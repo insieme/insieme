@@ -21,17 +21,21 @@ if (NOT MSVC)
 endif()
 lookup_lib( PAPI papi )
 
+# for win64 we need to add a assembly object file to each target, see below.
+# For all other platforms this var is empty. This safes a lot of if clauses througout this file
+set (WIN64ASM_OBJ "") 
 if(MSVC)
 	#you need to have environment variables PTHREAD_ROOT and GTEST_ROOT which point to the base dir of those libraries/headers
-	set (PTHREAD_INCLUDE_DIRS "$ENV{PTHREAD_ROOT}include")
-	set (pthread_LIB "$ENV{PTHREAD_ROOT}lib/x86/pthreadVC2.lib")
-	#message("asf ${PTHREAD_INCLUDE_DIRS}")
+	set (PTHREAD_INCLUDE_DIRS "$ENV{PTHREAD_ROOT}/include")	
 	set (gtest_LIB "$ENV{GTEST_ROOT}/build/Debug/gtest.lib")
 	set (gtest_main_LIB "$ENV{GTEST_ROOT}/build/Debug/gtest_main.lib")
 	set (GTEST_INCLUDE_DIRS "$ENV{GTEST_ROOT}/include")
-	
-	# this is to compile c code as c++ code
-	#set_target_properties (insieme_runtime PROPERTIES LINKER_LANGUAGE CXX)
+	if (MSVC AND CMAKE_CL_64)
+		set (WIN64ASM_OBJ "${CMAKE_CURRENT_SOURCE_DIR}/asm/win64asm.obj")
+		set (pthread_LIB "$ENV{PTHREAD_ROOT}/lib/x64/pthreadVC2.lib")
+	else ()
+		set (pthread_LIB "$ENV{PTHREAD_ROOT}/lib/x86/pthreadVC2.lib")
+	endif()
 endif()
 	
 # enable C99 support within gcc
@@ -107,12 +111,15 @@ else ( USE_OPENCL )
 	message(STATUS "OPENCL DISABLED")
 endif( USE_OPENCL )
 
-# Build the runtime
-add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} )
+# create the runtime target
+add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} ${WIN64ASM_OBJ})
+
 if ( USE_OPENCL )
 	target_link_libraries(insieme_runtime ${OPENCL_LIBS})
 endif ( USE_OPENCL )
 
+
+#link libraries for the insieme_runtime target
 target_link_libraries(insieme_runtime ${pthread_LIB})
 if(~MSVC)
 	target_link_libraries(insieme_runtime dl rt m ${papi_LIB})
@@ -144,7 +151,7 @@ foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	set ( case_name ${ut_prefix}${case_name} )
-	add_executable(${case_name} ${case_file})
+	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	if(~MSVC)
 		target_link_libraries(${case_name} dl)
@@ -175,7 +182,7 @@ file(GLOB test_cases test/manual_*.c)
 foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-	add_library(${case_name} SHARED ${case_file})
+	add_library(${case_name} SHARED ${case_file} ${WIN64ASM_OBJ})
 	if(~MSVC)
 		target_link_libraries(${case_name} ${pthread_LIB})
 		target_link_libraries(${case_name} dl)
@@ -193,7 +200,7 @@ foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	include_directories(include/ $ENV{OPENCL_ROOT}/include/)
-	add_executable(${case_name} ${case_file})
+	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	if(~MSVC)
 		target_link_libraries(${case_name} dl)

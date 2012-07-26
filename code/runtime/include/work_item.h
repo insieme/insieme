@@ -105,11 +105,20 @@ static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index);
 irt_work_item* _irt_wi_create(irt_worker* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 
-void
-#ifdef _M_IX86
-__fastcall
+// on the WIN64 platform, function _irt_wi_trampoline will be called from a linked obj-file, which implements some 
+// functionality in assembly code for  -> thus its name must not be mangled by a c++ compiler -> wrap extern "C" around
+#ifdef __cplusplus
+extern "C" {
 #endif
-_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func);
+	void
+	#ifdef _M_IX86
+	__fastcall
+	#endif
+	_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func);
+
+#ifdef __cplusplus
+}
+#endif
 
 irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 

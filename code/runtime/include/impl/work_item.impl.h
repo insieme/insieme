@@ -169,14 +169,24 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 	return retval;
 }
 
-void
-#ifdef _M_IX86
-__fastcall
+
+#ifdef __cplusplus
+extern "C" {
 #endif
-_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
-	func(wi);
-	irt_wi_end(wi);
+
+	void
+	#ifdef _M_IX86
+	__fastcall
+	#endif
+	_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
+		func(wi);
+		irt_wi_end(wi);
+	}
+
+#ifdef __cplusplus
 }
+#endif
+
 
 irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	irt_worker *worker = irt_worker_get_current();

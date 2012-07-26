@@ -61,7 +61,11 @@ typedef struct _lwt_reused_stack {
 	#ifdef __GNUC__
 		char stack[] __attribute__ ((aligned (128)));
 	//	char stack[] __attribute__ ((aligned (__BIGGEST_ALIGNMENT__))); // older versions of gcc don't like this
+	#elif _MSC_VER
+		__declspec(align(128))
+		char stack[];
 	#else
+		#pragma warning "Unknown platform, stack unaligned" 
 		char stack[];
 	#endif
 
@@ -72,7 +76,11 @@ typedef struct _lwt_reused_stack {
 #define USING_MINLWT 1
 typedef intptr_t lwt_context;
 #else
+#ifdef _MSC_VER
+#include "include_win32/ucontext.h"
+#else // _MSC_VER
 #include <ucontext.h>
+#endif // _MSC_VER
 typedef ucontext_t lwt_context;
 #endif
 
