@@ -20,8 +20,7 @@ include_directories(
 	${LLVM_HOME}/include
 	${insieme_utils_include_dir}
 	${insieme_core_include_dir}
-	${insieme_annotations_include_dir} 
-	${insieme_analysis_include_dir} )
+	${insieme_annotations_include_dir} )
 
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
@@ -42,8 +41,6 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_annotations)
-	target_link_libraries(${case_name} insieme_analysis)
-	target_link_libraries(${case_name} insieme_transform)
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${clang_LIBs})
 	target_link_libraries(${case_name} ${pthread_LIB})

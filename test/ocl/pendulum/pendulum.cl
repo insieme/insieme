@@ -36,7 +36,6 @@ typedef struct {
 __kernel void pendulum(	__global unsigned* buf_image, 
 			__global unsigned* buf_dist,
 			__global Source* buf_sources,
-			unsigned num_sources,
 			double dt,
 			double friction,
 			double height,
@@ -81,7 +80,7 @@ __kernel void pendulum(	__global unsigned* buf_image,
 		acc_new[1] = 0;
 
 		// 1) calculate forces (proportional to the inverse square of the distance)
-		for (unsigned i = 0; i < num_sources; i++) {
+		for (unsigned i = 0; i < 4; i++) {
 			double r[2] = { pos[0] - buf_sources[i].posX, pos[1] - buf_sources[i].posY };
 			if (buf_sources[i].type == Linear) {
 				// Hooke's law (pulling back the pendulum to (0,0)
@@ -127,7 +126,7 @@ __kernel void pendulum(	__global unsigned* buf_image,
 
 	// undecided after MAX number of steps => return num_sources + 1
 	if(res.numSteps == 0)
-		res = (Trace){num_sources, max_steps};
+		res = (Trace){4, max_steps};
 //        Trace res = getTarget(curX, curY, buf_sources, num_sources, dt, friction, height, min_steps, max_steps, abortVelocity);
 
         buf_image[gid] = res.target;

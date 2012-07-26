@@ -39,14 +39,15 @@
 #define IRT_CWBUFFER_LENGTH 16
 
 typedef struct _irt_circular_work_buffer {
-	uint64 q_oldest_valid;
-	uint64 q_newest_valid;
-	irt_work_item items[IRT_CWBUFFER_LENGTH];
+	uint64 oldest_valid;
+	uint64 newest_valid;
+	irt_work_item* items[IRT_CWBUFFER_LENGTH];
 } irt_circular_work_buffer;
 
 typedef struct _irt_cw_data {
-
+	//__attribute__ ((aligned (64)))
 	irt_circular_work_buffer queue;
+	//__attribute__ ((aligned (64)))
 	irt_circular_work_buffer pool;
 } irt_cw_data;
 

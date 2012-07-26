@@ -54,7 +54,7 @@ struct _irt_##__type##_id { \
 	} value; \
 	struct _irt_##__type* cached; \
 }; \
-inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_ptr) { \
+static inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_ptr) { \
 	irt_##__type##_id id; \
 	irt_##__type##_id *gen_id = (irt_##__type##_id*)generator_id_ptr; \
 	id.value.full = gen_id->value.full; \
@@ -62,7 +62,7 @@ inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_ptr) { \
 	id.cached = NULL; \
 	return id; \
 } \
-inline irt_##__type##_id irt_##__type##_null_id() { \
+static inline irt_##__type##_id irt_##__type##_null_id() { \
 	irt_##__type##_id null_id = { { 0 }, NULL }; \
 	return null_id; \
 }
