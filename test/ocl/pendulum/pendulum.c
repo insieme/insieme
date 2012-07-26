@@ -109,10 +109,9 @@ int main(int argc, const char* argv[]) {
                 size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
 		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL,
-					   13,  (size_t)0, 		(void*) buf_image,
+					   12,  (size_t)0, 		(void*) buf_image,
 						(size_t)0, 		(void*) buf_dist,
 						(size_t)0, 		(void*) buf_sources,
-						sizeof(unsigned), 	(void*) &num_sources,
 						sizeof(double), 	(void*) &dt,
 						sizeof(double), 	(void*) &friction,
 						sizeof(double), 	(void*) &height,
