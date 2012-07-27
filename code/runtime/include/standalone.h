@@ -185,7 +185,12 @@ void irt_error_handler(int signal) {
 	pthread_mutex_lock(&irt_g_error_mutex); // not unlocked
 	_irt_worker_cancel_all_others();
 	irt_error* error = (irt_error*)pthread_getspecific(irt_g_error_key);
-	fprintf(stderr, "Insieme Runtime Error recieved (thread %p): %s\n", pthread_self(), irt_errcode_string(error->errcode));
+	// gcc will warn when the cast to void* is missing, Visual Studio will not compile with the cast
+	#ifdef _MSC_VER
+		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", pthread_self(), irt_errcode_string(error->errcode));
+	#else
+		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)pthread_self(), irt_errcode_string(error->errcode));
+	#endif
 	fprintf(stderr, "Additional information:\n");
 	irt_print_error_info(stderr, error);
 	exit(-error->errcode);
