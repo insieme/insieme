@@ -229,6 +229,10 @@ namespace parser {
 			auto& terminal = sequence[1];
 			assert(terminal.terminal);
 
+			// derive filters for before/after
+			const detail::TokenSet& before = context.grammar.getEndSet(sequence[0].terms.back());
+			const detail::TokenSet& after  = context.grammar.getStartSet(sequence[2].terms.front());
+
 			unsigned terminalSize = terminal.limit.getMin();
 			assert(terminalSize == terminal.limit.getMax());
 
@@ -251,6 +255,10 @@ namespace parser {
 
 			// search within potential scope
 			for(unsigned i = min; i!= max; i+=inc) {
+
+				// check token before and after token sequence
+				if (i > 0 && !before.contains(tokens[i-1])) continue;
+				if (i+terminalSize < tokens.size() && !after.contains(tokens[i+terminalSize])) continue;
 
 				// check terminal at corresponding position
 				TokenIter pos = tokens.begin() + i;
@@ -314,9 +322,7 @@ namespace parser {
 			// prune pattern
 			pattern+=1;
 		}
-//std::cout << "Remaining Pattern: " << join(" ", pattern.begin(), pattern.end(), [](std::ostream& out, const SubSequence& cur){
-//	out << join(" ", cur.terms, print<deref<TermPtr>>());
-//}) << "\n";
+
 		// if it is only a sequence of terminals => done!
 		if (pattern.empty()) {
 			return token.empty();
@@ -402,11 +408,38 @@ namespace parser {
 	}
 
 	Result Alternative::matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
+
+		// get list of candidates
+		vector<TermPtr> candidates;
+		if (begin == end) {
+			// take all rules with potential length 0
+			for(const TermPtr& cur : alternatives) {
+				if (cur->getMinRange() == 0u) {
+					candidates.push_back(cur);
+				}
+			}
+		} else {
+			// take all rules with matching start and end tokens
+			for(const TermPtr& cur : alternatives) {
+				const auto& sets = context.grammar.getStartEndSets(cur);
+				if (sets.first.contains(*begin) && sets.second.contains(*(end-1))) {
+					candidates.push_back(cur);
+				}
+			}
+		}
+
+		// check number of candidates
+		if (candidates.empty()) {
+			return false;		// will not match
+		}
+
+
 		// stupid implementation => improve with priorities and index!
 		auto backup = context.backup();
-		for(auto it = alternatives.begin(); it != alternatives.end(); ++it) {
-			Result res = (*it)->match(context, begin, end);
-			if (res) { return res; }	// FIXME: Here alternatives are lost!
+		context.setSpeculative(context.isSpeculative() || candidates.size() > 1u);
+		for(const TermPtr& cur : candidates) {
+			Result res = cur->match(context, begin, end);
+			if (res) { return res; }
 			backup.restore(context);
 		}
 		return false;
@@ -425,6 +458,11 @@ namespace parser {
 		// terminal case - empty case => will be accepted
 		if (begin == end) return true;
 
+		// check head element
+		if (!context.grammar.getStartSet(body).contains(*begin)) {
+			return false;	// will never match
+		}
+
 		// search largest portion starting from head being accepted by the body
 		unsigned size = std::distance(begin, end);
 		TokenIter curEnd = begin + std::min(body->getMinRange(), size);
@@ -433,7 +471,13 @@ namespace parser {
 		auto backup = context.backup();
 
 		// gradually reduce the range to be matched
+		const auto& endSet = context.grammar.getEndSet(body);
 		while (curEnd != upperLimit) {
+
+			// check end node
+			if (!endSet.contains(*(curEnd-1))) {
+				curEnd++; continue;	// will not match
+			}
 
 			// try current sub-range
 			Result res = body->match(context, begin, curEnd);
@@ -454,6 +498,185 @@ namespace parser {
 
 		// no first match found => no match at all
 		return fail(context, begin, end);
+	}
+
+
+	bool Terminal::updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+		return begin.add(terminal) || end.add(terminal);
+	}
+
+	bool Any::updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+		detail::TokenSet set = (!type)?(detail::TokenSet(detail::TokenSet::all())):(detail::TokenSet(type));
+		return begin.add(set) || end.add(set);
+	}
+
+	bool NonTerminal::updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+		return begin.add(g.getStartSet(nonTerminal)) || end.add(g.getEndSet(nonTerminal));
+	}
+
+	bool Alternative::updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+		bool res = false;
+		for(const TermPtr& opt : alternatives) {
+			res = begin.add(g.getStartSet(opt)) || res;
+			res = end.add(g.getEndSet(opt)) || res;
+		}
+		return res;
+	}
+
+	bool Loop::updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+		bool res = false;
+		res = begin.add(g.getStartSet(body)) || res;
+		res = end.add(g.getEndSet(body)) || res;
+		return res;
+	}
+
+
+	bool Sequence::SubSequence::updateStartSet(const Grammar& g, detail::TokenSet& start) const {
+		bool res = false;
+		auto it = terms.begin();
+		do {
+			res = start.add(g.getStartSet(*it)) || res;
+		} while ((*it)->getMinRange() == 0u && (++it) != terms.end());
+		return res;
+	}
+
+	bool Sequence::SubSequence::updateEndSet(const Grammar& g, detail::TokenSet& end) const {
+		bool res = false;
+		auto it = terms.rbegin();
+		do {
+			res = end.add(g.getEndSet(*it)) || res;
+		} while ((*it)->getMinRange() == 0u && (++it) != terms.rend());
+		return res;
+	}
+
+	bool Sequence::updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+		bool res = false;
+
+		// deal with potentially empty sub-sequences in the front
+		{
+			auto it = sequence.begin();
+			do {
+				res = it->updateStartSet(g, begin) || res;
+			} while(it->limit.getMin() == 0 && (++it) != sequence.end());
+		}
+
+		// deal with potentially empty sub-sequences in the back
+		{
+
+			auto it = sequence.rbegin();
+			do {
+				res = it->updateEndSet(g, end) || res;
+			} while(it->limit.getMin() == 0 && (++it) != sequence.rend());
+		}
+
+		return res;
+	}
+
+	void Sequence::addSubTerms(std::set<TermPtr>& terms) const {
+		// collect all sub-terms
+		for(const SubSequence& cur : sequence) {
+			for(const TermPtr& term : cur.terms) {
+				terms.insert(term);
+				term->addSubTerms(terms);
+			}
+		}
+	}
+
+
+
+	namespace detail {
+
+		bool TokenSet::add(const Token& token) {
+			if (contains(token)) return false;
+			*this += token;
+			return true;
+		}
+		bool TokenSet::add(const Token::Type& type) {
+			if (coversType(type)) return false;
+			*this += type;
+			return true;
+		}
+
+		bool TokenSet::add(const TokenSet& other) {
+			if (isSubSet(other)) return false;
+			*this += other;
+			return true;
+		}
+
+		bool TokenSet::isSubSet(const TokenSet& other) const {
+			return ((tokenTypeMask | other.tokenTypeMask) == tokenTypeMask) &&
+					(::all(other.tokens, [&](const Token& cur) { return contains(cur); }));
+		}
+
+		TokenSet& TokenSet::operator+=(const Token& token) {
+			if (!coversType(token) && !coversToken(token)) {
+				tokens.push_back(token);
+			}
+			return *this;
+		}
+
+		TokenSet& TokenSet::operator+=(const Token::Type& type) {
+			if (tokenTypeMask & (1<<type)) {
+				return *this; // nothing to add
+			}
+
+			// add to mask
+			tokenTypeMask = tokenTypeMask | (1<<type);
+
+			// kick out all tokens matched by type mask
+			auto newEnd = std::remove_if(tokens.begin(), tokens.end(),
+					[&](const Token& cur) { return coversType(cur); });
+			tokens.erase(newEnd, tokens.end());
+
+			// return updated
+			return *this;
+		}
+
+		TokenSet& TokenSet::operator+=(const TokenSet& other) {
+			// merge type mask
+			tokenTypeMask = tokenTypeMask | other.tokenTypeMask;
+
+			// filter out local set
+			auto newEnd = std::remove_if(tokens.begin(), tokens.end(),
+					[&](const Token& cur) { return coversType(cur); });
+			tokens.erase(newEnd, tokens.end());
+
+			// merge in other set
+			for(const Token& cur : other.tokens) {
+				if (!coversType(cur) && !coversToken(cur)) {
+					tokens.push_back(cur);
+				}
+			}
+			return *this;
+		}
+
+		std::ostream& TokenSet::printTo(std::ostream& out) const {
+			assert(Token::Symbol == 1 && Token::String_Literal == 8 && "If this changes, check this code!");
+
+			out << "{";
+
+			for(unsigned i = Token::Symbol; i != Token::String_Literal; i++) {
+				Token::Type cur = (Token::Type)i;
+				if (coversType(cur)) {
+					out << "(" << cur << ":*),";
+				}
+			}
+			return out << join(",", tokens) << "}";
+		}
+
+	}
+
+
+	std::ostream& Grammar::TermInfo::printTo(std::ostream& out) const {
+		return out << "TermInfo: {\n\t" <<
+				join("\n\t", termInfos,
+					[](std::ostream& out, const pair<TermPtr,StartEndSets>& cur) {
+						out << *cur.first << ": \t" << cur.second.first << " ... " << cur.second.second;
+				}) << "\n\t" <<
+				join("\n\t", nonTerminalInfos,
+					[](std::ostream& out, const pair<string,StartEndSets>& cur) {
+						out << cur.first << ": \t" << cur.second.first << " ... " << cur.second.second;
+				}) << "\n}";
 	}
 
 
@@ -513,10 +736,36 @@ namespace parser {
 			return NodePtr();		// a non-terminal without productions will not be matched
 		}
 
+		// compute set of potential rules
+		vector<RulePtr> candidates;
+		if (begin == end) {
+			// take all rules with potential length 0
+			for(const RulePtr& rule : pos->second) {
+				if (rule->getPattern()->getMinRange() == 0u) {
+					candidates.push_back(rule);
+				}
+			}
+
+		} else {
+			// take all rules with matching start and end tokens
+			for(const RulePtr& rule : pos->second) {
+				const auto& sets = getStartEndSets(rule->getPattern());
+				if (sets.first.contains(*begin) && sets.second.contains(*(end-1))) {
+					candidates.push_back(rule);
+				}
+			}
+		}
+
+		// see whether there are candidates
+		if (candidates.empty()) {
+			return NodePtr();
+		}
+
 		// create new temporary context
 		Context localContext(context, begin, end);
+		localContext.setSpeculative(context.isSpeculative() || candidates.size() > 1u);
 		auto backup = localContext.backup();
-		for(const RulePtr& rule : pos->second) {
+		for(const RulePtr& rule : candidates) {
 			NodePtr res = rule->match(localContext, begin, end);
 			if (res) return res;
 			backup.restore(localContext);
@@ -536,6 +785,55 @@ namespace parser {
 				out << *rule->getPattern();
 			}) << "\n";
 		}) << "})";
+	}
+
+	void Grammar::updateTermInfo() const {
+		if (infoValid) return;
+
+		// mark as up-to-date (already during processing to avoid infinite recursion)
+		infoValid = true;
+
+		// collect set of terms
+		std::set<TermPtr> terms;
+		for(const auto& product : productions) {
+			for(const RulePtr& rule : product.second) {
+				terms.insert(rule->getPattern());
+				rule->getPattern()->addSubTerms(terms);
+			}
+		}
+
+		// re-initialize term info
+		info = TermInfo();
+
+		// initialize information
+		for(const TermPtr& cur : terms) {
+			info.termInfos[cur];	// uses default initialization
+		}
+		for(const auto& production : productions) {
+			info.nonTerminalInfos[production.first];
+		}
+
+		// iteratively solve equation system for start/end sets
+		bool changed = true;
+		while (changed) {
+			changed = false;
+
+			// update terminals
+			for(const TermPtr& cur : terms) {
+				auto& sets = info.termInfos[cur];
+				changed = cur->updateTokenSets(*this, sets.first, sets.second) || changed;
+			}
+
+			// updated non-terminals
+			for(const auto& production : productions) {
+				// update productions for current non-terminal
+				auto& sets = info.nonTerminalInfos[production.first];
+				for(const auto& rule : production.second) {
+					changed = sets.first.add(getStartSet(rule->getPattern())) || changed;
+					changed = sets.second.add(getEndSet(rule->getPattern())) || changed;
+				}
+			}
+		}
 	}
 
 	const TermPtr empty = std::make_shared<Empty>();
