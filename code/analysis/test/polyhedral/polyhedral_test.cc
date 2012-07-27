@@ -65,17 +65,17 @@ using insieme::utils::ConstraintType;
 	IterationVector iterVec; \
 	\
 	iterVec.add( Iterator(iter1) ); \
-	EXPECT_EQ(static_cast<size_t>(2), iterVec.size()); \
+	EXPECT_EQ(2u, iterVec.size()); \
 	iterVec.add( Parameter(param) ); \
-	EXPECT_EQ(static_cast<size_t>(3), iterVec.size()); \
+	EXPECT_EQ(3u, iterVec.size()); \
 	iterVec.add( Iterator(iter2) ); \
-	EXPECT_EQ(static_cast<size_t>(4), iterVec.size()); \
+	EXPECT_EQ(4u, iterVec.size()); \
 
 TEST(IterationVector, Creation) {
 	
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
-	EXPECT_EQ(static_cast<size_t>(4), iterVec.size());
+	EXPECT_EQ(4u, iterVec.size());
 	EXPECT_EQ("(v1,v2|v3|1)", toString(iterVec));
 
 	EXPECT_TRUE( iterVec[0] == Iterator(iter1) );
@@ -468,7 +468,7 @@ TEST(IterationDomain, Creation) {
 	IterationDomain it(cl);
 	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 4); 
 	iterVec.add(Parameter(param2));
-	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
+	EXPECT_EQ(5u, iterVec.size());
 	EXPECT_EQ("(v1,v2|v3,v4|1)", toString(iterVec));
 
 	// check weather these 2 affine functions are the same... even thought the
@@ -594,6 +594,24 @@ TEST(IterationDomain, FromVariable2) {
 
 		EXPECT_EQ("(((v1 + -10*1 >= 0) ^ (v1 + -50*1 < 0)) ^ (v1 + -20*1 < 0))", toString(dom));
 	}
+}
+
+TEST(IterationDomain, NotAScop) {
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = 10 .. (int<4>:a*int<4>:b) : 1) { \
+			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
+		}") );
+	scop::mark(forStmt);
+
+	EXPECT_FALSE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+
+	IterationVector vec;
+	NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(3).getAddressOfChild(2);
+	IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
+	EXPECT_TRUE(dom.universe());
 }
 
 

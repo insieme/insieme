@@ -129,7 +129,7 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && !parent->hasAnnotation( scop::ScopRegion::KEY) ) { prev=parent; } 
 
 	// This statement is not part of a SCoP (also may throw an exception)
-	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { return IterationDomain( IterationVector() ); }
+	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { return IterationDomain( vec ); }
 
 	StatementAddress enclosingScop = parent.as<StatementAddress>();
 
@@ -142,7 +142,7 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	assert(parent && "Scop entry not found");
 
 	// Resolve the SCoP from the entry point
-	Scop scop = parent->getAnnotation( scop::ScopRegion::KEY )->getScop();
+	Scop scop = prev->getAnnotation( scop::ScopRegion::KEY )->getScop();
 
 	// navigate throgh the statements of the SCoP until we find the one 
 	auto fit = std::find_if(scop.begin(), scop.end(), [&](const StmtPtr& cur) { 

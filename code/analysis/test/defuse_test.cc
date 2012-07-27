@@ -125,7 +125,9 @@ TEST(DefUseCollect, Assignment) {
 		
 		EXPECT_TRUE(ref.getType() == Ref::SCALAR);
 
-	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
+	} catch(parse::ParseException& e) { 
+		std::cout << e.what() << std::endl;
+	}
 
 }
 
