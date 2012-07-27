@@ -40,12 +40,16 @@
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic.h"
+
+#include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 using namespace insieme::core;
 using namespace insieme::analysis;
@@ -61,22 +65,19 @@ using insieme::utils::ConstraintType;
 	IterationVector iterVec; \
 	\
 	iterVec.add( Iterator(iter1) ); \
-	EXPECT_EQ(static_cast<size_t>(2), iterVec.size()); \
+	EXPECT_EQ(2u, iterVec.size()); \
 	iterVec.add( Parameter(param) ); \
-	EXPECT_EQ(static_cast<size_t>(3), iterVec.size()); \
+	EXPECT_EQ(3u, iterVec.size()); \
 	iterVec.add( Iterator(iter2) ); \
-	EXPECT_EQ(static_cast<size_t>(4), iterVec.size()); \
+	EXPECT_EQ(4u, iterVec.size()); \
 
 TEST(IterationVector, Creation) {
 	
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
-	EXPECT_EQ(static_cast<size_t>(4), iterVec.size());
-	{
-		std::ostringstream ss;
-		iterVec.printTo(ss);
-		EXPECT_EQ("(v1,v2|v3|1)", ss.str());
-	}
+	EXPECT_EQ(4u, iterVec.size());
+	EXPECT_EQ("(v1,v2|v3|1)", toString(iterVec));
+
 	EXPECT_TRUE( iterVec[0] == Iterator(iter1) );
 	EXPECT_FALSE( iterVec[0] == Parameter(iter1) );
 
@@ -89,11 +90,8 @@ TEST(IterationVector, Creation) {
 	for (size_t it = 0; it < iterVec.size(); ++it ) {
 		EXPECT_TRUE( iterVec[it] == iterVec2[it]);
 	}
-	{
-		std::ostringstream ss;
-		ss << iterVec2;
-		EXPECT_EQ("(v1,v2|v3|1)", ss.str());
-	}
+
+	EXPECT_EQ("(v1,v2|v3|1)", toString(iterVec2));
 }
 
 TEST(IterationVector, Iterator) {
@@ -195,12 +193,7 @@ TEST(AffineFunction, Creation) {
 	af.setCoeff(Parameter(param),2);
 	af.setCoeff(Iterator(iter2), 1);
 	af.setCoeff(Constant(), 10);
-
-	{
-		std::ostringstream ss;
-		af.printTo(ss);
-		EXPECT_EQ("v2 + 2*v3 + 10*1", ss.str());
-	}
+	EXPECT_EQ("v2 + 2*v3 + 10*1", toString(af));
 
 	EXPECT_EQ(0, af.getCoeff(iter1));
 	EXPECT_EQ(2, af.getCoeff(param));
@@ -215,16 +208,11 @@ TEST(AffineFunction, Creation) {
 	EXPECT_EQ(2, af.getCoeff(param));
 	EXPECT_EQ(1, af.getCoeff(iter2));
 	EXPECT_EQ(10, af.getCoeff(Constant()));
-
-	{
-		std::ostringstream ss;
-		af.printTo(ss);
-		EXPECT_EQ("v2 + 2*v3 + 10*1", ss.str());
-	}
+	EXPECT_EQ("v2 + 2*v3 + 10*1", toString(af));
 
 	// convertion to IR 
 	ExpressionPtr expr = toIR(mgr, af);
-	EXPECT_EQ(expr->toString(), "int.add(int.add(v2, int.mul(2, v3)), 10)");
+	EXPECT_EQ("int.add(int.add(v2, int.mul(2, v3)), 10)", toString(*expr));
 }
 
 TEST(AffineFunction, CreationFromExpr) {
@@ -246,12 +234,7 @@ TEST(AffineFunction, CreationFromExpr) {
 	EXPECT_EQ(1, af.getCoeff(iter1));
 	EXPECT_EQ(1, af.getCoeff(param));
 	EXPECT_EQ(0, af.getCoeff(Constant()));
-
-	{
-		std::ostringstream ss;
-		af.printTo(ss);
-		EXPECT_EQ("v1 + v3", ss.str());
-	}
+	EXPECT_EQ("v1 + v3", toString(af));
 
 	iterVec.add( Iterator(iter2) );
 	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 4); 
@@ -262,12 +245,7 @@ TEST(AffineFunction, CreationFromExpr) {
 	EXPECT_EQ(1, af.getCoeff(param));
 	EXPECT_EQ(0, af.getCoeff(param2));
 	EXPECT_EQ(0, af.getCoeff(Constant()));
-
-	{
-		std::ostringstream ss;
-		af.printTo(ss);
-		EXPECT_EQ("v1 + v3", ss.str());
-	}
+	EXPECT_EQ("v1 + v3", toString(af));
 }
 
 TEST(AffineFunction, ToExpr) {
@@ -287,7 +265,7 @@ TEST(AffineFunction, ToExpr) {
 
 	ExpressionPtr expr = toIR(mgr, af);
 
-	EXPECT_EQ(expr->toString(), "int.add(v1, v3)");
+	EXPECT_EQ("int.add(v1, v3)", toString(*expr));
 
 	AffineFunction af2(iterVec, expr);
 	EXPECT_EQ(*expr, *toIR(mgr,af2));
@@ -358,7 +336,6 @@ TEST(AffineFunction, AFChangeBase) {
 	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); 
 	
 	IterationVector iterVec1( { iter2, iter1 }, { param }); 
-	// std::cout << iterVec1 << std::endl;
 	
 	AffineFunction af1(iterVec1, { 0,1,1,9 } );
 	
@@ -366,7 +343,6 @@ TEST(AffineFunction, AFChangeBase) {
 	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 5); 
 	
 	IterationVector iterVec2( { iter3, iter1, iter2 }, { param2, param } ) ; 
-	// std::cout << iterVec2 << std::endl;
 	
 	const IndexTransMap&& transMap = transform(iterVec2, iterVec1);
 	EXPECT_EQ(transMap, IndexTransMap( { 2,1,4,5 } ));
@@ -416,11 +392,7 @@ TEST(Constraint, Creation) {
 
 	AffineFunction af(iterVec, {0,1,2,10} );
 	AffineConstraint c(af, ConstraintType::EQ);
-	{
-		std::ostringstream ss;
-		c.printTo(ss);
-		EXPECT_EQ("v2 + 2*v3 + 10*1 == 0", ss.str());
-	}
+	EXPECT_EQ("v2 + 2*v3 + 10*1 == 0", toString(c));
 }
 
 TEST(Constraint, Normalization) {
@@ -429,17 +401,10 @@ TEST(Constraint, Normalization) {
 
 	AffineFunction af(iterVec, {0,1,2,10});
 	AffineConstraint c(af, ConstraintType::LT);
-	{
-		std::ostringstream ss;
-		c.printTo(ss);
-		EXPECT_EQ("v2 + 2*v3 + 10*1 < 0", ss.str());
-	}
+	EXPECT_EQ("v2 + 2*v3 + 10*1 < 0", toString(c));
+
 	AffineConstraintPtr&& nc = normalize(c);
-	{
-		std::ostringstream ss;
-		nc->printTo(ss);
-		EXPECT_EQ("(-v2 + -2*v3 + -11*1 >= 0)", ss.str());
-	}
+	EXPECT_EQ("(-v2 + -2*v3 + -11*1 >= 0)", toString(*nc));
 }
 
 TEST(Constraint, Combiner) {
@@ -448,21 +413,19 @@ TEST(Constraint, Combiner) {
 
 	AffineFunction af(iterVec, {0,1,2,10}); //FIXE LE
 	AffineConstraint c1(af, ConstraintType::EQ);
-	EXPECT_EQ(toIR(mgr,c1)->toString(), 
-			"int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0)"
-		);
+	EXPECT_EQ("int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0)", toString(*toIR(mgr,c1)));
 
 	AffineFunction af2(iterVec, {2,3,0,10});
 	AffineConstraint c2(af2, ConstraintType::LT);
-	EXPECT_EQ(toIR(mgr,c2)->toString(), 
-			"int.le(int.add(int.add(int.mul(2, v1), int.mul(3, v2)), 10), 0)"
-		);
+	EXPECT_EQ( "int.le(int.add(int.add(int.mul(2, v1), int.mul(3, v2)), 10), 0)", toString(*toIR(mgr,c2)) );
 
 	AffineConstraintPtr&& ptr = c1 or not_(c2);
 
 	ExpressionPtr expr = toIR(mgr, ptr);
-	EXPECT_EQ(expr->toString(), 
-		"bool.or(int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0), bind(){rec v6.{v6=fun(int<4> v4, int<4> v5) {return bool.not(int.le(int.add(int.add(int.mul(2, v4), int.mul(3, v5)), 10), 0));}}(v1, v2)})");
+	EXPECT_EQ("bool.or(int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0), "
+			  "bind(){rec v6.{v6=fun(int<4> v4, int<4> v5) {"
+			  	"return bool.not(int.le(int.add(int.add(int.mul(2, v4), int.mul(3, v5)), 10), 0));"
+			  "}}(v1, v2)})", toString(*expr));
 	
 }
 
@@ -498,22 +461,15 @@ TEST(IterationDomain, Creation) {
 		AffineConstraint(af, 	ConstraintType::LT) and 
 		AffineConstraint(af2, ConstraintType::LT) and 
 		AffineConstraint(af3, ConstraintType::NE);
-	{
-		std::ostringstream ss;
-		ss << iterVec;
-		EXPECT_EQ("(v1,v2|v3|1)", ss.str());
-	}
+
+	EXPECT_EQ("(v1,v2|v3|1)", toString(iterVec));
+	EXPECT_EQ("(((v2 + 2*v3 + 10*1 < 0) ^ (v1 + v2 + 7*1 < 0)) ^ (v1 + v3 != 0))", toString(*cl));
 
 	IterationDomain it(cl);
 	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 4); 
 	iterVec.add(Parameter(param2));
-	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
-
-	{
-		std::ostringstream ss;
-		ss << iterVec;
-		EXPECT_EQ("(v1,v2|v3,v4|1)", ss.str());
-	}
+	EXPECT_EQ(5u, iterVec.size());
+	EXPECT_EQ("(v1,v2|v3,v4|1)", toString(iterVec));
 
 	// check weather these 2 affine functions are the same... even thought the
 	// underlying iteration vector has been changed
@@ -535,11 +491,9 @@ TEST(IterationDomain, SimpleStrided) {
 		AffineConstraint(af, 	ConstraintType::LT) and 
 		AffineConstraint(af2, ConstraintType::EQ) and 
 		AffineConstraint(af3, ConstraintType::NE);
-	{
-		std::ostringstream ss;
-		ss << iterVec;
-		EXPECT_EQ("(v1,v2,v8|v3|1)", ss.str());
-	}
+
+	EXPECT_EQ("(v1,v2,v8|v3|1)", toString(iterVec));
+	EXPECT_EQ("(((v2 + 2*v8 + 10*1 < 0) ^ (v1 + v2 + 4*v3 + 7*1 == 0)) ^ (v1 + v8 != 0))", toString(*cl));
 }
 
 TEST(AffineFunction, ChangeBase) {
@@ -547,11 +501,7 @@ TEST(AffineFunction, ChangeBase) {
 	CREATE_ITER_VECTOR;
 
 	AffineFunction af(iterVec, { 0, 1, 2, 10 } );
-	{
-		std::ostringstream ss;
-		ss << af;
-		EXPECT_EQ("v2 + 2*v3 + 10*1", ss.str());
-	}
+	EXPECT_EQ("v2 + 2*v3 + 10*1", toString(af));
 
 	IterationVector iterVec1( { iter1, param, iter2 } ); 
 	// std::cout << iterVec1 << std::endl;
@@ -560,11 +510,7 @@ TEST(AffineFunction, ChangeBase) {
 	EXPECT_EQ(map, IndexTransMap( {0,2,1,3} ));
 
 	AffineFunction&& converted = af.toBase(iterVec1, map);
-	{
-		std::ostringstream ss;
-		ss << converted;
-		EXPECT_EQ("2*v3 + v2 + 10*1", ss.str());
-	}
+	EXPECT_EQ("2*v3 + v2 + 10*1", toString(converted));
 
 	AffineFunction&& converted2 = af.toBase(iterVec1);
 	EXPECT_EQ(converted, converted2);
@@ -588,21 +534,84 @@ TEST(IterationDomain, range) {
 	iterVec.add( Parameter(param) ); 
 
 	IterationDomain dom = makeVarRange(iterVec, param, IRBuilder(mgr).intLit(10));
-	{
-		std::ostringstream ss;
-		ss << dom;
-		EXPECT_EQ("(v3 + -10*1 == 0)", ss.str());
-	}
+	EXPECT_EQ("(v3 + -10*1 == 0)", toString(dom));
 	
 	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 4);
 	iterVec.add( Parameter(param2) );
 
 	IterationDomain dom1 = makeVarRange(iterVec, param, IRBuilder(mgr).intLit(10), param2);
-	{
-		std::ostringstream ss;
-		ss << dom1;
-		EXPECT_EQ("((v3 + -10*1 >= 0) ^ (v3 + -v4 < 0))", ss.str());
+	EXPECT_EQ("((v3 + -10*1 >= 0) ^ (v3 + -v4 < 0))", toString(dom1));
+}
+
+TEST(IterationDomain, FromVariable) {
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = 10 .. 50 : 1) { \
+			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
+		}") );
+	scop::mark(forStmt);
+
+	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+
+	IterationVector vec;
+	NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(3).getAddressOfChild(2);
+	IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
+	EXPECT_EQ("((v1 + -10*1 >= 0) ^ (v1 + -50*1 < 0))", toString(dom));
+}
+
+
+TEST(IterationDomain, FromVariable2) {
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = 10 .. 50 : 1) { \
+			if ( (i<20) ) \
+				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
+		}") );
+	scop::mark(forStmt);
+
+	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+
+	{ 
+		IterationVector vec;
+		// get the iterator i used in the if condition 
+		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(0).getAddressOfChild(2);
+		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
+
+		EXPECT_EQ("((v1 + -10*1 >= 0) ^ (v1 + -50*1 < 0))", toString(dom));
 	}
+
+	{ 
+		IterationVector vec;
+		// Get the iterator i inside the if stmt
+		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(1).
+						     getAddressOfChild(0).getAddressOfChild(3).getAddressOfChild(2);
+
+		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
+
+		EXPECT_EQ("(((v1 + -10*1 >= 0) ^ (v1 + -50*1 < 0)) ^ (v1 + -20*1 < 0))", toString(dom));
+	}
+}
+
+TEST(IterationDomain, NotAScop) {
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = 10 .. (int<4>:a*int<4>:b) : 1) { \
+			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
+		}") );
+	scop::mark(forStmt);
+
+	EXPECT_FALSE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+
+	IterationVector vec;
+	NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(3).getAddressOfChild(2);
+	IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
+	EXPECT_TRUE(dom.universe());
 }
 
 
@@ -636,13 +645,13 @@ TEST(Scop, BuildScop) {
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
 	IterationDomain domain( iterVec, { {  1, 0,   0 },     	// v1 >= 0
-		  								     { -1, 0, 100 }, 		// -v1 + 100 >= 0
-  										     {  0, 1,   0 },		// v2 >= 0
-										  	 {  0,-1, 100 } } );	// -v2 + 100 >= 0
+		  							   { -1, 0, 100 }, 		// -v1 + 100 >= 0
+  							   	       {  0, 1,   0 },		// v2 >= 0
+									   {  0,-1, 100 } } );	// -v2 + 100 >= 0
 
 	// std::cout << "DOM: " << domain << std::endl;
 	AffineSystem sched(iterVec, { {1, 0, 0}, 
-									    {0, 1, 0} } );
+							      {0, 1, 0} } );
 
 	Scop scop(iterVec);
 	scop.push_back( Stmt( 0, StatementAddress(stmt), domain, sched ) );
@@ -685,20 +694,24 @@ TEST(Transformations, Interchange) {
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
 	IterationDomain domain( iterVec, { {  1, 0,   0 },     	// v1 >= 0
-		  								     { -1, 0, 100 }, 		// -v1 + 100 >= 0
-  										     {  0, 1,   0 },		// v2 >= 0
-										  	 {  0,-1, 100 } } );	// -v2 + 100 >= 0
+		  							   { -1, 0, 100 }, 		// -v1 + 100 >= 0
+  									   {  0, 1,   0 },		// v2 >= 0
+									   {  0,-1, 100 } } );	// -v2 + 100 >= 0
 
 	// std::cout << "DOM: " << domain << std::endl;
 	AffineSystem sched(iterVec, { {1, 0, 0}, 
-									    {0, 1, 0} } );
+							      {0, 1, 0} } );
 
 	Scop scop(iterVec);
 	scop.push_back( Stmt( 0, StatementAddress(stmt), domain, sched ) );
 
 	NodePtr ir = scop.toIR(mgr);
 	
-	EXPECT_EQ( "for(int<4> v5 = 0 .. int.add(100, 1) : 1) {for(int<4> v6 = 0 .. int.add(100, 1) : 1) {ref.assign(v3, array.ref.elem.1D(array.ref.elem.1D(v4, v5), v6));};}", ir->toString());
+	EXPECT_EQ( "for(int<4> v5 = 0 .. int.add(100, 1) : 1) {"
+				 "for(int<4> v6 = 0 .. int.add(100, 1) : 1) {"
+				 	"ref.assign(v3, array.ref.elem.1D(array.ref.elem.1D(v4, v5), v6));"
+				  "};"
+			   "}", toString(*ir));
 
 	// perform interchange 
 	AffineSystem& schedule = scop[0].getSchedule();
@@ -706,8 +719,11 @@ TEST(Transformations, Interchange) {
 					{ 1, 0, 0} } );
 
 	ir = scop.toIR(mgr);
-
-	EXPECT_EQ( "for(int<4> v7 = 0 .. int.add(100, 1) : 1) {for(int<4> v8 = 0 .. int.add(100, 1) : 1) {ref.assign(v3, array.ref.elem.1D(array.ref.elem.1D(v4, v8), v7));};}", ir->toString());
+	EXPECT_EQ( "for(int<4> v7 = 0 .. int.add(100, 1) : 1) {"
+					"for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
+						"ref.assign(v3, array.ref.elem.1D(array.ref.elem.1D(v4, v8), v7));"
+					"};"
+				"}", toString(*ir));
 }
 
 TEST(Transformations, Tiling) {
@@ -736,17 +752,15 @@ TEST(Transformations, Tiling) {
 					arrAcc
 				);
 	
-	// std::cout << "STMT: " << *stmt << std::endl;
-
 	IterationVector iterVec( { iter1, iter2 } );  // (i,j,1)
 
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
 	IterationDomain domain( iterVec, { { 1, 0,   0 }, 
-		 								     {-1, 0, 100 }, 
-										     { 0, 1,   0 }, 
-										     { 0,-1, 100 } } );
+		 						       {-1, 0, 100 }, 
+									   { 0, 1,   0 }, 
+									   { 0,-1, 100 } } );
 
 	AffineSystem sched( iterVec, { { 1,0,0 }, { 0,1,0} } );
 
@@ -754,8 +768,11 @@ TEST(Transformations, Tiling) {
 	scop.push_back( Stmt( 0, StatementAddress(stmt), domain, sched ) );
 
 	NodePtr ir = scop.toIR(mgr);
-
-	EXPECT_EQ( "for(int<4> v6 = 0 .. int.add(100, 1) : 1) {for(int<4> v7 = 0 .. int.add(100, 1) : 1) {ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v6), v7));};}", ir->toString());
+	EXPECT_EQ( "for(int<4> v6 = 0 .. int.add(100, 1) : 1) {"
+					"for(int<4> v7 = 0 .. int.add(100, 1) : 1) {"
+						"ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v6), v7));"
+					"};"
+				"}", toString(*ir));
 
 	// perform interchange 
 	AffineSystem& schedule = scop[0].getSchedule();
@@ -794,11 +811,14 @@ TEST(Transformations, Tiling) {
 	schedule[1].setCoeff(iter1, 1);
 	schedule[1].setCoeff(iter2, 0);
 
-	// std::cout << schedule << std::endl;
-
 	ir = scop.toIR(mgr);
-
-	//EXPECT_EQ( ir->toString(), "{for(int<4> v9 = 0 .. int.add(100, 1) : 25) {for(int<4> v10 = v9 .. int.add(ite(int.lt(100, int.add(v9, 25)), bind(){rec v13.{v13=fun() {return 100;}}()}, bind(){rec v12.{v12=fun(int<4> v11) {return int.add(v11, 25);}}(v9)}), 1) : 1) {for(int<4> v14 = 0 .. int.add(100, 1) : 1) {ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v10), v14));};};};}");
+	EXPECT_EQ( "for(int<4> v9 = 0 .. int.add(100, 1) : 25) {"
+					"for(int<4> v10 = v9 .. int.add(select(int.add(cast<int<4>>(v9), cast<int<4>>(25)), 100, int.lt), 1) : 1) {"
+						"for(int<4> v11 = 0 .. int.add(100, 1) : 1) {"
+							"ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v10), v11));"
+						"};"
+					"};"
+				"}", toString(*ir));
 
 }
 
@@ -855,7 +875,7 @@ TEST(Transformations, Fusion) {
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	IterationDomain domain1( iterVec, { {  1, 0,  0 },
-		 									  { -1, 0, 90 } } );
+		 							    { -1, 0, 90 } } );
 	
 	domain1 &= IterationDomain( 
 		AffineConstraint( 
@@ -865,20 +885,20 @@ TEST(Transformations, Fusion) {
 	);
 
 	AffineSystem sched1(iterVec, { {0, 0, 0},
-		 							     {1, 0, 0}, 
-										 {0, 0, 0} } );
+		 						   {1, 0, 0}, 
+								   {0, 0, 0} } );
 
 	Scop scop(iterVec);
 	scop.push_back( Stmt( 0, StatementAddress(stmt1), domain1, sched1 ) );
 
 	// STMT2
 	AffineSystem sched2(iterVec, { {0, 0, 1}, 
-									     {0, 1, 0}, 
-										 {0, 0, 0} } );
+								   {0, 1, 0}, 
+								   {0, 0, 0} } );
 
 
 	IterationDomain domain2( iterVec, { {  0, 1,   0 },
-			 							  	  {  0,-1, 100 } } );
+			 						    {  0,-1, 100 } } );
 
 	domain2 &= IterationDomain( 
 		AffineConstraint( 
@@ -890,8 +910,14 @@ TEST(Transformations, Fusion) {
 	scop.push_back( Stmt( 1, StatementAddress(stmt2), domain2, sched2 ) );
 
 	NodePtr ir = scop.toIR(mgr);
-	
-	EXPECT_EQ( ir->toString(), "{for(int<4> v7 = 0 .. int.add(90, 1) : 1) {ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v7), 0));}; for(int<4> v8 = 0 .. int.add(100, 1) : 1) {ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v8), 0)));};}");
+	EXPECT_EQ("{"
+				"for(int<4> v7 = 0 .. int.add(90, 1) : 1) {"
+					"ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v7), 0));"
+			   "}; "
+			   "for(int<4> v8 = 0 .. int.add(100, 1) : 1) {"
+					"ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v8), 0)));"
+				"};"
+			  "}", toString(*ir));
 
 
 	// Add an outer loop 
@@ -926,6 +952,14 @@ TEST(Transformations, Fusion) {
 
 	ir = scop.toIR(mgr);
 
-	EXPECT_EQ( "{for(int<4> v9 = 0 .. int.add(90, 1) : 1) {ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v9), 0)); ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v9), 0)));}; for(int<4> v10 = 91 .. int.add(100, 1) : 1) {ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v10), 0)));};}", ir->toString());
+	EXPECT_EQ("{"
+				"for(int<4> v9 = 0 .. int.add(90, 1) : 1) {"
+					"ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v9), 0)); "
+					"ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v9), 0)));"
+				"}; "
+				"for(int<4> v10 = 91 .. int.add(100, 1) : 1) {"
+					"ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v10), 0)));"
+				"};"
+			  "}", toString(*ir));
 }
  

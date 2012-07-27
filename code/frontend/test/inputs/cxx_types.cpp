@@ -98,7 +98,7 @@ void test_func() {
 
 	//FIXME: C++ struct calls implicitly default ctor
  	#pragma test \
-	"{ref<struct<height:int<4>,age:int<4>>> v1 = ref.var(undefined(struct<height:int<4>,age:int<4>>)); rec v3.{v3=fun(ref<struct<height:int<4>,age:int<4>>> v2) {{{};}; return v2;}}(v1);}"
+	"{ref<struct<height:int<4>,age:int<4>>> v1 = ref.var(undefined(struct<height:int<4>,age:int<4>>)); rec v3.{v3=fun(ref<struct<height:int<4>,age:int<4>>> v2) {{}; return v2;}}(v1);}"
 	struct Person p;
 
 	#pragma test \
