@@ -528,6 +528,8 @@ namespace parser {
 
 		Terminal(const Token& terminal) : Term(1,1), terminal(terminal) {}
 
+		const Token& getTerminal() const { return terminal; }
+
 		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const;
 
 	protected:
@@ -675,6 +677,10 @@ namespace parser {
 		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const;
 
 		virtual void addSubTerms(std::set<TermPtr>& terms) const;
+
+		void addTokenPairs(std::map<Token,Token>& map) const;
+
+		bool supportsPair(const pair<Token,Token>& pair) const;
 
 	protected:
 
@@ -893,6 +899,35 @@ namespace parser {
 			std::map<string, StartEndSets> nonTerminalInfos;
 			std::map<TermPtr, StartEndSets> termInfos;
 
+		private:
+
+			// identified pairs of terminals
+			std::set<Token> leftParenthese;
+			std::set<Token> rightParenthese;
+			std::map<Token,Token> parenthesePairs;
+
+		public:
+
+			void addParenthese(const Token& open, const Token& close) {
+				leftParenthese.insert(open);
+				rightParenthese.insert(close);
+				parenthesePairs[open] = close;
+			}
+
+			bool isLeftParenthese(const Token& token) const {
+				return leftParenthese.find(token) != leftParenthese.end();
+			}
+
+			bool isRightParenthese(const Token& token) const {
+				return rightParenthese.find(token) != rightParenthese.end();
+			}
+
+			const Token& getClosingParenthese(const Token& open) const {
+				auto pos = parenthesePairs.find(open);
+				assert(pos != parenthesePairs.end());
+				return pos->second;
+			}
+
 		protected:
 			virtual std::ostream& printTo(std::ostream& out) const;
 		};
@@ -1052,7 +1087,7 @@ namespace parser {
 	}
 
 	template<typename ... Terms>
-	inline TermPtr seq(const Terms& ... terms) {
+	inline std::shared_ptr<Sequence> seq(const Terms& ... terms) {
 		return std::make_shared<Sequence>(toTermList(terms...));
 	}
 
