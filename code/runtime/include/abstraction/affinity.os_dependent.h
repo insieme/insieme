@@ -36,17 +36,22 @@
 
 #pragma once
 
+#ifdef _MSC_VER
+	#include <io.h>
+	#include <Windows.h>
+	typedef DWORD_PTR irt_native_cpu_set; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit
+#else
+	#include <unistd.h>
+	typedef cpu_set_t irt_native_cpu_set;
+#endif
+
 // in this file prototypes of platform dependent affinity functionality shall be declared
 
 // functionality regarding setting, clearing thread affinity and more
 
-void _irt_print_native_affinity_mask(irt_native_cpu_set mask);
-
 void irt_clear_affinity();
 
 void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread);
-
-uint32 _irt_affinity_next_available_physical(uint32 start);
 
 void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping);
 
