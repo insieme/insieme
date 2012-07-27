@@ -59,29 +59,24 @@ public:
 };
 
 int main() {
-
-	// test calling of base-class ctors
 	{
-		MC mc;
-		printf("mc.A::X %d\n", mc.A::X);
-		printf("mc.B::X %d\n", mc.B::X);
+		MC *mc = new MC();
+		printf("mc->A::X %d\n", mc->A::X);
+		printf("mc->B::X %d\n", mc->B::X);
 	}
 	{
-		C c;
-		printf("c.A::X %d\n", c.A::X);
+		C *c = new C();
+		printf("c->A::X %d\n", c->A::X);
 	}
-
-	// GMC/GC test handling of globalVar
-	// for ctor calling and single/multiple inheritance
 	{
-		GMC mc;
-		printf("mc.GA::X %d\n", mc.GA::X);
-		printf("mc.GB::X %d\n", mc.GB::X);
+		GMC *mc = new GMC();
+		printf("mc->GA::X %d\n", mc->GA::X);
+		printf("mc->GB::X %d\n", mc->GB::X);
 		printf("globalVar %d\n", globalVar);
 	}
 	{
-		GC c;
-		printf("c.GA::X %d\n", c.GA::X);
+		GC *c = new GC();
+		printf("c->GA::X %d\n", c->GA::X);
 		printf("globalVar %d\n", globalVar);
 	}
 }

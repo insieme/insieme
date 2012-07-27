@@ -61,7 +61,7 @@ struct NotAffineExpr : public std::logic_error {
 
 	NotAffineExpr(const core::ExpressionPtr& expr) : std::logic_error(""), expr(expr) {
 		std::ostringstream ss;
-		ss << "Expression '" << *expr << "' is not a linear affine function";
+		ss << "Expression '" << (expr ? toString(*expr) : "NULL") << "' is not a linear affine function";
 		msg = ss.str();
 	}
 	

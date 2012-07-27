@@ -73,40 +73,32 @@ public:
 int main() {
 
 	// ctor + init
-	printf("Ctor+init\n");
-	C ci1;
+/*	printf("Ctor+init\n");
+	C *ci1 = new C();
 
 	printf("\nArray of objects\n");
-	C cA[5];
-
-	// copy ctor
-	printf("\nCopy Ctor\n");
-	C cc1(ci1);
+	C *cA = new C[5];
 
 	// ctor + default arg
 	printf("\nCtor+default args\n");
-	C cd1(1);
-	C cd2(1,2);
-	C cd3(1,2,3);
+	C *cd1 = new C(1);
+	C *cd2 = new C(1,2);
+	C *cd3 = new C(1,2,3);
 
-	// D has comparable ctors as C but is used as member in E
-//	printf("\nD:\n\n");
-//	D d1;
-//	D d2(10);
-//
-//	printf("\nD dA[3]:\n\n");
-//	D dA[2];
+	printf("\nD:\n\n");
+	D *d1 = new D();
+	D *d2 = new D(10);
+*/	
+	printf("\nD dA[3]:\n\n");
+//	D *dA = new D[2];
 
-	// Test class member init with ctor
-	// E.dD needs ctor of class D
-	printf("\nE():\n\n");
-	E e1;
-
+/*	printf("\nE():\n\n");
+	E *e1 = new E();
 	printf("\nE(int):\n\n");
-	E e2(10);
-
+	E *e2 = new E(10);
+*/
 	printf("\nE eA[3]:\n\n");
-	E eA[3];
-
+//	E *eA = new E[3];
+	
 	return 0;
 }

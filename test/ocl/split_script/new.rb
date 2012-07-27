@@ -117,6 +117,12 @@ def initialize_env
     set_standard_path
   end
 
+  if (host == "klaus-T400")
+    $main_dir = '/home/klaus/insieme/build/'
+    $lib_dir = '/home/klaus/insieme-libs/'
+    set_standard_path
+  end
+
   ENV['IRT_INST_WORKER_EVENT_LOGGING'] = "true"
   $path =  Dir.pwd.gsub!($script_dir, '')
   install_gems host
@@ -766,7 +772,7 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
+test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..22, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
 
 # run the test
 test.info

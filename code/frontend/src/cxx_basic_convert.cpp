@@ -319,11 +319,13 @@ core::DeclarationStmtPtr CXXConversionFactory::convertVarDecl(const clang::VarDe
 			//VLOG(2) << var << " PointeeType->isStructOrClassType " << typePtr->isStructureOrClassType();
 		}
 
+//		if (typePtr->isArrayType()) {
+//			VLOG(2) << "isArrayType";
+//		}
+
 		//change thisstack2 only if we have a CXX object, pointer-to-CXX object, reference-to-CXX-object
 		if (typePtr->isStructureOrClassType()) {
-
 			cxxCtx.thisStack2 = var;
-
 		}
 
 		// initialization value
@@ -331,7 +333,6 @@ core::DeclarationStmtPtr CXXConversionFactory::convertVarDecl(const clang::VarDe
 		assert(initExpr && "not correct initialization of the variable");
 
 		retStmt = builder.declarationStmt(var, initExpr);
-
 	}
 
 	else {
@@ -1010,22 +1011,18 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 	const CXXRecordDecl * baseClassDecl;
 	if (const CXXConstructorDecl* cxxCtorDecl =dyn_cast<CXXConstructorDecl>(funcDecl)) {
 		baseClassDecl = cxxCtorDecl->getParent();
-		VLOG(2)
-			<< "Name of the class: " << baseClassDecl->getNameAsString();
+		VLOG(2) << "Name of the class: " << baseClassDecl->getNameAsString();
 		assert(baseClassDecl->getNameAsString()==cxxCtorDecl->getNameAsString() && "wrong constructor");
 		isCtor = true;
 		isCXX = true;
 	} else if (const CXXDestructorDecl* cxxDtorDecl =dyn_cast<CXXDestructorDecl>(funcDecl)) {
-
 		baseClassDecl = cxxDtorDecl->getParent();
 		isDtor = true;
 		isCXX = true;
 	} else if (const CXXMethodDecl* cxxMethodDecl = dyn_cast<CXXMethodDecl>(funcDecl)) {
 		if (cxxMethodDecl->isInstance()) {
 			baseClassDecl = cxxMethodDecl->getParent();
-			VLOG(2)
-				<< "Name of the class: " << baseClassDecl->getNameAsString();
-
+			VLOG(2) << "Name of the class: " << baseClassDecl->getNameAsString();
 			isCXX = true;
 		}
 	}
@@ -1230,10 +1227,9 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 	}
 
 	// if we introduce new decls we have to introduce them just before the body of the function
-	if (!decls.empty() || isCXX) {
-
+	if (isCXX && isCtor) {
 		// update __class if constructor and has polymorphic baseclass
-		if (isCtor && baseClassDecl->isPolymorphic()) {
+		if (baseClassDecl->isPolymorphic()) {
 			unsigned int classId = cxxCtx.polymorphicClassMap.find(baseClassDecl)->second.first;
 
 			// update "__class" in all dynamic bases classes to the given classId
@@ -1245,71 +1241,57 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 			}
 		}
 
+		//handle initializers (member/base classes)
+		const core::lang::BasicGenerator& gen = builder.getLangBasic();
+		const clang::CXXConstructorDecl *ctorDecl = dyn_cast<CXXConstructorDecl>(funcDecl);
+
 		// there are constructor initializers that has to be handled - these are inserted befor the body
-		// they only need to be considered when we handle a ctor
-		if (isCtor && !cxxCtx.ctorInitializerMap.empty()) {
-			const core::lang::BasicGenerator& gen = builder.getLangBasic();
+		for (clang::CXXConstructorDecl::init_const_iterator iit = ctorDecl->init_begin(),
+				iend = ctorDecl->init_end(); iit != iend; iit++) {
+			clang::CXXCtorInitializer *initializer = *iit;
 
-			for (std::map<const clang::FieldDecl*, core::ExpressionPtr>::iterator iit = cxxCtx.ctorInitializerMap.begin(),
-					iend = cxxCtx.ctorInitializerMap.end(); iit != iend; iit++) {
-				const FieldDecl * fieldDecl = (*iit).first;
+			core::StringValuePtr ident;
 
-				core::StringValuePtr ident = builder.stringValue(fieldDecl->getNameAsString());
+			if (initializer->isMemberInitializer()) {
+				const FieldDecl *fieldDecl = initializer->getMember();
 
-				const core::TypePtr& memberTy =
-						core::static_pointer_cast<const core::NamedCompositeType>(classTypePtr)->getTypeOfMember(ident);
-
-				// create access to the member of the struct/class
-				core::ExpressionPtr&& init = builder.callExpr(
-						builder.refType( memberTy ),
-						gen.getCompositeRefElem(),
-						toVector<core::ExpressionPtr>( cxxCtx.thisVar, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy) )
-				);
-
-				// create the assign
-				core::StatementPtr assign = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, (*iit).second);
-
-				core::ExpressionPtr expr = (*iit).second;
-				if (isCtor && dynamic_cast<const core::CallExpr*>(&(*expr))) {
-					// build new constructor call for a class/struct member inside a class
-					core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(expr);
-					const core::ExpressionPtr function = call->getFunctionExpr();
-					const vector<core::ExpressionPtr> args = call->getArguments();
-					vector<core::ExpressionPtr> newArgs;
-
-					unsigned int i = 0;
-					// HACK --> Initializers reference wrong globalVar
-					// if this initializer needs the globalVar leave out args[0] to get correct var
-					if(	ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end()
-						&& (ctx.globalVar->getType() == args[0]->getType()) ) {
-						VLOG(2) << ctx.globalVar << " " << args[0];
-						i = 1;	//skip first arg
-						newArgs.push_back(ctx.globalVar);	//push correct globalVar
-					}
-					// HACK END
-
-					for (; i < args.size() - 1; i++) {
-						newArgs.push_back(args[i]);
-					}
-					newArgs.push_back(init);
-
-					core::ExpressionPtr&& newCall = builder.callExpr(
-							/*TODO: use refType(memberTy) instead of gen.getUnit() because of changes with destructors*/builder.refType(memberTy),
-							function,
-							newArgs
-					);
-					VLOG(2) << newCall << " " << newCall->getType();
-
-					decls.push_back(newCall);
-				} else {
-					// add normal assignment
-					decls.push_back(assign);
-				}
+				VLOG(2) << initializer << " -> " << fieldDecl->getNameAsString() << " = " << convertExpr(initializer->getInit());
+				ident = builder.stringValue(fieldDecl->getNameAsString());
 			}
-			//we added all initializers -> empty initializerMap
-			cxxCtx.ctorInitializerMap.clear();
-		}
+			if (initializer->isBaseInitializer()) {
+				const CXXRecordDecl *baseClass = initializer->getBaseClass()->getAsCXXRecordDecl();
 
+				VLOG(2) << initializer << " -> " << baseClass->getNameAsString() << " = " << convertExpr(initializer->getInit());
+				ident = builder.stringValue(baseClass->getNameAsString());
+			}
+
+			const core::TypePtr& memberTy =
+					core::static_pointer_cast<const core::NamedCompositeType>(classTypePtr)->getTypeOfMember(ident);
+
+			// create access to the member of the struct/class
+			core::ExpressionPtr&& init = builder.callExpr(
+					builder.refType( memberTy ),
+					gen.getCompositeRefElem(),
+					toVector<core::ExpressionPtr>( cxxCtx.thisVar, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy) )
+			);
+
+			core::ExpressionPtr parentThisStack = cxxCtx.thisStack2;
+			cxxCtx.thisStack2 = init;
+			core::ExpressionPtr expr = convertExpr(initializer->getInit());
+			VLOG(2) << cxxCtx.thisVar << cxxCtx.thisStack2 << parentThisStack;
+			cxxCtx.thisStack2 = parentThisStack;
+
+			// create the assign (class->Member = initializerExpr)
+			core::StatementPtr assign = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, tryDeref(expr));
+
+			// add assignment
+			decls.push_back(assign);
+		}
+	}
+
+	// if we introduce new decls we have to introduce them just before the body of the function
+	if ( !decls.empty() ) {
+		// if there decls to be added before the body (initializer, vFuncTables, ... )
 		// push the old body
 		decls.push_back(body);
 		body = builder.compoundStmt(decls);
