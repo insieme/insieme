@@ -173,7 +173,6 @@ TEST(Constraint, DNF) {
 
 
 TEST(Constraint, ExtractList) {
-{
 		IntConstraintPtr comb = IntConstraint(2, ConstraintType::LT) and
 								not_(IntConstraint(0, ConstraintType::EQ) or
 								 	 IntConstraint(3, ConstraintType::GT)) and 
@@ -192,5 +191,4 @@ TEST(Constraint, ExtractList) {
 		EXPECT_EQ(2u, conj.size());
 		EXPECT_EQ(4u, conj[0].size());
 		EXPECT_EQ(4u, conj[1].size());
-	}
 }

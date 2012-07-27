@@ -841,11 +841,26 @@ inline CombinerPtr<FuncTy> toDNF( const CombinerPtr<FuncTy>& cons ) {
 }
 
 template <class FuncTy>
-std::vector<std::vector<CombinerPtr<FuncTy>>> getConjuctions(const CombinerPtr<FuncTy>& c) {
+std::vector<std::vector<CombinerPtr<FuncTy>>> getConjunctions(const CombinerPtr<FuncTy>& c) {
 	ConjunctionsCollector<FuncTy> cnv;
 	cnv.visit(c);
 
 	return cnv.conjunctions;
+}
+
+
+template <class FuncTy> 
+CombinerPtr<FuncTy> fromConjunctions(const std::vector<std::vector<CombinerPtr<FuncTy>>>& conj) {
+
+	CombinerPtr<FuncTy> res;
+	for (const auto& c : conj) {
+		CombinerPtr<FuncTy> sub;
+		for (const auto& curr : c) 
+			sub = !sub ? curr : (sub and curr);
+		res = !res ? sub : (res or sub);
+	}
+	return res;
+
 }
 
 template <class FuncTy>
