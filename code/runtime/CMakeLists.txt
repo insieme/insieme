@@ -14,13 +14,30 @@ include(../lookup_lib.cmake)
 include (../add_unit_test.cmake)
 
 #add_subdirectory( pmlib )
-find_library(pthread_LIB pthread)
+
+#normally you won't find a pthread lib under windows
+if (NOT MSVC)
+	find_library(pthread_LIB pthread)
+endif()
 lookup_lib( PAPI papi )
 
-if(WIN32)
-set (GTEST_LIBRARY "$ENV{GTEST_ROOT}/bin/gtest.lib")
-set (GTEST_MAIN_LIBRARY "$ENV{GTEST_ROOT}/bin/gtest_main.lib")
+# for win64 we need to add a assembly object file to each target, see below.
+# For all other platforms this var is empty. This safes a lot of if clauses througout this file
+set (WIN64ASM_OBJ "") 
+if(MSVC)
+	#you need to have environment variables PTHREAD_ROOT and GTEST_ROOT which point to the base dir of those libraries/headers
+	set (PTHREAD_INCLUDE_DIRS "$ENV{PTHREAD_ROOT}/include")	
+	set (gtest_LIB "$ENV{GTEST_ROOT}/build/Debug/gtest.lib")
+	set (gtest_main_LIB "$ENV{GTEST_ROOT}/build/Debug/gtest_main.lib")
+	set (GTEST_INCLUDE_DIRS "$ENV{GTEST_ROOT}/include")
+	if (MSVC AND CMAKE_CL_64)
+		set (WIN64ASM_OBJ "${CMAKE_CURRENT_SOURCE_DIR}/asm/win64asm.obj")
+		set (pthread_LIB "$ENV{PTHREAD_ROOT}/lib/x64/pthreadVC2.lib")
+	else ()
+		set (pthread_LIB "$ENV{PTHREAD_ROOT}/lib/x86/pthreadVC2.lib")
+	endif()
 endif()
+	
 # enable C99 support within gcc
 if (CMAKE_COMPILER_IS_GNUCC)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
@@ -46,7 +63,7 @@ if(CMAKE_COMPILER_IS_ICC)
 endif()
 
 
-if (WIN32)
+if (MSVC)
 	message( "Setting up environment for windows" )
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -use_fsasm -D__x86_64__")
 	
@@ -65,6 +82,13 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 
 file(GLOB_RECURSE insieme_runtime_srcs 	src/*.c )
 file(GLOB_RECURSE insieme_runtime_incs 	include/*.h )
+
+#using MSVC we need to tell cmake to treat code as c++ code (also applies to testcases at the bottom)
+if (MSVC)
+	foreach (source_file ${insieme_runtime_srcs})
+		set_source_files_properties(${source_file} PROPERTIES LANGUAGE CXX)
+	endforeach(source_file)
+endif()
 
 # We also search for OpenCL in the SDK default location
 
@@ -87,19 +111,25 @@ else ( USE_OPENCL )
 	message(STATUS "OPENCL DISABLED")
 endif( USE_OPENCL )
 
-# Build the runtime
-add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} )
+# create the runtime target
+add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} ${WIN64ASM_OBJ})
+
 if ( USE_OPENCL )
 	target_link_libraries(insieme_runtime ${OPENCL_LIBS})
 endif ( USE_OPENCL )
 
-target_link_libraries(insieme_runtime ${pthread_LIB} dl rt m ${papi_LIB})
+
+#link libraries for the insieme_runtime target
+target_link_libraries(insieme_runtime ${pthread_LIB})
+if(NOT MSVC)
+	target_link_libraries(insieme_runtime dl rt m ${papi_LIB})
+endif()
 
 # lookup Google Test libraries
 lookup_lib ( GTEST gtest )
 lookup_lib ( GTEST_MAIN gtest_main )
 
-include_directories(include/ ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
+include_directories(include/ ${PTHREAD_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
 
 # --------------------------------------------------------- Valgrind / GTest testing suite
 # avoid multiple import
@@ -121,13 +151,14 @@ foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	set ( case_name ${ut_prefix}${case_name} )
-	add_executable(${case_name} ${case_file})
+	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
 	target_link_libraries(${case_name} ${pthread_LIB})
-	target_link_libraries(${case_name} dl)
-	target_link_libraries(${case_name} rt)
-	target_link_libraries(${case_name} m)
-	target_link_libraries(${case_name} ${papi_LIB})
-	
+	if(NOT MSVC)
+		target_link_libraries(${case_name} dl)
+		target_link_libraries(${case_name} rt)
+		target_link_libraries(${case_name} m)
+		target_link_libraries(${case_name} ${papi_LIB})
+	endif()
 	# add dependency to google test libraries
 	target_link_libraries(${case_name} ${gtest_LIB})
 	target_link_libraries(${case_name} ${gtest_main_LIB})
@@ -151,11 +182,16 @@ file(GLOB test_cases test/manual_*.c)
 foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-	add_library(${case_name} SHARED ${case_file})
-	target_link_libraries(${case_name} ${pthread_LIB})
-	target_link_libraries(${case_name} dl)
-	target_link_libraries(${case_name} m)
-	target_link_libraries(${case_name} ${papi_LIB})
+	add_library(${case_name} SHARED ${case_file} ${WIN64ASM_OBJ})
+	if(NOT MSVC)
+		target_link_libraries(${case_name} ${pthread_LIB})
+		target_link_libraries(${case_name} dl)
+		target_link_libraries(${case_name} m)
+		target_link_libraries(${case_name} ${papi_LIB})
+	endif()
+	if(MSVC)
+		set_source_files_properties(${case_file} PROPERTIES LANGUAGE CXX)
+	endif()
 endforeach(case_file)
 
 # handle standalone (executable) test cases
@@ -164,12 +200,18 @@ foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	include_directories(include/ $ENV{OPENCL_ROOT}/include/)
-	add_executable(${case_name} ${case_file})
+	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
 	target_link_libraries(${case_name} ${pthread_LIB})
-	target_link_libraries(${case_name} dl)
-	target_link_libraries(${case_name} rt)
-	target_link_libraries(${case_name} m)
-	target_link_libraries(${case_name} ${papi_LIB})
+	if(NOT MSVC)
+		target_link_libraries(${case_name} dl)
+		target_link_libraries(${case_name} rt)
+		target_link_libraries(${case_name} m)
+		target_link_libraries(${case_name} ${papi_LIB})
+	endif()
+	if(MSVC)
+		set_source_files_properties(${case_file} PROPERTIES LANGUAGE CXX)
+	endif()
+	
 	if ( USE_OPENCL )
     	target_link_libraries(${case_name} ${OPENCL_LIBS})
 	endif ( USE_OPENCL )

@@ -47,8 +47,8 @@
 */
 int32 gettimeofday(struct timeval* tv, void* tz){
 	FILETIME ft; 
-	__int64 tmpres = 0; 
-	ZeroMemory(&ft,sizeof(ft));
+	uint64 tmpres = 0; 
+	memset(&ft, 0, sizeof(ft));
 	GetSystemTimeAsFileTime(&ft); 
  
 	tmpres = ft.dwHighDateTime; 
@@ -58,8 +58,8 @@ int32 gettimeofday(struct timeval* tv, void* tz){
 	tmpres /= 10;  /*convert into microseconds*/
 	//const __int64 DELTA_EPOCH_IN_MICROSECS = 11644473600000000;
 	//tmpres -= DELTA_EPOCH_IN_MICROSECS;  //uncomment if you want to use unix epoch instead of windows epoch
-	tv->tv_sec = (__int32)(tmpres*0.000001); 
-	tv->tv_usec =(tmpres%1000000);
+	tv->tv_sec = (long)(tmpres/1000000); 
+	tv->tv_usec = (long)(tmpres%1000000);
 
 	return 0; 
 }
