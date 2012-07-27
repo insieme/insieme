@@ -119,6 +119,55 @@ IterationDomain makeVarRange(IterationVector& 				iterVec,
 	);
 }
 
+
+IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAddress& addr) {
+	
+	// Find the enclosing SCoP (if any)
+	core::NodeAddress prev = addr;
+	core::NodeAddress parent;
+	// get the immediate SCoP
+	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && !parent->hasAnnotation( scop::ScopRegion::KEY) ) { prev=parent; } 
+
+	// This statement is not part of a SCoP (also may throw an exception)
+	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { return IterationDomain( IterationVector() ); }
+
+	StatementAddress enclosingScop = parent.as<StatementAddress>();
+
+	prev = parent;
+	// Iterate throgh the stateemnts until we find the entry point of the SCoP
+	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) ) { 
+		prev=parent;
+	} 
+
+	assert(parent && "Scop entry not found");
+
+	// Resolve the SCoP from the entry point
+	Scop scop = parent->getAnnotation( scop::ScopRegion::KEY )->getScop();
+
+	// navigate throgh the statements of the SCoP until we find the one 
+	auto fit = std::find_if(scop.begin(), scop.end(), [&](const StmtPtr& cur) { 
+			return isChildOf(cur->getAddr(),addr);
+		}); 
+
+	if (fit != scop.end()) {
+		vec = scop.getIterationVector();
+		// found stmt containing the requested expression 
+		return IterationDomain(vec, (*fit)->getDomain());
+	}
+
+	vec = scop.getIterationVector();
+	IterationDomain cur = IterationDomain(vec, enclosingScop->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints());
+	// otherwise the expression is part of a condition expression 
+	prev = enclosingScop;
+	// Iterate throgh the stateemnts until we find the entry point of the SCoP
+	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) ) { 
+		prev=parent;
+		cur &= IterationDomain( vec, prev->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints() );
+	} 
+	return cur;
+}	
+
+
 //==== AffineSystem ==============================================================================
 
 std::ostream& AffineSystem::printTo(std::ostream& out) const {
