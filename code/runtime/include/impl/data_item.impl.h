@@ -48,9 +48,6 @@
 #include "impl/irt_context.impl.h"
 #include "impl/instrumentation.impl.h"
 
-#ifdef _MSC_VER
-	#include <Windows.h>
-#endif
 
 
 IRT_DEFINE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
@@ -198,7 +195,7 @@ irt_data_block* irt_di_acquire(irt_data_item* di, irt_data_mode mode) {
 	// create the data blocks
 	uint64 type_size = irt_type_get_bytes(irt_context_get_current(), di->type_id);
 	uint32 dim = di->dimensions;
-	uint64 sizes[dim];
+	uint64 *sizes = (uint64*)alloca(sizeof(uint64)*dim);
 	for (uint32 i=0; i<dim; ++i) {
 		sizes[i] = di->ranges[i].end - di->ranges[i].begin;
 	}

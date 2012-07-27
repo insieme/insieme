@@ -40,6 +40,16 @@
 #include "id_generation.h"
 #include "config.h"
 
+#ifdef _MSC_VER
+	#include <Windows.h>
+#endif
+
+#ifdef WIN32
+	#include <malloc.h>
+#else
+	#include <alloca.h>
+#endif
+
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 

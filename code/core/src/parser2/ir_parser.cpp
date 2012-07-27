@@ -765,7 +765,8 @@ namespace parser {
 			g.addRule("N", rule(E, forward));
 			g.addRule("N", rule(S, forward));
 
-//			std::cout << g << "\n";
+//			std::cout << g << "\n\n";
+//			std::cout << g.getTermInfo() << "\n";
 
 			return g;
 		}
