@@ -805,6 +805,79 @@ namespace parser {
 
 	}
 
+	TEST(Parser, TerminalPairs) {
+		NodeManager manager;
+
+		auto T = rec("T");
+		auto A = rec("A");
+		auto B = rec("B");
+		auto C = rec("C");
+
+		// create a simple grammar
+		Grammar g("T");
+
+		g.addRule("T", rule(A, accept));
+		g.addRule("T", rule(B, accept));
+		g.addRule("A", rule(seq("(", list(T, ",") , ")"), accept));
+		g.addRule("B", rule(seq("[", list(T, ",") , "]"), accept));
+
+		// a pair where opener and closer are identical
+		g.addRule("C", rule(seq("|", list(T, ",") , "|"), accept));
+
+		// where both are the same but re-used
+		g.addRule("C", rule(seq("~", list(T, ",") , "~"), accept));
+		g.addRule("C", rule(seq("~"), accept));
+
+		// a strange pair ...
+		g.addRule("C", rule(seq("+", list(T, ",") , "-"), accept));
+
+		// a strange pair that should not work - opener reused
+		g.addRule("C", rule(seq("*", list(T, ",") , "/"), accept));
+		g.addRule("C", rule(lit("*"), accept));
+
+		// another strange pair that should not work - closer is reused
+		g.addRule("C", rule(seq("%", list(T, ",") , "."), accept));
+		g.addRule("C", rule(lit("."), accept));
+
+//		std::cout << "Grammar: " << g << "\n";
+
+		EXPECT_TRUE(g.match(manager, "([(),[]])"));
+		EXPECT_FALSE(g.match(manager, "([([),]])"));
+
+		// compute term meta information
+		const Grammar::TermInfo& info = g.getTermInfo();
+//		std::cout << "TermInfo: " << info << "\n";
+
+		// accepted pairs should be ...
+		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('(')));
+		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol(')')));
+		EXPECT_EQ(Token::createSymbol(')'), info.getClosingParenthese(Token::createSymbol('(')));
+
+		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('[')));
+		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol(']')));
+		EXPECT_EQ(Token::createSymbol(']'), info.getClosingParenthese(Token::createSymbol('[')));
+
+		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('|')));
+		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol('|')));
+		EXPECT_EQ(Token::createSymbol('|'), info.getClosingParenthese(Token::createSymbol('|')));
+
+		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('+')));
+		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol('-')));
+		EXPECT_EQ(Token::createSymbol('-'), info.getClosingParenthese(Token::createSymbol('+')));
+
+		// the one that should be excluded since opener and closer are re-used
+		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('~')));
+		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('~')));
+
+		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('*')));
+		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('/')));
+
+		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('%')));
+		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('.')));
+
+
+	}
+
 } // end namespace parser
 } // end namespace core
 } // end namespace insieme
