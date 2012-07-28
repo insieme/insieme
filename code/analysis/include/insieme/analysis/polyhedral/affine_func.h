@@ -61,7 +61,7 @@ struct NotAffineExpr : public std::logic_error {
 
 	NotAffineExpr(const core::ExpressionPtr& expr) : std::logic_error(""), expr(expr) {
 		std::ostringstream ss;
-		ss << "Expression '" << *expr << "' is not a linear affine function";
+		ss << "Expression '" << (expr ? toString(*expr) : "NULL") << "' is not a linear affine function";
 		msg = ss.str();
 	}
 	
@@ -212,6 +212,27 @@ public:
 
 	inline bool isConstant() const { 
 		return all(coeffs.begin(), coeffs.end()-1, [](const int& cur) { return cur == 0; }); 
+	}
+
+	bool operator<(const AffineFunction& other) const {
+		if (&getIterationVector() == &other.getIterationVector()) {
+			
+			auto thisIt = begin(), thisEnd = end();
+			auto otherIt = other.begin(), otherEnd = other.end();
+
+			assert((std::distance(thisIt, thisEnd) == std::distance(otherIt, otherEnd)) && 
+					"size of 2 iterators differs");
+
+			while(thisIt != thisEnd) {
+				assert((*thisIt).first == (*otherIt).first);
+				if ((*thisIt).second >= (*otherIt).second)
+					return false;
+				++thisIt; ++otherIt;
+			}
+			return true;
+		}
+
+		return getIterationVector() < other.getIterationVector();
 	}
 
 	// Implements the Printable interface 

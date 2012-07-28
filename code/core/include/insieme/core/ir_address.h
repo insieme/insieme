@@ -796,10 +796,10 @@ bool isChildOf(const Address<const T>& src, const Address<const N>& trg) {
 		return false;
 	}
 	// if it is the same node we are looking at, just return true
-	if (src == trg) { return true; }
+	if (src.getPath() == trg.getPath()) { return true; }
 	if (src.getDepth() > trg.getDepth()) { return false; }
 
-	return src == trg.getParentAddress( trg.getDepth() - src.getDepth() );
+	return src.getPath() == trg.getParentAddress( trg.getDepth() - src.getDepth() ).getPath();
 }
 
 template <class T, class N>

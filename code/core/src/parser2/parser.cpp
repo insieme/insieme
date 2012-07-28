@@ -243,33 +243,81 @@ namespace parser {
 
 			// limit range of search space
 			unsigned min = sequence[0].limit.getMin();
-			unsigned max = std::min(sequence[0].limit.getMax(), (unsigned)(tokens.size()-terminalSize))+1;
-			unsigned inc = 1;
+			unsigned max = std::min(sequence[0].limit.getMax(), (unsigned)(tokens.size()-terminalSize));
 
-			// walk in the other direction if left associative
-			if (leftAssociative) {
-				unsigned h = min; min = max; max = h;
-				max--; min--;	// shift excluded boundaries
-				inc = -1;
-			}
+			// get the first terminal to be looking for
+			TermPtr headTerminal = terminal.terms[0];
 
-			// search within potential scope
-			for(unsigned i = min; i!= max; i+=inc) {
+			// search all candidates first
+			const Grammar::TermInfo& info = context.grammar.getTermInfo();
+			vector<Token> parentheseStack;
+			vector<unsigned> candidates;
+			for(unsigned i = 0; i<max; ++i) {
+				const Token& cur = tokens[i];
+
+				// if current token is an opener => put closer on the stack
+				if (info.isLeftParenthese(cur)) {
+					parentheseStack.push_back(info.getClosingParenthese(cur));
+				}
+
+				// check whether it is a closer
+				if (info.isRightParenthese(cur)) {
+					if (!parentheseStack.empty() && parentheseStack.back() == cur) {
+						parentheseStack.pop_back();	// all fine
+					} else {
+						if (headTerminal->match(context, tokens.begin() + i, tokens.begin() + i +1)) {
+							// will be the last to be matched (it is the closing parentheses pair)
+							max = i;
+						} else {
+							// nothing more will be matched - parentheses not balanced
+							break;	// no need to continue search for candidates
+						}
+					}
+				}
+
+				// check whether iterator is inside a nested expression
+				//		- if searched head node is start of parentheses pair we still have to continue
+				bool isOpenToken = info.isLeftParenthese(cur) && headTerminal->match(context, tokens.begin() + i, tokens.begin() + i +1);
+				if (!(parentheseStack.empty() || (isOpenToken && parentheseStack.size() == 1u))) {
+					continue;	// jup, still inside => no candidate
+				}
+
+				// skip elements outside search range
+				if (i < min) continue;
 
 				// check token before and after token sequence
 				if (i > 0 && !before.contains(tokens[i-1])) continue;
 				if (i+terminalSize < tokens.size() && !after.contains(tokens[i+terminalSize])) continue;
 
-				// check terminal at corresponding position
+				// check terminals at corresponding position
 				TokenIter pos = tokens.begin() + i;
 				bool fit = true;
 				for(const TermPtr& cur : terminal.terms) {
 					fit = fit && cur->match(context, pos, pos+1);
 					pos++;
 				}
-
-				// no match at this position
 				if (!fit) continue;
+
+				// found a candidate
+				candidates.push_back(i);
+
+			}
+
+			// check whether candidates are empty
+			if (candidates.empty()) {
+				return fail(context, tokens.begin(), tokens.end());
+			}
+
+			// update speculation flag
+			context.setSpeculative(context.isSpeculative() || candidates.size() > 1u);
+
+			// reverse search order in left-associative case
+			if (leftAssociative) {
+				std::reverse(candidates.begin(), candidates.end());
+			}
+
+			// search within potential scope
+			for(unsigned i : candidates) {
 
 				// recursively match remaining terminals
 				ranges.push_back(SubRange(range(sequence.front().terms), tokens.subrange(0,i)));
@@ -291,7 +339,6 @@ namespace parser {
 	}
 
 	Result Sequence::matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
-
 		auto pattern = range(sequence);
 		auto token = range(begin, end);
 
@@ -430,7 +477,7 @@ namespace parser {
 
 		// check number of candidates
 		if (candidates.empty()) {
-			return false;		// will not match
+			return fail(context, begin, end);		// will not match
 		}
 
 
@@ -442,7 +489,7 @@ namespace parser {
 			if (res) { return res; }
 			backup.restore(context);
 		}
-		return false;
+		return fail(context, begin, end);
 	}
 
 
@@ -460,24 +507,74 @@ namespace parser {
 
 		// check head element
 		if (!context.grammar.getStartSet(body).contains(*begin)) {
-			return false;	// will never match
+			return fail(context, begin, end);	// will never match
 		}
 
 		// search largest portion starting from head being accepted by the body
 		unsigned size = std::distance(begin, end);
-		TokenIter curEnd = begin + std::min(body->getMinRange(), size);
-		TokenIter upperLimit = begin + std::min(body->getMaxRange(), size) + 1;
+		TokenIter lowerLimit = begin + std::min(body->getMinRange(), size) - 1;
+		TokenIter upperLimit = begin + std::min(body->getMaxRange(), size);
 
+		// the set of tokens ending the body
+		const auto& endSet = context.grammar.getEndSet(body);
+
+		// compute list of candidate-split-points
+		const Grammar::TermInfo& info = context.grammar.getTermInfo();
+		vector<Token> parentheseStack;
+		vector<TokenIter> candidates;
+		for(auto it = begin; it != upperLimit; ++it) {
+			const Token& cur = *it;
+
+			// if current token is an opener => put closer on the stack
+			if (info.isLeftParenthese(cur)) {
+				parentheseStack.push_back(info.getClosingParenthese(cur));
+				continue;
+			}
+
+			// check whether it is a closer
+			if (info.isRightParenthese(cur)) {
+				if (!parentheseStack.empty() && parentheseStack.back() == cur) {
+					parentheseStack.pop_back();	// all fine
+				} else {
+					// nothing more will be matched - parentheses not balanced
+					break;	// no need to continue search for candidates
+				}
+			}
+
+			// check whether iterator is inside a nested expression
+			if (!parentheseStack.empty()) {
+				continue;	// jup, still inside => no candidate
+			}
+
+			// so, there is nothing on the stack ..
+			assert(parentheseStack.empty());
+
+			// we are getting closer - check whether we are within the search range
+			if (it < lowerLimit) {
+				continue;
+			}
+
+			// now check whether current token is a terminator for the body
+			if (!endSet.contains(cur)) {
+				continue;
+			}
+
+			// nice - we have a candidate (the end is the next token)
+			candidates.push_back(it+1);
+		}
+
+		// check whether there are candidates
+		if (candidates.empty()) {
+			return fail(context, begin, end);
+		}
+
+
+		// update speculation flag
 		auto backup = context.backup();
+		context.setSpeculative(context.isSpeculative() || candidates.size() > 1u);
 
 		// gradually reduce the range to be matched
-		const auto& endSet = context.grammar.getEndSet(body);
-		while (curEnd != upperLimit) {
-
-			// check end node
-			if (!endSet.contains(*(curEnd-1))) {
-				curEnd++; continue;	// will not match
-			}
+		for(const auto& curEnd : candidates) {
 
 			// try current sub-range
 			Result res = body->match(context, begin, curEnd);
@@ -491,9 +588,6 @@ namespace parser {
 				// otherwise try next ..
 				backup.restore(context);
 			}
-
-			// try one step smaller
-			curEnd++;
 		}
 
 		// no first match found => no match at all
@@ -582,6 +676,106 @@ namespace parser {
 		}
 	}
 
+	void Sequence::addTokenPairs(std::map<Token,Token>& map) const {
+		// not the best but a fool-proof implementation (hopefully)
+		vector<TermPtr> terms;
+		for(const SubSequence& cur : sequence) {
+			for(const TermPtr& term : cur.terms) {
+				terms.push_back(term);
+			}
+		}
+
+		// now search token pairs
+		for(auto a = terms.begin(); a != terms.end(); ++a) {
+			auto terminal = dynamic_pointer_cast<Terminal>(*a);
+			if (!terminal) continue;
+
+			// found a start symbol
+			const Token& start = terminal->getTerminal();
+			if (start.getType() != Token::Symbol) { continue; }
+
+			// search end symbol
+			bool spansNonTerminal = false;
+			for(auto b=a+1; b != terms.end(); ++b) {
+				auto terminal = dynamic_pointer_cast<Terminal>(*b);
+				if (!terminal) {
+					spansNonTerminal = true;
+					continue;
+				}
+
+				// if there was no variable part in between ..
+				if (!spansNonTerminal) {
+					break;		// .. it can be skipped
+				}
+
+				const Token& end = terminal->getTerminal();
+				if (end.getType() != Token::Symbol) {
+					spansNonTerminal = true;
+					continue;
+				}
+
+				// an end has been found!
+				map[start] = end;
+				break;	// no further search necessary
+			}
+
+		}
+	}
+
+	namespace {
+
+		template<typename TokenIter>
+		bool checkParenthese(const Token& start, const Token& end, const TokenIter& tbegin, const TokenIter& tend) {
+			// search through range for start token
+			for(auto a = tbegin; a != tend; ++a) {
+				if (*a != start) continue;
+
+				// if start is present, end has to be as well!
+				bool found = false;
+				for(auto b=a+1; !found && b != tend; ++b) {
+					if (*b == end) {
+						found = true;
+						a = b;	// continue search from here
+					} else if (*b == start) {
+						return false; // another start before the end => pair not supported
+					}
+				}
+
+				// if there is no corresponding end-symbol the pair is not supported!
+				if (!found) return false;
+			}
+
+			// no violation found => everything is fine
+			return true;
+		}
+
+	}
+
+
+	bool Sequence::supportsPair(const pair<Token,Token>& pair) const {
+
+		// create list of tokens included within this sequence
+		vector<Token> tokenSeq;
+		for(const SubSequence& cur : sequence) {
+			for(const TermPtr& term : cur.terms) {
+				if (auto cur = dynamic_pointer_cast<Terminal>(term)) {
+					const Token& token = cur->getTerminal();
+					if (token.getType() == Token::Symbol) {
+						tokenSeq.push_back(token);
+					}
+				}
+			}
+		}
+
+		// extract start and end tokens
+		const Token& start = pair.first;
+		const Token& end = pair.second;
+
+		// search forward and backward direction
+		return	checkParenthese(start, end, tokenSeq.begin(), tokenSeq.end()) &&
+				checkParenthese(end, start, tokenSeq.rbegin(), tokenSeq.rend());
+
+	}
 
 
 	namespace detail {
@@ -676,6 +870,10 @@ namespace parser {
 				join("\n\t", nonTerminalInfos,
 					[](std::ostream& out, const pair<string,StartEndSets>& cur) {
 						out << cur.first << ": \t" << cur.second.first << " ... " << cur.second.second;
+				}) << "\n TerminalPairs: \n\t" <<
+				join("\n\t", parenthesePairs,
+					[](std::ostream& out, const pair<Token,Token>& cur) {
+						out << cur.first.getLexeme() << " " << cur.second.getLexeme();
 				}) << "\n}";
 	}
 
@@ -805,6 +1003,8 @@ namespace parser {
 		// re-initialize term info
 		info = TermInfo();
 
+		// ---- compute start / end sets -----
+
 		// initialize information
 		for(const TermPtr& cur : terms) {
 			info.termInfos[cur];	// uses default initialization
@@ -832,6 +1032,40 @@ namespace parser {
 					changed = sets.first.add(getStartSet(rule->getPattern())) || changed;
 					changed = sets.second.add(getEndSet(rule->getPattern())) || changed;
 				}
+			}
+		}
+
+
+		// ---- compute pairs -----
+
+		// start by collecting top-level production rule sequences
+		typedef std::shared_ptr<Sequence> SequencePtr;
+		std::vector<SequencePtr> sequences;
+		for(const auto& production : productions) {
+			for(const auto& rule : production.second) {
+				const TermPtr& cur = rule->getPattern();
+				if (auto sequence = dynamic_pointer_cast<Sequence>(cur)) {
+					sequences.push_back(sequence);
+				} else {
+					// turn into a sequence and add it to the list
+					sequences.push_back(seq(cur));
+				}
+			}
+		}
+
+		// create list of token-pair candidates
+		std::map<Token,Token> tokenPairCandidates;
+		for(const SequencePtr& cur : sequences) {
+			cur->addTokenPairs(tokenPairCandidates);
+		}
+
+		// check candidates (whenever the left-hand-side is present, the right has to be as well)
+		for(const pair<Token,Token>& cur : tokenPairCandidates) {
+
+			// if all sequences support the current pair ...
+			auto support = [&](const SequencePtr& seq) { return seq->supportsPair(cur); };
+			if (all(sequences, support)) {
+				info.addParenthese(cur.first, cur.second); // .. we can add it to the result
 			}
 		}
 	}

@@ -52,7 +52,6 @@
 namespace insieme { 
 namespace analysis { 
 
-
 enum class VarType { SCALAR, MEMBER, TUPLE, ARRAY };
 
 /** 

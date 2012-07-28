@@ -117,6 +117,12 @@ def initialize_env
     set_standard_path
   end
 
+  if (host == "klaus-T400")
+    $main_dir = '/home/klaus/insieme/build/'
+    $lib_dir = '/home/klaus/insieme-libs/'
+    set_standard_path
+  end
+
   ENV['IRT_INST_WORKER_EVENT_LOGGING'] = "true"
   $path =  Dir.pwd.gsub!($script_dir, '')
   install_gems host

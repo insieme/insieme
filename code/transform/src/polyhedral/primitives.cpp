@@ -372,7 +372,7 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 
 	// Make sure the domain is based on the current iteration vector
 	AffineConstraintPtr domain = cloneConstraint(iterVec, dom.getConstraint());
-	DisjunctionList&& disjunctions = getConjuctions(toDNF(domain)), lb, ub;
+	DisjunctionList&& disjunctions = getConjunctions(toDNF(domain)), lb, ub;
 
 	boost::tie(lb,ub) = getDomainBounds(iterVec, iter, disjunctions);
 	boost::tie(lb,ub) = std::make_pair(replace(lb, iter, newIter), replace(ub, iter, newIter));

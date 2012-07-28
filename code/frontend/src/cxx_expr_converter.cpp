@@ -1314,9 +1314,6 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXConstructExp
 
 	assert( convFact.currTU && "Translation unit not set.");
 
-	CXXConversionContext::CtorInitializerMap parentCtorInitializerMap = convFact.cxxCtx.ctorInitializerMap;
-	convFact.cxxCtx.ctorInitializerMap.clear();
-
 	// preserve THIS
 	core::ExpressionPtr parentThisStack = convFact.cxxCtx.thisStack2;
 
@@ -1328,20 +1325,6 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXConstructExp
 		packedArgs.push_back(parentThisStack);
 	}
 	VLOG(2) << cxxCtx.thisStack2 << parentThisStack;
-
-	// handle initializers
-	for (clang::CXXConstructorDecl::init_iterator iit =
-			constructorDecl->init_begin(), iend =
-			constructorDecl->init_end(); iit != iend; iit++) {
-		clang::CXXCtorInitializer * initializer = *iit;
-
-		if (initializer->isMemberInitializer()) {
-			FieldDecl *fieldDecl = initializer->getMember();
-
-			VLOG(2) << initializer << " -> " << fieldDecl->getNameAsString() << " = " << Visit(initializer->getInit());
-			convFact.cxxCtx.ctorInitializerMap.insert( std::make_pair(fieldDecl, Visit(initializer->getInit())));
-		}
-	}
 
 	CXXConversionFactory::CXXConversionContext::ScopeObjects downStreamSScopeObjectsCopy =
 	convFact.cxxCtx.downStreamScopeObjects;
@@ -1362,7 +1345,6 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXConstructExp
 	core::ExpressionPtr ctorExpr = core::static_pointer_cast<const core::LambdaExpr>(convFact.convertFunctionDecl(funcDecl));
 
 	convFact.cxxCtx.thisStack2 = parentThisStack;
-	convFact.cxxCtx.ctorInitializerMap = parentCtorInitializerMap;
 	ctx.globalVar = parentGlobalVar;
 	VLOG(2)<<parentThisStack;
 
@@ -1577,31 +1559,9 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXNewExpr(clan
 			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 		}
 
-		CXXConversionContext::CtorInitializerMap parentCtorInitializerMap = convFact.cxxCtx.ctorInitializerMap;
-		convFact.cxxCtx.ctorInitializerMap.clear();
-
-		// handle initializers
-		for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(),
-				iend = constructorDecl->init_end(); iit!=iend; iit++) {
-			clang::CXXCtorInitializer * initializer = *iit;
-
-			if(initializer->isMemberInitializer()) {
-				FieldDecl *fieldDecl = initializer->getMember();
-				RecordDecl *recordDecl = fieldDecl->getParent();
-
-				core::TypePtr recordTypePtr;
-				recordTypePtr = convFact.convertType(recordDecl->getTypeForDecl());
-
-				core::ExpressionPtr initExpr = Visit(initializer->getInit());
-				VLOG(2) << initializer << " -> " << fieldDecl->getNameAsString() << " = "<< initExpr;
-				convFact.cxxCtx.ctorInitializerMap.insert( std::make_pair(fieldDecl, initExpr) );
-			}
-		}
-
 		core::ExpressionPtr ctorExpr = core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
 
 		convFact.cxxCtx.thisStack2 = parentThisStack;
-		convFact.cxxCtx.ctorInitializerMap = parentCtorInitializerMap;
 
 		if(isArray) {
 			// variable to iterate over array
@@ -1850,10 +1810,11 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(c
 				);
 
 			// loop over all elements of array and call dtor
+			// Dtors are called in reverse order of construction!
 			core::ForStmtPtr dtorLoop = builder.forStmt(
 				itVar,
-				builder.literal(gen.getUInt4(), toString(0)),
 				arraySize,
+				builder.literal(gen.getUInt4(), toString(0)),
 				builder.literal(gen.getUInt4(), toString(1)),
 				dtorCall
 			);

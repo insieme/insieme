@@ -60,7 +60,7 @@ TEST(DefUseCollect, Scalar) {
 	);
 
 	RefList&& refs = collectDefUse(compStmt);
-	EXPECT_EQ(static_cast<size_t>(3), refs.size());
+	EXPECT_EQ(3u, refs.size());
 
 	// all the refs are usages 
 	std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ 
@@ -84,7 +84,7 @@ TEST(DefUseCollect, SimpleArray) {
 		// std::cout << *compStmt << std::endl;
 
 		RefList&& refs = collectDefUse(compStmt);
-		EXPECT_EQ(static_cast<size_t>(2), refs.size());
+		EXPECT_EQ(2u, refs.size());
 
 		// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
 
@@ -92,7 +92,7 @@ TEST(DefUseCollect, SimpleArray) {
 		std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ 
 				EXPECT_TRUE(cur->getUsage() == Ref::USE);
 				if (cur->getType() == Ref::ARRAY) {
-					EXPECT_EQ(static_cast<size_t>(1), static_cast<ArrayRef&>(*cur).getIndexExpressions().size());
+					EXPECT_EQ(1u, static_cast<ArrayRef&>(*cur).getIndexExpressions().size());
 				} else {
 					EXPECT_TRUE(cur->getType() == Ref::SCALAR);
 				}
@@ -117,7 +117,7 @@ TEST(DefUseCollect, Assignment) {
 		// std::cout << *compStmt << std::endl;
 
 		RefList&& refs = collectDefUse(compStmt);
-		EXPECT_EQ(static_cast<size_t>(1), refs.size());
+		EXPECT_EQ(1u, refs.size());
 		const Ref& ref = **refs.begin();
 		EXPECT_TRUE(ref.getUsage() == Ref::DEF);
 
@@ -125,7 +125,9 @@ TEST(DefUseCollect, Assignment) {
 		
 		EXPECT_TRUE(ref.getType() == Ref::SCALAR);
 
-	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
+	} catch(parse::ParseException& e) { 
+		std::cout << e.what() << std::endl;
+	}
 
 }
 
@@ -144,7 +146,7 @@ TEST(DefUseCollect, ArrayAccess) {
 		// std::cout << *compStmt << std::endl;
 
 		RefList&& refs = collectDefUse(compStmt);
-		EXPECT_EQ(static_cast<size_t>(2), refs.size());
+		EXPECT_EQ(2u, refs.size());
 
 		for_each(refs.arrays_begin(), refs.arrays_end(),
 			[](const RefPtr& cur) {
@@ -173,7 +175,7 @@ TEST(DefUseCollect, ArrayAssignment) {
 		// std::cout << *compStmt << std::endl;
 
 		RefList&& refs = collectDefUse(compStmt);
-		EXPECT_EQ(static_cast<size_t>(3), refs.size());
+		EXPECT_EQ(3u, refs.size());
 
 		RefList::ref_iterator<ArrayRef> it = refs.arrays_begin(), end = refs.arrays_end();
 		EXPECT_TRUE((*it)->getUsage() == Ref::USE);
@@ -204,7 +206,7 @@ TEST(DefUseCollect, ArrayAssignment2) {
 		// std::cout << *compStmt << std::endl;
 
 		RefList&& refs = collectDefUse(compStmt);
-		EXPECT_EQ(static_cast<size_t>(3), refs.size());
+		EXPECT_EQ(3u, refs.size());
 
 		RefList::ref_iterator<ArrayRef> it = refs.arrays_begin(), end = refs.arrays_end();
 		EXPECT_TRUE((*it)->getUsage() == Ref::USE);

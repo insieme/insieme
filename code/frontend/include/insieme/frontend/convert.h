@@ -562,8 +562,8 @@ class CXXConversionFactory: public ConversionFactory {
 		core::ExpressionPtr rhsThis;
 
 		// maps the values of each constructor initializer to its declaration, e.g. A() a(0) {} => a...field, 0...value
-		typedef std::map<const clang::FieldDecl*, core::ExpressionPtr> CtorInitializerMap;
-		CtorInitializerMap ctorInitializerMap;
+//		typedef std::map<const clang::FieldDecl*, core::ExpressionPtr> CtorInitializerMap;
+//		CtorInitializerMap ctorInitializerMap;
 
 		CXXConversionContext() : useClassCast(false), isCXXOperator(false) {
 		}
