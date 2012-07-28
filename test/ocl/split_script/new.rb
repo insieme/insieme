@@ -415,57 +415,57 @@ class Test
     puts "#####################################"
     puts "#####    " + "Evaluation Summary".light_blue + "     #####"
     puts "#####################################"
-    best_complete = 0; pred_complete = 0; worst_complete = 0; cpu_complete = 0; gpu_complete = 0; two_gpu_complete = 0; random_complete = 0;
+    best_complete = []; pred_complete = []; worst_complete = []; cpu_complete = []; gpu_complete = []; two_gpu_complete = []; random_complete = [];
     @test_names.each_with_index do |test_name, index|
       puts " * #{test_name}".light_blue
       perc = global_perc[index][0].average.to_i
-      best_complete += perc;
+      best_complete << global_perc[index][0]
       puts " * "+ "Best Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".green
 
       perc = global_perc[index][1].average.to_i
-      pred_complete += perc;
+      pred_complete << global_perc[index][1]
       puts " * "+ "Predicted Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".yellow
 
       perc = global_perc[index][2].average.to_i
-      worst_complete += perc;
+      worst_complete << global_perc[index][2]
       puts " * "+ "Worst Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".red
 
       perc = global_perc[index][3].average.to_i
-      cpu_complete += perc;
+      cpu_complete << global_perc[index][3]
       puts " * "+ "Cpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
 
       perc = global_perc[index][4].average.to_i
-      gpu_complete += perc;
+      gpu_complete << global_perc[index][4]
       puts " * "+ "Gpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
 
       if two_gpu_exist == true
         perc = global_perc[index][5].average.to_i
-        two_gpu_complete += perc;
+        two_gpu_complete << global_perc[index][5]
         puts " * "+ "2Gpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
       end
 
       perc = global_perc[index][6].average.to_i
-      random_complete += perc;
+      random_complete << global_perc[index][6]
       puts " * "+ "Random Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
 
     end
     puts
     puts " * COMPLETE EVALUATION".magenta
-      perc = best_complete/@test_names.size
+      perc = best_complete.flatten.average.to_i
       puts " * "+ "Best Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".green
-      perc = pred_complete/@test_names.size
+      perc = pred_complete.flatten.average.to_i
       puts " * "+ "Predicted Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".yellow
-      perc = worst_complete/@test_names.size
+      perc = worst_complete.flatten.average.to_i
       puts " * "+ "Worst Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".red
-      perc = cpu_complete/@test_names.size
+      perc = cpu_complete.flatten.average.to_i
       puts " * "+ "Cpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
-      perc = gpu_complete/@test_names.size
+      perc = gpu_complete.flatten.average.to_i
       puts " * "+ "Gpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
       if two_gpu_exist == true
-        perc = two_gpu_complete/@test_names.size
+        perc = two_gpu_complete.flatten.average.to_i
         puts " * "+ "2Gpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
       end
-      perc = random_complete/@test_names.size
+      perc = random_complete.flatten.average.to_i
       puts " * "+ "Random Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
     puts
   end
@@ -759,18 +759,17 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-#test = Test.new(split, [2, 18], [1], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..22, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
 test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
 
 
 # run the test
-#test.info
-#test.compile
-#test.check
+test.info
+test.compile
+test.check
 #test.run
 #test.fix
 #test.fake
 #test.view
 #test.collect
-test.evaluate :svm # or :ffnet
+#test.evaluate :svm # or :ffnet
 
