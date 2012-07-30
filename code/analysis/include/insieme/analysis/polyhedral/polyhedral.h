@@ -204,6 +204,11 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 };
 
+/**
+ * Given an IR statement, return the its polyhedral representation starting from the outermost SCoP
+ *
+ * If the statement is not inside a SCoP, the returned optional object will be not initialized
+ */
 boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& stmt);
 
 //*************************************************************************************************

@@ -153,7 +153,7 @@ void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element
 } // end anonymous namespace 
 
 
-IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAddress& addr) {
+boost::optional<IterationDomain> getVariableDomain(const core::ExpressionAddress& addr) {
 	
 
 	// Find the enclosing SCoP (if any)
@@ -163,7 +163,7 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && !parent->hasAnnotation( scop::ScopRegion::KEY) ) { prev=parent; } 
 
 	// This statement is not part of a SCoP (also may throw an exception)
-	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { return IterationDomain( vec ); }
+	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { return boost::optional<IterationDomain>(); }
 
 	StatementAddress enclosingScop = parent.as<StatementAddress>();
 
@@ -176,7 +176,7 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	assert(parent && "Scop entry not found");
 
 	// Resolve the SCoP from the entry point
-	const Scop& scop = prev->getAnnotation( scop::ScopRegion::KEY )->getScop();
+	Scop& scop = prev->getAnnotation( scop::ScopRegion::KEY )->getScop();
 
 	// navigate throgh the statements of the SCoP until we find the one 
 	auto fit = std::find_if(scop.begin(), scop.end(), [&](const StmtPtr& cur) { 
@@ -187,18 +187,16 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	auto extract_surrounding_domain = [&]() {
 
 		if (fit != scop.end()) {
-			vec = scop.getIterationVector();
 			// found stmt containing the requested expression 
-			return IterationDomain(vec, (*fit)->getDomain());
+			return (*fit)->getDomain();
 		} else {
-			vec = scop.getIterationVector();
-			IterationDomain domain = IterationDomain(vec, enclosingScop->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints());
+			IterationDomain domain( scop.getIterationVector(), enclosingScop->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints());
 			// otherwise the expression is part of a condition expression 
 			prev = enclosingScop;
 			// Iterate throgh the stateemnts until we find the entry point of the SCoP
 			while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) ) { 
 				prev=parent;
-				domain &= IterationDomain( vec, prev->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints() );
+				domain &= IterationDomain( scop.getIterationVector(), prev->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints() );
 			} 
 			return domain;
 		}
@@ -209,7 +207,7 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 
 	if (domain.universe() || domain.empty()) { return domain; }
 
-	AffineFunction func(vec, addr.getAddressedNode());
+	AffineFunction func(scop.getIterationVector(), addr.getAddressedNode());
 
 	// otherwise this is a composed by a conjunction of constraints. we need to analyze the
 	// contraints in order to determine the minimal constraint which defines the given expression 
@@ -236,10 +234,9 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	}
 
 	auto cons = utils::fromConjunctions(resultConj);
-	if (!cons) return IterationDomain(vec);
+	if (!cons) return boost::optional<IterationDomain>();
 
-	auto ret = IterationDomain(cons);
-	return ret;
+	return IterationDomain(cons);
 }	
 
 

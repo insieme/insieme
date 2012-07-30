@@ -672,12 +672,12 @@ TEST(ScopRegion, ForStmtSelectLBTile) {
     EXPECT_TRUE(code);
 
 	// convert for-stmt into a SCoP
-	auto scop = polyhedral::scop::ScopRegion::toScop(code);
-	EXPECT_TRUE(scop);
-
-	NodeManager mgr1;
-	// convert back into IR
-	NodePtr res = scop->toIR(mgr1);
+// 	auto scop = polyhedral::scop::ScopRegion::toScop(code);
+// 	EXPECT_TRUE(scop);
+// 
+// 	NodeManager mgr1;
+// 	// convert back into IR
+// 	NodePtr res = scop->toIR(mgr1);
 
 	//EXPECT_EQ("{if(int.le(v3, v2)) {for(int<4> v1 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-5), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v3))), cast<int<4>>(v2)), 5)))), cast<int<4>>(v2)) .. int.add(99, 1) : 5) {array.ref.elem.1D(v4, int.add(v1, v3));};} else {}; if(int.ge(v3, int.add(cast<int<4>>(v2), cast<int<4>>(1)))) {for(int<4> v4 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-5), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(v3), cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2)))), 5)))), cast<int<4>>(v3)) .. int.add(99, 1) : 5) {array.ref.elem.1D(v4, int.add(v4, v3));};} else {};}", toString(*res));
 	
