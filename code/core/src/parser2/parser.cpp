@@ -561,13 +561,17 @@ namespace parser {
 
 			// nice - we have a candidate (the end is the next token)
 			candidates.push_back(it+1);
+
+//// TODO: this is a dirty hack - find some justification
+//if (cur == Token::createSymbol(';')) {
+//	break;
+//}
 		}
 
 		// check whether there are candidates
 		if (candidates.empty()) {
 			return fail(context, begin, end);
 		}
-
 
 		// update speculation flag
 		auto backup = context.backup();
