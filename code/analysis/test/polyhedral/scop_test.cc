@@ -583,8 +583,8 @@ TEST(ScopRegion, ForStmtSelectLB) {
     EXPECT_TRUE(code);
 
 	// convert for-stmt into a SCoP
-	auto scop = polyhedral::scop::ScopRegion::toScop(code);
-	EXPECT_TRUE(scop) << "Not a SCoP";
+	//auto scop = polyhedral::scop::ScopRegion::toScop(code);
+	//EXPECT_TRUE(scop) << "Not a SCoP";
 
 	//NodeManager mgr1;
 	// convert back into IR
