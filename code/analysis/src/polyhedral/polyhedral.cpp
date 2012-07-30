@@ -215,7 +215,7 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	// contraints in order to determine the minimal constraint which defines the given expression 
 	AffineConstraintPtr constraints = domain.getConstraint(); 
 
-	std::vector<std::vector<AffineConstraintPtr>> resultConj;
+	DisjunctionList resultConj;
 	for( auto conj : utils::getConjunctions(utils::toDNF(constraints))  ) {
 		
 		auto cmp  = [](const AffineConstraintPtr& lhs, const AffineConstraintPtr& rhs) -> bool { 
@@ -232,7 +232,7 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 			}
 		});
 		
-		if (!curConj.empty()) resultConj.push_back( std::vector<AffineConstraintPtr>(curConj.begin(), curConj.end())); 
+		if (!curConj.empty()) resultConj.push_back( ConjunctionList(curConj.begin(), curConj.end())); 
 	}
 
 	auto cons = utils::fromConjunctions(resultConj);
