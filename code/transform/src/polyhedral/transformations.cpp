@@ -62,7 +62,7 @@ using insieme::transform::pattern::any;
 
 namespace {
 
-Scop extractScopFrom(const core::NodePtr& target) {
+const Scop& extractScopFrom(const core::NodePtr& target) {
 	// Run the SCoP analysis on this node in order to determine whether is possible to apply
 	// polyhedral transformations to it
 	scop::mark(target);
@@ -141,7 +141,7 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	// the extraction of the SCoP information from this target point make a copy of the polyhedral
 	// model associated to this node so that transformations are only applied to the copy and not
 	// reflected into the original region 
-	Scop origScop = extractScopFrom(target);
+	const Scop& origScop = extractScopFrom(target);
 
 	Scop transfScop(origScop.getIterationVector(), origScop.getStmts());
 
@@ -218,7 +218,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	// make a copy of the polyhedral model associated to this node so that transformations are only
 	// applied to the copy and not reflected into the original region 
-	Scop scop = extractScopFrom(target);
+	Scop scop( extractScopFrom(target) );
 
 	core::VariablePtr idx = matchList[loopIdx].as<core::VariablePtr>();
 
@@ -240,7 +240,6 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	VLOG(1) << "//@~ polyhedral.loop.stripmining Done";
 
 	assert( transformedIR && "Generated code for loop strip mining not valid" );
-	// std::cout << *transformedIR << std::endl;
 	return transformedIR;
 }
 
@@ -376,9 +375,7 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 	
 	// make a copy of the polyhedral model associated to this node so that transformations are only
 	// applied to the copy and not reflected into the original region 
-	Scop oScop = extractScopFrom(target);
-
-	LOG(INFO) << oScop;
+	const Scop& oScop = extractScopFrom(target);
 
 	Scop tScop(oScop.getIterationVector(), oScop.getStmts());
 
@@ -485,10 +482,10 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	assert( !iters.empty() );
 
 	// The application point of this transformation satisfies the preconditions, continue
-	Scop&& scop = extractScopFrom( target );
+	Scop scop(extractScopFrom(target));
 
 	// save the SCoP in order to check for validity of the transformation
-	Scop saveScop = scop;
+	Scop saveScop = Scop(scop);
 
 	// Apply fusion
 	doFuse(scop, iters);
@@ -530,10 +527,10 @@ core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
 	const core::ForStmtPtr& forStmt = target.as<core::ForStmtPtr>();
 
 	// The application point of this transformation satisfies the preconditions, continue
-	Scop&& scop = extractScopFrom( forStmt );
+	const Scop& saveScop = extractScopFrom( forStmt );
 
 	// Save a copy of the scop for later check the validity of the transformation
-	Scop saveScop = scop;
+	Scop scop(saveScop);
 
 	// chcek whether the indexes for the split refer to concrete statements inside this loop or they
 	// are out of bounds 
@@ -568,7 +565,7 @@ core::NodePtr LoopReschedule::apply(const core::NodePtr& target) const {
 	core::NodeManager& mgr = target->getNodeManager();
 
 	// The application point of this transformation satisfies the preconditions, continue
-	Scop scop = extractScopFrom( target );
+	Scop scop(extractScopFrom( target ));
 
 	// We add a compound statement in order to avoid wrong composition of transformations 
 	core::CompoundStmtPtr&& transformedIR = 
@@ -601,7 +598,7 @@ core::NodePtr LoopStamping::apply(const core::NodePtr& target) const {
 	core::ForStmtPtr outerStmt = target.as<core::ForStmtPtr>();
 
 	// The application point of this transformation satisfies the preconditions, continue
-	Scop scop = extractScopFrom( target );
+	Scop scop( extractScopFrom( target ) );
 	
 	core::ForStmtPtr forStmt = outerStmt;
 
@@ -616,7 +613,7 @@ core::NodePtr LoopStamping::apply(const core::NodePtr& target) const {
 	assert(forStmt && "Loop stamping must be applied to a forstmt");
 	core::VariablePtr iter = forStmt->getDeclaration()->getVariable();
 
-	std::vector<StmtPtr> stampedStmts = getLoopSubStatements(scop, iter);
+	std::vector<std::reference_wrapper<Stmt>>&& stampedStmts = getLoopSubStatements(scop, iter);
 
 	core::arithmetic::Formula rangeSize = 
 		core::arithmetic::toFormula(forStmt->getEnd()) - core::arithmetic::toFormula(forStmt->getStart());
@@ -625,7 +622,7 @@ core::NodePtr LoopStamping::apply(const core::NodePtr& target) const {
 
 	unsigned split = scop.size();
 	// Duplicate all the statements in the scop
-	for (size_t idx=stampedStmts.front()->getId(), end=stampedStmts.back()->getId(); idx<=end; ++idx) {
+	for (size_t idx=stampedStmts.front().get().getId(), end=stampedStmts.back().get().getId(); idx<=end; ++idx) {
 		AffineFunction f(scop.getIterationVector(), 
 				-(core::arithmetic::toFormula(forStmt->getEnd())-core::arithmetic::toFormula(ret.second))
 			);
@@ -663,7 +660,7 @@ core::NodePtr LoopParallelize::apply(const core::NodePtr& target) const {
 
 	const core::ForStmtPtr& forStmt = target.as<core::ForStmtPtr>();
 	// The application point of this transformation satisfies the preconditions, continue
-	Scop&& scop = extractScopFrom( forStmt );
+	const Scop& scop = extractScopFrom( forStmt );
 	if (!scop.isParallel(mgr)) {
 		throw InvalidTargetException("Loop carries dependencies, cannot be parallelized");
 	}
@@ -702,7 +699,7 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 	core::NodeManager& mgr = target->getNodeManager();
 
 	// Now we need to make sure the thing we are handling is a SCoP... otherwise makes no sense to continue
-	Scop scop = extractScopFrom( target );
+	Scop scop(extractScopFrom( target ));
 
 	IterationVector& iv = scop.getIterationVector();
 	// Region strip mining applied to something which is not a call expression which spawns a range
@@ -743,7 +740,7 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 	LOG(INFO) << "BEFORE FUSION" << scop;
 
 	core::NodePtr transformedIR = core::IRBuilder(mgr).compoundStmt( scop.toIR( mgr ).as<core::StatementPtr>() );	
-	Scop scop2 = extractScopFrom( transformedIR );
+	Scop scop2( extractScopFrom( transformedIR ) );
 
 	core::VariableList strip_iters;
 	for_each(scop2, [&](StmtPtr& curStmt) {

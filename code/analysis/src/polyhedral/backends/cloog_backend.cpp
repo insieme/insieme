@@ -739,8 +739,8 @@ public:
 		assert(cloogStmt->name);
 
 		// get the stmt object 
-		StmtPtr stmt = ctx.getAs<StmtPtr>( cloogStmt->name );
-		core::StatementPtr irStmt = stmt->getAddr().getAddressedNode();
+		const Stmt& stmt = *ctx.getAs<StmtPtr>( cloogStmt->name );
+		core::StatementPtr irStmt = stmt.getAddr().getAddressedNode();
 		
 		stmtStack.top().push_back(irStmt); 
 
@@ -752,7 +752,7 @@ public:
 			if (callExpr->getFunctionExpr()->getNodeType() == core::NT_Literal) {
 
 				RangedFunction::VarVect ranges;
-				for_each(stmt->access_begin(), stmt->access_end(), [&](const AccessInfoPtr& cur) {
+				for_each(stmt.access_begin(), stmt.access_end(), [&](const AccessInfoPtr& cur) {
 					if (cur->hasDomainInfo()) {	
 						std::vector<core::VariablePtr> iters = getOrderedIteratorsFor(cur->getAccess());
 						assert( !iters.empty() && iters.size() == 1 );
@@ -967,25 +967,25 @@ core::NodePtr toIR(core::NodeManager& mgr,
 		// declaration statement with an assignment 
 		
 		if( boost::apply_visitor( visit_tuple_info(), cur.second ) ) {
-			StmtPtr& stmt = boost::get<StmtPtr>(cur.second);
+			const Stmt& stmt = *boost::get<StmtPtr>(cur.second);
 
 			if( core::DeclarationStmtPtr decl = 
-				core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt->getAddr().getAddressedNode()) ) 
+				core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt.getAddr().getAddressedNode()) ) 
 			{
 				unsigned id = utils::numeric_cast<unsigned>(cur.first.substr(1));
 				stmts.insert( std::make_pair(id, decl) );
 
 				// replace the declaration stmt with an assignment 
 				cur.second = std::make_shared<Stmt>(
-					id,
-					core::StatementAddress(
-						builder.callExpr( mgr.getLangBasic().getRefAssign(), 
-							decl->getVariable(), 
-							builder.deref( decl->getInitialization() )
-						)
-					),
-					IterationDomain(iterVec, true),
-					AffineSystem(iterVec)
+						id,
+						core::StatementAddress(
+							builder.callExpr( mgr.getLangBasic().getRefAssign(), 
+								decl->getVariable(), 
+								builder.deref( decl->getInitialization() )
+							)
+						),
+						IterationDomain(iterVec, true),
+						AffineSystem(iterVec)
 				);
 			}
 		}

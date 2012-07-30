@@ -176,7 +176,7 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	assert(parent && "Scop entry not found");
 
 	// Resolve the SCoP from the entry point
-	Scop scop = prev->getAnnotation( scop::ScopRegion::KEY )->getScop();
+	const Scop& scop = prev->getAnnotation( scop::ScopRegion::KEY )->getScop();
 
 	// navigate throgh the statements of the SCoP until we find the one 
 	auto fit = std::find_if(scop.begin(), scop.end(), [&](const StmtPtr& cur) { 
@@ -422,14 +422,16 @@ void Scop::push_back( const Stmt& stmt ) {
 			}
 		);
 
-	stmts.push_back( std::make_shared<Stmt>(
+	stmts.emplace_back( std::unique_ptr<Stmt>(
+			new Stmt(
 				stmt.getId(), 
 				stmt.getAddr(), 
 				IterationDomain(iterVec, stmt.getDomain()),
 				AffineSystem(iterVec, stmt.getSchedule()), 
 				access
-			) 
-		);
+			)
+		) 
+	);
 	size_t dim = stmts.back()->getSchedule().size();
 	if (dim > sched_dim) {
 		sched_dim = dim;
