@@ -68,5 +68,3 @@ FUNC(printf, "(ref<array<char,1> >, var_list) -> int<4>", true,
 // exit -- not really side effect free, but as far as the analysis is concerned it might as well be
 FUNC(exit, "(int<4>)->unit", false, NO_REF)
 
-FUNC(memcpy, "int", false, NO_REF);
-
