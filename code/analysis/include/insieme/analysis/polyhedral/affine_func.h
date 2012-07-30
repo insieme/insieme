@@ -215,7 +215,7 @@ public:
 	}
 
 	bool operator<(const AffineFunction& other) const {
-		if (&getIterationVector() == &other.getIterationVector()) {
+		if (getIterationVector() == other.getIterationVector()) {
 			
 			auto thisIt = begin(), thisEnd = end();
 			auto otherIt = other.begin(), otherEnd = other.end();
@@ -225,11 +225,16 @@ public:
 
 			while(thisIt != thisEnd) {
 				assert((*thisIt).first == (*otherIt).first);
-				if ((*thisIt).second >= (*otherIt).second)
+				if ((*thisIt).second > (*otherIt).second)
 					return false;
+				if ((*thisIt).second < (*otherIt).second) 
+					return true;
+				
+				assert((*thisIt).second == (*otherIt).second);
 				++thisIt; ++otherIt;
 			}
-			return true;
+			// If we end up here it means the 2 functions have same coefficients 
+			return false;
 		}
 
 		return getIterationVector() < other.getIterationVector();

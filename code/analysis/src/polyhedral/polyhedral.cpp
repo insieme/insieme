@@ -122,7 +122,8 @@ IterationDomain makeVarRange(IterationVector& 				iterVec,
 
 namespace {
 
-void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element& elem, std::set<const Element*>& checked, std::set<AffineConstraintPtr>& cont) {
+template <class Cont>
+void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element& elem, std::set<const Element*>& checked, Cont& cont) {
 	
 	auto cmp = [](const Element* lhs, const Element* rhs) -> bool { return *lhs < *rhs; };
 	std::set<const Element*,decltype(cmp)> elements(cmp);
@@ -217,7 +218,12 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	std::vector<std::vector<AffineConstraintPtr>> resultConj;
 	for( auto conj : utils::getConjunctions(utils::toDNF(constraints))  ) {
 		
-		std::set<AffineConstraintPtr> curConj;
+		auto cmp  = [](const AffineConstraintPtr& lhs, const AffineConstraintPtr& rhs) -> bool { 
+			assert( lhs && rhs );
+			return *std::static_pointer_cast<RawAffineConstraint>(lhs) < 
+				   *std::static_pointer_cast<RawAffineConstraint>(rhs); 
+		};
+		std::set<AffineConstraintPtr, decltype(cmp)> curConj(cmp);
 		std::set<const Element*> checked;
 
 		for_each(func.begin(), func.end(), [&](const AffineFunction::Term& term) {

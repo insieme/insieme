@@ -560,7 +560,7 @@ TEST(IterationDomain, FromVariable) {
 	NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(3).
 						 getAddressOfChild(2);
 	IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
-	EXPECT_EQ("((v1 + -10*1 >= 0) ^ (-v1 + 49*1 >= 0))", toString(dom));
+	EXPECT_EQ("((-v1 + 49*1 >= 0) ^ (v1 + -10*1 >= 0))", toString(dom));
 	} catch( std::exception e ) {
 		std::cout << e.what() << std::endl;
 	}
@@ -587,7 +587,7 @@ TEST(IterationDomain, FromVariable2) {
 							 getAddressOfChild(2);
 		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
 
-		EXPECT_EQ("((v1 + -10*1 >= 0) ^ (-v1 + 49*1 >= 0))", toString(dom));
+		EXPECT_EQ("((-v1 + 49*1 >= 0) ^ (v1 + -10*1 >= 0))", toString(dom));
 	}
 
 	{ 
@@ -598,7 +598,7 @@ TEST(IterationDomain, FromVariable2) {
 
 		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
 
-		EXPECT_EQ("(((v1 + -10*1 >= 0) ^ (-v1 + 49*1 >= 0)) ^ (-v1 + 19*1 >= 0))", toString(dom));
+		EXPECT_EQ("(((-v1 + 19*1 >= 0) ^ (-v1 + 49*1 >= 0)) ^ (v1 + -10*1 >= 0))", toString(dom));
 	}
 }
 
@@ -652,7 +652,7 @@ TEST(IterationDomain, FromVariable3) {
 
 		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
 
-		EXPECT_EQ("(((v1 + -10*1 >= 0) ^ (-v1 + 49*1 >= 0)) ^ (-v1 + v2 + -1 >= 0))", toString(dom));
+		EXPECT_EQ("(((-v1 + 49*1 >= 0) ^ (-v1 + v2 + -1 >= 0)) ^ (v1 + -10*1 >= 0))", toString(dom));
 	}
 }
 
@@ -677,7 +677,7 @@ TEST(IterationDomain, FromVariable4) {
 		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
 							 getAddressOfChild(0).getAddressOfChild(0).getAddressOfChild(2);
 		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
-		EXPECT_EQ("((v2 + -v3 >= 0) ^ (-v2 + v1 + -1 >= 0))", toString(dom));
+		EXPECT_EQ("((-v2 + v1 + -1 >= 0) ^ (v2 + -v3 >= 0))", toString(dom));
 		auto pw = cardinality(mgr,dom);
 		EXPECT_EQ("v1-v3 -> if (v1-v3-1 >= 0)", toString(pw));
 	}
@@ -690,7 +690,7 @@ TEST(IterationDomain, FromVariable4) {
 							 getAddressOfChild(3);
 
 		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
-		EXPECT_EQ("((((v1 + -21*1 >= 0) ^ (v2 + -v3 >= 0)) ^ (-v2 + v1 + -1 >= 0)) ^ (v2 + -v3 + -1 >= 0))", toString(dom));
+		EXPECT_EQ("((((-v2 + v1 + -1 >= 0) ^ (v1 + -21*1 >= 0)) ^ (v2 + -v3 + -1 >= 0)) ^ (v2 + -v3 >= 0))", toString(dom));
 		auto pw = cardinality(mgr,dom);
 		EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
