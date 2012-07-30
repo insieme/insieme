@@ -40,11 +40,8 @@
 #include "irt_all_impls.h"
 #include "standalone.h"
 
-#ifdef _MSC_VER
-	#include <Windows.h>
-#endif
-
 int main(int argc, char** argv) {
+#ifndef IRT_MIN_MODE
 	if(argc < 2 || argc > 3) {
 		IRT_INFO("usage: runtime [libname] [numthreads]\n");
 		return -1;
@@ -61,4 +58,8 @@ int main(int argc, char** argv) {
 	for(;;) { irt_nanosleep(60*60*1e9); }
 
 	exit(0);
+#else //IRT_MIN_MODE
+	printf("Runtime built in minimal mode (IRT_MIN_MODE) can not be used in service mode!\n");
+	exit(-1);
+#endif //IRT_MIN_MODE
 }

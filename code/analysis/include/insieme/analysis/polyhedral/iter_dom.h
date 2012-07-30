@@ -172,4 +172,9 @@ IterationDomain makeVarRange( IterationVector& vec,
 
 IterationDomain extractFromCondition(IterationVector& iv, const core::ExpressionPtr& cond);
 
+/**
+ * Given a variable, returns the domain on which the variable is defined.
+ */
+IterationDomain getVariableDomain(IterationVector& iterVec, const core::ExpressionAddress& addr);
+
 } } } // end namespace insieme::analysis::polyhedtal

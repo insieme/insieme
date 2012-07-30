@@ -75,8 +75,8 @@ TEST(TypeConversion, HandleBuildinType) {
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
 
-	// BOOL -- NOT SUPPORTED IN C
-	//CHECK_BUILTIN_TYPE(Bool, "bool");
+	// BOOL
+	CHECK_BUILTIN_TYPE(Bool, "bool");
 
 	// UChar
 	CHECK_BUILTIN_TYPE(UChar, "uint<1>");

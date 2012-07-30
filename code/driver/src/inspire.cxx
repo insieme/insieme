@@ -109,6 +109,8 @@
 
 		std::cout << "Parsing took " << time << "sec.\n";
 
+		time = TIME(res = core::parser::parse(manager, ss.str()));
+		std::cout << "Parsing it a second time: " << time << "sec.\n";
 
 		cout << "Done\n";
 	}

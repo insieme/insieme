@@ -297,7 +297,7 @@ AffineConstraintPtr buildStridedDomain( NodeManager&		mgr,
 	ret.add( Iterator( existenceVar, true ) );
 
 	// Gets the list of lower bounds as a disjunction of eleemnts 
-	DisjunctionList bounds = getConjuctions(toDNF(lbCons));
+	DisjunctionList bounds = getConjunctions(toDNF(lbCons));
 	assert(!bounds.empty() && !bounds.front().empty());
 
 	// If we are in a situation where we only have a single bound for the loop then we can set the

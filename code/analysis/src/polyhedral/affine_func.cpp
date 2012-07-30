@@ -76,9 +76,7 @@ void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::c
 		return;
 	}
 
-	// this is a linear function
-	assert( formula.isLinear() && "Expression is not an affine linear function.");
-	
+		
 	const std::vector<Formula::Term>& terms = formula.getTerms();
 	// we have to updated the iteration vector by adding eventual parameters which are being used by
 	// this function. Because by looking to an expression we cannot determine if a variable is an
@@ -134,6 +132,9 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::arithmetic::Formula& formula) : 
 	iterVec(iterVec), sep(iterVec.getIteratorNum())
 {
+	// this is a linear function
+	if( !formula.isLinear() ) throw NotAffineExpr( core::ExpressionPtr() );
+
 	buildFromFormula( iterVec, formula);
 }
 

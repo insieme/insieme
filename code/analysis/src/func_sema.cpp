@@ -54,8 +54,6 @@ namespace analysis {
 using insieme::core::arithmetic::Formula;
 using insieme::core::arithmetic::Piecewise;
 
-
-
 // Given a concrete call expression, this method returns the argument to which this object is referring
 core::ExpressionPtr FunctionArgument::operator()(const core::CallExprPtr& callExpr) const {
 	core::LiteralPtr callFunc = core::static_pointer_cast<const core::Literal>(callExpr->getFunctionExpr());
@@ -308,12 +306,8 @@ using namespace insieme::utils::pipeline;
 // Utility macro which create a lazy evaluated expressions
 
 #define PLUS(A,B)				dup<CallExprPtr>() >> ((A)+(B))
-#define MUL(A,B)				pipeline::dup<CallExprPtr>() >> pipeline::makeReduction(std::multiplies<Piecewise>(),(A),(B))
-#define SUB(A,B)				pipeline::dup<CallExprPtr>() >> :pipeline::makeReduction(std::minus<Piecewise>(),(A),(B))
-#define MOD(A,B)				utils::pipeline::makeReduction(std::modulus<Piecewise>(),(A),(B))
-#define DIV(A,B)				utils::pipeline::makeReduction(std::divides<Piecewise>(),(A),(B))
-#define EQ(A,B)					utils::pipeline::makeReduction(std::equal_to<Piecewise>(),(A),(B))
-#define NE(A,B)					utils::pipeline::makeReduction(std::not_equal_to<Piecewise>(),(A),(B))
+#define MUL(A,B)				dup<CallExprPtr>() >> pipeline::makeReduction(std::multiplies<Piecewise>(),(A),(B))
+#define SUB(A,B)				dup<CallExprPtr>() >> :pipeline::makeReduction(std::minus<Piecewise>(),(A),(B))
  
 #define CI(USE)					insieme::analysis::LazyRange::fromUsage(USE)
 #define DEF						CI(Ref::DEF)
