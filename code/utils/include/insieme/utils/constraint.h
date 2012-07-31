@@ -39,14 +39,14 @@
 #include <memory>
 #include <vector>
 #include <cassert>
+#include <stdexcept>
+#include <iostream>
 
 #include "boost/operators.hpp"
 #include "boost/mpl/or.hpp"
 #include <boost/type_traits.hpp>
 #include "boost/utility/enable_if.hpp"
 #include "insieme/utils/printable.h"
-
-#include <stdexcept>
 
 namespace insieme {
 namespace utils {

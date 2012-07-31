@@ -153,7 +153,7 @@ void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element
 } // end anonymous namespace 
 
 
-boost::optional<IterationDomain> getVariableDomain(const core::ExpressionAddress& addr) {
+utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::ExpressionAddress& addr) {
 	
 
 	// Find the enclosing SCoP (if any)
@@ -163,7 +163,9 @@ boost::optional<IterationDomain> getVariableDomain(const core::ExpressionAddress
 	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && !parent->hasAnnotation( scop::ScopRegion::KEY) ) { prev=parent; } 
 
 	// This statement is not part of a SCoP (also may throw an exception)
-	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { return boost::optional<IterationDomain>(); }
+	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { 
+		return utils::CombinerPtr<core::arithmetic::Formula>(); 
+	}
 
 	StatementAddress enclosingScop = parent.as<StatementAddress>();
 
@@ -205,7 +207,8 @@ boost::optional<IterationDomain> getVariableDomain(const core::ExpressionAddress
 
 	IterationDomain domain( extract_surrounding_domain() );
 
-	if (domain.universe() || domain.empty()) { return domain; }
+	if (domain.universe()) return utils::CombinerPtr<core::arithmetic::Formula>();
+	if (domain.empty()) {  return utils::castTo<AffineFunction, core::arithmetic::Formula>(domain.getConstraint()); }
 
 	AffineFunction func(scop.getIterationVector(), addr.getAddressedNode());
 
@@ -234,9 +237,9 @@ boost::optional<IterationDomain> getVariableDomain(const core::ExpressionAddress
 	}
 
 	auto cons = utils::fromConjunctions(resultConj);
-	if (!cons) return boost::optional<IterationDomain>();
+	if (!cons) { return utils::CombinerPtr<core::arithmetic::Formula>(); }
 
-	return IterationDomain(cons);
+	return utils::castTo<AffineFunction, core::arithmetic::Formula>(cons);
 }	
 
 
