@@ -555,15 +555,11 @@ TEST(IterationDomain, FromVariable) {
 
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 
-	try {
-	IterationVector vec;
 	NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(3).
 						 getAddressOfChild(2);
-	IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
-	EXPECT_EQ("((v1 + -10*1 >= 0) ^ (-v1 + 49*1 >= 0))", toString(dom));
-	} catch( std::exception e ) {
-		std::cout << e.what() << std::endl;
-	}
+	auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+	EXPECT_TRUE(dom);
+	EXPECT_EQ("((-v1 + 49*1 >= 0) ^ (v1 + -10*1 >= 0))", toString(*dom));
 }
 
 
@@ -581,24 +577,22 @@ TEST(IterationDomain, FromVariable2) {
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 
 	{ 
-		IterationVector vec;
 		// get the iterator i used in the if condition 
 		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(0).
 							 getAddressOfChild(2);
-		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
-
-		EXPECT_EQ("((v1 + -10*1 >= 0) ^ (-v1 + 49*1 >= 0))", toString(dom));
+		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		EXPECT_TRUE(dom);
+		EXPECT_EQ("((-v1 + 49*1 >= 0) ^ (v1 + -10*1 >= 0))", toString(*dom));
 	}
 
 	{ 
-		IterationVector vec;
 		// Get the iterator i inside the if stmt
 		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(1).
 						     getAddressOfChild(0).getAddressOfChild(3).getAddressOfChild(2);
 
-		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
-
-		EXPECT_EQ("(((v1 + -10*1 >= 0) ^ (-v1 + 49*1 >= 0)) ^ (-v1 + 19*1 >= 0))", toString(dom));
+		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		EXPECT_TRUE(dom);
+		EXPECT_EQ("(((-v1 + 19*1 >= 0) ^ (-v1 + 49*1 >= 0)) ^ (v1 + -10*1 >= 0))", toString(*dom));
 	}
 }
 
@@ -614,11 +608,11 @@ TEST(IterationDomain, NotAScop) {
 
 	EXPECT_FALSE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 
-	IterationVector vec;
 	NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(3).
 						 getAddressOfChild(2);
-	IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
-	EXPECT_TRUE(dom.universe());
+	auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+	EXPECT_TRUE(dom);
+	EXPECT_TRUE((*dom).universe());
 }
 
 TEST(IterationDomain, FromVariable3) {
@@ -635,24 +629,23 @@ TEST(IterationDomain, FromVariable3) {
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 
 	{ 
-		IterationVector vec;
 		// get the iterator i used in the if condition 
 		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(0).
 							 getAddressOfChild(3);
-		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
-		EXPECT_TRUE(dom.universe());
-		EXPECT_FALSE(dom.empty());
+		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		EXPECT_FALSE(dom);
+		//EXPECT_TRUE(dom.universe());
+		//EXPECT_FALSE(dom.empty());
 	}
 
 	{ 
-		IterationVector vec;
 		// Get the iterator i inside the if stmt
 		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(1).
 						     getAddressOfChild(0).getAddressOfChild(3).getAddressOfChild(3);
 
-		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
-
-		EXPECT_EQ("(((v1 + -10*1 >= 0) ^ (-v1 + 49*1 >= 0)) ^ (-v1 + v2 + -1 >= 0))", toString(dom));
+		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		EXPECT_TRUE(dom);
+		EXPECT_EQ("(((-v1 + 49*1 >= 0) ^ (-v1 + v2 + -1 >= 0)) ^ (v1 + -10*1 >= 0))", toString(*dom));
 	}
 }
 
@@ -672,26 +665,26 @@ TEST(IterationDomain, FromVariable4) {
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 
 	{ 
-		IterationVector vec;
 		// get the iterator i used in the if condition 
 		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
 							 getAddressOfChild(0).getAddressOfChild(0).getAddressOfChild(2);
-		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
-		EXPECT_EQ("((v2 + -v3 >= 0) ^ (-v2 + v1 + -1 >= 0))", toString(dom));
-		auto pw = cardinality(mgr,dom);
+		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		EXPECT_TRUE(dom);
+		EXPECT_EQ("((-v2 + v1 + -1 >= 0) ^ (v2 + -v3 >= 0))", toString(*dom));
+		auto pw = cardinality(mgr,*dom);
 		EXPECT_EQ("v1-v3 -> if (v1-v3-1 >= 0)", toString(pw));
 	}
 
 	{ 
-		IterationVector vec;
 		// Get the iterator i inside the if stmt
 		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
 							 getAddressOfChild(0).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
 							 getAddressOfChild(3);
 
-		IterationDomain dom = getVariableDomain(vec, iAddr.as<ExpressionAddress>());
-		EXPECT_EQ("((((v1 + -21*1 >= 0) ^ (v2 + -v3 >= 0)) ^ (-v2 + v1 + -1 >= 0)) ^ (v2 + -v3 + -1 >= 0))", toString(dom));
-		auto pw = cardinality(mgr,dom);
+		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		EXPECT_TRUE(dom);
+		EXPECT_EQ("((((-v2 + v1 + -1 >= 0) ^ (v1 + -21*1 >= 0)) ^ (v2 + -v3 + -1 >= 0)) ^ (v2 + -v3 >= 0))", toString(*dom));
+		auto pw = cardinality(mgr,*dom);
 		EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
 }

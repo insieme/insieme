@@ -163,7 +163,9 @@ std::ostream& IterationVector::printTo(std::ostream& out) const {
 	return out;
 }
 
-bool IterationVector::contains(const core::ExpressionPtr& expr) const {  return getIdx(expr)!=-1; }
+bool IterationVector::contains(const core::ExpressionPtr& expr) const {  
+	return getIdx(expr)!=-1; 
+}
 
 namespace {
 template <class T>

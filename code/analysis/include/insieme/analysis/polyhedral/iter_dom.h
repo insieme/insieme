@@ -174,7 +174,10 @@ IterationDomain extractFromCondition(IterationVector& iv, const core::Expression
 
 /**
  * Given a variable, returns the domain on which the variable is defined.
+ *
+ * If the variable is not inside a SCoP the returned object will be empty which means the domain on
+ * which the variable is defined is the universe 
  */
-IterationDomain getVariableDomain(IterationVector& iterVec, const core::ExpressionAddress& addr);
+boost::optional<IterationDomain> getVariableDomain(const core::ExpressionAddress& addr);
 
 } } } // end namespace insieme::analysis::polyhedtal

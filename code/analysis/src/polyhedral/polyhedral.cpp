@@ -122,7 +122,8 @@ IterationDomain makeVarRange(IterationVector& 				iterVec,
 
 namespace {
 
-void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element& elem, std::set<const Element*>& checked, std::set<AffineConstraintPtr>& cont) {
+template <class Cont>
+void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element& elem, std::set<const Element*>& checked, Cont& cont) {
 	
 	auto cmp = [](const Element* lhs, const Element* rhs) -> bool { return *lhs < *rhs; };
 	std::set<const Element*,decltype(cmp)> elements(cmp);
@@ -152,7 +153,7 @@ void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element
 } // end anonymous namespace 
 
 
-IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAddress& addr) {
+boost::optional<IterationDomain> getVariableDomain(const core::ExpressionAddress& addr) {
 	
 
 	// Find the enclosing SCoP (if any)
@@ -162,7 +163,7 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && !parent->hasAnnotation( scop::ScopRegion::KEY) ) { prev=parent; } 
 
 	// This statement is not part of a SCoP (also may throw an exception)
-	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { return IterationDomain( vec ); }
+	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { return boost::optional<IterationDomain>(); }
 
 	StatementAddress enclosingScop = parent.as<StatementAddress>();
 
@@ -175,7 +176,7 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	assert(parent && "Scop entry not found");
 
 	// Resolve the SCoP from the entry point
-	Scop scop = prev->getAnnotation( scop::ScopRegion::KEY )->getScop();
+	Scop& scop = prev->getAnnotation( scop::ScopRegion::KEY )->getScop();
 
 	// navigate throgh the statements of the SCoP until we find the one 
 	auto fit = std::find_if(scop.begin(), scop.end(), [&](const StmtPtr& cur) { 
@@ -186,18 +187,16 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	auto extract_surrounding_domain = [&]() {
 
 		if (fit != scop.end()) {
-			vec = scop.getIterationVector();
 			// found stmt containing the requested expression 
-			return IterationDomain(vec, (*fit)->getDomain());
+			return (*fit)->getDomain();
 		} else {
-			vec = scop.getIterationVector();
-			IterationDomain domain = IterationDomain(vec, enclosingScop->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints());
+			IterationDomain domain( scop.getIterationVector(), enclosingScop->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints());
 			// otherwise the expression is part of a condition expression 
 			prev = enclosingScop;
 			// Iterate throgh the stateemnts until we find the entry point of the SCoP
 			while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) ) { 
 				prev=parent;
-				domain &= IterationDomain( vec, prev->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints() );
+				domain &= IterationDomain( scop.getIterationVector(), prev->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints() );
 			} 
 			return domain;
 		}
@@ -208,16 +207,21 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 
 	if (domain.universe() || domain.empty()) { return domain; }
 
-	AffineFunction func(vec, addr.getAddressedNode());
+	AffineFunction func(scop.getIterationVector(), addr.getAddressedNode());
 
 	// otherwise this is a composed by a conjunction of constraints. we need to analyze the
 	// contraints in order to determine the minimal constraint which defines the given expression 
 	AffineConstraintPtr constraints = domain.getConstraint(); 
 
-	std::vector<std::vector<AffineConstraintPtr>> resultConj;
+	DisjunctionList resultConj;
 	for( auto conj : utils::getConjunctions(utils::toDNF(constraints))  ) {
 		
-		std::set<AffineConstraintPtr> curConj;
+		auto cmp  = [](const AffineConstraintPtr& lhs, const AffineConstraintPtr& rhs) -> bool { 
+			assert( lhs && rhs );
+			return *std::static_pointer_cast<RawAffineConstraint>(lhs) < 
+				   *std::static_pointer_cast<RawAffineConstraint>(rhs); 
+		};
+		std::set<AffineConstraintPtr, decltype(cmp)> curConj(cmp);
 		std::set<const Element*> checked;
 
 		for_each(func.begin(), func.end(), [&](const AffineFunction::Term& term) {
@@ -226,14 +230,13 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 			}
 		});
 		
-		if (!curConj.empty()) resultConj.push_back( std::vector<AffineConstraintPtr>(curConj.begin(), curConj.end())); 
+		if (!curConj.empty()) resultConj.push_back( ConjunctionList(curConj.begin(), curConj.end())); 
 	}
 
 	auto cons = utils::fromConjunctions(resultConj);
-	if (!cons) return IterationDomain(vec);
+	if (!cons) return boost::optional<IterationDomain>();
 
-	auto ret = IterationDomain(cons);
-	return ret;
+	return IterationDomain(cons);
 }	
 
 
@@ -416,14 +419,16 @@ void Scop::push_back( const Stmt& stmt ) {
 			}
 		);
 
-	stmts.push_back( std::make_shared<Stmt>(
+	stmts.emplace_back( std::unique_ptr<Stmt>(
+			new Stmt(
 				stmt.getId(), 
 				stmt.getAddr(), 
 				IterationDomain(iterVec, stmt.getDomain()),
 				AffineSystem(iterVec, stmt.getSchedule()), 
 				access
-			) 
-		);
+			)
+		) 
+	);
 	size_t dim = stmts.back()->getSchedule().size();
 	if (dim > sched_dim) {
 		sched_dim = dim;

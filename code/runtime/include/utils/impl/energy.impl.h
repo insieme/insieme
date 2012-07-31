@@ -34,54 +34,26 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_statements.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_visitor.h"
+#pragma once
 
-#include "insieme/core/transform/node_replacer.h"
+#include "utils/energy.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
-#include "insieme/analysis/polyhedral/iter_dom.h"
-#include "insieme/analysis/polyhedral/iter_vec.h"
+#ifdef _MSC_VER
+	#warning "RAPL energy measurements in Windows are not supported!"
+#else
+	#include "utils/energy.h"
+	#include "abstraction/impl/rapl.impl.h"
+#endif
 
-#include "insieme/utils/logging.h"
-
-namespace insieme {
-namespace transform {
-
-using namespace core;
-using namespace analysis::polyhedral;
-
-core::NodePtr polyhedralSemplification(const core::NodePtr& node) {
-	auto& mgr = node->getNodeManager();
-
-	utils::map::PointerMap<NodePtr, NodePtr> replacements;
-
-	std::vector<NodeAddress> entry;
-
-	// run the ScoP analysis to determine SCoPs 
-	for ( const auto& addr : scop::mark(node) ) {
-	
-		if (addr->getNodeType() == NT_LambdaExpr) {
-			entry.push_back(addr.as<LambdaExprAddress>()->getBody());
-		}
-
-		entry.push_back(addr);
-	}
-
-	for( const auto& addr : entry) {
-		const Scop& scop = *scop::ScopRegion::toScop( addr );
-		
-		replacements.insert( { addr, IRBuilder(mgr).compoundStmt( scop.toIR(mgr).as<StatementPtr>() ) } );
-	}
-
-	LOG(INFO) << "**** PolyhedralSemplifications: Modificed '" << replacements.size() << "' SCoPs"; 
-
-	if (replacements.empty()) { return node; }
-
-	return core::transform::replaceAll(mgr, node, replacements);
+void irt_get_energy_consumption_dummy(double* energy) {
+	*energy = -1.0;
 }
 
-} // end transform namespace 
-} // end insieme namespace 
+void irt_energy_select_instrumentation_method() {
+	if(irt_rapl_is_supported()) {
+		irt_get_energy_consumption = &_irt_get_rapl_energy_consumption;
+		irt_log_setting_s("irt energy measurement method", "rapl");
+	} else {
+		irt_log_setting_s("irt energy measurement method", "none");
+	}
+}
