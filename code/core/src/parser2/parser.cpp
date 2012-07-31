@@ -893,6 +893,13 @@ namespace parser {
 
 //std::cout << "Token List: " << tokens << "\n";
 
+		// step 2) check parenthesis - if not properly nested, it is wrong!
+		if (!checkParenthese(tokens.begin(), tokens.end())) {
+			return NodePtr(); // parenthesis not properly nested!
+		}
+
+
+
 		// step 2) parse recursively
 		Context context(*this, manager, tokens.begin(), tokens.end());
 		return match(context, tokens.begin(), tokens.end(), start);
@@ -1077,6 +1084,30 @@ namespace parser {
 				info.addParenthese(cur.first, cur.second); // .. we can add it to the result
 			}
 		}
+	}
+
+	bool Grammar::checkParenthese(const TokenIter& begin, const TokenIter& end) const {
+		const TermInfo& info = getTermInfo();
+		if (!info.hasParenthesePairs()) {
+			return true;	// nothing to check
+		}
+
+		// check proper nesting
+		vector<Token> parentheseStack;
+		for(const Token& cur : range(begin, end)) {
+			if (info.isLeftParenthese(cur)) {
+				parentheseStack.push_back(info.getClosingParenthese(cur));
+			}
+			if (info.isRightParenthese(cur)) {
+				if (parentheseStack.empty() || parentheseStack.back() != cur) {
+					return false;		// not matching parentheses
+				}
+				parentheseStack.pop_back();
+			}
+		}
+
+		// now all parentheses should be closed
+		return parentheseStack.empty();
 	}
 
 	const TermPtr empty = std::make_shared<Empty>();

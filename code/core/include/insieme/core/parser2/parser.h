@@ -933,6 +933,10 @@ namespace parser {
 				return pos->second;
 			}
 
+			bool hasParenthesePairs() const {
+				return !parenthesePairs.empty();
+			}
+
 		protected:
 			virtual std::ostream& printTo(std::ostream& out) const;
 		};
@@ -1019,6 +1023,8 @@ namespace parser {
 		static Productions toProductions(const string& symbol, const vector<RulePtr>& rules);
 
 		void updateTermInfo() const;
+
+		bool checkParenthese(const TokenIter& begin, const TokenIter& end) const;
 	};
 
 
