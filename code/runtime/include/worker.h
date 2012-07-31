@@ -81,10 +81,10 @@ struct _irt_worker {
 	uint32 default_variant;
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
-	irt_pd_table* performance_data;
+	irt_instrumentation_event_data_table* instrumentation_event_data;
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_epd_table* extended_performance_data;
+	irt_instrumentation_region_data_table* instrumentation_region_data;
 	int32 irt_papi_event_set;
 	int32 irt_papi_number_of_events;
 #endif

@@ -110,7 +110,7 @@ void irt_init_globals() {
 	irt_time_ticks_per_sec_calibration_mark();
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_create_aggregated_performance_table(IRT_WORKER_PD_BLOCKSIZE);
+	irt_inst_create_aggregated_data_table(IRT_WORKER_PD_BLOCKSIZE);
 	irt_energy_select_instrumentation_method();
 #endif
 }
@@ -125,7 +125,7 @@ void irt_cleanup_globals() {
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_destroy_aggregated_performance_table();
+	irt_inst_destroy_aggregated_data_table();
 #endif
 	pthread_mutex_destroy(&irt_g_error_mutex);
 	pthread_key_delete(irt_g_error_key);
@@ -162,17 +162,20 @@ void irt_exit_handler() {
 	_irt_worker_end_all();
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
+	uint64 a = irt_time_ticks();
 	for(int i = 0; i < irt_g_worker_count; ++i) {
 		// TODO: add OpenCL events
-		irt_instrumentation_output(irt_g_workers[i]);
+		irt_inst_event_data_output(irt_g_workers[i]);
 	}
+	uint64 b = irt_time_ticks();
+	printf("time for writing: %3.5f\n", (b-a)/(double)irt_g_time_ticks_per_sec);
 #endif
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	for(int i = 0; i < irt_g_worker_count; ++i) {
-		irt_extended_instrumentation_output(irt_g_workers[i]);
+		irt_inst_region_data_output(irt_g_workers[i]);
 	}
-	irt_aggregated_instrumentation_output();
+	irt_inst_aggregated_data_output();
 	PAPI_shutdown();
 #endif
 	irt_cleanup_globals();
@@ -225,10 +228,10 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 #endif
 	// initialize PAPI and check version
 	irt_initialize_papi();
-	irt_region_toggle_instrumentation(true);
+	irt_inst_set_region_instrumentation(true);
 #endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
-	irt_all_toggle_instrumentation_from_env();
+	irt_inst_set_all_instrumentation_from_env();
 #endif
 	
 	irt_log_comment("starting worker threads");

@@ -151,7 +151,7 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 	reg->id.value.full = retval->id.value.full;
 	_irt_wi_event_register_only(reg);
 	// instrumentation
-	irt_wi_instrumentation_event(self, WORK_ITEM_CREATED, retval->id);
+	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, retval->id);
 	return retval;
 }
 static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
@@ -165,7 +165,7 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 	retval->id.cached = retval;
 	retval->num_fragments = 0;
 	retval->range = range;
-	irt_wi_instrumentation_event(self, WORK_ITEM_CREATED, retval->id);
+	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, retval->id);
 	if(irt_wi_is_fragment(source)) {
 		// splitting fragment wi
 		irt_work_item *base_source = source->source_id.cached; // TODO
@@ -224,11 +224,11 @@ void irt_wi_join(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_instrumentation_region_add_time(swi);
-		irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_JOIN, swi->id);
+		irt_inst_region_add_time(swi);
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN, swi->id);
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &swi->stack_ptr);
-		irt_instrumentation_region_set_timestamp(swi);
+		irt_inst_region_set_timestamp(swi);
 	}
 }
 
@@ -246,11 +246,11 @@ void irt_wi_join_all(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_CHILDREN_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_instrumentation_region_add_time(wi);
-		irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_JOIN_ALL, wi->id);
+		irt_inst_region_add_time(wi);
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN_ALL, wi->id);
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &wi->stack_ptr);
-		irt_instrumentation_region_set_timestamp(wi);
+		irt_inst_region_set_timestamp(wi);
 	} else {
 	}
 }
@@ -265,8 +265,8 @@ void irt_wi_end(irt_work_item* wi) {
 	if(wi->parameters != (irt_lw_data_item*)wi->param_buffer) free(wi->parameters);
 
 	// instrumentation update
-	irt_instrumentation_region_add_time(wi);
-	irt_wi_instrumentation_event(worker, WORK_ITEM_FINISHED, wi->id);
+	irt_inst_region_add_time(wi);
+	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINISHED, wi->id);
 	
 	// check for parent, if there, notify
 	if(wi->parent_id.cached) {
@@ -331,7 +331,7 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 		out_wis[i] = _irt_wi_create_fragment(wi, range);
 	}
 	
-	irt_wi_instrumentation_event(self, WORK_ITEM_SPLITTED, wi->id);
+	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SPLITTED, wi->id);
 	
 	if(irt_wi_is_fragment(wi)) {
 		irt_work_item* source = wi->source_id.cached; // TODO

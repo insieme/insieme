@@ -276,7 +276,7 @@ inline static void irt_schedule_loop(
 
 	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_wi_implementation_variant_features* features = &(irt_context_get_current()->impl_table[impl_id].variants[0].features);
-	if(features->implicit_region_id >= 0) _irt_instrumentation_pfor_start(features->implicit_region_id);
+	if(features->implicit_region_id >= 0) _irt_inst_pfor_start(features->implicit_region_id);
 	#endif // ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
