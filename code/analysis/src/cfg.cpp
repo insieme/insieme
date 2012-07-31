@@ -274,30 +274,20 @@ private:
 template < CreationPolicy CP >
 struct CFGBuilder: public IRVisitor< void, Address > {
 
-	CFGPtr cfg;
-	IRBuilder builder;
+	CFGPtr 			cfg;
+	IRBuilder 		builder;
 
-	// A pointer to the block which is currently the head of graph which is built
-	// bottom-up visiting the statements in reverse order
-	cfg::Block *spawnBlock;
-
-	CFG::VertexTy entry, exit, succ, head;
-	ScopeStack 	scopeStack;
-	BlockManager blockMgr;
+	CFG::VertexTy 	entry, exit, succ, head;
+	ScopeStack 		scopeStack;
+	BlockManager 	blockMgr;
 	
-	bool hasHead;
-
-	std::stack<size_t> argNumStack;
-
-	VariablePtr retVar;
+	VariablePtr 	retVar;
 
 	CFGBuilder(CFGPtr cfg, const NodeAddress& root) : 
 		IRVisitor<void, Address>(false), 
 		cfg(cfg), 
 		builder(root->getNodeManager()), 
-		spawnBlock(nullptr), 
-		blockMgr(cfg),
-		hasHead(false) 
+		blockMgr(cfg)
 	{
 		assert( !cfg->hasSubGraph(root) && "CFG for this root node already being built");
 		CFG::GraphBounds&& bounds = cfg->addSubGraph(root);
@@ -319,16 +309,14 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		// Performs the final steps to finalize the CFG
 		if ( entry == succ )	return;
 
-		if ( cfg->getBlock(succ).empty() ) {
-			// If the first statement of a root element is a function call we end up with an empty
-			// statement at the top of the CFG, we want to remove that block and connect the
-			// outgoing edges to the entry node
-			cfg->replaceNode(succ, entry);
-			return;
-		}	
+		//if ( cfg->getBlock(succ).empty() ) {
+		//	// If the first statement of a root element is a function call we end up with an empty
+		//	// statement at the top of the CFG, we want to remove that block and connect the
+		//	// outgoing edges to the entry node
+		//	cfg->replaceNode(succ, entry);
+		//	return;
+		//}	
 		cfg->addEdge(entry, succ);	// connect the entry with the top node
-
-		// std::cout << *cfg;
 	}
 
 	/**
@@ -489,7 +477,6 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		visit( whileStmt->getCondition() );
 	}
 
-
 	void visitForStmt(const ForStmtAddress& forStmt) {
 	
 		blockMgr.close();
@@ -529,7 +516,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 	void visitCompoundStmt(const CompoundStmtAddress& compStmt) {
 
-		const std::vector<StatementAddress>& body = compStmt->getStatements();
+		std::vector<StatementAddress> body(compStmt->getStatements());
 		if ( body.empty() ) { return; }
 
 		// we are sure there is at least 1 element in this compound statement
@@ -559,9 +546,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			return {true, cfg->getAliasMap().createAliasFor(cur)};
 		} 
 		return {false, cur.getAddressedNode()};
-
 	}
-
 
 	ExpressionPtr normalize(const ExpressionAddress& expr, std::vector<NodeAddress>& idxs) {
 
@@ -581,7 +566,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 				// analyze the arguments of this call expression
 				vector<ExpressionPtr> newArgs;
 				for (const auto& arg : callExpr->getArguments()) {
-					auto ret = cfgBuilder.storeTemp(arg);
+					auto&& ret = cfgBuilder.storeTemp(arg);
 					newArgs.push_back( ret.second );
 					if (ret.first) { idxs.push_back( arg ); }
 				}
@@ -590,7 +575,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 			ExpressionPtr visitCastExpr(const CastExprAddress& castExpr) {
 				// analyze the arguments of this call expression
-				auto newArg = cfgBuilder.storeTemp(castExpr->getSubExpression());
+				auto&& newArg = cfgBuilder.storeTemp(castExpr->getSubExpression());
 
 				if (newArg.first) { idxs.push_back(castExpr->getSubExpression()); }
 
@@ -602,7 +587,6 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			ExpressionPtr visitMarkerExpr(const MarkerExprAddress& markerExpr) {
 				return visit(markerExpr->getSubExpression());
 			}
-
 
 			ExpressionPtr visitStructExpr(const StructExprAddress& structExpr) {
 				StructExpr::Members members; 
@@ -666,15 +650,8 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	// In the case the passed address needs to be saved in one of the predisposed temporary
 	// variables, this function will generate the corresponding declaration stmt
 	StatementPtr assignTemp(const ExpressionAddress& expr, const ExpressionPtr& currExpr) {
-
-		const auto& mappings = cfg->getAliasMap();
-		
-		auto var = mappings.lookupImmediateAlias(expr);
-		if (var) 
-			return builder.declarationStmt( var, currExpr );
-		
-		return currExpr;
-
+		auto var = cfg->getAliasMap().lookupImmediateAlias(expr);
+		return var ? static_cast<StatementPtr>(builder.declarationStmt( var, currExpr )) : currExpr;
 	}
 
 	void visitArgument(const ExpressionAddress& arg) {
@@ -737,53 +714,22 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		if (!idxs.empty()) { visit(idxs.front()); }
 	}
 
-	void visitStructExpr(const StructExprAddress& structExpr) {
 	
+	void visitInitializerExpr(const ExpressionAddress& exprAddr) {
 		std::vector<NodeAddress> idxs;
 		// analyze the arguments of this call expression
-		auto subExprMod = normalize(structExpr,idxs);
+		auto repMod = normalize(exprAddr,idxs);
 
-		blockMgr->appendElement( cfg::Element( assignTemp(structExpr,subExprMod), structExpr) );
+		blockMgr->appendElement( cfg::Element( assignTemp(exprAddr,repMod), exprAddr) );
 		append();
 		
 		for (const auto& addr : idxs) { visit(addr); }
 	}
 
-	void visitTupleExpr(const TupleExprAddress& tupleExpr) {
-	
-		std::vector<NodeAddress> idxs;
-		// analyze the arguments of this call expression
-		auto repMod = normalize(tupleExpr,idxs);
-
-		blockMgr->appendElement( cfg::Element( assignTemp(tupleExpr,repMod), tupleExpr) );
-		append();
-		
-		for (const auto& addr : idxs) { visit(addr); }
-	}
-
-	void visitUnionExpr(const UnionExprAddress& unionExpr) {
-	
-		std::vector<NodeAddress> idxs;
-		// analyze the arguments of this call expression
-		auto repMod = normalize(unionExpr,idxs);
-
-		blockMgr->appendElement( cfg::Element( assignTemp(unionExpr,repMod), unionExpr) );
-		append();
-		
-		for (const auto& addr : idxs) { visit(addr); }
-	}
-
-	void visitVectorExpr(const VectorExprAddress& vecExpr) {
-	
-		std::vector<NodeAddress> idxs;
-		// analyze the arguments of this call expression
-		auto repMod = normalize(vecExpr,idxs);
-
-		blockMgr->appendElement( cfg::Element( assignTemp(vecExpr,repMod), vecExpr) );
-		append();
-		
-		for (const auto& addr : idxs) { visit(addr); }
-	}
+	void visitStructExpr(const StructExprAddress& structExpr) { visitInitializerExpr(structExpr); }
+	void visitTupleExpr(const TupleExprAddress& tupleExpr) { visitInitializerExpr(tupleExpr); }
+	void visitUnionExpr(const UnionExprAddress& unionExpr) { visitInitializerExpr(unionExpr); }
+	void visitVectorExpr(const VectorExprAddress& vecExpr) { visitInitializerExpr(vecExpr); }
 
 	void visitCallExpr(const CallExprAddress& callExpr) {
 	
@@ -852,9 +798,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		}
 
 		// Visit the Arguments
-		for (const auto& cur : callExpr->getArguments()) {
-			visitArgument(cur);
-		}
+		for (const auto& cur : callExpr->getArguments()) { visitArgument(cur); }
 	}
 
 	//void visitCallExpr(const CallExprAddress& callExpr) {
@@ -1046,7 +990,6 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	void visitStatement(const StatementAddress& stmt) {
 		
 		StatementPtr toAppendStmt = stmt.getAddressedNode();
-
 		if (ExpressionAddress expr = dynamic_address_cast<const Expression>(stmt)) {
 			toAppendStmt = assignTemp(expr, toAppendStmt.as<ExpressionPtr>()); 
 		}
@@ -1368,11 +1311,6 @@ std::ostream& Block::printTo(std::ostream& out) const {
 
 		return out << "\"]";
 	}
-	//case cfg::Block::CALL:
-	//	return out << "[shape=box,label=\"CALL\"]";
-
-	//case cfg::Block::RET:
-	//	return out << "[shape=box,label=\"RET\"]";
 
 	case cfg::Block::ENTRY:
 		return out << "[shape=diamond,label=\"ENTRY\"]";
