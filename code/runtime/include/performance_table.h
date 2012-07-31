@@ -59,45 +59,24 @@ typedef enum {
 	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_15 = 17,
 	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_16 = 18,
 } extended_performance_data_type;
-	
-typedef enum {
-	WORK_ITEM_CREATED = 1000,
-	WORK_ITEM_QUEUED = 1100,
-	WORK_ITEM_SPLITTED = 1200,
-	WORK_ITEM_STARTED = 1300,
-	WORK_ITEM_SUSPENDED_IO = 1500,
-	WORK_ITEM_SUSPENDED_BARRIER = 1501,
-	WORK_ITEM_SUSPENDED_JOIN = 1502,
-	WORK_ITEM_SUSPENDED_GROUPJOIN = 1503,
-	WORK_ITEM_SUSPENDED_JOIN_ALL = 1504,
-	WORK_ITEM_SUSPENDED_UNKOWN = 1599,
-	WORK_ITEM_RESUMED = 1600,
-	WORK_ITEM_FINISHED = 1900,
-} wi_instrumentation_event;
 
-typedef enum {
-	WORK_GROUP_CREATED = 2000,
-} wg_instrumentation_event;
+#define IRT_INST_EVENT(event, group_label, event_label) event,
+typedef enum instrumentation_event {
+#include "performance_table.def"
+} instrumentation_event;
+#undef IRT_INST_EVENT
 
-typedef enum {
-	WORKER_CREATED = 3000,
-	WORKER_RUNNING = 3100,
-	WORKER_SLEEP_START = 3200,
-	WORKER_SLEEP_END = 3300,
-	WORKER_SLEEP_BUSY_START = 3400,
-	WORKER_SLEEP_BUSY_END = 3500,
-	WORKER_STOP = 3800,
-} worker_instrumentation_event;
+#define IRT_INST_EVENT(event, group_label, event_label) event_label,
+const char* instrumentation_event_names[] = {
+#include "performance_table.def"
+};
+#undef IRT_INST_EVENT
 
-typedef enum {
-	DATA_ITEM_CREATED = 4000,
-	DATA_ITEM_RECYCLED = 4500,
-} di_instrumentation_event;
-
-typedef enum {
-	REGION_START = 5000,
-	REGION_END = 5100,
-} region_instrumentation_event;
+#define IRT_INST_EVENT(event, group_label, event_label) group_label,
+const char* instrumentation_group_names[] = {
+#include "performance_table.def"
+};
+#undef IRT_INST_EVENT
 
 typedef struct _irt_region {
 	uint64 cputime;

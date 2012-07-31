@@ -84,10 +84,10 @@ void irt_instrumentation_init_energy_instrumentation();
 
 // private event handlers
 
-void _irt_wi_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id);
-void _irt_wg_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id);
-void _irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id);
-void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id);
+void _irt_wi_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_work_item_id subject_id);
+void _irt_wg_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_work_group_id subject_id);
+void _irt_worker_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_worker_id subject_id);
+void _irt_di_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_data_item_id subject_id);
 
 // debug output functions
 
@@ -107,10 +107,10 @@ void irt_all_toggle_instrumentation(bool enable);
 // dummy functions to be used via function pointer to disable 
 // instrumentation even if IRT_ENABLE_INSTRUMENTATION is set
 
-void _irt_wi_no_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id);
-void _irt_wg_no_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id);
-void _irt_worker_no_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id);
-void _irt_di_no_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id);
+void _irt_wi_no_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_work_item_id subject_id);
+void _irt_wg_no_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_work_group_id subject_id);
+void _irt_worker_no_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_worker_id subject_id);
+void _irt_di_no_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_data_item_id subject_id);
 
 typedef uint64 region_id;
 

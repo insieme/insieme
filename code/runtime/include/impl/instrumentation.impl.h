@@ -53,20 +53,20 @@
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 // global function pointers to switch instrumentation on/off
-void (*irt_wi_instrumentation_event)(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) = &_irt_wi_instrumentation_event;
-void (*irt_wg_instrumentation_event)(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) = &_irt_wg_no_instrumentation_event;;
-void (*irt_di_instrumentation_event)(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) = &_irt_di_no_instrumentation_event;
-void (*irt_worker_instrumentation_event)(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) = &_irt_worker_no_instrumentation_event;
+void (*irt_wi_instrumentation_event)(irt_worker* worker, instrumentation_event event, irt_work_item_id subject_id) = &_irt_wi_instrumentation_event;
+void (*irt_wg_instrumentation_event)(irt_worker* worker, instrumentation_event event, irt_work_group_id subject_id) = &_irt_wg_no_instrumentation_event;;
+void (*irt_di_instrumentation_event)(irt_worker* worker, instrumentation_event event, irt_data_item_id subject_id) = &_irt_di_no_instrumentation_event;
+void (*irt_worker_instrumentation_event)(irt_worker* worker, instrumentation_event event, irt_worker_id subject_id) = &_irt_worker_no_instrumentation_event;
 bool irt_instrumentation_event_output_is_enabled = false;
 
 // ============================ dummy functions ======================================
 // dummy functions to be used via function pointer to disable
 // instrumentation even if IRT_ENABLE_INSTRUMENTATION is set
 
-void _irt_wi_no_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) { }
-void _irt_wg_no_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) { }
-void _irt_worker_no_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) { }
-void _irt_di_no_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) { }
+void _irt_wi_no_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_work_item_id subject_id) { }
+void _irt_wg_no_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_work_group_id subject_id) { }
+void _irt_worker_no_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_worker_id subject_id) { }
+void _irt_di_no_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_data_item_id subject_id) { }
 
 // resizes table according to blocksize
 void _irt_performance_table_resize(irt_pd_table* table) {
@@ -119,19 +119,19 @@ void _irt_instrumentation_event_insert(irt_worker* worker, const int event, cons
 
 // =========== private event handlers =================================
 
-void _irt_wi_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) {
+void _irt_wi_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_work_item_id subject_id) {
 	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
 }
 
-void _irt_wg_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) {
+void _irt_wg_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_work_group_id subject_id) {
 	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
 }
 
-void _irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) {
+void _irt_worker_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_worker_id subject_id) {
 	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
 }
 
-void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) {
+void _irt_di_instrumentation_event(irt_worker* worker, instrumentation_event event, irt_data_item_id subject_id) {
 	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
 }
 
@@ -247,8 +247,6 @@ void irt_instrumentation_output(irt_worker* worker) {
 		fprintf(opencl_logfile, ",\t%18lu\n", ocl_helper_table[helper_counter].timestamp);
 		helper_counter++;
 		}
-
-
 	}
 
 	fclose(opencl_logfile);
@@ -315,108 +313,7 @@ void irt_instrumentation_output(irt_worker* worker) {
 //			ocl_helper_table_counter++;
 //		}
 //#endif
-		if(table->data[i].event < 2000) { // 1000 <= work item events < 2000
-			fprintf(outputfile, "WI,%14lu,\t", table->data[i].subject_id);
-
-			switch(table->data[i].event) {
-				case WORK_ITEM_CREATED:
-					fprintf(outputfile, "CREATED");
-					break;
-				case WORK_ITEM_QUEUED:
-					fprintf(outputfile, "QUEUED");
-					break;
-				case WORK_ITEM_SPLITTED:
-					fprintf(outputfile, "SPLITTED");
-					break;
-				case WORK_ITEM_STARTED:
-					fprintf(outputfile, "STARTED");
-					break;
-				case WORK_ITEM_SUSPENDED_BARRIER:
-					fprintf(outputfile, "SUSP_BARRIER");
-					break;
-				case WORK_ITEM_SUSPENDED_IO:
-					fprintf(outputfile, "SUSP_IO");
-					break;
-				case WORK_ITEM_SUSPENDED_JOIN:
-					fprintf(outputfile, "SUSP_JOIN");
-					break;
-				case WORK_ITEM_SUSPENDED_GROUPJOIN:
-					fprintf(outputfile, "SUSP_GROUPJOIN");
-					break;
-				case WORK_ITEM_SUSPENDED_JOIN_ALL:
-					fprintf(outputfile, "SUSP_JOINALL");
-					break;
-				case WORK_ITEM_RESUMED:
-					fprintf(outputfile, "RESUMED");
-					break;
-				case WORK_ITEM_FINISHED:
-					fprintf(outputfile, "FINISHED");
-					break;
-				default:
-					fprintf(outputfile, "UNKNOWN");
-			}
-		} else if(table->data[i].event < 3000) { // 2000 <= work group events < 3000
-			fprintf(outputfile, "WG,%14lu,\t", table->data[i].subject_id);
-			switch(table->data[i].event) {
-				case WORK_GROUP_CREATED:
-					fprintf(outputfile, "CREATED");
-					break;
-				default:
-					fprintf(outputfile, "UNKOWN");
-			}
-		} else if(table->data[i].event < 4000) { // 3000 <= worker events < 4000
-			fprintf(outputfile, "WO,%14lu,\t", table->data[i].subject_id);
-			switch(table->data[i].event) {
-				case WORKER_CREATED:
-					fprintf(outputfile, "CREATED");
-					break;
-				case WORKER_RUNNING:
-					fprintf(outputfile, "RUNNING");
-					break;
-				case WORKER_SLEEP_START:
-					fprintf(outputfile, "SLEEP_START");
-					break;
-				case WORKER_SLEEP_END:
-					fprintf(outputfile, "SLEEP_END");
-					break;
-				case WORKER_SLEEP_BUSY_START:
-					fprintf(outputfile, "SLEEP_BUSY_START");
-					break;
-				case WORKER_SLEEP_BUSY_END:
-					fprintf(outputfile, "SLEEP_BUSY_END");
-					break;
-				case WORKER_STOP:
-					fprintf(outputfile, "STOP");
-					break;
-				default:
-					fprintf(outputfile, "UNKOWN");
-			}
-		} else if(table->data[i].event < 5000) { // 4000 <= data item events < 5000
-			fprintf(outputfile, "DI,%14lu,\t", table->data[i].subject_id);
-			switch(table->data[i].event) {
-				case DATA_ITEM_CREATED:
-					fprintf(outputfile, "CREATED");
-					break;
-				case DATA_ITEM_RECYCLED:
-					fprintf(outputfile, "RECYCLED");
-					break;
-				default:
-					fprintf(outputfile, "UNKOWN");
-			}
-		} else if(table->data[i].event < 6000) { // 5000 <= regions < 6000
-			fprintf(outputfile, "RG,%14lu,\t", table->data[i].subject_id);
-			switch(table->data[i].event) {
-				case REGION_START:
-					fprintf(outputfile, "START");
-					break;
-				case REGION_END:
-					fprintf(outputfile, "END");
-					break;
-				default:
-					fprintf(outputfile, "UNKNOWN");
-			}
-		}
-		fprintf(outputfile, ",\t%18lu\n", irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+		fprintf(outputfile, "%s,%14lu,\t%s,\t%18lu\n", instrumentation_group_names[table->data[i].event], table->data[i].subject_id, instrumentation_event_names[table->data[i].event], irt_time_convert_ticks_to_ns(table->data[i].timestamp));
 	}
 	fclose(outputfile);
 #ifdef USE_OPENCL
