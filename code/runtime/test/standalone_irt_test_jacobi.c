@@ -112,7 +112,7 @@ double sin(double p1);
 #ifdef _MSC_VER
 #define IRT_STACK_STRUCT(__name, ...) (__name##_create(__VA_ARGS__))
 #else
-#define IRT_STACK_STRUCT(__name, ...) ((__name){__VA_ARGS__})
+#define IRT_STACK_STRUCT(__name, ...) ((struct __name){__VA_ARGS__})
 #endif
 
 inline struct __insieme_gen_type_27 __insieme_gen_type_27_create(irt_type_id c0, int32_t* c1, float** c2, float** c3,    double* c4,   float** c5) {
