@@ -36,24 +36,12 @@
 
 #pragma once
 
-// for now, we are also working with pthreads under windows
+#include "abstraction/threads.h"
 
-#include "irt_inttypes.h"
-#include "declarations.h"
-
-#ifdef _MSC_VER
-	#include <Windows.h>
-	typedef HANDLE irt_thread;
-#else
-	#include <pthread.h>
-	typedef pthread_t irt_thread;
-#endif
-
-// HANDLE = void* 
-// pthread_t = (unsigned) int
-
-// typedef the signature of function executed by thread
 typedef void* irt_thread_func(void*);
 
-/** create a new thread executing fun with parameter args */
-irt_thread irt_thread_create(irt_thread_func *fun, void *args);
+irt_thread irt_thread_create(irt_thread_func *fun, void *args) {
+	irt_thread thread;
+	pthread_create(&thread, NULL, fun, args);
+	return thread;
+}

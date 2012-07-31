@@ -36,24 +36,29 @@
 
 #pragma once
 
-// for now, we are also working with pthreads under windows
+#include "abstraction/threads.h"
 
-#include "irt_inttypes.h"
-#include "declarations.h"
+// little helper struct to pass function and parameter to irt_win_thread_func
+typedef struct _irt_win_thread_params {
+	irt_thread_func *fun;	// function which shall be executed by (new) thread
+	void *args;				// parameter for function fun
+} irt_win_thread_params;
 
-#ifdef _MSC_VER
-	#include <Windows.h>
-	typedef HANDLE irt_thread;
-#else
-	#include <pthread.h>
-	typedef pthread_t irt_thread;
-#endif
+/*  wrapper function which admits to the required signature for CreateThread
+	it simply calls original irt_thread_func function with accoring parameter
+*/
+DWORD WINAPI _irt_win_thread_func(void* params)
+{
+	irt_win_thread_params *p = (irt_win_thread_params*)params;
+	DWORD ret = 0;
+	ret = (DWORD)p->fun(p->args);
+	free(params);
+	return ret;
+}
 
-// HANDLE = void* 
-// pthread_t = (unsigned) int
-
-// typedef the signature of function executed by thread
-typedef void* irt_thread_func(void*);
-
-/** create a new thread executing fun with parameter args */
-irt_thread irt_thread_create(irt_thread_func *fun, void *args);
+irt_thread irt_thread_create(irt_thread_func *fun, void *args) {
+	irt_win_thread_params *params = (irt_win_thread_params*)malloc(sizeof(irt_win_thread_params));
+	params->fun = fun;
+	params->args = args;
+	return CreateThread(NULL, NULL, _irt_win_thread_func, params, NULL, NULL);
+}

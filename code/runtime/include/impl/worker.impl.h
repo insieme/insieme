@@ -46,6 +46,9 @@
 	#include "impl/irt_mqueue.impl.h"
 #endif
 
+
+#include "abstraction/threads.h"
+#include "abstraction/impl/threads.impl.h"
 #include "impl/irt_context.impl.h"
 #include "impl/work_item.impl.h"
 #include "utils/impl/minlwt.impl.h"
@@ -237,9 +240,9 @@ void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init
 	arg->index = index;
 	arg->signal = signal;
 
-	pthread_t thread;
-
-	IRT_ASSERT(pthread_create(&thread, NULL, &_irt_worker_func, arg) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
+	irt_thread_create(&_irt_worker_func, arg);
+	/*pthread_t thread;
+	IRT_ASSERT(pthread_create(&thread, NULL, &_irt_worker_func, arg) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");*/
 }
 
 void _irt_worker_cancel_all_others() {

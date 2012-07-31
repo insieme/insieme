@@ -109,6 +109,12 @@ double sin(double p1);
 
 /* --- WINFIX BEGIN helper functions to create structs ------- */
 
+#ifdef _MSC_VER
+#define IRT_STACK_STRUCT(__name, ...) (__name##_create(__VA_ARGS__))
+#else
+#define IRT_STACK_STRUCT(__name, ...) ((__name){__VA_ARGS__})
+#endif
+
 inline struct __insieme_gen_type_27 __insieme_gen_type_27_create(irt_type_id c0, int32_t* c1, float** c2, float** c3,    double* c4,   float** c5) {
 	struct __insieme_gen_type_27 ret = { c0, c1, c2, c3, c4, c5};
 	return ret;
@@ -178,15 +184,12 @@ int32_t __insieme_fun_8(int32_t argc, char** argv) {
     end_t = clock();
     start_t = clock();
     for (int32_t var_32 = 0, var_92 = numIter, var_93 = 1; var_32 < var_92; var_32+=var_93) {
-		
-		// test
-		struct __insieme_gen_type_27 * hola = &__insieme_gen_type_27_create(8, &N, &u, &tmp, &factor, &f);
-		// end test
 
 		// WINFIX:
         // old: irt_merge(irt_parallel(&(irt_parallel_job){1, 4294967295, 1, 1, (irt_lw_data_item*)(&(struct __insieme_gen_type_27){8, &N, &u, &tmp, &factor, &f})}));
 		// new:
-		irt_merge(irt_parallel(&(irt_parallel_job_create(1, 4294967295, 1, 1, (irt_lw_data_item*)(&(__insieme_gen_type_27_create(8, &N, &u, &tmp, &factor, &f)))))));
+		irt_merge(irt_parallel(&(IRT_STACK_STRUCT(irt_parallel_job, 1, 4294967295, 1, 1, 
+			(irt_lw_data_item*)(&IRT_STACK_STRUCT(__insieme_gen_type_27, 8, &N, &u, &tmp, &factor, &f))))));
         memcpy((void*)u, (void*)tmp, (uint64_t)(N*N)*sizeof(float));
         for (int32_t var_40 = 1, var_101 = N-1, var_102 = 1; var_40 < var_101; var_40+=var_102) {
             for (int32_t var_42 = 1, var_103 = N-1, var_104 = 1; var_42 < var_103; var_42+=var_104) {
@@ -221,7 +224,7 @@ void __insieme_fun_23(int32_t* var_65, float** var_66, float** var_67, double* v
         {
 			// WINFIX: old: irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), (irt_work_item_range){1, *var_65-1, 1}, 0, (irt_lw_data_item*)(&(struct __insieme_gen_type_27){8, var_65, var_66, var_67, var_68, var_69}));
 			// new:
-            irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), irt_work_item_range_create(1, *var_65-1, 1), 0, (irt_lw_data_item*)(&__insieme_gen_type_27_create(8, var_65, var_66, var_67, var_68, var_69)));
+            irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), irt_work_item_range_create(1, *var_65-1, 1), 0, (irt_lw_data_item*)(&IRT_STACK_STRUCT(__insieme_gen_type_27, 8, var_65, var_66, var_67, var_68, var_69)));
             irt_wg_barrier(irt_wi_get_wg(irt_wi_get_current(), 0));
         };
     };
@@ -277,7 +280,7 @@ void insieme_cleanup_context(irt_context* context) {
 int32_t main(int32_t var_79, char** var_80) {
     // WINFIX, old:  irt_runtime_standalone(irt_get_default_worker_count(), &insieme_init_context, &insieme_cleanup_context, 2, (irt_lw_data_item*)(&(struct __insieme_gen_type_30){12, var_79, var_80}));
 	// new:
-	irt_runtime_standalone(irt_get_default_worker_count(), &insieme_init_context, &insieme_cleanup_context, 2, (irt_lw_data_item*)(&__insieme_gen_type_30_create(12, var_79, var_80)));
+	irt_runtime_standalone(irt_get_default_worker_count(), &insieme_init_context, &insieme_cleanup_context, 2, (irt_lw_data_item*)(&IRT_STACK_STRUCT(__insieme_gen_type_30, 12, var_79, var_80)));
     return 0;
 }
 
