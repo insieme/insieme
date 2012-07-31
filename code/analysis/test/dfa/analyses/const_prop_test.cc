@@ -283,7 +283,7 @@ TEST(ConstantPropagation, ArrayAliasReasign) {
 	CFGPtr cfg = CFG::buildCFG(code);
 
 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
-	auto&& ret = s.solve();
+	auto ret = s.solve();
 
 	// lookup address of variable b in the last stmt
 	NodeAddress aRef = NodeAddress(code).getAddressOfChild(3).getAddressOfChild(1).getAddressOfChild(2);

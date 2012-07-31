@@ -126,7 +126,7 @@ DefUse::defs_iterator DefUse::defs_end(const core::ExpressionAddress& expr) cons
 core::ExpressionAddress DefUse::defs_iterator::operator*() const { 
 	assert(pimpl->it != pimpl->end);
 
-	auto cur = std::get<0>(*pimpl->it);
+	auto&& cur = std::get<0>(*pimpl->it);
 	core::NodeAddress block = (*std::get<1>(*pimpl->it))[0].getStatementAddress();
 	
 	// check whether the variable we point to is an alias 
