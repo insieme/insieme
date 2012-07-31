@@ -198,7 +198,7 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 	
 	for (unsigned i = 0; i < param_num; ++i) {
 		size_t pos = iterVec.add( Parameter(extract_ir_expr(i, isl_dim_param)) );
-		// assert(pos-iter_num == i);
+		assert(pos-iter_num == i);
 	}
 	
 	return;
@@ -456,6 +456,23 @@ AffineConstraintPtr IslSet::toConstraint(core::NodeManager& mgr, IterationVector
 	UserData data(mgr, iterVec);
 	isl_union_set_foreach_set(set, visit_set, &data);
 
+	if (!data.ret) {
+		// this set was empty, however in ISL an empty set where the iteration domain contains
+		// iterations it acually is an universe set for that iterators 
+		if (iterVec.getIteratorNum() > 0) {
+			for_each(iterVec.iter_begin(), iterVec.iter_end(), 
+				[&](const Iterator& iter) {
+					AffineFunction func(iterVec);
+					func.setCoeff(iter, 1);
+
+					AffineConstraintPtr cons = 
+						AffineConstraint(func, ConstraintType::LE) || 
+						AffineConstraint(func, ConstraintType::GT);
+
+					data.ret = data.ret ? data.ret && cons : cons;
+				});
+		}
+	}
 	return data.ret;	
 }
 

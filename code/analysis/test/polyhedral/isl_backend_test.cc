@@ -114,6 +114,43 @@ TEST(IslBackend, SetConstraint) {
 	//isl_union_set_free(diff);
 }
 
+TEST(IslBackend, UniverseSet) {
+	
+	NodeManager mgr;	
+	CREATE_ITER_VECTOR; 
+
+	IterationDomain dom(iterVec);
+	EXPECT_TRUE( dom.universe() );
+
+	auto&& ctx = makeCtx<ISL>();
+	auto&& set = makeSet(ctx, dom);
+	EXPECT_EQ("[v3] -> { [v1] }", toString(*set));
+
+	IterationVector iv2;
+	AffineConstraintPtr cons = set->toConstraint(mgr, iv2);
+	EXPECT_TRUE(!!cons);
+
+	EXPECT_EQ(iv2, iterVec);
+	EXPECT_EQ("((v1 <= 0) v (v1 > 0))", toString(IterationDomain(cons)));
+}
+
+TEST(IslBackend, EmptySet) {
+	
+	NodeManager mgr;	
+	CREATE_ITER_VECTOR; 
+
+	IterationDomain dom(iterVec, true);
+	EXPECT_TRUE( dom.empty() );
+
+	auto&& ctx = makeCtx<ISL>();
+	auto&& set = makeSet(ctx, dom);
+	EXPECT_EQ("[v3] -> {  }", toString(*set));
+
+	IterationVector iv2;
+	AffineConstraintPtr cons = set->toConstraint(mgr, iv2);
+	EXPECT_FALSE(!!cons);
+}
+
 TEST(IslBackend, SetConstraintNormalized) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
