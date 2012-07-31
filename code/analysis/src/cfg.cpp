@@ -568,10 +568,14 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		struct NormalizeVisitor: public IRVisitor<ExpressionPtr, Address> {
 
 			CFGBuilder& cfgBuilder;
+			IRBuilder& builder;
 			std::vector<NodeAddress>& idxs;
 
-			NormalizeVisitor(CFGBuilder& builder, std::vector<NodeAddress>& idxs) : 
-				IRVisitor<ExpressionPtr, Address>(false), cfgBuilder(builder), idxs(idxs) { }
+			NormalizeVisitor(CFGBuilder& cfgBuilder, std::vector<NodeAddress>& idxs) : 
+				IRVisitor<ExpressionPtr, Address>(false), 
+				cfgBuilder(cfgBuilder), 
+				builder(cfgBuilder.builder), 
+				idxs(idxs) { }
 
 			ExpressionPtr visitCallExpr(const CallExprAddress& callExpr) {
 				// analyze the arguments of this call expression
@@ -581,7 +585,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 					newArgs.push_back( ret.second );
 					if (ret.first) { idxs.push_back( arg ); }
 				}
-				return cfgBuilder.builder.callExpr(callExpr->getFunctionExpr(), newArgs);
+				return builder.callExpr(callExpr->getFunctionExpr(), newArgs);
 			}
 
 			ExpressionPtr visitCastExpr(const CastExprAddress& castExpr) {
@@ -612,7 +616,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 						idxs.push_back( member->getValue() );
 					}
 				}
-				return cfgBuilder.builder.structExpr( members );
+				return builder.structExpr( members );
 			}
 
 			ExpressionPtr visitUnionExpr(const UnionExprAddress& unionExpr) {
@@ -621,7 +625,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 				if (tmpVar.first) {
 					idxs.push_back( unionExpr->getMember() );
 				}
-				return cfgBuilder.builder.unionExpr( unionExpr->getType(), unionExpr->getMemberName(), tmpVar.second );
+				return builder.unionExpr( unionExpr->getType(), unionExpr->getMemberName(), tmpVar.second );
 			}
 
 			ExpressionPtr visitVectorExpr(const VectorExprAddress& vectorExpr) {
@@ -634,7 +638,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 						idxs.push_back( expr );
 					}
 				}
-				return cfgBuilder.builder.vectorExpr( exprs );
+				return builder.vectorExpr( exprs );
 			}
 
 			ExpressionPtr visitTupleExpr(const TupleExprAddress& tupleExpr) {
@@ -647,7 +651,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 						idxs.push_back( expr );
 					}
 				}
-				return cfgBuilder.builder.tupleExpr( exprs );
+				return builder.tupleExpr( exprs );
 			}
 
 			ExpressionPtr visitExpression(const ExpressionAddress& expr) {
