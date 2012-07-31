@@ -155,7 +155,6 @@ void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element
 
 utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::ExpressionAddress& addr) {
 	
-
 	// Find the enclosing SCoP (if any)
 	core::NodeAddress prev = addr;
 	core::NodeAddress parent;
@@ -207,8 +206,10 @@ utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::Expr
 
 	IterationDomain domain( extract_surrounding_domain() );
 
-	if (domain.universe()) return utils::CombinerPtr<core::arithmetic::Formula>();
-	if (domain.empty()) {  return utils::castTo<AffineFunction, core::arithmetic::Formula>(domain.getConstraint()); }
+	if (domain.universe()) { return utils::CombinerPtr<core::arithmetic::Formula>(); }
+	if (domain.empty()) {  
+		return utils::castTo<AffineFunction, core::arithmetic::Formula>(domain.getConstraint()); 
+	}
 
 	AffineFunction func(scop.getIterationVector(), addr.getAddressedNode());
 
@@ -237,6 +238,18 @@ utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::Expr
 	}
 
 	auto cons = utils::fromConjunctions(resultConj);
+
+	if (!cons) { return utils::CombinerPtr<core::arithmetic::Formula>(); }
+
+	/* Simplify the constraint by using the polyhedral model library */
+	auto&& ctx = makeCtx();
+	auto&& set = makeSet(ctx, IterationDomain(cons));
+	set->simplify();
+
+	IterationVector iterVec;
+	cons = set->toConstraint(addr->getNodeManager(), iterVec);
+	
+	// If we end-up with an empty constraints it means that the result is the universe 
 	if (!cons) { return utils::CombinerPtr<core::arithmetic::Formula>(); }
 
 	return utils::castTo<AffineFunction, core::arithmetic::Formula>(cons);

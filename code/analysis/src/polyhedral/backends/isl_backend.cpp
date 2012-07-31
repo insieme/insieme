@@ -157,10 +157,8 @@ void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, 
 
 		// Retrieve the expression associated to this dimension
 		const Expr& var = static_cast<const Expr&>(*it);
-		std::ostringstream ss;
-		ss << var;
 
-		isl_id* id = isl_id_alloc(ctx, ss.str().c_str(), const_cast<core::Expression*>( &(*var.getExpr())) );
+		isl_id* id = isl_id_alloc(ctx, toString(var).c_str(), const_cast<core::Expression*>( &(*var.getExpr())) );
 		space = isl_space_set_dim_id(space, type, std::distance(begin, it), id);
 	}
 }
@@ -191,18 +189,16 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 	};
 
 	for (unsigned i = 0; i < iter_num; ++i) {
-		size_t pos = iterVec.add( 
-			Iterator(
-				core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set))
-			));
 
-		LOG(DEBUG) << core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set)) << pos << " " << i;
+		size_t pos = iterVec.add(Iterator(extract_ir_expr(i, isl_dim_set).as<core::VariablePtr>()));
+		// LOG(DEBUG) << core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set)) << pos << " " << i;
 		assert(pos == i);
+
 	}
 	
 	for (unsigned i = 0; i < param_num; ++i) {
 		size_t pos = iterVec.add( Parameter(extract_ir_expr(i, isl_dim_param)) );
-		assert(pos-iter_num == i);
+		// assert(pos-iter_num == i);
 	}
 	
 	return;
