@@ -162,13 +162,10 @@ void irt_exit_handler() {
 	_irt_worker_end_all();
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
-	uint64 a = irt_time_ticks();
 	for(int i = 0; i < irt_g_worker_count; ++i) {
 		// TODO: add OpenCL events
 		irt_inst_event_data_output(irt_g_workers[i]);
 	}
-	uint64 b = irt_time_ticks();
-	printf("time for writing: %3.5f\n", (b-a)/(double)irt_g_time_ticks_per_sec);
 #endif
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
