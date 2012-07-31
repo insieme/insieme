@@ -157,10 +157,8 @@ void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, 
 
 		// Retrieve the expression associated to this dimension
 		const Expr& var = static_cast<const Expr&>(*it);
-		std::ostringstream ss;
-		ss << var;
 
-		isl_id* id = isl_id_alloc(ctx, ss.str().c_str(), const_cast<core::Expression*>( &(*var.getExpr())) );
+		isl_id* id = isl_id_alloc(ctx, toString(var).c_str(), const_cast<core::Expression*>( &(*var.getExpr())) );
 		space = isl_space_set_dim_id(space, type, std::distance(begin, it), id);
 	}
 }
@@ -191,13 +189,11 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 	};
 
 	for (unsigned i = 0; i < iter_num; ++i) {
-		size_t pos = iterVec.add( 
-			Iterator(
-				core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set))
-			));
 
-		LOG(DEBUG) << core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set)) << pos << " " << i;
+		size_t pos = iterVec.add(Iterator(extract_ir_expr(i, isl_dim_set).as<core::VariablePtr>()));
+		// LOG(DEBUG) << core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set)) << pos << " " << i;
 		assert(pos == i);
+
 	}
 	
 	for (unsigned i = 0; i < param_num; ++i) {
@@ -460,6 +456,23 @@ AffineConstraintPtr IslSet::toConstraint(core::NodeManager& mgr, IterationVector
 	UserData data(mgr, iterVec);
 	isl_union_set_foreach_set(set, visit_set, &data);
 
+	if (!data.ret) {
+		// this set was empty, however in ISL an empty set where the iteration domain contains
+		// iterations it acually is an universe set for that iterators 
+		if (iterVec.getIteratorNum() > 0) {
+			for_each(iterVec.iter_begin(), iterVec.iter_end(), 
+				[&](const Iterator& iter) {
+					AffineFunction func(iterVec);
+					func.setCoeff(iter, 1);
+
+					AffineConstraintPtr cons = 
+						AffineConstraint(func, ConstraintType::LE) || 
+						AffineConstraint(func, ConstraintType::GT);
+
+					data.ret = data.ret ? data.ret && cons : cons;
+				});
+		}
+	}
 	return data.ret;	
 }
 
