@@ -446,6 +446,78 @@ namespace parser {
 
 	};
 
+	namespace detail {
+
+		class TokenSet : public utils::Printable {
+
+			/**
+			 * Individual tokens covered by this set.
+			 */
+			vector<Token> tokens;
+
+			/**
+			 * A bit-vector representing the mask of token types covered
+			 * by this set.
+			 */
+			unsigned tokenTypeMask;
+
+		public:
+			struct all {};
+
+			TokenSet() : tokenTypeMask(0) {};
+
+			template<typename ... Elements>
+			TokenSet(const Elements& ... elements)
+				: tokens(toVector(elements...)),
+				  tokenTypeMask(0) {};
+
+			TokenSet(const Token::Type& type)
+				: tokenTypeMask(1<<type) {}
+
+			TokenSet(const all&)
+				: tokenTypeMask((1<<16) -1) {}
+
+			bool contains(const Token& token) const {
+				return coversType(token) || coversToken(token);
+			}
+
+			bool add(const Token& token);
+			bool add(const Token::Type& type);
+			bool add(const TokenSet& other);
+
+			bool isSubSet(const TokenSet& other) const;
+
+			TokenSet& operator+=(const Token& token);
+			TokenSet& operator+=(const Token::Type& type);
+			TokenSet& operator+=(const TokenSet& other);
+
+			TokenSet operator+(const TokenSet& other) const {
+				return TokenSet(*this) += other;
+			}
+
+		protected:
+
+			virtual std::ostream& printTo(std::ostream& out) const;
+
+		private:
+
+			bool coversType(const Token::Type& type) const {
+				return (tokenTypeMask & (1<<type));
+			}
+
+			bool coversType(const Token& token) const {
+				return coversType(token.getType());
+			}
+
+			bool coversToken(const Token& token) const {
+				return any(tokens, [&](const Token& cur) { return cur==token; });
+			}
+
+		};
+
+	}
+
+
 	/**
 	 * A base class for all grammar terms. A term could be a terminal, a non-terminal,
 	 * a repetition or an alternative .
@@ -748,9 +820,15 @@ namespace parser {
 
 		TermPtr body;
 
+		// the set of tokens forming definite terminal characters
+		detail::TokenSet terminator;
+
 	public:
 
 		Loop(const TermPtr& body) : body(body) {}
+
+		template<typename ... Terminators>
+		Loop(const TermPtr& body, const Terminators& ... terminators) : body(body), terminator(terminators...) {}
 
 		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const;
 
@@ -810,79 +888,6 @@ namespace parser {
 			return out << *pattern << " => ...";
 		}
 	};
-
-
-	namespace detail {
-
-		class TokenSet : public utils::Printable {
-
-			/**
-			 * Individual tokens covered by this set.
-			 */
-			vector<Token> tokens;
-
-			/**
-			 * A bit-vector representing the mask of token types covered
-			 * by this set.
-			 */
-			unsigned tokenTypeMask;
-
-		public:
-			struct all {};
-
-			TokenSet() : tokenTypeMask(0) {};
-
-			TokenSet(const Token& element)
-				: tokens(toVector(element)),
-				  tokenTypeMask(0) {};
-
-			TokenSet(const Token::Type& type)
-				: tokenTypeMask(1<<type) {}
-
-			TokenSet(const all&)
-				: tokenTypeMask((1<<16) -1) {}
-
-			bool contains(const Token& token) const {
-				return coversType(token) || coversToken(token);
-			}
-
-			bool add(const Token& token);
-			bool add(const Token::Type& type);
-			bool add(const TokenSet& other);
-
-			bool isSubSet(const TokenSet& other) const;
-
-			TokenSet& operator+=(const Token& token);
-			TokenSet& operator+=(const Token::Type& type);
-			TokenSet& operator+=(const TokenSet& other);
-
-			TokenSet operator+(const TokenSet& other) const {
-				return TokenSet(*this) += other;
-			}
-
-		protected:
-
-			virtual std::ostream& printTo(std::ostream& out) const;
-
-		private:
-
-			bool coversType(const Token::Type& type) const {
-				return (tokenTypeMask & (1<<type));
-			}
-
-			bool coversType(const Token& token) const {
-				return coversType(token.getType());
-			}
-
-			bool coversToken(const Token& token) const {
-				return any(tokens, [&](const Token& cur) { return cur==token; });
-			}
-
-		};
-
-
-
-	}
 
 
 
@@ -1110,6 +1115,11 @@ namespace parser {
 
 	inline TermPtr loop(const TermPtr& body) {
 		return std::make_shared<Loop>(body);
+	}
+
+	template<typename ... Terminators>
+	inline TermPtr loop(const TermPtr& body, const Terminators& ... terminators) {
+		return std::make_shared<Loop>(body, terminators...);
 	}
 
 	inline TermPtr list(const TermPtr& element, const TermPtr& seperator) {
