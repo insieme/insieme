@@ -72,10 +72,7 @@ TEST(IslBackend, SetCreation) {
 
 	auto&& ctx = makeCtx<ISL>();
 	auto&& set = makeSet(ctx, IterationDomain(iterVec));
-
-	std::ostringstream ss;
-	ss << *set;
-	EXPECT_EQ("[v3] -> { [v1] }", ss.str());
+	EXPECT_EQ("[v3] -> { [v1] }", toString(*set));
 
 	IterationVector iv2;
 	set->toConstraint(mgr, iv2);
@@ -93,10 +90,7 @@ TEST(IslBackend, SetConstraint) {
 	auto&& ctx = makeCtx<ISL>();
 	auto&& set = makeSet(ctx, IterationDomain(c));
 	set->simplify();
-
-	std::ostringstream ss;
-	ss << *set;
-	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4 }", ss.str());
+	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4 }", toString(*set));
 
 	IterationVector iv2;
 	set->toConstraint(mgr, iv2);
@@ -558,7 +552,7 @@ TEST(IslBackend, Cardinality2) {
 	EXPECT_EQ("[v3] -> { 81 }", toString(*pw));
 	
 	utils::Piecewise<arithmetic::Formula> apw = pw->toPiecewise(mgr);
-	//EXPECT_TRUE( utils::isFormula(apw) );
+	// EXPECT_TRUE( utils::isFormula(apw) );
 	//EXPECT_EQ(arithmetic::Formula(81), arithmetic::toFormula(apw));
 
 }

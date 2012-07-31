@@ -154,7 +154,7 @@ public:
 		/**
 		 * Release the pointer from the unique_ptr container so it does not get removed
 		 */
-		void release_block_ptr() {
+		inline void release_block_ptr() {
 			assert (!pending() && "Cannot release, the blcok has not been inserted into the CFG");
 			std::get<0>(*this).release();
 		}
@@ -171,7 +171,7 @@ public:
 		BlockInfo(BlockInfo&& other) : 
 			std::tuple<std::unique_ptr<cfg::Block>, bool, bool, CFG::VertexTy>(std::move(other)) { }
 
-		BlockInfo& operator=(BlockInfo&& other) {
+		inline BlockInfo& operator=(BlockInfo&& other) {
 
 			assert (((pending() && curr_block()->empty()) || !pending()) && "Blcok is dirty!" ) ;
 			if (!pending()) { release_block_ptr(); }
@@ -180,22 +180,22 @@ public:
 			return *this;
 		}
 
-		cfg::Block* curr_block() const { 
+		inline cfg::Block* curr_block() const { 
 			return std::get<0>(*this).get(); 
 		}
 	
-		const bool& pending() const { 
+		inline const bool& pending() const { 
 			return std::get<1>(*this); 
 		}
-		bool& pending() { 
+		inline bool& pending() { 
 			return std::get<1>(*this); 
 		}
 
-		const bool& connected() const { return std::get<2>(*this); }
-		bool& connected() { return std::get<2>(*this); }
+		inline const bool& connected() const { return std::get<2>(*this); }
+		inline bool& connected() { return std::get<2>(*this); }
 
-		const CFG::VertexTy& block_id() const { return std::get<3>(*this); }
-		CFG::VertexTy& block_id() { return std::get<3>(*this); }
+		inline const CFG::VertexTy& block_id() const { return std::get<3>(*this); }
+		inline CFG::VertexTy& block_id() { return std::get<3>(*this); }
 
 		~BlockInfo() {
 			// If the block has been used in the CFG then do not delete it 
@@ -215,11 +215,9 @@ public:
 		return std::move(b);
 	}
 
-	void set(BlockInfo&& block) { 
-		bInfo = std::move(block); 
-	}
+	inline void set(BlockInfo&& block) { bInfo = std::move(block); }
 
-	cfg::Block* operator->() const { return bInfo.curr_block(); }
+	inline cfg::Block* operator->() const { return bInfo.curr_block(); }
 
 	/**
 	 * Close the current block and creates a new one for new content. 
@@ -564,107 +562,101 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 	}
 
-	ExpressionPtr normalize(const CallExprAddress& callExpr, std::vector<NodeAddress>& idxs) {
-		// analyze the arguments of this call expression
-		vector<ExpressionPtr> newArgs;
-		for (const auto& arg : callExpr->getArguments()) {
-			auto ret = storeTemp(arg);
-			newArgs.push_back( ret.second );
-			if (ret.first) { idxs.push_back( arg ); }
-		}
-		return builder.callExpr(callExpr->getFunctionExpr(), newArgs);
-	}
-
-	ExpressionPtr normalize(const CastExprAddress& castExpr, std::vector<NodeAddress>& idxs) {
-		// analyze the arguments of this call expression
-		auto newArg = storeTemp(castExpr->getSubExpression());
-
-		if (newArg.first) { idxs.push_back(castExpr->getSubExpression()); }
-
-		return newArg.first ? 
-			builder.castExpr(castExpr->getType(), newArg.second) :
-			castExpr.getAddressedNode();
-	}
-
-	ExpressionPtr normalize(const MarkerExprAddress& markerExpr, std::vector<NodeAddress>& idxs) {
-		return normalize(markerExpr->getSubExpression(), idxs);
-	}
-
-
-	ExpressionPtr normalize(const StructExprAddress& structExpr, std::vector<NodeAddress>& idxs) {
-		StructExpr::Members members; 
-
-		for(const auto& member : structExpr->getMembers()) {
-			auto&& tmpVar = storeTemp(member->getValue());
-			members.push_back( NamedValue::get(structExpr->getNodeManager(), member->getName(), tmpVar.second) );
-			if (tmpVar.first) {
-				idxs.push_back( member->getValue() );
-			}
-		}
-		return builder.structExpr( members );
-	}
-
-	ExpressionPtr normalize(const UnionExprAddress& unionExpr, std::vector<NodeAddress>& idxs) {
-
-		auto&& tmpVar = storeTemp(unionExpr->getMember());
-		if (tmpVar.first) {
-			idxs.push_back( unionExpr->getMember() );
-		}
-	
-		return builder.unionExpr( unionExpr->getType(), unionExpr->getMemberName(), tmpVar.second );
-	}
-
-	ExpressionPtr normalize(const VectorExprAddress& vectorExpr, std::vector<NodeAddress>& idxs) {
-		std::vector<ExpressionPtr> exprs; 
-
-		for(const auto& expr : vectorExpr->getExpressions()) {
-			auto&& tmpVar = storeTemp(expr);
-			exprs.push_back( tmpVar.second );
-			if (tmpVar.first) {
-				idxs.push_back( expr );
-			}
-		}
-		return builder.vectorExpr( exprs );
-	}
-
-	ExpressionPtr normalize(const TupleExprAddress& tupleExpr, std::vector<NodeAddress>& idxs) {
-		std::vector<ExpressionPtr> exprs; 
-
-		for(const auto& expr : tupleExpr->getExpressions()) {
-			auto&& tmpVar = storeTemp(expr);
-			exprs.push_back( tmpVar.second );
-			if (tmpVar.first) {
-				idxs.push_back( expr );
-			}
-		}
-		return builder.tupleExpr( exprs );
-	}
 
 	ExpressionPtr normalize(const ExpressionAddress& expr, std::vector<NodeAddress>& idxs) {
-		if (expr->getNodeType() == NT_CallExpr) 
-			return normalize(expr.as<CallExprAddress>(), idxs);
 
-		if (expr->getNodeType() == NT_CastExpr)
-			return normalize(expr.as<CastExprAddress>(), idxs);
+		struct NormalizeVisitor: public IRVisitor<ExpressionPtr, Address> {
 
-		if (expr->getNodeType() == NT_MarkerExpr)
-			return normalize(expr.as<MarkerExprAddress>(), idxs);
+			CFGBuilder& cfgBuilder;
+			std::vector<NodeAddress>& idxs;
 
-		if (expr->getNodeType() == NT_StructExpr)
-			return normalize(expr.as<StructExprAddress>(), idxs);
+			NormalizeVisitor(CFGBuilder& builder, std::vector<NodeAddress>& idxs) : 
+				IRVisitor<ExpressionPtr, Address>(false), cfgBuilder(builder), idxs(idxs) { }
 
-		if (expr->getNodeType() == NT_TupleExpr)
-			return normalize(expr.as<TupleExprAddress>(), idxs);
+			ExpressionPtr visitCallExpr(const CallExprAddress& callExpr) {
+				// analyze the arguments of this call expression
+				vector<ExpressionPtr> newArgs;
+				for (const auto& arg : callExpr->getArguments()) {
+					auto ret = cfgBuilder.storeTemp(arg);
+					newArgs.push_back( ret.second );
+					if (ret.first) { idxs.push_back( arg ); }
+				}
+				return cfgBuilder.builder.callExpr(callExpr->getFunctionExpr(), newArgs);
+			}
 
-		if (expr->getNodeType() == NT_UnionExpr)
-			return normalize(expr.as<UnionExprAddress>(), idxs);
+			ExpressionPtr visitCastExpr(const CastExprAddress& castExpr) {
+				// analyze the arguments of this call expression
+				auto newArg = cfgBuilder.storeTemp(castExpr->getSubExpression());
 
-		if (expr->getNodeType() == NT_VectorExpr)
-			return normalize(expr.as<VectorExprAddress>(), idxs);
+				if (newArg.first) { idxs.push_back(castExpr->getSubExpression()); }
+
+				return newArg.first ? 
+					cfgBuilder.builder.castExpr(castExpr->getType(), newArg.second) :
+					castExpr.getAddressedNode();
+			}
+
+			ExpressionPtr visitMarkerExpr(const MarkerExprAddress& markerExpr) {
+				return visit(markerExpr->getSubExpression());
+			}
 
 
-		// node is already normalized
-		return expr.getAddressedNode();
+			ExpressionPtr visitStructExpr(const StructExprAddress& structExpr) {
+				StructExpr::Members members; 
+
+				for(const auto& member : structExpr->getMembers()) {
+					auto&& tmpVar = cfgBuilder.storeTemp(member->getValue());
+					members.push_back( 
+						NamedValue::get(structExpr->getNodeManager(), member->getName(), tmpVar.second) 
+					);
+					if (tmpVar.first) {
+						idxs.push_back( member->getValue() );
+					}
+				}
+				return cfgBuilder.builder.structExpr( members );
+			}
+
+			ExpressionPtr visitUnionExpr(const UnionExprAddress& unionExpr) {
+
+				auto&& tmpVar = cfgBuilder.storeTemp(unionExpr->getMember());
+				if (tmpVar.first) {
+					idxs.push_back( unionExpr->getMember() );
+				}
+				return cfgBuilder.builder.unionExpr( unionExpr->getType(), unionExpr->getMemberName(), tmpVar.second );
+			}
+
+			ExpressionPtr visitVectorExpr(const VectorExprAddress& vectorExpr) {
+				std::vector<ExpressionPtr> exprs; 
+
+				for(const auto& expr : vectorExpr->getExpressions()) {
+					auto&& tmpVar = cfgBuilder.storeTemp(expr);
+					exprs.push_back( tmpVar.second );
+					if (tmpVar.first) {
+						idxs.push_back( expr );
+					}
+				}
+				return cfgBuilder.builder.vectorExpr( exprs );
+			}
+
+			ExpressionPtr visitTupleExpr(const TupleExprAddress& tupleExpr) {
+				std::vector<ExpressionPtr> exprs; 
+
+				for(const auto& expr : tupleExpr->getExpressions()) {
+					auto&& tmpVar = cfgBuilder.storeTemp(expr);
+					exprs.push_back( tmpVar.second );
+					if (tmpVar.first) {
+						idxs.push_back( expr );
+					}
+				}
+				return cfgBuilder.builder.tupleExpr( exprs );
+			}
+
+			ExpressionPtr visitExpression(const ExpressionAddress& expr) {
+				return expr.getAddressedNode();
+			}
+
+		};
+
+		return NormalizeVisitor(*this, idxs).visit(expr);
 	}
 
 	// In the case the passed address needs to be saved in one of the predisposed temporary

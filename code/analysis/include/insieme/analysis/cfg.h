@@ -62,20 +62,17 @@ typedef std::shared_ptr<CFG> CFGPtr;
 namespace cfg {
 
 /**
- * Element - Represents a top-level expression in a basic block. A type is
- * included to distinguish expression from terminal nodes.
+ * Element - Represents a top-level expression in a basic block. A type is included to distinguish
+ * expression from terminal nodes.
  *
- * Because the generation of the CFG introduces temporaries, the node store 2
- * pointers to IR. 
+ * Because the generation of the CFG introduces temporaries, the node store 2 pointers to IR. 
  *
- * viewPtr: This is a pointer to the analysis view of the IR where tempoaries
- * are used as a placeholder for DF values coming from the call of
- * subexpressions
+ * viewPtr: This is a pointer to the analysis view of the IR where tempoaries are used as a
+ * placeholder for DF values coming from the call of subexpressions
  *
- * baseAddr: Is the address of the original statement to which this CFG Element
- * is point to. This information is important in order to retrieve addresses of
- * IR nodes. For example to give some meaningfull information as result of the
- * DF analysis 
+ * baseAddr: Is the address of the original statement to which this CFG Element is point to. This
+ * information is important in order to retrieve addresses of IR nodes. For example to give some
+ * meaningfull information as result of the DF analysis 
  */
 struct Element : public utils::Printable {
 
@@ -298,7 +295,7 @@ public:
 
 		BlockVisitor(const FunctorType& func) : func(func) { }
 
-		void operator()(const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) { 
+		inline void operator()(const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) { 
 			func(g[v]); 
 		}
 
@@ -493,7 +490,7 @@ struct Block :
 	inline Terminator& terminator() { return term; }
 
 	inline bool hasTerminator() const { 
-		return !!term.getAnalysisStatement(); 
+		return static_cast<bool>(term.getAnalysisStatement()); 
 	}
 
 	/// Returns the number of elements inside this block
@@ -597,11 +594,11 @@ struct CallBlock: public Block {
 
 	CallBlock(const CFG& cfg): Block(cfg, CALL), ret(NULL) { }
 
-	const RetBlock& getReturnBlock() const { 
+	inline const RetBlock& getReturnBlock() const { 
 		assert(ret && "Return block for this CALL block not set."); 
 		return *ret; 
 	}
-	void setReturnBlock(RetBlock& ret) { this->ret = &ret; }
+	inline void setReturnBlock(RetBlock& ret) { this->ret = &ret; }
 
 	virtual ~CallBlock() { }
 private:
@@ -612,21 +609,16 @@ struct RetBlock: public Block {
 
 	RetBlock(const CFG& cfg): Block(cfg, RET), call(NULL) { }
 
-	const CallBlock& getCallBlock() const { 
+	inline const CallBlock& getCallBlock() const { 
 		assert(call && "Call block for this RET block not set.");
 		return *call; 
 	}
-	void setCallBlock(CallBlock& call) { this->call = &call; }
+	inline void setCallBlock(CallBlock& call) { this->call = &call; }
 
 	virtual ~RetBlock() { }
 private:
 	CallBlock* call;
 };
-
-
-
-
-
 
 } // end cfg namespace
 } // end analysis namespace
