@@ -38,8 +38,6 @@
 
 #include "abstraction/threads.h"
 
-typedef void* irt_thread_func(void*);
-
 irt_thread irt_thread_create(irt_thread_func *fun, void *args) {
 	irt_thread thread;
 	pthread_create(&thread, NULL, fun, args);
