@@ -204,6 +204,11 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 };
 
+/**
+ * Given an IR statement, return the its polyhedral representation starting from the outermost SCoP
+ *
+ * If the statement is not inside a SCoP, the returned optional object will be not initialized
+ */
 boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& stmt);
 
 //*************************************************************************************************
@@ -234,9 +239,18 @@ struct Scop : public utils::Printable {
 	}
 
 	// Copy constructor builds a deep copy of this SCoP. 
-	Scop(const Scop& other) : iterVec(other.iterVec), sched_dim(other.sched_dim) {
+	explicit Scop(const Scop& other) : iterVec(other.iterVec), sched_dim(other.sched_dim) {
 		for_each(other.stmts, [&] (const StmtPtr& stmt) { this->push_back( *stmt ); });
 	}
+
+	/**
+	 * Move constructor
+	 */
+	Scop(Scop&& other) : 
+		iterVec( std::move(other.iterVec) ) ,
+		stmts( std::move( other.stmts ) ),
+		sched_dim( other.sched_dim ) { }
+
 
 	std::ostream& printTo(std::ostream& out) const;
 
@@ -246,7 +260,7 @@ struct Scop : public utils::Printable {
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 	inline IterationVector& getIterationVector() { return iterVec; }
 
-	inline StmtVect getStmts() const { return stmts; }
+	inline const StmtVect& getStmts() const { return stmts; }
 
 	// Get iterators thorugh the statements contained in this SCoP
 	inline iterator begin() { return stmts.begin(); }

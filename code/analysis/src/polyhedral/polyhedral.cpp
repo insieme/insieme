@@ -49,6 +49,7 @@
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/analysis/dep_graph.h"
+#include <memory>
 
 #define MSG_WIDTH 100
 
@@ -119,9 +120,42 @@ IterationDomain makeVarRange(IterationVector& 				iterVec,
 	);
 }
 
+namespace {
 
-IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAddress& addr) {
+template <class Cont>
+void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element& elem, std::set<const Element*>& checked, Cont& cont) {
 	
+	auto cmp = [](const Element* lhs, const Element* rhs) -> bool { return *lhs < *rhs; };
+	std::set<const Element*,decltype(cmp)> elements(cmp);
+
+	if (!checked.insert(&elem).second) { return; }
+
+	// for each conjunction collect the constraints where the interested variables are appearing 
+	// do it recursively 
+	for ( const auto& cons : conjunctions ) {
+		
+		const AffineFunction& func = std::static_pointer_cast<RawAffineConstraint>(cons)->getConstraint().getFunction();
+
+		if (func.getCoeff(elem) != 0) { 
+			// add this constraint to the result 
+			cont.insert(cons);
+			
+			for_each(func.begin(), func.end(), [&](AffineFunction::Term term) {
+					if (term.second != 0 && term.first != elem && term.first.getType() != Element::CONST) {
+						elements.insert( &term.first );
+					}
+				});
+		}
+	}
+	for_each(elements.begin(), elements.end(), [&](const Element* cur) { extract(conjunctions, *cur, checked, cont); });
+}
+
+} // end anonymous namespace 
+
+
+utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::ExpressionAddress& addr) {
+	
+
 	// Find the enclosing SCoP (if any)
 	core::NodeAddress prev = addr;
 	core::NodeAddress parent;
@@ -129,7 +163,9 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && !parent->hasAnnotation( scop::ScopRegion::KEY) ) { prev=parent; } 
 
 	// This statement is not part of a SCoP (also may throw an exception)
-	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { return IterationDomain( vec ); }
+	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { 
+		return utils::CombinerPtr<core::arithmetic::Formula>(); 
+	}
 
 	StatementAddress enclosingScop = parent.as<StatementAddress>();
 
@@ -142,29 +178,68 @@ IterationDomain getVariableDomain(IterationVector& vec, const core::ExpressionAd
 	assert(parent && "Scop entry not found");
 
 	// Resolve the SCoP from the entry point
-	Scop scop = prev->getAnnotation( scop::ScopRegion::KEY )->getScop();
+	Scop& scop = prev->getAnnotation( scop::ScopRegion::KEY )->getScop();
 
 	// navigate throgh the statements of the SCoP until we find the one 
 	auto fit = std::find_if(scop.begin(), scop.end(), [&](const StmtPtr& cur) { 
 			return isChildOf(cur->getAddr(),addr);
 		}); 
 
-	if (fit != scop.end()) {
-		vec = scop.getIterationVector();
-		// found stmt containing the requested expression 
-		return IterationDomain(vec, (*fit)->getDomain());
+
+	auto extract_surrounding_domain = [&]() {
+
+		if (fit != scop.end()) {
+			// found stmt containing the requested expression 
+			return (*fit)->getDomain();
+		} else {
+			IterationDomain domain( scop.getIterationVector(), enclosingScop->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints());
+			// otherwise the expression is part of a condition expression 
+			prev = enclosingScop;
+			// Iterate throgh the stateemnts until we find the entry point of the SCoP
+			while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) ) { 
+				prev=parent;
+				domain &= IterationDomain( scop.getIterationVector(), prev->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints() );
+			} 
+			return domain;
+		}
+
+	};
+
+	IterationDomain domain( extract_surrounding_domain() );
+
+	if (domain.universe()) return utils::CombinerPtr<core::arithmetic::Formula>();
+	if (domain.empty()) {  return utils::castTo<AffineFunction, core::arithmetic::Formula>(domain.getConstraint()); }
+
+	AffineFunction func(scop.getIterationVector(), addr.getAddressedNode());
+
+	// otherwise this is a composed by a conjunction of constraints. we need to analyze the
+	// contraints in order to determine the minimal constraint which defines the given expression 
+	AffineConstraintPtr constraints = domain.getConstraint(); 
+
+	DisjunctionList resultConj;
+	for( auto conj : utils::getConjunctions(utils::toDNF(constraints))  ) {
+		
+		auto cmp  = [](const AffineConstraintPtr& lhs, const AffineConstraintPtr& rhs) -> bool { 
+			assert( lhs && rhs );
+			return *std::static_pointer_cast<RawAffineConstraint>(lhs) < 
+				   *std::static_pointer_cast<RawAffineConstraint>(rhs); 
+		};
+		std::set<AffineConstraintPtr, decltype(cmp)> curConj(cmp);
+		std::set<const Element*> checked;
+
+		for_each(func.begin(), func.end(), [&](const AffineFunction::Term& term) {
+			if (term.second != 0 && term.first.getType() != Element::CONST) {
+				extract(conj, term.first, checked, curConj);
+			}
+		});
+		
+		if (!curConj.empty()) resultConj.push_back( ConjunctionList(curConj.begin(), curConj.end())); 
 	}
 
-	vec = scop.getIterationVector();
-	IterationDomain cur = IterationDomain(vec, enclosingScop->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints());
-	// otherwise the expression is part of a condition expression 
-	prev = enclosingScop;
-	// Iterate throgh the stateemnts until we find the entry point of the SCoP
-	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) ) { 
-		prev=parent;
-		cur &= IterationDomain( vec, prev->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints() );
-	} 
-	return cur;
+	auto cons = utils::fromConjunctions(resultConj);
+	if (!cons) { return utils::CombinerPtr<core::arithmetic::Formula>(); }
+
+	return utils::castTo<AffineFunction, core::arithmetic::Formula>(cons);
 }	
 
 
@@ -347,14 +422,16 @@ void Scop::push_back( const Stmt& stmt ) {
 			}
 		);
 
-	stmts.push_back( std::make_shared<Stmt>(
+	stmts.emplace_back( std::unique_ptr<Stmt>(
+			new Stmt(
 				stmt.getId(), 
 				stmt.getAddr(), 
 				IterationDomain(iterVec, stmt.getDomain()),
 				AffineSystem(iterVec, stmt.getSchedule()), 
 				access
-			) 
-		);
+			)
+		) 
+	);
 	size_t dim = stmts.back()->getSchedule().size();
 	if (dim > sched_dim) {
 		sched_dim = dim;

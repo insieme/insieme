@@ -85,6 +85,8 @@ struct Element :
 	
 	bool operator<(const Element& other) const;
 
+	inline bool operator>=(const Element& other) const { return !(*this < other); }
+
 private:
 	Type type;
 };
@@ -318,6 +320,21 @@ public:
 	const Element& operator[](size_t idx) const;
 
 	bool operator==(const IterationVector& other) const;
+
+	bool operator<(const IterationVector& other) const {
+		if (size() > other.size()) return false;
+		if (size() < other.size()) return true;
+
+		// same size
+		auto thisIt = begin(), thisEnd = end();
+		auto otherIt = other.begin();
+
+		while(thisIt != thisEnd) {
+			if (*thisIt >= *otherIt) return false;
+			++thisIt; ++otherIt;
+		}
+		return true;
+	}
 
 	// Implements the Printable interface
 	std::ostream& printTo(std::ostream& out) const;

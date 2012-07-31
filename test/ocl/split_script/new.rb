@@ -117,6 +117,12 @@ def initialize_env
     set_standard_path
   end
 
+  if (host == "klaus-T400")
+    $main_dir = '/home/klaus/insieme/build/'
+    $lib_dir = '/home/klaus/insieme-libs/'
+    set_standard_path
+  end
+
   ENV['IRT_INST_WORKER_EVENT_LOGGING'] = "true"
   $path =  Dir.pwd.gsub!($script_dir, '')
   install_gems host
@@ -301,57 +307,13 @@ class Test
     puts
   end
 
-  def analysis perc
-    puts "#####################################"
-    puts "#####      " + "Analysis Phase".light_blue + "       #####"
-    puts "#####################################"
-    init_db_run
-    t_run = 0; c_run = 0; m_run = 0; n_run = 0; 
-    @test_names.each_with_index do |test_name, test_name_index|
-      @sizes[test_name_index].to_a.map{ |x| 2**x }.each do |size|
-        puts " * #{test_name} - #{size}".light_blue
-        times = [];
-        @splits.each_index do |i|
-          t_run += 1
-          split_values = @splits[i]
-          spaces = 20-split_values.size
-          str = " * OpenCL program view with splitting:  #{split_values}" + (" " * spaces)
-          qres = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values)
-          time_array = qres.select(:time).all.map!{|n| n[:time]}
-          ar_size = time_array.size
-          if ar_size < @iterations
-            puts ar_size != 0 ? str << "[" + "ONLY #{time_array.size} RUN".yellow + "]" : str << "[" + "NOT PRESENT".yellow + "]" 
-            m_run += 1
-          else
-            times <<  time_array.average
-            str << "[" + (time_array.average/1_000_000_000.0).round(4).to_s + "]  "
-            not_relevant = !t_test_correct?(time_array)
-            str <<  "[" + "NOT RELEVANT".red + "]" if not_relevant
-
-            #puts str
-            time_array.each_index{|i| puts " * " "#{i+1}: #{time_array[i]}".yellow } if not_relevant
-            n_run += 1 if not_relevant
-            c_run += 1 if !not_relevant
-          end
-        end
-	times.each_with_index{ |t, i| 
-          if (((t*100)/times.min)-100 < perc)
-            spaces = 20-@splits[i].size
-            puts " * "+ "Configuration within #{perc}%" + " "*13 + "#{@splits[i]}" + (" " * spaces) +
-                 "[#{(t/1_000_000_000.0).round(4).to_s}]"
-          end
-	}
-        puts
-      end
-    end
-  end
-
   def evaluate type
     puts "#####################################"
     puts "#####     " + "Evaluation Phase".light_blue + "      #####"
     puts "#####################################"
     init_db_run
     global_perc = []
+    two_gpu_exist = false
     @test_names.each_with_index do |test_name, test_name_index|
       puts " * Machine Learning: Training with all kernels except #{test_name}..."
       Dir.chdir($path + test_name)
@@ -379,10 +341,11 @@ class Test
 	  ev_array << line.gsub(/:|;|[a-zA-Z]*/,'').split.map{|x| x.to_i}
         end
       end
-      local_perc = [[],[],[],[],[]]
+      local_perc = [[],[],[],[],[],[],[]]
       @sizes[test_name_index].to_a.map{ |x| 2**x }.each_with_index do |size, size_index|
         puts " * #{test_name} - #{size}".light_blue
-        best_split = 0; best_time = 0; worst_split = 0; worst_time = 0; predicted_time = 0; cpu_split = 0; cpu_time = 0; gpu_split = 0; gpu_time = 0; 
+        best_split = 0; best_time = 0; worst_split = 0; worst_time = 0; predicted_time = 0; cpu_split = 0; cpu_time = 0; gpu_split = 0; gpu_time = 0; two_gpu_split = 0; two_gpu_time = 0; random_time = 0; 
+        random_time_array = [];
         @splits.each_index do |i|
           split_values = @splits[i]
           qres = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values)
@@ -405,7 +368,14 @@ class Test
             gpu_time = time_array.average
             gpu_split = i
           end
+           if split_values == "0.0,  0.5,  0.5" #FIXME
+            two_gpu_time = time_array.average
+            two_gpu_split = i
+            two_gpu_exist = true
+          end
+          random_time_array << time_array.average
         end
+        random_time = random_time_array.average
 	puts " * Machine Learning: Error -> best value doesn't match the one in the DB ".red if (best_split != ev_array[size_index][1])
         puts " * "+ "Best Configuration" + " "*19 + "#{@splits[best_split]}" + (" " * (20-@splits[best_split].size)) +"[#{(best_time/1_000_000_000.0).round(4).to_s}]" +"\t 100%".green
         local_perc[0] << 100;
@@ -429,6 +399,19 @@ class Test
         local_perc[4] << perc
         puts " * "+ "Gpu Configuration" + " "*20 + "#{@splits[gpu_split]}" + (" " * (20-@splits[gpu_split].size)) +
           "[#{(gpu_time/1_000_000_000.0).round(4).to_s}]" + "\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
+
+	if two_gpu_exist == true
+          perc = (best_time/two_gpu_time*100).to_i
+          local_perc[5] << perc
+          puts " * "+ "2Gpu Configuration" + " "*19 + "#{@splits[two_gpu_split]}" + (" " * (20-@splits[two_gpu_split].size)) +
+            "[#{(two_gpu_time/1_000_000_000.0).round(4).to_s}]" + "\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
+        end
+
+        perc = (best_time/random_time*100).to_i
+        local_perc[6] << perc
+        puts " * "+ "Random Configuration" + " "*17 + " " * 20 +
+          "[#{(random_time/1_000_000_000.0).round(4).to_s}]" + "\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
+
       end
 
       global_perc << local_perc
@@ -438,42 +421,58 @@ class Test
     puts "#####################################"
     puts "#####    " + "Evaluation Summary".light_blue + "     #####"
     puts "#####################################"
-    best_complete = 0; pred_complete = 0; worst_complete = 0; cpu_complete = 0; gpu_complete = 0;
+    best_complete = []; pred_complete = []; worst_complete = []; cpu_complete = []; gpu_complete = []; two_gpu_complete = []; random_complete = [];
     @test_names.each_with_index do |test_name, index|
       puts " * #{test_name}".light_blue
       perc = global_perc[index][0].average.to_i
-      best_complete += perc;
+      best_complete << global_perc[index][0]
       puts " * "+ "Best Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".green
 
       perc = global_perc[index][1].average.to_i
-      pred_complete += perc;
+      pred_complete << global_perc[index][1]
       puts " * "+ "Predicted Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".yellow
 
       perc = global_perc[index][2].average.to_i
-      worst_complete += perc;
+      worst_complete << global_perc[index][2]
       puts " * "+ "Worst Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".red
 
       perc = global_perc[index][3].average.to_i
-      cpu_complete += perc;
+      cpu_complete << global_perc[index][3]
       puts " * "+ "Cpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
 
       perc = global_perc[index][4].average.to_i
-      gpu_complete += perc;
+      gpu_complete << global_perc[index][4]
       puts " * "+ "Gpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
+
+      if two_gpu_exist == true
+        perc = global_perc[index][5].average.to_i
+        two_gpu_complete << global_perc[index][5]
+        puts " * "+ "2Gpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
+      end
+
+      perc = global_perc[index][6].average.to_i
+      random_complete << global_perc[index][6]
+      puts " * "+ "Random Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
+
     end
     puts
     puts " * COMPLETE EVALUATION".magenta
-      perc = best_complete/@test_names.size
+      perc = best_complete.flatten.average.to_i
       puts " * "+ "Best Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".green
-      perc = pred_complete/@test_names.size
+      perc = pred_complete.flatten.average.to_i
       puts " * "+ "Predicted Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".yellow
-      perc = worst_complete/@test_names.size
+      perc = worst_complete.flatten.average.to_i
       puts " * "+ "Worst Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".red
-      perc = cpu_complete/@test_names.size
+      perc = cpu_complete.flatten.average.to_i
       puts " * "+ "Cpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
-      perc = gpu_complete/@test_names.size
+      perc = gpu_complete.flatten.average.to_i
       puts " * "+ "Gpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
-
+      if two_gpu_exist == true
+        perc = two_gpu_complete.flatten.average.to_i
+        puts " * "+ "2Gpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
+      end
+      perc = random_complete.flatten.average.to_i
+      puts " * "+ "Random Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
     puts
   end
 
@@ -766,7 +765,8 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..22, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
+test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
+
 
 # run the test
 test.info
@@ -778,5 +778,4 @@ test.check
 #test.view
 #test.collect
 #test.evaluate :svm # or :ffnet
-#test.analysis 5
 

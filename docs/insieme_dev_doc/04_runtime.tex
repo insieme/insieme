@@ -226,7 +226,7 @@ this purpose:
 \subsection{Affinity}
 \subsection{Frequency switching} 
 
-Frequency switching is done in \file{frequency.h}. It provides several functions for obtaining and setting the current processor frequency and currently only supports UNIX-based systems. The functions use settings in the CPU driver, thus this functionality depends on the driver's and the hardware's support of frequency swichting. The frequency settings of the CPU driver can be accessed at /sys/devices/system/cpu/cpu\textbf{N}/cpufreq/, where \textbf{N} denotes the core's id. 
+Frequency switching is done in \file{frequency.h}. It provides several functions for obtaining and setting the current processor frequency and currently only supports UNIX-based systems. The functions use settings in the CPU driver, thus this functionality depends on the driver's and the hardware's support of frequency swichting. The frequency settings of the CPU driver can be accessed at /sys/devices/system/cpu/cpu\textbf{N}/cpufreq/, where \textbf{N} denotes the core's id. Hence, for the runtime to be able to change the frequency, these device files must be readable and writable by the user executing the runtime.
 %The following table lists the functions and their purpose:
 
 %\begin{table}[htbp] \small

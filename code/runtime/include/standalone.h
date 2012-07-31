@@ -111,6 +111,7 @@ void irt_init_globals() {
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_create_aggregated_performance_table(IRT_WORKER_PD_BLOCKSIZE);
+	irt_energy_select_instrumentation_method();
 #endif
 }
 

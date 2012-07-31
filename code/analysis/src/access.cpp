@@ -92,7 +92,9 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 		return Access(expr, 
 					expr.getAddressedNode().as<VariablePtr>(), 
 					dpBuilder.getPath(), 
-					VarType::SCALAR);
+					VarType::SCALAR,
+					boost::optional<polyhedral::IterationDomain>(),
+					boost::optional<const polyhedral::Scop&>());
 	}
 
 	assert(expr->getNodeType() == NT_CallExpr);
@@ -117,7 +119,9 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 	core::VariablePtr var = args[0].getAddressedNode().as<VariablePtr>();
 
 	if (gen.isRefDeref(callExpr->getFunctionExpr())) {
-		return Access(expr, var, dpBuilder.getPath(), VarType::SCALAR);
+		return Access(expr, var, dpBuilder.getPath(), VarType::SCALAR, 
+				      boost::optional<polyhedral::IterationDomain>(),
+					  boost::optional<const polyhedral::Scop&>());
 	} 
 
 	// Handle member access functions 
@@ -129,7 +133,9 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 					callExpr, 
 					var, 
 					dpBuilder.component( args[1].as<LiteralAddress>().getValue() ).getPath(),
-					VarType::TUPLE);
+					VarType::TUPLE,
+					boost::optional<polyhedral::IterationDomain>(), 
+					boost::optional<const polyhedral::Scop&>());
 		}
 
 		// This is a member access 
@@ -138,7 +144,9 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 					callExpr,
 					var,
 					dpBuilder.member( args[1].as<LiteralAddress>()->getValue().getValue()).getPath(),
-					VarType::MEMBER);
+					VarType::MEMBER,
+					boost::optional<polyhedral::IterationDomain>(),
+					boost::optional<const polyhedral::Scop&>());
 		}
 
 		assert( false && "Type of member access not supported" );
@@ -155,7 +163,9 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 						callExpr,
 						var,
 						dpBuilder.element(static_cast<int64_t>(f.getConstantValue())).getPath(),
-						VarType::ARRAY);
+						VarType::ARRAY,
+						boost::optional<polyhedral::IterationDomain>(),
+						boost::optional<const polyhedral::Scop&>());
 			}
 
 		} catch (arithmetic::NotAFormulaException&& e) { }

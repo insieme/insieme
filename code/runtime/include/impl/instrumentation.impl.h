@@ -43,12 +43,11 @@
 #include "utils/memory.h"
 #include "instrumentation.h"
 #include "impl/error_handling.impl.h"
-#include "pthread.h"
 #include "errno.h"
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi_helper.h"
-#include "utils/energy_rapl.h"
+#include "utils/impl/energy.impl.h"
 #include "utils/impl/timing.impl.h"
 #endif
 
@@ -643,7 +642,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			
 			irt_get_memory_usage(&(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64), &(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64));
 
-			double energy_consumption = -1;
+			//double energy_consumption = -1;
 
 			epd->timestamp = time;
 			epd->event = event;

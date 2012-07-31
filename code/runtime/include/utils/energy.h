@@ -34,54 +34,22 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_statements.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_visitor.h"
+#pragma once
 
-#include "insieme/core/transform/node_replacer.h"
+#include "abstraction/rapl.h"
 
-#include "insieme/analysis/polyhedral/scop.h"
-#include "insieme/analysis/polyhedral/iter_dom.h"
-#include "insieme/analysis/polyhedral/iter_vec.h"
 
-#include "insieme/utils/logging.h"
+// pointer to the function that is used to obtain energy readings
+void (*irt_get_energy_consumption)(double* energy);
 
-namespace insieme {
-namespace transform {
+/*
+ * a dummy method if no energy instrumentation is available
+ */
 
-using namespace core;
-using namespace analysis::polyhedral;
+void irt_get_energy_consumption_dummy(double* energy);
 
-core::NodePtr polyhedralSemplification(const core::NodePtr& node) {
-	auto& mgr = node->getNodeManager();
+/*
+ * selects the method used to obtain energy readings
+ */
 
-	utils::map::PointerMap<NodePtr, NodePtr> replacements;
-
-	std::vector<NodeAddress> entry;
-
-	// run the ScoP analysis to determine SCoPs 
-	for ( const auto& addr : scop::mark(node) ) {
-	
-		if (addr->getNodeType() == NT_LambdaExpr) {
-			entry.push_back(addr.as<LambdaExprAddress>()->getBody());
-		}
-
-		entry.push_back(addr);
-	}
-
-	for( const auto& addr : entry) {
-		const Scop& scop = *scop::ScopRegion::toScop( addr );
-		
-		replacements.insert( { addr, IRBuilder(mgr).compoundStmt( scop.toIR(mgr).as<StatementPtr>() ) } );
-	}
-
-	LOG(INFO) << "**** PolyhedralSemplifications: Modificed '" << replacements.size() << "' SCoPs"; 
-
-	if (replacements.empty()) { return node; }
-
-	return core::transform::replaceAll(mgr, node, replacements);
-}
-
-} // end transform namespace 
-} // end insieme namespace 
+void irt_energy_select_instrumentation_method();
