@@ -227,7 +227,7 @@ void __insieme_fun_23(int32_t* var_65, float** var_66, float** var_67, double* v
         {
 			// WINFIX: old: irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), (irt_work_item_range){1, *var_65-1, 1}, 0, (irt_lw_data_item*)(&(struct __insieme_gen_type_27){8, var_65, var_66, var_67, var_68, var_69}));
 			// new:
-            irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), irt_work_item_range_create(1, *var_65-1, 1), 0, (irt_lw_data_item*)(&IRT_STACK_STRUCT(_insieme_gen_type_27, 8, var_65, var_66, var_67, var_68, var_69)));
+            irt_pfor(irt_wi_get_current(), irt_wi_get_wg(irt_wi_get_current(), 0), IRT_STACK_STRUCT(irt_work_item_range, 1, *var_65-1, 1), 0, (irt_lw_data_item*)(&IRT_STACK_STRUCT(_insieme_gen_type_27, 8, var_65, var_66, var_67, var_68, var_69)));
             irt_wg_barrier(irt_wi_get_wg(irt_wi_get_current(), 0));
         };
     };
