@@ -609,8 +609,10 @@ void irt_inst_region_data_output(irt_worker* worker) {
 						start_data = table->data[j]; //memcpy(&start_data, &(table->data[j]), sizeof(irt_inst_region_data));
 						break;
 					}
-				IRT_ASSERT(start_data.timestamp != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Cannot find a matching start statement\n")
 			}
+				
+			IRT_ASSERT(start_data.timestamp != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Cannot find a matching start statement\n")
+
 			// single fprintf for performance reasons
 			// outputs all data in pairs: value_when_entering_region, value_when_exiting_region
 			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.1f,%1.1f",
