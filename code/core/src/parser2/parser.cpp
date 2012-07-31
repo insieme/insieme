@@ -562,6 +562,11 @@ namespace parser {
 			// nice - we have a candidate (the end is the next token)
 			candidates.push_back(it+1);
 
+			// check whether this entry is a terminating one
+			if (terminator.contains(cur)) {
+				break;
+			}
+
 //// TODO: this is a dirty hack - find some justification
 //if (cur == Token::createSymbol(';')) {
 //	break;

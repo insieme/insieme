@@ -615,7 +615,7 @@ namespace parser {
 
 			// compound statement
 			g.addRule("S", rule(
-					varScop(seq("{", loop(S), "}")),
+					varScop(seq("{", loop(S, Token::createSymbol(';')), "}")),
 					[](Context& cur)->NodePtr {
 						IRBuilder builder(cur.manager);
 						StatementList list;		// filter out no-ops
