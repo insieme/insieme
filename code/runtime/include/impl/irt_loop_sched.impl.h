@@ -377,7 +377,7 @@ inline static void irt_schedule_loop(
 	}
 	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	if(features->implicit_region_id >= 0)
-		_irt_instrumentation_pfor_end(features->implicit_region_id);
+		_irt_inst_pfor_end(features->implicit_region_id);
 	#endif
 	#endif // ifdef IRT_RUNTIME_TUNING
 }
