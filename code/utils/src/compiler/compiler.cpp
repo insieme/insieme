@@ -113,6 +113,24 @@ namespace compiler {
 	}
 	
 	string compileToBinary(const Printable& source, const Compiler& compiler) {
+
+		// create temporary target file name
+		char targetFile[] = P_tmpdir "/trgXXXXXX";
+		int trg = mkstemp(targetFile);
+		assert(trg != -1);
+		close(trg);
+
+		LOG(DEBUG) << "Using temporary file " << string(targetFile) << " as a target file for compilation.";
+
+		if (compileToBinary(source, targetFile, compiler)) {
+			return string(targetFile);
+		}
+		return string();
+	}
+
+
+	bool compileToBinary(const Printable& source, const string& targetFile, const Compiler& compiler) {
+
 		// create a temporary source file
 		// TODO: replace with boost::filesystem::temp_directory_path() when version 1.46 is available
 		char sourceFile[] = P_tmpdir "/srcXXXXXX";
@@ -127,14 +145,6 @@ namespace compiler {
 		srcFile << source << "\n";
 		srcFile.close();
 
-		// create temporary target file name
-		char targetFile[] = P_tmpdir "/trgXXXXXX";
-		int trg = mkstemp(targetFile);
-		assert(trg != -1);
-		close(trg);
-
-		LOG(DEBUG) << "Using temporary file " << string(targetFile) << " as a target file for compilation.";
-
 		// conduct compilation
 		bool res = compile(sourceFile, targetFile, compiler);
 		
@@ -143,10 +153,9 @@ namespace compiler {
 			boost::filesystem::remove(sourceFile);
 		}
 
-		if(!res) return string();
-		return string(targetFile);
+		// return success flag
+		return res;
 	}
-
 
 } // end namespace compiler
 } // end namespace utils

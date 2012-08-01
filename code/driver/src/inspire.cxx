@@ -43,9 +43,14 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/ir.h"
+#include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/parser2/ir_parser.h"
+
 #include "insieme/utils/timer.h"
+#include "insieme/utils/compiler/compiler.h"
+
+#include "insieme/backend/sequential/sequential_backend.h"
 
 	/**
 	 * This executable is realizing the control flow required for optimizing
@@ -64,6 +69,7 @@
 	struct CmdOptions {
 		bool valid;
 		string inputFile;
+		string outFile;
 	};
 
 	/**
@@ -93,7 +99,7 @@
 		std::stringstream ss;
 		ss << fstream(options.inputFile).rdbuf();
 
-		std::cout << "Code: \n" << ss.str() << "\n";
+//		std::cout << "Code: \n" << ss.str() << "\n";
 
 		// parse input
 		NodeManager manager;
@@ -101,18 +107,26 @@
 		NodePtr res;
 		double time = TIME(res = core::parser::parse(manager, ss.str()));
 
-		if (res) {
-			std::cout << core::printer::PrettyPrinter(res) << "\n";
-		} else {
+		if (!res) {
 			std::cout << "Error parsing file!\n";
+			return 1;
 		}
-
+//std::cout << core::printer::PrettyPrinter(res) << "\n";
 		std::cout << "Parsing took " << time << "sec.\n";
 
-		time = TIME(res = core::parser::parse(manager, ss.str()));
-		std::cout << "Parsing it a second time: " << time << "sec.\n";
+		auto msg = checks::check(res);
+		if (msg.size() > 0) {
+			std::cout << "Encountered issues:\n" << msg << "\n";
+			return 1;
+		}
 
-		cout << "Done\n";
+		// convert to target code and compile code
+		auto code = backend::sequential::SequentialBackend().convert(res);
+//std::cout << *code;
+		bool success = utils::compiler::compileToBinary(*code, options.outFile);
+
+		// works fine
+		return (success)?0:1;
 	}
 
 
@@ -127,6 +141,7 @@
 		desc.add_options()
 				("help,h", "produce help message")
 				("input,i", 			bpo::value<string>()->default_value(""), 		"the code file to be parsed")
+				("output,o", 			bpo::value<string>()->default_value("a.out"), 	"the binary build from the code")
 		;
 
 		// define positional options (all options not being named)
@@ -150,6 +165,12 @@
 		CmdOptions res;
 		res.valid = true;
 		res.inputFile = map["input"].as<string>();
+
+		if (map.count("output")) {
+			res.outFile = map["output"].as<string>();
+		} else {
+			res.outFile = "a.out";
+		}
 
 		// accumulation complete
 		return res;
