@@ -87,7 +87,9 @@ namespace parser {
 			 * 		T .. types
 			 * 		E .. expressions
 			 * 		S .. statements
-			 * 		N .. any ( P | T | E | S )
+			 * 		D .. definition
+			 * 		A .. application = program (root node)
+			 * 		N .. any ( P | T | E | S | D | A )
 			 */
 
 			auto P = rec("P");
@@ -95,6 +97,8 @@ namespace parser {
 			auto E = rec("E");
 			auto S = rec("S");
 			auto N = rec("N");
+			auto D = rec("D");
+			auto A = rec("A");
 
 
 			Grammar g(start);
@@ -340,6 +344,22 @@ namespace parser {
 					}
 			));
 
+			// char literal
+			g.addRule("E", rule(
+					any(Token::Char_Literal),
+					[](Context& cur)->NodePtr {
+						return IRBuilder(cur.manager).literal(cur.manager.getLangBasic().getChar(), *cur.begin);
+					}
+			));
+
+			// string literal
+			g.addRule("E", rule(
+					any(Token::String_Literal),
+					[](Context& cur)->NodePtr {
+						return IRBuilder(cur.manager).stringLit(*cur.begin);
+					}
+			));
+
 
 			// --------------- add expression rules ---------------
 
@@ -562,6 +582,9 @@ namespace parser {
 			// every expression is a statement (if terminated by ;)
 			g.addRule("S", rule(seq(E,";"), forward));
 
+			// every declaration is a statement
+			g.addRule("S", rule(D, forward));
+
 			// declaration statement
 			g.addRule("S", rule(
 					seq(T, cap(identifier), " = ", E, ";"),
@@ -600,17 +623,6 @@ namespace parser {
 						return decl;
 					},
 					1 // higher priority than ordinary declaration
-			));
-
-			// declaration statement
-			g.addRule("S", rule(
-				seq("let", cap(identifier), "=", (T | E), ";"),
-				[](Context& cur)->NodePtr {
-					// register name within symbol manager
-					cur.getSymbolManager().add(cur.getSubRange(0), cur.getTerm(0));
-					return IRBuilder(cur.manager).getNoOp();
-				},
-				1 //  higher priority than variable declaration
 			));
 
 			// compound statement
@@ -756,7 +768,40 @@ namespace parser {
 					}
 			));
 
+			// add print statement
+			g.addRule("S", rule(
+					seq("print(",cap(any(Token::String_Literal)), loop(seq(",", E)),");"),
+					[](Context& cur)->NodePtr {
+						ExpressionList params = convertList<ExpressionPtr>(cur.getTerms());
+						return IRBuilder(cur.manager).print(cur.getSubRange(0)[0].getLexeme(), params);
+					}
+			));
 
+
+			// -- Declarations --
+			g.addRule("D", rule(
+				seq("let", cap(identifier), "=", (T | E), ";"),
+				[](Context& cur)->NodePtr {
+					// register name within symbol manager
+					cur.getSymbolManager().add(cur.getSubRange(0), cur.getTerm(0));
+					return IRBuilder(cur.manager).getNoOp();
+				},
+				1 //  higher priority than variable declaration
+			));
+
+
+			// -- top level program code --
+
+			g.addRule("A", rule(
+					seq(loop(D),T,"main()", S),
+					[](Context& cur)->NodePtr {
+						IRBuilder builder(cur.manager);
+						TypePtr returnType = (cur.getTerms().end()-2)->as<TypePtr>();
+						StatementPtr body = cur.getTerms().back().as<StatementPtr>();
+						ExpressionPtr main = builder.lambdaExpr(body, VariableList());
+						return builder.createProgram(toVector(main));
+					}
+			));
 
 
 			// add productions for unknown node type N
@@ -764,6 +809,8 @@ namespace parser {
 			g.addRule("N", rule(T, forward));
 			g.addRule("N", rule(E, forward));
 			g.addRule("N", rule(S, forward));
+			g.addRule("N", rule(D, forward));
+			g.addRule("N", rule(A, forward));
 
 //			std::cout << g << "\n\n";
 //			std::cout << g.getTermInfo() << "\n";
