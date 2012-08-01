@@ -47,6 +47,8 @@
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/analysis/polyhedral/scop.h"
+
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::analysis;
@@ -60,8 +62,8 @@ TEST(Access, Scalars) {
 	{
 		auto code = parser.parseExpression("ref<int<4>>:a");
 
-		auto access = makeAccess( ExpressionAddress(code) );
-		std::cout << access << std::endl;
+		auto access = getImmediateAccess( ExpressionAddress(code) );
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_TRUE(access.isRef());
 	}
@@ -69,8 +71,8 @@ TEST(Access, Scalars) {
 	{
 		auto code = parser.parseExpression("int<4>:a");
 
-		auto access = makeAccess( ExpressionAddress(code) );
-		std::cout << access << std::endl;
+		auto access = getImmediateAccess( ExpressionAddress(code) );
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_FALSE(access.isRef());
 	}
@@ -78,8 +80,8 @@ TEST(Access, Scalars) {
 	{
 		auto code = parser.parseExpression("(op<ref.deref>(ref<int<4>>:a))");
 
-		auto access = makeAccess( ExpressionAddress(code) );
-		std::cout << access << std::endl;
+		auto access = getImmediateAccess( ExpressionAddress(code) );
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_FALSE(access.isRef());
 	}
@@ -88,8 +90,8 @@ TEST(Access, Scalars) {
 	{
 		auto code = parser.parseExpression("ref<struct<a:int<4>,b:int<4>>>:s");
 
-		auto access = makeAccess( ExpressionAddress(code) );
-		std::cout << access << std::endl;
+		auto access = getImmediateAccess( ExpressionAddress(code) );
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_TRUE(access.isRef());
 	}
@@ -108,8 +110,8 @@ TEST(Access, MemberAccess) {
 			"(op<composite.ref.elem>(ref<struct<a:int<4>, b:int<4>>>:s, lit<identifier,a>, lit<type<int<4>>, int<4>))"
 		);
 
-		auto access = makeAccess(ExpressionAddress(code));
-		std::cout << access << std::endl;
+		auto access = getImmediateAccess(ExpressionAddress(code));
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::MEMBER, access.getType());
 		EXPECT_EQ(1u, access.getAccessedVariable()->getId());
 		EXPECT_TRUE(access.isRef());
@@ -120,8 +122,8 @@ TEST(Access, MemberAccess) {
 			"(op<composite.member.access>(struct<a:int<4>, b:int<4>>:s, lit<identifier,a>, lit<type<int<4>>, int<4>))"
 		);
 		
-		auto access = makeAccess(ExpressionAddress(code));
-		std::cout << access << std::endl;
+		auto access = getImmediateAccess(ExpressionAddress(code));
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::MEMBER, access.getType());
 		EXPECT_EQ(2u, access.getAccessedVariable()->getId());
 		EXPECT_FALSE(access.isRef());
@@ -130,7 +132,7 @@ TEST(Access, MemberAccess) {
 }
 
 // Wait for new parser 
-TEST(IRVarEntity, ArrayAccess) {
+TEST(Access, ArrayAccess) {
 	
 	NodeManager mgr;
 	parse::IRParser parser(mgr);
@@ -140,9 +142,9 @@ TEST(IRVarEntity, ArrayAccess) {
 		auto code = parser.parseExpression(
 			"(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, 2))"
 		);
-		std::cout << code << " " << *code->getType() << std::endl;
-		auto access = makeAccess( ExpressionAddress(code) );
-		std::cout << access << std::endl;
+		// std::cout << code << " " << *code->getType() << std::endl;
+		auto access = getImmediateAccess( ExpressionAddress(code) );
+		//std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		// EXPECT_TRUE(access.isRef());
 	}
@@ -151,8 +153,8 @@ TEST(IRVarEntity, ArrayAccess) {
 		auto code = parser.parseExpression(
 			"(op<array.subscript.1D>(array<int<4>,1>:v, 2))"
 		);
-		auto access = makeAccess( ExpressionAddress(code) );
-		std::cout << access << std::endl;
+		auto access = getImmediateAccess( ExpressionAddress(code) );
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		// EXPECT_FALSE(access.isRef());
 	}
@@ -161,9 +163,9 @@ TEST(IRVarEntity, ArrayAccess) {
 		auto code = parser.parseExpression(
 			"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, 2))"
 		);
-		std::cout << code << " " << *code->getType() << std::endl;
-		auto access = makeAccess( ExpressionAddress(code) );
-		std::cout << access << std::endl;
+		// std::cout << code << " " << *code->getType() << std::endl;
+		auto access = getImmediateAccess( ExpressionAddress(code) );
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		// EXPECT_TRUE(access.isRef());
 	}
@@ -172,24 +174,82 @@ TEST(IRVarEntity, ArrayAccess) {
 		auto code = parser.parseExpression(
 			"(op<vector.subscript>(vector<int<4>,8>:v, 2))"
 		);
-		auto access = makeAccess( ExpressionAddress(code) );
+		auto access = getImmediateAccess( ExpressionAddress(code) );
 		std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		// EXPECT_FALSE(access.isRef());
 	}
 
-	//{
-		//auto code = parser.parseExpression(
-			//"(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, int<4>:b))"
-		//);
+	{
+		auto code = parser.parseExpression(
+			"(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, uint<4>:b))"
+		);
 
-		//auto vars = analyses::extractFromStmt(code);
-		//EXPECT_EQ(1u, vars.size());
-		//const VarEntity& v = *vars.begin();
-		//std::cout << v << std::endl;
-		//EXPECT_EQ(analyses::VarType::MEMBER, v.getType());
-		//EXPECT_TRUE(v.isRValue());
-		//EXPECT_FALSE(v.isLValue());
-	//}
+		auto access = getImmediateAccess( ExpressionAddress(code) );
+		std::cout << access << std::endl;
+		EXPECT_EQ(VarType::ARRAY, access.getType());
+		EXPECT_TRUE(access.isRef());
+		// std::cout << access.getConstraint() << std::endl;
+	}
+
+	{
+		auto code = parser.parseStatement(
+			"if( (uint<4>:b>10) )"
+			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, b))"
+		);
+
+		// perform the polyhedral analysis 
+		polyhedral::scop::mark(code);
+
+		auto access = getImmediateAccess( StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
+										  as<ExpressionAddress>() );
+		 std::cout << access << std::endl;
+		EXPECT_EQ(VarType::ARRAY, access.getType());
+		EXPECT_TRUE(access.isRef());
+		EXPECT_TRUE(!!access.getConstraint());
+		EXPECT_EQ("(v7 + -11*1 >= 0)", toString(*access.getConstraint()));
+
+		EXPECT_EQ(code, access.getContext().getAddressedNode()); 
+	}
+
+	{
+		auto code = parser.parseStatement(
+			"if( (uint<4>:b>10) )"
+			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (b+5)))"
+		);
+
+		// perform the polyhedral analysis 
+		polyhedral::scop::mark(code);
+
+		auto access = getImmediateAccess( StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
+				  						  as<ExpressionAddress>() );
+		std::cout << access << std::endl;
+		EXPECT_EQ(VarType::ARRAY, access.getType());
+		EXPECT_TRUE(access.isRef());
+		EXPECT_TRUE(!!access.getConstraint());
+		EXPECT_EQ("(v9 + -11*1 >= 0)", toString(*access.getConstraint()));
+
+		EXPECT_EQ(code, access.getContext().getAddressedNode()); 
+	}
+
+{
+		auto code = parser.parseStatement(
+			"if( ((uint<4>:b>10) && (uint<4>:a<20)) )"
+			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (b+a)))"
+		);
+
+		// perform the polyhedral analysis 
+		polyhedral::scop::mark(code);
+
+		auto access = getImmediateAccess( StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
+										  as<ExpressionAddress>() );
+		std::cout << access << std::endl;
+		EXPECT_EQ(VarType::ARRAY, access.getType());
+		EXPECT_TRUE(access.isRef());
+		EXPECT_TRUE(!!access.getConstraint());
+		EXPECT_EQ("((-v12 + 19*1 >= 0) ^ (v11 + -11*1 >= 0))", toString(*access.getConstraint()));
+
+		EXPECT_EQ(code, access.getContext().getAddressedNode()); 
+	}
 
 }

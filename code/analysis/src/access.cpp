@@ -39,6 +39,8 @@
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/analysis/polyhedral/iter_dom.h"
+
 #include "insieme/utils/logging.h"
 
 using namespace insieme;
@@ -46,10 +48,6 @@ using namespace insieme::core;
 using namespace insieme::analysis;
 
 namespace {
-
-struct MultipleAccessException : public std::logic_error {
-	MultipleAccessException() : std::logic_error("multiple accesses")  { }
-};
 
 struct NotAnAccessException : public std::logic_error {
 
@@ -74,7 +72,10 @@ std::ostream& Access::printTo(std::ostream& out) const {
 	return out << ":" << (isRef()?"ref":"val");
 }
 
-Access makeAccess(const core::ExpressionAddress& expr) {
+/** 
+ * Get the immediate access 
+ */
+Access getImmediateAccess(const core::ExpressionAddress& expr) {
 	
 	const lang::BasicGenerator& gen = expr->getNodeManager().getLangBasic();
 	datapath::DataPathBuilder dpBuilder(expr->getNodeManager());
@@ -85,18 +86,18 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 
 	// For cast expressions, we simply recur 
 	if (expr->getNodeType() == NT_CastExpr) 
-		return makeAccess(expr.as<CastExprAddress>()->getSubExpression());
+		return getImmediateAccess(expr.as<CastExprAddress>()->getSubExpression());
 
 	// If this is a scalar variable, then return the access to this variable 
 	if (expr->getNodeType() == NT_Variable) {
 		return Access(expr, 
-					expr.getAddressedNode().as<VariablePtr>(), 
-					dpBuilder.getPath(), 
-					VarType::SCALAR,
-					boost::optional<polyhedral::IterationDomain>(),
-					boost::optional<const polyhedral::Scop&>());
+				expr.getAddressedNode().as<VariablePtr>(), 
+				dpBuilder.getPath(), 
+				VarType::SCALAR,
+				Constraint(), 
+				core::NodeAddress()
+			);
 	}
-
 	assert(expr->getNodeType() == NT_CallExpr);
 
 	CallExprAddress callExpr = expr.as<CallExprAddress>();
@@ -119,9 +120,7 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 	core::VariablePtr var = args[0].getAddressedNode().as<VariablePtr>();
 
 	if (gen.isRefDeref(callExpr->getFunctionExpr())) {
-		return Access(expr, var, dpBuilder.getPath(), VarType::SCALAR, 
-				      boost::optional<polyhedral::IterationDomain>(),
-					  boost::optional<const polyhedral::Scop&>());
+		return Access(expr, var, dpBuilder.getPath(), VarType::SCALAR, Constraint(), core::NodeAddress());
 	} 
 
 	// Handle member access functions 
@@ -134,8 +133,9 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 					var, 
 					dpBuilder.component( args[1].as<LiteralAddress>().getValue() ).getPath(),
 					VarType::TUPLE,
-					boost::optional<polyhedral::IterationDomain>(), 
-					boost::optional<const polyhedral::Scop&>());
+					Constraint(),
+					core::NodeAddress()
+				);
 		}
 
 		// This is a member access 
@@ -145,8 +145,9 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 					var,
 					dpBuilder.member( args[1].as<LiteralAddress>()->getValue().getValue()).getPath(),
 					VarType::MEMBER,
-					boost::optional<polyhedral::IterationDomain>(),
-					boost::optional<const polyhedral::Scop&>());
+					Constraint(),
+					core::NodeAddress()
+				);
 		}
 
 		assert( false && "Type of member access not supported" );
@@ -164,15 +165,28 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 						var,
 						dpBuilder.element(static_cast<int64_t>(f.getConstantValue())).getPath(),
 						VarType::ARRAY,
-						boost::optional<polyhedral::IterationDomain>(),
-						boost::optional<const polyhedral::Scop&>());
+						Constraint(),
+						core::NodeAddress()
+					);
 			}
-
-		} catch (arithmetic::NotAFormulaException&& e) { }
-		
+			
+			auto dom = polyhedral::getVariableDomain( args[1] );
+			// otherwise we have the access throgh another variable, we need to determine the range
+			// for it 
+			return Access(
+					callExpr,
+					var,
+					dpBuilder.element( args[1].getAddressedNode() ).getPath(),
+					VarType::ARRAY,
+					dom.second,
+					dom.first
+				);
+		} catch (arithmetic::NotAFormulaException&& e) { 
+			// What if this is a piecewise? we can handle it 
+		}
 	}
 
-	throw MultipleAccessException();
+	assert(false && "Access not supported");
 }
 
 void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entities) {
@@ -195,7 +209,7 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 		CallExprAddress call = expr.as<CallExprAddress>();
 		for(auto& arg : call->getArguments()) {
 			try {
-				entities.insert( makeAccess(arg) );
+				entities.insert( getImmediateAccess(arg) );
 			} catch(NotAnAccessException&& e) { 
 				assert(e.isLit);
 				/* This is not an access, do nothing */ 
@@ -204,14 +218,14 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 	};
 
 	if (core::DeclarationStmtAddress declStmt = core::dynamic_address_cast<const DeclarationStmt>(stmt)) {
-		entities.insert( makeAccess(declStmt->getVariable()) );
+		entities.insert( getImmediateAccess(declStmt->getVariable()) );
 
 		try {
-			entities.insert( makeAccess(declStmt->getInitialization()) );
+			entities.insert( getImmediateAccess(declStmt->getInitialization()) );
 			return ;
 		} catch (NotAnAccessException&& e) { 
 			if (e.isLit) { return; }
-		} catch (MultipleAccessException&& e) { 	}
+		}
 
 		scanArguments( declStmt->getInitialization() );
 		return;
@@ -221,24 +235,24 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 
 		try {
 			// try to extract the access (if this is a single supported access)
-			entities.insert(makeAccess(stmt.as<ExpressionAddress>()));
+			entities.insert(getImmediateAccess(stmt.as<ExpressionAddress>()));
 			return;
 		} catch (NotAnAccessException&& e) {  
 			if (e.isLit) { return; } 
-		} catch (MultipleAccessException&& e) {  }
+		}
 
 		scanArguments(expr);
 		return;
 	}
-	assert( false );
+
+	assert( false && "expression not supported" );
 }
 
 std::set<Access> extractFromStmt(const core::StatementAddress& stmt) {
-	
 	std::set<Access> accesses;
+	
 	extractFromStmt(stmt, accesses);
-	return std::move(accesses);
-
+	return accesses;
 }
 
 
@@ -270,13 +284,13 @@ bool isConflicting(const Access& acc1, const Access& acc2, const AliasMap& alias
 	ExpressionAddress expr = aliases.getMappedExpr( acc1.getAccessedVariable() );
 	if ( expr ) 
 		try {
-			a1 = makeAccess(expr);
+			a1 = getImmediateAccess(expr);
 		} catch( ... ) { } 
 
 	expr = aliases.getMappedExpr( acc2.getAccessedVariable() );
 	if ( expr ) 
 		try {
-			a2 = makeAccess(expr);
+			a2 = getImmediateAccess(expr);
 		} catch ( ... ) { }
 
 	auto acc1Aliases = aliases.lookupAliases(a1.getAccessExpression());

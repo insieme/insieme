@@ -153,7 +153,7 @@ void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element
 } // end anonymous namespace 
 
 
-utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::ExpressionAddress& addr) {
+std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::ExpressionAddress& addr) {
 	
 	// Find the enclosing SCoP (if any)
 	core::NodeAddress prev = addr;
@@ -163,7 +163,7 @@ utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::Expr
 
 	// This statement is not part of a SCoP (also may throw an exception)
 	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { 
-		return utils::CombinerPtr<core::arithmetic::Formula>(); 
+		return std::make_pair(NodeAddress(), AffineConstraintPtr()); 
 	}
 
 	StatementAddress enclosingScop = parent.as<StatementAddress>();
@@ -207,10 +207,8 @@ utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::Expr
 
 	IterationDomain domain( extract_surrounding_domain() );
 
-	if (domain.universe()) { return utils::CombinerPtr<core::arithmetic::Formula>(); }
-
-	if (domain.empty()) {  
-		return utils::castTo<AffineFunction, core::arithmetic::Formula>(domain.getConstraint()); 
+	if (domain.universe() || domain.empty()) { 
+		return std::make_pair(NodeAddress(), domain.getConstraint()); 
 	}
 
 	AffineFunction func(scop.getIterationVector(), addr.getAddressedNode());
@@ -241,7 +239,7 @@ utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::Expr
 
 	auto cons = utils::fromConjunctions(resultConj);
 
-	if (!cons) { return utils::CombinerPtr<core::arithmetic::Formula>(); }
+	if (!cons) { return std::make_pair(enclosingScop, AffineConstraintPtr()); }
 
 	/* Simplify the constraint by using the polyhedral model library */
 	auto&& ctx = makeCtx();
@@ -250,11 +248,15 @@ utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::Expr
 
 	IterationVector iterVec;
 	cons = set->toConstraint(addr->getNodeManager(), iterVec);
-	
 	// If we end-up with an empty constraints it means that the result is the universe 
-	if (!cons) { return utils::CombinerPtr<core::arithmetic::Formula>(); }
+	if (!cons) { 
+		return std::make_pair(prev, AffineConstraintPtr()); 
+	}
 
-	return utils::castTo<AffineFunction, core::arithmetic::Formula>(cons);
+	// Need to represent the constraint based on the iteration vector stored in the Scop object
+	// which will survive the lifetime of this method
+	IterationDomain curr_dom( scop.getIterationVector(), IterationDomain(cons) );
+	return make_pair(prev, curr_dom.getConstraint());
 }	
 
 

@@ -55,7 +55,7 @@
 namespace insieme { 
 namespace analysis { 
 
-typedef utils::CombinerPtr<core::arithmetic::Formula> Constraint;
+typedef polyhedral::AffineConstraintPtr Constraint;
 
 enum class VarType { SCALAR, MEMBER, TUPLE, ARRAY };
 
@@ -91,31 +91,29 @@ class Access : public utils::Printable {
      * For arrays the domain depends on the range of values being accessed. It could be either a
      * single element or strided domain in the circumstances the array is accessed inside a loop
      */
-	//boost::optional<polyhedral::IterationDomain> dom;
+	Constraint dom;
 
-	/**
-	 * An iteration domain is meaningless if the associated SCoP is not specified. Indeed two accesses
-	 * to the same variable with the same symbolic range are the same only if the relative iteration
-	 * domain is within the same SCoP. If the SCoPs differs then we cannot make any assumption on
-	 * the fact that the same range of elements is going to be accessed. 
+	/** 
+	 * A constraint has sense only if within a SCoP. Indeed, two equal constraints extracted from
+	 * two different SCoPs based on the same variables may not be referring to the same memory
+	 * location as the indexes may be reassigned between the two SCoPs
 	 */
-	// boost::optional<const polyhedral::Scop&> 	scop;
+	core::NodeAddress ctx;
 
 	Access(const core::ExpressionAddress& 		expr, 
 		   const core::VariablePtr& 			var,
 		   const core::datapath::DataPathPtr& 	path, 
 		   const VarType& 						type,
-		   const boost::optional<polyhedral::IterationDomain>& 	dom,
-		   const boost::optional<const polyhedral::Scop&>&		scop) : 
+		   const Constraint& 					dom,
+		   const core::NodeAddress& 			ctx) : 
 		base_expr(expr), 
 		variable(var),
 		path(path), 
-		type(type)
-		//dom(dom)
-		//scop(scop) 
-		{ }
+		type(type),
+		dom(dom),
+		ctx(ctx) { }
 
-	friend Access makeAccess(const core::ExpressionAddress& expr);
+	friend Access getImmediateAccess(const core::ExpressionAddress& expr);
 
 public:
 	
@@ -128,39 +126,27 @@ public:
 	 */
 	bool isRef() const;
 
-	inline core::VariablePtr getAccessedVariable() const { 
-		return variable; 
-	}
+	inline core::VariablePtr getAccessedVariable() const { return variable; }
+	inline core::ExpressionAddress getAccessExpression() const { return base_expr; }
+	inline const core::datapath::DataPathPtr& getPath() const {	return path; }
 
-	inline core::ExpressionAddress getAccessExpression() const { 
-		return base_expr; 
-	}
+	inline const Constraint& getConstraint() const { return dom; }
 
-	inline const core::datapath::DataPathPtr& getPath() const {
-		return path; 
-	}
+	inline const core::NodeAddress& getContext() const { return ctx; }
 
 	std::ostream& printTo(std::ostream& out) const;
 
 	inline bool operator<(const Access& other) const {
 		if (variable < other.variable) { return true; }
-		
 		if (variable > other.variable) { return false; }
-
 		return path < other.path;
 	}
 
-	inline bool operator==(const Access& other) const {
-		return *variable == *other.variable;
-	}
-
-	inline bool operator!=(const Access& other) const {
-		return !(*this == other);
-	}
-
+	inline bool operator==(const Access& other) const { return *variable == *other.variable; }
+	inline bool operator!=(const Access& other) const {	return !(*this == other); }
 };
 
-Access makeAccess(const core::ExpressionAddress& expr);
+Access getImmediateAccess(const core::ExpressionAddress& expr);
 
 std::set<Access> extractFromStmt(const core::StatementAddress& stmt);
 
