@@ -366,7 +366,6 @@ namespace parser {
 		auto abcab = builder.compoundStmt(a,b,c,a,b);
 		EXPECT_EQ(builder.compoundStmt(a, b, abc, abcab, a, c), g.match(manager, "{ a; b; { a; b; c; }; { a; b; c; a; b; }; a; c; }"));
 
-
 		// some stuff that should not work
 		EXPECT_FALSE(g.match(manager, "{a ; a; a; a; a; a; a; a; a a ; a; a; a; a; a; a; a; }"));
 
@@ -875,8 +874,29 @@ namespace parser {
 		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('%')));
 		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('.')));
 
-
 	}
+
+	TEST(Parser, VariableSequences) {
+		NodeManager manager;
+
+		Grammar g("E");
+
+		// list of a lot as and bs
+		g.addRule("E", rule(seq(loop(lit("+")), loop(lit("-"))), accept));
+
+		// simple case
+		EXPECT_TRUE(g.match(manager, "++++"));
+		EXPECT_TRUE(g.match(manager, "+++-"));
+		EXPECT_TRUE(g.match(manager, "++--"));
+		EXPECT_TRUE(g.match(manager, "+---"));
+		EXPECT_TRUE(g.match(manager, "----"));
+
+		// what should not work
+		EXPECT_FALSE(g.match(manager, "-+-"));
+		EXPECT_FALSE(g.match(manager, "+-+"));
+		EXPECT_FALSE(g.match(manager, "-+-+"));
+	}
+
 
 } // end namespace parser
 } // end namespace core

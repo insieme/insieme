@@ -158,10 +158,10 @@ namespace parser {
 			// initialize candidate list
 			vector<TokenIter> candidates;
 
-//			// handle begin differently
-//			if (begin != end && begin >= lowerLimit && followSet.contains(*begin)) {
-//				candidates.push_back(begin);
-//			}
+			// handle begin differently
+			if (begin != end && begin >= lowerLimit && followSet.contains(*begin)) {
+				candidates.push_back(begin);
+			}
 
 			// compute list of candidate-split-points
 			vector<Token> parentheseStack;
@@ -193,7 +193,7 @@ namespace parser {
 				assert(parentheseStack.empty());
 
 				// we are getting closer - check whether we are within the search range
-				if (it < lowerLimit) {
+				if (it+1 < lowerLimit) {
 					continue;
 				}
 
@@ -212,7 +212,7 @@ namespace parser {
 
 				// check whether this entry is a terminating one
 				if (terminator.contains(cur)) {
-					break;
+					return candidates;		// we are done her!
 				}
 			}
 
@@ -242,7 +242,7 @@ namespace parser {
 
 			// search largest portion starting from head being accepted by the body
 			unsigned size = tokens.size();
-			TokenIter lowerLimit = tokens.begin() + std::min(curVar->getMinRange(), size) -1;
+			TokenIter lowerLimit = tokens.begin() + std::min(curVar->getMinRange(), size);
 			TokenIter upperLimit = tokens.begin() + std::min(curVar->getMaxRange(), size);
 
 			// the set of tokens ending the body
@@ -254,11 +254,6 @@ namespace parser {
 					context.grammar.getTermInfo(), tokens.begin(), upperLimit, lowerLimit,
 					endSet, followSet
 			);
-
-//std::cout << "\n";
-//std::cout << "Tokens: " << join(" ", tokens, [](std::ostream& out, const Token& cur) { out << cur.getLexeme(); }) << "\n";
-//std::cout << "Candidates for splitting of " << *pattern[0] << " and " << *pattern[1]
-//          << " are " << join(" ", candidates, print<deref<TokenIter>>()) << "\n";
 
 			// if there are no candidates this will not match
 			if (candidates.empty()) {
@@ -616,32 +611,31 @@ namespace parser {
 		// terminal case - empty case => will be accepted
 		if (begin == end) return true;
 
-		// check head element
-		if (!context.grammar.getStartSet(body).contains(*begin)) {
+		// the set of tokens ending the body
+		const auto& sets = context.grammar.getStartEndSets(body);
+		const auto& startSet = sets.first;
+		const auto& endSet = sets.second;
+
+		// check head and tail element
+		if (!startSet.contains(*begin) || !endSet.contains(*(end-1))) {
 			return fail(context, begin, end);	// will never match
 		}
 
 		// search largest portion starting from head being accepted by the body
 		unsigned size = std::distance(begin, end);
-		TokenIter lowerLimit = begin + std::min(body->getMinRange(), size) - 1;
+		TokenIter lowerLimit = begin + std::min(body->getMinRange(), size);
 		TokenIter upperLimit = begin + std::min(body->getMaxRange(), size);
-
-		// the set of tokens ending the body
-		const auto& sets = context.grammar.getStartEndSets(body);
-		const auto& followSet = sets.first;
-		const auto& endSet = sets.second;
 
 		// find candidates of potential splitting points
 		vector<TokenIter> candidates = findSplitCandidates(
 				context.grammar.getTermInfo(), begin, upperLimit, lowerLimit,
-				endSet, followSet, terminator
+				endSet, startSet, terminator
 		);
 
 		// check whether there are candidates
 		if (candidates.empty()) {
 			return fail(context, begin, end);
 		}
-
 		// update speculation flag
 		auto backup = context.backup();
 		context.setSpeculative(context.isSpeculative() || candidates.size() > 1u);
