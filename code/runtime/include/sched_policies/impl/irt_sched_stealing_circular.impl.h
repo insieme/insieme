@@ -273,7 +273,6 @@ void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
 	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
 	irt_cwb_push_back(&self->sched_data.pool, yielding_wi);
 	self->cur_wi = NULL;
-	irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_UNKOWN, yielding_wi->id);
 	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
 }
 
@@ -366,29 +365,29 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 }
 
 int irt_scheduling_iteration(irt_worker* self) {
-	irt_worker_instrumentation_event(self, WORKER_SCHEDULING_LOOP, self->id);
+	irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP, self->id);
 	irt_work_item* wi = NULL;
 
 	// try to take a WI from the pool
 	if(wi = irt_cwb_pop_front(&self->sched_data.pool)) {
-		irt_worker_instrumentation_event(self, WORKER_SCHEDULING_LOOP_END, self->id);
+		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
 	}
 	
 	// if that failed, try to take a work item from the queue
 	if(wi = irt_cwb_pop_front(&self->sched_data.queue)) {
-		irt_worker_instrumentation_event(self, WORKER_SCHEDULING_LOOP_END, self->id);
+		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
 	}
 
 	// try to steal a work item from random
-	irt_worker_instrumentation_event(self, WORKER_STEAL_TRY, self->id);
+	irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_TRY, self->id);
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		if(wi = irt_cwb_pop_back(&irt_g_workers[rand()%irt_g_worker_count]->sched_data.queue)) {
-			irt_worker_instrumentation_event(self, WORKER_SCHEDULING_LOOP_END, self->id);
-			irt_worker_instrumentation_event(self, WORKER_STEAL_SUCCESS, self->id);
+			irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_SUCCESS, self->id);
+			irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 			_irt_worker_switch_to_wi(self, wi);
 			return 1;
 		}
