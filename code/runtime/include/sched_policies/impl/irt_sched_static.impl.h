@@ -82,7 +82,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 
 irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
 	if(target->sched_data.queue.size >= irt_g_worker_count) {
-		_irt_worker_run_optional_wi(target, wi);
+		irt_worker_run_immediate_wi(target, wi);
 		return wi;
 	}
 	else {

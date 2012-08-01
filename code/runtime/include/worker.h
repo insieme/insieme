@@ -116,7 +116,9 @@ void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init
 void _irt_worker_cancel_all_others();
 
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
-void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi);
+
+void irt_worker_run_immediate_wi(irt_worker* self, irt_work_item *wi);
+inline void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
 
 #ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self);

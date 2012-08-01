@@ -350,6 +350,12 @@ void irt_instrumentation_output(irt_worker* worker) {
 				case WORK_ITEM_RESUMED:
 					fprintf(outputfile, "RESUMED");
 					break;
+				case WORK_ITEM_END_START:
+					fprintf(outputfile, "END_START");
+					break;
+				case WORK_ITEM_END_FINISHED:
+					fprintf(outputfile, "END_FINISHED");
+					break;
 				case WORK_ITEM_FINISHED:
 					fprintf(outputfile, "FINISHED");
 					break;
@@ -385,6 +391,21 @@ void irt_instrumentation_output(irt_worker* worker) {
 					break;
 				case WORKER_SLEEP_BUSY_END:
 					fprintf(outputfile, "SLEEP_BUSY_END");
+					break;
+				case WORKER_STEAL_TRY:
+					fprintf(outputfile, "STEAL_TRY");
+					break;
+				case WORKER_STEAL_SUCCESS:
+					fprintf(outputfile, "STEAL_SUCCESS");
+					break;
+				case WORKER_SCHEDULING_LOOP:
+					fprintf(outputfile, "SCHEDULING_LOOP");
+					break;
+				case WORKER_SCHEDULING_LOOP_END:
+					fprintf(outputfile, "SCHEDULING_LOOP_END");
+					break;
+				case WORKER_IMMEDIATE_EXEC:
+					fprintf(outputfile, "IMMEDIATE_EXEC");
 					break;
 				case WORKER_STOP:
 					fprintf(outputfile, "STOP");
