@@ -600,8 +600,8 @@ private
   end
 
   def get_result
-    first = `cat worker_event_log.000* | sort -k4 | grep CREATED | head -2 | tail -1 | awk -v x=4 '{print $x }'`
-    last = `cat worker_event_log.000* | sort -k4 | grep FINISHED | tail -2 | head -1 | awk -v x=4 '{print $x }'`
+    first = `cat worker_event_log.000* | sort -k4 | grep CREATED | grep WI | head -2 | tail -1 | awk 'BEGIN { FS = "," } ; { print $4 }'`
+    last = `cat worker_event_log.000* | sort -k4 | grep FINISHED | grep WI | tail -2 | head -1 | awk 'BEGIN { FS = "," } ; { print $4 }'`
     last.to_i - first.to_i
   end
 

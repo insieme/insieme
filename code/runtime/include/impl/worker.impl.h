@@ -112,15 +112,15 @@ void* _irt_worker_func(void *argvp) {
 
 	pthread_cond_init(&self->wait_cond, NULL);
 	pthread_mutex_init(&self->wait_mutex, NULL);
-
+	
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
-	self->instrumentation_event_data = irt_inst_create_event_data_table(IRT_WORKER_PD_BLOCKSIZE);
+	self->instrumentation_event_data = irt_inst_create_event_data_table();
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	self->instrumentation_region_data = irt_inst_create_region_data_table(IRT_WORKER_PD_BLOCKSIZE);
+	self->instrumentation_region_data = irt_inst_create_region_data_table();
 	// initialize papi's threading support and add events to be measured
 	//self->irt_papi_number_of_events = 0;
 	irt_initialize_papi_thread(&(self->irt_papi_event_set));
@@ -216,22 +216,35 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	}
 }
 
-void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi) {
-	irt_work_item *cur_wi = self->cur_wi;
+void irt_worker_run_immediate_wi(irt_worker* self, irt_work_item *wi) {
+	irt_worker_run_immediate(self, &wi->range, wi->impl_id, wi->parameters);
+}
+
+void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
+	irt_inst_insert_wo_event(target, IRT_INST_WORKER_IMMEDIATE_EXEC, target->id);
+	irt_work_item *self = target->cur_wi;
 	// store current wi data
-	irt_lw_data_item* params = cur_wi->parameters;
-	irt_work_item_range range = cur_wi->range;
-	irt_wi_implementation_id impl_id = cur_wi->impl_id;
+	irt_lw_data_item *prev_args = self->parameters;
+	irt_work_item_range prev_range = self->range;
+	irt_wi_implementation_id prev_impl_id = self->impl_id;
 	// set new wi data
-	cur_wi->parameters = wi->parameters;
-	cur_wi->range = wi->range;
-	cur_wi->impl_id = wi->impl_id;
+	self->parameters = args;
+	self->range = *range;
+	self->impl_id = impl_id;
+	// need unique active child number, can re-use id (and thus register entry)
+	uint32 *prev_parent_active_child_count = self->parent_num_active_children;
+	self->parent_num_active_children = self->num_active_children;
+	uint32 active_child_count = 0;
+	self->num_active_children = &active_child_count;
 	// call wi
-	(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation)(cur_wi);
+	(irt_context_table_lookup(target->cur_context)->impl_table[impl_id].variants[0].implementation)(self);
+	// restore active child number(s)
+	self->num_active_children = self->parent_num_active_children;
+	self->parent_num_active_children = prev_parent_active_child_count;
 	// restore data
-	cur_wi->parameters = params;
-	cur_wi->range = range;
-	cur_wi->impl_id = impl_id;
+	self->parameters = prev_args;
+	self->range = prev_range;
+	self->impl_id = prev_impl_id;
 }
 
 void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal) {

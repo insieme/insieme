@@ -36,18 +36,39 @@
 
 #pragma once
 
+#include "declarations.h"
+
 #define IRT_CWBUFFER_LENGTH 16
+#define IRT_CWBUFFER_MASK (IRT_CWBUFFER_LENGTH-1)
+
+
+typedef union _irt_cwb_state {
+	uint64 all;
+	struct {
+		union {
+			uint32 top;
+			struct {
+				uint16 top_val;
+				uint16 top_update;
+			};
+		};
+		union {
+			uint32 bot;
+			struct {
+				uint16 bot_val;
+				uint16 bot_update;
+			};
+		};
+	};
+} irt_cwb_state;
 
 typedef struct _irt_circular_work_buffer {
-	uint64 oldest_valid;
-	uint64 newest_valid;
+	volatile irt_cwb_state state;
 	irt_work_item* items[IRT_CWBUFFER_LENGTH];
 } irt_circular_work_buffer;
 
 typedef struct _irt_cw_data {
-	//__attribute__ ((aligned (64)))
 	irt_circular_work_buffer queue;
-	//__attribute__ ((aligned (64)))
 	irt_circular_work_buffer pool;
 } irt_cw_data;
 
@@ -55,3 +76,28 @@ typedef struct _irt_cw_data {
 
 // placeholder, not required
 #define irt_wi_scheduling_data uint32
+
+
+#if 0
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////// 64 bit triplet implementation ////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+typedef struct _irt_circular_work_buffer {
+	uint64 front_free;
+	uint64 back_free;
+	int64 size;
+	irt_work_item* items[IRT_CWBUFFER_LENGTH];
+} irt_circular_work_buffer;
+
+typedef struct _irt_cw_data {
+	irt_circular_work_buffer queue;
+	irt_circular_work_buffer pool;
+} irt_cw_data;
+
+#define irt_worker_scheduling_data irt_cw_data
+
+// placeholder, not required
+#define irt_wi_scheduling_data uint32
+
+#endif // 64 bit triplet implementation
