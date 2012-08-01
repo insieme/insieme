@@ -46,6 +46,8 @@
 #include <vector>
 
 #include "insieme/core/ir.h"
+#include "insieme/core/ir_builder.h"
+
 #include "insieme/utils/printable.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/string_utils.h"
@@ -164,7 +166,7 @@ namespace parser {
 
 
 
-	class Context {
+	class Context : public IRBuilder {
 
 		bool speculative;
 
@@ -245,7 +247,8 @@ namespace parser {
 
 
 		Context(const Grammar& grammar, NodeManager& manager, const TokenIter& begin, const TokenIter& end, bool speculative = true)
-			: speculative(speculative),
+			: IRBuilder(manager),
+			  speculative(speculative),
 			  variableScope(std::make_shared<ScopeManager>()),
 			  typeScope(std::make_shared<ScopeManager>()),
 			  nestingLevel(0),
@@ -255,7 +258,8 @@ namespace parser {
 			  end(end) {}
 
 		Context(const Context& context, const TokenIter& begin, const TokenIter& end)
-			: speculative(context.speculative),
+			: IRBuilder(context.getNodeManager()),
+			  speculative(context.speculative),
 			  variableScope(context.variableScope),
 			  typeScope(context.typeScope),
 			  nestingLevel(context.nestingLevel),
