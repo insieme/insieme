@@ -256,7 +256,7 @@ void irt_inst_event_data_output(irt_worker* worker) {
 #endif
 
 	for(int i = 0; i < table->number_of_elements; ++i)
-		fprintf(outputfile, "%s,%14lu,\t%s,\t%18lu\n", irt_g_instrumentation_group_names[table->data[i].event], table->data[i].subject_id, irt_g_instrumentation_event_names[table->data[i].event], irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+		fprintf(outputfile, "%s,%lu,%s,%lu\n", irt_g_instrumentation_group_names[table->data[i].event], table->data[i].subject_id, irt_g_instrumentation_event_names[table->data[i].event], irt_time_convert_ticks_to_ns(table->data[i].timestamp));
 
 	fclose(outputfile);
 #ifdef USE_OPENCL
