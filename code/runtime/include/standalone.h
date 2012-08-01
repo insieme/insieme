@@ -110,7 +110,7 @@ void irt_init_globals() {
 	irt_time_ticks_per_sec_calibration_mark();
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_inst_create_aggregated_data_table(IRT_WORKER_PD_BLOCKSIZE);
+	irt_inst_create_aggregated_data_table();
 	irt_energy_select_instrumentation_method();
 #endif
 }

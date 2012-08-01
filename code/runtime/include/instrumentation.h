@@ -72,8 +72,8 @@ typedef struct _irt_##__type__##_table irt_##__table__##_table; \
 
 // functions for creating and destroying performance tables
 
-irt_instrumentation_event_data_table* irt_inst_create_event_data_table(const unsigned blocksize);
-irt_instrumentation_region_data_table* irt_inst_create_region_data_table(unsigned blocksize);
+irt_instrumentation_event_data_table* irt_inst_create_event_data_table();
+irt_instrumentation_region_data_table* irt_inst_create_region_data_table();
 
 void irt_inst_destroy_event_data_table(irt_instrumentation_event_data_table* table);
 void irt_inst_destroy_region_data_table(irt_instrumentation_region_data_table* table);

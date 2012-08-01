@@ -117,10 +117,10 @@ void* _irt_worker_func(void *argvp) {
 	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
-	self->instrumentation_event_data = irt_inst_create_event_data_table(IRT_WORKER_PD_BLOCKSIZE);
+	self->instrumentation_event_data = irt_inst_create_event_data_table();
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	self->instrumentation_region_data = irt_inst_create_region_data_table(IRT_WORKER_PD_BLOCKSIZE);
+	self->instrumentation_region_data = irt_inst_create_region_data_table();
 	// initialize papi's threading support and add events to be measured
 	//self->irt_papi_number_of_events = 0;
 	irt_initialize_papi_thread(&(self->irt_papi_event_set));
