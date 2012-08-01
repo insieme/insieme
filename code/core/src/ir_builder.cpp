@@ -993,6 +993,20 @@ ExpressionPtr IRBuilder::wrapLazy(const ExpressionPtr& expr) const {
 	return bindExpr(VariableList(), callExpr(expr->getType(), res, convertList<Expression>(list)));
 }
 
+CallExprPtr IRBuilder::print(const string& format, const ExpressionList& args) const {
+	return print(stringLit(format), args);
+}
+
+CallExprPtr IRBuilder::print(const ExpressionPtr& format, const ExpressionList& args) const {
+	auto& basic = getLangBasic();
+	return callExpr(basic.getUnit(), basic.getPrint(), format, pack(args));
+}
+
+CallExprPtr IRBuilder::pack(const ExpressionList& values) const {
+	auto& basic = getLangBasic();
+	return callExpr(basic.getVarList(), basic.getVarlistPack(), tupleExpr(values));
+}
+
 CallExprPtr IRBuilder::select(const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& op) const {
 	const auto& basic = manager.getLangBasic();
 	const core::LiteralPtr& select = basic.getSelect();

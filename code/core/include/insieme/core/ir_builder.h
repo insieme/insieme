@@ -513,6 +513,11 @@ namespace core {
 			return ternaryOp(getLangBasic().getIfThenElse(), cond, a, b);
 		}
 
+		// output operators
+		CallExprPtr print(const string& format, const ExpressionList& args) const;
+		CallExprPtr print(const ExpressionPtr& format, const ExpressionList& args) const;
+
+		CallExprPtr pack(const ExpressionList& values) const;
 
 		// select operator and derived variants
 
