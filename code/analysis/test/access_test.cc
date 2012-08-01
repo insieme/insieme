@@ -175,7 +175,7 @@ TEST(Access, ArrayAccess) {
 			"(op<vector.subscript>(vector<int<4>,8>:v, 2))"
 		);
 		auto access = getImmediateAccess( ExpressionAddress(code) );
-		std::cout << access << std::endl;
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		// EXPECT_FALSE(access.isRef());
 	}
@@ -186,7 +186,7 @@ TEST(Access, ArrayAccess) {
 		);
 
 		auto access = getImmediateAccess( ExpressionAddress(code) );
-		std::cout << access << std::endl;
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		// std::cout << access.getConstraint() << std::endl;
@@ -203,7 +203,7 @@ TEST(Access, ArrayAccess) {
 
 		auto access = getImmediateAccess( StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
 										  as<ExpressionAddress>() );
-		 std::cout << access << std::endl;
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		EXPECT_TRUE(!!access.getConstraint());
@@ -223,7 +223,7 @@ TEST(Access, ArrayAccess) {
 
 		auto access = getImmediateAccess( StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
 				  						  as<ExpressionAddress>() );
-		std::cout << access << std::endl;
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		EXPECT_TRUE(!!access.getConstraint());
@@ -232,7 +232,7 @@ TEST(Access, ArrayAccess) {
 		EXPECT_EQ(code, access.getContext().getAddressedNode()); 
 	}
 
-{
+	{
 		auto code = parser.parseStatement(
 			"if( ((uint<4>:b>10) && (uint<4>:a<20)) )"
 			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (b+a)))"
@@ -243,13 +243,32 @@ TEST(Access, ArrayAccess) {
 
 		auto access = getImmediateAccess( StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
 										  as<ExpressionAddress>() );
-		std::cout << access << std::endl;
+		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		EXPECT_TRUE(!!access.getConstraint());
 		EXPECT_EQ("((-v12 + 19*1 >= 0) ^ (v11 + -11*1 >= 0))", toString(*access.getConstraint()));
 
 		EXPECT_EQ(code, access.getContext().getAddressedNode()); 
+	}
+
+	// not affine access => invalid scop
+	{
+		auto code = parser.parseStatement(
+			"if( ((uint<4>:b>10) && (uint<4>:a<20)) )"
+			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (b*a)))"
+		);
+
+		// perform the polyhedral analysis 
+		polyhedral::scop::mark(code);
+
+		auto access = getImmediateAccess( StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
+										  as<ExpressionAddress>() );
+		// std::cout << access << std::endl;
+		EXPECT_EQ(VarType::ARRAY, access.getType());
+		EXPECT_TRUE(access.isRef());
+		EXPECT_FALSE(!!access.getConstraint());
+		EXPECT_FALSE( access.getContext() ); 
 	}
 
 }
