@@ -105,13 +105,20 @@
 		NodeManager manager;
 
 		NodePtr res;
-		double time = TIME(res = core::parser::parse(manager, ss.str()));
-
-		if (!res) {
-			std::cout << "Error parsing file!\n";
+		insieme::utils::Timer timer;
+		try {
+			res = core::parser::parse_program(manager, ss.str(), true);
+			if (!res) {
+				std::cout << "Unknown parsing error!\n";
+				return 1;
+			}
+		} catch(const core::parser::IRParserException& pe) {
+			std::cout << "Parsing error encountered: " << pe.what() << "\n";
 			return 1;
 		}
-//std::cout << core::printer::PrettyPrinter(res) << "\n";
+		double time = timer.stop();
+
+std::cout << core::printer::PrettyPrinter(res) << "\n";
 		std::cout << "Parsing took " << time << "sec.\n";
 
 		auto msg = checks::check(res);

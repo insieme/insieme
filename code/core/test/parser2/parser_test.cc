@@ -553,7 +553,7 @@ namespace parser {
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
 			if (!a || !b) return false;
 			return IRBuilder(cur.manager).add(a,b);
-		});
+		}, 2);
 
 		auto mul = rule(seq(rec(), "*", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
@@ -561,7 +561,7 @@ namespace parser {
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
 			if (!a || !b) return false;
 			return IRBuilder(cur.manager).mul(a,b);
-		});
+		}, 1);
 
 		auto par = rule(seq("(", rec(), ")"), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 1u) return false;

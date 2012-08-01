@@ -488,6 +488,26 @@ namespace parser {
 					-10
 			));
 
+			g.addRule("E", rule(
+					seq(E, "==", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).eq(a,b);
+					},
+					-9
+			));
+
+			g.addRule("E", rule(
+					seq(E, "!=", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).eq(a,b);
+					},
+					-9
+			));
+
 			// -- vector / array access --
 
 			g.addRule("E", rule(
@@ -798,7 +818,7 @@ namespace parser {
 						IRBuilder builder(cur.manager);
 						TypePtr returnType = (cur.getTerms().end()-2)->as<TypePtr>();
 						StatementPtr body = cur.getTerms().back().as<StatementPtr>();
-						ExpressionPtr main = builder.lambdaExpr(body, VariableList());
+						ExpressionPtr main = builder.lambdaExpr(returnType, body, VariableList());
 						return builder.createProgram(toVector(main));
 					}
 			));
@@ -824,25 +844,53 @@ namespace parser {
 
 	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow) {
 		static const Grammar inspire = buildGrammar();
-		return inspire.match(manager, code, onFailThrow);
+		try {
+			return inspire.match(manager, code, onFailThrow);
+		} catch (const ParseException& pe) {
+			throw IRParserException(pe.what());
+		}
+		return NodePtr();
 	}
 
 	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow) {
 		static const Grammar g = buildGrammar("T");
-		return g.match(manager, code, onFailThrow).as<TypePtr>();
+		try {
+			return g.match(manager, code, onFailThrow).as<TypePtr>();
+		} catch (const ParseException& pe) {
+			throw IRParserException(pe.what());
+		}
+		return TypePtr();
 	}
 
 	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow) {
 		static const Grammar g = buildGrammar("E");
-		return g.match(manager, code, onFailThrow).as<ExpressionPtr>();
+		try {
+			return g.match(manager, code, onFailThrow).as<ExpressionPtr>();
+		} catch (const ParseException& pe) {
+			throw IRParserException(pe.what());
+		}
+		return ExpressionPtr();
 	}
 
 	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow) {
 		static const Grammar g = buildGrammar("S");
-		return g.match(manager, code, onFailThrow).as<StatementPtr>();
+		try {
+			return g.match(manager, code, onFailThrow).as<StatementPtr>();
+		} catch (const ParseException& pe) {
+			throw IRParserException(pe.what());
+		}
+		return StatementPtr();
 	}
 
-
+	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow) {
+		static const Grammar g = buildGrammar("A");
+		try {
+			return g.match(manager, code, onFailThrow).as<ProgramPtr>();
+		} catch (const ParseException& pe) {
+			throw IRParserException(pe.what());
+		}
+		return ProgramPtr();
+	}
 
 
 } // end namespace parser2
