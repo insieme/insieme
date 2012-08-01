@@ -150,21 +150,21 @@ TEST(Primitive, GetSubStmt) {
 
 	{ 
 		VariablePtr iter1 = builder.variable(mgr.getLangBasic().getInt4(), 1);
-		std::vector<StmtPtr>&& stmts = getLoopSubStatements(scop, iter1);
+		std::vector<std::reference_wrapper<Stmt>>&& stmts = getLoopSubStatements(scop, iter1);
 
 		EXPECT_EQ(2u, stmts.size());
 	}
 
 	{ 
 		VariablePtr iter2 = builder.variable(mgr.getLangBasic().getInt4(), 2);
-		std::vector<StmtPtr>&& stmts = getLoopSubStatements(scop, iter2);
+		std::vector<std::reference_wrapper<Stmt>>&& stmts = getLoopSubStatements(scop, iter2);
 
 		EXPECT_EQ(2u, stmts.size());
 	}
 
 	{ 
 		VariablePtr iter3 = builder.variable(mgr.getLangBasic().getInt4(), 3);
-		std::vector<StmtPtr>&& stmts = getLoopSubStatements(scop, iter3);
+		std::vector<std::reference_wrapper<Stmt>>&& stmts = getLoopSubStatements(scop, iter3);
 
 		EXPECT_EQ(1u, stmts.size());
 	}

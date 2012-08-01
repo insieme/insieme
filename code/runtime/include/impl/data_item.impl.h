@@ -48,9 +48,6 @@
 #include "impl/irt_context.impl.h"
 #include "impl/instrumentation.impl.h"
 
-#ifdef _MSC_VER
-	#include <Windows.h>
-#endif
 
 
 IRT_DEFINE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
@@ -61,7 +58,7 @@ static inline irt_data_item* _irt_di_new(uint16 dimensions) {
 	return (irt_data_item*)retval;
 }
 static inline void _irt_di_recycle(irt_data_item* di) {
-	irt_di_instrumentation_event(irt_worker_get_current(), DATA_ITEM_RECYCLED, di->id);
+	irt_inst_insert_di_event(irt_worker_get_current(), IRT_INST_DATA_ITEM_RECYCLED, di->id);
 	irt_data_item_table_remove(di->id);
 	free(di);
 }
@@ -81,7 +78,7 @@ irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range*
 	retval->parent_id = irt_data_item_null_id();
 	retval->lookup_table_next = NULL;
 	retval->data_block = NULL;
-	irt_di_instrumentation_event(irt_worker_get_current(), DATA_ITEM_CREATED, retval->id);
+	irt_inst_insert_di_event(irt_worker_get_current(), IRT_INST_DATA_ITEM_CREATED, retval->id);
 	irt_data_item_table_insert(retval);
 	return retval;
 }
@@ -198,7 +195,7 @@ irt_data_block* irt_di_acquire(irt_data_item* di, irt_data_mode mode) {
 	// create the data blocks
 	uint64 type_size = irt_type_get_bytes(irt_context_get_current(), di->type_id);
 	uint32 dim = di->dimensions;
-	uint64 sizes[dim];
+	uint64 *sizes = (uint64*)alloca(sizeof(uint64)*dim);
 	for (uint32 i=0; i<dim; ++i) {
 		sizes[i] = di->ranges[i].end - di->ranges[i].begin;
 	}

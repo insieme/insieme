@@ -61,7 +61,7 @@ struct NotAffineExpr : public std::logic_error {
 
 	NotAffineExpr(const core::ExpressionPtr& expr) : std::logic_error(""), expr(expr) {
 		std::ostringstream ss;
-		ss << "Expression '" << *expr << "' is not a linear affine function";
+		ss << "Expression '" << (expr ? toString(*expr) : "NULL") << "' is not a linear affine function";
 		msg = ss.str();
 	}
 	
@@ -149,7 +149,7 @@ public:
 		Term operator*() const; 
 		iterator& operator++();
 
-		bool operator==(const iterator& rhs) const { 
+		inline bool operator==(const iterator& rhs) const { 
 			return &iterVec == &rhs.iterVec && &af == &rhs.af && iterPos == rhs.iterPos;
 		}
 	};
@@ -213,6 +213,8 @@ public:
 	inline bool isConstant() const { 
 		return all(coeffs.begin(), coeffs.end()-1, [](const int& cur) { return cur == 0; }); 
 	}
+
+	bool operator<(const AffineFunction& other) const;
 
 	// Implements the Printable interface 
 	std::ostream& printTo(std::ostream& out) const;

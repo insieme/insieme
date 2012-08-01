@@ -59,11 +59,11 @@ UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest) {
 	return m;
 }
 
-std::vector<StmtPtr> getStmts(Scop& scop, const Iterator& iter, bool internal) {
+std::vector<std::reference_wrapper<Stmt>> getStmts(Scop& scop, const Iterator& iter, bool internal) {
 
 	const IterationVector& iterVec = scop.getIterationVector();
 
-	std::vector<StmtPtr> ret;
+	std::vector<std::reference_wrapper<Stmt>> ret;
 	for_each(scop, [&] (StmtPtr& cur) { 
 			IntMatrix&& sched = extractFrom( cur->getSchedule() );
 			int idx = iterVec.getIdx(iter);
@@ -73,9 +73,9 @@ std::vector<StmtPtr> getStmts(Scop& scop, const Iterator& iter, bool internal) {
 			for(; pos<end && sched[pos][idx]==0; ++pos) ;
 			
 			if( pos!=sched.rows() && internal ) {
-				ret.push_back( cur );
+				ret.emplace_back( std::ref(*cur) );
 			} else if (pos == sched.rows() && !internal) {
-				ret.push_back( cur );
+				ret.emplace_back( std::ref(*cur) );
 			}
 		} );
 
@@ -86,18 +86,18 @@ std::vector<StmtPtr> getStmts(Scop& scop, const Iterator& iter, bool internal) {
 } // end anonymous namespace 
 
 
-std::vector<StmtPtr> getLoopSubStatements(Scop& scop, const Iterator& iter) {
+std::vector<std::reference_wrapper<Stmt>> getLoopSubStatements(Scop& scop, const Iterator& iter) {
 	// returns all the statements which have 1 in the scheduling matrix corresponding to iterator
 	// 'iter'
-	return getStmts(scop, iter, true);
+	return std::move(getStmts(scop, iter, true));
 }
 
 void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIter) {
 	const IterationVector& iterVec = scop.getIterationVector();
-	std::vector<StmtPtr>&& stmts = getLoopSubStatements(scop, iter);
+	std::vector<std::reference_wrapper<Stmt>>&& stmts = getLoopSubStatements(scop, iter);
 
-	for_each(stmts, [&](StmtPtr& cur) { 
-		AffineSystem& schedule = cur->getSchedule();
+	for_each(stmts, [&](std::reference_wrapper<Stmt>& cur) { 
+		AffineSystem& schedule = cur.get().getSchedule();
 		size_t dim = schedule.size()+1;
 
 		if ( dim > scop.schedDim() ) { scop.schedDim() = dim; }
@@ -120,10 +120,10 @@ void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIte
 
 void scheduleLoopAfter(Scop& scop, const Iterator& iter, const Iterator& newIter) {
 	const IterationVector& iterVec = scop.getIterationVector();
-	std::vector<StmtPtr>&& stmts = getLoopSubStatements(scop, iter);
+	std::vector<std::reference_wrapper<Stmt>>&& stmts = getLoopSubStatements(scop, iter);
 
-	for_each(stmts, [&](StmtPtr& cur) { 
-		AffineSystem& schedule = cur->getSchedule();
+	for_each(stmts, [&](std::reference_wrapper<Stmt>& cur) { 
+		AffineSystem& schedule = cur.get().getSchedule();
 		size_t dim = schedule.size()+1;
 
 		if ( dim > scop.schedDim() ) { scop.schedDim() = dim; }
@@ -147,22 +147,22 @@ void scheduleLoopAfter(Scop& scop, const Iterator& iter, const Iterator& newIter
 
 void addConstraint(Scop& scop, const Iterator& iter, const IterationDomain& dom) {
 	
-	std::vector<StmtPtr>&& stmts = getLoopSubStatements(scop, iter);
+	std::vector<std::reference_wrapper<Stmt>>&& stmts = getLoopSubStatements(scop, iter);
 
-	for_each(stmts, [&](StmtPtr& cur) { cur->getDomain() &= dom; } );
+	for_each(stmts, [&](std::reference_wrapper<Stmt>& cur) { cur.get().getDomain() &= dom; } );
 
 }
 
 void setZeroOtherwise(Scop& scop, const Iterator& iter) {
 
 	const IterationVector& iterVec = scop.getIterationVector();
-	std::vector<StmtPtr>&& stmts = getStmts(scop, iter, false);
+	std::vector<std::reference_wrapper<Stmt>>&& stmts = getStmts(scop, iter, false);
 
-	for_each(stmts, [&](StmtPtr& cur) { 
+	for_each(stmts, [&](std::reference_wrapper<Stmt>& cur) { 
 		AffineFunction func(iterVec);
 		func.setCoeff( iter, 1 );
 
-		cur->getDomain() &= IterationDomain( AffineConstraint( func, ConstraintType::EQ) ); 
+		cur.get().getDomain() &= IterationDomain( AffineConstraint( func, ConstraintType::EQ) ); 
 	} );
 }
 
@@ -206,22 +206,22 @@ void applyUnimodularTransformation<BOTH>(Scop& scop, const UnimodularMatrix& tra
 	applyUnimodularTransformation<ACCESS_ONLY>(scop, trans);
 }
 
-bool checkTransformedSchedule(Scop origin, Scop trans) {
+bool checkTransformedSchedule(const Scop& origin, const Scop& trans) {
 
-	VLOG(1) << trans;
-	VLOG(1) << origin;
+	//VLOG(1) << trans;
+	//VLOG(1) << origin;
 	auto&& ctx = makeCtx();
 	auto&& deps = origin.computeDeps(ctx);
-	VLOG(1) << "Dependencies in the original schedule:";
-	VLOG(1) << *deps;
+	//VLOG(1) << "Dependencies in the original schedule:";
+	//VLOG(1) << *deps;
 
 	auto&& tSched = trans.getSchedule(ctx);
-	VLOG(1) << "Transformed schedule:";
-	VLOG(1) << *tSched;
+	//VLOG(1) << "Transformed schedule:";
+	//VLOG(1) << *tSched;
 
 	MapPtr<> umao = (polyhedral::reverse(tSched)(deps))(tSched);
-	VLOG(1) << "Application of transformation to original schedule:";
-	VLOG(1) << *umao;
+	//VLOG(1) << "Application of transformation to original schedule:";
+	//VLOG(1) << *umao;
 	//	isl_union_map_apply_range(
 	//		isl_union_map_apply_range( isl_union_map_reverse(tSched->getIslObj()), deps->getIslObj() ), 
 	//		tSched->getIslObj() 
@@ -230,8 +230,8 @@ bool checkTransformedSchedule(Scop origin, Scop trans) {
 	MapPtr<> nonValidMap(*ctx, isl_union_set_lex_gt_union_set( 
 								polyhedral::range(tSched)->getIslObj(), 
 								polyhedral::range(tSched)->getIslObj()));
-	VLOG(1) << "Non validity map:";
-	VLOG(1) << *nonValidMap;
+	//VLOG(1) << "Non validity map:";
+	//VLOG(1) << *nonValidMap;
 
 	//isl_union_map* nonValidDom = 
 	//	isl_union_set_lex_gt_union_set( 
@@ -243,7 +243,7 @@ bool checkTransformedSchedule(Scop origin, Scop trans) {
 	// LOG(INFO) << isl_union_map_is_empty(isl_union_map_intersect(umao, nonValidDom));
 
 	MapPtr<> intersection = umao * nonValidMap;
-	VLOG(1) << "Intersection: " << *intersection;
+	//VLOG(1) << "Intersection: " << *intersection;
 
 	// isl_union_map* intersection = isl_union_map_intersect( umao, nonValidDom );
 	
@@ -372,7 +372,7 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 
 	// Make sure the domain is based on the current iteration vector
 	AffineConstraintPtr domain = cloneConstraint(iterVec, dom.getConstraint());
-	DisjunctionList&& disjunctions = getConjuctions(toDNF(domain)), lb, ub;
+	DisjunctionList&& disjunctions = getConjunctions(toDNF(domain)), lb, ub;
 
 	boost::tie(lb,ub) = getDomainBounds(iterVec, iter, disjunctions);
 	boost::tie(lb,ub) = std::make_pair(replace(lb, iter, newIter), replace(ub, iter, newIter));
@@ -427,11 +427,11 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 
 namespace {
 
-void updateScheduling(const std::vector<StmtPtr>& stmts, const core::VariablePtr& oldIter,  
+void updateScheduling(const std::vector<std::reference_wrapper<Stmt>>& stmts, const core::VariablePtr& oldIter,  
 	 size_t firstSched, size_t& pos) 
 {
-	for_each(stmts, [&] (const StmtPtr& curr) {
-		AffineSystem& sys = curr->getSchedule();
+	for_each(stmts, [&] (const std::reference_wrapper<Stmt>& curr) {
+		AffineSystem& sys = curr.get().getSchedule();
 
 		AffineSystem::iterator saveIt=sys.end(), remIt=sys.begin();
 		for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
@@ -460,7 +460,7 @@ void doFuse(Scop& scop, const core::VariableList& iters) {
 		return; 
 	}
 
-	std::vector<StmtPtr>&& loopStmt1 = getLoopSubStatements(scop, iters[0]);
+	std::vector<std::reference_wrapper<Stmt>>&& loopStmt1 = getLoopSubStatements(scop, iters[0]);
 
 	// we schedule the fused loop at the same position of the first loop being fused (maybe this
 	// could be a parameter of the transformation as the loop could be schedule at the position of
@@ -468,7 +468,7 @@ void doFuse(Scop& scop, const core::VariableList& iters) {
 
 	size_t schedPos = 0;
 	assert(!loopStmt1.empty() && "Trying to fuse loop containing no statements");
-	AffineSystem& sys = loopStmt1.front()->getSchedule();
+	AffineSystem& sys = loopStmt1.front().get().getSchedule();
 	AffineSystem::iterator saveIt = sys.begin();
 	for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
 		if(it->getCoeff(iters[0]) != 0) {
@@ -488,10 +488,10 @@ void doFuse(Scop& scop, const core::VariableList& iters) {
 
 void doSplit(Scop& scop, const core::VariablePtr& iter, const std::vector<unsigned>& stmtIdxs) {
 
-	std::vector<StmtPtr>&& loopStmts = getLoopSubStatements(scop, iter);
+	std::vector<std::reference_wrapper<Stmt>>&& loopStmts = getLoopSubStatements(scop, iter);
 
 	size_t schedPos = 0;
-	AffineSystem& sys = loopStmts.front()->getSchedule();
+	AffineSystem& sys = loopStmts.front().get().getSchedule();
 	AffineSystem::iterator saveIt = sys.begin();
 	for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
 		if(it->getCoeff(iter) != 0) {
@@ -505,7 +505,7 @@ void doSplit(Scop& scop, const core::VariablePtr& iter, const std::vector<unsign
 		size_t pos = 0;
 		// schedule the statements between [idx, idx-1) in different loop
 		for(size_t stmt=stmtIdxs[idx]; stmt < ((idx<stmtIdxs.size()-1)?stmtIdxs[idx+1]:scop.size()); stmt++) {
-			AffineSystem& schedule = loopStmts[stmt]->getSchedule();
+			AffineSystem& schedule = loopStmts[stmt].get().getSchedule();
 			AffineSystem::iterator saveIt = schedule.begin(), it = schedule.begin(), end = schedule.end();
 			for(; it != end; ++it) {
 				if(it->getCoeff(iter) != 0) {

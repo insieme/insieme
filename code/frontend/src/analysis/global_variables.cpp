@@ -510,14 +510,6 @@ bool CXXGlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 		}
 	}
 
-	// handle initializers
-	for (clang::CXXConstructorDecl::init_iterator iit =
-			ctorDecl->init_begin(), iend =
-			ctorDecl->init_end(); iit != iend; iit++) {
-		clang::CXXCtorInitializer* initializer = *iit;
-		this->TraverseStmt(initializer->getInit());
-	}
-
 	// save the translation unit for the current function
 	const clang::idx::TranslationUnit* old = currTU;
 	if(!funcDecl->hasBody(definition)) {
@@ -530,6 +522,23 @@ bool CXXGlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
 		definition = ret.first;
 		currTU = ret.second;
+	}
+
+	// handle initializers
+	for (clang::CXXConstructorDecl::init_iterator iit =
+			ctorDecl->init_begin(), iend =
+			ctorDecl->init_end(); iit != iend; iit++) {
+		clang::CXXCtorInitializer* initializer = *iit;
+		this->TraverseStmt(initializer->getInit());
+
+		// check if the current initializer is a CXXConstructExpr
+		// -> using a ctor to initializer a class member
+		if( const CXXConstructExpr *initCtor = dyn_cast<CXXConstructExpr>(initializer->getInit()) ) {
+			//if this ctor is using globalVars add the surrounding ctor to usingGlobals
+			if(usingGlobals.find(initCtor->getConstructor()) != usingGlobals.end()) {
+				usingGlobals.insert( definition );
+			}
+		}
 	}
 
 	if(definition) {
@@ -571,14 +580,6 @@ bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorE
 		}
 	}
 
-	// handle initializers
-	for (clang::CXXConstructorDecl::init_iterator iit =
-			ctorDecl->init_begin(), iend =
-			ctorDecl->init_end(); iit != iend; iit++) {
-		clang::CXXCtorInitializer* initializer = *iit;
-		this->TraverseStmt(initializer->getInit());
-	}
-
 	// save the translation unit for the current function
 	const clang::idx::TranslationUnit* old = currTU;
 	if(!funcDecl->hasBody(definition)) {
@@ -591,6 +592,23 @@ bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorE
 		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
 		definition = ret.first;
 		currTU = ret.second;
+	}
+
+	// handle initializers
+	for (clang::CXXConstructorDecl::init_iterator iit =
+			ctorDecl->init_begin(), iend =
+			ctorDecl->init_end(); iit != iend; iit++) {
+		clang::CXXCtorInitializer* initializer = *iit;
+		this->TraverseStmt(initializer->getInit());
+
+		// check if the current initializer is a CXXConstructExpr
+		// -> using a ctor to initializer a class member
+		if( const CXXConstructExpr *initCtor = dyn_cast<CXXConstructExpr>(initializer->getInit()) ) {
+			//if this ctor is using globalVars add the surrounding ctor to usingGlobals
+			if(usingGlobals.find(initCtor->getConstructor()) != usingGlobals.end()) {
+				usingGlobals.insert( definition );
+			}
+		}
 	}
 
 	if(definition) {

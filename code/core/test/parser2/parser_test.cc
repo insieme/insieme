@@ -630,6 +630,254 @@ namespace parser {
 
 	}
 
+	namespace detail {
+
+		TEST(Parser, TokenSetContain) {
+
+			const TokenSet empty;
+
+			TokenSet a;
+			Token t1 = Token::createIdentifier("hello");
+			Token t2 = Token::createSymbol('+');
+
+			EXPECT_FALSE(empty.contains(t1));
+			EXPECT_FALSE(empty.contains(t1));
+
+			EXPECT_FALSE(a.contains(t1));
+			EXPECT_FALSE(a.contains(t2));
+
+			a += t1;
+			EXPECT_TRUE(a.contains(t1));
+			EXPECT_FALSE(a.contains(t2));
+
+			a += t2;
+			EXPECT_TRUE(a.contains(t1));
+			EXPECT_TRUE(a.contains(t2));
+
+			a = empty;
+			EXPECT_FALSE(a.contains(t1));
+			EXPECT_FALSE(a.contains(t2));
+
+			a += Token::Identifier;
+			EXPECT_TRUE(a.contains(t1));
+			EXPECT_FALSE(a.contains(t2));
+
+			a += t1;
+			EXPECT_TRUE(a.contains(t1));
+			EXPECT_FALSE(a.contains(t2));
+
+			a += t2;
+			EXPECT_TRUE(a.contains(t1));
+			EXPECT_TRUE(a.contains(t2));
+
+		}
+
+
+		TEST(Parser, TokenSetUnion) {
+
+			TokenSet a;
+
+			EXPECT_EQ("{}", toString(a));
+
+			a += Token::createIdentifier("hello");
+			EXPECT_EQ("{(Ident:hello)}", toString(a));
+
+			a += Token::createSymbol('+');
+			EXPECT_EQ("{(Ident:hello),(Symbol:+)}", toString(a));
+
+			a += Token::createLiteral(Token::Int_Literal, "12");
+			EXPECT_EQ("{(Ident:hello),(Symbol:+),(IntLit:12)}", toString(a));
+
+			a += Token::Identifier;
+			EXPECT_EQ("{(Ident:*),(Symbol:+),(IntLit:12)}", toString(a));
+
+			TokenSet b;
+
+			EXPECT_EQ("{(Ident:*),(Symbol:+),(IntLit:12)}", toString(a+b));
+
+			b += Token::Symbol;
+			EXPECT_EQ("{(Symbol:*),(Ident:*),(IntLit:12)}", toString(a+b));
+		}
+
+		bool isSubSet(const TokenSet& a, const TokenSet& b) {
+			return b.isSubSet(a);
+		}
+
+		bool isNotSubSet(const TokenSet& a, const TokenSet& b) {
+			return !isSubSet(a,b);
+		}
+
+		TEST(Parser, TokenSetSubSet) {
+
+			TokenSet a;
+			TokenSet b;
+
+			EXPECT_PRED2(isSubSet, a, b);
+			EXPECT_PRED2(isSubSet, b, a);
+
+			// add an identifier to a (a is bigger than
+			a.add(Token::createIdentifier("hello"));
+			EXPECT_PRED2(isSubSet, b, a);
+			EXPECT_PRED2(isNotSubSet, a, b);
+
+			// add full identifier type to b
+			b.add(Token::Identifier);
+			EXPECT_PRED2(isSubSet, a, b);
+			EXPECT_PRED2(isNotSubSet, b, a);
+
+			// add same class to a (should make them equal)
+			a.add(Token::Identifier);
+			EXPECT_PRED2(isSubSet, b, a);
+			EXPECT_PRED2(isSubSet, a, b);
+
+			// add other class to a
+			a.add(Token::Symbol);
+			EXPECT_PRED2(isNotSubSet, a, b);
+			EXPECT_PRED2(isSubSet, b, a);
+
+			// test unrelated sets
+			a = b;
+			a.add(Token::createSymbol('+'));
+			b.add(Token::createSymbol('-'));
+			EXPECT_PRED2(isNotSubSet, a, b);
+			EXPECT_PRED2(isNotSubSet, b, a);
+
+		}
+
+	} // end namespace detail
+
+
+	TEST(Parser, BeginEndTokenSets) {
+		NodeManager manager;
+
+		auto T = rec("T");
+		auto A = rec("A");
+		auto B = rec("B");
+
+		// create a simple grammar
+		Grammar g("T");
+
+		g.addRule("T", rule(A, accept));
+		g.addRule("T", rule(B, accept));
+		g.addRule("A", rule(seq("(", list(T, ",") , ")"), accept));
+		g.addRule("B", rule(seq("[", list(T, ",") , "]"), accept));
+
+//		std::cout << "Grammar: " << g << "\n";
+
+		EXPECT_TRUE(g.match(manager, "([(),[]])"));
+		EXPECT_FALSE(g.match(manager, "([([),]])"));
+
+		// compute begin/end token sets
+//		std::cout << "TermInfo: " << g.getTermInfo() << "\n";
+
+		EXPECT_EQ("{(Symbol:()}", toString(g.getStartSet("A")));
+		EXPECT_EQ("{(Symbol:))}", toString(g.getEndSet("A")));
+
+		EXPECT_EQ("{(Symbol:[)}", toString(g.getStartSet("B")));
+		EXPECT_EQ("{(Symbol:])}", toString(g.getEndSet("B")));
+
+	}
+
+	TEST(Parser, BeginEndSetOfSequenceIncludingOptionalEnd) {
+
+		Grammar g;
+		g.addRule("E", rule(loop(seq("a", opt(";"))), accept));
+		g.addRule("I", rule(loop(seq(lit("a") | rec("I"), opt(";"))), accept));
+
+		g.addRule("J", rule(loop(seq(opt(";"), "a")), accept));
+		g.addRule("K", rule(loop(seq(opt(";"), lit("a") | rec("K"))), accept));
+
+		// debug print
+//		std::cout << "Grammar: " << g << "\n";
+//		std::cout << "Info: " << g.getTermInfo() << "\n";
+
+		EXPECT_EQ("{(Ident:a)}", toString(g.getStartSet("E")));
+		EXPECT_TRUE(toString(g.getEndSet("I")) == "{(Ident:a),(Symbol:;)}" || toString(g.getEndSet("I")) == "{(Symbol:;),(Ident:a)}");
+
+		EXPECT_EQ("{(Ident:a)}", toString(g.getStartSet("I")));
+		EXPECT_TRUE(toString(g.getEndSet("I")) == "{(Ident:a),(Symbol:;)}" || toString(g.getEndSet("I")) == "{(Symbol:;),(Ident:a)}");
+
+		EXPECT_TRUE(toString(g.getStartSet("J")) == "{(Symbol:;),(Ident:a)}" || toString(g.getStartSet("J")) == "{(Ident:a),(Symbol:;)}");
+		EXPECT_EQ("{(Ident:a)}", toString(g.getEndSet("J")));
+
+		EXPECT_TRUE(toString(g.getStartSet("K")) == "{(Symbol:;),(Ident:a)}" || toString(g.getStartSet("K")) == "{(Ident:a),(Symbol:;)}");
+		EXPECT_EQ("{(Ident:a)}", toString(g.getEndSet("K")));
+
+	}
+
+	TEST(Parser, TerminalPairs) {
+		NodeManager manager;
+
+		auto T = rec("T");
+		auto A = rec("A");
+		auto B = rec("B");
+		auto C = rec("C");
+
+		// create a simple grammar
+		Grammar g("T");
+
+		g.addRule("T", rule(A, accept));
+		g.addRule("T", rule(B, accept));
+		g.addRule("A", rule(seq("(", list(T, ",") , ")"), accept));
+		g.addRule("B", rule(seq("[", list(T, ",") , "]"), accept));
+
+		// a pair where opener and closer are identical
+		g.addRule("C", rule(seq("|", list(T, ",") , "|"), accept));
+
+		// where both are the same but re-used
+		g.addRule("C", rule(seq("~", list(T, ",") , "~"), accept));
+		g.addRule("C", rule(seq("~"), accept));
+
+		// a strange pair ...
+		g.addRule("C", rule(seq("+", list(T, ",") , "-"), accept));
+
+		// a strange pair that should not work - opener reused
+		g.addRule("C", rule(seq("*", list(T, ",") , "/"), accept));
+		g.addRule("C", rule(lit("*"), accept));
+
+		// another strange pair that should not work - closer is reused
+		g.addRule("C", rule(seq("%", list(T, ",") , "."), accept));
+		g.addRule("C", rule(lit("."), accept));
+
+//		std::cout << "Grammar: " << g << "\n";
+
+		EXPECT_TRUE(g.match(manager, "([(),[]])"));
+		EXPECT_FALSE(g.match(manager, "([([),]])"));
+
+		// compute term meta information
+		const Grammar::TermInfo& info = g.getTermInfo();
+//		std::cout << "TermInfo: " << info << "\n";
+
+		// accepted pairs should be ...
+		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('(')));
+		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol(')')));
+		EXPECT_EQ(Token::createSymbol(')'), info.getClosingParenthese(Token::createSymbol('(')));
+
+		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('[')));
+		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol(']')));
+		EXPECT_EQ(Token::createSymbol(']'), info.getClosingParenthese(Token::createSymbol('[')));
+
+		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('|')));
+		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol('|')));
+		EXPECT_EQ(Token::createSymbol('|'), info.getClosingParenthese(Token::createSymbol('|')));
+
+		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('+')));
+		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol('-')));
+		EXPECT_EQ(Token::createSymbol('-'), info.getClosingParenthese(Token::createSymbol('+')));
+
+		// the one that should be excluded since opener and closer are re-used
+		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('~')));
+		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('~')));
+
+		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('*')));
+		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('/')));
+
+		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('%')));
+		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('.')));
+
+
+	}
+
 } // end namespace parser
 } // end namespace core
 } // end namespace insieme

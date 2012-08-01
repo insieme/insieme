@@ -172,4 +172,12 @@ IterationDomain makeVarRange( IterationVector& vec,
 
 IterationDomain extractFromCondition(IterationVector& iv, const core::ExpressionPtr& cond);
 
+/**
+ * Given a variable, returns the domain on which the variable is defined.
+ *
+ * If the variable is not inside a SCoP the returned object will be empty which means the domain on
+ * which the variable is defined is the universe 
+ */
+utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::ExpressionAddress& addr);
+
 } } } // end namespace insieme::analysis::polyhedtal

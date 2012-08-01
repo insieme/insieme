@@ -41,7 +41,12 @@
 namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 
 /** 
- * forward decl for PIMPL pattern
+ *  This is an utility class which can be used to get the definitions reaching a particular usage of
+ *  a variable and uses of a particular definition. This is obtained by performing
+ *  reaching_definition dataflow analysis on the given IR sub-graph. 
+ *
+ *  Given an expression (which represents an access to a variable) an iterator through all the
+ *  definitions (if the access is a use) or the uses (if the access is a def) can be obtained. 
  */
 class DefUse {
 

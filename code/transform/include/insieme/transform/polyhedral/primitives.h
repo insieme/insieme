@@ -52,6 +52,7 @@ using analysis::polyhedral::Scop;
 using analysis::polyhedral::Iterator;
 using analysis::polyhedral::Parameter;
 using analysis::polyhedral::StmtPtr;
+using analysis::polyhedral::Stmt;
 
 // Because most of the transformation in the polyhedral model are in the Z domain, we define
 // IntMatrix to represent a Matrix of integer coefficients 
@@ -93,7 +94,7 @@ const Elem& addTo(Scop& scop, const Elem& iter) {
 	return iter;
 }
 
-std::vector<StmtPtr> getLoopSubStatements(Scop& scop, const Iterator& iter);
+std::vector<std::reference_wrapper<Stmt>> getLoopSubStatements(Scop& scop, const Iterator& iter);
 
 void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIter);
 
@@ -129,7 +130,7 @@ void applyUnimodularTransformation(Scop& scop, const UnimodularMatrix& trans);
  * Check if in the transformed SCoP the dependencies exsiting in the original schedule have not been 
  * inverted. 
  */
-bool checkTransformedSchedule(Scop orgin, Scop trans);
+bool checkTransformedSchedule(const Scop& orgin, const Scop& trans);
 
 
 /**

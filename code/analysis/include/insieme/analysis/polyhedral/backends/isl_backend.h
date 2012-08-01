@@ -60,9 +60,6 @@ class Div;
 
 namespace analysis { namespace polyhedral {
 
-class Stmt;
-typedef std::shared_ptr<Stmt> StmtPtr;
-
 class IslCtx;
 class IslSet;
 class IslMap;
@@ -100,7 +97,7 @@ public:
 	// Build an ISL context and allocate the underlying isl_ctx object
 	explicit IslCtx() : ctx( isl_ctx_alloc() ) { }
 
-MapPtr<ISL> range_map(const IslMap& map);
+	MapPtr<ISL> range_map(const IslMap& map);
 	isl_ctx* getRawContext() { return ctx; }
 
 	TupleMap::iterator insertTuple( const TupleName& mapping ) { 

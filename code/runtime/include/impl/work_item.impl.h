@@ -39,11 +39,6 @@
 #include "work_item.h"
 
 #include <stdlib.h>
-#ifdef WIN32
-#include <malloc.h>
-#else
-#include <alloca.h>
-#endif
 #include "impl/worker.impl.h"
 #include "utils/impl/minlwt.impl.h"
 #include "irt_atomic.h"
@@ -113,7 +108,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 		irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	wi->id.cached = wi;
-	wi->parent_id = self->cur_wi ? self->cur_wi->id : (irt_work_item_id){{0}, NULL};
+	wi->parent_id = self->cur_wi ? self->cur_wi->id : irt_work_item_null_id();
 	wi->impl_id = impl_id;
 	wi->context_id = self->cur_context;
 	wi->num_groups = 0;
@@ -158,7 +153,7 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 	reg->id.value.full = retval->id.value.full;
 	_irt_wi_event_register_only(reg);
 	// instrumentation
-	irt_wi_instrumentation_event(self, WORK_ITEM_CREATED, retval->id);
+	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, retval->id);
 	return retval;
 }
 static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
@@ -172,7 +167,7 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 	retval->id.cached = retval;
 	retval->num_fragments = 0;
 	retval->range = range;
-	irt_wi_instrumentation_event(self, WORK_ITEM_CREATED, retval->id);
+	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, retval->id);
 	if(irt_wi_is_fragment(source)) {
 		// splitting fragment wi
 		irt_work_item *base_source = source->source_id.cached; // TODO
@@ -184,10 +179,24 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 	return retval;
 }
 
-void _irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
-	func(wi);
-	irt_wi_end(wi);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+	void
+	#ifdef _M_IX86
+	__fastcall
+	#endif
+	_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
+		func(wi);
+		irt_wi_end(wi);
+	}
+
+#ifdef __cplusplus
 }
+#endif
+
 
 irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	irt_worker *worker = irt_worker_get_current();
@@ -217,11 +226,11 @@ void irt_wi_join(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_instrumentation_region_add_time(swi);
-		irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_JOIN, swi->id);
+		irt_inst_region_add_time(swi);
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN, swi->id);
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &swi->stack_ptr);
-		irt_instrumentation_region_set_timestamp(swi);
+		irt_inst_region_set_timestamp(swi);
 	}
 }
 
@@ -237,7 +246,7 @@ bool _irt_wi_join_all_event(irt_wi_event_register* source_event_register, void *
 }
 
 void irt_wi_join_all(irt_work_item* wi) {
-	irt_wi_event_register_id reg_id = { wi->id.value.full, NULL };
+	irt_wi_event_register_id reg_id = { { wi->id.value.full }, NULL };
 	irt_wi_event_register *reg = irt_wi_event_register_table_lookup(reg_id);
 	if(reg->handler[IRT_WI_CHILDREN_COMPLETED] != NULL) irt_throw_string_error(IRT_ERR_INTERNAL, "join all registered before start");
 
@@ -252,11 +261,11 @@ void irt_wi_join_all(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_all_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_CHILDREN_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_instrumentation_region_add_time(wi);
-		irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_JOIN_ALL, wi->id);
+		irt_inst_region_add_time(wi);
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN_ALL, wi->id);
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &wi->stack_ptr);
-		irt_instrumentation_region_set_timestamp(wi);
+		irt_inst_region_set_timestamp(wi);
 	}
 }
 
@@ -267,8 +276,8 @@ void irt_wi_end(irt_work_item* wi) {
 	irt_worker* worker = irt_worker_get_current();
 
 	// instrumentation update
-	irt_instrumentation_region_add_time(wi);
-	irt_wi_instrumentation_event(worker, WORK_ITEM_END_START, wi->id);
+	irt_inst_region_add_time(wi);
+	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINISHED, wi->id);
 
 	// delete params struct
 	if(wi->parameters != (irt_lw_data_item*)wi->param_buffer) free(wi->parameters);
@@ -303,7 +312,7 @@ void irt_wi_end(irt_work_item* wi) {
 	// cleanup
 	_irt_del_wi_event_register(wi->id);
 	_irt_wi_recycle(wi, worker);
-	irt_wi_instrumentation_event(worker, WORK_ITEM_END_FINISHED, wi->id);
+	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_FINISHED, wi->id);
 	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
 }
@@ -337,7 +346,7 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 		out_wis[i] = _irt_wi_create_fragment(wi, range);
 	}
 	
-	irt_wi_instrumentation_event(self, WORK_ITEM_SPLITTED, wi->id);
+	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SPLITTED, wi->id);
 	
 	if(irt_wi_is_fragment(wi)) {
 		irt_work_item* source = wi->source_id.cached; // TODO

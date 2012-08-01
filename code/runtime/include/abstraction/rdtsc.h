@@ -40,6 +40,10 @@
 
 // Prototypes of functions using rdtsc
 
+#ifdef __cplusplus 
+extern "C" {
+#endif
+
 // get the tickcount (through rdtsc instruction)
 uint64 irt_time_ticks(void);
 
@@ -48,3 +52,7 @@ bool irt_time_ticks_available();
 
 // checks if rdtsc readings are constant over frequency changes (TscInvariant)
 bool irt_time_ticks_constant();
+
+#ifdef __cplusplus 
+}
+#endif

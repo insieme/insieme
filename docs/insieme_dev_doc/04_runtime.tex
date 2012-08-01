@@ -168,7 +168,7 @@ for region-based instrumentation to work.
 \subsubsection{Time measurements in the runtime}
 
 Time measurements in the runtime are done as described in section
-\ref{sec:runtime.time.measurement}. During the execution of the runtime, all
+\ref{sec:runtime.abstraction.time.measurement}. During the execution of the runtime, all
 performance data is logged in clock cycles. Any time-related performance data is
 only converted to nanoseconds when it is written to a file. Since the writing is
 done after the application has executed, this computational overhead will not be
@@ -176,8 +176,8 @@ measured.
 
 \subsubsection{Event instrumentation system}
 
-Note: Throughout this section, the abbreviations WI, WG and DI (or their
-lower-case pendants) denote work item, work group and data item.
+Note: Throughout this section, the abbreviations WI, WG, DI WO (or their
+lower-case pendants) denote work item, work group, data item and worker.
 
 The event instrumentation system can be enabled by defining
 \srcCodeInl{IRT_ENABLE_INSTRUMENTATION} at compile time. To actually use it
@@ -196,26 +196,26 @@ All event instrumentation functions are called via function pointers defined in
 \file{instrumentation.impl.h}:
 
 \begin{itemize} 
-	\item \srcCodeInl{irt_wi_instrumentation_event} 
-	\item \srcCodeInl{irt_wg_instrumentation_event} 
-	\item \srcCodeInl{irt_di_instrumentation_event} 
-	\item \srcCodeInl{irt_worker_instrumentation_event} 
+	\item \srcCodeInl{irt_inst_insert_wi_event} 
+	\item \srcCodeInl{irt_inst_insert_wg_event} 
+	\item \srcCodeInl{irt_inst_insert_wo_event} 
+	\item \srcCodeInl{irt_inst_insert_di_event} 
 \end{itemize}
 
 The function pointers are either pointing to the corresponding instrumentation
-functions (e.g. \srcCodeInl{_irt_wi_instrumentation_event()}) or are set to
-empty functions (e.g. \srcCodeInl{_irt_wi_no_instrumentation_event()}. This way
+functions (e.g. \srcCodeInl{_irt_inst_insert_wi_event()}) or are set to
+empty functions (e.g. \srcCodeInl{_irt_inst_insert_no_wi_event()}. This way
 of implementing allows for low-overhead switching between active and inactive
 instrumentation during runtime. The toggling between active and inactive
 instrumentation can be done via several functions that are provided solely for
 this purpose:
 
 \begin{itemize} 
-	\item \srcCodeInl{irt_wi_toggle_instrumentation(bool)} 
-	\item \srcCodeInl{irt_wg_toggle_instrumentation(bool)} 
-	\item \srcCodeInl{irt_worker_toggle_instrumentation(bool)} 
-	\item \srcCodeInl{irt_di_toggle_instrumentation(bool)} 
-	\item \srcCodeInl{irt_all_toggle_instrumentation(bool)} 
+	\item \srcCodeInl{irt_inst_set_wi_instrumentation(bool)} 
+	\item \srcCodeInl{irt_inst_set_wg_instrumentation(bool)} 
+	\item \srcCodeInl{irt_inst_set_wo_instrumentation(bool)} 
+	\item \srcCodeInl{irt_inst_set_di_instrumentation(bool)} 
+	\item \srcCodeInl{irt_inst_set_all_instrumentation(bool)} 
 \end{itemize}
 
 
@@ -226,7 +226,7 @@ this purpose:
 \subsection{Affinity}
 \subsection{Frequency switching} 
 
-Frequency switching is done in \file{frequency.h}. It provides several functions for obtaining and setting the current processor frequency and currently only supports UNIX-based systems. The functions use settings in the CPU driver, thus this functionality depends on the driver's and the hardware's support of frequency swichting. The frequency settings of the CPU driver can be accessed at /sys/devices/system/cpu/cpu\textbf{N}/cpufreq/, where \textbf{N} denotes the core's id. 
+Frequency switching is done in \file{frequency.h}. It provides several functions for obtaining and setting the current processor frequency and currently only supports UNIX-based systems. The functions use settings in the CPU driver, thus this functionality depends on the driver's and the hardware's support of frequency swichting. The frequency settings of the CPU driver can be accessed at /sys/devices/system/cpu/cpu\textbf{N}/cpufreq/, where \textbf{N} denotes the core's id. Hence, for the runtime to be able to change the frequency, these device files must be readable and writable by the user executing the runtime.
 %The following table lists the functions and their purpose:
 
 %\begin{table}[htbp] \small
@@ -278,7 +278,7 @@ likely not to be very useful due to noise, the interval between two
 100ms, depending on the system size.
 
 \subsection{Time measurement} 
-\label{sec:runtime.time.measurement}
+\label{sec:runtime.abstraction.time.measurement}
 
 Note: all functions mentioned here can be found in \file{timing.h}.
 

@@ -41,17 +41,21 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 
 #include "insieme/core/ir_address.h"
 #include "insieme/core/datapath/datapath.h"
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/constraint.h"
 
 #include "insieme/analysis/alias_map.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
 
 namespace insieme { 
 namespace analysis { 
 
+typedef utils::CombinerPtr<core::arithmetic::Formula> Constraint;
 
 enum class VarType { SCALAR, MEMBER, TUPLE, ARRAY };
 
@@ -69,6 +73,7 @@ class Access : public utils::Printable {
 	// Address of the access represented by this object 
 	core::ExpressionAddress 	base_expr;
 
+	// Actuall variable being accessed (note that this variable might be an alias)
 	core::VariablePtr			variable;
 
 	// Path to the accessed member/element/component 
@@ -78,14 +83,37 @@ class Access : public utils::Printable {
 	// The type of this access
 	VarType 					type;
 
-	Access(const core::ExpressionAddress& expr, 
-		   const core::VariablePtr& var,
-		   const core::datapath::DataPathPtr& path, 
-		   const VarType& type) : 
+    /**
+     * Represents the domain/range on which this access is defined
+     *
+     * For scalars or members the domain the domain is not defined
+	 *
+     * For arrays the domain depends on the range of values being accessed. It could be either a
+     * single element or strided domain in the circumstances the array is accessed inside a loop
+     */
+	//boost::optional<polyhedral::IterationDomain> dom;
+
+	/**
+	 * An iteration domain is meaningless if the associated SCoP is not specified. Indeed two accesses
+	 * to the same variable with the same symbolic range are the same only if the relative iteration
+	 * domain is within the same SCoP. If the SCoPs differs then we cannot make any assumption on
+	 * the fact that the same range of elements is going to be accessed. 
+	 */
+	// boost::optional<const polyhedral::Scop&> 	scop;
+
+	Access(const core::ExpressionAddress& 		expr, 
+		   const core::VariablePtr& 			var,
+		   const core::datapath::DataPathPtr& 	path, 
+		   const VarType& 						type,
+		   const boost::optional<polyhedral::IterationDomain>& 	dom,
+		   const boost::optional<const polyhedral::Scop&>&		scop) : 
 		base_expr(expr), 
 		variable(var),
 		path(path), 
-		type(type) { }
+		type(type)
+		//dom(dom)
+		//scop(scop) 
+		{ }
 
 	friend Access makeAccess(const core::ExpressionAddress& expr);
 
@@ -114,7 +142,7 @@ public:
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	bool operator<(const Access& other) const {
+	inline bool operator<(const Access& other) const {
 		if (variable < other.variable) { return true; }
 		
 		if (variable > other.variable) { return false; }

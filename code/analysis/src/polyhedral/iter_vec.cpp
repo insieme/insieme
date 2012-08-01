@@ -163,7 +163,24 @@ std::ostream& IterationVector::printTo(std::ostream& out) const {
 	return out;
 }
 
-bool IterationVector::contains(const core::ExpressionPtr& expr) const {  return getIdx(expr)!=-1; }
+bool IterationVector::contains(const core::ExpressionPtr& expr) const {  
+	return getIdx(expr)!=-1; 
+}
+
+bool IterationVector::operator<(const IterationVector& other) const {
+	if (size() > other.size()) return false;
+	if (size() < other.size()) return true;
+
+	// same size
+	auto thisIt = begin(), thisEnd = end();
+	auto otherIt = other.begin();
+
+	while(thisIt != thisEnd) {
+		if (*thisIt >= *otherIt) return false;
+		++thisIt; ++otherIt;
+	}
+	return true;
+}
 
 namespace {
 template <class T>

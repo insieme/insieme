@@ -43,8 +43,16 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/utils/printable.h"
+
 namespace insieme {
 namespace analysis {
+
+// Forward declaration 
+class Access;
+
+
+
 
 struct cmp_key {
 

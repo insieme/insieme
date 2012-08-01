@@ -72,10 +72,7 @@ TEST(IslBackend, SetCreation) {
 
 	auto&& ctx = makeCtx<ISL>();
 	auto&& set = makeSet(ctx, IterationDomain(iterVec));
-
-	std::ostringstream ss;
-	ss << *set;
-	EXPECT_EQ("[v3] -> { [v1] }", ss.str());
+	EXPECT_EQ("[v3] -> { [v1] }", toString(*set));
 
 	IterationVector iv2;
 	set->toConstraint(mgr, iv2);
@@ -93,10 +90,7 @@ TEST(IslBackend, SetConstraint) {
 	auto&& ctx = makeCtx<ISL>();
 	auto&& set = makeSet(ctx, IterationDomain(c));
 	set->simplify();
-
-	std::ostringstream ss;
-	ss << *set;
-	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4 }", ss.str());
+	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4 }", toString(*set));
 
 	IterationVector iv2;
 	set->toConstraint(mgr, iv2);
@@ -114,6 +108,43 @@ TEST(IslBackend, SetConstraint) {
 	//isl_union_set_free(diff);
 }
 
+TEST(IslBackend, UniverseSet) {
+	
+	NodeManager mgr;	
+	CREATE_ITER_VECTOR; 
+
+	IterationDomain dom(iterVec);
+	EXPECT_TRUE( dom.universe() );
+
+	auto&& ctx = makeCtx<ISL>();
+	auto&& set = makeSet(ctx, dom);
+	EXPECT_EQ("[v3] -> { [v1] }", toString(*set));
+
+	IterationVector iv2;
+	AffineConstraintPtr cons = set->toConstraint(mgr, iv2);
+	EXPECT_TRUE(!!cons);
+
+	EXPECT_EQ(iv2, iterVec);
+	EXPECT_EQ("((v1 <= 0) v (v1 > 0))", toString(IterationDomain(cons)));
+}
+
+TEST(IslBackend, EmptySet) {
+	
+	NodeManager mgr;	
+	CREATE_ITER_VECTOR; 
+
+	IterationDomain dom(iterVec, true);
+	EXPECT_TRUE( dom.empty() );
+
+	auto&& ctx = makeCtx<ISL>();
+	auto&& set = makeSet(ctx, dom);
+	EXPECT_EQ("[v3] -> {  }", toString(*set));
+
+	IterationVector iv2;
+	AffineConstraintPtr cons = set->toConstraint(mgr, iv2);
+	EXPECT_FALSE(!!cons);
+}
+
 TEST(IslBackend, SetConstraintNormalized) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
@@ -128,9 +159,7 @@ TEST(IslBackend, SetConstraintNormalized) {
 	auto&& ctx = makeCtx<ISL>();
 	auto&& set = makeSet(ctx, IterationDomain(c));
 
-	std::ostringstream ss;
-	ss << *set;
-	EXPECT_EQ("[v3] -> { [v1] : v1 <= -11 or v1 >= -9 }", ss.str());
+	EXPECT_EQ("[v3] -> { [v1] : v1 <= -11 or v1 >= -9 }", toString(*set));
 
 	// Build directly the ISL set
 	//isl_union_set* refSet = isl_union_set_read_from_str(ctx->getRawContext(), 
@@ -164,10 +193,7 @@ TEST(IslBackend, FromCombiner) {
 	auto&& ctx = makeCtx<ISL>();
 	AffineConstraintPtr cons1 = c1 or (not_(c2));
 	auto&& set = makeSet(ctx, IterationDomain( cons1 ));
-
-	std::ostringstream ss;
-	ss << *set;
-	EXPECT_EQ("[v3] -> { [v1] : v3 = -5 or 2v1 >= -10 - 3v3 }", ss.str());
+	EXPECT_EQ("[v3] -> { [v1] : v3 = -5 or 2v1 >= -10 - 3v3 }", toString(*set));
 
 	IterationVector iv;
 	AffineConstraintPtr cons2 = set->toConstraint(mgr, iv);
@@ -182,12 +208,7 @@ TEST(IslBackend, FromCombiner) {
 	SetPtr<> set2(*ctx, refSet);
 	
 	// we cannot check equality on sets because 1 sets contains ids and the one read from the string doesnt
-	std::ostringstream ss1;
-	ss1 << *set;
-	std::ostringstream ss2;
-	ss2 << *set2;
-
-	EXPECT_EQ( ss1.str(), ss2.str() );
+	EXPECT_EQ( toString(*set), toString(*set2) );
 }
 
 TEST(IslBackend, SetUnion) {
@@ -254,16 +275,13 @@ TEST(IslBackend, SimpleMap) {
 	CREATE_ITER_VECTOR;
 
 	AffineSystem affSys(iterVec, { { 0, 2, 10 }, 
-		  							     { 1, 1,  0 },
-									     { 1,-1,  8 } } );
+		  						   { 1, 1,  0 },
+								   { 1,-1,  8 } } );
 	// 0*v1 + 2*v2 + 10
 	
 	auto&& ctx = makeCtx<ISL>();
 	auto&& map = makeMap(ctx, affSys);
-
-	std::ostringstream ss;
-	ss << *map;
-	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }", ss.str());
+	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }", toString(*map));
 
 //	isl_union_map* refMap = isl_union_map_read_from_str(ctx->getRawContext(), 
 //			"[v3] -> {[v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }"
@@ -279,29 +297,22 @@ TEST(IslBackend, MapUnion) {
 	CREATE_ITER_VECTOR;
 
 	AffineSystem affSys(iterVec, { { 0, 2, 10 }, 
-		  							     { 1, 1,  0 }, 
-									     { 1,-1,  8 } } );
+		  			 		       { 1, 1,  0 }, 
+								   { 1,-1,  8 } } );
 	// 0*v1 + 2*v2 + 10
 	auto&& ctx = makeCtx<ISL>();
 	auto&& map = makeMap(ctx, affSys);
-
-	std::ostringstream ss;
-	ss << *map;
-	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }", ss.str());
+	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }", toString(*map));
 	
 	AffineSystem affSys2(iterVec, { { 1,-2, 0 }, 
-		 								  { 1, 8, 4 }, 
-										  {-5,-1, 4 } } );
+		 							{ 1, 8, 4 }, 
+									{-5,-1, 4 } } );
 	// 0*v1 + 2*v2 + 10
 	auto&& map2 = makeMap( ctx, affSys2 );
-	std::ostringstream ss2;
-	ss2 << *map2;
-	EXPECT_EQ("[v3] -> { [v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss2.str());
+	EXPECT_EQ("[v3] -> { [v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", toString(*map2));
 
 	auto&& mmap = *map + *map2;
-	std::ostringstream  ss3;
-	ss3 << *mmap;
-	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1]; [v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss3.str());
+	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1]; [v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", toString(*mmap));
 }
 
 TEST(Domain, SimpleStrided) {
@@ -319,18 +330,15 @@ TEST(Domain, SimpleStrided) {
 		AffineConstraint(af, 	ConstraintType::LT) and 
 		AffineConstraint(af2, ConstraintType::EQ) and 
 		AffineConstraint(af3, ConstraintType::NE);
-	{
-		std::ostringstream ss;
-		ss << iterVec;
-		EXPECT_EQ("(v1,v8|v3|1)", ss.str());
-	}
+
+	EXPECT_EQ("(v1,v8|v3|1)", toString(iterVec));
 
 	auto&& ctx = makeCtx<ISL>();
 	auto&& set = makeSet(ctx, IterationDomain(cl));
-
-	std::ostringstream ss;
-	ss << *set;
-	EXPECT_EQ("[v3] -> { [v1] : (exists (e0 = [(-1 - v3 + v1)/2]: 2e0 = -1 - v3 + v1 and v1 >= 15 - 5v3 and v1 >= -19 - 15v3)) or (exists (e0 = [(-1 - v3 + v1)/2]: 2e0 = -1 - v3 + v1 and v1 >= 15 - 5v3 and v1 <= -23 - 15v3)) }", ss.str());
+	EXPECT_EQ("[v3] -> { [v1] : (exists (e0 = [(-1 - v3 + v1)/2]: "
+			  "2e0 = -1 - v3 + v1 and v1 >= 15 - 5v3 and v1 >= -19 - 15v3)) or "
+			  "(exists (e0 = [(-1 - v3 + v1)/2]: 2e0 = -1 - v3 + v1 and "
+			  "v1 >= 15 - 5v3 and v1 <= -23 - 15v3)) }", toString(*set));
 
 }
 
@@ -355,18 +363,12 @@ TEST(Domain, Strided) {
 		AffineConstraint(af2) and 
 		AffineConstraint(af3, ConstraintType::EQ) and 
 		AffineConstraint(af4, ConstraintType::EQ);
-	{
-		std::ostringstream ss;
-		ss << iterVec;
-		EXPECT_EQ("(v1,v8,v9|v3|1)", ss.str());
-	}
+
+	EXPECT_EQ("(v1,v8,v9|v3|1)", toString(iterVec));
 
 	auto&& ctx = makeCtx<ISL>();
 	auto&& set = makeSet(ctx, IterationDomain(cl));
-
-	std::ostringstream ss;
-	ss << *set;
-	EXPECT_EQ("[v3] -> { [6] }", ss.str());
+	EXPECT_EQ("[v3] -> { [6] }", toString(*set));
 
 }
 
@@ -427,29 +429,20 @@ TEST(IslBackend, Floor) {
 		IterationDomain dom = createFloor(iterVec, 24, 5);
 		auto&& ctx = makeCtx<ISL>();
 		auto&& set = makeSet(ctx, dom);
-
-		std::ostringstream ss;
-		ss << *set;
-		EXPECT_EQ(ss.str(), "[v3] -> { [4] : v3 = 24 }");
+		EXPECT_EQ("[v3] -> { [4] : v3 = 24 }", toString(*set));
 	}
 	{
 		IterationDomain dom = createFloor(iterVec, 40, 5);
 		auto&& ctx = makeCtx<ISL>();
 		auto&& set = makeSet(ctx, dom);
-
-		std::ostringstream ss;
-		ss << *set;
-		EXPECT_EQ(ss.str(), "[v3] -> { [8] : v3 = 40 }");
+		EXPECT_EQ("[v3] -> { [8] : v3 = 40 }", toString(*set));
 	}
 
 	{
 		IterationDomain dom = createFloor(iterVec, -12, 5);
 		auto&& ctx = makeCtx<ISL>();
 		auto&& set = makeSet(ctx, dom);
-
-		std::ostringstream ss;
-		ss << *set;
-		EXPECT_EQ(ss.str(), "[v3] -> { [-3] : v3 = -12 }");
+		EXPECT_EQ("[v3] -> { [-3] : v3 = -12 }", toString(*set));
 		
 	}
 }
@@ -470,19 +463,13 @@ TEST(IslBackend, Ceil) {
 		IterationDomain dom = createCeil(iterVec, 24, 5);
 		auto&& ctx = makeCtx<ISL>();
 		auto&& set = makeSet(ctx, dom);
-
-		std::ostringstream ss;
-		ss << *set;
-		EXPECT_EQ(ss.str(), "[v3] -> { [5] : v3 = 24 }");
+		EXPECT_EQ("[v3] -> { [5] : v3 = 24 }", toString(*set));
 	}
 	{
 		IterationDomain dom = createCeil(iterVec, 40, 5);
 		auto&& ctx = makeCtx<ISL>();
 		auto&& set = makeSet(ctx, dom);
-
-		std::ostringstream ss;
-		ss << *set;
-		EXPECT_EQ(ss.str(), "[v3] -> { [8] : v3 = 40 }");
+		EXPECT_EQ("[v3] -> { [8] : v3 = 40 }", toString(*set));
 	}
 }
 
@@ -508,26 +495,17 @@ TEST(IslBackend, Cardinality) {
 	auto&& set = makeSet(ctx, IterationDomain( cons1 ));
 
 	PiecewisePtr<> pw = set->getCard();
-
-	{
-		std::ostringstream ss;
-		ss << *pw;
-		EXPECT_EQ("[v3] -> { (-1 - v3) : v3 <= -2 }", ss.str());
-	}
+	EXPECT_EQ("[v3] -> { (-1 - v3) : v3 <= -2 }", toString(*pw));
 
 	IterationVector cardDom = pw->getIterationVector(mgr);
 	IterationDomain dom = makeVarRange(cardDom, param, IRBuilder(mgr).intLit(-4));
 
 	// intersect with v3 == 4
 	pw *= makeSet(ctx, dom);
+	EXPECT_EQ("[v3] -> { 3 : v3 = -4 }", toString(*pw));
 
-	{
-		std::ostringstream ss;
-		ss << *pw;
-		EXPECT_EQ("[v3] -> { 3 : v3 = -4 }", ss.str());
-	}
 	pw->simplify();
-	std::cout << *pw << std::endl;
+	// std::cout << *pw << std::endl;
 
 	// arithmetic::Piecewise apw = pw->toPiecewise(mgr);
 	// std::cout << apw;
@@ -571,14 +549,10 @@ TEST(IslBackend, Cardinality2) {
 	auto&& set = makeSet(ctx, IterationDomain( cons1 ));
 
 	PiecewisePtr<> pw = set->getCard();
-	{
-		std::ostringstream ss;
-		ss << *pw;
-		EXPECT_EQ("[v3] -> { 81 }", ss.str());
-	}
+	EXPECT_EQ("[v3] -> { 81 }", toString(*pw));
 	
 	utils::Piecewise<arithmetic::Formula> apw = pw->toPiecewise(mgr);
-	//EXPECT_TRUE( utils::isFormula(apw) );
+	// EXPECT_TRUE( utils::isFormula(apw) );
 	//EXPECT_EQ(arithmetic::Formula(81), arithmetic::toFormula(apw));
 
 }

@@ -97,8 +97,8 @@ LITERAL(merge, 		"irt_merge", 	"(ref<irt_wi>)->unit")
 
 
 // -- IR instrumentation ---------
-LITERAL(instrumentationRegionStart, "irt_instrumentation_region_start", "(uint<8>)->unit")
-LITERAL(instrumentationRegionEnd, 	"irt_instrumentation_region_end", 	"(uint<8>)->unit")
+LITERAL(instrumentationRegionStart, "irt_inst_region_start", "(uint<8>)->unit")
+LITERAL(instrumentationRegionEnd, 	"irt_inst_region_end", 	"(uint<8>)->unit")
 
 
 /*

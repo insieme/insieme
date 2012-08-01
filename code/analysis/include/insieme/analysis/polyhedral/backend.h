@@ -49,7 +49,10 @@ class IterationVector;
 class IterationDomain;
 class AffineSystem;
 
-typedef boost::variant<core::NodePtr, insieme::analysis::polyhedral::StmtPtr> InfoObj;
+typedef boost::variant<
+	core::NodePtr, 
+	insieme::analysis::polyhedral::StmtPtr
+> InfoObj;
 
 typedef std::pair<InfoObj, std::string> TupleName;
 

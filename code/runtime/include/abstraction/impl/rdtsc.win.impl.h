@@ -39,7 +39,18 @@
 #include <Windows.h>
 #include "irt_inttypes.h"
 
+// prototypes
+/*
+extern "C" {
+	uint64 irt_time_ticks(void);
+	bool irt_time_ticks_available();
+	bool irt_time_ticks_constant();
+}
+*/
 
+// a win64 application will have to link the assembly version
+// since there is no support for inline assembly code under win64
+#ifndef _WIN64
 uint64 irt_time_ticks(void) {
 	// about __rdtsc() : http://msdn.microsoft.com/en-us/library/twchhe95.aspx , QueryPerformanceCounter is preferred, see: http://msdn.microsoft.com/en-us/library/windows/desktop/ee417693(v=vs.85).aspx
 
@@ -93,3 +104,4 @@ bool irt_time_ticks_constant() {
 	else
 		return 0;
 }
+#endif // _WIN64

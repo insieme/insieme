@@ -76,9 +76,7 @@ void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::c
 		return;
 	}
 
-	// this is a linear function
-	assert( formula.isLinear() && "Expression is not an affine linear function.");
-	
+		
 	const std::vector<Formula::Term>& terms = formula.getTerms();
 	// we have to updated the iteration vector by adding eventual parameters which are being used by
 	// this function. Because by looking to an expression we cannot determine if a variable is an
@@ -134,6 +132,9 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::arithmetic::Formula& formula) : 
 	iterVec(iterVec), sep(iterVec.getIteratorNum())
 {
+	// this is a linear function
+	if( !formula.isLinear() ) throw NotAffineExpr( core::ExpressionPtr() );
+
 	buildFromFormula( iterVec, formula);
 }
 
@@ -150,6 +151,32 @@ int AffineFunction::idxConv(size_t idx) const {
 	}
 	
 	return -1;
+}
+
+bool AffineFunction::operator<(const AffineFunction& other) const {
+	if (getIterationVector() == other.getIterationVector()) {
+		
+		auto thisIt = begin(), thisEnd = end();
+		auto otherIt = other.begin(), otherEnd = other.end();
+
+		assert((std::distance(thisIt, thisEnd) == std::distance(otherIt, otherEnd)) && 
+				"size of 2 iterators differs");
+
+		while(thisIt != thisEnd) {
+			assert((*thisIt).first == (*otherIt).first);
+			if ((*thisIt).second > (*otherIt).second)
+				return false;
+			if ((*thisIt).second < (*otherIt).second) 
+				return true;
+			
+			assert((*thisIt).second == (*otherIt).second);
+			++thisIt; ++otherIt;
+		}
+		// If we end up here it means the 2 functions have same coefficients 
+		return false;
+	}
+
+	return getIterationVector() < other.getIterationVector();
 }
 
 // Converts an AffineFunction to an IR expression
