@@ -79,6 +79,7 @@ struct Element :
 	Element(const Type& type) : type(type) { }
 
 	inline Type getType() const { return type; }
+
 	virtual std::ostream& printTo(std::ostream& out) const = 0;
 
 	bool operator==(const Element& other) const;
@@ -99,7 +100,8 @@ class Expr : public Element {
 	core::ExpressionPtr expr;
 public:
 	Expr(const Type& type, const core::ExpressionPtr& expr) : Element(type),  expr(expr) { } 
-	const core::ExpressionPtr& getExpr() const { assert(expr); return expr; } 
+
+	inline const core::ExpressionPtr& getExpr() const { assert(expr); return expr; } 
 
 	virtual ~Expr() { }
 };
@@ -113,11 +115,11 @@ struct Iterator : public Expr {
 	Iterator(const core::VariablePtr& var, bool existence=false) : 
 		Expr(Element::ITER, var), existence(existence) { } 
 	
-	const core::VariablePtr getVariable() const {
-		return core::static_pointer_cast<const core::Variable>(getExpr()); 
+	inline const core::VariablePtr getVariable() const {
+		return getExpr().as<core::VariablePtr>(); 
 	}
 	
-	bool operator<(const Iterator& other) const {
+	inline bool operator<(const Iterator& other) const {
 		return getVariable()->getId() < other.getVariable()->getId();
 	}
 	
@@ -151,7 +153,7 @@ struct Constant : public Element {
 	Constant() : Element(Element::CONST) { }
 
 	// Implements the Printable interface
-	std::ostream& printTo(std::ostream& out) const { return out << "1"; }
+	inline std::ostream& printTo(std::ostream& out) const { return out << "1"; }
 	virtual ~Constant() { }
 };
 
@@ -189,14 +191,14 @@ private:
 	Constant constant;				// constant part set to 1 (implicit) 
 
 	template <class T>							
-	int getIdxFrom(const T& elem, const std::vector<T>& vec) const {
+	inline int getIdxFrom(const T& elem, const std::vector<T>& vec) const {
 		auto fit = std::find(vec.begin(), vec.end(), elem);
 		if (fit != vec.end()) { return fit - vec.begin(); }
 		return -1;
 	}
 
 	template <class T>							
-	size_t addTo(const T& elem, std::vector<T>& vec) {
+	inline size_t addTo(const T& elem, std::vector<T>& vec) {
 		int idx = getIdxFrom(elem, vec);
 		if (idx != -1) { return idx; }
 
@@ -229,10 +231,10 @@ public:
 
         const Element& operator*() const;
 
-        iterator& operator++() { inc(1); return *this; }
-		iterator& operator+=(size_t val) { inc(val); return *this; }
+        inline iterator& operator++() { inc(1); return *this; }
+		inline iterator& operator+=(size_t val) { inc(val); return *this; }
 
-        bool operator==(const iterator& rhs) const { 
+        inline bool operator==(const iterator& rhs) const { 
 			return &iterVec == &rhs.iterVec && iterIt == rhs.iterIt && 
 				paramIt == rhs.paramIt && constant == rhs.constant && valid == rhs.valid;
 		}
@@ -304,8 +306,12 @@ public:
 	// Returns an iterator over the Elements of this iteration vector,
 	// the elements are returned according to the order defined as follows:
 	// (iter0, iter1 ... iterN | param0, param1, ... paramM | 1)
-	inline iterator begin() const { return iterator(*this, iters.begin(), params.begin()); }
-	inline iterator end() const { return iterator(*this, iters.end(), params.end(), false); }
+	inline iterator begin() const { 
+		return iterator(*this, iters.begin(), params.begin()); 
+	}
+	inline iterator end() const { 
+		return iterator(*this, iters.end(), params.end(), false); 
+	}
 
 	// Returns an iterator over the iterators of this iteration vector:
 	// (iter0, iter1, ... iterN)
@@ -321,20 +327,7 @@ public:
 
 	bool operator==(const IterationVector& other) const;
 
-	bool operator<(const IterationVector& other) const {
-		if (size() > other.size()) return false;
-		if (size() < other.size()) return true;
-
-		// same size
-		auto thisIt = begin(), thisEnd = end();
-		auto otherIt = other.begin();
-
-		while(thisIt != thisEnd) {
-			if (*thisIt >= *otherIt) return false;
-			++thisIt; ++otherIt;
-		}
-		return true;
-	}
+	bool operator<(const IterationVector& other) const;
 
 	// Implements the Printable interface
 	std::ostream& printTo(std::ostream& out) const;
@@ -361,8 +354,8 @@ typedef std::vector<size_t> IndexTransMap;
 const IndexTransMap transform(const IterationVector& trg, const IterationVector& src);
 
 /**
- * Creates a new iteration vector which contains the iterators and parameters of the given intVec but where
- * the existentially qualified variables have been removed. 
+ * Creates a new iteration vector which contains the iterators and parameters of the given intVec
+ * but where the existentially qualified variables have been removed. 
  */
 IterationVector removeExistQualified(const IterationVector& iterVec);
 

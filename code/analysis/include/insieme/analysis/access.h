@@ -41,17 +41,21 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 
 #include "insieme/core/ir_address.h"
 #include "insieme/core/datapath/datapath.h"
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/constraint.h"
 
 #include "insieme/analysis/alias_map.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 namespace insieme { 
 namespace analysis { 
+
+typedef utils::CombinerPtr<core::arithmetic::Formula> Constraint;
 
 enum class VarType { SCALAR, MEMBER, TUPLE, ARRAY };
 

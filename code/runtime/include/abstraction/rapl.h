@@ -128,7 +128,7 @@ int64 _irt_read_msr(int32 file, int32 subject);
  * closes an MSR file descriptor
  */
 
-uint64 _irt_close_msr(int32 file);
+int32 _irt_close_msr(int32 file);
 
 /*
  * Reads the package energy consumption in joules into the provided pointer. Calling

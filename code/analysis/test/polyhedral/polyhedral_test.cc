@@ -592,7 +592,7 @@ TEST(IterationDomain, FromVariable2) {
 
 		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
 		EXPECT_TRUE(!!dom);
-		EXPECT_EQ("(((-v1+19 >= 0) ^ (-v1+49 >= 0)) ^ (v1-10 >= 0))", toString(*dom));
+		EXPECT_EQ("((-v1+19 >= 0) ^ (v1-10 >= 0))", toString(*dom));
 	}
 }
 
@@ -683,12 +683,109 @@ TEST(IterationDomain, FromVariable4) {
 
 		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
 		EXPECT_TRUE(!!dom);
-		EXPECT_EQ("((((v1-v2-1 >= 0) ^ (v1-21 >= 0)) ^ (v2-v3-1 >= 0)) ^ (v2-v3 >= 0))", toString(*dom));
+		EXPECT_EQ("(((v1-v2-1 >= 0) ^ (v1-21 >= 0)) ^ (v2-v3-1 >= 0))", toString(*dom));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
 }
 
+TEST(IterationDomain, FromVariableStrided) {
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const IfStmt>( parser.parseStatement("\
+		if ( (int<4>:a > 20) ) { \
+			for(decl int<4>:i = int<4>:b .. a : 2) { \
+				if ( (int<4>:b<i) ) \
+					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
+			}; \
+		}") );
+	scop::mark(forStmt);
+
+	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+
+	{ 
+		// get the iterator i used in the if condition 
+		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
+							 getAddressOfChild(0).getAddressOfChild(0).getAddressOfChild(2);
+		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		EXPECT_TRUE(!!dom);
+		EXPECT_EQ("(((-v2+v3 == 0) ^ (v1-v2-1 >= 0)) ^ (v2-v3 >= 0))", toString(*dom));
+		//auto pw = cardinality(mgr,*dom);
+		//EXPECT_EQ("v1-v3 -> if (v1-v3-1 >= 0)", toString(pw));
+	}
+
+	{ 
+		// Get the iterator i inside the if stmt
+		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
+							 getAddressOfChild(0).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
+							 getAddressOfChild(3);
+
+		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		EXPECT_TRUE(!!dom);
+		EXPECT_EQ("((((-v2+v3 == 0) ^ (v1-v2-1 >= 0)) ^ (v1-21 >= 0)) ^ (v2-v3-1 >= 0))", toString(*dom));
+		//auto pw = cardinality(mgr,*dom);
+		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
+	}
+}
+
+TEST(IterationDomain, FromVariable5) {
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const IfStmt>( parser.parseStatement("\
+		if ( (1==1) ) { \
+			for(decl int<4>:i = int<4>:a .. (int<4>:a+10) : 2) { \
+				if ( (i==(int<4>:a+2)) ) \
+					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
+			}; \
+		}") );
+	scop::mark(forStmt);
+
+	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+
+	{ 
+		// Get the iterator i inside the if stmt
+		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
+							 getAddressOfChild(0).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
+							 getAddressOfChild(2);
+
+		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		EXPECT_TRUE(!!dom);
+		EXPECT_EQ("(v1-v2-2 == 0)", toString(*dom));
+		//auto pw = cardinality(mgr,*dom);
+		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
+	}
+}
+
+
+TEST(IterationDomain, FromVariable6) {
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const IfStmt>( parser.parseStatement("\
+		if ( (int<4>:a>4) ) { \
+			for(decl int<4>:i = a .. (a+10) : 2) { \
+				if ( (i==(a+1)) ) \
+					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
+			}; \
+		}") );
+	scop::mark(forStmt);
+
+	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+
+	{ 
+		// Get the iterator i inside the if stmt
+		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
+							 getAddressOfChild(0).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
+							 getAddressOfChild(2);
+
+		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		EXPECT_FALSE(!!dom);
+		//auto pw = cardinality(mgr,*dom);
+		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
+	}
+}
 
 //==== Scop =======================================================================================
 TEST(Scop, BuildScop) {

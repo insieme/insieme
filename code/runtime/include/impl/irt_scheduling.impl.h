@@ -72,11 +72,11 @@ void irt_scheduling_loop(irt_worker* self) {
 			irt_atomic_inc(&irt_g_active_worker_count);
 			continue;
 		}
-		irt_worker_instrumentation_event(self, WORKER_SLEEP_START, self->id);
+		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SLEEP_START, self->id);
 		IRT_DEBUG("%sWorker %3d actually sleeping.\n", self->id.value.components.thread==0?"":"\t\t\t\t\t\t", self->id.value.components.thread);
 		int wait_err = pthread_cond_wait(&self->wait_cond, &self->wait_mutex);
 		IRT_ASSERT(wait_err == 0, IRT_ERR_INTERNAL, "Worker failed to wait on scheduling condition");
-		irt_worker_instrumentation_event(self, WORKER_SLEEP_END, self->id);
+		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SLEEP_END, self->id);
 		IRT_DEBUG("%sWorker %3d woken.\n", self->id.value.components.thread==0?"":"\t\t\t\t\t\t", self->id.value.components.thread);
 		// we were woken up by the signal and now own the mutex
 		pthread_mutex_unlock(&self->wait_mutex);

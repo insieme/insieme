@@ -58,46 +58,25 @@ typedef enum {
 	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_14 = 16,
 	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_15 = 17,
 	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_16 = 18,
-} extended_performance_data_type;
-	
-typedef enum {
-	WORK_ITEM_CREATED = 1000,
-	WORK_ITEM_QUEUED = 1100,
-	WORK_ITEM_SPLITTED = 1200,
-	WORK_ITEM_STARTED = 1300,
-	WORK_ITEM_SUSPENDED_IO = 1500,
-	WORK_ITEM_SUSPENDED_BARRIER = 1501,
-	WORK_ITEM_SUSPENDED_JOIN = 1502,
-	WORK_ITEM_SUSPENDED_GROUPJOIN = 1503,
-	WORK_ITEM_SUSPENDED_JOIN_ALL = 1504,
-	WORK_ITEM_SUSPENDED_UNKOWN = 1599,
-	WORK_ITEM_RESUMED = 1600,
-	WORK_ITEM_FINISHED = 1900,
-} wi_instrumentation_event;
+} irt_instrumentation_extended_performance_data_type;
 
-typedef enum {
-	WORK_GROUP_CREATED = 2000,
-} wg_instrumentation_event;
+#define IRT_INST_EVENT(event, group_label, event_label) event,
+typedef enum _irt_instrumentation_event {
+#include "performance_table.def"
+} irt_instrumentation_event;
+#undef IRT_INST_EVENT
 
-typedef enum {
-	WORKER_CREATED = 3000,
-	WORKER_RUNNING = 3100,
-	WORKER_SLEEP_START = 3200,
-	WORKER_SLEEP_END = 3300,
-	WORKER_SLEEP_BUSY_START = 3400,
-	WORKER_SLEEP_BUSY_END = 3500,
-	WORKER_STOP = 3800,
-} worker_instrumentation_event;
+#define IRT_INST_EVENT(event, group_label, event_label) event_label,
+const char* irt_g_instrumentation_event_names[] = {
+#include "performance_table.def"
+};
+#undef IRT_INST_EVENT
 
-typedef enum {
-	DATA_ITEM_CREATED = 4000,
-	DATA_ITEM_RECYCLED = 4500,
-} di_instrumentation_event;
-
-typedef enum {
-	REGION_START = 5000,
-	REGION_END = 5100,
-} region_instrumentation_event;
+#define IRT_INST_EVENT(event, group_label, event_label) group_label,
+const char* irt_g_instrumentation_group_names[] = {
+#include "performance_table.def"
+};
+#undef IRT_INST_EVENT
 
 typedef struct _irt_region {
 	uint64 cputime;
@@ -109,51 +88,51 @@ typedef struct _irt_region_list {
 	irt_region* head;
 } irt_region_list;
 
-typedef struct _irt_performance_data {
+typedef struct _irt_instrumentation_event_data {
 	uint64 timestamp;
 	int32 event;
 	uint64 subject_id;
-} _irt_performance_data;
+} irt_instrumentation_event_data;
 
-typedef struct _irt_pd_table {
+typedef struct _irt_instrumentation_event_data_table {
 	uint32 size;
 	uint32 number_of_elements;
 	uint32 blocksize;
-	_irt_performance_data* data;
-} _irt_pd_table;
+	irt_instrumentation_event_data* data;
+} irt_instrumentation_event_data_table;
 
-typedef union _irt_extended_performance_data_raw {
+typedef union _irt_instrumentation_region_data_values {
 	double value_double;
 	uint64 value_uint64;
-} _irt_extended_performance_data_raw;
+} _irt_instrumentation_region_data_values;
 
-typedef struct _irt_extended_performance_data {
+typedef struct _irt_instrumentation_region_data {
 	uint64 timestamp;
 	int32 event;
 	uint64 subject_id;
-	_irt_extended_performance_data_raw data[NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES];
-} _irt_extended_performance_data;
+	_irt_instrumentation_region_data_values data[NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES];
+} irt_instrumentation_region_data;
 
-typedef struct _irt_epd_table {
+typedef struct _irt_instrumentation_region_data_table {
 	uint32 size;
 	uint32 number_of_elements;
 	uint32 blocksize;
-	_irt_extended_performance_data* data;
-} _irt_epd_table;
+	irt_instrumentation_region_data* data;
+} irt_instrumentation_region_data_table;
 
-typedef struct _irt_aggregated_performance_data {
+typedef struct _irt_instrumentation_aggregated_data {
 	uint64 cputime;
 	uint64 walltime;
 	uint32 number_of_workers;
 	int64 id;
-} _irt_aggregated_performance_data;
+} irt_instrumentation_aggregated_data;
 
-typedef struct _irt_apd_table {
+typedef struct _irt_instrumentation_aggregated_data_table {
 	uint32 size;
 	uint32 number_of_elements;
 	uint32 blocksize;
-	_irt_aggregated_performance_data* data;
-} _irt_apd_table;
+	irt_instrumentation_aggregated_data* data;
+} irt_instrumentation_aggregated_data_table;
 
 #ifdef USE_OPENCL
 
