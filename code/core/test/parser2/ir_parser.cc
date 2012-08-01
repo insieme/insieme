@@ -67,10 +67,10 @@ namespace parser {
 		TypePtr testC = builder.genericType("test", toVector(A,testA), toVector(pA,pC));
 
 		// just some simple generic types
-		EXPECT_EQ(test, parse(manager, "test"));
-
-		// some type with parameters
-		EXPECT_EQ(test, parse(manager, "test<>"));
+//		EXPECT_EQ(test, parse(manager, "test"));
+//
+//		// some type with parameters
+//		EXPECT_EQ(test, parse(manager, "test<>"));
 		EXPECT_EQ(testA, parse(manager, "test<A>"));
 		EXPECT_EQ(test2A, parse(manager, "test<test<A>>"));
 
@@ -343,7 +343,6 @@ namespace parser {
 
 	TEST(IR_Parser2, Lambdas) {
 		NodeManager manager;
-		IRBuilder builder(manager);
 
 		// parse two lambdas
 //		EXPECT_EQ("rec v1.{v1=fun() {}}", toString(*parse(manager, "()->bool { }")));
@@ -352,6 +351,69 @@ namespace parser {
 		// add call
 		EXPECT_EQ("AP({rec v3.{v3=fun(int<4> v1, int<4> v2) {return v1;}}(12, 14);})",
 				toString(parse(manager, "{ (int<4> a, int<4> b)->int<4> { return a; }(12,14); }"))
+		);
+
+	}
+
+
+	TEST(IR_Parser2, LargeCode) {
+
+		// this is mostly a speed test
+		NodeManager manager;
+
+		auto body = std::string(
+				"	// some type definitions\n"
+				"	let matrix = vector<vector<int<4>,4>,4>;\n"
+				"	let int = int<4>;\n"
+				"	\n"
+				"	int a = 12;\n"
+				"	int b = 14;\n"
+				"	\n"
+				"	// can also be used with auto\n"
+				"	auto c = 115+b;\n"
+				"	\n"
+				"	// define a function\n"
+				"	let min = (int a, int b)->int {\n"
+				"		if (a < b) return a;\n"
+				"		return b;\n"
+				"	};\n"
+				"	\n"
+				"	// use it\n"
+				"	min(a,b);\n"
+				"	\n"
+				"	for(int i=0..4) { }\n"
+				"	\n"
+				"	matrix m;\n"
+				"	\n"
+				"	m[1][2];\n"
+				"	\n"
+				"	let mmin = (matrix m)->int {\n"
+				"		int res = 0;\n"
+				"		for(int i=0..4) {\n"
+				"			for(int j=0..4) {\n"
+				"				if (res < m[i][j]) {\n"
+				"					\n"
+				"				}\n"
+				"			}\n"
+				"		}\n"
+				"		return res;\n"
+				"	};\n"
+				"	\n"
+		);
+
+		// try a small example
+		EXPECT_TRUE(
+			parse(manager,"{\n" + body + "}")
+		);
+
+		EXPECT_TRUE(
+			parse(manager,"{\n" + body + body + body + body + body + "}")
+		);
+
+
+		// also a corrupted case
+		EXPECT_FALSE(
+			parse(manager,"{\n" + body + body + body + "some shit" + body + body + "}")
 		);
 
 	}

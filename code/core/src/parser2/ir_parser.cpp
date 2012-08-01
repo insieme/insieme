@@ -77,6 +77,10 @@ namespace parser {
 			return core::convertList<element>(source);	// use core converter
 		}
 
+		ExpressionPtr getOperand(Context& cur, int index) {
+			return cur.tryDeref(cur.getTerm(index).as<ExpressionPtr>());
+		};
+
 
 		Grammar buildGrammar(const string& start = "N") {
 
@@ -87,7 +91,9 @@ namespace parser {
 			 * 		T .. types
 			 * 		E .. expressions
 			 * 		S .. statements
-			 * 		N .. any ( P | T | E | S )
+			 * 		D .. definition
+			 * 		A .. application = program (root node)
+			 * 		N .. any ( P | T | E | S | D | A )
 			 */
 
 			auto P = rec("P");
@@ -95,6 +101,8 @@ namespace parser {
 			auto E = rec("E");
 			auto S = rec("S");
 			auto N = rec("N");
+			auto D = rec("D");
+			auto A = rec("A");
 
 
 			Grammar g(start);
@@ -108,14 +116,14 @@ namespace parser {
 					any(Token::Int_Literal),
 					[](Context& cur)->NodePtr {
 						uint32_t value = utils::numeric_cast<uint32_t>(*cur.begin);
-						return IRBuilder(cur.manager).concreteIntTypeParam(value);
+						return cur.concreteIntTypeParam(value);
 					}
 			));
 
 			g.addRule("P", rule(
 					"#inf",
 					[](Context& cur)->NodePtr {
-						return IRBuilder(cur.manager).infiniteIntTypeParam();
+						return cur.infiniteIntTypeParam();
 					}
 			));
 
@@ -124,7 +132,7 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						const string& name = *(cur.end - 1);
 						if (name.size() != 1u) return fail(cur, "int-type-parameter variable name must not be longer than a single character");
-						return IRBuilder(cur.manager).variableIntTypeParam(name[0]);
+						return cur.variableIntTypeParam(name[0]);
 					}
 			));
 
@@ -136,7 +144,7 @@ namespace parser {
 					seq("'", identifier),
 					[](Context& cur)->NodePtr {
 						const string& name = *(cur.end - 1);
-						return IRBuilder(cur.manager).typeVariable(name);
+						return cur.typeVariable(name);
 					}
 			));
 
@@ -173,7 +181,7 @@ namespace parser {
 							++it;
 						}
 
-						return IRBuilder(cur.manager).genericType(*cur.begin, typeParams, intTypeParams);
+						return cur.genericType(*cur.begin, typeParams, intTypeParams);
 					}
 			));
 
@@ -181,7 +189,7 @@ namespace parser {
 			g.addRule("T", rule(
 					seq("(", list(T, ","), ")"),
 					[](Context& cur)->NodePtr {
-						return IRBuilder(cur.manager).tupleType(convertList<TypePtr>(cur.getTerms()));
+						return cur.tupleType(convertList<TypePtr>(cur.getTerms()));
 					}
 			));
 
@@ -194,7 +202,7 @@ namespace parser {
 						TypeList types = convertList<TypePtr>(terms);
 						TypePtr resType = types.back();
 						types.pop_back();
-						return IRBuilder(cur.manager).functionType(types, resType, true);
+						return cur.functionType(types, resType, true);
 					}
 			));
 
@@ -206,7 +214,7 @@ namespace parser {
 						TypeList types = convertList<TypePtr>(terms);
 						TypePtr resType = types.back();
 						types.pop_back();
-						return IRBuilder(cur.manager).functionType(types, resType, false);
+						return cur.functionType(types, resType, false);
 					}
 			));
 
@@ -215,7 +223,7 @@ namespace parser {
 				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
 					TypePtr type = cur.getTerms().back().as<TypePtr>();
 					auto iterName = cur.getSubRange(0);
-					NamedTypePtr member = IRBuilder(cur.manager).namedType(iterName[0], type);
+					NamedTypePtr member = cur.namedType(iterName[0], type);
 					cur.swap(member);
 					cur.popRange();
 				}
@@ -228,7 +236,7 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 						NamedTypeList members = convertList<NamedTypePtr>(terms);
-						return IRBuilder(cur.manager).structType(members);
+						return cur.structType(members);
 					}
 			));
 
@@ -237,7 +245,7 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 						NamedTypeList members = convertList<NamedTypePtr>(terms);
-						return IRBuilder(cur.manager).unionType(members);
+						return cur.unionType(members);
 					}
 			));
 
@@ -248,7 +256,7 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
 						IntTypeParamPtr dim = cur.getTerm(1).as<IntTypeParamPtr>();
-						return IRBuilder(cur.manager).arrayType(elementType, dim);
+						return cur.arrayType(elementType, dim);
 					},
 					1    // higher priority than generic type rule
 			));
@@ -258,7 +266,7 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
 						IntTypeParamPtr size = cur.getTerm(1).as<IntTypeParamPtr>();
-						return IRBuilder(cur.manager).vectorType(elementType, size);
+						return cur.vectorType(elementType, size);
 					},
 					1    // higher priority than generic type rule
 			));
@@ -266,7 +274,7 @@ namespace parser {
 					seq("ref<", T, ">"),
 					[](Context& cur)->NodePtr {
 						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
-						return IRBuilder(cur.manager).refType(elementType);
+						return cur.refType(elementType);
 					},
 					1    // higher priority than generic type rule
 			));
@@ -275,7 +283,7 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
 						IntTypeParamPtr size = cur.getTerm(1).as<IntTypeParamPtr>();
-						return IRBuilder(cur.manager).channelType(elementType, size);
+						return cur.channelType(elementType, size);
 					},
 					1    // higher priority than generic type rule
 			));
@@ -299,7 +307,7 @@ namespace parser {
 					any(Token::Bool_Literal),
 					[](Context& cur)->NodePtr {
 						const auto& type = cur.manager.getLangBasic().getBool();
-						return IRBuilder(cur.manager).literal(type, *cur.begin);
+						return cur.literal(type, *cur.begin);
 					}
 			));
 
@@ -318,7 +326,7 @@ namespace parser {
 									(sig)?basic.getUInt8():basic.getInt8()
 								  : (sig)?basic.getUInt4():basic.getInt4();
 
-						return IRBuilder(cur.manager).literal(type, lexeme);
+						return cur.literal(type, lexeme);
 					}
 			));
 
@@ -327,7 +335,7 @@ namespace parser {
 					any(Token::Float_Literal),
 					[](Context& cur)->NodePtr {
 						const auto& type = cur.manager.getLangBasic().getReal4();
-						return IRBuilder(cur.manager).literal(type, *cur.begin);
+						return cur.literal(type, *cur.begin);
 					}
 			));
 
@@ -336,7 +344,23 @@ namespace parser {
 					any(Token::Double_Literal),
 					[](Context& cur)->NodePtr {
 						const auto& type = cur.manager.getLangBasic().getReal8();
-						return IRBuilder(cur.manager).literal(type, *cur.begin);
+						return cur.literal(type, *cur.begin);
+					}
+			));
+
+			// char literal
+			g.addRule("E", rule(
+					any(Token::Char_Literal),
+					[](Context& cur)->NodePtr {
+						return cur.literal(cur.manager.getLangBasic().getChar(), *cur.begin);
+					}
+			));
+
+			// string literal
+			g.addRule("E", rule(
+					any(Token::String_Literal),
+					[](Context& cur)->NodePtr {
+						return cur.stringLit(*cur.begin);
 					}
 			));
 
@@ -348,9 +372,9 @@ namespace parser {
 			g.addRule("E", rule(
 					seq(E, "+", E),
 					[](Context& cur)->NodePtr {
-						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).add(a,b);
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.add(a,b);
 					},
 					-12
 			));
@@ -358,9 +382,9 @@ namespace parser {
 			g.addRule("E", rule(
 					seq(E, "-", E),
 					[](Context& cur)->NodePtr {
-						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).sub(a,b);
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.sub(a,b);
 					},
 					-12
 			));
@@ -368,9 +392,9 @@ namespace parser {
 			g.addRule("E", rule(
 					seq(E, "*", E),
 					[](Context& cur)->NodePtr {
-						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).mul(a,b);
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.mul(a,b);
 					},
 					-13
 			));
@@ -378,9 +402,9 @@ namespace parser {
 			g.addRule("E", rule(
 					seq(E, "/", E),
 					[](Context& cur)->NodePtr {
-						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).div(a,b);
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.div(a,b);
 					},
 					-13
 			));
@@ -388,9 +412,9 @@ namespace parser {
 			g.addRule("E", rule(
 					seq(E, "%", E),
 					[](Context& cur)->NodePtr {
-						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).mod(a,b);
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.mod(a,b);
 					},
 					-13
 			));
@@ -400,8 +424,8 @@ namespace parser {
 			g.addRule("E", rule(
 					seq("!", E),
 					[](Context& cur)->NodePtr {
-						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).logicNeg(a);
+						ExpressionPtr a = getOperand(cur, 0);
+						return cur.logicNeg(a);
 					},
 					-14
 			));
@@ -409,9 +433,9 @@ namespace parser {
 			g.addRule("E", rule(
 					seq(E, "&&", E),
 					[](Context& cur)->NodePtr {
-						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).logicAnd(a,b);
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.logicAnd(a,b);
 					},
 					-5
 			));
@@ -419,9 +443,9 @@ namespace parser {
 			g.addRule("E", rule(
 					seq(E, "||", E),
 					[](Context& cur)->NodePtr {
-						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).logicOr(a,b);
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.logicOr(a,b);
 					},
 					-4
 			));
@@ -431,9 +455,9 @@ namespace parser {
 			g.addRule("E", rule(
 					seq(E, "<", E),
 					[](Context& cur)->NodePtr {
-						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).lt(a,b);
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.lt(a,b);
 					},
 					-10
 			));
@@ -441,9 +465,9 @@ namespace parser {
 			g.addRule("E", rule(
 					seq(E, "<=", E),
 					[](Context& cur)->NodePtr {
-						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).le(a,b);
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.le(a,b);
 					},
 					-10
 			));
@@ -451,9 +475,9 @@ namespace parser {
 			g.addRule("E", rule(
 					seq(E, ">=", E),
 					[](Context& cur)->NodePtr {
-						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).ge(a,b);
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.ge(a,b);
 					},
 					-10
 			));
@@ -461,12 +485,78 @@ namespace parser {
 			g.addRule("E", rule(
 					seq(E, ">", E),
 					[](Context& cur)->NodePtr {
-						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).gt(a,b);
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.gt(a,b);
 					},
 					-10
 			));
+
+			g.addRule("E", rule(
+					seq(E, "==", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.eq(a,b);
+					},
+					-9
+			));
+
+			g.addRule("E", rule(
+					seq(E, "!=", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.eq(a,b);
+					},
+					-9
+			));
+
+
+			// -- ref manipulations --
+
+			g.addRule("E", rule(
+					seq("var(",E,")"),
+					[](Context& cur)->NodePtr {
+						return cur.refVar(cur.getTerm(0).as<ExpressionPtr>());
+					}
+			));
+
+			g.addRule("E", rule(
+					seq("new(",E,")"),
+					[](Context& cur)->NodePtr {
+						return cur.refNew(cur.getTerm(0).as<ExpressionPtr>());
+					}
+			));
+
+			g.addRule("E", rule(
+					seq("delete(",E,")"),
+					[](Context& cur)->NodePtr {
+						return cur.refDelete(cur.getTerm(0).as<ExpressionPtr>());
+					}
+			));
+
+			// assign
+			g.addRule("E", rule(
+					seq(E,"=",E),
+					[](Context& cur)->NodePtr {
+						return cur.assign(
+								cur.getTerm(0).as<ExpressionPtr>(),
+								cur.getTerm(1).as<ExpressionPtr>()
+						);
+					}
+			));
+
+			// deref
+			g.addRule("E", rule(
+					seq("*", E),
+					[](Context& cur)->NodePtr {
+						return cur.deref(cur.getTerm(0).as<ExpressionPtr>());
+					},
+					-14
+			));
+
+
 
 			// -- vector / array access --
 
@@ -474,8 +564,8 @@ namespace parser {
 					seq(E, "[", E, "]"),
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).arraySubscript(a, b);		// works for arrays and vectors
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.arraySubscript(a, b);		// works for arrays and vectors
 					},
 					-15
 			));
@@ -485,7 +575,7 @@ namespace parser {
 					seq(E, ".", cap(identifier)),
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
-						return IRBuilder(cur.manager).accessMember(a, cur.getSubRange(0)[0]);
+						return cur.accessMember(a, cur.getSubRange(0)[0]);
 					},
 					-15
 			));
@@ -524,7 +614,7 @@ namespace parser {
 						// get function
 						ExpressionPtr fun = terms.front().as<ExpressionPtr>();
 						terms.erase(terms.begin());
-						return IRBuilder(cur.manager).callExpr(fun, convertList<ExpressionPtr>(terms));
+						return cur.callExpr(fun, convertList<ExpressionPtr>(terms));
 					}
 			));
 
@@ -534,7 +624,7 @@ namespace parser {
 				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
 					TypePtr type = cur.getTerms().back().as<TypePtr>();
 					auto paramName = cur.getSubRange(0);
-					VariablePtr param = IRBuilder(cur.manager).variable(type);
+					VariablePtr param = cur.variable(type);
 					cur.getVarScopeManager().add(paramName, param);
 					cur.swap(param);	// exchange type with variable
 					cur.popRange();		// drop name from stack
@@ -553,7 +643,7 @@ namespace parser {
 						terms.pop_back();
 						TypePtr resType = terms.back().as<TypePtr>();
 						terms.pop_back();
-						return IRBuilder(cur.manager).lambdaExpr(resType, body, convertList<VariablePtr>(terms));
+						return cur.lambdaExpr(resType, body, convertList<VariablePtr>(terms));
 					}
 			));
 
@@ -562,13 +652,16 @@ namespace parser {
 			// every expression is a statement (if terminated by ;)
 			g.addRule("S", rule(seq(E,";"), forward));
 
+			// every declaration is a statement
+			g.addRule("S", rule(D, forward));
+
 			// declaration statement
 			g.addRule("S", rule(
 					seq(T, cap(identifier), " = ", E, ";"),
 					[](Context& cur)->NodePtr {
 						TypePtr type = cur.getTerm(0).as<TypePtr>();
 						ExpressionPtr value = cur.getTerm(1).as<ExpressionPtr>();
-						auto decl = IRBuilder(cur.manager).declarationStmt(type, value);
+						auto decl = cur.declarationStmt(type, value);
 						// register name within variable manager
 						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
 						return decl;
@@ -594,7 +687,7 @@ namespace parser {
 					seq("auto", cap(identifier), " = ", E, ";"),
 					[](Context& cur)->NodePtr {
 						ExpressionPtr value = cur.getTerm(0).as<ExpressionPtr>();
-						auto decl = IRBuilder(cur.manager).declarationStmt(value->getType(), value);
+						auto decl = cur.declarationStmt(value->getType(), value);
 						// register name within variable manager
 						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
 						return decl;
@@ -602,20 +695,9 @@ namespace parser {
 					1 // higher priority than ordinary declaration
 			));
 
-			// declaration statement
-			g.addRule("S", rule(
-				seq("let", cap(identifier), "=", (T | E), ";"),
-				[](Context& cur)->NodePtr {
-					// register name within symbol manager
-					cur.getSymbolManager().add(cur.getSubRange(0), cur.getTerm(0));
-					return IRBuilder(cur.manager).getNoOp();
-				},
-				1 //  higher priority than variable declaration
-			));
-
 			// compound statement
 			g.addRule("S", rule(
-					varScop(seq("{", loop(S), "}")),
+					varScop(seq("{", loop(S, Token::createSymbol(';')), "}")),
 					[](Context& cur)->NodePtr {
 						IRBuilder builder(cur.manager);
 						StatementList list;		// filter out no-ops
@@ -636,7 +718,7 @@ namespace parser {
 						if (!cur.manager.getLangBasic().isBool(condition->getType())) {
 							return fail(cur, "Conditional expression is not a boolean expression!");
 						}
-						return IRBuilder(cur.manager).ifStmt(condition, thenPart);
+						return cur.ifStmt(condition, thenPart);
 					}
 			));
 
@@ -651,7 +733,7 @@ namespace parser {
 						if (!cur.manager.getLangBasic().isBool(condition->getType())) {
 							return fail(cur, "Conditional expression is not a boolean expression!");
 						}
-						return IRBuilder(cur.manager).ifStmt(condition, thenPart, elsePart);
+						return cur.ifStmt(condition, thenPart, elsePart);
 					},
 					-1		// lower priority for this rule (default=0)
 			));
@@ -667,7 +749,7 @@ namespace parser {
 						if (!cur.manager.getLangBasic().isBool(condition->getType())) {
 							return fail(cur, "Conditional expression is not a boolean expression!");
 						}
-						return IRBuilder(cur.manager).whileStmt(condition, body);
+						return cur.whileStmt(condition, body);
 					}
 			));
 
@@ -675,7 +757,7 @@ namespace parser {
 				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
 					TypePtr type = cur.getTerm(0).as<TypePtr>();
 					auto iterName = cur.getSubRange(0);
-					VariablePtr iter = IRBuilder(cur.manager).variable(type);
+					VariablePtr iter = cur.variable(type);
 					cur.getVarScopeManager().add(iterName, iter);
 					cur.push(iter);
 				}
@@ -701,7 +783,7 @@ namespace parser {
 
 						// build loop
 						ExpressionPtr step = builder.literal(type, "1");
-						return IRBuilder(cur.manager).forStmt(iter, start, end, step, body);
+						return cur.forStmt(iter, start, end, step, body);
 					}
 			));
 
@@ -721,14 +803,14 @@ namespace parser {
 						if (!basic.isInt(type)) return fail(cur, "Iterator has to be of integer type!");
 
 						// build loop
-						return IRBuilder(cur.manager).forStmt(iter, start, end, step, body);
+						return cur.forStmt(iter, start, end, step, body);
 					}
 			));
 
 			g.addRule("S", rule(
 					seq("return ", E, ";"),
 					[](Context& cur)->NodePtr {
-						return IRBuilder(cur.manager).returnStmt(cur.getTerm(0).as<ExpressionPtr>());
+						return cur.returnStmt(cur.getTerm(0).as<ExpressionPtr>());
 					},
 					1		// higher priority than variable declaration (of type return)
 			));
@@ -736,7 +818,7 @@ namespace parser {
 			g.addRule("S", rule(
 					seq("return;"),
 					[](Context& cur)->NodePtr {
-						return IRBuilder(cur.manager).returnStmt(
+						return cur.returnStmt(
 								cur.manager.getLangBasic().getUnitConstant()
 						);
 					}
@@ -745,18 +827,51 @@ namespace parser {
 			g.addRule("S", rule(
 					seq("break;"),
 					[](Context& cur)->NodePtr {
-						return IRBuilder(cur.manager).breakStmt();
+						return cur.breakStmt();
 					}
 			));
 
 			g.addRule("S", rule(
 					seq("continue;"),
 					[](Context& cur)->NodePtr {
-						return IRBuilder(cur.manager).continueStmt();
+						return cur.continueStmt();
+					}
+			));
+
+			// add print statement
+			g.addRule("S", rule(
+					seq("print(",cap(any(Token::String_Literal)), loop(seq(",", E)),");"),
+					[](Context& cur)->NodePtr {
+						ExpressionList params = convertList<ExpressionPtr>(cur.getTerms());
+						return cur.print(cur.getSubRange(0)[0].getLexeme(), params);
 					}
 			));
 
 
+			// -- Declarations --
+			g.addRule("D", rule(
+				seq("let", cap(identifier), "=", (T | E), ";"),
+				[](Context& cur)->NodePtr {
+					// register name within symbol manager
+					cur.getSymbolManager().add(cur.getSubRange(0), cur.getTerm(0));
+					return cur.getNoOp();
+				},
+				1 //  higher priority than variable declaration
+			));
+
+
+			// -- top level program code --
+
+			g.addRule("A", rule(
+					seq(loop(D),T,"main()", S),
+					[](Context& cur)->NodePtr {
+						IRBuilder builder(cur.manager);
+						TypePtr returnType = (cur.getTerms().end()-2)->as<TypePtr>();
+						StatementPtr body = cur.getTerms().back().as<StatementPtr>();
+						ExpressionPtr main = builder.lambdaExpr(returnType, body, VariableList());
+						return builder.createProgram(toVector(main));
+					}
+			));
 
 
 			// add productions for unknown node type N
@@ -764,6 +879,8 @@ namespace parser {
 			g.addRule("N", rule(T, forward));
 			g.addRule("N", rule(E, forward));
 			g.addRule("N", rule(S, forward));
+			g.addRule("N", rule(D, forward));
+			g.addRule("N", rule(A, forward));
 
 //			std::cout << g << "\n\n";
 //			std::cout << g.getTermInfo() << "\n";
@@ -777,25 +894,53 @@ namespace parser {
 
 	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow) {
 		static const Grammar inspire = buildGrammar();
-		return inspire.match(manager, code, onFailThrow);
+		try {
+			return inspire.match(manager, code, onFailThrow);
+		} catch (const ParseException& pe) {
+			throw IRParserException(pe.what());
+		}
+		return NodePtr();
 	}
 
 	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow) {
 		static const Grammar g = buildGrammar("T");
-		return g.match(manager, code, onFailThrow).as<TypePtr>();
+		try {
+			return g.match(manager, code, onFailThrow).as<TypePtr>();
+		} catch (const ParseException& pe) {
+			throw IRParserException(pe.what());
+		}
+		return TypePtr();
 	}
 
 	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow) {
 		static const Grammar g = buildGrammar("E");
-		return g.match(manager, code, onFailThrow).as<ExpressionPtr>();
+		try {
+			return g.match(manager, code, onFailThrow).as<ExpressionPtr>();
+		} catch (const ParseException& pe) {
+			throw IRParserException(pe.what());
+		}
+		return ExpressionPtr();
 	}
 
 	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow) {
 		static const Grammar g = buildGrammar("S");
-		return g.match(manager, code, onFailThrow).as<StatementPtr>();
+		try {
+			return g.match(manager, code, onFailThrow).as<StatementPtr>();
+		} catch (const ParseException& pe) {
+			throw IRParserException(pe.what());
+		}
+		return StatementPtr();
 	}
 
-
+	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow) {
+		static const Grammar g = buildGrammar("A");
+		try {
+			return g.match(manager, code, onFailThrow).as<ProgramPtr>();
+		} catch (const ParseException& pe) {
+			throw IRParserException(pe.what());
+		}
+		return ProgramPtr();
+	}
 
 
 } // end namespace parser2

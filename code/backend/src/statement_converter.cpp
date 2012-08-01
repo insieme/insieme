@@ -395,6 +395,9 @@ namespace backend {
 		const VariableInfo& info_end  = varManager.addInfo(converter, var_end, VariableInfo::NONE);
 		const VariableInfo& info_step = varManager.addInfo(converter, var_step, VariableInfo::NONE);
 
+		// add dependency to iterator type definition
+		context.getDependencies().insert(info_iter.typeInfo->definition);
+
 		// create init, check, step and body
 		c_ast::VarDeclPtr init = manager->create<c_ast::VarDecl>(toVector(
 				std::make_pair(info_iter.var, convertExpression(context, ptr->getStart())),

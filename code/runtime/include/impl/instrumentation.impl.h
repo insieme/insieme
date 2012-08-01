@@ -77,9 +77,9 @@ void _irt_inst_event_data_table_resize(irt_instrumentation_event_data_table* tab
 // =============== functions for creating and destroying performance tables ===============
 
 // allocates memory for performance data, sets all fields
-irt_instrumentation_event_data_table* irt_inst_create_event_data_table(unsigned blocksize) {
+irt_instrumentation_event_data_table* irt_inst_create_event_data_table() {
 	irt_instrumentation_event_data_table* table = (irt_instrumentation_event_data_table*)malloc(sizeof(irt_instrumentation_event_data_table));
-	table->blocksize = blocksize;
+	table->blocksize = IRT_INST_WORKER_PD_BLOCKSIZE;
 	table->size = table->blocksize * 2;
 	table->number_of_elements = 0;
 	table->data = (irt_instrumentation_event_data*)malloc(sizeof(irt_instrumentation_event_data) * table->size);
@@ -152,7 +152,7 @@ void irt_inst_event_data_output(irt_worker* worker) {
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
-	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
+	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
@@ -303,7 +303,7 @@ void irt_inst_set_all_instrumentation(bool enable) {
 }
 
 void irt_inst_set_all_instrumentation_from_env() {
-	if(getenv(IRT_INST_WORKER_EVENT_LOGGING) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING), "true") == 0) {
+	if(getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV), "true") == 0) {
 		irt_inst_set_all_instrumentation(true);
 		irt_log_setting_s("IRT_INST_WORKER_EVENT_LOGGING", "enabled");
 		return;
@@ -316,7 +316,7 @@ void irt_inst_set_all_instrumentation_from_env() {
 
 // ============ to be used if IRT_ENABLE_INSTRUMENTATION is not set ==============
 
-irt_instrumentation_event_data_table* irt_inst_create_event_data_table(unsigned blocksize) { return NULL; }
+irt_instrumentation_event_data_table* irt_inst_create_event_data_table() { return NULL; }
 void irt_inst_destroy_event_data_table(irt_instrumentation_event_data_table* table) {}
 
 void irt_inst_insert_wi_event(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id) {}
@@ -329,7 +329,7 @@ void irt_inst_event_data_output(irt_worker* worker) {}
 #endif // IRT_ENABLE_INSTRUMENTATION
 
 #ifndef IRT_ENABLE_REGION_INSTRUMENTATION
-irt_instrumentation_region_data_table* irt_inst_create_region_data_table(unsigned blocksize) { return NULL; }
+irt_instrumentation_region_data_table* irt_inst_create_region_data_table() { return NULL; }
 void irt_inst_destroy_region_data_table(irt_instrumentation_region_data_table* table) {}
 void irt_inst_region_start(region_id id) {}
 void irt_inst_region_end(region_id id) {}
@@ -345,10 +345,10 @@ irt_instrumentation_aggregated_data_table* irt_g_aggregated_performance_table;
 
 irt_region_list* irt_region_list_create() {
 	irt_region_list* list = (irt_region_list*)malloc(sizeof(irt_region_list));
-	irt_region* temp = (irt_region*)malloc(sizeof(irt_region)*IRT_REGION_LIST_SIZE);
+	irt_region* temp = (irt_region*)malloc(sizeof(irt_region)*IRT_INST_REGION_LIST_SIZE);
 	list->head = temp++;
 	irt_region* current = list->head;
-	for(int i = 0; i < (IRT_REGION_LIST_SIZE-1); ++i) {
+	for(int i = 0; i < (IRT_INST_REGION_LIST_SIZE-1); ++i) {
 		current->next = temp++;
 		current = current->next;
 	}
@@ -399,9 +399,9 @@ void _irt_inst_region_data_table_resize(irt_instrumentation_region_data_table* t
 	table->data = (irt_instrumentation_region_data*)realloc(table->data, sizeof(irt_instrumentation_region_data)*table->size);
 }
 
-irt_instrumentation_region_data_table* irt_inst_create_region_data_table(unsigned blocksize) {
+irt_instrumentation_region_data_table* irt_inst_create_region_data_table() {
 	irt_instrumentation_region_data_table* table = (irt_instrumentation_region_data_table*)malloc(sizeof(irt_instrumentation_region_data_table));
-	table->blocksize = blocksize;
+	table->blocksize = IRT_INST_WORKER_PD_BLOCKSIZE;
 	table->size = table->blocksize * 2;
 	table->number_of_elements = 0;
 	table->data = (irt_instrumentation_region_data*)malloc(sizeof(irt_instrumentation_region_data) * table->size);
@@ -419,9 +419,9 @@ void _irt_inst_aggregated_data_table_resize() {
 	table->data = (irt_instrumentation_aggregated_data*)realloc(table->data, sizeof(irt_instrumentation_aggregated_data)*table->size);
 }
 
-void irt_inst_create_aggregated_data_table(unsigned blocksize) {
+void irt_inst_create_aggregated_data_table() {
 	irt_instrumentation_aggregated_data_table* table = (irt_instrumentation_aggregated_data_table*)malloc(sizeof(irt_instrumentation_aggregated_data_table));
-	table->blocksize = blocksize;
+	table->blocksize = IRT_INST_WORKER_PD_BLOCKSIZE;
 	table->size = table->blocksize * 2;
 	table->number_of_elements = 0;
 	table->data = (irt_instrumentation_aggregated_data*)malloc(sizeof(irt_instrumentation_aggregated_data) * table->size);
@@ -561,7 +561,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
-	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
+	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
@@ -643,7 +643,7 @@ void irt_inst_aggregated_data_output() {
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
-	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
+	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);

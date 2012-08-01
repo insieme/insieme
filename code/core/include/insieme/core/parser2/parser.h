@@ -46,6 +46,8 @@
 #include <vector>
 
 #include "insieme/core/ir.h"
+#include "insieme/core/ir_builder.h"
+
 #include "insieme/utils/printable.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/string_utils.h"
@@ -164,7 +166,7 @@ namespace parser {
 
 
 
-	class Context {
+	class Context : public IRBuilder {
 
 		bool speculative;
 
@@ -245,7 +247,8 @@ namespace parser {
 
 
 		Context(const Grammar& grammar, NodeManager& manager, const TokenIter& begin, const TokenIter& end, bool speculative = true)
-			: speculative(speculative),
+			: IRBuilder(manager),
+			  speculative(speculative),
 			  variableScope(std::make_shared<ScopeManager>()),
 			  typeScope(std::make_shared<ScopeManager>()),
 			  nestingLevel(0),
@@ -255,7 +258,8 @@ namespace parser {
 			  end(end) {}
 
 		Context(const Context& context, const TokenIter& begin, const TokenIter& end)
-			: speculative(context.speculative),
+			: IRBuilder(context.getNodeManager()),
+			  speculative(context.speculative),
 			  variableScope(context.variableScope),
 			  typeScope(context.typeScope),
 			  nestingLevel(context.nestingLevel),
@@ -445,6 +449,78 @@ namespace parser {
 		}
 
 	};
+
+	namespace detail {
+
+		class TokenSet : public utils::Printable {
+
+			/**
+			 * Individual tokens covered by this set.
+			 */
+			vector<Token> tokens;
+
+			/**
+			 * A bit-vector representing the mask of token types covered
+			 * by this set.
+			 */
+			unsigned tokenTypeMask;
+
+		public:
+			struct all {};
+
+			TokenSet() : tokenTypeMask(0) {};
+
+			template<typename ... Elements>
+			TokenSet(const Elements& ... elements)
+				: tokens(toVector(elements...)),
+				  tokenTypeMask(0) {};
+
+			TokenSet(const Token::Type& type)
+				: tokenTypeMask(1<<type) {}
+
+			TokenSet(const all&)
+				: tokenTypeMask((1<<16) -1) {}
+
+			bool contains(const Token& token) const {
+				return coversType(token) || coversToken(token);
+			}
+
+			bool add(const Token& token);
+			bool add(const Token::Type& type);
+			bool add(const TokenSet& other);
+
+			bool isSubSet(const TokenSet& other) const;
+
+			TokenSet& operator+=(const Token& token);
+			TokenSet& operator+=(const Token::Type& type);
+			TokenSet& operator+=(const TokenSet& other);
+
+			TokenSet operator+(const TokenSet& other) const {
+				return TokenSet(*this) += other;
+			}
+
+		protected:
+
+			virtual std::ostream& printTo(std::ostream& out) const;
+
+		private:
+
+			bool coversType(const Token::Type& type) const {
+				return (tokenTypeMask & (1<<type));
+			}
+
+			bool coversType(const Token& token) const {
+				return coversType(token.getType());
+			}
+
+			bool coversToken(const Token& token) const {
+				return any(tokens, [&](const Token& cur) { return cur==token; });
+			}
+
+		};
+
+	}
+
 
 	/**
 	 * A base class for all grammar terms. A term could be a terminal, a non-terminal,
@@ -748,9 +824,15 @@ namespace parser {
 
 		TermPtr body;
 
+		// the set of tokens forming definite terminal characters
+		detail::TokenSet terminator;
+
 	public:
 
 		Loop(const TermPtr& body) : body(body) {}
+
+		template<typename ... Terminators>
+		Loop(const TermPtr& body, const Terminators& ... terminators) : body(body), terminator(terminators...) {}
 
 		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const;
 
@@ -812,79 +894,6 @@ namespace parser {
 	};
 
 
-	namespace detail {
-
-		class TokenSet : public utils::Printable {
-
-			/**
-			 * Individual tokens covered by this set.
-			 */
-			vector<Token> tokens;
-
-			/**
-			 * A bit-vector representing the mask of token types covered
-			 * by this set.
-			 */
-			unsigned tokenTypeMask;
-
-		public:
-			struct all {};
-
-			TokenSet() : tokenTypeMask(0) {};
-
-			TokenSet(const Token& element)
-				: tokens(toVector(element)),
-				  tokenTypeMask(0) {};
-
-			TokenSet(const Token::Type& type)
-				: tokenTypeMask(1<<type) {}
-
-			TokenSet(const all&)
-				: tokenTypeMask((1<<16) -1) {}
-
-			bool contains(const Token& token) const {
-				return coversType(token) || coversToken(token);
-			}
-
-			bool add(const Token& token);
-			bool add(const Token::Type& type);
-			bool add(const TokenSet& other);
-
-			bool isSubSet(const TokenSet& other) const;
-
-			TokenSet& operator+=(const Token& token);
-			TokenSet& operator+=(const Token::Type& type);
-			TokenSet& operator+=(const TokenSet& other);
-
-			TokenSet operator+(const TokenSet& other) const {
-				return TokenSet(*this) += other;
-			}
-
-		protected:
-
-			virtual std::ostream& printTo(std::ostream& out) const;
-
-		private:
-
-			bool coversType(const Token::Type& type) const {
-				return (tokenTypeMask & (1<<type));
-			}
-
-			bool coversType(const Token& token) const {
-				return coversType(token.getType());
-			}
-
-			bool coversToken(const Token& token) const {
-				return any(tokens, [&](const Token& cur) { return cur==token; });
-			}
-
-		};
-
-
-
-	}
-
-
 
 	class Grammar : public utils::Printable {
 
@@ -926,6 +935,10 @@ namespace parser {
 				auto pos = parenthesePairs.find(open);
 				assert(pos != parenthesePairs.end());
 				return pos->second;
+			}
+
+			bool hasParenthesePairs() const {
+				return !parenthesePairs.empty();
 			}
 
 		protected:
@@ -1014,6 +1027,8 @@ namespace parser {
 		static Productions toProductions(const string& symbol, const vector<RulePtr>& rules);
 
 		void updateTermInfo() const;
+
+		bool checkParenthese(const TokenIter& begin, const TokenIter& end) const;
 	};
 
 
@@ -1110,6 +1125,11 @@ namespace parser {
 
 	inline TermPtr loop(const TermPtr& body) {
 		return std::make_shared<Loop>(body);
+	}
+
+	template<typename ... Terminators>
+	inline TermPtr loop(const TermPtr& body, const Terminators& ... terminators) {
+		return std::make_shared<Loop>(body, terminators...);
 	}
 
 	inline TermPtr list(const TermPtr& element, const TermPtr& seperator) {
