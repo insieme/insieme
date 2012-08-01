@@ -110,7 +110,7 @@ typedef struct _irt_instrumentation_region_data {
 	uint64 timestamp;
 	int32 event;
 	uint64 subject_id;
-	_irt_instrumentation_region_data_values data[NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES];
+	_irt_instrumentation_region_data_values data[IRT_INST_NUMBER_OF_REGION_DATA_ENTRIES];
 } irt_instrumentation_region_data;
 
 typedef struct _irt_instrumentation_region_data_table {

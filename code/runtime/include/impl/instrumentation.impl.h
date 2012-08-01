@@ -152,7 +152,7 @@ void irt_inst_event_data_output(irt_worker* worker) {
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
-	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
+	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
@@ -303,7 +303,7 @@ void irt_inst_set_all_instrumentation(bool enable) {
 }
 
 void irt_inst_set_all_instrumentation_from_env() {
-	if(getenv(IRT_INST_WORKER_EVENT_LOGGING) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING), "true") == 0) {
+	if(getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV), "true") == 0) {
 		irt_inst_set_all_instrumentation(true);
 		irt_log_setting_s("IRT_INST_WORKER_EVENT_LOGGING", "enabled");
 		return;
@@ -561,7 +561,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
-	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
+	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
@@ -643,7 +643,7 @@ void irt_inst_aggregated_data_output() {
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
-	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
+	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
