@@ -106,14 +106,12 @@ using namespace insieme::utils::log;
 
 	
 	void Converter::setMainName(const core::NodePtr& prog) {
-		LOG(INFO) << "SET MAIN NAME A";
 		// check for the program
 		if (prog->getNodeType() != core::NT_Program) {
 			return;
 		}
 		const core::ProgramPtr& program = static_pointer_cast<const core::Program>(prog);
 		
-		LOG(INFO) << "SET MAIN NAME C";
 		// find entry func lambda
 		const core::ExpressionPtr& mainExpr = program->getEntryPoints()[0];
 		if (mainExpr->getNodeType() != core::NT_LambdaExpr) {
@@ -122,7 +120,6 @@ using namespace insieme::utils::log;
 		const core::LambdaExprPtr& main = static_pointer_cast<const core::LambdaExpr>(mainExpr);
 		
 		// set name of entry func
-		LOG(INFO) << "SET MAIN NAME";
 		getNameManager().setName(main->getLambda(), "main");
 	}
 
