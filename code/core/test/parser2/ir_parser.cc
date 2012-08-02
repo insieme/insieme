@@ -287,6 +287,19 @@ namespace parser {
 				parse(manager, "1+2*3")
 		);
 
+		// check associativity
+		EXPECT_EQ(
+				builder.add(builder.add(one, two), tre),
+				parse(manager, "1+2+3")
+		);
+
+
+		// known bug: same precedence, different operator
+//		EXPECT_EQ(
+//				builder.sub(builder.add(one, two), tre),
+//				parse(manager, "1+2-3")
+//		);
+
 
 		// TODO: fix this one
 //		EXPECT_EQ(
