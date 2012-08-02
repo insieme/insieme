@@ -255,8 +255,29 @@ void irt_inst_event_data_output(irt_worker* worker) {
 	int ocl_helper_table_counter = 0;
 #endif
 
-	for(int i = 0; i < table->number_of_elements; ++i)
-		fprintf(outputfile, "%s,%lu,%s,%lu\n", irt_g_instrumentation_group_names[table->data[i].event], table->data[i].subject_id, irt_g_instrumentation_event_names[table->data[i].event], irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+	if(getenv(IRT_INST_BINARY_OUTPUT_ENV) && strcmp(getenv(IRT_INST_BINARY_OUTPUT_ENV), "true") == 0) {
+		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "enabled");
+
+		/* mark the first 8 bytes (64 bit) with "INSIEME1" and dump everything in binary according to the following format:
+		 *
+		 * 160...........................................................................................0
+		 * [31.event_number.0][63............subject_id...........0][63...............time..............0]
+		 * ...
+		 */
+
+		const char* header = "INSIEME1";
+		fwrite(header, sizeof(char), 8, outputfile);
+		for(int i = 0; i < table->number_of_elements; ++i) {
+			fwrite(&(table->data[i].event), sizeof(uint32), 1, outputfile);
+			fwrite(&(table->data[i].subject_id), sizeof(uint64), 1, outputfile);
+			uint64 test = irt_time_convert_ticks_to_ns(table->data[i].timestamp);
+			fwrite(&(test), sizeof(uint64), 1, outputfile);
+		}
+	} else {
+		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "disabled");
+		for(int i = 0; i < table->number_of_elements; ++i)
+			fprintf(outputfile, "%s,%lu,%s,%lu\n", irt_g_instrumentation_group_names[table->data[i].event], table->data[i].subject_id, irt_g_instrumentation_event_names[table->data[i].event], irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+	}
 
 	fclose(outputfile);
 #ifdef USE_OPENCL
