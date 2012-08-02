@@ -99,8 +99,7 @@ static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item*
 /* Either runs wi directly on the current worker, or acts identically to
  * irt_scheduling_assign_wi. The decision depends on the scheduling policy.
  */
-irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi);
-
+inline irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi);
 
 /* Either runs implementation directly on the current worker, or creates a work item
  * for it and acts identically to irt_scheduling_assign_wi. The decision depends on the scheduling policy.
@@ -122,4 +121,6 @@ void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi);
 #include "sched_policies/irt_sched_stealing.h"
 #elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_STEALING_CIRCULAR
 #include "sched_policies/irt_sched_stealing_circular.h"
+#else
+#error "No scheduling policy set"
 #endif

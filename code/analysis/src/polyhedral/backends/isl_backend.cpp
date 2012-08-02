@@ -342,6 +342,12 @@ SetPtr<ISL> operator+(IslSet& lhs, const IslSet& rhs) {
 	return SetPtr<ISL>(ctx, set);
 }
 
+SetPtr<ISL> operator-(IslSet& lhs, const IslSet& rhs) {
+	IslCtx& ctx = lhs.getCtx();
+	isl_union_set* set = isl_union_set_subtract(lhs.getIslObj(), rhs.getIslObj());
+	return SetPtr<ISL>(ctx, set);
+}
+
 SetPtr<ISL> operator*(IslSet& lhs, const IslSet& rhs) {
 	IslCtx& ctx = lhs.getCtx();
 	isl_union_set* set = isl_union_set_intersect(lhs.getIslObj(), rhs.getIslObj());

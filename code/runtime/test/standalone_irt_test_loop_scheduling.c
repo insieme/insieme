@@ -124,21 +124,21 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
 
-	irt_loop_sched_policy static10 = (irt_loop_sched_policy){IRT_STATIC_CHUNKED, 1024, 10};
+	irt_loop_sched_policy static10 = {IRT_STATIC_CHUNKED, 1024, 10};
 	irt_wg_set_loop_scheduling_policy(wg, &static10);
 	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
 
-	irt_loop_sched_policy dynamic10 = (irt_loop_sched_policy){IRT_DYNAMIC_CHUNKED, 1024, 2};
+	irt_loop_sched_policy dynamic10 = {IRT_DYNAMIC_CHUNKED, 1024, 2};
 	irt_wg_set_loop_scheduling_policy(wg, &dynamic10);
 	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
 
-	irt_loop_sched_policy guided10 = (irt_loop_sched_policy){IRT_GUIDED_CHUNKED, 1024, 10};
+	irt_loop_sched_policy guided10 = {IRT_GUIDED_CHUNKED, 1024, 10};
 	irt_wg_set_loop_scheduling_policy(wg, &guided10);
 	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
 	irt_wg_barrier(wg);

@@ -175,7 +175,7 @@ dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in, cons
 					}
 				}
 
-				Access var = makeAccess(ExpressionAddress(expr));
+				Access var = getImmediateAccess(ExpressionAddress(expr), cfg.getAliasMap());
 
 				dfa::Value<LiteralPtr> lit = lookup(var,in,cfg);
 
@@ -219,7 +219,7 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 
 		auto handle_def = [&](const VariablePtr& var, const ExpressionPtr& init) { 
 			
-			Access def = makeAccess(ExpressionAddress(var));
+			Access def = getImmediateAccess(ExpressionAddress(var), getCFG().getAliasMap());
 
 			ExpressionPtr initVal = init;
 
@@ -276,7 +276,10 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 		} else if ( cur.getType() == cfg::Element::LOOP_INCREMENT ) {
 			// make sure that the loop iterator is not a constant 
 			//
-			Access acc = makeAccess(cur.getStatementAddress().as<ForStmtAddress>()->getDeclaration()->getVariable());
+			Access acc = getImmediateAccess(
+					cur.getStatementAddress().as<ForStmtAddress>()->getDeclaration()->getVariable(),
+					getCFG().getAliasMap()
+				);
 			gen.insert( std::make_tuple(acc, dfa::bottom) );
 			
 			// kill all declarations reaching this block 

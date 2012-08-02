@@ -36,25 +36,11 @@
 
 #pragma once
 
-// for now, we are also working with pthreads under windows
+// a macro which creates a new struct of the specified type on the stack, uses compound initializer under linux
+// and a function which creates and returns a struct under windows (because Visual Studio does not support the compound initializer)
 
-#include "irt_inttypes.h"
-#include "declarations.h"
-
-#if defined(_MSC_VER) && !defined(IRT_USE_PTHREADS)
-	#include <Windows.h>
-	typedef HANDLE irt_thread;
+#ifdef _MSC_VER
+	#define IRT_STACK_STRUCT(__name, ...) (__name##_create(__VA_ARGS__))
 #else
-	#include <pthread.h>
-	typedef pthread_t irt_thread;
+	#define IRT_STACK_STRUCT(__name, ...) ((__name){__VA_ARGS__})
 #endif
-
-
-// HANDLE = void* 
-// pthread_t = (unsigned) int
-
-// typedef the signature of function executed by thread
-typedef void* irt_thread_func(void*);
-
-/** create a new thread executing fun with parameter args */
-irt_thread irt_thread_create(irt_thread_func *fun, void *args);
