@@ -1199,6 +1199,19 @@ namespace parser {
 		return std::make_shared<Action<new_scope_handler>>(term);
 	}
 
+	TermPtr symScop(const TermPtr& term) {
+		// define action event handler
+		struct new_scope_handler : public detail::actions {
+			void enter(Context& context, const TokenIter& begin, const TokenIter& end) const {
+				context.getSymbolManager().pushScope(true);
+			}
+			void leave(Context& context, const TokenIter& begin, const TokenIter& end) const {
+				context.getSymbolManager().popScope();
+			}
+		};
+		return std::make_shared<Action<new_scope_handler>>(term);
+	}
+
 } // end namespace parser
 } // end namespace core
 } // end namespace insieme
