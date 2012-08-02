@@ -52,10 +52,10 @@ int main() {
 	}
 	
 	// print verification check result
-	if (*success) {
-		print("OK\n");
-	} else {
+	if (!success) {
 		print("Fail\n");
+		return 1;
 	}
-	
+	print("OK\n");
+	return 0;
 }

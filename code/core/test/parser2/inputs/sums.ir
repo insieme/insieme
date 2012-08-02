@@ -9,7 +9,7 @@ let sum = (int n)->int {
 	return *sum;
 };
 
-int main() {
+unit main() {
 
 	// use summation function
 	print("Sum: %d\n", sum(100));

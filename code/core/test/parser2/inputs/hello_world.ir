@@ -1,4 +1,4 @@
 
-int main() {
+unit main() {
 	print("Hello World!");
 }
