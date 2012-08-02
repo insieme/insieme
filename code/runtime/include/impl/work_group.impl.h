@@ -72,6 +72,7 @@ irt_work_group* irt_wg_create() {
 	return wg;
 }
 void irt_wg_destroy(irt_work_group* wg) {
+	_irt_del_wg_event_register(wg->id);
 	pthread_spin_destroy(&wg->lock);
 	_irt_wg_recycle(wg);
 }
@@ -81,6 +82,7 @@ static inline void _irt_wg_end_member(irt_work_group* wg) {
 	irt_atomic_inc(&wg->ended_member_count);
 	if(irt_atomic_bool_compare_and_swap(&wg->ended_member_count, wg->local_member_count, 0)) { // TODO set to 0 ok? delete group?
 		irt_wg_event_trigger(wg->id, IRT_WG_EV_COMPLETED);
+		irt_wg_destroy(wg);
 	}
 }
 

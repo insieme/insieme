@@ -67,7 +67,8 @@ static inline void _irt_del_##__short__##_event_register(irt_##__subject__##_id 
 } \
  \
 void _irt_##__short__##_event_register_only(irt_##__short__##_event_register *reg) { \
-	 irt_##__short__##_event_register_table_insert(reg); \
+	/* assert(irt_##__short__##_event_register_table_lookup(reg->id) == NULL); */ \
+	irt_##__short__##_event_register_table_insert(reg); \
 } \
  \
 uint32 irt_##__short__##_event_check(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code) { \
@@ -86,6 +87,12 @@ uint32 irt_##__short__##_event_check_gt_and_register(irt_##__subject__##_id __sh
 	newreg->id.value.full = __short__##_id.value.full; \
 	newreg->id.cached = newreg; \
 	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
+	/* put new reg on reuse list if it was not used */ \
+	if(reg != newreg) { \
+		irt_worker* self = irt_worker_get_current(); \
+		newreg->lookup_table_next = self->__short__##_ev_register_list; \
+		self->__short__##_ev_register_list = newreg; \
+	} \
 	pthread_spin_lock(&reg->lock); \
 	/* check if event already occurred */ \
 	if(reg->occurrence_count[event_code] > p_val) { \
@@ -109,6 +116,12 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_
 	newreg->id.value.full = __short__##_id.value.full; \
 	newreg->id.cached = newreg; \
 	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
+	/* put new reg on reuse list if it was not used */ \
+	if(reg != newreg) { \
+		irt_worker* self = irt_worker_get_current(); \
+		newreg->lookup_table_next = self->__short__##_ev_register_list; \
+		self->__short__##_ev_register_list = newreg; \
+	} \
 	pthread_spin_lock(&reg->lock); \
 	/* increase event count */ \
 	++reg->occurrence_count[event_code]; \
@@ -133,6 +146,12 @@ void irt_##__short__##_event_set_occurrence_count(irt_##__subject__##_id __short
 	newreg->id.value.full = __short__##_id.value.full; \
 	newreg->id.cached = newreg; \
 	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
+	/* put new reg on reuse list if it was not used */ \
+	if(reg != newreg) { \
+		irt_worker* self = irt_worker_get_current(); \
+		newreg->lookup_table_next = self->__short__##_ev_register_list; \
+		self->__short__##_ev_register_list = newreg; \
+	} \
 	pthread_spin_lock(&reg->lock); \
 	/* set event count */ \
 	reg->occurrence_count[event_code] = count; \

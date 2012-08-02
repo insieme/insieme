@@ -118,7 +118,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	// TODO store size in LWDT
 	if(params != NULL) {
 		uint32 size = self->cur_context.cached->type_table[params->type_id].bytes;
-		if(size<=IRT_WI_PARAM_BUFFER_SIZE) 
+		if(size <= IRT_WI_PARAM_BUFFER_SIZE) 
 			wi->parameters = (irt_lw_data_item*)wi->param_buffer;
 		else 
 			wi->parameters = (irt_lw_data_item*)malloc(size); 
@@ -183,16 +183,14 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-	void
-	#ifdef _M_IX86
-	__fastcall
-	#endif
-	_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
-		func(wi);
-		irt_wi_end(wi);
-	}
-
+void
+#if _M_IX86 && _MSC_VER 
+__fastcall
+#endif
+_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
+	func(wi);
+	irt_wi_end(wi);
+}
 #ifdef __cplusplus
 }
 #endif
@@ -279,9 +277,6 @@ void irt_wi_end(irt_work_item* wi) {
 	irt_inst_region_add_time(wi);
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINISHED, wi->id);
 
-	// delete params struct
-	if(wi->parameters != (irt_lw_data_item*)wi->param_buffer) free(wi->parameters);
-
 	// check for parent, if there, notify
 	if(wi->parent_num_active_children) {
 		if(irt_atomic_sub_and_fetch(wi->parent_num_active_children, 1) == 0) {
@@ -297,6 +292,9 @@ void irt_wi_end(irt_work_item* wi) {
 		IRT_DEBUG("Fragment end, remaining %d", source->num_fragments);
 		irt_atomic_fetch_and_sub(&source->num_fragments, 1);
 		if(source->num_fragments == 0) irt_wi_end(source);
+	} else {
+		// delete params struct
+		if(wi->parameters != (irt_lw_data_item*)wi->param_buffer) free(wi->parameters);
 	}
 
 	// remove from groups

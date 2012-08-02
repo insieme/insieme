@@ -243,21 +243,20 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_affinity_policy aff_policy = irt_load_affinity_from_env();
 
 	// initialize workers
-	irt_worker_init_signal *signal = (irt_worker_init_signal*)malloc(sizeof(irt_worker_init_signal));
-	// ^ note that this memory is "leaked" (24 bytes). No one cares.
-	signal->init_count = 0;
-	pthread_mutex_init(&signal->init_mutex, NULL);
-	pthread_cond_init(&signal->init_condvar, NULL);
+	static irt_worker_init_signal signal;
+	signal.init_count = 0;
+	pthread_mutex_init(&signal.init_mutex, NULL);
+	pthread_cond_init(&signal.init_condvar, NULL);
 	for(int i=0; i<irt_g_worker_count; ++i) {
-		irt_worker_create(i, irt_get_affinity(i, aff_policy), signal);
+		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signal);
 	}
 
 	// wait until all workers are initialized
-	pthread_mutex_lock(&signal->init_mutex);
-	if(signal->init_count < irt_g_worker_count) {
-		pthread_cond_wait(&signal->init_condvar, &signal->init_mutex);
+	pthread_mutex_lock(&signal.init_mutex);
+	if(signal.init_count < irt_g_worker_count) {
+		pthread_cond_wait(&signal.init_condvar, &signal.init_mutex);
 	}
-	pthread_mutex_unlock(&signal->init_mutex);
+	pthread_mutex_unlock(&signal.init_mutex);
 	
 #ifdef USE_OPENCL
 	irt_log_comment("Running Insieme runtime with OpenCL!\n");
@@ -297,12 +296,7 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	handler.next = NULL;
 	handler.data = &mutex;
 	handler.func = &_irt_runtime_standalone_end_func;
-	irt_wi_event_register* ev_reg = (irt_wi_event_register*)calloc(1, sizeof(irt_wi_event_register));
-	pthread_spin_init(&ev_reg->lock, PTHREAD_PROCESS_PRIVATE);
-	ev_reg->handler[IRT_WI_EV_COMPLETED] = &handler;
-	ev_reg->id.value.full = main_wi->id.value.full;
-	ev_reg->id.cached = ev_reg;
-	_irt_wi_event_register_only(ev_reg);
+	irt_wi_event_check_and_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 	pthread_mutex_lock(&mutex);
