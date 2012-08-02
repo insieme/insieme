@@ -106,6 +106,7 @@ struct SetPtr: public std::shared_ptr<SET_TYPE(B)> {
 		std::shared_ptr<SET_TYPE(B)>( std::make_shared<SET_TYPE(B)>(ctx, args...) ) { }
 
 	SetPtr<B>& operator+=(const SetPtr<B>& other);
+	SetPtr<B>& operator-=(const SetPtr<B>& other);
 	SetPtr<B>& operator*=(const SetPtr<B>& other);
 
 };
@@ -253,6 +254,22 @@ MapPtr<B>& MapPtr<B>::operator*=(const SetPtr<B>& other) {
 template <Backend B>
 PiecewisePtr<B>& PiecewisePtr<B>::operator*=(const SetPtr<B>& other) {
 	*this = *this * other;
+	return *this;
+}
+
+
+/**
+ * Set Difference 
+ */
+template <Backend B>
+SetPtr<B> operator-(SET_TYPE(B)& lhs, const SET_TYPE(B)& rhs);
+
+template <Backend B>
+inline SetPtr<B> operator-(const SetPtr<B>& lhs, const SetPtr<B>& rhs) { return *lhs - *rhs; }
+
+template <Backend B>
+inline SetPtr<B>& SetPtr<B>::operator-=(const SetPtr<B>& other) { 
+	*this = *this - other;
 	return *this;
 }
 

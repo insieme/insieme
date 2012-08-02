@@ -153,7 +153,7 @@ void extract(const std::vector<AffineConstraintPtr>& conjunctions, const Element
 } // end anonymous namespace 
 
 
-utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::ExpressionAddress& addr) {
+std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::ExpressionAddress& addr) {
 	
 	// Find the enclosing SCoP (if any)
 	core::NodeAddress prev = addr;
@@ -162,15 +162,17 @@ utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::Expr
 	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && !parent->hasAnnotation( scop::ScopRegion::KEY) ) { prev=parent; } 
 
 	// This statement is not part of a SCoP (also may throw an exception)
-	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { 
-		return utils::CombinerPtr<core::arithmetic::Formula>(); 
+	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) || !parent->getAnnotation( scop::ScopRegion::KEY )->isValid()) { 
+		return std::make_pair(NodeAddress(), AffineConstraintPtr()); 
 	}
 
 	StatementAddress enclosingScop = parent.as<StatementAddress>();
 
 	prev = parent;
 	// Iterate throgh the stateemnts until we find the entry point of the SCoP
-	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) ) { 
+	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) &&
+			parent->getAnnotation( scop::ScopRegion::KEY )->isValid() ) 
+	{ 
 		prev=parent;
 	} 
 
@@ -207,54 +209,63 @@ utils::CombinerPtr<core::arithmetic::Formula> getVariableDomain(const core::Expr
 
 	IterationDomain domain( extract_surrounding_domain() );
 
-	if (domain.universe()) { return utils::CombinerPtr<core::arithmetic::Formula>(); }
-
-	if (domain.empty()) {  
-		return utils::castTo<AffineFunction, core::arithmetic::Formula>(domain.getConstraint()); 
+	if (domain.universe() || domain.empty()) { 
+		return std::make_pair(NodeAddress(), domain.getConstraint()); 
 	}
 
-	AffineFunction func(scop.getIterationVector(), addr.getAddressedNode());
+	try {
 
-	// otherwise this is a composed by a conjunction of constraints. we need to analyze the
-	// contraints in order to determine the minimal constraint which defines the given expression 
-	AffineConstraintPtr constraints = domain.getConstraint(); 
+		AffineFunction func(scop.getIterationVector(), addr.getAddressedNode());
 
-	DisjunctionList resultConj;
-	for( auto conj : utils::getConjunctions(utils::toDNF(constraints))  ) {
-		
-		auto cmp  = [](const AffineConstraintPtr& lhs, const AffineConstraintPtr& rhs) -> bool { 
-			assert( lhs && rhs );
-			return *std::static_pointer_cast<RawAffineConstraint>(lhs) < 
-				   *std::static_pointer_cast<RawAffineConstraint>(rhs); 
-		};
-		std::set<AffineConstraintPtr, decltype(cmp)> curConj(cmp);
-		std::set<const Element*> checked;
+		// otherwise this is a composed by a conjunction of constraints. we need to analyze the
+		// contraints in order to determine the minimal constraint which defines the given expression 
+		AffineConstraintPtr constraints = domain.getConstraint(); 
 
-		for_each(func.begin(), func.end(), [&](const AffineFunction::Term& term) {
-			if (term.second != 0 && term.first.getType() != Element::CONST) {
-				extract(conj, term.first, checked, curConj);
-			}
-		});
-		
-		if (!curConj.empty()) resultConj.push_back( ConjunctionList(curConj.begin(), curConj.end())); 
+		DisjunctionList resultConj;
+		for( auto conj : utils::getConjunctions(utils::toDNF(constraints))  ) {
+			
+			auto cmp  = [](const AffineConstraintPtr& lhs, const AffineConstraintPtr& rhs) -> bool { 
+				assert( lhs && rhs );
+				return *std::static_pointer_cast<RawAffineConstraint>(lhs) < 
+					   *std::static_pointer_cast<RawAffineConstraint>(rhs); 
+			};
+			std::set<AffineConstraintPtr, decltype(cmp)> curConj(cmp);
+			std::set<const Element*> checked;
+
+			for_each(func.begin(), func.end(), [&](const AffineFunction::Term& term) {
+				if (term.second != 0 && term.first.getType() != Element::CONST) {
+					extract(conj, term.first, checked, curConj);
+				}
+			});
+			
+			if (!curConj.empty()) resultConj.push_back( ConjunctionList(curConj.begin(), curConj.end())); 
+		}
+
+		auto cons = utils::fromConjunctions(resultConj);
+
+		if (!cons) { return std::make_pair(enclosingScop, AffineConstraintPtr()); }
+
+		/* Simplify the constraint by using the polyhedral model library */
+		auto&& ctx = makeCtx();
+		auto&& set = makeSet(ctx, IterationDomain(cons));
+		set->simplify();
+
+		IterationVector iterVec;
+		cons = set->toConstraint(addr->getNodeManager(), iterVec);
+		// If we end-up with an empty constraints it means that the result is the universe 
+		if (!cons) { 
+			return std::make_pair(prev, AffineConstraintPtr()); 
+		}
+
+		// Need to represent the constraint based on the iteration vector stored in the Scop object
+		// which will survive the lifetime of this method
+		IterationDomain curr_dom( scop.getIterationVector(), IterationDomain(cons) );
+		return make_pair(prev, curr_dom.getConstraint());
+
+	} catch (NotAffineExpr&& e) {
+		// The expression is not an affine function, therefore we give up
+		return std::make_pair(prev, AffineConstraintPtr());
 	}
-
-	auto cons = utils::fromConjunctions(resultConj);
-
-	if (!cons) { return utils::CombinerPtr<core::arithmetic::Formula>(); }
-
-	/* Simplify the constraint by using the polyhedral model library */
-	auto&& ctx = makeCtx();
-	auto&& set = makeSet(ctx, IterationDomain(cons));
-	set->simplify();
-
-	IterationVector iterVec;
-	cons = set->toConstraint(addr->getNodeManager(), iterVec);
-	
-	// If we end-up with an empty constraints it means that the result is the universe 
-	if (!cons) { return utils::CombinerPtr<core::arithmetic::Formula>(); }
-
-	return utils::castTo<AffineFunction, core::arithmetic::Formula>(cons);
 }	
 
 

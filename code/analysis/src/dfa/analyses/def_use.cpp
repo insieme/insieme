@@ -92,9 +92,9 @@ DefUse::defs_iterator DefUse::defs_begin(const core::ExpressionAddress& expr) co
 	std::set<Access> entities;
 	
 	for ( auto alias : pimpl->cfg->getAliasMap().lookupAliases(expr) ) {
-		entities.insert( makeAccess(core::ExpressionAddress(alias)) );
+		entities.insert( getImmediateAccess( core::ExpressionAddress(alias), pimpl->cfg->getAliasMap()) );
 	}
-	entities.insert( makeAccess(expr) );
+	entities.insert( getImmediateAccess(expr, pimpl->cfg->getAliasMap()) );
 
 	std::cout << entities << std::endl;
 

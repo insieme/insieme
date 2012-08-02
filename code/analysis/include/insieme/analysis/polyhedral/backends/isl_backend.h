@@ -202,6 +202,8 @@ public:
 //==== Overloaded operators for IslSet ===========================================================
 SetPtr<ISL> operator+(IslSet& lhs, const IslSet& rhs);
 
+SetPtr<ISL> operator-(IslSet& lhs, const IslSet& rhs);
+
 SetPtr<ISL> operator*(IslSet& lhs, const IslSet& rhs);
 
 /**************************************************************************************************

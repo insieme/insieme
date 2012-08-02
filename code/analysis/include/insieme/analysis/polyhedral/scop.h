@@ -344,7 +344,9 @@ inline boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& root) {
 	}
 	assert(root->hasAnnotation(ScopRegion::KEY));
 	ScopRegion& ann = *root->getAnnotation(ScopRegion::KEY);
+
 	ann.resolve();
+
 	if (!ann.isValid()) { 
 		return boost::optional<Scop>(); 
 	}
