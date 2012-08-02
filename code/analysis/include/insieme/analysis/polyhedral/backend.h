@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/constraint.h"
 
 struct cloogoptions;
 
@@ -338,6 +339,11 @@ MapPtr<B> makeEmptyMap(CtxPtr<B>& ctx, const IterationVector& iterVec = polyhedr
 
 template <Backend B = BACKEND>
 PiecewisePtr<B> makeZeroPiecewise(CtxPtr<B>& ctx) { return PiecewisePtr<B>(*ctx); }
+
+//template <Backend B = BACKEND>
+//PiecewisePtr<B> makePiecewise(CtxPtr<B>& ctx, const utils::Piecewise<polyhedtal::AffineFunction>& pw) { 
+//	return PiecewisePtr<B>(*ctx); 
+//}
 
 //===== Dependency analysis =======================================================================
 

@@ -98,7 +98,10 @@ bool Access::operator<(const Access& other) const {
 	if (!dom && other.dom) 		  	{ return true; }
 
 	// we are in the same context 
-	return dom < other.dom; 
+	if (*dom != *other.dom) 		{ return dom < other.dom; }
+
+	// otherwise if the dom is the same, we have to compare the expression
+	return toIR(base_expr->getNodeManager(), arr_access) < toIR(base_expr->getNodeManager(), other.arr_access);
 }
 
 /** 
@@ -122,9 +125,7 @@ Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& a
 		return Access(expr, 
 				expr.getAddressedNode().as<VariablePtr>(), 
 				dpBuilder.getPath(), 
-				VarType::SCALAR,
-				Constraint(), 
-				core::NodeAddress()
+				VarType::SCALAR
 			);
 	}
 	assert(expr->getNodeType() == NT_CallExpr);
@@ -161,9 +162,7 @@ Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& a
 					callExpr, 
 					var, 
 					dpBuilder.component( args[1].as<LiteralAddress>().getValue() ).getPath(),
-					VarType::TUPLE,
-					Constraint(),
-					core::NodeAddress()
+					VarType::TUPLE
 				);
 		}
 
@@ -173,9 +172,7 @@ Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& a
 					callExpr,
 					var,
 					dpBuilder.member( args[1].as<LiteralAddress>()->getValue().getValue()).getPath(),
-					VarType::MEMBER,
-					Constraint(),
-					core::NodeAddress()
+					VarType::MEMBER
 				);
 		}
 
@@ -193,9 +190,7 @@ Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& a
 						callExpr,
 						var,
 						dpBuilder.element(static_cast<int64_t>(f.getConstantValue())).getPath(),
-						VarType::ARRAY,
-						Constraint(),
-						core::NodeAddress()
+						VarType::ARRAY
 					);
 			}
 			

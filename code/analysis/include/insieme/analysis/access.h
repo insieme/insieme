@@ -102,18 +102,23 @@ class Access : public utils::Printable {
 	 */
 	core::NodeAddress ctx;
 
+	core::arithmetic::Formula 	arr_access;
+
+
 	Access(const core::ExpressionAddress& 		expr, 
 		   const core::VariablePtr& 			var,
 		   const core::datapath::DataPathPtr& 	path, 
 		   const VarType& 						type,
-		   const Constraint& 					dom,
-		   const core::NodeAddress& 			ctx) : 
+		   const Constraint& 					dom = Constraint(),
+		   const core::NodeAddress& 			ctx = core::NodeAddress(), 
+		   const core::arithmetic::Formula&		arr_access = core::arithmetic::Formula()) : 
 		base_expr(expr), 
 		variable(var),
 		path(path), 
 		type(type),
 		dom(dom),
-		ctx(ctx) { }
+		ctx(ctx), 
+		arr_access(arr_access) { }
 
 	friend Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& aliasMap);
 
@@ -142,6 +147,8 @@ public:
 	 * Return the context on which the constraint has validity
 	 */
 	inline const core::NodeAddress& getContext() const { return ctx; }
+
+	inline const core::arithmetic::Formula& getArrayAccess() const { return arr_access; }
 
 	std::ostream& printTo(std::ostream& out) const;
 
@@ -173,9 +180,10 @@ std::set<Access> extractFromStmt(const core::StatementAddress& stmt, const Alias
  * Similar to the previous function, this function collects all memory accesses within a statement,
  * accesses will be append to the provided set 
  */
-void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& accesses, const AliasMap& aliasMap=AliasMap());
-
-
+void extractFromStmt(const core::StatementAddress& stmt, 
+					 std::set<Access>& accesses, 
+					 const AliasMap& aliasMap=AliasMap()
+					);
 
 
 /**

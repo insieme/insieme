@@ -194,16 +194,14 @@ TEST(Access, ArrayAccess) {
 
 	{
 		auto code = parser.parseStatement(
-			"{"
-			"	if( (uint<4>:b>10) )"
-			"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, b));"
-			"}"
+			"if( (uint<4>:b>10) )"
+			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, b))"
 		);
 
 		// perform the polyhedral analysis 
 		polyhedral::scop::mark(code);
 
-		auto access = getImmediateAccess( StatementAddress(code).getAddressOfChild(0).as<IfStmtAddress>()->getThenBody()->getStatement(0).
+		auto access = getImmediateAccess( StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
 										  as<ExpressionAddress>() );
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
@@ -238,8 +236,6 @@ TEST(Access, ArrayAccess) {
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		EXPECT_FALSE(!!access.getConstraint());
-		// EXPECT_EQ("((-v10 + 19*1 >= 0) ^ (v9 + -11*1 >= 0))", toString(*access.getConstraint()));
-		// EXPECT_EQ(code, access.getContext().getAddressedNode()); 
 	}
 
 	{
@@ -265,31 +261,87 @@ TEST(Access, ArrayAccess) {
 	// not affine access => invalid scop
 	{
 		auto code = parser.parseStatement(
-			"{"
-			"   if( ((uint<4>:b>10) && (uint<4>:a<20)) ) {"
-			"	   decl uint<4>:c = (a*b); "
-			"	   (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, c));"
-			"   };"
+			"if( ((uint<4>:b>10) && (uint<4>:a<20)) ) {"
+			"  decl uint<4>:c = (a*b); "
+			"  (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, c));"
 			"}"
 		);
 
 		// perform the polyhedral analysis 
 		auto scop = polyhedral::scop::mark(code);
 		
-		DeclarationStmtAddress decl = StatementAddress(code).getAddressOfChild(0).as<IfStmtAddress>()->getThenBody()->getStatement(0).as<DeclarationStmtAddress>();
+		DeclarationStmtAddress decl = StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
+			as<DeclarationStmtAddress>();
 		// Create an alias for the expression c = b+a;
 		AliasMap map;
 		map.storeAlias( decl->getInitialization(), decl->getVariable().getAddressedNode() );
 
 		auto access = getImmediateAccess( 
-				StatementAddress(code).getAddressOfChild(0).as<IfStmtAddress>()->getThenBody()->getStatement(1). as<ExpressionAddress>(), 
+				StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(1). as<ExpressionAddress>(), 
 				map 
 			);
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		EXPECT_FALSE(!!access.getConstraint());
-		// EXPECT_TRUE( access.getContext() ); 
 	}
 
+}
+
+TEST(Access, SameAccess) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+
+	{
+		auto code = parser.parseStatement(
+			"for(decl uint<4>:i = 0 .. 10 : 1) { " \
+				"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i));"
+				"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i));"
+			"}"
+		);
+		auto access1 = getImmediateAccess( 
+				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
+			);
+		auto access2 = getImmediateAccess( 
+				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(1).as<ExpressionAddress>() 
+			);
+		
+		// std::cout << access1 << std::endl;
+		// std::cout << access2 << std::endl;
+
+		EXPECT_EQ(access1, access2);
+		EXPECT_FALSE( access1<access2 );
+		EXPECT_FALSE( access2<access1 );
+	}
+}
+
+TEST(Access, DifferentAccess) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+
+	{
+		auto code = parser.parseStatement(
+			"for(decl uint<4>:i = 0 .. 10 : 1) { " \
+				"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i));"
+				"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (i+1)));"
+			"}"
+		);
+		auto access1 = getImmediateAccess( 
+				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
+			);
+		auto access2 = getImmediateAccess( 
+				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(1).as<ExpressionAddress>() 
+			);
+		
+		std::cout << access1 << std::endl;
+		std::cout << access2 << std::endl;
+
+		EXPECT_EQ(access1, access2);
+		EXPECT_FALSE( access1<access2 );
+		EXPECT_FALSE( access2<access1 );
+	}
 }
