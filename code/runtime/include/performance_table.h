@@ -78,6 +78,13 @@ const char* irt_g_instrumentation_group_names[] = {
 };
 #undef IRT_INST_EVENT
 
+#define IRT_INST_EVENT(event, group_label, event_label) +1
+uint32 irt_g_inst_num_event_types = 0
+#include "performance_table.def"
+;
+#undef IRT_INST_EVENT
+
+
 typedef struct _irt_region {
 	uint64 cputime;
 	uint64 start_time;

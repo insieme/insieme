@@ -258,7 +258,9 @@ void irt_inst_event_data_output(irt_worker* worker) {
 	if(getenv(IRT_INST_BINARY_OUTPUT_ENV) && strcmp(getenv(IRT_INST_BINARY_OUTPUT_ENV), "true") == 0) {
 		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "enabled");
 
-		/* mark the first 8 bytes (64 bit) with "INSIEME1" and dump everything in binary according to the following format:
+
+		/* TODO: the following documentation is old and needs to be updated:
+		 * mark the first 8 bytes (64 bit) with "INSIEME1" and dump everything in binary according to the following format:
 		 *
 		 * 160...........................................................................................0
 		 * [31.event_number.0][63............subject_id...........0][63...............time..............0]
@@ -266,7 +268,16 @@ void irt_inst_event_data_output(irt_worker* worker) {
 		 */
 
 		const char* header = "INSIEME1";
-		fwrite(header, sizeof(char), 8, outputfile);
+		fprintf(outputfile, "%s", header);
+
+		fwrite(&(irt_g_inst_num_event_types), sizeof(uint32), 1, outputfile);
+
+		for(int i = 0; i < irt_g_inst_num_event_types; ++i)
+			fprintf(outputfile, "%s", irt_g_instrumentation_group_names[i]);
+
+		for(int i = 0; i < irt_g_inst_num_event_types; ++i)
+			fprintf(outputfile, "%-32s", irt_g_instrumentation_event_names[i]);
+
 		for(int i = 0; i < table->number_of_elements; ++i) {
 			fwrite(&(table->data[i].event), sizeof(uint32), 1, outputfile);
 			fwrite(&(table->data[i].subject_id), sizeof(uint64), 1, outputfile);
