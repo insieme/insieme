@@ -636,6 +636,17 @@ namespace parser {
 					}
 			));
 
+			// add usere defined literals
+			g.addRule("E", rule(
+					seq("lit(", cap(any(Token::String_Literal)), ":", T, ")"),
+					[](Context& cur)->NodePtr {
+						// remove initial and final "" from value
+						string value = cur.getSubRange(0).front().getLexeme();
+						value = value.substr(1,value.size()-2);
+						return cur.literal(cur.getTerm(0).as<TypePtr>(), value);
+					}
+			));
+
 
 			// --------------- add expression rules ---------------
 
@@ -837,6 +848,9 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
 						ExpressionPtr b = getOperand(cur, 1);
+						if (a->getType()->getNodeType() == NT_RefType) {
+							return cur.arrayRefElem(a, b);
+						}
 						return cur.arraySubscript(a, b);		// works for arrays and vectors
 					},
 					-15
@@ -847,6 +861,9 @@ namespace parser {
 					seq(E, ".", cap(identifier)),
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						if (a->getType()->getNodeType() == NT_RefType) {
+							return cur.refMember(a, cur.getSubRange(0)[0]);
+						}
 						return cur.accessMember(a, cur.getSubRange(0)[0]);
 					},
 					-15

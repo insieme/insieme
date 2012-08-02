@@ -70,6 +70,8 @@ namespace parser {
 
 		string file = ROOT_DIR + string(GetParam());
 
+		SCOPED_TRACE(file);
+
 		// check whether file is present
 		EXPECT_TRUE(fs::exists(file)) << "File " << file << " should exist!";
 		ASSERT_TRUE(fs::exists(file));
@@ -80,10 +82,10 @@ namespace parser {
 
 		// parse file
 		NodeManager manager;
-		NodePtr res = parse(manager, ss.str());
+		NodePtr res = parse(manager, ss.str(), true);
 
 		// it should have produced a result
-		EXPECT_TRUE(res);
+		ASSERT_TRUE(res);
 
 		// run semantic checks on files
 		auto msg = checks::check(res);

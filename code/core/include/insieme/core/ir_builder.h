@@ -476,11 +476,13 @@ namespace core {
 		}
 
 
-		inline CallExprPtr logicAnd(const ExpressionPtr& a, const ExpressionPtr& b) const {
+		inline CallExprPtr logicAnd(const ExpressionPtr& a, ExpressionPtr b) const {
+			if (b->getType()->getNodeType() != NT_FunctionType) b = wrapLazy(b);
 			return binaryOp(getOperator(lang::BasicGenerator::LAnd, a->getType(), b->getType()), a, b);
 		}
 
-		inline CallExprPtr logicOr(const ExpressionPtr& a, const ExpressionPtr& b) const {
+		inline CallExprPtr logicOr(const ExpressionPtr& a, ExpressionPtr b) const {
+			if (b->getType()->getNodeType() != NT_FunctionType) b = wrapLazy(b);
 			return binaryOp(getOperator(lang::BasicGenerator::LOr, a->getType(), b->getType()), a, b);
 		}
 
