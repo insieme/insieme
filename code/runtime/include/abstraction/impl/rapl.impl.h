@@ -107,7 +107,8 @@ void _irt_get_rapl_energy_consumption(double *package_energy) {
 		return;
 	}
 
-	package = (double) result * energy_units;
+	// upper 32 bit of the result are preserved, so discard them
+	package = (double) (result&0xFFFFFFFF) * energy_units;
 	*package_energy = package;
 
 	_irt_close_msr(file);

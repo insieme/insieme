@@ -139,7 +139,8 @@ int32 _irt_close_msr(int32 file);
 void _irt_get_rapl_energy_consumption(double *package_energy);
 
 /*
- * checks if RAPL is supported - currently, only sandybridge (ex) processors are known to support it
+ * checks if RAPL is supported - currently, only Sandy Bridge (EX) and Ivy Bridge processors are known
+ * to support it, so we simply check for the processor type
  */
 
 bool irt_rapl_is_supported();
