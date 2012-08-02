@@ -122,6 +122,18 @@ namespace compiler {
 	 */
 	string compileToBinary(const Printable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler());
 
+	/**
+	 * Compiles the given source code using the given compiler to the given target file using a temporary
+	 * source file-
+	 *
+	 * @param source the source code to be compiled
+	 * @param target the name of the target file (binary)
+	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
+	 * @return true if successful, false otherwise
+	 */
+	bool compileToBinary(const Printable& source, const string& target, const Compiler& compiler = Compiler::getDefaultC99Compiler());
+
+
 } // end namespace: compiler
 } // end namespace: utils
 } // end namespace: insieme

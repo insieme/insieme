@@ -53,8 +53,8 @@ struct id : public std::unary_function<const T&, const T&> {
 
 
 template<typename PointerType>
-struct deref: public std::unary_function<const PointerType&, const typename PointerType::element_type&> {
-	const typename PointerType::element_type& operator()(const PointerType& ptr) const {
+struct deref: public std::unary_function<const PointerType&, decltype(*PointerType())> {
+	decltype(*PointerType()) operator()(const PointerType& ptr) const {
 		return *ptr;
 	}
 };

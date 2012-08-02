@@ -51,6 +51,22 @@ namespace parser {
 
 	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow = false);
 
+	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow = false);
+
+
+	class IRParserException : public std::exception {
+
+		string msg;
+
+	public:
+
+		IRParserException(const string& msg) : msg(msg) {}
+		virtual ~IRParserException() throw() {};
+
+		virtual const char* what() const throw() {
+			return msg.c_str();
+		}
+	};
 
 } // end namespace parser
 } // end namespace core

@@ -580,6 +580,12 @@ namespace backend {
 			return c_ast::sizeOf(CONVERT_TYPE(target));
 		});
 
+		res[basic.getPrint()] = OP_CONVERTER({
+			// map to invoking the external function printf
+			core::IRBuilder builder(NODE_MANAGER);
+			auto printf = builder.literal("printf", call->getFunctionExpr()->getType());
+			return CONVERT_EXPR(builder.callExpr(LANG_BASIC.getUnit(), printf, ARG(0), ARG(1)));
+		});
 
 		// -- IR extensions --
 
