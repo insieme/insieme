@@ -162,7 +162,7 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && !parent->hasAnnotation( scop::ScopRegion::KEY) ) { prev=parent; } 
 
 	// This statement is not part of a SCoP (also may throw an exception)
-	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) ) { 
+	if ( !parent->hasAnnotation( scop::ScopRegion::KEY ) || !parent->getAnnotation( scop::ScopRegion::KEY )->isValid()) { 
 		return std::make_pair(NodeAddress(), AffineConstraintPtr()); 
 	}
 
@@ -170,7 +170,9 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 
 	prev = parent;
 	// Iterate throgh the stateemnts until we find the entry point of the SCoP
-	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) ) { 
+	while(!prev.isRoot() && (parent = prev.getParentAddress(1)) && parent->hasAnnotation( scop::ScopRegion::KEY) &&
+			parent->getAnnotation( scop::ScopRegion::KEY )->isValid() ) 
+	{ 
 		prev=parent;
 	} 
 
@@ -212,6 +214,7 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 	}
 
 	try {
+
 		AffineFunction func(scop.getIterationVector(), addr.getAddressedNode());
 
 		// otherwise this is a composed by a conjunction of constraints. we need to analyze the
@@ -258,6 +261,7 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 		// which will survive the lifetime of this method
 		IterationDomain curr_dom( scop.getIterationVector(), IterationDomain(cons) );
 		return make_pair(prev, curr_dom.getConstraint());
+
 	} catch (NotAffineExpr&& e) {
 		// The expression is not an affine function, therefore we give up
 		return std::make_pair(prev, AffineConstraintPtr());
