@@ -76,8 +76,10 @@ class Access : public utils::Printable {
 	// Actuall variable being accessed (note that this variable might be an alias)
 	core::VariablePtr			variable;
 
-	// Path to the accessed member/element/component 
-	//  => For scalar, the path is empty 
+	/**
+	 * Path to the accessed member/element/component 
+	 *  => For scalar, the path is empty 
+	 */ 
 	core::datapath::DataPathPtr	path;
 
 	// The type of this access
@@ -113,7 +115,7 @@ class Access : public utils::Printable {
 		dom(dom),
 		ctx(ctx) { }
 
-	friend Access getImmediateAccess(const core::ExpressionAddress& expr);
+	friend Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& aliasMap);
 
 public:
 	
@@ -130,27 +132,51 @@ public:
 	inline core::ExpressionAddress getAccessExpression() const { return base_expr; }
 	inline const core::datapath::DataPathPtr& getPath() const {	return path; }
 
+	/** 
+	 * If this is an array access, it may have associated a constraint which states the range of
+	 * elements being accessed
+	 */
 	inline const Constraint& getConstraint() const { return dom; }
 
+	/** 
+	 * Return the context on which the constraint has validity
+	 */
 	inline const core::NodeAddress& getContext() const { return ctx; }
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	inline bool operator<(const Access& other) const {
-		if (variable < other.variable) { return true; }
-		if (variable > other.variable) { return false; }
-		return path < other.path;
-	}
+	/** 
+	 * Define a partial order for accesses 
+	 */
+	bool operator<(const Access& other) const;
 
 	inline bool operator==(const Access& other) const { return *variable == *other.variable; }
 	inline bool operator!=(const Access& other) const {	return !(*this == other); }
 };
 
-Access getImmediateAccess(const core::ExpressionAddress& expr);
+/** 
+ * Given an expression, it returns the immediate memory access represented by this expression. 
+ *
+ * The method always returns the imediate access and in the case of expression accessing multiple
+ * variables, only the immediate access will be returned. 
+ */
+Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& aliasMap=AliasMap());
 
-std::set<Access> extractFromStmt(const core::StatementAddress& stmt);
 
-void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& accesses);
+/** 
+ * Given a statement, this function takes care of extracting all memory accesses within that
+ * statement. 
+ */
+std::set<Access> extractFromStmt(const core::StatementAddress& stmt, const AliasMap& aliasMap=AliasMap());
+
+/**
+ * Similar to the previous function, this function collects all memory accesses within a statement,
+ * accesses will be append to the provided set 
+ */
+void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& accesses, const AliasMap& aliasMap=AliasMap());
+
+
+
 
 /**
  * States whether two accesses are conflicting, it returns true if the 2 accesses referes to the

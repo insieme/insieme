@@ -87,12 +87,12 @@ AliasMap::AliasSet AliasMap::lookupAliases(const core::ExpressionAddress& expr) 
 
 void AliasMap::lookupAliasesImpl(const core::ExpressionAddress& expr, AliasSet& aliases) const {
 		
-	Access&& ve = getImmediateAccess(expr);
+	Access&& ve = getImmediateAccess(expr, *this);
 
 	for (const auto& cur : aliasMap) {
 		// check whether we can obtain an access from this expr 
 		try {		
-			auto&& access = getImmediateAccess(cur.first);
+			auto&& access = getImmediateAccess(cur.first, *this);
 			// LOG(INFO) << "Compare " << ve << " and " << access << " " << (access.isRef() && ((ve == access) | (isConflicting(ve, access))));
 
 			if (access.isRef() && isConflicting(ve, access)) { 

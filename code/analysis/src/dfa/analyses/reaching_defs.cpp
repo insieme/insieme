@@ -74,7 +74,7 @@ ReachingDefinitions::transfer_func(const typename ReachingDefinitions::value_typ
 
 		auto handle_def = [&](const core::VariablePtr& varPtr) { 
 
-			Access&& var = getImmediateAccess( core::ExpressionAddress(varPtr) );
+			Access&& var = getImmediateAccess( core::ExpressionAddress(varPtr), getCFG().getAliasMap() );
 
 			gen.insert( std::make_tuple(var, block) );
 

@@ -211,52 +211,57 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 		return std::make_pair(NodeAddress(), domain.getConstraint()); 
 	}
 
-	AffineFunction func(scop.getIterationVector(), addr.getAddressedNode());
+	try {
+		AffineFunction func(scop.getIterationVector(), addr.getAddressedNode());
 
-	// otherwise this is a composed by a conjunction of constraints. we need to analyze the
-	// contraints in order to determine the minimal constraint which defines the given expression 
-	AffineConstraintPtr constraints = domain.getConstraint(); 
+		// otherwise this is a composed by a conjunction of constraints. we need to analyze the
+		// contraints in order to determine the minimal constraint which defines the given expression 
+		AffineConstraintPtr constraints = domain.getConstraint(); 
 
-	DisjunctionList resultConj;
-	for( auto conj : utils::getConjunctions(utils::toDNF(constraints))  ) {
-		
-		auto cmp  = [](const AffineConstraintPtr& lhs, const AffineConstraintPtr& rhs) -> bool { 
-			assert( lhs && rhs );
-			return *std::static_pointer_cast<RawAffineConstraint>(lhs) < 
-				   *std::static_pointer_cast<RawAffineConstraint>(rhs); 
-		};
-		std::set<AffineConstraintPtr, decltype(cmp)> curConj(cmp);
-		std::set<const Element*> checked;
+		DisjunctionList resultConj;
+		for( auto conj : utils::getConjunctions(utils::toDNF(constraints))  ) {
+			
+			auto cmp  = [](const AffineConstraintPtr& lhs, const AffineConstraintPtr& rhs) -> bool { 
+				assert( lhs && rhs );
+				return *std::static_pointer_cast<RawAffineConstraint>(lhs) < 
+					   *std::static_pointer_cast<RawAffineConstraint>(rhs); 
+			};
+			std::set<AffineConstraintPtr, decltype(cmp)> curConj(cmp);
+			std::set<const Element*> checked;
 
-		for_each(func.begin(), func.end(), [&](const AffineFunction::Term& term) {
-			if (term.second != 0 && term.first.getType() != Element::CONST) {
-				extract(conj, term.first, checked, curConj);
-			}
-		});
-		
-		if (!curConj.empty()) resultConj.push_back( ConjunctionList(curConj.begin(), curConj.end())); 
+			for_each(func.begin(), func.end(), [&](const AffineFunction::Term& term) {
+				if (term.second != 0 && term.first.getType() != Element::CONST) {
+					extract(conj, term.first, checked, curConj);
+				}
+			});
+			
+			if (!curConj.empty()) resultConj.push_back( ConjunctionList(curConj.begin(), curConj.end())); 
+		}
+
+		auto cons = utils::fromConjunctions(resultConj);
+
+		if (!cons) { return std::make_pair(enclosingScop, AffineConstraintPtr()); }
+
+		/* Simplify the constraint by using the polyhedral model library */
+		auto&& ctx = makeCtx();
+		auto&& set = makeSet(ctx, IterationDomain(cons));
+		set->simplify();
+
+		IterationVector iterVec;
+		cons = set->toConstraint(addr->getNodeManager(), iterVec);
+		// If we end-up with an empty constraints it means that the result is the universe 
+		if (!cons) { 
+			return std::make_pair(prev, AffineConstraintPtr()); 
+		}
+
+		// Need to represent the constraint based on the iteration vector stored in the Scop object
+		// which will survive the lifetime of this method
+		IterationDomain curr_dom( scop.getIterationVector(), IterationDomain(cons) );
+		return make_pair(prev, curr_dom.getConstraint());
+	} catch (NotAffineExpr&& e) {
+		// The expression is not an affine function, therefore we give up
+		return std::make_pair(prev, AffineConstraintPtr());
 	}
-
-	auto cons = utils::fromConjunctions(resultConj);
-
-	if (!cons) { return std::make_pair(enclosingScop, AffineConstraintPtr()); }
-
-	/* Simplify the constraint by using the polyhedral model library */
-	auto&& ctx = makeCtx();
-	auto&& set = makeSet(ctx, IterationDomain(cons));
-	set->simplify();
-
-	IterationVector iterVec;
-	cons = set->toConstraint(addr->getNodeManager(), iterVec);
-	// If we end-up with an empty constraints it means that the result is the universe 
-	if (!cons) { 
-		return std::make_pair(prev, AffineConstraintPtr()); 
-	}
-
-	// Need to represent the constraint based on the iteration vector stored in the Scop object
-	// which will survive the lifetime of this method
-	IterationDomain curr_dom( scop.getIterationVector(), IterationDomain(cons) );
-	return make_pair(prev, curr_dom.getConstraint());
 }	
 
 
