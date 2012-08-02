@@ -41,13 +41,14 @@
 #include "irt_inttypes.h"
 #include "declarations.h"
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(IRT_USE_PTHREADS)
 	#include <Windows.h>
 	typedef HANDLE irt_thread;
 #else
 	#include <pthread.h>
 	typedef pthread_t irt_thread;
 #endif
+
 
 // HANDLE = void* 
 // pthread_t = (unsigned) int

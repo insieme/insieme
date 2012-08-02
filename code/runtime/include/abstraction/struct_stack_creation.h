@@ -36,9 +36,11 @@
 
 #pragma once
 
-#if defined(_MSC_VER) && !defined(IRT_USE_PTHREADS)
-	#include "threads.win.impl.h"
-#else
-	#include "threads.unix.impl.h"
-#endif
+// a macro which creates a new struct of the specified type on the stack, uses compound initializer under linux
+// and a function which creates and returns a struct under windows (because Visual Studio does not support the compound initializer)
 
+#ifdef _MSC_VER
+	#define IRT_STACK_STRUCT(__name, ...) (__name##_create(__VA_ARGS__))
+#else
+	#define IRT_STACK_STRUCT(__name, ...) ((__name){__VA_ARGS__})
+#endif
