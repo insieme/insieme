@@ -121,4 +121,6 @@ void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi);
 #include "sched_policies/irt_sched_stealing.h"
 #elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_STEALING_CIRCULAR
 #include "sched_policies/irt_sched_stealing_circular.h"
+#else
+#error "No scheduling policy set"
 #endif
