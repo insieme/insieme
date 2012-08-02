@@ -78,7 +78,7 @@ void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 wallt
 	irt_wi_implementation *impl = &irt_context_get_current()->impl_table[impl_id];
 
 	if(impl->variants[0].features.implicit_region_id >= 0) {
-		_irt_aggregated_instrumentation_insert_pfor(impl->variants[0].features.implicit_region_id, walltime, sched_data);
+		irt_inst_aggregated_data_insert_pfor(impl->variants[0].features.implicit_region_id, walltime, sched_data);
 	}
 #endif
 }

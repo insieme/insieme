@@ -71,7 +71,7 @@
  * takes a list of papi counters as argument and outputs lists of counters that can be counted simultaneously
  */
 
-int irt_check_papi_counter_combinations(const char* param_events) {
+int32 irt_check_papi_counter_combinations(const char* param_events) {
 
 	char list_of_events[IRT_INST_PAPI_MAX_COUNTERS_COMBINATIONS*PAPI_MAX_STR_LEN];
 
@@ -246,7 +246,7 @@ int irt_check_papi_counter_combinations(const char* param_events) {
  */
 
 int irt_check_papi_counter_combinations_from_env() {
-	irt_check_papi_counter_combinations("");
+	return irt_check_papi_counter_combinations("");
 }
 
 /*

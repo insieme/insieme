@@ -429,9 +429,14 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 
 CallExprPtr IRBuilder::deref(const ExpressionPtr& subExpr) const {
-	RefTypePtr&& refTy = dynamic_pointer_cast<const RefType>(subExpr->getType());
-	assert(refTy && "Deref a non ref type.");
-	return callExpr(refTy->getElementType(), manager.getLangBasic().getRefDeref(), subExpr);
+	TypePtr type = subExpr->getType();
+	assert(type->getNodeType() == NT_RefType);
+	return callExpr(type.as<RefTypePtr>()->getElementType(), manager.getLangBasic().getRefDeref(), subExpr);
+}
+
+ExpressionPtr IRBuilder::tryDeref(const ExpressionPtr& subExpr) const {
+	if (subExpr->getType()->getNodeType() != NT_RefType) return subExpr;
+	return deref(subExpr);
 }
 
 CallExprPtr IRBuilder::refVar(const ExpressionPtr& subExpr) const {
@@ -440,6 +445,14 @@ CallExprPtr IRBuilder::refVar(const ExpressionPtr& subExpr) const {
 
 CallExprPtr IRBuilder::refNew(const ExpressionPtr& subExpr) const {
 	return callExpr(refType(subExpr->getType()), manager.getLangBasic().getRefNew(), subExpr);
+}
+
+CallExprPtr IRBuilder::refDelete(const ExpressionPtr& subExpr) const {
+	auto& basic = manager.getLangBasic();
+	if (basic.isAnyRef(subExpr->getType())) {
+		return callExpr(basic.getUnit(), basic.getAnyRefDelete(), subExpr);
+	}
+	return callExpr(basic.getUnit(), basic.getRefDelete(), subExpr);
 }
 
 CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
@@ -991,6 +1004,20 @@ ExpressionPtr IRBuilder::wrapLazy(const ExpressionPtr& expr) const {
 
 	// otherwise: bind the free variables
 	return bindExpr(VariableList(), callExpr(expr->getType(), res, convertList<Expression>(list)));
+}
+
+CallExprPtr IRBuilder::print(const string& format, const ExpressionList& args) const {
+	return print(stringLit(format), args);
+}
+
+CallExprPtr IRBuilder::print(const ExpressionPtr& format, const ExpressionList& args) const {
+	auto& basic = getLangBasic();
+	return callExpr(basic.getUnit(), basic.getPrint(), format, pack(args));
+}
+
+CallExprPtr IRBuilder::pack(const ExpressionList& values) const {
+	auto& basic = getLangBasic();
+	return callExpr(basic.getVarList(), basic.getVarlistPack(), tupleExpr(values));
 }
 
 CallExprPtr IRBuilder::select(const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& op) const {

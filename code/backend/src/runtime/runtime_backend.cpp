@@ -152,8 +152,8 @@ namespace runtime {
 		table["irt_wg_barrier"]					= "irt_all_impls.h";
 		table["irt_wg_joining_barrier"]			= "irt_all_impls.h";
 		
-		table["irt_instrumentation_region_start"]		= "irt_all_impls.h";
-		table["irt_instrumentation_region_end"]			= "irt_all_impls.h";
+		table["irt_inst_region_start"]		= "irt_all_impls.h";
+		table["irt_inst_region_end"]			= "irt_all_impls.h";
 
 		table["irt_lock_create"] 	= "irt_all_impls.h";
 		table["irt_lock_acquire"] 	= "irt_all_impls.h";

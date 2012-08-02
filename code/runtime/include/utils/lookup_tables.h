@@ -40,7 +40,8 @@
 
 #include "error_handling.h"
 
-#define IRT_ID_HASH(__id__) ((__id__.value.components.thread<<5) ^ (__id__.value.components.index))
+#define IRT_ID_HASH(__id__) ((__id__.value.components.thread<<11) ^ (__id__.value.components.index))
+//#define IRT_ID_HASH(__id__) (7*((__id__.value.components.thread<<16) ^ (__id__.value.components.index)) >> 16)
 
 /* Defines a global, thread-safe lookup table and the functions to insert, 
  * retrieve and delete elements from it. The globals must still be created

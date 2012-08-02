@@ -455,6 +455,10 @@ LITERAL(AccuracyHighUnary,       "accuracy.high.unary", "(('a)->'b) -> ('a)->'b"
 LITERAL(AccuracyBestEffortUnary, "accuracy.besteffort.unary", "(('a)->'b) -> ('a)->'b")
 LITERAL(AccuracyFastUnary,       "accuracy.fast.unary", "(('a)->'b) -> ('a)->'b")
 
+// IO -----------------------------------------------------------------------------------------------------------------
+
+LITERAL(Print, "print", "(string,var_list)->unit")
+
 // Misc. --------------------------------------------------------------------------------------------------------------
 
 LITERAL(VarlistPack, "varlist.pack", "('alpha) -> var_list")
