@@ -166,7 +166,7 @@ void* _irt_worker_func(void *argvp) {
 	self->state = IRT_WORKER_STATE_RUNNING;
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
 	irt_scheduling_loop(self);
-
+	irt_worker_cleanup(self);
 	return NULL;
 }
 
@@ -254,8 +254,6 @@ void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init
 	arg->signal = signal;
 
 	irt_thread_create(&_irt_worker_func, arg);
-	/*pthread_t thread;
-	IRT_ASSERT(pthread_create(&thread, NULL, &_irt_worker_func, arg) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");*/
 }
 
 void _irt_worker_cancel_all_others() {
@@ -282,3 +280,25 @@ void _irt_worker_end_all() {
 	}
 }
 
+
+void irt_worker_cleanup(irt_worker* self) {
+	// clean up event register reuse stacks
+	{ // wi registers
+		irt_wi_event_register *cur, *next;
+		cur = self->wi_ev_register_list;
+		while(cur) {
+			next = cur->lookup_table_next;
+			free(cur);
+			cur = next;
+		}
+	}
+	{ // wg registers
+		irt_wg_event_register *cur, *next;
+		cur = self->wg_ev_register_list;
+		while(cur) {
+			next = cur->lookup_table_next;
+			free(cur);
+			cur = next;
+		}
+	}
+}

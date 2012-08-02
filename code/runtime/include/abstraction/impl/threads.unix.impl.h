@@ -40,6 +40,6 @@
 
 irt_thread irt_thread_create(irt_thread_func *fun, void *args) {
 	irt_thread thread;
-	pthread_create(&thread, NULL, fun, args);
+	IRT_ASSERT(pthread_create(&thread, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
 	return thread;
 }
