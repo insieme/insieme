@@ -583,6 +583,32 @@ namespace formatting {
 			OUT("0");
 		});
 
+		ADD_FORMATTER_DETAIL(res, basic.getSelect(), false,  {
+			core::IRBuilder builder(ARG(0)->getNodeManager());
+			OUT("((");
+			STMT_CONVERTER.convert(builder.callExpr(ARG(2), ARG(0), ARG(1)));
+			OUT(")?("); VISIT_ARG(0); OUT("):("); VISIT_ARG(1); OUT("))");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getCloogFloor(), false, {
+			// ((a*b>0)?(a/b):(-(-a/b+(-a%b!=0))))
+			OUT("((("); VISIT_ARG(0); OUT(")*("); VISIT_ARG(1); OUT(")>0)?");
+			OUT("(("); VISIT_ARG(0); OUT(")/("); VISIT_ARG(1); OUT(")):");
+			OUT("(-(-("); VISIT_ARG(0); OUT(")/("); VISIT_ARG(1); OUT(")+(-("); VISIT_ARG(0); OUT(")%("); VISIT_ARG(1); OUT(")!=0))))");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getCloogCeil(), false, {
+
+			// ((a*b>0)?(a/b + (a%b!=0)):(-(-a/b)))
+			OUT("(("); VISIT_ARG(0); OUT("*"); VISIT_ARG(1); OUT(">0)?");
+			OUT("("); VISIT_ARG(0); OUT("/"); VISIT_ARG(1); OUT("+("); VISIT_ARG(0); OUT("%"); VISIT_ARG(1); OUT("!=0)):");
+			OUT("(-(-"); VISIT_ARG(0); OUT("/"); VISIT_ARG(1); OUT("!=0)))");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getCloogMod(), true, {
+			OUT("("); VISIT_ARG(0); OUT(")%("); VISIT_ARG(1); OUT(")");
+		});
+
 		#include "insieme/simple_backend/formatting/formats_end.inc"
 
 		return res;
