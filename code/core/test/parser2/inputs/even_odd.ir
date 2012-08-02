@@ -1,0 +1,14 @@
+
+let int = int<4>;
+
+let even, odd =
+	(int n)->bool { if (n == 0) return true; return odd(n-1); },
+	(int n)->bool { if (n == 0) return false; return even(n-1); }
+;
+
+int main() {
+
+	print("Even: %d\n", even(50));
+	print("Even: %d\n", odd(50));
+	
+}
