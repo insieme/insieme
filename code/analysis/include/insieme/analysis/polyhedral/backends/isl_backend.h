@@ -274,7 +274,6 @@ MapPtr<ISL> domain_map(IslMap& map);
 
 
 
-
 /**************************************************************************************************
  * IslPiecewise: is the abstraction used to represent a piesewise expression ISL library. 
  *************************************************************************************************/
