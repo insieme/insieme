@@ -75,9 +75,11 @@ TEST(IslBackend, SetCreation) {
 	EXPECT_EQ("[v3] -> { [v1] }", toString(*set));
 
 	IterationVector iv2;
-	set->toConstraint(mgr, iv2);
+	auto cons = set->toConstraint(mgr, iv2);
 
 	EXPECT_EQ(iv2, iterVec);
+	EXPECT_TRUE(!!cons);
+	EXPECT_EQ("((v1 <= 0) v (v1 > 0))", toString(*cons));
 }
 
 TEST(IslBackend, SetConstraint) {
@@ -93,19 +95,16 @@ TEST(IslBackend, SetConstraint) {
 	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4 }", toString(*set));
 
 	IterationVector iv2;
-	set->toConstraint(mgr, iv2);
+	auto cons = set->toConstraint(mgr, iv2);
+	EXPECT_EQ(iterVec, iv2);
+	EXPECT_TRUE(!!cons);
+	EXPECT_EQ("(-v3 + -4 >= 0)", toString(*cons));
 
 	EXPECT_EQ(iv2, iterVec);
 
 	// Build directly the ISL set
-	//isl_union_set* refSet = isl_union_set_read_from_str(ctx->getRawContext(), 
-	//		"[v3] -> { [v1] : 3v3 + 10 < 0}"
-	//	);
-	//isl_union_set* diff = isl_union_set_subtract(refSet, isl_union_set_copy(const_cast<isl_union_set*>(set->getAsIslSet())));
-	
-	// check for equality
-	//EXPECT_EQ( isl_union_set_is_empty(diff) );
-	//isl_union_set_free(diff);
+	IslSet refSet(*ctx, "[v3] -> { [v1] : 3v3 + 10 < 0}");
+	EXPECT_EQ(toString(*set), toString(refSet));
 }
 
 TEST(IslBackend, UniverseSet) {
@@ -162,14 +161,10 @@ TEST(IslBackend, SetConstraintNormalized) {
 	EXPECT_EQ("[v3] -> { [v1] : v1 <= -11 or v1 >= -9 }", toString(*set));
 
 	// Build directly the ISL set
-	//isl_union_set* refSet = isl_union_set_read_from_str(ctx->getRawContext(), 
-	//		"[v3] -> {[v1] : v1 + 10 < 0 or v1 + 10 > 0}"
-	//	);
+	IslSet refSet(*ctx, "[v3] -> {[v1] : v1 + 10 < 0 or v1 + 10 > 0}");
 	
-	//isl_union_set* diff = isl_union_set_subtract(refSet, isl_union_set_copy(const_cast<isl_union_set*>(set->getAsIslSet())));
 	// check for equality
-	//EXPECT_TRUE( isl_union_set_is_empty(diff) );
-	//isl_union_set_free(diff);
+	EXPECT_EQ( toString(*set), toString(refSet));
 }
 
 TEST(IslBackend, FromCombiner) {
@@ -201,14 +196,10 @@ TEST(IslBackend, FromCombiner) {
 	// normalize the cons1 as it contains negations 
 
 	// Build directly the ISL set
-	isl_union_set* refSet = isl_union_set_read_from_str(ctx->getRawContext(), 
-			"[v3] -> {[v1] : 2*v3 + 10 = 0 or 2*v1 +3*v3 +10 >= 0}"
-		);
-	
-	SetPtr<> set2(*ctx, refSet);
+	IslSet refSet(*ctx, "[v3] -> {[v1] : 2*v3 + 10 = 0 or 2*v1 +3*v3 +10 >= 0}");
 	
 	// we cannot check equality on sets because 1 sets contains ids and the one read from the string doesnt
-	EXPECT_EQ( toString(*set), toString(*set2) );
+	EXPECT_EQ( toString(*set), toString(refSet) );
 }
 
 TEST(IslBackend, SetUnion) {
@@ -223,13 +214,15 @@ TEST(IslBackend, SetUnion) {
 
 	auto&& set = set1 + set2;
 
+	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4; [v3] }", toString(*set));
+
 	IterationVector iv;
 	AffineConstraintPtr cons = set->toConstraint(mgr, iv);
+	EXPECT_EQ("((-v3 + -4 >= 0) v (v1 + -v3 == 0))", toString(*cons));
+
 	AffineConstraintPtr orig = normalize(c1 or c2);
-	
-	//std::ostringstream ss;
-	//set->printTo(ss);
-	
+	EXPECT_EQ("((-3*v3 + -11 >= 0) v (v1 + -v3 == 0))", toString(*orig));
+
 	//isl_union_set* refMap = isl_union_set_read_from_str(ctx->getRawContext(), 
 	//		"[v3] -> { [v1] : 3*v3 + 10 < 0; [v1] : 1*v1 -1*v3 = 0}"
 	//	);

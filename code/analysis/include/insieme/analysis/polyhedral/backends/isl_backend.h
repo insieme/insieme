@@ -284,6 +284,8 @@ class IslPiecewise : public IslObj, public boost::noncopyable, public utils::Pri
 public:
 	IslPiecewise(IslCtx& ctx);
 
+	IslPiecewise(IslCtx& ctx, const utils::Piecewise<AffineFunction>& pw);
+
 	IslPiecewise(IslCtx& ctx, isl_union_pw_qpolynomial* ipw) : 
 		IslObj(ctx, isl_union_pw_qpolynomial_get_space(ipw)), pw(ipw) 
 	{ 

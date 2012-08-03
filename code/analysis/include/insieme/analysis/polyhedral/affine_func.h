@@ -194,6 +194,12 @@ public:
 	AffineFunction(const AffineFunction& other) : 
 		iterVec(other.iterVec), coeffs(other.coeffs), sep(other.sep) { }
 
+	/** 
+	 * Move semantics constructor for affine functions 
+	 */
+	AffineFunction(AffineFunction&& other) : 
+		iterVec(other.iterVec), coeffs(std::move(other.coeffs)), sep(other.sep) { }
+
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 
 	// Setter and Getter for coefficient values. 

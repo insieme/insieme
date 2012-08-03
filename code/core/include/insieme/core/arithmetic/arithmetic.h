@@ -1886,7 +1886,7 @@ namespace arithmetic {
 namespace utils {
 	template <>
 	inline int asConstant(const insieme::core::arithmetic::Formula& f) { 
-		if (!f.isConstant()) { throw "error"; } //fixme
+		if (!f.isConstant()) { throw std::logic_error("Formula is not constant"); } //fixme
 		if (f.isZero()) { return 0; }
 		return static_cast<int64_t>(f.getConstantValue());
 	}

@@ -207,7 +207,7 @@ TEST(Access, ArrayAccess) {
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		EXPECT_TRUE(!!access.getConstraint());
-		EXPECT_EQ("(v7 + -11*1 >= 0)", toString(*access.getConstraint()));
+		EXPECT_EQ("(v7 + -11 >= 0)", toString(*access.getConstraint()));
 
 		EXPECT_EQ(code, access.getContext().getAddressedNode()); 
 	}
