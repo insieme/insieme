@@ -39,11 +39,11 @@
 //#include <locale.h> // needed to use thousands separator
 #include <stdio.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include "utils/timing.h"
 #include "utils/memory.h"
 #include "instrumentation.h"
 #include "impl/error_handling.impl.h"
-#include "errno.h"
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi_helper.h"
@@ -255,35 +255,121 @@ void irt_inst_event_data_output(irt_worker* worker) {
 	int ocl_helper_table_counter = 0;
 #endif
 
+
 	if(getenv(IRT_INST_BINARY_OUTPUT_ENV) && strcmp(getenv(IRT_INST_BINARY_OUTPUT_ENV), "true") == 0) {
 		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "enabled");
 
-
-		/* TODO: the following documentation is old and needs to be updated:
-		 * mark the first 8 bytes (64 bit) with "INSIEME1" and dump everything in binary according to the following format:
+		/*
+		 * dump everything in binary according to the following format:
+		 * (note: the strings are written without the termination character '\0'!)
 		 *
-		 * 160...........................................................................................0
-		 * [31.event_number.0][63............subject_id...........0][63...............time..............0]
+		 *  8 byte: char, file version identifier, must read "INSIEME1"!
+		 * -------------------------------------------------------------
+		 *  4 byte: uint32, number of event names (=n)
+		 *  4 byte: char, event group identifier 1
+		 * 60 byte: char, event name identifier 1
+		 *  4 byte: char, event group identifier 2
+		 * 60 byte: char, event name identifier 2
 		 * ...
+		 * ...
+		 * ...
+		 *  4 byte: char, event group identifier n
+		 * 60 byte: char, event name identifier n
+		 * -------------------------------------------------------------
+		 *  8 byte: uint64, number of events (=m)
+		 *  4 byte: uint32, event id 1
+		 *  8 byte: uint64, subject id 1
+		 *  8 byte: uint64, timestamp (nanoseconds) 1
+		 *  4 byte: uint32, event id 2
+		 *  8 byte: uint64, subject id 2
+		 *  8 byte: uint64, timestamp (nanoseconds) 2
+		 *  ...
+		 *  ...
+		 *  ...
+		 *  4 byte: uint32, event id m
+		 *  8 byte: uint64, subject id m
+		 *  8 byte: uint64, timestamp (nanoseconds) m
+		 * -------------------------------------------------------------
+		 * EOF
 		 */
 
+		// write version
 		const char* header = "INSIEME1";
 		fprintf(outputfile, "%s", header);
 
+		// write size of event name table followed by group and event names
 		fwrite(&(irt_g_inst_num_event_types), sizeof(uint32), 1, outputfile);
+		for(int i = 0; i < irt_g_inst_num_event_types; ++i) {
+			fprintf(outputfile, "%-4s", irt_g_instrumentation_group_names[i]);
+			fprintf(outputfile, "%-60s", irt_g_instrumentation_event_names[i]);
+		}
 
-		for(int i = 0; i < irt_g_inst_num_event_types; ++i)
-			fprintf(outputfile, "%s", irt_g_instrumentation_group_names[i]);
+		// write size of event table
+		const uint64 temp_num_of_elements = (uint64)(table->number_of_elements);
+		fwrite(&temp_num_of_elements, sizeof(uint64), 1, outputfile);
 
-		for(int i = 0; i < irt_g_inst_num_event_types; ++i)
-			fprintf(outputfile, "%-32s", irt_g_instrumentation_event_names[i]);
+		// write the event table using a buffer for performance reasons
+		const uint32 entry_buffer_max = 10;
+		uint32 entry_buffer_current = 0;
+		const uint32 entry_size = sizeof(table->data[0].event) + sizeof(table->data[0].subject_id) + sizeof(irt_time_convert_ticks_to_ns(0));
+		char buffer[entry_size * entry_buffer_max];
 
 		for(int i = 0; i < table->number_of_elements; ++i) {
-			fwrite(&(table->data[i].event), sizeof(uint32), 1, outputfile);
-			fwrite(&(table->data[i].subject_id), sizeof(uint64), 1, outputfile);
-			uint64 test = irt_time_convert_ticks_to_ns(table->data[i].timestamp);
-			fwrite(&(test), sizeof(uint64), 1, outputfile);
+			//fwrite(&(table->data[i].event), sizeof(uint32), 1, outputfile);
+			//fwrite(&(table->data[i].subject_id), sizeof(uint64), 1, outputfile);
+			//uint64 time = irt_time_convert_ticks_to_ns(table->data[i].timestamp);
+			//fwrite(&(time), sizeof(uint64), 1, outputfile);
+			*(uint32*)(buffer + (0 + entry_size * entry_buffer_current)) = table->data[i].event;
+			*(uint64*)(buffer + (sizeof(table->data[0].event) + entry_size * entry_buffer_current)) = table->data[i].subject_id;
+			*(uint64*)(buffer + (sizeof(table->data[0].event) + sizeof(table->data[0].subject_id)) + entry_size * entry_buffer_current) = irt_time_convert_ticks_to_ns(table->data[i].timestamp);
+			++entry_buffer_current;
+			if(entry_buffer_current == entry_buffer_max) {
+				fwrite(buffer, sizeof(char), entry_size * entry_buffer_max, outputfile);
+				entry_buffer_current = 0;
+			}
 		}
+		if(entry_buffer_current > 0)
+			fwrite(buffer, sizeof(char), entry_size * entry_buffer_current, outputfile);
+
+		/*FILE* infile = fopen(outputfilename, "r");
+		uint32 number_of_types = 0;
+		uint64 number_of_events = 0;
+
+		char name[9];
+		fread(name, sizeof(char), 8, infile);
+		name[8] = 0;
+		printf("version: %s\n", name);
+		fread(&number_of_types, sizeof(uint32), 1, infile);
+
+		char group_names[number_of_types][5];
+		char event_names[number_of_types][61];
+
+		for(int i = 0; i < number_of_types; ++i) {
+			fread(group_names[i],sizeof(char),4, infile);
+			fread(event_names[i],sizeof(char),60, infile);
+			group_names[i][4] = 0;
+			event_names[i][60] = 0;
+			printf("name: %s%s\n", group_names[i], event_names[i]);
+		}
+
+		fread(&number_of_events, sizeof(uint64), 1, infile);
+		printf("binary read: irt_g_inst_num_event_types: %u, table->number_of_elements: %lu\n########\n", number_of_types, number_of_events);
+
+		uint32 event;
+		uint64 subject;
+		uint64 time;
+
+		for(int i = 0; i < number_of_events; ++i) {
+			fread(&event, sizeof(uint32), 1, infile);
+			fread(&subject, sizeof(uint64), 1, infile);
+			fread(&time, sizeof(uint64), 1, infile);
+			printf("event number: %u\n", event);
+			printf("%s,", group_names[event]);
+			printf("%lu,", subject);
+			printf("%s,", event_names[event]);
+			printf("%lu,\n", time);
+		}
+*/
 	} else {
 		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "disabled");
 		for(int i = 0; i < table->number_of_elements; ++i)
