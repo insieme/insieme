@@ -103,8 +103,9 @@ void _irt_inst_event_insert_time(irt_worker* worker, const int event, const uint
 	irt_instrumentation_event_data* pd = &(table->data[table->number_of_elements++]);
 
 	pd->timestamp = time;
-	pd->event = event;
-	pd->subject_id = id;
+	pd->event_id = event;
+	pd->index = ((irt_work_item_id*)&id)->value.components.index;
+	pd->thread = ((irt_work_item_id*)&id)->value.components.thread;
 }
 
 
@@ -307,7 +308,7 @@ void irt_inst_event_data_output(irt_worker* worker) {
 		// write size of event table
 		const uint64 temp_num_of_elements = (uint64)(table->number_of_elements);
 		fwrite(&temp_num_of_elements, sizeof(uint64), 1, outputfile);
-
+/*
 		// write the event table using a buffer for performance reasons
 		const uint32 entry_buffer_max = 10;
 		uint32 entry_buffer_current = 0;
@@ -330,6 +331,9 @@ void irt_inst_event_data_output(irt_worker* worker) {
 		}
 		if(entry_buffer_current > 0)
 			fwrite(buffer, sizeof(char), entry_size * entry_buffer_current, outputfile);
+*/
+
+		fwrite(table->data, sizeof(irt_instrumentation_event_data), table->number_of_elements, outputfile);
 
 		/*FILE* infile = fopen(outputfilename, "r");
 		uint32 number_of_types = 0;
@@ -372,8 +376,14 @@ void irt_inst_event_data_output(irt_worker* worker) {
 */
 	} else {
 		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "disabled");
-		for(int i = 0; i < table->number_of_elements; ++i)
-			fprintf(outputfile, "%s,%lu,%s,%lu\n", irt_g_instrumentation_group_names[table->data[i].event], table->data[i].subject_id, irt_g_instrumentation_event_names[table->data[i].event], irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+		for(int i = 0; i < table->number_of_elements; ++i) {
+			irt_work_item_id temp_id;
+			temp_id.cached = NULL;
+			temp_id.value.components.index = table->data[i].index;
+			temp_id.value.components.thread = table->data[i].thread;
+			temp_id.value.components.node = 0;
+			fprintf(outputfile, "%s,%lu,%s,%lu\n", irt_g_instrumentation_group_names[table->data[i].event_id], temp_id.value.full, irt_g_instrumentation_event_names[table->data[i].event_id], irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+		}
 	}
 
 	fclose(outputfile);
@@ -414,9 +424,9 @@ void irt_inst_set_di_instrumentation(bool enable) {
 
 void irt_inst_set_all_instrumentation(bool enable) {
 	irt_inst_set_wi_instrumentation(enable);
-//	irt_inst_set_wg_instrumentation(enable);
-//	irt_inst_set_wo_instrumentation(enable);
-//	irt_inst_set_di_instrumentation(enable);
+	irt_inst_set_wg_instrumentation(enable);
+	irt_inst_set_wo_instrumentation(enable);
+	irt_inst_set_di_instrumentation(enable);
 	irt_instrumentation_event_output_is_enabled = enable;
 }
 
