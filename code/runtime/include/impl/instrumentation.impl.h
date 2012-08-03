@@ -53,7 +53,7 @@
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 // global function pointers to switch instrumentation on/off
-void (*irt_inst_insert_wi_event)(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id) = &_irt_inst_insert_wi_event;
+void (*irt_inst_insert_wi_event)(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id) = &_irt_inst_insert_no_wi_event;
 void (*irt_inst_insert_wg_event)(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id) = &_irt_inst_insert_no_wg_event;;
 void (*irt_inst_insert_di_event)(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) = &_irt_inst_insert_no_di_event;
 void (*irt_inst_insert_wo_event)(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) = &_irt_inst_insert_no_wo_event;
@@ -421,9 +421,36 @@ void irt_inst_set_all_instrumentation(bool enable) {
 }
 
 void irt_inst_set_all_instrumentation_from_env() {
-	if(getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV), "true") == 0) {
-		irt_inst_set_all_instrumentation(true);
+	if (getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV), "true") == 0) {
 		irt_log_setting_s("IRT_INST_WORKER_EVENT_LOGGING", "enabled");
+		char* types = getenv(IRT_INST_WORKER_EVENT_TYPES_ENV);
+		if(!types) {
+			irt_inst_set_all_instrumentation(true);
+			irt_log_setting_s("IRT_INST_WORKER_EVENT_TYPES", "WI,WO,WG,DI");
+			return;
+		}
+
+		char* tok = strtok(types, ",");
+		char log_output[128];
+		uint32 log_output_counter = 0;
+
+		do {
+			if(strcmp(tok, "WI") == 0) {
+				irt_inst_set_wi_instrumentation(true);
+				log_output_counter += sprintf(&(log_output[log_output_counter]), "WI,");
+			} else if(strcmp(tok, "WO") == 0) {
+				irt_inst_set_wo_instrumentation(true);
+				log_output_counter += sprintf(&(log_output[log_output_counter]), "WO,");
+			} else if(strcmp(tok, "WG") == 0) {
+				irt_inst_set_wg_instrumentation(true);
+				log_output_counter += sprintf(&(log_output[log_output_counter]), "WG,");
+			} else if(strcmp(tok, "DI") == 0) {
+				irt_inst_set_di_instrumentation(true);
+				log_output_counter += sprintf(&(log_output[log_output_counter]), "DI,");
+			}
+		} while((tok = strtok(NULL, ",")) != NULL);
+		log_output[log_output_counter-1] = '\0';  // remove the last comma and replace with termination symbol
+		irt_log_setting_s("IRT_INST_WORKER_EVENT_TYPES", log_output);
 		return;
 	}
 	irt_inst_set_all_instrumentation(false);
