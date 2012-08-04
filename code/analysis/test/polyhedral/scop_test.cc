@@ -143,7 +143,7 @@ TEST(ScopRegion, SimpleForStmt) {
 	EXPECT_EQ(1u, iterVec.getParameterNum()) << iterVec;
 
 	EXPECT_EQ("(v1|v3|1)", toString(iterVec));
-	EXPECT_EQ("((v1 + -10*1 >= 0) ^ (v1 + -50*1 < 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("((v1 + -10 >= 0) ^ (v1 + -50 < 0))", toString(ann.getDomainConstraints()));
 	EXPECT_TRUE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
 }
 
@@ -263,8 +263,8 @@ TEST(ScopRegion, ForStmt4) {
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
 	EXPECT_EQ("(v1,v4,v5,v6|v3|1)",toString(iterVec));
-	EXPECT_EQ("((((((-2*v4 + -v5 + 5*1 == 0) ^ (v5 + -2*1 < 0)) ^ (v5 >= 0)) ^ (v1 + -v4 >= 0)) "
-			  "^ (v1 + -20*1 < 0)) ^ (v1 + -v4 + -5*v6 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("((((((-2*v4 + -v5 + 5 == 0) ^ (v5 + -2 < 0)) ^ (v5 >= 0)) ^ (v1 + -v4 >= 0)) "
+			  "^ (v1 + -20 < 0)) ^ (v1 + -v4 + -5*v6 == 0))", toString(ann.getDomainConstraints()));
 	
 	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
 	Piecewise pw = cardinality(mgr,  ann.getDomainConstraints());
@@ -304,7 +304,7 @@ TEST(ScopRegion, ForStmt5) {
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
 	EXPECT_EQ("(v1,v6,v7,v8|v5,v2,v3|1)", toString(iterVec));
-	EXPECT_EQ("((((((-3*v6 + v7 + v2 == 0) ^ (v7 + -3*1 < 0)) ^ (v7 >= 0)) ^ "
+	EXPECT_EQ("((((((-3*v6 + v7 + v2 == 0) ^ (v7 + -3 < 0)) ^ (v7 >= 0)) ^ "
 			"(v1 + -v6 >= 0)) ^ (v1 + -v3 < 0)) ^ (v1 + -v6 + -5*v8 == 0))", toString(ann.getDomainConstraints()));
 }
 
