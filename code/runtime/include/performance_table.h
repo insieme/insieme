@@ -97,8 +97,14 @@ typedef struct _irt_region_list {
 
 typedef struct _irt_instrumentation_event_data {
 	uint64 timestamp;
-	int32 event;
-	uint64 subject_id;
+	union {
+		struct {
+			uint16 event_id;
+			uint16 thread;
+			uint32 index;
+		};
+		uint64 identification;
+	};
 } irt_instrumentation_event_data;
 
 typedef struct _irt_instrumentation_event_data_table {

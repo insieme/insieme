@@ -475,10 +475,20 @@ AffineFunction::Term AffineFunction::iterator::operator*() const {
 namespace std {
 
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::polyhedral::AffineFunction::Term& c) {
-	// Avoid to print the coefficient when it is 1 or -1
-	if (abs(c.second) != 1) { out << c.second << "*"; }
-	if (c.second == -1) { out << "-"; }
+	
+	if (c.second < 0) { out << "-"; }
 
+	// Avoid to print the coefficient when it is 1 or -1
+	if (abs(c.second) != 1) { out << abs(c.second); }
+	
+	// If we are printing the constant part we simply don't print the 1
+	if (c.first.getType() == insieme::analysis::polyhedral::Element::CONST) { 
+		// if the absolute value of the constant part is 1, then we have to write a 1
+		if (abs(c.second) == 1) out << "1";
+		return out; 
+	}
+
+	if (abs(c.second) != 1) out << "*";
 	return out << c.first;
 }
 

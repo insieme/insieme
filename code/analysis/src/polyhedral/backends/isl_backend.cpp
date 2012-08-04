@@ -57,43 +57,137 @@ namespace {
 
 using namespace insieme::analysis::polyhedral;
 
-isl_constraint* convertConstraint ( 
-		isl_ctx*					islCtx, 
-		isl_space* 					space, 
-		const AffineConstraint& 	constraint, 
-		const isl_dim_type& 		type ) 
+template <class IterT>
+void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, IterT const& begin, IterT const& end) {
+	for(IterT it = begin; it != end; ++it) {
+		assert(dynamic_cast<const Expr*>(&*it) != NULL && "Element of not Variable type");
+
+		// Retrieve the expression associated to this dimension
+		const Expr& var = static_cast<const Expr&>(*it);
+
+		isl_id* id = isl_id_alloc(ctx, toString(var).c_str(), const_cast<core::Expression*>( &(*var.getExpr())) );
+		space = isl_space_set_dim_id(space, type, std::distance(begin, it), id);
+	}
+}
+
+/** 
+ * toIslSpace 
+ *
+ * Converts an IterationVector to an isl_space which is the equivalent representation used in ISL to
+ * represent iteration vectors.
+ */
+isl_space* toIslSpace(
+		IslCtx&						islCtx,
+		const IterationVector&		iterVec,
+		const TupleName& 			tuple ) 
+
 {
-	isl_constraint* islCons = NULL;
+	isl_space* islSpace = (iterVec.getIteratorNum() != 0)
+		? isl_space_set_alloc( islCtx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() )
+		: isl_space_params_alloc( islCtx.getRawContext(), iterVec.getParameterNum() );
 
-	isl_int intVal;
-	isl_int_init(intVal);
-	
-	islCons = (constraint.getType() == ConstraintType::EQ) ? 
-				isl_equality_alloc(isl_local_space_from_space( isl_space_copy(space) )) : 
-				isl_inequality_alloc(isl_local_space_from_space( isl_space_copy(space) ));
-	
-	const AffineFunction& af = constraint.getFunction();
-	size_t pos=0, sep=af.getIterationVector().getIteratorNum(), size=af.getIterationVector().size();
+	// Set the names for the iterators of this dim
+	setVariableName(islCtx.getRawContext(), islSpace, isl_dim_set, iterVec.iter_begin(), iterVec.iter_end());
 
-	for(AffineFunction::iterator it=af.begin(), end=af.end(); it!=end; ++it, ++pos) {
+	// Set the names for the parameters of this dim
+	setVariableName(islCtx.getRawContext(), islSpace, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
+	
+	if (!tuple.second.empty()) {
+		islCtx.insertTuple( tuple );
+		// Set the name of the tuple 
+		islSpace = isl_space_set_tuple_name(islSpace, isl_dim_set, tuple.second.c_str());
+	}
+
+	return islSpace;
+}
+
+
+// Utility function used to print to a stream the ISL internal representation of a set
+void print(std::ostream& out, isl_ctx* ctx, isl_aff* aff) {
+	isl_printer* printer = isl_printer_to_str(ctx);
+	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
+	isl_printer_set_indent(printer, 1);
+	isl_printer_print_aff(printer, aff);
+	isl_printer_flush(printer);
+	char* str = isl_printer_get_str(printer);
+	out << std::string(str);
+	free(str); // free the allocated string by the library
+	isl_printer_free(printer);
+}
+
+/** 
+ * toIslAff
+ *
+ * Converts an AffineFunction to an isl_aff object which can be used to create sets and
+ * relationships in ISL
+ */
+isl_aff* toIslAff (
+		isl_space*					islSpace,
+		const AffineFunction&		func,
+		const isl_dim_type& 		type)
+{
+	isl_local_space* lspace = isl_local_space_from_space(isl_space_copy(islSpace));
+	isl_aff* islAff = isl_aff_zero_on_domain( lspace );
+
+	size_t pos=0, sep=func.getIterationVector().getIteratorNum(), size=func.getIterationVector().size();
+	for(auto it=func.begin(), end=func.end(); it!=end; ++it, ++pos) {
+		assert(islAff && "Wrong ");
 		assert(pos < size);
-		AffineFunction::Term&& t = *it;
-		if(t.second == 0) {	continue; }
+		
+		AffineFunction::Term&& term = *it;
+		if(term.second == 0) { continue; }
 
-		isl_int_set_si(intVal, t.second);
 		if (pos < sep) {
-			isl_constraint_set_coefficient(islCons, type, pos, intVal);
+			islAff = isl_aff_set_coefficient_si(islAff, type, pos, term.second);
 			continue;
 		}
 
 		if (pos >= sep && pos < size-1) {
-			isl_constraint_set_coefficient(islCons, isl_dim_param, pos-sep, intVal);
+			islAff = isl_aff_set_coefficient_si(islAff, isl_dim_param, pos-sep, term.second);
 			continue;
 		}
-		isl_constraint_set_constant(islCons, intVal);
+		islAff = isl_aff_set_constant_si(islAff, term.second);
+		
 	}
-	isl_int_clear(intVal);
-	assert(islCons != NULL && "Constraint not correctly initialized");
+
+	assert(islAff && "Creation of isl_aff object failed");
+	return islAff;
+}
+
+isl_constraint* toIslConstraint(
+		isl_space*					islSpace,
+		const AffineConstraint&		c,
+		const isl_dim_type& 		type)
+{
+	isl_local_space* lspace = isl_local_space_from_space(isl_space_copy(islSpace));
+
+	// islCons takes ownership of the local space object 
+	isl_constraint* islCons = (c.getType() == ConstraintType::EQ) ? 
+				isl_equality_alloc(lspace) : isl_inequality_alloc(lspace);
+
+	const AffineFunction& func = c.getFunction();
+	size_t pos=0, sep=func.getIterationVector().getIteratorNum(), size=func.getIterationVector().size();
+	for(auto it=func.begin(), end=func.end(); it!=end; ++it, ++pos) {
+		assert(islCons && "Wrong ");
+		assert(pos < size);
+		
+		AffineFunction::Term&& term = *it;
+		if(term.second == 0) { continue; }
+
+		if (pos < sep) {
+			islCons = isl_constraint_set_coefficient_si(islCons, type, pos, term.second);
+			continue;
+		}
+
+		if (pos >= sep && pos < size-1) {
+			islCons = isl_constraint_set_coefficient_si(islCons, isl_dim_param, pos-sep, term.second);
+			continue;
+		}
+		islCons = isl_constraint_set_constant_si(islCons, term.second);
+		
+	}
+	
+	assert(islCons && "Creation of isl_aff object failed");
 	return islCons;
 }
 
@@ -110,7 +204,7 @@ isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_space* dim, const AffineCo
 	isl_basic_set* bset = isl_basic_set_universe( isl_space_copy(dim) );
 
 	// Create the ISL constraint 
-	isl_constraint* cons = convertConstraint( islCtx, dim, c, isl_dim_set);
+	isl_constraint* cons = toIslConstraint( dim, c, isl_dim_set );
 	
 	// Add the constraint to the basic_set
 	return isl_basic_set_add_constraint( bset, cons );
@@ -125,12 +219,14 @@ struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<Affine
 	ISLConstraintConverterVisitor(isl_ctx* ctx, isl_space* dim) : ctx(ctx), dim(dim) { }
 
 	isl_set* visitRawConstraint(const RawAffineConstraint& rcc) { 
-		// std::cout << "Before" << rcc.getConstraint() << std::endl;
+
 		const AffineConstraint& c = rcc.getConstraint();
+
 		if ( isNormalized(c) ) {
 			isl_basic_set* bset = setFromConstraint(ctx, dim, c);
 			return isl_set_from_basic_set( bset );
 		}
+
 		return visit( normalize(c) );
 	}
 
@@ -150,18 +246,6 @@ struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<Affine
 	}
 };
 
-template <class IterT>
-void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, IterT const& begin, IterT const& end) {
-	for(IterT it = begin; it != end; ++it) {
-		assert(dynamic_cast<const Expr*>(&*it) != NULL && "Element of not Variable type");
-
-		// Retrieve the expression associated to this dimension
-		const Expr& var = static_cast<const Expr&>(*it);
-
-		isl_id* id = isl_id_alloc(ctx, toString(var).c_str(), const_cast<core::Expression*>( &(*var.getExpr())) );
-		space = isl_space_set_dim_id(space, type, std::distance(begin, it), id);
-	}
-}
 
 // Utility which converts and isl_space to an IterationVector. They both represent the same concept. The main 
 // issue of the translation is on retrieving the pointer to the variable to which an isl paramer is refering 
@@ -200,8 +284,6 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 		size_t pos = iterVec.add( Parameter(extract_ir_expr(i, isl_dim_param)) );
 		assert(pos-iter_num == i);
 	}
-	
-	return;
 }
 
 } // end anonynous namespace
@@ -239,45 +321,25 @@ IslSet::IslSet(IslCtx& ctx, const std::string& set_str) :
 	space = isl_union_set_get_space( set );
 }
 
-IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : IslObj(ctx, NULL) { 
 
+IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : 
+	IslObj(ctx, NULL) 
+{
 	const IterationVector& iterVec = domain.getIterationVector();
 
-	// Build the space object
-	if ( iterVec.getIteratorNum() != 0 ) {
-		space = isl_space_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
-	} else {
-		space = isl_space_params_alloc( ctx.getRawContext(), iterVec.getParameterNum() );
-	}
-
-	// Set the names for the iterators of this dim
-	setVariableName(ctx.getRawContext(), space, isl_dim_set, iterVec.iter_begin(), iterVec.iter_end());
-
-	// Set the names for the parameters of this dim
-	setVariableName(ctx.getRawContext(), space, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
-	
-	if (!tuple.second.empty()) {
-		ctx.insertTuple( tuple );
-		// Set the name of the tuple 
-		space = isl_space_set_tuple_name(space, isl_dim_set, tuple.second.c_str());
-	}
+	// convert the iteration vector to an Isl Space 
+	space = toIslSpace(ctx, iterVec, tuple);
 
 	if ( domain.empty() ) {
 		set = isl_union_set_from_set(isl_set_empty( isl_space_copy(space) ));
 		return;
 	} 
 
-	isl_set* cset = NULL;
-	if ( domain.universe() ) {
-		cset = isl_set_universe( isl_space_copy(space) );
-	} else {
-		assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty" );
-		// If a non empty constraint is provided, then add it to the universe set 
-		ISLConstraintConverterVisitor ccv(ctx.getRawContext(), space);
-		cset = ccv.visit(domain.getConstraint());
-	}
+	isl_set* cset = domain.universe() ? 
+		isl_set_universe( isl_space_copy(space) ) :
+		ISLConstraintConverterVisitor(ctx.getRawContext(), space).visit(domain.getConstraint());
 	
-	assert(cset && "ISL set turned to be invalid");
+	assert(cset && "ISL set  is invalid");
 
 	// Eliminats existential quantitified variables 
 	size_t pos = 0;
@@ -285,13 +347,14 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 		[&]( const Iterator& iter ) {
 			// peel out this dimension by projecting it 
 			if ( iter.isExistential() ) { 
-				cset = isl_set_project_out( cset, isl_dim_set, pos, 1); 
+				cset = isl_set_project_out( cset, isl_dim_set, pos, 1 ); 
 				return;
 			} 
 			pos++;
 		}
 	);
-	assert(cset && "After projection set turn to be invalid");
+	assert(cset && "After projection set is invalid");
+
 	isl_space_free(space);
 
 	if (!tuple.second.empty()) {
@@ -300,6 +363,8 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 	
 	space = isl_set_get_space( cset );
 	set = isl_union_set_from_set( cset );
+
+	// apply semplification to the generated set 
 	simplify();
 }
 
@@ -307,7 +372,7 @@ bool IslSet::operator==(const IslSet& other) const {
 	return isl_union_set_is_equal( set, other.set );
 }
 
-bool IslSet::empty() const { return isl_union_set_is_empty(set);	}
+bool IslSet::empty() const { return isl_union_set_is_empty(set); }
 
 void IslSet::simplify() {
 	set = isl_union_set_coalesce( set );
@@ -357,6 +422,9 @@ SetPtr<ISL> operator*(IslSet& lhs, const IslSet& rhs) {
 // Convertion of an IslSet back to  IR Constraints 
 namespace {
 
+/** 
+ * Temporary object used to store information passed through the visit of the ISL constraint 
+ */
 struct UserData {
 	core::NodeManager& 	mgr;
 	IterationVector& 	iterVec;
@@ -365,7 +433,8 @@ struct UserData {
 	UserData(core::NodeManager& mgr, IterationVector& iterVec): 
 		mgr(mgr), iterVec(iterVec) { }
 
-	UserData(const UserData& other) : mgr(other.mgr), iterVec(other.iterVec) {}
+	UserData(UserData&& other) : mgr(other.mgr), iterVec(other.iterVec) { }
+
 };
 
 int visit_constraint(isl_constraint* cons, void* user) {
@@ -384,7 +453,7 @@ int visit_constraint(isl_constraint* cons, void* user) {
 
 	AffineFunction func(data.iterVec);
 
-	auto set_elem_coeff = [&](const isl_dim_type& type, const Element& elem) -> void {
+	auto set_elem_coeff = [&] (const isl_dim_type& type, const Element& elem) {
 		isl_int intVal;
 		isl_int_init(intVal); 
 
@@ -393,7 +462,7 @@ int visit_constraint(isl_constraint* cons, void* user) {
 			assert (idx >= iv.getIteratorNum());
 			idx -= iv.getIteratorNum();
 		}
-		isl_constraint_get_coefficient( cons, type, idx, &intVal);
+		isl_constraint_get_coefficient( cons, type, idx, &intVal );
 		func.setCoeff( elem, isl_int_to_c_int(intVal) );
 		isl_int_clear(intVal);
 	};
@@ -433,7 +502,7 @@ int visit_basic_set(isl_basic_set* bset, void* user) {
 	// Add the iterators/parameters present inside this space to the itervec
 	visit_space(space, mgr, iterVec);
 
-	UserData tmp(data);
+	UserData tmp(std::move(data));
 	// Iterate through the constraints 
 	isl_basic_set_foreach_constraint(bset, visit_constraint, &tmp);
 	data.ret = !data.ret ? tmp.ret : data.ret or tmp.ret;
@@ -445,7 +514,7 @@ int visit_basic_set(isl_basic_set* bset, void* user) {
 
 int visit_set(isl_set* set, void* user) {
 	UserData& data = *reinterpret_cast<UserData*>( user );
-	UserData tmp(data);
+	UserData tmp(std::move(data));
 
 	isl_set_foreach_basic_set(set, visit_basic_set, &tmp);
 	isl_set_free(set);
@@ -538,11 +607,11 @@ IslMap::IslMap(IslCtx& 				ctx,
 	}
 	isl_basic_map* bmap = isl_basic_map_universe( isl_space_copy(space) );
 	for(AffineSystem::const_iterator it=affSys.begin(), end=affSys.end(); it!=end; ++it, ++idx) {
-		isl_constraint* cons = convertConstraint(ctx.getRawContext(), 
-									space, 
-									AffineConstraint(*it, ConstraintType::EQ), 
-									isl_dim_in
-								);
+		isl_constraint* cons = 
+			toIslConstraint(space, 
+							AffineConstraint(*it, ConstraintType::EQ), 
+							isl_dim_in
+						);
 		// because each constraint is referring to a particular out dimension of the affine system,
 		// we have to sed to 1 the particular out index 
 		isl_int intVal;
@@ -747,6 +816,24 @@ std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const {
  * 	contains the implementation code of IslPiecewise.
  *
  *********************************************************************************************/
+
+
+// IslPiecewise::IslPiecewise(IslCtx& ctx, const utils::Piecewise<AffineFunction>& pw) {
+// 
+// 
+// 	for_each(pw.begin(), pw.end(), [&](const utils::Piecewise<AffineFunction>::Piece& cur) {
+// 				IslSet dom(ctx, IterationDomain(cur.first));
+// 				isl_union_set* set = dom.getIslObj();
+// 				
+// 
+// 				setFromConstraint(ctx.getRawContext(),dom.getSpace(), AffineConstraint());
+// 
+// 				isl_set_from_union_set(set)
+// 			});
+// 
+// 
+// }
+
 
 namespace {
 

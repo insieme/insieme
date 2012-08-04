@@ -1,0 +1,33 @@
+
+let int = int<4>;
+
+let sum = (int n)->int {
+	ref<int> sum = var(0);
+	for(int i=0..n+1) {
+		sum = sum + i;
+	}
+	return *sum;
+};
+
+unit main() {
+
+	// use summation function
+	print("Sum: %d\n", sum(100));
+
+	// use function pointer
+	auto ptr = sum;
+	print("Sum: %d\n", ptr(100));
+
+	// using lambda
+	auto lsum = (int n)->int { sum(n); };
+	print("Sum: %d\n", lsum(100));
+
+	// compute it inline
+	ref<int> sum = var(0);
+	for(int i=0..101) {
+		sum = sum + i;
+	}
+
+	print("Sum: %d\n", *sum);
+
+}

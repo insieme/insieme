@@ -100,6 +100,18 @@ namespace parser {
 				}
 				return NodePtr(); // .. nothing found
 			}
+
+			bool replace(const TokenRange& range, const NodePtr& node) {
+				// search and update element
+				for(auto it = symbols.rbegin(); it!=symbols.rend(); ++it) {
+					if (it->first == range) {
+						it->second = node;
+						return true;
+					}
+				}
+				return false;
+			}
+
 		};
 
 		// the stack of scopes managed by this manager
@@ -135,6 +147,15 @@ namespace parser {
 
 		void add(const TokenRange& range, const NodePtr& node) {
 			scopeStack.back().add(range, node);
+		}
+
+		bool replace(const TokenRange& range, const NodePtr& node) {
+			// search for scope to replace value
+			for(auto it = scopeStack.rbegin(); it!=scopeStack.rend(); ++it) {
+				if (it->replace(range, node)) return true;
+				if (!it->nested) return false;
+			}
+			return false;
 		}
 
 		NodePtr lookup(const TokenRange& range) const {
@@ -308,6 +329,14 @@ namespace parser {
 		const TokenRange& getSubRange(unsigned index) const {
 			assert(index < subRanges.size());
 			return subRanges[index];
+		}
+
+		void clearTerms() {
+			subTerms.clear();
+		}
+
+		void clearSubRanges() {
+			subRanges.clear();
 		}
 
 		ScopeManager& getVarScopeManager() {
@@ -1063,6 +1092,8 @@ namespace parser {
 	TermPtr varScop(const TermPtr& term);
 
 	TermPtr newScop(const TermPtr& term);
+
+	TermPtr symScop(const TermPtr& term);
 
 	inline TermPtr rec(const string& nonTerminal = "E") {
 		return std::make_shared<NonTerminal>(nonTerminal);

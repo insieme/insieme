@@ -22,7 +22,7 @@ void test_valid_strip() {
 	printf("#1 test_valid_interchage()\n");
 
 	#pragma insieme strip (1,2)
-	for (int i=0; i<5; i++) {
+	for (int i=1; i<5; i++) {
 		for (int j=0; j<9; j++) {
 			A[i-1][j] = A[i][j];
 		}
@@ -42,7 +42,7 @@ void test_valid_strip2() {
 	printf("#1 test_valid_interchage()\n");
 
 	#pragma insieme strip (1,4)
-	for (int i=0; i<5; i++) {
+	for (int i=1; i<5; i++) {
 		for (int j=0; j<9; j++) {
 			A[i-1][j] = A[i][j];
 		}
@@ -62,7 +62,7 @@ void test_valid_interchange() {
 	printf("#1 test_valid_interchage()\n");
 
 	#pragma insieme interchange(0,1)
-	for (int i=0; i<2; i++) {
+	for (int i=1; i<2; i++) {
 		for (int j=0; j<2; j++) {
 			A[i-1][j] = A[i][j];
 		}
@@ -80,7 +80,7 @@ void test_invalid_interchange() {
 	printf("#2 test_invalid_interchage()\n");
 	
 	#pragma insieme interchange(0,1)
-	for (int i=0; i<2; i++) {
+	for (int i=1; i<2; i++) {
 		for (int j=0; j<2; j++) {
 			A[i-1][j+1] = A[i][j];
 		}

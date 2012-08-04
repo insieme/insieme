@@ -72,6 +72,7 @@ enum ConstraintType { GT, LT, EQ, NE, GE, LE };
 
 // Returns the constrait type which correspond to the logic negation of a given constraint type
 inline ConstraintType getLogicNegation(const ConstraintType& c) {
+
 	switch(c) {
 	case ConstraintType::EQ: return ConstraintType::NE;
 	case ConstraintType::NE: return ConstraintType::EQ;
@@ -93,23 +94,48 @@ inline ConstraintType getLogicNegation(const ConstraintType& c) {
  * sort of constraint (==, !=, <, >, <= and >=) to be represented. 
  *****************************************************************************************************/
 template <typename FuncTy>
-struct Constraint : public utils::Printable, 
+struct Constraint : 
+	public utils::Printable, 
 	public boost::equality_comparable<Constraint<FuncTy>>,
 	public boost::less_than_comparable<Constraint<FuncTy>> 
 {
 
+	/** 
+	 * R-value move constructor 
+	 */
+	Constraint(Constraint<FuncTy>&& cons) : 
+		func(std::move(cons.func)), 
+		type(cons.type) { }
+
+	/**
+	 * Copy constructor 
+	 */
+	Constraint(const Constraint<FuncTy>& cons) : func(cons.func), type(cons.type) { }
+
+	/** 
+	 * R-Value move semantics constructor 
+	 */
+	Constraint(FuncTy&& func, ConstraintType type = ConstraintType::GE) :
+		func(std::move(func)), type(type) { }
+
+	/**
+	 * Standard costructor 
+	 */
 	Constraint(const FuncTy& func, const ConstraintType& type = ConstraintType::GE) : 
 		func(func), type(type) { }
 
+	/** 
+	 * Return the type of this constraint 
+	 */
 	inline ConstraintType getType() const { return type; }
 
 	inline const FuncTy& getFunction() const { return func; }
 
-	bool operator==(const Constraint<FuncTy>& other) const {
+	inline bool operator==(const Constraint<FuncTy>& other) const {
 		return func==other.func && type==other.type;
 	}
 
-	std::ostream& printTo(std::ostream& out) const { 
+	inline std::ostream& printTo(std::ostream& out) const { 
 		out << func << " ";
 		switch(type) {
 		case EQ: out << "==";  break;	case NE: out << "!=";  break; 	case GT: out << ">";   break;
@@ -148,8 +174,6 @@ private:
 template <>
 inline bool Constraint<int>::isEvaluable() const { return true; }
 
-
-
 /******************************************************************************************************
  * Combiner: The constraint combiner has the task to combine multiple constraints into 
  * conjunctions (AND) or disjunctions (OR) of constraints which can be either in positive form of 
@@ -168,10 +192,26 @@ struct CombinerPtr : public std::shared_ptr<Combiner<FuncTy>> {
 
 	typedef FuncTy func_type;
 	
+	/** 
+	 * Empty constructor builds an empty combiner
+	 */
 	CombinerPtr() { }
 
 	CombinerPtr(const std::shared_ptr<Combiner<FuncTy>>& cons) : 
 		std::shared_ptr<Combiner<FuncTy>>( cons ) { }
+
+	CombinerPtr(const CombinerPtr<FuncTy>& other) : 
+		std::shared_ptr<Combiner<FuncTy>>( other ) { }
+
+	CombinerPtr(CombinerPtr<FuncTy>&& other) :
+		std::shared_ptr<Combiner<FuncTy>>( std::move(other) ) { }
+
+	/** 
+	 * Automatic conversion to bool of a combiner
+	 */
+	operator bool() const {
+		return static_cast<bool>(static_cast<const std::shared_ptr<Combiner<FuncTy>>&>(*this));
+	}
 
 };
 
@@ -208,8 +248,19 @@ template <typename FuncTy>
 class RawConstraint : public Combiner<FuncTy> {
 	Constraint<FuncTy> constraint; 
 public:
-	RawConstraint(const Constraint<FuncTy>& constraint) : constraint(constraint) { }
-	
+
+	/** 
+	 * R-value move constructor 
+	 */
+	RawConstraint(Constraint<FuncTy>&& constraint) : 
+		constraint(std::move(constraint)) { }
+
+	/** 
+	 * Copy constructor 
+	 */
+	RawConstraint(const Constraint<FuncTy>& constraint) : 
+		constraint(constraint) { }
+
 	// Returns the constraint embodied in this wrapper class
 	inline const Constraint<FuncTy>& getConstraint() const { return constraint; }
 	
@@ -229,9 +280,7 @@ public:
 		return constraint < other.constraint; 
 	}
 
-	inline bool isTrue() const {
-		return constraint.isTrue();
-	}
+	inline bool isTrue() const { return constraint.isTrue(); }
 
 	inline CombinerType getCombinerType() const { return CT_RAW; }
 };
@@ -267,13 +316,9 @@ public:
 		return false;
 	}
 
-	inline bool isEvaluable() const {
-		return subComb->isEvaluable();
-	}
+	inline bool isEvaluable() const { return subComb->isEvaluable(); }
 
-	inline bool isTrue() const {
-		return !subComb->isTrue();
-	}
+	inline bool isTrue() const { return !subComb->isTrue(); }
 
 	inline CombinerType getCombinerType() const { return CT_NEG; }
 };
@@ -437,8 +482,7 @@ struct ConstraintPrinter : public RecConstraintVisitor<FuncTy, void> {
 
 template <class FuncTy>
 std::ostream& Combiner<FuncTy>::printTo(std::ostream& out) const {
-	ConstraintPrinter<FuncTy> vis(out);
-	vis.visit(*this);
+	ConstraintPrinter<FuncTy>(out).visit(*this);
 	return out;
 }
 
@@ -494,9 +538,13 @@ CombinerPtr<FuncTy> makeDisjunction(const All&... args) {
 	return __combiner<All...>::make(BinConstraint<FuncTy>::OR, args...); 
 }
 
-
 template <typename FuncTy>
 CombinerPtr<FuncTy> makeCombiner(const Constraint<FuncTy>& c) {
+	return CombinerPtr<FuncTy>(std::make_shared<RawConstraint<FuncTy>>(c));
+}
+
+template <typename FuncTy>
+CombinerPtr<FuncTy> makeCombiner(Constraint<FuncTy>&& c) {
 	return CombinerPtr<FuncTy>(std::make_shared<RawConstraint<FuncTy>>(c));
 }
 
@@ -602,8 +650,7 @@ struct ConstraintNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<Fun
 
 template <class FuncTy>
 inline CombinerPtr<FuncTy> normalize( const CombinerPtr<FuncTy>& cons ) {
-	ConstraintNormalizer<FuncTy> cnv;
-	return cnv.visit(cons);
+	return ConstraintNormalizer<FuncTy>().visit(cons);
 }
 
 namespace {
@@ -639,12 +686,10 @@ struct ConstraintConverter : public RecConstraintVisitor<SrcTy, CombinerPtr<TrgT
 
 
 template <class SrcTy, class TrgTy>
-inline CombinerPtr<TrgTy> castTo( 
-		const CombinerPtr<SrcTy>& cons, 
-		typename boost::enable_if<boost::is_convertible<SrcTy,TrgTy>>::type* dummy = 0) 
+inline CombinerPtr<TrgTy> 
+castTo(const CombinerPtr<SrcTy>& cons, typename boost::enable_if<boost::is_convertible<SrcTy,TrgTy>>::type* dummy = 0) 
 {
-	ConstraintConverter<SrcTy, TrgTy> cnv;
-	return cnv.visit(cons);
+	return ConstraintConverter<SrcTy, TrgTy>().visit(cons);
 }
 
 /**
@@ -660,7 +705,7 @@ template <class FuncTy>
 struct Piecewise : Printable {
 
 	typedef Constraint<FuncTy> 			  		Predicate;
-	typedef CombinerPtr<FuncTy>  		PredicatePtr;
+	typedef CombinerPtr<FuncTy>  				PredicatePtr;
 	typedef ConstraintType 	   			  		PredicateType;
 
 	typedef std::pair<PredicatePtr, FuncTy> 	Piece;
@@ -697,12 +742,15 @@ private:
 	Pieces pieces;
 };
 
+
+
+
+
+
 // TO DNF Form
 
 template <class FuncTy>
 CombinerPtr<FuncTy> toDNF(const CombinerPtr<FuncTy>& c);
-
-
 
 namespace {
 
@@ -841,8 +889,7 @@ struct ConjunctionsCollector : public RecConstraintVisitor<FuncTy,void> {
 
 template <class FuncTy>
 inline CombinerPtr<FuncTy> toDNF( const CombinerPtr<FuncTy>& cons ) {
-	DNFNormalizer<FuncTy> cnv;
-	return cnv.visit(cons);
+	return DNFNormalizer<FuncTy>().visit(cons);
 }
 
 template <class FuncTy>

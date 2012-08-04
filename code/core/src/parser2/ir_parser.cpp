@@ -39,6 +39,7 @@
 #include <sstream>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/parser2/parser.h"
 
 namespace insieme {
@@ -81,6 +82,274 @@ namespace parser {
 			return cur.tryDeref(cur.getTerm(index).as<ExpressionPtr>());
 		};
 
+		template<typename Target>
+		TokenIter findNext(const Grammar::TermInfo& info, const TokenIter begin, const TokenIter& end, const Target& token) {
+			vector<Token> parenthese;
+			for(TokenIter cur = begin; cur != end; ++cur) {
+
+				// early check to allow searching for open / close tokens
+				if (parenthese.empty() && *cur == token) {
+					return cur;
+				}
+
+				if (info.isLeftParenthese(*cur)) {
+					parenthese.push_back(info.getClosingParenthese(*cur));
+				}
+				if (info.isRightParenthese(*cur)) {
+					assert(!parenthese.empty() && parenthese.back() == *cur);
+					parenthese.pop_back();
+				}
+				if (!parenthese.empty()) {
+					continue;
+				}
+
+				if (*cur == token) {
+					return cur;
+				}
+			}
+			return end;
+		}
+
+
+		vector<TokenRange> split(const Grammar::TermInfo& info, const TokenRange& range, char sep) {
+			assert(!info.isLeftParenthese(Token::createSymbol(sep)));
+			assert(!info.isRightParenthese(Token::createSymbol(sep)));
+
+			TokenIter start = range.begin();
+			TokenIter end = range.end();
+
+			vector<TokenRange> res;
+			TokenIter next = findNext(info, start, end, sep);
+			while(next != end) {
+				res.push_back(TokenRange(start,next));
+				start = next+1;
+				next = findNext(info, start, end, sep);
+			}
+
+			// add final sub-range
+			if (start != end) res.push_back(TokenRange(start, end));
+
+			return res;
+		}
+
+		bool isType(Context& cur, const TokenIter& begin, const TokenIter& end) {
+			try {
+				// simple test to determine whether sub-range is a type
+				auto backup = cur.backup();
+				bool res = cur.grammar.match(cur, begin, end, "T");
+				backup.restore(cur);
+				return res;
+			} catch (const ParseException& pe) {
+				// ignore
+			}
+			return false;
+		}
+
+		bool containsOneOf(const NodePtr& root, const vector<NodePtr>& values) {
+			return visitDepthFirstOnceInterruptible(root, [&](const NodePtr& cur) {
+				return contains(values, cur);
+			});
+		}
+
+		FunctionTypePtr getFunctionType(Context& cur, const TokenRange& range) {
+
+			// find type definition
+			assert(range.front() == '(');
+
+			// parse argument type list
+			const Grammar::TermInfo& info = cur.grammar.getTermInfo();
+			TokenRange params_block(range.begin(), findNext(info, range.begin(), range.end(), '-'));
+
+			// remove initial ( and tailing )
+			params_block = params_block + 1 - 1 ;
+
+			// process parameters
+			TypeList params;
+			for(const TokenRange& param : split(info, params_block, ',')) {
+				// type is one less from the end - by skipping the identifier
+				TokenRange typeRange = param - 1;
+
+				// parse type
+				TypePtr type = cur.grammar.match(cur, typeRange.begin(), typeRange.end(), "T").as<TypePtr>();
+
+				// add to parameter type list
+				params.push_back(type);
+			}
+
+			// parse result type
+			TokenIter begin = params_block.end() + 3;
+			TokenIter resEnd = findNext(info, begin, range.end(), '{');
+			if (resEnd == range.end()) {
+				resEnd = findNext(info, begin, range.end(), Token::createIdentifier("return"));
+			}
+			TypePtr resType = cur.grammar.match(cur, begin, resEnd, "T").as<TypePtr>();
+
+			// build resulting type
+			return cur.functionType(params, resType);
+		}
+
+
+
+		TermPtr getLetTerm() {
+
+			/**
+			 * The let-rule works as follows:
+			 * 		let a1,..,an = e1,..,en
+			 * where a1 - an are names and e1 - en expressions
+			 * or types. The names a1 - an can be used inside
+			 * the e1 - en for building recursive types / functions.
+			 */
+
+			// an action saving the total token range for the let rule when entering the pattern
+			struct let_handler : public detail::actions {
+				void enter(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+					// for simplicity it is assumed that let is first part of rule
+					assert(cur.getTerms().empty());
+					assert(cur.getSubRanges().empty());
+					cur.push(TokenRange(begin, end));
+				}
+				void leave(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+					// clear term and sub-range lists
+					cur.clearTerms();
+					cur.clearSubRanges();
+				}
+				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+					// convert original bindings in actual bindings
+					const auto& ranges = cur.getSubRanges();
+					auto names = utils::make_range(ranges.begin()+1, ranges.end());
+					vector<NodePtr> values = cur.getTerms();
+
+					if (names.size() != values.size()) { return; }
+
+					// get symbol manager
+					ScopeManager& manager = cur.getSymbolManager();
+
+					// get list of bindings
+					vector<NodePtr> bindings;
+					for(const TokenRange& name : names) {
+						bindings.push_back(manager.lookup(name));
+					}
+
+					// check whether recursive elements are involved
+					bool isRecursive =
+							all(bindings, [](const NodePtr& value) { return value; }) &&						// no binding is null
+							any(values, [&](const NodePtr& value) { return containsOneOf(value, bindings); });	// any value referes to a binding
+
+					// add mappings ...
+					if (!isRecursive) {
+						for(std::size_t i=0; i<names.size(); i++) {
+							manager.add(names[i], values[i]);
+						}
+						return;
+					}
+
+					// convert all values to recursive values
+					if (values.front()->getNodeCategory() == NC_Type) {
+						// compute block of recursive type definitions
+						vector<RecTypeBindingPtr> defs;
+						for(std::size_t i=0; i<names.size(); i++) {
+							defs.push_back(cur.recTypeBinding(bindings[i].as<TypeVariablePtr>(), values[i].as<TypePtr>()));
+						}
+						RecTypeDefinitionPtr recDef = cur.recTypeDefinition(defs);
+
+						// replace types with recursive types
+						for(std::size_t i=0; i<names.size(); i++) {
+							values[i] = cur.recType(bindings[i].as<TypeVariablePtr>(), recDef);
+						}
+					} else if (values.front()->getNodeType() == NT_LambdaExpr) {
+
+						// build recursive function definition
+						vector<LambdaBindingPtr> defs;
+						for(std::size_t i=0; i<names.size(); i++) {
+							defs.push_back(cur.lambdaBinding(bindings[i].as<VariablePtr>(), values[i].as<LambdaExprPtr>()->getLambda()));
+						}
+
+						LambdaDefinitionPtr def = cur.lambdaDefinition(defs);
+
+						// replace bound names with rec functions
+						for(std::size_t i=0; i<names.size(); i++) {
+							values[i] = cur.lambdaExpr(bindings[i].as<VariablePtr>(), def);
+						}
+
+					} else {
+						assert(false && "Undefined type encountered!");
+					}
+
+					// substitute temporal mappings with real mappings
+					for(std::size_t i=0; i<names.size(); i++) {
+						manager.replace(names[i], values[i]);
+					}
+				}
+			};
+
+			// an action registering all names when being stated
+			struct declare_names : public detail::actions {
+				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+
+
+					// get total range and list of names
+					const auto& ranges = cur.getSubRanges();
+					assert(ranges.size() >= 2u && "Total range and first name have to be there!");
+					TokenRange total = ranges[0];
+					auto names = utils::make_range(ranges.begin()+1, ranges.end());
+
+					assert(*names.back().end() == '=');
+
+					// isolate definitions
+					TokenRange def(names.back().end()+1, total.end());
+					assert(!def.empty());
+
+					// split definitions
+					vector<TokenRange> defs;
+					if (names.size() > 1u) {
+						defs = split(cur.grammar.getTermInfo(), def, ',');
+					} else {
+						defs.push_back(def);
+					}
+
+					// check whether number of names and number of definitions are matching
+					if (names.size() != defs.size()) { return; }
+
+					// determine whether definitions are functions or recursive types
+					if (isType(cur, defs.front().begin(), defs.front().end())) {
+						// define type variables and be done
+						for(const TokenRange& name : names) {
+							TypeVariablePtr var = cur.typeVariable(name.front().getLexeme());
+							cur.getSymbolManager().add(name, var);
+						}
+						return;
+					}
+
+					// those are expressions => test whether it is function declaration
+					// Observation: no non-function expressions ends with a } or a ;
+					const Token& tail = *(defs.front().end()-1);
+					if (tail == '}' || tail == ';') {
+						// bind names to variables with types matching the corresponding definitions
+						for(std::size_t i = 0; i < names.size(); ++i) {
+							cur.getSymbolManager().add(names[i], cur.variable(getFunctionType(cur, defs[i])));
+						}
+					}
+
+					// neither recursive functions nor potential recursive types => nothing to do here
+
+				}
+			};
+
+
+			auto E = rec("E");
+			auto T = rec("T");
+			auto id = cap(identifier);
+
+			auto names = std::make_shared<Action<declare_names>>(seq(id, loop(seq(",",id))));
+			auto values = seq(E, loop(seq(",", E))) | seq(T, loop(seq(",", T)));
+			auto pattern = seq("let", names, "=",  values);
+			auto full = std::make_shared<Action<let_handler>>(pattern);
+
+			// that's it
+			return full;
+		}
+
+
 
 		Grammar buildGrammar(const string& start = "N") {
 
@@ -91,9 +360,8 @@ namespace parser {
 			 * 		T .. types
 			 * 		E .. expressions
 			 * 		S .. statements
-			 * 		D .. definition
 			 * 		A .. application = program (root node)
-			 * 		N .. any ( P | T | E | S | D | A )
+			 * 		N .. any ( P | T | E | S | A )
 			 */
 
 			auto P = rec("P");
@@ -101,7 +369,6 @@ namespace parser {
 			auto E = rec("E");
 			auto S = rec("S");
 			auto N = rec("N");
-			auto D = rec("D");
 			auto A = rec("A");
 
 
@@ -109,6 +376,8 @@ namespace parser {
 
 			vector<RulePtr> rules;
 
+			// the more complex let-term used at several occasions
+			auto let = getLetTerm();
 
 			// -------- add int-type parameter rules --------
 
@@ -299,6 +568,9 @@ namespace parser {
 					1    // higher priority than generic type rule
 			));
 
+			// allow a let to be used with a type
+			g.addRule("T", rule(symScop(seq(let,"in",T)), forward));
+
 			// --------------- add literal rules ---------------
 
 
@@ -361,6 +633,17 @@ namespace parser {
 					any(Token::String_Literal),
 					[](Context& cur)->NodePtr {
 						return cur.stringLit(*cur.begin);
+					}
+			));
+
+			// add usere defined literals
+			g.addRule("E", rule(
+					seq("lit(", cap(any(Token::String_Literal)), ":", T, ")"),
+					[](Context& cur)->NodePtr {
+						// remove initial and final "" from value
+						string value = cur.getSubRange(0).front().getLexeme();
+						value = value.substr(1,value.size()-2);
+						return cur.literal(cur.getTerm(0).as<TypePtr>(), value);
 					}
 			));
 
@@ -565,6 +848,9 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
 						ExpressionPtr b = getOperand(cur, 1);
+						if (a->getType()->getNodeType() == NT_RefType) {
+							return cur.arrayRefElem(a, b);
+						}
 						return cur.arraySubscript(a, b);		// works for arrays and vectors
 					},
 					-15
@@ -575,6 +861,9 @@ namespace parser {
 					seq(E, ".", cap(identifier)),
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						if (a->getType()->getNodeType() == NT_RefType) {
+							return cur.refMember(a, cur.getSubRange(0)[0]);
+						}
 						return cur.accessMember(a, cur.getSubRange(0)[0]);
 					},
 					-15
@@ -619,6 +908,9 @@ namespace parser {
 			));
 
 
+			// -- let expression --
+			g.addRule("E", rule(symScop(seq(let,"in",E)), forward));
+
 
 			struct register_param : public detail::actions {
 				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
@@ -653,7 +945,7 @@ namespace parser {
 			g.addRule("S", rule(seq(E,";"), forward));
 
 			// every declaration is a statement
-			g.addRule("S", rule(D, forward));
+			g.addRule("S", rule(seq(let, ";"), [](Context& cur)->NodePtr { return cur.getNoOp(); }));
 
 			// declaration statement
 			g.addRule("S", rule(
@@ -847,23 +1139,10 @@ namespace parser {
 					}
 			));
 
-
-			// -- Declarations --
-			g.addRule("D", rule(
-				seq("let", cap(identifier), "=", (T | E), ";"),
-				[](Context& cur)->NodePtr {
-					// register name within symbol manager
-					cur.getSymbolManager().add(cur.getSubRange(0), cur.getTerm(0));
-					return cur.getNoOp();
-				},
-				1 //  higher priority than variable declaration
-			));
-
-
 			// -- top level program code --
 
 			g.addRule("A", rule(
-					seq(loop(D),T,"main()", S),
+					seq(loop(seq(let, ";"), Token::createSymbol(';')),T,"main()", S),
 					[](Context& cur)->NodePtr {
 						IRBuilder builder(cur.manager);
 						TypePtr returnType = (cur.getTerms().end()-2)->as<TypePtr>();
@@ -879,7 +1158,6 @@ namespace parser {
 			g.addRule("N", rule(T, forward));
 			g.addRule("N", rule(E, forward));
 			g.addRule("N", rule(S, forward));
-			g.addRule("N", rule(D, forward));
 			g.addRule("N", rule(A, forward));
 
 //			std::cout << g << "\n\n";

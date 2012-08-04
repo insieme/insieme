@@ -287,6 +287,19 @@ namespace parser {
 				parse(manager, "1+2*3")
 		);
 
+		// check associativity
+		EXPECT_EQ(
+				builder.add(builder.add(one, two), tre),
+				parse(manager, "1+2+3")
+		);
+
+
+		// known bug: same precedence, different operator
+//		EXPECT_EQ(
+//				builder.sub(builder.add(one, two), tre),
+//				parse(manager, "1+2-3")
+//		);
+
 
 		// TODO: fix this one
 //		EXPECT_EQ(
@@ -415,6 +428,86 @@ namespace parser {
 		EXPECT_FALSE(
 			parse(manager,"{\n" + body + body + body + "some shit" + body + body + "}")
 		);
+
+	}
+
+	TEST(IR_Parser2, LetBinding) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		auto& basic = manager.getLangBasic();
+
+		// --- types ---
+
+		// test with types first
+		EXPECT_EQ(basic.getBool(), parse_type(manager, "let a = bool in a"));
+		EXPECT_EQ(basic.getBool(), parse_type(manager, "let a,b = bool,char in a"));
+		EXPECT_EQ(basic.getChar(), parse_type(manager, "let a,b = bool,char in b"));
+
+		// test simple recursive type
+		EXPECT_EQ("AP(rec 'a.{'a=(int,ref<'a>)})", toString(parse_type(manager, "let a = (int,ref<a>) in a")));
+
+		// test mutual recursive types
+		EXPECT_EQ("AP(rec 'a.{'a=(int,ref<'b>),'b=(char,ref<'a>)})", toString(parse_type(manager, "let a,b = (int,ref<b>),(char,ref<a>) in a")));
+		EXPECT_EQ("AP(rec 'b.{'a=(int,ref<'b>),'b=(char,ref<'a>)})", toString(parse_type(manager, "let a,b = (int,ref<b>),(char,ref<a>) in b")));
+
+		// --- values ---
+
+		// test simple value
+		EXPECT_EQ(builder.intLit(12), parse_expr(manager, "let a = 12 in a"));
+
+		// test multiple values
+		EXPECT_EQ("AP(int.add(1, 2))",toString(parse_expr(manager, "let a,b = 1,2 in a + b")));
+
+
+		// --- functions ---
+
+		// test non-recursive function
+		manager.setNextFreshID(0);
+		EXPECT_EQ("AP(rec v2.{v2=fun(bool v1) {return bool.not(v1);}}(false))",
+				toString(parse_expr(manager, "let f = (bool a)->bool { return !a; } in f(false)"))
+		);
+
+		// test recursive function
+		manager.setNextFreshID(0);
+		EXPECT_EQ("AP(rec v0.{v0=fun(int<4> v1) {if(int.eq(v1, 0)) {return 0;} else {}; return int.mul(v0(int.sub(v1, 1)), v1);}}(3))",
+			toString(parse_expr(manager, "let f = (int<4> a)->int<4> { if (a == 0) return 0; return f(a-1)*a; } in f(3)"))
+		);
+
+		// test recursive function with multiple arguments
+		manager.setNextFreshID(0);
+		EXPECT_EQ("AP(rec v0.{v0=fun(int<4> v2, int<4> v3) {if(int.eq(v2, 0)) {return v3;} else {}; return v0(int.sub(v2, 1), int.add(v3, v2));}}(3, 0))",
+			toString(parse_expr(manager, "let f = (int<4> a, int<4> sum)->int<4> { if (a == 0) return sum; return f(a-1, sum+a); } in f(3,0)"))
+		);
+
+		// test mutal recursive function
+		manager.setNextFreshID(0);
+		EXPECT_EQ("AP(rec v1.{v0=fun(int<4> v4) {if(int.eq(v4, 0)) {return true;} else {}; return v1(int.sub(v4, 1));}, "
+				             "v1=fun(int<4> v6) {if(int.eq(v6, 0)) {return false;} else {}; return v0(int.sub(v6, 1));}})",
+			toString(parse_expr(manager, ""
+					"let even,odd = "
+					"	(int<4> a)->bool { if (a == 0) return true; return odd(a-1); }, "
+					"	(int<4> a)->bool { if (a == 0) return false; return even(a-1); }"
+					"in odd"
+				)
+			)
+		);
+
+		// some encountered buggy cases:
+		manager.setNextFreshID(0);
+		EXPECT_EQ("AP(vector<vector<int<4>,4>,4>)", toString(parse_type(manager, "let t = vector<vector<int<4>,4>,4> in t")));
+
+	}
+
+	TEST(IR_Parser2, Literals) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr fun = parse_type(manager, "(ref<'a>)->'a");
+		ASSERT_TRUE(fun);
+
+		// test whether a listeral can be parsed successfully
+		EXPECT_EQ(builder.literal(fun, "test"), parse_expr(manager, "lit(\"test\":(ref<'a>)->'a)"));
+		EXPECT_EQ(builder.literal(fun, "test.more"), parse_expr(manager, "lit(\"test.more\":(ref<'a>)->'a)"));
 
 	}
 
