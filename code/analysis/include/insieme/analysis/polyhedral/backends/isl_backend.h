@@ -60,9 +60,6 @@ class Div;
 
 namespace analysis { namespace polyhedral {
 
-class Stmt;
-typedef std::shared_ptr<Stmt> StmtPtr;
-
 class IslCtx;
 class IslSet;
 class IslMap;
@@ -100,7 +97,7 @@ public:
 	// Build an ISL context and allocate the underlying isl_ctx object
 	explicit IslCtx() : ctx( isl_ctx_alloc() ) { }
 
-MapPtr<ISL> range_map(const IslMap& map);
+	MapPtr<ISL> range_map(const IslMap& map);
 	isl_ctx* getRawContext() { return ctx; }
 
 	TupleMap::iterator insertTuple( const TupleName& mapping ) { 
@@ -205,6 +202,8 @@ public:
 //==== Overloaded operators for IslSet ===========================================================
 SetPtr<ISL> operator+(IslSet& lhs, const IslSet& rhs);
 
+SetPtr<ISL> operator-(IslSet& lhs, const IslSet& rhs);
+
 SetPtr<ISL> operator*(IslSet& lhs, const IslSet& rhs);
 
 /**************************************************************************************************
@@ -275,7 +274,6 @@ MapPtr<ISL> domain_map(IslMap& map);
 
 
 
-
 /**************************************************************************************************
  * IslPiecewise: is the abstraction used to represent a piesewise expression ISL library. 
  *************************************************************************************************/
@@ -284,6 +282,8 @@ class IslPiecewise : public IslObj, public boost::noncopyable, public utils::Pri
 
 public:
 	IslPiecewise(IslCtx& ctx);
+
+	IslPiecewise(IslCtx& ctx, const utils::Piecewise<AffineFunction>& pw);
 
 	IslPiecewise(IslCtx& ctx, isl_union_pw_qpolynomial* ipw) : 
 		IslObj(ctx, isl_union_pw_qpolynomial_get_space(ipw)), pw(ipw) 

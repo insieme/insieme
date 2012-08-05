@@ -39,101 +39,101 @@
 //#include <locale.h> // needed to use thousands separator
 #include <stdio.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include "utils/timing.h"
 #include "utils/memory.h"
 #include "instrumentation.h"
 #include "impl/error_handling.impl.h"
-#include "pthread.h"
-#include "errno.h"
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi_helper.h"
-#include "utils/energy_rapl.h"
+#include "utils/impl/energy.impl.h"
 #include "utils/impl/timing.impl.h"
 #endif
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 // global function pointers to switch instrumentation on/off
-void (*irt_wi_instrumentation_event)(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) = &_irt_wi_instrumentation_event;
-void (*irt_wg_instrumentation_event)(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) = &_irt_wg_no_instrumentation_event;;
-void (*irt_di_instrumentation_event)(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) = &_irt_di_no_instrumentation_event;
-void (*irt_worker_instrumentation_event)(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) = &_irt_worker_no_instrumentation_event;
+void (*irt_inst_insert_wi_event)(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id) = &_irt_inst_insert_no_wi_event;
+void (*irt_inst_insert_wg_event)(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id) = &_irt_inst_insert_no_wg_event;;
+void (*irt_inst_insert_di_event)(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) = &_irt_inst_insert_no_di_event;
+void (*irt_inst_insert_wo_event)(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) = &_irt_inst_insert_no_wo_event;
 bool irt_instrumentation_event_output_is_enabled = false;
 
 // ============================ dummy functions ======================================
 // dummy functions to be used via function pointer to disable
 // instrumentation even if IRT_ENABLE_INSTRUMENTATION is set
 
-void _irt_wi_no_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) { }
-void _irt_wg_no_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) { }
-void _irt_worker_no_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) { }
-void _irt_di_no_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) { }
+void _irt_inst_insert_no_wi_event(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id) { }
+void _irt_inst_insert_no_wg_event(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id) { }
+void _irt_inst_insert_no_wo_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) { }
+void _irt_inst_insert_no_di_event(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) { }
 
 // resizes table according to blocksize
-void _irt_performance_table_resize(irt_pd_table* table) {
+void _irt_inst_event_data_table_resize(irt_instrumentation_event_data_table* table) {
 	table->size = table->size * 2;
-	table->data = (_irt_performance_data*)realloc(table->data, sizeof(_irt_performance_data)*table->size);
+	table->data = (irt_instrumentation_event_data*)realloc(table->data, sizeof(irt_instrumentation_event_data)*table->size);
 }
 
 // =============== functions for creating and destroying performance tables ===============
 
 // allocates memory for performance data, sets all fields
-irt_pd_table* irt_create_performance_table(unsigned blocksize) {
-	irt_pd_table* table = (irt_pd_table*)malloc(sizeof(irt_pd_table));
-	table->blocksize = blocksize;
+irt_instrumentation_event_data_table* irt_inst_create_event_data_table() {
+	irt_instrumentation_event_data_table* table = (irt_instrumentation_event_data_table*)malloc(sizeof(irt_instrumentation_event_data_table));
+	table->blocksize = IRT_INST_WORKER_PD_BLOCKSIZE;
 	table->size = table->blocksize * 2;
 	table->number_of_elements = 0;
-	table->data = (_irt_performance_data*)malloc(sizeof(_irt_performance_data) * table->size);
+	table->data = (irt_instrumentation_event_data*)malloc(sizeof(irt_instrumentation_event_data) * table->size);
 	return table;
 }
 
 // frees allocated memory
-void irt_destroy_performance_table(irt_pd_table* table) {
+void irt_inst_destroy_event_data_table(irt_instrumentation_event_data_table* table) {
 	free(table->data);
 	free(table);
 }
 
-void _irt_instrumentation_event_insert_time(irt_worker* worker, const int event, const uint64 id, const uint64 time) {
-	_irt_pd_table* table = worker->performance_data;
+void _irt_inst_event_insert_time(irt_worker* worker, const int event, const uint64 id, const uint64 time) {
+	irt_instrumentation_event_data_table* table = worker->instrumentation_event_data;
 
 	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size\n")
 
 	if(table->number_of_elements >= table->size) {
-		_irt_performance_table_resize(table);
+		_irt_inst_event_data_table_resize(table);
 	}
-	_irt_performance_data* pd = &(table->data[table->number_of_elements++]);
+	irt_instrumentation_event_data* pd = &(table->data[table->number_of_elements++]);
 
 	pd->timestamp = time;
-	pd->event = event;
-	pd->subject_id = id;
+	pd->event_id = event;
+	pd->index = ((irt_work_item_id*)&id)->value.components.index;
+	pd->thread = ((irt_work_item_id*)&id)->value.components.thread;
 }
 
 
 // commonly used internal function to record events and timestamps
-void _irt_instrumentation_event_insert(irt_worker* worker, const int event, const uint64 id) {
+void _irt_inst_event_insert(irt_worker* worker, const int event, const uint64 id) {
 	uint64 time = irt_time_ticks();
 
 	IRT_ASSERT(worker != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Trying to add event for worker 0!\n");
 
-	_irt_instrumentation_event_insert_time(worker, event, id, time);
+	_irt_inst_event_insert_time(worker, event, id, time);
 }
 
 // =========== private event handlers =================================
 
-void _irt_wi_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) {
-	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
+void _irt_inst_insert_wi_event(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id) {
+	_irt_inst_event_insert(worker, event, subject_id.value.full);
 }
 
-void _irt_wg_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) {
-	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
+void _irt_inst_insert_wg_event(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id) {
+	_irt_inst_event_insert(worker, event, subject_id.value.full);
 }
 
-void _irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) {
-	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
+void _irt_inst_insert_wo_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) {
+	_irt_inst_event_insert(worker, event, subject_id.value.full);
 }
 
-void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) {
-	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
+void _irt_inst_insert_di_event(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) {
+	_irt_inst_event_insert(worker, event, subject_id.value.full);
 }
 
 // ================= debug output functions ==================================
@@ -143,7 +143,7 @@ void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event 
 #endif
 
 // writes csv files
-void irt_instrumentation_output(irt_worker* worker) {
+void irt_inst_event_data_output(irt_worker* worker) {
 	if(!irt_instrumentation_event_output_is_enabled)
 		return;
 	// necessary for thousands separator
@@ -153,7 +153,7 @@ void irt_instrumentation_output(irt_worker* worker) {
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
-	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
+	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
@@ -171,7 +171,7 @@ void irt_instrumentation_output(irt_worker* worker) {
 		IRT_DEBUG_ONLY(strerror(errno));
 		return;
 	}*/
-	irt_pd_table* table = worker->performance_data;
+	irt_instrumentation_event_data_table* table = worker->instrumentation_event_data;
 	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no event data!")
 	//fprintf(outputfile, "INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.value.components.thread);
 
@@ -248,8 +248,6 @@ void irt_instrumentation_output(irt_worker* worker) {
 		fprintf(opencl_logfile, ",\t%18lu\n", ocl_helper_table[helper_counter].timestamp);
 		helper_counter++;
 		}
-
-
 	}
 
 	fclose(opencl_logfile);
@@ -258,167 +256,136 @@ void irt_instrumentation_output(irt_worker* worker) {
 	int ocl_helper_table_counter = 0;
 #endif
 
-	for(int i = 0; i < table->number_of_elements; ++i) {
-//#ifdef USE_OPENCL
-//		// if a new workitem started, check if there is corresponding opencl event data
-//		if(table->data[i].event == WORK_ITEM_STARTED) {
-//			for(int j = 0; j < ocl_helper_table_number_of_entries; ++j) {
-//				if(ocl_helper_table[j].workitem_id == table->data[i].subject_id) {//&& ocl_helper_table[j].event == IRT_INST_OCL_QUEUED) {
-//					ocl_offset = irt_time_convert_ticks_to_ns(table->data[i].timestamp) - ocl_helper_table[j].timestamp;
-//					break;
-//				}
-//			}
-//		}
-//
-//		// conditions:
-//		// ocl_helper_table_counter < ocl_helper_table_number_of_entries: iterator range
-//		// i > 0: no OCL event can be the very first event, there must at least be a preceeding WI STARTED
-//		// timestamp[i-1] < ocl_time + ocl_offset and timestamp[i] > ocl_time + ocl_offset: insert OCL event between WI if times match accordingly
-//
-//		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries &&
-//				(i > 0) &&
-//				(irt_time_convert_ticks_to_ns(table->data[i-1].timestamp) <= ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) &&
-//				irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
-////		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries && irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
-//			uint64 temp_timestamp = ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset;
-//			fprintf(outputfile, "KN,%14lu,\t", ocl_helper_table[ocl_helper_table_counter].workitem_id);
-//			switch(ocl_helper_table[ocl_helper_table_counter].origin) {
-//				case CL_COMMAND_NDRANGE_KERNEL:
-//					fprintf(outputfile, "ND_");
-//					break;
-//				case CL_COMMAND_WRITE_BUFFER:
-//					fprintf(outputfile, "WRITE_");
-//					break;
-//				case CL_COMMAND_READ_BUFFER:
-//					fprintf(outputfile, "READ_");
-//					break;
-//				default:
-//					fprintf(outputfile, "UNKNOWN_");
-//			}
-//			switch(ocl_helper_table[ocl_helper_table_counter].event) {
-//				case IRT_INST_OCL_QUEUED:
-//				       fprintf(outputfile, "QUEUED");
-//				       break;
-//				case IRT_INST_OCL_SUBMITTED:
-//				       fprintf(outputfile, "SUBMITTED");
-//				       break;
-//				case IRT_INST_OCL_STARTED:
-//				       fprintf(outputfile, "STARTED");
-//				       break;
-//				case IRT_INST_OCL_FINISHED:
-//				       fprintf(outputfile, "FINISHED");
-//				       break;
-//				default:
-//				       fprintf(outputfile, "UNNKOWN");
-//				       break;
-//			}
-//			fprintf(outputfile, ",\t%18lu\n", temp_timestamp);
-//			ocl_helper_table_counter++;
-//		}
-//#endif
-		if(table->data[i].event < 2000) { // 1000 <= work item events < 2000
-			fprintf(outputfile, "WI,%14lu,\t", table->data[i].subject_id);
 
-			switch(table->data[i].event) {
-				case WORK_ITEM_CREATED:
-					fprintf(outputfile, "CREATED");
-					break;
-				case WORK_ITEM_QUEUED:
-					fprintf(outputfile, "QUEUED");
-					break;
-				case WORK_ITEM_SPLITTED:
-					fprintf(outputfile, "SPLITTED");
-					break;
-				case WORK_ITEM_STARTED:
-					fprintf(outputfile, "STARTED");
-					break;
-				case WORK_ITEM_SUSPENDED_BARRIER:
-					fprintf(outputfile, "SUSP_BARRIER");
-					break;
-				case WORK_ITEM_SUSPENDED_IO:
-					fprintf(outputfile, "SUSP_IO");
-					break;
-				case WORK_ITEM_SUSPENDED_JOIN:
-					fprintf(outputfile, "SUSP_JOIN");
-					break;
-				case WORK_ITEM_SUSPENDED_GROUPJOIN:
-					fprintf(outputfile, "SUSP_GROUPJOIN");
-					break;
-				case WORK_ITEM_SUSPENDED_JOIN_ALL:
-					fprintf(outputfile, "SUSP_JOINALL");
-					break;
-				case WORK_ITEM_RESUMED:
-					fprintf(outputfile, "RESUMED");
-					break;
-				case WORK_ITEM_FINISHED:
-					fprintf(outputfile, "FINISHED");
-					break;
-				default:
-					fprintf(outputfile, "UNKNOWN");
-			}
-		} else if(table->data[i].event < 3000) { // 2000 <= work group events < 3000
-			fprintf(outputfile, "WG,%14lu,\t", table->data[i].subject_id);
-			switch(table->data[i].event) {
-				case WORK_GROUP_CREATED:
-					fprintf(outputfile, "CREATED");
-					break;
-				default:
-					fprintf(outputfile, "UNKOWN");
-			}
-		} else if(table->data[i].event < 4000) { // 3000 <= worker events < 4000
-			fprintf(outputfile, "WO,%14lu,\t", table->data[i].subject_id);
-			switch(table->data[i].event) {
-				case WORKER_CREATED:
-					fprintf(outputfile, "CREATED");
-					break;
-				case WORKER_RUNNING:
-					fprintf(outputfile, "RUNNING");
-					break;
-				case WORKER_SLEEP_START:
-					fprintf(outputfile, "SLEEP_START");
-					break;
-				case WORKER_SLEEP_END:
-					fprintf(outputfile, "SLEEP_END");
-					break;
-				case WORKER_SLEEP_BUSY_START:
-					fprintf(outputfile, "SLEEP_BUSY_START");
-					break;
-				case WORKER_SLEEP_BUSY_END:
-					fprintf(outputfile, "SLEEP_BUSY_END");
-					break;
-				case WORKER_STOP:
-					fprintf(outputfile, "STOP");
-					break;
-				default:
-					fprintf(outputfile, "UNKOWN");
-			}
-		} else if(table->data[i].event < 5000) { // 4000 <= data item events < 5000
-			fprintf(outputfile, "DI,%14lu,\t", table->data[i].subject_id);
-			switch(table->data[i].event) {
-				case DATA_ITEM_CREATED:
-					fprintf(outputfile, "CREATED");
-					break;
-				case DATA_ITEM_RECYCLED:
-					fprintf(outputfile, "RECYCLED");
-					break;
-				default:
-					fprintf(outputfile, "UNKOWN");
-			}
-		} else if(table->data[i].event < 6000) { // 5000 <= regions < 6000
-			fprintf(outputfile, "RG,%14lu,\t", table->data[i].subject_id);
-			switch(table->data[i].event) {
-				case REGION_START:
-					fprintf(outputfile, "START");
-					break;
-				case REGION_END:
-					fprintf(outputfile, "END");
-					break;
-				default:
-					fprintf(outputfile, "UNKNOWN");
+	if(getenv(IRT_INST_BINARY_OUTPUT_ENV) && strcmp(getenv(IRT_INST_BINARY_OUTPUT_ENV), "true") == 0) {
+		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "enabled");
+
+		/*
+		 * dump everything in binary according to the following format:
+		 * (note: the strings are written without the termination character '\0'!)
+		 *
+		 *  8 byte: char, file version identifier, must read "INSIEME1"!
+		 * -------------------------------------------------------------
+		 *  4 byte: uint32, number of event names (=n)
+		 *  4 byte: char, event group identifier 1
+		 * 60 byte: char, event name identifier 1
+		 *  4 byte: char, event group identifier 2
+		 * 60 byte: char, event name identifier 2
+		 * ...
+		 * ...
+		 * ...
+		 *  4 byte: char, event group identifier n
+		 * 60 byte: char, event name identifier n
+		 * -------------------------------------------------------------
+		 *  8 byte: uint64, number of events (=m)
+		 *  4 byte: uint32, event id 1
+		 *  8 byte: uint64, subject id 1
+		 *  8 byte: uint64, timestamp (nanoseconds) 1
+		 *  4 byte: uint32, event id 2
+		 *  8 byte: uint64, subject id 2
+		 *  8 byte: uint64, timestamp (nanoseconds) 2
+		 *  ...
+		 *  ...
+		 *  ...
+		 *  4 byte: uint32, event id m
+		 *  8 byte: uint64, subject id m
+		 *  8 byte: uint64, timestamp (nanoseconds) m
+		 * -------------------------------------------------------------
+		 * EOF
+		 */
+
+		// write version
+		const char* header = "INSIEME1";
+		fprintf(outputfile, "%s", header);
+
+		// write size of event name table followed by group and event names
+		fwrite(&(irt_g_inst_num_event_types), sizeof(uint32), 1, outputfile);
+		for(int i = 0; i < irt_g_inst_num_event_types; ++i) {
+			fprintf(outputfile, "%-4s", irt_g_instrumentation_group_names[i]);
+			fprintf(outputfile, "%-60s", irt_g_instrumentation_event_names[i]);
+		}
+
+		// write size of event table
+		const uint64 temp_num_of_elements = (uint64)(table->number_of_elements);
+		fwrite(&temp_num_of_elements, sizeof(uint64), 1, outputfile);
+/*
+		// write the event table using a buffer for performance reasons
+		const uint32 entry_buffer_max = 10;
+		uint32 entry_buffer_current = 0;
+		const uint32 entry_size = sizeof(table->data[0].event) + sizeof(table->data[0].subject_id) + sizeof(irt_time_convert_ticks_to_ns(0));
+		char buffer[entry_size * entry_buffer_max];
+
+		for(int i = 0; i < table->number_of_elements; ++i) {
+			//fwrite(&(table->data[i].event), sizeof(uint32), 1, outputfile);
+			//fwrite(&(table->data[i].subject_id), sizeof(uint64), 1, outputfile);
+			//uint64 time = irt_time_convert_ticks_to_ns(table->data[i].timestamp);
+			//fwrite(&(time), sizeof(uint64), 1, outputfile);
+			*(uint32*)(buffer + (0 + entry_size * entry_buffer_current)) = table->data[i].event;
+			*(uint64*)(buffer + (sizeof(table->data[0].event) + entry_size * entry_buffer_current)) = table->data[i].subject_id;
+			*(uint64*)(buffer + (sizeof(table->data[0].event) + sizeof(table->data[0].subject_id)) + entry_size * entry_buffer_current) = irt_time_convert_ticks_to_ns(table->data[i].timestamp);
+			++entry_buffer_current;
+			if(entry_buffer_current == entry_buffer_max) {
+				fwrite(buffer, sizeof(char), entry_size * entry_buffer_max, outputfile);
+				entry_buffer_current = 0;
 			}
 		}
-		fprintf(outputfile, ",\t%18lu\n", irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+		if(entry_buffer_current > 0)
+			fwrite(buffer, sizeof(char), entry_size * entry_buffer_current, outputfile);
+*/
+
+		fwrite(table->data, sizeof(irt_instrumentation_event_data), table->number_of_elements, outputfile);
+
+		/*FILE* infile = fopen(outputfilename, "r");
+		uint32 number_of_types = 0;
+		uint64 number_of_events = 0;
+
+		char name[9];
+		fread(name, sizeof(char), 8, infile);
+		name[8] = 0;
+		printf("version: %s\n", name);
+		fread(&number_of_types, sizeof(uint32), 1, infile);
+
+		char group_names[number_of_types][5];
+		char event_names[number_of_types][61];
+
+		for(int i = 0; i < number_of_types; ++i) {
+			fread(group_names[i],sizeof(char),4, infile);
+			fread(event_names[i],sizeof(char),60, infile);
+			group_names[i][4] = 0;
+			event_names[i][60] = 0;
+			printf("name: %s%s\n", group_names[i], event_names[i]);
+		}
+
+		fread(&number_of_events, sizeof(uint64), 1, infile);
+		printf("binary read: irt_g_inst_num_event_types: %u, table->number_of_elements: %lu\n########\n", number_of_types, number_of_events);
+
+		uint32 event;
+		uint64 subject;
+		uint64 time;
+
+		for(int i = 0; i < number_of_events; ++i) {
+			fread(&event, sizeof(uint32), 1, infile);
+			fread(&subject, sizeof(uint64), 1, infile);
+			fread(&time, sizeof(uint64), 1, infile);
+			printf("event number: %u\n", event);
+			printf("%s,", group_names[event]);
+			printf("%lu,", subject);
+			printf("%s,", event_names[event]);
+			printf("%lu,\n", time);
+		}
+*/
+	} else {
+		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "disabled");
+		for(int i = 0; i < table->number_of_elements; ++i) {
+			irt_work_item_id temp_id;
+			temp_id.cached = NULL;
+			temp_id.value.components.index = table->data[i].index;
+			temp_id.value.components.thread = table->data[i].thread;
+			temp_id.value.components.node = 0;
+			fprintf(outputfile, "%s,%lu,%s,%lu\n", irt_g_instrumentation_group_names[table->data[i].event_id], temp_id.value.full, irt_g_instrumentation_event_names[table->data[i].event_id], irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+		}
 	}
+
 	fclose(outputfile);
 #ifdef USE_OPENCL
 	free(ocl_helper_table);
@@ -427,49 +394,76 @@ void irt_instrumentation_output(irt_worker* worker) {
 
 // ================= instrumentation function pointer toggle functions =======================
 
-void irt_wi_toggle_instrumentation(bool enable) { 
+void irt_inst_set_wi_instrumentation(bool enable) {
 	if(enable)
-		irt_wi_instrumentation_event = &_irt_wi_instrumentation_event;
+		irt_inst_insert_wi_event = &_irt_inst_insert_wi_event;
 	else 
-		irt_wi_instrumentation_event = &_irt_wi_no_instrumentation_event;
+		irt_inst_insert_wi_event = &_irt_inst_insert_no_wi_event;
 }
 
-void irt_wg_toggle_instrumentation(bool enable) { 
+void irt_inst_set_wg_instrumentation(bool enable) {
 	if(enable)
-		irt_wg_instrumentation_event = &_irt_wg_instrumentation_event;
+		irt_inst_insert_wg_event = &_irt_inst_insert_wg_event;
 	else
-		irt_wg_instrumentation_event = &_irt_wg_no_instrumentation_event;
+		irt_inst_insert_wg_event = &_irt_inst_insert_no_wg_event;
 }
 
-void irt_worker_toggle_instrumentation(bool enable) { 
+void irt_inst_set_wo_instrumentation(bool enable) {
 	if(enable)
-		irt_worker_instrumentation_event = &_irt_worker_instrumentation_event;
+		irt_inst_insert_wo_event = &_irt_inst_insert_wo_event;
 	else
-		irt_worker_instrumentation_event = &_irt_worker_no_instrumentation_event;
+		irt_inst_insert_wo_event = &_irt_inst_insert_no_wo_event;
 }
 
-void irt_di_toggle_instrumentation(bool enable) { 
+void irt_inst_set_di_instrumentation(bool enable) {
 	if(enable)
-		irt_di_instrumentation_event = &_irt_di_instrumentation_event;
+		irt_inst_insert_di_event = &_irt_inst_insert_di_event;
 	else
-		irt_di_instrumentation_event = &_irt_di_no_instrumentation_event;
+		irt_inst_insert_di_event = &_irt_inst_insert_no_di_event;
 }
 
-void irt_all_toggle_instrumentation(bool enable) {
-	irt_wi_toggle_instrumentation(enable);
-//	irt_wg_toggle_instrumentation(enable);
-//	irt_worker_toggle_instrumentation(enable);
-//	irt_di_toggle_instrumentation(enable);
+void irt_inst_set_all_instrumentation(bool enable) {
+	irt_inst_set_wi_instrumentation(enable);
+	irt_inst_set_wg_instrumentation(enable);
+	irt_inst_set_wo_instrumentation(enable);
+	irt_inst_set_di_instrumentation(enable);
 	irt_instrumentation_event_output_is_enabled = enable;
 }
 
-void irt_all_toggle_instrumentation_from_env() {
-	if(getenv(IRT_INST_WORKER_EVENT_LOGGING) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING), "true") == 0) {
-		irt_all_toggle_instrumentation(true);
+void irt_inst_set_all_instrumentation_from_env() {
+	if (getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV), "true") == 0) {
 		irt_log_setting_s("IRT_INST_WORKER_EVENT_LOGGING", "enabled");
+		char* types = getenv(IRT_INST_WORKER_EVENT_TYPES_ENV);
+		if(!types) {
+			irt_inst_set_all_instrumentation(true);
+			irt_log_setting_s("IRT_INST_WORKER_EVENT_TYPES", "WI,WO,WG,DI");
+			return;
+		}
+
+		char* tok = strtok(types, ",");
+		char log_output[128];
+		uint32 log_output_counter = 0;
+
+		do {
+			if(strcmp(tok, "WI") == 0) {
+				irt_inst_set_wi_instrumentation(true);
+				log_output_counter += sprintf(&(log_output[log_output_counter]), "WI,");
+			} else if(strcmp(tok, "WO") == 0) {
+				irt_inst_set_wo_instrumentation(true);
+				log_output_counter += sprintf(&(log_output[log_output_counter]), "WO,");
+			} else if(strcmp(tok, "WG") == 0) {
+				irt_inst_set_wg_instrumentation(true);
+				log_output_counter += sprintf(&(log_output[log_output_counter]), "WG,");
+			} else if(strcmp(tok, "DI") == 0) {
+				irt_inst_set_di_instrumentation(true);
+				log_output_counter += sprintf(&(log_output[log_output_counter]), "DI,");
+			}
+		} while((tok = strtok(NULL, ",")) != NULL);
+		log_output[log_output_counter-1] = '\0';  // remove the last comma and replace with termination symbol
+		irt_log_setting_s("IRT_INST_WORKER_EVENT_TYPES", log_output);
 		return;
 	}
-	irt_all_toggle_instrumentation(false);
+	irt_inst_set_all_instrumentation(false);
 	irt_log_setting_s("IRT_INST_WORKER_EVENT_LOGGING", "disabled");
 }
 
@@ -477,39 +471,39 @@ void irt_all_toggle_instrumentation_from_env() {
 
 // ============ to be used if IRT_ENABLE_INSTRUMENTATION is not set ==============
 
-irt_pd_table* irt_create_performance_table(unsigned blocksize) { return NULL; }
-void irt_destroy_performance_table(irt_pd_table* table) { }
+irt_instrumentation_event_data_table* irt_inst_create_event_data_table() { return NULL; }
+void irt_inst_destroy_event_data_table(irt_instrumentation_event_data_table* table) {}
 
-void irt_wi_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) { }
-void irt_wg_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) { }
-void irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) { }
-void irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) { }
+void irt_inst_insert_wi_event(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id) {}
+void irt_inst_insert_wg_event(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id) {}
+void irt_inst_insert_wo_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) {}
+void irt_inst_insert_di_event(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) {}
 
-void irt_instrumentation_output(irt_worker* worker) { }
+void irt_inst_event_data_output(irt_worker* worker) {}
 
 #endif // IRT_ENABLE_INSTRUMENTATION
 
 #ifndef IRT_ENABLE_REGION_INSTRUMENTATION
-irt_epd_table* irt_create_extended_performance_table(unsigned blocksize) { return NULL; }
-void irt_destroy_extended_performance_table(irt_epd_table* table) {}
-void irt_instrumentation_region_start(region_id id) { }
-void irt_instrumentation_region_end(region_id id) { }
-void irt_extended_instrumentation_output(irt_worker* worker) {}
-void irt_aggregated_instrumentation_output() {}
-void irt_instrumentation_region_set_timestamp(irt_work_item* wi) {}
-void irt_instrumentation_region_add_time(irt_work_item* wi) {}
+irt_instrumentation_region_data_table* irt_inst_create_region_data_table() { return NULL; }
+void irt_inst_destroy_region_data_table(irt_instrumentation_region_data_table* table) {}
+void irt_inst_region_start(region_id id) {}
+void irt_inst_region_end(region_id id) {}
+void irt_inst_region_data_output(irt_worker* worker) {}
+void irt_inst_aggregated_data_output() {}
+void irt_inst_region_set_timestamp(irt_work_item* wi) {}
+void irt_inst_region_add_time(irt_work_item* wi) {}
 #endif
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 
-irt_apd_table* irt_g_aggregated_performance_table;
+irt_instrumentation_aggregated_data_table* irt_g_aggregated_performance_table;
 
 irt_region_list* irt_region_list_create() {
 	irt_region_list* list = (irt_region_list*)malloc(sizeof(irt_region_list));
-	irt_region* temp = (irt_region*)malloc(sizeof(irt_region)*IRT_REGION_LIST_SIZE);
+	irt_region* temp = (irt_region*)malloc(sizeof(irt_region)*IRT_INST_REGION_LIST_SIZE);
 	list->head = temp++;
 	irt_region* current = list->head;
-	for(int i = 0; i < (IRT_REGION_LIST_SIZE-1); ++i) {
+	for(int i = 0; i < (IRT_INST_REGION_LIST_SIZE-1); ++i) {
 		current->next = temp++;
 		current = current->next;
 	}
@@ -545,77 +539,77 @@ void irt_region_list_recycle_item(irt_worker* worker, irt_region* region) {
 	worker->region_reuse_list->head = region;
 }
 
-void (*irt_instrumentation_region_start)(region_id id) = &_irt_instrumentation_region_start;
-void (*irt_instrumentation_region_end)(region_id id) = &_irt_instrumentation_region_end;
+void (*irt_inst_region_start)(region_id id) = &_irt_inst_region_start;
+void (*irt_inst_region_end)(region_id id) = &_irt_inst_region_end;
 
-void _irt_no_instrumentation_region_start(region_id id) { }
-void _irt_no_instrumentation_region_end(region_id id) { }
+void _irt_no_inst_region_start(region_id id) { }
+void _irt_no_inst_region_end(region_id id) { }
 
 // =============== initialization functions ===============
 
 void irt_instrumentation_init_energy_instrumentation() { }
 
-void _irt_extended_performance_table_resize(irt_epd_table* table) {
+void _irt_inst_region_data_table_resize(irt_instrumentation_region_data_table* table) {
 	table->size = table->size * 2;
-	table->data = (_irt_extended_performance_data*)realloc(table->data, sizeof(_irt_extended_performance_data)*table->size);
+	table->data = (irt_instrumentation_region_data*)realloc(table->data, sizeof(irt_instrumentation_region_data)*table->size);
 }
 
-irt_epd_table* irt_create_extended_performance_table(unsigned blocksize) {
-	irt_epd_table* table = (irt_epd_table*)malloc(sizeof(irt_epd_table));
-	table->blocksize = blocksize;
+irt_instrumentation_region_data_table* irt_inst_create_region_data_table() {
+	irt_instrumentation_region_data_table* table = (irt_instrumentation_region_data_table*)malloc(sizeof(irt_instrumentation_region_data_table));
+	table->blocksize = IRT_INST_WORKER_PD_BLOCKSIZE;
 	table->size = table->blocksize * 2;
 	table->number_of_elements = 0;
-	table->data = (_irt_extended_performance_data*)malloc(sizeof(_irt_extended_performance_data) * table->size);
+	table->data = (irt_instrumentation_region_data*)malloc(sizeof(irt_instrumentation_region_data) * table->size);
 	return table;
 }
 
-void irt_destroy_extended_performance_table(irt_epd_table* table) {
+void irt_inst_destroy_region_data_table(irt_instrumentation_region_data_table* table) {
 	free(table->data);
 	free(table);
 }
 
-void _irt_aggregated_performance_table_resize() {
-	irt_apd_table* table = irt_g_aggregated_performance_table;
+void _irt_inst_aggregated_data_table_resize() {
+	irt_instrumentation_aggregated_data_table* table = irt_g_aggregated_performance_table;
 	table->size = table->size * 2;
-	table->data = (_irt_aggregated_performance_data*)realloc(table->data, sizeof(_irt_aggregated_performance_data)*table->size);
+	table->data = (irt_instrumentation_aggregated_data*)realloc(table->data, sizeof(irt_instrumentation_aggregated_data)*table->size);
 }
 
-void irt_create_aggregated_performance_table(unsigned blocksize) {
-	irt_apd_table* table = (irt_apd_table*)malloc(sizeof(irt_apd_table));
-	table->blocksize = blocksize;
+void irt_inst_create_aggregated_data_table() {
+	irt_instrumentation_aggregated_data_table* table = (irt_instrumentation_aggregated_data_table*)malloc(sizeof(irt_instrumentation_aggregated_data_table));
+	table->blocksize = IRT_INST_WORKER_PD_BLOCKSIZE;
 	table->size = table->blocksize * 2;
 	table->number_of_elements = 0;
-	table->data = (_irt_aggregated_performance_data*)malloc(sizeof(_irt_aggregated_performance_data) * table->size);
+	table->data = (irt_instrumentation_aggregated_data*)malloc(sizeof(irt_instrumentation_aggregated_data) * table->size);
 	irt_g_aggregated_performance_table = table;
 }
 
-void irt_destroy_aggregated_performance_table() {
+void irt_inst_destroy_aggregated_data_table() {
 	free(irt_g_aggregated_performance_table->data);
 	free(irt_g_aggregated_performance_table);
 }
 
-void irt_region_toggle_instrumentation(bool enable) {
+void irt_inst_set_region_instrumentation(bool enable) {
 	if(enable) {
-		irt_instrumentation_region_start = &_irt_instrumentation_region_start;
-		irt_instrumentation_region_end = &_irt_instrumentation_region_end;
+		irt_inst_region_start = &_irt_inst_region_start;
+		irt_inst_region_end = &_irt_inst_region_end;
 	} else {
-		irt_instrumentation_region_start = &_irt_no_instrumentation_region_start;
-		irt_instrumentation_region_end = &_irt_no_instrumentation_region_end;
+		irt_inst_region_start = &_irt_no_inst_region_start;
+		irt_inst_region_end = &_irt_no_inst_region_end;
 	}
 }
 
-void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int event, const uint64 id) {
+void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uint64 id) {
 
-	_irt_epd_table* table = worker->extended_performance_data;
+	irt_instrumentation_region_data_table* table = worker->instrumentation_region_data;
 		
-	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of extended event table entries larger than table size\n")
+	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of region event table entries larger than table size\n")
 	
 	if(table->number_of_elements >= table->size)
-		_irt_extended_performance_table_resize(table);
+		_irt_inst_region_data_table_resize(table);
+	irt_instrumentation_region_data* epd = &(table->data[table->number_of_elements++]);
 
-	_irt_extended_performance_data* epd = &(table->data[table->number_of_elements++]);
 	switch(event) {
-		case REGION_START:
+		case IRT_INST_REGION_START:
 			epd->event = event;
 			epd->subject_id = id;
 			irt_get_energy_consumption(&(epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double));
@@ -632,8 +626,8 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			//epd->timestamp = PAPI_get_virt_cyc(); // counts only since process start and does not include other scheduled processes, but decreased accuracy
 			break;
 
-		case REGION_END:
-			; // do not remove! bug in gcc!
+		case IRT_INST_REGION_END:
+			; // do not remove! bug in some versions of gcc!
 			// do time as early as possible to exclude overhead of remaining instrumentation/measurements
 			//uint64 time = PAPI_get_virt_cyc(); // counts only since process start and does not include other scheduled processes, but decreased accuracy
 			uint64 time = irt_time_ticks();
@@ -643,7 +637,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			
 			irt_get_memory_usage(&(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64), &(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64));
 
-			double energy_consumption = -1;
+			//double energy_consumption = -1;
 
 			epd->timestamp = time;
 			epd->event = event;
@@ -657,15 +651,13 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 	}
 }
 
-void _irt_aggregated_instrumentation_insert(irt_worker* worker, int64 id, uint64 walltime, uint64 cputime) {
+void _irt_instrumentation_aggregated_data_insert(irt_worker* worker, int64 id, uint64 walltime, uint64 cputime) {
 
 	IRT_ASSERT(irt_g_aggregated_performance_table->number_of_elements <= irt_g_aggregated_performance_table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size\n")
 
-	if(irt_g_aggregated_performance_table->number_of_elements >= irt_g_aggregated_performance_table->size) {
-		_irt_aggregated_performance_table_resize();
-	}
-
-	_irt_aggregated_performance_data* apd = &(irt_g_aggregated_performance_table->data[irt_g_aggregated_performance_table->number_of_elements++]);
+	if(irt_g_aggregated_performance_table->number_of_elements >= irt_g_aggregated_performance_table->size)
+		_irt_inst_aggregated_data_table_resize();
+	irt_instrumentation_aggregated_data* apd = &(irt_g_aggregated_performance_table->data[irt_g_aggregated_performance_table->number_of_elements++]);
 
 	apd->walltime = walltime;
 	apd->cputime = cputime;
@@ -675,66 +667,56 @@ void _irt_aggregated_instrumentation_insert(irt_worker* worker, int64 id, uint64
 
 void _irt_instrumentation_mark_start(region_id id) {
 	irt_worker* worker = irt_worker_get_current();
-	_irt_instrumentation_event_insert(worker, REGION_START, (uint64)id);
-	_irt_extended_instrumentation_event_insert(worker, REGION_START, (uint64)id);
+	_irt_inst_event_insert(worker, IRT_INST_REGION_START, (uint64)id);
+	_irt_inst_region_data_insert(worker, IRT_INST_REGION_START, (uint64)id);
 
 	irt_region* region = irt_region_list_new_item(worker);
 	region->cputime = 0;
 	region->start_time = irt_time_ticks();
 	region->next = worker->cur_wi->region;
 
-	irt_instrumentation_region_add_time(worker->cur_wi);
+	irt_inst_region_add_time(worker->cur_wi);
 	worker->cur_wi->region = region;
-	irt_instrumentation_region_set_timestamp(worker->cur_wi);
+	irt_inst_region_set_timestamp(worker->cur_wi);
 }
 
 void _irt_instrumentation_mark_end(region_id id, bool insert_aggregated) {
 	uint64 timestamp = irt_time_ticks();
 	irt_worker* worker = irt_worker_get_current();
-	irt_instrumentation_region_add_time(worker->cur_wi);
-	irt_instrumentation_region_set_timestamp(worker->cur_wi);
+	irt_inst_region_add_time(worker->cur_wi);
+	irt_inst_region_set_timestamp(worker->cur_wi);
 
 	uint64 ending_region_cputime = worker->cur_wi->region->cputime;
 
 	irt_region* region = worker->cur_wi->region;
 
 	if(insert_aggregated)
-		_irt_aggregated_instrumentation_insert(worker, id, timestamp - region->start_time, ending_region_cputime);
+		_irt_instrumentation_aggregated_data_insert(worker, id, timestamp - region->start_time, ending_region_cputime);
 
 	worker->cur_wi->region = region->next;
 	irt_region_list_recycle_item(worker, region);
 
-	if(worker->cur_wi->region) { // if the ended region was a nested one, add execution time to outer region
+	if(worker->cur_wi->region) // if the ended region was a nested one, add execution time to outer region
 		irt_atomic_fetch_and_add(&(worker->cur_wi->region->cputime), ending_region_cputime);
-	}
 
-	_irt_instrumentation_event_insert(worker, REGION_END, (uint64)id);
-	_irt_extended_instrumentation_event_insert(worker, REGION_END, (uint64)id);
-
+	_irt_inst_event_insert(worker, IRT_INST_REGION_END, (uint64)id);
+	_irt_inst_region_data_insert(worker, IRT_INST_REGION_END, (uint64)id);
 }
 
-void _irt_instrumentation_region_start(region_id id) {
-	_irt_instrumentation_mark_start(id);
-}
+void _irt_inst_region_start(region_id id) { _irt_instrumentation_mark_start(id); }
 
-void _irt_instrumentation_region_end(region_id id) {
-	_irt_instrumentation_mark_end(id, true);
-}
+void _irt_inst_region_end(region_id id) { _irt_instrumentation_mark_end(id, true); }
 
-void _irt_instrumentation_pfor_start(region_id id) {
-	_irt_instrumentation_mark_start(id);
-}
+void _irt_inst_pfor_start(region_id id) { _irt_instrumentation_mark_start(id); }
 
-void _irt_instrumentation_pfor_end(region_id id) {
-	_irt_instrumentation_mark_end(id, false);
-}
+void _irt_inst_pfor_end(region_id id) { _irt_instrumentation_mark_end(id, false); }
 
-void irt_extended_instrumentation_output(irt_worker* worker) {
+void irt_inst_region_data_output(irt_worker* worker) {
 	// environmental variable can hold the output path for the performance logs, default is .
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
-	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
+	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
@@ -767,23 +749,25 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 	}
 	fprintf(outputfile, "\n");
 
-	irt_epd_table* table = worker->extended_performance_data;
+	irt_instrumentation_region_data_table* table = worker->instrumentation_region_data;
 	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no performance data!")
 
 	// this loop iterates through the table: if REGION_END is found, search reversely for matching REGION_START and output corresponding values in a single line
 	for(int i = 0; i < table->number_of_elements; ++i) {
-		if(table->data[i].event == REGION_END) {
+		if(table->data[i].event == IRT_INST_REGION_END) {
 			// holds data of matching REGION_START
-			_irt_extended_performance_data start_data;
+			irt_instrumentation_region_data start_data = {};
 			// iterate back through performance entries to find the matching start with this id
 			for(int j = i-1; j >= 0; --j) {
 				if(table->data[j].subject_id == table->data[i].subject_id)
-					if(table->data[j].event == REGION_START) {
-						start_data = table->data[j]; //memcpy(&start_data, &(table->data[j]), sizeof(_irt_extended_performance_data));
+					if(table->data[j].event == IRT_INST_REGION_START) {
+						start_data = table->data[j]; //memcpy(&start_data, &(table->data[j]), sizeof(irt_inst_region_data));
 						break;
 					}
-				IRT_ASSERT(start_data.timestamp != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Cannot find a matching start statement\n")
 			}
+				
+			IRT_ASSERT(start_data.timestamp != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Cannot find a matching start statement\n")
+
 			// single fprintf for performance reasons
 			// outputs all data in pairs: value_when_entering_region, value_when_exiting_region
 			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.1f,%1.1f",
@@ -802,19 +786,19 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 					fprintf(outputfile, ",-1");
 				else
 					fprintf(outputfile, ",%lu", table->data[i].data[j].value_uint64);
-				}
+			}
 			fprintf(outputfile, "\n");
 		}
 	}
 	fclose(outputfile);
 }
 
-void irt_aggregated_instrumentation_output() {
+void irt_inst_aggregated_data_output() {
 	// environmental variable can hold the output path for the performance logs, default is .
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
-	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
+	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
 	struct stat st;
 	int stat_retval = stat(outputprefix,&st);
@@ -828,7 +812,7 @@ void irt_aggregated_instrumentation_output() {
 	FILE* outputfile = fopen(outputfilename, "w");
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for efficiency log writing: %s\n", strerror(errno));
 
-	irt_apd_table* table = irt_g_aggregated_performance_table;
+	irt_instrumentation_aggregated_data_table* table = irt_g_aggregated_performance_table;
 	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no performance data!")
 
 //	setlocale(LC_ALL, "");
@@ -845,14 +829,13 @@ void irt_aggregated_instrumentation_output() {
 	fclose(outputfile);
 }
 
-void _irt_aggregated_instrumentation_insert_pfor(int64 id, uint64 walltime, irt_loop_sched_data* sched_data) {
+void irt_inst_aggregated_data_insert_pfor(int64 id, uint64 walltime, irt_loop_sched_data* sched_data) {
 
 	IRT_ASSERT(irt_g_aggregated_performance_table->number_of_elements <= irt_g_aggregated_performance_table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size\n")
 
-	if(irt_g_aggregated_performance_table->number_of_elements >= irt_g_aggregated_performance_table->size) {
-		_irt_aggregated_performance_table_resize();
-	}
-	_irt_aggregated_performance_data* apd = &(irt_g_aggregated_performance_table->data[irt_g_aggregated_performance_table->number_of_elements++]);
+	if(irt_g_aggregated_performance_table->number_of_elements >= irt_g_aggregated_performance_table->size)
+		_irt_inst_aggregated_data_table_resize();
+	irt_instrumentation_aggregated_data* apd = &(irt_g_aggregated_performance_table->data[irt_g_aggregated_performance_table->number_of_elements++]);
 
 	apd->walltime = walltime;
 	apd->cputime = sched_data->cputime;
@@ -860,16 +843,14 @@ void _irt_aggregated_instrumentation_insert_pfor(int64 id, uint64 walltime, irt_
 	apd->id = id;
 }
 
-void irt_instrumentation_region_set_timestamp(irt_work_item* wi) {
+void irt_inst_region_set_timestamp(irt_work_item* wi) {
 	wi->last_timestamp = irt_time_ticks();
 }
 
-void irt_instrumentation_region_add_time(irt_work_item* wi) {
+void irt_inst_region_add_time(irt_work_item* wi) {
 	uint64 temp = irt_time_ticks();
-	if(wi->region) {
-//		printf("in wi %18lu, adding %18lu to %18lu of region %p\n", wi->id.value.full, temp - wi->last_timestamp, wi->region->cputime, wi->region);
+	if(wi->region)
 		irt_atomic_fetch_and_add(&(wi->region->cputime), temp - wi->last_timestamp);
-	}
 }
 
 #endif

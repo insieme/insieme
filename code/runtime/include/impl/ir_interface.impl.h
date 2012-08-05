@@ -107,7 +107,6 @@ irt_joinable* irt_parallel(const irt_parallel_job* job) {
 	}
 }
 
-
 void irt_merge(irt_joinable* joinable) {
 	if(joinable == NULL) return;
 	if(IRT_IS_WG_PTR(joinable)) {

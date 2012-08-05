@@ -139,6 +139,16 @@ namespace parser {
 		EXPECT_EQ("[(Ident:Some),(StrLit:\"str\\\"ing\"),(Ident:inside)]", toString(lex("Some \"str\\\"ing\" inside")));
 	}
 
+	TEST(Lexer, CommentsShort) {
+		EXPECT_EQ("[(Ident:a)]", toString(lex("// comment A \n a // comment B \n")));
+		EXPECT_EQ("[(Ident:b)]", toString(lex(" // comment A \n b // comment B")));
+	}
+
+	TEST(Lexer, CommentsLong) {
+		EXPECT_EQ("[(Ident:a)]", toString(lex("/* comment A */ a /* comment B /* */")));
+		EXPECT_EQ("[(Ident:b)]", toString(lex("/* comment A */ b /* comment B")));
+	}
+
 } // end namespace parser2
 } // end namespace core
 } // end namespace insieme

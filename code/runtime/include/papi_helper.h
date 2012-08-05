@@ -71,11 +71,11 @@
  * takes a list of papi counters as argument and outputs lists of counters that can be counted simultaneously
  */
 
-int irt_check_papi_counter_combinations(const char* param_events) {
+int32 irt_check_papi_counter_combinations(const char* param_events) {
 
 	char list_of_events[IRT_INST_PAPI_MAX_COUNTERS_COMBINATIONS*PAPI_MAX_STR_LEN];
 
-	if(param_events != "") {
+	if(strcmp(param_events,"") != 0) {
 		strcpy(list_of_events, param_events);
 	} else if(getenv(IRT_INST_PAPI_EVENTS)) {
 		// get papi counter names from environment variable if present, take default otherwise
@@ -90,7 +90,7 @@ int irt_check_papi_counter_combinations(const char* param_events) {
 	char* papi_event_toks[IRT_INST_PAPI_MAX_COUNTERS_COMBINATIONS];
 	char* cur_tok;
 	uint32 number_of_events_supplied = 0;
-	uint32 number_of_events_added = 0;
+	//uint32 number_of_events_added = 0;
 
 	// get the first event
 	if((papi_event_toks[0] = strtok(list_of_events, ":")) != NULL)
@@ -113,7 +113,7 @@ int irt_check_papi_counter_combinations(const char* param_events) {
 			matrix[i][j] = -1;
 	}
 
-	unsigned int j = 0;
+	//unsigned int j = 0;
 	int event_code;
 	int event_set = 0;
 	uint32 group_index = 0;
@@ -246,7 +246,7 @@ int irt_check_papi_counter_combinations(const char* param_events) {
  */
 
 int irt_check_papi_counter_combinations_from_env() {
-	irt_check_papi_counter_combinations("");
+	return irt_check_papi_counter_combinations("");
 }
 
 /*
@@ -261,7 +261,7 @@ int irt_parse_papi_names(int32* irt_papi_event_set, const char* param_events, bo
 
 	int retval = 0;
 
-	if(param_events != "")
+	if(strcmp(param_events, "") != 0)
 		strcpy(papi_event_names, param_events);
 	else if(getenv(IRT_INST_PAPI_EVENTS))
 		// get papi counter names from environment variable if present, take default otherwise
@@ -348,7 +348,7 @@ void irt_initialize_papi() {
 
 void irt_initialize_papi_thread(int32* irt_papi_event_set ) {
 
-	int32 retval = 0;
+	//int32 retval = 0;
 
 	*irt_papi_event_set = PAPI_NULL; // necessary, otherwise PAPI_create_eventset() will fail
 

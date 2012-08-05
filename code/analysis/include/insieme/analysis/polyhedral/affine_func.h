@@ -149,7 +149,7 @@ public:
 		Term operator*() const; 
 		iterator& operator++();
 
-		bool operator==(const iterator& rhs) const { 
+		inline bool operator==(const iterator& rhs) const { 
 			return &iterVec == &rhs.iterVec && &af == &rhs.af && iterPos == rhs.iterPos;
 		}
 	};
@@ -194,6 +194,12 @@ public:
 	AffineFunction(const AffineFunction& other) : 
 		iterVec(other.iterVec), coeffs(other.coeffs), sep(other.sep) { }
 
+	/** 
+	 * Move semantics constructor for affine functions 
+	 */
+	AffineFunction(AffineFunction&& other) : 
+		iterVec(other.iterVec), coeffs(std::move(other.coeffs)), sep(other.sep) { }
+
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 
 	// Setter and Getter for coefficient values. 
@@ -213,6 +219,8 @@ public:
 	inline bool isConstant() const { 
 		return all(coeffs.begin(), coeffs.end()-1, [](const int& cur) { return cur == 0; }); 
 	}
+
+	bool operator<(const AffineFunction& other) const;
 
 	// Implements the Printable interface 
 	std::ostream& printTo(std::ostream& out) const;

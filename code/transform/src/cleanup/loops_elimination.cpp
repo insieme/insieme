@@ -71,7 +71,7 @@ core::NodePtr polyhedralSemplification(const core::NodePtr& node) {
 	}
 
 	for( const auto& addr : entry) {
-		Scop scop = *scop::ScopRegion::toScop( addr );
+		const Scop& scop = *scop::ScopRegion::toScop( addr );
 		
 		replacements.insert( { addr, IRBuilder(mgr).compoundStmt( scop.toIR(mgr).as<StatementPtr>() ) } );
 	}

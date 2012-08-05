@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/constraint.h"
 
 struct cloogoptions;
 
@@ -49,7 +50,10 @@ class IterationVector;
 class IterationDomain;
 class AffineSystem;
 
-typedef boost::variant<core::NodePtr, insieme::analysis::polyhedral::StmtPtr> InfoObj;
+typedef boost::variant<
+	core::NodePtr, 
+	insieme::analysis::polyhedral::StmtPtr
+> InfoObj;
 
 typedef std::pair<InfoObj, std::string> TupleName;
 
@@ -103,6 +107,7 @@ struct SetPtr: public std::shared_ptr<SET_TYPE(B)> {
 		std::shared_ptr<SET_TYPE(B)>( std::make_shared<SET_TYPE(B)>(ctx, args...) ) { }
 
 	SetPtr<B>& operator+=(const SetPtr<B>& other);
+	SetPtr<B>& operator-=(const SetPtr<B>& other);
 	SetPtr<B>& operator*=(const SetPtr<B>& other);
 
 };
@@ -253,6 +258,22 @@ PiecewisePtr<B>& PiecewisePtr<B>::operator*=(const SetPtr<B>& other) {
 	return *this;
 }
 
+
+/**
+ * Set Difference 
+ */
+template <Backend B>
+SetPtr<B> operator-(SET_TYPE(B)& lhs, const SET_TYPE(B)& rhs);
+
+template <Backend B>
+inline SetPtr<B> operator-(const SetPtr<B>& lhs, const SetPtr<B>& rhs) { return *lhs - *rhs; }
+
+template <Backend B>
+inline SetPtr<B>& SetPtr<B>::operator-=(const SetPtr<B>& other) { 
+	*this = *this - other;
+	return *this;
+}
+
 // Get the range of a map
 template <Backend B>
 SetPtr<B> range(MAP_TYPE(B)& lhs);
@@ -318,6 +339,11 @@ MapPtr<B> makeEmptyMap(CtxPtr<B>& ctx, const IterationVector& iterVec = polyhedr
 
 template <Backend B = BACKEND>
 PiecewisePtr<B> makeZeroPiecewise(CtxPtr<B>& ctx) { return PiecewisePtr<B>(*ctx); }
+
+//template <Backend B = BACKEND>
+//PiecewisePtr<B> makePiecewise(CtxPtr<B>& ctx, const utils::Piecewise<polyhedtal::AffineFunction>& pw) { 
+//	return PiecewisePtr<B>(*ctx); 
+//}
 
 //===== Dependency analysis =======================================================================
 

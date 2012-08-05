@@ -68,10 +68,11 @@ irt_work_group* irt_wg_create() {
 	wg->redistribute_data_array = NULL;
 	wg->cur_sched = irt_g_loop_sched_policy_default;
 	pthread_spin_init(&wg->lock, PTHREAD_PROCESS_PRIVATE);
-	irt_wg_instrumentation_event(irt_worker_get_current(), WORK_GROUP_CREATED, wg->id);
+	irt_inst_insert_wg_event(irt_worker_get_current(), IRT_INST_WORK_GROUP_CREATED, wg->id);
 	return wg;
 }
 void irt_wg_destroy(irt_work_group* wg) {
+	_irt_del_wg_event_register(wg->id);
 	pthread_spin_destroy(&wg->lock);
 	_irt_wg_recycle(wg);
 }
@@ -81,6 +82,7 @@ static inline void _irt_wg_end_member(irt_work_group* wg) {
 	irt_atomic_inc(&wg->ended_member_count);
 	if(irt_atomic_bool_compare_and_swap(&wg->ended_member_count, wg->local_member_count, 0)) { // TODO set to 0 ok? delete group?
 		irt_wg_event_trigger(wg->id, IRT_WG_EV_COMPLETED);
+		irt_wg_destroy(wg);
 	}
 }
 
@@ -134,13 +136,13 @@ void irt_wg_barrier(irt_work_group* wg) {
 		_irt_wg_barrier_event_data barrier_ev_data = {swi, self};
 		irt_wg_event_lambda barrier_lambda = {_irt_wg_barrier_event_complete, &barrier_ev_data, NULL};
 		if(irt_wg_event_check_gt_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda, pre_occurances) == 0) {
-			irt_instrumentation_region_add_time(swi);
-			irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_BARRIER, swi->id);
+			irt_inst_region_add_time(swi);
+			irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
 			// suspend until allowed to leave barrier
 			self->cur_wi = NULL;
 			lwt_continue(&self->basestack, &swi->stack_ptr);
-			irt_instrumentation_region_set_timestamp(swi);
-			irt_wi_instrumentation_event(self, WORK_ITEM_RESUMED, swi->id);
+			irt_inst_region_set_timestamp(swi);
+			irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, swi->id);
 		}
 		//IRT_INFO("BARRIER - WI %3d: ]]] UP\n", irt_wi_get_wg_num(swi, 0));
 	} else {
@@ -185,10 +187,10 @@ void irt_wg_join(irt_work_group* wg) {
 	irt_wg_event_lambda lambda = { &_irt_wg_join_event, &clo, NULL };
 	uint32 occ = irt_wg_event_check_and_register(wg->id, IRT_WG_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_instrumentation_region_add_time(swi);
-		irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_GROUPJOIN, swi->id);
+		irt_inst_region_add_time(swi);
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_GROUPJOIN, swi->id);
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &swi->stack_ptr);
-		irt_instrumentation_region_set_timestamp(swi);
+		irt_inst_region_set_timestamp(swi);
 	}
 }

@@ -366,7 +366,6 @@ namespace parser {
 		auto abcab = builder.compoundStmt(a,b,c,a,b);
 		EXPECT_EQ(builder.compoundStmt(a, b, abc, abcab, a, c), g.match(manager, "{ a; b; { a; b; c; }; { a; b; c; a; b; }; a; c; }"));
 
-
 		// some stuff that should not work
 		EXPECT_FALSE(g.match(manager, "{a ; a; a; a; a; a; a; a; a a ; a; a; a; a; a; a; a; }"));
 
@@ -553,7 +552,7 @@ namespace parser {
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
 			if (!a || !b) return false;
 			return IRBuilder(cur.manager).add(a,b);
-		});
+		}, 2);
 
 		auto mul = rule(seq(rec(), "*", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
@@ -561,7 +560,7 @@ namespace parser {
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
 			if (!a || !b) return false;
 			return IRBuilder(cur.manager).mul(a,b);
-		});
+		}, 1);
 
 		auto par = rule(seq("(", rec(), ")"), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 1u) return false;
@@ -804,6 +803,100 @@ namespace parser {
 		EXPECT_EQ("{(Ident:a)}", toString(g.getEndSet("K")));
 
 	}
+
+	TEST(Parser, TerminalPairs) {
+		NodeManager manager;
+
+		auto T = rec("T");
+		auto A = rec("A");
+		auto B = rec("B");
+		auto C = rec("C");
+
+		// create a simple grammar
+		Grammar g("T");
+
+		g.addRule("T", rule(A, accept));
+		g.addRule("T", rule(B, accept));
+		g.addRule("A", rule(seq("(", list(T, ",") , ")"), accept));
+		g.addRule("B", rule(seq("[", list(T, ",") , "]"), accept));
+
+		// a pair where opener and closer are identical
+		g.addRule("C", rule(seq("|", list(T, ",") , "|"), accept));
+
+		// where both are the same but re-used
+		g.addRule("C", rule(seq("~", list(T, ",") , "~"), accept));
+		g.addRule("C", rule(seq("~"), accept));
+
+		// a strange pair ...
+		g.addRule("C", rule(seq("+", list(T, ",") , "-"), accept));
+
+		// a strange pair that should not work - opener reused
+		g.addRule("C", rule(seq("*", list(T, ",") , "/"), accept));
+		g.addRule("C", rule(lit("*"), accept));
+
+		// another strange pair that should not work - closer is reused
+		g.addRule("C", rule(seq("%", list(T, ",") , "."), accept));
+		g.addRule("C", rule(lit("."), accept));
+
+//		std::cout << "Grammar: " << g << "\n";
+
+		EXPECT_TRUE(g.match(manager, "([(),[]])"));
+		EXPECT_FALSE(g.match(manager, "([([),]])"));
+
+		// compute term meta information
+		const Grammar::TermInfo& info = g.getTermInfo();
+//		std::cout << "TermInfo: " << info << "\n";
+
+		// accepted pairs should be ...
+		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('(')));
+		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol(')')));
+		EXPECT_EQ(Token::createSymbol(')'), info.getClosingParenthese(Token::createSymbol('(')));
+
+		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('[')));
+		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol(']')));
+		EXPECT_EQ(Token::createSymbol(']'), info.getClosingParenthese(Token::createSymbol('[')));
+
+		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('|')));
+		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol('|')));
+		EXPECT_EQ(Token::createSymbol('|'), info.getClosingParenthese(Token::createSymbol('|')));
+
+		EXPECT_TRUE(info.isLeftParenthese(Token::createSymbol('+')));
+		EXPECT_TRUE(info.isRightParenthese(Token::createSymbol('-')));
+		EXPECT_EQ(Token::createSymbol('-'), info.getClosingParenthese(Token::createSymbol('+')));
+
+		// the one that should be excluded since opener and closer are re-used
+		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('~')));
+		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('~')));
+
+		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('*')));
+		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('/')));
+
+		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('%')));
+		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('.')));
+
+	}
+
+	TEST(Parser, VariableSequences) {
+		NodeManager manager;
+
+		Grammar g("E");
+
+		// list of a lot as and bs
+		g.addRule("E", rule(seq(loop(lit("+")), loop(lit("-"))), accept));
+
+		// simple case
+		EXPECT_TRUE(g.match(manager, "++++"));
+		EXPECT_TRUE(g.match(manager, "+++-"));
+		EXPECT_TRUE(g.match(manager, "++--"));
+		EXPECT_TRUE(g.match(manager, "+---"));
+		EXPECT_TRUE(g.match(manager, "----"));
+
+		// what should not work
+		EXPECT_FALSE(g.match(manager, "-+-"));
+		EXPECT_FALSE(g.match(manager, "+-+"));
+		EXPECT_FALSE(g.match(manager, "-+-+"));
+	}
+
 
 } // end namespace parser
 } // end namespace core

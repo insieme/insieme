@@ -112,11 +112,13 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	wi->impl_id = impl_id;
 	wi->context_id = self->cur_context;
 	wi->num_groups = 0;
-	wi->num_active_children = 0;
+	wi->_num_active_children = 0;
+	wi->num_active_children = &(wi->_num_active_children);
+	wi->parent_num_active_children = self->cur_wi ? self->cur_wi->num_active_children : NULL;
 	// TODO store size in LWDT
 	if(params != NULL) {
 		uint32 size = self->cur_context.cached->type_table[params->type_id].bytes;
-		if(size<=IRT_WI_PARAM_BUFFER_SIZE) 
+		if(size <= IRT_WI_PARAM_BUFFER_SIZE) 
 			wi->parameters = (irt_lw_data_item*)wi->param_buffer;
 		else 
 			wi->parameters = (irt_lw_data_item*)malloc(size); 
@@ -144,14 +146,14 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 		if(self->cur_wi->region != NULL) retval->region = self->cur_wi->region;
 #endif //IRT_ENABLE_REGION_INSTRUMENTATION
 		// increment child count in current wi
-		irt_atomic_inc(&self->cur_wi->num_active_children);
+		irt_atomic_inc(self->cur_wi->num_active_children);
 	}
 	// create entry in event table
 	irt_wi_event_register *reg = _irt_get_wi_event_register();
 	reg->id.value.full = retval->id.value.full;
 	_irt_wi_event_register_only(reg);
 	// instrumentation
-	irt_wi_instrumentation_event(self, WORK_ITEM_CREATED, retval->id);
+	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, retval->id);
 	return retval;
 }
 static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
@@ -165,7 +167,7 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 	retval->id.cached = retval;
 	retval->num_fragments = 0;
 	retval->range = range;
-	irt_wi_instrumentation_event(self, WORK_ITEM_CREATED, retval->id);
+	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, retval->id);
 	if(irt_wi_is_fragment(source)) {
 		// splitting fragment wi
 		irt_work_item *base_source = source->source_id.cached; // TODO
@@ -181,16 +183,14 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-	void
-	#ifdef _M_IX86
-	__fastcall
-	#endif
-	_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
-		func(wi);
-		irt_wi_end(wi);
-	}
-
+void
+#if _M_IX86 && _MSC_VER 
+__fastcall
+#endif
+_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
+	func(wi);
+	irt_wi_end(wi);
+}
 #ifdef __cplusplus
 }
 #endif
@@ -224,34 +224,46 @@ void irt_wi_join(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_instrumentation_region_add_time(swi);
-		irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_JOIN, swi->id);
+		irt_inst_region_add_time(swi);
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN, swi->id);
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &swi->stack_ptr);
-		irt_instrumentation_region_set_timestamp(swi);
+		irt_inst_region_set_timestamp(swi);
 	}
 }
 
 // join all ---------------------------------------------------------------------------------------
 
+bool _irt_wi_join_all_event(irt_wi_event_register* source_event_register, void *user_data) {
+	_irt_wi_join_event_data* join_data = (_irt_wi_join_event_data*)user_data;
+	// do not join wrong sink if multi-level optional wi in progress
+	// (signal received from inlined sibling child)
+	if(*(join_data->joining_wi->num_active_children) > 0) return true; 
+	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
+	return false;
+}
+
 void irt_wi_join_all(irt_work_item* wi) {
+	irt_wi_event_register_id reg_id = { { wi->id.value.full }, NULL };
+	irt_wi_event_register *reg = irt_wi_event_register_table_lookup(reg_id);
+	if(reg->handler[IRT_WI_CHILDREN_COMPLETED] != NULL) irt_throw_string_error(IRT_ERR_INTERNAL, "join all registered before start");
+
 	// reset the occurrence count
 	irt_wi_event_set_occurrence_count(wi->id, IRT_WI_CHILDREN_COMPLETED, 0);
-	if(wi->num_active_children==0) { 
+	if(*(wi->num_active_children) == 0) { 
 		return; // early exit
 	}
 	// register event
 	irt_worker* self = irt_worker_get_current();
 	_irt_wi_join_event_data clo = {wi, self};
-	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
+	irt_wi_event_lambda lambda = { &_irt_wi_join_all_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_CHILDREN_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_instrumentation_region_add_time(wi);
-		irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_JOIN_ALL, wi->id);
+		irt_inst_region_add_time(wi);
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN_ALL, wi->id);
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &wi->stack_ptr);
-		irt_instrumentation_region_set_timestamp(wi);
-	} else {
+		irt_inst_region_set_timestamp(wi);
 	}
 }
 
@@ -261,16 +273,13 @@ void irt_wi_end(irt_work_item* wi) {
 	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
 	irt_worker* worker = irt_worker_get_current();
 
-	// delete params struct
-	if(wi->parameters != (irt_lw_data_item*)wi->param_buffer) free(wi->parameters);
-
 	// instrumentation update
-	irt_instrumentation_region_add_time(wi);
-	irt_wi_instrumentation_event(worker, WORK_ITEM_FINISHED, wi->id);
-	
+	irt_inst_region_add_time(wi);
+	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINISHED, wi->id);
+
 	// check for parent, if there, notify
-	if(wi->parent_id.cached) {
-		if(irt_atomic_sub_and_fetch(&wi->parent_id.cached->num_active_children, 1) == 0) {
+	if(wi->parent_num_active_children) {
+		if(irt_atomic_sub_and_fetch(wi->parent_num_active_children, 1) == 0) {
 			irt_wi_event_trigger(wi->parent_id, IRT_WI_CHILDREN_COMPLETED);
 		}
 	}
@@ -283,6 +292,9 @@ void irt_wi_end(irt_work_item* wi) {
 		IRT_DEBUG("Fragment end, remaining %d", source->num_fragments);
 		irt_atomic_fetch_and_sub(&source->num_fragments, 1);
 		if(source->num_fragments == 0) irt_wi_end(source);
+	} else {
+		// delete params struct
+		if(wi->parameters != (irt_lw_data_item*)wi->param_buffer) free(wi->parameters);
 	}
 
 	// remove from groups
@@ -298,6 +310,7 @@ void irt_wi_end(irt_work_item* wi) {
 	// cleanup
 	_irt_del_wi_event_register(wi->id);
 	_irt_wi_recycle(wi, worker);
+	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_FINISHED, wi->id);
 	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
 }
@@ -331,7 +344,7 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 		out_wis[i] = _irt_wi_create_fragment(wi, range);
 	}
 	
-	irt_wi_instrumentation_event(self, WORK_ITEM_SPLITTED, wi->id);
+	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SPLITTED, wi->id);
 	
 	if(irt_wi_is_fragment(wi)) {
 		irt_work_item* source = wi->source_id.cached; // TODO
