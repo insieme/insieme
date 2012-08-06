@@ -1177,16 +1177,14 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		}
 		else if (core::analysis::isRefType(lhs->getType()) && 
 			!core::analysis::isRefType(rhs->getType()) && 
-			core::analysis::isRefType(core::analysis::getReferencedType(lhs->getType())) &&  
-			(core::analysis::getReferencedType(
-				core::analysis::getReferencedType(lhs->getType()))->getNodeType() == core::NT_ArrayType)
+			(core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType)
 		) {
 			doPointerArithmetic();	
 			return (retIr = rhs);
 
 		} else {
-			assert(lhsTy->getNodeType() == core::NT_RefType 
-					&& rhsTy->getNodeType() == core::NT_RefType && "Comparing pointers");
+			assert(lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType && "Comparing pointers");
+
 			retIr = builder.callExpr( gen.getBool(), gen.getPtrEq(), lhs, rhs );
 			if ( baseOp == BO_NE ) {
 				// comparing two refs
