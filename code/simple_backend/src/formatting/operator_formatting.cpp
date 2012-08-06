@@ -365,10 +365,10 @@ namespace formatting {
 				VISIT_ARG(0); OUT("+"); VISIT_ARG(1);
 		});
 
-		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPreInc(), true, { OUT("++"); VISIT_ARG(0); });
-		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPostInc(), true, { VISIT_ARG(0); OUT("++"); });
-		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPreDec(), true, { OUT("--"); VISIT_ARG(0); });
-		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPostDec(), true, { VISIT_ARG(0); OUT("--"); });
+		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPreInc(), true, { OUT("++(*"); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPostInc(), true, { OUT("(*"); VISIT_ARG(0); OUT(")++"); });
+		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPreDec(), true, { OUT("--(*"); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPostDec(), true, { OUT("(*"); VISIT_ARG(0); OUT(")--"); });
 
 
 		ADD_FORMATTER_DETAIL(res, basic.getVectorSubscript(), false, {
