@@ -647,8 +647,43 @@ namespace parser {
 					}
 			));
 
+			// add lang-basic literals
+			g.addRule("E", rule(
+					seq(identifier, opt(seq(".", list(identifier, ".")))),
+					[](Context& cur)->NodePtr {
+						// join matched token range and see whether it is a literal!
+						std::stringstream name;
+						name << join("", cur.begin, cur.end, [](std::ostream& out, const Token& cur) {
+							out << cur.getLexeme();
+						});
+
+						// exclude special built-in literal print (with variable argument list)
+						string builtInName = name.str();
+						if (builtInName == "print") {
+							return fail(cur, "Print literal can not be referenced directly - use statement instead!");
+						}
+
+						// look up literal within lang-basic
+						try {
+							return cur.getLangBasic().getBuiltIn(builtInName);
+						} catch (const lang::LiteralNotFoundException& lnfe) {
+							return fail(cur, "Unknown lang-basic literal!");
+						}
+					}
+			));
+
 
 			// --------------- add expression rules ---------------
+
+			// -- unary minus --
+
+			g.addRule("E", rule(
+				seq("-", E),
+				[](Context& cur)->NodePtr {
+					ExpressionPtr a = getOperand(cur, 0);
+					return cur.minus(a);
+				}
+			));
 
 			// -- arithmetic expressions --
 

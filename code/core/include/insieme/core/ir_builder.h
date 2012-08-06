@@ -437,9 +437,9 @@ namespace core {
 			return a; // this operator can be skipped
 		}
 
-		inline CallExprPtr minus(const ExpressionPtr& a) const {
-			return unaryOp(getOperator(lang::BasicGenerator::Minus, a->getType()), a);
-		}
+		// special (more complex) handling of unary minus)
+		LiteralPtr minus(const LiteralPtr& lit) const;
+		ExpressionPtr minus(const ExpressionPtr& a) const;
 
 
 		inline CallExprPtr preInc(const ExpressionPtr& a) const {

@@ -529,8 +529,25 @@ namespace parser {
 
 		// test builder support
 		EXPECT_EQ(builder.add(one, builder.mul(two, x)), builder.parse("one + two * x", symbols));
+	}
 
+	TEST(IR_Parser2, LangBasicSymbols) {
+		NodeManager manager;
+		auto& basic = manager.getLangBasic();
 
+		// test some pre-defined expressions
+		EXPECT_EQ(basic.getSignedIntAdd(), parse_expr(manager, "int.add"));
+		EXPECT_EQ(basic.getRefNarrow(), parse_expr(manager, "ref.narrow"));
+	}
+
+	TEST(IR_Parser2, UnaryMinus) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		EXPECT_EQ(builder.intLit(-5), parse_expr(manager, "-5"));
+		EXPECT_EQ(builder.intLit(2), parse_expr(manager, "-(-2)"));
+
+		EXPECT_EQ("AP(int.add(2, int.sub(0, int.add(1, 2))))", toString(parse_expr(manager, "2 + -(1 + 2)")));
 	}
 
 } // end namespace parser2

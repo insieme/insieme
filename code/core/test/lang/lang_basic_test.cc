@@ -40,6 +40,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/checks/ir_checks.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
@@ -100,6 +101,15 @@ TEST(LangBasic, OperatorGet) {
 	EXPECT_NE(*op3, *nm.getLangBasic().getBoolNe());
 }
 
+TEST(LangBasic, Derived) {
+	NodeManager nm;
+
+	// get a derived literal
+	EXPECT_EQ("rec v0.{v0=fun(ref<ref<array<'elem,1>>> v1) {ref<array<'elem,1>> v2 = ref.deref(v1); ref.assign(v1, array.view(ref.deref(v1), 1)); return v2;}}",
+			toString(*nm.getLangBasic().getArrayViewPostInc()));
+
+}
+
 TEST(LangBasic, DefinitionTest) {
 
 	NodeManager nm;
@@ -109,6 +119,7 @@ TEST(LangBasic, DefinitionTest) {
 #define CHECK(id) \
 	EXPECT_TRUE(gen.get##id ()); \
 	EXPECT_TRUE(gen.is##id(gen.get##id())); \
+	EXPECT_TRUE(checks::check(gen.get##id()).empty()) << checks::check(gen.get##id());
 
 #define TYPE(_id, _spec) CHECK(_id)
 #define LITERAL(_id, _name, _spec) CHECK(_id)

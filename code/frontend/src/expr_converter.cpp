@@ -1276,7 +1276,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 			// if this is a post/pre incremenet operator applied to an array we have to deal with it
 			// immediatelly because the getOperator function wouldn't deal with such case 
 
-			core::LiteralPtr opLit;
+			core::ExpressionPtr opLit;
 			switch (op) {
 			case core::lang::BasicGenerator::PreInc:
 				opLit = gen.getArrayViewPreInc();
@@ -1291,7 +1291,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 				opLit = gen.getArrayViewPostDec();
 				break;
 			default:
-				assert(false && "Decrement operator not handled for pointer arithmetic");
+				assert(false && "Operator not handled for pointer arithmetic");
 			}
 
 			return builder.callExpr(elementType, opLit, subExpr);

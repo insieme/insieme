@@ -40,6 +40,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/normalize.h"
 
 #include "insieme/simple_backend/variable_manager.h"
 #include "insieme/simple_backend/name_manager.h"
@@ -613,12 +614,13 @@ namespace simple_backend {
 				return;
 			}
 
-			// try generic build-in C operator handling
-			auto pos = formats.find(literalFun);
-			if (pos != formats.end()) {
-				pos->second->format(*this, ptr);
-				return;
-			}
+		}
+
+		// try generic build-in C operator handling
+		auto pos = formats.find(core::analysis::normalize(funExp));
+		if (pos != formats.end()) {
+			pos->second->format(*this, ptr);
+			return;
 		}
 
 		// handle function based on the kind of function node

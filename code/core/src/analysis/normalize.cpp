@@ -256,6 +256,11 @@ namespace analysis {
 
 	NodePtr normalize(const NodePtr& node) {
 
+		// short cut for constructs not including any variables
+		if (node->getNodeCategory() == NC_Type || node->getNodeType() == NT_Literal) {
+			return node;
+		}
+
 		// check whether it has already been normalized
 		if (auto annotation = node.getAnnotation(NormalizeAnnotation::KEY)) {
 			return annotation->getNormalized();
