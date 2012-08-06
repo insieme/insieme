@@ -364,7 +364,7 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 	double trainErr = 0, valErr = 0;
 
 	int epoch = 0;
-	for(; epoch < 5000; ++epoch) {
+	for(; epoch < 10000; ++epoch) {
 		// permute training data
 		std::random_shuffle(trainIndices.begin(), trainIndices.end());
 		trainErr = 0;
@@ -398,7 +398,7 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 		}
 	}
 
-	if(epoch == 5000) {
+	if(epoch == 10000) {
 		LOG(INFO) << "Unstopped!\n";
 	}
 
@@ -639,7 +639,7 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 		genDefaultQuery();
 
 	// read the maximum of the column in measurement for which to train
-	double max, min;
+	double max = 0.0, min = 0.0;
 	if(genOut != GenNNoutput::ML_KEEP_INT)
 		max = getMaximum(trainForName), min = getMinimum(trainForName);
 
@@ -863,7 +863,7 @@ size_t Trainer::loadModel(const std::string& filename, const std::string& path){
 
 	featureNormalization.resize(0,0,false);
 	std::string line, buf;
-	size_t numF;
+	size_t numF = 0;
 
 	// read parameters from ssv, one line for each feature in forom: avgerage, min, max
 	while(getline(fnp, line)) {
