@@ -1004,7 +1004,13 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		// we check if the RHS is a ref, in that case we use the deref operator
 		rhs = convFact.tryDeref(rhs);
 
-		if (lhs->getType()->getNodeType() == core::NT_RefType && rhs->getType()->getNodeType() != core::NT_RefType) 
+		// capture the case when pointer arithmetic is performed 
+		if (core::analysis::isRefType(lhs->getType()) && 
+			!core::analysis::isRefType(rhs->getType()) && 
+			core::analysis::isRefType(core::analysis::getReferencedType(lhs->getType())) &&  
+			(core::analysis::getReferencedType(
+				core::analysis::getReferencedType(lhs->getType()))->getNodeType() == core::NT_ArrayType)
+		) 
 			// do pointer arithmetic 
 			doPointerArithmetic(); 
 		else 
@@ -1099,15 +1105,15 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 	}
 
-	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-	" RHS(" << *rhs << "[" << *rhs->getType() << "])";
+	std::cout << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
+	" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;;
 
 	if( !isAssignment ) {
 
 		core::TypePtr&& lhsTy = lhs->getType();
 		core::TypePtr&& rhsTy = rhs->getType();
-		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-		" RHS(" << *rhs << "[" << *rhs->getType() << "])";
+		std::cout << "2 LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
+		" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 
 		if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
 				binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
@@ -1116,7 +1122,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 				// lhs is a scalar
 				lhs = scalarToVector(lhs, rhsTy, builder, convFact);
 			} else
-			lhs = convFact.tryDeref(lhs); // lhs is an ocl-vector
+				lhs = convFact.tryDeref(lhs); // lhs is an ocl-vector
 
 			if(binOp->getRHS()->getStmtClass() == Stmt::ImplicitCastExprClass ) { // the rhs is a scalar, implicitly casted to a vector
 				// rhs is a scalar
@@ -1138,8 +1144,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 				assert(false && "old stuff needed, tell Klaus");
 				return (retIr = builder.callExpr(lhsTy, opFunc, lhs, rhs));
 			}
-
+			assert(false && "Never reach this point");
 		}
+
 		if ( lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
 			// ----------------------------- Hack begin --------------------------------
 			// TODO: this is a quick solution => maybe clang allows you to determine the actual type
@@ -1168,12 +1175,17 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 			opFunc = gen.getOperator(exprTy, op);
 
 		}
-		else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
+		else if (core::analysis::isRefType(lhs->getType()) && 
+			!core::analysis::isRefType(rhs->getType()) && 
+			core::analysis::isRefType(core::analysis::getReferencedType(lhs->getType())) &&  
+			(core::analysis::getReferencedType(
+				core::analysis::getReferencedType(lhs->getType()))->getNodeType() == core::NT_ArrayType)
+		) {
 			doPointerArithmetic();	
 			return (retIr = rhs);
 
 		} else {
-			assert(lhsTy->getNodeType() == core::NT_RefType
+			assert(lhsTy->getNodeType() == core::NT_RefType 
 					&& rhsTy->getNodeType() == core::NT_RefType && "Comparing pointers");
 			retIr = builder.callExpr( gen.getBool(), gen.getPtrEq(), lhs, rhs );
 			if ( baseOp == BO_NE ) {
@@ -1182,7 +1194,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 			}
 			return retIr;
 		}
-
 		if ( DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS()) ) {
 			if ( isa<ArrayType>(declRefExpr->getDecl()->getType().getTypePtr()) )
 			assert(false && "Pointer arithmetic not yet supported");
