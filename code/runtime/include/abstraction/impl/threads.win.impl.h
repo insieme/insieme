@@ -60,5 +60,7 @@ irt_thread irt_thread_create(irt_thread_func *fun, void *args) {
 	irt_win_thread_params *params = (irt_win_thread_params*)malloc(sizeof(irt_win_thread_params));
 	params->fun = fun;
 	params->args = args;
-	return CreateThread(NULL, NULL, _irt_win_thread_func, params, NULL, NULL);
+	irt_thread t = CreateThread(NULL, NULL, _irt_win_thread_func, params, NULL, NULL);
+	IRT_ASSERT(t != NULL, IRT_ERR_INTERNAL, "Could not create worker thread");
+	return t;
 }
