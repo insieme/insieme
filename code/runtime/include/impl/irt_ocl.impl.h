@@ -561,13 +561,13 @@ void irt_ocl_rt_release_all_kernels(irt_context* context, cl_uint g_kernel_code_
 }
 
 irt_ocl_buffer* irt_ocl_rt_create_buffer(cl_mem_flags flags, size_t size){
-	int worker_id = irt_worker_get_current()->id.value.components.thread % irt_ocl_get_num_devices(); // :)
+	int worker_id = irt_worker_get_current()->id.thread % irt_ocl_get_num_devices(); // :)
 	irt_ocl_device* dev = irt_ocl_get_device(worker_id);
 	return irt_ocl_create_buffer(dev, flags, size);
 }
 
 void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_work_offset, size_t* global_work_size, size_t* local_work_size, cl_uint num_args, ...){
-	int worker_id = irt_worker_get_current()->id.value.components.thread % irt_ocl_get_num_devices();
+	int worker_id = irt_worker_get_current()->id.thread % irt_ocl_get_num_devices();
 	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[worker_id][kernel_id]; // :)
 #ifdef IRT_OCL_DEBUG
 	IRT_INFO("Running Opencl Kernel in \"%s\"\n", kernel->dev->name);
@@ -657,7 +657,7 @@ irt_ocl_event* irt_ocl_get_new_event() {//irt_worker* worker, const int event, c
 		_irt_cl_event_table_resize(table);
 
 	irt_ocl_event* rt_event = &(table->event_array[table->num_events++]);
-	rt_event->workitem_id = worker->cur_wi->id.value.full;
+	rt_event->workitem_id = worker->cur_wi->id.full;
 	return rt_event;
 }
 

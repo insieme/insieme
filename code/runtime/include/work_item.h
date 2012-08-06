@@ -100,7 +100,7 @@ struct _irt_work_item {
 
 static inline irt_work_item* irt_wi_get_current();
 
-static inline bool irt_wi_is_fragment(irt_work_item *wi) { return wi->source_id.value.full != irt_work_item_null_id().value.full; }
+static inline bool irt_wi_is_fragment(irt_work_item *wi) { return wi->source_id.full != irt_work_item_null_id().full; }
 static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index);
 static inline uint32 irt_wi_get_wg_num(irt_work_item *wi, uint32 index);
 static inline uint32 irt_wi_get_wg_size(irt_work_item *wi, uint32 index);

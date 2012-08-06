@@ -85,13 +85,13 @@ static inline void _irt_wi_recycle(irt_work_item* wi, irt_worker* self) {
 	//IRT_DEBUG("WI_CYC\n");
 	wi->next_reuse = self->wi_reuse_stack;
 	self->wi_reuse_stack = wi;
-	lwt_recycle(self->id.value.components.thread, wi);
+	lwt_recycle(self->id.thread, wi);
 	
 	/*IRT_VERBOSE_ONLY(
 		irt_work_item* last = self->wi_reuse_stack;
 		int i = 0;
 		while((last = last->next_reuse)) ++i;
-		printf("WI_CCC %d : %d\n", self->id.value.components.thread, i);
+		printf("WI_CCC %d : %d\n", self->id.thread, i);
 		);*/
 }
 
@@ -150,7 +150,7 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 	}
 	// create entry in event table
 	irt_wi_event_register *reg = _irt_get_wi_event_register();
-	reg->id.value.full = retval->id.value.full;
+	reg->id.full = retval->id.full;
 	_irt_wi_event_register_only(reg);
 	// instrumentation
 	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, retval->id);
@@ -244,7 +244,7 @@ bool _irt_wi_join_all_event(irt_wi_event_register* source_event_register, void *
 }
 
 void irt_wi_join_all(irt_work_item* wi) {
-	irt_wi_event_register_id reg_id = { { wi->id.value.full }, NULL };
+	irt_wi_event_register_id reg_id = { { wi->id.full }, NULL };
 	irt_wi_event_register *reg = irt_wi_event_register_table_lookup(reg_id);
 	if(reg->handler[IRT_WI_CHILDREN_COMPLETED] != NULL) irt_throw_string_error(IRT_ERR_INTERNAL, "join all registered before start");
 

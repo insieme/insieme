@@ -127,5 +127,5 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 }
 
 void insieme_wi_hw_implementation(irt_work_item* wi) {
-	printf("Hello world from worker %d\n", irt_worker_get_current()->id.value.components.thread);
+	printf("Hello world from worker %d\n", irt_worker_get_current()->id.thread);
 }

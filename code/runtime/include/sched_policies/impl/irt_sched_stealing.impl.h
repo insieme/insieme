@@ -61,11 +61,11 @@ int irt_scheduling_iteration(irt_worker* self) {
 		return 1;
 	}
 	// try to steal a work item from predecessor
-	int pred = self->id.value.components.thread-1;
+	int pred = self->id.thread-1;
 	if(pred < 0) pred = irt_g_worker_count-1;
 	irt_work_item* stolen_wi = irt_work_item_cdeque_pop_front(&irt_g_workers[pred]->sched_data.queue);
 	if(stolen_wi != NULL) {
-		//printf("I'm a dirty thief %d.value\n", self->id.value.components.thread);
+		//printf("I'm a dirty thief %d.value\n", self->id.thread);
 		_irt_worker_switch_to_wi(self, stolen_wi);
 		return 1;
 	}
@@ -80,7 +80,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
 		irt_signal_worker(target);
 		// signal successor
-		int succ = (target->id.value.components.thread+1)%irt_g_worker_count;
+		int succ = (target->id.thread+1)%irt_g_worker_count;
 		irt_signal_worker(irt_g_workers[succ]);
 	} else {
 		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
@@ -103,7 +103,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 //		return 1;
 //	}
 //	// try to steal work from predecessor
-//	int pred = self->id.value.components.thread-1;
+//	int pred = self->id.thread-1;
 //	if(pred < 0) pred = irt_g_worker_count-1;
 //	irt_work_item_cdeque *pq = &irt_g_workers[pred]->sched_data.queue;
 //	if(pq->size > 4) {
@@ -121,7 +121,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 //		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
 //		irt_signal_worker(target);
 //		// signal successor
-//		int succ = (target->id.value.components.thread+1)%irt_g_worker_count;
+//		int succ = (target->id.thread+1)%irt_g_worker_count;
 //		irt_signal_worker(irt_g_workers[succ]);
 //	} else {
 //		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
@@ -144,7 +144,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 //		return 1;
 //	}
 //	// try to steal a work item from left thread
-//	int tid = self->id.value.components.thread;
+//	int tid = self->id.thread;
 //	int left_index = tid/2;
 //	if(left_index == tid) left_index = irt_g_worker_count-1; // worker 0 overflows to end
 //	irt_work_item* stolen_wi = NULL;
@@ -182,7 +182,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 //			irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
 //			irt_signal_worker(target);
 //			// signal left/right
-//			int tid = target->id.value.components.thread;
+//			int tid = target->id.thread;
 //			int left_index = tid/2;
 //			if(left_index == tid) left_index = irt_g_worker_count-1; // worker 0 overflows to end
 //			irt_signal_worker(irt_g_workers[left_index]);

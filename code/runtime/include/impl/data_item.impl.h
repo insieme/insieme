@@ -183,7 +183,7 @@ irt_data_block* irt_di_acquire(irt_data_item* di, irt_data_mode mode) {
 	}
 
 	// look up parents
-	while (di->parent_id.value.full != irt_data_item_null_id().value.full) {
+	while (di->parent_id.full != irt_data_item_null_id().full) {
 		// resolve recursively
 		irt_data_block* block = irt_di_acquire(irt_data_item_table_lookup(di->parent_id), mode);
 

@@ -59,8 +59,8 @@ TEST(id_generation, parallel_ops) {
 
 	#pragma omp parallel
 	{
-		gen_id.value.components.node = 42;
-		gen_id.value.components.thread = omp_get_thread_num();
+		gen_id.node = 42;
+		gen_id.thread = omp_get_thread_num();
 		#pragma omp parallel
 		for(int i=0; i<TEST_COUNT; ++i) {
 			ids[i] = irt_generate_id_gen_test_id(&gen_id);
@@ -70,8 +70,8 @@ TEST(id_generation, parallel_ops) {
 	for(int i=0; i<TEST_COUNT; ++i) {
 		for(int j=0; j<TEST_COUNT; ++j) {
 			if(i == j) continue;
-			EXPECT_NE(ids[i].value.full, ids[j].value.full);
+			EXPECT_NE(ids[i].full, ids[j].full);
 		}
-		EXPECT_EQ(ids[i].value.components.node, gen_id.value.components.node);
+		EXPECT_EQ(ids[i].node, gen_id.node);
 	}
 }

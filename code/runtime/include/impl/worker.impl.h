@@ -59,7 +59,7 @@
 
 #ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self) {
-/*	IRT_INFO("======== Worker %d debug info:\n", self->id.value.components.thread);
+/*	IRT_INFO("======== Worker %d debug info:\n", self->id.thread);
 #ifdef USING_MINLWT	
 	IRT_INFO("== Base ptr: %p\n", (void*)self->basestack); // casting to void* would break 32 bit compatibility
 #else
@@ -97,11 +97,11 @@ void* _irt_worker_func(void *argvp) {
 	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
 	irt_worker* self = arg->generated;
 	self->pthread = pthread_self();
-	self->id.value.components.index = 1;
-	self->id.value.components.thread = arg->index;
-	self->id.value.components.node = 0; // TODO correct node id
+	self->id.index = 1;
+	self->id.thread = arg->index;
+	self->id.node = 0; // TODO correct node id
 	self->id.cached = self;
-	self->generator_id = self->id.value.full;
+	self->generator_id = self->id.full;
 	self->affinity = arg->affinity;
 	self->cur_context = irt_context_null_id();
 	self->cur_wi = NULL;
@@ -180,7 +180,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	if(wi->state == IRT_WI_STATE_NEW) {
 		// start WI from scratch
 		wi->state = IRT_WI_STATE_STARTED;
-		lwt_prepare(self->id.value.components.thread, wi, &self->basestack);
+		lwt_prepare(self->id.thread, wi, &self->basestack);
 
 		self->cur_wi = wi;
 #ifdef USING_MINLWT
