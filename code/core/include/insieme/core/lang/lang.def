@@ -421,7 +421,7 @@ LITERAL(VectorRefProjection, 	"vector.ref.projection",
 LITERAL(VectorToArray, 			"vector.to.array",				"(vector<'elem,#l>) -> array<'elem,1>")
 LITERAL(RefVectorToRefArray, 	"ref.vector.to.ref.array",		"(ref<vector<'elem,#l>>) -> ref<array<'elem,1>>")
 						
-LITERAL(ArrayView, 				"array.view",					"(ref<array<'elem,1>>, uint<8>) -> ref<array<'elem,1>>")
+LITERAL(ArrayView, 				"array.view",					"(ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")
 LITERAL(ArrayViewPostInc, 		"array.view.post.inc",			"(ref<ref<array<'elem,1>>>) -> ref<array<'elem,1>>")
 LITERAL(ArrayViewPreInc, 		"array.view.pre.inc",			"(ref<ref<array<'elem,1>>>) -> ref<array<'elem,1>>")
 
