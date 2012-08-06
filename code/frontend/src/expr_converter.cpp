@@ -969,6 +969,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 	if ( isCompound ) {
 		// we check if the RHS is a ref, in that case we use the deref operator
 		rhs = convFact.tryDeref(rhs);
+
 		core::ExpressionPtr&& opFunc = gen.getOperator(exprTy, op);
 		rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
 	}

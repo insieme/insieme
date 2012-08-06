@@ -904,12 +904,31 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			VLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
 		});
 
-		if (!ctx.isRecSubFunc) {
-			if (ctx.recVarExprMap.find(funcDecl) == ctx.recVarExprMap.end()) {
+		/** 
+		 * Creates the variable which should be used as a placeholder for invoking the given
+		 * function call and isert it in the map (recVarExprMap) used to store such variables
+		 * which are valid during the conversion of the given recursive function cycle
+		 */
+		auto createRecVar = [&] (const clang::FunctionDecl* funDecl) { 
 				// we create a TypeVar for each type in the mutual dependence
-				core::VariablePtr&& var = builder.variable( convertType( GET_TYPE_PTR(funcDecl) ) );
-				ctx.recVarExprMap.insert( std::make_pair(funcDecl, var) );
-			}
+				core::FunctionTypePtr funcType = convertType(GET_TYPE_PTR(funDecl)).as<core::FunctionTypePtr>();
+				
+				// In the case the function is receiving the global variables the signature needs to be
+				// modified by allowing the global struct to be passed as an argument
+				if ( ctx.globalFuncMap.find(funDecl) != ctx.globalFuncMap.end() ) {
+					funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
+				}
+				core::VariablePtr&& var = builder.variable( funcType );
+				ctx.recVarExprMap.insert( std::make_pair(funDecl, var) );
+
+				return var;
+		};
+
+
+		if (!ctx.isRecSubFunc) {
+			
+			if (ctx.recVarExprMap.find(funcDecl) == ctx.recVarExprMap.end()) { createRecVar(funcDecl); }
+
 		} else {
 			// we expect the var name to be in currVar
 			ctx.recVarExprMap.insert( std::make_pair(funcDecl, ctx.currVar) );
@@ -917,29 +936,16 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		// when a subtype is resolved we expect to already have these variables in the map
 		if (!ctx.isRecSubFunc) {
-			std::for_each(components.begin(), components.end(),
-					[ this ] (std::set<const FunctionDecl*>::value_type fd) {
-
-						if ( this->ctx.recVarExprMap.find(fd) == this->ctx.recVarExprMap.end() ) {
-							core::FunctionTypePtr funcType =
-							core::static_pointer_cast<const core::FunctionType>( this->convertType(GET_TYPE_PTR(fd)) );
-							// In the case the function is receiving the global variables the signature needs to be
-							// modified by allowing the global struct to be passed as an argument
-					if ( this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end() ) {
-						funcType = addGlobalsToFunctionType(this->builder, this->ctx.globalStruct.first, funcType);
-					}
-					core::VariablePtr&& var = this->builder.variable( funcType );
-					this->ctx.recVarExprMap.insert( std::make_pair(fd, var ) );
-				}
-			});
+			for( const auto& fd : components) {
+				if ( ctx.recVarExprMap.find(fd) == ctx.recVarExprMap.end() ) { createRecVar(fd); }
+			}
 		}
 		if (VLOG_IS_ON(2)) {
-			VLOG(2)
-				<< "MAP: ";
+			VLOG(2) << "MAP: ";
 			std::for_each(ctx.recVarExprMap.begin(), ctx.recVarExprMap.end(),
-					[] (ConversionContext::RecVarExprMap::value_type c) {
-						VLOG(2) << "\t" << c.first->getNameAsString() << "[" << c.first << "]";
-					});
+				[] (ConversionContext::RecVarExprMap::value_type c) {
+					VLOG(2) << "\t" << c.first->getNameAsString() << "[" << c.first << "] " << c.second->getType();
+				});
 		}
 	}
 
