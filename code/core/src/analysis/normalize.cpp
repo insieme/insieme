@@ -140,7 +140,8 @@ namespace analysis {
 				}
 
 				// it is migrated but not altered => fine
-				after.addAnnotation(std::make_shared<NormalizeAnnotation>(after->getNodeManager().get(normalized)));
+				NodePtr newNormalized = (before == normalized)?after:after->getNodeManager().get(normalized);
+				after.addAnnotation(std::make_shared<NormalizeAnnotation>(newNormalized));
 				return true;
 			};
 
@@ -149,7 +150,7 @@ namespace analysis {
 			 */
 			virtual void clone(const NodeAnnotationPtr& ptr, const NodePtr& copy) const {
 				// simply copy annotation
-				copy.addAnnotation(std::make_shared<NormalizeAnnotation>(copy->getNodeManager().get(normalized)));
+				copy.addAnnotation(std::make_shared<NormalizeAnnotation>(copy));
 			}
 		};
 
