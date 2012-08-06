@@ -13,4 +13,13 @@ int main(int argc, char* argv[]) {
 
 	a_ptr -= 2;
 	printf("%d == %d\n", a[0], *a_ptr);
+
+	printf("%d == %d\n", a[0], *(a_ptr++));
+
+	printf("%d == %d\n", a[2], *(++a_ptr));
+
+	a_ptr = a_ptr + 1;
+	printf("%d == %d\n", a[3], *a_ptr);
+
+	
 }
