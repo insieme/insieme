@@ -60,8 +60,8 @@ namespace {
 // It returns true if the source location SL is inside the range defined by SR
 bool isInsideRange(SourceRange SR, SourceLocation SL, SourceManager const& sm) {
 
-	LOG(INFO) << "Is after RANGE(" << Line(SR, sm).first << ", " << Line(SR, sm).second << ")";
-	LOG(INFO) << "Is after RANGE(" << Line(SL, sm) << ")";
+	//LOG(INFO) << "Is after RANGE(" << Line(SR, sm).first << ", " << Line(SR, sm).second << ")";
+	//LOG(INFO) << "Is after RANGE(" << Line(SL, sm) << ")";
 
 	return Line(SR, sm).first <= Line(SL, sm) && Line(SR, sm).second > Line(SL, sm);
 }
