@@ -945,7 +945,7 @@ namespace parser {
 	}
 
 
-	NodePtr Grammar::match(NodeManager& manager, const string& code, bool throwOnFail) const {
+	NodePtr Grammar::match(NodeManager& manager, const string& code, bool throwOnFail, const std::map<string, NodePtr>& symbols) const {
 		// step 1) start by obtaining list of tokens
 		auto tokens = lex(code);
 
@@ -958,7 +958,18 @@ namespace parser {
 		// step 2) parse recursively
 		NodePtr res;
 		try {
+			// create a context for the translation
 			Context context(*this, manager, tokens.begin(), tokens.end(), false);
+
+			// register pre-defined symbols
+			auto& symManager = context.getSymbolManager();
+			vector<vector<Token>> symbolTokens;
+			for(const pair<string, NodePtr>& cur : symbols) {
+				symbolTokens.push_back(toVector(Token::createIdentifier(cur.first)));
+				symManager.add(range(symbolTokens.back()), cur.second);
+			}
+
+			// run recursive match
 			res = match(context, tokens.begin(), tokens.end(), start);
 			if (!res && throwOnFail) throw ParseException("Unknown parser error!");
 		} catch (const ParseException& pe) {

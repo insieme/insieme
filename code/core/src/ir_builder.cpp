@@ -59,6 +59,8 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/core/parser2/ir_parser.h"
+
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
@@ -147,6 +149,29 @@ NodePtr IRBuilder::get(NodeType type, const NodeList& children) const {
 ProgramPtr IRBuilder::createProgram(const ExpressionList& entryPoints) const {
 	return Program::get(manager, entryPoints);
 }
+
+
+// ---------------------------- Parser Integration -----------------------------------
+
+NodePtr IRBuilder::parse(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser::parse(manager, code, true, symbols);
+}
+
+TypePtr IRBuilder::parseType(const string& code, const std::map<string, NodePtr>& symbols) const {
+	assert(symbols.empty() && "Symbols not yet supported!");
+	return parser::parse_type(manager, code, true, symbols);
+}
+
+ExpressionPtr IRBuilder::parseExpr(const string& code, const std::map<string, NodePtr>& symbols) const {
+	assert(symbols.empty() && "Symbols not yet supported!");
+	return parser::parse_expr(manager, code, true, symbols);
+}
+
+StatementPtr IRBuilder::parseStmt(const string& code, const std::map<string, NodePtr>& symbols) const {
+	assert(symbols.empty() && "Symbols not yet supported!");
+	return parser::parse_stmt(manager, code, true, symbols);
+}
+
 
 
 // ---------------------------- Standard Nodes -----------------------------------

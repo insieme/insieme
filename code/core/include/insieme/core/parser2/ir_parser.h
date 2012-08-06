@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <map>
 #include "insieme/core/forward_decls.h"
 
 namespace insieme {
@@ -43,15 +44,15 @@ namespace core {
 namespace parser {
 
 
-	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow = false);
+	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
 
-	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow = false);
+	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
 
-	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow = false);
+	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
 
-	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow = false);
+	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
 
-	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow = false);
+	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
 
 
 	class IRParserException : public std::exception {

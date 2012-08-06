@@ -106,6 +106,33 @@ namespace core {
 		NodePtr get(NodeType type, const NodeList& children) const;
 
 
+		// --- Add parser support ---
+
+		/**
+		 * Parses any kind of IR fragment encoded within the given code. The given symbol table
+		 * allows additional pre-defined let-definitions to be considered.
+		 *
+		 * @param code the code to be parsed and returned as a node
+		 * @param symbols a set of pre-defined symbols to be used within the code
+		 */
+		NodePtr parse(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
+		/**
+		 * The same as the parse member function yet interpreting the given code as a type.
+		 */
+		TypePtr parseType(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
+		/**
+		 * The same as the parse member function yet interpreting the given code as an expression.
+		 */
+		ExpressionPtr parseExpr(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
+		/**
+		 * The same as the parse member function yet interpreting the given code as a statement.
+		 */
+		StatementPtr parseStmt(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
+
 		// --- Imported Standard Factory Methods from Node Types ---
 
 		#include "ir_builder.inl"

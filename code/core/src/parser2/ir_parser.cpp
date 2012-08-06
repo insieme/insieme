@@ -1170,50 +1170,50 @@ namespace parser {
 
 
 
-	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow) {
+	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		static const Grammar inspire = buildGrammar();
 		try {
-			return inspire.match(manager, code, onFailThrow);
+			return inspire.match(manager, code, onFailThrow, definitions);
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}
 		return NodePtr();
 	}
 
-	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow) {
+	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		static const Grammar g = buildGrammar("T");
 		try {
-			return g.match(manager, code, onFailThrow).as<TypePtr>();
+			return g.match(manager, code, onFailThrow, definitions).as<TypePtr>();
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}
 		return TypePtr();
 	}
 
-	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow) {
+	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		static const Grammar g = buildGrammar("E");
 		try {
-			return g.match(manager, code, onFailThrow).as<ExpressionPtr>();
+			return g.match(manager, code, onFailThrow, definitions).as<ExpressionPtr>();
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}
 		return ExpressionPtr();
 	}
 
-	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow) {
+	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		static const Grammar g = buildGrammar("S");
 		try {
-			return g.match(manager, code, onFailThrow).as<StatementPtr>();
+			return g.match(manager, code, onFailThrow, definitions).as<StatementPtr>();
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}
 		return StatementPtr();
 	}
 
-	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow) {
+	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		static const Grammar g = buildGrammar("A");
 		try {
-			return g.match(manager, code, onFailThrow).as<ProgramPtr>();
+			return g.match(manager, code, onFailThrow, definitions).as<ProgramPtr>();
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}

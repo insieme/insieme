@@ -1007,7 +1007,7 @@ namespace parser {
 			infoValid = false;
 		}
 
-		NodePtr match(NodeManager& manager, const string& code, bool throwOnFail = false) const;
+		NodePtr match(NodeManager& manager, const string& code, bool throwOnFail = false, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
 
 		NodePtr match(Context& context, const TokenIter& begin, const TokenIter& end, const string& nonTerminal) const;
 
