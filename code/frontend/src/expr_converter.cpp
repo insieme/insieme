@@ -973,11 +973,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		core::TypePtr subRefTy = GET_REF_ELEM_TYPE(lhs->getType());
 
 		// In the case we have ref<ref<array<>>> then we deref again the argument 
-		if (subRefTy->getNodeType() == core::NT_RefType) {
+		if (core::analysis::isRefType(subRefTy)) {
 			lhs = builder.deref(lhs);
 			subRefTy = lhs->getType();
 		}
 
+		assert( core::analysis::isRefType(lhs->getType()) );
 		if(subRefTy->getNodeType() == core::NT_VectorType)
 			lhs = builder.callExpr(gen.getRefVectorToRefArray(), lhs);
 
@@ -986,15 +987,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		assert( (baseOp == BO_Add || baseOp == BO_Sub) &&
 				"Operators allowed in pointer arithmetic are + and - only");
 
-		// if the lhs is a vector we transform it to an array
-		if (subRefTy->getNodeType() == core::NT_VectorType) {
-			lhs = builder.callExpr(gen.getRefVectorToRefArray(), lhs);
-		}
-
 		assert(GET_REF_ELEM_TYPE(lhs->getType())->getNodeType() == core::NT_ArrayType &&
 				"LHS operator must be of type ref<array<'a,#l>>");
 
-		assert(gen.isSignedInt(rhs->getType()) && "Array view displacement must be a signed int");
+		assert(gen.isInt(rhs->getType()) && "Array view displacement must be a signed int");
+		if (gen.isUnsignedInt(rhs->getType()))
+			rhs = builder.castExpr(gen.getInt8(), rhs);
 
 		// check whether the RHS is of integer type
 		rhs = builder.callExpr(gen.getArrayView(), lhs, baseOp == BO_Add ? rhs : builder.invertSign(rhs));
@@ -1105,18 +1103,20 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 	}
 
-	std::cout << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
+	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 	" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;;
 
 	if( !isAssignment ) {
 
 		core::TypePtr&& lhsTy = lhs->getType();
 		core::TypePtr&& rhsTy = rhs->getType();
-		std::cout << "2 LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
+		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 		" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 
 		if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
 				binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
+			
+			std::cout << "OCL " << std::endl;
 			// check if lhs is not an ocl-vector, in this case create a vector form the scalar
 			if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) { // the rhs is a scalar, implicitly casted to a vector
 				// lhs is a scalar
@@ -1175,9 +1175,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 			opFunc = gen.getOperator(exprTy, op);
 
 		}
-		else if (core::analysis::isRefType(lhs->getType()) && 
-			!core::analysis::isRefType(rhs->getType()) && 
-			(core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType)
+		else if (core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType()) && 
+			(core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType || 
+			 core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_VectorType)
 		) {
 			doPointerArithmetic();	
 			return (retIr = rhs);
