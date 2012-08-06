@@ -1236,10 +1236,11 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 	auto encloseIncrementOperator =
 	[ this, &builder, &gen ]
 	(core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
+
 		if (subExpr->getNodeType() == core::NT_Variable && subExpr->getType()->getNodeType() != core::NT_RefType) {
 			// It can happen we are incrementing a variable which is coming from an input
 			// argument of a function
-			core::VariablePtr var = core::static_pointer_cast<const core::Variable>(subExpr);
+			core::VariablePtr var = subExpr.as<core::VariablePtr>();
 			assert(var->getType()->getNodeType() != core::NT_RefType);
 
 			auto&& fit = convFact.ctx.wrapRefMap.find(var);
@@ -1248,11 +1249,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 						std::make_pair( var, builder.variable( builder.refType(var->getType()) ) )
 				).first;
 			}
+
 			subExpr = fit->second;
 		}
 		core::TypePtr type = subExpr->getType();
-		assert( type->getNodeType() == core::NT_RefType &&
-				"Illegal increment/decrement operand - not a ref type" );
+		assert( type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type" );
+
 		core::TypePtr elementType = GET_REF_ELEM_TYPE(type);
 
 		core::TypePtr genType;
@@ -1260,10 +1262,35 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 			genType = gen.getIntGen();
 		} else if ( gen.isUnsignedInt(elementType) ) {
 			genType = gen.getUIntGen();
+
+		} else if ( core::analysis::isRefType(elementType) && (GET_REF_ELEM_TYPE(elementType)->getNodeType() == core::NT_ArrayType)) {
+			// if this is a post/pre incremenet operator applied to an array we have to deal with it
+			// immediatelly because the getOperator function wouldn't deal with such case 
+
+			core::LiteralPtr opLit;
+			switch (op) {
+			case core::lang::BasicGenerator::PreInc:
+				opLit = gen.getArrayViewPreInc();
+				break;
+			case core::lang::BasicGenerator::PostInc:
+				opLit = gen.getArrayViewPostInc();
+				break;
+			case core::lang::BasicGenerator::PreDec:
+				opLit = gen.getArrayViewPreDec();
+				break;
+			case core::lang::BasicGenerator::PostDec:
+				opLit = gen.getArrayViewPostDec();
+				break;
+			default:
+				assert(false && "Decrement operator not handled for pointer arithmetic");
+			}
+
+			return builder.callExpr(elementType, opLit, subExpr);
+
 		} else {
 			assert(false && "Illegal operand type for increment/decrement operator.");
 		}
-		return convFact.builder.callExpr(elementType, convFact.mgr.getLangBasic().getOperator(genType, op), subExpr);
+		return convFact.builder.callExpr(elementType, gen.getOperator(genType, op), subExpr);
 	};
 
 	switch ( unOp->getOpcode() ) {
