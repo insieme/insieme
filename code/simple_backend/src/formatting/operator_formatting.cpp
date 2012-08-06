@@ -358,8 +358,18 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefProjection1D(), false, {
-				OUT("/* totaly unclear */ &("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+				OUT("/* totally unclear */ &("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getArrayView(), true, {
+				VISIT_ARG(0); OUT("+"); VISIT_ARG(1);
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPreInc(), true, { OUT("++"); VISIT_ARG(0); });
+		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPostInc(), true, { VISIT_ARG(0); OUT("++"); });
+		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPreDec(), true, { OUT("--"); VISIT_ARG(0); });
+		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPostDec(), true, { VISIT_ARG(0); OUT("--"); });
+
 
 		ADD_FORMATTER_DETAIL(res, basic.getVectorSubscript(), false, {
 				bool isRef = call->getType()->getNodeType() == NT_RefType;

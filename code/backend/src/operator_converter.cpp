@@ -374,6 +374,26 @@ namespace backend {
 			return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
 		});
 
+		res[basic.getArrayView()] = OP_CONVERTER({
+			return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1));
+		});
+
+		res[basic.getArrayViewPreInc()] = OP_CONVERTER({
+			return c_ast::preInc(CONVERT_ARG(0));
+		});
+
+		res[basic.getArrayViewPostInc()] = OP_CONVERTER({
+			return c_ast::postInc(CONVERT_ARG(0));
+		});
+
+		res[basic.getArrayViewPreDec()] = OP_CONVERTER({
+			return c_ast::preDec(CONVERT_ARG(0));
+		});
+
+		res[basic.getArrayViewPostDec()] = OP_CONVERTER({
+			return c_ast::postDec(CONVERT_ARG(0));
+		});
+
 
 		// -- vectors --
 

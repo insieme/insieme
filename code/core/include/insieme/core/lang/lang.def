@@ -386,6 +386,14 @@ LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
 LITERAL(ArrayElemToVec, "array.elem.to.vec",
 						"(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
 
+						
+						
+LITERAL(ArrayView, 				"array.view",					"(ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")
+LITERAL(ArrayViewPreInc, 		"array.view.pre.inc",			"(ref<ref<array<'elem,1>>>) -> ref<array<'elem,1>>")
+LITERAL(ArrayViewPostInc, 		"array.view.post.inc",			"(ref<ref<array<'elem,1>>>) -> ref<array<'elem,1>>")
+LITERAL(ArrayViewPreDec, 		"array.view.pre.dec",			"(ref<ref<array<'elem,1>>>) -> ref<array<'elem,1>>")
+LITERAL(ArrayViewPostDec, 		"array.view.post.dec",			"(ref<ref<array<'elem,1>>>) -> ref<array<'elem,1>>")
+
 // -- special operations to support encoding of C ntnters as arrays ----------------------------------------------------
 
 LITERAL(IsNull,   		"is.null",				"(ref<'a>) -> bool")
@@ -420,10 +428,6 @@ LITERAL(VectorRefProjection, 	"vector.ref.projection",
 
 LITERAL(VectorToArray, 			"vector.to.array",				"(vector<'elem,#l>) -> array<'elem,1>")
 LITERAL(RefVectorToRefArray, 	"ref.vector.to.ref.array",		"(ref<vector<'elem,#l>>) -> ref<array<'elem,1>>")
-						
-LITERAL(ArrayView, 				"array.view",					"(ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")
-LITERAL(ArrayViewPostInc, 		"array.view.post.inc",			"(ref<ref<array<'elem,1>>>) -> ref<array<'elem,1>>")
-LITERAL(ArrayViewPreInc, 		"array.view.pre.inc",			"(ref<ref<array<'elem,1>>>) -> ref<array<'elem,1>>")
 
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
