@@ -351,6 +351,8 @@ LITERAL(Flush, "flush", "(ref<'a>) -> unit")
 
 GROUP(GeneralOp, BoolToInt, RealToInt, Undefined, InitZero, Sizeof, IntTypeParamToInt)
 
+DERIVED(Id, 				"id", "('a x)->'a { return x; }")		
+
 LITERAL(BoolToInt, 			"bool.to.int", 				"(bool) -> int<4>")
 LITERAL(RealToInt,			"real.to.int",				"(real<#a>, intTypeParam<#b>) -> int<#b>")
 
@@ -504,6 +506,16 @@ LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>, int<#a
 // redistribute
 // TODO herbert
 
+
+DERIVED(Atomic, "atomic", 
+		"(ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
+		"	auto res = *v; "
+		"	if (p(*v)) { "
+		"		v = f(*v); "
+		"	}"
+		"	return res; "
+		"}")
+		
 
 // Range Handling -----------------------------------------------------------------------------------------------------
 

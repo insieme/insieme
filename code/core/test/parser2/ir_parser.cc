@@ -550,6 +550,22 @@ namespace parser {
 		EXPECT_EQ("AP(int.add(2, int.sub(0, int.add(1, 2))))", toString(parse_expr(manager, "2 + -(1 + 2)")));
 	}
 
+	TEST(IR_Parser2, Bind) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		EXPECT_EQ("AP({int<4> v5 = 7; bind(v9){rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}}(v9, v5)}(5);})",
+			toString(builder.parse(
+				"{"
+				"	let int = int<4>;"
+				"	let sum = (int a, int b)->int { return a + b; };"
+				"	auto x = 7;"
+				" 	let pX = (int a)=>sum(a,x);"
+				"	pX(5);"
+				"}"
+		)));
+	}
+
 } // end namespace parser2
 } // end namespace core
 } // end namespace insieme

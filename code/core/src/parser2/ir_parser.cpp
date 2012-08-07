@@ -938,9 +938,17 @@ namespace parser {
 						// get function
 						ExpressionPtr fun = terms.front().as<ExpressionPtr>();
 						terms.erase(terms.begin());
-						if (fun->getType()->getNodeType()!=NT_FunctionType) {
+
+						TypePtr type = fun->getType();
+						if (type->getNodeType()!=NT_FunctionType) {
 							return fail(cur, "Calling non-function type!");
 						}
+
+						FunctionTypePtr funType = type.as<FunctionTypePtr>();
+						if (funType->getParameterTypes().size() != terms.size()) {
+							return fail(cur, "Invalid number of arguments!");
+						}
+
 						return cur.callExpr(fun, convertList<ExpressionPtr>(terms));
 					}
 			));
@@ -976,6 +984,25 @@ namespace parser {
 						return cur.lambdaExpr(resType, body, convertList<VariablePtr>(terms));
 					}
 			));
+
+
+			// -- bind expression --
+			g.addRule("E", rule(
+					seq("(", list(param, ","), ")=>", E),
+					[](Context& cur)->NodePtr {
+						// construct
+						NodeList terms = cur.getTerms();
+						ExpressionPtr expr = terms.back().as<ExpressionPtr>();
+						terms.pop_back();		// drop body expression
+
+						CallExprPtr call = (expr->getNodeType() == NT_CallExpr)?
+									expr.as<CallExprPtr>() : cur.id(expr);
+
+						// build bind expression
+						return cur.bindExpr(convertList<VariablePtr>(terms), call);
+					}
+			));
+
 
 			// --------------- add statement rules ---------------
 
