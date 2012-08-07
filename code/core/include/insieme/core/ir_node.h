@@ -1181,9 +1181,7 @@ namespace std {
  * compiler within gdb to print IR nodes.
  */
 
-void dumpText(const insieme::core::NodePtr& node);
-void dumpPretty(const insieme::core::NodePtr& node);
-void dumpPrettyFull(const insieme::core::NodePtr& node);
-
-
+void dumpText(const void* node);
+void dumpPretty(const void* node);
+void dumpPrettyFull(const void* node);
 
