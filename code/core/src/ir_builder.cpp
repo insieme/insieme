@@ -59,6 +59,8 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/core/parser2/ir_parser.h"
+
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
@@ -147,6 +149,29 @@ NodePtr IRBuilder::get(NodeType type, const NodeList& children) const {
 ProgramPtr IRBuilder::createProgram(const ExpressionList& entryPoints) const {
 	return Program::get(manager, entryPoints);
 }
+
+
+// ---------------------------- Parser Integration -----------------------------------
+
+NodePtr IRBuilder::parse(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser::parse(manager, code, true, symbols);
+}
+
+TypePtr IRBuilder::parseType(const string& code, const std::map<string, NodePtr>& symbols) const {
+	assert(symbols.empty() && "Symbols not yet supported!");
+	return parser::parse_type(manager, code, true, symbols);
+}
+
+ExpressionPtr IRBuilder::parseExpr(const string& code, const std::map<string, NodePtr>& symbols) const {
+	assert(symbols.empty() && "Symbols not yet supported!");
+	return parser::parse_expr(manager, code, true, symbols);
+}
+
+StatementPtr IRBuilder::parseStmt(const string& code, const std::map<string, NodePtr>& symbols) const {
+	assert(symbols.empty() && "Symbols not yet supported!");
+	return parser::parse_stmt(manager, code, true, symbols);
+}
+
 
 
 // ---------------------------- Standard Nodes -----------------------------------
@@ -429,9 +454,14 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 
 CallExprPtr IRBuilder::deref(const ExpressionPtr& subExpr) const {
-	RefTypePtr&& refTy = dynamic_pointer_cast<const RefType>(subExpr->getType());
-	assert(refTy && "Deref a non ref type.");
-	return callExpr(refTy->getElementType(), manager.getLangBasic().getRefDeref(), subExpr);
+	TypePtr type = subExpr->getType();
+	assert(type->getNodeType() == NT_RefType);
+	return callExpr(type.as<RefTypePtr>()->getElementType(), manager.getLangBasic().getRefDeref(), subExpr);
+}
+
+ExpressionPtr IRBuilder::tryDeref(const ExpressionPtr& subExpr) const {
+	if (subExpr->getType()->getNodeType() != NT_RefType) return subExpr;
+	return deref(subExpr);
 }
 
 CallExprPtr IRBuilder::refVar(const ExpressionPtr& subExpr) const {
@@ -440,6 +470,14 @@ CallExprPtr IRBuilder::refVar(const ExpressionPtr& subExpr) const {
 
 CallExprPtr IRBuilder::refNew(const ExpressionPtr& subExpr) const {
 	return callExpr(refType(subExpr->getType()), manager.getLangBasic().getRefNew(), subExpr);
+}
+
+CallExprPtr IRBuilder::refDelete(const ExpressionPtr& subExpr) const {
+	auto& basic = manager.getLangBasic();
+	if (basic.isAnyRef(subExpr->getType())) {
+		return callExpr(basic.getUnit(), basic.getAnyRefDelete(), subExpr);
+	}
+	return callExpr(basic.getUnit(), basic.getRefDelete(), subExpr);
 }
 
 CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
@@ -939,6 +977,60 @@ TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& 
 }
 
 
+namespace {
+
+	GenericTypePtr toSigned(const IRBuilder& builder, const GenericTypePtr& type) {
+		assert(builder.getLangBasic().isScalarType(type) && "Can not alter non-scalar type to signed!");
+
+		// check whether a modification is required
+		if (builder.getLangBasic().isUnsignedInt(type)) {
+			// alter to signed alternative
+			return builder.genericType("int", TypeList(), toVector(type->getIntTypeParameter()->getElement(0)));
+		}
+		return type;
+	}
+}
+
+
+LiteralPtr IRBuilder::minus(const LiteralPtr& lit) const {
+	assert(getLangBasic().isScalarType(lit->getType()) && "Can not change sign of non-scalar type!");
+
+	// update type of literal to support unsigned
+	TypePtr type = toSigned(*this, lit->getType().as<GenericTypePtr>());
+
+	// update string value of literal
+	string value = lit->getStringValue();
+	assert(value.size() > 0u);
+	if (value[0] == '-') {
+		value = value.substr(1);
+	} else {
+		value = "-" + value;
+	}
+
+	// create resulting literal
+	return literal(value, type);
+}
+
+ExpressionPtr IRBuilder::minus(const ExpressionPtr& a) const {
+	assert(getLangBasic().isScalarType(a->getType()) && "Can not change sign of non-scalar type!");
+
+	// check literal type
+	if (a->getNodeType() == NT_Literal) {
+		return minus(a.as<LiteralPtr>());
+	}
+
+	// update type of literal to support unsigned
+	TypePtr type = toSigned(*this, a->getType().as<GenericTypePtr>());
+
+	ExpressionPtr value = a;
+	if (value->getType() != type) {
+		value = castExpr(type, value);
+	}
+
+	// return 0 - a
+	return sub(getZero(type), a);
+}
+
 
 // ---------------------------- Utilities ---------------------------------------
 
@@ -991,6 +1083,20 @@ ExpressionPtr IRBuilder::wrapLazy(const ExpressionPtr& expr) const {
 
 	// otherwise: bind the free variables
 	return bindExpr(VariableList(), callExpr(expr->getType(), res, convertList<Expression>(list)));
+}
+
+CallExprPtr IRBuilder::print(const string& format, const ExpressionList& args) const {
+	return print(stringLit(format), args);
+}
+
+CallExprPtr IRBuilder::print(const ExpressionPtr& format, const ExpressionList& args) const {
+	auto& basic = getLangBasic();
+	return callExpr(basic.getUnit(), basic.getPrint(), format, pack(args));
+}
+
+CallExprPtr IRBuilder::pack(const ExpressionList& values) const {
+	auto& basic = getLangBasic();
+	return callExpr(basic.getVarList(), basic.getVarlistPack(), tupleExpr(values));
 }
 
 CallExprPtr IRBuilder::select(const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& op) const {

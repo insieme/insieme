@@ -187,7 +187,8 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 	// create and run initialization job
 	insieme_wi_init_params init_params = {INSIEME_WI_INIT_PARAM_T_INDEX, A->id, B->id};
-	irt_work_item* init_wi = irt_wi_create((irt_work_item_range){0,N,1}, INSIEME_WI_INIT_INDEX, (irt_lw_data_item*)&init_params);
+	irt_work_item_range wi_range = {0,N,1};
+	irt_work_item* init_wi = irt_wi_create(wi_range, INSIEME_WI_INIT_INDEX, (irt_lw_data_item*)&init_params);
 	irt_scheduling_assign_wi(irt_worker_get_current(), init_wi);
 
 	// wait until finished
@@ -195,7 +196,8 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 	// conduct the multiplication
 	insieme_wi_mul_params mul_params = {INSIEME_WI_MUL_PARAM_T_INDEX, A->id, B->id, C->id};
-	irt_work_item* mul_wi = irt_wi_create((irt_work_item_range){0,N,1}, INSIEME_WI_MUL_INDEX, (irt_lw_data_item*)&mul_params);
+	irt_work_item_range wi_range_2 = {0,N,1};
+	irt_work_item* mul_wi = irt_wi_create(wi_range_2, INSIEME_WI_MUL_INDEX, (irt_lw_data_item*)&mul_params);
 	irt_scheduling_assign_wi(irt_worker_get_current(), mul_wi);
 
 	// wait until finished
@@ -492,32 +494,38 @@ void insieme_wi_mul_datareq(irt_work_item* wi, irt_wi_di_requirement* requiremen
 	// dependency A (just a few rows)
 	// dim = 1
 	requirements[i].di_id = params->A;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
+	irt_data_range d_range_0 = {range.begin, range.end, range.step};
+	requirements[i].range = d_range_0;
 	i++;
 	// dim = 2
 	requirements[i].di_id = params->A;
-	requirements[i].range = (irt_data_range){0,N,1};
+	irt_data_range d_range_1 = {0,N,1};
+	requirements[i].range = d_range_1;
 	i++;
 
 
 	// dependency B (all of B)
 	// dim = 1
 	requirements[i].di_id = params->B;
-	requirements[i].range = (irt_data_range){0,N,1};
+	irt_data_range d_range_2 = {0,N,1};
+	requirements[i].range = d_range_2;
 	i++;
 	// dim = 2
 	requirements[i].di_id = params->B;
-	requirements[i].range = (irt_data_range){0,N,1};
+	irt_data_range d_range_3 = {0,N,1};
+	requirements[i].range = d_range_3;
 	i++;
 
 	// dependency C (just a few rows)
 	// dim = 1
 	requirements[i].di_id = params->C;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
+	irt_data_range d_range_4 = {range.begin, range.end, range.step};
+	requirements[i].range = d_range_4;
 	i++;
 	// dim = 2
 	requirements[i].di_id = params->C;
-	requirements[i].range = (irt_data_range){0,N,1};
+	irt_data_range d_range_5 = {0,N,1};
+	requirements[i].range = d_range_5;
 	i++;
 }
 
@@ -561,22 +569,26 @@ void insieme_wi_init_datareq(irt_work_item* wi, irt_wi_di_requirement* requireme
 	// dependency A (just a few rows)
 	// dim = 1
 	requirements[i].di_id = params->A;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
+	irt_data_range d_range_1 = {range.begin, range.end, range.step};
+	requirements[i].range = d_range_1;
 	i++;
 	// dim = 2
 	requirements[i].di_id = params->A;
-	requirements[i].range = (irt_data_range){0,N,1};
+	irt_data_range d_range_2 = {0,N,1};
+	requirements[i].range = d_range_2;
 	i++;
 
 
 	// dependency B (all of B)
 	// dim = 1
 	requirements[i].di_id = params->B;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
+	irt_data_range d_range_3 = {range.begin, range.end, range.step};
+	requirements[i].range = d_range_3;
 	i++;
 	// dim = 2
 	requirements[i].di_id = params->B;
-	requirements[i].range = (irt_data_range){0,N,1};
+	irt_data_range d_range_4 = {0,N,1};
+	requirements[i].range = d_range_4;
 	i++;
 
 }

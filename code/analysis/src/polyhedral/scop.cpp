@@ -76,7 +76,7 @@ using namespace insieme::analysis::polyhedral::scop;
 using arithmetic::Piecewise;
 using arithmetic::Formula;
 
-void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
+bool postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
 
 
 
@@ -651,8 +651,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		// if either one of the branches is not a ScopRegion it means the if statement is not a
 		// ScopRegion, therefore we can re-throw the exception and invalidate this region
 		if (!(isThenSCOP && isElseSCOP)) {
-			assert(ex);
-			RETHROW_EXCEPTION(NotASCoP, *ex, "", ifStmt.getAddressedNode() ); 
+			if(ex) RETHROW_EXCEPTION(NotASCoP, *ex, "", ifStmt.getAddressedNode() ); 
+
+			THROW_EXCEPTION(NotASCoP, "One of the if branches invalided the SCoP", ifStmt.getAddressedNode());
 		}
 
 		// reset the value of the iteration vector 
@@ -698,6 +699,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				ifStmt->getElseBody()->hasAnnotation(ScopRegion::KEY) && 
 				"IfStmt Post-Conditions check failed"
 			);
+
 		subScops.push_back( ifStmt );
 		return ret;
 	}
@@ -1223,6 +1225,22 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 					break;
 				}
 			});
+
+		// otherwise if one of the parameters of the SCoP is being defined in the body of the SCoP,
+		// then this region must be invalided as well
+		if (curStmt.getAddr()->getNodeType() == NT_DeclarationStmt) {
+			
+			// std::cout << iterVec << std::endl;
+			// std::cout << *curStmt.getAddr().as<DeclarationStmtAddress>()->getVariable().getAddressedNode() << std::endl;
+
+			// make sure the declared variable is not one of the parameters of the SCoP
+			if ( iterVec.contains( curStmt.getAddr().as<DeclarationStmtAddress>()->getVariable().getAddressedNode() ) ) {
+				THROW_EXCEPTION(DiscardSCoPException, "Declaration for one of the parameters of the SCoP is within the SCoP",  
+						curStmt.getAddr().getAddressedNode(), curStmt.getAddr().as<DeclarationStmtAddress>()->getVariable().getAddressedNode()
+					);
+			}
+		}
+
 		});
 
 	// now check stmts of the subScops
@@ -1232,20 +1250,13 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 	} );
 }
 
-void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
+bool postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 	assert ( scop->hasAnnotation(ScopRegion::KEY) );
 
 	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
+	if (!region.isValid()) { return false; }
+
 	const IterationVector& iterVec = region.getIterationVector();
-	
-	if (iterVec.getIteratorNum() == 0) {
-		// A top level SCoP containing no loops. This is considered not a SCoP in the terminology of
-		// the polyhedral model, therefore is discarded. However we don't set the flag to invalid
-		// because this region could be inside another SCoP contanining loops therefore forming a
-		// valid SCoP
-		VLOG(1) << "Invalidating SCoP because it contains no loops "; 
-		return;
-	}
 
 	try {
 
@@ -1253,7 +1264,7 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 		scopList.push_back( scop );
 
 	} catch( DiscardSCoPException e ) { 
-		VLOG(1) << "Invalidating SCoP because iterator/parameter '" << 
+		LOG(WARNING) << "Invalidating SCoP because iterator/parameter '" << 
 				*e.expression() << "' is being assigned in stmt: '" << *e.node() << "'";
 
 		// Recur on every subscop to identify minimal SCoPs
@@ -1263,7 +1274,19 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 		// Invalidate the annotation for this SCoP, we can set the valid flag to false because we
 		// are sure that within this SCoP there are issues with makes the SCoP not valid. 
 		region.setValid(false);
+		return false;
 	} 
+	
+// 	if (iterVec.getIteratorNum() == 0) {
+// 		// A top level SCoP containing no loops. This is considered not a SCoP in the terminology of
+// 		// the polyhedral model, therefore is discarded. However we don't set the flag to invalid
+// 		// because this region could be inside another SCoP contanining loops therefore forming a
+// 		// valid SCoP
+// 		VLOG(1) << "Invalidating SCoP because it contains no loops "; 
+// 		return true;
+// 	}
+
+	return true;
 
 }
 
@@ -1717,8 +1740,14 @@ AddressList mark(const core::NodePtr& root) {
 	} catch (NotASCoP&& e) {
 		LOG(WARNING) << e.what();
 	}
-	LOG(DEBUG) << "%%%% mark END\n" << ret << "\n//%%\n";
-	return ret;
+
+	AddressList final;
+	for(const auto& scop : ret) {
+		postProcessSCoP(scop, final);
+	}
+
+	LOG(DEBUG) << "%%%% mark END\n" << final << "\n//%%\n";
+	return final;
 }
 
 } } } } // end namespace insimee::analysis::polyhedral::scop

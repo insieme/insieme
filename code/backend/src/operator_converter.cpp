@@ -374,6 +374,45 @@ namespace backend {
 			return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
 		});
 
+		#define ADD_ELEMENT_TYPE_DEPENDENCY() \
+				core::TypePtr elementType = core::analysis::getReferencedType(call->getType()); \
+				elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); \
+				const TypeInfo& info = GET_TYPE_INFO(elementType); \
+				context.getDependencies().insert(info.definition);
+
+		res[basic.getArrayView()] = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1));
+		});
+
+		res[basic.getArrayViewPreInc()]  = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::preInc(getAssignmentTarget(context, ARG(0)));
+		});
+
+		res[basic.getArrayViewPostInc()] = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::postInc(getAssignmentTarget(context, ARG(0)));
+		});
+
+		res[basic.getArrayViewPreDec()]  = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::preDec(getAssignmentTarget(context, ARG(0)));
+		});
+
+		res[basic.getArrayViewPostDec()] = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::postDec(getAssignmentTarget(context, ARG(0)));
+		});
+
+
+		#undef ADD_ELEMENT_TYPE_DEPENDENCY()
+
 
 		// -- vectors --
 
@@ -580,6 +619,12 @@ namespace backend {
 			return c_ast::sizeOf(CONVERT_TYPE(target));
 		});
 
+		res[basic.getPrint()] = OP_CONVERTER({
+			// map to invoking the external function printf
+			core::IRBuilder builder(NODE_MANAGER);
+			auto printf = builder.literal("printf", call->getFunctionExpr()->getType());
+			return CONVERT_EXPR(builder.callExpr(LANG_BASIC.getUnit(), printf, ARG(0), ARG(1)));
+		});
 
 		// -- IR extensions --
 
@@ -621,17 +666,6 @@ namespace backend {
 			//   Operator Type: ( comp(arg0, arg1) ? arg0 : arg1)
 
 			core::IRBuilder builder(ARG(0)->getNodeManager());
-
-//			auto a = CONVERT_ARG(0);
-//			auto b = CONVERT_ARG(1);
-//
-//			auto caseA = CONVERT_EXPR(builder.callExpr(ARG(2), ARG(0), ARG(1)));
-//			auto caseB = CONVERT_EXPR(builder.callExpr(ARG(2), ARG(1), ARG(0)));
-//
-//			// equal
-//			auto caseC = c_ast::mul(c_ast::mul(c_ast::logicNot(caseA), c_ast::logicNot(caseB)), a);
-//
-//			return c_ast::add(c_ast::add( c_ast::mul(caseA, a), c_ast::mul(caseB, b)), caseC);
 			return c_ast::ite( CONVERT_EXPR( builder.callExpr(ARG(2), ARG(0), ARG(1)) ),
 							   CONVERT_ARG(0),
 							   CONVERT_ARG(1)

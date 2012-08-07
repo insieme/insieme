@@ -892,6 +892,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitMemberExpr(clang::Mem
 	return retIr;
 }
 
+
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							BINARY OPERATOR
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -966,11 +968,51 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		isCompound = false;
 	}
 
+	auto doPointerArithmetic = [&] () {
+		// LHS must be a ref<array<'a>>
+		core::TypePtr subRefTy = GET_REF_ELEM_TYPE(lhs->getType());
+
+		// In the case we have ref<ref<array<>>> then we deref again the argument 
+		if (core::analysis::isRefType(subRefTy)) {
+			lhs = builder.deref(lhs);
+			subRefTy = lhs->getType();
+		}
+
+		assert( core::analysis::isRefType(lhs->getType()) );
+		if(subRefTy->getNodeType() == core::NT_VectorType)
+			lhs = builder.callExpr(gen.getRefVectorToRefArray(), lhs);
+
+		// Capture pointer arithmetics
+		// 	Base op must be either a + or a -
+		assert( (baseOp == BO_Add || baseOp == BO_Sub) &&
+				"Operators allowed in pointer arithmetic are + and - only");
+
+		assert(GET_REF_ELEM_TYPE(lhs->getType())->getNodeType() == core::NT_ArrayType &&
+				"LHS operator must be of type ref<array<'a,#l>>");
+
+		assert(gen.isInt(rhs->getType()) && "Array view displacement must be a signed int");
+		if (gen.isUnsignedInt(rhs->getType()))
+			rhs = builder.castExpr(gen.getInt8(), rhs);
+
+		// check whether the RHS is of integer type
+		rhs = builder.callExpr(gen.getArrayView(), lhs, baseOp == BO_Add ? rhs : builder.invertSign(rhs));
+	};
+
 	if ( isCompound ) {
 		// we check if the RHS is a ref, in that case we use the deref operator
 		rhs = convFact.tryDeref(rhs);
-		core::ExpressionPtr&& opFunc = gen.getOperator(exprTy, op);
-		rhs = builder.callExpr(exprTy, opFunc, subExprLHS, rhs);
+
+		// capture the case when pointer arithmetic is performed 
+		if (core::analysis::isRefType(lhs->getType()) && 
+			!core::analysis::isRefType(rhs->getType()) && 
+			core::analysis::isRefType(core::analysis::getReferencedType(lhs->getType())) &&  
+			(core::analysis::getReferencedType(
+				core::analysis::getReferencedType(lhs->getType()))->getNodeType() == core::NT_ArrayType)
+		) 
+			// do pointer arithmetic 
+			doPointerArithmetic(); 
+		else 
+			rhs = builder.callExpr(exprTy, gen.getOperator(exprTy, op), subExprLHS, rhs);
 	}
 
 	bool isAssignment = false;
@@ -1062,23 +1104,25 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 	}
 
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-	" RHS(" << *rhs << "[" << *rhs->getType() << "])";
+	" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;;
 
 	if( !isAssignment ) {
 
 		core::TypePtr&& lhsTy = lhs->getType();
 		core::TypePtr&& rhsTy = rhs->getType();
 		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-		" RHS(" << *rhs << "[" << *rhs->getType() << "])";
+		" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 
 		if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
 				binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
+			
+			std::cout << "OCL " << std::endl;
 			// check if lhs is not an ocl-vector, in this case create a vector form the scalar
 			if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) { // the rhs is a scalar, implicitly casted to a vector
 				// lhs is a scalar
 				lhs = scalarToVector(lhs, rhsTy, builder, convFact);
 			} else
-			lhs = convFact.tryDeref(lhs); // lhs is an ocl-vector
+				lhs = convFact.tryDeref(lhs); // lhs is an ocl-vector
 
 			if(binOp->getRHS()->getStmtClass() == Stmt::ImplicitCastExprClass ) { // the rhs is a scalar, implicitly casted to a vector
 				// rhs is a scalar
@@ -1100,8 +1144,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 				assert(false && "old stuff needed, tell Klaus");
 				return (retIr = builder.callExpr(lhsTy, opFunc, lhs, rhs));
 			}
-
+			assert(false && "Never reach this point");
 		}
+
 		if ( lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
 			// ----------------------------- Hack begin --------------------------------
 			// TODO: this is a quick solution => maybe clang allows you to determine the actual type
@@ -1130,28 +1175,16 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 			opFunc = gen.getOperator(exprTy, op);
 
 		}
-		else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
-			// LHS must be a ref<array<'a>>
-			const core::TypePtr& subRefTy = GET_REF_ELEM_TYPE(lhsTy);
-
-			if(subRefTy->getNodeType() == core::NT_VectorType)
-			lhs = builder.callExpr(gen.getRefVectorToRefArray(), lhs);
-
-			// Capture pointer arithmetics
-			// 	Base op must be either a + or a -
-			assert( (baseOp == BO_Add || baseOp == BO_Sub) &&
-					"Operators allowed in pointer arithmetic are + and - only");
-
-			assert(GET_REF_ELEM_TYPE(lhs->getType())->getNodeType() == core::NT_ArrayType &&
-					"LHS operator must be of type ref<array<'a,#l>>");
-
-			// check whether the RHS is of integer type
-			// assert( gen.isUnsignedInt(rhsTy) && "Array displacement is of non type uint");
-			return (retIr = builder.callExpr(gen.getArrayView(), lhs, rhs));
+		else if (core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType()) && 
+			(core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType || 
+			 core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_VectorType)
+		) {
+			doPointerArithmetic();	
+			return (retIr = rhs);
 
 		} else {
-			assert(lhsTy->getNodeType() == core::NT_RefType
-					&& rhsTy->getNodeType() == core::NT_RefType && "Comparing pointers");
+			assert(lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType && "Comparing pointers");
+
 			retIr = builder.callExpr( gen.getBool(), gen.getPtrEq(), lhs, rhs );
 			if ( baseOp == BO_NE ) {
 				// comparing two refs
@@ -1159,7 +1192,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 			}
 			return retIr;
 		}
-
 		if ( DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS()) ) {
 			if ( isa<ArrayType>(declRefExpr->getDecl()->getType().getTypePtr()) )
 			assert(false && "Pointer arithmetic not yet supported");
@@ -1213,10 +1245,11 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 	auto encloseIncrementOperator =
 	[ this, &builder, &gen ]
 	(core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
+
 		if (subExpr->getNodeType() == core::NT_Variable && subExpr->getType()->getNodeType() != core::NT_RefType) {
 			// It can happen we are incrementing a variable which is coming from an input
 			// argument of a function
-			core::VariablePtr var = core::static_pointer_cast<const core::Variable>(subExpr);
+			core::VariablePtr var = subExpr.as<core::VariablePtr>();
 			assert(var->getType()->getNodeType() != core::NT_RefType);
 
 			auto&& fit = convFact.ctx.wrapRefMap.find(var);
@@ -1225,11 +1258,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 						std::make_pair( var, builder.variable( builder.refType(var->getType()) ) )
 				).first;
 			}
+
 			subExpr = fit->second;
 		}
 		core::TypePtr type = subExpr->getType();
-		assert( type->getNodeType() == core::NT_RefType &&
-				"Illegal increment/decrement operand - not a ref type" );
+		assert( type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type" );
+
 		core::TypePtr elementType = GET_REF_ELEM_TYPE(type);
 
 		core::TypePtr genType;
@@ -1237,10 +1271,35 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 			genType = gen.getIntGen();
 		} else if ( gen.isUnsignedInt(elementType) ) {
 			genType = gen.getUIntGen();
+
+		} else if ( core::analysis::isRefType(elementType) && (GET_REF_ELEM_TYPE(elementType)->getNodeType() == core::NT_ArrayType)) {
+			// if this is a post/pre incremenet operator applied to an array we have to deal with it
+			// immediatelly because the getOperator function wouldn't deal with such case 
+
+			core::ExpressionPtr opLit;
+			switch (op) {
+			case core::lang::BasicGenerator::PreInc:
+				opLit = gen.getArrayViewPreInc();
+				break;
+			case core::lang::BasicGenerator::PostInc:
+				opLit = gen.getArrayViewPostInc();
+				break;
+			case core::lang::BasicGenerator::PreDec:
+				opLit = gen.getArrayViewPreDec();
+				break;
+			case core::lang::BasicGenerator::PostDec:
+				opLit = gen.getArrayViewPostDec();
+				break;
+			default:
+				assert(false && "Operator not handled for pointer arithmetic");
+			}
+
+			return builder.callExpr(elementType, opLit, subExpr);
+
 		} else {
 			assert(false && "Illegal operand type for increment/decrement operator.");
 		}
-		return convFact.builder.callExpr(elementType, convFact.mgr.getLangBasic().getOperator(genType, op), subExpr);
+		return convFact.builder.callExpr(elementType, gen.getOperator(genType, op), subExpr);
 	};
 
 	switch ( unOp->getOpcode() ) {
@@ -1587,7 +1646,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCompoundLiteralExpr(c
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CExprConverter::Visit(clang::Expr* expr) {
-	VLOG(2) << "C";
 	core::ExpressionPtr&& retIr = StmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
 
 	// check for OpenMP annotations

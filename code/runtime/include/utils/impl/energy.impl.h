@@ -45,7 +45,7 @@
 	#include "abstraction/impl/rapl.impl.h"
 #endif
 
-void irt_get_energy_consumption_dummy(double* energy) {
+void _irt_get_energy_consumption_dummy(double* energy) {
 	*energy = -1.0;
 }
 
@@ -54,6 +54,7 @@ void irt_energy_select_instrumentation_method() {
 		irt_get_energy_consumption = &_irt_get_rapl_energy_consumption;
 		irt_log_setting_s("irt energy measurement method", "rapl");
 	} else {
+		irt_get_energy_consumption = &_irt_get_energy_consumption_dummy;
 		irt_log_setting_s("irt energy measurement method", "none");
 	}
 }

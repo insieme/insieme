@@ -125,6 +125,10 @@ namespace parser {
 			return type == other.type && lexeme == other.lexeme;
 		}
 
+		bool operator==(char symbol) const {
+			return type == Symbol && lexeme[0] == symbol;
+		}
+
 		bool operator!=(const Token& other) const {
 			return !(*this == other);
 		}

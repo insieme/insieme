@@ -76,8 +76,8 @@ int64 _irt_read_msr(int32 file, int32 subject) {
 	return data;
 }
 
-uint64 _irt_close_msr(int32 file) {
-	close(file);
+int32 _irt_close_msr(int32 file) {
+	return close(file);
 }
 
 void _irt_get_rapl_energy_consumption(double *package_energy) {
@@ -107,7 +107,8 @@ void _irt_get_rapl_energy_consumption(double *package_energy) {
 		return;
 	}
 
-	package = (double) result * energy_units;
+	// upper 32 bit of the result are preserved, so discard them
+	package = (double) (result&0xFFFFFFFF) * energy_units;
 	*package_energy = package;
 
 	_irt_close_msr(file);

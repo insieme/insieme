@@ -57,7 +57,7 @@ class AffineSystem : public utils::Printable, boost::noncopyable {
 	const IterationVector& iterVec; 
 	AffineList funcs;
 
-	void readFromMatrix(const utils::Matrix<int>& coeffs) {
+	inline void readFromMatrix(const utils::Matrix<int>& coeffs) {
 		if ( coeffs.empty() ) { return; }
 		for_each(coeffs, [&](const typename utils::Matrix<int>::value_type& cur) { 
 			this->append(cur); 
@@ -73,16 +73,16 @@ public:
 	public:
 		Iterator(const IterT& begin, const IterT& end): it(begin), end(end) { }
 
-        T& operator*() const { return **it; }
+        inline T& operator*() const { return **it; }
 
-        Iterator<T, IterT>& operator++() { ++it; return *this; }
-		Iterator<T, IterT>& operator+=(size_t val) { it+=val; return *this; }
+        inline Iterator<T, IterT>& operator++() { ++it; return *this; }
+		inline Iterator<T, IterT>& operator+=(size_t val) { it+=val; return *this; }
 
-        bool operator==(const Iterator<T, IterT>& rhs) const { 
+        inline bool operator==(const Iterator<T, IterT>& rhs) const { 
 			return it == rhs.it;
 		}
 
-		const IterT& get() const { return it; }
+		inline const IterT& get() const { return it; }
 	};
 
 	typedef Iterator<AffineFunction, AffineList::iterator> iterator;
@@ -167,11 +167,11 @@ public:
 	}
 
 	// Return the Affine function at position N of this Affine system 
-	AffineFunction& operator[]( size_t n ) { 
+	inline AffineFunction& operator[]( size_t n ) { 
 		assert( n < funcs.size() && "Index out of array bounds" );
 		return *funcs[n]; 
 	}
-	const AffineFunction& operator[]( size_t n ) const { 
+	inline const AffineFunction& operator[]( size_t n ) const { 
 		assert( n < funcs.size() && "Index out of array bounds" );
 		return *funcs[n];
 	}

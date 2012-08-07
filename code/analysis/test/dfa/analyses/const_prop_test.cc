@@ -84,7 +84,7 @@ TEST(ConstantPropagation, PropagateConstant) {
 	const cfg::BlockPtr& b = cfg->find(aRef);
 	EXPECT_EQ(2u, b->getBlockID());
 
-	auto access = makeAccess(aRef.as<ExpressionAddress>());
+	auto access = getImmediateAccess(aRef.as<ExpressionAddress>());
 
 	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {
@@ -128,7 +128,7 @@ TEST(ConstantPropagation, PropagateNotConstant) {
 
 	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {
-		if (std::get<0>(def) == makeAccess(aRef.as<ExpressionAddress>())) {
+		if (std::get<0>(def) == getImmediateAccess(aRef.as<ExpressionAddress>())) {
 			EXPECT_EQ(std::get<1>(def), dfa::bottom);
 			occurrences++;
 		}
@@ -167,7 +167,7 @@ TEST(ConstantPropagation, TransitivePropagation) {
 	const cfg::BlockPtr& b = cfg->find(aRef);
 	EXPECT_EQ(2u, b->getBlockID());
 
-	auto access = makeAccess(aRef.as<ExpressionAddress>());
+	auto access = getImmediateAccess(aRef.as<ExpressionAddress>());
 
 	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {
@@ -208,7 +208,7 @@ TEST(ConstantPropagation, Aliasing) {
 	const cfg::BlockPtr& b = cfg->find(aRef);
 	EXPECT_EQ(2u, b->getBlockID());
 
-	auto access = makeAccess(aRef.as<ExpressionAddress>());
+	auto access = getImmediateAccess(aRef.as<ExpressionAddress>());
 
 	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {
@@ -252,7 +252,7 @@ TEST(ConstantPropagation, ArrayAlias) {
 	const cfg::BlockPtr& b = cfg->find(aRef);
 	EXPECT_EQ(2u, b->getBlockID());
 
-	auto access = makeAccess(aRef.as<ExpressionAddress>());
+	auto access = getImmediateAccess(aRef.as<ExpressionAddress>());
 
 	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {
@@ -283,7 +283,7 @@ TEST(ConstantPropagation, ArrayAliasReasign) {
 	CFGPtr cfg = CFG::buildCFG(code);
 
 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
-	auto&& ret = s.solve();
+	auto ret = s.solve();
 
 	// lookup address of variable b in the last stmt
 	NodeAddress aRef = NodeAddress(code).getAddressOfChild(3).getAddressOfChild(1).getAddressOfChild(2);
@@ -292,7 +292,7 @@ TEST(ConstantPropagation, ArrayAliasReasign) {
 	const cfg::BlockPtr& b = cfg->find(aRef);
 	EXPECT_EQ(3u, b->getBlockID());
 
-	auto access = makeAccess(aRef.as<ExpressionAddress>());
+	auto access = getImmediateAccess(aRef.as<ExpressionAddress>());
 
 	unsigned occurrences=0;
 	//for( auto def : ret[b->getBlockID()] ) {

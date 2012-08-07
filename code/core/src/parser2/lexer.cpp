@@ -112,6 +112,46 @@ namespace parser {
 				return false;
 			}
 
+			template<typename InputIterator>
+			void consumeWhiteSpaces(InputIterator& next, const InputIterator& end) const {
+				while(next != end && isspace(*next)) ++next;
+			}
+
+			template<typename InputIterator>
+			void consumeComment(InputIterator& next, const InputIterator& end) const {
+
+				// consume white-spaces
+				consumeWhiteSpaces(next,end);
+				if (next == end) { return; }
+
+				// check for start commend symbol ( // or /* )
+				InputIterator a = next;
+				InputIterator b = next+1;
+				if (a == end || b == end) { return; }
+
+				// search for // commend
+				if (*a=='/' && *b=='/') {
+					// => lasts until end of line
+					next = b;
+					while (next != end && *next != '\n') ++next;
+
+					// consume potential successive comment
+					consumeComment(next, end);
+					return;
+				}
+
+				// search for /* commend
+				if (*a=='/' && *b=='*') {
+
+					// search for */ ending the comment
+					while(b!=end && (*a!='*' || *b!='/')) { ++a; ++b; }
+					next = (b==end)?end:b+1;
+
+					// consume potential successive comments
+					consumeComment(next,end);
+				}
+			}
+
 			/**
 			 * Realizes the actual identification of the next token by searching
 			 * its boundaries within the interval [next, end) and writing the result
@@ -121,12 +161,7 @@ namespace parser {
 			bool operator()(InputIterator& next, InputIterator end, Token& tok) const {
 
 				// skip over white spaces and comments
-				bool isComment = false;
-				while(next != end && (isspace(*next) || *next=='@' || isComment)) {
-					if (isComment && (*next=='\n' || *next=='@')) isComment = false;
-					if (!isComment && *next=='@') isComment = true;
-					++next;
-				}
+				consumeComment(next, end);
 
 				// check end-position
 				if (next == end) {

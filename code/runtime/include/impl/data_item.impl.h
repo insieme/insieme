@@ -58,7 +58,7 @@ static inline irt_data_item* _irt_di_new(uint16 dimensions) {
 	return (irt_data_item*)retval;
 }
 static inline void _irt_di_recycle(irt_data_item* di) {
-	irt_di_instrumentation_event(irt_worker_get_current(), DATA_ITEM_RECYCLED, di->id);
+	irt_inst_insert_di_event(irt_worker_get_current(), IRT_INST_DATA_ITEM_RECYCLED, di->id);
 	irt_data_item_table_remove(di->id);
 	free(di);
 }
@@ -78,7 +78,7 @@ irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range*
 	retval->parent_id = irt_data_item_null_id();
 	retval->lookup_table_next = NULL;
 	retval->data_block = NULL;
-	irt_di_instrumentation_event(irt_worker_get_current(), DATA_ITEM_CREATED, retval->id);
+	irt_inst_insert_di_event(irt_worker_get_current(), IRT_INST_DATA_ITEM_CREATED, retval->id);
 	irt_data_item_table_insert(retval);
 	return retval;
 }
@@ -183,7 +183,7 @@ irt_data_block* irt_di_acquire(irt_data_item* di, irt_data_mode mode) {
 	}
 
 	// look up parents
-	while (di->parent_id.value.full != irt_data_item_null_id().value.full) {
+	while (di->parent_id.full != irt_data_item_null_id().full) {
 		// resolve recursively
 		irt_data_block* block = irt_di_acquire(irt_data_item_table_lookup(di->parent_id), mode);
 

@@ -74,7 +74,9 @@ struct _irt_work_item {
 	irt_wi_implementation_id impl_id;
 	irt_work_item_range range;
 	uint32 num_groups;
-	uint32 num_active_children;
+	uint32 _num_active_children;
+	uint32 *num_active_children;
+	uint32 *parent_num_active_children;
 	irt_wi_wg_membership *wg_memberships;
 	volatile irt_work_item_state state;
 	irt_lw_data_item *parameters;
@@ -98,7 +100,7 @@ struct _irt_work_item {
 
 static inline irt_work_item* irt_wi_get_current();
 
-static inline bool irt_wi_is_fragment(irt_work_item *wi) { return wi->source_id.value.full != irt_work_item_null_id().value.full; }
+static inline bool irt_wi_is_fragment(irt_work_item *wi) { return wi->source_id.full != irt_work_item_null_id().full; }
 static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index);
 static inline uint32 irt_wi_get_wg_num(irt_work_item *wi, uint32 index);
 static inline uint32 irt_wi_get_wg_size(irt_work_item *wi, uint32 index);

@@ -72,11 +72,11 @@ typedef struct _irt_##__type__##_table irt_##__table__##_table; \
 
 // functions for creating and destroying performance tables
 
-irt_pd_table* irt_create_performance_table(const unsigned blocksize);
-irt_epd_table* irt_create_extended_performance_table(unsigned blocksize);
+irt_instrumentation_event_data_table* irt_inst_create_event_data_table();
+irt_instrumentation_region_data_table* irt_inst_create_region_data_table();
 
-void irt_destroy_performance_table(irt_pd_table* table);
-void irt_destroy_extended_performance_table(irt_epd_table* table);
+void irt_inst_destroy_event_data_table(irt_instrumentation_event_data_table* table);
+void irt_inst_destroy_region_data_table(irt_instrumentation_region_data_table* table);
 
 // initialization functions
 
@@ -84,39 +84,39 @@ void irt_instrumentation_init_energy_instrumentation();
 
 // private event handlers
 
-void _irt_wi_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id);
-void _irt_wg_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id);
-void _irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id);
-void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id);
+void _irt_inst_insert_wi_event(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id);
+void _irt_inst_insert_wg_event(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id);
+void _irt_inst_insert_wo_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id);
+void _irt_inst_insert_di_event(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id);
 
 // debug output functions
 
-void irt_instrumentation_output(irt_worker* worker);
-void irt_extended_instrumentation_output(irt_worker* worker);
-void irt_aggregated_instrumentation_output();
+void irt_inst_event_data_output(irt_worker* worker);
+void irt_inst_region_data_output(irt_worker* worker);
+void irt_inst_aggregated_data_output();
 
 // instrumentation function pointer toggle functions
 
-void irt_wi_toggle_instrumentation(bool enable);
-void irt_wg_toggle_instrumentation(bool enable);
-void irt_worker_toggle_instrumentation(bool enable);
-void irt_di_toggle_instrumentation(bool enable);
-void irt_region_toggle_instrumentation(bool enable);
-void irt_all_toggle_instrumentation(bool enable);
+void irt_inst_set_wi_instrumentation(bool enable);
+void irt_inst_set_wg_instrumentation(bool enable);
+void irt_inst_set_wo_instrumentation(bool enable);
+void irt_inst_set_di_instrumentation(bool enable);
+void irt_inst_set_region_instrumentation(bool enable);
+void irt_inst_set_all_instrumentation(bool enable);
 
 // dummy functions to be used via function pointer to disable 
 // instrumentation even if IRT_ENABLE_INSTRUMENTATION is set
 
-void _irt_wi_no_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id);
-void _irt_wg_no_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id);
-void _irt_worker_no_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id);
-void _irt_di_no_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id);
+void _irt_inst_insert_no_wi_event(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id);
+void _irt_inst_insert_no_wg_event(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id);
+void _irt_inst_insert_no_wo_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id);
+void _irt_inst_insert_no_di_event(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id);
 
 typedef uint64 region_id;
 
-void _irt_instrumentation_region_start(region_id id);
-void _irt_instrumentation_region_end(region_id id);
+void _irt_inst_region_start(region_id id);
+void _irt_inst_region_end(region_id id);
 
-void irt_instrumentation_region_set_timestamp(irt_work_item* wi);
-void irt_instrumentation_region_add_time(irt_work_item* wi);
+void irt_inst_region_set_timestamp(irt_work_item* wi);
+void irt_inst_region_add_time(irt_work_item* wi);
 

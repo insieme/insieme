@@ -41,16 +41,21 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 
 #include "insieme/core/ir_address.h"
 #include "insieme/core/datapath/datapath.h"
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/constraint.h"
 
 #include "insieme/analysis/alias_map.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
 
 namespace insieme { 
 namespace analysis { 
+
+typedef polyhedral::AffineConstraintPtr Constraint;
 
 enum class VarType { SCALAR, MEMBER, TUPLE, ARRAY };
 
@@ -68,25 +73,54 @@ class Access : public utils::Printable {
 	// Address of the access represented by this object 
 	core::ExpressionAddress 	base_expr;
 
+	// Actuall variable being accessed (note that this variable might be an alias)
 	core::VariablePtr			variable;
 
-	// Path to the accessed member/element/component 
-	//  => For scalar, the path is empty 
+	/**
+	 * Path to the accessed member/element/component 
+	 *  => For scalar, the path is empty 
+	 */ 
 	core::datapath::DataPathPtr	path;
 
 	// The type of this access
 	VarType 					type;
 
-	Access(const core::ExpressionAddress& expr, 
-		   const core::VariablePtr& var,
-		   const core::datapath::DataPathPtr& path, 
-		   const VarType& type) : 
+    /**
+     * Represents the domain/range on which this access is defined
+     *
+     * For scalars or members the domain the domain is not defined
+	 *
+     * For arrays the domain depends on the range of values being accessed. It could be either a
+     * single element or strided domain in the circumstances the array is accessed inside a loop
+     */
+	Constraint dom;
+
+	/** 
+	 * A constraint has sense only if within a SCoP. Indeed, two equal constraints extracted from
+	 * two different SCoPs based on the same variables may not be referring to the same memory
+	 * location as the indexes may be reassigned between the two SCoPs
+	 */
+	core::NodeAddress ctx;
+
+	core::arithmetic::Formula 	arr_access;
+
+
+	Access(const core::ExpressionAddress& 		expr, 
+		   const core::VariablePtr& 			var,
+		   const core::datapath::DataPathPtr& 	path, 
+		   const VarType& 						type,
+		   const Constraint& 					dom = Constraint(),
+		   const core::NodeAddress& 			ctx = core::NodeAddress(), 
+		   const core::arithmetic::Formula&		arr_access = core::arithmetic::Formula()) : 
 		base_expr(expr), 
 		variable(var),
 		path(path), 
-		type(type) { }
+		type(type),
+		dom(dom),
+		ctx(ctx), 
+		arr_access(arr_access) { }
 
-	friend Access makeAccess(const core::ExpressionAddress& expr);
+	friend Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& aliasMap);
 
 public:
 	
@@ -99,43 +133,58 @@ public:
 	 */
 	bool isRef() const;
 
-	inline core::VariablePtr getAccessedVariable() const { 
-		return variable; 
-	}
+	inline core::VariablePtr getAccessedVariable() const { return variable; }
+	inline core::ExpressionAddress getAccessExpression() const { return base_expr; }
+	inline const core::datapath::DataPathPtr& getPath() const {	return path; }
 
-	inline core::ExpressionAddress getAccessExpression() const { 
-		return base_expr; 
-	}
+	/** 
+	 * If this is an array access, it may have associated a constraint which states the range of
+	 * elements being accessed
+	 */
+	inline const Constraint& getConstraint() const { return dom; }
 
-	inline const core::datapath::DataPathPtr& getPath() const {
-		return path; 
-	}
+	/** 
+	 * Return the context on which the constraint has validity
+	 */
+	inline const core::NodeAddress& getContext() const { return ctx; }
+
+	inline const core::arithmetic::Formula& getArrayAccess() const { return arr_access; }
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	bool operator<(const Access& other) const {
-		if (variable < other.variable) { return true; }
-		
-		if (variable > other.variable) { return false; }
+	/** 
+	 * Define a partial order for accesses 
+	 */
+	bool operator<(const Access& other) const;
 
-		return path < other.path;
-	}
-
-	inline bool operator==(const Access& other) const {
-		return *variable == *other.variable;
-	}
-
-	inline bool operator!=(const Access& other) const {
-		return !(*this == other);
-	}
-
+	inline bool operator==(const Access& other) const { return *variable == *other.variable; }
+	inline bool operator!=(const Access& other) const {	return !(*this == other); }
 };
 
-Access makeAccess(const core::ExpressionAddress& expr);
+/** 
+ * Given an expression, it returns the immediate memory access represented by this expression. 
+ *
+ * The method always returns the imediate access and in the case of expression accessing multiple
+ * variables, only the immediate access will be returned. 
+ */
+Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& aliasMap=AliasMap());
 
-std::set<Access> extractFromStmt(const core::StatementAddress& stmt);
 
-void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& accesses);
+/** 
+ * Given a statement, this function takes care of extracting all memory accesses within that
+ * statement. 
+ */
+std::set<Access> extractFromStmt(const core::StatementAddress& stmt, const AliasMap& aliasMap=AliasMap());
+
+/**
+ * Similar to the previous function, this function collects all memory accesses within a statement,
+ * accesses will be append to the provided set 
+ */
+void extractFromStmt(const core::StatementAddress& stmt, 
+					 std::set<Access>& accesses, 
+					 const AliasMap& aliasMap=AliasMap()
+					);
+
 
 /**
  * States whether two accesses are conflicting, it returns true if the 2 accesses referes to the

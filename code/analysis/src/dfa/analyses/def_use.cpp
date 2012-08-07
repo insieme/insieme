@@ -92,9 +92,9 @@ DefUse::defs_iterator DefUse::defs_begin(const core::ExpressionAddress& expr) co
 	std::set<Access> entities;
 	
 	for ( auto alias : pimpl->cfg->getAliasMap().lookupAliases(expr) ) {
-		entities.insert( makeAccess(core::ExpressionAddress(alias)) );
+		entities.insert( getImmediateAccess( core::ExpressionAddress(alias), pimpl->cfg->getAliasMap()) );
 	}
-	entities.insert( makeAccess(expr) );
+	entities.insert( getImmediateAccess(expr, pimpl->cfg->getAliasMap()) );
 
 	std::cout << entities << std::endl;
 
@@ -126,7 +126,7 @@ DefUse::defs_iterator DefUse::defs_end(const core::ExpressionAddress& expr) cons
 core::ExpressionAddress DefUse::defs_iterator::operator*() const { 
 	assert(pimpl->it != pimpl->end);
 
-	auto cur = std::get<0>(*pimpl->it);
+	auto&& cur = std::get<0>(*pimpl->it);
 	core::NodeAddress block = (*std::get<1>(*pimpl->it))[0].getStatementAddress();
 	
 	// check whether the variable we point to is an alias 

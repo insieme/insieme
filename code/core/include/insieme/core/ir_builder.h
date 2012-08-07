@@ -106,6 +106,33 @@ namespace core {
 		NodePtr get(NodeType type, const NodeList& children) const;
 
 
+		// --- Add parser support ---
+
+		/**
+		 * Parses any kind of IR fragment encoded within the given code. The given symbol table
+		 * allows additional pre-defined let-definitions to be considered.
+		 *
+		 * @param code the code to be parsed and returned as a node
+		 * @param symbols a set of pre-defined symbols to be used within the code
+		 */
+		NodePtr parse(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
+		/**
+		 * The same as the parse member function yet interpreting the given code as a type.
+		 */
+		TypePtr parseType(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
+		/**
+		 * The same as the parse member function yet interpreting the given code as an expression.
+		 */
+		ExpressionPtr parseExpr(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
+		/**
+		 * The same as the parse member function yet interpreting the given code as a statement.
+		 */
+		StatementPtr parseStmt(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
+
 		// --- Imported Standard Factory Methods from Node Types ---
 
 		#include "ir_builder.inl"
@@ -201,7 +228,9 @@ namespace core {
 		CallExprPtr deref(const ExpressionPtr& subExpr) const;
 		CallExprPtr refVar(const ExpressionPtr& subExpr) const;
 		CallExprPtr refNew(const ExpressionPtr& subExpr) const;
+		CallExprPtr refDelete(const ExpressionPtr& subExpr) const;
 		CallExprPtr assign(const ExpressionPtr& target, const ExpressionPtr& value) const;
+		ExpressionPtr tryDeref(const ExpressionPtr& subExpr) const;
 
 		ExpressionPtr invertSign(const ExpressionPtr& subExpr) const;
 		// Returns the negation of the passed subExpr (which must be of boolean type)
@@ -408,9 +437,9 @@ namespace core {
 			return a; // this operator can be skipped
 		}
 
-		inline CallExprPtr minus(const ExpressionPtr& a) const {
-			return unaryOp(getOperator(lang::BasicGenerator::Minus, a->getType()), a);
-		}
+		// special (more complex) handling of unary minus)
+		LiteralPtr minus(const LiteralPtr& lit) const;
+		ExpressionPtr minus(const ExpressionPtr& a) const;
 
 
 		inline CallExprPtr preInc(const ExpressionPtr& a) const {
@@ -474,11 +503,13 @@ namespace core {
 		}
 
 
-		inline CallExprPtr logicAnd(const ExpressionPtr& a, const ExpressionPtr& b) const {
+		inline CallExprPtr logicAnd(const ExpressionPtr& a, ExpressionPtr b) const {
+			if (b->getType()->getNodeType() != NT_FunctionType) b = wrapLazy(b);
 			return binaryOp(getOperator(lang::BasicGenerator::LAnd, a->getType(), b->getType()), a, b);
 		}
 
-		inline CallExprPtr logicOr(const ExpressionPtr& a, const ExpressionPtr& b) const {
+		inline CallExprPtr logicOr(const ExpressionPtr& a, ExpressionPtr b) const {
+			if (b->getType()->getNodeType() != NT_FunctionType) b = wrapLazy(b);
 			return binaryOp(getOperator(lang::BasicGenerator::LOr, a->getType(), b->getType()), a, b);
 		}
 
@@ -513,6 +544,11 @@ namespace core {
 			return ternaryOp(getLangBasic().getIfThenElse(), cond, a, b);
 		}
 
+		// output operators
+		CallExprPtr print(const string& format, const ExpressionList& args) const;
+		CallExprPtr print(const ExpressionPtr& format, const ExpressionList& args) const;
+
+		CallExprPtr pack(const ExpressionList& values) const;
 
 		// select operator and derived variants
 

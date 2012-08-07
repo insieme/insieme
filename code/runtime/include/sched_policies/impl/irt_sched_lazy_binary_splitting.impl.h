@@ -56,7 +56,7 @@ inline void _irt_sched_split_work_item_binary(irt_work_item* wi, irt_worker* sel
 }
 
 inline irt_work_item* _irt_sched_steal_from_prev_thread(irt_worker* self) {
-	int32 neighbour_index = self->id.value.components.thread-1;
+	int32 neighbour_index = self->id.thread-1;
 	if(neighbour_index<0) neighbour_index = irt_g_worker_count-1;
 	return irt_work_item_cdeque_pop_back(&irt_g_workers[neighbour_index]->sched_data.queue);
 }

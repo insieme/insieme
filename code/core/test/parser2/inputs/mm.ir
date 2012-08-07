@@ -1,0 +1,61 @@
+
+let int = int<4>;
+let uint = uint<4>;
+
+let double = real<8>;
+
+let matrix = vector<vector<double,100>,100>;
+
+let initUniform = lit("vector.init.uniform":('elem, intTypeParam<#a>) -> vector<'elem,#a>);
+
+let p100 = lit("100": intTypeParam<100>);
+
+let initMatrix = initUniform(initUniform(0.0,p100),p100);
+
+
+int main() {
+
+	// create matrices
+	ref<matrix> a = var(initMatrix);
+	ref<matrix> b = var(initMatrix);
+	ref<matrix> c = var(initMatrix);
+	
+	// initialize a and b
+	for(uint i= 0u .. 100u) {
+		for(uint j= 0u .. 100u) {
+			if (i == j) {
+				a[i][j] = 1.0;
+			} else {
+				a[i][j] = 0.0;
+			}
+			b[i][j] = 2.0;
+		}
+	}
+	
+	
+	// muliply a and b => c
+	for(uint i = 0u .. 100u) {
+		for(uint j = 0u .. 100u) {
+			c[i][j] = 0.0;
+			for(uint k = 0u .. 100u) {
+				c[i][j] = c[i][j] + a[i][k] * b[i][j];
+			}
+		}
+	}
+	
+	// check results		
+	ref<bool> success = var(true);
+	for(uint i = 0u .. 100u) {
+		for(uint j = 0u .. 100u) {
+			success = success && c[i][j] == 2.0;
+		}
+	}
+	
+	// print verification check result
+	if (!success) {
+		print("Fail\n");
+		return 1;
+	}
+	print("OK\n");
+	return 0;
+}

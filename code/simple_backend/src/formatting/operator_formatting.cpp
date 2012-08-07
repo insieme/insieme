@@ -358,8 +358,18 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefProjection1D(), false, {
-				OUT("/* totaly unclear */ &("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+				OUT("/* totally unclear */ &("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getArrayView(), true, {
+				VISIT_ARG(0); OUT("+"); VISIT_ARG(1);
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPreInc(), true, { OUT("++(*"); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPostInc(), true, { OUT("(*"); VISIT_ARG(0); OUT(")++"); });
+		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPreDec(), true, { OUT("--(*"); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER_DETAIL(res, basic.getArrayViewPostDec(), true, { OUT("(*"); VISIT_ARG(0); OUT(")--"); });
+
 
 		ADD_FORMATTER_DETAIL(res, basic.getVectorSubscript(), false, {
 				bool isRef = call->getType()->getNodeType() == NT_RefType;
@@ -581,6 +591,32 @@ namespace formatting {
 
 		ADD_FORMATTER_DETAIL(res, basic.getPick(), false, {
 			OUT("0");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getSelect(), false,  {
+			core::IRBuilder builder(ARG(0)->getNodeManager());
+			OUT("((");
+			STMT_CONVERTER.convert(builder.callExpr(ARG(2), ARG(0), ARG(1)));
+			OUT(")?("); VISIT_ARG(0); OUT("):("); VISIT_ARG(1); OUT("))");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getCloogFloor(), false, {
+			// ((a*b>0)?(a/b):(-(-a/b+(-a%b!=0))))
+			OUT("((("); VISIT_ARG(0); OUT(")*("); VISIT_ARG(1); OUT(")>0)?");
+			OUT("(("); VISIT_ARG(0); OUT(")/("); VISIT_ARG(1); OUT(")):");
+			OUT("(-(-("); VISIT_ARG(0); OUT(")/("); VISIT_ARG(1); OUT(")+(-("); VISIT_ARG(0); OUT(")%("); VISIT_ARG(1); OUT(")!=0))))");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getCloogCeil(), false, {
+
+			// ((a*b>0)?(a/b + (a%b!=0)):(-(-a/b)))
+			OUT("(("); VISIT_ARG(0); OUT("*"); VISIT_ARG(1); OUT(">0)?");
+			OUT("("); VISIT_ARG(0); OUT("/"); VISIT_ARG(1); OUT("+("); VISIT_ARG(0); OUT("%"); VISIT_ARG(1); OUT("!=0)):");
+			OUT("(-(-"); VISIT_ARG(0); OUT("/"); VISIT_ARG(1); OUT("!=0)))");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getCloogMod(), true, {
+			OUT("("); VISIT_ARG(0); OUT(")%("); VISIT_ARG(1); OUT(")");
 		});
 
 		#include "insieme/simple_backend/formatting/formats_end.inc"

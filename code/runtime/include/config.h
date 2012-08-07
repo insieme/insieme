@@ -41,10 +41,14 @@
 // lookup table sizes
 #define IRT_CONTEXT_LT_BUCKETS 7
 #define IRT_DATA_ITEM_LT_BUCKETS 97
-#define IRT_EVENT_LT_BUCKETS 97 /*7207301*/
+#define IRT_EVENT_LT_BUCKETS /*65536*/ 64567 /*97*/ /*7207301*/
 
 // scheduling policy
 #define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
+
+// determines if workers should ever go to sleep
+// - needs to be unset for the stealing policies!
+#define IRT_WORKER_SLEEPING
 
 // ir interface
 #ifndef IRT_SANE_PARALLEL_MAX
@@ -67,24 +71,29 @@
 #define IRT_MQUEUE_MAXMSGSIZE 256
 
 // instrumentation
-#define IRT_INST_OUTPUT_PATH "IRT_INST_OUTPUT_PATH"
+#define IRT_INST_OUTPUT_PATH_ENV "IRT_INST_OUTPUT_PATH"
 #define IRT_INST_OUTPUT_PATH_CHAR_SIZE 4096
-#define IRT_INST_WORKER_EVENT_LOGGING "IRT_INST_WORKER_EVENT_LOGGING"
-#define IRT_WORKER_PD_BLOCKSIZE	512
-#define IRT_REGION_LIST_SIZE 1024
+#define IRT_INST_BINARY_OUTPUT_ENV "IRT_INST_BINARY_OUTPUT"
+#define IRT_INST_WORKER_EVENT_LOGGING_ENV "IRT_INST_WORKER_EVENT_LOGGING"
+#define IRT_INST_WORKER_EVENT_TYPES_ENV "IRT_INST_WORKER_EVENT_TYPES"
+#define IRT_INST_WORKER_PD_BLOCKSIZE	512
+#define IRT_INST_REGION_LIST_SIZE 1024
 
 // performance counters
 // environment variable holding the papi events, separated by colons
 #define IRT_INST_PAPI_EVENTS "IRT_INST_PAPI_EVENTS"
 #define IRT_INST_PAPI_MAX_COUNTERS 16
 #define IRT_INST_PAPI_MAX_COUNTERS_COMBINATIONS 512
-#define NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES 19
+#define IRT_INST_NUMBER_OF_REGION_DATA_ENTRIES 19
 
 // standalone
 #define IRT_NUM_WORKERS_ENV "IRT_NUM_WORKERS"
 
 // for using a minimal variant of the runtime without affinity and message queues => standalone mode only
 #define IRT_MIN_MODE
+
+// define IRT_USE_PTHREADS if you want to use pthread lib for windows (has no effect under linux)
+// #define IRT_USE_PTHREADS
 
 // work item
 #define IRT_WI_PARAM_BUFFER_SIZE 128

@@ -72,15 +72,14 @@ TEST(IslBackend, SetCreation) {
 
 	auto&& ctx = makeCtx<ISL>();
 	auto&& set = makeSet(ctx, IterationDomain(iterVec));
-
-	std::ostringstream ss;
-	ss << *set;
-	EXPECT_EQ("[v3] -> { [v1] }", ss.str());
+	EXPECT_EQ("[v3] -> { [v1] }", toString(*set));
 
 	IterationVector iv2;
-	set->toConstraint(mgr, iv2);
+	auto cons = set->toConstraint(mgr, iv2);
 
 	EXPECT_EQ(iv2, iterVec);
+	EXPECT_TRUE(cons);
+	EXPECT_EQ("((v1 <= 0) v (v1 > 0))", toString(*cons));
 }
 
 TEST(IslBackend, SetConstraint) {
@@ -93,25 +92,56 @@ TEST(IslBackend, SetConstraint) {
 	auto&& ctx = makeCtx<ISL>();
 	auto&& set = makeSet(ctx, IterationDomain(c));
 	set->simplify();
-
-	std::ostringstream ss;
-	ss << *set;
-	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4 }", ss.str());
+	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4 }", toString(*set));
 
 	IterationVector iv2;
-	set->toConstraint(mgr, iv2);
+	auto cons = set->toConstraint(mgr, iv2);
+	EXPECT_EQ(iterVec, iv2);
+	EXPECT_TRUE(cons);
+	EXPECT_EQ("(-v3 + -4 >= 0)", toString(*cons));
 
 	EXPECT_EQ(iv2, iterVec);
 
 	// Build directly the ISL set
-	//isl_union_set* refSet = isl_union_set_read_from_str(ctx->getRawContext(), 
-	//		"[v3] -> { [v1] : 3v3 + 10 < 0}"
-	//	);
-	//isl_union_set* diff = isl_union_set_subtract(refSet, isl_union_set_copy(const_cast<isl_union_set*>(set->getAsIslSet())));
+	IslSet refSet(*ctx, "[v3] -> { [v1] : 3v3 + 10 < 0}");
+	EXPECT_EQ(toString(*set), toString(refSet));
+}
+
+TEST(IslBackend, UniverseSet) {
 	
-	// check for equality
-	//EXPECT_EQ( isl_union_set_is_empty(diff) );
-	//isl_union_set_free(diff);
+	NodeManager mgr;	
+	CREATE_ITER_VECTOR; 
+
+	IterationDomain dom(iterVec);
+	EXPECT_TRUE( dom.universe() );
+
+	auto&& ctx = makeCtx<ISL>();
+	auto&& set = makeSet(ctx, dom);
+	EXPECT_EQ("[v3] -> { [v1] }", toString(*set));
+
+	IterationVector iv2;
+	AffineConstraintPtr cons = set->toConstraint(mgr, iv2);
+	EXPECT_TRUE(cons);
+
+	EXPECT_EQ(iv2, iterVec);
+	EXPECT_EQ("((v1 <= 0) v (v1 > 0))", toString(IterationDomain(cons)));
+}
+
+TEST(IslBackend, EmptySet) {
+	
+	NodeManager mgr;	
+	CREATE_ITER_VECTOR; 
+
+	IterationDomain dom(iterVec, true);
+	EXPECT_TRUE( dom.empty() );
+
+	auto&& ctx = makeCtx<ISL>();
+	auto&& set = makeSet(ctx, dom);
+	EXPECT_EQ("[v3] -> {  }", toString(*set));
+
+	IterationVector iv2;
+	AffineConstraintPtr cons = set->toConstraint(mgr, iv2);
+	EXPECT_FALSE(cons);
 }
 
 TEST(IslBackend, SetConstraintNormalized) {
@@ -131,14 +161,10 @@ TEST(IslBackend, SetConstraintNormalized) {
 	EXPECT_EQ("[v3] -> { [v1] : v1 <= -11 or v1 >= -9 }", toString(*set));
 
 	// Build directly the ISL set
-	//isl_union_set* refSet = isl_union_set_read_from_str(ctx->getRawContext(), 
-	//		"[v3] -> {[v1] : v1 + 10 < 0 or v1 + 10 > 0}"
-	//	);
+	IslSet refSet(*ctx, "[v3] -> {[v1] : v1 + 10 < 0 or v1 + 10 > 0}");
 	
-	//isl_union_set* diff = isl_union_set_subtract(refSet, isl_union_set_copy(const_cast<isl_union_set*>(set->getAsIslSet())));
 	// check for equality
-	//EXPECT_TRUE( isl_union_set_is_empty(diff) );
-	//isl_union_set_free(diff);
+	EXPECT_EQ( toString(*set), toString(refSet));
 }
 
 TEST(IslBackend, FromCombiner) {
@@ -170,14 +196,10 @@ TEST(IslBackend, FromCombiner) {
 	// normalize the cons1 as it contains negations 
 
 	// Build directly the ISL set
-	isl_union_set* refSet = isl_union_set_read_from_str(ctx->getRawContext(), 
-			"[v3] -> {[v1] : 2*v3 + 10 = 0 or 2*v1 +3*v3 +10 >= 0}"
-		);
-	
-	SetPtr<> set2(*ctx, refSet);
+	IslSet refSet(*ctx, "[v3] -> {[v1] : 2*v3 + 10 = 0 or 2*v1 +3*v3 +10 >= 0}");
 	
 	// we cannot check equality on sets because 1 sets contains ids and the one read from the string doesnt
-	EXPECT_EQ( toString(*set), toString(*set2) );
+	EXPECT_EQ( toString(*set), toString(refSet) );
 }
 
 TEST(IslBackend, SetUnion) {
@@ -192,19 +214,17 @@ TEST(IslBackend, SetUnion) {
 
 	auto&& set = set1 + set2;
 
+	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4; [v3] }", toString(*set));
+
 	IterationVector iv;
 	AffineConstraintPtr cons = set->toConstraint(mgr, iv);
-	AffineConstraintPtr orig = normalize(c1 or c2);
-	
-	//std::ostringstream ss;
-	//set->printTo(ss);
-	
-	//isl_union_set* refMap = isl_union_set_read_from_str(ctx->getRawContext(), 
-	//		"[v3] -> { [v1] : 3*v3 + 10 < 0; [v1] : 1*v1 -1*v3 = 0}"
-	//	);
+	EXPECT_EQ("((-v3 + -4 >= 0) v (v1 + -v3 == 0))", toString(*cons));
 
-	//printIslSet(std::cout, ctx->getRawContext(), refMap);
-	//EXPECT_EQ("", ss.str());
+	AffineConstraintPtr orig = normalize(c1 or c2);
+	EXPECT_EQ("((-3*v3 + -11 >= 0) v (v1 + -v3 == 0))", toString(*orig));
+
+	IslSet refSet(*ctx, "[v3] -> { [v1] : 3*v3 + 10 < 0; [v1] : 1*v1 -1*v3 = 0}");
+	EXPECT_EQ(toString(*set), toString(refSet));
 }
 
 TEST(IslBackend, SetIntersect) {
@@ -221,22 +241,14 @@ TEST(IslBackend, SetIntersect) {
 
 	IterationVector iv;
 	AffineConstraintPtr cons = set->toConstraint(mgr, iv);
+	EXPECT_TRUE(cons);
+	EXPECT_EQ("((v1 + -v3 == 0) ^ (-v3 + -4 >= 0))", toString(*cons));
 	
-	//std::cout << *cons << std::endl;
 	AffineConstraintPtr orig = normalize(c1 and c2);
+	EXPECT_EQ("((-3*v3 + -11 >= 0) ^ (v1 + -v3 == 0))", toString(*orig));
 
-	//std::cout << *orig << std::endl;
-
-	
-	//std::ostringstream ss;
-	//set->printTo(ss);
-	
-	//isl_union_set* refMap = isl_union_set_read_from_str(ctx->getRawContext(), 
-	//		"[v3] -> { [v1] : 3*v3 + 10 < 0; [v1] : 1*v1 -1*v3 = 0}"
-	//	);
-
-	//printIslSet(std::cout, ctx->getRawContext(), refMap);
-	//EXPECT_EQ("", ss.str());
+	IslSet refSet(*ctx, IterationDomain(orig));
+	EXPECT_EQ(toString(*set), toString(refSet));
 }
 
 TEST(IslBackend, SimpleMap) {
@@ -247,18 +259,12 @@ TEST(IslBackend, SimpleMap) {
 		  						   { 1, 1,  0 },
 								   { 1,-1,  8 } } );
 	// 0*v1 + 2*v2 + 10
-	
 	auto&& ctx = makeCtx<ISL>();
 	auto&& map = makeMap(ctx, affSys);
 	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }", toString(*map));
 
-//	isl_union_map* refMap = isl_union_map_read_from_str(ctx->getRawContext(), 
-//			"[v3] -> {[v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }"
-//		);
-
-//	EXPECT_TRUE( isl_union_map_is_equal(refMap, const_cast<isl_union_map*>(map->getAsIslMap())) );
-
-//	isl_union_map_free(refMap);
+	IslMap refMap(*ctx, "[v3] -> {[v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }");
+	EXPECT_EQ(toString(*map), toString(refMap));
 }
 
 TEST(IslBackend, MapUnion) {
@@ -308,7 +314,6 @@ TEST(Domain, SimpleStrided) {
 			  "2e0 = -1 - v3 + v1 and v1 >= 15 - 5v3 and v1 >= -19 - 15v3)) or "
 			  "(exists (e0 = [(-1 - v3 + v1)/2]: 2e0 = -1 - v3 + v1 and "
 			  "v1 >= 15 - 5v3 and v1 <= -23 - 15v3)) }", toString(*set));
-
 }
 
 TEST(Domain, Strided) {
@@ -521,7 +526,7 @@ TEST(IslBackend, Cardinality2) {
 	EXPECT_EQ("[v3] -> { 81 }", toString(*pw));
 	
 	utils::Piecewise<arithmetic::Formula> apw = pw->toPiecewise(mgr);
-	//EXPECT_TRUE( utils::isFormula(apw) );
+	// EXPECT_TRUE( utils::isFormula(apw) );
 	//EXPECT_EQ(arithmetic::Formula(81), arithmetic::toFormula(apw));
 
 }

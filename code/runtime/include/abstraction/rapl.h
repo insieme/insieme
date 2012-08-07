@@ -128,7 +128,7 @@ int64 _irt_read_msr(int32 file, int32 subject);
  * closes an MSR file descriptor
  */
 
-uint64 _irt_close_msr(int32 file);
+int32 _irt_close_msr(int32 file);
 
 /*
  * Reads the package energy consumption in joules into the provided pointer. Calling
@@ -139,7 +139,8 @@ uint64 _irt_close_msr(int32 file);
 void _irt_get_rapl_energy_consumption(double *package_energy);
 
 /*
- * checks if RAPL is supported - currently, only sandybridge (ex) processors are known to support it
+ * checks if RAPL is supported - currently, only Sandy Bridge (EX) and Ivy Bridge processors are known
+ * to support it, so we simply check for the processor type
  */
 
 bool irt_rapl_is_supported();

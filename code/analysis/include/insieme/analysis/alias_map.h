@@ -63,7 +63,7 @@ bool operator()(const insieme::core::ExpressionAddress& lhs, const insieme::core
 /**
  * This class stores aliases for variables. 
  */
-class AliasMap {
+class AliasMap : public utils::Printable {
 
 public:
 
@@ -85,6 +85,10 @@ public:
 
 	inline bool empty() const { 
 		return aliasMap.empty(); 
+	}
+
+	std::ostream& printTo(std::ostream& out) const {
+		return out << aliasMap;
 	}
 private:
 

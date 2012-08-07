@@ -42,6 +42,8 @@
 
 namespace insieme { namespace analysis { namespace polyhedral {
 
+class Scop;
+
 /**************************************************************************************************
  * IterationDomain: the iteration domain represent the domain on which a statement is valid.
  * Therefore it is a represented by a set of constraints (ConstraintCombiner). However, the
@@ -178,6 +180,6 @@ IterationDomain extractFromCondition(IterationVector& iv, const core::Expression
  * If the variable is not inside a SCoP the returned object will be empty which means the domain on
  * which the variable is defined is the universe 
  */
-boost::optional<IterationDomain> getVariableDomain(const core::ExpressionAddress& addr);
+std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::ExpressionAddress& addr);
 
 } } } // end namespace insieme::analysis::polyhedtal

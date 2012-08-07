@@ -40,6 +40,9 @@
 #ifndef LITERAL
 #define LITERAL(_id, _name, _spec)
 #endif
+#ifndef DERIVED
+#define DERIVED(_id, _name, _code) LITERAL(_id, _name, fail)
+#endif
 #ifndef GROUP
 #define GROUP(_id, ...)
 #endif
@@ -386,6 +389,13 @@ LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
 LITERAL(ArrayElemToVec, "array.elem.to.vec",
 						"(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
 
+// computation of an array-offset and some derivades
+LITERAL(ArrayView, 				"array.view",					"(ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")
+DERIVED(ArrayViewPreInc, 		"array.view.pre.inc",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array.view(*a,1); return *a; }")
+DERIVED(ArrayViewPostInc, 		"array.view.post.inc",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { auto res = *a; a = array.view(*a,1); return res; }")
+DERIVED(ArrayViewPreDec, 		"array.view.pre.dec",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array.view(*a,-1); return *a; }")
+DERIVED(ArrayViewPostDec, 		"array.view.post.dec",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { auto res = *a; a = array.view(*a,-1); return res; }")
+
 // -- special operations to support encoding of C ntnters as arrays ----------------------------------------------------
 
 LITERAL(IsNull,   		"is.null",				"(ref<'a>) -> bool")
@@ -420,8 +430,7 @@ LITERAL(VectorRefProjection, 	"vector.ref.projection",
 
 LITERAL(VectorToArray, 			"vector.to.array",				"(vector<'elem,#l>) -> array<'elem,1>")
 LITERAL(RefVectorToRefArray, 	"ref.vector.to.ref.array",		"(ref<vector<'elem,#l>>) -> ref<array<'elem,1>>")
-						
-LITERAL(ArrayView, 				"array.view",					"(ref<array<'elem,1>>, uint<8>) -> ref<array<'elem,1>>")
+
 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
@@ -454,6 +463,10 @@ LITERAL(AccuracyFastBinary,       "accuracy.fast", "(('a, 'a)->'b) -> ('a, 'a)->
 LITERAL(AccuracyHighUnary,       "accuracy.high.unary", "(('a)->'b) -> ('a)->'b")
 LITERAL(AccuracyBestEffortUnary, "accuracy.besteffort.unary", "(('a)->'b) -> ('a)->'b")
 LITERAL(AccuracyFastUnary,       "accuracy.fast.unary", "(('a)->'b) -> ('a)->'b")
+
+// IO -----------------------------------------------------------------------------------------------------------------
+
+LITERAL(Print, "print", "(string,var_list)->unit")
 
 // Misc. --------------------------------------------------------------------------------------------------------------
 
@@ -498,7 +511,7 @@ TYPE(JobRange, "JobRange")
 
 LITERAL(CreateMinRange,     "MinRange",    		"(uint<#8>)->JobRange")							// lower boundery only
 LITERAL(CreateBoundRange,   "BoundRange",    	"(uint<#8>, uint<#8>)->JobRange")				// lower and upper bound
-LITERAL(CreateBoundRangeMod,"BoundRange",    	"(uint<#8>, uint<#8>, uint<#8>)->JobRange")		// lower, upper and modula bound
+LITERAL(CreateBoundRangeMod,"BoundRangeMod",    "(uint<#8>, uint<#8>, uint<#8>)->JobRange")		// lower, upper and modula bound
 
 
 // Locks -----------------------------------------------------------
@@ -531,6 +544,7 @@ GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator,
 
 #undef TYPE
 #undef LITERAL
+#undef DERIVED
 #undef GROUP
 #undef OPERATOR
 #undef OPERATION

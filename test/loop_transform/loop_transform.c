@@ -22,7 +22,7 @@ void test_valid_strip() {
 	printf("#1 test_valid_interchage()\n");
 
 	#pragma insieme strip (1,2)
-	for (int i=0; i<5; i++) {
+	for (int i=1; i<5; i++) {
 		for (int j=0; j<9; j++) {
 			A[i-1][j] = A[i][j];
 		}
@@ -42,7 +42,7 @@ void test_valid_strip2() {
 	printf("#1 test_valid_interchage()\n");
 
 	#pragma insieme strip (1,4)
-	for (int i=0; i<5; i++) {
+	for (int i=1; i<5; i++) {
 		for (int j=0; j<9; j++) {
 			A[i-1][j] = A[i][j];
 		}
@@ -62,7 +62,7 @@ void test_valid_interchange() {
 	printf("#1 test_valid_interchage()\n");
 
 	#pragma insieme interchange(0,1)
-	for (int i=0; i<2; i++) {
+	for (int i=1; i<2; i++) {
 		for (int j=0; j<2; j++) {
 			A[i-1][j] = A[i][j];
 		}
@@ -80,7 +80,7 @@ void test_invalid_interchange() {
 	printf("#2 test_invalid_interchage()\n");
 	
 	#pragma insieme interchange(0,1)
-	for (int i=0; i<2; i++) {
+	for (int i=1; i<2; i++) {
 		for (int j=0; j<2; j++) {
 			A[i-1][j+1] = A[i][j];
 		}
@@ -389,13 +389,29 @@ void test_invalid_fusion2() {
 	PRINT(A, 3, 3);
 }
 
+void test_invalid_fission() {
+
+	float A[3][3] = {{1,2,3}, 
+					 {4,5,6}, 
+					 {7,8,9}};
+
+	printf("#12 test_invalid_fission()\n");
+
+	#pragma insieme split(1)
+	for (int i=1; i<3; i++) {
+		A[i][1] = A[2][0];
+		A[i-1][0] = A[i][1];
+	}
+	PRINT(A, 3, 3);
+}
+
 void test_valid_fission() {
 
 	float A[3][3] = {{1,2,3}, 
 					 {4,5,6}, 
 					 {7,8,9}};
 
-	printf("#12 test_valid_fission1()\n");
+	printf("#12 test_valid_fission()\n");
 
 	#pragma insieme split(1)
 	for (int i=0; i<3; i++) {
@@ -504,7 +520,7 @@ void test_composition_1() {
 					 { 7, 8, 9,10},
 					 {10,11,12,13}};
 	
-	printf("#2 test_invalid_interchage()\n");
+	printf("#2 test_composition_1()\n");
 	
 	#pragma insieme unroll(2)
 	#pragma insieme fuse(0,1)
@@ -524,9 +540,9 @@ void test_parallel() {
 					 { 7, 8, 9,10},
 					 {10,11,12,13}};
 	
-	printf("#2 test_valid_paralell()\n");
+	printf("#2 test_paralell()\n");
 	
-	// #pragma insieme parallelize( 0 )
+	#pragma insieme parallelize( 0 )
 	for (int i=0; i<4; i++) {
 		for (int j=0; j<4; j++) {
 			A[i][j+1] = A[i][j];
@@ -543,7 +559,7 @@ void test_stamping() {
 					 { 7, 8, 9,10},
 					 {10,11,12,13}};
 	
-	printf("#2 test_valid_paralell()\n");
+	printf("#2 test_stamping()\n");
 	
 	#pragma insieme stamp( 2,0,0 )
 	for (int i=0; i<4; i++) {
@@ -579,6 +595,7 @@ int main(int argc, char* argv[]) {
 	test_invalid_fusion2();
 	
 	test_valid_fission();
+	test_invalid_fission();
 
 	test_unroll_1();
 	test_unroll_2();

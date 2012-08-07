@@ -39,6 +39,10 @@
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/analysis/polyhedral/iter_dom.h"
+#include "insieme/analysis/polyhedral/backend.h"
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
+
 #include "insieme/utils/logging.h"
 
 using namespace insieme;
@@ -46,10 +50,6 @@ using namespace insieme::core;
 using namespace insieme::analysis;
 
 namespace {
-
-struct MultipleAccessException : public std::logic_error {
-	MultipleAccessException() : std::logic_error("multiple accesses")  { }
-};
 
 struct NotAnAccessException : public std::logic_error {
 
@@ -74,7 +74,40 @@ std::ostream& Access::printTo(std::ostream& out) const {
 	return out << ":" << (isRef()?"ref":"val");
 }
 
-Access makeAccess(const core::ExpressionAddress& expr) {
+bool Access::operator<(const Access& other) const {
+	// First check if the accesses are pointing to the same variable 
+	if (variable < other.variable) { return true; }
+	if (variable > other.variable) { return false; }
+
+	// Next check th type of variable to which the access refers 
+	if (type != VarType::ARRAY)    { return path < other.path; }
+
+	// If this is an array access, then we have to check whether we have associated information on
+	// the range of elements being accessed which refers to a domain on which we are sure variables
+	// have the same meaning.
+	if (!ctx && other.ctx) 		   	{ return true; }
+	if (ctx && !other.ctx) 		   	{ return false; }
+
+	// we check whether the two constraint refers to the same context 
+	if (ctx != other.ctx)		   	{ return ctx < other.ctx; }
+
+	// Now we check the domain information for the access 
+	if (!dom && !other.dom) 		{ return false; }
+
+	if (dom && !other.dom) 		  	{ return false; }
+	if (!dom && other.dom) 		  	{ return true; }
+
+	// we are in the same context 
+	if (*dom != *other.dom) 		{ return dom < other.dom; }
+
+	// otherwise if the dom is the same, we have to compare the expression
+	return toIR(base_expr->getNodeManager(), arr_access) < toIR(base_expr->getNodeManager(), other.arr_access);
+}
+
+/** 
+ * Get the immediate access 
+ */
+Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& aliasMap) {
 	
 	const lang::BasicGenerator& gen = expr->getNodeManager().getLangBasic();
 	datapath::DataPathBuilder dpBuilder(expr->getNodeManager());
@@ -85,16 +118,16 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 
 	// For cast expressions, we simply recur 
 	if (expr->getNodeType() == NT_CastExpr) 
-		return makeAccess(expr.as<CastExprAddress>()->getSubExpression());
+		return getImmediateAccess(expr.as<CastExprAddress>()->getSubExpression(), aliasMap);
 
 	// If this is a scalar variable, then return the access to this variable 
 	if (expr->getNodeType() == NT_Variable) {
 		return Access(expr, 
-					expr.getAddressedNode().as<VariablePtr>(), 
-					dpBuilder.getPath(), 
-					VarType::SCALAR);
+				expr.getAddressedNode().as<VariablePtr>(), 
+				dpBuilder.getPath(), 
+				VarType::SCALAR
+			);
 	}
-
 	assert(expr->getNodeType() == NT_CallExpr);
 
 	CallExprAddress callExpr = expr.as<CallExprAddress>();
@@ -117,7 +150,7 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 	core::VariablePtr var = args[0].getAddressedNode().as<VariablePtr>();
 
 	if (gen.isRefDeref(callExpr->getFunctionExpr())) {
-		return Access(expr, var, dpBuilder.getPath(), VarType::SCALAR);
+		return Access(expr, var, dpBuilder.getPath(), VarType::SCALAR, Constraint(), core::NodeAddress());
 	} 
 
 	// Handle member access functions 
@@ -129,7 +162,8 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 					callExpr, 
 					var, 
 					dpBuilder.component( args[1].as<LiteralAddress>().getValue() ).getPath(),
-					VarType::TUPLE);
+					VarType::TUPLE
+				);
 		}
 
 		// This is a member access 
@@ -138,7 +172,8 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 					callExpr,
 					var,
 					dpBuilder.member( args[1].as<LiteralAddress>()->getValue().getValue()).getPath(),
-					VarType::MEMBER);
+					VarType::MEMBER
+				);
 		}
 
 		assert( false && "Type of member access not supported" );
@@ -155,17 +190,40 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 						callExpr,
 						var,
 						dpBuilder.element(static_cast<int64_t>(f.getConstantValue())).getPath(),
-						VarType::ARRAY);
+						VarType::ARRAY
+					);
+			}
+			
+			ExpressionAddress expr = args[1];
+			if ( VariableAddress var = core::dynamic_address_cast<const Variable>( expr ) ) {
+				// if the index expression is a single variable we may be in the case where this
+				// variable is an alias for an other expression
+				if ( ExpressionAddress aliasExpr = aliasMap.getMappedExpr( var.getAddressedNode() ) ) {
+					// If this was an alias, use the aliased expression as array access 
+					expr = aliasExpr;
+				}
 			}
 
-		} catch (arithmetic::NotAFormulaException&& e) { }
-		
+			auto dom = polyhedral::getVariableDomain( expr );
+			// otherwise we have the access throgh another variable, we need to determine the range
+			// for it 
+			return Access(
+					callExpr,
+					var,
+					dpBuilder.element( args[1].getAddressedNode() ).getPath(),
+					VarType::ARRAY,
+					dom.second,
+					dom.first
+				);
+		} catch (arithmetic::NotAFormulaException&& e) { 
+			// What if this is a piecewise? we can handle it 
+			assert (false && "Array access is not a formula?");
+		} 	
 	}
-
-	throw MultipleAccessException();
+	assert(false && "Access not supported");
 }
 
-void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entities) {
+void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entities, const AliasMap& aliasMap) {
 	
 	/**
 	 * This function extracts entities from CFG blocks, therefore due to the construction properties
@@ -185,7 +243,7 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 		CallExprAddress call = expr.as<CallExprAddress>();
 		for(auto& arg : call->getArguments()) {
 			try {
-				entities.insert( makeAccess(arg) );
+				entities.insert( getImmediateAccess(arg, aliasMap) );
 			} catch(NotAnAccessException&& e) { 
 				assert(e.isLit);
 				/* This is not an access, do nothing */ 
@@ -194,14 +252,14 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 	};
 
 	if (core::DeclarationStmtAddress declStmt = core::dynamic_address_cast<const DeclarationStmt>(stmt)) {
-		entities.insert( makeAccess(declStmt->getVariable()) );
+		entities.insert( getImmediateAccess(declStmt->getVariable(), aliasMap) );
 
 		try {
-			entities.insert( makeAccess(declStmt->getInitialization()) );
+			entities.insert( getImmediateAccess(declStmt->getInitialization(), aliasMap) );
 			return ;
 		} catch (NotAnAccessException&& e) { 
 			if (e.isLit) { return; }
-		} catch (MultipleAccessException&& e) { 	}
+		}
 
 		scanArguments( declStmt->getInitialization() );
 		return;
@@ -211,26 +269,25 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 
 		try {
 			// try to extract the access (if this is a single supported access)
-			entities.insert(makeAccess(stmt.as<ExpressionAddress>()));
+			entities.insert(getImmediateAccess(stmt.as<ExpressionAddress>(), aliasMap));
 			return;
 		} catch (NotAnAccessException&& e) {  
 			if (e.isLit) { return; } 
-		} catch (MultipleAccessException&& e) {  }
+		}
 
 		scanArguments(expr);
 		return;
 	}
-	assert( false );
+
+	assert( false && "expression not supported" );
 }
 
-std::set<Access> extractFromStmt(const core::StatementAddress& stmt) {
-	
+std::set<Access> extractFromStmt(const core::StatementAddress& stmt, const AliasMap& aliasMap) {
 	std::set<Access> accesses;
-	extractFromStmt(stmt, accesses);
-	return std::move(accesses);
-
+	
+	extractFromStmt(stmt, accesses, aliasMap);
+	return accesses;
 }
-
 
 bool isConflicting(const Access& acc1, const Access& acc2, const AliasMap& aliases) {
 
@@ -260,13 +317,13 @@ bool isConflicting(const Access& acc1, const Access& acc2, const AliasMap& alias
 	ExpressionAddress expr = aliases.getMappedExpr( acc1.getAccessedVariable() );
 	if ( expr ) 
 		try {
-			a1 = makeAccess(expr);
+			a1 = getImmediateAccess(expr, aliases);
 		} catch( ... ) { } 
 
 	expr = aliases.getMappedExpr( acc2.getAccessedVariable() );
 	if ( expr ) 
 		try {
-			a2 = makeAccess(expr);
+			a2 = getImmediateAccess(expr, aliases);
 		} catch ( ... ) { }
 
 	auto acc1Aliases = aliases.lookupAliases(a1.getAccessExpression());

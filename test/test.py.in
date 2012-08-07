@@ -15,7 +15,7 @@ INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
 # RUN = the runtime backend
 #
 
-USE_SMP = 1
+USE_SMP = 0
 USE_SEQ = 0
 USE_RUN = 1
 USE_OCL = 0
@@ -26,8 +26,8 @@ INSIEME_FLAGS = "--std=c99 -I."
 CFLAGS_GCC = "-pipe -O3 --std=c99 -I."
 CFLAGS_SMP = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/simple_backend/include/insieme/simple_backend/runtime".format(**{'SRC_DIR': SRC_DIR})
 CFLAGS_SEQ = "-pipe -O3 --std=c99 -I."
-CFLAGS_RUN = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
-CFLAGS_OCL = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
+CFLAGS_RUN = "-pipe -O3 --std=gnu99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
+CFLAGS_OCL = "-pipe -O3 --std=gnu99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
 
 # linker flags
 LDFLAGS_GCC = "-lm -lpthread -lrt"

@@ -153,6 +153,32 @@ int AffineFunction::idxConv(size_t idx) const {
 	return -1;
 }
 
+bool AffineFunction::operator<(const AffineFunction& other) const {
+	if (getIterationVector() == other.getIterationVector()) {
+		
+		auto thisIt = begin(), thisEnd = end();
+		auto otherIt = other.begin(), otherEnd = other.end();
+
+		assert((std::distance(thisIt, thisEnd) == std::distance(otherIt, otherEnd)) && 
+				"size of 2 iterators differs");
+
+		while(thisIt != thisEnd) {
+			assert((*thisIt).first == (*otherIt).first);
+			if ((*thisIt).second > (*otherIt).second)
+				return false;
+			if ((*thisIt).second < (*otherIt).second) 
+				return true;
+			
+			assert((*thisIt).second == (*otherIt).second);
+			++thisIt; ++otherIt;
+		}
+		// If we end up here it means the 2 functions have same coefficients 
+		return false;
+	}
+
+	return getIterationVector() < other.getIterationVector();
+}
+
 // Converts an AffineFunction to an IR expression
 insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineFunction& af) {
 
@@ -449,10 +475,20 @@ AffineFunction::Term AffineFunction::iterator::operator*() const {
 namespace std {
 
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::polyhedral::AffineFunction::Term& c) {
-	// Avoid to print the coefficient when it is 1 or -1
-	if (abs(c.second) != 1) { out << c.second << "*"; }
-	if (c.second == -1) { out << "-"; }
+	
+	if (c.second < 0) { out << "-"; }
 
+	// Avoid to print the coefficient when it is 1 or -1
+	if (abs(c.second) != 1) { out << abs(c.second); }
+	
+	// If we are printing the constant part we simply don't print the 1
+	if (c.first.getType() == insieme::analysis::polyhedral::Element::CONST) { 
+		// if the absolute value of the constant part is 1, then we have to write a 1
+		if (abs(c.second) == 1) out << "1";
+		return out; 
+	}
+
+	if (abs(c.second) != 1) out << "*";
 	return out << c.first;
 }
 

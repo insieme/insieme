@@ -366,7 +366,6 @@ namespace parser {
 		auto abcab = builder.compoundStmt(a,b,c,a,b);
 		EXPECT_EQ(builder.compoundStmt(a, b, abc, abcab, a, c), g.match(manager, "{ a; b; { a; b; c; }; { a; b; c; a; b; }; a; c; }"));
 
-
 		// some stuff that should not work
 		EXPECT_FALSE(g.match(manager, "{a ; a; a; a; a; a; a; a; a a ; a; a; a; a; a; a; a; }"));
 
@@ -553,7 +552,7 @@ namespace parser {
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
 			if (!a || !b) return false;
 			return IRBuilder(cur.manager).add(a,b);
-		});
+		}, 2);
 
 		auto mul = rule(seq(rec(), "*", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
@@ -561,7 +560,7 @@ namespace parser {
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
 			if (!a || !b) return false;
 			return IRBuilder(cur.manager).mul(a,b);
-		});
+		}, 1);
 
 		auto par = rule(seq("(", rec(), ")"), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 1u) return false;
@@ -875,8 +874,29 @@ namespace parser {
 		EXPECT_FALSE(info.isLeftParenthese(Token::createSymbol('%')));
 		EXPECT_FALSE(info.isRightParenthese(Token::createSymbol('.')));
 
-
 	}
+
+	TEST(Parser, VariableSequences) {
+		NodeManager manager;
+
+		Grammar g("E");
+
+		// list of a lot as and bs
+		g.addRule("E", rule(seq(loop(lit("+")), loop(lit("-"))), accept));
+
+		// simple case
+		EXPECT_TRUE(g.match(manager, "++++"));
+		EXPECT_TRUE(g.match(manager, "+++-"));
+		EXPECT_TRUE(g.match(manager, "++--"));
+		EXPECT_TRUE(g.match(manager, "+---"));
+		EXPECT_TRUE(g.match(manager, "----"));
+
+		// what should not work
+		EXPECT_FALSE(g.match(manager, "-+-"));
+		EXPECT_FALSE(g.match(manager, "+-+"));
+		EXPECT_FALSE(g.match(manager, "-+-+"));
+	}
+
 
 } // end namespace parser
 } // end namespace core
