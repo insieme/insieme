@@ -277,7 +277,6 @@ OPERATION(Real, Gt, "real.gt", "(real<#a>,real<#a>) -> bool")
 OPERATION(Real, Le, "real.le", "(real<#a>,real<#a>) -> bool")
 OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
 
-GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp)
 
 // Bitwise Operations -------------------------------------------------------------------------------------------------
 
@@ -317,6 +316,54 @@ LITERAL(RefReinterpret, "ref.reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>"
 
 LITERAL(RefNarrow, 		"ref.narrow",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
 LITERAL(RefExpand,		"ref.expand",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
+
+// Operators for references
+OPERATION(Ref, Eq, "ref.eq", "(ref<'a>,ref<'a>) -> bool")
+OPERATION(Ref, Ne, "ref.ne", "(ref<'a>,ref<'a>) -> bool")
+OPERATION(Ref, Lt, "ref.lt", "(ref<'a>,ref<'a>) -> bool")
+OPERATION(Ref, Gt, "ref.gt", "(ref<'a>,ref<'a>) -> bool")
+OPERATION(Ref, Le, "ref.le", "(ref<'a>,ref<'a>) -> bool")
+OPERATION(Ref, Ge, "ref.ge", "(ref<'a>,ref<'a>) -> bool")
+
+GROUP(RefCompOp, RefEq, RefNe, RefLt, RefGt, RefLe, RefGe)
+
+
+// Type Operations ----------------------------------------------------------------------------------------------------
+
+DERIVED(TypeOf,			"type.of",				"('a x)->type<'a> { return lit('a); }")
+DERIVED(TypeCast,		"type.cast",			"('a x,type<'b> t)->'b { return ('b)x; }")
+LITERAL(TypeIsSubtype,	"type.is.subtype",		"(type<'a>, type<'b>)->bool")
+
+OPERATION(Type, Eq, 	"type.eq", "(type<'a>,type<'a>) -> bool")
+
+GROUP(TypeCompOp, TypeEq)
+
+
+// Generic Operations -------------------------------------------------------------------------------------------------
+
+// binary generic operators
+OPERATION(Gen, Add, 	 "gen.add", "('a,'a)->'a")
+OPERATION(Gen, Sub, 	 "gen.sub", "('a,'a)->'a") 
+OPERATION(Gen, Mul, 	 "gen.mul", "('a,'a)->'a") 
+OPERATION(Gen, Div, 	 "gen.div", "('a,'a)->'a")
+OPERATION(Gen, Mod, 	 "gen.mod", "('a,'a)->'a")
+
+OPERATION(Gen, And, 	 "gen.and", "('a,'a)->'a") 
+OPERATION(Gen, Or, 	 	 "gen.or",  "('a,'a)->'a") 
+OPERATION(Gen, Xor, 	 "gen.xor", "('a,'a)->'a") 
+
+OPERATION(Gen, LShift, 	 "gen.lshift", "('a,'a)->'a") 
+OPERATION(Gen, RShift, 	 "gen.rshift", "('a,'a)->'a") 
+
+OPERATION(Gen, Eq, "gen.eq", "('a,'a) -> bool")
+OPERATION(Gen, Ne, "gen.ne", "('a,'a) -> bool")
+OPERATION(Gen, Lt, "gen.lt", "('a,'a) -> bool")
+OPERATION(Gen, Gt, "gen.gt", "('a,'a) -> bool")
+OPERATION(Gen, Le, "gen.le", "('a,'a) -> bool")
+OPERATION(Gen, Ge, "gen.ge", "('a,'a) -> bool")
+
+GROUP(GenCompOp, GenEq, GenNe, GenLt, GenGt, GenLe, GenGe)
+
 
 // Data Paths ---------------------------------------------------------------------------------------------------------
 
@@ -549,6 +596,8 @@ LITERAL(CloogMod, 	"cloog.mod",   "( int<#4>, int<#4> ) -> int<#4>" )
 LITERAL(Exit, "exit", "(int<4>)->unit" )
 
 // Semantic Grouping --------------------------------------------------------------------------------
+
+GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp, RefCompOp, TypeCompOp, GenCompOp)
 
 GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator, 
 	VectorOp, ArrayOp, CompOp, RefEqual, RefDeref, BitwiseOp, CompOp, ArithOp, GeneralOp)

@@ -40,6 +40,7 @@
 
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/normalize.h"
 
 #include "insieme/utils/set_utils.h"
@@ -271,6 +272,25 @@ ExpressionPtr BasicGenerator::getBuiltIn(const string& name) const {
 	// check literals
 	return getLiteral(name);
 }
+
+
+bool BasicGenerator::isType(const NodePtr& type) const {
+	return type->getNodeCategory() == NC_Type && analysis::isTypeLiteralType(type.as<TypePtr>());
+}
+
+bool BasicGenerator::isRef(const NodePtr& type) const {
+	return type->getNodeType() == NT_RefType;
+}
+
+bool BasicGenerator::isGen(const NodePtr& type) const {
+	return type->getNodeCategory() == NC_Type
+			&& !type->getNodeType() == NT_VectorType		// vector types are handled using pointwise
+			&& !isBool(type) && !isChar(type)
+			&& !isSignedInt(type) && !isUnsignedInt(type)
+			&& !isReal(type)
+			&& !isType(type) && !isRef(type);
+}
+
 
 ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenerator::Operator& op) const {
 	auto fit = pimpl->operationMap.equal_range(op);

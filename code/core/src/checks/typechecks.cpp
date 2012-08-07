@@ -725,6 +725,11 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 	TypePtr src = source;
 	TypePtr trg = target;
 
+	// allow cast to generic
+	if (trg->getNodeType() == NT_TypeVariable) {
+		return res;
+	}
+
 	while (src->getNodeType() == trg->getNodeType()) {
 		switch(src->getNodeType()) {
 		case NT_ArrayType:
