@@ -65,8 +65,11 @@ irt_thread irt_thread_create(irt_thread_func *fun, void *args) {
 	return t;
 }
 
-inline irt_thread irt_current_thread(){
-	return GetCurrentThread();
+inline irt_thread irt_current_thread() {
+	HANDLE real_handle = NULL;
+	HANDLE proc_handle = GetCurrentProcess();
+	DuplicateHandle( proc_handle, GetCurrentThread(), proc_handle, &real_handle, 0, TRUE, DUPLICATE_SAME_ACCESS );
+	return real_handle;
 }
 
 inline void irt_thread_cancel(irt_thread t){
