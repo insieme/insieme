@@ -938,6 +938,9 @@ namespace parser {
 						// get function
 						ExpressionPtr fun = terms.front().as<ExpressionPtr>();
 						terms.erase(terms.begin());
+						if (fun->getType()->getNodeType()!=NT_FunctionType) {
+							return fail(cur, "Calling non-function type!");
+						}
 						return cur.callExpr(fun, convertList<ExpressionPtr>(terms));
 					}
 			));
