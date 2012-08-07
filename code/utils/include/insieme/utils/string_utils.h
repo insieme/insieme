@@ -67,12 +67,13 @@ template<typename T> struct to_primitive<const T&> : public to_primitive<T> {};
 template<typename ... Args>
 string format(const char* formatString, const Args& ... args) {
 	string retval;
-	unsigned BUFFER_SIZE = 2048;
+	int BUFFER_SIZE = 2048;
 	char buffer[BUFFER_SIZE];
-	if (snprintf(buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...)==-1) {
-		BUFFER_SIZE = 1<20;
+	int written = snprintf(buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...);
+	if(written >= BUFFER_SIZE || written < 0) { // deal with both GNU and c99 error reporting
+		BUFFER_SIZE = written>0 ? written+1 : 1024*1024*8;
 		char* heap_buffer = new char[BUFFER_SIZE];
-		snprintf(buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...);
+		snprintf(heap_buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...);
 		retval = string(heap_buffer);
 		delete [] heap_buffer;
 	} else {
