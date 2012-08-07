@@ -64,7 +64,7 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	float f = 7.0f;
 	subfunction(a);
 	float4 c = native_divide(a, b[3]);
-	short t[5];
+	short t[4]; 
 	short* x = t + 7lu;
 
 	char4 d = convert_char4(a);

@@ -57,7 +57,7 @@ static inline irt_##__short__##_event_register* _irt_get_##__short__##_event_reg
  \
 static inline void _irt_del_##__short__##_event_register(irt_##__subject__##_id __short__##_id) { \
 	irt_##__short__##_event_register_id reg_id; \
-	reg_id.value.full = __short__##_id.value.full; \
+	reg_id.full = __short__##_id.full; \
 	reg_id.cached = NULL; \
 	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_lookup(reg_id); \
 	irt_worker* self = irt_worker_get_current(); \
@@ -73,7 +73,7 @@ void _irt_##__short__##_event_register_only(irt_##__short__##_event_register *re
  \
 uint32 irt_##__short__##_event_check(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code) { \
 	irt_##__short__##_event_register_id reg_id; \
-	reg_id.value.full = __short__##_id.value.full; \
+	reg_id.full = __short__##_id.full; \
 	reg_id.cached = NULL; \
 	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup(reg_id); \
 	if(reg) { \
@@ -84,7 +84,7 @@ uint32 irt_##__short__##_event_check(irt_##__subject__##_id __short__##_id, irt_
  \
 uint32 irt_##__short__##_event_check_gt_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler, uint32 p_val) { \
 	irt_##__short__##_event_register *newreg = _irt_get_##__short__##_event_register(); \
-	newreg->id.value.full = __short__##_id.value.full; \
+	newreg->id.full = __short__##_id.full; \
 	newreg->id.cached = newreg; \
 	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
 	/* put new reg on reuse list if it was not used */ \
@@ -113,7 +113,7 @@ uint32 irt_##__short__##_event_check_and_register(irt_##__subject__##_id __short
  \
 void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code) { \
 	irt_##__short__##_event_register *newreg = _irt_get_##__short__##_event_register(); \
-	newreg->id.value.full = __short__##_id.value.full; \
+	newreg->id.full = __short__##_id.full; \
 	newreg->id.cached = newreg; \
 	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
 	/* put new reg on reuse list if it was not used */ \
@@ -143,7 +143,7 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_
  \
 void irt_##__short__##_event_set_occurrence_count(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, uint32 count) { \
 	irt_##__short__##_event_register *newreg = _irt_get_##__short__##_event_register(); \
-	newreg->id.value.full = __short__##_id.value.full; \
+	newreg->id.full = __short__##_id.full; \
 	newreg->id.cached = newreg; \
 	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
 	/* put new reg on reuse list if it was not used */ \

@@ -647,8 +647,43 @@ namespace parser {
 					}
 			));
 
+			// add lang-basic literals
+			g.addRule("E", rule(
+					seq(identifier, opt(seq(".", list(identifier, ".")))),
+					[](Context& cur)->NodePtr {
+						// join matched token range and see whether it is a literal!
+						std::stringstream name;
+						name << join("", cur.begin, cur.end, [](std::ostream& out, const Token& cur) {
+							out << cur.getLexeme();
+						});
+
+						// exclude special built-in literal print (with variable argument list)
+						string builtInName = name.str();
+						if (builtInName == "print") {
+							return fail(cur, "Print literal can not be referenced directly - use statement instead!");
+						}
+
+						// look up literal within lang-basic
+						try {
+							return cur.getLangBasic().getBuiltIn(builtInName);
+						} catch (const lang::LiteralNotFoundException& lnfe) {
+							return fail(cur, "Unknown lang-basic literal!");
+						}
+					}
+			));
+
 
 			// --------------- add expression rules ---------------
+
+			// -- unary minus --
+
+			g.addRule("E", rule(
+				seq("-", E),
+				[](Context& cur)->NodePtr {
+					ExpressionPtr a = getOperand(cur, 0);
+					return cur.minus(a);
+				}
+			));
 
 			// -- arithmetic expressions --
 
@@ -903,6 +938,9 @@ namespace parser {
 						// get function
 						ExpressionPtr fun = terms.front().as<ExpressionPtr>();
 						terms.erase(terms.begin());
+						if (fun->getType()->getNodeType()!=NT_FunctionType) {
+							return fail(cur, "Calling non-function type!");
+						}
 						return cur.callExpr(fun, convertList<ExpressionPtr>(terms));
 					}
 			));
@@ -1163,57 +1201,60 @@ namespace parser {
 //			std::cout << g << "\n\n";
 //			std::cout << g.getTermInfo() << "\n";
 
+			// initialize term information
+			g.getTermInfo();
+
 			return g;
 		}
 
 	}
 
+	// The various IR Grammer derivations	(initialized globals to avoid race conditions)
+	const Grammar grammar_full 		= buildGrammar();
+	const Grammar grammar_types		= buildGrammar("T");
+	const Grammar grammar_exprs		= buildGrammar("E");
+	const Grammar grammar_stmts		= buildGrammar("S");
+	const Grammar grammar_prog		= buildGrammar("A");
 
-
-	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow) {
-		static const Grammar inspire = buildGrammar();
+	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		try {
-			return inspire.match(manager, code, onFailThrow);
+			return grammar_full.match(manager, code, onFailThrow, definitions);
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}
 		return NodePtr();
 	}
 
-	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow) {
-		static const Grammar g = buildGrammar("T");
+	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		try {
-			return g.match(manager, code, onFailThrow).as<TypePtr>();
+			return grammar_types.match(manager, code, onFailThrow, definitions).as<TypePtr>();
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}
 		return TypePtr();
 	}
 
-	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow) {
-		static const Grammar g = buildGrammar("E");
+	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		try {
-			return g.match(manager, code, onFailThrow).as<ExpressionPtr>();
+			return grammar_exprs.match(manager, code, onFailThrow, definitions).as<ExpressionPtr>();
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}
 		return ExpressionPtr();
 	}
 
-	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow) {
-		static const Grammar g = buildGrammar("S");
+	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		try {
-			return g.match(manager, code, onFailThrow).as<StatementPtr>();
+			return grammar_stmts.match(manager, code, onFailThrow, definitions).as<StatementPtr>();
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}
 		return StatementPtr();
 	}
 
-	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow) {
-		static const Grammar g = buildGrammar("A");
+	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		try {
-			return g.match(manager, code, onFailThrow).as<ProgramPtr>();
+			return grammar_prog.match(manager, code, onFailThrow, definitions).as<ProgramPtr>();
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}

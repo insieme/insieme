@@ -50,15 +50,15 @@ struct _irt_##__type##_id { \
 			uint32 index; \
 			uint16 thread; \
 			uint16 node; \
-		} components; \
-	} value; \
+		}; \
+	}; \
 	struct _irt_##__type* cached; \
 }; \
 static inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_ptr) { \
 	irt_##__type##_id id; \
 	irt_##__type##_id *gen_id = (irt_##__type##_id*)generator_id_ptr; \
-	id.value.full = gen_id->value.full; \
-	id.value.components.index = gen_id->value.components.index++; \
+	id.full = gen_id->full; \
+	id.index = gen_id->index++; \
 	id.cached = NULL; \
 	return id; \
 } \

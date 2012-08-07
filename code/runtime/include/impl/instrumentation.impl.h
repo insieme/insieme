@@ -104,8 +104,8 @@ void _irt_inst_event_insert_time(irt_worker* worker, const int event, const uint
 
 	pd->timestamp = time;
 	pd->event_id = event;
-	pd->index = ((irt_work_item_id*)&id)->value.components.index;
-	pd->thread = ((irt_work_item_id*)&id)->value.components.thread;
+	pd->index = ((irt_work_item_id*)&id)->index;
+	pd->thread = ((irt_work_item_id*)&id)->thread;
 }
 
 
@@ -121,19 +121,19 @@ void _irt_inst_event_insert(irt_worker* worker, const int event, const uint64 id
 // =========== private event handlers =================================
 
 void _irt_inst_insert_wi_event(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id) {
-	_irt_inst_event_insert(worker, event, subject_id.value.full);
+	_irt_inst_event_insert(worker, event, subject_id.full);
 }
 
 void _irt_inst_insert_wg_event(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id) {
-	_irt_inst_event_insert(worker, event, subject_id.value.full);
+	_irt_inst_event_insert(worker, event, subject_id.full);
 }
 
 void _irt_inst_insert_wo_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) {
-	_irt_inst_event_insert(worker, event, subject_id.value.full);
+	_irt_inst_event_insert(worker, event, subject_id.full);
 }
 
 void _irt_inst_insert_di_event(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) {
-	_irt_inst_event_insert(worker, event, subject_id.value.full);
+	_irt_inst_event_insert(worker, event, subject_id.full);
 }
 
 // ================= debug output functions ==================================
@@ -162,7 +162,7 @@ void irt_inst_event_data_output(irt_worker* worker) {
 
 	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for performance log writing: %s\n", strerror(errno));
 
-	sprintf(outputfilename, "%s/worker_event_log.%04u", outputprefix, worker->id.value.components.thread);
+	sprintf(outputfilename, "%s/worker_event_log.%04u", outputprefix, worker->id.thread);
 
 	FILE* outputfile = fopen(outputfilename, "w");
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for event log writing: %s\n", strerror(errno));
@@ -173,7 +173,7 @@ void irt_inst_event_data_output(irt_worker* worker) {
 	}*/
 	irt_instrumentation_event_data_table* table = worker->instrumentation_event_data;
 	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no event data!")
-	//fprintf(outputfile, "INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.value.components.thread);
+	//fprintf(outputfile, "INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.thread);
 
 #ifdef USE_OPENCL
 	irt_ocl_event_table* ocl_table = worker->event_data;
@@ -213,7 +213,7 @@ void irt_inst_event_data_output(irt_worker* worker) {
 			ocl_helper_table[helper_counter].origin = retval;
 			ocl_helper_table[helper_counter].event = j;
 
-			fprintf(opencl_logfile, "Worker: %u %hu %hu, KN,%14lu,\t", worker->id.value.components.index, worker->id.value.components.thread, worker->id.value.components.node, ocl_helper_table[helper_counter].workitem_id);
+			fprintf(opencl_logfile, "Worker: %u %hu %hu, KN,%14lu,\t", worker->id.index, worker->id.thread, worker->id.node, ocl_helper_table[helper_counter].workitem_id);
 			switch(ocl_helper_table[helper_counter].origin) {
 				case CL_COMMAND_NDRANGE_KERNEL:
 					fprintf(opencl_logfile, "ND_");
@@ -379,10 +379,10 @@ void irt_inst_event_data_output(irt_worker* worker) {
 		for(int i = 0; i < table->number_of_elements; ++i) {
 			irt_work_item_id temp_id;
 			temp_id.cached = NULL;
-			temp_id.value.components.index = table->data[i].index;
-			temp_id.value.components.thread = table->data[i].thread;
-			temp_id.value.components.node = 0;
-			fprintf(outputfile, "%s,%lu,%s,%lu\n", irt_g_instrumentation_group_names[table->data[i].event_id], temp_id.value.full, irt_g_instrumentation_event_names[table->data[i].event_id], irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+			temp_id.index = table->data[i].index;
+			temp_id.thread = table->data[i].thread;
+			temp_id.node = 0;
+			fprintf(outputfile, "%s,%lu,%s,%lu\n", irt_g_instrumentation_group_names[table->data[i].event_id], temp_id.full, irt_g_instrumentation_event_names[table->data[i].event_id], irt_time_convert_ticks_to_ns(table->data[i].timestamp));
 		}
 	}
 
@@ -725,7 +725,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 
 	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for performance log writing: %s\n", strerror(errno));
 
-	sprintf(outputfilename, "%s/worker_performance_log.%04u", outputprefix, worker->id.value.components.thread);
+	sprintf(outputfilename, "%s/worker_performance_log.%04u", outputprefix, worker->id.thread);
 
 	// used to print papi names to the header of the performance logs
 	int number_of_papi_events = IRT_INST_PAPI_MAX_COUNTERS;

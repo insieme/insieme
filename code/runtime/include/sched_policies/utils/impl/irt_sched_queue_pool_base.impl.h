@@ -48,7 +48,7 @@ static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item*
 
 irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 	if(irt_g_worker_count == 1 || target->sched_data.queue.size > irt_g_worker_count+15) {
-		//printf("WO %d lazy: queued %d, address: %p\n", target->id.value.components.index, target->sched_data.queue.size,
+		//printf("WO %d lazy: queued %d, address: %p\n", target->id.index, target->sched_data.queue.size,
 		//	&target->sched_data.queue.size);
 		irt_work_item *self = target->cur_wi;
 		irt_lw_data_item *prev_args = self->parameters;

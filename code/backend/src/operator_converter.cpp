@@ -374,6 +374,45 @@ namespace backend {
 			return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
 		});
 
+		#define ADD_ELEMENT_TYPE_DEPENDENCY() \
+				core::TypePtr elementType = core::analysis::getReferencedType(call->getType()); \
+				elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); \
+				const TypeInfo& info = GET_TYPE_INFO(elementType); \
+				context.getDependencies().insert(info.definition);
+
+		res[basic.getArrayView()] = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1));
+		});
+
+		res[basic.getArrayViewPreInc()]  = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::preInc(getAssignmentTarget(context, ARG(0)));
+		});
+
+		res[basic.getArrayViewPostInc()] = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::postInc(getAssignmentTarget(context, ARG(0)));
+		});
+
+		res[basic.getArrayViewPreDec()]  = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::preDec(getAssignmentTarget(context, ARG(0)));
+		});
+
+		res[basic.getArrayViewPostDec()] = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::postDec(getAssignmentTarget(context, ARG(0)));
+		});
+
+
+		#undef ADD_ELEMENT_TYPE_DEPENDENCY()
+
 
 		// -- vectors --
 

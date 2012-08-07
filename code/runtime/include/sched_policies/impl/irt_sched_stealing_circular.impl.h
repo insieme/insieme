@@ -308,7 +308,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	//	irt_cwb_push_front(&target->sched_data.queue, wi);
 	//	irt_signal_worker(target);
 	//	// signal successor
-	//	int succ = (target->id.value.components.thread+1)%irt_g_worker_count;
+	//	int succ = (target->id.thread+1)%irt_g_worker_count;
 	//	irt_signal_worker(irt_g_workers[succ]);
 	//} else {
 		irt_cwb_push_front(&target->sched_data.queue, wi);
@@ -332,7 +332,7 @@ int irt_scheduling_iteration(irt_worker* self) {
 
 	// try to steal a work item from predecessor
 	irt_worker_instrumentation_event(self, WORKER_STEAL_TRY, self->id);
-	int pred = self->id.value.components.thread-1;
+	int pred = self->id.thread-1;
 	if(pred < 0) pred = irt_g_worker_count-1;
 	if(wi = irt_cwb_pop_back(&irt_g_workers[pred]->sched_data.queue)) {
 		irt_worker_instrumentation_event(self, WORKER_STEAL_SUCCESS, self->id);
@@ -357,7 +357,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	//	irt_cwb_push_front(&target->sched_data.queue, wi);
 	//	irt_signal_worker(target);
 	//	// signal successor
-	//	int succ = (target->id.value.components.thread+1)%irt_g_worker_count;
+	//	int succ = (target->id.thread+1)%irt_g_worker_count;
 	//	irt_signal_worker(irt_g_workers[succ]);
 	//} else {
 		irt_cwb_push_front(&target->sched_data.queue, wi);

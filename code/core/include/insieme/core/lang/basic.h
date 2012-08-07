@@ -91,6 +91,10 @@ public:
 	LiteralPtr get##_id() const; \
 	bool is##_id(const NodePtr& p) const;
 
+	#define DERIVED(_id, _name, _spec) \
+	ExpressionPtr get##_id() const; \
+	bool is##_id(const NodePtr& p) const;
+
 	#define OPERATION(_type, _op, _name, _spec) \
 	LiteralPtr get##_type##_op() const; \
 	bool is##_type##_op(const NodePtr& p) const;
@@ -102,7 +106,8 @@ public:
 	#include "insieme/core/lang/lang.def"
 
 	bool isBuiltIn(const NodePtr& node) const;
-	LiteralPtr getLiteral(const std::string& name) const;
+	ExpressionPtr getBuiltIn(const std::string& name) const;
+	LiteralPtr getLiteral(const string& name) const;
 
 	/**
 	 * Obtains an expression representing the the requested operator for the
