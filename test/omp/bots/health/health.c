@@ -551,10 +551,10 @@ void my_print(struct Village *village)
 /**********************************************************************/
 void read_input_data(char *filename)
 {
-   FILE *fin;
+   FILE *fin = fopen(filename, "r");
    int res;
 
-   if ((fin = fopen(filename, "r")) == NULL) {
+   if (fin == NULL) {
       bots_message("Could not open sequence file (%s)\n", filename);
       exit (-1);
    }
