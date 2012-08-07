@@ -52,11 +52,23 @@ void irt_clear_affinity() {
 
 }
 
-void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
+void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread) {
+	
+	// if mask is empty -> clear any affinity and return
 	if(irt_affinity_mask_is_empty(irt_mask)) {
 		irt_clear_affinity();
 		return;
 	}
+
+	// under windows it is assumed, that no system will have more than 64 processors, hence we only consider
+	// the first bitmask of the mask_quads array
+	uint64 mask = irt_mask.mask_quads[0];
+
+	#ifdef IRT_USE_PTHREADS
+		SetThreadAffinityMask(thread.p, mask);
+	#else
+		SetThreadAffinityMask(thread, mask);
+	#endif
 }
 
 uint32 _irt_affinity_next_available_physical(uint32 start) {

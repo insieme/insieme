@@ -93,10 +93,10 @@ typedef struct __irt_worker_func_arg {
 
 void* _irt_worker_func(void *argvp) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)argvp;
-	irt_set_affinity(arg->affinity, pthread_self());
+	irt_set_affinity(arg->affinity, irt_current_thread());
 	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
 	irt_worker* self = arg->generated;
-	self->pthread = pthread_self();
+	self->pthread = irt_current_thread();
 	self->id.value.components.index = 1;
 	self->id.value.components.thread = arg->index;
 	self->id.value.components.node = 0; // TODO correct node id
@@ -263,7 +263,7 @@ void _irt_worker_cancel_all_others() {
 		if(cur != self && cur->state == IRT_WORKER_STATE_RUNNING) {
 			cur->state = IRT_WORKER_STATE_STOP;
 			irt_inst_insert_wo_event(self, IRT_INST_WORKER_STOP, cur->id);
-			pthread_cancel(cur->pthread);
+			irt_thread_cancel(cur->pthread);
 		}
 	}
 	
@@ -275,7 +275,7 @@ void _irt_worker_end_all() {
 		if(cur->state == IRT_WORKER_STATE_RUNNING) {
 			cur->state = IRT_WORKER_STATE_STOP;
 			irt_signal_worker(cur);
-			pthread_join(cur->pthread, NULL);
+			irt_thread_join(cur->pthread);
 		}   
 	}
 }

@@ -52,7 +52,7 @@ void irt_clear_affinity() {
 		IRT_ERR_INIT, "Error clearing thread affinity.");
 }
 
-void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
+void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread) {
 	if(irt_affinity_mask_is_empty(irt_mask)) {
 		irt_clear_affinity();
 		return;
