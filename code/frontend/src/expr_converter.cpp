@@ -1116,7 +1116,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
 				binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
 			
-			std::cout << "OCL " << std::endl;
 			// check if lhs is not an ocl-vector, in this case create a vector form the scalar
 			if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) { // the rhs is a scalar, implicitly casted to a vector
 				// lhs is a scalar

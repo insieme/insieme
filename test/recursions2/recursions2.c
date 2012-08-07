@@ -1,6 +1,6 @@
+#include <stdio.h>
 
-
-extern int printf(char *, ...);
+// extern int printf(char *, ...);
 
 
 int three (int a, int b);
