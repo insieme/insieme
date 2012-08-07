@@ -1147,6 +1147,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		ctx.currVar = NULL;
 	}
 
+
 	// we reset the behavior of the solver
 	ctx.isRecSubFunc = false;
 
@@ -1179,6 +1180,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		currTU = oldTU;
 	}
+
+	// Clear the variables so that when we resolve the recursive function the actuall recursive
+	// lambda is utilized 
+	ctx.recVarExprMap.clear();
 
 	VLOG(2) << "Converted Into: " << *retLambdaExpr;
 	return attachFuncAnnotations(retLambdaExpr, funcDecl);

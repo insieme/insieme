@@ -50,6 +50,7 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/analysis/normalize.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
@@ -203,7 +204,7 @@ namespace backend {
 		core::ExpressionPtr fun = core::analysis::stripAttributes(call->getFunctionExpr());
 
 		// 1) see whether call is call to a known operator
-		auto pos = operatorTable.find(fun);
+		auto pos = operatorTable.find(core::analysis::normalize(fun));
 		if (pos != operatorTable.end()) {
 			// use operator converter
 			return pos->second(context, call);

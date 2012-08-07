@@ -67,10 +67,10 @@ namespace parser {
 		TypePtr testC = builder.genericType("test", toVector(A,testA), toVector(pA,pC));
 
 		// just some simple generic types
-//		EXPECT_EQ(test, parse(manager, "test"));
-//
-//		// some type with parameters
-//		EXPECT_EQ(test, parse(manager, "test<>"));
+		EXPECT_EQ(test, parse(manager, "test"));
+
+		// some type with parameters
+		EXPECT_EQ(test, parse(manager, "test<>"));
 		EXPECT_EQ(testA, parse(manager, "test<A>"));
 		EXPECT_EQ(test2A, parse(manager, "test<test<A>>"));
 
@@ -509,6 +509,45 @@ namespace parser {
 		EXPECT_EQ(builder.literal(fun, "test"), parse_expr(manager, "lit(\"test\":(ref<'a>)->'a)"));
 		EXPECT_EQ(builder.literal(fun, "test.more"), parse_expr(manager, "lit(\"test.more\":(ref<'a>)->'a)"));
 
+	}
+
+	TEST(IR_Parser2, PreDefinedSymbols) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		ExpressionPtr one = builder.intLit(1);
+		ExpressionPtr two = builder.intLit(2);
+		ExpressionPtr x = builder.variable(builder.getLangBasic().getInt4());
+
+		std::map<string, NodePtr> symbols;
+		symbols["one"] = one;
+		symbols["two"] = two;
+		symbols["x"] = x;
+
+		// test whether symbols are found
+		EXPECT_EQ(builder.add(one, builder.mul(two, x)), parse(manager, "one + two * x", false, symbols));
+
+		// test builder support
+		EXPECT_EQ(builder.add(one, builder.mul(two, x)), builder.parse("one + two * x", symbols));
+	}
+
+	TEST(IR_Parser2, LangBasicSymbols) {
+		NodeManager manager;
+		auto& basic = manager.getLangBasic();
+
+		// test some pre-defined expressions
+		EXPECT_EQ(basic.getSignedIntAdd(), parse_expr(manager, "int.add"));
+		EXPECT_EQ(basic.getRefNarrow(), parse_expr(manager, "ref.narrow"));
+	}
+
+	TEST(IR_Parser2, UnaryMinus) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		EXPECT_EQ(builder.intLit(-5), parse_expr(manager, "-5"));
+		EXPECT_EQ(builder.intLit(2), parse_expr(manager, "-(-2)"));
+
+		EXPECT_EQ("AP(int.add(2, int.sub(0, int.add(1, 2))))", toString(parse_expr(manager, "2 + -(1 + 2)")));
 	}
 
 } // end namespace parser2

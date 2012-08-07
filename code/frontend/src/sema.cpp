@@ -60,8 +60,8 @@ namespace {
 // It returns true if the source location SL is inside the range defined by SR
 bool isInsideRange(SourceRange SR, SourceLocation SL, SourceManager const& sm) {
 
-	// LOG(INFO) << "Is after RANGE(" << Line(SR, sm).first << ", " << Line(SR, sm).second << ")";
-	// LOG(INFO) << "Is after RANGE(" << Line(SL, sm);
+	//LOG(INFO) << "Is after RANGE(" << Line(SR, sm).first << ", " << Line(SR, sm).second << ")";
+	//LOG(INFO) << "Is after RANGE(" << Line(SL, sm) << ")";
 
 	return Line(SR, sm).first <= Line(SL, sm) && Line(SR, sm).second > Line(SL, sm);
 }
@@ -269,9 +269,6 @@ void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, co
 	for ( PragmaFilter filter(bounds, sm,  pimpl->pending_pragma); *filter; ++filter ) {
 		PragmaPtr&& P = *filter;
 		
-		LOG(DEBUG) << " Matching pragma ";
-		P->dump(std::cout, sm);
-
 		P->setStatement(S);
 		matched.push_back(P);
 	}
@@ -288,11 +285,11 @@ InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg C
 	IfStmt* ifStmt = static_cast<IfStmt*>( ret.get() );
 	PragmaList matched;
 
-	//LOG(INFO) << location(IfLoc, SourceMgr); 
-
+	matchStmt(ifStmt->getThen(), SourceRange(IfLoc, IfLoc), SourceMgr, matched);
 	// is there any pragmas to be associated with the 'then' statement of this if?
 	if ( !isa<CompoundStmt> (ifStmt->getThen()) ) {
-		matchStmt(ifStmt->getThen(), SourceRange(IfLoc, IfLoc), SourceMgr, matched);
+		// if there is no compound stmt, check the then part 
+		matchStmt(ifStmt->getThen(), SourceRange(IfLoc, ThenVal->getLocEnd()), SourceMgr, matched);
 	}
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 	matched.clear();

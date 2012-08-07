@@ -40,6 +40,7 @@
 
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/normalize.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/map_utils.h"
@@ -87,9 +88,12 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	IRBuilder build;
 
 	typedef LiteralPtr (BasicGenerator::*litFunPtr)() const;
-	typedef bool (BasicGenerator::*groupCheckFuncPtr)(const NodePtr&) const;
 	std::map<std::string, litFunPtr> literalMap;
 
+	typedef ExpressionPtr (BasicGenerator::*derivedFunPtr)() const;
+	std::map<std::string, derivedFunPtr> derivedMap;
+
+	typedef bool (BasicGenerator::*groupCheckFuncPtr)(const NodePtr&) const;
 	typedef std::multimap<BasicGenerator::Operator, std::pair<groupCheckFuncPtr, litFunPtr>> OperationMap;
 	OperationMap operationMap;
 
@@ -104,6 +108,9 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	ADD_IS_AND_GET(_id)
 	#define LITERAL(_id, _name, _spec) \
 	LiteralPtr ptr##_id; \
+	ADD_IS_AND_GET(_id)
+	#define DERIVED(_id, _name, _spec) \
+	ExpressionPtr ptr##_id; \
 	ADD_IS_AND_GET(_id)
 	#define OPERATION(_type, _op, _name, _spec) \
 	LiteralPtr ptr##_type##_op; \
@@ -121,6 +128,8 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	BasicGeneratorImpl(NodeManager& nm) : nm(nm), parser(nm), build(nm) {
 		#define LITERAL(_id, _name, _spec) \
 		literalMap.insert(std::make_pair(_name, &BasicGenerator::get##_id));
+		#define DERIVED(_id,_name,_spec) \
+		derivedMap.insert(std::make_pair(_name, &BasicGenerator::get##_id));
 		#define OPERATION(_type, _op, _name, _spec) \
 		literalMap.insert(std::make_pair(_name, &BasicGenerator::get##_type##_op)); \
 		operationMap.insert(std::make_pair(BasicGenerator::_op, std::make_pair(&BasicGenerator::is##_type, &BasicGenerator::get##_type##_op)));
@@ -198,6 +207,14 @@ LiteralPtr BasicGenerator::get##_id() const { \
 bool BasicGenerator::is##_id(const NodePtr& p) const { \
 	return *p == *get##_id(); };
 
+#define DERIVED(_id, _name, _spec) \
+ExpressionPtr BasicGenerator::get##_id() const { \
+	if(!pimpl->ptr##_id) pimpl->ptr##_id = analysis::normalize(pimpl->build.parseExpr(_spec)); \
+	return pimpl->ptr##_id; }; \
+bool BasicGenerator::is##_id(const NodePtr& p) const { \
+	return *p == *get##_id(); };
+
+
 #define OPERATION(_type, _op, _name, _spec) \
 LiteralPtr BasicGenerator::get##_type##_op() const { \
 	if(!pimpl->ptr##_type##_op) pimpl->ptr##_type##_op = pimpl->build.literal(pimpl->parser.parseType(_spec), _name); \
@@ -223,19 +240,36 @@ bool BasicGenerator::isBuiltIn(const NodePtr& node) const {
 	else if(auto lN = dynamic_pointer_cast<const Literal>(node)) {
 		#define LITERAL(_id, _name, _spec) \
 		if(*node == *get##_id()) return true;
+		#define DERIVED(_id, _name, _spec) // skip
 		#define OPERATION(_type, _op, _name, _spec) \
 		if(*node == *get##_type##_op()) return true;
+		#include "insieme/core/lang/lang.def"
+	}
+	else if(auto eN = dynamic_pointer_cast<const Expression>(node)) {
+		#define DERIVED(_id, _name, _spec) \
+		if(*node == *get##_id()) return true;
 		#include "insieme/core/lang/lang.def"
 	}
 	return false;
 }
 
 LiteralPtr BasicGenerator::getLiteral(const string& name) const {
+	// check literals
 	auto lIt = pimpl->literalMap.find(name);
 	if(lIt != pimpl->literalMap.end()) {
 		return ((*this).*lIt->second)();
 	}
 	throw LiteralNotFoundException(name);
+}
+
+ExpressionPtr BasicGenerator::getBuiltIn(const string& name) const {
+	// check derived
+	auto dIt = pimpl->derivedMap.find(name);
+	if(dIt != pimpl->derivedMap.end()) {
+		return ((*this).*dIt->second)();
+	}
+	// check literals
+	return getLiteral(name);
 }
 
 ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenerator::Operator& op) const {

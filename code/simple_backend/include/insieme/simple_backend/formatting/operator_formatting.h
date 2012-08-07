@@ -151,7 +151,7 @@ namespace formatting {
 	 * This type defines a lookup table containing a set of formats indexed by literals representing
 	 * the corresponding operations.
 	 */
-	typedef utils::map::PointerMap<core::LiteralPtr, FormatterPtr> FormatTable;
+	typedef utils::map::PointerMap<core::ExpressionPtr, FormatterPtr> FormatTable;
 
 	/**
 	 * Creates a list of formatters for basic C operators and additional functions being part

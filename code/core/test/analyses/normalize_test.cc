@@ -34,41 +34,50 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <vector>
 
-#include <map>
-#include "insieme/core/forward_decls.h"
+#include <gtest/gtest.h>
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/normalize.h"
 
 namespace insieme {
 namespace core {
-namespace parser {
+namespace analysis {
+
+	TEST(Normalizing, Basic) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+		auto& basic = manager.getLangBasic();
+
+		// create two variables not being normalized
+		VariablePtr a = builder.variable(basic.getInt4(), 2);
+		VariablePtr b = builder.variable(basic.getBool(), 3);
+
+		// test some simple stuff
+		EXPECT_EQ("AP(int<4>)", toString(normalize(basic.getInt4())));
+
+		// a and b should be normalized to the same variable
+		EXPECT_EQ(builder.variable(a->getType(), 0), normalize(a));
+		EXPECT_EQ(builder.variable(b->getType(), 0), normalize(b));
+
+		// test a compound
+		EXPECT_EQ("AP({v0; v1;})", toString(normalize(builder.compoundStmt(a, b))));
 
 
-	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
-
-	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
-
-	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
-
-	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
-
-	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
+		// test a nested compound
+		EXPECT_EQ("AP({v0; {v1;};})", toString(normalize(
+				builder.compoundStmt(a, builder.compoundStmt(b)))
+			));
 
 
-	class IRParserException : public std::exception {
+		// test a function
+		NodePtr node = builder.parse("{ int<4> a = 0; let f = (int<4> a, int<4> b)->int<4> { return a; } in f(a,a); }");
+		EXPECT_EQ("AP({int<4> v1 = 0; rec v5.{v5=fun(int<4> v3, int<4> v4) {return v3;}}(v1, v1);})", toString(node));
+		EXPECT_EQ("AP({int<4> v0 = 0; rec v0.{v0=fun(int<4> v1, int<4> v2) {return v1;}}(v0, v0);})", toString(normalize(node)));
+	}
 
-		string msg;
-
-	public:
-
-		IRParserException(const string& msg) : msg(msg) {}
-		virtual ~IRParserException() throw() {};
-
-		virtual const char* what() const throw() {
-			return msg.c_str();
-		}
-	};
-
-} // end namespace parser
+} // end namespace analysis
 } // end namespace core
 } // end namespace insieme

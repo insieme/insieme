@@ -1116,7 +1116,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
 				binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
 			
-			std::cout << "OCL " << std::endl;
 			// check if lhs is not an ocl-vector, in this case create a vector form the scalar
 			if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) { // the rhs is a scalar, implicitly casted to a vector
 				// lhs is a scalar
@@ -1276,7 +1275,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 			// if this is a post/pre incremenet operator applied to an array we have to deal with it
 			// immediatelly because the getOperator function wouldn't deal with such case 
 
-			core::LiteralPtr opLit;
+			core::ExpressionPtr opLit;
 			switch (op) {
 			case core::lang::BasicGenerator::PreInc:
 				opLit = gen.getArrayViewPreInc();
@@ -1291,7 +1290,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 				opLit = gen.getArrayViewPostDec();
 				break;
 			default:
-				assert(false && "Decrement operator not handled for pointer arithmetic");
+				assert(false && "Operator not handled for pointer arithmetic");
 			}
 
 			return builder.callExpr(elementType, opLit, subExpr);

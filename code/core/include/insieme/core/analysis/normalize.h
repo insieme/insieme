@@ -36,39 +36,32 @@
 
 #pragma once
 
-#include <map>
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_pointer.h"
 
 namespace insieme {
 namespace core {
-namespace parser {
+namespace analysis {
 
+	/**
+	 * Normalizes the given node to match a fixed schema such that
+	 * structural name independent equivalence can be checked with the
+	 * equality operator.
+	 *
+	 * @param node the node to be normalized.
+	 * @return the normalized version of the given node.
+	 */
+	NodePtr normalize(const NodePtr& node);
 
-	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
+	/**
+	 * A generic wrapper for the normalization operation above.
+	 *
+	 * @tparam T the type of node to be normalized
+	 * @param node the node to be normalized
+	 * @param the normalized version of the given node
+	 */
+	template<typename T> T normalize(const T& node) { return normalize(NodePtr(node)).as<T>(); }
 
-	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
-
-	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
-
-	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
-
-	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
-
-
-	class IRParserException : public std::exception {
-
-		string msg;
-
-	public:
-
-		IRParserException(const string& msg) : msg(msg) {}
-		virtual ~IRParserException() throw() {};
-
-		virtual const char* what() const throw() {
-			return msg.c_str();
-		}
-	};
-
-} // end namespace parser
+} // end namespace analysis
 } // end namespace core
 } // end namespace insieme
