@@ -133,6 +133,10 @@ namespace parser {
 			return !(*this == other);
 		}
 
+		bool operator!=(char symbol) const {
+			return !(*this == symbol);
+		}
+
 		bool operator<(const Token& other) const {
 			return type < other.type || (type == other.type && lexeme < other.lexeme);
 		}

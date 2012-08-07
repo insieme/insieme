@@ -554,6 +554,7 @@ namespace parser {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
+		// test a direct call
 		EXPECT_EQ("AP({int<4> v5 = 7; bind(v9){rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}}(v9, v5)}(5);})",
 			toString(builder.parse(
 				"{"
@@ -564,6 +565,28 @@ namespace parser {
 				"	pX(5);"
 				"}"
 		)));
+
+		// test returning a value
+		EXPECT_EQ("AP({bind(v10){rec v0.{v0=fun('a v1) {return v1;}}(5)}(2);})",
+			toString(builder.parse(
+				"{"
+				" 	let pX = (int<4> a)=>5;"
+				"	pX(2);"
+				"}"
+		)));
+
+		// test a statement
+		EXPECT_EQ("AP({ref<int<4>> v11 = ref.var(0); bind(v12){rec v15.{v15=fun(int<4> v13, ref<int<4>> v14) {ref.assign(v14, int.add(ref.deref(v14), v13));}}(v12, v11)}(5);})",
+			toString(builder.parse(
+				"{"
+				" 	ref<int<4>> x = var(0);"
+				"	let p = (int<4> a)=>{"
+				"		x = x + a;"
+				"	};"
+				"	p(5);"
+				"}"
+		)));
+
 	}
 
 } // end namespace parser2
