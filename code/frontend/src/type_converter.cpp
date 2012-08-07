@@ -82,14 +82,17 @@ void DependencyGraph<const clang::Type*>::Handle(const clang::Type* type,
 	assert(tagType && "Type not of TagType class");
 
 	RecordDecl* tag = llvm::dyn_cast<RecordDecl>(tagType->getDecl());
+
 	// if the tag type is not a struct but otherwise an enum, there will be no declaration 
 	// therefore we can safely return as there is no risk of recursion 
 	if (!tag) { return; }
 
 	for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
 		const Type* fieldType = (*it)->getType().getTypePtr();
+				
 		if( const PointerType *ptrTy = dyn_cast<PointerType>(fieldType) )
 			fieldType = ptrTy->getPointeeType().getTypePtr();
+
 		else if( const ReferenceType *refTy = dyn_cast<ReferenceType>(fieldType) )
 			fieldType = refTy->getPointeeType().getTypePtr();
 
@@ -99,9 +102,10 @@ void DependencyGraph<const clang::Type*>::Handle(const clang::Type* type,
 		}
 
 		if( const TagType* tagTy = llvm::dyn_cast<TagType>(fieldType) ) {
-			if ( llvm::isa<RecordDecl>(tagTy->getDecl()) ) {
+			// LOG(INFO) << "Affing " << tagTy->getDecl()->getNameAsString();
+			// if ( llvm::isa<RecordDecl>(tagTy->getDecl()) ) {
 				addNode( tagTy, &v );
-			}
+			// }
 		}
 	}
 }
@@ -168,6 +172,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitBuiltinType(const BuiltinTy
 //								COMPLEX TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitComplexType(const ComplexType* bulinTy) {
+	// FIXME
 	assert(false && "ComplexType not yet handled!");
 }
 

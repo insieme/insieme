@@ -1,6 +1,10 @@
 
 #include <stdio.h>
 
+int f(int* a) {
+	return *a++;
+}
+
 int main(int argc, char* argv[]) {
 
 
@@ -18,8 +22,12 @@ int main(int argc, char* argv[]) {
 
 	printf("%d == %d\n", a[2], *(++a_ptr));
 
+	*(a_ptr++) = 4;
+	printf("%d == %d\n", a[2], 4);
+
 	a_ptr = a_ptr + 1;
 	printf("%d == %d\n", a[3], *a_ptr);
 
+	printf("%d == %d\n", a[3], f(a_ptr));
 	
 }
