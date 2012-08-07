@@ -1245,7 +1245,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 	[ this, &builder, &gen ]
 	(core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
 
-		if (subExpr->getNodeType() == core::NT_Variable && subExpr->getType()->getNodeType() != core::NT_RefType) {
+		if ((subExpr->getNodeType() == core::NT_Variable && subExpr->getType()->getNodeType() != core::NT_RefType) 
+			|| (subExpr->getNodeType() == core::NT_Variable && subExpr->getType()->getNodeType() == core::NT_RefType && 
+			   GET_REF_ELEM_TYPE(subExpr->getType())->getNodeType() == core::NT_ArrayType)) {
 			// It can happen we are incrementing a variable which is coming from an input
 			// argument of a function
 			core::VariablePtr var = subExpr.as<core::VariablePtr>();
@@ -1260,6 +1262,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 
 			subExpr = fit->second;
 		}
+
 		core::TypePtr type = subExpr->getType();
 		assert( type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type" );
 
