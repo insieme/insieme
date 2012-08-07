@@ -284,7 +284,7 @@ bool BasicGenerator::isRef(const NodePtr& type) const {
 
 bool BasicGenerator::isGen(const NodePtr& type) const {
 	return type->getNodeCategory() == NC_Type
-			&& !type->getNodeType() == NT_VectorType		// vector types are handled using pointwise
+			&& type->getNodeType() != NT_VectorType		// vector types are handled using pointwise
 			&& !isBool(type) && !isChar(type)
 			&& !isSignedInt(type) && !isUnsignedInt(type)
 			&& !isReal(type)
