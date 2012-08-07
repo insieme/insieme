@@ -505,10 +505,13 @@ namespace parser {
 		TypePtr fun = parse_type(manager, "(ref<'a>)->'a");
 		ASSERT_TRUE(fun);
 
-		// test whether a listeral can be parsed successfully
+		// test whether a literal can be parsed successfully
 		EXPECT_EQ(builder.literal(fun, "test"), parse_expr(manager, "lit(\"test\":(ref<'a>)->'a)"));
 		EXPECT_EQ(builder.literal(fun, "test.more"), parse_expr(manager, "lit(\"test.more\":(ref<'a>)->'a)"));
 
+		// test type literal
+		TypePtr type = builder.getLangBasic().getInt4();
+		EXPECT_EQ(builder.getTypeLiteral(type), parse_expr(manager, "lit(int<4>)"));
 	}
 
 	TEST(IR_Parser2, PreDefinedSymbols) {

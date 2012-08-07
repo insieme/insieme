@@ -661,7 +661,7 @@ namespace parser {
 					}
 			));
 
-			// add usere defined literals
+			// add user defined literals
 			g.addRule("E", rule(
 					seq("lit(", cap(any(Token::String_Literal)), ":", T, ")"),
 					[](Context& cur)->NodePtr {
@@ -864,6 +864,17 @@ namespace parser {
 					-9
 			));
 
+			// -- cast --
+			g.addRule("E", rule(
+					seq("(", T, ")", E),
+					[](Context& cur)->NodePtr {
+						return cur.castExpr(
+								cur.getTerm(0).as<TypePtr>(),
+								cur.getTerm(1).as<ExpressionPtr>()
+						);
+					},
+					-14
+			));
 
 			// -- ref manipulations --
 
