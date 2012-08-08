@@ -161,8 +161,36 @@ namespace parser {
 			++cur;
 			if (cur == end || *cur != '>') return false;
 
-			// yes, it might be a bind
+			// yes, it should be a bind
 			return true;
+		}
+
+		bool isFunction(Context& context, const TokenIter& begin, const TokenIter& end) {
+
+			// it has to start with (, then some types and after the first ) a - and a >
+			// also the definition has to end with } or ;
+			if (*begin != '(') return false;
+
+			// it has to have a minimal size
+			if (std::distance(begin, end) < 6u) return false;
+
+			// check end
+			if (*(end-1) != '}' && *(end-1) != ';') return false;
+
+			TokenIter cur = findNext(context.grammar.getTermInfo(), begin, end, ')');
+			if (cur == end) return false;
+			++cur;
+			if (cur == end || *cur != '-') return false;
+			++cur;
+			if (cur == end || *cur != '>') return false;
+
+			// yes, it should be a function
+			return true;
+
+		}
+
+		bool allFunctions(Context& cur, const vector<TokenRange>& definitions) {
+			return all(definitions, [&](const TokenRange& range) { return isFunction(cur, range.begin(), range.end()); });
 		}
 
 		bool containsOneOf(const NodePtr& root, const vector<NodePtr>& values) {
@@ -347,8 +375,7 @@ namespace parser {
 
 					// those are expressions => test whether it is function declaration
 					// Observation: no non-function expressions ends with a } or a ;
-					const Token& tail = *(defs.front().end()-1);
-					if (tail == '}' || tail == ';') {
+					if (allFunctions(cur, defs)) {
 						// bind names to variables with types matching the corresponding definitions
 						for(std::size_t i = 0; i < names.size(); ++i) {
 							cur.getSymbolManager().add(names[i], cur.variable(getFunctionType(cur, defs[i])));
