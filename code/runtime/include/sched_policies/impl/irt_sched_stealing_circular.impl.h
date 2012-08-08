@@ -353,15 +353,7 @@ int irt_scheduling_iteration(irt_worker* self) {
 #if 1
 
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
-	//if(irt_cwb_size(&target->sched_data.queue) == 0) {
-	//	irt_cwb_push_front(&target->sched_data.queue, wi);
-	//	irt_signal_worker(target);
-	//	// signal successor
-	//	int succ = (target->id.thread+1)%irt_g_worker_count;
-	//	irt_signal_worker(irt_g_workers[succ]);
-	//} else {
-		irt_cwb_push_front(&target->sched_data.queue, wi);
-	//}
+	irt_cwb_push_front(&target->sched_data.queue, wi);
 }
 
 int irt_scheduling_iteration(irt_worker* self) {
@@ -369,14 +361,14 @@ int irt_scheduling_iteration(irt_worker* self) {
 	irt_work_item* wi = NULL;
 
 	// try to take a WI from the pool
-	if(wi = irt_cwb_pop_front(&self->sched_data.pool)) {
+	if((wi = irt_cwb_pop_front(&self->sched_data.pool))) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
 	}
 	
 	// if that failed, try to take a work item from the queue
-	if(wi = irt_cwb_pop_front(&self->sched_data.queue)) {
+	if((wi = irt_cwb_pop_front(&self->sched_data.queue))) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
@@ -384,13 +376,11 @@ int irt_scheduling_iteration(irt_worker* self) {
 
 	// try to steal a work item from random
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_TRY, self->id);
-	for(int i=0; i<irt_g_worker_count; ++i) {
-		if(wi = irt_cwb_pop_back(&irt_g_workers[rand()%irt_g_worker_count]->sched_data.queue)) {
-			irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_SUCCESS, self->id);
-			irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
-			_irt_worker_switch_to_wi(self, wi);
-			return 1;
-		}
+	if((wi = irt_cwb_pop_back(&irt_g_workers[rand_r(&self->rand_seed)%irt_g_worker_count]->sched_data.queue))) {
+		irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_SUCCESS, self->id);
+		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
+		_irt_worker_switch_to_wi(self, wi);
+		return 1;
 	}
 
 	// if that failed as well, look in the IPC message queue
