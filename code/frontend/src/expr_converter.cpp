@@ -991,7 +991,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		assert(GET_REF_ELEM_TYPE(lhs->getType())->getNodeType() == core::NT_ArrayType &&
 				"LHS operator must be of type ref<array<'a,#l>>");
 
-		LOG(INFO) << rhs->getType();
+		// LOG(INFO) << rhs->getType();
 		assert(gen.isInt(rhs->getType()) && "Array view displacement must be a signed int");
 		if (gen.isUnsignedInt(rhs->getType()))
 			rhs = builder.castExpr(gen.getInt8(), rhs);
