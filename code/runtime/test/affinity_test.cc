@@ -137,4 +137,10 @@ TEST(affinity, manual) {
 	irt_set_affinity(m, t);
 	// this is to check if mask has been set correctly
 	irt_set_affinity(m, t);
+
+	// set affinity for main thread
+	irt_thread myself = irt_current_thread();
+	irt_set_affinity(m, myself);
+	// clear affinity for main thread
+	irt_clear_affinity();
 }
