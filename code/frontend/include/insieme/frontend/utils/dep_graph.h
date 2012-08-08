@@ -47,7 +47,6 @@ class Type;
 
 namespace std {
 std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl);
-std::ostream& operator<<(std::ostream& out, const clang::Type* type);
 } // end std namespace
 
 namespace insieme {

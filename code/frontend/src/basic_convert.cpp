@@ -373,7 +373,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	VLOG(2)
 		<< "IR variable" << var.getType()->getNodeType() << "" << var<<":"<<varDecl;
 
-	ctx.varDeclMap.insert(std::make_pair(valDecl, var));
+	ctx.varDeclMap.insert( { valDecl, var } );
 
 	// Add the C name of this variable as annotation
 	var->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > (valDecl->getNameAsString()));
@@ -597,7 +597,7 @@ core::ExpressionPtr ConversionFactory::attachFuncAnnotations(const core::Express
 	/*
 	 * for each entry function being converted we register the location where it was originally defined in the C program
 	 */
-	std::pair<SourceLocation, SourceLocation>&& loc = std::make_pair(funcDecl->getLocStart(), funcDecl->getLocEnd());
+	std::pair<SourceLocation, SourceLocation> loc { funcDecl->getLocStart(), funcDecl->getLocEnd() };
 	fe::pragma::PragmaStmtMap::DeclMap::const_iterator fit = pragmaMap.getDeclarationMap().find(funcDecl);
 
 	if (fit != pragmaMap.getDeclarationMap().end()) {
@@ -821,7 +821,7 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 	auto fit = ctx.typeCache.find(type);
 	if(fit == ctx.typeCache.end()) {
 		core::TypePtr&& retTy = typeConvPtr->Visit( const_cast<Type*>(type) );
-		ctx.typeCache.insert( std::make_pair(type,retTy) );
+		ctx.typeCache.insert( {type, retTy} );
 		return retTy;
 	}
 
@@ -910,20 +910,18 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		 * which are valid during the conversion of the given recursive function cycle
 		 */
 		auto createRecVar = [&] (const clang::FunctionDecl* funDecl) { 
-			if (ctx.recVarExprMap.find(funDecl) == ctx.recVarExprMap.end()) {
-				// we create a TypeVar for each type in the mutual dependence
-				core::FunctionTypePtr funcType = convertType(GET_TYPE_PTR(funDecl)).as<core::FunctionTypePtr>();
-				
-				// In the case the function is receiving the global variables the signature needs to be
-				// modified by allowing the global struct to be passed as an argument
-				if ( ctx.globalFuncMap.find(funDecl) != ctx.globalFuncMap.end() ) {
-					funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
-				}
-				core::VariablePtr&& var = builder.variable( funcType );
-				ctx.recVarExprMap.insert( std::make_pair(funDecl, var) );
+			if (ctx.recVarExprMap.find(funDecl) != ctx.recVarExprMap.end()) { return; }
 
-				return var;
+			// we create a TypeVar for each type in the mutual dependence
+			core::FunctionTypePtr funcType = convertType(GET_TYPE_PTR(funDecl)).as<core::FunctionTypePtr>();
+			
+			// In the case the function is receiving the global variables the signature needs to be
+			// modified by allowing the global struct to be passed as an argument
+			if ( ctx.globalFuncMap.find(funDecl) != ctx.globalFuncMap.end() ) {
+				funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
 			}
+			core::VariablePtr&& var = builder.variable( funcType );
+			ctx.recVarExprMap.insert( { funDecl, var } );
 		};
 
 
@@ -931,7 +929,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			createRecVar(funcDecl);
 		} else {
 			// we expect the var name to be in currVar
-			ctx.recVarExprMap.insert( std::make_pair(funcDecl, ctx.currVar) );
+			ctx.recVarExprMap.insert( {funcDecl, ctx.currVar} );
 		}
 
 		// when a subtype is resolved we expect to already have these variables in the map
@@ -1074,7 +1072,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		core::LambdaExprPtr retLambdaExpr = builder.lambdaExpr(funcType, params, body);
 
 		// Adding the lambda function to the list of converted functions
-		ctx.lambdaExprCache.insert(std::make_pair(funcDecl, retLambdaExpr));
+		ctx.lambdaExprCache.insert( { funcDecl, retLambdaExpr} );
 
 		VLOG(2) << retLambdaExpr << " + function declaration: " << funcDecl;
 		return attachFuncAnnotations(retLambdaExpr, funcDecl);
@@ -1143,7 +1141,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		definitions.push_back( builder.lambdaBinding(ctx.currVar, lambda) );
 
 		// reinsert the TypeVar in the map in order to solve the other recursive types
-		ctx.recVarExprMap.insert( std::make_pair(fd, ctx.currVar) );
+		ctx.recVarExprMap.insert( {fd, ctx.currVar} );
 		ctx.currVar = NULL;
 	}
 
@@ -1155,7 +1153,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr(recVarRef, definition);
 
 	// Adding the lambda function to the list of converted functions
-	ctx.lambdaExprCache.insert(std::make_pair(funcDecl, retLambdaExpr));
+	ctx.lambdaExprCache.insert( {funcDecl, retLambdaExpr} );
 	// we also need to cache all the other recursive definition, so when we will resolve
 	// another function in the recursion we will not repeat the process again
 	for(const auto& fd : components) {
@@ -1174,7 +1172,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		currTU = &Program::getTranslationUnit(clangTU);
 
 		core::ExpressionPtr&& func = builder.lambdaExpr(fit->second, definition);
-		ctx.lambdaExprCache.insert( std::make_pair(decl, func) );
+		ctx.lambdaExprCache.insert( {decl, func} );
 
 		func = attachFuncAnnotations(func, decl);
 

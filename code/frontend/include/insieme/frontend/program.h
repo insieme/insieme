@@ -186,8 +186,8 @@ public:
 	PragmaIterator pragmas_begin(const PragmaIterator::FilteringFunc& func) const;
 	PragmaIterator pragmas_end() const;
 
-	clang::idx::Program& getClangProgram();
-	clang::idx::Indexer& getClangIndexer();
+	clang::idx::Program& getClangProgram() const;
+	clang::idx::Indexer& getClangIndexer() const;
 
 	void dumpCallGraph() const;
 };
