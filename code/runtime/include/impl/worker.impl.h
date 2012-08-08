@@ -96,7 +96,7 @@ void* _irt_worker_func(void *argvp) {
 	irt_set_affinity(arg->affinity, irt_current_thread());
 	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
 	irt_worker* self = arg->generated;
-	self->pthread = irt_current_thread();
+	self->thread = irt_current_thread();
 	self->id.index = 1;
 	self->id.thread = arg->index;
 	self->id.node = 0; // TODO correct node id
@@ -263,7 +263,7 @@ void _irt_worker_cancel_all_others() {
 		if(cur != self && cur->state == IRT_WORKER_STATE_RUNNING) {
 			cur->state = IRT_WORKER_STATE_STOP;
 			irt_inst_insert_wo_event(self, IRT_INST_WORKER_STOP, cur->id);
-			irt_thread_cancel(cur->pthread);
+			irt_thread_cancel(cur->thread);
 		}
 	}
 	
@@ -275,7 +275,7 @@ void _irt_worker_end_all() {
 		if(cur->state == IRT_WORKER_STATE_RUNNING) {
 			cur->state = IRT_WORKER_STATE_STOP;
 			irt_signal_worker(cur);
-			irt_thread_join(cur->pthread);
+			irt_thread_join(cur->thread);
 		}   
 	}
 }

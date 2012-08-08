@@ -118,3 +118,23 @@ TEST(affinity, maxdist) {
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(6, pol), 4));
 	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(7, pol), 6));
 }
+
+void* dummy_func(void* nada) {
+	printf("hello world");
+	return NULL;
+}
+
+// a test which you will have to step through when debugging
+TEST(affinity, manual) {
+	// get the initial affinity mask and create the mapping
+	irt_affinity_init_physical_mapping(&irt_g_affinity_physical_mapping);
+	_irt_print_native_affinity_mask(irt_g_affinity_base_mask);
+	uint32 num_cores = irt_affinity_cores_available();
+
+	// create a thread and set affinity
+	irt_thread t = irt_thread_create(dummy_func, NULL);
+	irt_affinity_mask m = { { 1 } };
+	irt_set_affinity(m, t);
+	// this is to check if mask has been set correctly
+	irt_set_affinity(m, t);
+}

@@ -72,11 +72,25 @@ uint32 _irt_affinity_next_available_physical(uint32 start) {
 	return UINT_MAX;
 }
 
+// gets initial affinity mask and sets irt_g_affinity_base_mask
+void _irt_affinity_get_base_mask(){
+	static bool initialized = false;
+
+	if (initialized)
+		return;
+
+	IRT_ASSERT(pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0, 
+		IRT_ERR_INIT, "Error retrieving program base affinity mask.");
+
+	initialized = true;
+}
+
 void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping) {
 	uint32 cur = 0;
 	uint32 i = 0;
-	IRT_ASSERT(pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0, 
-		IRT_ERR_INIT, "Error retrieving program base affinity mask.");
+	
+	_irt_affinity_get_base_mask();
+
 	for(i=0; i<IRT_MAX_CORES; ++i) {
 		out_mapping->map[i] = _irt_affinity_next_available_physical(cur);
 		//printf("Physical affinity map: %u => %u\n", i, out_mapping->map[i]);
@@ -90,8 +104,8 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 }
 
 uint32 irt_affinity_cores_available() {
-	IRT_ASSERT(pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0, 
-		IRT_ERR_INIT, "Error retrieving program base affinity mask.");
+	_irt_affinity_get_base_mask();
+
 	uint32 count = 0;
 	for(uint32 i=0; i<CPU_SETSIZE; ++i) {
 		if(CPU_ISSET(i, &irt_g_affinity_base_mask)) ++count;
