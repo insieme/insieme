@@ -324,13 +324,13 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 	// collect list of captured variables
 	vector<core::VariablePtr> varList = getVariablesToBeCaptured(job, varsInJobScope);
-	utils::map::PointerMap<core::NodePtr, core::NodePtr> mapping;
+	VariableMap mapping;
 	for_each(varList, [&](const core::VariablePtr& var) {
-		mapping.insert(std::make_pair(var, builder.variable(var->getType())));
+		mapping[var] = builder.variable(var->getType());
 	});
 
 	// replace the variables
-	core::JobExprPtr targetJob = static_pointer_cast<const core::JobExpr>(core::transform::replaceAll(manager, job, mapping));
+	core::JobExprPtr targetJob = static_pointer_cast<const core::JobExpr>(core::transform::replaceVars(manager, job, mapping));
 
 
 	// Step a) create job struct

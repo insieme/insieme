@@ -42,19 +42,32 @@
 #include "insieme/simple_backend/backend_convert.h"
 #include "insieme/simple_backend/statement_converter.h"
 
+#include "insieme/core/printer/pretty_printer.h"
 #include "insieme/utils/set_utils.h"
 
 namespace insieme {
 namespace simple_backend {
 
 namespace {
-	string getSignatureOf(const CodeFragmentPtr& context, const FunctionTypePtr& funType, const string& name, TypeManager& typeManager) {
+	string getSignatureOf(const CodeFragmentPtr& context, const FunctionTypePtr& funType, const string& name, TypeManager& typeManager, bool isWrap = false) {
 		std::stringstream ss;
 
-		ss << typeManager.getTypeName(context, funType->getReturnType()) << " " << name << "(";
+		// wrapper are static
+		if (isWrap) ss << "static ";
+
+		ss << typeManager.getTypeName(context, funType->getReturnType()) << " " << name << ((isWrap)?"_wrap":"") << "(";
 
 		auto parameter = funType->getParameterTypes();
 
+		// add closure parameter if required
+		if (isWrap) {
+			ss << "void * _closure";
+			if (!parameter.empty()) {
+				ss << ", ";
+			}
+		}
+
+		// add remaining parameters
 		ss << join(", ", parameter, [&](std::ostream& out, const TypePtr& cur) {
 			out << typeManager.getTypeName(context, cur);
 		});
@@ -132,7 +145,7 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	static std::set<string> INCLUDED = utils::set::toSet<std::set<string>>(
 			"atoi", "atof", "atol", "fprintf", "printf", "par_printf", "malloc", "alloca",
 			"fopen", "fread", "fwrite", "fgetc", "fflush", "fclose", "fscanf", "sscanf",
-			"sprintf", "__isnanl", "__isinfl" );
+			"sprintf", "__isnanl", "__isinfl", "snprintf" );
 
 	if (INCLUDED.find(name) == INCLUDED.end()) {
 		protoType << typeManager.getTypeInfo(protoType, returnType).externName << " " << name << "(";
@@ -234,6 +247,9 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaDefinitionPtr& definition) 
 		const FunctionTypePtr& funType = cur->getLambda()->getType();
 		CodeFragmentPtr prototype = CodeFragment::createNew("Prototype of " + name + " ... type: " + funType->toString());
 		prototype << getSignatureOf(prototype, funType, name, typeManager) << ";\n";
+
+		// also add forward declaration of wrapper
+		prototype << getSignatureOf(prototype, funType, name, typeManager, true) << ";\n";
 
 		this->prototypes.insert(std::make_pair(cur->getLambda(), prototype));
 

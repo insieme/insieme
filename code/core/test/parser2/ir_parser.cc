@@ -505,10 +505,13 @@ namespace parser {
 		TypePtr fun = parse_type(manager, "(ref<'a>)->'a");
 		ASSERT_TRUE(fun);
 
-		// test whether a listeral can be parsed successfully
+		// test whether a literal can be parsed successfully
 		EXPECT_EQ(builder.literal(fun, "test"), parse_expr(manager, "lit(\"test\":(ref<'a>)->'a)"));
 		EXPECT_EQ(builder.literal(fun, "test.more"), parse_expr(manager, "lit(\"test.more\":(ref<'a>)->'a)"));
 
+		// test type literal
+		TypePtr type = builder.getLangBasic().getInt4();
+		EXPECT_EQ(builder.getTypeLiteral(type), parse_expr(manager, "lit(int<4>)"));
 	}
 
 	TEST(IR_Parser2, PreDefinedSymbols) {
@@ -548,6 +551,45 @@ namespace parser {
 		EXPECT_EQ(builder.intLit(2), parse_expr(manager, "-(-2)"));
 
 		EXPECT_EQ("AP(int.add(2, int.sub(0, int.add(1, 2))))", toString(parse_expr(manager, "2 + -(1 + 2)")));
+	}
+
+	TEST(IR_Parser2, Bind) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// test a direct call
+		EXPECT_EQ("AP({int<4> v5 = 7; bind(v9){rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}}(v9, v5)}(5);})",
+			toString(builder.parse(
+				"{"
+				"	let int = int<4>;"
+				"	let sum = (int a, int b)->int { return a + b; };"
+				"	auto x = 7;"
+				" 	let pX = (int a)=>sum(a,x);"
+				"	pX(5);"
+				"}"
+		)));
+
+		// test returning a value
+		EXPECT_EQ("AP({bind(v10){rec v0.{v0=fun('a v1) {return v1;}}(5)}(2);})",
+			toString(builder.parse(
+				"{"
+				" 	let pX = (int<4> a)=>5;"
+				"	pX(2);"
+				"}"
+		)));
+
+		// test a statement
+		EXPECT_EQ("AP({ref<int<4>> v11 = ref.var(0); bind(v12){rec v15.{v15=fun(int<4> v13, ref<int<4>> v14) {ref.assign(v14, int.add(ref.deref(v14), v13));}}(v12, v11)}(5);})",
+			toString(builder.parse(
+				"{"
+				" 	ref<int<4>> x = var(0);"
+				"	let p = (int<4> a)=>{"
+				"		x = x + a;"
+				"	};"
+				"	p(5);"
+				"}"
+		)));
+
 	}
 
 } // end namespace parser2

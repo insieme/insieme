@@ -109,6 +109,22 @@ public:
 	ExpressionPtr getBuiltIn(const std::string& name) const;
 	LiteralPtr getLiteral(const string& name) const;
 
+
+	/**
+	 * Required to support operators on type literals.
+	 */
+	bool isType(const NodePtr& type) const;
+
+	/**
+	 * Required to support operators on type ref.
+	 */
+	bool isRef(const NodePtr& type) const;
+
+	/**
+	 * Required to support operators on generic types.
+	 */
+	bool isGen(const NodePtr& type) const;
+
 	/**
 	 * Obtains an expression representing the the requested operator for the
 	 * given data type.

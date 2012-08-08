@@ -215,6 +215,10 @@ namespace runtime {
 			return c_ast::call(C_NODE_MANAGER->create("irt_wi_join_all"), item);
 		});
 
+		table[basic.getFlush()] = OP_CONVERTER({
+			return c_ast::call(C_NODE_MANAGER->create("IRT_FLUSH"), CONVERT_ARG(0));
+		});
+
 		// locks
 
 		table[basic.getLockCreate()] = OP_CONVERTER({

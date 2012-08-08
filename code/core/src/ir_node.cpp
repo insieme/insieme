@@ -228,16 +228,16 @@ namespace std {
 
 
 
-void dumpText(const insieme::core::NodePtr& node) {
-	std::cout << insieme::core::dump::text::TextDump(node);
+void dumpText(const void* node) {
+	std::cout << insieme::core::dump::text::TextDump(insieme::core::NodePtr((insieme::core::Node*)node));
 }
 
-void dumpPretty(const insieme::core::NodePtr& node) {
-	std::cout << insieme::core::printer::PrettyPrinter(node);
+void dumpPretty(const void* node) {
+	std::cout << insieme::core::printer::PrettyPrinter(insieme::core::NodePtr((insieme::core::Node*)node));
 }
 
-void dumpPrettyFull(const insieme::core::NodePtr& node) {
-	std::cout << insieme::core::printer::PrettyPrinter(node,
+void dumpPrettyFull(const void* node) {
+	std::cout << insieme::core::printer::PrettyPrinter(insieme::core::NodePtr((insieme::core::Node*)node),
 				insieme::core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL
 			);
 }
