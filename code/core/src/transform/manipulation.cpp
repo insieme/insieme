@@ -612,18 +612,67 @@ namespace {
 	};
 
 
+
+//	LambdaExprPtr tryFixRecursive(NodeManager& manager, const LambdaExprPtr& lambda, unsigned index, const ExpressionPtr& value) {
+//		assert(lambda->isRecursive());
+//
+//		/**
+//		 * The following procedure is applied:
+//		 * 		- the parameter is fixed within the body of the lambda
+//		 * 		- all recursive calls are searched within the lambda
+//		 * 		- if value is passed along at the same position, unmodified
+//		 * 			=> remove parameter from recursion
+//		 * 		  otherwise: unroll once, fix parameter for non-recursive function
+//		 */
+//
+//		// check for compatible target type
+//		FunctionTypePtr funType = lambda->getFunctionType();
+//		TypeList paramTypes = funType->getParameterTypeList();
+//		assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
+//		assert(isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
+//
+//		// replace parameter within body
+//		const VariablePtr& param = lambda->getParameterList()[index];
+//		CompoundStmtPtr newBody = fixVariable(manager, lambda->getBody(), param, value).as<CompoundStmtPtr>();
+//
+//		// check whether it can be propagated over the recursion
+//		//  - search for recursive calls in new body
+//		auto recVar = lambda->getVariable();
+//
+//
+//
+//		// value is propagated => eliminate parameter in recursion
+//
+//		// Step 1) fix recursive variable
+//
+//		// Step 1) fix body by replacing all calls with fixed calls
+//		std::map<NodeAddress, NodePtr> replacements;
+//		for(const CallExprAddress& cur : calls) {
+//
+//
+//
+//			replacements.insert({cur, newCall});
+//		}
+//
+//
+//		bool canPropagate = all();
+//
+//
+//		return lambda;
+//	}
+
 }
 
 
 LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda, unsigned index, const ExpressionPtr& value) {
 
-	if (lambda->isRecursive()) {
-		// TODO: support recursive lambdas
-		return lambda;
-	}
+//	if (lambda->isRecursive()) {
+//		// use specialized function
+//		return tryFixRecursive(manager, lambda, index, value);
+//	}
 
 	// check parameters
-	const FunctionTypePtr& funType = static_pointer_cast<const FunctionType>(lambda->getType());
+	const FunctionTypePtr& funType = lambda->getFunctionType();
 	TypeList paramTypes = funType->getParameterTypes()->getTypes();
 	assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
 
@@ -639,15 +688,68 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	paramTypes.erase(paramTypes.begin() + index);
 	FunctionTypePtr newFunType = FunctionType::get(manager, paramTypes, funType->getReturnType(), true);
 
+	// create new recursive variable
+	auto newRecVar = Variable::get(manager, newFunType, lambda->getVariable()->getId());
+
+	// handle recursive functions
+	if (lambda->isRecursive()) {
+
+		if(lambda->getDefinition().size() > 1u) {
+			assert(false && "Propagating parameters across mutual recursive functions not supported yet!");
+			return lambda; // not supported yet
+		}
+
+		// collect all recursive calls (addresses to support a faster replacement later on)
+		VariablePtr recVar = lambda->getVariable();
+		vector<CallExprAddress> calls;
+		visitDepthFirst(NodeAddress(body), [&](const CallExprAddress& call){
+			if (call.as<CallExprPtr>()->getFunctionExpr() == recVar) calls.push_back(call);
+		});
+
+		// check whether parameter is propagated
+		bool isPropagated = all(calls, [&](const CallExprPtr& call)->bool {
+			// check whether value is propagated along the recursion
+			assert(index < call->getArguments().size() && "Invalid recursive call!");
+			return call->getArgument(index) == value;
+		});
+
+		// value is not propagated along recursion
+		if (!isPropagated) {
+			// unroll recursion once and use non-recursive parameter fixer
+			return tryFixParameter(manager, lambda->unrollOnce(), index, value);
+		}
+
+		// update recursive variable
+
+
+		// update recursive calls within body
+		IRBuilder builder(manager);
+		std::map<NodeAddress, NodePtr> replacements;
+		for(const CallExprAddress& cur : calls) {
+			// eliminate argument from call
+			ExpressionList newArgs = cur.as<CallExprPtr>()->getArguments();
+			newArgs.erase(newArgs.begin() + index);
+
+
+			// build and register updated call
+			CallExprPtr newCall = builder.callExpr(cur->getType(), newRecVar, newArgs);
+			replacements.insert({cur, newCall});
+		}
+
+		// update body
+		body = replaceAll(manager, replacements).as<CompoundStmtPtr>();
+	}
+
+
+
 	// create new parameter list
 	vector<VariablePtr> params = lambda->getParameterList()->getParameters();
 	params.erase(params.begin() + index);
 
 	// build resulting lambda (preserving recursive variable ID)
-	auto var = Variable::get(manager, newFunType, lambda->getVariable()->getId());
-	auto binding = LambdaBinding::get(manager, var, Lambda::get(manager, newFunType, params, body));
+	auto binding = LambdaBinding::get(manager, newRecVar, Lambda::get(manager, newFunType, params, body));
 	auto def = LambdaDefinition::get(manager, toVector(binding));
-	return LambdaExpr::get(manager, var, def);
+	return LambdaExpr::get(manager, newRecVar, def);
 }
 
 StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, const VariablePtr& var, const ExpressionPtr& value) {
