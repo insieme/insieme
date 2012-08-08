@@ -1050,6 +1050,12 @@ namespace {
 				return builder.intLit(1);
 			}
 
+			// handle flush
+			if (basic.isFlush(fun)) {
+				// => can be ignored
+				return builder.getNoOp();
+			}
+
 			// and locks
 			if (basic.isLockAcquire(fun)) {
 				return builder.getNoOp();
