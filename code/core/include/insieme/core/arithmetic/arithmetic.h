@@ -570,12 +570,26 @@ namespace arithmetic {
 		bool isOne() const { return factors.empty(); }
 
 		/**
+		 * Tests whether this product is representing a single value (exponent == 1).
+		 *
+		 * @return true if this product represents a value, false otherwise
+		 */
+		bool isValue() const;
+
+		/**
 		 * Tests whether this product is linear - hence it contains at most one variable
 		 * with an exponent of 1.
 		 *
 		 * @return true if linear, false otherwise
 		 */
 		bool isLinear() const;
+
+		/**
+		 * Checks whether this product contains a single variable.
+		 *
+		 * @return true if so, false otherwise.
+		 */
+		bool isUnivariate() const;
 
 		/**
 		 * Tests whether this product is polynomial - hence, it only contains positive
@@ -834,12 +848,27 @@ namespace arithmetic {
 		bool isInteger() const;
 
 		/**
+		 * Checks whether this formula represents a single value where the
+		 * exponent and coefficient is 1.
+		 *
+		 * @return true if so, false otherwise
+		 */
+		bool isValue() const;
+
+		/**
 		 * Checks whether this formula is linear, hence every term within this
 		 * formula is linear.
 		 *
 		 * @return true if so, false otherwise.
 		 */
 		bool isLinear() const;
+
+		/**
+		 * Checks whether this formula contains a single variable.
+		 *
+		 * @return true if so, false otherwise.
+		 */
+		bool isUnivariate() const;
 
 		/**
 		 * Checks whether this formula is polynomial. Hence, all terms within
