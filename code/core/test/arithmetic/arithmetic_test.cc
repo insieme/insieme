@@ -297,34 +297,46 @@ TEST(ArithmeticTest, ProductProperties) {
 	Product one;
 
 	EXPECT_TRUE(one.isOne());
+	EXPECT_FALSE(one.isValue());
 	EXPECT_TRUE(one.isLinear());
+	EXPECT_FALSE(one.isUnivariate());
 	EXPECT_TRUE(one.isPolynomial());
 
 	Product tmp;
 
 	tmp = varA;
 	EXPECT_FALSE(tmp.isOne());
+	EXPECT_TRUE(tmp.isValue());
 	EXPECT_TRUE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isUnivariate());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	tmp = varA * varA;
 	EXPECT_FALSE(tmp.isOne());
+	EXPECT_FALSE(tmp.isValue());
 	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isUnivariate());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	tmp = one / varA;
 	EXPECT_FALSE(tmp.isOne());
+	EXPECT_FALSE(tmp.isValue());
 	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isUnivariate());
 	EXPECT_FALSE(tmp.isPolynomial());
 
 	tmp = varA * varB;
 	EXPECT_FALSE(tmp.isOne());
+	EXPECT_FALSE(tmp.isValue());
 	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_FALSE(tmp.isUnivariate());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	tmp = tmp * varA;
 	EXPECT_FALSE(tmp.isOne());
+	EXPECT_FALSE(tmp.isValue());
 	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_FALSE(tmp.isUnivariate());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	// check for 1 = 1
@@ -345,14 +357,18 @@ TEST(ArithmeticTest, FormulaProperties) {
 	EXPECT_TRUE(zero.isZero());
 	EXPECT_FALSE(zero.isOne());
 	EXPECT_TRUE(zero.isConstant());
+	EXPECT_FALSE(zero.isValue());
 	EXPECT_TRUE(zero.isLinear());
+	EXPECT_FALSE(zero.isUnivariate());
 	EXPECT_TRUE(zero.isPolynomial());
 
 	Formula one = Product();
 	EXPECT_FALSE(one.isZero());
 	EXPECT_TRUE(one.isOne());
 	EXPECT_TRUE(one.isConstant());
+	EXPECT_FALSE(one.isValue());
 	EXPECT_TRUE(one.isLinear());
+	EXPECT_FALSE(one.isUnivariate());
 	EXPECT_TRUE(one.isPolynomial());
 
 	Formula tmp;
@@ -361,49 +377,72 @@ TEST(ArithmeticTest, FormulaProperties) {
 	EXPECT_FALSE(tmp.isZero());
 	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_TRUE(tmp.isValue());
 	EXPECT_TRUE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isUnivariate());
+	EXPECT_TRUE(tmp.isPolynomial());
+
+	tmp = 2*varA;
+	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isOne());
+	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_FALSE(tmp.isValue());
+	EXPECT_TRUE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isUnivariate());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	tmp = varA * varA;
 	EXPECT_FALSE(tmp.isZero());
 	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_FALSE(tmp.isValue());
 	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isUnivariate());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	tmp = one / varA;
 	EXPECT_FALSE(tmp.isZero());
 	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_FALSE(tmp.isValue());
 	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isUnivariate());
 	EXPECT_FALSE(tmp.isPolynomial());
 
 	tmp = varA * varB;
 	EXPECT_FALSE(tmp.isZero());
 	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_FALSE(tmp.isValue());
 	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_FALSE(tmp.isUnivariate());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	tmp = tmp * varA;
 	EXPECT_FALSE(tmp.isZero());
 	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_FALSE(tmp.isValue());
 	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_FALSE(tmp.isUnivariate());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	tmp = 2*varA + 2*varB + 3;
 	EXPECT_FALSE(tmp.isZero());
 	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_FALSE(tmp.isValue());
 	EXPECT_TRUE(tmp.isLinear());
+	EXPECT_FALSE(tmp.isUnivariate());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	tmp = 2*varA + 2*varA*varB + 3;
 	EXPECT_FALSE(tmp.isZero());
 	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_FALSE(tmp.isValue());
 	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_FALSE(tmp.isUnivariate());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 

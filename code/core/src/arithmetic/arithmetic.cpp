@@ -447,10 +447,18 @@ namespace arithmetic {
 		});
 	}
 
+	bool Product::isValue() const {
+		return factors.size() == static_cast<std::size_t>(1) && factors[0].second == 1;
+	}
+
 	bool Product::isLinear() const {
 		return factors.size() <= static_cast<std::size_t>(1) && all(factors, [](const Factor& cur) {
 			return cur.second == 1;
 		});
+	}
+
+	bool Product::isUnivariate() const {
+		return factors.size() == 1u;		// there is exactly one variable
 	}
 
 	bool Product::isPolynomial() const {
@@ -688,6 +696,15 @@ namespace arithmetic {
 		return all(terms, [](const Term& cur) {
 			return cur.first.isLinear();
 		});
+	}
+
+	bool Formula::isValue() const {
+		return terms.size() == static_cast<std::size_t>(1)
+				&& terms[0].second.isOne() && terms[0].first.isValue();
+	}
+
+	bool Formula::isUnivariate() const {
+		return extractValues().size() == 1u;
 	}
 
 	bool Formula::isPolynomial() const {

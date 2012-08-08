@@ -116,9 +116,7 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 	typedef std::set<const clang::FunctionDecl*> CallGraph;
 	CallGraph callGraph;
 
-	CallExprVisitor(clang::idx::Indexer& indexer) :
-			indexer(indexer) {
-	}
+	CallExprVisitor(clang::idx::Indexer& indexer) : indexer(indexer) { }
 
 	CallGraph getCallGraph(const clang::FunctionDecl* func) {
 		assert(func->hasBody() && "Function in the dependency graph has no body");
@@ -244,9 +242,7 @@ public:
 	FunctionDependencyGraph(clang::idx::Indexer& idx) :
 			DependencyGraph<const clang::FunctionDecl*>(), idx(idx), callExprVis(idx) {
 	}
-	clang::idx::Indexer& getIndexer() const {
-		return idx;
-	}
+	inline clang::idx::Indexer& getIndexer() const { return idx; }
 };
 
 } // end namespace utils
