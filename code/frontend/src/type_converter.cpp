@@ -128,8 +128,7 @@ void DependencyGraph<const clang::TagDecl*>::Handle(
 
 		// Elaborated types shoud be recursively visited 
 		 if( const ElaboratedType* elabTy = llvm::dyn_cast<ElaboratedType>(fieldType) ) {
-			if ( const clang::TagType* tagType = llvm::dyn_cast<TagType>(elabTy->getNamedType().getTypePtr()) )
-				addNode( findDefinition(tagType), &v );
+			 fieldType = elabTy->getNamedType().getTypePtr();
 		}
 
 		if( const TagType* tagTy = llvm::dyn_cast<TagType>(fieldType) ) {
@@ -491,19 +490,19 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 
 			if( !components.empty() ) {
 	
-				std::set<const clang::TagDecl*>&& subComponents = typeGraph.getSubComponents( tagDecl );
-				for(const auto& cur : subComponents) {
-					TagDecl* decl = const_cast<TagDecl*>(cur);
+			//	std::set<const clang::TagDecl*>&& subComponents = typeGraph.getSubComponents( tagDecl );
+			//	for(const auto& cur : subComponents) {
+			//		TagDecl* decl = const_cast<TagDecl*>(cur);
 
-					VLOG(2) << "Analyzing TagDecl as sub component: " << decl->getNameAsString();
+			//		VLOG(2) << "Analyzing TagDecl as sub component: " << decl->getNameAsString();
 
-					auto fit = convFact.ctx.recTypeCache.find(decl);
-					if ( fit == convFact.ctx.recTypeCache.end() ) {
-						// perform the conversion only if this is the first time this
-						// function is encountred
-						VisitTagType(cast<clang::TagType>(decl->getTypeForDecl()));
-					}
-				}
+			//		auto fit = convFact.ctx.recTypeCache.find(decl);
+			//		if ( fit == convFact.ctx.recTypeCache.end() ) {
+			//			// perform the conversion only if this is the first time this
+			//			// function is encountred
+			//			VisitTagType(cast<clang::TagType>(decl->getTypeForDecl()));
+			//		}
+			//	}
 
 				if(VLOG_IS_ON(2)) {
 					// we are dealing with a recursive type
