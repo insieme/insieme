@@ -1251,7 +1251,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 			// It can happen we are incrementing a variable which is coming from an input
 			// argument of a function
 			core::VariablePtr var = subExpr.as<core::VariablePtr>();
-			assert(var->getType()->getNodeType() != core::NT_RefType);
 
 			auto&& fit = convFact.ctx.wrapRefMap.find(var);
 			if ( fit == convFact.ctx.wrapRefMap.end() ) {
