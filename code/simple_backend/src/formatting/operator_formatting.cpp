@@ -501,6 +501,14 @@ namespace formatting {
 		ADD_FORMATTER(res, basic.getRealLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
 		ADD_FORMATTER(res, basic.getRealLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
+		ADD_FORMATTER(res, basic.getRefEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+		ADD_FORMATTER(res, basic.getRefNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
+		ADD_FORMATTER(res, basic.getRefGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
+		ADD_FORMATTER(res, basic.getRefGt(), { VISIT_ARG(0); OUT(">"); VISIT_ARG(1); });
+		ADD_FORMATTER(res, basic.getRefLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
+		ADD_FORMATTER(res, basic.getRefLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
+
+
 		ADD_FORMATTER(res, basic.getRealToInt(), {
 				OUT("(");
 				OUT(CONTEXT.getTypeManager().getTypeName(CODE, CALL->getType(), true));
