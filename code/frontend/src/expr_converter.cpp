@@ -1323,19 +1323,19 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 		// a++ ==> (__tmp = a, a=a+1, __tmp)
 		// ++a ==> ( a=a+1, a)
 		// --a
-		case UO_PreDec:
+	case UO_PreDec:
 		return retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreDec);
 		// a--
-		case UO_PostDec:
+	case UO_PostDec:
 		return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostDec));
 		// a++
-		case UO_PreInc:
+	case UO_PreInc:
 		return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreInc));
 		// ++a
-		case UO_PostInc:
+	case UO_PostInc:
 		return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostInc));
 		// &a
-		case UO_AddrOf:
+	case UO_AddrOf:
 		{
 			/*
 			 * We need to be careful paramvars are not dereferenced and the address passed around. If this happens
@@ -1357,7 +1357,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 			return (retIr = utils::refScalarToRefArray(retIr));
 		}
 		// *a
-		case UO_Deref: {
+	case UO_Deref: {
 			// make sure it is a L-Value
 			retIr = asLValue(subExpr);
 
@@ -1372,10 +1372,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 			);
 		}
 		// +a
-		case UO_Plus:
+	case UO_Plus:
 		return retIr = subExpr;
 		// -a
-		case UO_Minus:
+	case UO_Minus:
 		return (retIr = builder.invertSign( convFact.tryDeref(subExpr) ));
 		// ~a
 		case UO_Not:
@@ -1386,17 +1386,20 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 						retIr)
 		);
 		// !a
-		case UO_LNot:
+	case UO_LNot:
 		if( !gen.isBool(subExpr->getType()) ) {
 			subExpr = utils::cast(subExpr, gen.getBool());
 		}
 		assert( gen.isBool(subExpr->getType()) );
 
 		return (retIr = builder.callExpr( subExpr->getType(), gen.getBoolLNot(), subExpr ) );
-		case UO_Real:
-		case UO_Imag:
-		case UO_Extension: //TODO:
-		default:
+
+	case UO_Extension: 
+		return retIr = subExpr;
+
+	case UO_Real:
+	case UO_Imag:
+	default:
 		assert(false && "Unary operator not supported");
 	}
 }
