@@ -554,19 +554,7 @@ namespace simple_backend {
 				const core::TypeList& parameterTypes, const core::ExpressionList& arguments, bool externCall) {
 
 			// check same number of arguments - TODO: re-enable when frontend is fixed
-			// assert(parameterTypes.size() == arguments.size() && "Invalid parameter/argument combination!");
-
-			// TODO: remove this
-			if (parameterTypes.size() != arguments.size()) {
-				// default handling
-				functionalJoin([&]{ code << ", "; }, arguments, [&](const ExpressionPtr& ep) { converter.convert(ep, code); });
-				return;
-			}
-
-			// TODO: implicit conversion between vector / array (also within references)
-			// TODO: externalizing when calling external function
-
-			// OLD VERSION:
+			assert(parameterTypes.size() == arguments.size() && "Invalid parameter/argument combination!");
 			functionalJoin([&]{ code << ", "; }, arguments, [&](const ExpressionPtr& ep) { converter.convert(ep, code); });
 		}
 
@@ -657,7 +645,7 @@ namespace simple_backend {
 			case NT_Variable:
 			{
 				visit(funExp);
-				code << "->fun";
+				code << "->call";
 				code << "(";
 				visit(funExp);
 				if (!args.empty()) {

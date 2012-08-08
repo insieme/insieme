@@ -66,6 +66,8 @@ isbr_ThreadGroup isbr_parallel(isbr_Job*);
 void isbr_merge(isbr_ThreadGroup group);
 void isbr_barrier(isbr_ThreadGroup group);
 
+void isbr_merge_all();
+
 unsigned isbr_getMaxThreads();
 unsigned isbr_getThreadId(unsigned level);
 unsigned isbr_getGroupSize(unsigned level);
