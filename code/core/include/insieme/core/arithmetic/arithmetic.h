@@ -851,6 +851,9 @@ namespace arithmetic {
 		 * Checks whether this formula represents a single value where the
 		 * exponent and coefficient is 1.
 		 *
+		 * A formula is considered to be a value if it is a homogeneous, linear
+		 * function in one variable.
+		 *
 		 * @return true if so, false otherwise
 		 */
 		bool isValue() const;
