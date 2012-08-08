@@ -42,7 +42,6 @@
 #include "declarations.h"
 
 #if defined(_MSC_VER) && !defined(IRT_USE_PTHREADS)
-	#include <Windows.h>
 	typedef HANDLE irt_thread;
 #else
 	#include <pthread.h>
@@ -60,10 +59,10 @@ typedef void* irt_thread_func(void*);
 irt_thread irt_thread_create(irt_thread_func *fun, void *args);
 
 /** returns irt_thread identifier of current thread */
-inline irt_thread irt_current_thread();
+irt_thread irt_current_thread();
 
 /** requests cancelation of the given thread */
-inline void irt_thread_cancel(irt_thread);
+void irt_thread_cancel(irt_thread);
 
 /** makes calling thread wait for cancellation of thread t, return value of terminated thread is returned */
-inline int32 irt_thread_join(irt_thread t);
+int32 irt_thread_join(irt_thread t);

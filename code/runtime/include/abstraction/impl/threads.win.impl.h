@@ -65,14 +65,14 @@ irt_thread irt_thread_create(irt_thread_func *fun, void *args) {
 	return t;
 }
 
-inline irt_thread irt_current_thread() {
+irt_thread irt_current_thread() {
 	HANDLE real_handle = NULL;
 	HANDLE proc_handle = GetCurrentProcess();
 	DuplicateHandle( proc_handle, GetCurrentThread(), proc_handle, &real_handle, 0, TRUE, DUPLICATE_SAME_ACCESS );
 	return real_handle;
 }
 
-inline void irt_thread_cancel(irt_thread t){
+void irt_thread_cancel(irt_thread t){
 	/*
 	from http://msdn.microsoft.com/en-us/library/windows/desktop/ms686717(v=vs.85).aspx :
 	TerminateThread can result in the following problems:
@@ -87,6 +87,6 @@ inline void irt_thread_cancel(irt_thread t){
 	TerminateThread(t, -1);
 }
 
-inline int32 irt_thread_join(irt_thread t){
+int32 irt_thread_join(irt_thread t){
 	return WaitForSingleObject(t, INFINITE);
 }

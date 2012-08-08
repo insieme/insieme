@@ -44,15 +44,15 @@ irt_thread irt_thread_create(irt_thread_func *fun, void *args) {
 	return thread;
 }
 
-inline irt_thread irt_current_thread() {
+irt_thread irt_current_thread() {
 	return pthread_self();
 }
 
-inline void irt_thread_cancel(irt_thread t){
+void irt_thread_cancel(irt_thread t){
 	pthread_cancel(t);
 }
 
-inline int32 irt_thread_join(irt_thread t){
+int32 irt_thread_join(irt_thread t){
 	int32 return_val;
 	int32 *p_ret_val = &return_val;
 	pthread_join(t, (void**)&p_ret_val);
