@@ -208,7 +208,6 @@ namespace backend {
 		res[basic.getVolatileMake()] = OP_CONVERTER({ return CONVERT_ARG(0); });
 		res[basic.getVolatileRead()] = OP_CONVERTER({ return CONVERT_ARG(0); });
 		
-		res[basic.getFlush()] = OP_CONVERTER({ return c_ast::call(C_NODE_MANAGER->create("IRT_FLUSH"), CONVERT_ARG(0)); });
 
 		// -- references --
 

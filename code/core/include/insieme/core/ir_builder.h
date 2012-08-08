@@ -563,6 +563,10 @@ namespace core {
 			return select(a,b,lang::BasicGenerator::Gt);
 		}
 
+		CallExprPtr id(const ExpressionPtr& a) const {
+			return callExpr(a->getType(), getLangBasic().getId(), a);
+		}
+
 		/**
 		 * Encapsulate the given statement inside a body.
 		 */

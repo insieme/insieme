@@ -95,6 +95,10 @@ isbr_ThreadGroup isbr_parallel(isbr_Job* jobDescription) {
 	for(unsigned i=0; i<numThreads; ++i) {
 		pthread_create(&(threadGroup->threads[i]), &attr, &isbr_jobRunner, &args[i]);
 	}
+
+	// merge here already => to allow a merge all
+	isbr_merge(threadGroup);
+
 	return threadGroup;
 }
 
@@ -103,6 +107,8 @@ void isbr_merge(isbr_ThreadGroup group) {
 		pthread_join(group->threads[i], NULL);
 	}
 }
+
+void isbr_merge_all() { /* nothing to do => merged already within parallel */ };
 
 void isbr_barrier(isbr_ThreadGroup group) {
 	if (!group) return;

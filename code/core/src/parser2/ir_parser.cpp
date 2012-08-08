@@ -41,6 +41,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/parser2/parser.h"
+#include "insieme/core/transform/manipulation.h"
 
 namespace insieme {
 namespace core {
@@ -96,7 +97,10 @@ namespace parser {
 					parenthese.push_back(info.getClosingParenthese(*cur));
 				}
 				if (info.isRightParenthese(*cur)) {
-					assert(!parenthese.empty() && parenthese.back() == *cur);
+					// if this is not matching => return end (no next token)
+					if (parenthese.empty() || parenthese.back() != *cur) {
+						return end;
+					}
 					parenthese.pop_back();
 				}
 				if (!parenthese.empty()) {
@@ -143,6 +147,50 @@ namespace parser {
 				// ignore
 			}
 			return false;
+		}
+
+		bool isBind(Context& context, const TokenIter& begin, const TokenIter& end) {
+
+			// it has to start with (, then some types and after the first ) a = and a >
+			if (*begin != '(') return false;
+
+			TokenIter cur = findNext(context.grammar.getTermInfo(), begin, end, ')');
+			if (cur == end) return false;
+			++cur;
+			if (cur == end || *cur != '=') return false;
+			++cur;
+			if (cur == end || *cur != '>') return false;
+
+			// yes, it should be a bind
+			return true;
+		}
+
+		bool isFunction(Context& context, const TokenIter& begin, const TokenIter& end) {
+
+			// it has to start with (, then some types and after the first ) a - and a >
+			// also the definition has to end with } or ;
+			if (*begin != '(') return false;
+
+			// it has to have a minimal size
+			if (std::distance(begin, end) < 6u) return false;
+
+			// check end
+			if (*(end-1) != '}' && *(end-1) != ';') return false;
+
+			TokenIter cur = findNext(context.grammar.getTermInfo(), begin, end, ')');
+			if (cur == end) return false;
+			++cur;
+			if (cur == end || *cur != '-') return false;
+			++cur;
+			if (cur == end || *cur != '>') return false;
+
+			// yes, it should be a function
+			return true;
+
+		}
+
+		bool allFunctions(Context& cur, const vector<TokenRange>& definitions) {
+			return all(definitions, [&](const TokenRange& range) { return isFunction(cur, range.begin(), range.end()); });
 		}
 
 		bool containsOneOf(const NodePtr& root, const vector<NodePtr>& values) {
@@ -310,6 +358,11 @@ namespace parser {
 					// check whether number of names and number of definitions are matching
 					if (names.size() != defs.size()) { return; }
 
+					// test whether it is a bind on the right-hand-side
+					if (names.size() == 1u && isBind(cur, defs.front().begin(), defs.front().end())) {
+						return;		// no name-binding required
+					}
+
 					// determine whether definitions are functions or recursive types
 					if (isType(cur, defs.front().begin(), defs.front().end())) {
 						// define type variables and be done
@@ -322,8 +375,7 @@ namespace parser {
 
 					// those are expressions => test whether it is function declaration
 					// Observation: no non-function expressions ends with a } or a ;
-					const Token& tail = *(defs.front().end()-1);
-					if (tail == '}' || tail == ';') {
+					if (allFunctions(cur, defs)) {
 						// bind names to variables with types matching the corresponding definitions
 						for(std::size_t i = 0; i < names.size(); ++i) {
 							cur.getSymbolManager().add(names[i], cur.variable(getFunctionType(cur, defs[i])));
@@ -636,7 +688,7 @@ namespace parser {
 					}
 			));
 
-			// add usere defined literals
+			// add user defined literals
 			g.addRule("E", rule(
 					seq("lit(", cap(any(Token::String_Literal)), ":", T, ")"),
 					[](Context& cur)->NodePtr {
@@ -644,6 +696,15 @@ namespace parser {
 						string value = cur.getSubRange(0).front().getLexeme();
 						value = value.substr(1,value.size()-2);
 						return cur.literal(cur.getTerm(0).as<TypePtr>(), value);
+					}
+			));
+
+			// type literals
+			g.addRule("E", rule(
+					seq("lit(", T, ")"),
+					[](Context& cur)->NodePtr {
+						// just create corresponding type literal
+						return cur.getTypeLiteral(cur.getTerm(0).as<TypePtr>());
 					}
 			));
 
@@ -830,6 +891,17 @@ namespace parser {
 					-9
 			));
 
+			// -- cast --
+			g.addRule("E", rule(
+					seq("(", T, ")", E),
+					[](Context& cur)->NodePtr {
+						return cur.castExpr(
+								cur.getTerm(0).as<TypePtr>(),
+								cur.getTerm(1).as<ExpressionPtr>()
+						);
+					},
+					-14
+			));
 
 			// -- ref manipulations --
 
@@ -938,9 +1010,17 @@ namespace parser {
 						// get function
 						ExpressionPtr fun = terms.front().as<ExpressionPtr>();
 						terms.erase(terms.begin());
-						if (fun->getType()->getNodeType()!=NT_FunctionType) {
+
+						TypePtr type = fun->getType();
+						if (type->getNodeType()!=NT_FunctionType) {
 							return fail(cur, "Calling non-function type!");
 						}
+
+						FunctionTypePtr funType = type.as<FunctionTypePtr>();
+						if (funType->getParameterTypes().size() != terms.size()) {
+							return fail(cur, "Invalid number of arguments!");
+						}
+
 						return cur.callExpr(fun, convertList<ExpressionPtr>(terms));
 					}
 			));
@@ -976,6 +1056,40 @@ namespace parser {
 						return cur.lambdaExpr(resType, body, convertList<VariablePtr>(terms));
 					}
 			));
+
+
+			// -- bind expression --
+			g.addRule("E", rule(
+					seq("(", list(param, ","), ")=>", E | S),
+					[](Context& cur)->NodePtr {
+						// construct
+						NodeList terms = cur.getTerms();
+						StatementPtr stmt = terms.back().as<StatementPtr>();
+						terms.pop_back();		// drop body expression
+
+						// derive call expression
+						CallExprPtr call;
+						if (stmt->getNodeType() == NT_CallExpr) {
+							call = stmt.as<CallExprPtr>();
+						} else if (stmt->getNodeCategory() == NC_Expression){
+							call = cur.id(stmt.as<ExpressionPtr>());
+						} else if (stmt->getNodeCategory() == NC_Statement) {
+							// try outlining the statement
+							if (transform::isOutlineAble(stmt)) {
+								call = transform::outline(cur.getNodeManager(), stmt);
+							}
+						}
+
+						// check whether call-conversion was successful
+						if (!call) {
+							return fail(cur, "Not an outline-able context!");
+						}
+
+						// build bind expression
+						return cur.bindExpr(convertList<VariablePtr>(terms), call);
+					}
+			));
+
 
 			// --------------- add statement rules ---------------
 

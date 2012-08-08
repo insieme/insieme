@@ -158,7 +158,10 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitCastExpr(const core::CastExprPtr& ptr, ConversionContext& context) {
-		return c_ast::cast(converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType, visit(ptr->getSubExpression(), context));
+		// add dependency to type definition
+		auto info = converter.getTypeManager().getTypeInfo(ptr->getType());
+		context.addDependency(info.definition);
+		return c_ast::cast(info.rValueType, visit(ptr->getSubExpression(), context));
 	}
 
 	c_ast::NodePtr StmtConverter::visitJobExpr(const core::JobExprPtr& ptr, ConversionContext& context) {

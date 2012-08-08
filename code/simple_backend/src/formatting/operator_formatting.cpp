@@ -565,6 +565,7 @@ namespace formatting {
 		// handle parallel operators
 		ADD_FORMATTER_DETAIL(res, basic.getParallel(), false, { OUT("isbr_parallel("); VISIT_ARG(0); OUT(")"); });
 		ADD_FORMATTER_DETAIL(res, basic.getMerge(), false, { OUT("isbr_merge("); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER_DETAIL(res, basic.getMergeAll(), false, { OUT("isbr_merge_all()"); });
 		ADD_FORMATTER_DETAIL(res, basic.getBarrier(), false, { OUT("isbr_barrier("); VISIT_ARG(0); OUT(")"); });
 
 		ADD_FORMATTER_DETAIL(res, basic.getGetThreadGroup(), false, { OUT("isbr_getThreadGroup("); VISIT_ARG(0); OUT(")"); });

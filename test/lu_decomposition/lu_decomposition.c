@@ -9,11 +9,12 @@
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 
 #define VALUE double
+#define bool int
 
 // create the matices
 VALUE A[N][N];
 
-VALUE eq(double x, double y) {
+bool eq(double x, double y) {
 	VALUE diff = x - y;
 	diff = (diff<0)?-diff:diff;
 	return diff < 0.000001;
