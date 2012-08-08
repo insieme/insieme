@@ -1,0 +1,17 @@
+
+let int = int<4>;
+
+unit main() {
+
+	// an atomic increment
+	let atomicInc = (ref<'a> v)->unit {
+		atomic(v, ('a x)=>true, ('a x)=>x+('a)1);
+	};
+
+	// create an int and increment
+	ref<int> x = var(0);
+	atomicInc(x);
+	
+	ref<int<8>> y = var(0l);
+	atomicInc(y);
+}
