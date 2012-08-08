@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 struct Village;
 struct Patient;
@@ -36,9 +37,13 @@ struct Village {
 
 int main(int argc, char* argv[]) {
 
-	struct Village *v = NULL;
+	struct Village *v = malloc(sizeof(struct Village));
+	v->population = malloc(sizeof(struct Patient));
 
 	//v->hosp;
 	struct Patient* p;
 	v->population->back = p;
+
+	free(v->population);
+	free(v);
 }
