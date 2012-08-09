@@ -144,7 +144,7 @@ namespace parser {
 			EXPECT_TRUE(g.match(manager, "-"));
 			EXPECT_FALSE(g.match(manager, ""));
 
-			g = rule(empty, accept);
+			g = rule(empty(), accept);
 			EXPECT_FALSE(g.match(manager, "-"));
 			EXPECT_TRUE(g.match(manager, ""));
 	}
@@ -154,7 +154,7 @@ namespace parser {
 
 		string res = "";
 		Grammar grammar = rule(
-				seq(identifier, cap(identifier), identifier),
+				seq(identifier(), cap(identifier()), identifier()),
 				[&](const Context& cur)->Result {
 					//assert(cur.begin + 1 == cur.end);
 					EXPECT_EQ(0u, cur.getTerms().size());

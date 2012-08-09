@@ -1064,9 +1064,11 @@ namespace parser {
 
 	// -- factory functions -----------------------------------------------------------------------------
 
-	extern const TermPtr empty;
-
-	extern const TermPtr identifier;
+	inline TermPtr empty() {
+		// this is thread-save in C++11
+		const static TermPtr instance = std::make_shared<Empty>();
+		return instance;
+	}
 
 	inline TermPtr operator|(const TermPtr& a, const TermPtr& b) {
 		return std::make_shared<Alternative>(a, b);
@@ -1078,13 +1080,19 @@ namespace parser {
 
 	inline TermPtr lit(const string& str) {
 		auto list = lex(str);
-		if (list.empty()) return empty;
+		if (list.empty()) return empty();
 		if (list.size() == 1u) return lit(list[0]);
 		return std::make_shared<Sequence>(::transform(list, (TermPtr(*)(const Token&))&lit));
 	}
 
 	inline TermPtr any(Token::Type type = (Token::Type)0) {
 		return std::make_shared<Any>(type);
+	}
+
+	inline TermPtr identifier() {
+		// this is thread-save in C++11
+		const static TermPtr instance = any(Token::Identifier);
+		return instance;
 	}
 
 	TermPtr cap(const TermPtr& term);
@@ -1147,7 +1155,7 @@ namespace parser {
 	}
 
 	inline TermPtr opt(const TermPtr& term) {
-		return std::make_shared<Alternative>(term, empty);
+		return std::make_shared<Alternative>(term, empty());
 	}
 
 	inline TermPtr opt(const string& term) {
@@ -1164,7 +1172,7 @@ namespace parser {
 	}
 
 	inline TermPtr list(const TermPtr& element, const TermPtr& seperator) {
-		return empty | (element << loop(seperator << element));
+		return empty() | (element << loop(seperator << element));
 	}
 
 	inline TermPtr list(const TermPtr& element, const string& seperator) {

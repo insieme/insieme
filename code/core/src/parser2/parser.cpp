@@ -1170,10 +1170,6 @@ namespace parser {
 		return parentheseStack.empty();
 	}
 
-	const TermPtr empty = std::make_shared<Empty>();
-
-	const TermPtr identifier = any(Token::Identifier);
-
 	TermPtr cap(const TermPtr& term) {
 		// define action event handler
 		struct capture : public detail::actions {
