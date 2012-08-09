@@ -127,6 +127,7 @@ TEST_P(FrontendIntegrationTest, SemanticChecks) {
 	// obtain test case
 	utils::test::IntegrationTestCase testCase = GetParam();
 	SCOPED_TRACE("Testing Case: " + testCase.getName());
+	LOG(INFO) << "Testing Case: " + testCase.getName();
 
 	// load the code using the frontend
 	core::ProgramPtr code = load(manager, testCase);
@@ -175,6 +176,7 @@ TEST_P(TypeVariableDeductionTest, DeriveTypes) {
 	// obtain test case
 	utils::test::IntegrationTestCase testCase = GetParam();
 	SCOPED_TRACE("Testing Case: " + testCase.getName());
+	LOG(INFO) << "Testing Case: " + testCase.getName();
 
 	// load the code using the frontend
 	core::ProgramPtr code = load(manager, testCase);
@@ -291,6 +293,7 @@ TEST_P(SimpleBackendIntegrationTest, CompileableCode) {
 	utils::test::IntegrationTestCase testCase = GetParam();
 
 	SCOPED_TRACE("Testing Case: " + testCase.getName());
+	LOG(INFO) << "Testing Case: " + testCase.getName();
 
 	// load the code using the frontend
 	core::ProgramPtr code = load(manager, testCase);
@@ -371,6 +374,7 @@ TEST_P(BinaryDumpIntegrationTest, WriteReadTest) {
 	utils::test::IntegrationTestCase testCase = GetParam();
 
 	SCOPED_TRACE("Testing Case: " + testCase.getName());
+	LOG(INFO) << "Testing Case: " + testCase.getName();
 
 	// load the code using the frontend
 	core::ProgramPtr code = load(managerA, testCase);
@@ -462,6 +466,7 @@ TEST_P(XMLIntegrationTest, WriteReadTest) {
 	utils::test::IntegrationTestCase testCase = GetParam();
 
 	SCOPED_TRACE("Testing Case: " + testCase.getName());
+	LOG(INFO) << "Testing Case: " + testCase.getName();
 
 	// load the code using the frontend
 	core::ProgramPtr code = load(manager, testCase);
