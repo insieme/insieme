@@ -158,10 +158,7 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitCastExpr(const core::CastExprPtr& ptr, ConversionContext& context) {
-		// add dependency to type definition
-		auto info = converter.getTypeManager().getTypeInfo(ptr->getType());
-		context.addDependency(info.definition);
-		return c_ast::cast(info.rValueType, visit(ptr->getSubExpression(), context));
+		return c_ast::cast(converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType, visit(ptr->getSubExpression(), context));
 	}
 
 	c_ast::NodePtr StmtConverter::visitJobExpr(const core::JobExprPtr& ptr, ConversionContext& context) {
@@ -386,12 +383,8 @@ namespace backend {
 		bool isSimple(const core::ExpressionPtr& exp) {
 			try {
 				core::arithmetic::Formula form = core::arithmetic::toFormula(exp);
-				if(form.isConstant()) return true;
+				if(form.isConstant() || form.isValue()) return true;
 			} catch(core::arithmetic::NotAFormulaException e) { }
-			if(exp->getNodeType() == core::NT_Variable) return true;
-			if(core::analysis::isCallOf(exp, exp->getNodeManager().getLangBasic().getCompositeRefElem())
-			|| core::analysis::isCallOf(exp, exp->getNodeManager().getLangBasic().getCompositeMemberAccess())) return true;
-			if(core::analysis::isCallOf(exp, exp->getNodeManager().getLangBasic().getRefDeref())) return isSimple(core::analysis::getArgument(exp, 0));
 			return false;
 		}
 	}
@@ -427,6 +420,13 @@ namespace backend {
 			const VariableInfo& info_step = varManager.addInfo(converter, var_step, VariableInfo::NONE);
 			initVector.push_back(std::make_pair(info_step.var, convertExpression(context, step)));
 			cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, info_step.var);
+		} 
+		else { // use pre(inc/dec) if abs(step) == 1
+			core::arithmetic::Formula form = core::arithmetic::toFormula(step);
+			if(form.isConstant()) {
+				if(form.isOne()) cStep = c_ast::preInc(info_iter.var);
+				if((-form).isOne()) cStep = c_ast::preDec(info_iter.var);
+			}
 		}
 
 		// handle end
