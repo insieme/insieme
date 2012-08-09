@@ -51,9 +51,6 @@
 
 #include "insieme/backend/backend.h"
 
-#include "insieme/simple_backend/simple_backend.h"
-#include "insieme/simple_backend/rewrite.h"
-
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/sequential/sequential_backend.h"
@@ -742,20 +739,16 @@ int main(int argc, char** argv) {
 						}
 						break;
 					}
-					case 'r': {
-						backendName = "Runtime.Backend";
-						backend = insieme::backend::runtime::RuntimeBackend::getDefault();
-						break;
-					}
 					case 's': {
 						backendName = "Sequential.Backend";
 						backend = insieme::backend::sequential::SequentialBackend::getDefault();
 						break;
 					}
-					case 'p':
+					case 'r':
 					default: {
-						backendName = "Simple.Backend";
-						backend = insieme::simple_backend::SimpleBackend::getDefault();
+						backendName = "Runtime.Backend";
+						backend = insieme::backend::runtime::RuntimeBackend::getDefault();
+						break;
 					}
 				}
 

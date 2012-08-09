@@ -34,17 +34,51 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * Some utilities to be shared among all integration tests.
+ */
 
-#include <pthread.h>
+namespace insieme {
 
-typedef struct {
-    int needed;
-    int called;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-} isbr_barrier_t;
+	using namespace utils::test;
+	using namespace core;
 
-int isbr_barrier_init(isbr_barrier_t *barrier, int needed);
-int isbr_barrier_destroy(isbr_barrier_t *barrier);
-int isbr_barrier_wait(isbr_barrier_t *barrier);
+	
+	// --------------- Some global utilities for this test program --------------------
+	
+	namespace {
+	
+		// a node manager bound to the life cycle of the entire program
+		NodeManager testGlobalManager;
+	
+		// a cache for already loaded Integreation tests
+		std::map<IntegrationTestCase, ProgramPtr> loadedCodes;
+	
+		// a helper method for loading program code
+		ProgramPtr load(NodeManager& manager, const IntegrationTestCase& testCase) {
+	
+			// check whether the code is already in the cache
+			auto pos = loadedCodes.find(testCase);
+			if (pos != loadedCodes.end()) {
+				return manager.get(pos->second);
+			}
+		
+			// not loaded yet => load and cache code
+			frontend::ConversionJob job(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs());
+			job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
+			core::ProgramPtr code = job.execute();
+	
+			loadedCodes.insert(std::make_pair(testCase, code));
+			return manager.get(code);
+		}
+	
+	}
+	
+	
+	inline vector<TypePtr> getTypes(const vector<ExpressionPtr>& expressions) {
+		vector<TypePtr> res;
+		::transform(expressions, std::back_inserter(res), [](const ExpressionPtr& cur) { return cur->getType(); });
+		return res;
+	}
+
+}
