@@ -79,6 +79,7 @@ struct _irt_worker {
 	pthread_mutex_t wait_mutex;
 
 	uint32 default_variant;
+	unsigned int rand_seed;
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_instrumentation_event_data_table* instrumentation_event_data;
