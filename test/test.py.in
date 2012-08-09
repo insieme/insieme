@@ -667,7 +667,6 @@ def main():
 	abortOnFail = False;
 
 	#check flags
-	global USE_SMP
 	global USE_SEQ
 	global USE_RUN
 	global USE_OCL
@@ -710,32 +709,22 @@ def main():
 			global cleanRef
 			cleanRef = 1
 			sys.argv.remove(arg)
-		elif(arg == "-smp") :
-			USE_SMP = 1
-			USE_SEQ = 0
-			USE_RUN = 0
-			USE_OCL = 0
-			sys.argv.remove(arg)
 		elif(arg == "-seq") :
-			USE_SMP = 0
 			USE_SEQ = 1
 			USE_RUN = 0
 			USE_OCL = 0
 			sys.argv.remove(arg)
 		elif(arg == "-run") :
-			USE_SMP = 0
 			USE_SEQ = 0
 			USE_RUN = 1
 			USE_OCL = 0
 			sys.argv.remove(arg)
 		elif(arg == "-ocl") :
-			USE_SMP = 0
 			USE_SEQ = 0
 			USE_RUN = 0
 			USE_OCL = 1
 			sys.argv.remove(arg)
 		elif(arg == "-full") :
-			USE_SMP = 1
 			USE_SEQ = 1
 			USE_RUN = 1
 			USE_OCL = 0
