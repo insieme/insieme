@@ -5,8 +5,8 @@ project(insieme_utils CXX)
 
 include(../environment.cmake)
 
-# States that CMake required version must be >= 2.6
-cmake_minimum_required(VERSION 2.6)
+# States that CMake required version must be >= 2.8
+cmake_minimum_required(VERSION 2.8)
 
 # configure config files
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/test_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/utils/test/test_config.h)

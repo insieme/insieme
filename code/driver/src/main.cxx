@@ -73,6 +73,7 @@
 #include "insieme/utils/timer.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/version.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
@@ -530,7 +531,7 @@ int main(int argc, char** argv) {
 
 	CommandLineOptions::Parse(argc, argv);
 	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(CommandLineOptions::LogLevel));
-	LOG(INFO) << "Insieme compiler";
+	LOG(INFO) << "Insieme compiler - Version: " << utils::getVersion();
 
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::get(manager);
