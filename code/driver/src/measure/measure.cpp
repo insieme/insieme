@@ -429,16 +429,8 @@ namespace measure {
 	// -- measurements --
 
 	utils::compiler::Compiler getDefaultCompilerForMeasurments() {
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-
-		compiler = utils::compiler::Compiler("gcc");
-
-		// enable optimization
-		compiler.addFlag("--std=c99");
-		compiler.addFlag("-O3");
-
-		// the rest is done by the measurement procedure
-		return compiler;
+		// just take default optimizing compiler
+		return utils::compiler::Compiler::getDefaultC99CompilerO3();
 	}
 
 	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {

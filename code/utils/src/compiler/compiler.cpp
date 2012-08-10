@@ -55,7 +55,7 @@ namespace compiler {
 		// create a default version of a C99 compiler
 //		Compiler res(C_COMPILER); // TODO: re-enable when constant is set properly
 		Compiler res("gcc");
-		res.addFlag("--std=c99");
+		res.addFlag("--std=gnu99");
 		return res;
 	}
 
