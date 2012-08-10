@@ -1,0 +1,30 @@
+\section{The Simple Backend}
+There used to be a backend generating code using a thin \textit{pthread} based
+runtime layer. This backend, the so called simple backend, which was originally
+intended as a prototype for other backends, especially for the runtime backend
+generating code for the Insieme Runtime, has been gradually extended and
+maintained to support the full spectrum of the IR. However, eventually in August
+2012 it has been abendend due to the mature development state of the successors.
+
+The latest version of the simple backend can be found under revision 
+\begin{center}
+90748c115c8dfb1175dc7703e6d3c5c73f40d287
+\end{center}
+within the git. The code is organized within its own module (sub-folder
+\file{simple\_backend}).
+
+Structually the SimpleBackend is a predecessor of the real backend (see section
+\ref{sec:Compiler.Backend}). The core conversion works quite similar. The entire
+conversion is build around the \type{StatementConverter} and Utility classes
+like the \type{TypeManager}, \type{FunctionManager} or \type{JobManager} are
+contributing required services. 
+
+Unlike the real backend, the resulting code is not represented as a C-AST. The
+SimpleBackend is directly generating a \type{string} representation of the
+resulting C-Code. Although using this approach modifications to the generated
+output code are easier to be integrated, post-conversion transformations or the
+elimination of unnecessary parentheses (due to the existing precidence of
+operators) could not be supported well. Therefore the readability of the
+resulting code is limited.
+
+
