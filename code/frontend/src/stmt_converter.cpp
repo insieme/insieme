@@ -446,7 +446,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 											)
 									)
 							),
-							step,
+							builder.castExpr(init->getType(), step),
 							core::lang::BasicGenerator::Mul
 					),
 					core::lang::BasicGenerator::Add

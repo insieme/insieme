@@ -51,9 +51,6 @@
 
 #include "insieme/backend/backend.h"
 
-#include "insieme/simple_backend/simple_backend.h"
-#include "insieme/simple_backend/rewrite.h"
-
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/sequential/sequential_backend.h"
@@ -76,6 +73,7 @@
 #include "insieme/utils/timer.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/version.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
@@ -533,7 +531,7 @@ int main(int argc, char** argv) {
 
 	CommandLineOptions::Parse(argc, argv);
 	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(CommandLineOptions::LogLevel));
-	LOG(INFO) << "Insieme compiler";
+	LOG(INFO) << "Insieme compiler - Version: " << utils::getVersion();
 
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::get(manager);
@@ -742,20 +740,16 @@ int main(int argc, char** argv) {
 						}
 						break;
 					}
-					case 'r': {
-						backendName = "Runtime.Backend";
-						backend = insieme::backend::runtime::RuntimeBackend::getDefault();
-						break;
-					}
 					case 's': {
 						backendName = "Sequential.Backend";
 						backend = insieme::backend::sequential::SequentialBackend::getDefault();
 						break;
 					}
-					case 'p':
+					case 'r':
 					default: {
-						backendName = "Simple.Backend";
-						backend = insieme::simple_backend::SimpleBackend::getDefault();
+						backendName = "Runtime.Backend";
+						backend = insieme::backend::runtime::RuntimeBackend::getDefault();
+						break;
 					}
 				}
 

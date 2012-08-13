@@ -15,6 +15,11 @@ INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
 # RUN = the runtime backend
 #
 
+#
+# Figure out command to compute version of Code
+#
+INSIEME_VERSION="\"\\\"${insieme_version}\\\"\""
+
 USE_SMP = 0
 USE_SEQ = 0
 USE_RUN = 1
@@ -24,10 +29,10 @@ USE_OCL = 0
 SRC_DIR = "${CMAKE_SOURCE_DIR}"
 INSIEME_FLAGS = "--std=c99 -I."
 CFLAGS_GCC = "-pipe -O3 --std=c99 -I."
-CFLAGS_SMP = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/simple_backend/include/insieme/simple_backend/runtime".format(**{'SRC_DIR': SRC_DIR})
+CFLAGS_SMP = "-pipe -O3 --std=c99 -I. -I{0}/code/simple_backend/include/insieme/simple_backend/runtime".format(SRC_DIR)
 CFLAGS_SEQ = "-pipe -O3 --std=c99 -I."
-CFLAGS_RUN = "-pipe -O3 --std=gnu99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
-CFLAGS_OCL = "-pipe -O3 --std=gnu99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
+CFLAGS_RUN = "-pipe -O3 --std=gnu99 -I. -I{0}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -DINSIEME_VERSION={1}".format(SRC_DIR, INSIEME_VERSION)
+CFLAGS_OCL = "-pipe -O3 --std=gnu99 -I. -I{0}/code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -DINSIEME_VERSION={1}".format(SRC_DIR, INSIEME_VERSION)
 
 # linker flags
 LDFLAGS_GCC = "-lm -lpthread -lrt"
@@ -667,7 +672,6 @@ def main():
 	abortOnFail = False;
 
 	#check flags
-	global USE_SMP
 	global USE_SEQ
 	global USE_RUN
 	global USE_OCL
@@ -710,32 +714,22 @@ def main():
 			global cleanRef
 			cleanRef = 1
 			sys.argv.remove(arg)
-		elif(arg == "-smp") :
-			USE_SMP = 1
-			USE_SEQ = 0
-			USE_RUN = 0
-			USE_OCL = 0
-			sys.argv.remove(arg)
 		elif(arg == "-seq") :
-			USE_SMP = 0
 			USE_SEQ = 1
 			USE_RUN = 0
 			USE_OCL = 0
 			sys.argv.remove(arg)
 		elif(arg == "-run") :
-			USE_SMP = 0
 			USE_SEQ = 0
 			USE_RUN = 1
 			USE_OCL = 0
 			sys.argv.remove(arg)
 		elif(arg == "-ocl") :
-			USE_SMP = 0
 			USE_SEQ = 0
 			USE_RUN = 0
 			USE_OCL = 1
 			sys.argv.remove(arg)
 		elif(arg == "-full") :
-			USE_SMP = 1
 			USE_SEQ = 1
 			USE_RUN = 1
 			USE_OCL = 0

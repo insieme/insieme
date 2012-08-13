@@ -99,7 +99,8 @@ void bots_get_architecture(char *str)
    snprintf(str, BOTS_TMP_STR_SZ, "%s-%s;%d" ,architecture.sysname, architecture.machine, ncpus);
 }
 
-#if defined (__linux)
+#if defined (DISABLED_FOR_INSIEME_TEST)
+//#if defined (__linux)
 /* ****************************************************************** */
 void bots_get_load_average(char *str)
 {
@@ -222,13 +223,15 @@ Nodes;Nodes/Sec;\n");
          fprintf(stdout, "Parameters          = %s\n", str_parameters); /*fix*/
          fprintf(stdout, "Model               = %s\n", str_model); 
          fprintf(stdout, "Embedded cut-off    = %s\n", str_cutoff); 
-         fprintf(stdout, "# of Threads        = %s\n", str_resources);
+//         fprintf(stdout, "# of Threads        = %s\n", str_resources);
          fprintf(stdout, "Verification        = %s\n", str_result);
 
-         fprintf(stdout, "Time Program        = %s seconds\n", str_time_program);
-	 if (bots_sequential_flag) {
-           fprintf(stdout, "Time Sequential     = %s seconds\n", str_time_sequential);
-           fprintf(stdout, "Speed-up            = %s\n", str_speed_up);
+	 if (bots_print_times) {
+		 fprintf(stdout, "Time Program        = %s seconds\n", str_time_program);
+		 if (bots_sequential_flag) {
+		   fprintf(stdout, "Time Sequential     = %s seconds\n", str_time_sequential);
+		   fprintf(stdout, "Speed-up            = %s\n", str_speed_up);
+		 }
 	 }
 
          if ( bots_number_of_tasks > 0 ) {
@@ -240,7 +243,7 @@ Nodes;Nodes/Sec;\n");
          fprintf(stdout, "Execution Message   = %s\n", str_exec_message);
 
          fprintf(stdout, "Architecture        = %s\n", str_architecture);
-         fprintf(stdout, "Load Avg [1:5:15]   = %s\n", str_load_avg);
+//         fprintf(stdout, "Load Avg [1:5:15]   = %s\n", str_load_avg);
 
          fprintf(stdout, "Compilation Date    = %s\n", str_comp_date);
          fprintf(stdout, "Compilation Message = %s\n", str_comp_message);

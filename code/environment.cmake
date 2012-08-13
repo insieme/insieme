@@ -8,6 +8,7 @@
 #   LINKING_TYPE                Linux
 #   LLVM_HOME/$ENV{LLVM_HOME}   Both
 
+
 # -------------------------------------------------------------- define some code locations
 
 # setup std-include directories (to support some IDEs)
@@ -26,16 +27,14 @@ set ( insieme_utils_src_dir 	         	${insieme_code_dir}/utils/src )
 
 set ( insieme_utils_include_dir          	${insieme_code_dir}/utils/include )
 set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
-set ( insieme_annotations_include_dir       ${insieme_code_dir}/annotations/include )
+set ( insieme_annotations_include_dir       	${insieme_code_dir}/annotations/include )
 set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
 
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
 set ( insieme_backend_include_dir       	${insieme_code_dir}/backend/include )
 
 set ( insieme_driver_include_dir         	${insieme_code_dir}/driver/include )
-set ( insieme_experiments_include_dir       ${insieme_code_dir}/experiments/include )
-
-set ( insieme_simple_backend_include_dir 	${insieme_code_dir}/simple_backend/include )
+set ( insieme_experiments_include_dir       	${insieme_code_dir}/experiments/include )
 
 set ( insieme_analysis_include_dir       	${insieme_code_dir}/analysis/include )
 set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include )
@@ -44,7 +43,19 @@ set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/inclu
 
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 
-set ( insieme_machine_learning_include_dir  ${insieme_code_dir}/machine_learning/include )
+set ( insieme_machine_learning_include_dir  	${insieme_code_dir}/machine_learning/include )
+
+# -------------------------------------------------------------- determines insieme version
+
+find_package(Git)
+if(GIT_FOUND)
+	# deduce the code version using git describe
+	set ( insieme_version "`(cd ${insieme_code_dir}; ${GIT_EXECUTABLE} describe --dirty)`")
+	#set ( insieme_version "shit" )
+else()
+	set ( insieme_version "unknown" )
+endif()
+
 
 # ------------------------------------------------------------- configuration for platforms
 if(MSVC)   # Windows Visual Studio
@@ -256,6 +267,10 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	else()
 		message( "WARNING: --std=c++0x not supported by your compiler!" )
 	endif()
+
+	# add insieme version definition (add_definitions escapes back-quotes)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINSIEME_VERSION=\"\\\"${insieme_version}\\\"\"")
+
 endif()
 
 if (${CMAKE_CXX_COMPILER} MATCHES "icpc")

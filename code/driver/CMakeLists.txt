@@ -30,7 +30,6 @@ include_directories( ${insieme_frontend_include_dir} )
 include_directories( ${insieme_backend_include_dir} )
 include_directories( ${insieme_analysis_include_dir} )
 include_directories( ${insieme_transform_include_dir} )
-include_directories( ${insieme_simple_backend_include_dir} )
 include_directories( ${insieme_annotations_include_dir} )
 include_directories( ${insieme_driver_include_dir} )
 include_directories( ${insieme_machine_learning_include_dir} )
@@ -43,7 +42,6 @@ set( insieme_libraries
 	insieme_core 
 	insieme_frontend 
 	insieme_backend 
-	insieme_simple_backend
 	insieme_annotations 
 	insieme_analysis
 	insieme_transform

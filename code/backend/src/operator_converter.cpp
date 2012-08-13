@@ -203,6 +203,17 @@ namespace backend {
 		res[basic.getCharLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 
+		// -- references --
+
+		res[basic.getRefEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRefNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRefGe()] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRefGt()] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRefLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRefLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+//		res[basic.getRefSub()] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
 		// -- volatile --
 
 		res[basic.getVolatileMake()] = OP_CONVERTER({ return CONVERT_ARG(0); });
@@ -574,12 +585,6 @@ namespace backend {
 
 
 		// -- pointer --
-
-		res[basic.getPtrEq()] = OP_CONVERTER({
-			// Operator Type:  (array<'a,1>, array<'a,1>) -> bool
-			// generated code: X == Y
-			return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1));
-		});
 
 		res[basic.getGetNull()] = OP_CONVERTER({
 			// Operator Type:  (type<'a>) -> array<'a,1>

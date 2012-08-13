@@ -57,7 +57,7 @@ void (*irt_inst_insert_wi_event)(irt_worker* worker, irt_instrumentation_event e
 void (*irt_inst_insert_wg_event)(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id) = &_irt_inst_insert_no_wg_event;;
 void (*irt_inst_insert_di_event)(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) = &_irt_inst_insert_no_di_event;
 void (*irt_inst_insert_wo_event)(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) = &_irt_inst_insert_no_wo_event;
-bool irt_instrumentation_event_output_is_enabled = false;
+bool irt_g_instrumentation_event_output_is_enabled = false;
 
 // ============================ dummy functions ======================================
 // dummy functions to be used via function pointer to disable
@@ -142,10 +142,13 @@ void _irt_inst_insert_di_event(irt_worker* worker, irt_instrumentation_event eve
     bool irt_g_ocl_temp_event_dump_already_done = false;
 #endif
 
+void irt_inst_event_data_output_all(bool binary_format) {
+	for(int i = 0; i < irt_g_worker_count; ++i)
+		irt_inst_event_data_output(irt_g_workers[i], binary_format);
+}
+
 // writes csv files
-void irt_inst_event_data_output(irt_worker* worker) {
-	if(!irt_instrumentation_event_output_is_enabled)
-		return;
+void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 	// necessary for thousands separator
 	//setlocale(LC_ALL, "");
 	//
@@ -257,10 +260,12 @@ void irt_inst_event_data_output(irt_worker* worker) {
 #endif
 
 
-	if(getenv(IRT_INST_BINARY_OUTPUT_ENV) && strcmp(getenv(IRT_INST_BINARY_OUTPUT_ENV), "true") == 0) {
+	if(binary_format) {
 		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "enabled");
 
 		/*
+		 * TODO: this format description is outdated and wrong
+		 *
 		 * dump everything in binary according to the following format:
 		 * (note: the strings are written without the termination character '\0'!)
 		 *
@@ -298,82 +303,20 @@ void irt_inst_event_data_output(irt_worker* worker) {
 		const char* header = "INSIEME1";
 		fprintf(outputfile, "%s", header);
 
-		// write size of event name table followed by group and event names
+		// write number of event name table entries followed by group and event names
 		fwrite(&(irt_g_inst_num_event_types), sizeof(uint32), 1, outputfile);
 		for(int i = 0; i < irt_g_inst_num_event_types; ++i) {
 			fprintf(outputfile, "%-4s", irt_g_instrumentation_group_names[i]);
 			fprintf(outputfile, "%-60s", irt_g_instrumentation_event_names[i]);
 		}
 
-		// write size of event table
+		// write number of events
 		const uint64 temp_num_of_elements = (uint64)(table->number_of_elements);
 		fwrite(&temp_num_of_elements, sizeof(uint64), 1, outputfile);
-/*
-		// write the event table using a buffer for performance reasons
-		const uint32 entry_buffer_max = 10;
-		uint32 entry_buffer_current = 0;
-		const uint32 entry_size = sizeof(table->data[0].event) + sizeof(table->data[0].subject_id) + sizeof(irt_time_convert_ticks_to_ns(0));
-		char buffer[entry_size * entry_buffer_max];
 
-		for(int i = 0; i < table->number_of_elements; ++i) {
-			//fwrite(&(table->data[i].event), sizeof(uint32), 1, outputfile);
-			//fwrite(&(table->data[i].subject_id), sizeof(uint64), 1, outputfile);
-			//uint64 time = irt_time_convert_ticks_to_ns(table->data[i].timestamp);
-			//fwrite(&(time), sizeof(uint64), 1, outputfile);
-			*(uint32*)(buffer + (0 + entry_size * entry_buffer_current)) = table->data[i].event;
-			*(uint64*)(buffer + (sizeof(table->data[0].event) + entry_size * entry_buffer_current)) = table->data[i].subject_id;
-			*(uint64*)(buffer + (sizeof(table->data[0].event) + sizeof(table->data[0].subject_id)) + entry_size * entry_buffer_current) = irt_time_convert_ticks_to_ns(table->data[i].timestamp);
-			++entry_buffer_current;
-			if(entry_buffer_current == entry_buffer_max) {
-				fwrite(buffer, sizeof(char), entry_size * entry_buffer_max, outputfile);
-				entry_buffer_current = 0;
-			}
-		}
-		if(entry_buffer_current > 0)
-			fwrite(buffer, sizeof(char), entry_size * entry_buffer_current, outputfile);
-*/
-
+		// write event table
 		fwrite(table->data, sizeof(irt_instrumentation_event_data), table->number_of_elements, outputfile);
 
-		/*FILE* infile = fopen(outputfilename, "r");
-		uint32 number_of_types = 0;
-		uint64 number_of_events = 0;
-
-		char name[9];
-		fread(name, sizeof(char), 8, infile);
-		name[8] = 0;
-		printf("version: %s\n", name);
-		fread(&number_of_types, sizeof(uint32), 1, infile);
-
-		char group_names[number_of_types][5];
-		char event_names[number_of_types][61];
-
-		for(int i = 0; i < number_of_types; ++i) {
-			fread(group_names[i],sizeof(char),4, infile);
-			fread(event_names[i],sizeof(char),60, infile);
-			group_names[i][4] = 0;
-			event_names[i][60] = 0;
-			printf("name: %s%s\n", group_names[i], event_names[i]);
-		}
-
-		fread(&number_of_events, sizeof(uint64), 1, infile);
-		printf("binary read: irt_g_inst_num_event_types: %u, table->number_of_elements: %lu\n########\n", number_of_types, number_of_events);
-
-		uint32 event;
-		uint64 subject;
-		uint64 time;
-
-		for(int i = 0; i < number_of_events; ++i) {
-			fread(&event, sizeof(uint32), 1, infile);
-			fread(&subject, sizeof(uint64), 1, infile);
-			fread(&time, sizeof(uint64), 1, infile);
-			printf("event number: %u\n", event);
-			printf("%s,", group_names[event]);
-			printf("%lu,", subject);
-			printf("%s,", event_names[event]);
-			printf("%lu,\n", time);
-		}
-*/
 	} else {
 		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "disabled");
 		for(int i = 0; i < table->number_of_elements; ++i) {
@@ -427,7 +370,7 @@ void irt_inst_set_all_instrumentation(bool enable) {
 	irt_inst_set_wg_instrumentation(enable);
 	irt_inst_set_wo_instrumentation(enable);
 	irt_inst_set_di_instrumentation(enable);
-	irt_instrumentation_event_output_is_enabled = enable;
+	irt_g_instrumentation_event_output_is_enabled = enable;
 }
 
 void irt_inst_set_all_instrumentation_from_env() {
