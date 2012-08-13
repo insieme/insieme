@@ -359,7 +359,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 int irt_scheduling_iteration(irt_worker* self) {
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP, self->id);
 	irt_work_item* wi = NULL;
-
+	
 	// try to take a WI from the pool
 	if((wi = irt_cwb_pop_front(&self->sched_data.pool))) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);

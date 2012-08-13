@@ -101,6 +101,7 @@ namespace core {
 
 	typedef utils::set::PointerSet<NodePtr> NodeSet;
 	typedef utils::set::PointerSet<TypePtr> TypeSet;
+	typedef utils::set::PointerSet<VariablePtr> VariableSet;
 	typedef utils::set::PointerSet<IntTypeParamPtr> IntParamSet;
 	typedef utils::set::PointerSet<StatementPtr> StatementSet;
 	typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;

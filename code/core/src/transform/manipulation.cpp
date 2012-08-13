@@ -737,7 +737,9 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 		}
 
 		// update body
-		body = replaceAll(manager, replacements).as<CompoundStmtPtr>();
+		if(!replacements.empty()) {
+			body = replaceAll(manager, replacements).as<CompoundStmtPtr>();
+		}
 	}
 
 
@@ -752,9 +754,9 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	return LambdaExpr::get(manager, newRecVar, def);
 }
 
-StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, const VariablePtr& var, const ExpressionPtr& value) {
+NodePtr fixVariable(NodeManager& manager, const NodePtr& node, const VariablePtr& var, const ExpressionPtr& value) {
 	ParameterFixer fixer(manager, var, value);
-	return fixer.map(statement);
+	return fixer.map(node);
 }
 
 
@@ -1161,6 +1163,19 @@ NodePtr trySequentialize(NodeManager& manager, const NodePtr& stmt) {
 	}
 	return NodePtr();
 }
+
+LambdaExprPtr correctRecursiveLambdaVariableUsage(NodeManager& manager, const LambdaExprPtr& lambda) {
+
+	LambdaDefinitionPtr defs = lambda->getDefinition();
+	LambdaDefinitionPtr res = defs;
+	for(auto def : defs->getDefinitions()) {
+		auto var = def->getVariable();
+		res = fixVariable(manager, res, var, var).as<LambdaDefinitionPtr>();
+	}
+	return IRBuilder(manager).lambdaExpr(lambda->getVariable(), res);
+
+}
+
 
 
 } // end namespace transform

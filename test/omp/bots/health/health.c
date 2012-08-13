@@ -208,47 +208,47 @@ struct Results get_results(struct Village *village)
       t_res.total_time       += p_res.total_time;
       vlist = vlist->next;
    }
-   t_res.hosps_number     += 1.0;
+   t_res.hosps_number     += 1;
    t_res.hosps_personnel  += village->hosp.personnel;
 
    // Patients in the village
    p = village->population;
    while (p != NULL) 
    {
-      t_res.total_patients   += 1.0;
-      t_res.total_in_village += 1.0;
-      t_res.total_hosps_v    += (float)(p->hosps_visited);
-      t_res.total_time       += (float)(p->time); 
+      t_res.total_patients   += 1;
+      t_res.total_in_village += 1;
+      t_res.total_hosps_v    += p->hosps_visited;
+      t_res.total_time       += p->time; 
       p = p->forward; 
    }
    // Patients in hospital: waiting
    p = village->hosp.waiting;
    while (p != NULL) 
    {
-      t_res.total_patients += 1.0;
-      t_res.total_waiting  += 1.0;
-      t_res.total_hosps_v  += (float)(p->hosps_visited);
-      t_res.total_time     += (float)(p->time); 
+      t_res.total_patients += 1;
+      t_res.total_waiting  += 1;
+      t_res.total_hosps_v  += p->hosps_visited;
+      t_res.total_time     += p->time; 
       p = p->forward; 
    }
    // Patients in hospital: assess
    p = village->hosp.assess;
    while (p != NULL) 
    {
-      t_res.total_patients += 1.0;
-      t_res.total_assess   += 1.0;
-      t_res.total_hosps_v  += (float)(p->hosps_visited);
-      t_res.total_time     += (float)(p->time); 
+      t_res.total_patients += 1;
+      t_res.total_assess   += 1;
+      t_res.total_hosps_v  += p->hosps_visited;
+      t_res.total_time     += p->time; 
       p = p->forward; 
    }
    // Patients in hospital: inside
    p = village->hosp.inside;
    while (p != NULL) 
    {
-      t_res.total_patients += 1.0;
-      t_res.total_inside   += 1.0;
-      t_res.total_hosps_v  += (float)(p->hosps_visited);
-      t_res.total_time     += (float)(p->time); 
+      t_res.total_patients += 1;
+      t_res.total_inside   += 1;
+      t_res.total_hosps_v  += p->hosps_visited;
+      t_res.total_time     += p->time; 
       p = p->forward; 
    }  
 
@@ -352,7 +352,9 @@ void check_patients_realloc(struct Village *village)
 
    while (village->hosp.realloc != NULL) 
    {
-      p = s = village->hosp.realloc;
+	   // INSIEME FIX
+      p = village->hosp.realloc;
+      s = p;
       while (p != NULL)
       {
          if (p->id < s->id) s = p;
