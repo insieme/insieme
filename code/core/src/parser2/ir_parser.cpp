@@ -214,7 +214,7 @@ namespace parser {
 			// process parameters
 			TypeList params;
 			for(const TokenRange& param : split(info, params_block, ',')) {
-				// type is one less from the end - by skipping the identifier
+				// type is one less from the end - by skipping the id
 				TokenRange typeRange = param - 1;
 
 				// parse type
@@ -390,7 +390,7 @@ namespace parser {
 
 			auto E = rec("E");
 			auto T = rec("T");
-			auto id = cap(identifier);
+			auto id = cap(identifier());
 
 			auto names = std::make_shared<Action<declare_names>>(seq(id, loop(seq(",",id))));
 			auto values = seq(E, loop(seq(",", E))) | seq(T, loop(seq(",", T)));
@@ -423,6 +423,7 @@ namespace parser {
 			auto N = rec("N");
 			auto A = rec("A");
 
+			auto id = identifier();
 
 			Grammar g(start);
 
@@ -449,7 +450,7 @@ namespace parser {
 			));
 
 			g.addRule("P", rule(
-					seq("#", identifier),
+					seq("#", id),
 					[](Context& cur)->NodePtr {
 						const string& name = *(cur.end - 1);
 						if (name.size() != 1u) return fail(cur, "int-type-parameter variable name must not be longer than a single character");
@@ -462,7 +463,7 @@ namespace parser {
 
 			// add type variables
 			g.addRule("T", rule(
-					seq("'", identifier),
+					seq("'", id),
 					[](Context& cur)->NodePtr {
 						const string& name = *(cur.end - 1);
 						return cur.typeVariable(name);
@@ -471,7 +472,7 @@ namespace parser {
 
 			// add generic type
 			g.addRule("T", rule(
-					seq(identifier, opt(seq("<", list(P|T, ","), ">"))),
+					seq(id, opt(seq("<", list(P|T, ","), ">"))),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 
@@ -550,7 +551,7 @@ namespace parser {
 				}
 			};
 
-			static const auto member = std::make_shared<Action<process_named_type>>(seq(T, cap(identifier)));
+			static const auto member = std::make_shared<Action<process_named_type>>(seq(T, cap(id)));
 
 			g.addRule("T", rule(
 					seq("struct {", loop(seq(member, ";")), "}"),
@@ -611,7 +612,7 @@ namespace parser {
 
 			// add named types
 			g.addRule("T", rule(
-					cap(identifier),
+					cap(id),
 					[](Context& cur)->NodePtr {
 						// simply lookup name within variable manager
 						auto res = cur.getSymbolManager().lookup(cur.getSubRange(0));
@@ -710,7 +711,7 @@ namespace parser {
 
 			// add lang-basic literals
 			g.addRule("E", rule(
-					seq(identifier, opt(seq(".", list(identifier, ".")))),
+					seq(id, opt(seq(".", list(id, ".")))),
 					[](Context& cur)->NodePtr {
 						// join matched token range and see whether it is a literal!
 						std::stringstream name;
@@ -965,7 +966,7 @@ namespace parser {
 
 			// member access
 			g.addRule("E", rule(
-					seq(E, ".", cap(identifier)),
+					seq(E, ".", cap(id)),
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
 						if (a->getType()->getNodeType() == NT_RefType) {
@@ -982,7 +983,7 @@ namespace parser {
 
 			// -- add Variable --
 			g.addRule("E", rule(
-					cap(identifier),
+					cap(id),
 					[](Context& cur)->NodePtr {
 						// simply lookup name within variable manager
 						NodePtr res = cur.getVarScopeManager().lookup(cur.getSubRange(0));
@@ -993,7 +994,7 @@ namespace parser {
 			));
 
 			g.addRule("E", rule(
-					cap(identifier),
+					cap(id),
 					[](Context& cur)->NodePtr {
 						// simply lookup name within variable manager
 						auto res = cur.getSymbolManager().lookup(cur.getSubRange(0));
@@ -1041,7 +1042,7 @@ namespace parser {
 				}
 			};
 
-			static const auto param = std::make_shared<Action<register_param>>(seq(T, cap(identifier)));
+			static const auto param = std::make_shared<Action<register_param>>(seq(T, cap(id)));
 
 			// function expressions
 			g.addRule("E", rule(
@@ -1101,7 +1102,7 @@ namespace parser {
 
 			// declaration statement
 			g.addRule("S", rule(
-					seq(T, cap(identifier), " = ", E, ";"),
+					seq(T, cap(id), " = ", E, ";"),
 					[](Context& cur)->NodePtr {
 						TypePtr type = cur.getTerm(0).as<TypePtr>();
 						ExpressionPtr value = cur.getTerm(1).as<ExpressionPtr>();
@@ -1114,7 +1115,7 @@ namespace parser {
 
 			// declaration statement
 			g.addRule("S", rule(
-					seq(T, cap(identifier), ";"),
+					seq(T, cap(id), ";"),
 					[](Context& cur)->NodePtr {
 						IRBuilder builder(cur.manager);
 						TypePtr type = cur.getTerm(0).as<TypePtr>();
@@ -1128,7 +1129,7 @@ namespace parser {
 
 			// auto-declaration statement
 			g.addRule("S", rule(
-					seq("auto", cap(identifier), " = ", E, ";"),
+					seq("auto", cap(id), " = ", E, ";"),
 					[](Context& cur)->NodePtr {
 						ExpressionPtr value = cur.getTerm(0).as<ExpressionPtr>();
 						auto decl = cur.declarationStmt(value->getType(), value);
@@ -1207,7 +1208,7 @@ namespace parser {
 				}
 			};
 
-			static const auto iter = std::make_shared<Action<register_var>>(seq(T, cap(identifier)));
+			static const auto iter = std::make_shared<Action<register_var>>(seq(T, cap(id)));
 
 			// for loop without step size
 			g.addRule("S", rule(

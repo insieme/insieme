@@ -205,6 +205,9 @@ int bots_app_cutoff_value_2 = BOTS_APP_DEF_ARG_CUTOFF_2;
 int  bots_cutoff_value = BOTS_CUTOFF_DEF_VALUE;
 #endif
 
+// a flag added to allow bots to be used within integration tests
+int bots_print_times = 1;
+
 /***********************************************************************
  * print_usage: 
  **********************************************************************/
@@ -266,6 +269,8 @@ void bots_print_usage()
 #endif
    fprintf(stderr, "\n");
    fprintf(stderr, "  -h         : Print program's usage (this help).\n");
+   fprintf(stderr, "\n");
+   fprintf(stderr, "  -t         : Disable printing of times (for integration tests).\n");
    fprintf(stderr, "\n");
 }
 /***********************************************************************
@@ -407,6 +412,12 @@ bots_get_params_common(int argc, char **argv)
 	       argv[i][1] = '*';
                bots_print_header = TRUE;
                break;
+	
+	    case 't':
+		argv[i][1] = '*';
+		bots_print_times = FALSE;
+		break;
+
             default:
                // As at the moment there are only common paramenters
                // we launch an error. Otherwise we have to ignore the

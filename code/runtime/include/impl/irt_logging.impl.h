@@ -37,6 +37,7 @@
 #pragma once
 
 #include "irt_logging.h"
+#include "irt_version.h"
 #include "utils/affinity.h"
 #include "utils/impl/affinity.impl.h"
 #include <stdio.h>
@@ -72,6 +73,7 @@ void irt_log_init() {
 	irt_log("# Runtime logging started on %s\n", _irt_time_string());
 
 	irt_log_comment("Compile-time settings:");
+	irt_log_setting_s("IRT_CODE_VERSION", IRT_CODE_VERSION);
 #ifdef IRT_RUNTIME_TUNING
 	irt_log_setting_s("IRT_RUNTIME_TUNING", "enabled");
 #else
