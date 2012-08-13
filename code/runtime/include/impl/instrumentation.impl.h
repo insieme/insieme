@@ -422,7 +422,7 @@ void irt_inst_insert_wg_event(irt_worker* worker, irt_instrumentation_event even
 void irt_inst_insert_wo_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) {}
 void irt_inst_insert_di_event(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) {}
 
-void irt_inst_event_data_output(irt_worker* worker) {}
+void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {}
 
 #endif // IRT_ENABLE_INSTRUMENTATION
 
