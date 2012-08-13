@@ -295,8 +295,8 @@ OPERATION(UnsignedInt, Not,    "uint.not",    "(uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, And,    "uint.and",    "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Or,     "uint.or",     "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Xor,    "uint.xor",    "(uint<#a>,uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, LShift, "uint.lshift", "(uint<#a>,uint<4>) -> uint<#a>")
-OPERATION(UnsignedInt, RShift, "uint.rshift", "(uint<#a>,uint<4>) -> uint<#a>")
+OPERATION(UnsignedInt, LShift, "uint.lshift", "(uint<#a>,int<4>) -> uint<#a>")
+OPERATION(UnsignedInt, RShift, "uint.rshift", "(uint<#a>,int<4>) -> uint<#a>")
 
 GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 

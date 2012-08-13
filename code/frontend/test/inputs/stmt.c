@@ -119,7 +119,7 @@ void unary_op_test() {
 	#pragma test "int.lshift(( *v1), 2)"
 	a << 2;
 
-	#pragma test "uint.lshift(CAST<uint<4>>(( *v1)), CAST<uint<4>>(2))"
+	#pragma test "uint.lshift(CAST<uint<4>>(( *v1)), 2)"
 	(unsigned int)a << 2;
 }
 
@@ -198,11 +198,11 @@ void for_stmt_test() {
 
 	// for loop using a variable declared outside
 	#pragma test \
-	"{ for(decl int<4> v2 = 0 .. 100 : 1) { (v3 := v2); }; (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*1)));}"
+	"{ for(decl int<4> v2 = 0 .. 100 : 1) { (v3 := v2); }; (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*CAST<int<4>>(1))));}"
 	for(it=0; it<100; ++it) { a=it; }
 
 	#pragma test \
-	"{ for(decl int<4> v2 = ( *v3) .. 100 : 6) { (v3 := v2); }; (v1 := (( *v3)+(CAST<int<4>>(ceil((CAST<real<8>>((100-( *v3)))/CAST<real<8>>(6))))*6)));}"
+	"{ for(decl int<4> v2 = ( *v3) .. 100 : 6) { (v3 := v2); }; (v1 := (( *v3)+(CAST<int<4>>(ceil((CAST<real<8>>((100-( *v3)))/CAST<real<8>>(6))))*CAST<int<4>>(6))));}"
 	for(it=a; it<100; it+=6) { a=it; }
 
 	#pragma test \
@@ -215,7 +215,7 @@ void for_stmt_test() {
 
 	int mq, nq;
 	#pragma test \
-	"{ (v1 := 0); while((( *v2)>1)) { { }; fun(ref<int<4>> v3, ref<int<4>> v4){ int.postInc(v3); (v4 := (( *v4)/2)); }(v1, v2); };}"
+	"{ (v1 := 0); while((( *v2)>1)) { { }; fun(ref<int<4>> v3, ref<int<4>> v4){ int.postInc(v4); (v3 := (( *v3)/2)); }(v2, v1); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 
 	//(v1 := 0);
