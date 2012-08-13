@@ -1133,7 +1133,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 			rhs = convFact.tryDeref(rhs); // rhs is an ocl-vector
 
 			// generate a ocl_vector - scalar operation
-			opFunc = gen.getOperator(exprTy, op);
+			opFunc = gen.getOperator(lhs->getType(), op);
 
 			// TODO to be tested
 			if (const core::FunctionTypePtr funTy = core::dynamic_pointer_cast<const core::FunctionType>(opFunc->getType()))
