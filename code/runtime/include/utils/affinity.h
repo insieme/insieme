@@ -73,7 +73,7 @@ typedef struct {
 static irt_affinity_physical_mapping irt_g_affinity_physical_mapping;
 
 #include <sched.h>
-#include <pthread.h>
+#include "abstraction/threads.h"
 
 #include "impl/error_handling.impl.h"
 
