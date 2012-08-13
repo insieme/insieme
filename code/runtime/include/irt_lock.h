@@ -38,6 +38,8 @@
 
 #include "declarations.h"
 
+// TODO: this does not seem to be used!
+
 IRT_MAKE_ID_TYPE(lock);
 
 struct _irt_lock {

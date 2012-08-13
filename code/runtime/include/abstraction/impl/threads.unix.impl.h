@@ -52,9 +52,59 @@ void irt_thread_cancel(irt_thread t){
 	pthread_cancel(t);
 }
 
-int32 irt_thread_join(irt_thread t){
+int irt_thread_join(irt_thread t){
 	int32 return_val;
 	int32 *p_ret_val = &return_val;
 	pthread_join(t, (void**)&p_ret_val);
 	return return_val;
+}
+
+
+/* SPIN LOCK FUNCTIONS ------------------------------------------------------------------- */
+
+void irt_spin_lock(irt_spinlock *lock){
+	pthread_spin_lock(lock);
+}
+
+void irt_spin_unlock(irt_spinlock *lock){
+	pthread_spin_unlock(lock);
+}
+
+int irt_spin_init(irt_spinlock *lock){
+	return pthread_spin_init(lock, PTHREAD_PROCESS_PRIVATE);
+}
+
+void irt_spin_destroy(irt_spinlock *lock){
+	pthread_spin_destroy(lock);
+}
+
+
+/* MUTEX FUNCTIONS ------------------------------------------------------------------- */
+
+void irt_cond_var_init(irt_cond_var *cv) {
+	 pthread_cond_init(cv, NULL);
+}
+
+void irt_mutex_init(irt_lock_obj *m){
+	pthread_mutex_init(m, NULL);
+}
+
+void irt_mutex_lock(irt_lock_obj *m){
+	pthread_mutex_lock(m);
+}
+
+void irt_mutex_unlock(irt_lock_obj *m){
+	pthread_mutex_unlock(m);
+}
+
+void irt_cond_wake_all(irt_cond_var *cv){
+	pthread_cond_broadcast(cv);
+}
+
+int irt_cond_wait(irt_cond_var *cv, irt_lock_obj *m){
+	return pthread_cond_wait(cv, m);
+}
+
+void irt_cond_wake_one(irt_cond_var *cv){
+	pthread_cond_signal(cv);
 }

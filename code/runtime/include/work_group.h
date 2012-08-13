@@ -39,7 +39,7 @@
 #include "declarations.h"
 #include "irt_loop_sched.h"
 
-#include <pthread.h>
+#include "abstraction/threads.h"
 
 /* ------------------------------ data structures ----- */
 
@@ -50,7 +50,7 @@ struct _irt_work_group {
 	bool distributed;	// starts at false, set to true if part of the group is not on the same shared memory node
 	irt_worker_id coordinator;  // only set if distributed == true
 	/* implementation stuff */
-	pthread_spinlock_t lock;
+	irt_spinlock lock;
 	uint32 local_member_count;
 	uint32 ended_member_count;
 	uint32 cur_barrier_count;

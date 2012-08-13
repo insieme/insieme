@@ -63,7 +63,7 @@ void _irt_print_native_affinity_mask(irt_native_cpu_set mask) {
 
 void irt_clear_affinity() {
 	#ifdef IRT_USE_PTHREADS
-		SetThreadAffinityMask(thread.p, irt_g_affinity_base_mask);
+		SetThreadAffinityMask(pthread_self().p, irt_g_affinity_base_mask);
 	#else
 		SetThreadAffinityMask(GetCurrentThread(), irt_g_affinity_base_mask);
 	#endif
@@ -103,7 +103,7 @@ uint32 _irt_affinity_next_available_physical(uint32 start) {
 }
 
 // gets initial affinity mask and sets irt_g_affinity_base_mask
-void _irt_affinity_get_base_mask(){
+void _irt_affinity_init_base_mask(){
 	static bool initialized = false;
 
 	if (initialized)
@@ -119,7 +119,7 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 	uint32 cur = 0;
 	uint32 i = 0;
 
-	_irt_affinity_get_base_mask();
+	_irt_affinity_init_base_mask();
 
 	for(i=0; i<IRT_MAX_CORES; ++i) {
 		out_mapping->map[i] = _irt_affinity_next_available_physical(cur);
@@ -134,7 +134,7 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 }
 
 uint32 irt_affinity_cores_available() {
-	_irt_affinity_get_base_mask();
+	_irt_affinity_init_base_mask();
 
 	int bitmasklength = sizeof(irt_native_cpu_set) * 8;
 	irt_native_cpu_set powered = 1;

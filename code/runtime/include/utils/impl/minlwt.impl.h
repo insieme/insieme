@@ -233,9 +233,9 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 		};
 	}
 
-	#endif // _MSC_VER
+	#endif
 
-#else
+#else  // !defined(_MSC_VER)
 
 	#ifdef __GNUC__
 	__attribute__ ((noinline))

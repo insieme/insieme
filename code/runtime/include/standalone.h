@@ -245,18 +245,18 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	// initialize workers
 	static irt_worker_init_signal signal;
 	signal.init_count = 0;
-	pthread_mutex_init(&signal.init_mutex, NULL);
-	pthread_cond_init(&signal.init_condvar, NULL);
+	irt_mutex_init(&signal.init_mutex);
+	irt_cond_var_init(&signal.init_condvar);
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signal);
 	}
 
 	// wait until all workers are initialized
-	pthread_mutex_lock(&signal.init_mutex);
+	irt_mutex_lock(&signal.init_mutex);
 	if(signal.init_count < irt_g_worker_count) {
-		pthread_cond_wait(&signal.init_condvar, &signal.init_mutex);
+		irt_cond_wait(&signal.init_condvar, &signal.init_mutex);
 	}
-	pthread_mutex_unlock(&signal.init_mutex);
+	irt_mutex_unlock(&signal.init_mutex);
 	
 #ifdef USE_OPENCL
 	irt_log_comment("Running Insieme runtime with OpenCL!\n");

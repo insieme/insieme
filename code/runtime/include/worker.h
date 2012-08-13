@@ -75,8 +75,8 @@ struct _irt_worker {
 	irt_work_item lazy_wi;
 	
 	bool have_wait_mutex;
-	pthread_cond_t wait_cond;
-	pthread_mutex_t wait_mutex;
+	irt_cond_var wait_cond;
+	irt_lock_obj wait_mutex;
 
 	uint32 default_variant;
 
@@ -102,8 +102,8 @@ struct _irt_worker {
 
 typedef struct _irt_worker_init_signal {
 	uint32 init_count;
-	pthread_cond_t init_condvar;
-	pthread_mutex_t init_mutex;
+	irt_cond_var init_condvar;
+	irt_lock_obj init_mutex;
 } irt_worker_init_signal;
 
 /* ------------------------------ operations ----- */

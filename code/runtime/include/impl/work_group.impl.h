@@ -67,13 +67,13 @@ irt_work_group* irt_wg_create() {
 	wg->joined_pfor_count = 0;
 	wg->redistribute_data_array = NULL;
 	wg->cur_sched = irt_g_loop_sched_policy_default;
-	pthread_spin_init(&wg->lock, PTHREAD_PROCESS_PRIVATE);
+	irt_spin_init(&wg->lock);
 	irt_inst_insert_wg_event(irt_worker_get_current(), IRT_INST_WORK_GROUP_CREATED, wg->id);
 	return wg;
 }
 void irt_wg_destroy(irt_work_group* wg) {
 	_irt_del_wg_event_register(wg->id);
-	pthread_spin_destroy(&wg->lock);
+	irt_spin_destroy(&wg->lock);
 	_irt_wg_recycle(wg);
 }
 

@@ -40,6 +40,8 @@
 #include "work_group.h"
 #include "utils/timing.h"
 #include "impl/irt_optimizer.impl.h"
+#include "abstraction/threads.h"
+#include "abstraction/impl/threads.impl.h"
 
 // initializes scheduling data instrumentation for tuning
 inline static void _irt_loop_tuning_startup(volatile irt_loop_sched_data* sched_data) {
@@ -283,7 +285,7 @@ inline static void irt_schedule_loop(
 	mem->pfor_count++;
 
 	// prepare policy if first loop to reach pfor
-	pthread_spin_lock(&group->lock);
+	irt_spin_lock(&group->lock);
 	if(group->pfor_count < mem->pfor_count) {
 		//print_effort_estimation(impl_id, base_range, irt_context_table_lookup(self->context_id)->impl_table[impl_id].variants[0].effort_estimator);
 
@@ -319,7 +321,7 @@ inline static void irt_schedule_loop(
 		}
 
 	}
-	pthread_spin_unlock(&group->lock);
+	irt_spin_unlock(&group->lock);
 
 	// retrieve scheduling data generated for this loop by first entering wi
 	IRT_ASSERT(group->pfor_count - mem->pfor_count + 1 < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Loop scheduling ring buffer overflow");
