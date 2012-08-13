@@ -99,7 +99,8 @@ void bots_get_architecture(char *str)
    snprintf(str, BOTS_TMP_STR_SZ, "%s-%s;%d" ,architecture.sysname, architecture.machine, ncpus);
 }
 
-#if defined (__linux)
+#if defined (DISABLED_FOR_INSIEME_TEST)
+//#if defined (__linux)
 /* ****************************************************************** */
 void bots_get_load_average(char *str)
 {
