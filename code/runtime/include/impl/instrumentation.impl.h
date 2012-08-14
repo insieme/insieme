@@ -68,7 +68,7 @@ void _irt_inst_insert_no_wg_event(irt_worker* worker, irt_instrumentation_event 
 void _irt_inst_insert_no_wo_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) { }
 void _irt_inst_insert_no_di_event(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) { }
 
-// resizes table according to blocksize
+// resizes table
 void _irt_inst_event_data_table_resize(irt_instrumentation_event_data_table* table) {
 	table->size = table->size * 2;
 	table->data = (irt_instrumentation_event_data*)realloc(table->data, sizeof(irt_instrumentation_event_data)*table->size);
@@ -79,8 +79,7 @@ void _irt_inst_event_data_table_resize(irt_instrumentation_event_data_table* tab
 // allocates memory for performance data, sets all fields
 irt_instrumentation_event_data_table* irt_inst_create_event_data_table() {
 	irt_instrumentation_event_data_table* table = (irt_instrumentation_event_data_table*)malloc(sizeof(irt_instrumentation_event_data_table));
-	table->blocksize = IRT_INST_WORKER_PD_BLOCKSIZE;
-	table->size = table->blocksize * 2;
+	table->size = IRT_INST_WORKER_PD_BLOCKSIZE * 2;
 	table->number_of_elements = 0;
 	table->data = (irt_instrumentation_event_data*)malloc(sizeof(irt_instrumentation_event_data) * table->size);
 	return table;
@@ -88,8 +87,11 @@ irt_instrumentation_event_data_table* irt_inst_create_event_data_table() {
 
 // frees allocated memory
 void irt_inst_destroy_event_data_table(irt_instrumentation_event_data_table* table) {
-	free(table->data);
-	free(table);
+	if(table != NULL) {
+		if(table->data != NULL)
+			free(table->data);
+		free(table);
+	}
 }
 
 void _irt_inst_event_insert_time(irt_worker* worker, const int event, const uint64 id, const uint64 time) {
@@ -97,9 +99,9 @@ void _irt_inst_event_insert_time(irt_worker* worker, const int event, const uint
 
 	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size\n")
 
-	if(table->number_of_elements >= table->size) {
+	if(table->number_of_elements >= table->size)
 		_irt_inst_event_data_table_resize(table);
-	}
+
 	irt_instrumentation_event_data* pd = &(table->data[table->number_of_elements++]);
 
 	pd->timestamp = time;
@@ -390,15 +392,19 @@ void irt_inst_set_all_instrumentation_from_env() {
 		do {
 			if(strcmp(tok, "WI") == 0) {
 				irt_inst_set_wi_instrumentation(true);
+				irt_g_instrumentation_event_output_is_enabled = true;
 				log_output_counter += sprintf(&(log_output[log_output_counter]), "WI,");
 			} else if(strcmp(tok, "WO") == 0) {
 				irt_inst_set_wo_instrumentation(true);
+				irt_g_instrumentation_event_output_is_enabled = true;
 				log_output_counter += sprintf(&(log_output[log_output_counter]), "WO,");
 			} else if(strcmp(tok, "WG") == 0) {
 				irt_inst_set_wg_instrumentation(true);
+				irt_g_instrumentation_event_output_is_enabled = true;
 				log_output_counter += sprintf(&(log_output[log_output_counter]), "WG,");
 			} else if(strcmp(tok, "DI") == 0) {
 				irt_inst_set_di_instrumentation(true);
+				irt_g_instrumentation_event_output_is_enabled = true;
 				log_output_counter += sprintf(&(log_output[log_output_counter]), "DI,");
 			}
 		} while((tok = strtok(NULL, ",")) != NULL);
@@ -499,16 +505,18 @@ void _irt_inst_region_data_table_resize(irt_instrumentation_region_data_table* t
 
 irt_instrumentation_region_data_table* irt_inst_create_region_data_table() {
 	irt_instrumentation_region_data_table* table = (irt_instrumentation_region_data_table*)malloc(sizeof(irt_instrumentation_region_data_table));
-	table->blocksize = IRT_INST_WORKER_PD_BLOCKSIZE;
-	table->size = table->blocksize * 2;
+	table->size = IRT_INST_WORKER_PD_BLOCKSIZE * 2;
 	table->number_of_elements = 0;
 	table->data = (irt_instrumentation_region_data*)malloc(sizeof(irt_instrumentation_region_data) * table->size);
 	return table;
 }
 
 void irt_inst_destroy_region_data_table(irt_instrumentation_region_data_table* table) {
-	free(table->data);
-	free(table);
+	if(table != NULL) {
+		if(table->data != NULL)
+			free(table->data);
+		free(table);
+	}
 }
 
 void _irt_inst_aggregated_data_table_resize() {
@@ -519,16 +527,18 @@ void _irt_inst_aggregated_data_table_resize() {
 
 void irt_inst_create_aggregated_data_table() {
 	irt_instrumentation_aggregated_data_table* table = (irt_instrumentation_aggregated_data_table*)malloc(sizeof(irt_instrumentation_aggregated_data_table));
-	table->blocksize = IRT_INST_WORKER_PD_BLOCKSIZE;
-	table->size = table->blocksize * 2;
+	table->size = IRT_INST_WORKER_PD_BLOCKSIZE * 2;
 	table->number_of_elements = 0;
 	table->data = (irt_instrumentation_aggregated_data*)malloc(sizeof(irt_instrumentation_aggregated_data) * table->size);
 	irt_g_aggregated_performance_table = table;
 }
 
 void irt_inst_destroy_aggregated_data_table() {
-	free(irt_g_aggregated_performance_table->data);
-	free(irt_g_aggregated_performance_table);
+	if(irt_g_aggregated_performance_table != NULL) {
+		if(irt_g_aggregated_performance_table->data != NULL)
+			free(irt_g_aggregated_performance_table->data);
+		free(irt_g_aggregated_performance_table);
+	}
 }
 
 void irt_inst_set_region_instrumentation(bool enable) {
