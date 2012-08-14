@@ -396,8 +396,8 @@ TEST(IRParser, OperationTests) {
         parser.parseExpression("(lit<int<4>, 3456> << lit<int<4>, 1>)"));
 
     EXPECT_EQ(builder.callExpr(manager.getLangBasic().getUnsignedIntRShift(), builder.literal("546", manager.getLangBasic().getUInt4()),
-        builder.literal("8", manager.getLangBasic().getUInt4())),
-        parser.parseExpression("(lit<uint<4>, 546> >> lit<uint<4>, 8>)"));
+        builder.literal("8", manager.getLangBasic().getInt4())),
+        parser.parseExpression("(lit<uint<4>, 546> >> lit<int<4>, 8>)"));
 
     // unary operations
 

@@ -359,6 +359,15 @@ TypeSet BasicGenerator::getDirectSubTypesOf(const TypePtr& type) const {
 	return getSubTypeLattice()->getSubTypesOf(type);
 }
 
+
+std::ostream& operator<<(std::ostream& out, const BasicGenerator::Operator& op) {
+	switch(op) {
+	#define OPERATOR(_id, _str) case BasicGenerator::Operator::_id : return out << #_str;
+	#include "insieme/core/lang/lang.def"
+	}
+	return out << "- unknown operator -";
+}
+
 } // namespace lang
 } // namespace core
 } // namespace insieme
