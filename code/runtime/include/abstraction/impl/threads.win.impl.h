@@ -50,10 +50,9 @@ typedef struct _irt_win_thread_params {
 } irt_win_thread_params;
 
 /*  wrapper function which admits to the required signature for CreateThread
-	it simply calls original irt_thread_func function with accoring parameter
+	it simply calls original irt_thread_func function with according parameter
 */
-DWORD WINAPI _irt_win_thread_func(void* params)
-{
+DWORD WINAPI _irt_win_thread_func(void* params) {
 	irt_win_thread_params *p = (irt_win_thread_params*)params;
 	DWORD ret = 0;
 	ret = (DWORD)p->fun(p->args);
