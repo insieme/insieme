@@ -36,9 +36,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef WIN32
+#include <malloc.h>
+#else
 #include <alloca.h>
+#endif
 #include <ctype.h>
 #include "irt_ocl.h"
+#include "abstraction/threads.h"
+#include "abstraction/impl/threads.impl.h"
 
 /*
  * =====================================================================================
@@ -183,7 +189,7 @@ void irt_ocl_init_devices() {
 						dev->mem_available = _irt_cl_get_global_mem_size(&dev->device);
 						dev->max_buffer_size = _irt_cl_get_max_mem_alloc_size(&dev->device);
 						dev->buffer = NULL;
-						pthread_spin_init(&(dev->buffer_lock), 0);
+						irt_spin_init(&(dev->buffer_lock));
 					}
 				}
 			}
@@ -211,7 +217,7 @@ void irt_ocl_release_devices() {
 		irt_ocl_device* dev = &devices[i];
 
 		// release the buffer_lock
-		pthread_spin_destroy(&(dev->buffer_lock));
+		irt_spin_destroy(&(dev->buffer_lock));
 		// release the buffer list 
 		irt_ocl_buffer* tmp = dev->buffer;
 		while(tmp) {
@@ -258,7 +264,7 @@ inline irt_ocl_device* irt_ocl_get_device(cl_uint id) {
 
 irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size) {
 	IRT_ASSERT(size <= dev->max_buffer_size, IRT_ERR_OCL, "Error creating buffer: \"Buffer size is too big\"");
-	pthread_spin_lock(&(dev->buffer_lock));
+	irt_spin_lock(&(dev->buffer_lock));
 #ifdef IRT_OCL_DEBUG
 	printf("Available Memory: %lu   Request Memory: %lu\n", dev->mem_available, size);
 #endif
@@ -289,7 +295,7 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing cl_mem: \"%s\"", _irt_error_string(err_code));
 		free(ptr);
 	}
-	//pthread_spin_unlock(&(dev->buffer_lock));
+	//irt_spin_unlock(&(dev->buffer_lock));
 	
 	// create buffer
 	irt_ocl_buffer* buf = (irt_ocl_buffer*)malloc(sizeof(irt_ocl_buffer));
@@ -302,7 +308,7 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 	buf->dev = dev;
 	
 	// add buffer to the list
-	//pthread_spin_lock(&(dev->buffer_lock));
+	//irt_spin_lock(&(dev->buffer_lock));
 	irt_ocl_buffer* ptr = dev->buffer;
 	irt_ocl_buffer* prev = NULL;
 	while(ptr && (ptr->size <= size)) {
@@ -319,7 +325,7 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 	}
 	//update the available memory
 	dev->mem_available -= size;
-	pthread_spin_unlock(&(dev->buffer_lock));
+	irt_spin_unlock(&(dev->buffer_lock));
 
 	// print buffer list status
 	/*printf("LIST BEGIN\n");
@@ -466,7 +472,7 @@ inline void irt_ocl_print_device_short_info(irt_ocl_device* dev) {
 inline void irt_ocl_release_kernel(irt_ocl_kernel* kernel) {
 	cl_int err_code = clReleaseKernel(kernel->kernel);
 	// release the kernel_lock
-	pthread_spin_destroy(&(kernel->kernel_lock));
+	irt_spin_destroy(&(kernel->kernel_lock));
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing kernel");
 	free(kernel);
 }
@@ -507,7 +513,7 @@ void irt_ocl_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const ch
 		kernel->global_work_size = 0;
 		kernel->local_work_size = 0;
 		kernel->dev = dev;
-		pthread_spin_init(&(kernel->kernel_lock), 0);
+		irt_spin_init(&(kernel->kernel_lock));
 	}
 	err_code = clReleaseProgram(program);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing compute program: \"%s\"", _irt_error_string(err_code));
@@ -572,7 +578,7 @@ void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_w
 #ifdef IRT_OCL_DEBUG
 	IRT_INFO("Running Opencl Kernel in \"%s\"\n", kernel->dev->name);
 #endif
-	pthread_spin_lock(&(kernel->kernel_lock));
+	irt_spin_lock(&(kernel->kernel_lock));
 	irt_ocl_set_kernel_ndrange(kernel, work_dim, global_work_offset, global_work_size, local_work_size);
 
 	// loop through the arguments and call clSetKernelArg for each argument
@@ -624,7 +630,7 @@ void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_w
 		 IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error enqueuing Task Kernel: \"%s\"", _irt_error_string(err_code));
 	}
 	else IRT_ASSERT(false, IRT_ERR_OCL, "Kernel Type Not Valid");
-	pthread_spin_unlock(&(kernel->kernel_lock));
+	irt_spin_unlock(&(kernel->kernel_lock));
 }
 
 /*

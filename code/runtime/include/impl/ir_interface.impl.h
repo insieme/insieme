@@ -48,7 +48,7 @@
 //irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 //	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
 //	mem->pfor_count++;
-//	pthread_spin_lock(&group->lock);
+//	irt_spin_lock(&group->lock);
 //	irt_work_item* ret;
 //	if(group->pfor_count < mem->pfor_count) {
 //		// This wi was the first to reach this pfor
@@ -61,7 +61,7 @@
 //		IRT_ASSERT(group->pfor_count - mem->pfor_count < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Work group ring buffer overflow");
 //		ret = group->pfor_wi_list[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
 //	}
-//	pthread_spin_unlock(&group->lock);
+//	irt_spin_unlock(&group->lock);
 //	return ret;
 //}
 

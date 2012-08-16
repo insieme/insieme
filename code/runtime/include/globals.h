@@ -36,15 +36,15 @@
 
 #pragma once
 
-#include <pthread.h>
-
+#include "config.h" // required to make the switch in threads.h work
+#include "abstraction/threads.h"
 #include "irt_inttypes.h"
 #include "runtime.h"
 
-extern pthread_key_t irt_g_error_key;
-extern pthread_mutex_t irt_g_error_mutex;
+extern irt_tls_key irt_g_error_key;
+extern irt_lock_obj irt_g_error_mutex;
 
-extern pthread_key_t irt_g_worker_key;
+extern irt_tls_key irt_g_worker_key;
 extern uint32 irt_g_worker_count;
 extern uint32 irt_g_active_worker_count;
 struct _irt_worker;

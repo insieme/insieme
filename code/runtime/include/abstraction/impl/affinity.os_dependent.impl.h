@@ -36,7 +36,7 @@
 
 #pragma once
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 	#include "affinity.win.impl.h"
 #else
 	#include "affinity.unix.impl.h"

@@ -37,6 +37,7 @@
 #pragma once
 
 #include "irt_inttypes.h"
+#include "abstraction/threads.h"
 
 
 // ------------------------------------------------------------------------------------
@@ -65,7 +66,7 @@ typedef struct _irt_cap_block_usage_info {
 
 	int32 tag;					// the user defined tag identifying this region (negative if untagged)
 
-	pthread_spinlock_t* locks;  // a list of locks for synchronous access
+	irt_spinlock* locks;  // a list of locks for synchronous access
 
 	char* life_in_values;		// the life_in_values of the block when being read the first time when entering a region
 	bool* read;					// a flag mask marking read values
@@ -90,7 +91,7 @@ typedef struct _irt_cap_block_usage_info {
 typedef struct {
 	uint32 id;									// the ID of this region (as selected by the user, not necessarily unique)
 	bool active;								// a flag indicating wheather this region is currently active or not
-	pthread_spinlock_t lock;					// a lock used to protect the usage list
+	irt_spinlock lock;					// a lock used to protect the usage list
 	irt_cap_block_usage_info* volatile usage;	// a list of data block usage information maintained per accessed block
 } irt_cap_region;
 

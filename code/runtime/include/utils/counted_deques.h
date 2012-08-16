@@ -36,7 +36,8 @@
 
 #pragma once
 
-#include <pthread.h>
+#include "abstraction/threads.h"
+#include "abstraction/impl/threads.impl.h"
 
 #include "error_handling.h"
 
@@ -47,7 +48,7 @@
 #define IRT_DECLARE_COUNTED_DEQUE(__type__) \
 struct _irt_##__type__##_cdeque { \
 	irt_##__type__ *start, *end; \
-	pthread_spinlock_t lock; \
+	irt_spinlock lock; \
 	uint32 size; \
 }; \
 typedef struct _irt_##__type__##_cdeque irt_##__type__##_cdeque; \
@@ -72,7 +73,7 @@ static inline uint32 irt_##__type__##_cdeque_get_size(irt_##__type__##_cdeque* q
 #define IRT_DEFINE_COUNTED_DEQUE(__type__, __next_name__, __prev_name__) \
 \
 static inline void irt_##__type__##_cdeque_init(irt_##__type__##_cdeque* q) { \
-	IRT_ASSERT(pthread_spin_init(&(q->lock), PTHREAD_PROCESS_PRIVATE) == 0, \
+	IRT_ASSERT(irt_spin_init(&(q->lock)) == 0, \
 				IRT_ERR_INIT, "Failed initializing locks for " #__type__ " deque."); \
 	q->start = NULL; \
 	q->end = NULL; \
@@ -92,32 +93,32 @@ static inline void irt_##__type__##_cdeque_clear(irt_##__type__##_cdeque* q) { \
 } \
 static inline void irt_##__type__##_cdeque_cleanup(irt_##__type__##_cdeque* q) { \
 	irt_##__type__##_cdeque_clear(q); \
-	pthread_spin_destroy(&(q->lock)); \
+	irt_spin_destroy(&(q->lock)); \
 } \
 \
 static inline void irt_##__type__##_cdeque_insert_front(irt_##__type__##_cdeque* q, irt_##__type__* element) { \
 	element->__prev_name__ = NULL; \
-	pthread_spin_lock(&(q->lock)); \
+	irt_spin_lock(&(q->lock)); \
 	element->__next_name__ = q->start; \
 	if(q->start) q->start->__prev_name__ = element; \
 	else q->end = element; \
 	q->start = element; \
 	q->size++; \
-	pthread_spin_unlock(&(q->lock)); \
+	irt_spin_unlock(&(q->lock)); \
 } \
 static inline void irt_##__type__##_cdeque_insert_back(irt_##__type__##_cdeque* q, irt_##__type__* element) { \
 	element->__next_name__ = NULL; \
-	pthread_spin_lock(&(q->lock)); \
+	irt_spin_lock(&(q->lock)); \
 	element->__prev_name__ = q->end; \
 	if(q->end) q->end->__next_name__ = element; \
 	else q->start = element; \
 	q->end = element; \
 	q->size++; \
-	pthread_spin_unlock(&(q->lock)); \
+	irt_spin_unlock(&(q->lock)); \
 } \
 \
 static inline irt_##__type__* irt_##__type__##_cdeque_pop_front(irt_##__type__##_cdeque* q) { \
-	pthread_spin_lock(&(q->lock)); \
+	irt_spin_lock(&(q->lock)); \
 	irt_##__type__ *retval = q->start; \
 	if(retval) { \
 		q->start = retval->__next_name__; \
@@ -126,11 +127,11 @@ static inline irt_##__type__* irt_##__type__##_cdeque_pop_front(irt_##__type__##
 		retval->__next_name__ = NULL; \
 		q->size--; \
 	} \
-	pthread_spin_unlock(&(q->lock)); \
+	irt_spin_unlock(&(q->lock)); \
 	return retval; \
 } \
 static inline irt_##__type__* irt_##__type__##_cdeque_pop_back(irt_##__type__##_cdeque* q) { \
-	pthread_spin_lock(&(q->lock)); \
+	irt_spin_lock(&(q->lock)); \
 	irt_##__type__ *retval = q->end; \
 	if(retval) { \
 		q->end = retval->__prev_name__; \
@@ -139,16 +140,16 @@ static inline irt_##__type__* irt_##__type__##_cdeque_pop_back(irt_##__type__##_
 		retval->__prev_name__ = NULL; \
 		q->size--; \
 	} \
-	pthread_spin_unlock(&(q->lock)); \
+	irt_spin_unlock(&(q->lock)); \
 	return retval; \
 } \
 static inline void irt_##__type__##_cdeque_move_front_front(irt_##__type__##_cdeque* source, irt_##__type__##_cdeque* dest, int n) { \
-	pthread_spin_lock(&(source->lock)); \
+	irt_spin_lock(&(source->lock)); \
 	if(n >= source->size) { \
-		pthread_spin_unlock(&(source->lock)); \
+		irt_spin_unlock(&(source->lock)); \
 		return; \
 	} \
-	pthread_spin_lock(&(dest->lock)); \
+	irt_spin_lock(&(dest->lock)); \
 	for(int i=0; i<n; ++i) { \
 		irt_##__type__ *val = source->start; \
 		source->start = val->__next_name__; \
@@ -160,13 +161,13 @@ static inline void irt_##__type__##_cdeque_move_front_front(irt_##__type__##_cde
 	} \
 	source->size -= n; \
 	dest->size += n; \
-	pthread_spin_unlock(&(source->lock)); \
-	pthread_spin_unlock(&(dest->lock)); \
+	irt_spin_unlock(&(source->lock)); \
+	irt_spin_unlock(&(dest->lock)); \
 } \
 static inline irt_##__type__* irt_##__type__##_cdeque_take_elem(irt_##__type__##_cdeque* q, irt_##__type__* elem) { \
-	pthread_spin_lock(&(q->lock)); \
+	irt_spin_lock(&(q->lock)); \
 	if(q->start == NULL) { /* list is empty */ \
-		pthread_spin_unlock(&(q->lock)); \
+		irt_spin_unlock(&(q->lock)); \
 		return NULL; \
 	} \
 	if(q->start == elem) { /* first elem is target */ \
@@ -175,7 +176,7 @@ static inline irt_##__type__* irt_##__type__##_cdeque_take_elem(irt_##__type__##
 		if(q->start) q->start->__prev_name__ = NULL; \
 		else q->end = NULL; \
 		q->size--; \
-		pthread_spin_unlock(&(q->lock)); \
+		irt_spin_unlock(&(q->lock)); \
 		retval->__next_name__ = NULL; \
 		return retval; \
 	} \
@@ -185,7 +186,7 @@ static inline irt_##__type__* irt_##__type__##_cdeque_take_elem(irt_##__type__##
 		if(q->end) q->end->__next_name__ = NULL; \
 		else q->start = NULL; \
 		q->size--; \
-		pthread_spin_unlock(&(q->lock)); \
+		irt_spin_unlock(&(q->lock)); \
 		retval->__prev_name__ = NULL; \
 		return retval; \
 	} \
@@ -199,7 +200,7 @@ static inline irt_##__type__* irt_##__type__##_cdeque_take_elem(irt_##__type__##
 		retval->__prev_name__ = NULL; \
 		q->size--; \
 	} \
-	pthread_spin_unlock(&(q->lock)); \
+	irt_spin_unlock(&(q->lock)); \
 	return retval; \
 } \
 static inline uint32 irt_##__type__##_cdeque_get_size(irt_##__type__##_cdeque* q) { \

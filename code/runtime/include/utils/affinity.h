@@ -73,7 +73,7 @@ typedef struct {
 static irt_affinity_physical_mapping irt_g_affinity_physical_mapping;
 
 #include <sched.h>
-#include <pthread.h>
+#include "abstraction/threads.h"
 
 #include "impl/error_handling.impl.h"
 
@@ -89,6 +89,8 @@ static const irt_affinity_mask irt_g_empty_affinity_mask = { { 0 } };
 // include signatures of platform dependent functions
 #include "abstraction/affinity.os_dependent.h"
 
+// original affinity mask before any changes to affinity were applied; will be restored
+// when calling irt_clear_affinity()
 static irt_native_cpu_set irt_g_affinity_base_mask;
 
 // affinity mask struct handling //////////////////////////////////////////////////////////////////////////// 

@@ -37,9 +37,7 @@
 #pragma once
 
 #include "declarations.h"
-
-#include <pthread.h>
-
+#include "abstraction/threads.h"
 #include "work_item.h"
 #include "irt_scheduling.h"
 #include "utils/minlwt.h"
@@ -66,7 +64,7 @@ struct _irt_worker {
 	irt_worker_id id;
 	uint64 generator_id;
 	irt_affinity_mask affinity;
-	pthread_t pthread;
+	irt_thread thread;
 	lwt_context basestack;
 	irt_context_id cur_context;
 	irt_work_item* cur_wi;
@@ -75,8 +73,8 @@ struct _irt_worker {
 	irt_work_item lazy_wi;
 	
 	bool have_wait_mutex;
-	pthread_cond_t wait_cond;
-	pthread_mutex_t wait_mutex;
+	irt_cond_var wait_cond;
+	irt_lock_obj wait_mutex;
 
 	uint32 default_variant;
 	unsigned int rand_seed;
@@ -103,14 +101,14 @@ struct _irt_worker {
 
 typedef struct _irt_worker_init_signal {
 	uint32 init_count;
-	pthread_cond_t init_condvar;
-	pthread_mutex_t init_mutex;
+	irt_cond_var init_condvar;
+	irt_lock_obj init_mutex;
 } irt_worker_init_signal;
 
 /* ------------------------------ operations ----- */
 
 static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
+	return (irt_worker*)irt_tls_get(irt_g_worker_key);
 }
 
 void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal);
