@@ -37,9 +37,7 @@
 #pragma once
 
 #include "declarations.h"
-
-#include <pthread.h>
-
+#include "abstraction/threads.h"
 #include "work_item.h"
 #include "irt_scheduling.h"
 #include "utils/minlwt.h"
@@ -110,7 +108,7 @@ typedef struct _irt_worker_init_signal {
 /* ------------------------------ operations ----- */
 
 static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
+	return (irt_worker*)irt_tls_get(irt_g_worker_key);
 }
 
 void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal);

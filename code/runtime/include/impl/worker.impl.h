@@ -114,7 +114,7 @@ void* _irt_worker_func(void *argvp) {
 	irt_mutex_init(&self->wait_mutex);
 	
 	irt_scheduling_init_worker(self);
-	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
+	IRT_ASSERT(irt_tls_set(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->instrumentation_event_data = irt_inst_create_event_data_table();

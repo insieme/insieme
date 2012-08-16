@@ -41,7 +41,8 @@
 	actually this file is not related to the standalone mode of the runtime
 */
 
-#include <pthread.h>
+#include "abstraction/threads.h"
+#include "abstraction/impl/threads.impl.h"
 
 #include "client_app.h"
 #include "instrumentation.h"
@@ -63,10 +64,10 @@
 void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation_id impl_id, irt_lw_data_item *startup_params);
 
 // globals
-pthread_key_t irt_g_error_key;
-pthread_mutex_t irt_g_error_mutex;
-pthread_mutex_t irt_g_exit_handler_mutex;
-pthread_key_t irt_g_worker_key;
+irt_tls_key irt_g_error_key;
+irt_lock_obj irt_g_error_mutex;
+irt_lock_obj irt_g_exit_handler_mutex;
+irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
 uint32 irt_g_active_worker_count;
 struct _irt_worker **irt_g_workers;
@@ -91,14 +92,14 @@ void irt_init_globals() {
 
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
-	err_flag |= pthread_key_create(&irt_g_error_key, NULL);
-	err_flag |= pthread_key_create(&irt_g_worker_key, NULL);
+	err_flag |= irt_tls_key_create(&irt_g_error_key);
+	err_flag |= irt_tls_key_create(&irt_g_worker_key);
 	if(err_flag != 0) {
-		fprintf(stderr, "Could not create pthread key(s). Aborting.\n");
+		fprintf(stderr, "Could not create thread local storage key(s). Aborting.\n");
 		exit(-1);
 	}
-	pthread_mutex_init(&irt_g_error_mutex, NULL);
-	pthread_mutex_init(&irt_g_exit_handler_mutex, NULL);
+	irt_mutex_init(&irt_g_error_mutex);
+	irt_mutex_init(&irt_g_exit_handler_mutex);
 	irt_data_item_table_init();
 	irt_context_table_init();
 	irt_wi_event_register_table_init();
@@ -127,9 +128,9 @@ void irt_cleanup_globals() {
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_inst_destroy_aggregated_data_table();
 #endif
-	pthread_mutex_destroy(&irt_g_error_mutex);
-	pthread_key_delete(irt_g_error_key);
-	pthread_key_delete(irt_g_worker_key);
+	irt_mutex_destroy(&irt_g_error_mutex);
+	irt_tls_key_delete(irt_g_error_key);
+	irt_tls_key_delete(irt_g_worker_key);
 	irt_log_cleanup();
 }
 
@@ -149,9 +150,9 @@ void irt_exit(int i) {
 void irt_exit_handler() {
 	static bool irt_exit_handling_done = false;
 
-	while(pthread_mutex_trylock(&irt_g_exit_handler_mutex) != 0)
+	while(irt_mutex_trylock(&irt_g_exit_handler_mutex) != 0)
 		if(irt_exit_handling_done)
-			pthread_exit(0);
+			irt_thread_exit(0);
 
 	if(irt_exit_handling_done)
 		return;
@@ -178,20 +179,20 @@ void irt_exit_handler() {
 #endif
 	irt_cleanup_globals();
 	free(irt_g_workers);
-	pthread_mutex_unlock(&irt_g_exit_handler_mutex);
+	irt_mutex_unlock(&irt_g_exit_handler_mutex);
 	//IRT_INFO("\nInsieme runtime exiting.\n");
 }
 
 // error handling
 void irt_error_handler(int signal) {
-	pthread_mutex_lock(&irt_g_error_mutex); // not unlocked
+	irt_mutex_lock(&irt_g_error_mutex); // not unlocked
 	_irt_worker_cancel_all_others();
-	irt_error* error = (irt_error*)pthread_getspecific(irt_g_error_key);
+	irt_error* error = (irt_error*)irt_tls_get(irt_g_error_key);
 	// gcc will warn when the cast to void* is missing, Visual Studio will not compile with the cast
 	#ifdef _MSC_VER
-		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", pthread_self(), irt_errcode_string(error->errcode));
+		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", irt_current_thread(), irt_errcode_string(error->errcode));
 	#else
-		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)pthread_self(), irt_errcode_string(error->errcode));
+		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)irt_current_thread(), irt_errcode_string(error->errcode));
 	#endif
 	fprintf(stderr, "Additional information:\n");
 	irt_print_error_info(stderr, error);
@@ -273,14 +274,14 @@ uint32 irt_get_default_worker_count() {
 }
 
 bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *mutexp) {
-	pthread_mutex_t* mutex = (pthread_mutex_t*)mutexp;
-	pthread_mutex_unlock(mutex);
+	irt_lock_obj* mutex = (irt_lock_obj*)mutexp;
+	irt_mutex_unlock(mutex);
 	return false;
 }
 
 void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation_id impl_id, irt_lw_data_item *startup_params) {
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count);
-	pthread_setspecific(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
+	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;
@@ -290,9 +291,9 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	irt_work_group* outer_wg = irt_wg_create();
 	irt_wg_insert(outer_wg, main_wi);
 	// event handling for outer work item [[
-	pthread_mutex_t mutex;
-	pthread_mutex_init(&mutex, NULL);
-	pthread_mutex_lock(&mutex);
+	irt_lock_obj mutex;
+	irt_mutex_init(&mutex);
+	irt_mutex_lock(&mutex);
 	irt_wi_event_lambda handler;
 	handler.next = NULL;
 	handler.data = &mutex;
@@ -300,6 +301,6 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	irt_wi_event_check_and_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
-	pthread_mutex_lock(&mutex);
+	irt_mutex_lock(&mutex);
 	_irt_worker_end_all();
 }

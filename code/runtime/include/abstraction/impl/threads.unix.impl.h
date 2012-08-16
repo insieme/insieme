@@ -59,6 +59,10 @@ int irt_thread_join(irt_thread t){
 	return return_val;
 }
 
+void irt_thread_exit(int exit_code){
+	pthread_exit(&exit_code);
+}
+
 
 /* SPIN LOCK FUNCTIONS ------------------------------------------------------------------- */
 
@@ -93,8 +97,16 @@ void irt_mutex_lock(irt_lock_obj *m){
 	pthread_mutex_lock(m);
 }
 
+int irt_mutex_trylock(irt_lock_obj* m){
+	return pthread_mutex_trylock(m);
+}
+
 void irt_mutex_unlock(irt_lock_obj *m){
 	pthread_mutex_unlock(m);
+}
+
+void irt_mutex_destroy(irt_lock_obj *m){
+	pthread_mutex_destroy(m);
 }
 
 void irt_cond_wake_all(irt_cond_var *cv){
@@ -108,3 +120,24 @@ int irt_cond_wait(irt_cond_var *cv, irt_lock_obj *m){
 void irt_cond_wake_one(irt_cond_var *cv){
 	pthread_cond_signal(cv);
 }
+
+
+/* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
+
+int irt_tls_key_create(irt_tls_key* k){
+	return pthread_key_create(k, NULL);
+}
+
+void irt_tls_key_delete(irt_tls_key k) {
+	pthread_key_delete(k);
+}
+
+void* irt_tls_get(irt_tls_key k){
+	return pthread_getspecific(k);
+}
+
+int irt_tls_set(irt_tls_key k, void *val){
+	return pthread_setspecific(k, val);
+}
+
+

@@ -61,7 +61,6 @@ struct _irt_work_group {
 //	irt_pd_table* performance_data;
 	irt_loop_sched_policy cur_sched; // current scheduling policy
 	irt_loop_sched_data loop_sched_data[IRT_WG_RING_BUFFER_SIZE];
-	pthread_barrier_t barrier;
 };
 
 struct _irt_wi_wg_membership {

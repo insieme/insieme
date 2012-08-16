@@ -95,7 +95,6 @@ void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	wi->wg_memberships[group_num].num = mem_num;
 	wi->wg_memberships[group_num].pfor_count = 0;
 	//IRT_INFO("G: % 8lu Mem: % 3d  wi_id: % 8lu  g_n: % 3u\n", wg->id.full, mem_num, wi->id.full, group_num);
-	pthread_barrier_init(&wg->barrier, NULL, wg->local_member_count);
 }
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed

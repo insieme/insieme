@@ -95,6 +95,10 @@ int irt_thread_join(irt_thread t){
 	return WaitForSingleObject(t, INFINITE);
 }
 
+void irt_thread_exit(int exit_code){
+	ExitThread(exit_code);
+}
+
 
 /* SPIN LOCK FUNCTIONS ------------------------------------------------------------------- */
 
@@ -134,8 +138,16 @@ void irt_mutex_lock(irt_lock_obj *m){
 	AcquireSRWLockExclusive(m);
 }
 
+int irt_mutex_trylock(irt_lock_obj* m){
+	return !TryAcquireSRWLockExclusive(m);
+}
+
 void irt_mutex_unlock(irt_lock_obj *m){
 	ReleaseSRWLockExclusive(m);
+}
+
+void irt_mutex_destroy(irt_lock_obj *m){
+	// there is no WinAPI call
 }
 
 void irt_cond_wake_all(irt_cond_var* cv){
@@ -152,3 +164,24 @@ void irt_cond_wake_one(irt_cond_var *cv){
 	WakeConditionVariable(cv);
 }
 
+
+/* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
+
+int irt_tls_key_create(irt_tls_key* k){
+	*k = TlsAlloc();
+	if (*k == TLS_OUT_OF_INDEXES)
+		return -1;
+	return 0;
+}
+
+void irt_tls_key_delete(irt_tls_key k) {
+	TlsFree(k);
+}
+
+void* irt_tls_get(irt_tls_key k){
+	return TlsGetValue(k);
+}
+
+int irt_tls_set(irt_tls_key k, void *val){
+	return !TlsSetValue(k, val);
+}

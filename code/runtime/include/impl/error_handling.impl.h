@@ -40,7 +40,8 @@
 
 #include "globals.h"
 
-#include <pthread.h>
+#include "abstraction/threads.h"
+#include "abstraction/impl/threads.impl.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -60,7 +61,7 @@ void irt_throw_string_error(irt_errcode code, const char* message, ...) {
 }
 
 void irt_throw_generic_error(irt_error* error) {
-	if(pthread_setspecific(irt_g_error_key, error) != 0) {
+	if(irt_tls_set(irt_g_error_key, error) != 0) {
 		fprintf(stderr, "Error during error reporting. Shutting down.\n");
 		perror("System Error message");
 		exit(-1);

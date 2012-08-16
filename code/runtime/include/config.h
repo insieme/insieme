@@ -93,7 +93,10 @@
 #define IRT_MIN_MODE
 
 // define IRT_USE_PTHREADS if you want to use pthread lib for windows (has no effect under linux)
-#define IRT_USE_PTHREADS
+// better pass it in as as flag for the compiler
+//#ifndef IRT_USE_PTHREADS
+//#define IRT_USE_PTHREADS
+//#endif
 
 // work item
 #define IRT_WI_PARAM_BUFFER_SIZE 128

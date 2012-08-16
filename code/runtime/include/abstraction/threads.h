@@ -36,20 +36,24 @@
 
 #pragma once
 
+
 #include "irt_inttypes.h"
 #include "declarations.h"
 
 #if defined(_MSC_VER) && !defined(IRT_USE_PTHREADS)
+	#include <Windows.h> // keep this or Visual Studio Compiler goes nuts
 	typedef HANDLE irt_thread;
 	typedef long irt_spinlock;
 	typedef CONDITION_VARIABLE irt_cond_var;
 	typedef SRWLOCK irt_lock_obj;
+	typedef uint32 irt_tls_key;
 #else
 	#include <pthread.h>
 	typedef pthread_t irt_thread;
 	typedef pthread_spinlock_t irt_spinlock;
 	typedef pthread_cond_t irt_cond_var;
 	typedef pthread_mutex_t irt_lock_obj;
+	typedef pthread_key_t irt_tls_key;
 #endif
 
 
@@ -68,6 +72,8 @@ inline void irt_thread_cancel(irt_thread);
 /** makes calling thread wait for cancellation of thread t, return value of terminated thread is returned */
 inline int irt_thread_join(irt_thread t);
 
+/** exit a thread with specified exit code */
+inline void irt_thread_exit(int exit_code);
 
 
 /* SPIN LOCK FUNCTIONS ------------------------------------------------------------------- */
@@ -95,8 +101,14 @@ inline void irt_mutex_init(irt_lock_obj*);
 /** acquire lock object */
 inline void irt_mutex_lock(irt_lock_obj*);
 
+/** try to acquire lock object, returns 0 if lock was acquired */
+inline int irt_mutex_trylock(irt_lock_obj*);
+
 /** release lock object */
 inline void irt_mutex_unlock(irt_lock_obj*);
+
+/** destroy the lock object */
+inline void irt_mutex_destroy(irt_lock_obj*);
 
 /** wake all threads which slept on the condition variable */
 inline void irt_cond_wake_all(irt_cond_var*);
@@ -109,3 +121,18 @@ inline int irt_cond_wait(irt_cond_var*, irt_lock_obj*);
 
 /** singal and wake a thread which is blocked by the condition variable cv */
 inline void irt_cond_wake_one(irt_cond_var *cv);
+
+
+/* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
+
+/** creates a new thread local storage key at location k */
+inline int irt_tls_key_create(irt_tls_key* k);
+
+/** delete key k, if value is pointer to memory location, caller is responsible for freeing it */
+inline void irt_tls_key_delete(irt_tls_key k);
+
+/** get the thread local value for key k */
+inline void* irt_tls_get(irt_tls_key k);
+
+/** set the thread local value for key k */
+inline int irt_tls_set(irt_tls_key k, void *val);
