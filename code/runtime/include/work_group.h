@@ -74,6 +74,7 @@ typedef void irt_wg_redistribution_function(void** collected, uint32 local_id, u
 
 /* ------------------------------ operations ----- */
 
+irt_work_group* _irt_wg_create(irt_worker* self);
 irt_work_group* irt_wg_create();
 void irt_wg_destroy(irt_work_group* wg);
 

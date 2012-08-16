@@ -289,9 +289,9 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;
 	}
-	irt_work_item* main_wi = irt_wi_create(irt_g_wi_range_one_elem, impl_id, startup_params);
+	irt_work_item* main_wi = _irt_wi_create(irt_g_workers[0], &irt_g_wi_range_one_elem, impl_id, startup_params);
 	// create work group for outermost wi
-	irt_work_group* outer_wg = irt_wg_create();
+	irt_work_group* outer_wg = _irt_wg_create(irt_g_workers[0]);
 	irt_wg_insert(outer_wg, main_wi);
 	// event handling for outer work item [[
 	pthread_mutex_t mutex;
