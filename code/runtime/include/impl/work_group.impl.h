@@ -67,7 +67,7 @@ irt_work_group* _irt_wg_create(irt_worker* self) {
 	wg->joined_pfor_count = 0;
 	wg->redistribute_data_array = NULL;
 	wg->cur_sched = irt_g_loop_sched_policy_default;
-	pthread_spin_init(&wg->lock, PTHREAD_PROCESS_PRIVATE);
+	irt_spin_init(&wg->lock);
 	return wg;
 }
 
@@ -79,7 +79,7 @@ irt_work_group* irt_wg_create() {
 }
 void irt_wg_destroy(irt_work_group* wg) {
 	_irt_del_wg_event_register(wg->id);
-	pthread_spin_destroy(&wg->lock);
+	irt_spin_destroy(&wg->lock);
 	_irt_wg_recycle(wg);
 }
 
@@ -101,7 +101,6 @@ void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	wi->wg_memberships[group_num].num = mem_num;
 	wi->wg_memberships[group_num].pfor_count = 0;
 	//IRT_INFO("G: % 8lu Mem: % 3d  wi_id: % 8lu  g_n: % 3u\n", wg->id.full, mem_num, wi->id.full, group_num);
-	pthread_barrier_init(&wg->barrier, NULL, wg->local_member_count);
 }
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed

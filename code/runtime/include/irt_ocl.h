@@ -38,6 +38,7 @@
 
 #include "CL/cl.h"
 #include "impl/error_handling.impl.h"
+#include "abstraction/threads.h"
 #define IRT_OCL_INSTR 0
 //#define IRT_OCL_DEBUG 0
 
@@ -67,7 +68,7 @@ struct _irt_ocl_device {
 	cl_ulong mem_size; // memory of the device
 	cl_ulong mem_available; // memory still available, reduced after each buffer allocation
 	cl_ulong max_buffer_size; // max size of a buffer
-	pthread_spinlock_t buffer_lock;
+	irt_spinlock buffer_lock;
 	irt_ocl_buffer* buffer;
 
 	// device info
@@ -112,7 +113,7 @@ typedef struct _irt_ocl_kernel {
 	size_t* global_work_size;
 	size_t* local_work_size;
 
-	pthread_spinlock_t kernel_lock;
+	irt_spinlock kernel_lock;
 	irt_ocl_device* dev;
 } irt_ocl_kernel;
 

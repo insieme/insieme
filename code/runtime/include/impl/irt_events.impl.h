@@ -50,7 +50,7 @@ static inline irt_##__short__##_event_register* _irt_get_##__short__##_event_reg
 		return reg; \
 	} else { \
 		irt_##__short__##_event_register* ret = (irt_##__short__##_event_register*)calloc(1, sizeof(irt_##__short__##_event_register)); \
-		pthread_spin_init(&ret->lock, PTHREAD_PROCESS_PRIVATE); /* TODO check destroy */ \
+		irt_spin_init(&ret->lock); /* TODO check destroy */ \
 		return ret; \
 	} \
 } \
@@ -93,17 +93,17 @@ uint32 irt_##__short__##_event_check_gt_and_register(irt_##__subject__##_id __sh
 		newreg->lookup_table_next = self->__short__##_ev_register_list; \
 		self->__short__##_ev_register_list = newreg; \
 	} \
-	pthread_spin_lock(&reg->lock); \
+	irt_spin_lock(&reg->lock); \
 	/* check if event already occurred */ \
 	if(reg->occurrence_count[event_code] > p_val) { \
 		/* if so, return occurrence count */ \
-		pthread_spin_unlock(&reg->lock); \
+		irt_spin_unlock(&reg->lock); \
 		return reg->occurrence_count[event_code]; \
 	} \
 	/* else insert additional handler */ \
 	handler->next = reg->handler[event_code]; \
 	reg->handler[event_code] = handler; \
-	pthread_spin_unlock(&reg->lock); \
+	irt_spin_unlock(&reg->lock); \
 	return 0; \
 } \
  \
@@ -122,7 +122,7 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_
 		newreg->lookup_table_next = self->__short__##_ev_register_list; \
 		self->__short__##_ev_register_list = newreg; \
 	} \
-	pthread_spin_lock(&reg->lock); \
+	irt_spin_lock(&reg->lock); \
 	/* increase event count */ \
 	++reg->occurrence_count[event_code]; \
 	/* go through all event handlers */ \
@@ -138,7 +138,7 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_
 		} \
 		cur = nex; \
 	} \
-	pthread_spin_unlock(&reg->lock); \
+	irt_spin_unlock(&reg->lock); \
 } \
  \
 void irt_##__short__##_event_set_occurrence_count(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, uint32 count) { \
@@ -152,10 +152,10 @@ void irt_##__short__##_event_set_occurrence_count(irt_##__subject__##_id __short
 		newreg->lookup_table_next = self->__short__##_ev_register_list; \
 		self->__short__##_ev_register_list = newreg; \
 	} \
-	pthread_spin_lock(&reg->lock); \
+	irt_spin_lock(&reg->lock); \
 	/* set event count */ \
 	reg->occurrence_count[event_code] = count; \
-	pthread_spin_unlock(&reg->lock); \
+	irt_spin_unlock(&reg->lock); \
 }
 
 

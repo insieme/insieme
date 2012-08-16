@@ -178,6 +178,6 @@ static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy 
 
 void irt_set_global_affinity_policy(irt_affinity_policy policy) {
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
-		irt_set_affinity(irt_get_affinity(i, policy), irt_g_workers[i]->pthread);
+		irt_set_affinity(irt_get_affinity(i, policy), irt_g_workers[i]->thread);
 	}
 }
