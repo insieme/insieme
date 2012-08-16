@@ -40,6 +40,8 @@
 #include "irt_atomic.h"
 
 #include "context/impl/common.impl.h"
+#include "abstraction/threads.h"
+#include "abstraction/impl/threads.impl.h"
 
 #ifdef __INTEL_COMPILER
 #pragma warning push

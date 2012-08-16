@@ -37,6 +37,7 @@
 #pragma once
 
 #include "irt_inttypes.h"
+#include "abstraction/threads.h"
 
 
 // ------------------------------------------------------------------------------------
