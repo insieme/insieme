@@ -140,11 +140,6 @@ namespace core {
 					return ptr;
 				}
 
-				// cut of nested lambda definitions
-				if (ptr->getNodeType() == NT_LambdaDefinition) {
-					return ptr;
-				}
-
 				// replace recursively
 				return ptr->substitute(manager, *this);
 			}

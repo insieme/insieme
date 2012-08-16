@@ -85,8 +85,15 @@ namespace {
 		void visitVariable(const VariableAddress& cur) {
 			// check whether variable has been declared
 			if (declaredVariables.find(cur.getAddressedNode()) == declaredVariables.end()) {
+
+				// check whether it is a recursive function variable
+				auto visitor = makeLambdaVisitor([&](const LambdaDefinitionPtr& def)->bool {
+					return def->getDefinitionOf(cur);
+				});
+				bool isRecVariable = visitPathBottomUpInterruptible(cur, visitor);
+
 				// => not declared => add to list of undeclared variables
-				undeclaredVariableUsage.push_back(cur);
+				if (!isRecVariable) undeclaredVariableUsage.push_back(cur);
 			}
 		}
 

@@ -763,6 +763,54 @@ TEST(Manipulation, InlineFunction) {
 
 }
 
+
+TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// an easy case
+	LambdaExprPtr in = builder.parseExpr(
+		"let int = int<4> in "
+		"let f = (int a)->int {"
+		"	((int)->int g)->unit {"
+		"		g(5);"
+		"	}(f);"
+		"} in f"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(in);
+
+	EXPECT_EQ("rec v1.{v1=fun(int<4> v2) {rec v4.{v4=fun() {v1(5);}}();}}", 
+		toString(*transform::correctRecursiveLambdaVariableUsage(manager, in))
+	);
+
+	// an advanced case 
+	in = builder.parseExpr(
+		"let int = int<4> in "
+		"let h = ((int)->int f)->int { return f(5); } in "
+		"let f,g = "
+		"	(int a)->int {"
+		"		h(f);"
+		"		f(4);"
+		"		g(f(4));"
+		"		h(g);"
+		"	},"
+		"	(int a)->int {"
+		"		h(f);"
+		"		f(g(4));"
+		"		g(4);"
+		"		h(g);"
+		"	}"
+		"in g"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(in);
+
+	EXPECT_EQ("rec v13.{v12=fun(int<4> v14) {rec v11.{v11=fun() {return v12(5);}}(); v12(4); v13(v12(4)); rec v11.{v11=fun() {return v13(5);}}();}, v13=fun(int<4> v16) {rec v11.{v11=fun() {return v12(5);}}(); v12(v13(4)); v13(4); rec v11.{v11=fun() {return v13(5);}}();}}", 
+		toString(*transform::correctRecursiveLambdaVariableUsage(manager, in))
+	);
+}
+
 } // end namespace core
 } // end namespace insieme
 

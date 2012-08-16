@@ -151,6 +151,13 @@ private:
 	const SubTypeLattice* getSubTypeLattice() const;
 };
 
+
+
+/**
+ * Prints the operator enumeration in a readable format.
+ */
+std::ostream& operator<<(std::ostream& out, const BasicGenerator::Operator& op);
+
 } // namespace lang
 } // namespace core
 } // namespace insieme
