@@ -37,6 +37,7 @@
 #pragma once
 
 #include "abstraction/threads.h"
+#include "error_handling.h"
 
 #define IRT_SPIN_LOCKED 1
 #define IRT_SPIN_UNLOCKED 0

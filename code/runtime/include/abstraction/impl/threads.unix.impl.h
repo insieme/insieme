@@ -37,6 +37,7 @@
 #pragma once
 
 #include "abstraction/threads.h"
+#include "error_handling.h"
 
 irt_thread irt_thread_create(irt_thread_func *fun, void *args) {
 	irt_thread thread;

@@ -38,7 +38,7 @@
 
 
 #include "irt_inttypes.h"
-#include "declarations.h"
+//#include "declarations.h"
 
 #if defined(_MSC_VER) && !defined(IRT_USE_PTHREADS)
 	#include <Windows.h> // keep this or Visual Studio Compiler goes nuts
