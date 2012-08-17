@@ -677,7 +677,7 @@ namespace backend {
 				const c_ast::IdentifierPtr& name = pair.first;
 				const core::LambdaExprPtr& lambda = pair.second;
 
-				// unrolle function and create function defintion
+				// unroll function and create function definition
 				core::LambdaExprPtr unrolled = lambdaDefinition->unrollOnce(manager, lambda->getVariable());
 
 				// create dummy function ... no body

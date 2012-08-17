@@ -815,7 +815,10 @@ TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
 	// normalize representation (since parser is not deterministic)
 	in = analysis::normalize(in);
 
-	EXPECT_EQ("rec v0.{v1=fun(int<4> v2) {1; rec v0.{v0=fun() {return v1(5);}}(); v1(4); v0(v1(4)); rec v1.{v1=fun() {return v0(5);}}();}, v0=fun(int<4> v3) {2; rec v0.{v0=fun() {return v1(5);}}(); v1(v0(4)); v0(4); rec v1.{v1=fun() {return v0(5);}}();}}",
+	EXPECT_EQ("rec v0.{"
+			"v1=fun(int<4> v2) {1; rec v0.{v0=fun() {return v1(5);}}(); v1(4); v0(v1(4)); rec v1.{v1=fun() {return v0(5);}}();}, "
+			"v0=fun(int<4> v3) {2; rec v0.{v0=fun() {return v1(5);}}(); v1(v0(4)); v0(4); rec v1.{v1=fun() {return v0(5);}}();}"
+			"}",
 		toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in)))
 	);
 }
