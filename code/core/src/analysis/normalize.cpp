@@ -234,7 +234,9 @@ namespace analysis {
 				VariablePtr res;
 				do {
 					res = builder.variable(type, index++);
-				} while (contains(freeVarList, res));		// avoid collisions with free variables
+				} while (contains(freeVarList, res, [](const VariablePtr& a, const VariablePtr& b) {
+					return a->getId() == b->getId();
+				}));		// avoid id-collisions with free variables
 				return res;
 			};
 
