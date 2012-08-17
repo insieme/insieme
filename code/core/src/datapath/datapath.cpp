@@ -53,33 +53,33 @@ namespace datapath {
 	DataPath::DataPath(NodeManager& manager)
 		: path(manager.getLangBasic().getDataPathRoot()) { }
 
-	DataPath DataPath::member(const ExpressionPtr& member) {
+	DataPath DataPath::member(const ExpressionPtr& member) const {
 		auto& mgr = path.getNodeManager(); auto& basic = mgr.getLangBasic();
 		assert(basic.isIdentifier(member->getType()) && "Member identifier has to be an identifier!");
 		return DataPath(IRBuilder(mgr).callExpr(basic.getDataPath(), basic.getDataPathMember(), path, member));
 	}
 
-	DataPath DataPath::member(const string& name) {
+	DataPath DataPath::member(const string& name) const {
 		return member(IRBuilder(path.getNodeManager()).getIdentifierLiteral(name));
 	}
 
-	DataPath DataPath::element(const ExpressionPtr& element) {
+	DataPath DataPath::element(const ExpressionPtr& element) const {
 		auto& mgr = path.getNodeManager(); auto& basic = mgr.getLangBasic();
 		assert(basic.isUnsignedInt(element->getType()) && "Index has to be an unsigned integer!");
 		return DataPath(IRBuilder(mgr).callExpr(basic.getDataPath(), basic.getDataPathElement(), path, element));
 	}
 
-	DataPath DataPath::element(unsigned index) {
+	DataPath DataPath::element(unsigned index) const {
 		return element(IRBuilder(path.getNodeManager()).uintLit(index).as<ExpressionPtr>());
 	}
 
-	DataPath DataPath::component(const LiteralPtr& component) {
+	DataPath DataPath::component(const LiteralPtr& component) const {
 		auto& mgr = path.getNodeManager(); auto& basic = mgr.getLangBasic();
 		assert(basic.isUnsignedInt(component->getType()) && "Index has to be an unsigned integer!");
 		return DataPath(IRBuilder(mgr).callExpr(basic.getDataPath(), basic.getDataPathComponent(), path, component));
 	}
 
-	DataPath DataPath::component(unsigned index) {
+	DataPath DataPath::component(unsigned index) const {
 		return component(IRBuilder(path.getNodeManager()).uintLit(index));
 	}
 

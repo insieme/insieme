@@ -81,7 +81,7 @@ namespace datapath {
 		 * @param member the member to be accessed; the expresssion has to be of type identifer
 		 * @return the extended data path
 		 */
-		DataPath member(const ExpressionPtr& member);
+		DataPath member(const ExpressionPtr& member) const;
 
 		/**
 		 * Extends this data path by an access to the given member.
@@ -91,7 +91,7 @@ namespace datapath {
 		 * @param member the member to be accessed
 		 * @return the extended data path
 		 */
-		DataPath member(const string& name);
+		DataPath member(const string& name) const;
 
 		/**
 		 * Extends this data path by an access to the given element.
@@ -101,7 +101,7 @@ namespace datapath {
 		 * @param element the element to be accessed; the expression has to be an unsigned integer
 		 * @return the extended data path
 		 */
-		DataPath element(const ExpressionPtr& element);
+		DataPath element(const ExpressionPtr& element) const;
 
 		/**
 		 * Extends this data path by an access to the given element.
@@ -111,7 +111,7 @@ namespace datapath {
 		 * @param element the element to be accessed
 		 * @return the extended data path
 		 */
-		DataPath element(unsigned index);
+		DataPath element(unsigned index) const;
 
 		/**
 		 * Extends this data path by an access to the given component.
@@ -121,7 +121,7 @@ namespace datapath {
 		 * @param component the component to be accessed; must be an unsigned integer literal
 		 * @return the extended data path
 		 */
-		DataPath component(const LiteralPtr& component);
+		DataPath component(const LiteralPtr& component) const;
 
 		/**
 		 * Extends this data path by an access to the given component.
@@ -131,7 +131,7 @@ namespace datapath {
 		 * @param component the component to be accessed
 		 * @return the extended data path
 		 */
-		DataPath component(unsigned index);
+		DataPath component(unsigned index) const;
 
 		/**
 		 * A conversion operation to an ExpressionPtr.

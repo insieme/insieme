@@ -50,22 +50,30 @@ namespace inductive {
 	TEST(MemoryLocation, Basics) {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
+		auto& basic = mgr.getLangBasic();
 
 		// also, we need a data path builder
 		datapath::DataPathBuilder dbBuilder(mgr);
 
 
 		// create a new integer object
-		ExpressionPtr obj = builder.refNew(builder.intLit(12));
+		ExpressionPtr value = builder.uintLit(12);
+		ExpressionPtr obj = builder.refNew(value);
 
 		// create a simple memory location out of it
 		MemoryLocation loc = ExpressionAddress(obj);
 
 		// check location result
-		EXPECT_EQ("", toString(loc));
+		EXPECT_EQ("0/<>", toString(loc));
 
+		// access a reference of an array
+		loc = MemoryLocation(ExpressionAddress(builder.refVar(builder.undefined(builder.arrayType(basic.getInt4())))));
 
+		// access full array
+		EXPECT_EQ("0/<>", toString(loc));
 
+		// access an element of the array
+		EXPECT_EQ("0/<>[12]", toString(loc.element(value)));
 	}
 
 } // end namespace inductive

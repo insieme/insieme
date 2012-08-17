@@ -36,13 +36,66 @@
 
 #include "insieme/analysis/inductive/memory_location.h"
 
+#include "insieme/core/analysis/ir_utils.h"
+
 namespace insieme {
 namespace analysis {
 namespace inductive {
 
+	using namespace core;
+	using namespace core::analysis;
+
+	MemoryLocation::MemoryLocation(const core::ExpressionAddress& constructor)
+		: constructor(constructor), dataPath(constructor.getNodeManager()) {
+		auto& basic = constructor.getNodeManager().getLangBasic();
+		assert(
+				(isCallOf(constructor.getAddressedNode(), basic.getRefVar()) ||
+			     isCallOf(constructor.getAddressedNode(), basic.getRefNew()))
+			   && "Memory locations can only be constructed using ref.var(..) and ref.new(..)!"
+		);
+	}
+
+	MemoryLocation::MemoryLocation(const core::ExpressionAddress& constructor, const core::datapath::DataPath& dataPath)
+		: constructor(constructor), dataPath(dataPath) {
+
+		// TODO: implement sanity check!
+//		auto& basic = constructor.getNodeManager().getLangBasic();
+//		assert(
+//				(isCallOf(constructor.getAddressedNode(), basic.getRefVar()) ||
+//				 isCallOf(constructor.getAddressedNode(), basic.getRefNew()))
+//			   && "Memory locations can only be constructed using ref.var(..) and ref.new(..)!"
+//		);
+	}
+
+
 
 	std::ostream& MemoryLocation::printTo(std::ostream& out) const {
-		return out << "Loc(" << constructor << "." << *dataPath << ")";
+		return out << constructor << "/" << dataPath;
+	}
+
+	MemoryLocation MemoryLocation::member(const core::ExpressionPtr& member) const {
+		// TODO: check whether this access is allowed
+		return MemoryLocation(constructor, dataPath.member(member));
+	}
+
+	MemoryLocation MemoryLocation::member(const string& name) const {
+		return MemoryLocation(constructor, dataPath.member(name));
+	}
+
+	MemoryLocation MemoryLocation::element(const core::ExpressionPtr& element) const {
+		return MemoryLocation(constructor, dataPath.element(element));
+	}
+
+	MemoryLocation MemoryLocation::element(unsigned index) const {
+		return MemoryLocation(constructor, dataPath.element(index));
+	}
+
+	MemoryLocation MemoryLocation::component(const core::LiteralPtr& component) const {
+		return MemoryLocation(constructor, dataPath.component(component));
+	}
+
+	MemoryLocation MemoryLocation::component(unsigned index) const {
+		return MemoryLocation(constructor, dataPath.component(index));
 	}
 
 

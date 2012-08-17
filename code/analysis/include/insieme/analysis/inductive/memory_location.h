@@ -72,7 +72,7 @@ namespace inductive {
 		 * The relative path from the root object created by the constructor
 		 * to the referenced memory location.
 		 */
-		core::datapath::DataPathPtr dataPath;
+		core::datapath::DataPath dataPath;
 
 	public:
 
@@ -80,24 +80,28 @@ namespace inductive {
 		 * Creates a new memory location referencing the root of the object
 		 * created using the given constructor expression.
 		 *
-		 * @param constructor the expression used to allocate the new memory location
+		 * @param constructor the expression used to allocate the new memory location; it has
+		 * 			to be a call to the ref.var or ref.new literal!
 		 */
-		MemoryLocation(const core::ExpressionAddress& constructor)
-			: constructor(constructor) {
-
-			// initialize with the root path
-			dataPath = core::datapath::DataPathBuilder(constructor.getNodeManager()).getPath();
-		}
+		MemoryLocation(const core::ExpressionAddress& constructor);
 
 		/**
 		 * Creates a new memory location referencing the specified sub-element of the
 		 * object created using the given constructor expression.
 		 *
-		 * @param constructor the expression used to allocate the new memory location
+		 * @param constructor the expression used to allocate the new memory location; it has
+		 * 			to be a call to the ref.var or ref.new literal!
 		 * @param dataPath the path to the data element referenced within the addressed object
 		 */
-		MemoryLocation(const core::ExpressionAddress& constructor, const core::datapath::DataPathPtr& dataPath)
-			: constructor(constructor), dataPath(dataPath) {}
+		MemoryLocation(const core::ExpressionAddress& constructor, const core::datapath::DataPath& dataPath);
+
+
+		MemoryLocation member(const core::ExpressionPtr& member) const;
+		MemoryLocation member(const string& name) const;
+		MemoryLocation element(const core::ExpressionPtr& element) const;
+		MemoryLocation element(unsigned index) const;
+		MemoryLocation component(const core::LiteralPtr& component) const;
+		MemoryLocation component(unsigned index) const;
 
 
 	protected:
