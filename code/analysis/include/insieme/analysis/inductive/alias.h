@@ -34,50 +34,22 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+#pragma once
 
-#include <gtest/gtest.h>
-
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_address.h"
-#include "insieme/core/datapath/datapath.h"
+#include "insieme/analysis/inductive/memory_location.h"
 
 namespace insieme {
-namespace core {
-namespace datapath {
-
-TEST(DataPathBuilder, Basic) {
-
-	NodeManager mgr;
-
-	EXPECT_EQ("dp.root", toString(*DataPathBuilder(mgr).getPath()));
-	EXPECT_EQ("dp.member(dp.root, hello)", toString(*DataPathBuilder(mgr).member("hello").getPath()));
-	EXPECT_EQ("dp.element(dp.root, 12)", toString(*DataPathBuilder(mgr).element(12).getPath()));
-	EXPECT_EQ("dp.component(dp.root, 3)", toString(*DataPathBuilder(mgr).component(3).getPath()));
+namespace analysis {
+namespace inductive {
 
 
-	EXPECT_EQ("dp.component(dp.member(dp.element(dp.root, 12), hello), 3)", toString(*DataPathBuilder(mgr)
-			.element(12)
-			.member("hello")
-			.component(3)
-			.getPath())
-	);
+	// TODO: give more accurate responses
+	enum AliasTestResult {
+		TRUE, FALSE, MAYBE
+	};
 
-}
+	AliasTestResult isAlias(const core::ExpressionAddress& a, const core::ExpressionAddress& b);
 
-TEST(DataPath, Basic) {
-	NodeManager mgr;
-
-	DataPath path(mgr);
-
-	EXPECT_EQ("<>", toString(path));
-	EXPECT_EQ("<>[4]", toString(path.element(4)));
-	EXPECT_EQ("<>[4].test", toString(path.element(4).member("test")));
-	EXPECT_EQ("<>[4].test.c3", toString(path.element(4).member("test").component(3)));
-
-
-}
-
+} // end namespace inductive
 } // end namespace analysis
-} // end namespace core
 } // end namespace insieme

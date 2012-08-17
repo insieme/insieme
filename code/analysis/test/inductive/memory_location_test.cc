@@ -34,50 +34,40 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
-
 #include <gtest/gtest.h>
 
+#include "insieme/analysis/inductive/memory_location.h"
+
+#include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_address.h"
-#include "insieme/core/datapath/datapath.h"
 
 namespace insieme {
-namespace core {
-namespace datapath {
+namespace analysis {
+namespace inductive {
 
-TEST(DataPathBuilder, Basic) {
+	using namespace core;
 
-	NodeManager mgr;
+	TEST(MemoryLocation, Basics) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
-	EXPECT_EQ("dp.root", toString(*DataPathBuilder(mgr).getPath()));
-	EXPECT_EQ("dp.member(dp.root, hello)", toString(*DataPathBuilder(mgr).member("hello").getPath()));
-	EXPECT_EQ("dp.element(dp.root, 12)", toString(*DataPathBuilder(mgr).element(12).getPath()));
-	EXPECT_EQ("dp.component(dp.root, 3)", toString(*DataPathBuilder(mgr).component(3).getPath()));
-
-
-	EXPECT_EQ("dp.component(dp.member(dp.element(dp.root, 12), hello), 3)", toString(*DataPathBuilder(mgr)
-			.element(12)
-			.member("hello")
-			.component(3)
-			.getPath())
-	);
-
-}
-
-TEST(DataPath, Basic) {
-	NodeManager mgr;
-
-	DataPath path(mgr);
-
-	EXPECT_EQ("<>", toString(path));
-	EXPECT_EQ("<>[4]", toString(path.element(4)));
-	EXPECT_EQ("<>[4].test", toString(path.element(4).member("test")));
-	EXPECT_EQ("<>[4].test.c3", toString(path.element(4).member("test").component(3)));
+		// also, we need a data path builder
+		datapath::DataPathBuilder dbBuilder(mgr);
 
 
-}
+		// create a new integer object
+		ExpressionPtr obj = builder.refNew(builder.intLit(12));
 
+		// create a simple memory location out of it
+		MemoryLocation loc = ExpressionAddress(obj);
+
+		// check location result
+		EXPECT_EQ("", toString(loc));
+
+
+
+	}
+
+} // end namespace inductive
 } // end namespace analysis
-} // end namespace core
 } // end namespace insieme
