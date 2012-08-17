@@ -152,12 +152,14 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 	irt_wi_event_register *reg = _irt_get_wi_event_register();
 	reg->id.full = retval->id.full;
 	_irt_wi_event_register_only(reg);
-	// instrumentation
-	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, retval->id);
 	return retval;
 }
 static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
-	return _irt_wi_create(irt_worker_get_current(), &range, impl_id, params);
+	// instrumentation
+	irt_worker* self = irt_worker_get_current();
+	irt_work_item* wi = _irt_wi_create(self, &range, impl_id, params);
+	irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_CREATED, wi->id);
+	return wi;
 }
 irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_range range) {
 	irt_worker *self = irt_worker_get_current();
