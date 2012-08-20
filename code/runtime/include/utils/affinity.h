@@ -72,9 +72,7 @@ typedef struct {
 
 static irt_affinity_physical_mapping irt_g_affinity_physical_mapping;
 
-#include <sched.h>
 #include "abstraction/threads.h"
-
 #include "impl/error_handling.impl.h"
 
 #define IRT_AFFINITY_MASK_BITS_PER_QUAD ((uint64)64)   // number of processors identifiable through a bitmask
