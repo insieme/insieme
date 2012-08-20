@@ -358,7 +358,7 @@ namespace parser {
 			const Grammar::TermInfo& info = context.grammar.getTermInfo();
 			vector<Token> parentheseStack;
 			vector<unsigned> candidates;
-			for(unsigned i = 0; i<max; ++i) {
+			for(unsigned i = 0; i<=max; ++i) {
 				const Token& cur = tokens[i];
 
 				// if current token is an opener => put closer on the stack

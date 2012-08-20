@@ -167,12 +167,13 @@ TypePtr getVolatileType(const TypePtr& type) {
 
 namespace {
 
+
 	/**
 	 * Will certainly determine the declaration status of variables inside a block.
 	 */
 	struct LambdaDeltaVisitor : public IRVisitor<bool> {
-		insieme::utils::set::PointerSet<VariablePtr> bound;
-		insieme::utils::set::PointerSet<VariablePtr> free;
+		VariableSet bound;
+		VariableSet free;
 
 		// do not visit types
 		LambdaDeltaVisitor() : IRVisitor<bool>(false) {}
@@ -189,9 +190,45 @@ namespace {
 			return false;
 		}
 
+		bool visitLambda(const LambdaPtr& lambda) {
+			// register lambda parameters to be bound
+			const auto& params = lambda->getParameters();
+			bound.insert(params.begin(), params.end());
+			return false;
+		}
+
+		bool visitLambdaDefinition(const LambdaDefinitionPtr& definition) {
+			// register recursive lambda variables
+			for(const LambdaBindingPtr& bind : definition) {
+				bound.insert(bind->getVariable());
+			}
+			return false;
+		}
+
+
 		// due to the structure of the IR, nested lambdas can never reuse outer variables
 		//  - also prevents variables in LamdaDefinition from being inadvertently captured
-		bool visitLambdaExpr(const LambdaExprPtr&) {
+		bool visitLambdaExpr(const LambdaExprPtr& lambda) {
+
+			// The type used to annotate free variable lists.
+			struct FreeVariableSet : public VariableSet {
+				FreeVariableSet(const VariableSet& set) : VariableSet(set) {}
+				FreeVariableSet(const VariableList& list) : VariableSet(list.begin(), list.end()) {}
+			};
+
+			// check annotation
+			if (!lambda->hasAttachedValue<FreeVariableSet>()) {
+				// evaluate recursively
+				lambda->attachValue(FreeVariableSet(getFreeVariables(lambda->getDefinition())));
+			}
+
+			// should be fixed now
+			assert(lambda->hasAttachedValue<FreeVariableSet>());
+
+			// add free variables to result set
+			const FreeVariableSet& varset = lambda->getAttachedValue<FreeVariableSet>();
+			free.insert(varset.begin(), varset.end());
+
 			return true;
 		}
 

@@ -560,6 +560,7 @@ namespace core {
 		 * @return the resulting, unrolled lambda expression
 		 */
 		LambdaExprPtr unrollOnce(NodeManager& manager) const {
+			if (!isRecursive()) return manager.get(ExpressionAccessor<Derived, Ptr>::getNode());
 			return getDefinition()->unrollOnce(manager, getVariable());
 		}
 	};

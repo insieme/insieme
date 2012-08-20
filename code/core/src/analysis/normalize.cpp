@@ -41,6 +41,7 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
@@ -193,8 +194,12 @@ namespace analysis {
 				NodeType type = cur->getNodeType();
 				if (type == NT_Variable) {
 					// replace with normalized variables
-					assert(vars.find(cur.as<VariablePtr>()) != vars.end());
-					return vars.find(cur.as<VariablePtr>())->second;
+					auto pos = vars.find(cur.as<VariablePtr>());
+					if (pos != vars.end()) {
+						return pos->second;
+					}
+					// it is a free variable, no replacement!
+					return cur;
 				}
 
 				// invoke normalization recursively on lambda expressions
@@ -220,17 +225,36 @@ namespace analysis {
 			NodeManager& manager = node.getNodeManager();
 			IRBuilder builder(manager);
 
+			// get set of free variables
+			VariableList freeVarList = getFreeVariables(node);
+
+			// provide a mechanism to generate variable substitutions
+			int index = 0;
+			auto getNextVariable = [&](const TypePtr& type)->VariablePtr {
+				VariablePtr res;
+				do {
+					res = builder.variable(type, index++);
+				} while (contains(freeVarList, res, [](const VariablePtr& a, const VariablePtr& b) {
+					return a->getId() == b->getId();
+				}));		// avoid id-collisions with free variables
+				return res;
+			};
+
 			// collect all free variables in the top-level scope
 			VariableMap varMap;
-
-			// collect all variables
 			visitDepthFirstOncePrunable(node, [&](const NodePtr& cur) {
 				NodeType type = cur->getNodeType();
 				switch(type) {
 					case NT_Variable: {
-						auto index = varMap.size();
+
+						// check whether variable is free
 						VariablePtr var = cur.as<VariablePtr>();
-						varMap[var] = builder.variable(var->getType(), index);
+						if (contains(freeVarList, var)) {
+							break;	// do not touch free variables
+						}
+
+						// register variable to be replaced
+						varMap[var] = getNextVariable(var->getType());
 						break;
 					}
 					case NT_LambdaExpr: {

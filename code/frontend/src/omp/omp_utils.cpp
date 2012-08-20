@@ -156,26 +156,48 @@ const NodePtr GlobalMapper::mapBind(const BindExprPtr& bind) {
 const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 	LambdaExprPtr ret;
 	//LOG(INFO) << "?????? Mapping lambda expr " << lambdaExpr;
-	auto lambdaDef = lambdaExpr->getDefinition();
 	auto lambda = lambdaExpr->getLambda();
 	// create new var for global struct
 	VariablePtr innerVar = build.variable(curVar->getType());
 	VariablePtr outerVar = curVar;
 	curVar = innerVar;
 	// map body
-	auto newBody = static_pointer_cast<const CompoundStmt>(map(lambda->getBody()));
+	auto newBody = map(lambda->getBody()).as<CompoundStmtPtr>();
 	// add param
 	VariableList newParams = lambda->getParameterList();
 	newParams.push_back(curVar);
+
+	// update recursive variable
+	auto recVar = lambdaExpr->getVariable();
+	auto newRecVar = build.variable(recVar->getType());
+	if (lambdaExpr->isRecursive()) {
+		// TODO: update recursive call, not only function; => arguments are missing!
+		// 		implementing this is easier when general add-parameter function is available
+		newBody = core::transform::replaceAll(build.getNodeManager(), newBody, recVar, newRecVar, false).as<CompoundStmtPtr>();
+	}
+
 	// build replacement lambda
 	TypePtr retType = lambda->getType()->getReturnType();
-	//TypeList paramTypes = ::transform(newParams, [&](const VariablePtr& v){ return v->getType(); });
-	//FunctionTypePtr lambdaType = build.functionType(paramTypes, retType);
-	//auto newLambda = build.lambda(lambdaType, newParams, newBody);
+	TypeList paramTypes = ::transform(newParams, [](const VariablePtr& v){ return v->getType(); });
+	FunctionTypePtr lambdaType = build.functionType(paramTypes, retType);
+	auto newLambda = build.lambda(lambdaType, newParams, newBody);
+
 	// restore previous global variable
 	curVar = outerVar;
-	// build replacement lambda expression
-	ret = build.lambdaExpr(retType, newBody, newParams);
+
+	// build new definition block
+
+	vector<LambdaBindingPtr> bindings;
+	for(const LambdaBindingPtr& binding : lambdaExpr->getDefinition()) {
+		if (binding->getVariable() == recVar) {
+			bindings.push_back(build.lambdaBinding(recVar, newLambda));
+		} else {
+			bindings.push_back(binding);
+		}
+	}
+
+	// build new lambda (preserve all recursive variables)
+	ret = build.lambdaExpr(newRecVar, build.lambdaDefinition(bindings));
 	//LOG(INFO) << "!!!!!!! Mapped lambda expr " << ret;
 	return ret;
 }

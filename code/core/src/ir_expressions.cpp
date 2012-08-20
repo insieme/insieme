@@ -119,25 +119,68 @@ namespace core {
 			NodeManager& manager;
 			const LambdaDefinitionPtr& definition;
 
+			VariableSet recVars;
+
 
 		public:
 
 			RecLambdaUnroller(NodeManager& manager, const LambdaDefinitionPtr& definition)
-				: manager(manager), definition(definition) { }
+				: manager(manager), definition(definition) {
+				for(const LambdaBindingPtr& bind : definition->getDefinitions()) {
+					recVars.insert(bind->getVariable());
+				}
+			}
 
 			virtual const NodePtr resolveElement(const NodePtr& ptr) {
 				// check whether it is a known variable
 				if (ptr->getNodeType() == NT_Variable) {
 					VariablePtr var = static_pointer_cast<const Variable>(ptr);
-
-					if (definition->getDefinitionOf(var)) {
-						return LambdaExpr::get(manager, var, definition);
-					}
+					if (!recVars.contains(var)) return var;
+					return LambdaExpr::get(manager, var, definition);
 				}
 
 				// cut of types
 				if (ptr->getNodeCategory() == NC_Type) {
 					return ptr;
+				}
+
+				// special treatment of lambda expressions
+				if (ptr->getNodeType() == NT_LambdaExpr) {
+					// just substitute definition, but preserve variable
+					auto lambda = ptr.as<LambdaExprPtr>();
+					return LambdaExpr::get(manager, lambda->getVariable(), map(lambda->getDefinition()));
+				}
+
+
+				// cut-off nested lambda definitions
+				if (ptr->getNodeType() == NT_LambdaDefinition) {
+
+					// compute sub-set of recursive variables remaining in the unrolling
+					VariableSet subRecVars;
+
+					// filter recursive variables
+					LambdaDefinitionPtr defs = ptr.as<LambdaDefinitionPtr>();
+					for(const VariablePtr cur : recVars) {
+						if (!defs->getDefinitionOf(cur)) {
+							subRecVars.insert(cur);				// this one is not re-defined
+						}
+					}
+
+					// check whether there are still recursions left
+					if (subRecVars.empty()) {
+						return ptr;		// no further descend necessary
+					}
+
+					// switch to sub-set of recursive variables
+					VariableSet backup = recVars;
+					recVars = subRecVars;
+
+					// conduct substitution recursively
+					NodePtr res = ptr->substitute(manager, *this);
+
+					// restore backed up variable set
+					recVars = backup;
+					return res;
 				}
 
 				// replace recursively

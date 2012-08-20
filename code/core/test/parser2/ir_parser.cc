@@ -366,6 +366,11 @@ namespace parser {
 				toString(parse(manager, "{ (int<4> a, int<4> b)->int<4> { return a; }(12,14); }"))
 		);
 
+		// add call to empty function
+		EXPECT_EQ("AP({rec v4.{v4=fun() {return 3;}}();})",
+				toString(parse(manager, "{ ()->int<4> { return 3; } (); }", true))
+		);
+
 	}
 
 

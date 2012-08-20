@@ -54,7 +54,7 @@
 #ifdef IRT_ENABLE_INSTRUMENTATION
 // global function pointers to switch instrumentation on/off
 void (*irt_inst_insert_wi_event)(irt_worker* worker, irt_instrumentation_event event, irt_work_item_id subject_id) = &_irt_inst_insert_no_wi_event;
-void (*irt_inst_insert_wg_event)(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id) = &_irt_inst_insert_no_wg_event;;
+void (*irt_inst_insert_wg_event)(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id) = &_irt_inst_insert_no_wg_event;
 void (*irt_inst_insert_di_event)(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) = &_irt_inst_insert_no_di_event;
 void (*irt_inst_insert_wo_event)(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) = &_irt_inst_insert_no_wo_event;
 bool irt_g_instrumentation_event_output_is_enabled = false;
@@ -72,6 +72,7 @@ void _irt_inst_insert_no_di_event(irt_worker* worker, irt_instrumentation_event 
 void _irt_inst_event_data_table_resize(irt_instrumentation_event_data_table* table) {
 	table->size = table->size * 2;
 	table->data = (irt_instrumentation_event_data*)realloc(table->data, sizeof(irt_instrumentation_event_data)*table->size);
+	IRT_ASSERT(table->data != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Could not perform realloc for event instrumentation data table: %s", strerror(errno))
 }
 
 // =============== functions for creating and destroying performance tables ===============
@@ -97,7 +98,7 @@ void irt_inst_destroy_event_data_table(irt_instrumentation_event_data_table* tab
 void _irt_inst_event_insert_time(irt_worker* worker, const int event, const uint64 id, const uint64 time) {
 	irt_instrumentation_event_data_table* table = worker->instrumentation_event_data;
 
-	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size\n")
+	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size")
 
 	if(table->number_of_elements >= table->size)
 		_irt_inst_event_data_table_resize(table);
@@ -115,7 +116,8 @@ void _irt_inst_event_insert_time(irt_worker* worker, const int event, const uint
 void _irt_inst_event_insert(irt_worker* worker, const int event, const uint64 id) {
 	uint64 time = irt_time_ticks();
 
-	IRT_ASSERT(worker != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Trying to add event for worker 0!\n");
+	IRT_ASSERT(worker != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Trying to add event for worker NULL!");
+	IRT_ASSERT(worker == irt_worker_get_current(), IRT_ERR_INSTRUMENTATION, "Instrumentation: Trying to insert event for different worker");
 
 	_irt_inst_event_insert_time(worker, event, id, time);
 }
@@ -165,12 +167,12 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 	if(stat_retval != 0)
 		mkdir(outputprefix, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for performance log writing: %s\n", strerror(errno));
+	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for performance log writing: %s", strerror(errno));
 
 	sprintf(outputfilename, "%s/worker_event_log.%04u", outputprefix, worker->id.thread);
 
 	FILE* outputfile = fopen(outputfilename, "w");
-	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for event log writing: %s\n", strerror(errno));
+	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for event log writing: %s", strerror(errno));
 /*	if(outputfile == 0) {
 		IRT_DEBUG("Instrumentation: Unable to open file for event log writing\n");
 		IRT_DEBUG_ONLY(strerror(errno));
@@ -257,7 +259,7 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 
 	fclose(opencl_logfile);
 
-	IRT_ASSERT(ocl_helper_table_number_of_entries == helper_counter, IRT_ERR_INSTRUMENTATION, "OCL event counts do not match: helper_counter: %d, table_entries: %d\n", helper_counter, ocl_helper_table_number_of_entries);
+	IRT_ASSERT(ocl_helper_table_number_of_entries == helper_counter, IRT_ERR_INSTRUMENTATION, "OCL event counts do not match: helper_counter: %d, table_entries: %d", helper_counter, ocl_helper_table_number_of_entries);
 	int ocl_helper_table_counter = 0;
 #endif
 
@@ -501,6 +503,7 @@ void irt_instrumentation_init_energy_instrumentation() { }
 void _irt_inst_region_data_table_resize(irt_instrumentation_region_data_table* table) {
 	table->size = table->size * 2;
 	table->data = (irt_instrumentation_region_data*)realloc(table->data, sizeof(irt_instrumentation_region_data)*table->size);
+	IRT_ASSERT(table->data != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Could not perform realloc for region instrumentation data table: %s", strerror(errno))
 }
 
 irt_instrumentation_region_data_table* irt_inst_create_region_data_table() {
@@ -523,6 +526,7 @@ void _irt_inst_aggregated_data_table_resize() {
 	irt_instrumentation_aggregated_data_table* table = irt_g_aggregated_performance_table;
 	table->size = table->size * 2;
 	table->data = (irt_instrumentation_aggregated_data*)realloc(table->data, sizeof(irt_instrumentation_aggregated_data)*table->size);
+	IRT_ASSERT(table->data != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Could not perform realloc for aggregated instrumentation data table: %s", strerror(errno))
 }
 
 void irt_inst_create_aggregated_data_table() {
@@ -555,7 +559,7 @@ void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uin
 
 	irt_instrumentation_region_data_table* table = worker->instrumentation_region_data;
 		
-	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of region event table entries larger than table size\n")
+	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of region event table entries larger than table size")
 	
 	if(table->number_of_elements >= table->size)
 		_irt_inst_region_data_table_resize(table);
@@ -606,7 +610,7 @@ void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uin
 
 void _irt_instrumentation_aggregated_data_insert(irt_worker* worker, int64 id, uint64 walltime, uint64 cputime) {
 
-	IRT_ASSERT(irt_g_aggregated_performance_table->number_of_elements <= irt_g_aggregated_performance_table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size\n")
+	IRT_ASSERT(irt_g_aggregated_performance_table->number_of_elements <= irt_g_aggregated_performance_table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size")
 
 	if(irt_g_aggregated_performance_table->number_of_elements >= irt_g_aggregated_performance_table->size)
 		_irt_inst_aggregated_data_table_resize();
@@ -676,7 +680,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 	if(stat_retval != 0)
 		mkdir(outputprefix, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for performance log writing: %s\n", strerror(errno));
+	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for performance log writing: %s", strerror(errno));
 
 	sprintf(outputfilename, "%s/worker_performance_log.%04u", outputprefix, worker->id.thread);
 
@@ -719,7 +723,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 					}
 			}
 				
-			IRT_ASSERT(start_data.timestamp != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Cannot find a matching start statement\n")
+			IRT_ASSERT(start_data.timestamp != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Cannot find a matching start statement")
 
 			// single fprintf for performance reasons
 			// outputs all data in pairs: value_when_entering_region, value_when_exiting_region
@@ -758,12 +762,12 @@ void irt_inst_aggregated_data_output() {
 	if(stat_retval != 0)
 		mkdir(outputprefix, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for performance log writing: %s\n", strerror(errno));
+	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for performance log writing: %s", strerror(errno));
 
 	sprintf(outputfilename, "%s/worker_efficiency_log", outputprefix);
 
 	FILE* outputfile = fopen(outputfilename, "w");
-	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for efficiency log writing: %s\n", strerror(errno));
+	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for efficiency log writing: %s", strerror(errno));
 
 	irt_instrumentation_aggregated_data_table* table = irt_g_aggregated_performance_table;
 	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no performance data!")
@@ -784,7 +788,7 @@ void irt_inst_aggregated_data_output() {
 
 void irt_inst_aggregated_data_insert_pfor(int64 id, uint64 walltime, irt_loop_sched_data* sched_data) {
 
-	IRT_ASSERT(irt_g_aggregated_performance_table->number_of_elements <= irt_g_aggregated_performance_table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size\n")
+	IRT_ASSERT(irt_g_aggregated_performance_table->number_of_elements <= irt_g_aggregated_performance_table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size")
 
 	if(irt_g_aggregated_performance_table->number_of_elements >= irt_g_aggregated_performance_table->size)
 		_irt_inst_aggregated_data_table_resize();
