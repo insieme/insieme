@@ -158,17 +158,14 @@ NodePtr IRBuilder::parse(const string& code, const std::map<string, NodePtr>& sy
 }
 
 TypePtr IRBuilder::parseType(const string& code, const std::map<string, NodePtr>& symbols) const {
-	assert(symbols.empty() && "Symbols not yet supported!");
 	return parser::parse_type(manager, code, true, symbols);
 }
 
 ExpressionPtr IRBuilder::parseExpr(const string& code, const std::map<string, NodePtr>& symbols) const {
-	assert(symbols.empty() && "Symbols not yet supported!");
 	return parser::parse_expr(manager, code, true, symbols);
 }
 
 StatementPtr IRBuilder::parseStmt(const string& code, const std::map<string, NodePtr>& symbols) const {
-	assert(symbols.empty() && "Symbols not yet supported!");
 	return parser::parse_stmt(manager, code, true, symbols);
 }
 

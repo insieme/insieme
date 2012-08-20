@@ -55,7 +55,7 @@ static inline void _irt_wg_recycle(irt_work_group* wg) {
 	free(wg);
 }
 
-irt_work_group* irt_wg_create() {
+irt_work_group* _irt_wg_create(irt_worker* self) {
 	irt_work_group* wg = _irt_wg_new();
 	wg->id = irt_generate_work_group_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	wg->id.cached = wg;
@@ -68,7 +68,13 @@ irt_work_group* irt_wg_create() {
 	wg->redistribute_data_array = NULL;
 	wg->cur_sched = irt_g_loop_sched_policy_default;
 	irt_spin_init(&wg->lock);
-	irt_inst_insert_wg_event(irt_worker_get_current(), IRT_INST_WORK_GROUP_CREATED, wg->id);
+	return wg;
+}
+
+irt_work_group* irt_wg_create() {
+	irt_worker* self = irt_worker_get_current();
+	irt_work_group* wg = _irt_wg_create(self);
+	irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_CREATED, wg->id);
 	return wg;
 }
 void irt_wg_destroy(irt_work_group* wg) {

@@ -40,6 +40,7 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/analysis/normalize.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -780,8 +781,11 @@ TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
 
 	ASSERT_TRUE(in);
 
-	EXPECT_EQ("rec v1.{v1=fun(int<4> v2) {rec v4.{v4=fun() {v1(5);}}();}}", 
-		toString(*transform::correctRecursiveLambdaVariableUsage(manager, in))
+	// normalize representation (since parser is not deterministic)
+	in = analysis::normalize(in);
+
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {rec v1.{v1=fun() {v0(5);}}();}}",
+		toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in)))
 	);
 
 	// an advanced case 
@@ -790,12 +794,14 @@ TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
 		"let h = ((int)->int f)->int { return f(5); } in "
 		"let f,g = "
 		"	(int a)->int {"
+		"		1;"
 		"		h(f);"
 		"		f(4);"
 		"		g(f(4));"
 		"		h(g);"
 		"	},"
 		"	(int a)->int {"
+		"		2;"
 		"		h(f);"
 		"		f(g(4));"
 		"		g(4);"
@@ -806,8 +812,14 @@ TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
 
 	ASSERT_TRUE(in);
 
-	EXPECT_EQ("rec v13.{v12=fun(int<4> v14) {rec v11.{v11=fun() {return v12(5);}}(); v12(4); v13(v12(4)); rec v11.{v11=fun() {return v13(5);}}();}, v13=fun(int<4> v16) {rec v11.{v11=fun() {return v12(5);}}(); v12(v13(4)); v13(4); rec v11.{v11=fun() {return v13(5);}}();}}", 
-		toString(*transform::correctRecursiveLambdaVariableUsage(manager, in))
+	// normalize representation (since parser is not deterministic)
+	in = analysis::normalize(in);
+
+	EXPECT_EQ("rec v0.{"
+			"v1=fun(int<4> v2) {1; rec v0.{v0=fun() {return v1(5);}}(); v1(4); v0(v1(4)); rec v1.{v1=fun() {return v0(5);}}();}, "
+			"v0=fun(int<4> v3) {2; rec v0.{v0=fun() {return v1(5);}}(); v1(v0(4)); v0(4); rec v1.{v1=fun() {return v0(5);}}();}"
+			"}",
+		toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in)))
 	);
 }
 
