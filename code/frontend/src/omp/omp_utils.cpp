@@ -81,9 +81,20 @@ StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
 				retval.push_back(build.namedValue(gname, initializer));
 				handledGlobals.insert(gname);
 			}
-			// mark upward path from global
+			// mark upward path from global as well as handle recursions
 			auto pathMarker = makeLambdaVisitor([&](const NodeAddress& node) { node->addAnnotation(anno); });
-			visitPathBottomUp(lit, pathMarker);
+			auto pathMarkerPlus = makeLambdaVisitor([&](const NodeAddress& node) {
+				LambdaExprAddress lam = dynamic_address_cast<LambdaExprAddress>(node);
+				if(lam && !lam->hasAnnotation(GlobalRequiredAnnotation::key) && lam->isRecursive()) {
+					visitDepthFirst(lam, [&](const CallExprAddress& call) {
+						if(*call->getFunctionExpr() == *lam->getVariable()) {
+							visitPathBottomUp(call, pathMarker);
+						}
+					});
+				}
+				node->addAnnotation(anno);
+			});
+			visitPathBottomUp(lit, pathMarkerPlus);
 		}
 	});
 	return retval;
@@ -170,7 +181,7 @@ const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 	// update recursive variable
 	auto recVar = lambdaExpr->getVariable();
 	auto newRecVar = build.variable(recVar->getType());
-	if (lambdaExpr->isRecursive()) {
+	if(lambdaExpr->isRecursive()) {
 		// TODO: update recursive call, not only function; => arguments are missing!
 		// 		implementing this is easier when general add-parameter function is available
 		newBody = core::transform::replaceAll(build.getNodeManager(), newBody, recVar, newRecVar, false).as<CompoundStmtPtr>();
