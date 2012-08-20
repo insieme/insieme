@@ -81,9 +81,20 @@ StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
 				retval.push_back(build.namedValue(gname, initializer));
 				handledGlobals.insert(gname);
 			}
-			// mark upward path from global
+			// mark upward path from global as well as handle recursions
 			auto pathMarker = makeLambdaVisitor([&](const NodeAddress& node) { node->addAnnotation(anno); });
-			visitPathBottomUp(lit, pathMarker);
+			auto pathMarkerPlus = makeLambdaVisitor([&](const NodeAddress& node) {
+				LambdaExprAddress lam = dynamic_address_cast<LambdaExprAddress>(node);
+				if(lam && !lam->hasAnnotation(GlobalRequiredAnnotation::key) && lam->isRecursive()) {
+					visitDepthFirst(lam, [&](const CallExprAddress& call) {
+						if(*call->getFunctionExpr() == *lam->getVariable()) {
+							visitPathBottomUp(call, pathMarker);
+						}
+					});
+				}
+				node->addAnnotation(anno);
+			});
+			visitPathBottomUp(lit, pathMarkerPlus);
 		}
 	});
 	return retval;
@@ -167,19 +178,20 @@ const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 	VariableList newParams = lambda->getParameterList();
 	newParams.push_back(curVar);
 
+	// build new lambda type
+	TypePtr retType = lambda->getType()->getReturnType();
+	TypeList paramTypes = ::transform(newParams, [](const VariablePtr& v){ return v->getType(); });
+	FunctionTypePtr lambdaType = build.functionType(paramTypes, retType);
+
 	// update recursive variable
 	auto recVar = lambdaExpr->getVariable();
-	auto newRecVar = build.variable(recVar->getType());
-	if (lambdaExpr->isRecursive()) {
+	auto newRecVar = build.variable(lambdaType);
+	if(lambdaExpr->isRecursive()) {
 		// TODO: update recursive call, not only function; => arguments are missing!
 		// 		implementing this is easier when general add-parameter function is available
 		newBody = core::transform::replaceAll(build.getNodeManager(), newBody, recVar, newRecVar, false).as<CompoundStmtPtr>();
 	}
 
-	// build replacement lambda
-	TypePtr retType = lambda->getType()->getReturnType();
-	TypeList paramTypes = ::transform(newParams, [](const VariablePtr& v){ return v->getType(); });
-	FunctionTypePtr lambdaType = build.functionType(paramTypes, retType);
 	auto newLambda = build.lambda(lambdaType, newParams, newBody);
 
 	// restore previous global variable
@@ -190,7 +202,7 @@ const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 	vector<LambdaBindingPtr> bindings;
 	for(const LambdaBindingPtr& binding : lambdaExpr->getDefinition()) {
 		if (binding->getVariable() == recVar) {
-			bindings.push_back(build.lambdaBinding(recVar, newLambda));
+			bindings.push_back(build.lambdaBinding(newRecVar, newLambda));
 		} else {
 			bindings.push_back(binding);
 		}
