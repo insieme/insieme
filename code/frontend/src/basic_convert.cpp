@@ -740,7 +740,7 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 			
 			return retIr = builder.refVar(
 						builder.callExpr(GET_REF_ELEM_TYPE(type), mgr.getLangBasic().getArrayCreate1D(), 
-							builder.getTypeLiteral(arrType->getElementType()), size
+							builder.getTypeLiteral(arrType->getElementType()), builder.castExpr(mgr.getLangBasic().getUInt8(), size)
 						)
 				);
 		}
