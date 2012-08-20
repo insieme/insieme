@@ -275,7 +275,7 @@ namespace backend {
 	c_ast::NodePtr StmtConverter::visitVariable(const core::VariablePtr& ptr, ConversionContext& context) {
 		// just look up variable within variable manager and return variable token ...
 		const VariableInfo& info = context.getVariableManager().getInfo(ptr);
-		return (info.location == VariableInfo::DIRECT)?c_ast::ref(info.var):info.var;
+		return (info.location == VariableInfo::DIRECT && !core::analysis::isRefOf(ptr->getType(), core::NT_ArrayType))?c_ast::ref(info.var):info.var;
 	}
 
 	c_ast::NodePtr StmtConverter::visitVectorExpr(const core::VectorExprPtr& ptr, ConversionContext& context) {

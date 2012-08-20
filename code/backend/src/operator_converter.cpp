@@ -265,6 +265,8 @@ namespace backend {
 				return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, c_ast::lit(valueTypeInfo.rValueType, "0")));
 			}
 
+
+
 			auto res = CONVERT_EXPR(initValue);
 			if (res->getNodeType() == c_ast::NT_Initializer) {
 				return c_ast::ref(res);
@@ -288,8 +290,11 @@ namespace backend {
 
 			// special handling for arrays
 			if (core::analysis::isCallOf(ARG(0), LANG_BASIC.getArrayCreate1D())) {
-				// ref new can be skipped
-				return CONVERT_ARG(0);
+				// array-init is allocating data on stack using alloca => switch to malloc
+				ADD_HEADER_FOR("malloc");
+
+				auto res = CONVERT_ARG(0);
+				return c_ast::call(C_NODE_MANAGER->create("malloc"), static_pointer_cast<const c_ast::Call>(res)->arguments[0]);
 			}
 
 			// use a call to the ref_new operator of the ref type
@@ -376,12 +381,12 @@ namespace backend {
 
 		res[basic.getArrayCreate1D()] = OP_CONVERTER({
 			// type of Operator: (type<'elem>, uint<8>) -> array<'elem,1>
-			// create new array on the heap using malloc
-			ADD_HEADER_FOR("malloc");
+			// create new array on the heap using alloca
+			ADD_HEADER_FOR("alloca");
 
 			const core::ArrayTypePtr& resType = static_pointer_cast<const core::ArrayType>(call->getType());
 			c_ast::ExpressionPtr size = c_ast::mul(c_ast::sizeOf(CONVERT_TYPE(resType->getElementType())), CONVERT_ARG(1));
-			return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
+			return c_ast::call(C_NODE_MANAGER->create("alloca"), size);
 		});
 
 		#define ADD_ELEMENT_TYPE_DEPENDENCY() \
