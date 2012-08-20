@@ -508,9 +508,8 @@ protected:
 	}
 
 	NodePtr handleAtomic(const StatementPtr& stmtNode, const AtomicPtr& atomicP) {
-		// TODO implement
-		assert(false && "Not Implemented!");		// use assertions to avoid unnecessary hours of seg-fault bug tracking!!
-		return NodePtr();
+		// TODO
+		return stmtNode;
 	}
 };
 

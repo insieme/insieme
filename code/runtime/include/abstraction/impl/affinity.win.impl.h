@@ -93,7 +93,7 @@ void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread) {
 
 uint32 _irt_affinity_next_available_physical(uint32 start) {
 	int bitmasklength = sizeof(irt_native_cpu_set) * 8;
-	irt_native_cpu_set powered = (irt_native_cpu_set)pow((double)2, (int)start); // eg 2³ = ...001000
+	irt_native_cpu_set powered = 1 << start; // eg start=3 => ...001000
 	for(uint32 i=start; i< bitmasklength; i++) {
 		if ((powered & irt_g_affinity_base_mask) != 0)
 			return i;
