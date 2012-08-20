@@ -481,7 +481,7 @@ public:
 	 */
 	virtual core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
 
-	virtual core::ExpressionPtr convertInitExpr(const clang::Expr* expr,
+	virtual core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
 			const core::TypePtr& type, const bool zeroInit) const;
 
 	virtual void collectGlobalVar(const clang::FunctionDecl* funcDecl);

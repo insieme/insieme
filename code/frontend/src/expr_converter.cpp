@@ -1644,6 +1644,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCompoundLiteralExpr(c
 	) {
 		return (retIr =
 				convFact.convertInitExpr(
+						NULL, 
 						initList,
 						convFact.convertType(compLitExpr->getType().getTypePtr()),
 						false
