@@ -509,6 +509,7 @@ protected:
 
 	NodePtr handleAtomic(const StatementPtr& stmtNode, const AtomicPtr& atomicP) {
 		// TODO
+		return stmtNode;
 	}
 };
 
