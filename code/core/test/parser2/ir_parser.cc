@@ -293,7 +293,6 @@ namespace parser {
 				parse(manager, "1+2+3")
 		);
 
-
 		// known bug: same precedence, different operator
 //		EXPECT_EQ(
 //				builder.sub(builder.add(one, two), tre),
@@ -306,6 +305,28 @@ namespace parser {
 //				builder.mul(one,one),
 //				parse(manager, "2*0.5")
 //		);
+		
+		// bitwise
+		EXPECT_EQ(
+				builder.bitwiseAnd(one, two),
+				parse(manager, "1 & 2")
+		);
+
+		EXPECT_EQ(
+				builder.bitwiseOr(one, two),
+				parse(manager, "1 | 2")
+		);
+
+		EXPECT_EQ(
+				builder.bitwiseXor(one, two),
+				parse(manager, "1 ^ 2")
+		);
+
+		// bitwise precedence
+		EXPECT_EQ(
+				builder.bitwiseOr(builder.bitwiseAnd(one, tre), builder.bitwiseAnd(one, two)),
+				parse(manager, "1 & 3 | 1 & 2")
+		);
 	}
 
 	TEST(IR_Parser2, ForStatement) {

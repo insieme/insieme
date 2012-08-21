@@ -449,31 +449,24 @@ void irt_inst_region_add_time(irt_work_item* wi) {}
 
 irt_instrumentation_aggregated_data_table* irt_g_aggregated_performance_table;
 
-irt_region_list* irt_region_list_create() {
+irt_region_list* irt_inst_create_region_list() {
 	irt_region_list* list = (irt_region_list*)malloc(sizeof(irt_region_list));
-	irt_region* temp = (irt_region*)malloc(sizeof(irt_region)*IRT_INST_REGION_LIST_SIZE);
-	list->head = temp++;
-	irt_region* current = list->head;
-	for(int i = 0; i < (IRT_INST_REGION_LIST_SIZE-1); ++i) {
-		current->next = temp++;
-		current = current->next;
-	}
-
+	list->head = NULL;
 	return list;
 }
 
-/*void irt_region_list_destroy() {
-	irt_region* temp = irt_g_region_list->head;
-	irt_region* current = temp;
-	while(current->next != NULL) {
+void irt_inst_destroy_region_list(irt_region_list* list) {
+	irt_region* temp;
+	irt_region* current = list->head;
+	while(current != NULL) {
 		temp = current->next;
 		free(current);
 		current = temp;
 	}
-	free(irt_g_region_list);
-}*/
+	free(list);
+}
 
-irt_region* irt_region_list_new_item(irt_worker* worker) {
+irt_region* irt_inst_region_list_new_item(irt_worker* worker) {
 	irt_region* retval;
 	if(worker->region_reuse_list->head) {
 		retval = worker->region_reuse_list->head;
@@ -485,7 +478,7 @@ irt_region* irt_region_list_new_item(irt_worker* worker) {
 	return retval;
 }
 
-void irt_region_list_recycle_item(irt_worker* worker, irt_region* region) {
+void irt_inst_region_list_recycle_item(irt_worker* worker, irt_region* region) {
 	region->next = worker->region_reuse_list->head;
 	worker->region_reuse_list->head = region;
 }
@@ -627,7 +620,7 @@ void _irt_instrumentation_mark_start(region_id id) {
 	_irt_inst_event_insert(worker, IRT_INST_REGION_START, (uint64)id);
 	_irt_inst_region_data_insert(worker, IRT_INST_REGION_START, (uint64)id);
 
-	irt_region* region = irt_region_list_new_item(worker);
+	irt_region* region = irt_inst_region_list_new_item(worker);
 	region->cputime = 0;
 	region->start_time = irt_time_ticks();
 	region->next = worker->cur_wi->region;
@@ -651,7 +644,7 @@ void _irt_instrumentation_mark_end(region_id id, bool insert_aggregated) {
 		_irt_instrumentation_aggregated_data_insert(worker, id, timestamp - region->start_time, ending_region_cputime);
 
 	worker->cur_wi->region = region->next;
-	irt_region_list_recycle_item(worker, region);
+	irt_inst_region_list_recycle_item(worker, region);
 
 	if(worker->cur_wi->region) // if the ended region was a nested one, add execution time to outer region
 		irt_atomic_fetch_and_add(&(worker->cur_wi->region->cputime), ending_region_cputime);
