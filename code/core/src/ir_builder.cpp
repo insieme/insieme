@@ -532,6 +532,7 @@ DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const Express
 	return declarationStmt(variable(type), value);
 }
 
+
 CallExprPtr IRBuilder::acquireLock(const ExpressionPtr& lock) const {
 	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot lock a non-lock type.");
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockAcquire(), lock);
@@ -543,6 +544,43 @@ CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
 CallExprPtr IRBuilder::createLock() const {
 	return callExpr(manager.getLangBasic().getLock(), manager.getLangBasic().getLockCreate());
 }
+
+
+CallExprPtr IRBuilder::atomicOp(const ExpressionPtr& location, const ExpressionPtr& testFunc, const ExpressionPtr& replaceFunc) {
+	assert(core::analysis::isRefType(location->getType()) && "Atomic must be applied on ref.");
+	// should also check types of testFunc and replaceFunc
+	return callExpr(manager.getLangBasic().getAtomic(), location, testFunc, replaceFunc);
+}
+
+CallExprPtr IRBuilder::atomicAssignment(const CallExprPtr& assignment) {
+	const auto &basic = manager.getLangBasic();
+	assert(basic.isRefAssign(assignment->getFunctionExpr()) && "Trying to build atomic assignment from non-assigment");
+
+	const auto &lhs = assignment->getArgument(0), &rhs = assignment->getArgument(1);
+	const auto &lhsDeref = deref(lhs);
+	CallExprPtr rhsCall = dynamic_pointer_cast<CallExprPtr>(rhs);
+	assert(rhsCall && "Unsupported atomic assignment structure");
+
+	ExpressionPtr factor;
+	if(*lhsDeref == *rhsCall->getArgument(0)) factor = rhsCall->getArgument(1);
+	if(*lhsDeref == *rhsCall->getArgument(1)) factor = rhsCall->getArgument(0);
+	assert(factor && "LHS not found in RHS of atomic assignment");
+
+	const auto &rhsFun = rhsCall->getFunctionExpr();
+	if(basic.isAddOp(rhsFun)) return callExpr(basic.getAtomicFetchAndAdd(), lhs, factor);
+	if(basic.isSubOp(rhsFun)) return callExpr(basic.getAtomicFetchAndSub(), lhs, factor);
+	if(basic.isBitwiseAndOp(rhsFun)) return callExpr(basic.getAtomicFetchAndAnd(), lhs, factor);
+	if(basic.isBitwiseOrOp(rhsFun)) return callExpr(basic.getAtomicFetchAndOr(), lhs, factor);
+	if(basic.isBitwiseXorOp(rhsFun)) return callExpr(basic.getAtomicFetchAndXor(), lhs, factor);
+	assert(false && "Unsupported atomic operation");
+	return assignment;
+}
+
+CallExprPtr IRBuilder::atomicConditional(const IfStmtPtr& statement) {
+	assert(false && "Not implemented");
+	return CallExprPtr();
+}
+
 
 CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
 	assert(!variants.empty() && "Variant list must not be empty!");

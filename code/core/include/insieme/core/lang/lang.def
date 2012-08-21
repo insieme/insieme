@@ -364,6 +364,13 @@ OPERATION(Gen, Ge, "gen.ge", "('a,'a) -> bool")
 
 GROUP(GenCompOp, GenEq, GenNe, GenLt, GenGt, GenLe, GenGe)
 
+GROUP(AddOp, GenAdd, SignedIntAdd, UnsignedIntAdd, RealAdd) 
+GROUP(SubOp, GenSub, SignedIntSub, UnsignedIntSub, RealSub) 
+
+GROUP(BitwiseAndOp, GenAnd, SignedIntAnd, UnsignedIntAnd) 
+GROUP(BitwiseOrOp, GenOr, SignedIntOr, UnsignedIntOr) 
+GROUP(BitwiseXorOp, GenXor, SignedIntXor, UnsignedIntXor)
+
 
 // Data Paths ---------------------------------------------------------------------------------------------------------
 
