@@ -508,8 +508,10 @@ protected:
 	}
 
 	NodePtr handleAtomic(const StatementPtr& stmtNode, const AtomicPtr& atomicP) {
-		// TODO
-		return stmtNode;
+		CallExprPtr call = dynamic_pointer_cast<CallExprPtr>(stmtNode);
+		if(!call) cerr << printer::PrettyPrinter(stmtNode) << std::endl;
+		assert(call && "Unhandled OMP atomic");
+		return build.atomicAssignment(call);
 	}
 };
 
