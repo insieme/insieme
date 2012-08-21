@@ -146,7 +146,9 @@ TEST(Access, ArrayAccess) {
 		auto access = getImmediateAccess( ExpressionAddress(code) );
 		//std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
-		// EXPECT_TRUE(access.isRef());
+		EXPECT_FALSE(access.isRef());
+		EXPECT_EQ("(v0 + -2 == 0)", toString(*access.getConstraint()));
+		EXPECT_FALSE(access.getContext());
 	}
 
 	{
@@ -156,18 +158,23 @@ TEST(Access, ArrayAccess) {
 		auto access = getImmediateAccess( ExpressionAddress(code) );
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
-		// EXPECT_FALSE(access.isRef());
+		EXPECT_FALSE(access.isRef());
+		EXPECT_EQ("(v0 + -2 == 0)", toString(*access.getConstraint()));
+		EXPECT_FALSE(access.getContext());
 	}
 
 	{
 		auto code = parser.parseExpression(
-			"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, 2))"
+			"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (lit<uint<4>,3> - lit<uint<4>,1>)))"
 		);
+
 		// std::cout << code << " " << *code->getType() << std::endl;
 		auto access = getImmediateAccess( ExpressionAddress(code) );
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
-		// EXPECT_TRUE(access.isRef());
+		EXPECT_TRUE(access.isRef());
+		EXPECT_EQ("(v0 + -2 == 0)", toString(*access.getConstraint()));
+		EXPECT_FALSE(access.getContext());
 	}
 
 	{
@@ -177,7 +184,9 @@ TEST(Access, ArrayAccess) {
 		auto access = getImmediateAccess( ExpressionAddress(code) );
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
-		// EXPECT_FALSE(access.isRef());
+		EXPECT_FALSE(access.isRef());
+		EXPECT_EQ("(v0 + -2 == 0)", toString(*access.getConstraint()));
+		EXPECT_FALSE(access.getContext());
 	}
 
 	{
@@ -206,8 +215,8 @@ TEST(Access, ArrayAccess) {
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-		EXPECT_TRUE(!!access.getConstraint());
-		EXPECT_EQ("(v7 + -11 >= 0)", toString(*access.getConstraint()));
+		// EXPECT_TRUE(!!access.getConstraint());
+		EXPECT_EQ("((v7 + -11 >= 0) ^ (v0 + -v7 == 0))", toString(*access.getConstraint()));
 
 		EXPECT_EQ(code, access.getContext().getAddressedNode()); 
 	}
@@ -235,7 +244,8 @@ TEST(Access, ArrayAccess) {
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-		EXPECT_FALSE(!!access.getConstraint());
+
+
 	}
 
 	{
@@ -254,36 +264,33 @@ TEST(Access, ArrayAccess) {
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-		EXPECT_FALSE(!!access.getConstraint());
+		// EXPECT_FALSE(!!access.getConstraint());
 		EXPECT_FALSE( access.getContext() ); 
+
 	}
 
 	// not affine access => invalid scop
 	{
 		auto code = parser.parseStatement(
 			"if( ((uint<4>:b>10) && (uint<4>:a<20)) ) {"
-			"  decl uint<4>:c = (a*b); "
-			"  (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, c));"
+			"  (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (a+b)));"
 			"}"
 		);
 
 		// perform the polyhedral analysis 
 		auto scop = polyhedral::scop::mark(code);
 		
-		DeclarationStmtAddress decl = StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
-			as<DeclarationStmtAddress>();
-		// Create an alias for the expression c = b+a;
-		AliasMap map;
-		map.storeAlias( decl->getInitialization(), decl->getVariable().getAddressedNode() );
-
 		auto access = getImmediateAccess( 
-				StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(1). as<ExpressionAddress>(), 
-				map 
+				StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0). as<ExpressionAddress>()
 			);
-		// std::cout << access << std::endl;
+
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-		EXPECT_FALSE(!!access.getConstraint());
+		EXPECT_TRUE(access.getContext());
+
+		EXPECT_EQ("(((-v21 + 19 >= 0) ^ (v20 + -11 >= 0)) ^ (v0 + -v20 + -v21 == 0))", 
+				  toString(*access.getConstraint())
+				 );
 	}
 
 }
@@ -301,19 +308,25 @@ TEST(Access, SameAccess) {
 				"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i));"
 			"}"
 		);
+
+		// perform the polyhedral analysis 
+		auto scop = polyhedral::scop::mark(code);
+		
 		auto access1 = getImmediateAccess( 
 				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
 			);
 		auto access2 = getImmediateAccess( 
 				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(1).as<ExpressionAddress>() 
 			);
-		
-		// std::cout << access1 << std::endl;
-		// std::cout << access2 << std::endl;
 
-		EXPECT_EQ(access1, access2);
-		EXPECT_FALSE( access1<access2 );
-		EXPECT_FALSE( access2<access1 );
+		EXPECT_TRUE(access1.getContext());
+		EXPECT_EQ(access1.getContext(), code);
+		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v0 == 0))", toString(*access1.getConstraint()));
+
+		EXPECT_TRUE(access2.getContext());
+		EXPECT_EQ(access2.getContext(), code);
+		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v0 == 0))", toString(*access2.getConstraint()));
+
 	}
 }
 
@@ -330,6 +343,10 @@ TEST(Access, DifferentAccess) {
 				"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (i+1)));"
 			"}"
 		);
+
+		// perform the polyhedral analysis 
+		auto scop = polyhedral::scop::mark(code);
+		
 		auto access1 = getImmediateAccess( 
 				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
 			);
@@ -337,11 +354,14 @@ TEST(Access, DifferentAccess) {
 				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(1).as<ExpressionAddress>() 
 			);
 		
-		std::cout << access1 << std::endl;
-		std::cout << access2 << std::endl;
+		EXPECT_TRUE(access1.getContext());
+		EXPECT_EQ(access1.getContext(), code);
+		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v0 == 0))", toString(*access1.getConstraint()));
 
-		EXPECT_EQ(access1, access2);
-		EXPECT_FALSE( access1<access2 );
-		EXPECT_FALSE( access2<access1 );
+
+		EXPECT_TRUE(access2.getContext());
+		EXPECT_EQ(access2.getContext(), code);
+		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v0 + -1 == 0))", toString(*access2.getConstraint()));
+
 	}
 }
