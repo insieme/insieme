@@ -799,6 +799,38 @@ namespace parser {
 					-13
 			));
 
+			// -- bitwise arithmetic expressions --
+					
+			g.addRule("E", rule(
+					seq(E, "&", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.bitwiseAnd(a,b);
+					},
+					-8
+			));
+
+			g.addRule("E", rule(
+					seq(E, "^", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.bitwiseXor(a,b);
+					},
+					-7
+			));
+
+			g.addRule("E", rule(
+					seq(E, "|", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.bitwiseOr(a,b);
+					},
+					-6
+			));
+
 			// -- logical expressions --
 
 			g.addRule("E", rule(

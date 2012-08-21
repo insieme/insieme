@@ -364,6 +364,13 @@ OPERATION(Gen, Ge, "gen.ge", "('a,'a) -> bool")
 
 GROUP(GenCompOp, GenEq, GenNe, GenLt, GenGt, GenLe, GenGe)
 
+GROUP(AddOp, GenAdd, SignedIntAdd, UnsignedIntAdd, RealAdd) 
+GROUP(SubOp, GenSub, SignedIntSub, UnsignedIntSub, RealSub) 
+
+GROUP(BitwiseAndOp, GenAnd, SignedIntAnd, UnsignedIntAnd) 
+GROUP(BitwiseOrOp, GenOr, SignedIntOr, UnsignedIntOr) 
+GROUP(BitwiseXorOp, GenXor, SignedIntXor, UnsignedIntXor)
+
 
 // Data Paths ---------------------------------------------------------------------------------------------------------
 
@@ -553,15 +560,97 @@ LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>, int<#a
 // redistribute
 // TODO herbert
 
+// Atomics -----------------------------------------------------------------------------------------------------
 
 DERIVED(Atomic, "atomic", 
 		"(ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
 		"	auto res = *v; "
 		"	if (p(*v)) { "
 		"		v = f(*v); "
-		"	}"
+		"	} "
 		"	return res; "
-		"}")
+		"} ")
+
+// arithmetic
+
+DERIVED(AtomicFetchAndAdd, "atomic.fetch.and.add",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	auto test = ('a _)=>true; "
+		"	auto apply = ('a x)=>x+exp; "
+		"	return atomic(v, test, apply); "
+		"}  ")
+		
+DERIVED(AtomicAddAndFetch, "atomic.add.and.fetch",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic.fetch.and.add(v, exp) + exp; "
+		"}  ")
+		
+DERIVED(AtomicFetchAndSub, "atomic.fetch.and.sub",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	auto test = ('a _)=>true; "
+		"	auto apply = ('a x)=>x-exp; "
+		"	return atomic(v, test, apply); "
+		"}  ")
+		
+DERIVED(AtomicSubAndFetch, "atomic.sub.and.fetch",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic.fetch.and.sub(v, exp) - exp; "
+		"}  ")
+		
+// bitwise
+
+DERIVED(AtomicFetchAndAnd, "atomic.fetch.and.and",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	auto test = ('a _) => true; "
+		"	auto apply = ('a x) => x & exp; "
+		"	return atomic(v, test, apply); "
+		"}  ")
+		
+DERIVED(AtomicAndAndFetch, "atomic.and.and.fetch",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic.fetch.and.and(v, exp) & exp; "
+		"}  ")
+		
+DERIVED(AtomicFetchAndOr, "atomic.fetch.and.or",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	auto test = ('a _) => true; "
+		"	auto apply = ('a x) => x | exp; "
+		"	return atomic(v, test, apply); "
+		"}  ")
+		
+DERIVED(AtomicOrAndFetch, "atomic.or.and.fetch",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic.fetch.and.or(v, exp) | exp; "
+		"}  ")
+		
+DERIVED(AtomicFetchAndXor, "atomic.fetch.and.xor",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	auto test = ('a _) => true; "
+		"	auto apply = ('a x) => x ^ exp; "
+		"	return atomic(v, test, apply); "
+		"}  ")
+		
+DERIVED(AtomicXorAndFetch, "atomic.xor.and.fetch",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic.fetch.and.xor(v, exp) ^ exp; "
+		"}  ")
+
+// test and set
+		
+DERIVED(AtomicValCompareAndSwap, "atomic.val.compare.and.swap",
+		"(ref<'a> v, 'a old, 'a new) -> 'a { "
+		"	auto test = ('a x) => x == old; "
+		"	auto apply = ('a _) => new; "
+		"	return atomic(v, test, apply); "
+		"}  ")
+
+DERIVED(AtomicBoolCompareAndSwap, "atomic.bool.compare.and.swap",
+		"(ref<'a> v, 'a old, 'a new) -> bool { "
+		"	auto test = ('a x) => x == old; "
+		"	auto apply = ('a _) => new; "
+		"	return atomic(v, test, apply) == new; "
+		"}  ")
+
 		
 
 // Range Handling -----------------------------------------------------------------------------------------------------

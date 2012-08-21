@@ -366,6 +366,13 @@ namespace core {
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
 		CallExprPtr createLock() const;
 
+		// Atomics
+		CallExprPtr atomicOp(const ExpressionPtr& location, const ExpressionPtr& testFunc, const ExpressionPtr& replaceFunc);
+		/** Creates an atomic assignment operation (including operations such as atomic addition) */
+		CallExprPtr atomicAssignment(const CallExprPtr& assignment);
+		/** Creates a conditional atomic operation */
+		CallExprPtr atomicConditional(const IfStmtPtr& statement);
+
 		// Variants
 		CallExprPtr pickVariant(const ExpressionList& variants) const;
 

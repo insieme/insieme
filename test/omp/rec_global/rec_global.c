@@ -1,8 +1,10 @@
 #include <omp.h>
 
 int a(int x) {
+	int y;
 	#pragma omp critical
-	if(x==0) return 0;
+	y = x - 1;
+	if(y<0) return 0;
 	return a(x-1) + 1;
 }
 

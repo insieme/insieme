@@ -88,7 +88,7 @@ StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
 				if(lam && !lam->hasAnnotation(GlobalRequiredAnnotation::key) && lam->isRecursive()) {
 					visitDepthFirst(lam, [&](const CallExprAddress& call) {
 						if(*call->getFunctionExpr() == *lam->getVariable()) {
-							visitPathBottomUp(call, pathMarker);
+							visitPathBottomUp(call->getFunctionExpr(), pathMarker);
 						}
 					});
 				}
