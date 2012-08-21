@@ -142,7 +142,7 @@ void* _irt_worker_func(void *argvp) {
 	self->wi_reuse_stack = NULL; // prepare some?
 	self->stack_reuse_stack = NULL;
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	self->region_reuse_list = irt_region_list_create();
+	self->region_reuse_list = irt_inst_create_region_list();
 #endif
 
 	self->state = IRT_WORKER_STATE_READY;
