@@ -257,14 +257,6 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 			return std::make_pair(prev, AffineConstraintPtr()); 
 		}
 
-		// Create the piecewise 
-		utils::Piecewise<AffineFunction> pw(cons, func, AffineFunction(iterVec));
-		std::cout << pw << std::endl;
-
-		//auto ppw = makePiecewise(ctx, pw);
-		//std::cout << *ppw << std::endl;
-
-
 		// Need to represent the constraint based on the iteration vector stored in the Scop object
 		// which will survive the lifetime of this method
 		IterationDomain curr_dom( scop.getIterationVector(), IterationDomain(cons) );

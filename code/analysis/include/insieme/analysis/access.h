@@ -55,7 +55,7 @@
 namespace insieme { 
 namespace analysis { 
 
-typedef polyhedral::AffineConstraintPtr Constraint;
+typedef utils::CombinerPtr<polyhedral::AffineFunction> ConstraintPtr;
 
 enum class VarType { SCALAR, MEMBER, TUPLE, ARRAY };
 
@@ -85,6 +85,8 @@ class Access : public utils::Printable {
 	// The type of this access
 	VarType 					type;
 
+	polyhedral::IterationVector iterVec;
+
     /**
      * Represents the domain/range on which this access is defined
      *
@@ -93,7 +95,7 @@ class Access : public utils::Printable {
      * For arrays the domain depends on the range of values being accessed. It could be either a
      * single element or strided domain in the circumstances the array is accessed inside a loop
      */
-	Constraint dom;
+	 ConstraintPtr array_access;
 
 	/** 
 	 * A constraint has sense only if within a SCoP. Indeed, two equal constraints extracted from
@@ -102,23 +104,20 @@ class Access : public utils::Printable {
 	 */
 	core::NodeAddress ctx;
 
-	core::arithmetic::Formula 	arr_access;
-
-
 	Access(const core::ExpressionAddress& 		expr, 
 		   const core::VariablePtr& 			var,
 		   const core::datapath::DataPathPtr& 	path, 
 		   const VarType& 						type,
-		   const Constraint& 					dom = Constraint(),
-		   const core::NodeAddress& 			ctx = core::NodeAddress(), 
-		   const core::arithmetic::Formula&		arr_access = core::arithmetic::Formula()) : 
+		   const polyhedral::IterationVector&	iv = polyhedral::IterationVector(), 
+		   const ConstraintPtr& 				dom = ConstraintPtr(),
+		   const core::NodeAddress& 			ctx = core::NodeAddress() ) :
 		base_expr(expr), 
 		variable(var),
 		path(path), 
 		type(type),
-		dom(dom),
-		ctx(ctx), 
-		arr_access(arr_access) { }
+		iterVec(iv),
+		array_access( cloneConstraint(iterVec, dom) ),
+		ctx(ctx) {  }
 
 	friend Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& aliasMap);
 
@@ -141,14 +140,12 @@ public:
 	 * If this is an array access, it may have associated a constraint which states the range of
 	 * elements being accessed
 	 */
-	inline const Constraint& getConstraint() const { return dom; }
+	inline const ConstraintPtr& getAccessedRange() const { return array_access; }
 
 	/** 
 	 * Return the context on which the constraint has validity
 	 */
 	inline const core::NodeAddress& getContext() const { return ctx; }
-
-	inline const core::arithmetic::Formula& getArrayAccess() const { return arr_access; }
 
 	std::ostream& printTo(std::ostream& out) const;
 
