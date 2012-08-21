@@ -69,7 +69,7 @@ irt_lock_obj irt_g_error_mutex;
 irt_lock_obj irt_g_exit_handler_mutex;
 irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
-uint32 irt_g_active_worker_count;
+long irt_g_active_worker_count; //uint32 irt_g_active_worker_count;
 struct _irt_worker **irt_g_workers;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 #ifndef IRT_MIN_MODE
