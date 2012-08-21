@@ -103,7 +103,7 @@ bool Access::operator<(const Access& other) const {
 /** 
  * Get the immediate access 
  */
-Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& aliasMap) {
+Access getImmediateAccess(const core::ExpressionAddress& expr, const TmpVarMap& tmpVarMap) {
 	
 	NodeManager& mgr = expr->getNodeManager();
 	const lang::BasicGenerator& gen = expr->getNodeManager().getLangBasic();
@@ -115,7 +115,7 @@ Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& a
 
 	// For cast expressions, we simply recur 
 	if (expr->getNodeType() == NT_CastExpr) 
-		return getImmediateAccess(expr.as<CastExprAddress>()->getSubExpression(), aliasMap);
+		return getImmediateAccess(expr.as<CastExprAddress>()->getSubExpression(), tmpVarMap);
 
 	// If this is a scalar variable, then return the access to this variable 
 	if (expr->getNodeType() == NT_Variable) {
@@ -185,7 +185,7 @@ Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& a
 		// generated accesses. This is obtained using a variable whose ID is very large 
 		
 		core::VariablePtr idxVar = 
-			core::Variable::get(mgr, gen.getUInt8(), 0u); //std::numeric_limits<unsigned int>::max());
+			core::Variable::get(mgr, gen.getUInt8(), std::numeric_limits<unsigned int>::max());
 		
 		try {
 			// Extract the formula from the argument 1 
@@ -211,7 +211,7 @@ Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& a
 			if ( VariableAddress var = core::dynamic_address_cast<const Variable>( expr ) ) {
 				// if the index expression is a single variable we may be in the case where this
 				// variable is an alias for an other expression
-				if ( ExpressionAddress aliasExpr = aliasMap.getMappedExpr( var.getAddressedNode() ) ) {
+				if ( ExpressionAddress aliasExpr = tmpVarMap.getMappedExpr( var.getAddressedNode() ) ) {
 					// If this was an alias, use the aliased expression as array access 
 					expr = aliasExpr;
 				}
@@ -220,9 +220,18 @@ Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& a
 			auto dom = polyhedral::getVariableDomain( expr );
 			
 			if (dom.first) { 
-				polyhedral::IterationVector iterVec(
-						dom.first.getAnnotation(polyhedral::scop::ScopRegion::KEY)->getIterationVector()
-					);
+				
+				const polyhedral::IterationVector& oldIter = 
+					dom.first.getAnnotation(polyhedral::scop::ScopRegion::KEY)->getIterationVector();
+
+				polyhedral::IterationVector iterVec;
+
+				std::for_each(oldIter.iter_begin(), oldIter.iter_end(), [&](const polyhedral::Iterator& iter) {
+					iterVec.add( polyhedral::Iterator(iter.getExpr().as<VariablePtr>(), true) );
+				});
+				std::for_each(oldIter.param_begin(), oldIter.param_end(), [&](const polyhedral::Parameter& param) {
+					iterVec.add( param );
+				});
 
 				iterVec.add( polyhedral::Iterator(idxVar) );
 
@@ -256,7 +265,7 @@ Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& a
 	assert(false && "Access not supported");
 }
 
-void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entities, const AliasMap& aliasMap) {
+void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entities, const TmpVarMap& tmpVarMap) {
 	
 	/**
 	 * This function extracts entities from CFG blocks, therefore due to the construction properties
@@ -276,7 +285,7 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 		CallExprAddress call = expr.as<CallExprAddress>();
 		for(auto& arg : call->getArguments()) {
 			try {
-				entities.insert( getImmediateAccess(arg, aliasMap) );
+				entities.insert( getImmediateAccess(arg, tmpVarMap) );
 			} catch(NotAnAccessException&& e) { 
 				assert(e.isLit);
 				/* This is not an access, do nothing */ 
@@ -285,10 +294,10 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 	};
 
 	if (core::DeclarationStmtAddress declStmt = core::dynamic_address_cast<const DeclarationStmt>(stmt)) {
-		entities.insert( getImmediateAccess(declStmt->getVariable(), aliasMap) );
+		entities.insert( getImmediateAccess(declStmt->getVariable(), tmpVarMap) );
 
 		try {
-			entities.insert( getImmediateAccess(declStmt->getInitialization(), aliasMap) );
+			entities.insert( getImmediateAccess(declStmt->getInitialization(), tmpVarMap) );
 			return ;
 		} catch (NotAnAccessException&& e) { 
 			if (e.isLit) { return; }
@@ -302,7 +311,7 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 
 		try {
 			// try to extract the access (if this is a single supported access)
-			entities.insert(getImmediateAccess(stmt.as<ExpressionAddress>(), aliasMap));
+			entities.insert(getImmediateAccess(stmt.as<ExpressionAddress>(), tmpVarMap));
 			return;
 		} catch (NotAnAccessException&& e) {  
 			if (e.isLit) { return; } 
@@ -315,14 +324,14 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 	assert( false && "expression not supported" );
 }
 
-std::set<Access> extractFromStmt(const core::StatementAddress& stmt, const AliasMap& aliasMap) {
+std::set<Access> extractFromStmt(const core::StatementAddress& stmt, const TmpVarMap& tmpVarMap) {
 	std::set<Access> accesses;
 	
-	extractFromStmt(stmt, accesses, aliasMap);
+	extractFromStmt(stmt, accesses, tmpVarMap);
 	return accesses;
 }
 
-bool isConflicting(const Access& acc1, const Access& acc2, const AliasMap& aliases) {
+bool isConflicting(const Access& acc1, const Access& acc2, const TmpVarMap& tmpVarMap) {
 
 	NodeManager& mgr = acc1.getAccessedVariable()->getNodeManager();
 	const lang::BasicGenerator& gen = mgr.getLangBasic();
@@ -343,36 +352,38 @@ bool isConflicting(const Access& acc1, const Access& acc2, const AliasMap& alias
 		return false;
 	}
 
-	if (aliases.empty()) { return false; }
+	if (tmpVarMap.empty()) { return false; }
 
 	Access a1 = acc1, a2 = acc2;
 
-	ExpressionAddress expr = aliases.getMappedExpr( acc1.getAccessedVariable() );
+	ExpressionAddress expr = tmpVarMap.getMappedExpr( acc1.getAccessedVariable() );
 	if ( expr ) 
 		try {
-			a1 = getImmediateAccess(expr, aliases);
+			a1 = getImmediateAccess(expr, tmpVarMap);
 		} catch( ... ) { } 
 
-	expr = aliases.getMappedExpr( acc2.getAccessedVariable() );
+	expr = tmpVarMap.getMappedExpr( acc2.getAccessedVariable() );
 	if ( expr ) 
 		try {
-			a2 = getImmediateAccess(expr, aliases);
+			a2 = getImmediateAccess(expr, tmpVarMap);
 		} catch ( ... ) { }
 
-	auto acc1Aliases = aliases.lookupAliases(a1.getAccessExpression());
-	auto acc2Aliases = aliases.lookupAliases(a2.getAccessExpression());
+// 	auto acc1Aliases = aliases.lookupAliases(a1.getAccessExpression());
+// 	auto acc2Aliases = aliases.lookupAliases(a2.getAccessExpression());
+// 
+// 	//LOG(INFO) << acc1Aliases;
+// 	//LOG(INFO) << acc2Aliases;
+// 	std::set<VariablePtr> res;
+// 	std::set_intersection(acc1Aliases.begin(), acc1Aliases.end(), 
+// 						  acc2Aliases.begin(), acc2Aliases.end(), 
+// 						  std::inserter(res, res.begin()));
+// 	
+// 	// LOG(INFO) << res;
+// 	return !res.empty();
 
-	//LOG(INFO) << acc1Aliases;
-	//LOG(INFO) << acc2Aliases;
-	std::set<VariablePtr> res;
-	std::set_intersection(acc1Aliases.begin(), acc1Aliases.end(), 
-						  acc2Aliases.begin(), acc2Aliases.end(), 
-						  std::inserter(res, res.begin()));
-	
-	// LOG(INFO) << res;
-	return !res.empty();
-
+	return false;
 }
+
 
 
 } } // end insieme::analysis namespace 
