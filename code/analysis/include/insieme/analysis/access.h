@@ -140,7 +140,7 @@ public:
 	 * If this is an array access, it may have associated a constraint which states the range of
 	 * elements being accessed
 	 */
-	inline const ConstraintPtr& getConstraint() const { return array_access; }
+	inline const ConstraintPtr& getAccessedRange() const { return array_access; }
 
 	/** 
 	 * Return the context on which the constraint has validity

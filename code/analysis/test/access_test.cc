@@ -147,7 +147,7 @@ TEST(Access, ArrayAccess) {
 		//std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_FALSE(access.isRef());
-		EXPECT_EQ("(v0 + -2 == 0)", toString(*access.getConstraint()));
+		EXPECT_EQ("(v0 + -2 == 0)", toString(*access.getAccessedRange()));
 		EXPECT_FALSE(access.getContext());
 	}
 
@@ -159,7 +159,7 @@ TEST(Access, ArrayAccess) {
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_FALSE(access.isRef());
-		EXPECT_EQ("(v0 + -2 == 0)", toString(*access.getConstraint()));
+		EXPECT_EQ("(v0 + -2 == 0)", toString(*access.getAccessedRange()));
 		EXPECT_FALSE(access.getContext());
 	}
 
@@ -173,7 +173,7 @@ TEST(Access, ArrayAccess) {
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-		EXPECT_EQ("(v0 + -2 == 0)", toString(*access.getConstraint()));
+		EXPECT_EQ("(v0 + -2 == 0)", toString(*access.getAccessedRange()));
 		EXPECT_FALSE(access.getContext());
 	}
 
@@ -185,7 +185,7 @@ TEST(Access, ArrayAccess) {
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_FALSE(access.isRef());
-		EXPECT_EQ("(v0 + -2 == 0)", toString(*access.getConstraint()));
+		EXPECT_EQ("(v0 + -2 == 0)", toString(*access.getAccessedRange()));
 		EXPECT_FALSE(access.getContext());
 	}
 
@@ -216,7 +216,7 @@ TEST(Access, ArrayAccess) {
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		// EXPECT_TRUE(!!access.getConstraint());
-		EXPECT_EQ("((v7 + -11 >= 0) ^ (v0 + -v7 == 0))", toString(*access.getConstraint()));
+		EXPECT_EQ("((v7 + -11 >= 0) ^ (v0 + -v7 == 0))", toString(*access.getAccessedRange()));
 
 		EXPECT_EQ(code, access.getContext().getAddressedNode()); 
 	}
@@ -289,7 +289,7 @@ TEST(Access, ArrayAccess) {
 		EXPECT_TRUE(access.getContext());
 
 		EXPECT_EQ("(((-v21 + 19 >= 0) ^ (v20 + -11 >= 0)) ^ (v0 + -v20 + -v21 == 0))", 
-				  toString(*access.getConstraint())
+				  toString(*access.getAccessedRange())
 				 );
 	}
 
@@ -321,11 +321,11 @@ TEST(Access, SameAccess) {
 
 		EXPECT_TRUE(access1.getContext());
 		EXPECT_EQ(access1.getContext(), code);
-		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v0 == 0))", toString(*access1.getConstraint()));
+		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v0 == 0))", toString(*access1.getAccessedRange()));
 
 		EXPECT_TRUE(access2.getContext());
 		EXPECT_EQ(access2.getContext(), code);
-		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v0 == 0))", toString(*access2.getConstraint()));
+		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v0 == 0))", toString(*access2.getAccessedRange()));
 
 	}
 }
@@ -356,12 +356,12 @@ TEST(Access, DifferentAccess) {
 		
 		EXPECT_TRUE(access1.getContext());
 		EXPECT_EQ(access1.getContext(), code);
-		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v0 == 0))", toString(*access1.getConstraint()));
+		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v0 == 0))", toString(*access1.getAccessedRange()));
 
 
 		EXPECT_TRUE(access2.getContext());
 		EXPECT_EQ(access2.getContext(), code);
-		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v0 + -1 == 0))", toString(*access2.getConstraint()));
+		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v0 + -1 == 0))", toString(*access2.getAccessedRange()));
 
 	}
 }
