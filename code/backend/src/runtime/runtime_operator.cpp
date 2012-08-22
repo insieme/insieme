@@ -225,16 +225,46 @@ namespace runtime {
 			ADD_HEADER_FOR("irt_lock_create");
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_create"));
 		});
-
 		table[basic.getLockAcquire()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_lock_acquire");
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_acquire"), CONVERT_ARG(0));
 		});
-
 		table[basic.getLockRelease()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_lock_release");
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_release"), CONVERT_ARG(0));
 		});
+
+		// atomics
+
+		#define BIN_ATOMIC_CONVERTER(__IRNAME, __IRTNAME) \
+		table[basic.get##__IRNAME()] = OP_CONVERTER({ \
+			ADD_HEADER_FOR(#__IRTNAME); \
+			return c_ast::call(C_NODE_MANAGER->create(#__IRTNAME), CONVERT_ARG(0), CONVERT_ARG(1)); \
+		});
+		
+		BIN_ATOMIC_CONVERTER(AtomicFetchAndAdd, irt_atomic_fetch_and_add)
+		BIN_ATOMIC_CONVERTER(AtomicAddAndFetch, irt_atomic_add_and_fetch)
+		BIN_ATOMIC_CONVERTER(AtomicFetchAndSub, irt_atomic_fetch_and_sub)
+		BIN_ATOMIC_CONVERTER(AtomicSubAndFetch, irt_atomic_sub_and_fetch)
+		BIN_ATOMIC_CONVERTER(AtomicFetchAndAnd, irt_atomic_fetch_and_and)
+		BIN_ATOMIC_CONVERTER(AtomicAndAndFetch, irt_atomic_and_and_fetch)
+		BIN_ATOMIC_CONVERTER(AtomicFetchAndOr, irt_atomic_fetch_and_or)
+		BIN_ATOMIC_CONVERTER(AtomicOrAndFetch, irt_atomic_or_and_fetch)
+		BIN_ATOMIC_CONVERTER(AtomicFetchAndXor, irt_atomic_fetch_and_xor)
+		BIN_ATOMIC_CONVERTER(AtomicXorAndFetch, irt_atomic_xor_and_fetch)
+		#undef BIN_ATOMIC_CONVERTER
+
+		table[basic.getAtomicValCompareAndSwap()] = OP_CONVERTER({ \
+			ADD_HEADER_FOR("irt_atomic_val_compare_and_swap"); \
+			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_val_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2)); \
+		});
+
+		table[basic.getAtomicBoolCompareAndSwap()] = OP_CONVERTER({ \
+			ADD_HEADER_FOR("irt_atomic_bool_compare_and_swap"); \
+			return c_ast::call(C_NODE_MANAGER->create("irt_atomic_bool_compare_and_swap"), CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2)); \
+		});
+
+		// special
 
 		table[basic.getPick()] = OP_CONVERTER({
 			//uint16 irt_variant_pick(uint16 knop_id, uint16 num_variants);
