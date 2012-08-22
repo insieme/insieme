@@ -40,6 +40,7 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/analysis/normalize.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -530,6 +531,87 @@ TEST(Manipulation, TryFixingParameter_simple) {
 
 }
 
+TEST(Manipulation, TryFixParameter_recursive) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// build a recursive function call
+	LambdaExprPtr lambda = builder.parseExpr(
+			"let int = int<4> in "
+			"let f = (ref<int> x, int b)->unit {"
+			"	if (b == 0) return;"
+			"	x = x + b;"
+			"	f(x,b-1);"
+			"} in f"
+			).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(lambda);
+
+	// make sure it is recursive
+	EXPECT_TRUE(lambda->isRecursive()) << *lambda;
+
+	// now, try to fix first parameter
+	ExpressionPtr globalRef = builder.parseExpr("lit(\"global\":ref<int<4>>)");
+	LambdaExprPtr fixed = transform::tryFixParameter(manager, lambda, 0, globalRef);
+
+	// check whether something has changed
+	EXPECT_NE(lambda, fixed);
+	EXPECT_EQ("AP(rec v1.{v1=fun(int<4> v3) {if(int.eq(v3, 0)) {return unit;} else {}; ref.assign(global, int.add(ref.deref(global), v3)); v1(int.sub(v3, 1));}})", toString(fixed));
+	EXPECT_EQ("[]", toString(core::checks::check(fixed)));
+
+	// now, try fixing non-propagated parameter b
+	fixed = transform::tryFixParameter(manager, lambda, 1, builder.intLit(5));
+	EXPECT_NE(lambda, fixed);
+	EXPECT_EQ("AP(rec v5.{v5=fun(ref<int<4>> v2) {if(int.eq(5, 0)) {return unit;} else {}; ref.assign(v2, int.add(ref.deref(v2), 5)); rec v1.{v1=fun(ref<int<4>> v2, int<4> v3) {if(int.eq(v3, 0)) {return unit;} else {}; ref.assign(v2, int.add(ref.deref(v2), v3)); v1(v2, int.sub(v3, 1));}}(v2, int.sub(5, 1));}})", toString(fixed));
+	EXPECT_EQ("[]", toString(core::checks::check(fixed)));
+
+}
+
+// TODO: fix when required
+//TEST(Manipulation, TryFixParameter_mutual_recursive) {
+//
+//	NodeManager manager;
+//	IRBuilder builder(manager);
+//
+//	// build a recursive function call
+//	LambdaExprPtr lambda = builder.parseExpr(
+//			"let int = int<4> in "
+//			"let f,g = "
+//			"	(ref<int> x, int b)->unit {"
+//			"		if (b == 0) return;"
+//			"		f(x,b-2);"
+//			"		g(b-1,x);"
+//			"	},"
+//			"	(int b, ref<int> x)->unit {"
+//			"		if (b == 0) return;"
+//			"		g(b-2,x);"
+//			"		f(x,b-1);"
+//			"	}"
+//			" in f"
+//			).as<LambdaExprPtr>();
+//
+//	ASSERT_TRUE(lambda);
+//
+//	// now, try to fix first parameter
+//	ExpressionPtr globalRef = builder.parseExpr("lit(\"global\":ref<int<4>>)");
+//	LambdaExprPtr fixed = transform::tryFixParameter(manager, lambda, 0, globalRef);
+//
+//	// check whether something has changed
+//	EXPECT_NE(lambda, fixed);
+//	EXPECT_EQ("AP(rec v1.{v1=fun(int<4> v3) {if(int.eq(v3, 0)) {return unit;} else {}; ref.assign(global, int.add(ref.deref(global), v3)); v1(int.sub(v3, 1));}})", toString(fixed));
+//	EXPECT_EQ("[]", toString(core::checks::check(fixed)));
+//
+//	// now, try fixing non-propagated parameter b
+//	fixed = transform::tryFixParameter(manager, lambda, 1, builder.intLit(5));
+//	EXPECT_NE(lambda, fixed);
+//	EXPECT_EQ("AP(rec v5.{v5=fun(ref<int<4>> v2) {if(int.eq(5, 0)) {return unit;} else {}; ref.assign(v2, int.add(ref.deref(v2), 5)); rec v1.{v1=fun(ref<int<4>> v2, int<4> v3) {if(int.eq(v3, 0)) {return unit;} else {}; ref.assign(v2, int.add(ref.deref(v2), v3)); v1(v2, int.sub(v3, 1));}}(v2, int.sub(5, 1));}})", toString(fixed));
+//	EXPECT_EQ("[]", toString(core::checks::check(fixed)));
+//
+//}
+
+
+
 TEST(Manipulation, ExtractLambda) {
 	NodeManager man;
 	IRBuilder build(man);
@@ -680,6 +762,65 @@ TEST(Manipulation, InlineFunction) {
 	EXPECT_EQ("rec v1.{v1=fun(int<4> v3, int<4> v4) {int.add(v3, v4); int.sub(v4, v3);}}(v1, int.add(v1, v2))", toString(*call));
 	EXPECT_EQ("{int<4> v5 = int.add(v1, v2); int.add(v1, v5); int.sub(v5, v1);}", toString(*transform::tryInlineToStmt(mgr, call)));
 
+}
+
+
+TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// an easy case
+	LambdaExprPtr in = builder.parseExpr(
+		"let int = int<4> in "
+		"let f = (int a)->int {"
+		"	((int)->int g)->unit {"
+		"		g(5);"
+		"	}(f);"
+		"} in f"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(in);
+
+	// normalize representation (since parser is not deterministic)
+	in = analysis::normalize(in);
+
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {rec v1.{v1=fun() {v0(5);}}();}}",
+		toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in)))
+	);
+
+	// an advanced case 
+	in = builder.parseExpr(
+		"let int = int<4> in "
+		"let h = ((int)->int f)->int { return f(5); } in "
+		"let f,g = "
+		"	(int a)->int {"
+		"		1;"
+		"		h(f);"
+		"		f(4);"
+		"		g(f(4));"
+		"		h(g);"
+		"	},"
+		"	(int a)->int {"
+		"		2;"
+		"		h(f);"
+		"		f(g(4));"
+		"		g(4);"
+		"		h(g);"
+		"	}"
+		"in g"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(in);
+
+	// normalize representation (since parser is not deterministic)
+	in = analysis::normalize(in);
+
+	EXPECT_EQ("rec v0.{"
+			"v1=fun(int<4> v2) {1; rec v0.{v0=fun() {return v1(5);}}(); v1(4); v0(v1(4)); rec v1.{v1=fun() {return v0(5);}}();}, "
+			"v0=fun(int<4> v3) {2; rec v0.{v0=fun() {return v1(5);}}(); v1(v0(4)); v0(4); rec v1.{v1=fun() {return v0(5);}}();}"
+			"}",
+		toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in)))
+	);
 }
 
 } // end namespace core

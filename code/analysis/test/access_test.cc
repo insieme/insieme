@@ -48,6 +48,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 using namespace insieme;
 using namespace insieme::core;
@@ -95,7 +96,6 @@ TEST(Access, Scalars) {
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_TRUE(access.isRef());
 	}
-
 
 }
 
@@ -146,7 +146,9 @@ TEST(Access, ArrayAccess) {
 		auto access = getImmediateAccess( ExpressionAddress(code) );
 		//std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
-		// EXPECT_TRUE(access.isRef());
+		EXPECT_FALSE(access.isRef());
+		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
+		EXPECT_FALSE(access.getContext());
 	}
 
 	{
@@ -156,18 +158,23 @@ TEST(Access, ArrayAccess) {
 		auto access = getImmediateAccess( ExpressionAddress(code) );
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
-		// EXPECT_FALSE(access.isRef());
+		EXPECT_FALSE(access.isRef());
+		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
+		EXPECT_FALSE(access.getContext());
 	}
 
 	{
 		auto code = parser.parseExpression(
-			"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, 2))"
+			"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (lit<uint<4>,3> - lit<uint<4>,1>)))"
 		);
+
 		// std::cout << code << " " << *code->getType() << std::endl;
 		auto access = getImmediateAccess( ExpressionAddress(code) );
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
-		// EXPECT_TRUE(access.isRef());
+		EXPECT_TRUE(access.isRef());
+		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
+		EXPECT_FALSE(access.getContext());
 	}
 
 	{
@@ -177,7 +184,9 @@ TEST(Access, ArrayAccess) {
 		auto access = getImmediateAccess( ExpressionAddress(code) );
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
-		// EXPECT_FALSE(access.isRef());
+		EXPECT_FALSE(access.isRef());
+		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
+		EXPECT_FALSE(access.getContext());
 	}
 
 	{
@@ -206,8 +215,8 @@ TEST(Access, ArrayAccess) {
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-		EXPECT_TRUE(!!access.getConstraint());
-		EXPECT_EQ("(v7 + -11*1 >= 0)", toString(*access.getConstraint()));
+		// EXPECT_TRUE(!!access.getConstraint());
+		EXPECT_EQ("((v7 + -11 >= 0) ^ (v4294967295 + -v7 == 0))", toString(*access.getAccessedRange()));
 
 		EXPECT_EQ(code, access.getContext().getAddressedNode()); 
 	}
@@ -226,8 +235,8 @@ TEST(Access, ArrayAccess) {
 		DeclarationStmtAddress decl = StatementAddress(code).
 				as<IfStmtAddress>()->getThenBody()->getStatement(0).as<DeclarationStmtAddress>();
 		// Create an alias for the expression c = b+a;
-		AliasMap map;
-		map.storeAlias( decl->getInitialization(), decl->getVariable().getAddressedNode() );
+		TmpVarMap map;
+		map.storeTmpVar( decl->getInitialization(), decl->getVariable().getAddressedNode() );
 
 		auto access = getImmediateAccess( StatementAddress(code).
 				as<IfStmtAddress>()->getThenBody()->getStatement(1).as<ExpressionAddress>(), map );
@@ -235,7 +244,8 @@ TEST(Access, ArrayAccess) {
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-		EXPECT_FALSE(!!access.getConstraint());
+
+
 	}
 
 	{
@@ -254,36 +264,38 @@ TEST(Access, ArrayAccess) {
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-		EXPECT_FALSE(!!access.getConstraint());
+		// EXPECT_FALSE(!!access.getConstraint());
 		EXPECT_FALSE( access.getContext() ); 
+
 	}
 
 	// not affine access => invalid scop
 	{
 		auto code = parser.parseStatement(
 			"if( ((uint<4>:b>10) && (uint<4>:a<20)) ) {"
-			"  decl uint<4>:c = (a*b); "
-			"  (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, c));"
+			"  (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (a+b)));"
 			"}"
 		);
 
 		// perform the polyhedral analysis 
 		auto scop = polyhedral::scop::mark(code);
 		
-		DeclarationStmtAddress decl = StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
-			as<DeclarationStmtAddress>();
-		// Create an alias for the expression c = b+a;
-		AliasMap map;
-		map.storeAlias( decl->getInitialization(), decl->getVariable().getAddressedNode() );
-
 		auto access = getImmediateAccess( 
-				StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(1). as<ExpressionAddress>(), 
-				map 
+				StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0). as<ExpressionAddress>()
 			);
-		// std::cout << access << std::endl;
+
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-		EXPECT_FALSE(!!access.getConstraint());
+		EXPECT_TRUE(access.getContext());
+
+		EXPECT_EQ("(((-v21 + 19 >= 0) ^ (v20 + -11 >= 0)) ^ (v4294967295 + -v20 + -v21 == 0))", 
+				  toString(*access.getAccessedRange())
+				 );
+
+		auto ctx = polyhedral::makeCtx();
+		auto set = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access.getAccessedRange()));
+
+		EXPECT_EQ("[v20, v21] -> { [v20 + v21] : v21 <= 19 and v20 >= 11 }", toString(*set));
 	}
 
 }
@@ -301,19 +313,25 @@ TEST(Access, SameAccess) {
 				"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i));"
 			"}"
 		);
+
+		// perform the polyhedral analysis 
+		auto scop = polyhedral::scop::mark(code);
+		
 		auto access1 = getImmediateAccess( 
 				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
 			);
 		auto access2 = getImmediateAccess( 
 				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(1).as<ExpressionAddress>() 
 			);
-		
-		// std::cout << access1 << std::endl;
-		// std::cout << access2 << std::endl;
 
-		EXPECT_EQ(access1, access2);
-		EXPECT_FALSE( access1<access2 );
-		EXPECT_FALSE( access2<access1 );
+		EXPECT_TRUE(access1.getContext());
+		EXPECT_EQ(access1.getContext(), code);
+		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+
+		EXPECT_TRUE(access2.getContext());
+		EXPECT_EQ(access2.getContext(), code);
+		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access2.getAccessedRange()));
+
 	}
 }
 
@@ -330,6 +348,10 @@ TEST(Access, DifferentAccess) {
 				"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (i+1)));"
 			"}"
 		);
+
+		// perform the polyhedral analysis 
+		auto scop = polyhedral::scop::mark(code);
+		
 		auto access1 = getImmediateAccess( 
 				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
 			);
@@ -337,11 +359,123 @@ TEST(Access, DifferentAccess) {
 				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(1).as<ExpressionAddress>() 
 			);
 		
-		std::cout << access1 << std::endl;
-		std::cout << access2 << std::endl;
+		EXPECT_TRUE(access1.getContext());
+		EXPECT_EQ(access1.getContext(), code);
+		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
 
-		EXPECT_EQ(access1, access2);
-		EXPECT_FALSE( access1<access2 );
-		EXPECT_FALSE( access2<access1 );
+
+		EXPECT_TRUE(access2.getContext());
+		EXPECT_EQ(access2.getContext(), code);
+		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
+
+
+		auto ctx = polyhedral::makeCtx();
+		auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
+
+		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 9 and v4294967295 >= 0 }", toString(*set1));
+	}
+}
+
+TEST(Access, CommonSubset) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+
+	{
+		auto code = parser.parseStatement(
+			"{"
+			"	for(decl uint<4>:i1 = 1 .. 11 : 1) { " \
+			"		(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i1));"
+			"	};"
+			"	for(decl uint<4>:i2 = 0 .. 10 : 1) { " \
+			"		(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (i2+1)));"
+			"	};"
+			"}"
+		);
+
+		// perform the polyhedral analysis 
+		auto scop = polyhedral::scop::mark(code);
+		
+		auto access1 = getImmediateAccess( 
+				StatementAddress(code).as<CompoundStmtAddress>()->getStatement(0).
+									   as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
+			);
+		auto access2 = getImmediateAccess( 
+				StatementAddress(code).as<CompoundStmtAddress>()->getStatement(1).
+									   as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
+			);
+		
+		EXPECT_TRUE(access1.getContext());
+		EXPECT_EQ(access1.getContext(), code);
+		EXPECT_EQ("(((-v1 + 10 >= 0) ^ (v1 + -1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+
+		EXPECT_TRUE(access2.getContext());
+		EXPECT_EQ(access2.getContext(), code);
+		EXPECT_EQ("(((-v3 + 9 >= 0) ^ (v3 >= 0)) ^ (-v3 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
+
+		auto ctx = polyhedral::makeCtx();
+		auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
+		auto set2 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access2.getAccessedRange()));
+
+		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 10 and v4294967295 >= 1 }", toString(*set1));
+		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 10 and v4294967295 >= 1 }", toString(*set2));
+
+		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 10 and v4294967295 >= 1 }", toString(*(set1 * set2)));
+
+		EXPECT_EQ(*set1, *set2);
+		EXPECT_FALSE((set1*set2)->empty());
+
+		EXPECT_EQ(*set1, *(set1*set2));
+		EXPECT_TRUE((set1-set2)->empty());
+	}
+}
+
+TEST(Access, EmptySubset) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+
+	{
+		auto code = parser.parseStatement(
+			"{"
+			"	for(decl uint<4>:i1 = 1 .. 5 : 1) { " \
+			"		(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i1));"
+			"	};"
+			"	for(decl uint<4>:i2 = 4 .. 9 : 1) { " \
+			"		(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (i2+1)));"
+			"	};"
+			"}"
+		);
+
+		// perform the polyhedral analysis 
+		auto scop = polyhedral::scop::mark(code);
+		
+		auto access1 = getImmediateAccess( 
+				StatementAddress(code).as<CompoundStmtAddress>()->getStatement(0).
+									   as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
+			);
+		auto access2 = getImmediateAccess( 
+				StatementAddress(code).as<CompoundStmtAddress>()->getStatement(1).
+									   as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
+			);
+		
+		EXPECT_TRUE(access1.getContext());
+		EXPECT_EQ(access1.getContext(), code);
+		EXPECT_EQ("(((-v1 + 4 >= 0) ^ (v1 + -1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+
+		EXPECT_TRUE(access2.getContext());
+		EXPECT_EQ(access2.getContext(), code);
+		EXPECT_EQ("(((-v3 + 8 >= 0) ^ (v3 + -4 >= 0)) ^ (-v3 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
+
+		auto ctx = polyhedral::makeCtx();
+		auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
+		auto set2 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access2.getAccessedRange()));
+
+		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 4 and v4294967295 >= 1 }", toString(*set1));
+		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 9 and v4294967295 >= 5 }", toString(*set2));
+
+		EXPECT_TRUE((set1 * set2)->empty());
 	}
 }

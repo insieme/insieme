@@ -495,6 +495,86 @@ TEST(ExpressionsTest, JobExpr) {
 	basicExprTests(job, type, childList);
 }
 
+TEST(ExpressionTest, LambdaUnrolling) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	LambdaExprPtr lambda;
+
+	// check ordinary lambda
+	lambda = builder.parseExpr(
+		"let f = ()->unit { 5; } in f"
+	).as<LambdaExprPtr>();
+	ASSERT_TRUE(lambda);
+
+	EXPECT_FALSE(lambda->isRecursive());
+	EXPECT_EQ(lambda, lambda->unrollOnce());
+
+
+	// check recursive lambda
+	manager.setNextFreshID(0);
+	lambda = builder.parseExpr(
+		"let f = ()->unit { 5; f(); } in f"
+	).as<LambdaExprPtr>();
+	ASSERT_TRUE(lambda);
+
+	EXPECT_TRUE(lambda->isRecursive());
+	EXPECT_EQ(                     "rec v0.{v0=fun() {5; v0();}}",      toString(*lambda));
+	EXPECT_EQ("rec v4.{v4=fun() {5; rec v0.{v0=fun() {5; v0();}}();}}", toString(*lambda->unrollOnce()));
+
+
+	// check mutual recursive lambdas
+	manager.setNextFreshID(0);
+	lambda = builder.parseExpr(
+		"let f,g = "
+		"	()->unit { 1; g(); }, "
+		"	()->unit { 2; f(); } "
+		"in f"
+	).as<LambdaExprPtr>();
+	ASSERT_TRUE(lambda);
+
+	EXPECT_TRUE(lambda->isRecursive());
+	EXPECT_EQ(                     "rec v5.{v5=fun() {1; v6();}, v6=fun() {2; v5();}}",      toString(*lambda));
+	EXPECT_EQ("rec v9.{v9=fun() {1; rec v6.{v5=fun() {1; v6();}, v6=fun() {2; v5();}}();}}", toString(*lambda->unrollOnce()));
+
+
+	// check nested recursive lambda
+	manager.setNextFreshID(0);
+	lambda = builder.parseExpr(
+		"let f = ()->unit { "
+		"	5; "
+		"	()->unit { f(); } (); "
+		"} in f"
+	).as<LambdaExprPtr>();
+	ASSERT_TRUE(lambda);
+
+	EXPECT_TRUE(lambda->isRecursive());
+	EXPECT_EQ(                                           "rec v10.{v10=fun() {5; rec v11.{v11=fun() {v10();}}();}}",           toString(*lambda));
+	EXPECT_EQ("rec v13.{v13=fun() {5; rec v11.{v11=fun() {rec v10.{v10=fun() {5; rec v11.{v11=fun() {v10();}}();}}();}}();}}", toString(*lambda->unrollOnce()));
+	EXPECT_PRED2(containsSubString, toString(*lambda->unrollOnce()), toString(*lambda));
+
+	// check nested mutual recursive lambdas
+	manager.setNextFreshID(0);
+	lambda = builder.parseExpr(
+		"let f,g = "
+		"	()->unit { "
+		"		1; "
+		"		()->unit { g(); } (); "
+		"	}, "
+		"	()->unit { "
+		"		2; "
+		"		()->unit { f(); } (); "
+		"	} "
+		"in f"
+	).as<LambdaExprPtr>();
+	ASSERT_TRUE(lambda);
+
+	EXPECT_TRUE(lambda->isRecursive());
+	EXPECT_EQ(                                           "rec v15.{v15=fun() {1; rec v17.{v17=fun() {v16();}}();}, v16=fun() {2; rec v19.{v19=fun() {v15();}}();}}",           toString(*lambda));
+	EXPECT_EQ("rec v21.{v21=fun() {1; rec v17.{v17=fun() {rec v16.{v15=fun() {1; rec v17.{v17=fun() {v16();}}();}, v16=fun() {2; rec v19.{v19=fun() {v15();}}();}}();}}();}}", toString(*lambda->unrollOnce()));
+
+}
+
+
 template<typename PT>
 void basicExprTests(PT expression, const TypePtr& type, const NodeList& children) {
 

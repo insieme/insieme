@@ -59,7 +59,7 @@
 
 #ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self) {
-/*	IRT_INFO("======== Worker %d debug info:\n", self->id.value.components.thread);
+/*	IRT_INFO("======== Worker %d debug info:\n", self->id.thread);
 #ifdef USING_MINLWT	
 	IRT_INFO("== Base ptr: %p\n", (void*)self->basestack); // casting to void* would break 32 bit compatibility
 #else
@@ -93,15 +93,15 @@ typedef struct __irt_worker_func_arg {
 
 void* _irt_worker_func(void *argvp) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)argvp;
-	irt_set_affinity(arg->affinity, pthread_self());
+	irt_set_affinity(arg->affinity, irt_current_thread());
 	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
 	irt_worker* self = arg->generated;
-	self->pthread = pthread_self();
-	self->id.value.components.index = 1;
-	self->id.value.components.thread = arg->index;
-	self->id.value.components.node = 0; // TODO correct node id
+	self->thread = irt_current_thread();
+	self->id.index = 1;
+	self->id.thread = arg->index;
+	self->id.node = 0; // TODO correct node id
 	self->id.cached = self;
-	self->generator_id = self->id.value.full;
+	self->generator_id = self->id.full;
 	self->affinity = arg->affinity;
 	self->cur_context = irt_context_null_id();
 	self->cur_wi = NULL;
@@ -110,11 +110,11 @@ void* _irt_worker_func(void *argvp) {
 		self->default_variant = atoi(getenv(IRT_DEFAULT_VARIANT_ENV));
 	}
 
-	pthread_cond_init(&self->wait_cond, NULL);
-	pthread_mutex_init(&self->wait_mutex, NULL);
+	irt_cond_var_init(&self->wait_cond);
+	irt_mutex_init(&self->wait_mutex);
 	
 	irt_scheduling_init_worker(self);
-	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
+	IRT_ASSERT(irt_tls_set(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->instrumentation_event_data = irt_inst_create_event_data_table();
@@ -142,7 +142,7 @@ void* _irt_worker_func(void *argvp) {
 	self->wi_reuse_stack = NULL; // prepare some?
 	self->stack_reuse_stack = NULL;
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	self->region_reuse_list = irt_region_list_create();
+	self->region_reuse_list = irt_inst_create_region_list();
 #endif
 
 	self->state = IRT_WORKER_STATE_READY;
@@ -154,14 +154,14 @@ void* _irt_worker_func(void *argvp) {
 	free(arg);
 
 	// signal readyness
-	pthread_mutex_lock(&signal->init_mutex);
+	irt_mutex_lock(&signal->init_mutex);
 	signal->init_count++;
 	if(signal->init_count == irt_g_worker_count) {
-		pthread_cond_broadcast(&signal->init_condvar);
+		irt_cond_wake_all(&signal->init_condvar);
 	} else {
-		pthread_cond_wait(&signal->init_condvar, &signal->init_mutex);
+		irt_cond_wait(&signal->init_condvar, &signal->init_mutex);
 	}
-	pthread_mutex_unlock(&signal->init_mutex);
+	irt_mutex_unlock(&signal->init_mutex);
 
 	self->state = IRT_WORKER_STATE_RUNNING;
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
@@ -173,14 +173,14 @@ void* _irt_worker_func(void *argvp) {
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	IRT_ASSERT(self->cur_wi == NULL, IRT_ERR_INTERNAL, "Worker %p _irt_worker_switch_to_wi with non-null current WI", self);
 	if(self->have_wait_mutex) {
-		pthread_mutex_unlock(&self->wait_mutex);
+		irt_mutex_unlock(&self->wait_mutex);
 		self->have_wait_mutex = false;
 	}
 	self->cur_context = wi->context_id;
 	if(wi->state == IRT_WI_STATE_NEW) {
 		// start WI from scratch
 		wi->state = IRT_WI_STATE_STARTED;
-		lwt_prepare(self->id.value.components.thread, wi, &self->basestack);
+		lwt_prepare(self->id.thread, wi, &self->basestack);
 
 		self->cur_wi = wi;
 #ifdef USING_MINLWT
@@ -263,7 +263,7 @@ void _irt_worker_cancel_all_others() {
 		if(cur != self && cur->state == IRT_WORKER_STATE_RUNNING) {
 			cur->state = IRT_WORKER_STATE_STOP;
 			irt_inst_insert_wo_event(self, IRT_INST_WORKER_STOP, cur->id);
-			pthread_cancel(cur->pthread);
+			irt_thread_cancel(cur->thread);
 		}
 	}
 	
@@ -275,7 +275,7 @@ void _irt_worker_end_all() {
 		if(cur->state == IRT_WORKER_STATE_RUNNING) {
 			cur->state = IRT_WORKER_STATE_STOP;
 			irt_signal_worker(cur);
-			pthread_join(cur->pthread, NULL);
+			irt_thread_join(cur->thread);
 		}   
 	}
 }

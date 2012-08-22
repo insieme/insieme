@@ -139,11 +139,11 @@ protected:
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Recursive Type resolution
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		typedef std::map<const clang::Type*, insieme::core::TypeVariablePtr> TypeRecVarMap;
+		typedef std::map<const clang::TagDecl*, insieme::core::TypeVariablePtr> TypeRecVarMap;
 		TypeRecVarMap recVarMap;
 		bool isRecSubType;
 
-		typedef std::map<const clang::Type*, insieme::core::TypePtr> RecTypeMap;
+		typedef std::map<const clang::TagDecl*, insieme::core::TypePtr> RecTypeMap;
 		RecTypeMap recTypeCache;
 
 		bool isResolvingFunctionType;
@@ -481,7 +481,7 @@ public:
 	 */
 	virtual core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
 
-	virtual core::ExpressionPtr convertInitExpr(const clang::Expr* expr,
+	virtual core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
 			const core::TypePtr& type, const bool zeroInit) const;
 
 	virtual void collectGlobalVar(const clang::FunctionDecl* funcDecl);

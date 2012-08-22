@@ -57,7 +57,7 @@ extract(const Entity< dfa::elem<Access> >& e, const CFG& cfg) {
 
 			std::cout << cur << std::endl;
 
-			extractFromStmt( core::StatementAddress(cur.getAnalysisStatement()), entities, cfg.getAliasMap() );
+			extractFromStmt( core::StatementAddress(cur.getAnalysisStatement()), entities, cfg.getTmpVarMap() );
 		});
 	};
 	cfg.visitDFS(collector);

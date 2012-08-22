@@ -297,11 +297,11 @@ TEST(TypeUtils, IntParamUnification) {
 	EXPECT_EQ(*typeA3, *res.applyTo(manager, typeAx));
 }
 
-typedef utils::set::PointerSet<TypeVariablePtr> VariableSet;
+typedef utils::set::PointerSet<TypeVariablePtr> TypeVariableSet;
 typedef utils::set::PointerSet<IntTypeParamPtr> ParamSet;
 
-VariableSet getTypeVariables(const TypePtr& ptr) {
-	VariableSet res;
+TypeVariableSet getTypeVariables(const TypePtr& ptr) {
+	TypeVariableSet res;
 	visitDepthFirstOnce(ptr, [&res](const NodePtr& node) {
 		if (node->getNodeType() == NT_TypeVariable) {
 			res.insert(static_pointer_cast<const TypeVariable>(node));

@@ -93,7 +93,7 @@ template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypePa
 ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         opHelp(const string& name) {
 
-    return nodeMan.getLangBasic().getLiteral(name);
+    return nodeMan.getLangBasic().getBuiltIn(name);
 }
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>

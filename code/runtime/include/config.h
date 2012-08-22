@@ -75,8 +75,8 @@
 #define IRT_INST_OUTPUT_PATH_CHAR_SIZE 4096
 #define IRT_INST_BINARY_OUTPUT_ENV "IRT_INST_BINARY_OUTPUT"
 #define IRT_INST_WORKER_EVENT_LOGGING_ENV "IRT_INST_WORKER_EVENT_LOGGING"
+#define IRT_INST_WORKER_EVENT_TYPES_ENV "IRT_INST_WORKER_EVENT_TYPES"
 #define IRT_INST_WORKER_PD_BLOCKSIZE	512
-#define IRT_INST_REGION_LIST_SIZE 1024
 
 // performance counters
 // environment variable holding the papi events, separated by colons
@@ -92,7 +92,10 @@
 #define IRT_MIN_MODE
 
 // define IRT_USE_PTHREADS if you want to use pthread lib for windows (has no effect under linux)
-// #define IRT_USE_PTHREADS
+// better pass it in as as flag for the compiler
+//#ifndef IRT_USE_PTHREADS
+//#define IRT_USE_PTHREADS
+//#endif
 
 // work item
 #define IRT_WI_PARAM_BUFFER_SIZE 128

@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/typechecks.h"
+#include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
 namespace core {
@@ -648,6 +649,68 @@ TEST(ExternalFunctionType, Basic) {
 	ASSERT_FALSE(check(err, typeCheck).empty());
 
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_FUNCTION_TYPE, "", Message::ERROR));
+}
+
+TEST(LambdaExprType, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+
+	// build a lambda expression which is fine
+	LambdaExprPtr lambda = builder.parse(
+			"let int = int<4> in (int a)->int { return a; }"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(lambda);
+
+	// get addresses to all kind of variables
+	VariableAddress outer = LambdaExprAddress(lambda)->getVariable();
+	VariableAddress inner = LambdaExprAddress(lambda)->getDefinition()[0]->getVariable();
+
+	// check a correct version
+	CheckPtr typeCheck = make_check<LambdaTypeCheck>();
+	EXPECT_TRUE(check(lambda, typeCheck).empty()) << check(lambda, typeCheck);
+
+
+	// build an invalid variable as a replacement
+	VariablePtr invalid = builder.variable(outer->getType());
+
+	// case 1 - lambda expression selects non-existing body
+	auto err = transform::replaceNode(manager, outer, invalid).as<LambdaExprPtr>();
+
+	auto errors = check(err,typeCheck);
+	EXPECT_EQ(1u, errors.size()) << errors;
+	EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_EXPR_NO_SUCH_DEFINITION, "", Message::ERROR));
+
+	// case 2 - wrong type of lambda expression
+	FunctionTypePtr invalidType = builder.functionType(TypeList(), basic.getUnit());
+	err = transform::replaceNode(manager, LambdaExprAddress(lambda)->getType(), invalidType).as<LambdaExprPtr>();
+
+	errors = check(err,typeCheck);
+	EXPECT_EQ(1u, errors.size()) << errors;
+	EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_EXPR_TYPE, "", Message::ERROR));
+
+
+	// case 3 - use invalid variable type in lambda
+	invalid = builder.variable(invalidType);
+	err = transform::replaceNode(manager,
+				inner.switchRoot(transform::replaceNode(manager, outer.switchRoot(err), invalid).as<LambdaExprPtr>())
+			, invalid).as<LambdaExprPtr>();
+	errors = check(err,typeCheck);
+	EXPECT_EQ(1u, errors.size()) << errors;
+	EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_REC_VAR_TYPE, "", Message::ERROR));
+
+
+	// case 4 - wrong lambda type
+	VariablePtr param = lambda->getLambda()->getParameterList()[0];
+	VariablePtr invalidParam = builder.variable(basic.getFloat());
+
+	err = transform::replaceAll(manager,lambda, param, invalidParam, false).as<LambdaExprPtr>();
+	errors = check(err,typeCheck);
+	EXPECT_EQ(1u, errors.size()) << errors;
+	EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_TYPE, "", Message::ERROR));
+
+
 }
 
 

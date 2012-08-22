@@ -59,48 +59,85 @@ using namespace insieme;
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& out, const clang::Type* type) {
-	if(const clang::TagType* tagType = dyn_cast<const clang::TagType>(type))
-		return out << tagType->getDecl()->getNameAsString();
-	return out;
+std::ostream& operator<<(std::ostream& out, const clang::TagDecl* decl) {
+	return out << decl->getNameAsString();
 }
 
 } // end std namespace
 
+
+namespace {
+
+const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
+
+	// typedef std::map<std::pair<std::string, unsigned>, const clang::TagDecl*> DeclLocMap;
+	// static DeclLocMap locMap;
+
+	const clang::TagDecl* decl = tagType->getDecl();
+
+	TagDecl::redecl_iterator i,e = decl->redecls_end();
+	for(i = decl->redecls_begin(); i != e && !i->isCompleteDefinition(); ++i) ;
+
+	if (i!=e) { 
+		const clang::TagDecl* def = (*i)->getDefinition();
+	//	clang::SourceLocation loc = def->getLocation();
+		
+	//	auto fit = locMap.find({ def->getNameAsString(), loc.getRawEncoding() });
+	//	if (fit != locMap.end()) {
+	//		return fit->second;
+	//	}
+		// add this definition to the map
+	//	locMap.insert({ { def->getNameAsString(), loc.getRawEncoding()}, def });
+		return def;
+	}
+
+	return NULL;
+}
+
+} // end anonymous namespace 
+
 namespace insieme {
 namespace frontend {
+
 
 namespace utils {
 
 template <>
-void DependencyGraph<const clang::Type*>::Handle(const clang::Type* type,
-												 const DependencyGraph<const clang::Type*>::VertexTy& v) {
+void DependencyGraph<const clang::TagDecl*>::Handle(
+		const clang::TagDecl* tagDecl,
+		const DependencyGraph<const clang::TagDecl*>::VertexTy& v) 
+{
 	using namespace clang;
 
-	assert(llvm::isa<const TagType>(type));
-	const TagType* tagType = llvm::dyn_cast<const TagType>(type);
-	assert(tagType && "Type not of TagType class");
+	assert(tagDecl && "Type not of TagType class");
 
-	RecordDecl* tag = llvm::dyn_cast<RecordDecl>(tagType->getDecl());
+	const RecordDecl* tag = llvm::dyn_cast<const RecordDecl>(tagDecl);
+
 	// if the tag type is not a struct but otherwise an enum, there will be no declaration 
 	// therefore we can safely return as there is no risk of recursion 
 	if (!tag) { return; }
 
 	for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
 		const Type* fieldType = (*it)->getType().getTypePtr();
+				
 		if( const PointerType *ptrTy = dyn_cast<PointerType>(fieldType) )
 			fieldType = ptrTy->getPointeeType().getTypePtr();
+
 		else if( const ReferenceType *refTy = dyn_cast<ReferenceType>(fieldType) )
 			fieldType = refTy->getPointeeType().getTypePtr();
 
 		// Elaborated types shoud be recursively visited 
-		if( const ElaboratedType* elabTy = llvm::dyn_cast<ElaboratedType>(fieldType) ) {
-			addNode(elabTy->getNamedType().getTypePtr(), &v);
+		 if( const ElaboratedType* elabTy = llvm::dyn_cast<ElaboratedType>(fieldType) ) {
+			 fieldType = elabTy->getNamedType().getTypePtr();
 		}
 
 		if( const TagType* tagTy = llvm::dyn_cast<TagType>(fieldType) ) {
+			// LOG(INFO) << "Affing " << tagTy->getDecl()->getNameAsString();
 			if ( llvm::isa<RecordDecl>(tagTy->getDecl()) ) {
-				addNode( tagTy, &v );
+				// find the definition
+				auto def = findDefinition(tagTy);
+				assert(def);
+				addNode( def, &v );
 			}
 		}
 	}
@@ -168,6 +205,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitBuiltinType(const BuiltinTy
 //								COMPLEX TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitComplexType(const ComplexType* bulinTy) {
+	// FIXME
 	assert(false && "ComplexType not yet handled!");
 }
 
@@ -258,7 +296,9 @@ core::TypePtr ConversionFactory::TypeConverter::VisitVariableArrayType(const Var
 	assert(elemTy && "Conversion of array element type failed.");
 
 	// we need to check if the element type for this not a vector (or array) type
-	// if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
+	// if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) ||
+	//      core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) 
+	// {
 	//	 elemTy = convFact.builder.refType(elemTy);
 	// }
 
@@ -403,12 +443,14 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 //					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  core::TypePtr ConversionFactory::TypeConverter::VisitTagType(const TagType* tagType) {
-	VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
 	START_LOG_TYPE_CONVERSION( tagType );
 
-	if(!convFact.ctx.recVarMap.empty()) {
+	auto tagDecl = findDefinition(tagType);
+	VLOG(2) << "VisitTagType " << tagDecl->getNameAsString() <<  std::endl;
+
+	if(!convFact.ctx.recVarMap.empty() && tagDecl) {
 		// check if this type has a typevar already associated, in such case return it
-		ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagType);
+		ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagDecl);
 		if( fit != convFact.ctx.recVarMap.end() ) {
 			// we are resolving a parent recursive type, so we shouldn't
 			return fit->second;
@@ -417,8 +459,8 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 
 	// check if the type is in the cache of already solved recursive types
 	// this is done only if we are not resolving a recursive sub type
-	if(!convFact.ctx.isRecSubType) {
-		ConversionContext::RecTypeMap::const_iterator rit = convFact.ctx.recTypeCache.find(tagType);
+	if(!convFact.ctx.isRecSubType && tagDecl) {
+		ConversionContext::RecTypeMap::const_iterator rit = convFact.ctx.recTypeCache.find(tagDecl);
 		if(rit != convFact.ctx.recTypeCache.end())
 			return rit->second;
 	}
@@ -427,17 +469,8 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 	core::TypePtr retTy;
 	VLOG(1) << "~ Converting TagType: " << tagType->getDecl()->getName().str();
 
-	const TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
-	ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(tagDecl);
-	if(cit != convFact.ctx.classDeclMap.end()){
-		return cit->second;
-	}
+	if( tagDecl ) {
 
-	// iterate through all the re-declarations to see if one of them provides a definition
-	TagDecl::redecl_iterator i,e = tagDecl->redecls_end();
-	for(i = tagDecl->redecls_begin(); i != e && !i->isCompleteDefinition(); ++i) ;
-	if(i != e) {
-		tagDecl = i->getDefinition();
 		// we found a definition for this declaration, use it
 		assert(tagDecl->isCompleteDefinition() && "TagType is not a definition");
 
@@ -451,22 +484,35 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 
 			if(!convFact.ctx.isRecSubType) {
 				// add this type to the type graph (if not present)
-				typeGraph.addNode(tagDecl->getTypeForDecl());
+				typeGraph.addNode( tagDecl );
 			}
 
 			// retrieve the strongly connected componenets for this type
-			std::set<const Type*>&& components =
-				typeGraph.getStronglyConnectedComponents(tagDecl->getTypeForDecl());
+			std::set<const TagDecl*>&& components = typeGraph.getStronglyConnectedComponents(tagDecl);
 
 			if( !components.empty() ) {
+	
+			//	std::set<const clang::TagDecl*>&& subComponents = typeGraph.getSubComponents( tagDecl );
+			//	for(const auto& cur : subComponents) {
+			//		TagDecl* decl = const_cast<TagDecl*>(cur);
+
+			//		VLOG(2) << "Analyzing TagDecl as sub component: " << decl->getNameAsString();
+
+			//		auto fit = convFact.ctx.recTypeCache.find(decl);
+			//		if ( fit == convFact.ctx.recTypeCache.end() ) {
+			//			// perform the conversion only if this is the first time this
+			//			// function is encountred
+			//			VisitTagType(cast<clang::TagType>(decl->getTypeForDecl()));
+			//		}
+			//	}
+
 				if(VLOG_IS_ON(2)) {
 					// we are dealing with a recursive type
 					VLOG(2) << "Analyzing RecordDecl: " << recDecl->getNameAsString() << std::endl
 							<< "Number of components in the cycle: " << components.size();
 					std::for_each(components.begin(), components.end(),
-						[] (std::set<const Type*>::value_type c) {
-							assert(isa<const TagType>(c));
-							VLOG(2) << "\t" << dyn_cast<const TagType>(c)->getDecl()->getNameAsString();
+						[] (std::set<const TagDecl*>::value_type c) {
+							VLOG(2) << "\t" << c->getNameAsString();
 						}
 					);
 					typeGraph.print(std::cerr);
@@ -474,18 +520,15 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 
 				// we create a TypeVar for each type in the mutual dependence
 				convFact.ctx.recVarMap.insert(
-						std::make_pair(tagType, convFact.builder.typeVariable(recDecl->getName()))
+						std::make_pair(tagDecl, convFact.builder.typeVariable(recDecl->getName()))
 					);
 
 				// when a subtype is resolved we aspect to already have these variables in the map
 				if(!convFact.ctx.isRecSubType) {
 					std::for_each(components.begin(), components.end(),
-						[ this ] (std::set<const Type*>::value_type ty) {
-							const TagType* tagTy = dyn_cast<const TagType>(ty);
-							assert(tagTy && "Type is not of TagType type");
-
+						[ this ] (std::set<const TagDecl*>::value_type cur) {
 							this->convFact.ctx.recVarMap.insert(
-									std::make_pair(ty, convFact.builder.typeVariable(tagTy->getDecl()->getName()))
+									std::make_pair(cur, convFact.builder.typeVariable(cur->getName()))
 								);
 						}
 					);
@@ -496,69 +539,6 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 			// Note: if a field is referring one of the type in the cyclic dependency, a reference
 			//       to the TypeVar will be returned.
 			core::NamedCompositeType::Entries structElements;
-
-			// TODO
-			// c++ constructors
-			const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
-			VLOG(2)<<recDeclCXX;
-
-			if(recDeclCXX){
-				bool hasPolymorphicBaseClass = false;
-				// add only direct baseclasses as member
-				for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
-								bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
-					const CXXBaseSpecifier * base = bit;
-					RecordDecl *baseRecord = base->getType()->getAs<RecordType>()->getDecl();
-
-					// put for every direct base-class a member to the derived class
-					core::TypePtr&& fieldType = Visit( const_cast<Type*>(baseRecord->getTypeForDecl()) );
-					VLOG(2) << "BaseClass is: " << baseRecord->getNameAsString() << " type: " << fieldType;
-					core::StringValuePtr id = convFact.builder.stringValue(baseRecord->getNameAsString());
-					structElements.push_back(convFact.builder.namedType(id, fieldType ));
-
-					hasPolymorphicBaseClass |= base->getType()->getAsCXXRecordDecl()->isPolymorphic();
-				}
-
-//					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
-//							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
-//						CXXConstructorDecl * ctorDecl = *xit;
-//						VLOG(1) << "~ Converting constructor: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
-//
-//						core::TypePtr convertedType = convFact.convertType( GET_TYPE_PTR(ctorDecl) );
-//						assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
-//						core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
-//
-//						//TODO funcType = addGlobalsToFunctionType(convFact.builder, convFact.ctx.globalStruct.first, funcType);
-//
-//						convFact.convertFunctionDecl(ctorDecl);
-//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-//						//curr->dumpDeclContext(); // on cerr
-//						//std::cerr<<"enddumpconstr\n";
-//						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-//						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-//					}
-//
-//					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
-//							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
-//						CXXMethodDecl * curr = *mit;
-//						//convFact.convertFunctionDecl(curr, false);
-//
-//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-//						//curr->dumpDeclContext(); // on cerr
-//						//std::cerr<<"enddumpconstr\n";
-//						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-//						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-//					}
-
-				// add __class member to support virtual functions at highest polymorphic baseclass
-				if( recDeclCXX->isPolymorphic() && !hasPolymorphicBaseClass) {
-					VLOG(2) << recDeclCXX->getName().data() << " polymorphic class";
-
-					core::StringValuePtr id = convFact.builder.stringValue("__class");
-					structElements.push_back(convFact.builder.namedType(id, convFact.builder.getLangBasic().getUInt4()));
-				}
-
-			}  // end if recDeclCXX
 
 			unsigned mid = 0;
 			for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
@@ -585,7 +565,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 					return retTy;
 
 				// we have to create a recursive type
-				ConversionContext::TypeRecVarMap::const_iterator tit = convFact.ctx.recVarMap.find(tagType);
+				ConversionContext::TypeRecVarMap::const_iterator tit = convFact.ctx.recVarMap.find(tagDecl);
 				assert(tit != convFact.ctx.recVarMap.end() &&
 						"Recursive type has not TypeVar associated to himself");
 				core::TypeVariablePtr recTypeVar = tit->second;
@@ -599,13 +579,10 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 				convFact.ctx.isRecSubType = true;
 
 				std::for_each(components.begin(), components.end(),
-					[ this, &definitions, &recTypeVar ] (std::set<const Type*>::value_type ty) {
-						const TagType* tagTy = dyn_cast<const TagType>(ty);
-						assert(tagTy && "Type is not of TagType type");
+					[ this, &definitions, &recTypeVar ] (std::set<const TagDecl*>::value_type decl) {
 
 						//Visual Studio 2010 fix: full namespace
-						insieme::frontend::conversion::ConversionFactory::ConversionContext::TypeRecVarMap::const_iterator tit =
-								this->convFact.ctx.recVarMap.find(ty);
+						auto tit = this->convFact.ctx.recVarMap.find(decl);
 
 						assert(tit != this->convFact.ctx.recVarMap.end() && "Recursive type has no TypeVar associated");
 						core::TypeVariablePtr var = tit->second;
@@ -617,13 +594,13 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 						// in this way it will create a descriptor for this type (and he will not return the TypeVar
 						// associated with this recursive type). This behaviour is enabled only when the isRecSubType
 						// flag is true
-						this->convFact.ctx.recVarMap.erase(ty);
+						this->convFact.ctx.recVarMap.erase(decl);
 
-						definitions.push_back( this->convFact.builder.recTypeBinding(var, this->Visit(const_cast<Type*>(ty))) );
-						var->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(tagTy->getDecl()->getNameAsString()) );
+						definitions.push_back( this->convFact.builder.recTypeBinding(var, this->Visit(const_cast<Type*>(decl->getTypeForDecl()))) );
+						var->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(decl->getNameAsString()) );
 
 						// reinsert the TypeVar in the map in order to solve the other recursive types
-						this->convFact.ctx.recVarMap.insert( std::make_pair(tagTy, var) );
+						this->convFact.ctx.recVarMap.insert( std::make_pair(decl, var) );
 					}
 				);
 
@@ -644,17 +621,16 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 
 				// Once we solved this recursive type, we add to a cache of recursive types
 				// so next time we encounter it, we don't need to compute the graph
-				convFact.ctx.recTypeCache.insert(std::make_pair(tagType, retTy));
+				convFact.ctx.recTypeCache.insert( {tagDecl, retTy} );
 			}
 
 			// Adding the name of the C struct as annotation
 			if (!recDecl->getName().empty())
 				retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
-			convFact.ctx.classDeclMap.insert(std::make_pair(tagDecl, retTy));
 		}
 	} else {
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
-		retTy = convFact.builder.genericType( tagDecl->getNameAsString() );
+		retTy = convFact.builder.genericType( tagType->getDecl()->getNameAsString() );
 	}
 	END_LOG_TYPE_CONVERSION( retTy );
 	return retTy;

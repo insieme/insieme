@@ -36,6 +36,12 @@
 
 #pragma once
 
+/*
+ * in this file prototypes of platform dependent affinity functionality shall be declared
+ */
+
+#include "abstraction/threads.h"
+
 #ifdef _MSC_VER
 	#include <io.h>
 	#include <Windows.h>
@@ -45,17 +51,20 @@
 	typedef cpu_set_t irt_native_cpu_set;
 #endif
 
-// in this file prototypes of platform dependent affinity functionality shall be declared
 
 // functionality regarding setting, clearing thread affinity and more
 
+/** restore initial affinity as saved in irt_g_affinity_base_mask */
 void irt_clear_affinity();
 
-void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread);
+/** set the processor-affinity for the specified thread  */
+void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread);
 
+/** initializes irt_g_affinity_base_mask and creates a mapping from virtual cpuids (consecutive order of ids
+ starting at 0) to the real, available cpuids */
 void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping);
 
-// get the number of available cores
+/** get the number of available cores with respect to the initial affinity (irt_g_affinity_base_mask) */
 uint32 irt_affinity_cores_available();
 
 

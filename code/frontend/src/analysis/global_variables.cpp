@@ -839,7 +839,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		} else {
 			// this means the variable is not declared static inside a function so we have to initialize its value
 			initExpr = (*it)->getInit() ? 
-				convFact.convertInitExpr((*it)->getInit(), type, false) : 
+				convFact.convertInitExpr(NULL, (*it)->getInit(), type, false) : 
 				convFact.defaultInitVal(type);
 		}
 		// default initialization
@@ -971,7 +971,7 @@ GlobalVarCollector::GlobalStructPair CXXGlobalVarCollector::createGlobalStruct()
 		} else {
 			// this means the variable is not declared static inside a function so we have to initialize its value
 			initExpr = (*it)->getInit() ?
-				convFact.convertInitExpr((*it)->getInit(), type, false) :
+				convFact.convertInitExpr(NULL, (*it)->getInit(), type, false) :
 				convFact.defaultInitVal(type);
 		}
 		// default initialization

@@ -59,6 +59,8 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/core/parser2/ir_parser.h"
+
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
@@ -147,6 +149,26 @@ NodePtr IRBuilder::get(NodeType type, const NodeList& children) const {
 ProgramPtr IRBuilder::createProgram(const ExpressionList& entryPoints) const {
 	return Program::get(manager, entryPoints);
 }
+
+
+// ---------------------------- Parser Integration -----------------------------------
+
+NodePtr IRBuilder::parse(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser::parse(manager, code, true, symbols);
+}
+
+TypePtr IRBuilder::parseType(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser::parse_type(manager, code, true, symbols);
+}
+
+ExpressionPtr IRBuilder::parseExpr(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser::parse_expr(manager, code, true, symbols);
+}
+
+StatementPtr IRBuilder::parseStmt(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser::parse_stmt(manager, code, true, symbols);
+}
+
 
 
 // ---------------------------- Standard Nodes -----------------------------------
@@ -510,6 +532,7 @@ DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const Express
 	return declarationStmt(variable(type), value);
 }
 
+
 CallExprPtr IRBuilder::acquireLock(const ExpressionPtr& lock) const {
 	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot lock a non-lock type.");
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockAcquire(), lock);
@@ -521,6 +544,43 @@ CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
 CallExprPtr IRBuilder::createLock() const {
 	return callExpr(manager.getLangBasic().getLock(), manager.getLangBasic().getLockCreate());
 }
+
+
+CallExprPtr IRBuilder::atomicOp(const ExpressionPtr& location, const ExpressionPtr& testFunc, const ExpressionPtr& replaceFunc) {
+	assert(core::analysis::isRefType(location->getType()) && "Atomic must be applied on ref.");
+	// should also check types of testFunc and replaceFunc
+	return callExpr(manager.getLangBasic().getAtomic(), location, testFunc, replaceFunc);
+}
+
+CallExprPtr IRBuilder::atomicAssignment(const CallExprPtr& assignment) {
+	const auto &basic = manager.getLangBasic();
+	assert(basic.isRefAssign(assignment->getFunctionExpr()) && "Trying to build atomic assignment from non-assigment");
+
+	const auto &lhs = assignment->getArgument(0), &rhs = assignment->getArgument(1);
+	const auto &lhsDeref = deref(lhs);
+	CallExprPtr rhsCall = dynamic_pointer_cast<CallExprPtr>(rhs);
+	assert(rhsCall && "Unsupported atomic assignment structure");
+
+	ExpressionPtr factor;
+	if(*lhsDeref == *rhsCall->getArgument(0)) factor = rhsCall->getArgument(1);
+	if(*lhsDeref == *rhsCall->getArgument(1)) factor = rhsCall->getArgument(0);
+	assert(factor && "LHS not found in RHS of atomic assignment");
+
+	const auto &rhsFun = rhsCall->getFunctionExpr();
+	if(basic.isAddOp(rhsFun)) return callExpr(basic.getAtomicFetchAndAdd(), lhs, factor);
+	if(basic.isSubOp(rhsFun)) return callExpr(basic.getAtomicFetchAndSub(), lhs, factor);
+	if(basic.isBitwiseAndOp(rhsFun)) return callExpr(basic.getAtomicFetchAndAnd(), lhs, factor);
+	if(basic.isBitwiseOrOp(rhsFun)) return callExpr(basic.getAtomicFetchAndOr(), lhs, factor);
+	if(basic.isBitwiseXorOp(rhsFun)) return callExpr(basic.getAtomicFetchAndXor(), lhs, factor);
+	assert(false && "Unsupported atomic operation");
+	return assignment;
+}
+
+CallExprPtr IRBuilder::atomicConditional(const IfStmtPtr& statement) {
+	assert(false && "Not implemented");
+	return CallExprPtr();
+}
+
 
 CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
 	assert(!variants.empty() && "Variant list must not be empty!");
@@ -951,6 +1011,60 @@ TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& 
 	return infereExprTypeInternal(op, a, b, c);
 }
 
+
+namespace {
+
+	GenericTypePtr toSigned(const IRBuilder& builder, const GenericTypePtr& type) {
+		assert(builder.getLangBasic().isScalarType(type) && "Can not alter non-scalar type to signed!");
+
+		// check whether a modification is required
+		if (builder.getLangBasic().isUnsignedInt(type)) {
+			// alter to signed alternative
+			return builder.genericType("int", TypeList(), toVector(type->getIntTypeParameter()->getElement(0)));
+		}
+		return type;
+	}
+}
+
+
+LiteralPtr IRBuilder::minus(const LiteralPtr& lit) const {
+	assert(getLangBasic().isScalarType(lit->getType()) && "Can not change sign of non-scalar type!");
+
+	// update type of literal to support unsigned
+	TypePtr type = toSigned(*this, lit->getType().as<GenericTypePtr>());
+
+	// update string value of literal
+	string value = lit->getStringValue();
+	assert(value.size() > 0u);
+	if (value[0] == '-') {
+		value = value.substr(1);
+	} else {
+		value = "-" + value;
+	}
+
+	// create resulting literal
+	return literal(value, type);
+}
+
+ExpressionPtr IRBuilder::minus(const ExpressionPtr& a) const {
+	assert(getLangBasic().isScalarType(a->getType()) && "Can not change sign of non-scalar type!");
+
+	// check literal type
+	if (a->getNodeType() == NT_Literal) {
+		return minus(a.as<LiteralPtr>());
+	}
+
+	// update type of literal to support unsigned
+	TypePtr type = toSigned(*this, a->getType().as<GenericTypePtr>());
+
+	ExpressionPtr value = a;
+	if (value->getType() != type) {
+		value = castExpr(type, value);
+	}
+
+	// return 0 - a
+	return sub(getZero(type), a);
+}
 
 
 // ---------------------------- Utilities ---------------------------------------

@@ -129,8 +129,10 @@ protected:
 					newNode = handleMaster(static_pointer_cast<const Statement>(newNode), masterAnn);
 				} else if(auto flushAnn = std::dynamic_pointer_cast<Flush>(subAnn)) {
 					newNode = handleFlush(static_pointer_cast<const Statement>(newNode), flushAnn);
-				}  else if(auto taskwaitAnn = std::dynamic_pointer_cast<TaskWait>(subAnn)) {
+				} else if(auto taskwaitAnn = std::dynamic_pointer_cast<TaskWait>(subAnn)) {
 					newNode = handleTaskWait(static_pointer_cast<const Statement>(newNode), taskwaitAnn);
+				} else if(auto atomicAnn = std::dynamic_pointer_cast<Atomic>(subAnn)) {
+					newNode = handleAtomic(static_pointer_cast<const Statement>(newNode), atomicAnn);
 				} else if(std::dynamic_pointer_cast<ThreadPrivate>(subAnn)) {
 					newNode = handleThreadprivate(newNode);
 				} else {
@@ -147,6 +149,7 @@ protected:
 		newNode = fixStruct(newNode);
 		newNode = flattenCompounds(newNode);
 		newNode = handleFunctions(newNode);
+		if(LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(newNode)) newNode = transform::correctRecursiveLambdaVariableUsage(nodeMan, lambda);
 		// migrate annotations if applicable
 		if(newNode != node) transform::utils::migrateAnnotations(node, newNode);
 		return newNode;
@@ -502,6 +505,13 @@ protected:
 
 	NodePtr handleMaster(const StatementPtr& stmtNode, const MasterPtr& masterP) {
 		return build.ifStmt(build.eq(build.getThreadId(), build.getZero(build.getThreadId().getType())), stmtNode);
+	}
+
+	NodePtr handleAtomic(const StatementPtr& stmtNode, const AtomicPtr& atomicP) {
+		CallExprPtr call = dynamic_pointer_cast<CallExprPtr>(stmtNode);
+		if(!call) cerr << printer::PrettyPrinter(stmtNode) << std::endl;
+		assert(call && "Unhandled OMP atomic");
+		return build.atomicAssignment(call);
 	}
 };
 

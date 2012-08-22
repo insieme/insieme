@@ -79,6 +79,24 @@ int omp_get_ancestor_thread_num(int level);
 
 int omp_get_num_procs();
 
+
+// locks
+
+struct _irt_lock { int d; };
+
+typedef struct _irt_lock irt_lock;
+
+#define omp_lock_t struct _irt_lock
+
+void irt_lock_init(irt_lock* l) {}; 
+void irt_lock_acquire(irt_lock* l) {}; 
+void irt_lock_release(irt_lock* l) {}; 
+
+#define omp_init_lock(_param) irt_lock_init(_param)
+#define omp_set_lock(_param) irt_lock_acquire(_param)
+#define omp_unset_lock(_param) irt_lock_release(_param)
+
+
 #ifdef __cplusplus
  }
 #endif 

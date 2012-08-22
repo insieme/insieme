@@ -91,6 +91,10 @@ public:
 	LiteralPtr get##_id() const; \
 	bool is##_id(const NodePtr& p) const;
 
+	#define DERIVED(_id, _name, _spec) \
+	ExpressionPtr get##_id() const; \
+	bool is##_id(const NodePtr& p) const;
+
 	#define OPERATION(_type, _op, _name, _spec) \
 	LiteralPtr get##_type##_op() const; \
 	bool is##_type##_op(const NodePtr& p) const;
@@ -102,7 +106,24 @@ public:
 	#include "insieme/core/lang/lang.def"
 
 	bool isBuiltIn(const NodePtr& node) const;
-	LiteralPtr getLiteral(const std::string& name) const;
+	ExpressionPtr getBuiltIn(const std::string& name) const;
+	LiteralPtr getLiteral(const string& name) const;
+
+
+	/**
+	 * Required to support operators on type literals.
+	 */
+	bool isType(const NodePtr& type) const;
+
+	/**
+	 * Required to support operators on type ref.
+	 */
+	bool isRef(const NodePtr& type) const;
+
+	/**
+	 * Required to support operators on generic types.
+	 */
+	bool isGen(const NodePtr& type) const;
 
 	/**
 	 * Obtains an expression representing the the requested operator for the
@@ -129,6 +150,13 @@ private:
 	// obtains a pointer to a lazy-instantiated sub-type lattice
 	const SubTypeLattice* getSubTypeLattice() const;
 };
+
+
+
+/**
+ * Prints the operator enumeration in a readable format.
+ */
+std::ostream& operator<<(std::ostream& out, const BasicGenerator::Operator& op);
 
 } // namespace lang
 } // namespace core

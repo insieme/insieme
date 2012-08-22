@@ -324,7 +324,7 @@ public:
 	}
 	virtual void load(const char* path) {
 		std::fstream file(path);
-		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+		assert(file.is_open() && "Cannot open input file in MyC_SVM::load");
 
 		svm.LoadSVMModel(file);
 		shark = C_SVM(&svm, 0.0, 0.0);

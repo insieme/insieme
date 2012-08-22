@@ -1,13 +1,14 @@
 *.log
 *.aux
 *.make
-paper.pdf
 *.d
 *.fls
 *.bbl
 *.blg
 *.idx
 *.tcp
+*.synctex.gz
+insieme_doc.pdf
 .project
 .texlipse
-paper.tcp
+

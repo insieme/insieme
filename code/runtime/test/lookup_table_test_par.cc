@@ -75,9 +75,9 @@ uint32 num = 0;
 
 irt_lookup_test_id dummy_id_generator() {
 	irt_lookup_test_id id;
-	id.value.components.node = 1;
-	id.value.components.thread = omp_get_thread_num();
-	id.value.components.index = num++;
+	id.node = 1;
+	id.thread = omp_get_thread_num();
+	id.index = num++;
 	id.cached = NULL;
 	return id;
 }

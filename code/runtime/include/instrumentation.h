@@ -91,7 +91,8 @@ void _irt_inst_insert_di_event(irt_worker* worker, irt_instrumentation_event eve
 
 // debug output functions
 
-void irt_inst_event_data_output(irt_worker* worker);
+void irt_inst_event_data_output_all(bool binary_format);
+void irt_inst_event_data_output(irt_worker* worker, bool binary_format);
 void irt_inst_region_data_output(irt_worker* worker);
 void irt_inst_aggregated_data_output();
 

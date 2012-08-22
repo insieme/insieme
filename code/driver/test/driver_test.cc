@@ -39,8 +39,8 @@
 #include "insieme/core/ir_program.h"
 
 #include "insieme/frontend/program.h"
+#include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/driver/driver_config.h"
-#include "insieme/simple_backend/backend_convert.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 //#include <glog/logging.h>
@@ -53,7 +53,7 @@
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
 using namespace insieme::utils::set;
-using namespace insieme::simple_backend;
+using namespace insieme::backend::sequential;
 using namespace insieme::utils::log;
 
 TEST(DriverTest, HelloWorldTest) {
@@ -72,7 +72,7 @@ TEST(DriverTest, HelloWorldTest) {
     LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
 
 	LOG(INFO) << "Converting IR to C...";
-	auto converted = SimpleBackend::getDefault()->convert(program);
+	auto converted = SequentialBackend::getDefault()->convert(program);
 	LOG(INFO) << "Printing converted code: " << *converted;
 
 	std::ofstream out( std::string(SRC_DIR) + "/hello_world.insieme.c" );

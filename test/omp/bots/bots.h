@@ -30,6 +30,7 @@ extern int bots_check_flag;
 extern int bots_result;
 extern int bots_output_format;
 extern int bots_print_header;
+extern int bots_print_times;
 /* common variables */
 extern char bots_name[];
 extern char bots_parameters[];

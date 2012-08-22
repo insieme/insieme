@@ -91,12 +91,10 @@ DefUse::defs_iterator DefUse::defs_begin(const core::ExpressionAddress& expr) co
 
 	std::set<Access> entities;
 	
-	for ( auto alias : pimpl->cfg->getAliasMap().lookupAliases(expr) ) {
-		entities.insert( getImmediateAccess( core::ExpressionAddress(alias), pimpl->cfg->getAliasMap()) );
-	}
-	entities.insert( getImmediateAccess(expr, pimpl->cfg->getAliasMap()) );
-
-	std::cout << entities << std::endl;
+	// for ( auto alias : pimpl->cfg->getAliasMap().lookupAliases(expr) ) {
+	//	entities.insert( getImmediateAccess( core::ExpressionAddress(alias), pimpl->cfg->getAliasMap()) );
+	//}
+	//entities.insert( getImmediateAccess(expr, pimpl->cfg->getAliasMap()) );
 
 	return defs_iterator( 
 		std::make_shared<DefUse::defs_iterator_impl>(
@@ -130,7 +128,7 @@ core::ExpressionAddress DefUse::defs_iterator::operator*() const {
 	core::NodeAddress block = (*std::get<1>(*pimpl->it))[0].getStatementAddress();
 	
 	// check whether the variable we point to is an alias 
-	core::ExpressionAddress var = pimpl->cfg->getAliasMap().getMappedExpr(cur.getAccessExpression().as<core::VariablePtr>());
+	core::ExpressionAddress var = pimpl->cfg->getTmpVarMap().getMappedExpr(cur.getAccessExpression().as<core::VariablePtr>());
 
 	// May cause problem with multiple occurrences in the same stmt
 	core::NodeAddress addr = core::Address<const core::Node>::find( var?var:cur.getAccessExpression(), block.getAddressedNode());

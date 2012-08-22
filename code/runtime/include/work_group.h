@@ -39,7 +39,7 @@
 #include "declarations.h"
 #include "irt_loop_sched.h"
 
-#include <pthread.h>
+#include "abstraction/threads.h"
 
 /* ------------------------------ data structures ----- */
 
@@ -50,7 +50,7 @@ struct _irt_work_group {
 	bool distributed;	// starts at false, set to true if part of the group is not on the same shared memory node
 	irt_worker_id coordinator;  // only set if distributed == true
 	/* implementation stuff */
-	pthread_spinlock_t lock;
+	irt_spinlock lock;
 	uint32 local_member_count;
 	uint32 ended_member_count;
 	uint32 cur_barrier_count;
@@ -61,7 +61,6 @@ struct _irt_work_group {
 //	irt_pd_table* performance_data;
 	irt_loop_sched_policy cur_sched; // current scheduling policy
 	irt_loop_sched_data loop_sched_data[IRT_WG_RING_BUFFER_SIZE];
-	pthread_barrier_t barrier;
 };
 
 struct _irt_wi_wg_membership {
@@ -74,6 +73,7 @@ typedef void irt_wg_redistribution_function(void** collected, uint32 local_id, u
 
 /* ------------------------------ operations ----- */
 
+irt_work_group* _irt_wg_create(irt_worker* self);
 irt_work_group* irt_wg_create();
 void irt_wg_destroy(irt_work_group* wg);
 

@@ -542,6 +542,27 @@ namespace core {
 			return ExpressionAccessor<Derived, Ptr>::getNode().isRecursiveInternal();
 		}
 
+		/**
+		 * Unrolls this lambda once. If the lambda is not recursive, the result will
+		 * be the same as this lambda.
+		 *
+		 * @return the resulting, unrolled lambda expression
+		 */
+		LambdaExprPtr unrollOnce() const {
+			return unrollOnce(ExpressionAccessor<Derived, Ptr>::getNodeManager());
+		}
+
+		/**
+		 * Unrolls this lambda once. If the lambda is not recursive, the result will
+		 * be the same as this lambda.
+		 *
+		 * @param manager the manager to be used for maintaining the resulting reference
+		 * @return the resulting, unrolled lambda expression
+		 */
+		LambdaExprPtr unrollOnce(NodeManager& manager) const {
+			if (!isRecursive()) return manager.get(ExpressionAccessor<Derived, Ptr>::getNode());
+			return getDefinition()->unrollOnce(manager, getVariable());
+		}
 	};
 
 	/**

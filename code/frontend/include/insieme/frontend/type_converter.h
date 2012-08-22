@@ -75,7 +75,7 @@ class ConversionFactory::TypeConverter {
 
 protected:
 	ConversionFactory& convFact;
-	utils::DependencyGraph<const clang::Type*> typeGraph;
+	utils::DependencyGraph<const clang::TagDecl*> typeGraph;
 
 public:
 	TypeConverter(ConversionFactory& fact, Program& program);

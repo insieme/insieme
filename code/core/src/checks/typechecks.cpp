@@ -36,6 +36,7 @@
 
 #include "insieme/core/checks/typechecks.h"
 
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 
@@ -244,6 +245,74 @@ OptionalMessageList ReturnTypeCheck::visitLambda(const LambdaAddress& address) {
 
 	return res;
 }
+
+OptionalMessageList LambdaTypeCheck::visitLambdaExpr(const LambdaExprAddress& address) {
+
+	OptionalMessageList res;
+
+	// get lambda expression
+	LambdaExprPtr lambda = address.getAddressedNode();
+
+	// check that rec-lambda variable does exist within definitions
+	if(!lambda->getDefinition()->getDefinitionOf(lambda->getVariable())) {
+		add(res, Message(address,
+				EC_TYPE_INVALID_LAMBDA_EXPR_NO_SUCH_DEFINITION,
+				format("No definition found for rec-lambda variable %s",
+						toString(*lambda->getVariable())),
+				Message::ERROR
+		));
+
+		// no further checks usefull
+		return res;
+	}
+
+
+	// check type of lambda expression compared to rec-lambda variable type
+	TypePtr is = lambda->getType();
+	TypePtr should = lambda->getVariable()->getType();
+	if (*is != *should) {
+		add(res, Message(address,
+				EC_TYPE_INVALID_LAMBDA_EXPR_TYPE,
+				format("Lambda-Expression Type does not match rec-lambda Variable Type - is: %s, should: %s",
+						toString(*is),
+						toString(*should)),
+				Message::ERROR
+		));
+	}
+
+	// check type of recursive variable
+	assert(lambda->getDefinition()->getDefinitionOf(lambda->getVariable()));
+	is = lambda->getVariable()->getType();
+	should = lambda->getDefinition()->getDefinitionOf(lambda->getVariable())->getType();
+	if (*is != *should) {
+		add(res, Message(address,
+				EC_TYPE_INVALID_LAMBDA_REC_VAR_TYPE,
+				format("Type of recursive lambda variable %s does not fit type of lambda - is: %s, should: %s",
+						toString(*lambda->getVariable()),
+						toString(*is),
+						toString(*should)),
+				Message::ERROR
+		));
+	}
+
+	// check type of lambda
+	IRBuilder builder(lambda->getNodeManager());
+	FunctionTypePtr funTypeIs = lambda->getLambda()->getType();
+	FunctionTypePtr funTypeShould = builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur) { return cur->getType(); }), funTypeIs->getReturnType());
+	if (*funTypeIs != *funTypeShould) {
+		add(res, Message(address,
+				EC_TYPE_INVALID_LAMBDA_TYPE,
+				format("Invalid type of lambda definition for variable %s - is: %s, should %s",
+						toString(*lambda->getVariable()),
+						toString(*funTypeIs),
+						toString(*funTypeShould)),
+					Message::ERROR
+		));
+	}
+
+	return res;
+}
+
 
 OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
 
@@ -724,6 +793,11 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 	TypePtr target = address->getType();
 	TypePtr src = source;
 	TypePtr trg = target;
+
+	// allow cast to generic
+	if (trg->getNodeType() == NT_TypeVariable) {
+		return res;
+	}
 
 	while (src->getNodeType() == trg->getNodeType()) {
 		switch(src->getNodeType()) {

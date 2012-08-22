@@ -42,7 +42,8 @@
 #ifndef __mqueue_h
 #define __mqueue_h
 #include <sys/types.h>
-#include <pthread.h>
+#include "abstraction/threads.h"
+#include "abstraction/impl/threads.impl.h"
 
 #ifdef _MSC_VER
 	#include "include_win32/missing_sys_types.h"
@@ -88,8 +89,8 @@ struct mq_hdr
   pid_t mqh_pid;                /* nonzero PID if mqh_event set */
   struct sigevent mqh_event;    /* for mq_notify() */
 #if !defined(WIN32) && !defined (UNDER_CE)
-  pthread_mutex_t mqh_lock;     /* mutex lock */
-  pthread_cond_t mqh_wait;      /* and condition variable */
+  irt_lock_obj mqh_lock;     /* mutex lock */
+  irt_cond_var mqh_wait;      /* and condition variable */
 #endif
 };
 

@@ -92,40 +92,40 @@ TEST(CppConversion, FileTest) {
 
 	Logger::get(std::cerr, DEBUG, 0);
 
-	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "inputs/cpp.cpp" );
-
-	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
-
-	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
-		// we use an internal manager to have private counter for variables so we can write independent tests
-		NodeManager mgr;
-
-		fe::conversion::CXXConversionFactory convFactory( mgr, prog );
-		convFactory.setTranslationUnit(tu);
-
-		if(tp.isStatement()) {
-			StatementPtr&& stmt = convFactory.convertStmt( tp.getStatement() );
-			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
-
-			// do semantics checking
-			checkSemanticErrors(stmt);
-
-		} else {
-			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp.getDecl())) {
-				TypePtr&& type = convFactory.convertType( td->getTypeForDecl() );
-				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
-				// do semantics checking
-				checkSemanticErrors(type);
-			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
-				LambdaExprPtr&& expr = dynamic_pointer_cast<const LambdaExpr>(convFactory.convertFunctionDecl(fd));
-				assert(expr);
-				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(expr) + '\"' );
-				// do semantics checking
-				checkSemanticErrors(expr);
-			}
-		}
-	}
+// 	NodeManager manager;
+// 	fe::Program prog(manager);
+// 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "inputs/cpp.cpp" );
+// 
+// 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
+// 
+// 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
+// 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+// 		// we use an internal manager to have private counter for variables so we can write independent tests
+// 		NodeManager mgr;
+// 
+// 		fe::conversion::CXXConversionFactory convFactory( mgr, prog );
+// 		convFactory.setTranslationUnit(tu);
+// 
+// 		if(tp.isStatement()) {
+// 			StatementPtr&& stmt = convFactory.convertStmt( tp.getStatement() );
+// 			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
+// 
+// 			// do semantics checking
+// 			checkSemanticErrors(stmt);
+// 
+// 		} else {
+// 			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp.getDecl())) {
+// 				TypePtr&& type = convFactory.convertType( td->getTypeForDecl() );
+// 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
+// 				// do semantics checking
+// 				checkSemanticErrors(type);
+// 			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
+// 				LambdaExprPtr&& expr = dynamic_pointer_cast<const LambdaExpr>(convFactory.convertFunctionDecl(fd));
+// 				assert(expr);
+// 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(expr) + '\"' );
+// 				// do semantics checking
+// 				checkSemanticErrors(expr);
+// 			}
+// 		}
+// 	}
 }

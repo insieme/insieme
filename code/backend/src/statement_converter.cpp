@@ -49,6 +49,7 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -274,7 +275,7 @@ namespace backend {
 	c_ast::NodePtr StmtConverter::visitVariable(const core::VariablePtr& ptr, ConversionContext& context) {
 		// just look up variable within variable manager and return variable token ...
 		const VariableInfo& info = context.getVariableManager().getInfo(ptr);
-		return (info.location == VariableInfo::DIRECT)?c_ast::ref(info.var):info.var;
+		return (info.location == VariableInfo::DIRECT && !core::analysis::isRefOf(ptr->getType(), core::NT_ArrayType))?c_ast::ref(info.var):info.var;
 	}
 
 	c_ast::NodePtr StmtConverter::visitVectorExpr(const core::VectorExprPtr& ptr, ConversionContext& context) {
@@ -378,43 +379,79 @@ namespace backend {
 		return convertExpression(context, initValue);
 	}
 
+	namespace {
+		bool isSimple(const core::ExpressionPtr& exp) {
+			try {
+				core::arithmetic::Formula form = core::arithmetic::toFormula(exp);
+				if(form.isConstant() || form.isValue()) return true;
+			} catch(core::arithmetic::NotAFormulaException e) { }
+			return false;
+		}
+	}
+
+
 	c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, ConversionContext& context) {
 
 		auto manager = converter.getCNodeManager();
 
 		VariableManager& varManager = context.getVariableManager();
-		auto var_iter = ptr->getIterator();
-
-		// create variable storing end and step
 		core::IRBuilder builder(ptr->getNodeManager());
-		auto var_end = builder.variable(ptr->getIterator()->getType());
-		auto var_step = builder.variable(ptr->getIterator()->getType());
+		auto var_iter = ptr->getIterator();
 
 		// get induction variable info
 		const VariableInfo& info_iter = varManager.addInfo(converter, var_iter, VariableInfo::NONE);
-		const VariableInfo& info_end  = varManager.addInfo(converter, var_end, VariableInfo::NONE);
-		const VariableInfo& info_step = varManager.addInfo(converter, var_step, VariableInfo::NONE);
-
 		// add dependency to iterator type definition
 		context.getDependencies().insert(info_iter.typeInfo->definition);
 
-		// create init, check, step and body
-		c_ast::VarDeclPtr init = manager->create<c_ast::VarDecl>(toVector(
-				std::make_pair(info_iter.var, convertExpression(context, ptr->getStart())),
-				std::make_pair(info_end.var,  convertExpression(context, ptr->getEnd())),
-				std::make_pair(info_step.var, convertExpression(context, ptr->getStep()))
-		));
-		c_ast::ExpressionPtr check = c_ast::lt(info_iter.var, info_end.var);
-		c_ast::ExpressionPtr step = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, info_step.var);
-		c_ast::StatementPtr body = convertStmt(context, ptr->getBody());
+		auto initVector = toVector(std::make_pair(info_iter.var, convertExpression(context, ptr->getStart())));
+		
+		// Process:
+		// For both "end" and "step" expressions:
+		// - if simple: use directly
+		// - if not: build variables to store results
+		
+		// handle step
+		core::ExpressionPtr step = ptr->getStep();
+		c_ast::ExpressionPtr cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, convertExpression(context, step));
+		core::VariablePtr var_step;
+		if(!isSimple(step)) {
+			// create variable storing step
+			var_step = builder.variable(ptr->getIterator()->getType());
+			const VariableInfo& info_step = varManager.addInfo(converter, var_step, VariableInfo::NONE);
+			initVector.push_back(std::make_pair(info_step.var, convertExpression(context, step)));
+			cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, info_step.var);
+		} 
+		else { // use pre(inc/dec) if abs(step) == 1
+			core::arithmetic::Formula form = core::arithmetic::toFormula(step);
+			if(form.isConstant()) {
+				if(form.isOne()) cStep = c_ast::preInc(info_iter.var);
+				if((-form).isOne()) cStep = c_ast::preDec(info_iter.var);
+			}
+		}
+
+		// handle end
+		core::ExpressionPtr end = ptr->getEnd();
+		c_ast::ExpressionPtr cCheck = c_ast::lt(info_iter.var, convertExpression(context, end));
+		core::VariablePtr var_end;
+		if(!isSimple(end)) {
+			// create variable storing end
+			var_end = builder.variable(ptr->getIterator()->getType());
+			const VariableInfo& info_end  = varManager.addInfo(converter, var_end, VariableInfo::NONE);
+			initVector.push_back(std::make_pair(info_end.var, convertExpression(context, end)));
+			cCheck = c_ast::lt(info_iter.var, info_end.var);
+		}
+
+		// create init and body
+		c_ast::VarDeclPtr cInit = manager->create<c_ast::VarDecl>(initVector);
+		c_ast::StatementPtr cBody = convertStmt(context, ptr->getBody());
 
 		// remove variable info since no longer in scope
 		varManager.remInfo(var_iter);
-		varManager.remInfo(var_end);
-		varManager.remInfo(var_step);
+		if(var_step) varManager.remInfo(var_step);
+		if(var_end) varManager.remInfo(var_end);
 
 		// combine all into a for
-		return manager->create<c_ast::For>(init, check, step, body);
+		return manager->create<c_ast::For>(cInit, cCheck, cStep, cBody);
 	}
 
 	c_ast::NodePtr StmtConverter::visitIfStmt(const core::IfStmtPtr& ptr, ConversionContext& context) {

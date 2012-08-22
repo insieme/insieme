@@ -67,7 +67,7 @@ typedef struct _irt_wi_scheduling_data irt_wi_scheduling_data;
  * and/or splitting them) as well as checking the process-wide event queue
  * from time to time.
  */
-int irt_scheduling_iteration(irt_worker* self);
+inline int irt_scheduling_iteration(irt_worker* self);
 
 /* The scheduling loop which repeatedly runs scheduling iterations.
  * Should take care not to cause too much overhead when there is nothing

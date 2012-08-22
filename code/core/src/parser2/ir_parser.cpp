@@ -41,6 +41,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/parser2/parser.h"
+#include "insieme/core/transform/manipulation.h"
 
 namespace insieme {
 namespace core {
@@ -96,7 +97,10 @@ namespace parser {
 					parenthese.push_back(info.getClosingParenthese(*cur));
 				}
 				if (info.isRightParenthese(*cur)) {
-					assert(!parenthese.empty() && parenthese.back() == *cur);
+					// if this is not matching => return end (no next token)
+					if (parenthese.empty() || parenthese.back() != *cur) {
+						return end;
+					}
 					parenthese.pop_back();
 				}
 				if (!parenthese.empty()) {
@@ -145,6 +149,50 @@ namespace parser {
 			return false;
 		}
 
+		bool isBind(Context& context, const TokenIter& begin, const TokenIter& end) {
+
+			// it has to start with (, then some types and after the first ) a = and a >
+			if (*begin != '(') return false;
+
+			TokenIter cur = findNext(context.grammar.getTermInfo(), begin, end, ')');
+			if (cur == end) return false;
+			++cur;
+			if (cur == end || *cur != '=') return false;
+			++cur;
+			if (cur == end || *cur != '>') return false;
+
+			// yes, it should be a bind
+			return true;
+		}
+
+		bool isFunction(Context& context, const TokenIter& begin, const TokenIter& end) {
+
+			// it has to start with (, then some types and after the first ) a - and a >
+			// also the definition has to end with } or ;
+			if (*begin != '(') return false;
+
+			// it has to have a minimal size
+			if (std::distance(begin, end) < 6u) return false;
+
+			// check end
+			if (*(end-1) != '}' && *(end-1) != ';') return false;
+
+			TokenIter cur = findNext(context.grammar.getTermInfo(), begin, end, ')');
+			if (cur == end) return false;
+			++cur;
+			if (cur == end || *cur != '-') return false;
+			++cur;
+			if (cur == end || *cur != '>') return false;
+
+			// yes, it should be a function
+			return true;
+
+		}
+
+		bool allFunctions(Context& cur, const vector<TokenRange>& definitions) {
+			return all(definitions, [&](const TokenRange& range) { return isFunction(cur, range.begin(), range.end()); });
+		}
+
 		bool containsOneOf(const NodePtr& root, const vector<NodePtr>& values) {
 			return visitDepthFirstOnceInterruptible(root, [&](const NodePtr& cur) {
 				return contains(values, cur);
@@ -166,7 +214,7 @@ namespace parser {
 			// process parameters
 			TypeList params;
 			for(const TokenRange& param : split(info, params_block, ',')) {
-				// type is one less from the end - by skipping the identifier
+				// type is one less from the end - by skipping the id
 				TokenRange typeRange = param - 1;
 
 				// parse type
@@ -310,6 +358,11 @@ namespace parser {
 					// check whether number of names and number of definitions are matching
 					if (names.size() != defs.size()) { return; }
 
+					// test whether it is a bind on the right-hand-side
+					if (names.size() == 1u && isBind(cur, defs.front().begin(), defs.front().end())) {
+						return;		// no name-binding required
+					}
+
 					// determine whether definitions are functions or recursive types
 					if (isType(cur, defs.front().begin(), defs.front().end())) {
 						// define type variables and be done
@@ -322,8 +375,7 @@ namespace parser {
 
 					// those are expressions => test whether it is function declaration
 					// Observation: no non-function expressions ends with a } or a ;
-					const Token& tail = *(defs.front().end()-1);
-					if (tail == '}' || tail == ';') {
+					if (allFunctions(cur, defs)) {
 						// bind names to variables with types matching the corresponding definitions
 						for(std::size_t i = 0; i < names.size(); ++i) {
 							cur.getSymbolManager().add(names[i], cur.variable(getFunctionType(cur, defs[i])));
@@ -338,7 +390,7 @@ namespace parser {
 
 			auto E = rec("E");
 			auto T = rec("T");
-			auto id = cap(identifier);
+			auto id = cap(identifier());
 
 			auto names = std::make_shared<Action<declare_names>>(seq(id, loop(seq(",",id))));
 			auto values = seq(E, loop(seq(",", E))) | seq(T, loop(seq(",", T)));
@@ -371,6 +423,7 @@ namespace parser {
 			auto N = rec("N");
 			auto A = rec("A");
 
+			auto id = identifier();
 
 			Grammar g(start);
 
@@ -397,7 +450,7 @@ namespace parser {
 			));
 
 			g.addRule("P", rule(
-					seq("#", identifier),
+					seq("#", id),
 					[](Context& cur)->NodePtr {
 						const string& name = *(cur.end - 1);
 						if (name.size() != 1u) return fail(cur, "int-type-parameter variable name must not be longer than a single character");
@@ -410,7 +463,7 @@ namespace parser {
 
 			// add type variables
 			g.addRule("T", rule(
-					seq("'", identifier),
+					seq("'", id),
 					[](Context& cur)->NodePtr {
 						const string& name = *(cur.end - 1);
 						return cur.typeVariable(name);
@@ -419,7 +472,7 @@ namespace parser {
 
 			// add generic type
 			g.addRule("T", rule(
-					seq(identifier, opt(seq("<", list(P|T, ","), ">"))),
+					seq(id, opt(seq("<", list(P|T, ","), ">"))),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 
@@ -498,7 +551,7 @@ namespace parser {
 				}
 			};
 
-			static const auto member = std::make_shared<Action<process_named_type>>(seq(T, cap(identifier)));
+			static const auto member = std::make_shared<Action<process_named_type>>(seq(T, cap(id)));
 
 			g.addRule("T", rule(
 					seq("struct {", loop(seq(member, ";")), "}"),
@@ -559,7 +612,7 @@ namespace parser {
 
 			// add named types
 			g.addRule("T", rule(
-					cap(identifier),
+					cap(id),
 					[](Context& cur)->NodePtr {
 						// simply lookup name within variable manager
 						auto res = cur.getSymbolManager().lookup(cur.getSubRange(0));
@@ -636,7 +689,7 @@ namespace parser {
 					}
 			));
 
-			// add usere defined literals
+			// add user defined literals
 			g.addRule("E", rule(
 					seq("lit(", cap(any(Token::String_Literal)), ":", T, ")"),
 					[](Context& cur)->NodePtr {
@@ -647,8 +700,52 @@ namespace parser {
 					}
 			));
 
+			// type literals
+			g.addRule("E", rule(
+					seq("lit(", T, ")"),
+					[](Context& cur)->NodePtr {
+						// just create corresponding type literal
+						return cur.getTypeLiteral(cur.getTerm(0).as<TypePtr>());
+					}
+			));
+
+			// add lang-basic literals
+			g.addRule("E", rule(
+					seq(id, opt(seq(".", list(id, ".")))),
+					[](Context& cur)->NodePtr {
+						// join matched token range and see whether it is a literal!
+						std::stringstream name;
+						name << join("", cur.begin, cur.end, [](std::ostream& out, const Token& cur) {
+							out << cur.getLexeme();
+						});
+
+						// exclude special built-in literal print (with variable argument list)
+						string builtInName = name.str();
+						if (builtInName == "print") {
+							return fail(cur, "Print literal can not be referenced directly - use statement instead!");
+						}
+
+						// look up literal within lang-basic
+						try {
+							return cur.getLangBasic().getBuiltIn(builtInName);
+						} catch (const lang::LiteralNotFoundException& lnfe) {
+							return fail(cur, "Unknown lang-basic literal!");
+						}
+					}
+			));
+
 
 			// --------------- add expression rules ---------------
+
+			// -- unary minus --
+
+			g.addRule("E", rule(
+				seq("-", E),
+				[](Context& cur)->NodePtr {
+					ExpressionPtr a = getOperand(cur, 0);
+					return cur.minus(a);
+				}
+			));
 
 			// -- arithmetic expressions --
 
@@ -700,6 +797,38 @@ namespace parser {
 						return cur.mod(a,b);
 					},
 					-13
+			));
+
+			// -- bitwise arithmetic expressions --
+					
+			g.addRule("E", rule(
+					seq(E, "&", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.bitwiseAnd(a,b);
+					},
+					-8
+			));
+
+			g.addRule("E", rule(
+					seq(E, "^", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.bitwiseXor(a,b);
+					},
+					-7
+			));
+
+			g.addRule("E", rule(
+					seq(E, "|", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.bitwiseOr(a,b);
+					},
+					-6
 			));
 
 			// -- logical expressions --
@@ -795,6 +924,17 @@ namespace parser {
 					-9
 			));
 
+			// -- cast --
+			g.addRule("E", rule(
+					seq("(", T, ")", E),
+					[](Context& cur)->NodePtr {
+						return cur.castExpr(
+								cur.getTerm(0).as<TypePtr>(),
+								cur.getTerm(1).as<ExpressionPtr>()
+						);
+					},
+					-14
+			));
 
 			// -- ref manipulations --
 
@@ -858,7 +998,7 @@ namespace parser {
 
 			// member access
 			g.addRule("E", rule(
-					seq(E, ".", cap(identifier)),
+					seq(E, ".", cap(id)),
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
 						if (a->getType()->getNodeType() == NT_RefType) {
@@ -875,7 +1015,7 @@ namespace parser {
 
 			// -- add Variable --
 			g.addRule("E", rule(
-					cap(identifier),
+					cap(id),
 					[](Context& cur)->NodePtr {
 						// simply lookup name within variable manager
 						NodePtr res = cur.getVarScopeManager().lookup(cur.getSubRange(0));
@@ -886,7 +1026,7 @@ namespace parser {
 			));
 
 			g.addRule("E", rule(
-					cap(identifier),
+					cap(id),
 					[](Context& cur)->NodePtr {
 						// simply lookup name within variable manager
 						auto res = cur.getSymbolManager().lookup(cur.getSubRange(0));
@@ -903,6 +1043,17 @@ namespace parser {
 						// get function
 						ExpressionPtr fun = terms.front().as<ExpressionPtr>();
 						terms.erase(terms.begin());
+
+						TypePtr type = fun->getType();
+						if (type->getNodeType()!=NT_FunctionType) {
+							return fail(cur, "Calling non-function type!");
+						}
+
+						FunctionTypePtr funType = type.as<FunctionTypePtr>();
+						if (funType->getParameterTypes().size() != terms.size()) {
+							return fail(cur, "Invalid number of arguments!");
+						}
+
 						return cur.callExpr(fun, convertList<ExpressionPtr>(terms));
 					}
 			));
@@ -923,7 +1074,7 @@ namespace parser {
 				}
 			};
 
-			static const auto param = std::make_shared<Action<register_param>>(seq(T, cap(identifier)));
+			static const auto param = std::make_shared<Action<register_param>>(seq(T, cap(id)));
 
 			// function expressions
 			g.addRule("E", rule(
@@ -939,6 +1090,40 @@ namespace parser {
 					}
 			));
 
+
+			// -- bind expression --
+			g.addRule("E", rule(
+					seq("(", list(param, ","), ")=>", E | S),
+					[](Context& cur)->NodePtr {
+						// construct
+						NodeList terms = cur.getTerms();
+						StatementPtr stmt = terms.back().as<StatementPtr>();
+						terms.pop_back();		// drop body expression
+
+						// derive call expression
+						CallExprPtr call;
+						if (stmt->getNodeType() == NT_CallExpr) {
+							call = stmt.as<CallExprPtr>();
+						} else if (stmt->getNodeCategory() == NC_Expression){
+							call = cur.id(stmt.as<ExpressionPtr>());
+						} else if (stmt->getNodeCategory() == NC_Statement) {
+							// try outlining the statement
+							if (transform::isOutlineAble(stmt)) {
+								call = transform::outline(cur.getNodeManager(), stmt);
+							}
+						}
+
+						// check whether call-conversion was successful
+						if (!call) {
+							return fail(cur, "Not an outline-able context!");
+						}
+
+						// build bind expression
+						return cur.bindExpr(convertList<VariablePtr>(terms), call);
+					}
+			));
+
+
 			// --------------- add statement rules ---------------
 
 			// every expression is a statement (if terminated by ;)
@@ -949,7 +1134,7 @@ namespace parser {
 
 			// declaration statement
 			g.addRule("S", rule(
-					seq(T, cap(identifier), " = ", E, ";"),
+					seq(T, cap(id), " = ", E, ";"),
 					[](Context& cur)->NodePtr {
 						TypePtr type = cur.getTerm(0).as<TypePtr>();
 						ExpressionPtr value = cur.getTerm(1).as<ExpressionPtr>();
@@ -962,7 +1147,7 @@ namespace parser {
 
 			// declaration statement
 			g.addRule("S", rule(
-					seq(T, cap(identifier), ";"),
+					seq(T, cap(id), ";"),
 					[](Context& cur)->NodePtr {
 						IRBuilder builder(cur.manager);
 						TypePtr type = cur.getTerm(0).as<TypePtr>();
@@ -976,7 +1161,7 @@ namespace parser {
 
 			// auto-declaration statement
 			g.addRule("S", rule(
-					seq("auto", cap(identifier), " = ", E, ";"),
+					seq("auto", cap(id), " = ", E, ";"),
 					[](Context& cur)->NodePtr {
 						ExpressionPtr value = cur.getTerm(0).as<ExpressionPtr>();
 						auto decl = cur.declarationStmt(value->getType(), value);
@@ -1055,7 +1240,7 @@ namespace parser {
 				}
 			};
 
-			static const auto iter = std::make_shared<Action<register_var>>(seq(T, cap(identifier)));
+			static const auto iter = std::make_shared<Action<register_var>>(seq(T, cap(id)));
 
 			// for loop without step size
 			g.addRule("S", rule(
@@ -1163,57 +1348,60 @@ namespace parser {
 //			std::cout << g << "\n\n";
 //			std::cout << g.getTermInfo() << "\n";
 
+			// initialize term information
+			g.getTermInfo();
+
 			return g;
 		}
 
 	}
 
+	// The various IR Grammer derivations	(initialized globals to avoid race conditions)
+	const Grammar grammar_full 		= buildGrammar();
+	const Grammar grammar_types		= buildGrammar("T");
+	const Grammar grammar_exprs		= buildGrammar("E");
+	const Grammar grammar_stmts		= buildGrammar("S");
+	const Grammar grammar_prog		= buildGrammar("A");
 
-
-	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow) {
-		static const Grammar inspire = buildGrammar();
+	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		try {
-			return inspire.match(manager, code, onFailThrow);
+			return grammar_full.match(manager, code, onFailThrow, definitions);
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}
 		return NodePtr();
 	}
 
-	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow) {
-		static const Grammar g = buildGrammar("T");
+	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		try {
-			return g.match(manager, code, onFailThrow).as<TypePtr>();
+			return grammar_types.match(manager, code, onFailThrow, definitions).as<TypePtr>();
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}
 		return TypePtr();
 	}
 
-	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow) {
-		static const Grammar g = buildGrammar("E");
+	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		try {
-			return g.match(manager, code, onFailThrow).as<ExpressionPtr>();
+			return grammar_exprs.match(manager, code, onFailThrow, definitions).as<ExpressionPtr>();
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}
 		return ExpressionPtr();
 	}
 
-	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow) {
-		static const Grammar g = buildGrammar("S");
+	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		try {
-			return g.match(manager, code, onFailThrow).as<StatementPtr>();
+			return grammar_stmts.match(manager, code, onFailThrow, definitions).as<StatementPtr>();
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}
 		return StatementPtr();
 	}
 
-	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow) {
-		static const Grammar g = buildGrammar("A");
+	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		try {
-			return g.match(manager, code, onFailThrow).as<ProgramPtr>();
+			return grammar_prog.match(manager, code, onFailThrow, definitions).as<ProgramPtr>();
 		} catch (const ParseException& pe) {
 			throw IRParserException(pe.what());
 		}

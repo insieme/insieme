@@ -1,0 +1,7 @@
+# numSources, x, y, scale, dt, friction, height, abortVelocity, minSteps, maxSteps
+4, 60, 60, 800.0, 0.01, 0.01, 0.3, 0.01, 400, 100000
+# type ("Linear" or "Magnet"), pos_x, pos_y, mult, size
+Linear, 0, 0, 0.01, 0.02
+Magnet, 1, 0, 0.08, 0.02
+Magnet, -0.5, +0.866025404, 0.08, 0.02
+Magnet, -0.5, -0.866025404, 0.08, 0.02

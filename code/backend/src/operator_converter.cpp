@@ -203,12 +203,22 @@ namespace backend {
 		res[basic.getCharLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 
+		// -- references --
+
+		res[basic.getRefEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRefNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRefGe()] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRefGt()] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRefLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRefLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+//		res[basic.getRefSub()] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
 		// -- volatile --
 
 		res[basic.getVolatileMake()] = OP_CONVERTER({ return CONVERT_ARG(0); });
 		res[basic.getVolatileRead()] = OP_CONVERTER({ return CONVERT_ARG(0); });
 		
-		res[basic.getFlush()] = OP_CONVERTER({ return c_ast::call(C_NODE_MANAGER->create("IRT_FLUSH"), CONVERT_ARG(0)); });
 
 		// -- references --
 
@@ -255,6 +265,8 @@ namespace backend {
 				return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, c_ast::lit(valueTypeInfo.rValueType, "0")));
 			}
 
+
+
 			auto res = CONVERT_EXPR(initValue);
 			if (res->getNodeType() == c_ast::NT_Initializer) {
 				return c_ast::ref(res);
@@ -278,8 +290,11 @@ namespace backend {
 
 			// special handling for arrays
 			if (core::analysis::isCallOf(ARG(0), LANG_BASIC.getArrayCreate1D())) {
-				// ref new can be skipped
-				return CONVERT_ARG(0);
+				// array-init is allocating data on stack using alloca => switch to malloc
+				ADD_HEADER_FOR("malloc");
+
+				auto res = CONVERT_ARG(0);
+				return c_ast::call(C_NODE_MANAGER->create("malloc"), static_pointer_cast<const c_ast::Call>(res)->arguments[0]);
 			}
 
 			// use a call to the ref_new operator of the ref type
@@ -366,13 +381,52 @@ namespace backend {
 
 		res[basic.getArrayCreate1D()] = OP_CONVERTER({
 			// type of Operator: (type<'elem>, uint<8>) -> array<'elem,1>
-			// create new array on the heap using malloc
-			ADD_HEADER_FOR("malloc");
+			// create new array on the heap using alloca
+			ADD_HEADER_FOR("alloca");
 
 			const core::ArrayTypePtr& resType = static_pointer_cast<const core::ArrayType>(call->getType());
 			c_ast::ExpressionPtr size = c_ast::mul(c_ast::sizeOf(CONVERT_TYPE(resType->getElementType())), CONVERT_ARG(1));
-			return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
+			return c_ast::call(C_NODE_MANAGER->create("alloca"), size);
 		});
+
+		#define ADD_ELEMENT_TYPE_DEPENDENCY() \
+				core::TypePtr elementType = core::analysis::getReferencedType(call->getType()); \
+				elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); \
+				const TypeInfo& info = GET_TYPE_INFO(elementType); \
+				context.getDependencies().insert(info.definition);
+
+		res[basic.getArrayView()] = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1));
+		});
+
+		res[basic.getArrayViewPreInc()]  = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::preInc(getAssignmentTarget(context, ARG(0)));
+		});
+
+		res[basic.getArrayViewPostInc()] = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::postInc(getAssignmentTarget(context, ARG(0)));
+		});
+
+		res[basic.getArrayViewPreDec()]  = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::preDec(getAssignmentTarget(context, ARG(0)));
+		});
+
+		res[basic.getArrayViewPostDec()] = OP_CONVERTER({
+			// add dependency to element type definition
+			ADD_ELEMENT_TYPE_DEPENDENCY();
+			return c_ast::postDec(getAssignmentTarget(context, ARG(0)));
+		});
+
+
+		#undef ADD_ELEMENT_TYPE_DEPENDENCY
 
 
 		// -- vectors --
@@ -536,12 +590,6 @@ namespace backend {
 
 
 		// -- pointer --
-
-		res[basic.getPtrEq()] = OP_CONVERTER({
-			// Operator Type:  (array<'a,1>, array<'a,1>) -> bool
-			// generated code: X == Y
-			return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1));
-		});
 
 		res[basic.getGetNull()] = OP_CONVERTER({
 			// Operator Type:  (type<'a>) -> array<'a,1>

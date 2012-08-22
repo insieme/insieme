@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	createConnectionMatrix(con, nIn, TrainCmdOptions::NumHidden, nOut, true, true, true);
+	createConnectionMatrix(con, nIn, TrainCmdOptions::NumHidden, nOut, true, false, false);
 	// declare Machine
 	MyFFNet net = MyFFNet(nIn, nOut, con);
 	net.initWeights(TrainCmdOptions::Init * -1.0, TrainCmdOptions::Init);

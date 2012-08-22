@@ -64,11 +64,14 @@ namespace ml {
 
 
 // early stopping parameters
-#define GL 120.0
+/*#define GL 120.0
 #define TP 0.05
 #define PQ 150.0
-#define UP 50
-
+#define UP 50*/
+#define GL 120.0 // 120 -> 3620+
+#define TP 0.01 // 0.05 -> 1024; 0.01 -> 3660 +; 0.005 -> 5000+
+#define PQ 1000.0 // 15 -> 1880; 500 -> 3574; 1000 -> 3622; 1500 -> 5000+
+#define UP 50 // 50 -> 5000+; 5 -> 600
 
 namespace {
 /*
@@ -360,7 +363,8 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 	EarlyStopping estop(striplen);//, worsen(1);
 	double trainErr = 0, valErr = 0;
 
-	for(int epoch = 0; epoch < 1000; ++epoch) {
+	int epoch = 0;
+	for(; epoch < 10000; ++epoch) {
 		// permute training data
 		std::random_shuffle(trainIndices.begin(), trainIndices.end());
 		trainErr = 0;
@@ -392,6 +396,10 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 			LOG(INFO) << "Early stopping after " << epoch << " iterations\n";
 			break;
 		}
+	}
+
+	if(epoch == 10000) {
+		LOG(INFO) << "Unstopped!\n";
 	}
 
 	LOG(INFO) << "Train error " << trainErr << std::endl;
@@ -631,7 +639,7 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 		genDefaultQuery();
 
 	// read the maximum of the column in measurement for which to train
-	double max, min;
+	double max = 0.0, min = 0.0;
 	if(genOut != GenNNoutput::ML_KEEP_INT)
 		max = getMaximum(trainForName), min = getMinimum(trainForName);
 
@@ -710,7 +718,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		Array<double> in, target;
 		Array<double> out(model.getOutputDimension());
 
-		readDatabase(in, target);
+		size_t nRows = readDatabase(in, target);
 
 		// do the actual training
 		optimizer.init(model.getModel());
@@ -732,8 +740,8 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 			error = errFct.error(model.getModel(), in, target);
 		}
 		else
-			error = this->earlyStopping(optimizer, errFct, in, target, 10);
-//			error = this->myEarlyStopping(optimizer, errFct, in, target, 10, std::max(static_cast<size_t>(1),nRows/1000));
+//			error = this->earlyStopping(optimizer, errFct, in, target, 10);
+			error = this->myEarlyStopping(optimizer, errFct, in, target, 10, std::max(static_cast<size_t>(1),nRows/1000));
 
 		size_t misClass = 0;
 		for(size_t i = 0; i < in.dim(0); ++i ) {
@@ -855,7 +863,7 @@ size_t Trainer::loadModel(const std::string& filename, const std::string& path){
 
 	featureNormalization.resize(0,0,false);
 	std::string line, buf;
-	size_t numF;
+	size_t numF = 0;
 
 	// read parameters from ssv, one line for each feature in forom: avgerage, min, max
 	while(getline(fnp, line)) {

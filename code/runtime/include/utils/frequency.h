@@ -66,12 +66,12 @@ int irt_cpu_freq_get_available_frequencies_core(irt_worker* worker, unsigned int
 	FILE* file = fopen(path_to_cpufreq, "r");
 
 	if(file == NULL) {
-		IRT_DEBUG("Instrumentation: Unable to open frequency file for reading for worker %lu, file %s, reason: %s\n", worker->id.value.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to open frequency file for reading for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
 		return -2;
 	}
 
 	if(fscanf(file, "%u", &frequencies_temp[0]) != 1) {
-		IRT_DEBUG("Instrumentation: Unable to read available frequencies for worker %lu, file %s, reason: %s\n", worker->id.value.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to read available frequencies for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
 		fclose(file);
 		return -1;
 	}
@@ -98,12 +98,12 @@ int _irt_cpu_freq_write(const char* path_to_cpufreq, const unsigned int frequenc
 	FILE* file = fopen(path_to_cpufreq, "w");
 
 	if(file == NULL) {
-		IRT_DEBUG("Instrumentation: Unable to open frequency file for worker %lu, file %s, reason: %s\n", worker->id.value.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to open frequency file for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
 		return -2;
 	}
 
 	if((retval = fprintf(file, "%u\n", frequency) < 1)) {
-		IRT_DEBUG("Instrumentation: Unable to write frequency for worker %lu, file %s, reason: %s\n", worker->id.value.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to write frequency for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
 		fclose(file);
 		return -1;
 	}
@@ -125,12 +125,12 @@ int _irt_cpu_freq_read(const char* path_to_cpufreq) {
 	FILE* file = fopen(path_to_cpufreq, "r");
 
 	if(file == NULL) {
-		IRT_DEBUG("Instrumentation: Unable to open frequency file for writing for worker %lu, file %s, reason: %s\n", worker->id.value.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to open frequency file for writing for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
 		return -2;
 	}
 
 	if((retval = fscanf(file, "%u", &temp)) < 1) {
-		IRT_DEBUG("Instrumentation: Unable to read frequency for worker %lu, file %s, reason: %s\n", worker->id.value.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to read frequency for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
 		fclose(file);
 		return -1;
 	}

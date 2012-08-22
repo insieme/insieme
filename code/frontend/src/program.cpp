@@ -221,8 +221,8 @@ TranslationUnit& Program::createEmptyTranslationUnit() {
 
 const Program::TranslationUnitSet& Program::getTranslationUnits() const { return pimpl->tranUnits; }
 
-clang::idx::Program& Program::getClangProgram() { return pimpl->mProg; }
-clang::idx::Indexer& Program::getClangIndexer() { return pimpl->mIdx; }
+clang::idx::Program& Program::getClangProgram() const { return pimpl->mProg; }
+clang::idx::Indexer& Program::getClangIndexer() const { return pimpl->mIdx; }
 
 void Program::dumpCallGraph() const { pimpl->mCallGraph.dump(); }
 

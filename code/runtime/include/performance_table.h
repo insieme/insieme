@@ -97,14 +97,19 @@ typedef struct _irt_region_list {
 
 typedef struct _irt_instrumentation_event_data {
 	uint64 timestamp;
-	int32 event;
-	uint64 subject_id;
+	union {
+		struct {
+			uint16 event_id;
+			uint16 thread;
+			uint32 index;
+		};
+		uint64 identification;
+	};
 } irt_instrumentation_event_data;
 
 typedef struct _irt_instrumentation_event_data_table {
 	uint32 size;
 	uint32 number_of_elements;
-	uint32 blocksize;
 	irt_instrumentation_event_data* data;
 } irt_instrumentation_event_data_table;
 
@@ -123,7 +128,6 @@ typedef struct _irt_instrumentation_region_data {
 typedef struct _irt_instrumentation_region_data_table {
 	uint32 size;
 	uint32 number_of_elements;
-	uint32 blocksize;
 	irt_instrumentation_region_data* data;
 } irt_instrumentation_region_data_table;
 
@@ -137,7 +141,6 @@ typedef struct _irt_instrumentation_aggregated_data {
 typedef struct _irt_instrumentation_aggregated_data_table {
 	uint32 size;
 	uint32 number_of_elements;
-	uint32 blocksize;
 	irt_instrumentation_aggregated_data* data;
 } irt_instrumentation_aggregated_data_table;
 

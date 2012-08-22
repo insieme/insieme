@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/ir_node.h"
+#include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
 
 namespace insieme {
@@ -189,12 +189,24 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
  * whenever, the variable is passed to a function, the parameter will be eliminated.
  *
  * @param manager the manager to be used to create and maintain nodes which might have to be created
- * @param statement the statement within which the given variable should be fixed
+ * @param node the code fragment within which the given variable should be fixed
  * @param var the variable to be fixed
  * @param value the value to be used instead of the variable
  */
-StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, const VariablePtr& var, const ExpressionPtr& value);
+NodePtr fixVariable(NodeManager& manager, const NodePtr& node, const VariablePtr& var, const ExpressionPtr& value);
 
+/**
+ * A generic version of the fixVariable function declared above.
+ * 
+ * @param manager the manager to be used to create and maintain nodes which might have to be created
+ * @param node the code fragment within which the given variable should be fixed
+ * @param var the variable to be fixed
+ * @param value the value to be used instead of the variable
+ */
+template<typename T>
+Pointer<T> fixVariable(NodeManager& manager, const Pointer<T>& node, const VariablePtr& var, const ExpressionPtr& value) {
+	return fixVariable(manager, NodePtr(node), var, value).as<Pointer<T>>();
+}
 
 /**
  * Tries to inline the given function call into an expression. Hence, the result will be an equivalent
@@ -245,12 +257,18 @@ CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt);
  * variables accessed within the given expression as an argument. The call passing those parameters
  * to the generated lambda will be returned.
  *
- * @param manager the manager to be used to create and maintain ndoes wich might have to be created
+ * @param manager the manager to be used to create and maintain nodes which might have to be created
  * @param expr the expression to be outlined
  * @return a substitute evaluating the given expression being located within an outlined function
  */
 CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr);
 
+/** Inlines the evaluation of the given lazy expression.
+ ** 
+ ** @param manager the manager used to create new nodes
+ ** @param lazy the target lazy expression
+ ** @return the inlined expression equivalent to the lazy call (=inlineExpression(builder.call(lazy))
+ ** */
 ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy);
 
 /** Builds a lambda expression that can be called in place of [root].
@@ -345,6 +363,15 @@ Pointer<const T> trySequentialize(NodeManager& manager, const Pointer<const T>& 
 	NodePtr res = trySequentialize(manager, NodePtr(code));
 	return (res) ? res.as<Pointer<const T>>() : Pointer<const T>();
 }
+
+/**
+ * Removes superfluous lambda arguments.
+ *
+ * @param manager the manager used to create new nodes
+ * @param lambda to be fixed
+ * @return a fixed version of the lambda
+ */
+LambdaExprPtr correctRecursiveLambdaVariableUsage(NodeManager& manager, const LambdaExprPtr& lambda);
 
 } // end namespace transform
 } // end namespace core

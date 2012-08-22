@@ -67,10 +67,10 @@ namespace parser {
 		TypePtr testC = builder.genericType("test", toVector(A,testA), toVector(pA,pC));
 
 		// just some simple generic types
-//		EXPECT_EQ(test, parse(manager, "test"));
-//
-//		// some type with parameters
-//		EXPECT_EQ(test, parse(manager, "test<>"));
+		EXPECT_EQ(test, parse(manager, "test"));
+
+		// some type with parameters
+		EXPECT_EQ(test, parse(manager, "test<>"));
 		EXPECT_EQ(testA, parse(manager, "test<A>"));
 		EXPECT_EQ(test2A, parse(manager, "test<test<A>>"));
 
@@ -293,7 +293,6 @@ namespace parser {
 				parse(manager, "1+2+3")
 		);
 
-
 		// known bug: same precedence, different operator
 //		EXPECT_EQ(
 //				builder.sub(builder.add(one, two), tre),
@@ -306,6 +305,28 @@ namespace parser {
 //				builder.mul(one,one),
 //				parse(manager, "2*0.5")
 //		);
+		
+		// bitwise
+		EXPECT_EQ(
+				builder.bitwiseAnd(one, two),
+				parse(manager, "1 & 2")
+		);
+
+		EXPECT_EQ(
+				builder.bitwiseOr(one, two),
+				parse(manager, "1 | 2")
+		);
+
+		EXPECT_EQ(
+				builder.bitwiseXor(one, two),
+				parse(manager, "1 ^ 2")
+		);
+
+		// bitwise precedence
+		EXPECT_EQ(
+				builder.bitwiseOr(builder.bitwiseAnd(one, tre), builder.bitwiseAnd(one, two)),
+				parse(manager, "1 & 3 | 1 & 2")
+		);
 	}
 
 	TEST(IR_Parser2, ForStatement) {
@@ -364,6 +385,11 @@ namespace parser {
 		// add call
 		EXPECT_EQ("AP({rec v3.{v3=fun(int<4> v1, int<4> v2) {return v1;}}(12, 14);})",
 				toString(parse(manager, "{ (int<4> a, int<4> b)->int<4> { return a; }(12,14); }"))
+		);
+
+		// add call to empty function
+		EXPECT_EQ("AP({rec v4.{v4=fun() {return 3;}}();})",
+				toString(parse(manager, "{ ()->int<4> { return 3; } (); }", true))
 		);
 
 	}
@@ -505,9 +531,90 @@ namespace parser {
 		TypePtr fun = parse_type(manager, "(ref<'a>)->'a");
 		ASSERT_TRUE(fun);
 
-		// test whether a listeral can be parsed successfully
+		// test whether a literal can be parsed successfully
 		EXPECT_EQ(builder.literal(fun, "test"), parse_expr(manager, "lit(\"test\":(ref<'a>)->'a)"));
 		EXPECT_EQ(builder.literal(fun, "test.more"), parse_expr(manager, "lit(\"test.more\":(ref<'a>)->'a)"));
+
+		// test type literal
+		TypePtr type = builder.getLangBasic().getInt4();
+		EXPECT_EQ(builder.getTypeLiteral(type), parse_expr(manager, "lit(int<4>)"));
+	}
+
+	TEST(IR_Parser2, PreDefinedSymbols) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		ExpressionPtr one = builder.intLit(1);
+		ExpressionPtr two = builder.intLit(2);
+		ExpressionPtr x = builder.variable(builder.getLangBasic().getInt4());
+
+		std::map<string, NodePtr> symbols;
+		symbols["one"] = one;
+		symbols["two"] = two;
+		symbols["x"] = x;
+
+		// test whether symbols are found
+		EXPECT_EQ(builder.add(one, builder.mul(two, x)), parse(manager, "one + two * x", false, symbols));
+
+		// test builder support
+		EXPECT_EQ(builder.add(one, builder.mul(two, x)), builder.parse("one + two * x", symbols));
+	}
+
+	TEST(IR_Parser2, LangBasicSymbols) {
+		NodeManager manager;
+		auto& basic = manager.getLangBasic();
+
+		// test some pre-defined expressions
+		EXPECT_EQ(basic.getSignedIntAdd(), parse_expr(manager, "int.add"));
+		EXPECT_EQ(basic.getRefNarrow(), parse_expr(manager, "ref.narrow"));
+	}
+
+	TEST(IR_Parser2, UnaryMinus) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		EXPECT_EQ(builder.intLit(-5), parse_expr(manager, "-5"));
+		EXPECT_EQ(builder.intLit(2), parse_expr(manager, "-(-2)"));
+
+		EXPECT_EQ("AP(int.add(2, int.sub(0, int.add(1, 2))))", toString(parse_expr(manager, "2 + -(1 + 2)")));
+	}
+
+	TEST(IR_Parser2, Bind) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// test a direct call
+		EXPECT_EQ("AP({int<4> v5 = 7; bind(v9){rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}}(v9, v5)}(5);})",
+			toString(builder.parse(
+				"{"
+				"	let int = int<4>;"
+				"	let sum = (int a, int b)->int { return a + b; };"
+				"	auto x = 7;"
+				" 	let pX = (int a)=>sum(a,x);"
+				"	pX(5);"
+				"}"
+		)));
+
+		// test returning a value
+		EXPECT_EQ("AP({bind(v10){rec v0.{v0=fun('a v1) {return v1;}}(5)}(2);})",
+			toString(builder.parse(
+				"{"
+				" 	let pX = (int<4> a)=>5;"
+				"	pX(2);"
+				"}"
+		)));
+
+		// test a statement
+		EXPECT_EQ("AP({ref<int<4>> v11 = ref.var(0); bind(v12){rec v15.{v15=fun(int<4> v13, ref<int<4>> v14) {ref.assign(v14, int.add(ref.deref(v14), v13));}}(v12, v11)}(5);})",
+			toString(builder.parse(
+				"{"
+				" 	ref<int<4>> x = var(0);"
+				"	let p = (int<4> a)=>{"
+				"		x = x + a;"
+				"	};"
+				"	p(5);"
+				"}"
+		)));
 
 	}
 
