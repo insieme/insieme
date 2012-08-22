@@ -29,7 +29,7 @@ back.gcc.flags: Conf([
 					Flag("-pipe"),
 					Flag("-I.")
 				])
-back.gcc: 		%(back.gcc.flags)s + Conf(Flag("-std=c99"))
+back.gcc: 		%(back.gcc.flags)s + Conf(Flag("-std=gnu99"))
 back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++0x")) 
 
 back.icc.flags: Conf(Flag('-I.'))
