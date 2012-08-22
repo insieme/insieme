@@ -55,7 +55,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz)
          ;
    }
 
-   return(s - src - 1);        /* count does not include NUL */
+   return(s - src - 1u);        /* count does not include NUL */
 }
 
 /***********************************************************************
@@ -126,8 +126,8 @@ char * get_seq(char *sname, int *len, char *chartab, FILE *fin)
    seq  = NULL;
 
    while (*line != '>' && fgets(line, MAXLINE+1, fin) != NULL );
-   for (i = 1; i <= strlen(line); i++) if (line[i] != ' ') break;
-   for (j = i; j <= strlen(line); j++) if (line[j] == ' ') break;
+   for (i = 1; i <= (int)strlen(line); i++) if (line[i] != ' ') break;
+   for (j = i; j <= (int)strlen(line); j++) if (line[j] == ' ') break;
 
    strlcpy(sname, line + i, j - i + 1);;
    sname[j - i] = EOS;
@@ -152,10 +152,10 @@ char * get_seq(char *sname, int *len, char *chartab, FILE *fin)
 int readseqs(char *filename)
 {
    int  i, l1, no_seqs;
-   FILE *fin;
+   FILE *fin = fopen(filename, "r");
    char *seq1, chartab[128];
-
-   if ((fin = fopen(filename, "r")) == NULL) {
+	
+   if (!fin) {
       bots_message("Could not open sequence file (%s)\n", filename);
       exit (-1);
    }
