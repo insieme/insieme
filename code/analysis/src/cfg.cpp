@@ -738,7 +738,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			newArgs.push_back( storeTemp(arg).second );
 		}
 		
-		LOG(INFO) << *callExpr->getFunctionExpr();
+		// LOG(INFO) << *callExpr->getFunctionExpr();
 		ExpressionPtr toAppendStmt = builder.callExpr(callExpr->getFunctionExpr(), newArgs);
 
 		if ( callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr ) {

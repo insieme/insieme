@@ -493,7 +493,6 @@ TEST(Access, EmptySubset) {
 	}
 }
 
-
 TEST(Access, StridedSubset) {
 	
 	NodeManager mgr;
@@ -527,19 +526,23 @@ TEST(Access, StridedSubset) {
 		EXPECT_TRUE(access1.getContext());
 		EXPECT_FALSE(access1.isContextDependent());
 		EXPECT_EQ(access1.getContext(), code);
-		EXPECT_EQ("((((-v1 + 4 >= 0) ^ (v1 + -2*v4 + -1 == 0)) ^ (v1 + -1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+		EXPECT_EQ("((((-v1 + 4 >= 0) ^ (v1 + -2*v4 + -1 == 0)) ^ (v1 + -1 >= 0)) ^ (-v1 + v4294967295 == 0))", 
+				toString(*access1.getAccessedRange()));
 
 		EXPECT_TRUE(access2.getContext());
 		EXPECT_FALSE(access2.isContextDependent());
 		EXPECT_EQ(access2.getContext(), code);
-		EXPECT_EQ("((((-v3 + 8 >= 0) ^ (v3 + -2*v5 + -1 == 0)) ^ (v3 + -1 >= 0)) ^ (-v3 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
+		EXPECT_EQ("((((-v3 + 8 >= 0) ^ (v3 + -2*v5 + -1 == 0)) ^ (v3 + -1 >= 0)) ^ (-v3 + v4294967295 + -1 == 0))", 
+				toString(*access2.getAccessedRange()));
 
 		auto ctx = polyhedral::makeCtx();
 		auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
 		auto set2 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access2.getAccessedRange()));
 
-		EXPECT_EQ("{ [v4294967295] : exists (e0 = [(-1 + v4294967295)/2]: 2e0 = -1 + v4294967295 and v4294967295 <= 3 and v4294967295 >= 1) }", toString(*set1));
-		EXPECT_EQ("{ [v4294967295] : exists (e0 = [(v4294967295)/2]: 2e0 = v4294967295 and v4294967295 <= 8 and v4294967295 >= 2) }", toString(*set2));
+		EXPECT_EQ("{ [v4294967295] : exists (e0 = [(-1 + v4294967295)/2]: 2e0 = -1 + v4294967295 and v4294967295 <= 3 and v4294967295 >= 1) }", 
+				toString(*set1));
+		EXPECT_EQ("{ [v4294967295] : exists (e0 = [(v4294967295)/2]: 2e0 = v4294967295 and v4294967295 <= 8 and v4294967295 >= 2) }", 
+				toString(*set2));
 
 		EXPECT_TRUE((set1 * set2)->empty());
 	}
