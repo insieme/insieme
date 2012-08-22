@@ -51,7 +51,7 @@
 
 #include "insieme/utils/map_utils.h"
 
-#include "insieme/analysis/alias_map.h"
+#include "insieme/analysis/tmp_var_map.h"
 
 namespace insieme {
 namespace analysis {
@@ -429,8 +429,8 @@ public:
 			);
 	}
 
-	inline const AliasMap& getAliasMap() const { return aliasMap; }
-	inline AliasMap& getAliasMap() { return aliasMap; }
+	inline const TmpVarMap& getTmpVarMap() const { return tmpVarMap; }
+	inline TmpVarMap& getTmpVarMap() { return tmpVarMap; }
 
 private:
 	ControlFlowGraph	graph;
@@ -442,7 +442,7 @@ private:
 	VertexTy			entry_block, exit_block;
 
 
-	AliasMap 			aliasMap;
+	TmpVarMap 			tmpVarMap;
 };
 
 namespace cfg {

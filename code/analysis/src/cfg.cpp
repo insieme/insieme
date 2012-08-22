@@ -348,7 +348,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		if (!builder.getLangBasic().isUnit(retStmt->getReturnExpr()->getType())) {
 
 			if (retVar) {
-				cfg->getAliasMap().storeAlias(retStmt->getReturnExpr(), retVar);
+				cfg->getTmpVarMap().storeTmpVar(retStmt->getReturnExpr(), retVar);
 			}
 
 			visit( retStmt->getReturnExpr() );
@@ -543,7 +543,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			 cur->getNodeType() == NT_VectorExpr ||
 			 cur->getNodeType() == NT_MarkerExpr) 
 		{
-			return {true, cfg->getAliasMap().createAliasFor(cur)};
+			return {true, cfg->getTmpVarMap().createTmpFor(cur)};
 		} 
 		return {false, cur.getAddressedNode()};
 	}
@@ -650,7 +650,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	// In the case the passed address needs to be saved in one of the predisposed temporary
 	// variables, this function will generate the corresponding declaration stmt
 	StatementPtr assignTemp(const ExpressionAddress& expr, const ExpressionPtr& currExpr) {
-		auto var = cfg->getAliasMap().lookupImmediateAlias(expr);
+		auto var = cfg->getTmpVarMap().lookupImmediateAlias(expr);
 		return var ? static_cast<StatementPtr>(builder.declarationStmt( var, currExpr )) : currExpr;
 	}
 
@@ -737,7 +737,8 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		for (const auto& arg : callExpr->getArguments()) {
 			newArgs.push_back( storeTemp(arg).second );
 		}
-
+		
+		LOG(INFO) << *callExpr->getFunctionExpr();
 		ExpressionPtr toAppendStmt = builder.callExpr(callExpr->getFunctionExpr(), newArgs);
 
 		if ( callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr ) {
@@ -779,7 +780,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			// lookup the retVar introduced for this lambdaexpr
 			auto retVar = std::get<0>(bounds);
 
-			if (auto tmpVar = cfg->getAliasMap().lookupImmediateAlias(callExpr)) {
+			if (auto tmpVar = cfg->getTmpVarMap().lookupImmediateAlias(callExpr)) {
 				ret->appendElement( cfg::Element(builder.declarationStmt( tmpVar, retVar ), callExpr) );
 			}
 

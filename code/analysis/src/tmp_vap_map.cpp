@@ -34,9 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/alias_map.h"
-#include "insieme/analysis/access.h"
+#include "insieme/analysis/tmp_var_map.h"
 #include "insieme/utils/logging.h"
+
+
+namespace {
+
+
+
+} // end anonymous namespace 
 
 namespace insieme {
 namespace analysis {
@@ -52,25 +58,28 @@ bool cmp_key::operator()(const core::ExpressionAddress& lhs, const core::Express
 	return lhs.getPath() < rhs.getPath();
 }
 
-core::VariablePtr AliasMap::createAliasFor(const core::ExpressionAddress& expr) {
+void TmpVarMap::addMappingImpl(const core::ExpressionAddress& expr, const core::VariablePtr& var) {
+	// Add alias into the maps 
+	aliasMap.insert( {expr, var} ); 
+	invAliasMap.insert( {var, expr} );
+}
+
+core::VariablePtr TmpVarMap::createTmpFor(const core::ExpressionAddress& expr) {
 
 	auto alias = lookupImmediateAlias(expr);
 	if (!alias) {
-		core::IRBuilder builder(expr->getNodeManager());
-		alias = builder.variable(expr->getType());
-		aliasMap.insert( {expr, alias} );
+		alias = core::IRBuilder(expr->getNodeManager()).variable(expr->getType());
+		addMappingImpl( expr, alias );
 	}
-
 	return alias;
 }
 
-void AliasMap::storeAlias(const core::ExpressionAddress& expr, const core::VariablePtr& var) {
-
+void TmpVarMap::storeTmpVar(const core::ExpressionAddress& expr, const core::VariablePtr& var) {
 	auto alias = lookupImmediateAlias(expr);
-	if (!alias) { aliasMap.insert( {expr, var} ); }
+	if (!alias) { addMappingImpl(expr, var); }
 }
 
-core::VariablePtr AliasMap::lookupImmediateAlias(const core::ExpressionAddress& expr) const { 
+core::VariablePtr TmpVarMap::lookupImmediateAlias(const core::ExpressionAddress& expr) const { 
 	auto&& fit = aliasMap.find(expr);
 	if (fit == aliasMap.end()) {
 		return core::VariablePtr();
@@ -78,40 +87,37 @@ core::VariablePtr AliasMap::lookupImmediateAlias(const core::ExpressionAddress& 
 	return fit->second;
 }
 
-AliasMap::AliasSet AliasMap::lookupAliases(const core::ExpressionAddress& expr) const {
+// TmpVarMap::AliasSet TmpVarMap::lookupAliases(const core::ExpressionAddress& expr) const {
+// 
+// 	AliasSet aliases;
+// 	lookupAliasesImpl(expr, aliases);
+// 	return aliases;
+// }
 
-	AliasSet aliases;
-	lookupAliasesImpl(expr, aliases);
-	return aliases;
-}
+// void TmpVarMap::lookupAliasesImpl(const core::ExpressionAddress& expr, AliasSet& aliases) const {
+// 		
+// 	Access&& ve = getImmediateAccess(expr, *this);
+// 
+// 	for (const auto& cur : aliasMap) {
+// 		// check whether we can obtain an access from this expr 
+// 		try {		
+// 			auto&& access = getImmediateAccess(cur.first, *this);
+// 			// LOG(INFO) << "Compare " << ve << " and " << access << " " << (access.isRef() && ((ve == access) | (isConflicting(ve, access))));
+// 
+// 			if (access.isRef() && isConflicting(ve, access)) { 
+// 				aliases.insert(cur.second); 
+// 			}
+// 
+// 		} catch(...) { }
+// 	}
+// }
 
-void AliasMap::lookupAliasesImpl(const core::ExpressionAddress& expr, AliasSet& aliases) const {
-		
-	Access&& ve = getImmediateAccess(expr, *this);
-
-	for (const auto& cur : aliasMap) {
-		// check whether we can obtain an access from this expr 
-		try {		
-			auto&& access = getImmediateAccess(cur.first, *this);
-			// LOG(INFO) << "Compare " << ve << " and " << access << " " << (access.isRef() && ((ve == access) | (isConflicting(ve, access))));
-
-			if (access.isRef() && isConflicting(ve, access)) { 
-				aliases.insert(cur.second); 
-			}
-
-		} catch(...) { }
+core::ExpressionAddress TmpVarMap::getMappedExpr(const core::VariablePtr& var) const {
+	auto&& fit = invAliasMap.find(var);
+	if (fit == invAliasMap.end()) {
+		return core::ExpressionAddress();
 	}
-}
-
-core::ExpressionAddress AliasMap::getMappedExpr(const core::VariablePtr& var) const {
-	
-	// FIXME: store an inverse map to speed this up
-	auto fit = std::find_if(aliasMap.begin(), aliasMap.end(), 
-			 	[&](const ExprToAliasMap::value_type& cur) { return *cur.second == *var; });
-
-	if (fit != aliasMap.end()) return fit->first;
-	return core::VariableAddress();
-
+	return fit->second;
 }
 
 

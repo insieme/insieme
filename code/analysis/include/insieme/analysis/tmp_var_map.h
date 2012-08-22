@@ -48,12 +48,6 @@
 namespace insieme {
 namespace analysis {
 
-// Forward declaration 
-class Access;
-
-
-
-
 struct cmp_key {
 
 bool operator()(const insieme::core::ExpressionAddress& lhs, const insieme::core::ExpressionAddress& rhs) const;
@@ -61,118 +55,61 @@ bool operator()(const insieme::core::ExpressionAddress& lhs, const insieme::core
 };
 
 /**
- * This class stores aliases for variables. 
+ * This class stores mappings between IR addresses and temporary variables which are introduced
+ * during the construction of the CFG. 
  */
-class AliasMap : public utils::Printable {
+class TmpVarMap : public utils::Printable {
 
 public:
 
-	typedef std::map<core::ExpressionAddress, core::VariablePtr, cmp_key> ExprToAliasMap;
+	typedef std::map<core::ExpressionAddress, core::VariablePtr, cmp_key> 	ExprToAliasMap;
+	typedef std::map<core::VariablePtr, core::ExpressionAddress> 			InvExprToAliasMap;
 
-	typedef std::set<core::VariablePtr> AliasSet;
+	TmpVarMap() { }
 
-	AliasMap() { }
+	/** 
+	 * Given the address of an expression, we create a variable with the scope of storing the value
+	 * of that expression 
+	 */
+	core::VariablePtr createTmpFor(const core::ExpressionAddress& expr);
 
-	core::VariablePtr createAliasFor(const core::ExpressionAddress& expr);
-
-	void storeAlias(const core::ExpressionAddress& expr, const core::VariablePtr& var);
+	/** 
+	 * Given a tuple (expr, var) we store it in the tmp var map for lookup
+	 */
+	void storeTmpVar(const core::ExpressionAddress& expr, const core::VariablePtr& var);
 
 	core::VariablePtr lookupImmediateAlias(const core::ExpressionAddress& expr) const;
 
-	AliasSet lookupAliases(const core::ExpressionAddress& expr) const;
+	/** 
+	 * Given an expression, returns a set of variables which are aliases for that expression 
+	 */
+	// AliasSet lookupAliases(const core::ExpressionAddress& expr) const;
 
+	/** 
+	 * Given a temporary variable (or alias) this function returns the expression being mapped to
+	 * that alias.
+	 */
 	core::ExpressionAddress getMappedExpr(const core::VariablePtr& var) const;
 
-	inline bool empty() const { 
-		return aliasMap.empty(); 
-	}
+	/** 
+	 * Returns true when the map is empty
+	 */
+	inline bool empty() const { return aliasMap.empty(); }
 
 	std::ostream& printTo(std::ostream& out) const {
 		return out << aliasMap;
 	}
+
 private:
 
-	ExprToAliasMap aliasMap;
+	void addMappingImpl(const core::ExpressionAddress& expr, const core::VariablePtr& var);
 
-	void lookupAliasesImpl(const core::ExpressionAddress& expr, AliasSet& aliases) const;
+	ExprToAliasMap aliasMap;
+	InvExprToAliasMap invAliasMap;
+
+	// void lookupAliasesImpl(const core::ExpressionAddress& expr, AliasSet& aliases) const;
 
 };
-
-
-//class AliasClass {
-
-	//size_t class_id;
-	//typedef std::set<Access> AccessSet;
-
-	//AssessSet accesses; 
-
-//public: 
-
-	//AliasClass( size_t id, const Access& acc ) class_id(id), accesses( { acc } ) { }
-
-	//inline size_t getClassId() const {
-		//return class_id;
-	//}
-
-	//inline std::pair<AccessSet::iterator, bool> addAccess(const Access& acc) {
-		//assert(belongsTo(acc) && "Cannot include an access which is not belonging to the equivalence class");
-		//return accesses.insert( acc );
-	//}
-
-	//bool contains(const Access& acc) const {
-		//return accesses.find( acc ) != accesses.end();
-	//}
-	
-	/** 
-	 * Checks whether a particular access belongs to this class 
-	 */
-	//bool belongsTo(const Access& acc) const {
-		
-		//if (accesses.empty()) { return false; }
-
-		//bool ret = isConflicting(acc, accesses.begin());
-		//for_each(accesses.begin()+1, accesses.end(), [&](const Access& cur) {
-			//bool currVal = isClonflicting(acc, cur);
-			//assert(currVal == ret);
-		//});
-
-		//return ret;
-	//}
-
-//};
-
-//class AliasMap2 {
-
-	//typedef std::map<size_t, AliasClass> AliasClassMap;
-
-	//size_t curr_class_id;
-	//AliasClassMap aliasMap;
-
-//public:
-
-	//AliasMap2() : curr_class_id(0) { }
-
-	//void addAccess( const Access& acc ) {
-
-		//auto fit = std::find_if(aliasMap.begin(), aliasMap.end(), [&](const AliasClassMap::value_type& cur) { 
-				//return cur.second.belongsTo(acc);
-			//});
-
-		//if (fit != aliasMap.end()) {
-			//fit->second.addAccess(acc);
-			//return;
-		//}
-		
-		//aliasMap.insert( { curr_class_id, AliasClass(curr_class_id, acc) } );
-		//curr_class_id++;
-	//}
-
-
-
-//};
-
-
-
 
 
 } // end analysis namespace 

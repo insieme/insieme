@@ -59,6 +59,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
+#include "insieme/core/parser/ir_parse.h"
+
 #include "insieme/frontend/cpp/temporary_handler.h"
 #include "insieme/annotations/c/naming.h"
 
@@ -181,8 +183,9 @@ core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::T
 				return core::ExpressionPtr();
 			}
 
-			assert(
-					((lit->getStringValue() == "malloc" && callExpr->getArguments().size() == 1) || (lit->getStringValue() == "calloc" && callExpr->getArguments().size() == 2)) && "malloc() and calloc() takes respectively 1 and 2 arguments");
+			assert(((lit->getStringValue() == "malloc" && callExpr->getArguments().size() == 1) || 
+				    (lit->getStringValue() == "calloc" && callExpr->getArguments().size() == 2)) && 
+					"malloc() and calloc() takes respectively 1 and 2 arguments");
 
 			const core::lang::BasicGenerator& gen = builder.getLangBasic();
 			// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
@@ -197,16 +200,46 @@ core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::T
 			 * The number of elements to be allocated of type 'targetType' is:
 			 * 		-> 	expr / sizeof(targetType)
 			 */
-			core::CallExprPtr&& size = builder.callExpr(
+			core::CallExprPtr size;
+			if (lit->getStringValue() == "malloc") {
+				size = builder.callExpr(
 					gen.getUInt8(),
 					gen.getUnsignedIntDiv(),
-					callExpr->getArguments().front(),
+					callExpr->getArgument(0),
 					getSizeOfType(builder, elemType)
-			);
+				);
+			} else {
+				size = builder.callExpr(
+					gen.getUInt8(),
+					gen.getUnsignedIntDiv(),
+					builder.mul(callExpr->getArgument(0), callExpr->getArgument(1)),
+					getSizeOfType(builder, elemType)
+				);
 
-			// FIXME: calloc also initialize the memory to 0
-			return builder.refNew(
-					builder.callExpr(arrayType, gen.getArrayCreate1D(), builder.getTypeLiteral(elemType), size));
+			}
+
+			auto memAlloc = builder.refNew(
+					builder.callExpr(arrayType, gen.getArrayCreate1D(), builder.getTypeLiteral(elemType), size)
+				);
+
+			if (lit->getStringValue() == "malloc") { return memAlloc; }
+			// this is a calloc, then we have to do a memset to initialize the memory 
+			
+			auto var = builder.variable(builder.refType(arrayType));
+			auto declStmt = builder.declarationStmt(var, memAlloc);
+
+			core::parse::IRParser parser(builder.getNodeManager());
+			
+			auto memSet = builder.callExpr(
+					builder.literal(parser.parseType("(anyRef, int<4>, uint<8>) -> anyRef"), "memset"),
+					builder.callExpr(gen.getRefToAnyRef(), var), 
+					builder.intLit(0), 
+					size);
+
+			return builder.createCallExprFromBody(
+					builder.compoundStmt( declStmt, memSet, builder.returnStmt(var) ),
+					var->getType()
+				);
 		}
 	}
 	return core::ExpressionPtr();
