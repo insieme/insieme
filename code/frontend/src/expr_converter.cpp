@@ -1051,16 +1051,21 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		rhs = convFact.tryDeref(rhs);
 
 		// capture the case when pointer arithmetic is performed 
-		if (core::analysis::isRefType(lhs->getType()) && 
-			!core::analysis::isRefType(rhs->getType()) && 
+		if (core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType()) &&
 			core::analysis::isRefType(core::analysis::getReferencedType(lhs->getType())) &&  
-			(core::analysis::getReferencedType(
-				core::analysis::getReferencedType(lhs->getType()))->getNodeType() == core::NT_ArrayType)
-		) 
-			// do pointer arithmetic 
-			doPointerArithmetic(); 
-		else 
+			core::analysis::getReferencedType( core::analysis::getReferencedType(lhs->getType()))->getNodeType() == core::NT_ArrayType)
+		{
+				// do pointer arithmetic 
+				doPointerArithmetic(); 
+		} else if (core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType()) &&
+			core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType) 
+		{
+				lhs = wrapVariable(binOp->getLHS());
+				doPointerArithmetic(); 
+		}
+		else {
 			rhs = builder.callExpr(exprTy, gen.getOperator(exprTy, op), subExprLHS, rhs);
+		}
 	}
 
 	bool isAssignment = false;
