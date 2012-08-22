@@ -954,11 +954,24 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 	 * value of the last expression
 	 */
 	if ( binOp->getOpcode() == BO_Comma ) {
-
-		core::CompoundStmtPtr&& body = builder.compoundStmt(toVector<core::StatementPtr>(lhs,
-						(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs)) )
-		);
-		return (retIr = builder.createCallExprFromBody(body, rhs->getType()));
+		
+		core::TypePtr retType;
+		// the return type of this lambda is the type of the last expression (according to the C
+		// standard) 
+		std::vector<core::StatementPtr> stmts { lhs };
+		// LOG(INFO) << core::analysis::isCallOf(rhs, gen.getRefAssign());
+		if (core::analysis::isCallOf(rhs, gen.getRefAssign())) {
+			stmts.push_back(rhs);
+			auto retExpr = rhs.as<core::CallExprPtr>()->getArgument(0);
+			// additionally we have to return the value of the lhs of the assignment stmt 
+			stmts.push_back(builder.returnStmt(retExpr));
+			retType = retExpr->getType();
+		} else {
+			stmts.push_back(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs));
+			retType = rhs->getType();
+		}
+		// LOG(INFO) << stmts;
+		return (retIr = builder.createCallExprFromBody(builder.compoundStmt(stmts), retType));
 	}
 
 	// the type of this expression is the type of the LHS expression
