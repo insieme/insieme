@@ -445,6 +445,9 @@ LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
 LITERAL(ArrayElemToVec, "array.elem.to.vec",
 						"(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
 
+LITERAL(ArrayRefDistance, 		"array.ref.distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>)
+-> uint<8>")
+
 // computation of an array-offset and some derivades
 LITERAL(ArrayView, 				"array.view",					"(ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")
 DERIVED(ArrayViewPreInc, 		"array.view.pre.inc",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array.view(*a,1); return *a; }")
