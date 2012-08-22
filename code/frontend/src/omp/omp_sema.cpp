@@ -367,7 +367,7 @@ protected:
 		return ret;
 	}
 
-	StatementPtr implementDataClauses(const StatementPtr& stmtNode, const DatasharingClause* clause) {
+	StatementPtr implementDataClauses(const StatementPtr& stmtNode, const DatasharingClause* clause, StatementList& outsideDecls) {
 		const For* forP = dynamic_cast<const For*>(clause);
 		const Parallel* parallelP = dynamic_cast<const Parallel*>(clause);
 		StatementList replacements;
@@ -379,15 +379,25 @@ protected:
 		NodeMap privateToPublicMap;
 		// implement private copies where required
 		for_each(allp, [&](const ExpressionPtr& varExp) {
-			VariablePtr pVar = build.variable(varExp->getType());
+			const auto& expType = varExp->getType();
+			VariablePtr pVar = build.variable(expType);
 			publicToPrivateMap[varExp] = pVar;
 			privateToPublicMap[pVar] = varExp;
-			DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(varExp->getType()));
+			DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(expType));
 			if(clause->hasFirstPrivate() && contains(clause->getFirstPrivate(), varExp)) {
-				decl = build.declarationStmt(pVar, varExp);
+				// make sure to actually get *copies* for firstprivate initialization, not copies of references
+				if(core::analysis::isRefType(expType)) {
+					VariablePtr fpPassVar = build.variable(core::analysis::getReferencedType(expType));
+					DeclarationStmtPtr fpPassDecl = build.declarationStmt(fpPassVar, build.deref(varExp));
+					outsideDecls.push_back(fpPassDecl);
+					decl = build.declarationStmt(pVar, build.refVar(fpPassVar));
+				}
+				else {
+					decl = build.declarationStmt(pVar, varExp);
+				}
 			}
 			if(clause->hasReduction() && contains(clause->getReduction().getVars(), varExp)) {
-				decl = build.declarationStmt(pVar, getReductionInitializer(clause->getReduction().getOperator(), varExp->getType()));
+				decl = build.declarationStmt(pVar, getReductionInitializer(clause->getReduction().getOperator(), expType));
 			}
 			replacements.push_back(decl);
 		});
@@ -422,7 +432,8 @@ protected:
 	}
 	
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
-		auto newStmtNode = implementDataClauses(stmtNode, &*par);
+		StatementList resultStmts;
+		auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts);
 		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
 		// mark printf as unordered
 		parLambda = markUnordered(parLambda).as<BindExprPtr>();
@@ -431,16 +442,20 @@ protected:
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
-		return mergeCall;
+		resultStmts.push_back(mergeCall);
+		return build.compoundStmt(resultStmts);
 	}
 	
 	NodePtr handleTask(const StatementPtr& stmtNode, const TaskPtr& par) {
-		auto newStmtNode = implementDataClauses(stmtNode, &*par);
+		StatementList resultStmts;
+		auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts);
+		cout << "======================= \n" << printer::PrettyPrinter(newStmtNode);
 		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
-		auto range = build.getThreadNumRange(1, 1); // if no range is specified, assume 1 to infinity
+		auto range = build.getThreadNumRange(1, 1); // range for tasks is always 1
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
-		return parallelCall;
+		resultStmts.push_back(parallelCall);
+		return build.compoundStmt(resultStmts);
 	}
 
 	NodePtr handleTaskWait(const StatementPtr& stmtNode, const TaskWaitPtr& par) {
@@ -453,7 +468,10 @@ protected:
 		assert(stmtNode.getNodeType() == NT_ForStmt && "OpenMP for attached to non-for statement");
 		ForStmtPtr outer = dynamic_pointer_cast<const ForStmt>(stmtNode);
 		//outer = collapseForNest(outer);
-		return implementDataClauses(outer, &*forP);
+		StatementList resultStmts;
+		auto newStmtNode = implementDataClauses(outer, &*forP, resultStmts);
+		resultStmts.push_back(newStmtNode);
+		return build.compoundStmt(resultStmts);
 	}
 	
 	NodePtr handleParallelFor(const StatementPtr& stmtNode, const ParallelForPtr& pforP) {
