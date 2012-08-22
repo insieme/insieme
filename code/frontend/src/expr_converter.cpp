@@ -1201,7 +1201,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 
 		if (core::analysis::isRefType(rhs->getType()) && core::analysis::isRefType(lhs->getType()) && 
 			core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType &&
-			core::analysis::getReferencedType(rhs->getType())->getNodeType() == core::NT_ArrayType)
+			core::analysis::getReferencedType(rhs->getType())->getNodeType() == core::NT_ArrayType &&
+			baseOp == BO_Sub)
 		{
 			return retIr = builder.callExpr( gen.getArrayRefDistance(), lhs, rhs);
 		}
