@@ -590,7 +590,7 @@ TEST(IterationDomain, FromVariable2) {
 
 		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("((-v1 + 19 >= 0) ^ (v1 + -10 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((-v1 + 19 >= 0) ^ (-v1 + 49 >= 0)) ^ (v1 + -10 >= 0))", toString(*dom.second));
 	}
 }
 
@@ -681,7 +681,7 @@ TEST(IterationDomain, FromVariable4) {
 
 		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((-v2 + v1 + -1 >= 0) ^ (v1 + -21 >= 0)) ^ (v2 + -v3 + -1 >= 0))", toString(*dom.second));
+		EXPECT_EQ("((((-v2 + v1 + -1 >= 0) ^ (v1 + -21 >= 0)) ^ (v2 + -v3 + -1 >= 0)) ^ (v2 + -v3 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
@@ -708,7 +708,7 @@ TEST(IterationDomain, FromVariableStrided) {
 							 getAddressOfChild(0).getAddressOfChild(0).getAddressOfChild(2);
 		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((-v2 + v3 == 0) ^ (-v2 + v1 + -1 >= 0)) ^ (v2 + -v3 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((-v2 + v1 + -1 >= 0) ^ (v2 + -2*v5 + -v3 == 0)) ^ (v2 + -v3 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3 -> if (v1-v3-1 >= 0)", toString(pw));
 	}
@@ -721,7 +721,7 @@ TEST(IterationDomain, FromVariableStrided) {
 
 		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("((((-v2 + v3 == 0) ^ (-v2 + v1 + -1 >= 0)) ^ (v1 + -21 >= 0)) ^ (v2 + -v3 + -1 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((((-v2 + v1 + -1 >= 0) ^ (v1 + -21 >= 0)) ^ (v2 + -2*v5 + -v3 == 0)) ^ (v2 + -v3 + -1 >= 0)) ^ (v2 + -v3 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
@@ -750,7 +750,7 @@ TEST(IterationDomain, FromVariable5) {
 
 		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(v1 + -v2 + -2 == 0)", toString(*dom.second));
+		EXPECT_EQ("((((-v1 + v2 + 9 >= 0) ^ (v1 + -2*v5 + -v2 == 0)) ^ (v1 + -v2 + -2 == 0)) ^ (v1 + -v2 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
@@ -779,7 +779,7 @@ TEST(IterationDomain, FromVariable6) {
 							 getAddressOfChild(2);
 
 		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
-		EXPECT_FALSE(dom.second);
+		EXPECT_TRUE(dom.second);
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
