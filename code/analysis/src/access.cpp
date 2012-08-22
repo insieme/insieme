@@ -229,9 +229,9 @@ Access getImmediateAccess(const core::ExpressionAddress& expr, const TmpVarMap& 
 				std::for_each(oldIter.iter_begin(), oldIter.iter_end(), [&](const polyhedral::Iterator& iter) {
 					iterVec.add( polyhedral::Iterator(iter.getExpr().as<VariablePtr>(), true) );
 				});
-				std::for_each(oldIter.param_begin(), oldIter.param_end(), [&](const polyhedral::Parameter& param) {
-					iterVec.add( param );
-				});
+				// std::for_each(oldIter.param_begin(), oldIter.param_end(), [&](const polyhedral::Parameter& param) {
+				//	iterVec.add( param );
+				//});
 
 				iterVec.add( polyhedral::Iterator(idxVar) );
 
@@ -263,6 +263,23 @@ Access getImmediateAccess(const core::ExpressionAddress& expr, const TmpVarMap& 
 		} 	
 	}
 	assert(false && "Access not supported");
+}
+
+
+bool Access::isContextDependent() const {
+	
+	// check whether this is an array access, if not then this access is not context dependent 
+	if (type != VarType::ARRAY) { return false; }
+
+	// we have an array access, now check whether we have a bound expression limiting the range of
+	// accessed elements 
+	if(array_access) {
+		// if there are parameters in this access, then this access depends on the context 
+		if (iterVec.getParameterNum() > 0)
+			return true;
+	}
+	
+	return false;
 }
 
 void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entities, const TmpVarMap& tmpVarMap) {

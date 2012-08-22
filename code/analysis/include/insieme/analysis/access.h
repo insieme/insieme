@@ -95,7 +95,7 @@ class Access : public utils::Printable {
      * For arrays the domain depends on the range of values being accessed. It could be either a
      * single element or strided domain in the circumstances the array is accessed inside a loop
      */
-	 ConstraintPtr array_access;
+	 ConstraintPtr 				array_access;
 
 	/** 
 	 * A constraint has sense only if within a SCoP. Indeed, two equal constraints extracted from
@@ -148,6 +148,21 @@ public:
 	 * Return the context on which the constraint has validity
 	 */
 	inline const core::NodeAddress& getContext() const { return ctx; }
+
+	/** 
+	 * Accesses to arrays have range informations which states the subset of elements of the array
+	 * being accessed by the particular expression (e.g. an array access inside a loop). It could
+	 * happen that these accesses are symbolically bound to variables. 
+	 *
+	 * When comparing two accesses we must be sure that if the bounds are symbolic, they belong to
+	 * the same SCoP which makes sure that the bound is not being assigned. In the case of
+	 * comparison of two symbolically bound accesses belonging to different context, then we have to
+	 * assume that there is a potential collision between elements. 
+	 *
+	 * However, if the bounds of the range are not symbolical, then we can compare accesses
+	 * belonging to different contexts as long as the accessed array is the same
+	 */
+	bool isContextDependent() const;
 
 	std::ostream& printTo(std::ostream& out) const;
 	

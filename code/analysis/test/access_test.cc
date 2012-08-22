@@ -149,6 +149,7 @@ TEST(Access, ArrayAccess) {
 		EXPECT_FALSE(access.isRef());
 		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
 		EXPECT_FALSE(access.getContext());
+		EXPECT_FALSE(access.isContextDependent());
 	}
 
 	{
@@ -161,6 +162,7 @@ TEST(Access, ArrayAccess) {
 		EXPECT_FALSE(access.isRef());
 		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
 		EXPECT_FALSE(access.getContext());
+		EXPECT_FALSE(access.isContextDependent());
 	}
 
 	{
@@ -175,6 +177,7 @@ TEST(Access, ArrayAccess) {
 		EXPECT_TRUE(access.isRef());
 		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
 		EXPECT_FALSE(access.getContext());
+		EXPECT_FALSE(access.isContextDependent());
 	}
 
 	{
@@ -187,6 +190,7 @@ TEST(Access, ArrayAccess) {
 		EXPECT_FALSE(access.isRef());
 		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
 		EXPECT_FALSE(access.getContext());
+		EXPECT_FALSE(access.isContextDependent());
 	}
 
 	{
@@ -219,6 +223,7 @@ TEST(Access, ArrayAccess) {
 		EXPECT_EQ("((v7 + -11 >= 0) ^ (v4294967295 + -v7 == 0))", toString(*access.getAccessedRange()));
 
 		EXPECT_EQ(code, access.getContext().getAddressedNode()); 
+		EXPECT_TRUE(access.isContextDependent());
 	}
 
 	{
@@ -244,8 +249,7 @@ TEST(Access, ArrayAccess) {
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-
-
+		EXPECT_FALSE(access.isContextDependent());
 	}
 
 	{
@@ -264,9 +268,8 @@ TEST(Access, ArrayAccess) {
 		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-		// EXPECT_FALSE(!!access.getConstraint());
 		EXPECT_FALSE( access.getContext() ); 
-
+		EXPECT_FALSE(access.isContextDependent());
 	}
 
 	// not affine access => invalid scop
@@ -287,6 +290,7 @@ TEST(Access, ArrayAccess) {
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		EXPECT_TRUE(access.getContext());
+		EXPECT_TRUE(access.isContextDependent());
 
 		EXPECT_EQ("(((-v21 + 19 >= 0) ^ (v20 + -11 >= 0)) ^ (v4294967295 + -v20 + -v21 == 0))", 
 				  toString(*access.getAccessedRange())
@@ -325,10 +329,12 @@ TEST(Access, SameAccess) {
 			);
 
 		EXPECT_TRUE(access1.getContext());
+		EXPECT_FALSE(access1.isContextDependent());
 		EXPECT_EQ(access1.getContext(), code);
 		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
 
 		EXPECT_TRUE(access2.getContext());
+		EXPECT_FALSE(access2.isContextDependent());
 		EXPECT_EQ(access2.getContext(), code);
 		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access2.getAccessedRange()));
 
@@ -360,14 +366,15 @@ TEST(Access, DifferentAccess) {
 			);
 		
 		EXPECT_TRUE(access1.getContext());
+		EXPECT_FALSE(access1.isContextDependent());
 		EXPECT_EQ(access1.getContext(), code);
 		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
 
 
 		EXPECT_TRUE(access2.getContext());
+		EXPECT_FALSE(access2.isContextDependent());
 		EXPECT_EQ(access2.getContext(), code);
 		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
-
 
 		auto ctx = polyhedral::makeCtx();
 		auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
@@ -407,10 +414,12 @@ TEST(Access, CommonSubset) {
 			);
 		
 		EXPECT_TRUE(access1.getContext());
+		EXPECT_FALSE(access1.isContextDependent());
 		EXPECT_EQ(access1.getContext(), code);
 		EXPECT_EQ("(((-v1 + 10 >= 0) ^ (v1 + -1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
 
 		EXPECT_TRUE(access2.getContext());
+		EXPECT_FALSE(access2.isContextDependent());
 		EXPECT_EQ(access2.getContext(), code);
 		EXPECT_EQ("(((-v3 + 9 >= 0) ^ (v3 >= 0)) ^ (-v3 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
 
@@ -423,10 +432,12 @@ TEST(Access, CommonSubset) {
 
 		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 10 and v4294967295 >= 1 }", toString(*(set1 * set2)));
 
+		// the two sets are equal
 		EXPECT_EQ(*set1, *set2);
 		EXPECT_FALSE((set1*set2)->empty());
-
 		EXPECT_EQ(*set1, *(set1*set2));
+
+		// Set difference is empty 
 		EXPECT_TRUE((set1-set2)->empty());
 	}
 }
@@ -462,10 +473,12 @@ TEST(Access, EmptySubset) {
 			);
 		
 		EXPECT_TRUE(access1.getContext());
+		EXPECT_FALSE(access1.isContextDependent());
 		EXPECT_EQ(access1.getContext(), code);
 		EXPECT_EQ("(((-v1 + 4 >= 0) ^ (v1 + -1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
 
 		EXPECT_TRUE(access2.getContext());
+		EXPECT_FALSE(access2.isContextDependent());
 		EXPECT_EQ(access2.getContext(), code);
 		EXPECT_EQ("(((-v3 + 8 >= 0) ^ (v3 + -4 >= 0)) ^ (-v3 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
 
@@ -479,3 +492,56 @@ TEST(Access, EmptySubset) {
 		EXPECT_TRUE((set1 * set2)->empty());
 	}
 }
+
+
+TEST(Access, StridedSubset) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+
+	{
+		auto code = parser.parseStatement(
+			"{"
+			"	for(decl uint<4>:i1 = 1 .. 5 : 2) { " 
+			"		(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i1));"
+			"	};"
+			"	for(decl uint<4>:i2 = 1 .. 9 : 2) { " 
+			"		(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (i2+1)));"
+			"	};"
+			"}"
+		);
+
+		// perform the polyhedral analysis 
+		auto scop = polyhedral::scop::mark(code);
+		
+		auto access1 = getImmediateAccess( 
+				StatementAddress(code).as<CompoundStmtAddress>()->getStatement(0).
+									   as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
+			);
+		auto access2 = getImmediateAccess( 
+				StatementAddress(code).as<CompoundStmtAddress>()->getStatement(1).
+									   as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
+			);
+		
+		EXPECT_TRUE(access1.getContext());
+		EXPECT_FALSE(access1.isContextDependent());
+		EXPECT_EQ(access1.getContext(), code);
+		EXPECT_EQ("((((-v1 + 4 >= 0) ^ (v1 + -2*v4 + -1 == 0)) ^ (v1 + -1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+
+		EXPECT_TRUE(access2.getContext());
+		EXPECT_FALSE(access2.isContextDependent());
+		EXPECT_EQ(access2.getContext(), code);
+		EXPECT_EQ("((((-v3 + 8 >= 0) ^ (v3 + -2*v5 + -1 == 0)) ^ (v3 + -1 >= 0)) ^ (-v3 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
+
+		auto ctx = polyhedral::makeCtx();
+		auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
+		auto set2 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access2.getAccessedRange()));
+
+		EXPECT_EQ("{ [v4294967295] : exists (e0 = [(-1 + v4294967295)/2]: 2e0 = -1 + v4294967295 and v4294967295 <= 3 and v4294967295 >= 1) }", toString(*set1));
+		EXPECT_EQ("{ [v4294967295] : exists (e0 = [(v4294967295)/2]: 2e0 = v4294967295 and v4294967295 <= 8 and v4294967295 >= 2) }", toString(*set2));
+
+		EXPECT_TRUE((set1 * set2)->empty());
+	}
+}
+
