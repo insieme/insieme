@@ -1050,20 +1050,23 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		// we check if the RHS is a ref, in that case we use the deref operator
 		rhs = convFact.tryDeref(rhs);
 
+		// We have a compound operation applied to a ref<array<'a>> type which is probably one of
+		// the function parameters, We have to wrap this variable in a way it becomes a
+		// ref<ref<array<'a>>>
+		if (core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType()) &&
+			core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType) 
+		{
+			lhs = wrapVariable(binOp->getLHS());
+		}
+
 		// capture the case when pointer arithmetic is performed 
 		if (core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType()) &&
 			core::analysis::isRefType(core::analysis::getReferencedType(lhs->getType())) &&  
 			core::analysis::getReferencedType( core::analysis::getReferencedType(lhs->getType()))->getNodeType() == core::NT_ArrayType)
 		{
-				// do pointer arithmetic 
-				doPointerArithmetic(); 
-		} else if (core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType()) &&
-			core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType) 
-		{
-				lhs = wrapVariable(binOp->getLHS());
-				doPointerArithmetic(); 
-		}
-		else {
+			// do pointer arithmetic 
+			doPointerArithmetic(); 
+		} else 
 			rhs = builder.callExpr(exprTy, gen.getOperator(exprTy, op), subExprLHS, rhs);
 		}
 	}
