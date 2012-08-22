@@ -1199,6 +1199,13 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 			return (retIr = rhs);
 		}
 
+		if (core::analysis::isRefType(rhs->getType()) && core::analysis::isRefType(lhs->getType()) && 
+			core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType &&
+			core::analysis::getReferencedType(rhs->getType())->getNodeType() == core::NT_ArrayType)
+		{
+			return retIr = builder.callExpr( gen.getArrayRefDistance(), lhs, rhs);
+		}
+
 		if ( lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType)
 		{
 			// ----------------------------- Hack begin --------------------------------
