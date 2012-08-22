@@ -424,16 +424,12 @@ namespace backend {
 			ADD_ELEMENT_TYPE_DEPENDENCY();
 			return c_ast::postDec(getAssignmentTarget(context, ARG(0)));
 		});
-		
-		res[basic.getArrayRefDistance()] = OP_CONVERTER({
-			// add dependency to element type definition
-			ADD_ELEMENT_TYPE_DEPENDENCY();
-			return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1));
-		});
-
 
 		#undef ADD_ELEMENT_TYPE_DEPENDENCY
-
+		
+		res[basic.getArrayRefDistance()] = OP_CONVERTER({
+			return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1));
+		});
 
 		// -- vectors --
 
