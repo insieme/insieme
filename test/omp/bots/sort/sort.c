@@ -111,10 +111,7 @@ static inline ELM med3(ELM a, ELM b, ELM c)
  */
 static inline ELM choose_pivot(ELM *low, ELM *high)
 {
-     // insieme fix
-     //return med3(*low, *high, low[(high - low) / 2]);
-     int h= (int)high, l = (int)low;
-     return med3(*low, *high, low[(h-l) / 2]);
+     return med3(*low, *high, low[(high - low) / 2]);
 }
 
 static ELM *seqpart(ELM *low, ELM *high)
@@ -127,19 +124,11 @@ static ELM *seqpart(ELM *low, ELM *high)
      pivot = choose_pivot(low, high);
 
      while (1) {
-	  // insieme fix
-	  h = *curr_high;
-	  while (h > pivot) {
+	  while ((h = *curr_high) > pivot)
 	       curr_high--;
-	       h = *curr_high;
-	  }
 
-	  // insieme fix
-	  l = *curr_low;
-	  while (l < pivot) {
+	  while ((l = *curr_low) < pivot)
 	       curr_low++;
-	       l = *curr_low;
-	  }
 
 	  if (curr_low >= curr_high)
 	       break;
@@ -174,19 +163,17 @@ static void insertion_sort(ELM *low, ELM *high)
 {
      ELM *p, *q;
      ELM a, b;
-     // insieme fix
-     q = low + 1;
-     while (q <= high) {
+
+	 q = low + 1; 
+	 while(q <= high) {
 	  a = q[0];
-          p = q - 1;
-          b = p[0];
-	  while (p >= low && b > a) {
+	  p = q - 1; 
+	  while(p >= low && (b = p[0]) > a) {
 	       p[1] = b;
-               --p;
-               b = p[0];
-          }
+	       --p;
+	  }
 	  p[1] = a;
-          ++q;
+	  ++q;
      }
 }
 
@@ -197,13 +184,10 @@ void seqquick(ELM *low, ELM *high)
 {
      ELM *p;
 
-     // insieme fix
-     int h= (int)high, l = (int)low;
-     while (h - l >= bots_app_cutoff_value_2) {
+     while (high - low >= bots_app_cutoff_value_2) {
 	  p = seqpart(low, high);
 	  seqquick(low, p);
 	  low = p + 1;
-	  l = (int)low;
      }
 
      insertion_sort(low, high);
@@ -243,7 +227,7 @@ void seqmerge(ELM *low1, ELM *high1, ELM *low2, ELM *high2,
      if (low1 < high1 && low2 < high2) {
 	  a1 = *low1;
 	  a2 = *low2;
-	  for (;;) {
+	  while(1) {
 	       if (a1 < a2) {
 		    *lowdest++ = a1;
 		    a1 = *++low1;
@@ -260,7 +244,7 @@ void seqmerge(ELM *low1, ELM *high1, ELM *low2, ELM *high2,
      if (low1 <= high1 && low2 <= high2) {
 	  a1 = *low1;
 	  a2 = *low2;
-	  for (;;) {
+	  while(1) {
 	       if (a1 < a2) {
 		    *lowdest++ = a1;
 		    ++low1;
