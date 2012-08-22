@@ -258,15 +258,18 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 			//case we have to replace the collected VarDecl with this new instance 
 			if ( !varDecl->hasExternalStorage() && (*fit)->hasExternalStorage() ) {
 				// do replace
+				auto saveFit = *fit;
+				LOG(INFO) << saveFit->getNameAsString();
+
 				globals.erase(fit);
 				
-				auto&& vit = varTU.find( *fit );
+				auto&& vit = varTU.find( saveFit );
 				varTU.erase( vit );
 	
 				// Switch the value of the identifier for the variable already in the map to the
 				// this varDecl because the fit is defined extern 
 				for(GlobalIdentMap::iterator it = varIdentMap.begin(), end =varIdentMap.end(); it!=end; ++it) {
-					if (it->first->getNameAsString() == (*fit)->getNameAsString()) 
+					if (it->first->getNameAsString() == saveFit->getNameAsString()) 
 						it->second = ident;
 				}
 				

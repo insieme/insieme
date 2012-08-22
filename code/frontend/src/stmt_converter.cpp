@@ -426,30 +426,27 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 					convFact.mgr.getLangBasic().getDouble()
 			);
 
-			core::ExpressionPtr&& finalVal =
-			stmtutils::makeOperation(builder,
+			core::ExpressionPtr&& finalVal = builder.add(
 					init, // init +
-					stmtutils::makeOperation(builder,
-							builder.castExpr(iterType,// ( cast )
-									builder.callExpr(
-											convFact.mgr.getLangBasic().getDouble(),
-											builder.literal(ceilTy, "ceil"),// ceil()
-											stmtutils::makeOperation(// (cond-init)/step
-													builder,
-													builder.castExpr(convFact.mgr.getLangBasic().getDouble(),
-															stmtutils::makeOperation(builder,
-																	cond, init, core::lang::BasicGenerator::Sub
-															)// cond - init
-													),
-													builder.castExpr(convFact.mgr.getLangBasic().getDouble(), step),
-													core::lang::BasicGenerator::Div
-											)
-									)
-							),
-							builder.castExpr(init->getType(), step),
-							core::lang::BasicGenerator::Mul
-					),
-					core::lang::BasicGenerator::Add
+					builder.mul(
+						builder.castExpr(iterType,// ( cast )
+								builder.callExpr(
+										convFact.mgr.getLangBasic().getDouble(),
+										builder.literal(ceilTy, "ceil"),// ceil()
+										stmtutils::makeOperation(// (cond-init)/step
+												builder,
+												builder.castExpr(convFact.mgr.getLangBasic().getDouble(),
+														stmtutils::makeOperation(builder,
+																cond, init, core::lang::BasicGenerator::Sub
+														)// cond - init
+												),
+												builder.castExpr(convFact.mgr.getLangBasic().getDouble(), step),
+												core::lang::BasicGenerator::Div
+										)
+								)
+						),
+						builder.castExpr(init->getType(), step)
+					)
 			);
 
 			retStmt.push_back(

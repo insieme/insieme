@@ -209,6 +209,8 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 
 	IterationDomain domain( extract_surrounding_domain() );
 
+	// LOG(INFO) << domain;
+
 	if (domain.universe() || domain.empty()) { 
 		return std::make_pair(NodeAddress(), domain.getConstraint()); 
 	}
@@ -245,23 +247,25 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 
 		if (!cons) { return std::make_pair(enclosingScop, AffineConstraintPtr()); }
 
-		/* Simplify the constraint by using the polyhedral model library */
-		auto&& ctx = makeCtx();
-		auto&& set = makeSet(ctx, IterationDomain(cons));
-		set->simplify();
+		// LOG(INFO) << "GEN " << *cons;
 
-		IterationVector iterVec;
-		cons = set->toConstraint(addr->getNodeManager(), iterVec);
+		/* Simplify the constraint by using the polyhedral model library */
+		//auto&& ctx = makeCtx();
+		//auto&& set = makeSet(ctx, IterationDomain(cons));
+		//set->simplify();
+
+		//IterationVector iterVec;
+		//cons = set->toConstraint(addr->getNodeManager(), iterVec);
 		// If we end-up with an empty constraints it means that the result is the universe 
-		if (!cons) { 
-			return std::make_pair(prev, AffineConstraintPtr()); 
-		}
+		//if (!cons) { 
+		//	return std::make_pair(prev, AffineConstraintPtr()); 
+		//}
 
 		// Need to represent the constraint based on the iteration vector stored in the Scop object
 		// which will survive the lifetime of this method
-		IterationDomain curr_dom( scop.getIterationVector(), IterationDomain(cons) );
+		//IterationDomain curr_dom( scop.getIterationVector(), IterationDomain(cons) );
 
-		return make_pair(prev, curr_dom.getConstraint());
+		return make_pair(prev, cons);
 
 	} catch (NotAffineExpr&& e) {
 		// The expression is not an affine function, therefore we give up

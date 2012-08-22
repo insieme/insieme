@@ -89,6 +89,7 @@ FUN("string.h", strtok)
 FUN("string.h", strchr)
 FUN("string.h", strrchr)
 FUN("string.h", strcpy)
+FUN("string.h", strlen)
 
 FUN("time.h", strftime)
 FUN("time.h", gmtime)

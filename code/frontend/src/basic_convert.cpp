@@ -390,6 +390,8 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 	//return mgr.getLangBasic().getNull();
 	//}
 	// handle integers initialization
+	
+	// Primitive types 
 	if (mgr.getLangBasic().isInt(type)) {
 		// initialize integer value
 		return builder.literal("0", type);
@@ -403,21 +405,6 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 		// in case of floating types we initialize with a zero value
 		return builder.literal("0.0", type);
 	}
-	// handle refs initialization
-	if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
-		// initialize pointer/reference types with undefined
-		core::TypePtr elemType = refTy->getElementType();
-
-		core::ExpressionPtr initValue;
-		if (elemType->getNodeType() == core::NT_RefType) {
-			// ref<ref<...>> => this is a pointer, init with 0 (null)
-			initValue = builder.callExpr(elemType, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(elemType));
-		} else {
-			initValue = defaultInitVal(elemType);
-		}
-
-		return builder.refVar(initValue);
-	}
 	// handle strings initializationvalDec
 	if (mgr.getLangBasic().isString(type)) {
 		return builder.literal("", type);
@@ -429,6 +416,12 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 		return builder.literal("false", mgr.getLangBasic().getBool());
 	}
 
+	// Initialization for volatile types
+	if (core::analysis::isVolatileType(type)) {
+		return builder.callExpr(mgr.getLangBasic().getVolatileMake(),
+				defaultInitVal(core::analysis::getVolatileType(type)));
+	}
+
 	// Handle structs initialization
 	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type)) {
 		return builder.callExpr(structTy, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(structTy));
@@ -437,29 +430,16 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 	// Handle unions initialization
 	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(type)) {
 		assert(unionTy);
-		// TODO: for now silent compiler warning
 	}
 
 	// handle vectors initialization
 	if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
-		core::ExpressionPtr ret = builder.callExpr(vecTy,
+		return builder.callExpr(vecTy,
 				mgr.getLangBasic().getVectorInitUniform(),
 				initVal,
 				builder.getIntTypeParamLiteral(vecTy->getSize())
 		);
-		return ret;
-	}
-
-	// handle arrays initialization
-	if ( core::ArrayTypePtr&& arrTy = core::dynamic_pointer_cast<const core::ArrayType>(type)) {
-		if (arrTy->getElementType()->getNodeType() == core::NT_RefType) {
-			const core::RefTypePtr& ref = core::static_pointer_cast<const core::RefType>(arrTy->getElementType());
-			if (ref->getElementType()->getNodeType() != core::NT_VectorType) {
-				return builder.callExpr(mgr.getLangBasic().getGetNull(), builder.getTypeLiteral(arrTy));
-			}
-		}
-		return builder.callExpr(arrTy, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(arrTy));
 	}
 
 	// handle any-ref initialization
@@ -467,14 +447,37 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 		return mgr.getLangBasic().getNull();
 	}
 
-	// Initialization for volatile types
-	if (core::analysis::isVolatileType(type)) {
-		return builder.callExpr(mgr.getLangBasic().getVolatileMake(),
-				defaultInitVal(core::analysis::getVolatileType(type)));
+	assert(core::analysis::isRefType(type) && "We cannot initialize any different type of non-ref");
+
+	core::RefTypePtr refType = type.as<core::RefTypePtr>();
+	
+	// handle arrays initialization
+	if ( core::ArrayTypePtr&& arrTy = core::dynamic_pointer_cast<const core::ArrayType>(refType->getElementType())) {
+		// if (arrTy->getElementType()->getNodeType() == core::NT_RefType) {
+		//	const core::RefTypePtr& ref = core::static_pointer_cast<const core::RefType>(arrTy->getElementType());
+		//	if (ref->getElementType()->getNodeType() != core::NT_VectorType) {
+		return builder.callExpr(mgr.getLangBasic().getGetNull(), builder.getTypeLiteral(arrTy));
+		//	}
+		//}
+		//return builder.callExpr(arrTy, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(arrTy));
 	}
 
-	LOG(ERROR) << "Default initializer for type: '" << *type << "' not supported!";
-	assert(false && "Default initialization type not defined");
+	// handle refs initialization
+	// initialize pointer/reference types with undefined
+	core::TypePtr elemType = refType->getElementType();
+
+	core::ExpressionPtr initValue;
+	if (elemType->getNodeType() == core::NT_RefType) {
+		// ref<ref<...>> => this is a pointer, init with 0 (null)
+		initValue = builder.callExpr(elemType, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(elemType));
+	} else {
+		initValue = defaultInitVal(elemType);
+	}
+	return builder.refVar(initValue);
+
+		
+	// LOG(ERROR) << "Default initializer for type: '" << *type << "' not supported!";
+	// assert(false && "Default initialization type not defined");
 }
 
 core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {

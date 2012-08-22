@@ -425,9 +425,11 @@ namespace backend {
 			return c_ast::postDec(getAssignmentTarget(context, ARG(0)));
 		});
 
-
 		#undef ADD_ELEMENT_TYPE_DEPENDENCY
-
+		
+		res[basic.getArrayRefDistance()] = OP_CONVERTER({
+			return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1));
+		});
 
 		// -- vectors --
 

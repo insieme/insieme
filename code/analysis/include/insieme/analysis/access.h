@@ -49,7 +49,7 @@
 #include "insieme/utils/printable.h"
 #include "insieme/utils/constraint.h"
 
-#include "insieme/analysis/alias_map.h"
+#include "insieme/analysis/tmp_var_map.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 namespace insieme { 
@@ -95,7 +95,7 @@ class Access : public utils::Printable {
      * For arrays the domain depends on the range of values being accessed. It could be either a
      * single element or strided domain in the circumstances the array is accessed inside a loop
      */
-	 ConstraintPtr array_access;
+	 ConstraintPtr 				array_access;
 
 	/** 
 	 * A constraint has sense only if within a SCoP. Indeed, two equal constraints extracted from
@@ -119,7 +119,7 @@ class Access : public utils::Printable {
 		array_access( cloneConstraint(iterVec, dom) ),
 		ctx(ctx) {  }
 
-	friend Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& aliasMap);
+	friend Access getImmediateAccess(const core::ExpressionAddress& expr, const TmpVarMap& tmpVarMap);
 
 public:
 	
@@ -133,7 +133,9 @@ public:
 	bool isRef() const;
 
 	inline core::VariablePtr getAccessedVariable() const { return variable; }
+
 	inline core::ExpressionAddress getAccessExpression() const { return base_expr; }
+
 	inline const core::datapath::DataPathPtr& getPath() const {	return path; }
 
 	/** 
@@ -147,16 +149,38 @@ public:
 	 */
 	inline const core::NodeAddress& getContext() const { return ctx; }
 
-	std::ostream& printTo(std::ostream& out) const;
-
 	/** 
-	 * Define a partial order for accesses 
+	 * Accesses to arrays have range informations which states the subset of elements of the array
+	 * being accessed by the particular expression (e.g. an array access inside a loop). It could
+	 * happen that these accesses are symbolically bound to variables. 
+	 *
+	 * When comparing two accesses we must be sure that if the bounds are symbolic, they belong to
+	 * the same SCoP which makes sure that the bound is not being assigned. In the case of
+	 * comparison of two symbolically bound accesses belonging to different context, then we have to
+	 * assume that there is a potential collision between elements. 
+	 *
+	 * However, if the bounds of the range are not symbolical, then we can compare accesses
+	 * belonging to different contexts as long as the accessed array is the same
 	 */
-	bool operator<(const Access& other) const;
+	bool isContextDependent() const;
+
+	std::ostream& printTo(std::ostream& out) const;
+	
+
+	// TO BE REMOVED 
+	bool operator<(const Access& other) const ;
 
 	inline bool operator==(const Access& other) const { return *variable == *other.variable; }
+
 	inline bool operator!=(const Access& other) const {	return !(*this == other); }
 };
+
+
+/** 
+ * Given two accesses, this function returns true if the ranges on which the accesses are defined
+ * are overlapping or not.
+ */
+// bool isOverlapping(const Access& a1, const Access& a2);
 
 /** 
  * Given an expression, it returns the immediate memory access represented by this expression. 
@@ -164,14 +188,14 @@ public:
  * The method always returns the imediate access and in the case of expression accessing multiple
  * variables, only the immediate access will be returned. 
  */
-Access getImmediateAccess(const core::ExpressionAddress& expr, const AliasMap& aliasMap=AliasMap());
+Access getImmediateAccess(const core::ExpressionAddress& expr, const TmpVarMap& tmpVarMap=TmpVarMap());
 
 
 /** 
  * Given a statement, this function takes care of extracting all memory accesses within that
  * statement. 
  */
-std::set<Access> extractFromStmt(const core::StatementAddress& stmt, const AliasMap& aliasMap=AliasMap());
+std::set<Access> extractFromStmt(const core::StatementAddress& stmt, const TmpVarMap& tmpVarMap=TmpVarMap());
 
 /**
  * Similar to the previous function, this function collects all memory accesses within a statement,
@@ -179,7 +203,7 @@ std::set<Access> extractFromStmt(const core::StatementAddress& stmt, const Alias
  */
 void extractFromStmt(const core::StatementAddress& stmt, 
 					 std::set<Access>& accesses, 
-					 const AliasMap& aliasMap=AliasMap()
+					 const TmpVarMap& tmpVarMap=TmpVarMap()
 					);
 
 
@@ -188,6 +212,6 @@ void extractFromStmt(const core::StatementAddress& stmt,
  * same variable, and the datapaths of the two variables are overlapping. The predicate also
  * receives the alias map as argument so that it includes aliasing when checking for conflicts
  */
-bool isConflicting(const Access& acc1, const Access& acc2, const AliasMap& aliases = AliasMap());
+bool isConflicting(const Access& acc1, const Access& acc2, const TmpVarMap& tmpVarMap = TmpVarMap());
 
 } } // end insieme::analysis::dfa namespace 
