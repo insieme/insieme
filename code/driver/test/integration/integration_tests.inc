@@ -64,12 +64,14 @@ namespace insieme {
 			}
 		
 			// not loaded yet => load and cache code
-			frontend::ConversionJob job(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs());
+			frontend::ConversionJob job(manager, testCase.getFiles(), testCase.getIncludeDirs());
 			job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
 			core::ProgramPtr code = job.execute();
-	
-			loadedCodes.insert(std::make_pair(testCase, code));
-			return manager.get(code);
+
+			// store the code in the global node manager 
+			loadedCodes.insert(std::make_pair(testCase, testGlobalManager.get(code)));
+
+			return code;
 		}
 	
 	}
