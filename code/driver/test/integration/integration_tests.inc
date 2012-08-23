@@ -58,10 +58,10 @@ namespace insieme {
 		ProgramPtr load(NodeManager& manager, const IntegrationTestCase& testCase) {
 	
 			// check whether the code is already in the cache
-			auto pos = loadedCodes.find(testCase);
-			if (pos != loadedCodes.end()) {
-				return manager.get(pos->second);
-			}
+			//auto pos = loadedCodes.find(testCase);
+			//if (pos != loadedCodes.end()) {
+			//	return manager.get(pos->second);
+			//}
 		
 			// not loaded yet => load and cache code
 			frontend::ConversionJob job(manager, testCase.getFiles(), testCase.getIncludeDirs());
@@ -69,7 +69,7 @@ namespace insieme {
 			core::ProgramPtr code = job.execute();
 
 			// store the code in the global node manager 
-			loadedCodes.insert(std::make_pair(testCase, testGlobalManager.get(code)));
+			//loadedCodes.insert(std::make_pair(testCase, testGlobalManager.get(code)));
 
 			return code;
 		}
