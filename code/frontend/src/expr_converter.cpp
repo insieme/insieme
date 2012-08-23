@@ -1068,7 +1068,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 			doPointerArithmetic(); 
 		} else 
 			rhs = builder.callExpr(exprTy, gen.getOperator(exprTy, op), subExprLHS, rhs);
-		}
 	}
 
 	bool isAssignment = false;
