@@ -4,6 +4,10 @@
 #include "lib_icl_ext.h"
 #include "vmath.h"
 
+#ifndef PATH
+#define PATH "./"
+#endif
+
 // camera info
 typedef struct _CameraInfo {
         float position[5];
@@ -32,10 +36,12 @@ int main(int argc, const char* argv[]) {
         icl_args* args = icl_init_args();
         icl_parse_args(argc, argv, args);
 
-        int width = (int)floor(sqrt(args->size));
-        args->size = width * width;
-        int size = args->size;
-        icl_print_args(args);
+	chdir(PATH);
+
+       int width = (int)floor(sqrt(args->size));
+       args->size = width * width;
+       int size = args->size;
+       icl_print_args(args);
 
 	TriAccel* triAccels = (TriAccel*)malloc(sizeof(TriAccel) * size);
 	int* pixel = (int *)malloc(sizeof(int) * size);

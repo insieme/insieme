@@ -11,6 +11,9 @@
 
 #define POS(Image, X, Y) Image[(X)*width + (Y)]
 
+#ifndef PATH
+#define PATH "./"
+#endif
 
 typedef unsigned char uchar;
 
@@ -60,6 +63,7 @@ typedef struct {
 } Settings;
 
 int main(int argc, const char* argv[]) {
+	chdir(PATH);
         icl_args* args = icl_init_args();
         icl_parse_args(argc, argv, args);
 

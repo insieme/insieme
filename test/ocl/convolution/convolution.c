@@ -3,14 +3,20 @@
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
 
+#ifndef PATH
+#define PATH "./"
+#endif
+
 int main(int argc, const char* argv[]) {
         icl_args* args = icl_init_args();
         icl_parse_args(argc, argv, args);
 
-        int width = (int)floor(sqrt(args->size));
-        args->size = width * width;
-        int size = args->size;
-        icl_print_args(args);
+	chdir(PATH);
+	
+    int width = (int)floor(sqrt(args->size));
+    args->size = width * width;
+    int size = args->size;
+    icl_print_args(args);
 
 	int mask_width = 22;
 	int mask_size = mask_width * mask_width;

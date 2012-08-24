@@ -3,10 +3,16 @@
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
 
+#ifndef PATH
+#define PATH "./"
+#endif 
+
 int main(int argc, const char* argv[]) {
         icl_args* args = icl_init_args();
         icl_parse_args(argc, argv, args);
         icl_print_args(args);
+
+	chdir(PATH);
 
 	int size = args->size;
 

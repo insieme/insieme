@@ -65,6 +65,7 @@ FUN("stdio.h", fwrite)
 FUN("stdio.h", fclose)
 FUN("stdio.h", sprintf)
 FUN("stdio.h", snprintf)
+FUN("stdio.h", chdir)
 
 FUN("stdio.h", sscanf)
 FUN("stdio.h", fprintf)

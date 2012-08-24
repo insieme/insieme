@@ -4,6 +4,9 @@
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
 
+#ifndef PATH
+#define PATH "./"
+#endif
 
 void syr2k_check(float *A, float *B, float *C, float ALPHA, float BETA, int m, int n, int size)
 {
@@ -29,11 +32,12 @@ void syr2k_check(float *A, float *B, float *C, float ALPHA, float BETA, int m, i
 	}
 }
 
-
 int main(int argc, const char* argv[]) {
         icl_args* args = icl_init_args();
         icl_parse_args(argc, argv, args);
         icl_print_args(args);
+
+	chdir(PATH);
 
 	int width = (int)floor(sqrt(args->size));
 	args->size = width * width;

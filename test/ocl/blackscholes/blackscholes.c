@@ -9,6 +9,10 @@
 #define VECTOR_WIDTH 1
 #define CHECK_RESULT 1
 
+#ifndef PATH
+#define PATH "./"
+#endif
+
 /* =================================================================================================== */
 /*  N validation function. Here are the two reference routines used by validation */
 /*  (the second one, bsop_reference, calls the first one, N, in two places). */
@@ -97,7 +101,9 @@ int main(int argc, const char* argv[]) {
         icl_parse_args(argc, argv, args);
         icl_print_args(args);
 
-        int size = args->size;
+	chdir(PATH);
+
+    int size = args->size;
 
 	/* declare some variables for intializing data */
 	int idx;

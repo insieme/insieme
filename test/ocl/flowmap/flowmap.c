@@ -4,6 +4,9 @@
 #include "lib_icl_ext.h"
 #include <math.h>
 
+#ifndef PATH
+#define PATH "./"
+#endif
 
 static inline float random01_float(){ return (float) rand()/(RAND_MAX); }
 
@@ -21,6 +24,9 @@ void icl_fillrandom_float(float* arrayPtr, int width, int height, float rangeMin
 }	
 
 int main(int argc, const char* argv[]) {
+
+	chdir(PATH);
+
 	int numTimesteps = 4;
 	cl_float2 origin   = { 0.f,  0.f  };
 	cl_float2 cellSize = { 0.1f, 0.1f };	

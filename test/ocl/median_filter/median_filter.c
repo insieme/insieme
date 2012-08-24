@@ -7,9 +7,15 @@
 
 #define OUTPUT_IMAGE "medianfilter_output.bmp"
 
+#ifndef PATH
+#define PATH "./"
+#endif
+
 int main(int argc, const char* argv[]) {
         icl_args* args = icl_init_args();
         icl_parse_args(argc, argv, args);
+
+	chdir(PATH);
 
 	uchar4* bmpPixel;
 	BITMAPINFO *bmpInfo;

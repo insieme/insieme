@@ -3,6 +3,10 @@
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
 
+#ifndef PATH
+#define PATH "./"
+#endif
+
 void out_float_hbuffer(const float *hostbuf, size_t bsize){
 	size_t i;
 	for(i=0; i< bsize; i++){
@@ -27,6 +31,8 @@ void fillrandom_float(float* arrayPtr, int width, int height, float rangeMin, fl
 
 int main(int argc, const char* argv[]) 
 {
+	chdir(PATH);
+
 	icl_args* args = icl_init_args();
 	icl_parse_args(argc, argv, args);
         icl_print_args(args);

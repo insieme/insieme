@@ -1,1 +1,1 @@
--f input.15 -c
+{PATH}/{EXEC} -f {PATH}/input.15 -c

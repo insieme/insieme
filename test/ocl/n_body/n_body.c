@@ -5,6 +5,9 @@
 #include "lib_icl_ext.h"
 #include "n_body.h"
 
+#ifndef PATH
+#define PATH "./"
+#endif
 
 float rand_val(float min, float max) {
 	return (rand() / (float) RAND_MAX) * (max - min) + min;
@@ -27,6 +30,8 @@ int main(int argc, const char* argv[]) {
         icl_args* args = icl_init_args();
         icl_parse_args(argc, argv, args);
         icl_print_args(args);
+
+	chdir(PATH);
 
 	int size = args->size;
 
