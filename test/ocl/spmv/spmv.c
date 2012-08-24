@@ -4,6 +4,10 @@
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
 
+#ifndef PATH
+#define PATH "./"
+#endif 
+
 int main(int argc, const char* argv[]) {
         icl_args* args = icl_init_args();
         icl_parse_args(argc, argv, args);
@@ -16,6 +20,8 @@ int main(int argc, const char* argv[]) {
 	int* vec = (int*)malloc(sizeof(int) * size); // vector for the multiplication
 	int* output = (int*)malloc(sizeof(int) * size); // output data
 	
+	chdir(PATH);
+
 	srand(42);
 	//int min = rsize* 1 / 100; // min number of value for row
 	//int max = rsize* 3 / 100; // max..

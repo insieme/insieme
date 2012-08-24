@@ -3,6 +3,10 @@
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
 
+#ifndef PATH
+#define PATH "./"
+#endif 
+
 int float_compare(const void* elem1, const void* elem2) {
         if(*(const float*)elem1 < *(const float*)elem2) return -1;
         return *(const float*)elem1 > *(const float*)elem2;
@@ -45,6 +49,8 @@ int main(int argc, const char* argv[]) {
         icl_args* args = icl_init_args();
         icl_parse_args(argc, argv, args);
         icl_print_args(args);
+
+		chdir(PATH);
 
         int size = args->size;
 

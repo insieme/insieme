@@ -15,6 +15,10 @@
 #include "lib_icl_bmp.h"
 #include "math.h"
 
+#ifndef PATH
+#define PATH "./"
+#endif
+
 typedef cl_uchar4 pixel;
 
 int perm[512] = {
@@ -235,6 +239,8 @@ fprintf(stderr, "Error [%d]: H 0x%08X 0x%08X\n", i, output_host[i], output_devic
 
 
 int main(int argc, const char* argv[]) {
+	chdir(PATH);
+
         icl_args* args = icl_init_args();
         icl_parse_args(argc, argv, args);
 
