@@ -3,7 +3,7 @@
 ###################################################################################################
 #! /bin/sh
 """:"
-exec python $0 ${1+"$@"}
+exec python3 $0 ${1+"$@"}
 """
 import optparse, sys, os, re, random, math, shutil, time, subprocess, shlex, copy, configparser
 from multiprocessing import Pool, Process, Queue
