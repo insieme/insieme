@@ -1,1 +1,1 @@
--I. -I../common/ -I../../../code/frontend/test/inputs perlin_noise.c
+-I. -I../common/ -I../../../code/frontend/test/inputs perlin_noise.c -DPATH=\"{PATH}\"
