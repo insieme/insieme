@@ -330,6 +330,12 @@ namespace c_ast {
 		return *function==*other.function;
 	}
 
+	bool ExtVarDecl::equals(const Node& node) const {
+		assert(dynamic_cast<const ExtVarDecl*>(&node));
+		auto other = static_cast<const ExtVarDecl&>(node);
+		return *type==*other.type && name==other.name;
+	}
+
 	bool TypeDefinition::equals(const Node& node) const {
 		assert(dynamic_cast<const TypeDefinition*>(&node));
 		auto other = static_cast<const TypeDefinition&>(node);

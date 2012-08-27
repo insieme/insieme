@@ -1,1 +1,1 @@
--DINSIEME -I. -I../../ocl/common/ -I../../../code/frontend/test/inputs --opencl
+-DINSIEME --opencl -DPATH=\"{PATH}\"

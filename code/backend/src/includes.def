@@ -68,6 +68,7 @@ FUN("stdio.h", snprintf)
 
 FUN("stdio.h", sscanf)
 FUN("stdio.h", fprintf)
+FUN("stdio.h", perror)
 
 TYPE("stdio.h", "FILE")
 
