@@ -86,6 +86,7 @@ namespace insieme {
 	
 		// load the code using the frontend
 		core::ProgramPtr code = load(manager, testCase);
+		// LOG(INFO) << printer::PrettyPrinter(code);
 
 		// run semantic checks on loaded program
 		auto errors = core::check(code, core::checks::getFullCheck()).getErrors();
@@ -110,11 +111,12 @@ namespace insieme {
 				} while(ss.str().length() < 50 && contextSize++ < 5);
 				LOG(INFO) << "\t Context: " << ss.str() << std::endl;
 			});
+			// assert(false);
 		}
 
 	}
 
 	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+	// INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 }

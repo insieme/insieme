@@ -1,0 +1,712 @@
+###################################################################################################
+## Insieme Integration Test Script [v 2.0]
+###################################################################################################
+#! /bin/sh
+""":"
+exec python3 $0 ${1+"$@"}
+"""
+import optparse, sys, os, re, random, math, shutil, time, subprocess, shlex, copy, configparser
+from multiprocessing import Pool, Process, Queue
+
+# linker flags
+LDFLAGS_GCC   = "-lm -lpthread -lrt"
+
+CFG_FILE_NAME = 'test.cfg'
+INPUTS_DATA   = 'inputs.data'
+INSIEME_FLAGS = 'insieme.flags'
+REF_GCC_FLAGS = 'ref-gcc.flags'
+TEST_GCC_FLAGS= 'test-gcc.flags'
+PROG_INPUTS   = 'prog.input'
+
+NONE   = ''
+BOLD   = '\033[1m'
+UNDERLINE= '\033[4m'
+GREEN  = '\033[1;32m'
+YELLOW = '\033[93m'
+RED    = '\033[1;31m'
+BLUE   = '\033[1;94m'
+ENDC   = '\033[0m'
+
+def col_print(msg, col=NONE) :
+	if not no_colors and col != NONE:
+		msg = col + msg + ENDC
+
+	sys.stderr.write(msg)
+	
+class Flag:
+	def __init__(self, name, desc=''):
+		self.name = name; self.desc = desc
+
+	def __repr__(self):
+		return self.name
+
+class OutFileFlag(Flag):
+	def __init__(self, name, file_name, desc=''):
+		super(OutFileFlag, self).__init__(name, desc)
+		self.__file_name = file_name
+
+	@property
+	def file_name(self):
+		return '{CASE_NAME}.' + self.__file_name
+
+	def __repr__(self):
+		return "{0} {2}/{1}".format(self.name, self.file_name, '{PATH}')
+
+class Conf:
+	def __init__(self, flags, desc=""):
+		self.desc = desc
+		self.flags = flags if isinstance(flags, list) else [flags]
+
+	def __repr__(self):
+		return " ".join(map(lambda x: '{0}'.format(x), self.flags))
+
+	def __add__(self, conf):
+		tag = conf.desc
+		if len(self.desc)!=0 and len(conf.desc)!=0:
+			tag = self.desc + " >> " + conf.desc
+		elif len(self.desc) != 0:
+			tag = self.desc
+		return Conf(self.flags + conf.flags, tag)
+	@property
+	def files(self):
+		return [flag.file_name for flag in self.flags if isinstance(flag, OutFileFlag)]
+	@property
+	def output_file(self):
+		return [flag.file_name for flag in self.flags if isinstance(flag, OutFileFlag) and flag.name == '-o']
+
+class Pass:
+	def __init__(self, frontend, tmp_file=None, backend=None, out_file=None):
+		self.frontend = copy.deepcopy(frontend)
+		self.tmp_file = tmp_file
+		if tmp_file:
+			self.frontend.flags.append( OutFileFlag('-o', tmp_file) )
+			self.tmp_file = '{CASE_NAME}.'+tmp_file
+
+		assert not (frontend and not tmp_file and backend)
+		self.backend = copy.deepcopy(backend)
+		self.out_file = out_file
+
+		assert not (not backend and out_file)
+		if out_file:
+			self.backend.flags.append( OutFileFlag('-o', out_file) )
+			self.out_file = '{CASE_NAME}.'+out_file
+	@property
+	def files(self):
+		ret = []
+		if self.frontend:
+			ret.extend(self.frontend.files)
+		if self.backend:
+			ret.extend(self.backend.files)
+		return set(ret)
+
+class Commands:
+	COMPILE = (0, 'Compile')
+	SDIFF   = (1, 'SDiff')
+	RUN	  	= (2, 'Run')
+	EXT		= (3, 'Extract')
+	HDIFF   = (4, 'HDiff')
+	COPY    = (5, 'Copy')
+	DEL     = (6, 'Delete')
+	SUCC	= (7, 'DONE')
+
+
+###################################################################################################
+##
+## Builds the list of test cases to be executed.
+##
+## This is done by searching for the file test.cfg which hould be contained in those folder grouping
+## together sub benchmarks.
+###################################################################################################
+
+def read_test_cfg( path ):
+	assert os.path.exists( path )
+	return [path + '/' + x.strip() \
+			  for x in open(path+'/'+CFG_FILE_NAME).read().split('\n') \
+					if len(x) > 0 and not x.startswith('#') ]
+
+def expand(tests):
+	if isinstance(tests, list):
+		ret = []
+		for test in tests:
+			ret.extend(expand(test))
+		return ret
+
+	# Handle the cases where we need to recur and resolve
+	assert os.path.isdir( tests )
+
+	# If the directoy has a test.cfg file it means we have to run all the
+	# contained tests
+	if os.path.exists( tests+'/'+CFG_FILE_NAME ):
+		return expand( read_test_cfg( tests ) )
+
+	return [ tests ]
+
+class CmdExecReport:
+
+	def __init__(self, type, desc, ret_code, output, time):
+		self.type = type
+		self.desc = desc
+		self.ret_code = ret_code
+		self.output = output
+		self.time = time
+		self.stdev = 0.0
+
+
+###################################################################################################
+##
+## TestCaseData:
+##
+## A class utility which is utilized to compose the name of the generated files
+## from the compilation and execution of this test case
+###################################################################################################
+class TestData:
+	def __init__(self, name):
+		self.__name = name
+		self.reports = []
+
+	@property
+	def path(self):		return self.__name
+
+	@property
+	def name(self):		return os.path.basename(self.__name)
+
+completed = Queue()
+
+def reporter( report_queue ):
+
+	success_count = 0
+	failedTests = []
+	num = 1
+
+	while True:
+		job = completed.get()
+
+		# The work is completed, exit the loop and print the summary 
+		if job is None: break
+
+		col_print("\n#{0:-^61}\n".format('-'), BOLD)
+		col_print("# {0}/{1}: {2:<60}\n".format(num, test_cases_number, job.data.path), BOLD)
+		col_print("#{0:-^61}\n".format('-'), BOLD)
+
+		success = job.data.reports[-1].desc == 'DONE' and job.data.reports[-1].ret_code == 0
+
+		# Check the output for all the selected backends
+		for rep in job.data.reports[:-1]:
+			# Cmds with an id greater than 3 are not important to be shown 
+			if rep.type[0] > 4:
+				continue
+
+			sys.stderr.write("# ")
+			if rep.ret_code == 0:
+				col_print("{0:<44}".format(rep.desc), NONE),
+				col_print("[{0:>8.4f} secs {1}]\n".
+					format(rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else ""),
+					BLUE if rep.type == Commands.RUN else BOLD)
+			else:
+				col_print("{0:<44}[{1:>8.4f} secs {2}]\n".
+					format( rep.desc, rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else ""), RED)
+				col_print("#{0:-^60}\n".format('~'), RED)
+				sys.stderr.write( '\n'.join(str(rep.output).split('\n')[0:10 if not verbose else -1]) )
+				col_print("\n#{0:-^60}\n".format('~'), RED)
+
+		if not success:
+			col_print("#{0:-^61}\n".format("-"), RED)
+			col_print("# {0:^60}\n".format("FAILED -- " + job.data.path), RED)
+			col_print("#{0:-^61}\n".format("-"), RED)
+			failedTests.append( job.data.path )
+		else:
+			col_print("#{0:-^61}\n".format("-"), GREEN)
+			col_print("# {0:^60}\n".format("SUCCESS -- " + job.data.path), GREEN)
+			col_print("#{0:-^61}\n".format("-"), GREEN)
+			success_count += 1
+
+		sys.stderr.flush()
+		num += 1
+
+	if not mock_run:
+		# Before exiting the reporter prints a summary of the test case 
+		col_print("\n#{0:~^60}\n".format(' INTEGRATION TEST SUMMARY '), BOLD)
+		col_print("# SUCCESSFUL: ", BOLD)
+		col_print("{0:>46}\n".format(success_count), GREEN)
+		col_print("# FAILED:     ", BOLD)
+		col_print("{0:>46}\n".format(len(failedTests)), RED)
+		for test in failedTests:
+			col_print("# -> ", BOLD)
+			col_print("{0}\n".format(test), RED)
+		col_print("#{0:~^60}\n".format('~'), BOLD)
+	
+	report_queue.put( len(failedTests) )
+
+
+# Generic executor of commands
+def runner( job ):
+	if mock_run:
+		col_print("@{0:~^80}\n".format('~'), BOLD)
+		col_print("@Benchmark: {0}\n".format(job.data.path), BOLD)
+
+	# run cmd
+	for cmd in job.cmds:
+
+		if mock_run and cmd.type[0] < 5:
+			print(cmd.desc)
+			col_print(cmd.cmd + "\n", GREEN)
+			continue
+
+		if cmd.type == Commands.SUCC:
+			job.data.reports.append( CmdExecReport(Commands.SUCC, 'DONE', 0, "", 0.0) )
+			break
+
+		try:
+			command = os.path.expandvars(cmd.cmd)
+			start = time.time()
+			pid = subprocess.Popen( shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+			output = pid.communicate()[0].decode("utf-8")
+			retcode = pid.returncode
+			elapsed = time.time() - start
+		except Exception as e:
+			retcode = 1
+			output = "{0}".format(e)
+
+		if cmd.out_file:
+			file = open(cmd.out_file, "w")
+			file.write(output)
+			file.close()
+
+		# Create a report and append it to the result
+		job.data.reports.append( CmdExecReport(cmd.type, cmd.desc, retcode, output, elapsed) )
+
+		if (cmd.type == Commands.COMPILE or cmd.type == Commands.RUN or cmd.type == Commands.HDIFF) and retcode != 0:
+			job.data.reports.append( CmdExecReport(Commands.SUCC, 'DONE', 1, "", 0.0) )
+			# there was an error during compilation or running of the program, we mark the
+			# test case as failed
+			break
+
+		# if the command is a RUN command and we have to perform multiple runs, then benchmarks this code
+		if cmd.type == Commands.RUN:
+			execs = [ ]
+			for r in range(0,runs):
+				command = os.path.expandvars(cmd.cmd)
+				start = time.time()
+				pid = subprocess.Popen( shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+				output = pid.communicate()[0]
+				if pid.returncode != 0:
+					# something went wrong, the program which was supposed to work is now failing
+					job.data.reports[-1].ret_code = pid.returncode
+					job.data.reports[-1].output = output
+					break
+				execs.append( time.time() - start )
+
+			# compute mean value
+			mean = sum(execs)/runs
+			job.data.reports[-1].time = mean
+			# compute stdev
+			job.data.reports[-1].stdev = math.sqrt(sum( map(lambda x: (x-mean)**2, execs )) / runs)
+
+		# time.sleep (5)
+
+	if not mock_run:
+		completed.put( job )
+
+class Cmd:
+	def __init__(self, type, desc, cmd, out_file=None):
+		self.type = type
+		self.desc = desc
+		self.cmd  = cmd
+		self.out_file = out_file
+
+
+def load_from_file(file, path="./", default=''):
+	if os.path.exists(file):
+		return " ".join( [ x.strip() for x in open(file).read().format( **{'SRC_DIR': SRC_DIR,
+			'PATH': path} ).split(',') ] )
+	return default
+
+
+def visit_files(trg_dir, passes=set()):
+	if len(trg_dir) == 0:  return passes
+
+	trg_dir = os.path.normpath(trg_dir)
+
+	nexts = trg_dir.split('/')
+	if nexts[0] == '':
+		del nexts[0]
+		nexts[0] = '/'+nexts[0]
+	
+	if len(nexts) == 0:  return passes
+
+	final_specs = passes
+	# check whethere there is a file pass in this subfolder
+	if os.path.exists(nexts[0] + '/passes'):
+		specs = [x.strip() for x in open(nexts[0]+'/passes').read().split()]
+		for spec in specs:
+			if spec == "all":
+				final_specs |= set(passes_str)
+				continue
+
+			if spec.startswith('^'):
+				final_specs -= { spec[1:] }
+				continue
+
+			final_specs |= {spec}
+
+	os.chdir(nexts[0])
+	return visit_files("/".join(nexts[1:]), final_specs)
+
+
+def toAbsolutePaths(path, args):
+	# Prepend to every file of this test case the absolute path which allows test case to be
+	# executed from any directory of the system 
+	abs_args = []
+	for arg in args.split():
+		if arg.startswith('-I'):
+			abs_args.append("-I{0}/{1}".format(path, arg[2:]))
+			continue
+		if not arg.startswith('-'):
+			abs_args.append("{0}/{1}".format(path, arg))
+			continue
+		abs_args.append(arg)
+
+	return " ".join(abs_args)
+
+###################################################################################################
+## TestJob
+##
+## Builds an object containing all the information related to a specific test. Contains its name
+## and the list of commands which should be executed in order to perform the test.
+###################################################################################################
+class TestJob:
+
+	def __init__(self, test_case_name):
+		if test_case_name[-1] == '/': test_case_name = test_case_name[:-1]
+		
+		assert os.path.isdir(test_case_name)
+		save_path = os.getcwd()
+
+		pas = visit_files(test_case_name)
+		
+		isCxx = False
+
+		cur_passes = []
+		for id, val in passes:
+			if id in pas: 
+				cur_passes.append((id, val))
+				if id == "g++" or id == "icpc": isCxx = True
+
+		self.__data = TestData(test_case_name)
+		self.__cmds = [ ]
+		self.__is_parallel = False
+
+		ext = '.cpp' if isCxx==True else '.c'
+
+		path = os.path.abspath(".")
+
+		inputs 		 = load_from_file(INPUTS_DATA, path, self.__data.name + ext)
+		insiemeFlags = toAbsolutePaths(path, load_from_file(INSIEME_FLAGS, path))
+		gccFlagsRef  = toAbsolutePaths(path, load_from_file(REF_GCC_FLAGS, path))
+		gccFlagsTest = toAbsolutePaths(path, load_from_file(TEST_GCC_FLAGS, path))
+
+		input_args = None
+		if os.path.exists(PROG_INPUTS):
+			input_args = open(PROG_INPUTS).read().strip()
+
+		abs_input_files = toAbsolutePaths(path, inputs)
+
+		if do_clean is True:
+			for id, P in cur_passes:
+				if P.frontend is not None:
+					for file in P.frontend.files:
+						ref_file = "{0}.ref".format(file).format(**{
+							'CASE_NAME': self.__data.name,
+							'PATH': path
+						})
+						if os.path.exists(ref_file): os.remove(ref_file)
+
+				if P.backend is not None:
+					for file in P.backend.files:
+						ref_file = "{0}.ref".format(file).format(**{
+							'CASE_NAME': self.__data.name,
+							'PATH': path
+						})
+						if os.path.exists(ref_file): os.remove(ref_file)
+
+		finalize_cmds = []
+		cleanup_cmds = []
+		
+		first = True 
+		ref = None
+
+		# Compile for selected backends (without rerunning semantic checks)
+		for id, P in cur_passes:
+
+			if P.frontend:
+				self.__cmds.append(
+					Cmd(Commands.COMPILE, P.frontend.desc,
+					"{PASS_FLAGS} {FLAGS} {INPUTS}".format(
+						**{	'FLAGS': 		insiemeFlags,
+							'INPUTS': 		abs_input_files,
+							'PASS_FLAGS':	"{0}".format(P.frontend).format(**{
+								'CASE_NAME': self.__data.name,
+								'PATH': path
+							})
+						})
+					)
+				)
+
+				# Check diffs between generated files and reference files for this pass
+				for file in P.frontend.files:
+					file_name = ("{0}".format(file)).format(**{
+						'CASE_NAME': self.__data.name,
+						'PATH': path
+					})
+
+					# if we have a reference file, then check with a DIFF
+					if os.path.exists(file_name + ".ref"):
+						self.__cmds.append(
+							Cmd(Commands.SDIFF, "Comparing with reference {0}".format(id),
+							 "{0}/test/sortdiff {1}/{2} {1}/{2}.ref".format(SRC_DIR, path, file_name)
+							)
+						)
+						# If everything worked out, we overwrite the ref file 
+						finalize_cmds.append( 
+							Cmd(Commands.COPY, "Rewriting file as ref file {0}".format(id),
+							 "mv {0}/{1} {0}/{1}.ref".format(path, file_name)
+							)
+						)
+
+					else:
+						self.__cmds.append(
+							Cmd(Commands.COPY, "Copying file as ref file {0}".format(id),
+							 "cp {0}/{1} {0}/{1}.ref".format(path, file_name)
+							)
+						)
+
+			if P.backend:
+				# Compile generated code
+				input_file = P.tmp_file.format(**{'CASE_NAME': self.__data.name, 'PATH': path}) if P.tmp_file else inputs
+				file_name = ("{0}".format(P.backend.files[0])).format(**{
+								'CASE_NAME': self.__data.name,
+								'PATH': path
+							})
+
+				self.__cmds.append(
+					Cmd(Commands.COMPILE, P.backend.desc,
+					"{BACKEND} {FILE} {LDFLAGS} {GCCFLAGS}".format(
+						**{	'BACKEND':	 "{0}".format(P.backend).format(**{
+												'CASE_NAME': self.__data.name, 
+												'PATH': 	path,
+												'SRC_DIR': 	SRC_DIR
+											}),
+							'FILE': 	 abs_input_files if first else 
+										 "{0}/{1}".format(path, input_file),
+							'LDFLAGS':	 LDFLAGS_GCC,
+							'GCCFLAGS':	 gccFlagsTest if P.frontend else gccFlagsRef
+						})
+					)
+				)
+
+				# Run the generated executable
+				executable = P.backend.output_file[0].format(**{
+				  	 			'CASE_NAME': self.__data.name,
+				  	 			'PATH': path
+				  	 		})
+
+				file_name ="{0}.out".format(executable)
+				self.__cmds.append(
+					Cmd(Commands.RUN, "Run {0}".format(id),
+						"{0}".format(
+							input_args.format(**{'PATH':path,'EXEC': executable})
+							if input_args else "{0}/{1}".format(path, executable)
+					 	  ),
+						"{0}/{1}".format(path, file_name)
+					)
+				)
+
+				# upon finalization, remove the generated output files 
+				finalize_cmds.append(
+					Cmd(Commands.DEL, "Delete output file {0}".format(id),
+						"rm {0}/{1}".format(path, file_name)
+					)
+				)
+
+				if os.path.exists("{0}/output.match".format(path)):
+
+					# If we are interested to a specific pattern instead of the entire file, we issue a
+					# command to extract the pattern 
+					self.__cmds.append(
+						Cmd(Commands.EXT, "Extract pattern {0}".format(id),
+							"{0} {1}/{2}".format(open("{0}/output.match".format(path)).read().strip(),
+							path, file_name),
+							"{0}/{1}.match".format(path, file_name)
+						)
+					)
+					file_name ="{0}.match".format(file_name)
+	
+					# upon finalization, remove the generated output files 
+					finalize_cmds.append(
+						Cmd(Commands.DEL, "Delete output file {0}".format(id),
+							"rm {0}/{1}".format(path, file_name)
+						)
+					)
+
+				if first:
+					ref = file_name
+
+				# if we have a reference file, then check with a DIFF
+				if not first:
+					self.__cmds.append(
+						Cmd(Commands.HDIFF, "Comparing output  {0}".format(id),
+						 "{0}/test/sortdiff {1}/{2} {1}/{3}".format(SRC_DIR, path, ref, file_name)
+						)
+					)
+
+				first = False
+
+		self.__cmds += finalize_cmds
+		self.__cmds.append(
+			Cmd(Commands.SUCC, "Set as Successful","")
+		)
+
+		os.chdir(save_path)
+
+	def __str__(self):
+		return "\n\n".join( map(lambda x: "# {0} -> {1}\n{2}".format(x.type, x.desc, x.cmd), self.__cmds) )
+
+	@property
+	def cmds(self): return self.__cmds # sorted(self.__cmds, key=lambda x: x.type)
+	@property
+	def data(self): return self.__data
+
+def main(argv=None):
+	parser = optparse.OptionParser()
+	parser.add_option("-b", "--backend", dest="backends", type="string",
+							help=("The list of backends that should be uses: "
+							"options are 'smp', 'seq', 'run', 'ocl' or 'all', default: '%default'."),
+							default="smp,run")
+
+	parser.add_option("-w", "--workers", dest="workers", type="int",
+							help=("The number parallel workers: default: '%default'."),
+							# default=os.sysconf("SC_NPROCESSORS_ONLN")
+							default=1)
+
+	parser.add_option("-c", "--clean", action="store_true", dest="clean",
+							help=("Cleanup reference files, default= %default"),
+							default=False)
+
+	parser.add_option("-m", "--mock-run", action="store_true", dest="mock_run",
+							help=("Execute the mock run (you know what I mean don't let "
+							"me waste time explaining it :), default= %default"),
+							default=False)
+
+	parser.add_option("-r", "--runs", dest="runs", type="int",
+							help=("Execute the binary multiple times and produce a report on"
+							" average execution time and standard deviation , default= %default"),
+							default=1)
+
+	parser.add_option("-v", "--verbose", dest="verbose", action="store_true",
+							help=("Print to standard output occurred errors verbosily"
+							", default=%default"),
+							default=False)
+
+	parser.add_option("--no-colors", dest="no_colors", action="store_true",
+							help=("Disable color output, default=%default"),
+							default=False)
+
+	(options, args) = parser.parse_args()
+
+
+	config = configparser.ConfigParser()
+	config.readfp(open('${CMAKE_BINARY_DIR}/test.cfg'))
+
+	# config.read(['site.cfg', os.path.expanduser('~/.myapp.cfg')])
+	# Set the number of workers
+	num_cores = options.workers
+
+	test_cases = expand( args )
+
+	global test_cases_number
+	test_cases_number = len(test_cases)
+
+	print("@@ {0} benchmarks @@".format( len(test_cases) ))
+
+	# Global variable which stores the list of backends to be used
+	global passes
+	global passes_str
+
+	backends = list({x.strip() for x in options.backends.split(',')})
+
+	for backend in backends:
+		assert backend in {'smp', 'seq', 'run', 'ocl', 'all', 'mpi'}
+
+	if 'all' in backends:
+		backends = {'smp', 'seq', 'run', 'ocl', 'mpi'}
+
+	# Order the backends according to the indexes assigned to each backend
+	backends = sorted(backends)
+	
+	passes = [(key[8:],eval(val)) for key,val in config.items("Test") if key.startswith('pass')]
+	passes_str = [id for id,p in passes]
+	print (passes_str)
+
+	# check if the intel compiler is installed, otherwise remove the icc from the backends 
+	if not os.system("which gcc"):
+		to_remove = []
+		for x in range(len(passes_str)): 
+			if passes_str[x].endswith("icc") or passes_str[x].endswith("icpc"):
+				to_remove.append(x-len(to_remove))
+
+		for x in to_remove:
+			del passes_str[x]
+			del passes[x]
+
+	print("Selected backends are: {0}".format( list(map(lambda x: x[0], passes) )) )
+
+	# Global variable which stores whether the reference files should be removed
+	global do_clean
+	do_clean=options.clean
+
+	global mock_run
+	mock_run=options.mock_run
+
+	global runs
+	runs=options.runs
+
+	global verbose
+	verbose=options.verbose
+
+	global no_colors
+	no_colors=options.no_colors
+
+	global SRC_DIR
+	SRC_DIR=config.get("Test", "SRC_DIR")
+
+	global BIN_DIR
+	BIN_DIR=config.get("Test", "BIN_DIR")
+
+	report_queue = Queue()
+	# Instantiate the reporter
+	t = Process(target=reporter, args=[report_queue] )
+	t.start()
+
+	test_jobs = [TestJob(x) for x in test_cases]
+
+	# ldPath = os.getenv("LD_LIBRARY_PATH", "");
+	# os.putenv("LD_LIBRARY_PATH", ldPath + ":{0}/code/simple_backend".format(BIN_DIR));
+
+	# instantiate the pool of threads which are used to run test cases
+	pool = Pool(processes=num_cores)
+	pool.map(runner, test_jobs, 1)
+	pool.close()
+	pool.join()
+
+	# make the reporter exit
+	completed.put( None )
+	t.join()
+	# os.putenv("LD_LIBRARY_PATH",ldPath)
+
+	t.join()
+
+	ret_val = report_queue.get()
+	return os._exit(ret_val)
+
+if __name__ == "__main__":
+    sys.exit(main())

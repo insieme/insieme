@@ -1,1 +1,1 @@
--c -f test.input
+{PATH}/{EXEC} -c -f {PATH}/test.input

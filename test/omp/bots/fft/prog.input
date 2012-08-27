@@ -1,1 +1,1 @@
--n 10 -c -t
+{PATH}/{EXEC} -n 10 -c -t
