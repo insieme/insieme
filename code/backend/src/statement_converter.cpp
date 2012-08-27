@@ -189,6 +189,8 @@ namespace backend {
 			auto fragment = converter.getFragmentManager()->getFragment(IRExtensions::GLOBAL_ID);
 			assert(fragment && "Global Fragment not yet initialized!");
 			context.getDependencies().insert(fragment);
+
+			return res;
 		}
 
 		// special handling for type literals (fall-back solution)
@@ -201,6 +203,11 @@ namespace backend {
 		// handle null pointer
 		if (converter.getNodeManager().getLangBasic().isNull(ptr)) {
 			return converter.getCNodeManager()->create<c_ast::Literal>("0");
+		}
+
+		// handle all literals defined as extern  
+		if (core::analysis::isRefType(ptr->getType())) {
+			res = c_ast::ref(res);
 		}
 
 		// done
