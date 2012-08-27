@@ -678,12 +678,21 @@ void OptimizedStrassenMultiply_par(REAL *C, REAL *A, REAL *B, unsigned MatrixSiz
       #define EA(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetA ) )
       #define EB(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetB ) )
 
-      /* FIXME - may pay to expand these out - got higher speed-ups below */
-      /* S4 = A12 - ( S2 = ( S1 = A21 + A22 ) - A11 ) */
-      E(S4) = EA(A12) - ( E(S2) = ( E(S1) = EA(A21) + EA(A22) ) - EA(A11) );
+      //~ /* FIXME - may pay to expand these out - got higher speed-ups below */
+      //~ /* S4 = A12 - ( S2 = ( S1 = A21 + A22 ) - A11 ) */
+      //~ E(S4) = EA(A12) - ( E(S2) = ( E(S1) = EA(A21) + EA(A22) ) - EA(A11) );
 
-      /* S8 = (S6 = B22 - ( S5 = B12 - B11 ) ) - B21 */
-      E(S8) = ( E(S6) = EB(B22) - ( E(S5) = EB(B12) - EB(B11) ) ) - EB(B21);
+      //~ /* S8 = (S6 = B22 - ( S5 = B12 - B11 ) ) - B21 */
+      //~ E(S8) = ( E(S6) = EB(B22) - ( E(S5) = EB(B12) - EB(B11) ) ) - EB(B21);
+
+	// INSIEME fix
+	E(S1) = EA(A21) + EA(A22);
+	E(S2) = E(S1)- EA(A11);
+	E(S4) = EA(A12) - E(S2);
+	
+	E(S5) = EB(B12) - EB(B11);
+	E(S6) = EB(B22) - E(S5);
+	E(S8) = E(S6) - EB(B21);
 
       /* S3 = A11 - A21 */
       E(S3) = EA(A11) - EA(A21);
@@ -890,12 +899,21 @@ void OptimizedStrassenMultiply_par(REAL *C, REAL *A, REAL *B, unsigned MatrixSiz
       #define EA(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetA ) )
       #define EB(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetB ) )
 
-      /* FIXME - may pay to expand these out - got higher speed-ups below */
-      /* S4 = A12 - ( S2 = ( S1 = A21 + A22 ) - A11 ) */
-      E(S4) = EA(A12) - ( E(S2) = ( E(S1) = EA(A21) + EA(A22) ) - EA(A11) );
+      //~ /* FIXME - may pay to expand these out - got higher speed-ups below */
+      //~ /* S4 = A12 - ( S2 = ( S1 = A21 + A22 ) - A11 ) */
+      //~ E(S4) = EA(A12) - ( E(S2) = ( E(S1) = EA(A21) + EA(A22) ) - EA(A11) );
 
-      /* S8 = (S6 = B22 - ( S5 = B12 - B11 ) ) - B21 */
-      E(S8) = ( E(S6) = EB(B22) - ( E(S5) = EB(B12) - EB(B11) ) ) - EB(B21);
+      //~ /* S8 = (S6 = B22 - ( S5 = B12 - B11 ) ) - B21 */
+      //~ E(S8) = ( E(S6) = EB(B22) - ( E(S5) = EB(B12) - EB(B11) ) ) - EB(B21);
+
+	// INSIEME fix
+	E(S1) = EA(A21) + EA(A22);
+	E(S2) = E(S1)- EA(A11);
+	E(S4) = EA(A12) - E(S2);
+	
+	E(S5) = EB(B12) - EB(B11);
+	E(S6) = EB(B22) - E(S5);
+	E(S8) = E(S6) - EB(B21);
 
       /* S3 = A11 - A21 */
       E(S3) = EA(A11) - EA(A21);
@@ -1123,12 +1141,21 @@ void OptimizedStrassenMultiply_par(REAL *C, REAL *A, REAL *B, unsigned MatrixSiz
       #define EA(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetA ) )
       #define EB(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetB ) )
 
-      /* FIXME - may pay to expand these out - got higher speed-ups below */
-      /* S4 = A12 - ( S2 = ( S1 = A21 + A22 ) - A11 ) */
-      E(S4) = EA(A12) - ( E(S2) = ( E(S1) = EA(A21) + EA(A22) ) - EA(A11) );
+      //~ /* FIXME - may pay to expand these out - got higher speed-ups below */
+      //~ /* S4 = A12 - ( S2 = ( S1 = A21 + A22 ) - A11 ) */
+      //~ E(S4) = EA(A12) - ( E(S2) = ( E(S1) = EA(A21) + EA(A22) ) - EA(A11) );
 
-      /* S8 = (S6 = B22 - ( S5 = B12 - B11 ) ) - B21 */
-      E(S8) = ( E(S6) = EB(B22) - ( E(S5) = EB(B12) - EB(B11) ) ) - EB(B21);
+      //~ /* S8 = (S6 = B22 - ( S5 = B12 - B11 ) ) - B21 */
+      //~ E(S8) = ( E(S6) = EB(B22) - ( E(S5) = EB(B12) - EB(B11) ) ) - EB(B21);
+
+	// INSIEME fix
+	E(S1) = EA(A21) + EA(A22);
+	E(S2) = E(S1)- EA(A11);
+	E(S4) = EA(A12) - E(S2);
+	
+	E(S5) = EB(B12) - EB(B11);
+	E(S6) = EB(B22) - E(S5);
+	E(S8) = E(S6) - EB(B21);
 
       /* S3 = A11 - A21 */
       E(S3) = EA(A11) - EA(A21);
