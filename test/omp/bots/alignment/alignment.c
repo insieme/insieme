@@ -456,7 +456,7 @@ int pairalign()
             } else {
                #pragma omp task untied \
                private(i,gg,len2,mm_score) firstprivate(m,n,si,sj,len1) \
-               shared(nseqs, bench_output,seqlen_array,seq_array,gap_pos1,gap_pos2,pw_ge_penalty,pw_go_penalty,mat_avscore)
+               shared(nseqs,bench_output,seqlen_array,seq_array,gap_pos1,gap_pos2,pw_ge_penalty,pw_go_penalty,mat_avscore)
                {
                   int se1, se2, sb1, sb2, maxscore, seq1, seq2, g, gh;
                   int displ[2*MAX_ALN_LENGTH+1];
@@ -494,7 +494,7 @@ int pairalign()
                } // end task
             } // end if (n == 0 || m == 0)
          } // for (j)
-      } // end parallel for (i)
+      } // end single
    } // end parallel
    bots_message(" completed!\n");
    return 0;
