@@ -450,7 +450,8 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 	START_LOG_TYPE_CONVERSION( tagType );
 
 	auto tagDecl = findDefinition(tagType);
-	VLOG(2) << "VisitTagType " << tagDecl->getNameAsString() <<  std::endl;
+	if (tagDecl)
+		VLOG(2) << "VisitTagType " << tagDecl->getNameAsString() <<  std::endl;
 
 	if(!convFact.ctx.recVarMap.empty() && tagDecl) {
 		// check if this type has a typevar already associated, in such case return it
