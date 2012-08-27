@@ -411,9 +411,13 @@ core::TypePtr ConversionFactory::TypeConverter::VisitExtVectorType(const ExtVect
 core::TypePtr ConversionFactory::TypeConverter::VisitTypedefType(const TypedefType* typedefType) {
 	START_LOG_TYPE_CONVERSION( typedefType );
 
-	core::TypePtr&& subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
+	core::TypePtr subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
+	assert(subType);
+
 	// Adding the name of the typedef as annotation
-	subType->addAnnotation(std::make_shared<annotations::c::CNameAnnotation>(typedefType->getDecl()->getNameAsString()));
+	subType->addAnnotation(
+		std::make_shared<annotations::c::CNameAnnotation>(typedefType->getDecl()->getNameAsString())
+	);
 
 	END_LOG_TYPE_CONVERSION( subType );
 	return  subType;

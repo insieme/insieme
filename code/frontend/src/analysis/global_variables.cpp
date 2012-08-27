@@ -806,10 +806,10 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 
 		core::TypePtr&& type = convFact.convertType((*it)->getType().getTypePtr());
 
-		if ((*it)->getNameAsString() == "ompi_mpi_comm_world") {
+		// if ((*it)->getNameAsString() == "ompi_mpi_comm_world") {
 		//	LOG(INFO) << "OK";
-			type = builder.getLangBasic().getUnit();
-		}
+		//	type = builder.getLangBasic().getUnit();
+		//}
 
 		// If variable is marked to be volatile, make its tile volatile
 		//auto&& vit1 = std::find(convFact.getVolatiles().begin(), convFact.getVolatiles().end(), *it);
