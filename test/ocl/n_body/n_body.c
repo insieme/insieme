@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <unistd.h>
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
 #include "n_body.h"
