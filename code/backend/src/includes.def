@@ -65,13 +65,12 @@ FUN("stdio.h", fwrite)
 FUN("stdio.h", fclose)
 FUN("stdio.h", sprintf)
 FUN("stdio.h", snprintf)
+
 FUN("stdio.h", sscanf)
 FUN("stdio.h", fprintf)
 FUN("stdio.h", perror)
 
 TYPE("stdio.h", "FILE")
-
-FUN("unistd.h", chdir)
 
 FUN("stdlib.h", malloc)
 FUN("stdlib.h", calloc)
@@ -85,6 +84,8 @@ FUN("stdlib.h", atof)
 
 FUN("alloca.h", alloca)
 
+FUN("malloc.h", memalign)
+
 FUN("string.h", memcpy)
 FUN("string.h", strcmp)
 FUN("string.h", strtok)
@@ -92,7 +93,6 @@ FUN("string.h", strchr)
 FUN("string.h", strrchr)
 FUN("string.h", strcpy)
 FUN("string.h", strlen)
-FUN("string.h", strtol)
 
 FUN("time.h", strftime)
 FUN("time.h", gmtime)
@@ -105,7 +105,6 @@ FUN("math.h", floor)
 FUN("math.h", ceil)
 FUN("math.h", min)
 FUN("math.h", max)
-FUN("math.h", sqrt)
 
 FUN("math.h", __isnan)
 FUN("math.h", __isnanl)
@@ -121,16 +120,8 @@ FUN("mpi.h", MPI_Comm_size)
 FUN("mpi.h", MPI_Finalize)
 FUN("mpi.h", MPI_Init)
 FUN("mpi.h", MPI_Abort)
-
-FUN("mpi.h", MPI_Barrier)
-FUN("mpi.h", MPI_Bcast)
-FUN("mpi.h", MPI_Reduce)
-FUN("mpi.h", MPI_Gather)
-FUN("mpi.h", MPI_Scatter)
 FUN("mpi.h", MPI_Allreduce)
-FUN("mpi.h", MPI_Allgather)
-FUN("mpi.h", MPI_Allscatter)
-
+FUN("mpi.h", MPI_Barrier)
 FUN("mpi.h", MPI_Wait)
 FUN("mpi.h", MPI_Waitall)
 
@@ -146,7 +137,6 @@ TYPE("mpi.h", "struct ompi_communicator_t")
 TYPE("mpi.h", "struct ompi_op_t")
 TYPE("mpi.h", "struct ompi_request_t")
 TYPE("mpi.h", "struct ompi_predefined_op_t")
-
 // -----------------------------------
 #ifdef __INTERNAL_FUN_DEFINITION
 	#undef __INTERNAL_FUN_DEFINITION

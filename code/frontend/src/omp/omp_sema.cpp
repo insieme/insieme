@@ -443,13 +443,13 @@ protected:
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 		resultStmts.push_back(mergeCall);
+		resultStmts.push_back(build.mergeAll()); // implicit mergeall
 		return build.compoundStmt(resultStmts);
 	}
 	
 	NodePtr handleTask(const StatementPtr& stmtNode, const TaskPtr& par) {
 		StatementList resultStmts;
 		auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts);
-		cout << "======================= \n" << printer::PrettyPrinter(newStmtNode);
 		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
 		auto range = build.getThreadNumRange(1, 1); // range for tasks is always 1
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
