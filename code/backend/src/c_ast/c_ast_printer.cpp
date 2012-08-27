@@ -459,6 +459,10 @@ namespace c_ast {
 				return out << print(fun->returnType) << " " << print(fun->name) << "(" << printParam(fun->parameter) << ");\n";
 			}
 
+			PRINT(ExtVarDecl) {
+				return out << "extern " << print(node->type) << " " << node->name << ";\n";
+			}
+
 			PRINT(TypeDefinition) {
 
 				bool explicitTypeDef = (bool)(node->name);
