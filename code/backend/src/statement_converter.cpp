@@ -189,7 +189,6 @@ namespace backend {
 			auto fragment = converter.getFragmentManager()->getFragment(IRExtensions::GLOBAL_ID);
 			assert(fragment && "Global Fragment not yet initialized!");
 			context.getDependencies().insert(fragment);
-
 			return res;
 		}
 
@@ -205,9 +204,41 @@ namespace backend {
 			return converter.getCNodeManager()->create<c_ast::Literal>("0");
 		}
 
-		// handle all literals defined as extern  
+		// handle literals referencing external data elements
 		if (core::analysis::isRefType(ptr->getType())) {
-			res = c_ast::ref(res);
+			// look up external variable declaration
+			auto fragmentManager = converter.getFragmentManager();
+			string fragmentName = "extLitDecl:" + ptr->getStringValue();
+			auto fragment = fragmentManager->getFragment(fragmentName);
+
+			// check fragment
+			if (!fragment) {
+
+				// create new declaration
+				c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager);
+
+				// get type info
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(ptr->getType());
+
+				// add external declaration
+				auto& cManager = converter.getCNodeManager();
+				declaration->getCode().push_back(cManager->create<c_ast::Comment>("------- External Variable Declaration ----------"));
+				declaration->getCode().push_back(cManager->create<c_ast::ExtVarDecl>(info.lValueType, ptr->getStringValue()));
+
+				// add dependency to type declaration
+				declaration->addDependency(info.declaration);
+
+				// register fragment
+				fragmentManager->bindFragment(fragmentName, declaration);
+
+				fragment = declaration;
+			}
+
+			// add dependency
+			context.getDependencies().insert(fragment);
+
+			// also, result has to be referenced
+			return c_ast::ref(res);
 		}
 
 		// done

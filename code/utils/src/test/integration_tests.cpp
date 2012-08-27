@@ -144,7 +144,14 @@ namespace test {
 
 				} else {
 					// use default file name
-					files.push_back((testCaseDir / (cur + ".c")).string());
+					if (fs::exists(testCaseDir / (cur + ".c")))
+						// This is a C test case 
+						files.push_back((testCaseDir / (cur + ".c")).string());
+					else {
+						// this must be a c++ test case
+						assert(fs::exists(testCaseDir / (cur + ".cpp")));
+						files.push_back((testCaseDir / (cur + ".cpp")).string());
+					}
 				}
 
 				// collect flags

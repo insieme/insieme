@@ -17,14 +17,14 @@ __kernel void bit_compression(__global uint4* input, __global uint* num_bits, __
 		tmp |= (in.w << (20-bits)) &   50331648u;
 	} else if (bits == 4) {
 		tmp |= (in.x << (32-bits)) & 4026531840u;
-        tmp |= (in.y << (28-bits)) &  251658240u;
-        tmp |= (in.z << (24-bits)) &   15728640u;
-        tmp |= (in.w << (20-bits)) &     983040u;
+                tmp |= (in.y << (28-bits)) &  251658240u;
+                tmp |= (in.z << (24-bits)) &   15728640u;
+                tmp |= (in.w << (20-bits)) &     983040u;
 	} else if (bits == 8) {
-        tmp |= (in.x << (32-bits)) & 4278190080u;
-        tmp |= (in.y << (28-bits)) &   16711680u;
-        tmp |= (in.z << (24-bits)) &      65280u;
-        tmp |= (in.w << (20-bits)) &        255u;
+                tmp |= (in.x << (32-bits)) & 4278190080u;
+                tmp |= (in.y << (28-bits)) &   16711680u;
+                tmp |= (in.z << (24-bits)) &      65280u;
+                tmp |= (in.w << (20-bits)) &        255u;
 	}
 	output[gid] = tmp;
 }
