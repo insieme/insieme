@@ -462,6 +462,13 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct ExtVarDecl : public Declaration {
+		TypePtr type;
+		string name;
+		ExtVarDecl(TypePtr type, const string& name) : Declaration(NT_ExtVarDecl), type(type), name(name) {}
+		virtual bool equals(const Node& node) const;
+	};
+
 	// -- Definitions ----------------------------
 
 	struct Definition : public Node {
