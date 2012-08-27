@@ -612,6 +612,16 @@ namespace backend {
 			return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0));
 		});
 
+		res[basic.getAnyRefDelete()] = OP_CONVERTER({
+			// ensure correct type
+			assert(LANG_BASIC.isAnyRef(ARG(0)->getType()) && "Cannot anyref delete anything other than anyref!");
+
+			// add dependency to stdlib.h (contains the free)
+			ADD_HEADER_FOR("free");
+			
+			return c_ast::call(C_NODE_MANAGER->create("free"), CONVERT_ARG(0));
+		});
+
 
 		// -- others --
 
