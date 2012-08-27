@@ -1,1 +1,1 @@
--DINSIEME --opencl
+-DINSIEME --opencl -DPATH=\"{PATH}\"
