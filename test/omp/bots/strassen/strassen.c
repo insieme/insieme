@@ -111,7 +111,7 @@ void FastNaiveMatrixMultiply(REAL *C, REAL *A, REAL *B, unsigned MatrixSize,
       unsigned Products;
       for (Products = 1; Products < MatrixSize; Products++) {
 	REAL ARowValue = *ARowStart++;
-	BColumnStart = (REAL*) (((PTR) BColumnStart) + RowWidthBInBytes);
+	BColumnStart = (BColumnStart + RowWidthBInBytes/sizeof(REAL));
 	Sum0 += ARowValue * (*BColumnStart);
 	Sum1 += ARowValue * (*(BColumnStart+1));
 	Sum2 += ARowValue * (*(BColumnStart+2));
@@ -121,7 +121,7 @@ void FastNaiveMatrixMultiply(REAL *C, REAL *A, REAL *B, unsigned MatrixSize,
 	Sum6 += ARowValue * (*(BColumnStart+6));
 	Sum7 += ARowValue * (*(BColumnStart+7));	
       }
-      ARowStart = (REAL*) ( ((PTR) ARowStart) - MatrixWidthInBytes);
+      ARowStart = (ARowStart) - MatrixWidthInBytes/sizeof(REAL);
 
       *(C) = Sum0;
       *(C+1) = Sum1;
@@ -133,8 +133,8 @@ void FastNaiveMatrixMultiply(REAL *C, REAL *A, REAL *B, unsigned MatrixSize,
       *(C+7) = Sum7;
       C+=8;
     }
-    ARowStart = (REAL*) ( ((PTR) ARowStart) + RowWidthAInBytes );
-    C = (REAL*) ( ((PTR) C) + RowIncrementC );
+    ARowStart = ( (ARowStart) + RowWidthAInBytes/sizeof(REAL) );
+    C = C + RowIncrementC/sizeof(REAL);
   }
 }
 /*****************************************************************************
@@ -197,10 +197,10 @@ void FastAdditiveNaiveMatrixMultiply(REAL *C, REAL *A, REAL *B, unsigned MatrixS
 	Sum6 += ARowValue * (*(BColumnStart+6));
 	Sum7 += ARowValue * (*(BColumnStart+7));
 
-	BColumnStart = (REAL*) (((PTR) BColumnStart) + RowWidthBInBytes);
+	BColumnStart = ((BColumnStart) + RowWidthBInBytes/sizeof(REAL));
 
       }
-      ARowStart = (REAL*) ( ((PTR) ARowStart) - MatrixWidthInBytes);
+      ARowStart = ( (ARowStart) - MatrixWidthInBytes/sizeof(REAL));
 
       *(C) = Sum0;
       *(C+1) = Sum1;
@@ -213,8 +213,8 @@ void FastAdditiveNaiveMatrixMultiply(REAL *C, REAL *A, REAL *B, unsigned MatrixS
       C+=8;
     }
 
-    ARowStart = (REAL*) ( ((PTR) ARowStart) + RowWidthAInBytes );
-    C = (REAL*) ( ((PTR) C) + RowIncrementC );
+    ARowStart = ( (ARowStart) + RowWidthAInBytes /sizeof(REAL));
+    C = ( (C) + RowIncrementC /sizeof(REAL));
   }
 }
 /*****************************************************************************
@@ -464,9 +464,9 @@ void OptimizedStrassenMultiply_seq(REAL *C, REAL *A, REAL *B, unsigned MatrixSiz
       ** (note: that the unit of the offset is number of reals)
       ***********************************************************/
       /* Element of Global Matrix, such as A, B, C */
-      #define E(Matrix)   (* (REAL*) ( ((PTR) Matrix) + TempMatrixOffset ) )
-      #define EA(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetA ) )
-      #define EB(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetB ) )
+      #define E(Matrix)   (* ( (Matrix) + TempMatrixOffset/sizeof(REAL) ) )
+      #define EA(Matrix)  (* ( (Matrix) + MatrixOffsetA/sizeof(REAL) ) )
+      #define EB(Matrix)  (* ( (Matrix) + MatrixOffsetB/sizeof(REAL) ) )
 
       //~ /* FIXME - may pay to expand these out - got higher speed-ups below */
       //~ /* S4 = A12 - ( S2 = ( S1 = A21 + A22 ) - A11 ) */
@@ -571,10 +571,10 @@ void OptimizedStrassenMultiply_seq(REAL *C, REAL *A, REAL *B, unsigned MatrixSiz
       C21 += 4;
       C22 += 4;
     }
-    C11 = (REAL*) ( ((PTR) C11 ) + RowIncrementC);
-    C12 = (REAL*) ( ((PTR) C12 ) + RowIncrementC);
-    C21 = (REAL*) ( ((PTR) C21 ) + RowIncrementC);
-    C22 = (REAL*) ( ((PTR) C22 ) + RowIncrementC);
+    C11 = ( (C11 ) + RowIncrementC/sizeof(REAL));
+    C12 = ( (C12 ) + RowIncrementC/sizeof(REAL));
+    C21 = ( (C21 ) + RowIncrementC/sizeof(REAL));
+    C22 = ( (C22 ) + RowIncrementC/sizeof(REAL));
   }
   free(StartHeap);
 }
@@ -674,9 +674,9 @@ void OptimizedStrassenMultiply_par(REAL *C, REAL *A, REAL *B, unsigned MatrixSiz
       ** (note: that the unit of the offset is number of reals)
       ***********************************************************/
       /* Element of Global Matrix, such as A, B, C */
-      #define E(Matrix)   (* (REAL*) ( ((PTR) Matrix) + TempMatrixOffset ) )
-      #define EA(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetA ) )
-      #define EB(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetB ) )
+      #define E(Matrix)   (* ( (Matrix) + TempMatrixOffset/sizeof(REAL) ) )
+      #define EA(Matrix)  (* ( (Matrix) + MatrixOffsetA/sizeof(REAL) ) )
+      #define EB(Matrix)  (* ( (Matrix) + MatrixOffsetB/sizeof(REAL) ) )
 
       //~ /* FIXME - may pay to expand these out - got higher speed-ups below */
       //~ /* S4 = A12 - ( S2 = ( S1 = A21 + A22 ) - A11 ) */
@@ -792,10 +792,10 @@ void OptimizedStrassenMultiply_par(REAL *C, REAL *A, REAL *B, unsigned MatrixSiz
       C21 += 4;
       C22 += 4;
     }
-    C11 = (REAL*) ( ((PTR) C11 ) + RowIncrementC);
-    C12 = (REAL*) ( ((PTR) C12 ) + RowIncrementC);
-    C21 = (REAL*) ( ((PTR) C21 ) + RowIncrementC);
-    C22 = (REAL*) ( ((PTR) C22 ) + RowIncrementC);
+    C11 = ( (C11 ) + RowIncrementC/sizeof(REAL));
+    C12 = ( (C12 ) + RowIncrementC/sizeof(REAL));
+    C21 = ( (C21 ) + RowIncrementC/sizeof(REAL));
+    C22 = ( (C22 ) + RowIncrementC/sizeof(REAL));
   }
   free(StartHeap);
 }
@@ -895,9 +895,9 @@ void OptimizedStrassenMultiply_par(REAL *C, REAL *A, REAL *B, unsigned MatrixSiz
       ** (note: that the unit of the offset is number of reals)
       ***********************************************************/
       /* Element of Global Matrix, such as A, B, C */
-      #define E(Matrix)   (* (REAL*) ( ((PTR) Matrix) + TempMatrixOffset ) )
-      #define EA(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetA ) )
-      #define EB(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetB ) )
+      #define E(Matrix)   (* ( (Matrix) + TempMatrixOffset/sizeof(REAL) ) )
+      #define EA(Matrix)  (* ( (Matrix) + MatrixOffsetA/sizeof(REAL) ) )
+      #define EB(Matrix)  (* ( (Matrix) + MatrixOffsetB/sizeof(REAL) ) )
 
       //~ /* FIXME - may pay to expand these out - got higher speed-ups below */
       //~ /* S4 = A12 - ( S2 = ( S1 = A21 + A22 ) - A11 ) */
@@ -1034,10 +1034,10 @@ void OptimizedStrassenMultiply_par(REAL *C, REAL *A, REAL *B, unsigned MatrixSiz
       C21 += 4;
       C22 += 4;
     }
-    C11 = (REAL*) ( ((PTR) C11 ) + RowIncrementC);
-    C12 = (REAL*) ( ((PTR) C12 ) + RowIncrementC);
-    C21 = (REAL*) ( ((PTR) C21 ) + RowIncrementC);
-    C22 = (REAL*) ( ((PTR) C22 ) + RowIncrementC);
+    C11 = ( (C11 ) + RowIncrementC/sizeof(REAL));
+    C12 = ( (C12 ) + RowIncrementC/sizeof(REAL));
+    C21 = ( (C21 ) + RowIncrementC/sizeof(REAL));
+    C22 = ( (C22 ) + RowIncrementC/sizeof(REAL));
   }
   free(StartHeap);
 }
@@ -1137,9 +1137,9 @@ void OptimizedStrassenMultiply_par(REAL *C, REAL *A, REAL *B, unsigned MatrixSiz
       ** (note: that the unit of the offset is number of reals)
       ***********************************************************/
       /* Element of Global Matrix, such as A, B, C */
-      #define E(Matrix)   (* (REAL*) ( ((PTR) Matrix) + TempMatrixOffset ) )
-      #define EA(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetA ) )
-      #define EB(Matrix)  (* (REAL*) ( ((PTR) Matrix) + MatrixOffsetB ) )
+      #define E(Matrix)   (* ( (Matrix) + TempMatrixOffset/sizeof(REAL) ) )
+      #define EA(Matrix)  (* ( (Matrix) + MatrixOffsetA/sizeof(REAL) ) )
+      #define EB(Matrix)  (* ( (Matrix) + MatrixOffsetB/sizeof(REAL) ) )
 
       //~ /* FIXME - may pay to expand these out - got higher speed-ups below */
       //~ /* S4 = A12 - ( S2 = ( S1 = A21 + A22 ) - A11 ) */
@@ -1255,10 +1255,10 @@ void OptimizedStrassenMultiply_par(REAL *C, REAL *A, REAL *B, unsigned MatrixSiz
       C21 += 4;
       C22 += 4;
     }
-    C11 = (REAL*) ( ((PTR) C11 ) + RowIncrementC);
-    C12 = (REAL*) ( ((PTR) C12 ) + RowIncrementC);
-    C21 = (REAL*) ( ((PTR) C21 ) + RowIncrementC);
-    C22 = (REAL*) ( ((PTR) C22 ) + RowIncrementC);
+    C11 = ( (C11 ) + RowIncrementC/sizeof(REAL));
+    C12 = ( (C12 ) + RowIncrementC/sizeof(REAL));
+    C21 = ( (C21 ) + RowIncrementC/sizeof(REAL));
+    C22 = ( (C22 ) + RowIncrementC/sizeof(REAL));
   }
   free(StartHeap);
 }
