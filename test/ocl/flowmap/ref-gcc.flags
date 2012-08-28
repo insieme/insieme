@@ -1,1 +1,1 @@
--D_POSIX_C_SOURCE=199309 ../common/lib_icl.c ../common/lib_icl_ext.c -I$OPENCL_ROOT/include -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 
+../common/lib_icl.c ../common/lib_icl_ext.c -I$OPENCL_ROOT/include -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 

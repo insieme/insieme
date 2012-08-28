@@ -1,1 +1,1 @@
--D_POSIX_C_SOURCE=199309 ../common/lib_icl.c ../common/lib_icl_ext.c
+../common/lib_icl.c ../common/lib_icl_ext.c
