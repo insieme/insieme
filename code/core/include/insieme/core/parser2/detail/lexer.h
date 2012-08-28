@@ -44,7 +44,9 @@
 #include "insieme/utils/printable.h"
 
 /**
- * This is the header file
+ * Within this header file the lexer-part of the INSPIRE parser is defined.
+ * It essentially defines the type used to represent tokens and a function
+ * converting a string into a list of tokens.
  */
 
 namespace insieme {
@@ -57,67 +59,123 @@ namespace detail {
 
 	class Token;
 
+
 	/**
 	 * The main function provided by this header file. Given a string
 	 * containing a program code (fragment), it will be converted into
 	 * a list of tokens.
+	 *
+	 * @param code the code to be tokenized
+	 * @return the list of identified tokens.
 	 */
 	vector<Token> lex(const std::string& code);
 
 
+
+
 	// -- Token Types ----------------------------------------
 
-
-
+	/**
+	 * The class used to represent a token within the parser.
+	 */
 	class Token : public utils::Printable {
 
 	public:
 
+		/**
+		 * The type of tokens distinguished during the parsing.
+		 */
 		enum Type {
-			Symbol = 1,
-			Identifier,
-			Bool_Literal,
-			Int_Literal,
-			Float_Literal,
-			Double_Literal,
-			Char_Literal,
-			String_Literal
+									// type 0 is used for "Any" when filtering those
+			Symbol = 1,				// < tokens describing symbols / operators like +,-/($:...
+			Identifier,				// < everything else - also "keywords" like if, while, ...
+			Bool_Literal,			// < boolean literals true / false
+			Int_Literal,			// < integer literals, including oct and hex-values
+			Float_Literal,			// < floating point literals, including e-notation
+			Double_Literal,			// < double literals
+			Char_Literal,			// < character literals like 'x' and '\n', including the ''
+			String_Literal			// < string literals, including the ""
 		};
 
 	private:
 
+		/**
+		 * The type of this token, according to the enum above.
+		 */
 		Type type;
 
+		/**
+		 * The string represented by this token.
+		 */
 		string lexeme;
 
+		/**
+		 * Creates a new token based on the given type and lexeme. This constructor
+		 * is private. New Tokens have to be created using the public static factory
+		 * functions to ensure the constrains regarding types and lexeme.
+		 *
+		 * @param type the type of the new token
+		 * @param the associated lexeme
+		 */
 		Token(Type type, const string& lexeme)
 			: type(type), lexeme(lexeme) {}
 
 	public:
 
+		/**
+		 * A default constructor.
+		 */
 		Token() : type(Symbol), lexeme("?") {}
 
 		// Getter:
 
+		/**
+		 * Obtains the type of this token.
+		 */
 		Type getType() const {
 			return type;
 		}
 
+		/**
+		 * Obtains the string represented by this token.
+		 */
 		const string& getLexeme() const {
 			return lexeme;
 		}
 
 		// Factory Functions:
 
+		/**
+		 * Creates a new token covering the given symbol. Symbols must only consist of
+		 * a single character (to simplify the handling of potential symbol combination
+		 * ambiguities - e.g. << for 2 opening brackets or a bitwise shift).
+		 *
+		 * @param lexeme the symbol to be converted into a token
+		 * @return a token representing the given symbol
+		 */
 		static Token createSymbol(char lexeme) {
 			return Token(Symbol, string(&lexeme, 1));
 		}
 
+		/**
+		 * Creates an identifier token based on the given non-empty lexeme.
+		 *
+		 * @param lexeme the text of the identifier to be covered
+		 * @return an identifier token for the given text
+		 */
 		static Token createIdentifier(const string& lexeme) {
 			assert(!lexeme.empty());
 			return Token(Identifier, lexeme);
 		}
 
+		/**
+		 * Creates an arbitrary literal-token based on the given type and
+		 * lexeme.
+		 *
+		 * @param type the type of the token to be created (has to be a literal type)
+		 * @param lexeme the text to be represented
+		 * @return the requested token instance
+		 */
 		static Token createLiteral(Type type, const string& lexeme) {
 			assert(!lexeme.empty());
 			assert(Bool_Literal <= type && type <= String_Literal);
@@ -146,16 +204,25 @@ namespace detail {
 			return type < other.type || (type == other.type && lexeme < other.lexeme);
 		}
 
+		/**
+		 * An implicit to-string converter of tokens.
+		 */
 		operator const string&() const {
 			return lexeme;
 		}
 
 	protected:
 
+		/**
+		 * Allows tokens to be printed to the streams in a readable format.
+		 */
 		virtual std::ostream& printTo(std::ostream& out) const;
 
 	};
 
+	/**
+	 * Allows token types to be printed to a stream in a readable format.
+	 */
 	std::ostream& operator<<(std::ostream& out, const Token::Type& type);
 
 

@@ -59,6 +59,10 @@ namespace detail {
 		 */
 		struct IR_Tokenizer {
 
+			/**
+			 * Identifies symbols. Symbols are characters from within a pre-defined set
+			 * of characters.
+			 */
 			template<typename InputIterator>
 			bool isSymbol(InputIterator next) const {
 				// the list of terminals
@@ -68,6 +72,11 @@ namespace detail {
 				return contains(terminals, *next);
 			}
 
+			/**
+			 * Checks whether the following prefix within the input iterator is a literal.
+			 * If so, the handed in result-token tok will be updated and true will be returned.
+			 * Otherwise the result will be false.
+			 */
 			template<typename InputIterator>
 			bool resolveLiterals(InputIterator& next, const InputIterator& end, Token& tok) const {
 
@@ -81,6 +90,7 @@ namespace detail {
 						regex::optimize |			// use optimized engine
 						regex::ECMAScript;			// use ~JavaScript syntax
 
+				// statically compiled regex patterns for the various literal types
 				static const auto literalTypes = toVector(	// the order is important!
 					(LiteralType){Token::Bool_Literal, 		regex(R"(true|false)",flags)},
 					(LiteralType){Token::Float_Literal, 	regex(R"(((([1-9][0-9]*)|0)\.[0-9]+[fF]))", flags)},
@@ -90,6 +100,7 @@ namespace detail {
 					(LiteralType){Token::String_Literal, 	regex(R"("(\\.|[^\\"])*")", flags)}
 				);
 
+				// check one after another whether regexes are matching the current prefix
 				for(const LiteralType& cur : literalTypes) {
 
 					// search for the current regex at the beginning of the rest of the code
@@ -113,11 +124,17 @@ namespace detail {
 				return false;
 			}
 
+			/**
+			 * Consumes the heading white-spaces of the given range.
+			 */
 			template<typename InputIterator>
 			void consumeWhiteSpaces(InputIterator& next, const InputIterator& end) const {
 				while(next != end && isspace(*next)) ++next;
 			}
 
+			/**
+			 * Consumes commends at the head of the given range.
+			 */
 			template<typename InputIterator>
 			void consumeComment(InputIterator& next, const InputIterator& end) const {
 
