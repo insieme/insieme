@@ -618,6 +618,92 @@ namespace parser {
 
 	}
 
+	TEST(IR_Parser2, ParseAddresses) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// a simple example
+
+		vector<NodeAddress> list = builder.parseAddresses(
+				"{"
+				"	1 + $2$ * 3;"
+				"}"
+		);
+
+		ASSERT_EQ(1u, list.size());
+		EXPECT_EQ("0-0-3-2", toString(list[0]));
+		EXPECT_EQ("2", toString(*list[0].getAddressedNode()));
+		EXPECT_EQ(core::NT_Literal, list[0]->getNodeType());
+
+
+		// test multiple marks
+		list = builder.parseAddresses(
+				"{"
+				"	1 + $$2$ * $3$$;"
+				"}"
+		);
+
+		ASSERT_EQ(3u, list.size());
+
+		EXPECT_EQ("0-0-3", toString(list[0]));
+		EXPECT_EQ("int.mul(2, 3)", toString(*list[0].getAddressedNode()));
+		EXPECT_EQ(core::NT_CallExpr, list[0]->getNodeType());
+
+		EXPECT_EQ("0-0-3-2", toString(list[1]));
+		EXPECT_EQ("2", toString(*list[1].getAddressedNode()));
+		EXPECT_EQ(core::NT_Literal, list[1]->getNodeType());
+
+		EXPECT_EQ("0-0-3-3", toString(list[2]));
+		EXPECT_EQ("3", toString(*list[2].getAddressedNode()));
+		EXPECT_EQ(core::NT_Literal, list[2]->getNodeType());
+
+
+		// test statements
+		list = builder.parseAddresses(
+				"{"
+				"	$1 + 2 * 3;$"
+				"}"
+		);
+
+		ASSERT_EQ(1u, list.size());
+		EXPECT_EQ("0-0", toString(list[0]));
+		EXPECT_EQ("int.add(1, int.mul(2, 3))", toString(*list[0].getAddressedNode()));
+		EXPECT_EQ(core::NT_CallExpr, list[0]->getNodeType());
+
+	}
+
+	TEST(IR_Parser2, ParseAddressSharing) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// a simple example
+
+		vector<NodeAddress> list = builder.parseAddresses(
+				"{"
+				"	int<4> x = 2;"
+				"	$x = 3$;"
+				"	$x = $x$ + 2$;"
+				"}"
+		);
+
+		// there should only be two addresses
+		ASSERT_EQ(3u, list.size());
+
+		EXPECT_EQ("0-1", toString(list[0]));
+		EXPECT_EQ("ref.assign(v1, 3)", toString(*list[0].getAddressedNode()));
+		EXPECT_EQ(core::NT_CallExpr, list[0]->getNodeType());
+
+		EXPECT_EQ("0-2", toString(list[1]));
+		EXPECT_EQ("ref.assign(v1, int.add(v1, 2))", toString(*list[1].getAddressedNode()));
+		EXPECT_EQ(core::NT_CallExpr, list[1]->getNodeType());
+
+
+		EXPECT_EQ("0-2-3-2", toString(list[2]));
+		EXPECT_EQ("v1", toString(*list[2].getAddressedNode()));
+		EXPECT_EQ(core::NT_Variable, list[2]->getNodeType());
+
+	}
+
 } // end namespace parser2
 } // end namespace core
 } // end namespace insieme

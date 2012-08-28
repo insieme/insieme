@@ -169,6 +169,9 @@ StatementPtr IRBuilder::parseStmt(const string& code, const std::map<string, Nod
 	return parser::parse_stmt(manager, code, true, symbols);
 }
 
+vector<NodeAddress> IRBuilder::parseAddresses(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser::parse_addresses(manager, code, true, symbols);
+}
 
 
 // ---------------------------- Standard Nodes -----------------------------------

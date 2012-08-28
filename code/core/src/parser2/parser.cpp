@@ -170,8 +170,12 @@ namespace parser {
 
 				// if current token is an opener => put closer on the stack
 				if (info.isLeftParenthese(cur)) {
-					parentheseStack.push_back(info.getClosingParenthese(cur));
-					continue;
+					// check whether this is a right-parentheses as well (e.g. $ .. $ )
+					if (!info.isRightParenthese(cur) || parentheseStack.empty() || parentheseStack.back() != cur) {
+						// it is not a right-parentheses or it is not the expected one
+						parentheseStack.push_back(info.getClosingParenthese(cur));
+						continue;
+					}
 				}
 
 				// check whether it is a closer

@@ -39,6 +39,7 @@
 #include "insieme/core/forward_decls.h"
 
 #include "insieme/core/ir_pointer.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_node_traits.h"
 
 #include "insieme/core/ir_node.h"
@@ -131,6 +132,13 @@ namespace core {
 		 * The same as the parse member function yet interpreting the given code as a statement.
 		 */
 		StatementPtr parseStmt(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
+		/**
+		 * Allows lists of addresses to be parsed. This parser supports the same grammar + allows constructs to be enclosed
+		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
+		 * ordered according to the order of node-addresses (lexicographical).
+		 */
+		vector<NodeAddress> parseAddresses(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
 
 
 		// --- Imported Standard Factory Methods from Node Types ---
