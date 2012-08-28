@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <math.h>
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
 
@@ -37,7 +38,7 @@ bool compare_float(const float *refData, const float *data, const int length, co
     }
 
     float normRef = sqrtf((float) ref);
-    if (fabs((float) ref) < 1e-7f) {
+    if (fabs(ref) < 1e-7f) {
         return false;
     }
     float normError = sqrtf((float) error);
@@ -107,27 +108,28 @@ int main(int argc, const char* argv[]) {
 		icl_release_buffers(5, buf_input1, buf_input2, buf_alpha, buf_beta, buf_output);
 		icl_release_kernel(kernel);
 	}
-	
+
         if (args->check_result) {
 	        printf("======================\n= Linear Regression Done\n");
-		float* output2 = (float *)malloc(sizeof(float) * size);
-		for(unsigned int j = 0; j < size; ++j) {
-			const int gid = j;
-			float a = alpha[gid];
-			float b = beta[gid];
-			float error = 0;
-			for(int i=0; i<size; i++) {
-				float e = (a * input1[i] + b) - input2[i];
-				error += e * e;
+			float* output2 = (float *)malloc(sizeof(float) * size);
+			for(unsigned int j = 0; j < size; ++j) {
+				const int gid = j;
+				float a = alpha[gid];
+				float b = beta[gid];
+				float error = 0;
+				for(int i=0; i<size; i++) {
+					float e = (a * input1[i] + b) - input2[i];
+					error += e * e;
+				}
+				output2[gid] = error;
 			}
-			output2[gid] = error;
-		}
-                bool check = compare_float(output, output2, size, 0.000001);
-		printf("======================\n");
-		printf("Result check: %s\n", check ? "OK" : "FAIL");
-		free(output2);
+	                
+		    bool check = compare_float(output, output2, size, 0.000001);
+			printf("======================\n");
+			printf("Result check: %s\n", check ? "OK" : "FAIL");
+			free(output2);
         } else {
-		printf("Result check: OK\n");
+			printf("Result check: OK\n");
         }
 
 	icl_release_args(args);
