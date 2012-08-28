@@ -1,1 +1,1 @@
-ocl ^seq ^run
+^seq ocl ^run
