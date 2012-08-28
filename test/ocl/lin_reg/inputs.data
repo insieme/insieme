@@ -1,1 +1,1 @@
--I. -I../common/ -I../../../code/frontend/test/inputs lin_reg.c
+-I. -I../common/ -I../../../code/frontend/test/inputs lin_reg.c -DPATH=\"{PATH}\"
