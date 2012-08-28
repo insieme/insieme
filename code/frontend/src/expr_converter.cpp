@@ -515,9 +515,11 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(clan
 	case CK_LValueToRValue:
 		return (retIr = asRValue(retIr));
 
+	case CK_ArrayToPointerDecay:
+		return retIr;
+
 	case CK_NoOp:
 		//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
-		VLOG(2) << "NoOp Cast";
 		return retIr;
 
 	default:
@@ -541,7 +543,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitExplicitCastExpr(clan
 
 	case CK_NoOp:
 		//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
-		VLOG(2) << "NoOp Cast";
 		return retIr;
 
 	default:
@@ -584,14 +585,14 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(clang::CastE
 		return retIr;
 	}
 
-	const core::TypePtr& nonRefType = nonRefExpr->getType();
+	// const core::TypePtr& nonRefType = nonRefExpr->getType();
 	// if the subexpression is an array or a vector, remove all the C implicit casts
-	if (nonRefType->getNodeType() == core::NT_ArrayType || nonRefType->getNodeType() == core::NT_VectorType
-			|| nonRefType->getNodeType() == core::NT_FunctionType) {
-			return retIr;
-	}
-
-
+	//if (nonRefType->getNodeType() == core::NT_ArrayType || 
+	//	nonRefType->getNodeType() == core::NT_VectorType || 
+	//	nonRefType->getNodeType() == core::NT_FunctionType) 
+	//{
+	//	return retIr;
+	//}
 
 	// handle truncation of floating point numbers
 	const core::TypePtr& subExprType = retIr->getType();
@@ -794,7 +795,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 // [C99 6.4.2.2] - A predefined identifier such as __func__.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitPredefinedExpr(clang::PredefinedExpr* preExpr) {
-	const core::lang::BasicGenerator& gen = convFact.mgr.getLangBasic();
 	
 	string lit;
 	switch(preExpr->getIdentType()) {
