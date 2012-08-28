@@ -78,37 +78,42 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 		if(!called) continue;
 		VariablePtr param = called->getParameterList()[argIndex];
 		//LOG(INFO) << "**************************************\n====\nparam:\n " << printer::PrettyPrinter(param) << "\n*********************\n";
-		visitDepthFirst(firstAddress(curcall, called->getBody()), [&](const VariableAddress& var) {
-			if(*var.getAddressedNode() != *param) return;
-			CallExprAddress useCallAdr = var.getParentAddress(1).as<CallExprAddress>();
-			CallExprPtr usecall = useCallAdr;
-			if(usecall) {
-				if(basic.isArrayRefElem1D(usecall->getFunctionExpr())) {
-					try {
-						auto formula = arithmetic::toFormula(usecall->getArgument(1));
-						if(formula.isZero()) {
-							// correct use
-						} else {
+		NodeAddress addr = firstAddress(curcall, called->getBody());
+		if(addr) {
+			visitDepthFirst(addr, [&](const VariableAddress& var) {
+				if(*var.getAddressedNode() != *param) return;
+				if(var.isRoot()) return;
+				if(var.getParentAddress(1).getNodeType() != NT_CallExpr) return;
+				CallExprAddress useCallAdr = var.getParentAddress(1).as<CallExprAddress>();
+				CallExprPtr usecall = useCallAdr;
+				if(usecall) {
+					if(basic.isArrayRefElem1D(usecall->getFunctionExpr())) {
+						try {
+							auto formula = arithmetic::toFormula(usecall->getArgument(1));
+							if(formula.isZero()) {
+								// correct use
+							} else {
+								add(res, Message(useCallAdr,
+									EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
+									format("Potentially unsafe indexing of single-element array %s using formula %s", 
+										toString(*(param)).c_str(), toString(formula).c_str()),
+									Message::WARNING));
+							}
+						} catch(arithmetic::NotAFormulaException e) {
 							add(res, Message(useCallAdr,
 								EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
-								format("Potentially unsafe indexing of single-element array %s using formula %s", 
-									toString(*(param)).c_str(), toString(formula).c_str()),
+								format("Potentially unsafe indexing of single-element array %s using expression %s", 
+									toString(*(param)).c_str(), toString(*(usecall->getArgument(1))).c_str()),
 								Message::WARNING));
 						}
-					} catch(arithmetic::NotAFormulaException e) {
-						add(res, Message(useCallAdr,
-							EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
-							format("Potentially unsafe indexing of single-element array %s using expression %s", 
-								toString(*(param)).c_str(), toString(*(usecall->getArgument(1))).c_str()),
-							Message::WARNING));
+					} else {
+						// warn here as well? (used in unexpected call)
 					}
 				} else {
-					// warn here as well? (used in unexpected call)
+					// warn here as well? (used in non-call)
 				}
-			} else {
-				// warn here as well? (used in non-call)
-			}
-		});
+			});
+		}
 	}
 
 	return res;
