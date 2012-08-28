@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include <assert.h>
 
 #include "ticktock.h"
@@ -65,19 +66,20 @@ void block_transpose_rec(double *M, size_t N, size_t n, size_t block){
 	if(n <= block){
 		#pragma omp task
 		transpose_block(M, N, (n < block)?n:block);
-	}else{
-		// transpose the corner block
-		#pragma omp task
-		transpose_block(M, N, block);
-		int i;
-		for(i=1; i<n/block; i++){
-			// transpose opposite blocks
-			#pragma omp task
-			transpose_opposite(M + i*block, M + i*block*N, N, block);
-		}
-		// recur on the smaller problem size
-		block_transpose_rec(M+(1+N)*block, N, n-block, block);
+		return;
 	}
+	
+	// transpose the corner block
+	#pragma omp task
+	transpose_block(M, N, block);
+	int i;
+	for(i=1; i<n/block; i++){
+		// transpose opposite blocks
+		#pragma omp task
+		transpose_opposite(M + i*block, M + i*block*N, N, block);
+	}
+	// recur on the smaller problem size
+	block_transpose_rec(M+(1+N)*block, N, n-block, block);
 }
 
 void block_transpose(double* M, size_t N, size_t block){
@@ -110,8 +112,9 @@ int main(int argc, char* argv[]) {
 	#pragma omp parallel
 	num_threads = omp_get_num_threads();
 #endif
-
+	ticktock();
 	block_transpose(M, N, 32);
+	long time = ticktock();
 
 	int check = 1;
 	// check correctness 
@@ -120,6 +123,7 @@ int main(int argc, char* argv[]) {
 			check = S[i*N+j]==M[j*N+i];
 	
 	printf("CHECK %s\n", check?"OK":"FAILED");
+	printf("Elapsed time: %ld msecs\n", time);
 
 	free(M);
 	free(S);

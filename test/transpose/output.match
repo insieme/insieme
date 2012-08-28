@@ -1,0 +1,1 @@
+awk '/^CHECK\s\w+$/{ print $2 }'
