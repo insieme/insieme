@@ -47,7 +47,8 @@ back.ocl:   	%(back.run)s + Conf([
 					Flag('-lOpenCL'), 
 					Flag('-I$OPENCL_ROOT/include'),
 					Flag('-L$OPENCL_ROOT/lib/x86_64'),
-					Flag('-DUSE_OPENCL=ON')
+					Flag('-DUSE_OPENCL=ON'),
+					Flag('-D_POSIX_C_SOURCE=199309')
 				], "OCL")
 
 # LIST OF PASSES (it's important that passes names begins with the pass keyword)
@@ -78,5 +79,4 @@ pass.11.ocl:		Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c',
 pass.12.ocl_icc:	Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c', 
 					 %(back.ocl)s + %(back.c.opt)s, 'ocl.test' 
 					)
-
 
