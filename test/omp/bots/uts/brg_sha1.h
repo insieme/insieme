@@ -98,7 +98,7 @@ typedef struct sha1_ctx_s sha1_ctx;
 VOID_RETURN sha1_compile(sha1_ctx ctx[1]);
 
 VOID_RETURN sha1_begin(sha1_ctx ctx[1]);
-VOID_RETURN sha1_hash(const unsigned char data[], unsigned long len, sha1_ctx ctx[1]);
+VOID_RETURN sha1_hash(const unsigned char data[], unsigned len, sha1_ctx ctx[1]);
 VOID_RETURN sha1_end(unsigned char hval[], sha1_ctx ctx[1]);
 VOID_RETURN sha1(unsigned char hval[], const unsigned char data[], unsigned long len);
 

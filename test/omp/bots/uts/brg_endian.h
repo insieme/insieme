@@ -51,7 +51,7 @@
 #  if !defined( __MINGW32__ )
 #    include <endian.h>
 #    if !defined( __BEOS__ )
-#      include <byteswap.h>
+//#      include <byteswap.h>
 #    endif
 #  endif
 #endif

@@ -1015,6 +1015,36 @@ TEST(TypeVariableDeduction, VectorSubTypeOfArray) {
 	EXPECT_TRUE(res);
 }
 
+TEST(TypeVariableDeduction, ReductionType) {
+
+	/**
+	 * There was an error in the type deduction of a call to the reduction operator.
+	 * This should be investigated here
+	 */
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
+
+	FunctionTypePtr funType = builder.parseType("(ref<array<'a,1>>,uint<8>,('b,'a)->'b,'b)->'b").as<FunctionTypePtr>();
+	EXPECT_TRUE(funType);
+
+	vector<TypePtr> args = {
+			builder.parseType("ref<array<'a,1>>"),
+			builder.parseType("uint<8>"),
+			builder.parseType("('b,'a)->'b"),
+			builder.parseType("'b")
+	};
+
+	auto res = getTypeVariableInstantiation(manager, funType, args);
+	EXPECT_TRUE(res);
+	std::cout << *res << "\n";
+	EXPECT_EQ("'a", toString(*res->applyTo(builder.typeVariable("a"))));
+	EXPECT_EQ("'b", toString(*res->applyTo(builder.typeVariable("b"))));
+
+
+}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme
