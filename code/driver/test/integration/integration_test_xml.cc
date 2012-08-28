@@ -109,7 +109,7 @@ namespace insieme {
 	}
 
 	// instantiate the test case
-	// INSTANTIATE_TEST_CASE_P(XMLIntegrationCheck, XMLIntegrationTest, ::testing::ValuesIn(getAllCases()));
+	INSTANTIATE_TEST_CASE_P(XMLIntegrationCheck, XMLIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 }
 

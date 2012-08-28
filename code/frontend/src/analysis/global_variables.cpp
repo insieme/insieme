@@ -806,6 +806,11 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 
 		core::TypePtr&& type = convFact.convertType((*it)->getType().getTypePtr());
 
+		// if ((*it)->getNameAsString() == "ompi_mpi_comm_world") {
+		//	LOG(INFO) << "OK";
+		//	type = builder.getLangBasic().getUnit();
+		//}
+
 		// If variable is marked to be volatile, make its tile volatile
 		//auto&& vit1 = std::find(convFact.getVolatiles().begin(), convFact.getVolatiles().end(), *it);
 	   	if(/*vit1 != convFact.getVolatiles().end() ||*/ (*it)->getType().isVolatileQualified()) {
@@ -836,9 +841,9 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		core::ExpressionPtr initExpr;
 		if( (*it)->hasExternalStorage() ) {
 			assert (type->getNodeType() == core::NT_RefType);
-			core::TypePtr derefTy = core::static_pointer_cast<const core::RefType>( type )->getElementType();
+			// core::TypePtr derefTy = core::static_pointer_cast<const core::RefType>( type )->getElementType();
 			// build a literal which points to the name of the external variable 
-			initExpr = builder.refVar( builder.literal((*it)->getNameAsString(), derefTy) );
+			initExpr = builder.literal((*it)->getNameAsString(), type);
 		} else {
 			// this means the variable is not declared static inside a function so we have to initialize its value
 			initExpr = (*it)->getInit() ? 

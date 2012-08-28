@@ -206,7 +206,10 @@ def reporter( report_queue ):
 				col_print("{0:<44}[{1:>8.4f} secs {2}]\n".
 					format( rep.desc, rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else ""), RED)
 				col_print("#{0:-^60}\n".format('~'), RED)
-				sys.stderr.write( '\n'.join(str(rep.output).split('\n')[0:10 if not verbose else -1]) )
+				if rep.output is "" or rep.output is None:
+					sys.stderr.write('Program exist with error code {0}\n'.format(rep.ret_code))
+				else:
+					sys.stderr.write( '\n'.join(str(rep.output).split('\n')[0:10 if not verbose else -1]) )
 				col_print("\n#{0:-^60}\n".format('~'), RED)
 
 		if not success:
@@ -358,10 +361,11 @@ def toAbsolutePaths(path, args):
 	# executed from any directory of the system 
 	abs_args = []
 	for arg in args.split():
-		if arg.startswith('-I'):
+		arg = os.path.expandvars(arg)
+		if arg.startswith('-I') and not os.path.isabs(arg[2:].strip()) and not arg[2:].strip().startswith('$'): 
 			abs_args.append("-I{0}/{1}".format(path, arg[2:]))
 			continue
-		if not arg.startswith('-'):
+		if not arg.startswith('-') and not os.path.isabs(arg):
 			abs_args.append("{0}/{1}".format(path, arg))
 			continue
 		abs_args.append(arg)
@@ -520,13 +524,14 @@ class TestJob:
 						"{0}/{1}".format(path, file_name)
 					)
 				)
-
-				# upon finalization, remove the generated output files 
-				finalize_cmds.append(
-					Cmd(Commands.DEL, "Delete output file {0}".format(id),
-						"rm {0}/{1}".format(path, file_name)
+			
+				if not mock_run:
+					# upon finalization, remove the generated output files 
+					finalize_cmds.append(
+						Cmd(Commands.DEL, "Delete output file {0}".format(id),
+							"rm {0}/{1}".format(path, file_name)
+						)
 					)
-				)
 
 				if os.path.exists("{0}/output.match".format(path)):
 
@@ -541,12 +546,13 @@ class TestJob:
 					)
 					file_name ="{0}.match".format(file_name)
 	
-					# upon finalization, remove the generated output files 
-					finalize_cmds.append(
-						Cmd(Commands.DEL, "Delete output file {0}".format(id),
-							"rm {0}/{1}".format(path, file_name)
+					if not mock_run:
+						# upon finalization, remove the generated output files 
+						finalize_cmds.append(
+							Cmd(Commands.DEL, "Delete output file {0}".format(id),
+								"rm {0}/{1}".format(path, file_name)
+							)
 						)
-					)
 
 				if first:
 					ref = file_name
@@ -615,7 +621,7 @@ def main(argv=None):
 
 
 	config = configparser.ConfigParser()
-	config.readfp(open('${CMAKE_BINARY_DIR}/test.cfg'))
+	config.readfp(open('@CMAKE_BINARY_DIR@/test.cfg'))
 
 	# config.read(['site.cfg', os.path.expanduser('~/.myapp.cfg')])
 	# Set the number of workers

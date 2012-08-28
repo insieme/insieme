@@ -1,1 +1,1 @@
-{PATH}/{EXEC} -c
+{PATH}/{EXEC} -c -n 20 -m 20

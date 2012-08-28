@@ -18,7 +18,7 @@ act.seq:		Conf(Flag("-b seq"), "Seq. Backend")
 act.run:		Conf(Flag("-b run"), "Run. Backend")
 act.ocl:		Conf(Flag("-b ocl"), "Ocl Backend")
 
-front.insieme: %(comp.insieme)s + Conf(Flag("--std=c99 -I. --col-wrap=120 --show-line-no"))
+front.insieme: %(comp.insieme)s + Conf(Flag("--std=c99 --col-wrap=120 --show-line-no"))
 
 # LIST of INSIEME BACKENDS
 back.gcc.flags: Conf([ 
@@ -28,7 +28,7 @@ back.gcc.flags: Conf([
 					Flag("-I.")
 				])
 back.gcc: 		%(back.gcc.flags)s + Conf(Flag("-std=gnu99"))
-back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++0x")) 
+back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++11")) 
 
 back.icc.flags: Conf(Flag('-I.'))
 back.icc:		%(back.icc.flags)s + Conf(Flag("-c99"))
@@ -40,9 +40,17 @@ back.run:		Conf([
 					Flag('-I%(SRC_DIR)s/code/runtime/include'),
 					Flag('-D_XOPEN_SOURCE=700'),
 					Flag('-D_GNU_SOURCE'),
+					Flag('-Wl,--no-as-needed'),
 					Flag('-ldl')
 				], "RUN")
-back.ocl:   	%(back.run)s + Conf([Flag('-lOpenCL'), Flag('-DUSE_OPENCL=ON')], "OCL")
+back.ocl:   	%(back.run)s + Conf([
+					Flag('-Wl,--no-as-needed'),
+					Flag('-lOpenCL'), 
+					Flag('-I$OPENCL_ROOT/include'),
+					Flag('-L$OPENCL_ROOT/lib/x86_64'),
+					Flag('-DUSE_OPENCL=ON'),
+					Flag('-D_POSIX_C_SOURCE=199309')
+				], "OCL")
 
 # LIST OF PASSES (it's important that passes names begins with the pass keyword)
 pass.00.gcc: 		Pass(None, None, %(comp.gcc)s+%(back.c.opt)s+%(back.gcc)s, 'ref')
@@ -72,5 +80,4 @@ pass.11.ocl:		Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c',
 pass.12.ocl_icc:	Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c', 
 					 %(back.ocl)s + %(back.c.opt)s, 'ocl.test' 
 					)
-
 

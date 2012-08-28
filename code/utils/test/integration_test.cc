@@ -55,13 +55,13 @@ namespace test {
 
 TEST(TestUtilsTest, getList) {
 
-//	namespace fs = boost::filesystem;
-//
-//	auto res = getAllCases();
-//
-//	LOG(log::INFO) << join("\n", res);
-//
-//	// check the existens of the referenced files
+	namespace fs = boost::filesystem;
+
+	auto res = getAllCases();
+
+	LOG(log::INFO) << join("\n", res);
+
+	// check the existens of the referenced files
 //	for_each(res, [](const IntegrationTestCase& cur) {
 //		SCOPED_TRACE(cur.getName());
 //

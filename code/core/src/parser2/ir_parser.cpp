@@ -42,6 +42,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/parser2/parser.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/node_mapper_utils.h"
 
 namespace insieme {
 namespace core {
@@ -1354,6 +1355,37 @@ namespace parser {
 			return g;
 		}
 
+		/**
+		 * The mark used to annotate selected regions of the code.
+		 */
+		class AddressMark {};
+
+		Grammar buildGrammarForAddresses() {
+			// start with full grammar
+			Grammar g = buildGrammar();
+
+			auto E = rec("E");
+			auto S = rec("S");
+
+			// add rules marking addresses
+			g.addRule("E", rule(seq("$", E, "$"), [](Context& context)->NodePtr {
+				assert(context.getTerms().size() == 1u);
+				NodePtr res = context.markerExpr(context.getTerm(0).as<ExpressionPtr>());
+				res->attachValue<AddressMark>();
+				return res;
+			}));
+
+			g.addRule("S", rule(seq("$", S, "$"), [](Context& context)->NodePtr {
+				assert(context.getTerms().size() == 1u);
+				NodePtr res = context.markerStmt(context.getTerm(0).as<StatementPtr>());
+				res->attachValue<AddressMark>();
+				return res;
+			}));
+
+			// return modified grammar
+			return g;
+		}
+
 	}
 
 	// The various IR Grammer derivations	(initialized globals to avoid race conditions)
@@ -1362,6 +1394,7 @@ namespace parser {
 	const Grammar grammar_exprs		= buildGrammar("E");
 	const Grammar grammar_stmts		= buildGrammar("S");
 	const Grammar grammar_prog		= buildGrammar("A");
+	const Grammar grammar_addr		= buildGrammarForAddresses();
 
 	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		try {
@@ -1406,6 +1439,102 @@ namespace parser {
 			throw IRParserException(pe.what());
 		}
 		return ProgramPtr();
+	}
+
+	namespace {
+
+		struct MarkEliminator : public core::transform::CachedNodeMapping {
+			virtual const NodePtr resolveElement(const NodePtr& ptr) {
+
+				// replace recursively
+				NodePtr res = ptr->substitute(ptr->getNodeManager(), *this);
+
+				// eliminate marked nodes
+				if (ptr->hasAttachedValue<AddressMark>()) {
+					// strip off marker expression (also drops annotation)
+					if(res->getNodeType() == core::NT_MarkerExpr) {
+						return res.as<core::MarkerExprPtr>()->getSubExpression();
+					}
+					if (res->getNodeType() == core::NT_MarkerStmt) {
+						return res.as<core::MarkerStmtPtr>()->getSubStatement();
+					}
+					assert(false && "Only marker expressions and statements should be marked.");
+				}
+
+				// return result
+				return res;
+			}
+		};
+
+		NodePtr removeMarks(const core::NodePtr& cur) {
+			return MarkEliminator().map(cur);
+		}
+
+		NodeAddress removeMarks(const core::NodePtr& newRoot, const core::NodeAddress& cur) {
+
+			// handle terminal case => address only references a root node
+			if (cur.isRoot()) {
+				return core::NodeAddress(newRoot);
+			}
+
+			// get cleaned path to parent node
+			NodeAddress parent = removeMarks(newRoot, cur.getParentAddress());
+
+			// skip marked nodes
+			if (cur->hasAttachedValue<AddressMark>()) {
+				return parent;
+			}
+
+			// also fix child of marker node
+			if (cur.getDepth() >= 2 && cur.getParentNode()->hasAttachedValue<AddressMark>()) {
+				return parent.getAddressOfChild(cur.getParentAddress().getIndex());
+			}
+
+			// in all other cases just restore same address path
+			return parent.getAddressOfChild(cur.getIndex());
+		}
+
+	}
+
+
+	std::vector<NodeAddress> parse_addresses(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
+		try {
+			// parse the input code (all resulting addresses will be marked)
+			NodePtr root = grammar_addr.match(manager, code, onFailThrow, definitions);
+
+			// check the result
+			if (!root) return std::vector<NodeAddress>();
+
+			// search all marked locations within the parsed code fragment
+			std::vector<NodeAddress> res;
+			core::visitDepthFirst(NodeAddress(root), [&](const NodeAddress& cur) {
+				if (cur->hasAttachedValue<AddressMark>()) {
+					// get address to marked sub-construct
+					if(cur->getNodeType() == core::NT_MarkerExpr) {
+						res.push_back(cur.as<core::MarkerExprAddress>()->getSubExpression());
+					} else if (cur->getNodeType() == core::NT_MarkerStmt) {
+						res.push_back(cur.as<core::MarkerStmtAddress>()->getSubStatement());
+					} else {
+						assert(false && "Only marker expressions and statements should be marked.");
+					}
+				}
+			});
+
+			// remove marks from code
+			root = removeMarks(root);
+
+			// remove marker nodes from addresses
+			for(NodeAddress& cur : res) {
+				cur = removeMarks(root, cur);
+			}
+
+			// return list of addresses
+			return res;
+
+		} catch (const ParseException& pe) {
+			throw IRParserException(pe.what());
+		}
+		return std::vector<NodeAddress>();
 	}
 
 

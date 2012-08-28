@@ -37,6 +37,7 @@
 #pragma once
 
 #include <map>
+#include <vector>
 #include "insieme/core/forward_decls.h"
 
 namespace insieme {
@@ -53,6 +54,8 @@ namespace parser {
 	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
 
 	ProgramPtr parse_program(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
+
+	std::vector<NodeAddress> parse_addresses(NodeManager& manager, const string& code, bool onFailThrow = false, const std::map<string, NodePtr>& definitions = std::map<string,NodePtr>());
 
 
 	class IRParserException : public std::exception {

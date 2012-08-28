@@ -61,7 +61,7 @@ namespace parser {
 			template<typename InputIterator>
 			bool isSymbol(InputIterator next) const {
 				// the list of terminals
-				static const string terminals = "+-*/%=()<>{}[]&|.,:;?!~^°'´\\#";
+				static const string terminals = "+-*/%=()<>{}[]&|.,:;?!~^°'´\\#$";
 
 				// check whether end has been reached
 				return contains(terminals, *next);

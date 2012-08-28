@@ -568,9 +568,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(clang::CastE
 	core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(retIr);
 
 	// if the cast is to a 'void*' type then we simply skip it
-	if (gen.isAnyRef(type)) {
-		return retIr;
-	}
+	if (gen.isAnyRef(type)) { return retIr; }
 
 	if ((type->getNodeType() == core::NT_RefType) && (*retIr == *convFact.builder.literal(retIr->getType(), "0"))) {
 		return (retIr = convFact.builder.callExpr(gen.getGetNull(),
@@ -590,8 +588,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(clang::CastE
 	// if the subexpression is an array or a vector, remove all the C implicit casts
 	if (nonRefType->getNodeType() == core::NT_ArrayType || nonRefType->getNodeType() == core::NT_VectorType
 			|| nonRefType->getNodeType() == core::NT_FunctionType) {
-		return retIr;
+			return retIr;
 	}
+
+
 
 	// handle truncation of floating point numbers
 	const core::TypePtr& subExprType = retIr->getType();
@@ -795,8 +795,24 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitPredefinedExpr(clang::PredefinedExpr* preExpr) {
 	const core::lang::BasicGenerator& gen = convFact.mgr.getLangBasic();
-	return convFact.builder.callExpr(gen.getGetNull(),
-			convFact.builder.getTypeLiteral(convFact.convertType(GET_TYPE_PTR(preExpr))));
+	
+	string lit;
+	switch(preExpr->getIdentType()) {
+	case PredefinedExpr::Func: 				
+		lit = "__func__"; break;
+	case PredefinedExpr::Function: 			
+		lit = "__FUNCTION__"; break;
+	case PredefinedExpr::PrettyFunction: 	
+		lit = "__PRETTY_FUNCTION__"; break;
+	case PredefinedExpr::PrettyFunctionNoVirtual: 
+	default:
+		assert(false && "Handle for predefined function not defined");
+	}
+
+	core::TypePtr type = convFact.convertType(GET_TYPE_PTR(preExpr));
+	assert(type->getNodeType() == core::NT_VectorType);
+	core::TypePtr elemType = type.as<core::VectorTypePtr>()->getElementType();
+	return convFact.builder.literal(lit, convFact.builder.refType(convFact.builder.arrayType(elemType)));
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1066,8 +1082,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		{
 			// do pointer arithmetic 
 			doPointerArithmetic(); 
-		} else 
+		} else {
 			rhs = builder.callExpr(exprTy, gen.getOperator(exprTy, op), subExprLHS, rhs);
+		}
+			
 	}
 
 	bool isAssignment = false;
@@ -1726,7 +1744,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCompoundLiteralExpr(c
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CExprConverter::Visit(clang::Expr* expr) {
-	core::ExpressionPtr&& retIr = StmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
+	core::ExpressionPtr retIr = StmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
 
 	// check for OpenMP annotations
 	return omp::attachOmpAnnotation(retIr, expr, convFact);

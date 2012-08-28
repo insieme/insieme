@@ -66,6 +66,14 @@ namespace insieme {
 			// not loaded yet => load and cache code
 			frontend::ConversionJob job(manager, testCase.getFiles(), testCase.getIncludeDirs());
 			job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
+			job.setOption(frontend::ConversionJob::OpenCL, testCase.isEnableOpenCL());
+			
+			// add definitions
+			for(const auto& cur : testCase.getDefinitions()) {
+				job.addDefinition(cur.first, cur.second);
+			}
+			
+			// execute job
 			core::ProgramPtr code = job.execute();
 
 			// store the code in the global node manager 
