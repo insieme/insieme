@@ -436,6 +436,9 @@ namespace {
 					return;
 				}
 
+				// some sanity check frequently encountered
+				assert(node->getLambda() && "Accessing non-present Lambda Definition!");
+
 				// short-cut for non-recursive functions
 				if (!node->isRecursive()) {
 					visit(node->getLambda());
