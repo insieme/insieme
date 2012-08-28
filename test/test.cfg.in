@@ -43,7 +43,12 @@ back.run:		Conf([
 					Flag('-Wl,--no-as-needed'),
 					Flag('-ldl')
 				], "RUN")
-back.ocl:   	%(back.run)s + Conf([Flag('-lOpenCL'), Flag('-DUSE_OPENCL=ON')], "OCL")
+back.ocl:   	%(back.run)s + Conf([
+					Flag('-lOpenCL'), 
+					Flag('-I$OPENCL_ROOT/include'),
+					Flag('-L$OPENCL_ROOT/lib/x86_64'),
+					Flag('-DUSE_OPENCL=ON')
+				], "OCL")
 
 # LIST OF PASSES (it's important that passes names begins with the pass keyword)
 pass.00.gcc: 		Pass(None, None, %(comp.gcc)s+%(back.c.opt)s+%(back.gcc)s, 'ref')
