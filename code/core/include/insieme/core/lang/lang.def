@@ -454,6 +454,16 @@ DERIVED(ArrayViewPostInc, 		"array.view.post.inc",			"(ref<ref<array<'elem,1>>> 
 DERIVED(ArrayViewPreDec, 		"array.view.pre.dec",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array.view(*a,-1); return *a; }")
 DERIVED(ArrayViewPostDec, 		"array.view.post.dec",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { auto res = *a; a = array.view(*a,-1); return res; }")
 
+DERIVED(ArrayReduce, "array.reduce", 
+		"(ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {"
+		"	ref<'b> res = var(init);"
+		"	for(uint<8> i = 0ul .. size) {"
+		"		res = op(*res, *(data[i]));"
+		"	}"
+		"	return *res;"
+		"}"
+)
+
 // -- special operations to support encoding of C ntnters as arrays ----------------------------------------------------
 
 LITERAL(IsNull,   		"is.null",				"(ref<'a>) -> bool")
@@ -529,7 +539,7 @@ LITERAL(Print, "print", "(string,var_list)->unit")
 // Misc. --------------------------------------------------------------------------------------------------------------
 
 LITERAL(VarlistPack, "varlist.pack", "('alpha) -> var_list")
-LITERAL(IfThenElse, "ite", "(bool, () => 'b, () => 'b) -> 'b")
+DERIVED(IfThenElse, "ite", "(bool c, () => 'b a, () => 'b b) -> 'b { if (c) { return a(); } else { return b(); } }")
 
 
 // Tunable Options ----------------------------------------------------------------------------------------------------
@@ -555,12 +565,17 @@ LITERAL(GetThreadGroup, "getThreadGroup", "(uint<#a>) -> threadgroup")
 LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> int<4>")
 LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> int<4>")
 
-LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
+// the work-sharing construct
 LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>, int<#a>, int<#a>)=>'a)->unit")
 
-//TYPE(reduce, "reduce", "(threadgroup, ('a -> 'a), ) -> unit") // wtf?
-// redistribute
-// TODO herbert
+
+// the data-sharing construct
+LITERAL(Redistribute, "redistribute", "(threadgroup, 'a, (ref<array<'a,1>>, uint<8>, uint<8>)=>'b )->'b")
+
+// some derivades
+DERIVED(Barrier, "barrier", "(threadgroup g)->unit { redistribute(g, 0, (ref<array<int<4>,1>> _, uint<8> _, uint<8> _)->unit { return; }); }")
+DERIVED(PReduce, "preduce", "(threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b { return redistribute(g, v, (ref<array<'a,1>> data, uint<8> size, uint<8> pid)=> array.reduce(data, size, op, init) ); }")
+		
 
 // Atomics -----------------------------------------------------------------------------------------------------
 
@@ -577,8 +592,8 @@ DERIVED(Atomic, "atomic",
 
 DERIVED(AtomicFetchAndAdd, "atomic.fetch.and.add",
 		"(ref<'a> v, 'a exp) -> 'a { "
-		"	auto test = ('a _)=>true; "
-		"	auto apply = ('a x)=>x+exp; "
+		"	let test = ('a _)=>true; "
+		"	let apply = ('a x)=>x+exp; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 		
@@ -589,8 +604,8 @@ DERIVED(AtomicAddAndFetch, "atomic.add.and.fetch",
 		
 DERIVED(AtomicFetchAndSub, "atomic.fetch.and.sub",
 		"(ref<'a> v, 'a exp) -> 'a { "
-		"	auto test = ('a _)=>true; "
-		"	auto apply = ('a x)=>x-exp; "
+		"	let test = ('a _)=>true; "
+		"	let apply = ('a x)=>x-exp; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 		
@@ -603,8 +618,8 @@ DERIVED(AtomicSubAndFetch, "atomic.sub.and.fetch",
 
 DERIVED(AtomicFetchAndAnd, "atomic.fetch.and.and",
 		"(ref<'a> v, 'a exp) -> 'a { "
-		"	auto test = ('a _) => true; "
-		"	auto apply = ('a x) => x & exp; "
+		"	let test = ('a _) => true; "
+		"	let apply = ('a x) => x & exp; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 		
@@ -615,8 +630,8 @@ DERIVED(AtomicAndAndFetch, "atomic.and.and.fetch",
 		
 DERIVED(AtomicFetchAndOr, "atomic.fetch.and.or",
 		"(ref<'a> v, 'a exp) -> 'a { "
-		"	auto test = ('a _) => true; "
-		"	auto apply = ('a x) => x | exp; "
+		"	let test = ('a _) => true; "
+		"	let apply = ('a x) => x | exp; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 		
@@ -627,8 +642,8 @@ DERIVED(AtomicOrAndFetch, "atomic.or.and.fetch",
 		
 DERIVED(AtomicFetchAndXor, "atomic.fetch.and.xor",
 		"(ref<'a> v, 'a exp) -> 'a { "
-		"	auto test = ('a _) => true; "
-		"	auto apply = ('a x) => x ^ exp; "
+		"	let test = ('a _) => true; "
+		"	let apply = ('a x) => x ^ exp; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 		
@@ -641,15 +656,15 @@ DERIVED(AtomicXorAndFetch, "atomic.xor.and.fetch",
 		
 DERIVED(AtomicValCompareAndSwap, "atomic.val.compare.and.swap",
 		"(ref<'a> v, 'a old, 'a new) -> 'a { "
-		"	auto test = ('a x) => x == old; "
-		"	auto apply = ('a _) => new; "
+		"	let test = ('a x) => x == old; "
+		"	let apply = ('a _) => new; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 
 DERIVED(AtomicBoolCompareAndSwap, "atomic.bool.compare.and.swap",
 		"(ref<'a> v, 'a old, 'a new) -> bool { "
-		"	auto test = ('a x) => x == old; "
-		"	auto apply = ('a _) => new; "
+		"	let test = ('a x) => x == old; "
+		"	let apply = ('a _) => new; "
 		"	return atomic(v, test, apply) == new; "
 		"}  ")
 

@@ -276,14 +276,14 @@ VOID_RETURN sha1_hash(const unsigned char data[], unsigned len, sha1_ctx ctx[1])
 
     while(len >= space)     /* transfer whole blocks if possible  */
     {
-		unsigned char* tmp = ((unsigned char*)(ctx->wbuf));
+		unsigned char* tmp = (unsigned char*)(ctx->wbuf);
         memcpy(tmp + pos, sp, space);
         sp += space; len -= space; space = SHA1_BLOCK_SIZE; pos = 0;
         bsw_32(ctx->wbuf, SHA1_BLOCK_SIZE >> 2);
         sha1_compile(ctx);
     }
 
-	unsigned char* tmp = ((unsigned char*)(ctx->wbuf));
+	unsigned char* tmp = (unsigned char*)(ctx->wbuf);
     memcpy(tmp + pos, sp, len);
 }
 
