@@ -82,6 +82,8 @@ FUN("stdlib.h", atoi)
 FUN("stdlib.h", atol)
 FUN("stdlib.h", atof)
 
+FUN("unistd.h", chdir)
+
 FUN("alloca.h", alloca)
 
 FUN("malloc.h", memalign)
