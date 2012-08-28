@@ -43,6 +43,7 @@
 #include <boost/unordered_map.hpp>
 
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/map_utils.h"
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -101,26 +102,7 @@ namespace {
 	 */
 	class Formatter {
 
-		/**
-		 * The type of literal this formatter is capable of handling
-		 */
-		const LiteralPtr literal;
-
 	public:
-
-		/**
-		 * Creates a new instance of a formatter.
-		 *
-		 * @param literal the literal handled by this formatter
-		 */
-		Formatter(const LiteralPtr& literal) : literal(literal) {}
-
-		/**
-		 * Obtains the literal handled by this formatter.
-		 *
-		 * @return the handled literal
-		 */
-		const LiteralPtr& getLiteral() { return literal; }
 
 		/**
 		 * Performs the actual code formating. This method is pure abstract and
@@ -157,12 +139,11 @@ namespace {
 
 		/**
 		 * Creates a new instance of this type printing the given literal using the
-		 * given lambda during the formating.
+		 * given formating lambda.
 		 *
-		 * @param literal the literal to be handled by this formatter
 		 * @param lambda the lambda performing the actual formatting
 		 */
-		LambdaFormatter(const LiteralPtr& literal, Lambda lambda) : Formatter(literal), lambda(lambda) {}
+		LambdaFormatter(Lambda lambda) : lambda(lambda) {}
 
 		/**
 		 * Conducts the actual formatting of the given call expression.
@@ -181,18 +162,16 @@ namespace {
 	 * A utility function to create LiteralFormatter instances without the need of
 	 * specifying generic types. Those types will be inferred automatically.
 	 *
-	 * @param literal the literal to be handled by the requested formatter
 	 * @param lambda the formatting routine
 	 * @return a new formatter handling the given literal using the given lambda
 	 */
 	template<typename Lambda>
-	FormatterPtr make_formatter(const LiteralPtr& literal, Lambda lambda) {
-		return std::make_shared<LambdaFormatter<Lambda>>(literal, lambda);
+	FormatterPtr make_formatter(Lambda lambda) {
+		return std::make_shared<LambdaFormatter<Lambda>>(lambda);
 	}
 
-	// TODO re-enable full literal comparison
-	//	typedef boost::unordered_map<LiteralPtr, FormatterPtr, hash_target<LiteralPtr>, equal_target<LiteralPtr>> FormatTable;
-	typedef boost::unordered_map<string, FormatterPtr, boost::hash<string>> FormatTable;
+	// defines the table used for indexing formatter entries
+	typedef utils::map::PointerMap<ExpressionPtr, FormatterPtr> FormatTable;
 
 	// a forward declaration for a method assembling formatter tables
 	FormatTable initFormatTable(const PrettyPrinter&);
@@ -512,15 +491,13 @@ namespace {
 
 				// test whether for the current call a special format has been registered
 				auto function = node->getFunctionExpr();
-				if (function->getNodeType() == NT_Literal) {
-					auto pos = formatTable.find(static_pointer_cast<const Literal>(function)->getValue()->getValue());
-					if (pos != formatTable.end()) {
-						FormatterPtr formatter = (*pos).second;
-						if (printBrackets) out << "(";
-						formatter->format(*this, node);
-						if (printBrackets) out << ")";
-						return;
-					}
+				auto pos = formatTable.find(function);
+				if (pos != formatTable.end()) {
+					FormatterPtr formatter = (*pos).second;
+					if (printBrackets) out << "(";
+					formatter->format(*this, node);
+					if (printBrackets) out << ")";
+					return;
 				}
 
 				// default formating
@@ -856,7 +833,7 @@ namespace {
 		#define PRINT_EXPR(E) printer.visit(E)
 		#define PRINT_ARG(N) printArgument(printer, call, N)
 		#define ADD_FORMATTER(Literal, FORMAT) \
-					res.insert(std::make_pair(Literal->getValue()->getValue(), make_formatter(Literal, [](InspirePrinter& printer, const CallExprPtr& call) FORMAT ))).second;
+					res.insert(std::make_pair(Literal, make_formatter([](InspirePrinter& printer, const CallExprPtr& call) FORMAT ))).second;
 
 
 		if (config.hasOption(PrettyPrinter::PRINT_DEREFS)) {

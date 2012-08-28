@@ -218,6 +218,7 @@ TEST (ArithmeticTest, fromIRExpr) {
 
 
 	// some more complex stuff
+	mgr.setNextFreshID(2);
 	expr = parser.parseExpression("(((15/2) * int<4>:x) / ((20/6) * int<4>:x))");
 	EXPECT_EQ("int.div(int.mul(int.div(15, 2), v2), int.mul(int.div(20, 6), v2))", toString(*expr));
 
@@ -466,7 +467,7 @@ TEST(ArithmeticTest, PiecewiseToIRAndBack) {
 
 	pw += Piecewise( v1 + v2 <= 0, 3+4-v1 );
 	EXPECT_EQ("-v1+7 -> if (v1+v2 <= 0); 0 -> if (!(v1+v2 <= 0))", toString(pw));
-	EXPECT_EQ("ite(int.le(int.add(v1, v2), 0), bind(){rec v4.{v4=fun(int<4> v1) {return int.add(int.mul(-1, v1), 7);}}(v1)}, rec v3.{v3=fun() {return 0;}})", toString(*toIR(mgr, pw)));
+	EXPECT_EQ("rec v0.{v0=fun(bool v1, (()=>'b) v2, (()=>'b) v3) {if(v1) {return v2();} else {return v3();};}}(int.le(int.add(v1, v2), 0), bind(){rec v8.{v8=fun(int<4> v1) {return int.add(int.mul(-1, v1), 7);}}(v1)}, rec v7.{v7=fun() {return 0;}})", toString(*toIR(mgr, pw)));
 	EXPECT_PRED1(empty, check(toIR(mgr,pw), all));
 
 	pw += Piecewise( v2 <= 0, v2);
