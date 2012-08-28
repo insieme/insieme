@@ -621,7 +621,7 @@ def main(argv=None):
 
 
 	config = configparser.ConfigParser()
-	config.readfp(open('${CMAKE_BINARY_DIR}/test.cfg'))
+	config.readfp(open('@CMAKE_BINARY_DIR@/test.cfg'))
 
 	# config.read(['site.cfg', os.path.expanduser('~/.myapp.cfg')])
 	# Set the number of workers
