@@ -27,7 +27,7 @@ cd openmpi-$VERSION
 
 
 echo "#### Building Openmpi ####"
-CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/openmpi-$VERSION
+CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/openmpi-$VERSION --disable-mpi-f77 --disable-mpi-f90
 make -j $SLOTS
 
 # Check for failure
