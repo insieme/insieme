@@ -43,9 +43,14 @@
 
 #include "insieme/utils/printable.h"
 
+/**
+ * This is the header file
+ */
+
 namespace insieme {
 namespace core {
 namespace parser {
+namespace detail {
 
 	using std::string;
 	using std::vector;
@@ -154,7 +159,7 @@ namespace parser {
 	std::ostream& operator<<(std::ostream& out, const Token::Type& type);
 
 
-
+} // end namespace detail
 } // end namespace parser
 } // end namespace core
 } // end namespace insieme

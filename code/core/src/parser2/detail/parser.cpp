@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/parser2/parser.h"
+#include "insieme/core/parser2/detail/parser.h"
 
 #include <sstream>
 #include <iterator>
@@ -43,6 +43,7 @@
 namespace insieme {
 namespace core {
 namespace parser {
+namespace detail {
 
 	namespace {
 
@@ -151,8 +152,8 @@ namespace parser {
 
 		vector<TokenIter> findSplitCandidates(const Grammar::TermInfo& info,
 				const TokenIter& begin, const TokenIter& end, const TokenIter& lowerLimit,
-				const detail::TokenSet& endSet, const detail::TokenSet& followSet,
-				const detail::TokenSet& terminator = detail::TokenSet()
+				const TokenSet& endSet, const TokenSet& followSet,
+				const TokenSet& terminator = TokenSet()
 		) {
 
 			// initialize candidate list
@@ -336,8 +337,8 @@ namespace parser {
 			assert(terminal.terminal);
 
 			// derive filters for before/after
-			const detail::TokenSet& before = context.grammar.getEndSet(sequence[0].terms.back());
-			const detail::TokenSet& after  = context.grammar.getStartSet(sequence[2].terms.front());
+			const TokenSet& before = context.grammar.getEndSet(sequence[0].terms.back());
+			const TokenSet& after  = context.grammar.getStartSet(sequence[2].terms.front());
 
 			unsigned terminalSize = terminal.limit.getMin();
 			assert(terminalSize == terminal.limit.getMax());
@@ -666,20 +667,20 @@ namespace parser {
 	}
 
 
-	bool Terminal::updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+	bool Terminal::updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const {
 		return begin.add(terminal) || end.add(terminal);
 	}
 
-	bool Any::updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
-		detail::TokenSet set = (!type)?(detail::TokenSet(detail::TokenSet::all())):(detail::TokenSet(type));
+	bool Any::updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const {
+		TokenSet set = (!type)?(TokenSet(TokenSet::all())):(TokenSet(type));
 		return begin.add(set) || end.add(set);
 	}
 
-	bool NonTerminal::updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+	bool NonTerminal::updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const {
 		return begin.add(g.getStartSet(nonTerminal)) || end.add(g.getEndSet(nonTerminal));
 	}
 
-	bool Alternative::updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+	bool Alternative::updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const {
 		bool res = false;
 		for(const TermPtr& opt : alternatives) {
 			res = begin.add(g.getStartSet(opt)) || res;
@@ -688,7 +689,7 @@ namespace parser {
 		return res;
 	}
 
-	bool Loop::updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+	bool Loop::updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const {
 		bool res = false;
 		res = begin.add(g.getStartSet(body)) || res;
 		res = end.add(g.getEndSet(body)) || res;
@@ -696,7 +697,7 @@ namespace parser {
 	}
 
 
-	bool Sequence::SubSequence::updateStartSet(const Grammar& g, detail::TokenSet& start) const {
+	bool Sequence::SubSequence::updateStartSet(const Grammar& g, TokenSet& start) const {
 		bool res = false;
 		auto it = terms.begin();
 		do {
@@ -705,7 +706,7 @@ namespace parser {
 		return res;
 	}
 
-	bool Sequence::SubSequence::updateEndSet(const Grammar& g, detail::TokenSet& end) const {
+	bool Sequence::SubSequence::updateEndSet(const Grammar& g, TokenSet& end) const {
 		bool res = false;
 		auto it = terms.rbegin();
 		do {
@@ -714,7 +715,7 @@ namespace parser {
 		return res;
 	}
 
-	bool Sequence::updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+	bool Sequence::updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const {
 		bool res = false;
 
 		// deal with potentially empty sub-sequences in the front
@@ -848,8 +849,7 @@ namespace parser {
 
 	}
 
-
-	namespace detail {
+	// -- begin token set
 
 		bool TokenSet::add(const Token& token) {
 			if (contains(token)) return false;
@@ -929,8 +929,7 @@ namespace parser {
 			return out << join(",", tokens) << "}";
 		}
 
-	}
-
+	// -- end token set
 
 	std::ostream& Grammar::TermInfo::printTo(std::ostream& out) const {
 		return out << "TermInfo: {\n\t" <<
@@ -1223,6 +1222,7 @@ namespace parser {
 		return std::make_shared<Action<new_scope_handler>>(term);
 	}
 
+} // end namespace detail
 } // end namespace parser
 } // end namespace core
 } // end namespace insieme
