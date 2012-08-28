@@ -3,6 +3,7 @@
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
 #include <math.h>
+#include <unistd.h>
 
 #ifndef PATH
 #define PATH "./"

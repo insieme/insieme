@@ -54,6 +54,7 @@
 #endif /* NODE definition */
 // -----------------------------------
 
+FUN("assert.h", __assert_fail)
 
 FUN("stdio.h", printf)
 FUN("stdio.h", par_printf) // a lie

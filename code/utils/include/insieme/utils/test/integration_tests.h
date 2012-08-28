@@ -36,6 +36,9 @@
 
 #pragma once
 
+#include <string>
+#include <map>
+#include <vector>
 #include <boost/optional.hpp>
 
 #include "insieme/utils/string_utils.h"
@@ -45,6 +48,8 @@ namespace insieme {
 namespace utils {
 namespace test {
 
+	using std::map;
+	using std::string;
 	using std::vector;
 
 	/**
@@ -72,13 +77,23 @@ namespace test {
 		 */
 		bool enableOpenMP;
 
+		/**
+		 * A flag indicating whether OpenCL should be enabled within the frontend or not.
+		 */
+		bool enableOpenCL;
+
+		/**
+		 * A list of macro definitions to be forwarded to the frontend.
+		 */
+		map<string, string> definitions;
+
 	public:
 
 		/**
 		 * Creates a new test case based on the given arguments.
 		 */
-		IntegrationTestCase(const string& name, const vector<string>& files, const vector<string>& includeDirs, bool enableOpenMP)
-			: name(name), files(files), includeDirs(includeDirs), enableOpenMP(enableOpenMP) {}
+		IntegrationTestCase(const string& name, const vector<string>& files, const vector<string>& includeDirs, bool enableOpenMP, bool enableOpenCL, const map<string,string>& definitions)
+			: name(name), files(files), includeDirs(includeDirs), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL), definitions(definitions) {}
 
 		/**
 		 * Obtains the name of this test case.
@@ -106,6 +121,20 @@ namespace test {
 		 */
 		bool isEnableOpenMP() const {
 			return enableOpenMP;
+		}
+
+		/**
+		 * Determines whether the OpenCL conversion should be enabled within the frontend or not.
+		 */
+		bool isEnableOpenCL() const {
+			return enableOpenCL;
+		}
+
+		/**
+		 * Obtains the list of macro definitions to be passed on the the frontend.
+		 */
+		const map<string, string>& getDefinitions() const {
+			return definitions;
 		}
 
 		/**
