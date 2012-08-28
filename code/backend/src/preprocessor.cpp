@@ -180,14 +180,18 @@ namespace backend {
 					// convert to lambda
 					core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
 
-					// check whether the lambda is generic
+					// check whether the lambda is generic and not a built-in
 					if (core::isGeneric(fun->getType())) {
 
-						// compute substitutions
-						core::SubstitutionOpt&& map = core::analysis::getTypeVariableInstantiation(manager, call);
+						// instantiate generic non-built-in function
+						if (!manager.getLangBasic().isBuiltIn(fun)) {
 
-						// instantiate type variables according to map
-						lambda = core::transform::instantiate(manager, lambda, map);
+							// compute substitutions
+							core::SubstitutionOpt&& map = core::analysis::getTypeVariableInstantiation(manager, call);
+
+							// instantiate type variables according to map
+							lambda = core::transform::instantiate(manager, lambda, map);
+						}
 
 						// create new call node
 						core::ExpressionList arguments;
