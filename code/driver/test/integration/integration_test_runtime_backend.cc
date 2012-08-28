@@ -85,8 +85,9 @@ namespace insieme {
 		SCOPED_TRACE("Testing Case: " + testCase.getName());
 		LOG(INFO) << "Testing Case: " + testCase.getName();
 
-		if (testCase.getName() == "ocl/ocl_kernel") {
-			LOG(INFO) << "Skipping kernel test ...";
+		// skip OpenCL tests
+		if (testCase.isEnableOpenCL()) {
+			LOG(INFO) << "Skipping OpenCL tests ...";
 			return;
 		}
 	
@@ -101,13 +102,7 @@ namespace insieme {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 		compiler.addFlag("-I " SRC_DIR "../../runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
 
-		EXPECT_TRUE(utils::compiler::compile(*target, compiler));// << "Code: " << *target;
-
-
-	//	// test whether result can be compiled
-	//	auto compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	//	compiler.addFlag("-I/home/herbert/insieme/code/simple_backend/include/insieme/simple_backend/runtime");
-	//	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
+		EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "\nCode: " << *target;
 	}
 
 	// instantiate the test case

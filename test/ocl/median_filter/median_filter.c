@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "lib_icl.h"
 #include "lib_icl_ext.h"   
 #include "lib_icl_bmp.h"
