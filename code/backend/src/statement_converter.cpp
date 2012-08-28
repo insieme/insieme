@@ -158,7 +158,9 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitCastExpr(const core::CastExprPtr& ptr, ConversionContext& context) {
-		return c_ast::cast(converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType, visit(ptr->getSubExpression(), context));
+		const auto& info = converter.getTypeManager().getTypeInfo(ptr->getType());
+		context.addDependency(info.definition);
+		return c_ast::cast(info.rValueType, visit(ptr->getSubExpression(), context));
 	}
 
 	c_ast::NodePtr StmtConverter::visitJobExpr(const core::JobExprPtr& ptr, ConversionContext& context) {
@@ -202,6 +204,12 @@ namespace backend {
 		// handle null pointer
 		if (converter.getNodeManager().getLangBasic().isNull(ptr)) {
 			return converter.getCNodeManager()->create<c_ast::Literal>("0");
+		}
+
+		// handle pre-defined C identifiers (standard - 6.4.2.2)
+		const static vector<string> predefined = { "__func__", "__FUNCTION__", "__PRETTY_FUNCTION__" };
+		if (contains(predefined, ptr->getStringValue())) {
+			return res;		// just print literal as it is
 		}
 
 		// handle literals referencing external data elements
