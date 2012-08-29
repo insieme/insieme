@@ -27,6 +27,8 @@
 #define IR 2836
 #define MASK 123459876
 
+#include <omp.h>
+
 struct Results {
    long hosps_number;
    long hosps_personnel;
@@ -58,7 +60,7 @@ struct Hosp {
    struct Patient *assess;
    struct Patient *inside;
    struct Patient *realloc;
-   struct _irt_lock  realloc_lock;
+   omp_lock_t realloc_lock;
 };
 struct Village {
    int id;
