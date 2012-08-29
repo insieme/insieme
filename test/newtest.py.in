@@ -525,13 +525,13 @@ class TestJob:
 					)
 				)
 			
-				if not mock_run:
-					# upon finalization, remove the generated output files 
-					finalize_cmds.append(
-						Cmd(Commands.DEL, "Delete output file {0}".format(id),
-							"rm {0}/{1}".format(path, file_name)
-						)
-					)
+				#if not mock_run:
+				#	# upon finalization, remove the generated output files 
+				#	finalize_cmds.append(
+				#		Cmd(Commands.DEL, "Delete output file {0}".format(id),
+				#			"rm {0}/{1}".format(path, file_name)
+				#		)
+				#	)
 
 				if os.path.exists("{0}/output.match".format(path)):
 
@@ -546,13 +546,13 @@ class TestJob:
 					)
 					file_name ="{0}.match".format(file_name)
 	
-					if not mock_run:
-						# upon finalization, remove the generated output files 
-						finalize_cmds.append(
-							Cmd(Commands.DEL, "Delete output file {0}".format(id),
-								"rm {0}/{1}".format(path, file_name)
-							)
-						)
+					#if not mock_run:
+					#	# upon finalization, remove the generated output files 
+					#	finalize_cmds.append(
+					#		Cmd(Commands.DEL, "Delete output file {0}".format(id),
+					#			"rm {0}/{1}".format(path, file_name)
+					#		)
+					#	)
 
 				if first:
 					ref = file_name
