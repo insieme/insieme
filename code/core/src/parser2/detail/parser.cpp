@@ -916,7 +916,7 @@ namespace detail {
 		}
 
 		std::ostream& TokenSet::printTo(std::ostream& out) const {
-			assert(Token::Symbol == 1 && Token::String_Literal == 8 && "If this changes, check this code!");
+			assert(Token::Symbol == 1 && Token::String_Literal == 9 && "If this changes, check this code!");
 
 			out << "{";
 

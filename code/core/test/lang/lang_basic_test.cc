@@ -117,6 +117,7 @@ TEST(LangBasic, DefinitionTest) {
 
 	// test all type and literal definitions
 #define CHECK(id) \
+	std::cout << "Checking " #id "\n"; \
 	EXPECT_TRUE(gen.get##id ()); \
 	EXPECT_TRUE(gen.is##id(gen.get##id())); \
 	EXPECT_TRUE(checks::check(gen.get##id()).empty()) << checks::check(gen.get##id());
