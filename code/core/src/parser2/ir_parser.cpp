@@ -40,7 +40,9 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/parser2/parser.h"
+
+#include "insieme/core/parser2/detail/parser.h"
+
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
@@ -48,6 +50,8 @@ namespace insieme {
 namespace core {
 namespace parser {
 
+	// import namespaces since this was re-factored afterward
+	using namespace insieme::core::parser::detail;
 
 	namespace {
 
@@ -1535,6 +1539,15 @@ namespace parser {
 			throw IRParserException(pe.what());
 		}
 		return std::vector<NodeAddress>();
+	}
+
+
+	/**
+	 * Builds an instance of the full IR Grammar to be customized
+	 * by the user for specific purposes.
+	 */
+	Grammar createGrammar() {
+		return buildGrammar();
 	}
 
 

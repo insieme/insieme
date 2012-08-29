@@ -81,7 +81,8 @@ struct DefUse::defs_iterator_impl {
 };
 
 bool DefUse::defs_iterator::operator==(const defs_iterator& other) const {
-	return pimpl->vars == other.pimpl->vars && pimpl->it == other.pimpl->it;
+	// return pimpl->vars == other.pimpl->vars && pimpl->it == other.pimpl->it;
+	return false;
 }
 
 DefUse::defs_iterator DefUse::defs_begin(const core::ExpressionAddress& expr) const {

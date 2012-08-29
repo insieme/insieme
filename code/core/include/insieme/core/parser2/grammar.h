@@ -34,23 +34,35 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/dfa/entity.h"
+#pragma once
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/ir_visitor.h"
-
-#include "insieme/analysis/cfg.h"
-
-#include "insieme/utils/set_utils.h"
-#include "insieme/utils/logging.h"
-
-using namespace insieme::analysis::cfg;
-
-namespace insieme { namespace analysis { namespace dfa {
+#include "insieme/core/parser2/detail/parser.h"
 
 
+/**
+ * This header file contains extra utility functionality to be used
+ * by advanced users of the parser infrastructure. It provides access
+ * to internal data structures which are only required in cases
+ * where the grammar needs to be further customized.
+ *
+ * NOTE: the implementation of the functions defined within this header
+ * 	are located within the ir_parser.cpp file due to technical issues.
+ */
 
+namespace insieme {
+namespace core {
+namespace parser {
 
+	/**
+	 * Obtains an instance of the full IR grammar. This function therefore
+	 * allows to obtain a copy of the Grammer which can be further customized
+	 * for specific tasks by adding additional rules. It can also be used to
+	 * print the full Grammar of INSPIRE.
+	 *
+	 * @return a copy of the full IR Grammar.
+	 */
+	Grammar createGrammar();
 
-
-} } } // end insieme::analysis::dfa namespace 
+} // end namespace parser
+} // end namespace core
+} // end namespace insieme

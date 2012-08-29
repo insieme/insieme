@@ -53,12 +53,12 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/range.h"
 
-#include "insieme/core/parser2/lexer.h"
+#include "insieme/core/parser2/detail/lexer.h"
 
 namespace insieme {
 namespace core {
 namespace parser {
-
+namespace detail {
 
 	class Term;
 	typedef std::shared_ptr<Term> TermPtr;
@@ -72,9 +72,7 @@ namespace parser {
 	typedef typename Tokens::const_iterator TokenIter;
 	typedef typename utils::range<TokenIter> TokenRange;
 
-	namespace detail {
-		class TokenSet;
-	}
+	class TokenSet;
 
 
 	class ScopeManager {
@@ -479,76 +477,74 @@ namespace parser {
 
 	};
 
-	namespace detail {
 
-		class TokenSet : public utils::Printable {
+	class TokenSet : public utils::Printable {
 
-			/**
-			 * Individual tokens covered by this set.
-			 */
-			vector<Token> tokens;
+		/**
+		 * Individual tokens covered by this set.
+		 */
+		vector<Token> tokens;
 
-			/**
-			 * A bit-vector representing the mask of token types covered
-			 * by this set.
-			 */
-			unsigned tokenTypeMask;
+		/**
+		 * A bit-vector representing the mask of token types covered
+		 * by this set.
+		 */
+		unsigned tokenTypeMask;
 
-		public:
-			struct all {};
+	public:
+		struct all {};
 
-			TokenSet() : tokenTypeMask(0) {};
+		TokenSet() : tokenTypeMask(0) {};
 
-			template<typename ... Elements>
-			TokenSet(const Elements& ... elements)
-				: tokens(toVector(elements...)),
-				  tokenTypeMask(0) {};
+		template<typename ... Elements>
+		TokenSet(const Elements& ... elements)
+			: tokens(toVector(elements...)),
+			  tokenTypeMask(0) {};
 
-			TokenSet(const Token::Type& type)
-				: tokenTypeMask(1<<type) {}
+		TokenSet(const Token::Type& type)
+			: tokenTypeMask(1<<type) {}
 
-			TokenSet(const all&)
-				: tokenTypeMask((1<<16) -1) {}
+		TokenSet(const all&)
+			: tokenTypeMask((1<<16) -1) {}
 
-			bool contains(const Token& token) const {
-				return coversType(token) || coversToken(token);
-			}
+		bool contains(const Token& token) const {
+			return coversType(token) || coversToken(token);
+		}
 
-			bool add(const Token& token);
-			bool add(const Token::Type& type);
-			bool add(const TokenSet& other);
+		bool add(const Token& token);
+		bool add(const Token::Type& type);
+		bool add(const TokenSet& other);
 
-			bool isSubSet(const TokenSet& other) const;
+		bool isSubSet(const TokenSet& other) const;
 
-			TokenSet& operator+=(const Token& token);
-			TokenSet& operator+=(const Token::Type& type);
-			TokenSet& operator+=(const TokenSet& other);
+		TokenSet& operator+=(const Token& token);
+		TokenSet& operator+=(const Token::Type& type);
+		TokenSet& operator+=(const TokenSet& other);
 
-			TokenSet operator+(const TokenSet& other) const {
-				return TokenSet(*this) += other;
-			}
+		TokenSet operator+(const TokenSet& other) const {
+			return TokenSet(*this) += other;
+		}
 
-		protected:
+	protected:
 
-			virtual std::ostream& printTo(std::ostream& out) const;
+		virtual std::ostream& printTo(std::ostream& out) const;
 
-		private:
+	private:
 
-			bool coversType(const Token::Type& type) const {
-				return (tokenTypeMask & (1<<type));
-			}
+		bool coversType(const Token::Type& type) const {
+			return (tokenTypeMask & (1<<type));
+		}
 
-			bool coversType(const Token& token) const {
-				return coversType(token.getType());
-			}
+		bool coversType(const Token& token) const {
+			return coversType(token.getType());
+		}
 
-			bool coversToken(const Token& token) const {
-				return any(tokens, [&](const Token& cur) { return cur==token; });
-			}
+		bool coversToken(const Token& token) const {
+			return any(tokens, [&](const Token& cur) { return cur==token; });
+		}
 
-		};
+	};
 
-	}
 
 
 	/**
@@ -586,7 +582,7 @@ namespace parser {
 		 *
 		 * @return true if new items have been added, false otherwise
 		 */
-		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const =0;
+		virtual bool updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const =0;
 
 		/**
 		 * A function to be used for collecting all sub-terms of this term.
@@ -609,7 +605,7 @@ namespace parser {
 
 		Empty() : Term(0,0) {}
 
-		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+		virtual bool updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const {
 			return false; // do not change anything - needs to be managed by context
 		}
 
@@ -635,7 +631,7 @@ namespace parser {
 
 		const Token& getTerminal() const { return terminal; }
 
-		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const;
+		virtual bool updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const;
 
 	protected:
 
@@ -656,7 +652,7 @@ namespace parser {
 
 		Any(Token::Type type = (Token::Type)0) : Term(1,1), type(type) {}
 
-		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const;
+		virtual bool updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const;
 
 	protected:
 
@@ -680,7 +676,7 @@ namespace parser {
 		NonTerminal(const string& nonTerminal = "E")
 			: Term(Limit(1)), nonTerminal(nonTerminal) {}		// TODO: limit those as well - non-terminals are usually recursive => potentially infinite in size but never empty ...
 
-		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const;
+		virtual bool updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const;
 
 	protected:
 
@@ -691,14 +687,12 @@ namespace parser {
 		}
 	};
 
-	namespace detail {
-		struct actions {
-			void enter(Context& context, const TokenIter& begin, const TokenIter& end) const { }
-			void accept(Context& context, const TokenIter& begin, const TokenIter& end) const { }
-			void reject(Context& context, const TokenIter& begin, const TokenIter& end) const { }
-			void leave(Context& context, const TokenIter& begin, const TokenIter& end) const { }
-		};
-	}
+	struct actions {
+		void enter(Context& context, const TokenIter& begin, const TokenIter& end) const { }
+		void accept(Context& context, const TokenIter& begin, const TokenIter& end) const { }
+		void reject(Context& context, const TokenIter& begin, const TokenIter& end) const { }
+		void leave(Context& context, const TokenIter& begin, const TokenIter& end) const { }
+	};
 
 	template<typename actions>
 	class Action : public Term {
@@ -708,7 +702,7 @@ namespace parser {
 		Action(const TermPtr& term)
 			: Term(term->getLimit()), subTerm(term) {}
 
-		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const {
+		virtual bool updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const {
 			return subTerm->updateTokenSets(g,begin,end);
 		}
 
@@ -749,8 +743,8 @@ namespace parser {
 			SubSequence(bool terminal = false)
 				: terminal(terminal), limit(0,0) {}
 
-			bool updateStartSet(const Grammar& g, detail::TokenSet& start) const;
-			bool updateEndSet(const Grammar& g, detail::TokenSet& end) const;
+			bool updateStartSet(const Grammar& g, TokenSet& start) const;
+			bool updateEndSet(const Grammar& g, TokenSet& end) const;
 		};
 
 		vector<SubSequence> sequence;
@@ -779,7 +773,7 @@ namespace parser {
 			updateLimit();
 		}
 
-		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const;
+		virtual bool updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const;
 
 		virtual void addSubTerms(std::set<TermPtr>& terms) const;
 
@@ -824,7 +818,7 @@ namespace parser {
 		}
 
 
-		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const;
+		virtual bool updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const;
 
 		virtual void addSubTerms(std::set<TermPtr>& terms) const {
 			for(const TermPtr& cur : alternatives) {
@@ -854,7 +848,7 @@ namespace parser {
 		TermPtr body;
 
 		// the set of tokens forming definite terminal characters
-		detail::TokenSet terminator;
+		TokenSet terminator;
 
 	public:
 
@@ -863,7 +857,7 @@ namespace parser {
 		template<typename ... Terminators>
 		Loop(const TermPtr& body, const Terminators& ... terminators) : body(body), terminator(terminators...) {}
 
-		virtual bool updateTokenSets(const Grammar& g, detail::TokenSet& begin, detail::TokenSet& end) const;
+		virtual bool updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const;
 
 		virtual void addSubTerms(std::set<TermPtr>& terms) const {
 			terms.insert(body); body->addSubTerms(terms);
@@ -931,7 +925,7 @@ namespace parser {
 		typedef std::multiset<RulePtr, compare_target<RulePtr>> RuleSet;
 		typedef std::map<string, RuleSet> Productions;
 
-		typedef pair<detail::TokenSet, detail::TokenSet> StartEndSets;
+		typedef pair<TokenSet, TokenSet> StartEndSets;
 
 		struct TermInfo : public utils::Printable {
 			std::map<string, StartEndSets> nonTerminalInfos;
@@ -1023,11 +1017,11 @@ namespace parser {
 			return info.find(subTerm)->second;
 		}
 
-		const detail::TokenSet& getStartSet(const TermPtr& subTerm) const {
+		const TokenSet& getStartSet(const TermPtr& subTerm) const {
 			return getStartEndSets(subTerm).first;
 		}
 
-		const detail::TokenSet& getEndSet(const TermPtr& subTerm) const {
+		const TokenSet& getEndSet(const TermPtr& subTerm) const {
 			return getStartEndSets(subTerm).second;
 		}
 
@@ -1037,11 +1031,11 @@ namespace parser {
 			return info.find(nonTerminal)->second;
 		}
 
-		const detail::TokenSet& getStartSet(const string& nonTerminal) const {
+		const TokenSet& getStartSet(const string& nonTerminal) const {
 			return getStartEndSets(nonTerminal).first;
 		}
 
-		const detail::TokenSet& getEndSet(const string& nonTerminal) const {
+		const TokenSet& getEndSet(const string& nonTerminal) const {
 			return getStartEndSets(nonTerminal).second;
 		}
 
@@ -1186,6 +1180,8 @@ namespace parser {
 	inline RulePtr rule(const string& str, const typename Rule::Action& action, unsigned priority = 10) {
 		return rule(lit(str), action, priority);
 	}
+
+} // end namespace detail
 } // end namespace parser
 } // end namespace core
 } // end namespace insieme

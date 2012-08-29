@@ -966,7 +966,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			VLOG(2) << "MAP: ";
 			std::for_each(ctx.recVarExprMap.begin(), ctx.recVarExprMap.end(),
 				[] (ConversionContext::RecVarExprMap::value_type c) {
-					VLOG(2) << "\t" << c.first->getNameAsString() << "[" << c.first << "] " << c.second->getType();
+					VLOG(2) << "\t" << c.first->getNameAsString() << "[" << c.first << "] " << c.second << " " << c.second->getType();
 				});
 
 		}
@@ -1131,8 +1131,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		assert(tit != ctx.recVarExprMap.end() && "Recursive function has no TypeVar associated");
 		ctx.currVar = tit->second;
 
-			// test whether function has already been resolved
-		if (*tit->second == *recVarRef) { break; }
+		// test whether function has already been resolved
+		if (*tit->second == *recVarRef) { continue; }
 
 		/*
 		 * we remove the variable from the list in order to fool the solver, in this way it will create a descriptor
@@ -1165,9 +1165,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		// reinsert the TypeVar in the map in order to solve the other recursive types
 		ctx.recVarExprMap.insert( {fd, ctx.currVar} );
-		ctx.currVar = NULL;
 	}
-
+	ctx.currVar = NULL;
 
 	// we reset the behavior of the solver
 	ctx.isRecSubFunc = false;
