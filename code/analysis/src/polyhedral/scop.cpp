@@ -261,7 +261,7 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 
 			return boundCons and extractFrom( iterVec, newExpr, trg, ct );
 		}
-		throw e;
+		RETHROW_EXCEPTION(NotASCoP, e, "During conversion to piecewise", expr);
 	}
 }
 
