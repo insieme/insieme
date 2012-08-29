@@ -655,17 +655,17 @@ DERIVED(AtomicXorAndFetch, "atomic.xor.and.fetch",
 // test and set
 		
 DERIVED(AtomicValCompareAndSwap, "atomic.val.compare.and.swap",
-		"(ref<'a> v, 'a old, 'a new) -> 'a { "
-		"	let test = ('a x) => x == old; "
-		"	let apply = ('a _) => new; "
+		"(ref<'a> v, 'a _old, 'a _new) -> 'a { "
+		"	let test = ('a x) => x == _old; "
+		"	let apply = ('a _) => _new; "
 		"	return atomic(v, test, apply); "
 		"}  ")
 
 DERIVED(AtomicBoolCompareAndSwap, "atomic.bool.compare.and.swap",
-		"(ref<'a> v, 'a old, 'a new) -> bool { "
-		"	let test = ('a x) => x == old; "
-		"	let apply = ('a _) => new; "
-		"	return atomic(v, test, apply) == new; "
+		"(ref<'a> v, 'a _old, 'a _new) -> bool { "
+		"	let test = ('a x) => x == _old; "
+		"	let apply = ('a _) => _new; "
+		"	return atomic(v, test, apply) == _new; "
 		"}  ")
 
 		

@@ -429,6 +429,7 @@ namespace parser {
 			auto A = rec("A");
 
 			auto id = identifier();
+			auto kw = keyword();
 
 			Grammar g(start);
 
@@ -715,8 +716,9 @@ namespace parser {
 			));
 
 			// add lang-basic literals
+			auto part = id | keyword("ref") | keyword("array") | keyword("vector") | keyword("channel");
 			g.addRule("E", rule(
-					seq(id, opt(seq(".", list(id, ".")))),
+					seq(part, opt(seq(".", list(part, ".")))),
 					[](Context& cur)->NodePtr {
 						// join matched token range and see whether it is a literal!
 						std::stringstream name;
@@ -1249,37 +1251,18 @@ namespace parser {
 
 			// for loop without step size
 			g.addRule("S", rule(
-					varScop(seq("for(", iter, "=", E, "..", E, ")", S)),
+					varScop(seq("for(", iter, "=", E, "..", E, opt(seq(":",E)), ")", S)),
 					[](Context& cur)->NodePtr {
 						const auto& terms = cur.getTerms();
 						TypePtr type = terms[0].as<TypePtr>();
 						VariablePtr iter = terms[1].as<VariablePtr>();
 						ExpressionPtr start = terms[2].as<ExpressionPtr>();
 						ExpressionPtr end = terms[3].as<ExpressionPtr>();
-						StatementPtr body = terms[4].as<StatementPtr>();
 
-						auto& basic = cur.manager.getLangBasic();
-						if (!basic.isInt(type)) return fail(cur, "Iterator has to be of integer type!");
+						// extract step if present
+						ExpressionPtr step = (terms.size() == 6u)?terms[4].as<ExpressionPtr>():cur.literal(type, "1");
 
-						IRBuilder builder(cur.manager);
-
-						// build loop
-						ExpressionPtr step = builder.literal(type, "1");
-						return cur.forStmt(iter, start, end, step, body);
-					}
-			));
-
-			// for loop with step size
-			g.addRule("S", rule(
-					varScop(seq("for(", iter, "=", E, "..", E, ":", E, ")", S)),
-					[](Context& cur)->NodePtr {
-						const auto& terms = cur.getTerms();
-						TypePtr type = terms[0].as<TypePtr>();
-						VariablePtr iter = terms[1].as<VariablePtr>();
-						ExpressionPtr start = terms[2].as<ExpressionPtr>();
-						ExpressionPtr end = terms[3].as<ExpressionPtr>();
-						ExpressionPtr step = terms[4].as<ExpressionPtr>();
-						StatementPtr body = terms[5].as<StatementPtr>();
+						StatementPtr body = terms.back().as<StatementPtr>();
 
 						auto& basic = cur.manager.getLangBasic();
 						if (!basic.isInt(type)) return fail(cur, "Iterator has to be of integer type!");

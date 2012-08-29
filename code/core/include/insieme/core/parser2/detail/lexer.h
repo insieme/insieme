@@ -88,7 +88,8 @@ namespace detail {
 		enum Type {
 									// type 0 is used for "Any" when filtering those
 			Symbol = 1,				// < tokens describing symbols / operators like +,-/($:...
-			Identifier,				// < everything else - also "keywords" like if, while, ...
+			Identifier,				// < everything else - variable names, type names, ...
+			Keyword,				// < known keywords like if, for, let, return, array, ...
 			Bool_Literal,			// < boolean literals true / false
 			Int_Literal,			// < integer literals, including oct and hex-values
 			Float_Literal,			// < floating point literals, including e-notation
@@ -160,12 +161,23 @@ namespace detail {
 		/**
 		 * Creates an identifier token based on the given non-empty lexeme.
 		 *
-		 * @param lexeme the text of the identifier to be covered
+		 * @param lexeme the text of the identifier to be covered (must not be empty)
 		 * @return an identifier token for the given text
 		 */
 		static Token createIdentifier(const string& lexeme) {
 			assert(!lexeme.empty());
 			return Token(Identifier, lexeme);
+		}
+
+		/**
+		 * Creates a keyword token based on the given non-empty lexeme.
+		 *
+		 * @param lexeme the text of the keyword to be covered (must not be empty)
+		 * @return a keyword token for the given text
+		 */
+		static Token createKeyword(const string& lexeme) {
+			assert(!lexeme.empty());
+			return Token(Keyword, lexeme);
 		}
 
 		/**

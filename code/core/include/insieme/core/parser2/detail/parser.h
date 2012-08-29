@@ -1089,6 +1089,15 @@ namespace detail {
 		return instance;
 	}
 
+	inline TermPtr keyword() {
+		const static TermPtr instance = any(Token::Keyword);
+		return instance;
+	}
+
+	inline TermPtr keyword(const string& keyword) {
+		return lit(keyword);
+	}
+
 	TermPtr cap(const TermPtr& term);
 
 	TermPtr varScop(const TermPtr& term);
