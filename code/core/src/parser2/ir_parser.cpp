@@ -84,6 +84,10 @@ namespace parser {
 			return core::convertList<element>(source);	// use core converter
 		}
 
+		bool isReference(const ExpressionPtr& cur) {
+			return cur->getType()->getNodeType() == core::NT_RefType;
+		}
+
 		ExpressionPtr getOperand(Context& cur, int index) {
 			return cur.tryDeref(cur.getTerm(index).as<ExpressionPtr>());
 		};
@@ -715,6 +719,17 @@ namespace parser {
 					}
 			));
 
+			// identifier literals
+			g.addRule("E", rule(
+					seq("lit(", cap(any(Token::String_Literal)), ")"),
+					[](Context& cur)->NodePtr {
+						// just create an identifier literal
+						string value = cur.getSubRange(0).front().getLexeme();
+						value = value.substr(1,value.size()-2);
+						return cur.getIdentifierLiteral(value);
+					}
+			));
+
 			// add lang-basic literals
 			auto part = id | keyword("ref") | keyword("array") | keyword("vector") | keyword("channel");
 			g.addRule("E", rule(
@@ -1136,6 +1151,9 @@ namespace parser {
 			// every expression is a statement (if terminated by ;)
 			g.addRule("S", rule(seq(E,";"), forward));
 
+			// allow ; at the end of statements
+			g.addRule("S", rule(seq(S,";"), forward));
+
 			// every declaration is a statement
 			g.addRule("S", rule(seq(let, ";"), [](Context& cur)->NodePtr { return cur.getNoOp(); }));
 
@@ -1159,6 +1177,12 @@ namespace parser {
 						IRBuilder builder(cur.manager);
 						TypePtr type = cur.getTerm(0).as<TypePtr>();
 						ExpressionPtr value = builder.undefined(type);
+
+						// wrap into a ref.var if it is a reference type
+						if (type->getNodeType() == core::NT_RefType) {
+							value = builder.refVar(builder.undefined(type.as<RefTypePtr>()->getElementType()));
+						}
+
 						auto decl = builder.declarationStmt(type, value);
 						// register name within variable manager
 						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
