@@ -20,7 +20,7 @@
 //-----------------------------------------------------------------------------
 // This is the naive implementation of (in place) matrix transpose. No
 // optimizations are done, the OpenMP version is straightforward.
-void naive_transpose(double *M, size_t N){
+void naive_transpose(double *M, int N){
 	int i, j;
 	#pragma omp parallel for private(i,j)
 	for(i=0; i<N; i++){
@@ -62,7 +62,7 @@ void transpose_opposite(double* M1, double* M2, int N, int block){
 		}
 }
 
-void block_transpose_rec(double *M, size_t N, size_t n, size_t block){
+void block_transpose_rec(double *M, int N, int n, int block){
 	if(n <= block){
 		#pragma omp task
 		transpose_block(M, N, (n < block)?n:block);
@@ -92,11 +92,18 @@ void block_transpose(double* M, size_t N, size_t block){
 
 int main(int argc, char* argv[]) {
 
-	size_t N;
-	if (argc == 1)
+	int N;
+	int B;
+
+	if (argc != 2) {
 		N = 8192;
-	else
+		B = 8;
+	} else {
 		N = atoi(argv[1]);
+		B = atoi(argv[2]);
+	}
+
+	assert(N%B==0 && "Matrix size not divisible by block size");
 
 	double* M = (double*) malloc(sizeof(double) * N * N);
 	double* S = (double*) malloc(sizeof(double) * N * N);
@@ -113,7 +120,7 @@ int main(int argc, char* argv[]) {
 	num_threads = omp_get_num_threads();
 #endif
 	ticktock();
-	block_transpose(M, N, 32);
+	block_transpose(M, N, B);
 	long time = ticktock();
 
 	int check = 1;
