@@ -1461,6 +1461,13 @@ namespace parser {
 
 			// handle terminal case => address only references a root node
 			if (cur.isRoot()) {
+
+				// if root is marked => skip
+				if (cur->hasAttachedValue<AddressMark>()) {
+					return core::NodeAddress();
+				}
+
+				// return new root
 				return core::NodeAddress(newRoot);
 			}
 
@@ -1470,6 +1477,11 @@ namespace parser {
 			// skip marked nodes
 			if (cur->hasAttachedValue<AddressMark>()) {
 				return parent;
+			}
+
+			// see whether this is the first non-marked node along the path
+			if (!parent) {
+				return core::NodeAddress(newRoot);
 			}
 
 			// also fix child of marker node
