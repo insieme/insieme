@@ -704,6 +704,39 @@ namespace parser {
 
 	}
 
+	TEST(IR_Parser2, ParseAddressRoot) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// a simple example
+
+		vector<NodeAddress> list = builder.parseAddresses(
+				"${"
+				"	int<4> x = 2;"
+				"	$x = 3$;"
+				"	$x = $x$ + 2$;"
+				"}$"
+		);
+
+		// there should only be two addresses
+		ASSERT_EQ(4u, list.size());
+
+		EXPECT_EQ("0", toString(list[0]));
+		EXPECT_EQ(core::NT_CompoundStmt, list[0]->getNodeType());
+
+		EXPECT_EQ("0-1", toString(list[1]));
+		EXPECT_EQ("ref.assign(v1, 3)", toString(*list[1].getAddressedNode()));
+		EXPECT_EQ(core::NT_CallExpr, list[1]->getNodeType());
+
+		EXPECT_EQ("0-2", toString(list[2]));
+		EXPECT_EQ("ref.assign(v1, int.add(v1, 2))", toString(*list[2].getAddressedNode()));
+		EXPECT_EQ(core::NT_CallExpr, list[2]->getNodeType());
+
+		EXPECT_EQ("0-2-3-2", toString(list[3]));
+		EXPECT_EQ("v1", toString(*list[3].getAddressedNode()));
+		EXPECT_EQ(core::NT_Variable, list[3]->getNodeType());
+	}
+
 } // end namespace parser2
 } // end namespace core
 } // end namespace insieme

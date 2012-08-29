@@ -204,8 +204,27 @@ namespace detail {
 					++next;
 				}
 
-				// get identified sub-string
-				tok = Token::createIdentifier(string(start,next));
+				// get current lexeme
+				string lexeme = string(start, next);
+
+				// define set of keywords to be considered
+				static const vector<string> KEYWORD = {
+						"if", "else", "while", "for", "let", "in", "auto",
+						"return", "break", "continue",
+						"var", "new", "delete", "print",
+						"struct", "union",
+						"array", "vector", "ref", "channel"
+				};
+
+				// check whether it is a keyword
+				if (contains(KEYWORD, lexeme)) {
+					// it is => create keyword token
+					tok = Token::createKeyword(lexeme);
+				} else {
+					// everything else is an identifier
+					tok = Token::createIdentifier(lexeme);
+				}
+
 				return true;
 			}
 
@@ -241,6 +260,7 @@ namespace detail {
 		switch(type) {
 			case Token::Symbol :    		out << "Symbol"; break;
 			case Token::Identifier: 		out << "Ident"; break;
+			case Token::Keyword:			out << "Keyword"; break;
 			case Token::Bool_Literal:		out << "BoolLit"; break;
 			case Token::Int_Literal: 		out << "IntLit"; break;
 			case Token::Float_Literal: 		out << "FloatLit"; break;
