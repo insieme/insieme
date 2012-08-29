@@ -110,7 +110,8 @@ class Access : public utils::Printable {
 		   const VarType& 						type,
 		   const polyhedral::IterationVector&	iv = polyhedral::IterationVector(), 
 		   const ConstraintPtr& 				dom = ConstraintPtr(),
-		   const core::NodeAddress& 			ctx = core::NodeAddress() ) :
+		   const core::NodeAddress& 			ctx = core::NodeAddress() 
+	) :
 		base_expr(expr), 
 		variable(var),
 		path(path), 
@@ -166,13 +167,54 @@ public:
 
 	std::ostream& printTo(std::ostream& out) const;
 	
-
 	// TO BE REMOVED 
 	bool operator<(const Access& other) const ;
 
-	inline bool operator==(const Access& other) const { return *variable == *other.variable; }
+	// Determine whether two accesses are the same access, this can be determined by comparing the
+	// address of the accessed variable  
+	bool operator==(const Access& other) const {
+		return base_expr.getRootNode() == other.base_expr.getRootNode() && base_expr == other.base_expr;
+	}
 
-	inline bool operator!=(const Access& other) const {	return !(*this == other); }
+	bool operator!=(const Access& other) const { return !(*this == other); }
+};
+
+
+/** 
+ * An access class is a set of accesses which refer to the same memory location. In case of R-Values
+ * an access refers to the actual value. Important to notice that access classes are specific to a
+ * program point (represented by a CFG blok)
+ *
+ * An access can refer to larger section of memory (in case of array accesses inside loopbounds), in
+ * that case a class contains all the accesses which may have a conflict.
+ *
+ * Accesses classes are meant to be used in DF analysis and be stored into sets, which means that
+ * they provide a partial order. 
+ */
+class AccessClass {
+
+	/**
+	 * Stores the accesses which refer to a memory area
+	 */
+	std::vector<Access> accesses;
+
+	size_t uid;
+
+	AccessClass() { }
+
+public:
+
+	void storeAccess(const Access& access) { 
+		assert(std::find(accesses.begin(), accesses.end(), access) == accesses.end() && 
+				"Access is already present in this class");
+
+		accesses.push_back(access); 
+	}
+
+	bool operator<(const AccessClass& other) const { 
+		return uid < other.uid;
+	}
+
 };
 
 
@@ -205,7 +247,6 @@ void extractFromStmt(const core::StatementAddress& stmt,
 					 std::set<Access>& accesses, 
 					 const TmpVarMap& tmpVarMap=TmpVarMap()
 					);
-
 
 /**
  * States whether two accesses are conflicting, it returns true if the 2 accesses referes to the
