@@ -38,14 +38,15 @@
 #include <limits>
 #include <algorithm>
 
+#include "insieme/utils/logging.h"
 #include "insieme/analysis/access.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
 
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/analysis/normalize.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
@@ -57,38 +58,84 @@ using namespace insieme::analysis;
 TEST(Access, Scalars) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
 	IRBuilder builder(mgr);
 
 	{
-		auto code = parser.parseExpression("ref<int<4>>:a");
+		auto code = builder.parseAddresses(
+			"{ "
+			"	ref<int<4>> a;"
+			"	$a$;"
+			"}"
+		);
 
-		auto access = getImmediateAccess( ExpressionAddress(code) );
+		EXPECT_EQ(1u, code.size());
+
+		auto accessAddr = code[0].as<ExpressionAddress>();
+		auto access = getImmediateAccess( accessAddr );
+
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_TRUE(access.isRef());
+
+		AccessManager mgr;
+		auto& assClass = mgr.getClassFor(access);
+		EXPECT_EQ(0u, assClass.getUID());
+
+		auto& assClass2 = mgr.getClassFor(access);
+		EXPECT_EQ(0u, assClass2.getUID());
+
+		EXPECT_EQ(assClass, assClass2);
 	}
 
 	{
-		auto code = parser.parseExpression("int<4>:a");
+		auto code = builder.parseAddresses(
+			"{"
+			"	int<4> a;"
+			"	$a$;"
+			"}"
+		);
 
-		auto access = getImmediateAccess( ExpressionAddress(code) );
+		EXPECT_EQ(1u, code.size());
+
+		auto accessAddr = code[0].as<ExpressionAddress>();
+
+		auto access = getImmediateAccess( accessAddr );
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_FALSE(access.isRef());
 	}
 
 	{
-		auto code = parser.parseExpression("(op<ref.deref>(ref<int<4>>:a))");
+		auto code = builder.parseAddresses(
+			"{"
+			"	ref<int<4>> a;"
+			"	$*$a$$;"
+			"}"
+		);
+		
+		EXPECT_EQ(2u, code.size());
 
-		auto access = getImmediateAccess( ExpressionAddress(code) );
+		auto accessAddr = code[0].as<ExpressionAddress>();
+		auto varAddr = code[1].as<VariableAddress>();
+
+		auto access = getImmediateAccess( accessAddr );
 		EXPECT_EQ(VarType::SCALAR, access.getType());
+		EXPECT_EQ(varAddr.getAddressedNode(), access.getAccessedVariable());
 		EXPECT_FALSE(access.isRef());
 	}
 
 
 	{
-		auto code = parser.parseExpression("ref<struct<a:int<4>,b:int<4>>>:s");
+		auto code = builder.parseAddresses(
+			"{"
+			"	ref<struct{int<4> a; int<4> b;}> s;"
+			"	$s$;"
+			"}"
+		);
 
-		auto access = getImmediateAccess( ExpressionAddress(code) );
+		EXPECT_EQ(1u, code.size());
+
+		auto accessAddr = code[0].as<ExpressionAddress>();
+
+		auto access = getImmediateAccess( accessAddr );
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_TRUE(access.isRef());
 	}
@@ -98,28 +145,47 @@ TEST(Access, Scalars) {
 TEST(Access, MemberAccess) {
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
 	IRBuilder builder(mgr);
 
 	{
-		auto code = parser.parseExpression(
-			"(op<composite.ref.elem>(ref<struct<a:int<4>, b:int<4>>>:s, lit<identifier,a>, lit<type<int<4>>, int<4>))"
+		auto code = builder.parseAddresses(
+			"{ "
+			"	ref<struct{ int<4> a; int<4> b; }> s;"
+			"	$$s$.a$;"
+			"}"
 		);
 
-		auto access = getImmediateAccess(ExpressionAddress(code));
+		EXPECT_EQ(2u, code.size());
+
+		auto accessAddr = code[0].as<ExpressionAddress>();
+		auto varAddr = code[1].as<VariableAddress>();
+
+		auto access = getImmediateAccess(accessAddr);
+
+		EXPECT_EQ(accessAddr, access.getAccessExpression());
+		EXPECT_EQ(varAddr.getAddressedNode(), access.getAccessedVariable());
 		EXPECT_EQ(VarType::MEMBER, access.getType());
-		EXPECT_EQ(1u, access.getAccessedVariable()->getId());
 		EXPECT_TRUE(access.isRef());
 	}
 
 	{
-		auto code = parser.parseExpression(
-			"(op<composite.member.access>(struct<a:int<4>, b:int<4>>:s, lit<identifier,a>, lit<type<int<4>>, int<4>))"
+		auto code = builder.parseAddresses(
+			"{ "
+			"	struct{ int<4> a; int<4> b; } s;"
+			"	$$s$.a$;"
+			"}"
 		);
-		
-		auto access = getImmediateAccess(ExpressionAddress(code));
+		EXPECT_EQ(2u, code.size());
+
+		auto accessAddr = code[0].as<ExpressionAddress>();
+		auto varAddr = code[1].as<VariableAddress>();
+
+		auto access = getImmediateAccess(accessAddr);
+
+		EXPECT_EQ(accessAddr, access.getAccessExpression());
+		EXPECT_EQ(varAddr.getAddressedNode(), access.getAccessedVariable());
 		EXPECT_EQ(VarType::MEMBER, access.getType());
-		EXPECT_EQ(2u, access.getAccessedVariable()->getId());
+
 		EXPECT_FALSE(access.isRef());
 	}
 
@@ -129,14 +195,39 @@ TEST(Access, MemberAccess) {
 TEST(Access, ArrayAccess) {
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
 	IRBuilder builder(mgr);
 
-	{
-		auto code = parser.parseExpression(
-			"(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, 2))"
+	{	
+		auto code = builder.parseAddresses(
+			"{ "
+			"	ref<array<int<4>,1>> v;"
+			"	$v[2u]$;"
+			"}"
 		);
-		auto access = getImmediateAccess( ExpressionAddress(code) );
+		EXPECT_EQ(1u, code.size());
+
+		auto accessAddr = code[0].as<ExpressionAddress>();
+		auto access = getImmediateAccess( accessAddr );
+
+		EXPECT_EQ(VarType::ARRAY, access.getType());
+		EXPECT_TRUE(access.isRef());
+		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
+		EXPECT_FALSE(access.getContext());
+		EXPECT_FALSE(access.isContextDependent());
+	}
+
+	{	
+		auto code = builder.parseAddresses(
+			"{ "
+			"	array<int<4>,1> v;"
+			"	$v[2u]$;"
+			"}"
+		);
+		EXPECT_EQ(1u, code.size());
+
+		auto accessAddr = code[0].as<ExpressionAddress>();
+
+		auto access = getImmediateAccess( accessAddr );
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_FALSE(access.isRef());
 		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
@@ -145,23 +236,17 @@ TEST(Access, ArrayAccess) {
 	}
 
 	{
-		auto code = parser.parseExpression(
-			"(op<array.subscript.1D>(array<int<4>,1>:v, 2))"
+		auto code = builder.parseAddresses(
+			"{ "
+			"	ref<vector<int<4>,4>> v;"
+			"	$v[3u-1u]$;"
+			"}"
 		);
-		auto access = getImmediateAccess( ExpressionAddress(code) );
-		EXPECT_EQ(VarType::ARRAY, access.getType());
-		EXPECT_FALSE(access.isRef());
-		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
-		EXPECT_FALSE(access.getContext());
-		EXPECT_FALSE(access.isContextDependent());
-	}
+		EXPECT_EQ(1u, code.size());
 
-	{
-		auto code = parser.parseExpression(
-			"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (lit<uint<4>,3> - lit<uint<4>,1>)))"
-		);
+		auto accessAddr = code[0].as<ExpressionAddress>();
 
-		auto access = getImmediateAccess( ExpressionAddress(code) );
+		auto access = getImmediateAccess( accessAddr );
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
@@ -170,10 +255,17 @@ TEST(Access, ArrayAccess) {
 	}
 
 	{
-		auto code = parser.parseExpression(
-			"(op<vector.subscript>(vector<int<4>,8>:v, 2))"
+		auto code = builder.parseAddresses(
+			"{ "
+			"	vector<int<4>,4> v;"
+			"	$v[2u]$;"
+			"}"
 		);
-		auto access = getImmediateAccess( ExpressionAddress(code) );
+		EXPECT_EQ(1u, code.size());
+
+		auto accessAddr = code[0].as<ExpressionAddress>();
+
+		auto access = getImmediateAccess( accessAddr );
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_FALSE(access.isRef());
 		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
@@ -181,55 +273,77 @@ TEST(Access, ArrayAccess) {
 		EXPECT_FALSE(access.isContextDependent());
 	}
 
-	{
-		auto code = parser.parseExpression(
-			"(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, uint<4>:b))"
-		);
+	std::map<string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["b"] = builder.variable(builder.getLangBasic().getUInt4());
 
-		auto access = getImmediateAccess( ExpressionAddress(code) );
+	{
+		auto code = builder.parseAddresses(
+			"{ "
+			"	$v[b]$;"
+			"}", symbols
+		);
+		EXPECT_EQ(1u, code.size());
+
+		auto accessAddr = code[0].as<ExpressionAddress>();
+
+		auto access = getImmediateAccess( accessAddr );
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 	}
 
 	{
-		auto code = parser.parseStatement(
-			"if( (uint<4>:b>10) )"
-			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, b))"
+		auto address = builder.parseAddresses(
+			"{"
+			"	$if( b > 10u ) {"
+			"		$v[b]$;"
+			"	}$"
+			"}", symbols
 		);
+
+		EXPECT_EQ(2u, address.size());
+
+		auto rootNode = address[1].getRootNode();
+		auto accessNode = address[1];
 
 		// perform the polyhedral analysis 
-		polyhedral::scop::mark(code);
+		auto scops = polyhedral::scop::mark(rootNode);
 
-		auto access = getImmediateAccess( StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
-										  as<ExpressionAddress>() );
+		auto access = getImmediateAccess( accessNode.as<ExpressionAddress>() );
+
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-		// EXPECT_TRUE(!!access.getConstraint());
-		EXPECT_EQ("((v7 + -11 >= 0) ^ (v4294967295 + -v7 == 0))", toString(*access.getAccessedRange()));
 
-		EXPECT_EQ(code, access.getContext().getAddressedNode()); 
+		EXPECT_TRUE(!!access.getAccessedRange());
+		EXPECT_EQ("((v10 + -11 >= 0) ^ (v4294967295 + -v10 == 0))", toString(*access.getAccessedRange()));
+
+		EXPECT_EQ(address[0], access.getContext().getAddressedNode()); 
 		EXPECT_TRUE(access.isContextDependent());
 	}
 
+	symbols["a"] = builder.variable(builder.getLangBasic().getUInt4());
 	{
-		auto code = parser.parseStatement(
-			"if( ((uint<4>:b>10) && (uint<4>:a<20)) ) {"
-			"	decl uint<4>:c = (b+a); "
-			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, c));"
-			"}"
+		auto address = builder.parseAddresses(
+			"$if (b>0u && a<20u) {"
+			"	$uint<4> c = a+b;$"
+			"	$v[c]$; "
+			"}$", symbols
 		);
 
-		// perform the polyhedral analysis 
-		polyhedral::scop::mark(code);
+		EXPECT_EQ(3u, address.size());
 
-		DeclarationStmtAddress decl = StatementAddress(code).
-				as<IfStmtAddress>()->getThenBody()->getStatement(0).as<DeclarationStmtAddress>();
+		auto rootNode = address[0];
+		auto declNode = address[1].as<DeclarationStmtAddress>();
+		auto accessNode = address[2];
+
+		// perform the polyhedral analysis 
+		auto scops = polyhedral::scop::mark(rootNode);
+
 		// Create an alias for the expression c = b+a;
 		TmpVarMap map;
-		map.storeTmpVar( decl->getInitialization(), decl->getVariable().getAddressedNode() );
+		map.storeTmpVar( declNode->getInitialization(), declNode->getVariable().getAddressedNode() );
 
-		auto access = getImmediateAccess( StatementAddress(code).
-				as<IfStmtAddress>()->getThenBody()->getStatement(1).as<ExpressionAddress>(), map );
+		auto access = getImmediateAccess( accessNode.as<ExpressionAddress>(), map );
 
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
@@ -237,51 +351,61 @@ TEST(Access, ArrayAccess) {
 	}
 
 	{
-		auto code = parser.parseStatement(
-			"if( ((uint<4>:b>10) && (uint<4>:a<20)) ) {"
-			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (a*b)));"
-			"}"
+		auto address = builder.parseAddresses(
+			"$if (b>0u && a<20u) {"
+			"	$v[a*b]$; "
+			"}$", symbols
 		);
 
-		// perform the polyhedral analysis 
-		polyhedral::scop::mark(code);
+		EXPECT_EQ(2u, address.size());
 
-		auto access = getImmediateAccess( StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
-										  as<ExpressionAddress>());
+		auto rootNode = address[0];
+		auto accessNode = address[1].as<ExpressionAddress>();
+
+		// perform the polyhedral analysis 
+		polyhedral::scop::mark(rootNode);
+
+		auto access = getImmediateAccess( accessNode );
 
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
+
 		EXPECT_FALSE( access.getContext() ); 
 		EXPECT_FALSE(access.isContextDependent());
 	}
 
-	// not affine access => invalid scop
 	{
-		auto code = parser.parseStatement(
-			"if( ((uint<4>:b>10) && (uint<4>:a<20)) ) {"
-			"  (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (a+b)));"
-			"}"
+		auto address = builder.parseAddresses(
+			"${"
+			"	if (b>0u && a<20u) {"
+			"		$v[a+b]$; "
+			"	}"
+			"}$", symbols
 		);
 
+		EXPECT_EQ(2u, address.size());
+
+		auto rootNode = address[0];
+		auto accessNode = address[1].as<ExpressionAddress>();
+
 		// perform the polyhedral analysis 
-		auto scop = polyhedral::scop::mark(code);
-		
-		auto access = getImmediateAccess( 
-				StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).as<ExpressionAddress>()
-			);
+		polyhedral::scop::mark(rootNode.getAddressedNode());
+
+		auto access = getImmediateAccess( accessNode );
 
 		EXPECT_EQ(VarType::ARRAY, access.getType());
+
 		EXPECT_TRUE(access.isRef());
 		EXPECT_TRUE(access.getContext());
 		EXPECT_TRUE(access.isContextDependent());
 
-		EXPECT_EQ("(((-v25 + 19 >= 0) ^ (v24 + -11 >= 0)) ^ (v4294967295 + -v24 + -v25 == 0))", 
+		EXPECT_EQ("(((-v14 + 19 >= 0) ^ (v10 + -1 >= 0)) ^ (v4294967295 + -v10 + -v14 == 0))", 
 				  toString(*access.getAccessedRange())
 				 );
 
 		auto ctx = polyhedral::makeCtx();
 		auto set = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access.getAccessedRange()));
-		EXPECT_EQ("[v24, v25] -> { [v24 + v25] : v25 <= 19 and v24 >= 11 }", toString(*set));
+		EXPECT_EQ("[v10, v14] -> { [v10 + v14] : v14 <= 19 and v10 >= 1 }", toString(*set));
 	}
 
 }
@@ -289,244 +413,254 @@ TEST(Access, ArrayAccess) {
 TEST(Access, SameAccess) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
 	IRBuilder builder(mgr);
 
-	{
-		auto code = parser.parseStatement(
-			"for(decl uint<4>:i = 0 .. 10 : 1) { " \
-				"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i));"
-				"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i));"
-			"}"
-		);
+	std::map<string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
-		// perform the polyhedral analysis 
-		auto scop = polyhedral::scop::mark(code);
-		
-		auto access1 = getImmediateAccess( 
-				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
-			);
-		auto access2 = getImmediateAccess( 
-				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(1).as<ExpressionAddress>() 
-			);
+	auto address = builder.parseAddresses(
+		"$for (uint<4> i = 0u .. 10 : 1) {"
+		"	$v[i]$; "
+		"	$v[i]$; "
+		"}$", symbols
+	);
 
-		EXPECT_TRUE(access1.getContext());
-		EXPECT_FALSE(access1.isContextDependent());
-		EXPECT_EQ(access1.getContext(), code);
-		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+	EXPECT_EQ(3u, address.size());
 
-		EXPECT_TRUE(access2.getContext());
-		EXPECT_FALSE(access2.isContextDependent());
-		EXPECT_EQ(access2.getContext(), code);
-		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access2.getAccessedRange()));
+	auto rootNode = address[0];
 
-	}
+	// perform the polyhedral analysis 
+	polyhedral::scop::mark(rootNode.getAddressedNode());
+
+	auto accessNode1 = address[1].as<ExpressionAddress>();
+	auto accessNode2 = address[2].as<ExpressionAddress>();
+
+	auto access1 = getImmediateAccess( accessNode1 );
+	auto access2 = getImmediateAccess( accessNode2 );
+
+	EXPECT_TRUE(access1.getContext());
+	EXPECT_FALSE(access1.isContextDependent());
+	EXPECT_EQ(access1.getContext(), rootNode);
+	EXPECT_EQ("(((-v2 + 9 >= 0) ^ (v2 >= 0)) ^ (-v2 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+
+	EXPECT_TRUE(access2.getContext());
+	EXPECT_FALSE(access2.isContextDependent());
+	EXPECT_EQ(access2.getContext(), rootNode);
+	EXPECT_EQ("(((-v2 + 9 >= 0) ^ (v2 >= 0)) ^ (-v2 + v4294967295 == 0))", toString(*access2.getAccessedRange()));
 }
 
 TEST(Access, DifferentAccess) {
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
 	IRBuilder builder(mgr);
 
-	{
-		auto code = parser.parseStatement(
-			"for(decl uint<4>:i = 0 .. 10 : 1) { " \
-				"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i));"
-				"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (i+1)));"
-			"}"
-		);
+	std::map<string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
-		// perform the polyhedral analysis 
-		auto scop = polyhedral::scop::mark(code);
-		
-		auto access1 = getImmediateAccess( 
-				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
-			);
-		auto access2 = getImmediateAccess( 
-				StatementAddress(code).as<ForStmtAddress>()->getBody()->getStatement(1).as<ExpressionAddress>() 
-			);
-		
-		EXPECT_TRUE(access1.getContext());
-		EXPECT_FALSE(access1.isContextDependent());
-		EXPECT_EQ(access1.getContext(), code);
-		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+	auto address = builder.parseAddresses(
+		"$for (uint<4> i = 0u .. 10 : 1) {"
+		"	$v[i]$; "
+		"	$v[i+1u]$; "
+		"}$", symbols
+	);
+
+	EXPECT_EQ(3u, address.size());
+
+	auto rootNode = address[0];
+
+	// perform the polyhedral analysis 
+	polyhedral::scop::mark(rootNode.getAddressedNode());
+
+	auto accessNode1 = address[1].as<ExpressionAddress>();
+	auto accessNode2 = address[2].as<ExpressionAddress>();
+
+	auto access1 = getImmediateAccess( accessNode1 );
+	auto access2 = getImmediateAccess( accessNode2 );
+
+	EXPECT_TRUE(access1.getContext());
+	EXPECT_FALSE(access1.isContextDependent());
+	EXPECT_EQ(access1.getContext(), rootNode);
+	EXPECT_EQ("(((-v2 + 9 >= 0) ^ (v2 >= 0)) ^ (-v2 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
 
 
-		EXPECT_TRUE(access2.getContext());
-		EXPECT_FALSE(access2.isContextDependent());
-		EXPECT_EQ(access2.getContext(), code);
-		EXPECT_EQ("(((-v1 + 9 >= 0) ^ (v1 >= 0)) ^ (-v1 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
+	EXPECT_TRUE(access2.getContext());
+	EXPECT_FALSE(access2.isContextDependent());
+	EXPECT_EQ(access2.getContext(), rootNode);
+	EXPECT_EQ("(((-v2 + 9 >= 0) ^ (v2 >= 0)) ^ (-v2 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
 
-		auto ctx = polyhedral::makeCtx();
-		auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
-
-		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 9 and v4294967295 >= 0 }", toString(*set1));
-	}
+	auto ctx = polyhedral::makeCtx();
+	auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
+	EXPECT_EQ("{ [v4294967295] : v4294967295 <= 9 and v4294967295 >= 0 }", toString(*set1));
 }
 
 TEST(Access, CommonSubset) {
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
 	IRBuilder builder(mgr);
 
-	{
-		auto code = parser.parseStatement(
-			"{"
-			"	for(decl uint<4>:i1 = 1 .. 11 : 1) { " \
-			"		(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i1));"
-			"	};"
-			"	for(decl uint<4>:i2 = 0 .. 10 : 1) { " \
-			"		(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (i2+1)));"
-			"	};"
-			"}"
-		);
+	std::map<string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
-		// perform the polyhedral analysis 
-		auto scop = polyhedral::scop::mark(code);
-		
-		auto access1 = getImmediateAccess( 
-				StatementAddress(code).as<CompoundStmtAddress>()->getStatement(0).
-									   as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
-			);
-		auto access2 = getImmediateAccess( 
-				StatementAddress(code).as<CompoundStmtAddress>()->getStatement(1).
-									   as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
-			);
-		
-		EXPECT_TRUE(access1.getContext());
-		EXPECT_FALSE(access1.isContextDependent());
-		EXPECT_EQ(access1.getContext(), code);
-		EXPECT_EQ("(((-v1 + 10 >= 0) ^ (v1 + -1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+	auto address = builder.parseAddresses(
+		"${ "
+		"	for (uint<4> i1 = 1u .. 11u : 1) {"
+		"		$v[i1]$; "
+		"	}"
+		"	for (uint<4> i2 = 0u .. 10u : 1) {"
+		"		$v[i2+1u]$;"
+		"	}"
+		"}$", symbols
+	);
 
-		EXPECT_TRUE(access2.getContext());
-		EXPECT_FALSE(access2.isContextDependent());
-		EXPECT_EQ(access2.getContext(), code);
-		EXPECT_EQ("(((-v3 + 9 >= 0) ^ (v3 >= 0)) ^ (-v3 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
+	EXPECT_EQ(3u, address.size());
 
-		auto ctx = polyhedral::makeCtx();
-		auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
-		auto set2 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access2.getAccessedRange()));
+	auto rootNode = address[0];
 
-		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 10 and v4294967295 >= 1 }", toString(*set1));
-		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 10 and v4294967295 >= 1 }", toString(*set2));
+	// perform the polyhedral analysis 
+	polyhedral::scop::mark(rootNode.getAddressedNode());
 
-		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 10 and v4294967295 >= 1 }", toString(*(set1 * set2)));
+	auto accessNode1 = address[1].as<ExpressionAddress>();
+	auto accessNode2 = address[2].as<ExpressionAddress>();
 
-		// the two sets are equal
-		EXPECT_EQ(*set1, *set2);
-		EXPECT_FALSE((set1*set2)->empty());
-		EXPECT_EQ(*set1, *(set1*set2));
+	auto access1 = getImmediateAccess( accessNode1 );
+	auto access2 = getImmediateAccess( accessNode2 );
 
-		// Set difference is empty 
-		EXPECT_TRUE((set1-set2)->empty());
-	}
+	EXPECT_TRUE(access1.getContext());
+	EXPECT_FALSE(access1.isContextDependent());
+	EXPECT_EQ(access1.getContext(), rootNode);
+	EXPECT_EQ("(((-v2 + 10 >= 0) ^ (v2 + -1 >= 0)) ^ (-v2 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+
+	EXPECT_TRUE(access2.getContext());
+	EXPECT_FALSE(access2.isContextDependent());
+	EXPECT_EQ(access2.getContext(), rootNode);
+	EXPECT_EQ("(((-v4 + 9 >= 0) ^ (v4 >= 0)) ^ (-v4 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
+
+	auto ctx = polyhedral::makeCtx();
+	auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
+	auto set2 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access2.getAccessedRange()));
+
+	EXPECT_EQ("{ [v4294967295] : v4294967295 <= 10 and v4294967295 >= 1 }", toString(*set1));
+	EXPECT_EQ("{ [v4294967295] : v4294967295 <= 10 and v4294967295 >= 1 }", toString(*set2));
+
+	EXPECT_EQ("{ [v4294967295] : v4294967295 <= 10 and v4294967295 >= 1 }", toString(*(set1 * set2)));
+
+	// the two sets are equal
+	EXPECT_EQ(*set1, *set2);
+	EXPECT_FALSE((set1*set2)->empty());
+	EXPECT_EQ(*set1, *(set1*set2));
+
+	// Set difference is empty 
+	EXPECT_TRUE((set1-set2)->empty());
 }
+
+
+
 
 TEST(Access, EmptySubset) {
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
 	IRBuilder builder(mgr);
 
-	{
-		auto code = parser.parseStatement(
-			"{"
-			"	for(decl uint<4>:i1 = 1 .. 5 : 1) { " \
-			"		(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i1));"
-			"	};"
-			"	for(decl uint<4>:i2 = 4 .. 9 : 1) { " \
-			"		(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (i2+1)));"
-			"	};"
-			"}"
-		);
+	std::map<string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
-		// perform the polyhedral analysis 
-		auto scop = polyhedral::scop::mark(code);
-		
-		auto access1 = getImmediateAccess( 
-				StatementAddress(code).as<CompoundStmtAddress>()->getStatement(0).
-									   as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
-			);
-		auto access2 = getImmediateAccess( 
-				StatementAddress(code).as<CompoundStmtAddress>()->getStatement(1).
-									   as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
-			);
-		
-		EXPECT_TRUE(access1.getContext());
-		EXPECT_FALSE(access1.isContextDependent());
-		EXPECT_EQ(access1.getContext(), code);
-		EXPECT_EQ("(((-v1 + 4 >= 0) ^ (v1 + -1 >= 0)) ^ (-v1 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+	auto address = builder.parseAddresses(
+		"${ "
+		"	for (uint<4> i1 = 1u .. 5u : 1) {"
+		"		$v[i1]$; "
+		"	}"
+		"	for (uint<4> i2 = 4u .. 9u : 1) {"
+		"		$v[i2+1u]$;"
+		"	}"
+		"}$", symbols
+	);
 
-		EXPECT_TRUE(access2.getContext());
-		EXPECT_FALSE(access2.isContextDependent());
-		EXPECT_EQ(access2.getContext(), code);
-		EXPECT_EQ("(((-v3 + 8 >= 0) ^ (v3 + -4 >= 0)) ^ (-v3 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
+	EXPECT_EQ(3u, address.size());
 
-		auto ctx = polyhedral::makeCtx();
-		auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
-		auto set2 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access2.getAccessedRange()));
+	auto rootNode = address[0];
 
-		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 4 and v4294967295 >= 1 }", toString(*set1));
-		EXPECT_EQ("{ [v4294967295] : v4294967295 <= 9 and v4294967295 >= 5 }", toString(*set2));
+	// perform the polyhedral analysis 
+	polyhedral::scop::mark(rootNode.getAddressedNode());
 
-		EXPECT_TRUE((set1 * set2)->empty());
-	}
+	auto accessNode1 = address[1].as<ExpressionAddress>();
+	auto accessNode2 = address[2].as<ExpressionAddress>();
+
+	auto access1 = getImmediateAccess( accessNode1 );
+	auto access2 = getImmediateAccess( accessNode2 );
+
+	EXPECT_TRUE(access1.getContext());
+	EXPECT_FALSE(access1.isContextDependent());
+	EXPECT_EQ(access1.getContext(), rootNode);
+	EXPECT_EQ("(((-v2 + 4 >= 0) ^ (v2 + -1 >= 0)) ^ (-v2 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+
+	EXPECT_TRUE(access2.getContext());
+	EXPECT_FALSE(access2.isContextDependent());
+	EXPECT_EQ(access2.getContext(), rootNode);
+	EXPECT_EQ("(((-v4 + 8 >= 0) ^ (v4 + -4 >= 0)) ^ (-v4 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
+
+	auto ctx = polyhedral::makeCtx();
+	auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
+	auto set2 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access2.getAccessedRange()));
+
+	EXPECT_EQ("{ [v4294967295] : v4294967295 <= 4 and v4294967295 >= 1 }", toString(*set1));
+	EXPECT_EQ("{ [v4294967295] : v4294967295 <= 9 and v4294967295 >= 5 }", toString(*set2));
+
+	EXPECT_TRUE((set1 * set2)->empty());
 }
 
 TEST(Access, StridedSubset) {
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
 	IRBuilder builder(mgr);
 
-	{
-		auto code = parser.parseStatement(
-			"{"
-			"	for(decl uint<4>:i1 = 1 .. 5 : 2) { " 
-			"		(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, i1));"
-			"	};"
-			"	for(decl uint<4>:i2 = 1 .. 9 : 2) { " 
-			"		(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (i2+1)));"
-			"	};"
-			"}"
-		);
+	std::map<string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
-		// perform the polyhedral analysis 
-		auto scop = polyhedral::scop::mark(code);
-		
-		auto access1 = getImmediateAccess( 
-				StatementAddress(code).as<CompoundStmtAddress>()->getStatement(0).
-									   as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
-			);
-		auto access2 = getImmediateAccess( 
-				StatementAddress(code).as<CompoundStmtAddress>()->getStatement(1).
-									   as<ForStmtAddress>()->getBody()->getStatement(0).as<ExpressionAddress>() 
-			);
-		
-		EXPECT_TRUE(access1.getContext());
-		EXPECT_FALSE(access1.isContextDependent());
-		EXPECT_EQ(access1.getContext(), code);
-		EXPECT_EQ("((((-v1 + 4 >= 0) ^ (v1 + -2*v4 + -1 == 0)) ^ (v1 + -1 >= 0)) ^ (-v1 + v4294967295 == 0))", 
-				toString(*access1.getAccessedRange()));
+	auto address = builder.parseAddresses(
+		"${ "
+		"	for (uint<4> i1 = 1u .. 5u : 2) {"
+		"		$v[i1]$; "
+		"	}"
+		"	for (uint<4> i2 = 1u .. 9u : 2) {"
+		"		$v[i2+1u]$;"
+		"	}"
+		"}$", symbols
+	);
 
-		EXPECT_TRUE(access2.getContext());
-		EXPECT_FALSE(access2.isContextDependent());
-		EXPECT_EQ(access2.getContext(), code);
-		EXPECT_EQ("((((-v3 + 8 >= 0) ^ (v3 + -2*v5 + -1 == 0)) ^ (v3 + -1 >= 0)) ^ (-v3 + v4294967295 + -1 == 0))", 
-				toString(*access2.getAccessedRange()));
+	EXPECT_EQ(3u, address.size());
 
-		auto ctx = polyhedral::makeCtx();
-		auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
-		auto set2 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access2.getAccessedRange()));
+	auto rootNode = address[0];
 
-		EXPECT_EQ("{ [v4294967295] : exists (e0 = [(-1 + v4294967295)/2]: 2e0 = -1 + v4294967295 and v4294967295 <= 3 and v4294967295 >= 1) }", 
-				toString(*set1));
-		EXPECT_EQ("{ [v4294967295] : exists (e0 = [(v4294967295)/2]: 2e0 = v4294967295 and v4294967295 <= 8 and v4294967295 >= 2) }", 
-				toString(*set2));
+	// perform the polyhedral analysis 
+	polyhedral::scop::mark(rootNode.getAddressedNode());
 
-		EXPECT_TRUE((set1 * set2)->empty());
-	}
+	auto accessNode1 = address[1].as<ExpressionAddress>();
+	auto accessNode2 = address[2].as<ExpressionAddress>();
+
+	auto access1 = getImmediateAccess( accessNode1 );
+	auto access2 = getImmediateAccess( accessNode2 );
+
+	EXPECT_TRUE(access1.getContext());
+	EXPECT_FALSE(access1.isContextDependent());
+	EXPECT_EQ(access1.getContext(), rootNode);
+	EXPECT_EQ("((((-v2 + 4 >= 0) ^ (v2 + -2*v7 + -1 == 0)) ^ (v2 + -1 >= 0)) ^ (-v2 + v4294967295 == 0))", 
+			toString(*access1.getAccessedRange()));
+
+	EXPECT_TRUE(access2.getContext());
+	EXPECT_FALSE(access2.isContextDependent());
+	EXPECT_EQ(access2.getContext(), rootNode);
+	EXPECT_EQ("((((-v4 + 8 >= 0) ^ (v4 + -2*v8 + -1 == 0)) ^ (v4 + -1 >= 0)) ^ (-v4 + v4294967295 + -1 == 0))", 
+			toString(*access2.getAccessedRange()));
+
+	auto ctx = polyhedral::makeCtx();
+	auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
+	auto set2 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access2.getAccessedRange()));
+
+	EXPECT_EQ("{ [v4294967295] : exists (e0 = [(-1 + v4294967295)/2]: 2e0 = -1 + v4294967295 and v4294967295 <= 3 and v4294967295 >= 1) }", 
+			toString(*set1));
+	EXPECT_EQ("{ [v4294967295] : exists (e0 = [(v4294967295)/2]: 2e0 = v4294967295 and v4294967295 <= 8 and v4294967295 >= 2) }", 
+			toString(*set2));
+
+	EXPECT_TRUE((set1 * set2)->empty());
 }
 

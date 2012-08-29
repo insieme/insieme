@@ -126,13 +126,20 @@ void DependencyGraph<const clang::TagDecl*>::Handle(
 		else if( const ReferenceType *refTy = dyn_cast<ReferenceType>(fieldType) )
 			fieldType = refTy->getPointeeType().getTypePtr();
 
+		if( const TypedefType* elabTy = llvm::dyn_cast<TypedefType>(fieldType) ) {
+			 fieldType = elabTy->getDecl()->getUnderlyingType().getTypePtr();
+		}
+
 		// Elaborated types shoud be recursively visited 
-		 if( const ElaboratedType* elabTy = llvm::dyn_cast<ElaboratedType>(fieldType) ) {
+		if( const ElaboratedType* elabTy = llvm::dyn_cast<ElaboratedType>(fieldType) ) {
 			 fieldType = elabTy->getNamedType().getTypePtr();
 		}
 
+	//	fieldType->dump();
+	//	LOG(INFO) << fieldType->getTypeClassName();
+
 		if( const TagType* tagTy = llvm::dyn_cast<TagType>(fieldType) ) {
-			// LOG(INFO) << "Affing " << tagTy->getDecl()->getNameAsString();
+	//		LOG(INFO) << "Adding " << tagTy->getDecl()->getNameAsString();
 			if ( llvm::isa<RecordDecl>(tagTy->getDecl()) ) {
 				// find the definition
 				auto def = findDefinition(tagTy);

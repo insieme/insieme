@@ -85,6 +85,9 @@ template <class RetTy, class InTy>
 struct numeric_cast_impl<RetTy, InTy, 1> {
 
 	static RetTy convert(const std::string& in) {
+		// special handling for 0u
+		if (in == "0u") return static_cast<RetTy>(0);
+
 		// convert hexadecimal numbers
 		if( in.compare(0, 2, "0x") == 0 || in.compare(0, 3, "-0x") == 0 || in.compare(0, 2, "0X") == 0 || in.compare(0, 3, "-0X") == 0 )
 			return boost::lexical_cast<HexTo<RetTy>>( in );
@@ -106,6 +109,8 @@ struct numeric_cast_impl<RetTy, InTy, 1> {
 		if(in.size()>2 && (in[in.size()-2] == 'u' || in[in.size()-2] == 'U')) {
 			isUnsigned = true;
 		}
+
+
 
 		if(in[in.size()-1] == 'l' || in[in.size()-1] == 'L') {
 			// treats as a long double
