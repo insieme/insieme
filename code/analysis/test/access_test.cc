@@ -64,7 +64,6 @@ TEST(Access, Scalars) {
 		auto code = parser.parseExpression("ref<int<4>>:a");
 
 		auto access = getImmediateAccess( ExpressionAddress(code) );
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_TRUE(access.isRef());
 	}
@@ -73,7 +72,6 @@ TEST(Access, Scalars) {
 		auto code = parser.parseExpression("int<4>:a");
 
 		auto access = getImmediateAccess( ExpressionAddress(code) );
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_FALSE(access.isRef());
 	}
@@ -82,7 +80,6 @@ TEST(Access, Scalars) {
 		auto code = parser.parseExpression("(op<ref.deref>(ref<int<4>>:a))");
 
 		auto access = getImmediateAccess( ExpressionAddress(code) );
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_FALSE(access.isRef());
 	}
@@ -92,7 +89,6 @@ TEST(Access, Scalars) {
 		auto code = parser.parseExpression("ref<struct<a:int<4>,b:int<4>>>:s");
 
 		auto access = getImmediateAccess( ExpressionAddress(code) );
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_TRUE(access.isRef());
 	}
@@ -111,7 +107,6 @@ TEST(Access, MemberAccess) {
 		);
 
 		auto access = getImmediateAccess(ExpressionAddress(code));
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::MEMBER, access.getType());
 		EXPECT_EQ(1u, access.getAccessedVariable()->getId());
 		EXPECT_TRUE(access.isRef());
@@ -123,7 +118,6 @@ TEST(Access, MemberAccess) {
 		);
 		
 		auto access = getImmediateAccess(ExpressionAddress(code));
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::MEMBER, access.getType());
 		EXPECT_EQ(2u, access.getAccessedVariable()->getId());
 		EXPECT_FALSE(access.isRef());
@@ -142,9 +136,7 @@ TEST(Access, ArrayAccess) {
 		auto code = parser.parseExpression(
 			"(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, 2))"
 		);
-		// std::cout << code << " " << *code->getType() << std::endl;
 		auto access = getImmediateAccess( ExpressionAddress(code) );
-		//std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_FALSE(access.isRef());
 		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
@@ -157,7 +149,6 @@ TEST(Access, ArrayAccess) {
 			"(op<array.subscript.1D>(array<int<4>,1>:v, 2))"
 		);
 		auto access = getImmediateAccess( ExpressionAddress(code) );
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_FALSE(access.isRef());
 		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
@@ -170,9 +161,7 @@ TEST(Access, ArrayAccess) {
 			"(op<vector.ref.elem>(ref<vector<int<4>,4>>:v, (lit<uint<4>,3> - lit<uint<4>,1>)))"
 		);
 
-		// std::cout << code << " " << *code->getType() << std::endl;
 		auto access = getImmediateAccess( ExpressionAddress(code) );
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
@@ -185,7 +174,6 @@ TEST(Access, ArrayAccess) {
 			"(op<vector.subscript>(vector<int<4>,8>:v, 2))"
 		);
 		auto access = getImmediateAccess( ExpressionAddress(code) );
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_FALSE(access.isRef());
 		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
@@ -199,10 +187,8 @@ TEST(Access, ArrayAccess) {
 		);
 
 		auto access = getImmediateAccess( ExpressionAddress(code) );
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
-		// std::cout << access.getConstraint() << std::endl;
 	}
 
 	{
@@ -216,7 +202,6 @@ TEST(Access, ArrayAccess) {
 
 		auto access = getImmediateAccess( StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
 										  as<ExpressionAddress>() );
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		// EXPECT_TRUE(!!access.getConstraint());
@@ -246,7 +231,6 @@ TEST(Access, ArrayAccess) {
 		auto access = getImmediateAccess( StatementAddress(code).
 				as<IfStmtAddress>()->getThenBody()->getStatement(1).as<ExpressionAddress>(), map );
 
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		EXPECT_FALSE(access.isContextDependent());
@@ -265,7 +249,6 @@ TEST(Access, ArrayAccess) {
 		auto access = getImmediateAccess( StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).
 										  as<ExpressionAddress>());
 
-		// std::cout << access << std::endl;
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());
 		EXPECT_FALSE( access.getContext() ); 
@@ -284,7 +267,7 @@ TEST(Access, ArrayAccess) {
 		auto scop = polyhedral::scop::mark(code);
 		
 		auto access = getImmediateAccess( 
-				StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0). as<ExpressionAddress>()
+				StatementAddress(code).as<IfStmtAddress>()->getThenBody()->getStatement(0).as<ExpressionAddress>()
 			);
 
 		EXPECT_EQ(VarType::ARRAY, access.getType());
@@ -292,14 +275,13 @@ TEST(Access, ArrayAccess) {
 		EXPECT_TRUE(access.getContext());
 		EXPECT_TRUE(access.isContextDependent());
 
-		EXPECT_EQ("(((-v21 + 19 >= 0) ^ (v20 + -11 >= 0)) ^ (v4294967295 + -v20 + -v21 == 0))", 
+		EXPECT_EQ("(((-v25 + 19 >= 0) ^ (v24 + -11 >= 0)) ^ (v4294967295 + -v24 + -v25 == 0))", 
 				  toString(*access.getAccessedRange())
 				 );
 
 		auto ctx = polyhedral::makeCtx();
 		auto set = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access.getAccessedRange()));
-
-		EXPECT_EQ("[v20, v21] -> { [v20 + v21] : v21 <= 19 and v20 >= 11 }", toString(*set));
+		EXPECT_EQ("[v24, v25] -> { [v24 + v25] : v25 <= 19 and v24 >= 11 }", toString(*set));
 	}
 
 }
