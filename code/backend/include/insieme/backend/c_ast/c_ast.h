@@ -134,7 +134,7 @@ namespace c_ast {
 
 	struct PrimitiveType : public Type {
 		enum CType {
-			Void, Bool, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float, Double
+			Void, Bool, Char, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float, Double
 		};
 		const CType type;
 		PrimitiveType(CType type) : Type(NT_PrimitiveType), type(type) {}
@@ -424,16 +424,16 @@ namespace c_ast {
 
 	struct Call : public Expression {
 		NodePtr function;
-		vector<ExpressionPtr> arguments;
+		vector<NodePtr> arguments;
 
 		Call(NodePtr function) : Expression(NT_Call), function(function) {}
 
-		Call(NodePtr function, const vector<ExpressionPtr>& args)
+		Call(NodePtr function, const vector<NodePtr>& args)
 			: Expression(NT_Call), function(function), arguments(args) {}
 
 		template<typename ... E>
 		Call(NodePtr function, E ... args)
-			: Expression(NT_Call), function(function), arguments(toVector<ExpressionPtr>(args...)) {}
+			: Expression(NT_Call), function(function), arguments(toVector<NodePtr>(args...)) {}
 
 		virtual bool equals(const Node& node) const;
 	};

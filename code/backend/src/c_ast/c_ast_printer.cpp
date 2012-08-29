@@ -129,6 +129,7 @@ namespace c_ast {
 				switch(node->type) {
 				case PrimitiveType::Void : return out << "void";
 				case PrimitiveType::Bool : return out << "bool";
+				case PrimitiveType::Char : return out << "char";
 				case PrimitiveType::Int8 : return out << "int8_t";
 				case PrimitiveType::Int16 : return out << "int16_t";
 				case PrimitiveType::Int32 : return out << "int32_t";
@@ -440,7 +441,7 @@ namespace c_ast {
 			PRINT(Call) {
 				// <function> ( <arguments> )
 				return out << print(node->function) << "("
-						<< join(", ", node->arguments, [&](std::ostream& out, const ExpressionPtr& cur) {
+						<< join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) {
 							out << print(cur);
 				}) << ")";
 			}

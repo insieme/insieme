@@ -309,7 +309,7 @@ namespace c_ast {
 	bool Call::equals(const Node& node) const {
 		assert(dynamic_cast<const Call*>(&node));
 		auto other = static_cast<const Call&>(node);
-		return *function==*other.function && ::equals(arguments, other.arguments, equal_target<ExpressionPtr>());
+		return *function==*other.function && ::equals(arguments, other.arguments, equal_target<NodePtr>());
 	}
 
 	bool Parentheses::equals(const Node& node) const {
