@@ -362,7 +362,10 @@ OPERATION(Gen, Gt, "gen.gt", "('a,'a) -> bool")
 OPERATION(Gen, Le, "gen.le", "('a,'a) -> bool")
 OPERATION(Gen, Ge, "gen.ge", "('a,'a) -> bool")
 
+GROUP(GenArithmeticOp, GenAdd, GenSub, GenMul, GenDiv, GenMod)
+GROUP(GenBitwiseOp, GenAnd, GenOr, GenXor, GenLShift, GenRShift)
 GROUP(GenCompOp, GenEq, GenNe, GenLt, GenGt, GenLe, GenGe)
+GROUP(GenOp, GenArithmeticOp, GenBitwiseOp, GenCompOp)
 
 GROUP(AddOp, GenAdd, SignedIntAdd, UnsignedIntAdd, RealAdd) 
 GROUP(SubOp, GenSub, SignedIntSub, UnsignedIntSub, RealSub) 
