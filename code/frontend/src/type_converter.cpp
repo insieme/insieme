@@ -144,11 +144,11 @@ void DependencyGraph<const clang::TagDecl*>::Handle(
 		while( (purified = purifyType(fieldType)) != fieldType )
 			fieldType = purified;
 		
-		purified->dump();
-		LOG(DEBUG) << purified->getTypeClassName();
+		// purified->dump();
+		// LOG(DEBUG) << purified->getTypeClassName();
 
 		if( const TagType* tagTy = llvm::dyn_cast<TagType>(purified) ) {
-			LOG(DEBUG) << "Adding " << tagTy->getDecl()->getNameAsString();
+			// LOG(DEBUG) << "Adding " << tagTy->getDecl()->getNameAsString();
 			if ( llvm::isa<RecordDecl>(tagTy->getDecl()) ) {
 				// find the definition
 				auto def = findDefinition(tagTy);
