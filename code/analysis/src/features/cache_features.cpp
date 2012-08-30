@@ -50,6 +50,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/sequentialize.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/printer/lua_printer.h"
 
