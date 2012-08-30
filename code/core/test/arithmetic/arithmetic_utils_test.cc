@@ -240,6 +240,36 @@ TEST (ArithmeticTest, fromIRExpr) {
 }
 
 
+TEST(ConstraintTest, fromAndToIR) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto var = builder.variable(mgr.getLangBasic().getInt4(), 0);
+
+	auto f = Formula(var);
+	EXPECT_EQ("v0", toString(f));
+
+	auto one = Formula(1);
+	auto two = Formula(2);
+
+	// some simple formula
+	Constraint c = f > one && f < two;
+	EXPECT_EQ("(!(v0-1 <= 0) and !(-v0+2 <= 0))", toString(c));
+
+	EXPECT_EQ("AP(bool.and(bool.not(int.le(int.sub(v0, 1), 0)), bind(){rec v5.{v5=fun(int<4> v0) {return bool.not(int.le(int.add(int.mul(-1, v0), 2), 0));}}(v0)}))", toString(toIR(mgr, c)));
+	EXPECT_EQ(c, toConstraint(toIR(mgr, c)));
+
+	// some valid formula
+	c = f > one || f <= one;
+	EXPECT_EQ("true", toString(c));
+
+	EXPECT_EQ("AP(true)", toString(toIR(mgr, c)));
+	EXPECT_EQ(c, toConstraint(toIR(mgr, c)));
+
+}
+
+
+
 TEST(ArithmeticTest, FormulaValueExtraction) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
