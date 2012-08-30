@@ -178,7 +178,9 @@ namespace {
 		// do not visit types
 		LambdaDeltaVisitor() : IRVisitor<bool>(false) {}
 
-		bool visitNode(const NodePtr& node) { return false; } // default behavior: continue visiting
+		bool visitNode(const NodePtr& node) {
+			return node->getNodeCategory() == NC_Type;
+		} // default behavior: continue visiting
 
 		bool visitDeclarationStmt(const DeclarationStmtPtr &decl) {
 			bound.insert(decl->getVariable());
@@ -235,7 +237,9 @@ namespace {
 		// for bind, just look at the variables being bound and ignore the call
 		bool visitBindExpr(const BindExprPtr& bindExpr) {
 			ExpressionList expressions = bindExpr->getBoundExpressions();
-			for_each(expressions, [&](const ExpressionPtr e) { this->visit(e); } );
+			for_each(expressions, [&](const ExpressionPtr& e) {
+				visitDepthFirstOncePrunable(e, *this);
+			} );
 			return true;
 		}
 	};
@@ -245,13 +249,9 @@ namespace {
 VariableList getFreeVariables(const NodePtr& code) {
 	LambdaDeltaVisitor ldv;
 	visitDepthFirstOncePrunable(code, ldv);
-	//std::cout << "\ncode for free var check:\n" << code;
-	//std::cout << "\n== Free set: \n" << ldv.free;
 
 	// convert result into list
-	VariableList res(ldv.free.begin(), ldv.free.end());
-	//std::cout << "\n== res: \n" << res;
-	return res;
+	return VariableList(ldv.free.begin(), ldv.free.end());
 }
 
 namespace {
