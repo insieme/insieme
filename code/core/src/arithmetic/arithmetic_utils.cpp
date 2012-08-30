@@ -80,7 +80,8 @@ namespace {
 			checkType(cur);
 			try {
 				return utils::numeric_cast<int64_t>(cur->getValue()->getValue());
-			}catch(boost::bad_lexical_cast&& e) {
+			}catch(boost::bad_lexical_cast) {
+				// The literal wasn't a signed int, try unsigned
 				// we cannot cast the literal to an integer value (probably because it was a double)
 				throw NotAFormulaException(cur);
 			}

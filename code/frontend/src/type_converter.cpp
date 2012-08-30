@@ -117,33 +117,46 @@ void DependencyGraph<const clang::TagDecl*>::Handle(
 	// therefore we can safely return as there is no risk of recursion 
 	if (!tag) { return; }
 
+
+	auto purifyType = [](const clang::Type* type) -> const clang::Type* {
+
+		if( const PointerType *ptrTy = dyn_cast<PointerType>(type) )
+			return ptrTy->getPointeeType().getTypePtr();
+
+		if( const ReferenceType *refTy = dyn_cast<ReferenceType>(type) )
+			return refTy->getPointeeType().getTypePtr();
+
+		if( const TypedefType* typeDefTy = llvm::dyn_cast<TypedefType>(type) ) {
+			 return typeDefTy->getDecl()->getUnderlyingType().getTypePtr();
+		}
+
+		if( const ElaboratedType* elabTy = llvm::dyn_cast<ElaboratedType>(type) ) {
+			 return elabTy->getNamedType().getTypePtr();
+		}
+
+		return type;
+	};
+
 	for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
 		const Type* fieldType = (*it)->getType().getTypePtr();
-				
-		if( const PointerType *ptrTy = dyn_cast<PointerType>(fieldType) )
-			fieldType = ptrTy->getPointeeType().getTypePtr();
+	
+		// purify the type until a fixpoint is reached 
+		const Type* purified = fieldType;
+		while( (purified = purifyType(fieldType)) != fieldType )
+			fieldType = purified;
+		
+		// purified->dump();
+		// LOG(DEBUG) << purified->getTypeClassName();
 
-		else if( const ReferenceType *refTy = dyn_cast<ReferenceType>(fieldType) )
-			fieldType = refTy->getPointeeType().getTypePtr();
-
-		if( const TypedefType* elabTy = llvm::dyn_cast<TypedefType>(fieldType) ) {
-			 fieldType = elabTy->getDecl()->getUnderlyingType().getTypePtr();
-		}
-
-		// Elaborated types shoud be recursively visited 
-		if( const ElaboratedType* elabTy = llvm::dyn_cast<ElaboratedType>(fieldType) ) {
-			 fieldType = elabTy->getNamedType().getTypePtr();
-		}
-
-	//	fieldType->dump();
-	//	LOG(INFO) << fieldType->getTypeClassName();
-
-		if( const TagType* tagTy = llvm::dyn_cast<TagType>(fieldType) ) {
-	//		LOG(INFO) << "Adding " << tagTy->getDecl()->getNameAsString();
+		if( const TagType* tagTy = llvm::dyn_cast<TagType>(purified) ) {
+			// LOG(DEBUG) << "Adding " << tagTy->getDecl()->getNameAsString();
 			if ( llvm::isa<RecordDecl>(tagTy->getDecl()) ) {
 				// find the definition
 				auto def = findDefinition(tagTy);
-				assert(def);
+
+				// we may have no definition for the type
+				if (!def) { return; }
+
 				addNode( def, &v );
 			}
 		}

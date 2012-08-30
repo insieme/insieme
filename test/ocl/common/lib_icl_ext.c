@@ -10,6 +10,7 @@ icl_args* icl_init_args(){
 	args->device_id = 0;
 	args->size = 1024;
 	args->local_size = 256;
+	args->loop_iteration = 1;
 	args->check_result = false;
 	return args;
 }
@@ -33,6 +34,9 @@ void icl_parse_args(int argc, const char** argv, icl_args* args) {
                         if(!strcmp(argv[i], "-id")) {
                                 args->device_id = (size_t) (atoi(argv[i + 1]));
                         }
+			if(!strcmp(argv[i], "-loop")) {
+				args->loop_iteration = (size_t) (atoi(argv[i + 1]));
+			}
                 }
                 // params requiring only one flag
 		if(!strcmp(argv[i], "-check"))
@@ -43,6 +47,7 @@ void icl_parse_args(int argc, const char** argv, icl_args* args) {
                                 " -id <S>\tdevice id, default is 0\n"
                                 " -size <S>\tinput size, default is 1024\n"
 				" -local <S>\tOpenCL local size\n"
+				" -loop <S>\tnumber of iteration of the buffer & kernel code\n"
                                 " -check\tcompares output results with a CPU host-based reference implementation\n"
                                 " -help\tprints this info box\n"
 			);
@@ -62,7 +67,7 @@ static const char* _icl_get_device_type_string(cl_device_type type) {
 
 
 void icl_print_args(const icl_args *args){
-	printf("arguments: device %s, id %d, size %d, local %d, check %s\n", _icl_get_device_type_string(args->device_type), args->device_id, args->size, args->local_size, (args->check_result)? "YES":"NO");
+	printf("arguments: device %s, id %d, size %d, local %d, loop %d, check %s\n", _icl_get_device_type_string(args->device_type), args->device_id, args->size, args->local_size, args->loop_iteration, (args->check_result)? "YES":"NO");
 }
 
 void icl_release_args(icl_args *args){

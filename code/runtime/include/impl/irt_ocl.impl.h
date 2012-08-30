@@ -269,6 +269,94 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 	printf("Available Memory: %lu   Request Memory: %lu\n", dev->mem_available, size);
 #endif
 	if (size > dev->mem_available) {
+		IRT_ASSERT(false, IRT_ERR_OCL, "Error creating buffer: \"Not enough memory available\"");
+	}
+	
+	// create buffer
+	irt_ocl_buffer* buf = (irt_ocl_buffer*)malloc(sizeof(irt_ocl_buffer));
+	cl_int err_code;
+	buf->mem = clCreateBuffer(dev->context, flags, size, NULL, &err_code);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error creating buffer: \"%s\"", _irt_error_string(err_code));
+	buf->used = true;
+	buf->size = size;
+	buf->next = NULL;
+	buf->dev = dev;
+	
+	// add buffer to the list
+	irt_ocl_buffer* ptr = dev->buffer;
+	irt_ocl_buffer* prev = NULL;
+	while(ptr && (ptr->size <= size)) {
+		prev = ptr;
+		ptr = ptr->next;
+	}
+	if (!prev) { // prev == NULL
+		buf->next = ptr;
+		dev->buffer = buf;
+	} else {
+		//insert after prev
+		buf->next = prev->next;
+		prev->next = buf;
+	}
+	//update the available memory
+	dev->mem_available -= size;
+	irt_spin_unlock(&(dev->buffer_lock));
+
+        /*printf("LIST BEGIN\n");
+        irt_ocl_buffer* test = dev->buffer;
+        while (test) {
+                printf("Value: %lu\n", test->size);
+                test = test->next;
+        }
+        printf("LIST END\n");*/
+
+	return buf;
+}
+
+inline void irt_ocl_release_buffer(irt_ocl_buffer* buf) {
+	irt_spin_lock(&(buf->dev->buffer_lock));
+	irt_ocl_buffer* ptr = buf->dev->buffer;
+	irt_ocl_buffer* prev = NULL;
+
+	/*printf("LIST BEGIN RELEASE\n");
+        irt_ocl_buffer* test = buf->dev->buffer;
+        while (test) {
+                printf("Value: %lu\n", test->size);
+                test = test->next;
+        }
+        printf("LIST END\n");*/
+
+
+        while (ptr) {
+		if (ptr == buf)
+			break;
+		prev = ptr;
+		ptr = ptr->next;
+	}
+	if (!prev) {
+		buf->dev->buffer = ptr->next;
+	} else {
+		prev->next = ptr->next;
+	}
+	if (ptr == NULL) 
+		printf("null buffer\n");
+	else
+		printf("buffer size = %d\n", buf->size);
+	// free the selected buffer
+	cl_int err_code = clReleaseMemObject(ptr->mem);
+ 	buf->dev->mem_available += ptr->size;
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing cl_mem: \"%s\"", _irt_error_string(err_code));
+	free(ptr);
+	irt_spin_unlock(&(buf->dev->buffer_lock));
+}
+
+/*
+irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size) {
+	IRT_ASSERT(size <= dev->max_buffer_size, IRT_ERR_OCL, "Error creating buffer: \"Buffer size is too big\"");
+	irt_spin_lock(&(dev->buffer_lock));
+#ifdef IRT_OCL_DEBUG
+	printf("Available Memory: %lu   Request Memory: %lu\n", dev->mem_available, size);
+#endif
+	if (size > dev->mem_available) {
 #ifdef IRT_OCL_DEBUG
 		printf(" Need to free some buffer\n");
 #endif
@@ -328,6 +416,7 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 	irt_spin_unlock(&(dev->buffer_lock));
 
 	// print buffer list status
+*/
 	/*printf("LIST BEGIN\n");
 	irt_ocl_buffer* test = dev->cl_buffer;
 	while (test) {
@@ -336,7 +425,7 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 	}
 	printf("LIST END\n");*/
 	//
-
+/*
 	return buf;
 }
 
@@ -344,6 +433,7 @@ inline void irt_ocl_release_buffer(irt_ocl_buffer* buf) {
 	IRT_ASSERT(buf != NULL && buf->used == true, IRT_ERR_OCL, "Error releasing buffer");
 	buf->used = false;
 }
+*/
 
 inline void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t offset, size_t size, const void* source_ptr) {
 	irt_ocl_device* dev = buf->dev;
