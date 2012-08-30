@@ -285,8 +285,7 @@ namespace {
 				ExpressionPtr res = pos->second;
 
 				// to ensure a single evaluation!
-				NodeType type = res->getNodeType();
-				if (type != NT_Variable && type != NT_Literal) {
+				if (!isSideEffectFree(res)) {
 					replacedOnce.insert(var);
 				}
 				return res;
@@ -298,6 +297,26 @@ namespace {
 
 		bool wasSuccessful() const {
 			return successful;
+		}
+
+		static bool isSideEffectFree(const ExpressionPtr& expr) {
+
+			// all variables and literals are side-effect free accessable
+			NodeType type = expr->getNodeType();
+			if (type != NT_Variable && type != NT_Literal) {
+				return true;
+			}
+
+			// check for other operations
+			if (type != NT_CallExpr) {
+				return false;
+			}
+
+			// check whether function is side-effect free + all arguments are
+			CallExprPtr call = expr.as<CallExprPtr>();
+			auto& basic = expr->getNodeManager().getLangBasic();
+			return basic.isPure(call->getFunctionExpr()) &&
+					all(call->getArguments(), &isSideEffectFree);
 		}
 	};
 
@@ -678,6 +697,9 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 
 	assert(isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
 
+	// make sure replacement value does not have any free variables except it is a variable itself (used for fixing recursive variables)
+	assert((value->getNodeType() == NT_Variable || core::analysis::getFreeVariables(value).empty()) && "Replacement value must not have free variables!");
+
 	// conduct replacement
 
 	const VariablePtr& param = lambda->getParameterList()[index];
@@ -757,6 +779,97 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 NodePtr fixVariable(NodeManager& manager, const NodePtr& node, const VariablePtr& var, const ExpressionPtr& value) {
 	ParameterFixer fixer(manager, var, value);
 	return fixer.map(node);
+}
+
+
+CallExprPtr pushBindIntoLambda(NodeManager& manager, const CallExprPtr& call, unsigned index) {
+
+	// ---------------- Pre-Conditions --------------------
+
+	// check whether indexed parameter is in-deed a bind
+	assert(index < call->getArguments().size() && "Invalid argument index!");
+	assert(call->getArgument(index)->getNodeType() == NT_BindExpr && "Specified argument is not a bind!");
+
+	// check whether function is in-deed a lambda
+	assert(call->getFunctionExpr()->getNodeType() == NT_LambdaExpr && "Function has to be a lambda!");
+
+	// so far it is only supported for non-recursive implementations
+	assert(!call->getFunctionExpr().as<LambdaExprPtr>()->isRecursive() && "Not implemented for recursive functions!");
+
+	// ----------------------------------------------------
+
+	IRBuilder builder(manager);
+
+	// get all free variables within the body of the lambda (those must not be used for new variables)
+	LambdaExprPtr lambda = call->getFunctionExpr().as<LambdaExprPtr>();
+	auto freeVars = analysis::getFreeVariables(lambda->getBody());
+
+	// get next free variable ID
+	unsigned next_index = 1;
+	for(const auto& cur : freeVars) {
+		next_index = std::max(next_index, cur->getId() + 1);
+	}
+
+	// compute a map of free variables to
+	vector<ExpressionPtr> newArgs;
+	vector<VariablePtr> newParams;
+	vector<ExpressionPtr> newBindCallArgs;
+
+	// iterate through bound expressions => filter constants and others
+	BindExprPtr bind = call->getArgument(index).as<BindExprPtr>();
+	const VariableList bindParams = bind->getParameters().getParameters();
+	CallExprPtr callWithinBind = bind->getCall();
+	for(const ExpressionPtr& cur : callWithinBind->getArguments()) {
+
+		// bind-parameters are just forwarded
+		if (cur->getNodeType() == NT_Variable && contains(bindParams, cur.as<VariablePtr>())) {
+			newBindCallArgs.push_back(cur);
+			continue;
+		}
+
+		// this is a bound expression
+		//  => if it is a constant it stays
+		if (analysis::getFreeVariables(cur).empty()) {
+			newBindCallArgs.push_back(cur);
+			continue;
+		}
+
+		//  => otherwise it is evaluated and forwarded as a parameter
+		VariablePtr newParam = builder.variable(cur->getType(), next_index++);
+		newBindCallArgs.push_back(newParam);
+
+		// add new parameter to list of parameters to be added to the lambda
+		newParams.push_back(newParam);
+
+		// add new argument to be passed by the call
+		newArgs.push_back(cur);
+	}
+
+	// --- build up result ---
+
+	// build new bind with modified call expression
+	auto newBind = BindExpr::get(manager, bind->getType().as<FunctionTypePtr>(), bind->getParameters(),
+			CallExpr::get(manager, callWithinBind->getType(), callWithinBind->getFunctionExpr(), newBindCallArgs)
+	);
+
+	// fix parameter within body of lambda
+	auto newBody = fixVariable(manager, lambda->getBody(), lambda->getParameterList()[index], newBind);
+
+	// fix parameter list of lambda
+	VariableList newLambdaParams = lambda->getParameterList()->getParameters();
+	newLambdaParams.erase(newLambdaParams.begin() + index); // remove parameter accepting bind
+	newLambdaParams.insert(newLambdaParams.begin() + index, newParams.begin(), newParams.end()); // inject new parameters
+
+	// build new lambda
+	auto newLambda = builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), newBody, newLambdaParams);
+
+	// assemble new argument list
+	ExpressionList newArgumentList = call->getArguments();
+	newArgumentList.erase(newArgumentList.begin() + index); // drop bind argument
+	newArgumentList.insert(newArgumentList.begin() + index, newArgs.begin(), newArgs.end()); // inject new arguments
+
+	// finally build new call expression
+	return builder.callExpr(call->getType(), newLambda, newArgumentList);
 }
 
 
@@ -967,201 +1080,6 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 	utils::migrateAnnotations(addr.getAddressedNode(), compound);
 
 	return declStmt;
-}
-
-
-
-namespace {
-
-	class NotSequentializableException : public std::exception {
-		std::string msg;
-	public:
-		NotSequentializableException(const string& msg = "Unknown Error") : msg(msg) {};
-		virtual const char* what() const throw() { return msg.c_str(); }
-		virtual ~NotSequentializableException() throw() { }
-	};
-
-
-	class Sequentializer : public transform::CachedNodeMapping, private IRVisitor<preserve_node_type> {
-
-		NodeManager& manager;
-		IRBuilder builder;
-		const lang::BasicGenerator& basic;
-
-	public:
-
-		Sequentializer(NodeManager& manager)
-			: manager(manager), builder(manager), basic(manager.getLangBasic()) {}
-
-		virtual const NodePtr resolveElement(const NodePtr& ptr) {
-			// skip types
-			if (ptr->getNodeCategory() == NC_Type) {
-				return ptr;
-			}
-			return visit(ptr);
-		}
-
-	protected:
-
-		StatementPtr handleCall(const CallExprPtr& call) {
-
-			const auto& fun = call->getFunctionExpr();
-			auto args = call->getArguments();
-
-			// skip merge expressions if possible
-			if (basic.isMerge(fun)) {
-				// eval argument if necessary
-				if (args[0]->getNodeType() == NT_CallExpr) {
-					return args[0];
-				}
-				return builder.getNoOp();
-			}
-
-			// ignore merge-all calls
-			if (basic.isMergeAll(fun)) {
-				return builder.getNoOp();
-			}
-
-			// handle parallel expression
-			if (basic.isParallel(fun)) {
-				// invoke recursively resolved argument (should be a lazy function after conversion)
-				return evalLazy(manager, args[0]);
-			}
-
-			// handle pfor calls
-			if (basic.isPFor(fun)) {
-				core::ExpressionPtr start = args[1];
-				core::ExpressionPtr end = args[2];
-				core::ExpressionPtr step = args[3];
-				return core::transform::tryInlineToStmt(manager, builder.callExpr(basic.getUnit(), args[4], start, end, step));
-			}
-
-			// handle barrier
-			if (basic.isBarrier(fun)) {
-				// => can be ignored
-				return builder.getNoOp();
-			}
-
-			// handle thread group id
-			if (basic.isGetThreadId(fun)) {
-				return builder.intLit(0);
-			}
-
-			// and finally the thread group size
-			if (basic.isGetGroupSize(fun)) {
-				return builder.intLit(1);
-			}
-
-			// handle flush
-			if (basic.isFlush(fun)) {
-				// => can be ignored
-				return builder.getNoOp();
-			}
-
-			// and locks
-			if (basic.isLockAcquire(fun)) {
-				return builder.getNoOp();
-			}
-
-			if (basic.isLockRelease(fun)) {
-				return builder.getNoOp();
-			}
-
-			if (basic.isLockCreate(fun)) {
-				return builder.intLit(0);
-			}
-
-			// otherwise, don't touch it
-			return call;
-		}
-
-		ExpressionPtr handleJobExpr(const JobExprPtr& job) {
-
-			// check whether 1 is within job range
-			ExpressionPtr range = job->getThreadNumRange();
-
-			assert(range->getNodeType() == NT_CallExpr && "Range is not formed by call expression!");
-
-			// resolve first argument (lower bound)
-			ExpressionPtr lowerBound = analysis::getArgument(range, 0);
-
-			try {
-
-				// check lower boundary
-				arithmetic::Formula f = arithmetic::toFormula(lowerBound);
-
-				if (!f.isConstant()) {
-					throw NotSequentializableException("Lower bound of job expression is not constant!");
-				}
-
-				auto lb = f.getConstantValue();
-				if (lb.isZero()) {
-					// job can be completely eliminated => return empty function
-					return builder.lambdaExpr(basic.getUnit(), builder.getNoOp(), VariableList());
-				}
-
-				if (!lb.isOne()) {
-					throw NotSequentializableException("Parallel Job requires more than one thread!");
-				}
-
-			} catch (const arithmetic::NotAFormulaException& nfe) {
-				throw NotSequentializableException("Unable to parse lower boundary of job expression!");
-			}
-
-
-			// pick branch (not supported yet)
-			if (!job->getGuardedExprs().empty()) {
-				throw NotSequentializableException("Sequentializing job expressions exposing guards not yet supported.");
-			}
-
-			ExpressionPtr branch = job->getDefaultExpr();
-
-			// convert selected branch into a lazy expression
-			//	- inline local definitions into bind expression
-			//	- return bind expression
-
-			// NOTE: this assumes that every local variable is only bound once
-			VarExprMap map;
-			for_each(job->getLocalDecls().getElements(), [&](const DeclarationStmtPtr& decl) {
-				map[decl->getVariable()] = decl->getInitialization();
-			});
-
-			return replaceVarsGen(manager, branch, map);
-		}
-
-		StatementPtr visitStatement(const StatementPtr& curStmt) {
-
-			// start by resolve stmt recursively
-			StatementPtr stmt = curStmt->substitute(manager, *this);
-
-			// eliminate parallel constructs if necessary
-			if (stmt->getNodeType() == NT_CallExpr) {
-				return handleCall(static_pointer_cast<CallExprPtr>(stmt));
-			}
-
-			if (stmt->getNodeType() == NT_JobExpr) {
-				return handleJobExpr(static_pointer_cast<JobExprPtr>(stmt));
-			}
-
-			// otherwise take it as it has been resolved
-			return stmt;
-		}
-
-		NodePtr visitNode(const NodePtr& node) {
-			return node->substitute(manager, *this);
-		}
-
-	};
-
-}
-
-NodePtr trySequentialize(NodeManager& manager, const NodePtr& stmt) {
-	try {
-		return Sequentializer(manager).map(stmt);
-	} catch (const NotSequentializableException& nse) {
-		LOG(INFO) << "Unable to sequentialize: " << nse.what();
-	}
-	return NodePtr();
 }
 
 LambdaExprPtr correctRecursiveLambdaVariableUsage(NodeManager& manager, const LambdaExprPtr& lambda) {
