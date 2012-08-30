@@ -140,6 +140,7 @@ void DependencyGraph<const clang::TagDecl*>::Handle(
 	for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
 		const Type* fieldType = (*it)->getType().getTypePtr();
 	
+		// purify the type until a fixpoint is reached 
 		const Type* purified = fieldType;
 		while( (purified = purifyType(fieldType)) != fieldType )
 			fieldType = purified;
@@ -152,7 +153,10 @@ void DependencyGraph<const clang::TagDecl*>::Handle(
 			if ( llvm::isa<RecordDecl>(tagTy->getDecl()) ) {
 				// find the definition
 				auto def = findDefinition(tagTy);
-				assert(def);
+
+				// we may have no definition for the type
+				if (!def) { return; }
+
 				addNode( def, &v );
 			}
 		}
