@@ -607,11 +607,24 @@ class TestJob:
 	def data(self): return self.__data
 
 def main(argv=None):
+
+	config = configparser.ConfigParser()
+	config.readfp(open('@CMAKE_BINARY_DIR@/test.cfg'))
+
+	# Global variable which stores the list of backends to be used
+	global passes
+	global passes_str
+
+	# Load passes from the configuration file 
+	passes = [(key[8:],eval(val)) for key,val in config.items("Test") if key.startswith('pass')]
+	passes_str = [id for id,p in passes]
+
 	parser = optparse.OptionParser()
-	parser.add_option("-b", "--backend", dest="backends", type="string",
-							help=("The list of backends that should be uses: "
-							"options are 'smp', 'seq', 'run', 'ocl' or 'all', default: '%default'."),
-							default="smp,run")
+	parser.add_option("-b", "--backends", dest="backends", type="string",
+							help=("The list of backends/passes that should be uses: "
+								"options are {0},'all', default: '%default'.".
+								format(", ".join(list(map(lambda x: "\'"+x+"\'", passes_str))))),
+							default="all")
 
 	parser.add_option("-w", "--workers", dest="workers", type="int",
 							help=("The number parallel workers: default: '%default'."),
@@ -643,10 +656,6 @@ def main(argv=None):
 
 	(options, args) = parser.parse_args()
 
-
-	config = configparser.ConfigParser()
-	config.readfp(open('@CMAKE_BINARY_DIR@/test.cfg'))
-
 	save_path = os.getcwd()
 	# Retrieve the insieme version 
 	os.chdir('@CMAKE_SOURCE_DIR@')
@@ -674,37 +683,40 @@ def main(argv=None):
 	print("| {0:^{1}} |".format("Running '{0}' benchmark(s)".format( len(test_cases) ), len(msg_str)))
 	print("{0:-^{1}}".format('-', len(msg_str)+4))
 
-	# Global variable which stores the list of backends to be used
-	global passes
-	global passes_str
+	if test_cases_number == 0:
+		print("|{0:~^{1}}|".format('~', len(msg_str)+2))
+		print("| {0:^{1}} |".format("DONE", len(msg_str)))
+		print("|{0:~^{1}}|".format('~', len(msg_str)+2))
+		return os._exit(0)
 
+	# Read the backends provided by the user and select the one to be used in the run 
 	backends = list({x.strip() for x in options.backends.split(',')})
+	print (backends)
 
-	for backend in backends:
-		assert backend in {'smp', 'seq', 'run', 'ocl', 'all', 'mpi'}
+	if not (len(backends) == 1 and backends[0] is "all"): 
+		allowed = []
+		# Filter backend
+		for backend in backends:
+			assert backend in passes_str
+			allowed.append( passes_str.index(backend) )
 
-	if 'all' in backends:
-		backends = {'smp', 'seq', 'run', 'ocl', 'mpi'}
+		allowed = sorted(allowed)
 
-	# Order the backends according to the indexes assigned to each backend
-	backends = sorted(backends)
+		passes = [ passes[x] for x in allowed ]
+		passes_str = [ x[0] for x in passes]
 	
-	passes = [(key[8:],eval(val)) for key,val in config.items("Test") if key.startswith('pass')]
-	passes_str = [id for id,p in passes]
-	print (passes_str)
-
 	# check if the intel compiler is installed, otherwise remove the icc from the backends 
 	if not os.system("which gcc"):
 		to_remove = []
-		for x in range(len(passes_str)): 
+		for x in range(len(passes)): 
 			if passes_str[x].endswith("icc") or passes_str[x].endswith("icpc"):
 				to_remove.append(x-len(to_remove))
 
 		for x in to_remove:
-			del passes_str[x]
 			del passes[x]
+			del passes_str[x]
 
-	print("Selected backends are: {0}".format( list(map(lambda x: x[0], passes) )) )
+	print("Selected passes are: {0}".format( list(map(lambda x: x, passes_str) )) )
 
 	# Global variable which stores whether the reference files should be removed
 	global do_clean
