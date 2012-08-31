@@ -175,6 +175,7 @@ class CmdExecReport:
 ## from the compilation and execution of this test case
 ###################################################################################################
 class TestData:
+
 	def __init__(self, name):
 		self.__name = name
 		self.reports = []
@@ -271,7 +272,8 @@ def runner( job ):
 
 		if mock_run and cmd.type[0] < 5:
 			print(cmd.desc)
-			col_print(cmd.cmd + "\n", GREEN)
+			command = os.path.expandvars(cmd.cmd)
+			col_print(command+"\n", GREEN)
 			continue
 
 		if cmd.type == Commands.SUCC:
@@ -279,11 +281,8 @@ def runner( job ):
 			break
 
 		try:
-			command = os.path.expandvars(cmd.cmd)
 			start = time.time()
-			pid = subprocess.Popen( shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-			output = pid.communicate()[0].decode("utf-8")
-			retcode = pid.returncode
+			(retcode, output) = exec_shell_cmd(cmd.cmd)
 			elapsed = time.time() - start
 		except Exception as e:
 			retcode = 1
@@ -307,15 +306,14 @@ def runner( job ):
 		if cmd.type == Commands.RUN:
 			execs = [ ]
 			for r in range(0,runs):
-				command = os.path.expandvars(cmd.cmd)
 				start = time.time()
-				pid = subprocess.Popen( shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-				output = pid.communicate()[0]
-				if pid.returncode != 0:
+				(retcode, output) = exec_shell_cmd(cmd.cmd)
+				if retcode != 0:
 					# something went wrong, the program which was supposed to work is now failing
-					job.data.reports[-1].ret_code = pid.returncode
+					job.data.reports[-1].ret_code = pid.retcode
 					job.data.reports[-1].output = output
 					break
+
 				execs.append( time.time() - start )
 
 			# compute mean value
@@ -339,8 +337,8 @@ class Cmd:
 
 def load_from_file(file, path="./", default=''):
 	if os.path.exists(file):
-		return " ".join( [ x.strip() for x in open(file).read().format( **{'SRC_DIR': SRC_DIR,
-			'PATH': path} ).split(',') ] )
+		return " ".join( [ x.strip() for x in open(file).read().format( 
+			**{'SRC_DIR': SRC_DIR, 'PATH': path} ).split(',') ] )
 	return default
 
 
@@ -402,7 +400,6 @@ class TestJob:
 	def __init__(self, test_case_name):
 		
 		assert os.path.isdir(test_case_name)
-		
 		save_path = os.path.abspath(os.getcwd())
 
 		# check which passes are enabled and set the directory to the test case 
@@ -410,15 +407,15 @@ class TestJob:
 
 		prefix = os.path.commonprefix([save_path, os.path.abspath(test_case_name)])
 
-		test_case_name = os.path.abspath(test_case_name)[
-				len(prefix)+ (1 if not prefix.endswith('/') else 0):]
+		test_case_name = os.path.abspath(test_case_name)[len(prefix)+(1 if not prefix.endswith('/')
+			else 0):0]
 
 		isCxx = False
 
 		cur_passes = []
 		for id, val in passes:
 			if id in pas: 
-				cur_passes.append((id, val))
+				cur_passes.append( (id, val) )
 				if id == "g++" or id == "icpc": isCxx = True
 
 		self.__data = TestData(test_case_name)
@@ -604,6 +601,7 @@ class TestJob:
 
 	@property
 	def cmds(self): return self.__cmds # sorted(self.__cmds, key=lambda x: x.type)
+
 	@property
 	def data(self): return self.__data
 
