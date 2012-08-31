@@ -402,18 +402,17 @@ class TestJob:
 	def __init__(self, test_case_name):
 		
 		assert os.path.isdir(test_case_name)
-		save_path = os.path.abspath(os.getcwd())
 		
+		save_path = os.path.abspath(os.getcwd())
+
+		# check which passes are enabled and set the directory to the test case 
+		pas = visit_files(test_case_name)
+
 		prefix = os.path.commonprefix([save_path, os.path.abspath(test_case_name)])
-		print (prefix)
+
 		test_case_name = os.path.abspath(test_case_name)[
 				len(prefix)+ (1 if not prefix.endswith('/') else 0):]
-		assert os.path.isdir(test_case_name)
 
-		if test_case_name[-1] == '/': test_case_name = test_case_name[:-1]
-
-		pas = visit_files(test_case_name)
-		
 		isCxx = False
 
 		cur_passes = []
