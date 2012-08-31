@@ -512,7 +512,10 @@ class TestJob:
 
 			if P.backend:
 				# Compile generated code
-				input_file = P.tmp_file.format(**{'CASE_NAME': self.__data.name, 'PATH': path}) if P.tmp_file else inputs
+				input_file = "{0}/{1}".format(path, P.tmp_file.format(
+								**{'CASE_NAME': self.__data.name, 'PATH': path}
+							)) if P.tmp_file else abs_input_files
+
 				file_name = ("{0}".format(P.backend.files[0])).format(**{
 								'CASE_NAME': self.__data.name,
 								'PATH': path
@@ -526,8 +529,7 @@ class TestJob:
 												'PATH': 	path,
 												'SRC_DIR': 	SRC_DIR
 											}),
-							'FILE': 	 abs_input_files if first else 
-										 "{0}/{1}".format(path, input_file),
+							'FILE': 	 input_file,
 							'LDFLAGS':	 LDFLAGS_GCC,
 							'GCCFLAGS':	 gccFlagsTest if P.frontend else gccFlagsRef
 						})
