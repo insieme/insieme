@@ -44,10 +44,10 @@ back.run:		Conf([
 					Flag('-ldl')
 				], "RUN")
 back.ocl:   	%(back.run)s + Conf([
-					Flag('-Wl,--no-as-needed'),
 					Flag('-lOpenCL'), 
 					Flag('-I$OPENCL_ROOT/include'),
 					Flag('-L$OPENCL_ROOT/lib/x86_64'),
+					Flag('-Wl,--no-as-needed'),
 					Flag('-DUSE_OPENCL=ON'),
 					Flag('-D_POSIX_C_SOURCE=199309')
 				], "OCL")
