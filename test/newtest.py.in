@@ -8,6 +8,12 @@ exec python3 $0 ${1+"$@"}
 import optparse, sys, os, re, random, math, shutil, time, subprocess, shlex, copy, configparser
 from multiprocessing import Pool, Process, Queue
 
+#
+# Figure out command to compute version of Code
+#
+INSIEME_VERSION_STR="\"\\\"@insieme_version@\\\"\""
+INSIEME_VERSION="unknown"
+
 # linker flags
 LDFLAGS_GCC   = "-lm -lpthread -lrt"
 
@@ -249,6 +255,10 @@ def reporter( report_queue ):
 	
 	report_queue.put( len(failedTests) )
 
+def exec_shell_cmd(cmd):
+	command = os.path.expandvars(cmd)
+	pid = subprocess.Popen( shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+	return pid.returncode, pid.communicate()[0].decode("utf-8")
 
 # Generic executor of commands
 def runner( job ):
@@ -390,10 +400,15 @@ def toAbsolutePaths(path, args):
 class TestJob:
 
 	def __init__(self, test_case_name):
-		if test_case_name[-1] == '/': test_case_name = test_case_name[:-1]
 		
 		assert os.path.isdir(test_case_name)
 		save_path = os.getcwd()
+		
+		prefix = os.path.commonprefix([save_path, os.path.abspath(test_case_name)])
+		test_case_name = os.path.abspath(test_case_name)[len(prefix)+1:]
+		assert os.path.isdir(test_case_name)
+
+		if test_case_name[-1] == '/': test_case_name = test_case_name[:-1]
 
 		pas = visit_files(test_case_name)
 		
@@ -632,22 +647,32 @@ def main(argv=None):
 	config = configparser.ConfigParser()
 	config.readfp(open('@CMAKE_BINARY_DIR@/test.cfg'))
 
-	# config.read(['site.cfg', os.path.expanduser('~/.myapp.cfg')])
+	save_path = os.getcwd()
+	# Retrieve the insieme version 
+	os.chdir('@CMAKE_SOURCE_DIR@')
+	(_, INSIEME_VERSION) = exec_shell_cmd('git describe --dirty')
+	INSIEME_VERSION = INSIEME_VERSION.strip()
+	msg_str = "Insieme version: {0}".format( INSIEME_VERSION )
+	print("{0:-^{1}}".format('-', len(msg_str)+4))
+	print("| {0} |".format(msg_str))
+	print("|{0:~^{1}}|".format('~', len(msg_str)+2))
+	# restore path 
+	os.chdir(save_path)
+
 	# Set the number of workers
 	num_cores = options.workers
 
 	# If the script is executed without specifying a path, the test folder
 	# in the SOURCE directory is used as entry point 
 	if not args: args = '@CMAKE_SOURCE_DIR@/test'
-
 	assert(args)
-
 	test_cases = expand( args )
 
 	global test_cases_number
 	test_cases_number = len(test_cases)
 
-	print("@@ {0} benchmarks @@".format( len(test_cases) ))
+	print("| {0:^{1}} |".format("Running '{0}' benchmark(s)".format( len(test_cases) ), len(msg_str)))
+	print("{0:-^{1}}".format('-', len(msg_str)+4))
 
 	# Global variable which stores the list of backends to be used
 	global passes
