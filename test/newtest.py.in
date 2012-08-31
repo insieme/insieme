@@ -33,6 +33,9 @@ def col_print(msg, col=NONE) :
 
 	sys.stderr.write(msg)
 	
+"""
+Generic class which represent a generic flag passed to the compiler 
+"""
 class Flag:
 	def __init__(self, name, desc=''):
 		self.name = name; self.desc = desc
@@ -40,6 +43,10 @@ class Flag:
 	def __repr__(self):
 		return self.name
 
+"""
+Specialization of a Flag which is an output flag which means any flag which 
+generate an output file. 
+"""
 class OutFileFlag(Flag):
 	def __init__(self, name, file_name, desc=''):
 		super(OutFileFlag, self).__init__(name, desc)
@@ -67,9 +74,11 @@ class Conf:
 		elif len(self.desc) != 0:
 			tag = self.desc
 		return Conf(self.flags + conf.flags, tag)
+
 	@property
 	def files(self):
 		return [flag.file_name for flag in self.flags if isinstance(flag, OutFileFlag)]
+
 	@property
 	def output_file(self):
 		return [flag.file_name for flag in self.flags if isinstance(flag, OutFileFlag) and flag.name == '-o']
@@ -626,6 +635,12 @@ def main(argv=None):
 	# config.read(['site.cfg', os.path.expanduser('~/.myapp.cfg')])
 	# Set the number of workers
 	num_cores = options.workers
+
+	# If the script is executed without specifying a path, the test folder
+	# in the SOURCE directory is used as entry point 
+	if not args: args = '@CMAKE_SOURCE_DIR@/test'
+
+	assert(args)
 
 	test_cases = expand( args )
 
