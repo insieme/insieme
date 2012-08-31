@@ -695,7 +695,7 @@ def main(argv=None):
 	backends = list({x.strip() for x in options.backends.split(',')})
 	print (backends)
 
-	if not (len(backends) == 1 and backends[0] is "all"): 
+	if not (len(backends) == 1 and backends[0] == "all"): 
 		allowed = []
 		# Filter backend
 		for backend in backends:
