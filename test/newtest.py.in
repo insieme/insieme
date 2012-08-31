@@ -405,8 +405,9 @@ class TestJob:
 		save_path = os.getcwd()
 		
 		prefix = os.path.commonprefix([save_path, os.path.abspath(test_case_name)])
-		if len(prefix)>1:
-			test_case_name = os.path.abspath(test_case_name)[len(prefix)+1:]
+		test_case_name = os.path.abspath(test_case_name)[len(prefix)+1
+									if not prefix.endswith('/') else 0:
+								]
 		assert os.path.isdir(test_case_name)
 
 		if test_case_name[-1] == '/': test_case_name = test_case_name[:-1]
