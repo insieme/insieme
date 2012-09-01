@@ -33,6 +33,8 @@ RED    = '\033[1;31m'
 BLUE   = '\033[1;94m'
 ENDC   = '\033[0m'
 
+COLUMNS=80
+
 def col_print(msg, col=NONE) :
 	if not no_colors and col != NONE:
 		msg = col + msg + ENDC
@@ -65,6 +67,9 @@ class OutFileFlag(Flag):
 	def __repr__(self):
 		return "{0} {2}/{1}".format(self.name, self.file_name, '{PATH}')
 
+"""
+A Configuration is composed by a set of flags
+"""
 class Conf:
 	def __init__(self, flags, desc=""):
 		self.desc = desc
@@ -158,8 +163,9 @@ def expand(tests):
 
 class CmdExecReport:
 
-	def __init__(self, type, desc, ret_code, output, time):
+	def __init__(self, type, cmd, desc, ret_code, output, time):
 		self.type = type
+		self.cmd =  cmd
 		self.desc = desc
 		self.ret_code = ret_code
 		self.output = output
@@ -199,10 +205,11 @@ def reporter( report_queue ):
 
 		# The work is completed, exit the loop and print the summary 
 		if job is None: break
-
-		col_print("\n#{0:-^61}\n".format('-'), BOLD)
-		col_print("# {0}/{1}: {2:<60}\n".format(num, test_cases_number, job.data.path), BOLD)
-		col_print("#{0:-^61}\n".format('-'), BOLD)
+		
+		sep = "#"+"-"*(COLUMNS-1)+"\n"
+		col_print("\n"+sep, BOLD)
+		col_print("# {0}/{1}: {2:<{3}}\n".format(num, test_cases_number, job.data.name, COLUMNS), BOLD)
+		col_print(sep, BOLD)
 
 		success = job.data.reports[-1].desc == 'DONE' and job.data.reports[-1].ret_code == 0
 
@@ -212,31 +219,34 @@ def reporter( report_queue ):
 			if rep.type[0] > 4:
 				continue
 
-			sys.stderr.write("# ")
 			if rep.ret_code == 0:
-				col_print("{0:<44}".format(rep.desc), NONE),
+				col_print("# {0:<{1}}".format(rep.desc, COLUMNS-18), NONE),
 				col_print("[{0:>8.4f} secs {1}]\n".
 					format(rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else ""),
 					BLUE if rep.type == Commands.RUN else BOLD)
 			else:
-				col_print("{0:<44}[{1:>8.4f} secs {2}]\n".
-					format( rep.desc, rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else ""), RED)
-				col_print("#{0:-^60}\n".format('~'), RED)
+				col_print("# {0:<{1}}[{2:>8.4f} secs {3}]\n".
+					format( rep.desc, COLUMNS-18, rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else ""), RED)
+				col_print(sep, RED)
+				
 				if rep.output is "" or rep.output is None:
 					sys.stderr.write('Program exist with error code {0}\n'.format(rep.ret_code))
 				else:
+					# Prints the failed command 
+					col_print("Command: " + rep.cmd+"\n\n", GREEN)
 					sys.stderr.write( '\n'.join(str(rep.output).split('\n')[0:10 if not verbose else -1]) )
-				col_print("\n#{0:-^60}\n".format('~'), RED)
+
+				col_print("\n"+sep, RED)
 
 		if not success:
-			col_print("#{0:-^61}\n".format("-"), RED)
-			col_print("# {0:^60}\n".format("FAILED -- " + job.data.path), RED)
-			col_print("#{0:-^61}\n".format("-"), RED)
+			col_print(sep, RED)
+			col_print("# {0:^{1}}\n".format("FAILED -- " + job.data.path, COLUMNS), RED)
+			col_print(sep, RED)
 			failedTests.append( job.data.path )
 		else:
-			col_print("#{0:-^61}\n".format("-"), GREEN)
-			col_print("# {0:^60}\n".format("SUCCESS -- " + job.data.path), GREEN)
-			col_print("#{0:-^61}\n".format("-"), GREEN)
+			col_print(sep, GREEN)
+			col_print("# {0:^{1}}\n".format("SUCCESS -- " + job.data.path, COLUMNS), GREEN)
+			col_print(sep, GREEN)
 			success_count += 1
 
 		sys.stderr.flush()
@@ -244,15 +254,15 @@ def reporter( report_queue ):
 
 	if not mock_run:
 		# Before exiting the reporter prints a summary of the test case 
-		col_print("\n#{0:~^60}\n".format(' INTEGRATION TEST SUMMARY '), BOLD)
+		col_print("\n#{0:~^{1}}\n".format(' INTEGRATION TEST SUMMARY ', COLUMNS-1), BOLD)
 		col_print("# SUCCESSFUL: ", BOLD)
-		col_print("{0:>46}\n".format(success_count), GREEN)
+		col_print("{0:>66}\n".format(success_count), GREEN)
 		col_print("# FAILED:     ", BOLD)
-		col_print("{0:>46}\n".format(len(failedTests)), RED)
+		col_print("{0:>66}\n".format(len(failedTests)), RED)
 		for test in failedTests:
 			col_print("# -> ", BOLD)
 			col_print("{0}\n".format(test), RED)
-		col_print("#{0:~^60}\n".format('~'), BOLD)
+		col_print("#"+"~"*(COLUMNS-1)+"\n", BOLD)
 	
 	report_queue.put( len(failedTests) )
 
@@ -278,7 +288,7 @@ def runner( job ):
 			continue
 
 		if cmd.type == Commands.SUCC:
-			job.data.reports.append( CmdExecReport(Commands.SUCC, 'DONE', 0, "", 0.0) )
+			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 0, "", 0.0) )
 			break
 
 		try:
@@ -295,10 +305,10 @@ def runner( job ):
 			file.close()
 
 		# Create a report and append it to the result
-		job.data.reports.append( CmdExecReport(cmd.type, cmd.desc, retcode, output, elapsed) )
+		job.data.reports.append( CmdExecReport(cmd.type, cmd.cmd, cmd.desc, retcode, output, elapsed) )
 
 		if (cmd.type == Commands.COMPILE or cmd.type == Commands.RUN or cmd.type == Commands.HDIFF) and retcode != 0:
-			job.data.reports.append( CmdExecReport(Commands.SUCC, 'DONE', 1, "", 0.0) )
+			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 1, "", 0.0) )
 			# there was an error during compilation or running of the program, we mark the
 			# test case as failed
 			break
@@ -406,13 +416,13 @@ class TestJob:
 		if test_case_name.endswith('/'): 
 			test_case_name=test_case_name[:-1]
 
+		# save the absolute path to the test case before we switch directory 
+
+		abs_path = os.path.abspath(test_case_name)
 		# check which passes are enabled and set the directory to the test case 
 		pas = visit_files(test_case_name)
 
-		prefix = os.path.commonprefix([save_path, os.path.abspath(test_case_name)])
-
-		test_case_name = os.path.abspath(test_case_name)[len(prefix)+(1 if not prefix.endswith('/')
-			else 0):]
+		test_case_name = os.path.relpath(abs_path, save_path) 
 
 		isCxx = False
 
@@ -667,9 +677,9 @@ def main(argv=None):
 	(_, INSIEME_VERSION) = exec_shell_cmd('git describe --dirty')
 	INSIEME_VERSION = INSIEME_VERSION.strip()
 	msg_str = "Insieme version: {0}".format( INSIEME_VERSION )
-	print("{0:-^{1}}".format('-', len(msg_str)+4))
-	print("| {0} |".format(msg_str))
-	print("|{0:~^{1}}|".format('~', len(msg_str)+2))
+	print("-"*COLUMNS)
+	print("|{0:^{1}}|".format(msg_str, COLUMNS-2))
+	print("|"+"-"*(COLUMNS-2)+"|")
 	# restore path 
 	os.chdir(save_path)
 
@@ -685,18 +695,17 @@ def main(argv=None):
 	global test_cases_number
 	test_cases_number = len(test_cases)
 
-	print("| {0:^{1}} |".format("Running '{0}' benchmark(s)".format( len(test_cases) ), len(msg_str)))
-	print("{0:-^{1}}".format('-', len(msg_str)+4))
+	print("|{0:^{1}}|".format("Running '{0}' benchmark(s)".format( len(test_cases) ), COLUMNS-2))
+	print("|"+"-"*(COLUMNS-2)+"|")
 
 	if test_cases_number == 0:
-		print("|{0:~^{1}}|".format('~', len(msg_str)+2))
-		print("| {0:^{1}} |".format("DONE", len(msg_str)))
-		print("|{0:~^{1}}|".format('~', len(msg_str)+2))
+		print("|"+"-"*(COLUMNS-2)+"|")
+		print("|{0:^{1}}|".format("DONE", COLUMNS-2))
+		print("|"+"-"*(COLUMNS-2)+"|")
 		return os._exit(0)
 
 	# Read the backends provided by the user and select the one to be used in the run 
 	backends = list({x.strip() for x in options.backends.split(',')})
-	print (backends)
 
 	if not (len(backends) == 1 and backends[0] == "all"): 
 		allowed = []
@@ -721,7 +730,13 @@ def main(argv=None):
 			del passes[x]
 			del passes_str[x]
 
-	print("Selected passes are: {0}".format( list(map(lambda x: x, passes_str) )) )
+
+	global no_colors
+	no_colors=options.no_colors
+
+	print(" * Selected passes are: {0}".
+			format( ", ".join(list(map(lambda x: "'"+x+"'", passes_str) ))) 
+		 )
 
 	# Global variable which stores whether the reference files should be removed
 	global do_clean
@@ -735,9 +750,6 @@ def main(argv=None):
 
 	global verbose
 	verbose=options.verbose
-
-	global no_colors
-	no_colors=options.no_colors
 
 	global SRC_DIR
 	SRC_DIR=config.get("Test", "SRC_DIR")
