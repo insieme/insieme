@@ -187,7 +187,7 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 
 	res = eliminateRedundantAssignments(res);
 
-	// res = eliminatePseudoArrays(res);
+	res = eliminatePseudoArrays(res);
 
 	if(CommandLineOptions::ConstantPropagation) {
 		LOG(INFO) << "Performing Constant Propagation on input program";
