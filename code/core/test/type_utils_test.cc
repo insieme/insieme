@@ -855,6 +855,34 @@ TEST(TypeUtils, isGeneric) {
 	EXPECT_TRUE(isGeneric(builder.functionType(toVector(var), var)));
 	EXPECT_TRUE(isGeneric(builder.functionType(toVector(var), constA)));
 	EXPECT_FALSE(isGeneric(builder.functionType(toVector(constA), constA)));
+
+	// also make sure that recursive types are not recognized
+	{
+		TypeVariablePtr rec = builder.typeVariable("list");
+		TypePtr listElem = builder.structType(toVector(
+				builder.namedType("load", manager.getLangBasic().getInt4()),
+				builder.namedType("next", builder.refType(rec))
+		));
+		TypePtr constRecType = builder.recType(rec, builder.recTypeDefinition(toVector(builder.recTypeBinding(rec, listElem))));
+
+		EXPECT_EQ("rec 'list.{'list=struct<load:int<4>,next:ref<'list>>}", toString(*constRecType));
+		EXPECT_FALSE(isGeneric(constRecType));
+	}
+
+	// yet, a generic recursive type should be recognized
+	{
+		TypeVariablePtr rec = builder.typeVariable("list");
+		TypePtr listElem = builder.structType(toVector(
+				builder.namedType("load", builder.typeVariable("b")),
+				builder.namedType("next", builder.refType(rec))
+		));
+		TypePtr constRecType = builder.recType(rec, builder.recTypeDefinition(toVector(builder.recTypeBinding(rec, listElem))));
+
+		EXPECT_EQ("rec 'list.{'list=struct<load:'b,next:ref<'list>>}", toString(*constRecType));
+		EXPECT_TRUE(isGeneric(constRecType));
+	}
+
+
 }
 
 TEST(TypeUtils, getElementTypes) {
