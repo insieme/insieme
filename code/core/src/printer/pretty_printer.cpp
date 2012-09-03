@@ -63,7 +63,7 @@ namespace printer {
 // set up default formats for pretty printer
 const unsigned PrettyPrinter::OPTIONS_DEFAULT = 0;
 const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
-	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ATTRIBUTES;
+	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY;
 const unsigned PrettyPrinter::OPTIONS_MAX_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
 	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ANNOTATIONS | PrettyPrinter::NO_LIST_SUGAR
 	| PrettyPrinter::PRINT_ATTRIBUTES;
@@ -221,6 +221,10 @@ namespace {
 		 */
 		InspirePrinter(std::ostream& out, const PrettyPrinter& print)
 				: IRVisitor<>(true), formatTable(initFormatTable(print)), indent(0), print(print), depth(0), out(out) { };
+
+		const PrettyPrinter& getPrettyPrint() const {
+			return print;
+		}
 
 		/**
 		 * Wrapper for general tasks
@@ -835,6 +839,7 @@ namespace {
 		#define MGR call->getNodeManager()
 		#define PRINT_EXPR(E) printer.visit(E)
 		#define PRINT_ARG(N) printArgument(printer, call, N)
+		#define HAS_OPTION(OPT) printer.getPrettyPrint().hasOption(PrettyPrinter::OPT)
 		#define ADD_FORMATTER(Literal, FORMAT) \
 					res.insert(std::make_pair(Literal, make_formatter([](InspirePrinter& printer, const CallExprPtr& call) FORMAT ))).second;
 
@@ -886,9 +891,9 @@ namespace {
 
 		// nicer inlined versions of the && and || operators
 //		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); PRINT_ARG(1); });
-		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
+		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(1); else PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
 //		ADD_FORMATTER(basic.getBoolLOr(), { PRINT_ARG(0); OUT(" || "); PRINT_ARG(1); });
-		ADD_FORMATTER(basic.getBoolLOr(), { PRINT_ARG(0); OUT(" || "); PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
+		ADD_FORMATTER(basic.getBoolLOr(), { PRINT_ARG(0); OUT(" || "); if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(1); else PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
 		ADD_FORMATTER(basic.getBoolEq(), { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolLNot(), { OUT("!"); PRINT_ARG(0); });
 
@@ -925,9 +930,9 @@ namespace {
 		
 		ADD_FORMATTER(basic.getIfThenElse(), {
 				OUT("("); PRINT_ARG(0); OUT(")?");
-				PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
+				if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(1); else PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
 				OUT(":");
-				PRINT_EXPR(transform::evalLazy(MGR, ARG(2)));
+				if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(2); else PRINT_EXPR(transform::evalLazy(MGR, ARG(2)));
 		});
 
 		if (!config.hasOption(PrettyPrinter::NO_LIST_SUGAR)) {
