@@ -167,7 +167,6 @@ namespace backend {
 				return ptr;
 			}
 
-
 			// look for call expressions
 			if (ptr->getNodeType() == core::NT_CallExpr) {
 				// extract the call
@@ -185,23 +184,28 @@ namespace backend {
 
 						// instantiate generic non-built-in function
 						if (!manager.getLangBasic().isBuiltIn(fun)) {
-
 							// compute substitutions
 							core::SubstitutionOpt&& map = core::analysis::getTypeVariableInstantiation(manager, call);
 
 							// instantiate type variables according to map
 							lambda = core::transform::instantiate(manager, lambda, map);
+
+							// if lambda has not changed => do not change anything
+							if (lambda != fun) {
+								// create new call node
+								core::ExpressionList arguments;
+								::transform(call->getArguments(), std::back_inserter(arguments), [&](const core::ExpressionPtr& cur) {
+									return static_pointer_cast<const core::Expression>(this->mapElement(0, cur));
+								});
+
+								// produce new call expression
+								auto res = core::CallExpr::get(manager, call->getType(), lambda, arguments);
+
+								// instantiate sub-expressions recursively
+								return res->substitute(manager, *this);
+							}
+
 						}
-
-						// create new call node
-						core::ExpressionList arguments;
-						::transform(call->getArguments(), std::back_inserter(arguments), [&](const core::ExpressionPtr& cur) {
-							return static_pointer_cast<const core::Expression>(this->mapElement(0, cur));
-						});
-
-						// produce new call expression
-						return core::CallExpr::get(manager, call->getType(), lambda, arguments);
-
 					}
 				}
 			}
