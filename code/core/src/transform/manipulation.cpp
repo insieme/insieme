@@ -378,6 +378,11 @@ namespace {
 			return call;
 		}
 
+		// if recursive => inlining not possible
+		if (lambda->isRecursive()) {
+			return call;
+		}
+
 		// Step 2 - check body => has to be a return statement
 		StatementPtr bodyStmt = lambda->getLambda()->getBody();
 
