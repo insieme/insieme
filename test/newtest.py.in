@@ -8,6 +8,12 @@ exec python3 $0 ${1+"$@"}
 import optparse, sys, os, re, random, math, shutil, time, subprocess, shlex, copy, configparser
 from multiprocessing import Pool, Process, Queue
 
+#
+# Figure out command to compute version of Code
+#
+INSIEME_VERSION_STR="\"\\\"@insieme_version@\\\"\""
+INSIEME_VERSION="unknown"
+
 # linker flags
 LDFLAGS_GCC   = "-lm -lpthread -lrt"
 
@@ -27,12 +33,17 @@ RED    = '\033[1;31m'
 BLUE   = '\033[1;94m'
 ENDC   = '\033[0m'
 
+COLUMNS=80
+
 def col_print(msg, col=NONE) :
 	if not no_colors and col != NONE:
 		msg = col + msg + ENDC
 
 	sys.stderr.write(msg)
 	
+"""
+Generic class which represent a generic flag passed to the compiler 
+"""
 class Flag:
 	def __init__(self, name, desc=''):
 		self.name = name; self.desc = desc
@@ -40,6 +51,10 @@ class Flag:
 	def __repr__(self):
 		return self.name
 
+"""
+Specialization of a Flag which is an output flag which means any flag which 
+generate an output file. 
+"""
 class OutFileFlag(Flag):
 	def __init__(self, name, file_name, desc=''):
 		super(OutFileFlag, self).__init__(name, desc)
@@ -52,6 +67,9 @@ class OutFileFlag(Flag):
 	def __repr__(self):
 		return "{0} {2}/{1}".format(self.name, self.file_name, '{PATH}')
 
+"""
+A Configuration is composed by a set of flags
+"""
 class Conf:
 	def __init__(self, flags, desc=""):
 		self.desc = desc
@@ -67,9 +85,11 @@ class Conf:
 		elif len(self.desc) != 0:
 			tag = self.desc
 		return Conf(self.flags + conf.flags, tag)
+
 	@property
 	def files(self):
 		return [flag.file_name for flag in self.flags if isinstance(flag, OutFileFlag)]
+
 	@property
 	def output_file(self):
 		return [flag.file_name for flag in self.flags if isinstance(flag, OutFileFlag) and flag.name == '-o']
@@ -143,8 +163,9 @@ def expand(tests):
 
 class CmdExecReport:
 
-	def __init__(self, type, desc, ret_code, output, time):
+	def __init__(self, type, cmd, desc, ret_code, output, time):
 		self.type = type
+		self.cmd =  cmd
 		self.desc = desc
 		self.ret_code = ret_code
 		self.output = output
@@ -160,6 +181,7 @@ class CmdExecReport:
 ## from the compilation and execution of this test case
 ###################################################################################################
 class TestData:
+
 	def __init__(self, name):
 		self.__name = name
 		self.reports = []
@@ -183,10 +205,11 @@ def reporter( report_queue ):
 
 		# The work is completed, exit the loop and print the summary 
 		if job is None: break
-
-		col_print("\n#{0:-^61}\n".format('-'), BOLD)
-		col_print("# {0}/{1}: {2:<60}\n".format(num, test_cases_number, job.data.path), BOLD)
-		col_print("#{0:-^61}\n".format('-'), BOLD)
+		
+		sep = "#"+"-"*(COLUMNS-1)+"\n"
+		col_print("\n"+sep, BOLD)
+		col_print("# {0}/{1}: {2:<{3}}\n".format(num, test_cases_number, job.data.name, COLUMNS), BOLD)
+		col_print(sep, BOLD)
 
 		success = job.data.reports[-1].desc == 'DONE' and job.data.reports[-1].ret_code == 0
 
@@ -196,31 +219,34 @@ def reporter( report_queue ):
 			if rep.type[0] > 4:
 				continue
 
-			sys.stderr.write("# ")
 			if rep.ret_code == 0:
-				col_print("{0:<44}".format(rep.desc), NONE),
+				col_print("# {0:<{1}}".format(rep.desc, COLUMNS-18), NONE),
 				col_print("[{0:>8.4f} secs {1}]\n".
 					format(rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else ""),
 					BLUE if rep.type == Commands.RUN else BOLD)
 			else:
-				col_print("{0:<44}[{1:>8.4f} secs {2}]\n".
-					format( rep.desc, rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else ""), RED)
-				col_print("#{0:-^60}\n".format('~'), RED)
+				col_print("# {0:<{1}}[{2:>8.4f} secs {3}]\n".
+					format( rep.desc, COLUMNS-18, rep.time, "DEV({0:.4f})".format(rep.stdev) if rep.stdev != 0 else ""), RED)
+				col_print(sep, RED)
+				
 				if rep.output is "" or rep.output is None:
 					sys.stderr.write('Program exist with error code {0}\n'.format(rep.ret_code))
 				else:
+					# Prints the failed command 
+					col_print("Command: " + rep.cmd+"\n\n", GREEN)
 					sys.stderr.write( '\n'.join(str(rep.output).split('\n')[0:10 if not verbose else -1]) )
-				col_print("\n#{0:-^60}\n".format('~'), RED)
+
+				col_print("\n"+sep, RED)
 
 		if not success:
-			col_print("#{0:-^61}\n".format("-"), RED)
-			col_print("# {0:^60}\n".format("FAILED -- " + job.data.path), RED)
-			col_print("#{0:-^61}\n".format("-"), RED)
+			col_print(sep, RED)
+			col_print("# {0:^{1}}\n".format("FAILED -- " + job.data.path, COLUMNS), RED)
+			col_print(sep, RED)
 			failedTests.append( job.data.path )
 		else:
-			col_print("#{0:-^61}\n".format("-"), GREEN)
-			col_print("# {0:^60}\n".format("SUCCESS -- " + job.data.path), GREEN)
-			col_print("#{0:-^61}\n".format("-"), GREEN)
+			col_print(sep, GREEN)
+			col_print("# {0:^{1}}\n".format("SUCCESS -- " + job.data.path, COLUMNS), GREEN)
+			col_print(sep, GREEN)
 			success_count += 1
 
 		sys.stderr.flush()
@@ -228,18 +254,23 @@ def reporter( report_queue ):
 
 	if not mock_run:
 		# Before exiting the reporter prints a summary of the test case 
-		col_print("\n#{0:~^60}\n".format(' INTEGRATION TEST SUMMARY '), BOLD)
+		col_print("\n#{0:~^{1}}\n".format(' INTEGRATION TEST SUMMARY ', COLUMNS-1), BOLD)
 		col_print("# SUCCESSFUL: ", BOLD)
-		col_print("{0:>46}\n".format(success_count), GREEN)
+		col_print("{0:>66}\n".format(success_count), GREEN)
 		col_print("# FAILED:     ", BOLD)
-		col_print("{0:>46}\n".format(len(failedTests)), RED)
+		col_print("{0:>66}\n".format(len(failedTests)), RED)
 		for test in failedTests:
 			col_print("# -> ", BOLD)
 			col_print("{0}\n".format(test), RED)
-		col_print("#{0:~^60}\n".format('~'), BOLD)
+		col_print("#"+"~"*(COLUMNS-1)+"\n", BOLD)
 	
 	report_queue.put( len(failedTests) )
 
+def exec_shell_cmd(cmd):
+	command = os.path.expandvars(cmd)
+	pid = subprocess.Popen( shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+	output = pid.communicate()[0];
+	return pid.returncode, output.decode("utf-8")
 
 # Generic executor of commands
 def runner( job ):
@@ -252,19 +283,17 @@ def runner( job ):
 
 		if mock_run and cmd.type[0] < 5:
 			print(cmd.desc)
-			col_print(cmd.cmd + "\n", GREEN)
+			command = os.path.expandvars(cmd.cmd)
+			col_print(command+"\n", GREEN)
 			continue
 
 		if cmd.type == Commands.SUCC:
-			job.data.reports.append( CmdExecReport(Commands.SUCC, 'DONE', 0, "", 0.0) )
+			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 0, "", 0.0) )
 			break
 
 		try:
-			command = os.path.expandvars(cmd.cmd)
 			start = time.time()
-			pid = subprocess.Popen( shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-			output = pid.communicate()[0].decode("utf-8")
-			retcode = pid.returncode
+			(retcode, output) = exec_shell_cmd(cmd.cmd)
 			elapsed = time.time() - start
 		except Exception as e:
 			retcode = 1
@@ -276,10 +305,10 @@ def runner( job ):
 			file.close()
 
 		# Create a report and append it to the result
-		job.data.reports.append( CmdExecReport(cmd.type, cmd.desc, retcode, output, elapsed) )
+		job.data.reports.append( CmdExecReport(cmd.type, cmd.cmd, cmd.desc, retcode, output, elapsed) )
 
 		if (cmd.type == Commands.COMPILE or cmd.type == Commands.RUN or cmd.type == Commands.HDIFF) and retcode != 0:
-			job.data.reports.append( CmdExecReport(Commands.SUCC, 'DONE', 1, "", 0.0) )
+			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 1, "", 0.0) )
 			# there was an error during compilation or running of the program, we mark the
 			# test case as failed
 			break
@@ -288,15 +317,14 @@ def runner( job ):
 		if cmd.type == Commands.RUN:
 			execs = [ ]
 			for r in range(0,runs):
-				command = os.path.expandvars(cmd.cmd)
 				start = time.time()
-				pid = subprocess.Popen( shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-				output = pid.communicate()[0]
-				if pid.returncode != 0:
+				(retcode, output) = exec_shell_cmd(cmd.cmd)
+				if retcode != 0:
 					# something went wrong, the program which was supposed to work is now failing
-					job.data.reports[-1].ret_code = pid.returncode
+					job.data.reports[-1].ret_code = pid.retcode
 					job.data.reports[-1].output = output
 					break
+
 				execs.append( time.time() - start )
 
 			# compute mean value
@@ -320,8 +348,8 @@ class Cmd:
 
 def load_from_file(file, path="./", default=''):
 	if os.path.exists(file):
-		return " ".join( [ x.strip() for x in open(file).read().format( **{'SRC_DIR': SRC_DIR,
-			'PATH': path} ).split(',') ] )
+		return " ".join( [ x.strip() for x in open(file).read().format( 
+			**{'SRC_DIR': SRC_DIR, 'PATH': path} ).split(',') ] )
 	return default
 
 
@@ -381,19 +409,27 @@ def toAbsolutePaths(path, args):
 class TestJob:
 
 	def __init__(self, test_case_name):
-		if test_case_name[-1] == '/': test_case_name = test_case_name[:-1]
 		
 		assert os.path.isdir(test_case_name)
-		save_path = os.getcwd()
+		save_path = os.path.abspath(os.getcwd())
 
+		if test_case_name.endswith('/'): 
+			test_case_name=test_case_name[:-1]
+
+		# save the absolute path to the test case before we switch directory 
+
+		abs_path = os.path.abspath(test_case_name)
+		# check which passes are enabled and set the directory to the test case 
 		pas = visit_files(test_case_name)
-		
+
+		test_case_name = os.path.relpath(abs_path, save_path) 
+
 		isCxx = False
 
 		cur_passes = []
 		for id, val in passes:
 			if id in pas: 
-				cur_passes.append((id, val))
+				cur_passes.append( (id, val) )
 				if id == "g++" or id == "icpc": isCxx = True
 
 		self.__data = TestData(test_case_name)
@@ -486,7 +522,10 @@ class TestJob:
 
 			if P.backend:
 				# Compile generated code
-				input_file = P.tmp_file.format(**{'CASE_NAME': self.__data.name, 'PATH': path}) if P.tmp_file else inputs
+				input_file = "{0}/{1}".format(path, P.tmp_file.format(
+								**{'CASE_NAME': self.__data.name, 'PATH': path}
+							)) if P.tmp_file else abs_input_files
+
 				file_name = ("{0}".format(P.backend.files[0])).format(**{
 								'CASE_NAME': self.__data.name,
 								'PATH': path
@@ -500,8 +539,7 @@ class TestJob:
 												'PATH': 	path,
 												'SRC_DIR': 	SRC_DIR
 											}),
-							'FILE': 	 abs_input_files if first else 
-										 "{0}/{1}".format(path, input_file),
+							'FILE': 	 input_file,
 							'LDFLAGS':	 LDFLAGS_GCC,
 							'GCCFLAGS':	 gccFlagsTest if P.frontend else gccFlagsRef
 						})
@@ -579,15 +617,29 @@ class TestJob:
 
 	@property
 	def cmds(self): return self.__cmds # sorted(self.__cmds, key=lambda x: x.type)
+
 	@property
 	def data(self): return self.__data
 
 def main(argv=None):
+
+	config = configparser.ConfigParser()
+	config.readfp(open('@CMAKE_BINARY_DIR@/test.cfg'))
+
+	# Global variable which stores the list of backends to be used
+	global passes
+	global passes_str
+
+	# Load passes from the configuration file 
+	passes = [(key[8:],eval(val)) for key,val in config.items("Test") if key.startswith('pass')]
+	passes_str = [id for id,p in passes]
+
 	parser = optparse.OptionParser()
-	parser.add_option("-b", "--backend", dest="backends", type="string",
-							help=("The list of backends that should be uses: "
-							"options are 'smp', 'seq', 'run', 'ocl' or 'all', default: '%default'."),
-							default="smp,run")
+	parser.add_option("-b", "--backends", dest="backends", type="string",
+							help=("The list of backends/passes that should be uses: "
+								"options are {0},'all', default: '%default'.".
+								format(", ".join(list(map(lambda x: "\'"+x+"\'", passes_str))))),
+							default="all")
 
 	parser.add_option("-w", "--workers", dest="workers", type="int",
 							help=("The number parallel workers: default: '%default'."),
@@ -619,52 +671,72 @@ def main(argv=None):
 
 	(options, args) = parser.parse_args()
 
+	save_path = os.getcwd()
+	# Retrieve the insieme version 
+	os.chdir('@CMAKE_SOURCE_DIR@')
+	(_, INSIEME_VERSION) = exec_shell_cmd('git describe --dirty')
+	INSIEME_VERSION = INSIEME_VERSION.strip()
+	msg_str = "Insieme version: {0}".format( INSIEME_VERSION )
+	print("-"*COLUMNS)
+	print("|{0:^{1}}|".format(msg_str, COLUMNS-2))
+	print("|"+"-"*(COLUMNS-2)+"|")
+	# restore path 
+	os.chdir(save_path)
 
-	config = configparser.ConfigParser()
-	config.readfp(open('@CMAKE_BINARY_DIR@/test.cfg'))
-
-	# config.read(['site.cfg', os.path.expanduser('~/.myapp.cfg')])
 	# Set the number of workers
 	num_cores = options.workers
 
+	# If the script is executed without specifying a path, the test folder
+	# in the SOURCE directory is used as entry point 
+	if not args: args = '@CMAKE_SOURCE_DIR@/test'
+	assert(args)
 	test_cases = expand( args )
 
 	global test_cases_number
 	test_cases_number = len(test_cases)
 
-	print("@@ {0} benchmarks @@".format( len(test_cases) ))
+	print("|{0:^{1}}|".format("Running '{0}' benchmark(s)".format( len(test_cases) ), COLUMNS-2))
+	print("|"+"-"*(COLUMNS-2)+"|")
 
-	# Global variable which stores the list of backends to be used
-	global passes
-	global passes_str
+	if test_cases_number == 0:
+		print("|"+"-"*(COLUMNS-2)+"|")
+		print("|{0:^{1}}|".format("DONE", COLUMNS-2))
+		print("|"+"-"*(COLUMNS-2)+"|")
+		return os._exit(0)
 
+	# Read the backends provided by the user and select the one to be used in the run 
 	backends = list({x.strip() for x in options.backends.split(',')})
 
-	for backend in backends:
-		assert backend in {'smp', 'seq', 'run', 'ocl', 'all', 'mpi'}
+	if not (len(backends) == 1 and backends[0] == "all"): 
+		allowed = []
+		# Filter backend
+		for backend in backends:
+			assert backend in passes_str
+			allowed.append( passes_str.index(backend) )
 
-	if 'all' in backends:
-		backends = {'smp', 'seq', 'run', 'ocl', 'mpi'}
+		allowed = sorted(allowed)
 
-	# Order the backends according to the indexes assigned to each backend
-	backends = sorted(backends)
+		passes = [ passes[x] for x in allowed ]
+		passes_str = [ x[0] for x in passes]
 	
-	passes = [(key[8:],eval(val)) for key,val in config.items("Test") if key.startswith('pass')]
-	passes_str = [id for id,p in passes]
-	print (passes_str)
-
 	# check if the intel compiler is installed, otherwise remove the icc from the backends 
 	if not os.system("which gcc"):
 		to_remove = []
-		for x in range(len(passes_str)): 
+		for x in range(len(passes)): 
 			if passes_str[x].endswith("icc") or passes_str[x].endswith("icpc"):
 				to_remove.append(x-len(to_remove))
 
 		for x in to_remove:
-			del passes_str[x]
 			del passes[x]
+			del passes_str[x]
 
-	print("Selected backends are: {0}".format( list(map(lambda x: x[0], passes) )) )
+
+	global no_colors
+	no_colors=options.no_colors
+
+	print(" * Selected passes are: {0}".
+			format( ", ".join(list(map(lambda x: "'"+x+"'", passes_str) ))) 
+		 )
 
 	# Global variable which stores whether the reference files should be removed
 	global do_clean
@@ -678,9 +750,6 @@ def main(argv=None):
 
 	global verbose
 	verbose=options.verbose
-
-	global no_colors
-	no_colors=options.no_colors
 
 	global SRC_DIR
 	SRC_DIR=config.get("Test", "SRC_DIR")

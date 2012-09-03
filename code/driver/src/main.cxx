@@ -548,7 +548,7 @@ int main(int argc, char** argv) {
 			// do the actual clang to IR conversion
 			program = measureTimeFor<core::ProgramPtr>("Frontend.convert ", [&]() { return p.convert(); } );
 
-			//doCleanup(program);
+			doCleanup(program);
 
 			// run OpenCL frontend
 			applyOpenCLFrontend(program);

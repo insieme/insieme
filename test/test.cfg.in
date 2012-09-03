@@ -13,7 +13,7 @@ SMP_BUILD: 		%(BIN_DIR)s/code/simple_backend/
 
 act.sema: 		Conf(Flag("-S"), "Sema")
 act.ir: 		Conf(OutFileFlag("--dump-ir", "ir"))
-act.cfg: 		Conf(OutFileFlag("--dump-cfg", "cfg"))
+# act.cfg: 		Conf(OutFileFlag("--dump-cfg", "cfg"))
 act.seq:		Conf(Flag("-b seq"), "Seq. Backend")
 act.run:		Conf(Flag("-b run"), "Run. Backend")
 act.ocl:		Conf(Flag("-b ocl"), "Ocl Backend")
@@ -44,10 +44,10 @@ back.run:		Conf([
 					Flag('-ldl')
 				], "RUN")
 back.ocl:   	%(back.run)s + Conf([
-					Flag('-Wl,--no-as-needed'),
 					Flag('-lOpenCL'), 
 					Flag('-I$OPENCL_ROOT/include'),
 					Flag('-L$OPENCL_ROOT/lib/x86_64'),
+					Flag('-Wl,--no-as-needed'),
 					Flag('-DUSE_OPENCL=ON'),
 					Flag('-D_POSIX_C_SOURCE=199309')
 				], "OCL")
@@ -59,7 +59,7 @@ pass.01.icc: 		Pass(None, None, %(comp.icc)s+%(back.c.opt)s+%(back.icc)s, 'ref')
 pass.02.g++:		Pass(None, None, %(comp.g++)s+%(back.c.opt)s+%(back.g++)s, 'ref')
 pass.03.icpc:		Pass(None, None, %(comp.icpc)s+%(back.c.opt)s+%(back.icpc)s, 'ref')
 
-pass.05.sema: 		Pass(%(front.insieme)s+%(act.sema)s+%(act.ir)s + %(act.cfg)s)
+pass.05.sema: 		Pass(%(front.insieme)s+%(act.sema)s+%(act.ir)s)
 
 pass.07.seq:   		Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
 					 %(comp.gcc)s+%(back.gcc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test' 
