@@ -7,6 +7,7 @@ typedef struct _icl_args {
 	int device_id;
 	int size;
 	int local_size;
+	int loop_iteration;
 	bool check_result;
 } icl_args;
 

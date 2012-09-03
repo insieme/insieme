@@ -1,0 +1,1 @@
+-DUNIX -D__OPENCL_VERSION__ -I./include -I../../../code/frontend/test/inputs src/all.c src/CLElemQMHS4.c src/Element.c src/hash_functions.c src/hash_table.c src/loadCheckSave.c src/main.c src/Material.c src/readData.c src/saveData.c src/utils.c

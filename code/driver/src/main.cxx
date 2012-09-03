@@ -565,11 +565,13 @@ int main(int argc, char** argv) {
 					[&]() { return insieme::driver::handlePragmaInfo(program); } );
 
 			InverseStmtMap stmtMap;
-			printIR(program, stmtMap);
+			// printIR(program, stmtMap);
 
 			// perform checks
 			MessageList errors;
 			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
+
+			printIR(program, stmtMap);
 
 			// run OMP frontend
 			if(CommandLineOptions::OpenMP) {
