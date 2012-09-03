@@ -76,7 +76,7 @@ namespace transform {
 		auto res = analysis::normalize(transform::trySequentialize(mgr, code));
 //		std::cout << core::printer::PrettyPrinter(res) << "\n";
 		EXPECT_EQ(
-				"{ref<int<4>> v0 = ref.var(2); rec v0.{v0=fun(ref<'a> v1, 'a v2) {return rec v0.{v0=fun(ref<'a> v1, 'a v2) {'a v2 = ref.deref(v1); ref.assign(v1, gen.add(ref.deref(v1), ref.deref(v1))); return v2;}}(v1, v2);}}(v0, 10);}",
+				"{ref<int<4>> v0 = ref.var(2); rec v0.{v0=fun(ref<'a> v1, 'a v2) {return rec v0.{v0=fun(ref<'a> v1, 'a v2) {'a v3 = ref.deref(v1); ref.assign(v1, gen.add(ref.deref(v1), v2)); return v3;}}(v1, v2);}}(v0, 10);}",
 				toString(*res)
 		);
 		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());

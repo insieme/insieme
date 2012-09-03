@@ -802,13 +802,18 @@ CallExprPtr pushBindIntoLambda(NodeManager& manager, const CallExprPtr& call, un
 
 	// get all free variables within the body of the lambda (those must not be used for new variables)
 	LambdaExprPtr lambda = call->getFunctionExpr().as<LambdaExprPtr>();
-	auto freeVars = analysis::getFreeVariables(lambda->getBody());
+	auto allVars = analysis::getAllVariables(lambda);
+
+	// also consider variables within the bind node to be moved inside
+	auto bindVars = analysis::getAllVariables(call->getArgument(index));
+	allVars.insert(bindVars.begin(), bindVars.end());
 
 	// get next free variable ID
-	unsigned next_index = 1;
-	for(const auto& cur : freeVars) {
-		next_index = std::max(next_index, cur->getId() + 1);
+	unsigned next_index = 0;
+	for(const auto& cur : allVars) {
+		next_index = std::max(next_index, cur->getId());
 	}
+	next_index++;
 
 	// compute a map of free variables to
 	vector<ExpressionPtr> newArgs;
