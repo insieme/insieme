@@ -41,6 +41,8 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
+#include "insieme/core/analysis/ir_utils.h"
+
 namespace insieme {
 namespace core {
 
@@ -114,7 +116,7 @@ namespace core {
 
 	namespace {
 
-		class RecLambdaUnroller : public transform::CachedNodeMapping {
+		class RecLambdaUnroller : public core::NodeMapping {
 
 			NodeManager& manager;
 			const LambdaDefinitionPtr& definition;
@@ -131,7 +133,12 @@ namespace core {
 				}
 			}
 
+			virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+				return resolveElement(ptr);
+			}
+
 			virtual const NodePtr resolveElement(const NodePtr& ptr) {
+
 				// check whether it is a known variable
 				if (ptr->getNodeType() == NT_Variable) {
 					VariablePtr var = static_pointer_cast<const Variable>(ptr);
@@ -148,11 +155,16 @@ namespace core {
 				if (ptr->getNodeType() == NT_LambdaExpr) {
 					// just substitute definition, but preserve variable
 					auto lambda = ptr.as<LambdaExprPtr>();
+
+					// check whether there are free variables
+					VariableList freeVars = analysis::getFreeVariables(lambda);
+					if (!any(freeVars, [&](const VariablePtr& cur) { return recVars.contains(cur); })) return ptr;
+
 					return LambdaExpr::get(manager, lambda->getVariable(), map(lambda->getDefinition()));
 				}
 
 
-				// cut-off nested lambda definitions
+				// cut-off nested lambda definitions or reduce recursive variable set
 				if (ptr->getNodeType() == NT_LambdaDefinition) {
 
 					// compute sub-set of recursive variables remaining in the unrolling
@@ -177,6 +189,38 @@ namespace core {
 
 					// conduct substitution recursively
 					NodePtr res = ptr->substitute(manager, *this);
+
+					// restore backed up variable set
+					recVars = backup;
+					return res;
+				}
+
+
+				// reduce recursive variable set in case parameters are overloading them
+				if (ptr->getNodeType() == NT_Lambda) {
+					// just substitute definition, but preserve variable
+					auto lambda = ptr.as<LambdaPtr>();
+
+					// filter out the parameters from the substitution list
+					VariableSet subRecVars;
+
+					for(const VariablePtr& cur : recVars) {
+						if (!contains(lambda->getParameterList(), cur)) {
+							subRecVars.insert(cur);		// the current var gets hidden by a local variable
+						}
+					}
+
+					// check whether there are still recursions left
+					if (subRecVars.empty()) {
+						return ptr;		// no further descend necessary
+					}
+
+					// switch to sub-set of recursive variables
+					VariableSet backup = recVars;
+					recVars = subRecVars;
+
+					// conduct substitution recursively
+					NodePtr res = Lambda::get(manager, lambda->getType(), lambda->getParameters(), map(lambda->getBody()));
 
 					// restore backed up variable set
 					recVars = backup;
