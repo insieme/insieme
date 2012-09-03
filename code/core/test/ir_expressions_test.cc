@@ -41,7 +41,12 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_address.h"
 
+#include "insieme/core/analysis/normalize.h"
+
 #include "insieme/utils/set_utils.h"
+
+#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "ir_node_test.inc"
 
@@ -573,6 +578,51 @@ TEST(ExpressionTest, LambdaUnrolling) {
 	EXPECT_EQ("rec v21.{v21=fun() {1; rec v17.{v17=fun() {rec v16.{v15=fun() {1; rec v17.{v17=fun() {v16();}}();}, v16=fun() {2; rec v19.{v19=fun() {v15();}}();}}();}}();}}", toString(*lambda->unrollOnce()));
 
 }
+
+TEST(ExpressionTest, LambdaUnrollingEvenOdd) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	/**
+	 * Bug: when unrolling recursive functions using the recursive variables within binds (suspected)
+	 * 		an invalid node-composition assertion is triggered.
+	 */
+
+	LambdaExprPtr even = builder.parseExpr(
+			"let int = int<4> in "
+			"let even,odd = "
+			"	(int x)->bool { return (x==0)?true:(odd(x-1)); },"
+			"	(int x)->bool { return (x==0)?false:(even(x-1)); }"
+			"in even"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(even);
+
+	auto res = check(even, core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+	res = check(even->unrollOnce(manager), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+	res = check(even->unrollOnce(manager)->unrollOnce(manager), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+
+	// -- the same normalized --
+
+	even = analysis::normalize(even);
+
+	res = check(even, core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+	res = check(even->unrollOnce(manager), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+	res = check(even->unrollOnce(manager)->unrollOnce(manager), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+}
+
 
 
 template<typename PT>
