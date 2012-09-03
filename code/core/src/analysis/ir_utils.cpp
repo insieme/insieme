@@ -254,6 +254,50 @@ VariableList getFreeVariables(const NodePtr& code) {
 	return VariableList(ldv.free.begin(), ldv.free.end());
 }
 
+
+namespace {
+
+	struct VariableCollector : public IRVisitor<> {
+
+		struct VariableSetAnnotation : public VariableSet {
+			VariableSetAnnotation(const VariableSet& varSet) : VariableSet(varSet) {}
+		};
+
+		VariableSet varSet;
+
+		void visitVariable(const VariablePtr& var) {
+			varSet.insert(var);		// collect value, that's all
+		}
+
+		void visitLambda(const LambdaPtr& lambda) {
+			// add a cut-off at lambdas and cache results
+			if (!lambda->hasAttachedValue<VariableSetAnnotation>()) {
+				VariableSet local = getAllVariables(lambda->getBody());
+				local.insert(lambda->getParameters().begin(),lambda->getParameters().end());
+				lambda->attachValue<VariableSetAnnotation>(local);
+			}
+			assert(lambda->hasAttachedValue<VariableSetAnnotation>());
+			const VariableSetAnnotation& set = lambda->getAttachedValue<VariableSetAnnotation>();
+			varSet.insert(set.begin(), set.end());
+		}
+
+		void visitNode(const NodePtr& node) {
+			// collect recursively
+			visitAll(node->getChildList());
+		}
+
+	};
+
+}
+
+
+VariableSet getAllVariables(const NodePtr& code) {
+	VariableCollector collector;
+	collector.visit(code);
+	return collector.varSet;
+}
+
+
 namespace {
 class RenamingVarVisitor: public core::IRVisitor<void, Address> {
 	core::VariableAddress varAddr;
