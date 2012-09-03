@@ -43,6 +43,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/analysis/normalize.h"
 
 namespace insieme {
 namespace core {
@@ -326,6 +327,23 @@ namespace parser {
 		EXPECT_EQ(
 				builder.bitwiseOr(builder.bitwiseAnd(one, tre), builder.bitwiseAnd(one, two)),
 				parse(manager, "1 & 3 | 1 & 2")
+		);
+	}
+
+	TEST(IR_Parser2, IfThenElse) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const auto& basic = manager.getLangBasic();
+
+		auto res = analysis::normalize(builder.parse(
+				"true?1:2"
+		)).as<ExpressionPtr>();
+
+		ASSERT_TRUE(res);
+
+		EXPECT_EQ(
+				analysis::normalize(builder.ite(basic.getTrue(), builder.wrapLazy(builder.intLit(1)), builder.wrapLazy(builder.intLit(2)))),
+				res
 		);
 	}
 

@@ -1002,6 +1002,19 @@ namespace parser {
 			));
 
 
+			// -- add support for if-then-else operator ---
+			g.addRule("E", rule(
+					seq(E,"?",E,":",E),
+					[](Context& cur)->NodePtr {
+						return cur.ite(
+							cur.getTerm(0).as<ExpressionPtr>(),
+							cur.wrapLazy(cur.getTerm(1).as<ExpressionPtr>()),
+							cur.wrapLazy(cur.getTerm(2).as<ExpressionPtr>())
+						);
+					},
+					-3
+			));
+
 
 			// -- vector / array access --
 
