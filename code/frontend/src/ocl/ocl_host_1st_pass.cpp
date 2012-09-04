@@ -896,6 +896,11 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 	ADD_Handler(builder, o2i, "icl_savebmp", return node;);
 	ADD_Handler(builder, o2i, "icl_loadbmp", return node;);
 
+	// exceptions for icl_lib power measurent
+	ADD_Handler(builder, o2i, "icl_start_energy_measurement", return node;);
+	ADD_Handler(builder, o2i, "icl_stop_energy_measurement", return node;);
+
+
 	// handlers for insieme opencl runtime stuff
 	ADD_Handler(builder, o2i, "icl_",
 		return builder.literal(node->getType(), "0"); // default handling, remove it
