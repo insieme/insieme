@@ -66,7 +66,6 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 	TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/insieme_datarange.c" );
 
 	const PragmaList& pl = tu.getPragmaList();
-	const ClangCompiler& omp = tu.getCompiler();
 
 	EXPECT_FALSE(pl.empty());
 /*

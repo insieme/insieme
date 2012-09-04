@@ -38,30 +38,54 @@
 
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/problem.h"
-
-#include "insieme/analysis/access.h"
 #include "insieme/analysis/dfa/analyses/extractors.h"
 
+
 namespace insieme { namespace analysis { namespace dfa { 
-/**
- * Define the extractor for CFG Blocks. In this case we extract the address of
- * the CFG Blocks (an alternative would be to store the block ID)
- */
-template <>
-inline typename container_type_traits< dfa::elem<cfg::BlockPtr> >::type 
-extract(const Entity< elem<cfg::BlockPtr> >& e, const CFG& cfg) {
-	
-	typedef typename container_type_traits< dfa::elem<cfg::BlockPtr> >::type Container;
 
-	Container entities;
-	auto collector = [&entities] (const cfg::BlockPtr& block) { entities.insert( block ); };
-	cfg.visitDFS(collector);
-
-	return entities;
-}
 
 namespace analyses {
 
+/** 
+ * LValue is an abstraction used to represent l-values in the analysis 
+ */
+class LValue : public utils::Printable {
+
+	// Pointer to the expression which refers to either a variable, member access, tuple access or
+	// array access 
+	core::ExpressionPtr lvalueExpr;
+
+public:
+
+	LValue(const core::ExpressionPtr& expr) : lvalueExpr(expr) { }
+
+	inline bool operator<(const LValue& other) const {
+		return lvalueExpr < other.lvalueExpr;
+	}
+
+	inline bool operator==(const LValue& other) const {
+		return lvalueExpr == other.lvalueExpr;
+	}
+
+	std::ostream& printTo(std::ostream& out) const {
+		return out << *lvalueExpr;
+	}
+
+	const core::ExpressionPtr& getLValueExpr() const { return lvalueExpr; }
+
+};
+
+} // end analyses namespace 
+
+/** 
+ * Extractor for LValue entities from the CFG
+ */
+template <>
+typename container_type_traits< dfa::elem<analyses::LValue>  >::type 
+extract(const Entity< dfa::elem<analyses::LValue> >& e, const CFG& cfg);
+
+
+namespace analyses {
 
 /**
  * Define the DataFlow problem for Reaching Definitions 
@@ -78,7 +102,7 @@ class ReachingDefinitions:
 	public Problem<
 				ReachingDefinitions, 
 				ForwardAnalysisTag, 
-				Entity< dfa::elem<Access>, dfa::elem<cfg::BlockPtr> >, 
+				Entity< dfa::elem<LValue>, dfa::elem<cfg::BlockPtr> >, 
 				PowerSet
 			> 
 {
@@ -86,10 +110,10 @@ class ReachingDefinitions:
 	typedef Problem<
 				ReachingDefinitions, 
 				ForwardAnalysisTag, 
-				Entity< dfa::elem<Access>, dfa::elem<cfg::BlockPtr> >, 
+				Entity< dfa::elem<LValue>, dfa::elem<cfg::BlockPtr> >, 
 				PowerSet
 			> Base;
-	
+
 public:
 
 	typedef typename Base::direction_tag direction_tag;
@@ -119,6 +143,13 @@ public:
 	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
 
 };
+
+/**
+ * Given a set of definitions reaching a block in the CFG, this method add those definitions to the
+ * given AccessManager.
+ */
+void definitionsToAccesses(const typename ReachingDefinitions::value_type& data, AccessManager& mgr);
+
 
 } } } } // end insieme::analysis::dfa::analyses namespace 
 
