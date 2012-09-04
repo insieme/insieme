@@ -258,6 +258,54 @@ TEST(ReachingDefinition, ScalarWithControl3) {
 	EXPECT_EQ(addresses[2], *addrIt);
 }
 
+TEST(ReachingDefinition, ScalarWithLoop) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	$ref<int<4>> a = 0;$ "
+		"	while ( a <= 0 ) { "
+		"		b = $a$;   "
+		"		$a$ = i+b; "
+		"	}"
+		"	int<4> c = *$a$;"
+		"}$"
+    );
+    EXPECT_EQ(5u, addresses.size());
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+
+	// lookup address of variable A
+	VariableAddress aRef = addresses[2].as<VariableAddress>();
+	
+	std::pair<cfg::BlockPtr,size_t> b = cfg->find(aRef);
+	EXPECT_EQ(6u, b.first->getBlockID());
+
+	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
+	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	
+	auto thisAccess = getImmediateAccess(aRef);
+	auto addrSet = extractRealAddresses(*aMgr.getClassFor(thisAccess), cfg->getTmpVarMap());
+	EXPECT_EQ(2u, addrSet.size());
+
+	auto addrIt = addrSet.begin();
+
+	// Makes sure the computed addresses have the same root node 
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1].as<DeclarationStmtAddress>()->getVariable(), *addrIt);
+
+	++addrIt;
+
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[3], *addrIt);
+}
 
 //=============================================================================
 // STRUCTS 

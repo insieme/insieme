@@ -72,6 +72,37 @@ namespace core {
 		return ::toString(*getType()) < ::toString(*other->getType());
 	}
 
+	std::ostream& LambdaExpr::printTo(std::ostream& out) const {
+		return out << "rec " << *getVariable() << "." << *getDefinition();
+	}
+
+	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
+		VariablePtr var = Variable::get(manager, lambda->getType());
+		LambdaBindingPtr binding = LambdaBinding::get(manager, var, lambda);
+		LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
+		return get(manager, lambda->getType(), var, def);
+	}
+
+	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
+		return get(manager, Lambda::get(manager, type, params, body));
+	}
+
+
+	bool LambdaExpr::isRecursiveInternal() const {
+		// evaluate lazily
+		if (!recursive.isEvaluated()) {
+			recursive.setValue(getDefinition()->isRecursive(getVariable()));
+		}
+		return recursive.getValue();
+	}
+
+	LambdaExprPtr LambdaExpr::unroll(NodeManager& manager, unsigned numTimes) const {
+		// TODO: check whether unrolled definitions are still mutual recursive!
+		if (!isRecursive()) return manager.get(this);
+		return LambdaExpr::get(manager, getVariable(), getDefinition()->unroll(manager, numTimes));
+	}
+
+
 	namespace {
 
 		/**
@@ -177,58 +208,59 @@ namespace core {
 		return !getRecursiveCallLocations(this, variable).empty();
 	}
 
-	std::ostream& LambdaExpr::printTo(std::ostream& out) const {
-		return out << "rec " << *getVariable() << "." << *getDefinition();
-	}
-
-	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
-		VariablePtr var = Variable::get(manager, lambda->getType());
-		LambdaBindingPtr binding = LambdaBinding::get(manager, var, lambda);
-		LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
-		return get(manager, lambda->getType(), var, def);
-	}
-
-	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
-		return get(manager, Lambda::get(manager, type, params, body));
-	}
-
-
-	bool LambdaExpr::isRecursiveInternal() const {
-		// evaluate lazily
-		if (!recursive.isEvaluated()) {
-			recursive.setValue(getDefinition()->isRecursive(getVariable()));
-		}
-		return recursive.getValue();
-	}
-
-	LambdaExprPtr LambdaDefinition::unrollDefinition(NodeManager& manager, const VariablePtr& variable, unsigned numTimes) const {
+	LambdaExprPtr LambdaDefinition::peel(NodeManager& manager, const VariablePtr& variable, unsigned numTimes) const {
 		assert(getBindingOf(variable) && "Referencing undefined recursive lambda binding!");
 
-		// terminal case => no unrolling at all
+		// terminal case => no peeling at all
 		if (numTimes == 0 || !isRecursive(variable)) {
 			return LambdaExpr::get(manager, variable, this);
 		}
 
-		// start by obtaining list of recursive calls
-		const RecursiveCallLocations& locs = getRecursiveCallLocations(this, variable);
-
-		// compute unrolled code versions for each variable
-		std::map<VariablePtr, LambdaExprPtr> unrolled;
-		for(const VariableAddress& cur : locs) {
-			auto pos = unrolled.find(cur);
-			if (pos == unrolled.end()) {
-				unrolled[cur] = unrollDefinition(manager, cur, numTimes - 1);
+		// compute peeled code versions for each variable
+		std::map<VariablePtr, LambdaExprPtr> peeled;
+		for(const VariableAddress& cur : getRecursiveCallLocations(this, variable)) {
+			auto pos = peeled.find(cur);
+			if (pos == peeled.end()) {
+				peeled[cur] = peel(manager, cur, numTimes - 1);
 			}
 		}
 
 		// build up replacement map
 		std::map<NodeAddress, NodePtr> replacements;
-		for (const VariableAddress& cur : locs) {
-			replacements[cur] = unrolled[cur];
+		for (const VariableAddress& cur : getRecursiveCallLocations(this, variable)) {
+			replacements[cur] = peeled[cur];
 		}
 
-		// use replace-utility for unrolling the lambda
+		// use replace-utility for peeling the lambda
 		return LambdaExpr::get(manager, transform::replaceAll(manager, replacements).as<LambdaPtr>());
+	}
+
+	LambdaDefinitionPtr LambdaDefinition::unroll(NodeManager& manager, unsigned numTimes) const {
+
+		// just return lambda definition as it is if no unrolling is requested
+		if (numTimes < 2) return this;
+
+		// conduct the unrolling one time less => use results
+		std::map<VariablePtr, LambdaExprPtr> unrolled;
+		for(const LambdaBindingPtr& cur : unroll(manager, numTimes - 1)) {
+			unrolled[cur->getVariable()] = LambdaExpr::get(manager, cur->getLambda());
+		}
+
+		vector<LambdaBindingPtr> newBindings;
+		for(const LambdaBindingPtr& cur : *this) {
+
+			// build up replacement map
+			std::map<NodeAddress, NodePtr> replacements;
+			for (const VariableAddress& var : getRecursiveCallLocations(this, cur->getVariable())) {
+				replacements[var] = unrolled[var];
+			}
+
+			// convert current lambda
+			newBindings.push_back(LambdaBinding::get(manager, cur->getVariable(), transform::replaceAll(manager, replacements).as<LambdaPtr>()));
+		}
+
+		// build up resulting definitions
+		return LambdaDefinition::get(manager, newBindings);
 	}
 
 } // end namespace core

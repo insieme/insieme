@@ -678,7 +678,7 @@ namespace backend {
 				const core::LambdaExprPtr& lambda = pair.second;
 
 				// unroll function and create function definition
-				core::LambdaExprPtr unrolled = lambdaDefinition->unrollOnce(manager, lambda->getVariable());
+				core::LambdaExprPtr unrolled = lambdaDefinition->peel(manager, lambda->getVariable());
 
 				// create dummy function ... no body
 				const core::FunctionTypePtr& funType = static_pointer_cast<const core::FunctionType>(lambda->getType());
