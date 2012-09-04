@@ -742,8 +742,8 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 
 		// value is not propagated along recursion
 		if (!isPropagated) {
-			// unroll recursion once and use non-recursive parameter fixer
-			return tryFixParameter(manager, lambda->unrollOnce(), index, value);
+			// peel recursion once and use non-recursive parameter fixer
+			return tryFixParameter(manager, lambda->peel(), index, value);
 		}
 
 		// update recursive variable
