@@ -38,6 +38,12 @@ int main(int argc, const char* argv[]) {
 
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "mat_mul.cl", "mat_mul", "", ICL_SOURCE);
+	
+		size_t szLocalWorkSize =  args->local_size;
+		float multiplier = size/(float)szLocalWorkSize;
+		if(multiplier > (int)multiplier)
+			multiplier += 1;
+		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
 		for (int i = 0; i < args->loop_iteration; ++i) {
 			icl_buffer* buf_input1 = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
@@ -46,12 +52,6 @@ int main(int argc, const char* argv[]) {
 
 			icl_write_buffer(buf_input1, CL_TRUE, sizeof(int) * size, &input1[0], NULL, NULL);
 			icl_write_buffer(buf_input2, CL_TRUE, sizeof(int) * size, &input2[0], NULL, NULL);
-		
-			size_t szLocalWorkSize =  args->local_size;
-			float multiplier = size/(float)szLocalWorkSize;
-			if(multiplier > (int)multiplier)
-				multiplier += 1;
-			size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
 			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 5,
 												(size_t)0, (void *)buf_input1,
