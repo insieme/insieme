@@ -349,7 +349,7 @@ namespace arithmetic {
 
 	std::ostream& Value::printTo(std::ostream& out) const {
 		// just use pretty printer to format value
-		return out << printer::PrettyPrinter(value);
+		return out << printer::PrettyPrinter(value, printer::PrettyPrinter::NO_LET_BINDINGS);
 	}
 
 	namespace {
