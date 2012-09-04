@@ -73,3 +73,45 @@ void icl_print_args(const icl_args *args){
 void icl_release_args(icl_args *args){
 	free(args);
 }
+
+#ifdef ICL_ENABLE_ENERGY_MEASUREMENT
+
+#include "CInterface.h"
+
+void icl_start_energy_measurement() {
+        pmCreateNewSession("Test", "192.168.64.187", 5027);
+        pmAbortSession("Test");
+
+        if(pmStartSession(0) != 0) {
+                pmAbortSession("Test");
+                printf("Start session failed!\n");
+                return -1;
+        }
+}
+
+void icl_stop_energy_measurement() {
+	char* key = pmStopSession();
+
+	if(pmRetrieveResults(0, key, NULL)) {
+		pmAbortSession("Test");
+		printf("Retrieve results failed!\n");
+		return -1;
+        }
+
+	double result;
+	if( pmCalculateDiff(0, 0, Whr, &result)) {
+		pmAbortSession("Test");
+		printf("Calc diff failed! %f\n", result);
+        } else {
+		FILE* energy = fopen("energy.log", "w");
+		fprintf(energy, "%f\n", result);
+		fclose(energy);
+	}
+
+}
+#else
+
+void icl_start_energy_measurement(){}
+void icl_stop_energy_measurement(){}
+
+#endif
