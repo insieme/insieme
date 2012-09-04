@@ -167,7 +167,6 @@ namespace transform {
 						CompoundStmtPtr inner = cur.as<CompoundStmtPtr>();
 						if (!any(inner.getStatements(), [](const StatementPtr& cur) { return cur->getNodeType() == NT_DeclarationStmt; })) {
 							copy(inner, std::back_inserter(newStmts));
-							copy(inner, newStmts.end());
 							changed = true;
 							continue;
 						}
