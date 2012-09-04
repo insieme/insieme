@@ -183,8 +183,8 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::ForStmt* forStmt) {
 	START_LOG_STMT_CONVERSION(forStmt);
 	const core::IRBuilder& builder = convFact.builder;
-	VLOG(2)
-		<< "{ Visit ForStmt }";
+
+	VLOG(2) << "{ Visit ForStmt }";
 
 	stmtutils::StmtWrapper retStmt;
 
@@ -248,8 +248,9 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		}
 
 		if (!initExpr.isSingleStmt()) {
-			assert(
-					core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) && "Not a declaration statement");
+			assert(core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) &&
+					"Not a declaration statement"
+				);
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			// We have a multiple declaration in the initialization part of the stmt, e.g.
 			//
@@ -535,19 +536,8 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitIfStmt(clang::IfSt
 	const core::IRBuilder& builder = convFact.builder;
 	stmtutils::StmtWrapper retStmt;
 
-	VLOG(2)
-		<< "{ Visit IfStmt }";
+	VLOG(2) << "{ Visit IfStmt }";
 	core::StatementPtr&& thenBody = stmtutils::tryAggregateStmts( builder, Visit( ifStmt->getThen() ) );
-	/*
-	 if(thenBody->getNodeType() != core::NT_CompoundStmt){
-
-	 vector<core::StatementPtr> stmtList;
-	 stmtList.push_back(thenBody);
-	 thenBody = convFact.addDestructorCalls(stmtList);
-
-	 }
-	 */
-
 	assert(thenBody && "Couldn't convert 'then' body of the IfStmt");
 
 	core::ExpressionPtr condExpr;
@@ -571,36 +561,43 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitIfStmt(clang::IfSt
 
 		// the expression will be a cast to bool of the declared variable
 		condExpr = builder.castExpr(convFact.mgr.getLangBasic().getBool(), declStmt->getVariable());
+
 	} else {
-		const clang::Expr* cond = ifStmt->getCond();assert( cond && "If statement with no condition.");
+
+		const clang::Expr* cond = ifStmt->getCond();
+		assert( cond && "If statement with no condition." );
 
 		condExpr = convFact.convertExpr(cond);
-		// condExpr = convFact.tryDeref(convFact.convertExpr( cond ));
+		if (core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign())) {
+			// an assignment as condition is not allowed in IR, prepend the assignment operation 
+			retStmt.push_back( condExpr );
+			// use the first argument as condition 
+			condExpr = builder.deref( condExpr.as<core::CallExprPtr>()->getArgument(0) );
+		}
+
 		if (!convFact.mgr.getLangBasic().isBool(condExpr->getType())) {
 			// convert the expression to bool via the castToType utility routine
 			condExpr = utils::cast(condExpr, convFact.mgr.getLangBasic().getBool());
 		}
-		condExpr = convFact.tryDeref(condExpr);
+	}
+	
+	assert( condExpr && "Couldn't convert 'condition' expression of the IfStmt");
 
-	}assert( condExpr && "Couldn't convert 'condition' expression of the IfStmt");
-
-	core::StatementPtr elseBody;
+	core::StatementPtr elseBody = builder.compoundStmt();
 	// check for else statement
 	if ( Stmt* elseStmt = ifStmt->getElse()) {
 		elseBody = stmtutils::tryAggregateStmts(builder, Visit(elseStmt));
-	} else {
-		// create an empty compound statement in the case there is no else stmt
-		elseBody = builder.compoundStmt();
-	}assert(elseBody && "Couldn't convert 'else' body of the IfStmt");
+	}
+	assert(elseBody && "Couldn't convert 'else' body of the IfStmt");
 
 	// adding the ifstmt to the list of returned stmts
 	retStmt.push_back(builder.ifStmt(condExpr, thenBody, elseBody));
 
-	// try to aggregate statements into a CompoundStmt if more than 1 statement
-	// has been created from this IfStmt
+	// try to aggregate statements into a CompoundStmt if more than 1 statement has been created
+	// from this IfStmt
 	retStmt = tryAggregateStmts(builder, retStmt);
 
-	END_LOG_STMT_CONVERSION( retStmt.getSingleStmt());
+	END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
 	// otherwise we introduce an outer CompoundStmt
 	return retStmt;
 }

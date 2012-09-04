@@ -40,49 +40,118 @@
 
 #include "insieme/utils/logging.h"
 
-namespace insieme { namespace analysis { namespace dfa { namespace analyses {
+namespace insieme { namespace analysis { namespace dfa {
+
+template <>
+typename container_type_traits< dfa::elem<analyses::LValue>  >::type 
+extract(const Entity< dfa::elem<analyses::LValue> >& e, const CFG& cfg) 
+{ 
+	std::set<analyses::LValue> entities;
+
+	auto collector = [&entities, &cfg] (const cfg::BlockPtr& block) {
+		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
+	
+			// TODO: 
+			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { /* skip */ return; }
+
+			auto stmt = cur.getAnalysisStatement();
+			if (auto declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
+				entities.insert( analyses::LValue(declStmt->getVariable()) );
+				return;
+			}
+
+			core::ExpressionPtr expr = core::dynamic_pointer_cast<const core::Expression>(stmt);
+			if (!expr) { return; }
+
+			if (core::analysis::isCallOf(expr, expr->getNodeManager().getLangBasic().getRefAssign())) {
+				entities.insert( analyses::LValue(expr.as<core::CallExprPtr>()->getArgument(0)) );
+				return;
+			}
+
+		});
+	};
+	cfg.visitDFS(collector);
+
+	return entities;
+}
+	
+namespace analyses {
+
+typedef typename ReachingDefinitions::value_type AnalysisDataType;
 
 /**
  * ReachingDefinitions Problem
  */
-typename ReachingDefinitions::value_type 
-ReachingDefinitions::meet(const typename ReachingDefinitions::value_type& lhs, const typename ReachingDefinitions::value_type& rhs) const 
-{
-	// LOG(DEBUG) << "MEET ( " << lhs << ", " << rhs << ") -> ";
-	typename ReachingDefinitions::value_type ret;
+
+AnalysisDataType ReachingDefinitions::meet(const AnalysisDataType& lhs, const AnalysisDataType& rhs) const {
+	LOG(DEBUG) << "MEET ( " << lhs << ", " << rhs << ") -> ";
+	AnalysisDataType ret;
 	std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
-	// LOG(DEBUG) << ret;
+	LOG(DEBUG) << ret;
 	return ret;
 }
 
 
-typename ReachingDefinitions::value_type 
-ReachingDefinitions::transfer_func(const typename ReachingDefinitions::value_type& in, const cfg::BlockPtr& block) const {
-	typename ReachingDefinitions::value_type gen, kill;
+void definitionsToAccesses(const AnalysisDataType& data, AccessManager& mgr) {
+	for(const auto& dfValue : data) {
+
+		auto reachExpr	= std::get<0>(dfValue).getLValueExpr();
+		auto reachBlock = std::get<1>(dfValue);
+
+		core::ExpressionAddress retAddr;
+		size_t stmtIdx=0;
+
+		// find the statement in this block which contains the expr 
+		for(auto it=reachBlock->stmt_begin(), end=reachBlock->stmt_end(); !retAddr && it!=end; ++it, ++stmtIdx) {
+			retAddr = core::Address<const core::Expression>::find(reachExpr, it->getAnalysisStatement());
+		}
+
+		--stmtIdx;
+
+		assert(retAddr && stmtIdx<reachBlock->size() && "Stmt address not found");
+
+		mgr.getClassFor( getImmediateAccess( retAddr, {reachBlock,stmtIdx} ) );
+	}
+}
+
+AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
+
+	AnalysisDataType gen, kill;
 	
 	if (block->empty()) { return in; }
-	assert(block->size() == 1);
+
+	assert(block->size() == 1 && "Blocks with more than 1 stmts are not supported"); // FIXME: relax
 
 	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 	LOG(DEBUG) << "~ Block " << block->getBlockID();
 	LOG(DEBUG) << "~ IN: " << in;
 
-	for_each(block->stmt_begin(), block->stmt_end(), 
-			[&] (const cfg::Element& cur) {
+	AccessManager mgr(&getCFG(), getCFG().getTmpVarMap());
+	definitionsToAccesses(in, mgr);
+
+	size_t stmtIdx=0;
+	for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
 
 		core::StatementPtr stmt = cur.getAnalysisStatement();
 
 		auto handle_def = [&](const core::VariablePtr& varPtr) { 
 
-			Access&& var = getImmediateAccess( core::ExpressionAddress(varPtr), getCFG().getTmpVarMap() );
+			auto addr = core::Address<const core::Expression>::find(varPtr,stmt);
+			auto access = getImmediateAccess(addr, {block, stmtIdx}, getCFG().getTmpVarMap() );
 
+			AccessClassPtr collisionClass = mgr.getClassFor( access );
+
+			LOG(DEBUG) << "COLLISION CLASS: " << *collisionClass;
+			// kill all entities 
+		
+			if (access.isRef()) 
+				for (auto& acc : *collisionClass) {
+					kill.insert( std::make_tuple(LValue(acc->getAccessedVariable()), acc->getCFGBlock()) );
+				}
+
+			auto var = LValue(varPtr);
 			gen.insert( std::make_tuple(var, block) );
 
-			// kill all declarations reaching this block 
-			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
-					[&](const typename ReachingDefinitions::value_type::value_type& cur){
-						return std::get<0>(cur) == var;
-					} );
 		};
 
 		if (stmt->getNodeType() == core::NT_Literal) { return; }
@@ -90,7 +159,8 @@ ReachingDefinitions::transfer_func(const typename ReachingDefinitions::value_typ
 		// assume scalar variables 
 		if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
 
-			handle_def( decl->getVariable() );
+			if (!getCFG().getTmpVarMap().isTmpVar(decl->getVariable()))
+				handle_def( decl->getVariable() );
 
 		} else if (core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(stmt)) {
 
@@ -102,12 +172,14 @@ ReachingDefinitions::transfer_func(const typename ReachingDefinitions::value_typ
 			LOG(WARNING) << stmt;
 			assert(false && "Stmt not handled");
 		}
+
+		stmtIdx++;
 	});
 
 	LOG(DEBUG) << "~ KILL: " << kill;
 	LOG(DEBUG) << "~ GEN:  " << gen;
 
-	typename ReachingDefinitions::value_type set_diff, ret;
+	AnalysisDataType set_diff, ret;
 	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
 	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
 
