@@ -560,8 +560,31 @@ namespace core {
 		 * @return the resulting, unrolled lambda expression
 		 */
 		LambdaExprPtr unrollOnce(NodeManager& manager) const {
+			return unroll(manager);
+		}
+
+		/**
+		 * Unrolls this lambda the given amount of time. If the lambda is not recursive, the
+		 * result will be the same as this lambda.
+		 *
+		 * @param numTimes the number of times this lambda shell be unrolled
+		 * @return the resulting, unrolled lambda expression
+		 */
+		LambdaExprPtr unroll(unsigned numTimes = 1) const {
+			return unroll(ExpressionAccessor<Derived, Ptr>::getNodeManager(), numTimes);
+		}
+
+		/**
+		 * Unrolls this lambda the given amount of time. If the lambda is not recursive, the
+		 * result will be the same as this lambda.
+		 *
+		 * @param manager the manager to be used for maintaining the resulting reference
+		 * @param numTimes the number of times this lambda shell be unrolled
+		 * @return the resulting, unrolled lambda expression
+		 */
+		LambdaExprPtr unroll(NodeManager& manager, unsigned numTimes = 1) const {
 			if (!isRecursive()) return manager.get(ExpressionAccessor<Derived, Ptr>::getNode());
-			return getDefinition()->unrollOnce(manager, getVariable());
+			return getDefinition()->unroll(manager, getVariable(), numTimes);
 		}
 	};
 
@@ -716,23 +739,32 @@ namespace core {
 	IR_LIST_NODE_ACCESSOR(LambdaDefinition, Support, Definitions, LambdaBinding)
 
 		/**
-		 * Obtains a pointer to the function body defining the recursive function represented
-		 * by the given variable within this recursive definition.
+		 * Obtains a pointer to the lambda binding associated to the recursive lambda
+		 * variable handed in as an argument or null if there is no such binding.
 		 *
 		 * @param variable the variable used to define the requested recursive function within
 		 * 				   this recursive function definition.
-		 * @return a copy of the internally maintained pointer to the actual function definition.
+		 * @return a pointer to the associated lambda binding or null if there is no such binding
 		 */
-		Ptr<const Lambda> getDefinitionOf(const VariablePtr& variable) const {
+		Ptr<const LambdaBinding> getBindingOf(const VariablePtr& variable) const {
 			auto definitions = getDefinitions();
 			auto it = std::find_if(definitions.begin(), definitions.end(),
 					[&](const LambdaBindingPtr& cur) { return *cur->getVariable() == *variable; }
 			);
+			return (it == definitions.end())?Ptr<const LambdaBinding>():*it;
+		}
 
-			if (it == definitions.end()) {
-				return Ptr<const Lambda>();
-			}
-			return it->getLambda();
+		/**
+		 * Obtains a pointer to the lambda defining the recursive function represented
+		 * by the given variable within this recursive definition.
+		 *
+		 * @param variable the variable used to define the requested recursive function within
+		 * 				   this recursive function definition.
+		 * @return a pointer to the actual function definition.
+		 */
+		Ptr<const Lambda> getDefinitionOf(const VariablePtr& variable) const {
+			auto binding = getBindingOf(variable);
+			return (binding)?binding->getLambda():Ptr<const Lambda>();
 		}
 
 		/**
@@ -756,7 +788,19 @@ namespace core {
 		 * @return the resulting, unrolled lambda expression
 		 */
 		LambdaExprPtr unrollOnce(NodeManager& manager, const VariablePtr& variable) const {
-			return SupportAccessor<Derived,Ptr>::getNode().unrollDefinitionOnce(manager, variable);
+			return unroll(manager, variable);
+		}
+
+		/**
+		 * Unrolls this definition the given number of times for the given variable.
+		 *
+		 * @param manager the manager to be used for maintaining the resulting reference
+		 * @param variable the variable defining the definition to be unrolled
+		 * @param numTimes then number of times the lambda should be unrolled
+		 * @return the resulting, unrolled lambda expression
+		 */
+		LambdaExprPtr unroll(NodeManager& manager, const VariablePtr& variable, unsigned numTimes = 1) const {
+			return SupportAccessor<Derived,Ptr>::getNode().unrollDefinition(manager, variable, numTimes);
 		}
 
 	};
@@ -803,9 +847,10 @@ namespace core {
 		 *
 		 * @param manager the manager to be used for maintaining the resulting reference
 		 * @param variable the variable defining the definition to be unrolled once
+		 * @param numTimes the number of times the selected definition shell be unrolled
 		 * @return the resulting, unrolled lambda expression
 		 */
-		LambdaExprPtr unrollDefinitionOnce(NodeManager& manager, const VariablePtr& variable) const;
+		LambdaExprPtr unrollDefinition(NodeManager& manager, const VariablePtr& variable, unsigned numTimes = 1) const;
 
 	};
 

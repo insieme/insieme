@@ -621,6 +621,20 @@ TEST(ExpressionTest, LambdaUnrollingEvenOdd) {
 	res = check(even->unrollOnce(manager)->unrollOnce(manager), core::checks::getFullCheck());
 	EXPECT_TRUE(res.empty()) << res;
 
+
+	// -- unrolling multiple times --
+
+	res = check(even->unroll(0), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+	res = check(even->unroll(1), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+	res = check(even->unroll(2), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+	res = check(even->unroll(3), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
 }
 
 
