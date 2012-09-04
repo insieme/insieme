@@ -1158,6 +1158,31 @@ namespace parser {
 					}
 			));
 
+			// ------------- add parallel constructs -------------
+
+			g.addRule("S", rule(
+					seq("spawn", E, ";"),
+					[](Context& cur)->NodePtr {
+						return cur.parallel(cur.getTerm(0).as<ExpressionPtr>(), 1);
+					}
+			));
+
+			g.addRule("S", rule(
+					seq("sync;"),
+					[](Context& cur)->NodePtr {
+						const auto& basic = cur.getNodeManager().getLangBasic();
+						return cur.callExpr(basic.getUnit(), basic.getMergeAll());
+					}
+			));
+
+			g.addRule("S", rule(
+					seq("syncAll;"),
+					[](Context& cur)->NodePtr {
+						const auto& basic = cur.getNodeManager().getLangBasic();
+						return cur.callExpr(basic.getUnit(), basic.getMergeAll());
+					}
+			));
+
 
 			// --------------- add statement rules ---------------
 
