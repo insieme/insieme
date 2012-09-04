@@ -39,8 +39,11 @@ cd ..
 
 rm -Rf $PREFIX/pm-r*
 mkdir $PREFIX/pm-r$REVISION
+cd $PREFIX/pm-r$REVISION
+mkdir include
 
-cp $PREFIX/pm-build/libPM.so $PREFIX/pm-r$REVISION
+cp $PREFIX/pm-build/libPM.so .
+cp $PREFIX/pm-build/*.h include
 
 rm $PREFIX/pm-latest
 ln -s $PREFIX/pm-r$REVISION $PREFIX/pm-latest
