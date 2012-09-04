@@ -74,7 +74,10 @@ void checkSemanticErrors(const NodePtr& node) {
 
 std::string getPrettyPrinted(const NodePtr& node) {
 	std::ostringstream ss;
-	ss << insieme::core::printer::PrettyPrinter(node, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	ss << insieme::core::printer::PrettyPrinter(node,
+			insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL |
+			insieme::core::printer::PrettyPrinter::NO_LET_BINDINGS
+	);
 
 	// Remove new lines and leading spaces
 	std::vector<char> res;

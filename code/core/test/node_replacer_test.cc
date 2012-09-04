@@ -332,10 +332,10 @@ TEST(NodeReplacer, RecVarsReplacement) {
 
 
 	EXPECT_EQ("[]", toString(check(stmt2, all)));
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>> v6 =\
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2, printer::PrettyPrinter::NO_LET_BINDINGS)), "decl ref<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>> v6 =\
   var(undefined(type<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>>));");
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<ref<array<real<4>,1>>> v7 =  var(undefined(type<ref<array<real<4>,1>>>))");
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "fun(ref<(ref<array<real<4>,1>>)> v8, ref<array<real<4>,1>> v9)");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2, printer::PrettyPrinter::NO_LET_BINDINGS)), "decl ref<ref<array<real<4>,1>>> v7 =  var(undefined(type<ref<array<real<4>,1>>>))");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2, printer::PrettyPrinter::NO_LET_BINDINGS)), "fun(ref<(ref<array<real<4>,1>>)> v8, ref<array<real<4>,1>> v9)");
 
 }
 
