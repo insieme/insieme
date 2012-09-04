@@ -1190,13 +1190,18 @@ int CFG::getStrongComponents() {
 	//});
 }
 
-cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
+std::pair<cfg::BlockPtr,size_t> CFG::find(const core::NodeAddress& node) const {
 
 	cfg::BlockPtr found;
-	
+	size_t stmtIdx=0;
 	auto&& block_visitor = [&] (const cfg::BlockPtr& block) -> void {
+
+		stmtIdx=0;
 		for_each(block->stmt_begin(), block->stmt_end(), [&](const cfg::Element& cur) {
 			
+			// if the block has been found, just return 
+			if (found) return;
+
 			core::NodeAddress src = cur.getStatementAddress();
 			core::NodeAddress trg = node;
 
@@ -1205,6 +1210,8 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 				found = block;
 				return; 
 			}
+
+			++stmtIdx;
 		});
 	};
 
@@ -1224,7 +1231,7 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 			terminator
 		);
 
-	return found;
+	return { found, stmtIdx };
 }
 
 namespace cfg {

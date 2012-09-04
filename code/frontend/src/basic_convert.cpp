@@ -370,12 +370,14 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	 * the IR variable and insert it into the map for future lookups
 	 */
 	core::VariablePtr&& var = builder.variable( irType );
-	VLOG(2) << "IR variable" << var.getType()->getNodeType() << "" << var<<":"<<varDecl;
+	VLOG(2) << "IR variable" << var.getType()->getNodeType() << "" << var<<":"<<varDecl->getNameAsString();
 
 	ctx.varDeclMap.insert( { valDecl, var } );
 
-	// Add the C name of this variable as annotation
-	var->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > (valDecl->getNameAsString()));
+	if ( !valDecl->getNameAsString().empty() ) {
+		// Add the C name of this variable as annotation
+		var->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > (valDecl->getNameAsString()));
+	}
 
 	// Add OpenCL attributes
 	insieme::core::NodeAnnotationPtr&& attr = convertAttribute(valDecl);

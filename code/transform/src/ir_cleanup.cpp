@@ -47,6 +47,8 @@
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 
+#include "insieme/analysis/polyhedral/scop.h"
+
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 
@@ -73,7 +75,9 @@ bool isArrayType(const TypePtr& cur) {
 	}
 
 	// also accept ref/array combination
-	if ((cur->getNodeType() == NT_RefType && static_pointer_cast<const RefType>(cur)->getElementType()->getNodeType() == NT_ArrayType)) {
+	if ((cur->getNodeType() == NT_RefType && 
+		 static_pointer_cast<const RefType>(cur)->getElementType()->getNodeType() == NT_ArrayType)) 
+	{
 		return true;
 	}
 	return false;
@@ -107,67 +111,6 @@ core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
 	return node;
 }
 
-core::NodePtr removeUnecessaryDerefs(const core::NodePtr& node) {
-	
-	using namespace insieme::transform::pattern;
-	using insieme::transform::pattern::any;
-
-	// Search for deref operations followed by a var.ref which should be replaced by a noop
-	TreePatternPtr&& pattern = 
-		aT( irp::callExpr(any, irp::literal(any,"ref.var"), 
-				single(irp::callExpr(any, irp::literal(any,"ref.deref"), *any))) 
-		  );
-
-	auto&& match = pattern->matchPointer( node );
-	if (!match) { return node; }
-
-	// LOG(INFO) << match; // SOON
-
-	return node;
-}
-
-struct LoopCollector : public core::IRVisitor<void> {
-	typedef std::vector<ForStmtPtr> LoopList;
-
-	LoopCollector() : core::IRVisitor<void>(false) { }
-
-	void visitForStmt( const ForStmtPtr& forStmt ) {
-		visit(forStmt->getBody());
-
-		loops.push_back(forStmt);
-	}
-
-	LoopList operator()(const NodePtr& root) {
-		visit(root);
-		return loops;
-	}
-
-	void visitNode(const core::NodePtr& node) {
-		std::for_each(node->getChildList().begin(), node->getChildList().end(),
-			[ this ] (core::NodePtr curr){
-				this->visit(curr);
-			});
-	}
-
-private:
-	LoopList loops;
-};
-
-core::NodePtr normalizeLoops(const core::NodePtr& node) {
-
-	LoopCollector lc;
-	LoopCollector::LoopList&& loops = lc(node);
-
-	LOG(DEBUG) << loops.size();
-	std::for_each(loops.begin(), loops.end(), [](const ForStmtPtr& cur){
-		LOG(DEBUG) << *cur;
-	} );
-
-	return node;
-}
-
-
-
 } // end anonymous namespace
 
 
@@ -180,6 +123,8 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 //	res = removePseudoArraysInStructs(res);
 //	res = normalizeLoops(res);
 //	res = removeUnecessaryDerefs(res);
+
+	insieme::analysis::polyhedral::scop::mark(res);
 
 	res = deadBranchElimination(res);
 
