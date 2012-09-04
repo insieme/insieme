@@ -62,6 +62,8 @@ int main(int argc, const char* argv[]) {
 
 	icl_init_devices(ICL_ALL);
 	
+	icl_start_energy_measurement();
+
 	if (icl_get_num_devices() != 0) {
 		icl_device* dev = icl_get_device(0);
 
@@ -72,31 +74,35 @@ int main(int argc, const char* argv[]) {
 		icl_buffer* buf_input_b = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(float) * size);
 		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(float) * size);
 
-		icl_write_buffer(buf_input_a, CL_TRUE, sizeof(float) * size, &input_a[0], NULL, NULL);
-		icl_write_buffer(buf_input_b, CL_TRUE, sizeof(float) * size, &input_b[0], NULL, NULL);
-		icl_write_buffer(buf_output, CL_TRUE, sizeof(float) * size, &output[0], NULL, NULL);
-		
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 7,
-											(size_t)0, (void *)buf_input_a,
-											(size_t)0, (void *)buf_input_b,
-											(size_t)0, (void *)buf_output,
-											sizeof(cl_float), (void *)&ALPHA,
-											sizeof(cl_float), (void *)&BETA,
-											sizeof(cl_int), (void *)&M,
-											sizeof(cl_int), (void *)&N);
-		
-		icl_read_buffer(buf_output, CL_TRUE, sizeof(float) * size, &output[0], NULL, NULL);
+		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_write_buffer(buf_input_a, CL_TRUE, sizeof(float) * size, &input_a[0], NULL, NULL);
+			icl_write_buffer(buf_input_b, CL_TRUE, sizeof(float) * size, &input_b[0], NULL, NULL);
+			icl_write_buffer(buf_output, CL_TRUE, sizeof(float) * size, &output[0], NULL, NULL);
+
+			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 7,
+												(size_t)0, (void *)buf_input_a,
+												(size_t)0, (void *)buf_input_b,
+												(size_t)0, (void *)buf_output,
+												sizeof(cl_float), (void *)&ALPHA,
+												sizeof(cl_float), (void *)&BETA,
+												sizeof(cl_int), (void *)&M,
+												sizeof(cl_int), (void *)&N);
+
+			icl_read_buffer(buf_output, CL_TRUE, sizeof(float) * size, &output[0], NULL, NULL);
+		}
 		
 		icl_release_buffers(3, buf_input_a, buf_input_b, buf_output);
 		icl_release_kernel(kernel);
 	}
 	
+	icl_stop_energy_measurement();
+
 	for(int i =0; i < 0; ++i)
 		printf("%d %f\n", i, output[i]);
 	
