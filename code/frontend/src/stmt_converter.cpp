@@ -575,13 +575,14 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitIfStmt(clang::IfSt
 			condExpr = builder.deref( condExpr.as<core::CallExprPtr>()->getArgument(0) );
 		}
 
-		if (!convFact.mgr.getLangBasic().isBool(condExpr->getType())) {
-			// convert the expression to bool via the castToType utility routine
-			condExpr = utils::cast(condExpr, convFact.mgr.getLangBasic().getBool());
-		}
 	}
-	
+
 	assert( condExpr && "Couldn't convert 'condition' expression of the IfStmt");
+
+	if (!convFact.mgr.getLangBasic().isBool(condExpr->getType())) {
+		// convert the expression to bool via the castToType utility routine
+		condExpr = utils::cast(condExpr, convFact.mgr.getLangBasic().getBool());
+	}
 
 	core::StatementPtr elseBody = builder.compoundStmt();
 	// check for else statement
@@ -610,15 +611,15 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitWhileStmt(clang::W
 	const core::IRBuilder& builder = convFact.builder;
 	stmtutils::StmtWrapper retStmt;
 
-	VLOG(2)
-		<< "{ WhileStmt }";
+	VLOG(2)	<< "{ WhileStmt }";
 	core::StatementPtr&& body = tryAggregateStmts( builder, Visit( whileStmt->getBody() ) );
 	assert(body && "Couldn't convert body of the WhileStmt");
 
 	core::ExpressionPtr condExpr;
 	if ( clang::VarDecl* condVarDecl = whileStmt->getConditionVariable()) {
-		assert(
-				whileStmt->getCond() == NULL && "WhileStmt condition cannot contains both a variable declaration and an expression");
+		assert(	!whileStmt->getCond() && 
+				"WhileStmt condition cannot contains both a variable declaration and an expression"
+			);
 
 		/*
 		 * we are in the situation where a variable is declared in the if condition, i.e.:
@@ -633,7 +634,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitWhileStmt(clang::W
 		 * 		}
 		 */
 		clang::Expr* expr = condVarDecl->getInit();
-		condVarDecl->setInit(NULL); // set the expression to null (temporarily)
+		condVarDecl->setInit(NULL); // set the expression to null (temporarely)
 		core::DeclarationStmtPtr&& declStmt = convFact.convertVarDecl(condVarDecl);
 		condVarDecl->setInit(expr); // set back the value of init value
 
@@ -641,18 +642,30 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitWhileStmt(clang::W
 		// the expression will be an a = expr
 		assert( false && "WhileStmt with a declaration of a condition variable not supported");
 	} else {
-		const clang::Expr* cond = whileStmt->getCond();assert( cond && "WhileStmt with no condition.");
+		const clang::Expr* cond = whileStmt->getCond();
+		assert( cond && "WhileStmt with no condition.");
+
 		condExpr = convFact.convertExpr(cond);
-	}assert( condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
+
+		if (core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign())) {
+			// an assignment as condition is not allowed in IR, prepend the assignment operation 
+			retStmt.push_back( condExpr );
+			// use the first argument as condition 
+			condExpr = builder.deref( condExpr.as<core::CallExprPtr>()->getArgument(0) );
+		}
+	}
+	
+	assert( condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
 
 	if (!convFact.mgr.getLangBasic().isBool(condExpr->getType())) {
 		// convert the expression to bool via the castToType utility routine
 		condExpr = utils::cast(condExpr, convFact.mgr.getLangBasic().getBool());
 	}
 
-	retStmt = stmtutils::tryAggregateStmts(builder, { builder.whileStmt(convFact.tryDeref(condExpr), body) });
+	retStmt.push_back( builder.whileStmt(condExpr, body) );
+	retStmt = tryAggregateStmts(builder, retStmt);
 
-	END_LOG_STMT_CONVERSION( retStmt.getSingleStmt());
+	END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
 	// otherwise we introduce an outer CompoundStmt
 	return retStmt;
 }
