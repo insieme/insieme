@@ -500,7 +500,7 @@ TEST(ExpressionsTest, JobExpr) {
 	basicExprTests(job, type, childList);
 }
 
-TEST(ExpressionTest, LambdaUnrolling) {
+TEST(ExpressionTest, LambdaPeeling) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	LambdaExprPtr lambda;
@@ -512,7 +512,7 @@ TEST(ExpressionTest, LambdaUnrolling) {
 	ASSERT_TRUE(lambda);
 
 	EXPECT_FALSE(lambda->isRecursive());
-	EXPECT_EQ(lambda, lambda->unrollOnce());
+	EXPECT_EQ(lambda, lambda->peel());
 
 
 	// check recursive lambda
@@ -524,7 +524,7 @@ TEST(ExpressionTest, LambdaUnrolling) {
 
 	EXPECT_TRUE(lambda->isRecursive());
 	EXPECT_EQ(                     "rec v0.{v0=fun() {5; v0();}}",      toString(*lambda));
-	EXPECT_EQ("rec v4.{v4=fun() {5; rec v0.{v0=fun() {5; v0();}}();}}", toString(*lambda->unrollOnce()));
+	EXPECT_EQ("rec v4.{v4=fun() {5; rec v0.{v0=fun() {5; v0();}}();}}", toString(*lambda->peel()));
 
 
 	// check mutual recursive lambdas
@@ -539,7 +539,7 @@ TEST(ExpressionTest, LambdaUnrolling) {
 
 	EXPECT_TRUE(lambda->isRecursive());
 	EXPECT_EQ(                     "rec v5.{v5=fun() {1; v6();}, v6=fun() {2; v5();}}",      toString(*lambda));
-	EXPECT_EQ("rec v9.{v9=fun() {1; rec v6.{v5=fun() {1; v6();}, v6=fun() {2; v5();}}();}}", toString(*lambda->unrollOnce()));
+	EXPECT_EQ("rec v9.{v9=fun() {1; rec v6.{v5=fun() {1; v6();}, v6=fun() {2; v5();}}();}}", toString(*lambda->peel()));
 
 
 	// check nested recursive lambda
@@ -554,8 +554,8 @@ TEST(ExpressionTest, LambdaUnrolling) {
 
 	EXPECT_TRUE(lambda->isRecursive());
 	EXPECT_EQ(                                           "rec v10.{v10=fun() {5; rec v11.{v11=fun() {v10();}}();}}",           toString(*lambda));
-	EXPECT_EQ("rec v13.{v13=fun() {5; rec v11.{v11=fun() {rec v10.{v10=fun() {5; rec v11.{v11=fun() {v10();}}();}}();}}();}}", toString(*lambda->unrollOnce()));
-	EXPECT_PRED2(containsSubString, toString(*lambda->unrollOnce()), toString(*lambda));
+	EXPECT_EQ("rec v13.{v13=fun() {5; rec v11.{v11=fun() {rec v10.{v10=fun() {5; rec v11.{v11=fun() {v10();}}();}}();}}();}}", toString(*lambda->peel()));
+	EXPECT_PRED2(containsSubString, toString(*lambda->peel()), toString(*lambda));
 
 	// check nested mutual recursive lambdas
 	manager.setNextFreshID(0);
@@ -575,16 +575,16 @@ TEST(ExpressionTest, LambdaUnrolling) {
 
 	EXPECT_TRUE(lambda->isRecursive());
 	EXPECT_EQ(                                           "rec v15.{v15=fun() {1; rec v17.{v17=fun() {v16();}}();}, v16=fun() {2; rec v19.{v19=fun() {v15();}}();}}",           toString(*lambda));
-	EXPECT_EQ("rec v21.{v21=fun() {1; rec v17.{v17=fun() {rec v16.{v15=fun() {1; rec v17.{v17=fun() {v16();}}();}, v16=fun() {2; rec v19.{v19=fun() {v15();}}();}}();}}();}}", toString(*lambda->unrollOnce()));
+	EXPECT_EQ("rec v21.{v21=fun() {1; rec v17.{v17=fun() {rec v16.{v15=fun() {1; rec v17.{v17=fun() {v16();}}();}, v16=fun() {2; rec v19.{v19=fun() {v15();}}();}}();}}();}}", toString(*lambda->peel()));
 
 }
 
-TEST(ExpressionTest, LambdaUnrollingEvenOdd) {
+TEST(ExpressionTest, LambdaPeelingEvenOdd) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
 	/**
-	 * Bug: when unrolling recursive functions using the recursive variables within binds (suspected)
+	 * Bug: when peeling recursive functions using the recursive variables within binds (suspected)
 	 * 		an invalid node-composition assertion is triggered.
 	 */
 
@@ -601,10 +601,10 @@ TEST(ExpressionTest, LambdaUnrollingEvenOdd) {
 	auto res = check(even, core::checks::getFullCheck());
 	EXPECT_TRUE(res.empty()) << res;
 
-	res = check(even->unrollOnce(manager), core::checks::getFullCheck());
+	res = check(even->peel(manager), core::checks::getFullCheck());
 	EXPECT_TRUE(res.empty()) << res;
 
-	res = check(even->unrollOnce(manager)->unrollOnce(manager), core::checks::getFullCheck());
+	res = check(even->peel(manager)->peel(manager), core::checks::getFullCheck());
 	EXPECT_TRUE(res.empty()) << res;
 
 
@@ -615,10 +615,76 @@ TEST(ExpressionTest, LambdaUnrollingEvenOdd) {
 	res = check(even, core::checks::getFullCheck());
 	EXPECT_TRUE(res.empty()) << res;
 
-	res = check(even->unrollOnce(manager), core::checks::getFullCheck());
+	res = check(even->peel(manager), core::checks::getFullCheck());
 	EXPECT_TRUE(res.empty()) << res;
 
-	res = check(even->unrollOnce(manager)->unrollOnce(manager), core::checks::getFullCheck());
+	res = check(even->peel(manager)->peel(manager), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+
+	// -- peeling multiple times --
+
+	res = check(even->peel(0), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+	res = check(even->peel(1), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+	res = check(even->peel(2), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+	res = check(even->peel(3), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+}
+
+
+TEST(ExpressionTest, LambdaUnrollingEvenOdd) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	/**
+	 * Bug: when peeling recursive functions using the recursive variables within binds (suspected)
+	 * 		an invalid node-composition assertion is triggered.
+	 */
+
+	LambdaExprPtr even = builder.parseExpr(
+			"let int = int<4> in "
+			"let even,odd = "
+			"	(int x)->bool { return (x==0)?true:(odd(x-1)); },"
+			"	(int x)->bool { return (x==0)?false:(even(x-1)); }"
+			"in even"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(even);
+
+	auto res = check(even, core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+	EXPECT_NE(*even->unroll(2), *even->peel(2));
+
+//std::cout << "Unroll 0:\n" << core::printer::PrettyPrinter(even->unroll(0)) << "\n\n";
+//std::cout << "Unroll 1:\n" << core::printer::PrettyPrinter(even->unroll(1)) << "\n\n";
+//std::cout << "Unroll 2:\n" << core::printer::PrettyPrinter(even->unroll(2)) << "\n\n";
+//std::cout << "Unroll 5:\n" << core::printer::PrettyPrinter(even->unroll(5)) << "\n\n";
+
+	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v3==0)?true:(v3-1==0)?false:v1(v3-1-1);");
+	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v11==0)?false:(v11-1==0)?true:v2(v11-1-1);");
+
+	res = check(even->unroll(manager, 2), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << even->unroll(manager, 2) << res;
+
+	res = check(even->unroll(manager, 3), core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << even->unroll(manager, 3) << res;
+
+
+	// -- the same normalized --
+
+	even = analysis::normalize(even);
+
+	res = check(even, core::checks::getFullCheck());
+	EXPECT_TRUE(res.empty()) << res;
+
+	res = check(even->unroll(manager, 2), core::checks::getFullCheck());
 	EXPECT_TRUE(res.empty()) << res;
 
 
@@ -636,7 +702,6 @@ TEST(ExpressionTest, LambdaUnrollingEvenOdd) {
 	res = check(even->unroll(3), core::checks::getFullCheck());
 	EXPECT_TRUE(res.empty()) << res;
 }
-
 
 
 template<typename PT>

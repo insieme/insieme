@@ -543,25 +543,29 @@ namespace core {
 		}
 
 		/**
-		 * Unrolls this lambda once. If the lambda is not recursive, the result will
-		 * be the same as this lambda.
+		 * Peels this lambda the given amount of time. If the lambda is not recursive, the
+		 * result will be the same as this lambda.
 		 *
-		 * @return the resulting, unrolled lambda expression
+		 * @param numTimes the number of times this lambda shell be peeled
+		 * @return the resulting, peeled lambda expression
 		 */
-		LambdaExprPtr unrollOnce() const {
-			return unrollOnce(ExpressionAccessor<Derived, Ptr>::getNodeManager());
+		LambdaExprPtr peel(unsigned numTimes = 1) const {
+			return peel(ExpressionAccessor<Derived, Ptr>::getNodeManager(), numTimes);
 		}
 
 		/**
-		 * Unrolls this lambda once. If the lambda is not recursive, the result will
-		 * be the same as this lambda.
+		 * Peels this lambda the given amount of time. If the lambda is not recursive, the
+		 * result will be the same as this lambda.
 		 *
 		 * @param manager the manager to be used for maintaining the resulting reference
-		 * @return the resulting, unrolled lambda expression
+		 * @param numTimes the number of times this lambda shell be peeled
+		 * @return the resulting, peeled lambda expression
 		 */
-		LambdaExprPtr unrollOnce(NodeManager& manager) const {
-			return unroll(manager);
+		LambdaExprPtr peel(NodeManager& manager, unsigned numTimes = 1) const {
+			if (!isRecursive()) return manager.get(ExpressionAccessor<Derived, Ptr>::getNode());
+			return getDefinition()->peel(manager, getVariable(), numTimes);
 		}
+
 
 		/**
 		 * Unrolls this lambda the given amount of time. If the lambda is not recursive, the
@@ -570,7 +574,7 @@ namespace core {
 		 * @param numTimes the number of times this lambda shell be unrolled
 		 * @return the resulting, unrolled lambda expression
 		 */
-		LambdaExprPtr unroll(unsigned numTimes = 1) const {
+		LambdaExprPtr unroll(unsigned numTimes) const {
 			return unroll(ExpressionAccessor<Derived, Ptr>::getNodeManager(), numTimes);
 		}
 
@@ -582,9 +586,8 @@ namespace core {
 		 * @param numTimes the number of times this lambda shell be unrolled
 		 * @return the resulting, unrolled lambda expression
 		 */
-		LambdaExprPtr unroll(NodeManager& manager, unsigned numTimes = 1) const {
-			if (!isRecursive()) return manager.get(ExpressionAccessor<Derived, Ptr>::getNode());
-			return getDefinition()->unroll(manager, getVariable(), numTimes);
+		LambdaExprPtr unroll(NodeManager& manager, unsigned numTimes) const {
+			return ExpressionAccessor<Derived,Ptr>::getNode().unroll(manager, numTimes);
 		}
 	};
 
@@ -672,6 +675,15 @@ namespace core {
 		 * Determines whether this function is recursively defined or not.
 		 */
 		bool isRecursiveInternal() const;
+
+		/**
+		 * Unrolls this lambda expression for the given number of times.
+		 *
+		 * @param manager the manager to be used for maintaining the resulting reference
+		 * @param numTimes the number of times this lambda expression shell be unrolled
+		 * @return the resulting, unrolled lambda expression
+		 */
+		LambdaExprPtr unroll(NodeManager& manager, unsigned numTimes) const;
 
 	};
 
@@ -779,30 +791,28 @@ namespace core {
 			return SupportAccessor<Derived,Ptr>::getNode().isRecursivelyDefined(variable);
 		}
 
-
 		/**
-		 * Unrolls this definition once for the given variable.
+		 * Peels this definition the given number of times for the given variable.
 		 *
 		 * @param manager the manager to be used for maintaining the resulting reference
-		 * @param variable the variable defining the definition to be unrolled once
-		 * @return the resulting, unrolled lambda expression
+		 * @param variable the variable defining the definition to be peeled
+		 * @param numTimes then number of times the lambda should be peeled
+		 * @return the resulting, peeled lambda expression
 		 */
-		LambdaExprPtr unrollOnce(NodeManager& manager, const VariablePtr& variable) const {
-			return unroll(manager, variable);
+		LambdaExprPtr peel(NodeManager& manager, const VariablePtr& variable, unsigned numTimes = 1) const {
+			return SupportAccessor<Derived,Ptr>::getNode().peel(manager, variable, numTimes);
 		}
 
 		/**
-		 * Unrolls this definition the given number of times for the given variable.
+		 * Unrolls this definition the given number of times.
 		 *
 		 * @param manager the manager to be used for maintaining the resulting reference
-		 * @param variable the variable defining the definition to be unrolled
 		 * @param numTimes then number of times the lambda should be unrolled
-		 * @return the resulting, unrolled lambda expression
+		 * @return the resulting, unrolled lambda definition
 		 */
-		LambdaExprPtr unroll(NodeManager& manager, const VariablePtr& variable, unsigned numTimes = 1) const {
-			return SupportAccessor<Derived,Ptr>::getNode().unrollDefinition(manager, variable, numTimes);
+		LambdaDefinitionPtr unroll(NodeManager& manager, unsigned numTimes) const {
+			return SupportAccessor<Derived,Ptr>::getNode().unroll(manager, numTimes);
 		}
-
 	};
 
 	/**
@@ -843,14 +853,25 @@ namespace core {
 		bool isRecursivelyDefined(const VariablePtr& variable) const;
 
 		/**
-		 * Unrolls this definition once for the given variable.
+		 * Peels this definition for the given variable and number of times.
 		 *
 		 * @param manager the manager to be used for maintaining the resulting reference
-		 * @param variable the variable defining the definition to be unrolled once
-		 * @param numTimes the number of times the selected definition shell be unrolled
-		 * @return the resulting, unrolled lambda expression
+		 * @param variable the variable defining the definition to be peeled
+		 * @param numTimes the number of times the selected definition shell be peeled
+		 * @return the resulting, peeled lambda expression
 		 */
-		LambdaExprPtr unrollDefinition(NodeManager& manager, const VariablePtr& variable, unsigned numTimes = 1) const;
+		LambdaExprPtr peel(NodeManager& manager, const VariablePtr& variable, unsigned numTimes = 1) const;
+
+		/**
+		 * Unrolls the definitions of all the recursive functions within this definition
+		 * for the given number of times.
+		 *
+		 * @param manager the manager to be used for maintaining the resulting nodes
+		 * @param numTimes the number of times to unroll this definition; if it is 0 or 1, it will
+		 * 				stick to the current version; if it is > 1, actual unrolling will happen
+		 * @return the unrolled definition
+		 */
+		LambdaDefinitionPtr unroll(NodeManager& manager, unsigned numTimes) const;
 
 	};
 
