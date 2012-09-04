@@ -963,6 +963,10 @@ namespace {
 		ADD_FORMATTER(basic.getRefNew(), { OUT(" new("); PRINT_ARG(0); OUT(")"); });
 		ADD_FORMATTER(basic.getRefDelete(), { OUT(" del("); PRINT_ARG(0); OUT(")"); });
 
+		if (!config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
+			ADD_FORMATTER(basic.getStringToCharPointer(), { PRINT_ARG(0); });
+		}
+
 		ADD_FORMATTER(basic.getDataPathRoot(), { OUT("<>"); });
 		ADD_FORMATTER(basic.getDataPathMember(),  { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getDataPathElement(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
