@@ -213,7 +213,8 @@ namespace detail {
 						"return", "break", "continue",
 						"var", "new", "delete", "print",
 						"struct", "union",
-						"array", "vector", "ref", "channel"
+						"array", "vector", "ref", "channel",
+						"spawn", "syncAll"
 				};
 
 				// check whether it is a keyword
