@@ -26,43 +26,50 @@ int main(int argc, const char* argv[]) {
 	
 	for(int i=0; i < size; ++i) {
 		input1[i] = i;
-		input2[i] = i;
+		input2[i] = i; 
 	}
 
 	icl_init_devices(args->device_type);
-	
+
+	icl_start_energy_measurement();
+
 	if (icl_get_num_devices() != 0) {
 		icl_device* dev = icl_get_device(args->device_id);
 
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "mat_mul.cl", "mat_mul", "", ICL_SOURCE);
-		
-		icl_buffer* buf_input1 = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
-		icl_buffer* buf_input2 = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
-		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
 
-		icl_write_buffer(buf_input1, CL_TRUE, sizeof(int) * size, &input1[0], NULL, NULL);
-		icl_write_buffer(buf_input2, CL_TRUE, sizeof(int) * size, &input2[0], NULL, NULL);
-		
-		size_t szLocalWorkSize =  args->local_size;
-		float multiplier = size/(float)szLocalWorkSize;
-		if(multiplier > (int)multiplier)
-			multiplier += 1;
-		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
+		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_input1 = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
+			icl_buffer* buf_input2 = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
+			icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
 
-		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 5,
-											(size_t)0, (void *)buf_input1,
-											(size_t)0, (void *)buf_input2,
-											(size_t)0, (void *)buf_output,
-											sizeof(cl_int), (void *)&size,
-											sizeof(cl_int), (void *)&width);
+			icl_write_buffer(buf_input1, CL_TRUE, sizeof(int) * size, &input1[0], NULL, NULL);
+			icl_write_buffer(buf_input2, CL_TRUE, sizeof(int) * size, &input2[0], NULL, NULL);
 		
-		icl_read_buffer(buf_output, CL_TRUE, sizeof(int) * size, &output[0], NULL, NULL);
+			size_t szLocalWorkSize =  args->local_size;
+			float multiplier = size/(float)szLocalWorkSize;
+			if(multiplier > (int)multiplier)
+				multiplier += 1;
+			size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
+
+			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 5,
+												(size_t)0, (void *)buf_input1,
+												(size_t)0, (void *)buf_input2,
+												(size_t)0, (void *)buf_output,
+												sizeof(cl_int), (void *)&size,
+												sizeof(cl_int), (void *)&width);
 		
-		icl_release_buffers(3, buf_input1, buf_input2, buf_output);
+			icl_read_buffer(buf_output, CL_TRUE, sizeof(int) * size, &output[0], NULL, NULL);
+		
+			icl_release_buffers(3, buf_input1, buf_input2, buf_output);
+		}
+
 		icl_release_kernel(kernel);
 	}
 	
+	icl_stop_energy_measurement();
+
         if (args->check_result) {
 		printf("======================\n= Matrix Multiplication Done\n");
 		unsigned int check = 1;
@@ -89,5 +96,5 @@ int main(int argc, const char* argv[]) {
         icl_release_devices();
         free(input1);
         free(input2);
-        free(output);	
+        free(output);
 }
