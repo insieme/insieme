@@ -103,61 +103,67 @@ int main(int argc, const char* argv[]) {
         
 	CameraInfo camInfo;
 
-        // set camera
-        float d[5];
-        float u[5];
-        float r[5];
-        vec3_set_3f(d, 1.0f, 1.0f, -1.0f);
-        vec3_set_3f(u, 0.0f, 0.0f, 1.0f);
-        vec3_set_3f(r, 1.0f, -1.0f, 0.0f);
+	// set camera
+	float d[5];
+	float u[5];
+	float r[5];
+	vec3_set_3f(d, 1.0f, 1.0f, -1.0f);
+	vec3_set_3f(u, 0.0f, 0.0f, 1.0f);
+	vec3_set_3f(r, 1.0f, -1.0f, 0.0f);
 
-        // d
-        vec3_normalize(d, d);
-        // r
-        vec3_cross(r, d, u);
-        vec3_normalize(r, r);
-        // u
-        vec3_cross(u, r, d);
-        vec3_normalize(u, u);
+	// d
+	vec3_normalize(d, d);
+	// r
+	vec3_cross(r, d, u);
+	vec3_normalize(r, r);
+	// u
+	vec3_cross(u, r, d);
+	vec3_normalize(u, u);
 
-        vec3_set_3f(camInfo.position, -1.0f, -1.0f, 1.0f);
-        vec3_set_v(camInfo.direction, d);
-        vec3_set_v(camInfo.right, r);
-        vec3_set_v(camInfo.up, u);
+	vec3_set_3f(camInfo.position, -1.0f, -1.0f, 1.0f);
+	vec3_set_v(camInfo.direction, d);
+	vec3_set_v(camInfo.right, r);
+	vec3_set_v(camInfo.up, u);
 
-        icl_init_devices(args->device_type);
+	icl_init_devices(args->device_type);
 
-        if (icl_get_num_devices() != 0) {
-                icl_device* dev = icl_get_device(args->device_id);
+	icl_start_energy_measurement();
 
-                icl_print_device_short_info(dev);
+	if (icl_get_num_devices() != 0) {
+		icl_device* dev = icl_get_device(args->device_id);
+
+		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "raytracing.cl", "raytracing", "", ICL_SOURCE);
 		
 		icl_buffer* buf_triAccels = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(TriAccel) * size);
 		icl_buffer* buf_pixel = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
 
-		icl_write_buffer(buf_triAccels, CL_TRUE, sizeof(TriAccel) * size, &triAccels[0], NULL, NULL);
-	
-                size_t szLocalWorkSize =  args->local_size;
-                float multiplier = size/(float)szLocalWorkSize;
-                if(multiplier > (int)multiplier)
-                        multiplier += 1;
-                size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
+		size_t szLocalWorkSize =  args->local_size;
+		float multiplier = size/(float)szLocalWorkSize;
+		if(multiplier > (int)multiplier)
+				multiplier += 1;
+		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 5,
-											(size_t) 0, (void*) buf_pixel,
-											(size_t) 0, (void*) buf_triAccels,
-											sizeof(CameraInfo), &camInfo,
-                                                                                        sizeof(cl_int), (void *)&size,
-                                                                                        sizeof(cl_int), (void *)&width);
+		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_write_buffer(buf_triAccels, CL_TRUE, sizeof(TriAccel) * size, &triAccels[0], NULL, NULL);
+
+			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 5,
+												(size_t) 0, (void*) buf_pixel,
+												(size_t) 0, (void*) buf_triAccels,
+												sizeof(CameraInfo), &camInfo,
+												sizeof(cl_int), (void *)&size,
+												sizeof(cl_int), (void *)&width);
 
 
-		icl_read_buffer(buf_pixel, CL_TRUE, sizeof(int) * size, &pixel[0], NULL, NULL);
+			icl_read_buffer(buf_pixel, CL_TRUE, sizeof(int) * size, &pixel[0], NULL, NULL);
+		}
 		
 		icl_release_buffers(2, buf_triAccels, buf_pixel);
 		icl_release_kernel(kernel);
 	}
 	
+	icl_stop_energy_measurement();
+
 	if (args->check_result) {
 		printf("======================\n= Simple program working\n");
 		unsigned int check = 1;

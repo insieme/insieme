@@ -34,6 +34,8 @@ int main(int argc, const char* argv[]) {
 
 	icl_init_devices(ICL_ALL);
 	
+	icl_start_energy_measurement();
+
 	if (icl_get_num_devices() != 0) {
 		icl_device* dev = icl_get_device(0);
 
@@ -45,30 +47,34 @@ int main(int argc, const char* argv[]) {
 		icl_buffer* buf_dists = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * size);
 		icl_buffer* buf_neighbors = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
 
-		icl_write_buffer(buf_ref, CL_TRUE, sizeof(float) * nRef /*dim*/, &ref[0], NULL, NULL);
-		icl_write_buffer(buf_query, CL_TRUE, sizeof(float) * size /*dim*/, &query[0], NULL, NULL);
-		
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 6,
-											(size_t)0, (void *)buf_ref,
-											(size_t)0, (void *)buf_query,
-											(size_t)0, (void *)buf_dists,
-											(size_t)0, (void *)buf_neighbors,
-											sizeof(cl_int), (void *)&nRef,
-											sizeof(cl_int), (void *)&size);
-//											sizeof(cl_int), (void *)&dim);
+		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_write_buffer(buf_ref, CL_TRUE, sizeof(float) * nRef /*dim*/, &ref[0], NULL, NULL);
+			icl_write_buffer(buf_query, CL_TRUE, sizeof(float) * size /*dim*/, &query[0], NULL, NULL);
 		
-		icl_read_buffer(buf_dists, CL_TRUE, sizeof(float) * size, &dists[0], NULL, NULL);
-		icl_read_buffer(buf_neighbors, CL_TRUE, sizeof(int) * size, &neighbors[0], NULL, NULL);
+			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 6,
+												(size_t)0, (void *)buf_ref,
+												(size_t)0, (void *)buf_query,
+												(size_t)0, (void *)buf_dists,
+												(size_t)0, (void *)buf_neighbors,
+												sizeof(cl_int), (void *)&nRef,
+												sizeof(cl_int), (void *)&size);
+	//											sizeof(cl_int), (void *)&dim);
+		
+			icl_read_buffer(buf_dists, CL_TRUE, sizeof(float) * size, &dists[0], NULL, NULL);
+			icl_read_buffer(buf_neighbors, CL_TRUE, sizeof(int) * size, &neighbors[0], NULL, NULL);
+		}
 		
 		icl_release_buffers(4, buf_ref, buf_query, buf_dists, buf_neighbors);
 		icl_release_kernel(kernel);
 	}
+	
+	icl_stop_energy_measurement();
 	
 	if (args->check_result) {
 		printf("======================\n= KNN program working\n");
@@ -84,8 +90,7 @@ int main(int argc, const char* argv[]) {
 		printf("======================\n");
 		printf("Result check: %s\n", check ? "OK" : "FAIL");
 	} else {
-		
-                printf("Result check: OK\n");
+		printf("Result check: OK\n");
 	}
 
 	icl_release_args(args);	

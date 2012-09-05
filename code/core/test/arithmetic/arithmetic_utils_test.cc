@@ -178,8 +178,8 @@ TEST(ArithmeticTest, nonVariableValues) {
 	auto all = checks::getFullCheck();
 
 	EXPECT_EQ("v3", toString(*varX));
-	EXPECT_EQ("v3.a", toString(printer::PrettyPrinter(xa)));
-	EXPECT_EQ("v3.b", toString(printer::PrettyPrinter(xb)));
+	EXPECT_EQ("v3.a", toString(printer::PrettyPrinter(xa, printer::PrettyPrinter::NO_LET_BINDINGS)));
+	EXPECT_EQ("v3.b", toString(printer::PrettyPrinter(xb, printer::PrettyPrinter::NO_LET_BINDINGS)));
 
 	// -- build formulas using subscripts --
 

@@ -337,10 +337,10 @@ inline void irt_ocl_release_buffer(irt_ocl_buffer* buf) {
 	} else {
 		prev->next = ptr->next;
 	}
-	if (ptr == NULL) 
+	/*if (ptr == NULL) 
 		printf("null buffer\n");
 	else
-		printf("buffer size = %d\n", buf->size);
+		printf("buffer size = %d\n", buf->size);*/
 	// free the selected buffer
 	cl_int err_code = clReleaseMemObject(ptr->mem);
  	buf->dev->mem_available += ptr->size;

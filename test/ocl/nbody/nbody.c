@@ -8,7 +8,6 @@
 #define EQ(T1,T2) 		(fabs((T1).s[0]-(T2).s[0]) < eps && fabs((T1).s[1]-(T2).s[1]) < eps && fabs((T1).s[2]-(T2).s[2]) < eps)
 
 #define eps 1
-#define M 1
 #define SPACE_SIZE 100
 
 float rand_val(float min, float max) {
@@ -52,24 +51,26 @@ int main(int argc, const char* argv[]) {
 
 	icl_init_devices(args->device_type);
 	
+	icl_start_energy_measurement();
+
 	if (icl_get_num_devices() != 0) {
 		icl_device* dev = icl_get_device(args->device_id);
 
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "nbody.cl", "nbody", "", ICL_SOURCE);
-		
-		icl_buffer* buf_pos = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
-		icl_buffer* buf_vel = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
-		icl_buffer* buf_newPos = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
-		icl_buffer* buf_newVel = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
 
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
+		
+		icl_buffer* buf_pos = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
+		icl_buffer* buf_vel = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
+		icl_buffer* buf_newPos = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
+		icl_buffer* buf_newVel = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
 
-		for(int i=0; i<M; i++) {
+		for (int i = 0; i < args->loop_iteration; ++i) {
 			icl_write_buffer(buf_pos, CL_TRUE, sizeof(cl_float4) * size, &pos[0], NULL, NULL);
 			icl_write_buffer(buf_vel, CL_TRUE, sizeof(cl_float4) * size, &vel[0], NULL, NULL);
 
@@ -90,6 +91,8 @@ int main(int argc, const char* argv[]) {
 		icl_release_buffers(4, buf_vel, buf_pos, buf_newVel, buf_newPos);
 		icl_release_kernel(kernel);
 	}
+	
+	icl_stop_energy_measurement();
 	
 	if (args->check_result) {
 		printf("======================\n= N Body Simulation working\n");

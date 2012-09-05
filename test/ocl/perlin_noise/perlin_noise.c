@@ -254,12 +254,14 @@ int main(int argc, const char* argv[]) {
 	cl_uchar4* output = (cl_uchar4 *) malloc(sizeof(cl_uchar4) * size);
 	float time = 0.f;
 
-        icl_init_devices(args->device_type);
+	icl_init_devices(args->device_type);
 
-        if (icl_get_num_devices() != 0) {
-                icl_device* dev = icl_get_device(args->device_id);
+	icl_start_energy_measurement();
 
-                icl_print_device_short_info(dev);
+	if (icl_get_num_devices() != 0) {
+		icl_device* dev = icl_get_device(args->device_id);
+
+		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "perlin_noise.cl", "compute_perlin_noise", "", ICL_SOURCE);
 
 		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * size);
@@ -270,17 +272,21 @@ int main(int argc, const char* argv[]) {
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 4,
-			(size_t)0, (void *)buf_output,
-			sizeof(cl_float), (void *)&time,
-			sizeof(cl_int), (void *)&size,
-			sizeof(cl_int), (void *)&width);
+		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 4,
+				(size_t)0, (void *)buf_output,
+				sizeof(cl_float), (void *)&time,
+				sizeof(cl_int), (void *)&size,
+				sizeof(cl_int), (void *)&width);
 
-		icl_read_buffer(buf_output, CL_TRUE, sizeof(float) * size, &output[0], NULL, NULL);
-		
+			icl_read_buffer(buf_output, CL_TRUE, sizeof(float) * size, &output[0], NULL, NULL);
+		}
+
 		icl_release_buffers(1, buf_output);
 		icl_release_kernel(kernel);
 	}
+
+	icl_stop_energy_measurement();
 
 	if (args->check_result) {
 		printf("Checking results\n");
