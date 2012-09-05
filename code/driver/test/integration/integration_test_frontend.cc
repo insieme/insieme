@@ -83,7 +83,7 @@ namespace insieme {
 		utils::test::IntegrationTestCase testCase = GetParam();
 		SCOPED_TRACE("Testing Case: " + testCase.getName());
 		LOG(INFO) << "Testing Case: " + testCase.getName();
-	
+
 		// load the code using the frontend
 		core::ProgramPtr code = load(manager, testCase);
 		// LOG(INFO) << printer::PrettyPrinter(code);
