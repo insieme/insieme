@@ -1111,6 +1111,7 @@ ExpressionPtr IRBuilder::wrapLazy(const ExpressionPtr& expr) const {
 
 	// if it is a expression, bind free variables
 	VariableList list = analysis::getFreeVariables(expr);
+	std::sort(list.begin(), list.end(), compare_target<VariablePtr>());
 	ExpressionPtr res = lambdaExpr(expr->getType(),returnStmt(expr), list);
 
 	// if there are no free variables ...
