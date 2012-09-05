@@ -1338,9 +1338,13 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 	[ this, &builder, &gen ]
 	(core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
 
-		if ((subExpr->getNodeType() == core::NT_Variable && subExpr->getType()->getNodeType() != core::NT_RefType) 
-			|| (subExpr->getNodeType() == core::NT_Variable && subExpr->getType()->getNodeType() == core::NT_RefType && 
-			   GET_REF_ELEM_TYPE(subExpr->getType())->getNodeType() == core::NT_ArrayType)) {
+		if ((subExpr->getNodeType() == core::NT_Variable && 
+			 subExpr->getType()->getNodeType() != core::NT_RefType) 
+			|| 
+			(subExpr->getNodeType() == core::NT_Variable && 
+			 subExpr->getType()->getNodeType() == core::NT_RefType && 
+			 GET_REF_ELEM_TYPE(subExpr->getType())->getNodeType() == core::NT_ArrayType)) 
+		{
 			// It can happen we are incrementing a variable which is coming from an input
 			// argument of a function
 			core::VariablePtr var = subExpr.as<core::VariablePtr>();
@@ -1357,16 +1361,11 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 
 		core::TypePtr type = subExpr->getType();
 		assert( type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type" );
-
 		core::TypePtr elementType = GET_REF_ELEM_TYPE(type);
 
-		core::TypePtr genType;
-		if ( gen.isSignedInt(elementType) ) {
-			genType = gen.getIntGen();
-		} else if ( gen.isUnsignedInt(elementType) ) {
-			genType = gen.getUIntGen();
-
-		} else if ( core::analysis::isRefType(elementType) && (GET_REF_ELEM_TYPE(elementType)->getNodeType() == core::NT_ArrayType)) {
+		if ( core::analysis::isRefType(elementType) && 
+			 (GET_REF_ELEM_TYPE(elementType)->getNodeType() == core::NT_ArrayType)) 
+		{
 			// if this is a post/pre incremenet operator applied to an array we have to deal with it
 			// immediatelly because the getOperator function wouldn't deal with such case 
 
@@ -1390,10 +1389,26 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 
 			return builder.callExpr(elementType, opLit, subExpr);
 
-		} else {
-			assert(false && "Illegal operand type for increment/decrement operator.");
 		}
-		return convFact.builder.callExpr(elementType, gen.getOperator(genType, op), subExpr);
+
+		switch (op) {
+
+		case core::lang::BasicGenerator::PreInc:
+			return convFact.builder.preInc(subExpr);
+
+		case core::lang::BasicGenerator::PostInc:
+			return convFact.builder.postInc(subExpr);
+
+		case core::lang::BasicGenerator::PreDec:
+			return convFact.builder.preDec(subExpr);
+
+		case core::lang::BasicGenerator::PostDec:
+			return convFact.builder.postDec(subExpr);
+
+		default :
+			assert(false);
+		}
+
 	};
 
 	switch ( unOp->getOpcode() ) {

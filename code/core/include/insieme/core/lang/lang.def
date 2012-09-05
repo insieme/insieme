@@ -195,8 +195,9 @@ OPERATION(Bool, Not,  "bool.bnot", "(bool) -> bool")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
-GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod, 
-        SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec)
+GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod,
+IncrementOp)
+//      SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec)
 
 OPERATION(SignedInt, Add,  "int.add", "(int<#a>,int<#a>) -> int<#a>")
 OPERATION(SignedInt, Sub,  "int.sub", "(int<#a>,int<#a>) -> int<#a>")
@@ -204,13 +205,14 @@ OPERATION(SignedInt, Mul,  "int.mul", "(int<#a>,int<#a>) -> int<#a>")
 OPERATION(SignedInt, Div,  "int.div", "(int<#a>,int<#a>) -> int<#a>")
 OPERATION(SignedInt, Mod,  "int.mod", "(int<#a>,int<#a>) -> int<#a>")
 
-OPERATION(SignedInt, PreInc,  "int.preInc",  "(ref<int<#a>>) -> int<#a>")
-OPERATION(SignedInt, PostInc, "int.postInc", "(ref<int<#a>>) -> int<#a>")
+// OPERATION(SignedInt, PreInc,  "int.preInc",  "(ref<int<#a>>) -> int<#a>")
+// OPERATION(SignedInt, PostInc, "int.postInc", "(ref<int<#a>>) -> int<#a>")
 OPERATION(SignedInt, PreDec,  "int.preDec",  "(ref<int<#a>>) -> int<#a>")
 OPERATION(SignedInt, PostDec, "int.postDec", "(ref<int<#a>>) -> int<#a>")
 
 GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod,
-        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
+IncrementOp)
+//        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
 
 OPERATION(UnsignedInt, Add,  "uint.add", "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Sub,  "uint.sub", "(uint<#a>,uint<#a>) -> uint<#a>")
@@ -218,8 +220,8 @@ OPERATION(UnsignedInt, Mul,  "uint.mul", "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Div,  "uint.div", "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Mod,  "uint.mod", "(uint<#a>,uint<#a>) -> uint<#a>")
 
-OPERATION(UnsignedInt, PreInc,  "uint.preInc",  "(ref<uint<#a>>) -> uint<#a>")
-OPERATION(UnsignedInt, PostInc, "uint.postInc", "(ref<uint<#a>>) -> uint<#a>")
+// OPERATION(UnsignedInt, PreInc,  "uint.preInc",  "(ref<uint<#a>>) -> uint<#a>")
+// OPERATION(UnsignedInt, PostInc, "uint.postInc", "(ref<uint<#a>>) -> uint<#a>")
 OPERATION(UnsignedInt, PreDec,  "uint.preDec",  "(ref<uint<#a>>) -> uint<#a>")
 OPERATION(UnsignedInt, PostDec, "uint.postDec", "(ref<uint<#a>>) -> uint<#a>")
 
@@ -233,9 +235,14 @@ OPERATION(Real, Div,  "real.div", "(real<#a>,real<#a>) -> real<#a>")
 
 GROUP(ArithOp, IntArithOp, UIntArithOp, RealArithOp)
 
-GROUP(IncrementOp, 
-		SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec,
-        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
+DERIVED(GenPreInc, 		"gen.pre.inc",		"(ref<'a> v)->'a { v=*v+lit(\"1\":'a); return *v; }")
+DERIVED(GenPostInc, 	"gen.post.inc",		"(ref<'a> v)->'a { auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
+DERIVED(GenPreDec, 		"gen.pre.dec",		"(ref<'a> v)->'a { v=*v-lit(\"1\":'a); return *v; }")
+DERIVED(GenPostDec, 	"gen.post.dec",		"(ref<'a> v)->'a { auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
+
+GROUP(IncrementOp, GenPreInc, GenPostInc, GenPreDec, GenPostDec)
+// SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec,
+//        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
 
 GROUP(LinearIntOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, IncrementOp)
 
@@ -365,7 +372,7 @@ OPERATION(Gen, Ge, "gen.ge", "('a,'a) -> bool")
 GROUP(GenArithmeticOp, GenAdd, GenSub, GenMul, GenDiv, GenMod)
 GROUP(GenBitwiseOp, GenAnd, GenOr, GenXor, GenLShift, GenRShift)
 GROUP(GenCompOp, GenEq, GenNe, GenLt, GenGt, GenLe, GenGe)
-GROUP(GenOp, GenArithmeticOp, GenBitwiseOp, GenCompOp)
+GROUP(GenOp, GenArithmeticOp, GenBitwiseOp, GenCompOp, IncrementOp )
 
 GROUP(AddOp, GenAdd, SignedIntAdd, UnsignedIntAdd, RealAdd) 
 GROUP(SubOp, GenSub, SignedIntSub, UnsignedIntSub, RealSub) 

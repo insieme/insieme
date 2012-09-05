@@ -678,14 +678,19 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDoStmt(clang::DoSt
 	const core::IRBuilder& builder = convFact.builder;
 	stmtutils::StmtWrapper retStmt;
 
-	VLOG(2)
-		<< "{ DoStmt }";
+	VLOG(2) << "{ DoStmt }";
+
 	core::CompoundStmtPtr&& body = builder.wrapBody( stmtutils::tryAggregateStmts( builder, Visit( doStmt->getBody() ) ) );
 	assert(body && "Couldn't convert body of the WhileStmt");
 
-	const clang::Expr* cond = doStmt->getCond();assert( cond && "DoStmt with no condition.");
-	core::ExpressionPtr condExpr = convFact.convertExpr(cond);assert(
-			condExpr && "Couldn't convert 'condition' expression of the DoStmt");
+	const clang::Expr* cond = doStmt->getCond();
+	assert(cond && "DoStmt must have a condition.");
+
+	core::ExpressionPtr condExpr = convFact.convertExpr(cond);
+	assert(condExpr && "Couldn't convert 'condition' expression of the DoStmt");
+
+	assert(!core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign()) && 
+			"Assignment not allowd in condition expression");
 
 	if (!convFact.mgr.getLangBasic().isBool(condExpr->getType())) {
 		// convert the expression to bool via the castToType utility routine
@@ -697,10 +702,10 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDoStmt(clang::DoSt
 	std::copy(body->getStatements().begin(), body->getStatements().end(), std::back_inserter(stmts));
 	stmts.push_back(builder.whileStmt(condExpr, body));
 
-	core::StatementPtr&& irNode = builder.compoundStmt(stmts);
+	core::StatementPtr irNode = builder.compoundStmt(stmts);
 
 	// handle eventual OpenMP pragmas attached to the Clang node
-	core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, doStmt, convFact);
+	core::StatementPtr annotatedNode = omp::attachOmpAnnotation(irNode, doStmt, convFact);
 
 	// adding the WhileStmt to the list of returned stmts
 	retStmt.push_back(annotatedNode);
@@ -719,12 +724,12 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 	const core::IRBuilder& builder = convFact.builder;
 	stmtutils::StmtWrapper retStmt;
 
-	VLOG(2)
-		<< "{ Visit SwitchStmt }";
+	VLOG(2) << "{ Visit SwitchStmt }";
 	core::ExpressionPtr condExpr;
+
 	if ( const clang::VarDecl* condVarDecl = switchStmt->getConditionVariable()) {
-		assert(
-				switchStmt->getCond() == NULL && "SwitchStmt condition cannot contains both a variable declaration and an expression");
+		assert(	!switchStmt->getCond() && 
+				"SwitchStmt condition cannot contains both a variable declaration and an expression");
 
 		core::DeclarationStmtPtr&& declStmt = convFact.convertVarDecl(condVarDecl);
 		retStmt.push_back(declStmt);
@@ -732,7 +737,8 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 		// the expression will be a reference to the declared variable
 		condExpr = declStmt->getVariable();
 	} else {
-		const clang::Expr* cond = switchStmt->getCond();assert( cond && "SwitchStmt with no condition.");
+		const clang::Expr* cond = switchStmt->getCond();
+		assert(cond && "SwitchStmt with no condition.");
 		condExpr = convFact.tryDeref(convFact.convertExpr(cond));
 
 		// we create a variable to store the value of the condition for this switch
@@ -743,7 +749,9 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 		retStmt.push_back(declVar);
 
 		condExpr = condVar;
-	}assert( condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
+	}
+
+	assert( condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// this Switch stamtement has a body, i.e.:
@@ -932,16 +940,16 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitCompoundStmt(clang
 		//
 		// 		int<a> a = 0; int<4> b = 1;
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			stmtutils::StmtWrapper convertedStmt;
+		stmtutils::StmtWrapper convertedStmt;
 
-			if(dyn_cast<clang::ReturnStmt>(stmt)) {
-				hasReturn = true;
-			}
+		if(dyn_cast<clang::ReturnStmt>(stmt)) {
+			hasReturn = true;
+		}
 
-			convertedStmt = Visit(stmt);
-			copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
+		convertedStmt = Visit(stmt);
+		copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
 
-		});
+	});
 
 	retIr = convFact.builder.compoundStmt(stmtList);
 
