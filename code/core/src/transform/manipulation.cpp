@@ -930,7 +930,7 @@ CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt) {
 	// sort to obtain stable results
 	// std::stable_sort is used here because std::sort segfaults (for no discernable reason) 
 	// on a particular list in the omp/nas/lu test case
-	std::stable_sort(free.begin(), free.end(), compare_target<VariablePtr>());
+	std::sort(free.begin(), free.end(), compare_target<VariablePtr>());
 
 	// rename free variables within body using restricted scope
 	IRBuilder builder(manager);
