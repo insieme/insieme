@@ -37,6 +37,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include <boost/tuple/tuple.hpp>
+#include <set>
 #include <limits>
 
 #include "insieme/core/ir_node.h"
