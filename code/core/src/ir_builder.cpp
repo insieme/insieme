@@ -65,6 +65,14 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
 
+namespace {
+
+bool set_cmp(const insieme::core::VariablePtr& lhs, const insieme::core::VariablePtr& rhs) { 
+	return *lhs < *rhs;
+}
+
+} // end anonymous namespace 
+
 namespace insieme {
 namespace core {
 
@@ -124,10 +132,7 @@ namespace {
 		visitDepthFirstPrunable(root, visitor);
 
 		// Define the comparator for the set 
-		auto cmp = [](const VariablePtr& lhs, const VariablePtr& rhs) -> bool { 
-			return *lhs < *rhs;
-		};
-		std::set<VariablePtr, decltype(cmp)> nonDecls(cmp);
+		std::set<VariablePtr, bool(*)(const VariablePtr&,const VariablePtr&)> nonDecls(set_cmp);
 
 		std::set_difference( 
 				visitor.usedVars.begin(), visitor.usedVars.end(),
