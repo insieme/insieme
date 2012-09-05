@@ -63,29 +63,34 @@
 namespace stmtutils {
 
 // Tried to aggregate statements into a compound statement (if more than 1 statement is present)
-insieme::core::StatementPtr tryAggregateStmts(const insieme::core::IRBuilder& builder, const StatementList& stmtVect) {
-	if (stmtVect.size() == 1) {
-		return tryAggregateStmt(builder, stmtVect.front());
-	}
-	return builder.compoundStmt(stmtVect);
+insieme::core::StatementPtr 
+tryAggregateStmts(const insieme::core::IRBuilder& builder, const StatementList& stmtVect) 
+{
+	return (stmtVect.size() == 1) ? tryAggregateStmt(builder, stmtVect.front()) : builder.compoundStmt(stmtVect);
 }
 
-insieme::core::StatementPtr tryAggregateStmt(const insieme::core::IRBuilder& builder, const insieme::core::StatementPtr& stmt) {
-	if (stmt->getNodeType() == insieme::core::NT_CompoundStmt) {
-		return tryAggregateStmts(builder, static_pointer_cast<insieme::core::CompoundStmtPtr>(stmt)->getStatements());
-	}
-	return stmt;
+insieme::core::StatementPtr 
+tryAggregateStmt(const insieme::core::IRBuilder& builder, 
+				 const insieme::core::StatementPtr& stmt) 
+{
+	return (stmt->getNodeType() == insieme::core::NT_CompoundStmt) ? 
+		tryAggregateStmts(builder, static_pointer_cast<insieme::core::CompoundStmtPtr>(stmt)->getStatements())
+		: stmt;
 }
 
-insieme::core::ExpressionPtr makeOperation(const insieme::core::IRBuilder& builder, const insieme::core::ExpressionPtr& lhs,
-		const insieme::core::ExpressionPtr& rhs, const insieme::core::lang::BasicGenerator::Operator& op) {
+insieme::core::ExpressionPtr 
+makeOperation(const insieme::core::IRBuilder& builder, 
+			  const insieme::core::ExpressionPtr& lhs,
+			  const insieme::core::ExpressionPtr& rhs, 
+			  const insieme::core::lang::BasicGenerator::Operator& op) 
+{
 	return builder.callExpr(lhs->getType(), // return type
 			builder.getLangBasic().getOperator(lhs->getType(), op), // get the oprtator
-			toVector<insieme::core::ExpressionPtr>(lhs, rhs) // LHS and RHS of the operation
-					);
+			{ lhs, rhs } // LHS and RHS of the operation
+		);
 }
 
-}
+} // end stmtutils namespace 
 
 namespace insieme {
 namespace frontend {
@@ -304,8 +309,8 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		assert( initExpr.isSingleStmt() && "Init expression for loop statement contains multiple statements");
 
 		// We are in the case where we are sure there is exactly 1 element in the initialization expression
-		core::DeclarationStmtPtr declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(
-				initExpr.getSingleStmt());
+		core::DeclarationStmtPtr declStmt = 
+			core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr.getSingleStmt());
 
 		bool iteratorChanged = false;
 
@@ -328,8 +333,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 			// 			i = ceil((cond-init)/step) * step + init;
 			// 		}
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			core::ExpressionPtr&& init =
-			core::dynamic_pointer_cast<const core::Expression>( initExpr.getSingleStmt() );
+			core::ExpressionPtr init = initExpr.getSingleStmt().as<core::ExpressionPtr>();
 
 			assert(init && "Initialization statement for loop is not an expression");
 
@@ -357,11 +361,14 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		core::ExpressionPtr init = declStmt->getInitialization();
 
 		if (core::analysis::isCallOf(init, convFact.mgr.getLangBasic().getRefVar())) {
-			const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(init);assert(
-					callExpr->getArguments().size() == 1);
+			core::CallExprPtr callExpr = init.as<core::CallExprPtr>();
+			assert(callExpr->getArguments().size() == 1);
+
 			init = callExpr->getArgument(0);
-			assert(
-					init->getType()->getNodeType() != core::NT_RefType && "Initialization value of induction variable must be of non-ref type");
+
+			assert(init->getType()->getNodeType() != core::NT_RefType && 
+					"Initialization value of induction variable must be of non-ref type"
+				);
 
 		} else if (init->getType()->getNodeType() == core::NT_RefType) {
 			init = builder.deref(init);
@@ -370,7 +377,6 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		assert( init->getType()->getNodeType() != core::NT_RefType);
 
 		declStmt = builder.declarationStmt(inductionVar, init);
-
 		assert(init->getType()->getNodeType() != core::NT_RefType);
 
 		if (loopAnalysis.isInverted()) {
@@ -524,7 +530,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		retStmt = stmtutils::tryAggregateStmts(builder, retStmt);
 	}
 
-	// END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
+	END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
 	return retStmt;
 }
 
