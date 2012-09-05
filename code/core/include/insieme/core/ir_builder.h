@@ -372,7 +372,7 @@ namespace core {
 		// Locks
 		CallExprPtr acquireLock(const ExpressionPtr& lock) const;
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
-		CallExprPtr createLock() const;
+		CallExprPtr initLock(const ExpressionPtr& lock) const;
 
 		// Atomics
 		CallExprPtr atomicOp(const ExpressionPtr& location, const ExpressionPtr& testFunc, const ExpressionPtr& replaceFunc);
