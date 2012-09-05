@@ -119,15 +119,19 @@ namespace {
 	    utils::set::PointerSet<VariablePtr> usedVars;
 	};
 
-	utils::set::PointerSet<VariablePtr> getRechingVariables(const core::NodePtr& root) {
+	std::vector<VariablePtr> getRechingVariables(const core::NodePtr& root) {
 		VarRefFinder visitor;
 		visitDepthFirstPrunable(root, visitor);
 
-		utils::set::PointerSet<VariablePtr> nonDecls;
+		auto cmp = [](const VariablePtr& lhs, const VariablePtr& rhs) -> bool { 
+			return *lhs < *rhs;
+		};
+		std::set<VariablePtr, decltype(cmp)> nonDecls(cmp);
+
 		std::set_difference( visitor.usedVars.begin(), visitor.usedVars.end(),
 				visitor.declaredVars.begin(), visitor.declaredVars.end(), std::inserter(nonDecls, nonDecls.begin()));
 
-		return nonDecls;
+		return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
 	}
 
 }
@@ -205,9 +209,15 @@ UIntValuePtr IRBuilder::uintValue(unsigned value) const {
 
 // ---------------------------- Convenience -------------------------------------
 
+
+bool IRBuilder::matchType(const std::string& typeStr, const core::TypePtr& irType) const {
+	return unify(manager, parseType(typeStr), irType);
+}
+
 GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intParams) const {
 	return genericType(name, types(typeParams), intTypeParams(intParams));
 }
+
 
 StructTypePtr IRBuilder::structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
 	vector<NamedTypePtr> members;
@@ -798,7 +808,7 @@ CallExprPtr IRBuilder::parallel(const StatementPtr& stmt, int numThreads) const 
 
 core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
     // Find the variables which are used in the body and not declared
-	utils::set::PointerSet<VariablePtr>&& args = getRechingVariables(body);
+	std::vector<VariablePtr>&& args = getRechingVariables(body);
 
     core::TypeList argsType;
     VariableList params;
@@ -809,7 +819,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     std::for_each(args.begin(), args.end(), [ & ] (const core::ExpressionPtr& curr) {
             assert(curr->getNodeType() == core::NT_Variable);
 
-            const core::VariablePtr& bodyVar = core::static_pointer_cast<const core::Variable>(curr);
+            const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
             const core::TypePtr& varType = bodyVar->getType();
 
             // we create a new variable to replace the captured variable

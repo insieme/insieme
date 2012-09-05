@@ -80,7 +80,7 @@ void binary_op_test() {
 	a -= b;
 
 	#pragma test \
-	"fun(ref<int<4>> v3, ref<int<4>> v4){ (( *v3)+1); return (( *v4)-1);}(v2, v1)"
+	"fun(ref<int<4>> v3, ref<int<4>> v4){ (( *v4)+1); return (( *v3)-1);}(v1, v2)"
 	(a+1, b-1);
 }
 

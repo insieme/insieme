@@ -196,8 +196,8 @@ TEST(TypeUtils, Substitution) {
 	EXPECT_PRED2(containsSubString, toString(combinedAB.getMapping()), "AP('A)=AP(type<'A,constType,15,#y>)");
 	EXPECT_PRED2(containsSubString, toString(combinedAB.getMapping()), "AP('B)=AP(constType)");
 
-	EXPECT_PRED2(containsSubString, toString(combinedAB.getMapping()), "AP('A)=AP(type<'A,'B,#x,#y>)");
-	EXPECT_PRED2(containsSubString, toString(combinedAB.getMapping()), "AP('B)=AP(constType)");
+	EXPECT_PRED2(containsSubString, toString(combinedBA.getMapping()), "AP('A)=AP(type<'A,'B,#x,#y>)");
+	EXPECT_PRED2(containsSubString, toString(combinedBA.getMapping()), "AP('B)=AP(constType)");
 	EXPECT_EQ("{AP('B)=AP(constType)}", toString(combinedBB.getMapping()));
 
 	EXPECT_EQ("{}", toString(combinedAA.getIntTypeParamMapping()));
