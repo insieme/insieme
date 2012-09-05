@@ -130,9 +130,9 @@ class Access : public utils::Printable {
 		   const core::VariablePtr& 			var,
 		   const core::datapath::DataPathPtr& 	path, 
 		   const VarType& 						type,
-		   const cfg::BlockPtr& 				cfg_block = cfg::BlockPtr(),
-		   size_t								stmtIdx = 0,
-		   const polyhedral::IterationVector&	iv = polyhedral::IterationVector(), 
+		   const cfg::BlockPtr& 				cfg_block 	= cfg::BlockPtr(),
+		   size_t								stmtIdx 	= 0,
+		   const polyhedral::IterationVector&	iv 	= polyhedral::IterationVector(), 
 		   const ConstraintPtr& 				dom = ConstraintPtr(),
 		   const core::NodeAddress& 			ctx = core::NodeAddress() 
 	) :
@@ -250,9 +250,9 @@ std::set<Access> extractFromStmt(const core::StatementAddress& stmt, const TmpVa
  * Similar to the previous function, this function collects all memory accesses within a statement,
  * accesses will be append to the provided set 
  */
-void extractFromStmt(const core::StatementAddress& stmt, 
-					 std::set<Access>& accesses, 
-					 const TmpVarMap& tmpVarMap=TmpVarMap()
+void extractFromStmt(const core::StatementAddress& 	stmt, 
+					 std::set<Access>& 				accesses, 
+					 const TmpVarMap& 				tmpVarMap=TmpVarMap()
 					);
 
 /**

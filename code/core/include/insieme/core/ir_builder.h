@@ -159,6 +159,8 @@ namespace core {
 
 		// --- Convenience Utilities ---
 
+		bool matchType(const std::string& typeStr, const core::TypePtr& irType) const;
+
 		template <typename T>
 		core::Pointer<const T> normalize(const core::Pointer<const T>& root) const {
 			return core::analysis::normalize(root);
