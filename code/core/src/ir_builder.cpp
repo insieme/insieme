@@ -123,13 +123,17 @@ namespace {
 		VarRefFinder visitor;
 		visitDepthFirstPrunable(root, visitor);
 
+		// Define the comparator for the set 
 		auto cmp = [](const VariablePtr& lhs, const VariablePtr& rhs) -> bool { 
 			return *lhs < *rhs;
 		};
 		std::set<VariablePtr, decltype(cmp)> nonDecls(cmp);
 
-		std::set_difference( visitor.usedVars.begin(), visitor.usedVars.end(),
-				visitor.declaredVars.begin(), visitor.declaredVars.end(), std::inserter(nonDecls, nonDecls.begin()));
+		std::set_difference( 
+				visitor.usedVars.begin(), visitor.usedVars.end(),
+				visitor.declaredVars.begin(), visitor.declaredVars.end(), 
+				std::inserter(nonDecls, nonDecls.begin())
+			);
 
 		return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
 	}

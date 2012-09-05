@@ -1220,26 +1220,23 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 			assert(false && "Never reach this point");
 		}
 
-		if (core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType()) && 
-			(core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType || 
-			 core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_VectorType)
+		if (!core::analysis::isRefType(rhs->getType()) && 
+			(builder.matchType("ref<array<'a,1>>", lhs->getType()) || builder.matchType("ref<vector<'a,#n>>", lhs->getType()))
 		) {
 			doPointerArithmetic();	
 			return (retIr = rhs);
 		}
 
-		if (core::analysis::isRefType(rhs->getType()) && !core::analysis::isRefType(lhs->getType()) && 
-			(core::analysis::getReferencedType(rhs->getType())->getNodeType() == core::NT_ArrayType || 
-			 core::analysis::getReferencedType(rhs->getType())->getNodeType() == core::NT_VectorType)
+		if (!core::analysis::isRefType(lhs->getType()) && 
+			(builder.matchType("ref<array<'a,1>>", rhs->getType()) || builder.matchType("ref<vector<'a,#n>>", rhs->getType()))
 		) {
 			std::swap(rhs, lhs);
 			doPointerArithmetic();	
 			return (retIr = rhs);
 		}
-
-		if (core::analysis::isRefType(rhs->getType()) && core::analysis::isRefType(lhs->getType()) && 
-			core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType &&
-			core::analysis::getReferencedType(rhs->getType())->getNodeType() == core::NT_ArrayType &&
+	
+		if (builder.matchType("ref<array<'a,1>>", lhs->getType()) && 
+			builder.matchType("ref<array<'a,1>>", rhs->getType()) &&
 			baseOp == BO_Sub)
 		{
 			return retIr = builder.callExpr( gen.getArrayRefDistance(), lhs, rhs);
@@ -1371,40 +1368,21 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 
 			core::ExpressionPtr opLit;
 			switch (op) {
-			case core::lang::BasicGenerator::PreInc:
-				opLit = gen.getArrayViewPreInc();
-				break;
-			case core::lang::BasicGenerator::PostInc:
-				opLit = gen.getArrayViewPostInc();
-				break;
-			case core::lang::BasicGenerator::PreDec:
-				opLit = gen.getArrayViewPreDec();
-				break;
-			case core::lang::BasicGenerator::PostDec:
-				opLit = gen.getArrayViewPostDec();
-				break;
+			case core::lang::BasicGenerator::PreInc:  opLit = gen.getArrayViewPreInc(); 	break;
+			case core::lang::BasicGenerator::PostInc: opLit = gen.getArrayViewPostInc();	break;
+			case core::lang::BasicGenerator::PreDec:  opLit = gen.getArrayViewPreDec();		break;
+			case core::lang::BasicGenerator::PostDec: opLit = gen.getArrayViewPostDec();	break;
 			default:
 				assert(false && "Operator not handled for pointer arithmetic");
 			}
-
 			return builder.callExpr(elementType, opLit, subExpr);
-
 		}
 
 		switch (op) {
-
-		case core::lang::BasicGenerator::PreInc:
-			return convFact.builder.preInc(subExpr);
-
-		case core::lang::BasicGenerator::PostInc:
-			return convFact.builder.postInc(subExpr);
-
-		case core::lang::BasicGenerator::PreDec:
-			return convFact.builder.preDec(subExpr);
-
-		case core::lang::BasicGenerator::PostDec:
-			return convFact.builder.postDec(subExpr);
-
+		case core::lang::BasicGenerator::PreInc: 	return convFact.builder.preInc(subExpr);
+		case core::lang::BasicGenerator::PostInc:	return convFact.builder.postInc(subExpr);
+		case core::lang::BasicGenerator::PreDec:	return convFact.builder.preDec(subExpr);
+		case core::lang::BasicGenerator::PostDec:	return convFact.builder.postDec(subExpr);
 		default :
 			assert(false);
 		}
@@ -1416,18 +1394,14 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 		// a++ ==> (__tmp = a, a=a+1, __tmp)
 		// ++a ==> ( a=a+1, a)
 		// --a
-	case UO_PreDec:
-		return retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreDec);
-		// a--
-	case UO_PostDec:
-		return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostDec));
-		// a++
-	case UO_PreInc:
-		return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreInc));
-		// ++a
-	case UO_PostInc:
-		return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostInc));
-		// &a
+	case UO_PreDec:  return retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreDec);
+	// a--
+	case UO_PostDec: return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostDec));
+	// a++
+	case UO_PreInc:  return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreInc));
+	// ++a
+	case UO_PostInc: return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostInc));
+	// &a
 	case UO_AddrOf:
 		{
 			/*
@@ -1449,7 +1423,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 			assert(retIr->getType()->getNodeType() == core::NT_RefType);
 			return (retIr = utils::refScalarToRefArray(retIr));
 		}
-		// *a
+	// *a
 	case UO_Deref: {
 			// make sure it is a L-Value
 			retIr = asLValue(subExpr);
@@ -1464,14 +1438,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 					getCArrayElemRef(builder, retIr) : convFact.tryDeref(retIr)
 			);
 		}
-		// +a
-	case UO_Plus:
-		return retIr = subExpr;
-		// -a
-	case UO_Minus:
-		return (retIr = builder.invertSign( convFact.tryDeref(subExpr) ));
-		// ~a
-		case UO_Not:
+	// +a
+	case UO_Plus:  return retIr = subExpr;
+	// -a
+	case UO_Minus: return (retIr = builder.invertSign( convFact.tryDeref(subExpr) ));
+	// ~a
+	case UO_Not:
 		retIr = convFact.tryDeref(subExpr);
 		return (retIr = builder.callExpr(
 						retIr->getType(),
