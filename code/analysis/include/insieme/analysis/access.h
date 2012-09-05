@@ -296,7 +296,7 @@ private:
 
 public:
 
-	typedef std::pair<AccessClassPtr, core::datapath::DataPathPtr> Dependence;
+	typedef std::pair<std::weak_ptr<AccessClass>, core::datapath::DataPathPtr> Dependence;
 
 	typedef std::vector<Dependence> SubClasses;
 
@@ -309,7 +309,7 @@ private:
 	/**
 	 * Reference to the parent class 
 	 */
-	const AccessClassPtr parentClass;
+	const std::weak_ptr<AccessClass> parentClass;
 
 	friend class AccessManager;
 
@@ -319,7 +319,7 @@ private:
 	AccessClass(
 			const std::reference_wrapper<const AccessManager>& mgr, 
 			size_t uid, 
-			const AccessClassPtr parent = AccessClassPtr()
+			const std::weak_ptr<AccessClass> parent = std::weak_ptr<AccessClass>()
 	) : mgr(mgr), 
 		uid(uid), 
 		parentClass(parent) {  }
@@ -359,7 +359,7 @@ public:
 	inline size_t getUID() const { return uid; }
 
 	const AccessClassPtr getParentClass() const {
-		return parentClass;
+		return parentClass.lock();
 	}
 
 	inline void addSubClass(const Dependence& dep) {
