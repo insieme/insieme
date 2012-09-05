@@ -1067,8 +1067,8 @@ namespace {
 				return builder.getNoOp();
 			}
 
-			if (basic.isLockCreate(fun)) {
-				return builder.intLit(0);
+			if (basic.isLockInit(fun)) {
+				return builder.getNoOp();
 			}
 
 			// otherwise, don't touch it
