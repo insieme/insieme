@@ -36,6 +36,7 @@
 
 #include "insieme/core/ir_builder.h"
 
+#include <tuple>
 #include <limits>
 #include <set>
 
@@ -74,14 +75,14 @@ namespace core {
 
 namespace {
 
-	typedef boost::tuple<vector<VariablePtr>, vector<ExpressionPtr>> InitDetails;
+	typedef std::tuple<vector<VariablePtr>, vector<ExpressionPtr>> InitDetails;
 
 	InitDetails splitUp(const IRBuilder::VarValueMapping& captureInits) {
 
 		// prepare containers
 		InitDetails res;
-		vector<VariablePtr>& vars = res.get<0>();
-		vector<ExpressionPtr>& inits = res.get<1>();
+		vector<VariablePtr>& vars = std::get<0>(res);
+		vector<ExpressionPtr>& inits = std::get<1>(res);
 
 		// process the given map
 		for_each(captureInits, [&](const IRBuilder::VarValueMapping::value_type& cur) {
