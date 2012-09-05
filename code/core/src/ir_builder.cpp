@@ -36,9 +36,8 @@
 
 #include "insieme/core/ir_builder.h"
 
-#include <boost/tuple/tuple.hpp>
-#include <set>
 #include <limits>
+#include <set>
 
 #include "insieme/core/ir_node.h"
 
@@ -65,14 +64,6 @@
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
-
-namespace {
-
-bool set_cmp(const insieme::core::VariablePtr& lhs, const insieme::core::VariablePtr& rhs) { 
-	return *lhs < *rhs;
-}
-
-} // end anonymous namespace 
 
 namespace insieme {
 namespace core {
@@ -133,7 +124,10 @@ namespace {
 		visitDepthFirstPrunable(root, visitor);
 
 		// Define the comparator for the set 
-		std::set<VariablePtr, bool(*)(const VariablePtr&,const VariablePtr&)> nonDecls(set_cmp);
+		auto cmp = [](const VariablePtr& lhs, const VariablePtr& rhs) -> bool { 
+			return *lhs < *rhs;
+		};
+		std::set<VariablePtr, decltype(cmp)> nonDecls(cmp);
 
 		std::set_difference( 
 				visitor.usedVars.begin(), visitor.usedVars.end(),
