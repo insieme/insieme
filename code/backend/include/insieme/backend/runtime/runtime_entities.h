@@ -128,7 +128,7 @@ namespace runtime {
 
 	public:
 
-		WorkItemImpl(const vector<WorkItemVariant>& variants) : variants(variants) {};
+		WorkItemImpl(const vector<WorkItemVariant>& variants = vector<WorkItemVariant>()) : variants(variants) {};
 
 		vector<WorkItemVariant>& getVariants() {
 			return variants;

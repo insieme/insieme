@@ -65,6 +65,8 @@ namespace compiler {
 
 		static Compiler getDefaultC99Compiler();
 		static Compiler getDefaultC99CompilerO3();
+		static Compiler getRuntimeCompiler();
+		static Compiler getRuntimeCompilerO3();
 
 		const string& getExecutable() const {
 			return executable;
