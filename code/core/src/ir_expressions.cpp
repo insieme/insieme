@@ -57,11 +57,8 @@ namespace core {
 	}
 
 	bool Variable::operator<(const Variable& var) const {
-		VariablePtr other(&var);
-		if (getId() < other->getId()) {
-			return true;
-		}
-		return ::toString(*getType()) < ::toString(*other->getType());
+		if (getId() < var.getId()) return true;
+		return getId() == var.getId() && ::toString(*getType()) < ::toString(*var.getType());
 	}
 
 	bool Literal::operator<(const Literal& var) const {
