@@ -193,8 +193,11 @@ TEST(TypeUtils, Substitution) {
 	Substitution combinedBA = Substitution::compose(manager, subB, subA);
 	Substitution combinedBB = Substitution::compose(manager, subB, subB);
 
-	EXPECT_EQ("{AP('A)=AP(type<'A,constType,15,#y>), AP('B)=AP(constType)}", toString(combinedAB.getMapping()));
-	EXPECT_EQ("{AP('A)=AP(type<'A,'B,#x,#y>), AP('B)=AP(constType)}", toString(combinedBA.getMapping()));
+	EXPECT_PRED2(containsSubString, toString(combinedAB.getMapping()), "AP('A)=AP(type<'A,constType,15,#y>)");
+	EXPECT_PRED2(containsSubString, toString(combinedAB.getMapping()), "AP('B)=AP(constType)");
+
+	EXPECT_PRED2(containsSubString, toString(combinedBA.getMapping()), "AP('A)=AP(type<'A,'B,#x,#y>)");
+	EXPECT_PRED2(containsSubString, toString(combinedBA.getMapping()), "AP('B)=AP(constType)");
 	EXPECT_EQ("{AP('B)=AP(constType)}", toString(combinedBB.getMapping()));
 
 	EXPECT_EQ("{}", toString(combinedAA.getIntTypeParamMapping()));
@@ -855,6 +858,34 @@ TEST(TypeUtils, isGeneric) {
 	EXPECT_TRUE(isGeneric(builder.functionType(toVector(var), var)));
 	EXPECT_TRUE(isGeneric(builder.functionType(toVector(var), constA)));
 	EXPECT_FALSE(isGeneric(builder.functionType(toVector(constA), constA)));
+
+	// also make sure that recursive types are not recognized
+	{
+		TypeVariablePtr rec = builder.typeVariable("list");
+		TypePtr listElem = builder.structType(toVector(
+				builder.namedType("load", manager.getLangBasic().getInt4()),
+				builder.namedType("next", builder.refType(rec))
+		));
+		TypePtr constRecType = builder.recType(rec, builder.recTypeDefinition(toVector(builder.recTypeBinding(rec, listElem))));
+
+		EXPECT_EQ("rec 'list.{'list=struct<load:int<4>,next:ref<'list>>}", toString(*constRecType));
+		EXPECT_FALSE(isGeneric(constRecType));
+	}
+
+	// yet, a generic recursive type should be recognized
+	{
+		TypeVariablePtr rec = builder.typeVariable("list");
+		TypePtr listElem = builder.structType(toVector(
+				builder.namedType("load", builder.typeVariable("b")),
+				builder.namedType("next", builder.refType(rec))
+		));
+		TypePtr constRecType = builder.recType(rec, builder.recTypeDefinition(toVector(builder.recTypeBinding(rec, listElem))));
+
+		EXPECT_EQ("rec 'list.{'list=struct<load:'b,next:ref<'list>>}", toString(*constRecType));
+		EXPECT_TRUE(isGeneric(constRecType));
+	}
+
+
 }
 
 TEST(TypeUtils, getElementTypes) {

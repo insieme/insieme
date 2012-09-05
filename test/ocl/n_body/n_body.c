@@ -47,6 +47,8 @@ int main(int argc, const char* argv[]) {
 
 	icl_init_devices(args->device_type);
 	
+	icl_start_energy_measurement();
+
 	if (icl_get_num_devices() != 0) {
 		icl_device* dev = icl_get_device(args->device_id);
 
@@ -62,7 +64,7 @@ int main(int argc, const char* argv[]) {
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-		for(int i=0; i<M; i++) {
+		for (int i = 0; i < args->loop_iteration; ++i) {
 			icl_write_buffer(buf_B, CL_TRUE, sizeof(body) * size, &B[0], NULL, NULL);
 
 			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 3,
@@ -78,6 +80,8 @@ int main(int argc, const char* argv[]) {
 		icl_release_kernel(kernel);
 	}
 	
+	icl_stop_energy_measurement();
+	
 	if (args->check_result) {
 		printf("======================\n= N Body Simulation working\n");
 		impulse sum = triple_zero();
@@ -85,7 +89,7 @@ int main(int argc, const char* argv[]) {
 			sum = ADD(sum, MULS(B[i].v,B[i].m));
 		}
 		unsigned int check = EQ(sum, triple_zero());
-printf("ERRROR: %f %f %f\n", sum.x, sum.y, sum.z);
+		//printf("ERRROR: %f %f %f\n", sum.x, sum.y, sum.z);
 		printf("======================\n");
 		printf("Result check: %s\n", check ? "OK" : "FAIL");
 	} else {

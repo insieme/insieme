@@ -50,6 +50,8 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_program.h"
 
+#include "insieme/core/analysis/normalize.h"
+
 namespace insieme {
 namespace core {
 
@@ -156,6 +158,13 @@ namespace core {
 		UIntValuePtr uintValue(unsigned value) const;
 
 		// --- Convenience Utilities ---
+
+		bool matchType(const std::string& typeStr, const core::TypePtr& irType) const;
+
+		template <typename T>
+		core::Pointer<const T> normalize(const core::Pointer<const T>& root) const {
+			return core::analysis::normalize(root);
+		}
 
 		GenericTypePtr genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intTypeParams) const;
 
@@ -458,21 +467,20 @@ namespace core {
 
 
 		inline CallExprPtr preInc(const ExpressionPtr& a) const {
-			return unaryOp(getOperator(lang::BasicGenerator::PreInc, a->getType()), a);
+			return unaryOp(getLangBasic().getGenPreInc(), a);
 		}
 
 		inline CallExprPtr postInc(const ExpressionPtr& a) const {
-			return unaryOp(getOperator(lang::BasicGenerator::PostInc, a->getType()), a);
+			return unaryOp(getLangBasic().getGenPostInc(), a);
 		}
 
 		inline CallExprPtr preDec(const ExpressionPtr& a) const {
-			return unaryOp(getOperator(lang::BasicGenerator::PreDec, a->getType()), a);
+			return unaryOp(getLangBasic().getGenPreDec(), a);
 		}
 
 		inline CallExprPtr postDec(const ExpressionPtr& a) const {
-			return unaryOp(getOperator(lang::BasicGenerator::PostDec, a->getType()), a);
+			return unaryOp(getLangBasic().getGenPostDec(), a);
 		}
-
 
 		// binary operators
 

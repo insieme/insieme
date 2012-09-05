@@ -1024,7 +1024,6 @@ TEST(TypeVariableDeduction, ReductionType) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
-	const lang::BasicGenerator& basic = manager.getLangBasic();
 
 	FunctionTypePtr funType = builder.parseType("(ref<array<'a,1>>,uint<8>,('b,'a)->'b,'b)->'b").as<FunctionTypePtr>();
 	EXPECT_TRUE(funType);

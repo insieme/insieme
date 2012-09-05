@@ -34,18 +34,46 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/sequential/sequential_preprocessor.h"
+#pragma once
 
-#include "insieme/core/transform/sequentialize.h"
+#include "insieme/core/forward_decls.h"
+
+#include "insieme/core/ir_pointer.h"
 
 namespace insieme {
-namespace backend {
-namespace sequential {
+namespace core {
+namespace transform {
 
-	core::NodePtr Sequentializer::process(core::NodeManager& manager, const core::NodePtr& code) {
-		return core::transform::trySequentialize(manager, code);
+
+
+	/**
+	 * Iterates through the given code fragment and replaces statically computable constructs with their
+	 * simplified equivalents. The following simplifications are applied:
+	 *
+	 * 	- Direct calls of bind expressions like "bind(..){ ... } ( .. )" are contracted to a single call.
+	 * 	- Calls to functions consisting of a single line (e.g. fun('a v1) { return v1; } are inlined.
+	 * 	- if with a conditionals evaluating to true / false are substituted by the corresponding body
+	 * 	- NoOps are eliminated
+	 *
+	 * @param manager the manager to be used for constructing the resulting code
+	 * @param code the code to be simplified
+	 * @return the simplified program code
+	 */
+	NodePtr simplify(NodeManager& manager, const NodePtr& code);
+
+	/**
+	 * A generic alternative of the simplify function.
+	 *
+	 * @param manager the manager to be used for constructing the resulting code
+	 * @param code the code to be simplified
+	 * @return the simplified program code
+	 */
+	template<typename T>
+	Pointer<const T> simplify(NodeManager& manager, const Pointer<const T>& code) {
+		return simplify(manager, NodePtr(code)).as<Pointer<const T>>();
 	}
 
-} // end namespace runtime
-} // end namespace backend
+
+} // end namespace transform
+} // end namespace core
 } // end namespace insieme

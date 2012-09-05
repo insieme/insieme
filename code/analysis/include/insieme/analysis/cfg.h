@@ -382,9 +382,9 @@ public:
 
 	/**
 	 * Search for a particular node which is contained inside any of the blocks and return 
-	 * the containing block
+	 * the containing block and statement ID relative to the block 
 	 */
-	cfg::BlockPtr find(const core::NodeAddress& node) const;
+	std::pair<cfg::BlockPtr,size_t> find(const core::NodeAddress& node) const;
 
 	/**
 	 * Builds a control flow graph starting from the rootNode

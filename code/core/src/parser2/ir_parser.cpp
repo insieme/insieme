@@ -1002,6 +1002,19 @@ namespace parser {
 			));
 
 
+			// -- add support for if-then-else operator ---
+			g.addRule("E", rule(
+					seq(E,"?",E,":",E),
+					[](Context& cur)->NodePtr {
+						return cur.ite(
+							cur.getTerm(0).as<ExpressionPtr>(),
+							cur.wrapLazy(cur.getTerm(1).as<ExpressionPtr>()),
+							cur.wrapLazy(cur.getTerm(2).as<ExpressionPtr>())
+						);
+					},
+					-3
+			));
+
 
 			// -- vector / array access --
 
@@ -1142,6 +1155,31 @@ namespace parser {
 
 						// build bind expression
 						return cur.bindExpr(convertList<VariablePtr>(terms), call);
+					}
+			));
+
+			// ------------- add parallel constructs -------------
+
+			g.addRule("S", rule(
+					seq("spawn", E, ";"),
+					[](Context& cur)->NodePtr {
+						return cur.parallel(cur.getTerm(0).as<ExpressionPtr>(), 1);
+					}
+			));
+
+			g.addRule("S", rule(
+					seq("sync;"),
+					[](Context& cur)->NodePtr {
+						const auto& basic = cur.getNodeManager().getLangBasic();
+						return cur.callExpr(basic.getUnit(), basic.getMergeAll());
+					}
+			));
+
+			g.addRule("S", rule(
+					seq("syncAll;"),
+					[](Context& cur)->NodePtr {
+						const auto& basic = cur.getNodeManager().getLangBasic();
+						return cur.callExpr(basic.getUnit(), basic.getMergeAll());
 					}
 			));
 

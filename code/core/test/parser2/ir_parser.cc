@@ -43,6 +43,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/analysis/normalize.h"
 
 namespace insieme {
 namespace core {
@@ -329,6 +330,23 @@ namespace parser {
 		);
 	}
 
+	TEST(IR_Parser2, IfThenElse) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const auto& basic = manager.getLangBasic();
+
+		auto res = analysis::normalize(builder.parse(
+				"true?1:2"
+		)).as<ExpressionPtr>();
+
+		ASSERT_TRUE(res);
+
+		EXPECT_EQ(
+				analysis::normalize(builder.ite(basic.getTrue(), builder.wrapLazy(builder.intLit(1)), builder.wrapLazy(builder.intLit(2)))),
+				res
+		);
+	}
+
 	TEST(IR_Parser2, ForStatement) {
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -584,8 +602,8 @@ namespace parser {
 		IRBuilder builder(manager);
 
 		// test a direct call
-		EXPECT_EQ("AP({int<4> v5 = 7; bind(v9){rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}}(v9, v5)}(5);})",
-			toString(builder.parse(
+		EXPECT_EQ("AP({int<4> v0 = 7; bind(v1){rec v0.{v0=fun(int<4> v1, int<4> v2) {return int.add(v1, v2);}}(v1, v0)}(5);})",
+			toString(builder.normalize(builder.parse(
 				"{"
 				"	let int = int<4>;"
 				"	let sum = (int a, int b)->int { return a + b; };"
@@ -593,20 +611,20 @@ namespace parser {
 				" 	let pX = (int a)=>sum(a,x);"
 				"	pX(5);"
 				"}"
-		)));
+		))));
 
 		// test returning a value
-		EXPECT_EQ("AP({bind(v10){rec v0.{v0=fun('a v1) {return v1;}}(5)}(2);})",
-			toString(builder.parse(
+		EXPECT_EQ("AP({bind(v0){rec v0.{v0=fun('a v1) {return v1;}}(5)}(2);})",
+			toString(builder.normalize(builder.parse(
 				"{"
 				" 	let pX = (int<4> a)=>5;"
 				"	pX(2);"
 				"}"
-		)));
+		))));
 
 		// test a statement
-		EXPECT_EQ("AP({ref<int<4>> v11 = ref.var(0); bind(v12){rec v15.{v15=fun(int<4> v13, ref<int<4>> v14) {ref.assign(v14, int.add(ref.deref(v14), v13));}}(v12, v11)}(5);})",
-			toString(builder.parse(
+		EXPECT_EQ("AP({ref<int<4>> v0 = ref.var(0); bind(v1){rec v0.{v0=fun(ref<int<4>> v1, int<4> v2) {ref.assign(v1, int.add(ref.deref(v1), v2));}}(v0, v1)}(5);})",
+			toString(builder.normalize(builder.parse(
 				"{"
 				" 	ref<int<4>> x = var(0);"
 				"	let p = (int<4> a)=>{"
@@ -614,7 +632,7 @@ namespace parser {
 				"	};"
 				"	p(5);"
 				"}"
-		)));
+		))));
 
 	}
 

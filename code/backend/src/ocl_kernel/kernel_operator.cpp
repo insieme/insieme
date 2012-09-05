@@ -148,10 +148,10 @@ namespace ocl_kernel{
 		table[builder.pointwise(basic.getUnsignedIntLShift())] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		table[builder.pointwise(basic.getUnsignedIntRShift())] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		table[builder.pointwise(basic.getUnsignedIntPreInc())]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
-		table[builder.pointwise(basic.getUnsignedIntPostInc())] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
-		table[builder.pointwise(basic.getUnsignedIntPreDec())]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
-		table[builder.pointwise(basic.getUnsignedIntPostDec())] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
+		table[builder.pointwise(basic.getGenPreInc())]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
+		table[builder.pointwise(basic.getGenPostInc())] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
+		table[builder.pointwise(basic.getGenPreDec())]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
+		table[builder.pointwise(basic.getGenPostDec())] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
 
 		table[builder.pointwise(basic.getUnsignedIntEq())] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		table[builder.pointwise(basic.getUnsignedIntNe())] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
@@ -175,10 +175,10 @@ namespace ocl_kernel{
 		table[builder.pointwise(basic.getSignedIntLShift())] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		table[builder.pointwise(basic.getSignedIntRShift())] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		table[builder.pointwise(basic.getSignedIntPreInc())]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
-		table[builder.pointwise(basic.getSignedIntPostInc())] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
-		table[builder.pointwise(basic.getSignedIntPreDec())]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
-		table[builder.pointwise(basic.getSignedIntPostDec())] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
+//		table[builder.pointwise(basic.getSignedIntPreInc())]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
+//		table[builder.pointwise(basic.getSignedIntPostInc())] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
+//		table[builder.pointwise(basic.getSignedIntPreDec())]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
+//		table[builder.pointwise(basic.getSignedIntPostDec())] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
 
 		table[builder.pointwise(basic.getSignedIntEq())] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		table[builder.pointwise(basic.getSignedIntNe())] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });

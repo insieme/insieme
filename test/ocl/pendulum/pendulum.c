@@ -95,25 +95,29 @@ int main(int argc, const char* argv[]) {
 	unsigned* dist = (unsigned*)malloc(sizeof(unsigned) * size);
 
 	icl_init_devices(args->device_type);
-        if (icl_get_num_devices() != 0) {
-                icl_device* dev = icl_get_device(args->device_id);
 
-                icl_print_device_short_info(dev);
-                icl_buffer* buf_image = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(unsigned) * size);
-                icl_buffer* buf_dist = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(unsigned) * size);
-                icl_buffer* buf_sources = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(Source) * num_sources);
+	icl_start_energy_measurement();
 
-                icl_write_buffer(buf_sources, CL_TRUE, sizeof(Source) * num_sources, &sources[0], NULL, NULL);
-	
+	if (icl_get_num_devices() != 0) {
+		icl_device* dev = icl_get_device(args->device_id);
+
+		icl_print_device_short_info(dev);
+		icl_buffer* buf_image = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(unsigned) * size);
+		icl_buffer* buf_dist = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(unsigned) * size);
+		icl_buffer* buf_sources = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(Source) * num_sources);
+
 		icl_kernel* kernel = icl_create_kernel(dev, "pendulum.cl", "pendulum", "", ICL_SOURCE);
 
-                size_t szLocalWorkSize =  args->local_size;
-                float multiplier = size/(float)szLocalWorkSize;
-                if(multiplier > (int)multiplier)
-                        multiplier += 1;
-                size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
+		size_t szLocalWorkSize =  args->local_size;
+		float multiplier = size/(float)szLocalWorkSize;
+		if(multiplier > (int)multiplier)
+				multiplier += 1;
+		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL,
+		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_write_buffer(buf_sources, CL_TRUE, sizeof(Source) * num_sources, &sources[0], NULL, NULL);
+
+			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL,
 					   12,  (size_t)0, 		(void*) buf_image,
 						(size_t)0, 		(void*) buf_dist,
 						(size_t)0, 		(void*) buf_sources,
@@ -127,13 +131,16 @@ int main(int argc, const char* argv[]) {
 						sizeof(int),		(void*) &size,
 						sizeof(double),		(void*) &scale);
 
-                icl_read_buffer(buf_image, CL_TRUE, sizeof(unsigned) * size, &(image[0]), NULL, NULL);
-                icl_read_buffer(buf_dist, CL_TRUE, sizeof(unsigned) * size, &(dist[0]), NULL, NULL);
+			icl_read_buffer(buf_image, CL_TRUE, sizeof(unsigned) * size, &(image[0]), NULL, NULL);
+			icl_read_buffer(buf_dist, CL_TRUE, sizeof(unsigned) * size, &(dist[0]), NULL, NULL);
+		}
+		icl_release_buffers(3, buf_image, buf_dist, buf_sources);
+		icl_release_kernel(kernel);
 
-                icl_release_buffers(3, buf_image, buf_dist, buf_sources);
-                icl_release_kernel(kernel);
-		
 	}
+
+	icl_stop_energy_measurement();
+
 	icl_release_devices();
 	
 	unsigned maxSteps = 0;

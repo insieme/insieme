@@ -39,6 +39,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/simplify.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/analysis/normalize.h"
 
@@ -822,6 +823,59 @@ TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
 		toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in)))
 	);
 }
+
+TEST(Manipulation, pushBindIntoLambdaTest) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+
+
+
+	// ---- general case - with free variables in bounded expressions -----
+
+	std::map<string, NodePtr> symbols;
+	symbols["v"] = builder.variable(manager.getLangBasic().getInt4(), 77);
+
+	CallExprPtr call = analysis::normalize(builder.parseExpr(
+			"let int = int<4> in (((int)=>int a)->int { return a(2); } ((int x)=> (2+v) + x))",
+			symbols
+	)).as<CallExprPtr>();
+
+	ASSERT_TRUE(call);
+
+	EXPECT_EQ("rec v0.{v0=fun(((int<4>)=>int<4>) v1) {return v1(2);}}(bind(v0){int.add(int.add(2, v77), v0)})", toString(*call));
+
+	// push bind inside
+	CallExprPtr res = analysis::normalize(transform::pushBindIntoLambda(manager, call, 0));
+
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return bind(v2){int.add(v1, v2)}(2);}}(int.add(2, v77))", toString(*res));
+	EXPECT_EQ("int.add(int.add(2, v77), 2)", toString(*transform::simplify(manager, res)));
+
+	EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
+
+
+
+
+
+	// ---- special case - no free variables in bounded expressions -----
+
+	call = analysis::normalize(builder.parseExpr(
+			"let int = int<4> in (((int)=>int a)->int { return a(2); } ((int x)=> (2+3) + x))"
+	)).as<CallExprPtr>();
+
+	ASSERT_TRUE(call);
+
+	EXPECT_EQ("rec v0.{v0=fun(((int<4>)=>int<4>) v1) {return v1(2);}}(bind(v0){int.add(int.add(2, 3), v0)})", toString(*call));
+
+	// push bind inside
+	res = analysis::normalize(transform::pushBindIntoLambda(manager, call, 0));
+
+	EXPECT_EQ("rec v0.{v0=fun() {return bind(v1){int.add(int.add(2, 3), v1)}(2);}}()", toString(*res));
+	EXPECT_EQ("int.add(int.add(2, 3), 2)", toString(*transform::simplify(manager, res)));
+
+	EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
+}
+
 
 } // end namespace core
 } // end namespace insieme

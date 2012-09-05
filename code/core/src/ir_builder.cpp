@@ -36,8 +36,9 @@
 
 #include "insieme/core/ir_builder.h"
 
-#include <boost/tuple/tuple.hpp>
+#include <tuple>
 #include <limits>
+#include <set>
 
 #include "insieme/core/ir_node.h"
 
@@ -74,14 +75,14 @@ namespace core {
 
 namespace {
 
-	typedef boost::tuple<vector<VariablePtr>, vector<ExpressionPtr>> InitDetails;
+	typedef std::tuple<vector<VariablePtr>, vector<ExpressionPtr>> InitDetails;
 
 	InitDetails splitUp(const IRBuilder::VarValueMapping& captureInits) {
 
 		// prepare containers
 		InitDetails res;
-		vector<VariablePtr>& vars = res.get<0>();
-		vector<ExpressionPtr>& inits = res.get<1>();
+		vector<VariablePtr>& vars = std::get<0>(res);
+		vector<ExpressionPtr>& inits = std::get<1>(res);
 
 		// process the given map
 		for_each(captureInits, [&](const IRBuilder::VarValueMapping::value_type& cur) {
@@ -119,15 +120,23 @@ namespace {
 	    utils::set::PointerSet<VariablePtr> usedVars;
 	};
 
-	utils::set::PointerSet<VariablePtr> getRechingVariables(const core::NodePtr& root) {
+	std::vector<VariablePtr> getRechingVariables(const core::NodePtr& root) {
 		VarRefFinder visitor;
 		visitDepthFirstPrunable(root, visitor);
 
-		utils::set::PointerSet<VariablePtr> nonDecls;
-		std::set_difference( visitor.usedVars.begin(), visitor.usedVars.end(),
-				visitor.declaredVars.begin(), visitor.declaredVars.end(), std::inserter(nonDecls, nonDecls.begin()));
+		// Define the comparator for the set 
+		auto cmp = [](const VariablePtr& lhs, const VariablePtr& rhs) -> bool { 
+			return *lhs < *rhs;
+		};
+		std::set<VariablePtr, decltype(cmp)> nonDecls(cmp);
 
-		return nonDecls;
+		std::set_difference( 
+				visitor.usedVars.begin(), visitor.usedVars.end(),
+				visitor.declaredVars.begin(), visitor.declaredVars.end(), 
+				std::inserter(nonDecls, nonDecls.begin())
+			);
+
+		return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
 	}
 
 }
@@ -205,9 +214,15 @@ UIntValuePtr IRBuilder::uintValue(unsigned value) const {
 
 // ---------------------------- Convenience -------------------------------------
 
+
+bool IRBuilder::matchType(const std::string& typeStr, const core::TypePtr& irType) const {
+	return unify(manager, parseType(typeStr), irType);
+}
+
 GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intParams) const {
 	return genericType(name, types(typeParams), intTypeParams(intParams));
 }
+
 
 StructTypePtr IRBuilder::structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
 	vector<NamedTypePtr> members;
@@ -799,7 +814,7 @@ CallExprPtr IRBuilder::parallel(const StatementPtr& stmt, int numThreads) const 
 
 core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
     // Find the variables which are used in the body and not declared
-	utils::set::PointerSet<VariablePtr>&& args = getRechingVariables(body);
+	std::vector<VariablePtr>&& args = getRechingVariables(body);
 
     core::TypeList argsType;
     VariableList params;
@@ -810,7 +825,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     std::for_each(args.begin(), args.end(), [ & ] (const core::ExpressionPtr& curr) {
             assert(curr->getNodeType() == core::NT_Variable);
 
-            const core::VariablePtr& bodyVar = core::static_pointer_cast<const core::Variable>(curr);
+            const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
             const core::TypePtr& varType = bodyVar->getType();
 
             // we create a new variable to replace the captured variable
@@ -1112,6 +1127,7 @@ ExpressionPtr IRBuilder::wrapLazy(const ExpressionPtr& expr) const {
 
 	// if it is a expression, bind free variables
 	VariableList list = analysis::getFreeVariables(expr);
+	std::sort(list.begin(), list.end(), compare_target<VariablePtr>());
 	ExpressionPtr res = lambdaExpr(expr->getType(),returnStmt(expr), list);
 
 	// if there are no free variables ...

@@ -77,11 +77,11 @@ TEST(Access, Scalars) {
 		EXPECT_TRUE(access.isRef());
 
 		AccessManager mgr;
-		auto& assClass = mgr.getClassFor(access);
-		EXPECT_EQ(0u, assClass.getUID());
+		auto assClass = mgr.getClassFor(access);
+		EXPECT_EQ(0u, assClass->getUID());
 
-		auto& assClass2 = mgr.getClassFor(access);
-		EXPECT_EQ(0u, assClass2.getUID());
+		auto assClass2 = mgr.getClassFor(access);
+		EXPECT_EQ(0u, assClass2->getUID());
 
 		EXPECT_EQ(assClass, assClass2);
 	}
@@ -101,6 +101,15 @@ TEST(Access, Scalars) {
 		auto access = getImmediateAccess( accessAddr );
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_FALSE(access.isRef());
+
+		AccessManager mgr;
+		auto assClass = mgr.getClassFor(access);
+		EXPECT_EQ(0u, assClass->getUID());
+
+		auto assClass2 = mgr.getClassFor(access);
+		EXPECT_EQ(0u, assClass2->getUID());
+
+		EXPECT_EQ(assClass, assClass2);
 	}
 
 	{
@@ -120,6 +129,15 @@ TEST(Access, Scalars) {
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_EQ(varAddr.getAddressedNode(), access.getAccessedVariable());
 		EXPECT_FALSE(access.isRef());
+
+		AccessManager mgr;
+		auto assClass = mgr.getClassFor(access);
+		EXPECT_EQ(0u, assClass->getUID());
+
+		auto assClass2 = mgr.getClassFor(access);
+		EXPECT_EQ(0u, assClass2->getUID());
+
+		EXPECT_EQ(assClass, assClass2);
 	}
 
 
@@ -138,8 +156,57 @@ TEST(Access, Scalars) {
 		auto access = getImmediateAccess( accessAddr );
 		EXPECT_EQ(VarType::SCALAR, access.getType());
 		EXPECT_TRUE(access.isRef());
+
+		AccessManager mgr;
+		auto assClass = mgr.getClassFor(access);
+		EXPECT_EQ(0u, assClass->getUID());
+
+		auto assClass2 = mgr.getClassFor(access);
+		EXPECT_EQ(0u, assClass2->getUID());
+
+		EXPECT_EQ(assClass, assClass2);
 	}
 
+}
+
+TEST(Access, ScalarAliasedAccess) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	{
+		auto code = builder.parseAddresses(
+			"{"
+			"	ref<int<4>> a;"
+			"	$*$a$$;"
+			"	$ref<int<4>> b = a;$"
+			"   $b$;"
+			"}"
+		);
+		
+		EXPECT_EQ(4u, code.size());
+
+		auto accessAddr1 = code[0].as<ExpressionAddress>();
+		auto accessAddr2= code[3].as<ExpressionAddress>();
+		auto declAddr = code[2].as<DeclarationStmtAddress>();
+		auto varAddr = code[1].as<VariableAddress>();
+		
+		// Create an alias for the expression c = b+a;
+		TmpVarMap map;
+		map.storeTmpVar( declAddr->getInitialization(), declAddr->getVariable().getAddressedNode() );
+
+		auto access1 = getImmediateAccess( accessAddr1 );
+		auto access2 = getImmediateAccess( accessAddr2 );
+
+		AccessManager mgr(nullptr, map);
+		auto assClass = mgr.getClassFor(access1);
+		EXPECT_EQ(0u, assClass->getUID());
+		auto assClass2 = mgr.getClassFor(access2);
+		EXPECT_EQ(0u, assClass2->getUID());
+
+		EXPECT_EQ(*assClass, *assClass2);
+		EXPECT_EQ(*assClass, *assClass2);
+	}
 }
 
 TEST(Access, MemberAccess) {
@@ -173,23 +240,122 @@ TEST(Access, MemberAccess) {
 			"{ "
 			"	struct{ int<4> a; int<4> b; } s;"
 			"	$$s$.a$;"
+			"	$s.b$;"
 			"}"
 		);
-		EXPECT_EQ(2u, code.size());
+		EXPECT_EQ(3u, code.size());
 
 		auto accessAddr = code[0].as<ExpressionAddress>();
 		auto varAddr = code[1].as<VariableAddress>();
 
 		auto access = getImmediateAccess(accessAddr);
+		auto access2 = getImmediateAccess(code[2].as<ExpressionAddress>());
 
 		EXPECT_EQ(accessAddr, access.getAccessExpression());
 		EXPECT_EQ(varAddr.getAddressedNode(), access.getAccessedVariable());
 		EXPECT_EQ(VarType::MEMBER, access.getType());
 
 		EXPECT_FALSE(access.isRef());
+
+		AccessManager mgr;
+		auto assClass1 = mgr.getClassFor(access);
+		EXPECT_EQ(0u, assClass1->getUID());
+		auto assClass2 = mgr.getClassFor(access2);
+		EXPECT_EQ(1u, assClass2->getUID());
+
+		EXPECT_NE(assClass1, assClass2);
 	}
 
 }
+
+TEST(Access, CompoundMemberAccess) {
+	
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	{
+		auto code = builder.parseAddresses(
+			"{ "
+			"	ref<struct{ int<4> a; struct{ int<4> b; int<4> c;} b; }> s;"
+			"	$ref<struct{int<4> b; int<4> c;}> t1 = s.b;$"
+			"	$t1.b$;"
+			"}"
+		);
+
+		EXPECT_EQ(2u, code.size());
+
+		// Retrieve addresses for access 
+		auto declAddr = code[0].as<DeclarationStmtAddress>();
+		auto accessAddr = code[1].as<ExpressionAddress>();
+
+		// get access 
+		auto access = getImmediateAccess(accessAddr);
+
+		EXPECT_EQ(accessAddr, access.getAccessExpression());
+		EXPECT_EQ(declAddr->getVariable().getAddressedNode(), access.getAccessedVariable());
+		EXPECT_EQ(VarType::MEMBER, access.getType());
+
+		EXPECT_TRUE(access.isRef());
+
+		TmpVarMap tmpVarMap;
+		tmpVarMap.storeTmpVar(declAddr->getInitialization(), declAddr->getVariable().getAddressedNode());
+
+		AccessManager mgr(NULL, tmpVarMap);
+		auto cl = mgr.getClassFor(access);
+		EXPECT_EQ(1u, cl->size());
+		EXPECT_EQ(1u, cl->getUID());
+
+		EXPECT_EQ(2u, mgr.size());
+	
+		auto& cl2 = mgr[0];
+		EXPECT_EQ(1u, cl2.size());
+	}
+
+}
+
+TEST(Access, CompoundMemberAccess2) {
+	
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	{
+		auto code = builder.parseAddresses(
+			"{ "
+			"	ref<struct{ int<4> a; struct{ int<4> b; int<4> c;} b; }> s;"
+			"	$ref<struct{int<4> b; int<4> c;}> t1 = s.b;$"
+			"	$t1.b$;"
+			"	$ref<struct{int<4> b; int<4> c;}> t2 = s.b;$"
+			"	$t2.b$;"
+			"}"
+		);
+
+		EXPECT_EQ(4u, code.size());
+
+		// extract addresses for the first access 
+		auto declAddr1 = code[0].as<DeclarationStmtAddress>();
+		auto accessAddr1 = code[1].as<ExpressionAddress>();
+
+		// extract addresses for the second access 
+		auto declAddr2 = code[2].as<DeclarationStmtAddress>();
+		auto accessAddr2 = code[3].as<ExpressionAddress>();
+
+		auto access1 = getImmediateAccess(accessAddr1);
+		auto access2 = getImmediateAccess(accessAddr2);
+
+		// store the alias mappings manually 
+		TmpVarMap tmpVarMap;
+		tmpVarMap.storeTmpVar(declAddr1->getInitialization(), declAddr1->getVariable().getAddressedNode());
+		tmpVarMap.storeTmpVar(declAddr2->getInitialization(), declAddr2->getVariable().getAddressedNode());
+
+		AccessManager mgr(NULL, tmpVarMap);
+		auto class1 = mgr.getClassFor(access1);
+		auto class2 = mgr.getClassFor(access2);
+
+		EXPECT_EQ(class1, class2);
+		EXPECT_EQ(*class1, *class2);
+	}
+}
+
 
 // Wait for new parser 
 TEST(Access, ArrayAccess) {
@@ -343,7 +509,7 @@ TEST(Access, ArrayAccess) {
 		TmpVarMap map;
 		map.storeTmpVar( declNode->getInitialization(), declNode->getVariable().getAddressedNode() );
 
-		auto access = getImmediateAccess( accessNode.as<ExpressionAddress>(), map );
+		auto access = getImmediateAccess( accessNode.as<ExpressionAddress>(), {nullptr, 0}, map );
 
 		EXPECT_EQ(VarType::ARRAY, access.getType());
 		EXPECT_TRUE(access.isRef());

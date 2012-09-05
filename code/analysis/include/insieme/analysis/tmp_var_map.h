@@ -91,6 +91,10 @@ public:
 	 */
 	core::ExpressionAddress getMappedExpr(const core::VariablePtr& var) const;
 
+	inline bool isTmpVar(const core::VariablePtr& var) const {
+		return invAliasMap.find(var) != invAliasMap.end();
+	}
+
 	/** 
 	 * Returns true when the map is empty
 	 */

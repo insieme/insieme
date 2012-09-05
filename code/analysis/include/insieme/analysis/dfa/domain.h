@@ -261,8 +261,8 @@ public:
 		auto bt2 = dfa::expand(base2);
 
 		base_type res;
-		for(auto it1 : bt1) 
-			for (auto it2 : bt2) {
+		for(auto& it1 : bt1) 
+			for (auto& it2 : bt2) {
 				res.insert( std::make_tuple(it1,it2) ); 	
 			}
 
