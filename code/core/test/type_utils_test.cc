@@ -193,7 +193,7 @@ TEST(TypeUtils, Substitution) {
 	Substitution combinedBA = Substitution::compose(manager, subB, subA);
 	Substitution combinedBB = Substitution::compose(manager, subB, subB);
 
-	EXPECT_EQ("{AP('A)=AP(type<'A,constType,15,#y>), AP('B)=AP(constType)}", toString(combinedAB.getMapping()));
+	EXPECT_EQ("{AP('B)=AP(constType), AP('A)=AP(type<'A,constType,15,#y>)}", toString(combinedAB.getMapping()));
 	EXPECT_EQ("{AP('A)=AP(type<'A,'B,#x,#y>), AP('B)=AP(constType)}", toString(combinedBA.getMapping()));
 	EXPECT_EQ("{AP('B)=AP(constType)}", toString(combinedBB.getMapping()));
 
