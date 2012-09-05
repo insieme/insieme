@@ -430,8 +430,8 @@ std::ostream& AccessClass::printTo(std::ostream& out) const {
 	return out << "AccessClass(" << uid << ")"
 		// print list of accesses in this class 
 		<< " [" << join(",", accesses, [&](std::ostream& jout, const AccessPtr& cur) { jout << *cur; }) << "]" 
-		<< " PARENT(" << (parentClass ? utils::numeric_cast<std::string>(parentClass->getUID()) : "NONE" ) << ")" 
-		<< " SUB_CLASSES {" << join(",", subClasses, [&](std::ostream& jout, const Dependence& cur) { jout << cur; }) << "}";
+		<< " PARENT(" << (!parentClass.expired() ? utils::numeric_cast<std::string>(parentClass.lock()->getUID()) : "NONE" ) << ")" 
+		<< " SUB_CLASSES {" << join(",", subClasses, [&](std::ostream& jout, const Dependence& cur) { jout << *cur.first.lock() << ":" << cur.second; }) << "}";
 }
 
 std::set<ExpressionAddress> extractRealAddresses(const AccessClass& cl, const TmpVarMap& tmpVarMap) {
@@ -609,8 +609,8 @@ AccessClassPtr AccessManager::getClassFor(const Access& access) {
 	if (parentClass) { 
 		for(auto cl : parentClass->getSubClasses()) {
 			if (*cl.second == *access.getPath()) {
-				cl.first->storeAccess(access);
-				return cl.first;
+				cl.first.lock()->storeAccess(access);
+				return cl.first.lock();
 			}
 		}
 	}
