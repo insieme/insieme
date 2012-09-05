@@ -61,7 +61,7 @@ namespace parser {
 	 *
 	 * @return a copy of the full IR Grammar.
 	 */
-	Grammar createGrammar();
+	detail::Grammar createGrammar();
 
 } // end namespace parser
 } // end namespace core

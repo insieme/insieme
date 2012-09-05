@@ -711,9 +711,27 @@ JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const vector<
 	return jobExpr(type, threadNumRange, declarationStmts(localDecls), guardedExprs(branches), defaultExpr);
 }
 
+namespace {
+
+	bool isJobBody(const NodePtr& node) {
+		// it has to be an expression
+		if (node->getNodeCategory() != NC_Expression) return false;
+
+		// the function has to be ()->unit or ()=>unit
+		TypePtr type = node.as<ExpressionPtr>()->getType();
+		if (type->getNodeType() != NT_FunctionType) return false;
+		return type.as<FunctionTypePtr>()->getParameterTypes()->empty();
+	}
+
+}
+
 JobExprPtr IRBuilder::jobExpr(const StatementPtr& stmt, int numThreads) const {
+
+	ExpressionPtr jobBody =
+			(isJobBody(stmt))?stmt.as<ExpressionPtr>():transform::extractLambda(manager, stmt);
+
 	return jobExpr((numThreads < 1)?getThreadNumRange(1):getThreadNumRange(numThreads, numThreads),
-			vector<DeclarationStmtPtr>(), vector<GuardedExprPtr>(), transform::extractLambda(manager, stmt));
+			vector<DeclarationStmtPtr>(), vector<GuardedExprPtr>(), jobBody);
 }
 
 MarkerExprPtr IRBuilder::markerExpr(const ExpressionPtr& subExpr, unsigned id) const {

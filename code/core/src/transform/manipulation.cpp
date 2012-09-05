@@ -988,6 +988,13 @@ ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy) {
 }
 
 BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root) {
+
+	// if it is already extracted, skip operation
+	if (root->getNodeType() == NT_BindExpr) {
+		return root.as<BindExprPtr>();
+	}
+
+	// use standard outlining utility
 	return extractLambda(manager, root, toVector<VariablePtr>());
 }
 
