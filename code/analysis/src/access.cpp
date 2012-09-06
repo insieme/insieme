@@ -649,6 +649,12 @@ AccessClassPtr AccessManager::getClassFor(const Access& access) {
 	return classes.back();
 }
 
+std::ostream& AccessManager::printTo(std::ostream& out) const { 
+	return out << "AccessManager [" << size() << "]\n\t" << 
+		join("\n\t", classes, [&](std::ostream& jout, const AccessClassPtr& cur) { 
+				jout << *cur; 
+			}) << "]";
+}
 
 } } // end insieme::analysis namespace 
 

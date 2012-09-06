@@ -343,6 +343,7 @@ void printIR(const NodePtr& program, InverseStmtMap& stmtMap) {
 // Check Semantics 
 //***************************************************************************************
 void checkSema(const core::NodePtr& program, MessageList& list, const InverseStmtMap& stmtMap) {
+
 	using namespace insieme::core::printer;
 
 	// Skip semantics checks if the flag is not set
@@ -561,7 +562,7 @@ int main(int argc, char** argv) {
 					[&]() { return insieme::driver::applyTransfomrations(program); } );
 
 			// Handling of pragma info
-			program = measureTimeFor<ProgramPtr>("Pragma.Info", 
+			program = measureTimeFor<ProgramPtr>("Pragma.Info",  
 					[&]() { return insieme::driver::handlePragmaInfo(program); } );
 
 			InverseStmtMap stmtMap;
@@ -569,7 +570,7 @@ int main(int argc, char** argv) {
 
 			// perform checks
 			MessageList errors;
-			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
+			// if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
 
 			printIR(program, stmtMap);
 
@@ -578,13 +579,12 @@ int main(int argc, char** argv) {
 				stmtMap.clear();
 				applyOpenMPFrontend(program);
 				printIR(program, stmtMap);
-				// check again if the OMP flag is on
-				if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
 			}
 
-
 			/**************######################################################################################################***/
-			regions = insieme::driver::region::SizeBasedRegionSelector(CommandLineOptions::MinRegionSize, CommandLineOptions::MaxRegionSize).getRegions(program);
+			regions = insieme::driver::region::SizeBasedRegionSelector(
+					CommandLineOptions::MinRegionSize, CommandLineOptions::MaxRegionSize
+				).getRegions(program);
 			//cout << "\n\n******************************************************* REGIONS \n\n";
 			//for_each(regions, [](const NodeAddress& a) {
 			//	cout << "\n***** REGION \n";
@@ -601,12 +601,14 @@ int main(int argc, char** argv) {
 			// Dump the Inter procedural Control Flow Graph associated to this program
 			dumpCFG(program, CommandLineOptions::CFG);
 
-			printIR(program, stmtMap);
+			//printIR(program, stmtMap);
 
 			// Perform SCoP region analysis 
 			markSCoPs(program, errors, stmtMap);
-			printIR(program, stmtMap);
-			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
+			// printIR(program, stmtMap);
+			
+			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap); }
+
 			// IR statistics
 			showStatistics(program);
 

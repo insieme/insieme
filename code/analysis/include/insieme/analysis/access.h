@@ -219,6 +219,7 @@ public:
 	bool operator!=(const Access& other) const { return !(*this == other); }
 };
 
+
 typedef std::shared_ptr<Access> AccessPtr;
 
 
@@ -446,12 +447,7 @@ public:
 
 	inline size_t size() const { return classes.size(); }
 
-	inline std::ostream& printTo(std::ostream& out) const { 
-		return out << "AccessManager [" << size() << "]\n\t" << 
-			join("\n\t", classes, [&](std::ostream& jout, const AccessClassPtr& cur) { 
-					jout << *cur; 
-				}) << "]";
-	}
+	std::ostream& printTo(std::ostream& out) const;
 
 };
 
