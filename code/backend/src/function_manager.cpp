@@ -51,6 +51,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/lang/basic.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"

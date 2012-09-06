@@ -166,8 +166,8 @@ namespace c_ast {
 
 	struct VectorType : public Type {
 		TypePtr elementType;
-		ExpressionPtr size;
-		VectorType(TypePtr elementType, ExpressionPtr size) : Type(NT_VectorType), elementType(elementType), size(size) {}
+		ExpressionPtr size;		// could be null to represent T[]; - no size given
+		VectorType(TypePtr elementType, ExpressionPtr size = ExpressionPtr()) : Type(NT_VectorType), elementType(elementType), size(size) {}
 		virtual bool equals(const Node& node) const;
 	};
 
