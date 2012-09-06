@@ -45,6 +45,7 @@
 
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/encoder/lists.h"
 
 namespace insieme {
 namespace core {
@@ -1379,11 +1380,20 @@ namespace parser {
 			g.addRule("A", rule(
 					seq(loop(seq(let, ";"), Token::createSymbol(';')),T,"main()", S),
 					[](Context& cur)->NodePtr {
-						IRBuilder builder(cur.manager);
 						TypePtr returnType = (cur.getTerms().end()-2)->as<TypePtr>();
 						StatementPtr body = cur.getTerms().back().as<StatementPtr>();
-						ExpressionPtr main = builder.lambdaExpr(returnType, body, VariableList());
-						return builder.createProgram(toVector(main));
+						ExpressionPtr main = cur.lambdaExpr(returnType, body, VariableList());
+						return cur.createProgram(toVector(main));
+					}
+			));
+
+
+			// ------------- syntactic sugar for lists -------------
+
+			g.addRule("E", rule(
+					seq("[",E,loop(seq(",",E)),"]"),
+					[](Context& cur)->NodePtr {
+						return encoder::toIR(cur.manager, convertList<ExpressionPtr>(cur.getTerms()));
 					}
 			));
 

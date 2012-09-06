@@ -34,35 +34,59 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/parser2/detail/parser.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/lang/extension.h"
 
+#include "insieme/backend/runtime/runtime_backend.h"
+#include "insieme/backend/runtime/runtime_extensions.h"
+#include "insieme/backend/runtime/runtime_entities.h"
 
-/**
- * This header file contains extra utility functionality to be used
- * by advanced users of the parser infrastructure. It provides access
- * to internal data structures which are only required in cases
- * where the grammar needs to be further customized.
- *
- * NOTE: the implementation of the functions defined within this header
- * 	are located within the ir_parser.cpp file due to technical issues.
- */
+#include "insieme/utils/compiler/compiler.h"
 
 namespace insieme {
-namespace core {
-namespace parser {
+namespace backend {
+namespace runtime {
 
-	/**
-	 * Obtains an instance of the full IR grammar. This function therefore
-	 * allows to obtain a copy of the Grammer which can be further customized
-	 * for specific tasks by adding additional rules. It can also be used to
-	 * print the full Grammar of INSPIRE.
-	 *
-	 * @return a copy of the full IR Grammar.
-	 */
-	detail::Grammar createGrammar();
+	TEST(MultiVersionJob, Generation) {
 
-} // end namespace parser
-} // end namespace core
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a multi-version job
+		auto code = builder.parse(
+			"unit main() {"
+			"	ref<int<4>> a;"
+			"	spawn ()=> { a = 3; };"
+			"	spawn pick(["
+			"		()=> { a = 3; },"
+			"		()=> { a = 1+2; },"
+			"		()=> { a = 1*3; }"
+			"	]);"
+			"	sync;"
+			"}"
+		).as<core::ProgramPtr>();
+
+		ASSERT_TRUE(code);
+
+
+		auto res = core::check(code, core::checks::getFullCheck());
+		EXPECT_TRUE(res.empty()) << res;
+
+		// generate code using the runtime backend
+		auto targetCode = RuntimeBackend::getDefault()->convert(code);
+
+		// print results if interrested
+//		std::cout << core::printer::PrettyPrinter(code) << "\n";
+//		std::cout << *targetCode << "\n";
+
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, utils::compiler::Compiler::getRuntimeCompiler()));
+	}
+
+} // end namespace runtime
+} // end namespace backend
 } // end namespace insieme
+

@@ -99,8 +99,7 @@ namespace insieme {
 		auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
 
 		// see whether target code can be compiled
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-		compiler.addFlag("-I " SRC_DIR "../../runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
 		EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "\nCode: " << *target;
 	}
