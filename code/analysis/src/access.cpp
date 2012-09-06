@@ -52,12 +52,6 @@ using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::analysis;
 
-namespace {
-
-
-
-}  // end anonymous namespace 
-
 namespace insieme { 
 namespace analysis { 
 
@@ -67,7 +61,9 @@ bool Access::isRef() const {
 
 std::ostream& Access::printTo(std::ostream& out) const { 
 	out << *variable << ":["; 
-	if (cfgBlock) { out << "{B" << cfgBlock->getBlockID() << ":" << stmtIdx << "}"; }
+	if (cfgBlock) { 
+		out << "{B" << cfgBlock->getBlockID() << ":" << stmtIdx << "}"; 
+	}
 	out << base_expr << "]";
 
 	// Print path 
@@ -75,7 +71,13 @@ std::ostream& Access::printTo(std::ostream& out) const {
 		out << "<" << *path << ">"; 
 	}
 	
-	return out << ":" << (isRef()?"ref":"val") << " " << array_access;
+	out << ":" << (isRef()?"ref":"val");
+
+	if (array_access) {
+		out << " if -> " << *array_access;
+	}
+
+	return out;
 }
 
 bool Access::operator<(const Access& other) const {
@@ -424,6 +426,24 @@ bool isConflicting(const Access& acc1, const Access& acc2, const TmpVarMap& tmpV
 	return false;
 }
 
+
+Access getCFGBasedAccess(const core::ExpressionAddress& expr, const CFGPtr& cfg) {
+
+	auto alias = cfg->getTmpVarMap().lookupImmediateAlias(expr);
+
+	if (!alias) { alias = expr.getAddressedNode().as<VariablePtr>(); }
+
+	std::cout << alias << std::endl;
+	auto cfgBlock = cfg->find(expr);
+	assert(cfgBlock.first && "Expr not found in the code");
+
+	return getImmediateAccess(
+			core::Address<const Expression>::find(
+				alias, 
+				(*cfgBlock.first)[cfgBlock.second].getAnalysisStatement()
+			), {cfgBlock.first, cfgBlock.second}); 
+}
+
 // AccessClass ================================================================
 
 std::ostream& AccessClass::printTo(std::ostream& out) const {
@@ -621,8 +641,6 @@ AccessClassPtr AccessManager::getClassFor(const Access& access) {
 	auto accessClassPtr = std::make_shared<AccessClass>(newClass);
 	
 	classes.emplace_back( accessClassPtr );
-
-	
 
 	if (parentClass) {
 		parentClass->addSubClass( AccessClass::Dependence(accessClassPtr,access.getPath()) );

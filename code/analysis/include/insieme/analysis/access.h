@@ -222,6 +222,8 @@ public:
 typedef std::shared_ptr<Access> AccessPtr;
 
 
+Access getCFGBasedAccess(const core::ExpressionAddress& expr, const CFGPtr& cfg);
+
 /** 
  * Given two accesses, this function returns true if the ranges on which the accesses are defined
  * are overlapping or not.
@@ -267,6 +269,7 @@ class AccessManager;
 class AccessClass;
 
 typedef std::shared_ptr<AccessClass> AccessClassPtr;
+typedef std::weak_ptr<AccessClass>   AccessClassWPtr;
 
 /** 
  * An access class is a set of accesses which refer to the same memory location. In case of R-Values
@@ -296,7 +299,7 @@ private:
 
 public:
 
-	typedef std::pair<std::weak_ptr<AccessClass>, core::datapath::DataPathPtr> Dependence;
+	typedef std::pair<AccessClassWPtr, core::datapath::DataPathPtr> Dependence;
 
 	typedef std::vector<Dependence> SubClasses;
 
@@ -309,7 +312,7 @@ private:
 	/**
 	 * Reference to the parent class 
 	 */
-	const std::weak_ptr<AccessClass> parentClass;
+	const AccessClassWPtr parentClass;
 
 	friend class AccessManager;
 
@@ -319,7 +322,7 @@ private:
 	AccessClass(
 			const std::reference_wrapper<const AccessManager>& mgr, 
 			size_t uid, 
-			const std::weak_ptr<AccessClass> parent = std::weak_ptr<AccessClass>()
+			const AccessClassWPtr parent = AccessClassWPtr()
 	) : mgr(mgr), 
 		uid(uid), 
 		parentClass(parent) {  }
@@ -396,7 +399,8 @@ public:
  * Return the vector of addresses which are not temporary variable and therefore it returns
  * addresses which exists only outside the CFG
  */
-std::set<core::ExpressionAddress> extractRealAddresses(const AccessClass& cl, const TmpVarMap& tmpVarMap = TmpVarMap());
+std::set<core::ExpressionAddress> 
+extractRealAddresses(const AccessClass& cl, const TmpVarMap& tmpVarMap = TmpVarMap());
 
 
 /**
@@ -444,7 +448,9 @@ public:
 
 	inline std::ostream& printTo(std::ostream& out) const { 
 		return out << "AccessManager [" << size() << "]\n\t" << 
-			join("\n\t", classes, [&](std::ostream& jout, const AccessClassPtr& cur) { jout << *cur; }) << "]";
+			join("\n\t", classes, [&](std::ostream& jout, const AccessClassPtr& cur) { 
+					jout << *cur; 
+				}) << "]";
 	}
 
 };

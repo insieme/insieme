@@ -139,11 +139,9 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 			auto addr = core::Address<const core::Expression>::find(varPtr,stmt);
 			auto access = getImmediateAccess(addr, {block, stmtIdx}, getCFG().getTmpVarMap() );
 
-			AccessClassPtr collisionClass = mgr.getClassFor( access );
+			AccessClassPtr collisionClass = mgr.getClassFor(access);
 
-			LOG(DEBUG) << "COLLISION CLASS: " << *collisionClass;
-			// kill all entities 
-		
+			// Kill Entities 
 			if (access.isRef()) 
 				for (auto& acc : *collisionClass) {
 					kill.insert( std::make_tuple(LValue(acc->getAccessedVariable()), acc->getCFGBlock()) );
