@@ -787,6 +787,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 		assert( false && "Call expression not referring a function");
 	}
 	assert(false);
+	return core::ExpressionPtr();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -854,6 +855,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryExprOrTypeTraitE
 	case UETT_VecStep:
 	default:
 	assert(false && "Kind of expressions not handled");
+	return core::ExpressionPtr();
 }
 
 }
@@ -1386,7 +1388,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 		default :
 			assert(false);
 		}
-
+		return core::ExpressionPtr(); // should not be reachable
 	};
 
 	switch ( unOp->getOpcode() ) {
@@ -1467,6 +1469,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 	default:
 		assert(false && "Unary operator not supported");
 	}
+	return core::ExpressionPtr();	// should not be reachable
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1583,7 +1586,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitExtVectorElementExpr(
 	llvm::StringRef&& accessor = vecElemExpr->getAccessor().getName();
 
 	core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(vecElemExpr) );
-	unsigned int pos;
+	unsigned int pos = 0u;
 
 	//translate OpenCL accessor string to index
 	if ( accessor == "x" ) pos = 0u;
@@ -1680,13 +1683,14 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitDeclRefExpr(clang::De
 		);
 	}
 	assert(false && "DeclRefExpr not supported!");
+	return core::ExpressionPtr();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //                  VECTOR/STRUCT INITALIZATION EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitInitListExpr(clang::InitListExpr* initList) {
-	assert(false && "Visiting of initializer list is not allowed!");
+	assert(false && "Visiting of initializer list is not allowed!"); return core::ExpressionPtr();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
