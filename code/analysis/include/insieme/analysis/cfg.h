@@ -61,7 +61,7 @@ typedef std::shared_ptr<CFG> CFGPtr;
 
 namespace cfg {
 
-/**
+/*/////////////////////////////////////////////////////////////////////////////////////////////////
  * Element - Represents a top-level expression in a basic block. A type is included to distinguish
  * expression from terminal nodes.
  *
@@ -73,7 +73,7 @@ namespace cfg {
  * baseAddr: Is the address of the original statement to which this CFG Element is point to. This
  * information is important in order to retrieve addresses of IR nodes. For example to give some
  * meaningfull information as result of the DF analysis 
- */
+ */////////////////////////////////////////////////////////////////////////////////////////////////
 struct Element : public utils::Printable {
 
 	enum Type { 
@@ -114,12 +114,13 @@ inline bool operator==(const core::StatementPtr& lhs, const Element& rhs) {
 	return *rhs.getStatementAddress().getAddressedNode() == *lhs;
 }
 
-/**
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////
  * Terminator - The terminator represents the type of control-flow that occurs at the end of the
  * basic block.  The terminator is a StatementPtr referring to an AST node that has control-flow:
  * if-statements, breaks, loops, etc.  If the control-flow is conditional, the condition expression
  * will appear within the set of statements in the block (usually the last statement).
- */
+ */////////////////////////////////////////////////////////////////////////////////////////////////
 struct Terminator : public Element {
 
 	Terminator() : Element(core::StatementPtr(), core::StatementAddress()) { }
@@ -129,10 +130,11 @@ struct Terminator : public Element {
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-/**
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////
  * Edge: An edge interconnects two CFG Blocks. An edge can contain an expression which determines
  * the condition under which the path is taken.
- */
+ */////////////////////////////////////////////////////////////////////////////////////////////////
 struct Edge {
 	
 	Edge(const core::ExpressionPtr& expr = core::ExpressionPtr()) : 
@@ -152,12 +154,82 @@ private:
 class Block;
 typedef std::shared_ptr<Block> BlockPtr;
 
+
+/*////////////////////////////////////////////////////////////////////////////////////////////
+ * A CFGAddress stores the unique address of an IR entity based on the CFG representation. 
+ *
+ * An entity is represented by a triplette, represented by che CFG block, the statement index
+ * (relative to the block) and the address relative to the statement. 
+ *////////////////////////////////////////////////////////////////////////////////////////////
+struct Address {
+	
+	cfg::BlockPtr		block;
+	unsigned			stmt_idx;
+	core::NodeAddress	addr;
+
+	/**
+	 * Create a CFG address starting from a block pointer, an index addressing the element inside
+	 * the block and an address relative to the addressed analysis statement 
+	 */
+	Address(const cfg::BlockPtr& block, unsigned stmt_idx, const core::NodeAddress& addr) :
+		block(block), stmt_idx(stmt_idx), addr(addr) { }
+	
+	/**
+	 * Copy constructores with and without move semantics 
+	 */
+	Address(const cfg::Address& other) :
+		block(other.block), 
+		stmt_idx(other.stmt_idx),
+		addr(other.addr) { }
+
+	Address(cfg::Address&& other) : 
+		block(std::move(other.block)), 
+		stmt_idx(other.stmt_idx), 
+		addr(std::move(other.addr)) { }
+
+
+	inline operator bool() const { return static_cast<bool>(block); }
+
+
+	/** 
+	 * Retrieve the CFG block to which this address referes to 
+	 */
+	inline const cfg::Block& getBlock() const {
+		assert(block && "Trying to access an invalid cfg address");
+		return *block; 
+	}
+
+	inline const cfg::BlockPtr& getBlockPtr() const { 
+		return block; 
+	}
+
+	inline unsigned getStmtIdx() const { return stmt_idx; }
+
+	/**
+	 * Retrieve the node addressed by this address (the name guarantee consistency with ir addresses 
+	 */
+	inline core::NodePtr getAddressedNode() const { return addr.getAddressedNode(); }
+
+	/**
+	 * Return the absolute address if the addressed entity exists outside the CFG 
+	 */
+	core::NodeAddress toAbsoluteAddress(const CFG& cfg) const { 
+		// TODO:
+		return core::NodeAddress();
+	}
+};
+
+
+
+
 } // end cfg namespace
 
 enum CreationPolicy { 
 	OneStmtPerBasicBlock, 
 	MultiStmtPerBasicBlock 
 };
+
+
 
 /**
  * CFG: represents the graph built from IR. Boost.Graph is used as internal representation.
@@ -384,7 +456,7 @@ public:
 	 * Search for a particular node which is contained inside any of the blocks and return 
 	 * the containing block and statement ID relative to the block 
 	 */
-	std::pair<cfg::BlockPtr,size_t> find(const core::NodeAddress& node) const;
+	cfg::Address find(const core::NodeAddress& node) const;
 
 	/**
 	 * Builds a control flow graph starting from the rootNode

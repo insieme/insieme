@@ -434,14 +434,15 @@ Access getCFGBasedAccess(const core::ExpressionAddress& expr, const CFGPtr& cfg)
 	if (!alias) { alias = expr.getAddressedNode().as<VariablePtr>(); }
 
 	std::cout << alias << std::endl;
-	auto cfgBlock = cfg->find(expr);
-	assert(cfgBlock.first && "Expr not found in the code");
+	auto cfgAddr = cfg->find(expr);
+
+	assert(cfgAddr && "Expr not found in the code");
 
 	return getImmediateAccess(
 			core::Address<const Expression>::find(
 				alias, 
-				(*cfgBlock.first)[cfgBlock.second].getAnalysisStatement()
-			), {cfgBlock.first, cfgBlock.second}); 
+				cfgAddr.getBlock()[cfgAddr.stmt_idx].getAnalysisStatement()
+			), {cfgAddr.block, cfgAddr.stmt_idx}); 
 }
 
 // AccessClass ================================================================
@@ -450,8 +451,12 @@ std::ostream& AccessClass::printTo(std::ostream& out) const {
 	return out << "AccessClass(" << uid << ")"
 		// print list of accesses in this class 
 		<< " [" << join(",", accesses, [&](std::ostream& jout, const AccessPtr& cur) { jout << *cur; }) << "]" 
-		<< " PARENT(" << (!parentClass.expired() ? utils::numeric_cast<std::string>(parentClass.lock()->getUID()) : "NONE" ) << ")" 
-		<< " SUB_CLASSES {" << join(",", subClasses, [&](std::ostream& jout, const Dependence& cur) { jout << *cur.first.lock() << ":" << cur.second; }) << "}";
+		// Print the ID of the parent class if any
+		<< " PARENT(" << (!parentClass.expired() ? utils::numeric_cast<std::string>(parentClass.lock()->getUID()) : "NONE" ) << ")"
+		// Print the direct subclasses for this class 
+		<< " SUB_CLASSES {" << join(",", subClasses, 
+				[&](std::ostream& jout, const Dependence& cur) { jout << *cur.first.lock() << ":" << cur.second; }) 
+		<< "}";
 }
 
 std::set<ExpressionAddress> extractRealAddresses(const AccessClass& cl, const TmpVarMap& tmpVarMap) {
@@ -461,7 +466,6 @@ std::set<ExpressionAddress> extractRealAddresses(const AccessClass& cl, const Tm
 	for (auto& access : cl) {
 	
 		auto accessAddr = access->getAccessExpression();
-		// LOG(INFO) << accessAddr << " " << *accessAddr;
 
 		if (accessAddr->getNodeType() == NT_Variable && 
 			tmpVarMap.isTmpVar(accessAddr.getAddressedNode().as<VariablePtr>())) {
@@ -474,13 +478,11 @@ std::set<ExpressionAddress> extractRealAddresses(const AccessClass& cl, const Tm
 			core::VariablePtr var = access->getAccessedVariable();
 			if (tmpVarMap.isTmpVar(var)) {
 				auto tmpAddr = tmpVarMap.getMappedExpr(var);
-				// LOG(INFO) << tmpAddr; 
 				assert( tmpAddr );
+
 				addrList.insert(tmpAddr.getParentAddress().as<ExpressionAddress>());
 				continue;
 			}
-
-			// LOG(INFO) << "entering";
 			auto stmtAddr 	  = (*cfgBlock)[access->getStmtIdx()].getStatementAddress();
 			auto analysisStmt = (*cfgBlock)[access->getStmtIdx()].getAnalysisStatement();
 			
@@ -496,9 +498,6 @@ std::set<ExpressionAddress> extractRealAddresses(const AccessClass& cl, const Tm
 				continue;
 			}
 
-			// LOG(INFO) << stmtAddr << " " << *stmtAddr; 
-			// LOG(INFO) << analysisStmt;
-	
 			// search common root
 			NodeAddress rootAddr=accessAddr;
 			std::vector<size_t> path;
@@ -512,7 +511,6 @@ std::set<ExpressionAddress> extractRealAddresses(const AccessClass& cl, const Tm
 				newAddr = newAddr.getAddressOfChild(idx);
 			});
 
-			// std::cout << newAddr << " " << *newAddr << std::endl;
 			addrList.insert(newAddr.as<ExpressionAddress>());
 			continue;
 		} 
@@ -532,18 +530,18 @@ AccessClassPtr AccessManager::getClassFor(const Access& access) {
 		core::ExpressionAddress aliasedExpr = tmpVarMap.getMappedExpr(var);
 		if (aliasedExpr) {
 			// this is an alias indeed 
-			std::pair<cfg::BlockPtr,size_t> block;
+			cfg::Address cfgAddr(cfg::BlockPtr(), 0, NodeAddress());
 			if (cfg) {
-				block = cfg->find(aliasedExpr);
-				assert(block.first && "Failed to lookup expression in the CFG");
+				cfgAddr = cfg->find(aliasedExpr);
+				assert(cfgAddr && "Failed to lookup expression in the CFG");
 			}
-			assert((!cfg || (cfg && block.first)) && "Block cannot be empty");
+			assert((!cfg || (cfg && cfgAddr)) && "Block cannot be empty");
 
 			try {
 				core::ExpressionAddress relativeAddr = aliasedExpr;
 
-				if (block.first) {
-					auto cfgElement = (*block.first)[block.second];
+				if (cfgAddr) {
+					auto cfgElement = cfgAddr.getBlock()[cfgAddr.stmt_idx];
 					relativeAddr = 
 						DeclarationStmtAddress(cfgElement.getAnalysisStatement().as<DeclarationStmtPtr>())
 							->getInitialization();
@@ -551,7 +549,7 @@ AccessClassPtr AccessManager::getClassFor(const Access& access) {
 
 				assert(relativeAddr && "Error while forming the relative address");
 
-				return getImmediateAccess(relativeAddr,block);
+				return getImmediateAccess(relativeAddr,{cfgAddr.block, cfgAddr.stmt_idx});
 
 			} catch (NotAnAccessException&& e) { }
 		}
