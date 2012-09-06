@@ -18,7 +18,11 @@ act.seq:		Conf(Flag("-b seq"), "Seq. Backend")
 act.run:		Conf(Flag("-b run"), "Run. Backend")
 act.ocl:		Conf(Flag("-b ocl"), "Ocl Backend")
 
-front.insieme: %(comp.insieme)s + Conf(Flag("--std=c99 --col-wrap=120 --show-line-no"))
+front.insieme: %(comp.insieme)s + Conf([ Flag("--std=c99"), 
+									     Flag("--col-wrap=120"),
+										 Flag("--show-line-no"),
+										 Flag("--log-level=INFO")]
+									  )
 
 # LIST of INSIEME BACKENDS
 back.gcc.flags: Conf([ 
