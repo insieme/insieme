@@ -79,7 +79,10 @@ enum {
 	EC_TYPE_INVALID_LAMBDA_EXPR_NO_SUCH_DEFINITION,
 	EC_TYPE_INVALID_LAMBDA_EXPR_TYPE,
 	EC_TYPE_INVALID_LAMBDA_REC_VAR_TYPE,
-	EC_TYPE_INVALID_LAMBDA_TYPE
+	EC_TYPE_INVALID_LAMBDA_TYPE,
+
+	EC_TYPE_INVALID_ARRAY_VALUE,
+	EC_TYPE_INVALID_ARRAY_CONTEXT
 };
 
 // defines macros for generating CHECK declarations
@@ -93,6 +96,7 @@ SIMPLE_CHECK(BindExprType, BindExpr, false);
 SIMPLE_CHECK(ExternalFunctionType, Literal, false);
 SIMPLE_CHECK(ReturnType, Lambda, false);
 SIMPLE_CHECK(LambdaType, LambdaExpr, false);
+SIMPLE_CHECK(ArrayType, ArrayType, true);
 
 SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt, false);
 SIMPLE_CHECK(IfConditionType, IfStmt, false);
