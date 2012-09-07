@@ -135,12 +135,16 @@ namespace conversion {
 class ConversionFactory::StmtConverter {
 
 protected:
-	ConversionFactory& convFact;
+	ConversionFactory& 					convFact;
+	core::NodeManager& 					mgr;
+	const core::IRBuilder& 				builder;
+	const core::lang::BasicGenerator& 	gen;
 
 public:
 	StmtConverter(ConversionFactory& convFact) :
-			convFact(convFact) {
-	}
+		convFact(convFact), mgr(convFact.mgr), 
+		builder(convFact.builder), gen(convFact.mgr.getLangBasic()) { }
+
 	virtual ~StmtConverter() {}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

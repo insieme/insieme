@@ -74,12 +74,18 @@ namespace conversion {
 class ConversionFactory::TypeConverter {
 
 protected:
-	ConversionFactory& convFact;
+	ConversionFactory& 					convFact;
+	core::NodeManager& 					mgr;
+	const core::IRBuilder& 				builder;
+	const core::lang::BasicGenerator& 	gen;
+
 	utils::DependencyGraph<const clang::TagDecl*> typeGraph;
 
 public:
 	TypeConverter(ConversionFactory& fact, Program& program);
-	virtual ~TypeConverter();
+
+	virtual ~TypeConverter() { }
+
 	virtual core::TypePtr VisitBuiltinType(const BuiltinType* buldInTy);
 	virtual core::TypePtr VisitComplexType(const ComplexType* bulinTy);
 	virtual core::TypePtr VisitConstantArrayType(const ConstantArrayType* arrTy);
@@ -102,7 +108,10 @@ protected:
 	virtual core::TypePtr handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 };
 
-class ConversionFactory::CTypeConverter: public ConversionFactory::TypeConverter, public TypeVisitor<ConversionFactory::CTypeConverter, core::TypePtr>{
+class ConversionFactory::CTypeConverter: 
+	public ConversionFactory::TypeConverter, 
+	public TypeVisitor<ConversionFactory::CTypeConverter, core::TypePtr>
+{
 
 protected:
 	//ConversionFactory& convFact;

@@ -25,8 +25,7 @@ unit main() {
 	x = 12;
 	print("Equal: %d\n", ref.eq(o.a, x));
 	print("x = %d \t o.a = %d\n", *x, *o.a);
-	
-	
+
 	// udpate element of b directly
 	o.b[2u] = 0;
 	print("o.b[2] = %d\n", *o.b[2u]);

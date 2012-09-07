@@ -230,18 +230,28 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		return builder.callExpr(trgTy, gen.getRefToAnyRef(), expr);
 	}
 
-
 	///////////////////////////////////////////////////////////////////////////////////////
-	// 										0 -> anyRef
+	// 							0 -> anyRef 
 	///////////////////////////////////////////////////////////////////////////////////////
 	// Convert a ref<'a> type to anyRef. 
 	///////////////////////////////////////////////////////////////////////////////////////
-	if ( gen.isAnyRef(trgTy) && (*expr == *builder.literal(argTy,"0")) ) {
+	if ( gen.isAnyRef(trgTy) &&  *expr == *builder.literal(argTy,"0") ) 
+	{
 		// FIXME: not sure about this being correct, we have to get a ref from a null in order to convert it to 
 		// the anyref value
-		return CAST(builder.callExpr( gen.getGetNull(), builder.getTypeLiteral(argTy) ), trgTy);
+		return builder.callExpr( gen.getGetNull(), builder.getTypeLiteral(argTy) );
 	}
 
+
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 							0 -> ref<array<'a,#n>>
+	///////////////////////////////////////////////////////////////////////////////////////
+	// Convert a ref<'a> type to anyRef. 
+	///////////////////////////////////////////////////////////////////////////////////////
+	if ( builder.matchType("ref<array<'a,#n>>", trgTy) && *expr == *builder.literal(argTy,"0") ) 
+	{
+		return builder.callExpr( gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(trgTy)) );
+	}
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 									ref<'a> -> 'a
@@ -280,12 +290,14 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	}
 
 
-	// NOTE: from this point on we are sure the type of the target type and the argument type are the same 
-	//       meaning that either we have a ref-type or non-ref type.
+	// NOTE: from this point on we are sure the type of the target type and the argument type are
+	// the same meaning that either we have a ref-type or non-ref type.
 
-	// [ ref<vector<'a, #n>> -> ref<array<'a,1>> ]
-	//
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 						ref<vector<'a, #n>> -> ref<array<'a,1>>
+	///////////////////////////////////////////////////////////////////////////////////////
 	// convert a reference to a vector to a reference to an array using the refVector2RefArray literal  
+	///////////////////////////////////////////////////////////////////////////////////////
 	if ( trgTy->getNodeType() == core::NT_RefType) {
 		// we are sure at this point the type of arg is of ref-type as well
 		const core::TypePtr& elemTy = GET_REF_ELEM_TYPE(trgTy);
@@ -341,17 +353,22 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 //		return builder.vectorExpr(vecTy , vals);
 //	}
 
-	// [ vector<'a, #n> -> vector<'b, #m> ] 
-	//
-	// this conversion is only valid if 'a and 'b are the same type and #m >= #n, in the rest of the cases 
-	// we produce a compiler error saying this cast is not allowed within the IR type system
+
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 							vector<'a, #n> -> vector<'b, #m> 
+	///////////////////////////////////////////////////////////////////////////////////////
+	// this conversion is only valid if 'a and 'b are the same type and #m >= #n, in the rest of the
+	// cases we produce a compiler error saying this cast is not allowed within the IR type system
+	///////////////////////////////////////////////////////////////////////////////////////
 	if ( trgTy->getNodeType() == core::NT_VectorType && argTy->getNodeType() == core::NT_VectorType ) {
 		// if we are here is because the two types are not the same, check whether the problem is the 
 		// element type or the dimension
-		const core::VectorTypePtr& vecTrgTy = core::static_pointer_cast<const core::VectorType>(trgTy);
-		const core::VectorTypePtr& vecArgTy = core::static_pointer_cast<const core::VectorType>(argTy);
+		auto vecTrgTy = trgTy.as<core::VectorTypePtr>();
+		auto vecArgTy = argTy.as<core::VectorTypePtr>();
+
 		// check the type first 
 		if ( *vecArgTy->getElementType() != *vecTrgTy->getElementType() ) {
+
 			if((*vecArgTy->getElementType() == *builder.getNodeManager().getLangBasic().getBool()
 					&& *vecTrgTy->getElementType() == *builder.getNodeManager().getLangBasic().getInt4())
 				|| (*vecTrgTy->getElementType() == *builder.getNodeManager().getLangBasic().getBool()
@@ -364,35 +381,21 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 			// converting from a vector of a type to a vector of another type, this is not possible
 			assert(false && "Converting from vector<'a> to vector<'b>"); 
 		}
+
 		if ( *vecArgTy->getSize() != *vecTrgTy->getSize() ) {
 			// converting from a vector size X to vector size Y, only possible if X <= Y
-			size_t vecTrgSize = core::static_pointer_cast<const core::ConcreteIntTypeParam>(vecTrgTy->getSize())->getValue();
-			size_t vecArgSize = core::static_pointer_cast<const core::ConcreteIntTypeParam>(vecArgTy->getSize())->getValue();
+			size_t vecTrgSize = vecTrgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
+			size_t vecArgSize = vecArgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
+
 			assert(vecTrgSize >= vecArgSize && "Conversion not possible");
 
 			// TODO report it as an error ? 
 			assert(false && "Casting between two different vector sizes not yet implemented!");
+
 			return expr;
 		}
 	}
 
-	// [ 'a -> array<'a,1> ]
-	//
-	// builds an array from a scalar value
-	if ( trgTy->getNodeType() == core::NT_ArrayType && 	argTy->getNodeType() != core::NT_ArrayType && 
-			argTy->getNodeType() != core::NT_VectorType )
-	{
-		assert(false);
-//		// This is done by creating a wrapping array containing the argument
-//		const core::TypePtr& subTy = GET_ARRAY_ELEM_TYPE(trgTy);
-//		core::ConcreteIntTypeParamPtr&& size = core::ConcreteIntTypeParam::get(builder.getNodeManager(), 1);
-//		core::ExpressionPtr vecExpr = builder.callExpr(
-//				builder.vectorType(subTy, size), // vec<subTy,1>
-//				gen.getVectorInitUniform(),
-//				toVector( CAST(expr, subTy), builder.getIntTypeParamLiteral(size) )
-//			);
-//		return builder.callExpr( trgTy, gen.getVectorToArray(), toVector(vecExpr) );
-	}
 
 	// [ ref<'a> -> ref<array<'a>> ]
 	//

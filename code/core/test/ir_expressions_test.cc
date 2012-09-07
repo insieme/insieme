@@ -45,7 +45,7 @@
 
 #include "insieme/utils/set_utils.h"
 
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "ir_node_test.inc"

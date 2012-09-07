@@ -288,6 +288,10 @@ protected:
 	ConversionFactory& convFact;
 	ConversionContext& ctx;
 
+	core::NodeManager& 					mgr;
+	const core::IRBuilder& 				builder;
+	const core::lang::BasicGenerator& 	gen;
+
 	core::ExpressionPtr wrapVariable(clang::Expr* expr);
 
 	core::ExpressionPtr asLValue(const core::ExpressionPtr& value);
@@ -304,10 +308,13 @@ public:
 	ExprConverter(ConversionFactory& convFact, Program& program) :
 		convFact(convFact),
 		ctx(convFact.ctx),
+		mgr(convFact.mgr),
+		builder(convFact.builder),
+		gen(convFact.builder.getLangBasic()),
 		funcDepGraph(program.getClangIndexer())
-	{
-	}
-	virtual ~ExprConverter() {};
+	{  }
+
+	virtual ~ExprConverter() { }
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								INTEGER LITERAL
@@ -495,7 +502,10 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //										CXX EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class CXXConversionFactory::CXXExprConverter : public ExprConverter, public StmtVisitor<CXXExprConverter, core::ExpressionPtr> {
+class CXXConversionFactory::CXXExprConverter : 
+	public ExprConverter, 
+	public StmtVisitor<CXXExprConverter, core::ExpressionPtr> 
+{
 	CXXConversionFactory& convFact;
 	CXXConversionFactory::CXXConversionContext& cxxCtx;
 	utils::FunctionDependencyGraph funcDepGraph;
@@ -509,8 +519,8 @@ public:
 		cxxCtx(cxxConvFact.cxxCtx),
 		funcDepGraph(program.getClangIndexer()),
 		tempHandler(&cxxConvFact)
-	{
-	}
+	{ }
+
 	virtual ~CXXExprConverter() {}
 
 private:

@@ -42,7 +42,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/utils/test/test_utils.h"
 
@@ -54,6 +54,8 @@
 
 namespace insieme {
 namespace core {
+
+using namespace checks;
 
 TEST(NodeReplacer, Basic) {
 	NodeManager manager;

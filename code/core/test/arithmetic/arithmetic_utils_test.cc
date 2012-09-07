@@ -39,13 +39,15 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/parser/ir_parse.h"
 namespace insieme {
 namespace core {
 namespace arithmetic {
+
+using namespace insieme::core::checks;
 
 
 TEST(ArithmeticUtilsTest, fromIR) {

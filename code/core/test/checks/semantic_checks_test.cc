@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/semanticchecks.h"
+#include "insieme/core/checks/semantic_checks.h"
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/utils/logging.h"
 

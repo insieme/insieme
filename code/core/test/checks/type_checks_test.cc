@@ -37,9 +37,14 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/type_checks.h"
 #include "insieme/core/transform/node_replacer.h"
+<<<<<<< HEAD
 #include "insieme/core/parser2/grammar.h"
+=======
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/printer/pretty_printer.h"
+>>>>>>> master
 
 namespace insieme {
 namespace core {
@@ -827,10 +832,6 @@ TEST(ArrayTypeChecks, Basic) {
 }
 
 TEST(NarrowExpresion, Basic) {
-	NodeManager manager;
-	IRBuilder builder(manager);
-	auto& basic = manager.getLangBasic();
-
 	//(ref<'a>, datapath, type<'b>) -> ref<'b>
 	
 	core::NodePtr irCode = builder.parse( 
@@ -840,8 +841,59 @@ TEST(NarrowExpresion, Basic) {
 	std::cerr << "\n***********************************************************************\n";
 	std::cerr << insieme::core::parser::createGrammar();
 	std::cerr << "\n***********************************************************************\n";
+}
+
+TEST(ArrayTypeChecks, Exceptions) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+
+	CheckPtr typeCheck = getFullCheck();
+
+	// create simple, context less array type
+	TypePtr element = manager.getLangBasic().getInt4();
+	TypePtr arrayType = builder.arrayType(element);
+
+	NodePtr cur;
+	auto errors = check(arrayType, typeCheck);
+
+	// allow arrays to be used within type literals
+	cur = builder.getTypeLiteral(arrayType);
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	ExpressionPtr arrayPtr = builder.callExpr(basic.getArrayCreate1D(), builder.getTypeLiteral(element), builder.uintLit(12u));
+
+	// also, allow array values to be used within ref.new, ref.var, struct, tuple and union expressions
+
+	// ref.var
+	cur = builder.refVar(arrayPtr);
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	// ref.new
+	cur = builder.refNew(arrayPtr);
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	// struct expression
+	cur = builder.structExpr(toVector(builder.namedValue("a", arrayPtr)));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	// union expression
+	UnionTypePtr unionType = builder.unionType(toVector(builder.namedType("a", arrayType)));
+	cur = builder.unionExpr(unionType, builder.stringValue("a"), arrayPtr);
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	// tuple expression
+	cur = builder.tupleExpr(toVector(arrayPtr));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
 }
+
 
 } // end namespace checks
 } // end namespace core

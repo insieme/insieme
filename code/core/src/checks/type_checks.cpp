@@ -34,11 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/type_checks.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/core/analysis/type_variable_deduction.h"
 
@@ -388,6 +389,11 @@ OptionalMessageList ArrayTypeCheck::visitArrayType(const ArrayTypeAddress& addre
 	// it has to be a struct, union or tuple
 	auto parentType = parent->getNodeType();
 
+	// allow array to occur within a meta-type type
+	if (core::analysis::isTypeLiteralType(parent.as<TypePtr>())) {
+		return res; 	// arrays are allowed within type literals
+	}
+
 	// check valid context
 	if (parentType != NT_StructType && parentType != NT_UnionType && parentType != NT_TupleType) {
 		add(res, Message(parent,
@@ -402,10 +408,10 @@ OptionalMessageList ArrayTypeCheck::visitArrayType(const ArrayTypeAddress& addre
 	NodeAddress grandParent = getParentType(parent);
 
 	// check valid parent context => element has to be embedded within a reference
-	if (grandParent && grandParent->getNodeType() != NT_RefType) {
+	if (grandParent && grandParent->getNodeType() != NT_RefType && grandParent->getNodeType() != NT_ArrayType) {
 		add(res, Message(grandParent,
 				EC_TYPE_INVALID_ARRAY_CONTEXT,
-				"Invalid array context. Variable sized struct / union / tuples must be enclosed by a ref.",
+				"Invalid array context. Variable sized struct / union / tuples must be enclosed by a ref or array.",
 				Message::ERROR
 		));
 		return res;
@@ -944,7 +950,7 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 		case NT_TypeVariable:
 			return res;
 		default:
-			assert(false && "Sorry, missed some type!");
+			assert(false && "Sorry, missed some type!"); break;
 		}
 	}
 
@@ -959,45 +965,118 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 	return res;
 }
 
+
+TypePtr isNarrowDataPath (const IRBuilder& builder, 
+					  const ExpressionPtr& source,
+					  const ExpressionPtr& datapath) {
+
+	TypePtr fail;
+
+	// if ROOT, target and source must be equal
+	if (builder.getLangBasic().isDataPathRoot(datapath)){
+
+		return analysis::getReferencedType(source->getType());
+	}
+	else{
+		// if not root, datapath is function shaped
+		if (!datapath.isa<CallExprPtr>())
+			return fail;
+		const CallExprPtr& dpExp = datapath.as<CallExprPtr>();
+		const ExpressionPtr& innerDP = dpExp->getArgument(0);
+		const ExpressionPtr& member= dpExp->getArgument(1);
+		const TypePtr& inType = isNarrowDataPath(builder, source, innerDP);
+
+		// if Member, check that member exist inside of source
+		if (builder.getLangBasic().isDataPathMember(dpExp->getFunctionExpr())){
+
+			if (inType.isa<NamedCompositeTypePtr>()){
+				const NamedCompositeTypePtr& structType = inType.as<NamedCompositeTypePtr>();
+				return structType->getTypeOfMember (member.as<core::LiteralPtr>()->getValue());
+			}
+			else{
+				return fail;
+			}
+		}
+		else if (builder.getLangBasic().isDataPathElement(dpExp->getFunctionExpr())){
+
+			if (inType.isa<ArrayTypePtr>()) {
+				return inType.as<ArrayTypePtr>()->getElementType();
+			}
+			else if(inType.isa<VectorTypePtr>()){
+				return inType.as<VectorTypePtr>()->getElementType();
+			}
+			else{
+				return fail;
+			}
+		}
+		else if (builder.getLangBasic().isDataPathComponent(dpExp->getFunctionExpr())){
+
+			if (!inType.isa<TupleTypePtr>())
+				return fail;
+
+			auto f = arithmetic::toFormula(member);
+			if (!f.isConstant())
+				return fail;
+			if (!f.isInteger())
+				return  fail;
+
+			int n = (int64_t)f.getConstantValue();
+			if (((int)inType.as<TupleTypePtr>()->size() <= n) || (n <0))
+				return  fail;
+			return inType.as<TupleTypePtr>()->getElement(n);
+		}
+	}
+	return fail;
+}
+
+
 OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 	
 	NodeManager manager;
 	OptionalMessageList res;
 
-	auto functionExp = call->getFunctionExpr();
 	// obtain function type ...
-	TypePtr funType = functionExp->getType();
-
-
+	TypePtr funType = call->getFunctionExpr()->getType();
 	assert( call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
 
 	const FunctionTypePtr& functionType = CAST(FunctionType, funType);
 	const TypeList& parameterTypes = functionType->getParameterTypes()->getTypes();
 	const TypePtr& returnType = functionType->getReturnType();
 
-	// Obtain argument type
-	TypeList argumentTypes;
-	transform(call.as<CallExprPtr>()->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) {
-		return cur->getType();
-	});
-
-
-	std::cout << argumentTypes.size();
 	// the function call must be narrow
-	
-	// must have 3 parameters
-	
-	// second parameter must be a datapath
-	
-	// case root:
-	// 		target element must be source
-	
-	add(res, Message(call,
-			EC_TYPE_MALFORM_NARROW_CALL,
-			format("Malform Narrow expresion %s and %s",
-					"a",
-					"b"),
-			Message::ERROR));
+	if (!analysis::isCallOf(call.getAddressedNode(), manager.getLangBasic().getRefNarrow()))
+		return res;
+
+	if (call.getArguments().size() != 3u)
+		return res;
+
+	// Obtain argument type
+	ExpressionPtr srcArg = call.as<CallExprPtr>()->getArgument(0);
+	ExpressionPtr dpArg  = call.as<CallExprPtr>()->getArgument(1);
+	ExpressionPtr trgArg = call.as<CallExprPtr>()->getArgument(2);
+
+	IRBuilder builder(call.getNodeManager());
+	TypePtr narrowType = isNarrowDataPath(builder, srcArg, dpArg);
+	if (!narrowType){
+		add(res, Message(call,
+						EC_TYPE_MALFORM_NARROW_CALL,
+						format ("Malform dataPath in Narrow expresion %s, %s, %s",
+								toString(*srcArg).c_str(),
+								toString(*dpArg).c_str(),
+								toString(*trgArg).c_str()),
+						Message::ERROR));
+	}
+	else{
+		if (*narrowType != *analysis::getRepresentedType(trgArg)){
+		add(res, Message(call,
+						EC_TYPE_MALFORM_NARROW_CALL,
+						format (" Wrong return type in Narrow Expression %s, %s, %s",
+								toString(*srcArg).c_str(),
+								toString(*dpArg).c_str(),
+								toString(*trgArg).c_str()),
+						Message::ERROR));
+		}
+	}
 
 	return res;
 }

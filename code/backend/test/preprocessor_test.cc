@@ -47,7 +47,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/transform/node_replacer.h"
 
@@ -83,8 +83,8 @@ TEST(Preprocessor, GlobalElimination) {
 //	std::cout << "Input: " << core::printer::PrettyPrinter(program) << "\n";
 
 	// check for semantic errors
-	auto errors = core::check(program, core::checks::getFullCheck());
-	EXPECT_EQ(core::MessageList(), errors);
+	auto errors = core::checks::check(program);
+	EXPECT_EQ(core::checks::MessageList(), errors);
 
 
 	// run preprocessor
@@ -92,8 +92,8 @@ TEST(Preprocessor, GlobalElimination) {
 
 //	std::cout << "Processed: " << core::printer::PrettyPrinter(res) << "\n";
 
-	errors = core::check(res, core::checks::getFullCheck());
-	EXPECT_EQ(core::MessageList(), errors);
+	errors = core::checks::check(res);
+	EXPECT_EQ(core::checks::MessageList(), errors);
 
 	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(res)), "__GLOBAL__1;");
 	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(res)), "__GLOBAL__1 := X;");

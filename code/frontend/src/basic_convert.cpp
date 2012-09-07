@@ -128,30 +128,23 @@ const clang::idx::TranslationUnit* ConversionFactory::getTranslationUnitForDefin
 }
 
 ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog) :
+		mgr(mgr), builder(mgr),
 		stmtConvPtr(std::make_shared<CStmtConverter>(*this)),
 		typeConvPtr(std::make_shared<CTypeConverter>(*this, prog)),
 		exprConvPtr(std::make_shared<CExprConverter>(*this, prog)),
 		// cppcheck-suppress exceptNew
-		mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) {
+		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) {
 }
 
 ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog,
 	std::shared_ptr<StmtConverter> stmtConvPtr,
 	std::shared_ptr<TypeConverter> typeConvPtr,
 	std::shared_ptr<ExprConverter> exprConvPtr) :
+		mgr(mgr), builder(mgr), 
 		stmtConvPtr(stmtConvPtr),
 		typeConvPtr(typeConvPtr),
 		exprConvPtr(exprConvPtr),
-		mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) {
-}
-
-ConversionFactory::~ConversionFactory() {
-	// dealloc StmtConverter
-//	ConversionFactory::cleanStmtConvert(stmtConv);
-//	// dealloc StmtConverter
-//	ConversionFactory::cleanTypeConvert(typeConv);
-//	// dealloc StmtConverter
-//	ConversionFactory::cleanExprConvert(exprConv);
+		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) {
 }
 
 void ConversionFactory::collectGlobalVar(const clang::FunctionDecl* funcDecl) {

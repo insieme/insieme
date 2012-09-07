@@ -42,11 +42,6 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-enum {
-	EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE = EC_GROUP_IMPERATIVE + 1,
-	EC_IMPERATIVE_ILLEGAL_VARIABLE_REUSE
-};
-
 // defines macros for generating CHECK declarations
 #include "insieme/core/checks/check_macros.inc"
 
@@ -61,9 +56,6 @@ SIMPLE_CHECK(UndeclaredVariable, LambdaDefinition, false);
  * into a recursive check.
  */
 SIMPLE_CHECK(DeclaredOnce, Node, false);
-
-
-// TODO: add another test verifying that every variable is only defined once
 
 
 #undef SIMPLE_CHECK

@@ -34,59 +34,28 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include <boost/lexical_cast.hpp>
-
-#include "insieme/core/encoder/lists.h"
-
-#include "insieme/utils/container_utils.h"
-
-#include "insieme/core/ir_node.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/full_check.h"
+#include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {
 namespace core {
-namespace encoder {
-
-TEST(Lists, languageExtension) {
-
-	NodeManager manager;
-	const ListExtension& ext = manager.getLangExtension<ListExtension>();
-
-	EXPECT_EQ("(('a,list<'a>)->list<'a>)", toString(*ext.cons->getType()));
-	EXPECT_EQ("((type<'a>)->list<'a>)", toString(*ext.empty->getType()));
-
-}
+namespace checks {
 
 
-TEST(Lists, listConversion) {
+	/**
+	 * Obtains a combined check case containing all the checks defined within this header file.
+	 */
+	CheckPtr getFullCheck();
 
-	NodeManager manager;
-
-	// create a list
-
-	vector<int> list = toVector(1,2,3);
-	core::ExpressionPtr irList = toIR(manager, list);
-	vector<int> back = toValue<vector<int>>(irList);
-
-	EXPECT_EQ("[1,2,3]", toString(list));
-	EXPECT_EQ("cons(1, cons(2, cons(3, empty(int<4>))))", toString(*irList));
-
-	EXPECT_TRUE(isEncodingOf<vector<int>>(irList));
-	EXPECT_EQ(list, back);
-
-	EXPECT_EQ("[]", toString(check(irList, checks::getFullCheck())));
+	/**
+	 * Allies all known semantic checks on the given node and returns the obtained message list.
+	 */
+	inline MessageList check(const NodePtr& node) {
+		return check(node, getFullCheck());
+	}
 
 
-	// test another type
-	EXPECT_EQ("cons(3.75, cons(1.47, empty(real<8>)))", toString(*toIR(manager, toVector<double>(3.75, 1.47))));
-
-}
-
-
-} // end namespace lists
+} // end namespace checks
 } // end namespace core
 } // end namespace insieme
-

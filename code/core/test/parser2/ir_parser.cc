@@ -42,7 +42,7 @@
 #include "insieme/core/dump/text_dump.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/normalize.h"
 
 namespace insieme {
