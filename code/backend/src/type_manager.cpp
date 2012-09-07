@@ -647,7 +647,7 @@ namespace backend {
 
 			// create externalizer
 			res->externalize = [dataElementName](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-				return access(node, dataElementName);
+				return (node->getNodeType()==c_ast::NT_Literal)?node:access(node, dataElementName);
 			};
 
 			// create internalizer
@@ -760,6 +760,8 @@ namespace backend {
 			// special treatment for exporting vectors
 			if (elementNodeType == core::NT_VectorType) {
 				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+					// special treatment for literals (e.g. string literals)
+					if (node->getNodeType() == c_ast::NT_Literal) return node;
 					// generated code: ((externalName)X.data)
 					return c_ast::access(c_ast::parenthese(c_ast::deref(node)), manager->create("data"));
 				};

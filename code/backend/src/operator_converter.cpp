@@ -626,6 +626,12 @@ namespace backend {
 			// Operator type: (ref<vector<'elem,#l>>) -> ref<array<'elem,1>>
 			const TypeInfo& info = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
 			context.getDependencies().insert(info.definition);
+
+			// special handling for string literals
+			if (call->getArgument(0)->getNodeType() == core::NT_Literal) {
+				return CONVERT_ARG(0);
+			}
+
 			return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");
 		});
 

@@ -212,6 +212,11 @@ namespace backend {
 			return res;		// just print literal as it is
 		}
 
+		// handle C string literals (which are of type ref<vector<...>>)
+		if (ptr->getStringValue()[0] == '"') {
+			return res;		// just print it and be done
+		}
+
 		// handle literals referencing external data elements
 		if (core::analysis::isRefType(ptr->getType())) {
 			// look up external variable declaration
