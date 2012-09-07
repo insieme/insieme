@@ -235,8 +235,8 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 				core::NodePtr parent = var.getParentNode();
 
 				// the parent expression can be either a deref, followed by a subscript or a refelement1d.
-				if ( core::analysis::isCallOf(parent, basic.getArraySubscript1D()) || 
-					 core::analysis::isCallOf(parent, basic.getArrayRefElem1D()) ) 
+				if ( core::analysis::isCallOf(parent, basic.getArraySubscript1D()) ||
+					 core::analysis::isCallOf(parent, basic.getArrayRefElem1D()) )
 				{
 					bool isPseudo = false;
 					try {

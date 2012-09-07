@@ -41,6 +41,8 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/attributes.h"
 
+#include "insieme/core/lang/basic.h"
+
 // WARNING: this file is only preliminary and might be heavily modified or moved ...
 
 

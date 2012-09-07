@@ -51,9 +51,6 @@
 #include "insieme/core/ir_node_traits.h"
 #include "insieme/core/ir_pointer.h"
 
-#include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/extension.h"
-
 namespace insieme {
 namespace core {
 
@@ -529,6 +526,12 @@ namespace core {
 	// 									Node Manager
 	// **********************************************************************************
 
+	// two forward declarations required by the node manager
+	namespace lang {
+		class BasicGenerator;
+		class Extension;
+	}
+
 	/**
 	 * Instances of the NodeManager class can be used to control the life cycle
 	 * of IR nodes. The life cycle of every node is bound to a single manager and
@@ -561,7 +564,7 @@ namespace core {
 			 * An instance of the basic generator offering access to essential INSPIRE
 			 * specific language constructs.
 			 */
-			const lang::BasicGenerator basic;
+			const std::unique_ptr<const lang::BasicGenerator> basic;
 
 			/**
 			 * The store maintaining language extensions.
@@ -576,32 +579,26 @@ namespace core {
 			/**
 			 * A constructor for this data structure.
 			 */
-			NodeManagerData(NodeManager& manager)
-				: root(manager), basic(manager) {};
+			NodeManagerData(NodeManager& manager);
 
 			/**
 			 * A destructor for this data structure cleaning up extensions.
 			 */
-			~NodeManagerData() {
-				// free all extensions
-				for_each(extensions, [](const ExtensionMap::value_type& cur) {
-					delete cur.second;
-				});
-			}
+			~NodeManagerData();
 		};
 
 		/**
 		 * A pointer to the node manager data struct managed by the root of the hierarchy
 		 * this node manager is part of.
 		 */
-		NodeManagerData* data;
+		std::shared_ptr<NodeManagerData> data;
 
 	public:
 
 		/**
 		 * A default constructor creating a fresh, empty node manager instance.
 		 */
-		NodeManager() : data(new NodeManagerData(*this)) { }
+		NodeManager();
 
 		/**
 		 * A constructor to be used for manager-chaining, allowing to build hierarchies
@@ -610,24 +607,12 @@ namespace core {
 		 * @param manager the manager covering the surrounding scope; the life cycle of the
 		 * handed in manager has to exceed the life cycle of this manager
 		 */
-		explicit NodeManager(NodeManager& manager)
-			: InstanceManager<Node, Pointer>(manager), data(manager.data) {}
+		explicit NodeManager(NodeManager& manager);
 
 		/**
 		 * Creates a new node manager using the given id as its initial fresh id.
 		 */
-		explicit NodeManager(unsigned initialFreshID) : data(new NodeManagerData(*this)) { setNextFreshID(initialFreshID); }
-
-		/**
-		 * The destructor cleaning up all language extensions.
-		 */
-		~NodeManager() {
-			// extensions are only handled by root manager
-			if (getBaseManager()) { return; }
-
-			// clear attached data struct
-			delete data;
-		}
+		explicit NodeManager(unsigned initialFreshID);
 
 		/**
 		 * Obtains a pointer to the base manager this manager is attached to or
@@ -641,7 +626,7 @@ namespace core {
 		 * Obtains access to the generator of the basic language constructs.
 		 */
 		const lang::BasicGenerator& getLangBasic() const {
-			return data->basic;
+			return *data->basic;
 		}
 
 		/**

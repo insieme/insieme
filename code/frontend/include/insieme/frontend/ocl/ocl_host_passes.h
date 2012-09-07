@@ -184,8 +184,7 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 						core::CallExprPtr unneccecaryFunction = dynamic_pointer_cast<const core::CallExpr>(cur.second);
 						if(unneccecaryFunction && (
 							builder.getNodeManager().getLangBasic().isRefDeref(unneccecaryFunction->getFunctionExpr()) ||
-							builder.getNodeManager().getLangBasic().isRefVectorToRefArray(unneccecaryFunction->getFunctionExpr()) ||
-							builder.getNodeManager().getLangBasic().isVectorToArray(unneccecaryFunction->getFunctionExpr()) ))
+							builder.getNodeManager().getLangBasic().isRefVectorToRefArray(unneccecaryFunction->getFunctionExpr())  ))
 								arg = unneccecaryFunction->getArgument(0);
 
 //std::cout << "\n 1 " << *yAddr << " - " << *cur.first << std::endl;

@@ -40,6 +40,7 @@
 #include <functional>
 
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/lang/basic.h"
 
 #include "insieme/utils/logging.h"
 

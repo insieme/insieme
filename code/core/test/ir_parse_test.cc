@@ -158,9 +158,9 @@ TEST(IRParser, ExpressionTests) {
 
     // bindExpr
     auto parsedBind1 = dynamic_pointer_cast<const BindExpr>(parser.parseExpression("bind(uint<8>:unbound){ \
-        (op<array.subscript.1D>(array<'a,1>:arr, unbound)) }"));
+        (op<array.ref.elem.1D>(ref<array<'a,1>>:arr, unbound)) }"));
     EXPECT_EQ(1u, parsedBind1->getParameters().size());
-    EXPECT_EQ(manager.getLangBasic().getArraySubscript1D(), parsedBind1->getCall()->getFunctionExpr());
+    EXPECT_EQ(manager.getLangBasic().getArrayRefElem1D(), parsedBind1->getCall()->getFunctionExpr());
 
     auto parsedBind2 = dynamic_pointer_cast<const BindExpr>(parser.parseExpression("bind(real<8>:unbound){ (fun (real<8>, int<4>)->int<4>:lambda in { \
             (real<8>, int<4>)->int<4>:lambda = (real<8>:p, int<4>:q)->int<4> {\

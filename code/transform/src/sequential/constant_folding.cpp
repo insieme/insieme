@@ -39,6 +39,8 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/core/lang/basic.h"
+
 namespace insieme {
 namespace transform {
 namespace sequential {

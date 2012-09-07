@@ -51,6 +51,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
 namespace core {

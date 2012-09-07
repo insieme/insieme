@@ -52,6 +52,8 @@
 
 #include "insieme/core/analysis/normalize.h"
 
+#include "insieme/core/lang/basic.h"
+
 namespace insieme {
 namespace core {
 
