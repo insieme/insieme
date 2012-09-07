@@ -85,8 +85,9 @@ bool DefUse::defs_iterator::operator==(const defs_iterator& other) const {
 
 DefUse::defs_iterator DefUse::defs_begin(const core::ExpressionAddress& expr) const {
 	
-	auto  block = pimpl->cfg->find(expr);
-	auto& reaching_defs = pimpl->analysis[block.first->getBlockID()];
+	auto  cfgAddr = pimpl->cfg->find(expr);
+
+	auto& reaching_defs = pimpl->analysis[cfgAddr.getBlock().getBlockID()];
 
 	std::set<Access> entities;
 	
@@ -106,8 +107,8 @@ DefUse::defs_iterator DefUse::defs_begin(const core::ExpressionAddress& expr) co
 }
 
 DefUse::defs_iterator DefUse::defs_end(const core::ExpressionAddress& expr) const {
-	auto  block = pimpl->cfg->find(expr);
-	auto& reaching_defs = pimpl->analysis[block.first->getBlockID()];
+	auto  cfgAddr = pimpl->cfg->find(expr);
+	auto& reaching_defs = pimpl->analysis[cfgAddr.getBlock().getBlockID()];
 
 	return defs_iterator( 
 			std::make_shared<DefUse::defs_iterator_impl>(

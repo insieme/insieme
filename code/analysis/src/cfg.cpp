@@ -55,6 +55,7 @@
 #include <tuple>
 #include <stack>
 
+using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::utils;
 using namespace insieme::analysis;
@@ -272,7 +273,7 @@ private:
  * The visit is done in reverse order in a way the number of CFG nodes is minimized.
  */
 template < CreationPolicy CP >
-struct CFGBuilder: public IRVisitor< void, Address > {
+struct CFGBuilder: public IRVisitor< void, core::Address > {
 
 	CFGPtr 			cfg;
 	IRBuilder 		builder;
@@ -284,7 +285,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	VariablePtr 	retVar;
 
 	CFGBuilder(CFGPtr cfg, const NodeAddress& root) : 
-		IRVisitor<void, Address>(false), 
+		IRVisitor<void, core::Address>(false), 
 		cfg(cfg), 
 		builder(root->getNodeManager()), 
 		blockMgr(cfg)
@@ -550,14 +551,14 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 	ExpressionPtr normalize(const ExpressionAddress& expr, std::vector<NodeAddress>& idxs) {
 
-		struct NormalizeVisitor: public IRVisitor<ExpressionPtr, Address> {
+		struct NormalizeVisitor: public IRVisitor<ExpressionPtr, core::Address> {
 
 			CFGBuilder& cfgBuilder;
 			IRBuilder& builder;
 			std::vector<NodeAddress>& idxs;
 
 			NormalizeVisitor(CFGBuilder& cfgBuilder, std::vector<NodeAddress>& idxs) : 
-				IRVisitor<ExpressionPtr, Address>(false), 
+				IRVisitor<ExpressionPtr, insieme::core::Address>(false), 
 				cfgBuilder(cfgBuilder), 
 				builder(cfgBuilder.builder), 
 				idxs(idxs) { }
@@ -1190,7 +1191,7 @@ int CFG::getStrongComponents() {
 	//});
 }
 
-std::pair<cfg::BlockPtr,size_t> CFG::find(const core::NodeAddress& node) const {
+cfg::Address CFG::find(const core::NodeAddress& node) const {
 
 	cfg::BlockPtr found;
 	size_t stmtIdx=0;
@@ -1231,11 +1232,33 @@ std::pair<cfg::BlockPtr,size_t> CFG::find(const core::NodeAddress& node) const {
 			terminator
 		);
 
-	return { found, stmtIdx };
+	if (!found) { return cfg::Address(found, 0, NodeAddress()); }
+	
+	// Find the address of the stmt in the CFG representation 
+	core::StatementPtr aStmt = (*found)[stmtIdx].getAnalysisStatement();
+
+	core::NodeAddress addr = core::NodeAddress(aStmt);
+
+	if (node.getAddressedNode() != aStmt && aStmt.getNodeType() == core::NT_DeclarationStmt) { 
+		auto declStmt = addr.as<DeclarationStmtAddress>();
+
+		if ( tmpVarMap.getMappedExpr(declStmt->getVariable()) == node ) { 
+			addr = addr.as<DeclarationStmtAddress>()->getInitialization();
+			return cfg::Address(found, stmtIdx, addr);
+		} 
+	}
+
+	// last chance to find the node 
+	if (node.getAddressedNode() != addr.getAddressedNode()) { 
+		addr = core::Address<const Node>::find(node.getAddressedNode(), addr.getAddressedNode());
+	}
+
+	assert(node.getAddressedNode() == addr.getAddressedNode() && "Search for node in the CFG failed");
+
+	return cfg::Address(found, stmtIdx, addr);
 }
 
 namespace cfg {
-
 
 namespace {
 

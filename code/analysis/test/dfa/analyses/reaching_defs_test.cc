@@ -91,11 +91,12 @@ TEST(ReachingDefinition, ScalarNoControl) {
 	// lookup address of variable A
 	core::VariableAddress aRef = addresses[3].as<VariableAddress>();
 	
-	std::pair<cfg::BlockPtr,size_t> b = cfg->find(aRef);
-	EXPECT_EQ(2u, b.first->getBlockID());
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(2u, blockID);
 	
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 	
 	auto thisAccess = getImmediateAccess(aRef);
 	auto addrSet = extractRealAddresses(*aMgr.getClassFor(thisAccess), cfg->getTmpVarMap());
@@ -136,11 +137,12 @@ TEST(ReachingDefinition, ScalarWithControl) {
 	// lookup address of variable A
 	core::VariableAddress aRef = addresses[3].as<VariableAddress>();
 	
-	std::pair<cfg::BlockPtr,size_t> b = cfg->find(aRef);
-	EXPECT_EQ(2u, b.first->getBlockID());
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(2u, blockID);
 
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 	
 	auto thisAccess = getImmediateAccess(aRef);
 	auto addrSet = extractRealAddresses(*aMgr.getClassFor(thisAccess), cfg->getTmpVarMap());
@@ -186,11 +188,12 @@ TEST(ReachingDefinition, ScalarWithControl2) {
 	// lookup address of variable A
 	VariableAddress aRef = addresses[3].as<VariableAddress>();
 	
-	std::pair<cfg::BlockPtr,size_t> b = cfg->find(aRef);
-	EXPECT_EQ(2u, b.first->getBlockID());
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(2u, blockID);
 
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 	
 	auto thisAccess = getImmediateAccess(aRef);
 	auto addrSet = extractRealAddresses(*aMgr.getClassFor(thisAccess), cfg->getTmpVarMap());
@@ -235,12 +238,13 @@ TEST(ReachingDefinition, ScalarWithControl3) {
 
 	// lookup address of variable A
 	VariableAddress aRef = addresses[3].as<VariableAddress>();
-	
-	std::pair<cfg::BlockPtr,size_t> b = cfg->find(aRef);
-	EXPECT_EQ(2u, b.first->getBlockID());
+
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(2u, blockID);
 
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 	
 	auto thisAccess = getImmediateAccess(aRef);
 	auto addrSet = extractRealAddresses(*aMgr.getClassFor(thisAccess), cfg->getTmpVarMap());
@@ -285,11 +289,12 @@ TEST(ReachingDefinition, ScalarWithLoop) {
 	// lookup address of variable A
 	VariableAddress aRef = addresses[2].as<VariableAddress>();
 	
-	std::pair<cfg::BlockPtr,size_t> b = cfg->find(aRef);
-	EXPECT_EQ(6u, b.first->getBlockID());
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(6u, blockID);
 
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 	
 	auto thisAccess = getImmediateAccess(aRef);
 	auto addrSet = extractRealAddresses(*aMgr.getClassFor(thisAccess), cfg->getTmpVarMap());
@@ -336,12 +341,13 @@ TEST(ReachingDefinitions, StructMemberNoControl) {
 
 	// lookup address of variable A
 	ExpressionAddress aRef = addresses[2].as<ExpressionAddress>();
-	
-	std::pair<cfg::BlockPtr, size_t> b = cfg->find(aRef);
-	EXPECT_EQ(3u, b.first->getBlockID());
+
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(3u, blockID);
 
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 
 	auto thisAccess = getImmediateAccess(aRef);
 	auto cl = aMgr.getClassFor(thisAccess);
@@ -426,11 +432,12 @@ TEST(ReachingDefinitions, StructMemberWithControl) {
 	// lookup address of variable A
 	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
 	
-	std::pair<cfg::BlockPtr,size_t> b = cfg->find(aRef);
-	EXPECT_EQ(3u, b.first->getBlockID());
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(3u, blockID);
 
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 
 	auto thisAccess = getImmediateAccess(aRef);
 	auto cl = aMgr.getClassFor(thisAccess);
@@ -478,12 +485,13 @@ TEST(ReachingDefinitions, StructMemberNested) {
 
 	// lookup address of variable A
 	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
-	
-	std::pair<cfg::BlockPtr,size_t> b = cfg->find(aRef);
-	EXPECT_EQ(3u, b.first->getBlockID());
+
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(3u, blockID);
 
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 
 	auto thisAccess = getCFGBasedAccess(aRef,cfg);
 	auto cl = aMgr.getClassFor(thisAccess);
@@ -535,12 +543,13 @@ TEST(ReachingDefinitions, StructMemberNested2) {
 
 	// lookup address of variable A
 	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
-	
-	std::pair<cfg::BlockPtr,size_t> b = cfg->find(aRef);
-	EXPECT_EQ(3u, b.first->getBlockID());
+
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(3u, blockID);
 
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 
 	auto thisAccess = getCFGBasedAccess(aRef,cfg);
 	auto cl = aMgr.getClassFor(thisAccess);
@@ -590,11 +599,12 @@ TEST(ReachingDefinitions, VectorsNoControl) {
 	// lookup address of variable A
 	ExpressionAddress aRef = addresses[2].as<ExpressionAddress>();
 	
-	std::pair<cfg::BlockPtr, size_t> b = cfg->find(aRef);
-	EXPECT_EQ(3u, b.first->getBlockID());
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(3u, blockID);
 
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 
 	auto thisAccess = getImmediateAccess(aRef);
 	auto cl = aMgr.getClassFor(thisAccess);
@@ -636,12 +646,13 @@ TEST(ReachingDefinitions, VectorsWithControl) {
 
 	// lookup address of variable A
 	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
-	
-	std::pair<cfg::BlockPtr, size_t> b = cfg->find(aRef);
-	EXPECT_EQ(3u, b.first->getBlockID());
+
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(3u, blockID);
 
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 
 	auto thisAccess = getCFGBasedAccess(aRef, cfg);
 
@@ -692,12 +703,13 @@ TEST(ReachingDefinitions, VectorsWithControl2) {
 
 	// lookup address of variable A
 	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
-	
-	std::pair<cfg::BlockPtr, size_t> b = cfg->find(aRef);
-	EXPECT_EQ(3u, b.first->getBlockID());
+
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(3u, blockID);
 
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 
 	auto thisAccess = getCFGBasedAccess(aRef, cfg);
 
@@ -742,12 +754,13 @@ TEST(ReachingDefinitions, VectorsWithControl3) {
 
 	// lookup address of variable A
 	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
-	
-	std::pair<cfg::BlockPtr, size_t> b = cfg->find(aRef);
-	EXPECT_EQ(3u, b.first->getBlockID());
+
+	cfg::Address addr = cfg->find(aRef);
+	auto blockID = addr.getBlock().getBlockID();
+	EXPECT_EQ(3u, blockID);
 
 	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
-	definitionsToAccesses(ret[b.first->getBlockID()], aMgr);
+	definitionsToAccesses(ret[blockID], aMgr);
 
 	auto thisAccess = getCFGBasedAccess(aRef, cfg);
 

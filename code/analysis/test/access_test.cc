@@ -50,10 +50,44 @@
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "insieme/analysis/cfg.h"
 
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::analysis;
+
+TEST(UnifiedAddress, IRAddress) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	{
+		auto addr = builder.parseAddresses("int<4> a = $10+20$;");
+
+		EXPECT_EQ(1u, addr.size());
+
+		EXPECT_EQ(
+			addr[0].getAddressedNode(), 
+			UnifiedAddress(addr[0]).getAddressedNode()
+		);
+	}
+	
+//	{
+//		auto addr = builder.parseAddresses("$int<4> a = $10+20$;$");
+//
+//		EXPECT_EQ(2u, addr.size());
+//		CFGPtr cfg = CFG::buildCFG<MultiStmtPerBasicBlock>(addr[0]);
+//
+//		auto block = cfg->find(addr[1]);
+//
+//		auto cfgAddr = NodeAddress((*block.first)[block.second].getAnalysisStatement()).getAddressOfChild(1);
+//		EXPECT_EQ(
+//			addr[1].getAddressedNode(), 
+//			UnifiedAddress(CFGAddress(*block.first, block.second, cfgAddr)).getAddressedNode()
+//		);
+//
+//	}
+
+}
 
 TEST(Access, Scalars) {
 

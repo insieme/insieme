@@ -130,7 +130,7 @@ bool KernelCodeRetriver::saveString(const core::LiteralPtr& lit) {
 
 bool KernelCodeRetriver::saveString(const core::CallExprPtr& call) {
 	if (const LiteralPtr lit = dynamic_pointer_cast<const Literal>(call->getFunctionExpr())) {
-		if (lit->getStringValue() == "string.as.char.pointer") {
+		if (BASIC.isRefVectorToRefArray(lit)) {
 			if (const LiteralPtr pl = dynamic_pointer_cast<const Literal>(tryRemove(BASIC.getRefDeref(), call->getArgument(0), builder))) {
 				path = pl->getStringValue();
 				return true;
@@ -205,7 +205,7 @@ bool KernelCodeRetriver::visitDeclarationStmt(const core::DeclarationStmtPtr& de
 void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {
 	if(const CallExprPtr callSaC = dynamic_pointer_cast<const CallExpr>(path)) {
 		if(const LiteralPtr stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
-			if(stringAsChar->getStringValue() == "string.as.char.pointer") {
+			if(BASIC.isRefVectorToRefArray(stringAsChar)) {
 				if(const LiteralPtr path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
 					// check if file has already been added
 					if(kernelFileCache.find(path->getStringValue()) == kernelFileCache.end()) {
@@ -1010,7 +1010,7 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 					// call resolve element to load the kernel using the appropriate handler
 					resolveElement(newCall);
 					ExpressionPtr kn = newCall->getArgument(2);
-					// usually kernel name is embedded in a "string.as.char.pointer" call"
+					// usually kernel name is embedded in a "ref.vector.to.ref.array" call"
 					if(const CallExprPtr sacp = dynamic_pointer_cast<const CallExpr>(kn))
 						kn = sacp->getArgument(0);
 					if(const LiteralPtr kl = dynamic_pointer_cast<const Literal>(kn)) {
@@ -1029,7 +1029,7 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 			if(const LiteralPtr fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
 				if(fun->getStringValue() == "clCreateKernel" ) {
 						ExpressionPtr kn = newCall->getArgument(1);
-						// usually kernel name is embedded in a "string.as.char.pointer" call"
+						// usually kernel name is embedded in a "ref.vector.to.ref.array" call"
 						if(const CallExprPtr sacp = dynamic_pointer_cast<const CallExpr>(kn))
 						kn = sacp->getArgument(0);
 						if(const LiteralPtr kl = dynamic_pointer_cast<const Literal>(kn)) {

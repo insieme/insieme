@@ -98,7 +98,7 @@ namespace checks {
 	CheckPtr combine(const CheckList& list);
 
 	template<typename ... Checks>
-	CheckPtr combine(const Checks& ... checks) { return combine(toVector(checks)); }
+	CheckPtr combine(const Checks& ... checks) { return combine(toVector(checks...)); }
 
 	template<typename C, typename ... Args>
 	inline CheckPtr make_check(const Args& ... args) {
