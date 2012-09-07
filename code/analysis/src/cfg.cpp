@@ -1260,6 +1260,14 @@ cfg::Address CFG::find(const core::NodeAddress& node) const {
 
 namespace cfg {
 
+std::ostream& Address::printTo(std::ostream& out) const {
+	// if the address is invalid print <invalid>
+	if (!block)  return out << "<invalid-address>";
+
+	return out << "<" << block->getBlockID() << ":" << stmt_idx << ":" << addr << ">";
+
+}
+
 namespace {
 
 //~~~~~ DOT FILE PRINTING UTILITIES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

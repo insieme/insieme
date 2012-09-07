@@ -161,7 +161,7 @@ typedef std::shared_ptr<Block> BlockPtr;
  * An entity is represented by a triplette, represented by che CFG block, the statement index
  * (relative to the block) and the address relative to the statement. 
  *////////////////////////////////////////////////////////////////////////////////////////////
-struct Address {
+struct Address : public utils::Printable {
 	
 	cfg::BlockPtr		block;
 	unsigned			stmt_idx;
@@ -217,8 +217,9 @@ struct Address {
 		// TODO:
 		return core::NodeAddress();
 	}
-};
 
+	std::ostream& printTo(std::ostream& out) const;
+};
 
 
 
