@@ -230,18 +230,28 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		return builder.callExpr(trgTy, gen.getRefToAnyRef(), expr);
 	}
 
-
 	///////////////////////////////////////////////////////////////////////////////////////
-	// 										0 -> anyRef
+	// 							0 -> anyRef 
 	///////////////////////////////////////////////////////////////////////////////////////
 	// Convert a ref<'a> type to anyRef. 
 	///////////////////////////////////////////////////////////////////////////////////////
-	if ( gen.isAnyRef(trgTy) && (*expr == *builder.literal(argTy,"0")) ) {
+	if ( gen.isAnyRef(trgTy) &&  *expr == *builder.literal(argTy,"0") ) 
+	{
 		// FIXME: not sure about this being correct, we have to get a ref from a null in order to convert it to 
 		// the anyref value
-		return CAST(builder.callExpr( gen.getGetNull(), builder.getTypeLiteral(argTy) ), trgTy);
+		return builder.callExpr( gen.getGetNull(), builder.getTypeLiteral(argTy) );
 	}
 
+
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 							0 -> ref<array<'a,#n>>
+	///////////////////////////////////////////////////////////////////////////////////////
+	// Convert a ref<'a> type to anyRef. 
+	///////////////////////////////////////////////////////////////////////////////////////
+	if ( builder.matchType("ref<array<'a,#n>>", trgTy) && *expr == *builder.literal(argTy,"0") ) 
+	{
+		return builder.callExpr( gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(trgTy)) );
+	}
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 									ref<'a> -> 'a
@@ -386,23 +396,6 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		}
 	}
 
-	// [ 'a -> array<'a,1> ]
-	//
-	// builds an array from a scalar value
-	if ( trgTy->getNodeType() == core::NT_ArrayType && 	argTy->getNodeType() != core::NT_ArrayType && 
-			argTy->getNodeType() != core::NT_VectorType )
-	{
-		assert(false);
-//		// This is done by creating a wrapping array containing the argument
-//		const core::TypePtr& subTy = GET_ARRAY_ELEM_TYPE(trgTy);
-//		core::ConcreteIntTypeParamPtr&& size = core::ConcreteIntTypeParam::get(builder.getNodeManager(), 1);
-//		core::ExpressionPtr vecExpr = builder.callExpr(
-//				builder.vectorType(subTy, size), // vec<subTy,1>
-//				gen.getVectorInitUniform(),
-//				toVector( CAST(expr, subTy), builder.getIntTypeParamLiteral(size) )
-//			);
-//		return builder.callExpr( trgTy, gen.getVectorToArray(), toVector(vecExpr) );
-	}
 
 	// [ ref<'a> -> ref<array<'a>> ]
 	//
