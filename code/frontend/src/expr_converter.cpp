@@ -374,15 +374,19 @@ core::ExpressionPtr ConversionFactory::ExprConverter::asRValue(const core::Expre
 
 	// check whether value is parameter to the current function
 	if (value->getNodeType() == core::NT_Variable) {
-		core::VariablePtr var = static_pointer_cast<const core::Variable>(value);
+		auto var = value.as<core::VariablePtr>();
 		if (ctx.curParameter && contains(*ctx.curParameter, var)) {
 			// => parameters are always r-values
 			return var;
 		}
 	}
 
-	// adds a deref to expression in case expression is of a ref type
-	if (core::analysis::isRefType(value->getType())) {
+	auto type = value->getType();
+	// adds a deref to expression in case expression is of a ref type, only if the target tpye is
+	// not a vector or an array 
+	if (core::analysis::isRefType(value->getType()) && 
+		!(builder.matchType("ref<vector<'a,#n>>", type) || builder.matchType("ref<array<'a,#n>>", type))) 
+	{
 		return builder.deref(value);
 	}
 	return value;
@@ -494,7 +498,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitStringLiteral(clang::
 		builder.refType(
 			builder.vectorType(
 				gen.getChar(), 
-				core::ConcreteIntTypeParam::get(builder.getNodeManager(), strValue.length()+1)
+				core::ConcreteIntTypeParam::get(builder.getNodeManager(), strValue.length()-1)
 			)
 		);
 
@@ -534,11 +538,19 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(clan
 	START_LOG_EXPR_CONVERSION(castExpr);
 
 	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
+	auto type = convFact.convertType(GET_TYPE_PTR(castExpr));
+
 	LOG_EXPR_CONVERSION(retIr);
 
 	// handle implicit casts according to their kind
 	switch (castExpr->getCastKind()) {
 	case CK_LValueToRValue:
+		
+		// capture the case of cast to arrays. because arrays cannot exists without a ref we need 
+		// to make sure to add a refVar to the element 
+		if (builder.matchType("array<'a,#n>", type) && builder.matchType("vector<'a,#n>", retIr->getType()))
+			return retIr = utils::cast(retIr, type);
+
 		return (retIr = asRValue(retIr));
 
 	case CK_ArrayToPointerDecay:
@@ -1554,9 +1566,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitArraySubscriptExpr(cl
 
 		op = refSubTy->getNodeType() == core::NT_ArrayType ? gen.getArrayRefElem1D() : gen.getVectorRefElem();
 
-		opType = builder.refType(
-				core::static_pointer_cast<const core::SingleElementType>(refSubTy)->getElementType()
-		);
+		opType = builder.refType(refSubTy.as<core::SingleElementTypePtr>()->getElementType());
 
 	} else {
 

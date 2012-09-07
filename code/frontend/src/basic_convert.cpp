@@ -635,55 +635,59 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 	START_LOG_EXPR_CONVERSION(initList);
 
 	core::ExpressionPtr retIr;
+
 //	ATTACH_OMP_ANNOTATIONS(retIr, initList);
 	LOG_EXPR_CONVERSION(retIr);
 
-	bool isRef = false;
 	core::TypePtr currType = type;
 	if ( core::RefTypePtr&& refType = core::dynamic_pointer_cast<const core::RefType>(type)) {
-		isRef = true;
 		currType = refType->getElementType();
 	}
 
 	if (currType->getNodeType() == core::NT_VectorType || currType->getNodeType() == core::NT_ArrayType) {
 
-		const core::TypePtr& elemTy =
-				core::static_pointer_cast<const core::SingleElementType>(currType)->getElementType();
+		auto elemTy = currType.as<core::SingleElementTypePtr>()->getElementType();
 
 		ExpressionList elements;
 		// get all values of the init expression
 		for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
 			const clang::Expr* subExpr = initList->getInit(i);
-			core::ExpressionPtr&& convExpr = convertInitExpr(NULL /*FIXME*/, subExpr, elemTy, false);
+
+			auto convExpr = convertInitExpr(NULL /*FIXME*/, subExpr, elemTy, false);
 
 			assert(convExpr && "convExpr is empty");
+
 			elements.push_back(utils::cast(convExpr, elemTy));
 		}
 
 		if (elements.size() == 1 && currType->getNodeType() == core::NT_VectorType) {
-			const core::VectorTypePtr& vecTy = core::static_pointer_cast<const core::VectorType>(currType);
+			auto vecTy = core::static_pointer_cast<const core::VectorType>(currType);
 			// In C when the initializer list contains 1 elements then all the elements of the
 			// vector (or array) must be initialized with the same value
-			const core::ConcreteIntTypeParamPtr& vecArgSize =
-					core::static_pointer_cast<const core::ConcreteIntTypeParam>(vecTy->getSize());
+			auto vecArgSize = vecTy->getSize().as<core::ConcreteIntTypeParamPtr>();
 
 			retIr = builder.callExpr(vecTy, builder.getLangBasic().getVectorInitUniform(), elements.front(),
-					builder.getIntTypeParamLiteral(vecArgSize));
-
+						builder.getIntTypeParamLiteral(vecArgSize)
+					);
 		} else
 			retIr = builder.vectorExpr(elements);
 	}
 
 	/*
-	 * in the case the initexpr is used to initialize a struct/class we need to create a structExpr to initialize the
-	 * structure
+	 * in the case the initexpr is used to initialize a struct/class we need to create a structExpr
+	 * to initialize the structure
 	 */
 	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(currType)) {
+
 		core::StructExpr::Members members;
 		for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
+
 			const core::NamedTypePtr& curr = structTy->getEntries()[i];
-			members.push_back(
-					builder.namedValue(curr->getName(), convertInitExpr(NULL, initList->getInit(i), curr->getType(), false)));
+
+			members.push_back(builder.namedValue(
+						curr->getName(), 
+						convertInitExpr(NULL, initList->getInit(i), curr->getType(), false))
+				);
 		}
 		retIr = builder.structExpr(members);
 	}
@@ -692,9 +696,9 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 	 * in the case the initexpr is used to initialize a union
 	 */
 	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(currType)) {
-		core::ExpressionPtr ie = convertInitExpr(NULL, initList->getInit(0), unionTy->getEntries()[0]->getType(), false);
+
+		auto ie = convertInitExpr(NULL, initList->getInit(0), unionTy->getEntries()[0]->getType(), false);
 		retIr = builder.unionExpr(unionTy, unionTy->getEntries()[0]->getName(), ie);
-		LOG(DEBUG) << *retIr;
 
 	//	core::StructExpr::Members members;
 	//	for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
@@ -707,9 +711,6 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 
 	assert(retIr && "Couldn't convert initialization expression");
 
-	if (isRef) {
-		retIr = builder.refVar(retIr);
-	}
 	// create vector initializator
 	return retIr;
 }
@@ -737,10 +738,10 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 			auto arrType = GET_REF_ELEM_TYPE(type).as<core::ArrayTypePtr>();
 			
 			return retIr = builder.refVar(
-						builder.callExpr(GET_REF_ELEM_TYPE(type), mgr.getLangBasic().getArrayCreate1D(), 
-							builder.getTypeLiteral(arrType->getElementType()), builder.castExpr(mgr.getLangBasic().getUInt8(), size)
-						)
-				);
+				builder.callExpr(GET_REF_ELEM_TYPE(type), mgr.getLangBasic().getArrayCreate1D(), 
+					builder.getTypeLiteral(arrType->getElementType()), builder.castExpr(mgr.getLangBasic().getUInt8(), size)
+				)
+			);
 		}
 
 		// if no init expression is provided => use undefined for given set of types
@@ -751,16 +752,17 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 		{
 			if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
 				const core::TypePtr& res = refTy->getElementType();
-				return (retIr = builder.refVar(
+
+				return retIr = builder.refVar(
 						builder.callExpr(res,
 								(zeroInit ? mgr.getLangBasic().getInitZero() : mgr.getLangBasic().getUndefined()),
-								builder.getTypeLiteral(res))));
+								builder.getTypeLiteral(res)));
 			}
-			return (retIr = builder.callExpr(type,
+			return retIr = builder.callExpr(type,
 					(zeroInit ? mgr.getLangBasic().getInitZero() : mgr.getLangBasic().getUndefined()),
-					builder.getTypeLiteral(type)));
+					builder.getTypeLiteral(type));
 		} else {
-			return (retIr = defaultInitVal(type));
+			return retIr = defaultInitVal(type);
 		}
 	}
 
@@ -769,7 +771,7 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	 * structs and unions
 	 */
 	if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr )) {
-		return (retIr = convertInitializerList(listExpr, type));
+		return retIr = utils::cast(convertInitializerList(listExpr, type), type);
 	}
 
 	// init the cpp class / struct - check here for enabled cpp in compiler lang options
@@ -793,17 +795,14 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	}
 
 	// fix type if necessary (also converts "Hello" into ['H','e',...])
-	core::TypePtr valueType = type;
-	if (type->getNodeType() == core::NT_RefType) {
-		valueType = core::analysis::getReferencedType(valueType);
-	}
-
-	retIr = utils::cast(retIr, valueType);
+	retIr = utils::cast(retIr, type);
 
 	// if result is a reference type => create new local variable
-	if (type->getNodeType() == core::NT_RefType) {
-		retIr = builder.callExpr(type, mgr.getLangBasic().getRefVar(), retIr);
-	}
+	//if (type->getNodeType() == core::NT_RefType) {
+	//	retIr = builder.callExpr(type, mgr.getLangBasic().getRefVar(), retIr);
+	//}
+
+	assert(retIr);
 
 	return retIr;
 }

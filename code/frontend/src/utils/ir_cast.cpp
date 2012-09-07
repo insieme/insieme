@@ -237,8 +237,8 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	///////////////////////////////////////////////////////////////////////////////////////
 	if ( gen.isAnyRef(trgTy) &&  *expr == *builder.literal(argTy,"0") ) 
 	{
-		// FIXME: not sure about this being correct, we have to get a ref from a null in order to convert it to 
-		// the anyref value
+		// FIXME: not sure about this being correct, we have to get a ref from a null in order to
+		// convert it to the anyref value
 		return builder.callExpr( gen.getGetNull(), builder.getTypeLiteral(argTy) );
 	}
 
@@ -271,37 +271,63 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	// Convert an expression of non-ref type to an expression with ref-type. This is allowed for example 
 	// for string literals which can be converted to ref<arrays<>> (because of the C semantics) 
 	///////////////////////////////////////////////////////////////////////////////////////
-	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType ) {
-		const core::TypePtr& subTy = GET_REF_ELEM_TYPE(trgTy);
-		// The function requires a refType and the current argument is of non-ref type
-		if ( subTy->getNodeType() == core::NT_ArrayType && builder.getLangBasic().isString(argTy) ) {
-			// If the argument is a string then we have to convert the string into a char pointer
-			// because of C semantics 
-			return builder.callExpr( gen.getStringToCharPointer(), expr );
-		} 
+	if ( trgTy->getNodeType() == core::NT_RefType && *GET_REF_ELEM_TYPE(trgTy) == *argTy) {
 
+		const core::TypePtr& subTy = GET_REF_ELEM_TYPE(trgTy);
+		
 		// if last call was a deref (*) => undo call
 		if ( *subTy == *argTy && core::analysis::isCallOf(expr, gen.getRefDeref()) ) {
 			return expr.as<core::CallExprPtr>()->getArgument(0);
 		}
 
 		// call the function recursively
-		return builder.refVar( CAST(expr, subTy) );
+		return builder.refVar( expr );
 	}
 
 
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 									'a -> ref<'b>
+	///////////////////////////////////////////////////////////////////////////////////////
+	// Convert an expression of non-ref type to an expression with ref-type. This is allowed for example 
+	// for string literals which can be converted to ref<arrays<>> (because of the C semantics) 
+	///////////////////////////////////////////////////////////////////////////////////////
+	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType) {
+
+		const core::TypePtr& subTy = GET_REF_ELEM_TYPE(trgTy);
+		
+		if (builder.matchType("array<'a,#n>", subTy) && builder.matchType("vector<'a,#n>", argTy)) {
+			return CAST(expr, subTy);
+		}
+
+		// call the function recursively
+		return builder.refVar( CAST(expr, subTy) );
+	}
+
 	// NOTE: from this point on we are sure the type of the target type and the argument type are
 	// the same meaning that either we have a ref-type or non-ref type.
+
+	
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 						vector<'a, #n> -> array<'a,1>
+	//
+	// 	This is not directly allowed by the IR, but we can 
+	///////////////////////////////////////////////////////////////////////////////////////
+
+	if ( builder.matchType("array<'a,#n>",trgTy) && builder.matchType("vector<'a,#n>",argTy) ) {
+		return CAST(builder.refVar(expr), builder.refType(trgTy));
+	}
+
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 						ref<vector<'a, #n>> -> ref<array<'a,1>>
 	///////////////////////////////////////////////////////////////////////////////////////
 	// convert a reference to a vector to a reference to an array using the refVector2RefArray literal  
 	///////////////////////////////////////////////////////////////////////////////////////
-	if ( trgTy->getNodeType() == core::NT_RefType) {
+	if ( builder.matchType("ref<array<'a,#n>>",trgTy) && builder.matchType("ref<vector<'a,#n>>", argTy) ) {
 		// we are sure at this point the type of arg is of ref-type as well
 		const core::TypePtr& elemTy = GET_REF_ELEM_TYPE(trgTy);
 		const core::TypePtr& argSubTy = GET_REF_ELEM_TYPE(argTy);
+
 		if(elemTy->getNodeType() == core::NT_ArrayType && argSubTy->getNodeType() == core::NT_VectorType) {
 			const core::TypePtr& elemVecTy = GET_VEC_ELEM_TYPE(argSubTy);
 
@@ -397,33 +423,45 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	}
 
 
-	// [ ref<'a> -> ref<array<'a>> ]
-	//
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 							ref<'a> -> ref<array<'a>>
+	///////////////////////////////////////////////////////////////////////////////////////
 	// Use the scalarToArray literal to perform this kind of conversion
+	///////////////////////////////////////////////////////////////////////////////////////
 	if ( trgTy->getNodeType() == core::NT_RefType ) {
-		assert( argTy->getNodeType() == core::NT_RefType );
+
 		const core::TypePtr& subTrgTy = core::analysis::getReferencedType(trgTy);
 
 		if ( subTrgTy->getNodeType() == core::NT_ArrayType ) {
 			// If the sub type of the arrat is 'a as well as the referenced type of ref, then apply
 			// the cast 
-			if (*core::analysis::getReferencedType(argTy) == 
-					*core::static_pointer_cast<const core::ArrayType>(subTrgTy)->getElementType())
+			if (*core::analysis::getReferencedType(argTy) == *subTrgTy.as<core::ArrayTypePtr>()->getElementType())
 				return refScalarToRefArray(expr);
 		}
 	}
 
-	// [ ref<'a> -> ref<ref<'a>> ]
+
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 							ref<'a> -> ref<ref<'a>>
+	///////////////////////////////////////////////////////////////////////////////////////
 	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
 		const core::TypePtr& subArgTy = GET_REF_ELEM_TYPE(argTy);
 		if (*subArgTy == *trgTy) { return builder.deref( expr ); }
 	}
 
-	// [ ref<'a> -> ref<'b> ]
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 							  ref<'a> -> ref<'b>
+	///////////////////////////////////////////////////////////////////////////////////////
 	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
 
 		core::TypePtr nonRefTrgTy = trgTy.as<core::RefTypePtr>()->getElementType();
-		return builder.callExpr(trgTy, builder.getNodeManager().getLangBasic().getRefReinterpret(), expr, builder.getTypeLiteral(nonRefTrgTy));
+
+		return builder.callExpr(
+				trgTy, 
+				builder.getNodeManager().getLangBasic().getRefReinterpret(), 
+				expr, 
+				builder.getTypeLiteral(nonRefTrgTy)
+			);
 	}
 
 	// [ volatile<'a> -> 'a ]
@@ -437,8 +475,6 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	}
 
 	return builder.castExpr(trgTy, expr);
-	//LOG(ERROR) << ": converting expression '" << *expr << "' of type '" << *expr->getType() << "' to type '" 
-			   //<< *trgTy << "' not yet supported!";
 	//assert(false && "Cast conversion not supported!");
 }
 
