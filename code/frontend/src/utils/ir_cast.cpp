@@ -413,12 +413,8 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 			size_t vecTrgSize = vecTrgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 			size_t vecArgSize = vecArgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 
+			// LOG(INFO) << vecTrgSize << " " << vecArgSize;
 			assert(vecTrgSize >= vecArgSize && "Conversion not possible");
-
-			// TODO report it as an error ? 
-			assert(false && "Casting between two different vector sizes not yet implemented!");
-
-			return expr;
 		}
 	}
 
