@@ -82,7 +82,8 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 			// because ref<array<>> are used to represent R-value C pointers we can pass it 
 			// to the caller function, the semantics is that the function can potentially 
 			// change the content of the array
-			if (GET_REF_ELEM_TYPE(argTy)->getNodeType() != core::NT_ArrayType) {
+			if (GET_REF_ELEM_TYPE(argTy)->getNodeType() != core::NT_ArrayType &&
+				GET_REF_ELEM_TYPE(argTy)->getNodeType() != core::NT_VectorType) {
 				return builder.deref( expr );
 			}
 		}
