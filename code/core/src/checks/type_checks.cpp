@@ -407,10 +407,10 @@ OptionalMessageList ArrayTypeCheck::visitArrayType(const ArrayTypeAddress& addre
 	NodeAddress grandParent = getParentType(parent);
 
 	// check valid parent context => element has to be embedded within a reference
-	if (grandParent && grandParent->getNodeType() != NT_RefType) {
+	if (grandParent && grandParent->getNodeType() != NT_RefType && grandParent->getNodeType() != NT_ArrayType) {
 		add(res, Message(grandParent,
 				EC_TYPE_INVALID_ARRAY_CONTEXT,
-				"Invalid array context. Variable sized struct / union / tuples must be enclosed by a ref.",
+				"Invalid array context. Variable sized struct / union / tuples must be enclosed by a ref or array.",
 				Message::ERROR
 		));
 		return res;
