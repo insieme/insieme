@@ -42,23 +42,20 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-// defines macros for generating CHECK declarations
-#include "insieme/core/checks/check_macros.inc"
 
-/**
- * This check verifies that array indices are in range. 
- * Currently only implemented for single element arrays generated from scalars.
- */
-SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
+	/**
+	 * Obtains a combined check case containing all the checks defined within this header file.
+	 */
+	CheckPtr getFullCheck();
 
-/**
- * This check verifies that undefined(...) is only called within ref.new or ref.var.
- */
-SIMPLE_CHECK(Undefined, CallExpr, false);
+	/**
+	 * Allies all known semantic checks on the given node and returns the obtained message list.
+	 */
+	inline MessageList check(const NodePtr& node) {
+		return check(node, getFullCheck());
+	}
 
-#undef SIMPLE_CHECK
 
-} // end namespace check
+} // end namespace checks
 } // end namespace core
 } // end namespace insieme
-

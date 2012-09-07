@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/lang/extension.h"
 
@@ -95,7 +95,7 @@ TEST(RuntimeExtensions, WorkItemVariant) {
 	EXPECT_FALSE(enc::isEncodingOf<WorkItemVariant>(core::ExpressionPtr()));
 
 	// apply IR semantic checks
-	EXPECT_EQ("[]", toString(core::check(encoded, core::checks::getFullCheck())));
+	EXPECT_EQ("[]", toString(core::checks::check(encoded, core::checks::getFullCheck())));
 
 
 
@@ -121,7 +121,7 @@ TEST(RuntimeExtensions, WorkItemVariant) {
 	EXPECT_FALSE(enc::isEncodingOf<WorkItemVariant>(core::ExpressionPtr()));
 
 	// apply IR semantic checks
-	EXPECT_EQ("[]", toString(core::check(encoded, core::checks::getFullCheck())));
+	EXPECT_EQ("[]", toString(core::checks::check(encoded, core::checks::getFullCheck())));
 
 }
 
@@ -151,7 +151,7 @@ TEST(RuntimeExtensions, WorkItemImpl) {
 	EXPECT_FALSE(enc::isEncodingOf<WorkItemImpl>(core::ExpressionPtr()));
 
 	// apply IR semantic checks
-	EXPECT_EQ("[]", toString(core::check(encoded, core::checks::getFullCheck())));
+	EXPECT_EQ("[]", toString(core::checks::check(encoded, core::checks::getFullCheck())));
 }
 
 TEST(RuntimeExtensions, DataItem) {

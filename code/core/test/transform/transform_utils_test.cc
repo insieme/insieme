@@ -39,12 +39,14 @@
 #include "insieme/core/transform/utils/member_access_literal_updater.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
 namespace transform {
+
+using namespace checks;
 
 TEST(TransformUtils, MemberAccessLiteralUpdater) {
 	NodeManager mgr;
@@ -75,7 +77,7 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 		const StatementPtr& structAccess = builder.compoundStmt(saStmts);
 
 		// test for errors
-		auto errors = core::check(structAccess, insieme::core::checks::getFullCheck()).getAll();
+		auto errors = check(structAccess, insieme::core::checks::getFullCheck()).getAll();
 		EXPECT_EQ(4u, errors.size());
 
 		// correct errors
@@ -83,10 +85,10 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 		NodePtr corrected = malu.mapElement(0, structAccess);
 
 		// test for errors again
-		errors = core::check(corrected, insieme::core::checks::getFullCheck()).getAll();
+		errors = check(corrected, insieme::core::checks::getFullCheck()).getAll();
 		EXPECT_EQ(0u, errors.size());
 		std::sort(errors.begin(), errors.end());
-		for_each(errors, [](const core::Message& cur) {
+		for_each(errors, [](const Message& cur) {
 			LOG(INFO) << cur << std::endl;
 		});
 	}
@@ -109,7 +111,7 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 		const StatementPtr& tupleAccess = builder.compoundStmt(saStmts);
 
 		// test for errors
-		auto errors = core::check(tupleAccess, insieme::core::checks::getFullCheck()).getAll();
+		auto errors = check(tupleAccess, insieme::core::checks::getFullCheck()).getAll();
 		EXPECT_EQ(3u, errors.size());
 
 		// correct errors
@@ -117,10 +119,10 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 		NodePtr corrected = malu.mapElement(0, tupleAccess);
 
 		// test for errors again
-		errors = core::check(corrected, insieme::core::checks::getFullCheck()).getAll();
+		errors = check(corrected, insieme::core::checks::getFullCheck()).getAll();
 		EXPECT_EQ(0u, errors.size());
 		std::sort(errors.begin(), errors.end());
-		for_each(errors, [](const core::Message& cur) {
+		for_each(errors, [](const Message& cur) {
 			LOG(INFO) << cur << std::endl;
 		});
 	}

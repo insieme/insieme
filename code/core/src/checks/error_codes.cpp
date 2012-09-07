@@ -34,31 +34,31 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/core/checks/error_codes.h"
 
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace core {
 namespace checks {
 
-// defines macros for generating CHECK declarations
-#include "insieme/core/checks/check_macros.inc"
 
-/**
- * This check verifies that array indices are in range. 
- * Currently only implemented for single element arrays generated from scalars.
- */
-SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
 
-/**
- * This check verifies that undefined(...) is only called within ref.new or ref.var.
- */
-SIMPLE_CHECK(Undefined, CallExpr, false);
-
-#undef SIMPLE_CHECK
-
-} // end namespace check
+} // end namespace checks
 } // end namespace core
 } // end namespace insieme
 
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::core::checks::ErrorCode& code) {
+
+		out << "[" << format("%05d", (unsigned)code) << "] - ";
+		switch(code) {
+			#define CODE(KIND,NAME) case insieme::core::checks::EC_##KIND##_##NAME: return out << #KIND " / " #NAME;
+			#include "insieme/core/checks/error_codes.inc"
+		}
+
+		return out << "Unknown Error CODE";
+	}
+
+}

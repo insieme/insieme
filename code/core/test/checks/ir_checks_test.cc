@@ -37,12 +37,13 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_check.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace core {
+namespace checks {
 
 
 class AllFine : public IRCheck {
@@ -55,7 +56,7 @@ public:
 	IDontLikeAnythingCheck() : IRCheck(true) {}
 	OptionalMessageList visitNode(const NodeAddress& node) {
 		if (node->getNodeType() != NT_GenericType) return 0;
-		return MessageList(Message(node, 1, "I hate it!"));
+		return MessageList(Message(node, (ErrorCode)1, "I hate it!"));
 	}
 };
 
@@ -63,7 +64,7 @@ class IAmScaredCheck : public IRCheck {
 public:
 	IAmScaredCheck() : IRCheck(true) {}
 	OptionalMessageList visitNode(const NodeAddress& node) {
-		return MessageList(Message(node, 2, "Don't know - I'm scared!", Message::WARNING));
+		return MessageList(Message(node, (ErrorCode)2, "Don't know - I'm scared!", Message::WARNING));
 	}
 };
 
@@ -75,14 +76,14 @@ TEST(IRCheck, Basic) {
 	TypePtr type = builder.genericType("A");
 	NodeAddress addr(type);
 
-	Message msgA(addr, 1, "I hate it!");
-	Message msgB(addr, 2, "Don't know - I'm scared!", Message::WARNING);
+	Message msgA(addr, (ErrorCode)1, "I hate it!");
+	Message msgB(addr, (ErrorCode)2, "Don't know - I'm scared!", Message::WARNING);
 
 	EXPECT_EQ("0", toString(addr));
 	NodeAddress& adr2 = addr;
 	EXPECT_EQ("0", toString(adr2));
-	EXPECT_EQ("ERROR:   [00001]@ (0) - MSG: I hate it!", toString(msgA));
-	EXPECT_EQ("WARNING: [00002]@ (0) - MSG: Don't know - I'm scared!", toString(msgB));
+	EXPECT_EQ("ERROR:   [00001] - TYPE / INVALID_NUMBER_OF_ARGUMENTS @ (0) - MSG: I hate it!", toString(msgA));
+	EXPECT_EQ("WARNING: [00002] - TYPE / INVALID_ARGUMENT_TYPE @ (0) - MSG: Don't know - I'm scared!", toString(msgB));
 
 	MessageList res = check(type, make_check<AllFine>());
 	EXPECT_EQ(MessageList(),res);
@@ -133,23 +134,24 @@ TEST(IRCheck, Decorators) {
 	vector<Message> res = check(typeA, recCheck).getAll();
 	std::sort(res.begin(), res.end());
 	ASSERT_EQ((std::size_t)5, res.size());
-	EXPECT_EQ(res[0], Message(adr1, 1, "", Message::ERROR));
-	EXPECT_EQ(res[1], Message(adr2, 1, "", Message::ERROR));
-	EXPECT_EQ(res[2], Message(adr3, 1, "", Message::ERROR));
-	EXPECT_EQ(res[3], Message(adr4, 1, "", Message::ERROR));
-	EXPECT_EQ(res[4], Message(adr5, 1, "", Message::ERROR));
+	EXPECT_EQ(res[0], Message(adr1, (ErrorCode)1, "", Message::ERROR));
+	EXPECT_EQ(res[1], Message(adr2, (ErrorCode)1, "", Message::ERROR));
+	EXPECT_EQ(res[2], Message(adr3, (ErrorCode)1, "", Message::ERROR));
+	EXPECT_EQ(res[3], Message(adr4, (ErrorCode)1, "", Message::ERROR));
+	EXPECT_EQ(res[4], Message(adr5, (ErrorCode)1, "", Message::ERROR));
 
 	res = check(typeA, onceCheck).getAll();
 	std::sort(res.begin(), res.end());
 	ASSERT_EQ((std::size_t)4, res.size());
-	EXPECT_EQ(res[0], Message(adr1, 1, "", Message::ERROR));
-	EXPECT_EQ(res[1], Message(adr2, 1, "", Message::ERROR));
-	EXPECT_EQ(res[2], Message(adr3, 1, "", Message::ERROR));
-	EXPECT_EQ(res[3], Message(adr4, 1, "", Message::ERROR));
+	EXPECT_EQ(res[0], Message(adr1, (ErrorCode)1, "", Message::ERROR));
+	EXPECT_EQ(res[1], Message(adr2, (ErrorCode)1, "", Message::ERROR));
+	EXPECT_EQ(res[2], Message(adr3, (ErrorCode)1, "", Message::ERROR));
+	EXPECT_EQ(res[3], Message(adr4, (ErrorCode)1, "", Message::ERROR));
 
 }
 
 
+} // end namespace checks
 } // end namespace core
 } // end namespace insieme
 

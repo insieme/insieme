@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/lang/extension.h"
 
@@ -73,7 +73,7 @@ namespace runtime {
 		ASSERT_TRUE(code);
 
 
-		auto res = core::check(code, core::checks::getFullCheck());
+		auto res = core::checks::check(code);
 		EXPECT_TRUE(res.empty()) << res;
 
 		// generate code using the runtime backend

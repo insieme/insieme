@@ -44,7 +44,7 @@
 #define MIN_CONTEXT 40
 
 #include "insieme/core/ir_statistic.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -353,7 +353,7 @@ void checkSema(const core::NodePtr& program, MessageList& list, const InverseStm
 	insieme::utils::Timer timer("Checks");
 
 	measureTimeFor<void>("Semantic Checks ", 
-		[&]() { list = check( program, core::checks::getFullCheck() ); }
+		[&]() { list = check( program ); }
 	);
 
 	auto errors = list.getAll();

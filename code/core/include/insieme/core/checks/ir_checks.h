@@ -36,40 +36,317 @@
 
 #pragma once
 
-#include "insieme/core/ir_check.h"
+#include <memory>
 
-/**
- * This header file represents a facade header for checks to be applied on IR ASTs
- */
+#include <boost/optional/optional.hpp>
+
+#include "insieme/utils/enum.h"
+
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_visitor.h"
+
+#include "insieme/core/checks/error_codes.h"
 
 namespace insieme {
 namespace core {
 namespace checks {
 
+	// ----------------- end-user interface -------------------------
+
+
+	class Message;
+	class MessageList;
+	typedef boost::optional<MessageList> OptionalMessageList;
+
+	class IRCheck;
+	typedef std::shared_ptr<IRCheck> CheckPtr;
+	typedef std::vector<CheckPtr> CheckList;
+
 	/**
-	 * Defines a list of Error Code classes
+	 * Requests a check to be conducted. The given check is been applied to
+	 * the given given node and a list of warnings and errors is returned.
+	 *
+	 * NOTE: To run a full-check considering all implemented checks you should
+	 * include the full_check.h (which is including this header) and use the
+	 * overloaded check(NodePtr) function.
+	 *
+	 * @param node the node to be tested
+	 * @param check the check to be applied
+	 * @return a message of identified issues
 	 */
-	enum {
-		EC_GROUP_TYPE       = 1000,	/* < type based problems */
-		EC_GROUP_IMPERATIVE = 2000,	/* < imperative program constructs based problems */
-		EC_GROUP_SEMANTIC   = 3000	/* < imperative program constructs based problems */
+	MessageList check(const NodePtr& node, const CheckPtr& check);
+
+
+
+	// ----------------- detailed interface -------------------------
+
+	/**
+	 * The base class of all IR-Check implementations. Internally, an IRCheck is
+	 * just a special case of an IR Visitor producing an error-message list.
+	 */
+	class IRCheck : public IRVisitor<OptionalMessageList, core::Address> {
+		public:
+			IRCheck(bool visitTypes) : IRVisitor<OptionalMessageList, core::Address>(visitTypes) {}
 	};
 
-	/**
-	 * Obtains a combined check case containing all the checks defined within this header file.
-	 */
-	CheckPtr getFullCheck();
+	// ----- Check Combinators -----
 
-	/**
-	 * Allies all known semantic checks on the given node and returns the obtained message list.
-	 */
-	inline MessageList check(const NodePtr& node) {
-		return check(node, getFullCheck());
+	CheckPtr makeRecursive(const CheckPtr& check);
+
+	CheckPtr makeVisitOnce(const CheckPtr& check);
+
+	CheckPtr combine(const CheckList& list);
+
+	template<typename ... Checks>
+	CheckPtr combine(const Checks& ... checks) { return combine(toVector(checks)); }
+
+	template<typename C, typename ... Args>
+	inline CheckPtr make_check(const Args& ... args) {
+		return std::make_shared<C>(args...);
 	}
 
-} // end namespace check
+
+	/**
+	 * The class used to represent Warnings and Errors encountered while running IR checks.
+	 */
+	class Message {
+
+	public:
+
+		/**
+		 * An enumeration of the various types of messaged that might occure.
+		 */
+		enum Type {
+			ERROR,		/* < in case a real problem has been discovered */
+			WARNING 	/* < in case something has been discovered that shouldn't be used but is */
+		};
+
+	private:
+
+		/**
+		 * The type of this message.
+		 *
+		 * @see Type
+		 */
+		Type type;
+
+		/**
+		 * The address of the node where this issue has been discovered on.
+		 */
+		NodeAddress address;
+
+		/**
+		 * The error code of this message - added since it is easier to automatically process
+		 * numbers than strings.
+		 */
+		ErrorCode errorCode;
+
+		/**
+		 * A string message describing the problem.
+		 */
+		string message;
+
+	public:
+
+		/**
+		 * Creates a new message based on the given parameters.
+		 *
+		 * @param address the address of the node this error has been discovered on - may be the empty address.
+		 * @param errorCode the error code describing the problem
+		 * @param message a message describing the issue
+		 * @param type the type of the new message (ERROR by default)
+		 */
+		Message(const NodeAddress& address, ErrorCode errorCode, const string& message, Type type = ERROR)
+			: type(type), address(address), errorCode(errorCode), message(message) {};
+
+		/**
+		 * Obtains the address of the node this message is associated to.
+		 *
+		 * @return the node address - might be invalid in case the error cannot be associated to a single node.
+		 */
+		const NodeAddress& getAddress() const {
+			return address;
+		}
+
+		/**
+		 * Obtains the message describing the problem.
+		 *
+		 * @return the message string
+		 */
+		const string& getMessage() const {
+			return message;
+		}
+
+		/**
+		 * Obtains the error code assigned to this message.
+		 *
+		 * @return the error code
+		 */
+		ErrorCode getErrorCode() const {
+			return errorCode;
+		}
+
+		/**
+		 * The type of this warning.
+		 */
+		Type getType() const {
+			return type;
+		}
+
+		/**
+		 * Implements the equality operator for this class. Two error messages are equal
+		 * if the have the same error code, warning level and are pointing to the same node address.
+		 *
+		 * @param other the message to be compared to
+		 * @return true if equal, false otherwise
+		 */
+		bool operator==(const Message& other) const;
+
+		/**
+		 * Implements the inequality operator for this class. It is simply the negation of the
+		 * equality operation.
+		 *
+		 * @param other the message to be compared to
+		 * @return true if not equal, false otherwise
+		 *
+		 * @see operator==
+		 */
+		bool operator!=(const Message& other) const {
+			return !(*this == other);
+		}
+
+		/**
+		 * Can be used to sort messages within a list. Messages are ordered according to their
+		 * type (ERROR < WARNING) and their address.
+		 *
+		 * @param other the message to be compared to
+		 * @return true if this one is considered smaller, false otherwise
+		 */
+		bool operator<(const Message& other) const;
+	};
+
+
+	/**
+	 * A container for error and warning messages.
+	 */
+	class MessageList {
+		/**
+		 * The list of encountered errors.
+		 */
+		std::vector<Message> errors;
+
+		/**
+		 * The list of encountered warnings.
+		 */
+		std::vector<Message> warnings;
+
+	public:
+
+		/**
+		 * A constructor for a message list allowing to specify an arbitrary
+		 * list of messages to be added to the resulting list.
+		 */
+		template<typename ... T>
+		MessageList(const T& ... mgs) {
+			auto msgs = toVector<Message>(mgs...);
+			for_each(msgs, [&](const Message& cur) { this->add(cur); });
+		}
+
+		/**
+		 * Obtains a list containing all encountered errors and warnings included
+		 * within this list.
+		 */
+		const std::vector<Message> getAll() const {
+			return concatenate<Message>(errors, warnings);
+		}
+
+		/**
+		 * Obtains a list containing all errors stored within this message list.
+		 */
+		const std::vector<Message>& getErrors() const { return errors; }
+
+		/**
+		 * Obtains a list containing all warnings stored within this message list.
+		 */
+		const std::vector<Message>& getWarnings() const { return warnings; }
+
+		/**
+		 * Append a new message to this message list.
+		 *
+		 * @param msg the message to be appended
+		 */
+		const void add(const Message& msg) {
+			switch(msg.getType()) {
+			case Message::ERROR: errors.push_back(msg); return;
+			case Message::WARNING: warnings.push_back(msg); return;
+			}
+			assert(false && "Invalid message type encountered!");
+		}
+
+		/**
+		 * Adds all messages from the given container to the given
+		 */
+		const void addAll(const MessageList& list) {
+			auto addFun = [&](const Message& cur) { this->add(cur); };
+			for_each(list.errors, addFun);
+			for_each(list.warnings, addFun);
+		}
+
+		/**
+		 * Tests whether this message list is empty.
+		 */
+		bool empty() const {
+			return errors.empty() && warnings.empty();
+		}
+
+		/**
+		 * Obtains the number of messages within this container.
+		 */
+		std::size_t size() const {
+			return errors.size() + warnings.size();
+		}
+
+		/**
+		 * Obtains direct access to one of the contained messages.
+		 */
+		const Message& operator[](std::size_t index) const {
+			assert(0 <= index && index < size());
+			if (index<errors.size()) {
+				return errors[index];
+			}
+			return warnings[index-errors.size()];
+		}
+
+		/**
+		 * Compares this message list with another message list.
+		 */
+		bool operator==(const MessageList& other) const {
+			return errors == other.errors && warnings == other.warnings;
+		}
+	};
+
+
+	/**
+	 * A utility function to merge optional message lists.
+	 */
+	void addAll(OptionalMessageList& target, const OptionalMessageList& list);
+
+	/**
+	 * A utility function to append a message to an optional message list.
+	 */
+	void add(OptionalMessageList& target, const Message& msg);
+
+
+} // end namspace checks
 } // end namespace core
 } // end namespace insieme
 
+/**
+ * Allows messages to be printed to an output stream.
+ */
+std::ostream& operator<<(std::ostream& out, const insieme::core::checks::Message& message);
 
-
+/**
+ * Allows message lists to be printed to an output stream.
+ */
+std::ostream& operator<<(std::ostream& out, const insieme::core::checks::MessageList& messageList);

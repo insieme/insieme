@@ -36,29 +36,23 @@
 
 #pragma once
 
-#include "insieme/core/checks/ir_checks.h"
+#include <ostream>
 
 namespace insieme {
 namespace core {
 namespace checks {
 
-// defines macros for generating CHECK declarations
-#include "insieme/core/checks/check_macros.inc"
+	enum ErrorCode {
+		#define CODE(KIND,NAME) EC_##KIND##_##NAME,
+		#include "error_codes.inc"
+	};
 
-/**
- * This check verifies that array indices are in range. 
- * Currently only implemented for single element arrays generated from scalars.
- */
-SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
-
-/**
- * This check verifies that undefined(...) is only called within ref.new or ref.var.
- */
-SIMPLE_CHECK(Undefined, CallExpr, false);
-
-#undef SIMPLE_CHECK
-
-} // end namespace check
+} // end namespace checks
 } // end namespace core
 } // end namespace insieme
 
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::core::checks::ErrorCode& code);
+
+}
