@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/type_checks.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"

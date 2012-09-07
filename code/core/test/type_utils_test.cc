@@ -44,7 +44,7 @@
 #include "insieme/core/type_utils.h"
 
 #include "insieme/core/checks/full_check.h"
-#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/type_checks.h"
 
 #include "insieme/core/parser/ir_parse.h"
 

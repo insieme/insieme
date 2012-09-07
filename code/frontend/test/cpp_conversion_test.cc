@@ -44,7 +44,6 @@
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/checks/full_check.h"
-#include "insieme/core/checks/typechecks.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/logging.h"
