@@ -474,32 +474,34 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitStringLiteral(clang::
 			convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc()
 	);
 
-	size_t vecSize = strValue.length();
-	// a string literal is converted into a ref<vector<char,#n>> type 
-	ExpressionList vals(vecSize+1);
-	size_t it;
-	for(it=0; it<vecSize; ++it) {
-		char c = strValue.at(it);
-		std::string str(1,c);
-		switch(c) {
-			case '\n': str = "\\n";	   break;
-			case '\\': str = "\\\\";   break;
-			case '\r': str = "\\r";	   break;
-			case '\t': str = "\\t";	   break;
-			case '\0': str = "\\0";	   break;
-		}
-		vals[it] = convFact.builder.literal( std::string("\'") + str + "\'", gen.getChar() );
-	}
-	// put '\0' terminators on the remaining elements
-	vals[vecSize] = convFact.builder.literal( std::string("\'") + "\\0" + "\'", gen.getChar() ); 
-	// Add the string terminator
-	auto vecType = convFact.builder.vectorType(
-		gen.getChar(), 
-		core::ConcreteIntTypeParam::get(convFact.builder.getNodeManager(), vecSize+1)
-	);
+//	size_t vecSize = strValue.length();
+//	// a string literal is converted into a ref<vector<char,#n>> type 
+//	ExpressionList vals(vecSize+1);
+//	size_t it;
+//	for(it=0; it<vecSize; ++it) {
+//		char c = strValue.at(it);
+//		std::string str(1,c);
+//		switch(c) {
+//			case '\n': str = "\\n";	   break;
+//			case '\\': str = "\\\\";   break;
+//			case '\r': str = "\\r";	   break;
+//			case '\t': str = "\\t";	   break;
+//			case '\0': str = "\\0";	   break;
+//		}
+//		vals[it] = convFact.builder.literal( std::string("\'") + str + "\'", gen.getChar() );
+//	}
+//	// put '\0' terminators on the remaining elements
+//	vals[vecSize] = convFact.builder.literal( std::string("\'") + "\\0" + "\'", gen.getChar() ); 
+//	// Add the string terminator
+	auto vecType = 
+		convFact.builder.refType(
+			convFact.builder.vectorType(
+				gen.getChar(), 
+				core::ConcreteIntTypeParam::get(convFact.builder.getNodeManager(), strValue.length()+1)
+			)
+		);
 
-	//return retExpr = convFact.builder.literal(strValue, convFact.mgr.getLangBasic().getString());
-	return retExpr = convFact.builder.refVar(convFact.builder.vectorExpr(vecType, vals));
+	return retExpr = convFact.builder.literal(strValue, vecType);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
