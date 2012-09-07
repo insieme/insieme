@@ -1011,6 +1011,22 @@ namespace core {
 			return getElements().end();
 		}
 
+		/**
+		 * Obtains a reference to the first element within this list.
+		 */
+		const Ptr<const ElementType>& front() const {
+			assert(size() > 0u);
+			return *begin();
+		}
+
+		/**
+		 * Obtains a reference to the last element within this list.
+		 */
+		const Ptr<const ElementType>& back() const {
+			assert(size() > 0u);
+			return *(end() - 1);
+		}
+
 	private:
 
 		/**

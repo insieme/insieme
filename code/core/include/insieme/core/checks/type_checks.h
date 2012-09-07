@@ -53,7 +53,7 @@ SIMPLE_CHECK(BindExprType, BindExpr, false);
 SIMPLE_CHECK(ExternalFunctionType, Literal, false);
 SIMPLE_CHECK(ReturnType, Lambda, false);
 SIMPLE_CHECK(LambdaType, LambdaExpr, false);
-SIMPLE_CHECK(ArrayType, ArrayType, true);
+SIMPLE_CHECK(ArrayType, Node, true);
 
 SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt, false);
 SIMPLE_CHECK(IfConditionType, IfStmt, false);

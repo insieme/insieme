@@ -68,6 +68,7 @@ namespace checks {
 			checks.push_back(make_check<BuiltInLiteralCheck>());
 			checks.push_back(make_check<RefCastCheck>());
 			checks.push_back(make_check<CastCheck>());
+			checks.push_back(make_check<ArrayTypeCheck>());
 
 			checks.push_back(make_check<UndeclaredVariableCheck>());
 
@@ -80,8 +81,7 @@ namespace checks {
 			return combine(
 					toVector<CheckPtr>(
 						recursive,
-						make_check<DeclaredOnceCheck>(),
-						makeRecursive(make_check<ArrayTypeCheck>())
+						make_check<DeclaredOnceCheck>()
 					)
 			);
 		}

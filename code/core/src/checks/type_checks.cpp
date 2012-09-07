@@ -315,123 +315,100 @@ OptionalMessageList LambdaTypeCheck::visitLambdaExpr(const LambdaExprAddress& ad
 
 namespace {
 
-	TypeAddress getParentType(const NodeAddress& cur) {
-		// terminal case
-		if (!cur || cur.isRoot()) return TypeAddress();
-
-		NodeAddress parent = cur.getParentAddress();
-		if (parent->getNodeCategory() == NC_Type) {
-			return parent.as<TypeAddress>();
+	bool isVariableSized(const TypePtr& cur) {
+		NodeType type = cur->getNodeType();
+		switch(type) {
+		case NT_ArrayType: return true;
+		case NT_StructType: {
+			StructTypePtr structType = cur.as<StructTypePtr>();
+			return !structType.empty() && isVariableSized(structType.back()->getType());
 		}
-		return getParentType(parent);
-	}
-
-	bool isArrayBuiltIn(const NodePtr& cur) {
-		auto& basic = cur->getNodeManager().getLangBasic();
-		return basic.isBuiltIn(cur);
-	}
-
-	bool isPartOfArrayBuiltIn(const NodeAddress& cur) {
-		if (cur.isRoot()) return isArrayBuiltIn(cur);
-		if (cur->getNodeCategory() != NC_Expression) return isPartOfArrayBuiltIn(cur.getParentAddress());
-		return isArrayBuiltIn(cur);
+		case NT_TupleType: {
+			TupleTypePtr tupleType = cur.as<TupleTypePtr>();
+			return !tupleType.empty() && isVariableSized(tupleType.back());
+		}
+		case NT_UnionType: {
+			UnionTypePtr unionType = cur.as<UnionTypePtr>();
+			return any(unionType, [](const NamedTypePtr& cur) { return isVariableSized(cur->getType()); });
+		}
+		default: return false;
+		}
 	}
 
 }
 
-OptionalMessageList ArrayTypeCheck::visitArrayType(const ArrayTypeAddress& address) {
+OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
+
 	NodeManager manager;
 	OptionalMessageList res;
 
-	// this test requires a context
-	if (address.isRoot()) {
-		return res;
+	// filter out everything which is not a type or expression
+	NodeCategory cat = address->getNodeCategory();
+	if (cat != NC_Expression && cat != NC_Type) {
+		return res;		// this test is only covering expressions and types
 	}
 
-	// check the two main exceptions - the array create literals
-	if (isPartOfArrayBuiltIn(address)) {
-		return res;
-	}
+	// check expressions (must not be arrays except within very few cases)
+	if (cat == NC_Expression) {
+		ExpressionPtr expr = address.as<ExpressionPtr>();
+		if (expr->getType()->getNodeType() == NT_ArrayType) {
 
-	NodeAddress parent = address.getParentAddress();
+			// if it is the result of a array-create call it is accepted
+			auto& basic = address->getNodeManager().getLangBasic();
+			if (core::analysis::isCallOf(expr, basic.getArrayCreate1D()) || core::analysis::isCallOf(expr, basic.getArrayCreateND())) {
+				return res; // all fine for those two components
+			}
 
-	// check that array is not used by value
-	if (parent->getNodeCategory() == NC_Expression) {
-
-		// if it is the result of a array-create call it is accepted
-		auto& basic = address->getNodeManager().getLangBasic();
-		if (core::analysis::isCallOf(parent, basic.getArrayCreate1D()) || core::analysis::isCallOf(parent, basic.getArrayCreateND())) {
-			return res; // all fine for those two components
+			// no value instantiation allowed
+			add(res, Message(address,
+					EC_TYPE_INVALID_ARRAY_VALUE,
+					format("Invalid instantiation of array value of type %s! Arrays must not be accessed by value, only by reference.",
+							toString(*address)),
+						Message::ERROR
+			));
+			return res;
 		}
+	}
 
-		add(res, Message(parent,
-				EC_TYPE_INVALID_ARRAY_VALUE,
-				format("Invalid instantiation of array value of type %s! Arrays must not be accessed by value, only by reference.",
-						toString(*address)),
-					Message::ERROR
-		));
+	// the rest are just limitations on types
+	if (cat != NC_Type) return res;
+
+	// union, ref and array types are fine
+
+
+	// check composition of struct types
+	if (address->getNodeType() == NT_StructType) {
+		StructTypePtr structType = address.as<StructTypePtr>();
+		if (structType.empty()) return res;
+		for(auto it = structType.begin(); it != structType.end() - 1; ++it) {
+			if (isVariableSized(it->getType())) {
+				add(res, Message(address,
+						EC_TYPE_INVALID_ARRAY_CONTEXT,
+						"Variable sized data structure has to be the last component of enclosing struct type.",
+						Message::ERROR
+				));
+			}
+		}
 		return res;
 	}
 
-	// get enclosing parent type
-	parent = getParentType(address);
-	if (!parent) return res;
-
-	// check the context
-	assert(parent->getNodeCategory() == NC_Type && "There should not be another context!");
-
-	// if it is enclosed within a reference or another array, everything is fine
-	if (parent->getNodeType() == NT_RefType || parent->getNodeType() == NT_ArrayType) {
+	// check union types
+	if (address->getNodeType() == NT_TupleType) {
+		TupleTypePtr tupleType = address.as<TupleTypePtr>();
+		if (tupleType.empty()) return res;
+		for(auto it = tupleType.begin(); it != tupleType.end() - 1; ++it) {
+			if (isVariableSized(*it)) {
+				add(res, Message(address,
+						EC_TYPE_INVALID_ARRAY_CONTEXT,
+						"Variable sized data structure has to be the last component of enclosing tuple type.",
+						Message::ERROR
+				));
+			}
+		}
 		return res;
 	}
 
-	// it has to be a struct, union or tuple
-	auto parentType = parent->getNodeType();
-
-	// allow array to occur within a meta-type type
-	if (core::analysis::isTypeLiteralType(parent.as<TypePtr>())) {
-		return res; 	// arrays are allowed within type literals
-	}
-
-	// check valid context
-	if (parentType != NT_StructType && parentType != NT_UnionType && parentType != NT_TupleType) {
-		add(res, Message(parent,
-				EC_TYPE_INVALID_ARRAY_CONTEXT,
-				"Arrays must only be used within refs, structs, unions, tuples or other array types..",
-				Message::ERROR
-		));
-		return res;
-	}
-
-	// check that an array is not used without a reference
-	NodeAddress grandParent = getParentType(parent);
-
-	// check valid parent context => element has to be embedded within a reference
-	if (grandParent && grandParent->getNodeType() != NT_RefType && grandParent->getNodeType() != NT_ArrayType) {
-		add(res, Message(grandParent,
-				EC_TYPE_INVALID_ARRAY_CONTEXT,
-				"Invalid array context. Variable sized struct / union / tuples must be enclosed by a ref or array.",
-				Message::ERROR
-		));
-		return res;
-	}
-
-	// for unions it is fine anyway
-	if (parent->getNodeType() == NT_UnionType) {
-		return res;	// all fine
-	}
-
-	// for structs and tuples it has to be the last element
-	if (address.getParentAddress(address.getDepth() - parent.getDepth() - 1).getIndex() != parent->getChildList().size() - 1u) {
-		add(res, Message(parent,
-				EC_TYPE_INVALID_ARRAY_CONTEXT,
-				"Embedded array has to be the last component of enclosing struct or tuple type.",
-				Message::ERROR
-		));
-		return res;
-	}
-
-	// no problem encountered
+	// no issues identified
 	return res;
 }
 

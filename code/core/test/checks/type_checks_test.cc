@@ -758,12 +758,10 @@ TEST(ArrayTypeChecks, Basic) {
 	EXPECT_EQ(1u, errors.size());
 	EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
 
-	// struct must not be nested inside another struct
+	// may be nested inside another struct
 	cur = builder.structType(toVector(builder.namedType("a", builder.structType(toVector(builder.namedType("a", arrayType))))));
 	errors = check(cur, typeCheck);
-	EXPECT_FALSE(errors.empty()) << errors;
-	EXPECT_EQ(1u, errors.size());
-	EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
+	EXPECT_TRUE(errors.empty()) << errors;
 
 
 	// ----- union ------
@@ -808,10 +806,7 @@ TEST(ArrayTypeChecks, Basic) {
 	// variable size tuple must not be nested inside a non-reference
 	cur = builder.structType(toVector(builder.namedType("a", builder.tupleType(toVector(arrayType)))));
 	errors = check(cur, typeCheck);
-	EXPECT_FALSE(errors.empty()) << errors;
-	EXPECT_EQ(1u, errors.size());
-	EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
-
+	EXPECT_TRUE(errors.empty()) << errors;
 
 	// also, there must not be a value of type array
 	ExpressionPtr exp = builder.literal("val", arrayType);
