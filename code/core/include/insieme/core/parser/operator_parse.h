@@ -38,6 +38,8 @@
 
 #include "insieme/core/parser/ir_parse.h"
 
+#include "insieme/core/lang/basic.h"
+
 #include "insieme/utils/map_utils.h"
 
 namespace insieme {

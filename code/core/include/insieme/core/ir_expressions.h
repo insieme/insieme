@@ -792,6 +792,17 @@ namespace core {
 		}
 
 		/**
+		 * Determines whether any lambda defined within this definition is recursive.
+		 *
+		 * @return true if there is a recursive lambda, false otherwise
+		 */
+		bool isRecursive() const {
+			return any(getDefinitions(), [&](const LambdaBindingPtr& cur) {
+				return this->isRecursive(cur->getVariable());
+			});
+		}
+
+		/**
 		 * Peels this definition the given number of times for the given variable.
 		 *
 		 * @param manager the manager to be used for maintaining the resulting reference

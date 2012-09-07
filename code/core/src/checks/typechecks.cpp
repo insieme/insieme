@@ -313,6 +313,123 @@ OptionalMessageList LambdaTypeCheck::visitLambdaExpr(const LambdaExprAddress& ad
 	return res;
 }
 
+namespace {
+
+	TypeAddress getParentType(const NodeAddress& cur) {
+		// terminal case
+		if (!cur || cur.isRoot()) return TypeAddress();
+
+		NodeAddress parent = cur.getParentAddress();
+		if (parent->getNodeCategory() == NC_Type) {
+			return parent.as<TypeAddress>();
+		}
+		return getParentType(parent);
+	}
+
+	bool isArrayBuiltIn(const NodePtr& cur) {
+		auto& basic = cur->getNodeManager().getLangBasic();
+		return basic.isBuiltIn(cur);
+	}
+
+	bool isPartOfArrayBuiltIn(const NodeAddress& cur) {
+		if (cur.isRoot()) return isArrayBuiltIn(cur);
+		if (cur->getNodeCategory() != NC_Expression) return isPartOfArrayBuiltIn(cur.getParentAddress());
+		return isArrayBuiltIn(cur);
+	}
+
+}
+
+OptionalMessageList ArrayTypeCheck::visitArrayType(const ArrayTypeAddress& address) {
+	NodeManager manager;
+	OptionalMessageList res;
+
+	// this test requires a context
+	if (address.isRoot()) {
+		return res;
+	}
+
+	// check the two main exceptions - the array create literals
+	if (isPartOfArrayBuiltIn(address)) {
+		return res;
+	}
+
+	NodeAddress parent = address.getParentAddress();
+
+	// check that array is not used by value
+	if (parent->getNodeCategory() == NC_Expression) {
+
+		// if it is the result of a array-create call it is accepted
+		auto& basic = address->getNodeManager().getLangBasic();
+		if (core::analysis::isCallOf(parent, basic.getArrayCreate1D()) || core::analysis::isCallOf(parent, basic.getArrayCreateND())) {
+			return res; // all fine for those two components
+		}
+
+		add(res, Message(parent,
+				EC_TYPE_INVALID_ARRAY_VALUE,
+				format("Invalid instantiation of array value of type %s! Arrays must not be accessed by value, only by reference.",
+						toString(*address)),
+					Message::ERROR
+		));
+		return res;
+	}
+
+	// get enclosing parent type
+	parent = getParentType(address);
+	if (!parent) return res;
+
+	// check the context
+	assert(parent->getNodeCategory() == NC_Type && "There should not be another context!");
+
+	// if it is enclosed within a reference or another array, everything is fine
+	if (parent->getNodeType() == NT_RefType || parent->getNodeType() == NT_ArrayType) {
+		return res;
+	}
+
+	// it has to be a struct, union or tuple
+	auto parentType = parent->getNodeType();
+
+	// check valid context
+	if (parentType != NT_StructType && parentType != NT_UnionType && parentType != NT_TupleType) {
+		add(res, Message(parent,
+				EC_TYPE_INVALID_ARRAY_CONTEXT,
+				"Arrays must only be used within refs, structs, unions, tuples or other array types..",
+				Message::ERROR
+		));
+		return res;
+	}
+
+	// check that an array is not used without a reference
+	NodeAddress grandParent = getParentType(parent);
+
+	// check valid parent context => element has to be embedded within a reference
+	if (grandParent && grandParent->getNodeType() != NT_RefType) {
+		add(res, Message(grandParent,
+				EC_TYPE_INVALID_ARRAY_CONTEXT,
+				"Invalid array context. Variable sized struct / union / tuples must be enclosed by a ref.",
+				Message::ERROR
+		));
+		return res;
+	}
+
+	// for unions it is fine anyway
+	if (parent->getNodeType() == NT_UnionType) {
+		return res;	// all fine
+	}
+
+	// for structs and tuples it has to be the last element
+	if (address.getParentAddress(address.getDepth() - parent.getDepth() - 1).getIndex() != parent->getChildList().size() - 1u) {
+		add(res, Message(parent,
+				EC_TYPE_INVALID_ARRAY_CONTEXT,
+				"Embedded array has to be the last component of enclosing struct or tuple type.",
+				Message::ERROR
+		));
+		return res;
+	}
+
+	// no problem encountered
+	return res;
+}
+
 
 OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
 

@@ -79,7 +79,8 @@ namespace checks {
 		return combine(
 				toVector<CheckPtr>(
 					recursive,
-					make_check<DeclaredOnceCheck>()
+					make_check<DeclaredOnceCheck>(),
+					makeRecursive(make_check<ArrayTypeCheck>())
 				)
 		);
 	}

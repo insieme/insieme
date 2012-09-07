@@ -41,6 +41,7 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/basic.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
@@ -256,16 +257,17 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		}
 	}
 
-	// [ vector<'a, #n> -> array<'a,1> ]
+	// [ vector<'a, #n> -> array<'a,1> ] => impossible
 	//
 	// convert a vector to an array using the Vector2Array literal  
 	if ( trgTy->getNodeType() == core::NT_ArrayType && argTy->getNodeType() == core::NT_VectorType ) {
-		// we are sure at this point the type of arg is of ref-type as well
-		const core::TypePtr& trgSubTy = GET_ARRAY_ELEM_TYPE(trgTy);
-		const core::TypePtr& argSubTy = GET_VEC_ELEM_TYPE(argTy);
-	
-		assert(*trgSubTy == *argSubTy && "Cannot convert vector<'a> to array<'b>.");
-		return builder.callExpr( trgTy,	gen.getVectorToArray(), expr );
+		assert(false && "It is prohibited to create array values!");  return core::ExpressionPtr();
+//		// we are sure at this point the type of arg is of ref-type as well
+//		const core::TypePtr& trgSubTy = GET_ARRAY_ELEM_TYPE(trgTy);
+//		const core::TypePtr& argSubTy = GET_VEC_ELEM_TYPE(argTy);
+//
+//		assert(*trgSubTy == *argSubTy && "Cannot convert vector<'a> to array<'b>.");
+//		return builder.callExpr( trgTy,	gen.getVectorToArray(), expr );
 	}
 
 	// [ string -> vector<char,#n> ]
@@ -350,20 +352,21 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	// Converts a string literal to an array of chars, we do this by converting the string to a vector of chars 
 	// and then converting the vector to an array. 
 	if ( trgTy->getNodeType() == core::NT_ArrayType && gen.isString(argTy) ) {
-		const core::ArrayTypePtr& arrTy = core::static_pointer_cast<const core::ArrayType>(trgTy);
-		assert( gen.isChar(arrTy->getElementType()) && "Converting a string to something which is not a char*" );
-		
-		// convert the string into a vector and then use vector.to.array to get the desired array
-		core::ExpressionPtr&& ret = 
-			CAST(expr, 
-				builder.vectorType(gen.getChar(), 
-					core::ConcreteIntTypeParam::get(
-						builder.getNodeManager(), 
-						core::static_pointer_cast<const core::Literal>(expr)->getStringValue().length()-1) )
-				);
-
-		// now convert the vector<char, #n> into an array<char, #n>
-		return builder.callExpr( trgTy, gen.getVectorToArray(), toVector(ret) );
+		assert(false && "It is prohibited to create array values!"); return core::ExpressionPtr();
+//		const core::ArrayTypePtr& arrTy = core::static_pointer_cast<const core::ArrayType>(trgTy);
+//		assert( gen.isChar(arrTy->getElementType()) && "Converting a string to something which is not a char*" );
+//
+//		// convert the string into a vector and then use vector.to.array to get the desired array
+//		core::ExpressionPtr&& ret =
+//			CAST(expr,
+//				builder.vectorType(gen.getChar(),
+//					core::ConcreteIntTypeParam::get(
+//						builder.getNodeManager(),
+//						core::static_pointer_cast<const core::Literal>(expr)->getStringValue().length()-1) )
+//				);
+//
+//		// now convert the vector<char, #n> into an array<char, #n>
+//		return builder.callExpr( trgTy, gen.getVectorToArray(), toVector(ret) );
 	}
 	
 	// [ 'a -> array<'a,1> ]
@@ -372,15 +375,17 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	if ( trgTy->getNodeType() == core::NT_ArrayType && 	argTy->getNodeType() != core::NT_ArrayType && 
 			argTy->getNodeType() != core::NT_VectorType )
 	{
-		// This is done by creating a wrapping array containing the argument
-		const core::TypePtr& subTy = GET_ARRAY_ELEM_TYPE(trgTy);
-		core::ConcreteIntTypeParamPtr&& size = core::ConcreteIntTypeParam::get(builder.getNodeManager(), 1);
-		core::ExpressionPtr vecExpr = builder.callExpr( 
-				builder.vectorType(subTy, size), // vec<subTy,1>
-				gen.getVectorInitUniform(), 
-				toVector( CAST(expr, subTy), builder.getIntTypeParamLiteral(size) )
-			);
-		return builder.callExpr( trgTy, gen.getVectorToArray(), toVector(vecExpr) );
+		assert(false && "It is prohibited to create array values!"); return core::ExpressionPtr();
+
+//		// This is done by creating a wrapping array containing the argument
+//		const core::TypePtr& subTy = GET_ARRAY_ELEM_TYPE(trgTy);
+//		core::ConcreteIntTypeParamPtr&& size = core::ConcreteIntTypeParam::get(builder.getNodeManager(), 1);
+//		core::ExpressionPtr vecExpr = builder.callExpr(
+//				builder.vectorType(subTy, size), // vec<subTy,1>
+//				gen.getVectorInitUniform(),
+//				toVector( CAST(expr, subTy), builder.getIntTypeParamLiteral(size) )
+//			);
+//		return builder.callExpr( trgTy, gen.getVectorToArray(), toVector(vecExpr) );
 	}
 
 	// [ ref<'a> -> ref<array<'a>> ]

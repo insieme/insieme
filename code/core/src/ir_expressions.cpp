@@ -235,7 +235,7 @@ namespace core {
 	LambdaDefinitionPtr LambdaDefinition::unroll(NodeManager& manager, unsigned numTimes) const {
 
 		// just return lambda definition as it is if no unrolling is requested
-		if (numTimes < 2) return this;
+		if (numTimes < 2 || !isRecursive()) return this;
 
 		// conduct the unrolling one time less => use results
 		std::map<VariablePtr, LambdaExprPtr> unrolled;
@@ -245,6 +245,12 @@ namespace core {
 
 		vector<LambdaBindingPtr> newBindings;
 		for(const LambdaBindingPtr& cur : *this) {
+
+			// skip non-recursive definitions
+			if (!isRecursive(cur->getVariable())) {
+				newBindings.push_back(cur);
+				continue;
+			}
 
 			// build up replacement map
 			std::map<NodeAddress, NodePtr> replacements;

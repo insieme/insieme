@@ -427,33 +427,21 @@ LITERAL(IntTypeParamToInt, 	"int.type.param.to.int", 	"(intTypeParam<#n>)->int<8
 
 // Arrays -------------------------------------------------------------------------------------------------------------
 
-GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArrayLength1D, ArrayLengthND, ArraySubscript1D, ArraySubscriptND, ArrayRefElem1D, ArrayRefElemND,
-		ArrayProjection1D, ArrayProjectionND, ArrayRefProjection1D, ArrayRefProjectionND)
+GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArraySubscript1D, ArraySubscriptND, ArrayRefElem1D, ArrayRefElemND, ArrayRefProjection1D, ArrayRefProjectionND)
 
 LITERAL(ArrayCreate1D, 		"array.create.1D", 		"(type<'elem>, uint<8>) -> array<'elem,1>")
 LITERAL(ArrayCreateND, 		"array.create.ND", 		"(type<'elem>, vector<uint<8>,#n>) -> array<'elem,#n>")
 
-LITERAL(ArrayLength1D, 		"array.length.1D", 		"(array<'elem,1>) -> uint<8>")
-LITERAL(ArrayLengthND, 		"array.length.ND", 		"(array<'elem,#n>) -> vector<uint<8>,#n>")
-
-LITERAL(ArraySubscript1D, 	"array.subscript.1D", 	"(array<'elem,1>, uint<8>) -> 'elem")
-LITERAL(ArraySubscriptND, 	"array.subscript.ND", 	"(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
+LITERAL(ArraySubscript1D,      "array.subscript.1D",   "(array<'elem,1>, uint<8>) -> 'elem")
+LITERAL(ArraySubscriptND,      "array.subscript.ND",   "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
 
 LITERAL(ArrayRefElem1D, 	"array.ref.elem.1D", 	"(ref<array<'elem,1>>, uint<8>) -> ref<'elem>")
 LITERAL(ArrayRefElemND, 	"array.ref.elem.ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
-
-LITERAL(ArrayProjection1D, 	"array.projection.1D", 	"(array<'elem,1>,uint<8>,uint<8>) -> array<'elem,1>")
-LITERAL(ArrayProjectionND, 	"array.projection.ND",
-						   	"(array<'elem,#n>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
 
 LITERAL(ArrayRefProjection1D, "array.ref.projection.1D",
 							  "(ref<array<'elem,1>>,uint<8>,uint<8>) -> ref<array<'elem,1>>")
 LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
 							  "(ref<array<'elem,#n>>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
-
-// function to copy an array 1D of type t and size m to an 1D array of type ref<vector<t,n> and size m/n
-LITERAL(ArrayElemToVec, "array.elem.to.vec",
-						"(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
 
 LITERAL(ArrayRefDistance, 		"array.ref.distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>) -> uint<8>")
 
@@ -506,7 +494,6 @@ LITERAL(VectorProjection, 		"vector.projection",
 LITERAL(VectorRefProjection, 	"vector.ref.projection",
 							 	"(ref<vector<'elem,#n>>,intTypeParam<#s>,intTypeParam<#m>) -> ref<vector<'elem,#m>>")
 
-LITERAL(VectorToArray, 			"vector.to.array",				"(vector<'elem,#l>) -> array<'elem,1>")
 LITERAL(RefVectorToRefArray, 	"ref.vector.to.ref.array",		"(ref<vector<'elem,#l>>) -> ref<array<'elem,1>>")
 
 

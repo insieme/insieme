@@ -182,7 +182,7 @@ namespace c_ast {
 	bool VectorType::equals(const Node& node) const {
 		assert(dynamic_cast<const VectorType*>(&node));
 		auto other = static_cast<const VectorType&>(node);
-		return *elementType == *other.elementType && *size == *other.size;
+		return *elementType == *other.elementType && ((!size && !other.size) || (size && other.size && *size == *other.size));
 	}
 
 	bool NamedCompositeType::equals(const Node& node) const {

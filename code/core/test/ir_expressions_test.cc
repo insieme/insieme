@@ -704,6 +704,29 @@ TEST(ExpressionTest, LambdaUnrollingEvenOdd) {
 }
 
 
+TEST(ExpressionTest, LambdaUnrollingNonRecursive) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	LambdaExprPtr simple = builder.parseExpr(
+			"(int<4> x)->bool { return (x==0); }"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(simple);
+
+	EXPECT_EQ(simple, simple->peel(0));
+	EXPECT_EQ(simple, simple->peel(1));
+	EXPECT_EQ(simple, simple->peel(2));
+	EXPECT_EQ(simple, simple->peel(3));
+
+	EXPECT_EQ(simple, simple->unroll(0));
+	EXPECT_EQ(simple, simple->unroll(1));
+	EXPECT_EQ(simple, simple->unroll(2));
+	EXPECT_EQ(simple, simple->unroll(3));
+
+}
+
+
 template<typename PT>
 void basicExprTests(PT expression, const TypePtr& type, const NodeList& children) {
 
