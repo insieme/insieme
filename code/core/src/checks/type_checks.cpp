@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/type_checks.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/type_utils.h"
@@ -387,6 +387,11 @@ OptionalMessageList ArrayTypeCheck::visitArrayType(const ArrayTypeAddress& addre
 
 	// it has to be a struct, union or tuple
 	auto parentType = parent->getNodeType();
+
+	// allow array to occur within a meta-type type
+	if (core::analysis::isTypeLiteralType(parent.as<TypePtr>())) {
+		return res; 	// arrays are allowed within type literals
+	}
 
 	// check valid context
 	if (parentType != NT_StructType && parentType != NT_UnionType && parentType != NT_TupleType) {
@@ -944,7 +949,7 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 		case NT_TypeVariable:
 			return res;
 		default:
-			assert(false && "Sorry, missed some type!");
+			assert(false && "Sorry, missed some type!"); break;
 		}
 	}
 

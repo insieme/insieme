@@ -36,9 +36,9 @@
 
 #include "insieme/core/checks/full_check.h"
 
-#include "insieme/core/checks/imperativechecks.h"
-#include "insieme/core/checks/typechecks.h"
-#include "insieme/core/checks/semanticchecks.h"
+#include "insieme/core/checks/imperative_checks.h"
+#include "insieme/core/checks/type_checks.h"
+#include "insieme/core/checks/semantic_checks.h"
 
 
 namespace insieme {

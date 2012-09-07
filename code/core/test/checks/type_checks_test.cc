@@ -40,6 +40,7 @@
 #include "insieme/core/checks/typechecks.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 namespace core {
@@ -829,6 +830,7 @@ TEST(ArrayTypeChecks, Basic) {
 TEST(ArrayTypeChecks, Exceptions) {
 	NodeManager manager;
 	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
 
 	CheckPtr typeCheck = getFullCheck();
 
@@ -844,7 +846,7 @@ TEST(ArrayTypeChecks, Exceptions) {
 	errors = check(cur, typeCheck);
 	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
-	auto arrayPtr = builder.getZero(builder.refType(arrayType));
+	ExpressionPtr arrayPtr = builder.callExpr(basic.getArrayCreate1D(), builder.getTypeLiteral(element), builder.uintLit(12u));
 
 	// also, allow array values to be used within ref.new, ref.var, struct, tuple and union expressions
 

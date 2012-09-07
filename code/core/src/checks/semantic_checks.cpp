@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/checks/semanticchecks.h"
+#include "insieme/core/checks/semantic_checks.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -99,7 +99,7 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 										toString(*(param)).c_str(), toString(formula).c_str()),
 									Message::WARNING));
 							}
-						} catch(arithmetic::NotAFormulaException e) {
+						} catch(const arithmetic::NotAFormulaException& e) {
 							add(res, Message(useCallAdr,
 								EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
 								format("Potentially unsafe indexing of single-element array %s using expression %s", 
