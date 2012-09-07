@@ -39,6 +39,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/typechecks.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/parser2/grammar.h"
 
 namespace insieme {
 namespace core {
@@ -825,6 +826,22 @@ TEST(ArrayTypeChecks, Basic) {
 
 }
 
+TEST(NarrowExpresion, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+
+	//(ref<'a>, datapath, type<'b>) -> ref<'b>
+	
+	core::NodePtr irCode = builder.parse( 
+				" let inner = struct{ int<4> val;};"
+				);
+
+	std::cerr << "\n***********************************************************************\n";
+	std::cerr << insieme::core::parser::createGrammar();
+	std::cerr << "\n***********************************************************************\n";
+
+}
 
 } // end namespace checks
 } // end namespace core

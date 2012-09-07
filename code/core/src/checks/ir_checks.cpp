@@ -72,6 +72,8 @@ namespace checks {
 		
 		checks.push_back(make_check<ScalarArrayIndexRangeCheck>());
 		checks.push_back(make_check<UndefinedCheck>());
+		
+		checks.push_back(make_check<NarrowCheck>());
 
 		// assemble the IR check list
 		CheckPtr recursive = makeVisitOnce(combine(checks));

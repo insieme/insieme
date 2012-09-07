@@ -959,6 +959,48 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 	return res;
 }
 
+OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
+	
+	NodeManager manager;
+	OptionalMessageList res;
+
+	auto functionExp = call->getFunctionExpr();
+	// obtain function type ...
+	TypePtr funType = functionExp->getType();
+
+
+	assert( call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
+
+	const FunctionTypePtr& functionType = CAST(FunctionType, funType);
+	const TypeList& parameterTypes = functionType->getParameterTypes()->getTypes();
+	const TypePtr& returnType = functionType->getReturnType();
+
+	// Obtain argument type
+	TypeList argumentTypes;
+	transform(call.as<CallExprPtr>()->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) {
+		return cur->getType();
+	});
+
+
+	std::cout << argumentTypes.size();
+	// the function call must be narrow
+	
+	// must have 3 parameters
+	
+	// second parameter must be a datapath
+	
+	// case root:
+	// 		target element must be source
+	
+	add(res, Message(call,
+			EC_TYPE_MALFORM_NARROW_CALL,
+			format("Malform Narrow expresion %s and %s",
+					"a",
+					"b"),
+			Message::ERROR));
+
+	return res;
+}
 
 #undef CAST
 

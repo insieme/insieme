@@ -83,6 +83,8 @@ enum {
 
 	EC_TYPE_INVALID_ARRAY_VALUE,
 	EC_TYPE_INVALID_ARRAY_CONTEXT
+
+	EC_TYPE_MALFORM_NARROW_CALL
 };
 
 // defines macros for generating CHECK declarations
@@ -114,6 +116,7 @@ SIMPLE_CHECK(RefCast, CastExpr, false);
 
 SIMPLE_CHECK(Cast, CastExpr, false);
 
+SIMPLE_CHECK(Narrow, CallExpr, false);
 
 // TODO:
 //	- check that only concrete types are used for variables
