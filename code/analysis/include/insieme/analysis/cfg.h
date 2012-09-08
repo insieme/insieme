@@ -84,11 +84,32 @@ struct Element : public utils::Printable {
 	};
 
 	Element(const core::StatementAddress& baseAddr, const Type& type = NONE) : 
-		viewPtr( baseAddr.getAddressedNode() ), baseAddr( baseAddr ), type( type ) { }
+		viewPtr( baseAddr.getAddressedNode() ), 
+		baseAddr( baseAddr ), 
+		diffAddr( core::StatementAddress(baseAddr.getAddressedNode()) ),
+		type( type ) { }
 
 	Element(const core::StatementPtr& viewPtr, 
 			const core::StatementAddress& baseAddr, 
-			const Type& type = NONE) : viewPtr(viewPtr), baseAddr(baseAddr), type(type) { }
+			const Type& type = NONE) 
+	: viewPtr(viewPtr), 
+	  baseAddr(baseAddr), 
+	  diffAddr( viewPtr ? core::StatementAddress(viewPtr) : core::StatementAddress() ),
+	  type(type) { }
+
+	Element(const core::StatementPtr& viewPtr, 
+			const core::StatementAddress& baseAddr, 
+			const core::StatementAddress& diffAddr,
+			const Type& type = NONE) 
+	: viewPtr(viewPtr), 
+	  baseAddr(baseAddr), 
+	  diffAddr(diffAddr),
+	  type(type) 
+	{
+		assert( (!diffAddr || (diffAddr && diffAddr.getRootNode() == viewPtr)) && 
+				"Diff must always be relative to analysis stmt"
+			  ); 
+	}
 
 	inline const Type& getType() const { return type; }
 	
@@ -96,13 +117,31 @@ struct Element : public utils::Printable {
 
 	inline const core::StatementAddress& getStatementAddress() const { return baseAddr; }
 
+	inline const core::StatementAddress& getDifference() const { return diffAddr; }
+
 	inline std::ostream& printTo(std::ostream& out) const { 
 		return out << *viewPtr; 
 	}
 
 private:
-	core::StatementPtr viewPtr;
-	core::StatementAddress baseAddr;
+
+	/** 
+	 * Stores the analysis statement utilized for analysis 
+	 */
+	core::StatementPtr 		viewPtr;
+
+	/** 
+	 * Stores the address of the original IR statement from which the analyisis statement has been
+	 * generated
+	 */
+	core::StatementAddress 	baseAddr;
+
+	/** 
+	 * This is an addresses which allows to easily find the position of the original statement
+	 * within the analysis stmt generated for analsyis purposes 
+	 */
+	core::StatementAddress 	diffAddr;
+
 	Type type;
 };
 
@@ -123,7 +162,8 @@ inline bool operator==(const core::StatementPtr& lhs, const Element& rhs) {
  */////////////////////////////////////////////////////////////////////////////////////////////////
 struct Terminator : public Element {
 
-	Terminator() : Element(core::StatementPtr(), core::StatementAddress()) { }
+	//Terminator() : 
+	//	Element(core::StatementPtr(), core::StatementAddress()) { }
 
 	Terminator(const core::StatementAddress& stmt) : Element(stmt) { }
 
@@ -213,10 +253,7 @@ struct Address : public utils::Printable {
 	/**
 	 * Return the absolute address if the addressed entity exists outside the CFG 
 	 */
-	core::NodeAddress toAbsoluteAddress(const CFG& cfg) const { 
-		// TODO:
-		return core::NodeAddress();
-	}
+	core::NodeAddress toAbsoluteAddress(const CFG& cfg) const;
 
 	std::ostream& printTo(std::ostream& out) const;
 };
@@ -559,18 +596,21 @@ struct Block :
 	}
 
 	/// Setters and getters for the terminator element
-	inline const Terminator& terminator() const { return term; }
-	inline Terminator& terminator() { return term; }
-
-	inline bool hasTerminator() const { 
-		return static_cast<bool>(term.getAnalysisStatement()); 
+	inline const Terminator& terminator() const { 
+		assert(hasTerminator() && "trying to access invalid terminator");
+		return *term; 
 	}
+	inline void setTerminator(const Terminator& t) {
+		term = t;
+	}
+
+	inline bool hasTerminator() const { return static_cast<bool>(term); }
 
 	/// Returns the number of elements inside this block
 	inline size_t size() const { return stmtList.size(); }
 	/// Returns true of the block is empty
 	inline bool empty() const { 
-		return stmtList.empty() && !term.getAnalysisStatement(); 
+		return stmtList.empty() && !hasTerminator(); 
 	}
 
 	// return the block type
@@ -657,8 +697,8 @@ private:
 	const Type		blockType;
 	CFG::VertexTy	vertex_id;
 
-	StatementList 	stmtList;
-	Terminator		term;
+	StatementList 				stmtList;
+	boost::optional<Terminator>	term;
 };
 
 struct RetBlock;

@@ -174,7 +174,7 @@ public:
 
 		inline BlockInfo& operator=(BlockInfo&& other) {
 
-			assert (((pending() && curr_block()->empty()) || !pending()) && "Blcok is dirty!" ) ;
+			assert (((pending() && curr_block()->empty()) || !pending()) && "Block is dirty!" ) ;
 			if (!pending()) { release_block_ptr(); }
 
 			std::tuple<std::unique_ptr<cfg::Block>, bool, bool, CFG::VertexTy>::operator=(std::move(other));
@@ -325,7 +325,7 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 	 * (i.e. for or while stmt)
 	 */
 	void visitContinueStmt(const ContinueStmtAddress& continueStmt) {
-		blockMgr->terminator() = cfg::Terminator(continueStmt);
+		blockMgr->setTerminator( cfg::Terminator(continueStmt) );
 		succ = blockMgr.connectTo(scopeStack.getContinueTarget().entry);
 	}
 
@@ -334,7 +334,7 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 	 * (i.e. for or while stmt)
 	 */
 	void visitBreakStmt(const BreakStmtAddress& breakStmt) {
-		blockMgr->terminator() = cfg::Terminator( breakStmt );
+		blockMgr->setTerminator( cfg::Terminator( breakStmt ) );
 		succ = blockMgr.connectTo(scopeStack.getBreakTarget().exit);
 	}
 
@@ -343,7 +343,7 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 	 * (i.e. lambda expression)
 	 */
 	void visitReturnStmt(const ReturnStmtAddress& retStmt) {
-		blockMgr->terminator() = cfg::Terminator(retStmt);
+		blockMgr->setTerminator( cfg::Terminator(retStmt) );
 		succ = blockMgr.connectTo(scopeStack.getEnclosingLambda().exit);
 		
 		if (!builder.getLangBasic().isUnit(retStmt->getReturnExpr()->getType())) {
@@ -385,7 +385,7 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 		CFG::VertexTy elseBlock = succ;
 
 		// Build the block representing the entry of the IF stmt
-		blockMgr->terminator() = cfg::Terminator(ifStmt);
+		blockMgr->setTerminator( cfg::Terminator(ifStmt) );
 		CFG::VertexTy src = blockMgr.append();
 
 		// Connect the thenBlock with the head of the CFG 
@@ -405,7 +405,7 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 
 		blockMgr.close();
 		
-		blockMgr->terminator() = cfg::Terminator(switchStmt);
+		blockMgr->setTerminator( cfg::Terminator(switchStmt) );
 		CFG::VertexTy src = blockMgr.append();
 		BlockManager::BlockInfo saveBlock = blockMgr.get();
 
@@ -452,7 +452,7 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 		
 		blockMgr.close();
 		
-		blockMgr->terminator() = cfg::Terminator(whileStmt);
+		blockMgr->setTerminator( cfg::Terminator(whileStmt) );
 		CFG::VertexTy src = blockMgr.append();
 
 		BlockManager::BlockInfo saveBlock = blockMgr.get();
@@ -482,7 +482,7 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 	
 		blockMgr.close();
 
-		blockMgr->terminator() = cfg::Terminator(forStmt);
+		blockMgr->setTerminator( cfg::Terminator(forStmt) );
 		CFG::VertexTy forHead = blockMgr.append();
 
 		CFG::VertexTy sink = succ;
@@ -684,7 +684,9 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 
 		if (isLambda) { initExpr = storeTemp(init).second; }
 
-		blockMgr->appendElement( cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr), declStmt) );
+		blockMgr->appendElement( 
+			cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr), declStmt) 
+			);
 
 		append();
 
@@ -794,7 +796,13 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 			succ = callVertex;
 			
 		} else {
-			blockMgr->appendElement( cfg::Element(assignTemp(callExpr,toAppendStmt), callExpr) );
+			StatementAddress diff(toAppendStmt);
+			StatementPtr saveStmt = assignTemp(callExpr,toAppendStmt);
+			if (saveStmt != toAppendStmt) {
+				diff = DeclarationStmtAddress( saveStmt.as<DeclarationStmtPtr>())->getInitialization();
+			}
+
+			blockMgr->appendElement( cfg::Element(saveStmt, callExpr, diff) );
 
 			append();
 		}
@@ -992,11 +1000,15 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 	void visitStatement(const StatementAddress& stmt) {
 		
 		StatementPtr toAppendStmt = stmt.getAddressedNode();
+		StatementAddress diffAddr(toAppendStmt);
+
 		if (ExpressionAddress expr = dynamic_address_cast<const Expression>(stmt)) {
 			toAppendStmt = assignTemp(expr, toAppendStmt.as<ExpressionPtr>()); 
+			// if we change the stmt we compute the diff address 
+			if (toAppendStmt != stmt.getAddressedNode()) 
+				diffAddr = DeclarationStmtAddress(toAppendStmt.as<DeclarationStmtPtr>())->getInitialization();
 		}
-
-		blockMgr->appendElement( cfg::Element(toAppendStmt, stmt) );
+		blockMgr->appendElement( cfg::Element(toAppendStmt, stmt, diffAddr) );
 		append();	
 	}
 
@@ -1236,7 +1248,6 @@ cfg::Address CFG::find(const core::NodeAddress& node) const {
 	
 	// Find the address of the stmt in the CFG representation 
 	core::StatementPtr aStmt = (*found)[stmtIdx].getAnalysisStatement();
-
 	core::NodeAddress addr = core::NodeAddress(aStmt);
 
 	if (node.getAddressedNode() != aStmt && aStmt.getNodeType() == core::NT_DeclarationStmt) { 
@@ -1246,6 +1257,23 @@ cfg::Address CFG::find(const core::NodeAddress& node) const {
 			addr = addr.as<DeclarationStmtAddress>()->getInitialization();
 			return cfg::Address(found, stmtIdx, addr);
 		} 
+
+		if (!tmpVarMap.isTmpVar(declStmt->getVariable())) {
+			// find the declstmt in the original address and record the path
+			std::vector<unsigned> path;
+			core::NodeAddress tmpNode = node;
+			while(tmpNode.getNodeType() != core::NT_DeclarationStmt) {
+				path.push_back(tmpNode.getIndex());
+				tmpNode = tmpNode.getParentAddress();
+				assert(tmpNode && "Addres became invalid");
+			}
+			
+			for_each(path.rbegin(), path.rend(), [&]( const unsigned& idx ) {
+				addr = addr.getAddressOfChild(idx);
+			});
+
+			return cfg::Address(found, stmtIdx, addr);
+		}
 	}
 
 	// last chance to find the node 
@@ -1259,6 +1287,39 @@ cfg::Address CFG::find(const core::NodeAddress& node) const {
 }
 
 namespace cfg {
+
+core::NodeAddress Address::toAbsoluteAddress(const CFG& cfg) const {
+	
+	core::NodePtr node = getAddressedNode();
+
+	// if the addressed node is a tmp variable then we return the mapped expression 
+	if (node->getNodeType() == core::NT_Variable && cfg.getTmpVarMap().isTmpVar(node.as<VariablePtr>())) {
+		return cfg.getTmpVarMap().getMappedExpr(node.as<VariablePtr>());
+	}
+
+	const cfg::Element& 	cfgElem = (*block)[stmt_idx];
+	core::StatementAddress 	rStmt 	= cfgElem.getStatementAddress();
+	core::StatementAddress 	diff 	= cfgElem.getDifference();
+
+	auto newAddr = cropRootNode(addr, diff);
+
+	// Concat the 2 addresse (rStmt + newAddr)
+	//
+	// Because we are sure of what we are doing we cannot use the concat method in ir_address
+	// because the asserts are too restrictive. In this case we try to concat two address which are
+	// not matching, therefore the standard concat wouldn't work
+	//
+	const Path& tailPath = newAddr.getPath(); 
+	// If try to merge a path with another path containing only 1 node we return the head path
+	if ( tailPath.getLength() <= 1) { return rStmt; }
+
+	Path newPath = rStmt.getPath();
+	for(int i=tailPath.getLength()-2; i>=0; --i) {
+		newPath = newPath.extendForChild( tailPath.getPathToParent(i).getIndex() );
+	}
+
+	return NodeAddress(newPath);
+}
 
 std::ostream& Address::printTo(std::ostream& out) const {
 	// if the address is invalid print <invalid>
