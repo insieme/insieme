@@ -42,6 +42,7 @@
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/encoder/lists.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
@@ -414,8 +415,55 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 			size_t vecTrgSize = vecTrgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 			size_t vecArgSize = vecArgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 
-			// LOG(INFO) << vecTrgSize << " " << vecArgSize;
-			assert(vecTrgSize >= vecArgSize && "Conversion not possible");
+			core::ExpressionPtr plainExpr = expr;
+			if (core::analysis::isCallOf(plainExpr, gen.getRefDeref())) {
+				plainExpr = plainExpr.as<core::CallExprPtr>()->getArgument(0);
+			}
+
+			if (plainExpr->getNodeType() == core::NT_Literal) {
+				//  this is a literal string 
+				assert(vecArgTy->getElementType()->getNodeType() != core::NT_RefType && 
+						"conversion of string literals to vector<ref<'a>> not yet supported");
+
+				assert(vecArgTy->getSize()->getNodeType() == core::NT_ConcreteIntTypeParam);
+
+				// do conversion from a string to an array of char
+				std::string strVal = plainExpr.as<core::LiteralPtr>()->getStringValue();
+
+				// because string literals are stored with the corresponding " " we iterate from 1 to length()-2
+				// but we need an additional character to store the string terminator \0
+				
+				assert(strVal.length()-1 <= vecTrgSize && 
+						"Target vector type not large enough to hold string literal"
+					); 
+
+				// FIXME: Use clang error report for this
+				ExpressionList vals(vecArgSize);
+				size_t it;
+				for(it=0; it<strVal.length()-2; ++it) {
+					char c = strVal.at(it+1);
+					std::string str(1,c);
+					switch(c) {
+						case '\n': str = "\\n";	   break;
+						case '\\': str = "\\\\";   break;
+						case '\r': str = "\\r";	   break;
+						case '\t': str = "\\t";	   break;
+						case '\0': str = "\\0";	   break;
+					}
+					vals[it] = builder.literal( std::string("\'") + str + "\'", gen.getChar() );
+				}
+				// put '\0' terminators on the remaining elements
+				vals[it] = builder.literal( std::string("\'") + "\\0" + "\'", gen.getChar() ); // Add the string terminator
+				auto list = core::encoder::toIR(plainExpr->getNodeManager(), vals);
+
+				return builder.callExpr(
+						gen.getVectorInitPartial(), 
+						list, 
+						builder.getIntTypeParamLiteral(vecTrgTy->getSize())
+					);
+			}
+				
+			assert(false && "casting between arrays of different size is not supported");
 		}
 	}
 
