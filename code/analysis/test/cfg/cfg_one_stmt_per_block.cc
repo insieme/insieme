@@ -136,6 +136,7 @@ TEST(CFGBuilder, IfThen) {
 
     EXPECT_TRUE(code);
 	CFGPtr cfg = CFG::buildCFG(code);
+	std::cout << *cfg << std::endl;
 
 	EXPECT_EQ(4u+2u, cfg->size());
 

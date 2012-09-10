@@ -771,7 +771,13 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	 * structs and unions
 	 */
 	if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr )) {
-		return retIr = utils::cast(convertInitializerList(listExpr, type), type);
+		return retIr = utils::cast( convertInitializerList(listExpr, type), type);
+
+//		if (builder.matchType("array<'a,#n>", type) && builder.matchType("vector<'a,#n>", retIr->getType()))
+//		{
+//			return retIr = utils::cast(builder.refVar(retIr), builder.refType(type));
+//		}
+//		return utils::cast(retIr, type);
 	}
 
 	// init the cpp class / struct - check here for enabled cpp in compiler lang options
@@ -791,16 +797,32 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	retIr = convertExpr(expr);
 
 	if (core::analysis::isCallOf(retIr, mgr.getLangBasic().getArrayCreate1D())) {
-		retIr = builder.callExpr(builder.refType(retIr->getType()), mgr.getLangBasic().getRefNew(), retIr);
+		return retIr = builder.callExpr(builder.refType(retIr->getType()), mgr.getLangBasic().getRefNew(), retIr);
 	}
 
-	// fix type if necessary (also converts "Hello" into ['H','e',...])
-	retIr = utils::cast(retIr, type);
+	// Avoid the deref when dealing with ref<vector<'a>>
+	if ( builder.matchType("ref<array<'a,#n>>", retIr->getType()) && 
+		 builder.matchType("ref<array<'a,#n>>", type ) ) 
+	{
+		return retIr = retIr;
+	}
 
-	// if result is a reference type => create new local variable
-	//if (type->getNodeType() == core::NT_RefType) {
-	//	retIr = builder.callExpr(type, mgr.getLangBasic().getRefVar(), retIr);
-	//}
+	if (type->getNodeType() == core::NT_RefType && 
+		!(retIr->getNodeType() == core::NT_Literal && 
+			builder.matchType("ref<vector<char,#n>>", retIr->getType()))) 
+	{
+		retIr = builder.refVar(utils::cast(retIr, GET_REF_ELEM_TYPE(type)));
+	} else {
+		retIr = utils::cast(retIr, type);
+	}
+
+//	// fix type if necessary (also converts "Hello" into ['H','e',...])
+//	retIr = utils::cast(retIr, type);
+//
+//	// if result is a reference type => create new local variable
+//	if (type->getNodeType() == core::NT_RefType) {
+//		retIr = builder.callExpr(type, mgr.getLangBasic().getRefVar(), retIr);
+//	}
 
 	assert(retIr);
 

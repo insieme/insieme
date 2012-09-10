@@ -542,15 +542,16 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(clan
 
 	LOG_EXPR_CONVERSION(retIr);
 
+	// capture the case of cast to arrays. because arrays cannot exists without a ref we need 
+	// to make sure to add a refVar to the element 
+	if (builder.matchType("ref<array<'a,#n>>", type) && builder.matchType("vector<'a,#n>", retIr->getType()))
+	{
+		return retIr = utils::cast(builder.refVar(retIr), type);
+	}
+
 	// handle implicit casts according to their kind
 	switch (castExpr->getCastKind()) {
 	case CK_LValueToRValue:
-		
-		// capture the case of cast to arrays. because arrays cannot exists without a ref we need 
-		// to make sure to add a refVar to the element 
-		if (builder.matchType("array<'a,#n>", type) && builder.matchType("vector<'a,#n>", retIr->getType()))
-			return retIr = utils::cast(retIr, type);
-
 		return (retIr = asRValue(retIr));
 
 	case CK_ArrayToPointerDecay:
@@ -604,6 +605,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(clang::CastE
 	auto nonRefExpr = convFact.tryDeref(retIr);
 
 	auto type = convFact.convertType(GET_TYPE_PTR(castExpr));
+
+	if (gen.isUnit(type)) { return gen.getUnitConstant(); }
 
 	// if the cast is to a 'void*' type then we simply skip it
 	if (gen.isAnyRef(type)) { return retIr; }
