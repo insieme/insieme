@@ -39,6 +39,7 @@
 #include "insieme/frontend/ocl/ocl_host_1st_pass.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include <fstream>
 
@@ -106,11 +107,8 @@ void tryStructExtract(ExpressionPtr& expr, IRBuilder& builder) {
 
 bool isNullPtr(const ExpressionPtr& expr, const IRBuilder& builder) {
 	// cast to void pointer
-	if (const CallExprPtr rta = dynamic_pointer_cast<const CallExpr>(expr))
-		if (rta->getFunctionExpr() == BASIC.getRefToAnyRef())
-			if (const CallExprPtr getNull = dynamic_pointer_cast<const CallExpr>(rta->getArgument(0)))
-				if (getNull->getFunctionExpr() == BASIC.getGetNull())
-					return true;
+	if(core::analysis::isCallOf(expr, BASIC.getGetNull()))
+		return true;
 
 	// null literal
 	const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr);
