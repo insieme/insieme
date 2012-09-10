@@ -791,16 +791,28 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	retIr = convertExpr(expr);
 
 	if (core::analysis::isCallOf(retIr, mgr.getLangBasic().getArrayCreate1D())) {
-		retIr = builder.callExpr(builder.refType(retIr->getType()), mgr.getLangBasic().getRefNew(), retIr);
+		return retIr = builder.callExpr(builder.refType(retIr->getType()), mgr.getLangBasic().getRefNew(), retIr);
 	}
 
-	// fix type if necessary (also converts "Hello" into ['H','e',...])
-	retIr = utils::cast(retIr, type);
+	// Avoid the deref when dealing with ref<vector<'a>>
+	if ( builder.matchType("ref<array<'a,#n>>", retIr->getType()) && 
+		 builder.matchType("ref<array<'a,#n>>", type ) ) 
+	{
+		LOG(INFO) << type;
+		return retIr = builder.refVar(utils::cast(builder.deref(retIr), type));
+	}
 
-	// if result is a reference type => create new local variable
-	//if (type->getNodeType() == core::NT_RefType) {
-	//	retIr = builder.callExpr(type, mgr.getLangBasic().getRefVar(), retIr);
-	//}
+	if (type->getNodeType() == core::NT_RefType) {
+		retIr = builder.refVar(utils::cast(retIr, GET_REF_ELEM_TYPE(type)));
+	}
+
+//	// fix type if necessary (also converts "Hello" into ['H','e',...])
+//	retIr = utils::cast(retIr, type);
+//
+//	// if result is a reference type => create new local variable
+//	if (type->getNodeType() == core::NT_RefType) {
+//		retIr = builder.callExpr(type, mgr.getLangBasic().getRefVar(), retIr);
+//	}
 
 	assert(retIr);
 
