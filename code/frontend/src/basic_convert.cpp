@@ -798,8 +798,7 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	if ( builder.matchType("ref<array<'a,#n>>", retIr->getType()) && 
 		 builder.matchType("ref<array<'a,#n>>", type ) ) 
 	{
-		LOG(INFO) << type;
-		return retIr = builder.refVar(utils::cast(builder.deref(retIr), type));
+		return retIr = retIr;
 	}
 
 	if (type->getNodeType() == core::NT_RefType) {
