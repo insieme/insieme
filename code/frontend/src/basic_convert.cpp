@@ -771,7 +771,13 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	 * structs and unions
 	 */
 	if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr )) {
-		return retIr = utils::cast(convertInitializerList(listExpr, type), type);
+		return retIr = utils::cast( convertInitializerList(listExpr, type), type);
+
+//		if (builder.matchType("array<'a,#n>", type) && builder.matchType("vector<'a,#n>", retIr->getType()))
+//		{
+//			return retIr = utils::cast(builder.refVar(retIr), builder.refType(type));
+//		}
+//		return utils::cast(retIr, type);
 	}
 
 	// init the cpp class / struct - check here for enabled cpp in compiler lang options
@@ -801,8 +807,13 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 		return retIr = retIr;
 	}
 
-	if (type->getNodeType() == core::NT_RefType) {
+	if (type->getNodeType() == core::NT_RefType && 
+		!(retIr->getNodeType() == core::NT_Literal && 
+			builder.matchType("ref<vector<char,#n>>", retIr->getType()))) 
+	{
 		retIr = builder.refVar(utils::cast(retIr, GET_REF_ELEM_TYPE(type)));
+	} else {
+		retIr = utils::cast(retIr, type);
 	}
 
 //	// fix type if necessary (also converts "Hello" into ['H','e',...])

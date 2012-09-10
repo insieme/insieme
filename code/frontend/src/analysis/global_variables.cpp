@@ -845,10 +845,13 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 			// build a literal which points to the name of the external variable 
 			initExpr = builder.literal((*it)->getNameAsString(), type);
 		} else {
+
+			LOG(INFO)<<*type;
 			// this means the variable is not declared static inside a function so we have to initialize its value
 			initExpr = (*it)->getInit() ? 
 				convFact.convertInitExpr(NULL, (*it)->getInit(), type, false) : 
 				convFact.defaultInitVal(type);
+			LOG(INFO) <<*initExpr;
 		}
 		// default initialization
 		core::NamedValuePtr member = builder.namedValue(ident, initExpr);
@@ -973,15 +976,21 @@ GlobalVarCollector::GlobalStructPair CXXGlobalVarCollector::createGlobalStruct()
 		core::ExpressionPtr initExpr;
 		if( (*it)->hasExternalStorage() ) {
 			assert (type->getNodeType() == core::NT_RefType);
-			core::TypePtr derefTy = core::static_pointer_cast<const core::RefType>( type )->getElementType();
+
+			auto derefTy = type.as<core::RefTypePtr>()->getElementType();
 			// build a literal which points to the name of the external variable
 			initExpr = builder.refVar( builder.literal((*it)->getNameAsString(), derefTy) );
 		} else {
+
+			LOG(INFO)<<*type;
 			// this means the variable is not declared static inside a function so we have to initialize its value
 			initExpr = (*it)->getInit() ?
 				convFact.convertInitExpr(NULL, (*it)->getInit(), type, false) :
 				convFact.defaultInitVal(type);
+
+			std::cout << *initExpr << std::endl;
 		}
+
 		// default initialization
 		core::NamedValuePtr member = builder.namedValue(ident, initExpr);
 
