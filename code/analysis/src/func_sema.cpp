@@ -190,10 +190,9 @@ core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piece
 				// Get the type of the contained object 
 				core::TypePtr nonRefTy = arrType;
 				while(nonRefTy->getNodeType() == core::NT_RefType) {
-					LOG(INFO) << *nonRefTy;
 					nonRefTy = nonRefTy.as<core::RefTypePtr>()->getElementType();
 				}
-				LOG(INFO) << "done";
+
 				assert((nonRefTy->getNodeType() == core::NT_VectorType || nonRefTy->getNodeType() == core::NT_ArrayType) && 
 						"expecting array or vector type");
 				
@@ -370,7 +369,7 @@ const boost::optional<FunctionSemaAnnotation> FunctionSemaAnnotation::getFunctio
 
 void loadFunctionSemantics(core::NodeManager& mgr) {
 
-	LOG(INFO) << "Loading semantic info" << std::endl;
+	LOG(DEBUG) << "Loading semantic info" << std::endl;
 
 	// check whether it has been loaded before
 	core::NodePtr flagNode = core::StringValue::get(mgr, "SemanticLoaded");
@@ -441,7 +440,7 @@ FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 	
 	if(!sema) {
 		// Try to do your best finding the semantics of this function 
-		LOG(WARNING) << "Tried to extract semantics for unknown function: '" 
+		LOG(DEBUG) << "Tried to extract semantics for unknown function: '" 
 				     << *funcLit << "' with type '" << *funcLit->getType() << "'";
 
 		return FunctionSema(isPure(funcLit), true, FunctionSema::Accesses());

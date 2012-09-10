@@ -261,7 +261,7 @@ TEST(NodeAddressTest, Find) {
 
 	NodeAddress addrRoot(root);
 
-	EXPECT_EQ(Address<const Type>::find(typeC, root), addrRoot.getAddressOfChild(2));
+	EXPECT_EQ(Address<const Type>::find(typeC, root), addrRoot.getAddressOfChild(1,2));
 }
 
 TEST(NodeAddressTest, Visiting) {

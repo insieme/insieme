@@ -39,6 +39,8 @@
 #include "insieme/core/ir_address.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/basic.h"
+
 #include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
 
@@ -280,7 +282,7 @@ public:
 		}
 
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArraySubscript1D()) ||
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArrayRefElem1D()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArrayRefElem1D()) ||
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorRefElem()) || 
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorSubscript()) || 
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArrayView()) ) 

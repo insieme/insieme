@@ -43,7 +43,7 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/ir.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/parser2/ir_parser.h"
 

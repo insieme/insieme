@@ -34,38 +34,28 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/region/pfor_selector.h"
+#pragma once
 
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/lang/basic.h"
+#include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {
-namespace driver {
-namespace region {
+namespace core {
+namespace checks {
 
-	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
 
-		RegionList res;
-		auto pfor = node->getNodeManager().getLangBasic().getPFor();
-		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
-			if (*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
-				return false;
-			}
-			core::ExpressionAddress body = cur->getArgument(4);
-			if (body->getNodeType() == core::NT_BindExpr) {
-				body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
-			}
-			if (body->getNodeType() == core::NT_LambdaExpr) {
-				res.push_back(body.as<core::LambdaExprAddress>()->getBody());
-			}
-			return true;
-		}, false);
+	/**
+	 * Obtains a combined check case containing all the checks defined within this header file.
+	 */
+	CheckPtr getFullCheck();
 
-		return res;
+	/**
+	 * Allies all known semantic checks on the given node and returns the obtained message list.
+	 */
+	inline MessageList check(const NodePtr& node) {
+		return check(node, getFullCheck());
 	}
 
-} // end namespace region
-} // end namespace driver
-} // end namespace insieme
 
+} // end namespace checks
+} // end namespace core
+} // end namespace insieme

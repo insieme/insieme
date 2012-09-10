@@ -49,6 +49,7 @@
 #include "insieme/core/ir_node_traits.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/basic.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"

@@ -40,7 +40,7 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/simplify.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/normalize.h"
 
 #include "insieme/core/printer/pretty_printer.h"

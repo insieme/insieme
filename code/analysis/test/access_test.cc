@@ -50,10 +50,44 @@
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "insieme/analysis/cfg.h"
 
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::analysis;
+
+TEST(UnifiedAddress, IRAddress) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	{
+		auto addr = builder.parseAddresses("int<4> a = $10+20$;");
+
+		EXPECT_EQ(1u, addr.size());
+
+		EXPECT_EQ(
+			addr[0].getAddressedNode(), 
+			UnifiedAddress(addr[0]).getAddressedNode()
+		);
+	}
+	
+//	{
+//		auto addr = builder.parseAddresses("$int<4> a = $10+20$;$");
+//
+//		EXPECT_EQ(2u, addr.size());
+//		CFGPtr cfg = CFG::buildCFG<MultiStmtPerBasicBlock>(addr[0]);
+//
+//		auto block = cfg->find(addr[1]);
+//
+//		auto cfgAddr = NodeAddress((*block.first)[block.second].getAnalysisStatement()).getAddressOfChild(1);
+//		EXPECT_EQ(
+//			addr[1].getAddressedNode(), 
+//			UnifiedAddress(CFGAddress(*block.first, block.second, cfgAddr)).getAddressedNode()
+//		);
+//
+//	}
+
+}
 
 TEST(Access, Scalars) {
 
@@ -382,24 +416,24 @@ TEST(Access, ArrayAccess) {
 		EXPECT_FALSE(access.isContextDependent());
 	}
 
-	{	
-		auto code = builder.parseAddresses(
-			"{ "
-			"	array<int<4>,1> v;"
-			"	$v[2u]$;"
-			"}"
-		);
-		EXPECT_EQ(1u, code.size());
-
-		auto accessAddr = code[0].as<ExpressionAddress>();
-
-		auto access = getImmediateAccess( accessAddr );
-		EXPECT_EQ(VarType::ARRAY, access.getType());
-		EXPECT_FALSE(access.isRef());
-		EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
-		EXPECT_FALSE(access.getContext());
-		EXPECT_FALSE(access.isContextDependent());
-	}
+//{	
+//	auto code = builder.parseAddresses(
+//		"{ "
+//		"	array<int<4>,1> v;"
+//		"	$v[2u]$;"
+//		"}"
+//	);
+//	EXPECT_EQ(1u, code.size());
+//
+//	auto accessAddr = code[0].as<ExpressionAddress>();
+//
+//	auto access = getImmediateAccess( accessAddr );
+//	EXPECT_EQ(VarType::ARRAY, access.getType());
+//	EXPECT_FALSE(access.isRef());
+//	EXPECT_EQ("(v4294967295 + -2 == 0)", toString(*access.getAccessedRange()));
+//	EXPECT_FALSE(access.getContext());
+//	EXPECT_FALSE(access.isContextDependent());
+//}
 
 	{
 		auto code = builder.parseAddresses(
@@ -481,7 +515,7 @@ TEST(Access, ArrayAccess) {
 		EXPECT_TRUE(access.isRef());
 
 		EXPECT_TRUE(!!access.getAccessedRange());
-		EXPECT_EQ("((v10 + -11 >= 0) ^ (v4294967295 + -v10 == 0))", toString(*access.getAccessedRange()));
+		EXPECT_EQ("((v8 + -11 >= 0) ^ (v4294967295 + -v8 == 0))", toString(*access.getAccessedRange()));
 
 		EXPECT_EQ(address[0], access.getContext().getAddressedNode()); 
 		EXPECT_TRUE(access.isContextDependent());
@@ -565,13 +599,13 @@ TEST(Access, ArrayAccess) {
 		EXPECT_TRUE(access.getContext());
 		EXPECT_TRUE(access.isContextDependent());
 
-		EXPECT_EQ("(((-v14 + 19 >= 0) ^ (v10 + -1 >= 0)) ^ (v4294967295 + -v10 + -v14 == 0))", 
+		EXPECT_EQ("(((-v12 + 19 >= 0) ^ (v8 + -1 >= 0)) ^ (v4294967295 + -v8 + -v12 == 0))", 
 				  toString(*access.getAccessedRange())
 				 );
 
 		auto ctx = polyhedral::makeCtx();
 		auto set = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access.getAccessedRange()));
-		EXPECT_EQ("[v10, v14] -> { [v10 + v14] : v14 <= 19 and v10 >= 1 }", toString(*set));
+		EXPECT_EQ("[v8, v12] -> { [v8 + v12] : v12 <= 19 and v8 >= 1 }", toString(*set));
 	}
 
 }

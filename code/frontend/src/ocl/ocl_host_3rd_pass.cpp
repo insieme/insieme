@@ -242,11 +242,12 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 			if(const CallExprPtr vta = dynamic_pointer_cast<const CallExpr>(toArray->getArgument(0))) {
 	// throw away ref.var
 	// TODO only a dirty fix, check it
-				if(vta->getFunctionExpr() == BASIC.getVectorToArray()) {
-					arg = vta->getArgument(0);
-					argTy = arg->getType();
-					param = builder.variable(argTy);
-				}
+	// this will no longer happen, vector-to-array is gone
+//				if(vta->getFunctionExpr() == BASIC.getVectorToArray()) {
+//					arg = vta->getArgument(0);
+//					argTy = arg->getType();
+//					param = builder.variable(argTy);
+//				}
 			}
 		} else {
 			std::cerr << "Unexpected Function: " << toArray << " of type " << toArray->getArgument(0)->getType() << std::endl;

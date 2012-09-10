@@ -42,11 +42,6 @@ namespace insieme {
 namespace core {
 namespace checks {
 
-enum {
-	EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE = EC_GROUP_SEMANTIC + 1,
-	EC_SEMANTIC_INCORRECT_UNDEFINED
-};
-
 // defines macros for generating CHECK declarations
 #include "insieme/core/checks/check_macros.inc"
 

@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_program.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/frontend/program.h"
@@ -79,13 +79,13 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 
 	LOG(INFO) << "Printing the IR: " << pp;
 */
-	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+	auto errors = core::checks::check(program).getAll();
 
 	EXPECT_EQ(errors.size(), 0u);
 
 	std::sort(errors.begin(), errors.end());
 
-	for_each(errors, [](const core::Message& cur) {
+	for_each(errors, [](const core::checks::Message& cur) {
 		LOG(INFO) << cur << std::endl;
 	});
 

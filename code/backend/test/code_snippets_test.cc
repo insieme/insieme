@@ -47,6 +47,8 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/extension.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"

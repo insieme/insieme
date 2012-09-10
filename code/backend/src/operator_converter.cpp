@@ -48,6 +48,7 @@
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/basic.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/transform/manipulation.h"
@@ -595,12 +596,6 @@ namespace backend {
 
 		// -- vectors --
 
-		res[basic.getVectorToArray()] = OP_CONVERTER({
-			// initialize an array instance
-			//   Operator Type: (vector<'elem,#l>) -> array<'elem,1>
-			return c_ast::access(CONVERT_ARG(0), "data");
-		});
-
 		res[basic.getVectorRefElem()] = OP_CONVERTER({
 			//   operator type:  (ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>
 			//   generated code: &((*X).data[Y])
@@ -631,6 +626,12 @@ namespace backend {
 			// Operator type: (ref<vector<'elem,#l>>) -> ref<array<'elem,1>>
 			const TypeInfo& info = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
 			context.getDependencies().insert(info.definition);
+
+			// special handling for string literals
+			if (call->getArgument(0)->getNodeType() == core::NT_Literal) {
+				return CONVERT_ARG(0);
+			}
+
 			return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");
 		});
 
@@ -704,8 +705,14 @@ namespace backend {
 			assert(ARG(1)->getNodeType() == core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 
+			// special handling for accessing variable array within struct
+			auto access = c_ast::access(c_ast::deref(CONVERT_ARG(0)), field);
+			if (core::analysis::isRefOf(call->getType(), core::NT_ArrayType)) {
+				return access;
+			}
+
 			// access the type
-			return c_ast::ref(c_ast::access(c_ast::deref(CONVERT_ARG(0)), field));
+			return c_ast::ref(access);
 		});
 
 

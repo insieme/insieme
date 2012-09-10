@@ -517,8 +517,7 @@ ExpressionPtr IRBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
 
 
 CallExprPtr IRBuilder::arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const {
-	auto aType = dynamic_pointer_cast<const ArrayType>(array->getType());
-	if(aType) return callExpr(aType->getElementType(), manager.getLangBasic().getArraySubscript1D(), array, index);
+	assert(!dynamic_pointer_cast<const ArrayType>(array->getType()) && "Accessing array by value is not allowed!");
 	auto vType = dynamic_pointer_cast<const VectorType>(array->getType());
 	assert(vType && "Tried array subscript operation on non-array expression");
 	return callExpr(vType->getElementType(), manager.getLangBasic().getVectorSubscript(), array, index);
@@ -982,46 +981,54 @@ LiteralPtr IRBuilder::getIdentifierLiteral(const core::StringValuePtr& value) co
 }
 
 ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPtr& subExpr) const {
-    // Convert casts form scalars to vectors to vector init exrpessions
-    if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
-        if(getLangBasic().isScalarType(subExpr->getType())) {
-            // get vector element type without ref
-            core::TypePtr elementType = vt->getElementType();
-            core::TypePtr targetType = elementType;// refs in arrays have been removed! (elementType->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
-                    //dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
 
-            core::ExpressionPtr arg = (subExpr->getType() == targetType) ? subExpr :
-                castExpr(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
+	// if it is alread a vector => done
+	if (subExpr->getType()->getNodeType() == NT_VectorType) {
+		return subExpr;
+	}
 
-            core::ExpressionPtr&& retExpr = callExpr(type, getLangBasic().getVectorInitUniform(),
-                (elementType->getNodeType() == core::NT_RefType && arg->getNodeType() != core::NT_RefType)  ? refVar( arg ) : arg,// if we need a ref type and arg is no ref: add ref
-                getIntTypeParamLiteral(vt->getSize()));
-
-            return retExpr;
-        }
-    }
+	assert(getLangBasic().isScalarType(subExpr->getType()) && "Requested to convert non-scalar to scalar!");
+	assert(type->getNodeType() == NT_VectorType && "Target type has to be a vector type!");
 
 
-    // check for casts from salar pointers to vector pointers
-    if(core::ArrayTypePtr&& array = dynamic_pointer_cast<const core::ArrayType>(type)) {
-//        core::RefTypePtr&& refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
-        core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(array->getElementType());
-        core::ArrayTypePtr&& castedArray = dynamic_pointer_cast<const core::ArrayType>(subExpr->getType());
-        if(castedArray && vt ){
-            core::TypePtr elemTy = /*castedArray->getElementType()->getNodeType() == core::NodeType::NT_RefType ?
-                    dynamic_pointer_cast<const core::RefType>(castedArray->getElementType())->getElementType() :*/ castedArray->getElementType();
+	VectorTypePtr vt = type.as<VectorTypePtr>();
 
-            if(elemTy) {
-                // check if they have the same type
-                assert(elemTy == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
+	// Convert casts form scalars to vectors to vector init exrpessions
+	// get vector element type without ref
+	core::TypePtr elementType = vt->getElementType();
+	core::TypePtr targetType = elementType;// refs in arrays have been removed! (elementType->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
+			//dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
 
-                return  callExpr(getLangBasic().getArrayElemToVec(), subExpr, getIntTypeParamLiteral(vt->getSize()));
-            }
-        }
-    }
+	core::ExpressionPtr arg = (subExpr->getType() == targetType) ? subExpr :
+		castExpr(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
 
-    // expression is either already a vector/array type or the type is not a vector type
-    return subExpr;
+	core::ExpressionPtr&& retExpr = callExpr(type, getLangBasic().getVectorInitUniform(),
+		(elementType->getNodeType() == core::NT_RefType && arg->getNodeType() != core::NT_RefType)  ? refVar( arg ) : arg,// if we need a ref type and arg is no ref: add ref
+		getIntTypeParamLiteral(vt->getSize()));
+
+	return retExpr;
+
+
+//    // check for casts from salar pointers to vector pointers
+//    if(core::ArrayTypePtr&& array = dynamic_pointer_cast<const core::ArrayType>(type)) {
+////        core::RefTypePtr&& refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
+//        core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(array->getElementType());
+//        core::ArrayTypePtr&& castedArray = dynamic_pointer_cast<const core::ArrayType>(subExpr->getType());
+//        if(castedArray && vt ){
+//            core::TypePtr elemTy = /*castedArray->getElementType()->getNodeType() == core::NodeType::NT_RefType ?
+//                    dynamic_pointer_cast<const core::RefType>(castedArray->getElementType())->getElementType() :*/ castedArray->getElementType();
+//
+//            if(elemTy) {
+//                // check if they have the same type
+//                assert(elemTy == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
+//
+//                return  callExpr(getLangBasic().getArrayElemToVec(), subExpr, getIntTypeParamLiteral(vt->getSize()));
+//            }
+//        }
+//    }
+
+//    // expression is either already a vector/array type or the type is not a vector type
+//    return subExpr;
 }
 
 

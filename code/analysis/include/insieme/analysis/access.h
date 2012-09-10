@@ -37,14 +37,15 @@
 #pragma once
 
 #include <set>
+#include <functional>
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/datapath/datapath.h"
 
 #include "insieme/core/ir_address.h"
-#include "insieme/core/datapath/datapath.h"
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/constraint.h"
@@ -54,6 +55,8 @@
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/utils/logging.h"
+
+#include <boost/variant.hpp>
 
 namespace insieme { 
 namespace analysis { 
@@ -66,9 +69,96 @@ struct NotAnAccessException : public std::logic_error {
 		std::logic_error("not an access"), isLit(isLit) { }
 };
 
+
+
 typedef utils::CombinerPtr<polyhedral::AffineFunction> ConstraintPtr;
 
+
+
+namespace support {
+
+struct NodeExtractorVisitor : public boost::static_visitor<core::NodePtr> {
+	template <class T>
+	core::NodePtr operator()(const T& addr) const { 
+		return addr.getAddressedNode(); 
+	}
+};
+
+} // end support namespace 
+
+
+/**
+ * An UnifiedAddress represents an abstraction which allows to address entities both in the IR and
+ * in the CFG. 
+ */
+struct UnifiedAddress {
+ 
+	typedef boost::variant<core::NodeAddress, cfg::Address> AddressImpl;
+	
+	UnifiedAddress(const core::NodeAddress& addr) : address(addr) { }
+
+	UnifiedAddress(const cfg::Address& addr) : address(addr) { }
+
+
+	bool isCFGAddress() const {
+
+		struct checkCFGAddrVisitor : public boost::static_visitor<bool> {
+			bool operator()(const cfg::Address&) const { return true; }
+			bool operator()(const core::NodeAddress&) const { return false; }
+		};
+
+		return boost::apply_visitor(checkCFGAddrVisitor(), address);
+	}
+
+
+	core::NodePtr getAddressedNode() const { 
+		return boost::apply_visitor(support::NodeExtractorVisitor(), address);
+	}
+
+private:
+	AddressImpl address;
+
+};
+
+
 enum class VarType { SCALAR, MEMBER, TUPLE, ARRAY };
+
+
+
+
+//class Access : public utils::Printable {
+//
+//public:
+//	
+//	virtual bool isRef() const;
+//
+//	virtual core::VariablePtr getAddressedVariable() const;
+//
+//	virtual core::ExpressionAddress getAccessAddress() const;
+//
+//};
+//
+//typedef std::shared_ptr<Access> AccessPtr;
+//
+//
+//
+//
+//
+//class BaseAccess : public Access {
+//
+//	/**
+//	 * Address of the access represented by this object 
+//	 */
+//	core::ExpressionAddress 	exprAddr;
+//
+//public:
+//
+//	BaseAccess(const core::ExpressionAddress& exprAddr) 
+//	
+//
+//};
+
+
 
 /** 
  * The Access class represent an access to an IR variable. 
@@ -81,31 +171,17 @@ enum class VarType { SCALAR, MEMBER, TUPLE, ARRAY };
  */
 class Access : public utils::Printable {
 
-	// Address of the access represented by this object 
-	//
-	// This address is an absolute address if no CFG block is provided, otherwise it will be an
-	// address relative to the cfgBlock. This is required in order to be able to address temporary
-	// variable being created during the construction of the CFG which cannot be addressed based on
-	// the root of the CFG. For this reason, in order to address a specific location of the CFG we
-	// base it on the actual block.
-	core::ExpressionAddress 	base_expr;
+	core::ExpressionAddress base_expr;
 
-	// Actuall variable being accessed (note that this variable might be an alias)
-	core::VariablePtr			variable;
+	core::VariablePtr variable;
 
-	/**
-	 * Path to the accessed member/element/component 
-	 *  => For scalar, the path is empty 
-	 */ 
-	core::datapath::DataPathPtr	path;
+	core::datapath::DataPathPtr path;
 
-	// The type of this access
-	VarType 					type;
+	VarType type;
 
-	// The cfg-block containing this access 
-	cfg::BlockPtr 				cfgBlock;
-	// Index relative to the cfg block 
-	size_t						stmtIdx;
+	cfg::BlockPtr cfgBlock;
+
+	size_t stmtIdx; 
 
 	polyhedral::IterationVector iterVec;
 
@@ -130,8 +206,8 @@ class Access : public utils::Printable {
 		   const core::VariablePtr& 			var,
 		   const core::datapath::DataPathPtr& 	path, 
 		   const VarType& 						type,
-		   const cfg::BlockPtr& 				cfg_block 	= cfg::BlockPtr(),
-		   size_t								stmtIdx 	= 0,
+		   const cfg::BlockPtr& 				cfg_block = cfg::BlockPtr(),
+		   size_t								stmtIdx = 0,
 		   const polyhedral::IterationVector&	iv 	= polyhedral::IterationVector(), 
 		   const ConstraintPtr& 				dom = ConstraintPtr(),
 		   const core::NodeAddress& 			ctx = core::NodeAddress() 
@@ -167,12 +243,11 @@ public:
 
 	inline core::ExpressionAddress getAccessExpression() const { return base_expr; }
 
+	inline const core::datapath::DataPathPtr& getPath() const {	return path; }
+
 	inline cfg::BlockPtr getCFGBlock() const { return cfgBlock; }
 
 	inline size_t getStmtIdx() const { return stmtIdx; }
-
-	inline const core::datapath::DataPathPtr& getPath() const {	return path; }
-
 	/** 
 	 * If this is an array access, it may have associated a constraint which states the range of
 	 * elements being accessed
@@ -221,6 +296,7 @@ public:
 
 typedef std::shared_ptr<Access> AccessPtr;
 
+Access getCFGBasedAccess(const core::ExpressionAddress& expr, const CFGPtr& cfg);
 
 /** 
  * Given two accesses, this function returns true if the ranges on which the accesses are defined
@@ -267,6 +343,7 @@ class AccessManager;
 class AccessClass;
 
 typedef std::shared_ptr<AccessClass> AccessClassPtr;
+typedef std::weak_ptr<AccessClass>   AccessClassWPtr;
 
 /** 
  * An access class is a set of accesses which refer to the same memory location. In case of R-Values
@@ -296,7 +373,7 @@ private:
 
 public:
 
-	typedef std::pair<std::weak_ptr<AccessClass>, core::datapath::DataPathPtr> Dependence;
+	typedef std::pair<AccessClassWPtr, core::datapath::DataPathPtr> Dependence;
 
 	typedef std::vector<Dependence> SubClasses;
 
@@ -309,7 +386,7 @@ private:
 	/**
 	 * Reference to the parent class 
 	 */
-	const std::weak_ptr<AccessClass> parentClass;
+	const AccessClassWPtr parentClass;
 
 	friend class AccessManager;
 
@@ -319,7 +396,7 @@ private:
 	AccessClass(
 			const std::reference_wrapper<const AccessManager>& mgr, 
 			size_t uid, 
-			const std::weak_ptr<AccessClass> parent = std::weak_ptr<AccessClass>()
+			const AccessClassWPtr parent = AccessClassWPtr()
 	) : mgr(mgr), 
 		uid(uid), 
 		parentClass(parent) {  }
@@ -396,7 +473,8 @@ public:
  * Return the vector of addresses which are not temporary variable and therefore it returns
  * addresses which exists only outside the CFG
  */
-std::set<core::ExpressionAddress> extractRealAddresses(const AccessClass& cl, const TmpVarMap& tmpVarMap = TmpVarMap());
+std::set<core::ExpressionAddress> 
+extractRealAddresses(const AccessClass& cl, const TmpVarMap& tmpVarMap = TmpVarMap());
 
 
 /**
@@ -442,10 +520,7 @@ public:
 
 	inline size_t size() const { return classes.size(); }
 
-	inline std::ostream& printTo(std::ostream& out) const { 
-		return out << "AccessManager [" << size() << "]\n\t" << 
-			join("\n\t", classes, [&](std::ostream& jout, const AccessClassPtr& cur) { jout << *cur; }) << "]";
-	}
+	std::ostream& printTo(std::ostream& out) const;
 
 };
 

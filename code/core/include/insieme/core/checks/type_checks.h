@@ -34,38 +34,50 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/region/pfor_selector.h"
+#pragma once
 
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/lang/basic.h"
+#include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {
-namespace driver {
-namespace region {
+namespace core {
+namespace checks {
 
-	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
+// defines macros for generating CHECK declarations
+#include "insieme/core/checks/check_macros.inc"
 
-		RegionList res;
-		auto pfor = node->getNodeManager().getLangBasic().getPFor();
-		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
-			if (*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
-				return false;
-			}
-			core::ExpressionAddress body = cur->getArgument(4);
-			if (body->getNodeType() == core::NT_BindExpr) {
-				body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
-			}
-			if (body->getNodeType() == core::NT_LambdaExpr) {
-				res.push_back(body.as<core::LambdaExprAddress>()->getBody());
-			}
-			return true;
-		}, false);
+SIMPLE_CHECK(Keyword, GenericType, true);
 
-		return res;
-	}
+SIMPLE_CHECK(CallExprType, CallExpr, false);
+SIMPLE_CHECK(FunctionType, LambdaExpr, false);
+SIMPLE_CHECK(BindExprType, BindExpr, false);
+SIMPLE_CHECK(ExternalFunctionType, Literal, false);
+SIMPLE_CHECK(ReturnType, Lambda, false);
+SIMPLE_CHECK(LambdaType, LambdaExpr, false);
+SIMPLE_CHECK(ArrayType, Node, true);
 
-} // end namespace region
-} // end namespace driver
+SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt, false);
+SIMPLE_CHECK(IfConditionType, IfStmt, false);
+SIMPLE_CHECK(ForStmtType, ForStmt, false);
+SIMPLE_CHECK(WhileConditionType, WhileStmt, false);
+SIMPLE_CHECK(SwitchExpressionType, SwitchStmt, false);
+
+SIMPLE_CHECK(StructExprType, StructExpr, false);
+SIMPLE_CHECK(MemberAccessElementType, CallExpr, false);
+SIMPLE_CHECK(ComponentAccessType, CallExpr, false);
+
+SIMPLE_CHECK(BuiltInLiteral, Literal, false);
+
+SIMPLE_CHECK(RefCast, CastExpr, false);
+
+SIMPLE_CHECK(Cast, CastExpr, false);
+
+
+// TODO:
+//	- check that only concrete types are used for variables
+
+#undef SIMPLE_CHECK
+
+} // end namespace check
+} // end namespace core
 } // end namespace insieme
 

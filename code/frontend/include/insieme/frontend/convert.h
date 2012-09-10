@@ -260,6 +260,10 @@ protected:
 
 	ConversionContext ctx;
 
+	//	GlobalIdentMap globalIdentMap;                                  ////////////////////////////////
+	core::NodeManager& mgr;
+	const core::IRBuilder builder;
+
 	/**
 	 * Converts a Clang statements into an IR statements.
 	 */
@@ -281,11 +285,7 @@ protected:
 	class CExprConverter;
 	std::shared_ptr<ExprConverter> exprConvPtr;
 
-	//	GlobalIdentMap globalIdentMap;                                  ////////////////////////////////
-	core::NodeManager& mgr;
-	const core::IRBuilder builder;
 	Program& program;
-
 	/**
 	 * Maps of statements to pragmas.
 	 */
@@ -335,7 +335,7 @@ public:
 					std::shared_ptr<TypeConverter> typeConvPtr,
 					std::shared_ptr<ExprConverter> exprConvPtr);
 
-	virtual ~ConversionFactory();
+	virtual ~ConversionFactory() { }
 
 	// Getters & Setters
 	const core::IRBuilder& getIRBuilder() const {

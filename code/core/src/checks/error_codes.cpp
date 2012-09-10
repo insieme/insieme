@@ -34,38 +34,31 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/region/pfor_selector.h"
+#include "insieme/core/checks/error_codes.h"
 
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/lang/basic.h"
+#include "insieme/utils/string_utils.h"
 
 namespace insieme {
-namespace driver {
-namespace region {
+namespace core {
+namespace checks {
 
-	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
 
-		RegionList res;
-		auto pfor = node->getNodeManager().getLangBasic().getPFor();
-		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
-			if (*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
-				return false;
-			}
-			core::ExpressionAddress body = cur->getArgument(4);
-			if (body->getNodeType() == core::NT_BindExpr) {
-				body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
-			}
-			if (body->getNodeType() == core::NT_LambdaExpr) {
-				res.push_back(body.as<core::LambdaExprAddress>()->getBody());
-			}
-			return true;
-		}, false);
 
-		return res;
-	}
-
-} // end namespace region
-} // end namespace driver
+} // end namespace checks
+} // end namespace core
 } // end namespace insieme
 
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::core::checks::ErrorCode& code) {
+
+		out << "[" << format("%05d", (unsigned)code) << "] - ";
+		switch(code) {
+			#define CODE(KIND,NAME) case insieme::core::checks::EC_##KIND##_##NAME: return out << #KIND " / " #NAME;
+			#include "insieme/core/checks/error_codes.inc"
+		}
+
+		return out << "Unknown Error CODE";
+	}
+
+}

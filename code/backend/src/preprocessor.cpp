@@ -44,6 +44,7 @@
 #include "insieme/core/ir_address.h"
 
 #include "insieme/core/type_utils.h"
+#include "insieme/core/lang/basic.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -739,8 +740,9 @@ namespace backend {
 
 				// handle vector->array
 				if (argType->getNodeType() == core::NT_VectorType && paramType->getNodeType() == core::NT_ArrayType) {
+					assert(ref && "Cannot convert implicitly to array value!");
 					// conversion needed
-					newArgs[i] = builder.callExpr((ref)?basic.getRefVectorToRefArray():basic.getVectorToArray(), newArgs[i]);
+					newArgs[i] = builder.callExpr(basic.getRefVectorToRefArray(), newArgs[i]);
 					changed = true;
 				}
 			}
@@ -764,20 +766,22 @@ namespace backend {
 				return declaration;
 			}
 
-			// get initialization value
-			type = declaration->getInitialization()->getType();
-			if (type->getNodeType() != core::NT_VectorType) {
-				return declaration;
-			}
+			assert(type->getNodeType() != core::NT_ArrayType && "Invalid declaration of array value type!");
 
-			// extract some values from the declaration statement
-			core::NodeManager& manager = declaration->getNodeManager();
-			const core::VariablePtr& var = declaration->getVariable();
-			const core::ExpressionPtr& oldInit = declaration->getInitialization();
-
-			// construct a new init statement
-			core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.getLangBasic().getVectorToArray(), toVector(oldInit));
-			return core::DeclarationStmt::get(manager, declaration->getVariable(), newInit);
+//			// get initialization value
+//			type = declaration->getInitialization()->getType();
+//			if (type->getNodeType() != core::NT_VectorType) {
+//				return declaration;
+//			}
+//
+//			// extract some values from the declaration statement
+//			core::NodeManager& manager = declaration->getNodeManager();
+//			const core::VariablePtr& var = declaration->getVariable();
+//			const core::ExpressionPtr& oldInit = declaration->getInitialization();
+//
+//			// construct a new init statement
+//			core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.getLangBasic().getVectorToArray(), toVector(oldInit));
+//			return core::DeclarationStmt::get(manager, declaration->getVariable(), newInit);
 		}
 	};
 

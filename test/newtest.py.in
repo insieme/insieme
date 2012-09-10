@@ -266,10 +266,20 @@ def reporter( report_queue ):
 	
 	report_queue.put( len(failedTests) )
 
-def exec_shell_cmd(cmd):
+def exec_shell_cmd(cmd, env):
+	
+	# set env
+	for (key,val) in env.items():
+		os.putenv(key, val);
+	
 	command = os.path.expandvars(cmd)
 	pid = subprocess.Popen( shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 	output = pid.communicate()[0];
+
+	# reset env
+	for key,val in env.items():
+		os.putenv(key, "");
+
 	return pid.returncode, output.decode("utf-8")
 
 # Generic executor of commands
@@ -293,7 +303,7 @@ def runner( job ):
 
 		try:
 			start = time.time()
-			(retcode, output) = exec_shell_cmd(cmd.cmd)
+			(retcode, output) = exec_shell_cmd(cmd.cmd, cmd.env)
 			elapsed = time.time() - start
 		except Exception as e:
 			retcode = 1
@@ -318,7 +328,7 @@ def runner( job ):
 			execs = [ ]
 			for r in range(0,runs):
 				start = time.time()
-				(retcode, output) = exec_shell_cmd(cmd.cmd)
+				(retcode, output) = exec_shell_cmd(cmd.cmd, cmd.env)
 				if retcode != 0:
 					# something went wrong, the program which was supposed to work is now failing
 					job.data.reports[-1].ret_code = pid.retcode
@@ -339,11 +349,12 @@ def runner( job ):
 		completed.put( job )
 
 class Cmd:
-	def __init__(self, type, desc, cmd, out_file=None):
+	def __init__(self, type, desc, cmd, out_file=None, env=dict()):
 		self.type = type
 		self.desc = desc
 		self.cmd  = cmd
 		self.out_file = out_file
+		self.env = env
 
 
 def load_from_file(file, path="./", default=''):
@@ -553,13 +564,27 @@ class TestJob:
 				  	 		})
 
 				file_name ="{0}.out".format(executable)
+				env_vars = dict()
+
+				if input_args:
+					exec_idx = input_args.index("{PATH}/{EXEC}")
+					assert exec_idx != -1
+					# use a regexp for recongnizing env variables 
+					if exec_idx > 0 and '=' in input_args[0:exec_idx]:
+						# it means we have some environment variable to set 
+						env_vars = { x.split('=')[0].strip() : x.split('=')[1].strip() \
+								 for x in input_args[0:exec_idx].split() if '=' in x }
+
+					input_args = input_args[exec_idx:]
+
 				self.__cmds.append(
 					Cmd(Commands.RUN, "Run {0}".format(id),
 						"{0}".format(
 							input_args.format(**{'PATH':path,'EXEC': executable})
 							if input_args else "{0}/{1}".format(path, executable)
 					 	  ),
-						"{0}/{1}".format(path, file_name)
+						"{0}/{1}".format(path, file_name), 
+						env_vars
 					)
 				)
 			
@@ -674,7 +699,7 @@ def main(argv=None):
 	save_path = os.getcwd()
 	# Retrieve the insieme version 
 	os.chdir('@CMAKE_SOURCE_DIR@')
-	(_, INSIEME_VERSION) = exec_shell_cmd('git describe --dirty')
+	(_, INSIEME_VERSION) = exec_shell_cmd('git describe --dirty', dict())
 	INSIEME_VERSION = INSIEME_VERSION.strip()
 	msg_str = "Insieme version: {0}".format( INSIEME_VERSION )
 	print("-"*COLUMNS)

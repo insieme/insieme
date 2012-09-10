@@ -50,6 +50,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
 
+#include "insieme/core/lang/basic.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/dump/binary_dump.h"
 #include "insieme/core/analysis/ir_utils.h"

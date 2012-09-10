@@ -34,38 +34,60 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/region/pfor_selector.h"
+#include "insieme/analysis/scopes_map.h"
 
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/lang/basic.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme {
-namespace driver {
-namespace region {
+namespace analysis {
 
-	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
+using namespace insieme::analysis;
+using namespace insieme::core;
 
-		RegionList res;
-		auto pfor = node->getNodeManager().getLangBasic().getPFor();
-		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
-			if (*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
-				return false;
+namespace {
+
+	class VariableDefinitionFinder : public IRVisitor<void, Address> {
+
+		VariableScopeMap& scopeMap;
+
+	public:
+
+		VariableDefinitionFinder(VariableScopeMap& scopeMap) : scopeMap(scopeMap) { }
+
+		void visitDeclarationStmt(const DeclarationStmtAddress& declStmt) {
+
+			NodeAddress scope = declStmt.getFirstParentOfType(NT_CompoundStmt);
+			assert(scope && "Impossible to find surrounding compound stmt for declaration");
+			scopeMap.insert( std::make_pair(declStmt->getVariable(), scope.as<CompoundStmtAddress>()) );
+
+		}
+
+		void visitLambda(const LambdaAddress& lambda) {
+			// the validity of a lambda parameter is the body of the lambda 
+			for (auto param : lambda->getParameters()) {
+				scopeMap.insert( std::make_pair(param, lambda->getBody()) );
 			}
-			core::ExpressionAddress body = cur->getArgument(4);
-			if (body->getNodeType() == core::NT_BindExpr) {
-				body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
-			}
-			if (body->getNodeType() == core::NT_LambdaExpr) {
-				res.push_back(body.as<core::LambdaExprAddress>()->getBody());
-			}
-			return true;
-		}, false);
+		}
+	};
 
-		return res;
-	}
+} // end anonymous namespace 
 
-} // end namespace region
-} // end namespace driver
-} // end namespace insieme
+/** 
+ * Given a variable it returns the scope (compound stmt) on which the variable is valid
+ */
+VariableScopeMap mapVariablesToScopes(const NodeAddress& root) {
 
+	VariableScopeMap scopeMap;
+	visitDepthFirst(root, VariableDefinitionFinder(scopeMap));
+
+	return scopeMap;
+	
+
+}
+
+
+} // end analysis namespace 
+} // end insieme namespace 

@@ -72,6 +72,7 @@ namespace c_ast {
 				: indentStep(indentStep), indent(0) {}
 
 			std::ostream& print(NodePtr node, std::ostream& out) {
+				if (!node) return out;
 				switch(node->getType()) {
 					#define CONCRETE(name) case NT_ ## name: return print ## name (static_pointer_cast<name>(node), out);
 					#include "insieme/backend/c_ast/c_nodes.def"
@@ -517,7 +518,7 @@ namespace c_ast {
 
 
 		std::ostream& PrintWrapper::printTo(std::ostream& out) const {
-			return printer.print(node, out);
+			return (node)?printer.print(node, out):out;
 		}
 
 		struct TypeLevel {

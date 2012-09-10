@@ -34,41 +34,23 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma once 
 
-#include "insieme/core/checks/ir_checks.h"
+#include <map>
+
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
-namespace core {
-namespace checks {
+namespace analysis {
 
-enum {
-	EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE = EC_GROUP_IMPERATIVE + 1,
-	EC_IMPERATIVE_ILLEGAL_VARIABLE_REUSE
-};
+typedef std::map<core::VariableAddress, core::CompoundStmtAddress> VariableScopeMap;
 
-// defines macros for generating CHECK declarations
-#include "insieme/core/checks/check_macros.inc"
 
-/**
- * This check verifies that variables are only used within their scope.
+/** 
+ * Given a variable it returns the scope (compound stmt) on which the variable is valid
  */
-SIMPLE_CHECK(UndeclaredVariable, LambdaDefinition, false);
-
-/**
- * This check verifies whether the same variable is used within more than one situation.
- * Unlike other checks, this check is intrinsically recursive and does not need to be wrapped
- * into a recursive check.
- */
-SIMPLE_CHECK(DeclaredOnce, Node, false);
+VariableScopeMap mapVariablesToScopes(const core::NodeAddress& root);
 
 
-// TODO: add another test verifying that every variable is only defined once
-
-
-#undef SIMPLE_CHECK
-
-} // end namespace check
-} // end namespace core
-} // end namespace insieme
-
+} // end analysis namespace 
+} // end insieme namespace 

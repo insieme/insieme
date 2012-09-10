@@ -136,6 +136,7 @@ TEST(CFGBuilder, IfThen) {
 
     EXPECT_TRUE(code);
 	CFGPtr cfg = CFG::buildCFG(code);
+	std::cout << *cfg << std::endl;
 
 	EXPECT_EQ(4u+2u, cfg->size());
 
@@ -572,14 +573,19 @@ TEST(CFGBuilder, ForBreak) {
 TEST(CFGBuilder, CallExpr) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto code = parser.parseStatement(
-		"(ref<int<4>>:a = (int<4>:b + (int<4>:c + int<4>:d)))"
-    );
+	std::map<std::string, NodePtr> symbols;
+	symbols["a"] = builder.variable(builder.parseType("ref<int<4>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+	symbols["c"] = builder.variable(builder.parseType("int<4>"));
+	symbols["d"] = builder.variable(builder.parseType("int<4>"));
 
-    EXPECT_TRUE(code);
-	CFGPtr cfg = CFG::buildCFG(code);
+    auto addresses = builder.parseAddresses("$a=$b+$c+d$$;$", symbols);
+
+	EXPECT_EQ(3u, addresses.size());
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0]);
 
 	EXPECT_EQ(3u+2u, cfg->size());
 
@@ -591,21 +597,21 @@ TEST(CFGBuilder, CallExpr) {
 	EXPECT_EQ(1u, sum_c_d->size());
 	core::StatementAddress addr = (*sum_c_d)[0].getStatementAddress();
 	EXPECT_EQ(core::NT_CallExpr, addr->getNodeType());
-	EXPECT_EQ(addr, NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1));
+	EXPECT_EQ(addr, addresses[2]);
 	EXPECT_EQ(1u, sum_c_d->successors_count());
 
 	const auto& sum_b_c_d = sum_c_d->successor(0);
 	EXPECT_EQ(1u, sum_b_c_d->size());
 	core::StatementAddress addr1 = (*sum_b_c_d)[0].getStatementAddress();
 	EXPECT_EQ(core::NT_CallExpr, addr1->getNodeType());
-	EXPECT_EQ(addr1, NodeAddress(code).getAddressOfChild(1));
+	EXPECT_EQ(addr1, addresses[1]);
 	EXPECT_EQ(1u, sum_b_c_d->successors_count());
 
 	const auto& assign = sum_b_c_d->successor(0);
 	EXPECT_EQ(1u, assign->size());
 	core::StatementAddress addr2 = (*assign)[0].getStatementAddress();
 	EXPECT_EQ(core::NT_CallExpr, addr2->getNodeType());
-	EXPECT_EQ(addr2, NodeAddress(code));
+	EXPECT_EQ(addr2, addresses[0]);
 	EXPECT_EQ(1u, assign->successors_count());
 
 	const auto& exit = assign->successor(0);

@@ -38,6 +38,7 @@
 
 #include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/lang/basic.h"
 
 #include "insieme/utils/logging.h"
 

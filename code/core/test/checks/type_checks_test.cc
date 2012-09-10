@@ -37,8 +37,10 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/type_checks.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 namespace core {
@@ -710,6 +712,164 @@ TEST(LambdaExprType, Basic) {
 	EXPECT_EQ(1u, errors.size()) << errors;
 	EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_TYPE, "", Message::ERROR));
 
+
+}
+
+TEST(ArrayTypeChecks, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	CheckPtr typeCheck = getFullCheck();
+
+	// create simple, context less array type
+	TypePtr element = manager.getLangBasic().getInt4();
+	TypePtr arrayType = builder.arrayType(element);
+
+	TypePtr cur;
+
+	// test something without context
+	EXPECT_TRUE(check(arrayType, typeCheck).empty()) << check(arrayType, typeCheck);
+
+	auto errors = check(arrayType, typeCheck);
+
+	// ----- struct ------
+
+	// test it within a struct
+	cur = builder.structType(toVector(builder.namedType("a", arrayType)));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+	// .. a bigger struct
+	cur = builder.structType(toVector(builder.namedType("c", element), builder.namedType("a", arrayType)));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+	// it has to be the last element
+	cur = builder.structType(toVector(builder.namedType("a", arrayType), builder.namedType("c", element)));
+	errors = check(cur, typeCheck);
+	EXPECT_FALSE(errors.empty()) << errors;
+	EXPECT_EQ(1u, errors.size());
+	EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
+
+	// and must not be present multiple times
+	cur = builder.structType(toVector(builder.namedType("a", arrayType), builder.namedType("b", element), builder.namedType("c", arrayType)));
+	errors = check(cur, typeCheck);
+	EXPECT_FALSE(errors.empty()) << errors;
+	EXPECT_EQ(1u, errors.size());
+	EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
+
+	// may be nested inside another struct
+	cur = builder.structType(toVector(builder.namedType("a", builder.structType(toVector(builder.namedType("a", arrayType))))));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+
+	// ----- union ------
+
+	// also union
+	cur = builder.unionType(toVector(builder.namedType("c", element), builder.namedType("a", arrayType)));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+	// here the order is not important
+	cur = builder.unionType(toVector(builder.namedType("a", arrayType), builder.namedType("c", element)));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+
+	// ----- tuples ------
+
+	// test it within a tuple
+	cur = builder.tupleType(toVector(arrayType));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+	// .. a bigger tuple
+	cur = builder.tupleType(toVector(element, arrayType));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+	// it has to be the last element
+	cur = builder.tupleType(toVector(arrayType, element));
+	errors = check(cur, typeCheck);
+	EXPECT_FALSE(errors.empty()) << errors;
+	EXPECT_EQ(1u, errors.size());
+	EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
+
+	// and must not be present multiple times
+	cur = builder.tupleType(toVector(arrayType, element, arrayType));
+	errors = check(cur, typeCheck);
+	EXPECT_FALSE(errors.empty()) << errors;
+	EXPECT_EQ(1u, errors.size());
+	EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
+
+	// variable size tuple must not be nested inside a non-reference
+	cur = builder.structType(toVector(builder.namedType("a", builder.tupleType(toVector(arrayType)))));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+	// also, there must not be a value of type array
+	ExpressionPtr exp = builder.literal("val", arrayType);
+	errors = check(exp, typeCheck);
+	EXPECT_FALSE(errors.empty()) << errors;
+	EXPECT_EQ(1u, errors.size());
+	EXPECT_PRED2(containsMSG, check(exp, typeCheck), Message(NodeAddress(exp), EC_TYPE_INVALID_ARRAY_VALUE, "", Message::ERROR));
+
+	exp = builder.literal("val", builder.refType(arrayType));
+	errors = check(exp, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+
+}
+
+TEST(ArrayTypeChecks, Exceptions) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+
+	CheckPtr typeCheck = getFullCheck();
+
+	// create simple, context less array type
+	TypePtr element = manager.getLangBasic().getInt4();
+	TypePtr arrayType = builder.arrayType(element);
+
+	NodePtr cur;
+	auto errors = check(arrayType, typeCheck);
+
+	// allow arrays to be used within type literals
+	cur = builder.getTypeLiteral(arrayType);
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	ExpressionPtr arrayPtr = builder.callExpr(basic.getArrayCreate1D(), builder.getTypeLiteral(element), builder.uintLit(12u));
+
+	// also, allow array values to be used within ref.new, ref.var, struct, tuple and union expressions
+
+	// ref.var
+	cur = builder.refVar(arrayPtr);
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	// ref.new
+	cur = builder.refNew(arrayPtr);
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	// struct expression
+	cur = builder.structExpr(toVector(builder.namedValue("a", arrayPtr)));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	// union expression
+	UnionTypePtr unionType = builder.unionType(toVector(builder.namedType("a", arrayType)));
+	cur = builder.unionExpr(unionType, builder.stringValue("a"), arrayPtr);
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	// tuple expression
+	cur = builder.tupleExpr(toVector(arrayPtr));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
 
 }
 

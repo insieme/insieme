@@ -40,7 +40,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;

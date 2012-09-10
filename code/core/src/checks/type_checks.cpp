@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/type_checks.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/type_utils.h"
@@ -310,6 +310,105 @@ OptionalMessageList LambdaTypeCheck::visitLambdaExpr(const LambdaExprAddress& ad
 		));
 	}
 
+	return res;
+}
+
+namespace {
+
+	bool isVariableSized(const TypePtr& cur) {
+		NodeType type = cur->getNodeType();
+		switch(type) {
+		case NT_ArrayType: return true;
+		case NT_StructType: {
+			StructTypePtr structType = cur.as<StructTypePtr>();
+			return !structType.empty() && isVariableSized(structType.back()->getType());
+		}
+		case NT_TupleType: {
+			TupleTypePtr tupleType = cur.as<TupleTypePtr>();
+			return !tupleType.empty() && isVariableSized(tupleType.back());
+		}
+		case NT_UnionType: {
+			UnionTypePtr unionType = cur.as<UnionTypePtr>();
+			return any(unionType, [](const NamedTypePtr& cur) { return isVariableSized(cur->getType()); });
+		}
+		default: return false;
+		}
+	}
+
+}
+
+OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
+
+	NodeManager manager;
+	OptionalMessageList res;
+
+	// filter out everything which is not a type or expression
+	NodeCategory cat = address->getNodeCategory();
+	if (cat != NC_Expression && cat != NC_Type) {
+		return res;		// this test is only covering expressions and types
+	}
+
+	// check expressions (must not be arrays except within very few cases)
+	if (cat == NC_Expression) {
+		ExpressionPtr expr = address.as<ExpressionPtr>();
+		if (expr->getType()->getNodeType() == NT_ArrayType) {
+
+			// if it is the result of a array-create call it is accepted
+			auto& basic = address->getNodeManager().getLangBasic();
+			if (core::analysis::isCallOf(expr, basic.getArrayCreate1D()) || core::analysis::isCallOf(expr, basic.getArrayCreateND())) {
+				return res; // all fine for those two components
+			}
+
+			// no value instantiation allowed
+			add(res, Message(address,
+					EC_TYPE_INVALID_ARRAY_VALUE,
+					format("Invalid instantiation of array value of type %s! Arrays must not be accessed by value, only by reference.",
+							toString(*address)),
+						Message::ERROR
+			));
+			return res;
+		}
+	}
+
+	// the rest are just limitations on types
+	if (cat != NC_Type) return res;
+
+	// union, ref and array types are fine
+
+
+	// check composition of struct types
+	if (address->getNodeType() == NT_StructType) {
+		StructTypePtr structType = address.as<StructTypePtr>();
+		if (structType.empty()) return res;
+		for(auto it = structType.begin(); it != structType.end() - 1; ++it) {
+			if (isVariableSized(it->getType())) {
+				add(res, Message(address,
+						EC_TYPE_INVALID_ARRAY_CONTEXT,
+						"Variable sized data structure has to be the last component of enclosing struct type.",
+						Message::ERROR
+				));
+			}
+		}
+		return res;
+	}
+
+	// check union types
+	if (address->getNodeType() == NT_TupleType) {
+		TupleTypePtr tupleType = address.as<TupleTypePtr>();
+		if (tupleType.empty()) return res;
+		for(auto it = tupleType.begin(); it != tupleType.end() - 1; ++it) {
+			if (isVariableSized(*it)) {
+				add(res, Message(address,
+						EC_TYPE_INVALID_ARRAY_CONTEXT,
+						"Variable sized data structure has to be the last component of enclosing tuple type.",
+						Message::ERROR
+				));
+			}
+		}
+		return res;
+	}
+
+	// no issues identified
 	return res;
 }
 
@@ -827,7 +926,7 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 		case NT_TypeVariable:
 			return res;
 		default:
-			assert(false && "Sorry, missed some type!");
+			assert(false && "Sorry, missed some type!"); break;
 		}
 	}
 

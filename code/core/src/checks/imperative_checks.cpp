@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/checks/imperativechecks.h"
+#include "insieme/core/checks/imperative_checks.h"
 
 #include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>

@@ -43,8 +43,8 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/type_utils.h"
 
-#include "insieme/core/checks/ir_checks.h"
-#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/checks/type_checks.h"
 
 #include "insieme/core/parser/ir_parse.h"
 
@@ -53,6 +53,7 @@
 namespace insieme {
 namespace core {
 
+using namespace checks;
 using namespace utils::set;
 
 bool unifyable(const TypePtr& typeA, const TypePtr& typeB) {

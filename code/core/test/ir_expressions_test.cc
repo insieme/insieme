@@ -45,7 +45,7 @@
 
 #include "insieme/utils/set_utils.h"
 
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "ir_node_test.inc"
@@ -701,6 +701,29 @@ TEST(ExpressionTest, LambdaUnrollingEvenOdd) {
 
 	res = check(even->unroll(3), core::checks::getFullCheck());
 	EXPECT_TRUE(res.empty()) << res;
+}
+
+
+TEST(ExpressionTest, LambdaUnrollingNonRecursive) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	LambdaExprPtr simple = builder.parseExpr(
+			"(int<4> x)->bool { return (x==0); }"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(simple);
+
+	EXPECT_EQ(simple, simple->peel(0));
+	EXPECT_EQ(simple, simple->peel(1));
+	EXPECT_EQ(simple, simple->peel(2));
+	EXPECT_EQ(simple, simple->peel(3));
+
+	EXPECT_EQ(simple, simple->unroll(0));
+	EXPECT_EQ(simple, simple->unroll(1));
+	EXPECT_EQ(simple, simple->unroll(2));
+	EXPECT_EQ(simple, simple->unroll(3));
+
 }
 
 
