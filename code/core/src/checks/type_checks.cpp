@@ -883,59 +883,71 @@ OptionalMessageList RefCastCheck::visitCastExpr(const CastExprAddress& address) 
 	return res;
 }
 
+namespace {
+
+	bool isPrimitiveType(const TypePtr& type) {
+		auto& basic = type->getNodeManager().getLangBasic();
+		return basic.isChar(type) || basic.isBool(type) || basic.isScalarType(type);
+	}
+
+	bool isValidCast(const TypePtr& src, const TypePtr& trg) {
+
+		// get basic definitions
+		auto& basic = src->getNodeManager().getLangBasic();
+
+		// casting a type to itself is always allowed
+		if (*src == *trg) return true;
+
+		// allow cast to generic
+		if (trg->getNodeType() == NT_TypeVariable) {
+			return true;
+		}
+
+		// casts between integer values or reals are allowed
+		if (isPrimitiveType(src) && isPrimitiveType(trg)) {
+			return true; // this is allowed
+		}
+
+		// also allow references to be casted to boolean
+		if (src->getNodeType() == NT_RefType && basic.isBool(trg)) return true;
+
+		// we also allow casts between references
+		if (src->getNodeType() == NT_RefType && trg->getNodeType() == NT_RefType) {
+			// check whether cast between target types is valid
+			auto srcType = src.as<RefTypePtr>()->getElementType();
+			auto trgType = trg.as<RefTypePtr>()->getElementType();
+
+			if (srcType->getNodeType() == NT_RefType || trg->getNodeType() == NT_RefType) {
+				return isValidCast(srcType, trgType);
+			}
+
+			// this is a
+			return true;
+		}
+
+		// everything else is invalid
+		return false;
+	}
+
+}
+
 
 OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 
 	OptionalMessageList res;
 
-	TypePtr source = address->getSubExpression()->getType();
-	TypePtr target = address->getType();
-	TypePtr src = source;
-	TypePtr trg = target;
+	TypePtr src = address->getSubExpression()->getType();
+	TypePtr trg = address->getType();
 
-	// allow cast to generic
-	if (trg->getNodeType() == NT_TypeVariable) {
+	// check whether cast is safe
+	if (isValidCast(src, trg)) {
 		return res;
 	}
 
-	while (src->getNodeType() == trg->getNodeType()) {
-		switch(src->getNodeType()) {
-		case NT_ArrayType:
-		case NT_ChannelType:
-		case NT_RefType:
-		case NT_VectorType:
-			src = static_pointer_cast<const Type>(src->getChildList()[0]);
-			trg = static_pointer_cast<const Type>(trg->getChildList()[0]);
-			break;
-		case NT_TupleType:
-		case NT_FunctionType:
-		case NT_RecType:
-			if (*src != *trg) {
-				add(res, Message(address,
-						EC_TYPE_ILLEGAL_CAST,
-						format("Casting between incompatible types %s and %s",
-								toString(*source).c_str(),
-								toString(*target).c_str()),
-						Message::ERROR));
-				return res;
-			}
-		case NT_GenericType:
-		case NT_StructType: // also necessary for c++ inheritance
-			// this cast is allowed (for now)
-			return res;
-		case NT_TypeVariable:
-			return res;
-		default:
-			assert(false && "Sorry, missed some type!"); break;
-		}
-	}
-
-	// types are not of same kind => illegal cast
+	// report an error
 	add(res, Message(address,
 		EC_TYPE_ILLEGAL_CAST,
-		format("Casting between incompatible types %s and %s",
-				toString(*source).c_str(),
-				toString(*target).c_str()),
+		format("Casting between incompatible types %s and %s", toString(src), toString(trg)),
 		Message::ERROR));
 
 	return res;

@@ -314,9 +314,9 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	// 	This is not directly allowed by the IR, but we can 
 	///////////////////////////////////////////////////////////////////////////////////////
 
-	if ( builder.matchType("array<'a,#n>",trgTy) && builder.matchType("vector<'a,#n>",argTy) ) {
-		return CAST(builder.refVar(expr), builder.refType(trgTy));
-	}
+	//if ( builder.matchType("array<'a,#n>",trgTy) && builder.matchType("vector<'a,#n>",argTy) ) {
+	//	return CAST(builder.refVar(expr), builder.refType(trgTy));
+	//}
 
 
 	///////////////////////////////////////////////////////////////////////////////////////
