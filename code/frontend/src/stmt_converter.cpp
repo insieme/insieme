@@ -530,7 +530,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		retStmt = stmtutils::tryAggregateStmts(builder, retStmt);
 	}
 
-	END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
+	//END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
 	return retStmt;
 }
 

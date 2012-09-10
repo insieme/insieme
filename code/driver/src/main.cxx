@@ -41,6 +41,8 @@
 
 #include <boost/filesystem.hpp>
 
+// Minimum size of the context string reported by the error checker
+// (context will be extended when smaller)
 #define MIN_CONTEXT 40
 
 #include "insieme/core/ir_statistic.h"
@@ -86,6 +88,7 @@
 #include "insieme/driver/region/size_based_selector.h"
 #include "insieme/driver/pragma_transformer.h"
 #include "insieme/driver/pragma_info.h"
+#include "insieme/driver/task_optimizer.h"
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -521,8 +524,8 @@ void featureExtract(const core::ProgramPtr& program) {
 	return;
 }
 
-
 } // end anonymous namespace 
+
 
 /** 
  * Insieme compiler entry point 
@@ -580,6 +583,14 @@ int main(int argc, char** argv) {
 				printIR(program, stmtMap);
 				// check again if the OMP flag is on
 				if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
+				if(CommandLineOptions::TaskOpt) {
+					program = measureTimeFor<core::ProgramPtr>("Task Optimization ", [&]() {
+						return insieme::applyTaskOptimization(program);
+					});
+					printIR(program, stmtMap);
+					// check once more if the OMP flag is on
+					if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
+				}
 			}
 
 
