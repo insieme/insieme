@@ -110,7 +110,6 @@ struct UnifiedAddress {
 		return boost::apply_visitor(checkCFGAddrVisitor(), address);
 	}
 
-
 	core::NodePtr getAddressedNode() const { 
 		return boost::apply_visitor(support::NodeExtractorVisitor(), address);
 	}
@@ -122,8 +121,6 @@ private:
 
 
 enum class VarType { SCALAR, MEMBER, TUPLE, ARRAY };
-
-
 
 
 //class Access : public utils::Printable {

@@ -796,6 +796,12 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	{
 		return retIr = utils::cast(retIr, type);
 	}
+	if ( builder.matchType("ref<vector<char,#n>>", retIr->getType()) && retIr->getNodeType() == core::NT_Literal &&
+		 builder.matchType("ref<array<char,#n>>", type ) ) 
+	{
+		return retIr = utils::cast(retIr, type);
+	}
+
 	// Avoid the deref when dealing with ref<vector<'a>>
 	//if ( builder.matchType("ref<vector<char,#n>>", retIr->getType()) && retIr->getNodeType() == core::NT_Literal &&
 	//	 builder.matchType("ref<vector<char,#n>>", type ) ) 

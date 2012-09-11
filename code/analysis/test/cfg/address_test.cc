@@ -147,7 +147,7 @@ TEST(CFGAddress, Simple3) {
 		EXPECT_EQ( 0u, address.getStmtIdx() );
 		EXPECT_EQ("<3:0:0-1-3>", toString(address));
 		EXPECT_EQ( addresses[3].getAddressedNode(), address.getAddressedNode() );
-		EXPECT_EQ( addresses[3], address.toAbsoluteAddress(*cfg) );
+		EXPECT_EQ( addresses[3], address.toAbsoluteAddress(cfg->getTmpVarMap()) );
 	}
 	{ 
 		auto address = cfg->find(addresses[2]);
@@ -158,7 +158,7 @@ TEST(CFGAddress, Simple3) {
 		EXPECT_EQ("<2:0:0-1>", toString(address));
 		EXPECT_NE( addresses[2].getAddressedNode(), address.getAddressedNode() );
 		EXPECT_EQ("int.add(v8, v2)", toString(*address.getAddressedNode()));
-		EXPECT_EQ( addresses[2], address.toAbsoluteAddress(*cfg) );
+		EXPECT_EQ( addresses[2], address.toAbsoluteAddress(cfg->getTmpVarMap()) );
 	}
 	{ 
 		auto address = cfg->find(addresses[1]);
@@ -169,7 +169,7 @@ TEST(CFGAddress, Simple3) {
 		EXPECT_EQ("<2:0:0>", toString(address));
 		EXPECT_NE( addresses[1].getAddressedNode(), address.getAddressedNode() );
 		EXPECT_EQ("ref<int<4>> v5 = int.add(v8, v2)", toString(*address.getAddressedNode()));
-		EXPECT_EQ( addresses[1], address.toAbsoluteAddress(*cfg) );
+		EXPECT_EQ( addresses[1], address.toAbsoluteAddress(cfg->getTmpVarMap()) );
 	}
 }
 

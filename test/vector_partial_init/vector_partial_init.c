@@ -41,6 +41,16 @@ int main() {
 		printf("s[2]=%c\n", s[2]);
 		printf("s[3]=%c\n", s[3]);
 	}
+
+	char t[] = "Hello";
+	printf("t=%s\n", t);
+
+	char r[15] = "World";
+	printf("r=%s\n", r);
+
+	char u[6] = "Hello";
+	printf("u=%s\n", u);
+
 	return 0;
 }
 

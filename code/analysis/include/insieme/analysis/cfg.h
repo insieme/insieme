@@ -250,10 +250,14 @@ struct Address : public utils::Printable {
 	 */
 	inline core::NodePtr getAddressedNode() const { return addr.getAddressedNode(); }
 
+	inline Address getAddressOfChild(unsigned idx) const {
+		return Address(block, stmt_idx, addr.getAddressOfChild(idx));
+	}
+
 	/**
 	 * Return the absolute address if the addressed entity exists outside the CFG 
 	 */
-	core::NodeAddress toAbsoluteAddress(const CFG& cfg) const;
+	core::NodeAddress toAbsoluteAddress(const TmpVarMap& cfg) const;
 
 	std::ostream& printTo(std::ostream& out) const;
 };
