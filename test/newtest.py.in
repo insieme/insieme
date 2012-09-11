@@ -206,9 +206,10 @@ def reporter( report_queue ):
 		# The work is completed, exit the loop and print the summary 
 		if job is None: break
 		
-		sep = "#"+"-"*(COLUMNS-1)+"\n"
+		sep = "#"+"-"*(COLUMNS-2)+"#\n"
 		col_print("\n"+sep, BOLD)
-		col_print("# {0}/{1}: {2:<{3}}\n".format(num, test_cases_number, job.data.name, COLUMNS), BOLD)
+		col_print("# {0:>3}/{1:<3}: {2:<{3}} #\n".format(num, test_cases_number, job.data.path,
+			COLUMNS-13), BOLD)
 		col_print(sep, BOLD)
 
 		success = job.data.reports[-1].desc == 'DONE' and job.data.reports[-1].ret_code == 0
@@ -233,19 +234,20 @@ def reporter( report_queue ):
 					sys.stderr.write('Program exist with error code {0}\n'.format(rep.ret_code))
 				else:
 					# Prints the failed command 
-					col_print("Command: " + rep.cmd+"\n\n", GREEN)
-					sys.stderr.write( '\n'.join(str(rep.output).split('\n')[0:10 if not verbose else -1]) )
+					col_print("Command: ")
+					col_print(rep.cmd+"\n\n", GREEN)
+					sys.stderr.write( '\n'.join(str(rep.output).split('\n')[0:15 if not verbose else -1]) )
 
 				col_print("\n"+sep, RED)
 
 		if not success:
 			col_print(sep, RED)
-			col_print("# {0:^{1}}\n".format("FAILED -- " + job.data.path, COLUMNS), RED)
+			col_print("#{0:^{1}}#\n".format("FAILED -- " + job.data.path, COLUMNS-2), RED)
 			col_print(sep, RED)
 			failedTests.append( job.data.path )
 		else:
 			col_print(sep, GREEN)
-			col_print("# {0:^{1}}\n".format("SUCCESS -- " + job.data.path, COLUMNS), GREEN)
+			col_print("#{0:^{1}}#\n".format("SUCCESS -- " + job.data.path, COLUMNS-2), GREEN)
 			col_print(sep, GREEN)
 			success_count += 1
 
@@ -254,15 +256,17 @@ def reporter( report_queue ):
 
 	if not mock_run:
 		# Before exiting the reporter prints a summary of the test case 
-		col_print("\n#{0:~^{1}}\n".format(' INTEGRATION TEST SUMMARY ', COLUMNS-1), BOLD)
+		col_print("\n#{0:~^{1}}#\n".format(' INTEGRATION TEST SUMMARY ', COLUMNS-2), BOLD)
 		col_print("# SUCCESSFUL: ", BOLD)
-		col_print("{0:>66}\n".format(success_count), GREEN)
+		col_print("{0:>64} ".format(success_count), GREEN)
+		col_print("#\n", BOLD)
 		col_print("# FAILED:     ", BOLD)
-		col_print("{0:>66}\n".format(len(failedTests)), RED)
+		col_print("{0:>64} ".format(len(failedTests)), RED)
+		col_print("#\n", BOLD)
 		for test in failedTests:
 			col_print("# -> ", BOLD)
 			col_print("{0}\n".format(test), RED)
-		col_print("#"+"~"*(COLUMNS-1)+"\n", BOLD)
+		col_print("#"+"~"*(COLUMNS-2)+"#\n", BOLD)
 	
 	report_queue.put( len(failedTests) )
 
