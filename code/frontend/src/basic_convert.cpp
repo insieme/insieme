@@ -794,13 +794,16 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	if ( builder.matchType("ref<array<'a,#n>>", retIr->getType()) && 
 		 builder.matchType("ref<array<'a,#n>>", type ) ) 
 	{
-		return retIr = retIr;
+		return retIr = utils::cast(retIr, type);
 	}
+	// Avoid the deref when dealing with ref<vector<'a>>
+	//if ( builder.matchType("ref<vector<char,#n>>", retIr->getType()) && retIr->getNodeType() == core::NT_Literal &&
+	//	 builder.matchType("ref<vector<char,#n>>", type ) ) 
+	//{
+	//	return retIr = utils::cast(retIr, type);
+	//}
 
-	if (type->getNodeType() == core::NT_RefType && 
-		!(retIr->getNodeType() == core::NT_Literal && 
-			builder.matchType("ref<vector<char,#n>>", retIr->getType()))) 
-	{
+	if (type->getNodeType() == core::NT_RefType ) {
 		retIr = builder.refVar(utils::cast(retIr, GET_REF_ELEM_TYPE(type)));
 	} else {
 		retIr = utils::cast(retIr, type);
