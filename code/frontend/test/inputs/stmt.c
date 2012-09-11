@@ -314,10 +314,10 @@ void switch_stmt_test() {
 
 	for(;;) {
 	#pragma test \
-	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 10: { return CAST<unit>(9); (v1 := (( *v1)+10)); } case 8: { (v1 := (( *v1)+10)); } case 2: { (v1 := 1); continue; } case 3: { fun(ref<'a> v1){ decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v1); return unit; } default: { } };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 10: { } case 8: { (v1 := (( *v1)+10)); } case 2: { (v1 := 1); continue; } case 3: { fun(ref<'a> v1){ decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v1); return unit; } default: { } };}"
 	switch(a) {
 		case 10:
-			return 9;
+			break;
 		case 8:
 			a += 10;
 			break;
@@ -412,7 +412,7 @@ void init_expr() {
 	int* a = 0;
 
 	#pragma test \
-	"([1, 2, 3][CAST<uint<4>>(1)])"
+	"( *(ref.vector.to.ref.array(( var([1, 2, 3])))&[CAST<uint<4>>(1)]))"
 	((int[3]) {1,2,3})[1];
 
 	struct Person p;

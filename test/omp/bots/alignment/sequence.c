@@ -42,7 +42,8 @@ size_t strlcpy(char *dst, const char *src, size_t siz)
    /* Copy as many bytes as will fit */
    if (n != 0) {
       while (--n != 0) {
-         if ((*d++ = *s++) == '\0')
+		 *d++ = *s++;
+         if (*(d-1) == '\0')
          break;
       }
    }
@@ -55,7 +56,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz)
          ;
    }
 
-   return(s - src - 1u);        /* count does not include NUL */
+   return (s - src - 1u);        /* count does not include NUL */
 }
 
 /***********************************************************************
@@ -69,7 +70,8 @@ void fill_chartab(char *chartab)
 
    for (i = 0; i < 25; i++) {
       char c = amino_acid_codes[i];
-      chartab[(int)c] = chartab[tolower(c)] = c;
+      chartab[(int)c] = c;
+	  chartab[tolower(c)] = c;
    }
 }
 

@@ -124,11 +124,14 @@ static ELM *seqpart(ELM *low, ELM *high)
      pivot = choose_pivot(low, high);
 
      while (1) {
-	  while ((h = *curr_high) > pivot)
-	       curr_high--;
-
-	  while ((l = *curr_low) < pivot)
-	       curr_low++;
+	  h = *curr_high;
+	  while (h > pivot)
+	       h = *(--curr_high);
+	
+	  l = *curr_low;
+	  while (l < pivot) {
+	       l = *(++curr_low);
+	  }
 
 	  if (curr_low >= curr_high)
 	       break;
@@ -168,9 +171,12 @@ static void insertion_sort(ELM *low, ELM *high)
 	 while(q <= high) {
 	  a = q[0];
 	  p = q - 1; 
-	  while(p >= low && (b = p[0]) > a) {
+	  b = p[0];
+	  while(p >= low && b > a) {
 	       p[1] = b;
 	       --p;
+		   if (p>low)
+			   b = p[0];
 	  }
 	  p[1] = a;
 	  ++q;

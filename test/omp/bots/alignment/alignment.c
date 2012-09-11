@@ -73,8 +73,13 @@ int clustalw = FALSE;
  **********************************************************************/
 void del(int k, int *print_ptr, int *last_print, int *displ)
 {
-   if (*last_print<0) *last_print = displ[(*print_ptr)-1] -=  k;
-   else               *last_print = displ[(*print_ptr)++]  = -k;
+   if (*last_print<0) {
+	   displ[(*print_ptr)-1] -=  k;
+	   *last_print = displ[(*print_ptr)-1];
+   } else {  
+	   displ[(*print_ptr)++]  = -k;
+	   *last_print = -k;
+   }
 }
 
 /***********************************************************************
@@ -86,7 +91,8 @@ void add(int v, int *print_ptr, int *last_print, int *displ)
       displ[(*print_ptr)-1] = v;
       displ[(*print_ptr)++] = *last_print;
    } else {
-      *last_print = displ[(*print_ptr)++] = v;
+      displ[(*print_ptr)++] = v;
+	  *last_print = v;
    }
 }
 
@@ -140,7 +146,9 @@ int get_matrix(int *matptr, int *xref, int scale)
    }
 
    maxres--;
-   av1 = av2 = av3 = 0;
+   av1 = 0;
+   av2 = 0;
+   av3 = 0;
 
    for (i = 0; i <= max_aa; i++) {
       for (j = 0; j <= i;      j++) {
@@ -155,7 +163,8 @@ int get_matrix(int *matptr, int *xref, int scale)
    av3 /= (int) (((double)(maxres*maxres-maxres))/2);
    mat_avscore = -av3;
 
-   min = max = matrix[0][0];
+   min = matrix[0][0]; 
+   max = matrix[0][0];
 
    for (i = 0; i <= max_aa; i++)
       for (j = 1; j <= i;      j++) {
@@ -190,12 +199,14 @@ void forward_pass(char *ia, char *ib, int n, int m, int *se1, int *se2, int *max
         int DD[MAX_ALN_LENGTH];
 
    *maxscore  = 0;
-   *se1 = *se2 = 0;
+   *se1 = 0;
+   *se2 = 0;
 
    for (i = 0; i <= m; i++) {HH[i] = 0; DD[i] = -g;}
 
    for (i = 1; i <= n; i++) {
-      hh = p = 0;
+      hh = 0;
+	  p = 0;
       f  = -g;
 
       for (j = 1; j <= m; j++) {
@@ -232,12 +243,14 @@ void reverse_pass(char *ia, char *ib, int se1, int se2, int *sb1, int *sb2, int 
         int DD[MAX_ALN_LENGTH];
 
    cost = 0;
-   *sb1  = *sb2 = 1;
+   *sb1  = 1; 
+   *sb2 = 1;
 
    for (i = se2; i > 0; i--){ HH[i] = -1; DD[i] = -1;}
 
    for (i = se1; i > 0; i--) {
-      hh = f = -1;
+      hh = -1; 
+	  f = -1;
       if (i == se1) p = 0; else p = -1;
 
       for (j = se2; j > 0; j--) {
@@ -301,7 +314,8 @@ int diff (int A, int B, int M, int N, int tb, int te, int *print_ptr, int *last_
          add(N, print_ptr, last_print, displ);
       } else {
          if (midj > 1) add(midj-1, print_ptr, last_print, displ);
-         displ[(*print_ptr)++] = *last_print = 0;
+         displ[(*print_ptr)++] = 0;
+		 *last_print = 0;
          if (midj < N) add(N-midj, print_ptr, last_print, displ);
       }
 
@@ -313,19 +327,27 @@ int diff (int A, int B, int M, int N, int tb, int te, int *print_ptr, int *last_
    t     = -tb;
 
    for (j = 1; j <= N; j++) {
-      HH[j] = t = t - gh;
-      DD[j] = t - g;
+	  t = t - gh;
+      HH[j] = t;
+	  DD[j] = t - g;
    }
 
    t = -tb;
 
    for (i = 1; i <= midi; i++) {
       s     = HH[0];
-      HH[0] = hh = t = t - gh;
+	  t = t - gh;
+	  hh = t;
+      HH[0] = t;
       f     = t - g;
       for (j = 1; j <= N; j++) {
-         if ((hh = hh - g - gh)    > (f = f - gh))    f = hh;
-         if ((hh = HH[j] - g - gh) > (e = DD[j]- gh)) e = hh;
+		 hh = hh - g - gh;
+		 f = f - gh;
+         if (hh > f)    f = hh;
+
+		 hh = HH[j] - g - gh;
+		 e = DD[j]- gh;
+         if (hh > e) e = hh;
          hh = s + calc_score(i,j,A,B,seq1,seq2);
          if (f > hh) hh = f;
          if (e > hh) hh = e;
@@ -340,17 +362,29 @@ int diff (int A, int B, int M, int N, int tb, int te, int *print_ptr, int *last_
    RR[N] = 0;
    t     = -te;
 
-   for (j = N-1; j >= 0; j--) {RR[j] = t = t - gh; SS[j] = t - g;}
+   for (j = N-1; j >= 0; j--) {
+		t = t - gh;
+	   	RR[j] = t;
+		SS[j] = t - g;
+   }
 
    t = -te;
 
    for (i = M - 1; i >= midi; i--) {
       s     = RR[N];
-      RR[N] = hh = t = t-gh;
+	  t = t-gh;
+	  hh = t;
+      RR[N] = hh;
       f     = t - g;
       for (j = N - 1; j >= 0; j--) {
-         if ((hh = hh - g - gh)    > (f = f - gh))     f = hh;
-         if ((hh = RR[j] - g - gh) > (e = SS[j] - gh)) e = hh;
+		 hh = hh - g - gh;
+		 f = f - gh;
+         if (hh > f)     f = hh;
+
+		 hh = RR[j] - g - gh;
+		 e = SS[j] - gh;
+         if (hh > e) e = hh;
+
          hh = s + calc_score(i+1,j+1,A,B,seq1,seq2);
          if (f > hh) hh = f;
          if (e > hh) hh = e;
@@ -412,12 +446,15 @@ double tracepath(int tsb1, int tsb2, int *print_ptr, int *displ, int seq1, int s
 
          ++i1; ++i2; ++pos;
 
-      } else if ((k = displ[i]) > 0) {
-         i2  += k;
-         pos += k;
       } else {
-         i1  -= k;
-         pos -= k;
+		  k = displ[i];
+		  if (k > 0) {
+         	 i2  += k;
+	         pos += k;
+    	  } else {
+        	 i1  -= k;
+         	 pos -= k;
+		  }
       }
    }
 
@@ -578,9 +615,15 @@ void init_matrix(void)
 
    for (i = 0; i < NUMRES; i++) def_aa_xref[i]  = -1;
 
-   for (i = 0; (c1 = amino_acid_order[i]); i++)
-      for (j = 0; (c2 = amino_acid_codes[j]); j++)
-         if (c1 == c2) {def_aa_xref[i] = j; break;}
+   c1 = amino_acid_order[0];
+   for (i = 0; c1; i++) { 
+	  c2 = amino_acid_codes[0];
+      for (j = 0; c2; j++) {
+        	if (c1 == c2) {def_aa_xref[i] = j; break;}
+	  		c2 = amino_acid_codes[j+1];
+	  }
+	  c1 = amino_acid_order[i+1]; 
+   }
 }
 
 void pairalign_init (char *filename)
