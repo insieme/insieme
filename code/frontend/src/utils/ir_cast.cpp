@@ -410,6 +410,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 			assert(false && "Converting from vector<'a> to vector<'b>"); 
 		}
 
+
 		if ( *vecArgTy->getSize() != *vecTrgTy->getSize() ) {
 			// converting from a vector size X to vector size Y, only possible if X <= Y
 			size_t vecTrgSize = vecTrgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
@@ -419,6 +420,8 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 			if (core::analysis::isCallOf(plainExpr, gen.getRefDeref())) {
 				plainExpr = plainExpr.as<core::CallExprPtr>()->getArgument(0);
 			}
+
+			core::ExpressionPtr initList;
 
 			if (plainExpr->getNodeType() == core::NT_Literal) {
 				//  this is a literal string 
@@ -454,16 +457,21 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 				}
 				// put '\0' terminators on the remaining elements
 				vals[it] = builder.literal( std::string("\'") + "\\0" + "\'", gen.getChar() ); // Add the string terminator
-				auto list = core::encoder::toIR(plainExpr->getNodeManager(), vals);
+				initList = core::encoder::toIR(plainExpr->getNodeManager(), vals);
+			} else {
 
-				return builder.callExpr(
-						gen.getVectorInitPartial(), 
-						list, 
-						builder.getIntTypeParamLiteral(vecTrgTy->getSize())
+				// we assume that the expr is an initializer for a vector, a vector expr
+				auto vecExpr = plainExpr.as<core::VectorExprPtr>()->getExpressions();
+				initList = core::encoder::toIR(plainExpr->getNodeManager(), 
+					   std::vector<core::ExpressionPtr>(vecExpr.begin(), vecExpr.end())
 					);
 			}
-				
-			assert(false && "casting between arrays of different size is not supported");
+			
+			return builder.callExpr(
+					gen.getVectorInitPartial(), 
+					initList, 
+					builder.getIntTypeParamLiteral(vecTrgTy->getSize())
+				);
 		}
 	}
 
