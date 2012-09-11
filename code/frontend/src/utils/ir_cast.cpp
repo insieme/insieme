@@ -382,6 +382,10 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 //	}
 
 
+	if (builder.matchType("ref<vector<char,#n>>",argTy) && builder.matchType("ref<vector<char,#m>>", trgTy)) {
+		return builder.refVar(CAST(builder.deref(expr), GET_REF_ELEM_TYPE(trgTy)));
+	}
+
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 							vector<'a, #n> -> vector<'b, #m> 
 	///////////////////////////////////////////////////////////////////////////////////////

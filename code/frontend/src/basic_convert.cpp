@@ -660,17 +660,7 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 			elements.push_back(utils::cast(convExpr, elemTy));
 		}
 
-		if (elements.size() == 1 && currType->getNodeType() == core::NT_VectorType) {
-			auto vecTy = core::static_pointer_cast<const core::VectorType>(currType);
-			// In C when the initializer list contains 1 elements then all the elements of the
-			// vector (or array) must be initialized with the same value
-			auto vecArgSize = vecTy->getSize().as<core::ConcreteIntTypeParamPtr>();
-
-			retIr = builder.callExpr(vecTy, builder.getLangBasic().getVectorInitUniform(), elements.front(),
-						builder.getIntTypeParamLiteral(vecArgSize)
-					);
-		} else
-			retIr = builder.vectorExpr(elements);
+		retIr = builder.vectorExpr(elements);
 	}
 
 	/*
