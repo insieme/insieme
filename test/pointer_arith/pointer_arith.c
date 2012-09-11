@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
 
 	printf("%d == %d\n", a[2], *(++a_ptr));
 
-	*(a_ptr++) = 4;
+	*(a_ptr) = 4;
 	printf("%d == %d\n", a[2], 4);
 
 	a_ptr = a_ptr + 1;
