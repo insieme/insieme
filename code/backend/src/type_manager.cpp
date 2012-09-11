@@ -761,7 +761,7 @@ namespace backend {
 			if (elementNodeType == core::NT_VectorType) {
 				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					// special treatment for literals (e.g. string literals)
-					if (node->getNodeType() == c_ast::NT_Literal) return node;
+					if (node->getNodeType() == c_ast::NT_Literal && static_pointer_cast<const c_ast::Literal>(node)->value[0] == '\"') return node;
 					// generated code: ((externalName)X.data)
 					return c_ast::access(c_ast::parenthese(c_ast::deref(node)), manager->create("data"));
 				};
