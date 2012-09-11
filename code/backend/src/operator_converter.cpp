@@ -664,7 +664,10 @@ namespace backend {
 
 			// special handling for string literals
 			if (call->getArgument(0)->getNodeType() == core::NT_Literal) {
-				return CONVERT_ARG(0);
+				core::LiteralPtr literal = call->getArgument(0).as<core::LiteralPtr>();
+				if (literal->getStringValue()[0] == '\"') {
+					return CONVERT_ARG(0);
+				}
 			}
 
 			return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");
