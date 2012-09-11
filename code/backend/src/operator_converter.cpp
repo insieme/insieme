@@ -51,6 +51,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/encoder/encoder.h"
+#include "insieme/core/encoder/lists.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -402,7 +403,10 @@ namespace backend {
 				return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, c_ast::lit(valueTypeInfo.rValueType, "0")));
 			}
 
-
+			// add support for partial vector initialization
+			if (core::analysis::isCallOf(initValue, basic.getVectorInitPartial())) {
+				return CONVERT_ARG(0);
+			}
 
 			auto res = CONVERT_EXPR(initValue);
 			if (res->getNodeType() == c_ast::NT_Initializer) {
@@ -620,6 +624,24 @@ namespace backend {
 			context.getDependencies().insert(info.initUniform);
 
 			return c_ast::call(info.initUniformName, CONVERT_ARG(0));
+		});
+
+		res[basic.getVectorInitPartial()] = OP_CONVERTER({
+
+			// obtain information regarding vector type
+			const core::VectorTypePtr vectorType = call->getType().as<core::VectorTypePtr>();
+			const VectorTypeInfo& info = GET_TYPE_INFO(vectorType);
+
+			// add dependency
+			context.getDependencies().insert(info.definition);
+
+			// create data vector to fill struct
+			auto values = core::encoder::toValue<vector<core::ExpressionPtr>>(ARG(0));
+			auto converted = ::transform(values, [&](const core::ExpressionPtr& cur)->c_ast::NodePtr { return CONVERT_EXPR(cur); });
+			auto data = C_NODE_MANAGER->create<c_ast::VectorInit>(converted);
+
+			// create compound-init expression filing struct
+			return c_ast::init(info.rValueType, data);
 		});
 
 		res[basic.getRefVectorToRefArray()] = OP_CONVERTER({
