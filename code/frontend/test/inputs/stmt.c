@@ -396,12 +396,16 @@ void vector_stmt_test() {
 	b[1][1] = 0;
 
 	#pragma test \
-	"decl ref<vector<int<4>,10>> v1 = ( var(vector.init.uniform(0, 10)))"
+	"decl ref<vector<int<4>,10>> v1 = ( var(vector.init.partial(([0]), 10)))"
 	int vec[10] = {0};
 
-	//#pragma test \
-	//"fun(ref<array<array<int<4>,1>,1>> v2){ }(ref.vector.to.ref.array(v1))"
-	//evil(b);
+	#pragma test \
+	"decl ref<ref<array<int<4>,1>>> v1 = ( var(ref.vector.to.ref.array(( var(vector.init.partial(([0,5,10]), 10))))))"
+	int *vec_ptr = (int[10]) {0, 5, 10};
+
+	#pragma test \
+	"fun(ref<array<ref<array<int<4>,1>>,1>> v2){ }(ref.reinterpret(ref.vector.to.ref.array(v1), type<array<ref<array<int<4>,1>>,1>>))"
+	evil(b);
 }
 
 void* vf(void* ptr) { return ptr; }
