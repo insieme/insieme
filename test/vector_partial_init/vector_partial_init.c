@@ -24,6 +24,15 @@ int main() {
 	char s[20] = "a";
 	printf("s[0]=%c\n", s[0]);
 
+	char t[] = "Hello";
+	printf("t=%s\n", t);
+
+	char r[15] = "World";
+	printf("r=%s\n", r);
+
+	char u[6] = "Hello";
+	printf("u=%s\n", u);
+
 	return 0;
 }
 

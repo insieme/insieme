@@ -371,9 +371,22 @@ namespace backend {
 				return CONVERT_EXPR(call->getArgument(0));
 			}
 
+			// extract resulting type
 			const core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
 			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(elementType);
 			context.getDependencies().insert(info.definition);
+
+			// special handling for string literals
+			if (ARG(0)->getNodeType() == core::NT_Literal) {
+				core::LiteralPtr literal = ARG(0).as<core::LiteralPtr>();
+				if (literal->getStringValue()[0] == '\"') {
+					// the cast to a vector element is implemented at this point
+					// instead of the actual literal conversion to save unnecessary casts when
+					// strings are forwarded to external functions (printf) directly
+					return c_ast::deref(c_ast::cast(c_ast::ptr(info.rValueType), CONVERT_ARG(0)));
+				}
+			}
+
 			return c_ast::deref(CONVERT_ARG(0));
 		});
 
