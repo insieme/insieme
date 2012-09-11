@@ -219,7 +219,7 @@ VOID_RETURN sha1_compile(sha1_ctx ctx[1])
 #undef  hf
 #define hf(i) (w[(i) & 15] = rotl32(                    \
                  w[((i) + 13) & 15] ^ w[((i) + 8) & 15] \
-               ^ w[((i) +  2) & 15] ^ w[(i) & 15], 1))
+               ^ w[((i) +  2) & 15] ^ w[(i) & 15], 1), w[(i) & 15])
 
     one_cycle(v,4,0,1,2,3, ch, 0x5a827999, hf(16));
     one_cycle(v,3,4,0,1,2, ch, 0x5a827999, hf(17));
@@ -254,7 +254,8 @@ VOID_RETURN sha1_compile(sha1_ctx ctx[1])
 
 VOID_RETURN sha1_begin(sha1_ctx ctx[1])
 {
-    ctx->count[0] = ctx->count[1] = 0;
+    ctx->count[0] = 0;
+	ctx->count[1] = 0;
     ctx->hash[0] = 0x67452301;
     ctx->hash[1] = 0xefcdab89;
     ctx->hash[2] = 0x98badcfe;
