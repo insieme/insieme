@@ -178,8 +178,17 @@ namespace backend {
 			return converter.getFunctionManager().getValue(ptr, context);
 		}
 
+		// special handling for unit literal
+		if (converter.getNodeManager().getLangBasic().isUnitConstant(ptr)) {
+			return c_ast::cast(
+				converter.getCNodeManager()->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void),
+				converter.getCNodeManager()->create<c_ast::Literal>("0")
+			);
+		}
+
 		// convert literal
 		c_ast::ExpressionPtr res = converter.getCNodeManager()->create<c_ast::Literal>(ptr->getStringValue());
+
 
 		// special handling for the global struct
 		if (!ptr->getStringValue().compare(0, IRExtensions::GLOBAL_ID.size(), IRExtensions::GLOBAL_ID)) {
