@@ -258,15 +258,18 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 			//case we have to replace the collected VarDecl with this new instance 
 			if ( !varDecl->hasExternalStorage() && (*fit)->hasExternalStorage() ) {
 				// do replace
+				auto saveFit = *fit;
+				LOG(INFO) << saveFit->getNameAsString();
+
 				globals.erase(fit);
 				
-				auto&& vit = varTU.find( *fit );
+				auto&& vit = varTU.find( saveFit );
 				varTU.erase( vit );
 	
 				// Switch the value of the identifier for the variable already in the map to the
 				// this varDecl because the fit is defined extern 
 				for(GlobalIdentMap::iterator it = varIdentMap.begin(), end =varIdentMap.end(); it!=end; ++it) {
-					if (it->first->getNameAsString() == (*fit)->getNameAsString()) 
+					if (it->first->getNameAsString() == saveFit->getNameAsString()) 
 						it->second = ident;
 				}
 				
@@ -803,6 +806,11 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 
 		core::TypePtr&& type = convFact.convertType((*it)->getType().getTypePtr());
 
+		// if ((*it)->getNameAsString() == "ompi_mpi_comm_world") {
+		//	LOG(INFO) << "OK";
+		//	type = builder.getLangBasic().getUnit();
+		//}
+
 		// If variable is marked to be volatile, make its tile volatile
 		//auto&& vit1 = std::find(convFact.getVolatiles().begin(), convFact.getVolatiles().end(), *it);
 	   	if(/*vit1 != convFact.getVolatiles().end() ||*/ (*it)->getType().isVolatileQualified()) {
@@ -833,14 +841,17 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		core::ExpressionPtr initExpr;
 		if( (*it)->hasExternalStorage() ) {
 			assert (type->getNodeType() == core::NT_RefType);
-			core::TypePtr derefTy = core::static_pointer_cast<const core::RefType>( type )->getElementType();
+			// core::TypePtr derefTy = core::static_pointer_cast<const core::RefType>( type )->getElementType();
 			// build a literal which points to the name of the external variable 
-			initExpr = builder.refVar( builder.literal((*it)->getNameAsString(), derefTy) );
+			initExpr = builder.literal((*it)->getNameAsString(), type);
 		} else {
+
+			LOG(INFO)<<*type;
 			// this means the variable is not declared static inside a function so we have to initialize its value
 			initExpr = (*it)->getInit() ? 
 				convFact.convertInitExpr(NULL, (*it)->getInit(), type, false) : 
 				convFact.defaultInitVal(type);
+			LOG(INFO) <<*initExpr;
 		}
 		// default initialization
 		core::NamedValuePtr member = builder.namedValue(ident, initExpr);
@@ -965,15 +976,21 @@ GlobalVarCollector::GlobalStructPair CXXGlobalVarCollector::createGlobalStruct()
 		core::ExpressionPtr initExpr;
 		if( (*it)->hasExternalStorage() ) {
 			assert (type->getNodeType() == core::NT_RefType);
-			core::TypePtr derefTy = core::static_pointer_cast<const core::RefType>( type )->getElementType();
+
+			auto derefTy = type.as<core::RefTypePtr>()->getElementType();
 			// build a literal which points to the name of the external variable
 			initExpr = builder.refVar( builder.literal((*it)->getNameAsString(), derefTy) );
 		} else {
+
+			LOG(INFO)<<*type;
 			// this means the variable is not declared static inside a function so we have to initialize its value
 			initExpr = (*it)->getInit() ?
 				convFact.convertInitExpr(NULL, (*it)->getInit(), type, false) :
 				convFact.defaultInitVal(type);
+
+			std::cout << *initExpr << std::endl;
 		}
+
 		// default initialization
 		core::NamedValuePtr member = builder.namedValue(ident, initExpr);
 

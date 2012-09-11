@@ -43,8 +43,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_program.h"
-#include "insieme/core/ir_check.h"
-#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/logging.h"
@@ -59,13 +58,14 @@
 #include "clang/Index/Program.h"
 
 using namespace insieme::core;
+using namespace insieme::core::checks;
 using namespace insieme::utils::log;
 namespace fe = insieme::frontend;
 using namespace clang;
 
 
 void checkSemanticErrors(const NodePtr& node) {
-	auto msgList = check( node, checks::getFullCheck() ).getAll();
+	auto msgList = check( node ).getAll();
 	EXPECT_EQ(static_cast<unsigned int>(0), msgList.size());
 	std::sort(msgList.begin(), msgList.end());
 	std::for_each(msgList.begin(), msgList.end(), [&node](const Message& cur) {

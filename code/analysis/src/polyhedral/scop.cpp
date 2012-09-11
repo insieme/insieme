@@ -261,7 +261,7 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 
 			return boundCons and extractFrom( iterVec, newExpr, trg, ct );
 		}
-		throw e;
+		RETHROW_EXCEPTION(NotASCoP, e, "During conversion to piecewise", expr);
 	}
 }
 
@@ -1302,7 +1302,16 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 
 	NodeManager& mgr = cond->getNodeManager();
 
-	if (cond->getNodeType() == NT_CastExpr) return extractFromCondition(iv, cond.as<CastExprPtr>()->getSubExpression());
+	if (cond->getNodeType() == NT_CastExpr) 
+		return extractFromCondition(iv, cond.as<CastExprPtr>()->getSubExpression());
+
+	if (cond->getNodeType() == NT_Variable && mgr.getLangBasic().isBool(cond->getType())) {
+		THROW_EXCEPTION(NotASCoP, 
+			"Condition expression is a boolean variable not supported by formulas", 
+			cond
+		);
+	}
+
 	assert (cond->getNodeType() == NT_CallExpr);
 
 	const CallExprPtr& callExpr = cond.as<CallExprPtr>();

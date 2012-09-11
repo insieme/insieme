@@ -476,17 +476,45 @@ namespace backend {
 			std::set<c_ast::CodeFragmentPtr> definitions;
 
 			// add elements
-			for_each(ptr->getEntries(), [&](const core::NamedTypePtr& entry) {
+			for(const core::NamedTypePtr& entry : ptr->getEntries()) {
+
+				// get the name of the member
 				c_ast::IdentifierPtr name = manager->create(entry->getName()->getValue());
-				const TypeInfo* info = resolveType(entry->getType());
+				core::TypePtr curType = entry->getType();
+
+				// special handling of variable sized arrays within structs / unions
+				if (curType->getNodeType() == core::NT_ArrayType) {
+					core::ArrayTypePtr array = curType.as<core::ArrayTypePtr>();
+
+					// make sure it is 1-dimensional
+					assert(array->getDimension() == core::IRBuilder(ptr->getNodeManager()).concreteIntTypeParam(1));
+
+					// construct vector type to be used
+					core::TypePtr elementType = array->getElementType();
+					const TypeInfo* info = resolveType(elementType);
+					auto memberType = manager->create<c_ast::VectorType>(info->rValueType);
+
+					// add member
+					type->elements.push_back(var(memberType, name));
+
+					// remember definition
+					if(info->definition) {
+						definitions.insert(info->definition);
+					}
+
+					continue;
+				}
+
+				// build up the type entry
+				const TypeInfo* info = resolveType(curType);
 				c_ast::TypePtr elementType = info->rValueType;
 				type->elements.push_back(var(elementType, name));
 
-				// remember definitons
+				// remember definitions
 				if (info->definition) {
 					definitions.insert(info->definition);
 				}
-			});
+			}
 
 			// create declaration of named composite type
 			auto declCode = manager->create<c_ast::TypeDeclaration>(type);
@@ -619,7 +647,7 @@ namespace backend {
 
 			// create externalizer
 			res->externalize = [dataElementName](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-				return access(node, dataElementName);
+				return (node->getNodeType()==c_ast::NT_Literal)?node:access(node, dataElementName);
 			};
 
 			// create internalizer
@@ -732,6 +760,8 @@ namespace backend {
 			// special treatment for exporting vectors
 			if (elementNodeType == core::NT_VectorType) {
 				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+					// special treatment for literals (e.g. string literals)
+					if (node->getNodeType() == c_ast::NT_Literal) return node;
 					// generated code: ((externalName)X.data)
 					return c_ast::access(c_ast::parenthese(c_ast::deref(node)), manager->create("data"));
 				};

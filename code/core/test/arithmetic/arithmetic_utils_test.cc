@@ -39,13 +39,15 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/parser/ir_parse.h"
 namespace insieme {
 namespace core {
 namespace arithmetic {
+
+using namespace insieme::core::checks;
 
 
 TEST(ArithmeticUtilsTest, fromIR) {
@@ -178,8 +180,8 @@ TEST(ArithmeticTest, nonVariableValues) {
 	auto all = checks::getFullCheck();
 
 	EXPECT_EQ("v3", toString(*varX));
-	EXPECT_EQ("v3.a", toString(printer::PrettyPrinter(xa)));
-	EXPECT_EQ("v3.b", toString(printer::PrettyPrinter(xb)));
+	EXPECT_EQ("v3.a", toString(printer::PrettyPrinter(xa, printer::PrettyPrinter::NO_LET_BINDINGS)));
+	EXPECT_EQ("v3.b", toString(printer::PrettyPrinter(xb, printer::PrettyPrinter::NO_LET_BINDINGS)));
 
 	// -- build formulas using subscripts --
 
@@ -218,6 +220,7 @@ TEST (ArithmeticTest, fromIRExpr) {
 
 
 	// some more complex stuff
+	mgr.setNextFreshID(2);
 	expr = parser.parseExpression("(((15/2) * int<4>:x) / ((20/6) * int<4>:x))");
 	EXPECT_EQ("int.div(int.mul(int.div(15, 2), v2), int.mul(int.div(20, 6), v2))", toString(*expr));
 
@@ -237,6 +240,36 @@ TEST (ArithmeticTest, fromIRExpr) {
 	f = toFormula(expr);
 	EXPECT_EQ("-4*v4", toString(f));
 }
+
+
+TEST(ConstraintTest, fromAndToIR) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto var = builder.variable(mgr.getLangBasic().getInt4(), 0);
+
+	auto f = Formula(var);
+	EXPECT_EQ("v0", toString(f));
+
+	auto one = Formula(1);
+	auto two = Formula(2);
+
+	// some simple formula
+	Constraint c = f > one && f < two;
+	EXPECT_EQ("(!(v0-1 <= 0) and !(-v0+2 <= 0))", toString(c));
+
+	EXPECT_EQ("AP(bool.and(bool.not(int.le(int.sub(v0, 1), 0)), bind(){rec v5.{v5=fun(int<4> v0) {return bool.not(int.le(int.add(int.mul(-1, v0), 2), 0));}}(v0)}))", toString(toIR(mgr, c)));
+	EXPECT_EQ(c, toConstraint(toIR(mgr, c)));
+
+	// some valid formula
+	c = f > one || f <= one;
+	EXPECT_EQ("true", toString(c));
+
+	EXPECT_EQ("AP(true)", toString(toIR(mgr, c)));
+	EXPECT_EQ(c, toConstraint(toIR(mgr, c)));
+
+}
+
 
 
 TEST(ArithmeticTest, FormulaValueExtraction) {
@@ -466,7 +499,7 @@ TEST(ArithmeticTest, PiecewiseToIRAndBack) {
 
 	pw += Piecewise( v1 + v2 <= 0, 3+4-v1 );
 	EXPECT_EQ("-v1+7 -> if (v1+v2 <= 0); 0 -> if (!(v1+v2 <= 0))", toString(pw));
-	EXPECT_EQ("ite(int.le(int.add(v1, v2), 0), bind(){rec v4.{v4=fun(int<4> v1) {return int.add(int.mul(-1, v1), 7);}}(v1)}, rec v3.{v3=fun() {return 0;}})", toString(*toIR(mgr, pw)));
+	EXPECT_EQ("rec v0.{v0=fun(bool v1, (()=>'b) v2, (()=>'b) v3) {if(v1) {return v2();} else {return v3();};}}(int.le(int.add(v1, v2), 0), bind(){rec v8.{v8=fun(int<4> v1) {return int.add(int.mul(-1, v1), 7);}}(v1)}, rec v7.{v7=fun() {return 0;}})", toString(*toIR(mgr, pw)));
 	EXPECT_PRED1(empty, check(toIR(mgr,pw), all));
 
 	pw += Piecewise( v2 <= 0, v2);

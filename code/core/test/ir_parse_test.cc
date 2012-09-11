@@ -158,9 +158,9 @@ TEST(IRParser, ExpressionTests) {
 
     // bindExpr
     auto parsedBind1 = dynamic_pointer_cast<const BindExpr>(parser.parseExpression("bind(uint<8>:unbound){ \
-        (op<array.subscript.1D>(array<'a,1>:arr, unbound)) }"));
+        (op<array.ref.elem.1D>(ref<array<'a,1>>:arr, unbound)) }"));
     EXPECT_EQ(1u, parsedBind1->getParameters().size());
-    EXPECT_EQ(manager.getLangBasic().getArraySubscript1D(), parsedBind1->getCall()->getFunctionExpr());
+    EXPECT_EQ(manager.getLangBasic().getArrayRefElem1D(), parsedBind1->getCall()->getFunctionExpr());
 
     auto parsedBind2 = dynamic_pointer_cast<const BindExpr>(parser.parseExpression("bind(real<8>:unbound){ (fun (real<8>, int<4>)->int<4>:lambda in { \
             (real<8>, int<4>)->int<4>:lambda = (real<8>:p, int<4>:q)->int<4> {\
@@ -412,22 +412,22 @@ TEST(IRParser, OperationTests) {
         builder.literal("100", manager.getLangBasic().getInt8())),
         parser.parseExpression("( -lit<int<8>, 100>)"));
 
-    auto builtPreInc = builder.callExpr(manager.getLangBasic().getUInt8(), manager.getLangBasic().getUnsignedIntPreInc(),
+    auto builtPreInc = builder.callExpr(manager.getLangBasic().getUInt8(), manager.getLangBasic().getGenPreInc(),
         builder.variable(builder.refType(manager.getLangBasic().getUInt8())));
     auto parsedPreInc = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( ++ ref<uint<8>>:pri )"));
     EXPECT_EQ(builtPreInc->getFunctionExpr(), parsedPreInc->getFunctionExpr());
     EXPECT_EQ(builtPreInc->getArgument(0)->getType(), parsedPreInc->getArgument(0)->getType());
 
     auto parsedPostInc = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( ref<int<4>>:poi++ )"));
-    EXPECT_EQ(manager.getLangBasic().getSignedIntPostInc(), parsedPostInc->getFunctionExpr());
+    EXPECT_EQ(manager.getLangBasic().getGenPostInc(), parsedPostInc->getFunctionExpr());
     EXPECT_EQ(builder.refType(manager.getLangBasic().getInt4()), parsedPostInc->getArgument(0)->getType());
 
     auto parsedPreDec = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( --ref<int<2>>:prd )"));
-    EXPECT_EQ(manager.getLangBasic().getSignedIntPreDec(), parsedPreDec->getFunctionExpr());
+    EXPECT_EQ(manager.getLangBasic().getGenPreDec(), parsedPreDec->getFunctionExpr());
     EXPECT_EQ(builder.refType(manager.getLangBasic().getInt2()), parsedPreDec->getArgument(0)->getType());
 
     auto parsedPostDec = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("(ref<uint<16>>:pod -- )"));
-    EXPECT_EQ(manager.getLangBasic().getUnsignedIntPostDec(), parsedPostDec->getFunctionExpr());
+    EXPECT_EQ(manager.getLangBasic().getGenPostDec(), parsedPostDec->getFunctionExpr());
     EXPECT_EQ(builder.refType(manager.getLangBasic().getUInt16()), parsedPostDec->getArgument(0)->getType());
 
     // logical operations

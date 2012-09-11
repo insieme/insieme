@@ -42,6 +42,8 @@
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
+#include "insieme/core/lang/basic.h"
+
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {

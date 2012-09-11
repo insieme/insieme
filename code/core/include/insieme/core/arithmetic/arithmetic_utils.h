@@ -62,6 +62,11 @@ namespace arithmetic {
 	 * @throws a NotAFormulaException if the given expression is not an arithmetic expression
 	 */
 	Formula toFormula(const ExpressionPtr& expr);
+
+	/**
+	 * A function converting a given expression into a constraint.
+	 */
+	Constraint toConstraint(const ExpressionPtr& expr);
 	
 	/**
 	 * A function converting a given expression into a piecewise
@@ -110,6 +115,16 @@ namespace arithmetic {
 		virtual const char* what() const throw();
 		ExpressionPtr getCause() const { return expr; }
 		virtual ~NotAFormulaException() throw() { }
+	};
+
+	/**
+	 * An exception which will be raised if a expression not representing
+	 * a constraint should be converted into one.
+	 */
+	class NotAConstraintException : public NotAFormulaException {
+	public:
+		NotAConstraintException(const ExpressionPtr& expr) : NotAFormulaException(expr) { }
+		virtual ~NotAConstraintException() throw() { }
 	};
 
 	/**

@@ -322,6 +322,7 @@ void nqueens(int n, int j, char *a, int *solutions, int depth)
 void nqueens(int n, int j, char *a, int depth)
 #endif
 {
+	//printf("nqueens n: %d, j: %d, a: %p, solutions: %p, depth: %d\n", n, j, a, solutions, depth);
 #ifndef FORCE_TIED_TASKS
 	int *csols;
 #endif

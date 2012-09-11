@@ -363,7 +363,7 @@ TEST(FunctionManager, Bind) {
 	ConversionContext context(converter);
 
 	EXPECT_EQ(
-			"name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, v3)",
+			"name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, &v3)",
 			toC(funManager.getValue(bind, context))
 	);
 	EXPECT_TRUE(context.getDependencies().find(info.definitions) != context.getDependencies().end());
@@ -466,7 +466,7 @@ TEST(FunctionManager, NestedBind) {
 	ConversionContext context(converter);
 
 	EXPECT_EQ(
-			"name_ctr((name_closure*)alloca(sizeof(name_closure)), name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, v3), v5)",
+			"name_ctr((name_closure*)alloca(sizeof(name_closure)), name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, &v3), v5)",
 			toC(funManager.getValue(bind, context))
 	);
 	EXPECT_TRUE(context.getDependencies().find(info.definitions) != context.getDependencies().end());

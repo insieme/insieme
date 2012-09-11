@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
 namespace driver {

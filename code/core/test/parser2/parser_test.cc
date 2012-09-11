@@ -36,7 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/parser2/parser.h"
+#include "insieme/core/parser2/detail/parser.h"
+
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/dump/text_dump.h"
 
@@ -45,6 +46,7 @@
 namespace insieme {
 namespace core {
 namespace parser {
+namespace detail {
 
 	namespace {
 
@@ -897,7 +899,7 @@ namespace parser {
 		EXPECT_FALSE(g.match(manager, "-+-+"));
 	}
 
-
+} // end namespace detail
 } // end namespace parser
 } // end namespace core
 } // end namespace insieme

@@ -40,7 +40,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <papi.h>
 #include "affinity.h"
 #include "utils/impl/affinity.impl.h"
 

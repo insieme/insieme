@@ -222,7 +222,7 @@ inline bool equals(const ListA& a, const ListB& b, const Comparator& comparator)
 	}
 
 	// compare values using std equal ...
-	return std::equal(a.cbegin(), a.cend(), b.cbegin(), comparator);
+	return std::equal(a.begin(), a.end(), b.begin(), comparator);
 }
 
 /**
@@ -383,7 +383,7 @@ bool any(InputIterator first, InputIterator last, const Function& predicate)
  */
 template<class ContainerType, class Function>
 bool any(const ContainerType& list, const Function& predicate) {
-	return any(list.cbegin(), list.cend(), predicate);
+	return any(list.begin(), list.end(), predicate);
 }
 
 /** Combines the hash value of each value element in the supplied range of pointers with seed.
@@ -407,7 +407,7 @@ void hashPtrRange(size_t& seed, InputIterator first, InputIterator last) {
  */
 template<class ContainerType>
 void hashPtrRange(size_t& seed, const ContainerType& container) {
-	hashPtrRange(seed, container.cbegin(), container.cend());
+	hashPtrRange(seed, container.begin(), container.end());
 }
 
 /**
@@ -451,7 +451,7 @@ bool hasDuplicates(InputIterator first, InputIterator last) {
  */
 template<class ContainerType>
 bool hasDuplicates(const ContainerType& list) {
-	return hasDuplicates(list.cbegin(), list.cend());
+	return hasDuplicates(list.begin(), list.end());
 }
 
 /**
@@ -490,12 +490,12 @@ void projectToSecond(InputIterator start, InputIterator end, OutputIterator out)
 
 template<typename PairContainer, typename ResultContainer>
 void projectToFirst(const PairContainer& input, ResultContainer& result) {
-	projectToFirst(input.cbegin(), input.cend(), std::back_inserter(result));
+	projectToFirst(input.begin(), input.end(), std::back_inserter(result));
 }
 
 template<typename PairContainer, typename ResultContainer>
 void projectToSecond(const PairContainer& input, ResultContainer& result) {
-	projectToSecond(input.cbegin(), input.cend(), std::back_inserter(result));
+	projectToSecond(input.begin(), input.end(), std::back_inserter(result));
 }
 
 template<typename PairContainer>
@@ -526,7 +526,7 @@ std::ostream& operator<<(std::ostream& out, const vector<Element>& container) {
 
 	// convert elements into strings
 	vector<string> list;
-	std::transform(container.cbegin(), container.cend(), back_inserter(list), &toString<Element>);
+	std::transform(container.begin(), container.end(), back_inserter(list), &toString<Element>);
 
 	// print and done
 	return out << "[" << boost::join(list, ",") << "]";
@@ -544,7 +544,7 @@ std::ostream& operator<<(std::ostream& out, const std::list<Element>& container)
 
 	// convert elements into strings
 	vector<string> list;
-	std::transform(container.cbegin(), container.cend(), back_inserter(list), &toString<Element>);
+	std::transform(container.begin(), container.end(), back_inserter(list), &toString<Element>);
 
 	// print and done
 	return out << "[" << boost::join(list, ",") << "]";

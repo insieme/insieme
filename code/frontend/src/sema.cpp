@@ -154,7 +154,7 @@ const char* strbchr(const char* stream, char c) {
 clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 												 clang::MultiStmtArg Elts, bool isStmtExpr) {
 
-	VLOG(2) << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
+	// VLOG(2) << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
 
 	/*
 	 * when pragmas are just after the beginning of a compound stmt, example:
@@ -278,7 +278,7 @@ clang::StmtResult
 InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg CondVal, clang::Decl* CondVar,
 		clang::Stmt* ThenVal, clang::SourceLocation ElseLoc, clang::Stmt* ElseVal) {
 
-	VLOG(2) << "{InsiemeSema}: ActOnIfStmt()";
+	// VLOG(2) << "{InsiemeSema}: ActOnIfStmt()";
 	clang::StmtResult ret =
 			Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, clang::move(ThenVal), ElseLoc, clang::move(ElseVal));
 
@@ -308,7 +308,7 @@ InsiemeSema::ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LP
 		clang::Sema::FullExprArg Second, clang::Decl* SecondVar, clang::Sema::FullExprArg Third,
 		clang::SourceLocation RParenLoc, clang::Stmt* Body) {
 
-	VLOG(2) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
+	// VLOG(2) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
 	clang::StmtResult ret =
 		Sema::ActOnForStmt(ForLoc, LParenLoc, clang::move(First), Second, SecondVar, Third, RParenLoc, clang::move(Body));
 
@@ -334,7 +334,7 @@ clang::Decl* InsiemeSema::ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, cla
 }
 
 clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt* Body) {
-	VLOG(2) << "{InsiemeSema}: ActOnFinishFunctionBody()";
+	// VLOG(2) << "{InsiemeSema}: ActOnFinishFunctionBody()";
 	clang::Decl* ret = Sema::ActOnFinishFunctionBody(Decl, clang::move(Body));
 	// We are sure all the pragmas inside the function body have been matched
 
@@ -389,7 +389,7 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 //}
 
 clang::Decl* InsiemeSema::ActOnDeclarator(clang::Scope *S, clang::Declarator &D) {
-	VLOG(2) << "{InsiemeSema}: ActOnDeclarator()";
+	// VLOG(2) << "{InsiemeSema}: ActOnDeclarator()";
 
 	clang::Decl* ret = Sema::ActOnDeclarator(S, D);
 	if ( isInsideFunctionDef ) {
@@ -419,7 +419,7 @@ clang::Decl* InsiemeSema::ActOnDeclarator(clang::Scope *S, clang::Declarator &D)
 }
 
 void InsiemeSema::ActOnTagFinishDefinition(clang::Scope* S, clang::Decl* TagDecl, clang::SourceLocation RBraceLoc) {
-	VLOG(2) << "{InsiemeSema}: ActOnTagFinishDefinition()";
+	// VLOG(2) << "{InsiemeSema}: ActOnTagFinishDefinition()";
 
 	Sema::ActOnTagFinishDefinition(S, TagDecl, RBraceLoc);
 	PragmaList matched;
@@ -444,12 +444,12 @@ void InsiemeSema::addPragma(PragmaPtr P) {
 
 void InsiemeSema::dump() {
 //Visual Studios 2010 fix: Release mode (without debug) evaluates DLOG(INFO) to "(void) 0"
-	if(VLOG_IS_ON(2)) {
-		VLOG(2) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
-		std::for_each(pimpl->pragma_list.begin(), pimpl->pragma_list.end(),
-				[ this ](const PragmaPtr& pragma) { pragma->dump(LOG_STREAM(INFO), this->SourceMgr); }
-			);
-	}
+	//if(VLOG_IS_ON(2)) {
+	//	VLOG(2) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
+	//	std::for_each(pimpl->pragma_list.begin(), pimpl->pragma_list.end(),
+	//			[ this ](const PragmaPtr& pragma) { pragma->dump(LOG_STREAM(INFO), this->SourceMgr); }
+	//		);
+	//}
 }
 
 } // End frontend namespace

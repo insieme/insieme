@@ -59,7 +59,7 @@ void printGrid(Grid* A) {
 
 int steps;
 
-inline void update(Grid* A, Grid* B, int i, int j) {
+void update(Grid* A, Grid* B, int i, int j) {
 
 	// correct coordinates
 	i = (i+(N-1)) % (N-1);
@@ -467,15 +467,19 @@ int main() {
 	printf("Running problem size %d = %d x %d ...\n", P, N, M);
 
 	// run computation
+#ifdef _OPENMP
 	double start = omp_get_wtime();
+#endif
 #ifdef iterative
 	jacobi_iterative(A,B,M);
 #else
 	printf("Using CUT = %d => CUT_OFF = %d\n", CUT, CUT_OFF);
 	jacobi_recursive(A,B,M);
 #endif
+#ifdef _OPENMP
 	double time = omp_get_wtime() - start;
 	printf("Execution time: %.1fms\n", time*1000);
+#endif
 
 	// verification
 	double sum = 0.0;

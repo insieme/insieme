@@ -39,6 +39,8 @@
 #include "insieme/backend/converter.h"
 #include "insieme/backend/type_manager.h"
 
+#include "insieme/core/lang/basic.h"
+
 namespace insieme {
 namespace backend {
 namespace sequential {

@@ -3,7 +3,9 @@
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
 
-
+#ifndef PATH
+#define PATH "./"
+#endif
 
 int main(int argc, const char* argv[]) {
 		icl_args* args = icl_init_args();
@@ -13,6 +15,8 @@ int main(int argc, const char* argv[]) {
 	int keySize = 16;
 	int rounds = 10;
 	int expandedKeySize = (rounds + 1) * keySize;
+
+	chdir(PATH);
 
 	int size = args->size;
 

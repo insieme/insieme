@@ -37,27 +37,128 @@
 #pragma once
 
 #include <set>
+#include <functional>
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/datapath/datapath.h"
 
 #include "insieme/core/ir_address.h"
-#include "insieme/core/datapath/datapath.h"
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/constraint.h"
 
+#include "insieme/analysis/cfg.h"
 #include "insieme/analysis/tmp_var_map.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
+
+#include "insieme/utils/logging.h"
+
+#include <boost/variant.hpp>
 
 namespace insieme { 
 namespace analysis { 
 
+struct NotAnAccessException : public std::logic_error {
+
+	bool isLit;
+
+	NotAnAccessException(bool isLit) :
+		std::logic_error("not an access"), isLit(isLit) { }
+};
+
+
+
 typedef utils::CombinerPtr<polyhedral::AffineFunction> ConstraintPtr;
 
+
+
+namespace support {
+
+struct NodeExtractorVisitor : public boost::static_visitor<core::NodePtr> {
+	template <class T>
+	core::NodePtr operator()(const T& addr) const { 
+		return addr.getAddressedNode(); 
+	}
+};
+
+} // end support namespace 
+
+
+/**
+ * An UnifiedAddress represents an abstraction which allows to address entities both in the IR and
+ * in the CFG. 
+ */
+struct UnifiedAddress {
+ 
+	typedef boost::variant<core::NodeAddress, cfg::Address> AddressImpl;
+	
+	UnifiedAddress(const core::NodeAddress& addr) : address(addr) { }
+
+	UnifiedAddress(const cfg::Address& addr) : address(addr) { }
+
+
+	bool isCFGAddress() const {
+
+		struct checkCFGAddrVisitor : public boost::static_visitor<bool> {
+			bool operator()(const cfg::Address&) const { return true; }
+			bool operator()(const core::NodeAddress&) const { return false; }
+		};
+
+		return boost::apply_visitor(checkCFGAddrVisitor(), address);
+	}
+
+
+	core::NodePtr getAddressedNode() const { 
+		return boost::apply_visitor(support::NodeExtractorVisitor(), address);
+	}
+
+private:
+	AddressImpl address;
+
+};
+
+
 enum class VarType { SCALAR, MEMBER, TUPLE, ARRAY };
+
+
+
+
+//class Access : public utils::Printable {
+//
+//public:
+//	
+//	virtual bool isRef() const;
+//
+//	virtual core::VariablePtr getAddressedVariable() const;
+//
+//	virtual core::ExpressionAddress getAccessAddress() const;
+//
+//};
+//
+//typedef std::shared_ptr<Access> AccessPtr;
+//
+//
+//
+//
+//
+//class BaseAccess : public Access {
+//
+//	/**
+//	 * Address of the access represented by this object 
+//	 */
+//	core::ExpressionAddress 	exprAddr;
+//
+//public:
+//
+//	BaseAccess(const core::ExpressionAddress& exprAddr) 
+//	
+//
+//};
+
+
 
 /** 
  * The Access class represent an access to an IR variable. 
@@ -70,20 +171,17 @@ enum class VarType { SCALAR, MEMBER, TUPLE, ARRAY };
  */
 class Access : public utils::Printable {
 
-	// Address of the access represented by this object 
-	core::ExpressionAddress 	base_expr;
+	core::ExpressionAddress base_expr;
 
-	// Actuall variable being accessed (note that this variable might be an alias)
-	core::VariablePtr			variable;
+	core::VariablePtr variable;
 
-	/**
-	 * Path to the accessed member/element/component 
-	 *  => For scalar, the path is empty 
-	 */ 
-	core::datapath::DataPathPtr	path;
+	core::datapath::DataPathPtr path;
 
-	// The type of this access
-	VarType 					type;
+	VarType type;
+
+	cfg::BlockPtr cfgBlock;
+
+	size_t stmtIdx; 
 
 	polyhedral::IterationVector iterVec;
 
@@ -95,7 +193,7 @@ class Access : public utils::Printable {
      * For arrays the domain depends on the range of values being accessed. It could be either a
      * single element or strided domain in the circumstances the array is accessed inside a loop
      */
-	 ConstraintPtr array_access;
+	 ConstraintPtr 				array_access;
 
 	/** 
 	 * A constraint has sense only if within a SCoP. Indeed, two equal constraints extracted from
@@ -108,18 +206,27 @@ class Access : public utils::Printable {
 		   const core::VariablePtr& 			var,
 		   const core::datapath::DataPathPtr& 	path, 
 		   const VarType& 						type,
-		   const polyhedral::IterationVector&	iv = polyhedral::IterationVector(), 
+		   const cfg::BlockPtr& 				cfg_block = cfg::BlockPtr(),
+		   size_t								stmtIdx = 0,
+		   const polyhedral::IterationVector&	iv 	= polyhedral::IterationVector(), 
 		   const ConstraintPtr& 				dom = ConstraintPtr(),
-		   const core::NodeAddress& 			ctx = core::NodeAddress() ) :
+		   const core::NodeAddress& 			ctx = core::NodeAddress() 
+	) :
 		base_expr(expr), 
 		variable(var),
 		path(path), 
 		type(type),
+		cfgBlock(cfg_block),
+		stmtIdx(stmtIdx),
 		iterVec(iv),
 		array_access( cloneConstraint(iterVec, dom) ),
 		ctx(ctx) {  }
 
-	friend Access getImmediateAccess(const core::ExpressionAddress& expr, const TmpVarMap& tmpVarMap);
+	friend Access getImmediateAccess(
+			const core::ExpressionAddress& expr, 
+			const std::pair<cfg::BlockPtr, size_t>& cfgAddr, 
+			const TmpVarMap& tmpVarMap
+		);
 
 public:
 	
@@ -138,6 +245,9 @@ public:
 
 	inline const core::datapath::DataPathPtr& getPath() const {	return path; }
 
+	inline cfg::BlockPtr getCFGBlock() const { return cfgBlock; }
+
+	inline size_t getStmtIdx() const { return stmtIdx; }
 	/** 
 	 * If this is an array access, it may have associated a constraint which states the range of
 	 * elements being accessed
@@ -149,16 +259,44 @@ public:
 	 */
 	inline const core::NodeAddress& getContext() const { return ctx; }
 
+	/** 
+	 * Accesses to arrays have range informations which states the subset of elements of the array
+	 * being accessed by the particular expression (e.g. an array access inside a loop). It could
+	 * happen that these accesses are symbolically bound to variables. 
+	 *
+	 * When comparing two accesses we must be sure that if the bounds are symbolic, they belong to
+	 * the same SCoP which makes sure that the bound is not being assigned. In the case of
+	 * comparison of two symbolically bound accesses belonging to different context, then we have to
+	 * assume that there is a potential collision between elements. 
+	 *
+	 * However, if the bounds of the range are not symbolical, then we can compare accesses
+	 * belonging to different contexts as long as the accessed array is the same
+	 */
+	bool isContextDependent() const;
+
 	std::ostream& printTo(std::ostream& out) const;
 	
 	// TO BE REMOVED 
 	bool operator<(const Access& other) const ;
 
-	inline bool operator==(const Access& other) const { return *variable == *other.variable; }
+	// Determine whether two accesses are the same access, this can be determined by comparing the
+	// address of the accessed variable  
+	inline bool operator==(const Access& other) const {
+		// handles the trivial case 
+		if (this == &other) { return true; }
 
-	inline bool operator!=(const Access& other) const {	return !(*this == other); }
+		return ((cfgBlock && other.cfgBlock && *cfgBlock == *other.cfgBlock) || 
+				(!cfgBlock && !other.cfgBlock)
+			   ) && base_expr.getRootNode() == other.base_expr.getRootNode() 
+				 && base_expr == other.base_expr;
+	}
+
+	bool operator!=(const Access& other) const { return !(*this == other); }
 };
 
+typedef std::shared_ptr<Access> AccessPtr;
+
+Access getCFGBasedAccess(const core::ExpressionAddress& expr, const CFGPtr& cfg);
 
 /** 
  * Given two accesses, this function returns true if the ranges on which the accesses are defined
@@ -172,7 +310,10 @@ public:
  * The method always returns the imediate access and in the case of expression accessing multiple
  * variables, only the immediate access will be returned. 
  */
-Access getImmediateAccess(const core::ExpressionAddress& expr, const TmpVarMap& tmpVarMap=TmpVarMap());
+Access getImmediateAccess(const core::ExpressionAddress& expr, 
+						  const std::pair<cfg::BlockPtr, size_t>& cfgAddr = std::make_pair(cfg::BlockPtr(),0), 
+						  const TmpVarMap& tmpVarMap=TmpVarMap()
+);
 
 
 /** 
@@ -185,11 +326,10 @@ std::set<Access> extractFromStmt(const core::StatementAddress& stmt, const TmpVa
  * Similar to the previous function, this function collects all memory accesses within a statement,
  * accesses will be append to the provided set 
  */
-void extractFromStmt(const core::StatementAddress& stmt, 
-					 std::set<Access>& accesses, 
-					 const TmpVarMap& tmpVarMap=TmpVarMap()
+void extractFromStmt(const core::StatementAddress& 	stmt, 
+					 std::set<Access>& 				accesses, 
+					 const TmpVarMap& 				tmpVarMap=TmpVarMap()
 					);
-
 
 /**
  * States whether two accesses are conflicting, it returns true if the 2 accesses referes to the
@@ -197,5 +337,191 @@ void extractFromStmt(const core::StatementAddress& stmt,
  * receives the alias map as argument so that it includes aliasing when checking for conflicts
  */
 bool isConflicting(const Access& acc1, const Access& acc2, const TmpVarMap& tmpVarMap = TmpVarMap());
+
+class AccessManager;
+
+class AccessClass;
+
+typedef std::shared_ptr<AccessClass> AccessClassPtr;
+typedef std::weak_ptr<AccessClass>   AccessClassWPtr;
+
+/** 
+ * An access class is a set of accesses which refer to the same memory location. In case of R-Values
+ * an access refers to the actual value. Important to notice that access classes are specific to a
+ * program point (represented by a CFG blok)
+ *
+ * An access can refer to larger section of memory (in case of array accesses inside loopbounds), in
+ * that case a class contains all the accesses which may have a conflict.
+ *
+ * Accesses classes are meant to be used in DF analysis and be stored into sets, which means that
+ * they provide a partial order. 
+ */
+class AccessClass : public utils::Printable {
+
+	std::reference_wrapper<const AccessManager> mgr;
+
+	size_t uid;
+
+public:
+	typedef std::vector<AccessPtr> AccessVector;
+
+private:
+	/**
+	 * Stores the accesses which refer to a memory area
+	 */
+	AccessVector accesses;
+
+public:
+
+	typedef std::pair<AccessClassWPtr, core::datapath::DataPathPtr> Dependence;
+
+	typedef std::vector<Dependence> SubClasses;
+
+private:
+	/** 
+	 * List of dependencies to sub-classes 
+	 */
+	SubClasses subClasses;
+
+	/**
+	 * Reference to the parent class 
+	 */
+	const AccessClassWPtr parentClass;
+
+	friend class AccessManager;
+
+	/** 
+	 * AccessClass instances can only be created by the AccessMaanger class
+	 */
+	AccessClass(
+			const std::reference_wrapper<const AccessManager>& mgr, 
+			size_t uid, 
+			const AccessClassWPtr parent = AccessClassWPtr()
+	) : mgr(mgr), 
+		uid(uid), 
+		parentClass(parent) {  }
+
+public:
+
+	AccessClass(const AccessClass& other): 
+		mgr(other.mgr), 
+		uid(other.uid), 
+		accesses(other.accesses), 
+		parentClass(other.parentClass) { }
+
+	AccessClass(AccessClass&& other) : 
+		mgr(other.mgr), 
+		uid(other.uid), 
+		accesses(std::move(other.accesses)),
+		parentClass(std::move(other.parentClass)) { }
+
+	AccessClass& storeAccess(const Access& access) {
+		/** 
+		 * Makes sure the access is not already in this class
+		 */
+		assert(std::find_if(accesses.begin(), accesses.end(), 
+					[&](const AccessPtr& cur){ return *cur == access; }) == accesses.end() 
+				&& "Access is already present in this class");
+
+		accesses.push_back(std::make_shared<Access>(access)); 
+
+		return *this;
+	}
+
+	/** 
+	 * Return the unique identifier used to identify this access class.
+	 *
+	 * Comparison based on identifier is valid only within the same access manager.
+	 */
+	inline size_t getUID() const { return uid; }
+
+	const AccessClassPtr getParentClass() const {
+		return parentClass.lock();
+	}
+
+	inline void addSubClass(const Dependence& dep) {
+		subClasses.push_back(dep);
+	}
+
+	const SubClasses& getSubClasses() const { return subClasses; }
+
+	inline bool operator<(const AccessClass& other) const { 
+		return uid < other.uid;
+	}
+
+	inline bool operator==(const AccessClass& other) const { 
+		if (this == &other) { return true; }
+
+		// check if the ID is the same and was generated by the same manager 
+		return &mgr.get() == &other.mgr.get() && uid == other.getUID();
+	}
+
+	inline bool operator!=(const AccessClass& other) const {
+		return !(*this == other);
+	}
+
+	std::ostream& printTo(std::ostream& out) const;
+
+	inline AccessVector::const_iterator begin() const { return accesses.begin(); }
+	inline AccessVector::const_iterator end() const { return accesses.end(); }
+
+	inline size_t size() const { return accesses.size(); }
+};
+
+
+/** 
+ * Return the vector of addresses which are not temporary variable and therefore it returns
+ * addresses which exists only outside the CFG
+ */
+std::set<core::ExpressionAddress> 
+extractRealAddresses(const AccessClass& cl, const TmpVarMap& tmpVarMap = TmpVarMap());
+
+
+/**
+ * The AccessManager takes care of managing and creating access classes 
+ */
+class AccessManager: public utils::Printable {
+
+public:
+	typedef std::vector<AccessClassPtr> ClassVector;
+
+private:
+	ClassVector classes;
+	
+	const CFG* 			cfg;
+	const TmpVarMap& 	tmpVarMap;
+
+public:
+
+	typedef ClassVector::iterator 		iterator;
+	typedef ClassVector::const_iterator const_iterator;
+
+	AccessManager(const CFG* cfg = nullptr, const TmpVarMap& tmpVarMap = TmpVarMap()) : 
+		cfg(cfg), 
+		tmpVarMap(tmpVarMap) { }
+
+	AccessClassPtr getClassFor(const Access& access);
+
+	inline iterator begin() { return classes.begin(); }
+	inline iterator end() { return classes.end(); }
+
+	inline const_iterator begin() const { return classes.begin(); }
+	inline const_iterator end() const { return classes.end(); }
+
+	inline AccessClass& operator[](const size_t uid) { 
+		assert(uid < classes.size() && "OutOfBounds array access");
+		return *classes[uid]; 
+	}
+
+	inline const AccessClass& operator[](const size_t uid) const {
+		assert(uid < classes.size() && "OutOfBounds array access");
+		return *classes[uid]; 
+	}
+
+	inline size_t size() const { return classes.size(); }
+
+	std::ostream& printTo(std::ostream& out) const;
+
+};
 
 } } // end insieme::analysis::dfa namespace 
