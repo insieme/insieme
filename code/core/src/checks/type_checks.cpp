@@ -39,6 +39,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/core/analysis/type_variable_deduction.h"
 
@@ -51,6 +52,78 @@ namespace checks {
 #define CAST(TargetType, value) \
 	static_pointer_cast<const TargetType>(value)
 
+namespace{
+
+TypePtr ResolveDataPath (const IRBuilder& builder, 
+					  	 const TypePtr& source,
+					  	 const ExpressionPtr& datapath) {
+
+	TypePtr fail;
+
+	// if ROOT, target and source must be equal
+	if (builder.getLangBasic().isDataPathRoot(datapath)){
+
+		if (auto ret= analysis::getReferencedType(source))
+			return ret;									// narrow case
+		else
+			return source;								// expand case
+	}
+	else{
+		// if not root, datapath is function shaped
+		if (!datapath.isa<CallExprPtr>())
+			return fail;
+
+		const CallExprPtr& dpExp = datapath.as<CallExprPtr>();
+		const ExpressionPtr& innerDP = dpExp->getArgument(0);
+		const ExpressionPtr& member  = dpExp->getArgument(1);
+		const TypePtr& inType = ResolveDataPath(builder, source, innerDP);
+
+		// if Member, check that member exist inside of source
+		if (builder.getLangBasic().isDataPathMember(dpExp->getFunctionExpr())){
+
+			if (inType.isa<NamedCompositeTypePtr>()){
+				const NamedCompositeTypePtr& structType = inType.as<NamedCompositeTypePtr>();
+				return structType->getTypeOfMember (member.as<core::LiteralPtr>()->getValue());
+			}
+			else{
+				// TODO: recursive types not supported
+				return fail;
+			}
+		}
+		else if (builder.getLangBasic().isDataPathElement(dpExp->getFunctionExpr())){
+
+			if (inType.isa<ArrayTypePtr>()) {
+				return inType.as<ArrayTypePtr>()->getElementType();
+			}
+			else if(inType.isa<VectorTypePtr>()){
+				return inType.as<VectorTypePtr>()->getElementType();
+			}
+			else{
+				return fail;
+			}
+		}
+		else if (builder.getLangBasic().isDataPathComponent(dpExp->getFunctionExpr())){
+
+			if (!inType.isa<TupleTypePtr>())
+				return fail;
+
+			auto f = arithmetic::toFormula(member);
+			if (!f.isConstant())
+				return fail;
+			if (!f.isInteger())
+				return  fail;
+
+			int n = (int64_t)f.getConstantValue();
+			if (((int)inType.as<TupleTypePtr>()->size() <= n) || (n <0))
+				return  fail;
+			return inType.as<TupleTypePtr>()->getElement(n);
+		}
+	}
+	return fail;
+}
+
+
+} // end anonymous namespace
 
 OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& address) {
 
@@ -953,6 +1026,127 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 	return res;
 }
 
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///      Narrow check
+///	Narrow construction is a function call in which there are 3 parameters
+//		- data structure/array/tuple
+//		- datapath to the inner member/element to extract
+//		- type of the expected inner object
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
+	
+	NodeManager manager;
+	OptionalMessageList res;
+
+	// obtain function type ...
+	TypePtr funType = call->getFunctionExpr()->getType();
+	assert( call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
+
+	// the function call must be narrow
+	if (!analysis::isCallOf(call.getAddressedNode(), manager.getLangBasic().getRefNarrow()))
+		return res;
+
+	if (call.getArguments().size() != 3u)
+		return res;
+
+	// Obtain argument type
+	ExpressionPtr srcArg = call.as<CallExprPtr>()->getArgument(0);
+	ExpressionPtr dpArg  = call.as<CallExprPtr>()->getArgument(1);
+	ExpressionPtr trgArg = call.as<CallExprPtr>()->getArgument(2);
+
+	IRBuilder builder(call.getNodeManager());
+
+	// check recursively the inner types of the expression
+	TypePtr narrowType = ResolveDataPath(builder, srcArg->getType(), dpArg);
+	if (!narrowType){
+		add(res, Message(call,
+						EC_TYPE_MALFORM_NARROW_CALL,
+						format ("Malform dataPath in Narrow expresion %s, %s, %s",
+								toString(*srcArg).c_str(),
+								toString(*dpArg).c_str(),
+								toString(*trgArg).c_str()),
+						Message::ERROR));
+	}
+	else{
+		if (*narrowType != *analysis::getRepresentedType(trgArg)){
+		add(res, Message(call,
+						EC_TYPE_MALFORM_NARROW_CALL,
+						format (" Wrong return type in Narrow Expression %s, %s, %s",
+								toString(*srcArg).c_str(),
+								toString(*dpArg).c_str(),
+								toString(*trgArg).c_str()),
+						Message::ERROR));
+		}
+	}
+	return res;
+}
+
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+///      Expand check
+///	Expand construction is a function call in which there are 3 parameters
+//		- variable of any type which belongs as member to a structure/array/tuple
+//		- datapath of this variable inside of the outhermost structure/array/tuple
+//		- type of the expected object
+///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+OptionalMessageList ExpandCheck::visitCallExpr(const CallExprAddress& call) {
+
+	NodeManager manager;
+	OptionalMessageList res;
+
+	// obtain function type ...
+	TypePtr funType = call->getFunctionExpr()->getType();
+	assert( call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
+
+	// the function call must be Expand
+	if (!analysis::isCallOf(call.getAddressedNode(), manager.getLangBasic().getRefExpand()))
+		return res;
+
+	if (call.getArguments().size() != 3u)
+		return res;
+
+	// Obtain argument type
+	ExpressionPtr srcArg = call.as<CallExprPtr>()->getArgument(0);  // variable
+	ExpressionPtr dpArg  = call.as<CallExprPtr>()->getArgument(1);  // datapath
+	ExpressionPtr trgArg = call.as<CallExprPtr>()->getArgument(2);  // outher data structure type literal
+
+	IRBuilder builder(call.getNodeManager());
+
+	// check recursively the inner types of the expression
+	TypePtr extractType = ResolveDataPath(builder, analysis::getRepresentedType(trgArg), dpArg);
+	if (!extractType){
+		add(res, Message(call,
+						EC_TYPE_MALFORM_EXPAND_CALL,
+						format ("Malform dataPath in Expand expresion %s, %s, %s",
+								toString(*srcArg).c_str(),
+								toString(*dpArg).c_str(),
+								toString(*trgArg).c_str()),
+						Message::ERROR));
+	}
+	else{
+		auto srcType = analysis::getReferencedType(srcArg->getType());
+		if (!srcType){
+			add(res, Message(call,
+						EC_TYPE_MALFORM_EXPAND_CALL,
+						format (" First parameter must be a reference in Expand Expression %s, %s, %s",
+								toString(*srcArg).c_str(),
+								toString(*dpArg).c_str(),
+								toString(*trgArg).c_str()),
+						Message::ERROR));
+		}
+
+
+		if (*extractType != *srcType){
+			add(res, Message(call,
+						EC_TYPE_MALFORM_EXPAND_CALL,
+						format (" Wrong return type in Expand Expression %s, %s, %s",
+								toString(*srcArg).c_str(),
+								toString(*dpArg).c_str(),
+								toString(*trgArg).c_str()),
+						Message::ERROR));
+		}
+	}
+	return res;
+}
 
 #undef CAST
 
