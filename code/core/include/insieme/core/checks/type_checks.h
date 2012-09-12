@@ -71,6 +71,8 @@ SIMPLE_CHECK(RefCast, CastExpr, false);
 
 SIMPLE_CHECK(Cast, CastExpr, false);
 
+SIMPLE_CHECK(Narrow, CallExpr, false);
+SIMPLE_CHECK(Expand, CallExpr, false);
 
 // TODO:
 //	- check that only concrete types are used for variables
