@@ -72,6 +72,7 @@ namespace c_ast {
 				: indentStep(indentStep), indent(0) {}
 
 			std::ostream& print(NodePtr node, std::ostream& out) {
+				if (!node) return out;
 				switch(node->getType()) {
 					#define CONCRETE(name) case NT_ ## name: return print ## name (static_pointer_cast<name>(node), out);
 					#include "insieme/backend/c_ast/c_nodes.def"
@@ -129,6 +130,7 @@ namespace c_ast {
 				switch(node->type) {
 				case PrimitiveType::Void : return out << "void";
 				case PrimitiveType::Bool : return out << "bool";
+				case PrimitiveType::Char : return out << "char";
 				case PrimitiveType::Int8 : return out << "int8_t";
 				case PrimitiveType::Int16 : return out << "int16_t";
 				case PrimitiveType::Int32 : return out << "int32_t";
@@ -440,7 +442,7 @@ namespace c_ast {
 			PRINT(Call) {
 				// <function> ( <arguments> )
 				return out << print(node->function) << "("
-						<< join(", ", node->arguments, [&](std::ostream& out, const ExpressionPtr& cur) {
+						<< join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) {
 							out << print(cur);
 				}) << ")";
 			}
@@ -457,6 +459,10 @@ namespace c_ast {
 				// <returnType> name ( <parameter list> );
 				FunctionPtr fun =  node->function;
 				return out << print(fun->returnType) << " " << print(fun->name) << "(" << printParam(fun->parameter) << ");\n";
+			}
+
+			PRINT(ExtVarDecl) {
+				return out << "extern " << print(node->type) << " " << node->name << ";\n";
 			}
 
 			PRINT(TypeDefinition) {
@@ -512,7 +518,7 @@ namespace c_ast {
 
 
 		std::ostream& PrintWrapper::printTo(std::ostream& out) const {
-			return printer.print(node, out);
+			return (node)?printer.print(node, out):out;
 		}
 
 		struct TypeLevel {

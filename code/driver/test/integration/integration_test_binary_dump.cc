@@ -45,12 +45,6 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/core/ir_check.h"
-
-#include "insieme/core/checks/ir_checks.h"
-#include "insieme/core/checks/typechecks.h"
-#include "insieme/core/checks/imperativechecks.h"
-#include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/dump/binary_dump.h"
 #include "insieme/core/dump/text_dump.h"
 

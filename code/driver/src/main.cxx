@@ -44,7 +44,7 @@
 #define MIN_CONTEXT 40
 
 #include "insieme/core/ir_statistic.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -343,6 +343,7 @@ void printIR(const NodePtr& program, InverseStmtMap& stmtMap) {
 // Check Semantics 
 //***************************************************************************************
 void checkSema(const core::NodePtr& program, MessageList& list, const InverseStmtMap& stmtMap) {
+
 	using namespace insieme::core::printer;
 
 	// Skip semantics checks if the flag is not set
@@ -352,7 +353,7 @@ void checkSema(const core::NodePtr& program, MessageList& list, const InverseStm
 	insieme::utils::Timer timer("Checks");
 
 	measureTimeFor<void>("Semantic Checks ", 
-		[&]() { list = check( program, core::checks::getFullCheck() ); }
+		[&]() { list = check( program ); }
 	);
 
 	auto errors = list.getAll();
@@ -548,6 +549,10 @@ int main(int argc, char** argv) {
 			// do the actual clang to IR conversion
 			program = measureTimeFor<core::ProgramPtr>("Frontend.convert ", [&]() { return p.convert(); } );
 
+			InverseStmtMap stmtMap;
+
+			// printIR(program, stmtMap);
+
 			doCleanup(program);
 
 			// run OpenCL frontend
@@ -561,28 +566,28 @@ int main(int argc, char** argv) {
 					[&]() { return insieme::driver::applyTransfomrations(program); } );
 
 			// Handling of pragma info
-			program = measureTimeFor<ProgramPtr>("Pragma.Info", 
+			program = measureTimeFor<ProgramPtr>("Pragma.Info",  
 					[&]() { return insieme::driver::handlePragmaInfo(program); } );
 
-			InverseStmtMap stmtMap;
-			printIR(program, stmtMap);
+			// printIR(program, stmtMap);
 
 			// perform checks
 			MessageList errors;
-			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
+			// if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
+
+			printIR(program, stmtMap);
 
 			// run OMP frontend
 			if(CommandLineOptions::OpenMP) {
 				stmtMap.clear();
 				applyOpenMPFrontend(program);
 				printIR(program, stmtMap);
-				// check again if the OMP flag is on
-				if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
 			}
 
-
 			/**************######################################################################################################***/
-			regions = insieme::driver::region::SizeBasedRegionSelector(CommandLineOptions::MinRegionSize, CommandLineOptions::MaxRegionSize).getRegions(program);
+			regions = insieme::driver::region::SizeBasedRegionSelector(
+					CommandLineOptions::MinRegionSize, CommandLineOptions::MaxRegionSize
+				).getRegions(program);
 			//cout << "\n\n******************************************************* REGIONS \n\n";
 			//for_each(regions, [](const NodeAddress& a) {
 			//	cout << "\n***** REGION \n";
@@ -599,12 +604,14 @@ int main(int argc, char** argv) {
 			// Dump the Inter procedural Control Flow Graph associated to this program
 			dumpCFG(program, CommandLineOptions::CFG);
 
-			printIR(program, stmtMap);
+			//printIR(program, stmtMap);
 
 			// Perform SCoP region analysis 
 			markSCoPs(program, errors, stmtMap);
-			printIR(program, stmtMap);
-			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
+			// printIR(program, stmtMap);
+			
+			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap); }
+
 			// IR statistics
 			showStatistics(program);
 

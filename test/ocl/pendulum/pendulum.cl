@@ -15,7 +15,8 @@
 #define sqr(x) (x)*(x)
 #define ABS(x) sqrt( sqr(x[0]) + sqr(x[1]) )
 #define DIST(x, y) sqrt(sqr((x)[0]-(y)[0])+sqr((x)[1]-(y)[1]))
-#define ASS(x, y) ((x)[0] = (y)[0], (x)[1] = (y)[1])
+#define ASS(x, y) ((x)[0] = (y)[0], (x)[1] = (y)[1]) 
+
 
 enum Kind { Linear, Magnet };
 
@@ -120,8 +121,12 @@ __kernel void pendulum(	__global unsigned* buf_image,
 		vel[1] += dt * ( 1.0/3.0 * acc_new[1] + 5.0/6.0 * acc[1] - 1.0/6.0 * acc_old[1]);
 
 		// 4) flip the accelerator values
-		ASS(acc_old, acc);
-		ASS(acc, acc_new);
+//		ASS(acc_old, acc);
+		acc_old[0] = acc[0];
+		acc_old[1] = acc[1];
+//		ASS(acc, acc_new);
+		acc[0] = acc_new[0];
+		acc[1] = acc_new[1];
 	}
 
 	// undecided after MAX number of steps => return num_sources + 1

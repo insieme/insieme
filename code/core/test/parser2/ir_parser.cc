@@ -42,7 +42,8 @@
 #include "insieme/core/dump/text_dump.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/analysis/normalize.h"
 
 namespace insieme {
 namespace core {
@@ -293,7 +294,6 @@ namespace parser {
 				parse(manager, "1+2+3")
 		);
 
-
 		// known bug: same precedence, different operator
 //		EXPECT_EQ(
 //				builder.sub(builder.add(one, two), tre),
@@ -306,6 +306,45 @@ namespace parser {
 //				builder.mul(one,one),
 //				parse(manager, "2*0.5")
 //		);
+		
+		// bitwise
+		EXPECT_EQ(
+				builder.bitwiseAnd(one, two),
+				parse(manager, "1 & 2")
+		);
+
+		EXPECT_EQ(
+				builder.bitwiseOr(one, two),
+				parse(manager, "1 | 2")
+		);
+
+		EXPECT_EQ(
+				builder.bitwiseXor(one, two),
+				parse(manager, "1 ^ 2")
+		);
+
+		// bitwise precedence
+		EXPECT_EQ(
+				builder.bitwiseOr(builder.bitwiseAnd(one, tre), builder.bitwiseAnd(one, two)),
+				parse(manager, "1 & 3 | 1 & 2")
+		);
+	}
+
+	TEST(IR_Parser2, IfThenElse) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const auto& basic = manager.getLangBasic();
+
+		auto res = analysis::normalize(builder.parse(
+				"true?1:2"
+		)).as<ExpressionPtr>();
+
+		ASSERT_TRUE(res);
+
+		EXPECT_EQ(
+				analysis::normalize(builder.ite(basic.getTrue(), builder.wrapLazy(builder.intLit(1)), builder.wrapLazy(builder.intLit(2)))),
+				res
+		);
 	}
 
 	TEST(IR_Parser2, ForStatement) {
@@ -563,8 +602,8 @@ namespace parser {
 		IRBuilder builder(manager);
 
 		// test a direct call
-		EXPECT_EQ("AP({int<4> v5 = 7; bind(v9){rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}}(v9, v5)}(5);})",
-			toString(builder.parse(
+		EXPECT_EQ("AP({int<4> v0 = 7; bind(v1){rec v0.{v0=fun(int<4> v1, int<4> v2) {return int.add(v1, v2);}}(v1, v0)}(5);})",
+			toString(builder.normalize(builder.parse(
 				"{"
 				"	let int = int<4>;"
 				"	let sum = (int a, int b)->int { return a + b; };"
@@ -572,20 +611,20 @@ namespace parser {
 				" 	let pX = (int a)=>sum(a,x);"
 				"	pX(5);"
 				"}"
-		)));
+		))));
 
 		// test returning a value
-		EXPECT_EQ("AP({bind(v10){rec v0.{v0=fun('a v1) {return v1;}}(5)}(2);})",
-			toString(builder.parse(
+		EXPECT_EQ("AP({bind(v0){rec v0.{v0=fun('a v1) {return v1;}}(5)}(2);})",
+			toString(builder.normalize(builder.parse(
 				"{"
 				" 	let pX = (int<4> a)=>5;"
 				"	pX(2);"
 				"}"
-		)));
+		))));
 
 		// test a statement
-		EXPECT_EQ("AP({ref<int<4>> v11 = ref.var(0); bind(v12){rec v15.{v15=fun(int<4> v13, ref<int<4>> v14) {ref.assign(v14, int.add(ref.deref(v14), v13));}}(v12, v11)}(5);})",
-			toString(builder.parse(
+		EXPECT_EQ("AP({ref<int<4>> v0 = ref.var(0); bind(v1){rec v0.{v0=fun(ref<int<4>> v1, int<4> v2) {ref.assign(v1, int.add(ref.deref(v1), v2));}}(v0, v1)}(5);})",
+			toString(builder.normalize(builder.parse(
 				"{"
 				" 	ref<int<4>> x = var(0);"
 				"	let p = (int<4> a)=>{"
@@ -593,8 +632,127 @@ namespace parser {
 				"	};"
 				"	p(5);"
 				"}"
-		)));
+		))));
 
+	}
+
+	TEST(IR_Parser2, ParseAddresses) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// a simple example
+
+		vector<NodeAddress> list = builder.parseAddresses(
+				"{"
+				"	1 + $2$ * 3;"
+				"}"
+		);
+
+		ASSERT_EQ(1u, list.size());
+		EXPECT_EQ("0-0-3-2", toString(list[0]));
+		EXPECT_EQ("2", toString(*list[0].getAddressedNode()));
+		EXPECT_EQ(core::NT_Literal, list[0]->getNodeType());
+
+
+		// test multiple marks
+		list = builder.parseAddresses(
+				"{"
+				"	1 + $$2$ * $3$$;"
+				"}"
+		);
+
+		ASSERT_EQ(3u, list.size());
+
+		EXPECT_EQ("0-0-3", toString(list[0]));
+		EXPECT_EQ("int.mul(2, 3)", toString(*list[0].getAddressedNode()));
+		EXPECT_EQ(core::NT_CallExpr, list[0]->getNodeType());
+
+		EXPECT_EQ("0-0-3-2", toString(list[1]));
+		EXPECT_EQ("2", toString(*list[1].getAddressedNode()));
+		EXPECT_EQ(core::NT_Literal, list[1]->getNodeType());
+
+		EXPECT_EQ("0-0-3-3", toString(list[2]));
+		EXPECT_EQ("3", toString(*list[2].getAddressedNode()));
+		EXPECT_EQ(core::NT_Literal, list[2]->getNodeType());
+
+
+		// test statements
+		list = builder.parseAddresses(
+				"{"
+				"	$1 + 2 * 3;$"
+				"}"
+		);
+
+		ASSERT_EQ(1u, list.size());
+		EXPECT_EQ("0-0", toString(list[0]));
+		EXPECT_EQ("int.add(1, int.mul(2, 3))", toString(*list[0].getAddressedNode()));
+		EXPECT_EQ(core::NT_CallExpr, list[0]->getNodeType());
+
+	}
+
+	TEST(IR_Parser2, ParseAddressSharing) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// a simple example
+
+		vector<NodeAddress> list = builder.parseAddresses(
+				"{"
+				"	int<4> x = 2;"
+				"	$x = 3$;"
+				"	$x = $x$ + 2$;"
+				"}"
+		);
+
+		// there should only be two addresses
+		ASSERT_EQ(3u, list.size());
+
+		EXPECT_EQ("0-1", toString(list[0]));
+		EXPECT_EQ("ref.assign(v1, 3)", toString(*list[0].getAddressedNode()));
+		EXPECT_EQ(core::NT_CallExpr, list[0]->getNodeType());
+
+		EXPECT_EQ("0-2", toString(list[1]));
+		EXPECT_EQ("ref.assign(v1, int.add(v1, 2))", toString(*list[1].getAddressedNode()));
+		EXPECT_EQ(core::NT_CallExpr, list[1]->getNodeType());
+
+
+		EXPECT_EQ("0-2-3-2", toString(list[2]));
+		EXPECT_EQ("v1", toString(*list[2].getAddressedNode()));
+		EXPECT_EQ(core::NT_Variable, list[2]->getNodeType());
+
+	}
+
+	TEST(IR_Parser2, ParseAddressRoot) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// a simple example
+
+		vector<NodeAddress> list = builder.parseAddresses(
+				"${"
+				"	int<4> x = 2;"
+				"	$x = 3$;"
+				"	$x = $x$ + 2$;"
+				"}$"
+		);
+
+		// there should only be two addresses
+		ASSERT_EQ(4u, list.size());
+
+		EXPECT_EQ("0", toString(list[0]));
+		EXPECT_EQ(core::NT_CompoundStmt, list[0]->getNodeType());
+
+		EXPECT_EQ("0-1", toString(list[1]));
+		EXPECT_EQ("ref.assign(v1, 3)", toString(*list[1].getAddressedNode()));
+		EXPECT_EQ(core::NT_CallExpr, list[1]->getNodeType());
+
+		EXPECT_EQ("0-2", toString(list[2]));
+		EXPECT_EQ("ref.assign(v1, int.add(v1, 2))", toString(*list[2].getAddressedNode()));
+		EXPECT_EQ(core::NT_CallExpr, list[2]->getNodeType());
+
+		EXPECT_EQ("0-2-3-2", toString(list[3]));
+		EXPECT_EQ("v1", toString(*list[3].getAddressedNode()));
+		EXPECT_EQ(core::NT_Variable, list[3]->getNodeType());
 	}
 
 } // end namespace parser2

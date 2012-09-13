@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/ir_check.h"
+#include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/string_utils.h"
@@ -46,6 +46,7 @@
 #include <sstream>
 
 using namespace insieme::core;
+using namespace insieme::core::checks;
 
 namespace insieme {
 namespace driver {

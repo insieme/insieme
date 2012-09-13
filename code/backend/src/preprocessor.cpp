@@ -44,6 +44,7 @@
 #include "insieme/core/ir_address.h"
 
 #include "insieme/core/type_utils.h"
+#include "insieme/core/lang/basic.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -167,7 +168,6 @@ namespace backend {
 				return ptr;
 			}
 
-
 			// look for call expressions
 			if (ptr->getNodeType() == core::NT_CallExpr) {
 				// extract the call
@@ -180,24 +180,33 @@ namespace backend {
 					// convert to lambda
 					core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
 
-					// check whether the lambda is generic
+					// check whether the lambda is generic and not a built-in
 					if (core::isGeneric(fun->getType())) {
 
-						// compute substitutions
-						core::SubstitutionOpt&& map = core::analysis::getTypeVariableInstantiation(manager, call);
+						// instantiate generic non-built-in function
+						if (!manager.getLangBasic().isBuiltIn(fun)) {
+							// compute substitutions
+							core::SubstitutionOpt&& map = core::analysis::getTypeVariableInstantiation(manager, call);
 
-						// instantiate type variables according to map
-						lambda = core::transform::instantiate(manager, lambda, map);
+							// instantiate type variables according to map
+							lambda = core::transform::instantiate(manager, lambda, map);
 
-						// create new call node
-						core::ExpressionList arguments;
-						::transform(call->getArguments(), std::back_inserter(arguments), [&](const core::ExpressionPtr& cur) {
-							return static_pointer_cast<const core::Expression>(this->mapElement(0, cur));
-						});
+							// if lambda has not changed => do not change anything
+							if (lambda != fun) {
+								// create new call node
+								core::ExpressionList arguments;
+								::transform(call->getArguments(), std::back_inserter(arguments), [&](const core::ExpressionPtr& cur) {
+									return static_pointer_cast<const core::Expression>(this->mapElement(0, cur));
+								});
 
-						// produce new call expression
-						return core::CallExpr::get(manager, call->getType(), lambda, arguments);
+								// produce new call expression
+								auto res = core::CallExpr::get(manager, call->getType(), lambda, arguments);
 
+								// instantiate sub-expressions recursively
+								return res->substitute(manager, *this);
+							}
+
+						}
 					}
 				}
 			}
@@ -731,8 +740,9 @@ namespace backend {
 
 				// handle vector->array
 				if (argType->getNodeType() == core::NT_VectorType && paramType->getNodeType() == core::NT_ArrayType) {
+					assert(ref && "Cannot convert implicitly to array value!");
 					// conversion needed
-					newArgs[i] = builder.callExpr((ref)?basic.getRefVectorToRefArray():basic.getVectorToArray(), newArgs[i]);
+					newArgs[i] = builder.callExpr(basic.getRefVectorToRefArray(), newArgs[i]);
 					changed = true;
 				}
 			}
@@ -756,20 +766,22 @@ namespace backend {
 				return declaration;
 			}
 
-			// get initialization value
-			type = declaration->getInitialization()->getType();
-			if (type->getNodeType() != core::NT_VectorType) {
-				return declaration;
-			}
+			assert(type->getNodeType() != core::NT_ArrayType && "Invalid declaration of array value type!");
 
-			// extract some values from the declaration statement
-			core::NodeManager& manager = declaration->getNodeManager();
-			const core::VariablePtr& var = declaration->getVariable();
-			const core::ExpressionPtr& oldInit = declaration->getInitialization();
-
-			// construct a new init statement
-			core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.getLangBasic().getVectorToArray(), toVector(oldInit));
-			return core::DeclarationStmt::get(manager, declaration->getVariable(), newInit);
+//			// get initialization value
+//			type = declaration->getInitialization()->getType();
+//			if (type->getNodeType() != core::NT_VectorType) {
+//				return declaration;
+//			}
+//
+//			// extract some values from the declaration statement
+//			core::NodeManager& manager = declaration->getNodeManager();
+//			const core::VariablePtr& var = declaration->getVariable();
+//			const core::ExpressionPtr& oldInit = declaration->getInitialization();
+//
+//			// construct a new init statement
+//			core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.getLangBasic().getVectorToArray(), toVector(oldInit));
+//			return core::DeclarationStmt::get(manager, declaration->getVariable(), newInit);
 		}
 	};
 

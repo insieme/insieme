@@ -43,7 +43,7 @@
 #include <boost/filesystem.hpp>
 
 #include "insieme/utils/container_utils.h"
-
+#include "insieme/utils/test/test_config.h"
 
 namespace insieme {
 namespace utils {
@@ -61,6 +61,18 @@ namespace compiler {
 
 	Compiler Compiler::getDefaultC99CompilerO3() {
 		Compiler res = getDefaultC99Compiler();
+		res.addFlag("-O3");
+		return res;
+	}
+
+	Compiler Compiler::getRuntimeCompiler() {
+		Compiler res = getDefaultC99Compiler();
+		res.addFlag("-I " SRC_ROOT_DIR "runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+		return res;
+	}
+
+	Compiler Compiler::getRuntimeCompilerO3() {
+		Compiler res = getRuntimeCompiler();
 		res.addFlag("-O3");
 		return res;
 	}

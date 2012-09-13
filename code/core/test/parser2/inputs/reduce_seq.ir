@@ -1,0 +1,7 @@
+(ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {
+	ref<'b> res = var(init);
+	for(uint<8> i = 0ul .. size) {
+		res = op(*res, *(data[i]));
+	}
+	return *res;
+}

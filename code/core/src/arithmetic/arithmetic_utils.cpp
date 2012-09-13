@@ -42,6 +42,7 @@
 #include "insieme/core/type_utils.h"
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 
 #include "insieme/utils/numeric_cast.h"
 
@@ -79,7 +80,8 @@ namespace {
 			checkType(cur);
 			try {
 				return utils::numeric_cast<int64_t>(cur->getValue()->getValue());
-			}catch(boost::bad_lexical_cast&& e) {
+			}catch(boost::bad_lexical_cast) {
+				// The literal wasn't a signed int, try unsigned
 				// we cannot cast the literal to an integer value (probably because it was a double)
 				throw NotAFormulaException(cur);
 			}
@@ -190,6 +192,138 @@ namespace {
 Formula toFormula(const ExpressionPtr& expr) {
 	// the magic is done by the formula converter
 	return FormulaConverter(expr->getNodeManager().getLangBasic()).visit(expr);
+}
+
+namespace {
+
+	class ConstraintConverter : public IRVisitor<Constraint> {
+
+		const lang::BasicGenerator& lang;
+		detail::BDDManagerPtr bddManager;
+
+	public:
+
+		ConstraintConverter(const lang::BasicGenerator& lang)
+			: IRVisitor(false), lang(lang), bddManager(detail::createBDDManager()) {}
+
+	protected:
+
+		Constraint visitLiteral(const LiteralPtr& cur) {
+			checkType(cur);
+			if (lang.isTrue(cur)) {
+				return Constraint::getTrue(bddManager);
+			}
+			if (lang.isFalse(cur)) {
+				return Constraint::getFalse(bddManager);
+			}
+			throw NotAConstraintException(cur);
+		}
+
+		Constraint visitVariable(const VariablePtr& cur) {
+			// boolean variables are not supported directly
+			throw NotAConstraintException(cur);
+		}
+
+		Constraint visitCallExpr(const CallExprPtr& call) {
+			checkType(call);
+
+			// check boolean constraints
+			ExpressionPtr fun = call->getFunctionExpr();
+
+			// --- logical operations between constraints ---
+
+			// handle logic and
+			if (lang.isBoolLAnd(fun)) {
+				// get left and right constraint
+				Constraint a = visit(call->getArgument(0));
+				Constraint b = visit(transform::evalLazy(call->getNodeManager(), call->getArgument(1)));
+				return a && b;
+			}
+
+			// handle logic or
+			if (lang.isBoolLOr(fun)) {
+				// get left and right constraint
+				Constraint a = visit(call->getArgument(0));
+				Constraint b = visit(transform::evalLazy(call->getNodeManager(), call->getArgument(1)));
+				return a || b;
+			}
+
+			// handle logic negation
+			if (lang.isBoolLNot(fun)) {
+				return !visit(call->getArgument(0));
+			}
+
+			// handle equality
+			if (lang.isBoolEq(fun)) {
+				Constraint a = visit(call->getArgument(0));
+				Constraint b = visit(call->getArgument(1));
+				return (a && b) || (!a && !b);
+			}
+
+			// handle not-equal
+			if (lang.isBoolNe(fun)) {
+				Constraint a = visit(call->getArgument(0));
+				Constraint b = visit(call->getArgument(1));
+				return (a && !b) || (!a && b);
+			}
+
+			// --- comparison operators between formulas ---
+
+			// check whether it is a comparison operator
+			if (call->getArguments().size() != 2u || fun->getNodeType() != core::NT_Literal || !lang.isCompOp(fun)) {
+				throw NotAConstraintException(call);
+			}
+
+			// handle arguments (need to be formulas
+			Formula a;
+			Formula b;
+			try {
+				a = toFormula(call->getArgument(0));
+				b = toFormula(call->getArgument(1));
+			} catch (const NotAFormulaException& nfe) {
+				// if it is not a formula, it is also not a constraint
+				throw NotAConstraintException(call);
+			}
+
+			// process according to comparison operator encountered
+			switch(lang.getOperator(fun.as<LiteralPtr>())) {
+			case core::lang::BasicGenerator::Operator::Eq: return eq(a,b);
+			case core::lang::BasicGenerator::Operator::Ne: return ne(a,b);
+			case core::lang::BasicGenerator::Operator::Lt: return a < b;
+			case core::lang::BasicGenerator::Operator::Le: return a <= b;
+			case core::lang::BasicGenerator::Operator::Gt: return a > b;
+			case core::lang::BasicGenerator::Operator::Ge: return a >= b;
+			default: break; // ignore
+			}
+
+			// no supported formula
+			throw NotAConstraintException(call);
+		}
+
+		Constraint visitExpression(const ExpressionPtr& cur) {
+			throw NotAConstraintException(cur);
+		}
+
+		Constraint visitNode(const NodePtr& cur) {
+			throw NotAConstraintException(ExpressionPtr());
+		}
+
+	private:
+
+		void checkType(const ExpressionPtr& expr) {
+			// check that current expression is a integer expression
+			if (!lang.isBool(expr->getType())) {
+				throw NotAConstraintException(expr);
+			}
+		}
+
+	};
+
+} // end anonumous namespace
+
+Constraint toConstraint(const ExpressionPtr& expr) {
+	// the magic is done by the constraint converter
+	return ConstraintConverter(expr->getNodeManager().getLangBasic()).visit(expr);
 }
 
 namespace {

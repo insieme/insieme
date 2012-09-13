@@ -8,19 +8,21 @@ comp.icc:		Conf("icc", "ICC")
 comp.icpc:		Conf("icpc","ICPC")
 comp.insieme: 	Conf("%(BIN_DIR)s/code/driver/main", "InsiemeC")
 
+SMP_HEADER:		%(SRC_DIR)s/code/simple_backend/include/insieme/simple_backend/runtime
+SMP_BUILD: 		%(BIN_DIR)s/code/simple_backend/
 
-SMP_HEADER:	%(SRC_DIR)s/code/simple_backend/include/insieme/simple_backend/runtime
-SMP_BUILD:  %(BIN_DIR)s/code/simple_backend/
+act.sema: 		Conf(Flag("-S"), "Sema")
+act.ir: 		Conf(OutFileFlag("--dump-ir", "ir"))
+# act.cfg: 		Conf(OutFileFlag("--dump-cfg", "cfg"))
+act.seq:		Conf(Flag("-b seq"), "Seq. Backend")
+act.run:		Conf(Flag("-b run"), "Run. Backend")
+act.ocl:		Conf(Flag("-b ocl"), "Ocl Backend")
 
-act.sema: 	Conf(Flag("-S"), "Sema")
-act.ir: 	Conf(OutFileFlag("--dump-ir", "ir"))
-act.cfg: 	Conf(OutFileFlag("--dump-cfg", "cfg"))
-act.smp: 	Conf(Flag("-b pthread"), "Simple Backend")
-act.seq:	Conf(Flag("-b seq"), "Seq. Backend")
-act.run:	Conf(Flag("-b run"), "Run. Backend")
-act.ocl:	Conf(Flag("-b ocl"), "Ocl Backend")
-
-front.insieme: %(comp.insieme)s + Conf(Flag("--std=c99 -I."))
+front.insieme: %(comp.insieme)s + Conf([ Flag("--std=c99"), 
+									     Flag("--col-wrap=120"),
+										 Flag("--show-line-no"),
+										 Flag("--log-level=INFO")]
+									  )
 
 # LIST of INSIEME BACKENDS
 back.gcc.flags: Conf([ 
@@ -29,27 +31,30 @@ back.gcc.flags: Conf([
 					Flag("-pipe"),
 					Flag("-I.")
 				])
-back.gcc: 		%(back.gcc.flags)s + Conf(Flag("-std=c99"))
-back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++0x")) 
+back.gcc: 		%(back.gcc.flags)s + Conf(Flag("-std=gnu99"))
+back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++11")) 
 
 back.icc.flags: Conf(Flag('-I.'))
 back.icc:		%(back.icc.flags)s + Conf(Flag("-c99"))
 back.icpc:		%(back.icc.flags)s + Conf(Flag("-c11"))
 
 back.c.opt: 	Conf(Flag('-O3'))
-back.smp:   	Conf([ 
-					Flag("-I%(SMP_HEADER)s"),
-					Flag("-linsieme_simple_backend_runtime"),
-					Flag("-L%(SMP_BUILD)s")
-				 ], "SMB")
 back.seq: 		Conf(Flag("-lm"), "SEQ")
 back.run:		Conf([
 					Flag('-I%(SRC_DIR)s/code/runtime/include'),
 					Flag('-D_XOPEN_SOURCE=700'),
 					Flag('-D_GNU_SOURCE'),
+					Flag('-Wl,--no-as-needed'),
 					Flag('-ldl')
 				], "RUN")
-back.ocl:   	%(back.run)s + Conf(Flag('-lOpenCL'), "OCL")
+back.ocl:   	%(back.run)s + Conf([
+					Flag('-lOpenCL'), 
+					Flag('-I$OPENCL_ROOT/include'),
+					Flag('-L$OPENCL_ROOT/lib/x86_64'),
+					Flag('-Wl,--no-as-needed'),
+					Flag('-DUSE_OPENCL=ON'),
+					Flag('-D_POSIX_C_SOURCE=199309')
+				], "OCL")
 
 # LIST OF PASSES (it's important that passes names begins with the pass keyword)
 pass.00.gcc: 		Pass(None, None, %(comp.gcc)s+%(back.c.opt)s+%(back.gcc)s, 'ref')
@@ -58,14 +63,7 @@ pass.01.icc: 		Pass(None, None, %(comp.icc)s+%(back.c.opt)s+%(back.icc)s, 'ref')
 pass.02.g++:		Pass(None, None, %(comp.g++)s+%(back.c.opt)s+%(back.g++)s, 'ref')
 pass.03.icpc:		Pass(None, None, %(comp.icpc)s+%(back.c.opt)s+%(back.icpc)s, 'ref')
 
-pass.04.sema: 		Pass(%(front.insieme)s+%(act.sema)s+%(act.ir)s + %(act.cfg)s)
-
-pass.05.smp:		Pass(%(front.insieme)s+%(act.smp)s, 'insieme.smp.c', 
-					 %(comp.gcc)s+%(back.gcc)s+%(back.smp)s+%(back.c.opt)s, 'smp.test' 
-					) 
-pass.06.smp_icc:	Pass(%(front.insieme)s+%(act.smp)s, 'insieme.smp.c',  
-					 %(comp.icc)s+%(back.icc)s+%(back.smp)s+%(back.c.opt)s, 'smp.test.icc' 
-					) 
+pass.05.sema: 		Pass(%(front.insieme)s+%(act.sema)s+%(act.ir)s)
 
 pass.07.seq:   		Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
 					 %(comp.gcc)s+%(back.gcc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test' 

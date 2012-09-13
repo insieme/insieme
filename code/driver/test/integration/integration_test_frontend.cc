@@ -41,22 +41,10 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/ir_builder.h"
 
-#include "insieme/core/ir_check.h"
+#include "insieme/core/checks/full_check.h"
 
-#include "insieme/core/checks/ir_checks.h"
-#include "insieme/core/checks/typechecks.h"
-#include "insieme/core/checks/imperativechecks.h"
-#include "insieme/core/arithmetic/arithmetic_utils.h"
-#include "insieme/core/dump/binary_dump.h"
-#include "insieme/core/dump/text_dump.h"
-
-#include "insieme/backend/runtime/runtime_backend.h"
-
-#include "insieme/utils/compiler/compiler.h"
 #include "insieme/utils/test/integration_tests.h"
 #include "insieme/utils/cmd_line_utils.h"
 #include "insieme/utils/logging.h"
@@ -83,16 +71,17 @@ namespace insieme {
 		utils::test::IntegrationTestCase testCase = GetParam();
 		SCOPED_TRACE("Testing Case: " + testCase.getName());
 		LOG(INFO) << "Testing Case: " + testCase.getName();
-	
+
 		// load the code using the frontend
 		core::ProgramPtr code = load(manager, testCase);
+		// LOG(INFO) << printer::PrettyPrinter(code);
 
 		// run semantic checks on loaded program
-		auto errors = core::check(code, core::checks::getFullCheck()).getErrors();
+		auto errors = core::checks::check(code).getErrors();
 
 		EXPECT_EQ(static_cast<std::size_t>(0), errors.size());
 		if (!errors.empty()) {
-			for_each(errors, [](const Message& cur) {
+			for_each(errors, [](const core::checks::Message& cur) {
 				LOG(INFO) << cur;
 				NodeAddress address = cur.getAddress();
 				std::stringstream ss;
@@ -110,6 +99,7 @@ namespace insieme {
 				} while(ss.str().length() < 50 && contextSize++ < 5);
 				LOG(INFO) << "\t Context: " << ss.str() << std::endl;
 			});
+			// assert(false);
 		}
 
 	}

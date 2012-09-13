@@ -134,7 +134,7 @@ namespace c_ast {
 
 	struct PrimitiveType : public Type {
 		enum CType {
-			Void, Bool, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float, Double
+			Void, Bool, Char, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float, Double
 		};
 		const CType type;
 		PrimitiveType(CType type) : Type(NT_PrimitiveType), type(type) {}
@@ -166,8 +166,8 @@ namespace c_ast {
 
 	struct VectorType : public Type {
 		TypePtr elementType;
-		ExpressionPtr size;
-		VectorType(TypePtr elementType, ExpressionPtr size) : Type(NT_VectorType), elementType(elementType), size(size) {}
+		ExpressionPtr size;		// could be null to represent T[]; - no size given
+		VectorType(TypePtr elementType, ExpressionPtr size = ExpressionPtr()) : Type(NT_VectorType), elementType(elementType), size(size) {}
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -424,16 +424,16 @@ namespace c_ast {
 
 	struct Call : public Expression {
 		NodePtr function;
-		vector<ExpressionPtr> arguments;
+		vector<NodePtr> arguments;
 
 		Call(NodePtr function) : Expression(NT_Call), function(function) {}
 
-		Call(NodePtr function, const vector<ExpressionPtr>& args)
+		Call(NodePtr function, const vector<NodePtr>& args)
 			: Expression(NT_Call), function(function), arguments(args) {}
 
 		template<typename ... E>
 		Call(NodePtr function, E ... args)
-			: Expression(NT_Call), function(function), arguments(toVector<ExpressionPtr>(args...)) {}
+			: Expression(NT_Call), function(function), arguments(toVector<NodePtr>(args...)) {}
 
 		virtual bool equals(const Node& node) const;
 	};
@@ -459,6 +459,13 @@ namespace c_ast {
 	struct FunctionPrototype : public Declaration {
 		FunctionPtr function;
 		FunctionPrototype(FunctionPtr function) : Declaration(NT_FunctionPrototype), function(function) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct ExtVarDecl : public Declaration {
+		TypePtr type;
+		string name;
+		ExtVarDecl(TypePtr type, const string& name) : Declaration(NT_ExtVarDecl), type(type), name(name) {}
 		virtual bool equals(const Node& node) const;
 	};
 

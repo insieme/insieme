@@ -174,6 +174,8 @@ private:
 template <>
 inline bool Constraint<int>::isEvaluable() const { return true; }
 
+
+
 /******************************************************************************************************
  * Combiner: The constraint combiner has the task to combine multiple constraints into 
  * conjunctions (AND) or disjunctions (OR) of constraints which can be either in positive form of 
@@ -239,6 +241,8 @@ struct Combiner: public utils::Printable {
 	virtual CombinerType getCombinerType() const = 0;
 
 };
+
+
 
 /**************************************************************************************************
  * This class is a wrapper for a plain Constraint. Utilized to combine constraints in a composite
@@ -610,7 +614,6 @@ operator or(const C1<FuncTy>& lhs, const C2<FuncTy>& rhs) {
 	return makeDisjunction<FuncTy>(lhsPtr, rhsPtr); 
 }
 
-
 namespace {
 
 template <class FuncTy>
@@ -718,8 +721,8 @@ struct Piecewise : Printable {
 
 	// Build a piecewise containing only 1 piece
 	Piecewise( const PredicatePtr& pred, const FuncTy& trueVal, const FuncTy& falseVal = FuncTy()) 
-		: pieces( { Piece(normalize(pred), trueVal), 
-					Piece(normalize(not_(pred)), falseVal) 
+		: pieces( { Piece(pred, trueVal), 
+					Piece(not_(pred), falseVal) 
 				  } ) { }
 
 	std::ostream& printTo(std::ostream& out) const {

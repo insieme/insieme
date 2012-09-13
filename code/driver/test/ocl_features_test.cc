@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_program.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/frontend/program.h"
@@ -79,13 +79,13 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 
 	LOG(INFO) << "Printing the IR: " << pp;
 */
-	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+	auto errors = core::checks::check(program).getAll();
 
 	EXPECT_EQ(errors.size(), 0u);
 
 	std::sort(errors.begin(), errors.end());
 
-	for_each(errors, [](const core::Message& cur) {
+	for_each(errors, [](const core::checks::Message& cur) {
 		LOG(INFO) << cur << std::endl;
 	});
 
@@ -111,22 +111,22 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 
 
 	EXPECT_EQ(1.0, intOPs);
-	EXPECT_EQ(200.0, vecIntOPs);
+	EXPECT_EQ(0.0, vecIntOPs);
 
 	EXPECT_EQ(1.0, floatOPs);
 	EXPECT_EQ(800.0, vecFloatOPs);
 
-	EXPECT_EQ(6.0, intrinsics);
+	EXPECT_EQ(10.0, intrinsics);
 
 	EXPECT_EQ(0.0, barriers);
 
-	EXPECT_EQ(50.0, memoryAccesses);
+	EXPECT_EQ(45.0, memoryAccesses);
 
 //std::cout << "r " << relLocalmemAcc << " c " << computeMemoryRatio << std::endl;
-	EXPECT_GT(0.001, fabs(0.02 - relLocalmemAcc));
-	EXPECT_GT(0.001, fabs(22.04 - computeMemoryRatio));
+	EXPECT_GT(0.001, fabs(0.0222222 - relLocalmemAcc));
+	EXPECT_GT(0.001, fabs(17.8222 - computeMemoryRatio));
 
-	EXPECT_EQ(1102.0, totalComputation);
+	EXPECT_EQ(802.0, totalComputation);
 
 	// code_features.cpp:56
 	// cache_utils.h:72

@@ -34,38 +34,19 @@
  * regarding third party software licenses.
  */
 
+#pragma once 
+
 #include "insieme/frontend/convert.h"
-
-/*
-#include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/analysis/loop_analyzer.h"
-#include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/utils/ir_cast.h"
-
-#include "insieme/frontend/pragma/insieme.h"
-#include "insieme/frontend/omp/omp_pragma.h"
-#include "insieme/frontend/mpi/mpi_pragma.h"
-
-#include "insieme/utils/container_utils.h"
-#include "insieme/utils/logging.h"
-
-#include "insieme/core/ir_statements.h"
-#include "insieme/core/analysis/ir_utils.h"
-
-#include "insieme/annotations/c/naming.h"
-#include "insieme/annotations/c/location.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
-
-#include "insieme/core/transform/node_replacer.h"
-*/
-
 #include "insieme/frontend/cpp/temporary_handler.h"
+
+#include "insieme/core/forward_decls.h"
 
 #include "clang/AST/StmtVisitor.h"
 
 namespace stmtutils {
 
-typedef vector<insieme::core::StatementPtr> StatementList;
+using namespace insieme::core;
+
 //-------------------------------------------- StmtWrapper ------------------------------------------------------------
 /*
  * Utility class used as a return type for the StmtVisitor. It can store a list of statement
@@ -89,25 +70,22 @@ struct StmtWrapper: public StatementList {
 	}
 };
 
-insieme::core::StatementPtr tryAggregateStmt(const insieme::core::IRBuilder& builder, const insieme::core::StatementPtr& stmt);
-insieme::core::StatementPtr tryAggregateStmts(const insieme::core::IRBuilder& builder, const StatementList& stmtVect);
-insieme::core::ExpressionPtr makeOperation(const insieme::core::IRBuilder& builder, const insieme::core::ExpressionPtr& lhs,
-		const insieme::core::ExpressionPtr& rhs, const insieme::core::lang::BasicGenerator::Operator& op);
+StatementPtr tryAggregateStmt(const IRBuilder& builder, const StatementPtr& stmt);
+StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& stmtVect);
+ExpressionPtr makeOperation(const IRBuilder& builder, const ExpressionPtr& lhs,
+		const ExpressionPtr& rhs, const lang::BasicGenerator::Operator& op);
 
 }
-
-using namespace clang;
-using namespace insieme;
 
 namespace insieme {
 namespace frontend {
 namespace conversion {
 
 #define FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtTy) \
-	stmtutils::StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return stmtutils::StmtWrapper( convFact.convertExpr(stmt) ); }
+	stmtutils::StmtWrapper Visit##StmtTy( clang::StmtTy* stmt ) { return stmtutils::StmtWrapper( convFact.convertExpr(stmt) ); }
 
 #define CALL_BASE_STMT_VISIT(Base, StmtTy) \
-	stmtutils::StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return Base::Visit##StmtTy( stmt ); }
+	stmtutils::StmtWrapper Visit##StmtTy( clang::StmtTy* stmt ) { return Base::Visit##StmtTy( stmt ); }
 
 #define LOG_STMT_CONVERSION(retIr) \
 	FinalActions attachLog( [&] () { END_LOG_STMT_CONVERSION(retIr); } )
@@ -135,12 +113,16 @@ namespace conversion {
 class ConversionFactory::StmtConverter {
 
 protected:
-	ConversionFactory& convFact;
+	ConversionFactory& 					convFact;
+	core::NodeManager& 					mgr;
+	const core::IRBuilder& 				builder;
+	const core::lang::BasicGenerator& 	gen;
 
 public:
 	StmtConverter(ConversionFactory& convFact) :
-			convFact(convFact) {
-	}
+		convFact(convFact), mgr(convFact.mgr), 
+		builder(convFact.builder), gen(convFact.mgr.getLangBasic()) { }
+
 	virtual ~StmtConverter() {}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -206,13 +188,16 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	virtual stmtutils::StmtWrapper Visit(clang::Stmt* stmt) = 0;
 
-	stmtutils::StmtWrapper VisitStmt(Stmt* stmt);
+	stmtutils::StmtWrapper VisitStmt(clang::Stmt* stmt);
 };
 
 //---------------------------------------------------------------------------------------------------------------------
 //							C STMT CONVERTER -- takes care of C nodes
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::CStmtConverter : public ConversionFactory::StmtConverter, public StmtVisitor<ConversionFactory::CStmtConverter, stmtutils::StmtWrapper> {
+class ConversionFactory::CStmtConverter : 
+	public ConversionFactory::StmtConverter, 
+	public clang::StmtVisitor<ConversionFactory::CStmtConverter, stmtutils::StmtWrapper> 
+{
 
 protected:
 	//ConversionFactory& convFact;
@@ -266,7 +251,11 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //							CXX STMT CONVERTER  -- takes care of CXX nodes and C nodes with CXX code mixed in
 //---------------------------------------------------------------------------------------------------------------------
-class CXXConversionFactory::CXXStmtConverter: public ConversionFactory::StmtConverter, public StmtVisitor<CXXConversionFactory::CXXStmtConverter, stmtutils::StmtWrapper> {
+class CXXConversionFactory::CXXStmtConverter: 
+	public ConversionFactory::StmtConverter, 
+	public clang::StmtVisitor<CXXConversionFactory::CXXStmtConverter, stmtutils::StmtWrapper> 
+{
+
 	cpp::TemporaryHandler tempHandler;
 	CXXConversionFactory& cxxConvFact;
 

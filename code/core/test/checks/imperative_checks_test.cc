@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/imperativechecks.h"
+#include "insieme/core/checks/imperative_checks.h"
 
 namespace insieme {
 namespace core {

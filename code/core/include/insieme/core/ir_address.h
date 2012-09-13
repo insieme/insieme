@@ -663,15 +663,17 @@ public:
 	 * Checks whether this address is referencing the same path as
 	 * the given address.
 	 */
-	bool operator==(const Address<T>& other) const {
+	template <typename S>
+	bool operator==(const Address<S>& other) const {
 		// test for identity or equal path
-		return this == &other || path == other.path;
+		return this == reinterpret_cast<const Address<T>*>(&other) || path == other.getPath();
 	}
 
 	/**
 	 * Implementing the not-equal operator addresses.
 	 */
-	bool operator!=(const Address<T>& other) const {
+	template <typename S>
+	bool operator!=(const Address<S>& other) const {
 		return !(*this == other);
 	}
 

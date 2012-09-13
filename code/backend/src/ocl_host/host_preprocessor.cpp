@@ -46,9 +46,9 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 
-#include "insieme/core/ir_check.h"
 #include "insieme/utils/logging.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/analysis/features/type_features.h"
 
@@ -743,17 +743,17 @@ using insieme::transform::pattern::anyList;
 		nodeMap.clear();
 
 		// Semantic check on code2
-		auto semantic = core::check(code2, insieme::core::checks::getFullCheck());
+		auto semantic = core::checks::check(code2, insieme::core::checks::getFullCheck());
 		auto warnings = semantic.getWarnings();
 		std::sort(warnings.begin(), warnings.end());
-		for_each(warnings, [](const core::Message& cur) {
+		for_each(warnings, [](const core::checks::Message& cur) {
 			LOG(INFO) << cur << std::endl;
 		});
 
 		auto errors = semantic.getErrors();
 		std::sort(errors.begin(), errors.end());
         std::cout << "ERROR BEFORE SPLITTING: " << std::endl;
-		for_each(errors, [](const core::Message& cur) {
+		for_each(errors, [](const core::checks::Message& cur) {
 			LOG(INFO) << cur << std::endl;
 		});
 
@@ -1124,17 +1124,17 @@ using insieme::transform::pattern::anyList;
 				CallExprPtr newCall = builder.callExpr(newLambda, arguments);
 
 				// Semantic check on newCall
-				auto semantic = core::check(newCall, insieme::core::checks::getFullCheck());
+				auto semantic = core::checks::check(newCall, insieme::core::checks::getFullCheck());
 				auto warnings = semantic.getWarnings();
 				std::sort(warnings.begin(), warnings.end());
-				for_each(warnings, [](const core::Message& cur) {
+				for_each(warnings, [](const core::checks::Message& cur) {
 					LOG(INFO) << cur << std::endl;
 				});
 
 				auto errors = semantic.getErrors();
 				std::sort(errors.begin(), errors.end());
 				std::cout << "ERROR New CAll: " << std::endl;
-				for_each(errors, [](const core::Message& cur) {
+				for_each(errors, [](const core::checks::Message& cur) {
 					LOG(INFO) << cur << std::endl;
 				});
 
@@ -1162,16 +1162,16 @@ using insieme::transform::pattern::anyList;
 				std::cout << "NEWCALL " << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
 
 				// Semantic check on code2
-				semantic = core::check(newBody2, insieme::core::checks::getFullCheck());
+				semantic = core::checks::check(newBody2, insieme::core::checks::getFullCheck());
 				warnings = semantic.getWarnings();
 				std::sort(warnings.begin(), warnings.end());
-				for_each(warnings, [](const core::Message& cur) {
+				for_each(warnings, [](const core::checks::Message& cur) {
 					LOG(INFO) << cur << std::endl;
 				});
 
 				errors = semantic.getErrors();
 				std::sort(errors.begin(), errors.end());
-				for_each(errors, [&builder, &foundErrors](const core::Message& cur) {
+				for_each(errors, [&builder, &foundErrors](const core::checks::Message& cur) {
 					LOG(INFO) << "---- SEMANTIC ERROR - FINAL STEP ---- \n" << cur << std::endl;
 					foundErrors = true;
 				});

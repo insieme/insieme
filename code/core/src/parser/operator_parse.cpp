@@ -141,9 +141,20 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
         inplaceOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr& a) {
     IRBuilder builder(nodeMan);
 
-	if(RefTypePtr ref = dynamic_pointer_cast<const RefType>(a->getType())) {
-		return builder.callExpr(generator->getOperator(ref->getElementType(), op), a);
+	switch(op) {
+
+	case lang::BasicGenerator::PreInc:  return builder.callExpr(a->getType(), generator->getGenPreInc(), a);
+	case lang::BasicGenerator::PreDec:  return builder.callExpr(a->getType(), generator->getGenPreDec(), a);
+	case lang::BasicGenerator::PostInc: return builder.callExpr(a->getType(), generator->getGenPostInc(), a);
+	case lang::BasicGenerator::PostDec: return builder.callExpr(a->getType(), generator->getGenPostDec(), a);
+
+	default:
+		break;
 	}
+	//builder.callExpr(a->getType(), 
+	//if(RefTypePtr ref = dynamic_pointer_cast<const RefType>(a->getType())) {
+	//	return builder.callExpr(generator->getOperator(ref->getElementType(), op), a);
+	//}
 
 	throw SemanticException("Inplace Operations only work on reference variables");
 }

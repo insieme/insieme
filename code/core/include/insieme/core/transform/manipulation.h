@@ -185,6 +185,29 @@ NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigne
 LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda, unsigned index, const ExpressionPtr& value);
 
 /**
+ * Replaces the given call expression with an expression where the computation of a bind on
+ * position index is replaced a its bound values and the actual computation of the bind
+ * is moved inside the lambda to be called.
+ *
+ * Let
+ *
+ * 			fun ( ..., bind(){...}, ...)
+ *
+ * be the call and fun a lambda expression. The resulting call will be
+ *
+ * 			fun' ( ..., BoundVariables(bind(){...}, ...)
+ *
+ * such that the bind is computed within fun' and the bound variables within the bind are passed
+ * as additional arguments.
+ *
+ * @param manager the manager to be used to create and maintain nodes which might have to be created
+ * @param call the call to be modified
+ * @param index the index of the bind-argument to be pushed inside
+ * @return the fixed function call
+ */
+CallExprPtr pushBindIntoLambda(NodeManager& manager, const CallExprPtr& call, unsigned index);
+
+/**
  * Fixes the given variable by the given value. Each occurrences of the variable will be replaced by the given value. Further,
  * whenever, the variable is passed to a function, the parameter will be eliminated.
  *
@@ -335,34 +358,6 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
  * @return the variable alias to use or a null pointer if the variable is not found
  */
 //VariablePtr makeAvailable(NodeManager& manager, const VariableAddress& var, const NodeAddress& location, NodePtr& outNewRoot);
-
-
-/**
- * Converts the given statement into an equivalent sequential code variant by replacing
- * all parallel constructs inside with their sequential counterpart.
- *
- * @param manager the manager used to create new nodes
- * @param stmt the statement to be sequentialized
- * @return a sequential version of the code or a null pointer if the given code can not be
- * 			safely sequentialized.
- */
-NodePtr trySequentialize(NodeManager& manager, const NodePtr& stmt);
-
-/**
- * A generic form of the trySequentialize function preserving the type of the pointer being
- * passed as an argument. The caller has to make sure that the result type is still valid after
- * the sequentialization. If the sequentialization fails, a null pointer will be returned.
- *
- * @param manager the manager used to create new nodes
- * @param stmt the statement to be sequentialized
- * @return a sequential version of the code or a null pointer if the given code can not be
- * 			safely sequentialized.
- */
-template<typename T>
-Pointer<const T> trySequentialize(NodeManager& manager, const Pointer<const T>& code) {
-	NodePtr res = trySequentialize(manager, NodePtr(code));
-	return (res) ? res.as<Pointer<const T>>() : Pointer<const T>();
-}
 
 /**
  * Removes superfluous lambda arguments.

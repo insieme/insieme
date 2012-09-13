@@ -514,7 +514,8 @@ int add_cell(int id, coor FOOTPRINT, ibrd BOARD, struct cell *CELLS) {
 	ibrd board;
 	coor footprint, NWS[DMAX];
 
-	nnc = nnl = 0;
+	nnc = 0;
+	nnl = 0;
 
 	/* for each possible shape */
 	for (i = 0; i < CELLS[id].n; i++) {

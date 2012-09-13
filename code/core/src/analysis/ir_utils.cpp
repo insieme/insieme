@@ -41,6 +41,8 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/attributes.h"
 
+#include "insieme/core/lang/basic.h"
+
 // WARNING: this file is only preliminary and might be heavily modified or moved ...
 
 
@@ -178,7 +180,9 @@ namespace {
 		// do not visit types
 		LambdaDeltaVisitor() : IRVisitor<bool>(false) {}
 
-		bool visitNode(const NodePtr& node) { return false; } // default behavior: continue visiting
+		bool visitNode(const NodePtr& node) {
+			return node->getNodeCategory() == NC_Type;
+		} // default behavior: continue visiting
 
 		bool visitDeclarationStmt(const DeclarationStmtPtr &decl) {
 			bound.insert(decl->getVariable());
@@ -235,7 +239,9 @@ namespace {
 		// for bind, just look at the variables being bound and ignore the call
 		bool visitBindExpr(const BindExprPtr& bindExpr) {
 			ExpressionList expressions = bindExpr->getBoundExpressions();
-			for_each(expressions, [&](const ExpressionPtr e) { this->visit(e); } );
+			for_each(expressions, [&](const ExpressionPtr& e) {
+				visitDepthFirstOncePrunable(e, *this);
+			} );
 			return true;
 		}
 	};
@@ -245,14 +251,54 @@ namespace {
 VariableList getFreeVariables(const NodePtr& code) {
 	LambdaDeltaVisitor ldv;
 	visitDepthFirstOncePrunable(code, ldv);
-	//std::cout << "\ncode for free var check:\n" << code;
-	//std::cout << "\n== Free set: \n" << ldv.free;
 
 	// convert result into list
-	VariableList res(ldv.free.begin(), ldv.free.end());
-	//std::cout << "\n== res: \n" << res;
-	return res;
+	return VariableList(ldv.free.begin(), ldv.free.end());
 }
+
+
+namespace {
+
+	struct VariableCollector : public IRVisitor<> {
+
+		struct VariableSetAnnotation : public VariableSet {
+			VariableSetAnnotation(const VariableSet& varSet) : VariableSet(varSet) {}
+		};
+
+		VariableSet varSet;
+
+		void visitVariable(const VariablePtr& var) {
+			varSet.insert(var);		// collect value, that's all
+		}
+
+		void visitLambda(const LambdaPtr& lambda) {
+			// add a cut-off at lambdas and cache results
+			if (!lambda->hasAttachedValue<VariableSetAnnotation>()) {
+				VariableSet local = getAllVariables(lambda->getBody());
+				local.insert(lambda->getParameters().begin(),lambda->getParameters().end());
+				lambda->attachValue<VariableSetAnnotation>(local);
+			}
+			assert(lambda->hasAttachedValue<VariableSetAnnotation>());
+			const VariableSetAnnotation& set = lambda->getAttachedValue<VariableSetAnnotation>();
+			varSet.insert(set.begin(), set.end());
+		}
+
+		void visitNode(const NodePtr& node) {
+			// collect recursively
+			visitAll(node->getChildList());
+		}
+
+	};
+
+}
+
+
+VariableSet getAllVariables(const NodePtr& code) {
+	VariableCollector collector;
+	collector.visit(code);
+	return collector.varSet;
+}
+
 
 namespace {
 class RenamingVarVisitor: public core::IRVisitor<void, Address> {

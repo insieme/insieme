@@ -45,13 +45,18 @@
 #include "insieme/backend/ir_extensions.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
+#include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/lang/basic.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/encoder/encoder.h"
+#include "insieme/core/encoder/lists.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace backend {
@@ -63,17 +68,6 @@ namespace backend {
 
 			// convert expression
 			c_ast::ExpressionPtr res = context.getConverter().getStmtConverter().convertExpression(context, expr);
-
-			// special handling for variables representing data indirectly
-			// TODO: figure out why this is not required any more ... ?!?
-//			if (expr->getNodeType() == core::NT_Variable) {
-//				core::VariablePtr var = static_pointer_cast<const core::Variable>(expr);
-//
-//				if (context.getVariableManager().getInfo(var).location == VariableInfo::INDIRECT) {
-//					// should result in a pointer to the target
-//					return res;
-//				}
-//			}
 
 			// a deref is required (implicit in C)
 			return c_ast::deref(res);
@@ -91,6 +85,157 @@ namespace backend {
 			return core::transform::evalLazy(manager, exprPtr);
 		}
 
+		core::ExpressionPtr wrapNarrow(const core::ExpressionPtr& root, const core::ExpressionPtr& dataPath) {
+			core::NodeManager& mgr = dataPath.getNodeManager();
+			auto& basic = mgr.getLangBasic();
+			core::IRBuilder builder(mgr);
+
+			// check for the terminal case
+			if (basic.isDataPathRoot(dataPath)) {
+				return root;
+			}
+
+			// checks the remaining data path
+			assert(dataPath->getNodeType() == core::NT_CallExpr && "Data Path is neither root nor call!");
+
+			// resolve data path recursively
+			core::CallExprPtr call = dataPath.as<core::CallExprPtr>();
+			core::ExpressionPtr res = wrapNarrow(root, call->getArgument(0));
+			auto fun = call->getFunctionExpr();
+			if (basic.isDataPathMember(fun)) {
+				// access the member of the struct / union
+				return builder.refMember(res, call->getArgument(1).as<core::LiteralPtr>()->getStringValue());
+			} else if (basic.isDataPathElement(fun)) {
+				// access element of vector
+				return builder.arrayRefElem(res, call->getArgument(1));
+			} else if (basic.isDataPathComponent(fun)) {
+				// access tuple component
+				return builder.refComponent(res, call->getArgument(1));
+			}
+
+			// this is not a valid data path
+			LOG(ERROR) << "Invalid data path encoding: " << *dataPath << "\n";
+			assert(false && "Unknown Data Path encoding!");
+			return res;
+		}
+
+		/**
+		 * Converts a root expression + data path into a C-AST construct navigating from the root to the addressed
+		 * data element.
+		 */
+		c_ast::ExpressionPtr narrow(ConversionContext& context, const core::ExpressionPtr& root, const core::ExpressionPtr& dataPath) {
+			// convert data path to access operations and use standard conversion
+			return context.getConverter().getStmtConverter().convertExpression(context, wrapNarrow(root, dataPath));
+		}
+
+		/**
+		 * Converts a leaf expression and a data path into a C-AST expression navigating from the leaf to the root
+		 * expression.
+		 */
+		c_ast::ExpressionPtr expand(ConversionContext& context, const c_ast::ExpressionPtr& src, const core::ExpressionPtr& dataPath, const core::TypePtr& resType, core::TypePtr& curType) {
+			auto& basic = dataPath.getNodeManager().getLangBasic();
+
+			// expansion is not supported in C => requires manual pointer arithmetic
+
+			// check for the terminal case
+			if (basic.isDataPathRoot(dataPath)) {
+				curType = resType;	// update currently processed type
+				return src;		// done, no offset required
+			}
+
+			// process remaining data-path components
+			assert(dataPath->getNodeType() == core::NT_CallExpr && "Data Path is neither root nor call!");
+
+			// resolve data path recursively
+			core::CallExprPtr call = dataPath.as<core::CallExprPtr>();
+			auto fun = call->getFunctionExpr();
+
+
+			// compute offsets of remaining data path recursively
+			c_ast::ExpressionPtr res = expand(context, src, call->getArgument(0), resType, curType);
+
+			// compute access expression
+			auto& cNodeManager = context.getConverter().getCNodeManager();
+			if (basic.isDataPathMember(fun)) {
+
+				// extract element type from current result type
+				core::LiteralPtr memberName = call->getArgument(1).as<core::LiteralPtr>();
+
+				// obtain reference to struct type
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(curType);
+
+				// add definition of type
+				context.addDependency(info.definition);
+
+				// update current type for following steps
+				curType = curType.as<core::NamedCompositeTypePtr>()->getNamedTypeEntryOf(memberName->getValue())->getType();
+
+				// compute offset using offsetof macro
+				c_ast::ExpressionPtr offset = c_ast::call(
+						cNodeManager->create("offsetof"),
+						info.rValueType,
+						cNodeManager->create(memberName->getStringValue())
+				);
+
+				return c_ast::sub(res, offset);
+
+			} else if (basic.isDataPathElement(fun)) {
+
+				// update current type for next steps
+				curType = curType.getChild(0).as<core::TypePtr>();
+
+				// get type-info of element type
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(curType);
+
+				// add dependency
+				context.addDependency(info.definition);
+
+				c_ast::ExpressionPtr offset = c_ast::mul(
+						c_ast::sizeOf(info.rValueType),
+						context.getConverter().getStmtConverter().convertExpression(context, call->getArgument(1))
+				);
+
+				// subtract offset from pointer
+				return c_ast::sub(res, offset);
+
+			} else if (basic.isDataPathComponent(fun)) {
+
+				// obtain reference to struct type
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(curType);
+
+				//  --- update current type for next steps ---
+
+				// get element type of selected component
+				core::arithmetic::Formula index = core::arithmetic::toFormula(call->getArgument(1));
+				assert(index.isInteger() && "Non-constant tuple element access encountered!");
+
+				// extract component index
+				int componentIndex = index.getConstantValue().getNumerator();
+
+				// extract element type from tuple
+				curType = resType.as<core::TupleTypePtr>()->getElement(componentIndex);
+
+
+				// --- compute offset ---
+
+				// add definition of type
+				context.addDependency(info.definition);
+
+				// compute offset using offsetof macro
+				c_ast::ExpressionPtr offset = c_ast::call(
+						cNodeManager->create("offsetof"),
+						info.rValueType,
+						cNodeManager->create(format("c%d", componentIndex))
+				);
+
+				return c_ast::sub(res, offset);
+
+			} else {
+				assert(false && "Unknown data path setup!");
+			}
+
+			return src;
+		}
 	}
 
 
@@ -98,13 +243,6 @@ namespace backend {
 		const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 		OperatorConverterTable res;
-
-//		std::function<int(int,int)> x;
-//
-//		x = &(((struct {
-//			int dummy;
-//			static int f(int a, int b) { return a; };
-//		}){0}).f);
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
@@ -135,10 +273,10 @@ namespace backend {
 		res[basic.getUnsignedIntLShift()] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getUnsignedIntRShift()] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		res[basic.getUnsignedIntPreInc()]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
-		res[basic.getUnsignedIntPostInc()] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
-		res[basic.getUnsignedIntPreDec()]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
-		res[basic.getUnsignedIntPostDec()] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
+		res[basic.getGenPreInc()]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
+		res[basic.getGenPostInc()] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
+		res[basic.getGenPreDec()]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
+		res[basic.getGenPostDec()] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
 
 		res[basic.getUnsignedIntEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getUnsignedIntNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
@@ -164,10 +302,10 @@ namespace backend {
 		res[basic.getSignedIntLShift()] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getSignedIntRShift()] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		res[basic.getSignedIntPreInc()]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
-		res[basic.getSignedIntPostInc()] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
-		res[basic.getSignedIntPreDec()]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
-		res[basic.getSignedIntPostDec()] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
+		//res[basic.getSignedIntPreInc()]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
+		//res[basic.getSignedIntPostInc()] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
+		//res[basic.getSignedIntPreDec()]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
+		//res[basic.getSignedIntPostDec()] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
 
 		res[basic.getSignedIntEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getSignedIntNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
@@ -233,9 +371,22 @@ namespace backend {
 				return CONVERT_EXPR(call->getArgument(0));
 			}
 
+			// extract resulting type
 			const core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
 			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(elementType);
 			context.getDependencies().insert(info.definition);
+
+			// special handling for string literals
+			if (ARG(0)->getNodeType() == core::NT_Literal) {
+				core::LiteralPtr literal = ARG(0).as<core::LiteralPtr>();
+				if (literal->getStringValue()[0] == '\"') {
+					// the cast to a vector element is implemented at this point
+					// instead of the actual literal conversion to save unnecessary casts when
+					// strings are forwarded to external functions (printf) directly
+					return c_ast::deref(c_ast::cast(c_ast::ptr(info.rValueType), CONVERT_ARG(0)));
+				}
+			}
+
 			return c_ast::deref(CONVERT_ARG(0));
 		});
 
@@ -265,6 +416,11 @@ namespace backend {
 				return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, c_ast::lit(valueTypeInfo.rValueType, "0")));
 			}
 
+			// add support for partial vector initialization
+			if (core::analysis::isCallOf(initValue, basic.getVectorInitPartial())) {
+				return CONVERT_ARG(0);
+			}
+
 			auto res = CONVERT_EXPR(initValue);
 			if (res->getNodeType() == c_ast::NT_Initializer) {
 				return c_ast::ref(res);
@@ -288,8 +444,11 @@ namespace backend {
 
 			// special handling for arrays
 			if (core::analysis::isCallOf(ARG(0), LANG_BASIC.getArrayCreate1D())) {
-				// ref new can be skipped
-				return CONVERT_ARG(0);
+				// array-init is allocating data on stack using alloca => switch to malloc
+				ADD_HEADER_FOR("malloc");
+
+				auto res = CONVERT_ARG(0);
+				return c_ast::call(C_NODE_MANAGER->create("malloc"), static_pointer_cast<const c_ast::Call>(res)->arguments[0]);
 			}
 
 			// use a call to the ref_new operator of the ref type
@@ -340,6 +499,32 @@ namespace backend {
 			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
 		});
 
+		// -- support narrow and expand --
+
+		res[basic.getRefNarrow()] = OP_CONVERTER({
+			// narrow starting position step by step
+			return narrow(context, ARG(0), ARG(1));
+		});
+
+		res[basic.getRefExpand()] = OP_CONVERTER({
+			ADD_HEADER_FOR("offsetof");
+
+			auto charPtrType = c_ast::ptr(C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Char));
+
+			// navigate up by re-computing pionter address
+			auto res = CONVERT_ARG(0);	// get address of nested
+
+			// cast to char* (to match byte order)
+			res = c_ast::cast(charPtrType,res);
+
+			// subtract offsets
+			core::TypePtr curType;
+			res = expand(context, res, ARG(1), call->getType().as<core::RefTypePtr>()->getElementType(), curType);
+
+			// cast to target type and return result
+			return c_ast::cast(CONVERT_TYPE(call->getType()), res);
+		});
+
 
 		// -- strings --
 
@@ -376,12 +561,12 @@ namespace backend {
 
 		res[basic.getArrayCreate1D()] = OP_CONVERTER({
 			// type of Operator: (type<'elem>, uint<8>) -> array<'elem,1>
-			// create new array on the heap using malloc
-			ADD_HEADER_FOR("malloc");
+			// create new array on the heap using alloca
+			ADD_HEADER_FOR("alloca");
 
 			const core::ArrayTypePtr& resType = static_pointer_cast<const core::ArrayType>(call->getType());
 			c_ast::ExpressionPtr size = c_ast::mul(c_ast::sizeOf(CONVERT_TYPE(resType->getElementType())), CONVERT_ARG(1));
-			return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
+			return c_ast::call(C_NODE_MANAGER->create("alloca"), size);
 		});
 
 		#define ADD_ELEMENT_TYPE_DEPENDENCY() \
@@ -420,17 +605,13 @@ namespace backend {
 			return c_ast::postDec(getAssignmentTarget(context, ARG(0)));
 		});
 
-
 		#undef ADD_ELEMENT_TYPE_DEPENDENCY
-
+		
+		res[basic.getArrayRefDistance()] = OP_CONVERTER({
+			return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1));
+		});
 
 		// -- vectors --
-
-		res[basic.getVectorToArray()] = OP_CONVERTER({
-			// initialize an array instance
-			//   Operator Type: (vector<'elem,#l>) -> array<'elem,1>
-			return c_ast::access(CONVERT_ARG(0), "data");
-		});
 
 		res[basic.getVectorRefElem()] = OP_CONVERTER({
 			//   operator type:  (ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>
@@ -458,10 +639,37 @@ namespace backend {
 			return c_ast::call(info.initUniformName, CONVERT_ARG(0));
 		});
 
+		res[basic.getVectorInitPartial()] = OP_CONVERTER({
+
+			// obtain information regarding vector type
+			const core::VectorTypePtr vectorType = call->getType().as<core::VectorTypePtr>();
+			const VectorTypeInfo& info = GET_TYPE_INFO(vectorType);
+
+			// add dependency
+			context.getDependencies().insert(info.definition);
+
+			// create data vector to fill struct
+			auto values = core::encoder::toValue<vector<core::ExpressionPtr>>(ARG(0));
+			auto converted = ::transform(values, [&](const core::ExpressionPtr& cur)->c_ast::NodePtr { return CONVERT_EXPR(cur); });
+			auto data = C_NODE_MANAGER->create<c_ast::VectorInit>(converted);
+
+			// create compound-init expression filing struct
+			return c_ast::init(info.rValueType, data);
+		});
+
 		res[basic.getRefVectorToRefArray()] = OP_CONVERTER({
 			// Operator type: (ref<vector<'elem,#l>>) -> ref<array<'elem,1>>
 			const TypeInfo& info = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
 			context.getDependencies().insert(info.definition);
+
+			// special handling for string literals
+			if (call->getArgument(0)->getNodeType() == core::NT_Literal) {
+				core::LiteralPtr literal = call->getArgument(0).as<core::LiteralPtr>();
+				if (literal->getStringValue()[0] == '\"') {
+					return CONVERT_ARG(0);
+				}
+			}
+
 			return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");
 		});
 
@@ -535,8 +743,14 @@ namespace backend {
 			assert(ARG(1)->getNodeType() == core::NT_Literal);
 			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 
+			// special handling for accessing variable array within struct
+			auto access = c_ast::access(c_ast::deref(CONVERT_ARG(0)), field);
+			if (core::analysis::isRefOf(call->getType(), core::NT_ArrayType)) {
+				return access;
+			}
+
 			// access the type
-			return c_ast::ref(c_ast::access(c_ast::deref(CONVERT_ARG(0)), field));
+			return c_ast::ref(access);
 		});
 
 
@@ -603,6 +817,16 @@ namespace backend {
 
 		res[basic.getAnyRefToRef()] = OP_CONVERTER({
 			return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0));
+		});
+
+		res[basic.getAnyRefDelete()] = OP_CONVERTER({
+			// ensure correct type
+			assert(LANG_BASIC.isAnyRef(ARG(0)->getType()) && "Cannot anyref delete anything other than anyref!");
+
+			// add dependency to stdlib.h (contains the free)
+			ADD_HEADER_FOR("free");
+			
+			return c_ast::call(C_NODE_MANAGER->create("free"), CONVERT_ARG(0));
 		});
 
 

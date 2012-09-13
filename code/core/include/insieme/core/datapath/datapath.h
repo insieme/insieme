@@ -44,11 +44,124 @@ namespace core {
 namespace datapath {
 
 	/**
-	 * A type declaration for a data path pointer. Internally,
-	 * it is nothing more than a term of a given type being
-	 * composed using a limit set of function symbols.
+	 * Legacy code - a data path used to be a plain expression pointer.
 	 */
 	typedef ExpressionPtr DataPathPtr;
+
+	/**
+	 * The type used to represent data paths. Internally
+	 * a data path is represented by an IR construct modeling
+	 * the path within a data object to some referenced
+	 * sub-element.
+	 */
+	class DataPath : public utils::Printable {
+
+		ExpressionPtr path;
+
+		/**
+		 * The constructor to be invoked by the builder class.
+		 *
+		 * @param path the path to be represented by the resulting instance
+		 */
+		DataPath(const ExpressionPtr& path)
+			: path(path) {}
+
+	public:
+
+		/**
+		 * Creates a new data path referencing the root of a data object.
+		 */
+		DataPath(NodeManager& manager);
+
+		/**
+		 * Extends this data path by an access to the given member.
+		 * This call is only supported if the accessed element is a
+		 * struct, union or recursive type with a top-level struct/union.
+		 *
+		 * @param member the member to be accessed; the expresssion has to be of type identifer
+		 * @return the extended data path
+		 */
+		DataPath member(const ExpressionPtr& member) const;
+
+		/**
+		 * Extends this data path by an access to the given member.
+		 * This call is only supported if the accessed element is a
+		 * struct, union or recursive type with a top-level struct/union.
+		 *
+		 * @param member the member to be accessed
+		 * @return the extended data path
+		 */
+		DataPath member(const string& name) const;
+
+		/**
+		 * Extends this data path by an access to the given element.
+		 * This call is only supported if the accessed element is a
+		 * vector or array or a recursive type with a top-level vector/array.
+		 *
+		 * @param element the element to be accessed; the expression has to be an unsigned integer
+		 * @return the extended data path
+		 */
+		DataPath element(const ExpressionPtr& element) const;
+
+		/**
+		 * Extends this data path by an access to the given element.
+		 * This call is only supported if the accessed element is a
+		 * vector or array or a recursive type with a top-level vector/array.
+		 *
+		 * @param element the element to be accessed
+		 * @return the extended data path
+		 */
+		DataPath element(unsigned index) const;
+
+		/**
+		 * Extends this data path by an access to the given component.
+		 * This call is only supported if the accessed element is a
+		 * tuple or a recursive type with a top-level tuple.
+		 *
+		 * @param component the component to be accessed; must be an unsigned integer literal
+		 * @return the extended data path
+		 */
+		DataPath component(const LiteralPtr& component) const;
+
+		/**
+		 * Extends this data path by an access to the given component.
+		 * This call is only supported if the accessed element is a
+		 * tuple or a recursive type with a top-level tuple.
+		 *
+		 * @param component the component to be accessed
+		 * @return the extended data path
+		 */
+		DataPath component(unsigned index) const;
+
+		/**
+		 * A conversion operation to an ExpressionPtr.
+		 */
+		operator ExpressionPtr() const {
+			return path;
+		}
+
+		/**
+		 * A conversion operation to an StatementPtr.
+		 */
+		operator StatementPtr() const {
+			return path;
+		}
+
+		/**
+		 * A conversion operation to an NodePtr.
+		 */
+		operator NodePtr() const {
+			return path;
+		}
+
+	protected:
+
+		/**
+		 * Allows this data path to be printed in a human readable format.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
+
+	};
 
 
 	/**
@@ -57,14 +170,9 @@ namespace datapath {
 	class DataPathBuilder {
 
 		/**
-		 * The manager maintaining the internally constructed data path.
-		 */
-		NodeManager& manager;
-
-		/**
 		 * The path constructed by this builder.
 		 */
-		DataPathPtr path;
+		DataPath path;
 
 	public:
 
@@ -75,15 +183,14 @@ namespace datapath {
 		 * @param manager the manager to be used for maintaining
 		 * 			the internally constructed path
 		 */
-		DataPathBuilder(NodeManager& manager);
+		DataPathBuilder(NodeManager& manager) : path(manager) {}
 
 		/**
 		 * Creates a new builder instance based on the given initial path.
 		 *
 		 * @param path the path to be used as an initial path for the builder
 		 */
-		DataPathBuilder(const DataPathPtr& path)
-			: manager(path->getNodeManager()), path(path) {}
+		DataPathBuilder(const DataPath& path) : path(path) {}
 
 		/**
 		 * This function will extend the internally constructed path by
@@ -143,6 +250,13 @@ namespace datapath {
 
 		/**
 		 * Obtains a copy of the internally constructed data path.
+		 */
+		DataPath getDataPath() const {
+			return path;
+		}
+
+		/**
+		 * Obtains a copy of the internally constructed data path as an expression.
 		 */
 		DataPathPtr getPath() const {
 			return path;

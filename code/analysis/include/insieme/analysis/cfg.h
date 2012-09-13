@@ -51,7 +51,7 @@
 
 #include "insieme/utils/map_utils.h"
 
-#include "insieme/analysis/alias_map.h"
+#include "insieme/analysis/tmp_var_map.h"
 
 namespace insieme {
 namespace analysis {
@@ -61,7 +61,7 @@ typedef std::shared_ptr<CFG> CFGPtr;
 
 namespace cfg {
 
-/**
+/*/////////////////////////////////////////////////////////////////////////////////////////////////
  * Element - Represents a top-level expression in a basic block. A type is included to distinguish
  * expression from terminal nodes.
  *
@@ -73,7 +73,7 @@ namespace cfg {
  * baseAddr: Is the address of the original statement to which this CFG Element is point to. This
  * information is important in order to retrieve addresses of IR nodes. For example to give some
  * meaningfull information as result of the DF analysis 
- */
+ */////////////////////////////////////////////////////////////////////////////////////////////////
 struct Element : public utils::Printable {
 
 	enum Type { 
@@ -84,11 +84,32 @@ struct Element : public utils::Printable {
 	};
 
 	Element(const core::StatementAddress& baseAddr, const Type& type = NONE) : 
-		viewPtr( baseAddr.getAddressedNode() ), baseAddr( baseAddr ), type( type ) { }
+		viewPtr( baseAddr.getAddressedNode() ), 
+		baseAddr( baseAddr ), 
+		diffAddr( core::StatementAddress(baseAddr.getAddressedNode()) ),
+		type( type ) { }
 
 	Element(const core::StatementPtr& viewPtr, 
 			const core::StatementAddress& baseAddr, 
-			const Type& type = NONE) : viewPtr(viewPtr), baseAddr(baseAddr), type(type) { }
+			const Type& type = NONE) 
+	: viewPtr(viewPtr), 
+	  baseAddr(baseAddr), 
+	  diffAddr( viewPtr ? core::StatementAddress(viewPtr) : core::StatementAddress() ),
+	  type(type) { }
+
+	Element(const core::StatementPtr& viewPtr, 
+			const core::StatementAddress& baseAddr, 
+			const core::StatementAddress& diffAddr,
+			const Type& type = NONE) 
+	: viewPtr(viewPtr), 
+	  baseAddr(baseAddr), 
+	  diffAddr(diffAddr),
+	  type(type) 
+	{
+		assert( (!diffAddr || (diffAddr && diffAddr.getRootNode() == viewPtr)) && 
+				"Diff must always be relative to analysis stmt"
+			  ); 
+	}
 
 	inline const Type& getType() const { return type; }
 	
@@ -96,13 +117,31 @@ struct Element : public utils::Printable {
 
 	inline const core::StatementAddress& getStatementAddress() const { return baseAddr; }
 
+	inline const core::StatementAddress& getDifference() const { return diffAddr; }
+
 	inline std::ostream& printTo(std::ostream& out) const { 
 		return out << *viewPtr; 
 	}
 
 private:
-	core::StatementPtr viewPtr;
-	core::StatementAddress baseAddr;
+
+	/** 
+	 * Stores the analysis statement utilized for analysis 
+	 */
+	core::StatementPtr 		viewPtr;
+
+	/** 
+	 * Stores the address of the original IR statement from which the analyisis statement has been
+	 * generated
+	 */
+	core::StatementAddress 	baseAddr;
+
+	/** 
+	 * This is an addresses which allows to easily find the position of the original statement
+	 * within the analysis stmt generated for analsyis purposes 
+	 */
+	core::StatementAddress 	diffAddr;
+
 	Type type;
 };
 
@@ -114,25 +153,28 @@ inline bool operator==(const core::StatementPtr& lhs, const Element& rhs) {
 	return *rhs.getStatementAddress().getAddressedNode() == *lhs;
 }
 
-/**
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////
  * Terminator - The terminator represents the type of control-flow that occurs at the end of the
  * basic block.  The terminator is a StatementPtr referring to an AST node that has control-flow:
  * if-statements, breaks, loops, etc.  If the control-flow is conditional, the condition expression
  * will appear within the set of statements in the block (usually the last statement).
- */
+ */////////////////////////////////////////////////////////////////////////////////////////////////
 struct Terminator : public Element {
 
-	Terminator() : Element(core::StatementPtr(), core::StatementAddress()) { }
+	//Terminator() : 
+	//	Element(core::StatementPtr(), core::StatementAddress()) { }
 
 	Terminator(const core::StatementAddress& stmt) : Element(stmt) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-/**
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////
  * Edge: An edge interconnects two CFG Blocks. An edge can contain an expression which determines
  * the condition under which the path is taken.
- */
+ */////////////////////////////////////////////////////////////////////////////////////////////////
 struct Edge {
 	
 	Edge(const core::ExpressionPtr& expr = core::ExpressionPtr()) : 
@@ -152,12 +194,84 @@ private:
 class Block;
 typedef std::shared_ptr<Block> BlockPtr;
 
+
+/*////////////////////////////////////////////////////////////////////////////////////////////
+ * A CFGAddress stores the unique address of an IR entity based on the CFG representation. 
+ *
+ * An entity is represented by a triplette, represented by che CFG block, the statement index
+ * (relative to the block) and the address relative to the statement. 
+ *////////////////////////////////////////////////////////////////////////////////////////////
+struct Address : public utils::Printable {
+	
+	cfg::BlockPtr		block;
+	unsigned			stmt_idx;
+	core::NodeAddress	addr;
+
+	/**
+	 * Create a CFG address starting from a block pointer, an index addressing the element inside
+	 * the block and an address relative to the addressed analysis statement 
+	 */
+	Address(const cfg::BlockPtr& block, unsigned stmt_idx, const core::NodeAddress& addr) :
+		block(block), stmt_idx(stmt_idx), addr(addr) { }
+	
+	/**
+	 * Copy constructores with and without move semantics 
+	 */
+	Address(const cfg::Address& other) :
+		block(other.block), 
+		stmt_idx(other.stmt_idx),
+		addr(other.addr) { }
+
+	Address(cfg::Address&& other) : 
+		block(std::move(other.block)), 
+		stmt_idx(other.stmt_idx), 
+		addr(std::move(other.addr)) { }
+
+
+	inline operator bool() const { return static_cast<bool>(block); }
+
+
+	/** 
+	 * Retrieve the CFG block to which this address referes to 
+	 */
+	inline const cfg::Block& getBlock() const {
+		assert(block && "Trying to access an invalid cfg address");
+		return *block; 
+	}
+
+	inline const cfg::BlockPtr& getBlockPtr() const { 
+		return block; 
+	}
+
+	inline unsigned getStmtIdx() const { return stmt_idx; }
+
+	/**
+	 * Retrieve the node addressed by this address (the name guarantee consistency with ir addresses 
+	 */
+	inline core::NodePtr getAddressedNode() const { return addr.getAddressedNode(); }
+
+	inline Address getAddressOfChild(unsigned idx) const {
+		return Address(block, stmt_idx, addr.getAddressOfChild(idx));
+	}
+
+	/**
+	 * Return the absolute address if the addressed entity exists outside the CFG 
+	 */
+	core::NodeAddress toAbsoluteAddress(const TmpVarMap& cfg) const;
+
+	std::ostream& printTo(std::ostream& out) const;
+};
+
+
+
 } // end cfg namespace
 
 enum CreationPolicy { 
 	OneStmtPerBasicBlock, 
 	MultiStmtPerBasicBlock 
 };
+
+
 
 /**
  * CFG: represents the graph built from IR. Boost.Graph is used as internal representation.
@@ -382,9 +496,9 @@ public:
 
 	/**
 	 * Search for a particular node which is contained inside any of the blocks and return 
-	 * the containing block
+	 * the containing block and statement ID relative to the block 
 	 */
-	cfg::BlockPtr find(const core::NodeAddress& node) const;
+	cfg::Address find(const core::NodeAddress& node) const;
 
 	/**
 	 * Builds a control flow graph starting from the rootNode
@@ -429,8 +543,8 @@ public:
 			);
 	}
 
-	inline const AliasMap& getAliasMap() const { return aliasMap; }
-	inline AliasMap& getAliasMap() { return aliasMap; }
+	inline const TmpVarMap& getTmpVarMap() const { return tmpVarMap; }
+	inline TmpVarMap& getTmpVarMap() { return tmpVarMap; }
 
 private:
 	ControlFlowGraph	graph;
@@ -442,7 +556,7 @@ private:
 	VertexTy			entry_block, exit_block;
 
 
-	AliasMap 			aliasMap;
+	TmpVarMap 			tmpVarMap;
 };
 
 namespace cfg {
@@ -486,18 +600,21 @@ struct Block :
 	}
 
 	/// Setters and getters for the terminator element
-	inline const Terminator& terminator() const { return term; }
-	inline Terminator& terminator() { return term; }
-
-	inline bool hasTerminator() const { 
-		return static_cast<bool>(term.getAnalysisStatement()); 
+	inline const Terminator& terminator() const { 
+		assert(hasTerminator() && "trying to access invalid terminator");
+		return *term; 
 	}
+	inline void setTerminator(const Terminator& t) {
+		term = t;
+	}
+
+	inline bool hasTerminator() const { return static_cast<bool>(term); }
 
 	/// Returns the number of elements inside this block
 	inline size_t size() const { return stmtList.size(); }
 	/// Returns true of the block is empty
 	inline bool empty() const { 
-		return stmtList.empty() && !term.getAnalysisStatement(); 
+		return stmtList.empty() && !hasTerminator(); 
 	}
 
 	// return the block type
@@ -584,8 +701,8 @@ private:
 	const Type		blockType;
 	CFG::VertexTy	vertex_id;
 
-	StatementList 	stmtList;
-	Terminator		term;
+	StatementList 				stmtList;
+	boost::optional<Terminator>	term;
 };
 
 struct RetBlock;

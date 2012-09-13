@@ -282,7 +282,7 @@ void irt_wi_end(irt_work_item* wi) {
 
 	// instrumentation update
 	irt_inst_region_add_time(wi);
-	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_FINISHED, wi->id);
+	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_START, wi->id);
 
 	// check for parent, if there, notify
 	if(wi->parent_num_active_children) {

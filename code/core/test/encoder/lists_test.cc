@@ -44,7 +44,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 namespace insieme {
 namespace core {

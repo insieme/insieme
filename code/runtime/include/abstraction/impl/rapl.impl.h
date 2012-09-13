@@ -119,13 +119,13 @@ bool irt_rapl_is_supported() {
 
 	__asm__ __volatile__("cpuid" : "=b" (b), "=c" (c), "=d" (d) : "a" (0x0));
 
-	unsigned vendor_string_ebx = 0x756E6547; //
-	unsigned vendor_string_ecx = 0x6C65746E; //
-	unsigned vendor_string_edx = 0x49656E69; //
+	unsigned vendor_string_ebx = 0x756E6547; // Genu
+	unsigned vendor_string_ecx = 0x6C65746E; // ineI
+	unsigned vendor_string_edx = 0x49656E69; // ntel
 
 	// if not an intel cpu
 	if(b != vendor_string_ebx || c != vendor_string_ecx || d != vendor_string_edx)
-		return -1;
+		return false;
 
 	__asm__ __volatile__("cpuid" : "=a" (a) : "a" (0x00000001) : "ebx", "ecx", "edx");
 
@@ -142,5 +142,5 @@ bool irt_rapl_is_supported() {
 			return true;
 	}
 
-	return 0;
+	return false;
 }

@@ -42,7 +42,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/utils/test/test_utils.h"
 
@@ -54,6 +54,8 @@
 
 namespace insieme {
 namespace core {
+
+using namespace checks;
 
 TEST(NodeReplacer, Basic) {
 	NodeManager manager;
@@ -314,8 +316,8 @@ TEST(NodeReplacer, RecVarsReplacement) {
 
 	// apply recursive variable replacer
 //	std::cout << "Replacements " << map << std::endl;
-	NodePtr stmt2 = transform::replaceVarsRecursiveGen(manager, stmt, map, false,
-			transform::defaultTypeRecovery, transform::getVarInitUpdater(manager));
+	NodePtr stmt2 = builder.normalize(transform::replaceVarsRecursiveGen(manager, stmt, map, false,
+			transform::defaultTypeRecovery, transform::getVarInitUpdater(manager)));
 //	std::cout << stmt2 << std::endl;
 	// fix initalization
 /* fixed by functor passed to replaceVarsRecutsiveGen
@@ -332,10 +334,10 @@ TEST(NodeReplacer, RecVarsReplacement) {
 
 
 	EXPECT_EQ("[]", toString(check(stmt2, all)));
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>> v6 =\
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2, printer::PrettyPrinter::NO_LET_BINDINGS)), "decl ref<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>> v0 =\
   var(undefined(type<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>>));");
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<ref<array<real<4>,1>>> v7 =  var(undefined(type<ref<array<real<4>,1>>>))");
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "fun(ref<(ref<array<real<4>,1>>)> v8, ref<array<real<4>,1>> v9)");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2, printer::PrettyPrinter::NO_LET_BINDINGS)), "decl ref<ref<array<real<4>,1>>> v1 =  var(undefined(type<ref<array<real<4>,1>>>))");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2, printer::PrettyPrinter::NO_LET_BINDINGS)), "fun(ref<(ref<array<real<4>,1>>)> v1, ref<array<real<4>,1>> v2)");
 
 }
 

@@ -97,7 +97,7 @@ irt_joinable* irt_parallel(const irt_parallel_job* job) {
 		if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;
 		irt_work_item** wis = (irt_work_item**)alloca(sizeof(irt_work_item*)*num_threads);
 		for(uint32 i=0; i<num_threads; ++i) {
-			wis[i] = _irt_wi_create(target, &irt_g_wi_range_one_elem, job->impl_id, job->args);
+			wis[i] = irt_wi_create(irt_g_wi_range_one_elem, job->impl_id, job->args);
 			irt_wg_insert(retwg, wis[i]);
 		}
 		for(uint32 i=0; i<num_threads; ++i) {

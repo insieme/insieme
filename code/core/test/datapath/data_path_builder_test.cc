@@ -65,6 +65,19 @@ TEST(DataPathBuilder, Basic) {
 
 }
 
+TEST(DataPath, Basic) {
+	NodeManager mgr;
+
+	DataPath path(mgr);
+
+	EXPECT_EQ("<>", toString(path));
+	EXPECT_EQ("<>[4]", toString(path.element(4)));
+	EXPECT_EQ("<>[4].test", toString(path.element(4).member("test")));
+	EXPECT_EQ("<>[4].test.c3", toString(path.element(4).member("test").component(3)));
+
+
+}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme
