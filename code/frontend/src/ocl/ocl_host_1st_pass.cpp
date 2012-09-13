@@ -39,6 +39,7 @@
 #include "insieme/frontend/ocl/ocl_host_1st_pass.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include <fstream>
 
@@ -106,11 +107,8 @@ void tryStructExtract(ExpressionPtr& expr, IRBuilder& builder) {
 
 bool isNullPtr(const ExpressionPtr& expr, const IRBuilder& builder) {
 	// cast to void pointer
-	if (const CallExprPtr rta = dynamic_pointer_cast<const CallExpr>(expr))
-		if (rta->getFunctionExpr() == BASIC.getRefToAnyRef())
-			if (const CallExprPtr getNull = dynamic_pointer_cast<const CallExpr>(rta->getArgument(0)))
-				if (getNull->getFunctionExpr() == BASIC.getGetNull())
-					return true;
+	if(core::analysis::isCallOf(expr, BASIC.getGetNull()))
+		return true;
 
 	// null literal
 	const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr);
@@ -130,7 +128,7 @@ bool KernelCodeRetriver::saveString(const core::LiteralPtr& lit) {
 
 bool KernelCodeRetriver::saveString(const core::CallExprPtr& call) {
 	if (const LiteralPtr lit = dynamic_pointer_cast<const Literal>(call->getFunctionExpr())) {
-		if (lit->getStringValue() == "string.as.char.pointer") {
+		if (BASIC.isRefVectorToRefArray(lit)) {
 			if (const LiteralPtr pl = dynamic_pointer_cast<const Literal>(tryRemove(BASIC.getRefDeref(), call->getArgument(0), builder))) {
 				path = pl->getStringValue();
 				return true;
@@ -205,7 +203,7 @@ bool KernelCodeRetriver::visitDeclarationStmt(const core::DeclarationStmtPtr& de
 void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {
 	if(const CallExprPtr callSaC = dynamic_pointer_cast<const CallExpr>(path)) {
 		if(const LiteralPtr stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
-			if(stringAsChar->getStringValue() == "string.as.char.pointer") {
+			if(BASIC.isRefVectorToRefArray(stringAsChar)) {
 				if(const LiteralPtr path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
 					// check if file has already been added
 					if(kernelFileCache.find(path->getStringValue()) == kernelFileCache.end()) {
@@ -896,6 +894,11 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 	ADD_Handler(builder, o2i, "icl_savebmp", return node;);
 	ADD_Handler(builder, o2i, "icl_loadbmp", return node;);
 
+	// exceptions for icl_lib power measurent
+	ADD_Handler(builder, o2i, "icl_start_energy_measurement", return node;);
+	ADD_Handler(builder, o2i, "icl_stop_energy_measurement", return node;);
+
+
 	// handlers for insieme opencl runtime stuff
 	ADD_Handler(builder, o2i, "icl_",
 		return builder.literal(node->getType(), "0"); // default handling, remove it
@@ -1005,7 +1008,7 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 					// call resolve element to load the kernel using the appropriate handler
 					resolveElement(newCall);
 					ExpressionPtr kn = newCall->getArgument(2);
-					// usually kernel name is embedded in a "string.as.char.pointer" call"
+					// usually kernel name is embedded in a "ref.vector.to.ref.array" call"
 					if(const CallExprPtr sacp = dynamic_pointer_cast<const CallExpr>(kn))
 						kn = sacp->getArgument(0);
 					if(const LiteralPtr kl = dynamic_pointer_cast<const Literal>(kn)) {
@@ -1024,7 +1027,7 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 			if(const LiteralPtr fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
 				if(fun->getStringValue() == "clCreateKernel" ) {
 						ExpressionPtr kn = newCall->getArgument(1);
-						// usually kernel name is embedded in a "string.as.char.pointer" call"
+						// usually kernel name is embedded in a "ref.vector.to.ref.array" call"
 						if(const CallExprPtr sacp = dynamic_pointer_cast<const CallExpr>(kn))
 						kn = sacp->getArgument(0);
 						if(const LiteralPtr kl = dynamic_pointer_cast<const Literal>(kn)) {

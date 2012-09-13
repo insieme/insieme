@@ -54,6 +54,7 @@
 #endif /* NODE definition */
 // -----------------------------------
 
+FUN("assert.h", __assert_fail)
 
 FUN("stdio.h", printf)
 FUN("stdio.h", par_printf) // a lie
@@ -68,6 +69,7 @@ FUN("stdio.h", snprintf)
 
 FUN("stdio.h", sscanf)
 FUN("stdio.h", fprintf)
+FUN("stdio.h", perror)
 
 TYPE("stdio.h", "FILE")
 
@@ -81,14 +83,22 @@ FUN("stdlib.h", atoi)
 FUN("stdlib.h", atol)
 FUN("stdlib.h", atof)
 
+FUN("stddef.h", offsetof)
+
+FUN("unistd.h", chdir)
+
 FUN("alloca.h", alloca)
+
+FUN("malloc.h", memalign)
 
 FUN("string.h", memcpy)
 FUN("string.h", strcmp)
 FUN("string.h", strtok)
+FUN("string.h", strtol)
 FUN("string.h", strchr)
 FUN("string.h", strrchr)
 FUN("string.h", strcpy)
+FUN("string.h", strlen)
 
 FUN("time.h", strftime)
 FUN("time.h", gmtime)
@@ -108,24 +118,48 @@ FUN("math.h", __isnanf)
 FUN("math.h", __isinfl)
 FUN("math.h", __isinff)
 
-FUN("mpi.h", MPI_Send)
-FUN("mpi.h", MPI_Recv)
+//==== MPI =====================================
 FUN("mpi.h", MPI_Init)
+FUN("mpi.h", MPI_Finalize)
+
 FUN("mpi.h", MPI_Comm_rank)
 FUN("mpi.h", MPI_Comm_size)
-FUN("mpi.h", MPI_Finalize)
-FUN("mpi.h", MPI_Init)
 FUN("mpi.h", MPI_Abort)
-FUN("mpi.h", MPI_Allreduce)
-FUN("mpi.h", MPI_Barrier)
+
+FUN("mpi.h", MPI_Send)
+FUN("mpi.h", MPI_Ssend)
+FUN("mpi.h", MPI_Rsend)
+FUN("mpi.h", MPI_Bsend)
+FUN("mpi.h", MPI_Isend)
+
+FUN("mpi.h", MPI_Recv)
+FUN("mpi.h", MPI_Irecv)
+
 FUN("mpi.h", MPI_Wait)
 FUN("mpi.h", MPI_Waitall)
+FUN("mpi.h", MPI_Waitany)
+FUN("mpi.h", MPI_Test)
+FUN("mpi.h", MPI_Testall)
+FUN("mpi.h", MPI_Testany)
+
+FUN("mpi.h", MPI_Probe)
+
+FUN("mpi.h", MPI_Barrier)
+FUN("mpi.h", MPI_Bcast)
+FUN("mpi.h", MPI_Gather)
+FUN("mpi.h", MPI_Scatter)
+FUN("mpi.h", MPI_Reduce)
+FUN("mpi.h", MPI_Allgather)
+FUN("mpi.h", MPI_Allscatter)
+FUN("mpi.h", MPI_Allreduce)
+FUN("mpi.h", MPI_Alltoall)
 
 TYPE("mpi.h", "MPI_Comm")
 TYPE("mpi.h", "MPI_Status")
 TYPE("mpi.h", "MPI_Request")
 TYPE("mpi.h", "MPI_Datatype")
 
+//==== OpenMPI datatypes ========================
 TYPE("mpi.h", "struct ompi_datatype_t")
 TYPE("mpi.h", "struct ompi_predefined_datatype_t")
 TYPE("mpi.h", "struct ompi_predefined_communicator_t")
@@ -133,6 +167,8 @@ TYPE("mpi.h", "struct ompi_communicator_t")
 TYPE("mpi.h", "struct ompi_op_t")
 TYPE("mpi.h", "struct ompi_request_t")
 TYPE("mpi.h", "struct ompi_predefined_op_t")
+
+
 // -----------------------------------
 #ifdef __INTERNAL_FUN_DEFINITION
 	#undef __INTERNAL_FUN_DEFINITION

@@ -58,18 +58,28 @@ namespace insieme {
 		ProgramPtr load(NodeManager& manager, const IntegrationTestCase& testCase) {
 	
 			// check whether the code is already in the cache
-			auto pos = loadedCodes.find(testCase);
-			if (pos != loadedCodes.end()) {
-				return manager.get(pos->second);
-			}
+			//auto pos = loadedCodes.find(testCase);
+			//if (pos != loadedCodes.end()) {
+			//	return manager.get(pos->second);
+			//}
 		
 			// not loaded yet => load and cache code
-			frontend::ConversionJob job(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs());
+			frontend::ConversionJob job(manager, testCase.getFiles(), testCase.getIncludeDirs());
 			job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
+			job.setOption(frontend::ConversionJob::OpenCL, testCase.isEnableOpenCL());
+			
+			// add definitions
+			for(const auto& cur : testCase.getDefinitions()) {
+				job.addDefinition(cur.first, cur.second);
+			}
+			
+			// execute job
 			core::ProgramPtr code = job.execute();
-	
-			loadedCodes.insert(std::make_pair(testCase, code));
-			return manager.get(code);
+
+			// store the code in the global node manager 
+			//loadedCodes.insert(std::make_pair(testCase, testGlobalManager.get(code)));
+
+			return code;
 		}
 	
 	}

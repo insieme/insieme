@@ -195,6 +195,7 @@ namespace runtime {
 			case c_ast::PrimitiveType::Void:
 				assert(false && "Void should not be part of the type table!"); break;
 			case c_ast::PrimitiveType::Bool:   kind = "IRT_T_BOOL"; break;
+			case c_ast::PrimitiveType::Char:   kind = "IRT_T_CHAR"; break;
 			case c_ast::PrimitiveType::Int8:   kind = "IRT_T_INT8"; break;
 			case c_ast::PrimitiveType::Int16:  kind = "IRT_T_INT16"; break;
 			case c_ast::PrimitiveType::Int32:  kind = "IRT_T_INT32"; break;

@@ -180,6 +180,25 @@ static inline TypePtr getRepresentedType(const TypePtr& type) {
 }
 
 /**
+ * Extracts the represented type from the given type literal expression.
+ *
+ * @param type the type literal type
+ * @return the represented type
+ */
+static inline TypePtr getRepresentedType(const ExpressionPtr& expr) {
+	return getRepresentedType(expr->getType());
+}
+
+/**
+ * Collects a set of all variables encountered within the given code fragment (and
+ * all nested fragments - including invoked functions).
+ *
+ * @param code the code fragment to be analysed
+ * @return the set of encountered variables.
+ */
+VariableSet getAllVariables(const NodePtr& code);
+
+/**
  * Extracts the list of free variables from the given code fragment.
  *
  * @param code the code fragment to be analysed

@@ -485,7 +485,7 @@ namespace analysis {
 						break;
 					}
 					// add a new constant
-					const TypePtr substitute = GenericType::get(manager, "_const_" + var->getVarName());
+					const TypePtr substitute = GenericType::get(manager, string("_const_") + var->getVarName()->toString());
 					argumentMapping.addMapping(var, substitute);
 					break;
 				}

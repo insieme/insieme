@@ -81,7 +81,7 @@ core::NodePtr doConstantPropagation(const core::NodePtr& root) {
 					core::ExpressionAddress expr = std::get<0>(cur).getAccessExpression();
 					if (expr->getNodeType() == core::NT_Variable) {
 						// this may be a temp
-						core::ExpressionAddress addr = cfg->getAliasMap().getMappedExpr( expr.as<core::VariableAddress>().getAddressedNode() );
+						core::ExpressionAddress addr = cfg->getTmpVarMap().getMappedExpr( expr.as<core::VariableAddress>().getAddressedNode() );
 						if (addr) { expr = addr; }
 						LOG(INFO) << *expr;
 					}

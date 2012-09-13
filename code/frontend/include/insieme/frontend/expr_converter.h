@@ -34,31 +34,13 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/convert.h"
+#pragma once 
 
-//#include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/frontend/convert.h"
 #include "insieme/annotations/c/location.h"
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/dep_graph.h"
-//#include "insieme/frontend/utils/clang_utils.h"
-//#include "insieme/frontend/utils/ir_cast.h"
-//#include "insieme/frontend/analysis/expr_analysis.h"
-//#include "insieme/frontend/omp/omp_pragma.h"
-//#include "insieme/frontend/ocl/ocl_compiler.h"
-//
-//#include "insieme/frontend/pragma/insieme.h"
-//
-//#include "insieme/utils/container_utils.h"
-//#include "insieme/utils/logging.h"
-//#include "insieme/utils/numeric_cast.h"
-//#include "insieme/utils/functional_utils.h"
-//
-//#include "insieme/core/lang/basic.h"
-//#include "insieme/core/transform/node_replacer.h"
-//#include "insieme/core/analysis/ir_utils.h"
-//#include "insieme/core/arithmetic/arithmetic_utils.h"
-//#include "insieme/core/datapath/datapath.h"
 
 #include "insieme/frontend/cpp/temporary_handler.h"
 #include "insieme/annotations/c/naming.h"
@@ -67,25 +49,19 @@
 
 #include "clang/Index/Entity.h"
 #include "clang/Index/Indexer.h"
-//
-//#include <clang/AST/DeclCXX.h>
-//#include <clang/AST/ExprCXX.h>
-//
-//#include <clang/AST/CXXInheritance.h>
-//
-//#include "clang/Basic/FileManager.h"
 
-using namespace clang;
-using namespace insieme;
 namespace fe = insieme::frontend;
 
 namespace exprutils {
+
+using namespace insieme;
+
 // FIXME 
 // Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
 annotations::c::SourceLocation convertClangSrcLoc(clang::SourceManager& sm, const clang::SourceLocation& loc);
 
 // Returns a string of the text within the source range of the input stream
-std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocation& start);
+std::string GetStringFromStream(const clang::SourceManager& srcMgr, const SourceLocation& start);
 /*
  * In case the the last argument of the function is a var_arg, we try pack the exceeding arguments
  * with the pack operation provided by the IR.
@@ -125,109 +101,24 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 		return callGraph;
 	}
 
-	void addFunctionDecl(FunctionDecl* funcDecl) {
-		const clang::FunctionDecl* def = NULL;
-		/*
-		 * this will find function definitions if they are declared in  the same translation unit
-		 * (also defined as static)
-		 */
-		if (!funcDecl->hasBody(def)) {
-			/*
-			 * if the function is not defined in this translation unit, maybe it is defined in another we already
-			 * loaded use the clang indexer to lookup the definition for this function declarations
-			 */
-			clang::idx::Entity&& funcEntity = clang::idx::Entity::get( funcDecl, indexer.getProgram() );
-			conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
-			if ( ret.first ) {def = ret.first;}
-		}
+	void addFunctionDecl(clang::FunctionDecl* funcDecl);
 
-		if (def) {
-			callGraph.insert(def);
-		}
-	}
+	void VisitCallExpr(clang::CallExpr* callExpr);
 
-	void VisitCallExpr(clang::CallExpr* callExpr) {
-		if (FunctionDecl * funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee())) {
-			addFunctionDecl(funcDecl);
-		}
-		VisitStmt(callExpr);
-	}
-
-	void VisitDeclRefExpr(DeclRefExpr* expr) {
-		// if this variable is used to invoke a function (therefore is a
-		// function pointer) and it has been defined here, we add a potentially
-		// dependency to the current definition
-		//if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(expr->getDecl()) ) {
-		// addFunctionDecl(funcDecl);
-		//}
-	}
+	void VisitDeclRefExpr(clang::DeclRefExpr* expr);
 
 	void VisitStmt(clang::Stmt* stmt) {
 		std::for_each(stmt->child_begin(), stmt->child_end(),
 				[ this ](clang::Stmt* curr) {if(curr) this->Visit(curr);});
 	}
 
-	void VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
-		// connects the constructor expression to the function graph
-		addFunctionDecl(ctorExpr->getConstructor());
-		VisitStmt(ctorExpr);
+	void VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
 
-		// if there is an member with an initializer in the ctor we add it to the function graph
-		clang::CXXConstructorDecl* constructorDecl = dyn_cast<CXXConstructorDecl>(ctorExpr->getConstructor());
-		for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(), iend =
-				constructorDecl->init_end(); iit != iend; iit++) {
-			clang::CXXCtorInitializer * initializer = *iit;
+	void VisitCXXNewExpr(clang::CXXNewExpr* callExpr);
 
-			if (initializer->isMemberInitializer()) {
-				Visit(initializer->getInit());
-			}
-		}
+	void VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr);
 
-		// if we construct a object there should be some kind of destructor
-		// we have to add it to the function graph
-		if ( CXXRecordDecl* classDecl = GET_TYPE_PTR(ctorExpr)->getAsCXXRecordDecl()) {
-			CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
-			addFunctionDecl(dtorDecl);
-		}
-	}
-
-	void VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
-
-		//if there is an member with an initializer in the ctor we add it to the function graph
-		if (clang::CXXConstructorDecl * constructorDecl = dyn_cast<CXXConstructorDecl>(callExpr->getConstructor())) {
-			// connects the constructor expression to the function graph
-			addFunctionDecl(constructorDecl);
-			for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(), iend =
-					constructorDecl->init_end(); iit != iend; iit++) {
-				clang::CXXCtorInitializer * initializer = *iit;
-
-				if (initializer->isMemberInitializer()) {
-					Visit(initializer->getInit());
-				}
-			}
-		}
-
-		VisitStmt(callExpr);
-	}
-
-	void VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
-		addFunctionDecl(callExpr->getOperatorDelete());
-
-		// if we delete a class object -> add destructor to function call
-		if ( CXXRecordDecl* classDecl = callExpr->getDestroyedType()->getAsCXXRecordDecl()) {
-			CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
-			addFunctionDecl(dtorDecl);
-		}
-
-		VisitStmt(callExpr);
-	}
-
-	void VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* mcExpr) {
-		// connects the member call expression to the function graph
-		//assert(false && "in next clang version");
-		addFunctionDecl(dyn_cast<FunctionDecl>(mcExpr->getCalleeDecl()));
-		VisitStmt(mcExpr);
-	}
+	void VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* mcExpr);
 
 };
 
@@ -250,7 +141,7 @@ public:
 namespace conversion {
 
 #define CALL_BASE_EXPR_VISIT(Base, ExprTy) \
-	core::ExpressionPtr Visit##ExprTy( ExprTy* expr ) { return Base::Visit##ExprTy( expr ); }
+	core::ExpressionPtr Visit##ExprTy( clang::ExprTy* expr ) { return Base::Visit##ExprTy( expr ); }
 
 #define GET_REF_ELEM_TYPE(type) \
 	(core::static_pointer_cast<const core::RefType>(type)->getElementType())
@@ -288,6 +179,10 @@ protected:
 	ConversionFactory& convFact;
 	ConversionContext& ctx;
 
+	core::NodeManager& 					mgr;
+	const core::IRBuilder& 				builder;
+	const core::lang::BasicGenerator& 	gen;
+
 	core::ExpressionPtr wrapVariable(clang::Expr* expr);
 
 	core::ExpressionPtr asLValue(const core::ExpressionPtr& value);
@@ -304,10 +199,13 @@ public:
 	ExprConverter(ConversionFactory& convFact, Program& program) :
 		convFact(convFact),
 		ctx(convFact.ctx),
+		mgr(convFact.mgr),
+		builder(convFact.builder),
+		gen(convFact.builder.getLangBasic()),
 		funcDepGraph(program.getClangIndexer())
-	{
-	}
-	virtual ~ExprConverter() {};
+	{  }
+
+	virtual ~ExprConverter() { }
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								INTEGER LITERAL
@@ -320,7 +218,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CHARACTER LITERAL
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCharacterLiteral(CharacterLiteral* charLit);
+	core::ExpressionPtr VisitCharacterLiteral(clang::CharacterLiteral* charLit);
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								STRING LITERAL
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -414,7 +312,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						EXT VECTOR ELEMENT EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitExtVectorElementExpr(ExtVectorElementExpr* vecElemExpr);
+	core::ExpressionPtr VisitExtVectorElementExpr(clang::ExtVectorElementExpr* vecElemExpr);
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							VAR DECLARATION REFERENCE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -445,7 +343,7 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //										C EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::CExprConverter: public ExprConverter, public StmtVisitor<CExprConverter, core::ExpressionPtr> {
+class ConversionFactory::CExprConverter: public ExprConverter, public clang::StmtVisitor<CExprConverter, core::ExpressionPtr> {
 protected:
 //	ConversionFactory& convFact;
 //	ConversionContext& ctx;
@@ -495,7 +393,10 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //										CXX EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class CXXConversionFactory::CXXExprConverter : public ExprConverter, public StmtVisitor<CXXExprConverter, core::ExpressionPtr> {
+class CXXConversionFactory::CXXExprConverter : 
+	public ExprConverter, 
+	public clang::StmtVisitor<CXXExprConverter, core::ExpressionPtr> 
+{
 	CXXConversionFactory& convFact;
 	CXXConversionFactory::CXXConversionContext& cxxCtx;
 	utils::FunctionDependencyGraph funcDepGraph;
@@ -509,8 +410,8 @@ public:
 		cxxCtx(cxxConvFact.cxxCtx),
 		funcDepGraph(program.getClangIndexer()),
 		tempHandler(&cxxConvFact)
-	{
-	}
+	{ }
+
 	virtual ~CXXExprConverter() {}
 
 private:
@@ -587,7 +488,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CXX BOOLEAN LITERAL
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr* boolLit);
+	core::ExpressionPtr VisitCXXBoolLiteralExpr(clang::CXXBoolLiteralExpr* boolLit);
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX MEMBER CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

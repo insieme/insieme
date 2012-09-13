@@ -179,8 +179,10 @@ void irt_exit_handler() {
 	for(int i = 0; i < irt_g_worker_count; ++i)
 		irt_inst_region_data_output(irt_g_workers[i]);
 	irt_inst_aggregated_data_output();
-	for(int i = 0; i < irt_g_worker_count; ++i)
+	for(int i = 0; i < irt_g_worker_count; ++i) {
 			irt_inst_destroy_region_data_table(irt_g_workers[i]->instrumentation_region_data);
+			irt_inst_destroy_region_list(irt_g_workers[i]->region_reuse_list);
+	}
 	PAPI_shutdown();
 #endif
 	irt_cleanup_globals();

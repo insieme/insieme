@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_program.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 //#include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/data_annotations.h"
@@ -96,17 +96,17 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 
 	LOG(INFO) << "Printing the IR: " << pp;
 
-	auto semantic = core::check(program, insieme::core::checks::getFullCheck());
+	auto semantic = core::checks::check(program);
 	auto warnings = semantic.getWarnings();
 	std::sort(warnings.begin(), warnings.end());
-	for_each(warnings, [](const core::Message& cur) {
+	for_each(warnings, [](const core::checks::Message& cur) {
 		LOG(INFO) << cur << std::endl;
 	});
 
 	auto errors = semantic.getErrors();
 	EXPECT_EQ(0u, errors.size());
 	std::sort(errors.begin(), errors.end());
-	for_each(errors, [](const core::Message& cur) {
+	for_each(errors, [](const core::checks::Message& cur) {
 		LOG(INFO) << cur << std::endl;
 		/*        core::NodeAddress address = cur.getAddress();
 		 core::NodePtr context = address.getParentNode(address.getDepth()-1);
@@ -159,10 +159,10 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	LOG(INFO) << "Printing the IR: " << pp;
 	//    LOG(INFO) << pp;
 
-	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getErrors();
+	auto errors = core::checks::check(program, insieme::core::checks::getFullCheck()).getErrors();
 	EXPECT_EQ(0u, errors.size());
 	std::sort(errors.begin(), errors.end());
-	for_each(errors, [](const core::Message& cur) {
+	for_each(errors, [](const core::checks::Message& cur) {
 		LOG(INFO) << cur << std::endl;
 		/*        core::NodeAddress address = cur.getAddress();
 		 core::NodePtr context = address.getParentNode(address.getDepth()-1);

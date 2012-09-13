@@ -124,7 +124,7 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
 dfa::Value<LiteralPtr> lookup(const Access& var, const value_type& in, const CFG& cfg) {
 	
 	for ( const auto& cur : in ) {
-		if( isConflicting(std::get<0>(cur), var, cfg.getAliasMap()) ) {
+		if( isConflicting(std::get<0>(cur), var, cfg.getTmpVarMap()) ) {
 			if ( std::get<1>(cur).isTop() ) 
 				continue;
 				
@@ -175,7 +175,7 @@ dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in, cons
 					}
 				}
 
-				Access var = getImmediateAccess(ExpressionAddress(expr), cfg.getAliasMap());
+				Access var = getImmediateAccess(ExpressionAddress(expr), {nullptr, 0}, cfg.getTmpVarMap());
 
 				dfa::Value<LiteralPtr> lit = lookup(var,in,cfg);
 
@@ -219,7 +219,7 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 
 		auto handle_def = [&](const VariablePtr& var, const ExpressionPtr& init) { 
 			
-			Access def = getImmediateAccess(ExpressionAddress(var), getCFG().getAliasMap());
+			Access def = getImmediateAccess(ExpressionAddress(var), {nullptr, 0}, getCFG().getTmpVarMap());
 
 			ExpressionPtr initVal = init;
 
@@ -253,7 +253,7 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 			// kill all declarations reaching this block 
 			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
 					[&](const typename value_type::value_type& cur){
-						return isConflicting(std::get<0>(cur), def, getCFG().getAliasMap());
+						return isConflicting(std::get<0>(cur), def, getCFG().getTmpVarMap());
 					} );
 
 		};
@@ -278,14 +278,15 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 			//
 			Access acc = getImmediateAccess(
 					cur.getStatementAddress().as<ForStmtAddress>()->getDeclaration()->getVariable(),
-					getCFG().getAliasMap()
+					{ nullptr, 0 },
+					getCFG().getTmpVarMap()
 				);
 			gen.insert( std::make_tuple(acc, dfa::bottom) );
 			
 			// kill all declarations reaching this block 
 			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
 					[&](const typename value_type::value_type& cur){
-						return isConflicting(std::get<0>(cur), acc, getCFG().getAliasMap());
+						return isConflicting(std::get<0>(cur), acc, getCFG().getTmpVarMap());
 					} );
 
 

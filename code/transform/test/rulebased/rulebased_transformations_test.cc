@@ -42,7 +42,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/utils/test/test_utils.h"
 
@@ -92,7 +92,7 @@ namespace rulebased {
 			}") );
 
 
-		std::cout << core::check(forStmt, core::checks::getFullCheck()) << "\n";
+		std::cout << core::checks::check(forStmt) << "\n";
 
 		EXPECT_TRUE(forStmt);
 
@@ -122,7 +122,7 @@ namespace rulebased {
 
 		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v1 = 50 .. 50 : 2)");
 
-//		auto list = core::check(transformed, core::checks::getFullCheck());
+//		auto list = core::checks::check(transformed);
 //		EXPECT_TRUE(list.empty()) << list;
 
 	}
@@ -149,7 +149,7 @@ namespace rulebased {
 		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v1 = 0 .. 0 : 10)");
 		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v1 = 0 .. 5 : 1)");
 
-		auto list = core::check(transformed, core::checks::getFullCheck());
+		auto list = core::checks::check(transformed);
 		EXPECT_TRUE(list.empty()) << list;
 
 	}
@@ -168,7 +168,7 @@ namespace rulebased {
 			}") );
 
 
-//		std::cout << core::check(forStmt, core::checks::getFullCheck()) << "\n";
+//		std::cout << core::checks::check(forStmt) << "\n";
 
 		EXPECT_TRUE(forStmt);
 
@@ -185,7 +185,7 @@ namespace rulebased {
 		}
 		EXPECT_EQ(builder.compoundStmt(stmts), transformed);
 
-		auto list = core::check(transformed, core::checks::getFullCheck());
+		auto list = core::checks::check(transformed);
 		EXPECT_TRUE(list.empty()) << list;
 
 	}
@@ -204,7 +204,7 @@ namespace rulebased {
 			}") );
 
 
-//		std::cout << core::check(forStmt, core::checks::getFullCheck()) << "\n";
+//		std::cout << core::checks::check(forStmt) << "\n";
 
 		EXPECT_TRUE(forStmt);
 
@@ -221,7 +221,7 @@ namespace rulebased {
 		}
 		EXPECT_EQ(builder.compoundStmt(stmts), transformed);
 
-		auto list = core::check(transformed, core::checks::getFullCheck());
+		auto list = core::checks::check(transformed);
 		EXPECT_TRUE(list.empty()) << list;
 
 
@@ -272,7 +272,7 @@ namespace rulebased {
 		EXPECT_PRED2(containsSubString, res, "v1 = v3 .. select((v3+10), 50, int.lt) : 1");
 		EXPECT_PRED2(containsSubString, res, "v2 = v4 .. select((v4+15), 80, int.lt) : 1");
 
-		EXPECT_EQ(vector<core::Message>(),  core::check(transformed, core::checks::getFullCheck()).getAll());
+		EXPECT_EQ(vector<core::checks::Message>(),  core::checks::check(transformed).getAll());
 
 	}
 

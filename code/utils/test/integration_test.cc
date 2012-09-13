@@ -62,25 +62,25 @@ TEST(TestUtilsTest, getList) {
 	LOG(log::INFO) << join("\n", res);
 
 	// check the existens of the referenced files
-	for_each(res, [](const IntegrationTestCase& cur) {
-		SCOPED_TRACE(cur.getName());
-
-		EXPECT_GE(cur.getFiles().size(), static_cast<std::size_t>(1));
-		for_each(cur.getFiles(), [](const string& cur){
-			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of file " << cur;
-			EXPECT_FALSE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
-		});
-
-		for_each(cur.getIncludeDirs(), [](const string& cur){
-			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of directory " << cur;
-			EXPECT_TRUE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
-		});
-	});
-
-	// should also work a second time
-	auto numTests = res.size();
-	res = getAllCases();
-	EXPECT_EQ(numTests, res.size());
+//	for_each(res, [](const IntegrationTestCase& cur) {
+//		SCOPED_TRACE(cur.getName());
+//
+//		EXPECT_GE(cur.getFiles().size(), static_cast<std::size_t>(1));
+//		for_each(cur.getFiles(), [](const string& cur){
+//			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of file " << cur;
+//			EXPECT_FALSE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
+//		});
+//
+//		for_each(cur.getIncludeDirs(), [](const string& cur){
+//			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of directory " << cur;
+//			EXPECT_TRUE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
+//		});
+//	});
+//
+//	// should also work a second time
+//	auto numTests = res.size();
+//	res = getAllCases();
+//	EXPECT_EQ(numTests, res.size());
 }
 
 

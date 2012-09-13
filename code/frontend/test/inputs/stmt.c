@@ -80,7 +80,7 @@ void binary_op_test() {
 	a -= b;
 
 	#pragma test \
-	"fun(ref<int<4>> v3, ref<int<4>> v4){ (( *v3)+1); return (( *v4)-1);}(v2, v1)"
+	"fun(ref<int<4>> v3, ref<int<4>> v4){ (( *v4)+1); return (( *v3)-1);}(v1, v2)"
 	(a+1, b-1);
 }
 
@@ -104,16 +104,16 @@ void unary_op_test() {
 	#pragma test "( *(( *v1)&[0]))"
 	*b;
 
-	#pragma test "int.postInc(v1)"
+	#pragma test "fun(ref<'a> v1){ decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2;}(v1)"
 	a++;
 
-	#pragma test "int.postDec(v1)"
+	#pragma test "fun(ref<'a> v1){ decl 'a v2 = ( *v1); (v1 := gen.sub(( *v1), 1)); return v2;}(v1)"
 	a--;
 
-	#pragma test "int.preInc(v1)"
+	#pragma test "fun(ref<'a> v1){ (v1 := gen.add(( *v1), 1)); return ( *v1);}(v1)"
 	++a;
 
-	#pragma test "int.preDec(v1)"
+	#pragma test "fun(ref<'a> v1){ (v1 := gen.sub(( *v1), 1)); return ( *v1);}(v1)"
 	--a;
 
 	#pragma test "int.lshift(( *v1), 2)"
@@ -174,15 +174,15 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"(((( *v1)!=0))?(( *v1)+1):(( *v1)-1))"
+	"(((( *v1)!=0))?bind(){fun(ref<int<4>> v4){ return (( *v4)+1);}(v1)}:bind(){fun(ref<int<4>> v2){ return (( *v2)-1);}(v1)})"
 	a ? a+1 : a-1;
 
 	#pragma test \
-	"(((( *v1)==0))?(( *v1)+1):(( *v1)-1))"
+	"(((( *v1)==0))?bind(){fun(ref<int<4>> v4){ return (( *v4)+1);}(v1)}:bind(){fun(ref<int<4>> v2){ return (( *v2)-1);}(v1)})"
 	a == 0 ? a+1 : a-1;
 
 	#pragma test \
-	"if(((( *v1)>0) && (( *v1)!=1))) { } else { }"
+	"if(((( *v1)>0) && bind(){fun(ref<int<4>> v2){ return (( *v2)!=1);}(v1)})) { } else { }"
 	if(cond > 0 && cond != 1) {	; }
 }
 
@@ -215,7 +215,7 @@ void for_stmt_test() {
 
 	int mq, nq;
 	#pragma test \
-	"{ (v1 := 0); while((( *v2)>1)) { { }; fun(ref<int<4>> v3, ref<int<4>> v4){ int.postInc(v4); (v3 := (( *v3)/2)); }(v2, v1); };}"
+	"{ (v1 := 0); while((( *v2)>1)) { { }; fun(ref<int<4>> v6, ref<int<4>> v7){ fun(ref<'a> v1){ decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v6); (v7 := (( *v7)/2)); return v7; }(v1, v2); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 
 	//(v1 := 0);
@@ -266,7 +266,7 @@ void switch_stmt_test() {
 
 
 	#pragma test \
-	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 0: { } default: { int.postInc(v1); } };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 0: { } default: { fun(ref<'a> v1){ decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v1); } };}"
 	switch(a) {
 	case 0:
 		break;
@@ -314,10 +314,10 @@ void switch_stmt_test() {
 
 	for(;;) {
 	#pragma test \
-	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 10: { return CAST<unit>(9); (v1 := (( *v1)+10)); } case 8: { (v1 := (( *v1)+10)); } case 2: { (v1 := 1); continue; } case 3: { int.postInc(v1); return unit; } default: { } };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 10: { } case 8: { (v1 := (( *v1)+10)); } case 2: { (v1 := 1); continue; } case 3: { fun(ref<'a> v1){ decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v1); return unit; } default: { } };}"
 	switch(a) {
 		case 10:
-			return 9;
+			break;
 		case 8:
 			a += 10;
 			break;
@@ -396,12 +396,16 @@ void vector_stmt_test() {
 	b[1][1] = 0;
 
 	#pragma test \
-	"decl ref<vector<int<4>,10>> v1 = ( var(vector.init.uniform(0, 10)))"
+	"decl ref<vector<int<4>,10>> v1 = ( var(vector.init.partial(([0]), 10)))"
 	int vec[10] = {0};
 
-	//#pragma test \
-	//"fun(ref<array<array<int<4>,1>,1>> v2){ }(ref.vector.to.ref.array(v1))"
-	//evil(b);
+	#pragma test \
+	"decl ref<ref<array<int<4>,1>>> v1 = ( var(ref.vector.to.ref.array(( var(vector.init.partial(([0,5,10]), 10))))))"
+	int *vec_ptr = (int[10]) {0, 5, 10};
+
+	#pragma test \
+	"fun(ref<array<ref<array<int<4>,1>>,1>> v2){ }(ref.reinterpret(ref.vector.to.ref.array(v1), type<array<ref<array<int<4>,1>>,1>>))"
+	evil(b);
 }
 
 void* vf(void* ptr) { return ptr; }
@@ -412,7 +416,7 @@ void init_expr() {
 	int* a = 0;
 
 	#pragma test \
-	"([1, 2, 3][CAST<uint<4>>(1)])"
+	"( *(ref.vector.to.ref.array(( var([1, 2, 3])))&[CAST<uint<4>>(1)]))"
 	((int[3]) {1,2,3})[1];
 
 	struct Person p;

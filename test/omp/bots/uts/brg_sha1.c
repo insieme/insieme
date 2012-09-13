@@ -219,7 +219,7 @@ VOID_RETURN sha1_compile(sha1_ctx ctx[1])
 #undef  hf
 #define hf(i) (w[(i) & 15] = rotl32(                    \
                  w[((i) + 13) & 15] ^ w[((i) + 8) & 15] \
-               ^ w[((i) +  2) & 15] ^ w[(i) & 15], 1))
+               ^ w[((i) +  2) & 15] ^ w[(i) & 15], 1), w[(i) & 15])
 
     one_cycle(v,4,0,1,2,3, ch, 0x5a827999, hf(16));
     one_cycle(v,3,4,0,1,2, ch, 0x5a827999, hf(17));
@@ -254,7 +254,8 @@ VOID_RETURN sha1_compile(sha1_ctx ctx[1])
 
 VOID_RETURN sha1_begin(sha1_ctx ctx[1])
 {
-    ctx->count[0] = ctx->count[1] = 0;
+    ctx->count[0] = 0;
+	ctx->count[1] = 0;
     ctx->hash[0] = 0x67452301;
     ctx->hash[1] = 0xefcdab89;
     ctx->hash[2] = 0x98badcfe;
@@ -265,23 +266,26 @@ VOID_RETURN sha1_begin(sha1_ctx ctx[1])
 /* SHA1 hash data in an array of bytes into hash buffer and */
 /* call the hash_compile function as required.              */
 
-VOID_RETURN sha1_hash(const unsigned char data[], unsigned long len, sha1_ctx ctx[1])
+VOID_RETURN sha1_hash(const unsigned char data[], unsigned len, sha1_ctx ctx[1])
 {   uint_32t pos = (uint_32t)(ctx->count[0] & SHA1_MASK),
             space = SHA1_BLOCK_SIZE - pos;
     const unsigned char *sp = data;
 
-    if((ctx->count[0] += len) < len)
+    ctx->count[0] += len;
+    if(ctx->count[0] < len)
         ++(ctx->count[1]);
 
-    while(len >= space)     /* tranfer whole blocks if possible  */
+    while(len >= space)     /* transfer whole blocks if possible  */
     {
-        memcpy(((unsigned char*)ctx->wbuf) + pos, sp, space);
+		unsigned char* tmp = (unsigned char*)(ctx->wbuf);
+        memcpy(tmp + pos, sp, space);
         sp += space; len -= space; space = SHA1_BLOCK_SIZE; pos = 0;
         bsw_32(ctx->wbuf, SHA1_BLOCK_SIZE >> 2);
         sha1_compile(ctx);
     }
 
-    memcpy(((unsigned char*)ctx->wbuf) + pos, sp, len);
+	unsigned char* tmp = (unsigned char*)(ctx->wbuf);
+    memcpy(tmp + pos, sp, len);
 }
 
 /* SHA1 final padding and digest calculation  */
@@ -298,8 +302,8 @@ VOID_RETURN sha1_end(unsigned char hval[], sha1_ctx ctx[1])
     /* a single 1 bit and as many zero bits as necessary. Note that */
     /* we can always add the first padding byte here because the    */
     /* buffer always has at least one empty slot                    */
-    ctx->wbuf[i >> 2] &= 0xffffff80 << 8 * (~i & 3);
-    ctx->wbuf[i >> 2] |= 0x00000080 << 8 * (~i & 3);
+    ctx->wbuf[i >> 2] &= 0xffffff80 << 8 * (int)(~i & 3);
+    ctx->wbuf[i >> 2] |= 0x00000080 << 8 * (int)(~i & 3);
 
     /* we need 9 or more empty positions, one for the padding byte  */
     /* (above) and eight for the length count. If there is not      */
@@ -327,7 +331,7 @@ VOID_RETURN sha1_end(unsigned char hval[], sha1_ctx ctx[1])
     /* extract the hash value as bytes in case the hash buffer is   */
     /* misaligned for 32-bit words                                  */
     for(i = 0; i < SHA1_DIGEST_SIZE; ++i)
-        hval[i] = (unsigned char)(ctx->hash[i >> 2] >> (8 * (~i & 3)));
+        hval[i] = (unsigned char)(ctx->hash[i >> 2] >> (8 * (int)(~i & 3)));
 }
 
 VOID_RETURN sha1(unsigned char hval[], const unsigned char data[], unsigned long len)

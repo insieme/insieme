@@ -44,6 +44,7 @@
 
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/analysis/normalize.h"
 
 using namespace insieme::analysis::polyhedral;
 using namespace insieme::transform::polyhedral;
@@ -93,34 +94,28 @@ TEST(Transform, InterchangeManual) {
 
 	scop[0].getSchedule().set( newSched );
 
-	NodeManager mgr1;
-	NodePtr newIR = scop.toIR(mgr1);
-	// std::cout << *newIR << std::endl;
-	
-	// EXPECT_EQ(*newIR, *forStmtInt);
-	EXPECT_EQ( "for(int<4> v1 = 5 .. int.add(24, 1) : 1) {for(int<4> v2 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v3, uint.add(v2, v1));};}", toString(*newIR));
+	NodePtr newIR = analysis::normalize(scop.toIR(mgr));
+	EXPECT_EQ( "for(int<4> v0 = 5 .. int.add(24, 1) : 1) {"
+					"for(int<4> v1 = 10 .. int.add(49, 1) : 1) {"
+						"array.ref.elem.1D(v3, uint.add(v1, v0));"
+					"};"
+				"}", toString(*newIR));
 }
 
-void checkSCoPCorrectness(unsigned freshID, const insieme::core::NodePtr& node) { 
+void checkSCoPCorrectness(const insieme::core::NodePtr& node) { 
 	using namespace insieme::core;
 	using namespace insieme::analysis;
 	// Check for the generated SCoP
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(node);
 	EXPECT_TRUE(scop2);
 
-	LOG(DEBUG) << *scop2;
+	// LOG(DEBUG) << *scop2;
+	NodePtr res = analysis::normalize(scop2->toIR(node->getNodeManager()));
 
-	NodeManager mgr;
-	mgr.setNextFreshID(freshID);
-
-	NodePtr res = scop2->toIR(mgr);
-
-	LOG(DEBUG) << printer::PrettyPrinter(node);
-	LOG(DEBUG) << printer::PrettyPrinter(res); 
-
+	// LOG(DEBUG) << printer::PrettyPrinter(newNode);
+	// LOG(DEBUG) << printer::PrettyPrinter(res); 
 	EXPECT_EQ(*node,*res);
 }
-
 
 TEST(Transform, InterchangeAuto) {
 	using namespace insieme::core;
@@ -141,11 +136,15 @@ TEST(Transform, InterchangeAuto) {
 	scop::mark(forStmt);
 
 	LoopInterchange li(0, 1);
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 	
-	EXPECT_EQ( "for(int<4> v4 = 5 .. int.add(24, 1) : 1) {for(int<4> v5 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v3, uint.add(v5, v4));};}", toString(*newIR));
+	EXPECT_EQ( "for(int<4> v0 = 5 .. int.add(24, 1) : 1) {"
+					"for(int<4> v1 = 10 .. int.add(49, 1) : 1) {"
+						"array.ref.elem.1D(v3, uint.add(v1, v0));"
+					"};"
+				"}", toString(*newIR));
 
-	checkSCoPCorrectness(4,newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, InterchangeAuto2) {
@@ -168,11 +167,20 @@ TEST(Transform, InterchangeAuto2) {
 	scop::mark(forStmt);
 
 	LoopInterchange li(0, 1);
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 	
-	EXPECT_EQ( "{for(int<4> v4 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v4);}; for(int<4> v5 = 5 .. int.add(24, 1) : 1) {for(int<4> v6 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, uint.add(v6, v5));};};}", toString(*newIR));
+	EXPECT_EQ( "{"
+				"for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
+					"array.ref.elem.1D(v2, v0);"
+				"}; "
+				"for(int<4> v1 = 5 .. int.add(24, 1) : 1) {"
+					"for(int<4> v3 = 10 .. int.add(49, 1) : 1) {"
+						"array.ref.elem.1D(v2, uint.add(v3, v1));"
+					"};"
+				"};"
+			    "}", toString(*newIR));
 
-	checkSCoPCorrectness(4, newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, StripMiningAuto) {
@@ -195,11 +203,18 @@ TEST(Transform, StripMiningAuto) {
 	scop::mark(forStmt);
 
 	LoopStripMining li(1, 7);
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 
-	EXPECT_EQ( "for(int<4> v6 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v6); for(int<4> v7 = 5 .. int.add(24, 1) : 7) {for(int<4> v8 = v7 .. int.add(select(int.add(cast<int<4>>(v7), cast<int<4>>(6)), 24, int.lt), 1) : 1) {array.ref.elem.1D(v2, uint.add(v6, v8));};};}", toString(*newIR));
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
+					"array.ref.elem.1D(v2, v0); "
+					"for(int<4> v1 = 5 .. int.add(24, 1) : 7) {"
+						"for(int<4> v3 = v1 .. int.add(select(int.add(cast<int<4>>(v1), cast<int<4>>(6)), 24, int.lt), 1) : 1) {"
+							"array.ref.elem.1D(v2, uint.add(v0, v3));"
+						"};"
+					"};"
+				"}", toString(*newIR));
 
-	checkSCoPCorrectness(6, newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, LoopFusionAuto) {
@@ -224,11 +239,21 @@ TEST(Transform, LoopFusionAuto) {
 	scop::mark(stmt);
 
 	LoopFusion lf( {0,1} );
-	NodePtr newIR = lf.apply(stmt);
+	NodePtr newIR = analysis::normalize(lf.apply(stmt));
 
-	EXPECT_EQ( toString(*newIR), "{for(int<4> v4 = 5 .. int.add(9, 1) : 1) {array.ref.elem.1D(v2, v4);}; for(int<4> v5 = 10 .. int.add(24, 1) : 1) {array.ref.elem.1D(v2, v5); array.ref.elem.1D(v2, v5);}; for(int<4> v6 = 25 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v6);};}" );
+	EXPECT_EQ( "{"
+					"for(int<4> v0 = 5 .. int.add(9, 1) : 1) {"
+						"array.ref.elem.1D(v2, v0);"
+					"}; "
+					"for(int<4> v1 = 10 .. int.add(24, 1) : 1) {"
+						"array.ref.elem.1D(v2, v1); array.ref.elem.1D(v2, v1);"
+					"}; "
+					"for(int<4> v3 = 25 .. int.add(49, 1) : 1) {"
+						"array.ref.elem.1D(v2, v3);"
+					"};"
+				"}", toString(*newIR) );
 
-	checkSCoPCorrectness(4, newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, TilingManual) {
@@ -256,11 +281,19 @@ TEST(Transform, TilingManual) {
 	newIR = lsm2.apply(newIR);
 
 	LoopInterchange li(1,2);
-	newIR = li.apply(newIR);
+	newIR = analysis::normalize(li.apply(newIR));
 
-	EXPECT_EQ( "for(int<4> v18 = 10 .. int.add(49, 1) : 7) {for(int<4> v19 = 5 .. int.add(24, 1) : 7) {for(int<4> v20 = v18 .. int.add(select(int.add(cast<int<4>>(v18), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v21 = v19 .. int.add(select(int.add(cast<int<4>>(v19), cast<int<4>>(6)), 24, int.lt), 1) : 1) {array.ref.elem.1D(v3, uint.add(v20, v21));};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {"
+					"for(int<4> v1 = 5 .. int.add(24, 1) : 7) {"
+						"for(int<4> v2 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {"
+							"for(int<4> v4 = v1 .. int.add(select(int.add(cast<int<4>>(v1), cast<int<4>>(6)), 24, int.lt), 1) : 1) {"
+								"array.ref.elem.1D(v3, uint.add(v2, v4));"
+							"};"
+						"};"
+					"};"
+				"}", newIR->toString() );
 
-	checkSCoPCorrectness(18, newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, TilingAuto) {
@@ -282,11 +315,19 @@ TEST(Transform, TilingAuto) {
 	scop::mark(forStmt);
 
 	LoopTiling li({7,7});
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 
-	EXPECT_EQ( "for(int<4> v8 = 10 .. int.add(49, 1) : 7) {for(int<4> v9 = 5 .. int.add(24, 1) : 7) {for(int<4> v10 = v8 .. int.add(select(int.add(cast<int<4>>(v8), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v11 = v9 .. int.add(select(int.add(cast<int<4>>(v9), cast<int<4>>(6)), 24, int.lt), 1) : 1) {array.ref.elem.1D(v3, uint.add(v10, v11));};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {"
+					"for(int<4> v1 = 5 .. int.add(24, 1) : 7) {"
+						"for(int<4> v2 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {"
+							"for(int<4> v4 = v1 .. int.add(select(int.add(cast<int<4>>(v1), cast<int<4>>(6)), 24, int.lt), 1) : 1) {"
+								"array.ref.elem.1D(v3, uint.add(v2, v4));"
+							"};"
+						"};"
+					"};"
+				"}", toString(*newIR) );
 
-	checkSCoPCorrectness(8, newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, TilingAuto2) {
@@ -310,11 +351,23 @@ TEST(Transform, TilingAuto2) {
 	scop::mark(forStmt);
 
 	LoopTiling li({ 7,6,3 });
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 
-	EXPECT_EQ( "for(int<4> v11 = 10 .. int.add(49, 1) : 7) {for(int<4> v12 = 3 .. int.add(24, 1) : 6) {for(int<4> v13 = 2 .. int.add(99, 1) : 3) {for(int<4> v14 = v11 .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v15 = v12 .. int.add(select(int.add(cast<int<4>>(v12), cast<int<4>>(5)), 24, int.lt), 1) : 1) {for(int<4> v16 = v13 .. int.add(select(int.add(cast<int<4>>(v13), cast<int<4>>(2)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v14, v15));};};};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {"
+					"for(int<4> v1 = 3 .. int.add(24, 1) : 6) {"
+						"for(int<4> v2 = 2 .. int.add(99, 1) : 3) {"
+							"for(int<4> v3 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {"
+								"for(int<4> v5 = v1 .. int.add(select(int.add(cast<int<4>>(v1), cast<int<4>>(5)), 24, int.lt), 1) : 1) {"
+									"for(int<4> v6 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(2)), 99, int.lt), 1) : 1) {"
+										"array.ref.elem.1D(v4, uint.add(v3, v5));"
+									"};"
+								"};"
+							"};"
+						"};"
+					"};"
+				"}", toString(*newIR) );
 
-	checkSCoPCorrectness(11, newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, TilingAuto21) {
@@ -338,11 +391,21 @@ TEST(Transform, TilingAuto21) {
 	scop::mark(forStmt);
 
 	LoopTiling li({ 5,5 }, {0,0});
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 
-	EXPECT_EQ( "for(int<4> v9 = 10 .. int.add(49, 1) : 1) {for(int<4> v10 = 3 .. int.add(24, 1) : 5) {for(int<4> v11 = 2 .. int.add(99, 1) : 5) {for(int<4> v12 = v10 .. int.add(select(int.add(cast<int<4>>(v10), cast<int<4>>(4)), 24, int.lt), 1) : 1) {for(int<4> v13 = v11 .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(4)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v9, v12));};};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
+					"for(int<4> v1 = 3 .. int.add(24, 1) : 5) {"
+						"for(int<4> v2 = 2 .. int.add(99, 1) : 5) {"
+							"for(int<4> v3 = v1 .. int.add(select(int.add(cast<int<4>>(v1), cast<int<4>>(4)), 24, int.lt), 1) : 1) {"
+								"for(int<4> v5 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(4)), 99, int.lt), 1) : 1) {"
+									"array.ref.elem.1D(v4, uint.add(v0, v3));"
+								"};"
+							"};"
+						"};"
+					"};"
+				"}", toString(*newIR) );
 
-	checkSCoPCorrectness(9,newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, TilingAuto3) {
@@ -367,11 +430,11 @@ TEST(Transform, TilingAuto3) {
 	scop::mark(forStmt);
 
 	LoopTiling li({7,6,8});
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 
-	EXPECT_EQ( "for(int<4> v11 = 10 .. int.add(49, 1) : 7) {for(int<4> v12 = 1 .. int.add(24, 1) : 6) {for(int<4> v13 = v11 .. int.add(99, 1) : 1) {for(int<4> v14 = int.add(cast<int<4>>(v13), cast<int<4>>(int.mul(cast<int<4>>(-8), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v11))), cast<int<4>>(v13)), 8))))) .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(6)), select(v13, 49, int.lt), int.lt), 1) : 8) {if(bool.and(int.le(v11, v14), bind(){rec v17.{v17=fun(int<4> v15, int<4> v16) {return int.ge(v15, int.add(cast<int<4>>(v16), cast<int<4>>(-7)));}}(v11, v14)})) {for(int<4> v18 = v12 .. int.add(int.add(cast<int<4>>(v12), cast<int<4>>(5)), 1) : 1) {for(int<4> v19 = v13 .. int.add(select(int.add(cast<int<4>>(v13), cast<int<4>>(7)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v14, v18));};};} else {};};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v1 = 1 .. int.add(24, 1) : 6) {for(int<4> v2 = v0 .. int.add(99, 1) : 1) {for(int<4> v3 = int.add(cast<int<4>>(v2), cast<int<4>>(int.mul(cast<int<4>>(-8), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v0))), cast<int<4>>(v2)), 8))))) .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), select(v2, 49, int.lt), int.lt), 1) : 8) {if(bool.and(int.le(v0, v3), bind(){rec v0.{v0=fun(int<4> v1, int<4> v2) {return int.ge(v1, int.add(cast<int<4>>(v2), cast<int<4>>(-7)));}}(v0, v3)})) {for(int<4> v5 = v1 .. int.add(int.add(cast<int<4>>(v1), cast<int<4>>(5)), 1) : 1) {for(int<4> v6 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(7)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v3, v5));};};} else {};};};};}", toString(*newIR) );
 
-	checkSCoPCorrectness(11,newIR);
+	// checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, LoopStamping) {
@@ -394,11 +457,22 @@ TEST(Transform, LoopStamping) {
 	scop::mark(forStmt);
 
 	LoopStamping ls( 7, { 0,0 } );
-	NodePtr newIR = ls.apply(forStmt);
+	NodePtr newIR = analysis::normalize(ls.apply(forStmt));
 
-	EXPECT_EQ( "{for(int<4> v6 = 0 .. int.add(29, 1) : 1) {for(int<4> v7 = 0 .. int.add(27, 1) : 1) {array.ref.elem.1D(v3, uint.add(v6, v7));};}; for(int<4> v8 = 0 .. int.add(29, 1) : 1) {for(int<4> v9 = 28 .. int.add(29, 1) : 1) {array.ref.elem.1D(v3, uint.add(v8, v9));};};}", newIR->toString() );
+	EXPECT_EQ( "{"
+					"for(int<4> v0 = 0 .. int.add(29, 1) : 1) {"
+						"for(int<4> v1 = 0 .. int.add(27, 1) : 1) {"
+							"array.ref.elem.1D(v3, uint.add(v0, v1));"
+						"};"
+					"}; "
+					"for(int<4> v2 = 0 .. int.add(29, 1) : 1) {"
+						"for(int<4> v4 = 28 .. int.add(29, 1) : 1) {"
+							"array.ref.elem.1D(v3, uint.add(v2, v4));"
+						"};"
+					"};"
+				"}", toString(*newIR) );
 
-	checkSCoPCorrectness(6,newIR);
+	checkSCoPCorrectness(newIR);
 
 }
 
@@ -422,11 +496,22 @@ TEST(Transform, LoopStamping2) {
 	scop::mark(forStmt);
 
 	LoopStamping ls( 7 , { 0 } );
-	NodePtr newIR = ls.apply(forStmt);
+	NodePtr newIR = analysis::normalize(ls.apply(forStmt));
 
-	EXPECT_EQ( "{for(int<4> v6 = 3 .. int.add(23, 1) : 1) {for(int<4> v7 = 3 .. int.add(29, 1) : 1) {array.ref.elem.1D(v3, uint.add(v6, v7));};}; for(int<4> v8 = 24 .. int.add(29, 1) : 1) {for(int<4> v9 = 3 .. int.add(29, 1) : 1) {array.ref.elem.1D(v3, uint.add(v8, v9));};};}", newIR->toString() );
+	EXPECT_EQ( "{"
+					"for(int<4> v0 = 3 .. int.add(23, 1) : 1) {"
+						"for(int<4> v1 = 3 .. int.add(29, 1) : 1) {"
+							"array.ref.elem.1D(v3, uint.add(v0, v1));"
+						"};"
+					"}; "
+					"for(int<4> v2 = 24 .. int.add(29, 1) : 1) {"
+						"for(int<4> v4 = 3 .. int.add(29, 1) : 1) {"
+							"array.ref.elem.1D(v3, uint.add(v2, v4));"
+						"};"
+					"};"
+				"}", toString(*newIR) );
 
-	checkSCoPCorrectness(6,newIR);
+	checkSCoPCorrectness(newIR);
 
 }
 
@@ -454,10 +539,9 @@ TEST(Transform, LoopStamping3) {
 	LoopStamping ls( 7, { 0 } );
 	NodePtr newIR = ls.apply(forStmt);
 
-	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v8 = 10 .. int.add(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 1) : 1) {for(int<4> v9 = 1 .. int.add(24, 1) : 1) {for(int<4> v10 = 1 .. int.add(99, 1) : 1) {array.ref.elem.1D(v5, uint.add(v8, v9));};};}; for(int<4> v11 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 1) : 1) {for(int<4> v12 = 1 .. int.add(24, 1) : 1) {for(int<4> v13 = 1 .. int.add(99, 1) : 1) {array.ref.elem.1D(v5, uint.add(v11, v12));};};};} else {}", newIR->toString() );
+	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v120 = 10 .. int.add(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 1) : 1) {for(int<4> v121 = 1 .. int.add(24, 1) : 1) {for(int<4> v122 = 1 .. int.add(99, 1) : 1) {array.ref.elem.1D(v5, uint.add(v120, v121));};};}; for(int<4> v123 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 1) : 1) {for(int<4> v124 = 1 .. int.add(24, 1) : 1) {for(int<4> v125 = 1 .. int.add(99, 1) : 1) {array.ref.elem.1D(v5, uint.add(v123, v124));};};};} else {}", toString(*newIR) );
 
-	//checkSCoPCorrectness(8,newIR);
-
+	//checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, LoopStamping4) {
@@ -482,9 +566,23 @@ TEST(Transform, LoopStamping4) {
 	scop::mark(forStmt);
 
 	LoopStamping ls( 7, { 0 } );
-	NodePtr newIR = ls.apply(forStmt);
+	NodePtr newIR = analysis::normalize(ls.apply(forStmt));
 
-	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v8 = 10 .. int.add(select(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 99, int.lt), 1) : 1) {for(int<4> v9 = 1 .. int.add(24, 1) : 1) {for(int<4> v10 = v8 .. int.add(99, 1) : 1) {array.ref.elem.1D(v5, uint.add(v8, v9));};};}; for(int<4> v11 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 99, int.lt), 1) : 1) {for(int<4> v12 = 1 .. int.add(24, 1) : 1) {for(int<4> v13 = v11 .. int.add(99, 1) : 1) {array.ref.elem.1D(v5, uint.add(v11, v12));};};};} else {}", newIR->toString() );
+	EXPECT_EQ( "if(int.ge(v2, 11)) {"
+					"for(int<4> v0 = 10 .. int.add(select(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 99, int.lt), 1) : 1) {"
+						"for(int<4> v1 = 1 .. int.add(24, 1) : 1) {for(int<4> v3 = v0 .. int.add(99, 1) : 1) {"
+							"array.ref.elem.1D(v5, uint.add(v0, v1));"
+						"};"
+					"};"
+				"}; "
+				"for(int<4> v4 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 99, int.lt), 1) : 1) {"
+					"for(int<4> v6 = 1 .. int.add(24, 1) : 1) {"
+						"for(int<4> v7 = v4 .. int.add(99, 1) : 1) {"
+							"array.ref.elem.1D(v5, uint.add(v4, v6));"
+						"};"
+					"};"
+				"};"
+			"} else {}", toString(*newIR) );
 
 	// checkSCoPCorrectness(8,newIR);
 

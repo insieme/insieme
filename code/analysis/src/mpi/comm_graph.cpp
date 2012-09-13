@@ -138,14 +138,14 @@ void merge(CFGPtr& cfg, const CommGraph& commGraph) {
 		boost::tie(ei, ei_end) = out_edges(*vi, commGraph);
 		if (std::distance(ei, ei_end) != 0) {
 			// Add the edges 
-			cfg::BlockPtr srcBlock = cfg->find( commGraph[*vi].call );
+			cfg::Address srcBlock = cfg->find( commGraph[*vi].call );
 			assert( srcBlock );
 
 			for(; ei!=ei_end; ++ei) {
-				cfg::BlockPtr trgBlock = cfg->find( commGraph[ boost::target(*ei, commGraph) ].call );
+				cfg::Address trgBlock = cfg->find( commGraph[ boost::target(*ei, commGraph) ].call );
 				assert(trgBlock);
 
-				cfg->addEdge(*srcBlock, *trgBlock);
+				cfg->addEdge(srcBlock.getBlock(), trgBlock.getBlock());
 
 			}
 		}

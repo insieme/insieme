@@ -36,7 +36,7 @@
 
 #include "insieme/backend/sequential/sequential_preprocessor.h"
 
-#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/sequentialize.h"
 
 namespace insieme {
 namespace backend {

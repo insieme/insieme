@@ -82,8 +82,8 @@ namespace sequential {
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-				getBasicPreProcessorSequence(),
-				makePreProcessor<Sequentializer>()
+				makePreProcessor<Sequentializer>(),
+				getBasicPreProcessorSequence()
 		);
 		converter.setPreProcessor(preprocessor);
 

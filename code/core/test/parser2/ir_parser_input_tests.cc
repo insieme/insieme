@@ -45,7 +45,7 @@
 #include <boost/filesystem.hpp>
 
 #include "insieme/core/parser2/ir_parser.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/utils/test/test_config.h"
 

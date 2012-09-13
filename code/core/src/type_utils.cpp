@@ -36,6 +36,7 @@
 
 #include "insieme/core/type_utils.h"
 
+#include <set>
 #include <cassert>
 #include <boost/unordered_map.hpp>
 
@@ -954,12 +955,114 @@ TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB) {
 }
 
 
+namespace {
+
+	/**
+	 * Defines a set of type variables required to be passed as a context
+	 * through the IsGeneric visitor.
+	 */
+	typedef std::set<TypeVariablePtr> TypeVariableSet;
+
+	/**
+	 * A visitor searching for free type variables or variable int type parameters.
+	 * The visitor is used by the isGeneric(..) function. If one of those is present,
+	 * the type is generic.
+	 */
+	class IsGeneric : private IRVisitor<bool, Pointer, TypeVariableSet&> {
+
+	public:
+
+		IsGeneric() : IRVisitor<bool, Pointer, TypeVariableSet&>(true) {}
+
+		/**
+		 * An entry point for this visitor testing whether the given type
+		 * is a generic type or not.
+		 */
+		bool test(const TypePtr& type) {
+			TypeVariableSet boundVars;
+			return visit(type, boundVars);
+		}
+
+	private:
+
+		/**
+		 * When encountering a variable, check whether it is bound.
+		 */
+		bool visitTypeVariable(const TypeVariablePtr& var, TypeVariableSet& boundVars) {
+			return boundVars.find(var) == boundVars.end();	// if not, there is a free generic variable
+		}
+
+		bool visitFunctionType(const FunctionTypePtr& funType, TypeVariableSet& boundVars) {
+			return any(funType->getParameterTypes(), [&](const TypePtr& type) { return visit(type, boundVars); }) ||
+					visit(funType->getReturnType(), boundVars);
+		}
+
+		bool visitNamedCompositeType(const NamedCompositeTypePtr& type, TypeVariableSet& boundVars) {
+			return any(type->getElements(), [&](const NamedTypePtr& element) { return visit(element->getType(), boundVars); });
+		}
+
+		bool visitTupleType(const TupleTypePtr& tuple, TypeVariableSet& boundVars) {
+			return any(tuple->getElements(), [&](const TypePtr& type) { return visit(type, boundVars); });
+		}
+
+		bool visitGenericType(const GenericTypePtr& type, TypeVariableSet& boundVars) {
+			// generic type is generic if one of its parameters is
+			return
+				any(
+					type->getTypeParameter()->getTypes(),
+					[&](const TypePtr& type) { return visit(type, boundVars); }
+				) ||
+				any(
+					type->getIntTypeParameter()->getParameters(),
+					[&](const IntTypeParamPtr& param) { return visit(param, boundVars); }
+				);
+		}
+
+		bool visitRecType(const RecTypePtr& recType, TypeVariableSet& boundVars) {
+			TypeVariableSet local = boundVars;
+			for(const RecTypeBindingPtr& binding : recType->getDefinition()) {
+				local.insert(binding->getVariable());
+			}
+
+			// check types within recursive bindings
+			return any(recType->getDefinition(), [&](const RecTypeBindingPtr& binding) { return visit(binding->getType(), local); });
+		}
+
+		bool visitType(const TypePtr& type, TypeVariableSet& boundVars) {
+			return any(type->getChildList(), [&](const NodePtr& node) { return visit(node, boundVars); });
+		}
+
+
+		// -- int type parameters --
+
+		bool visitVariableIntTypeParam(const VariableIntTypeParamPtr& var, TypeVariableSet& boundVars) {
+			return true;	// if there are free int type parameter => it is generic
+		}
+
+		bool visitIntTypeParam(const IntTypeParamPtr& param, TypeVariableSet& boundVars) {
+			return false;	// int-type params are not causing a type to be generic
+		}
+
+
+		/**
+		 * A terminal visit capturing all non-covered types. This one should
+		 * never be reached since all cases need to be covered within specialized
+		 * visit members.
+		 */
+		bool visitNode(const NodePtr& node, TypeVariableSet& boundVars) {
+			LOG(FATAL) << "Reaching " << *node << " within IsGeneric visitor!";
+			assert(false && "Should not be reached!");
+			return false;
+		}
+
+	};
+
+}
+
+
 bool isGeneric(const TypePtr& type) {
-	// just use a interruptible visitor to check for type or integer param variables
-	return visitDepthFirstOnceInterruptible(type, makeLambdaVisitor([](const NodePtr& cur) {
-		// return true when a generic type has been found => interrupts the visiting process
-		return (cur->getNodeType() == core::NT_TypeVariable || cur->getNodeType() == core::NT_VariableIntTypeParam);
-	}, true));
+	// just use the IsGeneric recursive visitor based test
+	return IsGeneric().test(type);
 }
 
 

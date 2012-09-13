@@ -1,0 +1,19 @@
+Total: 2258 samples
+    1119  49.6%  49.6%     1121  49.6% sparselu_seq_call
+    1045  46.3%  95.8%     1046  46.3% insieme_wi_2_var_0_impl
+      37   1.6%  97.5%       37   1.6% insieme_wi_1_var_0_impl
+      34   1.5%  99.0%       34   1.5% insieme_wi_0_var_0_impl
+       9   0.4%  99.4%       10   0.4% __insieme_fun_8
+       5   0.2%  99.6%        5   0.2% tcmalloc::CentralFreeList::Populate
+       3   0.1%  99.7%        3   0.1% sparselu_par_call
+       2   0.1%  99.8%        2   0.1% irt_runtime_start
+       1   0.0%  99.9%        1   0.0% __intel_new_memset
+       1   0.0%  99.9%        1   0.0% __read_nocancel
+       1   0.0% 100.0%        1   0.0% _dl_fixup
+       1   0.0% 100.0%        1   0.0% _init
+       0   0.0% 100.0%        1   0.0% __libc_calloc
+       0   0.0% 100.0%        1   0.0% _dl_allocate_tls
+       0   0.0% 100.0%        4   0.2% tc_malloc
+       0   0.0% 100.0%        5   0.2% tcmalloc::CentralFreeList::FetchFromSpansSafe
+       0   0.0% 100.0%        5   0.2% tcmalloc::CentralFreeList::RemoveRange
+       0   0.0% 100.0%        5   0.2% tcmalloc::ThreadCache::FetchFromCentralCache

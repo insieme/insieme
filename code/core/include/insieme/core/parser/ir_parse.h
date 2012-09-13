@@ -69,7 +69,7 @@ public :
 		return ("IR Parsing failed\n" + err).c_str();
 	}
 
-    ParseException() : err("") {}
+    ParseException() : err("Unspecified Error") {}
 
     ParseException(string errMsg) : err(errMsg) {}
 

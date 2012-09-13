@@ -40,7 +40,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
@@ -62,7 +62,7 @@ TEST(LangBasic, BoolChecks) {
 TEST(LangBasic, StringGet) {
 	NodeManager nm;
 
-	EXPECT_EQ(nm.getLangBasic().getBarrier(), nm.getLangBasic().getLiteral("barrier"));
+	EXPECT_EQ(nm.getLangBasic().getRedistribute(), nm.getLangBasic().getLiteral("redistribute"));
 	// EXPECT_EQ(LiteralPtr(), nm.getLangBasic().getLiteral("surelyNotBuiltInISincerelyHope__"));
 }
 
@@ -117,6 +117,7 @@ TEST(LangBasic, DefinitionTest) {
 
 	// test all type and literal definitions
 #define CHECK(id) \
+	std::cout << "Checking " #id "\n"; \
 	EXPECT_TRUE(gen.get##id ()); \
 	EXPECT_TRUE(gen.is##id(gen.get##id())); \
 	EXPECT_TRUE(checks::check(gen.get##id()).empty()) << checks::check(gen.get##id());

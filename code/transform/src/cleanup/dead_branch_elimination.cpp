@@ -51,7 +51,7 @@ namespace insieme {
 namespace transform {
 
 using namespace core;
-using namespace analysis::polyhedral;
+using namespace insieme::analysis::polyhedral;
 
 // remove dead code 
 core::NodePtr deadBranchElimination(const core::NodePtr& node) {

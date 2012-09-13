@@ -411,7 +411,7 @@ def run_test_case(test_case_name, home_folder):
 					sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
 
-				input_args = ""
+				input_args = None
 				if os.path.exists("prog.input"):
 					input_args = open("prog.input").read().strip()
 
@@ -419,7 +419,8 @@ def run_test_case(test_case_name, home_folder):
 				sys.stderr.flush()
 
 				start = time.time()
-				exitValue = run_prog("./{0} {1} > {2}".format(ref_exec, input_args, ref_out)) >> 8
+				cmd = input_args.format(**{'PATH':'./', 'EXEC':ref_exec}) if input_args else ref_exec
+				exitValue = run_prog("./{0} > {1}".format(cmd, ref_out)) >> 8
 
 				if not mockRun:
 					if exitValue != 0:
@@ -434,9 +435,9 @@ def run_test_case(test_case_name, home_folder):
 
 					ldPath = os.getenv("LD_LIBRARY_PATH", "");
 					os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/simple_backend");
+					cmd = input_args.format(**{'PATH':'./', 'EXEC':test_smp_exec}) if input_args else test_smp_exec
 					start = time.time()
-					exitValue = run_prog("./{0} {1} > {2} 2> /dev/null".format(test_smp_exec,
-						input_args, test_smp_out)) >> 8;
+					exitValue = run_prog("./{0} > {1} 2> /dev/null".format(cmd, test_smp_out)) >> 8;
 					if not mockRun:
 						if exitValue != 0:
 							if exitValue == 139:
@@ -452,9 +453,9 @@ def run_test_case(test_case_name, home_folder):
 					sys.stderr.write(" * Running SEQ program...                ")
 					sys.stderr.flush()
 
+					cmd = input_args.format(**{'PATH':'./', 'EXEC':test_seq_exec}) if input_args else test_seq_exec
 					start = time.time()
-					exitValue = run_prog("./{0} {1} > {2} 2> /dev/null".format(test_seq_exec,
-						input_args, test_seq_out)) >> 8;
+					exitValue = run_prog("./{0} > {1} 2> /dev/null".format(cmd, test_seq_out)) >> 8;
 					if not mockRun:
 						if exitValue != 0:
 							if exitValue == 139:
@@ -471,9 +472,9 @@ def run_test_case(test_case_name, home_folder):
 
 					ldPath = os.getenv("LD_LIBRARY_PATH", "");
 					os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/runtime/pmlib");
+					cmd = input_args.format(**{'PATH':'./', 'EXEC':test_run_exec}) if input_args else test_run_exec
 					start = time.time()
-					exitValue = run_prog("./{0} {1} > {2} 2> /dev/null".format(test_run_exec,
-						input_args, test_run_out)) >> 8;
+					exitValue = run_prog("./{0} > {1} 2> /dev/null".format(cmd, test_run_out)) >> 8;
 					if not mockRun:
 						if exitValue != 0:
 							if exitValue == 139:
@@ -489,9 +490,9 @@ def run_test_case(test_case_name, home_folder):
 					sys.stderr.write(" * Running OCL program...                ")
 					sys.stderr.flush()
 
+					cmd = input_args.format(**{'PATH':'./', 'EXEC':test_ocl_exec}) if input_args else test_ocl_exec
 					start = time.time()
-					exitValue = run_prog("./{0} {1} > {2} 2> /dev/null".format(test_ocl_exec,
-						input_args, test_ocl_out)) >> 8;
+					exitValue = run_prog("./{0} > {1} 2> /dev/null".format(cmd, test_ocl_out)) >> 8;
 					if not mockRun:
 						if exitValue != 0:
 							if exitValue == 139:
