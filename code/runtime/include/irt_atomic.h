@@ -76,12 +76,9 @@
 	#define irt_atomic_and_and_fetch(__location, __value, ...)		(_InterlockedAnd(__location, __value))
 	#define irt_atomic_xor_and_fetch(__location, __value, ...)		(_InterlockedXor(__location, __value))
 
-	#define irt_atomic_inc(__location) InterlockedIncrement(__location)
-	#define irt_atomic_dec(__location) InterlockedDecrement(__location)
-
 
 	// Windows 7 and up -> InterlockedExchangeAdd and others are overloaded (such that there is a function with matching types)
-	#if (_WIN32_WINNT >= 0x0601)
+	#if (WINVER >= 0x0601)
 
 		// fetch_and_op: original value before op shall be returned
 		#define irt_atomic_fetch_and_add(__location, __value, ...)		(InterlockedExchangeAdd(__location, __value))
@@ -99,27 +96,72 @@
 		#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, ...)	((__oldval) == InterlockedCompareExchange(__location, __newval, __oldval)) /* somehow equiv to __oldval == *__location which is the condition for swapping values */
 		#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, ...)	InterlockedCompareExchange(__location, __newval, __oldval)
 
+		#define irt_atomic_inc(__location) InterlockedIncrement(__location)
+		#define irt_atomic_dec(__location) InterlockedDecrement(__location)
+
 	// Windows XP, Windows Vista (and below?) -> there exist no overloaded functions but 32bit and 64bit versions of interlocked functions
 	// hence we do the overloading
-	#else // _WIN32_WINNT < 0x0601
+	#else // WINVER < 0x0601
 
-		// function overloads which will either call the 32bit or the 64bit intrinsic interlocked operation
-		uint64 _irt_interlocked_exchange_add(uint64 *loc, uint64 val){
-			return (uint64)InterlockedExchangeAdd64(loc, val);
+		#include <intrin.h>
+
+		#pragma intrinsic(_InterlockedCompareExchange64)
+		
+		// function overloads which will either call the 32bit or the 64bit interlocked operation
+		uint64 _irt_interlocked_exchange_add(volatile uint64 *loc, uint64 val){
+
+			LONGLONG old;
+
+			do {
+				old = *loc;
+			} while (_InterlockedCompareExchange64((LONGLONG*)loc,
+												  (LONGLONG)(old + val),
+												  old) != old);
+
+			return (uint64)old;
+			//return (uint64)_InterlockedExchangeAdd64((LONGLONG*)loc, (LONGLONG)val);
 		}
 
-		uint32 _irt_interlocked_exchange_add(uint32 *loc, uint32 val){
-			return (uint32)InterlockedExchangeAdd(loc, val);
+		uint32 _irt_interlocked_exchange_add(volatile uint32 *loc, uint32 val){
+			return (uint32)InterlockedExchangeAdd((long*)loc, (long)val);
 		}
 
-		uint64 _irt_interlocked_compare_exchange(uint64 *loc, uint64 newval, uint64 oldval){
+		uint64 _irt_interlocked_compare_exchange(volatile uint64 *loc, uint64 newval, uint64 oldval){
 			// directly call the compiler intrinsic
-			return (uint64)_InterlockedCompareExchange64(loc, newval, oldval);
+			return (uint64)_InterlockedCompareExchange64((LONGLONG*)loc, (LONGLONG)newval, (LONGLONG)oldval);
 		}
 
-		uint32 _irt_interlocked_compare_exchange(uint32 *loc, uint32 newval, uint32 oldval){
+		uint32 _irt_interlocked_compare_exchange(volatile uint32 *loc, uint32 newval, uint32 oldval){
 			// directly call the compiler intrinsic
-			return (uint32)_InterlockedCompareExchange(loc, newval, oldval);
+			return (uint32)InterlockedCompareExchange((long*)loc, (long)newval, (long)oldval);
+		}
+
+		uint64 _irt_interlocked_increment(uint64 *loc){
+			LONGLONG old;
+			do {
+				old = *loc;
+			} while (_InterlockedCompareExchange64((LONGLONG*)loc,
+												  (LONGLONG)(old + 1),
+												  old) != old);
+			return (uint64)old+1;
+		}
+
+		uint32 _irt_interlocked_increment(uint32 *loc){
+			return (uint32)InterlockedIncrement((long*)loc);
+		}
+
+		uint64 _irt_interlocked_decrement(uint64 *loc){
+			LONGLONG old;
+			do {
+				old = *loc;
+			} while (_InterlockedCompareExchange64((LONGLONG*)loc,
+												  (LONGLONG)(old - 1),
+												  old) != old);
+			return (uint64)old-1;
+		}
+
+		uint32 _irt_interlocked_decrement(uint32 *loc){
+			return (uint32)InterlockedDecrement((long*)loc);
 		}
 
 
@@ -133,7 +175,9 @@
 		#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, ...)	((__oldval) == _irt_interlocked_compare_exchange(__location, __newval, __oldval)) /* somehow equiv to __oldval == *__location which is the condition for swapping values */
 		#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, ...)	_irt_interlocked_compare_exchange(__location, __newval, __oldval)
 
+		#define irt_atomic_inc(__location) _irt_interlocked_increment(__location)
+		#define irt_atomic_dec(__location) _irt_interlocked_decrement(__location)
 
-	#endif // _WIN32_WINNT >= 0x0600
+	#endif // WINVER >= 0x0600
 
 #endif

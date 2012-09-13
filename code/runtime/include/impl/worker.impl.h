@@ -91,6 +91,27 @@ typedef struct __irt_worker_func_arg {
 	irt_worker_init_signal *signal;
 } _irt_worker_func_arg;
 
+
+/** wait until all worker threads are created (signal->init_count == irt_g_worker_count) */
+void _irt_await_all_workers_init(irt_worker_init_signal *signal){
+	#if defined(WINVER) && (WINVER < 0x0600)
+		irt_atomic_inc(&(signal->init_count));
+		HANDLE ev = OpenEvent(SYNCHRONIZE, FALSE, "AllWorkersInitialized");
+		// wait until master thread signals ev
+		WaitForSingleObject(ev, INFINITE);
+	#else
+		irt_mutex_lock(&signal->init_mutex);
+		signal->init_count++;
+		if(signal->init_count == irt_g_worker_count) {
+			// signal readyness of created thread to master thread
+			irt_cond_wake_all(&signal->init_condvar);
+		} else {
+			irt_cond_wait(&signal->init_condvar, &signal->init_mutex);
+		}
+		irt_mutex_unlock(&signal->init_mutex);
+	#endif
+}
+
 void* _irt_worker_func(void *argvp) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)argvp;
 	irt_set_affinity(arg->affinity, irt_current_thread());
@@ -109,25 +130,25 @@ void* _irt_worker_func(void *argvp) {
 	if(getenv(IRT_DEFAULT_VARIANT_ENV)) {
 		self->default_variant = atoi(getenv(IRT_DEFAULT_VARIANT_ENV));
 	}
-
+	
 	irt_cond_var_init(&self->wait_cond);
 	irt_mutex_init(&self->wait_mutex);
 	
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(irt_tls_set(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 
-#ifdef IRT_ENABLE_INSTRUMENTATION
-	self->instrumentation_event_data = irt_inst_create_event_data_table();
-#endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	self->instrumentation_region_data = irt_inst_create_region_data_table();
-	// initialize papi's threading support and add events to be measured
-	//self->irt_papi_number_of_events = 0;
-	irt_initialize_papi_thread(&(self->irt_papi_event_set));
-#endif
-#ifdef IRT_OCL_INSTR
-	self->event_data = irt_ocl_create_event_table();
-#endif
+	#ifdef IRT_ENABLE_INSTRUMENTATION
+		self->instrumentation_event_data = irt_inst_create_event_data_table();
+	#endif
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		self->instrumentation_region_data = irt_inst_create_region_data_table();
+		// initialize papi's threading support and add events to be measured
+		//self->irt_papi_number_of_events = 0;
+		irt_initialize_papi_thread(&(self->irt_papi_event_set));
+	#endif
+	#ifdef IRT_OCL_INSTR
+		self->event_data = irt_ocl_create_event_table();
+	#endif
 	
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_CREATED, self->id);
 	
@@ -141,9 +162,10 @@ void* _irt_worker_func(void *argvp) {
 	self->wg_ev_register_list = NULL; // prepare some?
 	self->wi_reuse_stack = NULL; // prepare some?
 	self->stack_reuse_stack = NULL;
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	self->region_reuse_list = irt_inst_create_region_list();
-#endif
+
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		self->region_reuse_list = irt_inst_create_region_list();
+	#endif
 
 	self->state = IRT_WORKER_STATE_READY;
 	// TODO instrumentation?
@@ -153,15 +175,8 @@ void* _irt_worker_func(void *argvp) {
 	irt_worker_init_signal *signal = arg->signal;
 	free(arg);
 
-	// signal readyness
-	irt_mutex_lock(&signal->init_mutex);
-	signal->init_count++;
-	if(signal->init_count == irt_g_worker_count) {
-		irt_cond_wake_all(&signal->init_condvar);
-	} else {
-		irt_cond_wait(&signal->init_condvar, &signal->init_mutex);
-	}
-	irt_mutex_unlock(&signal->init_mutex);
+	// wait until all workers are initialized
+	_irt_await_all_workers_init(signal);
 
 	self->state = IRT_WORKER_STATE_RUNNING;
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);

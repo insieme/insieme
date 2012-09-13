@@ -98,10 +98,6 @@ void irt_mutex_lock(irt_lock_obj *m){
 	pthread_mutex_lock(m);
 }
 
-int irt_mutex_trylock(irt_lock_obj* m){
-	return pthread_mutex_trylock(m);
-}
-
 void irt_mutex_unlock(irt_lock_obj *m){
 	pthread_mutex_unlock(m);
 }
