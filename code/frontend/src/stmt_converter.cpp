@@ -57,31 +57,26 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
-//#include "insieme/frontend/cpp/temporary_handler.h"
-//#include "clang/AST/StmtVisitor.h"
+using namespace clang;
 
 namespace stmtutils {
 
+using namespace insieme::core;
+
 // Tried to aggregate statements into a compound statement (if more than 1 statement is present)
-insieme::core::StatementPtr 
-tryAggregateStmts(const insieme::core::IRBuilder& builder, const StatementList& stmtVect) 
-{
+StatementPtr tryAggregateStmts(const IRBuilder& builder, const StatementList& stmtVect) {
 	return (stmtVect.size() == 1) ? tryAggregateStmt(builder, stmtVect.front()) : builder.compoundStmt(stmtVect);
 }
 
-insieme::core::StatementPtr 
-tryAggregateStmt(const insieme::core::IRBuilder& builder, const insieme::core::StatementPtr& stmt) 
-{
-	return stmt->getNodeType() == insieme::core::NT_CompoundStmt ? 
-		tryAggregateStmts(builder, stmt.as<core::CompoundStmtPtr>()->getStatements())
-		: stmt;
+StatementPtr tryAggregateStmt(const IRBuilder& builder, const StatementPtr& stmt) {
+	return stmt->getNodeType() == NT_CompoundStmt ? 
+		tryAggregateStmts(builder, stmt.as<CompoundStmtPtr>()->getStatements())	: stmt;
 }
 
-insieme::core::ExpressionPtr 
-makeOperation(const insieme::core::IRBuilder& builder, 
-			  const insieme::core::ExpressionPtr& lhs,
-			  const insieme::core::ExpressionPtr& rhs, 
-			  const insieme::core::lang::BasicGenerator::Operator& op) 
+ExpressionPtr makeOperation(const IRBuilder& builder, 
+			  			 	const ExpressionPtr& lhs,
+			  				const ExpressionPtr& rhs, 
+					  		const lang::BasicGenerator::Operator& op) 
 {
 	return builder.callExpr(lhs->getType(), // return type
 			builder.getLangBasic().getOperator(lhs->getType(), op), // get the oprtator
