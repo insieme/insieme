@@ -69,7 +69,7 @@ irt_lock_obj irt_g_error_mutex;
 irt_lock_obj irt_g_exit_handler_mutex;
 irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
-long irt_g_active_worker_count; //uint32 irt_g_active_worker_count;
+uint32 irt_g_active_worker_count;
 struct _irt_worker **irt_g_workers;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 #ifndef IRT_MIN_MODE
@@ -150,12 +150,15 @@ void irt_exit(int i) {
 void irt_exit_handler() {
 	static bool irt_exit_handling_done = false;
 
-	while(irt_mutex_trylock(&irt_g_exit_handler_mutex) != 0)
-		if(irt_exit_handling_done)
-			irt_thread_exit(0);
+	// only one thread may execute this routine, when it is done it sets irt_exit_handling_done true
+	irt_mutex_lock(&irt_g_exit_handler_mutex);
 
-	if(irt_exit_handling_done)
+	// every other thread which comes after simply exits
+	if(irt_exit_handling_done){
+		irt_mutex_unlock(&irt_g_exit_handler_mutex);
+		irt_thread_exit(0);
 		return;
+	}
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	
 #endif
@@ -207,6 +210,40 @@ void irt_interrupt_handler(int signal) {
 	// do nothing
 }
 
+// initialize objects required for signaling threads
+void* _irt_init_signalable(irt_worker_init_signal *signal){
+	// all Systems other than Windows XP will use condition variables, WinXP uses events to singal threads
+	#if defined(WINVER) && (WINVER < 0x0600)
+		HANDLE ev = CreateEvent( 
+			NULL,							// default security attributes
+			TRUE,							// manual-reset event
+			FALSE,							// initial state is nonsignaled
+			"AllWorkersInitialized"			// object name
+		);
+		return ev;
+	#else
+		irt_mutex_init(&(signal->init_mutex));
+		irt_cond_var_init(&(signal->init_condvar));
+		return NULL;
+	#endif
+}
+
+// when all workers are created every waiting worker may continue
+void _irt_wake_sleeping_workers(irt_worker_init_signal *signal, void *ev_handle){
+	// Windows XP Version
+	#if defined(WINVER) && (WINVER < 0x0600)
+		while (!irt_atomic_bool_compare_and_swap(&(signal->init_count), irt_g_worker_count, irt_g_worker_count)){}
+		// wake waiting threads
+		SetEvent(ev_handle);
+	#else
+		irt_mutex_lock(&(signal->init_mutex));
+		if (signal->init_count < irt_g_worker_count) {
+			irt_cond_wait(&(signal->init_condvar), &(signal->init_mutex));
+		}
+		irt_mutex_unlock(&(signal->init_mutex));
+	#endif
+}
+
 void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count) {
 
 	if(worker_count > IRT_MAX_WORKERS) {
@@ -224,17 +261,18 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
-	irt_instrumentation_init_energy_instrumentation();
-#endif
-	// initialize PAPI and check version
-	irt_initialize_papi();
-	irt_inst_set_region_instrumentation(true);
-#endif
-#ifdef IRT_ENABLE_INSTRUMENTATION
-	irt_inst_set_all_instrumentation_from_env();
-#endif
+
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
+			irt_instrumentation_init_energy_instrumentation();
+		#endif
+		// initialize PAPI and check version
+		irt_initialize_papi();
+		irt_inst_set_region_instrumentation(true);
+	#endif
+	#ifdef IRT_ENABLE_INSTRUMENTATION
+		irt_inst_set_all_instrumentation_from_env();
+	#endif
 	
 	irt_log_comment("starting worker threads");
 	irt_log_setting_u("irt_g_worker_count", worker_count);
@@ -250,23 +288,20 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	// initialize workers
 	static irt_worker_init_signal signal;
 	signal.init_count = 0;
-	irt_mutex_init(&signal.init_mutex);
-	irt_cond_var_init(&signal.init_condvar);
+
+	void* ev_handle = _irt_init_signalable(&signal);
+
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_worker_create(i, irt_get_affinity(i, aff_policy), &signal);
 	}
 
-	// wait until all workers are initialized
-	irt_mutex_lock(&signal.init_mutex);
-	if(signal.init_count < irt_g_worker_count) {
-		irt_cond_wait(&signal.init_condvar, &signal.init_mutex);
-	}
-	irt_mutex_unlock(&signal.init_mutex);
-	
-#ifdef USE_OPENCL
-	irt_log_comment("Running Insieme runtime with OpenCL!\n");
-	irt_ocl_init_devices();
-#endif
+	// wait until all workers have signaled readyness
+	_irt_wake_sleeping_workers(&signal, ev_handle);
+
+	#ifdef USE_OPENCL
+		irt_log_comment("Running Insieme runtime with OpenCL!\n");
+		irt_ocl_init_devices();
+	#endif
 }
 
 uint32 irt_get_default_worker_count() {
