@@ -26,7 +26,7 @@ tar -xzf openmpi-$VERSION.tar.gz
 cd openmpi-$VERSION
 
 echo "#### Building Openmpi ####"
-CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/openmpi-$VERSION --disable-mpi-f77 --disable-mpi-f90 --enable-mpi-thread-multiple --with-openib  --with-hwloc=$PREFIX/hwloc-latest 
+CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/openmpi-$VERSION --disable-mpi-f77 --disable-mpi-f90 --enable-mpi-thread-multiple --with-openib  --with-hwloc=$PREFIX/hwloc-latest --with-ltdl=$PREFIX/libtool-latest/
 make -j $SLOTS
 
 # Check for failure
