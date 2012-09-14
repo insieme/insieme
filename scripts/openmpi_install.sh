@@ -13,7 +13,7 @@ LDFLAGS="-mtune=native -O3"
 ########################################################################
 rm -Rf $PREFIX/openmpi-$VERSION
 echo "#### Downloading Openmpi ####"
-wget http://www.open-mpi.org/software/ompi/v$VER/downloads/openmpi-$VERSION.tar.gz
+wget -nc http://www.open-mpi.org/software/ompi/v$VER/downloads/openmpi-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then
@@ -25,9 +25,8 @@ export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/m
 tar -xzf openmpi-$VERSION.tar.gz
 cd openmpi-$VERSION
 
-
 echo "#### Building Openmpi ####"
-CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/openmpi-$VERSION --disable-mpi-f77 --disable-mpi-f90
+CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/openmpi-$VERSION --disable-mpi-f77 --disable-mpi-f90 --enable-mpi-thread-multiple --with-openib  --with-hwloc=$PREFIX/hwloc-latest 
 make -j $SLOTS
 
 # Check for failure
