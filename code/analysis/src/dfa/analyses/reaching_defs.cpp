@@ -40,6 +40,8 @@
 
 #include "insieme/utils/logging.h"
 
+#include "insieme/analysis/access.h"
+
 namespace insieme { namespace analysis { namespace dfa {
 
 template <>
@@ -110,7 +112,9 @@ void definitionsToAccesses(const AnalysisDataType& data, AccessManager& mgr) {
 
 		assert(retAddr && stmtIdx<reachBlock->size() && "Stmt address not found");
 
-		mgr.getClassFor( getImmediateAccess( retAddr, {reachBlock,stmtIdx} ) );
+		mgr.getClassFor( 
+				getImmediateAccess( reachExpr->getNodeManager(), 
+									cfg::Address(reachBlock, stmtIdx, retAddr) ));
 	}
 }
 
@@ -137,14 +141,21 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 		auto handle_def = [&](const core::VariablePtr& varPtr) { 
 
 			auto addr = core::Address<const core::Expression>::find(varPtr,stmt);
-			auto access = getImmediateAccess(addr, {block, stmtIdx}, getCFG().getTmpVarMap() );
-
+			auto access = getImmediateAccess( 
+							stmt->getNodeManager(), 
+							cfg::Address(block, stmtIdx, addr), 
+							getCFG().getTmpVarMap() 
+						);
+		//	std::cout << access << std::endl;
 			AccessClassPtr collisionClass = mgr.getClassFor(access);
 
 			// Kill Entities 
-			if (access.isRef()) 
+			if (access->isReference()) 
 				for (auto& acc : *collisionClass) {
-					kill.insert( std::make_tuple(LValue(acc->getAccessedVariable()), acc->getCFGBlock()) );
+					kill.insert( std::make_tuple(
+							LValue(acc->getRoot().getVariable()), 
+							acc->getAddress().as<cfg::Address>().getBlockPtr()) 
+					 );
 				}
 
 			auto var = LValue(varPtr);

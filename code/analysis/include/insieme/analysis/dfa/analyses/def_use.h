@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include "insieme/core/forward_decls.h"
 
 #include <iterator>
