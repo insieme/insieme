@@ -48,93 +48,94 @@ using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
  
 core::NodePtr doConstantPropagation(const core::NodePtr& root) {
-	
-	//auto order = [&] (const core::NodeAddress& lhs, const core::NodeAddress& rhs) -> bool { return lhs.getPath() > rhs.getPath(); };
-	std::map<core::NodeAddress, core::NodePtr> replacements;
-
-	core::NodeManager& mgr = root->getNodeManager();
-
-	// Build the CFG 
-	CFGPtr cfg = CFG::buildCFG(root);
-
-
-	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
-	auto&& analysis = s.solve();
-	
-	// For each block fo the CFG apply replace constants 
-	
-	auto blockVisitor = [&] (const cfg::BlockPtr& block) {
-
-		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& stmt) {
-
-			LOG(INFO) << *((*block)[0].getStatementAddress());
-			LOG(INFO) << block->getBlockID() << " -> " << analysis[block->getBlockID()];
-
-			for (const auto& cur : analysis[block->getBlockID()]) {
-			
-				// LOG(INFO) << stmt.getStatementAddress() << " " 
-				// 		  << std::get<0>(cur).getAccessExpression();
-
-				// if the addressed access is a constant, then store the replacement 
-				if (std::get<1>(cur).isValue()) {
-					
-					core::ExpressionAddress expr = std::get<0>(cur).getAccessExpression();
-					if (expr->getNodeType() == core::NT_Variable) {
-						// this may be a temp
-						core::ExpressionAddress addr = cfg->getTmpVarMap().getMappedExpr( expr.as<core::VariableAddress>().getAddressedNode() );
-						if (addr) { expr = addr; }
-						LOG(INFO) << *expr;
-					}
-
-					core::NodeAddress rep = core::Address<const core::Expression>::find(expr, stmt.getStatementAddress());
-					if (rep) { 
-						
-						core::StatementPtr stmtPtr = stmt.getStatementAddress().getAddressedNode();
-
-						LOG(INFO) << stmtPtr; 
-						// if this is a decl stmt then we have to exclude any replacement of the
-						// declared variable
-						if ( (stmtPtr->getNodeType() == core::NT_DeclarationStmt) && 
-						 	 (*rep.getAddressedNode() == *stmtPtr.as<core::DeclarationStmtPtr>()->getVariable()) ) 
-							continue;
-	
-						// check whether this is an assignment operation 
-						if (stmtPtr->getNodeType() == core::NT_CallExpr && 
-							core::analysis::isCallOf(stmtPtr.as<core::ExpressionPtr>(), mgr.getLangBasic().getRefAssign()) && 
-							(*rep.getAddressedNode() == *stmtPtr.as<core::CallExprPtr>().getArgument(0))) 
-							continue;
-
-						//if ( core::analysis::isRefType(rep.as<core::ExpressionAddress>()->getType()) ) {
-							// assumes the parent operation is a deref
-						// 	rep = rep.getParentAddress(1);
-						//}
-
-						LOG(INFO) << " TRG : " << rep << " " << *rep;
-						core::NodeAddress repAddr = core::concat<const core::Node>(stmt.getStatementAddress(), rep);
-						LOG(INFO) << repAddr;
-
-						auto fit = replacements.find(repAddr);
-						if(fit == replacements.end()) {
-							LOG(INFO) << "~~~~~Apply replacement: " << cur << " " << repAddr << " " << *repAddr; 
-							replacements.insert( { repAddr, std::get<1>(cur).value() } );
-						}
-					}
-
-				}
-			}
-
-		});
-	};
-
-	cfg->visitDFS(blockVisitor);
-
-	if (replacements.empty()) { return root; }
-
-	// get rid of redundant
-	LOG(DEBUG) << "PROPAGATING: " << replacements.size() << " constnts";
-	LOG(DEBUG) << replacements;
-
-	return core::transform::replaceAll(mgr, replacements);
+//	
+//	//auto order = [&] (const core::NodeAddress& lhs, const core::NodeAddress& rhs) -> bool { return lhs.getPath() > rhs.getPath(); };
+//	std::map<core::NodeAddress, core::NodePtr> replacements;
+//
+//	core::NodeManager& mgr = root->getNodeManager();
+//
+//	// Build the CFG 
+//	CFGPtr cfg = CFG::buildCFG(root);
+//
+//
+//	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+//	auto&& analysis = s.solve();
+//	
+//	// For each block fo the CFG apply replace constants 
+//	
+//	auto blockVisitor = [&] (const cfg::BlockPtr& block) {
+//
+//		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& stmt) {
+//
+//			LOG(INFO) << *((*block)[0].getStatementAddress());
+//			LOG(INFO) << block->getBlockID() << " -> " << analysis[block->getBlockID()];
+//
+//			for (const auto& cur : analysis[block->getBlockID()]) {
+//			
+//				// LOG(INFO) << stmt.getStatementAddress() << " " 
+//				// 		  << std::get<0>(cur).getAccessExpression();
+//
+//				// if the addressed access is a constant, then store the replacement 
+//				if (std::get<1>(cur).isValue()) {
+//					
+//					core::ExpressionAddress expr = std::get<0>(cur).getAccessExpression();
+//					if (expr->getNodeType() == core::NT_Variable) {
+//						// this may be a temp
+//						core::ExpressionAddress addr = cfg->getTmpVarMap().getMappedExpr( expr.as<core::VariableAddress>().getAddressedNode() );
+//						if (addr) { expr = addr; }
+//						LOG(INFO) << *expr;
+//					}
+//
+//					core::NodeAddress rep = core::Address<const core::Expression>::find(expr, stmt.getStatementAddress());
+//					if (rep) { 
+//						
+//						core::StatementPtr stmtPtr = stmt.getStatementAddress().getAddressedNode();
+//
+//						LOG(INFO) << stmtPtr; 
+//						// if this is a decl stmt then we have to exclude any replacement of the
+//						// declared variable
+//						if ( (stmtPtr->getNodeType() == core::NT_DeclarationStmt) && 
+//						 	 (*rep.getAddressedNode() == *stmtPtr.as<core::DeclarationStmtPtr>()->getVariable()) ) 
+//							continue;
+//	
+//						// check whether this is an assignment operation 
+//						if (stmtPtr->getNodeType() == core::NT_CallExpr && 
+//							core::analysis::isCallOf(stmtPtr.as<core::ExpressionPtr>(), mgr.getLangBasic().getRefAssign()) && 
+//							(*rep.getAddressedNode() == *stmtPtr.as<core::CallExprPtr>().getArgument(0))) 
+//							continue;
+//
+//						//if ( core::analysis::isRefType(rep.as<core::ExpressionAddress>()->getType()) ) {
+//							// assumes the parent operation is a deref
+//						// 	rep = rep.getParentAddress(1);
+//						//}
+//
+//						LOG(INFO) << " TRG : " << rep << " " << *rep;
+//						core::NodeAddress repAddr = core::concat<const core::Node>(stmt.getStatementAddress(), rep);
+//						LOG(INFO) << repAddr;
+//
+//						auto fit = replacements.find(repAddr);
+//						if(fit == replacements.end()) {
+//							LOG(INFO) << "~~~~~Apply replacement: " << cur << " " << repAddr << " " << *repAddr; 
+//							replacements.insert( { repAddr, std::get<1>(cur).value() } );
+//						}
+//					}
+//
+//				}
+//			}
+//
+//		});
+//	};
+//
+//	cfg->visitDFS(blockVisitor);
+//
+//	if (replacements.empty()) { return root; }
+//
+//	// get rid of redundant
+//	LOG(DEBUG) << "PROPAGATING: " << replacements.size() << " constnts";
+//	LOG(DEBUG) << replacements;
+//
+//	return core::transform::replaceAll(mgr, replacements);
+	return root;
 }
 
 } // end transfrom namespace 

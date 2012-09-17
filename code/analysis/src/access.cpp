@@ -37,6 +37,7 @@
 #include "insieme/analysis/access.h"
 #include "insieme/core/analysis/ir_utils.h"
 
+#include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 // #include "insieme/core/dump/text_dump.h"
 
@@ -52,608 +53,598 @@ using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::analysis;
 
-namespace insieme { 
-namespace analysis { 
+namespace insieme {
+namespace analysis {
 
-bool Access::isRef() const { 
-	return core::analysis::isRefType(base_expr->getType()); 
+
+//=== UnifiedAddress ==============================================================================
+
+namespace {
+
+	struct NodeExtractorVisitor : public boost::static_visitor<core::NodePtr> {
+		template <class T>
+			core::NodePtr operator()(const T& addr) const {
+				return addr.getAddressedNode();
+			}
+	};
+
+	struct AddrChildVisitor : public boost::static_visitor<UnifiedAddress> {
+
+		unsigned idx;
+
+		AddrChildVisitor(unsigned idx) : idx(idx) { }
+
+		template <class T>
+			UnifiedAddress operator()(const T& addr) const {
+				return addr.getAddressOfChild(idx);
+			}
+	};
+
+} // end anonymous namespace
+
+bool UnifiedAddress::isCFGAddress() const {
+	struct checkCFGAddrVisitor : public boost::static_visitor<bool> {
+		bool operator()(const cfg::Address&) const {
+			return true;
+		}
+		bool operator()(const core::NodeAddress&) const {
+			return false;
+		}
+	};
+	return boost::apply_visitor(checkCFGAddrVisitor(), address);
 }
 
-std::ostream& Access::printTo(std::ostream& out) const { 
-	out << *variable << ":["; 
-	if (cfgBlock) { 
-		out << "{B" << cfgBlock->getBlockID() << ":" << stmtIdx << "}"; 
-	}
-	out << base_expr << "]";
 
-	// Print path 
-	if (path && !variable->getNodeManager().getLangBasic().isDataPathRoot(path)) { 
-		out << "<" << *path << ">"; 
-	}
-	
-	out << ":" << (isRef()?"ref":"val");
-
-	if (array_access) {
-		out << " if -> " << *array_access;
-	}
-
-	return out;
+core::NodePtr UnifiedAddress::getAddressedNode() const {
+	return boost::apply_visitor(NodeExtractorVisitor(), address);
 }
 
-bool Access::operator<(const Access& other) const {
-	// First check if the accesses are pointing to the same variable 
-	if (variable < other.variable) { return true; }
-	if (variable > other.variable) { return false; }
+core::NodeAddress UnifiedAddress::getAbsoluteAddress(const TmpVarMap& varMap) const {
+	if (isCFGAddress()) {
+		return boost::get<const cfg::Address&>(address).toAbsoluteAddress(varMap);
+	}
 
-	// Next check th type of variable to which the access refers 
-	if (type != VarType::ARRAY)    { return path < other.path; }
-
-	// If this is an array access, then we have to check whether we have associated information on
-	// the range of elements being accessed which refers to a domain on which we are sure variables
-	// have the same meaning.
-	if (!ctx && other.ctx) 		   	{ return true; }
-	if (ctx && !other.ctx) 		   	{ return false; }
-
-	// we check whether the two constraint refers to the same context 
-	if (ctx != other.ctx)		   	{ return ctx < other.ctx; }
-
-	return true;
-	// we are in the same context 
-	// if (array_access != other.array_access)	{ return array_access < other.array_access; }
-
-	// otherwise if the dom is the same, we have to compare the expression
-	// return toIR(base_expr->getNodeManager(), array_access) < toIR(base_expr->getNodeManager(), other.array_access);
+	return boost::get<const core::NodeAddress&>(address);
 }
 
-/** 
- * Get the immediate access 
+UnifiedAddress UnifiedAddress::getAddressOfChild(unsigned idx) const {
+	return boost::apply_visitor(AddrChildVisitor(idx), address);
+}
+
+
+/**
+ * Get the immediate access
  */
-Access getImmediateAccess(
-		const core::ExpressionAddress& 					expr, 
-		const std::pair<cfg::BlockPtr, size_t>& 		cfgAddr, 
-		const TmpVarMap& 								tmpVarMap) 
-{
-	
-	NodeManager& mgr = expr->getNodeManager();
-	const lang::BasicGenerator& gen = expr->getNodeManager().getLangBasic();
-	datapath::DataPathBuilder dpBuilder(expr->getNodeManager());
+AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap) {
 
-	// A literal is not an access 
-	if (expr->getNodeType() == NT_Literal) 
-		throw NotAnAccessException(true);
+	NodePtr exprNode = expr.getAddressedNode();
 
-	// For cast expressions, we simply recur 
-	if (expr->getNodeType() == NT_CastExpr) 
-		return getImmediateAccess(expr.as<CastExprAddress>()->getSubExpression(), cfgAddr, tmpVarMap);
+	const lang::BasicGenerator& gen = mgr.getLangBasic();
 
-	// If this is a scalar variable, then return the access to this variable 
-	if (expr->getNodeType() == NT_Variable) {
-		return Access(expr, 
-				expr.getAddressedNode().as<VariablePtr>(), 
-				dpBuilder.getPath(), 
-				VarType::SCALAR,
-				cfgAddr.first,
-				cfgAddr.second
-			);
+	// A literal is not an access
+	if (exprNode->getNodeType() == NT_Literal) {
+		throw NotAnAccessException(toString(*exprNode));
 	}
-	assert(expr->getNodeType() == NT_CallExpr);
 
-	CallExprAddress callExpr = expr.as<CallExprAddress>();
+	// For cast expressions, we simply recur
+	// if (exprNode->getNodeType() == NT_CastExpr)
+	//	return getImmediateAccess(expr.as<CastExprAddress>()->getSubExpression(), tmpVarMap);
+
+	// If this is a scalar variable, then return the access to this variable
+	if (exprNode->getNodeType() == NT_Variable) {
+		return std::make_shared<BaseAccess>(expr);
+	}
+
+	assert(exprNode->getNodeType() == NT_CallExpr);
+
+	CallExprPtr callExpr = exprNode.as<CallExprPtr>();
 	auto args = callExpr->getArguments();
 
-	LOG(DEBUG) << *callExpr;
-
-	// If the callexpr is not a subscript or a member access, then it means this is not 
+	// If the callexpr is not a subscript or a member access, then it means this is not
 	// a direct memory access, but it could be we are processing a binary operator or other
 	// which may contain multiple accesses. Therefore we throw an exception.
 	if (!gen.isMemberAccess(callExpr->getFunctionExpr()) &&
-		!gen.isSubscriptOperator(callExpr->getFunctionExpr()) &&
-		!gen.isRefDeref(callExpr->getFunctionExpr()) ) 
-	{
-		throw NotAnAccessException(false);
+			!gen.isSubscriptOperator(callExpr->getFunctionExpr()) &&
+			!gen.isRefDeref(callExpr->getFunctionExpr()) ) {
+		throw NotAnAccessException(toString(*callExpr));
 	}
 
-	// because of the construction of the CFG, the arguments of the deref operation must be a
-	// variable
-	if ( args[0]->getNodeType() != NT_Variable ) { throw std::logic_error("error"); }
-
-	core::VariablePtr var = args[0].getAddressedNode().as<VariablePtr>();
+	auto subAccess = getImmediateAccess(mgr, expr.getAddressOfChild(2), tmpVarMap);
 
 	if (gen.isRefDeref(callExpr->getFunctionExpr())) {
-		return Access(expr, var, dpBuilder.getPath(), VarType::SCALAR, cfgAddr.first, cfgAddr.second);
-	} 
+		return std::make_shared<Deref>(expr, subAccess);
+	}
 
-	// Handle member access functions 
+	// Handle member access functions
 	if ( gen.isMemberAccess(callExpr->getFunctionExpr()) ) {
 
 		// this is a tuple access
-		if ( gen.isUnsignedInt( args[1]->getType() ) ) {
-			return Access(
-					callExpr, 
-					var, 
-					dpBuilder.component( args[1].as<LiteralAddress>().getValue() ).getPath(),
-					VarType::TUPLE,
-					cfgAddr.first,
-					cfgAddr.second
-				);
-		}
-
-		// This is a member access 
-		if ( gen.isIdentifier( args[1]->getType() ) ) {
-			return Access(
-					callExpr,
-					var,
-					dpBuilder.member( args[1].as<LiteralAddress>()->getValue().getValue()).getPath(),
-					VarType::MEMBER,
-					cfgAddr.first,
-					cfgAddr.second
-				);
+		if ( gen.isUnsignedInt( args[1]->getType() ) || gen.isIdentifier( args[1]->getType() ) ) {
+			return std::make_shared<Member>(expr, subAccess, args[1].as<LiteralPtr>());
 		}
 
 		assert( false && "Type of member access not supported" );
 	}
 
-	// Handle Array/Vector subscript operator 
+	// Handle Array/Vector subscript operator
 	if ( gen.isSubscriptOperator(callExpr->getFunctionExpr()) ) {
 
-		// Create the variable used to express the range information for this access. 
+		// Create the variable used to express the range information for this access.
 		// Because we need to be able to compare accesses of different arrays for inclusion we need
 		// to make sure the variable used to access the array i (i.e. A[i]) is the same for all the
-		// generated accesses. This is obtained using a variable whose ID is very large 
-		
-		core::VariablePtr idxVar = 
+		// generated accesses. This is obtained using a variable whose ID is very large
+
+		core::VariablePtr idxVar =
 			core::Variable::get(mgr, gen.getUInt8(), std::numeric_limits<unsigned int>::max());
-		
+
 		try {
-			// Extract the formula from the argument 1 
-			arithmetic::Formula f = arithmetic::toFormula( args[1].getAddressedNode() );
+			// Extract the formula from the argument 1
+			arithmetic::Formula f = arithmetic::toFormula( args[1] );
 			if (f.isConstant()) {
 
-				polyhedral::IterationVector iterVec; 
+				polyhedral::IterationVector iterVec;
 				iterVec.add( polyhedral::Iterator( idxVar ) );
-				polyhedral::AffineFunction af( iterVec, { 1, -static_cast<int>(static_cast<int64_t>(f.getConstantValue())) } );
+				polyhedral::AffineFunction af(
+						iterVec, { 1, -static_cast<int>(static_cast<int64_t>(f.getConstantValue())) }
+						);
 
-				return Access(
-						callExpr,
-						var,
-						dpBuilder.element(static_cast<int64_t>(f.getConstantValue())).getPath(),
-						VarType::ARRAY,
-						cfgAddr.first,
-						cfgAddr.second,
+				return std::make_shared<Subscript>(
+						expr,
+						subAccess,
+						core::NodeAddress(),
 						iterVec,
-						makeCombiner(utils::Constraint<polyhedral::AffineFunction>(af, utils::ConstraintType::EQ)) 
-					);
+						makeCombiner(utils::Constraint<polyhedral::AffineFunction>(af, utils::ConstraintType::EQ))
+						);
 			}
 
-			// the access function is not a constant but a function 
-			ExpressionAddress expr = args[1];
-			if ( VariableAddress var = core::dynamic_address_cast<const Variable>( expr ) ) {
-				// if the index expression is a single variable we may be in the case where this
-				// variable is an alias for an other expression
-				if ( ExpressionAddress aliasExpr = tmpVarMap.getMappedExpr( var.getAddressedNode() ) ) {
-					// If this was an alias, use the aliased expression as array access 
-					expr = aliasExpr;
-				}
-			}
+			// the access function is not a constant but a function
+			auto idxExpr = expr.getAddressOfChild(3);
 
-			auto dom = polyhedral::getVariableDomain( expr );
-			
-			if (dom.first) { 
-				
-				const polyhedral::IterationVector& oldIter = 
+			//	if ( VariablePtr var = core::dynamic_pointer_cast<const Variable>( idxExpr.getAddressedNode() ) ) {
+			//		// if the index expression is a single variable we may be in the case where this
+			//		// variable is an alias for an other expression
+			//		if ( ExpressionAddress aliasExpr = tmpVarMap.getMappedExpr( var ) ) {
+			//			// If this was an alias, use the aliased expression as array access
+			//			idxExpr = aliasExpr;
+			//		}
+			//	}
+
+			auto dom = polyhedral::getVariableDomain(idxExpr.getAbsoluteAddress(tmpVarMap).as<core::ExpressionAddress>() );
+			if (dom.first) {
+
+				const polyhedral::IterationVector& oldIter =
 					dom.first.getAnnotation(polyhedral::scop::ScopRegion::KEY)->getIterationVector();
 
 				polyhedral::IterationVector iterVec;
 
 				std::for_each(oldIter.iter_begin(), oldIter.iter_end(), [&](const polyhedral::Iterator& iter) {
-					iterVec.add( polyhedral::Iterator(iter.getExpr().as<VariablePtr>(), true) );
-				});
-				// std::for_each(oldIter.param_begin(), oldIter.param_end(), [&](const polyhedral::Parameter& param) {
-				//	iterVec.add( param );
-				//});
+						iterVec.add( polyhedral::Iterator(iter.getExpr().as<VariablePtr>(), true) );
+						});
 
 				iterVec.add( polyhedral::Iterator(idxVar) );
 
 				polyhedral::AffineFunction af(iterVec, core::arithmetic::Formula(idxVar) - f);
 
-				// this region is a SCoP
-				return Access(
-					callExpr,
-					var,
-					dpBuilder.element( args[1].getAddressedNode() ).getPath(),
-					VarType::ARRAY,
-					cfgAddr.first,
-					cfgAddr.second,
-					iterVec,
-					cloneConstraint(iterVec, dom.second) and 
-						makeCombiner(utils::Constraint<polyhedral::AffineFunction>(af, utils::ConstraintType::EQ)),
-					dom.first
-				);
+				return std::make_shared<Subscript>(
+						expr,
+						subAccess,
+						dom.first,
+						iterVec,
+						cloneConstraint(iterVec, dom.second) and
+						utils::Constraint<polyhedral::AffineFunction>(af, utils::ConstraintType::EQ)
+						);
 			}
 
-			return Access(
-				callExpr,
-				var,
-				dpBuilder.element( args[1].getAddressedNode() ).getPath(),
-				VarType::ARRAY,
-				cfgAddr.first,
-				cfgAddr.second
-			);
+			return std::make_shared<Subscript>(expr, subAccess);
 
-		} catch (arithmetic::NotAFormulaException&& e) { 
-			// What if this is a piecewise? we can handle it 
+		} catch (arithmetic::NotAFormulaException&& e) {
+			// What if this is a piecewise? we can handle it
 			assert (false && "Array access is not a formula?");
-		} 	
+		}
 	}
 	assert(false && "Access not supported");
 }
 
-
-bool Access::isContextDependent() const {
-	
-	// check whether this is an array access, if not then this access is not context dependent 
-	if (type != VarType::ARRAY) { return false; }
-
-	// we have an array access, now check whether we have a bound expression limiting the range of
-	// accessed elements 
-	if(array_access) {
-		// if there are parameters in this access, then this access depends on the context 
-		if (iterVec.getParameterNum() > 0)
-			return true;
-	}
-	
-	return false;
-}
-
-void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entities, const TmpVarMap& tmpVarMap) {
-	
 	/**
-	 * This function extracts entities from CFG blocks, therefore due to the construction properties
-	 * of CFG Blocks, only the following cases are possible:
-	 *
-	 * 1) decl A = callexpr( vars... );
-	 * 2) decl A = cast( vars... );
-	 * 3) A = callexpr( vars ... );
-	 * 4) A = cast( vars ...);
-	 * 5) callexpr( vars... );
-	 * 6) cast( vars...);
+	 * Pretty printer for accesses which prints them using indentation for easier read
 	 */
+	class AccessPrinter : public RecAccessVisitor<std::string> {
 
-	auto scanArguments = [&] ( const ExpressionAddress& expr ) {
-		// this expression there are multiple references, therefore we skip the call-expr
-		// and examine the single variables 
-		CallExprAddress call = expr.as<CallExprAddress>();
-		for(auto& arg : call->getArguments()) {
-			try {
-				entities.insert( getImmediateAccess(arg, {nullptr, 0}, tmpVarMap) );
-			} catch(NotAnAccessException&& e) { 
-				assert(e.isLit);
-				/* This is not an access, do nothing */ 
+		unsigned 		level;
+
+		std::string indent(char sep=' ') const {
+			return ""; //return std::string(level*4, sep);
+		}
+
+		public:
+		AccessPrinter() : level(0)  { }
+
+		std::string visitBaseAccess(const BaseAccessPtr& access) {
+			std::ostringstream ss;
+			ss << indent() << *access->getAddress().getAddressedNode() << "{@" << access->getAddress() << "}";
+			return ss.str();
+		}
+
+		std::string visitDeref(const DerefPtr& access) {
+			std::ostringstream ss;
+			ss << indent() << "deref:{@" << access->getAddress() << "}(";
+			++level;
+			ss << visit(access->getSubAccess());
+			--level;
+			ss << indent() << ")";
+			return ss.str();
+		}
+
+		std::string visitMember(const MemberPtr& access) {
+			std::ostringstream ss;
+			if (access->getSubAccess()) {
+				ss << indent() << "member{@" << access->getAddress() << "}(";
+				++level;
+				ss << visit(access->getSubAccess());
+			} else {
+				ss << "*";
 			}
+			ss << indent() << "." << *access->getMember();
+			--level;
+			ss << indent() << ")";
+			return ss.str();
+		}
+
+		std::string visitSubscript(const SubscriptPtr& access) {
+			std::ostringstream ss;
+			if (access->getSubAccess()) {
+				ss << indent() << "subscript:{@" << access->getAddress() << "}(";
+				++level;
+				ss << visit(access->getSubAccess());
+			} else {
+				ss << "*";
+			}
+			auto rangeStr = access->getRange() ? toString(*access->getRange()) : "unbounded";
+
+			size_t pos;
+			while( (pos = rangeStr.find("v4294967295")) != -1) {
+				auto it = rangeStr.begin()+pos;
+				rangeStr = rangeStr.replace(it, it+(std::string("v4294967295").length()), "i", 1);
+			}
+
+			ss << indent() << "[i:" << rangeStr << "]";
+			--level;
+			ss << indent() << ")";
+			return ss.str();
 		}
 	};
 
-	if (core::DeclarationStmtAddress declStmt = core::dynamic_address_cast<const DeclarationStmt>(stmt)) {
-		entities.insert( getImmediateAccess(declStmt->getVariable(), {nullptr, 0}, tmpVarMap) );
 
-		try {
-			entities.insert( getImmediateAccess(declStmt->getInitialization(), {nullptr, 0}, tmpVarMap) );
-			return ;
-		} catch (NotAnAccessException&& e) { 
-			if (e.isLit) { return; }
-		}
+bool equalPath(const AccessPtr& lhs, const AccessPtr& rhs) {
 
-		scanArguments( declStmt->getInitialization() );
-		return;
+	// If both are null ptrs then these are compatible accesses
+	if (!lhs && !rhs) { return true;  }
+	if (!lhs || !rhs) { return false; }
+
+	// this must hold at this point
+	assert (lhs && rhs );
+
+	// make sure to skip any deref nodes
+	if (lhs->getType() == AccessType::AT_DEREF)
+		return equalPath(cast<Deref>(lhs)->getSubAccess(), rhs);
+	if (rhs->getType() == AccessType::AT_DEREF)
+		return equalPath(lhs,cast<Deref>(rhs)->getSubAccess());
+
+	// despite removing derefs, the current component is not the same, therefore the two paths are
+	// not equal
+	if (lhs->getType() != rhs->getType()) { return false; }
+
+	switch(lhs->getType()) {
+
+		case AccessType::AT_BASE:
+			return cast<BaseAccess>(lhs)->getVariable() ==
+				cast<BaseAccess>(rhs)->getVariable();
+
+		case AccessType::AT_MEMBER: 
+			{
+				auto lhsM = cast<Member>(lhs);
+				auto rhsM = cast<Member>(rhs);
+				return equalPath(lhsM->getSubAccess(),rhsM->getSubAccess()) &&
+					(lhsM->getMember() == rhsM->getMember());
+			}
+		case AccessType::AT_SUBSCRIPT: 
+			{
+				auto lhsS = cast<Subscript>(lhs);
+				auto rhsS = cast<Subscript>(rhs);
+
+				bool remain = equalPath(lhsS->getSubAccess(), rhsS->getSubAccess());
+				if (!remain) { return false; }
+
+				if ((lhsS->getContext() && rhsS->getContext()) || 
+					(!lhsS->getContext() && !rhsS->getContext())) 
+				{
+					auto ctx = polyhedral::makeCtx();
+					auto lhsSet = polyhedral::makeSet(ctx, polyhedral::IterationDomain(lhsS->getRange()));
+					auto rhsSet = polyhedral::makeSet(ctx, polyhedral::IterationDomain(rhsS->getRange()));
+					
+					// compute the difference, if it is empty then the two ranges are equivalent 
+					auto difference = (lhsSet-rhsSet) + (rhsSet-lhsSet);
+					if ( difference->empty() ) { 
+						return true;
+					}
+					return false;
+				}
+				return false;
+			}
+		default:
+			assert(false && "not supported");
 	}
-
-	if (core::ExpressionAddress expr = core::dynamic_address_cast<const Expression>(stmt)) {
-
-		try {
-			// try to extract the access (if this is a single supported access)
-			entities.insert(getImmediateAccess(stmt.as<ExpressionAddress>(), {nullptr, 0}, tmpVarMap));
-			return;
-		} catch (NotAnAccessException&& e) {  
-			if (e.isLit) { return; } 
-		}
-
-		scanArguments(expr);
-		return;
-	}
-
-	assert( false && "expression not supported" );
-}
-
-std::set<Access> extractFromStmt(const core::StatementAddress& stmt, const TmpVarMap& tmpVarMap) {
-	std::set<Access> accesses;
-	
-	extractFromStmt(stmt, accesses, tmpVarMap);
-	return accesses;
-}
-
-
-
-bool isConflicting(const Access& acc1, const Access& acc2, const TmpVarMap& tmpVarMap) {
-
-	NodeManager& mgr = acc1.getAccessedVariable()->getNodeManager();
-	const lang::BasicGenerator& gen = mgr.getLangBasic();
-
-	if (*acc1.getAccessedVariable() == *acc2.getAccessedVariable()) {
-		// check the paths 
-		if (*acc1.getPath() == *gen.getDataPathRoot()) return true; 
-		if (*acc2.getPath() == *gen.getDataPathRoot()) return true; 
-		
-		// else check if a path includes the other 
-		
-		NodeAddress path1(acc1.getPath());
-		NodeAddress path2(acc2.getPath());
-
-		if ( isChildOf(path1, path2) ) return true;
-		if ( isChildOf(path2, path1) ) return true;
-
-		return false;
-	}
-
-	if (tmpVarMap.empty()) { return false; }
-
-	Access a1 = acc1, a2 = acc2;
-
-//	ExpressionAddress expr = tmpVarMap.getMappedExpr( acc1.getAccessedVariable() );
-//	if ( expr ) 
-//		try {
-//			a1 = getImmediateAccess(expr, tmpVarMap);
-//		} catch( ... ) { } 
-//
-//	expr = tmpVarMap.getMappedExpr( acc2.getAccessedVariable() );
-//	if ( expr ) 
-//		try {
-//			a2 = getImmediateAccess(expr, tmpVarMap);
-//		} catch ( ... ) { }
-//
-// 	auto acc1Aliases = aliases.lookupAliases(a1.getAccessExpression());
-// 	auto acc2Aliases = aliases.lookupAliases(a2.getAccessExpression());
-// 
-// 	//LOG(INFO) << acc1Aliases;
-// 	//LOG(INFO) << acc2Aliases;
-// 	std::set<VariablePtr> res;
-// 	std::set_intersection(acc1Aliases.begin(), acc1Aliases.end(), 
-// 						  acc2Aliases.begin(), acc2Aliases.end(), 
-// 						  std::inserter(res, res.begin()));
-// 	
-// 	// LOG(INFO) << res;
-// 	return !res.empty();
-
-	return false;
 }
 
 
-Access getCFGBasedAccess(const core::ExpressionAddress& expr, const CFGPtr& cfg) {
+AccessPtr switchRoot(const AccessPtr& access, const AccessPtr& newRoot) {
 
-	auto alias = cfg->getTmpVarMap().lookupImmediateAlias(expr);
+	if (auto baseAccess = std::dynamic_pointer_cast<const BaseAccess>(access)) {
+		return newRoot;
+	}
 
-	if (!alias) { alias = expr.getAddressedNode().as<VariablePtr>(); }
-
-	std::cout << alias << std::endl;
-	auto cfgAddr = cfg->find(expr);
-
-	assert(cfgAddr && "Expr not found in the code");
-
-	return getImmediateAccess(
-			core::Address<const Expression>::find(
-				alias, 
-				cfgAddr.getBlock()[cfgAddr.stmt_idx].getAnalysisStatement()
-			), {cfgAddr.block, cfgAddr.stmt_idx}); 
+	auto decAccess = cast<AccessDecorator>(access);
+	return decAccess->switchSubAccess( switchRoot(decAccess->getSubAccess(), newRoot) );
 }
 
 // AccessClass ================================================================
 
 std::ostream& AccessClass::printTo(std::ostream& out) const {
 	return out << "AccessClass(" << uid << ")"
-		// print list of accesses in this class 
-		<< " [" << join(",", accesses, [&](std::ostream& jout, const AccessPtr& cur) { jout << *cur; }) << "]" 
-		// Print the ID of the parent class if any
-		<< " PARENT(" << (!parentClass.expired() ? utils::numeric_cast<std::string>(parentClass.lock()->getUID()) : "NONE" ) << ")"
-		// Print the direct subclasses for this class 
-		<< " SUB_CLASSES {" << join(",", subClasses, 
-				[&](std::ostream& jout, const Dependence& cur) { jout << *cur.first.lock() << ":" << cur.second; }) 
-		<< "}";
+		// print list of accesses in this class
+		<< " [" << join(",", accesses, [&](std::ostream& jout, const AccessPtr& cur) {
+				jout << cur;
+				}) << "]"
+
+	// Print the ID of the parent class if any
+	<< " PARENT(" << (!parentClass.expired() ?
+				utils::numeric_cast<std::string>(parentClass.lock()->getUID()) :
+				"NONE"
+				)
+		<< ")"
+
+		// Print the direct subclasses for this class
+		<< " SUB_CLASSES {" << join(",", subClasses,
+				[&](std::ostream& jout, const Dependence& cur) {
+				jout << cur.first.lock()->getUID() << ":" << cast<Access>(cur.second);
+				})
+	<< "}";
 }
 
-std::set<ExpressionAddress> extractRealAddresses(const AccessClass& cl, const TmpVarMap& tmpVarMap) {
-
-	std::set<ExpressionAddress> addrList;
-
-	for (auto& access : cl) {
-	
-		auto accessAddr = access->getAccessExpression();
-
-		if (accessAddr->getNodeType() == NT_Variable && 
-			tmpVarMap.isTmpVar(accessAddr.getAddressedNode().as<VariablePtr>())) {
-			continue;
-		}
-
-		cfg::BlockPtr cfgBlock;
-		if (cfgBlock = access->getCFGBlock()) {
-			// This is an address relative to the CFG, 
-			core::VariablePtr var = access->getAccessedVariable();
-			if (tmpVarMap.isTmpVar(var)) {
-				auto tmpAddr = tmpVarMap.getMappedExpr(var);
-				assert( tmpAddr );
-
-				addrList.insert(tmpAddr.getParentAddress().as<ExpressionAddress>());
-				continue;
-			}
-			auto stmtAddr 	  = (*cfgBlock)[access->getStmtIdx()].getStatementAddress();
-			auto analysisStmt = (*cfgBlock)[access->getStmtIdx()].getAnalysisStatement();
-			
-			if (*(stmtAddr.getAddressedNode()) == *(accessAddr.getAddressedNode())) { 
-				addrList.insert(stmtAddr.as<ExpressionAddress>());
-				continue;
-			}
-
-			if (*stmtAddr.getAddressedNode() == *analysisStmt) {
-				addrList.insert( 
-					core::concat(stmtAddr.as<NodeAddress>(), accessAddr.as<NodeAddress>()
-				).as<ExpressionAddress>() );
-				continue;
-			}
-
-			// search common root
-			NodeAddress rootAddr=accessAddr;
-			std::vector<size_t> path;
-			while(!rootAddr.isRoot() && rootAddr.getAddressedNode() != stmtAddr.getAddressedNode()) { 
-				path.push_back(rootAddr.getIndex());
-				rootAddr = rootAddr.getParentAddress();
-			}
-
-			NodeAddress newAddr = stmtAddr;
-			for_each(path.rbegin(), path.rend(), [&](size_t idx) {
-				newAddr = newAddr.getAddressOfChild(idx);
-			});
-
-			addrList.insert(newAddr.as<ExpressionAddress>());
-			continue;
-		} 
-
-		// addrList.push_back(accessAddr);
-	}
-
-	return addrList;
-}
+//std::set<ExpressionAddress> extractRealAddresses(const AccessClass& cl, const TmpVarMap& tmpVarMap) {
+//
+//	std::set<ExpressionAddress> addrList;
+//
+//	for (auto& access : cl) {
+//
+//		auto accessAddr = access->getAddress();
+//
+//		if (accessAddr->getNodeType() == NT_Variable &&
+//			tmpVarMap.isTmpVar(accessAddr.getAddressedNode().as<VariablePtr>())) {
+//			continue;
+//		}
+//
+//		cfg::BlockPtr cfgBlock;
+//		if (cfgBlock = access->getCFGBlock()) {
+//			// This is an address relative to the CFG,
+//			core::VariablePtr var = access->getAccessedVariable();
+//			if (tmpVarMap.isTmpVar(var)) {
+//				auto tmpAddr = tmpVarMap.getMappedExpr(var);
+//				assert( tmpAddr );
+//
+//				addrList.insert(tmpAddr.getParentAddress().as<ExpressionAddress>());
+//				continue;
+//			}
+//			auto stmtAddr 	  = (*cfgBlock)[access->getStmtIdx()].getStatementAddress();
+//			auto analysisStmt = (*cfgBlock)[access->getStmtIdx()].getAnalysisStatement();
+//
+//			if (*(stmtAddr.getAddressedNode()) == *(accessAddr.getAddressedNode())) {
+//				addrList.insert(stmtAddr.as<ExpressionAddress>());
+//				continue;
+//			}
+//
+//			if (*stmtAddr.getAddressedNode() == *analysisStmt) {
+//				addrList.insert(
+//					core::concat(stmtAddr.as<NodeAddress>(), accessAddr.as<NodeAddress>()
+//				).as<ExpressionAddress>() );
+//				continue;
+//			}
+//
+//			// search common root
+//			NodeAddress rootAddr=accessAddr;
+//			std::vector<size_t> path;
+//			while(!rootAddr.isRoot() && rootAddr.getAddressedNode() != stmtAddr.getAddressedNode()) {
+//				path.push_back(rootAddr.getIndex());
+//				rootAddr = rootAddr.getParentAddress();
+//			}
+//
+//			NodeAddress newAddr = stmtAddr;
+//			for_each(path.rbegin(), path.rend(), [&](size_t idx) {
+//				newAddr = newAddr.getAddressOfChild(idx);
+//			});
+//
+//			addrList.insert(newAddr.as<ExpressionAddress>());
+//			continue;
+//		}
+//
+//		// addrList.push_back(accessAddr);
+//	}
+//
+//	return addrList;
+//}
 
 // AccessManager ==============================================================
 
-AccessClassPtr AccessManager::getClassFor(const Access& access) {
 
-	auto getAccessForAlias = [&](const core::VariablePtr var) -> boost::optional<Access> {
+namespace {
 
-		core::ExpressionAddress aliasedExpr = tmpVarMap.getMappedExpr(var);
-		if (aliasedExpr) {
-			// this is an alias indeed 
-			cfg::Address cfgAddr(cfg::BlockPtr(), 0, NodeAddress());
-			if (cfg) {
-				cfgAddr = cfg->find(aliasedExpr);
-				assert(cfgAddr && "Failed to lookup expression in the CFG");
-			}
-			assert((!cfg || (cfg && cfgAddr)) && "Block cannot be empty");
 
-			try {
-				core::ExpressionAddress relativeAddr = aliasedExpr;
 
-				if (cfgAddr) {
-					auto cfgElement = cfgAddr.getBlock()[cfgAddr.stmt_idx];
-					relativeAddr = 
-						DeclarationStmtAddress(cfgElement.getAnalysisStatement().as<DeclarationStmtPtr>())
-							->getInitialization();
-				}
+} // end anonymous namespace 
 
-				assert(relativeAddr && "Error while forming the relative address");
+AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 
-				return getImmediateAccess(relativeAddr,{cfgAddr.block, cfgAddr.stmt_idx});
-
-			} catch (NotAnAccessException&& e) { }
-		}
-
-		return boost::optional<Access>();
-	};
-
-	/* 
-	 * Iterate through the existing classes and determine whether this access belongs to one of
-	 * the exising classes, if not create a new class 
-	 */
+    /*
+     * Iterate through the existing classes and determine whether this access belongs to one of
+     * the exising classes, if not create a new class
+     */
 	for (auto& cl : classes) {
 
-		for (auto& ac : cl->accesses) {
-			
-			// If we find the access already in one of the classes, then we simply return it 
-			if (*ac == access) { return cl; }
+		auto classAccesses = cl->accesses;
+		bool found=false;
+		bool belongs=false;
 
-			// otherwise we are in a situation where 2 expression addresses accessing the same
-			// variable, in this case we check for range (if possible), 
-			if (*ac->getAccessedVariable() == *access.getAccessedVariable()) {
-				assert(ac->getType() == access.getType() && "Accessing the same variable with different types");
-
-				switch(ac->getType()) {
-				case VarType::SCALAR: 	
-					cl->storeAccess(access);
-					return cl;
-
-				case VarType::MEMBER:	
-				case VarType::TUPLE:
-					/**
-					 * If this is exactly the same memeber, than we can add this access to the
-					 * same access class, otherwise a new class can be created 
-					 */
-					if (*ac->getPath() == *access.getPath()) { cl->storeAccess(access); return cl; }
-					break;
-
-				case VarType::ARRAY:
-					// TODO: detemrine the common subrange and split classes 
-					cl->storeAccess(access);
-					return cl;
-					
-				default:
-					assert(false && "Not supported");
-				}
+		for(const auto& cur : classAccesses) {
+			if (*cur == *access) {
+				found = belongs = true; // the access is already in the class, therefore
+										// we mark it as found
+				break;
+			} else if (!belongs && equalPath(cur, access)) {
+				belongs = true;
 			}
+		}
+
+		if (belongs) {
+			// std::cout << *cl << std::endl;
+			// the access is already stored in this class, therefore we simply return it
+			if (!found) { cl->storeAccess(access); }
+			return cl;
 		}
 	}
 
 	// it might be that this access is an alias for an expression for which we already defined a
-	// class. 
-	if (auto potentialAlias = 
-		core::dynamic_pointer_cast<const core::Variable>(access.getAccessExpression().getAddressedNode())) 
-	{
-		if (auto ret = getAccessForAlias(potentialAlias) ) {
-			auto thisClass = getClassFor( *ret );
-			thisClass->storeAccess(access);
-			return thisClass;
+	// class.
+	if (auto potentialAlias =
+			core::dynamic_pointer_cast<const core::Variable>(access->getAddress().getAddressedNode())) {
+
+		UnifiedAddress aliasedExpr(tmpVarMap.getMappedExpr( potentialAlias ));
+
+		if (aliasedExpr.getAbsoluteAddress() && cfg) {
+			aliasedExpr = cfg->find(aliasedExpr.getAbsoluteAddress());
+		}
+
+		if (aliasedExpr.getAbsoluteAddress()) {
+			auto aliasAccess = getImmediateAccess(potentialAlias->getNodeManager(), aliasedExpr);
+
+			return getClassFor(aliasAccess); // FIXME add access???
 		}
 	}
 
-	/** 
+	/**
 	 * This might be an access to a subrange of a class.
 	 *
 	 * This can happen either when a compound member of a struct is accessed. or when the (N-x)th
-	 * dimension of a N dimensional array is accessed 
+	 * dimension of a N dimensional array is accessed
 	 */
 	AccessClassPtr parentClass;
-	if (auto potentialAlias = access.getAccessedVariable())	{
-		if (auto ret = getAccessForAlias(potentialAlias) )
-			parentClass = getClassFor( *ret );
+	AccessDecoratorPtr subRange;
+	
+	AccessPtr skipDeref = access;
+	while (skipDeref->getType() == AccessType::AT_DEREF) {
+		skipDeref = cast<Deref>(skipDeref)->getSubAccess();
+	}
+	if (skipDeref->getType() == AccessType::AT_MEMBER || skipDeref->getType() == AccessType::AT_SUBSCRIPT) {
+		parentClass = getClassFor( cast<AccessDecorator>(skipDeref)->getSubAccess() );
+		subRange = cast<AccessDecorator>(skipDeref)->switchSubAccess(AccessPtr());
 	}
 
-	// check if the parent class already has a child to represent this type of access 
-	if (parentClass) { 
-		for(auto cl : parentClass->getSubClasses()) {
-			if (*cl.second == *access.getPath()) {
-				cl.first.lock()->storeAccess(access);
-				return cl.first.lock();
+	// check if the parent class already has a child to represent this type of access
+	if (parentClass) {
+		assert(subRange);
+
+		for(auto& cl : parentClass->getSubClasses()) {
+			
+			// assume that the subclasses are disjoints 
+			switch(cl.second->getType()) {
+
+			case AccessType::AT_MEMBER:
+				assert(skipDeref->getType() == AccessType::AT_MEMBER);
+				if (*cast<Member>(skipDeref)->getMember() == *cast<Member>(cl.second)->getMember()) {
+					auto clPtr = cl.first.lock();
+					clPtr->storeAccess(access);
+					return clPtr;
+				}
+				break;
+
+			case AccessType::AT_SUBSCRIPT:
+			{
+				assert(skipDeref->getType() == AccessType::AT_SUBSCRIPT);
+
+				auto classRange = cast<Subscript>(cl.second);
+				auto accessRange = cast<Subscript>(skipDeref);
+
+				if ((classRange->getContext() && accessRange->getContext()) || 
+					(!classRange->getContext() && !accessRange->getContext())) 
+				{
+					auto ctx = polyhedral::makeCtx();
+					auto classSet  = polyhedral::makeSet(ctx, polyhedral::IterationDomain(classRange->getRange()));
+					auto accessSet = polyhedral::makeSet(ctx, polyhedral::IterationDomain(accessRange->getRange()));
+					
+					// compute the difference, if it is empty then the two ranges are equivalent 
+					auto intersection = classSet * accessSet;
+					if ( !intersection->empty() ) { 
+						// complex 
+						if (*intersection == *classSet) {
+							// Creates a new alias class  (can't use make_shared because the constructor is private)
+							auto newClass = std::shared_ptr<AccessClass>(new AccessClass(std::cref(*this), classes.size(), parentClass) );
+							newClass->storeAccess(access);
+							classes.emplace_back( newClass );
+
+							newClass->addSubClass( cl );
+							cl.first.lock()->setParentClass(newClass);
+							
+							cl.first = newClass;
+							cl.second = subRange;
+
+							return newClass;
+						} 
+						if (*intersection == *accessSet) {
+							parentClass = cl.first.lock();
+						}
+					}
+				} else {
+					// We have no detailed information of the accessed range, therefore 
+					// we assume this access can potentially access the entire array
+					parentClass->storeAccess(access);
+					return parentClass;
+				}
+			}
+
+			default:
+				break;
 			}
 		}
 	}
 
-	// Creates a new alias class 
-	AccessClass newClass(std::cref(*this), classes.size(), parentClass);
-	newClass.storeAccess(access);
-	auto accessClassPtr = std::make_shared<AccessClass>(newClass);
-	
-	classes.emplace_back( accessClassPtr );
+	// Creates a new alias class  (can't use make_shared because the constructor is private)
+	auto newClass = std::shared_ptr<AccessClass>(new AccessClass(std::cref(*this), classes.size(), parentClass) );
+	newClass->storeAccess(access);
+	classes.emplace_back( newClass );
 
 	if (parentClass) {
-		parentClass->addSubClass( AccessClass::Dependence(accessClassPtr,access.getPath()) );
+		parentClass->addSubClass( AccessClass::Dependence( newClass, subRange ) );
 	}
 
-	return classes.back();
+	return newClass;
 }
 
-std::ostream& AccessManager::printTo(std::ostream& out) const { 
-	return out << "AccessManager [" << size() << "]\n\t" << 
-		join("\n\t", classes, [&](std::ostream& jout, const AccessClassPtr& cur) { 
-				jout << *cur; 
-			}) << "]";
+std::ostream& AccessManager::printTo(std::ostream& out) const {
+	return out << "AccessManager [" << size() << "]\n{\t" <<
+		join("\n\t", classes, [&](std::ostream& jout, const AccessClassPtr& cur) {
+				jout << *cur;
+				}) << std::endl << "}";
 }
 
-} } // end insieme::analysis namespace 
+
+}
+} // end insieme::analysis namespace
+
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::analysis::AccessPtr& access) {
+		return out << insieme::analysis::AccessPrinter().visit(access);
+	}
+
+}// end std namespace
 
 
