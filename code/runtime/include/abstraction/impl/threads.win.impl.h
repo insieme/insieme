@@ -184,6 +184,10 @@ void irt_mutex_lock(irt_lock_obj *m){
 	AcquireSRWLockExclusive(m);
 }
 
+int irt_mutex_trylock(irt_lock_obj *m){
+	return !TryAcquireSRWLockExclusive(m);
+}
+
 void irt_mutex_unlock(irt_lock_obj *m){
 	ReleaseSRWLockExclusive(m);
 }
@@ -205,6 +209,14 @@ void irt_mutex_init(irt_lock_obj *m){
 
 void irt_mutex_lock(irt_lock_obj *m){
 	WaitForSingleObject(*m, INFINITE); // decreases semaphore count by 1 if it is greater than 0, else waits until it becomes greater than 0
+}
+
+int irt_mutex_trylock(irt_lock_obj *m){
+	DWORD res = WaitForSingleObject(*m, 1); // wait 1ms for m being signalled, then return
+	if (res == WAIT_OBJECT_0)
+		return 0;
+	else
+		return -1;
 }
 
 void irt_mutex_unlock(irt_lock_obj *m){
