@@ -1024,6 +1024,13 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
 						ExpressionPtr b = getOperand(cur, 1);
+
+						// support signed indices (automatic cast to unsigned)
+						auto& basic = cur.getLangBasic();
+						if (basic.isSignedInt(b->getType())) {
+							b = cur.castExpr(basic.getUInt8(), b);
+						}
+
 						if (a->getType()->getNodeType() == NT_RefType) {
 							return cur.arrayRefElem(a, b);
 						}
