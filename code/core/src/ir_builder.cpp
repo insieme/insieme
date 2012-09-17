@@ -214,9 +214,33 @@ UIntValuePtr IRBuilder::uintValue(unsigned value) const {
 
 // ---------------------------- Convenience -------------------------------------
 
-
 bool IRBuilder::matchType(const std::string& typeStr, const core::TypePtr& irType) const {
-	return unify(manager, parseType(typeStr), irType);
+
+	// the type used for caching parser results
+	struct ParserCache : public std::map<string, TypePtr> {};
+	typedef std::shared_ptr<ParserCache> ParserCachePtr;
+
+	// lookup result within cache
+	NodePtr cacheNode = manager.get(breakStmt());		// some node that is easy to find :)
+
+	// get reference to cache
+	if (!cacheNode->hasAttachedValue<ParserCachePtr>()) {
+		cacheNode->attachValue(std::make_shared<ParserCache>());
+	}
+	const ParserCachePtr& cache = cacheNode->getAttachedValue<ParserCachePtr>();
+
+	// get cached result or parse
+	TypePtr type;
+	auto pos = cache->find(typeStr);
+	if (pos == cache->end()) {
+		type = parseType(typeStr);
+		cache->insert(std::make_pair(typeStr, type));
+	} else {
+		type = pos->second;
+	}
+
+	// try unify the parsed type and the given type
+	return unify(manager, type, irType);
 }
 
 GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intParams) const {
