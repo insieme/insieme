@@ -1329,6 +1329,11 @@ std::ostream& Address::printTo(std::ostream& out) const {
 
 }
 
+bool Address::operator==(const Address& other) const {
+	return *block == *other.block && stmt_idx == other.stmt_idx && addr == other.addr;
+}
+
+
 namespace {
 
 //~~~~~ DOT FILE PRINTING UTILITIES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

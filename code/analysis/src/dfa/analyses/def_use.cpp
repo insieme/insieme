@@ -37,9 +37,9 @@
 #include "insieme/analysis/dfa/analyses/def_use.h"
 
 #include "insieme/analysis/dfa/analyses/reaching_defs.h"
+
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/solver.h"
-
 
 namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 
@@ -65,17 +65,17 @@ struct DefUse::defs_iterator_impl {
 
 	typedef typename ReachingDefinitions::value_type::const_iterator iterator;
 
-	CFGPtr	cfg;
-	std::set<Access> vars;
-	iterator it, end;
+	// CFGPtr	cfg;
+	//std::set<Access> vars;
+	// iterator it, end;
 
-	defs_iterator_impl(
-			const CFGPtr& cfg,
-			const std::set<Access>& vars, 
-			const iterator& begin, 
-			const iterator& end
-	) :
-		cfg(cfg), vars(vars), it(begin), end(end) { }
+//	defs_iterator_impl(
+//			const CFGPtr& cfg,
+//			const std::set<Access>& vars, 
+//			const iterator& begin, 
+//			const iterator& end
+//	) :
+//		cfg(cfg), vars(vars), it(begin), end(end) { }
 };
 
 bool DefUse::defs_iterator::operator==(const defs_iterator& other) const {
@@ -85,44 +85,44 @@ bool DefUse::defs_iterator::operator==(const defs_iterator& other) const {
 
 DefUse::defs_iterator DefUse::defs_begin(const core::ExpressionAddress& expr) const {
 	
-	auto  cfgAddr = pimpl->cfg->find(expr);
+	// auto  cfgAddr = pimpl->cfg->find(expr);
 
-	auto& reaching_defs = pimpl->analysis[cfgAddr.getBlock().getBlockID()];
+	//auto& reaching_defs = pimpl->analysis[cfgAddr.getBlock().getBlockID()];
 
-	std::set<Access> entities;
+	// std::set<Access> entities;
 	
 	// for ( auto alias : pimpl->cfg->getAliasMap().lookupAliases(expr) ) {
 	//	entities.insert( getImmediateAccess( core::ExpressionAddress(alias), pimpl->cfg->getAliasMap()) );
 	//}
 	//entities.insert( getImmediateAccess(expr, pimpl->cfg->getAliasMap()) );
 
-	return defs_iterator( 
-		std::make_shared<DefUse::defs_iterator_impl>(
-			pimpl->cfg,
-			entities,
-			reaching_defs.begin(), 
-			reaching_defs.end()
-		)
-	);
+//	return defs_iterator( 
+//		std::make_shared<DefUse::defs_iterator_impl>(
+//			pimpl->cfg,
+//			entities,
+//			reaching_defs.begin(), 
+//			reaching_defs.end()
+//		)
+//	);
 }
 
 DefUse::defs_iterator DefUse::defs_end(const core::ExpressionAddress& expr) const {
-	auto  cfgAddr = pimpl->cfg->find(expr);
-	auto& reaching_defs = pimpl->analysis[cfgAddr.getBlock().getBlockID()];
+	//auto  cfgAddr = pimpl->cfg->find(expr);
+	//auto& reaching_defs = pimpl->analysis[cfgAddr.getBlock().getBlockID()];
 
-	return defs_iterator( 
-			std::make_shared<DefUse::defs_iterator_impl>(
-				pimpl->cfg,
-				std::set<Access>{ }, 
-				reaching_defs.end(), 
-				reaching_defs.end()
-			)
-		);
+//	return defs_iterator( 
+//			std::make_shared<DefUse::defs_iterator_impl>(
+//				pimpl->cfg,
+//				std::set<Access>{ }, 
+//				reaching_defs.end(), 
+//				reaching_defs.end()
+//			)
+//		);
 }
 
 
 core::ExpressionAddress DefUse::defs_iterator::operator*() const { 
-	assert(pimpl->it != pimpl->end);
+//	assert(pimpl->it != pimpl->end);
 
 	// auto&& cur = std::get<0>(*pimpl->it);
 	// core::NodeAddress block = (*std::get<1>(*pimpl->it))[0].getStatementAddress();
@@ -139,7 +139,7 @@ core::ExpressionAddress DefUse::defs_iterator::operator*() const {
 
 
 void DefUse::defs_iterator::inc(bool first) {
-	if (!first) { ++pimpl->it; }
+//	if (!first) { ++pimpl->it; }
 
 	//while(pimpl->it != pimpl->end &&
 	//	  std::find_if(pimpl->vars.begin(), pimpl->vars.end(), 

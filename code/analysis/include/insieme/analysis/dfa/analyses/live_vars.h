@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#pragma once 
+
 #include "insieme/analysis/dfa/problem.h"
 
 namespace insieme {
