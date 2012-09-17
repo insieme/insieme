@@ -182,6 +182,9 @@ foreach ( case_file ${test_cases})
 	
 	#add_unit_test(${case_name} ${VFLAG})
 	add_unit_test(${case_name} FALSE)
+	
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp") #as one test uses openmp
+	
 endforeach(case_file)
 
 # handle manual (library) test cases
