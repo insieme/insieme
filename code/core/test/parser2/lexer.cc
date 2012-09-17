@@ -150,6 +150,10 @@ namespace detail {
 		EXPECT_EQ("[(Ident:b)]", toString(lex("/* comment A */ b /* comment B")));
 	}
 
+	TEST(Lexer, NonLiterals) {
+		EXPECT_EQ("[(Keyword:array),(Symbol:.),(Ident:create),(Symbol:.),(Ident:1d)]", toString(lex("array.create.1d")));
+	}
+
 } // end namespace detail
 } // end namespace parser2
 } // end namespace core
