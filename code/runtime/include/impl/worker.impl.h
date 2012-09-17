@@ -227,10 +227,14 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	irt_lw_data_item *prev_args = self->parameters;
 	irt_work_item_range prev_range = self->range;
 	irt_wi_implementation_id prev_impl_id = self->impl_id;
+	irt_work_item_id prev_source = self->source_id;
+	uint32 prev_fragments = self->num_fragments;
 	// set new wi data
 	self->parameters = args;
 	self->range = *range;
 	self->impl_id = impl_id;
+	self->source_id = irt_work_item_null_id();
+	self->num_fragments = 0;
 	// need unique active child number, can re-use id (and thus register entry)
 	uint32 *prev_parent_active_child_count = self->parent_num_active_children;
 	self->parent_num_active_children = self->num_active_children;
@@ -245,6 +249,8 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	self->parameters = prev_args;
 	self->range = prev_range;
 	self->impl_id = prev_impl_id;
+	self->source_id = prev_source;
+	self->num_fragments = prev_fragments;
 }
 
 void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal) {
