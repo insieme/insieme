@@ -655,8 +655,10 @@ TEST(Access, ArrayAlias) {
 	
 		EXPECT_EQ(2u, mgr.size());
 
+		std::cout << mgr << std::endl;
+
 		EXPECT_EQ(1u, cl1->getUID());
-		EXPECT_EQ(2u, cl1->size());
+		EXPECT_EQ(1u, cl1->size());
 	}
 }
 
