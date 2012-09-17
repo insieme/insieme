@@ -81,7 +81,7 @@ namespace {
 
 	protected:
 
-		OptionalMessageList visitNode(const NodeAddress& node) {
+		OptionalMessageList visit(const NodeAddress& node) {
 			// aggregate list of all error / warning messages
 			OptionalMessageList list;
 			for_each(checks.begin(), checks.end(), [&list, &node](const CheckPtr& cur) {
