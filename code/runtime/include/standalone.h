@@ -151,14 +151,14 @@ void irt_exit_handler() {
 	static bool irt_exit_handling_done = false;
 
 	// only one thread may execute this routine, when it is done it sets irt_exit_handling_done true
-	irt_mutex_lock(&irt_g_exit_handler_mutex);
-
 	// every other thread which comes after simply exits
-	if(irt_exit_handling_done){
-		irt_mutex_unlock(&irt_g_exit_handler_mutex);
-		irt_thread_exit(0);
+	while(irt_mutex_trylock(&irt_g_exit_handler_mutex) != 0)
+		if (irt_exit_handling_done)
+			irt_thread_exit(0);
+
+	if (irt_exit_handling_done)
 		return;
-	}
+
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	
 #endif
