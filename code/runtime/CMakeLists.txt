@@ -195,7 +195,7 @@ foreach (case_file ${test_cases})
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} m)
 		target_link_libraries(${case_name} ${papi_LIB})
-	else
+	else()
 		set_source_files_properties(${case_file} PROPERTIES LANGUAGE CXX)
 	endif()
 endforeach(case_file)
@@ -213,7 +213,7 @@ foreach (case_file ${test_cases})
 		target_link_libraries(${case_name} rt)
 		target_link_libraries(${case_name} m)
 		target_link_libraries(${case_name} ${papi_LIB})
-	else
+	else()
 		set_source_files_properties(${case_file} PROPERTIES LANGUAGE CXX)
 	endif()
 	
