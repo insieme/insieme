@@ -845,13 +845,10 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 			// build a literal which points to the name of the external variable 
 			initExpr = builder.literal((*it)->getNameAsString(), type);
 		} else {
-
-			LOG(INFO)<<*type;
 			// this means the variable is not declared static inside a function so we have to initialize its value
 			initExpr = (*it)->getInit() ? 
 				convFact.convertInitExpr(NULL, (*it)->getInit(), type, false) : 
 				convFact.defaultInitVal(type);
-			LOG(INFO) <<*initExpr;
 		}
 		// default initialization
 		core::NamedValuePtr member = builder.namedValue(ident, initExpr);

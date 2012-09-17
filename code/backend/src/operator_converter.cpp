@@ -51,6 +51,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/encoder/encoder.h"
+#include "insieme/core/encoder/lists.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -370,9 +371,22 @@ namespace backend {
 				return CONVERT_EXPR(call->getArgument(0));
 			}
 
+			// extract resulting type
 			const core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
 			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(elementType);
 			context.getDependencies().insert(info.definition);
+
+			// special handling for string literals
+			if (ARG(0)->getNodeType() == core::NT_Literal) {
+				core::LiteralPtr literal = ARG(0).as<core::LiteralPtr>();
+				if (literal->getStringValue()[0] == '\"') {
+					// the cast to a vector element is implemented at this point
+					// instead of the actual literal conversion to save unnecessary casts when
+					// strings are forwarded to external functions (printf) directly
+					return c_ast::deref(c_ast::cast(c_ast::ptr(info.rValueType), CONVERT_ARG(0)));
+				}
+			}
+
 			return c_ast::deref(CONVERT_ARG(0));
 		});
 
@@ -402,7 +416,10 @@ namespace backend {
 				return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, c_ast::lit(valueTypeInfo.rValueType, "0")));
 			}
 
-
+			// add support for partial vector initialization
+			if (core::analysis::isCallOf(initValue, basic.getVectorInitPartial())) {
+				return CONVERT_ARG(0);
+			}
 
 			auto res = CONVERT_EXPR(initValue);
 			if (res->getNodeType() == c_ast::NT_Initializer) {
@@ -622,6 +639,24 @@ namespace backend {
 			return c_ast::call(info.initUniformName, CONVERT_ARG(0));
 		});
 
+		res[basic.getVectorInitPartial()] = OP_CONVERTER({
+
+			// obtain information regarding vector type
+			const core::VectorTypePtr vectorType = call->getType().as<core::VectorTypePtr>();
+			const VectorTypeInfo& info = GET_TYPE_INFO(vectorType);
+
+			// add dependency
+			context.getDependencies().insert(info.definition);
+
+			// create data vector to fill struct
+			auto values = core::encoder::toValue<vector<core::ExpressionPtr>>(ARG(0));
+			auto converted = ::transform(values, [&](const core::ExpressionPtr& cur)->c_ast::NodePtr { return CONVERT_EXPR(cur); });
+			auto data = C_NODE_MANAGER->create<c_ast::VectorInit>(converted);
+
+			// create compound-init expression filing struct
+			return c_ast::init(info.rValueType, data);
+		});
+
 		res[basic.getRefVectorToRefArray()] = OP_CONVERTER({
 			// Operator type: (ref<vector<'elem,#l>>) -> ref<array<'elem,1>>
 			const TypeInfo& info = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
@@ -629,7 +664,10 @@ namespace backend {
 
 			// special handling for string literals
 			if (call->getArgument(0)->getNodeType() == core::NT_Literal) {
-				return CONVERT_ARG(0);
+				core::LiteralPtr literal = call->getArgument(0).as<core::LiteralPtr>();
+				if (literal->getStringValue()[0] == '\"') {
+					return CONVERT_ARG(0);
+				}
 			}
 
 			return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");

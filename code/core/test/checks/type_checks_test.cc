@@ -39,6 +39,8 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/type_checks.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/parser2/ir_parser.h"
+#include "insieme/core/parser2/grammar.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -818,9 +820,96 @@ TEST(ArrayTypeChecks, Basic) {
 	exp = builder.literal("val", builder.refType(arrayType));
 	errors = check(exp, typeCheck);
 	EXPECT_TRUE(errors.empty()) << errors;
-
-
 }
+
+
+TEST(NarrowExpresion, Basic) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+	CheckPtr typeCheck = getFullCheck();
+
+	NodePtr res = core::parser::parse(manager,
+		"{"
+		" let inner = struct{ int<4> a;};"
+		" let two   = struct{ inner a; int<4> b;};"
+		" ref<two> obj; "
+		" ref<int<4>> inside = ref.narrow( obj, dp.member(dp.root, lit(\"b\")), lit(int<4>));"
+		" ref<int<4>> morein = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"a\")), lit(int<4>));"
+		"}"
+	);
+	ASSERT_TRUE (res);
+	auto errors = check(res, typeCheck);
+	EXPECT_TRUE(errors.empty()) << "Correct Narrow Test\n" << errors;
+	EXPECT_EQ("AP({ref<struct<a:struct<a:int<4>>,b:int<4>>> v1 = ref.var(undefined(struct<a:struct<a:int<4>>,b:int<4>>)); ref<int<4>> v2 = ref.narrow(v1, dp.member(dp.root, b), int<4>); ref<int<4>> v3 = ref.narrow(v1, dp.member(dp.member(dp.root, a), a), int<4>);})",
+			  toString(res));
+	
+	res = core::parser::parse(manager,
+		"{"
+		" let inner = struct{ int<4> a;};"
+		" let two   = struct{ inner a; int<4> b;};"
+		" ref<two> obj; "
+		" ref<int<4>> x = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"b\")),lit(\"a\")), lit(int<4>));"
+		" ref<int<4>> y = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"b\")), lit(int<4>));"
+		" ref<int<8>> z = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"a\")), lit(int<8>));"
+		"}"
+	);
+	ASSERT_TRUE (res);
+	errors = check(res, typeCheck);
+	EXPECT_EQ(3u, errors.size());
+}
+
+
+TEST(ExpandExpresion, Basic) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+	CheckPtr typeCheck = getFullCheck();
+
+	NodePtr res = core::parser::parse(manager,
+		"{"
+		" let int   = int<4>;"
+		" let inner = struct{ int a;};"
+		" let outer = struct{ inner a; int b;};"
+		""
+		" ref<inner>  obj;"
+		" obj.a = -15;"
+		" ref<int> x = obj.a;"
+		" ref<inner> exp = ref.expand(x, dp.member(dp.root, lit(\"a\")), lit(inner));"
+		""
+		" ref<outer> obj2; "
+		" ref<inner> y = obj2.a;"
+		" ref<int>   z = y.a;"
+		" ref<outer> exp2 = ref.expand (z, dp.member (dp.member (dp.root, lit(\"a\")), lit(\"a\")), lit(outer));"
+		"}"
+		);
+	ASSERT_TRUE (res);
+	auto errors = check(res, typeCheck);
+	EXPECT_TRUE(errors.empty()) << "Correct Narrow Test\n" << errors;
+
+	res = core::parser::parse(manager,
+		"{"
+		" let int   = int<4>;"
+		" let inner = struct{ int a;};"
+		" let outer = struct{ inner a; int b;};"
+		""
+		" ref<inner>  obj;"
+		" obj.a = -15;"
+		" ref<int> x = obj.a;"
+		" ref<inner> exp = ref.expand(x, dp.member(dp.root, lit(\"r\")), lit(inner));"
+		""
+		" ref<outer> obj2; "
+		" ref<inner> y = obj2.a;"
+		" ref<int>   z = y.a;"
+		" ref<outer> exp2 = ref.expand (z, dp.member (dp.member (dp.root, lit(\"b\")), lit(\"a\")), lit(outer));"
+		" ref<int>   exp3 = ref.expand (z, dp.member (dp.member (dp.root, lit(\"a\")), lit(\"a\")), lit(int));"
+		"}"
+		);
+	ASSERT_TRUE (res);
+	errors = check(res, typeCheck);
+	EXPECT_EQ(3u, errors.size());
+}
+
 
 TEST(ArrayTypeChecks, Exceptions) {
 	NodeManager manager;

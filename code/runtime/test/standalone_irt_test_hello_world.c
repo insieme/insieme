@@ -84,7 +84,7 @@ void insieme_cleanup_context(irt_context* context) {
 int main(int argc, char **argv) {
 	uint32 wcount = irt_get_default_worker_count();
 	if(argc>=2) wcount = atoi(argv[1]);
-	irt_runtime_standalone(3, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
+	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
 	return 0;
 }
 

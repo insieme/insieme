@@ -36,11 +36,11 @@
 
 #include <math.h>
 
+#include "standalone.h"
 #include "impl/client_app.impl.h"
 #include "impl/irt_context.impl.h"
 #include "impl/error_handling.impl.h"
 #include "impl/worker.impl.h"
-#include "impl/irt_mqueue.impl.h"
 #include "impl/data_item.impl.h"
 #include "impl/irt_scheduling.impl.h"
 #include "irt_types.h"
@@ -171,3 +171,14 @@ void insieme_wi_opt_bench_implementation(irt_work_item* wi) {
 	}
 	irt_atomic_inc(params->check);
 }
+
+
+int main(int argc, char **argv) {
+	uint32 wcount = irt_get_default_worker_count();
+	if(argc>=2) wcount = atoi(argv[1]);
+	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
+	return 0;
+}
+
+
+

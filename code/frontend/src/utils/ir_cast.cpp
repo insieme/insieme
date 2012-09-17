@@ -42,6 +42,7 @@
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/encoder/lists.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
@@ -106,7 +107,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	// the case is invalid and we hare to replace it with a comparison with the NULL reference.
 	// therefore:
 	//		if( ref )  ->  if( ref != Null )
-	if ( gen.isBool(trgTy) && builder.matchType("ref<array<'a,#n>>", argTy)) 
+	if ( gen.isBool(trgTy) && isRefArray(argTy)) 
 	{
 		// convert NULL (of type AnyRef) to the same ref type as the LHS expression
 		return builder.callExpr(gen.getBoolLNot(), 
@@ -118,7 +119,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 							ref<vector<'a,#n>> -> Boolean
 	///////////////////////////////////////////////////////////////////////////////////////
-	if ( gen.isBool(trgTy) && builder.matchType("ref<vector<'a,#n>>", argTy)) 
+	if ( gen.isBool(trgTy) && isRefVector(argTy)) 
 	{
 		// convert NULL (of type AnyRef) to the same ref type as the LHS expression
 		return CAST(builder.callExpr(gen.getRefVectorToRefArray(), expr), trgTy);
@@ -249,7 +250,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	///////////////////////////////////////////////////////////////////////////////////////
 	// Convert a ref<'a> type to anyRef. 
 	///////////////////////////////////////////////////////////////////////////////////////
-	if ( builder.matchType("ref<array<'a,#n>>", trgTy) && *expr == *builder.literal(argTy,"0") ) 
+	if ( isRefArray(trgTy) && *expr == *builder.literal(argTy,"0") ) 
 	{
 		return builder.callExpr( gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(trgTy)) );
 	}
@@ -296,7 +297,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 
 		const core::TypePtr& subTy = GET_REF_ELEM_TYPE(trgTy);
 		
-		if (builder.matchType("array<'a,#n>", subTy) && builder.matchType("vector<'a,#n>", argTy)) {
+		if (isArray(subTy) && isVector(argTy)) {
 			return CAST(expr, subTy);
 		}
 
@@ -324,7 +325,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	///////////////////////////////////////////////////////////////////////////////////////
 	// convert a reference to a vector to a reference to an array using the refVector2RefArray literal  
 	///////////////////////////////////////////////////////////////////////////////////////
-	if ( builder.matchType("ref<array<'a,#n>>",trgTy) && builder.matchType("ref<vector<'a,#n>>", argTy) ) {
+	if ( isRefArray(trgTy) && isRefVector(argTy) ) {
 		// we are sure at this point the type of arg is of ref-type as well
 		const core::TypePtr& elemTy = GET_REF_ELEM_TYPE(trgTy);
 		const core::TypePtr& argSubTy = GET_REF_ELEM_TYPE(argTy);
@@ -381,6 +382,10 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 //	}
 
 
+	if (isRefVector(argTy) && isRefVector(trgTy)) {
+		return builder.refVar(CAST(builder.deref(expr), GET_REF_ELEM_TYPE(trgTy)));
+	}
+
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 							vector<'a, #n> -> vector<'b, #m> 
 	///////////////////////////////////////////////////////////////////////////////////////
@@ -409,13 +414,68 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 			assert(false && "Converting from vector<'a> to vector<'b>"); 
 		}
 
+
 		if ( *vecArgTy->getSize() != *vecTrgTy->getSize() ) {
 			// converting from a vector size X to vector size Y, only possible if X <= Y
 			size_t vecTrgSize = vecTrgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 			size_t vecArgSize = vecArgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 
-			// LOG(INFO) << vecTrgSize << " " << vecArgSize;
-			assert(vecTrgSize >= vecArgSize && "Conversion not possible");
+			core::ExpressionPtr plainExpr = expr;
+			if (core::analysis::isCallOf(plainExpr, gen.getRefDeref())) {
+				plainExpr = plainExpr.as<core::CallExprPtr>()->getArgument(0);
+			}
+
+			core::ExpressionPtr initList;
+
+			if (plainExpr->getNodeType() == core::NT_Literal) {
+				//  this is a literal string 
+				assert(vecArgTy->getElementType()->getNodeType() != core::NT_RefType && 
+						"conversion of string literals to vector<ref<'a>> not yet supported");
+
+				assert(vecArgTy->getSize()->getNodeType() == core::NT_ConcreteIntTypeParam);
+
+				// do conversion from a string to an array of char
+				std::string strVal = plainExpr.as<core::LiteralPtr>()->getStringValue();
+
+				// because string literals are stored with the corresponding " " we iterate from 1 to length()-2
+				// but we need an additional character to store the string terminator \0
+				
+				assert(strVal.length()-1 <= vecTrgSize && 
+						"Target vector type not large enough to hold string literal"
+					); 
+
+				// FIXME: Use clang error report for this
+				ExpressionList vals(vecArgSize);
+				size_t it;
+				for(it=0; it<strVal.length()-2; ++it) {
+					char c = strVal.at(it+1);
+					std::string str(1,c);
+					switch(c) {
+						case '\n': str = "\\n";	   break;
+						case '\\': str = "\\\\";   break;
+						case '\r': str = "\\r";	   break;
+						case '\t': str = "\\t";	   break;
+						case '\0': str = "\\0";	   break;
+					}
+					vals[it] = builder.literal( std::string("\'") + str + "\'", gen.getChar() );
+				}
+				// put '\0' terminators on the remaining elements
+				vals[it] = builder.literal( std::string("\'") + "\\0" + "\'", gen.getChar() ); // Add the string terminator
+				initList = core::encoder::toIR(plainExpr->getNodeManager(), vals);
+			} else {
+
+				// we assume that the expr is an initializer for a vector, a vector expr
+				auto vecExpr = plainExpr.as<core::VectorExprPtr>()->getExpressions();
+				initList = core::encoder::toIR(plainExpr->getNodeManager(), 
+					   std::vector<core::ExpressionPtr>(vecExpr.begin(), vecExpr.end())
+					);
+			}
+			
+			return builder.callExpr(
+					gen.getVectorInitPartial(), 
+					initList, 
+					builder.getIntTypeParamLiteral(vecTrgTy->getSize())
+				);
 		}
 	}
 
@@ -538,6 +598,26 @@ core::ExpressionPtr cast(const core::ExpressionPtr& expr, const core::TypePtr& t
 
 	return ret;
 }
+
+bool isArray(const core::TypePtr& type) {
+	return type->getNodeType() == core::NT_ArrayType;
+}
+
+bool isRefArray(const core::TypePtr& type) {
+	return type->getNodeType() == core::NT_RefType && 
+		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType;
+}
+
+bool isVector(const core::TypePtr& type) {
+	return type->getNodeType() == core::NT_VectorType;
+}
+
+bool isRefVector(const core::TypePtr& type) {
+	return type->getNodeType() == core::NT_RefType && 
+		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_VectorType;
+}
+
+
 
 } // end utils namespace
 } // end frontend namespace 

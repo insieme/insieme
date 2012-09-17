@@ -1288,13 +1288,13 @@ cfg::Address CFG::find(const core::NodeAddress& node) const {
 
 namespace cfg {
 
-core::NodeAddress Address::toAbsoluteAddress(const CFG& cfg) const {
+core::NodeAddress Address::toAbsoluteAddress(const TmpVarMap& tmpVarMap) const {
 	
 	core::NodePtr node = getAddressedNode();
 
 	// if the addressed node is a tmp variable then we return the mapped expression 
-	if (node->getNodeType() == core::NT_Variable && cfg.getTmpVarMap().isTmpVar(node.as<VariablePtr>())) {
-		return cfg.getTmpVarMap().getMappedExpr(node.as<VariablePtr>());
+	if (node->getNodeType() == core::NT_Variable && tmpVarMap.isTmpVar(node.as<VariablePtr>())) {
+		return tmpVarMap.getMappedExpr(node.as<VariablePtr>());
 	}
 
 	const cfg::Element& 	cfgElem = (*block)[stmt_idx];

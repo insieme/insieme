@@ -296,7 +296,48 @@ void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDe
 	std::for_each(graph.begin(), graph.end(),
 			[ this, v ](const clang::FunctionDecl* currFunc) {assert(currFunc); this->addNode(currFunc, &v);});
 }
+
+/*************************************************************************************************
+ * CallExprVisitor 
+ *************************************************************************************************/
+void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
+	const clang::FunctionDecl* def = NULL;
+	/*
+	 * this will find function definitions if they are declared in  the same translation unit
+	 * (also defined as static)
+	 */
+	if (!funcDecl->hasBody(def)) {
+		/*
+		 * if the function is not defined in this translation unit, maybe it is defined in another we already
+		 * loaded use the clang indexer to lookup the definition for this function declarations
+		 */
+		clang::idx::Entity&& funcEntity = clang::idx::Entity::get( funcDecl, indexer.getProgram() );
+		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
+		if ( ret.first ) {def = ret.first;}
+	}
+
+	if (def) {
+		callGraph.insert(def);
+	}
 }
+
+void CallExprVisitor::VisitCallExpr(clang::CallExpr* callExpr) {
+	if (clang::FunctionDecl * funcDecl = llvm::dyn_cast<clang::FunctionDecl>(callExpr->getDirectCallee())) {
+		addFunctionDecl(funcDecl);
+	}
+	VisitStmt(callExpr);
+}
+
+void CallExprVisitor::VisitDeclRefExpr(clang::DeclRefExpr* expr) {
+	// if this variable is used to invoke a function (therefore is a
+	// function pointer) and it has been defined here, we add a potentially
+	// dependency to the current definition
+	//if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(expr->getDecl()) ) {
+	// addFunctionDecl(funcDecl);
+	//}
+}
+
+} // end utils namespace 
 
 namespace conversion {
 
@@ -385,7 +426,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::asRValue(const core::Expre
 	// adds a deref to expression in case expression is of a ref type, only if the target tpye is
 	// not a vector or an array 
 	if (core::analysis::isRefType(value->getType()) && 
-		!(builder.matchType("ref<vector<'a,#n>>", type) || builder.matchType("ref<array<'a,#n>>", type))) 
+		!(utils::isRefVector(type) || utils::isRefArray(type))) 
 	{
 		return builder.deref(value);
 	}
@@ -544,7 +585,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(clan
 
 	// capture the case of cast to arrays. because arrays cannot exists without a ref we need 
 	// to make sure to add a refVar to the element 
-	if (builder.matchType("ref<array<'a,#n>>", type) && builder.matchType("vector<'a,#n>", retIr->getType()))
+	if (utils::isRefArray(type) && utils::isVector(retIr->getType()))
 	{
 		return retIr = utils::cast(builder.refVar(retIr), type);
 	}
@@ -1246,22 +1287,21 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		}
 
 		if (!core::analysis::isRefType(rhs->getType()) && 
-			(builder.matchType("ref<array<'a,1>>", lhs->getType()) || builder.matchType("ref<vector<'a,#n>>", lhs->getType()))
+			(utils::isRefArray(lhs->getType()) || utils::isRefVector(lhs->getType()))
 		) {
 			doPointerArithmetic();	
 			return (retIr = rhs);
 		}
 
 		if (!core::analysis::isRefType(lhs->getType()) && 
-			(builder.matchType("ref<array<'a,1>>", rhs->getType()) || builder.matchType("ref<vector<'a,#n>>", rhs->getType()))
+			(utils::isRefArray(rhs->getType()) || utils::isRefVector(rhs->getType()))
 		) {
 			std::swap(rhs, lhs);
 			doPointerArithmetic();	
 			return (retIr = rhs);
 		}
 	
-		if (builder.matchType("ref<array<'a,1>>", lhs->getType()) && 
-			builder.matchType("ref<array<'a,1>>", rhs->getType()) &&
+		if (utils::isRefArray(lhs->getType()) &&  utils::isRefArray(rhs->getType()) &&
 			baseOp == BO_Sub)
 		{
 			return retIr = builder.callExpr( gen.getArrayRefDistance(), lhs, rhs);
@@ -1510,8 +1550,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 	condExpr = utils::cast(condExpr, gen.getBool());
 
 	// Dereference eventual references
-	if ( retTy->getNodeType() == core::NT_RefType &&
-		!(builder.matchType("ref<array<'a,#n>>", retTy))) 
+	if ( retTy->getNodeType() == core::NT_RefType && !utils::isRefArray(retTy) ) 
 	{
 		retTy = GET_REF_ELEM_TYPE(retTy);
 	}

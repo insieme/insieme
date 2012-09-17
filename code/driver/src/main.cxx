@@ -552,6 +552,10 @@ int main(int argc, char** argv) {
 			// do the actual clang to IR conversion
 			program = measureTimeFor<core::ProgramPtr>("Frontend.convert ", [&]() { return p.convert(); } );
 
+			InverseStmtMap stmtMap;
+
+			// printIR(program, stmtMap);
+
 			doCleanup(program);
 
 			// run OpenCL frontend
@@ -568,7 +572,6 @@ int main(int argc, char** argv) {
 			program = measureTimeFor<ProgramPtr>("Pragma.Info",  
 					[&]() { return insieme::driver::handlePragmaInfo(program); } );
 
-			InverseStmtMap stmtMap;
 			// printIR(program, stmtMap);
 
 			// perform checks

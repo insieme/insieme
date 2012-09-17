@@ -45,7 +45,9 @@
 #include <malloc.h>
 #include <math.h>
 
-// TODO: implement!
+#ifdef IRT_USE_PTHREADS
+#include <sched.h>
+#endif
 
 void _irt_print_native_affinity_mask(irt_native_cpu_set mask) {
 	uint32 bitmasklength = sizeof(irt_native_cpu_set) * 8;
