@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
 	cl_int ta = 7;
 	clSetKernelArg(kernel[1] , 3, sizeof(cl_int), &ta);
 	cl_short2 sv = {0,1};
-//	clSetKernelArg(kernel[1] , 4, sizeof(cl_short2), &sv);
+	clSetKernelArg(kernel[1] , 4, sizeof(cl_short2), &sv);
 
 
 	size_t globalSize[] = { 8, 8 };
