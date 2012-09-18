@@ -272,8 +272,10 @@ def reporter( report_queue ):
 
 def exec_shell_cmd(cmd, env):
 	
+	save_env = { }
 	# set env
 	for (key,val) in env.items():
+		save_env[key] = os.getenv(key)
 		os.putenv(key, val);
 	
 	command = os.path.expandvars(cmd)
@@ -282,7 +284,11 @@ def exec_shell_cmd(cmd, env):
 
 	# reset env
 	for key,val in env.items():
-		os.putenv(key, "");
+		var = save_env[key]
+		if not var:
+			os.unsetenv(key)
+		else:
+			os.putenv(key,var);
 
 	return pid.returncode, output.decode("utf-8")
 
