@@ -20,7 +20,7 @@ __kernel void sobel_filter(__global uchar4* inputImage, __global uchar4* outputI
 		float4 i02 = convert_float4(inputImage[gid - 1 + width]);
 		float4 i12 = convert_float4(inputImage[gid + width]);
 		float4 i22 = convert_float4(inputImage[gid + 1 + width]);
-		float4 two = (float4)(2);
+		float4 two = (float4)2;
 
 		float4 Gx =   i00 + two * i10 + i20 - i02  - two * i12 - i22;
 		float4 Gy =   i00 - i20 + two * i01 - two * i21 + i02  -  i22;

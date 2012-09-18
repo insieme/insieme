@@ -44,10 +44,6 @@ int main(int argc, const char* argv[]) {
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "convolution.cl", "convolution", "", ICL_SOURCE);
 		
-		icl_buffer* buf_input  = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
-		icl_buffer* buf_mask   = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * mask_size);
-		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
-		
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
@@ -55,6 +51,10 @@ int main(int argc, const char* argv[]) {
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_input  = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
+			icl_buffer* buf_mask   = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * mask_size);
+			icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
+		
 			icl_write_buffer(buf_input, CL_TRUE, sizeof(int) * size, &input[0], NULL, NULL);
 			icl_write_buffer(buf_mask, CL_TRUE, sizeof(int) * mask_size, &mask[0], NULL, NULL);
 
@@ -67,9 +67,9 @@ int main(int argc, const char* argv[]) {
 												sizeof(cl_int), (void *)&mask_width);
 		
 			icl_read_buffer(buf_output, CL_TRUE, sizeof(int) * size, &output[0], NULL, NULL);
+			icl_release_buffers(3, buf_input, buf_mask, buf_output);
 		}
 		
-		icl_release_buffers(3, buf_input, buf_mask, buf_output);
 		icl_release_kernel(kernel);
 	}
 	

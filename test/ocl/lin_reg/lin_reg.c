@@ -81,12 +81,6 @@ int main(int argc, const char* argv[]) {
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "lin_reg.cl", "lin_reg", "", ICL_SOURCE);
 
-		icl_buffer* buf_input1 = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
-		icl_buffer* buf_input2 = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
-		icl_buffer* buf_alpha  = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
-		icl_buffer* buf_beta   = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
-		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * size);
-
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
@@ -94,6 +88,12 @@ int main(int argc, const char* argv[]) {
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_input1 = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
+			icl_buffer* buf_input2 = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
+			icl_buffer* buf_alpha  = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
+			icl_buffer* buf_beta   = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
+			icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * size);
+
 			icl_write_buffer(buf_input1, CL_TRUE, sizeof(float) * size, &input1[0], NULL, NULL);
 			icl_write_buffer(buf_input2, CL_TRUE, sizeof(float) * size, &input2[0], NULL, NULL);
 			icl_write_buffer(buf_alpha, CL_TRUE, sizeof(float) * size, &alpha[0], NULL, NULL);
@@ -107,9 +107,9 @@ int main(int argc, const char* argv[]) {
 												(size_t)0, (void *)buf_output,
 												sizeof(cl_int), (void *)&size);
 			icl_read_buffer(buf_output, CL_TRUE, sizeof(float) * size, &output[0], NULL, NULL);
+			icl_release_buffers(5, buf_input1, buf_input2, buf_alpha, buf_beta, buf_output);
 		}
 
-		icl_release_buffers(5, buf_input1, buf_input2, buf_alpha, buf_beta, buf_output);
 		icl_release_kernel(kernel);
 	}
 	
