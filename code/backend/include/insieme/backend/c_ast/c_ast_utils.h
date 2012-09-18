@@ -222,6 +222,10 @@ namespace c_ast {
 		return fun->getManager()->create<c_ast::Call>(fun, args ...);
 	}
 
+	inline CallPtr call(NodePtr fun, const vector<NodePtr>& args) {
+		return fun->getManager()->create<c_ast::Call>(fun, args);
+	}
+
 	// -- Unary Operations --------------------------------------
 
 	inline ExpressionPtr unaryOp(UnaryOperation::UnaryOp op, NodePtr a) {
@@ -442,6 +446,10 @@ namespace c_ast {
 	template<typename ... E>
 	inline InitializerPtr init(TypePtr type, E ... elements) {
 		return type->getManager()->create<c_ast::Initializer>(type, toVector<c_ast::NodePtr>(elements...));
+	}
+
+	inline InitializerPtr init(TypePtr type, const vector<c_ast::NodePtr>& elements) {
+		return type->getManager()->create<c_ast::Initializer>(type, elements);
 	}
 
 	template<typename ... E>

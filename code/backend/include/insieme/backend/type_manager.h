@@ -53,6 +53,8 @@ namespace backend {
 
 	class TypeInfo;
 	class FunctionTypeInfo;
+	class StructTypeInfo;
+	class UnionTypeInfo;
 	class RefTypeInfo;
 	class ArrayTypeInfo;
 	class VectorTypeInfo;
@@ -84,6 +86,12 @@ namespace backend {
 		virtual ~TypeManager();
 
 		virtual const TypeInfo& getTypeInfo(const core::TypePtr&);
+
+		virtual const StructTypeInfo& getTypeInfo(const core::StructTypePtr&);
+
+		virtual const StructTypeInfo& getTypeInfo(const core::TupleTypePtr&);
+
+		virtual const UnionTypeInfo& getTypeInfo(const core::UnionTypePtr&);
 
 		virtual const FunctionTypeInfo& getTypeInfo(const core::FunctionTypePtr&);
 
@@ -137,6 +145,24 @@ namespace backend {
 		virtual ~TypeInfo() {};
 	};
 
+	struct StructTypeInfo : public TypeInfo {
+
+		// to be included:
+		//		- a constructor function
+
+		c_ast::CodeFragmentPtr constructor;
+
+	};
+
+	struct UnionTypeInfo : public TypeInfo {
+
+		// to be included:
+		//		- a constructor per member
+
+		std::vector<c_ast::CodeFragmentPtr> constructors;
+
+	};
+
 	struct FunctionTypeInfo : public TypeInfo {
 
 		// to be included
@@ -173,7 +199,7 @@ namespace backend {
 		//		- nothing extra so far
 	};
 
-	struct VectorTypeInfo : public TypeInfo {
+	struct VectorTypeInfo : public StructTypeInfo {
 		// to be included
 		//		- init uniform operator
 
