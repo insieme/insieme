@@ -497,6 +497,18 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		}
 	}
 
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 							'a -> vector<'a,L>
+	///////////////////////////////////////////////////////////////////////////////////////
+	if (isVector(trgTy) && *GET_VEC_ELEM_TYPE(trgTy) == *argTy ) {
+		auto vecTrgTy = trgTy.as<core::VectorTypePtr>();
+
+		return builder.callExpr(gen.getVectorInitUniform(), 
+					expr,
+					builder.getIntTypeParamLiteral(vecTrgTy->getSize())
+				);
+	}
+
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 							ref<'a> -> ref<ref<'a>>

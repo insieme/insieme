@@ -137,7 +137,7 @@ public:
 }
 
 TEST(OclCompilerTest, HelloCLTest) {
-	Logger::get(std::cerr, DEBUG);
+	Logger::get(std::cerr, DEBUG, 2);
     CommandLineOptions::Verbosity = 2;
     core::NodeManager manager;
     core::ProgramPtr program = core::Program::get(manager);

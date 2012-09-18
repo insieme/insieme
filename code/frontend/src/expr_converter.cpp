@@ -1256,18 +1256,19 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
 				binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
 			
+			lhs = utils::cast(lhs, exprTy);
 			// check if lhs is not an ocl-vector, in this case create a vector form the scalar
-			if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) { // the rhs is a scalar, implicitly casted to a vector
-				// lhs is a scalar
-				lhs = scalarToVector(lhs, rhsTy, builder, convFact);
-			} else
-				lhs = convFact.tryDeref(lhs); // lhs is an ocl-vector
-
-			if(binOp->getRHS()->getStmtClass() == Stmt::ImplicitCastExprClass ) { // the rhs is a scalar, implicitly casted to a vector
-				// rhs is a scalar
-				rhs = scalarToVector(rhs, lhsTy, builder, convFact);
-			} else
-			rhs = convFact.tryDeref(rhs); // rhs is an ocl-vector
+//			if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) { // the rhs is a scalar, implicitly casted to a vector
+//				// lhs is a scalar
+//				lhs = scalarToVector(lhs, rhsTy, builder, convFact);
+//			} else
+//				lhs = convFact.tryDeref(lhs); // lhs is an ocl-vector
+//
+//			if(binOp->getRHS()->getStmtClass() == Stmt::ImplicitCastExprClass ) { // the rhs is a scalar, implicitly casted to a vector
+//				// rhs is a scalar
+//				rhs = scalarToVector(rhs, lhsTy, builder, convFact);
+//			} else
+			rhs = utils::cast(rhs, exprTy); // rhs is an ocl-vector
 
 			// generate a ocl_vector - scalar operation
 			opFunc = gen.getOperator(lhs->getType(), op);
