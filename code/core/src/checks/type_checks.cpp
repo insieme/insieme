@@ -144,7 +144,7 @@ OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& add
 
 OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 
-	NodeManager manager;
+	NodeManager& manager = address->getNodeManager();
 	OptionalMessageList res;
 
 	// obtain function type ...
@@ -412,7 +412,6 @@ namespace {
 
 OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
 
-	NodeManager manager;
 	OptionalMessageList res;
 
 	// filter out everything which is not a type or expression
@@ -488,7 +487,6 @@ OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
 
 OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const DeclarationStmtAddress& address) {
 
-	NodeManager manager;
 	OptionalMessageList res;
 
 	DeclarationStmtPtr declaration = address.getAddressedNode();
@@ -1035,7 +1033,7 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 	
-	NodeManager manager;
+	NodeManager& manager = call->getNodeManager();
 	OptionalMessageList res;
 
 	// obtain function type ...
@@ -1090,7 +1088,7 @@ OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 ///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 OptionalMessageList ExpandCheck::visitCallExpr(const CallExprAddress& call) {
 
-	NodeManager manager;
+	NodeManager& manager = call->getNodeManager();
 	OptionalMessageList res;
 
 	// obtain function type ...

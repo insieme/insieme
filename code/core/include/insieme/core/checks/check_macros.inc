@@ -44,5 +44,9 @@
 	class Name ## Check : public IRCheck { \
 		public: \
 		Name ## Check() : IRCheck(visitTypes) {}; \
+		virtual OptionalMessageList visit(const NodeAddress& address) { \
+			if (NodeType##Address adr = dynamic_address_cast<const NodeType>(address)) return visit ## NodeType (adr); \
+			return OptionalMessageList(); \
+		} \
 		virtual OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
 	}
