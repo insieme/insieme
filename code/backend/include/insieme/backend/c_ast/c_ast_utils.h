@@ -150,6 +150,13 @@ namespace c_ast {
 		return type->getManager()->create<c_ast::PointerType>(type);
 	}
 
+	inline VectorTypePtr vec(const TypePtr& element, unsigned size) {
+		return element->getManager()->create<c_ast::VectorType>(
+				element,
+				element->getManager()->create<Literal>(toString(size))
+		);
+	}
+
 	inline FunctionTypePtr fun(const TypePtr& returnType, const vector<c_ast::TypePtr>& params) {
 		return returnType->getManager()->create<c_ast::FunctionType>(returnType, params);
 	}
