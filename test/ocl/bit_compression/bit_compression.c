@@ -39,10 +39,6 @@ int main(int argc, const char* argv[]) {
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "bit_compression.cl", "bit_compression", "", ICL_SOURCE);
 
-		icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uint4) * size);
-		icl_buffer* buf_bits = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
-		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(cl_uint) * size);
-		
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
@@ -50,6 +46,10 @@ int main(int argc, const char* argv[]) {
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uint4) * size);
+			icl_buffer* buf_bits = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
+			icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(cl_uint) * size);
+		
 			icl_write_buffer(buf_input, CL_FALSE, sizeof(cl_uint4) * size, &input[0], NULL, NULL);
 			icl_write_buffer(buf_bits, CL_TRUE, sizeof(cl_uint) * size, &num_bits[0], NULL, NULL);
 
@@ -61,9 +61,9 @@ int main(int argc, const char* argv[]) {
 			);
 
 			icl_read_buffer(buf_output, CL_TRUE, sizeof(cl_float) * size, &output[0], NULL, NULL);
+			icl_release_buffers(3, buf_input, buf_bits, buf_output);
 		}
 		
-		icl_release_buffers(3, buf_input, buf_bits, buf_output);
 		icl_release_kernel(kernel);
 	}
 	

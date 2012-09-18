@@ -65,12 +65,12 @@ int main(int argc, const char* argv[]) {
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 		
-		icl_buffer* buf_pos = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
-		icl_buffer* buf_vel = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
-		icl_buffer* buf_newPos = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
-		icl_buffer* buf_newVel = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
-
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_pos = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
+			icl_buffer* buf_vel = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
+			icl_buffer* buf_newPos = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
+			icl_buffer* buf_newVel = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_float4) * size);
+
 			icl_write_buffer(buf_pos, CL_TRUE, sizeof(cl_float4) * size, &pos[0], NULL, NULL);
 			icl_write_buffer(buf_vel, CL_TRUE, sizeof(cl_float4) * size, &vel[0], NULL, NULL);
 
@@ -85,10 +85,10 @@ int main(int argc, const char* argv[]) {
 											
 			icl_read_buffer(buf_newPos, CL_TRUE, sizeof(cl_float4) * size, &pos[0], NULL, NULL);
 			icl_read_buffer(buf_newVel, CL_TRUE, sizeof(cl_float4) * size, &vel[0], NULL, NULL);
+			icl_release_buffers(4, buf_vel, buf_pos, buf_newVel, buf_newPos);
 		}
 		
 		
-		icl_release_buffers(4, buf_vel, buf_pos, buf_newVel, buf_newPos);
 		icl_release_kernel(kernel);
 	}
 	
