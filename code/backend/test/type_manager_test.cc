@@ -321,8 +321,8 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("ref<vector<int<4>,4>>", toString(*type));
 	EXPECT_EQ("name", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
-	EXPECT_EQ("int32_t[4]", toC(info.externalType));
-	EXPECT_EQ("(*X).data", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("int32_t*", toC(info.externalType));
+	EXPECT_EQ("(int32_t*)X", toC(info.externalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
@@ -335,8 +335,8 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("ref<vector<vector<int<4>,2>,4>>", toString(*type));
 	EXPECT_EQ("name", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
-	EXPECT_EQ("name[4]", toC(info.externalType));
-	EXPECT_EQ("(*X).data", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("int32_t(*)[2]", toC(info.externalType));
+	EXPECT_EQ("(int32_t(*)[2])X", toC(info.externalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
