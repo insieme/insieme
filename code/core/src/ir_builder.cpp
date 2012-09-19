@@ -526,14 +526,13 @@ CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& 
 	// if the rhs is a union while the lhs is not, try to find the appropriate entry in the union
 	if(UnionTypePtr uType = dynamic_pointer_cast<const UnionType>(value->getType())) {
 		TypePtr nrtt = targetType->getElementType();
-std::cout << "bla " << uType << " " << nrtt << std::endl;
 		if(nrtt->getNodeType() != NT_UnionType) {
 			auto list = uType.getEntries();
 			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
 				return isSubTypeOf(cur->getType(), nrtt);
 			});
 
-			assert(false && pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
+			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
 			return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target,
 					accessMember(value, pos->getName()));
 		}
