@@ -36,12 +36,6 @@ int main(int argc, const char* argv[]) {
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "mers_twister.cl", "mersenne_twister", "", ICL_SOURCE);
 
-		icl_buffer* buf_ma = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
-		icl_buffer* buf_b = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
-		icl_buffer* buf_c = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
-		icl_buffer* buf_seed = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
-		icl_buffer* buf_result = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(cl_float4) * size);
-
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
@@ -49,6 +43,12 @@ int main(int argc, const char* argv[]) {
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 		
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_ma = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
+			icl_buffer* buf_b = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
+			icl_buffer* buf_c = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
+			icl_buffer* buf_seed = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
+			icl_buffer* buf_result = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(cl_float4) * size);
+
 			icl_write_buffer(buf_ma, CL_FALSE, sizeof(cl_uint) * size, &ma[0], NULL, NULL);
 			icl_write_buffer(buf_b, CL_FALSE, sizeof(cl_uint) * size, &b[0], NULL, NULL);
 			icl_write_buffer(buf_c, CL_FALSE, sizeof(cl_uint) * size, &c[0], NULL, NULL);
@@ -64,9 +64,9 @@ int main(int argc, const char* argv[]) {
 			);
 
 			icl_read_buffer(buf_result, CL_TRUE, sizeof(cl_float4) * size, &result[0], NULL, NULL);
+			icl_release_buffers(5, buf_ma, buf_b, buf_c, buf_seed, buf_result);
 		}
 		
-		icl_release_buffers(5, buf_ma, buf_b, buf_c, buf_seed, buf_result);
 		icl_release_kernel(kernel);
 	}
 	

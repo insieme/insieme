@@ -150,6 +150,13 @@ namespace c_ast {
 		return type->getManager()->create<c_ast::PointerType>(type);
 	}
 
+	inline VectorTypePtr vec(const TypePtr& element, unsigned size) {
+		return element->getManager()->create<c_ast::VectorType>(
+				element,
+				element->getManager()->create<Literal>(toString(size))
+		);
+	}
+
 	inline FunctionTypePtr fun(const TypePtr& returnType, const vector<c_ast::TypePtr>& params) {
 		return returnType->getManager()->create<c_ast::FunctionType>(returnType, params);
 	}
@@ -220,6 +227,10 @@ namespace c_ast {
 	template<typename ... E>
 	inline CallPtr call(NodePtr fun, E ... args) {
 		return fun->getManager()->create<c_ast::Call>(fun, args ...);
+	}
+
+	inline CallPtr call(NodePtr fun, const vector<NodePtr>& args) {
+		return fun->getManager()->create<c_ast::Call>(fun, args);
 	}
 
 	// -- Unary Operations --------------------------------------
@@ -442,6 +453,10 @@ namespace c_ast {
 	template<typename ... E>
 	inline InitializerPtr init(TypePtr type, E ... elements) {
 		return type->getManager()->create<c_ast::Initializer>(type, toVector<c_ast::NodePtr>(elements...));
+	}
+
+	inline InitializerPtr init(TypePtr type, const vector<c_ast::NodePtr>& elements) {
+		return type->getManager()->create<c_ast::Initializer>(type, elements);
 	}
 
 	template<typename ... E>

@@ -58,9 +58,6 @@ int main(int argc, const char* argv[])
         icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "reduction_chunking.cl", "reduce", "", ICL_SOURCE);
 		
-		icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_float16) * size);
-		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * size);
-
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
@@ -68,6 +65,9 @@ int main(int argc, const char* argv[])
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 		
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_float16) * size);
+			icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * size);
+
 			icl_write_buffer(buf_input, CL_FALSE, sizeof(cl_float16) * size, &input[0], NULL, NULL);
 
 
@@ -79,9 +79,9 @@ int main(int argc, const char* argv[])
 			);
 
 			icl_read_buffer(buf_output, CL_TRUE, sizeof(float) * size, &output[0], NULL, NULL);
+			icl_release_buffers(2, buf_input, buf_output);
 		}
 		
-		icl_release_buffers(2, buf_input, buf_output);
 		icl_release_kernel(kernel);
 	}
 	

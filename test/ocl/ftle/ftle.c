@@ -58,9 +58,6 @@ int main(int argc, const char* argv[]) {
 
 		icl_kernel* kernel = icl_create_kernel(dev, "ftle.cl", "computeFTLE", "-I.", ICL_SOURCE);
 
-		icl_buffer* buf_flowMap   = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(cl_float2) * size);		
-		icl_buffer* buf_output    = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * size);
-
 		size_t localWorkSize = args->local_size;
 		float multiplier = size/(float)localWorkSize;
 		if(multiplier > (int)multiplier)
@@ -68,6 +65,9 @@ int main(int argc, const char* argv[]) {
 		size_t szGlobalWorkSize = (int)multiplier * localWorkSize;
 
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_flowMap   = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(cl_float2) * size);		
+			icl_buffer* buf_output    = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * size);
+
 			icl_write_buffer(buf_flowMap, CL_TRUE, sizeof(cl_float2) * size, &flowMap[0], NULL, NULL);
 
 			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &localWorkSize, NULL, NULL, 6,
@@ -79,9 +79,9 @@ int main(int argc, const char* argv[]) {
 					sizeof(cl_int), (void *)&size);
 
 			icl_read_buffer(buf_output, CL_TRUE, sizeof(cl_float2) * size, &output[0], NULL, NULL);
+			icl_release_buffers(2, buf_flowMap, buf_output);
 		}
 
-		icl_release_buffers(2, buf_flowMap, buf_output);
 		icl_release_kernel(kernel);		
 	}
 

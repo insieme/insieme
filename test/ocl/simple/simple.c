@@ -40,10 +40,10 @@ int main(int argc, const char* argv[]) {
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 	
-		icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
-		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
-
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
+			icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
+
 			icl_write_buffer(buf_input, CL_TRUE, sizeof(int) * size, &input[0], NULL, NULL);
 
 			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 3,
@@ -52,9 +52,9 @@ int main(int argc, const char* argv[]) {
 												sizeof(cl_int), (void *)&size);
 		
 			icl_read_buffer(buf_output, CL_TRUE, sizeof(int) * size, &output[0], NULL, NULL);
+			icl_release_buffers(2, buf_input, buf_output);
 		}
 		
-		icl_release_buffers(2, buf_input, buf_output);
 		icl_release_kernel(kernel);
 	}
 	

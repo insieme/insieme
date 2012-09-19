@@ -28,6 +28,7 @@ front.insieme: %(comp.insieme)s + Conf([ Flag("--std=c99"),
 back.gcc.flags: Conf([ 
 					Flag("-fshow-column"), 
 					Flag("-Wall"), 
+					Flag('-Wl,--no-as-needed'),
 					Flag("-pipe"),
 					Flag("-I.")
 				])
@@ -44,14 +45,12 @@ back.run:		Conf([
 					Flag('-I%(SRC_DIR)s/code/runtime/include'),
 					Flag('-D_XOPEN_SOURCE=700'),
 					Flag('-D_GNU_SOURCE'),
-					Flag('-Wl,--no-as-needed'),
 					Flag('-ldl')
 				], "RUN")
 back.ocl:   	%(back.run)s + Conf([
 					Flag('-lOpenCL'), 
 					Flag('-I$OPENCL_ROOT/include'),
 					Flag('-L$OPENCL_ROOT/lib/x86_64'),
-					Flag('-Wl,--no-as-needed'),
 					Flag('-DUSE_OPENCL=ON'),
 					Flag('-D_POSIX_C_SOURCE=199309')
 				], "OCL")

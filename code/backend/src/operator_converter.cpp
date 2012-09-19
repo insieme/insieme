@@ -425,7 +425,8 @@ namespace backend {
 			if (res->getNodeType() == c_ast::NT_Initializer) {
 				return c_ast::ref(res);
 			}
-			return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, res));
+			// creates a something of the format "(int[1]){x}"
+			return c_ast::init(c_ast::vec(valueTypeInfo.rValueType, 1), res);
 		});
 
 		res[basic.getRefNew()] = OP_CONVERTER({
