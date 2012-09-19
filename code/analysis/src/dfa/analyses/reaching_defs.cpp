@@ -97,6 +97,7 @@ AnalysisDataType ReachingDefinitions::meet(const AnalysisDataType& lhs, const An
 void definitionsToAccesses(const AnalysisDataType& data, AccessManager& mgr) {
 	for(const auto& dfValue : data) {
 
+		// LOG(INFO) << dfValue;
 		auto reachExpr	= std::get<0>(dfValue).getLValueExpr();
 		auto reachBlock = std::get<1>(dfValue);
 
@@ -115,6 +116,18 @@ void definitionsToAccesses(const AnalysisDataType& data, AccessManager& mgr) {
 		mgr.getClassFor( 
 				getImmediateAccess( reachExpr->getNodeManager(), 
 									cfg::Address(reachBlock, stmtIdx, retAddr) ));
+	}
+}
+
+
+typedef std::set<AccessClassPtr, compare_target<AccessClassPtr>> AccessClassSet;
+
+// reach the parent class 
+void addSubClasses(AccessClassSet& classes, const AccessClassPtr& cl) {
+	for (const auto& cur : cl->getSubClasses()) {
+		auto thisClass = cur.first.lock();
+		if(classes.insert(thisClass).second)
+			addSubClasses(classes, thisClass);
 	}
 }
 
@@ -141,23 +154,29 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 		auto handle_def = [&](const core::VariablePtr& varPtr) { 
 
 			auto addr = core::Address<const core::Expression>::find(varPtr,stmt);
+			assert(addr);
 			auto access = getImmediateAccess( 
 							stmt->getNodeManager(), 
 							cfg::Address(block, stmtIdx, addr), 
 							getCFG().getTmpVarMap() 
 						);
-		//	std::cout << access << std::endl;
+
 			AccessClassPtr collisionClass = mgr.getClassFor(access);
+
+			AccessClassSet classes;
+			classes.insert(collisionClass);
+			addSubClasses(classes, collisionClass);
 
 			// Kill Entities 
 			if (access->isReference()) 
-				for (auto& acc : *collisionClass) {
-					kill.insert( std::make_tuple(
-							LValue(acc->getRoot().getVariable()), 
-							acc->getAddress().as<cfg::Address>().getBlockPtr()) 
-					 );
+				for (auto curClass : classes) {
+					for (auto& acc : *curClass) {
+						kill.insert( std::make_tuple(
+								LValue(acc->getRoot().getVariable()), 
+								acc->getAddress().as<cfg::Address>().getBlockPtr()) 
+						 );
+					}
 				}
-
 			auto var = LValue(varPtr);
 			gen.insert( std::make_tuple(var, block) );
 
@@ -176,10 +195,10 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 			if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
 				handle_def( call->getArgument(0).as<core::VariablePtr>() );
 			}
+		}
 
-		} else {
-			LOG(WARNING) << stmt;
-			assert(false && "Stmt not handled");
+		if (cur.getType() == cfg::Element::LOOP_INCREMENT) {
+			handle_def( stmt.as<core::ForStmtPtr>()->getDeclaration()->getVariable() );
 		}
 
 		stmtIdx++;

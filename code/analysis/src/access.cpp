@@ -112,6 +112,19 @@ UnifiedAddress UnifiedAddress::getAddressOfChild(unsigned idx) const {
 }
 
 
+bool UnifiedAddress::operator==(const UnifiedAddress& other) const {
+	if (this == &other) {
+		return true;
+	}
+	if (isCFGAddress() == other.isCFGAddress()) {
+		if (isCFGAddress()) {
+			return as<cfg::Address>() == other.as<cfg::Address>();
+		}
+		return as<core::NodeAddress>() == other.as<core::NodeAddress>();
+	}
+	return false;
+}
+
 /**
  * Get the immediate access
  */
@@ -186,7 +199,7 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 				iterVec.add( polyhedral::Iterator( idxVar ) );
 				polyhedral::AffineFunction af(
 						iterVec, { 1, -static_cast<int>(static_cast<int64_t>(f.getConstantValue())) }
-						);
+					);
 
 				return std::make_shared<Subscript>(
 						expr,
@@ -194,22 +207,23 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 						core::NodeAddress(),
 						iterVec,
 						makeCombiner(utils::Constraint<polyhedral::AffineFunction>(af, utils::ConstraintType::EQ))
-						);
+					);
 			}
 
 			// the access function is not a constant but a function
 			auto idxExpr = expr.getAddressOfChild(3);
+			auto idxExprAddr = idxExpr.getAbsoluteAddress(tmpVarMap).as<core::ExpressionAddress>();
+			
+			if ( VariablePtr var = core::dynamic_pointer_cast<const Variable>( idxExprAddr.getAddressedNode() ) ) {
+				// if the index expression is a single variable we may be in the case where this
+				// variable is an alias for an other expression
+				if ( ExpressionAddress aliasExpr = tmpVarMap.getMappedExpr( var ) ) {
+					// If this was an alias, use the aliased expression as array access
+					idxExprAddr = aliasExpr;
+				}
+			}
 
-			//	if ( VariablePtr var = core::dynamic_pointer_cast<const Variable>( idxExpr.getAddressedNode() ) ) {
-			//		// if the index expression is a single variable we may be in the case where this
-			//		// variable is an alias for an other expression
-			//		if ( ExpressionAddress aliasExpr = tmpVarMap.getMappedExpr( var ) ) {
-			//			// If this was an alias, use the aliased expression as array access
-			//			idxExpr = aliasExpr;
-			//		}
-			//	}
-
-			auto dom = polyhedral::getVariableDomain(idxExpr.getAbsoluteAddress(tmpVarMap).as<core::ExpressionAddress>() );
+			auto dom = polyhedral::getVariableDomain(idxExprAddr);
 			if (dom.first) {
 
 				const polyhedral::IterationVector& oldIter =
@@ -232,7 +246,7 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 						iterVec,
 						cloneConstraint(iterVec, dom.second) and
 						utils::Constraint<polyhedral::AffineFunction>(af, utils::ConstraintType::EQ)
-						);
+					);
 			}
 
 			return std::make_shared<Subscript>(expr, subAccess);
@@ -354,20 +368,23 @@ bool equalPath(const AccessPtr& lhs, const AccessPtr& rhs) {
 
 				bool remain = equalPath(lhsS->getSubAccess(), rhsS->getSubAccess());
 				if (!remain) { return false; }
-
+				
 				if ((lhsS->getContext() && rhsS->getContext()) || 
 					(!lhsS->getContext() && !rhsS->getContext())) 
 				{
 					auto ctx = polyhedral::makeCtx();
-					auto lhsSet = polyhedral::makeSet(ctx, polyhedral::IterationDomain(lhsS->getRange()));
-					auto rhsSet = polyhedral::makeSet(ctx, polyhedral::IterationDomain(rhsS->getRange()));
-					
+					auto lhsSet = polyhedral::makeSet(ctx, 
+							lhsS->getRange() ?
+								polyhedral::IterationDomain(lhsS->getRange()) :
+								polyhedral::IterationDomain(lhsS->getIterationVector(), false)
+						);
+					auto rhsSet = polyhedral::makeSet(ctx, 
+							rhsS->getRange() ?
+								polyhedral::IterationDomain(rhsS->getRange()) :
+								polyhedral::IterationDomain(rhsS->getIterationVector(), false)
+						);
 					// compute the difference, if it is empty then the two ranges are equivalent 
-					auto difference = (lhsSet-rhsSet) + (rhsSet-lhsSet);
-					if ( difference->empty() ) { 
-						return true;
-					}
-					return false;
+					return *lhsSet == *rhsSet;
 				}
 				return false;
 			}
@@ -505,7 +522,6 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 		}
 
 		if (belongs) {
-			// std::cout << *cl << std::endl;
 			// the access is already stored in this class, therefore we simply return it
 			if (!found) { cl->storeAccess(access); }
 			return cl;
@@ -525,8 +541,9 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 
 		if (aliasedExpr.getAbsoluteAddress()) {
 			auto aliasAccess = getImmediateAccess(potentialAlias->getNodeManager(), aliasedExpr);
-
-			return getClassFor(aliasAccess); // FIXME add access???
+			auto cl = getClassFor(aliasAccess);
+			cl->storeAccess(access);
+			return cl;
 		}
 	}
 
@@ -543,11 +560,16 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 	while (skipDeref->getType() == AccessType::AT_DEREF) {
 		skipDeref = cast<Deref>(skipDeref)->getSubAccess();
 	}
+
 	if (skipDeref->getType() == AccessType::AT_MEMBER || skipDeref->getType() == AccessType::AT_SUBSCRIPT) {
 		parentClass = getClassFor( cast<AccessDecorator>(skipDeref)->getSubAccess() );
 		subRange = cast<AccessDecorator>(skipDeref)->switchSubAccess(AccessPtr());
 	}
 
+	// LOG(INFO) << (!!parentClass ? toString(*parentClass) : ""); 
+	// LOG(INFO) << skipDeref;
+	// LOG(INFO) << access;
+	// LOG(INFO) << subRange ? toString(std::static_pointer_cast<const Access>(subRange)) : "";
 	// check if the parent class already has a child to represent this type of access
 	if (parentClass) {
 		assert(subRange);
@@ -555,36 +577,50 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 		for(auto& cl : parentClass->getSubClasses()) {
 			
 			// assume that the subclasses are disjoints 
-			switch(cl.second->getType()) {
-
-			case AccessType::AT_MEMBER:
+			if (cl.second->getType() == AccessType::AT_MEMBER) {
 				assert(skipDeref->getType() == AccessType::AT_MEMBER);
+
 				if (*cast<Member>(skipDeref)->getMember() == *cast<Member>(cl.second)->getMember()) {
 					auto clPtr = cl.first.lock();
 					clPtr->storeAccess(access);
 					return clPtr;
 				}
-				break;
 
-			case AccessType::AT_SUBSCRIPT:
-			{
+				continue;
+			}
+
+			if (cl.second->getType() == AccessType::AT_SUBSCRIPT) {
+				
+				// LOG(INFO) << access << " " << std::static_pointer_cast<const Access>(cl.second);
+
 				assert(skipDeref->getType() == AccessType::AT_SUBSCRIPT);
 
 				auto classRange = cast<Subscript>(cl.second);
 				auto accessRange = cast<Subscript>(skipDeref);
 
-				if ((classRange->getContext() && accessRange->getContext()) || 
-					(!classRange->getContext() && !accessRange->getContext())) 
-				{
+				//if ((classRange->getContext() && accessRange->getContext()) || 
+				//	(!classRange->getContext() && !accessRange->getContext())) 
+				//{
 					auto ctx = polyhedral::makeCtx();
-					auto classSet  = polyhedral::makeSet(ctx, polyhedral::IterationDomain(classRange->getRange()));
-					auto accessSet = polyhedral::makeSet(ctx, polyhedral::IterationDomain(accessRange->getRange()));
+					auto classSet  = polyhedral::makeSet(ctx, 
+							classRange->getRange() ?
+								polyhedral::IterationDomain(classRange->getRange()) :
+								polyhedral::IterationDomain(classRange->getIterationVector(), false)
+							);
+					auto accessSet = polyhedral::makeSet(ctx, 
+								accessRange->getRange() ?
+								polyhedral::IterationDomain(accessRange->getRange()) :
+								polyhedral::IterationDomain(accessRange->getIterationVector(), false)
+							);
 					
 					// compute the difference, if it is empty then the two ranges are equivalent 
 					auto intersection = classSet * accessSet;
+					// LOG(INFO) << "intersection " << *intersection; 
+
 					if ( !intersection->empty() ) { 
 						// complex 
 						if (*intersection == *classSet) {
+							
 							// Creates a new alias class  (can't use make_shared because the constructor is private)
 							auto newClass = std::shared_ptr<AccessClass>(new AccessClass(std::cref(*this), classes.size(), parentClass) );
 							newClass->storeAccess(access);
@@ -595,23 +631,21 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 							
 							cl.first = newClass;
 							cl.second = subRange;
-
 							return newClass;
 						} 
 						if (*intersection == *accessSet) {
 							parentClass = cl.first.lock();
+							break;
 						}
 					}
-				} else {
+				//} else {
+
 					// We have no detailed information of the accessed range, therefore 
 					// we assume this access can potentially access the entire array
-					parentClass->storeAccess(access);
-					return parentClass;
-				}
-			}
+					// parentClass->storeAccess(access);
+					// return parentClass;
 
-			default:
-				break;
+				//}
 			}
 		}
 	}

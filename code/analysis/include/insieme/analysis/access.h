@@ -94,23 +94,17 @@ struct UnifiedAddress : public utils::Printable {
 	UnifiedAddress getAddressOfChild(unsigned idx) const;
 
 	template <class T>
-	T as() const { 
-		return boost::get<T>(address);
-	}
+	inline T as() const { return boost::get<T>(address); }
 
-
-	bool operator==(const UnifiedAddress& other) const {
-		return getAbsoluteAddress(TmpVarMap()) == other.getAbsoluteAddress(TmpVarMap());
-	}
+	bool operator==(const UnifiedAddress& other) const;
 
 	std::ostream& printTo(std::ostream& out) const {
 		return out << address;
 	}
 
-	operator bool() const {
-		if (isCFGAddress()) { return static_cast<bool>(boost::get<cfg::Address>(address)); }
-
-		return boost::get<core::NodeAddress>(address);
+	inline operator bool() const {
+		if (isCFGAddress()) { return static_cast<bool>(as<cfg::Address>()); }
+		return as<core::NodeAddress>();
 	}
 
 private:
