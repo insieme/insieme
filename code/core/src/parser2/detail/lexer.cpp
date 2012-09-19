@@ -113,11 +113,18 @@ namespace detail {
 					// update token
 					tok = Token::createLiteral(cur.type, m[0]);
 
-					// update next
-					next += m.length();
+					// check following character
+					auto newEnd = next + m.length();
 
-					// this was a success
-					return true;
+					// test whether it is followed by white space, comment or symbol
+					if (newEnd == end || isSymbol(newEnd) || isspace(*newEnd)) {
+
+						// update next
+						next = newEnd;
+
+						// this was a success
+						return true;
+					}
 				}
 
 				// this is not a literal

@@ -44,8 +44,16 @@
 	#include <Windows.h> // keep this or Visual Studio Compiler goes nuts
 	typedef HANDLE irt_thread;
 	typedef long irt_spinlock;
-	typedef CONDITION_VARIABLE irt_cond_var;
-	typedef SRWLOCK irt_lock_obj;
+
+	// Vista and up will use slim reader writer lock instead of critical section, condition variables are supported too
+	#if (WINVER >= 0x0600)
+		typedef SRWLOCK irt_lock_obj;
+		typedef CONDITION_VARIABLE irt_cond_var;
+	#else
+		typedef int32 irt_cond_var; // dummy typedef such that interface below may stay untouched
+		typedef HANDLE irt_lock_obj;
+	#endif
+
 	typedef uint32 irt_tls_key;
 #else
 	#include <pthread.h>
@@ -101,8 +109,8 @@ inline void irt_mutex_init(irt_lock_obj*);
 /** acquire lock object */
 inline void irt_mutex_lock(irt_lock_obj*);
 
-/** try to acquire lock object, returns 0 if lock was acquired */
-inline int irt_mutex_trylock(irt_lock_obj*);
+/** try to acquire lock object not waiting until lock is acquired, returns 0 on success, nonzero otherwise */
+int irt_mutex_trylock(irt_lock_obj*);
 
 /** release lock object */
 inline void irt_mutex_unlock(irt_lock_obj*);

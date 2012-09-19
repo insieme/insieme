@@ -107,7 +107,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	// the case is invalid and we hare to replace it with a comparison with the NULL reference.
 	// therefore:
 	//		if( ref )  ->  if( ref != Null )
-	if ( gen.isBool(trgTy) && builder.matchType("ref<array<'a,#n>>", argTy)) 
+	if ( gen.isBool(trgTy) && isRefArray(argTy)) 
 	{
 		// convert NULL (of type AnyRef) to the same ref type as the LHS expression
 		return builder.callExpr(gen.getBoolLNot(), 
@@ -119,7 +119,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 							ref<vector<'a,#n>> -> Boolean
 	///////////////////////////////////////////////////////////////////////////////////////
-	if ( gen.isBool(trgTy) && builder.matchType("ref<vector<'a,#n>>", argTy)) 
+	if ( gen.isBool(trgTy) && isRefVector(argTy)) 
 	{
 		// convert NULL (of type AnyRef) to the same ref type as the LHS expression
 		return CAST(builder.callExpr(gen.getRefVectorToRefArray(), expr), trgTy);
@@ -250,7 +250,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	///////////////////////////////////////////////////////////////////////////////////////
 	// Convert a ref<'a> type to anyRef. 
 	///////////////////////////////////////////////////////////////////////////////////////
-	if ( builder.matchType("ref<array<'a,#n>>", trgTy) && *expr == *builder.literal(argTy,"0") ) 
+	if ( isRefArray(trgTy) && *expr == *builder.literal(argTy,"0") ) 
 	{
 		return builder.callExpr( gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(trgTy)) );
 	}
@@ -297,7 +297,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 
 		const core::TypePtr& subTy = GET_REF_ELEM_TYPE(trgTy);
 		
-		if (builder.matchType("array<'a,#n>", subTy) && builder.matchType("vector<'a,#n>", argTy)) {
+		if (isArray(subTy) && isVector(argTy)) {
 			return CAST(expr, subTy);
 		}
 
@@ -325,7 +325,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	///////////////////////////////////////////////////////////////////////////////////////
 	// convert a reference to a vector to a reference to an array using the refVector2RefArray literal  
 	///////////////////////////////////////////////////////////////////////////////////////
-	if ( builder.matchType("ref<array<'a,#n>>",trgTy) && builder.matchType("ref<vector<'a,#n>>", argTy) ) {
+	if ( isRefArray(trgTy) && isRefVector(argTy) ) {
 		// we are sure at this point the type of arg is of ref-type as well
 		const core::TypePtr& elemTy = GET_REF_ELEM_TYPE(trgTy);
 		const core::TypePtr& argSubTy = GET_REF_ELEM_TYPE(argTy);
@@ -382,7 +382,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 //	}
 
 
-	if (builder.matchType("ref<vector<char,#n>>",argTy) && builder.matchType("ref<vector<char,#m>>", trgTy)) {
+	if (isRefVector(argTy) && isRefVector(trgTy)) {
 		return builder.refVar(CAST(builder.deref(expr), GET_REF_ELEM_TYPE(trgTy)));
 	}
 
@@ -497,6 +497,18 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		}
 	}
 
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 							'a -> vector<'a,L>
+	///////////////////////////////////////////////////////////////////////////////////////
+	if (isVector(trgTy) && *GET_VEC_ELEM_TYPE(trgTy) == *argTy ) {
+		auto vecTrgTy = trgTy.as<core::VectorTypePtr>();
+
+		return builder.callExpr(gen.getVectorInitUniform(), 
+					expr,
+					builder.getIntTypeParamLiteral(vecTrgTy->getSize())
+				);
+	}
+
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 							ref<'a> -> ref<ref<'a>>
@@ -598,6 +610,26 @@ core::ExpressionPtr cast(const core::ExpressionPtr& expr, const core::TypePtr& t
 
 	return ret;
 }
+
+bool isArray(const core::TypePtr& type) {
+	return type->getNodeType() == core::NT_ArrayType;
+}
+
+bool isRefArray(const core::TypePtr& type) {
+	return type->getNodeType() == core::NT_RefType && 
+		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType;
+}
+
+bool isVector(const core::TypePtr& type) {
+	return type->getNodeType() == core::NT_VectorType;
+}
+
+bool isRefVector(const core::TypePtr& type) {
+	return type->getNodeType() == core::NT_RefType && 
+		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_VectorType;
+}
+
+
 
 } // end utils namespace
 } // end frontend namespace 

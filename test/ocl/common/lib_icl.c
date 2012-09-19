@@ -642,6 +642,8 @@ void icl_run_kernel(const icl_kernel* kernel, cl_uint work_dim, const size_t* gl
 						global_work_size,
 						local_work_size,
 						num, wait_ev, ev);
+//	clFinish( (kernel->dev)->queue );
+
 	ICL_ASSERT(err_code == CL_SUCCESS, "Error enqueuing NDRange Kernel: \"%s\"", _icl_error_string(err_code));
 }
 

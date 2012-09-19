@@ -743,8 +743,7 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 
 	// In the case the object we need to initialize is a ref<array...> then we are not allowed to
 	// deref the actual initializer, therefore we assign the object as it is 
-	if ( builder.matchType("ref<array<'a,#n>>", retIr->getType()) && 
-		 builder.matchType("ref<array<'a,#n>>", type ) ) 
+	if ( utils::isRefArray(retIr->getType()) && utils::isRefArray(type ) ) 
 	{
 		return retIr = utils::cast(retIr, type);
 	}
@@ -752,8 +751,8 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// If we have a string literal as initializer and we need to assign it to a ref<array<...>> we
 	// can directly cast it using the ref.vector.to.ref.array and perform the assignment. We do not
 	// need to create a copy of the object in the right hand side 
-	if ( builder.matchType("ref<vector<char,#n>>", retIr->getType()) && retIr->getNodeType() == core::NT_Literal &&
-		 builder.matchType("ref<array<char,#n>>", type ) ) 
+	if ( utils::isRefVector(retIr->getType()) && retIr->getNodeType() == core::NT_Literal &&
+		 utils::isRefArray(type ) ) 
 	{
 		return retIr = utils::cast(retIr, type);
 	}

@@ -44,11 +44,12 @@ float4 subfunction(float4 a) {
 }
 
 #pragma insieme mark
-__kernel void hello(__global short *src, __global float4 *dst, __local float *l, int factor/*, short2 vector*/){
+__kernel void hello(__global short *src, __global float4 *dst, __local float *l, int factor, short2 vector){
 #pragma insieme datarange (dst = __insieme_ocl_globalId : __insieme_ocl_globalId), \
 	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
 	                      (l = 0 : __insieme_ocl_globalSize)
 {
+	__local float l[4];
 	short bs1 = bitselect(src[0], src[1], src[2]);
 	float4 bs2 = bitselect(dst[0], dst[1], dst[2]);
 
@@ -58,8 +59,8 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 
 	float4 a = cos((float4)(l[3]));
 	float4* b = (float4*)src;
-	int4 n;
-	int4 m = (n & ~(a > b[0])) | n;
+	int4 n = (int4)3;
+	int4 m;// = (n & ~(a > b[0])) | n;
 	b = (float4*)src ;
 	float f = 7.0f;
 	subfunction(a);

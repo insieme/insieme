@@ -57,8 +57,7 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
-//#include "insieme/frontend/cpp/temporary_handler.h"
-//#include "clang/AST/StmtVisitor.h"
+using namespace clang;
 
 namespace insieme {
 namespace frontend {

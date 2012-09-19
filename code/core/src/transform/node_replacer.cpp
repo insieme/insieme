@@ -701,6 +701,10 @@ private:
 				return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
 			}
 
+			if(manager.getLangBasic().isRefAssign(literal)) {
+				return static_pointer_cast<const CallExpr>(builder.assign(args.at(0), args.at(1)));
+			}
+
 			CallExprPtr newCall = builder.callExpr(literal, args);
 
 			return newCall;
