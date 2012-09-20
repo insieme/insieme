@@ -421,7 +421,9 @@ private:
 
 public:
 
-	typedef std::pair<AccessClassWPtr, AccessDecoratorPtr> Dependence;
+	enum DependenceType { DT_LEVEL, DT_RANGE };
+
+	typedef std::tuple<DependenceType, AccessClassWPtr, AccessDecoratorPtr> Dependence;
 
 	typedef std::vector<Dependence> SubClasses;
 
@@ -549,6 +551,11 @@ private:
 	const CFG* 			cfg;
 	const TmpVarMap& 	tmpVarMap;
 
+	std::tuple<AccessClass::DependenceType, AccessClassPtr,bool> 
+	classify(const AccessClassPtr& 				parent,  
+			const AccessDecoratorPtr& 			subLevel, 
+			const AccessClass::DependenceType& 	depType,
+			const AccessPtr& 					currAccess);
 public:
 
 	typedef ClassVector::iterator 		iterator;

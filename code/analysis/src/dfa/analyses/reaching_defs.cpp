@@ -52,11 +52,13 @@ extract(const Entity< dfa::elem<analyses::LValue> >& e, const CFG& cfg)
 
 	auto collector = [&entities, &cfg] (const cfg::BlockPtr& block) {
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
-	
-			// TODO: 
-			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { /* skip */ return; }
 
 			auto stmt = cur.getAnalysisStatement();
+	
+			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { 
+				stmt.as<core::ForStmtPtr>()->getDeclaration()->getVariable();
+			}
+
 			if (auto declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
 				entities.insert( analyses::LValue(declStmt->getVariable()) );
 				return;
@@ -125,7 +127,11 @@ typedef std::set<AccessClassPtr, compare_target<AccessClassPtr>> AccessClassSet;
 // reach the parent class 
 void addSubClasses(AccessClassSet& classes, const AccessClassPtr& cl) {
 	for (const auto& cur : cl->getSubClasses()) {
-		auto thisClass = cur.first.lock();
+		// Visit the parent until the kind of access changes 
+		if (std::get<0>(cur) == AccessClass::DT_LEVEL)
+			break;
+
+		auto thisClass = std::get<1>(cur).lock();
 		if(classes.insert(thisClass).second)
 			addSubClasses(classes, thisClass);
 	}
