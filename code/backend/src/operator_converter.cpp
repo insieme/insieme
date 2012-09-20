@@ -537,12 +537,6 @@ namespace backend {
 
 		// -- arrays --
 
-		#define ADD_ELEMENT_TYPE_DEPENDENCY() \
-				core::TypePtr elementType = core::analysis::getReferencedType(call->getType()); \
-				elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); \
-				const TypeInfo& info = GET_TYPE_INFO(elementType); \
-				context.getDependencies().insert(info.definition);
-
 		res[basic.getArraySubscript1D()] = OP_CONVERTER({
 			// skip deref => included subscript operator
 			c_ast::ExpressionPtr target;
@@ -555,8 +549,13 @@ namespace backend {
 		});
 
 		res[basic.getArrayRefElem1D()] = OP_CONVERTER({
+			// add dependency to element type
+			core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType()); \
+			elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); \
+			const TypeInfo& info = GET_TYPE_INFO(elementType); \
+			context.getDependencies().insert(info.definition);
+
 			// generated code &(X[Y])
-			ADD_ELEMENT_TYPE_DEPENDENCY();
 			return c_ast::ref(c_ast::subscript(CONVERT_ARG(0), CONVERT_ARG(1)));
 		});
 
@@ -577,6 +576,11 @@ namespace backend {
 			return c_ast::call(C_NODE_MANAGER->create("alloca"), size);
 		});
 
+		#define ADD_ELEMENT_TYPE_DEPENDENCY() \
+				core::TypePtr elementType = core::analysis::getReferencedType(call->getType()); \
+				elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); \
+				const TypeInfo& info = GET_TYPE_INFO(elementType); \
+				context.getDependencies().insert(info.definition);
 
 		res[basic.getArrayView()] = OP_CONVERTER({
 			// add dependency to element type definition
