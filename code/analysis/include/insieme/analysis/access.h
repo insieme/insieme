@@ -490,6 +490,8 @@ public:
 	 */
 	inline size_t getUID() const { return uid; }
 
+	inline const AccessVector& getAccesses() const { return accesses; }
+
 	inline void setParentClass(const AccessClassPtr& parent) { 
 		this->parentClass = parent; 
 	}
@@ -566,6 +568,8 @@ public:
 		tmpVarMap(tmpVarMap) { }
 
 	AccessClassPtr getClassFor(const AccessPtr& access);
+
+	void printDotGraph(std::ostream& out) const;
 
 	inline iterator begin() { return classes.begin(); }
 	inline iterator end() { return classes.end(); }

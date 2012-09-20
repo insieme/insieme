@@ -62,6 +62,18 @@ using namespace insieme::analysis::dfa;
 
 typedef std::set<ExpressionAddress> ExprAddrSet;
 
+
+AccessPtr isRangeRelation(const AccessClassPtr& parent, const AccessClassPtr& thisClass) {
+
+	if (!parent) { return AccessPtr(); }
+
+	for(const auto& dep : parent->getSubClasses()) {
+		if (std::get<0>(dep) == AccessClass::DT_RANGE && 
+			*std::get<1>(dep).lock() == *thisClass) { return std::get<2>(dep);  }
+	}
+	return AccessPtr();
+}
+
 void lookup_accesses(std::set<NodeAddress>& addrSet, const AccessClassPtr& cl, const CFGPtr& cfg) {
 
 	auto addrs = extractRealAddresses(*cl, cfg->getTmpVarMap());
@@ -69,14 +81,26 @@ void lookup_accesses(std::set<NodeAddress>& addrSet, const AccessClassPtr& cl, c
 
 	auto parent = cl->getParentClass();
 	if (parent) { 
-		bool found=false;
-		for(const auto& dep : parent->getSubClasses()) {
-			if (std::get<0>(dep) == AccessClass::DT_RANGE && 
-				std::get<1>(dep).lock() == cl) { found = true; }
-
+	
+		auto range = isRangeRelation(parent, cl);
+		if ( range ) {
+			lookup_accesses(addrSet, cl->getParentClass(), cfg); 
+			return;
 		}
-		if (found) 
-		lookup_accesses(addrSet, cl->getParentClass(), cfg); 
+
+		// otherwise 
+		if (isRangeRelation(parent->getParentClass(), parent)) {
+			// find a child which is a level 
+			parent = parent->getParentClass();
+			for(const auto& dep : parent->getSubClasses()) {
+				if (std::get<0>(dep) == AccessClass::DT_LEVEL) 
+				{ 
+					lookup_accesses(addrSet, std::get<1>(dep).lock(), cfg);	
+					return;
+				}
+			}
+		}
+
 	}
 }
 
@@ -99,6 +123,7 @@ std::set<NodeAddress> getDefinitions(
 	std::set<NodeAddress> addrSet;
 	lookup_accesses(addrSet, aMgr.getClassFor(thisAccess), cfg);
 
+	// aMgr.printDotGraph(std::cout);
 	// remove the address of the use 
 	addrSet.erase(use);
 
@@ -749,7 +774,6 @@ TEST(ReachingDefinitions, VectorsWithControl4) {
 
 }
 
-
 //TEST(ReachingDefinitions, Vectors2DWithControl5) {
 //
 //	NodeManager mgr;
@@ -799,4 +823,55 @@ TEST(ReachingDefinitions, VectorsWithControl4) {
 //	EXPECT_EQ(++addrIt, addrSet.end());
 //
 //}
+
+TEST(ReachingDefinitions, Vectors2DWithControl6) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(
+		builder.parseType("ref<vector<vector<vector<uint<4>,10>,10>,10>>")
+	);
+
+	auto addresses = builder.parseAddresses(
+	"${"
+	"	uint<4> a = 2u; "
+	"	uint<4> b = 3u; "
+	//"	$v[1u][2u][2u]$ = a+b; "
+	"	for (uint<4> i=0u..10u : 2u) { "
+	"		$v[1u][i][2u]$ = a+b; "
+	"	}"
+	"	v[1u][1u][2u] = a+b; "
+	"	uint<4> c = *$v[1u][2u][2u]$;"
+	"}$", symbols
+	);
+	EXPECT_EQ(3u, addresses.size());
+
+	// mark for polyhedral 
+	polyhedral::scop::mark(addresses[0]);
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+   
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[2].as<ExpressionAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(1u, addrSet.size());
+
+	auto addrIt = addrSet.begin();
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+
+	//EXPECT_NE(++addrIt, addrSet.end());
+
+	//EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	//EXPECT_EQ(addresses[2], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
+
+}
 

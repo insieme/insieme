@@ -447,8 +447,32 @@ namespace {
 
 } // end anonymous namespace 
 
+void AccessManager::printDotGraph(std::ostream& out) const { 
 
-std::tuple<AccessClass::DependenceType, AccessClassPtr,bool> 
+	// print dot header
+	out << "digraph G {" << std::endl;
+
+	for(unsigned idx=0; idx<size(); ++idx) {
+
+		out << "\t" << idx << " [shape=\"box\",label=\"UID: " << classes[idx]->getUID() << "\\n" << 
+		    join("\\l", classes[idx]->getAccesses(), [&](std::ostream& jout, const AccessPtr& cur) {
+				jout << "+ " << cur;
+			}) << "\\l\"];" << std::endl;
+
+		// check dependencies 
+		for (const auto& dep : classes[idx]->getSubClasses()) {
+		
+			out << "\t" << idx << " -> " << std::get<1>(dep).lock()->getUID() 
+				<< " [label=\"" << std::static_pointer_cast<const Access>(std::get<2>(dep)) << "\",color=" <<
+				(std::get<0>(dep)==AccessClass::DT_RANGE?"red":"blue") << "];" << std::endl;
+
+		}
+	}
+	
+	out << "}" << std::endl;
+}
+
+std::tuple<AccessClass::DependenceType, AccessClassPtr, bool> 
 AccessManager::classify(const AccessClassPtr& 				parent,  
 						const AccessDecoratorPtr& 			subLevel, 
 						const AccessClass::DependenceType& 	depType,
@@ -503,13 +527,13 @@ AccessManager::classify(const AccessClassPtr& 				parent,
 
 			if ( !intersection->empty() ) { 
 				
-				if (*intersection == *accessSet && *intersection == *classSet) {
+				if (*intersection == *accessSet && *intersection == *classSet && subType == depType) {
 					subClass->storeAccess(currAccess);
-					return std::make_tuple( depType, subClass, true);
+					return std::make_tuple( depType, subClass, true );
 				}
 
 				// complex 
-				if (*intersection == *classSet) {
+				if (*intersection == *classSet && depType == subType) {
 					
 					// Creates a new alias class  (can't use make_shared because the constructor is private)
 					auto newClass = std::shared_ptr<AccessClass>(
@@ -519,11 +543,10 @@ AccessManager::classify(const AccessClassPtr& 				parent,
 					newClass->storeAccess(currAccess);
 					classes.emplace_back( newClass );
 
-					// Add the new class as direct child of the parent 
 					newClass->addSubClass( dep );
-
+					// Add the new class as direct child of the parent 
 					subClass->setParentClass(newClass);
-					
+
 					std::get<0>(dep) = AccessClass::DT_RANGE;
 					std::get<1>(dep) = newClass;
 					std::get<2>(dep) = subLevel;
@@ -531,7 +554,7 @@ AccessManager::classify(const AccessClassPtr& 				parent,
 					return std::make_tuple( depType, newClass, true );
 				} 
 			
-				if (*intersection == *accessSet) {
+				if (*intersection == *accessSet && subType == depType) {
 					return classify(subClass, subLevel, AccessClass::DT_RANGE,  currAccess);
 				}
 			}
@@ -618,6 +641,9 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 	if (parentClass) {
 
 		assert(subLevel);
+
+		// LOG(INFO)<<"Access: " << access;
+		// LOG(INFO)<<"PARENT: " << *parentClass;
 
 		auto ret = classify(parentClass, subLevel, depType, access);
 
