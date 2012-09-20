@@ -87,13 +87,18 @@ namespace test {
 		 */
 		map<string, string> definitions;
 
+		/**
+		 * A list of arguments to be passed on to the compiler when building this test case.
+		 */
+		vector<string> compilerArguments;
+
 	public:
 
 		/**
 		 * Creates a new test case based on the given arguments.
 		 */
-		IntegrationTestCase(const string& name, const vector<string>& files, const vector<string>& includeDirs, bool enableOpenMP, bool enableOpenCL, const map<string,string>& definitions)
-			: name(name), files(files), includeDirs(includeDirs), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL), definitions(definitions) {}
+		IntegrationTestCase(const string& name, const vector<string>& files, const vector<string>& includeDirs, bool enableOpenMP, bool enableOpenCL, const map<string,string>& definitions, const vector<string>& arguments)
+			: name(name), files(files), includeDirs(includeDirs), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL), definitions(definitions), compilerArguments(arguments) {}
 
 		/**
 		 * Obtains the name of this test case.
@@ -135,6 +140,13 @@ namespace test {
 		 */
 		const map<string, string>& getDefinitions() const {
 			return definitions;
+		}
+
+		/**
+		 * Obtains a list of additional arguments to be passed on to the compiler when building the test case.
+		 */
+		const vector<string>& getCompilerArguments() const {
+			return compilerArguments;
 		}
 
 		/**
