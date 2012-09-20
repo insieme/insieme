@@ -82,6 +82,9 @@ TEST(DefUse, ScalarNoControl) {
 	EXPECT_EQ(addresses[2], *addrIt);
 }
 
+//=============================================================================
+// Members
+//=============================================================================
 TEST(DefUse, VectorsWithControl) {
 
 	NodeManager mgr;
