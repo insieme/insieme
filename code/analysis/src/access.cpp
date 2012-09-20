@@ -366,7 +366,7 @@ bool equalPath(const AccessPtr& lhs, const AccessPtr& rhs) {
 			auto lhsS = cast<Subscript>(lhs);
 			auto rhsS = cast<Subscript>(rhs);
 
-			if(bool remain = equalPath(lhsS->getSubAccess(), rhsS->getSubAccess())) {
+			if(equalPath(lhsS->getSubAccess(), rhsS->getSubAccess())) {
 
 				auto ctx = polyhedral::makeCtx();
 				// Build up a set from the contraint expression of the LHS expr
@@ -426,68 +426,18 @@ std::ostream& AccessClass::printTo(std::ostream& out) const {
 				})
 	<< "}";
 }
-
-//std::set<ExpressionAddress> extractRealAddresses(const AccessClass& cl, const TmpVarMap& tmpVarMap) {
-//
-//	std::set<ExpressionAddress> addrList;
-//
-//	for (auto& access : cl) {
-//
-//		auto accessAddr = access->getAddress();
-//
-//		if (accessAddr->getNodeType() == NT_Variable &&
-//			tmpVarMap.isTmpVar(accessAddr.getAddressedNode().as<VariablePtr>())) {
-//			continue;
-//		}
-//
-//		cfg::BlockPtr cfgBlock;
-//		if (cfgBlock = access->getCFGBlock()) {
-//			// This is an address relative to the CFG,
-//			core::VariablePtr var = access->getAccessedVariable();
-//			if (tmpVarMap.isTmpVar(var)) {
-//				auto tmpAddr = tmpVarMap.getMappedExpr(var);
-//				assert( tmpAddr );
-//
-//				addrList.insert(tmpAddr.getParentAddress().as<ExpressionAddress>());
-//				continue;
-//			}
-//			auto stmtAddr 	  = (*cfgBlock)[access->getStmtIdx()].getStatementAddress();
-//			auto analysisStmt = (*cfgBlock)[access->getStmtIdx()].getAnalysisStatement();
-//
-//			if (*(stmtAddr.getAddressedNode()) == *(accessAddr.getAddressedNode())) {
-//				addrList.insert(stmtAddr.as<ExpressionAddress>());
-//				continue;
-//			}
-//
-//			if (*stmtAddr.getAddressedNode() == *analysisStmt) {
-//				addrList.insert(
-//					core::concat(stmtAddr.as<NodeAddress>(), accessAddr.as<NodeAddress>()
-//				).as<ExpressionAddress>() );
-//				continue;
-//			}
-//
-//			// search common root
-//			NodeAddress rootAddr=accessAddr;
-//			std::vector<size_t> path;
-//			while(!rootAddr.isRoot() && rootAddr.getAddressedNode() != stmtAddr.getAddressedNode()) {
-//				path.push_back(rootAddr.getIndex());
-//				rootAddr = rootAddr.getParentAddress();
-//			}
-//
-//			NodeAddress newAddr = stmtAddr;
-//			for_each(path.rbegin(), path.rend(), [&](size_t idx) {
-//				newAddr = newAddr.getAddressOfChild(idx);
-//			});
-//
-//			addrList.insert(newAddr.as<ExpressionAddress>());
-//			continue;
-//		}
-//
-//		// addrList.push_back(accessAddr);
-//	}
-//
-//	return addrList;
-//}
+/** 
+ * Given an access class (which contains accesses to the same memory area, this function returns the
+ * actual addresses from the root used during the analysis 
+ */
+std::set<core::ExpressionAddress> extractRealAddresses(const AccessClass& cl, const TmpVarMap& map) {
+	std::set<core::ExpressionAddress> ret;
+	std::transform(cl.begin(), cl.end(), std::inserter(ret, ret.begin()), 
+			[&](const AccessPtr& cur) { 
+			 	return cur->getAddress().getAbsoluteAddress(map).as<core::ExpressionAddress>(); 
+			});
+	return ret;
+}
 
 // AccessManager ==============================================================
 
@@ -513,8 +463,8 @@ AccessManager::classify(const AccessClassPtr& 				parent,
 
 	for(auto& dep : parent->getSubClasses()) {
 		
-		const auto& subType = std::get<0>(dep);
-		const auto& subClass = std::get<1>(dep).lock();
+		const auto& subType   = std::get<0>(dep);
+		const auto& subClass  = std::get<1>(dep).lock();
 		const auto& subAccess = std::get<2>(dep);
 
 		// assume that the subclasses are disjoints 
@@ -664,10 +614,6 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 		subLevel = cast<AccessDecorator>(skipDeref)->switchSubAccess(AccessPtr());
 	}
 
-	// LOG(INFO) << (!!parentClass ? toString(*parentClass) : ""); 
-	// LOG(INFO) << skipDeref;
-	// LOG(INFO) << access;
-	// LOG(INFO) << subRange ? toString(std::static_pointer_cast<const Access>(subRange)) : "";
 	// check if the parent class already has a child to represent this type of access
 	if (parentClass) {
 

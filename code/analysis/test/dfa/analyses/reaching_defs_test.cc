@@ -39,7 +39,6 @@
 #include <algorithm>
 
 #include "insieme/analysis/dfa/analyses/reaching_defs.h"
-#include "insieme/analysis/dfa/analyses/def_use.h"
 
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/value.h"
@@ -52,7 +51,6 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
 
-#include "insieme/analysis/dfa/analyses/reaching_defs.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/core/printer/pretty_printer.h"
@@ -64,19 +62,9 @@ using namespace insieme::analysis::dfa;
 
 typedef std::set<ExpressionAddress> ExprAddrSet;
 
-std::set<core::NodeAddress> extractRealAddresses(const AccessClass& cl, const TmpVarMap& map) {
-
-	std::set<core::NodeAddress> ret;
-	for( const auto& access : cl) {
-		ret.insert( access->getAddress().getAbsoluteAddress(map) );
-	}
-	
-	return ret;
-}
-
 void lookup_accesses(std::set<NodeAddress>& addrSet, const AccessClassPtr& cl, const CFGPtr& cfg) {
 
-	auto addrs = ::extractRealAddresses(*cl, cfg->getTmpVarMap());
+	auto addrs = extractRealAddresses(*cl, cfg->getTmpVarMap());
 	std::copy(addrs.begin(), addrs.end(), std::inserter(addrSet, addrSet.begin()));
 
 	auto parent = cl->getParentClass();
