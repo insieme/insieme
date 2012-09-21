@@ -287,8 +287,8 @@ namespace core {
 		LambdaPtr lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
 
 		// Lambda Expressions
+		LambdaExprPtr lambdaExpr(const StatementPtr& body, const VariableList& params = VariableList()) const;
 		LambdaExprPtr lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const;
-		LambdaExprPtr lambdaExpr(const StatementPtr& body, const VariableList& params) const;
 		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const;
 		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const;
 		LambdaExprPtr lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
