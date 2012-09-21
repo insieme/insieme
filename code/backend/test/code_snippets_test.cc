@@ -223,7 +223,7 @@ TEST(FunctionCall, VectorExpression) {
 	auto converted = sequential::SequentialBackend::getDefault()->convert(call);
 	string code = toString(*converted);
 
-	EXPECT_PRED2(containsSubString, code, "call_vector((__insieme_type_1){{0, 0, 0}}.data)");
+	EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t*)(&(__insieme_type_1){{0, 0, 0}}))");
 }
 
 

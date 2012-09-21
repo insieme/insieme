@@ -214,9 +214,33 @@ UIntValuePtr IRBuilder::uintValue(unsigned value) const {
 
 // ---------------------------- Convenience -------------------------------------
 
-
 bool IRBuilder::matchType(const std::string& typeStr, const core::TypePtr& irType) const {
-	return unify(manager, parseType(typeStr), irType);
+
+	// the type used for caching parser results
+	struct ParserCache : public std::map<string, TypePtr> {};
+	typedef std::shared_ptr<ParserCache> ParserCachePtr;
+
+	// lookup result within cache
+	NodePtr cacheNode = manager.get(breakStmt());		// some node that is easy to find :)
+
+	// get reference to cache
+	if (!cacheNode->hasAttachedValue<ParserCachePtr>()) {
+		cacheNode->attachValue(std::make_shared<ParserCache>());
+	}
+	const ParserCachePtr& cache = cacheNode->getAttachedValue<ParserCachePtr>();
+
+	// get cached result or parse
+	TypePtr type;
+	auto pos = cache->find(typeStr);
+	if (pos == cache->end()) {
+		type = parseType(typeStr);
+		cache->insert(std::make_pair(typeStr, type));
+	} else {
+		type = pos->second;
+	}
+
+	// try unify the parsed type and the given type
+	return unify(manager, type, irType);
 }
 
 GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intParams) const {
@@ -496,6 +520,24 @@ CallExprPtr IRBuilder::refDelete(const ExpressionPtr& subExpr) const {
 }
 
 CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
+	RefTypePtr targetType = dynamic_pointer_cast<const RefType>(target->getType());
+	assert(targetType && "Target of an assignmet must be of type ref<'a>");
+
+	// if the rhs is a union while the lhs is not, try to find the appropriate entry in the union
+	if(UnionTypePtr uType = dynamic_pointer_cast<const UnionType>(value->getType())) {
+		TypePtr nrtt = targetType->getElementType();
+		if(nrtt->getNodeType() != NT_UnionType) {
+			auto list = uType.getEntries();
+			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
+				return isSubTypeOf(cur->getType(), nrtt);
+			});
+
+			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
+			return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target,
+					accessMember(value, pos->getName()));
+		}
+	}
+
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target, value);
 }
 

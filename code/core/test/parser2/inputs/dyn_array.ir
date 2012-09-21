@@ -1,0 +1,17 @@
+
+let int = int<4>;
+
+unit main() {
+	
+	auto x = new(array.create.1D(lit(int), 50u));
+
+	for(int i=0..10) {
+		x[i] = i;
+	}
+	
+	for(int i=0..10) {
+		print("x[%d]=%d\n", i, *(x[i]));
+	}
+	
+	delete(x);
+}

@@ -109,6 +109,9 @@ inline void irt_mutex_init(irt_lock_obj*);
 /** acquire lock object */
 inline void irt_mutex_lock(irt_lock_obj*);
 
+/** try to acquire lock object not waiting until lock is acquired, returns 0 on success, nonzero otherwise */
+int irt_mutex_trylock(irt_lock_obj*);
+
 /** release lock object */
 inline void irt_mutex_unlock(irt_lock_obj*);
 

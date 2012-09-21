@@ -332,17 +332,16 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 //ßßß	kernelArgs[kernel].push_back(arg);
 //std::cout << "ARGUMENT: \t" << kernel->getType() << std::endl;
 
-	FunctionTypePtr fTy = builder.functionType(toVector(kernel->getType(), arg->getType()), BASIC.getInt4());
+	FunctionTypePtr fTy = builder.functionType(toVector(kernel->getType(), tryDeref(arg, builder)->getType()), BASIC.getInt4());
 	params.push_back(src);
-	body.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), tuple,
-			(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
+
+	body.push_back(builder.assign( builder.callExpr(BASIC.getTupleRefElem(), tuple,	(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
 			builder.getTypeLiteral(src->getType())), src));
 	body.push_back(builder.returnStmt(builder.intLit(0)));
 	LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 
-//	std::cout << "SET PARAM: \n" << function << std::endl;
 	// store argument in a tuple
-	return builder.callExpr(BASIC.getInt4(), function, kernel, builder.callExpr(BASIC.getRefDeref(), arg));
+	return builder.callExpr(BASIC.getInt4(), function, kernel, tryDeref(arg, builder));
 }
 
 bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type, bool foundMul) {

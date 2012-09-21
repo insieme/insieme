@@ -40,6 +40,8 @@
 
 #include "insieme/utils/logging.h"
 
+#include "insieme/analysis/access.h"
+
 namespace insieme { namespace analysis { namespace dfa {
 
 template <>
@@ -50,11 +52,13 @@ extract(const Entity< dfa::elem<analyses::LValue> >& e, const CFG& cfg)
 
 	auto collector = [&entities, &cfg] (const cfg::BlockPtr& block) {
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
-	
-			// TODO: 
-			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { /* skip */ return; }
 
 			auto stmt = cur.getAnalysisStatement();
+	
+			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { 
+				stmt.as<core::ForStmtPtr>()->getDeclaration()->getVariable();
+			}
+
 			if (auto declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
 				entities.insert( analyses::LValue(declStmt->getVariable()) );
 				return;
@@ -95,6 +99,7 @@ AnalysisDataType ReachingDefinitions::meet(const AnalysisDataType& lhs, const An
 void definitionsToAccesses(const AnalysisDataType& data, AccessManager& mgr) {
 	for(const auto& dfValue : data) {
 
+		// LOG(INFO) << dfValue;
 		auto reachExpr	= std::get<0>(dfValue).getLValueExpr();
 		auto reachBlock = std::get<1>(dfValue);
 
@@ -110,7 +115,25 @@ void definitionsToAccesses(const AnalysisDataType& data, AccessManager& mgr) {
 
 		assert(retAddr && stmtIdx<reachBlock->size() && "Stmt address not found");
 
-		mgr.getClassFor( getImmediateAccess( retAddr, {reachBlock,stmtIdx} ) );
+		mgr.getClassFor( 
+				getImmediateAccess( reachExpr->getNodeManager(), 
+									cfg::Address(reachBlock, stmtIdx, retAddr) ));
+	}
+}
+
+
+typedef std::set<AccessClassPtr, compare_target<AccessClassPtr>> AccessClassSet;
+
+// reach the parent class 
+void addSubClasses(AccessClassSet& classes, const AccessClassPtr& cl) {
+	for (const auto& cur : cl->getSubClasses()) {
+		// Visit the parent until the kind of access changes 
+		if (std::get<0>(cur) == AccessClass::DT_LEVEL)
+			break;
+
+		auto thisClass = std::get<1>(cur).lock();
+		if(classes.insert(thisClass).second)
+			addSubClasses(classes, thisClass);
 	}
 }
 
@@ -137,16 +160,29 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 		auto handle_def = [&](const core::VariablePtr& varPtr) { 
 
 			auto addr = core::Address<const core::Expression>::find(varPtr,stmt);
-			auto access = getImmediateAccess(addr, {block, stmtIdx}, getCFG().getTmpVarMap() );
+			assert(addr);
+			auto access = getImmediateAccess( 
+							stmt->getNodeManager(), 
+							cfg::Address(block, stmtIdx, addr), 
+							getCFG().getTmpVarMap() 
+						);
 
 			AccessClassPtr collisionClass = mgr.getClassFor(access);
 
-			// Kill Entities 
-			if (access.isRef()) 
-				for (auto& acc : *collisionClass) {
-					kill.insert( std::make_tuple(LValue(acc->getAccessedVariable()), acc->getCFGBlock()) );
-				}
+			AccessClassSet classes;
+			classes.insert(collisionClass);
+			addSubClasses(classes, collisionClass);
 
+			// Kill Entities 
+			if (access->isReference()) 
+				for (auto curClass : classes) {
+					for (auto& acc : *curClass) {
+						kill.insert( std::make_tuple(
+								LValue(acc->getRoot().getVariable()), 
+								acc->getAddress().as<cfg::Address>().getBlockPtr()) 
+						 );
+					}
+				}
 			auto var = LValue(varPtr);
 			gen.insert( std::make_tuple(var, block) );
 
@@ -165,10 +201,10 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 			if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
 				handle_def( call->getArgument(0).as<core::VariablePtr>() );
 			}
+		}
 
-		} else {
-			LOG(WARNING) << stmt;
-			assert(false && "Stmt not handled");
+		if (cur.getType() == cfg::Element::LOOP_INCREMENT) {
+			handle_def( stmt.as<core::ForStmtPtr>()->getDeclaration()->getVariable() );
 		}
 
 		stmtIdx++;

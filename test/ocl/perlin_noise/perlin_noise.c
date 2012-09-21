@@ -264,8 +264,6 @@ int main(int argc, const char* argv[]) {
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "perlin_noise.cl", "compute_perlin_noise", "", ICL_SOURCE);
 
-		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * size);
-
 		size_t szLocalWorkSize =  args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
@@ -273,6 +271,8 @@ int main(int argc, const char* argv[]) {
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * size);
+
 			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 4,
 				(size_t)0, (void *)buf_output,
 				sizeof(cl_float), (void *)&time,
@@ -280,9 +280,9 @@ int main(int argc, const char* argv[]) {
 				sizeof(cl_int), (void *)&width);
 
 			icl_read_buffer(buf_output, CL_TRUE, sizeof(float) * size, &output[0], NULL, NULL);
+			icl_release_buffers(1, buf_output);
 		}
 
-		icl_release_buffers(1, buf_output);
 		icl_release_kernel(kernel);
 	}
 

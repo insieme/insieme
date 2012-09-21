@@ -37,125 +37,84 @@
 #include "insieme/analysis/dfa/analyses/def_use.h"
 
 #include "insieme/analysis/dfa/analyses/reaching_defs.h"
+
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/solver.h"
 
+#include "insieme/analysis/polyhedral/scop.h"
 
 namespace insieme { namespace analysis { namespace dfa { namespace analyses {
+
+namespace {
+
+void lookup_accesses(AddressSet& addrSet, const AccessClassPtr& cl, const CFGPtr& cfg) {
+
+	auto addrs = extractRealAddresses(*cl, cfg->getTmpVarMap());
+	std::copy(addrs.begin(), addrs.end(), std::inserter(addrSet, addrSet.begin()));
+
+	auto parent = cl->getParentClass();
+	if (parent) { 
+		bool found=false;
+		for(const auto& dep : parent->getSubClasses()) {
+			if (std::get<0>(dep) == AccessClass::DT_RANGE && 
+				std::get<1>(dep).lock() == cl) { found = true; }
+
+		}
+		if (found) 
+		lookup_accesses(addrSet, cl->getParentClass(), cfg); 
+	}
+}
+
+AddressSet getDefinitions(
+		const Solver<dfa::analyses::ReachingDefinitions>::CFGBlockMap& ret, 
+		const CFGPtr& cfg, 
+		const core::ExpressionAddress& use) 
+{
+	
+	cfg::Address addr = cfg->find(use);
+	auto blockID = addr.getBlock().getBlockID();
+
+	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
+	auto fit = ret.find(blockID);
+	definitionsToAccesses(fit->second, aMgr);
+
+	auto thisAccess = getImmediateAccess(use->getNodeManager(), use);
+
+	AddressSet addrSet;
+	lookup_accesses(addrSet, aMgr.getClassFor(thisAccess), cfg);
+
+	// remove the address of the use 
+	addrSet.erase(use);
+
+	return addrSet;
+}
+
+} // end anonymous namespace 
 
 struct DefUse::DefUseImpl {
 
 	CFGPtr cfg;
 	std::map<size_t, typename ReachingDefinitions::value_type> analysis;
 
-	DefUseImpl(const core::NodePtr& root) : 
-		cfg(CFG::buildCFG(root))
+	DefUseImpl(const core::NodePtr& root) : cfg(CFG::buildCFG(root))
 	{
 		Solver<ReachingDefinitions> s(*cfg);
-		analysis = s.solve();
+		
+		// Collect polyhedral informations and attach it to the IR nodes 
+		polyhedral::scop::mark(root);
+
+		analysis = std::move(s.solve());
 	}
 	
 };
 
-
 DefUse::DefUse(const core::NodePtr& root) : 
 	pimpl( std::make_shared<DefUse::DefUseImpl>(root) ) { }
 
-struct DefUse::defs_iterator_impl {
 
-	typedef typename ReachingDefinitions::value_type::const_iterator iterator;
-
-	CFGPtr	cfg;
-	std::set<Access> vars;
-	iterator it, end;
-
-	defs_iterator_impl(
-			const CFGPtr& cfg,
-			const std::set<Access>& vars, 
-			const iterator& begin, 
-			const iterator& end
-	) :
-		cfg(cfg), vars(vars), it(begin), end(end) { }
-};
-
-bool DefUse::defs_iterator::operator==(const defs_iterator& other) const {
-	// return pimpl->vars == other.pimpl->vars && pimpl->it == other.pimpl->it;
-	return false;
+AddressSet DefUse::getDefinitions(const core::ExpressionAddress& addr) {
+	return insieme::analysis::dfa::analyses::getDefinitions(pimpl->analysis, pimpl->cfg, addr); 
 }
-
-DefUse::defs_iterator DefUse::defs_begin(const core::ExpressionAddress& expr) const {
-	
-	auto  cfgAddr = pimpl->cfg->find(expr);
-
-	auto& reaching_defs = pimpl->analysis[cfgAddr.getBlock().getBlockID()];
-
-	std::set<Access> entities;
-	
-	// for ( auto alias : pimpl->cfg->getAliasMap().lookupAliases(expr) ) {
-	//	entities.insert( getImmediateAccess( core::ExpressionAddress(alias), pimpl->cfg->getAliasMap()) );
-	//}
-	//entities.insert( getImmediateAccess(expr, pimpl->cfg->getAliasMap()) );
-
-	return defs_iterator( 
-		std::make_shared<DefUse::defs_iterator_impl>(
-			pimpl->cfg,
-			entities,
-			reaching_defs.begin(), 
-			reaching_defs.end()
-		)
-	);
-}
-
-DefUse::defs_iterator DefUse::defs_end(const core::ExpressionAddress& expr) const {
-	auto  cfgAddr = pimpl->cfg->find(expr);
-	auto& reaching_defs = pimpl->analysis[cfgAddr.getBlock().getBlockID()];
-
-	return defs_iterator( 
-			std::make_shared<DefUse::defs_iterator_impl>(
-				pimpl->cfg,
-				std::set<Access>{ }, 
-				reaching_defs.end(), 
-				reaching_defs.end()
-			)
-		);
-}
-
-
-core::ExpressionAddress DefUse::defs_iterator::operator*() const { 
-	assert(pimpl->it != pimpl->end);
-
-	// auto&& cur = std::get<0>(*pimpl->it);
-	// core::NodeAddress block = (*std::get<1>(*pimpl->it))[0].getStatementAddress();
-	
-	// check whether the variable we point to is an alias 
-	// core::ExpressionAddress var = pimpl->cfg->getTmpVarMap().getMappedExpr(cur.getAccessExpression().as<core::VariablePtr>());
-
-	// May cause problem with multiple occurrences in the same stmt
-	// core::NodeAddress addr = core::Address<const core::Node>::find( var?var:cur.getAccessExpression(), block.getAddressedNode());
-
-	// return core::concat(block, addr).as<core::ExpressionAddress>();
-	return core::ExpressionAddress();
-}
-
-
-void DefUse::defs_iterator::inc(bool first) {
-	if (!first) { ++pimpl->it; }
-
-	//while(pimpl->it != pimpl->end &&
-	//	  std::find_if(pimpl->vars.begin(), pimpl->vars.end(), 
-	//		[&](const Access& acc) { return isConflicting(std::get<0>(*pimpl->it), acc); } ) == pimpl->vars.end()
-	//	 ) 
-	//{
-	//	++(pimpl->it); 
-	//}
-
-	//if (pimpl->it == pimpl->end) 
-	//	pimpl->vars.clear();
-}
-
-
-
-
 
 
 } } } } // end insieme::analysis::dfa::analyses

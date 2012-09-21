@@ -195,12 +195,14 @@ class Block;
 typedef std::shared_ptr<Block> BlockPtr;
 
 
-/*////////////////////////////////////////////////////////////////////////////////////////////
- * A CFGAddress stores the unique address of an IR entity based on the CFG representation. 
- *
- * An entity is represented by a triplette, represented by che CFG block, the statement index
- * (relative to the block) and the address relative to the statement. 
- *////////////////////////////////////////////////////////////////////////////////////////////
+// ===========================================================================================
+// ==================================== cfg::Address =========================================
+// ===========================================================================================
+// A CFGAddress stores the unique address of an IR entity based on the CFG representation. 
+//
+// An entity is represented by a triplette, represented by che CFG block, the statement index
+// (relative to the block) and the address relative to the statement. 
+// ===========================================================================================
 struct Address : public utils::Printable {
 	
 	cfg::BlockPtr		block;
@@ -260,6 +262,8 @@ struct Address : public utils::Printable {
 	core::NodeAddress toAbsoluteAddress(const TmpVarMap& cfg) const;
 
 	std::ostream& printTo(std::ostream& out) const;
+
+	bool operator==(const Address& other) const;
 };
 
 

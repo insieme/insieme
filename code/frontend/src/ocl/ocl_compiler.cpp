@@ -225,11 +225,11 @@ core::CallExprPtr KernelData::callBarrier(const core::ExpressionPtr& memFence) {
     if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(arg)){
         if(lit->getStringValue() == "0") {
             //if lit is 0 CLK_LOCAL_MEM_FENCE,
-            return builder.callExpr(builder.getNodeManager().getLangBasic().getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
+            return builder.barrier(builder.getThreadGroup(builder.uintLit(0)));
         }
         if(lit->getStringValue() == "1"){
             //if lit is 1 CLK_GLOBAL_MEM_FENCE
-            return builder.callExpr(builder.getNodeManager().getLangBasic().getBarrier(), builder.getThreadGroup(builder.uintLit(1)));
+            return builder.barrier(builder.getThreadGroup(builder.uintLit(1)));
         }
     }
     // can also be barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE)

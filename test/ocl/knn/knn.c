@@ -42,11 +42,6 @@ int main(int argc, const char* argv[]) {
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "knn.cl", "knn", "", ICL_SOURCE);
 		
-		icl_buffer* buf_ref = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(float) * nRef /* dim*/);
-		icl_buffer* buf_query = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(float) * size /* dim*/);
-		icl_buffer* buf_dists = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * size);
-		icl_buffer* buf_neighbors = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
-
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
@@ -54,6 +49,11 @@ int main(int argc, const char* argv[]) {
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_ref = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(float) * nRef /* dim*/);
+			icl_buffer* buf_query = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(float) * size /* dim*/);
+			icl_buffer* buf_dists = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * size);
+			icl_buffer* buf_neighbors = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
+
 			icl_write_buffer(buf_ref, CL_TRUE, sizeof(float) * nRef /*dim*/, &ref[0], NULL, NULL);
 			icl_write_buffer(buf_query, CL_TRUE, sizeof(float) * size /*dim*/, &query[0], NULL, NULL);
 		
@@ -68,9 +68,9 @@ int main(int argc, const char* argv[]) {
 		
 			icl_read_buffer(buf_dists, CL_TRUE, sizeof(float) * size, &dists[0], NULL, NULL);
 			icl_read_buffer(buf_neighbors, CL_TRUE, sizeof(int) * size, &neighbors[0], NULL, NULL);
+			icl_release_buffers(4, buf_ref, buf_query, buf_dists, buf_neighbors);
 		}
 		
-		icl_release_buffers(4, buf_ref, buf_query, buf_dists, buf_neighbors);
 		icl_release_kernel(kernel);
 	}
 	
