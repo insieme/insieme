@@ -45,6 +45,8 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/normalize.h"
 
+#include "insieme/utils/test/test_utils.h"
+
 namespace insieme {
 namespace core {
 namespace parser {
@@ -754,6 +756,32 @@ namespace parser {
 		EXPECT_EQ("v1", toString(*list[3].getAddressedNode()));
 		EXPECT_EQ(core::NT_Variable, list[3]->getNodeType());
 	}
+
+//	TEST(IR_Parser2_ErrorReporting, If) {
+//		NodeManager manager;
+//		IRBuilder builder(manager);
+//
+//		try {
+//			// parse something that is faulty
+//			builder.parseStmt(
+//					"{"
+//					"	int<4> a = 4;"
+//					"	if (true) {"
+//					"		some shit"
+//					"	}"
+//					"}"
+//			);
+//		} catch(const IRParserException& ipe) {
+//
+//			// inspect error report
+//			EXPECT_PRED2(notContainsSubString, ipe.getMessage(), "if ( true ) { some shit }");
+//			EXPECT_PRED2(containsSubString, ipe.getMessage(), "if ( true ) { some shit }");
+//
+//			return;
+//		}
+//
+//		FAIL() << "An exception should have been raised!";
+//	}
 
 } // end namespace parser2
 } // end namespace core

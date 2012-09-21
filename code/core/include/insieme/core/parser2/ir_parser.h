@@ -175,6 +175,11 @@ namespace parser {
 		virtual ~IRParserException() throw() {};
 
 		/**
+		 * Obtains a reference to the message describing the problem.
+		 */
+		const string& getMessage() const { return msg; }
+
+		/**
 		 * Obtains a reference to the explanation stored within this exception.
 		 */
 		virtual const char* what() const throw() {

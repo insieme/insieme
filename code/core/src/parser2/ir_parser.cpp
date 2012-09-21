@@ -1202,10 +1202,10 @@ namespace parser {
 			// --------------- add statement rules ---------------
 
 			// every expression is a statement (if terminated by ;)
-			g.addRule("S", rule(seq(E,";"), forward));
+			g.addRule("S", rule(seq(E,";"), forward, -1));	// lower priority since less likely
 
 			// allow ; at the end of statements
-			g.addRule("S", rule(seq(S,";"), forward));
+			g.addRule("S", rule(seq(S,";"), forward, -2));	// lower priority since even less likely
 
 			// every declaration is a statement
 			g.addRule("S", rule(seq(let, ";"), [](Context& cur)->NodePtr { return cur.getNoOp(); }));
@@ -1298,6 +1298,11 @@ namespace parser {
 					},
 					-1		// lower priority for this rule (default=0)
 			));
+
+//			// switch
+//			g.addRule("S", rule(
+//					seq("switch(", E, ") {", list(seq("case", E, ":", S)), opt(seq("default:", S)),"}")
+//			));
 
 
 			// while statement
