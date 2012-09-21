@@ -89,7 +89,7 @@ void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread) {
 	#ifdef IRT_USE_PTHREADS
 		DWORD_PTR old_mask = SetThreadAffinityMask(thread.p, mask);
 	#else
-		DWORD_PTR old_mask = SetThreadAffinityMask(thread, mask);
+		DWORD_PTR old_mask = SetThreadAffinityMask(thread.thread_handle, mask);
 	#endif
 }
 
