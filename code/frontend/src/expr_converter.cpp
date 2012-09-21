@@ -59,7 +59,6 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
-#include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/frontend/cpp/temporary_handler.h"
 #include "insieme/annotations/c/naming.h"
@@ -229,10 +228,8 @@ core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::T
 			auto var = builder.variable(builder.refType(arrayType));
 			auto declStmt = builder.declarationStmt(var, memAlloc);
 
-			core::parse::IRParser parser(builder.getNodeManager());
-			
 			auto memSet = builder.callExpr(
-					builder.literal(parser.parseType("(anyRef, int<4>, uint<8>) -> anyRef"), "memset"),
+					builder.literal(builder.parseType("(anyRef, int<4>, uint<8>) -> anyRef"), "memset"),
 					builder.callExpr(gen.getRefToAnyRef(), var), 
 					builder.intLit(0), 
 					size);

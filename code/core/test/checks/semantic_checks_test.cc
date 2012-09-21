@@ -38,7 +38,6 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/semantic_checks.h"
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {
@@ -54,14 +53,14 @@ TEST(ScalarArrayIndexRangeCheck, Basic) {
 	IRBuilder builder(manager);
 
 	{
-		StatementPtr stmt_err = parse::parseStatement(manager, 
-			"fun () -> unit {{ \
-				decl ref<uint<8>>:i = 0; \
-				(fun (ref<array<uint<8>,1>>:arr) -> unit {{ \
-					decl uint<8>:b = 1; \
-					(op<array.ref.elem.1D>(arr, b)); \
-				}} ((op<scalar.to.array>(i)))); \
-			}}");
+		StatementPtr stmt_err = builder.parseExpr( 
+			"() -> unit { "
+			"	ref<uint<8>> i = var(0u); "
+			"	(ref<array<uint<8>,1>> arr) -> unit { "
+			"		uint<8> b = 1u; "
+			"		arr[b]; "
+			"	} (scalar.to.array(i)); "
+			"}");
 
 		CheckPtr scalarArrayIndexRangeCheck = makeRecursive(make_check<ScalarArrayIndexRangeCheck>());
 
@@ -73,15 +72,16 @@ TEST(ScalarArrayIndexRangeCheck, Basic) {
 		EXPECT_PRED2(containsMSG, check(stmt_err, scalarArrayIndexRangeCheck), 
 			Message(errorAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE, "", Message::WARNING));
 	}
+
 	{
-		StatementPtr stmt_pass = parse::parseStatement(manager, 
-			"fun () -> unit {{ \
-				decl ref<uint<8>>:i = 0; \
-				(fun (ref<array<uint<8>,1>>:arr) -> unit {{ \
-					decl uint<8>:b = 1; \
-					(op<array.ref.elem.1D>(arr, lit<uint<8>, 0>)); \
-				}} ((op<scalar.to.array>(i)))); \
-			}}");
+		StatementPtr stmt_pass = builder.parseExpr( 
+			"() -> unit { "
+			"	ref<uint<8>> i = var(0u); "
+			"	(ref<array<uint<8>,1>> arr) -> unit { "
+			"		uint<8> b = 1; "
+			"		arr[0u]; "
+			"	} (scalar.to.array(i)); "
+			"}");
 
 		CheckPtr scalarArrayIndexRangeCheck = makeRecursive(make_check<ScalarArrayIndexRangeCheck>());
 		EXPECT_TRUE(check(stmt_pass, scalarArrayIndexRangeCheck).empty());

@@ -47,7 +47,6 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/analysis/cfg.h"
 
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/set_utils.h"
@@ -61,18 +60,22 @@ using namespace insieme::analysis::dfa;
 TEST(Problem, Variable) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
 	typedef utils::set::PointerSet<VariablePtr> VarSet; 
 
-    auto code = parser.parseStatement(
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+
+    auto code = builder.parseStmt(
 		"{"
-		"	decl ref<int<4>>:a = 0;"
-		"	for(decl int<4>:i = 10 .. 50 : 1) { "
-		"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
-		"	};"
-		"	decl int<4>:c = (op<ref.deref>(a));"
-		"}"
+		"	ref<int<4>> a = var(0);"
+		"	for(int<4> i = 10 .. 50) { "
+		"		v[i+b]; "
+		"	}"
+		"	int<4> c = *a;"
+		"}", symbols
     );
 
     EXPECT_TRUE(code);
@@ -107,21 +110,23 @@ TEST(Problem, Variable) {
 TEST(Problem, LiveVariables) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
 	typedef utils::set::PointerSet<VariablePtr> VarSet; 
 
-    auto code = parser.parseStatement(
+    auto code = builder.parseStmt(
 		"{"
-		"	decl ref<int<4>>:a = 0;"
-		"	for(decl int<4>:i = 10 .. 50 : 1) { "
-		"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
-		"	};"
-		"	decl int<4>:c = (op<ref.deref>(a));"
-		"}"
+		"	ref<int<4>> a = var(0);"
+		"	for(int<4> i = 10 .. 50) { "
+		"		v[i+b]; "
+		"	}"
+		"	int<4> c = *a;"
+		"}", symbols
     );
-
-	std::cout << *code << std::endl;
 
     EXPECT_TRUE(code);
 	CFGPtr cfg = CFG::buildCFG(code);

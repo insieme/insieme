@@ -42,7 +42,7 @@
 #include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/parser/ir_parse.h"
+
 namespace insieme {
 namespace core {
 namespace arithmetic {
@@ -202,9 +202,13 @@ TEST(ArithmeticTest, nonVariableValues) {
 
 TEST (ArithmeticTest, fromIRExpr) {
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+
+	std::map<std::string, NodePtr> symbols;
+	symbols["v1"] = builder.variable(builder.parseType("int<4>"));
+
 	// from expr: int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v112)
-	auto expr = parser.parseExpression("((((0 * 4) * 4) + (0 * 4)) + int<4>:v1)");
+	auto expr = builder.parseExpr("0 * 4 * 4 + (0 * 4) + v1", symbols);
 
 	EXPECT_EQ("int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v1)", toString(*expr));
 
@@ -212,33 +216,35 @@ TEST (ArithmeticTest, fromIRExpr) {
 	EXPECT_EQ("v1", toString(f));
 
 	// add some devision
-	expr = parser.parseExpression("((1 * 4)/2)");
+	expr = builder.parseExpr("(1 * 4)/2");
 	EXPECT_EQ("int.div(int.mul(1, 4), 2)", toString(*expr));
 
 	f = toFormula(expr);
 	EXPECT_EQ("2", toString(f));
 
+	symbols.clear();
+	symbols["x"] = builder.variable(builder.parseType("int<4>"));
 
 	// some more complex stuff
 	mgr.setNextFreshID(2);
-	expr = parser.parseExpression("(((15/2) * int<4>:x) / ((20/6) * int<4>:x))");
-	EXPECT_EQ("int.div(int.mul(int.div(15, 2), v2), int.mul(int.div(20, 6), v2))", toString(*expr));
+	expr = builder.parseExpr("((15/2) * x) / ((20/6) * x)", symbols);
+	EXPECT_EQ("int.div(int.mul(int.div(15, 2), v6), int.mul(int.div(20, 6), v6))", toString(*expr));
 
 	f = toFormula(expr);
 	EXPECT_EQ("2", toString(f));
 
 
 	// test support of division by 1
-	expr = parser.parseExpression("((12 * int<4>:x) / 1)");
-	EXPECT_EQ("int.div(int.mul(12, v3), 1)", toString(*expr));
+	expr = builder.parseExpr("((12 * x) / 1)", symbols);
+	EXPECT_EQ("int.div(int.mul(12, v6), 1)", toString(*expr));
 	f = toFormula(expr);
-	EXPECT_EQ("12*v3", toString(f));
+	EXPECT_EQ("12*v6", toString(f));
 
 	// test support for division by -1
-	expr = parser.parseExpression("((4 * int<4>:x) / -1)");
-	EXPECT_EQ("int.div(int.mul(4, v4), -1)", toString(*expr));
+	expr = builder.parseExpr("((4 * x) / -1)", symbols);
+	EXPECT_EQ("int.div(int.mul(4, v6), -1)", toString(*expr));
 	f = toFormula(expr);
-	EXPECT_EQ("-4*v4", toString(f));
+	EXPECT_EQ("-4*v6", toString(f));
 }
 
 
