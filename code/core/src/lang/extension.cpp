@@ -45,7 +45,9 @@ namespace lang {
 
 	core::TypePtr getType(core::NodeManager& manager, const string& type) {
 		// build type
-		return parser::parse_type(manager, type, false);
+		TypePtr res = parser::parse_type(manager, type, false);
+		assert(res && "Unable to parse given type!");
+		return res;
 	}
 
 	core::LiteralPtr getLiteral(core::NodeManager& manager, const string& type, const string& value) {
