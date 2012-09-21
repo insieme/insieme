@@ -672,9 +672,9 @@ DERIVED(AtomicBoolCompareAndSwap, "atomic.bool.compare.and.swap",
 
 TYPE(JobRange, "JobRange")
 
-LITERAL(CreateMinRange,     "MinRange",    		"(uint<#8>)->JobRange")							// lower boundery only
-LITERAL(CreateBoundRange,   "BoundRange",    	"(uint<#8>, uint<#8>)->JobRange")				// lower and upper bound
-LITERAL(CreateBoundRangeMod,"BoundRangeMod",    "(uint<#8>, uint<#8>, uint<#8>)->JobRange")		// lower, upper and modula bound
+LITERAL(CreateMinRange,     "MinRange",    		"(uint<8>)->JobRange")							// lower boundery only
+LITERAL(CreateBoundRange,   "BoundRange",    	"(uint<8>, uint<8>)->JobRange")				// lower and upper bound
+LITERAL(CreateBoundRangeMod,"BoundRangeMod",    "(uint<8>, uint<8>, uint<8>)->JobRange")		// lower, upper and modula bound
 
 
 // Locks -----------------------------------------------------------
@@ -693,9 +693,9 @@ LITERAL(LockCreate,  "lock.create", "()->lock")
 GROUP(CloogMath, CloogFloor, CloogCeil, CloogMod)
 
 LITERAL(Select, "select", "('a, 'a, ('a, 'a) -> bool) -> 'a")
-LITERAL(CloogFloor, "cloog.floor", "( int<#4>, int<#4> ) -> int<#4>" )
-LITERAL(CloogCeil,  "cloog.ceil",  "( int<#4>, int<#4> ) -> int<#4>" )
-LITERAL(CloogMod, 	"cloog.mod",   "( int<#4>, int<#4> ) -> int<#4>" )
+LITERAL(CloogFloor, "cloog.floor", "( int<4>, int<4> ) -> int<4>" )
+LITERAL(CloogCeil,  "cloog.ceil",  "( int<4>, int<4> ) -> int<4>" )
+LITERAL(CloogMod, 	"cloog.mod",   "( int<4>, int<4> ) -> int<4>" )
 
 LITERAL(Exit, "exit", "(int<4>)->unit" )
 

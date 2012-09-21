@@ -112,9 +112,9 @@ LITERAL(regionAttribute, "region", "(uint<8>)->attribute")
 LITERAL(runStandalone, "runStandalone", "(irt_wi_implementation_id, irt_lwdi<'a>)->unit")
 
 // -- Code Utilities ------
-NTYPE(workItemRange, 			"struct<begin:int<4>,end:int<4>,step:int<4>>", "irt_work_item_range")
+NTYPE(workItemRange, 			"struct { int<4> begin; int<4> end; int<4> step; }", "irt_work_item_range")
 
-LITERAL(getWorkItemRange, 		"getRange", 	"(ref<irt_wi>)->struct<begin:int<4>,end:int<4>,step:int<4>>")
+LITERAL(getWorkItemRange, 		"getRange", 	"(ref<irt_wi>)->struct { int<4> begin; int<4> end; int<4> step; }")
 LITERAL(getWorkItemArgument, 	"getArg", 		"(ref<irt_wi>, uint<#a>, type<irt_lwdi<'p>>, type<'a>)->'a")
 
 
