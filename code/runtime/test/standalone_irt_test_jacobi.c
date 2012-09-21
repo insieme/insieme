@@ -218,6 +218,8 @@ int32_t __insieme_fun_8(int32_t argc, char** argv) {
     free(res);
     printf("Job Done! - residuo: %lf\n", resv);
 
+	irt_exit(0);
+
 	// WINFIX: missing return
 	return 0;
 }

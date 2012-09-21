@@ -197,11 +197,15 @@ void irt_error_handler(int signal) {
 	_irt_worker_cancel_all_others();
 	irt_error* error = (irt_error*)irt_tls_get(irt_g_error_key);
 	// gcc will warn when the cast to void* is missing, Visual Studio will not compile with the cast
-	#ifdef _MSC_VER
-		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", irt_current_thread(), irt_errcode_string(error->errcode));
+	irt_thread t;
+	irt_thread_get_current(&t);
+
+	#if defined(_MSC_VER) && !defined(IRT_USE_PTHREADS)
+		fprintf(stderr, "Insieme Runtime Error received (thread %i): %s\n", t.thread_id, irt_errcode_string(error->errcode));
 	#else
-		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)irt_current_thread(), irt_errcode_string(error->errcode));
+		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t.p, irt_errcode_string(error->errcode));
 	#endif
+
 	fprintf(stderr, "Additional information:\n");
 	irt_print_error_info(stderr, error);
 	exit(-error->errcode);

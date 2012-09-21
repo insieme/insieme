@@ -39,29 +39,37 @@
 #include "abstraction/threads.h"
 #include "error_handling.h"
 
-irt_thread irt_thread_create(irt_thread_func *fun, void *args) {
+void irt_thread_create(irt_thread_func *fun, void *args, irt_thread *t) {
 	irt_thread thread;
-	IRT_ASSERT(pthread_create(&thread, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
-	return thread;
+	if (t == NULL) {
+		IRT_ASSERT(pthread_create(&thread, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
+	}
+	else {
+		IRT_ASSERT(pthread_create(t, NULL, fun, args) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
+	}
 }
 
-irt_thread irt_current_thread() {
-	return pthread_self();
+void irt_thread_get_current(irt_thread *t) {
+	*t = pthread_self();
 }
 
-void irt_thread_cancel(irt_thread t){
-	pthread_cancel(t);
+void irt_thread_cancel(irt_thread *t){
+	pthread_cancel(*t);
 }
 
-int irt_thread_join(irt_thread t){
+int irt_thread_join(irt_thread *t){
 	int32 return_val;
 	int32 *p_ret_val = &return_val;
-	pthread_join(t, (void**)&p_ret_val);
+	pthread_join(*t, (void**)&p_ret_val);
 	return return_val;
 }
 
 void irt_thread_exit(int exit_code){
 	pthread_exit(&exit_code);
+}
+
+bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
+	return t1->p == t2->p;
 }
 
 
@@ -99,7 +107,7 @@ void irt_mutex_lock(irt_lock_obj *m){
 }
 
 int irt_mutex_trylock(irt_lock_obj *m){
-	pthread_mutex_trylock(m);
+	return pthread_mutex_trylock(m);
 }
 
 void irt_mutex_unlock(irt_lock_obj *m){
