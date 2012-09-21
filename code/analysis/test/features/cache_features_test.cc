@@ -36,10 +36,12 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/features/cache_features.h"
-
 #include "insieme/core/ir_node.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/parser/ir_parse.h"
+
+#include "insieme/analysis/features/cache_features.h"
 
 #include "insieme/utils/timer.h"
 
@@ -65,21 +67,23 @@ namespace features {
 
 	TEST(CacheSimulator, Basic) {
 		NodeManager mgr;
-		parse::IRParser parser(mgr);
+		IRBuilder builder(mgr);
 
-		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-			"for(decl uint<4>:k = 0 .. 10 : 1) {"
-			"	for(decl uint<4>:i = 0 .. 20 : 1) {"
-			"		decl ref<uint<4>>:m = (op<ref.var>(10));"
-			"		(op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i));"
-			"		for(decl uint<4>:j = 0 .. 30 : 1) {"
-			"			(op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i));"
-			"			(op<ref.assign>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i)), j)), (op<ref.deref>(m))));"
-			"		};"
-			"	};"
-			"}") );
+		std::map<std::string, NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<vector<uint<4>,1>,1>>"));
 
-
+		// load some code sample ...
+		auto forStmt = builder.parseStmt(
+			"for(uint<4> k = 0u..10u) {"
+			"	for(uint<4> i = 0u..20u) {"
+			"		ref<uint<4>> m = var(10u);"
+			"		v[i];"
+			"		for(uint<4> j = 0u..30u : 1u) {"
+			"			v[i];"
+			"			v[i][j] = *m;"
+			"		}"
+			"	}"
+			"}", symbols).as<ForStmtPtr>();
 		EXPECT_TRUE(forStmt);
 
 		EmptyModel model;
@@ -90,13 +94,15 @@ namespace features {
 
 	TEST(CacheSimulator, SimpleCacheModel) {
 		NodeManager mgr;
-		parse::IRParser parser(mgr);
+		IRBuilder builder(mgr);
 
+		std::map<std::string, NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<array<uint<4>,1>>"));
 
-		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-			"for(decl uint<4>:i = 0 .. 100 : 1) {"
-			"	(op<ref.assign>((op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, i)), i));"
-			"}") );
+		auto forStmt = builder.parseStmt(
+			"for( uint<4> i = 0u..100u) {"
+			"	v[i] = i;"
+			"}", symbols).as<ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 
