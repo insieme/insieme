@@ -202,8 +202,10 @@ void irt_error_handler(int signal) {
 
 	#if defined(_MSC_VER) && !defined(IRT_USE_PTHREADS)
 		fprintf(stderr, "Insieme Runtime Error received (thread %i): %s\n", t.thread_id, irt_errcode_string(error->errcode));
-	#else
+	#elif defined(_MSC_VER)
 		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t.p, irt_errcode_string(error->errcode));
+	#else
+		fprintf(stderr, "Insieme Runtime Error received (thread %p): %s\n", (void*)t, irt_errcode_string(error->errcode));
 	#endif
 
 	fprintf(stderr, "Additional information:\n");
