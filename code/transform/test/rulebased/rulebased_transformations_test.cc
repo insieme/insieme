@@ -40,7 +40,6 @@
 #include "insieme/transform/sequential/constant_folding.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/checks/full_check.h"
 
@@ -84,13 +83,10 @@ namespace rulebased {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		core::parse::IRParser parser(manager);
-
-		auto forStmt = static_pointer_cast<core::ForStmtPtr>( parser.parseStatement("\
-			for(decl int<4>:i = 10 .. 50 : 2) { \
-				i; \
-			}") );
-
+		auto forStmt = builder.parseStmt(
+			"for(int<4> i = 10 .. 50 : 2) { "
+			"	i; "
+			"}").as<core::ForStmtPtr>();
 
 		std::cout << core::checks::check(forStmt) << "\n";
 
@@ -135,9 +131,7 @@ namespace rulebased {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		core::parse::IRParser parser(manager);
-
-		auto forStmt = parser.parseStatement("for(decl int<4>:i = 0 .. 5 : 1) { i; }");
+		auto forStmt = builder.parseStmt("for(int<4> i = 0 .. 5) { i; }");
 
 		EXPECT_TRUE(forStmt);
 
@@ -151,7 +145,6 @@ namespace rulebased {
 
 		auto list = core::checks::check(transformed);
 		EXPECT_TRUE(list.empty()) << list;
-
 	}
 
 
@@ -160,23 +153,16 @@ namespace rulebased {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		core::parse::IRParser parser(manager);
-
-		auto forStmt = static_pointer_cast<core::ForStmtPtr>( parser.parseStatement("\
-			for(decl int<4>:i = 10 .. 50 : 2) { \
-				i; \
-			}") );
-
-
-//		std::cout << core::checks::check(forStmt) << "\n";
+		auto forStmt = builder.parseStmt(
+			"for(int<4> i = 10 .. 50 : 2) { "
+			"	i; "
+			"}").as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 
 		TotalLoopUnrolling trans;
 		auto transformed = trans.apply(forStmt);
 		auto res = toString(core::printer::PrettyPrinter(transformed, core::printer::PrettyPrinter::OPTIONS_DETAIL));
-
-//		std::cout << res;
 
 		// check transformed code
 		vector<core::StatementPtr> stmts;
@@ -187,29 +173,25 @@ namespace rulebased {
 
 		auto list = core::checks::check(transformed);
 		EXPECT_TRUE(list.empty()) << list;
-
 	}
-
 
 	TEST(Transformations, TotalLoopUnrollingVariableBoundary) {
 
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		core::parse::IRParser parser(manager);
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["x"] = builder.variable(builder.parseType("int<4>"));
 
-		auto forStmt = static_pointer_cast<core::ForStmtPtr>( parser.parseStatement("\
-			for(decl int<4>:i = (10 + int<4>:x) .. (50 + x) : 2) { \
-				i; \
-			}") );
-
-
-//		std::cout << core::checks::check(forStmt) << "\n";
+		auto forStmt = builder.parseStmt(
+			"for(int<4> i = 10+x .. 50+x : 2) { "
+			"	i; "
+			"}", symbols).as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 
 		TotalLoopUnrolling trans;
-		auto transformed = trans.apply(forStmt);
+		auto transformed = core::analysis::normalize(trans.apply(forStmt));
 		auto res = toString(core::printer::PrettyPrinter(transformed, core::printer::PrettyPrinter::OPTIONS_DETAIL));
 
 //		std::cout << res;
@@ -217,27 +199,28 @@ namespace rulebased {
 		// check transformed code
 		vector<core::StatementPtr> stmts;
 		for(int i =10; i<50; i+=2) {
-			stmts.push_back(builder.add(builder.variable(manager.getLangBasic().getInt4(),2), builder.intLit(i)));
+			stmts.push_back(builder.add(builder.variable(manager.getLangBasic().getInt4(),1), builder.intLit(i)));
 		}
 		EXPECT_EQ(builder.compoundStmt(stmts), transformed);
 
 		auto list = core::checks::check(transformed);
 		EXPECT_TRUE(list.empty()) << list;
 
+		symbols["y"] = builder.variable(builder.parseType("int<4>"));
 
 		// something that should fail
-		forStmt = static_pointer_cast<core::ForStmtPtr>( parser.parseStatement("\
-				for(decl int<4>:i = (10 + int<4>:x) .. (50 + int<4>:y) : 2) { \
-					i; \
-				}") );
+		forStmt = builder.parseStmt(
+			"for(int<4> i = 10+x .. 50+y : 2) { "
+			"	i; "
+			"}", symbols).as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 		EXPECT_THROW(trans.apply(forStmt), InvalidTargetException);
 
-		forStmt = static_pointer_cast<core::ForStmtPtr>( parser.parseStatement("\
-				for(decl int<4>:i = (10 + int<4>:x) .. (50 + x) : (2*int<4>:x)) { \
-					i; \
-				}") );
+		forStmt = builder.parseStmt(
+			"for(int<4> i = 10+x .. 50+x : 2*x) { "
+			"	i; "
+			"}", symbols).as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 		EXPECT_THROW(trans.apply(forStmt), InvalidTargetException);
@@ -248,16 +231,12 @@ namespace rulebased {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		core::parse::IRParser parser(manager);
-
-		auto forStmt = static_pointer_cast<core::ForStmtPtr>( parser.parseStatement(
-				"for(decl int<4>:i = 0 .. 50 : 1) {"
-				"	for(decl int<4>:j = 10 .. 80 : 1) {"
-				"		i;"
-				"	};"
-				"}"
-			)
-		);
+		auto forStmt = builder.parseStmt(
+			"for(int<4> i = 0 .. 50) {"
+			"	for(int<4> j = 10 .. 80) {"
+			"		i;"
+			"	}"
+			"}").as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 
