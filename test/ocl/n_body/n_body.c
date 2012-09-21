@@ -55,9 +55,6 @@ int main(int argc, const char* argv[]) {
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "n_body.cl", "n_body", "-I.", ICL_SOURCE);
 		
-		icl_buffer* buf_B = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(body) * size);
-		icl_buffer* buf_tmp = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(body) * size);
-
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
@@ -65,6 +62,9 @@ int main(int argc, const char* argv[]) {
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_B = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(body) * size);
+			icl_buffer* buf_tmp = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(body) * size);
+
 			icl_write_buffer(buf_B, CL_TRUE, sizeof(body) * size, &B[0], NULL, NULL);
 
 			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 3,
@@ -73,10 +73,10 @@ int main(int argc, const char* argv[]) {
 											sizeof(cl_int), (void *)&size);
 											
 			icl_read_buffer(buf_tmp, CL_TRUE, sizeof(body) * size, &B[0], NULL, NULL);
+		
+			icl_release_buffers(2, buf_B, buf_tmp);
 		}
 		
-		
-		icl_release_buffers(2, buf_B, buf_tmp);
 		icl_release_kernel(kernel);
 	}
 	

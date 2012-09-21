@@ -115,10 +115,9 @@ void irt_ocl_print_events(){
 void irt_ocl_init_devices() {
 	devices = NULL;
 	num_devices = 0;
-	cl_platform_id* cl_platforms;
 	cl_uint cl_num_platforms = _irt_cl_get_num_platforms();
 	if (cl_num_platforms != 0) {
-		cl_platforms = (cl_platform_id*)alloca(cl_num_platforms * sizeof(cl_platform_id));
+		cl_platform_id* cl_platforms = (cl_platform_id*)alloca(cl_num_platforms * sizeof(cl_platform_id));
 		_irt_cl_get_platforms(cl_num_platforms, cl_platforms);
 		
 		for (cl_uint i = 0; i < cl_num_platforms; i++) {
@@ -127,73 +126,76 @@ void irt_ocl_init_devices() {
 			num_devices += cl_num_devices;
 		}
 	}
-	if (num_devices != 0) {
-		devices = (irt_ocl_device*)malloc(num_devices * sizeof(irt_ocl_device));
-		cl_uint index = 0;
-		cl_platform_id* cl_platforms;
-		cl_uint cl_num_platforms = _irt_cl_get_num_platforms();
-		if (cl_num_platforms != 0) {
-			cl_platforms = (cl_platform_id*)alloca(cl_num_platforms * sizeof(cl_platform_id));
-			_irt_cl_get_platforms(cl_num_platforms, cl_platforms);
-		
-			for (cl_uint i = 0; i < cl_num_platforms; i++) {
-				cl_device_type device_type = DEVICE_TYPE;
-				cl_device_id* cl_devices;
-				cl_uint cl_num_devices = _irt_cl_get_num_devices(&cl_platforms[i], device_type);
-				if (cl_num_devices != 0) {
-					cl_devices = (cl_device_id*)alloca(cl_num_devices * sizeof(cl_device_id));
-					_irt_cl_get_devices(&cl_platforms[i], device_type, cl_num_devices, cl_devices);
-					for (cl_uint i = 0; i < cl_num_devices; ++i, ++index) {
-						cl_int err_code;
-						irt_ocl_device* dev = &devices[index];
-						dev->device = cl_devices[i];
-						dev->context = clCreateContext(NULL, 1, &dev->device, NULL, NULL, &err_code);
-						IRT_ASSERT(err_code == CL_SUCCESS &&dev->context != NULL, IRT_ERR_OCL, "Error creating context: \"%s\"", _irt_error_string(err_code));
-						#ifdef IRT_OCL_INSTR
-							dev->queue = clCreateCommandQueue(dev->context, dev->device, CL_QUEUE_PROFILING_ENABLE, &err_code);
-						#else
-							dev->queue = clCreateCommandQueue(dev->context, dev->device, 0, &err_code);
-						#endif
-						IRT_ASSERT(err_code == CL_SUCCESS && dev->queue != NULL, IRT_ERR_OCL, "Error creating queue: \"%s\"", _irt_error_string(err_code));
 
-						// Device Info
-						dev->name = _irt_cl_get_name(&dev->device);
-						dev->type = _irt_cl_get_type(&dev->device);
-						dev->vendor = _irt_cl_get_vendor(&dev->device);
-						dev->version = _irt_cl_get_version(&dev->device);
-						dev->driver_version = _irt_cl_get_driver_version(&dev->device);
-						dev->profile = _irt_cl_get_profile(&dev->device);
+	if (num_devices == 0) {
+		irt_throw_string_error(IRT_ERR_OCL, "No OCL devices present on system.");
+	}
 
-						dev->max_compute_units = _irt_cl_get_max_compute_units(&dev->device);
-						dev->max_clock_frequency = _irt_cl_get_max_clock_frequency(&dev->device);
-						dev->max_work_item_dimensions = _irt_cl_get_max_work_item_dimensions(&dev->device);
-						dev->max_work_item_sizes = _irt_cl_get_max_work_item_sizes(&dev->device);
-						dev->max_work_group_size = _irt_cl_get_max_work_group_size(&dev->device);
+	devices = (irt_ocl_device*)malloc(num_devices * sizeof(irt_ocl_device));
+	cl_uint index = 0;
+	cl_platform_id* cl_platforms;
+	if (cl_num_platforms != 0) {
+		cl_platforms = (cl_platform_id*)alloca(cl_num_platforms * sizeof(cl_platform_id));
+		_irt_cl_get_platforms(cl_num_platforms, cl_platforms);
 
-						dev->image_support = _irt_cl_has_image_support(&dev->device);
-						dev->single_fp_config = _irt_cl_get_single_fp_config(&dev->device);
-						dev->endian_little = _irt_cl_is_endian_little(&dev->device);
-						dev->extensions = _irt_cl_get_extensions(&dev->device);
+		for (cl_uint i = 0; i < cl_num_platforms; i++) {
+			cl_device_type device_type = DEVICE_TYPE;
+			cl_device_id* cl_devices;
+			cl_uint cl_num_devices = _irt_cl_get_num_devices(&cl_platforms[i], device_type);
+			if (cl_num_devices != 0) {
+				cl_devices = (cl_device_id*)alloca(cl_num_devices * sizeof(cl_device_id));
+				_irt_cl_get_devices(&cl_platforms[i], device_type, cl_num_devices, cl_devices);
+				for (cl_uint i = 0; i < cl_num_devices; ++i, ++index) {
+					cl_int err_code;
+					irt_ocl_device* dev = &devices[index];
+					dev->device = cl_devices[i];
+					dev->context = clCreateContext(NULL, 1, &dev->device, NULL, NULL, &err_code);
+					IRT_ASSERT(err_code == CL_SUCCESS &&dev->context != NULL, IRT_ERR_OCL, "Error creating context: \"%s\"", _irt_error_string(err_code));
+					#ifdef IRT_OCL_INSTR
+						dev->queue = clCreateCommandQueue(dev->context, dev->device, CL_QUEUE_PROFILING_ENABLE, &err_code);
+					#else
+						dev->queue = clCreateCommandQueue(dev->context, dev->device, 0, &err_code);
+					#endif
+					IRT_ASSERT(err_code == CL_SUCCESS && dev->queue != NULL, IRT_ERR_OCL, "Error creating queue: \"%s\"", _irt_error_string(err_code));
 
-						dev->mem_cache_type = _irt_cl_get_global_mem_cache_type(&dev->device);
-						dev->global_mem_cacheline_size = _irt_cl_get_global_mem_cacheline_size(&dev->device);
-						dev->global_mem_cache_size = _irt_cl_get_global_mem_cache_size(&dev->device);
+					// Device Info
+					dev->name = _irt_cl_get_name(&dev->device);
+					dev->type = _irt_cl_get_type(&dev->device);
+					dev->vendor = _irt_cl_get_vendor(&dev->device);
+					dev->version = _irt_cl_get_version(&dev->device);
+					dev->driver_version = _irt_cl_get_driver_version(&dev->device);
+					dev->profile = _irt_cl_get_profile(&dev->device);
 
-						dev->max_constant_buffer_size = _irt_cl_get_max_constant_buffer_size(&dev->device);
+					dev->max_compute_units = _irt_cl_get_max_compute_units(&dev->device);
+					dev->max_clock_frequency = _irt_cl_get_max_clock_frequency(&dev->device);
+					dev->max_work_item_dimensions = _irt_cl_get_max_work_item_dimensions(&dev->device);
+					dev->max_work_item_sizes = _irt_cl_get_max_work_item_sizes(&dev->device);
+					dev->max_work_group_size = _irt_cl_get_max_work_group_size(&dev->device);
 
-						dev->local_mem_type = _irt_cl_get_local_mem_type(&dev->device);
-						dev->local_mem_size = _irt_cl_get_local_mem_size(&dev->device);
+					dev->image_support = _irt_cl_has_image_support(&dev->device);
+					dev->single_fp_config = _irt_cl_get_single_fp_config(&dev->device);
+					dev->endian_little = _irt_cl_is_endian_little(&dev->device);
+					dev->extensions = _irt_cl_get_extensions(&dev->device);
 
-						// Buffer Info
-						dev->mem_size = _irt_cl_get_global_mem_size(&dev->device);
-						dev->mem_available = _irt_cl_get_global_mem_size(&dev->device);
-						dev->max_buffer_size = _irt_cl_get_max_mem_alloc_size(&dev->device);
-						dev->buffer = NULL;
-						irt_spin_init(&(dev->buffer_lock));
-					}
+					dev->mem_cache_type = _irt_cl_get_global_mem_cache_type(&dev->device);
+					dev->global_mem_cacheline_size = _irt_cl_get_global_mem_cacheline_size(&dev->device);
+					dev->global_mem_cache_size = _irt_cl_get_global_mem_cache_size(&dev->device);
+
+					dev->max_constant_buffer_size = _irt_cl_get_max_constant_buffer_size(&dev->device);
+
+					dev->local_mem_type = _irt_cl_get_local_mem_type(&dev->device);
+					dev->local_mem_size = _irt_cl_get_local_mem_size(&dev->device);
+
+					// Buffer Info
+					dev->mem_size = _irt_cl_get_global_mem_size(&dev->device);
+					dev->mem_available = _irt_cl_get_global_mem_size(&dev->device);
+					dev->max_buffer_size = _irt_cl_get_max_mem_alloc_size(&dev->device);
+					dev->buffer = NULL;
+					irt_spin_init(&(dev->buffer_lock));
 				}
 			}
 		}
+
         // reorder the devices: CPUs, GPUs, ACCs
         sorted_dev_id = (cl_uint*)malloc(num_devices * sizeof(cl_uint));
         cl_uint cur_pos = 0;

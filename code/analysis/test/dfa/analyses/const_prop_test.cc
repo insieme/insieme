@@ -47,7 +47,6 @@
 
 #include "insieme/analysis/dfa/analyses/reaching_defs.h"
 
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 using namespace insieme;

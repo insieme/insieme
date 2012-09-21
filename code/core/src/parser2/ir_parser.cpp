@@ -94,7 +94,7 @@ namespace parser {
 		};
 
 		template<typename Target>
-		TokenIter findNext(const Grammar::TermInfo& info, const TokenIter begin, const TokenIter& end, const Target& token) {
+		TokenIter findNext(const Grammar::TermInfo& info, const TokenIter begin, const TokenIter& end, const Target& token, bool angleBackets = false) {
 			vector<Token> parenthese;
 			for(TokenIter cur = begin; cur != end; ++cur) {
 
@@ -106,7 +106,12 @@ namespace parser {
 				if (info.isLeftParenthese(*cur)) {
 					parenthese.push_back(info.getClosingParenthese(*cur));
 				}
-				if (info.isRightParenthese(*cur)) {
+
+				if (angleBackets && *cur == '<') {
+					parenthese.push_back(Token::createSymbol('>'));
+				}
+
+				if (info.isRightParenthese(*cur) || (angleBackets && *cur == '>')) {
 					// if this is not matching => return end (no next token)
 					if (parenthese.empty() || parenthese.back() != *cur) {
 						return end;
@@ -125,7 +130,7 @@ namespace parser {
 		}
 
 
-		vector<TokenRange> split(const Grammar::TermInfo& info, const TokenRange& range, char sep) {
+		vector<TokenRange> split(const Grammar::TermInfo& info, const TokenRange& range, char sep, bool angleBackets = false) {
 			assert(!info.isLeftParenthese(Token::createSymbol(sep)));
 			assert(!info.isRightParenthese(Token::createSymbol(sep)));
 
@@ -133,11 +138,12 @@ namespace parser {
 			TokenIter end = range.end();
 
 			vector<TokenRange> res;
-			TokenIter next = findNext(info, start, end, sep);
+
+			TokenIter next = findNext(info, start, end, sep, angleBackets);
 			while(next != end) {
 				res.push_back(TokenRange(start,next));
 				start = next+1;
-				next = findNext(info, start, end, sep);
+				next = findNext(info, start, end, sep, angleBackets);
 			}
 
 			// add final sub-range
@@ -223,12 +229,13 @@ namespace parser {
 
 			// process parameters
 			TypeList params;
-			for(const TokenRange& param : split(info, params_block, ',')) {
+			for(const TokenRange& param : split(info, params_block, ',', true)) {
 				// type is one less from the end - by skipping the id
 				TokenRange typeRange = param - 1;
 
 				// parse type
 				TypePtr type = cur.grammar.match(cur, typeRange.begin(), typeRange.end(), "T").as<TypePtr>();
+				assert(type && "Unable to parse parameter type!");
 
 				// add to parameter type list
 				params.push_back(type);
@@ -1024,6 +1031,13 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
 						ExpressionPtr b = getOperand(cur, 1);
+
+						// support signed indices (automatic cast to unsigned)
+						auto& basic = cur.getLangBasic();
+						if (basic.isSignedInt(b->getType())) {
+							b = cur.castExpr(basic.getUInt8(), b);
+						}
+
 						if (a->getType()->getNodeType() == NT_RefType) {
 							return cur.arrayRefElem(a, b);
 						}

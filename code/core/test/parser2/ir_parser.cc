@@ -698,7 +698,7 @@ namespace parser {
 
 		vector<NodeAddress> list = builder.parseAddresses(
 				"{"
-				"	int<4> x = 2;"
+				"	ref<int<4>> x = 2;"
 				"	$x = 3$;"
 				"	$x = $x$ + 2$;"
 				"}"
@@ -712,11 +712,11 @@ namespace parser {
 		EXPECT_EQ(core::NT_CallExpr, list[0]->getNodeType());
 
 		EXPECT_EQ("0-2", toString(list[1]));
-		EXPECT_EQ("ref.assign(v1, int.add(v1, 2))", toString(*list[1].getAddressedNode()));
+		EXPECT_EQ("ref.assign(v1, int.add(ref.deref(v1), 2))", toString(*list[1].getAddressedNode()));
 		EXPECT_EQ(core::NT_CallExpr, list[1]->getNodeType());
 
 
-		EXPECT_EQ("0-2-3-2", toString(list[2]));
+		EXPECT_EQ("0-2-3-2-2", toString(list[2]));
 		EXPECT_EQ("v1", toString(*list[2].getAddressedNode()));
 		EXPECT_EQ(core::NT_Variable, list[2]->getNodeType());
 
@@ -730,7 +730,7 @@ namespace parser {
 
 		vector<NodeAddress> list = builder.parseAddresses(
 				"${"
-				"	int<4> x = 2;"
+				"	ref<int<4>> x = 2;"
 				"	$x = 3$;"
 				"	$x = $x$ + 2$;"
 				"}$"
@@ -747,10 +747,10 @@ namespace parser {
 		EXPECT_EQ(core::NT_CallExpr, list[1]->getNodeType());
 
 		EXPECT_EQ("0-2", toString(list[2]));
-		EXPECT_EQ("ref.assign(v1, int.add(v1, 2))", toString(*list[2].getAddressedNode()));
+		EXPECT_EQ("ref.assign(v1, int.add(ref.deref(v1), 2))", toString(*list[2].getAddressedNode()));
 		EXPECT_EQ(core::NT_CallExpr, list[2]->getNodeType());
 
-		EXPECT_EQ("0-2-3-2", toString(list[3]));
+		EXPECT_EQ("0-2-3-2-2", toString(list[3]));
 		EXPECT_EQ("v1", toString(*list[3].getAddressedNode()));
 		EXPECT_EQ(core::NT_Variable, list[3]->getNodeType());
 	}
