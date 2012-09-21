@@ -60,23 +60,30 @@ DWORD WINAPI _irt_win_thread_func(void* params) {
 	return ret;
 }
 
-irt_thread irt_thread_create(irt_thread_func *fun, void *args) {
+void irt_thread_create(irt_thread_func *fun, void *args, irt_thread *t) {
 	irt_win_thread_params *params = (irt_win_thread_params*)malloc(sizeof(irt_win_thread_params));
 	params->fun = fun;
 	params->args = args;
-	irt_thread t = CreateThread(NULL, NULL, _irt_win_thread_func, params, NULL, NULL);
-	IRT_ASSERT(t != NULL, IRT_ERR_INTERNAL, "Could not create worker thread");
-	return t;
+	HANDLE thread_handle;
+	if (t == NULL)
+		thread_handle = CreateThread(NULL, NULL, _irt_win_thread_func, params, NULL, NULL);
+	else {
+		thread_handle = CreateThread(NULL, NULL, _irt_win_thread_func, params, NULL, &(t->thread_id));
+		t->thread_handle = thread_handle;
+	}
+
+	IRT_ASSERT(thread_handle != NULL, IRT_ERR_INTERNAL, "Could not create worker thread");
 }
 
-irt_thread irt_current_thread() {
+void irt_thread_get_current(irt_thread *t) {
 	HANDLE real_handle = NULL;
 	HANDLE proc_handle = GetCurrentProcess();
 	DuplicateHandle( proc_handle, GetCurrentThread(), proc_handle, &real_handle, 0, TRUE, DUPLICATE_SAME_ACCESS );
-	return real_handle;
+	t->thread_handle = real_handle;
+	t->thread_id = GetCurrentThreadId();
 }
 
-void irt_thread_cancel(irt_thread t){
+void irt_thread_cancel(irt_thread *t){
 	/*
 	from http://msdn.microsoft.com/en-us/library/windows/desktop/ms686717(v=vs.85).aspx :
 	TerminateThread can result in the following problems:
@@ -88,15 +95,19 @@ void irt_thread_cancel(irt_thread t){
 	we don't care about all those issues since this function is only called in case of an error and the program
 	should exit
 	*/
-	TerminateThread(t, -1);
+	TerminateThread(t->thread_handle, -1);
 }
 
-int irt_thread_join(irt_thread t){
-	return WaitForSingleObject(t, INFINITE);
+int irt_thread_join(irt_thread *t){
+	return WaitForSingleObject(t->thread_handle, INFINITE);
 }
 
 void irt_thread_exit(int exit_code){
 	ExitThread(exit_code);
+}
+
+bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
+	return t1->thread_id == t2->thread_id;
 }
 
 

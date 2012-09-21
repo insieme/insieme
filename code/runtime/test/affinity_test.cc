@@ -132,14 +132,16 @@ TEST(affinity, manual) {
 	uint32 num_cores = irt_affinity_cores_available();
 
 	// create a thread and set affinity
-	irt_thread t = irt_thread_create(dummy_func, NULL);
+	irt_thread t;
+	irt_thread_create(dummy_func, NULL, &t);
 	irt_affinity_mask m = { { 1 } };
 	irt_set_affinity(m, t);
 	// this is to check if mask has been set correctly
 	irt_set_affinity(m, t);
 
 	// set affinity for main thread
-	irt_thread myself = irt_current_thread();
+	irt_thread myself;
+	irt_thread_get_current(&myself);
 	irt_set_affinity(m, myself);
 	// clear affinity for main thread
 	irt_clear_affinity();

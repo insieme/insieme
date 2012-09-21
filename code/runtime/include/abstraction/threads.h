@@ -42,7 +42,13 @@
 
 #if defined(_MSC_VER) && !defined(IRT_USE_PTHREADS)
 	#include <Windows.h> // keep this or Visual Studio Compiler goes nuts
-	typedef HANDLE irt_thread;
+
+	struct _irt_thread {
+		DWORD thread_id; // uniquely identifies a thread
+		HANDLE thread_handle; // just a reference to the thread (multiple handles can refer to the same thread)
+	};
+
+	typedef _irt_thread irt_thread;
 	typedef long irt_spinlock;
 
 	// Vista and up will use slim reader writer lock instead of critical section, condition variables are supported too
@@ -68,20 +74,23 @@
 // typedef the signature of function executed by thread
 typedef void* irt_thread_func(void*);
 
-/** create a new thread executing fun with parameter args */
-inline irt_thread irt_thread_create(irt_thread_func *fun, void *args);
+/** create a new thread executing fun with parameter args, info about new thread will be saved in t if t is not NULL */
+inline void irt_thread_create(irt_thread_func *fun, void *args, irt_thread* t);
 
-/** returns irt_thread identifier of current thread */
-inline irt_thread irt_current_thread();
+/** saves thread information of current thread in t  */
+inline void irt_thread_get_current(irt_thread *t);
 
 /** requests cancelation of the given thread */
-inline void irt_thread_cancel(irt_thread);
+inline void irt_thread_cancel(irt_thread*);
 
 /** makes calling thread wait for cancellation of thread t, return value of terminated thread is returned */
-inline int irt_thread_join(irt_thread t);
+inline int irt_thread_join(irt_thread *t);
 
 /** exit a thread with specified exit code */
 inline void irt_thread_exit(int exit_code);
+
+/** check if two thread objects are equal */
+bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2);
 
 
 /* SPIN LOCK FUNCTIONS ------------------------------------------------------------------- */

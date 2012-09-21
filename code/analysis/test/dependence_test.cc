@@ -41,9 +41,6 @@
 
 #include "insieme/analysis/dep_graph.h"
 
-#include "insieme/core/ir_program.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_builder.h"
 
 using namespace insieme::core;
