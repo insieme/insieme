@@ -1299,10 +1299,33 @@ namespace parser {
 					-1		// lower priority for this rule (default=0)
 			));
 
-//			// switch
-//			g.addRule("S", rule(
-//					seq("switch(", E, ") {", list(seq("case", E, ":", S)), opt(seq("default:", S)),"}")
-//			));
+			// switch
+			g.addRule("S", rule(
+					seq("switch(", E, ") {", loop(seq("case", E, ":", S)), opt(seq("default:", S)),"}"),
+					[](Context& cur)->NodePtr {
+						const auto& terms = cur.getTerms();
+
+						ExpressionPtr expr = terms[0].as<ExpressionPtr>();
+
+						vector<SwitchCasePtr> cases;
+						for(unsigned i = 1; i+1<terms.size(); i+=2) {
+							ExpressionPtr caseValue = terms[i].as<ExpressionPtr>();
+							StatementPtr caseBody = terms[i+1].as<StatementPtr>();
+
+							// check that value is a literal
+							if (!caseValue.isa<LiteralPtr>()) return NodePtr();
+
+							// add case
+							cases.push_back(cur.switchCase(caseValue.as<LiteralPtr>(), caseBody));
+						}
+
+						// get default body
+						StatementPtr defaultBody = (terms.size() % 2) ? cur.getNoOp(): terms.back().as<StatementPtr>();
+
+						// build switch and be done
+						return cur.switchStmt(expr, cases, defaultBody);
+					}
+			));
 
 
 			// while statement

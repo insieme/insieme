@@ -205,6 +205,58 @@ namespace parser {
 
 	}
 
+	TEST(IR_Parser2, SwitchStatement) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		NodePtr node;
+
+		// without default case
+		node = builder.parse(
+				"switch(3) {"
+				"	case 1: 3;"
+				"	case 2: 2;"
+				"	case 3: 1;"
+				"}"
+		);
+
+		ASSERT_TRUE(node);
+		EXPECT_EQ("switch(3) [ case 1: {3;} | case 2: {2;} | case 3: {1;} | default: {} ]", toString(*node));
+
+		// with default case
+		node = builder.parse(
+				"switch(3) {"
+				"	case 1: 3;"
+				"	case 2: 2;"
+				"	case 3: 1;"
+				"	default: 0;"
+				"}"
+		);
+
+		ASSERT_TRUE(node);
+		EXPECT_EQ("switch(3) [ case 1: {3;} | case 2: {2;} | case 3: {1;} | default: {0;} ]", toString(*node));
+
+		// default only
+		node = builder.parse(
+				"switch(3) {"
+				"	default: 0;"
+				"}"
+		);
+
+		ASSERT_TRUE(node);
+		EXPECT_EQ("switch(3) [  default: {0;} ]", toString(*node));
+
+		// with nothing
+		node = builder.parse(
+				"switch(3) {"
+				"}"
+		);
+
+		ASSERT_TRUE(node);
+		EXPECT_EQ("switch(3) [  default: {} ]", toString(*node));
+
+	}
+
 	TEST(IR_Parser2, WhileStatement) {
 		NodeManager manager;
 		IRBuilder builder(manager);
