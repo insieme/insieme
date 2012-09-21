@@ -138,6 +138,11 @@ namespace core {
 		StatementPtr parseStmt(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
 
 		/**
+		 * The same as the parse member function yet interpreting the given code as a full program.
+		 */
+		ProgramPtr parseProgram(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
+		/**
 		 * Allows lists of addresses to be parsed. This parser supports the same grammar + allows constructs to be enclosed
 		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
 		 * ordered according to the order of node-addresses (lexicographical).

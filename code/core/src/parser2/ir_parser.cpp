@@ -43,6 +43,7 @@
 
 #include "insieme/core/parser2/detail/parser.h"
 
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/encoder/lists.h"
@@ -1095,6 +1096,10 @@ namespace parser {
 						terms.erase(terms.begin());
 
 						TypePtr type = fun->getType();
+						if (analysis::isRefType(type)) {
+							fun = cur.deref(fun);
+							type = fun->getType();
+						}
 						if (type->getNodeType()!=NT_FunctionType) {
 							return fail(cur, "Calling non-function type!");
 						}
