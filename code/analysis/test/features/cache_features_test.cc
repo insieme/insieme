@@ -75,7 +75,7 @@ namespace features {
 		auto forStmt = builder.parseStmt(
 			"for(int<4> k = 0..10) {"
 			"	for(int<4> i = 0..20) {"
-			"		ref<int<4>> m = var(0);"
+			"		ref<int<4>> m = 0;"
 			"		v[i];"
 			"		for(int<4> j = 0..30) {"
 			"			v[i];"

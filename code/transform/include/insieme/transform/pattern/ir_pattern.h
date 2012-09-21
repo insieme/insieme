@@ -62,7 +62,7 @@ namespace irp {
 		return atom(a(string(code)));
 	}
 
-	inline TreePatternPtr atom(core::NodeManager& manager, string& code) {
+	inline TreePatternPtr atom(core::NodeManager& manager, const string& code) {
 		auto a = [&manager] (const string& str) {return core::parse::parseIR(manager, str); };
 		return atom(a(code));
 	}
