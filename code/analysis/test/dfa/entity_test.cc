@@ -44,7 +44,6 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
 
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/logging.h"
