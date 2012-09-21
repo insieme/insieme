@@ -42,10 +42,8 @@
 #include <unordered_map>
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/transform/pattern/pattern.h"
-#include "insieme/core/parser/ir_parse.h"
-
-#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace transform {
@@ -57,14 +55,8 @@ namespace irp {
 		return pattern::atom(node);
 	}
 
-	inline TreePatternPtr atom(core::NodeManager& manager, const char* code) {
-		auto a = [&manager] (const string& str) {return core::parse::parseIR(manager, str); };
-		return atom(a(string(code)));
-	}
-
 	inline TreePatternPtr atom(core::NodeManager& manager, const string& code) {
-		auto a = [&manager] (const string& str) {return core::parse::parseIR(manager, str); };
-		return atom(a(code));
+		return atom(core::IRBuilder(manager).parse(code));
 	}
 
 	inline TreePatternPtr wrapBody(const TreePatternPtr& body) {
