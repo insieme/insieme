@@ -949,7 +949,7 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = getOperand(cur, 0);
 						ExpressionPtr b = getOperand(cur, 1);
-						return cur.eq(a,b);
+						return cur.ne(a,b);
 					},
 					-9
 			));
