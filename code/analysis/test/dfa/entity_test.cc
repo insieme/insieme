@@ -59,7 +59,6 @@ TEST(CreateEntity, AtomicEntity) {
 	Entity<VariablePtr> e("variables");
 	EXPECT_EQ(1u,e.arity());
 
-
 }
 
 TEST(CreateEntity, CompoundEntity) {
@@ -75,12 +74,16 @@ TEST(CreateEntity, CompoundEntity) {
 TEST(EntityExtract, VariableExtractor) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto code = parser.parseStatement(
-		"for(decl int<4>:i = 10 .. 50 : 1) { "
-		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
-		"}"
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,50>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+
+    auto code = builder.parseStmt(
+		"for(int<4> i = 10 .. 50 : 1) { "
+		"	v[i+b]; "
+		"}", symbols
     );
 
     EXPECT_TRUE(code);
@@ -103,12 +106,16 @@ TEST(EntityExtract, VariableExtractor) {
 TEST(EntityExtract, ExpressionExtractor) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto code = parser.parseStatement(
-		"for(decl int<4>:i = 10 .. 50 : 1) { "
-		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
-		"}"
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+
+    auto code = builder.parseStmt(
+		"for(int<4> i = 10 .. 50 : 1) { "
+		"	v[i+b]; "
+		"}", symbols
     );
 
     EXPECT_TRUE(code);
@@ -117,7 +124,7 @@ TEST(EntityExtract, ExpressionExtractor) {
 
 	auto dom = extract(dfa::Entity<elem<ExpressionPtr>>(), *cfg);
 
-	EXPECT_EQ(12u, dom.size());
+	EXPECT_EQ(13u, dom.size());
 	EXPECT_TRUE(dfa::isBounded(dom));
 
 	// filter out all builtin literal
@@ -125,18 +132,22 @@ TEST(EntityExtract, ExpressionExtractor) {
 			return mgr.getLangBasic().isBuiltIn(cur); 
 		} );
 
-	EXPECT_EQ(10u, std::distance(twin.first, twin.second));
+	EXPECT_EQ(11u, std::distance(twin.first, twin.second));
 }
 
 TEST(EntityExtract, GenLiteralExtractor) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto code = parser.parseStatement(
-		"for(decl int<4>:i = 10 .. 50 : 1) { "
-		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
-		"}"
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+
+    auto code = builder.parseStmt(
+		"for(int<4> i = 10 .. 50 : 1) { "
+		"	v[i+b]; "
+		"}", symbols
     );
 
     EXPECT_TRUE(code);
@@ -152,12 +163,16 @@ TEST(EntityExtract, GenLiteralExtractor) {
 TEST(EntityExtract, TypeExtractor) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto code = parser.parseStatement(
-		"for(decl int<4>:i = 10 .. 50 : 1) { "
-		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
-		"}"
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+
+    auto code = builder.parseStmt(
+		"for(int<4> i = 10 .. 50 : 1) { "
+		"	v[i+b]; "
+		"}", symbols
     );
 
     EXPECT_TRUE(code);
@@ -174,12 +189,16 @@ TEST(EntityExtract, TypeExtractor) {
 TEST(CompoundEntityExtract, VariableTypeExtractor) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto code = parser.parseStatement(
-		"for(decl int<4>:i = 10 .. 50 : 1) { "
-		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
-		"}"
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+
+    auto code = builder.parseStmt(
+		"for(int<4> i = 10 .. 50 : 1) { "
+		"	v[i+b]; "
+		"}", symbols
     );
 
     EXPECT_TRUE(code);
