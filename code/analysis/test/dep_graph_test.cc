@@ -55,10 +55,10 @@ namespace dep {
 
 		auto node = builder.parseStmt(
 			"{"
-				"ref<int<4>> sum = 0;"
-				"for(uint<4> i = 10 .. 50 : 1) {"
-				"	sum = sum+1;"
-				"}; "
+			"	ref<int<4>> sum = 0;"
+			"	for(uint<4> i = 10 .. 50 : 1) {"
+			"		sum = sum+1;"
+			"	}; "
 			"}");
 
 		EXPECT_TRUE(node);
