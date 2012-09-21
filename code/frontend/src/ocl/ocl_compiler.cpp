@@ -363,14 +363,14 @@ std::cout << "Ftype: " << ftype << std::endl;
 				unsigned length = retTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 
 				std::string irCode = format(
-					"fun(vector<'a,%i> fromVec, type<'b> toElemTy) -> vector<'b,%i> { "
-					"	ref<vector<'b,%i> > toVec = var( undefined(lit(type<vector<'b, %i>>)) );"
+					"(vector<'a,%i> fromVec, type<'b> toElemTy) -> vector<'b,%i> { "
+					"	ref<vector<'b,%i> > toVec = var( undefined(lit(vector<'b,%i>)) );"
 						""
 						"for(uint<8> i = 0u .. %iu ) "
 						"	toVec[i] = ('b) fromVec[i]; "
 						""
 						"return *toVec; "
-					"}}", length, length, length, length, length, length);
+					"}", length, length, length, length, length, length);
 
 				core::ExpressionPtr irConvert = builder.parseExpr(irCode);
 						/*"fun(vector<'a,#l>:fromVec, type<'b>:toElemTy) -> vector<'b,#l> {{ "
