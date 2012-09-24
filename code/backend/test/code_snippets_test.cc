@@ -199,6 +199,7 @@ TEST(FunctionCall, TypeLiterals) {
 	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 }
 
+
 TEST(FunctionCall, RefNewCalls) {
     core::NodeManager manager;
     core::IRBuilder builder(manager);
@@ -237,6 +238,37 @@ TEST(FunctionCall, VectorExpression) {
 	EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t*)(&(__insieme_type_1){{0, 0, 0}}))");
 }
 
+
+TEST(Literals, BoolLiterals) {
+    core::NodeManager manager;
+    core::IRBuilder builder(manager);
+
+    // create a code fragment including the boolean constants
+    core::ProgramPtr program = builder.parseProgram(
+    		"int<4> main() {"
+    		"	true;"
+    		"	false;"
+    		"	return 0;"
+    		"}"
+    );
+    ASSERT_TRUE(program);
+
+    std::cout << "Program: " << *program << std::endl;
+
+    auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+    std::cout << "Converted: \n" << *converted << std::endl;
+
+    string code = toString(*converted);
+    EXPECT_PRED2(containsSubString, code, "true");
+    EXPECT_PRED2(containsSubString, code, "false");
+
+    // try compiling the code fragment
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
 
 
 } // namespace backend

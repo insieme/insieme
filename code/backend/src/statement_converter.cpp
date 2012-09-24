@@ -210,6 +210,11 @@ namespace backend {
 			return c_ast::lit(info.rValueType, "type_token");
 		}
 
+		// special handling for boolean literals
+		if (ptr.getNodeManager().getLangBasic().isBool(ptr->getType())) {
+			context.getIncludes().insert("stdbool.h");
+		}
+
 		// handle null pointer
 		if (converter.getNodeManager().getLangBasic().isNull(ptr)) {
 			return converter.getCNodeManager()->create<c_ast::Literal>("0");
