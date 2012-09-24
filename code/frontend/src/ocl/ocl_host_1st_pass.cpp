@@ -243,7 +243,7 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 
 const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, const ExpressionPtr& sizeArg, const bool copyPtr,
 		const ExpressionPtr& hostPtr, const ExpressionPtr& errcode_ret) {
-	ExpressionPtr fun = o2i.getClCreateBuffer(copyPtr);
+	ExpressionPtr fun = o2i.getClCreateBuffer(copyPtr, errcode_ret == builder.getTypeLiteral(builder.arrayType(BASIC.getInt4())));
 
 	TypePtr type;
 	ExpressionPtr size;
@@ -387,9 +387,12 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 	return false;
 }
 
-ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr) {
+ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr, bool setErrcodeRet) {
 	// read/write flags ignored
-	// errcorcode always set to 0 = CL_SUCCESS
+	// errcorcode always set to 0 = CL_SUCCESS for clCreatBuffer and ignored for icl_create_buffer
+
+	std::string returnErrorcode = setErrcodeRet ? "		errorcode_ret[0u] = 0; " : "";
+
 	if (copyHostPtr)
 		return builder.parseExpr(
 		"("
@@ -404,7 +407,7 @@ ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr) {
 		"		for(uint<8> i = 0u .. size) { "
 		"			devicePtr[i] = *hp[i]; "
 		"		} "
-		"		errorcode_ret[0u] = 0; "
+		+ returnErrorcode +
 		"		return devicePtr; "
 	 	"}");
 
@@ -415,7 +418,7 @@ ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr) {
 		"	uint<8> 				size, "
 		"	ref<array<int<4>, 1> >  errorcode_ret"
 		") -> ref<array<'a, 1> > { "
-        "	errorcode_ret[0u] = 0; "
+		+ returnErrorcode +
 		"	return new( array.create.1D( elemType, size )); "
        	"}");
 }
