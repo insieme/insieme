@@ -896,7 +896,12 @@ namespace detail {
 
 		NodePtr match(Context& context, const TokenIter& begin, const TokenIter& end) const {
 			if (pattern->match(context, begin, end)) {
-				return action(context);
+				try {
+					return action(context);
+				} catch(...) {
+					// it cannot be parsed => return null-pointer
+					return NodePtr();
+				}
 			}
 			return NodePtr();	// no result
 		}

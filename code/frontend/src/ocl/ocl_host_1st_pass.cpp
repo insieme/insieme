@@ -402,7 +402,7 @@ ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr) {
 		"		ref<array<'a,1>> devicePtr = new( array.create.1D( elemType, size ) ); "
 		"		ref<array<'a,1>> 		hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
 		"		for(uint<8> i = 0u .. size) { "
-		"			devicePtr[i] = hp[i]; "
+		"			devicePtr[i] = *hp[i]; "
 		"		} "
 		"		errorcode_ret[0u] = 0; "
 		"		return devicePtr; "
@@ -416,7 +416,7 @@ ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr) {
 		"	ref<array<int<4>, 1> >  errorcode_ret"
 		") -> ref<array<'a, 1> > { "
         "	errorcode_ret[0u] = 0; "
-		"	return new( array.create.1D( elemType, size a )); "
+		"	return new( array.create.1D( elemType, size )); "
        	"}");
 }
 
@@ -552,7 +552,7 @@ ExpressionPtr Ocl2Inspire::getClGetIDs() {
 	// TODO add functionality
 	return builder.parseExpr(
 		"(ref<array<uint<4>,1>> num_devices) -> int<4> { "
-		"	num_devices[0u] = 1; "
+		"	num_devices[0u] = 1u; "
 		"	return 0; "
 		"}");
 }

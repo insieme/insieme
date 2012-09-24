@@ -44,6 +44,7 @@
 
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/test/test_utils.h"
 
@@ -687,6 +688,19 @@ namespace parser {
 				"	p(5);"
 				"}"
 		))));
+
+	}
+
+	TEST(IR_Parser2, SizeOfBug) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		NodePtr res = builder.parseExpr(
+				"8u / sizeof(lit(uint<4>))"
+		);
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::analysis::isCallOf(res, manager.getLangBasic().getUnsignedIntDiv()));
 
 	}
 
