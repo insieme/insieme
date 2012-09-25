@@ -36,32 +36,43 @@
 
 #pragma once
 
+#include "declarations.h"
 #include "irt_lock.h"
-#include "irt_atomic.h"
+#include "abstraction/impl/threads.impl.h"
 #include "impl/irt_scheduling.impl.h"
 #include "impl/worker.impl.h"
+#include "utils/impl/minlwt.impl.h"
 
-#ifdef _MSC_VER
-	#include <Windows.h>
-#endif
-
-irt_lock* irt_lock_create() {
-	irt_lock* ret = (irt_lock*)malloc(sizeof(irt_lock));
-	ret->id = irt_generate_lock_id(IRT_LOOKUP_GENERATOR_ID_PTR);
-	ret->locked = 0;
-	return ret;
+void irt_lock_init(irt_lock* lock) {
+	irt_spin_init(&lock->mutex);
+	lock->top = NULL;
+	lock->locked = 0;
 }
 
 void irt_lock_acquire(irt_lock* lock) {
-	while(!irt_atomic_bool_compare_and_swap(&lock->locked, 0, 1)) {
-		irt_worker* cw = irt_worker_get_current();
-		//IRT_INFO("Could not acquire lock: %lu\n", cw->cur_wi->id.full);
-		irt_scheduling_yield(cw, cw->cur_wi);
+	irt_spin_lock(&lock->mutex);
+	if(lock->locked) { // suspend if locked
+		irt_worker *wo = irt_worker_get_current();
+		irt_work_item *wi = wo->cur_wi;
+		locked_wi selflocked = {wi, wo, lock->top};
+		lock->top = &selflocked;
+		irt_spin_unlock(&lock->mutex);
+		wo->cur_wi = NULL;
+		lwt_continue(&wo->basestack, &wi->stack_ptr);
+	} else { // acquire lock
+		lock->locked = 1;
 	}
-	//IRT_INFO("[[ acquired lock: %lu\n", irt_wi_get_current()->id.full);
+	irt_spin_unlock(&lock->mutex);
 }
 
 void irt_lock_release(irt_lock* lock) {
-	//IRT_INFO("]] released lock: %lu\n", irt_wi_get_current()->id.full);
-	lock->locked = 0;
+	irt_spin_lock(&lock->mutex);
+	if(lock->top) { // release a waiting task
+		locked_wi *task = lock->top;
+		lock->top = task->next;
+		irt_scheduling_continue_wi(task->worker, task->wi);
+	} else { // none waiting, lock is now unlocked
+		lock->locked = 0;
+	}
+	irt_spin_unlock(&lock->mutex);	
 }

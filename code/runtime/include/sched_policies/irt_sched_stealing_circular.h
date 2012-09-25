@@ -38,7 +38,7 @@
 
 #include "declarations.h"
 
-#define IRT_CWBUFFER_LENGTH 8
+#define IRT_CWBUFFER_LENGTH 16
 #define IRT_CWBUFFER_MASK (IRT_CWBUFFER_LENGTH-1)
 
 
