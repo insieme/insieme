@@ -539,7 +539,6 @@ int main(int argc, char** argv) {
 
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::get(manager);
-	insieme::driver::region::RegionList regions;
 	try {
 		if(!CommandLineOptions::InputFiles.empty()) {
 			auto inputFiles = CommandLineOptions::InputFiles;
@@ -596,9 +595,7 @@ int main(int argc, char** argv) {
 			}
 
 			/**************######################################################################################################***/
-			regions = insieme::driver::region::SizeBasedRegionSelector(
-					CommandLineOptions::MinRegionSize, CommandLineOptions::MaxRegionSize
-				).getRegions(program);
+
 			//cout << "\n\n******************************************************* REGIONS \n\n";
 			//for_each(regions, [](const NodeAddress& a) {
 			//	cout << "\n***** REGION \n";
@@ -644,7 +641,6 @@ int main(int argc, char** argv) {
 			//doCleanup(program);
 			//printIR(program, stmtMap);
 			//if (CommandLineOptions::Cleanup) { checkSema(program, errors, stmtMap); }
-			
 
 			// Extract features
 			if (CommandLineOptions::FeatureExtract) { featureExtract(program); }
@@ -674,6 +670,9 @@ int main(int argc, char** argv) {
 
 		if(CommandLineOptions::DoRegionInstrumentation) {
 			LOG(INFO) << "============================ Generating region instrumentation =========================";
+			insieme::driver::region::RegionList regions = insieme::driver::region::SizeBasedRegionSelector(
+					CommandLineOptions::MinRegionSize, CommandLineOptions::MaxRegionSize
+				).getRegions(program);
 
 			if (regions.empty()) {
 				LOG(INFO) << " No regions selected!";
@@ -697,7 +696,6 @@ int main(int argc, char** argv) {
 				});
 
 				program = static_pointer_cast<ProgramPtr>(transform::replaceAll(manager, replacementMap));
-
 			}
 		}
 
