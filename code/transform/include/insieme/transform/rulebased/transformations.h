@@ -369,7 +369,7 @@ namespace rulebased {
 //			// =>
 //			// compound( { _i = int_val(L),int_val(U),int_val(S) | BODY{ int_lit(_i) / V } })
 //			irg::compoundStmt(irg::forEach("_i",irg::evalInteger(g::varExpr("L")),irg::eval(g::varExpr("L")),irg::int4Value("S"), // ?? vorr: int4Value() in ir_generator.h vordefiniert
-//				irg::substitute(g::var("BODY"),irg::literal(irg::int4(),g::var("_i")),g::var("V"))))
+//				irg::substitute(g::var("BODY"),g::var("V"),irg::literal(irg::int4(),g::var("_i")))))
 //			// ------------------------------------------------------------
 //			)
 //		) {};

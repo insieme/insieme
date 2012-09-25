@@ -126,8 +126,8 @@ namespace irg {
 		return node(core::NT_Variable, single(type) << single(id));
 	}
 
-	inline TreeGeneratorPtr callExpr(const TreeGeneratorPtr& type, const TreeGeneratorPtr& function, const ListGeneratorPtr& parameters) {
-		return node(core::NT_CallExpr, type << single(function) << node(core::NT_Expressions, parameters));
+	inline TreeGeneratorPtr callExpr(const TreeGeneratorPtr& type, const TreeGeneratorPtr& function, const ListGeneratorPtr& parameters = generator::empty) {
+		return node(core::NT_CallExpr, type << single(function) << parameters);
 	}
 
 	inline TreeGeneratorPtr bindExpr(const ListGeneratorPtr& parameters, const TreeGeneratorPtr& call) {
