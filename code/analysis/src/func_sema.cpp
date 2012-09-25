@@ -37,7 +37,6 @@
 #include "insieme/analysis/func_sema.h"
 
 #include "insieme/analysis/defuse_collect.h"
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/ir_visitor.h"
@@ -386,7 +385,7 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 
 	#define FUNC(Name, Type, SideEffects, args_info...)  \
 	{\
-	core::LiteralPtr&& funcLit = builder.literal(core::parse::parseType(mgr, Type), #Name); \
+	core::LiteralPtr&& funcLit = builder.literal(core::IRBuilder(mgr).parseType(Type), #Name); \
 	/*LOG(INFO) << funcLit << " || " << funcLit->getType(); */\
 	assert(funcLit->getType()->getNodeType() == core::NT_FunctionType && "Type in function db not a function type: " #Name); \
 	FunctionSemaAnnotation::Args&& args = makeArgumentInfo({ args_info }); \

@@ -41,8 +41,6 @@
 #include "insieme/transform/polyhedral/primitives.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
-#include "insieme/core/parser/ir_parse.h"
-
 using namespace insieme::core;
 using namespace insieme::analysis;
 

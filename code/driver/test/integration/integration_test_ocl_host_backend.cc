@@ -42,7 +42,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/backend/runtime/runtime_backend.h"
+#include "insieme/backend/ocl_host/host_backend.h"
 
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/utils/test/integration_tests.h"
@@ -58,13 +58,13 @@
 
 namespace insieme {
 
-	// ---------------------------------- Check the runtime backend -------------------------------------
+	// ---------------------------------- Check the ocl host backend -------------------------------------
 
 	// the type definition (specifying the parameter type)
-	class RuntimeBackendIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+	class OCLHostBackendIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
 
 	// define the test case pattern
-	TEST_P(RuntimeBackendIntegrationTest, CompileableCode) {
+	TEST_P(OCLHostBackendIntegrationTest, CompileableCode) {
 		core::NodeManager manager;
 
 		// obtain test case
@@ -74,8 +74,8 @@ namespace insieme {
 		LOG(INFO) << "Testing Case: " + testCase.getName();
 
 		// skip OpenCL tests
-		if (testCase.isEnableOpenCL()) {
-			LOG(INFO) << "Skipping OpenCL tests ...";
+		if (!testCase.isEnableOpenCL()) {
+			LOG(INFO) << "Skipping non-OpenCL tests ...";
 			return;
 		}
 	
@@ -84,20 +84,19 @@ namespace insieme {
 
 
 		// create target code using the runtime backend
-		auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
+		auto target = backend::ocl_host::OCLHostBackend::getDefault()->convert(code);
 
 		// see whether target code can be compiled
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
-//		// add OCL specific compiler flags
-//		compiler.addFlag("-lOpenCL");
-//		compiler.addFlag("-lm");
-//		compiler.addFlag("-I$OPENCL_ROOT/include");
-//		compiler.addFlag("-L$OPENCL_ROOT/lib/x86_64");
-//		compiler.addFlag("-DUSE_OPENCL=ON");
-//		compiler.addFlag("-D_POSIX_C_SOURCE=199309");
+		// add OCL specific compiler flags
+		compiler.addFlag("-lOpenCL");
+		compiler.addFlag("-I$OPENCL_ROOT/include");
+		compiler.addFlag("-L$OPENCL_ROOT/lib/x86_64");
+		compiler.addFlag("-DUSE_OPENCL=ON");
+		compiler.addFlag("-D_POSIX_C_SOURCE=199309");
 
-		// add extra compiler flags from test case
+		// add extra compiler flags
 		for(const auto& flag : testCase.getCompilerArguments()) {
 			compiler.addFlag(flag);
 		}
@@ -106,6 +105,6 @@ namespace insieme {
 	}
 
 	// instantiate the test case
-	INSTANTIATE_TEST_CASE_P(RuntimeBackendIntegrationCheck, RuntimeBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+	INSTANTIATE_TEST_CASE_P(OCLHostBackendIntegrationCheck, OCLHostBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 }

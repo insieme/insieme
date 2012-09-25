@@ -297,17 +297,21 @@ using namespace insieme::transform::pattern;
 			core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
 
 			// collect parameters to be captured by the job
-			vector<core::VariablePtr> capturedVars = getVariablesToBeCaptured(job);
 
 			// add local declarations
 			core::TypeList list;
+			core::VariableSet jobLocalVars;
 			core::ExpressionList capturedValues;
 			utils::map::PointerMap<core::VariablePtr, unsigned> varIndex;
 			for_each(job->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& cur) {
 				varIndex.insert(std::make_pair(cur->getVariable(), list.size()));
 				list.push_back(cur->getVariable()->getType());
+				jobLocalVars.insert(cur->getVariable());
 				capturedValues.push_back(cur->getInitialization());
 			});
+
+			// and captured variables
+			vector<core::VariablePtr> capturedVars = getVariablesToBeCaptured(job, jobLocalVars);
 			for_each(capturedVars, [&](const core::VariablePtr& cur) {
 				varIndex.insert(std::make_pair(cur, list.size()));
 				list.push_back(cur->getType());
@@ -467,9 +471,10 @@ using namespace insieme::transform::pattern;
 				core::ExpressionPtr max = range.max;
 				core::ExpressionPtr mod = range.mod;
 
+				// creates a list of work-item implementations and the work item data record to be passed along
 				auto info = wrapJob(manager, job);
-				core::ExpressionPtr wi = coder::toIR(manager, info.first);
-				core::ExpressionPtr data = info.second;
+				core::ExpressionPtr wi = coder::toIR(manager, info.first);		// the implementation list
+				core::ExpressionPtr data = info.second;							// the work item data record to be passed
 
 				// create call to job constructor
 				return builder.callExpr(ext.jobType, ext.createJob, toVector(min,max,mod, wi, data));

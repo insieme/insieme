@@ -44,6 +44,9 @@
 
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/analysis/ir_utils.h"
+
+#include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
 namespace core {
@@ -200,6 +203,58 @@ namespace parser {
 				builder.ifStmt(cond_true, builder.ifStmt(cond_false, builder.compoundStmt(a,b), b)),
 				parse(manager, "if(true) if(false) { 1; 2; } else 2;")
 		);
+
+	}
+
+	TEST(IR_Parser2, SwitchStatement) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		NodePtr node;
+
+		// without default case
+		node = builder.parse(
+				"switch(3) {"
+				"	case 1: 3;"
+				"	case 2: 2;"
+				"	case 3: 1;"
+				"}"
+		);
+
+		ASSERT_TRUE(node);
+		EXPECT_EQ("switch(3) [ case 1: {3;} | case 2: {2;} | case 3: {1;} | default: {} ]", toString(*node));
+
+		// with default case
+		node = builder.parse(
+				"switch(3) {"
+				"	case 1: 3;"
+				"	case 2: 2;"
+				"	case 3: 1;"
+				"	default: 0;"
+				"}"
+		);
+
+		ASSERT_TRUE(node);
+		EXPECT_EQ("switch(3) [ case 1: {3;} | case 2: {2;} | case 3: {1;} | default: {0;} ]", toString(*node));
+
+		// default only
+		node = builder.parse(
+				"switch(3) {"
+				"	default: 0;"
+				"}"
+		);
+
+		ASSERT_TRUE(node);
+		EXPECT_EQ("switch(3) [  default: {0;} ]", toString(*node));
+
+		// with nothing
+		node = builder.parse(
+				"switch(3) {"
+				"}"
+		);
+
+		ASSERT_TRUE(node);
+		EXPECT_EQ("switch(3) [  default: {} ]", toString(*node));
 
 	}
 
@@ -636,6 +691,19 @@ namespace parser {
 
 	}
 
+	TEST(IR_Parser2, SizeOfBug) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		NodePtr res = builder.parseExpr(
+				"8u / sizeof(lit(uint<4>))"
+		);
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::analysis::isCallOf(res, manager.getLangBasic().getUnsignedIntDiv()));
+
+	}
+
 	TEST(IR_Parser2, ParseAddresses) {
 		NodeManager manager;
 		IRBuilder builder(manager);
@@ -754,6 +822,32 @@ namespace parser {
 		EXPECT_EQ("v1", toString(*list[3].getAddressedNode()));
 		EXPECT_EQ(core::NT_Variable, list[3]->getNodeType());
 	}
+
+//	TEST(IR_Parser2_ErrorReporting, If) {
+//		NodeManager manager;
+//		IRBuilder builder(manager);
+//
+//		try {
+//			// parse something that is faulty
+//			builder.parseStmt(
+//					"{"
+//					"	int<4> a = 4;"
+//					"	if (true) {"
+//					"		some shit"
+//					"	}"
+//					"}"
+//			);
+//		} catch(const IRParserException& ipe) {
+//
+//			// inspect error report
+//			EXPECT_PRED2(notContainsSubString, ipe.getMessage(), "if ( true ) { some shit }");
+//			EXPECT_PRED2(containsSubString, ipe.getMessage(), "if ( true ) { some shit }");
+//
+//			return;
+//		}
+//
+//		FAIL() << "An exception should have been raised!";
+//	}
 
 } // end namespace parser2
 } // end namespace core

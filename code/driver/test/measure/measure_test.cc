@@ -47,7 +47,6 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
@@ -126,11 +125,15 @@ namespace measure {
 
 		// create a small example code fragment
 		NodeManager manager;
-		StatementPtr stmt = parse::parseStatement(manager,"{"
-			"decl ref<int<4>>:sum = (op<ref.var>(0));"
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	(sum = ((op<ref.deref>(sum))+1));"
-			"};}");
+		IRBuilder builder(manager);
+		StatementPtr stmt = builder.parseStmt(
+				"{"
+				"	ref<int<4>> sum = var(0);"
+				"	for(uint<4> i = 10 .. 50 : 1) {"
+				"		sum = sum + 1;"
+				"	}"
+				"}"
+		);
 
 		EXPECT_TRUE(stmt);
 
@@ -153,11 +156,14 @@ namespace measure {
 		auto& basic = manager.getLangBasic();
 		IRBuilder builder(manager);
 
-		StatementPtr stmt = parse::parseStatement(manager,"{"
-			"decl ref<int<4>>:sum = (op<ref.var>(0));"
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	(sum = ((op<ref.deref>(sum))+1));"
-			"};}");
+		StatementPtr stmt = builder.parseStmt(
+				"{"
+				"	ref<int<4>> sum = var(0);"
+				"	for(uint<4> i = 10 .. 50 : 1) {"
+				"		sum = sum + 1;"
+				"	}"
+				"}"
+		);
 
 		EXPECT_TRUE(stmt);
 
@@ -235,11 +241,15 @@ namespace measure {
 
 		// create a small example code fragment
 		NodeManager manager;
-		StatementPtr stmt = parse::parseStatement(manager,"{"
-			"decl ref<int<4>>:sum = (op<ref.var>(0));"
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	(sum = ((op<ref.deref>(sum))+1));"
-			"};}");
+		IRBuilder builder(manager);
+		StatementPtr stmt = builder.parseStmt(
+				"{"
+				"	ref<int<4>> sum = var(0);"
+				"	for(uint<4> i = 10 .. 50 : 1) {"
+				"		sum = sum + 1;"
+				"	}"
+				"}"
+		);
 
 		EXPECT_TRUE(stmt);
 
@@ -274,11 +284,15 @@ namespace measure {
 
 		// create a small example code fragment
 		NodeManager manager;
-		StatementPtr stmt = parse::parseStatement(manager,"{"
-			"decl ref<int<4>>:sum = (op<ref.var>(0));"
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	(sum = ((op<ref.deref>(sum))+1));"
-			"};}");
+		IRBuilder builder(manager);
+		StatementPtr stmt = builder.parseStmt(
+				"{"
+				"	ref<int<4>> sum = var(0);"
+				"	for(uint<4> i = 10 .. 50 : 1) {"
+				"		sum = sum + 1;"
+				"	}"
+				"}"
+		);
 
 		EXPECT_TRUE(stmt);
 
@@ -308,11 +322,15 @@ namespace measure {
 
 		// create a small example code fragment
 		NodeManager manager;
-		StatementPtr stmt = parse::parseStatement(manager,"{"
-			"decl ref<int<4>>:sum = (op<ref.var>(0));"
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	(sum = ((op<ref.deref>(sum))+1));"
-			"};}");
+		IRBuilder builder(manager);
+		StatementPtr stmt = builder.parseStmt(
+				"{"
+				"	ref<int<4>> sum = var(0);"
+				"	for(uint<4> i = 10 .. 50 : 1) {"
+				"		sum = sum + 1;"
+				"	}"
+				"}"
+		);
 
 		EXPECT_TRUE(stmt);
 
@@ -362,22 +380,26 @@ namespace measure {
 
 		// create a small example code fragment
 		NodeManager manager;
-		StatementPtr stmt = parse::parseStatement(manager,"{"
-			"decl ref<int<4>>:sum = (op<ref.var>(0));"
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	for(decl uint<4>:j = 0 .. 80 : 1) {"
-			"		(sum = ((op<ref.deref>(sum))+1));"
-			"	};"
-			"	for(decl uint<4>:k = 0 .. 160 : 1) {"
-			"		(sum = ((op<ref.deref>(sum))+1));"
-			"	};"
-			"	for(decl uint<4>:m = 0 .. 240 : 1) {"
-			"		(sum = ((op<ref.deref>(sum))+1));"
-			"	};"
-			"	for(decl uint<4>:n = 0 .. 320 : 1) {"
-			"		(sum = ((op<ref.deref>(sum))+1));"
-			"	};"
-			"};}");
+		IRBuilder builder(manager);
+		StatementPtr stmt = builder.parseStmt(
+				"{"
+				"	ref<int<4>> sum = var(0);"
+				"	for(uint<4> i = 10 .. 50 : 1) {"
+				"		for(uint<4> j = 0 .. 80 : 1) {"
+				"			sum = sum + 1;"
+				"		}"
+				"		for(uint<4> k = 0 .. 160 : 1) {"
+				"			sum = sum + 1;"
+				"		}"
+				"		for(uint<4> m = 0 .. 240 : 1) {"
+				"			sum = sum + 1;"
+				"		}"
+				"		for(uint<4> n = 0 .. 320 : 1) {"
+				"			sum = sum + 1;"
+				"		}"
+				"	}"
+				"}"
+		);
 
 		EXPECT_TRUE(stmt);
 
@@ -452,11 +474,15 @@ namespace measure {
 
 		// create a small example code fragment
 		NodeManager manager;
-		StatementPtr stmt = parse::parseStatement(manager,"{"
-			"decl ref<int<4>>:sum = (op<ref.var>(0));"
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	(sum = ((op<ref.deref>(sum))+1));"
-			"};}");
+		IRBuilder builder(manager);
+		StatementPtr stmt = builder.parseStmt(
+				"{"
+				"	ref<int<4>> sum = var(0);"
+				"	for(uint<4> i = 10 .. 50 : 1) {"
+				"		sum = sum + 1;"
+				"	}"
+				"}"
+		);
 
 		EXPECT_TRUE(stmt);
 
@@ -504,11 +530,15 @@ namespace measure {
 //
 //		// create a small example code fragment
 //		NodeManager manager;
-//		StatementPtr stmt = parse::parseStatement(manager,"{"
-//			"decl ref<int<4>>:sum = (op<ref.var>(0));"
-//			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-//			"	(sum = ((op<ref.deref>(sum))+1));"
-//			"};}");
+//		IRBuilder builder(manager);
+//		StatementPtr stmt = builder.parseStmt(
+//				"{"
+//				"	ref<int<4>> sum = var(0);"
+//				"	for(uint<4> i = 10 .. 50 : 1) {"
+//				"		sum = sum + 1;"
+//				"	}"
+//				"}"
+//		);
 //
 //		EXPECT_TRUE(stmt);
 //
@@ -528,11 +558,15 @@ namespace measure {
 //
 //		// create a small example code fragment
 //		NodeManager manager;
-//		StatementPtr stmt = parse::parseStatement(manager,"{"
-//			"decl ref<int<4>>:sum = (op<ref.var>(0));"
-//			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-//			"	(sum = ((op<ref.deref>(sum))+1));"
-//			"};}");
+//		IRBuilder builder(manager);
+//		StatementPtr stmt = builder.parseStmt(
+//				"{"
+//				"	ref<int<4>> sum = var(0);"
+//				"	for(uint<4> i = 10 .. 50 : 1) {"
+//				"		sum = sum + 1;"
+//				"	}"
+//				"}"
+//		);
 //
 //		EXPECT_TRUE(stmt);
 //

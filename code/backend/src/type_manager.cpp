@@ -841,9 +841,14 @@ namespace backend {
 			// produce external type
 			res->externalType = c_ast::ptr(subType->externalType);
 
-			// special handling of references to vectors and arrays (implicit pointer in C)
-			if (elementNodeType == core::NT_ArrayType || elementNodeType == core::NT_VectorType) {
+			// special handling of references to arrays (always pointer in C)
+			if (elementNodeType == core::NT_ArrayType) {
 				res->externalType = subType->externalType;
+			}
+
+			// special handling of references to vectors (implicit pointer in C)
+			if (elementNodeType == core::NT_VectorType) {
+				res->externalType = c_ast::ptr(resolveType(ptr->getElementType().as<core::VectorTypePtr>()->getElementType())->externalType);
 			}
 
 			// add externalization operators
@@ -863,11 +868,11 @@ namespace backend {
 
 			// special treatment for exporting vectors
 			if (elementNodeType == core::NT_VectorType) {
-				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+				res->externalize = [res,subType](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					// special treatment for literals (e.g. string literals)
 					if (node->getNodeType() == c_ast::NT_Literal && static_pointer_cast<const c_ast::Literal>(node)->value[0] == '\"') return node;
-					// generated code: ((externalName)X.data)
-					return c_ast::access(c_ast::parenthese(c_ast::deref(node)), manager->create("data"));
+					// generated code: ((elementName*)X)
+					return c_ast::cast(res->externalType, node);
 				};
 				res->internalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					// generate initializser: (arraytype){node}

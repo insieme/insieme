@@ -41,7 +41,7 @@
 // lookup table sizes
 #define IRT_CONTEXT_LT_BUCKETS 7
 #define IRT_DATA_ITEM_LT_BUCKETS 97
-#define IRT_EVENT_LT_BUCKETS /*65536*/ 64567 /*97*/ /*7207301*/
+#define IRT_EVENT_LT_BUCKETS /*65536*/ /*64567*/ 97 /*7207301*/
 
 // scheduling policy
 #define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC

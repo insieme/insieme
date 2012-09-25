@@ -549,6 +549,12 @@ namespace backend {
 		});
 
 		res[basic.getArrayRefElem1D()] = OP_CONVERTER({
+			// add dependency to element type
+			core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType()); \
+			elementType = elementType.as<core::ArrayTypePtr>()->getElementType(); \
+			const TypeInfo& info = GET_TYPE_INFO(elementType); \
+			context.getDependencies().insert(info.definition);
+
 			// generated code &(X[Y])
 			return c_ast::ref(c_ast::subscript(CONVERT_ARG(0), CONVERT_ARG(1)));
 		});

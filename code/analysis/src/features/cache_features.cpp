@@ -40,6 +40,7 @@
 #include "insieme/utils/lua/lua.h"
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/numeric_cast.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_visitor.h"
@@ -651,6 +652,12 @@ namespace features {
 					return core::arithmetic::toIR(manager, getMemoryLocation(cur));
 				}
 
+				// remove type extensions form integer literals
+				if (cur->getNodeType() == core::NT_Literal && basic.isInt(cur->getType())) {
+					std::cout << "Converting " << cur << " into " << builder.literal(cur->getType(), format("%d", utils::numeric_cast<int>(cur.as<core::LiteralPtr>()->getStringValue()))) << "\n";
+					return builder.literal(cur->getType(), format("%d", utils::numeric_cast<int>(cur.as<core::LiteralPtr>()->getStringValue())));
+				}
+
 				// all the rest is what it is
 				return cur;
 
@@ -828,7 +835,7 @@ namespace features {
 					return builder.declarationStmt(var, builder.callExpr(intType, fresh_mem_location));
 				}
 
-				return decl;
+				return builder.declarationStmt(decl->getVariable(), processExpression(init));
 			}
 
 

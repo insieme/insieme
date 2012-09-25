@@ -36,9 +36,9 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/parser/ir_parse.h"
-
 #include "insieme/analysis/features/code_feature_catalog.h"
+
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace analysis {
@@ -55,24 +55,23 @@ using namespace core;
 
 	TEST(CodeFeatureCatalog, Extracting) {
 		NodeManager mgr;
-		parse::IRParser parser(mgr);
+		IRBuilder builder(mgr);
+
+		std::map<std::string, NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 
 		// load some code sample ...
-		auto stmt = parser.parseStatement(""
-				"for(decl uint<4>:i = 10 .. 50 : 1) {"
-				"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i));"
-				"	for(decl uint<4>:j = 5 .. 25 : 1) {"
-				"		if ( (j < 10 ) ) {"
-				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-				"		} else {"
-				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
-				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
-				"		};"
-				"	};"
-				"}");
-
-
+		auto stmt = builder.parseStmt(
+			"for(uint<4> i = 10u .. 50u : 1u) {"
+			"	v[i];"
+			"	for(uint<4> j = 5u .. 25u : 1u) {"
+			"		if ( j < 10u ) {"
+			"			v[i+j]; v[i+j];"
+			"		} else {"
+			"			v[i-j]; v[i-j];"
+			"		};"
+			"	};"
+			"}", symbols);
 
 		FeatureCatalog	catalog = getFullCodeFeatureCatalog();
 		catalog.addAll(features::getFullCodeFeatureCatalog());
@@ -86,14 +85,14 @@ using namespace core;
 		features.push_back(catalog.getFeature("SCF_NUM_variables_lambda_static"));     // 4
 		features.push_back(catalog.getFeature("SCF_NUM_branches_lambda_real"));        // 5
 
-		std::vector<features::Value> values = analysis::features::extractFrom(stmt, features);
+		std::vector<features::Value> values = features::extractFrom(stmt, features);
 
-		EXPECT_EQ(1600,  analysis::features::getValue<double>(values.at(0)));
-		EXPECT_EQ(5,     analysis::features::getValue<double>(values.at(1)));
-		EXPECT_EQ(0,     analysis::features::getValue<double>(values.at(2)));
-		EXPECT_EQ(40100, analysis::features::getValue<double>(values.at(3)));
-		EXPECT_EQ(17,    analysis::features::getValue<double>(values.at(4)));
-		EXPECT_EQ(800,   analysis::features::getValue<double>(values.at(5)));
+		EXPECT_EQ(1600,  features::getValue<double>(values.at(0)));
+		EXPECT_EQ(5,     features::getValue<double>(values.at(1)));
+		EXPECT_EQ(0,     features::getValue<double>(values.at(2)));
+		EXPECT_EQ(40100, features::getValue<double>(values.at(3)));
+		EXPECT_EQ(17,    features::getValue<double>(values.at(4)));
+		EXPECT_EQ(800,   features::getValue<double>(values.at(5)));
 	}
 
 } // end namespace features

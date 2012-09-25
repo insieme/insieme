@@ -495,7 +495,7 @@ OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const Declara
 	TypePtr variableType = declaration->getVariable()->getType();
 	TypePtr initType = declaration->getInitialization()->getType();
 
-	if (*variableType != *initType) {
+	if (!isSubTypeOf(initType, variableType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_INITIALIZATION_EXPR,
 						format("Invalid type of initial value - expected: \n%s, actual: \n%s",
@@ -544,7 +544,7 @@ OptionalMessageList ForStmtTypeCheck::visitForStmt(const ForStmtAddress& address
 		return res;
 	}
 
-	if (*iteratorType != *node->getEnd().getType()) {
+	if (!isSubTypeOf(node->getEnd().getType(), iteratorType)) {
 		add(res, Message(address,
 			EC_TYPE_INVALID_BOUNDARY_TYPE,
 			format("Invalid type of upper loop boundary - expected: %s, actual: %s\n",
@@ -553,7 +553,7 @@ OptionalMessageList ForStmtTypeCheck::visitForStmt(const ForStmtAddress& address
 			Message::ERROR));
 	}
 
-	if (*iteratorType != *node->getStep().getType()) {
+	if (!isSubTypeOf(node->getStep().getType(), iteratorType)) {
 		add(res, Message(address,
 			EC_TYPE_INVALID_BOUNDARY_TYPE,
 			format("Invalid type of step size - expected: %s, actual: %s\n",

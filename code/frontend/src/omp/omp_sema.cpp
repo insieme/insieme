@@ -47,7 +47,6 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/analysis/attributes.h"
-#include "insieme/core/parser/type_parse.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -469,7 +468,7 @@ protected:
 
 	NodePtr markUnordered(const NodePtr& node) {
 		auto& attr = nodeMan.getLangExtension<core::analysis::AttributeExtension>();
-		auto printfNodePtr = build.literal("printf", core::parse::parseType(nodeMan, "(ref<array<char,1> >, var_list) -> int<4>"));
+		auto printfNodePtr = build.literal("printf", build.parseType("(ref<array<char,1> >, var_list) -> int<4>"));
 		return transform::replaceAll(nodeMan, node, printfNodePtr, core::analysis::addAttribute(printfNodePtr, attr.getUnordered()));
 	}
 	

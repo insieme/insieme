@@ -39,7 +39,6 @@
 #include "insieme/analysis/features/code_features.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -54,18 +53,17 @@ namespace features {
 
 	TEST(FeatureAggregation, Basic) {
 		NodeManager mgr;
-		parse::IRParser parser(mgr);
+		IRBuilder builder(mgr);
 		auto& basic = mgr.getLangBasic();
 
 		// load some code sample ...
-		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-				"for(decl int<4>:i = 10 .. 50 : 1) {"
-				"	(i%1);"
-				"	for(decl int<4>:j = 5 .. 25 : 1) {"
-				"       (i%j);"
-				"	};"
-				"}") );
-
+		auto forStmt = builder.parseStmt(
+				"for( int<4> i = 10 .. 50 : 1) {"
+				"	i%1;"
+				"	for(int<4> j = 5 .. 25 : 1) {"
+				"       i%j;"
+				"	}"
+				"}").as<ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 

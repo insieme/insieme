@@ -39,7 +39,6 @@
 #include "insieme/transform/filter/filter.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
 
@@ -54,14 +53,19 @@ namespace filter {
 	TEST(TargetFilter, Basic) {
 
 		core::NodeManager manager;
-		core::NodePtr node = core::parse::parseStatement(manager,""
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	for(decl uint<4>:j = 3 .. 25 : 1) {"
-			"		for(decl uint<4>:k = 2 .. 100 : 1) {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"		};"
-			"	};"
-			"}");
+		core::IRBuilder builder(manager);
+
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+
+		auto node = builder.parseStmt(
+			"for(uint<4> i = 10u .. 50u ) {"
+			"	for(uint<4> j = 3u .. 25u) {"
+			"		for(uint<4> k = 2u .. 100u) {"
+			"			v[i+j];"
+			"		}"
+			"	}"
+			"}", symbols).as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(node);
 
@@ -83,16 +87,21 @@ namespace filter {
 	TEST(TargetFilter, AllMatches) {
 
 		core::NodeManager manager;
-		core::NodePtr node = core::parse::parseStatement(manager,""
-			"for(decl uint<4>:l = 8 .. 70 : 3) {"
-			"	for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"		for(decl uint<4>:j = 3 .. 25 : 1) {"
-			"			for(decl uint<4>:k = 2 .. 100 : 1) {"
-			"				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"			};"
-			"		};"
-			"	};"
-			"}");
+		
+		core::IRBuilder builder(manager);
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+
+		auto node = builder.parseStmt(
+			"for(uint<4> l = 8u .. 70u) {"
+			"	for(uint<4> i = 10u .. 50u) {"
+			"		for(uint<4> j = 3u .. 25u) {"
+			"			for(uint<4> k = 2u .. 100u) {"
+			"				v[i+j];"
+			"			}"
+			"		}"
+			"	}"
+			"}", symbols);
 
 		EXPECT_TRUE(node);
 
