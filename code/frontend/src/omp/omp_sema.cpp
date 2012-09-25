@@ -607,7 +607,7 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 			// add initialization for collected global locks
 			for(NamedValuePtr& val : collectedGlobals) {
 				if(analysis::isRefOf(val->getValue(), resultStorage.getLangBasic().getLock())) {
-					auto initCall = build.initLock(build.accessMember(globalDecl->getVariable(), val->getName()));
+					auto initCall = build.initLock(build.refMember(globalDecl->getVariable(), val->getName()));
 					result = transform::insertAfter(resultStorage, DeclarationStmtAddress::find(globalDecl, result), initCall).as<ProgramPtr>();
 				}
 			}
