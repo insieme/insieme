@@ -200,6 +200,40 @@ TEST(FunctionCall, TypeLiterals) {
 }
 
 
+TEST(FunctionCall, GenericFunctionAndTypeLiteral) {
+    core::NodeManager manager;
+    core::IRBuilder builder(manager);
+
+    // create a function accepting a type literal
+
+    core::ProgramPtr program = builder.parseProgram(
+    		"int<4> main() {"
+    		"	(ref<array<'a,1>> data)->uint<8> {"
+    		"		return sizeof(lit('a));"
+    		"	} (get.null(lit(array<real<4>,1>)));"
+    		"	return 0;"
+    		"}"
+    );
+    ASSERT_TRUE(program);
+
+    std::cout << "Program: " << *program << std::endl;
+
+    auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+    std::cout << "Converted: \n" << *converted << std::endl;
+
+    string code = toString(*converted);
+    EXPECT_PRED2(notContainsSubString, code, "<?>");
+    EXPECT_PRED2(containsSubString, code, "sizeof(float)");
+
+    // try compiling the code fragment
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
+
+
 TEST(FunctionCall, RefNewCalls) {
     core::NodeManager manager;
     core::IRBuilder builder(manager);
