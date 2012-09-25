@@ -126,6 +126,16 @@ namespace transform {
 					return core::transform::tryInlineToStmt(manager, builder.callExpr(basic.getUnit(), args[4], start, end, step));
 				}
 
+				// handle thread group id
+				if (basic.isGetThreadId(fun)) {
+					return builder.intLit(0);
+				}
+
+				// and finally the thread group size
+				if (basic.isGetGroupSize(fun)) {
+					return builder.intLit(1);
+				}
+
 				// check whether synchronization operations should be eliminated
 				if (!removeSyncOps) {
 					return call;
@@ -135,16 +145,6 @@ namespace transform {
 				if (basic.isBarrier(fun)) {
 					// => can be ignored
 					return builder.getNoOp();
-				}
-
-				// handle thread group id
-				if (basic.isGetThreadId(fun)) {
-					return builder.intLit(0);
-				}
-
-				// and finally the thread group size
-				if (basic.isGetGroupSize(fun)) {
-					return builder.intLit(1);
 				}
 
 				// handle flush
@@ -186,6 +186,7 @@ namespace transform {
 				// otherwise, don't touch it
 				return call;
 			}
+
 
 			ExpressionPtr handleJobExpr(const JobExprPtr& job) {
 
@@ -243,8 +244,17 @@ namespace transform {
 
 			StatementPtr visitStatement(const StatementPtr& curStmt) {
 
+				// start with current statement
+				StatementPtr stmt = curStmt;
+
+				// testing whether job can be converted into a parallel loop
+				if (stmt->getNodeType() == NT_JobExpr) {
+					stmt = toPFor(stmt.as<JobExprPtr>());	// try converting job into a parallel loop
+					if (!stmt) stmt = curStmt;				// on failure, undo step
+				}
+
 				// start by resolve stmt recursively
-				StatementPtr stmt = curStmt->substitute(manager, *this);
+				stmt = stmt->substitute(manager, *this);
 
 				// eliminate parallel constructs if necessary
 				if (stmt->getNodeType() == NT_CallExpr) {

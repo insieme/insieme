@@ -1109,7 +1109,294 @@ LambdaExprPtr correctRecursiveLambdaVariableUsage(NodeManager& manager, const La
 
 }
 
+namespace {
 
+
+//			ExpressionPtr processAsLoop(const JobExprPtr& job) {
+//				ExpressionPtr fail;
+//
+//				// there must not be any guards
+//				if (!job->getGuardedExprs().empty()) return fail;
+//
+//				// a job can be converted into a loop if there are no collective operations within the body
+//				ExpressionPtr branch = job->getDefaultExpr();
+//
+//				auto& basic = job->getNodeManager().getLangBasic();
+//				bool loopable = visitDepthFirstInterruptible(
+//						[&](const CallExprPtr& cur) {
+//							return basic.isPFor(cur->getFunctionExpr()) || basic.isRedistribute(cur->getFunctionExpr());
+//						}, true, false);
+//
+//				if (!loopable) return fail;
+//
+//				// convert into a loop
+//
+//			}
+
+	/**
+	 * A class re-writing the body of a job expression into a pfor body.
+	 *
+	 * The main problem here is to replace getThreadID() and getGroupSize() with variables
+	 * representing the loop boundaries.
+	 */
+	class JobBodyToPForBodyConverter : public CachedNodeMapping {
+
+		VariablePtr iterator;
+
+		VariablePtr numIterations;
+
+		bool forwardIterator;
+
+		bool forwardNumIterations;
+
+		int parallelNestingLevel;
+
+	public:
+
+		JobBodyToPForBodyConverter(const VariablePtr& iterator, const VariablePtr& numIterations)
+			: iterator(iterator), numIterations(numIterations), forwardIterator(false), forwardNumIterations(false), parallelNestingLevel(0) {}
+
+		ExpressionPtr rewriteBody(const ExpressionPtr& body) {
+			forwardIterator = false;
+			forwardNumIterations = false;
+			parallelNestingLevel = 0;
+			return body->substitute(body->getNodeManager(), *this);
+		}
+
+	private:
+
+		const LambdaExprPtr resolveLambda(const LambdaExprPtr& lambda) {
+
+			// back up forward flags
+			bool backupIterator = forwardIterator;
+			bool backupNumIterations = forwardNumIterations;
+
+			// apply conversion
+			LambdaExprPtr res = lambda->substitute(lambda->getNodeManager(), *this).as<LambdaExprPtr>();
+
+			// test whether iterators need to be forwarded
+			if (forwardIterator || forwardNumIterations) {
+
+				assert(!res->isRecursive() && "Not yet supported for recursive functions!");
+
+				// update parameter list
+				VariableList params = res->getParameterList().getElements();
+				if (forwardIterator) {
+					params.push_back(iterator);
+				}
+				if (forwardNumIterations) {
+					params.push_back(numIterations);
+				}
+
+				// build new lambda expression
+				res = IRBuilder(res->getNodeManager()).lambdaExpr(
+						res->getFunctionType()->getReturnType(),
+						res->getBody(),
+						params
+				);
+			}
+
+			// restore state
+			forwardIterator = backupIterator;
+			forwardNumIterations = backupNumIterations;
+
+			// done
+			return res;
+		}
+
+		const JobExprPtr resolveJob(const JobExprPtr& job) {
+			// just rais and reduce nesting level
+			parallelNestingLevel++;
+			JobExprPtr res = job->substitute(job->getNodeManager(), *this);
+			parallelNestingLevel--;
+			return res;
+		}
+
+		int getNestingLevel(const ExpressionPtr& level) {
+			try {
+				arithmetic::Formula f = arithmetic::toFormula(level);
+				if (f.isInteger()) {
+					return f.getConstantValue().getNumerator();
+				}
+			} catch (const arithmetic::NotAFormulaException& nfe) {
+				// can happen
+			}
+			// TODO: raise an exception
+			return -1;	// it is unknown can not be supported
+		}
+
+		virtual const NodePtr resolveElement(const NodePtr& ptr) {
+
+			// skip types
+			if (ptr->getNodeCategory() == NC_Type) return ptr;
+
+			// handle lambda expressions by potentially adding parameters to function
+			if (ptr->getNodeType() == NT_LambdaExpr) {
+				return resolveLambda(ptr.as<LambdaExprPtr>());
+			}
+
+			// handle job expressions
+			if (ptr->getNodeType() == NT_JobExpr) {
+				return resolveJob(ptr.as<JobExprPtr>());
+			}
+
+			// resolve recursively
+			NodeManager& mgr = ptr->getNodeManager();
+			NodePtr res = ptr->substitute(mgr, *this);
+
+			// intercept calls to get-thread-id and get-group-size
+			if (res->getNodeType() != NT_CallExpr) {
+				return res;
+			}
+
+			// handle calls to modified functions
+			CallExprPtr call = res.as<CallExprPtr>();
+			if (call->getFunctionExpr() != ptr.as<CallExprPtr>()->getFunctionExpr()) {
+				assert(call->getFunctionExpr()->getNodeType() == NT_LambdaExpr);
+				ParametersPtr params = call->getFunctionExpr().as<LambdaExprPtr>()->getParameterList();
+
+				// build up new argument set
+				ExpressionList args = call->getArguments();
+				assert(params.size() - args.size() <= 2 && params.size() > args.size());
+
+
+				if (params.size() - args.size() == 2) {
+					forwardIterator = true;
+					args.push_back(iterator);
+					forwardNumIterations = true;
+					args.push_back(numIterations);
+				} else {
+					assert(params.size() - args.size() == 1);
+					ExpressionPtr param = *(params.end() - 1);
+					if (param == iterator) {
+						forwardIterator = true;
+						args.push_back(iterator);
+					} else {
+						forwardNumIterations = true;
+						args.push_back(numIterations);
+					}
+				}
+
+				// build substituting call expression
+				return IRBuilder(mgr).callExpr(call->getType(), call->getFunctionExpr(), args);
+			}
+
+			// handle function symbols
+			if (analysis::isCallOf(call, mgr.getLangBasic().getGetThreadId())) {
+				if (getNestingLevel(call->getArgument(0)) == parallelNestingLevel) {
+					forwardIterator = true;
+					return iterator;
+				}
+			}
+
+			if (analysis::isCallOf(call, mgr.getLangBasic().getGetGroupSize())) {
+				if (getNestingLevel(call->getArgument(0)) == parallelNestingLevel) {
+					forwardNumIterations = true;
+					return numIterations;
+				}
+			}
+
+			return call;
+		}
+
+
+	};
+
+
+
+}
+
+ExpressionPtr toPFor(const JobExprPtr& job) {
+	static const ExpressionPtr fail;
+
+	// make sure there are no guarded statements
+	if (!job->getGuardedExprs().empty()) return fail;
+
+	// prepair utilities
+	NodeManager& mgr = job.getNodeManager();
+	IRBuilder builder(mgr);
+
+	// get lower boundary from job range
+	ExpressionPtr range = job->getThreadNumRange();
+	assert(range->getNodeType() == NT_CallExpr && "Range is not formed by call expression!");
+	ExpressionPtr lowerBound = analysis::getArgument(range, 0);
+
+	// get job-body
+	ExpressionPtr jobBody = job->getDefaultExpr();
+
+	// convert job-body into pfor-body
+	VariablePtr iter = builder.variable(lowerBound->getType());					// TODO: make sure ID is unique
+	VariablePtr numIterations = builder.variable(lowerBound->getType());		// TODO: if this is a constant, make it constant
+	ExpressionPtr pforBody = JobBodyToPForBodyConverter(iter, numIterations).map(jobBody);
+
+	// build up function encapsulating pfor-body
+	VariablePtr start = builder.variable(iter->getType());
+	VariablePtr end   = builder.variable(iter->getType());
+	VariablePtr step  = builder.variable(iter->getType());
+
+	// build up body
+	StatementList stmts(job.getLocalDecls().begin(), job.getLocalDecls().end());
+	stmts.push_back(builder.forStmt(iter, start, end, step, pforBody));
+
+	// TODO:
+	//		- capture local variables and bind them to function to be used within the pfor
+	//		- build pfor-function with captured variables and iterators
+	//		- reduce parameter set to start/end/step using a bind
+
+//	// create function
+//	LambdaExprPtr fun =
+//
+//
+//	// add local declarations
+//
+//
+//
+//
+//	try {
+//
+//		// check lower boundary
+//		arithmetic::Formula f = arithmetic::toFormula(lowerBound);
+//
+//		if (!f.isConstant()) {
+//			throw NotSequentializableException("Lower bound of job expression is not constant!");
+//		}
+//
+//		auto lb = f.getConstantValue();
+//		if (lb.isZero()) {
+//			// job can be completely eliminated => return empty function
+//			return builder.lambdaExpr(basic.getUnit(), builder.getNoOp(), VariableList());
+//		}
+//
+//		if (!lb.isOne()) {
+//			throw NotSequentializableException("Parallel Job requires more than one thread!");
+//		}
+//
+//	} catch (const arithmetic::NotAFormulaException& nfe) {
+//		throw NotSequentializableException("Unable to parse lower boundary of job expression!");
+//	}
+//
+//
+//	// pick branch (not supported yet)
+//	if (!job->getGuardedExprs().empty()) {
+//		throw NotSequentializableException("Sequentializing job expressions exposing guards not yet supported.");
+//	}
+//
+//	ExpressionPtr branch = job->getDefaultExpr();
+//
+//	// convert selected branch into a lazy expression
+//	//	- inline local definitions into bind expression
+//	//	- return bind expression
+//
+//	// NOTE: this assumes that every local variable is only bound once
+//	VarExprMap map;
+//	for_each(job->getLocalDecls().getElements(), [&](const DeclarationStmtPtr& decl) {
+//		map[decl->getVariable()] = decl->getInitialization();
+//	});
+//
+//	return replaceVarsGen(manager, branch, map);
+
+	return fail;
+}
 
 } // end namespace transform
 } // end namespace core
