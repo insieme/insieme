@@ -77,7 +77,7 @@ StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
 			if(handledGlobals.count(gname) == 0) {
 				ExpressionPtr initializer;
 				if(analysis::isRefOf(lit.getAddressedNode(), nodeMan.getLangBasic().getLock())) {
-					initializer = build.undefined(lit->getType());
+					initializer = build.undefined(analysis::getReferencedType(lit->getType()));
 				} else assert(false && "Unsupported OMP global type");
 				retval.push_back(build.namedValue(gname, initializer));
 				handledGlobals.insert(gname);
@@ -217,7 +217,7 @@ const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 const NodePtr GlobalMapper::mapLiteral(const LiteralPtr& literal) {
 	const string& gname = literal->getStringValue();
 	if(gname.find("global_omp") == 0) {
-		return build.accessMember(build.deref(curVar), gname);
+		return build.refMember(curVar, gname);
 	}
 
 	return literal;
