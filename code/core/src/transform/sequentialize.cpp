@@ -162,7 +162,7 @@ namespace transform {
 					return builder.getNoOp();
 				}
 
-				if (basic.isLockCreate(fun)) {
+				if (basic.isLockInit(fun)) {
 					return builder.getNoOp();
 				}
 

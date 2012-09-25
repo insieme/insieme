@@ -73,8 +73,9 @@ class Redeemer : public NodeMapping {
 	CompoundStmtPtr outerBody;
 	ExpressionPtr retLoc;
 	VariablePtr returned;
-
+	
 	bool compRetActive;
+	bool encounteredReturn;
 
 	NodePtr getReturnedAssignment() {
 		return build.assign(returned, build.boolLit(true));
@@ -91,9 +92,10 @@ class Redeemer : public NodeMapping {
 			retStmts.push_back(replacement);
 			if(compRetActive && i < stmtList.size()-1) {
 				StatementList remainder(stmtList.begin()+i+1, stmtList.end());
+				bool prevCompRetActive = compRetActive;
 				compRetActive = false;
 				retStmts.push_back(wrapNotReturned(mapCompoundStmt(build.compoundStmt(remainder))));
-				compRetActive = true;
+				compRetActive = prevCompRetActive;
 				break;
 			}
 		}
@@ -112,6 +114,7 @@ class Redeemer : public NodeMapping {
 
 	NodePtr mapReturnStmt(const ReturnStmtPtr& retStmt) {
 		compRetActive = true;
+		encounteredReturn = true;
 		StatementList retStmts;
 		if(retLoc) retStmts.push_back(build.assign(retLoc, retStmt->getReturnExpr()));
 		retStmts.push_back(getReturnedAssignment().as<StatementPtr>());
@@ -126,6 +129,8 @@ public:
 		retLoc = returnLocation;
 		outerBody = body;
 		StatementList retStmts;
+		compRetActive = false;
+		encounteredReturn = false;
 
 		// build returned boolean
 		returned = build.variable(build.refType(build.getLangBasic().getBool()));
@@ -133,7 +138,7 @@ public:
 
 		// adjust body
 		retStmts.push_back(map(body));
-		return build.compoundStmt(retStmts);
+		return encounteredReturn ? build.compoundStmt(retStmts) : body;
 	}
 
 
