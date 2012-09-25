@@ -36,43 +36,14 @@
 
 #pragma once
 
-#include "declarations.h"
-#include "irt_lock.h"
-#include "abstraction/impl/threads.impl.h"
-#include "impl/irt_scheduling.impl.h"
-#include "impl/worker.impl.h"
-#include "utils/impl/minlwt.impl.h"
+#include "insieme/core/forward_decls.h"
 
-void irt_lock_init(irt_lock* lock) {
-	irt_spin_init(&lock->mutex);
-	lock->top = NULL;
-	lock->locked = 0;
-}
+namespace insieme {
 
-void irt_lock_acquire(irt_lock* lock) {
-	irt_spin_lock(&lock->mutex);
-	if(lock->locked) { // suspend if locked
-		irt_worker *wo = irt_worker_get_current();
-		irt_work_item *wi = wo->cur_wi;
-		locked_wi selflocked = {wi, wo, lock->top};
-		lock->top = &selflocked;
-		irt_spin_unlock(&lock->mutex);
-		wo->cur_wi = NULL;
-		lwt_continue(&wo->basestack, &wi->stack_ptr);
-	} else { // acquire lock
-		lock->locked = 1;
-	}
-	irt_spin_unlock(&lock->mutex);
-}
+/**
+ * Takes all (mutually) recursive parallel tasks in the given program, 
+ * and multiversions them to feature unrolled and fully sequentialized variants.
+ */
+core::ProgramPtr applyTaskOptimization(const core::ProgramPtr& program);
 
-void irt_lock_release(irt_lock* lock) {
-	irt_spin_lock(&lock->mutex);
-	if(lock->top) { // release a waiting task
-		locked_wi *task = lock->top;
-		lock->top = task->next;
-		irt_scheduling_continue_wi(task->worker, task->wi);
-	} else { // none waiting, lock is now unlocked
-		lock->locked = 0;
-	}
-	irt_spin_unlock(&lock->mutex);	
 }

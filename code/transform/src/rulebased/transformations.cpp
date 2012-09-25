@@ -140,8 +140,8 @@ namespace rulebased {
 						irg::forEach("_i",0,parameter::getValue<unsigned>(params),
 							g::substitute(
 								g::var("BODY"),
-								irg::simplify(irg::add(g::var("V"), irg::mul(g::var("S"),irg::literal(g::var("T"),g::var("_i"))))),
-								g::var("V")
+								g::var("V"),
+								irg::simplify(irg::add(g::var("V"), irg::mul(g::var("S"),irg::literal(g::var("T"),g::var("_i")))))
 							)
 						)
 					) <<
@@ -254,8 +254,8 @@ namespace rulebased {
 					g::forEach("_i",deltaRange("L","U","S"),
 						g::substitute(
 							g::var("BODY"),
-							irg::simplify(irg::add(g::var("L"), irg::literal(g::var("T"),g::var("_i")))),
-							g::var("V")
+							g::var("V"),
+							irg::simplify(irg::add(g::var("L"), irg::literal(g::var("T"),g::var("_i"))))
 						)
 					)
 				)

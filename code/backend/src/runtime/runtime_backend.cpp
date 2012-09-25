@@ -155,7 +155,7 @@ namespace runtime {
 		table["irt_inst_region_start"]			= "irt_all_impls.h";
 		table["irt_inst_region_end"]			= "irt_all_impls.h";
 		
-		table["irt_lock_create"] 	= "irt_all_impls.h";
+		table["irt_lock_init"] 		= "irt_all_impls.h";
 		table["irt_lock_acquire"] 	= "irt_all_impls.h";
 		table["irt_lock_release"] 	= "irt_all_impls.h";
 

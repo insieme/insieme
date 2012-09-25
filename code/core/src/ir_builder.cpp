@@ -597,15 +597,16 @@ DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const Express
 
 
 CallExprPtr IRBuilder::acquireLock(const ExpressionPtr& lock) const {
-	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot lock a non-lock type.");
+	assert(analysis::isRefOf(lock, manager.getLangBasic().getLock()) && "Cannot lock a non-lock type.");
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockAcquire(), lock);
 }
 CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
-	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot unlock a non-lock type.");
+	assert(analysis::isRefOf(lock, manager.getLangBasic().getLock()) && "Cannot unlock a non-lock type.");
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockRelease(), lock);
 }
-CallExprPtr IRBuilder::createLock() const {
-	return callExpr(manager.getLangBasic().getLock(), manager.getLangBasic().getLockCreate());
+CallExprPtr IRBuilder::initLock(const ExpressionPtr& lock) const {
+	assert(analysis::isRefOf(lock, manager.getLangBasic().getLock()) && "Cannot init a non-lock type.");
+	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockInit(), lock);
 }
 
 

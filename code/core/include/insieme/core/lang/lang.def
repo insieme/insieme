@@ -681,9 +681,9 @@ LITERAL(CreateBoundRangeMod,"BoundRangeMod",    "(uint<8>, uint<8>, uint<8>)->Jo
 
 TYPE(Lock, "lock")
 
-LITERAL(LockAcquire,  "lock.acquire", "(lock)->unit")
-LITERAL(LockRelease, "lock.release", "(lock)->unit")
-LITERAL(LockCreate,  "lock.create", "()->lock")
+LITERAL(LockAcquire,  "lock.acquire", "(ref<lock>)->unit")
+LITERAL(LockRelease, "lock.release", "(ref<lock>)->unit")
+LITERAL(LockInit,  "lock.init", "(ref<lock>)->unit")
 
 // --------------------------------------------------------------------------------------------------------------------
 

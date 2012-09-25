@@ -837,8 +837,8 @@ using namespace insieme::transform::pattern;
 				if(pickCall->hasAttachedValue<PickImplementationHint>()) {
 					auto implHint = pickCall->getAttachedValue<PickImplementationHint>();
 					switch(implHint) {
-					case PickImplementationHint::CALL: return convertVariantToSwitch(call);
-					case PickImplementationHint::SWITCH: return convertVariantToCall(call);
+					case PickImplementationHint::CALL: return convertVariantToCall(call);
+					case PickImplementationHint::SWITCH: return convertVariantToSwitch(call);
 					default: assert(false && "Invalid variant implementation hint"); break;
 					}
 				}

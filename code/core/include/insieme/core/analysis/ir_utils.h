@@ -81,7 +81,9 @@ static inline core::ExpressionPtr getArgument(const NodePtr& call, int index) {
 bool isNoOp(const StatementPtr& candidate);
 
 /**
- * Tests whether the given node is representing a reference type to the given type.
+ * Tests whether the given node is of a reference type to the given type.
+ * For Types: direct test
+ * For Expressions: the expression type is tested
  *
  * @param candidate the node to be tested
  * @param type the type of the expected element
@@ -90,7 +92,9 @@ bool isNoOp(const StatementPtr& candidate);
 bool isRefOf(const NodePtr& candidate, const NodePtr& type);
 
 /**
- * Tests whether the given node is representing a reference type to a type of the given kind.
+ * Tests whether the given node is of a reference type to a type of the given kind.
+ * For Types: direct test
+ * For Expressions: the expression type is tested
  *
  * @param candidate the node to be tested
  * @param kind the kind of the expected element

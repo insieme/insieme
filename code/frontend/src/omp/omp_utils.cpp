@@ -42,6 +42,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -75,8 +76,8 @@ StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
 			// add global to set if required
 			if(handledGlobals.count(gname) == 0) {
 				ExpressionPtr initializer;
-				if(nodeMan.getLangBasic().isLock(lit.getAddressedNode()->getType())) {
-					initializer = build.createLock();
+				if(analysis::isRefOf(lit.getAddressedNode(), nodeMan.getLangBasic().getLock())) {
+					initializer = build.undefined(lit->getType());
 				} else assert(false && "Unsupported OMP global type");
 				retval.push_back(build.namedValue(gname, initializer));
 				handledGlobals.insert(gname);
@@ -198,7 +199,6 @@ const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 	curVar = outerVar;
 
 	// build new definition block
-
 	vector<LambdaBindingPtr> bindings;
 	for(const LambdaBindingPtr& binding : lambdaExpr->getDefinition()) {
 		if (binding->getVariable() == recVar) {

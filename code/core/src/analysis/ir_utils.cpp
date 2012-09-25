@@ -101,13 +101,19 @@ bool isRefOf(const NodePtr& candidate, const NodePtr& type) {
 		return false;
 	}
 
+	NodePtr adjustedCandidate = candidate;
+	// check if expression, if so use type
+	if(ExpressionPtr expr = dynamic_pointer_cast<ExpressionPtr>(candidate)) {
+		adjustedCandidate = expr->getType();
+	}
+
 	// check type of node
-	if (candidate->getNodeType() != NT_RefType) {
+	if (adjustedCandidate->getNodeType() != NT_RefType) {
 		return false;
 	}
 
-	// check element type
-	return *(static_pointer_cast<const RefType>(candidate)->getElementType()) == *type;
+	// check element type 
+	return *(adjustedCandidate.as<RefTypePtr>()->getElementType()) == *type;
 }
 
 bool isRefOf(const NodePtr& candidate, const NodeType kind) {
@@ -116,14 +122,20 @@ bool isRefOf(const NodePtr& candidate, const NodeType kind) {
 	if (!candidate) {
 		return false;
 	}
+	
+	NodePtr adjustedCandidate = candidate;
+	// check if expression, if so use type
+	if(ExpressionPtr expr = dynamic_pointer_cast<ExpressionPtr>(candidate)) {
+		adjustedCandidate = expr->getType();
+	}
 
 	// check type of node
-	if (candidate->getNodeType() != NT_RefType) {
+	if (adjustedCandidate->getNodeType() != NT_RefType) {
 		return false;
 	}
 
 	// check element type (kind)
-	return static_pointer_cast<const RefType>(candidate)->getElementType()->getNodeType() == kind;
+	return adjustedCandidate.as<RefTypePtr>()->getElementType()->getNodeType() == kind;
 }
 
 bool isTypeLiteralType(const GenericTypePtr& type) {

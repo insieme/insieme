@@ -44,7 +44,6 @@ namespace transform {
 namespace pattern {
 namespace irp {
 
-
 	namespace {
 
 		template<typename T>
