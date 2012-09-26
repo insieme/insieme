@@ -90,6 +90,15 @@ uint64 irt_time_ms() {
 	return time;
 }
 
+
+uint64 irt_time_ns() { // ask philip if we can implement this using ticks
+	struct timeval tv;
+	uint64 time;
+	gettimeofday(&tv, NULL);
+	time = tv.tv_sec * 1000 * 1000 * 1000 + tv.tv_usec * 1000;
+	return time;
+}
+
 // measures number of clock ticks over 100 ms, sets irt_g_time_ticks_per_sec and returns the value
 uint64 irt_time_set_ticks_per_sec() {
 	uint64 before = 0, after = 0;
