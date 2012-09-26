@@ -55,7 +55,7 @@ namespace irp {
 				if (details::match(pattern, cur)) {
 					res.push_back(cur);
 				}
-			}, matchTypes);
+			}, true, matchTypes);
 
 			return res;
 

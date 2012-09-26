@@ -211,8 +211,15 @@ namespace irp {
 		return node(core::NT_MarkerStmt, single(subExpr) << single(id));
 	}
 
-	const TreePatternPtr continueStmt = node(core::NT_ContinueStmt);
-	const TreePatternPtr breakStmt = node(core::NT_BreakStmt);
+	inline const TreePatternPtr& continueStmt() {
+		static const TreePatternPtr res = node(core::NT_ContinueStmt);
+		return res;
+	}
+
+	inline const TreePatternPtr& breakStmt() {
+		static const TreePatternPtr res = node(core::NT_BreakStmt);
+		return res;
+	}
 
 	inline TreePatternPtr jobExpr(const TreePatternPtr& threadNumRange, const ListPatternPtr& localDecls, const ListPatternPtr& guardedExprs, 
 			const TreePatternPtr& defaultExpr) {

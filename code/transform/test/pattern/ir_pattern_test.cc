@@ -247,7 +247,7 @@ TEST(IRPattern, forStmt) {
 
 	TreePatternPtr pattern1 = irp::forStmt(var("x"), any, at("(5)"), at("(-5)"), irp::declarationStmt(var("y"), at("(3)")));
 	TreePatternPtr pattern2 = irp::forStmt(any, any, at("(10)"), at("(2)"), irp::returnStmt(at("(0)")));
-	TreePatternPtr pattern3 = irp::forStmt(any, any, at("(5)"), at("(1)"), irp::compoundStmt(*any << irp::continueStmt << any));
+	TreePatternPtr pattern3 = irp::forStmt(any, any, at("(5)"), at("(1)"), irp::compoundStmt(*any << irp::continueStmt() << any));
 	TreePatternPtr pattern4 = irp::forStmt(var("i"), var("x"), var("y"), var("z"), irp::compoundStmt(irp::forStmt(var("j"), var("x"), var("y"), var("z"), irp::compoundStmt(*any)) << *any));
 
 	EXPECT_PRED2(isMatch, pattern1, stmt1);
@@ -401,7 +401,6 @@ TEST(TargetFilter, InnerMostForLoop) {
 	TreePatternPtr pattern = irp::innerMostForLoop();
 	EXPECT_EQ(toVector(for4), irp::collectAll(pattern, root));
 
-	pattern = irp::innerMostForLoop(1);
 	EXPECT_EQ(toVector(for4), irp::collectAll(pattern, root));
 
 	pattern = irp::innerMostForLoop(2);
@@ -483,7 +482,7 @@ TEST(TargetFilter, InnerMostForLoop2) {
 	EXPECT_EQ(toVector(for4, for5), irp::collectAll(pattern, root));
 
 	pattern = irp::innerMostForLoop(2);
-	EXPECT_EQ(toVector(for3,for1), irp::collectAll(pattern, root));
+	EXPECT_EQ(toVector(for1, for3), irp::collectAll(pattern, root));
 
 	pattern = irp::innerMostForLoop(3);
 	EXPECT_EQ(toVector(for2), irp::collectAll(pattern, root));
