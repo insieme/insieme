@@ -41,10 +41,12 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_mapper.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/sequentialize.h"
 #include "insieme/core/transform/simplify.h"
@@ -105,23 +107,50 @@ class TaskMultiversioner {
 	}
 
 	LambdaDefinitionPtr removeOuterParallels(LambdaDefinitionPtr lamDef) {
-		auto patt = p::aT(p::var("parallel", irp::callExpr(basic.getParallel(), 
-			irp::jobExpr(p::any, p::var("defaultExp", p::aT(irp::atom(basic.getParallel())))) )));
-		//auto gen = g::substitute(g::root, g::var("parallel"), irg::callExpr(irg::atom(basic.getUnit()), g::var("defaultExp")));
-		LambdaDefinitionPtr prevLamDef;
-		while(lamDef != prevLamDef) {
-			prevLamDef = lamDef;
-			//lamDef = p::apply(lamDef, patt, gen).as<LambdaDefinitionPtr>();
-			auto match = patt->matchAddress(LambdaDefinitionAddress(lamDef));
-			if(match) {
-				NodeAddress parAddr = match->getVarBinding("parallel").getValue();
-				NodeAddress defAddr = match->getVarBinding("defaultExp").getValue();
-				CallExprPtr callExp = build.callExpr(basic.getUnit(), defAddr.getAddressedNode().as<ExpressionPtr>());
-				StatementPtr inlined = core::transform::inlineMultiReturnPlainCall(nodeMan, core::transform::simplify(nodeMan, callExp));
-				lamDef = core::transform::replaceNode(nodeMan, parAddr, inlined).as<LambdaDefinitionPtr>();
-			}
-		}
-		return prevLamDef;
+
+		// create a cached check for nested parallel calls
+		auto containsParallel = makeCachedLambdaVisitor([](const NodePtr& node, const rec_call<bool>::type& rec)->bool {
+			return analysis::isCallOf(node, node->getNodeManager().getLangBasic().getParallel()) || any(node->getChildList(), rec);
+		});
+
+		// sequentialize all job-spawning steps running jobs with nested parallels
+		return core::transform::makeCachedLambdaMapper([&](const NodePtr& ptr)->NodePtr {
+
+			// only interested in parallel calls
+			if (!analysis::isCallOf(ptr, basic.getParallel())) return ptr;
+
+			// skip parallel if there is another nested parallel
+			ExpressionPtr branch = ptr.as<CallExprPtr>()->getArgument(0).as<JobExprPtr>()->getDefaultExpr();
+			if (!containsParallel(branch)) return ptr; // preserve the innermost one
+
+			// inline recursive call
+			CallExprPtr callExpr = build.callExpr(basic.getUnit(), branch);
+			return core::transform::inlineMultiReturnPlainCall(nodeMan, core::transform::simplify(nodeMan, callExpr));
+
+		}).map(lamDef);
+
+
+//		auto patt = p::aT(p::var("parallel", irp::callExpr(basic.getParallel(),
+//			irp::jobExpr(p::any, p::var("defaultExp", p::aT(irp::atom(basic.getParallel())))) )));
+//		//auto gen = g::substitute(g::root, g::var("parallel"), irg::callExpr(irg::atom(basic.getUnit()), g::var("defaultExp")));
+//		LambdaDefinitionPtr prevLamDef;
+//		int i = 0;
+//		while(lamDef != prevLamDef) {
+//			prevLamDef = lamDef;
+//			//lamDef = p::apply(lamDef, patt, gen).as<LambdaDefinitionPtr>();
+//			i++;
+//			std::cout << "Matching " << i << " ...\n";
+//			auto match = patt->matchAddress(LambdaDefinitionAddress(lamDef));
+//			std::cout << "Updating " << i << "...\n";
+//			if(match) {
+//				NodeAddress parAddr = match->getVarBinding("parallel").getValue();
+//				NodeAddress defAddr = match->getVarBinding("defaultExp").getValue();
+//				CallExprPtr callExp = build.callExpr(basic.getUnit(), defAddr.getAddressedNode().as<ExpressionPtr>());
+//				StatementPtr inlined = core::transform::inlineMultiReturnPlainCall(nodeMan, core::transform::simplify(nodeMan, callExp));
+//				lamDef = core::transform::replaceNode(nodeMan, parAddr, inlined).as<LambdaDefinitionPtr>();
+//			}
+//		}
+//		return prevLamDef;
 	}
 
 	// does not correctly handle parallels generated in recursive function calls
@@ -132,6 +161,7 @@ class TaskMultiversioner {
 		LambdaDefinitionPtr prevLamDef;
 		while(lamDef != prevLamDef) {
 			prevLamDef = lamDef;
+			std::cout << "Running 2 ...\n";
 			auto match = patt->matchAddress(LambdaDefinitionAddress(lamDef));
 			if(match) {
 				NodeAddress addr = match->getVarBinding("mergeAll").getValue();
@@ -160,8 +190,8 @@ class TaskMultiversioner {
 		lambdaDefOptionsList.push_back(lamDef);
 		lambdaDefOptionsList.push_back(removeExtraneousMergeAlls(removeOuterParallels(lamDef->unroll(nodeMan, 2))));
 		lambdaDefOptionsList.push_back(removeExtraneousMergeAlls(removeOuterParallels(lamDef->unroll(nodeMan, 4))));
-		//lambdaDefOptionsList.push_back(lamDef->unroll(nodeMan, 2));
-		//lambdaDefOptionsList.push_back(lamDef->unroll(nodeMan, 4));
+//		lambdaDefOptionsList.push_back(lamDef->unroll(nodeMan, 2));
+//		lambdaDefOptionsList.push_back(lamDef->unroll(nodeMan, 4));
 		lambdaDefOptionsList.push_back(core::transform::trySequentialize(nodeMan, lamDef));
 		
 		// replace recursive jobs in lambdas with pick from available options, generating new bindings
