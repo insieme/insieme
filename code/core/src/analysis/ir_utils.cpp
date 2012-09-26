@@ -36,6 +36,8 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 
+#include <set>
+
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
@@ -181,39 +183,74 @@ TypePtr getVolatileType(const TypePtr& type) {
 
 namespace {
 
+	/**
+	 * A functor template for the free-variable collector handling the critical part distinguishing
+	 * the collection of pointers and nodes.
+	 */
+	template<template<class Target> class Ptr>
+	struct rec_free_var_collector;
+
+	/**
+	 * The specialization of the rec_free_var_collector template for pointers.
+	 */
+	template<>
+	struct rec_free_var_collector<Pointer> {
+		vector<VariablePtr> operator()(const NodePtr& cur) const { return analysis::getFreeVariables(cur); }
+		VariablePtr extend(const NodePtr&, const VariablePtr& res) const { return res; }
+	};
+
+	/**
+	 * The specialization of the rec_free_var_collector template for addresses.
+	 */
+	template<>
+	struct rec_free_var_collector<Address> {
+		vector<VariableAddress> operator()(const NodeAddress& cur) const {
+			return getFreeVariableAddresses(cur);
+		}
+		VariableAddress extend(const NodeAddress& head, const VariableAddress& tail) const {
+			return concat(head, tail);
+		}
+	};
 
 	/**
 	 * Will certainly determine the declaration status of variables inside a block.
 	 */
-	struct LambdaDeltaVisitor : public IRVisitor<bool> {
+	template<template<class Target> class Ptr>
+	struct FreeVariableCollector : public IRVisitor<bool, Ptr> {
+
+		typedef std::set<Ptr<const Variable>> ResultSet;
+		typedef vector<Ptr<const Variable>> ResultList;
+
 		VariableSet bound;
-		VariableSet free;
+		ResultSet free;
 
 		// do not visit types
-		LambdaDeltaVisitor() : IRVisitor<bool>(false) {}
+		FreeVariableCollector() : IRVisitor<bool,Ptr>(false) {}
 
-		bool visitNode(const NodePtr& node) {
+		bool visitNode(const Ptr<const Node>& node) {
 			return node->getNodeCategory() == NC_Type;
 		} // default behavior: continue visiting
 
-		bool visitDeclarationStmt(const DeclarationStmtPtr &decl) {
+		bool visitDeclarationStmt(const Ptr<const DeclarationStmt>& decl) {
 			bound.insert(decl->getVariable());
 			return false;
 		}
 
-		bool visitVariable(const VariablePtr& var) {
-			if(bound.find(var) == bound.end()) free.insert(var);
+		bool visitVariable(const Ptr<const Variable>& var) {
+			if(bound.find(var) == bound.end()) {
+				free.insert(var);
+			}
 			return false;
 		}
 
-		bool visitLambda(const LambdaPtr& lambda) {
+		bool visitLambda(const Ptr<const Lambda>& lambda) {
 			// register lambda parameters to be bound
 			const auto& params = lambda->getParameters();
 			bound.insert(params.begin(), params.end());
 			return false;
 		}
 
-		bool visitLambdaDefinition(const LambdaDefinitionPtr& definition) {
+		bool visitLambdaDefinition(const Ptr<const LambdaDefinition>& definition) {
 			// register recursive lambda variables
 			for(const LambdaBindingPtr& bind : definition) {
 				bound.insert(bind->getVariable());
@@ -224,35 +261,45 @@ namespace {
 
 		// due to the structure of the IR, nested lambdas can never reuse outer variables
 		//  - also prevents variables in LamdaDefinition from being inadvertently captured
-		bool visitLambdaExpr(const LambdaExprPtr& lambda) {
+		bool visitLambdaExpr(const Ptr<const LambdaExpr>& lambda) {
+			static const rec_free_var_collector<Ptr> collectRecursive;
+
 
 			// The type used to annotate free variable lists.
-			struct FreeVariableSet : public VariableSet {
-				FreeVariableSet(const VariableSet& set) : VariableSet(set) {}
-				FreeVariableSet(const VariableList& list) : VariableSet(list.begin(), list.end()) {}
+			struct FreeVariableSet : public ResultSet {
+				FreeVariableSet(const ResultSet& set) : ResultSet(set) {}
+				FreeVariableSet(const ResultList& list) : ResultSet(list.begin(), list.end()) {}
 			};
 
 			// check annotation
-			if (!lambda->hasAttachedValue<FreeVariableSet>()) {
+			auto definition = lambda->getDefinition();
+			if (!definition->template hasAttachedValue<FreeVariableSet>()) {
 				// evaluate recursively
-				lambda->attachValue(FreeVariableSet(getFreeVariables(lambda->getDefinition())));
+				definition->attachValue(FreeVariableSet(collectRecursive(definition)));
 			}
 
 			// should be fixed now
-			assert(lambda->hasAttachedValue<FreeVariableSet>());
+			assert(definition->template hasAttachedValue<FreeVariableSet>());
 
 			// add free variables to result set
-			const FreeVariableSet& varset = lambda->getAttachedValue<FreeVariableSet>();
-			free.insert(varset.begin(), varset.end());
+			for(const auto& cur : definition->template getAttachedValue<FreeVariableSet>()) {
+				free.insert(collectRecursive.extend(definition, cur));
+			}
 
 			return true;
 		}
 
-		// for bind, just look at the variables being bound and ignore the call
-		bool visitBindExpr(const BindExprPtr& bindExpr) {
-			ExpressionList expressions = bindExpr->getBoundExpressions();
-			for_each(expressions, [&](const ExpressionPtr& e) {
-				visitDepthFirstOncePrunable(e, *this);
+		bool visitBindExpr(const Ptr<const BindExpr>& bindExpr) {
+			// register recursive lambda variables
+//			for(const auto& param : bindExpr->getParameters()) {
+//				bound.insert(param);
+//			}
+//			return false;
+
+			// NOTE: this is the old bug version (does not consider variables within call expression)
+			auto expressions = bindExpr->getBoundExpressions();
+			for_each(expressions, [&](const Ptr<const Expression>& e) {
+				visitDepthFirstPrunable(e, *this);
 			} );
 			return true;
 		}
@@ -261,13 +308,22 @@ namespace {
 }
 
 VariableList getFreeVariables(const NodePtr& code) {
-	LambdaDeltaVisitor ldv;
-	visitDepthFirstOncePrunable(code, ldv);
+	FreeVariableCollector<Pointer> collector;
+	visitDepthFirstOncePrunable(code, collector);
 
 	// convert result into list
-	return VariableList(ldv.free.begin(), ldv.free.end());
+	return VariableList(collector.free.begin(), collector.free.end());
 }
 
+vector<VariableAddress> getFreeVariableAddresses(const NodePtr& code) {
+	FreeVariableCollector<Address> collector;
+	visitDepthFirstPrunable(NodeAddress(code), collector);
+
+	// convert result into list
+	auto res = vector<VariableAddress>(collector.free.begin(), collector.free.end());
+	std::sort(res.begin(), res.end());
+	return res;
+}
 
 namespace {
 
