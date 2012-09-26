@@ -50,13 +50,14 @@
 #include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_entities.h"
 
+#include "insieme/backend/ocl_host/host_extensions.h"
+
 #include "insieme/analysis/features/code_features.h"
 #include "insieme/analysis/features/code_feature_catalog.h"
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/utils/cmd_line_utils.h"
-#include "insieme/transform/pattern/ir_pattern.h"
 
 namespace insieme {
 namespace backend {
@@ -522,10 +523,8 @@ using namespace insieme::transform::pattern;
 			}
 
 			bool isOpencl(const core::StatementPtr& stmt) {
-				TreePatternPtr kernelCall = aT(irp::callExpr( irp::literal("call_kernel"), *any));
-				MatchOpt&& match = kernelCall->matchPointer(stmt);
-				if(match) return true;
-				return false;
+				auto kernelCall = stmt->getNodeManager().getLangExtension<ocl_host::Extensions>().callKernel;
+				return core::visitDepthFirstOnceInterruptible(stmt, [&](const core::LiteralPtr& cur)->bool { return cur == kernelCall; });
 			}
 
 			uint64_t estimateEffort(const core::StatementPtr& stmt) {
