@@ -211,6 +211,15 @@ VariableSet getAllVariables(const NodePtr& code);
 VariableList getFreeVariables(const NodePtr& code);
 
 /**
+ * Extracts a list of addresses routed by the given node referencing all
+ * free variables.
+ *
+ * @param code the code fragment to extract free variables from
+ * @return the list of addresses referencing those addresses
+ */
+vector<VariableAddress> getFreeVariableAddresses(const NodePtr& code);
+
+/**
  * Retrieves the name of variable in the outer scope where it has been declared.
  *
  * @param varlist the list of adresses of renamed variables
