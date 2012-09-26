@@ -43,6 +43,9 @@
 #include "impl/worker.impl.h"
 #include "utils/impl/minlwt.impl.h"
 
+#define IRT_LOCK_NANOS_BUSY_WAIT 10000
+#define IRT_LOCK_NANOS_INTERVAL 500
+
 void irt_lock_init(irt_lock* lock) {
 	irt_spin_init(&lock->mutex);
 	lock->top = NULL;
@@ -50,8 +53,15 @@ void irt_lock_init(irt_lock* lock) {
 }
 
 void irt_lock_acquire(irt_lock* lock) {
+	//uint64 start_t = irt_time_ns();
+	//restart:
 	irt_spin_lock(&lock->mutex);
 	if(lock->locked) { // suspend if locked
+		//if(irt_time_ns()-start_t < IRT_LOCK_NANOS_BUSY_WAIT) {
+		//	irt_spin_unlock(&lock->mutex);
+		//	irt_busy_nanosleep(IRT_LOCK_NANOS_INTERVAL);
+		//	goto restart;
+		//}
 		irt_worker *wo = irt_worker_get_current();
 		irt_work_item *wi = wo->cur_wi;
 		locked_wi selflocked = {wi, wo, lock->top};
@@ -61,8 +71,8 @@ void irt_lock_acquire(irt_lock* lock) {
 		lwt_continue(&wo->basestack, &wi->stack_ptr);
 	} else { // acquire lock
 		lock->locked = 1;
+		irt_spin_unlock(&lock->mutex);
 	}
-	irt_spin_unlock(&lock->mutex);
 }
 
 void irt_lock_release(irt_lock* lock) {
@@ -70,7 +80,9 @@ void irt_lock_release(irt_lock* lock) {
 	if(lock->top) { // release a waiting task
 		locked_wi *task = lock->top;
 		lock->top = task->next;
+		irt_worker* wo = task->worker;
 		irt_scheduling_continue_wi(task->worker, task->wi);
+		irt_signal_worker(wo);
 	} else { // none waiting, lock is now unlocked
 		lock->locked = 0;
 	}
