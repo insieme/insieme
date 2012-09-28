@@ -242,6 +242,13 @@ namespace detail {
 				return curVar->match(context, tokens.begin(), tokens.end());
 			}
 
+			// special treatment for empty token list
+			if (tokens.empty()) {
+				if (!curVar->match(context, tokens.begin(), tokens.end())) {
+					return fail(context, tokens.begin(), tokens.end());
+				}
+				return matchVarOnly(context, pattern+1, tokens);
+			}
 
 			// --- search candidates for split-points ---
 
@@ -337,8 +344,8 @@ namespace detail {
 			assert(terminal.terminal);
 
 			// derive filters for before/after
-			const TokenSet& before = context.grammar.getEndSet(sequence[0].terms.back());
-			const TokenSet& after  = context.grammar.getStartSet(sequence[2].terms.front());
+			const TokenSet& before = context.grammar.getSequenceEndSet(sequence[0]);
+			const TokenSet& after  = context.grammar.getSequenceStartSet(sequence[2]);
 
 			unsigned terminalSize = terminal.limit.getMin();
 			assert(terminalSize == terminal.limit.getMax());
@@ -1097,7 +1104,18 @@ namespace detail {
 		while (changed) {
 			changed = false;
 
-			// update terminals
+			// update sub-sequences
+			for(const TermPtr& cur : terms) {
+				if (auto seq = dynamic_pointer_cast<const Sequence>(cur)) {
+					for(const Sequence::SubSequence& cur : seq->getSubSequences()) {
+						auto& sets = info.subSequenceInfo[&cur];
+						changed = cur.updateStartSet(*this,sets.first) || changed;
+						changed = cur.updateEndSet(*this, sets.second) || changed;
+					}
+				}
+			}
+
+			// update terms
 			for(const TermPtr& cur : terms) {
 				auto& sets = info.termInfos[cur];
 				changed = cur->updateTokenSets(*this, sets.first, sets.second) || changed;

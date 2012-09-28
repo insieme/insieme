@@ -39,9 +39,7 @@
 #include "insieme/analysis/dep_graph.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/parser/ir_parse.h"
-#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace analysis {
@@ -53,11 +51,15 @@ namespace dep {
 
 		// create a small SCoP using a local variable
 		NodeManager manager;
-		NodePtr node = parse::parseStatement(manager,"{"
-			"decl ref<int<4>>:sum = 0;"
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	(sum = ((op<ref.deref>(sum))+1));"
-			"};}");
+		IRBuilder builder(manager);
+
+		auto node = builder.parseStmt(
+			"{"
+			"	ref<int<4>> sum = 0;"
+			"	for(uint<4> i = 10 .. 50 : 1) {"
+			"		sum = sum+1;"
+			"	}; "
+			"}");
 
 		EXPECT_TRUE(node);
 
@@ -94,17 +96,18 @@ namespace dep {
 
 	}
 
-
 	TEST(DependenceAnalysis, LocalVariables) {
 
 		// create a small SCoP using a local variable
 		NodeManager manager;
-		NodePtr node = parse::parseStatement(manager,""
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	decl ref<int<4>>:sum = 0;"
-			"	for(decl uint<4>:k = 2 .. 100 : 1) {"
-			"		(sum = ((op<ref.deref>(sum))+1));"
-			"	};"
+		IRBuilder builder(manager);
+
+		auto node = builder.parseStmt(
+			"for(int<4> i = 10 .. 50 : 1) {"
+			"	ref<int<4>> sum = 0;"
+			"	for(int<4> k = 2 .. 100 : 1) {"
+			"		sum = sum+1;"
+			"	}"
 			"}");
 
 		EXPECT_TRUE(node);
@@ -144,17 +147,19 @@ namespace dep {
 
 		// create a small SCoP using a local variable
 		NodeManager manager;
-		NodePtr node = parse::parseStatement(manager,""
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	decl ref<int<4>>:a = 0;"
-			"	for(decl uint<4>:k = 2 .. 100 : 1) {"
-			"		(a = ((op<ref.deref>(a))+1));"
-			"		decl ref<int<4>>:b = 0;"
-			"		for(decl uint<4>:j = 2 .. 100 : 1) {"
-			"			(a = ((op<ref.deref>(a))+1));"
-			"			(b = ((op<ref.deref>(b))+1));"
-			"		};"
-			"	};"
+		IRBuilder builder(manager);
+
+		NodePtr node = builder.parseStmt(
+			"for(uint<4> i = 10 .. 50 : 1) {"
+			"	ref<int<4>> a = 0;"
+			"	for(uint<4> k = 2 .. 100 : 1) {"
+			"		a = a+1;"
+			"		ref<int<4>> b = 0;"
+			"		for(uint<4> j = 2 .. 100 : 1) {"
+			"			a = a+1;"
+			"			b = b+1;"
+			"		}"
+			"	}"
 			"}");
 
 		EXPECT_TRUE(node);
@@ -225,21 +230,23 @@ namespace dep {
 
 		// implement matrix multiplication
 		NodeManager manager;
-		NodePtr node = parse::parseStatement(manager,""
-			"for(decl uint<4>:i = 0 .. 50 : 1) {"
-			"	for(decl uint<4>:j = 0 .. 50 : 1) {"
-			"		decl ref<int<4>>:sum = 0;"
-			"		for(decl uint<4>:k = 0 .. 50 : 1) {"
-			"			(sum = ((op<ref.deref>(sum)) + "
-			"					("
-			"						(op<ref.deref>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,50>,50>>:A, i)), k)))) "
-			"							* "
-			"						(op<ref.deref>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,50>,50>>:B, k)), j))))"
-			"					)));"
-			"		};"
-			"		((op<ref.deref>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,50>,50>>:C, i)), j)))) = sum);"
-			"	};"
-			"}");
+		IRBuilder builder(manager);
+
+		std::map<std::string, NodePtr> symbols;
+		symbols["A"] = builder.variable(builder.parseType("ref<vector<vector<uint<4>,50>,50>>"));
+		symbols["B"] = builder.variable(builder.parseType("ref<vector<vector<uint<4>,50>,50>>"));
+		symbols["C"] = builder.variable(builder.parseType("ref<vector<vector<uint<4>,50>,50>>"));
+
+		auto node = builder.parseStmt(
+			"for(uint<4> i = 0 .. 50 : 1) {"
+			"	for(uint<4> j = 0 .. 50 : 1) {"
+			"		ref<int<4>> sum = 0;"
+			"		for(uint<4> k = 0 .. 50 : 1) {"
+			"			sum = sum + A[i][k] * B[k][j]; "
+			"		}"
+			"		C[i][j] = sum;"
+			"	}"
+			"}", symbols);
 
 		EXPECT_TRUE(node);
 

@@ -104,7 +104,7 @@ namespace runtime {
 			}
 
 			if(basic.isLock(type)) {
-				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_lock*", "irt_lock.h");
+				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_lock", "irt_lock.h");
 			}
 
 			// it is not a special runtime type => let somebody else try

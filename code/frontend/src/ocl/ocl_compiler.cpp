@@ -45,8 +45,6 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/data_annotations.h"
 
-#include "insieme/core/parser/ir_parse.h"
-
 #include "insieme/core/transform/manipulation.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -363,18 +361,18 @@ std::cout << "Ftype: " << ftype << std::endl;
 				// write a function (args.at(0)->getType()) -> ftype->getReturnType() that internally creates a new vector of type ftype->getReturnType() and
 				// copies the elements from args.at(0) to it element wise in a loop, the length of the vector will be hardcoded
 				unsigned length = retTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
-				std::string irCode = format(
-					"fun(vector<'a,%i>:fromVec, type<'b>:toElemTy) -> vector<'b,%i> {{ "
-						"decl ref<vector<'b,%i> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, %i> >, vector(type('b),%i)> )) ));"
-						""
-						"for(decl uint<8>:i = lit<uint<8>, 0> .. %i ) "
-						"	( (op<vector.ref.elem>(toVec, i )) = CAST<'b>( (op<vector.subscript>(fromVec, i )) ) ); "
-						""
-						"return (op<ref.deref>(toVec )); "
-					"}}", length, length, length, length, length, length);
 
-				core::parse::IRParser parser(builder.getNodeManager());
-				core::ExpressionPtr irConvert = parser.parseExpression(irCode);
+				std::string irCode = format(
+					"(vector<'a,%i> fromVec, type<'b> toElemTy) -> vector<'b,%i> { "
+					"	ref<vector<'b,%i> > toVec = var( undefined(lit(vector<'b,%i>)) );"
+						""
+						"for(uint<8> i = 0u .. %iu ) "
+						"	toVec[i] = ('b) fromVec[i]; "
+						""
+						"return *toVec; "
+					"}", length, length, length, length, length, length);
+
+				core::ExpressionPtr irConvert = builder.parseExpr(irCode);
 						/*"fun(vector<'a,#l>:fromVec, type<'b>:toElemTy) -> vector<'b,#l> {{ "
 					"decl uint<8>:length = CAST<uint<8>>( (op<int.type.param.to.int>( lit<intTypeParam<#l>, #l> )) ); "
 					"decl ref<vector<'b,#l> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, #l> >, vector(type('b),#l)> )) ));"

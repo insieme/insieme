@@ -38,28 +38,27 @@
 
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/transform/ir_cleanup.h"
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/utils/logging.h"
 
 using namespace insieme::utils::log;
 
 namespace insieme {
 	using namespace core;
-	using namespace core::parse;
 
 namespace transform {
 
 TEST(PseudoArrayElimination, Basic) {
 
 	NodeManager manager;
-	
-	StatementPtr stmt = parseStatement(manager, 
-		"fun () -> unit {{ \
-			decl array<int<4>, 1>:arr = (op<array.create.1D>(lit<type<int<4> >, int>, lit<uint<8>, 1>)); \
-		}}");
+	IRBuilder builder(manager);
 
+	StatementPtr stmt = builder.parseStmt( 
+		"() -> unit { "
+		"	array<int<4>,1> arr = array.create.1D( lit(int<4>), 1u ); "
+		"};");
 	
 	LOG(INFO) << printer::PrettyPrinter(stmt);
 

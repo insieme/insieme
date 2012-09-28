@@ -94,23 +94,17 @@ struct UnifiedAddress : public utils::Printable {
 	UnifiedAddress getAddressOfChild(unsigned idx) const;
 
 	template <class T>
-	T as() const { 
-		return boost::get<T>(address);
-	}
+	inline T as() const { return boost::get<T>(address); }
 
-
-	bool operator==(const UnifiedAddress& other) const {
-		return getAbsoluteAddress(TmpVarMap()) == other.getAbsoluteAddress(TmpVarMap());
-	}
+	bool operator==(const UnifiedAddress& other) const;
 
 	std::ostream& printTo(std::ostream& out) const {
 		return out << address;
 	}
 
-	operator bool() const {
-		if (isCFGAddress()) { return static_cast<bool>(boost::get<cfg::Address>(address)); }
-
-		return boost::get<core::NodeAddress>(address);
+	inline operator bool() const {
+		if (isCFGAddress()) { return static_cast<bool>(as<cfg::Address>()); }
+		return as<core::NodeAddress>();
 	}
 
 private:
@@ -427,7 +421,9 @@ private:
 
 public:
 
-	typedef std::pair<AccessClassWPtr, AccessDecoratorPtr> Dependence;
+	enum DependenceType { DT_LEVEL, DT_RANGE };
+
+	typedef std::tuple<DependenceType, AccessClassWPtr, AccessDecoratorPtr> Dependence;
 
 	typedef std::vector<Dependence> SubClasses;
 
@@ -494,6 +490,8 @@ public:
 	 */
 	inline size_t getUID() const { return uid; }
 
+	inline const AccessVector& getAccesses() const { return accesses; }
+
 	inline void setParentClass(const AccessClassPtr& parent) { 
 		this->parentClass = parent; 
 	}
@@ -555,6 +553,11 @@ private:
 	const CFG* 			cfg;
 	const TmpVarMap& 	tmpVarMap;
 
+	std::tuple<AccessClass::DependenceType, AccessClassPtr,bool> 
+	classify(const AccessClassPtr& 				parent,  
+			const AccessDecoratorPtr& 			subLevel, 
+			const AccessClass::DependenceType& 	depType,
+			const AccessPtr& 					currAccess);
 public:
 
 	typedef ClassVector::iterator 		iterator;
@@ -565,6 +568,8 @@ public:
 		tmpVarMap(tmpVarMap) { }
 
 	AccessClassPtr getClassFor(const AccessPtr& access);
+
+	void printDotGraph(std::ostream& out) const;
 
 	inline iterator begin() { return classes.begin(); }
 	inline iterator end() { return classes.end(); }

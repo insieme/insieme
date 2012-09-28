@@ -46,8 +46,6 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/checks/type_checks.h"
 
-#include "insieme/core/parser/ir_parse.h"
-
 #include "insieme/utils/container_utils.h"
 
 namespace insieme {
@@ -667,7 +665,7 @@ TEST(TypeUtils, VariableSubstitutionBug) {
 
 	TypePtr intType = manager.getLangBasic().getUInt4();
 	TypePtr vectorType = builder.vectorType(intType, builder.concreteIntTypeParam(8));
-	TypePtr funType = parse::parseType(manager, "(vector<'elem,#l>,'res,('elem,'res)->'res)->'res");
+	TypePtr funType = builder.parseType("(vector<'elem,#l>,'res,('elem,'res)->'res)->'res");
 	EXPECT_TRUE(funType);
 
 	EXPECT_EQ(NT_VectorType, vectorType->getNodeType());

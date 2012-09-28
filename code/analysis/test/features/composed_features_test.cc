@@ -36,12 +36,9 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/features/code_feature_catalog.h"
-
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser/ir_parse.h"
-//#include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/analysis/features/code_feature_catalog.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
 namespace insieme {
@@ -52,24 +49,26 @@ namespace features {
 
 	TEST(ComposedFeatures, Basic) {
 		NodeManager mgr;
-		parse::IRParser parser(mgr);
+		IRBuilder builder(mgr);
+
 		auto& basic = mgr.getLangBasic();
 
-		// load some code sample ...
-		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	( (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)) = (op<array.subscript.1D>(array<int<4>,1>:w, i)));"
-			"	for(decl uint<4>:j = 5 .. 25 : 1) {"
-			"		if ( (j < 10 ) ) {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"		} else {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
-			"		};"
-			"	};"
-			"}") );
+		std::map<std::string, NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
+		symbols["w"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
 
+		// load some code sample ...
+		auto forStmt = builder.parseStmt(
+			"for(uint<4> i = 10u .. 50u : 1u) {"
+			"	v[i] = w[i];"
+			"	for(uint<4> j = 5u .. 25u : 1u) {"
+			"		if ( (j < 10u ) ) {"
+			"			v[i+j]; v[i+j];"
+			"		} else {"
+			"			v[i-j]; v[i-j];"
+			"		}"
+			"	}"
+			"}", symbols).as<ForStmtPtr>();
 
 		FeaturePtr nativeArrayRefElem1D = createSimpleCodeFeature("NUM_getArrayRefElem1D", "number of getArrayRefElem1D",
 				basic.getArrayRefElem1D(), FA_Weighted);

@@ -37,12 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/analysis/defuse_collect.h"
-
-#include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_statements.h"
-
-#include "insieme/core/parser/ir_parse.h"
 
 using namespace insieme::core;
 using namespace insieme::analysis;
@@ -50,13 +45,19 @@ using namespace insieme::analysis;
 TEST(DefUseCollect, Scalar) {
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+	
+	std::map<std::string, NodePtr> symbols;
+	symbols["a"] = builder.variable(builder.parseType("ref<int<4>>"));
+	symbols["b"] = builder.variable(builder.parseType("ref<int<4>>"));
+	symbols["c"] = builder.variable(builder.parseType("ref<int<4>>"));
+
 	// even if the expression is completely wrong (because it works with refs),
 	// still valid as a test case 
-    auto compStmt = parser.parseStatement(
-		"{\
-			((ref<int<4>>:a+ref<int<4>>:b)*ref<int<4>>:c);\
-		}"
+    auto compStmt = builder.parseStmt(
+		"{ "
+		"	a+b*c; "
+		"} ", symbols
 	);
 
 	RefList&& refs = collectDefUse(compStmt);
@@ -72,153 +73,156 @@ TEST(DefUseCollect, Scalar) {
 TEST(DefUseCollect, SimpleArray) {
 	
 	NodeManager mgr;
-	try{
-		parse::IRParser parser(mgr);
-		// even if the expression is completely wrong (because it works with refs),
-		// still valid as a test case 
-		auto compStmt = parser.parseStatement(
-			"{\
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (int<4>:a+ref<int<4>>:b)));\
-			}"
-		);
-		// std::cout << *compStmt << std::endl;
+	IRBuilder builder(mgr);
 
-		RefList&& refs = collectDefUse(compStmt);
-		EXPECT_EQ(2u, refs.size());
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,4>>"));
+	symbols["a"] = builder.variable(builder.parseType("int<4>"));
+	symbols["b"] = builder.variable(builder.parseType("ref<int<4>>"));
 
-		// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
+	// even if the expression is completely wrong (because it works with refs),
+	// still valid as a test case 
+	auto compStmt = builder.parseStmt(
+		"{ "
+		"	v[a+b]; "
+		"} ", symbols
+	);
+	// std::cout << *compStmt << std::endl;
 
-		// all the refs are usages 
-		std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ 
-				EXPECT_TRUE(cur->getUsage() == Ref::USE);
-				if (cur->getType() == Ref::ARRAY) {
-					EXPECT_EQ(1u, static_cast<ArrayRef&>(*cur).getIndexExpressions().size());
-				} else {
-					EXPECT_TRUE(cur->getType() == Ref::SCALAR);
-				}
-			});
+	RefList&& refs = collectDefUse(compStmt);
+	EXPECT_EQ(2u, refs.size());
 
-	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
+	// all the refs are usages 
+	std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ 
+			EXPECT_TRUE(cur->getUsage() == Ref::USE);
+			if (cur->getType() == Ref::ARRAY) {
+				EXPECT_EQ(1u, static_cast<ArrayRef&>(*cur).getIndexExpressions().size());
+			} else {
+				EXPECT_TRUE(cur->getType() == Ref::SCALAR);
+			}
+		});
 
 }
 
 TEST(DefUseCollect, Assignment) {
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
-	try { 
-		// even if the expression is completely wrong (because it works with refs),
-		// still valid as a test case 
-		auto compStmt = parser.parseStatement(
-			"{\
-				(ref<int<4>>:a = int<4>:c);\
-			}"
-		);
-		// std::cout << *compStmt << std::endl;
+	IRBuilder builder(mgr);
 
-		RefList&& refs = collectDefUse(compStmt);
-		EXPECT_EQ(1u, refs.size());
-		const Ref& ref = **refs.begin();
-		EXPECT_TRUE(ref.getUsage() == Ref::DEF);
+	std::map<std::string, NodePtr> symbols;
+	symbols["a"] = builder.variable(builder.parseType("ref<int<4>>"));
+	symbols["c"] = builder.variable(builder.parseType("int<4>"));
 
-	//	std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
-		
-		EXPECT_TRUE(ref.getType() == Ref::SCALAR);
+	// even if the expression is completely wrong (because it works with refs),
+	// still valid as a test case 
+	auto compStmt = builder.parseStmt(
+		"{ "
+		"	a = c; "
+		"} ", symbols
+	);
 
-	} catch(parse::ParseException& e) { 
-		std::cout << e.what() << std::endl;
-	}
+	RefList&& refs = collectDefUse(compStmt);
+	EXPECT_EQ(1u, refs.size());
+	const Ref& ref = **refs.begin();
+	EXPECT_TRUE(ref.getUsage() == Ref::DEF);
+	
+	EXPECT_TRUE(ref.getType() == Ref::SCALAR);
 
 }
 
 TEST(DefUseCollect, ArrayAccess) {
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
-	// even if the expression is completely wrong (because it works with refs),
-	// still valid as a test case 
-	try {
-		auto compStmt = parser.parseStatement(
-			"{\
-				(op<vector.ref.elem>(ref<vector<int<4>,10>>:a, (op<array.ref.elem.1D>(ref<array<int<4>,1>>:c, int<4>:b))));\
-			}"
-		);
-		// std::cout << *compStmt << std::endl;
+	IRBuilder builder(mgr);
 
-		RefList&& refs = collectDefUse(compStmt);
-		EXPECT_EQ(2u, refs.size());
+	std::map<std::string, NodePtr> symbols;
+	symbols["a"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+	symbols["c"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-		for_each(refs.arrays_begin(), refs.arrays_end(),
-			[](const RefPtr& cur) {
-				EXPECT_TRUE(cur->getUsage() == Ref::USE);
-			}
-		);
+	// even if the expression is completely wrong (because it works with refs), still valid as a
+	// test case 
+	auto compStmt =builder.parseStmt(
+		"{ "
+		"	a[c[b]]; "
+		"} ", symbols
+	);
+	// std::cout << *compStmt << std::endl;
 
-	// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
-	
-	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
+	RefList&& refs = collectDefUse(compStmt);
+	EXPECT_EQ(2u, refs.size());
+
+	for_each(refs.arrays_begin(), refs.arrays_end(),
+		[](const RefPtr& cur) {
+			EXPECT_TRUE(cur->getUsage() == Ref::USE);
+		}
+	);
 
 }
 
 TEST(DefUseCollect, ArrayAssignment) {
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
-	// even if the expression is completely wrong (because it works with refs),
-	// still valid as a test case 
-	try {
-		auto compStmt = parser.parseStatement(
-			"{\
-				((op<vector.ref.elem>(ref<vector<int<4>,10>>:a, (op<array.ref.elem.1D>(ref<array<int<4>,1>>:c, int<4>:b)))) = ref<int<4>>:d);\
-			}"
-		);
-		// std::cout << *compStmt << std::endl;
+	IRBuilder builder(mgr);
 
-		RefList&& refs = collectDefUse(compStmt);
-		EXPECT_EQ(3u, refs.size());
+	std::map<std::string, NodePtr> symbols;
+	symbols["a"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+	symbols["c"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+	symbols["d"] = builder.variable(builder.parseType("ref<int<4>>"));
 
-		RefList::ref_iterator<ArrayRef> it = refs.arrays_begin(), end = refs.arrays_end();
-		EXPECT_TRUE((*it)->getUsage() == Ref::USE);
-		++it;
-		EXPECT_TRUE(it != end);
-		EXPECT_TRUE((*it)->getUsage() == Ref::DEF);
-		++it;
-		EXPECT_TRUE(it == end);
+	// even if the expression is completely wrong (because it works with refs), still valid as a
+	// test case 
+	auto compStmt = builder.parseStmt(
+		"{ "
+		"	a[c[b]] = d; "
+		"}", symbols
+	);
+	// std::cout << *compStmt << std::endl;
 
-	// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
-	
-	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
+	RefList&& refs = collectDefUse(compStmt);
+	EXPECT_EQ(3u, refs.size());
+
+	RefList::ref_iterator<ArrayRef> it = refs.arrays_begin(), end = refs.arrays_end();
+	EXPECT_TRUE((*it)->getUsage() == Ref::USE);
+	++it;
+	EXPECT_TRUE(it != end);
+	EXPECT_TRUE((*it)->getUsage() == Ref::DEF);
+	++it;
+	EXPECT_TRUE(it == end);
 
 }
 
 TEST(DefUseCollect, ArrayAssignment2) {
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
-	// even if the expression is completely wrong (because it works with refs),
-	// still valid as a test case 
-	try {
-		auto compStmt = parser.parseStatement(
-			"{\
-				((op<vector.ref.elem>(ref<vector<int<4>,10>>:a, (op<array.ref.elem.1D>(ref<array<int<4>,1>>:c, int<4>:b)))) = ref<int<4>>:d);\
-			}"
-		);
-		// std::cout << *compStmt << std::endl;
+	IRBuilder builder(mgr);
 
-		RefList&& refs = collectDefUse(compStmt);
-		EXPECT_EQ(3u, refs.size());
+	std::map<std::string, NodePtr> symbols;
+	symbols["a"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+	symbols["c"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+	symbols["d"] = builder.variable(builder.parseType("ref<int<4>>"));
 
-		RefList::ref_iterator<ArrayRef> it = refs.arrays_begin(), end = refs.arrays_end();
-		EXPECT_TRUE((*it)->getUsage() == Ref::USE);
-		++it;
-		EXPECT_TRUE(it != end);
-		EXPECT_TRUE((*it)->getUsage() == Ref::DEF);
-		++it;
-		EXPECT_TRUE(it == end);
+	// even if the expression is completely wrong (because it works with refs), still valid as a
+	// test case 
+	auto compStmt = builder.parseStmt(
+		"{ "
+		"	a[c[b]] = d; "
+		"} ", symbols
+	);
+	// std::cout << *compStmt << std::endl;
 
-	// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
-	
-	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
+	RefList&& refs = collectDefUse(compStmt);
+	EXPECT_EQ(3u, refs.size());
+
+	RefList::ref_iterator<ArrayRef> it = refs.arrays_begin(), end = refs.arrays_end();
+	EXPECT_TRUE((*it)->getUsage() == Ref::USE);
+	++it;
+	EXPECT_TRUE(it != end);
+	EXPECT_TRUE((*it)->getUsage() == Ref::DEF);
+	++it;
+	EXPECT_TRUE(it == end);
 
 }
 

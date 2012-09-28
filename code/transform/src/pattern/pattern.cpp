@@ -36,12 +36,23 @@
 
 #include "insieme/transform/pattern/pattern.h"
 
+#include "insieme/core/ir.h"
+
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
+
+	namespace details {
+
+		bool isTypeOrValueOrParam(const core::NodeType type) {
+			return core::isA<core::NC_Type>(type) ||
+					core::isA<core::NC_IntTypeParam>(type) ||
+					core::isA<core::NC_Value>(type);
+		}
+	}
 
 
 	const TreePatternPtr any = std::make_shared<tree::Wildcard>();

@@ -54,6 +54,9 @@ void irt_busy_nanosleep(uint64 wait_time);
 // get timespan from epoch in ms
 uint64 irt_time_ms();
 
+// get timespan from epoch in ns
+uint64 irt_time_ns();
+
 // measures number of clock ticks over 100 ms, sets irt_g_time_ticks_per_sec and returns the value
 uint64 irt_time_set_ticks_per_sec();
 

@@ -41,15 +41,16 @@
 // lookup table sizes
 #define IRT_CONTEXT_LT_BUCKETS 7
 #define IRT_DATA_ITEM_LT_BUCKETS 97
-#define IRT_EVENT_LT_BUCKETS /*65536*/ 64567 /*97*/ /*7207301*/
+#define IRT_EVENT_LT_BUCKETS /*65536*/ /*64567*/ 97 /*7207301*/
 
 // scheduling policy
 #define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
+//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
 
 // determines if workers should ever go to sleep
 // - needs to be unset for the stealing policies!
 // workers must not sleep when compiling/running a program on windows xp because condition variables are not supported there
-//#define IRT_WORKER_SLEEPING
+#define IRT_WORKER_SLEEPING
 
 // ir interface
 #ifndef IRT_SANE_PARALLEL_MAX
@@ -78,6 +79,7 @@
 #define IRT_INST_WORKER_EVENT_LOGGING_ENV "IRT_INST_WORKER_EVENT_LOGGING"
 #define IRT_INST_WORKER_EVENT_TYPES_ENV "IRT_INST_WORKER_EVENT_TYPES"
 #define IRT_INST_WORKER_PD_BLOCKSIZE	512
+#define IRT_INST_REGION_LIST_SIZE 1024
 
 // performance counters
 // environment variable holding the papi events, separated by colons

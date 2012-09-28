@@ -199,8 +199,40 @@ namespace test {
 					inputs.close();
 				}
 
+				// collect compiler arguments
+				vector<string> compilerFlags;
+				auto compilerFlagsFile = testCaseDir / "test-gcc.flags";
+				if (fs::exists(compilerFlagsFile)) {
+					// just check for special flags
+					fs::ifstream inputs;
+					inputs.open(compilerFlagsFile);
+					if (!inputs.is_open()) {
+						LOG(log::WARNING) << "Unable to open flag file " << compilerFlagsFile.string();
+						continue;
+					}
+
+					// read entry by entry
+					while (!inputs.eof()) {
+						string flag;
+						inputs >> flag;
+						std::remove(flag.begin(), flag.end(), ' ');
+						if (flag.empty()) continue;
+
+						// process flag
+						if (fs::exists(testCaseDir / flag)) {
+							// it is an extra file to be compiled => use absolute path
+							compilerFlags.push_back((testCaseDir / flag).string());
+						} else {
+							// accept as ordinary flag
+							compilerFlags.push_back(flag);
+						}
+					}
+					inputs.close();
+				}
+
+
 				// add test case
-				res.push_back(IntegrationTestCase(prefix + cur, files, includeDirs, enableOpenMP, enableOpenCL, definitions));
+				res.push_back(IntegrationTestCase(prefix + cur, files, includeDirs, enableOpenMP, enableOpenCL, definitions, compilerFlags));
 			}
 
 			return res;

@@ -52,10 +52,9 @@ extern "C" {
 // since there is no support for inline assembly code under win64
 #ifndef _WIN64
 uint64 irt_time_ticks(void) {
-	// about __rdtsc() : http://msdn.microsoft.com/en-us/library/twchhe95.aspx , QueryPerformanceCounter is preferred, see: http://msdn.microsoft.com/en-us/library/windows/desktop/ee417693(v=vs.85).aspx
 
 	uint32 a, d;
-	// assembler version
+
 	__asm {
 		rdtsc
 		mov a, eax
@@ -64,20 +63,14 @@ uint64 irt_time_ticks(void) {
 	uint64 a64, d64;
 	a64 = a;
 	d64 = d;
+
 	return (a64 | (d64 << 32));
-	
-	// using PerformanceCounter
-	//LARGE_INTEGER ctr;
-	//QueryPerformanceCounter(&ctr);
-	//return ctr.QuadPart;
 }
 
 // checks if rdtsc instruction is available
 bool irt_time_ticks_available() {
 	unsigned d;
 	// with VS compiler, there is no need to preserve EAX, EBX, ECX, EDX, EDI, ESI register, see: http://msdn.microsoft.com/en-us/library/k1a8ss06(v=vs.80).aspx
-	// TODO: check if uint32 is the right type
-	//uint32 inParam = 0x00000001;
 	__asm {
 		mov eax, 0x00000001 // mov targetreg, const
 		cpuid
@@ -91,7 +84,6 @@ bool irt_time_ticks_available() {
 
 bool irt_time_ticks_constant() {
 	unsigned d;
-	//uint32 inParam = 0x80000007;
 	__asm {
 		mov eax, 0x80000007
 		cpuid
@@ -104,4 +96,4 @@ bool irt_time_ticks_constant() {
 	else
 		return 0;
 }
-#endif // _WIN64
+#endif // NOT _WIN64

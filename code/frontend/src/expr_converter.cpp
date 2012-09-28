@@ -59,7 +59,6 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
-#include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/frontend/cpp/temporary_handler.h"
 #include "insieme/annotations/c/naming.h"
@@ -229,10 +228,8 @@ core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::T
 			auto var = builder.variable(builder.refType(arrayType));
 			auto declStmt = builder.declarationStmt(var, memAlloc);
 
-			core::parse::IRParser parser(builder.getNodeManager());
-			
 			auto memSet = builder.callExpr(
-					builder.literal(parser.parseType("(anyRef, int<4>, uint<8>) -> anyRef"), "memset"),
+					builder.literal(builder.parseType("(anyRef, int<4>, uint<8>) -> anyRef"), "memset"),
 					builder.callExpr(gen.getRefToAnyRef(), var), 
 					builder.intLit(0), 
 					size);
@@ -1544,9 +1541,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 	LOG_EXPR_CONVERSION(retIr);
 
 	core::TypePtr retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
-	core::ExpressionPtr&& trueExpr = Visit(condOp->getTrueExpr());
-	core::ExpressionPtr&& falseExpr = Visit(condOp->getFalseExpr());
-	core::ExpressionPtr&& condExpr = Visit( condOp->getCond() );
+	core::ExpressionPtr trueExpr  = Visit(condOp->getTrueExpr());
+	core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr());
+	core::ExpressionPtr condExpr  = Visit( condOp->getCond() );
 
 	condExpr = utils::cast(condExpr, gen.getBool());
 
@@ -1556,14 +1553,27 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 		retTy = GET_REF_ELEM_TYPE(retTy);
 	}
 
+	// in C++, string literals with same size may produce an error, do not cast to avoid 
+	// weird behaviour 
+	if (!llvm::isa<StringLiteral>(condOp->getTrueExpr()) ||
+		!llvm::isa<StringLiteral>(condOp->getTrueExpr())){
+
+		trueExpr  = utils::cast(trueExpr, retTy);
+		falseExpr = utils::cast(falseExpr, retTy);
+	}
+	else{
+		retTy = trueExpr->getType();
+	}
+
+
 	return (retIr =
 			builder.callExpr(retTy, gen.getIfThenElse(),
 					condExpr, // Condition
 					builder.createCallExprFromBody(
-							builder.returnStmt(utils::cast(trueExpr, retTy)), retTy, true
+							builder.returnStmt(trueExpr), retTy, true
 					),// True
 					builder.createCallExprFromBody(
-							builder.returnStmt(utils::cast(falseExpr, retTy)), retTy, true
+							builder.returnStmt(falseExpr), retTy, true
 					)// False
 			)
 	);
