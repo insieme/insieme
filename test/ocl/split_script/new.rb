@@ -53,7 +53,7 @@ end
 def install_gems host
   # needed ruby gems
   ENV['GEM_PATH'] = "#{$lib_dir}/gem/"
-  ENV['R_HOME'] = (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4") ? "/usr/lib64/R" : "/usr/lib/R"
+  ENV['R_HOME'] = (host == "mc1-ib" || host == "mc2-ib" || host == "mc3-ib" || host == "mc4-ib") ? "/usr/lib64/R" : "/usr/lib/R"
   ENV['LD_LIBRARY_PATH'] = ["RHOME/bin", ENV['LD_LIBRARY_PATH'], ].join(':')
   `mkdir #{$lib_dir}/gem/` if !File.directory?("#{$lib_dir}/gem/")
   gem_names = ["colorize", "sequel", "sqlite3", "rsruby"] #, "rb-libsvm"]
@@ -64,7 +64,7 @@ def install_gems host
         `gem install -i #{$lib_dir}gem sqlite3 -- --with-sqlite3-dir=#{$lib_dir}/sqlite-latest/ 2> file.tmp`
       elsif name == "rsruby"
         host = `hostname`.strip
-        if (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4")
+        if (host == "mc1-ib" || host == "mc2-ib" || host == "mc3-ib" || host == "mc4-ib")
           `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib64/R --with-R-include=/usr/include/R 2> file.tmp`
         elsif
           `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib/R --with-R-include=/usr/share/R/include 2> file.tmp`
@@ -94,7 +94,7 @@ end
 def initialize_env
   host = `hostname`.strip
 
-  if (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4")
+  if (host == "mc1-ib" || host == "mc2-ib" || host == "mc3-ib" || host == "mc4-ib")
     $main_dir = '/software-local/insieme_build/code/'
     $lib_dir =  '/software-local/insieme-libs/'
     ENV['OPENCL_ROOT'] = '/software/AMD/AMD-APP-SDK-v2.6-RC3-lnx64/'
@@ -819,22 +819,21 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-#test = Test.new(split, [2, 18], [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
+test = Test.new(split, [2, 18], [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
 
 #test = Test.new(split, [2, 18], [ 5, 6, 7, 8, 9, 10, 11, 12, 13,   16, 17, 18], [ 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21,  9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17 ], 5) # AL
 
 
 #test = Test.new(split, [2, 18], [1,2,3,4,5,6,7,8,9,10], [9..23, 9..25, 9..23,  9..25, 9..24, 9..25, 9..24, 9..21,  9..19, 9..18], 5)
-test = Test.new(split, [2, 18], [16], [ 9..22], 5)
 
 # run the test
 #test.info
 test.compile
 test.check
-test.run
-test.fix
+#test.run
+#test.fix
 #test.fake
-test.view
+#test.view
 #test.delete
 #test.collect
 #test.evaluate :svm # or :ffnet
