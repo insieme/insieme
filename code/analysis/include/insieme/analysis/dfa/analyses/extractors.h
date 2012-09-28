@@ -44,9 +44,9 @@ namespace insieme {
 namespace analysis {
 namespace dfa {
 
-template <>
-inline typename container_type_traits< dfa::elem<Access>  >::type
-extract(const Entity< dfa::elem<Access> >& e, const CFG& cfg) { 
+// template <>
+// inline typename container_type_traits< dfa::elem<Access>  >::type
+// extract(const Entity< dfa::elem<Access> >& e, const CFG& cfg) { 
 
 //	std::set<Access> entities;
 
@@ -62,7 +62,7 @@ extract(const Entity< dfa::elem<Access> >& e, const CFG& cfg) {
 
 //	return entities;
 
-}
+// }
 
 /**
  * Define the extractor for CFG Blocks. In this case we extract the address of

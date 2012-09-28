@@ -165,14 +165,6 @@ int main(int argc, const char* argv[]) {
 		icl_device* dev = icl_get_device(args->device_id);
 		icl_print_device_short_info(dev);
 	
-		icl_buffer* cpflag_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(unsigned int) * size);
-		icl_buffer* S0_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
-		icl_buffer* K_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
-		icl_buffer* r_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
-		icl_buffer* sigma_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
-		icl_buffer* T_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
-		icl_buffer* answer_buf = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(FLOAT) *size);
-
         size_t szLocalWorkSize = args->local_size;
         float multiplier = size/(float)szLocalWorkSize;
         if(multiplier > (int)multiplier)
@@ -182,6 +174,14 @@ int main(int argc, const char* argv[]) {
 		icl_kernel* kernel = icl_create_kernel(dev, "blackscholes.cl", "bsop_kernel", "", ICL_SOURCE);
 
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* cpflag_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(unsigned int) * size);
+			icl_buffer* S0_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+			icl_buffer* K_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+			icl_buffer* r_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+			icl_buffer* sigma_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+			icl_buffer* T_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+			icl_buffer* answer_buf = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(FLOAT) *size);
+
 			// write data to ocl buffers
 			icl_write_buffer(cpflag_buf, CL_TRUE, size * sizeof(int), cpflag, NULL, NULL);
 			icl_write_buffer(S0_buf, CL_TRUE, size * sizeof(float), S0, NULL, NULL);
@@ -202,9 +202,9 @@ int main(int argc, const char* argv[]) {
 												sizeof(cl_int), (void *)&size);
 
 			icl_read_buffer(answer_buf, CL_TRUE, sizeof(int) * size, &answer[0], NULL, NULL);
+			icl_release_buffers(6, cpflag_buf, S0_buf, K_buf, r_buf, sigma_buf, T_buf, answer_buf);
 		}
 	
-		icl_release_buffers(6, cpflag_buf, S0_buf, K_buf, r_buf, sigma_buf, T_buf, answer_buf);
 		icl_release_kernel(kernel);
 	} else {
 		printf("ERROR: No devices found\n");

@@ -36,7 +36,7 @@
 
 #include "insieme/core/lang/extension.h"
 
-#include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/parser2/ir_parser.h"
 #include "insieme/core/ir_expressions.h"
 
 namespace insieme {
@@ -45,7 +45,9 @@ namespace lang {
 
 	core::TypePtr getType(core::NodeManager& manager, const string& type) {
 		// build type
-		return parse::parseType(manager, type);
+		TypePtr res = parser::parse_type(manager, type, false);
+		assert(res && "Unable to parse given type!");
+		return res;
 	}
 
 	core::LiteralPtr getLiteral(core::NodeManager& manager, const string& type, const string& value) {

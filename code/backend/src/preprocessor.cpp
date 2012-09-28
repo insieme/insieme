@@ -653,11 +653,6 @@ namespace backend {
 				res = handleCallExpr(core::static_pointer_cast<const core::CallExpr>(res));
 			}
 
-			// handle declarations
-			if (ptr->getNodeType() == core::NT_DeclarationStmt) {
-				res = handleDeclarationStmt(core::static_pointer_cast<const core::DeclarationStmt>(res));
-			}
-
 			// handle rest
 			return res;
 		}
@@ -740,7 +735,7 @@ namespace backend {
 
 				// handle vector->array
 				if (argType->getNodeType() == core::NT_VectorType && paramType->getNodeType() == core::NT_ArrayType) {
-					assert(ref && "Cannot convert implicitly to array value!");
+					if (!ref) { assert(ref && "Cannot convert implicitly to array value!"); }
 					// conversion needed
 					newArgs[i] = builder.callExpr(basic.getRefVectorToRefArray(), newArgs[i]);
 					changed = true;
@@ -755,34 +750,6 @@ namespace backend {
 			return core::CallExpr::get(manager, instantiation->applyTo(call->getType()), call->getFunctionExpr(), newArgs);
 		}
 
-		/**
-		 * This method replaces vector initialization values with vector2array conversions whenever necessary.
-		 */
-		core::DeclarationStmtPtr handleDeclarationStmt(core::DeclarationStmtPtr declaration) {
-
-			// only important for array types
-			core::TypePtr type = declaration->getVariable()->getType();
-			if (type->getNodeType() != core::NT_ArrayType) {
-				return declaration;
-			}
-
-			assert(type->getNodeType() != core::NT_ArrayType && "Invalid declaration of array value type!");
-
-//			// get initialization value
-//			type = declaration->getInitialization()->getType();
-//			if (type->getNodeType() != core::NT_VectorType) {
-//				return declaration;
-//			}
-//
-//			// extract some values from the declaration statement
-//			core::NodeManager& manager = declaration->getNodeManager();
-//			const core::VariablePtr& var = declaration->getVariable();
-//			const core::ExpressionPtr& oldInit = declaration->getInitialization();
-//
-//			// construct a new init statement
-//			core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.getLangBasic().getVectorToArray(), toVector(oldInit));
-//			return core::DeclarationStmt::get(manager, declaration->getVariable(), newInit);
-		}
 	};
 
 	core::NodePtr MakeVectorArrayCastsExplicit::process(core::NodeManager& manager, const core::NodePtr& code) {

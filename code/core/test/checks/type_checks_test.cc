@@ -419,6 +419,25 @@ TEST(DeclarationStmtTypeCheck, Basic) {
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 }
 
+TEST(DeclarationStmtTypeCheck, SubTypes) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+
+	// OK ... create a function literal
+	TypePtr typeA = basic.getInt4();
+	TypePtr typeB = basic.getInt8();
+	ExpressionPtr init = builder.literal(typeA, "4");
+	DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(typeB), builder.literal(typeA, "4"));
+	DeclarationStmtPtr err = builder.declarationStmt(builder.variable(typeA), builder.literal(typeB, "4"));
+
+	CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+ 	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+}
+
 TEST(IfCondition, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);

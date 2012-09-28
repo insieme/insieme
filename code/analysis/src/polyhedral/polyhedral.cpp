@@ -209,7 +209,7 @@ std::pair<core::NodeAddress, AffineConstraintPtr> getVariableDomain(const core::
 
 	IterationDomain domain( extract_surrounding_domain() );
 
-	// LOG(INFO) << domain;
+	//LOG(INFO) << domain;
 
 	if (domain.universe() || domain.empty()) { 
 		return std::make_pair(NodeAddress(), domain.getConstraint()); 

@@ -43,6 +43,7 @@
 
 #include "insieme/core/parser2/detail/parser.h"
 
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/encoder/lists.h"
@@ -949,7 +950,7 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = getOperand(cur, 0);
 						ExpressionPtr b = getOperand(cur, 1);
-						return cur.eq(a,b);
+						return cur.ne(a,b);
 					},
 					-9
 			));
@@ -1095,6 +1096,10 @@ namespace parser {
 						terms.erase(terms.begin());
 
 						TypePtr type = fun->getType();
+						if (analysis::isRefType(type)) {
+							fun = cur.deref(fun);
+							type = fun->getType();
+						}
 						if (type->getNodeType()!=NT_FunctionType) {
 							return fail(cur, "Calling non-function type!");
 						}
@@ -1202,10 +1207,10 @@ namespace parser {
 			// --------------- add statement rules ---------------
 
 			// every expression is a statement (if terminated by ;)
-			g.addRule("S", rule(seq(E,";"), forward));
+			g.addRule("S", rule(seq(E,";"), forward, -1));	// lower priority since less likely
 
 			// allow ; at the end of statements
-			g.addRule("S", rule(seq(S,";"), forward));
+			g.addRule("S", rule(seq(S,";"), forward, -2));	// lower priority since even less likely
 
 			// every declaration is a statement
 			g.addRule("S", rule(seq(let, ";"), [](Context& cur)->NodePtr { return cur.getNoOp(); }));
@@ -1297,6 +1302,34 @@ namespace parser {
 						return cur.ifStmt(condition, thenPart, elsePart);
 					},
 					-1		// lower priority for this rule (default=0)
+			));
+
+			// switch
+			g.addRule("S", rule(
+					seq("switch(", E, ") {", loop(seq("case", E, ":", S)), opt(seq("default:", S)),"}"),
+					[](Context& cur)->NodePtr {
+						const auto& terms = cur.getTerms();
+
+						ExpressionPtr expr = terms[0].as<ExpressionPtr>();
+
+						vector<SwitchCasePtr> cases;
+						for(unsigned i = 1; i+1<terms.size(); i+=2) {
+							ExpressionPtr caseValue = terms[i].as<ExpressionPtr>();
+							StatementPtr caseBody = terms[i+1].as<StatementPtr>();
+
+							// check that value is a literal
+							if (!caseValue.isa<LiteralPtr>()) return NodePtr();
+
+							// add case
+							cases.push_back(cur.switchCase(caseValue.as<LiteralPtr>(), caseBody));
+						}
+
+						// get default body
+						StatementPtr defaultBody = (terms.size() % 2) ? cur.getNoOp(): terms.back().as<StatementPtr>();
+
+						// build switch and be done
+						return cur.switchStmt(expr, cases, defaultBody);
+					}
 			));
 
 

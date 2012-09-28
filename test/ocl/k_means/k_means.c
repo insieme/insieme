@@ -46,10 +46,6 @@ int main(int argc, const char* argv[]) {
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "k_means.cl", "k_means", "", ICL_SOURCE);
 		
-		icl_buffer* buf_features = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(float) * feature_size);
-		icl_buffer* buf_clusters = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(float) * cluster_size);
-		icl_buffer* buf_membership = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
-		
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
@@ -57,6 +53,10 @@ int main(int argc, const char* argv[]) {
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_features = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(float) * feature_size);
+			icl_buffer* buf_clusters = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(float) * cluster_size);
+			icl_buffer* buf_membership = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
+		
 			icl_write_buffer(buf_features, CL_TRUE, sizeof(float) * feature_size, &features[0], NULL, NULL);
 			icl_write_buffer(buf_clusters, CL_TRUE, sizeof(float) * cluster_size, &clusters[0], NULL, NULL);
 
@@ -69,9 +69,9 @@ int main(int argc, const char* argv[]) {
 												sizeof(cl_int), (void *)&nfeatures);
 		
 			icl_read_buffer(buf_membership, CL_TRUE, sizeof(int) * size, &membership[0], NULL, NULL);
+			icl_release_buffers(3, buf_features, buf_clusters, buf_membership);
 		}
 		
-		icl_release_buffers(3, buf_features, buf_clusters, buf_membership);
 		icl_release_kernel(kernel);
 	}
 	

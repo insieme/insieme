@@ -52,9 +52,6 @@ int main(int argc, const char* argv[]) {
 		icl_print_device_short_info(device);
 		icl_kernel *kernel = icl_create_kernel(device, "median_filter.cl","median_filter", "", ICL_SOURCE);
 
-		icl_buffer *input_buf  =  icl_create_buffer(device, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
-		icl_buffer *output_buf =  icl_create_buffer(device, CL_MEM_WRITE_ONLY, sizeof(cl_uint) * size);
-
 		size_t szLocalWorkSize =  args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
@@ -62,6 +59,9 @@ int main(int argc, const char* argv[]) {
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
 		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer *input_buf  =  icl_create_buffer(device, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
+			icl_buffer *output_buf =  icl_create_buffer(device, CL_MEM_WRITE_ONLY, sizeof(cl_uint) * size);
+
 			icl_write_buffer(input_buf, CL_TRUE, sizeof(cl_uint) * size, inputImageData,NULL,NULL);
 
 			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 4,
@@ -71,9 +71,9 @@ int main(int argc, const char* argv[]) {
 										sizeof(cl_uint), &width);
 
 			icl_read_buffer(output_buf, CL_TRUE, sizeof(cl_uint) * size, outputImageData, NULL, NULL);
+			icl_release_buffers(2, input_buf, output_buf);
 		}
 
-		icl_release_buffers(2, input_buf, output_buf);
 		icl_release_kernel(kernel);
 	}
 

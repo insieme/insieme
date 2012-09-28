@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <type_traits>
+
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_node_types.h"
 
@@ -101,8 +103,19 @@ namespace core {
 	#include "insieme/core/ir_nodes.def"
 	#undef NODE
 
-
-
+	/**
+	 * Determines whether the given node type belongs to the requested category.
+	 */
+	template<NodeCategory category>
+	bool isA(NodeType type) {
+		switch(type) {
+		#define CONCRETE(KIND) \
+			case NT_ ## KIND : return std::is_base_of<typename node_category_trait<category>::base_type, typename to_node_type<NT_##KIND>::type>::value;
+		#include "insieme/core/ir_nodes.def"
+		#undef CONCRETE
+		}
+		return false;
+	}
 
 	// **********************************************************************************
 	// 									Node Child Type

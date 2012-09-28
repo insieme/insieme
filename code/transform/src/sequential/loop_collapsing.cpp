@@ -47,7 +47,6 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/analysis/attributes.h"
-#include "insieme/core/parser/type_parse.h"
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/analysis/dep_graph.h"

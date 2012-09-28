@@ -40,6 +40,9 @@
 
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/checks/full_check.h"
+#include "insieme/utils/logging.h"
+
 using namespace insieme::core;
 using namespace insieme::core::lang;
 
@@ -75,5 +78,54 @@ TEST(IRBuilder, TypeMatch) {
 	EXPECT_TRUE(builder.matchType("ref<vector<'a,#n>>", type));
 	EXPECT_FALSE(builder.matchType("ref<vector<'a,5>>", type));
 	EXPECT_TRUE(builder.matchType("ref<vector<int<#b>,6>>", type));
+
+}
+
+int check(NodePtr nodeToCheck) {
+	auto semantic = checks::check(nodeToCheck);
+	auto warnings = semantic.getWarnings();
+	std::sort(warnings.begin(), warnings.end());
+	for_each(warnings, [](const checks::Message& cur) {
+		LOG(INFO) << cur << std::endl;
+	});
+
+	auto errors = semantic.getErrors();
+	EXPECT_EQ(0u, errors.size());
+	std::sort(errors.begin(), errors.end());
+	for_each(errors, [](const checks::Message& cur) {
+		LOG(INFO) << cur << std::endl;
+		/*        core::NodeAddress address = cur.getAddress();
+		 core::NodePtr context = address.getParentNode(address.getDepth()-1);
+		 std::cout << "\t Context: " <<
+		 insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
+		 */
+	});
+
+	return errors.size();
+}
+
+TEST(IRBuilder, Assign) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+
+    VariablePtr lhs = builder.variable(builder.refType(basic.getInt4()));
+    VariablePtr rhs = builder.variable(basic.getInt4());
+
+    ExpressionPtr simpleAssign = builder.assign(lhs, rhs);
+
+    check(simpleAssign);
+
+	vector<std::pair<StringValuePtr,TypePtr>> unionEntries;
+	unionEntries.push_back(std::make_pair(builder.stringValue("a"), basic.getReal4()));
+	unionEntries.push_back(std::make_pair(builder.stringValue("b"), basic.getUInt2()));
+	unionEntries.push_back(std::make_pair(builder.stringValue("c"), builder.vectorType(basic.getChar(), builder.concreteIntTypeParam(4))));
+
+	VariablePtr unionRhs = builder.variable(builder.unionType(unionEntries));
+
+	ExpressionPtr unionAssign = builder.assign(lhs, unionRhs);
+
+	check(unionAssign);
 
 }

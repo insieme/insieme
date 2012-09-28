@@ -114,10 +114,12 @@ void _irt_await_all_workers_init(irt_worker_init_signal *signal){
 
 void* _irt_worker_func(void *argvp) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)argvp;
-	irt_set_affinity(arg->affinity, irt_current_thread());
+	irt_thread t;
+	irt_thread_get_current(&t);
+	irt_set_affinity(arg->affinity, t);
 	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
 	irt_worker* self = arg->generated;
-	self->thread = irt_current_thread();
+	irt_thread_get_current(&(self->thread));
 	self->id.index = 1;
 	self->id.thread = arg->index;
 	self->id.node = 0; // TODO correct node id
@@ -242,10 +244,14 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	irt_lw_data_item *prev_args = self->parameters;
 	irt_work_item_range prev_range = self->range;
 	irt_wi_implementation_id prev_impl_id = self->impl_id;
+	irt_work_item_id prev_source = self->source_id;
+	uint32 prev_fragments = self->num_fragments;
 	// set new wi data
 	self->parameters = args;
 	self->range = *range;
 	self->impl_id = impl_id;
+	self->source_id = irt_work_item_null_id();
+	self->num_fragments = 0;
 	// need unique active child number, can re-use id (and thus register entry)
 	uint32 *prev_parent_active_child_count = self->parent_num_active_children;
 	self->parent_num_active_children = self->num_active_children;
@@ -260,6 +266,8 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	self->parameters = prev_args;
 	self->range = prev_range;
 	self->impl_id = prev_impl_id;
+	self->source_id = prev_source;
+	self->num_fragments = prev_fragments;
 }
 
 void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal) {
@@ -267,8 +275,7 @@ void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init
 	arg->affinity = affinity;
 	arg->index = index;
 	arg->signal = signal;
-
-	irt_thread_create(&_irt_worker_func, arg);
+	irt_thread_create(&_irt_worker_func, arg, NULL);
 }
 
 void _irt_worker_cancel_all_others() {
@@ -278,19 +285,27 @@ void _irt_worker_cancel_all_others() {
 		if(cur != self && cur->state == IRT_WORKER_STATE_RUNNING) {
 			cur->state = IRT_WORKER_STATE_STOP;
 			irt_inst_insert_wo_event(self, IRT_INST_WORKER_STOP, cur->id);
-			irt_thread_cancel(cur->thread);
+			irt_thread_cancel(&(cur->thread));
 		}
 	}
 	
 }
 
 void _irt_worker_end_all() {
+
+	// get info about calling thread
+	irt_thread calling_thread;
+	irt_thread_get_current(&calling_thread);
+
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker *cur = irt_g_workers[i];
 		if(cur->state == IRT_WORKER_STATE_RUNNING) {
 			cur->state = IRT_WORKER_STATE_STOP;
 			irt_signal_worker(cur);
-			irt_thread_join(cur->thread);
+
+			// avoid calling thread awaiting its own termination
+			if(!irt_thread_check_equality(&calling_thread, &(cur->thread)))
+				irt_thread_join(&(cur->thread));
 		}   
 	}
 }

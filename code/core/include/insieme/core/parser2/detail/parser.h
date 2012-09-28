@@ -735,6 +735,8 @@ namespace detail {
 
 	class Sequence : public Term {
 
+	public:
+
 		struct SubSequence {
 			bool terminal;
 			Limit limit;
@@ -746,6 +748,8 @@ namespace detail {
 			bool updateStartSet(const Grammar& g, TokenSet& start) const;
 			bool updateEndSet(const Grammar& g, TokenSet& end) const;
 		};
+
+	private:
 
 		vector<SubSequence> sequence;
 
@@ -772,6 +776,8 @@ namespace detail {
 			  leftAssociative(leftAssociative) {
 			updateLimit();
 		}
+
+		const vector<SubSequence>& getSubSequences() const { return sequence; }
 
 		virtual bool updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const;
 
@@ -890,7 +896,12 @@ namespace detail {
 
 		NodePtr match(Context& context, const TokenIter& begin, const TokenIter& end) const {
 			if (pattern->match(context, begin, end)) {
-				return action(context);
+				try {
+					return action(context);
+				} catch(...) {
+					// it cannot be parsed => return null-pointer
+					return NodePtr();
+				}
 			}
 			return NodePtr();	// no result
 		}
@@ -930,6 +941,7 @@ namespace detail {
 		struct TermInfo : public utils::Printable {
 			std::map<string, StartEndSets> nonTerminalInfos;
 			std::map<TermPtr, StartEndSets> termInfos;
+			std::map<Sequence::SubSequence const*, StartEndSets> subSequenceInfo;
 
 		private:
 
@@ -1023,6 +1035,20 @@ namespace detail {
 
 		const TokenSet& getEndSet(const TermPtr& subTerm) const {
 			return getStartEndSets(subTerm).second;
+		}
+
+		const StartEndSets& getSequenceStartEndSets(const Sequence::SubSequence& subSequence) const {
+			const auto& info = getTermInfo().subSequenceInfo;
+			assert(info.find(&subSequence) != info.end());
+			return info.find(&subSequence)->second;
+		}
+
+		const TokenSet& getSequenceStartSet(const Sequence::SubSequence& subSequence) const {
+			return getSequenceStartEndSets(subSequence).first;
+		}
+
+		const TokenSet& getSequenceEndSet(const Sequence::SubSequence& subSequence) const {
+			return getSequenceStartEndSets(subSequence).second;
 		}
 
 		const StartEndSets& getStartEndSets(const string& nonTerminal) const {

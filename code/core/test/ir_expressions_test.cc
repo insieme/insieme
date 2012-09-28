@@ -45,6 +45,7 @@
 
 #include "insieme/utils/set_utils.h"
 
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -724,6 +725,33 @@ TEST(ExpressionTest, LambdaUnrollingNonRecursive) {
 	EXPECT_EQ(simple, simple->unroll(2));
 	EXPECT_EQ(simple, simple->unroll(3));
 
+}
+
+TEST(ExpressionTest, LambdaUnrollingExponential) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	LambdaExprPtr fun = builder.parseExpr(
+			"let int = int<4> in "
+			"let fun = (int x)->int { fun(x-2) + fun(x-1); }"
+			"in fun"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(fun);
+
+	// count number of recursive calls
+	EXPECT_EQ(2u, analysis::getFreeVariableAddresses(fun->getLambda()).size());
+
+	// this number should grow when unrolling the function
+	EXPECT_EQ(4u, analysis::getFreeVariableAddresses(fun->unroll(2)->getLambda()).size());
+	EXPECT_EQ(8u, analysis::getFreeVariableAddresses(fun->unroll(3)->getLambda()).size());
+	EXPECT_EQ(16u, analysis::getFreeVariableAddresses(fun->unroll(4)->getLambda()).size());
+
+
+	// number of free variables should be 0 in case of a peeling
+	EXPECT_EQ(0u, analysis::getFreeVariableAddresses(fun->peel()).size());
+	EXPECT_EQ(0u, analysis::getFreeVariableAddresses(fun->peel(2)).size());
+	EXPECT_EQ(0u, analysis::getFreeVariableAddresses(fun->peel(3)).size());
 }
 
 

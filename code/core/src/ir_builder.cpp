@@ -178,6 +178,10 @@ StatementPtr IRBuilder::parseStmt(const string& code, const std::map<string, Nod
 	return parser::parse_stmt(manager, code, true, symbols);
 }
 
+ProgramPtr IRBuilder::parseProgram(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser::parse_program(manager, code, true, symbols);
+}
+
 vector<NodeAddress> IRBuilder::parseAddresses(const string& code, const std::map<string, NodePtr>& symbols) const {
 	return parser::parse_addresses(manager, code, true, symbols);
 }
@@ -520,6 +524,24 @@ CallExprPtr IRBuilder::refDelete(const ExpressionPtr& subExpr) const {
 }
 
 CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
+	RefTypePtr targetType = dynamic_pointer_cast<const RefType>(target->getType());
+	assert(targetType && "Target of an assignmet must be of type ref<'a>");
+
+	// if the rhs is a union while the lhs is not, try to find the appropriate entry in the union
+	if(UnionTypePtr uType = dynamic_pointer_cast<const UnionType>(value->getType())) {
+		TypePtr nrtt = targetType->getElementType();
+		if(nrtt->getNodeType() != NT_UnionType) {
+			auto list = uType.getEntries();
+			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
+				return isSubTypeOf(cur->getType(), nrtt);
+			});
+
+			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
+			return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target,
+					accessMember(value, pos->getName()));
+		}
+	}
+
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target, value);
 }
 
@@ -575,15 +597,16 @@ DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const Express
 
 
 CallExprPtr IRBuilder::acquireLock(const ExpressionPtr& lock) const {
-	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot lock a non-lock type.");
+	assert(analysis::isRefOf(lock, manager.getLangBasic().getLock()) && "Cannot lock a non-lock type.");
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockAcquire(), lock);
 }
 CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
-	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot unlock a non-lock type.");
+	assert(analysis::isRefOf(lock, manager.getLangBasic().getLock()) && "Cannot unlock a non-lock type.");
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockRelease(), lock);
 }
-CallExprPtr IRBuilder::createLock() const {
-	return callExpr(manager.getLangBasic().getLock(), manager.getLangBasic().getLockCreate());
+CallExprPtr IRBuilder::initLock(const ExpressionPtr& lock) const {
+	assert(analysis::isRefOf(lock, manager.getLangBasic().getLock()) && "Cannot init a non-lock type.");
+	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockInit(), lock);
 }
 
 

@@ -89,6 +89,19 @@ namespace insieme {
 		// see whether target code can be compiled
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
+//		// add OCL specific compiler flags
+//		compiler.addFlag("-lOpenCL");
+//		compiler.addFlag("-lm");
+//		compiler.addFlag("-I$OPENCL_ROOT/include");
+//		compiler.addFlag("-L$OPENCL_ROOT/lib/x86_64");
+//		compiler.addFlag("-DUSE_OPENCL=ON");
+//		compiler.addFlag("-D_POSIX_C_SOURCE=199309");
+
+		// add extra compiler flags from test case
+		for(const auto& flag : testCase.getCompilerArguments()) {
+			compiler.addFlag(flag);
+		}
+
 		EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "\nCode: " << *target;
 	}
 

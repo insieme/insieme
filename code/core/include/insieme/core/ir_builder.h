@@ -138,6 +138,11 @@ namespace core {
 		StatementPtr parseStmt(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
 
 		/**
+		 * The same as the parse member function yet interpreting the given code as a full program.
+		 */
+		ProgramPtr parseProgram(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
+		/**
 		 * Allows lists of addresses to be parsed. This parser supports the same grammar + allows constructs to be enclosed
 		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
 		 * ordered according to the order of node-addresses (lexicographical).
@@ -287,8 +292,8 @@ namespace core {
 		LambdaPtr lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
 
 		// Lambda Expressions
+		LambdaExprPtr lambdaExpr(const StatementPtr& body, const VariableList& params = VariableList()) const;
 		LambdaExprPtr lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const;
-		LambdaExprPtr lambdaExpr(const StatementPtr& body, const VariableList& params) const;
 		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const;
 		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const;
 		LambdaExprPtr lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
@@ -383,7 +388,7 @@ namespace core {
 		// Locks
 		CallExprPtr acquireLock(const ExpressionPtr& lock) const;
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
-		CallExprPtr createLock() const;
+		CallExprPtr initLock(const ExpressionPtr& lock) const;
 
 		// Atomics
 		CallExprPtr atomicOp(const ExpressionPtr& location, const ExpressionPtr& testFunc, const ExpressionPtr& replaceFunc);

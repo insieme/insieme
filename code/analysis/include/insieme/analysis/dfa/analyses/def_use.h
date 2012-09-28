@@ -36,11 +36,15 @@
 
 #pragma once
 
+#include <set>
+
 #include "insieme/core/forward_decls.h"
 
 #include <iterator>
 
 namespace insieme { namespace analysis { namespace dfa { namespace analyses {
+
+typedef std::set<core::ExpressionAddress> AddressSet;
 
 /** 
  *  This is an utility class which can be used to get the definitions reaching a particular usage of
@@ -58,35 +62,10 @@ class DefUse {
 
 public:
 
-	struct defs_iterator_impl;
-
-	struct defs_iterator: std::iterator< std::forward_iterator_tag, core::ExpressionAddress > {
-		
-		core::ExpressionAddress operator*() const;
-
-		defs_iterator& operator++() { inc(false); return *this; }
-
-		bool operator==(const defs_iterator& other) const;
-
-		bool operator!=(const defs_iterator& other) const { return !((*this) == other); }
-
-	private:
-		std::shared_ptr<defs_iterator_impl> pimpl;
-
-		friend class DefUse;
-		defs_iterator( const std::shared_ptr<defs_iterator_impl>& pimpl ) : pimpl(pimpl) { inc(true); } 
-	
-		void inc(bool first);
-	};
-
-	typedef defs_iterator iterator;
-
 	DefUse(const core::NodePtr& root);
 
-	defs_iterator defs_begin(const core::ExpressionAddress& var) const;
-
-	defs_iterator defs_end(const core::ExpressionAddress& var) const;
-
+	AddressSet getDefinitions(const core::ExpressionAddress& addr);
+	
 };
 
 } } } } // end insieme::analysis::dfa::analyses

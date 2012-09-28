@@ -240,6 +240,11 @@ public:
 	 * Computes the hash code for a single-step path only consisting of the given node.
 	 */
 	static std::size_t hashSingleStepPath(const NodePtr& node);
+
+	/**
+	 * Concatenates the two paths.
+	 */
+	static Path concat(const Path& a, const Path& b);
 };
 
 
@@ -266,8 +271,7 @@ static_address_cast(const Address<T>& src);
  * TODO: extend documentation with usage scenarios
  */
 template<typename T>
-class Address :
-	public node_type<typename boost::remove_const<T>::type>::adr_accessor_type {
+class Address : public node_type<typename boost::remove_const<T>::type>::adr_accessor_type {
 
 public:
 
@@ -770,22 +774,10 @@ struct DynamicAddressCast {
 	}
 };
 
-template <class T>
-Address<const T> concat(const Address<const T>& head, const Address<const T>& tail) {
-
-	// NOTE: this is O(n^2) for the n = length of path
-	// TODO: write recursive version which is O(n)
-
+template <class A, class B>
+Address<const B> concat(const Address<const A>& head, const Address<const B>& tail) {
 	assert(head.getAddressedNode() == tail.getRootNode() && "Impossible to merge addresses");
-	const Path& tailPath = tail.getPath(); 
-	// If try to merge a path with another path containing only 1 node we return the head path
-	if ( tailPath.getLength() <= 1) { return head; }
-
-	Path newPath = head.getPath();
-	for(int i=tailPath.getLength()-2; i>=0; --i) {
-		newPath = newPath.extendForChild( tailPath.getPathToParent(i).getIndex() );
-	}
-	return Address<const T>(newPath);
+	return Address<const B>(Path::concat(head.getPath(), tail.getPath()));
 }
 
 /**
