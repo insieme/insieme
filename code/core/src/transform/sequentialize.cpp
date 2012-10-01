@@ -248,10 +248,11 @@ namespace transform {
 				StatementPtr stmt = curStmt;
 
 				// testing whether job can be converted into a parallel loop
-				if (stmt->getNodeType() == NT_JobExpr) {
-					stmt = toPFor(stmt.as<JobExprPtr>());	// try converting job into a parallel loop
-					if (!stmt) stmt = curStmt;				// on failure, undo step
-				}
+				// TODO: re-enable when implementation is complete
+//				if (stmt->getNodeType() == NT_JobExpr) {
+//					stmt = toPFor(stmt.as<JobExprPtr>());	// try converting job into a parallel loop
+//					if (!stmt) stmt = curStmt;				// on failure, undo step
+//				}
 
 				// start by resolve stmt recursively
 				stmt = stmt->substitute(manager, *this);
