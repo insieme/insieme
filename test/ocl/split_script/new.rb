@@ -282,9 +282,11 @@ class Test
             str <<  "[" + "NOT RELEVANT".red + "]" if not_relevant
             if energy_array.average != 0.0
               str << " Wh [" + energy_array.average.round(6).to_s + "]"
-              not_relevant_energy = !t_test_correct?(energy_array)
-              str <<  "[" + "NOT RELEVANT".red + "]" if not_relevant_energy
-              n_energy += 1 if not_relevant_energy
+              if (!energy_array.collect{|x| x == energy_array.average}.all?{|x| x == true})
+                 not_relevant_energy = !t_test_correct?(energy_array)
+                 str <<  "[" + "NOT RELEVANT".red + "]" if not_relevant_energy
+                 n_energy += 1 if not_relevant_energy
+              end
             end
             str << " Iter [" + loop_iteration_array.average.round(5).to_s + "]" 
             puts str
@@ -494,7 +496,13 @@ class Test
           if time_array.size < @iterations
             (@iterations - time_array.size).times{|n| single_run datetime, test_name, size, n, i, 1}
           else
-            if ((!t_test_correct?(time_array)) || (!t_test_correct?(energy_array)))
+            do_energy_t_test = !energy_array.collect{|x| x == energy_array.average}.all?{|x| x == true}
+            energy_t_test = false;
+            if do_energy_t_test
+		energy_t_test = !t_test_correct?(energy_array))
+            end
+
+            if ((!t_test_correct?(time_array)) || ernergy_t_test)
               $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).delete
               @iterations.times{|n| single_run datetime, test_name, size, n, i, 1}
             end
@@ -819,21 +827,22 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
+test = Test.new(split, [2, 18], [2,3,4,5,6,7,8,9,10,11,12,13,14,15], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
 
 #test = Test.new(split, [2, 18], [ 5, 6, 7, 8, 9, 10, 11, 12, 13,   16, 17, 18], [ 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21,  9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17 ], 5) # AL
+test = Test.new(split, [2, 18], [2,3,4,5,11,12], [9..25, 9..23, 9..25, 9..24, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
 
 
 #test = Test.new(split, [2, 18], [1,2,3,4,5,6,7,8,9,10], [9..23, 9..25, 9..23,  9..25, 9..24, 9..25, 9..24, 9..21,  9..19, 9..18], 5)
 
 # run the test
 #test.info
-test.compile
-test.check
+#test.compile
+#test.check
 #test.run
 #test.fix
 #test.fake
-#test.view
+test.view
 #test.delete
 #test.collect
 #test.evaluate :svm # or :ffnet
