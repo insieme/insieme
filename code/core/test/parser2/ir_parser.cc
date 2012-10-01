@@ -158,6 +158,10 @@ namespace parser {
 		EXPECT_EQ("union<>", toString(*parse(manager, "union { }")));
 		EXPECT_EQ("union<a:A,b:B,c:int<4>>", toString(*parse(manager, "union { A a; B b; int<4> c; }")));
 
+		EXPECT_EQ("tuple(10,\"string\")", toString(*parse(manager, "(10, \"string\")")));
+		EXPECT_EQ(core::NT_TupleExpr, parse(manager, "(10, \"string\")")->getNodeType());
+		EXPECT_EQ(core::NT_TupleType, parse(manager, "(10, \"string\")").as<ExpressionPtr>()->getType()->getNodeType());
+
 	}
 
 	TEST(IR_Parser2, ArrayVectorRefAndChannelTypes) {

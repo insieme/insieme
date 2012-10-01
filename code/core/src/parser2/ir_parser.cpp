@@ -590,6 +590,14 @@ namespace parser {
 					}
 			));
 
+			g.addRule("T", rule(
+					seq("(", list(E, ","), ")"),
+					[](Context& cur)->NodePtr {
+						auto& terms = cur.getTerms();
+						auto elements = convertList<ExpressionPtr>(terms);
+						return cur.tupleExpr(elements);
+					}
+			));
 
 			// add array, vector, ref and channel types
 			g.addRule("T", rule(
