@@ -188,7 +188,6 @@ TEST(ReachingDefinition, ScalarWithControl) {
 
 	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
 
-	std::cout << *cfg << std::endl;
 	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
 	auto ret = s.solve();
 
