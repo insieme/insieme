@@ -1454,7 +1454,7 @@ namespace parser {
 
 
 			// add productions for unknown node type N
-			g.addRule("N", rule(P, forward));
+			g.addRule("N", rule(P, forward, -1));	// type parameter have a lower priority than the rest
 			g.addRule("N", rule(T, forward));
 			g.addRule("N", rule(E, forward));
 			g.addRule("N", rule(S, forward));

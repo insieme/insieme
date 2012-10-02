@@ -192,7 +192,7 @@ TEST(IRPattern, declarationStmt) {
 	StatementPtr stmt1 = IRBuilder(manager).parseStmt("int<4> i = 3;");
 
 	TreePatternPtr pattern1 = irp::declarationStmt(any, any);
-	TreePatternPtr pattern2 = irp::declarationStmt(irp::variable(at("int<4>"), any), at("(3)"));
+	TreePatternPtr pattern2 = irp::declarationStmt(irp::variable(at("int<4>"), any), at("3"));
 	EXPECT_PRED2(isMatch, pattern1, stmt1);
 	EXPECT_PRED2(isMatch, pattern2, stmt1);
 }
@@ -208,10 +208,10 @@ TEST(IRPattern, ifStmt) {
 
 	TreePatternPtr pattern1 = irp::ifStmt(any, at("{ return 0; }"), irp::returnStmt(any));
 	TreePatternPtr pattern2 = irp::ifStmt(any, irp::returnStmt(any), irp::returnStmt(any));
-	TreePatternPtr pattern3 = irp::ifStmt(any, irp::returnStmt(at("(1)")|at("(0)")), irp::returnStmt(any));
+	TreePatternPtr pattern3 = irp::ifStmt(any, irp::returnStmt(at("1")|at("0")), irp::returnStmt(any));
 	TreePatternPtr pattern4 = irp::ifStmt(any, at("{ return 0; }"), any);
 	TreePatternPtr pattern5 = irp::ifStmt(any, at("{ return 0; }"), at("{ }"));
-	TreePatternPtr pattern6 = irp::ifStmt(at("(1 != 0)"), at("{ return 0; }"), at("{ }"));
+	TreePatternPtr pattern6 = irp::ifStmt(at("1 != 0"), at("{ return 0; }"), at("{ }"));
 
 	EXPECT_PRED2(isMatch, pattern1, stmt1);
 	EXPECT_PRED2(isMatch, pattern2, stmt1);
@@ -245,9 +245,9 @@ TEST(IRPattern, forStmt) {
 	StatementPtr stmt3 = ps("for(int<4> i = 0 .. 5) { 7; 6; continue; 8; }");
 	StatementPtr stmt4 = ps("for(int<4> i = 0 .. 2) { for(int<4> j = 0 .. 2){ return 0; } }");
 
-	TreePatternPtr pattern1 = irp::forStmt(var("x"), any, at("(5)"), at("(-5)"), irp::declarationStmt(var("y"), at("(3)")));
-	TreePatternPtr pattern2 = irp::forStmt(any, any, at("(10)"), at("(2)"), irp::returnStmt(at("(0)")));
-	TreePatternPtr pattern3 = irp::forStmt(any, any, at("(5)"), at("(1)"), irp::compoundStmt(*any << irp::continueStmt() << any));
+	TreePatternPtr pattern1 = irp::forStmt(var("x"), any, at("5"), at("-5"), irp::declarationStmt(var("y"), at("3")));
+	TreePatternPtr pattern2 = irp::forStmt(any, any, at("10"), at("2"), irp::returnStmt(at("0")));
+	TreePatternPtr pattern3 = irp::forStmt(any, any, at("5"), at("1"), irp::compoundStmt(*any << irp::continueStmt() << any));
 	TreePatternPtr pattern4 = irp::forStmt(var("i"), var("x"), var("y"), var("z"), irp::compoundStmt(irp::forStmt(var("j"), var("x"), var("y"), var("z"), irp::compoundStmt(*any)) << *any));
 
 	EXPECT_PRED2(isMatch, pattern1, stmt1);
@@ -264,7 +264,7 @@ TEST(IRPattern, Addresses) {
 	StatementAddress stmt1 = ps("for(int<4> i = 30 .. 5 : -5) { int<4> i = 3;}");
 	StatementAddress stmt2 = ps("for(int<4> i = 0 .. 2) { for(int<4> j = 0 .. 2){ 7; return 0; } }");
 
-	TreePatternPtr pattern1 = irp::forStmt(var("x"), any, at("(5)"), at("(-5)"), irp::declarationStmt(var("y"), at("(3)")));
+	TreePatternPtr pattern1 = irp::forStmt(var("x"), any, at("5"), at("-5"), irp::declarationStmt(var("y"), at("3")));
 	TreePatternPtr pattern2 = irp::forStmt(var("i"), var("x"), var("y"), var("z"), irp::compoundStmt(irp::forStmt(var("j"), var("x"), var("y"), var("z"), irp::compoundStmt(*var("b", any))) << *any));
 
 	// addresses always point to first encounter
