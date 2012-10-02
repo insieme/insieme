@@ -499,10 +499,10 @@ class Test
             do_energy_t_test = !energy_array.collect{|x| x == energy_array.average}.all?{|x| x == true}
             energy_t_test = false;
             if do_energy_t_test
-		energy_t_test = !t_test_correct?(energy_array))
+		energy_t_test = !t_test_correct?(energy_array)
             end
 
-            if ((!t_test_correct?(time_array)) || ernergy_t_test)
+            if ((!t_test_correct?(time_array)) || energy_t_test)
               $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).delete
               @iterations.times{|n| single_run datetime, test_name, size, n, i, 1}
             end
@@ -827,7 +827,7 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [2,3,4,5,6,7,8,9,10,11,12,13,14,15], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
+#test = Test.new(split, [2, 18], [2,3,4,5,6,7,8,9,10,11,12,13,14,15], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
 
 #test = Test.new(split, [2, 18], [ 5, 6, 7, 8, 9, 10, 11, 12, 13,   16, 17, 18], [ 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21,  9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17 ], 5) # AL
 test = Test.new(split, [2, 18], [2,3,4,5,11,12], [9..25, 9..23, 9..25, 9..24, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
@@ -840,7 +840,7 @@ test = Test.new(split, [2, 18], [2,3,4,5,11,12], [9..25, 9..23, 9..25, 9..24, 9.
 #test.compile
 #test.check
 #test.run
-#test.fix
+test.fix
 #test.fake
 test.view
 #test.delete
