@@ -117,13 +117,9 @@ std::set<NodeAddress> getDefinitions(
 	auto fit = ret.find(blockID);
 	EXPECT_NE(fit, ret.end());
 	
-	std::cout << fit->second << std::endl;
+	// std::cout << fit->second << std::endl;
 
 	insieme::analysis::dfa::analyses::definitionsToAccesses(fit->second, aMgr);
-
-	std::cout << aMgr << std::endl;
-
-	aMgr.printDotGraph(std::cout);
 
 	auto thisAccess = getImmediateAccess(use->getNodeManager(), use);
 

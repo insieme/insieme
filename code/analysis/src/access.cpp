@@ -510,6 +510,7 @@ AccessManager::classify(const AccessClassPtr& 				parent,
 			}
 		}
 
+		// Subscripts 
 		if (subAccess->getType() == AccessType::AT_SUBSCRIPT) {
 			
 			assert(skipDeref->getType() == AccessType::AT_SUBSCRIPT);
@@ -531,17 +532,22 @@ AccessManager::classify(const AccessClassPtr& 				parent,
 			
 			// compute the difference, if it is empty then the two ranges are equivalent 
 			auto intersection = classSet * accessSet;
-			// LOG(INFO) << "intersection " << *intersection; 
+			// LOG(INFO) << "intersection " << *intersection << " " << depType << ", " << subType; 
 
 			if ( !intersection->empty() ) { 
 				
-				if (*intersection == *accessSet && *intersection == *classSet && subType == depType) {
+				// We hit the same class, add the access to the class  
+				if (subType == depType && 
+					*intersection == *accessSet && 
+					*intersection == *classSet ) 
+				{
 					subClass->storeAccess(currAccess);
 					return std::make_tuple( depType, subClass, true );
 				}
 
-				// complex 
-				if (*intersection == *classSet && depType == subType) {
+				// We are in the case where the intersection is equal to the class set. 
+				// This means we have to create a new class and append the old class as a subrange 
+				if (depType == subType && *intersection == *classSet)  {
 					
 					// Creates a new alias class  (can't use make_shared because the constructor is private)
 					auto newClass = std::shared_ptr<AccessClass>(
@@ -551,17 +557,20 @@ AccessManager::classify(const AccessClassPtr& 				parent,
 					newClass->storeAccess(currAccess);
 					classes.emplace_back( newClass );
 
-					newClass->addSubClass( dep );
+					newClass->addSubClass( 
+							std::make_tuple(AccessClass::DT_RANGE, std::get<1>(dep), std::get<2>(dep)) 
+						);
+
 					// Add the new class as direct child of the parent 
 					subClass->setParentClass(newClass);
 
-					std::get<0>(dep) = AccessClass::DT_RANGE;
 					std::get<1>(dep) = newClass;
 					std::get<2>(dep) = subLevel;
 
 					return std::make_tuple( depType, newClass, true );
 				} 
-			
+
+						
 				if (*intersection == *accessSet && subType == depType) {
 					return classify(subClass, subLevel, AccessClass::DT_RANGE,  currAccess);
 				}
