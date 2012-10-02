@@ -45,33 +45,35 @@
 namespace insieme { namespace analysis { namespace dfa {
 
 template <>
-typename container_type_traits< dfa::elem<analyses::LValue>  >::type 
-extract(const Entity< dfa::elem<analyses::LValue> >& e, const CFG& cfg) 
-{ 
-	std::set<analyses::LValue> entities;
+typename container_type_traits< dfa::elem< cfg::Address >  >::type 
+extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg) {
+
+	std::set<cfg::Address> entities;
 
 	auto collector = [&entities, &cfg] (const cfg::BlockPtr& block) {
+		size_t stmt_idx=0;
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
+			++stmt_idx;
 
-			auto stmt = cur.getAnalysisStatement();
+			auto stmt = core::NodeAddress(cur.getAnalysisStatement());
 	
 			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { 
 				stmt.as<core::ForStmtPtr>()->getDeclaration()->getVariable();
+				// FIXME
 			}
 
-			if (auto declStmt = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
-				entities.insert( analyses::LValue(declStmt->getVariable()) );
+			if (auto declStmt = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
+				entities.insert( cfg::Address(block, stmt_idx-1, declStmt->getVariable()) );
 				return;
 			}
 
-			core::ExpressionPtr expr = core::dynamic_pointer_cast<const core::Expression>(stmt);
+			auto expr = core::dynamic_address_cast<const core::Expression>(stmt);
 			if (!expr) { return; }
 
-			if (core::analysis::isCallOf(expr, expr->getNodeManager().getLangBasic().getRefAssign())) {
-				entities.insert( analyses::LValue(expr.as<core::CallExprPtr>()->getArgument(0)) );
+			if (core::analysis::isCallOf(expr.getAddressedNode(), expr->getNodeManager().getLangBasic().getRefAssign())) {
+				entities.insert( cfg::Address(block, stmt_idx-1, expr.as<core::CallExprAddress>()->getArgument(0)) );
 				return;
 			}
-
 		});
 	};
 	cfg.visitDFS(collector);
@@ -96,29 +98,12 @@ AnalysisDataType ReachingDefinitions::meet(const AnalysisDataType& lhs, const An
 }
 
 
-void definitionsToAccesses(const AnalysisDataType& data, AccessManager& mgr) {
-	for(const auto& dfValue : data) {
+void definitionsToAccesses(const AnalysisDataType& data, AccessManager& aMgr) {
 
-		// LOG(INFO) << dfValue;
-		auto reachExpr	= std::get<0>(dfValue).getLValueExpr();
-		auto reachBlock = std::get<1>(dfValue);
-
-		core::ExpressionAddress retAddr;
-		size_t stmtIdx=0;
-
-		// find the statement in this block which contains the expr 
-		for(auto it=reachBlock->stmt_begin(), end=reachBlock->stmt_end(); !retAddr && it!=end; ++it, ++stmtIdx) {
-			retAddr = core::Address<const core::Expression>::find(reachExpr, it->getAnalysisStatement());
-		}
-
-		--stmtIdx;
-
-		assert(retAddr && stmtIdx<reachBlock->size() && "Stmt address not found");
-
-		mgr.getClassFor( 
-				getImmediateAccess( reachExpr->getNodeManager(), 
-									cfg::Address(reachBlock, stmtIdx, retAddr) ));
+	for(const auto& dfAddress : data) {
+		aMgr.getClassFor( getImmediateAccess( dfAddress.getAddressedNode()->getNodeManager(),dfAddress ) );
 	}
+
 }
 
 
@@ -161,6 +146,7 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 
 			auto addr = core::Address<const core::Expression>::find(varPtr,stmt);
 			assert(addr);
+
 			auto access = getImmediateAccess( 
 							stmt->getNodeManager(), 
 							cfg::Address(block, stmtIdx, addr), 
@@ -175,16 +161,13 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 
 			// Kill Entities 
 			if (access->isReference()) 
-				for (auto curClass : classes) {
+				for (auto& curClass : classes) {
 					for (auto& acc : *curClass) {
-						kill.insert( std::make_tuple(
-								LValue(acc->getRoot().getVariable()), 
-								acc->getAddress().as<cfg::Address>().getBlockPtr()) 
-						 );
+						kill.insert( acc->getAddress().as<cfg::Address>() );
 					}
 				}
-			auto var = LValue(varPtr);
-			gen.insert( std::make_tuple(var, block) );
+
+			gen.insert( access->getAddress().as<cfg::Address>() );
 
 		};
 
