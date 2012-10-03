@@ -96,7 +96,7 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
 	value_type::const_iterator lhs_it = lhs.begin(), rhs_it = rhs.begin(), it, end;
 
 	while(lhs_it != lhs.end() && rhs_it != rhs.end()) {
-		if(var(*lhs_it) == var(*rhs_it)) {
+		if(var(*lhs_it).getAddressedNode() == var(*rhs_it).getAddressedNode()) {
 			ret.insert( std::make_tuple(var(*lhs_it), eval(val(*lhs_it), val(*rhs_it))) );
 			++lhs_it; ++rhs_it;
 			continue;
@@ -120,21 +120,25 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
  * determined constant value which could be either a literal or the top/bottom element of the
  * lattice representing respectively "undefined" and "not constant". 
  */
-dfa::Value<LiteralPtr> lookup(const AccessPtr& var, const value_type& in, const CFG& cfg) {
+dfa::Value<LiteralPtr> lookup( NodeManager& mgr, const AccessPtr& var, const value_type& in, const CFG& cfg ) {
 	
-//	for ( const auto& cur : in ) {
-	//	if( isConflicting(std::get<0>(cur), var, cfg.getTmpVarMap()) ) {
-	//		if ( std::get<1>(cur).isTop() ) 
-	//			continue;
-	//			
-	//		if ( std::get<1>(cur).isTop() ) 
-	//			return dfa::bottom;
-//
-//			return std::get<1>(cur);
-//		}
-//	}
-	// was always top
-	return dfa::top;
+	AccessManager aMgr; 
+	std::vector<std::pair<AccessClassPtr, dfa::Value<LiteralPtr>>> classes;
+
+	std::transform(in.begin(), in.end(), std::back_inserter(classes), [&](const value_type::value_type& cur) { 
+			return std::make_pair(
+						aMgr.getClassFor( getImmediateAccess(mgr, std::get<0>(cur), cfg.getTmpVarMap()) ), 
+						std::get<1>(cur) 
+					);
+		});
+
+	// LOG(INFO) << join(", ", classes.begin(), classes.end(), [&](std::ostream& jout, const AccessClassPtr& cur) { jout << *cur; } );
+
+	auto accessClass = aMgr.getClassFor(var);
+	auto fit = std::find_if(classes.begin(), classes.end(), 
+			[&](const std::pair<AccessClassPtr, dfa::Value<LiteralPtr>>& cur) { return *cur.first==*accessClass; });
+
+	return fit->second; 
 }	
 
 dfa::Value<LiteralPtr> eval(const ExpressionAddress& 	lit, 
@@ -187,7 +191,7 @@ dfa::Value<LiteralPtr> eval(const ExpressionAddress& 	lit,
 				cfg::Address cfgAddr(block, stmt_idx, exprAddr);
 				auto var = getImmediateAccess(exprAddr->getNodeManager(), cfgAddr, cfg.getTmpVarMap());
 
-				dfa::Value<LiteralPtr> lit = lookup(var, in, cfg);
+				dfa::Value<LiteralPtr> lit = lookup(exprAddr->getNodeManager(), var, in, cfg);
 
 				if (lit.isBottom()) { return dfa::bottom; }
 				if (lit.isTop()) 	{ return dfa::top; 	  }
@@ -204,12 +208,24 @@ dfa::Value<LiteralPtr> eval(const ExpressionAddress& 	lit,
 		}
 
 	} catch(NotAFormulaException&& e) { 
+		// we cannot determine whether this is a constant value, we return the bottom symbol then 
 		return dfa::bottom; 
 	}
 
-	assert( false );
+	assert( false  && "Something odd happened" );
 }
 
+void definitionsToAccesses(const value_type& data, AccessManager& aMgr) {
+
+	for(const auto& value : data) {
+		const auto& addr = std::get<0>(value);
+
+		aMgr.getClassFor( 
+				getImmediateAccess( addr.getAddressedNode()->getNodeManager(), addr ) 
+			);
+	}
+
+}
 
 value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
 
@@ -221,8 +237,23 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 	LOG(INFO) << "~ Block " << block->getBlockID();
 	LOG(INFO) << "~ IN: " << in;
 
-	size_t stmt_idx = 0;
 
+	core::NodeManager& mgr = getCFG().getNodeManager();
+
+	// Build the access manager which contains the incoming variables 
+	
+	AccessManager aMgr(&getCFG(), getCFG().getTmpVarMap());
+	std::vector<std::pair<AccessClassPtr, dfa::Value<LiteralPtr>>> classes;
+
+	std::transform(in.begin(), in.end(), std::back_inserter(classes), [&](const value_type::value_type& cur) { 
+			return std::make_pair(
+					aMgr.getClassFor( getImmediateAccess(mgr, std::get<0>(cur), cfg.getTmpVarMap()) ), 
+					std::get<1>(cur) 
+				);
+		});
+
+
+	size_t stmt_idx = 0;
 	for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
 
 		++stmt_idx;
@@ -230,7 +261,6 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 		StatementAddress stmt = core::StatementAddress(cur.getAnalysisStatement());
 
 		const lang::BasicGenerator& basicGen = stmt->getNodeManager().getLangBasic();
-
 
 		auto handle_def = [&](const VariableAddress& varAddr, const ExpressionAddress& init) { 
 				
@@ -263,16 +293,29 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 			//}
 
 			dfa::Value<LiteralPtr> res = eval(initVal, block, stmt_idx-1, in, getCFG());
-
 			gen.insert( std::make_tuple(cfgAddr, res) );
 
+			auto access = getImmediateAccess(varAddr->getNodeManager(), 
+											 cfg::Address(block, stmt_idx-1, varAddr), 
+											 cfg.getTmpVarMap()
+										);
 
-			// kill all declarations reaching this block 
-			//std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
-			//		[&](const typename value_type::value_type& cur){
-			//			return isConflicting(std::get<0>(cur), def, getCFG().getTmpVarMap());
-			//		} );
+			AccessClassPtr collisionClass = aMgr.getClassFor(access);
 
+			AccessClassSet depClasses;
+			depClasses.insert(collisionClass);
+			// Add subclasses which are affected by this definition
+			addSubClasses(collisionClass, depClasses);
+
+			// Kill Entities 
+			if (access->isReference()) {
+				for(auto it = in.begin(), end=in.end(); it != end; ++it) {
+					if (std::find_if( depClasses.begin(), depClasses.end(), [&](const AccessClassPtr& cur) { 
+								return *cur == *classes[std::distance(in.begin(),it)].first; }) != depClasses.end() ) {
+						kill.insert( *it );
+					}
+				}
+			}
 		};
 
 		if (stmt->getNodeType() == NT_Literal) { return; }
@@ -288,7 +331,6 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 			}
 
 			// do nothing otherwise
-			//
 		} else if ( cur.getType() == cfg::Element::LOOP_INCREMENT ) {
 			// make sure that the loop iterator is not a constant 
 			//

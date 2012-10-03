@@ -390,6 +390,7 @@ typedef std::shared_ptr<AccessClass> AccessClassPtr;
 typedef std::weak_ptr<AccessClass>   AccessClassWPtr;
 
 
+typedef std::set<AccessClassPtr, compare_target<AccessClassPtr>> AccessClassSet; 
 
 /** 
  * An access class is a set of accesses which refer to the same memory location. In case of R-Values
@@ -528,8 +529,10 @@ public:
 	inline AccessVector::const_iterator end() const { return accesses.end(); }
 
 	inline size_t size() const { return accesses.size(); }
+
 };
 
+void addSubClasses(const AccessClassPtr& thisClass, AccessClassSet& collect);
 
 /** 
  * Return the vector of addresses which are not temporary variable and therefore it returns

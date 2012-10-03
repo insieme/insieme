@@ -511,6 +511,8 @@ public:
 
 	core::NodePtr getRootNode() const;
 
+	core::NodeManager& getNodeManager() const { return getRootNode()->getNodeManager(); }
+
 	GraphBounds addSubGraph(const core::NodePtr& root);
 
 	// Check whether a graph for the root node has been already created

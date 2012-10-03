@@ -687,6 +687,22 @@ std::ostream& AccessManager::printTo(std::ostream& out) const {
 }
 
 
+void addSubClasses(const AccessClassPtr& thisClass, AccessClassSet& collect) {
+
+	for (const auto& cur : thisClass->getSubClasses()) {
+
+		// Visit the parent until the kind of access changes 
+		if (std::get<0>(cur) == AccessClass::DT_LEVEL)
+			break;
+
+		auto thisSubClass = std::get<1>(cur).lock();
+		if(collect.insert(thisSubClass).second) {
+			addSubClasses(thisSubClass, collect);	
+		}
+	}
+}
+
+
 }
 } // end insieme::analysis namespace
 

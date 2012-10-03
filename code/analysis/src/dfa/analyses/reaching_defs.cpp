@@ -104,21 +104,6 @@ void definitionsToAccesses(const AnalysisDataType& data, AccessManager& aMgr) {
 	}
 }
 
-typedef std::set<AccessClassPtr, compare_target<AccessClassPtr>> AccessClassSet;
-
-// reach the parent class 
-void addSubClasses(AccessClassSet& classes, const AccessClassPtr& cl) {
-	for (const auto& cur : cl->getSubClasses()) {
-		// Visit the parent until the kind of access changes 
-		if (std::get<0>(cur) == AccessClass::DT_LEVEL)
-			break;
-
-		auto thisClass = std::get<1>(cur).lock();
-		if(classes.insert(thisClass).second)
-			addSubClasses(classes, thisClass);
-	}
-}
-
 AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
 
 	AnalysisDataType gen, kill;
@@ -150,8 +135,9 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 
 			AccessClassSet classes;
 			classes.insert(collisionClass);
+
 			// Add subclasses which are affected by this definition
-			addSubClasses(classes, collisionClass);
+			addSubClasses(collisionClass, classes);
 
 			// Kill Entities 
 			if (access->isReference()) 
