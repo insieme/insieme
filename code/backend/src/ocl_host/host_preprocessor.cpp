@@ -767,7 +767,7 @@ using insieme::transform::pattern::anyList;
         insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(code2);
 
 		auto at = [&manager](string str) { return irp::atom(manager, str); };
-		TreePatternPtr splitPoint = irp::ifStmt(at("(1u != 0u)"), any, any);
+		TreePatternPtr splitPoint = irp::ifStmt(at("(uint<4>)1 != (uint<4>)0"), any, any);
 
 		bool foundErrors = false;
 		visitDepthFirst(code2, [&](const IfStmtPtr& ifSplit) {
