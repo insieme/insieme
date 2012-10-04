@@ -229,9 +229,7 @@ struct Address : public utils::Printable {
 		stmt_idx(other.stmt_idx), 
 		addr(std::move(other.addr)) { }
 
-
 	inline operator bool() const { return static_cast<bool>(block); }
-
 
 	/** 
 	 * Retrieve the CFG block to which this address referes to 
@@ -241,9 +239,7 @@ struct Address : public utils::Printable {
 		return *block; 
 	}
 
-	inline const cfg::BlockPtr& getBlockPtr() const { 
-		return block; 
-	}
+	inline const cfg::BlockPtr& getBlockPtr() const { return block; }
 
 	inline unsigned getStmtIdx() const { return stmt_idx; }
 
@@ -264,8 +260,9 @@ struct Address : public utils::Printable {
 	std::ostream& printTo(std::ostream& out) const;
 
 	bool operator==(const Address& other) const;
-};
 
+	bool operator<(const Address& other) const;
+};
 
 
 } // end cfg namespace
@@ -513,6 +510,8 @@ public:
 	static CFGPtr buildCFG(const core::NodePtr& rootNode, CFGPtr cfg = std::make_shared<CFG>());
 
 	core::NodePtr getRootNode() const;
+
+	core::NodeManager& getNodeManager() const { return getRootNode()->getNodeManager(); }
 
 	GraphBounds addSubGraph(const core::NodePtr& root);
 
