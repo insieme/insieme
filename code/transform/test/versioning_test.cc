@@ -41,7 +41,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/utils/test/test_utils.h"
 
@@ -62,17 +62,17 @@ namespace transform {
 		core::StatementPtr out;
 
 		out = versioning(makeNoOp(), makeNoOp())->apply(in);
-		EXPECT_TRUE(core::check(out, core::checks::getFullCheck()).empty());
+		EXPECT_TRUE(core::checks::check(out).empty());
 		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick([0,1])");
 
 		// try special case - on transformation only
 		out = versioning(makeNoOp())->apply(in);
-		EXPECT_TRUE(core::check(out, core::checks::getFullCheck()).empty());
+		EXPECT_TRUE(core::checks::check(out).empty());
 		EXPECT_EQ(*in, *out);
 
 		// and a large number of versions
 		out = versioning(makeNoOp(), makeNoOp(), makeNoOp(), makeNoOp())->apply(in);
-		EXPECT_TRUE(core::check(out, core::checks::getFullCheck()).empty());
+		EXPECT_TRUE(core::checks::check(out).empty());
 		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "pick([0,1,2,3])");
 
 	}

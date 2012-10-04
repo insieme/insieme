@@ -44,6 +44,9 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/dump/text_dump.h"
 
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/extension.h"
+
 #include "insieme/utils/container_utils.h"
 
 namespace insieme {
@@ -205,6 +208,26 @@ namespace core {
 
 			// make a recursive call
 			return equalsWithAnnotations(cur.first, cur.second);
+		});
+	}
+
+
+	NodeManager::NodeManager() : data(new NodeManagerData(*this)) { }
+
+	NodeManager::NodeManager(NodeManager& manager)
+		: InstanceManager<Node, Pointer>(manager), data(manager.data) {}
+
+	NodeManager::NodeManager(unsigned initialFreshID)
+		: data(new NodeManagerData(*this)) { setNextFreshID(initialFreshID); }
+
+	NodeManager::NodeManagerData::NodeManagerData(NodeManager& manager)
+		: root(manager), basic(new lang::BasicGenerator(manager)) {};
+
+
+	NodeManager::NodeManagerData::~NodeManagerData() {
+		// free all extensions
+		for_each(extensions, [](const ExtensionMap::value_type& cur) {
+			delete cur.second;
 		});
 	}
 

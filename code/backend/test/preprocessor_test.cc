@@ -45,9 +45,8 @@
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/transform/node_replacer.h"
 
@@ -56,25 +55,33 @@ namespace backend {
 
 TEST(Preprocessor, GlobalElimination) {
 	core::NodeManager manager;
-	core::parse::IRParser parser(manager);
+	core::IRBuilder builder(manager);
 
-	core::ProgramPtr program = parser.parseProgram("main: fun ()->int<4>:"
-			"mainfct in { ()->int<4>:mainfct = ()->int<4>{ {"
-			"   decl ref<struct<a:vector<int<4>,20>,f:()->unit>>:v1 = (op<ref.new>(struct{a:(op<undefined>(lit<type<vector<int<4>,20>>, bla>)),f:(op<undefined>(lit<type<()->unit>, bla>))}));"
-			"	(op<composite.ref.elem>(v1,lit<identifier,a>,lit<type<vector<int<4>,20>>, bla>));"
-			"	(op<composite.member.access>((op<ref.deref>(v1)),lit<identifier,a>,lit<type<vector<int<4>,20>>, bla>));"
-			"	(fun(ref<struct<a:vector<int<4>,20>,f:()->unit>>:v2) -> int<4> {{"
-			"		(op<composite.ref.elem>(v2,lit<identifier,a>,lit<type<vector<int<4>,20>>, bla>));"
-			"		(op<composite.member.access>((op<ref.deref>(v2)),lit<identifier,a>,lit<type<vector<int<4>,20>>, bla>));"
-			"		return 0;"
-			"	}}(v1) );"
-			"   {"
-			"		(op<ref.assign>((op<composite.ref.elem>(v1,lit<identifier,a>,lit<type<vector<int<4>,20>>, bla>)), lit<vector<int<4>,20>, X>));"
-			"		((op<ref.deref>((op<composite.ref.elem>(v1,lit<identifier,f>,lit<type<()->unit>, bla>))))());"
-			"   };"
+	std::map<string, core::NodePtr> symbols;
+	symbols["A"] = builder.structExpr(toVector<core::NamedValuePtr>(
+			builder.namedValue("a", builder.undefined(builder.parseType("vector<int<4>,20>"))),
+			builder.namedValue("f", builder.undefined(builder.parseType("()->unit")))
+	));
+
+	core::ProgramPtr program = builder.parseProgram(
+			"let gstruct = struct { vector<int<4>,20> a; ()->unit f; };"
+			""
+			"int<4> main() {"
+			"	ref<gstruct> v1 = new(A);"
+			"	v1.a;"
+			"	composite.member.access(*v1, lit(\"a\" : identifier), lit(vector<int<4>,20>));"
+			"	(ref<gstruct> v2) -> int<4> {"
+			"		v2.a;"
+			"		composite.member.access(*v2, lit(\"a\" : identifier), lit(vector<int<4>,20>));"
+			"	} (v1);"
+			"	{"
+			"		v1.a = lit(\"X\":vector<int<4>,20>);"
+			"		v1.f();"
+			"	}"
 			"	return 0;"
-			"} } }");
-
+			"}",
+			symbols
+	);
 
 	EXPECT_TRUE(program);
 
@@ -83,8 +90,8 @@ TEST(Preprocessor, GlobalElimination) {
 //	std::cout << "Input: " << core::printer::PrettyPrinter(program) << "\n";
 
 	// check for semantic errors
-	auto errors = core::check(program, core::checks::getFullCheck());
-	EXPECT_EQ(core::MessageList(), errors);
+	auto errors = core::checks::check(program);
+	EXPECT_EQ(core::checks::MessageList(), errors);
 
 
 	// run preprocessor
@@ -92,8 +99,8 @@ TEST(Preprocessor, GlobalElimination) {
 
 //	std::cout << "Processed: " << core::printer::PrettyPrinter(res) << "\n";
 
-	errors = core::check(res, core::checks::getFullCheck());
-	EXPECT_EQ(core::MessageList(), errors);
+	errors = core::checks::check(res);
+	EXPECT_EQ(core::checks::MessageList(), errors);
 
 	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(res)), "__GLOBAL__1;");
 	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(res)), "__GLOBAL__1 := X;");

@@ -38,7 +38,6 @@
 
 #include <map>
 
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/normalize.h"
@@ -85,7 +84,6 @@ struct GroupFiller<> {
 
 struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	NodeManager &nm;
-	parse::IRParser parser;
 	IRBuilder build;
 
 	typedef LiteralPtr (BasicGenerator::*litFunPtr)() const;
@@ -126,7 +124,7 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	};
 	#include "insieme/core/lang/lang.def"
 
-	BasicGeneratorImpl(NodeManager& nm) : nm(nm), parser(nm), build(nm) {
+	BasicGeneratorImpl(NodeManager& nm) : nm(nm), build(nm) {
 		#define LITERAL(_id, _name, _spec) \
 		literalMap.insert(std::make_pair(_name, &BasicGenerator::get##_id));
 		#define DERIVED(_id,_name,_spec) \
@@ -196,14 +194,14 @@ BasicGenerator::~BasicGenerator() {
 
 #define TYPE(_id, _spec) \
 TypePtr BasicGenerator::get##_id() const { \
-	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->parser.parseType(_spec); \
+	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->build.parseType(_spec); \
 	return pimpl->ptr##_id; }; \
 bool BasicGenerator::is##_id(const NodePtr& p) const { \
 	return *p == *get##_id(); };
 
 #define LITERAL(_id, _name, _spec) \
 LiteralPtr BasicGenerator::get##_id() const { \
-	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->build.literal(pimpl->parser.parseType(_spec), _name); \
+	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->build.literal(pimpl->build.parseType(_spec), _name); \
 	return pimpl->ptr##_id; }; \
 bool BasicGenerator::is##_id(const NodePtr& p) const { \
 	return *p == *get##_id(); };
@@ -218,7 +216,7 @@ bool BasicGenerator::is##_id(const NodePtr& p) const { \
 
 #define OPERATION(_type, _op, _name, _spec) \
 LiteralPtr BasicGenerator::get##_type##_op() const { \
-	if(!pimpl->ptr##_type##_op) pimpl->ptr##_type##_op = pimpl->build.literal(pimpl->parser.parseType(_spec), _name); \
+	if(!pimpl->ptr##_type##_op) pimpl->ptr##_type##_op = pimpl->build.literal(pimpl->build.parseType(_spec), _name); \
 	return pimpl->ptr##_type##_op; }; \
 bool BasicGenerator::is##_type##_op(const NodePtr& p) const { \
 	return *p == *get##_type##_op(); };

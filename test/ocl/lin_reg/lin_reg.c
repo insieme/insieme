@@ -1,7 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <math.h>
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
+
+#ifndef PATH
+#define PATH "./"
+#endif 
 
 int float_compare(const void* elem1, const void* elem2) {
         if(*(const float*)elem1 < *(const float*)elem2) return -1;
@@ -32,7 +38,7 @@ bool compare_float(const float *refData, const float *data, const int length, co
     }
 
     float normRef = sqrtf((float) ref);
-    if (fabs((float) ref) < 1e-7f) {
+    if (fabs(ref) < 1e-7f) {
         return false;
     }
     float normError = sqrtf((float) error);
@@ -42,45 +48,38 @@ bool compare_float(const float *refData, const float *data, const int length, co
 }
 
 int main(int argc, const char* argv[]) {
-        icl_args* args = icl_init_args();
-        icl_parse_args(argc, argv, args);
-        icl_print_args(args);
+    icl_args* args = icl_init_args();
+    icl_parse_args(argc, argv, args);
+    icl_print_args(args);
 
-        int size = args->size;
+	chdir(PATH);
 
-        float* input1 = (float*) malloc(sizeof(float) * size);
-        float* input2 = (float*) malloc(sizeof(float) * size);
-        float* alpha  = (float*) malloc(sizeof(float) * size);
-        float* beta   = (float*) malloc(sizeof(float) * size);
-        float* output = (float*) malloc(sizeof(float) * size);
+    int size = args->size;
 
-        fill_random_float(input2, size, 1, -1.0f, 1.0f);
-        qsort(input2, size, sizeof(float), float_compare);
-        float step = 2.0f / size;
-        for(int i=0; i < size; i++) 
-		input1[i] = -1.0f + i * step;
+    float* input1 = (float*) malloc(sizeof(float) * size);
+    float* input2 = (float*) malloc(sizeof(float) * size);
+    float* alpha  = (float*) malloc(sizeof(float) * size);
+    float* beta   = (float*) malloc(sizeof(float) * size);
+    float* output = (float*) malloc(sizeof(float) * size);
 
-        fill_random_float(alpha, size, 1, -1.0f, 1.0f);
-        fill_random_float(beta, size, 1, -1.0f, 1.0f);
+    fill_random_float(input2, size, 1, -1.0f, 1.0f);
+    qsort(input2, size, sizeof(float), float_compare);
+    float step = 2.0f / size;
+    for(int i=0; i < size; i++) 
+	input1[i] = -1.0f + i * step;
 
-        icl_init_devices(args->device_type);
+    fill_random_float(alpha, size, 1, -1.0f, 1.0f);
+    fill_random_float(beta, size, 1, -1.0f, 1.0f);
 
-        if (icl_get_num_devices() != 0) {
-                icl_device* dev = icl_get_device(args->device_id);
+    icl_init_devices(args->device_type);
 
-                icl_print_device_short_info(dev);
+	icl_start_energy_measurement();
+
+    if (icl_get_num_devices() != 0) {
+		icl_device* dev = icl_get_device(args->device_id);
+
+		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "lin_reg.cl", "lin_reg", "", ICL_SOURCE);
-
-                icl_buffer* buf_input1 = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
-                icl_buffer* buf_input2 = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
-                icl_buffer* buf_alpha  = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
-                icl_buffer* buf_beta   = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
-                icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * size);
-	
-                icl_write_buffer(buf_input1, CL_TRUE, sizeof(float) * size, &input1[0], NULL, NULL);
-                icl_write_buffer(buf_input2, CL_TRUE, sizeof(float) * size, &input2[0], NULL, NULL);
-                icl_write_buffer(buf_alpha, CL_TRUE, sizeof(float) * size, &alpha[0], NULL, NULL);
-                icl_write_buffer(buf_beta, CL_TRUE, sizeof(float) * size, &beta[0], NULL, NULL);
 
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
@@ -88,21 +87,36 @@ int main(int argc, const char* argv[]) {
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 6,
-											(size_t)0, (void *)buf_input1,
-											(size_t)0, (void *)buf_input2,
-                        								(size_t)0, (void *)buf_alpha,
-								                        (size_t)0, (void *)buf_beta,
-											(size_t)0, (void *)buf_output,
-											sizeof(cl_int), (void *)&size);
-		icl_read_buffer(buf_output, CL_TRUE, sizeof(float) * size, &output[0], NULL, NULL);
+		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* buf_input1 = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
+			icl_buffer* buf_input2 = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
+			icl_buffer* buf_alpha  = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
+			icl_buffer* buf_beta   = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * size);
+			icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * size);
 
-		icl_release_buffers(5, buf_input1, buf_input2, buf_alpha, buf_beta, buf_output);
+			icl_write_buffer(buf_input1, CL_TRUE, sizeof(float) * size, &input1[0], NULL, NULL);
+			icl_write_buffer(buf_input2, CL_TRUE, sizeof(float) * size, &input2[0], NULL, NULL);
+			icl_write_buffer(buf_alpha, CL_TRUE, sizeof(float) * size, &alpha[0], NULL, NULL);
+			icl_write_buffer(buf_beta, CL_TRUE, sizeof(float) * size, &beta[0], NULL, NULL);
+
+			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 6,
+												(size_t)0, (void *)buf_input1,
+												(size_t)0, (void *)buf_input2,
+			                								(size_t)0, (void *)buf_alpha,
+											                (size_t)0, (void *)buf_beta,
+												(size_t)0, (void *)buf_output,
+												sizeof(cl_int), (void *)&size);
+			icl_read_buffer(buf_output, CL_TRUE, sizeof(float) * size, &output[0], NULL, NULL);
+			icl_release_buffers(5, buf_input1, buf_input2, buf_alpha, buf_beta, buf_output);
+		}
+
 		icl_release_kernel(kernel);
 	}
 	
-        if (args->check_result) {
-	        printf("======================\n= Linear Regression Done\n");
+	icl_stop_energy_measurement();
+
+    if (args->check_result) {
+        printf("======================\n= Linear Regression Done\n");
 		float* output2 = (float *)malloc(sizeof(float) * size);
 		for(unsigned int j = 0; j < size; ++j) {
 			const int gid = j;
@@ -115,13 +129,14 @@ int main(int argc, const char* argv[]) {
 			}
 			output2[gid] = error;
 		}
-                bool check = compare_float(output, output2, size, 0.000001);
+                
+	    bool check = compare_float(output, output2, size, 0.000001);
 		printf("======================\n");
 		printf("Result check: %s\n", check ? "OK" : "FAIL");
 		free(output2);
-        } else {
+    } else {
 		printf("Result check: OK\n");
-        }
+    }
 
 	icl_release_args(args);
 	icl_release_devices();

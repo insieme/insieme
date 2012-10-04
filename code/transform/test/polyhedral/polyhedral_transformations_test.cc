@@ -42,8 +42,9 @@
 #include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
-#include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/analysis/normalize.h"
 
 using namespace insieme::analysis::polyhedral;
 using namespace insieme::transform::polyhedral;
@@ -58,69 +59,58 @@ TEST(Transform, InterchangeManual) {
 	using insieme::transform::pattern::any;
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 10 .. 50 : 1) { \
-			for(decl uint<4>:j = 5 .. 25 : 1) { \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-			}; \
-		}") );
-	// std::cout << *forStmt << std::endl;
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
+
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 10u .. 50u ) { "
+		"	for(uint<4> j = 5u .. 25u ) { "
+		"		v[i+j]; "
+		"	} "
+		"}", symbols).as<ForStmtPtr>();
+
+	EXPECT_TRUE(forStmt);
+
 	scop::mark(forStmt);
 
 	TreePatternPtr pattern = rT ( irp::forStmt( var("i"), any, any, any, recurse | !irp::forStmt() ) );
-	auto&& match = pattern->matchPointer(forStmt);
+	auto match = pattern->matchPointer(forStmt);
 
-	VariablePtr i = 
-		static_pointer_cast<const Variable>( match->getVarBinding("i").getList()[0] );
+	VariablePtr i = match->getVarBinding("i").getList()[0].as<VariablePtr>();
 
-	VariablePtr j = 
-		static_pointer_cast<const Variable>( match->getVarBinding("i").getList()[1] );
+	VariablePtr j = match->getVarBinding("i").getList()[1].as<VariablePtr>();
 	
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
 
 	Scop& scop = ann.getScop();
 	IntMatrix&& schedule = extractFrom(scop[0].getSchedule());
-	// std::cout << schedule << std::endl;
 	
-	auto&& interMat = makeInterchangeMatrix( scop.getIterationVector(), i, j );
-	// std::cout << interMat << std::endl;
-
-	auto&& newSched = schedule * interMat;
-	// std::cout << newSched << std::endl;
+	auto interMat = makeInterchangeMatrix( scop.getIterationVector(), i, j );
+	auto newSched = schedule * interMat;
 
 	scop[0].getSchedule().set( newSched );
 
-	NodeManager mgr1;
-	NodePtr newIR = scop.toIR(mgr1);
-	// std::cout << *newIR << std::endl;
-	
-	// EXPECT_EQ(*newIR, *forStmtInt);
-	EXPECT_EQ( "for(int<4> v1 = 5 .. int.add(24, 1) : 1) {for(int<4> v2 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v3, uint.add(v2, v1));};}", toString(*newIR));
+	NodePtr newIR = analysis::normalize(scop.toIR(mgr));
+	EXPECT_EQ( "for(int<4> v0 = 5 .. int.add(24, 1) : 1) {"
+					"for(int<4> v2 = 10 .. int.add(49, 1) : 1) {"
+						"vector.ref.elem(v1, uint.add(v2, v0));"
+					"};"
+				"}", toString(*newIR));
 }
 
-void checkSCoPCorrectness(unsigned freshID, const insieme::core::NodePtr& node) { 
+void checkSCoPCorrectness(const insieme::core::NodePtr& node) { 
 	using namespace insieme::core;
 	using namespace insieme::analysis;
 	// Check for the generated SCoP
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(node);
 	EXPECT_TRUE(scop2);
 
-	LOG(DEBUG) << *scop2;
-
-	NodeManager mgr;
-	mgr.setNextFreshID(freshID);
-
-	NodePtr res = scop2->toIR(mgr);
-
-	LOG(DEBUG) << printer::PrettyPrinter(node);
-	LOG(DEBUG) << printer::PrettyPrinter(res); 
-
+	NodePtr res = analysis::normalize(scop2->toIR(node->getNodeManager()));
 	EXPECT_EQ(*node,*res);
 }
-
 
 TEST(Transform, InterchangeAuto) {
 	using namespace insieme::core;
@@ -129,23 +119,30 @@ TEST(Transform, InterchangeAuto) {
 	using insieme::transform::pattern::any;
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 10 .. 50 : 1) { \
-			for(decl uint<4>:j = 5 .. 25 : 1) { \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-			}; \
-		}") );
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
+
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 10u .. 50u ) { "
+		"	for(uint<4> j = 5u .. 25u ) { "
+		"		v[i+j]; "
+		"	} "
+		"}", symbols).as<ForStmtPtr>();
 
 	scop::mark(forStmt);
 
 	LoopInterchange li(0, 1);
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 	
-	EXPECT_EQ( "for(int<4> v4 = 5 .. int.add(24, 1) : 1) {for(int<4> v5 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v3, uint.add(v5, v4));};}", toString(*newIR));
+	EXPECT_EQ( "for(int<4> v0 = 5 .. int.add(24, 1) : 1) {"
+					"for(int<4> v2 = 10 .. int.add(49, 1) : 1) {"
+						"vector.ref.elem(v1, uint.add(v2, v0));"
+					"};"
+				"}", toString(*newIR));
 
-	checkSCoPCorrectness(4,newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, InterchangeAuto2) {
@@ -155,24 +152,37 @@ TEST(Transform, InterchangeAuto2) {
 	using insieme::transform::pattern::any;
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 10 .. 50 : 1) { \
-			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
-			for(decl uint<4>:j = 5 .. 25 : 1) { \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-			}; \
-		}") );
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
+
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 10u .. 50u) { "
+		"	v[i]; "
+		"	for(uint<4> j = 5u .. 25u) { "
+		"		v[i+j]; "
+		"	} "
+		"}", symbols).as<ForStmtPtr>();
 
 	scop::mark(forStmt);
 
 	LoopInterchange li(0, 1);
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 	
-	EXPECT_EQ( "{for(int<4> v4 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v4);}; for(int<4> v5 = 5 .. int.add(24, 1) : 1) {for(int<4> v6 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, uint.add(v6, v5));};};}", toString(*newIR));
+	EXPECT_EQ( 
+		"{"
+			"for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
+				"vector.ref.elem(v1, v0);"
+			"}; "
+			"for(int<4> v2 = 5 .. int.add(24, 1) : 1) {"
+				"for(int<4> v3 = 10 .. int.add(49, 1) : 1) {"
+					"vector.ref.elem(v1, uint.add(v3, v2));"
+				"};"
+			"};"
+		"}", toString(*newIR));
 
-	checkSCoPCorrectness(4, newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, StripMiningAuto) {
@@ -182,25 +192,39 @@ TEST(Transform, StripMiningAuto) {
 	using insieme::transform::pattern::any;
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 10 .. 50 : 1) { \
-			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
-			for(decl uint<4>:j = 5 .. 25 : 1) { \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-			}; \
-		}") );
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 10u .. 50u) { "
+		"	v[i]; "
+		"	for(uint<4> j = 5u .. 25u) { "
+		"		v[i+j]; "
+		"	} "
+		"}", symbols).as<ForStmtPtr>();
+
+	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
 
 	LoopStripMining li(1, 7);
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 
-	EXPECT_EQ( "for(int<4> v6 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v6); for(int<4> v7 = 5 .. int.add(24, 1) : 7) {for(int<4> v8 = v7 .. int.add(select(int.add(cast<int<4>>(v7), cast<int<4>>(6)), 24, int.lt), 1) : 1) {array.ref.elem.1D(v2, uint.add(v6, v8));};};}", toString(*newIR));
+	EXPECT_EQ( 
+		"for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
+			"vector.ref.elem(v1, v0); "
+			"for(int<4> v2 = 5 .. int.add(24, 1) : 7) {"
+				"for(int<4> v3 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int.lt), 1) : 1) {"
+					"vector.ref.elem(v1, uint.add(v0, v3));"
+				"};"
+			"};"
+		"}", toString(*newIR));
 
-	checkSCoPCorrectness(6, newIR);
+	checkSCoPCorrectness(newIR);
 }
+
+
 
 TEST(Transform, LoopFusionAuto) {
 	using namespace insieme::core;
@@ -209,26 +233,30 @@ TEST(Transform, LoopFusionAuto) {
 	using insieme::transform::pattern::any;
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
 
-    auto stmt = parser.parseStatement("\
-		{\
-			for(decl uint<4>:i = 10 .. 50 : 1) { \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
-			};\
-			for(decl uint<4>:j = 5 .. 25 : 1) { \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, j)); \
-			}; \
-		}");
+    auto stmt = builder.parseStmt(
+		"{ "
+		"	for(uint<4> i = 10u .. 50u) { "
+		"		v[i]; "
+		"	} "
+		"	for(uint<4> j = 5u .. 25u) { "
+		"		v[j]; "
+		"	} "
+		"}", symbols);
+
+	EXPECT_TRUE(stmt);
 
 	scop::mark(stmt);
 
 	LoopFusion lf( {0,1} );
-	NodePtr newIR = lf.apply(stmt);
+	NodePtr newIR = analysis::normalize(lf.apply(stmt));
 
-	EXPECT_EQ( toString(*newIR), "{for(int<4> v4 = 5 .. int.add(9, 1) : 1) {array.ref.elem.1D(v2, v4);}; for(int<4> v5 = 10 .. int.add(24, 1) : 1) {array.ref.elem.1D(v2, v5); array.ref.elem.1D(v2, v5);}; for(int<4> v6 = 25 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v6);};}" );
+	EXPECT_EQ( "{for(int<4> v0 = 5 .. int.add(9, 1) : 1) {vector.ref.elem(v1, v0);}; for(int<4> v2 = 10 .. int.add(24, 1) : 1) {vector.ref.elem(v1, v2); vector.ref.elem(v1, v2);}; for(int<4> v3 = 25 .. int.add(49, 1) : 1) {vector.ref.elem(v1, v3);};}", toString(*newIR) );
 
-	checkSCoPCorrectness(4, newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, TilingManual) {
@@ -238,14 +266,18 @@ TEST(Transform, TilingManual) {
 	using insieme::transform::pattern::any;
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 10 .. 50 : 1) { \
-			for(decl uint<4>:j = 5 .. 25 : 1) { \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-			}; \
-		}") );
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 10u .. 50u) { "
+		"	for(uint<4> j = 5u .. 25u) { "
+		"		v[i+j]; "
+		"	} "
+		"}", symbols).as<ForStmtPtr>();
+
+	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
 
@@ -256,12 +288,14 @@ TEST(Transform, TilingManual) {
 	newIR = lsm2.apply(newIR);
 
 	LoopInterchange li(1,2);
-	newIR = li.apply(newIR);
+	newIR = analysis::normalize(li.apply(newIR));
 
-	EXPECT_EQ( "for(int<4> v18 = 10 .. int.add(49, 1) : 7) {for(int<4> v19 = 5 .. int.add(24, 1) : 7) {for(int<4> v20 = v18 .. int.add(select(int.add(cast<int<4>>(v18), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v21 = v19 .. int.add(select(int.add(cast<int<4>>(v19), cast<int<4>>(6)), 24, int.lt), 1) : 1) {array.ref.elem.1D(v3, uint.add(v20, v21));};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 5 .. int.add(24, 1) : 7) {for(int<4> v3 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v4 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int.lt), 1) : 1) {vector.ref.elem(v1, uint.add(v3, v4));};};};}", newIR->toString() );
 
-	checkSCoPCorrectness(18, newIR);
+	checkSCoPCorrectness(newIR);
 }
+
+
 
 TEST(Transform, TilingAuto) {
 	using namespace insieme::core;
@@ -270,23 +304,27 @@ TEST(Transform, TilingAuto) {
 	using insieme::transform::pattern::any;
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 10 .. 50 : 1) { \
-			for(decl uint<4>:j = 5 .. 25 : 1) { \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-			}; \
-		}") );
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 10u .. 50u) { "
+		"	for(uint<4> j = 5u .. 25u) { "
+		"		v[i+j]; "
+		"	} "
+		"}", symbols).as<ForStmtPtr>();
+
+	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
 
 	LoopTiling li({7,7});
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 
-	EXPECT_EQ( "for(int<4> v8 = 10 .. int.add(49, 1) : 7) {for(int<4> v9 = 5 .. int.add(24, 1) : 7) {for(int<4> v10 = v8 .. int.add(select(int.add(cast<int<4>>(v8), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v11 = v9 .. int.add(select(int.add(cast<int<4>>(v9), cast<int<4>>(6)), 24, int.lt), 1) : 1) {array.ref.elem.1D(v3, uint.add(v10, v11));};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 5 .. int.add(24, 1) : 7) {for(int<4> v3 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v4 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int.lt), 1) : 1) {vector.ref.elem(v1, uint.add(v3, v4));};};};}", toString(*newIR) );
 
-	checkSCoPCorrectness(8, newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, TilingAuto2) {
@@ -296,25 +334,29 @@ TEST(Transform, TilingAuto2) {
 	using insieme::transform::pattern::any;
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 10 .. 50 : 1) { \
-			for(decl uint<4>:j = 3 .. 25 : 1) { \
-				for(decl uint<4>:k = 2 .. 100 : 1) { \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-				}; \
-			}; \
-		}") );
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 10u .. 50u) { "
+		"	for(uint<4> j = 3u .. 25u) { "
+		"		for(uint<4> k = 2u .. 100u) { "
+		"			v[i+j]; "
+		"		}"
+		"	}"
+		"}", symbols).as<ForStmtPtr>();
+
+	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
 
 	LoopTiling li({ 7,6,3 });
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 
-	EXPECT_EQ( "for(int<4> v11 = 10 .. int.add(49, 1) : 7) {for(int<4> v12 = 3 .. int.add(24, 1) : 6) {for(int<4> v13 = 2 .. int.add(99, 1) : 3) {for(int<4> v14 = v11 .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v15 = v12 .. int.add(select(int.add(cast<int<4>>(v12), cast<int<4>>(5)), 24, int.lt), 1) : 1) {for(int<4> v16 = v13 .. int.add(select(int.add(cast<int<4>>(v13), cast<int<4>>(2)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v14, v15));};};};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 3 .. int.add(24, 1) : 6) {for(int<4> v3 = 2 .. int.add(99, 1) : 3) {for(int<4> v4 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v5 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(5)), 24, int.lt), 1) : 1) {for(int<4> v6 = v3 .. int.add(select(int.add(cast<int<4>>(v3), cast<int<4>>(2)), 99, int.lt), 1) : 1) {vector.ref.elem(v1, uint.add(v4, v5));};};};};};}", toString(*newIR) );
 
-	checkSCoPCorrectness(11, newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, TilingAuto21) {
@@ -324,25 +366,27 @@ TEST(Transform, TilingAuto21) {
 	using insieme::transform::pattern::any;
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 10 .. 50 : 1) { \
-			for(decl uint<4>:j = 3 .. 25 : 1) { \
-				for(decl uint<4>:k = 2 .. 100 : 1) { \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-				}; \
-			}; \
-		}") );
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 10u.. 50u) { "
+		"	for(uint<4> j = 3u .. 25u) { "
+		"		for(uint<4> k = 2u .. 100u) { "
+		"			v[i+j]; "
+		"		} "
+		" 	}"
+		"}", symbols).as<ForStmtPtr>();
 
 	scop::mark(forStmt);
 
 	LoopTiling li({ 5,5 }, {0,0});
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 
-	EXPECT_EQ( "for(int<4> v9 = 10 .. int.add(49, 1) : 1) {for(int<4> v10 = 3 .. int.add(24, 1) : 5) {for(int<4> v11 = 2 .. int.add(99, 1) : 5) {for(int<4> v12 = v10 .. int.add(select(int.add(cast<int<4>>(v10), cast<int<4>>(4)), 24, int.lt), 1) : 1) {for(int<4> v13 = v11 .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(4)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v9, v12));};};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 1) {for(int<4> v2 = 3 .. int.add(24, 1) : 5) {for(int<4> v3 = 2 .. int.add(99, 1) : 5) {for(int<4> v4 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(4)), 24, int.lt), 1) : 1) {for(int<4> v5 = v3 .. int.add(select(int.add(cast<int<4>>(v3), cast<int<4>>(4)), 99, int.lt), 1) : 1) {vector.ref.elem(v1, uint.add(v0, v4));};};};};}", toString(*newIR) );
 
-	checkSCoPCorrectness(9,newIR);
+	checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, TilingAuto3) {
@@ -351,27 +395,30 @@ TEST(Transform, TilingAuto3) {
 	using namespace insieme::transform::pattern;
 	using insieme::transform::pattern::any;
 	
-	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 10 .. 50 : 1) { \
-			for(decl uint<4>:j = 1 .. 25 : 1) { \
-				for(decl uint<4>:k = i .. 100 : 1) { \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-				};\
-			}; \
-		}") );
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 10u .. 50u ) { "
+		"	for(uint<4> j = 1u .. 25u ) { "
+		"		for(uint<4> k = i .. 100u ) { "
+		"			v[i+j]; "
+		"		} "
+		"	} "
+		"}", symbols).as<ForStmtPtr>();
+
+	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
 
 	LoopTiling li({7,6,8});
-	NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 
-	EXPECT_EQ( "for(int<4> v11 = 10 .. int.add(49, 1) : 7) {for(int<4> v12 = 1 .. int.add(24, 1) : 6) {for(int<4> v13 = v11 .. int.add(99, 1) : 1) {for(int<4> v14 = int.add(cast<int<4>>(v13), cast<int<4>>(int.mul(cast<int<4>>(-8), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v11))), cast<int<4>>(v13)), 8))))) .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(6)), select(v13, 49, int.lt), int.lt), 1) : 8) {if(bool.and(int.le(v11, v14), bind(){rec v17.{v17=fun(int<4> v15, int<4> v16) {return int.ge(v15, int.add(cast<int<4>>(v16), cast<int<4>>(-7)));}}(v11, v14)})) {for(int<4> v18 = v12 .. int.add(int.add(cast<int<4>>(v12), cast<int<4>>(5)), 1) : 1) {for(int<4> v19 = v13 .. int.add(select(int.add(cast<int<4>>(v13), cast<int<4>>(7)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v14, v18));};};} else {};};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 1 .. int.add(24, 1) : 6) {for(int<4> v3 = v0 .. int.add(99, 1) : 1) {for(int<4> v4 = int.add(cast<int<4>>(v3), cast<int<4>>(int.mul(cast<int<4>>(-8), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v0))), cast<int<4>>(v3)), 8))))) .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), select(v3, 49, int.lt), int.lt), 1) : 8) {if(bool.and(int.le(v0, v4), bind(){rec v0.{v0=fun(int<4> v1, int<4> v2) {return int.ge(v1, int.add(cast<int<4>>(v2), cast<int<4>>(-7)));}}(v0, v4)})) {for(int<4> v5 = v2 .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(5)), 1) : 1) {for(int<4> v6 = v3 .. int.add(select(int.add(cast<int<4>>(v3), cast<int<4>>(7)), 99, int.lt), 1) : 1) {vector.ref.elem(v1, uint.add(v4, v5));};};} else {};};};};}", toString(*newIR) );
 
-	checkSCoPCorrectness(11,newIR);
+	// checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, LoopStamping) {
@@ -380,25 +427,28 @@ TEST(Transform, LoopStamping) {
 	using namespace insieme::transform::pattern;
 	using insieme::transform::pattern::any;
 	
-	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 0 .. 30 : 1) { \
-			for(decl uint<4>:j = 0 .. 30 : 1) { \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-			}; \
-		}") );
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 0u .. 30u) { "
+		"	for(uint<4> j = 0u .. 30u) { "
+		"		v[i+j]; "
+		"	} "
+		"}", symbols).as<ForStmtPtr>();
+
+	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
 
 	LoopStamping ls( 7, { 0,0 } );
-	NodePtr newIR = ls.apply(forStmt);
+	NodePtr newIR = analysis::normalize(ls.apply(forStmt));
 
-	EXPECT_EQ( "{for(int<4> v6 = 0 .. int.add(29, 1) : 1) {for(int<4> v7 = 0 .. int.add(27, 1) : 1) {array.ref.elem.1D(v3, uint.add(v6, v7));};}; for(int<4> v8 = 0 .. int.add(29, 1) : 1) {for(int<4> v9 = 28 .. int.add(29, 1) : 1) {array.ref.elem.1D(v3, uint.add(v8, v9));};};}", newIR->toString() );
+	EXPECT_EQ( "{for(int<4> v0 = 0 .. int.add(29, 1) : 1) {for(int<4> v2 = 0 .. int.add(27, 1) : 1) {vector.ref.elem(v1, uint.add(v0, v2));};}; for(int<4> v3 = 0 .. int.add(29, 1) : 1) {for(int<4> v4 = 28 .. int.add(29, 1) : 1) {vector.ref.elem(v1, uint.add(v3, v4));};};}", toString(*newIR) );
 
-	checkSCoPCorrectness(6,newIR);
+	checkSCoPCorrectness(newIR);
 
 }
 
@@ -410,23 +460,27 @@ TEST(Transform, LoopStamping2) {
 	
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 3 .. 30 : 1) { \
-			for(decl uint<4>:j = 3 .. 30 : 1) { \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-			}; \
-		}") );
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 3u .. 30u ) { "
+		"	for(uint<4> j = 3u .. 30u) { "
+		"		v[i+j]; "
+		"	} "
+		"}", symbols).as<ForStmtPtr>();
+
+	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
 
 	LoopStamping ls( 7 , { 0 } );
-	NodePtr newIR = ls.apply(forStmt);
+	NodePtr newIR = analysis::normalize(ls.apply(forStmt));
 
-	EXPECT_EQ( "{for(int<4> v6 = 3 .. int.add(23, 1) : 1) {for(int<4> v7 = 3 .. int.add(29, 1) : 1) {array.ref.elem.1D(v3, uint.add(v6, v7));};}; for(int<4> v8 = 24 .. int.add(29, 1) : 1) {for(int<4> v9 = 3 .. int.add(29, 1) : 1) {array.ref.elem.1D(v3, uint.add(v8, v9));};};}", newIR->toString() );
+	EXPECT_EQ( "{for(int<4> v0 = 3 .. int.add(23, 1) : 1) {for(int<4> v2 = 3 .. int.add(29, 1) : 1) {vector.ref.elem(v1, uint.add(v0, v2));};}; for(int<4> v3 = 24 .. int.add(29, 1) : 1) {for(int<4> v4 = 3 .. int.add(29, 1) : 1) {vector.ref.elem(v1, uint.add(v3, v4));};};}", toString(*newIR) );
 
-	checkSCoPCorrectness(6,newIR);
+	checkSCoPCorrectness(newIR);
 
 }
 
@@ -438,26 +492,30 @@ TEST(Transform, LoopStamping3) {
 	
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 10 .. int<4>:b : 1) { \
-			for(decl uint<4>:j = 1 .. 25 : 1) { \
-				for(decl uint<4>:k = 1 .. 100 : 1) { \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-				};\
-			}; \
-		}") );
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 10u .. b ) { "
+		"	for(uint<4> j = 1u .. 25u) { "
+		"		for(uint<4> k = 1u .. 100u) { "
+		"			v[i+j]; "
+		"		} "
+		"	} "
+		"}", symbols).as<ForStmtPtr>();
+
+	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
 
 	LoopStamping ls( 7, { 0 } );
 	NodePtr newIR = ls.apply(forStmt);
 
-	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v8 = 10 .. int.add(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 1) : 1) {for(int<4> v9 = 1 .. int.add(24, 1) : 1) {for(int<4> v10 = 1 .. int.add(99, 1) : 1) {array.ref.elem.1D(v5, uint.add(v8, v9));};};}; for(int<4> v11 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 1) : 1) {for(int<4> v12 = 1 .. int.add(24, 1) : 1) {for(int<4> v13 = 1 .. int.add(99, 1) : 1) {array.ref.elem.1D(v5, uint.add(v11, v12));};};};} else {}", newIR->toString() );
+	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v120 = 10 .. int.add(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 1) : 1) {for(int<4> v121 = 1 .. int.add(24, 1) : 1) {for(int<4> v122 = 1 .. int.add(99, 1) : 1) {vector.ref.elem(v1, uint.add(v120, v121));};};}; for(int<4> v123 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 1) : 1) {for(int<4> v124 = 1 .. int.add(24, 1) : 1) {for(int<4> v125 = 1 .. int.add(99, 1) : 1) {vector.ref.elem(v1, uint.add(v123, v124));};};};} else {}", toString(*newIR) );
 
-	//checkSCoPCorrectness(8,newIR);
-
+	//checkSCoPCorrectness(newIR);
 }
 
 TEST(Transform, LoopStamping4) {
@@ -466,25 +524,29 @@ TEST(Transform, LoopStamping4) {
 	using namespace insieme::transform::pattern;
 	using insieme::transform::pattern::any;
 	
-	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl uint<4>:i = 10 .. int<4>:b : 1) { \
-			for(decl uint<4>:j = 1 .. 25 : 1) { \
-				for(decl uint<4>:k = i .. 100 : 1) { \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-				};\
-			}; \
-		}") );
+    auto forStmt = builder.parseStmt(
+		"for(uint<4> i = 10u .. b) { "
+		"	for(uint<4> j = 1u .. 25u) { "
+		"		for(uint<4> k = i .. 100u ) { "
+		"			v[i+j]; "
+		"		} "
+		"	} "
+		"}", symbols).as<ForStmtPtr>();
+
+	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
 
 	LoopStamping ls( 7, { 0 } );
-	NodePtr newIR = ls.apply(forStmt);
+	NodePtr newIR = analysis::normalize(ls.apply(forStmt));
 
-	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v8 = 10 .. int.add(select(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 99, int.lt), 1) : 1) {for(int<4> v9 = 1 .. int.add(24, 1) : 1) {for(int<4> v10 = v8 .. int.add(99, 1) : 1) {array.ref.elem.1D(v5, uint.add(v8, v9));};};}; for(int<4> v11 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 99, int.lt), 1) : 1) {for(int<4> v12 = 1 .. int.add(24, 1) : 1) {for(int<4> v13 = v11 .. int.add(99, 1) : 1) {array.ref.elem.1D(v5, uint.add(v11, v12));};};};} else {}", newIR->toString() );
+	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v0 = 10 .. int.add(select(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 99, int.lt), 1) : 1) {for(int<4> v3 = 1 .. int.add(24, 1) : 1) {for(int<4> v4 = v0 .. int.add(99, 1) : 1) {vector.ref.elem(v1, uint.add(v0, v3));};};}; for(int<4> v5 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 99, int.lt), 1) : 1) {for(int<4> v6 = 1 .. int.add(24, 1) : 1) {for(int<4> v7 = v5 .. int.add(99, 1) : 1) {vector.ref.elem(v1, uint.add(v5, v6));};};};} else {}", toString(*newIR) );
 
 	// checkSCoPCorrectness(8,newIR);
 

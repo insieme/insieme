@@ -38,11 +38,14 @@
 
 #include "insieme/frontend/frontend.h"
 
+#include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
+#include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/cmd_line_utils.h"
+
 
 namespace insieme {
 namespace frontend {
@@ -76,6 +79,15 @@ core::ProgramPtr ConversionJob::execute() {
 	CommandLineOptions::OpenMP = hasOption(OpenMP);
 	CommandLineOptions::OpenCL = hasOption(OpenCL);
 
+	// add definitions needed by the OpenCL frontend
+	if(hasOption(OpenCL)) {
+		CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
+		CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
+		CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
+
+		CommandLineOptions::Defs.push_back("INSIEME");
+	}
+
 	// create a temporary manager
 	core::NodeManager tmpMgr(manager);
 
@@ -91,6 +103,12 @@ core::ProgramPtr ConversionJob::execute() {
 	// apply OpenMP sema conversion
 	if (hasOption(OpenMP)) {
 		res = frontend::omp::applySema(res, tmpMgr);
+	}
+
+	// apply OpenCL conversion
+	if(hasOption(OpenCL)) {
+		frontend::ocl::HostCompiler oclHostCompiler(res);
+		res = oclHostCompiler.compile();
 	}
 
 	// return instance within global manager

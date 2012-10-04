@@ -51,7 +51,7 @@ class ConstantPropagation:
 	public Problem<
 			ConstantPropagation, 
 			ForwardAnalysisTag,
-			Entity<dfa::elem<Access>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+			Entity<dfa::elem<cfg::Address>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
 			PowerSet
 	> 
 {
@@ -59,7 +59,7 @@ class ConstantPropagation:
 	typedef Problem<
 			ConstantPropagation, 
 			ForwardAnalysisTag,
-			Entity<dfa::elem<Access>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+			Entity<dfa::elem<cfg::Address>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
 			PowerSet
 	>  Base;
 	
@@ -72,6 +72,7 @@ public:
 	virtual value_type init() const { return top(); }
 
 	virtual value_type top() const { 
+
 		const auto& lhsBase = extracted.getLeftBaseSet();
 		return makeCartProdSet(
 				lhsBase, 
@@ -83,6 +84,7 @@ public:
 
 	virtual value_type bottom() const {
 		const auto& lhsBase = extracted.getLeftBaseSet();
+
 		return makeCartProdSet(
 				lhsBase, 
 				std::set<dfa::Value<core::LiteralPtr>>( 

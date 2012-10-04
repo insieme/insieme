@@ -66,7 +66,7 @@ void basic_type_test() {
 	#pragma test "ref<vector<real<4>,3>> v1 = ref.var({cast<real<4>>(0),cast<real<4>>(0),cast<real<4>>(0)})"
 	float vvv[3] = { 0, 0, 0 };
 
-	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({vector.init.uniform(cast<real<4>>(0), 1),vector.init.uniform(cast<real<4>>(0), 1)})"
+	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({{cast<real<4>>(0)},{cast<real<4>>(0)}})"
 	float vvvv[][1] = { {0}, {0} };
 
 	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(get.null(array<int<4>,1>))"

@@ -50,13 +50,14 @@
 #include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_entities.h"
 
+#include "insieme/backend/ocl_host/host_extensions.h"
+
 #include "insieme/analysis/features/code_features.h"
 #include "insieme/analysis/features/code_feature_catalog.h"
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/utils/cmd_line_utils.h"
-#include "insieme/transform/pattern/ir_pattern.h"
 
 namespace insieme {
 namespace backend {
@@ -297,17 +298,21 @@ using namespace insieme::transform::pattern;
 			core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
 
 			// collect parameters to be captured by the job
-			vector<core::VariablePtr> capturedVars = getVariablesToBeCaptured(job);
 
 			// add local declarations
 			core::TypeList list;
+			core::VariableSet jobLocalVars;
 			core::ExpressionList capturedValues;
 			utils::map::PointerMap<core::VariablePtr, unsigned> varIndex;
 			for_each(job->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& cur) {
 				varIndex.insert(std::make_pair(cur->getVariable(), list.size()));
 				list.push_back(cur->getVariable()->getType());
+				jobLocalVars.insert(cur->getVariable());
 				capturedValues.push_back(cur->getInitialization());
 			});
+
+			// and captured variables
+			vector<core::VariablePtr> capturedVars = getVariablesToBeCaptured(job, jobLocalVars);
 			for_each(capturedVars, [&](const core::VariablePtr& cur) {
 				varIndex.insert(std::make_pair(cur, list.size()));
 				list.push_back(cur->getType());
@@ -339,23 +344,47 @@ using namespace insieme::transform::pattern;
 				return fixVariables(res);
 			};
 
-			// create function processing the job (forming the entry point)
-			core::StatementList body;
-			core::StatementPtr returnStmt = builder.returnStmt(basic.getUnitConstant());
-			for(auto it = job->getGuardedExprs().begin(); it != job->getGuardedExprs().end(); ++it) {
-				const core::GuardedExprPtr& cur = *it;
-				core::ExpressionPtr condition = fixVariables(cur->getGuard());
-				core::ExpressionPtr branch = fixBranch(cur->getExpression());
-				body.push_back(builder.ifStmt(condition, builder.compoundStmt(branch, returnStmt)));
+			// compute work-item implementation variants
+			vector<WorkItemVariant> variants;
+
+			// support for multiple body implementations
+			auto params = toVector(workItem);
+			if (job->getGuardedExprs().empty() && core::analysis::isCallOf(job->getDefaultExpr(), basic.getPick())) {
+
+				// ---- default only but various variants ------
+				auto alternatives = job->getDefaultExpr().as<core::CallExprPtr>()->getArgument(0);
+				auto impls = core::encoder::toValue<vector<core::ExpressionPtr>>(alternatives);
+
+				assert(!impls.empty() && "There must be at least one implementation!");
+
+				for(const auto& cur : impls) {
+					variants.push_back(WorkItemVariant(builder.lambdaExpr(unit, fixBranch(cur), params)));
+				}
+
+			} else {
+
+				// general case with guards, yet many variants
+
+				// create function processing the job (forming the entry point)
+				core::StatementList body;
+				core::StatementPtr returnStmt = builder.returnStmt(basic.getUnitConstant());
+				for(auto it = job->getGuardedExprs().begin(); it != job->getGuardedExprs().end(); ++it) {
+					const core::GuardedExprPtr& cur = *it;
+					core::ExpressionPtr condition = fixVariables(cur->getGuard());
+					core::ExpressionPtr branch = fixBranch(cur->getExpression());
+					body.push_back(builder.ifStmt(condition, builder.compoundStmt(branch, returnStmt)));
+				}
+
+				// add default branch
+				body.push_back(fixBranch(job->getDefaultExpr()));
+
+				// add to variant list
+				variants.push_back(WorkItemVariant(builder.lambdaExpr(unit, builder.compoundStmt(body), params)));
+
 			}
 
-			// add default branch
-			body.push_back(fixBranch(job->getDefaultExpr()));
-			
 			// produce work item implementation
-			WorkItemVariant variant(builder.lambdaExpr(unit, builder.compoundStmt(body), toVector(workItem)));
-			WorkItemImpl impl(toVector(variant));
-
+			WorkItemImpl impl(variants);
 
 			// ------------------- initialize work item parameters -------------------------
 
@@ -443,9 +472,10 @@ using namespace insieme::transform::pattern;
 				core::ExpressionPtr max = range.max;
 				core::ExpressionPtr mod = range.mod;
 
+				// creates a list of work-item implementations and the work item data record to be passed along
 				auto info = wrapJob(manager, job);
-				core::ExpressionPtr wi = coder::toIR(manager, info.first);
-				core::ExpressionPtr data = info.second;
+				core::ExpressionPtr wi = coder::toIR(manager, info.first);		// the implementation list
+				core::ExpressionPtr data = info.second;							// the work item data record to be passed
 
 				// create call to job constructor
 				return builder.callExpr(ext.jobType, ext.createJob, toVector(min,max,mod, wi, data));
@@ -493,10 +523,8 @@ using namespace insieme::transform::pattern;
 			}
 
 			bool isOpencl(const core::StatementPtr& stmt) {
-				TreePatternPtr kernelCall = aT(irp::callExpr( irp::literal("call_kernel"), *any));
-				MatchOpt&& match = kernelCall->matchPointer(stmt);
-				if(match) return true;
-				return false;
+				auto kernelCall = stmt->getNodeManager().getLangExtension<ocl_host::Extensions>().callKernel;
+				return core::visitDepthFirstOnceInterruptible(stmt, [&](const core::LiteralPtr& cur)->bool { return cur == kernelCall; });
 			}
 
 			uint64_t estimateEffort(const core::StatementPtr& stmt) {
@@ -808,8 +836,8 @@ using namespace insieme::transform::pattern;
 				if(pickCall->hasAttachedValue<PickImplementationHint>()) {
 					auto implHint = pickCall->getAttachedValue<PickImplementationHint>();
 					switch(implHint) {
-					case PickImplementationHint::CALL: return convertVariantToSwitch(call);
-					case PickImplementationHint::SWITCH: return convertVariantToCall(call);
+					case PickImplementationHint::CALL: return convertVariantToCall(call);
+					case PickImplementationHint::SWITCH: return convertVariantToSwitch(call);
 					default: assert(false && "Invalid variant implementation hint"); break;
 					}
 				}

@@ -40,77 +40,146 @@
 
 #include "insieme/utils/logging.h"
 
-namespace insieme { namespace analysis { namespace dfa { namespace analyses {
+#include "insieme/analysis/access.h"
+
+namespace insieme { namespace analysis { namespace dfa {
+
+template <>
+typename container_type_traits< dfa::elem< cfg::Address >  >::type 
+extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg) {
+
+	std::set<cfg::Address> entities;
+
+	auto collector = [&entities, &cfg] (const cfg::BlockPtr& block) {
+		size_t stmt_idx=0;
+		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
+			++stmt_idx;
+
+			auto stmt = core::NodeAddress(cur.getAnalysisStatement());
+	
+			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { 
+				stmt.as<core::ForStmtPtr>()->getDeclaration()->getVariable();
+				// FIXME
+			}
+
+			if (auto declStmt = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
+				entities.insert( cfg::Address(block, stmt_idx-1, declStmt->getVariable()) );
+				return;
+			}
+
+			auto expr = core::dynamic_address_cast<const core::Expression>(stmt);
+			if (!expr) { return; }
+
+			if (core::analysis::isCallOf(expr.getAddressedNode(), expr->getNodeManager().getLangBasic().getRefAssign())) {
+				entities.insert( cfg::Address(block, stmt_idx-1, expr.as<core::CallExprAddress>()->getArgument(0)) );
+				return;
+			}
+		});
+	};
+	cfg.visitDFS(collector);
+
+	return entities;
+}
+	
+namespace analyses {
+
+typedef typename ReachingDefinitions::value_type AnalysisDataType;
 
 /**
  * ReachingDefinitions Problem
  */
-typename ReachingDefinitions::value_type 
-ReachingDefinitions::meet(const typename ReachingDefinitions::value_type& lhs, const typename ReachingDefinitions::value_type& rhs) const 
-{
-	// LOG(DEBUG) << "MEET ( " << lhs << ", " << rhs << ") -> ";
-	typename ReachingDefinitions::value_type ret;
+
+AnalysisDataType ReachingDefinitions::meet(const AnalysisDataType& lhs, const AnalysisDataType& rhs) const {
+	LOG(DEBUG) << "MEET ( " << lhs << ", " << rhs << ") -> ";
+	AnalysisDataType ret;
 	std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
-	// LOG(DEBUG) << ret;
+	LOG(DEBUG) << ret;
 	return ret;
 }
 
 
-typename ReachingDefinitions::value_type 
-ReachingDefinitions::transfer_func(const typename ReachingDefinitions::value_type& in, const cfg::BlockPtr& block) const {
-	typename ReachingDefinitions::value_type gen, kill;
+void definitionsToAccesses(const AnalysisDataType& data, AccessManager& aMgr) {
+	for(const auto& dfAddress : data) {
+		aMgr.getClassFor( getImmediateAccess( dfAddress.getAddressedNode()->getNodeManager(),dfAddress ) );
+	}
+}
+
+AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
+
+	AnalysisDataType gen, kill;
 	
 	if (block->empty()) { return in; }
-	assert(block->size() == 1);
 
 	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 	LOG(DEBUG) << "~ Block " << block->getBlockID();
 	LOG(DEBUG) << "~ IN: " << in;
 
-	for_each(block->stmt_begin(), block->stmt_end(), 
-			[&] (const cfg::Element& cur) {
+	AccessManager mgr(&getCFG(), getCFG().getTmpVarMap());
+	definitionsToAccesses(in, mgr);
 
-		core::StatementPtr stmt = cur.getAnalysisStatement();
+	size_t stmtIdx=0;
+	for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
 
-		auto handle_def = [&](const core::VariablePtr& varPtr) { 
+		core::StatementAddress stmt = core::StatementAddress(cur.getAnalysisStatement());
 
-			Access&& var = getImmediateAccess( core::ExpressionAddress(varPtr), getCFG().getAliasMap() );
+		auto handle_def = [&](const core::VariableAddress& varAddr) { 
 
-			gen.insert( std::make_tuple(var, block) );
+			assert(varAddr && "Variable not found within the statement of the CFG Block");
 
-			// kill all declarations reaching this block 
-			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
-					[&](const typename ReachingDefinitions::value_type::value_type& cur){
-						return std::get<0>(cur) == var;
-					} );
+			cfg::Address cfgAddr(block, stmtIdx, varAddr);
+
+			auto access = getImmediateAccess(stmt->getNodeManager(), cfgAddr, getCFG().getTmpVarMap());
+
+			// Get the class to which the access belongs to 
+			AccessClassPtr collisionClass = mgr.getClassFor(access);
+
+			AccessClassSet classes;
+			classes.insert(collisionClass);
+
+			// Add subclasses which are affected by this definition
+			addSubClasses(collisionClass, classes);
+
+			// Kill Entities 
+			if (access->isReference()) 
+				for (auto& curClass : classes) {
+					for (auto& acc : *curClass) {
+						kill.insert( acc->getAddress().as<cfg::Address>() );
+					}
+				}
+
+			gen.insert( access->getAddress().as<cfg::Address>() );
+
 		};
 
 		if (stmt->getNodeType() == core::NT_Literal) { return; }
 
-		// assume scalar variables 
-		if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
+		if (core::DeclarationStmtAddress decl = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
 
-			handle_def( decl->getVariable() );
-
-		} else if (core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(stmt)) {
-
-			if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
-				handle_def( call->getArgument(0).as<core::VariablePtr>() );
+			if (!getCFG().getTmpVarMap().isTmpVar(decl->getVariable().getAddressedNode())) {
+				handle_def( decl->getVariable() );
 			}
 
-		} else {
-			LOG(WARNING) << stmt;
-			assert(false && "Stmt not handled");
+		} else if (core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(stmt)) {
+
+			if (core::analysis::isCallOf(call.getAddressedNode(), call->getNodeManager().getLangBasic().getRefAssign()) ) { 
+				handle_def( call->getArgument(0).as<core::VariableAddress>() );
+			}
 		}
+
+		if (cur.getType() == cfg::Element::LOOP_INCREMENT) {
+			handle_def( stmt.as<core::ForStmtAddress>()->getDeclaration()->getVariable() );
+		}
+
+		++stmtIdx;
 	});
 
+	// TODO: Factorize outside the analysis code 
 	LOG(DEBUG) << "~ KILL: " << kill;
 	LOG(DEBUG) << "~ GEN:  " << gen;
 
-	typename ReachingDefinitions::value_type set_diff, ret;
+	AnalysisDataType set_diff, ret;
 	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
 	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
-
 	LOG(DEBUG) << "~ RET: " << ret;
 
 	return ret;

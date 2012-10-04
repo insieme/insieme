@@ -37,7 +37,6 @@
 #include "insieme/analysis/func_sema.h"
 
 #include "insieme/analysis/defuse_collect.h"
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/ir_visitor.h"
@@ -190,10 +189,9 @@ core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piece
 				// Get the type of the contained object 
 				core::TypePtr nonRefTy = arrType;
 				while(nonRefTy->getNodeType() == core::NT_RefType) {
-					LOG(INFO) << *nonRefTy;
 					nonRefTy = nonRefTy.as<core::RefTypePtr>()->getElementType();
 				}
-				LOG(INFO) << "done";
+
 				assert((nonRefTy->getNodeType() == core::NT_VectorType || nonRefTy->getNodeType() == core::NT_ArrayType) && 
 						"expecting array or vector type");
 				
@@ -370,7 +368,7 @@ const boost::optional<FunctionSemaAnnotation> FunctionSemaAnnotation::getFunctio
 
 void loadFunctionSemantics(core::NodeManager& mgr) {
 
-	LOG(INFO) << "Loading semantic info" << std::endl;
+	LOG(DEBUG) << "Loading semantic info" << std::endl;
 
 	// check whether it has been loaded before
 	core::NodePtr flagNode = core::StringValue::get(mgr, "SemanticLoaded");
@@ -387,7 +385,7 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 
 	#define FUNC(Name, Type, SideEffects, args_info...)  \
 	{\
-	core::LiteralPtr&& funcLit = builder.literal(core::parse::parseType(mgr, Type), #Name); \
+	core::LiteralPtr&& funcLit = builder.literal(core::IRBuilder(mgr).parseType(Type), #Name); \
 	/*LOG(INFO) << funcLit << " || " << funcLit->getType(); */\
 	assert(funcLit->getType()->getNodeType() == core::NT_FunctionType && "Type in function db not a function type: " #Name); \
 	FunctionSemaAnnotation::Args&& args = makeArgumentInfo({ args_info }); \
@@ -441,7 +439,7 @@ FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 	
 	if(!sema) {
 		// Try to do your best finding the semantics of this function 
-		LOG(WARNING) << "Tried to extract semantics for unknown function: '" 
+		LOG(DEBUG) << "Tried to extract semantics for unknown function: '" 
 				     << *funcLit << "' with type '" << *funcLit->getType() << "'";
 
 		return FunctionSema(isPure(funcLit), true, FunctionSema::Accesses());

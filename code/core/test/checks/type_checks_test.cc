@@ -37,7 +37,12 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/type_checks.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/parser2/ir_parser.h"
+#include "insieme/core/parser2/grammar.h"
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 namespace core {
@@ -414,6 +419,25 @@ TEST(DeclarationStmtTypeCheck, Basic) {
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 }
 
+TEST(DeclarationStmtTypeCheck, SubTypes) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+
+	// OK ... create a function literal
+	TypePtr typeA = basic.getInt4();
+	TypePtr typeB = basic.getInt8();
+	ExpressionPtr init = builder.literal(typeA, "4");
+	DeclarationStmtPtr ok = builder.declarationStmt(builder.variable(typeB), builder.literal(typeA, "4"));
+	DeclarationStmtPtr err = builder.declarationStmt(builder.variable(typeA), builder.literal(typeB, "4"));
+
+	CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+ 	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+}
+
 TEST(IfCondition, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);
@@ -648,6 +672,313 @@ TEST(ExternalFunctionType, Basic) {
 	ASSERT_FALSE(check(err, typeCheck).empty());
 
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_FUNCTION_TYPE, "", Message::ERROR));
+}
+
+TEST(LambdaExprType, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+
+	// build a lambda expression which is fine
+	LambdaExprPtr lambda = builder.parse(
+			"let int = int<4> in (int a)->int { return a; }"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(lambda);
+
+	// get addresses to all kind of variables
+	VariableAddress outer = LambdaExprAddress(lambda)->getVariable();
+	VariableAddress inner = LambdaExprAddress(lambda)->getDefinition()[0]->getVariable();
+
+	// check a correct version
+	CheckPtr typeCheck = make_check<LambdaTypeCheck>();
+	EXPECT_TRUE(check(lambda, typeCheck).empty()) << check(lambda, typeCheck);
+
+
+	// build an invalid variable as a replacement
+	VariablePtr invalid = builder.variable(outer->getType());
+
+	// case 1 - lambda expression selects non-existing body
+	auto err = transform::replaceNode(manager, outer, invalid).as<LambdaExprPtr>();
+
+	auto errors = check(err,typeCheck);
+	EXPECT_EQ(1u, errors.size()) << errors;
+	EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_EXPR_NO_SUCH_DEFINITION, "", Message::ERROR));
+
+	// case 2 - wrong type of lambda expression
+	FunctionTypePtr invalidType = builder.functionType(TypeList(), basic.getUnit());
+	err = transform::replaceNode(manager, LambdaExprAddress(lambda)->getType(), invalidType).as<LambdaExprPtr>();
+
+	errors = check(err,typeCheck);
+	EXPECT_EQ(1u, errors.size()) << errors;
+	EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_EXPR_TYPE, "", Message::ERROR));
+
+
+	// case 3 - use invalid variable type in lambda
+	invalid = builder.variable(invalidType);
+	err = transform::replaceNode(manager,
+				inner.switchRoot(transform::replaceNode(manager, outer.switchRoot(err), invalid).as<LambdaExprPtr>())
+			, invalid).as<LambdaExprPtr>();
+	errors = check(err,typeCheck);
+	EXPECT_EQ(1u, errors.size()) << errors;
+	EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_REC_VAR_TYPE, "", Message::ERROR));
+
+
+	// case 4 - wrong lambda type
+	VariablePtr param = lambda->getLambda()->getParameterList()[0];
+	VariablePtr invalidParam = builder.variable(basic.getFloat());
+
+	err = transform::replaceAll(manager,lambda, param, invalidParam, false).as<LambdaExprPtr>();
+	errors = check(err,typeCheck);
+	EXPECT_EQ(1u, errors.size()) << errors;
+	EXPECT_PRED2(containsMSG, errors, Message(NodeAddress(err), EC_TYPE_INVALID_LAMBDA_TYPE, "", Message::ERROR));
+
+
+}
+
+TEST(ArrayTypeChecks, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	CheckPtr typeCheck = getFullCheck();
+
+	// create simple, context less array type
+	TypePtr element = manager.getLangBasic().getInt4();
+	TypePtr arrayType = builder.arrayType(element);
+
+	TypePtr cur;
+
+	// test something without context
+	EXPECT_TRUE(check(arrayType, typeCheck).empty()) << check(arrayType, typeCheck);
+
+	auto errors = check(arrayType, typeCheck);
+
+	// ----- struct ------
+
+	// test it within a struct
+	cur = builder.structType(toVector(builder.namedType("a", arrayType)));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+	// .. a bigger struct
+	cur = builder.structType(toVector(builder.namedType("c", element), builder.namedType("a", arrayType)));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+	// it has to be the last element
+	cur = builder.structType(toVector(builder.namedType("a", arrayType), builder.namedType("c", element)));
+	errors = check(cur, typeCheck);
+	EXPECT_FALSE(errors.empty()) << errors;
+	EXPECT_EQ(1u, errors.size());
+	EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
+
+	// and must not be present multiple times
+	cur = builder.structType(toVector(builder.namedType("a", arrayType), builder.namedType("b", element), builder.namedType("c", arrayType)));
+	errors = check(cur, typeCheck);
+	EXPECT_FALSE(errors.empty()) << errors;
+	EXPECT_EQ(1u, errors.size());
+	EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
+
+	// may be nested inside another struct
+	cur = builder.structType(toVector(builder.namedType("a", builder.structType(toVector(builder.namedType("a", arrayType))))));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+
+	// ----- union ------
+
+	// also union
+	cur = builder.unionType(toVector(builder.namedType("c", element), builder.namedType("a", arrayType)));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+	// here the order is not important
+	cur = builder.unionType(toVector(builder.namedType("a", arrayType), builder.namedType("c", element)));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+
+	// ----- tuples ------
+
+	// test it within a tuple
+	cur = builder.tupleType(toVector(arrayType));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+	// .. a bigger tuple
+	cur = builder.tupleType(toVector(element, arrayType));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+	// it has to be the last element
+	cur = builder.tupleType(toVector(arrayType, element));
+	errors = check(cur, typeCheck);
+	EXPECT_FALSE(errors.empty()) << errors;
+	EXPECT_EQ(1u, errors.size());
+	EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
+
+	// and must not be present multiple times
+	cur = builder.tupleType(toVector(arrayType, element, arrayType));
+	errors = check(cur, typeCheck);
+	EXPECT_FALSE(errors.empty()) << errors;
+	EXPECT_EQ(1u, errors.size());
+	EXPECT_PRED2(containsMSG, check(cur, typeCheck), Message(NodeAddress(cur), EC_TYPE_INVALID_ARRAY_CONTEXT, "", Message::ERROR));
+
+	// variable size tuple must not be nested inside a non-reference
+	cur = builder.structType(toVector(builder.namedType("a", builder.tupleType(toVector(arrayType)))));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+
+	// also, there must not be a value of type array
+	ExpressionPtr exp = builder.literal("val", arrayType);
+	errors = check(exp, typeCheck);
+	EXPECT_FALSE(errors.empty()) << errors;
+	EXPECT_EQ(1u, errors.size());
+	EXPECT_PRED2(containsMSG, check(exp, typeCheck), Message(NodeAddress(exp), EC_TYPE_INVALID_ARRAY_VALUE, "", Message::ERROR));
+
+	exp = builder.literal("val", builder.refType(arrayType));
+	errors = check(exp, typeCheck);
+	EXPECT_TRUE(errors.empty()) << errors;
+}
+
+
+TEST(NarrowExpresion, Basic) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+	CheckPtr typeCheck = getFullCheck();
+
+	NodePtr res = core::parser::parse(manager,
+		"{"
+		" let inner = struct{ int<4> a;};"
+		" let two   = struct{ inner a; int<4> b;};"
+		" ref<two> obj; "
+		" ref<int<4>> inside = ref.narrow( obj, dp.member(dp.root, lit(\"b\")), lit(int<4>));"
+		" ref<int<4>> morein = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"a\")), lit(int<4>));"
+		"}"
+	);
+	ASSERT_TRUE (res);
+	auto errors = check(res, typeCheck);
+	EXPECT_TRUE(errors.empty()) << "Correct Narrow Test\n" << errors;
+	EXPECT_EQ("AP({ref<struct<a:struct<a:int<4>>,b:int<4>>> v1 = ref.var(undefined(struct<a:struct<a:int<4>>,b:int<4>>)); ref<int<4>> v2 = ref.narrow(v1, dp.member(dp.root, b), int<4>); ref<int<4>> v3 = ref.narrow(v1, dp.member(dp.member(dp.root, a), a), int<4>);})",
+			  toString(res));
+	
+	res = core::parser::parse(manager,
+		"{"
+		" let inner = struct{ int<4> a;};"
+		" let two   = struct{ inner a; int<4> b;};"
+		" ref<two> obj; "
+		" ref<int<4>> x = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"b\")),lit(\"a\")), lit(int<4>));"
+		" ref<int<4>> y = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"b\")), lit(int<4>));"
+		" ref<int<8>> z = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"a\")), lit(int<8>));"
+		"}"
+	);
+	ASSERT_TRUE (res);
+	errors = check(res, typeCheck);
+	EXPECT_EQ(3u, errors.size());
+}
+
+
+TEST(ExpandExpresion, Basic) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+	CheckPtr typeCheck = getFullCheck();
+
+	NodePtr res = core::parser::parse(manager,
+		"{"
+		" let int   = int<4>;"
+		" let inner = struct{ int a;};"
+		" let outer = struct{ inner a; int b;};"
+		""
+		" ref<inner>  obj;"
+		" obj.a = -15;"
+		" ref<int> x = obj.a;"
+		" ref<inner> exp = ref.expand(x, dp.member(dp.root, lit(\"a\")), lit(inner));"
+		""
+		" ref<outer> obj2; "
+		" ref<inner> y = obj2.a;"
+		" ref<int>   z = y.a;"
+		" ref<outer> exp2 = ref.expand (z, dp.member (dp.member (dp.root, lit(\"a\")), lit(\"a\")), lit(outer));"
+		"}"
+		);
+	ASSERT_TRUE (res);
+	auto errors = check(res, typeCheck);
+	EXPECT_TRUE(errors.empty()) << "Correct Narrow Test\n" << errors;
+
+	res = core::parser::parse(manager,
+		"{"
+		" let int   = int<4>;"
+		" let inner = struct{ int a;};"
+		" let outer = struct{ inner a; int b;};"
+		""
+		" ref<inner>  obj;"
+		" obj.a = -15;"
+		" ref<int> x = obj.a;"
+		" ref<inner> exp = ref.expand(x, dp.member(dp.root, lit(\"r\")), lit(inner));"
+		""
+		" ref<outer> obj2; "
+		" ref<inner> y = obj2.a;"
+		" ref<int>   z = y.a;"
+		" ref<outer> exp2 = ref.expand (z, dp.member (dp.member (dp.root, lit(\"b\")), lit(\"a\")), lit(outer));"
+		" ref<int>   exp3 = ref.expand (z, dp.member (dp.member (dp.root, lit(\"a\")), lit(\"a\")), lit(int));"
+		"}"
+		);
+	ASSERT_TRUE (res);
+	errors = check(res, typeCheck);
+	EXPECT_EQ(3u, errors.size());
+}
+
+
+TEST(ArrayTypeChecks, Exceptions) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+
+	CheckPtr typeCheck = getFullCheck();
+
+	// create simple, context less array type
+	TypePtr element = manager.getLangBasic().getInt4();
+	TypePtr arrayType = builder.arrayType(element);
+
+	NodePtr cur;
+	auto errors = check(arrayType, typeCheck);
+
+	// allow arrays to be used within type literals
+	cur = builder.getTypeLiteral(arrayType);
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	ExpressionPtr arrayPtr = builder.callExpr(basic.getArrayCreate1D(), builder.getTypeLiteral(element), builder.uintLit(12u));
+
+	// also, allow array values to be used within ref.new, ref.var, struct, tuple and union expressions
+
+	// ref.var
+	cur = builder.refVar(arrayPtr);
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	// ref.new
+	cur = builder.refNew(arrayPtr);
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	// struct expression
+	cur = builder.structExpr(toVector(builder.namedValue("a", arrayPtr)));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	// union expression
+	UnionTypePtr unionType = builder.unionType(toVector(builder.namedType("a", arrayType)));
+	cur = builder.unionExpr(unionType, builder.stringValue("a"), arrayPtr);
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+	// tuple expression
+	cur = builder.tupleExpr(toVector(arrayPtr));
+	errors = check(cur, typeCheck);
+	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
 }
 
 

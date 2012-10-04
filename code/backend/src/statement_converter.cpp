@@ -158,7 +158,9 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitCastExpr(const core::CastExprPtr& ptr, ConversionContext& context) {
-		return c_ast::cast(converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType, visit(ptr->getSubExpression(), context));
+		const auto& info = converter.getTypeManager().getTypeInfo(ptr->getType());
+		context.addDependency(info.definition);
+		return c_ast::cast(info.rValueType, visit(ptr->getSubExpression(), context));
 	}
 
 	c_ast::NodePtr StmtConverter::visitJobExpr(const core::JobExprPtr& ptr, ConversionContext& context) {
@@ -176,8 +178,17 @@ namespace backend {
 			return converter.getFunctionManager().getValue(ptr, context);
 		}
 
+		// special handling for unit literal
+		if (converter.getNodeManager().getLangBasic().isUnitConstant(ptr)) {
+			return c_ast::cast(
+				converter.getCNodeManager()->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void),
+				converter.getCNodeManager()->create<c_ast::Literal>("0")
+			);
+		}
+
 		// convert literal
 		c_ast::ExpressionPtr res = converter.getCNodeManager()->create<c_ast::Literal>(ptr->getStringValue());
+
 
 		// special handling for the global struct
 		if (!ptr->getStringValue().compare(0, IRExtensions::GLOBAL_ID.size(), IRExtensions::GLOBAL_ID)) {
@@ -189,6 +200,7 @@ namespace backend {
 			auto fragment = converter.getFragmentManager()->getFragment(IRExtensions::GLOBAL_ID);
 			assert(fragment && "Global Fragment not yet initialized!");
 			context.getDependencies().insert(fragment);
+			return res;
 		}
 
 		// special handling for type literals (fall-back solution)
@@ -198,9 +210,62 @@ namespace backend {
 			return c_ast::lit(info.rValueType, "type_token");
 		}
 
+		// special handling for boolean literals
+		if (ptr.getNodeManager().getLangBasic().isBool(ptr->getType())) {
+			context.getIncludes().insert("stdbool.h");
+		}
+
 		// handle null pointer
 		if (converter.getNodeManager().getLangBasic().isNull(ptr)) {
 			return converter.getCNodeManager()->create<c_ast::Literal>("0");
+		}
+
+		// handle pre-defined C identifiers (standard - 6.4.2.2)
+		const static vector<string> predefined = { "__func__", "__FUNCTION__", "__PRETTY_FUNCTION__" };
+		if (contains(predefined, ptr->getStringValue())) {
+			return res;		// just print literal as it is
+		}
+
+		// handle C string literals (which are of type ref<vector<...>>)
+		if (ptr->getStringValue()[0] == '"') {
+			return res;		// just print it and be done
+		}
+
+		// handle literals referencing external data elements
+		if (core::analysis::isRefType(ptr->getType())) {
+			// look up external variable declaration
+			auto fragmentManager = converter.getFragmentManager();
+			string fragmentName = "extLitDecl:" + ptr->getStringValue();
+			auto fragment = fragmentManager->getFragment(fragmentName);
+
+			// check fragment
+			if (!fragment) {
+
+				// create new declaration
+				c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager);
+
+				// get type info
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(ptr->getType());
+
+				// add external declaration
+				auto& cManager = converter.getCNodeManager();
+				declaration->getCode().push_back(cManager->create<c_ast::Comment>("------- External Variable Declaration ----------"));
+				declaration->getCode().push_back(cManager->create<c_ast::ExtVarDecl>(info.lValueType, ptr->getStringValue()));
+
+				// add dependency to type declaration
+				declaration->addDependency(info.declaration);
+
+				// register fragment
+				fragmentManager->bindFragment(fragmentName, declaration);
+
+				fragment = declaration;
+			}
+
+			// add dependency
+			context.getDependencies().insert(fragment);
+
+			// also, result has to be referenced
+			return c_ast::ref(res);
 		}
 
 		// done
@@ -275,7 +340,7 @@ namespace backend {
 	c_ast::NodePtr StmtConverter::visitVariable(const core::VariablePtr& ptr, ConversionContext& context) {
 		// just look up variable within variable manager and return variable token ...
 		const VariableInfo& info = context.getVariableManager().getInfo(ptr);
-		return (info.location == VariableInfo::DIRECT)?c_ast::ref(info.var):info.var;
+		return (info.location == VariableInfo::DIRECT && !core::analysis::isRefOf(ptr->getType(), core::NT_ArrayType))?c_ast::ref(info.var):info.var;
 	}
 
 	c_ast::NodePtr StmtConverter::visitVectorExpr(const core::VectorExprPtr& ptr, ConversionContext& context) {

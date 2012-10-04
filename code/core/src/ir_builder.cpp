@@ -36,8 +36,9 @@
 
 #include "insieme/core/ir_builder.h"
 
-#include <boost/tuple/tuple.hpp>
+#include <tuple>
 #include <limits>
+#include <set>
 
 #include "insieme/core/ir_node.h"
 
@@ -74,14 +75,14 @@ namespace core {
 
 namespace {
 
-	typedef boost::tuple<vector<VariablePtr>, vector<ExpressionPtr>> InitDetails;
+	typedef std::tuple<vector<VariablePtr>, vector<ExpressionPtr>> InitDetails;
 
 	InitDetails splitUp(const IRBuilder::VarValueMapping& captureInits) {
 
 		// prepare containers
 		InitDetails res;
-		vector<VariablePtr>& vars = res.get<0>();
-		vector<ExpressionPtr>& inits = res.get<1>();
+		vector<VariablePtr>& vars = std::get<0>(res);
+		vector<ExpressionPtr>& inits = std::get<1>(res);
 
 		// process the given map
 		for_each(captureInits, [&](const IRBuilder::VarValueMapping::value_type& cur) {
@@ -119,15 +120,23 @@ namespace {
 	    utils::set::PointerSet<VariablePtr> usedVars;
 	};
 
-	utils::set::PointerSet<VariablePtr> getRechingVariables(const core::NodePtr& root) {
+	std::vector<VariablePtr> getRechingVariables(const core::NodePtr& root) {
 		VarRefFinder visitor;
 		visitDepthFirstPrunable(root, visitor);
 
-		utils::set::PointerSet<VariablePtr> nonDecls;
-		std::set_difference( visitor.usedVars.begin(), visitor.usedVars.end(),
-				visitor.declaredVars.begin(), visitor.declaredVars.end(), std::inserter(nonDecls, nonDecls.begin()));
+		// Define the comparator for the set 
+		auto cmp = [](const VariablePtr& lhs, const VariablePtr& rhs) -> bool { 
+			return *lhs < *rhs;
+		};
+		std::set<VariablePtr, decltype(cmp)> nonDecls(cmp);
 
-		return nonDecls;
+		std::set_difference( 
+				visitor.usedVars.begin(), visitor.usedVars.end(),
+				visitor.declaredVars.begin(), visitor.declaredVars.end(), 
+				std::inserter(nonDecls, nonDecls.begin())
+			);
+
+		return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
 	}
 
 }
@@ -169,6 +178,13 @@ StatementPtr IRBuilder::parseStmt(const string& code, const std::map<string, Nod
 	return parser::parse_stmt(manager, code, true, symbols);
 }
 
+ProgramPtr IRBuilder::parseProgram(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser::parse_program(manager, code, true, symbols);
+}
+
+vector<NodeAddress> IRBuilder::parseAddresses(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser::parse_addresses(manager, code, true, symbols);
+}
 
 
 // ---------------------------- Standard Nodes -----------------------------------
@@ -202,9 +218,39 @@ UIntValuePtr IRBuilder::uintValue(unsigned value) const {
 
 // ---------------------------- Convenience -------------------------------------
 
+bool IRBuilder::matchType(const std::string& typeStr, const core::TypePtr& irType) const {
+
+	// the type used for caching parser results
+	struct ParserCache : public std::map<string, TypePtr> {};
+	typedef std::shared_ptr<ParserCache> ParserCachePtr;
+
+	// lookup result within cache
+	NodePtr cacheNode = manager.get(breakStmt());		// some node that is easy to find :)
+
+	// get reference to cache
+	if (!cacheNode->hasAttachedValue<ParserCachePtr>()) {
+		cacheNode->attachValue(std::make_shared<ParserCache>());
+	}
+	const ParserCachePtr& cache = cacheNode->getAttachedValue<ParserCachePtr>();
+
+	// get cached result or parse
+	TypePtr type;
+	auto pos = cache->find(typeStr);
+	if (pos == cache->end()) {
+		type = parseType(typeStr);
+		cache->insert(std::make_pair(typeStr, type));
+	} else {
+		type = pos->second;
+	}
+
+	// try unify the parsed type and the given type
+	return unify(manager, type, irType);
+}
+
 GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intParams) const {
 	return genericType(name, types(typeParams), intTypeParams(intParams));
 }
+
 
 StructTypePtr IRBuilder::structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
 	vector<NamedTypePtr> members;
@@ -478,6 +524,24 @@ CallExprPtr IRBuilder::refDelete(const ExpressionPtr& subExpr) const {
 }
 
 CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
+	RefTypePtr targetType = dynamic_pointer_cast<const RefType>(target->getType());
+	assert(targetType && "Target of an assignmet must be of type ref<'a>");
+
+	// if the rhs is a union while the lhs is not, try to find the appropriate entry in the union
+	if(UnionTypePtr uType = dynamic_pointer_cast<const UnionType>(value->getType())) {
+		TypePtr nrtt = targetType->getElementType();
+		if(nrtt->getNodeType() != NT_UnionType) {
+			auto list = uType.getEntries();
+			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
+				return isSubTypeOf(cur->getType(), nrtt);
+			});
+
+			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
+			return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target,
+					accessMember(value, pos->getName()));
+		}
+	}
+
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target, value);
 }
 
@@ -499,8 +563,7 @@ ExpressionPtr IRBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
 
 
 CallExprPtr IRBuilder::arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const {
-	auto aType = dynamic_pointer_cast<const ArrayType>(array->getType());
-	if(aType) return callExpr(aType->getElementType(), manager.getLangBasic().getArraySubscript1D(), array, index);
+	assert(!dynamic_pointer_cast<const ArrayType>(array->getType()) && "Accessing array by value is not allowed!");
 	auto vType = dynamic_pointer_cast<const VectorType>(array->getType());
 	assert(vType && "Tried array subscript operation on non-array expression");
 	return callExpr(vType->getElementType(), manager.getLangBasic().getVectorSubscript(), array, index);
@@ -532,17 +595,56 @@ DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const Express
 	return declarationStmt(variable(type), value);
 }
 
+
 CallExprPtr IRBuilder::acquireLock(const ExpressionPtr& lock) const {
-	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot lock a non-lock type.");
+	assert(analysis::isRefOf(lock, manager.getLangBasic().getLock()) && "Cannot lock a non-lock type.");
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockAcquire(), lock);
 }
 CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
-	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot unlock a non-lock type.");
+	assert(analysis::isRefOf(lock, manager.getLangBasic().getLock()) && "Cannot unlock a non-lock type.");
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockRelease(), lock);
 }
-CallExprPtr IRBuilder::createLock() const {
-	return callExpr(manager.getLangBasic().getLock(), manager.getLangBasic().getLockCreate());
+CallExprPtr IRBuilder::initLock(const ExpressionPtr& lock) const {
+	assert(analysis::isRefOf(lock, manager.getLangBasic().getLock()) && "Cannot init a non-lock type.");
+	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockInit(), lock);
 }
+
+
+CallExprPtr IRBuilder::atomicOp(const ExpressionPtr& location, const ExpressionPtr& testFunc, const ExpressionPtr& replaceFunc) {
+	assert(core::analysis::isRefType(location->getType()) && "Atomic must be applied on ref.");
+	// should also check types of testFunc and replaceFunc
+	return callExpr(manager.getLangBasic().getAtomic(), location, testFunc, replaceFunc);
+}
+
+CallExprPtr IRBuilder::atomicAssignment(const CallExprPtr& assignment) {
+	const auto &basic = manager.getLangBasic();
+	assert(basic.isRefAssign(assignment->getFunctionExpr()) && "Trying to build atomic assignment from non-assigment");
+
+	const auto &lhs = assignment->getArgument(0), &rhs = assignment->getArgument(1);
+	const auto &lhsDeref = deref(lhs);
+	CallExprPtr rhsCall = dynamic_pointer_cast<CallExprPtr>(rhs);
+	assert(rhsCall && "Unsupported atomic assignment structure");
+
+	ExpressionPtr factor;
+	if(*lhsDeref == *rhsCall->getArgument(0)) factor = rhsCall->getArgument(1);
+	if(*lhsDeref == *rhsCall->getArgument(1)) factor = rhsCall->getArgument(0);
+	assert(factor && "LHS not found in RHS of atomic assignment");
+
+	const auto &rhsFun = rhsCall->getFunctionExpr();
+	if(basic.isAddOp(rhsFun)) return callExpr(basic.getAtomicFetchAndAdd(), lhs, factor);
+	if(basic.isSubOp(rhsFun)) return callExpr(basic.getAtomicFetchAndSub(), lhs, factor);
+	if(basic.isBitwiseAndOp(rhsFun)) return callExpr(basic.getAtomicFetchAndAnd(), lhs, factor);
+	if(basic.isBitwiseOrOp(rhsFun)) return callExpr(basic.getAtomicFetchAndOr(), lhs, factor);
+	if(basic.isBitwiseXorOp(rhsFun)) return callExpr(basic.getAtomicFetchAndXor(), lhs, factor);
+	assert(false && "Unsupported atomic operation");
+	return assignment;
+}
+
+CallExprPtr IRBuilder::atomicConditional(const IfStmtPtr& statement) {
+	assert(false && "Not implemented");
+	return CallExprPtr();
+}
+
 
 CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
 	assert(!variants.empty() && "Variant list must not be empty!");
@@ -655,9 +757,27 @@ JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const vector<
 	return jobExpr(type, threadNumRange, declarationStmts(localDecls), guardedExprs(branches), defaultExpr);
 }
 
+namespace {
+
+	bool isJobBody(const NodePtr& node) {
+		// it has to be an expression
+		if (node->getNodeCategory() != NC_Expression) return false;
+
+		// the function has to be ()->unit or ()=>unit
+		TypePtr type = node.as<ExpressionPtr>()->getType();
+		if (type->getNodeType() != NT_FunctionType) return false;
+		return type.as<FunctionTypePtr>()->getParameterTypes()->empty();
+	}
+
+}
+
 JobExprPtr IRBuilder::jobExpr(const StatementPtr& stmt, int numThreads) const {
+
+	ExpressionPtr jobBody =
+			(isJobBody(stmt))?stmt.as<ExpressionPtr>():transform::extractLambda(manager, stmt);
+
 	return jobExpr((numThreads < 1)?getThreadNumRange(1):getThreadNumRange(numThreads, numThreads),
-			vector<DeclarationStmtPtr>(), vector<GuardedExprPtr>(), transform::extractLambda(manager, stmt));
+			vector<DeclarationStmtPtr>(), vector<GuardedExprPtr>(), jobBody);
 }
 
 MarkerExprPtr IRBuilder::markerExpr(const ExpressionPtr& subExpr, unsigned id) const {
@@ -757,7 +877,7 @@ CallExprPtr IRBuilder::parallel(const StatementPtr& stmt, int numThreads) const 
 
 core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
     // Find the variables which are used in the body and not declared
-	utils::set::PointerSet<VariablePtr>&& args = getRechingVariables(body);
+	std::vector<VariablePtr>&& args = getRechingVariables(body);
 
     core::TypeList argsType;
     VariableList params;
@@ -768,7 +888,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     std::for_each(args.begin(), args.end(), [ & ] (const core::ExpressionPtr& curr) {
             assert(curr->getNodeType() == core::NT_Variable);
 
-            const core::VariablePtr& bodyVar = core::static_pointer_cast<const core::Variable>(curr);
+            const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
             const core::TypePtr& varType = bodyVar->getType();
 
             // we create a new variable to replace the captured variable
@@ -907,46 +1027,54 @@ LiteralPtr IRBuilder::getIdentifierLiteral(const core::StringValuePtr& value) co
 }
 
 ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPtr& subExpr) const {
-    // Convert casts form scalars to vectors to vector init exrpessions
-    if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
-        if(getLangBasic().isScalarType(subExpr->getType())) {
-            // get vector element type without ref
-            core::TypePtr elementType = vt->getElementType();
-            core::TypePtr targetType = elementType;// refs in arrays have been removed! (elementType->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
-                    //dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
 
-            core::ExpressionPtr arg = (subExpr->getType() == targetType) ? subExpr :
-                castExpr(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
+	// if it is alread a vector => done
+	if (subExpr->getType()->getNodeType() == NT_VectorType) {
+		return subExpr;
+	}
 
-            core::ExpressionPtr&& retExpr = callExpr(type, getLangBasic().getVectorInitUniform(),
-                (elementType->getNodeType() == core::NT_RefType && arg->getNodeType() != core::NT_RefType)  ? refVar( arg ) : arg,// if we need a ref type and arg is no ref: add ref
-                getIntTypeParamLiteral(vt->getSize()));
-
-            return retExpr;
-        }
-    }
+	assert(getLangBasic().isScalarType(subExpr->getType()) && "Requested to convert non-scalar to scalar!");
+	assert(type->getNodeType() == NT_VectorType && "Target type has to be a vector type!");
 
 
-    // check for casts from salar pointers to vector pointers
-    if(core::ArrayTypePtr&& array = dynamic_pointer_cast<const core::ArrayType>(type)) {
-//        core::RefTypePtr&& refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
-        core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(array->getElementType());
-        core::ArrayTypePtr&& castedArray = dynamic_pointer_cast<const core::ArrayType>(subExpr->getType());
-        if(castedArray && vt ){
-            core::TypePtr elemTy = /*castedArray->getElementType()->getNodeType() == core::NodeType::NT_RefType ?
-                    dynamic_pointer_cast<const core::RefType>(castedArray->getElementType())->getElementType() :*/ castedArray->getElementType();
+	VectorTypePtr vt = type.as<VectorTypePtr>();
 
-            if(elemTy) {
-                // check if they have the same type
-                assert(elemTy == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
+	// Convert casts form scalars to vectors to vector init exrpessions
+	// get vector element type without ref
+	core::TypePtr elementType = vt->getElementType();
+	core::TypePtr targetType = elementType;// refs in arrays have been removed! (elementType->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
+			//dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
 
-                return  callExpr(getLangBasic().getArrayElemToVec(), subExpr, getIntTypeParamLiteral(vt->getSize()));
-            }
-        }
-    }
+	core::ExpressionPtr arg = (subExpr->getType() == targetType) ? subExpr :
+		castExpr(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
 
-    // expression is either already a vector/array type or the type is not a vector type
-    return subExpr;
+	core::ExpressionPtr&& retExpr = callExpr(type, getLangBasic().getVectorInitUniform(),
+		(elementType->getNodeType() == core::NT_RefType && arg->getNodeType() != core::NT_RefType)  ? refVar( arg ) : arg,// if we need a ref type and arg is no ref: add ref
+		getIntTypeParamLiteral(vt->getSize()));
+
+	return retExpr;
+
+
+//    // check for casts from salar pointers to vector pointers
+//    if(core::ArrayTypePtr&& array = dynamic_pointer_cast<const core::ArrayType>(type)) {
+////        core::RefTypePtr&& refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
+//        core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(array->getElementType());
+//        core::ArrayTypePtr&& castedArray = dynamic_pointer_cast<const core::ArrayType>(subExpr->getType());
+//        if(castedArray && vt ){
+//            core::TypePtr elemTy = /*castedArray->getElementType()->getNodeType() == core::NodeType::NT_RefType ?
+//                    dynamic_pointer_cast<const core::RefType>(castedArray->getElementType())->getElementType() :*/ castedArray->getElementType();
+//
+//            if(elemTy) {
+//                // check if they have the same type
+//                assert(elemTy == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
+//
+//                return  callExpr(getLangBasic().getArrayElemToVec(), subExpr, getIntTypeParamLiteral(vt->getSize()));
+//            }
+//        }
+//    }
+
+//    // expression is either already a vector/array type or the type is not a vector type
+//    return subExpr;
 }
 
 
@@ -1070,6 +1198,7 @@ ExpressionPtr IRBuilder::wrapLazy(const ExpressionPtr& expr) const {
 
 	// if it is a expression, bind free variables
 	VariableList list = analysis::getFreeVariables(expr);
+	std::sort(list.begin(), list.end(), compare_target<VariablePtr>());
 	ExpressionPtr res = lambdaExpr(expr->getType(),returnStmt(expr), list);
 
 	// if there are no free variables ...

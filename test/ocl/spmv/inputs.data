@@ -1,0 +1,1 @@
+-I. -I../common/ -I../../../code/frontend/test/inputs spmv.c -DPATH=\"{PATH}\"

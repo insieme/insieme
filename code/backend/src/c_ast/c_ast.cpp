@@ -182,7 +182,7 @@ namespace c_ast {
 	bool VectorType::equals(const Node& node) const {
 		assert(dynamic_cast<const VectorType*>(&node));
 		auto other = static_cast<const VectorType&>(node);
-		return *elementType == *other.elementType && *size == *other.size;
+		return *elementType == *other.elementType && ((!size && !other.size) || (size && other.size && *size == *other.size));
 	}
 
 	bool NamedCompositeType::equals(const Node& node) const {
@@ -309,7 +309,7 @@ namespace c_ast {
 	bool Call::equals(const Node& node) const {
 		assert(dynamic_cast<const Call*>(&node));
 		auto other = static_cast<const Call&>(node);
-		return *function==*other.function && ::equals(arguments, other.arguments, equal_target<ExpressionPtr>());
+		return *function==*other.function && ::equals(arguments, other.arguments, equal_target<NodePtr>());
 	}
 
 	bool Parentheses::equals(const Node& node) const {
@@ -328,6 +328,12 @@ namespace c_ast {
 		assert(dynamic_cast<const FunctionPrototype*>(&node));
 		auto other = static_cast<const FunctionPrototype&>(node);
 		return *function==*other.function;
+	}
+
+	bool ExtVarDecl::equals(const Node& node) const {
+		assert(dynamic_cast<const ExtVarDecl*>(&node));
+		auto other = static_cast<const ExtVarDecl&>(node);
+		return *type==*other.type && name==other.name;
 	}
 
 	bool TypeDefinition::equals(const Node& node) const {

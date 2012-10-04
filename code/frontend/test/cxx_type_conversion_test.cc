@@ -65,95 +65,95 @@ namespace fe = insieme::frontend;
 	EXPECT_TRUE(convType); \
 	EXPECT_EQ(InsiemeTypeDesc, toString(*convType)); }
 
-TEST(TypeConversion, HandleBuildinType) {
-
-	Logger::get(std::cerr, DEBUG, 2);
-
-	NodeManager manager;
-	fe::Program prog(manager);
-
-	// VOID
-	CHECK_BUILTIN_TYPE(Void, "unit");
-	// BOOL
-	CHECK_BUILTIN_TYPE(Bool, "bool");
-
-	// UChar
-	CHECK_BUILTIN_TYPE(UChar, "uint<1>");
-	// Char
-	CHECK_BUILTIN_TYPE(SChar, "char");
-	// Char16
-	CHECK_BUILTIN_TYPE(Char16, "int<2>");
-	// Char32
-	CHECK_BUILTIN_TYPE(Char32, "int<4>");
-	// WChar
-	// CHECK_BUILTIN_TYPE(WChar, "wchar");  removed during port to clang2.9
-
-	// UShort
-	CHECK_BUILTIN_TYPE(UShort, "uint<2>");
-	// Short
-	CHECK_BUILTIN_TYPE(Short, "int<2>");
-	// UInt
-	CHECK_BUILTIN_TYPE(UInt, "uint<4>");
-	// INT
-	CHECK_BUILTIN_TYPE(Int, "int<4>");
-
-	// ULong
-	CHECK_BUILTIN_TYPE(ULong, "uint<8>");
-	CHECK_BUILTIN_TYPE(ULongLong, "uint<8>");
-
-	CHECK_BUILTIN_TYPE(Long, "int<8>");
-	CHECK_BUILTIN_TYPE(LongLong, "int<8>");
-
-	// UInt128
-	CHECK_BUILTIN_TYPE(UInt128, "uint<16>");
-
-	// Float
-	CHECK_BUILTIN_TYPE(Float, "real<4>");
-	// Double
-	CHECK_BUILTIN_TYPE(Double, "real<8>");
-	// LongDouble
-	// CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
-
-}
-
-TEST(TypeConversion, HandlePointerType) {
-	using namespace clang;
-
-	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
-	const fe::ClangCompiler& clang = tu.getCompiler();
-	CXXConversionFactory convFactory( manager, prog );
-
-	clang::Type* intTy = new clang::BuiltinType(clang::BuiltinType::Int);
-	QualType pointerTy = clang.getASTContext().getPointerType(QualType(intTy, 0));
-
-	TypePtr insiemeTy = convFactory.convertType( pointerTy.getTypePtr() );
-	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("ref<array<int<4>,1>>", insiemeTy->toString());
-
-	operator delete (intTy);
-}
-
-TEST(TypeConversion, HandleReferenceType) {
-	using namespace clang;
-
-	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
-	const fe::ClangCompiler& clang = tu.getCompiler();
-	CXXConversionFactory convFactory( manager, prog );
-
-	clang::Type* intTy = new clang::BuiltinType(clang::BuiltinType::Int);
-	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(intTy, 0));
-
-	TypePtr insiemeTy = convFactory.convertType( refTy.getTypePtr() );
-	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
-
-	operator delete (intTy);
-}
-
+//TEST(TypeConversion, HandleBuildinType) {
+//
+//	Logger::get(std::cerr, DEBUG, 2);
+//
+//	NodeManager manager;
+//	fe::Program prog(manager);
+//
+//	// VOID
+//	CHECK_BUILTIN_TYPE(Void, "unit");
+//	// BOOL
+//	CHECK_BUILTIN_TYPE(Bool, "bool");
+//
+//	// UChar
+//	CHECK_BUILTIN_TYPE(UChar, "uint<1>");
+//	// Char
+//	CHECK_BUILTIN_TYPE(SChar, "char");
+//	// Char16
+//	CHECK_BUILTIN_TYPE(Char16, "int<2>");
+//	// Char32
+//	CHECK_BUILTIN_TYPE(Char32, "int<4>");
+//	// WChar
+//	// CHECK_BUILTIN_TYPE(WChar, "wchar");  removed during port to clang2.9
+//
+//	// UShort
+//	CHECK_BUILTIN_TYPE(UShort, "uint<2>");
+//	// Short
+//	CHECK_BUILTIN_TYPE(Short, "int<2>");
+//	// UInt
+//	CHECK_BUILTIN_TYPE(UInt, "uint<4>");
+//	// INT
+//	CHECK_BUILTIN_TYPE(Int, "int<4>");
+//
+//	// ULong
+//	CHECK_BUILTIN_TYPE(ULong, "uint<8>");
+//	CHECK_BUILTIN_TYPE(ULongLong, "uint<8>");
+//
+//	CHECK_BUILTIN_TYPE(Long, "int<8>");
+//	CHECK_BUILTIN_TYPE(LongLong, "int<8>");
+//
+//	// UInt128
+//	CHECK_BUILTIN_TYPE(UInt128, "uint<16>");
+//
+//	// Float
+//	CHECK_BUILTIN_TYPE(Float, "real<4>");
+//	// Double
+//	CHECK_BUILTIN_TYPE(Double, "real<8>");
+//	// LongDouble
+//	// CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
+//
+//}
+//
+//TEST(TypeConversion, HandlePointerType) {
+//	using namespace clang;
+//
+//	NodeManager manager;
+//	fe::Program prog(manager);
+//	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
+//	const fe::ClangCompiler& clang = tu.getCompiler();
+//	CXXConversionFactory convFactory( manager, prog );
+//
+//	clang::Type* intTy = new clang::BuiltinType(clang::BuiltinType::Int);
+//	QualType pointerTy = clang.getASTContext().getPointerType(QualType(intTy, 0));
+//
+//	TypePtr insiemeTy = convFactory.convertType( pointerTy.getTypePtr() );
+//	EXPECT_TRUE(insiemeTy);
+//	EXPECT_EQ("ref<array<int<4>,1>>", insiemeTy->toString());
+//
+//	operator delete (intTy);
+//}
+//
+//TEST(TypeConversion, HandleReferenceType) {
+//	using namespace clang;
+//
+//	NodeManager manager;
+//	fe::Program prog(manager);
+//	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
+//	const fe::ClangCompiler& clang = tu.getCompiler();
+//	CXXConversionFactory convFactory( manager, prog );
+//
+//	clang::Type* intTy = new clang::BuiltinType(clang::BuiltinType::Int);
+//	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(intTy, 0));
+//
+//	TypePtr insiemeTy = convFactory.convertType( refTy.getTypePtr() );
+//	EXPECT_TRUE(insiemeTy);
+//	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
+//
+//	operator delete (intTy);
+//}
+//
 //TEST(TypeConversion, HandleStructType) {
 //	using namespace clang;
 //
@@ -353,68 +353,68 @@ TEST(TypeConversion, HandleFunctionType) {
 //	operator delete (floatTy);
 }
 
-TEST(TypeConversion, HandleArrayType) {
-	using namespace clang;
-
-	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
-	const fe::ClangCompiler& clang = tu.getCompiler();
-	CXXConversionFactory convFactory( manager, prog );
-
-	ASTContext& ctx = clang.getASTContext();
-
-	// Check constant arrays: i.e. int a[4];
-	BuiltinType* intTy = new BuiltinType(BuiltinType::Int);
-	{
-		QualType arrayTy = ctx.getConstantArrayType(QualType(intTy, 0), llvm::APInt(16,8,false), clang::ArrayType::Normal, 0);
-		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
-		EXPECT_TRUE(insiemeTy);
-		EXPECT_EQ("vector<int<4>,8>", insiemeTy->toString());
-	}
-	operator delete (intTy);
-
-	// check incomplete array types: char* arr[]
-	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
-	{
-		QualType arrayTy = ctx.getIncompleteArrayType(ctx.getPointerType(QualType(charTy, 0)), clang::ArrayType::Normal, 0);
-		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
-		EXPECT_TRUE(insiemeTy);
-		EXPECT_EQ("array<ref<array<char,1>>,1>", insiemeTy->toString());
-	}
-	operator delete (charTy);
-
-	// ... check variable array and dependent array sizes
-
-}
+//TEST(TypeConversion, HandleArrayType) {
+//	using namespace clang;
+//
+//	NodeManager manager;
+//	fe::Program prog(manager);
+//	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
+//	const fe::ClangCompiler& clang = tu.getCompiler();
+//	CXXConversionFactory convFactory( manager, prog );
+//
+//	ASTContext& ctx = clang.getASTContext();
+//
+//	// Check constant arrays: i.e. int a[4];
+//	BuiltinType* intTy = new BuiltinType(BuiltinType::Int);
+//	{
+//		QualType arrayTy = ctx.getConstantArrayType(QualType(intTy, 0), llvm::APInt(16,8,false), clang::ArrayType::Normal, 0);
+//		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
+//		EXPECT_TRUE(insiemeTy);
+//		EXPECT_EQ("vector<int<4>,8>", insiemeTy->toString());
+//	}
+//	operator delete (intTy);
+//
+//	// check incomplete array types: char* arr[]
+//	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
+//	{
+//		QualType arrayTy = ctx.getIncompleteArrayType(ctx.getPointerType(QualType(charTy, 0)), clang::ArrayType::Normal, 0);
+//		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
+//		EXPECT_TRUE(insiemeTy);
+//		EXPECT_EQ("array<ref<array<char,1>>,1>", insiemeTy->toString());
+//	}
+//	operator delete (charTy);
+//
+//	// ... check variable array and dependent array sizes
+//
+//}
 
 
 TEST(TypeConversion, FileTest) {
 	Logger::get(std::cerr, FATAL, 2);
 
-	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/cxx_types.cpp" );
-
-	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
-
-	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-		// we use an internal manager to have private counter for variables so we can write independent tests
-		NodeManager mgr;
-
-		CXXConversionFactory convFactory( mgr, prog );
-		convFactory.setTranslationUnit(tu);
-
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
-
-		if(tp.isStatement())
-			EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertStmt( tp.getStatement() )->toString() + '\"' );
-		else {
-			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
-			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
-			}
-		}
-	}
+// 	NodeManager manager;
+// 	fe::Program prog(manager);
+// 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/cxx_types.cpp" );
+// 
+// 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
+// 
+// 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
+// 		// we use an internal manager to have private counter for variables so we can write independent tests
+// 		NodeManager mgr;
+// 
+// 		CXXConversionFactory convFactory( mgr, prog );
+// 		convFactory.setTranslationUnit(tu);
+// 
+// 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+// 
+// 		if(tp.isStatement())
+// 			EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertStmt( tp.getStatement() )->toString() + '\"' );
+// 		else {
+// 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
+// 				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+// 			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
+// 				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
+// 			}
+// 		}
+// 	}
 }

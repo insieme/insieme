@@ -43,6 +43,7 @@
 #include <boost/unordered_map.hpp>
 
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/map_utils.h"
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -62,10 +63,10 @@ namespace printer {
 // set up default formats for pretty printer
 const unsigned PrettyPrinter::OPTIONS_DEFAULT = 0;
 const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
-	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ATTRIBUTES;
+	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY;
 const unsigned PrettyPrinter::OPTIONS_MAX_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
 	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ANNOTATIONS | PrettyPrinter::NO_LIST_SUGAR
-	| PrettyPrinter::PRINT_ATTRIBUTES;
+	| PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY;
 const unsigned PrettyPrinter::OPTIONS_SINGLE_LINE = PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE;
 
 /**
@@ -101,26 +102,7 @@ namespace {
 	 */
 	class Formatter {
 
-		/**
-		 * The type of literal this formatter is capable of handling
-		 */
-		const LiteralPtr literal;
-
 	public:
-
-		/**
-		 * Creates a new instance of a formatter.
-		 *
-		 * @param literal the literal handled by this formatter
-		 */
-		Formatter(const LiteralPtr& literal) : literal(literal) {}
-
-		/**
-		 * Obtains the literal handled by this formatter.
-		 *
-		 * @return the handled literal
-		 */
-		const LiteralPtr& getLiteral() { return literal; }
 
 		/**
 		 * Performs the actual code formating. This method is pure abstract and
@@ -157,12 +139,11 @@ namespace {
 
 		/**
 		 * Creates a new instance of this type printing the given literal using the
-		 * given lambda during the formating.
+		 * given formating lambda.
 		 *
-		 * @param literal the literal to be handled by this formatter
 		 * @param lambda the lambda performing the actual formatting
 		 */
-		LambdaFormatter(const LiteralPtr& literal, Lambda lambda) : Formatter(literal), lambda(lambda) {}
+		LambdaFormatter(Lambda lambda) : lambda(lambda) {}
 
 		/**
 		 * Conducts the actual formatting of the given call expression.
@@ -181,18 +162,16 @@ namespace {
 	 * A utility function to create LiteralFormatter instances without the need of
 	 * specifying generic types. Those types will be inferred automatically.
 	 *
-	 * @param literal the literal to be handled by the requested formatter
 	 * @param lambda the formatting routine
 	 * @return a new formatter handling the given literal using the given lambda
 	 */
 	template<typename Lambda>
-	FormatterPtr make_formatter(const LiteralPtr& literal, Lambda lambda) {
-		return std::make_shared<LambdaFormatter<Lambda>>(literal, lambda);
+	FormatterPtr make_formatter(Lambda lambda) {
+		return std::make_shared<LambdaFormatter<Lambda>>(lambda);
 	}
 
-	// TODO re-enable full literal comparison
-	//	typedef boost::unordered_map<LiteralPtr, FormatterPtr, hash_target<LiteralPtr>, equal_target<LiteralPtr>> FormatTable;
-	typedef boost::unordered_map<string, FormatterPtr, boost::hash<string>> FormatTable;
+	// defines the table used for indexing formatter entries
+	typedef utils::map::PointerMap<ExpressionPtr, FormatterPtr> FormatTable;
 
 	// a forward declaration for a method assembling formatter tables
 	FormatTable initFormatTable(const PrettyPrinter&);
@@ -202,7 +181,7 @@ namespace {
 	/**
 	 * The main visitor used by the pretty printer process.
 	 */
-	class InspirePrinter : public IRVisitor<> {
+	class InspirePrinter : private IRVisitor<> {
 
 		/**
 		 * A table containing special formatting rules for particular functions.
@@ -218,13 +197,20 @@ namespace {
 		 * The pretty print handled by this printer. It is stored since it contains
 		 * various formating options.
 		 */
-		const PrettyPrinter& print;
+		const PrettyPrinter& printer;
 
 		/**
 		 * A counter for the current recursive depth of the print. The depth is checked when entering
 		 * a visitXY method. In case it is exceeded, the recursion is terminated.
 		 */
 		unsigned depth;
+
+		/**
+		 * A list of nodes being bound to names to make the code more readable.
+		 */
+		std::map<NodePtr, std::string> letBindings;
+
+		bool singleLineTypes;
 
 	public:
 
@@ -238,16 +224,77 @@ namespace {
 		 * stream.
 		 *
 		 * @param out the stream to be printed to
-		 * @param print the setup of the pretty print
+		 * @param printer the setup of the pretty printer
 		 */
-		InspirePrinter(std::ostream& out, const PrettyPrinter& print)
-				: IRVisitor<>(true), formatTable(initFormatTable(print)), indent(0), print(print), depth(0), out(out) { };
+		InspirePrinter(std::ostream& out, const PrettyPrinter& printer)
+				: IRVisitor<>(true), formatTable(initFormatTable(printer)), indent(0), printer(printer), depth(0), out(out) { };
+
+		const PrettyPrinter& getPrettyPrint() const {
+			return printer;
+		}
+
+		/**
+		 * The main entry point computing common sub-expressions before printing the actual code.
+		 */
+		void print(const NodePtr& node) {
+
+			// reset setup
+			letBindings.clear();
+			singleLineTypes = true;
+
+			// check whether bindings should be used
+			if (printer.hasOption(PrettyPrinter::NO_LET_BINDINGS) || printer.hasOption(PrettyPrinter::PRINT_SINGLE_LINE)) {
+				// skip computation of bindings
+				visit(node);
+				return;
+			}
+
+			// compute set of substitutions
+			int funCounter = 0;
+			int typeCounter = 0;
+			singleLineTypes = false;		// enable multiline type definitions
+			visitDepthFirstOnce(node, [&](const NodePtr& cur) {
+
+				// do not let-bind build ins
+				if (cur->getNodeManager().getLangBasic().isBuiltIn(cur)) {
+					return;
+				}
+
+				NodeType type = cur->getNodeType();
+
+				if(type == NT_RecType || type == NT_StructType || type == NT_UnionType || type == NT_LambdaExpr) {
+
+					// obtain a name (TODO: pick something more important)
+					string name = (type == NT_LambdaExpr)?format("fun%03d", funCounter++):format("type%03d", typeCounter++);
+
+					// print a let binding
+					out << "let " << name << " = ";
+					visit(cur);
+					out << ";\n\n";
+
+					// add a substitution rule
+					letBindings[cur] = name;
+				}
+
+			}, false);	// iterate through IR in post-order
+
+			singleLineTypes = true;
+			visit(node);
+		}
 
 		/**
 		 * Wrapper for general tasks
 		 */
 		virtual void visit(const NodePtr& element) {
-			if (depth > print.maxDepth) {
+
+			// check whether this one has been substituted
+			auto pos = letBindings.find(element);
+			if (pos != letBindings.end()) {
+				out << pos->second;
+				return;
+			}
+
+			if (depth > printer.maxDepth) {
 				out << " ... ";
 				return;
 			}
@@ -299,22 +346,40 @@ namespace {
 		PRINT(RecType, {
 				out << "rec ";
 				visit(node->getTypeVariable());
-				out << "{" << join(", ", node->getDefinition()->getDefinitions(), 
+
+				string newItem = "\n\t";
+				string newLine = "\n";
+
+				if (singleLineTypes) {
+					newItem = "";
+					newLine = "";
+				}
+
+				out << "{" << newItem << join(", " + newItem, node->getDefinition()->getDefinitions(),
 					[&](std::ostream& jout, const RecTypeBindingPtr& cur) {
 						this->visit(cur->getVariable());
 						jout << "=";
 						this->visit(cur->getType());
-				}) << "}";
+				}) << newLine << "}";
 		});
 
-		PRINT(NamedCompositeType, {		
+		PRINT(NamedCompositeType, {
+
+			string newItem = "\n\t";
+			string newLine = "\n";
+
+			if (singleLineTypes) {
+				newItem = "";
+				newLine = "";
+			}
+
 			out << ((node->getNodeType() == NT_UnionType)?"union<":"struct<");
-			out << join(",", node->getEntries(), 
+			out << newItem << join("," + newItem, node->getEntries(),
 				[&](std::ostream& out, const NamedTypePtr& cur) {
 					this->visit(cur->getName());
 					out << ":";
 				   this->visit(cur->getType());
-			    }) << ">";
+			    }) << newLine << ">";
 		});
 
 		PRINT(TupleType, {
@@ -323,7 +388,33 @@ namespace {
 					<< ')';
 		});
 
+		PRINT(RefType, {
+				out << "ref<";
+				visit(node->getElementType());
+				out << ">";
+		});
+
+		PRINT(ArrayType, {
+				out << "array<";
+				visit(node->getElementType());
+				out << ",";
+				visit(node->getDimension());
+				out << ">";
+		});
+
+		PRINT(VectorType, {
+				out << "vector<";
+				visit(node->getElementType());
+				out << ",";
+				visit(node->getSize());
+				out << ">";
+		});
+
 		PRINT(Type,{
+				out << *node;
+		});
+
+		PRINT(IntTypeParam, {
 				out << *node;
 		});
 
@@ -443,7 +534,7 @@ namespace {
 				}
 
 				const string& str = node->getStringValue();
-				if (print.hasOption(PrettyPrinter::NAME_CONTRACTION) && str.size() > 9) {
+				if (printer.hasOption(PrettyPrinter::NAME_CONTRACTION) && str.size() > 9) {
 					out << str.substr(0,3) << "..." << str.substr(str.size()-3, str.size());
 				} else {
 					out << str;
@@ -451,11 +542,14 @@ namespace {
 		});
 
 		PRINT(LambdaExpr, {
-				bool noExpandLambdas = print.hasOption(PrettyPrinter::NO_EXPAND_LAMBDAS);
+				bool noExpandLambdas = printer.hasOption(PrettyPrinter::NO_EXPAND_LAMBDAS);
 				if(noExpandLambdas) {
 					out << "fun{...}";
 					return;
 				}
+
+				// some sanity check frequently encountered
+				assert(node->getLambda() && "Accessing non-present Lambda Definition!");
 
 				// short-cut for non-recursive functions
 				if (!node->isRecursive()) {
@@ -508,19 +602,17 @@ namespace {
 		PRINT(CallExpr, {
 
 				// obtain flag indicating format
-				bool printBrackets = print.hasOption(PrettyPrinter::PRINT_BRACKETS);
+				bool printBrackets = printer.hasOption(PrettyPrinter::PRINT_BRACKETS);
 
 				// test whether for the current call a special format has been registered
 				auto function = node->getFunctionExpr();
-				if (function->getNodeType() == NT_Literal) {
-					auto pos = formatTable.find(static_pointer_cast<const Literal>(function)->getValue()->getValue());
-					if (pos != formatTable.end()) {
-						FormatterPtr formatter = (*pos).second;
-						if (printBrackets) out << "(";
-						formatter->format(*this, node);
-						if (printBrackets) out << ")";
-						return;
-					}
+				auto pos = formatTable.find(function);
+				if (pos != formatTable.end()) {
+					FormatterPtr formatter = (*pos).second;
+					if (printBrackets) out << "(";
+					formatter->format(*this, node);
+					if (printBrackets) out << ")";
+					return;
 				}
 
 				// default formating
@@ -550,7 +642,7 @@ namespace {
 		});
 
 		PRINT(CastExpr, {
-				if (print.hasOption(PrettyPrinter::PRINT_CASTS)) {
+				if (printer.hasOption(PrettyPrinter::PRINT_CASTS)) {
 					out << "CAST<";
 				   	this->visit(node->getType());
 				    out << ">(";
@@ -658,14 +750,14 @@ namespace {
 		});
 
 		PRINT(MarkerExpr, {
-			bool showMarker = print.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
+			bool showMarker = printer.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
 			if (showMarker) out << "<m id=" << node->getId() << ">";
 			visit(node->getSubExpression());
 			if (showMarker) out << "</m>";
 		});
 
 		PRINT(MarkerStmt, {
-			bool showMarker = print.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
+			bool showMarker = printer.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
 			if (showMarker) out << "<m id=" << node->getId() << ">";
 			visit(node->getSubStatement());
 			if (showMarker) out << "</m>";
@@ -684,14 +776,14 @@ namespace {
 		 */
 		void newLine() const {
 			// check single-line flag
-			if (print.hasOption(PrettyPrinter::PRINT_SINGLE_LINE)) {
+			if (printer.hasOption(PrettyPrinter::PRINT_SINGLE_LINE)) {
 				return;
 			}
 			out.flush();
 			// print a new line
 			out << std::endl;
 			for (unsigned i=0; i<indent; i++) {
-				out << std::string(print.tabSep.second, print.tabSep.first);
+				out << std::string(printer.tabSep.second, printer.tabSep.first);
 			}
 		}
 
@@ -713,7 +805,7 @@ namespace {
 		 * If enabled, prints annotations on Node node.
 		 */
 		void printAnnotations(const NodePtr& node, bool start) {
-			if(print.hasOption(PrettyPrinter::PRINT_ANNOTATIONS) && node->hasAnnotations()) {
+			if(printer.hasOption(PrettyPrinter::PRINT_ANNOTATIONS) && node->hasAnnotations()) {
 				if(start) {
 					out << "$[";
 					auto iter = node->getAnnotations().begin(); 
@@ -793,8 +885,8 @@ namespace {
 		// Range -> IR nodes map
 		SourceLocationMap& srcMap;
 
-		InspireMapPrinter(boost::iostreams::stream<OutputStreamWrapper>& out, SourceLocationMap& srcMap, const PrettyPrinter& print) 
-				: InspirePrinter(out, print), out(out), wout(*out), srcMap(srcMap) { }
+		InspireMapPrinter(boost::iostreams::stream<OutputStreamWrapper>& out, SourceLocationMap& srcMap, const PrettyPrinter& printer)
+				: InspirePrinter(out, printer), out(out), wout(*out), srcMap(srcMap) { }
 
 		void visit(const NodePtr& node) {
 
@@ -855,8 +947,9 @@ namespace {
 		#define MGR call->getNodeManager()
 		#define PRINT_EXPR(E) printer.visit(E)
 		#define PRINT_ARG(N) printArgument(printer, call, N)
+		#define HAS_OPTION(OPT) printer.getPrettyPrint().hasOption(PrettyPrinter::OPT)
 		#define ADD_FORMATTER(Literal, FORMAT) \
-					res.insert(std::make_pair(Literal->getValue()->getValue(), make_formatter(Literal, [](InspirePrinter& printer, const CallExprPtr& call) FORMAT ))).second;
+					res.insert(std::make_pair(Literal, make_formatter([](InspirePrinter& printer, const CallExprPtr& call) FORMAT ))).second;
 
 
 		if (config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
@@ -869,6 +962,10 @@ namespace {
 		ADD_FORMATTER(basic.getRefVar(), { OUT(" var("); PRINT_ARG(0); OUT(")"); });
 		ADD_FORMATTER(basic.getRefNew(), { OUT(" new("); PRINT_ARG(0); OUT(")"); });
 		ADD_FORMATTER(basic.getRefDelete(), { OUT(" del("); PRINT_ARG(0); OUT(")"); });
+
+		if (!config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
+			ADD_FORMATTER(basic.getStringToCharPointer(), { PRINT_ARG(0); });
+		}
 
 		ADD_FORMATTER(basic.getDataPathRoot(), { OUT("<>"); });
 		ADD_FORMATTER(basic.getDataPathMember(),  { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
@@ -906,9 +1003,9 @@ namespace {
 
 		// nicer inlined versions of the && and || operators
 //		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); PRINT_ARG(1); });
-		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
+		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(1); else PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
 //		ADD_FORMATTER(basic.getBoolLOr(), { PRINT_ARG(0); OUT(" || "); PRINT_ARG(1); });
-		ADD_FORMATTER(basic.getBoolLOr(), { PRINT_ARG(0); OUT(" || "); PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
+		ADD_FORMATTER(basic.getBoolLOr(), { PRINT_ARG(0); OUT(" || "); if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(1); else PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
 		ADD_FORMATTER(basic.getBoolEq(), { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolLNot(), { OUT("!"); PRINT_ARG(0); });
 
@@ -945,9 +1042,9 @@ namespace {
 		
 		ADD_FORMATTER(basic.getIfThenElse(), {
 				OUT("("); PRINT_ARG(0); OUT(")?");
-				PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
+				if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(1); else PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
 				OUT(":");
-				PRINT_EXPR(transform::evalLazy(MGR, ARG(2)));
+				if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(2); else PRINT_EXPR(transform::evalLazy(MGR, ARG(2)));
 		});
 
 		if (!config.hasOption(PrettyPrinter::NO_LIST_SUGAR)) {
@@ -1012,7 +1109,7 @@ namespace std {
 std::ostream& operator<<(std::ostream& out, const insieme::core::printer::PrettyPrinter& print) {
 	// use inspire printer to print the code ...
 	insieme::core::printer::InspirePrinter printer(out, print);
-	printer.visit(print.root);
+	printer.print(print.root);
 	return out;
 }
 

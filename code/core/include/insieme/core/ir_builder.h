@@ -39,6 +39,7 @@
 #include "insieme/core/forward_decls.h"
 
 #include "insieme/core/ir_pointer.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_node_traits.h"
 
 #include "insieme/core/ir_node.h"
@@ -48,6 +49,10 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_program.h"
+
+#include "insieme/core/analysis/normalize.h"
+
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
 namespace core {
@@ -132,6 +137,18 @@ namespace core {
 		 */
 		StatementPtr parseStmt(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
 
+		/**
+		 * The same as the parse member function yet interpreting the given code as a full program.
+		 */
+		ProgramPtr parseProgram(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
+		/**
+		 * Allows lists of addresses to be parsed. This parser supports the same grammar + allows constructs to be enclosed
+		 * within $ .. $ signs. Addresses referencing constructs enclosed like this will be returned. The resulting list is
+		 * ordered according to the order of node-addresses (lexicographical).
+		 */
+		vector<NodeAddress> parseAddresses(const string& code, const std::map<string, NodePtr>& symbols = std::map<string, NodePtr>()) const;
+
 
 		// --- Imported Standard Factory Methods from Node Types ---
 
@@ -148,6 +165,13 @@ namespace core {
 		UIntValuePtr uintValue(unsigned value) const;
 
 		// --- Convenience Utilities ---
+
+		bool matchType(const std::string& typeStr, const core::TypePtr& irType) const;
+
+		template <typename T>
+		core::Pointer<const T> normalize(const core::Pointer<const T>& root) const {
+			return core::analysis::normalize(root);
+		}
 
 		GenericTypePtr genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intTypeParams) const;
 
@@ -268,8 +292,8 @@ namespace core {
 		LambdaPtr lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
 
 		// Lambda Expressions
+		LambdaExprPtr lambdaExpr(const StatementPtr& body, const VariableList& params = VariableList()) const;
 		LambdaExprPtr lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const;
-		LambdaExprPtr lambdaExpr(const StatementPtr& body, const VariableList& params) const;
 		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const;
 		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const;
 		LambdaExprPtr lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
@@ -364,7 +388,14 @@ namespace core {
 		// Locks
 		CallExprPtr acquireLock(const ExpressionPtr& lock) const;
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
-		CallExprPtr createLock() const;
+		CallExprPtr initLock(const ExpressionPtr& lock) const;
+
+		// Atomics
+		CallExprPtr atomicOp(const ExpressionPtr& location, const ExpressionPtr& testFunc, const ExpressionPtr& replaceFunc);
+		/** Creates an atomic assignment operation (including operations such as atomic addition) */
+		CallExprPtr atomicAssignment(const CallExprPtr& assignment);
+		/** Creates a conditional atomic operation */
+		CallExprPtr atomicConditional(const IfStmtPtr& statement);
 
 		// Variants
 		CallExprPtr pickVariant(const ExpressionList& variants) const;
@@ -443,21 +474,20 @@ namespace core {
 
 
 		inline CallExprPtr preInc(const ExpressionPtr& a) const {
-			return unaryOp(getOperator(lang::BasicGenerator::PreInc, a->getType()), a);
+			return unaryOp(getLangBasic().getGenPreInc(), a);
 		}
 
 		inline CallExprPtr postInc(const ExpressionPtr& a) const {
-			return unaryOp(getOperator(lang::BasicGenerator::PostInc, a->getType()), a);
+			return unaryOp(getLangBasic().getGenPostInc(), a);
 		}
 
 		inline CallExprPtr preDec(const ExpressionPtr& a) const {
-			return unaryOp(getOperator(lang::BasicGenerator::PreDec, a->getType()), a);
+			return unaryOp(getLangBasic().getGenPreDec(), a);
 		}
 
 		inline CallExprPtr postDec(const ExpressionPtr& a) const {
-			return unaryOp(getOperator(lang::BasicGenerator::PostDec, a->getType()), a);
+			return unaryOp(getLangBasic().getGenPostDec(), a);
 		}
-
 
 		// binary operators
 

@@ -32,6 +32,10 @@ PYTHON 	:= ${PREFIX}/python-$(shell ${AWK_CMD} python_install.sh | cut -d= -f2 )
 RUBY 	:= ${PREFIX}/ruby-$(shell ${AWK_CMD} ruby_install.sh | cut -d= -f2 )
 PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
 
+CCACHE	:= ${PREFIX}/ccache-$(shell ${AWK_CMD} ccache_install.sh | cut -d= -f2 )
+HWLOC	:= ${PREFIX}/hwloc-$(shell ${AWK_CMD} hwloc_install.sh | cut -d= -f2 )
+OPENMPI	:= ${PREFIX}/openmpi-$(shell ${AWK_CMD} openmpi_install.sh | cut -d= -f2 )
+
 NEW_CXX	= ${PREFIX}/gcc-latest/bin/g++
 NEW_CC	= ${PREFIX}/gcc-latest/bin/gcc
 
@@ -175,6 +179,25 @@ ${PAPI}: papi_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh papi_install.sh
 	@echo "@@@@ Done! @@@@"
 
+## CCache
+${CCACHE}: ccache_install.sh ${GCC}
+	@echo "#### INSTALL CCACHE ${CCACHE} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ccache_install.sh
+	@echo "@@@@ Done! @@@@"
+
+## HWLOC
+${HWLOC}: hwloc_install.sh ${GCC}
+	@echo "#### INSTALL HWLOC ${HWLOC} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh hwloc_install.sh
+	@echo "@@@@ Done! @@@@"
+
+## OpenMPI
+${OPENMPI}: openmpi_install.sh ${GCC} ${HWLOC}
+	@echo "#### INSTALL OpenMPI ${OPENMPI} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh openmpi_install.sh
+	@echo "@@@@ Done! @@@@"
+
+
 INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${BOOST} \
 		 ${CMAKE} ${GTEST} ${LUAJIT} ${CUDD} ${SHARK} ${KOMPEX} \
-		 ${XERCES} ${PYTHON} ${RUBY} ${PAPI}
+		 ${XERCES} ${PYTHON} ${RUBY} ${PAPI} ${OPENMPI} ${CCACHE}

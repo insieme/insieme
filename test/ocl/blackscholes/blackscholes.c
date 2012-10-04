@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <math.h>
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
@@ -8,6 +9,10 @@
 
 #define VECTOR_WIDTH 1
 #define CHECK_RESULT 1
+
+#ifndef PATH
+#define PATH "./"
+#endif
 
 /* =================================================================================================== */
 /*  N validation function. Here are the two reference routines used by validation */
@@ -97,7 +102,9 @@ int main(int argc, const char* argv[]) {
         icl_parse_args(argc, argv, args);
         icl_print_args(args);
 
-        int size = args->size;
+	chdir(PATH);
+
+    int size = args->size;
 
 	/* declare some variables for intializing data */
 	int idx;
@@ -152,53 +159,59 @@ int main(int argc, const char* argv[]) {
 
 	icl_init_devices(args->device_type);
 	
+	icl_start_energy_measurement();
+
 	if (icl_get_num_devices() != 0) {
 		icl_device* dev = icl_get_device(args->device_id);
 		icl_print_device_short_info(dev);
 	
-		icl_buffer* cpflag_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(unsigned int) * size);
-		icl_buffer* S0_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
-		icl_buffer* K_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
-		icl_buffer* r_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
-		icl_buffer* sigma_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
-		icl_buffer* T_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
-		icl_buffer* answer_buf = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(FLOAT) *size);
-
-		// write data to ocl buffers
-		icl_write_buffer(cpflag_buf, CL_TRUE, size * sizeof(int), cpflag, NULL, NULL);
-		icl_write_buffer(S0_buf, CL_TRUE, size * sizeof(float), S0, NULL, NULL);
-		icl_write_buffer(K_buf, CL_TRUE, size * sizeof(float), K, NULL, NULL);
-		icl_write_buffer(r_buf, CL_TRUE, size * sizeof(float), r, NULL, NULL);
-		icl_write_buffer(sigma_buf, CL_TRUE, size * sizeof(float), sigma, NULL, NULL);
-		icl_write_buffer(T_buf, CL_TRUE, size * sizeof(float), T, NULL, NULL);
-		icl_write_buffer(answer_buf, CL_TRUE, size * sizeof(float), answer, NULL, NULL);
+        size_t szLocalWorkSize = args->local_size;
+        float multiplier = size/(float)szLocalWorkSize;
+        if(multiplier > (int)multiplier)
+                multiplier += 1;
+        size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
 		icl_kernel* kernel = icl_create_kernel(dev, "blackscholes.cl", "bsop_kernel", "", ICL_SOURCE);
 
-                size_t szLocalWorkSize = args->local_size;
-                float multiplier = size/(float)szLocalWorkSize;
-		// size_t num_workgroups = size / (VECTOR_WIDTH * szLocalWorkSize);
-                if(multiplier > (int)multiplier)
-                        multiplier += 1;
-                size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
+		for (int i = 0; i < args->loop_iteration; ++i) {
+			icl_buffer* cpflag_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(unsigned int) * size);
+			icl_buffer* S0_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+			icl_buffer* K_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+			icl_buffer* r_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+			icl_buffer* sigma_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+			icl_buffer* T_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+			icl_buffer* answer_buf = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(FLOAT) *size);
 
-		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 8,
-											(size_t)0, (void *)cpflag_buf,
-											(size_t)0, (void *)S0_buf,
-											(size_t)0, (void *)K_buf,
-											(size_t)0, (void *)r_buf,
-											(size_t)0, (void *)sigma_buf,
-											(size_t)0, (void *)T_buf,
-											(size_t)0, (void *)answer_buf,
-											sizeof(cl_int), (void *)&size);
+			// write data to ocl buffers
+			icl_write_buffer(cpflag_buf, CL_TRUE, size * sizeof(int), cpflag, NULL, NULL);
+			icl_write_buffer(S0_buf, CL_TRUE, size * sizeof(float), S0, NULL, NULL);
+			icl_write_buffer(K_buf, CL_TRUE, size * sizeof(float), K, NULL, NULL);
+			icl_write_buffer(r_buf, CL_TRUE, size * sizeof(float), r, NULL, NULL);
+			icl_write_buffer(sigma_buf, CL_TRUE, size * sizeof(float), sigma, NULL, NULL);
+			icl_write_buffer(T_buf, CL_TRUE, size * sizeof(float), T, NULL, NULL);
+			icl_write_buffer(answer_buf, CL_TRUE, size * sizeof(float), answer, NULL, NULL);
 
-		icl_read_buffer(answer_buf, CL_TRUE, sizeof(int) * size, &answer[0], NULL, NULL);
+			icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 8,
+												(size_t)0, (void *)cpflag_buf,
+												(size_t)0, (void *)S0_buf,
+												(size_t)0, (void *)K_buf,
+												(size_t)0, (void *)r_buf,
+												(size_t)0, (void *)sigma_buf,
+												(size_t)0, (void *)T_buf,
+												(size_t)0, (void *)answer_buf,
+												sizeof(cl_int), (void *)&size);
+
+			icl_read_buffer(answer_buf, CL_TRUE, sizeof(int) * size, &answer[0], NULL, NULL);
+			icl_release_buffers(6, cpflag_buf, S0_buf, K_buf, r_buf, sigma_buf, T_buf, answer_buf);
+		}
 	
-		icl_release_buffers(6, cpflag_buf, S0_buf, K_buf, r_buf, sigma_buf, T_buf, answer_buf);
 		icl_release_kernel(kernel);
 	} else {
 		printf("ERROR: No devices found\n");
 	}
+	
+	icl_stop_energy_measurement();
+	
 #if CHECK_RESULT
 	double maxouterr = 0;
 	int maxouterrindex = 0;

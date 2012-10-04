@@ -41,9 +41,6 @@
 #include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/analysis/subtype_constraints.h"
 
-#include "insieme/core/parser/ir_parse.h"
-
-
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -825,9 +822,10 @@ TEST(TypeVariableDeduction, ArrayVectorRelation) {
 
 	NodeManager manager;
 
+	IRBuilder builder(manager);
 
-	TypePtr typeA = parse::parseType(manager, "array<ref<char>,1>");
-	TypePtr typeB = parse::parseType(manager, "vector<ref<char>,25>");
+	TypePtr typeA = builder.parseType("array<ref<char>,1>");
+	TypePtr typeB = builder.parseType("vector<ref<char>,25>");
 	EXPECT_NE(typeA, typeB);
 	EXPECT_PRED2(matchable, typeA, typeB);
 
@@ -835,8 +833,8 @@ TEST(TypeVariableDeduction, ArrayVectorRelation) {
 	EXPECT_EQ(NT_VectorType, typeB->getNodeType());
 
 	// now within a tuple
-	typeA = parse::parseType(manager, "(array<ref<char>,1>,var_list)");
-	typeB = parse::parseType(manager, "(vector<ref<char>,25>,var_list)");
+	typeA = builder.parseType("(array<ref<char>,1>,var_list)");
+	typeB = builder.parseType("(vector<ref<char>,25>,var_list)");
 
 	EXPECT_NE(typeA, typeB);
 	EXPECT_PRED2(matchable, typeA, typeB);
@@ -1013,6 +1011,35 @@ TEST(TypeVariableDeduction, VectorSubTypeOfArray) {
 
 	auto res = getTypeVariableInstantiation(manager, toVector(arrTy), toVector(vecTy));
 	EXPECT_TRUE(res);
+}
+
+TEST(TypeVariableDeduction, ReductionType) {
+
+	/**
+	 * There was an error in the type deduction of a call to the reduction operator.
+	 * This should be investigated here
+	 */
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	FunctionTypePtr funType = builder.parseType("(ref<array<'a,1>>,uint<8>,('b,'a)->'b,'b)->'b").as<FunctionTypePtr>();
+	EXPECT_TRUE(funType);
+
+	vector<TypePtr> args = {
+			builder.parseType("ref<array<'a,1>>"),
+			builder.parseType("uint<8>"),
+			builder.parseType("('b,'a)->'b"),
+			builder.parseType("'b")
+	};
+
+	auto res = getTypeVariableInstantiation(manager, funType, args);
+	EXPECT_TRUE(res);
+	std::cout << *res << "\n";
+	EXPECT_EQ("'a", toString(*res->applyTo(builder.typeVariable("a"))));
+	EXPECT_EQ("'b", toString(*res->applyTo(builder.typeVariable("b"))));
+
+
 }
 
 } // end namespace analysis

@@ -41,7 +41,6 @@
 #include <sstream>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser/ir_parse.h"
 
 using std::shared_ptr;
 
@@ -56,16 +55,20 @@ TEST(TextDump, StoreLoad) {
 
 	// create a code fragment using manager A
 	NodeManager managerA;
+	IRBuilder builder(managerA);
 
-	NodePtr code = parse::parseIR(managerA, "\
-			{\
-				for(decl uint<4>:i = 10 .. 50 : 1) { \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
-				};\
-				for(decl uint<4>:j = 5 .. 25 : 1) { \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, j)); \
-				}; \
-			}");
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+
+	NodePtr code = builder.parseStmt(
+		"{ "
+		"	for(uint<4> i = 10u .. 50u) { "
+		"		v[i]; "
+		"	} "
+		"	for(uint<4> j = 5u .. 25u) { "
+		"		v[j]; "
+		"	} "
+		"}", symbols);
 
 	EXPECT_TRUE(code) << *code;
 
@@ -93,16 +96,20 @@ TEST(TextDump, StoreLoadAddress) {
 
 	// create a code fragment using manager A
 	NodeManager managerA;
+	IRBuilder builder(managerA);
 
-	NodePtr code = parse::parseIR(managerA, "\
-			{\
-				for(decl uint<4>:i = 10 .. 50 : 1) { \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
-				};\
-				for(decl uint<4>:j = 5 .. 25 : 1) { \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, j)); \
-				}; \
-			}");
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+
+	NodePtr code = builder.parseStmt(
+		"{ "
+		"	for(uint<4> i = 10u .. 50u) { "
+		"		v[i]; "
+		"	} "
+		"	for(uint<4> j = 5u .. 25u) { "
+		"		v[j]; "
+		"	} "
+		"}", symbols);
 
 	EXPECT_TRUE(code) << *code;
 

@@ -45,7 +45,9 @@
 #include <malloc.h>
 #include <math.h>
 
-// TODO: implement!
+#ifdef IRT_USE_PTHREADS
+#include <sched.h>
+#endif
 
 void _irt_print_native_affinity_mask(irt_native_cpu_set mask) {
 	uint32 bitmasklength = sizeof(irt_native_cpu_set) * 8;
@@ -87,13 +89,13 @@ void irt_set_affinity(irt_affinity_mask irt_mask, irt_thread thread) {
 	#ifdef IRT_USE_PTHREADS
 		DWORD_PTR old_mask = SetThreadAffinityMask(thread.p, mask);
 	#else
-		DWORD_PTR old_mask = SetThreadAffinityMask(thread, mask);
+		DWORD_PTR old_mask = SetThreadAffinityMask(thread.thread_handle, mask);
 	#endif
 }
 
 uint32 _irt_affinity_next_available_physical(uint32 start) {
 	int bitmasklength = sizeof(irt_native_cpu_set) * 8;
-	irt_native_cpu_set powered = (irt_native_cpu_set)pow((double)2, (int)start); // eg 2³ = ...001000
+	irt_native_cpu_set powered = 1 << start; // eg start=3 => ...001000
 	for(uint32 i=start; i< bitmasklength; i++) {
 		if ((powered & irt_g_affinity_base_mask) != 0)
 			return i;

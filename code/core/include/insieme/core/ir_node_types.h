@@ -88,5 +88,16 @@ namespace core {
 		NC_Support			// < a utility used to realize a complex data structure
 	};
 
+	// A node trait linking a the category enumeration to the base type
+	template<NodeCategory category> struct node_category_trait;
+	template<> struct node_category_trait<NC_Value> 		{ typedef Value base_type; };
+	template<> struct node_category_trait<NC_IntTypeParam> 	{ typedef IntTypeParam base_type; };
+	template<> struct node_category_trait<NC_Type> 			{ typedef Type base_type; };
+	template<> struct node_category_trait<NC_Expression> 	{ typedef Expression base_type; };
+	template<> struct node_category_trait<NC_Statement> 	{ typedef Statement base_type; };
+	template<> struct node_category_trait<NC_Program> 		{ typedef Program base_type; };
+	template<> struct node_category_trait<NC_Support> 		{ typedef Support base_type; };
+
+
 } // end namespace core
 } // end namespace insieme

@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <sched.h>
 #include "utils/affinity.h"
 
 void _irt_print_native_affinity_mask(irt_native_cpu_set mask) {

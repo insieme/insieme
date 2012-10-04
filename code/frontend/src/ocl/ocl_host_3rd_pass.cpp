@@ -40,8 +40,6 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/core/parser/ir_parse.h"
-
 namespace ba = boost::algorithm;
 
 namespace insieme {
@@ -242,59 +240,53 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 			if(const CallExprPtr vta = dynamic_pointer_cast<const CallExpr>(toArray->getArgument(0))) {
 	// throw away ref.var
 	// TODO only a dirty fix, check it
-				if(vta->getFunctionExpr() == BASIC.getVectorToArray()) {
-					arg = vta->getArgument(0);
-					argTy = arg->getType();
-					param = builder.variable(argTy);
-				}
+	// this will no longer happen, vector-to-array is gone
+//				if(vta->getFunctionExpr() == BASIC.getVectorToArray()) {
+//					arg = vta->getArgument(0);
+//					argTy = arg->getType();
+//					param = builder.variable(argTy);
+//				}
 			}
 		} else {
 			std::cerr << "Unexpected Function: " << toArray << " of type " << toArray->getArgument(0)->getType() << std::endl;
 			assert(false && "Unexpected function in OpenCL size argument");
 		}
 	} else { // the argument is an array
-		size = tryDeref(size, builder);
-		assert(size->getType()->getNodeType() == NT_ArrayType && "Called clEnqueueNDRangeKernel with invalid group argument");
+		size = removeDoubleRef(size, builder);
+		assert(size->getType()->getNodeType() == NT_RefType && "Called clEnqueueNDRangeKernel with invalid group argument");
 		argTy = size->getType();
 		param = builder.variable(argTy);
 		arg = size;
 	}
 
-	ExpressionPtr init = param;
+	ExpressionPtr init = removeDoubleRef(param, builder);
 
-	if(RefTypePtr ref = dynamic_pointer_cast<const RefType>(param->getType())) {
-		init = builder.deref(param);
-		//        argTy = ref->getElementType();
-	}
-
-	TypePtr fieldTy;
-	if(const ArrayTypePtr array = dynamic_pointer_cast<const ArrayType>(init->getType()))
-	fieldTy = array->getElementType();
-
-	if(const VectorTypePtr vector = dynamic_pointer_cast<const VectorType>(init->getType()))
-	fieldTy = vector->getElementType();
+	bool isArray = builder.matchType("ref<array<'a, 1>>", init->getType());
+	isArray |= builder.matchType("ref<vector<'a, #n>>", init->getType());
+	isArray |= builder.matchType("array<'a, 1>", init->getType());
+	isArray |= builder.matchType("vector<'a, #n>", init->getType());
 
 	DeclarationStmtPtr vDecl;
 	if(wd == 1) {
-		if(fieldTy)
-		init = builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "0"));
+		if(isArray)
+			init = builder.arrayAccess(init, builder.literal(BASIC.getUInt8(), "0"));
 		if(init->getType() != BASIC.getUInt8()) {
-			init = builder.castExpr(BASIC.getUInt8(), init);
+			init = builder.castExpr(BASIC.getUInt8(), tryDeref(init, builder));
 		}
 		vDecl = builder.declarationStmt(vecTy,
 				builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(BASIC.getUInt8(), "1"), builder.literal(BASIC.getUInt8(), "1"))));
 	} else {
-		assert(fieldTy && "Size argument of multidimensional group is no vector or array");
+		assert(isArray && "Size argument of multidimensional group is no vector or array");
 
 		vector<ExpressionPtr> subscripts;
-		subscripts.push_back(builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "0")));
-		subscripts.push_back(builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "1")));
-		subscripts.push_back(wd == 3 ? (ExpressionPtr)builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "2")) :
+		subscripts.push_back(builder.arrayAccess(init, builder.literal(BASIC.getUInt8(), "0")));
+		subscripts.push_back(builder.arrayAccess(init, builder.literal(BASIC.getUInt8(), "1")));
+		subscripts.push_back(wd == 3 ? (ExpressionPtr)builder.arrayAccess(init, builder.literal(BASIC.getUInt8(), "2")) :
 				(ExpressionPtr)builder.literal(BASIC.getUInt8(), "1"));
 
 		for_each(subscripts, [&](ExpressionPtr& r) {
 					if(r->getType() != BASIC.getUInt8())
-					r = builder.castExpr(BASIC.getUInt8(), r);
+					r = builder.castExpr(BASIC.getUInt8(), tryDeref(r, builder));
 				});
 
 		vDecl = builder.declarationStmt(vecTy, builder.vectorExpr(subscripts));

@@ -152,12 +152,22 @@ namespace runtime {
 		table["irt_wg_barrier"]					= "irt_all_impls.h";
 		table["irt_wg_joining_barrier"]			= "irt_all_impls.h";
 		
-		table["irt_inst_region_start"]		= "irt_all_impls.h";
+		table["irt_inst_region_start"]			= "irt_all_impls.h";
 		table["irt_inst_region_end"]			= "irt_all_impls.h";
-
-		table["irt_lock_create"] 	= "irt_all_impls.h";
+		
+		table["irt_lock_init"] 		= "irt_all_impls.h";
 		table["irt_lock_acquire"] 	= "irt_all_impls.h";
 		table["irt_lock_release"] 	= "irt_all_impls.h";
+
+		table["irt_atomic_fetch_and_add"]			= "irt_atomic.h";
+		table["irt_atomic_fetch_and_sub"]			= "irt_atomic.h";
+		table["irt_atomic_add_and_fetch"]			= "irt_atomic.h";
+		table["irt_atomic_sub_and_fetch"]			= "irt_atomic.h";
+		table["irt_atomic_or_and_fetch"]			= "irt_atomic.h";
+		table["irt_atomic_and_and_fetch"]			= "irt_atomic.h";
+		table["irt_atomic_xor_and_fetch"]			= "irt_atomic.h";
+		table["irt_atomic_val_compare_and_swap"]	= "irt_atomic.h";
+		table["irt_atomic_bool_compare_and_swap"]	= "irt_atomic.h";
 
 		table["irt_variant_pick"]	= "irt_all_impls.h";
 

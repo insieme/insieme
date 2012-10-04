@@ -18,3 +18,4 @@ build*
 
 *.log
 *.pgm
+*.out.match

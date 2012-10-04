@@ -98,7 +98,6 @@ ClmemTable& Host2ndPass::getCleanedStructures() {
 void Host2ndPass::updateKernelArgs(KernelArgs& kernelArgs, NodeMap& replacements) {
 	for_each(kernelArgs, [&](std::pair<ExpressionPtr, std::vector<ExpressionPtr> > args) {
 		for_each(args.second, [&](ExpressionPtr& arg) {
-std::cout << "Replacement " << replacements << std::endl;
 			NodePtr replaced = transform::replaceAll(arg->getNodeManager(), arg, replacements, true); // needed for USE_HOST_PTR flag
 			arg = core::transform::replaceVarsRecursiveGen(arg->getNodeManager(), replaced, cl_mems, false).as<ExpressionPtr>();
 			std::cout << "arg: " << arg->getType() << " - " << arg << std::endl;

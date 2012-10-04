@@ -39,7 +39,6 @@
 #include "insieme/core/printer/lua_printer.h"
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/utils/lua/lua.h"
 #include "insieme/utils/test/test_utils.h"
 
@@ -73,30 +72,34 @@ namespace printer {
 
 	TEST(LuaPrinter, ControlFlow) {
 		NodeManager mgr;
-		parse::IRParser parser(mgr);
+		IRBuilder builder(mgr);
 
-		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-			"for(decl uint<4>:k = 0 .. 10 : 1) {"
-			"	for(decl uint<4>:i = 0 .. 20 : 1) {"
-			"		decl ref<uint<4>>:m = (op<ref.var>(10));"
-			"		for(decl uint<4>:j = 0 .. 30 : 1) {"
-			"			(op<ref.assign>((op<vector.ref.elem>(ref<vector<uint<4>,10>>:v, i)), (op<ref.deref>(m))));"
-			"           (op<ref.assign>(ref<uint<4>>:x, (x + 1)));"
-			"		};"
-			"	};"
-			"}") );
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<uint<4>,10>>"));
+		symbols["x"] = builder.variable(builder.parseType("ref<int<4>>"));
+
+		auto forStmt = builder.parseStmt(
+			"for(int<4> k = 0 .. 10) {"
+			"	for(int<4> i = 0 .. 20) {"
+			"		ref<int<4>> m = var(10);"
+			"		for(int<4> j = 0 .. 30) {"
+			"			v[i] = m;"
+			"           x = x + 1;"
+			"		}"
+			"	}"
+			"}", symbols).as<ForStmtPtr>();
 
 
 		string script = toLuaScript(forStmt);
 		EXPECT_PRED2(containsSubString, script, "(10 - 1)");
-		EXPECT_PRED2(containsSubString, script, "v5[v2] = (v3)");
-		EXPECT_PRED2(containsSubString, script, "v6 = (v6) + 1");
+		EXPECT_PRED2(containsSubString, script, "v1[v4] = v5");
+		EXPECT_PRED2(containsSubString, script, "v2 = (v2) + 1");
 
 		// test whether script is syntactically correct
 		utils::lua::Lua lua;
-		lua.run("v5 = {}; v6 = 0");
+		lua.run("v1 = {}; v2 = 0");
 		lua.run(toLuaScript(forStmt));
-		EXPECT_EQ(10*20*30, lua.eval<int>("v6"));
+		EXPECT_EQ(10*20*30, lua.eval<int>("v2"));
 	}
 
 

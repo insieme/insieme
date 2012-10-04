@@ -39,7 +39,6 @@
 #include <algorithm>
 
 #include "insieme/analysis/dfa/analyses/reaching_defs.h"
-#include "insieme/analysis/dfa/analyses/def_use.h"
 
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/value.h"
@@ -52,9 +51,8 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
 
-#include "insieme/analysis/dfa/analyses/reaching_defs.h"
+#include "insieme/analysis/polyhedral/scop.h"
 
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 using namespace insieme;
@@ -62,207 +60,900 @@ using namespace insieme::core;
 using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
 
-TEST(Problem, ReachingDefinitions) {
+typedef std::set<ExpressionAddress> ExprAddrSet;
+
+
+AccessPtr isRangeRelation(const AccessClassPtr& parent, const AccessClassPtr& thisClass) {
+
+	if (!parent) { return AccessPtr(); }
+
+	for(const auto& dep : parent->getSubClasses()) {
+		if (std::get<0>(dep) == AccessClass::DT_RANGE && 
+			*std::get<1>(dep).lock() == *thisClass) { return std::get<2>(dep);  }
+	}
+	return AccessPtr();
+}
+
+void lookup_accesses(std::set<NodeAddress>& addrSet, const AccessClassPtr& cl, const CFGPtr& cfg) {
+
+	auto addrs = extractRealAddresses(*cl, cfg->getTmpVarMap());
+	std::copy(addrs.begin(), addrs.end(), std::inserter(addrSet, addrSet.begin()));
+
+	auto parent = cl->getParentClass();
+	if (parent) { 
+	
+		auto range = isRangeRelation(parent, cl);
+		if ( range ) {
+			lookup_accesses(addrSet, cl->getParentClass(), cfg); 
+			return;
+		} 
+
+		// otherwise 
+		if (isRangeRelation(parent->getParentClass(), parent)) {
+			// find a child which is a level 
+			parent = parent->getParentClass();
+			for(const auto& dep : parent->getSubClasses()) {
+				if (std::get<0>(dep) == AccessClass::DT_LEVEL) 
+				{ 
+					lookup_accesses(addrSet, std::get<1>(dep).lock(), cfg);	
+					return;
+				}
+			}
+		}
+
+
+	}
+}
+
+std::set<NodeAddress> getDefinitions(
+		const Solver<dfa::analyses::ReachingDefinitions>::CFGBlockMap& ret, 
+		const CFGPtr& cfg, 
+		const NodeAddress& use) 
+{
+	
+	cfg::Address addr = cfg->find(use);
+	auto blockID = addr.getBlock().getBlockID();
+
+	AccessManager aMgr(&*cfg, cfg->getTmpVarMap());
+	auto fit = ret.find(blockID);
+	EXPECT_NE(fit, ret.end());
+	 
+	std::cout << fit->second << std::endl;
+
+	insieme::analysis::dfa::analyses::definitionsToAccesses(fit->second, aMgr);
+
+	auto thisAccess = getImmediateAccess(use->getNodeManager(), use);
+
+	std::set<NodeAddress> addrSet;
+	lookup_accesses(addrSet, aMgr.getClassFor(thisAccess), cfg);
+
+	aMgr.printDotGraph(std::cout);
+	// remove the address of the use 
+	addrSet.erase(use);
+
+	return addrSet;
+}
+
+//=============================================================================
+// Scalars 
+//=============================================================================
+TEST(ReachingDefinition, ScalarNoControl) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-	typedef utils::set::PointerSet<VariablePtr> VarSet; 
-
-    auto code = parser.parseStatement(
-		"{"
-		"	decl ref<int<4>>:a = 0;"
-		"	if ( (a<=0) ) { "
-		"		(a = (int<4>:i+int<4>:b)); "
-		"	};"
-		"	decl int<4>:c = (op<ref.deref>(a));"
-		"}"
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	$ref<int<4>> a = 0;$ "
+		"	$a$ = i+b; "
+		"	int<4> c = *$a$;"
+		"}$"
     );
+    EXPECT_EQ(4u, addresses.size());
 
-    EXPECT_TRUE(code);
-	CFGPtr cfg = CFG::buildCFG(code);
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
 
 	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
 	auto ret = s.solve();
-	
+
 	// lookup address of variable A
-	NodeAddress aRef = NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1).getAddressOfChild(2);
-	// std::cout << *aRef << std::endl;
-	
-	const cfg::BlockPtr& b = cfg->find(aRef);
-	EXPECT_EQ(2u, b->getBlockID());
+	core::VariableAddress aRef = addresses[3].as<VariableAddress>();
+		
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(1u, addrSet.size());
 
-	std::vector<core::VariableAddress> addrList;
-	 
-	for( auto def : ret[b->getBlockID()] ) {
-		if (std::get<0>(def) == getImmediateAccess( aRef.as<VariableAddress>()) ) {
-			core::NodeAddress block = (*std::get<1>(def))[0].getStatementAddress();
-			core::NodeAddress addr = Address<const Node>::find( aRef, block.getAddressedNode());
-			addrList.push_back( core::static_address_cast<core::VariableAddress>(core::concat(block, addr)) );
-		}
-	}
-
-	// std::cout << addrList << std::endl;
-	EXPECT_EQ(2u, addrList.size());
-	EXPECT_EQ(addrList[0], NodeAddress(code).getAddressOfChild(0).getAddressOfChild(0));
-	EXPECT_EQ(addrList[1], NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).
-							getAddressOfChild(0).getAddressOfChild(2));
+	auto addrIt = addrSet.begin();
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[2], *addrIt);
 }
 
-TEST(Problem, ReachingDefinitions2) {
+TEST(ReachingDefinition, ScalarWithControl) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto code = parser.parseStatement(
-		"{"
-		"	decl ref<int<4>>:a = 0;"
-		"	if ( (a<=0) ) { "
-		"		(a = (int<4>:i+int<4>:b)); "
-		"	};"
-		"	decl int<4>:c = (op<ref.deref>(a));"
-		"}"
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	$ref<int<4>> a = 0;$ "
+		"	if ( a <= 0 ) { "
+		"		$a$ = i+b; "
+		"	}"
+		"	int<4> c = *$a$;"
+		"}$"
     );
+    EXPECT_EQ(4u, addresses.size());
 
-    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
 
-	analyses::DefUse du(code);
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
 
-	VariableAddress aRef = core::static_address_cast<const core::Variable>( 
-			NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1).getAddressOfChild(2)
-		);
+	// lookup address of variable A
+	core::VariableAddress aRef = addresses[3].as<VariableAddress>();
 	
-	EXPECT_EQ(2u, std::distance(du.defs_begin(aRef), du.defs_end(aRef)));
-	
-	auto comp = [](const ExpressionAddress& lhs, const ExpressionAddress& rhs) -> bool { 
-		assert(lhs.getRootNode() == rhs.getRootNode());
-		return lhs.getPath() < rhs.getPath();
-	};
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(2u, addrSet.size());
 
-	std::set<ExpressionAddress, decltype(comp)> definitions(du.defs_begin(aRef), du.defs_end(aRef), comp);
-	
-	auto it = definitions.begin(), end = definitions.end();
+	auto addrIt = addrSet.begin();
 
-	{
-		ExpressionAddress trgRef = core::static_address_cast<const core::Expression>( 
-			NodeAddress(code).getAddressOfChild(0).getAddressOfChild(0)
-		);
+	// Makes sure the computed addresses have the same root node 
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1].as<DeclarationStmtAddress>()->getVariable(), *addrIt);
 
-		EXPECT_EQ(trgRef, *it);
-		EXPECT_EQ(*trgRef, **it);
-	}
-	++it;
-	{
-		ExpressionAddress trgRef = core::static_address_cast<const core::Expression>( 
-			NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(2)
-		);
-	
-		EXPECT_EQ(trgRef, *it);
-		EXPECT_EQ(*trgRef, **it);
-	}
-	++it;
+	EXPECT_NE(++addrIt, addrSet.end());
 
-	EXPECT_EQ(end,it);
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[2], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
 }
 
-
-TEST(Problem, ReachingDefinitions3) {
+TEST(ReachingDefinition, ScalarWithControl2) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto code = parser.parseStatement(
-		"{"
-		"	decl ref<int<4>>:a = 0;"
-		"	if ( (a<=0) ) { "
-		"		(a = (int<4>:i+int<4>:b)); "
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	ref<int<4>> a = 0; "
+		"	if ( a <= 0 ) { "
+		"		$a$ = i+b; "
 		"	} else {"
-		"		(a = int<4>:b);"
-		"   };"
-		"	decl int<4>:c = (op<ref.deref>(a));"
-		"}"
+		"		$a$ = 3; "	
+		"	}"
+		"	int<4> c = *$a$;"
+		"}$"
     );
+    EXPECT_EQ(4u, addresses.size());
 
-    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
 
-	analyses::DefUse du(code);
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
 
-	VariableAddress aRef = core::static_address_cast<const core::Variable>( 
-			NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1).getAddressOfChild(2)
-		);
+	// lookup address of variable A
+	VariableAddress aRef = addresses[3].as<VariableAddress>();
 	
-	EXPECT_EQ(2u, std::distance(du.defs_begin(aRef), du.defs_end(aRef)));
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(2u, addrSet.size());
 
-	analyses::DefUse::iterator it = du.defs_begin(aRef), end = du.defs_end(aRef);
+	auto addrIt = addrSet.begin();
 
-	std::vector<NodeAddress> l { 
-		NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(2),
-		NodeAddress(code).getAddressOfChild(1).getAddressOfChild(2).getAddressOfChild(0).getAddressOfChild(2)
-	};
+	// Makes sure the computed addresses have the same root node 
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
 
-	auto fit1 = std::find(it, end, l[0]);
-	EXPECT_NE(end, fit1);
+	EXPECT_NE(++addrIt, addrSet.end());
 
-	auto fit2 = std::find(it, end, l[1]);
-	EXPECT_NE(end, fit2);
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[2], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
 }
 
-
-TEST(Problem, ReachingDefinitionsMember) {
+TEST(ReachingDefinition, ScalarWithControl3) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto code = parser.parseStatement(
-		"{"
-		"	decl ref<struct<a:int<4>, b:int<4>>>:s=0;"
-	//	"	if ( (int<4>:b <= 0) ) { "
-		"	((op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>,int>)) = 3);"
-	//	"   };"
-		"	decl ref<int<4>>:c = (op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>, int>));"
-		"}"
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	ref<int<4>> a = 0; "
+		"	$a$ = 2; "
+		"	while ( a <= 0 ) { "
+		"		a = i+b; "
+		"		$a$ = 3; "	
+		"	}"
+		"	int<4> c = *$a$;"
+		"}$"
     );
+    EXPECT_EQ(4u, addresses.size());
 
-    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
 
-	analyses::DefUse du(code);
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
 
-	ExpressionAddress aRef = core::static_address_cast<const core::Expression>( 
-			NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1)
+	// lookup address of variable A
+	VariableAddress aRef = addresses[3].as<VariableAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(2u, addrSet.size());
+
+	auto addrIt = addrSet.begin();
+
+	// Makes sure the computed addresses have the same root node 
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+
+	EXPECT_NE(++addrIt, addrSet.end());
+
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[2], *addrIt);
+	
+	EXPECT_EQ(++addrIt, addrSet.end());
+}
+
+TEST(ReachingDefinition, ScalarWithLoop) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	ref<int<4>> b = 3; "
+		"	$ref<int<4>> a = 0;$ "
+		"	while ( a <= 0 ) { "
+		"		b = $a$;   "
+		"		$a$ = i+b; "
+		"	}"
+		"	int<4> c = *$a$;"
+		"}$"
+    );
+    EXPECT_EQ(5u, addresses.size());
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+
+	// lookup address of variable A
+	VariableAddress aRef = addresses[2].as<VariableAddress>();
+	
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(2u, addrSet.size());
+
+	auto addrIt = addrSet.begin();
+
+	// Makes sure the computed addresses have the same root node 
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1].as<DeclarationStmtAddress>()->getVariable(), *addrIt);
+
+	EXPECT_NE(++addrIt, addrSet.end());
+
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[3], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
+}
+
+//=============================================================================
+// STRUCTS 
+//=============================================================================
+TEST(ReachingDefinitions, StructMemberNoControl) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["s"] = builder.variable(builder.parseType("ref<struct{ int<4> a; int<4> b; }>"));
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	$s.a$ = i+b;  "
+		"	int<4> c = *$s.a$; "
+		"}$", symbols
+    );
+	EXPECT_EQ(3u, addresses.size());
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[2].as<ExpressionAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(1u, addrSet.size());
+
+	EXPECT_EQ(addresses[0].getRootNode(), addrSet.begin()->getRootNode());
+	EXPECT_EQ(addresses[1], *addrSet.begin());
+}
+
+//TEST(ReachingDefinitions, StructMemberInitialization) {
+//
+//	NodeManager mgr;
+//	IRBuilder builder(mgr);
+//
+//    auto addresses = builder.parseAddresses(
+//		"${"
+//		"	int<4> i = 2; "
+//		"	int<4> b = 3; "
+//		"	$ref<struct { int<4> a; }> s;$"
+//		"	int<4> c = *$s.a$;"
+//		"}$"
+//    );
+//	EXPECT_EQ(3u, addresses.size());
+//
+//	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+//	std::cout << *cfg << std::endl;
+//
+//	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+//	auto ret = s.solve();
+//
+//	// lookup address of variable A
+//	ExpressionAddress aRef = addresses[2].as<ExpressionAddress>();
+//
+//	auto addrSet = getDefinitions(ret, cfg, aRef);
+//	EXPECT_EQ(1u, addrSet.size());
+//
+//	EXPECT_EQ(addresses[0].getRootNode(), addrSet.begin()->getRootNode());
+//	EXPECT_EQ(addresses[1], *addrSet.begin());
+//}
+
+TEST(ReachingDefinitions, StructMemberWithControl) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["s"] = builder.variable(builder.parseType("ref<struct{ int<4> a; int<4> b; }>"));
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	$s.a$ = 3; "
+		"	if ( s.a <= 0 ) { "
+		"		$s.a$ = i+b; "
+		"	}"
+		"	int<4> c = *$s.a$;"
+		"}$", symbols
+    );
+    EXPECT_EQ(4u, addresses.size());
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+	
+	// std::cout << *cfg << std::endl;
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
+	
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(2u, addrSet.size());
+	auto addrIt = addrSet.begin();
+
+	// Makes sure the computed addresses have the same root node 
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+
+	EXPECT_NE(++addrIt, addrSet.end());
+
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[2], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
+}
+
+TEST(ReachingDefinitions, StructMemberNested) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["s"] = builder.variable(builder.parseType("ref<struct{ int<4> a; struct{ int<4> b; } b; }>"));
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	$s.b.b$ = 3; "
+		"	if ( s.a <= 0 ) { "
+		"		$s.a$ = i+b; "
+		"	}"
+		"	int<4> c = *$s.b.b$;"
+		"}$", symbols
+    );
+    EXPECT_EQ(4u, addresses.size());
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+	
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(1u, addrSet.size());
+
+	auto addrIt = addrSet.begin();
+
+	// Makes sure the computed addresses have the same root node 
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
+}
+
+TEST(ReachingDefinitions, StructMemberNested2) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["s"] = builder.variable(builder.parseType(
+			"ref<struct{ int<4> a; struct{ int<4> a; struct { int<4> b; } b; } b; }>"
+		));
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	$s.b.b.b$ = 3; "
+		"	if ( s.a <= 0 ) { "
+		"		$s.b.b.b$ = i+b; "
+		"	}"
+		"	int<4> c = *$s.b.b.b$;"
+		"}$", symbols
+    );
+    EXPECT_EQ(4u, addresses.size());
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+	// std::cout << *cfg << std::endl;
+	
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(2u, addrSet.size());
+	
+	auto addrIt = addrSet.begin();
+
+	// Makes sure the computed addresses have the same root node 
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+
+	EXPECT_NE(++addrIt, addrSet.end());
+
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[2], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
+}
+
+//=============================================================================
+// ARRAYS 
+//=============================================================================
+TEST(ReachingDefinitions, VectorsNoControl) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>, 10>>"));
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	$v[2u]$ = i+b; "
+		"	int<4> c = *$v[2u]$;"
+		"}$", symbols
+    );
+	EXPECT_EQ(3u, addresses.size());
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[2].as<ExpressionAddress>();
+	
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(1u, addrSet.size());
+
+	EXPECT_EQ(addresses[0].getRootNode(), addrSet.begin()->getRootNode());
+	EXPECT_EQ(addresses[1], *addrSet.begin());
+}
+
+TEST(ReachingDefinitions, VectorsWithControl) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<struct{int<4> a; int<2> b;}, 10>>"));
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	$v[2u].a$ = i+b; "
+		"	while (i<b) { "
+		"		$v[2u].a$ = i+b; "
+		"	}"
+		"	int<4> c = *$v[2u].a$;"
+		"}$", symbols
+    );
+	EXPECT_EQ(4u, addresses.size());
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(2u, addrSet.size()); 
+
+	auto addrIt = addrSet.begin();
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+
+	EXPECT_NE(++addrIt, addrSet.end());
+
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[2], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
+}
+
+
+TEST(ReachingDefinitions, VectorsWithControl2) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(
+			builder.parseType("ref<vector<struct{int<4> a; int<2> b;}, 10>>")
 		);
-	
-	auto var = getImmediateAccess(aRef);
 
-	EXPECT_EQ(2u, std::distance(du.defs_begin(aRef), du.defs_end(aRef)));
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	$v[2u].a$ = i+b; "
+		"	while (i<b) { "
+		"		$v[2u].b$ = i+b; "
+		"	}"
+		"	int<4> c = *$v[2u].a$;"
+		"}$", symbols
+    );
+	EXPECT_EQ(4u, addresses.size());
 
-	auto comp = [](const ExpressionAddress& lhs, const ExpressionAddress& rhs) -> bool { 
-		assert(lhs.getRootNode() == rhs.getRootNode());
-		return lhs.getPath() < rhs.getPath();
-	};
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
 
-	std::set<ExpressionAddress, decltype(comp)> definitions(du.defs_begin(aRef), du.defs_end(aRef), comp);
-	
-	auto it = definitions.begin(), end = definitions.end();
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(1u, addrSet.size());
+
+	auto addrIt = addrSet.begin();
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+}
+
+TEST(ReachingDefinitions, VectorsWithControl3) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(
+			builder.parseType("ref<vector<struct{int<4> a; int<2> b;}, 10>>")
+		);
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> i = 2; "
+		"	int<4> b = 3; "
+		"	$v[2u].a$ = i+b; "
+		"	while (i<b) { "
+		"		$v[3u].a$ = i+b; "
+		"	}"
+		"	int<4> c = *$v[2u].a$;"
+		"}$", symbols
+    );
+	EXPECT_EQ(4u, addresses.size());
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(1u, addrSet.size());
+
+	auto addrIt = addrSet.begin();
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+}
+
+TEST(ReachingDefinitions, VectorsWithControl4) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(
+		builder.parseType("ref<vector<uint<4>,10>>")
+	);
+
+	auto addresses = builder.parseAddresses(
+	"${"
+	"	uint<4> a = 2u; "
+	"	uint<4> b = 3u; "
+	"	$v[1u]$ = a+b; "
+	"	for (uint<4> i=0u..10u : 2u) { "
+	"		$v[i]$ = a+b; "
+	"	}"
+	"	uint<4> c = *$v[1u]$;"
+	"	uint<4> d = *$v[2u]$;"
+	"}$", symbols
+	);
+	EXPECT_EQ(5u, addresses.size());
+
+	// mark for polyhedral 
+	polyhedral::scop::mark(addresses[0]);
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+   
+	{
+		// lookup address of variable A
+		ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
+
+		auto addrSet = getDefinitions(ret, cfg, aRef);
+		EXPECT_EQ(1u, addrSet.size());
+
+		auto addrIt = addrSet.begin();
+		EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+		EXPECT_EQ(addresses[1], *addrIt);
+	}
 
 	{
-		ExpressionAddress trgRef = core::static_address_cast<const core::Expression>( 
-			NodeAddress(code).getAddressOfChild(0).getAddressOfChild(0)
-		);
+		// lookup address of variable A
+		ExpressionAddress aRef = addresses[4].as<ExpressionAddress>();
 
-		EXPECT_EQ(trgRef, *it);
-		EXPECT_EQ(*trgRef, **it);
-	}
-	++it;
-	{
-		ExpressionAddress trgRef = core::static_address_cast<const core::Expression>( 
-			NodeAddress(code).getAddressOfChild(1).getAddressOfChild(2)
-		);
-	
-		EXPECT_EQ(trgRef, *it);
-		EXPECT_EQ(*trgRef, **it);
-	}
-	++it;
+		auto addrSet = getDefinitions(ret, cfg, aRef);
+		EXPECT_EQ(1u, addrSet.size());
 
-	EXPECT_EQ(end,it);
+		auto addrIt = addrSet.begin();
+		EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+		EXPECT_EQ(addresses[2], *addrIt);
+	}
 
 }
+
+TEST(ReachingDefinitions, Vectors2DWithControl5) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(
+		builder.parseType("ref<vector<vector<uint<4>,10>,10>>")
+	);
+
+	auto addresses = builder.parseAddresses(
+	"${"
+	"	uint<4> a = 2u; "
+	"	uint<4> b = 3u; "
+	"	$v[1u][2u]$ = a+b; "
+	"	for (uint<4> i=0u..10u : 2u) { "
+	"		$v[1u][i]$ = a+b; "
+	"	}"
+	"	uint<4> c = *$v[1u][2u]$;"
+	"}$", symbols
+	);
+	EXPECT_EQ(4u, addresses.size());
+
+	// mark for polyhedral 
+	polyhedral::scop::mark(addresses[0]);
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+   
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(2u, addrSet.size());
+
+	auto addrIt = addrSet.begin();
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+
+	EXPECT_NE(++addrIt, addrSet.end());
+
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[2], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
+
+}
+
+TEST(ReachingDefinitions, Vectors2DWithControl6) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(
+		builder.parseType("ref<vector<vector<vector<uint<4>,10>,10>,10>>")
+	);
+
+	auto addresses = builder.parseAddresses(
+	"${"
+	"	uint<4> a = 2u; "
+	"	uint<4> b = 3u; "
+	"	$v[1u][2u][2u]$ = a+b; "
+	"	for (uint<4> i=0u..10u : 2u) { "
+	"		$v[1u][i][2u]$ = a+b; "
+	"	}"
+	"	v[1u][1u][2u] = a+b; "
+	"	uint<4> c = *$v[1u][2u][2u]$;"
+	"}$", symbols
+	);
+	EXPECT_EQ(4u, addresses.size());
+
+	// mark for polyhedral 
+	polyhedral::scop::mark(addresses[0]);
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+   
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(2u, addrSet.size());
+
+	auto addrIt = addrSet.begin();
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+
+	++addrIt;
+	EXPECT_EQ(addresses[2], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
+}
+
+
+TEST(ReachingDefinitions, Vectors2DWithControl7) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(
+		builder.parseType("ref<vector<vector<vector<uint<4>,10>,10>,10>>")
+	);
+
+	auto addresses = builder.parseAddresses(
+	"${"
+	"	uint<4> a = 2u; "
+	"	uint<4> b = 3u; "
+	"	$v[1u][2u][2u]$ = a+b; "
+	"	for (uint<4> i=0u..10u : 2u) { "
+	"		$v[0u][i][2u]$ = a+b; "
+	"	}"
+	"	v[1u][1u][2u] = a+b; "
+	"	uint<4> c = *$v[1u][2u][2u]$;"
+	"}$", symbols
+	);
+	EXPECT_EQ(4u, addresses.size());
+
+	// mark for polyhedral 
+	polyhedral::scop::mark(addresses[0]);
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+   
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(1u, addrSet.size());
+
+	auto addrIt = addrSet.begin();
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
+
+}
+
+TEST(ReachingDefinitions, Vectors2DWithControl8) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(
+		builder.parseType("ref<vector<vector<vector<uint<4>,10>,10>,10>>")
+	);
+
+	auto addresses = builder.parseAddresses(
+	"${"
+	"	uint<4> a = 2u; "
+	"	uint<4> b = 3u; "
+	"	v[1u][1u][2u] = a+b; "
+	"	for (uint<4> i=0u..10u : 2u) { "
+	"		v[1u][i][2u] = a+b; "
+	"	}"
+	"	$v[1u][1u][2u]$ = a+b; "
+	"	uint<4> c = *$v[1u][1u][2u]$;"
+	"}$", symbols
+	);
+	EXPECT_EQ(3u, addresses.size());
+
+	// mark for polyhedral 
+	polyhedral::scop::mark(addresses[0]);
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+   
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[2].as<ExpressionAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(1u, addrSet.size());
+
+	auto addrIt = addrSet.begin();
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
+}
+
+

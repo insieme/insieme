@@ -79,6 +79,52 @@ LambdaDefinitionAddress findEnclosingLambdaDefinition(const NodeAddress& addr) {
 	return parent.as<LambdaDefinitionAddress>();
 }
 
+typedef std::map<NodeAddress, NodePtr> ReplacementMap;
+
+bool transformCallSite(const core::CallExprAddress& callExpr, 
+					   const std::vector<unsigned>& indexes, 
+					   ReplacementMap& replacements) 
+{
+	auto& mgr = callExpr->getNodeManager();
+	IRBuilder builder(mgr);
+	auto& basic = mgr.getLangBasic();
+	
+	ReplacementMap tmpReplacements;
+
+	// replace the CallExpr
+	for ( unsigned idx : indexes ) {
+
+		NodeAddress arg = callExpr->getArgument(idx);
+		if (core::analysis::isCallOf(arg, basic.getScalarToArray()) ) {
+			tmpReplacements.insert ( 
+					{ arg, 
+					  arg.as<CallExprAddress>().getArgument(0).getAddressedNode()
+					}
+				);
+		} else if ( analysis::isCallOf(arg, basic.getRefVectorToRefArray()) ) {
+			// we need to pass a reference to the element 0
+			tmpReplacements.insert ( 
+					{ arg, 
+					  builder.callExpr(
+						  basic.getVectorRefElem(),
+						  arg.as<CallExprAddress>().getArgument(0).getAddressedNode(),
+						  builder.uintLit(0))
+					}
+				);
+		} else {
+			// FIXME: add an handler for other cases
+			// in the case we cannot handle the argument, we switch back to the old call
+			// probably creating multi-versioning 
+			return false;
+		}
+	}
+
+	// for each index we were able to transform the argument to fit the new type
+	// => make the local changes to the actual code 
+	std::copy(tmpReplacements.begin(), tmpReplacements.end(), std::inserter(replacements, replacements.begin()));
+	return true;
+}
+
 } // end anonymous namespace 
 
 core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
@@ -93,7 +139,7 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 
 	// Prepare replacement mapper to replace all the call sites of functions for which the signature
 	// has been changed 
-	std::map<NodeAddress, NodePtr> callExprReplacements;
+	ReplacementMap callExprReplacements;
 	utils::map::PointerMap<VariablePtr, VariablePtr> lambdaVarReplacements;
 
 	visitDepthFirst(NodeAddress(node), [&](const CallExprAddress& callExpr) {
@@ -145,7 +191,7 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 			LambdaAddress lambdaAddr( lambda );
 
 			// Prepare replacement map for expressions within the lambda
-			std::map<NodeAddress, NodePtr> replacements;
+			ReplacementMap replacements;
 
 			std::set<VariableAddress> possiblyPseudoArrays;
 			// Checks if any of the parameters is an array
@@ -189,8 +235,8 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 				core::NodePtr parent = var.getParentNode();
 
 				// the parent expression can be either a deref, followed by a subscript or a refelement1d.
-				if ( core::analysis::isCallOf(parent, basic.getArraySubscript1D()) || 
-					 core::analysis::isCallOf(parent, basic.getArrayRefElem1D()) ) 
+				if ( core::analysis::isCallOf(parent, basic.getArraySubscript1D()) ||
+					 core::analysis::isCallOf(parent, basic.getArrayRefElem1D()) )
 				{
 					bool isPseudo = false;
 					try {
@@ -281,17 +327,28 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 				NodePtr newLambda = core::transform::replaceAll(mgr, replacements);
 				newLambda = core::transform::replaceVars(mgr, newLambda, localVarReplacements);
 
+				ReplacementMap localCallExprReplacements;
+				// search for recursive call inside this lambda to the lambda itself 
+				visitDepthFirst(NodeAddress(newLambda), [&](const CallExprAddress& callExpr) {
+						if (*callExpr->getFunctionExpr() == *lambdaVar) {
+							transformCallSite(callExpr, indexes, localCallExprReplacements);
+						}
+					});
+
+				if (!localCallExprReplacements.empty()) {
+					newLambda = core::transform::replaceAll(mgr, localCallExprReplacements);
+				}
+
 				// now replace the variable associated to this lambda 
 				addr = addr.switchRoot(newLambdaDef);
 
 				lambdaVarReplacements.insert( { lambdaVar, builder.variable(newLambda.as<LambdaPtr>()->getType()) } );
 				newLambdaDef = core::transform::replaceNode(mgr, addr, newLambda);
 				newLambdaDef = core::transform::replaceVars(mgr, newLambdaDef, lambdaVarReplacements);
-				
+
 				lambdaDefinitions[lambdaDef] = newLambdaDef.as<LambdaDefinitionPtr>();
 
 				lambdaReplacements.insert( { lambda, indexes } );
-
 			}
 		}
 		
@@ -314,43 +371,16 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 			lambdaExpr = LambdaExpr::get(mgr, vit->second, lambdaDefinitions[lambdaDef]);
 		}
 
-		std::map<NodeAddress, NodePtr> localCallExprReplacements;
+		ReplacementMap localCallExprReplacements;
 		localCallExprReplacements.insert( { callExpr->getFunctionExpr(), lambdaExpr } );
+		if (transformCallSite(callExpr, fit->second, localCallExprReplacements) ) {
 
-		// replace the CallExpr
-		for ( unsigned idx : fit->second ) {
-			NodeAddress arg = callExpr->getArgument(idx);
-			
-			if (core::analysis::isCallOf(arg, basic.getScalarToArray()) ) {
-				localCallExprReplacements.insert ( 
-						{ arg, 
-						  arg.as<CallExprAddress>().getArgument(0).getAddressedNode()
-						}
-					);
-			} else if ( analysis::isCallOf(arg, basic.getRefVectorToRefArray()) ) {
-				// we need to pass a reference to the element 0
-				localCallExprReplacements.insert ( 
-						{ arg, 
-						  builder.callExpr(
-							  basic.getVectorRefElem(),
-							  arg.as<CallExprAddress>().getArgument(0).getAddressedNode(),
-							  builder.uintLit(0))
-						}
-					);
-			} else {
-				// FIXME: add an handler for other cases
-				// in the case we cannot handle the argument, we switch back to the old call
-				// probably creating multi-versioning 
-				return ;
-			}
-		}
-
-		// copy the replacements to the glbal map
-		std::copy(localCallExprReplacements.begin(), 
+			// copy the replacements to the glbal map
+			std::copy(localCallExprReplacements.begin(), 
 				  localCallExprReplacements.end(), 
 				  std::inserter(callExprReplacements, callExprReplacements.begin())
 				);
-
+		}
 
 	}, false);
 	

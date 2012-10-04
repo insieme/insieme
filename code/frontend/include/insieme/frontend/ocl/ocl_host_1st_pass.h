@@ -36,8 +36,6 @@
 
 #pragma once
 
-#include "insieme/core/parser/ir_parse.h"
-
 #include "insieme/utils/logging.h"
 #include "insieme/frontend/ocl/ocl_host_passes.h"
 
@@ -92,17 +90,15 @@ public:
 struct Ocl2Inspire {
 private:
 	core::IRBuilder& builder;
-	core::parse::IRParser parser;
 
 public:
 	Ocl2Inspire(core::IRBuilder& build) :
-		builder(build), parser(build.getNodeManager()) {
-	}
+		builder(build) { }
 
 	bool extractSizeFromSizeof(const core::ExpressionPtr& arg,
 			core::ExpressionPtr& size, core::TypePtr& type, bool foundMul = false);
 
-	core::ExpressionPtr getClCreateBuffer(bool copyHostPtr);
+	core::ExpressionPtr getClCreateBuffer(bool copyHostPtr, bool setErrcodeRet);
 	core::ExpressionPtr getClCopyBuffer();
 	core::ExpressionPtr getClCopyBufferFallback();
 	core::ExpressionPtr getClWriteBuffer();

@@ -167,6 +167,25 @@ public:
 
 };
 
+template<typename Lambda>
+class CachedLambdaNodeMapping : public CachedNodeMapping {
+	Lambda lambda;
+	bool mapTypes;
+public:
+	CachedLambdaNodeMapping(Lambda lambda, bool mapTypes)
+		: lambda(lambda), mapTypes(mapTypes) { };
+
+	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+		if (!mapTypes && ptr->getNodeCategory() == NC_Type) return ptr;
+		return lambda(ptr->substitute(ptr->getNodeManager(), *this));
+	}
+};
+
+template<typename Lambda>
+CachedLambdaNodeMapping<Lambda> makeCachedLambdaMapper(Lambda lambda, bool mapTypes = false) {
+	return CachedLambdaNodeMapping<Lambda>(lambda, mapTypes);
+}
+
 } // end namespace transform
 } // end namespace core
 } // end namespace insieme

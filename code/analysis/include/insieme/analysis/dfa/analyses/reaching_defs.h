@@ -38,30 +38,19 @@
 
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/problem.h"
-
-#include "insieme/analysis/access.h"
 #include "insieme/analysis/dfa/analyses/extractors.h"
 
 namespace insieme { namespace analysis { namespace dfa { 
-/**
- * Define the extractor for CFG Blocks. In this case we extract the address of
- * the CFG Blocks (an alternative would be to store the block ID)
+
+/** 
+ * Extractor for LValue entities from the CFG
  */
 template <>
-inline typename container_type_traits< dfa::elem<cfg::BlockPtr> >::type 
-extract(const Entity< elem<cfg::BlockPtr> >& e, const CFG& cfg) {
-	
-	typedef typename container_type_traits< dfa::elem<cfg::BlockPtr> >::type Container;
+typename container_type_traits< dfa::elem<cfg::Address>  >::type 
+extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg);
 
-	Container entities;
-	auto collector = [&entities] (const cfg::BlockPtr& block) { entities.insert( block ); };
-	cfg.visitDFS(collector);
-
-	return entities;
-}
 
 namespace analyses {
-
 
 /**
  * Define the DataFlow problem for Reaching Definitions 
@@ -78,7 +67,7 @@ class ReachingDefinitions:
 	public Problem<
 				ReachingDefinitions, 
 				ForwardAnalysisTag, 
-				Entity< dfa::elem<Access>, dfa::elem<cfg::BlockPtr> >, 
+				Entity< dfa::elem<cfg::Address> >, 
 				PowerSet
 			> 
 {
@@ -86,10 +75,10 @@ class ReachingDefinitions:
 	typedef Problem<
 				ReachingDefinitions, 
 				ForwardAnalysisTag, 
-				Entity< dfa::elem<Access>, dfa::elem<cfg::BlockPtr> >, 
+				Entity< dfa::elem<cfg::Address> >, 
 				PowerSet
 			> Base;
-	
+
 public:
 
 	typedef typename Base::direction_tag direction_tag;
@@ -107,11 +96,7 @@ public:
 
 	inline value_type bottom() const {
 		// the bottom element is the empty set 
-		const auto& lhsBase = extracted.getLeftBaseSet();
-		return makeCartProdSet(
-				lhsBase, 
-				std::set<cfg::BlockPtr>( { cfg.getBlockPtr(cfg.entry()) } ) 
-			).expand();
+		return extracted;
 	}
 
 	value_type meet(const value_type& lhs, const value_type& rhs) const;
@@ -119,6 +104,13 @@ public:
 	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
 
 };
+
+/**
+ * Given a set of definitions reaching a block in the CFG, this method add those definitions to the
+ * given AccessManager.
+ */
+void definitionsToAccesses(const typename ReachingDefinitions::value_type& data, AccessManager& mgr);
+
 
 } } } } // end insieme::analysis::dfa::analyses namespace 
 

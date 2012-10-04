@@ -476,8 +476,8 @@ namespace generator {
 		return std::make_shared<tree::Node>(type, generator);
 	}
 
-	inline TreeGeneratorPtr substitute(const TreeGeneratorPtr& tree, const TreeGeneratorPtr& replacement, const TreeGeneratorPtr& var) {
-		return std::make_shared<tree::Substitute>(tree, replacement, var);
+	inline TreeGeneratorPtr substitute(const TreeGeneratorPtr& tree, const TreeGeneratorPtr& target, const TreeGeneratorPtr& replacement) {
+		return std::make_shared<tree::Substitute>(tree, replacement, target);
 	}
 
 	inline TreeGeneratorPtr let(const string& var, const TreeGeneratorPtr& value, const TreeGeneratorPtr& tree) {

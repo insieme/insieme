@@ -43,6 +43,7 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/lang/basic.h"
 
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/logging.h"

@@ -41,6 +41,8 @@
 using namespace insieme;
 using namespace driver;
 
+using namespace insieme::core::checks;
+
 std::string attributeIdToString(const NodeProperty& prop) {
 	switch(prop) {
 	case NodeProperty::LABEL: return "label";
@@ -171,7 +173,7 @@ void checkSemanticErrors(const MessageList& list, DotNode& currNode, const core:
 	std::sort(errors.begin(), errors.end());
 	std::for_each(errors.begin(), errors.end(), [&currNode, node](const Message& cur) {
 		if(*node == *cur.getAddress().getAddressedNode()) {
-			if(cur.getType() == core::Message::ERROR)
+			if(cur.getType() == core::checks::Message::ERROR)
 				currNode[NodeProperty::COLOR] = "red";
 			else
 				currNode[NodeProperty::COLOR] = "yellow";

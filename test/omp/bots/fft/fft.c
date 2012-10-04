@@ -48,7 +48,8 @@ void compute_w_coefficients(int n, int a, int b, COMPLEX * W)
 	  twoPiOverN = 2.0 * 3.1415926535897932384626434 / n;
 	  for (k = a; k <= b; ++k) {
 	       c = cos(twoPiOverN * k);
-	       c_re(W[k]) = c_re(W[n - k]) = c;
+	       c_re(W[k]) = c;
+		   c_re(W[n - k]) = c;
 	       s = sin(twoPiOverN * k);
 	       c_im(W[k]) = -s;
 	       c_im(W[n - k]) = s;
@@ -72,7 +73,8 @@ void compute_w_coefficients_seq(int n, int a, int b, COMPLEX * W)
 	  twoPiOverN = 2.0 * 3.1415926535897932384626434 / n;
 	  for (k = a; k <= b; ++k) {
 	       c = cos(twoPiOverN * k);
-	       c_re(W[k]) = c_re(W[n - k]) = c;
+	       c_re(W[k]) = c;
+		   c_re(W[n - k]) = c;
 	       s = sin(twoPiOverN * k);
 	       c_im(W[k]) = -s;
 	       c_im(W[n - k]) = s;
@@ -182,7 +184,8 @@ void fft_twiddle_gen1(COMPLEX * in, COMPLEX * out,
 	  int l1 = nWdnti + nWdntm * k;
 	  int l0;
 
-	  r0 = i0 = 0.0;
+	  r0 = 0.0;
+	  i0 = 0.0;
 	  for (j = 0, jp = in, l0 = 0; j < r; ++j, jp += m) {
 	       rw = c_re(W[l0]);
 	       iw = c_im(W[l0]);
@@ -215,6 +218,7 @@ void fft_twiddle_gen(int i, int i1, COMPLEX * in, COMPLEX * out, COMPLEX * W, in
 				nWdn, r, m);
      }
      #pragma omp taskwait
+     return;
 }
 void fft_twiddle_gen_seq(int i, int i1, COMPLEX * in, COMPLEX * out, COMPLEX * W,
                          int nW, int nWdn, int r, int m)

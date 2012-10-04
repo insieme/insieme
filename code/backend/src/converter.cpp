@@ -46,8 +46,7 @@
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/variable_manager.h"
 
-#include "insieme/core/ir_check.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -61,8 +60,8 @@ namespace backend {
 
 		// only for debugging purposes ...
 //		LOG(INFO) << "\n\nBefore Preprocessed code: \n" << core::printer::PrettyPrinter(source, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-//		LOG(INFO) << "Semantic Checks Before Preprocessing: " << core::check(source, core::checks::getFullCheck());
-//		assert(core::check(source, core::checks::getFullCheck()).empty() && "Expected error free input program!");
+//		LOG(INFO) << "Semantic Checks Before Preprocessing: " << core::checks::check(source);
+//		assert(core::checks::check(source).empty() && "Expected error free input program!");
 
 		utils::Timer timer = insieme::utils::Timer(getConverterName() + " Preprocessing");
 
@@ -74,8 +73,8 @@ namespace backend {
 
 		// only for debugging purposes ...
 //		LOG(INFO) << "\nPreprocessed code: \n" << core::printer::PrettyPrinter(processed, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-//		LOG(INFO) << "Semantic Checks: " << core::check(processed, core::checks::getFullCheck());
-//		for_each(core::check(processed, core::checks::getFullCheck()).getAll(), [](const core::Message& msg) {
+//		LOG(INFO) << "Semantic Checks: " << core::checks::check(processed);
+//		for_each(core::checks::check(processed).getAll(), [](const core::Message& msg) {
 //			LOG(INFO) << msg << " @ " << *msg.getAddress();
 //		});
 //		assert(core::check(processed, core::checks::getFullCheck()).getErrors().empty() && "Errors encountered after pre-processing");

@@ -288,7 +288,7 @@ irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi)
 irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 	irt_circular_work_buffer *queue = &target->sched_data.queue;
-	if(irt_g_worker_count == 1 || irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH-2) {
+	if(/*irt_g_worker_count == 1 ||*/ irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH-2) {
 		irt_worker_run_immediate(target, range, impl_id, args);
 		return NULL;
 	}

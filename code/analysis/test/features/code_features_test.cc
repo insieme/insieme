@@ -39,7 +39,6 @@
 #include "insieme/analysis/features/code_features.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
@@ -60,24 +59,24 @@ namespace features {
 
 	TEST(FeatureAggregation, Basic) {
 		NodeManager mgr;
-		parse::IRParser parser(mgr);
+		IRBuilder builder(mgr);
 		auto& basic = mgr.getLangBasic();
 
+		std::map<std::string, NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+
 		// load some code sample ...
-		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i));"
-			"	for(decl uint<4>:j = 5 .. 25 : 1) {"
-			"		if ( (j < 10 ) ) {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+		auto forStmt = builder.parseStmt(
+			"for(uint<4> i = 10u .. 50u : 1u) {"
+			"	v[i];"
+			"	for(uint<4> j = 5u .. 25u : 1u) {"
+			"		if ( j < 10u ) {"
+			"			v[i+j]; v[i+j];"
 			"		} else {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
+			"			v[i-j]; v[i-j];"
 			"		};"
 			"	};"
-			"}") );
-
+			"}", symbols).as<ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 //		EXPECT_TRUE(scop::ScopRegion::toScop(forStmt));
@@ -112,23 +111,26 @@ namespace features {
 
 	TEST(FeatureAggregation, Complex) {
 		NodeManager mgr;
-		parse::IRParser parser(mgr);
+		IRBuilder builder(mgr);
 		auto& basic = mgr.getLangBasic();
 
+		std::map<std::string, NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+		symbols["M"] = builder.variable(builder.parseType("uint<4>"));
+		symbols["N"] = builder.variable(builder.parseType("uint<4>"));
+
 		// load some code sample ...
-		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-			"for(decl uint<4>:i = 10 .. uint<4>:M : 1) {"
-			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i));"
-			"	for(decl uint<4>:j = 5 .. uint<4>:N : 1) {"
-			"		if ( (j < 10 ) ) {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+		auto forStmt = builder.parseStmt(
+			"for(uint<4> i = 10u .. M : 1u) {"
+			"	v[i];"
+			"	for(uint<4> j = 5u .. N : 1u) {"
+			"		if ( j < 10u ) {"
+			"			v[i+j]; v[i+j];"
 			"		} else {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
-			"		};"
-			"	};"
-			"}") );
+			"			v[i-j]; v[i-j];"
+			"		}"
+			"	}"
+			"}", symbols).as<ForStmtPtr>();
 
 
 		EXPECT_TRUE(forStmt);
@@ -165,7 +167,6 @@ namespace features {
 	TEST(OperatorStatistics, Basic) {
 
 		NodeManager mgr;
-		parse::IRParser parser(mgr);
 		auto& basic = mgr.getLangBasic();
 
 		auto op1 = basic.getRefDeref();
@@ -213,24 +214,24 @@ namespace features {
 	TEST(OperatorStatistic, Extractor) {
 
 		NodeManager mgr;
-		parse::IRParser parser(mgr);
+		IRBuilder builder(mgr);
 		auto& basic = mgr.getLangBasic();
 
+		std::map<std::string, NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+
 		// load some code sample ...
-		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i));"
-			"	for(decl uint<4>:j = 5 .. 25 : 1) {"
-			"		if ( (j < 10 ) ) {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+		auto forStmt = builder.parseStmt(
+			"for(uint<4> i = 10u .. 50u : 1u) {"
+			"	v[i];"
+			"	for(uint<4> j = 5u .. 25u : 1u) {"
+			"		if ( j < 10u ) {"
+			"			v[i+j]; v[i+j];"
 			"		} else {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
+			"			v[i-j]; v[i-j];"
 			"		};"
 			"	};"
-			"}") );
-
+			"}", symbols).as<ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 
@@ -266,7 +267,6 @@ namespace features {
 	TEST(FeatureValues, Basic) {
 
 		NodeManager mgr;
-		parse::IRParser parser(mgr);
 		auto& basic = mgr.getLangBasic();
 
 		auto op1 = basic.getRefDeref();
@@ -301,24 +301,24 @@ namespace features {
 	TEST(CodeFeatures, SimpleFeatures) {
 
 		NodeManager mgr;
-		parse::IRParser parser(mgr);
+		IRBuilder builder(mgr);
 		auto& basic = mgr.getLangBasic();
 
+		std::map<std::string, NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+
 		// load some code sample ...
-		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i));"
-			"	for(decl uint<4>:j = 5 .. 25 : 1) {"
-			"		if ( (j < 10 ) ) {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+		auto forStmt = builder.parseStmt(
+			"for(uint<4> i = 10u .. 50u : 1u) {"
+			"	v[i];"
+			"	for(uint<4> j = 5u .. 25u : 1u) {"
+			"		if ( j < 10u ) {"
+			"			v[i+j]; v[i+j];"
 			"		} else {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
+			"			v[i-j]; v[i-j];"
 			"		};"
 			"	};"
-			"}") );
-
+			"}", symbols).as<ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 

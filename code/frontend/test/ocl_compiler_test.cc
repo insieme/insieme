@@ -38,7 +38,7 @@
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
@@ -137,7 +137,7 @@ public:
 }
 
 TEST(OclCompilerTest, HelloCLTest) {
-	Logger::get(std::cerr, DEBUG);
+	Logger::get(std::cerr, DEBUG, 2);
     CommandLineOptions::Verbosity = 2;
     core::NodeManager manager;
     core::ProgramPtr program = core::Program::get(manager);
@@ -163,13 +163,13 @@ TEST(OclCompilerTest, HelloCLTest) {
 
 //    LOG(INFO) << pp;
 
-    auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+    auto errors = core::checks::check(program).getAll();
 
     EXPECT_EQ(0u, errors.size());
 
     std::sort(errors.begin(), errors.end());
 
-    for_each(errors, [](const core::Message& cur) {
+    for_each(errors, [](const core::checks::Message& cur) {
         LOG(INFO) << cur << std::endl;
 /*        core::NodeAddress address = cur.getAddress();
         core::NodePtr context = address.getParentNode(address.getDepth()-1);

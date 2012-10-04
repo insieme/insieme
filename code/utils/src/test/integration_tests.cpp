@@ -144,11 +144,20 @@ namespace test {
 
 				} else {
 					// use default file name
-					files.push_back((testCaseDir / (cur + ".c")).string());
+					if (fs::exists(testCaseDir / (cur + ".c")))
+						// This is a C test case 
+						files.push_back((testCaseDir / (cur + ".c")).string());
+					else {
+						// this must be a c++ test case
+						assert(fs::exists(testCaseDir / (cur + ".cpp")));
+						files.push_back((testCaseDir / (cur + ".cpp")).string());
+					}
 				}
 
 				// collect flags
 				bool enableOpenMP = false;
+				bool enableOpenCL = false;
+				map<string,string> definitions;
 				auto flagsFile = testCaseDir / "insieme.flags";
 				if (fs::exists(flagsFile)) {
 					// just check for special flags
@@ -164,18 +173,66 @@ namespace test {
 						string flag;
 						inputs >> flag;
 						std::remove(flag.begin(), flag.end(), ' ');
-						if (!flag.empty()) {
-							if (flag == "--omp-sema") {
-								// enable the OpenMP frontend
-								enableOpenMP = true;
+						if (flag.empty()) continue;
+
+						// process flags
+						if (flag == "--omp-sema") {
+							// enable the OpenMP frontend
+							enableOpenMP = true;
+						}
+						if (flag == "--opencl") {
+							// enable the OpenCL frontend
+							enableOpenCL = true;
+						}
+
+						if (flag.size() > 2 && flag[0] == '-' && flag[1] == 'D') {
+							string def = flag.substr(2);
+							std::size_t eq_pos = def.find('=');
+							if (eq_pos == std::string::npos) {
+								// there is no equal sign => just define string
+								definitions[def] = "";
+							} else {
+								definitions[def.substr(0,eq_pos)] = def.substr(eq_pos+1);
 							}
 						}
 					}
 					inputs.close();
 				}
 
+				// collect compiler arguments
+				vector<string> compilerFlags;
+				auto compilerFlagsFile = testCaseDir / "test-gcc.flags";
+				if (fs::exists(compilerFlagsFile)) {
+					// just check for special flags
+					fs::ifstream inputs;
+					inputs.open(compilerFlagsFile);
+					if (!inputs.is_open()) {
+						LOG(log::WARNING) << "Unable to open flag file " << compilerFlagsFile.string();
+						continue;
+					}
+
+					// read entry by entry
+					while (!inputs.eof()) {
+						string flag;
+						inputs >> flag;
+						std::remove(flag.begin(), flag.end(), ' ');
+						if (flag.empty()) continue;
+
+						// process flag
+						if (fs::exists(testCaseDir / flag)) {
+							// it is an extra file to be compiled => use absolute path
+							compilerFlags.push_back((testCaseDir / flag).string());
+						} else {
+							// accept as ordinary flag
+							compilerFlags.push_back(flag);
+						}
+					}
+					inputs.close();
+				}
+
+
 				// add test case
-				res.push_back(IntegrationTestCase(prefix + cur, files, includeDirs, enableOpenMP));
+				res.push_back(IntegrationTestCase(prefix + cur, files, includeDirs, enableOpenMP, enableOpenCL, definitions, compilerFlags));
 			}
 
 			return res;

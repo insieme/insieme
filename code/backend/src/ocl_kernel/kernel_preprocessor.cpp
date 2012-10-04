@@ -49,8 +49,8 @@
 #include "insieme/core/dump/binary_dump.h"
 
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/ir_check.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"

@@ -701,6 +701,10 @@ private:
 				return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
 			}
 
+			if(manager.getLangBasic().isRefAssign(literal)) {
+				return static_pointer_cast<const CallExpr>(builder.assign(args.at(0), args.at(1)));
+			}
+
 			CallExprPtr newCall = builder.callExpr(literal, args);
 
 			return newCall;
@@ -753,6 +757,26 @@ private:
 
 		// recursive replacement has to be continued
 		NodePtr res = ptr->substitute(manager, *this);
+
+		// fix generic operators ... gen.eq => int.eq if parameters are properly instantiated
+		if (res->getNodeType() == NT_CallExpr) {
+			auto& basic = manager.getLangBasic();
+			CallExprPtr call = res.as<CallExprPtr>();
+			if (basic.isGenOp(call->getFunctionExpr())) {
+
+				// see whether operation can be replaced
+				auto oldOp = call->getFunctionExpr().as<LiteralPtr>();
+				auto opCode = basic.getOperator(oldOp);
+				auto newOp = basic.getOperator(call->getArgument(0)->getType(), opCode);
+
+				// if there was a change
+				if (newOp && newOp != oldOp) {
+					// exchange operator
+					IRBuilder builder(manager);
+					res = builder.callExpr(call->getType(), newOp, call->getArguments());
+				}
+			}
+		}
 
 		// check whether something has changed ...
 		if (res == ptr) {

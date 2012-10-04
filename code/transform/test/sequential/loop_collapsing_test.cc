@@ -39,9 +39,8 @@
 #include "insieme/transform/sequential/loop_collapsing.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 #include "insieme/utils/test/test_utils.h"
 
@@ -54,16 +53,13 @@ namespace sequential {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		core::parse::IRParser parser(manager);
-
-		auto forStmt = static_pointer_cast<core::ForStmtPtr>( parser.parseStatement(
-				"for(decl int<4>:i = 0 .. 50 : 1) {"
-				"	for(decl int<4>:j = 10 .. 80 : 1) {"
-				"		(i + j);"
-				"	};"
-				"}"
-			)
-		);
+		auto forStmt = builder.parseStmt(
+			"for(int<4> i = 0 .. 50) {"
+			"	for(int<4> j = 10 .. 80) {"
+			"		i + j;"
+			"	};"
+			"}"
+		).as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 
@@ -75,7 +71,7 @@ namespace sequential {
 		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v3 = 0 .. (cloog.ceil((50-0), 1)*cloog.ceil((80-10), 1)) : 1)");
 		EXPECT_PRED2(containsSubString, res, "((((v3/cloog.ceil((80-10), 1))*1)+0)+(((v3%cloog.ceil((80-10), 1))*1)+10))");
 
-		EXPECT_EQ(vector<core::Message>(),  core::check(transformed, core::checks::getFullCheck()).getAll());
+		EXPECT_EQ(vector<core::checks::Message>(),  core::checks::check(transformed).getAll());
 
 	}
 
@@ -84,18 +80,15 @@ namespace sequential {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		core::parse::IRParser parser(manager);
-
-		auto forStmt = static_pointer_cast<core::ForStmtPtr>( parser.parseStatement(
-				"for(decl int<4>:i = 0 .. 50 : 1) {"
-				"	for(decl int<4>:j = 10 .. 80 : 2) {"
-				"		for(decl int<4>:k = 50 .. 90 : 3) {"
-				"			((i + j) + k);"
-				"		};"
-				"	};"
+		auto forStmt = builder.parseStmt(
+				"for(int<4> i = 0 .. 50 ) {"
+				"	for(int<4> j = 10 .. 80 : 2) {"
+				"		for(int<4> k = 50 .. 90 : 3) {"
+				"			i + j + k;"
+				"		}"
+				"	}"
 				"}"
-			)
-		);
+			).as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 
@@ -107,7 +100,7 @@ namespace sequential {
 		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v5 = 0 .. (cloog.ceil(((cloog.ceil((50-0), 1)*cloog.ceil((80-10), 2))-0), 1)*cloog.ceil((90-50), 3)) : 1)");
 		EXPECT_PRED2(containsSubString, res, "((((((((v5/cloog.ceil((90-50), 3))*1)+0)/cloog.ceil((80-10), 2))*1)+0)+((((((v5/cloog.ceil((90-50), 3))*1)+0)%cloog.ceil((80-10), 2))*2)+10))+(((v5%cloog.ceil((90-50), 3))*3)+50))");
 
-		EXPECT_EQ(vector<core::Message>(),  core::check(transformed, core::checks::getFullCheck()).getAll());
+		EXPECT_EQ(vector<core::checks::Message>(),  core::checks::check(transformed).getAll());
 
 	}
 

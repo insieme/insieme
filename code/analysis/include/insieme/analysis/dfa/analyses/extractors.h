@@ -44,26 +44,41 @@ namespace insieme {
 namespace analysis {
 namespace dfa {
 
+// template <>
+// inline typename container_type_traits< dfa::elem<Access>  >::type
+// extract(const Entity< dfa::elem<Access> >& e, const CFG& cfg) { 
+
+//	std::set<Access> entities;
+
+//	auto collector = [&entities, &cfg] (const cfg::BlockPtr& block) {
+//		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
+//
+//			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { /* skip */ return; }
+//
+//	// 		extractFromStmt( core::StatementAddress(cur.getAnalysisStatement()), entities, cfg.getTmpVarMap() );
+//		});
+//	};
+//	cfg.visitDFS(collector);
+
+//	return entities;
+
+// }
+
+/**
+ * Define the extractor for CFG Blocks. In this case we extract the address of
+ * the CFG Blocks (an alternative would be to store the block ID)
+ */
 template <>
-inline typename container_type_traits< dfa::elem<Access>  >::type
-extract(const Entity< dfa::elem<Access> >& e, const CFG& cfg) { 
+inline typename container_type_traits< dfa::elem<cfg::BlockPtr> >::type 
+extract(const Entity< elem<cfg::BlockPtr> >& e, const CFG& cfg) {
+	
+	typedef typename container_type_traits< dfa::elem<cfg::BlockPtr> >::type Container;
 
-	std::set<Access> entities;
-
-	auto collector = [&entities, &cfg] (const cfg::BlockPtr& block) {
-		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
-
-			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { /* skip */ return; }
-
-			std::cout << cur << std::endl;
-
-			extractFromStmt( core::StatementAddress(cur.getAnalysisStatement()), entities, cfg.getAliasMap() );
-		});
-	};
+	Container entities;
+	auto collector = [&entities] (const cfg::BlockPtr& block) { entities.insert( block ); };
 	cfg.visitDFS(collector);
 
 	return entities;
-
 }
 
 } } } // end insieme::analysis::dfa::analyses namespace 

@@ -106,7 +106,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 			irt_wi_join(bench_wi);
 		}
 		uint64 total_time = irt_time_ms() - start_time;
-		uint64 total_wis = pow(NUM_ITER, NUM_LEVELS);
+		uint64 total_wis = (uint64)pow((double)NUM_ITER, (double)NUM_LEVELS);
 		uint64 wis_per_sec = (uint64)(total_wis/((double)total_time/1000.0));
 		printf("======================\n= manual irt wi benchmark done\n");
 		printf("= number of wis executed: %lu\n", check_val);

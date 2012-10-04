@@ -40,13 +40,20 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/parser2/parser.h"
+
+#include "insieme/core/parser2/detail/parser.h"
+
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/encoder/lists.h"
 
 namespace insieme {
 namespace core {
 namespace parser {
 
+	// import namespaces since this was re-factored afterward
+	using namespace insieme::core::parser::detail;
 
 	namespace {
 
@@ -79,12 +86,16 @@ namespace parser {
 			return core::convertList<element>(source);	// use core converter
 		}
 
+		bool isReference(const ExpressionPtr& cur) {
+			return cur->getType()->getNodeType() == core::NT_RefType;
+		}
+
 		ExpressionPtr getOperand(Context& cur, int index) {
 			return cur.tryDeref(cur.getTerm(index).as<ExpressionPtr>());
 		};
 
 		template<typename Target>
-		TokenIter findNext(const Grammar::TermInfo& info, const TokenIter begin, const TokenIter& end, const Target& token) {
+		TokenIter findNext(const Grammar::TermInfo& info, const TokenIter begin, const TokenIter& end, const Target& token, bool angleBackets = false) {
 			vector<Token> parenthese;
 			for(TokenIter cur = begin; cur != end; ++cur) {
 
@@ -96,7 +107,12 @@ namespace parser {
 				if (info.isLeftParenthese(*cur)) {
 					parenthese.push_back(info.getClosingParenthese(*cur));
 				}
-				if (info.isRightParenthese(*cur)) {
+
+				if (angleBackets && *cur == '<') {
+					parenthese.push_back(Token::createSymbol('>'));
+				}
+
+				if (info.isRightParenthese(*cur) || (angleBackets && *cur == '>')) {
 					// if this is not matching => return end (no next token)
 					if (parenthese.empty() || parenthese.back() != *cur) {
 						return end;
@@ -115,7 +131,7 @@ namespace parser {
 		}
 
 
-		vector<TokenRange> split(const Grammar::TermInfo& info, const TokenRange& range, char sep) {
+		vector<TokenRange> split(const Grammar::TermInfo& info, const TokenRange& range, char sep, bool angleBackets = false) {
 			assert(!info.isLeftParenthese(Token::createSymbol(sep)));
 			assert(!info.isRightParenthese(Token::createSymbol(sep)));
 
@@ -123,11 +139,12 @@ namespace parser {
 			TokenIter end = range.end();
 
 			vector<TokenRange> res;
-			TokenIter next = findNext(info, start, end, sep);
+
+			TokenIter next = findNext(info, start, end, sep, angleBackets);
 			while(next != end) {
 				res.push_back(TokenRange(start,next));
 				start = next+1;
-				next = findNext(info, start, end, sep);
+				next = findNext(info, start, end, sep, angleBackets);
 			}
 
 			// add final sub-range
@@ -213,12 +230,13 @@ namespace parser {
 
 			// process parameters
 			TypeList params;
-			for(const TokenRange& param : split(info, params_block, ',')) {
+			for(const TokenRange& param : split(info, params_block, ',', true)) {
 				// type is one less from the end - by skipping the id
 				TokenRange typeRange = param - 1;
 
 				// parse type
 				TypePtr type = cur.grammar.match(cur, typeRange.begin(), typeRange.end(), "T").as<TypePtr>();
+				assert(type && "Unable to parse parameter type!");
 
 				// add to parameter type list
 				params.push_back(type);
@@ -424,6 +442,7 @@ namespace parser {
 			auto A = rec("A");
 
 			auto id = identifier();
+			auto kw = keyword();
 
 			Grammar g(start);
 
@@ -571,6 +590,14 @@ namespace parser {
 					}
 			));
 
+			g.addRule("T", rule(
+					seq("(", list(E, ","), ")"),
+					[](Context& cur)->NodePtr {
+						auto& terms = cur.getTerms();
+						auto elements = convertList<ExpressionPtr>(terms);
+						return cur.tupleExpr(elements);
+					}
+			));
 
 			// add array, vector, ref and channel types
 			g.addRule("T", rule(
@@ -709,9 +736,21 @@ namespace parser {
 					}
 			));
 
-			// add lang-basic literals
+			// identifier literals
 			g.addRule("E", rule(
-					seq(id, opt(seq(".", list(id, ".")))),
+					seq("lit(", cap(any(Token::String_Literal)), ")"),
+					[](Context& cur)->NodePtr {
+						// just create an identifier literal
+						string value = cur.getSubRange(0).front().getLexeme();
+						value = value.substr(1,value.size()-2);
+						return cur.getIdentifierLiteral(value);
+					}
+			));
+
+			// add lang-basic literals
+			auto part = id | keyword("ref") | keyword("array") | keyword("vector") | keyword("channel");
+			g.addRule("E", rule(
+					seq(part, opt(seq(".", list(part, ".")))),
 					[](Context& cur)->NodePtr {
 						// join matched token range and see whether it is a literal!
 						std::stringstream name;
@@ -797,6 +836,38 @@ namespace parser {
 						return cur.mod(a,b);
 					},
 					-13
+			));
+
+			// -- bitwise arithmetic expressions --
+					
+			g.addRule("E", rule(
+					seq(E, "&", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.bitwiseAnd(a,b);
+					},
+					-8
+			));
+
+			g.addRule("E", rule(
+					seq(E, "^", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.bitwiseXor(a,b);
+					},
+					-7
+			));
+
+			g.addRule("E", rule(
+					seq(E, "|", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = getOperand(cur, 0);
+						ExpressionPtr b = getOperand(cur, 1);
+						return cur.bitwiseOr(a,b);
+					},
+					-6
 			));
 
 			// -- logical expressions --
@@ -887,7 +958,7 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = getOperand(cur, 0);
 						ExpressionPtr b = getOperand(cur, 1);
-						return cur.eq(a,b);
+						return cur.ne(a,b);
 					},
 					-9
 			));
@@ -948,6 +1019,19 @@ namespace parser {
 			));
 
 
+			// -- add support for if-then-else operator ---
+			g.addRule("E", rule(
+					seq(E,"?",E,":",E),
+					[](Context& cur)->NodePtr {
+						return cur.ite(
+							cur.getTerm(0).as<ExpressionPtr>(),
+							cur.wrapLazy(cur.getTerm(1).as<ExpressionPtr>()),
+							cur.wrapLazy(cur.getTerm(2).as<ExpressionPtr>())
+						);
+					},
+					-3
+			));
+
 
 			// -- vector / array access --
 
@@ -956,6 +1040,13 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
 						ExpressionPtr b = getOperand(cur, 1);
+
+						// support signed indices (automatic cast to unsigned)
+						auto& basic = cur.getLangBasic();
+						if (basic.isSignedInt(b->getType())) {
+							b = cur.castExpr(basic.getUInt8(), b);
+						}
+
 						if (a->getType()->getNodeType() == NT_RefType) {
 							return cur.arrayRefElem(a, b);
 						}
@@ -1013,6 +1104,10 @@ namespace parser {
 						terms.erase(terms.begin());
 
 						TypePtr type = fun->getType();
+						if (analysis::isRefType(type)) {
+							fun = cur.deref(fun);
+							type = fun->getType();
+						}
 						if (type->getNodeType()!=NT_FunctionType) {
 							return fail(cur, "Calling non-function type!");
 						}
@@ -1091,11 +1186,39 @@ namespace parser {
 					}
 			));
 
+			// ------------- add parallel constructs -------------
+
+			g.addRule("S", rule(
+					seq("spawn", E, ";"),
+					[](Context& cur)->NodePtr {
+						return cur.parallel(cur.getTerm(0).as<ExpressionPtr>(), 1);
+					}
+			));
+
+			g.addRule("S", rule(
+					seq("sync;"),
+					[](Context& cur)->NodePtr {
+						const auto& basic = cur.getNodeManager().getLangBasic();
+						return cur.callExpr(basic.getUnit(), basic.getMergeAll());
+					}
+			));
+
+			g.addRule("S", rule(
+					seq("syncAll;"),
+					[](Context& cur)->NodePtr {
+						const auto& basic = cur.getNodeManager().getLangBasic();
+						return cur.callExpr(basic.getUnit(), basic.getMergeAll());
+					}
+			));
+
 
 			// --------------- add statement rules ---------------
 
 			// every expression is a statement (if terminated by ;)
-			g.addRule("S", rule(seq(E,";"), forward));
+			g.addRule("S", rule(seq(E,";"), forward, -1));	// lower priority since less likely
+
+			// allow ; at the end of statements
+			g.addRule("S", rule(seq(S,";"), forward, -2));	// lower priority since even less likely
 
 			// every declaration is a statement
 			g.addRule("S", rule(seq(let, ";"), [](Context& cur)->NodePtr { return cur.getNoOp(); }));
@@ -1120,6 +1243,12 @@ namespace parser {
 						IRBuilder builder(cur.manager);
 						TypePtr type = cur.getTerm(0).as<TypePtr>();
 						ExpressionPtr value = builder.undefined(type);
+
+						// wrap into a ref.var if it is a reference type
+						if (type->getNodeType() == core::NT_RefType) {
+							value = builder.refVar(builder.undefined(type.as<RefTypePtr>()->getElementType()));
+						}
+
 						auto decl = builder.declarationStmt(type, value);
 						// register name within variable manager
 						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
@@ -1183,6 +1312,34 @@ namespace parser {
 					-1		// lower priority for this rule (default=0)
 			));
 
+			// switch
+			g.addRule("S", rule(
+					seq("switch(", E, ") {", loop(seq("case", E, ":", S)), opt(seq("default:", S)),"}"),
+					[](Context& cur)->NodePtr {
+						const auto& terms = cur.getTerms();
+
+						ExpressionPtr expr = terms[0].as<ExpressionPtr>();
+
+						vector<SwitchCasePtr> cases;
+						for(unsigned i = 1; i+1<terms.size(); i+=2) {
+							ExpressionPtr caseValue = terms[i].as<ExpressionPtr>();
+							StatementPtr caseBody = terms[i+1].as<StatementPtr>();
+
+							// check that value is a literal
+							if (!caseValue.isa<LiteralPtr>()) return NodePtr();
+
+							// add case
+							cases.push_back(cur.switchCase(caseValue.as<LiteralPtr>(), caseBody));
+						}
+
+						// get default body
+						StatementPtr defaultBody = (terms.size() % 2) ? cur.getNoOp(): terms.back().as<StatementPtr>();
+
+						// build switch and be done
+						return cur.switchStmt(expr, cases, defaultBody);
+					}
+			));
+
 
 			// while statement
 			g.addRule("S", rule(
@@ -1212,37 +1369,18 @@ namespace parser {
 
 			// for loop without step size
 			g.addRule("S", rule(
-					varScop(seq("for(", iter, "=", E, "..", E, ")", S)),
+					varScop(seq("for(", iter, "=", E, "..", E, opt(seq(":",E)), ")", S)),
 					[](Context& cur)->NodePtr {
 						const auto& terms = cur.getTerms();
 						TypePtr type = terms[0].as<TypePtr>();
 						VariablePtr iter = terms[1].as<VariablePtr>();
 						ExpressionPtr start = terms[2].as<ExpressionPtr>();
 						ExpressionPtr end = terms[3].as<ExpressionPtr>();
-						StatementPtr body = terms[4].as<StatementPtr>();
 
-						auto& basic = cur.manager.getLangBasic();
-						if (!basic.isInt(type)) return fail(cur, "Iterator has to be of integer type!");
+						// extract step if present
+						ExpressionPtr step = (terms.size() == 6u)?terms[4].as<ExpressionPtr>():cur.literal(type, "1");
 
-						IRBuilder builder(cur.manager);
-
-						// build loop
-						ExpressionPtr step = builder.literal(type, "1");
-						return cur.forStmt(iter, start, end, step, body);
-					}
-			));
-
-			// for loop with step size
-			g.addRule("S", rule(
-					varScop(seq("for(", iter, "=", E, "..", E, ":", E, ")", S)),
-					[](Context& cur)->NodePtr {
-						const auto& terms = cur.getTerms();
-						TypePtr type = terms[0].as<TypePtr>();
-						VariablePtr iter = terms[1].as<VariablePtr>();
-						ExpressionPtr start = terms[2].as<ExpressionPtr>();
-						ExpressionPtr end = terms[3].as<ExpressionPtr>();
-						ExpressionPtr step = terms[4].as<ExpressionPtr>();
-						StatementPtr body = terms[5].as<StatementPtr>();
+						StatementPtr body = terms.back().as<StatementPtr>();
 
 						auto& basic = cur.manager.getLangBasic();
 						if (!basic.isInt(type)) return fail(cur, "Iterator has to be of integer type!");
@@ -1297,17 +1435,26 @@ namespace parser {
 			g.addRule("A", rule(
 					seq(loop(seq(let, ";"), Token::createSymbol(';')),T,"main()", S),
 					[](Context& cur)->NodePtr {
-						IRBuilder builder(cur.manager);
 						TypePtr returnType = (cur.getTerms().end()-2)->as<TypePtr>();
 						StatementPtr body = cur.getTerms().back().as<StatementPtr>();
-						ExpressionPtr main = builder.lambdaExpr(returnType, body, VariableList());
-						return builder.createProgram(toVector(main));
+						ExpressionPtr main = cur.lambdaExpr(returnType, body, VariableList());
+						return cur.createProgram(toVector(main));
+					}
+			));
+
+
+			// ------------- syntactic sugar for lists -------------
+
+			g.addRule("E", rule(
+					seq("[",E,loop(seq(",",E)),"]"),
+					[](Context& cur)->NodePtr {
+						return encoder::toIR(cur.manager, convertList<ExpressionPtr>(cur.getTerms()));
 					}
 			));
 
 
 			// add productions for unknown node type N
-			g.addRule("N", rule(P, forward));
+			g.addRule("N", rule(P, forward, -1));	// type parameter have a lower priority than the rest
 			g.addRule("N", rule(T, forward));
 			g.addRule("N", rule(E, forward));
 			g.addRule("N", rule(S, forward));
@@ -1322,6 +1469,37 @@ namespace parser {
 			return g;
 		}
 
+		/**
+		 * The mark used to annotate selected regions of the code.
+		 */
+		class AddressMark {};
+
+		Grammar buildGrammarForAddresses() {
+			// start with full grammar
+			Grammar g = buildGrammar();
+
+			auto E = rec("E");
+			auto S = rec("S");
+
+			// add rules marking addresses
+			g.addRule("E", rule(seq("$", E, "$"), [](Context& context)->NodePtr {
+				assert(context.getTerms().size() == 1u);
+				NodePtr res = context.markerExpr(context.getTerm(0).as<ExpressionPtr>());
+				res->attachValue<AddressMark>();
+				return res;
+			}));
+
+			g.addRule("S", rule(seq("$", S, "$"), [](Context& context)->NodePtr {
+				assert(context.getTerms().size() == 1u);
+				NodePtr res = context.markerStmt(context.getTerm(0).as<StatementPtr>());
+				res->attachValue<AddressMark>();
+				return res;
+			}));
+
+			// return modified grammar
+			return g;
+		}
+
 	}
 
 	// The various IR Grammer derivations	(initialized globals to avoid race conditions)
@@ -1330,6 +1508,7 @@ namespace parser {
 	const Grammar grammar_exprs		= buildGrammar("E");
 	const Grammar grammar_stmts		= buildGrammar("S");
 	const Grammar grammar_prog		= buildGrammar("A");
+	const Grammar grammar_addr		= buildGrammarForAddresses();
 
 	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
 		try {
@@ -1374,6 +1553,123 @@ namespace parser {
 			throw IRParserException(pe.what());
 		}
 		return ProgramPtr();
+	}
+
+	namespace {
+
+		struct MarkEliminator : public core::transform::CachedNodeMapping {
+			virtual const NodePtr resolveElement(const NodePtr& ptr) {
+
+				// replace recursively
+				NodePtr res = ptr->substitute(ptr->getNodeManager(), *this);
+
+				// eliminate marked nodes
+				if (ptr->hasAttachedValue<AddressMark>()) {
+					// strip off marker expression (also drops annotation)
+					if(res->getNodeType() == core::NT_MarkerExpr) {
+						return res.as<core::MarkerExprPtr>()->getSubExpression();
+					}
+					if (res->getNodeType() == core::NT_MarkerStmt) {
+						return res.as<core::MarkerStmtPtr>()->getSubStatement();
+					}
+					assert(false && "Only marker expressions and statements should be marked.");
+				}
+
+				// return result
+				return res;
+			}
+		};
+
+		NodePtr removeMarks(const core::NodePtr& cur) {
+			return MarkEliminator().map(cur);
+		}
+
+		NodeAddress removeMarks(const core::NodePtr& newRoot, const core::NodeAddress& cur) {
+
+			// handle terminal case => address only references a root node
+			if (cur.isRoot()) {
+
+				// if root is marked => skip
+				if (cur->hasAttachedValue<AddressMark>()) {
+					return core::NodeAddress();
+				}
+
+				// return new root
+				return core::NodeAddress(newRoot);
+			}
+
+			// get cleaned path to parent node
+			NodeAddress parent = removeMarks(newRoot, cur.getParentAddress());
+
+			// skip marked nodes
+			if (cur->hasAttachedValue<AddressMark>()) {
+				return parent;
+			}
+
+			// see whether this is the first non-marked node along the path
+			if (!parent) {
+				return core::NodeAddress(newRoot);
+			}
+
+			// also fix child of marker node
+			if (cur.getDepth() >= 2 && cur.getParentNode()->hasAttachedValue<AddressMark>()) {
+				return parent.getAddressOfChild(cur.getParentAddress().getIndex());
+			}
+
+			// in all other cases just restore same address path
+			return parent.getAddressOfChild(cur.getIndex());
+		}
+
+	}
+
+
+	std::vector<NodeAddress> parse_addresses(NodeManager& manager, const string& code, bool onFailThrow, const std::map<string, NodePtr>& definitions) {
+		try {
+			// parse the input code (all resulting addresses will be marked)
+			NodePtr root = grammar_addr.match(manager, code, onFailThrow, definitions);
+
+			// check the result
+			if (!root) return std::vector<NodeAddress>();
+
+			// search all marked locations within the parsed code fragment
+			std::vector<NodeAddress> res;
+			core::visitDepthFirst(NodeAddress(root), [&](const NodeAddress& cur) {
+				if (cur->hasAttachedValue<AddressMark>()) {
+					// get address to marked sub-construct
+					if(cur->getNodeType() == core::NT_MarkerExpr) {
+						res.push_back(cur.as<core::MarkerExprAddress>()->getSubExpression());
+					} else if (cur->getNodeType() == core::NT_MarkerStmt) {
+						res.push_back(cur.as<core::MarkerStmtAddress>()->getSubStatement());
+					} else {
+						assert(false && "Only marker expressions and statements should be marked.");
+					}
+				}
+			});
+
+			// remove marks from code
+			root = removeMarks(root);
+
+			// remove marker nodes from addresses
+			for(NodeAddress& cur : res) {
+				cur = removeMarks(root, cur);
+			}
+
+			// return list of addresses
+			return res;
+
+		} catch (const ParseException& pe) {
+			throw IRParserException(pe.what());
+		}
+		return std::vector<NodeAddress>();
+	}
+
+
+	/**
+	 * Builds an instance of the full IR Grammar to be customized
+	 * by the user for specific purposes.
+	 */
+	Grammar createGrammar() {
+		return buildGrammar();
 	}
 
 

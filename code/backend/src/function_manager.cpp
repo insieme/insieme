@@ -51,6 +51,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/lang/basic.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
@@ -660,7 +661,7 @@ namespace backend {
 
 				// obtain current lambda and add lambda info
 				auto res = funInfos.insert(std::make_pair(lambda, info));
-				assert(res.second && "Entry should not be already present!");
+				if(!res.second) assert(false && "Entry should not be already present!");
 
 				// add prototype to prototype block
 				declarations->getCode().push_back(cManager->create<c_ast::FunctionPrototype>(codeInfo.function));
@@ -677,8 +678,9 @@ namespace backend {
 				const c_ast::IdentifierPtr& name = pair.first;
 				const core::LambdaExprPtr& lambda = pair.second;
 
-				// unroll function and create function definition
-				core::LambdaExprPtr unrolled = lambdaDefinition->unrollOnce(manager, lambda->getVariable());
+				// peel function and create function definition
+				core::LambdaExprPtr unrolled = lambdaDefinition->peel(manager, lambda->getVariable());
+				assert(!unrolled->isRecursive() && "Peeled function must not be recursive!");
 
 				// create dummy function ... no body
 				const core::FunctionTypePtr& funType = static_pointer_cast<const core::FunctionType>(lambda->getType());

@@ -1,0 +1,14 @@
+
+let int = int<4>;
+
+/**
+ * The following parameter list was making problems due to the , in the types.
+ */
+let f = (ref<array<int,1>> x, ref<vector<int,#a>> y)->unit {
+	// nothing
+};
+
+
+unit main() {
+		
+}

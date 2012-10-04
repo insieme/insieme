@@ -66,6 +66,9 @@ namespace backend {
 		template<> struct info_trait<core::Type> { typedef TypeInfo type; };
 		template<> struct info_trait<core::GenericType> { typedef TypeInfo type; };
 		template<> struct info_trait<core::RefType> { typedef RefTypeInfo type; };
+		template<> struct info_trait<core::StructType> { typedef StructTypeInfo type; };
+		template<> struct info_trait<core::TupleType> { typedef StructTypeInfo type; };
+		template<> struct info_trait<core::UnionType> { typedef UnionTypeInfo type; };
 		template<> struct info_trait<core::ArrayType> { typedef ArrayTypeInfo type; };
 		template<> struct info_trait<core::VectorType> { typedef VectorTypeInfo type; };
 		template<> struct info_trait<core::ChannelType> { typedef ChannelTypeInfo type; };
@@ -133,10 +136,10 @@ namespace backend {
 			const TypeInfo* resolveTypeVariable(const core::TypeVariablePtr& ptr);
 			const TypeInfo* resolveGenericType(const core::GenericTypePtr& ptr);
 
-			const TypeInfo* resolveNamedCompositType(const core::NamedCompositeTypePtr&, bool);
-			const TypeInfo* resolveStructType(const core::StructTypePtr& ptr);
-			const TypeInfo* resolveUnionType(const core::UnionTypePtr& ptr);
-			const TypeInfo* resolveTupleType(const core::TupleTypePtr& ptr);
+			const StructTypeInfo* resolveStructType(const core::StructTypePtr& ptr);
+			const StructTypeInfo* resolveTupleType(const core::TupleTypePtr& ptr);
+
+			const UnionTypeInfo* resolveUnionType(const core::UnionTypePtr& ptr);
 
 			const ArrayTypeInfo* resolveArrayType(const core::ArrayTypePtr& ptr);
 			const VectorTypeInfo* resolveVectorType(const core::VectorTypePtr& ptr);
@@ -150,6 +153,9 @@ namespace backend {
 
 			const TypeInfo* resolveRecType(const core::RecTypePtr& ptr);
 			void resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr);
+
+			template<typename ResInfo>
+			ResInfo* resolveNamedCompositType(const core::NamedCompositeTypePtr&, bool);
 		};
 
 
@@ -167,6 +173,21 @@ namespace backend {
 
 
 	const TypeInfo& TypeManager::getTypeInfo(const core::TypePtr& type) {
+		// take value from store
+		return *(store->resolveType(type));
+	}
+
+	const StructTypeInfo& TypeManager::getTypeInfo(const core::StructTypePtr& type) {
+		// take value from store
+		return *(store->resolveType(type));
+	}
+
+	const StructTypeInfo& TypeManager::getTypeInfo(const core::TupleTypePtr& type) {
+		// take value from store
+		return *(store->resolveType(type));
+	}
+
+	const UnionTypeInfo& TypeManager::getTypeInfo(const core::UnionTypePtr& type) {
 		// take value from store
 		return *(store->resolveType(type));
 	}
@@ -446,7 +467,8 @@ namespace backend {
 			return type_info_utils::createUnsupportedInfo(manager);
 		}
 
-		const TypeInfo* TypeInfoStore::resolveNamedCompositType(const core::NamedCompositeTypePtr& ptr, bool isStruct) {
+		template<typename ResInfo>
+		ResInfo* TypeInfoStore::resolveNamedCompositType(const core::NamedCompositeTypePtr& ptr, bool isStruct) {
 
 			// The resolution of a named composite type is based on 3 steps
 			//		- first, get a name for the resulting C struct / union
@@ -459,7 +481,7 @@ namespace backend {
 			auto fragmentManager = converter.getFragmentManager();
 
 			// fetch a name for the composed type
-			string name = converter.getNameManager().getName(ptr, "gen_type");
+			string name = converter.getNameManager().getName(ptr, "type");
 
 			// get struct and type name
 			c_ast::IdentifierPtr typeName = manager->create(name);
@@ -476,17 +498,45 @@ namespace backend {
 			std::set<c_ast::CodeFragmentPtr> definitions;
 
 			// add elements
-			for_each(ptr->getEntries(), [&](const core::NamedTypePtr& entry) {
+			for(const core::NamedTypePtr& entry : ptr->getEntries()) {
+
+				// get the name of the member
 				c_ast::IdentifierPtr name = manager->create(entry->getName()->getValue());
-				const TypeInfo* info = resolveType(entry->getType());
+				core::TypePtr curType = entry->getType();
+
+				// special handling of variable sized arrays within structs / unions
+				if (curType->getNodeType() == core::NT_ArrayType) {
+					core::ArrayTypePtr array = curType.as<core::ArrayTypePtr>();
+
+					// make sure it is 1-dimensional
+					assert(array->getDimension() == core::IRBuilder(ptr->getNodeManager()).concreteIntTypeParam(1));
+
+					// construct vector type to be used
+					core::TypePtr elementType = array->getElementType();
+					const TypeInfo* info = resolveType(elementType);
+					auto memberType = manager->create<c_ast::VectorType>(info->rValueType);
+
+					// add member
+					type->elements.push_back(var(memberType, name));
+
+					// remember definition
+					if(info->definition) {
+						definitions.insert(info->definition);
+					}
+
+					continue;
+				}
+
+				// build up the type entry
+				const TypeInfo* info = resolveType(curType);
 				c_ast::TypePtr elementType = info->rValueType;
 				type->elements.push_back(var(elementType, name));
 
-				// remember definitons
+				// remember definitions
 				if (info->definition) {
 					definitions.insert(info->definition);
 				}
-			});
+			}
 
 			// create declaration of named composite type
 			auto declCode = manager->create<c_ast::TypeDeclaration>(type);
@@ -498,18 +548,100 @@ namespace backend {
 			definition->addDependencies(definitions);
 
 			// create resulting type info
-			return type_info_utils::createInfo(type, declaration, definition);
+			return type_info_utils::createInfo<ResInfo>(type, declaration, definition);
 		}
 
-		const TypeInfo* TypeInfoStore::resolveStructType(const core::StructTypePtr& ptr) {
-			return resolveNamedCompositType(ptr, true);
+		const StructTypeInfo* TypeInfoStore::resolveStructType(const core::StructTypePtr& ptr) {
+			StructTypeInfo* res = resolveNamedCompositType<StructTypeInfo>(ptr, true);
+
+			// get C node manager
+			auto manager = converter.getCNodeManager();
+			auto fragmentManager = converter.getFragmentManager();
+
+			// define c ast nodes for constructor
+			c_ast::NodePtr ifdef = manager->create<c_ast::OpaqueCode>("#ifdef _MSC_VER");
+			c_ast::NodePtr endif = manager->create<c_ast::OpaqueCode>("#endif\n");
+
+
+			// create list of parameters
+			vector<c_ast::VariablePtr> params;
+			int i = 0;
+			for(const core::NamedTypePtr& cur : ptr) {
+				params.push_back(c_ast::var(resolveType(cur->getType())->rValueType, format("m%0d", i++)));
+			}
+
+			// create struct initialization
+			c_ast::VariablePtr resVar = c_ast::var(res->rValueType,"res");
+			vector<c_ast::NodePtr> elements(params.begin(), params.end());
+
+			c_ast::StatementPtr body = c_ast::compound(
+				manager->create<c_ast::VarDecl>(resVar, manager->create<c_ast::VectorInit>(elements)),
+				c_ast::ret(resVar)
+			);
+
+			// create constructor
+			string name = converter.getNameManager().getName(ptr, "type");
+			c_ast::NodePtr ctr = manager->create<c_ast::Function>(
+					c_ast::Function::INLINE,
+					res->rValueType,
+					manager->create(name + "_ctr"),
+					params,
+					body
+			);
+
+			// add constructor
+			res->constructor = c_ast::CCodeFragment::createNew(fragmentManager, toVector(ifdef, ctr, endif));
+
+			// done
+			return res;
 		}
 
-		const TypeInfo* TypeInfoStore::resolveUnionType(const core::UnionTypePtr& ptr) {
-			return resolveNamedCompositType(ptr, false);
+		const UnionTypeInfo* TypeInfoStore::resolveUnionType(const core::UnionTypePtr& ptr) {
+			UnionTypeInfo* res = resolveNamedCompositType<UnionTypeInfo>(ptr, false);
+
+			// get C node manager
+			auto manager = converter.getCNodeManager();
+			auto fragmentManager = converter.getFragmentManager();
+
+			// create list of constructors for members
+			int i = 0;
+			for(const core::NamedTypePtr& cur : ptr) {
+
+				// define c ast nodes for constructor
+				c_ast::NodePtr ifdef = manager->create<c_ast::OpaqueCode>("#ifdef _MSC_VER");
+				c_ast::NodePtr endif = manager->create<c_ast::OpaqueCode>("#endif\n");
+
+
+				// create current parameter
+				c_ast::VariablePtr param = c_ast::var(resolveType(cur->getType())->rValueType, "value");
+
+				// create union initialization
+				c_ast::VariablePtr resVar = c_ast::var(res->rValueType,"res");
+
+				c_ast::StatementPtr body = c_ast::compound(
+					manager->create<c_ast::VarDecl>(resVar, manager->create<c_ast::VectorInit>(toVector<c_ast::NodePtr>(param))),
+					c_ast::ret(resVar)
+				);
+
+				// create constructor
+				string name = converter.getNameManager().getName(ptr, "type");
+				c_ast::NodePtr ctr = manager->create<c_ast::Function>(
+						c_ast::Function::INLINE,
+						res->rValueType,
+						manager->create(format("%s_ctr_%d", name, i++)),
+						toVector(param),
+						body
+				);
+
+				// add constructor
+				res->constructors.push_back(c_ast::CCodeFragment::createNew(fragmentManager, toVector(ifdef, ctr, endif)));
+			}
+
+			// done
+			return res;
 		}
 
-		const TypeInfo* TypeInfoStore::resolveTupleType(const core::TupleTypePtr& ptr) {
+		const StructTypeInfo* TypeInfoStore::resolveTupleType(const core::TupleTypePtr& ptr) {
 
 			// use struct conversion to resolve type => since tuple is represented using structs
 			core::IRBuilder builder(ptr->getNodeManager());
@@ -619,7 +751,7 @@ namespace backend {
 
 			// create externalizer
 			res->externalize = [dataElementName](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-				return access(node, dataElementName);
+				return (node->getNodeType()==c_ast::NT_Literal)?node:access(node, dataElementName);
 			};
 
 			// create internalizer
@@ -709,9 +841,14 @@ namespace backend {
 			// produce external type
 			res->externalType = c_ast::ptr(subType->externalType);
 
-			// special handling of references to vectors and arrays (implicit pointer in C)
-			if (elementNodeType == core::NT_ArrayType || elementNodeType == core::NT_VectorType) {
+			// special handling of references to arrays (always pointer in C)
+			if (elementNodeType == core::NT_ArrayType) {
 				res->externalType = subType->externalType;
+			}
+
+			// special handling of references to vectors (implicit pointer in C)
+			if (elementNodeType == core::NT_VectorType) {
+				res->externalType = c_ast::ptr(resolveType(ptr->getElementType().as<core::VectorTypePtr>()->getElementType())->externalType);
 			}
 
 			// add externalization operators
@@ -731,9 +868,11 @@ namespace backend {
 
 			// special treatment for exporting vectors
 			if (elementNodeType == core::NT_VectorType) {
-				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-					// generated code: ((externalName)X.data)
-					return c_ast::access(c_ast::parenthese(c_ast::deref(node)), manager->create("data"));
+				res->externalize = [res,subType](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+					// special treatment for literals (e.g. string literals)
+					if (node->getNodeType() == c_ast::NT_Literal && static_pointer_cast<const c_ast::Literal>(node)->value[0] == '\"') return node;
+					// generated code: ((elementName*)X)
+					return c_ast::cast(res->externalType, node);
 				};
 				res->internalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					// generate initializser: (arraytype){node}

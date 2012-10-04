@@ -221,6 +221,7 @@ struct ScopRegion: public core::NodeAnnotation {
 	 * constraints are based on.
 	 */
 	inline const IterationVector& getIterationVector() const {  return iterVec; }
+	inline IterationVector& getIterationVector() {  return iterVec; }
 	
 	/** 
 	 * Retrieves the constraint combiner associated to this ScopRegion.

@@ -91,12 +91,35 @@ typedef struct __irt_worker_func_arg {
 	irt_worker_init_signal *signal;
 } _irt_worker_func_arg;
 
+
+/** wait until all worker threads are created (signal->init_count == irt_g_worker_count) */
+void _irt_await_all_workers_init(irt_worker_init_signal *signal){
+	#if defined(WINVER) && (WINVER < 0x0600)
+		irt_atomic_inc(&(signal->init_count));
+		HANDLE ev = OpenEvent(SYNCHRONIZE, FALSE, "AllWorkersInitialized");
+		// wait until master thread signals ev
+		WaitForSingleObject(ev, INFINITE);
+	#else
+		irt_mutex_lock(&signal->init_mutex);
+		signal->init_count++;
+		if(signal->init_count == irt_g_worker_count) {
+			// signal readyness of created thread to master thread
+			irt_cond_wake_all(&signal->init_condvar);
+		} else {
+			irt_cond_wait(&signal->init_condvar, &signal->init_mutex);
+		}
+		irt_mutex_unlock(&signal->init_mutex);
+	#endif
+}
+
 void* _irt_worker_func(void *argvp) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)argvp;
-	irt_set_affinity(arg->affinity, irt_current_thread());
+	irt_thread t;
+	irt_thread_get_current(&t);
+	irt_set_affinity(arg->affinity, t);
 	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
 	irt_worker* self = arg->generated;
-	self->thread = irt_current_thread();
+	irt_thread_get_current(&(self->thread));
 	self->id.index = 1;
 	self->id.thread = arg->index;
 	self->id.node = 0; // TODO correct node id
@@ -109,25 +132,25 @@ void* _irt_worker_func(void *argvp) {
 	if(getenv(IRT_DEFAULT_VARIANT_ENV)) {
 		self->default_variant = atoi(getenv(IRT_DEFAULT_VARIANT_ENV));
 	}
-
+	
 	irt_cond_var_init(&self->wait_cond);
 	irt_mutex_init(&self->wait_mutex);
 	
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(irt_tls_set(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 
-#ifdef IRT_ENABLE_INSTRUMENTATION
-	self->instrumentation_event_data = irt_inst_create_event_data_table();
-#endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	self->instrumentation_region_data = irt_inst_create_region_data_table();
-	// initialize papi's threading support and add events to be measured
-	//self->irt_papi_number_of_events = 0;
-	irt_initialize_papi_thread(&(self->irt_papi_event_set));
-#endif
-#ifdef IRT_OCL_INSTR
-	self->event_data = irt_ocl_create_event_table();
-#endif
+	#ifdef IRT_ENABLE_INSTRUMENTATION
+		self->instrumentation_event_data = irt_inst_create_event_data_table();
+	#endif
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		self->instrumentation_region_data = irt_inst_create_region_data_table();
+		// initialize papi's threading support and add events to be measured
+		//self->irt_papi_number_of_events = 0;
+		irt_initialize_papi_thread(&(self->irt_papi_event_set));
+	#endif
+	#ifdef IRT_OCL_INSTR
+		self->event_data = irt_ocl_create_event_table();
+	#endif
 	
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_CREATED, self->id);
 	
@@ -141,9 +164,10 @@ void* _irt_worker_func(void *argvp) {
 	self->wg_ev_register_list = NULL; // prepare some?
 	self->wi_reuse_stack = NULL; // prepare some?
 	self->stack_reuse_stack = NULL;
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	self->region_reuse_list = irt_region_list_create();
-#endif
+
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		self->region_reuse_list = irt_inst_create_region_list();
+	#endif
 
 	self->state = IRT_WORKER_STATE_READY;
 	// TODO instrumentation?
@@ -153,15 +177,8 @@ void* _irt_worker_func(void *argvp) {
 	irt_worker_init_signal *signal = arg->signal;
 	free(arg);
 
-	// signal readyness
-	irt_mutex_lock(&signal->init_mutex);
-	signal->init_count++;
-	if(signal->init_count == irt_g_worker_count) {
-		irt_cond_wake_all(&signal->init_condvar);
-	} else {
-		irt_cond_wait(&signal->init_condvar, &signal->init_mutex);
-	}
-	irt_mutex_unlock(&signal->init_mutex);
+	// wait until all workers are initialized
+	_irt_await_all_workers_init(signal);
 
 	self->state = IRT_WORKER_STATE_RUNNING;
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
@@ -227,10 +244,14 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	irt_lw_data_item *prev_args = self->parameters;
 	irt_work_item_range prev_range = self->range;
 	irt_wi_implementation_id prev_impl_id = self->impl_id;
+	irt_work_item_id prev_source = self->source_id;
+	uint32 prev_fragments = self->num_fragments;
 	// set new wi data
 	self->parameters = args;
 	self->range = *range;
 	self->impl_id = impl_id;
+	self->source_id = irt_work_item_null_id();
+	self->num_fragments = 0;
 	// need unique active child number, can re-use id (and thus register entry)
 	uint32 *prev_parent_active_child_count = self->parent_num_active_children;
 	self->parent_num_active_children = self->num_active_children;
@@ -245,6 +266,8 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	self->parameters = prev_args;
 	self->range = prev_range;
 	self->impl_id = prev_impl_id;
+	self->source_id = prev_source;
+	self->num_fragments = prev_fragments;
 }
 
 void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal) {
@@ -252,8 +275,7 @@ void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init
 	arg->affinity = affinity;
 	arg->index = index;
 	arg->signal = signal;
-
-	irt_thread_create(&_irt_worker_func, arg);
+	irt_thread_create(&_irt_worker_func, arg, NULL);
 }
 
 void _irt_worker_cancel_all_others() {
@@ -263,19 +285,27 @@ void _irt_worker_cancel_all_others() {
 		if(cur != self && cur->state == IRT_WORKER_STATE_RUNNING) {
 			cur->state = IRT_WORKER_STATE_STOP;
 			irt_inst_insert_wo_event(self, IRT_INST_WORKER_STOP, cur->id);
-			irt_thread_cancel(cur->thread);
+			irt_thread_cancel(&(cur->thread));
 		}
 	}
 	
 }
 
 void _irt_worker_end_all() {
+
+	// get info about calling thread
+	irt_thread calling_thread;
+	irt_thread_get_current(&calling_thread);
+
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker *cur = irt_g_workers[i];
 		if(cur->state == IRT_WORKER_STATE_RUNNING) {
 			cur->state = IRT_WORKER_STATE_STOP;
 			irt_signal_worker(cur);
-			irt_thread_join(cur->thread);
+
+			// avoid calling thread awaiting its own termination
+			if(!irt_thread_check_equality(&calling_thread, &(cur->thread)))
+				irt_thread_join(&(cur->thread));
 		}   
 	}
 }
