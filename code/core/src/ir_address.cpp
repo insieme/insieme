@@ -445,6 +445,11 @@ std::ostream& Path::printTo(std::ostream& out) const {
 	return out << " - empty path - ";
 }
 
+Path Path::concat(const Path& a, const Path& b) {
+	if (b.getLength() == 1) return a;
+	return concat(a, b.getPathToParent()).extendForChild(b.getIndex());
+}
+
 } // end namespace core
 } // end namespace insieme
 

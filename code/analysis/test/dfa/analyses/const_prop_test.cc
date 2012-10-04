@@ -47,7 +47,6 @@
 
 #include "insieme/analysis/dfa/analyses/reaching_defs.h"
 
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 using namespace insieme;
@@ -56,87 +55,78 @@ using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
 
 TEST(ConstantPropagation, PropagateConstant) {
-// 
-// 	NodeManager mgr;
-// 	parse::IRParser parser(mgr);
-// 	IRBuilder builder(mgr);
-// 
-//     auto code = parser.parseStatement(
-// 		"{"
-// 		"	decl ref<int<4>>:a = 1;"
-// 		"	if ( (a<=0) ) { "
-// 		"		(a = 1); "
-// 		"	};"
-// 		"	decl int<4>:c = (op<ref.deref>(a));"
-// 		"}"
-//     );
-// 
-//     EXPECT_TRUE(code);
-// 	CFGPtr cfg = CFG::buildCFG(code);
-// 
-// 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
-// 	auto&& ret = s.solve();
-// 
-// 	// lookup address of variable A
-// 	NodeAddress aRef = NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1).getAddressOfChild(2);
-// 	
-// 	// Finds the CFG block containing the address of variable a
-// 	const cfg::BlockPtr& b = cfg->find(aRef);
-// 	EXPECT_EQ(2u, b->getBlockID());
-// 
-// 	auto access = getImmediateAccess(aRef.as<ExpressionAddress>());
-// 
-// 	unsigned occurrences=0;
-// 	for( auto def : ret[b->getBlockID()] ) {
-// 		if (isConflicting(std::get<0>(def),access)) {
-// 			EXPECT_EQ(std::get<1>(def), builder.intLit(1));
-// 			occurrences++;
-// 		}
-// 	}
-// 	EXPECT_EQ(1u, occurrences);
-// 
+ 
+ 	NodeManager mgr;
+ 	IRBuilder builder(mgr);
+ 
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	ref<int<4>> a = 1;"
+		"	if ( a <= 0 ) { "
+		"		a = 1; "
+		"	} "
+		"	int<4> c = *$a$;"
+		"}$"
+    );
+ 
+	EXPECT_EQ(2u, addresses.size());
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+ 
+ 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+ 	auto ret = s.solve();
+
+ 	// lookup address of variable A
+ 	// Finds the CFG block containing the address of variable a
+ 	auto addr = cfg->find( addresses[1] );
+ 	EXPECT_EQ(2u, addr.getBlockPtr()->getBlockID());
+ 
+	auto consts = ret[addr.getBlockPtr()->getBlockID()];
+	auto fit = std::find_if(consts.begin(), consts.end(), 
+		[&](const dfa::analyses::ConstantPropagation::value_type::value_type& cur) {
+			return std::get<0>(cur).getAddressedNode() == addresses[1].getAddressedNode(); 
+		});
+
+	EXPECT_EQ( builder.intLit(1), std::get<1>(*fit).value() );
 }
-// 
-// TEST(ConstantPropagation, PropagateNotConstant) {
-// 
-// 	NodeManager mgr;
-// 	parse::IRParser parser(mgr);
-// 	IRBuilder builder(mgr);
-// 
-//     auto code = parser.parseStatement(
-// 		"{"
-// 		"	decl ref<int<4>>:a = 1;"
-// 		"	if ( (a<=0) ) { "
-// 		"		(a = 2); "
-// 		"	};"
-// 		"	decl int<4>:c = (op<ref.deref>(a));"
-// 		"}"
-//     );
-// 
-//     EXPECT_TRUE(code);
-// 	CFGPtr cfg = CFG::buildCFG(code);
-// 
-// 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
-// 	auto&& ret = s.solve();
-// 	
-// 	// lookup address of variable a
-// 	NodeAddress aRef = NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1).getAddressOfChild(2);
-// 	
-// 	// Finds the CFG block containing the address of variable a
-// 	const cfg::BlockPtr& b = cfg->find(aRef);
-// 	EXPECT_EQ(2u, b->getBlockID());
-// 
-// 	unsigned occurrences=0;
-// 	for( auto def : ret[b->getBlockID()] ) {
-// 		if (std::get<0>(def) == getImmediateAccess(aRef.as<ExpressionAddress>())) {
-// 			EXPECT_EQ(std::get<1>(def), dfa::bottom);
-// 			occurrences++;
-// 		}
-// 	}
-// 	EXPECT_EQ(1u, occurrences);
-// 
-// }
-// 
+
+
+TEST(ConstantPropagation, PropagateNotConstant) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	ref<int<4>> a = 1;"
+		"	if ( a <= 0 ) { "
+		"		a = 2; "
+		"	}"
+		"	int<4> c = *$a$;"
+		"}$"
+    );
+
+  	EXPECT_EQ(2u, addresses.size());
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+ 
+	std::cout << *cfg << std::endl;
+
+ 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+ 	auto ret = s.solve();
+
+ 	// lookup address of variable A
+ 	// Finds the CFG block containing the address of variable a
+ 	auto addr = cfg->find( addresses[1] );
+ 	EXPECT_EQ(2u, addr.getBlockPtr()->getBlockID());
+ 
+	auto consts = ret[addr.getBlockPtr()->getBlockID()];
+	auto fit = std::find_if(consts.begin(), consts.end(), 
+		[&](const dfa::analyses::ConstantPropagation::value_type::value_type& cur) {
+			return std::get<0>(cur).getAddressedNode() == addresses[1].getAddressedNode(); 
+		});
+
+	EXPECT_EQ( dfa::bottom, std::get<1>(*fit) );
+}
+
 // TEST(ConstantPropagation, TransitivePropagation) {
 // 
 // 	NodeManager mgr;

@@ -40,7 +40,6 @@
 
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser/ir_parse.h"
 
 namespace insieme {
 namespace transform {
@@ -50,14 +49,20 @@ namespace filter {
 	TEST(TargetFilter, OutermostLoops) {
 
 		core::NodeManager manager;
-		core::NodePtr node = core::parse::parseStatement(manager,""
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	for(decl uint<4>:j = 3 .. 25 : 1) {"
-			"		for(decl uint<4>:k = 2 .. 100 : 1) {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"		};"
-			"	};"
-			"}");
+
+		core::IRBuilder builder(manager);
+
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+
+		auto node = builder.parseStmt(
+			"for(uint<4> i = 10u .. 50u) {"
+			"	for(uint<4> j = 3u .. 25u) {"
+			"		for(uint<4> k = 2u .. 100u) {"
+			"			v[i+j];"
+			"		}"
+			"	}"
+			"}", symbols);
 
 		EXPECT_TRUE(node);
 
@@ -72,24 +77,25 @@ namespace filter {
 
 
 		// try multiple outermost for loops
-		node = core::parse::parseStatement(manager,"{"
+		node = builder.parseStmt(
+		"{"
 			"10;"
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	for(decl uint<4>:j = 3 .. 25 : 1) {"
-			"		for(decl uint<4>:k = 2 .. 100 : 1) {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"		};"
-			"	};"
+			"for(uint<4> i = 10u .. 50u) {"
+			"	for(uint<4> j = 3u .. 25u) {"
+			"		for(uint<4> k = 2u .. 100u) {"
+			"			v[i+j];"
+			"		}"
+			"	}"
 			"};"
 			"12;"
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	for(decl uint<4>:j = 3 .. 25 : 1) {"
-			"		for(decl uint<4>:k = 2 .. 100 : 1) {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"		};"
-			"	};"
+			"for(uint<4> i = 10u .. 50u) {"
+			"	for(uint<4> j = 3u .. 25u) {"
+			"		for(uint<4> k = 2u .. 100u) {"
+			"			v[i+j];"
+			"		}"
+			"	}"
 			"};"
-		"}");
+		"}", symbols);
 
 		res = filter(node);
 		EXPECT_TRUE(::all(res, isFor));
@@ -102,27 +108,33 @@ namespace filter {
 	TEST(TargetFilter, InnermostLoops) {
 
 		core::NodeManager manager;
-		core::NodePtr node = core::parse::parseStatement(manager,"{"
+		core::IRBuilder builder(manager);
+
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+
+		auto node = builder.parseStmt(
+			"{"
 				"10;"
-				"for(decl uint<4>:i = 10 .. 50 : 1) {"
-				"	for(decl uint<4>:j = 3 .. 25 : 1) {"
-				"		for(decl uint<4>:k = 2 .. 100 : 1) {"
-				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-				"		};"
-				"	};"
-				"	for(decl uint<4>:k = 2 .. 100 : 1) {"
-				"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-				"	};"
-				"};"
+				"for(uint<4> i = 10u .. 50u) {"
+				"	for(uint<4> j = 3u .. 25u) {"
+				"		for(uint<4> k = 2u .. 100u) {"
+				"			v[i+j];"
+				"		}"
+				"	}"
+				"	for(uint<4> k = 2u .. 100u) {"
+				"		v[i+k];"
+				"	}"
+				"}"
 				"12;"
-				"for(decl uint<4>:i = 10 .. 50 : 1) {"
-				"	for(decl uint<4>:j = 3 .. 25 : 1) {"
-				"		for(decl uint<4>:k = 2 .. 100 : 1) {"
-				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-				"		};"
-				"	};"
-				"};"
-			"}");
+				"for(uint<4> i = 10u .. 50u) {"
+				"	for(uint<4> j = 3u .. 25u) {"
+				"		for(uint<4> k = 2u .. 100u) {"
+				"			v[i+j];"
+				"		}"
+				"	}"
+				"}"
+			"}", symbols);
 
 		EXPECT_TRUE(node);
 
@@ -169,29 +181,33 @@ namespace filter {
 	TEST(TargetFilter, LoopPicker) {
 
 		core::NodeManager manager;
-		core::NodePtr node = core::parse::parseStatement(manager,"{"
-				"10;"
-				"for(decl uint<4>:i = 10 .. 50 : 1) {"
-				"	for(decl uint<4>:j = 3 .. 25 : 1) {"
-				"		for(decl uint<4>:k = 2 .. 100 : 1) {"
-				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-				"		};"
-				"	};"
-				"	for(decl uint<4>:k = 2 .. 100 : 1) {"
-				"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-				"	};"
-				"};"
-				"12;"
-				"for(decl uint<4>:i = 10 .. 50 : 1) {"
-				"	for(decl uint<4>:j = 3 .. 25 : 1) {"
-				"		for(decl uint<4>:k = 2 .. 100 : 1) {"
-				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-				"		};"
-				"	};"
-				"};"
-			"}");
+		core::IRBuilder builder(manager);
 
-		EXPECT_TRUE(node);
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+
+		auto node = builder.parseStmt(
+			"{"
+				"10;"
+				"for(uint<4> i = 10u .. 50u) {"
+				"	for(uint<4> j = 3u .. 25u) {"
+				"		for(uint<4> k = 2u .. 100u) {"
+				"			v[i+j];"
+				"		}"
+				"	}"
+				"	for(uint<4> k = 2u .. 100u) {"
+				"		v[i+k];"
+				"	}"
+				"}"
+				"12;"
+				"for(uint<4> i = 10u .. 50u) {"
+				"	for(uint<4> j = 3u .. 25u) {"
+				"		for(uint<4> k = 2u .. 100u) {"
+				"			v[i+j];"
+				"		}"
+				"	}"
+				"}"
+			"}", symbols);
 
 		auto root = core::NodeAddress(node);
 
@@ -222,27 +238,33 @@ namespace filter {
 	TEST(TargetFilter, AddressPicker) {
 
 		core::NodeManager manager;
-		core::NodePtr node = core::parse::parseStatement(manager,"{"
+		core::IRBuilder builder(manager);
+
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,10>>"));
+
+		auto node = builder.parseStmt(
+			"{"
 				"10;"
-				"for(decl uint<4>:i = 10 .. 50 : 1) {"
-				"	for(decl uint<4>:j = 3 .. 25 : 1) {"
-				"		for(decl uint<4>:k = 2 .. 100 : 1) {"
-				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-				"		};"
-				"	};"
-				"	for(decl uint<4>:k = 2 .. 100 : 1) {"
-				"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-				"	};"
-				"};"
+				"for(uint<4> i = 10u .. 50u) {"
+				"	for(uint<4> j = 3u .. 25u) {"
+				"		for(uint<4> k = 2u .. 100u) {"
+				"			v[i+j];"
+				"		}"
+				"	}"
+				"	for(uint<4> k = 2u .. 100u) {"
+				"		v[i+k];"
+				"	}"
+				"}"
 				"12;"
-				"for(decl uint<4>:i = 10 .. 50 : 1) {"
-				"	for(decl uint<4>:j = 3 .. 25 : 1) {"
-				"		for(decl uint<4>:k = 2 .. 100 : 1) {"
-				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-				"		};"
-				"	};"
-				"};"
-			"}");
+				"for(uint<4> i = 10u .. 50u) {"
+				"	for(uint<4> j = 3u .. 25u) {"
+				"		for(uint<4> k = 2u .. 100u) {"
+				"			v[i+j];"
+				"		}"
+				"	}"
+				"}"
+			"}", symbols);
 
 		EXPECT_TRUE(node);
 

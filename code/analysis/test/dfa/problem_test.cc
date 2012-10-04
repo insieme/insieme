@@ -45,7 +45,6 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/analysis/cfg.h"
 
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/set_utils.h"
@@ -59,14 +58,18 @@ using namespace insieme::analysis::dfa;
 TEST(Problem, Variable) {
 
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
 	typedef std::set<VariablePtr> VarSet; 
 
-    auto code = parser.parseStatement(
-		"for(decl int<4>:i = 10 .. 50 : 1) { "
-		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
-		"}"
+    auto code = builder.parseStmt(
+		"for(int<4> i = 10 .. 50 : 1) { "
+		"	v[i+b]; "
+		"}", symbols
     );
 
     EXPECT_TRUE(code);

@@ -221,9 +221,9 @@ namespace runtime {
 
 		// locks
 
-		table[basic.getLockCreate()] = OP_CONVERTER({
-			ADD_HEADER_FOR("irt_lock_create");
-			return c_ast::call(C_NODE_MANAGER->create("irt_lock_create"));
+		table[basic.getLockInit()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_lock_init");
+			return c_ast::call(C_NODE_MANAGER->create("irt_lock_init"), CONVERT_ARG(0));
 		});
 		table[basic.getLockAcquire()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_lock_acquire");

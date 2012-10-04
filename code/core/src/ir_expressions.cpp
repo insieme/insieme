@@ -41,7 +41,6 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
-
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/core/ir_address.h"
@@ -177,6 +176,7 @@ namespace core {
 			}
 
 			void visitNode(const NodeAddress& node, RecursiveCallLocations& res, VariableSet& recVars) {
+				if (node->getNodeCategory() == NC_Type) return;
 				// a general forwarding to all child nodes
 				visitAll(node->getChildList(), res, recVars);
 			}
@@ -212,7 +212,6 @@ namespace core {
 		if (numTimes == 0 || !isRecursive(variable)) {
 			return LambdaExpr::get(manager, variable, this);
 		}
-
 		// compute peeled code versions for each variable
 		std::map<VariablePtr, LambdaExprPtr> peeled;
 		for(const VariableAddress& cur : getRecursiveCallLocations(this, variable)) {

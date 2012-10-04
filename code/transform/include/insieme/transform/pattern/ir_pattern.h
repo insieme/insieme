@@ -42,10 +42,8 @@
 #include <unordered_map>
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/transform/pattern/pattern.h"
-#include "insieme/core/parser/ir_parse.h"
-
-#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace transform {
@@ -57,14 +55,8 @@ namespace irp {
 		return pattern::atom(node);
 	}
 
-	inline TreePatternPtr atom(core::NodeManager& manager, const char* code) {
-		auto a = [&manager] (const string& str) {return core::parse::parseIR(manager, str); };
-		return atom(a(string(code)));
-	}
-
-	inline TreePatternPtr atom(core::NodeManager& manager, string& code) {
-		auto a = [&manager] (const string& str) {return core::parse::parseIR(manager, str); };
-		return atom(a(code));
+	inline TreePatternPtr atom(core::NodeManager& manager, const string& code) {
+		return atom(core::IRBuilder(manager).parse(code));
 	}
 
 	inline TreePatternPtr wrapBody(const TreePatternPtr& body) {
@@ -107,15 +99,19 @@ namespace irp {
 		return node(core::NT_Variable, single(type) << single(id));
 	}
 
-	inline TreePatternPtr callExpr(const TreePatternPtr& type, const TreePatternPtr& function, const ListPatternPtr& parameters) {
+	inline TreePatternPtr callExpr(const TreePatternPtr& type, const TreePatternPtr& function, const ListPatternPtr& parameters = anyList) {
 		return node(core::NT_CallExpr, type << single(function) << parameters);
 	}
 
-	inline TreePatternPtr callExpr(const core::NodePtr& function, const ListPatternPtr& parameters) {
+	inline TreePatternPtr callExpr(const core::NodePtr& function, const ListPatternPtr& parameters = anyList) {
 		return callExpr(any, atom(function), parameters);
 	}
+	
+	inline TreePatternPtr callExpr(const core::NodePtr& function, const TreePatternPtr& parameter) {
+		return callExpr(function, single(parameter));
+	}
 
-	inline TreePatternPtr callExpr(const TreePatternPtr& function, const ListPatternPtr& parameters) {
+	inline TreePatternPtr callExpr(const TreePatternPtr& function, const ListPatternPtr& parameters = anyList) {
 		return callExpr(any, function, parameters);
 	}
 
@@ -215,8 +211,25 @@ namespace irp {
 		return node(core::NT_MarkerStmt, single(subExpr) << single(id));
 	}
 
-	const TreePatternPtr continueStmt = node(core::NT_ContinueStmt);
-	const TreePatternPtr breakStmt = node(core::NT_BreakStmt);
+	inline const TreePatternPtr& continueStmt() {
+		static const TreePatternPtr res = node(core::NT_ContinueStmt);
+		return res;
+	}
+
+	inline const TreePatternPtr& breakStmt() {
+		static const TreePatternPtr res = node(core::NT_BreakStmt);
+		return res;
+	}
+
+	inline TreePatternPtr jobExpr(const TreePatternPtr& threadNumRange, const ListPatternPtr& localDecls, const ListPatternPtr& guardedExprs, 
+			const TreePatternPtr& defaultExpr) {
+		return node(core::NT_JobExpr, single(any) << single(threadNumRange) << single(node(core::NT_DeclarationStmts, localDecls)) 
+			<< single(node(core::NT_GuardedExprs, guardedExprs)) << single(defaultExpr));
+	}
+
+	inline TreePatternPtr jobExpr(const TreePatternPtr& threadNumRange, const TreePatternPtr& defaultExpr) {
+		return jobExpr(threadNumRange, anyList, anyList, defaultExpr);
+	}
 
 	/**
 	 * Creates a pattern matching loops on the given level.

@@ -46,9 +46,10 @@ FLAG("clang-cfg-dump",		"clang-cfg-dump",		ClangCFGDump,	false, 	"Dump cfg graph
 FLAG("const-prop",			"const-prop",			ConstantPropagation, false, 	"Perform constant propagation")
 
 // core options
-FLAG("benchmark-core", 		"benchmark-core", 		BenchmarkCore, 	false, "runs some standard-core operations on the IR representation")
-FLAG("test,T", 				"test", 				Test, 			false, "Enable the test function which should test some pre-released features of insieme")
+FLAG("benchmark-core", 		"benchmark-core", 		BenchmarkCore, 	false,	"runs some standard-core operations on the IR representation")
+FLAG("test,T", 				"test", 				Test, 			false,	"Enable the test function which should test some pre-released features of insieme")
 FLAG("feat-extract,f",		"feat-extract",			FeatureExtract,	false,	"Enables feature extraction")
+FLAG("task-opt",			"task-opt",				TaskOpt,		false,	"Enables task optimization by means of multi-versioning")
 
 // backend options
 FLAG("estimate-effort",		"estimate-effort",		EstimateEffort,	false,	"Enables generation of the effort estimation function")

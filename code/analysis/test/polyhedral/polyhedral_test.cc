@@ -42,14 +42,8 @@
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
-#include "insieme/core/ir_program.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic.h"
-
-#include "insieme/core/parser/ir_parse.h"
-#include "insieme/core/printer/pretty_printer.h"
 
 using namespace insieme::core;
 using namespace insieme::analysis;
@@ -543,247 +537,280 @@ TEST(IterationDomain, range) {
 
 TEST(IterationDomain, FromVariable) {
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. 50 : 1) { \
-			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
-		}") );
-	scop::mark(forStmt);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<iint<4>,1>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+    auto addresses = builder.parseAddresses(
+		"$for(int<4> i = 10 .. 50 : 1) { "
+		"	v[$i+b$]; "
+		"}$", symbols
+	);
 
-	NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(3).
-						 getAddressOfChild(2);
-	auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+	EXPECT_EQ(2u, addresses.size());
+	scop::mark(addresses[0].getAddressedNode());
+
+	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
+
+	auto iAddr = addresses[1].as<ExpressionAddress>();
+	auto dom = getVariableDomain(iAddr);
+
 	EXPECT_TRUE(dom.second);
-	EXPECT_EQ("((-v1 + 49 >= 0) ^ (v1 + -10 >= 0))", toString(*dom.second));
+	EXPECT_EQ("((-v3 + 49 >= 0) ^ (v3 + -10 >= 0))", toString(*dom.second));
 }
 
 
 TEST(IterationDomain, FromVariable2) {
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. 50 : 1) { \
-			if ( (i<20) ) \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
-		}") );
-	scop::mark(forStmt);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+    auto addresses = builder.parseAddresses(
+		"$for(int<4> i = 10 .. 50 : 1) { "
+		"	if ( $i$<20 ) "
+		"		v[$i+b$]; "
+		"}$", symbols);
+
+	EXPECT_EQ(3u, addresses.size());
+	scop::mark(addresses[0].getAddressedNode());
+
+	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
 
 	{ 
 		// get the iterator i used in the if condition 
-		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(0).
-							 getAddressOfChild(2);
-		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		auto iAddr =  addresses[1].as<ExpressionAddress>();
+		auto dom = getVariableDomain(iAddr);
+
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("((-v1 + 49 >= 0) ^ (v1 + -10 >= 0))", toString(*dom.second));
+		EXPECT_EQ("((-v3 + 49 >= 0) ^ (v3 + -10 >= 0))", toString(*dom.second));
 	}
 
 	{ 
 		// Get the iterator i inside the if stmt
-		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(1).
-						     getAddressOfChild(0).getAddressOfChild(3).getAddressOfChild(2);
+		auto iAddr =  addresses[2].as<ExpressionAddress>();
+		auto dom = getVariableDomain(iAddr);
 
-		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((-v1 + 19 >= 0) ^ (-v1 + 49 >= 0)) ^ (v1 + -10 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((-v3 + 19 >= 0) ^ (-v3 + 49 >= 0)) ^ (v3 + -10 >= 0))", toString(*dom.second));
 	}
 }
 
 TEST(IterationDomain, NotAScop) {
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. (int<4>:a*int<4>:b) : 1) { \
-			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
-		}") );
-	scop::mark(forStmt);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
+	symbols["a"] = builder.variable(builder.parseType("int<4>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-	EXPECT_FALSE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+    auto addresses = builder.parseAddresses(
+		"$for(int<4> i = 10 .. a*b : 1) { "
+		"	v[$i+b$]; "
+		"}$", symbols
+	);
 
-	NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(3).
-						 getAddressOfChild(2);
-	auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+	EXPECT_EQ(2u, addresses.size());
+	scop::mark(addresses[0].getAddressedNode());
+
+	EXPECT_FALSE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
+
+	auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
+
 	EXPECT_FALSE(dom.second);
-	// EXPECT_TRUE((*dom).universe());
 }
 
 TEST(IterationDomain, FromVariable3) {
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. 50 : 1) { \
-			if ( (i<int<4>:b) ) \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
-		}") );
-	scop::mark(forStmt);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+    auto addresses = builder.parseAddresses(
+		"$for(int<4> i = 10 .. 50 : 1) { "
+		"	if ( $i$<b ) "
+		"		v[$i+b$]; "
+		"}$", symbols);
+
+	EXPECT_EQ(3u, addresses.size());
+	scop::mark(addresses[0].getAddressedNode());
+
+	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
 
 	{ 
 		// get the iterator i used in the if condition 
-		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(0).
-							 getAddressOfChild(3);
-		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
-		EXPECT_FALSE(dom.second);
-		//EXPECT_TRUE(dom.universe());
-		//EXPECT_FALSE(dom.empty());
+		auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
+		EXPECT_TRUE(dom.second);
+		EXPECT_EQ("((-v3 + 49 >= 0) ^ (v3 + -10 >= 0))", toString(*dom.second));
 	}
-
 	{ 
 		// Get the iterator i inside the if stmt
-		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(3).getAddressOfChild(0).getAddressOfChild(1).
-						     getAddressOfChild(0).getAddressOfChild(3).getAddressOfChild(3);
-
-		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		auto dom = getVariableDomain(addresses[2].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((-v1 + 49 >= 0) ^ (-v1 + v2 + -1 >= 0)) ^ (v1 + -10 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((-v3 + 49 >= 0) ^ (-v3 + v2 + -1 >= 0)) ^ (v3 + -10 >= 0))", toString(*dom.second));
 	}
 }
 
 TEST(IterationDomain, FromVariable4) {
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto forStmt = static_pointer_cast<const IfStmt>( parser.parseStatement("\
-		if ( (int<4>:a > 20) ) { \
-			for(decl int<4>:i = int<4>:b .. a : 1) { \
-				if ( (int<4>:b<i) ) \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
-			}; \
-		}") );
-	scop::mark(forStmt);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["a"] = builder.variable(builder.parseType("int<4>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+    auto addresses = builder.parseAddresses(
+		"$if ( a > 20 ) { "
+		"	for(int<4> i = b .. a : 1) { "
+		"		if ( b < $i$ ) "
+		"			v[$i+b$]; "
+		"	} "
+		"}$", symbols);
+
+	EXPECT_EQ(3u, addresses.size());
+	scop::mark(addresses[0].getAddressedNode());
+
+	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
 
 	{ 
 		// get the iterator i used in the if condition 
-		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
-							 getAddressOfChild(0).getAddressOfChild(0).getAddressOfChild(2);
-		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
+
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("((-v2 + v1 + -1 >= 0) ^ (v2 + -v3 >= 0))", toString(*dom.second));
+		EXPECT_EQ("((-v4 + v2 + -1 >= 0) ^ (v4 + -v3 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3 -> if (v1-v3-1 >= 0)", toString(pw));
 	}
-
 	{ 
 		// Get the iterator i inside the if stmt
-		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
-							 getAddressOfChild(0).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
-							 getAddressOfChild(3);
+		auto dom = getVariableDomain(addresses[2].as<ExpressionAddress>());
 
-		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("((((-v2 + v1 + -1 >= 0) ^ (v1 + -21 >= 0)) ^ (v2 + -v3 + -1 >= 0)) ^ (v2 + -v3 >= 0))", toString(*dom.second));
+		EXPECT_EQ("((((-v4 + v2 + -1 >= 0) ^ (v2 + -21 >= 0)) ^ (v4 + -v3 + -1 >= 0)) ^ (v4 + -v3 >= 0))", 
+				  toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
 }
+
+
 
 TEST(IterationDomain, FromVariableStrided) {
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto forStmt = static_pointer_cast<const IfStmt>( parser.parseStatement("\
-		if ( (int<4>:a > 20) ) { \
-			for(decl int<4>:i = int<4>:b .. a : 2) { \
-				if ( (int<4>:b<i) ) \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
-			}; \
-		}") );
-	scop::mark(forStmt);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["a"] = builder.variable(builder.parseType("int<4>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+    auto addresses = builder.parseAddresses(
+		"$if ( a > 20 ) { "
+		"	for(int<4> i = b .. a : 2) { "
+		"		if ( b<$i$ ) "
+		"			v[$i+b$]; "
+		"	} "
+		"}$ ", symbols);
+
+	EXPECT_EQ(3u, addresses.size());
+	scop::mark(addresses[0].getAddressedNode());
+
+	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
 
 	{ 
 		// get the iterator i used in the if condition 
-		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
-							 getAddressOfChild(0).getAddressOfChild(0).getAddressOfChild(2);
-		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((-v2 + v1 + -1 >= 0) ^ (v2 + -2*v5 + -v3 == 0)) ^ (v2 + -v3 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((-v4 + v2 + -1 >= 0) ^ (v4 + -2*v8 + -v3 == 0)) ^ (v4 + -v3 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3 -> if (v1-v3-1 >= 0)", toString(pw));
 	}
 
 	{ 
 		// Get the iterator i inside the if stmt
-		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
-							 getAddressOfChild(0).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
-							 getAddressOfChild(3);
-
-		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		auto dom = getVariableDomain(addresses[2].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("(((((-v2 + v1 + -1 >= 0) ^ (v1 + -21 >= 0)) ^ (v2 + -2*v5 + -v3 == 0)) ^ (v2 + -v3 + -1 >= 0)) ^ (v2 + -v3 >= 0))", toString(*dom.second));
+		EXPECT_EQ("(((((-v4 + v2 + -1 >= 0) ^ (v2 + -21 >= 0)) ^ (v4 + -2*v8 + -v3 == 0)) ^ (v4 + -v3 + -1 >= 0)) ^ (v4 + -v3 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
 }
 
+
+
 TEST(IterationDomain, FromVariable5) {
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto forStmt = static_pointer_cast<const IfStmt>( parser.parseStatement("\
-		if ( (1==1) ) { \
-			for(decl int<4>:i = int<4>:a .. (int<4>:a+10) : 2) { \
-				if ( (i==(int<4>:a+2)) ) \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
-			}; \
-		}") );
-	scop::mark(forStmt);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["a"] = builder.variable(builder.parseType("int<4>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+    auto addresses = builder.parseAddresses(
+		"$if ( 1==1 ) { "
+		"	for(int<4> i = a .. a+10 : 2) { "
+		"		if ( i==a+2 ) "
+		"			v[$i+b$]; "
+		"	} "
+		"}$ ", symbols);
 
-	{ 
-		// Get the iterator i inside the if stmt
-		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
-							 getAddressOfChild(0).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
-							 getAddressOfChild(2);
+	EXPECT_EQ(2u, addresses.size());
+	scop::mark(addresses[0].getAddressedNode());
 
-		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
-		EXPECT_TRUE(dom.second);
-		EXPECT_EQ("((((-v1 + v2 + 9 >= 0) ^ (v1 + -2*v5 + -v2 == 0)) ^ (v1 + -v2 + -2 == 0)) ^ (v1 + -v2 >= 0))", toString(*dom.second));
-		//auto pw = cardinality(mgr,*dom);
-		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
-	}
+	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
+
+	// Get the iterator i inside the if stmt
+	auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
+	EXPECT_TRUE(dom.second);
+
+	EXPECT_EQ("((((-v4 + v2 + 9 >= 0) ^ (v4 + -2*v7 + -v2 == 0)) ^ (v4 + -v2 + -2 == 0)) ^ (v4 + -v2 >= 0))", 
+			  toString(*dom.second));
+	//auto pw = cardinality(mgr,*dom);
+	//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 }
 
 
 TEST(IterationDomain, FromVariable6) {
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
-    auto forStmt = static_pointer_cast<const IfStmt>( parser.parseStatement("\
-		if ( (int<4>:a>4) ) { \
-			for(decl int<4>:i = a .. (a+10) : 2) { \
-				if ( (i==(a+1)) ) \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
-			}; \
-		}") );
-	scop::mark(forStmt);
+	std::map<std::string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["a"] = builder.variable(builder.parseType("int<4>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+    auto addresses = builder.parseAddresses(
+		"$if ( a>4 ) { "
+		"	for(int<4> i = a .. a+10 : 2) { "
+		"		if ( i==a+1 ) "
+		"			v[$i+b$]; "
+		"	} "
+		"}$ ", symbols);
+
+	EXPECT_EQ(2u, addresses.size());
+	scop::mark(addresses[0].getAddressedNode());
+
+	EXPECT_TRUE( addresses[0]->hasAnnotation(scop::ScopRegion::KEY) );
 
 	{ 
 		// Get the iterator i inside the if stmt
-		NodeAddress iAddr =  NodeAddress(forStmt).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
-							 getAddressOfChild(0).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(3).
-							 getAddressOfChild(2);
-
-		auto dom = getVariableDomain(iAddr.as<ExpressionAddress>());
+		auto dom = getVariableDomain(addresses[1].as<ExpressionAddress>());
 		EXPECT_TRUE(dom.second);
+		EXPECT_EQ("(((((-v4 + v2 + 9 >= 0) ^ (v2 + -5 >= 0)) ^ (v4 + -2*v7 + -v2 == 0)) ^ (v4 + -v2 + -1 == 0)) ^ (v4 + -v2 >= 0))", toString(*dom.second));
 		//auto pw = cardinality(mgr,*dom);
 		//EXPECT_EQ("v1-v3-1 -> if ((v1-v3-2 >= 0) ^ (v1-21 >= 0))", toString(pw));
 	}
 }
+
 
 //==== Scop =======================================================================================
 TEST(Scop, BuildScop) {

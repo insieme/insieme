@@ -36,12 +36,13 @@
 
 #include <gtest/gtest.h>
 
+#include "insieme/core/ir_builder.h"
+
 #include "insieme/transform/pattern/match.h"
 #include "insieme/transform/pattern/generator.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/transform/pattern/ir_generator.h"
-#include "insieme/core/parser/ir_parse.h"
 
 namespace insieme {
 namespace transform {
@@ -71,9 +72,17 @@ namespace pattern {
 
 		NodeManager manager;
 		IRBuilder builder(manager);
-		auto ps = [&manager](string str) { return parse::parseStatement(manager, str); };
+		auto ps = [&manager](string str) { return IRBuilder(manager).parseStmt(str); };
 
-		StatementPtr stmt = ps("for(decl int<4>:i = 0 .. 2 : 1) { for(decl int<4>:j = 1 .. 3 : 1){ 7; 6; continue; 8; }; }");
+		StatementPtr stmt = ps(
+			"for(int<4> i = 0 .. 2) { "
+			"	for(int<4> j = 1 .. 3){ "
+			"		7; "
+			"		6; " 
+			"		continue; "
+			"		8;"
+			" 	} "
+			"}");
 
 		LiteralPtr one = builder.intLit(1);
 

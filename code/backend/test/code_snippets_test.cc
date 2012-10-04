@@ -46,7 +46,6 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/extension.h"
 
@@ -59,18 +58,18 @@ namespace backend {
 
 TEST(FunctionCall, templates) {
     core::NodeManager manager;
-    core::parse::IRParser parser(manager);
+    core::IRBuilder builder(manager);
 
-    core::ProgramPtr program = parser.parseProgram("main: fun ()->int<4>:\
-            mainfct in { ()->int<4>:mainfct = ()->int<4>{ { \
-                (fun(type<'a>:dtype, uint<4>:size) -> array<'a, 1> {{ \
-                    return (op<array.create.1D>( dtype, size )); \
-                }}(lit<type<real<4> >, type(real(4)) >, lit<uint<4>, 7>) ); \
-                \
-                \
-                return 0; \
-            } } }");
+    core::ProgramPtr program = builder.parseProgram(
+    	"int<4> main() {"
+    	"	(type<'a> dtype, uint<4> size)->ref<array<'a,1>> {"
+    	"		return array.create.1D(dtype, size);"
+    	"	} (lit(real<4>), 7u);"
+    	"	return 0;"
+    	"}"
+    );
 
+    ASSERT_TRUE(program);
 
     LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
 
@@ -94,18 +93,23 @@ TEST(FunctionCall, templates) {
 
 TEST(FunctionCall, VectorReduction) {
     core::NodeManager manager;
-    core::parse::IRParser parser(manager);
+    core::IRBuilder builder(manager);
 
     // Operation: vector.reduction
     // Type: (vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res
 
-    core::ProgramPtr program = parser.parseProgram("main: fun ()->unit:\
-            mainfct in { ()->unit:mainfct = ()->unit{ { \
-                (fun() -> int<4> {{ \
-                    return (op<vector.reduction>( vector<int<4>,4>(1,2,3,4), 0, op<int.add> )); \
-                }}() ); \
-            } } }");
+    std::map<string, core::NodePtr> symbols;
+    symbols["v"] = builder.vectorExpr(toVector<core::ExpressionPtr>(builder.intLit(1), builder.intLit(2),  builder.intLit(3),  builder.intLit(4)));
 
+    core::ProgramPtr program = builder.parseProgram(
+    		"unit main() {"
+    		"	()->int<4> {"
+    		"		return vector.reduction(v, 0, int.add);"
+    		"	}();"
+    		"}",
+    		symbols
+    );
+    ASSERT_TRUE(program);
 
     LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
 
@@ -131,16 +135,22 @@ TEST(FunctionCall, VectorReduction) {
 
 TEST(FunctionCall, Pointwise) {
     core::NodeManager manager;
-    core::parse::IRParser parser(manager);
+    core::IRBuilder builder(manager);
 
     // Operation: vector.pointwise
     // Type: (('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>
 
-    core::ProgramPtr program = parser.parseProgram("main: fun ()->unit:\
-            mainfct in { ()->unit:mainfct = ()->unit{ { \
-    			((op<vector.pointwise>(op<int.add>))(vector<int<4>,4>(1,2,3,4), vector<int<4>,4>(5,6,7,8))); \
-            } } }");
+    std::map<string, core::NodePtr> symbols;
+	symbols["v1"] = builder.vectorExpr(toVector<core::ExpressionPtr>(builder.intLit(1), builder.intLit(2),  builder.intLit(3),  builder.intLit(4)));
+	symbols["v2"] = builder.vectorExpr(toVector<core::ExpressionPtr>(builder.intLit(5), builder.intLit(6),  builder.intLit(7),  builder.intLit(8)));
 
+    core::ProgramPtr program = builder.parseProgram(
+    		"unit main() {"
+    		"	vector.pointwise(int.add)(v1,v2);"
+    		"}",
+    		symbols
+    );
+    ASSERT_TRUE(program);
 
 
     auto converted = sequential::SequentialBackend::getDefault()->convert(program);
@@ -159,17 +169,18 @@ TEST(FunctionCall, Pointwise) {
 
 TEST(FunctionCall, TypeLiterals) {
     core::NodeManager manager;
-    core::parse::IRParser parser(manager);
+    core::IRBuilder builder(manager);
 
     // create a function accepting a type literal
 
-    core::ProgramPtr program = parser.parseProgram("main: fun ()->int<4>:\
-                mainfct in { ()->int<4>:mainfct = ()->int<4>{ { \
-                    (fun(type<'a>:dtype) -> int<4> {{ \
-                        return 0; \
-                    }}(lit<type<real<4> >, type(real(4)) >) ); \
-                    return 0; \
-                } } }");
+    core::ProgramPtr program = builder.parseProgram(
+    		"int<4> main() {"
+    		"	(type<'a> dtype)->int<4> {"
+    		"	} (lit(real<4>));"
+    		"	return 0;"
+    		"}"
+    );
+    ASSERT_TRUE(program);
 
     std::cout << "Program: " << *program << std::endl;
 
@@ -187,6 +198,41 @@ TEST(FunctionCall, TypeLiterals) {
 	compiler.addFlag("-c"); // do not run the linker
 	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 }
+
+
+TEST(FunctionCall, GenericFunctionAndTypeLiteral) {
+    core::NodeManager manager;
+    core::IRBuilder builder(manager);
+
+    // create a function accepting a type literal
+
+    core::ProgramPtr program = builder.parseProgram(
+    		"int<4> main() {"
+    		"	(ref<array<'a,1>> data)->uint<8> {"
+    		"		return sizeof(lit('a));"
+    		"	} (get.null(lit(array<real<4>,1>)));"
+    		"	return 0;"
+    		"}"
+    );
+    ASSERT_TRUE(program);
+
+    std::cout << "Program: " << *program << std::endl;
+
+    auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+    std::cout << "Converted: \n" << *converted << std::endl;
+
+    string code = toString(*converted);
+    EXPECT_PRED2(notContainsSubString, code, "<?>");
+    EXPECT_PRED2(containsSubString, code, "sizeof(float)");
+
+    // try compiling the code fragment
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
+
 
 TEST(FunctionCall, RefNewCalls) {
     core::NodeManager manager;
@@ -226,6 +272,37 @@ TEST(FunctionCall, VectorExpression) {
 	EXPECT_PRED2(containsSubString, code, "call_vector((uint64_t*)(&(__insieme_type_1){{0, 0, 0}}))");
 }
 
+
+TEST(Literals, BoolLiterals) {
+    core::NodeManager manager;
+    core::IRBuilder builder(manager);
+
+    // create a code fragment including the boolean constants
+    core::ProgramPtr program = builder.parseProgram(
+    		"int<4> main() {"
+    		"	true;"
+    		"	false;"
+    		"	return 0;"
+    		"}"
+    );
+    ASSERT_TRUE(program);
+
+    std::cout << "Program: " << *program << std::endl;
+
+    auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+    std::cout << "Converted: \n" << *converted << std::endl;
+
+    string code = toString(*converted);
+    EXPECT_PRED2(containsSubString, code, "true");
+    EXPECT_PRED2(containsSubString, code, "false");
+
+    // try compiling the code fragment
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
 
 
 } // namespace backend

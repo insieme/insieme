@@ -40,8 +40,6 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/core/parser/ir_parse.h"
-
 namespace ba = boost::algorithm;
 
 namespace insieme {

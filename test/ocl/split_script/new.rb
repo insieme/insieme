@@ -53,7 +53,7 @@ end
 def install_gems host
   # needed ruby gems
   ENV['GEM_PATH'] = "#{$lib_dir}/gem/"
-  ENV['R_HOME'] = (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4") ? "/usr/lib64/R" : "/usr/lib/R"
+  ENV['R_HOME'] = (host == "mc1-ib" || host == "mc2-ib" || host == "mc3-ib" || host == "mc4-ib") ? "/usr/lib64/R" : "/usr/lib/R"
   ENV['LD_LIBRARY_PATH'] = ["RHOME/bin", ENV['LD_LIBRARY_PATH'], ].join(':')
   `mkdir #{$lib_dir}/gem/` if !File.directory?("#{$lib_dir}/gem/")
   gem_names = ["colorize", "sequel", "sqlite3", "rsruby"] #, "rb-libsvm"]
@@ -64,7 +64,7 @@ def install_gems host
         `gem install -i #{$lib_dir}gem sqlite3 -- --with-sqlite3-dir=#{$lib_dir}/sqlite-latest/ 2> file.tmp`
       elsif name == "rsruby"
         host = `hostname`.strip
-        if (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4")
+        if (host == "mc1-ib" || host == "mc2-ib" || host == "mc3-ib" || host == "mc4-ib")
           `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib64/R --with-R-include=/usr/include/R 2> file.tmp`
         elsif
           `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib/R --with-R-include=/usr/share/R/include 2> file.tmp`
@@ -94,7 +94,7 @@ end
 def initialize_env
   host = `hostname`.strip
 
-  if (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4")
+  if (host == "mc1-ib" || host == "mc2-ib" || host == "mc3-ib" || host == "mc4-ib")
     $main_dir = '/software-local/insieme_build/code/'
     $lib_dir =  '/software-local/insieme-libs/'
     ENV['OPENCL_ROOT'] = '/software/AMD/AMD-APP-SDK-v2.6-RC3-lnx64/'
@@ -265,8 +265,9 @@ class Test
           spaces = 20-split_values.size
           str = " * OpenCL program view with splitting:  #{split_values}" + (" " * spaces)
           qres = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values)
-          time_array = qres.select(:time).all.map!{|n| n[:time]}
+          time_array = qres.select(:extended_time).all.map!{|n| n[:extended_time]}
           energy_array = qres.select(:energy).all.map!{|n| n[:energy]}
+          loop_iteration_array = qres.select(:loop_iteration).all.map!{|n| n[:loop_iteration]} 
           ar_size = time_array.size
           if ar_size < @iterations
             puts ar_size != 0 ? str << "[" + "ONLY #{time_array.size} RUN".yellow + "]" : str << "[" + "NOT PRESENT".yellow + "]" 
@@ -280,11 +281,14 @@ class Test
             not_relevant = !t_test_correct?(time_array)
             str <<  "[" + "NOT RELEVANT".red + "]" if not_relevant
             if energy_array.average != 0.0
-              str << " W*h [" + energy_array.average.round(5).to_s + "]"
-              not_relevant_energy = !t_test_correct?(energy_array)
-              str <<  "[" + "NOT RELEVANT".red + "]" if not_relevant_energy
-              n_energy += 1 if not_relevant_energy
+              str << " Wh [" + energy_array.average.round(6).to_s + "]"
+              if (!energy_array.collect{|x| x == energy_array.average}.all?{|x| x == true})
+                 not_relevant_energy = !t_test_correct?(energy_array)
+                 str <<  "[" + "NOT RELEVANT".red + "]" if not_relevant_energy
+                 n_energy += 1 if not_relevant_energy
+              end
             end
+            str << " Iter [" + loop_iteration_array.average.round(5).to_s + "]" 
             puts str
             time_array.each_index{|i| puts " * " "#{i+1}: #{time_array[i]}".yellow } if not_relevant
             n_run += 1 if not_relevant
@@ -487,11 +491,18 @@ class Test
         puts " * #{test_name} - #{size}".light_blue
         @splits.each_index do |i|
           split_values = @splits[i]
-          time_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:time).all.map!{|n| n[:time]}
+          time_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:extended_time).all.map!{|n| n[:extended_time]}
+          energy_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:energy).all.map!{|n| n[:energy]}
           if time_array.size < @iterations
             (@iterations - time_array.size).times{|n| single_run datetime, test_name, size, n, i, 1}
           else
-            if !t_test_correct?(time_array) 
+            do_energy_t_test = !energy_array.collect{|x| x == energy_array.average}.all?{|x| x == true}
+            energy_t_test = false;
+            if do_energy_t_test
+		energy_t_test = !t_test_correct?(energy_array)
+            end
+
+            if ((!t_test_correct?(time_array)) || energy_t_test)
               $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).delete
               @iterations.times{|n| single_run datetime, test_name, size, n, i, 1}
             end
@@ -514,11 +525,15 @@ class Test
         @splits.each_index do |i|
           split_values = @splits[i]
           time_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:time).all.map!{|n| n[:time]}
+          energy_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:energy).all.map!{|n| n[:energy]} 
+          loop_iteration_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:loop_iteration).all.map!{|n| n[:loop_iteration]}
           if !t_test_correct?(time_array)
             $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).delete
             time = time_array.median
+            energy = energy_array.median
+            loop_iteration = loop_iteration_array.median
             puts " * #{test_name}".light_blue + "  size #{size}  with splitting:  #{split_values}  => Inserting the median"
-            @iterations.times{ time += 1; $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :time => time, :timestamp => datetime) }
+            @iterations.times{ time += 1; energy += 0.000000001; $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :energy => energy, :loop_iteration => loop_iteration, :time => time, :timestamp => datetime) }
           end
         end
       end
@@ -559,6 +574,25 @@ class Test
       end
       puts
     end
+  end
+
+  def delete 
+    puts "#####################################"
+    puts "#####         " + "Delete Phase".light_blue + "        #####"
+    puts "#####################################"
+    init_db_run
+    @test_names.each_with_index do |test_name, test_name_index|
+      Dir.chdir($path + test_name)
+      @sizes[test_name_index].to_a.map{ |x| 2**x }.each do |size|
+        puts " * #{test_name} - #{size}".light_blue
+        @splits.each_index do |i|
+          split_values = @splits[i]
+          $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).delete
+        end
+        puts
+      end
+    end
+    puts
   end
 
 # utility functions
@@ -616,6 +650,7 @@ private
           Bignum   :time
           Bignum   :extended_time
           Float    :energy
+          Bignum   :loop_iteration
           String   :worker_event
           String   :ocl_event
           DateTime :timestamp
@@ -692,16 +727,22 @@ private
     `rm ocl_event_log* 2> /dev/null`
     `rm energy.log 2> /dev/null`
     
-    loop_iteration = 10_000_000_000/time.to_i
+    loop_iteration = 20_000_000_000/time.to_i
+    loop_iteration = 1 if loop_iteration < 1
+
     `./#{test_name}.ocl.test -size #{size} -loop #{loop_iteration}`
     extended_time = get_result
     if File.exist?("energy.log")
       energy = `cat energy.log`.to_f
     else
+      puts "NO energy!"
       energy = 0.0
     end
     `rm energy.log 2> /dev/null`
-    $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :time => time, :extended_time => extended_time, :energy => energy/loop_iteration, :worker_event => worker_event, :ocl_event => ocl_event, :timestamp => datetime)
+
+    sleep(0.5)
+
+    $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :time => time, :extended_time => extended_time/loop_iteration, :energy => energy/loop_iteration, :loop_iteration => loop_iteration, :worker_event => worker_event, :ocl_event => ocl_event, :timestamp => datetime)
     #puts
     #puts "Time: #{time}"
     #puts "Loop Iteration: #{loop_iteration}"
@@ -754,7 +795,7 @@ $program = ["simple",           # 1
             "mol_dyn",          # 7
             "spmv",             # 8
             "lin_reg",          # 9 
-            "nbody",            # 10
+            "n_body",            # 10
             "k_means",          # 11
             "knn",              # 12
             "syr2k",            # 13
@@ -784,19 +825,24 @@ $program = ["simple",           # 1
 initialize_env
 
 # create a test
-#split = (1..21).to_a
-split = (15..15).to_a
+split = (1..21).to_a
 
-#test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
-test = Test.new(split, [2, 18], [3], [10..10], 3)
+#test = Test.new(split, [2, 18], [2,3,4,5,6,7,8,9,10,11,12,13,14,15], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
+
+#test = Test.new(split, [2, 18], [ 5, 6, 7, 8, 9, 10, 11, 12, 13,   16, 17, 18], [ 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21,  9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17 ], 5) # AL
+test = Test.new(split, [2, 18], [2,3,4,5,11,12], [9..25, 9..23, 9..25, 9..24, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
+
+
+#test = Test.new(split, [2, 18], [1,2,3,4,5,6,7,8,9,10], [9..23, 9..25, 9..23,  9..25, 9..24, 9..25, 9..24, 9..21,  9..19, 9..18], 5)
 
 # run the test
-test.info
-test.compile
-test.check
-test.run
-#test.fix
+#test.info
+#test.compile
+#test.check
+#test.run
+test.fix
 #test.fake
 test.view
+#test.delete
 #test.collect
 #test.evaluate :svm # or :ffnet
