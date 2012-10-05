@@ -291,28 +291,34 @@ def reporter( report_queue ):
 
 	
 	header = ["bench_name", "orig_time", "seq_time", "run_time", "ocl_time", 
+										 "rel_seq_time",	"rel_run_time", "rel_ocl_time",  
 							"orig_mem",  "seq_mem",  "run_mem", "ocl_mem",
-							"orig_stdev","seq_stdev","run_stdev","ocl_stdev" ]
+										 "rel_seq_mem", "rel_run_mem", "rel_ocl_mem",
+							"orig_stdev","seq_stdev","run_stdev","ocl_stdev", 
+										 "rel_seq_stdev", "rel_run_stdev", "rel_ocl_stdev"]
 
 	table = []
 	table.append(header)
 	for entry in entries:
-		line = [0] * 13
+		line = [0] * len(header)
 		# add name 
 		line[0] = entry[0]
 
 		for e in entry[1:]:
 			if e[0] == 'gcc':
-				line[1:13:4] = e[1:]
+				line[1::7] = e[1:]
 
 			if e[0] == 'seq':
-				line[2:13:4] = e[1:]
+				line[2::7] = e[1:]
+				line[5::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7]))
 
 			if e[0] == 'run':
-				line[3:13:4] = e[1:]
+				line[3::7] = e[1:]
+				line[6::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7]))
 
 			if e[0] == 'ocl':
-				line[4:13:4] = e[1:]
+				line[4::7] = e[1:]
+				line[7::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7] ))
 
 		table.append( line )
 	
