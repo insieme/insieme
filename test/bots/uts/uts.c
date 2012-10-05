@@ -61,7 +61,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 #include <sys/time.h>
 
 #include "app-desc.h"

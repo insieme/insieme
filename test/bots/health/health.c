@@ -162,7 +162,9 @@ void allocate_village( struct Village **capital, struct Village *back,
       (*capital)->hosp.waiting = NULL;
       (*capital)->hosp.inside = NULL;
       (*capital)->hosp.realloc = NULL;
+	#ifdef _OPENMP
       omp_init_lock(&(*capital)->hosp.realloc_lock);
+	#endif
       // Create Cities (lower level)
       inext = NULL;
       for (i = sim_cities; i>0; i--)
@@ -307,9 +309,13 @@ void check_patients_assess_par(struct Village *village)
             {
                village->hosp.free_personnel++;
                removeList(&(village->hosp.assess), p);
+			#ifdef _OPENMP
                omp_set_lock(&(village->hosp.realloc_lock));
+			#endif
                addList(&(village->back->hosp.realloc), p); 
+			#ifdef _OPENMP
                omp_unset_lock(&(village->hosp.realloc_lock));
+			#endif
             } 
          }
          else /* move to village */

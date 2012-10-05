@@ -1,1 +1,1 @@
-{PATH}/{EXEC} -f {PATH}/small.input -c
+{PATH}/{EXEC} -f {PATH}/../../../bots/health/small.input -c

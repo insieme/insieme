@@ -36,6 +36,8 @@
 
 #include "insieme/analysis/inductive/memory_location.h"
 
+#include "insieme/core/lang/basic.h"
+
 #include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {

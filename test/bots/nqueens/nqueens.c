@@ -31,7 +31,10 @@
 #include <alloca.h>
 #include "bots.h"
 #include "app-desc.h"
+
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 
 /* Checking information */
