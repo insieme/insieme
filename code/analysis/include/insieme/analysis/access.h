@@ -154,13 +154,13 @@ public:
 
 	virtual bool isBaseAccess() const = 0;
 
-	bool isReference() const {
+	inline bool isReference() const {
 		return addr.getAddressedNode().as<core::ExpressionPtr>()->getType()->getNodeType() == core::NT_RefType; 
 	}
 
 	virtual bool isContextDependent() const { return false; }
 
-	bool operator==(const Access& other) const { 
+	inline bool operator==(const Access& other) const { 
 		// Test the trivial case first 
 		if (this == &other) { return true; }
 		return addr == other.addr;
@@ -571,6 +571,8 @@ public:
 		tmpVarMap(tmpVarMap) { }
 
 	AccessClassPtr getClassFor(const AccessPtr& access);
+
+	AccessClassPtr findClass(const AccessPtr& access) const;
 
 	void printDotGraph(std::ostream& out) const;
 

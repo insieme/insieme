@@ -91,7 +91,7 @@ TEST(EntityExtract, VariableExtractor) {
 
 	// Extract VariablePtr
 	{ 
-		auto dom = extract(dfa::Entity<elem<VariablePtr>>(), *cfg);
+		auto dom = extract(dfa::Entity<elem<VariablePtr>>(), *cfg );
 		EXPECT_EQ(4u, dom.size());
 	}
 

@@ -185,6 +185,8 @@ class Solver {
 	
 	const CFG& cfg;
 
+	Problem df_p;
+
 protected:
 
 	inline typename Problem::value_type 
@@ -204,16 +206,18 @@ public:
 	 */
 	typedef std::map<size_t, typename Problem::value_type> CFGBlockMap;
 
-	Solver(const CFG& cfg) : cfg(cfg) { }
+	Solver(const CFG& cfg) : cfg(cfg), df_p(cfg) { }
 
-	inline CFGBlockMap solve() const {
+	inline const Problem& getProblemInstance() const { return df_p; }
+	inline Problem& getProblemInstance() { return df_p; }
+
+	inline CFGBlockMap solve() {
 
 		using namespace detail;
 
 		typedef typename Problem::value_type 	value_type;
 		typedef typename Problem::direction_tag direction_tag;
 
-		Problem df_p(cfg);
 		df_p.initialize();
 
 		WorklistQueue q;
@@ -233,7 +237,7 @@ public:
 						x = df_p.meet(x, v);
 					});
 				
-				// LOG(DEBUG) << x;
+				LOG(INFO) << x;
 
 				solver_data[ block->getBlockID() ] = x; // df_p.transfer_func(x, block);
 				
@@ -248,7 +252,7 @@ public:
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@@@";
 		LOG(DEBUG) << "@@ Initial State @@";
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@@@";
-		printDataflowData(LOG_STREAM(DEBUG), solver_data); 
+		printDataflowData(LOG_STREAM(INFO), solver_data); 
 
 		// iterate through the elements of the queue until the queue is empty
 		while (!q.empty()) {
@@ -272,14 +276,14 @@ public:
 					
 				});
 
-			//LOG(DEBUG) << "AFTER ITER";
-			//LOG(DEBUG) << solver_data;
+			// LOG(DEBUG) << "AFTER ITER";
+			// LOG(DEBUG) << solver_data;
 		}
 
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@";
 		LOG(DEBUG) << "@@ Final State @@";
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@";
-		printDataflowData(LOG_STREAM(DEBUG), solver_data); 
+		printDataflowData(LOG_STREAM(INFO), solver_data); 
 
 		return std::move(solver_data);
 	}

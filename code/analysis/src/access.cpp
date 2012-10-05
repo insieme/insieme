@@ -449,10 +449,15 @@ std::set<core::ExpressionAddress> extractRealAddresses(const AccessClass& cl, co
 // AccessManager ==============================================================
 
 
-namespace {
+AccessClassPtr AccessManager::findClass(const AccessPtr& access) const {
 
-
-} // end anonymous namespace 
+	for (const auto& accClass : classes) {
+		for (const auto& acc : accClass->getAccesses()) {
+			if (*acc == *access) { return accClass; }
+		}
+	}
+	return AccessClassPtr();
+}
 
 void AccessManager::printDotGraph(std::ostream& out) const { 
 
