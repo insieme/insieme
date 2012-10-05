@@ -63,6 +63,9 @@ class Problem {
 
 	// Builds the lattice 
 	void init_internal() {
+
+		extracted = extract(E(), cfg, static_cast<Impl&>(*this));
+
 		lattice_ptr = std::make_shared<LowerSemilattice<container_type>>(
 				container_type(extracted), 
 					top(), 
@@ -87,7 +90,7 @@ public:
 	typedef D direction_tag;
 
 
-	Problem(const CFG& cfg) : cfg(cfg), extracted( extract(E(), cfg) ) { }
+	Problem(const CFG& cfg) : cfg(cfg)  { }
 
 	void initialize() { init_internal(); }
 

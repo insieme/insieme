@@ -46,7 +46,7 @@ namespace insieme { namespace analysis { namespace dfa {
 
 template <>
 typename container_type_traits< dfa::elem< cfg::Address >  >::type 
-extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg) {
+extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg, analyses::ReachingDefinitions& def) {
 
 	std::set<cfg::Address> entities;
 
