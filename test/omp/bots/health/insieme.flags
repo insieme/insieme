@@ -1,1 +1,1 @@
---omp-sema
+-D_OPENMP --omp-sema

@@ -1,1 +1,1 @@
--I../../../bots ../../../bots/bots_common.c ../../../bots/bots_main.c ../../../bots/strassen/strassen.c
+-I../../../bots -I../../../bots/strassen ../../../bots/bots_common.c ../../../bots/bots_main.c ../../../bots/strassen/strassen.c
