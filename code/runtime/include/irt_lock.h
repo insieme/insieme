@@ -37,17 +37,20 @@
 #pragma once
 
 #include "declarations.h"
+#include "abstraction/threads.h"
 
-// TODO: this does not seem to be used!
-
-IRT_MAKE_ID_TYPE(lock);
+typedef struct _locked_wi {
+	irt_work_item *wi;
+	irt_worker *worker;
+	struct _locked_wi *next;
+} locked_wi;
 
 struct _irt_lock {
-	irt_lock_id id;
+	irt_spinlock mutex;
 	uint32 locked;
+	locked_wi *top;
 };
 
-irt_lock* irt_lock_create();
-
+void irt_lock_init(irt_lock* lock);
 void irt_lock_acquire(irt_lock* lock);
 void irt_lock_release(irt_lock* lock);

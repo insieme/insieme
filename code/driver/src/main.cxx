@@ -41,6 +41,8 @@
 
 #include <boost/filesystem.hpp>
 
+// Minimum size of the context string reported by the error checker
+// (context will be extended when smaller)
 #define MIN_CONTEXT 40
 
 #include "insieme/core/ir_statistic.h"
@@ -86,6 +88,7 @@
 #include "insieme/driver/region/size_based_selector.h"
 #include "insieme/driver/pragma_transformer.h"
 #include "insieme/driver/pragma_info.h"
+#include "insieme/driver/task_optimizer.h"
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -522,8 +525,8 @@ void featureExtract(const core::ProgramPtr& program) {
 	return;
 }
 
-
 } // end anonymous namespace 
+
 
 /** 
  * Insieme compiler entry point 
@@ -536,7 +539,6 @@ int main(int argc, char** argv) {
 
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::get(manager);
-	insieme::driver::region::RegionList regions;
 	try {
 		if(!CommandLineOptions::InputFiles.empty()) {
 			auto inputFiles = CommandLineOptions::InputFiles;
@@ -582,12 +584,18 @@ int main(int argc, char** argv) {
 				stmtMap.clear();
 				applyOpenMPFrontend(program);
 				printIR(program, stmtMap);
+				if(CommandLineOptions::TaskOpt) {
+					program = measureTimeFor<core::ProgramPtr>("Task Optimization ", [&]() {
+						return insieme::applyTaskOptimization(program);
+					});
+					printIR(program, stmtMap);
+				}
+				// check again if the OMP flag is on
+				if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
 			}
 
 			/**************######################################################################################################***/
-			regions = insieme::driver::region::SizeBasedRegionSelector(
-					CommandLineOptions::MinRegionSize, CommandLineOptions::MaxRegionSize
-				).getRegions(program);
+
 			//cout << "\n\n******************************************************* REGIONS \n\n";
 			//for_each(regions, [](const NodeAddress& a) {
 			//	cout << "\n***** REGION \n";
@@ -633,7 +641,6 @@ int main(int argc, char** argv) {
 			//doCleanup(program);
 			//printIR(program, stmtMap);
 			//if (CommandLineOptions::Cleanup) { checkSema(program, errors, stmtMap); }
-			
 
 			// Extract features
 			if (CommandLineOptions::FeatureExtract) { featureExtract(program); }
@@ -663,6 +670,9 @@ int main(int argc, char** argv) {
 
 		if(CommandLineOptions::DoRegionInstrumentation) {
 			LOG(INFO) << "============================ Generating region instrumentation =========================";
+			insieme::driver::region::RegionList regions = insieme::driver::region::SizeBasedRegionSelector(
+					CommandLineOptions::MinRegionSize, CommandLineOptions::MaxRegionSize
+				).getRegions(program);
 
 			if (regions.empty()) {
 				LOG(INFO) << " No regions selected!";
@@ -686,7 +696,6 @@ int main(int argc, char** argv) {
 				});
 
 				program = static_pointer_cast<ProgramPtr>(transform::replaceAll(manager, replacementMap));
-
 			}
 		}
 

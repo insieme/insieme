@@ -912,13 +912,12 @@ namespace core {
 		 * Obtains a list of all expressions which's resulting value is bound by this expression.
 		 */
 		vector<Ptr<const Expression>> getBoundExpressions() const {
-			typename Ptr<const Expression>::StaticCast caster;
 			vector<Ptr<const Expression>> res;
 
-			auto& parameters = getParameters()->getElements();
+			const auto& parameters = this->getNode().getParameters()->getElements();
 			for_each(getCall()->getArguments(), [&](const Ptr<const Expression>& cur) {
 				if (cur->getNodeType() == NT_Variable) {
-					const Ptr<const Variable>& var = caster.template operator()<const Variable>(cur);
+					const VariablePtr& var = cur.template as<VariablePtr>();
 					if (contains(parameters, var)) {
 						return;
 					}

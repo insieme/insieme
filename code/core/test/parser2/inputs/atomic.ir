@@ -5,7 +5,7 @@ unit main() {
 
 	// an atomic increment
 	let atomicInc = (ref<'a> v)->unit {
-		atomic(v, ('a x)=>true, ('a x)=>x+('a)1);
+		atomic(v, ('a _)=>true, ('a x)=>x+('a)1);
 	};
 
 	// create an int and increment

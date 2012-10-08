@@ -692,6 +692,20 @@ namespace core {
 		}
 
 		/**
+		 * Retrieves the named type entry referencing the given member name within this
+		 * struct type or a null pointer if there is no such member.
+		 *
+		 * @param name the name to be searching for
+		 */
+		Ptr<const NamedType> getNamedTypeEntryOf(const string& name) const {
+			auto list = getEntries();
+			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
+				return cur->getName()->getValue() == name;
+			});
+			return (pos==list.end())?Ptr<const NamedType>():(*pos);
+		}
+
+		/**
 		 * Retrieves the type of a member of this composite type or a null pointer if there is no
 		 * such entry.
 		 *

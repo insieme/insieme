@@ -468,7 +468,7 @@ int main() {
 
 	// run computation
 #ifdef _OPENMP
-	double start = omp_get_wtime();
+//	double start = omp_get_wtime();
 #endif
 #ifdef iterative
 	jacobi_iterative(A,B,M);
@@ -477,8 +477,8 @@ int main() {
 	jacobi_recursive(A,B,M);
 #endif
 #ifdef _OPENMP
-	double time = omp_get_wtime() - start;
-	printf("Execution time: %.1fms\n", time*1000);
+//	double time = omp_get_wtime() - start;
+//	printf("Execution time: %.1fms\n", time*1000);
 #endif
 
 	// verification

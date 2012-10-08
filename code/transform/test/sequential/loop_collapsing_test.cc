@@ -39,7 +39,6 @@
 #include "insieme/transform/sequential/loop_collapsing.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/checks/full_check.h"
 
@@ -54,16 +53,13 @@ namespace sequential {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		core::parse::IRParser parser(manager);
-
-		auto forStmt = static_pointer_cast<core::ForStmtPtr>( parser.parseStatement(
-				"for(decl int<4>:i = 0 .. 50 : 1) {"
-				"	for(decl int<4>:j = 10 .. 80 : 1) {"
-				"		(i + j);"
-				"	};"
-				"}"
-			)
-		);
+		auto forStmt = builder.parseStmt(
+			"for(int<4> i = 0 .. 50) {"
+			"	for(int<4> j = 10 .. 80) {"
+			"		i + j;"
+			"	};"
+			"}"
+		).as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 
@@ -84,18 +80,15 @@ namespace sequential {
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
-		core::parse::IRParser parser(manager);
-
-		auto forStmt = static_pointer_cast<core::ForStmtPtr>( parser.parseStatement(
-				"for(decl int<4>:i = 0 .. 50 : 1) {"
-				"	for(decl int<4>:j = 10 .. 80 : 2) {"
-				"		for(decl int<4>:k = 50 .. 90 : 3) {"
-				"			((i + j) + k);"
-				"		};"
-				"	};"
+		auto forStmt = builder.parseStmt(
+				"for(int<4> i = 0 .. 50 ) {"
+				"	for(int<4> j = 10 .. 80 : 2) {"
+				"		for(int<4> k = 50 .. 90 : 3) {"
+				"			i + j + k;"
+				"		}"
+				"	}"
 				"}"
-			)
-		);
+			).as<core::ForStmtPtr>();
 
 		EXPECT_TRUE(forStmt);
 

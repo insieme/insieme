@@ -47,7 +47,6 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/analysis/attributes.h"
-#include "insieme/core/parser/type_parse.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -94,8 +93,12 @@ protected:
 	// Identifies omp annotations and uses the correct methods to deal with them
 	// except for threadprivate, all omp annotations are on statement or expression marker nodes
 	virtual const NodePtr resolveElement(const NodePtr& node) {
-		if(node->getNodeCategory() == NC_Type) return node;
 		NodePtr newNode;
+		if(node->getNodeCategory() == NC_Type) { // go top-down for types!
+			newNode = handleTypes(node);
+			if(newNode==node) newNode = node->substitute(nodeMan, *this);
+			return newNode;
+		}
 		if(BaseAnnotationPtr anno = node->getAnnotation(BaseAnnotation::KEY)) {
 			if(auto mExp = dynamic_pointer_cast<const MarkerExpr>(node)) {
 				newNode = mExp->getSubExpression()->substitute(nodeMan, *this);
@@ -213,11 +216,49 @@ protected:
 				} else if(funName == "omp_get_max_threads") {
 					return build.intLit(65536); // The maximum number of threads shall be 65536. 
 					// Thou shalt not count to 65537, and neither shalt thou count to 65535, unless swiftly proceeding to 65536.
-				} else if(funName.substr(0, 4) == "omp_") {
+				} 
+				// OMP Locks --------------------------------------------
+				else if(funName == "omp_init_lock") {
+					ExpressionPtr arg = callExp->getArgument(0);
+					if(analysis::isCallOf(arg, basic.getScalarToArray())) arg = analysis::getArgument(arg, 0);
+					return build.initLock(arg);
+				} else if(funName == "omp_set_lock") {
+					ExpressionPtr arg = callExp->getArgument(0);
+					if(analysis::isCallOf(arg, basic.getScalarToArray())) arg = analysis::getArgument(arg, 0);
+					return build.acquireLock(arg);
+				} else if(funName == "omp_unset_lock") {
+					ExpressionPtr arg = callExp->getArgument(0);
+					if(analysis::isCallOf(arg, basic.getScalarToArray())) arg = analysis::getArgument(arg, 0);
+					return build.releaseLock(arg);
+				} else if(funName == "scalar.to.array") {
+					ExpressionPtr arg = callExp->getArgument(0);
+					if(analysis::isRefOf(arg, basic.getLock())) return arg;
+					return newNode;
+				} 
+				// Unhandled OMP functions
+				else if(funName.substr(0, 4) == "omp_") {
 					LOG(ERROR) << "Function name: " << funName;
 					assert(false && "Unknown OpenMP function");
 				}
 			}
+		}
+		return newNode;
+	}
+
+	// implements OpenMP built-in types by replacing them with the correct IR constructs
+	NodePtr handleTypes(const NodePtr& newNode) {
+		if(TypePtr type = dynamic_pointer_cast<TypePtr>(newNode)) {
+			//std::cout << "-- Type: " << *type << "\n"; 
+			//if(analysis::isRefType(type)) {
+			//	TypePtr sub = analysis::getReferencedType(type);
+				if(ArrayTypePtr arr = dynamic_pointer_cast<ArrayTypePtr>(type)) type = arr->getElementType();
+				if(StructTypePtr st = dynamic_pointer_cast<StructTypePtr>(type)) {
+					if(st->getNamedTypeEntryOf("insieme_omp_lock_struct_marker")) {
+						//std::cout << "!! Found!\n"; 
+						return basic.getLock();
+					}
+				}
+			//}
 		}
 		return newNode;
 	}
@@ -427,7 +468,7 @@ protected:
 
 	NodePtr markUnordered(const NodePtr& node) {
 		auto& attr = nodeMan.getLangExtension<core::analysis::AttributeExtension>();
-		auto printfNodePtr = build.literal("printf", core::parse::parseType(nodeMan, "(ref<array<char,1> >, var_list) -> int<4>"));
+		auto printfNodePtr = build.literal("printf", build.parseType("(ref<array<char,1> >, var_list) -> int<4>"));
 		return transform::replaceAll(nodeMan, node, printfNodePtr, core::analysis::addAttribute(printfNodePtr, attr.getUnordered()));
 	}
 	
@@ -504,11 +545,11 @@ protected:
 		string name = "global_omp_critical_lock_" + nameSuffix;
 		StatementList replacements;
 		// push lock
-		replacements.push_back(build.acquireLock(build.literal(nodeMan.getLangBasic().getLock(), name)));
+		replacements.push_back(build.acquireLock(build.literal(build.refType(basic.getLock()), name)));
 		// push original code fragment
 		replacements.push_back(statement);
 		// push unlock
-		replacements.push_back(build.releaseLock(build.literal(nodeMan.getLangBasic().getLock(), name)));
+		replacements.push_back(build.releaseLock(build.literal(build.refType(basic.getLock()), name)));
 		// build replacement compound
 		return build.compoundStmt(replacements);
 	}
@@ -535,6 +576,7 @@ protected:
 
 
 const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
+	IRBuilder build(resultStorage);
 	ProgramPtr result = prog;
 
 	// new sema
@@ -561,11 +603,16 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 		if(collectedGlobals.size() > 0) {
 			auto globalDecl = transform::createGlobalStruct(resultStorage, result, collectedGlobals);
 			GlobalMapper globalMapper(resultStorage, globalDecl->getVariable());
-			//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE GLOBAL\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 			result = globalMapper.map(result);
+			// add initialization for collected global locks
+			for(NamedValuePtr& val : collectedGlobals) {
+				if(val->getValue()->getType() == resultStorage.getLangBasic().getLock()) {
+					auto initCall = build.initLock(build.refMember(globalDecl->getVariable(), val->getName()));
+					result = transform::insertAfter(resultStorage, DeclarationStmtAddress::find(globalDecl, result), initCall).as<ProgramPtr>();
+				}
+			}
 			timer.stop();
 			LOG(INFO) << timer;
-			//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST GLOBAL\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 		}
 	}
 

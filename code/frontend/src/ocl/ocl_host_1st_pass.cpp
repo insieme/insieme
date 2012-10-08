@@ -61,7 +61,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder) {
 		path = path.substr(1, path.length() - 2);
 
 	std::ifstream check;
-	string root = path;
+			string root = path;
 	size_t nIncludes = CommandLineOptions::IncludePaths.size();
 	// try relative path first
 	check.open(path);
@@ -243,7 +243,7 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 
 const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, const ExpressionPtr& sizeArg, const bool copyPtr,
 		const ExpressionPtr& hostPtr, const ExpressionPtr& errcode_ret) {
-	ExpressionPtr fun = o2i.getClCreateBuffer(copyPtr);
+	ExpressionPtr fun = o2i.getClCreateBuffer(copyPtr, errcode_ret == builder.getTypeLiteral(builder.arrayType(BASIC.getInt4())));
 
 	TypePtr type;
 	ExpressionPtr size;
@@ -387,121 +387,186 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 	return false;
 }
 
-ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr) {
+ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr, bool setErrcodeRet) {
 	// read/write flags ignored
-	// errcorcode always set to 0 = CL_SUCCESS
-	if (copyHostPtr)
-		return parser.parseExpression("fun(type<'a>:elemType, uint<8>:flags, uint<8>:size, anyRef:hostPtr, ref<array<int<4>, 1> >:errorcode_ret) -> \
-					ref<array<'a, 1> >  {{ \
-	            decl ref<array<'a, 1> >:devicePtr = (op<ref.new>( (op<array.create.1D>( elemType, size )) )); \
-				decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type(array('a ,1)) > )); \
-				for(decl uint<8>:i = lit<uint<8>, 0> .. size) \
-					( (op<array.ref.elem.1D>(devicePtr, i )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
-				 \
-	            ( (op<array.ref.elem.1D>(errorcode_ret, lit<uint<8>, 0> )) = 0 ); \
-				return devicePtr; \
-	       }}");
+	// errcorcode always set to 0 = CL_SUCCESS for clCreatBuffer and ignored for icl_create_buffer
 
-	return parser.parseExpression("fun(type<'a>:elemType, uint<8>:flags, uint<8>:size, ref<array<int<4>, 1> >:errorcode_ret) -> ref<array<'a, 1> > {{ \
-            ( (op<array.ref.elem.1D>(errorcode_ret, lit<uint<8>, 0> )) = 0 ); \
-            return (op<ref.new>( (op<array.create.1D>( elemType, size )) )); \
-       }}");
+	std::string returnErrorcode = setErrcodeRet ? "		errorcode_ret[0u] = 0; " : "";
+
+	if (copyHostPtr)
+		return builder.parseExpr(
+		"("
+		"	type<'a> 				elemType, "
+		"	uint<8> 				flags, "
+		"	uint<8> 				size, "
+		"	anyRef 					hostPtr, "
+		"	ref<array<int<4>,1> > 	errorcode_ret"
+		") -> ref<array<'a, 1> >  { "
+		"		ref<array<'a,1>> devicePtr = new( array.create.1D( elemType, size ) ); "
+		"		ref<array<'a,1>> 		hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
+		"		for(uint<8> i = 0u .. size) { "
+		"			devicePtr[i] = *hp[i]; "
+		"		} "
+		+ returnErrorcode +
+		"		return devicePtr; "
+	 	"}");
+
+	return builder.parseExpr(
+		"( "
+		"	type<'a>				elemType, "
+		"	uint<8> 				flags, "
+		"	uint<8> 				size, "
+		"	ref<array<int<4>, 1> >  errorcode_ret"
+		") -> ref<array<'a, 1> > { "
+		+ returnErrorcode +
+		"	return new( array.create.1D( elemType, size )); "
+       	"}");
 }
 
 ExpressionPtr Ocl2Inspire::getClCopyBuffer() {
 	// event stuff removed
 	// always returns 0 = CL_SUCCESS
-	return parser.parseExpression("fun(ref<array<'a, 1> >:srcBuffer, ref<array<'a, 1> >:dstBuffer, uint<8>:srcOffset, uint<8>:dstOffset, uint<8>:cb) -> int<4> {{ \
-			decl uint<8>:do = (dstOffset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-			decl uint<8>:so = (srcOffset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-            for(decl uint<8>:i = lit<uint<8>, 0> .. cb) \
-                ( (op<array.ref.elem.1D>(dstBuffer, (i + do) )) = (op<ref.deref>( (op<array.ref.elem.1D>(srcBuffer, (i + so) )) )) ); \
-            return 0; \
-    	}}");
+	return builder.parseExpr(
+		"( "
+		"	ref<array<'a, 1> > srcBuffer, "
+		"	 ref<array<'a, 1> > dstBuffer, "
+		"	 uint<8>      		srcOffset, "
+		"	 uint<8> 			dstOffset, "
+		"	 uint<8> 			cb"
+		") -> int<4> {"
+		"	uint<8> do = dstOffset / sizeof( lit('a)); "
+		"	uint<8> so = srcOffset / sizeof( lit('a)); "
+        "   for(uint<8> i = 0u .. cb) { "
+		"		dstBuffer[i + do] = *srcBuffer[i + so]; "
+		"	}"
+		"	return 0; "
+    	"}");
 }
 
 ExpressionPtr Ocl2Inspire::getClCopyBufferFallback() {
 	// event stuff removed
 	// always returns 0 = CL_SUCCESS
-	return parser.parseExpression("fun(ref<array<'a, 1> >:srcBuffer, ref<array<'a, 1> >:dstBuffer, uint<8>:srcOffset, uint<8>:dstOffset, uint<8>:cb) -> int<4> {{ \
-            decl uint<8>:size = (cb / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-			decl uint<8>:do = (dstOffset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-			decl uint<8>:so = (srcOffset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-			for(decl uint<8>:i = lit<uint<8>, 0> .. size) \
-                ( (op<array.ref.elem.1D>(dstBuffer, (i + dstOffset) )) = (op<ref.deref>( (op<array.ref.elem.1D>(srcBuffer, (i + dstOffset) )) )) ); \
-            return 0; \
-    	}}");
+	return builder.parseExpr(
+		"("
+		"	ref<array<'a, 1> >	srcBuffer, "
+		"	ref<array<'a, 1> > 	dstBuffer, "
+		"	uint<8>				srcOffset, "
+		"	uint<8>				dstOffset, "
+		"	uint<8>				cb"
+		") -> int<4> { "
+		"	uint<8> size = cb / sizeof( lit('a) ); "
+		"	uint<8>   do = dstOffset / sizeof( lit('a)); "
+		"	uint<8>	  so = srcOffset / sizeof( lit('a)); "
+		"	for(uint<8> i = 0u .. size) { "
+		"		dstBuffer[i + dstOffset] = *srcBuffer[i + dstOffset]; "
+		"	}"
+		"	return 0; "
+		"}");
 }
 
 ExpressionPtr Ocl2Inspire::getClWriteBuffer() {
 	// blocking_write ignored
 	// event stuff removed
 	// always returns 0 = CL_SUCCESS
-	return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_write, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
-            decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type(array('a ,1)) > )); \
-			decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-            for(decl uint<8>:i = lit<uint<8>, 0> .. cb) \
-                ( (op<array.ref.elem.1D>(devicePtr, (i + o) )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
-            return 0; \
-    	}}");
+	return builder.parseExpr(
+		"("
+		"	ref<array<'a, 1> > 	devicePtr, "
+		"	uint<4>				blocking_write, "
+		"	uint<8>				offset, "
+		"	uint<8>				cb, "
+		"	anyRef				hostPtr"
+		") -> int<4> { "
+		"	ref<array<'a,1>> hp = anyref.to.ref(hostPtr, lit(array<'a, 1>)); "
+		"	uint<8> 	  	  o = offset / sizeof( lit('a) ); "
+		"	for(uint<8> i = 0u .. cb) { "
+		"		devicePtr[i + o] = *hp[i]; "
+		"	}"
+		"	return 0; "
+    	"}");
 }
 
 ExpressionPtr Ocl2Inspire::getClWriteBufferFallback() {
 	// blocking_write ignored
 	// event stuff removed
 	// always returns 0 = CL_SUCCESS
-	return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_write, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
-            decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type(array('a ,1)) > )); \
-			decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-            decl uint<8>:size = (cb / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-            for(decl uint<8>:i = lit<uint<8>, 0> .. size) \
-                ( (op<array.ref.elem.1D>(devicePtr, (i + o) )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
-            return 0; \
-    	}}");
+	return builder.parseExpr(
+		"("
+		"	ref<array<'a, 1>> 	devicePtr, "
+		"	uint<4> 			blocking_write, "
+		"	uint<8>				offset, "
+		"	uint<8>				cb, "
+		"	anyRef				hostPtr"
+		") -> int<4> { "
+		"	ref<array<'a,1>> hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
+		"	uint<8> 		  o = offset / sizeof( lit('a) ); "
+        "	uint<8> 	   size = cb / sizeof( lit('a) ); "
+        "	for(uint<8> i = 0u .. size) { "
+        "		devicePtr[i + o] = *hp[i]; "
+		"	}"
+        "	return 0; "
+    	"}");
 }
 
 ExpressionPtr Ocl2Inspire::getClReadBuffer() {
 	// blocking_write ignored
 	// event stuff removed
 	// always returns 0 = CL_SUCCESS
-	return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_read, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
-			decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type<array<'a ,1 > )); \
-			decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-			for(decl uint<8>:i = lit<uint<8>, 0> .. cb) \
-				( (op<array.ref.elem.1D>(hp, i )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, (i + o) )) )) );\
-            return 0; \
-    	}}");
+	return builder.parseExpr(
+		"("
+		"	ref<array<'a,1>> 	devicePtr, "
+		"	uint<4> 			blocking_read, "
+		"	uint<8>				offset, "
+		"	uint<8>				cb, "
+		"	anyRef 				hostPtr"
+		") -> int<4> { "
+		"	ref<array<'a,1>> hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
+		"	uint<8>			  o = offset / sizeof( lit('a) ); "
+		"	for(uint<8> i = 0u .. cb) { "
+		"		hp[i] = *devicePtr[i + o]; "
+		"	}"
+        "	return 0; "
+ 	   	"}");
 }
 
 ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
 	// blocking_write ignored
 	// event stuff removed
 	// always returns 0 = CL_SUCCESS
-	return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_read, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
-            decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type<array<'a ,1 > )); \
-            decl uint<8>:size = (cb / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-			decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-            for(decl uint<8>:i = lit<uint<8>, 0> .. size) \
-                ( (op<array.ref.elem.1D>(hp, i )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, (i + o) )) )) ); \
-            return 0; \
-    }}");
+	return builder.parseExpr(
+		"("
+		"	ref<array<'a, 1> > 	devicePtr, "
+		"	uint<4> 			blocking_read, "
+		"	uint<8> 			offset, "
+		"	uint<8> 			cb, "
+		"	anyRef 				hostPtr"
+		") -> int<4> { "
+        "	ref<array<'a, 1> > hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
+		"	uint<8> 		 size = cb / sizeof( lit('a) ); "
+		"	uint<8> 			o = offset / sizeof( lit('a) ); "
+		"	for(uint<8> i = 0u .. size) { "
+		"		hp[i] = *devicePtr[i + o]; "
+		"	} "
+        "	return 0; "
+    	"}");
 }
 
 ExpressionPtr Ocl2Inspire::getClGetIDs() {
 	// does simply set the number of devices to 1 and returns 0 = CL_SUCCESS
 	// TODO add functionality
-	return parser.parseExpression("fun(ref<array<uint<4>, 1> >:num_devices) -> int<4> {{ \
-			( (op<array.ref.elem.1D>(num_devices, lit<uint<8>, 0>) ) = 1); \
-			return 0; \
-		}}");
+	return builder.parseExpr(
+		"(ref<array<uint<4>,1>> num_devices) -> int<4> { "
+		"	num_devices[0u] = 1u; "
+		"	return 0; "
+		"}");
 }
 
 ExpressionPtr Ocl2Inspire::getClSetKernelArg() {
 	// alsways returns 0 = CL_SUCCESS
-	return parser.parseExpression("fun(ref<'a>:argTuple, uint<8>:idx, type<'b>:ty, 'b:src) -> int<4> {{\
-            ( (op<tuple.ref.elem>(argTuple, idx, ty)) = src );\
-            return 0; \
-    }}");
+	return builder.parseExpr(
+		"(ref<'a> argTuple, uint<8> idx, type<'b> ty, 'b src) -> int<4> { "
+        "	argTuple.idx = src; "
+		"	return 0; "
+  		"}");
 }
 
 HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
@@ -535,7 +600,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 	);
 
 	ADD_Handler(builder, o2i, "icl_get_num_devices",
-			return builder.literal("1", BASIC.getUInt4());
+			return builder.castExpr(BASIC.getUInt4(), builder.literal("1", BASIC.getInt4()));
 	);
 
 	ADD_Handler(builder, o2i, "clCreateBuffer",

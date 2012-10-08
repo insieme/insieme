@@ -178,6 +178,10 @@ StatementPtr IRBuilder::parseStmt(const string& code, const std::map<string, Nod
 	return parser::parse_stmt(manager, code, true, symbols);
 }
 
+ProgramPtr IRBuilder::parseProgram(const string& code, const std::map<string, NodePtr>& symbols) const {
+	return parser::parse_program(manager, code, true, symbols);
+}
+
 vector<NodeAddress> IRBuilder::parseAddresses(const string& code, const std::map<string, NodePtr>& symbols) const {
 	return parser::parse_addresses(manager, code, true, symbols);
 }
@@ -593,15 +597,16 @@ DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const Express
 
 
 CallExprPtr IRBuilder::acquireLock(const ExpressionPtr& lock) const {
-	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot lock a non-lock type.");
+	assert(analysis::isRefOf(lock, manager.getLangBasic().getLock()) && "Cannot lock a non-lock type.");
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockAcquire(), lock);
 }
 CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
-	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot unlock a non-lock type.");
+	assert(analysis::isRefOf(lock, manager.getLangBasic().getLock()) && "Cannot unlock a non-lock type.");
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockRelease(), lock);
 }
-CallExprPtr IRBuilder::createLock() const {
-	return callExpr(manager.getLangBasic().getLock(), manager.getLangBasic().getLockCreate());
+CallExprPtr IRBuilder::initLock(const ExpressionPtr& lock) const {
+	assert(analysis::isRefOf(lock, manager.getLangBasic().getLock()) && "Cannot init a non-lock type.");
+	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockInit(), lock);
 }
 
 

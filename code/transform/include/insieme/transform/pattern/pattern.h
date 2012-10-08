@@ -44,6 +44,7 @@
 #include <boost/optional.hpp>
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/transform/pattern/structure.h"
 #include "insieme/transform/pattern/match.h"
@@ -75,14 +76,30 @@ namespace pattern {
 		template<typename T, typename target = typename match_target_info<T>::target_type>
 		boost::optional<Match<target>> match(const TreePattern& pattern, const T& node);
 
+		bool isTypeOrValueOrParam(const core::NodeType type);
+		inline bool isTypeOrValueOrParam(const int type) { return false; }
+
+		inline bool isTypeOrValueOrParam(const core::NodeAddress node) {
+			return isTypeOrValueOrParam(node->getNodeType());
+		}
+
+		inline bool isTypeOrValueOrParam(const TreePtr&) { return false; }
+
 	}
 
 	typedef boost::optional<Match<ptr_target>> MatchOpt;
 	typedef boost::optional<Match<address_target>> AddressMatchOpt;
 
 
-	class Pattern : public utils::Printable {
-	public:
+	struct Pattern : public utils::Printable {
+
+		/**
+		 * A flag indicating that this pattern does not contain any variables.
+		 */
+		bool isVariableFree;
+
+		Pattern(bool isVariableFree) : isVariableFree(isVariableFree) {}
+
 		virtual std::ostream& printTo(std::ostream& out) const = 0;
 	};
 
@@ -100,10 +117,16 @@ namespace pattern {
 		 */
 		const Type type;
 
+		/**
+		 * A flag indicating whether the matched tree may be a type or a type parameter.
+		 */
+		bool mayBeType;
+
 		// TODO: add filter support
 //		const std::vector<FilterPtr> filter;
 
-		TreePattern(const Type type) : type(type) {};
+
+		TreePattern(const Type type, bool isVariableFree, bool mayBeType = true) : Pattern(isVariableFree), type(type), mayBeType(mayBeType) {};
 
 		bool match(const core::NodePtr& node) const {
 			return matchPointer(node);
@@ -128,7 +151,7 @@ namespace pattern {
 
 		const Type type;
 
-		ListPattern(const Type type) : type(type) {};
+		ListPattern(const Type type, bool isVariableFree) : Pattern(isVariableFree), type(type) {};
 
 	};
 
@@ -140,7 +163,7 @@ namespace pattern {
 
 			const core::NodeValue value;
 
-			Value(const core::NodeValue& value) : TreePattern(TreePattern::Value), value(value) {}
+			Value(const core::NodeValue& value) : TreePattern(TreePattern::Value, true), value(value) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << value;
@@ -155,8 +178,9 @@ namespace pattern {
 			const core::NodePtr nodeAtom;
 			const TreePtr treeAtom;
 
-			Constant(const core::NodePtr& atom) : TreePattern(TreePattern::Constant), nodeAtom(atom) {}
-			Constant(const TreePtr& atom) : TreePattern(TreePattern::Constant), treeAtom(atom) {}
+			Constant(const core::NodePtr& atom)
+				: TreePattern(TreePattern::Constant, true, details::isTypeOrValueOrParam(atom->getNodeType())), nodeAtom(atom) {}
+			Constant(const TreePtr& atom) : TreePattern(TreePattern::Constant, true), treeAtom(atom) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				if (nodeAtom) {
@@ -169,7 +193,7 @@ namespace pattern {
 		// A wildcard for the pattern matching of a tree - accepts everything
 		struct Wildcard : public TreePattern {
 
-			Wildcard() : TreePattern(TreePattern::Wildcard) {}
+			Wildcard() : TreePattern(TreePattern::Wildcard, true) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << "_";
@@ -184,7 +208,7 @@ namespace pattern {
 			const TreePatternPtr pattern;
 
 			Variable(const std::string& name, const TreePatternPtr& pattern = any)
-				: TreePattern(TreePattern::Variable), name(name), pattern(pattern) {}
+				: TreePattern(TreePattern::Variable, false, pattern->mayBeType), name(name), pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				out << "$" << name;
@@ -203,9 +227,9 @@ namespace pattern {
 			const TreePatternPtr pattern;
 
 			Recursion(const string& name)
-				: TreePattern(TreePattern::Recursion), name(name), terminal(true) {}
+				: TreePattern(TreePattern::Recursion, false), name(name), terminal(true) {}
 			Recursion(const string& name, const TreePatternPtr& pattern)
-				: TreePattern(TreePattern::Recursion), name(name), terminal(false), pattern(pattern) {}
+				: TreePattern(TreePattern::Recursion, pattern->isVariableFree, pattern->mayBeType), name(name), terminal(false), pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				if(terminal) return out << "rec." << name;
@@ -221,13 +245,13 @@ namespace pattern {
 			const ListPatternPtr pattern;
 
 			Node(const ListPatternPtr& pattern)
-				: TreePattern(TreePattern::Node), id(-1), type(-1), pattern(pattern) {}
+				: TreePattern(TreePattern::Node, pattern->isVariableFree), id(-1), type(-1), pattern(pattern) {}
 
 			Node(char id, const ListPatternPtr& pattern)
-				: TreePattern(TreePattern::Node), id(id), type(-1), pattern(pattern) {}
+				: TreePattern(TreePattern::Node, pattern->isVariableFree), id(id), type(-1), pattern(pattern) {}
 
 			Node(const core::NodeType type, const ListPatternPtr& pattern)
-				: TreePattern(TreePattern::Node), id(-1), type(type), pattern(pattern) {}
+				: TreePattern(TreePattern::Node, pattern->isVariableFree, details::isTypeOrValueOrParam(type)), id(-1), type(type), pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				if(id != -1) {
@@ -248,7 +272,7 @@ namespace pattern {
 			const TreePatternPtr pattern;
 
 			Negation(const TreePatternPtr& pattern)
-				: TreePattern(TreePattern::Negation), pattern(pattern) {}
+				: TreePattern(TreePattern::Negation, pattern->isVariableFree), pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << "!(" << *pattern << ")";
@@ -262,7 +286,7 @@ namespace pattern {
 			const TreePatternPtr pattern2;
 
 			Conjunction(const TreePatternPtr& a, const TreePatternPtr& b)
-				: TreePattern(TreePattern::Conjunction), pattern1(a), pattern2(b) {}
+				: TreePattern(TreePattern::Conjunction, a->isVariableFree && b->isVariableFree, a->mayBeType && b->mayBeType), pattern1(a), pattern2(b) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << *pattern1 << " & " << *pattern2;
@@ -276,7 +300,7 @@ namespace pattern {
 			const TreePatternPtr pattern2;
 
 			Disjunction(const TreePatternPtr& a, const TreePatternPtr& b)
-				: TreePattern(TreePattern::Disjunction), pattern1(a), pattern2(b) {}
+				: TreePattern(TreePattern::Disjunction, a->isVariableFree && b->isVariableFree, a->mayBeType || b->mayBeType), pattern1(a), pattern2(b) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << *pattern1 << " | " << *pattern2;
@@ -290,7 +314,8 @@ namespace pattern {
 
 			template<typename ... Patterns>
 			Descendant(Patterns ... patterns)
-				: TreePattern(TreePattern::Descendant), subPatterns(toVector<TreePatternPtr>(patterns...)) {};
+				: TreePattern(TreePattern::Descendant, all(toVector<TreePatternPtr>(patterns...), [](const TreePatternPtr& cur) { return cur->isVariableFree; })),
+				  subPatterns(toVector<TreePatternPtr>(patterns...)) {};
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << "aT(" << join(",", subPatterns, print<id<TreePatternPtr>>()) << ")";
@@ -302,7 +327,7 @@ namespace pattern {
 	namespace list {
 
 		struct Empty : public ListPattern {
-			Empty() : ListPattern(ListPattern::Empty) {}
+			Empty() : ListPattern(ListPattern::Empty, true) {}
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << "[]";
 			}
@@ -313,7 +338,7 @@ namespace pattern {
 			const TreePatternPtr element;
 
 			Single(const TreePatternPtr& element)
-			: ListPattern(ListPattern::Single), element(element) {}
+			: ListPattern(ListPattern::Single, element->isVariableFree), element(element) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << *element;
@@ -327,7 +352,7 @@ namespace pattern {
 			const ListPatternPtr right;
 
 			Sequence(const ListPatternPtr& left, const ListPatternPtr& right)
-				: ListPattern(ListPattern::Sequence), left(left), right(right) {}
+				: ListPattern(ListPattern::Sequence, left->isVariableFree && right->isVariableFree), left(left), right(right) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << *left << "," << *right;
@@ -341,7 +366,7 @@ namespace pattern {
 			const ListPatternPtr alternative2;
 
 			Alternative(const ListPatternPtr& A, const ListPatternPtr& B)
-				: ListPattern(ListPattern::Alternative), alternative1(A), alternative2(B) {}
+				: ListPattern(ListPattern::Alternative, A->isVariableFree && B->isVariableFree), alternative1(A), alternative2(B) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << *alternative1 << "|" << *alternative2;
@@ -355,7 +380,7 @@ namespace pattern {
 			const unsigned minRep;			// minimum number of repetitions
 
 			Repetition(const ListPatternPtr& pattern, unsigned minRep = 0)
-				: ListPattern(ListPattern::Repetition), pattern(pattern), minRep(minRep) {}
+				: ListPattern(ListPattern::Repetition, pattern->isVariableFree), pattern(pattern), minRep(minRep) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				if (minRep == 0) {
@@ -376,7 +401,7 @@ namespace pattern {
 			const ListPatternPtr pattern;
 
 			Variable(const std::string& name, const ListPatternPtr& pattern = any)
-				: ListPattern(ListPattern::Variable), name(name), pattern(pattern) {}
+				: ListPattern(ListPattern::Variable, false), name(name), pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				out << "$" << name;
@@ -537,13 +562,23 @@ namespace pattern {
 
 	namespace details {
 
+
+		enum CachedMatchResult {
+			Yes, No, Unknown
+		};
+
+
 		template<typename T>
 		class MatchContext : public utils::Printable {
 
 		public:
 			typedef typename T::value_type value_type;
+			typedef typename T::atom_type atom_type;
 			typedef typename T::list_type list_type;
 			typedef typename T::list_iterator iterator;
+
+			// a cache for tree patterns not including variables
+			typedef std::map<std::pair<const TreePattern*, typename T::atom_type>, bool> tree_pattern_cache;
 
 		private:
 			struct RecVarInfo {
@@ -563,9 +598,11 @@ namespace pattern {
 
 			RecVarMap boundRecursiveVariables;
 
+			std::shared_ptr<tree_pattern_cache> treePatternCache;
+
 		public:
 
-			MatchContext() { }
+			MatchContext() : treePatternCache(std::make_shared<tree_pattern_cache>()) { }
 
 			Match<T>& getMatch() {
 				return match;
@@ -667,6 +704,23 @@ namespace pattern {
 			void unbindRecVar(const std::string& var) {
 				boundRecursiveVariables.erase(var);
 			}
+
+			// -- Cached Match Results -----------------------------
+
+			CachedMatchResult cachedMatch(const TreePattern& pattern, const atom_type& node) const {
+				assert(pattern.isVariableFree && "Can only cache variable-free pattern fragments!");
+
+				auto pos = treePatternCache->find(std::make_pair(&pattern, node));
+				if (pos == treePatternCache->end()) {
+					return Unknown;
+				}
+				return (pos->second)?Yes:No;
+			}
+
+			void addToCache(const TreePattern& pattern, const value_type& node, bool match) {
+				(*treePatternCache)[std::make_pair(&pattern, node)] = match;
+			}
+
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				out << "Match(";
@@ -771,8 +825,46 @@ namespace pattern {
 				return false;
 			}
 
+			namespace {
+
+				bool contains_variable_free(MatchContext<ptr_target>& context, const core::NodePtr& tree, const TreePatternPtr& pattern) {
+					bool res = false;
+					core::visitDepthFirstOncePrunable(tree, [&](const core::NodePtr& cur)->bool {
+						return res = res || match(pattern, context, cur);
+					}, true, pattern->mayBeType);
+					return res;
+				}
+
+				bool contains_variable_free(MatchContext<address_target>& context, const core::NodeAddress& tree, const TreePatternPtr& pattern) {
+					bool res = false;
+					core::visitDepthFirstOncePrunable(tree.as<core::NodePtr>(), [&](const core::NodePtr& cur)->bool {
+						return res = res || match(pattern, context, core::NodeAddress(cur));
+					}, true, pattern->mayBeType);
+					return res;
+				}
+
+				bool contains_variable_free(MatchContext<tree_target>& context, const TreePtr& tree, const TreePatternPtr& pattern) {
+					bool res = false;
+					res = res || match(pattern, context, tree);
+					for_each(tree->getChildList(), [&](const TreePtr& cur) { // generalize this
+						res = res || contains_variable_free(context, cur, pattern);
+					});
+					return res;
+				}
+			}
+
 			template<typename T>
 			bool contains(MatchContext<T>& context, const typename T::value_type& tree, const TreePatternPtr& pattern) {
+
+				// prune types
+				if (!pattern->mayBeType && isTypeOrValueOrParam(tree)) return false;
+
+				// if variable free, only non-shared nodes need to be checked
+				if (pattern->isVariableFree) {
+					return contains_variable_free(context, tree, pattern);
+				}
+
+				// if there are variables, all nodes need to be checked
 				bool res = false;
 				// isolate context for each try
 				res = res || match(pattern, context, tree);
@@ -1010,24 +1102,50 @@ namespace pattern {
 
 		} // end namespace list
 
+		namespace {
+
+			template<typename T>
+			bool match_internal(const TreePattern& pattern, MatchContext<T>& context, const typename T::value_type& tree) {
+				switch(pattern.type) {
+					#define CASE(NAME) case TreePattern::NAME : return tree::match ## NAME (static_cast<const pattern::tree::NAME&>(pattern), context, tree)
+						CASE(Value);
+						CASE(Constant);
+						CASE(Variable);
+						CASE(Wildcard);
+						CASE(Node);
+						CASE(Negation);
+						CASE(Conjunction);
+						CASE(Disjunction);
+						CASE(Descendant);
+						CASE(Recursion);
+					#undef CASE
+				}
+				assert(false && "Missed a pattern type!");
+				return false;
+			}
+		}
+
 		template<typename T>
 		bool match(const TreePattern& pattern, MatchContext<T>& context, const typename T::value_type& tree) {
-			switch(pattern.type) {
-				#define CASE(NAME) case TreePattern::NAME : return tree::match ## NAME (static_cast<const pattern::tree::NAME&>(pattern), context, tree)
-					CASE(Value);
-					CASE(Constant);
-					CASE(Variable);
-					CASE(Wildcard);
-					CASE(Node);
-					CASE(Negation);
-					CASE(Conjunction);
-					CASE(Disjunction);
-					CASE(Descendant);
-					CASE(Recursion);
-				#undef CASE
+			// skip searching within types if not searching for a type
+			if (!pattern.mayBeType && isTypeOrValueOrParam(tree)) return false;
+
+			// use cache if possible
+			if (pattern.isVariableFree) {
+				CachedMatchResult cachRes = context.cachedMatch(pattern, tree);
+				if (cachRes != Unknown) {
+					return cachRes == Yes;
+				}
+
+				// resolve and save result
+				bool res = match_internal(pattern, context, tree);
+				context.addToCache(pattern, tree, res);
+				return res;
 			}
-			assert(false && "Missed a pattern type!");
-			return false;
+
+			// for all the rest, use non-cached inner implementation
+			return match_internal(pattern, context, tree);
+
 		}
 
 

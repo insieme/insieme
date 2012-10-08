@@ -88,7 +88,6 @@ typedef struct _irt_wg_event_register irt_wg_event_register;
 
 /* ------------------------------ locking ----- */
 
-IRT_DECLARE_ID_TYPE(lock);
 typedef struct _irt_lock irt_lock;
 
 /* ------------------------------ loop scheduling ----- */

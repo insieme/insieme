@@ -40,40 +40,11 @@
 #include "insieme/analysis/dfa/problem.h"
 #include "insieme/analysis/dfa/analyses/extractors.h"
 
-
 namespace insieme { namespace analysis { namespace dfa { 
-
 
 namespace analyses {
 
-/** 
- * LValue is an abstraction used to represent l-values in the analysis 
- */
-class LValue : public utils::Printable {
-
-	// Pointer to the expression which refers to either a variable, member access, tuple access or
-	// array access 
-	core::ExpressionPtr lvalueExpr;
-
-public:
-
-	LValue(const core::ExpressionPtr& expr) : lvalueExpr(expr) { }
-
-	inline bool operator<(const LValue& other) const {
-		return lvalueExpr < other.lvalueExpr;
-	}
-
-	inline bool operator==(const LValue& other) const {
-		return lvalueExpr == other.lvalueExpr;
-	}
-
-	std::ostream& printTo(std::ostream& out) const {
-		return out << *lvalueExpr;
-	}
-
-	const core::ExpressionPtr& getLValueExpr() const { return lvalueExpr; }
-
-};
+class ReachingDefinitions;
 
 } // end analyses namespace 
 
@@ -81,8 +52,9 @@ public:
  * Extractor for LValue entities from the CFG
  */
 template <>
-typename container_type_traits< dfa::elem<analyses::LValue>  >::type 
-extract(const Entity< dfa::elem<analyses::LValue> >& e, const CFG& cfg);
+typename container_type_traits< dfa::elem<cfg::Address>  >::type 
+extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg, analyses::ReachingDefinitions& def);
+
 
 
 namespace analyses {
@@ -102,7 +74,7 @@ class ReachingDefinitions:
 	public Problem<
 				ReachingDefinitions, 
 				ForwardAnalysisTag, 
-				Entity< dfa::elem<LValue>, dfa::elem<cfg::BlockPtr> >, 
+				Entity< dfa::elem<cfg::Address> >, 
 				PowerSet
 			> 
 {
@@ -110,7 +82,7 @@ class ReachingDefinitions:
 	typedef Problem<
 				ReachingDefinitions, 
 				ForwardAnalysisTag, 
-				Entity< dfa::elem<LValue>, dfa::elem<cfg::BlockPtr> >, 
+				Entity< dfa::elem<cfg::Address> >, 
 				PowerSet
 			> Base;
 
@@ -131,11 +103,7 @@ public:
 
 	inline value_type bottom() const {
 		// the bottom element is the empty set 
-		const auto& lhsBase = extracted.getLeftBaseSet();
-		return makeCartProdSet(
-				lhsBase, 
-				std::set<cfg::BlockPtr>( { cfg.getBlockPtr(cfg.entry()) } ) 
-			).expand();
+		return extracted;
 	}
 
 	value_type meet(const value_type& lhs, const value_type& rhs) const;

@@ -43,10 +43,8 @@
 #include "insieme/transform/pattern/ir_pattern.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/utils/test/test_utils.h"
-
 
 namespace insieme {
 namespace transform {
@@ -73,19 +71,19 @@ namespace transform {
 
 		TransformationPtr transform = makeForAll(filter, replacer);
 
-		core::NodePtr in = core::parse::parseStatement(manager,""
+		core::NodePtr in = builder.parseStmt(
 				"{"
-				"	for(decl uint<4>:i = 6 .. 12 : 3) {"
-				"		for(decl uint<4>:k = 6 .. 12 : 3) {"
-				"			(i+1);"
-				"		};"
-				"	};"
-				"	for(decl uint<4>:j = 3 .. 25 : 1) {"
-				"		(j+1);"
-				"	};"
+				"	for(uint<4> i = 6u .. 12u : 3u) {"
+				"		for(uint<4> k = 6u .. 12u : 3u) {"
+				"			i+1u;"
+				"		}"
+				"	}"
+				"	for(uint<4> j = 3u .. 25u : 1u) {"
+				"		j+1u;"
+				"	}"
 				"}");
-		EXPECT_TRUE(in);
 
+		EXPECT_TRUE(in);
 
 		core::NodePtr out = transform->apply(in);
 		EXPECT_EQ("{42; 42;}", toString(*out));

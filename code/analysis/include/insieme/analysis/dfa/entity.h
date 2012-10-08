@@ -154,9 +154,9 @@ struct container_type_traits< Entity<T...> > {
  * compound entityes can be extracted by combining the results of the value obtained by extracting
  * the single entities 
  */
-template <class... E>
-typename container_type_traits<E...>::type extract(const Entity<E...>& e, const CFG& cfg) {
-	return typename container_type_traits<E...>::type(extract(Entity<E>(),cfg)...);
+template <class ObjTy, class... E>
+typename container_type_traits<E...>::type extract(const Entity<E...>& e, const CFG& cfg, ObjTy& obj) {
+	return typename container_type_traits<E...>::type(extract(Entity<E>(),cfg,obj)...);
 }
 
 /**
@@ -164,9 +164,9 @@ typename container_type_traits<E...>::type extract(const Entity<E...>& e, const 
  *
  * IR entities (NodePtrs) can be extracted via this specialization of the extract method 
  */
-template <class IRE>
+template <class ObjTy, class IRE>
 typename container_type_traits< elem<core::Pointer<const IRE>> >::type 
-extract(const Entity< elem<core::Pointer<const IRE>> >& e, const CFG& cfg) {
+extract(const Entity< elem<core::Pointer<const IRE>> >& e, const CFG& cfg, ObjTy& obj) {
 	
 	typedef typename container_type_traits< elem<core::Pointer<const IRE>> >::type Container;
 
@@ -188,7 +188,7 @@ extract(const Entity< elem<core::Pointer<const IRE>> >& e, const CFG& cfg) {
 	return entities;
 }
 
-template <class T> 
-DomainSet<T> extract(const Entity< dom<T> >& e, const CFG& cfg) { return DomainSet<T>(); }
+template <class ObjTy, class T> 
+DomainSet<T> extract(const Entity< dom<T> >& e, const CFG& cfg, ObjTy& obj) { return DomainSet<T>(); }
 
 } } } // end insieme::analysis::dfa

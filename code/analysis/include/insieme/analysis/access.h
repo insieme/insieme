@@ -115,22 +115,22 @@ private:
 
 //=== forward declarations ========================================================================
 class Access;
-typedef std::shared_ptr<const Access> AccessPtr;
+typedef std::shared_ptr<const Access> 			AccessPtr;
 
 class BaseAccess;
-typedef std::shared_ptr<const BaseAccess> BaseAccessPtr;
+typedef std::shared_ptr<const BaseAccess> 		BaseAccessPtr;
 
 class AccessDecorator;
-typedef std::shared_ptr<const AccessDecorator> AccessDecoratorPtr;
+typedef std::shared_ptr<const AccessDecorator> 	AccessDecoratorPtr;
 
 class Deref;
-typedef std::shared_ptr<const Deref> DerefPtr;
+typedef std::shared_ptr<const Deref> 			DerefPtr;
 
 class Member;
-typedef std::shared_ptr<const Member> MemberPtr;
+typedef std::shared_ptr<const Member> 			MemberPtr;
 
 class Subscript;
-typedef std::shared_ptr<const Subscript> SubscriptPtr;
+typedef std::shared_ptr<const Subscript> 		SubscriptPtr;
 
 
 // ================================================================================================ 
@@ -154,17 +154,15 @@ public:
 
 	virtual bool isBaseAccess() const = 0;
 
-	bool isReference() const {
+	inline bool isReference() const {
 		return addr.getAddressedNode().as<core::ExpressionPtr>()->getType()->getNodeType() == core::NT_RefType; 
 	}
 
 	virtual bool isContextDependent() const { return false; }
 
-	bool operator==(const Access& other) const { 
+	inline bool operator==(const Access& other) const { 
 		// Test the trivial case first 
-		if (this == &other) { 
-			return true;
-		}
+		if (this == &other) { return true; }
 		return addr == other.addr;
 	}
 
@@ -391,6 +389,9 @@ class AccessClass;
 typedef std::shared_ptr<AccessClass> AccessClassPtr;
 typedef std::weak_ptr<AccessClass>   AccessClassWPtr;
 
+
+typedef std::set<AccessClassPtr, compare_target<AccessClassPtr>> AccessClassSet; 
+
 /** 
  * An access class is a set of accesses which refer to the same memory location. In case of R-Values
  * an access refers to the actual value. Important to notice that access classes are specific to a
@@ -528,8 +529,10 @@ public:
 	inline AccessVector::const_iterator end() const { return accesses.end(); }
 
 	inline size_t size() const { return accesses.size(); }
+
 };
 
+void addSubClasses(const AccessClassPtr& thisClass, AccessClassSet& collect);
 
 /** 
  * Return the vector of addresses which are not temporary variable and therefore it returns
@@ -568,6 +571,8 @@ public:
 		tmpVarMap(tmpVarMap) { }
 
 	AccessClassPtr getClassFor(const AccessPtr& access);
+
+	AccessClassPtr findClass(const AccessPtr& access) const;
 
 	void printDotGraph(std::ostream& out) const;
 

@@ -41,9 +41,6 @@
 #include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/analysis/subtype_constraints.h"
 
-#include "insieme/core/parser/ir_parse.h"
-
-
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -825,9 +822,10 @@ TEST(TypeVariableDeduction, ArrayVectorRelation) {
 
 	NodeManager manager;
 
+	IRBuilder builder(manager);
 
-	TypePtr typeA = parse::parseType(manager, "array<ref<char>,1>");
-	TypePtr typeB = parse::parseType(manager, "vector<ref<char>,25>");
+	TypePtr typeA = builder.parseType("array<ref<char>,1>");
+	TypePtr typeB = builder.parseType("vector<ref<char>,25>");
 	EXPECT_NE(typeA, typeB);
 	EXPECT_PRED2(matchable, typeA, typeB);
 
@@ -835,8 +833,8 @@ TEST(TypeVariableDeduction, ArrayVectorRelation) {
 	EXPECT_EQ(NT_VectorType, typeB->getNodeType());
 
 	// now within a tuple
-	typeA = parse::parseType(manager, "(array<ref<char>,1>,var_list)");
-	typeB = parse::parseType(manager, "(vector<ref<char>,25>,var_list)");
+	typeA = builder.parseType("(array<ref<char>,1>,var_list)");
+	typeB = builder.parseType("(vector<ref<char>,25>,var_list)");
 
 	EXPECT_NE(typeA, typeB);
 	EXPECT_PRED2(matchable, typeA, typeB);

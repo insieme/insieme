@@ -368,6 +368,20 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
  */
 LambdaExprPtr correctRecursiveLambdaVariableUsage(NodeManager& manager, const LambdaExprPtr& lambda);
 
+/**
+ * Converts the given job into a function containing a parallel for-loop processing the
+ * thread group range interval if possible. The loop will only iterate at most the number of
+ * times indicated by the lower boundary of the job range.
+ *
+ * If collective operations (pfor or redistribute) are used within the body, the conversion will
+ * fail and a null-pointer will be returned.
+ *
+ * @param job the job to be converted into a parallel loop
+ * @return a lazy-expression (function without arguments) to be called for conducting the work
+ * 		represented by the job.
+ */
+ExpressionPtr toPFor(const JobExprPtr& job);
+
 } // end namespace transform
 } // end namespace core
 } // end namespace insieme
