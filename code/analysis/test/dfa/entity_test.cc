@@ -91,7 +91,8 @@ TEST(EntityExtract, VariableExtractor) {
 
 	// Extract VariablePtr
 	{ 
-		auto dom = extract(dfa::Entity<elem<VariablePtr>>(), *cfg );
+		int v;
+		auto dom = extract(dfa::Entity<elem<VariablePtr>>(), *cfg, v);
 		EXPECT_EQ(4u, dom.size());
 	}
 
@@ -121,7 +122,8 @@ TEST(EntityExtract, ExpressionExtractor) {
 
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	auto dom = extract(dfa::Entity<elem<ExpressionPtr>>(), *cfg);
+	int v;
+	auto dom = extract(dfa::Entity<elem<ExpressionPtr>>(), *cfg, v);
 
 	EXPECT_EQ(13u, dom.size());
 	EXPECT_TRUE(dfa::isBounded(dom));
@@ -152,7 +154,8 @@ TEST(EntityExtract, GenLiteralExtractor) {
     EXPECT_TRUE(code);
 
 	CFGPtr cfg = CFG::buildCFG(code);
-	auto d = extract(dfa::Entity< dom< dfa::Value<LiteralPtr> > >(), *cfg);
+	int v;
+	auto d = extract(dfa::Entity< dom< dfa::Value<LiteralPtr> > >(), *cfg, v);
 
 	EXPECT_FALSE( d.bounded() );
 	EXPECT_TRUE( d.contains( top ) );
@@ -178,7 +181,8 @@ TEST(EntityExtract, TypeExtractor) {
 
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	auto dom = extract(dfa::Entity<elem<TypePtr>>(), *cfg);
+	int v;
+	auto dom = extract(dfa::Entity<elem<TypePtr>>(), *cfg, v);
 	EXPECT_EQ(12u, dom.size());
 
 	std::cout << dom << std::endl;
@@ -204,12 +208,12 @@ TEST(CompoundEntityExtract, VariableTypeExtractor) {
 
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	auto dom1 = extract(dfa::Entity<elem<VariablePtr>>(), *cfg);
+	int v2;
+	auto dom1 = extract(dfa::Entity<elem<VariablePtr>>(), *cfg, v2);
 	EXPECT_FALSE(dom1.empty());
 
 	VariablePtr v = *dom1.begin();
-
-	auto d = extract(dfa::Entity< elem<VariablePtr>, dom<dfa::Value<TypePtr>> >(), *cfg);
+	auto d = extract(dfa::Entity< elem<VariablePtr>, dom<dfa::Value<TypePtr>> >(), *cfg, v2);
 
 	EXPECT_FALSE( dfa::isBounded(d) );
 
