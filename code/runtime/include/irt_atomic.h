@@ -37,7 +37,7 @@
 #pragma once
 
 
-#ifndef WIN32
+#ifndef _MSC_VER
 
 	// direct mapping to compiler primitives/instrinsics
 

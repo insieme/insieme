@@ -58,9 +58,11 @@
 typedef struct _lwt_reused_stack {
 	struct _lwt_reused_stack *next;
 
-	#ifdef __GNUC__
+	#if defined(__GNUC__)
 		char stack[] __attribute__ ((aligned (128)));
 	//	char stack[] __attribute__ ((aligned (__BIGGEST_ALIGNMENT__))); // older versions of gcc don't like this
+	#elif defined(__MINGW32__) || defined(__MINGW64__)
+		char stack[] __attribute__((aligned(128)));
 	#elif _MSC_VER
 		__declspec(align(128))
 		char stack[];

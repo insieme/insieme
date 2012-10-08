@@ -127,7 +127,13 @@ static inline void* _irt_di_build_data_block(uint32 element_size, uint64* sizes,
 	uint64 step_size = ((dim == 2)?element_size:sizeof(void*))*cur_size;
 	for (uint64 i = 1; i<cur_size; ++i) {
 		// void pointer arithmetic is not defined => use ugly int casts
-		index[i] = (void*)((uint64)index[i-1] + step_size);
+
+		// pointer size is different on x86 and x64 -> switch to avoid warnings
+		#ifdef __x86_64__
+			index[i] = (void*)((uint64)index[i-1] + step_size);
+		#else
+			index[i] = (void*)((uint32)index[i-1] + (uint32)step_size);
+		#endif
 	}
 
 	// return pointer to index array

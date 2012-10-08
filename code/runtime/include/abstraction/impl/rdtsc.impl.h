@@ -46,8 +46,10 @@
 
 	// ====== all x86 based platforms, 32 and 64bit =====
 
-	#ifdef _MSC_VER
+	#if defined(_MSC_VER)
 		#include "abstraction/impl/rdtsc.win.impl.h"
+	#elif defined(__MINGW32__)
+		#include "abstraction/impl/rdtsc.mingw.impl.h"
 	#else
 		#include "abstraction/impl/rdtsc.unix.impl.h"
 	#endif

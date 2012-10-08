@@ -186,10 +186,10 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 extern "C" {
 #endif
 void
-#if _M_IX86 && _MSC_VER 
+#if (defined(_M_IX86)  && defined(_MSC_VER)) || (defined(__MINGW32__) && !defined(__MINGW64__))
 __fastcall
 #endif
-_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
+_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func *func) {
 	func(wi);
 	irt_wi_end(wi);
 }

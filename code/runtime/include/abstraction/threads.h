@@ -40,7 +40,7 @@
 #include "irt_inttypes.h"
 //#include "declarations.h"
 
-#if defined(_MSC_VER) && !defined(IRT_USE_PTHREADS)
+#if defined(WIN32) && !defined(IRT_USE_PTHREADS)
 	#include <Windows.h> // keep this or Visual Studio Compiler goes nuts
 
 	struct _irt_thread {
@@ -48,7 +48,7 @@
 		HANDLE thread_handle; // just a reference to the thread (multiple handles can refer to the same thread)
 	};
 
-	typedef _irt_thread irt_thread;
+	typedef struct _irt_thread irt_thread;
 	typedef long irt_spinlock;
 
 	// Vista and up will use slim reader writer lock instead of critical section, condition variables are supported too
