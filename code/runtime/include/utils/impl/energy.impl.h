@@ -38,7 +38,7 @@
 
 #include "utils/energy.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 	#warning "RAPL energy measurements in Windows are not supported!"
 #else
 	#include "utils/energy.h"

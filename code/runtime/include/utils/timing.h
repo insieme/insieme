@@ -39,7 +39,7 @@
 // prototype of functions using rdtsc
 #include "abstraction/rdtsc.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 	#define CLOCK_REALTIME 1 // just to have some definition for CLOCK_REALTIME
 	#include "include_win32/time.h"
 	#include "include_win32/sys_time.h"

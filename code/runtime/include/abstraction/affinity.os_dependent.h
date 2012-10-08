@@ -42,7 +42,7 @@
 
 #include "abstraction/threads.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 	#include <io.h>
 	#include <Windows.h>
 	typedef DWORD_PTR irt_native_cpu_set; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit

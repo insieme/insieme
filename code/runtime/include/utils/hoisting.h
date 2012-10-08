@@ -40,7 +40,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 	
 #else
 	#include <dlfcn.h>
@@ -50,7 +50,7 @@
 
 // TODO: dlopen_unique should become an irt_* function
 
-#ifdef WIN32
+#ifdef _WIN32
 	// TODO: implement this for windows
 	void* dlopen_unique(const char* filename, int flag) {
 		return NULL;

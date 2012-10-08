@@ -36,7 +36,7 @@
 
 #pragma once
 
-#if defined(WIN32)
+#if defined(_WIN32)
 	#include "affinity.win.impl.h"
 #else
 	#include "affinity.unix.impl.h"
