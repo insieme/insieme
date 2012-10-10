@@ -417,18 +417,22 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 				defaultInitVal(core::analysis::getVolatileType(type)));
 	}
 
+	core::TypePtr curType = type;
+	if (type->getNodeType() == core::NT_RecType) {
+		curType = type.as<core::RecTypePtr>()->unroll();
+	}
 	// Handle structs initialization
-	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type)) {
+	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(curType)) {
 		return builder.callExpr(structTy, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(structTy));
 	}
 
 	// Handle unions initialization
-	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(type)) {
+	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(curType)) {
 		assert(unionTy);
 	}
 
 	// handle vectors initialization
-	if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
+	if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(curType)) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
 		return builder.callExpr(vecTy,
 				mgr.getLangBasic().getVectorInitUniform(),
@@ -442,9 +446,9 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 		return mgr.getLangBasic().getNull();
 	}
 
-	assert(core::analysis::isRefType(type) && "We cannot initialize any different type of non-ref");
+	assert(core::analysis::isRefType(curType) && "We cannot initialize any different type of non-ref");
 
-	core::RefTypePtr refType = type.as<core::RefTypePtr>();
+	core::RefTypePtr refType = curType.as<core::RefTypePtr>();
 	
 	// handle arrays initialization
 	if ( core::ArrayTypePtr&& arrTy = core::dynamic_pointer_cast<const core::ArrayType>(refType->getElementType())) {
@@ -604,8 +608,15 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 	LOG_EXPR_CONVERSION(retIr);
 
 	core::TypePtr currType = type;
+
 	if ( core::RefTypePtr&& refType = core::dynamic_pointer_cast<const core::RefType>(type)) {
 		currType = refType->getElementType();
+	}
+
+	// Handles recursive types. Unroll once in order to reveal the actual type (hopefully it will be
+	// a struct type)
+	if (currType->getNodeType() == core::NT_RecType) {
+		currType = currType.as<core::RecTypePtr>()->unroll();
 	}
 
 	if (currType->getNodeType() == core::NT_VectorType || currType->getNodeType() == core::NT_ArrayType) {
@@ -627,11 +638,13 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 		retIr = builder.vectorExpr(elements);
 	}
 
+	
+
 	/*
 	 * in the case the initexpr is used to initialize a struct/class we need to create a structExpr
 	 * to initialize the structure
 	 */
-	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(currType)) {
+	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(currType) ) {
 
 		core::StructExpr::Members members;
 		for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
