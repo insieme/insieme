@@ -604,8 +604,15 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 	LOG_EXPR_CONVERSION(retIr);
 
 	core::TypePtr currType = type;
+
 	if ( core::RefTypePtr&& refType = core::dynamic_pointer_cast<const core::RefType>(type)) {
 		currType = refType->getElementType();
+	}
+
+	// Handles recursive types. Unroll once in order to reveal the actual type (hopefully it will be
+	// a struct type)
+	if (currType->getNodeType() == core::NT_RecType) {
+		currType = currType.as<core::RecTypePtr>()->unroll();
 	}
 
 	if (currType->getNodeType() == core::NT_VectorType || currType->getNodeType() == core::NT_ArrayType) {
@@ -627,11 +634,13 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 		retIr = builder.vectorExpr(elements);
 	}
 
+	
+
 	/*
 	 * in the case the initexpr is used to initialize a struct/class we need to create a structExpr
 	 * to initialize the structure
 	 */
-	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(currType)) {
+	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(currType) ) {
 
 		core::StructExpr::Members members;
 		for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
