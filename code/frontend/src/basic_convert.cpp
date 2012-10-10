@@ -417,18 +417,22 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 				defaultInitVal(core::analysis::getVolatileType(type)));
 	}
 
+	core::TypePtr curType = type;
+	if (type->getNodeType() == core::NT_RecType) {
+		curType = type.as<core::RecTypePtr>()->unroll();
+	}
 	// Handle structs initialization
-	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type)) {
+	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(curType)) {
 		return builder.callExpr(structTy, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(structTy));
 	}
 
 	// Handle unions initialization
-	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(type)) {
+	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(curType)) {
 		assert(unionTy);
 	}
 
 	// handle vectors initialization
-	if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
+	if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(curType)) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
 		return builder.callExpr(vecTy,
 				mgr.getLangBasic().getVectorInitUniform(),
@@ -442,9 +446,9 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 		return mgr.getLangBasic().getNull();
 	}
 
-	assert(core::analysis::isRefType(type) && "We cannot initialize any different type of non-ref");
+	assert(core::analysis::isRefType(curType) && "We cannot initialize any different type of non-ref");
 
-	core::RefTypePtr refType = type.as<core::RefTypePtr>();
+	core::RefTypePtr refType = curType.as<core::RefTypePtr>();
 	
 	// handle arrays initialization
 	if ( core::ArrayTypePtr&& arrTy = core::dynamic_pointer_cast<const core::ArrayType>(refType->getElementType())) {
