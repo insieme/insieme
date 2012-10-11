@@ -839,6 +839,22 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				<< "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl << "\tEmpty map: "
 				<< ctx.recVarExprMap.size();
 
+
+	if (ctx.isResolvingRecFuncBody) { 
+  		// check if this type has a typevar already associated, in such case return it
+  		ConversionContext::RecVarExprMap::const_iterator fit = ctx.recVarExprMap.find(funcDecl);
+
+  		if (fit != ctx.recVarExprMap.end()) {
+  			/*
+  			 * we are resolving a parent recursive type, so when one of the recursive functions in the
+  			 * connected components are called, the introduced mu variable has to be used instead.
+  			 */
+  			return fit->second;
+  		}
+
+	}
+
+
 	if (!ctx.isRecSubFunc) {
 		// add this type to the type graph (if not present)
 		exprConvPtr->funcDepGraph.addNode(funcDecl);

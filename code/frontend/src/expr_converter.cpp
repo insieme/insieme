@@ -788,50 +788,26 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 		}
 
-		/*
-		 * If we are resolving the body of a recursive function we have to return the associated variable every
-		 * time a function in the strongly connected graph of function calls is encountered.
-		 */
-		if (ctx.isResolvingRecFuncBody) {
-			// check if this type has a typevar already associated, in such case return it
-			ConversionContext::RecVarExprMap::const_iterator fit = ctx.recVarExprMap.find(definition);
-			if (fit != ctx.recVarExprMap.end()) {
-				/*
-				 * we are resolving a parent recursive type, so when one of the recursive functions in the
-				 * connected components are called, the introduced mu variable has to be used instead.
-				 */
-				convFact.currTU = oldTU;
-				return (irNode = builder.callExpr(funcTy->getReturnType(),
-						static_cast<core::ExpressionPtr>(fit->second), packedArgs));
-			}
-		}
+		ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
+		if (fit != ctx.lambdaExprCache.end()) {
+			convFact.currTU = oldTU;
+			
+			irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
+					 packedArgs);
 
-		if (!ctx.isResolvingRecFuncBody) {
+			convFact.currTU = oldTU;
 
-			ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
-
-			if (fit != ctx.lambdaExprCache.end()) {
-
-				convFact.currTU = oldTU;
-
-				irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
-						packedArgs);
-
-				convFact.currTU = oldTU;
-
-				return irNode;
-			}
+			return irNode;
 		}
 
 		assert(definition && "No definition found for function");
 
-		core::ExpressionPtr lambdaExpr = core::static_pointer_cast<const core::LambdaExpr>(
+		auto lambdaExpr = core::static_pointer_cast<const core::Expression>(
 				convFact.convertFunctionDecl(definition));
 
 		convFact.currTU = oldTU;
 
 		return (irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs));
-
 	} 
 
 	if ( callExpr->getCallee() ) {
