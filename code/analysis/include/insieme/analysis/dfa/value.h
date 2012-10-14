@@ -194,3 +194,20 @@ inline Value<T> value(const T& e) { return Value<T>(e); }
 } // end analysis namespace 
 } // end insieme namespace 
 
+namespace std {
+
+	using namespace insieme::analysis::dfa;
+
+	template <typename T>
+	struct hash<Value<T>> {
+		
+		size_t operator()(const Value<T>& val) const {
+			if (val.isTop()) 	{ return reinterpret_cast<size_t>(&top); }
+			if (val.isBottom()) { return reinterpret_cast<size_t>(&bottom); }
+			return std::hash<T>()(val.value());
+		}
+
+	};
+
+} // end std namespace 
+

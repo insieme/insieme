@@ -133,7 +133,7 @@ expand(const Cont& cont) { return cont; }
 /**
  * Implementation of a generic set based on existing implementations.
  */
-template <class T, template <typename... R> class Impl=std::set>
+template <class T, template <typename... R> class Impl=std::unordered_set>
 struct Set : public SymbolicSet<T>, public Impl<T> {
 
 	typedef T 		value_type;
