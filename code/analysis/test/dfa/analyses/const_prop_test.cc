@@ -240,8 +240,6 @@ TEST(ConstantPropagation, PropagateArrayElementLoop) {
 
 	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
  
-	std::cout << *cfg << std::endl;
-
  	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
  	auto ret = s.solve();
 
@@ -254,8 +252,6 @@ TEST(ConstantPropagation, PropagateArrayElementLoop) {
 	auto accClass = s.getProblemInstance().getAccessManager().getClassFor(acc);
 	assert( accClass );
 	
-	s.getProblemInstance().getAccessManager().printDotGraph(std::cout);
-
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 
 	auto fit = std::find_if(consts.begin(), consts.end(), 
@@ -301,8 +297,6 @@ TEST(ConstantPropagation, Formulas) {
 	auto accClass = s.getProblemInstance().getAccessManager().getClassFor(acc);
 	assert( accClass );
 	
-	s.getProblemInstance().getAccessManager().printDotGraph(std::cout);
-
 	auto consts = ret[addr.getBlockPtr()->getBlockID()];
 
 	auto fit = std::find_if(consts.begin(), consts.end(), 

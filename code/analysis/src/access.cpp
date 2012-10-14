@@ -137,8 +137,6 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 
 	NodePtr exprNode = expr.getAddressedNode();
 
-	LOG(INFO) << expr.getAddressedNode();
-
 	const lang::BasicGenerator& gen = mgr.getLangBasic();
 
 	// A literal is not an access
