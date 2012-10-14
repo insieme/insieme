@@ -225,8 +225,8 @@ TEST(ConstantPropagation, PropagateArrayElementLoop) {
 
     auto addresses = builder.parseAddresses(
 		"${"
-		"	v[2u] = 2; "
-		" 	for( uint<4> i = 3u .. 10u : 2u) {"
+		"	v[3u] = 4; "
+		" 	for( uint<4> i = 2u .. 10u : 2u) {"
 		"		v[i] = 4; "
 		"	} "
 		"	int<4> c = *$v[3u]$;"
@@ -264,7 +264,54 @@ TEST(ConstantPropagation, PropagateArrayElementLoop) {
 			});
 
 
-//	EXPECT_EQ( builder.intLit(4), std::get<1>(*fit).value() );
+	EXPECT_EQ( builder.intLit(4), std::get<1>(*fit).value() );
+
+}
+
+TEST(ConstantPropagation, Formulas) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	ref<int<4>> a = 10; "
+		"	int<4> b = a+2; "
+		"	a = b+a;"
+		"	int<4> c = $a$;"
+		"}$"
+    );
+
+  	EXPECT_EQ(2u, addresses.size());
+
+	// mark for polyhedral 
+	polyhedral::scop::mark(addresses[0]);
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+ 
+ 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+ 	auto ret = s.solve();
+
+ 	// lookup address of variable A
+ 	// Finds the CFG block containing the address of variable a
+ 	auto addr = cfg->find( addresses[1] );
+ 	EXPECT_EQ(2u, addr.getBlockPtr()->getBlockID());
+ 
+	auto acc = getImmediateAccess(mgr, addresses[1]);
+	auto accClass = s.getProblemInstance().getAccessManager().getClassFor(acc);
+	assert( accClass );
+	
+	s.getProblemInstance().getAccessManager().printDotGraph(std::cout);
+
+	auto consts = ret[addr.getBlockPtr()->getBlockID()];
+
+	auto fit = std::find_if(consts.begin(), consts.end(), 
+			[&](const dfa::analyses::ConstantPropagation::value_type::value_type& cur) { 
+				return *std::get<0>(cur) == *accClass; 
+			});
+
+
+	EXPECT_EQ( builder.intLit(22), std::get<1>(*fit).value() );
 
 }
 

@@ -137,6 +137,8 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 
 	NodePtr exprNode = expr.getAddressedNode();
 
+	LOG(INFO) << expr.getAddressedNode();
+
 	const lang::BasicGenerator& gen = mgr.getLangBasic();
 
 	// A literal is not an access
@@ -454,6 +456,7 @@ AccessClassPtr AccessManager::findClass(const AccessPtr& access) const {
 	for (const auto& accClass : classes) {
 		for (const auto& acc : accClass->getAccesses()) {
 			if (*acc == *access) { return accClass; }
+			if (equalPath(acc,access)) { return accClass; }
 		}
 	}
 	return AccessClassPtr();
@@ -629,10 +632,12 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 		}
 
 		if (aliasedExpr.getAbsoluteAddress()) {
-			auto aliasAccess = getImmediateAccess(potentialAlias->getNodeManager(), aliasedExpr);
-			auto cl = getClassFor(aliasAccess);
-			cl->storeAccess(access);
-			return cl;
+			try {
+				auto aliasAccess = getImmediateAccess(potentialAlias->getNodeManager(), aliasedExpr);
+				auto cl = getClassFor(aliasAccess);
+				cl->storeAccess(access);
+				return cl;
+			} catch (NotAnAccessException&& e) { }
 		}
 	}
 
@@ -692,9 +697,9 @@ std::ostream& AccessManager::printTo(std::ostream& out) const {
 }
 
 
-void addSubClasses(const AccessClassPtr& thisClass, AccessClassSet& collect) {
+void addSubClasses(const AccessClass& thisClass, AccessClassSet& collect) {
 
-	for (const auto& cur : thisClass->getSubClasses()) {
+	for (const auto& cur : thisClass.getSubClasses()) {
 
 		// Visit the parent until the kind of access changes 
 		if (std::get<0>(cur) == AccessClass::DT_LEVEL)
@@ -702,14 +707,29 @@ void addSubClasses(const AccessClassPtr& thisClass, AccessClassSet& collect) {
 
 		auto thisSubClass = std::get<1>(cur).lock();
 		if(collect.insert(thisSubClass).second) {
-			addSubClasses(thisSubClass, collect);	
+			addSubClasses(*thisSubClass, collect);	
 		}
 	}
 }
 
+AccessClassSet AccessClass::getConflicting() const {
+	
+	AccessClassSet ret;
+	// Add conflicting sub-classes 
+	addSubClasses(*this, ret);
 
+	const AccessClass* cur = this;
+	AccessClassPtr parent;
+	while ( parent = cur->getParentClass() )  {
+		ret.insert(parent);
+		cur = &*parent;
+	}
+
+	return ret;
 }
-} // end insieme::analysis namespace
+
+
+} } // end insieme::analysis namespace
 
 namespace std {
 

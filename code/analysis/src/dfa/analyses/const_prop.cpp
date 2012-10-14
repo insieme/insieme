@@ -59,6 +59,9 @@ extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, analyses::
 		size_t stmt_idx=0;
 
 		auto storeAccess = [&](const ExpressionAddress& var) {
+
+				LOG(INFO) << *var;
+
 				entities.insert( 
 					aMgr.getClassFor(
 						getImmediateAccess(
@@ -91,6 +94,8 @@ extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, analyses::
 	};
 	cfg.visitDFS(collector);
 
+
+	LOG(INFO) << entities;
 	return entities;
 }
 
@@ -172,12 +177,16 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
  * lattice representing respectively "undefined" and "not constant". 
  */
 dfa::Value<LiteralPtr> lookup( const AccessManager& aMgr, const AccessPtr& var, const value_type& in, const CFG& cfg ) {
-	
+
+	LOG(INFO) << in;
+	LOG(INFO) << aMgr;
+	LOG(INFO) << var;
 	auto accessClass = aMgr.findClass(var);
 
 	// If the class was not found, then return the top element 
 	if (!accessClass) { return dfa::top; }
 
+	LOG(INFO) << *accessClass;
 	auto fit = std::find_if(in.begin(), in.end(), [&](const value_type::value_type& cur) { 
 			return *std::get<0>(cur) == *accessClass; 
 		});
@@ -203,6 +212,8 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 
 		Formula f = toFormula(lit.getAddressedNode());
 
+		LOG(INFO) << "FORMULA " << f;
+
 		/**
 		 * If the expression is a constant then our job is finishes, we can return the constant value
 		 */
@@ -220,17 +231,19 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 
 			for(const auto& value : f.extractValues()) {
 				ExpressionPtr expr = value;
+
+				LOG(INFO) << expr; 
 				/**
 				 * This expression could be the deref of a variable. However we are interested in
 				 * storing the variable in order to lookup for previous definitions. 
 				 *
 				 * We remove any deref operations present
 				 */
-				if (CallExprPtr call = dynamic_pointer_cast<const CallExpr>(expr)) {
-					if (core::analysis::isCallOf(call, basicGen.getRefDeref())) { 
-						expr = call->getArgument(0);
-					}
-				}
+				// if (CallExprPtr call = dynamic_pointer_cast<const CallExpr>(expr)) {
+				//	if (core::analysis::isCallOf(call, basicGen.getRefDeref())) { 
+				//		expr = call->getArgument(0);
+				//	}
+				//}
 
 				auto exprAddr = core::Address<const core::Expression>::find(expr, lit.getAddressedNode());
 				// Build an address starting from the analysis stmt 
@@ -240,6 +253,8 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 				auto var = getImmediateAccess(exprAddr->getNodeManager(), cfgAddr, cfg.getTmpVarMap());
 
 				dfa::Value<LiteralPtr> lit = lookup(aMgr, var, in, cfg);
+
+				LOG(INFO) << lit;
 
 				if (lit.isBottom()) { return dfa::bottom; }
 				if (lit.isTop()) 	{ return dfa::top; 	  }
@@ -256,8 +271,9 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 		}
 
 	} catch(NotAFormulaException&& e) { 
-		// we cannot determine whether this is a constant value, we return the bottom symbol then 
 
+		LOG(INFO) << "NOT A FORMULA" << *lit;
+		// we cannot determine whether this is a constant value, we return the bottom symbol then 
 		return lookup(aMgr, 
 				      getImmediateAccess(lit->getNodeManager(), cfg::Address(block,stmt_idx,lit), cfg.getTmpVarMap()), 
 					  in, cfg);
@@ -315,10 +331,8 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 
 			gen.insert( std::make_tuple(defClass, res) );
 
-			AccessClassSet depClasses;
+			AccessClassSet depClasses = defClass->getConflicting();
 			depClasses.insert(defClass);
-			// Add subclasses which are affected by this definition
-			addSubClasses(defClass, depClasses);
 
 			// Kill Entities 
 			if (defAccess->isReference()) {
