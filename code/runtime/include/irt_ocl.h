@@ -42,7 +42,7 @@
 #define IRT_OCL_INSTR 0
 //#define IRT_OCL_DEBUG 0
 
-#define DEVICE_TYPE (CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_ACCELERATOR | CL_DEVICE_TYPE_CPU)
+#define DEVICE_TYPE (CL_DEVICE_TYPE_CPU)
 
 struct _irt_ocl_buffer;
 struct _irt_ocl_device;

@@ -100,8 +100,6 @@ void lookup_accesses(std::set<NodeAddress>& addrSet, const AccessClassPtr& cl, c
 				}
 			}
 		}
-
-
 	}
 }
 

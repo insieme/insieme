@@ -470,7 +470,7 @@ public:
 		 * Makes sure the access is not already in this class
 		 */
 		assert(!contains(access) && "Access is already present in this class");
-		accesses.push_back(access); 
+			accesses.push_back(access); 
 		return *this;
 	}
 
@@ -497,6 +497,19 @@ public:
 		this->parentClass = parent; 
 	}
 
+	inline std::pair<DependenceType, AccessDecoratorPtr> getParentRelationship() const {
+		if (!parentClass.lock()) { assert(false); }
+
+		const auto& subClasses = parentClass.lock()->getSubClasses();
+
+		auto fit = std::find_if(subClasses.begin(), subClasses.end(), 
+				[&](const Dependence& cur) { return *std::get<1>(cur).lock() == *this; });
+
+		assert(fit != subClasses.end());
+
+		return std::make_pair(std::get<0>(*fit), std::get<2>(*fit));
+	}
+
 	const AccessClassPtr getParentClass() const {
 		return parentClass.lock();
 	}
@@ -504,6 +517,8 @@ public:
 	inline void addSubClass(const Dependence& dep) {
 		subClasses.push_back(dep);
 	}
+
+	AccessClassSet getConflicting() const;
 
 	const SubClasses& getSubClasses() const { return subClasses; }
 	SubClasses& getSubClasses() { return subClasses; }
@@ -532,7 +547,7 @@ public:
 
 };
 
-void addSubClasses(const AccessClassPtr& thisClass, AccessClassSet& collect);
+void addSubClasses(const AccessClass& thisClass, AccessClassSet& collect);
 
 /** 
  * Return the vector of addresses which are not temporary variable and therefore it returns
