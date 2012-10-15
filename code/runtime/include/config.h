@@ -50,9 +50,9 @@
 // determines if workers should ever go to sleep
 // - needs to be unset for the stealing policies!
 // workers must not sleep when compiling/running a program on windows xp because condition variables are not supported there
-#if defined(WINVER) && (WINVER >= 0x0600)
+//#if defined(WINVER) && (WINVER >= 0x0600)
 	#define IRT_WORKER_SLEEPING
-#endif
+//#endif
 
 // ir interface
 #ifndef IRT_SANE_PARALLEL_MAX

@@ -59,6 +59,7 @@ extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, analyses::
 		size_t stmt_idx=0;
 
 		auto storeAccess = [&](const ExpressionAddress& var) {
+
 				entities.insert( 
 					aMgr.getClassFor(
 						getImmediateAccess(
@@ -172,7 +173,7 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
  * lattice representing respectively "undefined" and "not constant". 
  */
 dfa::Value<LiteralPtr> lookup( const AccessManager& aMgr, const AccessPtr& var, const value_type& in, const CFG& cfg ) {
-	
+
 	auto accessClass = aMgr.findClass(var);
 
 	// If the class was not found, then return the top element 
@@ -220,17 +221,18 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 
 			for(const auto& value : f.extractValues()) {
 				ExpressionPtr expr = value;
+
 				/**
 				 * This expression could be the deref of a variable. However we are interested in
 				 * storing the variable in order to lookup for previous definitions. 
 				 *
 				 * We remove any deref operations present
 				 */
-				if (CallExprPtr call = dynamic_pointer_cast<const CallExpr>(expr)) {
-					if (core::analysis::isCallOf(call, basicGen.getRefDeref())) { 
-						expr = call->getArgument(0);
-					}
-				}
+				// if (CallExprPtr call = dynamic_pointer_cast<const CallExpr>(expr)) {
+				//	if (core::analysis::isCallOf(call, basicGen.getRefDeref())) { 
+				//		expr = call->getArgument(0);
+				//	}
+				//}
 
 				auto exprAddr = core::Address<const core::Expression>::find(expr, lit.getAddressedNode());
 				// Build an address starting from the analysis stmt 
@@ -256,8 +258,8 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 		}
 
 	} catch(NotAFormulaException&& e) { 
-		// we cannot determine whether this is a constant value, we return the bottom symbol then 
 
+		// we cannot determine whether this is a constant value, we return the bottom symbol then 
 		return lookup(aMgr, 
 				      getImmediateAccess(lit->getNodeManager(), cfg::Address(block,stmt_idx,lit), cfg.getTmpVarMap()), 
 					  in, cfg);
@@ -315,10 +317,8 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 
 			gen.insert( std::make_tuple(defClass, res) );
 
-			AccessClassSet depClasses;
+			AccessClassSet depClasses = defClass->getConflicting();
 			depClasses.insert(defClass);
-			// Add subclasses which are affected by this definition
-			addSubClasses(defClass, depClasses);
 
 			// Kill Entities 
 			if (defAccess->isReference()) {
