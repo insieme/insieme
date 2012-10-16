@@ -67,8 +67,6 @@ namespace cilk {
 			}
 
 			res->attachValue<T>();
-
-			LOG(INFO) << "X " << *res;
 			return res;
 		}
 

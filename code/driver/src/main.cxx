@@ -79,6 +79,7 @@
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
+#include "insieme/frontend/cilk/cilk_sema.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/driver/driver_config.h"
@@ -492,6 +493,16 @@ void applyOpenCLFrontend(core::ProgramPtr& program) {
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
 
+void applyCilkFrontend(core::ProgramPtr& program) {
+	if (!CommandLineOptions::Cilk) { return; }
+
+	LOG(INFO) << "============================= Cilk conversion ====================================";
+	program = measureTimeFor<core::ProgramPtr>("Cilk ",
+			[&]() {return fe::cilk::applySema(program, program->getNodeManager()); }
+		);
+	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+}
+
 void showStatistics(const core::ProgramPtr& program) {
 	if (!CommandLineOptions::ShowStats) { return; }
 
@@ -593,6 +604,15 @@ int main(int argc, char** argv) {
 				// check again if the OMP flag is on
 				if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
 			}
+
+			// run Cilk frontend
+			if(CommandLineOptions::Cilk) {
+				applyCilkFrontend(program);
+				// check again if the OMP flag is on
+				printIR(program, stmtMap);
+				if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
+			}
+
 
 			/**************######################################################################################################***/
 

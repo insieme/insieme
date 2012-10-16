@@ -23,6 +23,7 @@ int fib(int n) {
 }
 
 int main() {
-	printf("fib(10) = %d\n", fib(10));
+	int N = 25;
+	printf("fib(%d) = %d\n", N, fib(N));
 	return 0;
 }

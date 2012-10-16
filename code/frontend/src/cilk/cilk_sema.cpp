@@ -36,19 +36,115 @@
 
 #include "insieme/frontend/cilk/cilk_sema.h"
 
+#include "insieme/frontend/cilk/cilk_annotation.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
+
 namespace insieme {
 namespace frontend {
 namespace cilk {
+
+	namespace {
+
+		class Cilkifyer : public core::transform::CachedNodeMapping {
+
+			core::NodeManager& manager;
+
+		public:
+
+			Cilkifyer(core::NodeManager& manager) : manager(manager) {}
+
+
+			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+				// skip all types
+				if (ptr->getNodeCategory() == core::NC_Type) {
+					return manager.get(ptr);
+				}
+
+				// process child-nodes first
+				core::NodePtr res = ptr->substitute(manager, *this);
+
+				// only interested in compound statements
+				if (res->getNodeType() != core::NT_CompoundStmt) return res;
+
+				// check statements one by one
+				bool changed = false;
+				core::StatementList statements = res.as<core::CompoundStmtPtr>()->getStatements();
+				core::StatementList newStmts;
+				for(core::StatementPtr cur : statements) {
+
+					// spawn => parallel(job(...))
+					if (cur->hasAttachedValue<CilkSpawnMarker>()) {
+						changed = true;
+
+						// remove marker if present
+						cur = stripMarker(cur);
+
+						// handle declarations
+						if (cur->getNodeType() == core::NT_DeclarationStmt) {
+							auto decl = cur.as<core::DeclarationStmtPtr>();
+
+							core::TypePtr type = decl->getVariable()->getType();
+							assert(type->getNodeType() == core::NT_RefType && "can only handle reference types!");
+
+							core::IRBuilder builder(manager);
+
+							// initialize the variable using an undefined
+							newStmts.push_back(builder.declarationStmt(decl.getVariable(), builder.refVar(builder.undefined(type.as<core::RefTypePtr>()->getElementType()))));
+
+							// assign the value
+							core::ExpressionPtr init = decl->getInitialization();
+							assert(core::analysis::isCallOf(init, manager.getLangBasic().getRefVar()));
+							init = init.as<core::CallExprPtr>()->getArgument(0);
+							newStmts.push_back(builder.parallel(builder.assign(decl.getVariable(), init),1));
+
+							// done
+							continue;
+						}
+
+						// all the rest
+						cur = core::IRBuilder(manager).parallel(stripMarker(cur), 1);
+					}
+
+					// sync => merge all
+					if (cur->hasAttachedValue<CilkSyncMarker>()) {
+						changed = true;
+						cur = core::IRBuilder(manager).mergeAll();
+					}
+
+					// take statement as it is
+					newStmts.push_back(cur);
+				}
+
+				// return result
+				if (!changed) return res;
+				return core::CompoundStmt::get(manager, newStmts);
+			}
+
+		public:
+
+			core::StatementPtr stripMarker(const core::StatementPtr& node) const {
+				if (node->getNodeType() == core::NT_MarkerExpr) {
+					return stripMarker(node.as<core::MarkerExprPtr>()->getSubExpression());
+				}
+				if (node->getNodeType() == core::NT_MarkerStmt) {
+					return stripMarker(node.as<core::MarkerStmtPtr>()->getSubStatement());
+				}
+				return node;
+			}
+
+		};
+
+	}
 
 	/**
 	 * Applies OMP semantics to given code fragment.
 	 */
 	const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& manager) {
-
-		// search for marker nodes with cilk annotation
-
-
-		return prog;
+		// use the cilkifyer ...
+		return Cilkifyer(manager).map(prog);
 	}
 
 } // namespace cilk
