@@ -57,12 +57,12 @@ namespace cilk {
 
 		// #pragma cilk spawn
 		cilk->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<CilkPragma<CilkSpawnMarker>>(
-				pp.getIdentifierInfo("cilk"), pragma::kwd("spawn") >> pragma::tok::eod, "cilk")
+				pp.getIdentifierInfo("spawn"), pragma::tok::eod, "cilk")
 			);
 
 		// #pragma cilk sync
 		cilk->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<CilkPragma<CilkSyncMarker>>(
-				pp.getIdentifierInfo("cilk"), pragma::kwd("sync") >> pragma::tok::eod, "cilk")
+				pp.getIdentifierInfo("sync"), pragma::tok::eod, "cilk")
 			);
 
 	}
