@@ -62,7 +62,7 @@ namespace cilk {
 			} else if (node->getNodeCategory() == core::NC_Expression) {
 				res = builder.markerExpr(node.as<core::ExpressionPtr>());
 			} else {
-				assert(false && "...");
+				assert(false && "Cannot annotate non statement/expression!");
 			}
 
 			res->attachValue<T>();
