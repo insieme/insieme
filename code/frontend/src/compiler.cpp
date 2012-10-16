@@ -220,6 +220,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 
 	// add Cilk definitions if required
 	if (CommandLineOptions::Cilk) {
+		this->pimpl->clang.getPreprocessorOpts().addMacroDef("cilk=");
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("spawn=_Pragma(\"cilk spawn\")");
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("sync=_Pragma(\"cilk sync\")");
 	}
