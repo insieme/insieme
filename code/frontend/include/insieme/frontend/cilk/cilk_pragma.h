@@ -55,6 +55,7 @@ namespace cilk {
 				Pragma(startLoc, endLoc, name, mmap) { }
 
 		virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::ConversionFactory& fact) const {
+
 			core::IRBuilder builder(node->getNodeManager());
 			core::NodePtr res;
 			if (node->getNodeCategory() == core::NC_Statement) {
@@ -66,6 +67,8 @@ namespace cilk {
 			}
 
 			res->attachValue<T>();
+
+			LOG(INFO) << "X " << *res;
 			return res;
 		}
 
