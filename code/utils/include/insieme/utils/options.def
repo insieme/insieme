@@ -41,6 +41,7 @@ FLAG("version,V", 			"version", 				Version, 		false, 	"print version string")
 // frontend options
 FLAG("omp-sema",			"omp-sema",	 			OpenMP, 		false,	"enable OpenMP semantics in frontend")
 FLAG("opencl", 				"opencl", 				OpenCL, 		false, 	"enable OpenCL semantics in frontend")
+FLAG("cilk", 				"cilk", 				Cilk, 			false, 	"enable Cilk semantics in frontend")
 FLAG("tag-mpi",				"tag-mpi",				MPITag,			false,  "add mpi pragma to MPI statements in the program and assign unique ID")
 FLAG("clang-cfg-dump",		"clang-cfg-dump",		ClangCFGDump,	false, 	"Dump cfg graph of clang")
 FLAG("const-prop",			"const-prop",			ConstantPropagation, false, 	"Perform constant propagation")

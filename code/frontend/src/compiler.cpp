@@ -218,6 +218,12 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 			clang::frontend::System, true, false, false);
 	}
 
+	// add Cilk definitions if required
+	if (CommandLineOptions::Cilk) {
+		this->pimpl->clang.getPreprocessorOpts().addMacroDef("spawn=_Pragma(\"cilk spawn\")");
+		this->pimpl->clang.getPreprocessorOpts().addMacroDef("sync=_Pragma(\"cilk sync\")");
+	}
+
 	// Do this AFTER setting preprocessor options
 	pimpl->clang.createPreprocessor();
 	pimpl->clang.createASTContext();

@@ -40,6 +40,7 @@
 #include "insieme/frontend/pragma/insieme.h"
 
 #include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/cilk/cilk_pragma.h"
 
 #include "insieme/frontend/mpi/mpi_pragma.h"
 #include "insieme/frontend/mpi/mpi_sema.h"
@@ -145,6 +146,9 @@ public:
 		insieme::frontend::TranslationUnit(file_name) {
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
+
+		//register 'cilk' pragmas
+		cilk::registerPragmaHandlers( mClang.getPreprocessor() );
 
 		// register 'test' pragma
 		TestPragma::registerPragmaHandler( mClang.getPreprocessor() );
