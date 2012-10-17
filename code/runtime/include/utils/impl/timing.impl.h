@@ -79,6 +79,13 @@ void irt_busy_nanosleep(uint64 wait_time) {
 	}
 }
 
+void irt_busy_ticksleep(uint64 wait_ticks) {
+	uint64 end = irt_time_ticks() + wait_ticks;
+	while(irt_time_ticks() < end) {
+		_irt_g_dummy_val++;
+	}
+}
+
 
 // ====== time related functions ======================================
 
