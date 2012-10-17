@@ -198,7 +198,7 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 {
 	using namespace arithmetic;
 
-	const lang::BasicGenerator& basicGen = lit->getNodeManager().getLangBasic();
+	//const lang::BasicGenerator& basicGen = lit->getNodeManager().getLangBasic();
 
 	try {
 
@@ -279,7 +279,7 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 	LOG(DEBUG) << "~ Block " << block->getBlockID();
 	LOG(DEBUG) << "~ IN: " << in;
 
-	core::NodeManager& mgr = getCFG().getNodeManager();
+	//core::NodeManager& mgr = getCFG().getNodeManager();
 
 	size_t stmt_idx = 0;
 	for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {

@@ -84,7 +84,6 @@ struct UnifiedAddress : public utils::Printable {
 
 	UnifiedAddress(const cfg::Address& addr) : address(addr) { }
 
-
 	bool isCFGAddress() const;
 
 	core::NodeAddress getAbsoluteAddress(const TmpVarMap& varMap=TmpVarMap()) const;
@@ -92,6 +91,8 @@ struct UnifiedAddress : public utils::Printable {
 	core::NodePtr getAddressedNode() const;
 
 	UnifiedAddress getAddressOfChild(unsigned idx) const;
+	
+	UnifiedAddress extendAddressFor(const std::vector<unsigned>& idxs) const;
 
 	template <class T>
 	inline T as() const { return boost::get<T>(address); }
@@ -111,6 +112,9 @@ private:
 	AddressImpl address;
 
 };
+
+
+
 
 
 //=== forward declarations ========================================================================
@@ -626,6 +630,9 @@ inline AccessPtr
 getImmediateAccess(core::NodeManager& mgr, const cfg::Address& expr, const TmpVarMap& tmpVarMap=TmpVarMap()) {
 	return getImmediateAccess(mgr, UnifiedAddress(expr), tmpVarMap);
 }
+
+std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap=TmpVarMap());
+
 
 } } // end insieme::analysis namespace 
 

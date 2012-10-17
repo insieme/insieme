@@ -112,6 +112,15 @@ UnifiedAddress UnifiedAddress::getAddressOfChild(unsigned idx) const {
 }
 
 
+UnifiedAddress UnifiedAddress::extendAddressFor(const std::vector<unsigned>& idxs) const {
+
+	UnifiedAddress ret = *this;
+	for (auto idx : idxs) {
+		ret = ret.getAddressOfChild(idx);
+	}
+	return ret;
+
+}
 
 
 bool UnifiedAddress::operator==(const UnifiedAddress& other) const {
@@ -145,8 +154,8 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 	}
 
 	// For cast expressions, we simply recur
-	// if (exprNode->getNodeType() == NT_CastExpr)
-	//	return getImmediateAccess(expr.as<CastExprAddress>()->getSubExpression(), tmpVarMap);
+	if (exprNode->getNodeType() == NT_CastExpr)
+		return getImmediateAccess(mgr, expr.as<CastExprAddress>()->getSubExpression(), tmpVarMap);
 
 	// If this is a scalar variable, then return the access to this variable
 	if (exprNode->getNodeType() == NT_Variable) {
@@ -262,6 +271,77 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 		}
 	}
 	assert(false && "Access not supported");
+}
+
+
+namespace {
+
+	void getAddressIndexes(const NodeAddress& addr, std::vector<unsigned>& idxs) {
+		if (addr.getDepth() > 2)
+			getAddressIndexes(addr.getParentAddress(), idxs);
+
+		idxs.push_back(addr.getIndex());
+	}
+
+} // end empty namespace 
+
+std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap) {
+	
+
+	struct ExploreAccesses : public IRVisitor<bool, core::Address> {
+		
+		core::NodeManager& 		mgr;
+		const TmpVarMap& 		tmpVarMap;
+		const UnifiedAddress& 	base;
+		std::vector<AccessPtr>& accesses;
+
+		ExploreAccesses(core::NodeManager& mgr, 
+						const TmpVarMap& tmpVarMap,
+						const UnifiedAddress& base, 
+						std::vector<AccessPtr>& accesses) 
+			:  mgr(mgr), tmpVarMap(tmpVarMap), base(base), accesses(accesses) { }
+
+		bool visitVariable(const core::VariableAddress& addr) {
+			// turn the address into a vector of indexes from the root 
+			std::vector<unsigned> idxs;
+			getAddressIndexes(addr, idxs);
+			auto accessAddress = base.extendAddressFor(idxs);
+
+			accesses.push_back( getImmediateAccess(mgr, accessAddress, tmpVarMap) );
+			return true;
+		}
+
+		bool visitCallExpr(const core::CallExprAddress& callExpr) {
+			
+			const auto& gen = callExpr->getNodeManager().getLangBasic();
+			const auto& func = callExpr->getFunctionExpr();
+
+			if (gen.isBitwiseOp(func) || gen.isCompOp(func) || 
+				gen.isArithOp(func) || gen.isRefAssign(func)) 
+			{
+				return false;
+			}
+
+			std::vector<unsigned> idxs;
+			getAddressIndexes(callExpr, idxs);
+			auto accessAddress = base.extendAddressFor(idxs);
+
+			accesses.push_back( getImmediateAccess(mgr, accessAddress, tmpVarMap) );
+			return true;
+		}
+
+		void visitNode() {
+		}
+			
+	};
+
+	core::NodePtr node = expr.getAddressedNode();
+	std::vector<AccessPtr> accesses;
+
+	visitDepthFirstPrunable(NodeAddress(node), ExploreAccesses(mgr,tmpVarMap,expr,accesses));
+
+	return accesses;
+
 }
 
 /**

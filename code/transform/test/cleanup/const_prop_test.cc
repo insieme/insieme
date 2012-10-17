@@ -34,40 +34,60 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <set>
+#include "insieme/core/ir_builder.h"
+#include "insieme/transform/ir_cleanup.h"
+#include "insieme/utils/logging.h"
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/analysis/cfg.h"
+namespace insieme {
+namespace transform {
 
-#include <iterator>
+	using namespace core;
 
-namespace insieme { namespace analysis { namespace dfa { namespace analyses {
+	TEST(ConstProp, Simple) {
 
-typedef std::set<core::ExpressionAddress> AddressSet;
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
-/** 
- *  This is an utility class which can be used to get the definitions reaching a particular usage of
- *  a variable and uses of a particular definition. This is obtained by performing
- *  reaching_definition dataflow analysis on the given IR sub-graph. 
- *
- *  Given an expression (which represents an access to a variable) an iterator through all the
- *  definitions (if the access is a use) or the uses (if the access is a def) can be obtained. 
- */
-class DefUse {
+		auto code = builder.parse(
+			"{"
+			"	ref<int<4>> a = 10; "
+			"	int<4> b = a+2; "
+			"	a = b+a;"
+			"	int<4> c = a;"
+			"}"
+		);
 
-	class DefUseImpl;
+		NodePtr ret = doConstantPropagation(code);
+		
+		EXPECT_EQ("{int<4> v3 = 22;}", toString(*ret));
+	}
 
-	std::shared_ptr<DefUseImpl> pimpl;
+	TEST(ConstProp, Vector) {
 
-public:
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		
+		std::map<std::string, core::NodePtr> symbols;
+		symbols["v"] = builder.variable(
+			builder.parseType("ref<vector<int<4>,10>>")
+		);
 
-	DefUse(const core::NodePtr& root, const CFGPtr& cfg=nullptr);
+		auto code = builder.parse(
+			"{"
+			"	v[2u] = 10; "
+			"	v[3u] = 3; "
+			"	v[1u] = v[2u] + v[3u]; "
+			"	v[2u] = v[1u]; "
+			"	int<4> a = v[2u]; "
+			"}", symbols
+		);
 
-	AddressSet getDefinitions(const core::ExpressionAddress& addr);
-	
-};
+		NodePtr ret = doConstantPropagation(code);
 
-} } } } // end insieme::analysis::dfa::analyses
+		EXPECT_EQ("{int<4> v2 = 13;}", toString(*ret));
+	}
 
+} // end transform namespace 
+} // end insieme namespace 

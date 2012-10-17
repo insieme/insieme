@@ -237,7 +237,7 @@ public:
 						x = df_p.meet(x, v);
 					});
 				
-				LOG(INFO) << x;
+				//LOG(DEBUG) << x;
 
 				solver_data[ block->getBlockID() ] = x; // df_p.transfer_func(x, block);
 				
@@ -252,7 +252,7 @@ public:
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@@@";
 		LOG(DEBUG) << "@@ Initial State @@";
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@@@";
-		printDataflowData(LOG_STREAM(INFO), solver_data); 
+		printDataflowData(LOG_STREAM(DEBUG), solver_data); 
 
 		// iterate through the elements of the queue until the queue is empty
 		while (!q.empty()) {
@@ -283,7 +283,7 @@ public:
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@";
 		LOG(DEBUG) << "@@ Final State @@";
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@";
-		printDataflowData(LOG_STREAM(INFO), solver_data); 
+		printDataflowData(LOG_STREAM(DEBUG), solver_data); 
 
 		return std::move(solver_data);
 	}
