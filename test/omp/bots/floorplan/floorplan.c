@@ -253,8 +253,9 @@ int add_cell_ser (int id, coor FOOTPRINT, ibrd BOARD, struct cell *CELLS) {
 
 				/* if area is less than best area */
 			} else if (area < MIN_AREA) {
+				int val = add_cell_ser(cells[id].next, footprint, board,cells);
 #pragma omp atomic
-				nn2 += add_cell_ser(cells[id].next, footprint, board,cells);
+				nn2 += val;
 
 				/* if area is greater than or equal to best area, prune search */
 			} else {
@@ -327,8 +328,9 @@ int add_cell(int id, coor FOOTPRINT, ibrd BOARD, struct cell *CELLS,int level) {
 
 						/* if area is less than best area */
 					} else if (area < MIN_AREA) {
+						int val = add_cell(cells[id].next, footprint, board,cells,level+1);
 #pragma omp atomic
-						nnc += add_cell(cells[id].next, footprint, board,cells,level+1);
+						nnc += val;
 						/* if area is greater than or equal to best area, prune search */
 					} else {
 
@@ -409,8 +411,9 @@ int add_cell(int id, coor FOOTPRINT, ibrd BOARD, struct cell *CELLS,int level) {
 
 						/* if area is less than best area */
 					} else if (area < MIN_AREA) {
+						int val = add_cell(cells[id].next, footprint, board,cells,level+1);
 #pragma omp atomic
-						nnc += add_cell(cells[id].next, footprint, board,cells,level+1);
+						nnc += val;
 						/* if area is greater than or equal to best area, prune search */
 					} else {
 
@@ -487,11 +490,13 @@ int add_cell(int id, coor FOOTPRINT, ibrd BOARD, struct cell *CELLS,int level) {
 						/* if area is less than best area */
 					} else if (area < MIN_AREA) {
 						if(level+1 < bots_cutoff_value ) {
+							int val = add_cell(cells[id].next, footprint, board,cells,level+1);
 	#pragma omp atomic
-							nnc += add_cell(cells[id].next, footprint, board,cells,level+1);
+							nnc += val;
 						} else {
+							int val = add_cell_ser(cells[id].next, footprint, board,cells);
 	#pragma omp atomic
-							nnc += add_cell_ser(cells[id].next, footprint, board,cells);
+							nnc += val;
 						}
 						/* if area is greater than or equal to best area, prune search */
 					} else {
@@ -564,8 +569,9 @@ int add_cell(int id, coor FOOTPRINT, ibrd BOARD, struct cell *CELLS) {
 
 						/* if area is less than best area */
 					} else if (area < MIN_AREA) {
+						int val = add_cell(cells[id].next, footprint, board,cells);
 	#pragma omp atomic
-						nnc += add_cell(cells[id].next, footprint, board,cells);
+						nnc += val;
 						/* if area is greater than or equal to best area, prune search */
 					} else {
 
