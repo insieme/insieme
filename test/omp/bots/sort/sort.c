@@ -362,7 +362,6 @@ void cilkmerge_par(ELM *low1, ELM *high1, ELM *low2, ELM *high2, ELM *lowdest)
      cilkmerge_par(split1 + 1, high1, split2 + 1, high2,
 		     lowdest + lowsize + 2);
 #pragma omp taskwait
-
      return;
 }
 
@@ -401,6 +400,7 @@ void cilksort_par(ELM *low, ELM *tmp, long size)
 #pragma omp task untied
      cilksort_par(D, tmpD, size - 3 * quarter);
 #pragma omp taskwait
+	{}
 
 #pragma omp task untied
      cilkmerge_par(A, A + quarter - 1, B, B + quarter - 1, tmpA);
