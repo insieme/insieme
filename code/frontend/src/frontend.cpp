@@ -41,6 +41,7 @@
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
+#include "insieme/frontend/cilk/cilk_sema.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/utils/container_utils.h"
@@ -78,6 +79,7 @@ core::ProgramPtr ConversionJob::execute() {
 	// setup additional flags
 	CommandLineOptions::OpenMP = hasOption(OpenMP);
 	CommandLineOptions::OpenCL = hasOption(OpenCL);
+	CommandLineOptions::Cilk = hasOption(Cilk);
 
 	// add definitions needed by the OpenCL frontend
 	if(hasOption(OpenCL)) {
@@ -109,6 +111,11 @@ core::ProgramPtr ConversionJob::execute() {
 	if(hasOption(OpenCL)) {
 		frontend::ocl::HostCompiler oclHostCompiler(res);
 		res = oclHostCompiler.compile();
+	}
+
+	// apply Cilk conversion
+	if(hasOption(Cilk)) {
+		res = frontend::cilk::applySema(res, tmpMgr);
 	}
 
 	// return instance within global manager

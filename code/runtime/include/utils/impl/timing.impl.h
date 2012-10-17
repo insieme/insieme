@@ -44,19 +44,9 @@
 #include "../filesystem.h"
 #include "irt_logging.h"
 
-#ifdef _MSC_VER
-	#define CLOCK_REALTIME 187 // just to have some definition for CLOCK_REALTIME
-	#include "include_win32/time.h"
-	#include "include_win32/sys_time.h"
-#else
-	#include <time.h>
-	#include <unistd.h>
-	#include <sys/time.h>
-#endif
-
 // ====== sleep functions ======================================
 
-int irt_nanosleep_timespec(const struct timespec* wait_time) {
+int irt_nanosleep_timespec(const struct timespec *wait_time) {
 	return nanosleep(wait_time, NULL);
 }
 

@@ -115,14 +115,15 @@ static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_imp
 extern "C" {
 #endif
 	void
-	#ifdef _M_IX86
+	#if (defined(_M_IX86)  && defined(_MSC_VER)) || (defined(__MINGW32__) && !defined(__MINGW64__))
 	__fastcall
 	#endif
-	_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func);
+	_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func *func);
 
 #ifdef __cplusplus
 }
 #endif
+
 
 irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 

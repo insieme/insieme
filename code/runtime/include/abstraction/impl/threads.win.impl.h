@@ -54,10 +54,11 @@ typedef struct _irt_win_thread_params {
 */
 DWORD WINAPI _irt_win_thread_func(void* params) {
 	irt_win_thread_params *p = (irt_win_thread_params*)params;
-	DWORD ret = 0;
-	ret = (DWORD)p->fun(p->args);
+	p->fun(p->args);
 	free(params);
-	return ret;
+	// the void* retruned by fun is never used anyway and the WINAPI required that a DWORD value is returned
+	// so we return zero (and not a cast of the void* returned by fun)
+	return 0;
 }
 
 void irt_thread_create(irt_thread_func *fun, void *args, irt_thread *t) {
@@ -66,9 +67,9 @@ void irt_thread_create(irt_thread_func *fun, void *args, irt_thread *t) {
 	params->args = args;
 	HANDLE thread_handle;
 	if (t == NULL)
-		thread_handle = CreateThread(NULL, NULL, _irt_win_thread_func, params, NULL, NULL);
+		thread_handle = CreateThread(NULL, 0, _irt_win_thread_func, params, 0, NULL);
 	else {
-		thread_handle = CreateThread(NULL, NULL, _irt_win_thread_func, params, NULL, &(t->thread_id));
+		thread_handle = CreateThread(NULL, 0, _irt_win_thread_func, params, 0, &(t->thread_id));
 		t->thread_handle = thread_handle;
 	}
 

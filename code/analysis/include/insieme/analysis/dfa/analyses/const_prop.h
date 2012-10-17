@@ -42,59 +42,90 @@
 #include "insieme/analysis/access.h"
 #include "insieme/analysis/dfa/analyses/extractors.h"
 
-namespace insieme { namespace analysis { namespace dfa { namespace analyses {
-//
-///**
-// * Define the DataFlowProblem for Constant Propagation
-// */
-//class ConstantPropagation: 
-//	public Problem<
-//			ConstantPropagation, 
-//			ForwardAnalysisTag,
-//			Entity<dfa::elem<Access>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
-//			PowerSet
-//	> 
-//{
-//
-//	typedef Problem<
-//			ConstantPropagation, 
-//			ForwardAnalysisTag,
-//			Entity<dfa::elem<Access>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
-//			PowerSet
-//	>  Base;
-//	
-//public:
-//
-//	typedef typename Base::value_type value_type;
-//
-//	ConstantPropagation(const CFG& cfg): Base(cfg) { }
-//
-//	virtual value_type init() const { return top(); }
-//
-//	virtual value_type top() const { 
-//		const auto& lhsBase = extracted.getLeftBaseSet();
-//		return makeCartProdSet(
-//				lhsBase, 
-//				std::set<dfa::Value<core::LiteralPtr>>( 
-//					{ dfa::Value<core::LiteralPtr>(dfa::top) } 
-//				) 
-//			).expand();
-//	}
-//
-//	virtual value_type bottom() const {
-//		const auto& lhsBase = extracted.getLeftBaseSet();
-//		return makeCartProdSet(
-//				lhsBase, 
-//				std::set<dfa::Value<core::LiteralPtr>>( 
-//					{ dfa::Value<core::LiteralPtr>(dfa::bottom) } 
-//				) 
-//			).expand();
-//	}
-//
-//	value_type meet(const value_type& lhs, const value_type& rhs) const;
-//
-//	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
-//};
-//
+namespace insieme { namespace analysis { namespace dfa { 
+
+namespace analyses {
+class ConstantPropagation;
+} // end analyses namespace 
+
+typename container_type_traits< dfa::elem< AccessClassPtr >  >::type 
+extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, analyses::ConstantPropagation& obj);
+	
+namespace analyses {
+
+/**
+ * Define the DataFlowProblem for Constant Propagation
+ */
+class ConstantPropagation: 
+	public Problem<
+			ConstantPropagation, 
+			ForwardAnalysisTag,
+			Entity<dfa::elem<AccessClassPtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+			PowerSet
+	> 
+{
+
+	typedef Problem<
+			ConstantPropagation, 
+			ForwardAnalysisTag,
+			Entity<dfa::elem<AccessClassPtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+			PowerSet
+	>  Base;
+	
+public:
+
+	typedef typename Base::value_type value_type;
+
+	AccessManager aMgr;
+
+	ConstantPropagation(const CFG& cfg): Base(cfg), aMgr(&cfg, cfg.getTmpVarMap()) { }
+
+	AccessManager& getAccessManager() { return aMgr; }
+	const AccessManager& getAccessManager() const { return aMgr; }
+
+	virtual value_type init() const {
+		const auto& lhsBase = extracted.getLeftBaseSet();
+		return makeCartProdSet(
+				lhsBase, 
+				std::set<dfa::Value<core::LiteralPtr>>( 
+					{ dfa::Value<core::LiteralPtr>(dfa::top) } 
+				) 
+			).expand();
+	}
+
+	virtual value_type top() const { return value_type(); }
+
+	virtual value_type bottom() const {
+		const auto& lhsBase = extracted.getLeftBaseSet();
+
+		return makeCartProdSet(
+				lhsBase, 
+				std::set<dfa::Value<core::LiteralPtr>>( 
+					{ dfa::Value<core::LiteralPtr>(dfa::bottom) } 
+				) 
+			).expand();
+	}
+
+	value_type meet(const value_type& lhs, const value_type& rhs) const;
+
+	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
+};
+
 } } } } // end insieme::analysis::dfa::analyses namespace 
 
+namespace std {
+
+	using namespace insieme::analysis;
+	using namespace insieme::core;
+
+	std::ostream& operator<<(std::ostream& out, const std::tuple<AccessClassPtr, dfa::Value<LiteralPtr>>& cur) {
+		out << "(cid:" << std::get<0>(cur)->getUID() << ","; 
+		if (std::get<1>(cur).isValue()) {
+			out << *std::get<1>(cur).value();
+		} else {
+			out << std::get<1>(cur);
+		}
+		return out << ")";
+	}
+
+} // end std namespace 

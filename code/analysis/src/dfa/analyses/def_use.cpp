@@ -96,9 +96,11 @@ struct DefUse::DefUseImpl {
 	CFGPtr cfg;
 	std::map<size_t, typename ReachingDefinitions::value_type> analysis;
 
-	DefUseImpl(const core::NodePtr& root) : cfg(CFG::buildCFG(root))
+	DefUseImpl(const core::NodePtr& root, const CFGPtr& cfg) : cfg(cfg)
 	{
-		Solver<ReachingDefinitions> s(*cfg);
+		if (!this->cfg) { this->cfg = CFG::buildCFG(root); }
+
+		Solver<ReachingDefinitions> s(*this->cfg);
 		
 		// Collect polyhedral informations and attach it to the IR nodes 
 		polyhedral::scop::mark(root);
@@ -108,8 +110,8 @@ struct DefUse::DefUseImpl {
 	
 };
 
-DefUse::DefUse(const core::NodePtr& root) : 
-	pimpl( std::make_shared<DefUse::DefUseImpl>(root) ) { }
+DefUse::DefUse(const core::NodePtr& root, const CFGPtr& cfg) : 
+	pimpl( std::make_shared<DefUse::DefUseImpl>(root, cfg) ) { }
 
 
 AddressSet DefUse::getDefinitions(const core::ExpressionAddress& addr) {

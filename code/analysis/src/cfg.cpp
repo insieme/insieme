@@ -1333,6 +1333,14 @@ bool Address::operator==(const Address& other) const {
 	return *block == *other.block && stmt_idx == other.stmt_idx && addr == other.addr;
 }
 
+bool Address::operator<(const Address& other) const {
+	
+	return getBlock() < other.getBlock() || 
+			( getBlock() == other.getBlock() && 
+				( stmt_idx < other.stmt_idx || 
+				  ( stmt_idx == other.stmt_idx && addr < other.stmt_idx ) ) ); 
+
+}
 
 namespace {
 

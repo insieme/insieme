@@ -150,9 +150,8 @@ public:
 		// update the strong components
 		getStronglyConnectedComponents(t);
 		
-		// before resolving this component we have to resolve all the
-		// components with an ID with is smaller than the current. For 
-		// each of these components, we return the root node 
+		// before resolving this component we have to resolve all the components with an ID with is
+		// smaller than the current. For each of these components, we return the root node 
 		auto&& fit = find(t);
 		assert(fit.first && "Type node is not in the graph");
 		VertexTy v = fit.second;
@@ -174,6 +173,11 @@ public:
 		typename boost::property_map<NodeDepGraph, T NodeProperty::*>::const_type&& node = get(&NodeProperty::node, graph);
 		boost::write_graphviz(out, graph, label_writer<typename boost::property_map<NodeDepGraph, T NodeProperty::*>::const_type>(node));
 	}
+
+	/**
+	 * Reset the dependency graph
+	 */
+	void clear() { graph.clear(); }
 
 	~DependencyGraph() {
 	   graph.clear();

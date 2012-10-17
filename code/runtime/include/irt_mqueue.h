@@ -41,7 +41,7 @@
 // include implementation only in non-min mode
 
 //#ifndef IRT_MIN_MODE
-	#ifdef _MSC_VER
+	#ifdef _WIN32
 		#include "include_win32\mqueue.h"
 	#else
 		#include <mqueue.h>

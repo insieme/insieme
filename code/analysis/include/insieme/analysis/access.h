@@ -84,7 +84,6 @@ struct UnifiedAddress : public utils::Printable {
 
 	UnifiedAddress(const cfg::Address& addr) : address(addr) { }
 
-
 	bool isCFGAddress() const;
 
 	core::NodeAddress getAbsoluteAddress(const TmpVarMap& varMap=TmpVarMap()) const;
@@ -92,6 +91,8 @@ struct UnifiedAddress : public utils::Printable {
 	core::NodePtr getAddressedNode() const;
 
 	UnifiedAddress getAddressOfChild(unsigned idx) const;
+	
+	UnifiedAddress extendAddressFor(const std::vector<unsigned>& idxs) const;
 
 	template <class T>
 	inline T as() const { return boost::get<T>(address); }
@@ -113,24 +114,27 @@ private:
 };
 
 
+
+
+
 //=== forward declarations ========================================================================
 class Access;
-typedef std::shared_ptr<const Access> AccessPtr;
+typedef std::shared_ptr<const Access> 			AccessPtr;
 
 class BaseAccess;
-typedef std::shared_ptr<const BaseAccess> BaseAccessPtr;
+typedef std::shared_ptr<const BaseAccess> 		BaseAccessPtr;
 
 class AccessDecorator;
-typedef std::shared_ptr<const AccessDecorator> AccessDecoratorPtr;
+typedef std::shared_ptr<const AccessDecorator> 	AccessDecoratorPtr;
 
 class Deref;
-typedef std::shared_ptr<const Deref> DerefPtr;
+typedef std::shared_ptr<const Deref> 			DerefPtr;
 
 class Member;
-typedef std::shared_ptr<const Member> MemberPtr;
+typedef std::shared_ptr<const Member> 			MemberPtr;
 
 class Subscript;
-typedef std::shared_ptr<const Subscript> SubscriptPtr;
+typedef std::shared_ptr<const Subscript> 		SubscriptPtr;
 
 
 // ================================================================================================ 
@@ -154,17 +158,15 @@ public:
 
 	virtual bool isBaseAccess() const = 0;
 
-	bool isReference() const {
+	inline bool isReference() const {
 		return addr.getAddressedNode().as<core::ExpressionPtr>()->getType()->getNodeType() == core::NT_RefType; 
 	}
 
 	virtual bool isContextDependent() const { return false; }
 
-	bool operator==(const Access& other) const { 
+	inline bool operator==(const Access& other) const { 
 		// Test the trivial case first 
-		if (this == &other) { 
-			return true;
-		}
+		if (this == &other) { return true; }
 		return addr == other.addr;
 	}
 
@@ -391,6 +393,9 @@ class AccessClass;
 typedef std::shared_ptr<AccessClass> AccessClassPtr;
 typedef std::weak_ptr<AccessClass>   AccessClassWPtr;
 
+
+typedef std::set<AccessClassPtr, compare_target<AccessClassPtr>> AccessClassSet; 
+
 /** 
  * An access class is a set of accesses which refer to the same memory location. In case of R-Values
  * an access refers to the actual value. Important to notice that access classes are specific to a
@@ -469,7 +474,7 @@ public:
 		 * Makes sure the access is not already in this class
 		 */
 		assert(!contains(access) && "Access is already present in this class");
-		accesses.push_back(access); 
+			accesses.push_back(access); 
 		return *this;
 	}
 
@@ -496,6 +501,19 @@ public:
 		this->parentClass = parent; 
 	}
 
+	inline std::pair<DependenceType, AccessDecoratorPtr> getParentRelationship() const {
+		if (!parentClass.lock()) { assert(false); }
+
+		const auto& subClasses = parentClass.lock()->getSubClasses();
+
+		auto fit = std::find_if(subClasses.begin(), subClasses.end(), 
+				[&](const Dependence& cur) { return *std::get<1>(cur).lock() == *this; });
+
+		assert(fit != subClasses.end());
+
+		return std::make_pair(std::get<0>(*fit), std::get<2>(*fit));
+	}
+
 	const AccessClassPtr getParentClass() const {
 		return parentClass.lock();
 	}
@@ -503,6 +521,8 @@ public:
 	inline void addSubClass(const Dependence& dep) {
 		subClasses.push_back(dep);
 	}
+
+	AccessClassSet getConflicting() const;
 
 	const SubClasses& getSubClasses() const { return subClasses; }
 	SubClasses& getSubClasses() { return subClasses; }
@@ -528,8 +548,10 @@ public:
 	inline AccessVector::const_iterator end() const { return accesses.end(); }
 
 	inline size_t size() const { return accesses.size(); }
+
 };
 
+void addSubClasses(const AccessClass& thisClass, AccessClassSet& collect);
 
 /** 
  * Return the vector of addresses which are not temporary variable and therefore it returns
@@ -569,6 +591,8 @@ public:
 
 	AccessClassPtr getClassFor(const AccessPtr& access);
 
+	AccessClassPtr findClass(const AccessPtr& access) const;
+
 	void printDotGraph(std::ostream& out) const;
 
 	inline iterator begin() { return classes.begin(); }
@@ -606,6 +630,9 @@ inline AccessPtr
 getImmediateAccess(core::NodeManager& mgr, const cfg::Address& expr, const TmpVarMap& tmpVarMap=TmpVarMap()) {
 	return getImmediateAccess(mgr, UnifiedAddress(expr), tmpVarMap);
 }
+
+std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap=TmpVarMap());
+
 
 } } // end insieme::analysis namespace 
 

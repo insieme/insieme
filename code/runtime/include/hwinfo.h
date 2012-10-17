@@ -44,7 +44,7 @@ uint32 irt_get_num_cpus() {
 #ifdef _SC_NPROCESSORS_ONLN
 	// Linux
 	ret = sysconf(_SC_NPROCESSORS_ONLN);
-#elif defined(WIN32)
+#elif defined(_WIN32)
 	// Windows
 	SYSTEM_INFO sysinfo; 
 	GetSystemInfo( &sysinfo ); 

@@ -138,10 +138,10 @@ class Commands:
 ## together sub benchmarks.
 ###################################################################################################
 
-def read_test_cfg( path ):
+def read_test_cfg( path, cfg_file_name ):
 	assert os.path.exists( path )
 	return [path + '/' + x.strip() \
-			  for x in open(path+'/'+CFG_FILE_NAME).read().split('\n') \
+			  for x in open(path+'/'+cfg_file_name).read().split('\n') \
 					if len(x) > 0 and not x.startswith('#') ]
 
 def expand(tests):
@@ -157,20 +157,27 @@ def expand(tests):
 	# If the directoy has a test.cfg file it means we have to run all the
 	# contained tests
 	if os.path.exists( tests+'/'+CFG_FILE_NAME ):
-		return expand( read_test_cfg( tests ) )
+		return expand( read_test_cfg( tests, CFG_FILE_NAME ) )
 
 	return [ tests ]
 
+
+# Class used to store the data gathered during the execution of a benchmark 
 class CmdExecReport:
 
-	def __init__(self, type, cmd, desc, ret_code, output, time):
+	def __init__(self, type, cmd, desc, ret_code, output, memory, time):
 		self.type = type
 		self.cmd =  cmd
 		self.desc = desc
 		self.ret_code = ret_code
 		self.output = output
+		self.memory = memory
 		self.time = time
 		self.stdev = 0.0
+
+	def __repr__(self):
+		return "{0} {1} {2} {3} {4}".format(self.type, self.cmd, self.ret_code, self.memory, self.time)
+
 
 
 ###################################################################################################
@@ -191,6 +198,52 @@ class TestData:
 
 	@property
 	def name(self):		return os.path.basename(self.__name)
+
+
+global benchmarks_data
+benchmarks_data = []
+
+def print_sum(benchmarks_data) :
+
+	entries = []
+	for bench in benchmarks_data:
+		entries.append( [bench.data.path] + [ (x.desc.split()[1], x.time, x.memory, x.stdev) \
+				for x in bench.data.reports[:-1] if x.type[0]	== 2 ] )
+	
+	header = ["bench_name", "orig_time", "seq_time", "run_time", "ocl_time", 
+										 "rel_seq_time",	"rel_run_time", "rel_ocl_time",  
+							"orig_mem",  "seq_mem",  "run_mem", "ocl_mem",
+										 "rel_seq_mem", "rel_run_mem", "rel_ocl_mem",
+							"orig_stdev","seq_stdev","run_stdev","ocl_stdev", 
+										 "rel_seq_stdev", "rel_run_stdev", "rel_ocl_stdev"]
+
+	table = []
+	table.append(header)
+	for entry in entries:
+		line = [0] * len(header)
+		# add name 
+		line[0] = entry[0]
+
+		for e in entry[1:]:
+			if e[0] == 'gcc':
+				line[1::7] = e[1:]
+
+			if e[0] == 'seq':
+				line[2::7] = e[1:]
+				line[5::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7]))
+
+			if e[0] == 'run':
+				line[3::7] = e[1:]
+				line[6::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7]))
+
+			if e[0] == 'ocl':
+				line[4::7] = e[1:]
+				line[7::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7] ))
+
+		table.append( line )
+	
+	print ("\n".join(map(lambda x: "{0}".format( ",".join(map(lambda y: "{0}".format(y), x) )), table)))
+
 
 completed = Queue()
 
@@ -214,12 +267,15 @@ def reporter( report_queue ):
 
 		success = job.data.reports[-1].desc == 'DONE' and job.data.reports[-1].ret_code == 0
 
+		# Store the result data for future evaluations 
+		benchmarks_data.append( job )
+
 		# Check the output for all the selected backends
 		for rep in job.data.reports[:-1]:
 			# Cmds with an id greater than 3 are not important to be shown 
 			if rep.type[0] > 4:
 				continue
-
+			
 			if rep.ret_code == 0:
 				col_print("# {0:<{1}}".format(rep.desc, COLUMNS-18), NONE),
 				col_print("[{0:>8.4f} secs {1}]\n".
@@ -239,7 +295,7 @@ def reporter( report_queue ):
 					sys.stderr.write( '\n'.join(str(rep.output).split('\n')[0:15 if not verbose else -1]) )
 
 				col_print("\n"+sep, RED)
-
+				
 		if not success:
 			col_print(sep, RED)
 			col_print("#{0:^{1}}#\n".format("FAILED -- " + job.data.path, COLUMNS-2), RED)
@@ -268,7 +324,12 @@ def reporter( report_queue ):
 			col_print("{0}\n".format(test), RED)
 		col_print("#"+"~"*(COLUMNS-2)+"#\n", BOLD)
 	
+
+	# print the summary table 
+	# print_summary(benchmarks_data)
+
 	report_queue.put( len(failedTests) )
+
 
 def exec_shell_cmd(cmd, env):
 	
@@ -308,16 +369,27 @@ def runner( job ):
 			continue
 
 		if cmd.type == Commands.SUCC:
-			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 0, "", 0.0) )
+			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 0, "", 0, 0.0) )
 			break
 
+		# Add time/and memory measurements
+		real_cmd = "/usr/bin/time -f \"\nTIME(%e):MEM(%M)\" {0}".format(cmd.cmd)
+
 		try:
-			start = time.time()
-			(retcode, output) = exec_shell_cmd(cmd.cmd, cmd.env)
-			elapsed = time.time() - start
+			(retcode, output) = exec_shell_cmd(real_cmd, cmd.env)
 		except Exception as e:
 			retcode = 1
 			output = "{0}".format(e)
+
+		time_spec = output.split('\n')[-2]
+		# print(time_spec)
+		
+		m = re.match(r"^TIME\((?P<time>\d+(.\d+)?)\):MEM\((?P<mem>\d+)\)$", time_spec)
+
+		elapsed = float(m.group('time'))
+		tot_mem = int(m.group('mem'))
+
+		output = "\n".join(output.split('\n')[:-2])
 
 		if cmd.out_file:
 			file = open(cmd.out_file, "w")
@@ -325,33 +397,44 @@ def runner( job ):
 			file.close()
 
 		# Create a report and append it to the result
-		job.data.reports.append( CmdExecReport(cmd.type, cmd.cmd, cmd.desc, retcode, output, elapsed) )
+		job.data.reports.append( CmdExecReport(cmd.type, cmd.cmd, cmd.desc, retcode, output, tot_mem, elapsed) )
 
 		if (cmd.type == Commands.COMPILE or cmd.type == Commands.RUN or cmd.type == Commands.HDIFF) and retcode != 0:
-			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 1, "", 0.0) )
+			job.data.reports.append( CmdExecReport(Commands.SUCC, '', 'DONE', 1, "", 0, 0.0) )
 			# there was an error during compilation or running of the program, we mark the
 			# test case as failed
 			break
 
 		# if the command is a RUN command and we have to perform multiple runs, then benchmarks this code
-		if cmd.type == Commands.RUN:
-			execs = [ ]
-			for r in range(0,runs):
-				start = time.time()
-				(retcode, output) = exec_shell_cmd(cmd.cmd, cmd.env)
+		if cmd.type == Commands.RUN and runs > 1:
+			time = [ elapsed ] 
+			mem = [ tot_mem ]
+			for r in range(1,runs):
+				(retcode, output) = exec_shell_cmd(real_cmd, cmd.env)
 				if retcode != 0:
 					# something went wrong, the program which was supposed to work is now failing
 					job.data.reports[-1].ret_code = pid.retcode
 					job.data.reports[-1].output = output
 					break
+				
+				time_spec = output.split('\n')[-2]
+		
+				# print(time_spec)
+				m = re.match(r"^TIME\((?P<time>\d+(.\d+)?)\):MEM\((?P<mem>\d+)\)$", time_spec)
 
-				execs.append( time.time() - start )
+				elapsed = float(m.group('time'))
+				tot_mem = int(m.group('mem'))
+
+				time.append( elapsed )
+				mem.append( tot_mem )
 
 			# compute mean value
-			mean = sum(execs)/runs
-			job.data.reports[-1].time = mean
+			mean_time = sum(time)/runs
+			mean_mem  = sum(mem)/runs
+			job.data.reports[-1].time = mean_time
+			job.data.reports[-1].memory = mean_mem
 			# compute stdev
-			job.data.reports[-1].stdev = math.sqrt(sum( map(lambda x: (x-mean)**2, execs )) / runs)
+			job.data.reports[-1].stdev = math.sqrt(sum( map(lambda x: (x-mean_time)**2, time)) / runs)
 
 		# time.sleep (5)
 
@@ -704,6 +787,14 @@ def main(argv=None):
 							help=("Disable color output, default=%default"),
 							default=False)
 
+	parser.add_option("--show-cases", dest="show_cases", action="store_true",
+							help=("Display the list of test cases which will be executed, default=%default"),
+							default=False)
+
+	parser.add_option("--cfg", dest="cfg", type="string",
+							help=("Loads the list of benchmarks to be executed through a file, default=%default"),
+							default=None)
+
 	(options, args) = parser.parse_args()
 
 	save_path = os.getcwd()
@@ -721,11 +812,18 @@ def main(argv=None):
 	# Set the number of workers
 	num_cores = options.workers
 
+	if options.cfg:
+		args = read_test_cfg('./', options.cfg)
+
 	# If the script is executed without specifying a path, the test folder
 	# in the SOURCE directory is used as entry point 
 	if not args: args = '@CMAKE_SOURCE_DIR@/test'
+	
 	assert(args)
 	test_cases = expand( args )
+
+	if options.show_cases:
+		print (" ".join(test_cases))
 
 	global test_cases_number
 	test_cases_number = len(test_cases)
@@ -793,6 +891,7 @@ def main(argv=None):
 	BIN_DIR=config.get("Test", "BIN_DIR")
 
 	report_queue = Queue()
+
 	# Instantiate the reporter
 	t = Process(target=reporter, args=[report_queue] )
 	t.start()
