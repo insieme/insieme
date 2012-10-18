@@ -40,6 +40,8 @@
 #include "insieme/transform/ir_cleanup.h"
 #include "insieme/utils/logging.h"
 
+#include "insieme/core/transform/simplify.h"
+
 namespace insieme {
 namespace transform {
 
@@ -61,8 +63,60 @@ namespace transform {
 
 		NodePtr ret = doConstantPropagation(code);
 		
-		EXPECT_EQ("{int<4> v3 = 22;}", toString(*ret));
+		EXPECT_EQ(
+			"{"
+				"ref<int<4>> v1 = 10; "
+				"int<4> v2 = int.add(10, 2); "
+				"ref.assign(v1, 22); "
+				"int<4> v3 = 22;"
+			"}", toString(*ret));
 	}
+
+
+	TEST(ConstProp, Liveness) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto code = builder.parse(
+			"{"
+			"	ref<int<4>> a = 10; "
+			"	ref<int<4>> c = 20; "
+			"	if (a < c) { "
+			"		int<4> b = a+2; "
+			"		a = b+a;"
+			"	}"
+			"	c = a;"
+			"}"
+		);
+
+		NodePtr ret = doConstantPropagation(code);
+		
+		EXPECT_EQ(
+			"{"
+				"ref<int<4>> v1 = 10; " 
+				"ref<int<4>> v2 = 20; "
+				"if(int.lt(10, 20)) {"
+					"int<4> v3 = int.add(10, 2); "
+					"ref.assign(v1, 22);"
+				"} else {}; "
+				"ref.assign(v2, v1);"
+			"}", toString(*ret));
+
+		ret = doConstantPropagation(insieme::core::transform::simplify(mgr, ret));
+
+		EXPECT_EQ(
+			"{"
+				"ref<int<4>> v1 = 10; "
+				"ref<int<4>> v2 = 20; "
+				"{"
+					"int<4> v3 = int.add(10, 2); "
+					"ref.assign(v1, 22);"
+				"}; "
+				"ref.assign(v2, 22);"
+			"}", toString(*ret));
+	}
+
 
 	TEST(ConstProp, Vector) {
 
@@ -86,7 +140,14 @@ namespace transform {
 
 		NodePtr ret = doConstantPropagation(code);
 
-		EXPECT_EQ("{int<4> v2 = 13;}", toString(*ret));
+		EXPECT_EQ(
+			"{"
+				"ref.assign(vector.ref.elem(v1, 2u), 10); "
+				"ref.assign(vector.ref.elem(v1, 3u), 3); "
+				"ref.assign(vector.ref.elem(v1, 1u), 13); "
+				"ref.assign(vector.ref.elem(v1, 2u), 13); "
+				"int<4> v2 = 13;"
+			"}", toString(*ret));
 	}
 
 } // end transform namespace 

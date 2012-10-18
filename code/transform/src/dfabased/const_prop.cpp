@@ -35,10 +35,8 @@
  */
 
 #include "insieme/analysis/dfa/analyses/const_prop.h"
-#include "insieme/analysis/dfa/analyses/def_use.h"
 #include "insieme/analysis/dfa/solver.h"
 
-#include "insieme/core/transform/simplify.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/core/analysis/ir_utils.h"
@@ -53,16 +51,14 @@ core::NodePtr doConstantPropagation(const core::NodePtr& root) {
 	
 	std::map<core::NodeAddress, core::NodePtr> replacements;
 
-
 	core::NodeManager& mgr = root->getNodeManager();
+	const auto& gen = mgr.getLangBasic();
 
 	// Build the CFG 
 	CFGPtr cfg = CFG::buildCFG(root);
 
 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
 	auto&& const_prop_result = s.solve();
-
-	dfa::analyses::DefUse du(root, cfg);
 
 	AccessManager aMgr = s.getProblemInstance().getAccessManager();
 	
@@ -73,6 +69,7 @@ core::NodePtr doConstantPropagation(const core::NodePtr& root) {
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& stmt) {
 
 			auto stmtPtr = stmt.getAnalysisStatement();
+	//		LOG(INFO) << *stmtPtr;
 
 			for (const auto& cur : const_prop_result[block->getBlockID()]) {
 
@@ -97,24 +94,29 @@ core::NodePtr doConstantPropagation(const core::NodePtr& root) {
 					auto fit = std::find(classes.begin(), classes.end(), accClass);
 
 					if (fit != classes.end()) {
+
 						size_t idx = std::distance(classes.begin(), fit);
 						if(core::NodeAddress addr = accesses[idx]->getAddress().getAbsoluteAddress(cfg->getTmpVarMap())) {
 
-							if (addr->getNodeType() == core::NT_Literal)
+							// if the value we want to replace is the left hand side of an
+							// assignment stmt, or the variable in a declaration stmt
+							// then do not perform the assignemnt 
+							core::NodeAddress parent = addr.getParentAddress();
+							if (parent->getNodeType() == core::NT_DeclarationStmt && 
+								parent.as<core::DeclarationStmtAddress>()->getVariable() == addr)
+							{	
 								continue;
+							}
+					
+							if (parent->getNodeType() == core::NT_CallExpr && 
+								core::analysis::isCallOf(parent.getAddressedNode(), gen.getRefAssign()) &&
+								parent.as<core::CallExprAddress>()->getArgument(0) == addr)
+							{	
+								continue;
+							}
 
 							// do replace 
 							replacements.insert( {addr, std::get<1>(cur).value()} );
-
-							try {
-								auto addrSet = du.getDefinitions(addr.as<core::ExpressionAddress>());
-
-								for (core::NodeAddress addr : addrSet) {
-									addr = addr.getParentAddress();
-									replacements.insert( {addr, core::IRBuilder(mgr).getNoOp()} );
-								}
-
-							} catch(NotAnAccessException&& e) { }
 
 						}
 					}
@@ -128,7 +130,7 @@ core::NodePtr doConstantPropagation(const core::NodePtr& root) {
 
 	if (replacements.empty()) { return root; }
 
-	return core::transform::simplify(mgr, core::transform::replaceAll(mgr, replacements));
+	return core::transform::replaceAll(mgr, replacements);
 }
 
 } // end transfrom namespace 
