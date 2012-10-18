@@ -34,11 +34,11 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/dfabased/const_prop.h"
+#include "insieme/transform/dfabased/dead_assignments.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 
-#include "insieme/analysis/dfa/analyses/const_prop.h"
+#include "insieme/analysis/dfa/analyses/live_vars.h"
 #include "insieme/analysis/dfa/solver.h"
 
 #include "insieme/core/transform/node_replacer.h"
@@ -49,8 +49,8 @@ namespace transform {
 using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
  
-core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root) {
-	
+core::NodePtr deadAssignmentCleanup(core::NodeManager& mgr, const core::NodePtr& root) {
+
 	std::map<core::NodeAddress, core::NodePtr> replacements;
 
 	const auto& gen = mgr.getLangBasic();
@@ -58,72 +58,46 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root) {
 	// Build the CFG 
 	CFGPtr cfg = CFG::buildCFG(root);
 
-	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
-	auto&& const_prop_result = s.solve();
+	Solver<dfa::analyses::LiveVariables> s(*cfg);
+	auto&& result = s.solve();
 
 	AccessManager aMgr = s.getProblemInstance().getAccessManager();
 	
-	// For each block fo the CFG apply replace constants 
-	
+	// For each block fo the CFG remove declaration to variables which are dead
 	auto blockVisitor = [&] (const cfg::BlockPtr& block) {
 
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& stmt) {
 
-			auto stmtPtr = stmt.getAnalysisStatement();
-	//		LOG(INFO) << *stmtPtr;
+			auto stmtAddr = stmt.getStatementAddress();
+			bool isAssignment = false;
 
-			for (const auto& cur : const_prop_result[block->getBlockID()]) {
+			if ((stmtAddr->getNodeType() == core::NT_DeclarationStmt && (isAssignment=true)) || 
+				(stmtAddr->getNodeType() == core::NT_CallExpr && 
+				core::analysis::isCallOf(stmtAddr.as<core::CallExprAddress>().getAddressedNode(), gen.getRefAssign()))) 
+			{
+				// This block of the CFG refers to a stmt that in the original program is an
+				// assignment stmt or a declaration stmt. 
+				
+				core::NodeAddress addr(stmt.getAnalysisStatement());
 
-				// Extract accesses within this statement 
-				auto accesses = getAccesses(
-									mgr, 
-									UnifiedAddress(cfg::Address(block,0,core::NodeAddress(stmtPtr))), 
-									cfg->getTmpVarMap()
-								);
+				if (isAssignment)
+					addr = addr.as<core::DeclarationStmtAddress>()->getVariable();
+				else 
+					addr = addr.as<core::CallExprAddress>()->getArgument(0);
+		
+				LOG(INFO) << *addr;
 
-				// get corresponding classes 
-				std::vector<AccessClassPtr> classes;
-				std::transform(accesses.begin(), accesses.end(), std::back_inserter(classes), 
-					[&](const AccessPtr& cur) { return aMgr.getClassFor(cur); });
+				auto classPtr = aMgr.findClass(getImmediateAccess(mgr, cfg::Address(block,0,addr)));
 
-				// if the addressed access is a constant, then store the replacement 
-				if (std::get<1>(cur).isValue()) {
-					
-					auto accClass = std::get<0>(cur);
+				const auto& blockResultRef = result[block->getBlockID()];
+				auto fit = blockResultRef.find(classPtr);
 
-					// find all accesses in this statement 
-					auto fit = std::find(classes.begin(), classes.end(), accClass);
+				if (fit != blockResultRef.end()) { return; }
 
-					if (fit != classes.end()) {
+				// remove stmt
+				replacements.insert( {stmtAddr, core::IRBuilder(mgr).getNoOp() } );
 
-						size_t idx = std::distance(classes.begin(), fit);
-						if(core::NodeAddress addr = accesses[idx]->getAddress().getAbsoluteAddress(cfg->getTmpVarMap())) {
-
-							// if the value we want to replace is the left hand side of an
-							// assignment stmt, or the variable in a declaration stmt
-							// then do not perform the assignemnt 
-							core::NodeAddress parent = addr.getParentAddress();
-							if (parent->getNodeType() == core::NT_DeclarationStmt && 
-								parent.as<core::DeclarationStmtAddress>()->getVariable() == addr)
-							{	
-								continue;
-							}
-					
-							if (parent->getNodeType() == core::NT_CallExpr && 
-								core::analysis::isCallOf(parent.getAddressedNode(), gen.getRefAssign()) &&
-								parent.as<core::CallExprAddress>()->getArgument(0) == addr)
-							{	
-								continue;
-							}
-
-							// do replace 
-							replacements.insert( {addr, std::get<1>(cur).value()} );
-
-						}
-					}
-				}
 			}
-
 		});
 	};
 
@@ -134,5 +108,5 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root) {
 	return core::transform::replaceAll(mgr, replacements);
 }
 
-} // end transfrom namespace 
+} // end transform namespace 
 } // end insieme namespace 

@@ -52,6 +52,8 @@
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 
+#include "insieme/transform/dfabased/const_prop.h"
+
 #include "insieme/utils/cmd_line_utils.h"
 
 namespace insieme { namespace transform {
@@ -136,7 +138,7 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 
 	if(CommandLineOptions::ConstantPropagation) {
 		LOG(INFO) << "Performing Constant Propagation on input program";
-		res = doConstantPropagation(res);
+		res = doConstProp(res->getNodeManager(), res);
 	}
 	// done
 	return res;

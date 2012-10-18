@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/transform/ir_cleanup.h"
+#include "insieme/transform/dfabased/const_prop.h"
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/transform/simplify.h"
@@ -61,7 +61,7 @@ namespace transform {
 			"}"
 		);
 
-		NodePtr ret = doConstantPropagation(code);
+		NodePtr ret = doConstProp(mgr,code);
 		
 		EXPECT_EQ(
 			"{"
@@ -70,6 +70,7 @@ namespace transform {
 				"ref.assign(v1, 22); "
 				"int<4> v3 = 22;"
 			"}", toString(*ret));
+
 	}
 
 
@@ -90,7 +91,7 @@ namespace transform {
 			"}"
 		);
 
-		NodePtr ret = doConstantPropagation(code);
+		NodePtr ret = doConstProp(mgr,code);
 		
 		EXPECT_EQ(
 			"{"
@@ -103,7 +104,7 @@ namespace transform {
 				"ref.assign(v2, v1);"
 			"}", toString(*ret));
 
-		ret = doConstantPropagation(insieme::core::transform::simplify(mgr, ret));
+		ret = doConstProp(mgr,insieme::core::transform::simplify(mgr, ret));
 
 		EXPECT_EQ(
 			"{"
@@ -138,7 +139,7 @@ namespace transform {
 			"}", symbols
 		);
 
-		NodePtr ret = doConstantPropagation(code);
+		NodePtr ret = doConstProp(mgr,code);
 
 		EXPECT_EQ(
 			"{"
