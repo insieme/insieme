@@ -36,7 +36,7 @@
 
 #pragma once
 
-#if defined(_MSC_VER) && !defined(IRT_USE_PTHREADS)
+#if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
 	#include "threads.win.impl.h"
 #else
 	#include "threads.unix.impl.h"

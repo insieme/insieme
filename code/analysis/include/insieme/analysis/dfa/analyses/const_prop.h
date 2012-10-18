@@ -42,7 +42,10 @@
 #include "insieme/analysis/access.h"
 #include "insieme/analysis/dfa/analyses/extractors.h"
 
-namespace insieme { namespace analysis { namespace dfa { namespace analyses {
+namespace insieme { 
+namespace analysis { 
+namespace dfa { 
+namespace analyses {
 
 /**
  * Define the DataFlowProblem for Constant Propagation
@@ -51,7 +54,7 @@ class ConstantPropagation:
 	public Problem<
 			ConstantPropagation, 
 			ForwardAnalysisTag,
-			Entity<dfa::elem<cfg::Address>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+			Entity<dfa::elem<AccessClassPtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
 			PowerSet
 	> 
 {
@@ -59,7 +62,7 @@ class ConstantPropagation:
 	typedef Problem<
 			ConstantPropagation, 
 			ForwardAnalysisTag,
-			Entity<dfa::elem<cfg::Address>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+			Entity<dfa::elem<AccessClassPtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
 			PowerSet
 	>  Base;
 	
@@ -67,12 +70,14 @@ public:
 
 	typedef typename Base::value_type value_type;
 
-	ConstantPropagation(const CFG& cfg): Base(cfg) { }
+	AccessManager aMgr;
 
-	virtual value_type init() const { return top(); }
+	ConstantPropagation(const CFG& cfg): Base(cfg), aMgr(&cfg, cfg.getTmpVarMap()) { }
 
-	virtual value_type top() const { 
+	AccessManager& getAccessManager() { return aMgr; }
+	const AccessManager& getAccessManager() const { return aMgr; }
 
+	virtual value_type init() const {
 		const auto& lhsBase = extracted.getLeftBaseSet();
 		return makeCartProdSet(
 				lhsBase, 
@@ -81,6 +86,8 @@ public:
 				) 
 			).expand();
 	}
+
+	virtual value_type top() const { return value_type(); }
 
 	virtual value_type bottom() const {
 		const auto& lhsBase = extracted.getLeftBaseSet();
@@ -100,3 +107,19 @@ public:
 
 } } } } // end insieme::analysis::dfa::analyses namespace 
 
+namespace std {
+
+	using namespace insieme::analysis;
+	using namespace insieme::core;
+
+	std::ostream& operator<<(std::ostream& out, const std::tuple<AccessClassPtr, dfa::Value<LiteralPtr>>& cur) {
+		out << "(cid:" << std::get<0>(cur)->getUID() << ","; 
+		if (std::get<1>(cur).isValue()) {
+			out << *std::get<1>(cur).value();
+		} else {
+			out << std::get<1>(cur);
+		}
+		return out << ")";
+	}
+
+} // end std namespace 

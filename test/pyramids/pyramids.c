@@ -10,7 +10,7 @@
 
 // define the problem size
 #ifndef P
-	#define P 7
+	#define P 9
 #endif
 
 // has to be one of 2^n + 1

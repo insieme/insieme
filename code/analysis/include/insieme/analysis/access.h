@@ -84,7 +84,6 @@ struct UnifiedAddress : public utils::Printable {
 
 	UnifiedAddress(const cfg::Address& addr) : address(addr) { }
 
-
 	bool isCFGAddress() const;
 
 	core::NodeAddress getAbsoluteAddress(const TmpVarMap& varMap=TmpVarMap()) const;
@@ -92,6 +91,8 @@ struct UnifiedAddress : public utils::Printable {
 	core::NodePtr getAddressedNode() const;
 
 	UnifiedAddress getAddressOfChild(unsigned idx) const;
+	
+	UnifiedAddress extendAddressFor(const std::vector<unsigned>& idxs) const;
 
 	template <class T>
 	inline T as() const { return boost::get<T>(address); }
@@ -111,6 +112,9 @@ private:
 	AddressImpl address;
 
 };
+
+
+
 
 
 //=== forward declarations ========================================================================
@@ -154,13 +158,13 @@ public:
 
 	virtual bool isBaseAccess() const = 0;
 
-	bool isReference() const {
+	inline bool isReference() const {
 		return addr.getAddressedNode().as<core::ExpressionPtr>()->getType()->getNodeType() == core::NT_RefType; 
 	}
 
 	virtual bool isContextDependent() const { return false; }
 
-	bool operator==(const Access& other) const { 
+	inline bool operator==(const Access& other) const { 
 		// Test the trivial case first 
 		if (this == &other) { return true; }
 		return addr == other.addr;
@@ -470,7 +474,7 @@ public:
 		 * Makes sure the access is not already in this class
 		 */
 		assert(!contains(access) && "Access is already present in this class");
-		accesses.push_back(access); 
+			accesses.push_back(access); 
 		return *this;
 	}
 
@@ -497,6 +501,19 @@ public:
 		this->parentClass = parent; 
 	}
 
+	inline std::pair<DependenceType, AccessDecoratorPtr> getParentRelationship() const {
+		if (!parentClass.lock()) { assert(false); }
+
+		const auto& subClasses = parentClass.lock()->getSubClasses();
+
+		auto fit = std::find_if(subClasses.begin(), subClasses.end(), 
+				[&](const Dependence& cur) { return *std::get<1>(cur).lock() == *this; });
+
+		assert(fit != subClasses.end());
+
+		return std::make_pair(std::get<0>(*fit), std::get<2>(*fit));
+	}
+
 	const AccessClassPtr getParentClass() const {
 		return parentClass.lock();
 	}
@@ -504,6 +521,8 @@ public:
 	inline void addSubClass(const Dependence& dep) {
 		subClasses.push_back(dep);
 	}
+
+	AccessClassSet getConflicting() const;
 
 	const SubClasses& getSubClasses() const { return subClasses; }
 	SubClasses& getSubClasses() { return subClasses; }
@@ -532,7 +551,7 @@ public:
 
 };
 
-void addSubClasses(const AccessClassPtr& thisClass, AccessClassSet& collect);
+void addSubClasses(const AccessClass& thisClass, AccessClassSet& collect);
 
 /** 
  * Return the vector of addresses which are not temporary variable and therefore it returns
@@ -572,6 +591,8 @@ public:
 
 	AccessClassPtr getClassFor(const AccessPtr& access);
 
+	AccessClassPtr findClass(const AccessPtr& access) const;
+
 	void printDotGraph(std::ostream& out) const;
 
 	inline iterator begin() { return classes.begin(); }
@@ -610,10 +631,17 @@ getImmediateAccess(core::NodeManager& mgr, const cfg::Address& expr, const TmpVa
 	return getImmediateAccess(mgr, UnifiedAddress(expr), tmpVarMap);
 }
 
+std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap=TmpVarMap());
+
+
 } } // end insieme::analysis namespace 
 
 namespace std {
 
 	std::ostream& operator<<(std::ostream& out, const insieme::analysis::AccessPtr& access);
+
+	inline std::ostream& operator<<(std::ostream& out, const insieme::analysis::AccessClassPtr& accClass) {
+		return out << accClass->getUID(); 
+	}
 
 }// end std namespace 

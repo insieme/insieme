@@ -100,8 +100,6 @@ void lookup_accesses(std::set<NodeAddress>& addrSet, const AccessClassPtr& cl, c
 				}
 			}
 		}
-
-
 	}
 }
 
@@ -118,8 +116,6 @@ std::set<NodeAddress> getDefinitions(
 	auto fit = ret.find(blockID);
 	EXPECT_NE(fit, ret.end());
 	 
-	std::cout << fit->second << std::endl;
-
 	insieme::analysis::dfa::analyses::definitionsToAccesses(fit->second, aMgr);
 
 	auto thisAccess = getImmediateAccess(use->getNodeManager(), use);

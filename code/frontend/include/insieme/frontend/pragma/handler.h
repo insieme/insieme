@@ -280,9 +280,9 @@ struct PragmaHandlerFactory {
 };
 
 // Handle the automatic attaching of annotations (coming from user pragmas) to generated IR nodes 
-void attachPragma( const core::NodePtr& 			node, 
-				   const clang::Stmt* 				clangNode, 
-				   conversion::ConversionFactory& 	fact );
+core::NodePtr  attachPragma( const core::NodePtr& 			node, 
+		  				     const clang::Stmt* 				clangNode, 
+						     conversion::ConversionFactory& 	fact );
 } // end pragma namespace
 } // End frontend namespace
 } // End insieme namespace

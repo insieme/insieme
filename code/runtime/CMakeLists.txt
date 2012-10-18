@@ -5,7 +5,7 @@ project(insieme_runtime C CXX)
 cmake_minimum_required(VERSION 2.6)
 
 #user configurable options
-if (MSVC)
+if (WIN32)
 	option (USE_PTHREADS "Use the Pthread Win32 Library (requires PTHREAD_ROOT environment var)" OFF)
 endif()
 option (USE_OPENCL "Build Insieme Runtime with Opencl" OFF)
@@ -25,13 +25,14 @@ include (../add_unit_test.cmake)
 # For all other platforms this var is empty. This safes a lot of if clauses througout this file
 set (WIN64ASM_OBJ "") 
 
-if(MSVC)
+if(WIN32)
 	#you need to have environment variables PTHREAD_ROOT and GTEST_ROOT which point to the base dir of those libraries/headers
 	set (gtest_LIB "$ENV{GTEST_ROOT}/build/Debug/gtest.lib")
 	set (gtest_main_LIB "$ENV{GTEST_ROOT}/build/Debug/gtest_main.lib")
 	set (GTEST_INCLUDE_DIRS "$ENV{GTEST_ROOT}/include")
 	
 	if (CMAKE_CL_64) #64 bit apps
+		message(STATUS "Creating WIN x64 project")
 		set (WIN64ASM_OBJ "${CMAKE_CURRENT_SOURCE_DIR}/asm/win64asm.obj")
 		if (USE_PTHREADS)
 			set (pthread_LIB "$ENV{PTHREAD_ROOT}/lib/x64/pthreadVC2.lib")
@@ -49,9 +50,8 @@ if(MSVC)
 	
 else() #only look for pthread lib on linux
 	find_library(pthread_LIB pthread)
+	lookup_lib( PAPI papi )
 endif()
-
-lookup_lib( PAPI papi )
 	
 # set compiler flags for gcc
 if (CMAKE_COMPILER_IS_GNUCC)
@@ -68,7 +68,11 @@ if (CMAKE_COMPILER_IS_GNUCC)
 
 	include(CheckCCompilerFlag)
 	check_c_compiler_flag( --std=gnu99 C99_Support )
-
+	
+	if(NOT WIN32)
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp") #as one gtest uses openmp
+	endif()
+	
 	if(C99_Support)
 	       	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --std=gnu99")
 	else()
@@ -84,6 +88,8 @@ endif()
 #if pthreads shall be used under Windows the define IRT_USE_PTHREADS is set
 if (MSVC AND USE_PTHREADS)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D IRT_USE_PTHREADS") #with Visual Studio we compile code as C++ Code => set CXX Flag
+elseif (WIN32 AND USE_PTHREADS)
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /D IRT_USE_PTHREADS")
 endif()
 
 
@@ -127,10 +133,10 @@ endif ( USE_OPENCL )
 
 
 #link libraries for the insieme_runtime target
-if(NOT MSVC OR USE_PTHREADS)
+if(NOT WIN32 OR USE_PTHREADS) #if(NOT MSVC OR USE_PTHREADS)
 	target_link_libraries(insieme_runtime ${pthread_LIB})
 endif()
-if(NOT MSVC)
+if(NOT WIN32) #if(NOT MSVC)
 	target_link_libraries(insieme_runtime dl rt m ${papi_LIB})
 endif()
 
@@ -160,7 +166,7 @@ foreach ( case_file ${test_cases})
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
 	target_link_libraries(${case_name} ${pthread_LIB})
-	if(NOT MSVC)
+	if(NOT WIN32)
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} rt)
 		target_link_libraries(${case_name} m)
@@ -183,8 +189,6 @@ foreach ( case_file ${test_cases})
 	#add_unit_test(${case_name} ${VFLAG})
 	add_unit_test(${case_name} FALSE)
 	
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp") #as one test uses openmp
-	
 endforeach(case_file)
 
 # handle manual (library) test cases
@@ -193,7 +197,7 @@ foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	add_library(${case_name} SHARED ${case_file} ${WIN64ASM_OBJ})
-	if(NOT MSVC)
+	if(NOT WIN32)
 		target_link_libraries(${case_name} ${pthread_LIB})
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} m)
@@ -211,7 +215,7 @@ foreach (case_file ${test_cases})
 	include_directories(include/ $ENV{OPENCL_ROOT}/include/)
 	add_executable(${case_name} ${case_file} ${WIN64ASM_OBJ})
 	target_link_libraries(${case_name} ${pthread_LIB})
-	if(NOT MSVC)
+	if(NOT WIN32)
 		target_link_libraries(${case_name} dl)
 		target_link_libraries(${case_name} rt)
 		target_link_libraries(${case_name} m)

@@ -40,11 +40,8 @@
 #include "id_generation.h"
 #include "config.h"
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 	#include <Windows.h>
-#endif
-
-#ifdef WIN32
 	#include <malloc.h>
 #else
 	#include <alloca.h>

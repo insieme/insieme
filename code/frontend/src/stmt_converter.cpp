@@ -991,6 +991,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitStmt(clang::Stmt* 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::CStmtConverter::Visit(clang::Stmt* stmt) {
 	VLOG(2) << "C";
+
 	stmtutils::StmtWrapper retStmt = StmtVisitor<CStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 
 	if ( retStmt.isSingleStmt() ) {
@@ -1000,11 +1001,13 @@ stmtutils::StmtWrapper ConversionFactory::CStmtConverter::Visit(clang::Stmt* stm
 		mpi::attachMPIStmtPragma(irStmt, stmt, convFact);
 
 		// Deal with transfromation pragmas
-		pragma::attachPragma(irStmt,stmt,convFact);
+		irStmt = pragma::attachPragma(irStmt,stmt,convFact).as<core::StatementPtr>();
 
 		// Deal with omp pragmas
 		if ( irStmt->getAnnotations().empty() )
-		return omp::attachOmpAnnotation(irStmt, stmt, convFact);
+			return omp::attachOmpAnnotation(irStmt, stmt, convFact);
+
+		return stmtutils::StmtWrapper(irStmt);
 	}
 	return retStmt;
 }

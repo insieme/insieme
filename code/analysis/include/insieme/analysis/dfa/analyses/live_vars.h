@@ -37,6 +37,9 @@
 #pragma once 
 
 #include "insieme/analysis/dfa/problem.h"
+#include "insieme/analysis/access.h"
+
+#include "insieme/analysis/dfa/analyses/extractors.h"
 
 namespace insieme {
 namespace analysis {
@@ -54,11 +57,12 @@ namespace analyses {
  *
  * The MEET operator is the intersection operation
  */
+
 class LiveVariables: public 
 		Problem<
 			LiveVariables, 
 			BackwardAnalysisTag, 
-			Entity<dfa::elem<core::VariablePtr>>, 
+			Entity<dfa::elem<AccessClassPtr>>, 
 			PowerSet
 		> 
 {
@@ -66,18 +70,22 @@ class LiveVariables: public
 	typedef Problem<
 				LiveVariables, 
 				BackwardAnalysisTag, 
-				Entity<dfa::elem<core::VariablePtr>>, 
+				Entity<dfa::elem<AccessClassPtr>>, 
 				PowerSet
 			> Base;
 	
+	AccessManager aMgr;
+
 public:
 
 	typedef typename Base::direction_tag direction_tag;
 
 	typedef typename Base::value_type value_type;
+	
+	LiveVariables(const CFG& cfg): Base(cfg), aMgr(&cfg, cfg.getTmpVarMap()) { }
 
-
-	LiveVariables(const CFG& cfg): Base(cfg) { }
+	AccessManager& getAccessManager() { return aMgr; }
+	const AccessManager& getAccessManager() const { return aMgr; }
 
 	inline value_type init() const { return top(); }
 

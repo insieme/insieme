@@ -42,6 +42,8 @@
 #include "impl/error_handling.impl.h"
 #include "impl/worker.impl.h"
 
+#ifndef IRT_MIN_MODE
+
 irt_client_app* irt_client_app_create(const char* library_file_name) {
 	irt_client_app *app = (irt_client_app*)malloc(sizeof(irt_client_app));
 	#ifndef IRT_MIN_MODE
@@ -63,3 +65,6 @@ void irt_client_app_destroy(irt_client_app* app) {
 		free(app);
 	#endif
 }
+
+#endif // ifndef IRT_MIN_MODE
+

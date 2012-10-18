@@ -77,6 +77,7 @@ namespace transform {
 			NodePtr simplifyCall(const NodePtr& ptr) {
 				// it has to be a call expression ...
 				if (ptr->getNodeType() != core::NT_CallExpr) return ptr;
+				if(manager.getLangBasic().isBuiltIn(ptr.as<CallExprPtr>()->getFunctionExpr())) return ptr;
 				// try in-lining of call expression
 				return tryInlineToExpr(manager, ptr.as<CallExprPtr>());
 			}
@@ -194,7 +195,9 @@ namespace transform {
 			 * Conducts the actual simplification.
 			 */
 			virtual const NodePtr resolveElement(const NodePtr& ptr) {
-
+				// skip built-ins
+				if(manager.getLangBasic().isBuiltIn(ptr)) return ptr;
+				
 				// skip types
 				if (ptr->getNodeCategory() == NC_Type) {
 					return ptr;
@@ -210,10 +213,10 @@ namespace transform {
 					CallExprPtr call = bind->getCall();
 
 					// improve function part and parameters, yet preserve call
-					ExpressionPtr newFun = call->getFunctionExpr()->substitute(manager, *this);
+					ExpressionPtr newFun = map(call->getFunctionExpr());//call->getFunctionExpr()->substitute(manager, *this);
 					vector<ExpressionPtr> args;
 					for(auto& cur : call->getArguments()) {
-						args.push_back(cur->substitute(manager, *this));
+						args.push_back(map(cur));
 					}
 
 					// construct bind with substituted call

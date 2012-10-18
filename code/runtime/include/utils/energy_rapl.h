@@ -79,7 +79,7 @@
 #include <math.h>
 #include "irt_inttypes.h"
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 	#include <io.h>
 #else
 	#include <unistd.h>
