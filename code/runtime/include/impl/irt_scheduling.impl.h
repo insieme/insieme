@@ -57,8 +57,9 @@ void irt_scheduling_loop(irt_worker* self) {
 		self->have_wait_mutex = false;
 #endif // IRT_WORKER_SLEEPING
 		// while there is something to do, continue scheduling
-		while(irt_scheduling_iteration(self)) 
+		while(irt_scheduling_iteration(self)) {
 			IRT_DEBUG("%sWorker %3d scheduled something.\n", self->id.thread==0?"":"\t\t\t\t\t\t", self->id.thread);
+		}
 #ifdef IRT_WORKER_SLEEPING
 		// check if self is the last worker
 		uint32 active = irt_g_active_worker_count;

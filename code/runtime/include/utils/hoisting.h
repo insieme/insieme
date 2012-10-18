@@ -40,6 +40,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#ifndef IRT_MIN_MODE
+
 #ifdef _WIN32
 	
 #else
@@ -71,6 +73,8 @@
 		assert(retval == 0);
 		return dlopen(uniquename, flag);
 	}
+
+#endif
 
 #endif
 

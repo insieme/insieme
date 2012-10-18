@@ -267,6 +267,9 @@ static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
 void irt_scheduling_init_worker(irt_worker* self) {
 	irt_cwb_init(&self->sched_data.pool);
 	irt_cwb_init(&self->sched_data.queue);
+#ifndef IRT_TASK_OPT
+	self->sched_data.demand = IRT_CWBUFFER_LENGTH;
+#endif //IRT_TASK_OPT
 }
 
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
@@ -287,8 +290,9 @@ irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi)
 
 irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
+#ifndef IRT_TASK_OPT
 	irt_circular_work_buffer *queue = &target->sched_data.queue;
-	if(/*irt_g_worker_count == 1 ||*/ irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH-2) {
+	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH-2) {
 		irt_worker_run_immediate(target, range, impl_id, args);
 		return NULL;
 	}
@@ -297,7 +301,32 @@ irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_r
 		irt_scheduling_assign_wi(target, real_wi);
 		return real_wi;
 	}
+#else //!IRT_TASK_OPT
+	int64 demand = --target->sched_data.demand;
+	if(demand > IRT_CWBUFFER_LENGTH/2) {
+		irt_work_item *real_wi = _irt_wi_create(target, range, impl_id, args);
+		irt_scheduling_assign_wi(target, real_wi);
+		return real_wi;
+	} else {
+		irt_worker_run_immediate(target, range, impl_id, args);
+		return NULL;
+	}
+#endif //!IRT_TASK_OPT
 }
+
+#ifdef IRT_TASK_OPT
+uint32 irt_scheduling_select_taskopt_variant(irt_work_item* wi, irt_worker* wo) {
+	int64 demand = wo->sched_data.demand;
+	if(demand > IRT_CWBUFFER_LENGTH/2) {
+		return 0;
+	} else if(demand > IRT_CWBUFFER_LENGTH/4) {
+		return 1;
+	} else if(demand > 0) {
+		return 2;
+	}
+	return 3;
+}
+#endif //IRT_TASK_OPT
 
 
 // ============================================================================ Scheduling (LINEAR STEALING)
@@ -368,7 +397,8 @@ int irt_scheduling_iteration(irt_worker* self) {
 	}
 	
 	// if that failed, try to take a work item from the queue
-	if((wi = irt_cwb_pop_front(&self->sched_data.queue))) {
+	//if((wi = irt_cwb_pop_front(&self->sched_data.queue))) {
+	if((wi = irt_cwb_pop_back(&self->sched_data.queue))) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
@@ -376,11 +406,16 @@ int irt_scheduling_iteration(irt_worker* self) {
 
 	// try to steal a work item from random
 	irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_TRY, self->id);
-	if((wi = irt_cwb_pop_back(&irt_g_workers[rand_r(&self->rand_seed)%irt_g_worker_count]->sched_data.queue))) {
+	irt_worker *wo = irt_g_workers[rand_r(&self->rand_seed)%irt_g_worker_count];
+	if((wi = irt_cwb_pop_back(&wo->sched_data.queue))) {
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_STEAL_SUCCESS, self->id);
 		irt_inst_insert_wo_event(self, IRT_INST_WORKER_SCHEDULING_LOOP_END, self->id);
 		_irt_worker_switch_to_wi(self, wi);
 		return 1;
+	} else {
+#ifdef IRT_TASK_OPT
+		wo->sched_data.demand = IRT_CWBUFFER_LENGTH;
+#endif //IRT_TASK_OPT
 	}
 
 	// if that failed as well, look in the IPC message queue

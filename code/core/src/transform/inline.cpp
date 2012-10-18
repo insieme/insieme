@@ -218,6 +218,12 @@ CompoundStmtPtr inlineMultiReturnPlainCall(NodeManager& nodeMan, const CallExprP
 	return inlineMultiReturnInternal(retStmts, nodeMan, call, retLoc);
 }
 
+insieme::core::CompoundStmtPtr inlineMultiReturn(NodeManager& nodeMan, const CallExprPtr& call) {
+	const lang::BasicGenerator& basic = nodeMan.getLangBasic();
+	if(call->getFunctionExpr() == basic.getRefAssign()) return inlineMultiReturnAssignment(nodeMan, call);
+	else return inlineMultiReturnPlainCall(nodeMan, call);
+}
+
 
 } // namespace transform
 } // namespace core

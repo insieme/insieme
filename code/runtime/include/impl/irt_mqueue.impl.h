@@ -43,6 +43,8 @@
 
 #include "impl/error_handling.impl.h"
 
+#ifndef IRT_MIN_MODE
+
 void irt_mqueue_init() {
 	struct mq_attr attr;
 	attr.mq_flags = O_NONBLOCK;
@@ -85,3 +87,15 @@ void irt_mqueue_send_new_app(const char* appname) {
 	msg.app_name[sizeof(msg.app_name)-1] = '\0';
 	irt_mqueue_send((irt_mqueue_msg*)&msg);
 }
+
+#else 
+
+void irt_mqueue_init() {}
+void irt_mqueue_cleanup() {}
+
+void irt_mqueue_send(const irt_mqueue_msg* msg) {}
+irt_mqueue_msg* irt_mqueue_receive() {}
+
+void irt_mqueue_send_new_app(const char* appname) {}
+
+#endif
