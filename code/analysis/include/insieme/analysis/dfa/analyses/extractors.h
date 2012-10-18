@@ -40,6 +40,9 @@
 
 #include "insieme/analysis/access.h"
 
+#include "insieme/core/ir_address.h"
+#include "insieme/core/analysis/ir_utils.h"
+
 namespace insieme { 
 namespace analysis {
 namespace dfa {
@@ -56,6 +59,55 @@ extract(const Entity< elem<cfg::BlockPtr> >& e, const CFG& cfg, T&) {
 
 	Container entities;
 	auto collector = [&entities] (const cfg::BlockPtr& block) { entities.insert( block ); };
+	cfg.visitDFS(collector);
+
+	return entities;
+}
+
+template <class T>
+typename container_type_traits< dfa::elem< AccessClassPtr >  >::type 
+extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, T& obj) {
+
+	std::set<AccessClassPtr> entities;
+	auto& aMgr = obj.getAccessManager();
+
+	core::NodeManager& mgr = cfg.getNodeManager();
+
+	auto collector = [&] (const cfg::BlockPtr& block) {
+		size_t stmt_idx=0;
+
+		auto storeAccess = [&](const core::ExpressionAddress& var) {
+
+				entities.insert( 
+					aMgr.getClassFor(
+						getImmediateAccess(
+							var->getNodeManager(), 
+							cfg::Address(block, stmt_idx-1, var),
+							cfg.getTmpVarMap()
+						)
+					) 
+				);
+			};
+
+		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
+			++stmt_idx;
+
+			auto stmt = core::NodeAddress(cur.getAnalysisStatement());
+			if (cur.getType() == cfg::Element::LOOP_INCREMENT) {  	/* TODO: */		}
+
+			if (auto declStmt = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
+				storeAccess(declStmt->getVariable());
+				return;
+			}
+
+			if(auto expr = core::dynamic_address_cast<const core::Expression>(stmt)) {
+				if (core::analysis::isCallOf(expr.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
+					storeAccess(expr.as<core::CallExprAddress>()->getArgument(0));
+					return;
+				}
+			}
+		});
+	};
 	cfg.visitDFS(collector);
 
 	return entities;

@@ -56,54 +56,83 @@ LiveVariables::meet(const typename LiveVariables::value_type& lhs, const typenam
 	return ret;
 }
 
+
 typename LiveVariables::value_type 
 LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const cfg::BlockPtr& block) const {
 	typename LiveVariables::value_type gen, kill;
 	
 	if (block->empty()) { return in; }
 
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "Block " << block->getBlockID();
-	LOG(DEBUG) << "IN: " << in;
+	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	LOG(INFO) << "Block " << block->getBlockID();
+	LOG(INFO) << "IN: " << in;
 
 	assert(block->size() == 1);
 
+	size_t stmt_idx = 0;
+
 	core::StatementPtr stmt = (*block)[0].getAnalysisStatement();
 
-	auto visitor = core::makeLambdaVisitor(
-			[&gen] (const core::VariablePtr& var) { gen.insert( var ); }, true);
-	auto v = makeDepthFirstVisitor( visitor );
+	core::NodeManager& mgr = stmt->getNodeManager();
 
-	// assume scalar variables 
-	if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
+	const AccessManager& aMgr = getAccessManager();
 
-		kill.insert( decl->getVariable() );
-		v.visit(decl->getInitialization());
 
-	} else if (core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(stmt)) {
+	auto handle_def = [&](const core::ExpressionAddress& rhs, const core::ExpressionAddress& lhs, bool isDecl) { 
+				
+		cfg::Address cfgAddr(block, stmt_idx, rhs);
+		auto defAccess = getImmediateAccess(stmt->getNodeManager(), cfgAddr, getCFG().getTmpVarMap());
 
-		auto begin = call->getArguments().begin(), end = call->getArguments().end();
+		auto defClass = aMgr.findClass(defAccess);
+		assert(defClass && "Invalid class for access. Something wrong in the extract() method");
 
-		if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
-			kill.insert( call->getArgument(0).as<core::VariablePtr>() );
-			++begin;
+		AccessClassSet depClasses = defClass->getConflicting();
+		depClasses.insert(defClass);
+
+		// Kill Entities 
+		if (defAccess->isReference()) {
+			for(auto it = in.begin(), end=in.end(); it != end; ++it) {
+				if (std::find_if( depClasses.begin(), depClasses.end(), [&](const AccessClassPtr& cur) { 
+							return *cur == **it; 
+						}) != depClasses.end() ) { kill.insert( *it ); }
+			}
 		}
 
-		std::for_each(begin, end, [&](const core::ExpressionPtr& cur) { v.visit(cur); });
+		auto addr = cfg::Address(block,stmt_idx,lhs);
+
+		auto accesses = getAccesses(mgr, UnifiedAddress(addr), getCFG().getTmpVarMap());
+		for (const auto& acc : accesses) {
+
+			gen.insert( aMgr.findClass(acc) );
+
+		}
+
+	};
+
+	// assume scalar variables 
+	if (core::DeclarationStmtAddress decl = 
+			core::dynamic_address_cast<const core::DeclarationStmt>(core::NodeAddress(stmt))) {
+
+		handle_def(decl->getVariable(), decl->getInitialization(), true);
+
+	} else if (core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(core::NodeAddress(stmt))) {
+
+		if(core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign()) );  
+
+			handle_def(call->getArgument(0), call->getArgument(1), false);
 
 	} else {
 		LOG(WARNING) << *block; 
-		// assert(false);
 	}
 	
-	LOG(DEBUG) << "KILL: " << kill;
-	LOG(DEBUG) << "GEN:  " << gen;
+	LOG(INFO) << "KILL: " << kill;
+	LOG(INFO) << "GEN:  " << gen;
 
 	typename LiveVariables::value_type set_diff, ret;
 	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
 	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
 
-	LOG(DEBUG) << "RET: " << ret;
+	LOG(INFO) << "RET: " << ret;
 	return ret;
 }
 

@@ -640,4 +640,8 @@ namespace std {
 
 	std::ostream& operator<<(std::ostream& out, const insieme::analysis::AccessPtr& access);
 
+	inline std::ostream& operator<<(std::ostream& out, const insieme::analysis::AccessClassPtr& accClass) {
+		return out << accClass->getUID(); 
+	}
+
 }// end std namespace 

@@ -279,8 +279,8 @@ namespace {
 	void getAddressIndexes(const NodeAddress& addr, std::vector<unsigned>& idxs) {
 		if (addr.getDepth() > 2)
 			getAddressIndexes(addr.getParentAddress(), idxs);
-
-		idxs.push_back(addr.getIndex());
+		if (addr.getDepth() > 1)
+			idxs.push_back(addr.getIndex());
 	}
 
 } // end empty namespace 
