@@ -105,8 +105,8 @@ namespace transform {
 		
 		EXPECT_EQ(
 			"{"
-				"{}; "
-				"{}; "
+				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
+				"ref<int<4>> v2 = ref.var(undefined(int<4>)); "
 				"ref<int<4>> v3 = 20; "
 				"ref.assign(v1, v3); "
 				"{}; "

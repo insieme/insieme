@@ -58,8 +58,6 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 	// Build the CFG 
 	CFGPtr cfg = CFG::buildCFG(root);
 
-	// LOG(INFO) << *cfg;
-
 	Solver<dfa::analyses::LiveVariables> s(*cfg);
 	auto&& result = s.solve();
 
@@ -67,8 +65,6 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 	//Solver<dfa::analyses::LiveVariables>::printDataflowData(std::cout, result);;
 	
 	AccessManager aMgr = s.getProblemInstance().getAccessManager();
-	
-	// LOG(INFO) << aMgr;
 
 	// For each block fo the CFG remove declaration to variables which are dead
 	auto blockVisitor = [&] (const cfg::BlockPtr& block) {
@@ -91,8 +87,6 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 					addr = addr.as<core::DeclarationStmtAddress>()->getVariable();
 				else 
 					addr = addr.as<core::CallExprAddress>()->getArgument(0);
-		
-				// LOG(INFO) << *addr;
 
 				auto classPtr = aMgr.findClass(getImmediateAccess(mgr, cfg::Address(block,0,addr)));
 
@@ -101,8 +95,25 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 
 				if (fit != blockResultRef.end()) { return; }
 
-				// remove stmt
-				replacements.insert( {stmtAddr, core::IRBuilder(mgr).getNoOp() } );
+				if (!isAssignment)
+					// remove stmt
+					replacements.insert( {stmtAddr, core::IRBuilder(mgr).getNoOp() } );
+
+				else {
+					core::IRBuilder builder(mgr);
+					const auto& decl = stmtAddr.as<core::DeclarationStmtAddress>();
+					core::TypePtr type = decl->getVariable()->getType();
+					if (core::analysis::isRefType(type)) {
+						type = core::analysis::getReferencedType(type);
+					}
+					auto init = 
+						builder.callExpr(type, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(type));
+
+					if (core::analysis::isRefType(decl->getVariable()->getType()))
+						init = builder.refVar(init);
+
+					replacements.insert( { decl->getInitialization(), init} );
+				}
 
 			}
 		});

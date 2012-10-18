@@ -76,15 +76,20 @@ namespace transform {
 
 		EXPECT_EQ(
 			"{"
-				"{}; "
-				"{}; "
+				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
+				"int<4> v2 = undefined(int<4>); "
 				"{}; "
 				"22;"
 			"}", toString(*ret));
 
 		ret = insieme::core::transform::simplify(mgr, ret);
 
-		EXPECT_EQ("{22;}",toString(*ret));
+		EXPECT_EQ(
+			"{"
+				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
+				"int<4> v2 = undefined(int<4>); "
+				"22;"
+			"}",toString(*ret));
 	}
 
 
@@ -138,10 +143,10 @@ namespace transform {
 
 		EXPECT_EQ(
 			"{"
-				"{}; "
-				"{}; "
+				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
+				"ref<int<4>> v2 = ref.var(undefined(int<4>)); "
 				"{"
-					"{}; "
+					"int<4> v3 = undefined(int<4>); "
 					"{};"
 				"}; "
 				"{}; "
@@ -150,7 +155,15 @@ namespace transform {
 
 		ret = insieme::core::transform::simplify(mgr, ret);
 
-		EXPECT_EQ("{22;}",toString(*ret));
+		EXPECT_EQ(
+			"{"
+				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
+				"ref<int<4>> v2 = ref.var(undefined(int<4>)); "
+				"{"
+					"int<4> v3 = undefined(int<4>);"
+				"}; "
+				"22;"
+			"}",toString(*ret));
 	}
 
 
@@ -195,13 +208,13 @@ namespace transform {
 				"{}; "
 				"{}; "
 				"{}; "
-				"{}; "
+				"int<4> v2 = undefined(int<4>); "
 				"13;"
 			"}", toString(*ret));
 
 		ret = insieme::core::transform::simplify(mgr, ret);
 
-		EXPECT_EQ("{13;}",toString(*ret));
+		EXPECT_EQ("{int<4> v2 = undefined(int<4>); 13;}",toString(*ret));
 
 	}
 
