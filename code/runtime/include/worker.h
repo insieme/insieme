@@ -111,6 +111,7 @@ typedef struct _irt_worker_init_signal {
 
 static inline irt_worker* irt_worker_get_current() {
 	irt_worker* w = (irt_worker*)irt_tls_get(irt_g_worker_key);
+	IRT_ASSERT(w != NULL, IRT_ERR_INTERNAL, "Called irt_worker_get_current from a non-worker thread or before worker initialization.");
 	return w;
 }
 

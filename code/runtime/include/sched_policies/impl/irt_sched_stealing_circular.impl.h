@@ -267,7 +267,7 @@ static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
 void irt_scheduling_init_worker(irt_worker* self) {
 	irt_cwb_init(&self->sched_data.pool);
 	irt_cwb_init(&self->sched_data.queue);
-#ifndef IRT_TASK_OPT
+#ifdef IRT_TASK_OPT
 	self->sched_data.demand = IRT_CWBUFFER_LENGTH;
 #endif //IRT_TASK_OPT
 }
