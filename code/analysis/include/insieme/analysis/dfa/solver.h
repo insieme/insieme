@@ -288,11 +288,10 @@ public:
 		return std::move(solver_data);
 	}
 
-private:
 	/** 
 	 * Print the dataflow values (for debugging purposes)
 	 */
-	void printDataflowData(std::ostream& out, const CFGBlockMap& data) const {
+	static void printDataflowData(std::ostream& out, const CFGBlockMap& data) {
 
 		out << join("\n", data, 
 			[&](std::ostream& jout, const typename CFGBlockMap::value_type& cur) { 
