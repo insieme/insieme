@@ -88,7 +88,7 @@ struct mq_hdr
   long mqh_nwait;               /* #threads blocked in mq_receive() */
   pid_t mqh_pid;                /* nonzero PID if mqh_event set */
   struct sigevent mqh_event;    /* for mq_notify() */
-#if !defined(WIN32) && !defined (UNDER_CE)
+#if !defined(_WIN32) && !defined (UNDER_CE)
   irt_lock_obj mqh_lock;     /* mutex lock */
   irt_cond_var mqh_wait;      /* and condition variable */
 #endif
@@ -106,7 +106,7 @@ struct msg_hdr
 /* one mq_info{} malloc'ed per process per mq_open() */
 struct mq_info
 {
-#if defined(WIN32)
+#if defined(_WIN32)
   /*
    * try not to polute the namespace.
    * typedef void* HANDLE;

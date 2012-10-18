@@ -55,6 +55,11 @@ CompoundStmtPtr inlineMultiReturnAssignment(NodeManager& nodeMan, const CallExpr
  */
 CompoundStmtPtr inlineMultiReturnPlainCall(NodeManager& nodeMan, const CallExprPtr& call);
 
+/** Inlines the given function call of type "x = f(a,b,c,...);" or "f(a,b,c,...);"
+ *  returns a compound statement which implements the same semantics when executed at the given call site
+ */
+CompoundStmtPtr inlineMultiReturn(NodeManager& nodeMan, const CallExprPtr& call);
+
 }
 }
 }

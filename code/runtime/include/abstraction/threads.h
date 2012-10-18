@@ -40,7 +40,7 @@
 #include "irt_inttypes.h"
 //#include "declarations.h"
 
-#if defined(WIN32) && !defined(IRT_USE_PTHREADS)
+#if defined(_WIN32) && !defined(IRT_USE_PTHREADS)
 	#include <Windows.h> // keep this or Visual Studio Compiler goes nuts
 
 	struct _irt_thread {

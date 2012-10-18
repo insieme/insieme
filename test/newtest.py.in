@@ -203,6 +203,48 @@ class TestData:
 global benchmarks_data
 benchmarks_data = []
 
+def print_sum(benchmarks_data) :
+
+	entries = []
+	for bench in benchmarks_data:
+		entries.append( [bench.data.path] + [ (x.desc.split()[1], x.time, x.memory, x.stdev) \
+				for x in bench.data.reports[:-1] if x.type[0]	== 2 ] )
+	
+	header = ["bench_name", "orig_time", "seq_time", "run_time", "ocl_time", 
+										 "rel_seq_time",	"rel_run_time", "rel_ocl_time",  
+							"orig_mem",  "seq_mem",  "run_mem", "ocl_mem",
+										 "rel_seq_mem", "rel_run_mem", "rel_ocl_mem",
+							"orig_stdev","seq_stdev","run_stdev","ocl_stdev", 
+										 "rel_seq_stdev", "rel_run_stdev", "rel_ocl_stdev"]
+
+	table = []
+	table.append(header)
+	for entry in entries:
+		line = [0] * len(header)
+		# add name 
+		line[0] = entry[0]
+
+		for e in entry[1:]:
+			if e[0] == 'gcc':
+				line[1::7] = e[1:]
+
+			if e[0] == 'seq':
+				line[2::7] = e[1:]
+				line[5::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7]))
+
+			if e[0] == 'run':
+				line[3::7] = e[1:]
+				line[6::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7]))
+
+			if e[0] == 'ocl':
+				line[4::7] = e[1:]
+				line[7::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7] ))
+
+		table.append( line )
+	
+	print ("\n".join(map(lambda x: "{0}".format( ",".join(map(lambda y: "{0}".format(y), x) )), table)))
+
+
 completed = Queue()
 
 def reporter( report_queue ):
@@ -284,45 +326,7 @@ def reporter( report_queue ):
 	
 
 	# print the summary table 
-	
-	entries = []
-	for bench in benchmarks_data:
-		entries.append( [bench.data.path] + [ (x.desc.split()[1], x.time, x.memory, x.stdev) for x in bench.data.reports[:-1] if x.type[0]	== 2 ] )
-
-	
-	header = ["bench_name", "orig_time", "seq_time", "run_time", "ocl_time", 
-										 "rel_seq_time",	"rel_run_time", "rel_ocl_time",  
-							"orig_mem",  "seq_mem",  "run_mem", "ocl_mem",
-										 "rel_seq_mem", "rel_run_mem", "rel_ocl_mem",
-							"orig_stdev","seq_stdev","run_stdev","ocl_stdev", 
-										 "rel_seq_stdev", "rel_run_stdev", "rel_ocl_stdev"]
-
-	table = []
-	table.append(header)
-	for entry in entries:
-		line = [0] * len(header)
-		# add name 
-		line[0] = entry[0]
-
-		for e in entry[1:]:
-			if e[0] == 'gcc':
-				line[1::7] = e[1:]
-
-			if e[0] == 'seq':
-				line[2::7] = e[1:]
-				line[5::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7]))
-
-			if e[0] == 'run':
-				line[3::7] = e[1:]
-				line[6::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7]))
-
-			if e[0] == 'ocl':
-				line[4::7] = e[1:]
-				line[7::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7] ))
-
-		table.append( line )
-	
-	print ("\n".join(map(lambda x: "{0}".format( ",".join(map(lambda y: "{0}".format(y), x) )), table)))
+	# print_summary(benchmarks_data)
 
 	report_queue.put( len(failedTests) )
 

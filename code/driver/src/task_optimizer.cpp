@@ -107,28 +107,32 @@ class TaskMultiversioner {
 	}
 
 	LambdaDefinitionPtr removeOuterParallels(LambdaDefinitionPtr lamDef) {
-
 		// create a cached check for nested parallel calls
-		auto containsParallel = makeCachedLambdaVisitor([](const NodePtr& node, const rec_call<bool>::type& rec)->bool {
-			return analysis::isCallOf(node, node->getNodeManager().getLangBasic().getParallel()) || any(node->getChildList(), rec);
+		auto containsParallel = makeCachedLambdaVisitor([&](const NodePtr& node, const rec_call<bool>::type& rec)->bool {
+			return analysis::isCallOf(node, basic.getParallel()) || any(node->getChildList(), rec);
 		});
 
 		// sequentialize all job-spawning steps running jobs with nested parallels
 		return core::transform::makeCachedLambdaMapper([&](const NodePtr& ptr)->NodePtr {
 
 			// only interested in parallel calls
-			if (!analysis::isCallOf(ptr, basic.getParallel())) return ptr;
+			if(!analysis::isCallOf(ptr, basic.getParallel())) return ptr;
 
 			// skip parallel if there is another nested parallel
 			ExpressionPtr branch = ptr.as<CallExprPtr>()->getArgument(0).as<JobExprPtr>()->getDefaultExpr();
-			if (!containsParallel(branch)) return ptr; // preserve the innermost one
+			if(!containsParallel(branch)) return ptr; // preserve the innermost one
 
 			// inline recursive call
 			CallExprPtr callExpr = build.callExpr(basic.getUnit(), branch);
-			return core::transform::inlineMultiReturnPlainCall(nodeMan, core::transform::simplify(nodeMan, callExpr));
+			//return callExpr;
+			CallExprPtr simplified = core::transform::simplify(nodeMan, callExpr);
+			return simplified;
+			VLOG(1) << "AMAZE: \n" << printer::PrettyPrinter(simplified, printer::PrettyPrinter::NO_LET_BINDINGS) << "\n";
+			CompoundStmtPtr inlined = core::transform::inlineMultiReturn(nodeMan, simplified);
+			VLOG(1) << "INLINED: \n" << printer::PrettyPrinter(inlined, printer::PrettyPrinter::NO_LET_BINDINGS) << "\n";
+			return inlined;
 
 		}).map(lamDef);
-
 
 //		auto patt = p::aT(p::var("parallel", irp::callExpr(basic.getParallel(),
 //			irp::jobExpr(p::any, p::var("defaultExp", p::aT(irp::atom(basic.getParallel())))) )));
@@ -155,20 +159,57 @@ class TaskMultiversioner {
 
 	// does not correctly handle parallels generated in recursive function calls
 	LambdaDefinitionPtr removeExtraneousMergeAlls(LambdaDefinitionPtr lamDef) {
-		auto mergeAll = irp::callExpr(basic.getMergeAll());
-		auto para = irp::atom(basic.getParallel());
-		auto patt = p::aT( irp::compoundStmt( p::anyList << p::aT(mergeAll) << *(!p::aT(para)) << p::var("mergeAll", mergeAll) << p::anyList ) );
-		LambdaDefinitionPtr prevLamDef;
-		while(lamDef != prevLamDef) {
-			prevLamDef = lamDef;
-			std::cout << "Running 2 ...\n";
-			auto match = patt->matchAddress(LambdaDefinitionAddress(lamDef));
-			if(match) {
-				NodeAddress addr = match->getVarBinding("mergeAll").getValue();
-				lamDef = core::transform::replaceNode(nodeMan, addr, build.getNoOp()).as<LambdaDefinitionPtr>();
+		// create a cached check for nested parallel calls
+		auto containsParallel = makeCachedLambdaVisitor([&](const NodePtr& node, const rec_call<bool>::type& rec)->bool {
+			return analysis::isCallOf(node, basic.getParallel()) || any(node->getChildList(), rec);
+		});
+		// create a cached check for nested mergeAll calls
+		auto containsMergeAll = makeCachedLambdaVisitor([&](const NodePtr& node, const rec_call<bool>::type& rec)->bool {
+			return analysis::isCallOf(node, basic.getMergeAll()) || any(node->getChildList(), rec);
+		});
+		
+		// remove all the superfluous mergeAlls from Compound Statements
+		return core::transform::makeCachedLambdaMapper([&](const NodePtr& ptr)->NodePtr {
+
+			// only interested in compound statements
+			CompoundStmtPtr comp = dynamic_pointer_cast<CompoundStmtPtr>(ptr);
+			if(!comp) return ptr;
+			bool changes = false;
+
+			// build compound statement list, omitting mergeAlls that are not required
+			StatementList replacementStmts;
+			for(int i=0; i<comp.getStatements().end()-comp.getStatements().begin(); ++i) {
+				StatementPtr stat = comp.getStatement(i);
+				bool skip = false;
+				if(analysis::isCallOf(stat, basic.getMergeAll())) {
+					for(int j=i-1; j>=0 && !skip; --j) {
+						StatementPtr backTrackStat = comp.getStatement(j);
+						if(containsMergeAll(backTrackStat)) skip = true;
+						else if(containsParallel(backTrackStat)) break;
+					}
+				}
+				if(!skip) replacementStmts.push_back(stat);
+				else changes = true;
 			}
-		}
-		return prevLamDef;
+
+			if(changes) return build.compoundStmt(replacementStmts);
+			else return ptr;
+		}).map(lamDef);
+
+		//auto mergeAll = irp::callExpr(basic.getMergeAll());
+		//auto para = irp::atom(basic.getParallel());
+		//auto patt = p::aT(irp::compoundStmt( p::anyList << p::aT(mergeAll) << *(!p::aT(para)) << p::var("mergeAll", mergeAll) << p::anyList ) );
+		//LambdaDefinitionPtr prevLamDef;
+		//while(lamDef != prevLamDef) {
+		//	prevLamDef = lamDef;
+		//	std::cout << "Running 2 ...\n";
+		//	auto match = patt->matchAddress(LambdaDefinitionAddress(lamDef));
+		//	if(match) {
+		//		NodeAddress addr = match->getVarBinding("mergeAll").getValue();
+		//		lamDef = core::transform::replaceNode(nodeMan, addr, build.getNoOp()).as<LambdaDefinitionPtr>();
+		//	}
+		//}
+		//return prevLamDef;
 	}
 
 	LambdaDefinitionPtr buildReplacement(const LambdaDefinitionPtr& lamDef) {
@@ -180,7 +221,7 @@ class TaskMultiversioner {
 			VariableList varOptions;
 			varOptions.push_back(rVar); // original version is the first option
 			varOptions.push_back(build.variable(rVar->getType())); // var for 2 unroll
-			//varOptions.push_back(build.variable(rVar->getType())); // var for 4 unroll
+      			varOptions.push_back(build.variable(rVar->getType())); // var for 4 unroll
 			varOptions.push_back(build.variable(rVar->getType())); // var for sequential
 			varOptionsList.push_back(varOptions);
 			sequentialVarReplacements.insert(make_pair(rVar, varOptions.back()));
@@ -189,10 +230,11 @@ class TaskMultiversioner {
 		vector<LambdaDefinitionPtr> lambdaDefOptionsList;
 		lambdaDefOptionsList.push_back(lamDef);
 		lambdaDefOptionsList.push_back(removeExtraneousMergeAlls(removeOuterParallels(lamDef->unroll(nodeMan, 2))));
-		lambdaDefOptionsList.push_back(removeExtraneousMergeAlls(removeOuterParallels(lamDef->unroll(nodeMan, 4))));
+      		lambdaDefOptionsList.push_back(removeExtraneousMergeAlls(removeOuterParallels(lamDef->unroll(nodeMan, 4))));
 //		lambdaDefOptionsList.push_back(lamDef->unroll(nodeMan, 2));
 //		lambdaDefOptionsList.push_back(lamDef->unroll(nodeMan, 4));
-		lambdaDefOptionsList.push_back(core::transform::trySequentialize(nodeMan, lamDef));
+//		lambdaDefOptionsList.push_back(core::transform::trySequentialize(nodeMan, lamDef));
+		lambdaDefOptionsList.push_back(core::transform::trySequentialize(nodeMan, lambdaDefOptionsList.back(), false));
 		
 		// replace recursive jobs in lambdas with pick from available options, generating new bindings
 		vector<LambdaBindingPtr> newBindings;
@@ -233,6 +275,7 @@ class TaskMultiversioner {
 
 		VLOG(1) << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!! orig:\n" << printer::PrettyPrinter(lamDef, printer::PrettyPrinter::NO_LET_BINDINGS) 
 			<< "\n!!!!!!!!!! new:\n" << printer::PrettyPrinter(core::transform::simplify(nodeMan, build.lambdaDefinition(newBindings)), printer::PrettyPrinter::NO_LET_BINDINGS);
+		
 		return core::transform::simplify(nodeMan, build.lambdaDefinition(newBindings));
 	}
 

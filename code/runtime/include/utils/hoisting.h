@@ -40,7 +40,9 @@
 #include <stdio.h>
 #include <assert.h>
 
-#ifdef WIN32
+#ifndef IRT_MIN_MODE
+
+#ifdef _WIN32
 	
 #else
 	#include <dlfcn.h>
@@ -50,7 +52,7 @@
 
 // TODO: dlopen_unique should become an irt_* function
 
-#ifdef WIN32
+#ifdef _WIN32
 	// TODO: implement this for windows
 	void* dlopen_unique(const char* filename, int flag) {
 		return NULL;
@@ -71,6 +73,8 @@
 		assert(retval == 0);
 		return dlopen(uniquename, flag);
 	}
+
+#endif
 
 #endif
 

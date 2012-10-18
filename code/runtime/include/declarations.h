@@ -40,7 +40,7 @@
 #include "id_generation.h"
 #include "config.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 	#include <Windows.h>
 	#include <malloc.h>
 #else

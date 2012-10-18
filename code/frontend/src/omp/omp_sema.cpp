@@ -570,7 +570,9 @@ protected:
 		CallExprPtr call = dynamic_pointer_cast<CallExprPtr>(stmtNode);
 		if(!call) cerr << printer::PrettyPrinter(stmtNode) << std::endl;
 		assert(call && "Unhandled OMP atomic");
-		return build.atomicAssignment(call);
+		auto at = build.atomicAssignment(call);
+		//std::cout << "ATOMIC: \n" << printer::PrettyPrinter(at, printer::PrettyPrinter::NO_LET_BINDINGS);
+		return at;
 	}
 };
 

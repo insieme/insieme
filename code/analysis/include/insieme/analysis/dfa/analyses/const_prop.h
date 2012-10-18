@@ -42,15 +42,9 @@
 #include "insieme/analysis/access.h"
 #include "insieme/analysis/dfa/analyses/extractors.h"
 
-namespace insieme { namespace analysis { namespace dfa { 
-
-namespace analyses {
-class ConstantPropagation;
-} // end analyses namespace 
-
-typename container_type_traits< dfa::elem< AccessClassPtr >  >::type 
-extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, analyses::ConstantPropagation& obj);
-	
+namespace insieme { 
+namespace analysis { 
+namespace dfa { 
 namespace analyses {
 
 /**

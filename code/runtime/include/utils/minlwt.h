@@ -73,7 +73,7 @@ typedef struct _lwt_reused_stack {
 
 } lwt_reused_stack;
 
-#if  defined(__x86_64__) || defined(WIN32)
+#if  defined(__x86_64__) || defined(_WIN32)
 //#if 0 // for testing the ucontext fallback on x64 systems
 #define USING_MINLWT 1
 typedef intptr_t lwt_context;

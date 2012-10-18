@@ -133,11 +133,8 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 			// Get the class to which the access belongs to 
 			AccessClassPtr collisionClass = mgr.getClassFor(access);
 
-			AccessClassSet classes;
+			AccessClassSet classes = collisionClass->getConflicting();
 			classes.insert(collisionClass);
-
-			// Add subclasses which are affected by this definition
-			addSubClasses(collisionClass, classes);
 
 			// Kill Entities 
 			if (access->isReference()) 
