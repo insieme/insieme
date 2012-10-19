@@ -51,6 +51,11 @@
 
 #include <stdexcept>
 
+#ifdef __GNUC__
+#include <signal.h>
+#include <execinfo.h>
+#endif
+
 namespace insieme {
 namespace utils {
 namespace log {
@@ -225,6 +230,32 @@ struct Formatter<Separator, Head, Tail...> {
 	}
 };
 
+inline void handler(int sig) {
+
+	int j, nptrs;
+#define SIZE 100
+	void *buffer[100];
+    char **strings;
+
+	nptrs = backtrace(buffer, SIZE);
+    fprintf(stderr, "backtrace() returned %d addresses\n", nptrs);
+
+	/* The call backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO)
+       would produce similar output to the following: */
+
+	strings = backtrace_symbols(buffer, nptrs);
+    if (strings == NULL) {
+        perror("backtrace_symbols");
+        exit(EXIT_FAILURE);
+    }
+
+	for (j = 0; j < nptrs; j++)
+		fprintf(stderr, "%s\n", strings[j]);
+
+	free(strings);
+	exit(1);
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							LOGGER
 //-----------------------------------------------------------
@@ -251,7 +282,13 @@ class Logger {
 		m_null_logger(io::null_sink()),
 		out(out),
 		m_level(level),
-		m_verbosity(verbosity) { }
+		m_verbosity(verbosity)
+	{ 
+#ifdef __GNUC__
+		/* Register an handler for segmentation faults */
+ 		signal(SIGSEGV, handler); 
+#endif
+	}
 
 public:
 

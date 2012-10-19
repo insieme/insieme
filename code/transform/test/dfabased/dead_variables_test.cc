@@ -117,6 +117,73 @@ namespace transform {
 
 	}
 
+	TEST(DeadAssignments, ScalarsWhileControl) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto code = builder.parse(
+			"{"
+			"	ref<int<4>> a = 10; "
+			"	ref<int<4>> i=0; "
+			"	while( i < 2 ) { "
+			"		a = i; "
+			"		i = i+1; "
+			"	} "
+			"	ref<int<4>> c = 20; "
+			"	a = c;"
+			"	a; "
+			"}"
+		);
+
+		NodePtr ret = removeDeadVariables(mgr,code);
+		
+		EXPECT_EQ(
+			"{"
+				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
+				"ref<int<4>> v2 = 0; "
+				"while(int.lt(ref.deref(v2), 2)) {"
+					"{}; "
+					"ref.assign(v2, int.add(ref.deref(v2), 1));"
+				"}; "
+				"ref<int<4>> v3 = 20; "
+				"ref.assign(v1, v3); v1;"
+			"}"
+			, toString(*ret));
+	}
+
+	TEST(DeadAssignments, ScalarsForControl) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto code = builder.parse(
+			"{"
+			"	ref<int<4>> a = 10; "
+			"	for(int<4> i=0 .. 10 : 2) {"
+			"		a = i; "
+			"	} "
+			"	ref<int<4>> c = 20; "
+			"	a = c;"
+			"	a; "
+			"}"
+		);
+
+		NodePtr ret = removeDeadVariables(mgr,code);
+		
+		EXPECT_EQ(
+			"{"
+				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
+				"for(int<4> v2 = 0 .. 10 : 2) {"
+					"{};"
+				"}; "
+				"ref<int<4>> v3 = 20; "
+				"ref.assign(v1, v3); "
+				"v1;"
+			"}"
+			, toString(*ret));
+	}
+
 
 	TEST(DeadAssignments, Structus) {
 
