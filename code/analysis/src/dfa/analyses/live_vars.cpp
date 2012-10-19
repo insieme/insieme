@@ -134,8 +134,14 @@ LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const
 			handle_body(call);
 		}
 
+	} else if ((*block)[0].getType() == cfg::Element::LOOP_INCREMENT) {
+
+		auto cfgAddr = getCFG().find((*block)[0].getStatementAddress().as<core::ForStmtAddress>()->getDeclaration()->getVariable());
+		auto accessPtr = getImmediateAccess(mgr, cfgAddr, getCFG().getTmpVarMap());
+		gen.insert( aMgr.findClass(accessPtr) );
+
 	} else {
-		handle_body(core::ExpressionAddress(stmt.as<core::ExpressionPtr>()));
+		handle_body( core::ExpressionAddress(stmt.as<core::ExpressionPtr>()) );
 	}
 	
 	LOG(DEBUG) << "KILL: " << kill;
