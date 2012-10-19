@@ -314,10 +314,7 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 //
 
 		} else {
-
-			LOG(WARNING) << stmt;
-			assert(false && "Stmt not handled");
-
+			
 		}
 	});
 

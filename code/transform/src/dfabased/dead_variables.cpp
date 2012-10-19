@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/dfabased/dead_assignments.h"
+#include "insieme/transform/dfabased/dead_variables.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 
@@ -49,7 +49,7 @@ namespace transform {
 using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
  
-core::NodePtr deadAssignmentCleanup(core::NodeManager& mgr, const core::NodePtr& root) {
+core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& root) {
 
 	std::map<core::NodeAddress, core::NodePtr> replacements;
 
@@ -61,8 +61,11 @@ core::NodePtr deadAssignmentCleanup(core::NodeManager& mgr, const core::NodePtr&
 	Solver<dfa::analyses::LiveVariables> s(*cfg);
 	auto&& result = s.solve();
 
-	AccessManager aMgr = s.getProblemInstance().getAccessManager();
+	/* print dataflow solver data */
+	//Solver<dfa::analyses::LiveVariables>::printDataflowData(std::cout, result);;
 	
+	AccessManager aMgr = s.getProblemInstance().getAccessManager();
+
 	// For each block fo the CFG remove declaration to variables which are dead
 	auto blockVisitor = [&] (const cfg::BlockPtr& block) {
 
@@ -84,8 +87,6 @@ core::NodePtr deadAssignmentCleanup(core::NodeManager& mgr, const core::NodePtr&
 					addr = addr.as<core::DeclarationStmtAddress>()->getVariable();
 				else 
 					addr = addr.as<core::CallExprAddress>()->getArgument(0);
-		
-				LOG(INFO) << *addr;
 
 				auto classPtr = aMgr.findClass(getImmediateAccess(mgr, cfg::Address(block,0,addr)));
 
@@ -94,8 +95,25 @@ core::NodePtr deadAssignmentCleanup(core::NodeManager& mgr, const core::NodePtr&
 
 				if (fit != blockResultRef.end()) { return; }
 
-				// remove stmt
-				replacements.insert( {stmtAddr, core::IRBuilder(mgr).getNoOp() } );
+				if (!isAssignment)
+					// remove stmt
+					replacements.insert( {stmtAddr, core::IRBuilder(mgr).getNoOp() } );
+
+				else {
+					core::IRBuilder builder(mgr);
+					const auto& decl = stmtAddr.as<core::DeclarationStmtAddress>();
+					core::TypePtr type = decl->getVariable()->getType();
+					if (core::analysis::isRefType(type)) {
+						type = core::analysis::getReferencedType(type);
+					}
+					auto init = 
+						builder.callExpr(type, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(type));
+
+					if (core::analysis::isRefType(decl->getVariable()->getType()))
+						init = builder.refVar(init);
+
+					replacements.insert( { decl->getInitialization(), init} );
+				}
 
 			}
 		});

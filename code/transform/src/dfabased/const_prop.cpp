@@ -64,13 +64,11 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root) {
 	AccessManager aMgr = s.getProblemInstance().getAccessManager();
 	
 	// For each block fo the CFG apply replace constants 
-	
 	auto blockVisitor = [&] (const cfg::BlockPtr& block) {
 
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& stmt) {
 
 			auto stmtPtr = stmt.getAnalysisStatement();
-	//		LOG(INFO) << *stmtPtr;
 
 			for (const auto& cur : const_prop_result[block->getBlockID()]) {
 

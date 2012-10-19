@@ -34,54 +34,20 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once 
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/transform/dfabased/dead_assignments.h"
-#include "insieme/utils/logging.h"
-
-#include "insieme/core/transform/simplify.h"
+#include "insieme/core/ir_pointer.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace transform {
 
-	using namespace core;
+	core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& root);
 
-	TEST(DeadAssignments, Liveness) {
-
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto code = builder.parse(
-			"{"
-			"	ref<int<4>> a = 10; "
-			"	ref<int<4>> c = 20; "
-			"	if (a < c) { "
-			"		int<4> b = a+2; "
-			"		a = b+3; "
-			"		a = b+3;"
-			"	}"
-			"	c = a;"
-			"}"
-		);
-
-		NodePtr ret = deadAssignmentCleanup(mgr,code);
-		
-		EXPECT_EQ(
-			"{"
-				"ref<int<4>> v1 = 10; "
-				"ref<int<4>> v2 = 20; "
-				"if(int.lt(ref.deref(v1), ref.deref(v2))) {"
-					"int<4> v3 = int.add(ref.deref(v1), 2); "
-					"{}; "
-					"ref.assign(v1, int.add(v3, 3));"
-				"} else {}; "
-				"{};"
-			"}"
-			, toString(*ret));
-
+	template <typename T>
+	core::Pointer<const T> removeDeadVariables(core::NodeManager& manager, const core::Pointer<const T>& code) {
+		return removeDeadVariables(manager, core::NodePtr(code)).as<core::Pointer<const T>>();
 	}
+
 } // end transform namespace 
-} // end insieme namespace
-
-
+} // end insieme name

@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/transform/dfabased/const_prop.h"
+#include "insieme/transform/dfabased/dead_variables.h"
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/transform/simplify.h"
@@ -57,7 +58,7 @@ namespace transform {
 			"	ref<int<4>> a = 10; "
 			"	int<4> b = a+2; "
 			"	a = b+a;"
-			"	int<4> c = a;"
+			"	a;"
 			"}"
 		);
 
@@ -68,9 +69,27 @@ namespace transform {
 				"ref<int<4>> v1 = 10; "
 				"int<4> v2 = int.add(10, 2); "
 				"ref.assign(v1, 22); "
-				"int<4> v3 = 22;"
+				"22;"
 			"}", toString(*ret));
 
+		ret = removeDeadVariables(mgr, ret);
+
+		EXPECT_EQ(
+			"{"
+				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
+				"int<4> v2 = undefined(int<4>); "
+				"{}; "
+				"22;"
+			"}", toString(*ret));
+
+		ret = insieme::core::transform::simplify(mgr, ret);
+
+		EXPECT_EQ(
+			"{"
+				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
+				"int<4> v2 = undefined(int<4>); "
+				"22;"
+			"}",toString(*ret));
 	}
 
 
@@ -88,6 +107,7 @@ namespace transform {
 			"		a = b+a;"
 			"	}"
 			"	c = a;"
+			"	c; "
 			"}"
 		);
 
@@ -101,7 +121,8 @@ namespace transform {
 					"int<4> v3 = int.add(10, 2); "
 					"ref.assign(v1, 22);"
 				"} else {}; "
-				"ref.assign(v2, v1);"
+				"ref.assign(v2, v1); "
+				"v2;"
 			"}", toString(*ret));
 
 		ret = doConstProp(mgr,insieme::core::transform::simplify(mgr, ret));
@@ -114,8 +135,35 @@ namespace transform {
 					"int<4> v3 = int.add(10, 2); "
 					"ref.assign(v1, 22);"
 				"}; "
-				"ref.assign(v2, 22);"
+				"ref.assign(v2, 22); "
+				"22;"
 			"}", toString(*ret));
+
+		ret = removeDeadVariables(mgr, ret);
+
+		EXPECT_EQ(
+			"{"
+				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
+				"ref<int<4>> v2 = ref.var(undefined(int<4>)); "
+				"{"
+					"int<4> v3 = undefined(int<4>); "
+					"{};"
+				"}; "
+				"{}; "
+				"22;"
+			"}", toString(*ret));
+
+		ret = insieme::core::transform::simplify(mgr, ret);
+
+		EXPECT_EQ(
+			"{"
+				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
+				"ref<int<4>> v2 = ref.var(undefined(int<4>)); "
+				"{"
+					"int<4> v3 = undefined(int<4>);"
+				"}; "
+				"22;"
+			"}",toString(*ret));
 	}
 
 
@@ -136,6 +184,7 @@ namespace transform {
 			"	v[1u] = v[2u] + v[3u]; "
 			"	v[2u] = v[1u]; "
 			"	int<4> a = v[2u]; "
+			"	a; "
 			"}", symbols
 		);
 
@@ -147,8 +196,26 @@ namespace transform {
 				"ref.assign(vector.ref.elem(v1, 3u), 3); "
 				"ref.assign(vector.ref.elem(v1, 1u), 13); "
 				"ref.assign(vector.ref.elem(v1, 2u), 13); "
-				"int<4> v2 = 13;"
+				"int<4> v2 = 13; "
+				"13;"
 			"}", toString(*ret));
+
+		ret = removeDeadVariables(mgr, ret);
+
+		EXPECT_EQ(
+			"{"
+				"{}; "
+				"{}; "
+				"{}; "
+				"{}; "
+				"int<4> v2 = undefined(int<4>); "
+				"13;"
+			"}", toString(*ret));
+
+		ret = insieme::core::transform::simplify(mgr, ret);
+
+		EXPECT_EQ("{int<4> v2 = undefined(int<4>); 13;}",toString(*ret));
+
 	}
 
 } // end transform namespace 
