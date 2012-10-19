@@ -261,8 +261,6 @@ void irt_ocl_init_devices() {
 	MPI_Comm_spawn("./worker", MPI_ARGV_NULL, universe_size-1, MPI_INFO_NULL, 0, MPI_COMM_SELF, &intercom, MPI_ERRCODES_IGNORE);
 	MPI_Intercomm_merge(intercom, 0, &everyone);
 
-	//int tag = _irt_create_tag(IRT_OCL_CREATE_BUFFER); // REMOVE SEGFAULT
-	
 	for (int i = 1; i < universe_size; ++i) {
 		IRT_DEBUG("M -> %d: \"init devices\"\n", i);
 		uint64_t device_type = DEVICE_TYPE;
@@ -799,6 +797,7 @@ void irt_ocl_rt_run_kernel(uint32_t kernel_id, uint32_t work_dim, size_t* global
 	int worker_id = irt_worker_get_current()->id.thread % irt_ocl_get_num_devices();
 	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[worker_id][kernel_id]; // :)
 	uint32_t node = kernel->device->node_id;
+
 #ifdef LOCAL_MODE
 	if (node == 0) {
 			irt_ocl_local_kernel* lkernel = (irt_ocl_local_kernel*)(kernel->kernel_add);
