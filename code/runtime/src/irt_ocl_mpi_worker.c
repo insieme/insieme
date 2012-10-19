@@ -34,14 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include <stdio.h>
+/*#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include "mpi.h"
 #include "impl/irt_ocl.impl.h"
-
+*/
 int main(int argc, char *argv[]) {
-	cl_int size;
+/*	cl_int size;
 	MPI_Comm intercom, everyone;
 	MPI_Init(&argc, &argv);
 	MPI_Comm_get_parent(&intercom);
@@ -276,6 +276,6 @@ int main(int argc, char *argv[]) {
 	}
 
 exit_label:
-	MPI_Finalize(); 
+	MPI_Finalize();*/
 	return 0; 
 }

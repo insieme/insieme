@@ -94,7 +94,7 @@ endif()
 
 
 #collect all source and header files
-file(GLOB_RECURSE insieme_runtime_srcs 	src/*.c )
+file(GLOB_RECURSE insieme_runtime_srcs 	src/runtime.c )
 file(GLOB_RECURSE insieme_runtime_incs 	include/*.h )
 
 #using MSVC we need to tell cmake to treat code as c++ code (also applies to testcases at the bottom)
@@ -113,6 +113,7 @@ if ( USE_OPENCL )
 		message(WARNING "OPENCL DISABLED, LIBRARY NOT FOUND")	
 	else ( ${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
 		add_definitions(-DUSE_OPENCL)
+		add_definitions(-DLOCAL_MODE)
 		message(STATUS "Found At: " ${OPENCL_LIBS})
 		message(STATUS "OPENCL ENABLED")
 		message(STATUS "USING ${OPENCL_LIBS}")
