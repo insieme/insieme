@@ -62,8 +62,8 @@ value_type LiveVariables::meet(const value_type& lhs, const value_type& rhs) con
 std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
 	
 	value_type gen, kill;
-	
-	if (block->empty()) { return {value_type(), value_type()}; }
+
+	if (block->empty()) { return {gen,kill}; }
 
 	assert(block->size() == 1); // FIXME
 
@@ -104,14 +104,14 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 		}
 
 		try {
-			auto useAccess = 
-				getImmediateAccess(stmt->getNodeManager(), cfg::Address(block, stmt_idx, rhs), getCFG().getTmpVarMap());
+			auto useAccess = getImmediateAccess(stmt->getNodeManager(), 
+									cfg::Address(block, stmt_idx, rhs), 
+									getCFG().getTmpVarMap()
+								);
 			
 			// if the RHS is a not live variable 
 			auto fit = in.find(defClass);
-			if (fit == in.end()) {
-				return ;
-			}
+			if (fit == in.end()) { return ; }
 
 		} catch(NotAnAccessException&& e) { }
 
@@ -119,8 +119,7 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 	};
 
 	// assume scalar variables 
-	if (core::DeclarationStmtAddress decl = 
-			core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
+	if (auto decl = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
 
 		handle_def(decl->getVariable(), decl->getInitialization());
 

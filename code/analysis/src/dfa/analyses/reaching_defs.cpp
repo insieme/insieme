@@ -58,8 +58,10 @@ extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg, analyses::Re
 			auto stmt = core::NodeAddress(cur.getAnalysisStatement());
 	
 			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { 
-				stmt.as<core::ForStmtPtr>()->getDeclaration()->getVariable();
-				// FIXME
+				entities.insert( cfg::Address(block, stmt_idx-1, 
+						stmt.as<core::ForStmtAddress>()->getDeclaration()->getVariable()
+					));
+				return;
 			}
 
 			if (auto declStmt = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
@@ -104,15 +106,12 @@ void definitionsToAccesses(const AnalysisDataType& data, AccessManager& aMgr) {
 	}
 }
 
-std::pair<AnalysisDataType,AnalysisDataType> ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
+std::pair<AnalysisDataType,AnalysisDataType> 
+ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
 
 	AnalysisDataType gen, kill;
 	
-	if (block->empty()) { return {value_type(),value_type()}; }
-
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "~ Block " << block->getBlockID();
-	LOG(DEBUG) << "~ IN: " << in;
+	if (block->empty()) { return {gen,kill}; }
 
 	AccessManager mgr(&getCFG(), getCFG().getTmpVarMap());
 	definitionsToAccesses(in, mgr);

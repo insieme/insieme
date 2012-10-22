@@ -196,7 +196,6 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 		if ( gen.isUnsignedInt( args[1]->getType() ) || gen.isIdentifier( args[1]->getType() ) ) {
 			return std::make_shared<Member>(expr, subAccess, args[1].as<LiteralPtr>());
 		}
-
 		assert( false && "Type of member access not supported" );
 	}
 
@@ -339,9 +338,6 @@ std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress&
 			return true;
 		}
 
-		void visitNode() {
-		}
-			
 	};
 
 	core::NodePtr node = expr.getAddressedNode();
@@ -350,7 +346,6 @@ std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress&
 	visitDepthFirstPrunable(NodeAddress(node), ExploreAccesses(mgr,tmpVarMap,expr,accesses));
 
 	return accesses;
-
 }
 
 /**
