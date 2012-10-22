@@ -730,17 +730,18 @@ private
 
  def single_run datetime, test_name, size, n, i, print
     `rm worker_event_log* 2> /dev/null`
-    `rm ocl_event_log* 2> /dev/null`
+    #`rm ocl_event_log* 2> /dev/null`
     split_values = @splits[i]
     ENV['IRT_OCL_SPLIT_VALUES'] = split_values
     print "\r * #{test_name}".light_blue + "  size: #{size}  iteration [#{n+1}/#{@iterations}]  split [#{i+1}/#{@splits.size}]" if print == 0
     print "\r * #{test_name}".light_blue + "  size: #{size}  split [#{i+1}/#{@splits.size}]  iteration [#{n+1}/#{@iterations}]" if print == 1
     `./#{test_name}.ocl.test -size #{size}`
     worker_event = `cat worker_event_log.000* | sort -k4 -t ","`
-    ocl_event = `cat ocl_event_log*`
+    #ocl_event = `cat ocl_event_log*`
+    ocl_event = ""
     time = get_result
     `rm worker_event_log* 2> /dev/null`
-    `rm ocl_event_log* 2> /dev/null`
+    #`rm ocl_event_log* 2> /dev/null`
     `rm energy.log 2> /dev/null`
     
     loop_iteration = 20_000_000_000/time.to_i
@@ -847,9 +848,7 @@ split = (1..21).to_a
 #test = Test.new(split, [2, 18], [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], [12..25, 12..27, 12..25, 12..27, 12..26, 12..27, 12..26, 12..23, 12..21, 12..20, 12..27, 12..25, 12..23, 12..28, 12..28, 12..24, 12..27, 12..25, 12..24, 12..26, 12..24, 12..26, 12..26, 12..19], 5) # ALL PROGRAMS
 
 #test = Test.new(split, [2, 18], [ 5, 6, 7, 8, 9, 10, 11, 12, 13,   16, 17, 18], [ 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21,  9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17 ], 5) # AL
-test = Test.new(split, [2, 18], [2,3,4,5,11,12], [12..27, 12..25, 12..27, 12..26, 12..27, 12..25, 12..23, 12..28, 12..28, 12..24, 12..27, 12..25, 12..24, 12..26, 12..24, 12..26, 12..26, 12..19], 5) # ALL PROGRAMS
-
-test = Test.new(split, [2, 18], [2,3], [9..27, 9..25], 5)
+test = Test.new(split, [2, 18], [1], [12..12, 12..25, 12..27, 12..26, 12..27, 12..25, 12..23, 12..28, 12..28, 12..24, 12..27, 12..25, 12..24, 12..26, 12..24, 12..26, 12..26, 12..19], 5) # ALL PROGRAMS
 
 #test = Test.new(split, [2, 18], [1,2,3,4,5,6,7,8,9,10], [9..23, 9..25, 9..23,  9..25, 9..24, 9..25, 9..24, 9..21,  9..19, 9..18], 5)
 
@@ -857,7 +856,7 @@ test = Test.new(split, [2, 18], [2,3], [9..27, 9..25], 5)
 test.info
 test.compile
 test.check
-#test.run
+test.run
 #test.fix
 #test.fake
 #test.view
