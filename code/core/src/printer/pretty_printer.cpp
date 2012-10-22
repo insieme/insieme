@@ -1047,6 +1047,8 @@ namespace {
 				if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(2); else PRINT_EXPR(transform::evalLazy(MGR, ARG(2)));
 		});
 
+		ADD_FORMATTER(basic.getBarrier(), { OUT("barrier()"); });
+
 		if (!config.hasOption(PrettyPrinter::NO_LIST_SUGAR)) {
 			// add semantic sugar for list handling
 			const encoder::ListExtension& ext = config.root->getNodeManager().getLangExtension<encoder::ListExtension>();
