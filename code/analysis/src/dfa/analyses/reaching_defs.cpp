@@ -137,17 +137,13 @@ ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockP
 
 			// Kill Entities 
 			if (access->isReference()) 
-				for (auto& curClass : classes) {
-					for (auto& acc : *curClass) {
+				for (auto& curClass : classes) 
+					for (auto& acc : *curClass) 
 						kill.insert( acc->getAddress().as<cfg::Address>() );
-					}
-				}
 
 			gen.insert( access->getAddress().as<cfg::Address>() );
 
 		};
-
-		if (stmt->getNodeType() == core::NT_Literal) { return; }
 
 		if (core::DeclarationStmtAddress decl = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
 
