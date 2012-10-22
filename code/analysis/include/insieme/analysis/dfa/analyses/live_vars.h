@@ -37,11 +37,23 @@
 #pragma once 
 
 #include "insieme/analysis/dfa/problem.h"
+#include "insieme/analysis/access.h"
+
+#include "insieme/analysis/dfa/analyses/extractors.h"
 
 namespace insieme {
 namespace analysis {
 namespace dfa {
 namespace analyses {
+
+class LiveVariables;
+
+typedef Problem<
+			LiveVariables, 
+			BackwardAnalysisTag, 
+			Entity< dfa::elem<AccessClassPtr> >, 
+			PowerSet
+		> LiveVarBase;
 
 /**
  * Define the DataFlow problem for Live variables 
@@ -54,30 +66,23 @@ namespace analyses {
  *
  * The MEET operator is the intersection operation
  */
-class LiveVariables: public 
-		Problem<
-			LiveVariables, 
-			BackwardAnalysisTag, 
-			Entity<dfa::elem<core::VariablePtr>>, 
-			PowerSet
-		> 
-{
 
-	typedef Problem<
-				LiveVariables, 
-				BackwardAnalysisTag, 
-				Entity<dfa::elem<core::VariablePtr>>, 
-				PowerSet
-			> Base;
-	
+class LiveVariables: public LiveVarBase {
+
+	typedef LiveVarBase Base;
+
+	AccessManager aMgr;
+
 public:
 
 	typedef typename Base::direction_tag direction_tag;
 
 	typedef typename Base::value_type value_type;
+	
+	LiveVariables(const CFG& cfg): Base(cfg), aMgr(&cfg, cfg.getTmpVarMap()) { }
 
-
-	LiveVariables(const CFG& cfg): Base(cfg) { }
+	AccessManager& getAccessManager() { return aMgr; }
+	const AccessManager& getAccessManager() const { return aMgr; }
 
 	inline value_type init() const { return top(); }
 
@@ -93,7 +98,7 @@ public:
 
 	value_type meet(const value_type& lhs, const value_type& rhs) const;
 
-	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
+	std::pair<value_type,value_type> transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
 
 };
 

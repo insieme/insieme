@@ -45,66 +45,104 @@ namespace analysis {
 namespace dfa {
 namespace analyses {
 
+typedef typename LiveVariables::value_type value_type;
+
 /**
  * LiveVariables Problem
  */
-typename LiveVariables::value_type 
-LiveVariables::meet(const typename LiveVariables::value_type& lhs, const typename LiveVariables::value_type& rhs) const 
+ 
+value_type LiveVariables::meet(const value_type& lhs, const value_type& rhs) const 
 {
-	typename LiveVariables::value_type ret;
+	value_type ret;
 	std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
 	return ret;
 }
 
-typename LiveVariables::value_type 
-LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const cfg::BlockPtr& block) const {
-	typename LiveVariables::value_type gen, kill;
+
+std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
 	
-	if (block->empty()) { return in; }
+	value_type gen, kill;
+	
+	if (block->empty()) { return {value_type(), value_type()}; }
 
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "Block " << block->getBlockID();
-	LOG(DEBUG) << "IN: " << in;
+	assert(block->size() == 1); // FIXME
 
-	assert(block->size() == 1);
+	size_t stmt_idx = 0;
 
-	core::StatementPtr stmt = (*block)[0].getAnalysisStatement();
+	core::StatementPtr stmtPtr = (*block)[0].getAnalysisStatement();
+	core::StatementAddress stmt = core::StatementAddress(stmtPtr);
 
-	auto visitor = core::makeLambdaVisitor(
-			[&gen] (const core::VariablePtr& var) { gen.insert( var ); }, true);
-	auto v = makeDepthFirstVisitor( visitor );
+	core::NodeManager& mgr = stmt->getNodeManager();
 
-	// assume scalar variables 
-	if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
+	const AccessManager& aMgr = getAccessManager();
 
-		kill.insert( decl->getVariable() );
-		v.visit(decl->getInitialization());
+	auto handle_body = [&](const core::ExpressionAddress& expr) {
 
-	} else if (core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(stmt)) {
-
-		auto begin = call->getArguments().begin(), end = call->getArguments().end();
-
-		if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
-			kill.insert( call->getArgument(0).as<core::VariablePtr>() );
-			++begin;
+		auto accesses = getAccesses(mgr, UnifiedAddress(cfg::Address(block,stmt_idx,expr)), getCFG().getTmpVarMap());
+		for (const auto& acc : accesses) {
+			gen.insert( aMgr.findClass(acc) );
 		}
 
-		std::for_each(begin, end, [&](const core::ExpressionPtr& cur) { v.visit(cur); });
+	};
+
+	auto handle_def = [&](const core::ExpressionAddress& lhs, const core::ExpressionAddress& rhs) { 
+				
+		auto defAccess = 
+			getImmediateAccess(stmt->getNodeManager(), cfg::Address(block, stmt_idx, lhs), getCFG().getTmpVarMap());
+
+		auto defClass = aMgr.findClass(defAccess);
+		assert(defClass && "Invalid class for access. Something wrong in the extract() method");
+
+		AccessClassSet depClasses = defClass->getConflicting();
+		depClasses.insert(defClass);
+
+		// Kill Entities 
+		for(auto it = in.begin(), end=in.end(); it != end; ++it) {
+			if (std::find_if( depClasses.begin(), depClasses.end(), [&](const AccessClassPtr& cur) { 
+						return *cur == **it; 
+					}) != depClasses.end() ) { kill.insert( *it ); }
+		}
+
+		try {
+			auto useAccess = 
+				getImmediateAccess(stmt->getNodeManager(), cfg::Address(block, stmt_idx, rhs), getCFG().getTmpVarMap());
+			
+			// if the RHS is a not live variable 
+			auto fit = in.find(defClass);
+			if (fit == in.end()) {
+				return ;
+			}
+
+		} catch(NotAnAccessException&& e) { }
+
+		handle_body(rhs);
+	};
+
+	// assume scalar variables 
+	if (core::DeclarationStmtAddress decl = 
+			core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
+
+		handle_def(decl->getVariable(), decl->getInitialization());
+
+	} else if (core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(stmt)) {
+
+		if (core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign()) ) {
+			handle_def(call->getArgument(0), call->getArgument(1));
+		} else {
+			handle_body(call);
+		}
+
+	} else if ((*block)[0].getType() == cfg::Element::LOOP_INCREMENT) {
+
+		auto cfgAddr = getCFG().find((*block)[0].getStatementAddress().as<core::ForStmtAddress>()->getDeclaration()->getVariable());
+		auto accessPtr = getImmediateAccess(mgr, cfgAddr, getCFG().getTmpVarMap());
+		gen.insert( aMgr.findClass(accessPtr) );
 
 	} else {
-		LOG(WARNING) << *block; 
-		// assert(false);
+		handle_body( core::ExpressionAddress(stmt.as<core::ExpressionPtr>()) );
 	}
 	
-	LOG(DEBUG) << "KILL: " << kill;
-	LOG(DEBUG) << "GEN:  " << gen;
-
-	typename LiveVariables::value_type set_diff, ret;
-	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
-	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
-
-	LOG(DEBUG) << "RET: " << ret;
-	return ret;
+	return {gen,kill};
 }
 
 } // end analyses namespace 

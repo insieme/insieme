@@ -77,6 +77,8 @@ int irt_nanosleep(uint64 wait_time);
 
 void irt_busy_nanosleep(uint64 wait_time);
 
+void irt_busy_ticksleep(uint64 wait_ticks);
+
 // ====== clock cycle measurements ======================================
 
 // get timespan from epoch in ms

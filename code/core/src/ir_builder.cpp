@@ -617,10 +617,11 @@ CallExprPtr IRBuilder::initLock(const ExpressionPtr& lock) const {
 CallExprPtr IRBuilder::atomicOp(const ExpressionPtr& location, const ExpressionPtr& testFunc, const ExpressionPtr& replaceFunc) {
 	assert(core::analysis::isRefType(location->getType()) && "Atomic must be applied on ref.");
 	// should also check types of testFunc and replaceFunc
-	return callExpr(manager.getLangBasic().getAtomic(), location, testFunc, replaceFunc);
+	return callExpr(analysis::getReferencedType(location->getType()), manager.getLangBasic().getAtomic(), location, testFunc, replaceFunc);
 }
 
 CallExprPtr IRBuilder::atomicAssignment(const CallExprPtr& assignment) {
+	// FIXME argument order
 	const auto &basic = manager.getLangBasic();
 	assert(basic.isRefAssign(assignment->getFunctionExpr()) && "Trying to build atomic assignment from non-assigment");
 
@@ -635,11 +636,11 @@ CallExprPtr IRBuilder::atomicAssignment(const CallExprPtr& assignment) {
 	assert(factor && "LHS not found in RHS of atomic assignment");
 
 	const auto &rhsFun = rhsCall->getFunctionExpr();
-	if(basic.isAddOp(rhsFun)) return callExpr(basic.getAtomicFetchAndAdd(), lhs, factor);
-	if(basic.isSubOp(rhsFun)) return callExpr(basic.getAtomicFetchAndSub(), lhs, factor);
-	if(basic.isBitwiseAndOp(rhsFun)) return callExpr(basic.getAtomicFetchAndAnd(), lhs, factor);
-	if(basic.isBitwiseOrOp(rhsFun)) return callExpr(basic.getAtomicFetchAndOr(), lhs, factor);
-	if(basic.isBitwiseXorOp(rhsFun)) return callExpr(basic.getAtomicFetchAndXor(), lhs, factor);
+	if(basic.isAddOp(rhsFun)) return callExpr(factor->getType(), basic.getAtomicFetchAndAdd(), lhs, factor);
+	if(basic.isSubOp(rhsFun)) return callExpr(factor->getType(), basic.getAtomicFetchAndSub(), lhs, factor);
+	if(basic.isBitwiseAndOp(rhsFun)) return callExpr(factor->getType(), basic.getAtomicFetchAndAnd(), lhs, factor);
+	if(basic.isBitwiseOrOp(rhsFun)) return callExpr(factor->getType(), basic.getAtomicFetchAndOr(), lhs, factor);
+	if(basic.isBitwiseXorOp(rhsFun)) return callExpr(factor->getType(), basic.getAtomicFetchAndXor(), lhs, factor);
 	assert(false && "Unsupported atomic operation");
 	return assignment;
 }

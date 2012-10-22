@@ -331,7 +331,6 @@ def reporter( report_queue ):
 	report_queue.put( len(failedTests) )
 
 
-
 def exec_shell_cmd(cmd, env):
 	
 	save_env = { }

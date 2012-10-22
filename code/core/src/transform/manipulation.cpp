@@ -1083,8 +1083,8 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 	});
 
 	auto structType = build.refType(build.structType(entries));
-	auto declStmt = build.declarationStmt(structType, build.refVar(build.structExpr(globals)));
-
+	// TODO: fix backend problem with this
+	auto declStmt = build.declarationStmt(structType, /*build.refVar(build.undefined(structType))*/build.refVar(build.structExpr(globals)));
 
 	// update program
 	int location = 0;

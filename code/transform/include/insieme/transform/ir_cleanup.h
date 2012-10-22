@@ -73,7 +73,6 @@ core::NodePtr polyhedralSemplification(const core::NodePtr& node);
 core::NodePtr eliminateRedundantAssignments(core::NodePtr root);
 
 
-core::NodePtr doConstantPropagation(const core::NodePtr& root);
 
 } // end of namespace transform
 } // end of namespace insieme

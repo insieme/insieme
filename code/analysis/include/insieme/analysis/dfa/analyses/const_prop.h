@@ -42,35 +42,26 @@
 #include "insieme/analysis/access.h"
 #include "insieme/analysis/dfa/analyses/extractors.h"
 
-namespace insieme { namespace analysis { namespace dfa { 
-
+namespace insieme { 
+namespace analysis { 
+namespace dfa { 
 namespace analyses {
+
 class ConstantPropagation;
-} // end analyses namespace 
 
-typename container_type_traits< dfa::elem< AccessClassPtr >  >::type 
-extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, analyses::ConstantPropagation& obj);
-	
-namespace analyses {
+typedef Problem<
+			ConstantPropagation, 
+			ForwardAnalysisTag,
+			Entity<dfa::elem<AccessClassPtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+			PowerSet
+	>  ConstPropBase;
 
 /**
  * Define the DataFlowProblem for Constant Propagation
  */
-class ConstantPropagation: 
-	public Problem<
-			ConstantPropagation, 
-			ForwardAnalysisTag,
-			Entity<dfa::elem<AccessClassPtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
-			PowerSet
-	> 
-{
+class ConstantPropagation: public ConstPropBase {
 
-	typedef Problem<
-			ConstantPropagation, 
-			ForwardAnalysisTag,
-			Entity<dfa::elem<AccessClassPtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
-			PowerSet
-	>  Base;
+	typedef ConstPropBase Base;
 	
 public:
 
@@ -83,32 +74,15 @@ public:
 	AccessManager& getAccessManager() { return aMgr; }
 	const AccessManager& getAccessManager() const { return aMgr; }
 
-	virtual value_type init() const {
-		const auto& lhsBase = extracted.getLeftBaseSet();
-		return makeCartProdSet(
-				lhsBase, 
-				std::set<dfa::Value<core::LiteralPtr>>( 
-					{ dfa::Value<core::LiteralPtr>(dfa::top) } 
-				) 
-			).expand();
-	}
+	virtual value_type init() const;
 
-	virtual value_type top() const { return value_type(); }
+	virtual value_type top() const;
 
-	virtual value_type bottom() const {
-		const auto& lhsBase = extracted.getLeftBaseSet();
-
-		return makeCartProdSet(
-				lhsBase, 
-				std::set<dfa::Value<core::LiteralPtr>>( 
-					{ dfa::Value<core::LiteralPtr>(dfa::bottom) } 
-				) 
-			).expand();
-	}
+	virtual value_type bottom() const;
 
 	value_type meet(const value_type& lhs, const value_type& rhs) const;
 
-	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
+	std::pair<value_type,value_type> transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
 };
 
 } } } } // end insieme::analysis::dfa::analyses namespace 

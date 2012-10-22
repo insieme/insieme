@@ -1,1 +1,1 @@
-{PATH}/{EXEC} -check -size 9000000
+{PATH}/{EXEC} -check

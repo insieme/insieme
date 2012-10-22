@@ -35,6 +35,7 @@
  */
 
 #include "insieme/analysis/dfa/analyses/const_prop.h"
+#include "insieme/analysis/dfa/analyses/extractors.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -45,60 +46,35 @@
 
 using namespace insieme::core;
 
-namespace insieme { namespace analysis { namespace dfa { 
-
-typename container_type_traits< dfa::elem< AccessClassPtr >  >::type 
-extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, analyses::ConstantPropagation& obj) {
-
-	std::set<AccessClassPtr> entities;
-	auto& aMgr = obj.getAccessManager();
-
-	core::NodeManager& mgr = cfg.getNodeManager();
-
-	auto collector = [&] (const cfg::BlockPtr& block) {
-		size_t stmt_idx=0;
-
-		auto storeAccess = [&](const ExpressionAddress& var) {
-
-				entities.insert( 
-					aMgr.getClassFor(
-						getImmediateAccess(
-							var->getNodeManager(), 
-							cfg::Address(block, stmt_idx-1, var),
-							cfg.getTmpVarMap()
-						)
-					) 
-				);
-			};
-
-		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
-			++stmt_idx;
-
-			auto stmt = core::NodeAddress(cur.getAnalysisStatement());
-			if (cur.getType() == cfg::Element::LOOP_INCREMENT) {  			}
-
-			if (auto declStmt = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
-				storeAccess(declStmt->getVariable());
-				return;
-			}
-
-			if(auto expr = core::dynamic_address_cast<const core::Expression>(stmt)) {
-				if (core::analysis::isCallOf(expr.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
-					storeAccess(expr.as<core::CallExprAddress>()->getArgument(0));
-					return;
-				}
-			}
-		});
-	};
-	cfg.visitDFS(collector);
-
-	return entities;
-}
-
+namespace insieme { 
+namespace analysis { 
+namespace dfa { 
 namespace analyses {
 
-
 typedef ConstantPropagation::value_type value_type;
+
+value_type ConstantPropagation::init() const {
+	const auto& lhsBase = extracted.getLeftBaseSet();
+	return makeCartProdSet(
+			lhsBase, 
+			std::set<dfa::Value<core::LiteralPtr>>( 
+				{ dfa::Value<core::LiteralPtr>(dfa::top) } 
+			) 
+		).expand();
+}
+
+value_type ConstantPropagation::top() const { return value_type(); }
+
+value_type ConstantPropagation::bottom() const {
+	const auto& lhsBase = extracted.getLeftBaseSet();
+
+	return makeCartProdSet(
+			lhsBase, 
+			std::set<dfa::Value<core::LiteralPtr>>( 
+				{ dfa::Value<core::LiteralPtr>(dfa::bottom) } 
+			) 
+		).expand();
+}
 
 /**
  * ConstantPropagation
@@ -198,7 +174,7 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 {
 	using namespace arithmetic;
 
-	const lang::BasicGenerator& basicGen = lit->getNodeManager().getLangBasic();
+	//const lang::BasicGenerator& basicGen = lit->getNodeManager().getLangBasic();
 
 	try {
 
@@ -269,17 +245,13 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 }
 
 
-value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
+std::pair<value_type,value_type> ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
 
 	value_type gen, kill;
-	
-	if (block->empty()) { return in; }
 
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "~ Block " << block->getBlockID();
-	LOG(DEBUG) << "~ IN: " << in;
+	if (block->empty()) { return {gen,kill}; }
 
-	core::NodeManager& mgr = getCFG().getNodeManager();
+	//core::NodeManager& mgr = getCFG().getNodeManager();
 
 	size_t stmt_idx = 0;
 	for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
@@ -321,11 +293,14 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 			depClasses.insert(defClass);
 
 			// Kill Entities 
-			if (defAccess->isReference()) {
-				for(auto it = in.begin(), end=in.end(); it != end; ++it) {
-					if (std::find_if( depClasses.begin(), depClasses.end(), [&](const AccessClassPtr& cur) { 
-								return *cur == *std::get<0>(*it); 
-							}) != depClasses.end() ) { kill.insert( *it ); }
+			for(auto it = in.begin(), end=in.end(); it != end; ++it) {
+				if (std::find_if( depClasses.begin(), depClasses.end(), [&](const AccessClassPtr& cur) { 
+							return *cur == *std::get<0>(*it); 
+						}) != depClasses.end() ) 
+				{ 
+					//if (defAccess->isReference()) {
+						kill.insert( *it ); 
+					//}
 				}
 			}
 		};
@@ -361,22 +336,11 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 //
 
 		} else {
-
-			LOG(WARNING) << stmt;
-			assert(false && "Stmt not handled");
-
+			
 		}
 	});
 
-	LOG(DEBUG) << "~ KILL: " << kill;
-	LOG(DEBUG) << "~ GEN:  " << gen;
-
-	value_type set_diff, ret;
-	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
-	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
-
-	//LOG(INFO) << "~ RET: " << ret;
-	return ret;
+	return {gen,kill};
 }
 
 } } } } // end insieme::analysis::dfa::analyses namespace 

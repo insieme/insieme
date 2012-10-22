@@ -102,7 +102,7 @@ public:
 
 	virtual value_type meet(const value_type& lhs, const value_type& rhs) const = 0;
 
-	virtual value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const = 0;
+	virtual std::pair<value_type,value_type> transfer_func(const value_type& in, const cfg::BlockPtr& block) const = 0;
 
 	const extract_type& getExtracted() const { return extracted; }
 

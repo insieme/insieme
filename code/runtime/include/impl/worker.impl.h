@@ -208,12 +208,18 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_inst_region_set_timestamp(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_STARTED, wi->id);
+#ifndef IRT_TASK_OPT
 		irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
 		if(self->default_variant < wimpl->num_variants) {
-			lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[self->default_variant].implementation));
+			lwt_start(wi, &self->basestack, wimpl->variants[self->default_variant].implementation);
 		} else {
-			lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
+			lwt_start(wi, &self->basestack, wimpl->variants[0].implementation);
 		}
+#else // !IRT_TASK_OPT
+        	irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
+        	uint32 opt = wimpl->num_variants > 1 ? irt_scheduling_select_taskopt_variant(wi, self) : 0;
+		lwt_start(wi, &self->basestack, wimpl->variants[opt].implementation);
+#endif // !IRT_TASK_OPT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	} else { 
@@ -258,7 +264,13 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	uint32 active_child_count = 0;
 	self->num_active_children = &active_child_count;
 	// call wi
+#ifndef IRT_TASK_OPT
 	(irt_context_table_lookup(target->cur_context)->impl_table[impl_id].variants[0].implementation)(self);
+#else // !IRT_TASK_OPT
+	irt_wi_implementation *wimpl = &(irt_context_table_lookup(target->cur_context)->impl_table[impl_id]);
+	uint32 opt = wimpl->num_variants > 1 ? irt_scheduling_select_taskopt_variant(self, target) : 0;
+	wimpl->variants[opt].implementation(self);
+#endif // !IRT_TASK_OPT
 	// restore active child number(s)
 	self->num_active_children = self->parent_num_active_children;
 	self->parent_num_active_children = prev_parent_active_child_count;

@@ -1032,3 +1032,71 @@ TEST(Access, StridedSubset) {
 	EXPECT_TRUE((set1 * set2)->empty());
 }
 
+TEST(Access, MultipleAccessesSimple) {
+	
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> a=2; "
+		"	int<4> b=3; "
+		"	$int<4> c = $a$ + $b$;$ "
+		"}$");
+
+	EXPECT_EQ(4u, addresses.size());
+
+	auto accesses = getAccesses(  mgr, UnifiedAddress(addresses[1]) );
+
+	EXPECT_EQ(3u, accesses.size());
+
+	EXPECT_EQ(addresses[1].as<DeclarationStmtAddress>()->getVariable(), accesses[0]->getAddress());
+	EXPECT_EQ(addresses[2], accesses[1]->getAddress());
+	EXPECT_EQ(addresses[3], accesses[2]->getAddress());
+}
+
+TEST(Access, MultipleAccessesVector) {
+	
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(
+		"${"
+		"	vector<uint<4>,4> a; "
+		"	uint<4> b=3; "
+		"	$uint<4> c = $a[b]$ + $b$;$ "
+		"}$");
+
+	EXPECT_EQ(4u, addresses.size());
+
+	auto accesses = getAccesses(  mgr, UnifiedAddress(addresses[1]) );
+
+	EXPECT_EQ(3u, accesses.size());
+
+	EXPECT_EQ(addresses[1].as<DeclarationStmtAddress>()->getVariable(), accesses[0]->getAddress());
+	EXPECT_EQ(addresses[2], accesses[1]->getAddress());
+	EXPECT_EQ(addresses[3], accesses[2]->getAddress());
+}
+
+TEST(Access, MultipleAccessesVector2) {
+	
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(
+		"${"
+		"	vector<uint<4>,4> a; "
+		"	ref<uint<4>> b=3; "
+		"	$$b$ = $a[b]$ + $b$;$"
+		"}$");
+
+	EXPECT_EQ(5u, addresses.size());
+
+	auto accesses = getAccesses(  mgr, UnifiedAddress(addresses[1]) );
+
+	EXPECT_EQ(3u, accesses.size());
+
+	EXPECT_EQ(addresses[2], accesses[0]->getAddress());
+	EXPECT_EQ(addresses[3], accesses[1]->getAddress());
+	EXPECT_EQ(addresses[4], accesses[2]->getAddress());
+}

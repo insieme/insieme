@@ -34,37 +34,20 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma once 
 
-#include "client_app.h"
+#include "insieme/core/ir_pointer.h"
+#include "insieme/core/forward_decls.h"
 
-#include "utils/hoisting.h"
-#include "impl/error_handling.impl.h"
-#include "impl/worker.impl.h"
+namespace insieme {
+namespace transform {
 
-#ifndef IRT_MIN_MODE
+	core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& root);
 
-irt_client_app* irt_client_app_create(const char* library_file_name) {
-	irt_client_app *app = (irt_client_app*)malloc(sizeof(irt_client_app));
-	#ifndef IRT_MIN_MODE
-		app->id = irt_generate_client_app_id(IRT_LOOKUP_GENERATOR_ID_PTR);
-		app->library = dlopen_unique(library_file_name, RTLD_NOW);
-		IRT_ASSERT(app->library != NULL, IRT_ERR_IO, "Could not load library %s\nError: %s\n", library_file_name, dlerror());
-	
-		app->init_context = (init_context_fun*)dlsym(app->library, IRT_APP_INIT_CONTEXT_NAME);
-		IRT_ASSERT(app->init_context != NULL, IRT_ERR_APP, "Insieme init function not found in library %s\nError: %s\n", library_file_name, dlerror());
-		app->cleanup_context = (cleanup_context_fun*)dlsym(app->library, IRT_APP_CLEANUP_CONTEXT_NAME);
-		IRT_ASSERT(app->cleanup_context != NULL, IRT_ERR_APP, "Insieme cleanup function not found in library %s\nError: %s\n", library_file_name, dlerror());
-	#endif
-	return app;
-}
+	template <typename T>
+	core::Pointer<const T> removeDeadVariables(core::NodeManager& manager, const core::Pointer<const T>& code) {
+		return removeDeadVariables(manager, core::NodePtr(code)).as<core::Pointer<const T>>();
+	}
 
-void irt_client_app_destroy(irt_client_app* app) {
-	#ifndef IRT_MIN_MODE
-		dlclose(app->library);
-		free(app);
-	#endif
-}
-
-#endif // ifndef IRT_MIN_MODE
-
+} // end transform namespace 
+} // end insieme name

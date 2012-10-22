@@ -140,7 +140,7 @@ namespace cilk {
 	}
 
 	/**
-	 * Applies OMP semantics to given code fragment.
+	 * Applies Cilk semantics to given code fragment.
 	 */
 	const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& manager) {
 		// use the cilkifyer ...
