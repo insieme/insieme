@@ -128,7 +128,7 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 						init = builder.refVar(init);
 					}
 
-					replacements.insert( { decl->getInitialization(), init} );
+					replacements.insert( {decl->getInitialization(), init} );
 				}
 
 			}
