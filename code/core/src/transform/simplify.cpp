@@ -89,6 +89,19 @@ namespace transform {
 				// check condition
 				IfStmtPtr ifStmt = ptr.as<IfStmtPtr>();
 
+				IRBuilder builder(manager);
+				if (ifStmt->getThenBody() == builder.getNoOp() && 
+					ifStmt->getElseBody() == builder.getNoOp())
+				{
+					return builder.getNoOp();
+
+				}
+
+				// if the then body is empty and the else body is not, then negate the condition
+				if (ifStmt->getThenBody() == builder.getNoOp()) {
+					ifStmt = builder.ifStmt( builder.logicNeg(ifStmt->getCondition()), ifStmt->getElseBody() );
+				}
+
 				try {
 					// evaluate constraint
 					arithmetic::Constraint cond = arithmetic::toConstraint(ifStmt->getCondition());
@@ -118,6 +131,12 @@ namespace transform {
 
 				// check condition
 				WhileStmtPtr whileStmt = ptr.as<WhileStmtPtr>();
+				IRBuilder builder(manager);
+
+				// If this is a while loop with no body, then get rid of it
+				if (whileStmt->getBody() == builder.getNoOp()) {
+					return builder.getNoOp();
+				}
 
 				try {
 					// evaluate constraint
@@ -126,7 +145,7 @@ namespace transform {
 					// if condition is always valid
 					if (cond.isUnsatisfiable()) {
 						// replace while-loop with no-op
-						return IRBuilder(manager).getNoOp();
+						return builder.getNoOp();
 					}
 
 				} catch (const arithmetic::NotAConstraintException& nce) {
@@ -139,6 +158,16 @@ namespace transform {
 			}
 
 			NodePtr simplifyFor(const NodePtr& ptr) {
+
+				if (ptr->getNodeType() != core::NT_ForStmt) return ptr;
+
+				auto forStmtPtr = ptr.as<ForStmtPtr>();
+
+				IRBuilder builder(manager);
+				if (forStmtPtr->getBody() == builder.getNoOp()) {
+					return builder.getNoOp();
+				}
+
 				// TODO: check iterator range ... if empty, drop loop
 				return ptr;
 			}

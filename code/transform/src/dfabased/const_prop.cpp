@@ -68,6 +68,10 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root) {
 	// For each block fo the CFG apply replace constants 
 	auto blockVisitor = [&] (const cfg::BlockPtr& block) {
 
+		// Avoid to handle call blocks // ret blocks 
+		if ( dynamic_cast<const cfg::CallBlock*>(block.get()) || 
+			 dynamic_cast<const cfg::RetBlock*>(block.get()) ) { return; }
+
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& stmt) {
 
 			auto stmtPtr = stmt.getAnalysisStatement();
@@ -98,6 +102,7 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root) {
 
 						size_t idx = std::distance(classes.begin(), fit);
 						if(core::NodeAddress addr = accesses[idx]->getAddress().getAbsoluteAddress(cfg->getTmpVarMap())) {
+							//LOG(INFO) << stmtPtr;
 
 							// if the value we want to replace is the left hand side of an
 							// assignment stmt, or the variable in a declaration stmt
@@ -115,15 +120,13 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root) {
 							{	
 								continue;
 							}
-			
-					//		if (!callStack.empty()) {
-					//			auto stack_func = callStack.top();
-					//			assert(stack_func);
-					//			if (stack_func.getRootNode() != addr.getRootNode()) {
-					//				addr = core::concat(stack_func, addr);
-					//			}
-
-					//		}
+							// FIXME: this doesn't work for context sensitive analysis 
+							if (addr.getRootNode() != root) {
+								// we are inside a function and we have to find the outermost lambda
+								auto callExprAddr = core::Address<const core::Node>::find(addr.getRootNode(), root);
+								addr = core::concat( callExprAddr, addr );
+							}
+							// LOG(INFO) << addr << " " << *addr << " " << std::get<1>(cur).value();
 							// do replace 
 							replacements.insert( {addr, std::get<1>(cur).value()} );
 
@@ -139,6 +142,9 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root) {
 
 	if (replacements.empty()) { return root; }
 
+//	LOG(INFO) << "Replacements :" << 
+//		join("\n",replacements,[&](std::ostream& jout, const std::map<core::NodeAddress, core::NodePtr>::value_type& val){ jout << *val.first << " -> " << *val.second; });
+//
 	return core::transform::replaceAll(mgr, replacements);
 }
 
