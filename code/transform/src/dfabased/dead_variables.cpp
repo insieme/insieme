@@ -63,13 +63,21 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 
 	/* print dataflow solver data */
 	//Solver<dfa::analyses::LiveVariables>::printDataflowData(std::cout, result);;
-	
+
 	AccessManager aMgr = s.getProblemInstance().getAccessManager();
 
 	// For each block fo the CFG remove declaration to variables which are dead
 	auto blockVisitor = [&] (const cfg::BlockPtr& block) {
+	
+		size_t stmt_idx = 0;
+
+		// Avoid to handle call blocks // ret blocks 
+		if ( dynamic_cast<const cfg::CallBlock*>(block.get()) || 
+			 dynamic_cast<const cfg::RetBlock*>(block.get()) ) { return; }
 
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& stmt) {
+		
+			++stmt_idx;
 
 			auto stmtAddr = stmt.getStatementAddress();
 			bool isAssignment = false;
@@ -82,22 +90,28 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 				// assignment stmt or a declaration stmt. 
 				
 				core::NodeAddress addr(stmt.getAnalysisStatement());
+				
+				addr = isAssignment ?
+							addr.as<core::DeclarationStmtAddress>()->getVariable() :
+							addr.as<core::CallExprAddress>()->getArgument(0);
 
-				if (isAssignment)
-					addr = addr.as<core::DeclarationStmtAddress>()->getVariable();
-				else 
-					addr = addr.as<core::CallExprAddress>()->getArgument(0);
-
-				auto classPtr = aMgr.findClass(getImmediateAccess(mgr, cfg::Address(block,0,addr)));
+				auto classPtr = aMgr.findClass(getImmediateAccess(mgr, cfg::Address(block,stmt_idx-1,addr)));
 
 				const auto& blockResultRef = result[block->getBlockID()];
-				auto fit = blockResultRef.find(classPtr);
+				
+				if (blockResultRef.find(classPtr) != blockResultRef.end()) { return; }
+	
+				// FIXME: this doesn't work for context sensitive analysis 
+				if (stmtAddr.getRootNode() != root) {
+					// we are inside a function and we have to find the outermost lambda
+					auto callExprAddr = core::Address<const core::Node>::find(stmtAddr.getRootNode(), root);
+					stmtAddr = core::concat( callExprAddr, stmtAddr );
+				}
 
-				if (fit != blockResultRef.end()) { return; }
-
-				if (!isAssignment)
+				if (!isAssignment) {
 					// remove stmt
 					replacements.insert( {stmtAddr, core::IRBuilder(mgr).getNoOp() } );
+				}
 
 				else {
 					core::IRBuilder builder(mgr);
@@ -106,11 +120,13 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 					if (core::analysis::isRefType(type)) {
 						type = core::analysis::getReferencedType(type);
 					}
+
 					auto init = 
 						builder.callExpr(type, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(type));
 
-					if (core::analysis::isRefType(decl->getVariable()->getType()))
+					if (core::analysis::isRefType(decl->getVariable()->getType())) {
 						init = builder.refVar(init);
+					}
 
 					replacements.insert( { decl->getInitialization(), init} );
 				}
