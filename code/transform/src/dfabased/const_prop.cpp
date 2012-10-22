@@ -43,6 +43,8 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
+#include <stack>
+
 namespace insieme {
 namespace transform {
 
@@ -113,7 +115,15 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root) {
 							{	
 								continue;
 							}
+			
+					//		if (!callStack.empty()) {
+					//			auto stack_func = callStack.top();
+					//			assert(stack_func);
+					//			if (stack_func.getRootNode() != addr.getRootNode()) {
+					//				addr = core::concat(stack_func, addr);
+					//			}
 
+					//		}
 							// do replace 
 							replacements.insert( {addr, std::get<1>(cur).value()} );
 

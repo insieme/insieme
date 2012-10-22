@@ -211,7 +211,7 @@ namespace transform {
 		EXPECT_EQ(
 			"{"
 				"ref<int<4>> v2 = 10; "
-				"ref<int<4>> v3 = 20; "
+				"ref<int<4>> v3 = ref.var(undefined(int<4>)); "
 				"{}; "
 				"ref.assign(v3, v2); "
 				"ref.assign(composite.ref.elem(v1, a, int<4>), v3); "
