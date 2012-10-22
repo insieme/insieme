@@ -213,7 +213,7 @@ class Test
 
       File.delete("#{test_name}.ocl.test") if File.exist?("#{test_name}.ocl.test")
       puts " * Compiling generated OCL output..."
-      cmd = "$CC -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I#{$lib_dir}/pm-latest/include -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL -L#{$lib_dir}/pm-latest/ -lPM 2> file.tmp"
+      cmd = "$CC -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -DLOCAL_MODE -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I#{$lib_dir}/pm-latest/include -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL -L#{$lib_dir}/pm-latest/ -lPM 2> file.tmp"
       `#{cmd}`
       exist? "#{test_name}.ocl.test", cmd
 
@@ -854,13 +854,13 @@ test = Test.new(split, [2, 18], [2,3], [9..27, 9..25], 5)
 #test = Test.new(split, [2, 18], [1,2,3,4,5,6,7,8,9,10], [9..23, 9..25, 9..23,  9..25, 9..24, 9..25, 9..24, 9..21,  9..19, 9..18], 5)
 
 # run the test
-#test.info
-#test.compile
-#test.check
+test.info
+test.compile
+test.check
 #test.run
-test.fix
+#test.fix
 #test.fake
-test.view
+#test.view
 #test.delete
 #test.collect
 #test.evaluate :svm # or :ffnet
