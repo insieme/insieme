@@ -104,11 +104,11 @@ void definitionsToAccesses(const AnalysisDataType& data, AccessManager& aMgr) {
 	}
 }
 
-AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
+std::pair<AnalysisDataType,AnalysisDataType> ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
 
 	AnalysisDataType gen, kill;
 	
-	if (block->empty()) { return in; }
+	if (block->empty()) { return {value_type(),value_type()}; }
 
 	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 	LOG(DEBUG) << "~ Block " << block->getBlockID();
@@ -170,16 +170,7 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 		++stmtIdx;
 	});
 
-	// TODO: Factorize outside the analysis code 
-	LOG(DEBUG) << "~ KILL: " << kill;
-	LOG(DEBUG) << "~ GEN:  " << gen;
-
-	AnalysisDataType set_diff, ret;
-	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
-	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
-	LOG(DEBUG) << "~ RET: " << ret;
-
-	return ret;
+	return {gen, kill};
 }
 
 } } } } // end insieme::analysis::dfa::analyses namespace 

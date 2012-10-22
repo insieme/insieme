@@ -53,6 +53,29 @@ namespace analyses {
 
 typedef ConstantPropagation::value_type value_type;
 
+value_type ConstantPropagation::init() const {
+	const auto& lhsBase = extracted.getLeftBaseSet();
+	return makeCartProdSet(
+			lhsBase, 
+			std::set<dfa::Value<core::LiteralPtr>>( 
+				{ dfa::Value<core::LiteralPtr>(dfa::top) } 
+			) 
+		).expand();
+}
+
+value_type ConstantPropagation::top() const { return value_type(); }
+
+value_type ConstantPropagation::bottom() const {
+	const auto& lhsBase = extracted.getLeftBaseSet();
+
+	return makeCartProdSet(
+			lhsBase, 
+			std::set<dfa::Value<core::LiteralPtr>>( 
+				{ dfa::Value<core::LiteralPtr>(dfa::bottom) } 
+			) 
+		).expand();
+}
+
 /**
  * ConstantPropagation
  *
@@ -222,15 +245,11 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 }
 
 
-value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
+std::pair<value_type,value_type> ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
 
 	value_type gen, kill;
-	
-	if (block->empty()) { return in; }
 
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "~ Block " << block->getBlockID();
-	LOG(DEBUG) << "~ IN: " << in;
+	if (block->empty()) { return {gen,kill}; }
 
 	//core::NodeManager& mgr = getCFG().getNodeManager();
 
@@ -274,11 +293,14 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 			depClasses.insert(defClass);
 
 			// Kill Entities 
-			if (defAccess->isReference()) {
-				for(auto it = in.begin(), end=in.end(); it != end; ++it) {
-					if (std::find_if( depClasses.begin(), depClasses.end(), [&](const AccessClassPtr& cur) { 
-								return *cur == *std::get<0>(*it); 
-							}) != depClasses.end() ) { kill.insert( *it ); }
+			for(auto it = in.begin(), end=in.end(); it != end; ++it) {
+				if (std::find_if( depClasses.begin(), depClasses.end(), [&](const AccessClassPtr& cur) { 
+							return *cur == *std::get<0>(*it); 
+						}) != depClasses.end() ) 
+				{ 
+					//if (defAccess->isReference()) {
+						kill.insert( *it ); 
+					//}
 				}
 			}
 		};
@@ -318,15 +340,7 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 		}
 	});
 
-	LOG(DEBUG) << "~ KILL: " << kill;
-	LOG(DEBUG) << "~ GEN:  " << gen;
-
-	value_type set_diff, ret;
-	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
-	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
-
-	//LOG(INFO) << "~ RET: " << ret;
-	return ret;
+	return {gen,kill};
 }
 
 } } } } // end insieme::analysis::dfa::analyses namespace 

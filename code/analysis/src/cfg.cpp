@@ -760,7 +760,7 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 
 			// A call expression creates 2 blocks, 1 spawning the function call and the second one
 			// collecting the return value
-			cfg::CallBlock* call = new cfg::CallBlock(*cfg);
+			cfg::CallBlock* call = new cfg::CallBlock(*cfg,callExpr);
 			cfg::RetBlock* ret = new cfg::RetBlock(*cfg);
 
 			// we interconnect the two blocks so that if we want to have intra-procedural analysis

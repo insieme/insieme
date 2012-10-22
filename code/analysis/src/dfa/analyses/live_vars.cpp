@@ -45,29 +45,27 @@ namespace analysis {
 namespace dfa {
 namespace analyses {
 
+typedef typename LiveVariables::value_type value_type;
+
 /**
  * LiveVariables Problem
  */
-typename LiveVariables::value_type 
-LiveVariables::meet(const typename LiveVariables::value_type& lhs, const typename LiveVariables::value_type& rhs) const 
+ 
+value_type LiveVariables::meet(const value_type& lhs, const value_type& rhs) const 
 {
-	typename LiveVariables::value_type ret;
+	value_type ret;
 	std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
 	return ret;
 }
 
 
-typename LiveVariables::value_type 
-LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const cfg::BlockPtr& block) const {
-	typename LiveVariables::value_type gen, kill;
+std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
 	
-	if (block->empty()) { return in; }
+	value_type gen, kill;
+	
+	if (block->empty()) { return {value_type(), value_type()}; }
 
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "Block " << block->getBlockID();
-	LOG(DEBUG) << "IN: " << in;
-
-	assert(block->size() == 1);
+	assert(block->size() == 1); // FIXME
 
 	size_t stmt_idx = 0;
 
@@ -144,15 +142,7 @@ LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const
 		handle_body( core::ExpressionAddress(stmt.as<core::ExpressionPtr>()) );
 	}
 	
-	LOG(DEBUG) << "KILL: " << kill;
-	LOG(DEBUG) << "GEN:  " << gen;
-
-	typename LiveVariables::value_type set_diff, ret;
-	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
-	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
-
-	LOG(DEBUG) << "RET: " << ret;
-	return ret;
+	return {gen,kill};
 }
 
 } // end analyses namespace 
