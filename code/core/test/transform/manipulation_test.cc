@@ -877,6 +877,40 @@ TEST(Manipulation, pushBindIntoLambdaTest) {
 }
 
 
+TEST(Manipulation, pushInto) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto addresses = builder.parseAddresses(
+		"let int = int<4> in "
+		"let f = (int a)->int { return a + $1$ + $2$; } in "
+		"let g = (int a)->int { return a - f(a); } in "
+		"g(10)"
+	);
+
+	ASSERT_EQ(2u, addresses.size());
+	NodePtr code = analysis::normalize(addresses[0].getRootNode());
+	ExpressionAddress exprA = addresses[0].switchRoot(code).as<ExpressionAddress>();
+	ExpressionAddress exprB = addresses[1].switchRoot(code).as<ExpressionAddress>();
+
+	EXPECT_TRUE(core::checks::check(code).empty()) << core::checks::check(code);
+
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return int.sub(v1, rec v0.{v0=fun(int<4> v1) {return int.add(int.add(v1, 1), 2);}}(v1));}}(10)", toString(*code));
+
+	// implant var
+	VariablePtr var = builder.variable(manager.getLangBasic().getInt4(), 1);
+	EXPECT_EQ("v1", toString(*var));
+
+	auto resA = analysis::normalize(transform::pushInto(manager, exprA, var));
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v1, int<4> v2) {return int.sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int.add(int.add(v1, v2), 2);}}(v1, v2));}}(10, v1)", toString(*resA.getRootNode()));
+	EXPECT_TRUE(core::checks::check(resA.getRootNode()).empty()) << core::checks::check(resA.getRootNode());
+
+	auto resB = analysis::normalize(transform::pushInto(manager, exprB.switchRoot(resA.getRootNode()), var));
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v1, int<4> v2) {return int.sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int.add(int.add(v1, v2), v2);}}(v1, v2));}}(10, v1)", toString(*resB.getRootNode()));
+	EXPECT_TRUE(core::checks::check(resB.getRootNode()).empty()) << core::checks::check(resB.getRootNode());
+}
+
+
 } // end namespace core
 } // end namespace insieme
 

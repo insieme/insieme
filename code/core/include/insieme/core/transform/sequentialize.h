@@ -51,6 +51,23 @@ namespace transform {
 	 * @param manager the manager used to create new nodes
 	 * @param stmt the statement to be sequentialized
 	 * @param removeSyncOps enables the elimination of locks, atomics, barriers, flushes, ...
+	 * @return a sequential version of the code
+	 * @throws NotSequentializableException in case the conversion can not be completed
+	 */
+	NodePtr sequentialize(NodeManager& manager, const NodePtr& stmt, bool removeSyncOps = true);
+
+	template<typename T>
+	Pointer<const T> sequentialize(NodeManager& manager, const Pointer<const T>& code, bool removeSyncOps = true) {
+		return sequentialize(manager, NodePtr(code), removeSyncOps).as<Pointer<const T>>();
+	}
+
+	/**
+	 * Converts the given statement into an equivalent sequential code variant by replacing
+	 * all parallel constructs inside with their sequential counterpart.
+	 *
+	 * @param manager the manager used to create new nodes
+	 * @param stmt the statement to be sequentialized
+	 * @param removeSyncOps enables the elimination of locks, atomics, barriers, flushes, ...
 	 * @return a sequential version of the code or a null pointer if the given code can not be
 	 * 			safely sequentialized.
 	 */
@@ -69,9 +86,16 @@ namespace transform {
 	 */
 	template<typename T>
 	Pointer<const T> trySequentialize(NodeManager& manager, const Pointer<const T>& code, bool removeSyncOps = true) {
-		NodePtr res = trySequentialize(manager, NodePtr(code), removeSyncOps);
-		return (res) ? res.as<Pointer<const T>>() : Pointer<const T>();
+		return trySequentialize(manager, NodePtr(code), removeSyncOps).as<Pointer<const T>>();
 	}
+
+	class NotSequentializableException : public std::exception {
+		std::string msg;
+	public:
+		NotSequentializableException(const string& msg = "Unknown Error") : msg(msg) {};
+		virtual const char* what() const throw() { return msg.c_str(); }
+		virtual ~NotSequentializableException() throw() { }
+	};
 
 } // end namespace transform
 } // end namespace core

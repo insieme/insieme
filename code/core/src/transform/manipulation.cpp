@@ -44,6 +44,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_cached_visitor.h"
 
 #include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -1100,6 +1101,100 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 	return declStmt;
 }
 
+
+namespace {
+
+	/**
+	 * Pushes the given variable from the root-node context of target to the target node by passing it
+	 * to every lambda encountered along this path. In the variable has to be renamed since the same id is
+	 * already present (types will not be considered to increase readability) the parameter var will be updated.
+	 * After the call var will reference the name of the variable as it is named in the context of the target.
+	 */
+	NodeAddress makeAvailable(NodeManager& manager, const NodeAddress& target, VariablePtr& var) {
+
+		// we are at the root node, no modification is necessary
+		if (target.isRoot()) return target;
+
+		// process recursively first (bring the variable to the current scope
+		NodeAddress parent = makeAvailable(manager, target.getParentAddress(), var);
+		NodeAddress res = parent.getAddressOfChild(target.getIndex());
+
+		// if this is a call to a lambda => add parameter (if not already there)
+		if (parent.getNodeType() == NT_CallExpr) {
+			CallExprPtr call = parent.as<CallExprPtr>();
+			if (*call->getFunctionExpr() == *target) {
+				// we are following the function call => add a parameter
+				if (!contains(call.getArguments(), var)) {
+
+					IRBuilder builder(manager);
+					ExpressionList newArgs = call.getArguments();
+					newArgs.push_back(var);
+
+					// build new call (function is fixed within recursive step one level up)
+					CallExprPtr newCall = builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs);
+					res = replaceAddress(manager, parent, newCall).getAddressOfChild(target.getIndex());
+				}
+			}
+		}
+
+		// if we are crossing a lambda, check whether new parameter needs to be accepted
+		if (res.getNodeType() == NT_LambdaExpr) {
+			assert(res.getParentNode()->getNodeType() == NT_CallExpr && "Parent of lambda needs to be a call!");
+			assert(*res.getParentNode().as<CallExprPtr>()->getFunctionExpr() == *res && "Only directly invoked lambdas supported!");
+
+			LambdaExprPtr lambda = res.as<LambdaExprPtr>();
+			CallExprPtr call = res.getParentNode().as<CallExprPtr>();
+
+			// check whether a new argument needs to be added
+			if (call->getArguments().size() != lambda->getParameterList().size()) {
+				assert(!lambda->isRecursive() && "Recursive functions not supported yet!");
+				IRBuilder builder(manager);
+
+				// find name for new parameter
+				auto variablesInScope = core::analysis::getAllVariablesInScope(lambda->getLambda());
+
+				VariablePtr newVar = var;
+				while(contains(variablesInScope, newVar, [](const VariablePtr& a, const VariablePtr& b) { return a->getId() == b->getId(); })) {
+					newVar = builder.variable(newVar->getType());
+				}
+
+				// update propagated variable
+				var = newVar;
+
+				// add new parameter and return new lambda
+				VariableList params = lambda->getParameterList().getParameters();
+				params.push_back(newVar);
+				LambdaExprPtr newLambda = builder.lambdaExpr(lambda->getFunctionType()->getReturnType(), lambda->getBody(), params);
+				res = replaceAddress(manager, res, newLambda);
+
+			} else {
+
+				// update variable when it is already passed as an argument
+				auto args = call->getArguments();
+				for(int i = args.size() - 1; i>0; i--) {
+					if (args[i] == var) {
+						var = lambda->getParameterList()[i];
+						break;
+					}
+				}
+
+			}
+		}
+
+		// for all others: just return result
+		return res;
+	}
+
+}
+
+VariableAddress pushInto(NodeManager& manager, const ExpressionAddress& target, const VariablePtr& var) {
+	VariablePtr inner = var;
+	NodeAddress inserted = makeAvailable(manager, target, inner);
+	return replaceAddress(manager, inserted, inner).as<VariableAddress>();
+}
+
+
+
 LambdaExprPtr correctRecursiveLambdaVariableUsage(NodeManager& manager, const LambdaExprPtr& lambda) {
 
 	LambdaDefinitionPtr defs = lambda->getDefinition();
@@ -1114,291 +1209,176 @@ LambdaExprPtr correctRecursiveLambdaVariableUsage(NodeManager& manager, const La
 
 namespace {
 
+	StatementPtr convertJobToPforBody(const StatementPtr& body, const VariablePtr& id, const VariablePtr& size) {
 
-//			ExpressionPtr processAsLoop(const JobExprPtr& job) {
-//				ExpressionPtr fail;
-//
-//				// there must not be any guards
-//				if (!job->getGuardedExprs().empty()) return fail;
-//
-//				// a job can be converted into a loop if there are no collective operations within the body
-//				ExpressionPtr branch = job->getDefaultExpr();
-//
-//				auto& basic = job->getNodeManager().getLangBasic();
-//				bool loopable = visitDepthFirstInterruptible(
-//						[&](const CallExprPtr& cur) {
-//							return basic.isPFor(cur->getFunctionExpr()) || basic.isRedistribute(cur->getFunctionExpr());
-//						}, true, false);
-//
-//				if (!loopable) return fail;
-//
-//				// convert into a loop
-//
-//			}
+		// - reduce the ID within every getThreadID and getThreadNum call by 1
+		// - if ID was 0, replace it by a constant
+		// - replace constant by pushing in the variables
 
-	/**
-	 * A class re-writing the body of a job expression into a pfor body.
-	 *
-	 * The main problem here is to replace getThreadID() and getGroupSize() with variables
-	 * representing the loop boundaries.
-	 */
-	class JobBodyToPForBodyConverter : public CachedNodeMapping {
+		// reduce the getThreadID values
+		IRBuilder builder(body->getNodeManager());
+		const LiteralPtr idConstant = builder.literal(id->getType(), "____TEMPORARY_PFOR_BODY_ID");
+		const LiteralPtr sizeConstant = builder.literal(id->getType(), "____TEMPORARY_PFOR_BODY_SIZE");
 
-		VariablePtr iterator;
+		StatementPtr res = makeCachedLambdaMapper([&](const NodePtr& cur)->NodePtr{
+			if (cur->getNodeType() != NT_CallExpr) return cur;
 
-		VariablePtr numIterations;
+			// some preparation
+			NodeManager& mgr = cur->getNodeManager();
+			auto& basic = mgr.getLangBasic();
+			IRBuilder builder(mgr);
+			auto call = cur.as<CallExprPtr>();
 
-		bool forwardIterator;
+			// a function reducing the level expression by 1
+			auto decLevel = [](const ExpressionPtr& level)->ExpressionPtr {
+				auto formula = arithmetic::toFormula(level);
+				assert(formula.isConstant() && "Accessing thread-group using non-constant level index not supported!");
+				if (formula.isZero()) return ExpressionPtr();
+				return arithmetic::toIR(level->getNodeManager(), formula-1);
+			};
 
-		bool forwardNumIterations;
+			// handle getThreadID
+			if (analysis::isCallOf(call, basic.getGetThreadId())) {
+				if (ExpressionPtr newLevel = decLevel(call[0])) {
+					return builder.getThreadId(newLevel);
+				}
+				return idConstant;
+			}
 
-		int parallelNestingLevel;
+			// handle group size
+			if (analysis::isCallOf(call,basic.getGetGroupSize())) {
+				if (ExpressionPtr newLevel = decLevel(call[0])) {
+					return builder.getThreadGroupSize(newLevel);
+				}
+				return sizeConstant;
+			}
 
-	public:
+			return cur;
+		}).map(body);
 
-		JobBodyToPForBodyConverter(const VariablePtr& iterator, const VariablePtr& numIterations)
-			: iterator(iterator), numIterations(numIterations), forwardIterator(false), forwardNumIterations(false), parallelNestingLevel(0) {}
+		// collect all references to the constants ...
+		set<NodeAddress> idConstants;
+		set<NodeAddress> sizeConstants;
+		visitDepthFirstPrunable(NodeAddress(res), [&](const NodeAddress& cur)->bool {
+			if (cur->getNodeCategory() == NC_Type) return true;
+			if (*cur == *idConstant) idConstants.insert(cur);
+			if (*cur == *sizeConstant) sizeConstants.insert(cur);
+			return false;
+		});
 
-		ExpressionPtr rewriteBody(const ExpressionPtr& body) {
-			forwardIterator = false;
-			forwardNumIterations = false;
-			parallelNestingLevel = 0;
-			return body->substitute(body->getNodeManager(), *this);
+		// start replacement
+		NodeManager& manager = body->getNodeManager();
+		for (auto it = idConstants.rbegin(); it != idConstants.rend(); ++it) {
+			res = pushInto(manager, it->switchRoot(res).as<ExpressionAddress>(), id).getRootNode().as<StatementPtr>();
+		}
+		for (auto it = sizeConstants.rbegin(); it != sizeConstants.rend(); ++it) {
+			res = pushInto(manager, it->switchRoot(res).as<ExpressionAddress>(), size).getRootNode().as<StatementPtr>();
 		}
 
-	private:
-
-		const LambdaExprPtr resolveLambda(const LambdaExprPtr& lambda) {
-
-			// back up forward flags
-			bool backupIterator = forwardIterator;
-			bool backupNumIterations = forwardNumIterations;
-
-			// apply conversion
-			LambdaExprPtr res = lambda->substitute(lambda->getNodeManager(), *this).as<LambdaExprPtr>();
-
-			// test whether iterators need to be forwarded
-			if (forwardIterator || forwardNumIterations) {
-
-				assert(!res->isRecursive() && "Not yet supported for recursive functions!");
-
-				// update parameter list
-				VariableList params = res->getParameterList().getElements();
-				if (forwardIterator) {
-					params.push_back(iterator);
-				}
-				if (forwardNumIterations) {
-					params.push_back(numIterations);
-				}
-
-				// build new lambda expression
-				res = IRBuilder(res->getNodeManager()).lambdaExpr(
-						res->getFunctionType()->getReturnType(),
-						res->getBody(),
-						params
-				);
-			}
-
-			// restore state
-			forwardIterator = backupIterator;
-			forwardNumIterations = backupNumIterations;
-
-			// done
-			return res;
-		}
-
-		const JobExprPtr resolveJob(const JobExprPtr& job) {
-			// just rais and reduce nesting level
-			parallelNestingLevel++;
-			JobExprPtr res = job->substitute(job->getNodeManager(), *this);
-			parallelNestingLevel--;
-			return res;
-		}
-
-		int getNestingLevel(const ExpressionPtr& level) {
-			try {
-				arithmetic::Formula f = arithmetic::toFormula(level);
-				if (f.isInteger()) {
-					return f.getConstantValue().getNumerator();
-				}
-			} catch (const arithmetic::NotAFormulaException& nfe) {
-				// can happen
-			}
-			// TODO: raise an exception
-			return -1;	// it is unknown can not be supported
-		}
-
-		virtual const NodePtr resolveElement(const NodePtr& ptr) {
-
-			// skip types
-			if (ptr->getNodeCategory() == NC_Type) return ptr;
-
-			// handle lambda expressions by potentially adding parameters to function
-			if (ptr->getNodeType() == NT_LambdaExpr) {
-				return resolveLambda(ptr.as<LambdaExprPtr>());
-			}
-
-			// handle job expressions
-			if (ptr->getNodeType() == NT_JobExpr) {
-				return resolveJob(ptr.as<JobExprPtr>());
-			}
-
-			// resolve recursively
-			NodeManager& mgr = ptr->getNodeManager();
-			NodePtr res = ptr->substitute(mgr, *this);
-
-			// intercept calls to get-thread-id and get-group-size
-			if (res->getNodeType() != NT_CallExpr) {
-				return res;
-			}
-
-			// handle calls to modified functions
-			CallExprPtr call = res.as<CallExprPtr>();
-			if (call->getFunctionExpr() != ptr.as<CallExprPtr>()->getFunctionExpr()) {
-				assert(call->getFunctionExpr()->getNodeType() == NT_LambdaExpr);
-				ParametersPtr params = call->getFunctionExpr().as<LambdaExprPtr>()->getParameterList();
-
-				// build up new argument set
-				ExpressionList args = call->getArguments();
-				assert(params.size() - args.size() <= 2 && params.size() > args.size());
+		// done
+		return res;
+	}
 
 
-				if (params.size() - args.size() == 2) {
-					forwardIterator = true;
-					args.push_back(iterator);
-					forwardNumIterations = true;
-					args.push_back(numIterations);
-				} else {
-					assert(params.size() - args.size() == 1);
-					ExpressionPtr param = *(params.end() - 1);
-					if (param == iterator) {
-						forwardIterator = true;
-						args.push_back(iterator);
-					} else {
-						forwardNumIterations = true;
-						args.push_back(numIterations);
-					}
-				}
+	ExpressionPtr jobToPforBody(const ExpressionPtr& jobBody, const VariablePtr& numIterations) {
+		NodeManager& mgr = jobBody->getNodeManager();
+		IRBuilder builder(mgr);
 
-				// build substituting call expression
-				return IRBuilder(mgr).callExpr(call->getType(), call->getFunctionExpr(), args);
-			}
+		/**
+		 * build something similar to:
+		 * 		(a,b,c)=> for (i = a .. b : c ) { f(i); }
+		 * where f is derived from the job body
+		 */
 
-			// handle function symbols
-			if (analysis::isCallOf(call, mgr.getLangBasic().getGetThreadId())) {
-				if (getNestingLevel(call->getArgument(0)) == parallelNestingLevel) {
-					forwardIterator = true;
-					return iterator;
-				}
-			}
-
-			if (analysis::isCallOf(call, mgr.getLangBasic().getGetGroupSize())) {
-				if (getNestingLevel(call->getArgument(0)) == parallelNestingLevel) {
-					forwardNumIterations = true;
-					return numIterations;
-				}
-			}
-
-			return call;
-		}
+		TypePtr iterType = mgr.getLangBasic().getInt8();
+		VariablePtr i = builder.variable(iterType);
+		VariablePtr a = builder.variable(iterType);
+		VariablePtr b = builder.variable(iterType);
+		VariablePtr c = builder.variable(iterType);
 
 
-	};
+		// replace getThreadID(0) / getThreadNum(0) => iterator / limit, reduce others by 1
 
+		// start extracting body by evaluating the job-body
+		StatementPtr body = evalLazy(mgr, jobBody);
+
+		// replace getThreadID / getThreadNum by iterator / limit
+		body = convertJobToPforBody(body, i, numIterations);
+
+		// build resulting loop
+		ForStmtPtr loop = builder.forStmt(i, a, b, c, body);
+
+		// build bind and the rest
+		return extractLambda(mgr, loop, {a,b,c});
+	}
 
 
 }
 
-ExpressionPtr toPFor(const JobExprPtr& job) {
+ExpressionPtr tryToPFor(const JobExprPtr& job) {
 	static const ExpressionPtr fail;
+	NodeManager& mgr = job.getNodeManager();
 
 	// make sure there are no guarded statements
 	if (!job->getGuardedExprs().empty()) return fail;
 
-	// prepair utilities
-	NodeManager& mgr = job.getNodeManager();
+	// also, there must not be a re-distribute call => can not be supported
+	if (analysis::contains(job->getDefaultExpr(), mgr.getLangBasic().getRedistribute())) return fail;
+
+	/**
+	 * Converts a job of the format
+	 *
+	 * 		job[x-y](A) f
+	 *
+	 * into something of the shape
+	 *
+	 * 		()=> {
+	 * 			A;
+	 * 			pfor(0,x,1,f');
+	 * 			barrier();
+	 * 		}
+	 *
+	 * 	where f' is the a modified version of f
+	 */
+
+	// prepare utilities
 	IRBuilder builder(mgr);
 
-	// get lower boundary from job range
-	ExpressionPtr range = job->getThreadNumRange();
-	assert(range->getNodeType() == NT_CallExpr && "Range is not formed by call expression!");
-	ExpressionPtr lowerBound = analysis::getArgument(range, 0);
+	// start list of statements by declarations A
+	StatementList stmts;
+	::copy(job.getLocalDecls(), std::back_inserter(stmts));
 
-	// get job-body
-	ExpressionPtr jobBody = job->getDefaultExpr();
+	// create pfor-call
+	{
+		auto range = job->getThreadNumRange();
+		auto lowerBound = analysis::getArgument(range, 0);
+		auto iterType = lowerBound->getType();
 
-	// convert job-body into pfor-body
-	VariablePtr iter = builder.variable(lowerBound->getType());					// TODO: make sure ID is unique
-	VariablePtr numIterations = builder.variable(lowerBound->getType());		// TODO: if this is a constant, make it constant
-	ExpressionPtr pforBody = JobBodyToPForBodyConverter(iter, numIterations).map(jobBody);
+		// build up range
+		ExpressionPtr start = builder.getZero(lowerBound->getType());
+		ExpressionPtr step  = builder.literal(iterType, "1");
 
-	// build up function encapsulating pfor-body
-	VariablePtr start = builder.variable(iter->getType());
-	VariablePtr end   = builder.variable(iter->getType());
-	VariablePtr step  = builder.variable(iter->getType());
+		// create iterator variable
+		VariablePtr threadID = builder.variable(start->getType());
 
-	// build up body
-	StatementList stmts(job.getLocalDecls().begin(), job.getLocalDecls().end());
-	stmts.push_back(builder.forStmt(iter, start, end, step, pforBody));
+		// create limit for iteration (into extra variable)
+		DeclarationStmtPtr limitDecl = builder.declarationStmt(lowerBound);
+		VariablePtr end = limitDecl->getVariable();
 
-	// TODO:
-	//		- capture local variables and bind them to function to be used within the pfor
-	//		- build pfor-function with captured variables and iterators
-	//		- reduce parameter set to start/end/step using a bind
+		stmts.push_back(limitDecl);
 
-//	// create function
-//	LambdaExprPtr fun =
-//
-//
-//	// add local declarations
-//
-//
-//
-//
-//	try {
-//
-//		// check lower boundary
-//		arithmetic::Formula f = arithmetic::toFormula(lowerBound);
-//
-//		if (!f.isConstant()) {
-//			throw NotSequentializableException("Lower bound of job expression is not constant!");
-//		}
-//
-//		auto lb = f.getConstantValue();
-//		if (lb.isZero()) {
-//			// job can be completely eliminated => return empty function
-//			return builder.lambdaExpr(basic.getUnit(), builder.getNoOp(), VariableList());
-//		}
-//
-//		if (!lb.isOne()) {
-//			throw NotSequentializableException("Parallel Job requires more than one thread!");
-//		}
-//
-//	} catch (const arithmetic::NotAFormulaException& nfe) {
-//		throw NotSequentializableException("Unable to parse lower boundary of job expression!");
-//	}
-//
-//
-//	// pick branch (not supported yet)
-//	if (!job->getGuardedExprs().empty()) {
-//		throw NotSequentializableException("Sequentializing job expressions exposing guards not yet supported.");
-//	}
-//
-//	ExpressionPtr branch = job->getDefaultExpr();
-//
-//	// convert selected branch into a lazy expression
-//	//	- inline local definitions into bind expression
-//	//	- return bind expression
-//
-//	// NOTE: this assumes that every local variable is only bound once
-//	VarExprMap map;
-//	for_each(job->getLocalDecls().getElements(), [&](const DeclarationStmtPtr& decl) {
-//		map[decl->getVariable()] = decl->getInitialization();
-//	});
-//
-//	return replaceVarsGen(manager, branch, map);
+		// get job body
+		ExpressionPtr jobBody = job->getDefaultExpr();
 
-	return fail;
+		// create and add pfor call
+		stmts.push_back(builder.pfor(jobToPforBody(jobBody, end), start, end, step));
+	}
+
+	// finish by adding the barrier
+	stmts.push_back(builder.barrier());
+
+	// return result
+	return extractLambda(mgr, builder.compoundStmt(stmts));
 }
 
 } // end namespace transform

@@ -43,7 +43,7 @@ namespace backend {
 namespace sequential {
 
 	core::NodePtr Sequentializer::process(core::NodeManager& manager, const core::NodePtr& code) {
-		return core::transform::trySequentialize(manager, code);
+		return core::transform::sequentialize(manager, code);
 	}
 
 } // end namespace runtime
