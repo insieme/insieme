@@ -51,6 +51,7 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/transform/ir_cleanup.h"
 
 #include "insieme/utils/logging.h"
 
@@ -71,6 +72,7 @@ namespace backend {
 		}
 		steps.push_back(makePreProcessor<InitZeroSubstitution>());
 		steps.push_back(makePreProcessor<MakeVectorArrayCastsExplicit>());
+		steps.push_back(makePreProcessor<RedundancyElimination>());
 		return makePreProcessor<PreProcessingSequence>(steps);
 	}
 
@@ -756,6 +758,11 @@ namespace backend {
 		// the converter does the magic
 		VectorToArrayConverter converter(manager);
 		return converter.map(code);
+	}
+
+	core::NodePtr RedundancyElimination::process(core::NodeManager& manager, const core::NodePtr& code) {
+		// the converter does the magic
+		return transform::eliminateRedundantAssignments(code);
 	}
 
 } // end namespace backend

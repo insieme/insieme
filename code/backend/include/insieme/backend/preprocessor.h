@@ -202,5 +202,13 @@ namespace backend {
 		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
 
+	/**
+	 * Eliminates assignments to or declarations of dead variables.
+	 */
+	class RedundancyElimination : public PreProcessor {
+	public:
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+	};
+
 } // end namespace backend
 } // end namespace insieme
