@@ -46,7 +46,8 @@
 #include "utils/timing.h"
 #include "impl/work_group.impl.h"
 
-#ifdef USE_OPENCL 
+#ifdef USE_OPENCL
+#include <CL/cl.h>
 #include "impl/irt_ocl.impl.h"
 #endif
 
@@ -367,7 +368,7 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 }
 
 void insieme_wi_mul_implementation3(irt_work_item* wi) {
-	#ifdef USE_OPENCL
+	/*#ifdef USE_OPENCL
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
 
@@ -481,6 +482,7 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	irt_di_destroy(itemB);
 	irt_di_destroy(itemC);
 	#endif
+	*/
 }
 
 void insieme_wi_mul_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {

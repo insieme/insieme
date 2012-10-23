@@ -46,7 +46,8 @@
 #include "utils/timing.h"
 #include "impl/work_group.impl.h"
 
-#ifdef USE_OPENCL 
+#ifdef USE_OPENCL
+#include <CL/cl.h>
 #include "impl/irt_ocl.impl.h"
 #endif
 

@@ -275,7 +275,7 @@ void irt_ocl_init_devices() {
 		num_devices += num_dev[i];
 	}
 
-	devices = realloc(devices, num_devices * sizeof(irt_ocl_device));
+	devices = (irt_ocl_device*) realloc(devices, num_devices * sizeof(irt_ocl_device));
 	IRT_ASSERT(devices != NULL, IRT_ERR_OCL, "Error during remote devices space allocation");
 	
 	for (int i = 1; i < universe_size; ++i) {
