@@ -46,13 +46,11 @@
 #include "irt_ocl.h"
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
-#ifdef USE_MPI_OPENCL
-	#include "irt_ocl_mpi_worker.h"
-#endif
 #include "standalone.h"
 
 #ifdef REMOTE_MODE
 #include <mpi.h>
+#include "irt_ocl_mpi_worker.h"
 
 uint32_t universe_size;
 MPI_Comm everyone;
