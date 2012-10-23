@@ -25,6 +25,8 @@ front.insieme: %(comp.insieme)s + Conf([ Flag("--std=c99"),
 										 Flag("--log-level=INFO")]
 									  )
 
+
+
 # LIST of INSIEME BACKENDS
 back.gcc.flags: Conf([ 
 					Flag("-fshow-column"), 
@@ -48,52 +50,61 @@ back.run:		Conf([
 					Flag('-D_GNU_SOURCE'),
 					Flag('-ldl')
 				], "RUN")
-back.ocl:   	%(back.run)s + Conf([
+
+back.ocl.common: %(back.run)s + Conf([
 					Flag('-lOpenCL'), 
 					Flag('-I$OPENCL_ROOT/include'),
 					Flag('-L$OPENCL_ROOT/lib/x86_64'),
-					Flag('-DLOCAL_MODE'),
 					Flag('-DUSE_OPENCL=ON'),
 					Flag('-D_POSIX_C_SOURCE=199309')
 				], "OCL")
 
-back.mpi_ocl:	%(back.run)s + Conf([
-					Flag('-lOpenCL'), 
-					Flag('-I$OPENCL_ROOT/include'),
-					Flag('-L$OPENCL_ROOT/lib/x86_64'),
+back.ocl:   	%(back.ocl.common)s + Conf([
+					Flag('-DLOCAL_MODE'),
+				], "OCL_LOCAL")
+
+back.mpi_ocl:	%(back.ocl.common)s + Conf([
 					Flag('-DREMOTE_MODE'),
-					Flag('-DUSE_OPENCL=ON'),
-					Flag('-D_POSIX_C_SOURCE=199309')
-				], "MPI_OCL")
+				], "OCL_REMOTE")
+
+
+execute.seq:		Conf(Flag(''))
+execute.mpi:		Conf('${MPI_C_INCLUDE_PATH}/../bin/mpirun', 'MPIRUN') + Conf([Flag('-n $SLOTS')])
 
 # LIST OF PASSES (it's important that passes names begins with the pass keyword)
-pass.00.gcc: 		Pass(None, None, %(comp.gcc)s+%(back.c.opt)s+%(back.gcc)s, 'ref')
-pass.01.icc: 		Pass(None, None, %(comp.icc)s+%(back.c.opt)s+%(back.icc)s, 'ref')
+pass.00.gcc: 		Pass(None,None,%(comp.gcc)s+%(back.c.opt)s+%(back.gcc)s,'ref',%(execute.seq)s)
+pass.01.icc: 		Pass(None,None,%(comp.icc)s+%(back.c.opt)s+%(back.icc)s,'ref',%(execute.seq)s)
 
-pass.02.g++:		Pass(None, None, %(comp.g++)s+%(back.c.opt)s+%(back.g++)s, 'ref')
-pass.03.icpc:		Pass(None, None, %(comp.icpc)s+%(back.c.opt)s+%(back.icpc)s, 'ref')
+pass.01.mpi: 		Pass(None,None,%(comp.mpicc)s+%(back.c.opt)s+%(back.gcc)s,'ref.mpi',%(execute.mpi)s)
+
+pass.02.g++:		Pass(None,None,%(comp.g++)s+%(back.c.opt)s+%(back.g++)s,'ref',%(execute.seq)s)
+pass.03.icpc:		Pass(None,None,%(comp.icpc)s+%(back.c.opt)s+%(back.icpc)s,'ref',%(execute.seq)s )
 
 pass.05.sema: 		Pass(%(front.insieme)s+%(act.sema)s+%(act.ir)s)
 
 pass.07.seq:   		Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
-					 %(comp.gcc)s+%(back.gcc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test' 
+					 %(comp.gcc)s+%(back.gcc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test',%(execute.seq)s  
 					)
 pass.08.seq_icc:	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
-					 %(comp.icc)s+%(back.icc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test.icc' 
+					 %(comp.icc)s+%(back.icc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test.icc',%(execute.seq)s 
+					)
+
+pass.07.seq_mpi: 	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
+					 %(comp.gcc)s+%(back.gcc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test',%(execute.mpi)s  
 					)
 
 pass.09.run:		Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.c', 
-					 %(comp.gcc)s+%(back.gcc)s+%(back.run)s+%(back.c.opt)s, 'run.test' 
+					 %(comp.gcc)s+%(back.gcc)s+%(back.run)s+%(back.c.opt)s, 'run.test',%(execute.seq)s 
 					)
 pass.10.run_icc:	Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.c', 
-					 %(comp.icc)s+%(back.icc)s+%(back.run)s+%(back.c.opt)s, 'run.test' 
+					 %(comp.icc)s+%(back.icc)s+%(back.run)s+%(back.c.opt)s, 'run.test',%(execute.seq)s
 					)
 pass.11.ocl:		Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c',  
-					 %(comp.gcc)s+%(back.gcc)s+%(back.ocl)s+%(back.c.opt)s, 'ocl.test' 
+					 %(comp.gcc)s+%(back.gcc)s+%(back.ocl)s+%(back.c.opt)s, 'ocl.test',%(execute.seq)s
 					)
 pass.12.ocl_icc:	Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c', 
-					 %(back.ocl)s + %(back.c.opt)s, 'ocl.test' 
+					 %(back.ocl)s + %(back.c.opt)s, 'ocl.test',%(execute.seq)s
 					)
 pass.13.mpi_ocl:	Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c',  
-					 %(comp.mpicc)s+%(back.gcc)s+%(back.mpi_ocl)s+%(back.c.opt)s, 'mpi_ocl.test' 
+					 %(comp.mpicc)s+%(back.gcc)s+%(back.mpi_ocl)s+%(back.c.opt)s, 'mpi_ocl.test', %(execute.mpi)s
 					)

@@ -95,7 +95,7 @@ class Conf:
 		return [flag.file_name for flag in self.flags if isinstance(flag, OutFileFlag) and flag.name == '-o']
 
 class Pass:
-	def __init__(self, frontend, tmp_file=None, backend=None, out_file=None):
+	def __init__(self, frontend, tmp_file=None, backend=None, out_file=None, executor=None):
 		self.frontend = copy.deepcopy(frontend)
 		self.tmp_file = tmp_file
 		if tmp_file:
@@ -110,6 +110,9 @@ class Pass:
 		if out_file:
 			self.backend.flags.append( OutFileFlag('-o', out_file) )
 			self.out_file = '{CASE_NAME}.'+out_file
+		
+		self.executor = executor
+
 	@property
 	def files(self):
 		ret = []
@@ -118,6 +121,12 @@ class Pass:
 		if self.backend:
 			ret.extend(self.backend.files)
 		return set(ret)
+	
+	@property
+	def exec(self):
+		return "{0}".format(self.executor);
+
+
 
 class Commands:
 	COMPILE = (0, 'Compile')
@@ -672,7 +681,8 @@ class TestJob:
 
 				self.__cmds.append(
 					Cmd(Commands.RUN, "Run {0}".format(id),
-						"{0}".format(
+						"{0} {1}".format(
+							P.exec,
 							input_args.format(**{'PATH':path,'EXEC': executable})
 							if input_args else "{0}/{1}".format(path, executable)
 					 	  ),
