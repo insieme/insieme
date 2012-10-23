@@ -46,6 +46,15 @@ namespace analysis {
 namespace dfa {
 namespace analyses {
 
+class LiveVariables;
+
+typedef Problem<
+			LiveVariables, 
+			BackwardAnalysisTag, 
+			Entity< dfa::elem<AccessClassPtr> >, 
+			PowerSet
+		> LiveVarBase;
+
 /**
  * Define the DataFlow problem for Live variables 
  *
@@ -58,22 +67,10 @@ namespace analyses {
  * The MEET operator is the intersection operation
  */
 
-class LiveVariables: public 
-		Problem<
-			LiveVariables, 
-			BackwardAnalysisTag, 
-			Entity<dfa::elem<AccessClassPtr>>, 
-			PowerSet
-		> 
-{
+class LiveVariables: public LiveVarBase {
 
-	typedef Problem<
-				LiveVariables, 
-				BackwardAnalysisTag, 
-				Entity<dfa::elem<AccessClassPtr>>, 
-				PowerSet
-			> Base;
-	
+	typedef LiveVarBase Base;
+
 	AccessManager aMgr;
 
 public:
@@ -101,7 +98,7 @@ public:
 
 	value_type meet(const value_type& lhs, const value_type& rhs) const;
 
-	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
+	std::pair<value_type,value_type> transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
 
 };
 

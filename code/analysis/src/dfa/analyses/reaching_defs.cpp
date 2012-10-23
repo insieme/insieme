@@ -58,8 +58,10 @@ extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg, analyses::Re
 			auto stmt = core::NodeAddress(cur.getAnalysisStatement());
 	
 			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { 
-				stmt.as<core::ForStmtPtr>()->getDeclaration()->getVariable();
-				// FIXME
+				entities.insert( cfg::Address(block, stmt_idx-1, 
+						stmt.as<core::ForStmtAddress>()->getDeclaration()->getVariable()
+					));
+				return;
 			}
 
 			if (auto declStmt = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
@@ -104,15 +106,12 @@ void definitionsToAccesses(const AnalysisDataType& data, AccessManager& aMgr) {
 	}
 }
 
-AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
+std::pair<AnalysisDataType,AnalysisDataType> 
+ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
 
 	AnalysisDataType gen, kill;
 	
-	if (block->empty()) { return in; }
-
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "~ Block " << block->getBlockID();
-	LOG(DEBUG) << "~ IN: " << in;
+	if (block->empty()) { return {gen,kill}; }
 
 	AccessManager mgr(&getCFG(), getCFG().getTmpVarMap());
 	definitionsToAccesses(in, mgr);
@@ -138,17 +137,13 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 
 			// Kill Entities 
 			if (access->isReference()) 
-				for (auto& curClass : classes) {
-					for (auto& acc : *curClass) {
+				for (auto& curClass : classes) 
+					for (auto& acc : *curClass) 
 						kill.insert( acc->getAddress().as<cfg::Address>() );
-					}
-				}
 
 			gen.insert( access->getAddress().as<cfg::Address>() );
 
 		};
-
-		if (stmt->getNodeType() == core::NT_Literal) { return; }
 
 		if (core::DeclarationStmtAddress decl = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
 
@@ -170,16 +165,7 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 		++stmtIdx;
 	});
 
-	// TODO: Factorize outside the analysis code 
-	LOG(DEBUG) << "~ KILL: " << kill;
-	LOG(DEBUG) << "~ GEN:  " << gen;
-
-	AnalysisDataType set_diff, ret;
-	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
-	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
-	LOG(DEBUG) << "~ RET: " << ret;
-
-	return ret;
+	return {gen, kill};
 }
 
 } } } } // end insieme::analysis::dfa::analyses namespace 

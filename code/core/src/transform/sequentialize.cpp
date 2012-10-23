@@ -60,15 +60,6 @@ namespace transform {
 
 	namespace {
 
-		class NotSequentializableException : public std::exception {
-			std::string msg;
-		public:
-			NotSequentializableException(const string& msg = "Unknown Error") : msg(msg) {};
-			virtual const char* what() const throw() { return msg.c_str(); }
-			virtual ~NotSequentializableException() throw() { }
-		};
-
-
 		class Sequentializer : public transform::CachedNodeMapping, private IRVisitor<preserve_node_type> {
 
 			NodeManager& manager;
@@ -124,16 +115,6 @@ namespace transform {
 					core::ExpressionPtr end = args[2];
 					core::ExpressionPtr step = args[3];
 					return core::transform::tryInlineToStmt(manager, builder.callExpr(basic.getUnit(), args[4], start, end, step));
-				}
-
-				// handle thread group id
-				if (basic.isGetThreadId(fun)) {
-					return builder.intLit(0);
-				}
-
-				// and finally the thread group size
-				if (basic.isGetGroupSize(fun)) {
-					return builder.intLit(1);
 				}
 
 				// check whether synchronization operations should be eliminated
@@ -230,8 +211,46 @@ namespace transform {
 				ExpressionPtr branch = job->getDefaultExpr();
 
 				// convert selected branch into a lazy expression
+				//  - handle getThreadNum / getThreadGroupSize
 				//	- inline local definitions into bind expression
 				//	- return bind expression
+
+				// reduce level in get-thread-group-size by 1, replace expressions representing 0
+				branch = makeCachedLambdaMapper([](const NodePtr& cur)->NodePtr{
+					if (cur->getNodeType() != NT_CallExpr) return cur;
+
+					// some preparation
+					NodeManager& mgr = cur->getNodeManager();
+					auto& basic = mgr.getLangBasic();
+					IRBuilder builder(mgr);
+					auto call = cur.as<CallExprPtr>();
+
+					// a function reducing the level expression by 1
+					auto decLevel = [](const ExpressionPtr& level)->ExpressionPtr {
+						auto formula = arithmetic::toFormula(level);
+						assert(formula.isConstant() && "Accessing thread-group using non-constant level index not supported!");
+						if (formula.isZero()) return ExpressionPtr();
+						return arithmetic::toIR(level->getNodeManager(), formula-1);
+					};
+
+					// handle getThreadID
+					if (analysis::isCallOf(call, basic.getGetThreadId())) {
+						if (ExpressionPtr newLevel = decLevel(call[0])) {
+							return builder.getThreadId(newLevel);
+						}
+						return builder.intLit(0);
+					}
+
+					// handle group size
+					if (analysis::isCallOf(call,basic.getGetGroupSize())) {
+						if (ExpressionPtr newLevel = decLevel(call[0])) {
+							return builder.getThreadGroupSize(newLevel);
+						}
+						return builder.intLit(1);
+					}
+
+					return cur;
+				}).map(branch);
 
 				// NOTE: this assumes that every local variable is only bound once
 				VarExprMap map;
@@ -249,6 +268,14 @@ namespace transform {
 
 				// testing whether job can be converted into a parallel loop
 				// TODO: re-enable when implementation is complete
+
+				// try conversion into a pfor
+				if (stmt->getNodeType() == NT_JobExpr) {
+					if (ExpressionPtr pfor = tryToPFor(stmt.as<JobExprPtr>())) {
+						return map(pfor);
+					}
+				}
+
 //				if (stmt->getNodeType() == NT_JobExpr) {
 //					stmt = toPFor(stmt.as<JobExprPtr>());	// try converting job into a parallel loop
 //					if (!stmt) stmt = curStmt;				// on failure, undo step
@@ -278,15 +305,18 @@ namespace transform {
 
 	}
 
+	NodePtr sequentialize(NodeManager& manager, const NodePtr& stmt, bool removeSyncOps) {
+		return Sequentializer(manager, removeSyncOps).map(stmt);
+	}
+
 	NodePtr trySequentialize(NodeManager& manager, const NodePtr& stmt, bool removeSyncOps) {
 		try {
-			return Sequentializer(manager, removeSyncOps).map(stmt);
+			return sequentialize(manager, stmt, removeSyncOps);
 		} catch (const NotSequentializableException& nse) {
 			LOG(INFO) << "Unable to sequentialize: " << nse.what();
 		}
 		return NodePtr();
 	}
-
 
 } // end namespace transform
 } // end namespace core

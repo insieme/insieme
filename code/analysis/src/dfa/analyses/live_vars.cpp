@@ -45,114 +45,111 @@ namespace analysis {
 namespace dfa {
 namespace analyses {
 
+typedef typename LiveVariables::value_type value_type;
+
 /**
  * LiveVariables Problem
  */
-typename LiveVariables::value_type 
-LiveVariables::meet(const typename LiveVariables::value_type& lhs, const typename LiveVariables::value_type& rhs) const 
+ 
+value_type LiveVariables::meet(const value_type& lhs, const value_type& rhs) const 
 {
-	typename LiveVariables::value_type ret;
+	value_type ret;
 	std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
 	return ret;
 }
 
 
-typename LiveVariables::value_type 
-LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const cfg::BlockPtr& block) const {
-	typename LiveVariables::value_type gen, kill;
+std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
 	
-	if (block->empty()) { return in; }
+	value_type gen, kill;
 
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "Block " << block->getBlockID();
-	LOG(DEBUG) << "IN: " << in;
-
-	assert(block->size() == 1);
-
-	size_t stmt_idx = 0;
-
-	core::StatementPtr stmtPtr = (*block)[0].getAnalysisStatement();
-	core::StatementAddress stmt = core::StatementAddress(stmtPtr);
-
-	core::NodeManager& mgr = stmt->getNodeManager();
+	if (block->empty()) { return {gen,kill}; }
 
 	const AccessManager& aMgr = getAccessManager();
 
-	auto handle_body = [&](const core::ExpressionAddress& expr) {
+	size_t stmt_idx = 0;
+	for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
 
-		auto accesses = getAccesses(mgr, UnifiedAddress(cfg::Address(block,stmt_idx,expr)), getCFG().getTmpVarMap());
-		for (const auto& acc : accesses) {
-			gen.insert( aMgr.findClass(acc) );
-		}
+		core::StatementPtr stmtPtr  = cur.getAnalysisStatement();
+		core::StatementAddress stmt = core::StatementAddress(stmtPtr);
 
-	};
+		core::NodeManager& mgr = stmt->getNodeManager();
 
-	auto handle_def = [&](const core::ExpressionAddress& lhs, const core::ExpressionAddress& rhs) { 
-				
-		auto defAccess = 
-			getImmediateAccess(stmt->getNodeManager(), cfg::Address(block, stmt_idx, lhs), getCFG().getTmpVarMap());
+		++stmt_idx; // because of early exit paths, we increase the counter now
 
-		auto defClass = aMgr.findClass(defAccess);
-		assert(defClass && "Invalid class for access. Something wrong in the extract() method");
+		auto handle_rhs = [&](const core::ExpressionAddress& expr) {
 
-		AccessClassSet depClasses = defClass->getConflicting();
-		depClasses.insert(defClass);
+			auto accesses = getAccesses(mgr, 
+				UnifiedAddress(cfg::Address(block,stmt_idx-1,expr)), 
+				getCFG().getTmpVarMap()
+			);
+			// for each usage of a variable add it to the gen set 
+			for (const auto& acc : accesses) { gen.insert( aMgr.findClass(acc) ); }
+		};
 
-		// Kill Entities 
-		for(auto it = in.begin(), end=in.end(); it != end; ++it) {
-			if (std::find_if( depClasses.begin(), depClasses.end(), [&](const AccessClassPtr& cur) { 
-						return *cur == **it; 
-					}) != depClasses.end() ) { kill.insert( *it ); }
-		}
 
-		try {
-			auto useAccess = 
-				getImmediateAccess(stmt->getNodeManager(), cfg::Address(block, stmt_idx, rhs), getCFG().getTmpVarMap());
-			
-			// if the RHS is a not live variable 
-			auto fit = in.find(defClass);
-			if (fit == in.end()) {
-				return ;
+		auto handle_def = [&](const core::ExpressionAddress& lhs, const core::ExpressionAddress& rhs) { 
+					
+			auto defAccess = getImmediateAccess(stmt->getNodeManager(), 
+								cfg::Address(block, stmt_idx-1, lhs), 
+								getCFG().getTmpVarMap()
+							);
+
+			auto defClass = aMgr.findClass(defAccess);
+			assert(defClass && "Invalid class for access. Something wrong in the extract() method");
+
+			AccessClassSet depClasses = defClass->getConflicting();
+			depClasses.insert(defClass);
+
+			// Kill Entities 
+			for(auto it = in.begin(), end=in.end(); it != end; ++it) {
+				if (std::find_if( depClasses.begin(), depClasses.end(), 
+						[&](const AccessClassPtr& cur) { 
+							return *cur == **it; 
+						}) != depClasses.end() ) { kill.insert( *it ); }
 			}
 
-		} catch(NotAnAccessException&& e) { }
+			// if the RHS is a not live variable
+			if (in.find(defClass) == in.end()) { 
+				// then any of the uses in the LHS are relevant 
+				return;
+			}
 
-		handle_body(rhs);
-	};
+			handle_rhs(rhs);
+		};
 
-	// assume scalar variables 
-	if (core::DeclarationStmtAddress decl = 
-			core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
 
-		handle_def(decl->getVariable(), decl->getInitialization());
+		// assume scalar variables 
+		if (auto decl = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
 
-	} else if (core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(stmt)) {
+			handle_def(decl->getVariable(), decl->getInitialization());
 
-		if (core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign()) ) {
-			handle_def(call->getArgument(0), call->getArgument(1));
+		} else if (auto call = core::dynamic_address_cast<const core::CallExpr>(stmt)) {
+
+			if (core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign()) ) {
+				handle_def(call->getArgument(0), call->getArgument(1));
+				return;
+			} 
+			// function 
+			handle_rhs(call);
+
+		} else if (cur.getType() == cfg::Element::LOOP_INCREMENT) {
+
+			auto cfgAddr = getCFG().find(
+					cur.getStatementAddress().as<core::ForStmtAddress>()->getDeclaration()->getVariable()
+				);
+
+			auto accessPtr = getImmediateAccess(mgr, cfgAddr, getCFG().getTmpVarMap());
+			gen.insert( aMgr.findClass(accessPtr) );
+
 		} else {
-			handle_body(call);
+
+			handle_rhs( core::ExpressionAddress(stmt.as<core::ExpressionPtr>()) );
+
 		}
-
-	} else if ((*block)[0].getType() == cfg::Element::LOOP_INCREMENT) {
-
-		auto cfgAddr = getCFG().find((*block)[0].getStatementAddress().as<core::ForStmtAddress>()->getDeclaration()->getVariable());
-		auto accessPtr = getImmediateAccess(mgr, cfgAddr, getCFG().getTmpVarMap());
-		gen.insert( aMgr.findClass(accessPtr) );
-
-	} else {
-		handle_body( core::ExpressionAddress(stmt.as<core::ExpressionPtr>()) );
-	}
+	});
 	
-	LOG(DEBUG) << "KILL: " << kill;
-	LOG(DEBUG) << "GEN:  " << gen;
-
-	typename LiveVariables::value_type set_diff, ret;
-	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
-	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
-
-	LOG(DEBUG) << "RET: " << ret;
-	return ret;
+	return {gen,kill};
 }
 
 } // end analyses namespace 

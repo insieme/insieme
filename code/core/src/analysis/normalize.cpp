@@ -303,6 +303,9 @@ namespace analysis {
 		return res;
 	}
 
+	NodeAddress normalize(const NodeAddress& node) {
+		return node.switchRoot(normalize(node.getRootNode()));
+	}
 
 } // end namespace analysis
 } // end namespace core

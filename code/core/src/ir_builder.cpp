@@ -591,6 +591,10 @@ CallExprPtr IRBuilder::vectorInit(const ExpressionPtr& initExp, const IntTypePar
 	return callExpr(vectorType(initExp->getType(), size), manager.getLangBasic().getVectorInitUniform(), initExp, getIntTypeParamLiteral(size));
 }
 
+DeclarationStmtPtr IRBuilder::declarationStmt(const ExpressionPtr& value) const {
+	return declarationStmt(value->getType(), value);
+}
+
 DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const ExpressionPtr& value) const {
 	return declarationStmt(variable(type), value);
 }

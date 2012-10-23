@@ -203,6 +203,18 @@ static inline TypePtr getRepresentedType(const ExpressionPtr& expr) {
 VariableSet getAllVariables(const NodePtr& code);
 
 /**
+ * Collects a set of all variables encountered within the current scope - hence not including
+ * any sub-functions but including recursive function variables.
+ *
+ * This function should be used whenever introducing a new variable to ensure that there
+ * are no collisions.
+ *
+ * @param code the code fragment to be analysed
+ * @return the set of all variables within the current scope
+ */
+VariableSet getAllVariablesInScope(const NodePtr& code);
+
+/**
  * Extracts the list of free variables from the given code fragment.
  *
  * @param code the code fragment to be analysed
@@ -254,6 +266,15 @@ TypePtr getVolatileType(const TypePtr& type);
  * @return the address to the requested call expression node or an invalid address if not found
  */
 CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const ExpressionPtr& fun);
+
+/**
+ * Tests whether the given code fragement contains the given element.
+ *
+ * @param code the IR structure to be inspected recursively
+ * @param element the element to be searched
+ * @return true if found, false otherwise
+ */
+bool contains(const NodePtr& code, const NodePtr& element);
 
 } // end namespace utils
 } // end namespace core

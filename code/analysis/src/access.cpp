@@ -162,6 +162,7 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 		return std::make_shared<BaseAccess>(expr);
 	}
 
+	// LOG(INFO) << exprNode;
 	assert(exprNode->getNodeType() == NT_CallExpr);
 
 	CallExprPtr callExpr = exprNode.as<CallExprPtr>();
@@ -172,11 +173,17 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 	// which may contain multiple accesses. Therefore we throw an exception.
 	if (!gen.isMemberAccess(callExpr->getFunctionExpr()) &&
 			!gen.isSubscriptOperator(callExpr->getFunctionExpr()) &&
-			!gen.isRefDeref(callExpr->getFunctionExpr()) ) {
+			!gen.isRefDeref(callExpr->getFunctionExpr())  &&
+			!gen.isRefVar(callExpr->getFunctionExpr()) )
+	{
 		throw NotAnAccessException(toString(*callExpr));
 	}
 
 	auto subAccess = getImmediateAccess(mgr, expr.getAddressOfChild(2), tmpVarMap);
+
+	if (gen.isRefVar(callExpr->getFunctionExpr())) {
+		return subAccess;
+	}
 
 	if (gen.isRefDeref(callExpr->getFunctionExpr())) {
 		return std::make_shared<Deref>(expr, subAccess);
@@ -189,7 +196,6 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 		if ( gen.isUnsignedInt( args[1]->getType() ) || gen.isIdentifier( args[1]->getType() ) ) {
 			return std::make_shared<Member>(expr, subAccess, args[1].as<LiteralPtr>());
 		}
-
 		assert( false && "Type of member access not supported" );
 	}
 
@@ -325,14 +331,13 @@ std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress&
 			std::vector<unsigned> idxs;
 			getAddressIndexes(callExpr, idxs);
 			auto accessAddress = base.extendAddressFor(idxs);
-
-			accesses.push_back( getImmediateAccess(mgr, accessAddress, tmpVarMap) );
+			
+			try {
+				accesses.push_back( getImmediateAccess(mgr, accessAddress, tmpVarMap) );
+			} catch (NotAnAccessException&& e) { }
 			return true;
 		}
 
-		void visitNode() {
-		}
-			
 	};
 
 	core::NodePtr node = expr.getAddressedNode();
@@ -341,7 +346,6 @@ std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress&
 	visitDepthFirstPrunable(NodeAddress(node), ExploreAccesses(mgr,tmpVarMap,expr,accesses));
 
 	return accesses;
-
 }
 
 /**

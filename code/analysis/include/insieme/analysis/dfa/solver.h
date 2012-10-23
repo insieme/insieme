@@ -233,8 +233,18 @@ public:
 					CFGIterTraits<direction_tag>::PrevBegin(block), 
 					CFGIterTraits<direction_tag>::PrevEnd(block),
 					[&]( const cfg::BlockPtr& pred) {
-						value_type&& v = df_p.transfer_func(df_p.top(), pred);
-						x = df_p.meet(x, v);
+						const value_type& in = df_p.top();
+						auto v = df_p.transfer_func(in, pred);
+						
+						value_type set_diff, ret;
+						std::set_difference(in.begin(), in.end(), v.second.begin(), v.second.end(), 
+											std::inserter(set_diff, set_diff.begin())
+						);
+						std::set_union(set_diff.begin(), set_diff.end(), v.first.begin(), v.first.end(), 
+									   std::inserter(ret, ret.begin())
+						);
+
+						x = df_p.meet(x, ret);
 					});
 				
 				//LOG(DEBUG) << x;
@@ -263,11 +273,18 @@ public:
 				CFGIterTraits<direction_tag>::NextBegin(block), 
 				CFGIterTraits<direction_tag>::NextEnd(block),
 				[&]( const cfg::BlockPtr& succ) {
-					
-					value_type&& tmp = df_p.meet(
-						solver_data[ succ->getBlockID() ], 
-						df_p.transfer_func(solver_data[ block->getBlockID() ], block)
+					const value_type& in = solver_data[ block->getBlockID() ];
+					auto v = df_p.transfer_func(in, block);
+
+					value_type set_diff, ret;
+					std::set_difference(in.begin(), in.end(), v.second.begin(), v.second.end(), 
+										std::inserter(set_diff, set_diff.begin())
 					);
+					std::set_union(set_diff.begin(), set_diff.end(), v.first.begin(), v.first.end(), 
+								   std::inserter(ret, ret.begin())
+					);
+
+					value_type tmp = df_p.meet(solver_data[ succ->getBlockID() ], ret);
 
 					if (df_p.getLattice().is_strictly_weaker_than(tmp, solver_data[ succ->getBlockID() ])) {
 						solver_data[ succ->getBlockID() ] = tmp;
