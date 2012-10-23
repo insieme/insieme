@@ -10,6 +10,8 @@ if (NOT third_part_libs_home )
 	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
 endif()
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../../include/irt_ocl_mpi_worker.h.in 
+			   ${CMAKE_CURRENT_SOURCE_DIR}/../../include/irt_ocl_mpi_worker.h)
 
 #include(../lookup_lib.cmake)
 #include (../add_unit_test.cmake)
@@ -18,7 +20,7 @@ find_library(pthread_LIB pthread)
 	
 # set compiler flags for gcc
 if (CMAKE_COMPILER_IS_GNUCC)
-	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC -lrt")
 
 	# add flags for debug mode
 	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0 -fPIC")

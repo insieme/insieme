@@ -46,6 +46,7 @@
 #include "irt_ocl.h"
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
+#include "irt_ocl_mpi_worker.h"
 #include "standalone.h"
 
 #ifdef REMOTE_MODE
@@ -242,7 +243,7 @@ void irt_ocl_init_devices() {
 	//MPI_Init(NULL, NULL);
 	int thread_level, claimed_level;
 	MPI_Init_thread( 0, 0, MPI_THREAD_MULTIPLE, &thread_level);
-	IRT_ASSERT(MPI_THREAD_MULTIPLE == thread_level, IRT_ERR_OCL, "Error during initialization: \"This MPI version doesn't support the right threading level\"");
+	IRT_ASSERT(MPI_THREAD_SINGLE == thread_level, IRT_ERR_OCL, "Error during initialization: \"This MPI version doesn't support the right threading level\"");
 	MPI_Query_thread(&claimed_level);
 	IRT_ASSERT(claimed_level == thread_level, IRT_ERR_OCL, "Error during initialization: \"This MPI version doesn't support the right threading level\"");    
 
@@ -258,7 +259,7 @@ void irt_ocl_init_devices() {
 		universe_size = *universe_sizep;
 	}
 	if (universe_size == 1) IRT_INFO("No room for new workers");
-	MPI_Comm_spawn("./worker", MPI_ARGV_NULL, universe_size-1, MPI_INFO_NULL, 0, MPI_COMM_SELF, &intercom, MPI_ERRCODES_IGNORE);
+	MPI_Comm_spawn(WORKER_PATH, MPI_ARGV_NULL, universe_size-1, MPI_INFO_NULL, 0, MPI_COMM_SELF, &intercom, MPI_ERRCODES_IGNORE);
 	MPI_Intercomm_merge(intercom, 0, &everyone);
 
 	for (int i = 1; i < universe_size; ++i) {

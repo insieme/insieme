@@ -7,6 +7,7 @@ comp.g++: 		Conf("g++", "G++")
 comp.icc:		Conf("icc", "ICC")
 comp.icpc:		Conf("icpc","ICPC")
 comp.insieme: 	Conf("%(BIN_DIR)s/code/driver/main", "InsiemeC")
+comp.mpicc:		Conf("${MPI_C_COMPILER}", "MPICC")
 
 SMP_HEADER:		%(SRC_DIR)s/code/simple_backend/include/insieme/simple_backend/runtime
 SMP_BUILD: 		%(BIN_DIR)s/code/simple_backend/
@@ -56,6 +57,15 @@ back.ocl:   	%(back.run)s + Conf([
 					Flag('-D_POSIX_C_SOURCE=199309')
 				], "OCL")
 
+back.mpi_ocl:	%(back.run)s + Conf([
+					Flag('-lOpenCL'), 
+					Flag('-I$OPENCL_ROOT/include'),
+					Flag('-L$OPENCL_ROOT/lib/x86_64'),
+					Flag('-DREMOTE_MODE'),
+					Flag('-DUSE_OPENCL=ON'),
+					Flag('-D_POSIX_C_SOURCE=199309')
+				], "MPI_OCL")
+
 # LIST OF PASSES (it's important that passes names begins with the pass keyword)
 pass.00.gcc: 		Pass(None, None, %(comp.gcc)s+%(back.c.opt)s+%(back.gcc)s, 'ref')
 pass.01.icc: 		Pass(None, None, %(comp.icc)s+%(back.c.opt)s+%(back.icc)s, 'ref')
@@ -84,4 +94,6 @@ pass.11.ocl:		Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c',
 pass.12.ocl_icc:	Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c', 
 					 %(back.ocl)s + %(back.c.opt)s, 'ocl.test' 
 					)
-
+pass.13.mpi_ocl:	Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c',  
+					 %(comp.mpicc)s+%(back.gcc)s+%(back.mpi_ocl)s+%(back.c.opt)s, 'mpi_ocl.test' 
+					)
