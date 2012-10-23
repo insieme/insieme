@@ -46,7 +46,9 @@
 #include "irt_ocl.h"
 #include "abstraction/threads.h"
 #include "abstraction/impl/threads.impl.h"
-#include "irt_ocl_mpi_worker.h"
+#ifdef USE_MPI_OPENCL
+	#include "irt_ocl_mpi_worker.h"
+#endif
 #include "standalone.h"
 
 #ifdef REMOTE_MODE
@@ -243,7 +245,7 @@ void irt_ocl_init_devices() {
 	//MPI_Init(NULL, NULL);
 	int thread_level, claimed_level;
 	MPI_Init_thread( 0, 0, MPI_THREAD_MULTIPLE, &thread_level);
-	IRT_ASSERT(MPI_THREAD_SINGLE == thread_level, IRT_ERR_OCL, "Error during initialization: \"This MPI version doesn't support the right threading level\"");
+	IRT_ASSERT(MPI_THREAD_MULTIPLE == thread_level, IRT_ERR_OCL, "Error during initialization: \"This MPI version doesn't support the right threading level\"");
 	MPI_Query_thread(&claimed_level);
 	IRT_ASSERT(claimed_level == thread_level, IRT_ERR_OCL, "Error during initialization: \"This MPI version doesn't support the right threading level\"");    
 
