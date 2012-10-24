@@ -1,1 +1,1 @@
-mpirun -np 1 {PATH}/{EXEC} -check
+MPI_HOSTS="-machinefile {PATH}/../hosts" {MPI_HOSTS} {PATH}/{EXEC} -check
