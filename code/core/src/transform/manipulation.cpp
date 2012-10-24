@@ -1197,6 +1197,9 @@ VariableAddress pushInto(NodeManager& manager, const ExpressionAddress& target, 
 
 LambdaExprPtr correctRecursiveLambdaVariableUsage(NodeManager& manager, const LambdaExprPtr& lambda) {
 
+	// short-cut for non-recursive functions
+	if (!lambda->isRecursive()) return manager.get(lambda);
+
 	LambdaDefinitionPtr defs = lambda->getDefinition();
 	LambdaDefinitionPtr res = defs;
 	for(auto def : defs->getDefinitions()) {
@@ -1290,7 +1293,7 @@ namespace {
 		 * where f is derived from the job body
 		 */
 
-		TypePtr iterType = mgr.getLangBasic().getInt8();
+		TypePtr iterType = mgr.getLangBasic().getUInt8();
 		VariablePtr i = builder.variable(iterType);
 		VariablePtr a = builder.variable(iterType);
 		VariablePtr b = builder.variable(iterType);
@@ -1377,7 +1380,7 @@ ExpressionPtr tryToPFor(const JobExprPtr& job) {
 	// finish by adding the barrier
 	stmts.push_back(builder.barrier());
 
-	// return result
+	// build resulting function
 	return extractLambda(mgr, builder.compoundStmt(stmts));
 }
 

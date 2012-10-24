@@ -195,7 +195,15 @@ namespace core {
 			}
 
 			// return a reference to the call location set
-			return binding->getAttachedValue<RecursiveCallLocations>();
+			const auto& res = binding->getAttachedValue<RecursiveCallLocations>();
+
+			// check validity of annotation (not moved between node managers)
+			if (!res.empty() && res[0].getRootNode() != definition->getDefinitionOf(var)) {
+				binding->attachValue(RecursiveCallCollector().findLocations(definition, var));
+				return binding->getAttachedValue<RecursiveCallLocations>();
+			}
+
+			return res;
 		}
 
 
