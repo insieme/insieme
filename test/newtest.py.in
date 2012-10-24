@@ -684,7 +684,7 @@ class TestJob:
 						"{0} {1} {2}".format(
 							P.exec,
 							'-machinefile {0}/hosts'.format(path) if os.path.exists(path+'/hosts') and
-							P.exec is not ''  else '',
+							P.exec.strip() != ''  else '',
 							input_args.format(**{'PATH':path, 
 												 'EXEC': executable
 												})
