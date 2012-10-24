@@ -87,7 +87,7 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
 
 	typedef dfa::Value<LiteralPtr> ConstantType;
 
-	LOG_STREAM(DEBUG) << "Meet (" << lhs << ", " << rhs << ") -> " << std::flush;
+	// LOG_STREAM(DEBUG) << "Meet (" << lhs << ", " << rhs << ") -> " << std::flush;
 	
 	/** 
 	 * Given 2 dataflow values associated to a variable, returns the new dataflow value 
@@ -138,7 +138,7 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
 
 	while( it != end) { ret.insert( *(it++) ); }
 
-	LOG(DEBUG) << ret; 
+	// LOG(DEBUG) << ret; 
 
 	return std::move(ret);
 }
@@ -245,13 +245,44 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 }
 
 
+
+
 std::pair<value_type,value_type> ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
 
 	value_type gen, kill;
 
+	/** 
+	 * Given a definition happening in a block, this function update the gen and kill sets 
+	 * expecially by eliminating all the previous definitions in the in set which are 
+	 * being killed by the new definition. The comparision is done based on the class 
+	 * to which the access belongs to
+	 */
+	auto populateSets = [&](const AccessManager& aMgr, 
+							const AccessPtr& defAccess, 
+							const dfa::Value<LiteralPtr>& res) 
+	{
+		auto defClass = aMgr.findClass(defAccess);
+		assert(defClass && "Invalid class for access. Something wrong in the extract() method");
+
+		gen.insert( std::make_tuple(defClass, res) );
+
+		AccessClassSet depClasses = defClass->getConflicting();
+		depClasses.insert(defClass);
+
+		// Kill Entities 
+		for(auto it = in.begin(), end=in.end(); it != end; ++it) {
+			if (std::find_if( depClasses.begin(), depClasses.end(), [&](const AccessClassPtr& cur) { 
+						return *cur == *std::get<0>(*it); 
+					}) != depClasses.end() ) 
+			{ 
+				kill.insert( *it ); 
+			}
+		}
+	};
+
 	if (block->empty()) { return {gen,kill}; }
 
-	//core::NodeManager& mgr = getCFG().getNodeManager();
+	core::NodeManager& mgr = getCFG().getNodeManager();
 
 	size_t stmt_idx = 0;
 	for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
@@ -259,13 +290,20 @@ std::pair<value_type,value_type> ConstantPropagation::transfer_func(const value_
 		++stmt_idx;
 
 		StatementAddress stmt = core::StatementAddress(cur.getAnalysisStatement());
-
 		const lang::BasicGenerator& basicGen = stmt->getNodeManager().getLangBasic();
 
+		/** 
+		 * This lambda handles the definition of a variable (deriving from the construction of 
+		 * the CFG, the LHS of an assignment or a declaration statements it is always a variable.
+		 *
+		 * The RHS of the expression (init) is analyzed to determine whether it is a constant. In
+		 * that case the value is propagated through the CFG. Otherwise the bottom value is used to 
+		 * state that the variable is not a constant.
+		 */
 		auto handle_def = [&](const VariableAddress& varAddr, const ExpressionAddress& init, bool isDecl) { 
 				
 			cfg::Address cfgAddr(block, stmt_idx-1, varAddr);
-			auto defAccess = getImmediateAccess(stmt->getNodeManager(), cfgAddr, getCFG().getTmpVarMap());
+			auto defAccess = getImmediateAccess(mgr, cfgAddr, getCFG().getTmpVarMap());
 
 			ExpressionAddress initVal = init;
 
@@ -274,7 +312,10 @@ std::pair<value_type,value_type> ConstantPropagation::transfer_func(const value_
 			 * expressions because they have no effect on constant propagation semantics.
 			 */
 			if (CallExprAddress call = dynamic_address_cast<const CallExpr>(init)) {
-
+			
+				/** 
+				 * Get rid of var-ref or var-new operations: FIXME
+				 */
 				if (core::analysis::isCallOf(call.getAddressedNode(), basicGen.getRefVar()) ||
 					core::analysis::isCallOf(call.getAddressedNode(), basicGen.getRefNew()) ) 
 				{ 
@@ -283,64 +324,53 @@ std::pair<value_type,value_type> ConstantPropagation::transfer_func(const value_
 			}
 
 			dfa::Value<LiteralPtr> res = eval(aMgr, initVal, block, stmt_idx-1, in, getCFG());
-
-			auto defClass = aMgr.findClass(defAccess);
-			assert(defClass && "Invalid class for access. Something wrong in the extract() method");
-
-			gen.insert( std::make_tuple(defClass, res) );
-
-			AccessClassSet depClasses = defClass->getConflicting();
-			depClasses.insert(defClass);
-
-			// Kill Entities 
-			for(auto it = in.begin(), end=in.end(); it != end; ++it) {
-				if (std::find_if( depClasses.begin(), depClasses.end(), [&](const AccessClassPtr& cur) { 
-							return *cur == *std::get<0>(*it); 
-						}) != depClasses.end() ) 
-				{ 
-					//if (defAccess->isReference()) {
-						kill.insert( *it ); 
-					//}
-				}
-			}
+			populateSets(aMgr, defAccess, res);
 		};
 
-		if (stmt->getNodeType() == NT_Literal) { return; }
 
-		// assume scalar variables 
+		/**
+		 * If the block contains a declaration stmt, then separate the LHS to the RHS and 
+		 * invoke the handle_def function
+		 */
 		if (DeclarationStmtAddress decl = dynamic_address_cast<const DeclarationStmt>(stmt)) {
-			handle_def( decl->getVariable(), decl->getInitialization(), true );
 
-		} else if (CallExprAddress call = dynamic_address_cast<const CallExpr>(stmt)) {
+			handle_def( decl->getVariable(), decl->getInitialization(), true );
+			return;
+
+		}
+		
+		/** 
+		 * If the block contains a call-expr which is an assignment stmt, then we also separate
+		 * LHS and RHS and call the handling function
+		 */
+		if (CallExprAddress call = dynamic_address_cast<const CallExpr>(stmt)) {
 
 			if (core::analysis::isCallOf(call.getAddressedNode(), basicGen.getRefAssign()) ) { 
 				handle_def( call->getArgument(0).as<VariableAddress>(), call->getArgument(1), false );
 			}
-
-			// do nothing otherwise
-		} else if ( cur.getType() == cfg::Element::LOOP_INCREMENT ) {
+			return;
+		} 
+		
+		/** 
+		 * The last implicit definition in the IR is the update of the loop iterator in a for-loop
+		 * stmt. Because the IR doesn't contain an explicit expression representing this update
+		 * (definition) we use the variable in the loop initialization as a placeholder and
+		 * conseguently mark this as not a constant. 
+		 */
+		if ( cur.getType() == cfg::Element::LOOP_INCREMENT ) {
 			// make sure that the loop iterator is not a constant 
-			//
-//			Access acc = getImmediateAccess(
-//					cur.getStatementAddress().as<ForStmtAddress>()->getDeclaration()->getVariable(),
-//					{ nullptr, 0 },
-//					getCFG().getTmpVarMap()
-//				);
-//			gen.insert( std::make_tuple(acc, dfa::bottom) );
-//			
-//			// kill all declarations reaching this block 
-//			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
-//					[&](const typename value_type::value_type& cur){
-//						return isConflicting(std::get<0>(cur), acc, getCFG().getTmpVarMap());
-//					} );
-//
+			auto itAcc = getImmediateAccess(
+					mgr,
+					getCFG().find(cur.getStatementAddress().as<ForStmtAddress>()->getDeclaration()->getVariable()),
+					getCFG().getTmpVarMap()
+				);
 
-		} else {
-			
-		}
+			populateSets(aMgr, itAcc, dfa::bottom);
+		} 	
+
 	});
 
-	return {gen,kill};
+	return { gen, kill };
 }
 
 } } } } // end insieme::analysis::dfa::analyses namespace 

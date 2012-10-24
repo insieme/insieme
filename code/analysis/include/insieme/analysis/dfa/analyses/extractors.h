@@ -93,7 +93,9 @@ extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, T& obj) {
 			++stmt_idx;
 
 			auto stmt = core::NodeAddress(cur.getAnalysisStatement());
-			if (cur.getType() == cfg::Element::LOOP_INCREMENT) {  	/* TODO: */		}
+
+			// The index access class has already been classified by the loop itself 
+			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { return; }
 
 			if (auto declStmt = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
 				storeAccess(declStmt->getVariable());
