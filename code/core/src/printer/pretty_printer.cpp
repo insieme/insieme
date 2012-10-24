@@ -262,7 +262,7 @@ namespace {
 
 				NodeType type = cur->getNodeType();
 
-				if(type == NT_RecType || type == NT_StructType || type == NT_UnionType || type == NT_LambdaExpr) {
+				if(type == NT_RecType || type == NT_StructType || type == NT_UnionType || (!printer.hasOption(PrettyPrinter::NO_LET_BOUND_FUNCTIONS) && type == NT_LambdaExpr)) {
 
 					// obtain a name (TODO: pick something more important)
 					string name = (type == NT_LambdaExpr)?format("fun%03d", funCounter++):format("type%03d", typeCounter++);
