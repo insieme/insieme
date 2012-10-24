@@ -244,6 +244,11 @@ class HostMapper: public core::transform::CachedNodeMapping {
 public:
 	HostMapper(core::IRBuilder& build, core::ProgramPtr& program);
 
+	// delete kernel name chache just in case somebody wants to reuse the frontend for another program with the same kernel names
+	~HostMapper() {
+		kernelFileCache.clear();
+	}
+
 	const core::NodePtr resolveElement(const core::NodePtr& element);
 
 	ClmemTable& getClMemMapping() { return cl_mems; }
