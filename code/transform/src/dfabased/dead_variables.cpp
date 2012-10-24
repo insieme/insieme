@@ -43,20 +43,27 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/utils/timer.h"
+
 namespace insieme {
 namespace transform {
 
 using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
  
-core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& root) {
+core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& root, CFGPtr cfg) {
 
 	std::map<core::NodeAddress, core::NodePtr> replacements;
 
 	const auto& gen = mgr.getLangBasic();
+	
+	utils::Timer t("Dead.Variables.Elimination");
+	FinalActions fa( [&](){ t.stop(); LOG(INFO) << t;} );
 
-	// Build the CFG 
-	CFGPtr cfg = CFG::buildCFG(root);
+	if (!cfg) {
+		// Build the CFG 
+		cfg = CFG::buildCFG(root);
+	}
 
 	Solver<dfa::analyses::LiveVariables> s(*cfg);
 	auto&& result = s.solve();
@@ -72,12 +79,16 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 		size_t stmt_idx = 0;
 
 		// Avoid to handle call blocks // ret blocks 
+		//  because of unresolved issues in the construction of the CFG this blocks will end up 
+		//  addressing errouneous positions in the IR: FIXME
 		if ( dynamic_cast<const cfg::CallBlock*>(block.get()) || 
 			 dynamic_cast<const cfg::RetBlock*>(block.get()) ) { return; }
 
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& stmt) {
 		
-			++stmt_idx;
+			// Because of mutliple exit points in this function, we need to be sure the stmt-idx 
+			// is updated at the end of this loob body. We solve this using a final action 
+			FinalActions fa( [&](){ ++stmt_idx; } );
 
 			auto stmtAddr = stmt.getStatementAddress();
 			bool isAssignment = false;
@@ -95,7 +106,7 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 							addr.as<core::DeclarationStmtAddress>()->getVariable() :
 							addr.as<core::CallExprAddress>()->getArgument(0);
 
-				auto classPtr = aMgr.findClass(getImmediateAccess(mgr, cfg::Address(block,stmt_idx-1,addr)));
+				auto classPtr = aMgr.findClass(getImmediateAccess(mgr, cfg::Address(block,stmt_idx,addr)));
 
 				const auto& blockResultRef = result[block->getBlockID()];
 				

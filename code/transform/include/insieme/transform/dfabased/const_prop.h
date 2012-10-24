@@ -40,13 +40,22 @@
 #include "insieme/core/forward_decls.h"
 
 namespace insieme {
+
+namespace analysis {
+class CFG;
+typedef std::shared_ptr<CFG> CFGPtr;
+} // end analysis namespace 
+
 namespace transform {
 
-	core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root);
+	core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, analysis::CFGPtr cfg);
 
 	template <typename T>
-	core::Pointer<const T> doConstProp(core::NodeManager& manager, const core::Pointer<const T>& code) {
-		return doConstProp(manager, core::NodePtr(code)).as<core::Pointer<const T>>();
+	core::Pointer<const T> doConstProp(core::NodeManager& manager, 
+									   const core::Pointer<const T>& code, 
+									   analysis::CFGPtr cfg = analysis::CFGPtr()) 
+	{
+		return doConstProp(manager, core::NodePtr(code), cfg).as<core::Pointer<const T>>();
 	}
 
 } // end transform namespace 

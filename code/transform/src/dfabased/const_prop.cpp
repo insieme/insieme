@@ -43,6 +43,8 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/utils/timer.h"
+
 #include <stack>
 
 namespace insieme {
@@ -51,14 +53,19 @@ namespace transform {
 using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
  
-core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root) {
+core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFGPtr cfg) {
 	
 	std::map<core::NodeAddress, core::NodePtr> replacements;
 
 	const auto& gen = mgr.getLangBasic();
 
-	// Build the CFG 
-	CFGPtr cfg = CFG::buildCFG(root);
+	utils::Timer t("Constant.Propagation");
+	FinalActions fa( [&](){ t.stop(); LOG(INFO) << t;} );
+
+	if (!cfg) {
+		// Build the CFG (in the case a valid CFG was not provided by the caller)
+		cfg = CFG::buildCFG(root);
+	}
 
 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
 	auto&& const_prop_result = s.solve();
