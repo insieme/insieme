@@ -68,7 +68,7 @@ back.mpi_ocl:	%(back.ocl.common)s + Conf([
 				], "OCL_REMOTE")
 
 
-execute.seq:		Conf(Flag(''))
+execute.seq:		Conf(Flag(''), "LOCAL_EXEC")
 execute.mpi:		Conf('${MPI_C_INCLUDE_PATH}/../bin/mpirun', 'MPIRUN') + Conf([Flag('-n $SLOTS')])
 
 # LIST OF PASSES (it's important that passes names begins with the pass keyword)
