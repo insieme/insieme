@@ -67,8 +67,8 @@ struct PrettyPrinter {
 		PRINT_ATTRIBUTES		= 1<<8,
 		NAME_CONTRACTION 		= 1<<9,
 		NO_EVAL_LAZY			= 1<<10,
-		NO_LET_BINDINGS			= 1<<11
-
+		NO_LET_BINDINGS			= 1<<11,
+		NO_LET_BOUND_FUNCTIONS 	= 1<<12
 	};
 
 	/**

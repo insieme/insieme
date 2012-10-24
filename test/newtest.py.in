@@ -913,7 +913,7 @@ def main(argv=None):
 	test_jobs = [TestJob(x) for x in test_cases]
 
 	# ldPath = os.getenv("LD_LIBRARY_PATH", "");
-	# os.putenv("LD_LIBRARY_PATH", ldPath + ":{0}/code/simple_backend".format(BIN_DIR));
+	os.putenv("SLOTS", "1");
 
 	# instantiate the pool of threads which are used to run test cases
 	pool = Pool(processes=num_cores)
