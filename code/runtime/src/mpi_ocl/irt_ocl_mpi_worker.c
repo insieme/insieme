@@ -37,6 +37,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+#undef REMOTE_MODE
+#define LOCAL_MODE
+
 #include "mpi.h"
 #include "impl/irt_ocl.impl.h"
 
