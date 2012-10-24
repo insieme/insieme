@@ -683,7 +683,7 @@ class TestJob:
 					Cmd(Commands.RUN, "Run {0}".format(id),
 						"{0} {1} {2}".format(
 							P.exec,
-							'-machinefile {0}/hosts'.format(path) if os.path.exists('./hosts') and
+							'-machinefile {0}/hosts'.format(path) if os.path.exists(path+'/hosts') and
 							P.exec is not ''  else '',
 							input_args.format(**{'PATH':path, 
 												 'EXEC': executable
