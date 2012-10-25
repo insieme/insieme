@@ -162,8 +162,12 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 		return std::make_shared<BaseAccess>(expr);
 	}
 	
-	if (exprNode->getNodeType() == NT_TupleExpr) 
+	if (exprNode->getNodeType() == NT_TupleExpr || 
+		exprNode->getNodeType() == NT_StructExpr ||
+		exprNode->getNodeType() == NT_VectorExpr) 
 		throw NotAnAccessException(toString(*exprNode));
+
+	LOG(INFO) << *exprNode;
 
 	assert(exprNode->getNodeType() == NT_CallExpr);
 
@@ -275,7 +279,7 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 
 		} catch (arithmetic::NotAFormulaException&& e) {
 			// What if this is a piecewise? we can handle it
-			assert (false && "Array access is not a formula?");
+			assert (false && "Array access is not a formula");
 		}
 	}
 	assert(false && "Access not supported");
@@ -295,7 +299,6 @@ namespace {
 
 std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap) {
 	
-
 	struct ExploreAccesses : public IRVisitor<bool, core::Address> {
 		
 		core::NodeManager& 		mgr;
@@ -344,7 +347,6 @@ std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress&
 
 	core::NodePtr node = expr.getAddressedNode();
 	std::vector<AccessPtr> accesses;
-
 	visitDepthFirstPrunable(NodeAddress(node), ExploreAccesses(mgr,tmpVarMap,expr,accesses));
 
 	return accesses;
@@ -355,13 +357,13 @@ std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress&
  */
 class AccessPrinter : public RecAccessVisitor<std::string> {
 
-	unsigned 		level;
+	unsigned level;
 
 	std::string indent(char sep=' ') const {
 		return ""; //return std::string(level*4, sep);
 	}
 
-	public:
+public:
 	AccessPrinter() : level(0)  { }
 
 	std::string visitBaseAccess(const BaseAccessPtr& access) {
@@ -492,6 +494,7 @@ AccessPtr switchRoot(const AccessPtr& access, const AccessPtr& newRoot) {
 	}
 
 	auto decAccess = cast<AccessDecorator>(access);
+	assert(decAccess);
 	return decAccess->switchSubAccess( switchRoot(decAccess->getSubAccess(), newRoot) );
 }
 
