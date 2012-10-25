@@ -76,6 +76,9 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 	auto blockVisitor = [&] (const cfg::BlockPtr& block) {
 
 		// Avoid to handle call blocks // ret blocks 
+		//  this is primarly connected with the fact that analysis stmts in the call block may 
+		//  be erroneusly translated into IR addresses because of pending issues in the CFG
+		//  generation: FIXME
 		if ( dynamic_cast<const cfg::CallBlock*>(block.get()) || 
 			 dynamic_cast<const cfg::RetBlock*>(block.get()) ) { return; }
 
@@ -85,20 +88,20 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 
 			for (const auto& cur : const_prop_result[block->getBlockID()]) {
 
-				// Extract accesses within this statement 
-				auto accesses = getAccesses(
+				// if the addressed access is a constant, then store the replacement 
+				if (std::get<1>(cur).isValue()) {
+
+					// Extract accesses within this statement 
+					auto accesses = getAccesses(
 									mgr, 
 									UnifiedAddress(cfg::Address(block,0,core::NodeAddress(stmtPtr))), 
 									cfg->getTmpVarMap()
 								);
-
-				// get corresponding classes 
-				std::vector<AccessClassPtr> classes;
-				std::transform(accesses.begin(), accesses.end(), std::back_inserter(classes), 
-					[&](const AccessPtr& cur) { return aMgr.getClassFor(cur); });
-
-				// if the addressed access is a constant, then store the replacement 
-				if (std::get<1>(cur).isValue()) {
+	
+					// get corresponding classes 
+					std::vector<AccessClassPtr> classes;
+					std::transform(accesses.begin(), accesses.end(), std::back_inserter(classes), 
+						[&](const AccessPtr& cur) { return aMgr.getClassFor(cur); });
 					
 					auto accClass = std::get<0>(cur);
 
@@ -152,6 +155,8 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 //	LOG(INFO) << "Replacements :" << 
 //		join("\n",replacements,[&](std::ostream& jout, const std::map<core::NodeAddress, core::NodePtr>::value_type& val){ jout << *val.first << " -> " << *val.second; });
 //
+	
+	LOG(INFO) << "**** Constant propagation: replacing '" << replacements.size() << "' constant(s)";
 	return core::transform::replaceAll(mgr, replacements);
 }
 

@@ -155,14 +155,16 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 
 	// For cast expressions, we simply recur
 	if (exprNode->getNodeType() == NT_CastExpr)
-		return getImmediateAccess(mgr, expr.as<CastExprAddress>()->getSubExpression(), tmpVarMap);
+		return getImmediateAccess(mgr, expr.getAddressOfChild(1), tmpVarMap);
 
 	// If this is a scalar variable, then return the access to this variable
 	if (exprNode->getNodeType() == NT_Variable) {
 		return std::make_shared<BaseAccess>(expr);
 	}
+	
+	if (exprNode->getNodeType() == NT_TupleExpr) 
+		throw NotAnAccessException(toString(*exprNode));
 
-	// LOG(INFO) << exprNode;
 	assert(exprNode->getNodeType() == NT_CallExpr);
 
 	CallExprPtr callExpr = exprNode.as<CallExprPtr>();
@@ -676,6 +678,7 @@ AccessManager::classify(const AccessClassPtr& 				parent,
 
 AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 
+	// LOG(INFO) << access;
     /*
      * Iterate through the existing classes and determine whether this access belongs to one of
      * the exising classes, if not create a new class
@@ -760,7 +763,7 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 	}
 
 	// Creates a new alias class  (can't use make_shared because the constructor is private)
-	auto newClass = std::shared_ptr<AccessClass>(new AccessClass(std::cref(*this), classes.size(), parentClass) );
+	auto newClass = std::shared_ptr<AccessClass>(new AccessClass(std::cref(*this), classes.size(), parentClass));
 	newClass->storeAccess(access);
 	classes.emplace_back( newClass );
 
