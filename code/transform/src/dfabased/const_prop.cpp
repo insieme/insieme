@@ -80,13 +80,18 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 	auto blockVisitor = [&] (const cfg::BlockPtr& block) {
 
 		// Avoid to handle call blocks // ret blocks 
-		//  this is primarly connected with the fact that analysis stmts in the call block may 
-		//  be erroneusly translated into IR addresses because of pending issues in the CFG
-		//  generation: FIXME
+		//   this is primarly connected with the fact that analysis stmts in the call block may 
+		//   be erroneusly translated into IR addresses because of pending issues in the CFG
+		//   generation: FIXME
 		if ( dynamic_cast<const cfg::CallBlock*>(block.get()) || 
 			 dynamic_cast<const cfg::RetBlock*>(block.get()) ) { return; }
 
+		size_t stmt_idx = 0;
+
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& stmt) {
+	
+			// Incremebet the stmt_idx at the end of the loopbody
+			FinalActions fa( [&](){ ++stmt_idx;} );
 
 			auto stmtPtr = stmt.getAnalysisStatement();
 
@@ -98,7 +103,7 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 					// Extract accesses within this statement 
 					auto accesses = getAccesses(
 									mgr, 
-									UnifiedAddress(cfg::Address(block,0,core::NodeAddress(stmtPtr))), 
+									UnifiedAddress(cfg::Address(block,stmt_idx,core::NodeAddress(stmtPtr))), 
 									cfg->getTmpVarMap()
 								);
 	
@@ -115,7 +120,8 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 					if (fit != classes.end()) {
 
 						size_t idx = std::distance(classes.begin(), fit);
-						if(core::NodeAddress addr = accesses[idx]->getAddress().getAbsoluteAddress(cfg->getTmpVarMap())) {
+						if (core::NodeAddress addr = accesses[idx]->getAddress().getAbsoluteAddress(cfg->getTmpVarMap())) 
+						{
 							
 							// Avoid ref-variables to be sobstituted by constants 
 							if (core::analysis::isRefType(addr.as<core::ExpressionAddress>()->getType())) 
@@ -137,6 +143,7 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 							{	
 								continue;
 							}
+
 							// FIXME: this doesn't work for context sensitive analysis 
 							if (addr.getRootNode() != root) {
 								// we are inside a function and we have to find the outermost lambda
