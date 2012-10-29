@@ -174,6 +174,12 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 	CallExprPtr callExpr = exprNode.as<CallExprPtr>();
 	auto args = callExpr->getArguments();
 
+	if (core::analysis::isCallOf(exprNode, gen.getRefReinterpret()) ||
+		core::analysis::isCallOf(exprNode, gen.getScalarToArray())) 
+	{
+		return getImmediateAccess(mgr, expr.getAddressOfChild(2), tmpVarMap);
+	}
+
 	// If the callexpr is not a subscript or a member access, then it means this is not
 	// a direct memory access, but it could be we are processing a binary operator or other
 	// which may contain multiple accesses. Therefore we throw an exception.

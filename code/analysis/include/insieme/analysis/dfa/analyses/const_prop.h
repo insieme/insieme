@@ -49,10 +49,14 @@ namespace analyses {
 
 class ConstantPropagation;
 
+// Definition for the dataflow problem 
 typedef Problem<
 			ConstantPropagation, 
 			ForwardAnalysisTag,
-			Entity<dfa::elem<AccessClassPtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+			Entity<
+				dfa::elem<AccessClassPtr>, 
+				dfa::dom<dfa::Value<core::LiteralPtr>>
+			>,
 			PowerSet
 	>  ConstPropBase;
 

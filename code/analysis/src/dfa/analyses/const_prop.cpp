@@ -37,6 +37,8 @@
 #include "insieme/analysis/dfa/analyses/const_prop.h"
 #include "insieme/analysis/dfa/analyses/extractors.h"
 
+#include "insieme/analysis/func_sema.h"
+
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 
@@ -175,6 +177,8 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 	using namespace arithmetic;
 
 	//const lang::BasicGenerator& basicGen = lit->getNodeManager().getLangBasic();
+
+	if (!lit) { return dfa::bottom; }
 
 	try {
 
@@ -349,10 +353,29 @@ std::pair<value_type,value_type> ConstantPropagation::transfer_func(const value_
 
 			if (core::analysis::isCallOf(call.getAddressedNode(), basicGen.getRefAssign()) ) { 
 				handle_def( call->getArgument(0).as<VariableAddress>(), call->getArgument(1), false );
+				return;
+			}
+
+			// Function calls to 
+			FunctionSema sema = extractSemantics(call);
+			if (sema.containsReferenceAccesses()) {
+
+				for_each(sema.accesses_begin(), sema.accesses_end(), [&](const FunctionSema::ReferenceAccess& cur) { 
+
+					// Extract the reference being accessed from this argument 
+					ExpressionAddress ref = cur.first.getReference();
+
+					LOG(INFO) << ref << " " << *ref;
+					if (std::get<0>(cur.second) == Ref::DEF) {
+						handle_def( ref.as<VariableAddress>(), ExpressionAddress(), false);
+					}
+
+				});
+
 			}
 			return;
 		} 
-		
+
 		/** 
 		 * The last implicit definition in the IR is the update of the loop iterator in a for-loop
 		 * stmt. Because the IR doesn't contain an explicit expression representing this update

@@ -62,6 +62,7 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 	utils::Timer t("Constant.Propagation");
 	FinalActions fa( [&](){ t.stop(); LOG(INFO) << t;} );
 
+	utils::Timer tAnalyze("Constant.Propagation.Analysis");
 	if (!cfg) {
 		// Build the CFG (in the case a valid CFG was not provided by the caller)
 		cfg = CFG::buildCFG(root);
@@ -69,6 +70,9 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 
 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
 	auto&& const_prop_result = s.solve();
+
+	tAnalyze.stop();
+	LOG(INFO) << tAnalyze;
 
 	AccessManager aMgr = s.getProblemInstance().getAccessManager();
 	
@@ -112,7 +116,10 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 
 						size_t idx = std::distance(classes.begin(), fit);
 						if(core::NodeAddress addr = accesses[idx]->getAddress().getAbsoluteAddress(cfg->getTmpVarMap())) {
-							//LOG(INFO) << stmtPtr;
+							
+							// Avoid ref-variables to be sobstituted by constants 
+							if (core::analysis::isRefType(addr.as<core::ExpressionAddress>()->getType())) 
+								continue;
 
 							// if the value we want to replace is the left hand side of an
 							// assignment stmt, or the variable in a declaration stmt
@@ -136,7 +143,7 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 								auto callExprAddr = core::Address<const core::Node>::find(addr.getRootNode(), root);
 								addr = core::concat( callExprAddr, addr );
 							}
-							// LOG(INFO) << addr << " " << *addr << " " << std::get<1>(cur).value();
+
 							// do replace 
 							replacements.insert( {addr, std::get<1>(cur).value()} );
 
@@ -157,6 +164,7 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 //
 	
 	LOG(INFO) << "**** Constant propagation: replacing '" << replacements.size() << "' constant(s)";
+
 	return core::transform::replaceAll(mgr, replacements);
 }
 
