@@ -96,6 +96,10 @@ pass.07.seq_mpi: 	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c',
 pass.09.run:		Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.c', 
 					 %(comp.gcc)s+%(back.gcc)s+%(back.run)s+%(back.c.opt)s, 'run.test',%(execute.seq)s 
 					)
+pass.09.run_win:	Pass(None, 'insieme.run.ref.c', 
+					 %(comp.gcc)s+%(back.gcc)s+%(back.run)s+%(back.c.opt)s, 'run.test',%(execute.seq)s 
+					)
+
 pass.10.run_icc:	Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.c', 
 					 %(comp.icc)s+%(back.icc)s+%(back.run)s+%(back.c.opt)s, 'run.test',%(execute.seq)s
 					)

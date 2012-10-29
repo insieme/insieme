@@ -98,8 +98,10 @@ class Pass:
 	def __init__(self, frontend, tmp_file=None, backend=None, out_file=None, executor=None):
 		self.frontend = copy.deepcopy(frontend)
 		self.tmp_file = tmp_file
-		if tmp_file:
+		if tmp_file and frontend:
 			self.frontend.flags.append( OutFileFlag('-o', tmp_file) )
+	
+		if tmp_file:
 			self.tmp_file = '{CASE_NAME}.'+tmp_file
 
 		assert not (frontend and not tmp_file and backend)
@@ -568,7 +570,10 @@ class TestJob:
 			for id, P in cur_passes:
 				if P.frontend is not None:
 					for file in P.frontend.files:
-						ref_file = "{0}.ref".format(file).format(**{
+						ext = os.path.split(file)[1].split('.')[-1]
+						abs_name = '/'.join( [os.path.split(file)[0], \
+							'.'.join(os.path.split(file)[1].split('.')[0:-1])])
+						ref_file = "{0}.ref.{1}".format(abs_name, ext).format(**{
 							'CASE_NAME': self.__data.name,
 							'PATH': path
 						})
@@ -576,7 +581,10 @@ class TestJob:
 
 				if P.backend is not None:
 					for file in P.backend.files:
-						ref_file = "{0}.ref".format(file).format(**{
+						ext = os.path.split(file)[1].split('.')[-1]
+						abs_name = '/'.join( [os.path.split(file)[0], \
+							'.'.join(os.path.split(file)[1].split('.')[0:-1])])
+						ref_file = "{0}.ref".format(abs_name,ref).format(**{
 							'CASE_NAME': self.__data.name,
 							'PATH': path
 						})
@@ -612,24 +620,30 @@ class TestJob:
 						'PATH': path
 					})
 
+					ext = os.path.split(file_name)[1].split('.')[-1]
+					abs_name = '/'.join( [os.path.split(file_name)[0], \
+								'.'.join(os.path.split(file_name)[1].split('.')[0:-1])])
+
+					ref_file = "{0}.ref.{1}".format(abs_name, ext)
 					# if we have a reference file, then check with a DIFF
-					if os.path.exists(file_name + ".ref"):
+					if os.path.exists(ref_file):
 						self.__cmds.append(
 							Cmd(Commands.SDIFF, "Comparing with reference {0}".format(id),
-							 "{0}/test/sortdiff {1}/{2} {1}/{2}.ref".format(SRC_DIR, path, file_name)
+							 "{0}/test/sortdiff {1}/{2} {1}/{3}".format(SRC_DIR, path, file_name,
+								 ref_file)
 							)
 						)
 						# If everything worked out, we overwrite the ref file 
 						finalize_cmds.append( 
 							Cmd(Commands.COPY, "Rewriting file as ref file {0}".format(id),
-							 "mv {0}/{1} {0}/{1}.ref".format(path, file_name)
+							 "mv {0}/{1} {0}/{2}".format(path, file_name, ref_file)
 							)
 						)
 
 					else:
 						self.__cmds.append(
 							Cmd(Commands.COPY, "Copying file as ref file {0}".format(id),
-							 "cp {0}/{1} {0}/{1}.ref".format(path, file_name)
+							 "cp {0}/{1} {0}/{2}".format(path, file_name, ref_file)
 							)
 						)
 
