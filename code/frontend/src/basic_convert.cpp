@@ -69,6 +69,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
+#include "insieme/core/transform/manipulation.h"
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
@@ -1196,48 +1197,34 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	return attachFuncAnnotations(retLambdaExpr, funcDecl);
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							AST CONVERTER
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::CallExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
 	mFact.currTU = &tu;
-//	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
-//	core::ExpressionPtr&& callExpr = mFact.createCallExpr( toVector<core::StatementPtr>(bodyStmt), mgr.getLangBasic().getUnit() );
+	
+	core::StatementPtr bodyStmt = mFact.convertStmt( body );
+	auto callExpr = core::transform::outline(mgr, bodyStmt);
 
-//	annotations::c::CLocAnnotation::ArgumentList args;
-//	if(core::CaptureInitExprPtr&& captureExpr = core::dynamic_pointer_cast<const core::CaptureInitExpr>(callExpr)) {
-//		// look for variable names
-//		for_each(captureExpr->getArguments().begin(), captureExpr->getArguments().end(), [ &args ](const core::ExpressionPtr& expr){
-//			// because this callexpr was created out of a stmt block, we are sure
-//			// input arguments are Variables
-//			core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(expr);
-//			assert(var && "Argument of call expression is not a variable.");
-//			// we also have to look at the CNameAnnotation in order to find the name of the original variable
-//
-//			std::shared_ptr<annotations::c::CNameAnnotation>&& nameAnn = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
-//			assert(nameAnn && "Variable has not CName associated");
-//			args.push_back( nameAnn->getName() );
-//		});
-//	}
+	annotations::c::CLocAnnotation::ArgumentList args;
+	auto lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
 
-//	core::LambdaExprPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>( callExpr->getFunctionExpr() );
-//	// ------ Adding source location annotation (CLocAnnotation) -------
-//	std::pair<SourceLocation, SourceLocation> loc = std::make_pair(body->getLocStart(), body->getLocEnd());
-//	PragmaStmtMap::StmtMap::const_iterator fit = mFact.getPragmaMap().getStatementMap().find(body);
-//	if(fit != mFact.getPragmaMap().getStatementMap().end()) {
-//		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
-//		loc.first = fit->second->getStartLocation();
-//	}
-//
-//	lambdaExpr.addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
-//		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.first),
-//		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.second),
-//		false, // this is not a function decl
-//		args)
-//	);
-//
-//	return lambdaExpr;
-	return core::LambdaExprPtr();
+	// ------ Adding source location annotation (CLocAnnotation) -------
+	std::pair<SourceLocation, SourceLocation> loc = std::make_pair(body->getLocStart(), body->getLocEnd());
+	auto fit = mFact.getPragmaMap().getStatementMap().find(body);
+	if(fit != mFact.getPragmaMap().getStatementMap().end()) {
+		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
+		loc.first = fit->second->getStartLocation();
+	}
+
+	lambdaExpr.addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
+		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.first),
+		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.second),
+		false, // this is not a function decl
+		args)
+	);
+
+	return callExpr;
 }
 
 core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
