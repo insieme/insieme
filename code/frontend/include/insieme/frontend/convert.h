@@ -662,15 +662,11 @@ public:
 			mProgram(prog.getProgram()) {
 	}
 
-	core::ProgramPtr getProgram() const {
-		return mProgram;
-	}
+	core::ProgramPtr getProgram() const { return mProgram; }
 
-	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
-			bool isMain = false);
+	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain = false);
 
-	core::LambdaExprPtr handleBody(const clang::Stmt* body,
-			const TranslationUnit& tu);
+	core::CallExprPtr handleBody(const clang::Stmt* body, const TranslationUnit& tu);
 };
 
 // ----------------------------------- CASTConverter ---------------------------

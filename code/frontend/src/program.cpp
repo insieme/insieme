@@ -334,8 +334,8 @@ const core::ProgramPtr& Program::convert() {
 			// and create an anonymous lambda expression to enclose it
 			const clang::Stmt* body = insiemePragma.getStatement();
 			assert(body && "Pragma matching failed!");
-			core::LambdaExprPtr&& lambdaExpr = astConvPtr->handleBody(body, *(*pit).second);
-			mProgram = core::Program::addEntryPoint(mMgr, mProgram, lambdaExpr);
+			core::CallExprPtr callExpr = astConvPtr->handleBody(body, *(*pit).second);
+			mProgram = core::Program::addEntryPoint(mMgr, mProgram, callExpr);
 		}
 	}
 
