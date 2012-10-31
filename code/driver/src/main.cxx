@@ -595,12 +595,6 @@ int main(int argc, char** argv) {
 				stmtMap.clear();
 				applyOpenMPFrontend(program);
 				printIR(program, stmtMap);
-				if(CommandLineOptions::TaskOpt) {
-					program = measureTimeFor<core::ProgramPtr>("Task Optimization ", [&]() {
-						return insieme::applyTaskOptimization(program);
-					});
-					printIR(program, stmtMap);
-				}
 				// check again if the OMP flag is on
 				if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
 			}
@@ -611,6 +605,13 @@ int main(int argc, char** argv) {
 				// check again if the OMP flag is on
 				printIR(program, stmtMap);
 				if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
+			}
+
+			if(CommandLineOptions::TaskOpt) {
+				program = measureTimeFor<core::ProgramPtr>("Task Optimization ", [&]() {
+					return insieme::applyTaskOptimization(program);
+				});
+				printIR(program, stmtMap);
 			}
 
 
