@@ -52,6 +52,10 @@
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/type_utils.h"
+#include "insieme/core/transform/manipulation.h"
+
+#include "insieme/core/analysis/type_variable_deduction.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
@@ -227,7 +231,27 @@ namespace backend {
 			return res;
 		}
 
-		// 3) test whether target is a lambda => call lambda directly, without creating a closure
+		// 3) test whether target is generic => instantiate
+		if (fun->getNodeType() == core::NT_LambdaExpr && core::isGeneric(fun->getType())) {
+			auto& manager = call->getNodeManager();
+
+			// compute substitutions
+			core::SubstitutionOpt&& map = core::analysis::getTypeVariableInstantiation(manager, call);
+
+			// instantiate type variables according to map
+			auto lambda = core::transform::instantiate(manager, fun.as<core::LambdaExprPtr>(), map);
+
+			// check result
+			assert(lambda && lambda != fun && "Lambda-Instantiation failed!");
+
+			// produce new call expression
+			auto res = core::CallExpr::get(manager, call->getType(), lambda, call->getArguments());
+
+			// return encoding of resulting call
+			return getCall(res, context);
+		}
+
+		// 4) test whether target is a lambda => call lambda directly, without creating a closure
 		if (fun->getNodeType() == core::NT_LambdaExpr) {
 			// obtain lambda information
 			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
@@ -247,7 +271,7 @@ namespace backend {
 		core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
 
 
-		// 4) test whether target is a plane function pointer => call function pointer, no closure
+		// 5) test whether target is a plane function pointer => call function pointer, no closure
 		if (funType->isPlain()) {
 			// add call to function pointer (which is the value)
 			c_ast::CallPtr res = c_ast::call(c_ast::parenthese(getValue(call->getFunctionExpr(), context)));

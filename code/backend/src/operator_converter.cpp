@@ -452,6 +452,37 @@ namespace backend {
 				return c_ast::call(C_NODE_MANAGER->create("malloc"), static_pointer_cast<const c_ast::Call>(res)->arguments[0]);
 			}
 
+			// special handling for variable sized structs
+			if (core::isVariableSized(resType->getElementType())) {
+				// Create code similar to this:
+				// 		(A*)memcpy(malloc(sizeof(A) + sizeof(float) * v2), &(struct A){ v2 }, sizeof(A))
+
+				assert(ARG(0)->getNodeType() == core::NT_StructExpr && "Only supporting struct expressions as initializer value so far!");
+				core::StructExprPtr initValue = ARG(0).as<core::StructExprPtr>();
+
+				// get types of struct and element
+				auto structType = initValue->getType();
+				auto elementType = core::getRepeatedType(structType);
+
+				// get size of variable part
+				auto arrayInitValue = initValue->getMembers().back()->getValue();
+				assert(core::isCallOf(arrayInitValue, LANG_BASIC.getArrayCreate1D()) && "Array not properly initialized!");
+				auto size = arrayInitValue.as<core::CallExprPtr>()->getArgument(1);
+
+				// add header dependencies
+				ADD_HEADER_FOR("malloc");
+				ADD_HEADER_FOR("memcpy");
+
+				auto c_struct_type = CONVERT_TYPE(structType);
+				auto c_element_type = CONVERT_TYPE(elementType);
+
+				// build call
+				auto malloc = c_ast::call(C_NODE_MANAGER->create("malloc"),
+						c_ast::add(c_ast::sizeOf(c_struct_type), c_ast::mul(c_ast::sizeOf(c_element_type), CONVERT_EXPR(size)))
+				);
+				return c_ast::cast(CONVERT_TYPE(resType), c_ast::call(C_NODE_MANAGER->create("memcpy"), malloc, c_ast::ref(CONVERT_EXPR(initValue)), c_ast::sizeOf(c_struct_type)));
+			}
+
 			// use a call to the ref_new operator of the ref type
 			context.getDependencies().insert(info.newOperator);
 			return c_ast::call(info.newOperatorName, CONVERT_ARG(0));
