@@ -47,21 +47,23 @@ namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 
 namespace {
 
-void lookup_accesses(AddressSet& addrSet, const AccessClassPtr& cl, const CFGPtr& cfg) {
+void lookup_accesses(AddressSet& addrSet, const AccessClassSet& clSet, const CFGPtr& cfg) {
 
-	auto addrs = extractRealAddresses(*cl, cfg->getTmpVarMap());
-	std::copy(addrs.begin(), addrs.end(), std::inserter(addrSet, addrSet.begin()));
+	for (auto& cl : clSet) {
+		auto addrs = extractRealAddresses(*cl, cfg->getTmpVarMap());
+		std::copy(addrs.begin(), addrs.end(), std::inserter(addrSet, addrSet.begin()));
 
-	auto parent = cl->getParentClass();
-	if (parent) { 
-		bool found=false;
-		for(const auto& dep : parent->getSubClasses()) {
-			if (std::get<0>(dep) == AccessClass::DT_RANGE && 
-				std::get<1>(dep).lock() == cl) { found = true; }
-
-		}
-		if (found) 
-		lookup_accesses(addrSet, cl->getParentClass(), cfg); 
+		auto parent = cl->getParentClass();
+//		if (parent) { 
+//			bool found=false;
+//			for(const auto& dep : parent->getSubClasses()) {
+//				if (std::get<0>(dep) == AccessClass::DT_RANGE && 
+//					std::get<1>(dep).lock() == cl) { found = true; }
+//
+//			}
+	//		if (found) 
+	//		lookup_accesses(addrSet, cl->getParentClass(), cfg); 
+//		}
 	}
 }
 

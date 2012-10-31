@@ -84,7 +84,7 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 				getCFG().getTmpVarMap()
 			);
 			// for each usage of a variable add it to the gen set 
-			for (const auto& acc : accesses) { gen.insert( aMgr.findClass(acc) ); }
+	//		for (const auto& acc : accesses) { gen.insert( aMgr.findClass(acc) ); }
 		};
 
 
@@ -95,27 +95,27 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 								getCFG().getTmpVarMap()
 							);
 
-			auto defClass = aMgr.findClass(defAccess);
-			assert(defClass && "Invalid class for access. Something wrong in the extract() method");
-
-			AccessClassSet depClasses = defClass->getConflicting();
-			depClasses.insert(defClass);
-
-			// Kill Entities 
-			for(auto it = in.begin(), end=in.end(); it != end; ++it) {
-				if (std::find_if( depClasses.begin(), depClasses.end(), 
-						[&](const AccessClassPtr& cur) { 
-							return *cur == **it; 
-						}) != depClasses.end() ) { kill.insert( *it ); }
-			}
-
-			// if the RHS is a not live variable
-			if (in.find(defClass) == in.end()) { 
-				// then any of the uses in the LHS are relevant 
-				return;
-			}
-
-			handle_rhs(rhs);
+//			auto defClass = aMgr.findClass(defAccess);
+//			assert(defClass && "Invalid class for access. Something wrong in the extract() method");
+//
+//			AccessClassSet depClasses = defClass->getConflicting();
+//			depClasses.insert(defClass);
+//
+//			// Kill Entities 
+//			for(auto it = in.begin(), end=in.end(); it != end; ++it) {
+//				if (std::find_if( depClasses.begin(), depClasses.end(), 
+//						[&](const AccessClassPtr& cur) { 
+//							return *cur == **it; 
+//						}) != depClasses.end() ) { kill.insert( *it ); }
+//			}
+//
+//			// if the RHS is a not live variable
+//			if (in.find(defClass) == in.end()) { 
+//				// then any of the uses in the LHS are relevant 
+//				return;
+//			}
+//
+//			handle_rhs(rhs);
 		};
 
 
@@ -139,8 +139,8 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 					cur.getStatementAddress().as<core::ForStmtAddress>()->getDeclaration()->getVariable()
 				);
 
-			auto accessPtr = getImmediateAccess(mgr, cfgAddr, getCFG().getTmpVarMap());
-			gen.insert( aMgr.findClass(accessPtr) );
+//			auto accessPtr = getImmediateAccess(mgr, cfgAddr, getCFG().getTmpVarMap());
+//			gen.insert( aMgr.findClass(accessPtr) );
 
 		} else {
 

@@ -62,56 +62,57 @@ namespace analysis {
 typedef utils::CombinerPtr<polyhedral::AffineFunction> ConstraintPtr;
 
 
-struct NotAnAccessException : public std::logic_error {
+	struct NotAnAccessException : public std::logic_error {
 
-	NotAnAccessException(const std::string& str) : 
-		std::logic_error("Not an access: " + str) { }
-};
+		NotAnAccessException(const std::string& str) : 
+			std::logic_error("Not an access: " + str) { }
+	};
 
-// ================================================================================================
-// ================================= UnifiedAddress ===============================================
-// ================================================================================================
-/**
- * An UnifiedAddress represents an abstraction which allows to address entities both in the IR and
- * in the CFG. 
- */
-struct UnifiedAddress : public utils::Printable {
- 
-	typedef boost::variant<core::NodeAddress, cfg::Address> AddressImpl;
-	
 
-	UnifiedAddress(const core::NodeAddress& addr) : address(addr) { }
 
-	UnifiedAddress(const cfg::Address& addr) : address(addr) { }
+	/**
+	 * UnifiedAddress 
+	 *
+	 * An UnifiedAddress represents an abstraction which allows to address entities both in the IR and
+	 * in the CFG. 
+	 */
+	struct UnifiedAddress : public utils::Printable {
+	 
+		typedef boost::variant<core::NodeAddress, cfg::Address> AddressImpl;
+		
 
-	bool isCFGAddress() const;
+		UnifiedAddress(const core::NodeAddress& addr) : address(addr) { }
 
-	core::NodeAddress getAbsoluteAddress(const TmpVarMap& varMap=TmpVarMap()) const;
+		UnifiedAddress(const cfg::Address& addr) : address(addr) { }
 
-	core::NodePtr getAddressedNode() const;
+		bool isCFGAddress() const;
 
-	UnifiedAddress getAddressOfChild(unsigned idx) const;
-	
-	UnifiedAddress extendAddressFor(const std::vector<unsigned>& idxs) const;
+		core::NodeAddress getAbsoluteAddress(const TmpVarMap& varMap=TmpVarMap()) const;
 
-	template <class T>
-	inline T as() const { return boost::get<T>(address); }
+		core::NodePtr getAddressedNode() const;
 
-	bool operator==(const UnifiedAddress& other) const;
+		UnifiedAddress getAddressOfChild(unsigned idx) const;
+		
+		UnifiedAddress extendAddressFor(const std::vector<unsigned>& idxs) const;
 
-	std::ostream& printTo(std::ostream& out) const {
-		return out << address;
-	}
+		template <class T>
+		inline T as() const { return boost::get<T>(address); }
 
-	inline operator bool() const {
-		if (isCFGAddress()) { return static_cast<bool>(as<cfg::Address>()); }
-		return as<core::NodeAddress>();
-	}
+		bool operator==(const UnifiedAddress& other) const;
 
-private:
-	AddressImpl address;
+		std::ostream& printTo(std::ostream& out) const {
+			return out << address;
+		}
 
-};
+		inline operator bool() const {
+			if (isCFGAddress()) { return static_cast<bool>(as<cfg::Address>()); }
+			return as<core::NodeAddress>();
+		}
+
+	private:
+		AddressImpl address;
+
+	};
 
 
 
@@ -137,9 +138,7 @@ class Subscript;
 typedef std::shared_ptr<const Subscript> 		SubscriptPtr;
 
 
-// ================================================================================================ 
-// ========================================= Access ===============================================
-// ================================================================================================ 
+
 
 enum class AccessType { AT_BASE, AT_DEREF, AT_MEMBER, AT_SUBSCRIPT };
 
@@ -192,9 +191,7 @@ public:
 };
 
 
-// ================================================================================================ 
-// ===================================== AccessDecorators =========================================
-// ================================================================================================ 
+
 
 struct AccessDecorator : public Access {
 
@@ -232,6 +229,7 @@ public:
 	inline AccessDecoratorPtr switchSubAccess(const AccessPtr& sub) const {
 		return std::make_shared<Deref>(getAddress(), sub);
 	}
+
 };
 
 
@@ -280,6 +278,8 @@ public:
 
 	const ConstraintPtr& getRange() const { return range; }
 
+	void setRange(const ConstraintPtr& range) { this->range = range; }
+
 	bool isContextDependent() const {
 		
 		// we have an array access, now check whether we have a bound expression limiting the range of
@@ -311,9 +311,8 @@ std::shared_ptr<const T> cast(const AccessPtr& access) {
 	return std::static_pointer_cast<const T>(access);
 }
 
-// ================================================================================================
-// ===================================== AccessVisitors ===========================================
-// ================================================================================================
+
+
 
 template <class RetTy>
 struct AccessVisitor {
@@ -426,9 +425,7 @@ private:
 
 public:
 
-	enum DependenceType { DT_LEVEL, DT_RANGE };
-
-	typedef std::tuple<DependenceType, AccessClassWPtr, AccessDecoratorPtr> Dependence;
+	typedef std::tuple<AccessClassWPtr, AccessDecoratorPtr> Dependence;
 
 	typedef std::vector<Dependence> SubClasses;
 
@@ -501,17 +498,17 @@ public:
 		this->parentClass = parent; 
 	}
 
-	inline std::pair<DependenceType, AccessDecoratorPtr> getParentRelationship() const {
-		if (!parentClass.lock()) { assert(false); }
-
-		const auto& subClasses = parentClass.lock()->getSubClasses();
-
-		auto fit = std::find_if(subClasses.begin(), subClasses.end(), 
-				[&](const Dependence& cur) { return *std::get<1>(cur).lock() == *this; });
-
-		assert(fit != subClasses.end());
-
-		return std::make_pair(std::get<0>(*fit), std::get<2>(*fit));
+	inline AccessDecoratorPtr getParentRelationship() const {
+//		if (!parentClass.lock()) { assert(false); }
+//
+//		const auto& subClasses = parentClass.lock()->getSubClasses();
+//
+//		auto fit = std::find_if(subClasses.begin(), subClasses.end(), 
+//				[&](const Dependence& cur) { return *std::get<1>(cur).lock() == *this; });
+//
+//		assert(fit != subClasses.end());
+//
+//		return std::make_pair(std::get<0>(*fit), std::get<2>(*fit));
 	}
 
 	const AccessClassPtr getParentClass() const {
@@ -521,8 +518,6 @@ public:
 	inline void addSubClass(const Dependence& dep) {
 		subClasses.push_back(dep);
 	}
-
-	AccessClassSet getConflicting() const;
 
 	const SubClasses& getSubClasses() const { return subClasses; }
 	SubClasses& getSubClasses() { return subClasses; }
@@ -551,7 +546,9 @@ public:
 
 };
 
-void addSubClasses(const AccessClass& thisClass, AccessClassSet& collect);
+AccessClassSet getConflicting(const AccessClassSet& classes);
+
+void addSubClasses(const AccessClassPtr& thisClass, AccessClassSet& collect);
 
 /** 
  * Return the vector of addresses which are not temporary variable and therefore it returns
@@ -575,11 +572,14 @@ private:
 	const CFG* 			cfg;
 	const TmpVarMap& 	tmpVarMap;
 
-	std::tuple<AccessClass::DependenceType, AccessClassPtr,bool> 
-	classify(const AccessClassPtr& 				parent,  
-			const AccessDecoratorPtr& 			subLevel, 
-			const AccessClass::DependenceType& 	depType,
-			const AccessPtr& 					currAccess);
+//	std::tuple<AccessClassPtr,bool>  
+//	classify(const AccessClassPtr& 				parent,  
+//			const AccessDecoratorPtr& 			subLevel, 
+//			const AccessPtr& 					currAccess);
+
+
+	AccessClassPtr addClass(AccessClassPtr parent, const AccessPtr& access, const AccessDecoratorPtr& dec);
+
 public:
 
 	typedef ClassVector::iterator 		iterator;
@@ -589,9 +589,13 @@ public:
 		cfg(cfg), 
 		tmpVarMap(tmpVarMap) { }
 
-	AccessClassPtr getClassFor(const AccessPtr& access);
+	/**
+	 * An access can belong to multiple classes, therefore when we look for the class 
+	 * containing a particular access we may hit multiple classes
+	 */
+	AccessClassSet getClassFor(const AccessPtr& access);
 
-	AccessClassPtr findClass(const AccessPtr& access) const;
+	AccessClassSet findClass(const AccessPtr& access) const;
 
 	void printDotGraph(std::ostream& out) const;
 

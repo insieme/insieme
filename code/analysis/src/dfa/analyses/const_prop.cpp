@@ -152,16 +152,18 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
  */
 dfa::Value<LiteralPtr> lookup( const AccessManager& aMgr, const AccessPtr& var, const value_type& in, const CFG& cfg ) {
 
-	auto accessClass = aMgr.findClass(var);
+	auto accessClasses = aMgr.findClass(var);
 
 	// If the class was not found, then return the top element 
-	if (!accessClass) { return dfa::top; }
+	if (accessClasses.empty()) { return dfa::top; }
 
-	auto fit = std::find_if(in.begin(), in.end(), [&](const value_type::value_type& cur) { 
-			return *std::get<0>(cur) == *accessClass; 
-		});
+	for (const auto& accessClass : accessClasses) {
+		auto fit = std::find_if(in.begin(), in.end(), [&](const value_type::value_type& cur) { 
+				return *std::get<0>(cur) == *accessClass; 
+			});
 
-	if( fit != in.end() ) return std::get<1>(*fit);
+		if( fit != in.end() ) return std::get<1>(*fit);
+	}
 
 	return dfa::top;
 }	
@@ -253,7 +255,8 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 
 
 
-std::pair<value_type,value_type> ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
+std::pair<value_type,value_type> 
+ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
 
 	value_type gen, kill;
 
@@ -267,19 +270,21 @@ std::pair<value_type,value_type> ConstantPropagation::transfer_func(const value_
 							const AccessPtr& defAccess, 
 							const dfa::Value<LiteralPtr>& res) 
 	{
-		auto defClass = aMgr.findClass(defAccess);
-		assert(defClass && "Invalid class for access. Something wrong in the extract() method");
+		auto defClasses = aMgr.findClass(defAccess);
+		assert(!defClasses.empty() && "Invalid class for access. Something wrong in the extract() method");
 
-		gen.insert( std::make_tuple(defClass, res) );
+		for (const auto& defClass : defClasses) {
+			gen.insert( std::make_tuple(defClass, res) );
+		}
 
-		AccessClassSet depClasses = defClass->getConflicting();
-		depClasses.insert(defClass);
+		AccessClassSet confClasses = getConflicting(defClasses);
+		std::copy(defClasses.begin(), defClasses.end(), std::inserter(confClasses,confClasses.begin()));
 
 		// Kill Entities 
 		for(auto it = in.begin(), end=in.end(); it != end; ++it) {
-			if (std::find_if( depClasses.begin(), depClasses.end(), [&](const AccessClassPtr& cur) { 
+			if (std::find_if( confClasses.begin(), confClasses.end(), [&](const AccessClassPtr& cur) { 
 						return *cur == *std::get<0>(*it); 
-					}) != depClasses.end() ) 
+					}) != confClasses.end() ) 
 			{ 
 				kill.insert( *it ); 
 			}

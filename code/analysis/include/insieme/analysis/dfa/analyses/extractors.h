@@ -43,6 +43,8 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/ir_utils.h"
 
+#include <algorithm>
+
 namespace insieme { 
 namespace analysis {
 namespace dfa {
@@ -78,16 +80,17 @@ extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, T& obj) {
 
 		auto storeAccess = [&](const core::ExpressionAddress& var) {
 
-				entities.insert( 
-					aMgr.getClassFor(
-						getImmediateAccess(
+			auto classes = 	
+				aMgr.getClassFor(
+					getImmediateAccess(
 							var->getNodeManager(), 
 							cfg::Address(block, stmt_idx-1, var),
 							cfg.getTmpVarMap()
 						)
-					) 
-				);
-			};
+					);
+
+			std::copy(classes.begin(), classes.end(), std::inserter(entities, entities.begin()));
+		};
 
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
 			++stmt_idx;

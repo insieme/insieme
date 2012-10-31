@@ -130,18 +130,18 @@ ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockP
 			auto access = getImmediateAccess(stmt->getNodeManager(), cfgAddr, getCFG().getTmpVarMap());
 
 			// Get the class to which the access belongs to 
-			AccessClassPtr collisionClass = mgr.getClassFor(access);
+			AccessClassSet collisionSet = mgr.getClassFor(access);
 
-			AccessClassSet classes = collisionClass->getConflicting();
-			classes.insert(collisionClass);
+	//		AccessClassSet classes = collisionClass->getConflicting();
+	//		classes.insert(collisionClass);
 
 			// Kill Entities 
-			if (access->isReference()) 
-				for (auto& curClass : classes) 
-					for (auto& acc : *curClass) 
-						kill.insert( acc->getAddress().as<cfg::Address>() );
-
-			gen.insert( access->getAddress().as<cfg::Address>() );
+//			if (access->isReference()) 
+//				for (auto& curClass : classes) 
+//					for (auto& acc : *curClass) 
+//						kill.insert( acc->getAddress().as<cfg::Address>() );
+//
+//			gen.insert( access->getAddress().as<cfg::Address>() );
 
 		};
 

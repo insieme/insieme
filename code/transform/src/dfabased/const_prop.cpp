@@ -95,27 +95,34 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 
 			auto stmtPtr = stmt.getAnalysisStatement();
 
+			// Early exit, avoid to waste cycles for extracting accesses that will not be used 
+			if (const_prop_result[block->getBlockID()].empty()) {
+				return ;
+			}
+
+			// Extract accesses within this statement 
+			auto accesses = getAccesses(
+							mgr, 
+							UnifiedAddress(cfg::Address(block,stmt_idx,core::NodeAddress(stmtPtr))), 
+							cfg->getTmpVarMap()
+						);
+
 			for (const auto& cur : const_prop_result[block->getBlockID()]) {
 
 				// if the addressed access is a constant, then store the replacement 
 				if (std::get<1>(cur).isValue()) {
-
-					// Extract accesses within this statement 
-					auto accesses = getAccesses(
-									mgr, 
-									UnifiedAddress(cfg::Address(block,stmt_idx,core::NodeAddress(stmtPtr))), 
-									cfg->getTmpVarMap()
-								);
 	
 					// get corresponding classes 
-					std::vector<AccessClassPtr> classes;
+					std::vector<AccessClassSet> classes;
 					std::transform(accesses.begin(), accesses.end(), std::back_inserter(classes), 
 						[&](const AccessPtr& cur) { return aMgr.getClassFor(cur); });
 					
 					auto accClass = std::get<0>(cur);
 
 					// find all accesses in this statement 
-					auto fit = std::find(classes.begin(), classes.end(), accClass);
+					auto fit = std::find_if(classes.begin(), classes.end(), [&](const AccessClassSet& cur) {
+							return cur.find(accClass) != cur.end();
+						});
 
 					if (fit != classes.end()) {
 
