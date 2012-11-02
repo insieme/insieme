@@ -141,7 +141,7 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 	if(CommandLineOptions::ConstantPropagation) {
 		LOG(INFO) << "Performing Constant Propagation on input program";
 		res = doConstProp(res->getNodeManager(), res);
-		// res = removeDeadVariables(res->getNodeManager(), res);
+		res = removeDeadVariables(res->getNodeManager(), res);
 		res = core::transform::simplify(res->getNodeManager(), res);
 	}
 	// done

@@ -443,8 +443,8 @@ FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 	
 	if(!semaOpt) {
 		// Try to do your best finding the semantics of this function 
-		LOG(DEBUG) << "Tried to extract semantics for unknown function: '" 
-				     << *funcLit << "' with type '" << *funcLit->getType() << "'";
+		///LOG(DEBUG) << "Tried to extract semantics for unknown function: '" 
+		///		     << *funcLit << "' with type '" << *funcLit->getType() << "'";
 
 		// Assume the function has side-effects 
 		return FunctionSema(isPure(funcLit), true, FunctionSema::Accesses());

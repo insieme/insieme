@@ -83,8 +83,12 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 				UnifiedAddress(cfg::Address(block,stmt_idx-1,expr)), 
 				getCFG().getTmpVarMap()
 			);
+
 			// for each usage of a variable add it to the gen set 
-	//		for (const auto& acc : accesses) { gen.insert( aMgr.findClass(acc) ); }
+			for (const auto& acc : accesses) { 
+				auto liveClasses = aMgr.findClass(acc);
+				std::copy(liveClasses.begin(), liveClasses.end(), std::inserter(gen, gen.begin()));
+			}
 		};
 
 
@@ -95,27 +99,31 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 								getCFG().getTmpVarMap()
 							);
 
-//			auto defClass = aMgr.findClass(defAccess);
-//			assert(defClass && "Invalid class for access. Something wrong in the extract() method");
-//
-//			AccessClassSet depClasses = defClass->getConflicting();
-//			depClasses.insert(defClass);
-//
-//			// Kill Entities 
-//			for(auto it = in.begin(), end=in.end(); it != end; ++it) {
-//				if (std::find_if( depClasses.begin(), depClasses.end(), 
-//						[&](const AccessClassPtr& cur) { 
-//							return *cur == **it; 
-//						}) != depClasses.end() ) { kill.insert( *it ); }
-//			}
-//
-//			// if the RHS is a not live variable
-//			if (in.find(defClass) == in.end()) { 
-//				// then any of the uses in the LHS are relevant 
-//				return;
-//			}
-//
-//			handle_rhs(rhs);
+			auto defClasses = aMgr.findClass(defAccess);
+			assert(!defClasses.empty() && "Invalid class for access. Something wrong in the extract() method");
+
+			AccessClassSet depClasses = getConflicting(defClasses);
+			std::copy(defClasses.begin(), defClasses.end(), std::inserter(depClasses, depClasses.begin()));
+
+			bool found = false;
+
+			// Kill Entities 
+			for(auto it = in.begin(), end=in.end(); it != end; ++it) {
+				if (std::find_if( depClasses.begin(), depClasses.end(), 
+						[&](const AccessClassPtr& cur) { return *cur == **it; }) != depClasses.end() ) { 
+							found = true; 
+							kill.insert( *it ); 
+				}
+			}
+
+			// if the LHS is a not live variable then the RHS should not be detected as a live
+			// variable 
+			if (!found) { 
+				// then any of the uses in the LHS are relevant 
+				return;
+			}
+
+			handle_rhs(rhs);
 		};
 
 
@@ -139,8 +147,10 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 					cur.getStatementAddress().as<core::ForStmtAddress>()->getDeclaration()->getVariable()
 				);
 
-//			auto accessPtr = getImmediateAccess(mgr, cfgAddr, getCFG().getTmpVarMap());
-//			gen.insert( aMgr.findClass(accessPtr) );
+			auto accessPtr = getImmediateAccess(mgr, cfgAddr, getCFG().getTmpVarMap());
+			auto liveClasses = aMgr.findClass(accessPtr);
+
+			std::copy(liveClasses.begin(), liveClasses.end(), std::inserter(gen, gen.begin()));
 
 		} else {
 

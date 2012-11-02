@@ -370,7 +370,6 @@ ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& bl
 					// Extract the reference being accessed from this argument 
 					ExpressionAddress ref = cur.first.getReference();
 
-					LOG(INFO) << ref << " " << *ref;
 					if (std::get<0>(cur.second) == Ref::DEF) {
 						handle_def( ref.as<VariableAddress>(), ExpressionAddress(), false);
 					}

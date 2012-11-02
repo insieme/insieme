@@ -64,16 +64,17 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 		// Build the CFG 
 		cfg = CFG::buildCFG(root);
 	}
+	
+	// LOG(INFO) << *cfg;
 
 	Solver<dfa::analyses::LiveVariables> s(*cfg);
 	auto&& result = s.solve();
 
 	/* print dataflow solver data */
-	//Solver<dfa::analyses::LiveVariables>::printDataflowData(std::cout, result);;
+	// Solver<dfa::analyses::LiveVariables>::printDataflowData(std::cout, result);;
 
 	AccessManager aMgr = s.getProblemInstance().getAccessManager();
-
-	// LOG(INFO) << aMgr; 
+	// LOG(INFO) << aMgr;
 
 	// For each block fo the CFG remove declaration to variables which are dead
 	auto blockVisitor = [&] (const cfg::BlockPtr& block) {
@@ -86,66 +87,68 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 		if ( dynamic_cast<const cfg::CallBlock*>(block.get()) || 
 			 dynamic_cast<const cfg::RetBlock*>(block.get()) ) { return; }
 
-//		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& stmt) {
-//		
-//			// Because of mutliple exit points in this function, we need to be sure the stmt-idx 
-//			// is updated at the end of this loob body. We solve this using a final action 
-//			FinalActions fa( [&](){ ++stmt_idx; } );
-//
-//			auto stmtAddr = stmt.getStatementAddress();
-//			bool isAssignment = false;
-//
-//			if ((stmtAddr->getNodeType() == core::NT_DeclarationStmt && (isAssignment=true)) || 
-//				(stmtAddr->getNodeType() == core::NT_CallExpr && 
-//				core::analysis::isCallOf(stmtAddr.as<core::CallExprAddress>().getAddressedNode(), gen.getRefAssign()))) 
-//			{
-//				// This block of the CFG refers to a stmt that in the original program is an
-//				// assignment stmt or a declaration stmt. 
-//				
-//				core::NodeAddress addr(stmt.getAnalysisStatement());
-//				
-//				addr = isAssignment ?
-//							addr.as<core::DeclarationStmtAddress>()->getVariable() :
-//							addr.as<core::CallExprAddress>()->getArgument(0);
-//
-//				auto classPtr = aMgr.findClass(getImmediateAccess(mgr, cfg::Address(block,stmt_idx,addr)));
-//
-//				const auto& blockResultRef = result[block->getBlockID()];
-//				
-//				if (blockResultRef.find(classPtr) != blockResultRef.end()) { return; }
-//	
-//				// FIXME: this doesn't work for context sensitive analysis 
-//				if (stmtAddr.getRootNode() != root) {
-//					// we are inside a function and we have to find the outermost lambda
-//					auto callExprAddr = core::Address<const core::Node>::find(stmtAddr.getRootNode(), root);
-//					stmtAddr = core::concat( callExprAddr, stmtAddr );
-//				}
-//
-//				if (!isAssignment) {
-//					// remove stmt
-//					replacements.insert( {stmtAddr, core::IRBuilder(mgr).getNoOp() } );
-//				}
-//
-//				else {
-//					core::IRBuilder builder(mgr);
-//					const auto& decl = stmtAddr.as<core::DeclarationStmtAddress>();
-//					core::TypePtr type = decl->getVariable()->getType();
-//					if (core::analysis::isRefType(type)) {
-//						type = core::analysis::getReferencedType(type);
-//					}
-//
-//					auto init = 
-//						builder.callExpr(type, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(type));
-//
-//					if (core::analysis::isRefType(decl->getVariable()->getType())) {
-//						init = builder.refVar(init);
-//					}
-//
-//					replacements.insert( {decl->getInitialization(), init} );
-//				}
-//
-//			}
-//		});
+		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& stmt) {
+		
+			// Because of mutliple exit points in this function, we need to be sure the stmt-idx 
+			// is updated at the end of this loob body. We solve this using a final action 
+			FinalActions fa( [&](){ ++stmt_idx; } );
+
+			auto stmtAddr = stmt.getStatementAddress();
+			bool isAssignment = false;
+
+			if ((stmtAddr->getNodeType() == core::NT_DeclarationStmt && (isAssignment=true)) || 
+				(stmtAddr->getNodeType() == core::NT_CallExpr && 
+				core::analysis::isCallOf(stmtAddr.as<core::CallExprAddress>().getAddressedNode(), gen.getRefAssign()))) 
+			{
+				// This block of the CFG refers to a stmt that in the original program is an
+				// assignment stmt or a declaration stmt. 
+				
+				core::NodeAddress addr(stmt.getAnalysisStatement());
+				
+				addr = isAssignment ?
+							addr.as<core::DeclarationStmtAddress>()->getVariable() :
+							addr.as<core::CallExprAddress>()->getArgument(0);
+
+				auto classes = aMgr.findClass(getImmediateAccess(mgr, cfg::Address(block,stmt_idx,addr)));
+
+				const auto& blockResultRef = result[block->getBlockID()];
+	
+				for (const auto& classPtr : classes) {
+					if (blockResultRef.find(classPtr) != blockResultRef.end()) { return; }
+				}
+	
+				// FIXME: this doesn't work for context sensitive analysis 
+				if (stmtAddr.getRootNode() != root) {
+					// we are inside a function and we have to find the outermost lambda
+					auto callExprAddr = core::Address<const core::Node>::find(stmtAddr.getRootNode(), root);
+					stmtAddr = core::concat( callExprAddr, stmtAddr );
+				}
+
+				if (!isAssignment) {
+					// remove stmt
+					replacements.insert( {stmtAddr, core::IRBuilder(mgr).getNoOp() } );
+				}
+
+				else {
+					core::IRBuilder builder(mgr);
+					const auto& decl = stmtAddr.as<core::DeclarationStmtAddress>();
+					core::TypePtr type = decl->getVariable()->getType();
+					if (core::analysis::isRefType(type)) {
+						type = core::analysis::getReferencedType(type);
+					}
+
+					auto init = 
+						builder.callExpr(type, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(type));
+
+					if (core::analysis::isRefType(decl->getVariable()->getType())) {
+						init = builder.refVar(init);
+					}
+
+					replacements.insert( {decl->getInitialization(), init} );
+				}
+
+			}
+		});
 	};
 
 	cfg->visitDFS(blockVisitor);
