@@ -549,16 +549,14 @@ TEST(ReachingDefinitions, VectorsNoControl) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	std::map<std::string, core::NodePtr> symbols;
-	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>, 10>>"));
-
     auto addresses = builder.parseAddresses(
 		"${"
+		"	ref<vector<int<4>, 10>> v; "
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
 		"	$v[2u]$ = i+b; "
 		"	int<4> c = *$v[2u]$;"
-		"}$", symbols
+		"}$"
     );
 	EXPECT_EQ(3u, addresses.size());
 

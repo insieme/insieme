@@ -377,14 +377,14 @@ public:
 
 	std::string visitBaseAccess(const BaseAccessPtr& access) {
 		std::ostringstream ss;
-		ss << indent() << (access->isFinal()?"F":"") 
+		ss << indent() << (access->isFinal()?"+":"") 
 			<< *access->getAddress().getAddressedNode() << "{@" << access->getAddress() << "}";
 		return ss.str();
 	}
 
 	std::string visitDeref(const DerefPtr& access) {
 		std::ostringstream ss;
-		ss << indent() << (access->isFinal()?"F":"")  << "deref:{@" << access->getAddress() << "}(";
+		ss << indent() << (access->isFinal()?"+":"")  << "deref:{@" << access->getAddress() << "}(";
 		++level;
 		ss << visit(access->getSubAccess());
 		--level;
@@ -395,7 +395,7 @@ public:
 	std::string visitMember(const MemberPtr& access) {
 		std::ostringstream ss;
 		if (access->getSubAccess()) {
-			ss << indent() << (access->isFinal()?"F":"")  << "member{@" << access->getAddress() << "}(";
+			ss << indent() << (access->isFinal()?"+":"")  << "member{@" << access->getAddress() << "}(";
 			++level;
 			ss << visit(access->getSubAccess());
 		} else {
@@ -410,7 +410,7 @@ public:
 	std::string visitSubscript(const SubscriptPtr& access) {
 		std::ostringstream ss;
 		if (access->getSubAccess()) {
-			ss << indent() << (access->isFinal()?"F":"") << "subscript:{@" << access->getAddress() << "}(";
+			ss << indent() << (access->isFinal()?"+":"") << "subscript:{@" << access->getAddress() << "}(";
 			++level;
 			ss << visit(access->getSubAccess());
 		} else {

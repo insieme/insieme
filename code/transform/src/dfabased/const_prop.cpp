@@ -129,7 +129,8 @@ core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFG
 						size_t idx = std::distance(classes.begin(), fit);
 						if (core::NodeAddress addr = accesses[idx]->getAddress().getAbsoluteAddress(cfg->getTmpVarMap())) 
 						{
-							
+	//						LOG(INFO) << addr << " " << *addr;
+
 							// Avoid ref-variables to be sobstituted by constants 
 							if (core::analysis::isRefType(addr.as<core::ExpressionAddress>()->getType())) 
 								continue;

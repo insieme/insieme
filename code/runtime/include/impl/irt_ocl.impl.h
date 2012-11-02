@@ -242,8 +242,8 @@ void irt_ocl_init_devices() {
 	MPI_Comm intercom;
 	//MPI_Init(NULL, NULL);
 	int thread_level, claimed_level;
-	MPI_Init_thread( 0, 0, MPI_THREAD_MULTIPLE, &thread_level);
-	IRT_ASSERT(MPI_THREAD_MULTIPLE == thread_level, IRT_ERR_OCL, "Error during initialization: \"This MPI version doesn't support the right threading level\"");
+	MPI_Init_thread( 0, 0, MPI_THREAD_SINGLE, &thread_level);
+	IRT_ASSERT(MPI_THREAD_SINGLE == thread_level, IRT_ERR_OCL, "Error during initialization: \"This MPI version doesn't support the right threading level\"");
 	MPI_Query_thread(&claimed_level);
 	IRT_ASSERT(claimed_level == thread_level, IRT_ERR_OCL, "Error during initialization: \"This MPI version doesn't support the right threading level\"");    
 
