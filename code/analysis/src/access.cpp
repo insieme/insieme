@@ -142,7 +142,7 @@ bool UnifiedAddress::operator==(const UnifiedAddress& other) const {
 /**
  * Get the immediate access
  */
-AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap) {
+AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap, bool final) {
 
 	NodePtr exprNode = expr.getAddressedNode();
 
@@ -155,11 +155,11 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 
 	// For cast expressions, we simply recur
 	if (exprNode->getNodeType() == NT_CastExpr)
-		return getImmediateAccess(mgr, expr.getAddressOfChild(1), tmpVarMap);
+		return getImmediateAccess(mgr, expr.getAddressOfChild(1), tmpVarMap, final);
 
 	// If this is a scalar variable, then return the access to this variable
 	if (exprNode->getNodeType() == NT_Variable) {
-		return std::make_shared<BaseAccess>(expr);
+		return std::make_shared<BaseAccess>(expr, final);
 	}
 	
 	if (exprNode->getNodeType() == NT_TupleExpr || 
@@ -176,7 +176,7 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 	if (core::analysis::isCallOf(exprNode, gen.getRefReinterpret()) ||
 		core::analysis::isCallOf(exprNode, gen.getScalarToArray())) 
 	{
-		return getImmediateAccess(mgr, expr.getAddressOfChild(2), tmpVarMap);
+		return getImmediateAccess(mgr, expr.getAddressOfChild(2), tmpVarMap, final);
 	}
 
 	// If the callexpr is not a subscript or a member access, then it means this is not
@@ -190,14 +190,14 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 		throw NotAnAccessException(toString(*callExpr));
 	}
 
-	auto subAccess = getImmediateAccess(mgr, expr.getAddressOfChild(2), tmpVarMap);
+	auto subAccess = getImmediateAccess(mgr, expr.getAddressOfChild(2), tmpVarMap, false);
 
 	
 	if (gen.isRefVar(callExpr->getFunctionExpr())) { return subAccess; }
 
 
 	if (gen.isRefDeref(callExpr->getFunctionExpr())) {
-		return std::make_shared<Deref>(expr, subAccess);
+		return std::make_shared<Deref>(expr, subAccess, final);
 	}
 
 
@@ -206,7 +206,7 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 
 		// this is a tuple access
 		if ( gen.isUnsignedInt( args[1]->getType() ) || gen.isIdentifier( args[1]->getType() ) ) {
-			return std::make_shared<Member>(expr, subAccess, args[1].as<LiteralPtr>());
+			return std::make_shared<Member>(expr, subAccess, args[1].as<LiteralPtr>(), final);
 		}
 		assert( false && "Type of member access not supported" );
 	}
@@ -237,6 +237,7 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 				return std::make_shared<Subscript>(
 						expr,
 						subAccess,
+						final,
 						core::NodeAddress(),
 						iterVec,
 						makeCombiner(utils::Constraint<polyhedral::AffineFunction>(af, utils::ConstraintType::EQ))
@@ -275,6 +276,7 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 				return std::make_shared<Subscript>(
 						expr,
 						subAccess,
+						final,
 						dom.first,
 						iterVec,
 						cloneConstraint(iterVec, dom.second) and
@@ -375,13 +377,14 @@ public:
 
 	std::string visitBaseAccess(const BaseAccessPtr& access) {
 		std::ostringstream ss;
-		ss << indent() << *access->getAddress().getAddressedNode() << "{@" << access->getAddress() << "}";
+		ss << indent() << (access->isFinal()?"F":"") 
+			<< *access->getAddress().getAddressedNode() << "{@" << access->getAddress() << "}";
 		return ss.str();
 	}
 
 	std::string visitDeref(const DerefPtr& access) {
 		std::ostringstream ss;
-		ss << indent() << "deref:{@" << access->getAddress() << "}(";
+		ss << indent() << (access->isFinal()?"F":"")  << "deref:{@" << access->getAddress() << "}(";
 		++level;
 		ss << visit(access->getSubAccess());
 		--level;
@@ -392,7 +395,7 @@ public:
 	std::string visitMember(const MemberPtr& access) {
 		std::ostringstream ss;
 		if (access->getSubAccess()) {
-			ss << indent() << "member{@" << access->getAddress() << "}(";
+			ss << indent() << (access->isFinal()?"F":"")  << "member{@" << access->getAddress() << "}(";
 			++level;
 			ss << visit(access->getSubAccess());
 		} else {
@@ -407,7 +410,7 @@ public:
 	std::string visitSubscript(const SubscriptPtr& access) {
 		std::ostringstream ss;
 		if (access->getSubAccess()) {
-			ss << indent() << "subscript:{@" << access->getAddress() << "}(";
+			ss << indent() << (access->isFinal()?"F":"") << "subscript:{@" << access->getAddress() << "}(";
 			++level;
 			ss << visit(access->getSubAccess());
 		} else {
@@ -535,9 +538,9 @@ std::ostream& AccessClass::printTo(std::ostream& out) const {
  */
 std::set<core::ExpressionAddress> extractRealAddresses(const AccessClass& cl, const TmpVarMap& map) {
 	std::set<core::ExpressionAddress> ret;
-	std::transform(cl.begin(), cl.end(), std::inserter(ret, ret.begin()), 
-			[&](const AccessPtr& cur) { 
-			 	return cur->getAddress().getAbsoluteAddress(map).as<core::ExpressionAddress>(); 
+	std::for_each(cl.begin(), cl.end(), [&](const AccessPtr& cur) { 
+				if (cur->isFinal())
+				 	ret.insert(cur->getAddress().getAbsoluteAddress(map).as<core::ExpressionAddress>()); 
 			});
 	return ret;
 }
@@ -704,7 +707,7 @@ AccessClassPtr AccessManager::addClass(AccessClassPtr parent, const AccessPtr& a
 }
 
 
-AccessClassSet AccessManager::getClassFor(const AccessPtr& access) {
+AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAccess) {
 
 	// LOG(INFO) << access;
 	AccessClassSet retClasses;
@@ -751,8 +754,8 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access) {
 
 		if (aliasedExpr.getAbsoluteAddress()) {
 			try {
-				auto aliasAccess = getImmediateAccess(potentialAlias->getNodeManager(), aliasedExpr);
-				auto clSet = getClassFor(aliasAccess);
+				auto aliasAccess = getImmediateAccess(potentialAlias->getNodeManager(), aliasedExpr, TmpVarMap(), !subAccess);
+				auto clSet = getClassFor(aliasAccess, true);
 
 				for (auto& cl : clSet) {
 					cl->storeAccess(access);
@@ -780,7 +783,7 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access) {
 
 	// Check whether this access is accessing a sublevel 
 	if (skipDeref->getType() == AccessType::AT_MEMBER || skipDeref->getType() == AccessType::AT_SUBSCRIPT) {
-		parentClasses = getClassFor( cast<AccessDecorator>(skipDeref)->getSubAccess() );
+		parentClasses = getClassFor( cast<AccessDecorator>(skipDeref)->getSubAccess(), true );
 		subLevel = cast<AccessDecorator>(skipDeref)->switchSubAccess(AccessPtr());
 	}
 
@@ -853,6 +856,7 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access) {
 							cmpAccess = std::make_shared<Subscript>(
 											cmpAccess->getAddress(),
 											cast<Subscript>(cmpAccess)->getSubAccess(),
+											cmpAccess->isFinal(),
 											cast<Subscript>(cmpAccess)->getContext(),
 											iv,
 											diffCons
@@ -872,6 +876,7 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access) {
 							auto accDecLevel = std::make_shared<Subscript>(
 											NodeAddress(),
 											AccessPtr(),
+											cmpAccess->isFinal(),
 											cast<Subscript>(cmpAccess)->getContext(),
 											iv,
 											interCons
@@ -888,6 +893,7 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access) {
 							auto diffLevel = std::make_shared<Subscript>(
 											NodeAddress(),
 											AccessPtr(),
+											cmpAccess->isFinal(),
 											cast<Subscript>(cmpAccess)->getContext(),
 											iv2,
 											diffCons

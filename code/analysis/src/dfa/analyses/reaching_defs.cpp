@@ -106,6 +106,17 @@ void definitionsToAccesses(const AnalysisDataType& data, AccessManager& aMgr) {
 	}
 }
 
+
+void collectSubClasses(AccessClassSet& classes, const AccessClassPtr& classPtr) { 
+
+	classes.insert(classPtr);
+	
+
+	
+	
+
+}
+
 std::pair<AnalysisDataType,AnalysisDataType> 
 ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
 
@@ -132,16 +143,20 @@ ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockP
 			// Get the class to which the access belongs to 
 			AccessClassSet collisionSet = mgr.getClassFor(access);
 
-	//		AccessClassSet classes = collisionClass->getConflicting();
-	//		classes.insert(collisionClass);
+			AccessClassSet subClasses;
+			for(const auto& curClass : collisionSet)  {
+				subClasses.insert(curClass);
+				addSubClasses(curClass, subClasses);
+			}
 
 			// Kill Entities 
-//			if (access->isReference()) 
-//				for (auto& curClass : classes) 
-//					for (auto& acc : *curClass) 
-//						kill.insert( acc->getAddress().as<cfg::Address>() );
-//
-//			gen.insert( access->getAddress().as<cfg::Address>() );
+			if (access->isReference()) 
+				for (auto& curClass : subClasses) 
+					for (auto& acc : *curClass) {
+						kill.insert( acc->getAddress().as<cfg::Address>() );
+					}
+
+			gen.insert( access->getAddress().as<cfg::Address>() );
 
 		};
 

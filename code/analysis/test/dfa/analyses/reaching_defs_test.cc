@@ -60,53 +60,38 @@ using namespace insieme::core;
 using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
 
+
 typedef std::set<ExpressionAddress> ExprAddrSet;
 
+//ExprAddrSet cleanup(const ExprAddrSet& addrSet) {
+//	ExprAddrSet ret;
+//	
+//	if (addrSet.empty()) { return ret; }
+//
+//	auto it = addrSet.begin(), end = addrSet.end();
+//
+//	while (it != end) {
+//		ret.insert(*it);
+//		decltype(it) refIt;
+//		while( (refIt = it) != end && (++it != end) && isChildOf(*refIt, *it) ) ; 
+//	}
+//	return ret;
+//}
 
-AccessPtr isRangeRelation(const AccessClassPtr& parent, const AccessClassPtr& thisClass) {
-
-	if (!parent) { return AccessPtr(); }
-
-	for(const auto& dep : parent->getSubClasses()) {
-		if (std::get<0>(dep) == AccessClass::DT_RANGE && 
-			*std::get<1>(dep).lock() == *thisClass) { return std::get<2>(dep);  }
+ExprAddrSet lookup_accesses(const AccessClassSet& classes, const CFGPtr& cfg) {
+	ExprAddrSet ret;
+	for (const auto& cl : classes) {
+		auto addrs = extractRealAddresses(*cl, cfg->getTmpVarMap());
+		std::copy(addrs.begin(), addrs.end(), std::inserter(ret, ret.begin()));
 	}
-	return AccessPtr();
+	return ret;
 }
 
-void lookup_accesses(std::set<NodeAddress>& addrSet, const AccessClassPtr& cl, const CFGPtr& cfg) {
 
-	auto addrs = extractRealAddresses(*cl, cfg->getTmpVarMap());
-	std::copy(addrs.begin(), addrs.end(), std::inserter(addrSet, addrSet.begin()));
-
-	auto parent = cl->getParentClass();
-	if (parent) { 
-	
-		auto range = isRangeRelation(parent, cl);
-		if ( range ) {
-			lookup_accesses(addrSet, cl->getParentClass(), cfg); 
-			return;
-		} 
-
-		// otherwise 
-		if (isRangeRelation(parent->getParentClass(), parent)) {
-			// find a child which is a level 
-			parent = parent->getParentClass();
-			for(const auto& dep : parent->getSubClasses()) {
-				if (std::get<0>(dep) == AccessClass::DT_LEVEL) 
-				{ 
-					lookup_accesses(addrSet, std::get<1>(dep).lock(), cfg);	
-					return;
-				}
-			}
-		}
-	}
-}
-
-std::set<NodeAddress> getDefinitions(
+ExprAddrSet getDefinitions(
 		const Solver<dfa::analyses::ReachingDefinitions>::CFGBlockMap& ret, 
-		const CFGPtr& cfg, 
-		const NodeAddress& use) 
+		const CFGPtr& 			cfg, 
+		const NodeAddress& 		use) 
 {
 	
 	cfg::Address addr = cfg->find(use);
@@ -120,12 +105,21 @@ std::set<NodeAddress> getDefinitions(
 
 	auto thisAccess = getImmediateAccess(use->getNodeManager(), use);
 
-	std::set<NodeAddress> addrSet;
-	lookup_accesses(addrSet, aMgr.getClassFor(thisAccess), cfg);
+	auto classes = aMgr.getClassFor(thisAccess);
+	//LOG(INFO) << aMgr;
+	//LOG(INFO) << "From access: " << classes;
 
-	aMgr.printDotGraph(std::cout);
+	// now get all the conflicting accesses 
+	auto confClasses = getConflicting(classes);
+	std::copy(classes.begin(), classes.end(), std::inserter(confClasses, confClasses.begin()));
+
+	//LOG(INFO) << "Conficting: " << confClasses;
+
+	ExprAddrSet addrSet = lookup_accesses(confClasses, cfg);
+
+	// aMgr.printDotGraph(std::cout);
 	// remove the address of the use 
-	addrSet.erase(use);
+	addrSet.erase(use.as<ExpressionAddress>());
 
 	return addrSet;
 }
@@ -485,6 +479,7 @@ TEST(ReachingDefinitions, StructMemberNested) {
 	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
 
 	auto addrSet = getDefinitions(ret, cfg, aRef);
+
 	EXPECT_EQ(1u, addrSet.size());
 
 	auto addrIt = addrSet.begin();
@@ -510,7 +505,8 @@ TEST(ReachingDefinitions, StructMemberNested2) {
 		"${"
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
-		"	$s.b.b.b$ = 3; "
+		"	$s.b.b$ = s.b.b; "
+		"	s.a = 5; "
 		"	if ( s.a <= 0 ) { "
 		"		$s.b.b.b$ = i+b; "
 		"	}"

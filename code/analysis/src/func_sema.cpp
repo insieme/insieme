@@ -370,13 +370,13 @@ const boost::optional<FunctionSemaAnnotation> FunctionSemaAnnotation::getFunctio
 
 void loadFunctionSemantics(core::NodeManager& mgr) {
 
-	LOG(DEBUG) << "Loading semantic info" << std::endl;
-
 	// check whether it has been loaded before
 	core::NodePtr flagNode = core::StringValue::get(mgr, "SemanticLoaded");
 	if (flagNode->hasAttachedValue<SemanticLoaded>()) {
 		return; 	// nothing to do any more
 	}
+
+	LOG(DEBUG) << "Loading semantic info" << std::endl;
 
 	insieme::utils::Timer t("Loading function.sema");
 	

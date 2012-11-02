@@ -144,12 +144,13 @@ enum class AccessType { AT_BASE, AT_DEREF, AT_MEMBER, AT_SUBSCRIPT };
 
 class Access { 
 
-	UnifiedAddress addr;
-	AccessType 	   type;
+	UnifiedAddress 	addr;
+	AccessType 	   	type;
+	bool 			final;
 
 public:
-	Access(const UnifiedAddress& addr, const AccessType& type) : 
-		addr(addr), type(type)  { }
+	Access(const UnifiedAddress& addr, const AccessType& type, bool final=false) : 
+		addr(addr), type(type), final(final)  { }
 
 	const UnifiedAddress& getAddress() const { return addr; }
 
@@ -160,6 +161,8 @@ public:
 	inline bool isReference() const {
 		return addr.getAddressedNode().as<core::ExpressionPtr>()->getType()->getNodeType() == core::NT_RefType; 
 	}
+
+	inline bool isFinal() const { return final; }
 
 	virtual bool isContextDependent() const { return false; }
 
@@ -179,7 +182,8 @@ public:
 class BaseAccess : public Access {
 
 public:
-	BaseAccess(const UnifiedAddress& addr) : Access(addr,AccessType::AT_BASE) { }
+	BaseAccess(const UnifiedAddress& addr, bool final=false) : 
+		Access(addr,AccessType::AT_BASE, final) { }
 
 	core::VariablePtr getVariable() const { 
 		return getAddress().getAddressedNode().as<core::VariablePtr>();
@@ -197,9 +201,10 @@ struct AccessDecorator : public Access {
 
 	AccessDecorator(const UnifiedAddress& 	addr, 
 					const AccessPtr& 		subAccess, 
-					const AccessType& 		type
+					const AccessType& 		type,
+					bool 					final = false
 	) :
-		Access(addr, type), subAccess(subAccess) { }
+		Access(addr, type, final), subAccess(subAccess) { }
 
 	const AccessPtr& getSubAccess() const { return subAccess; }
 
@@ -222,9 +227,10 @@ class Deref : public AccessDecorator {
 
 public:
 	Deref(const UnifiedAddress& 	addr, 
-		  const AccessPtr& 			subAccess
+		  const AccessPtr& 			subAccess,
+		  bool						final = false
 	) :
-		AccessDecorator(addr, subAccess, AccessType::AT_DEREF) { }
+		AccessDecorator(addr, subAccess, AccessType::AT_DEREF, final) { }
 
 	inline AccessDecoratorPtr switchSubAccess(const AccessPtr& sub) const {
 		return std::make_shared<Deref>(getAddress(), sub);
@@ -241,9 +247,10 @@ class Member: public AccessDecorator {
 public:
 	Member(const UnifiedAddress& 	addr, 
 		   const AccessPtr& 		subAccess, 
-		   const core::LiteralPtr& 	member
+		   const core::LiteralPtr& 	member,
+		   bool 					final = false
 	) :
-		AccessDecorator(addr, subAccess, AccessType::AT_MEMBER), 
+		AccessDecorator(addr, subAccess, AccessType::AT_MEMBER, final), 
 		member(member) { }
 
 	inline const core::LiteralPtr& getMember() const { return member; }
@@ -264,11 +271,12 @@ class Subscript : public AccessDecorator {
 public:
 	Subscript(const UnifiedAddress& 			addr, 
 			const AccessPtr& 					subAccess, 
+			bool								final   = false,
 			const core::NodeAddress& 			ctx 	= core::NodeAddress(),
 			const polyhedral::IterationVector& 	iterVec = polyhedral::IterationVector(), 
 			const ConstraintPtr 				range 	= ConstraintPtr()
 	) : 
-		AccessDecorator(addr, subAccess, AccessType::AT_SUBSCRIPT), 
+		AccessDecorator(addr, subAccess, AccessType::AT_SUBSCRIPT, final), 
 		ctx(ctx),
 		iv(iterVec), 
 		range( polyhedral::cloneConstraint(iv, range) ) { }
@@ -298,7 +306,7 @@ public:
 	}
 		
 	inline AccessDecoratorPtr switchSubAccess(const AccessPtr& sub) const {
-		return std::make_shared<Subscript>(getAddress(), sub, ctx, iv, range);
+		return std::make_shared<Subscript>(getAddress(), sub, false, ctx, iv, range);
 	}
 };
 
@@ -498,19 +506,6 @@ public:
 		this->parentClass = parent; 
 	}
 
-	inline AccessDecoratorPtr getParentRelationship() const {
-//		if (!parentClass.lock()) { assert(false); }
-//
-//		const auto& subClasses = parentClass.lock()->getSubClasses();
-//
-//		auto fit = std::find_if(subClasses.begin(), subClasses.end(), 
-//				[&](const Dependence& cur) { return *std::get<1>(cur).lock() == *this; });
-//
-//		assert(fit != subClasses.end());
-//
-//		return std::make_pair(std::get<0>(*fit), std::get<2>(*fit));
-	}
-
 	const AccessClassPtr getParentClass() const {
 		return parentClass.lock();
 	}
@@ -593,7 +588,7 @@ public:
 	 * An access can belong to multiple classes, therefore when we look for the class 
 	 * containing a particular access we may hit multiple classes
 	 */
-	AccessClassSet getClassFor(const AccessPtr& access);
+	AccessClassSet getClassFor(const AccessPtr& access, bool sub=false);
 
 	AccessClassSet findClass(const AccessPtr& access) const;
 
@@ -621,21 +616,31 @@ public:
 
 };
 
-AccessPtr 
-getImmediateAccess(core::NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap=TmpVarMap());
+AccessPtr getImmediateAccess(core::NodeManager& 	mgr, 
+							 const UnifiedAddress& 	expr, 
+							 const TmpVarMap& 		tmpVarMap=TmpVarMap(), 
+							 bool					final=true);
 
 
-inline AccessPtr 
-getImmediateAccess(core::NodeManager& mgr, const core::NodeAddress& expr, const TmpVarMap& tmpVarMap=TmpVarMap()) {
-	return getImmediateAccess(mgr, UnifiedAddress(expr), tmpVarMap);
+inline AccessPtr getImmediateAccess(core::NodeManager&			mgr,
+									const core::NodeAddress& 	expr, 
+									const TmpVarMap& 			tmpVarMap=TmpVarMap(),
+									bool 						final=true) 
+{
+	return getImmediateAccess(mgr, UnifiedAddress(expr), tmpVarMap, final);
 }
 
-inline AccessPtr 
-getImmediateAccess(core::NodeManager& mgr, const cfg::Address& expr, const TmpVarMap& tmpVarMap=TmpVarMap()) {
-	return getImmediateAccess(mgr, UnifiedAddress(expr), tmpVarMap);
+inline AccessPtr getImmediateAccess(core::NodeManager& 		mgr,
+								    const cfg::Address& 	expr, 
+									const TmpVarMap& 		tmpVarMap=TmpVarMap(), 
+									bool					final=true) 
+{
+	return getImmediateAccess(mgr, UnifiedAddress(expr), tmpVarMap, final);
 }
 
-std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap=TmpVarMap());
+std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, 
+								   const UnifiedAddress& expr, 
+								   const TmpVarMap& tmpVarMap=TmpVarMap());
 
 
 } } // end insieme::analysis namespace 
