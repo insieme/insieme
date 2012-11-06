@@ -284,6 +284,42 @@ namespace measure {
 		// ---- List-Aggregating expressions ---
 
 		/**
+		 *  Computes the first of quantities extracted as a list.
+		 *
+		 *  @param T the functor used to extract the list.
+		 */
+		template<typename T>
+		struct first_impl {
+			T list_extractor;
+			first_impl(T list_extractor) : list_extractor(list_extractor) {}
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				// check whether there is something
+				vector<Quantity> list = list_extractor(data, metric, region);
+				if (list.empty()) {
+					return Quantity::invalid(metric->getUnit());
+				}
+
+				// get first
+				Quantity res(0, list[0].getUnit());
+				res = list[0];
+
+				return res;
+			}
+			std::set<MetricPtr> getDependencies() const { return list_extractor.getDependencies(); };
+		};
+
+		// a specialization for metric pointer
+		template<> struct first_impl<MetricPtr> : public first_impl<list> {
+			first_impl(MetricPtr m) : first_impl<list>(list(m)) {}
+		};
+
+		/**
+		 * Since template-structs cannot be constructed nicely without specifying the template
+		 * parameters, this function is introducing the necessary automated type deduction.
+		 */
+		template<typename T> first_impl<T> first(const T& list) { return first_impl<T>(list); }
+
+		/**
 		 * Computes the sum of quantities extracted as a list.
 		 *
 		 * @param T the functor used to extract the list.
@@ -299,7 +335,7 @@ namespace measure {
 					return Quantity::invalid(metric->getUnit());
 				}
 
-				// compute average
+				// compute sum
 				Quantity res(0, list[0].getUnit());
 				for_each(list, [&](const Quantity& cur) {
 					res += cur;
