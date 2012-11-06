@@ -466,7 +466,7 @@ namespace backend {
 
 				// get size of variable part
 				auto arrayInitValue = initValue->getMembers().back()->getValue();
-				assert(core::isCallOf(arrayInitValue, LANG_BASIC.getArrayCreate1D()) && "Array not properly initialized!");
+				assert(core::analysis::isCallOf(arrayInitValue, LANG_BASIC.getArrayCreate1D()) && "Array not properly initialized!");
 				auto size = arrayInitValue.as<core::CallExprPtr>()->getArgument(1);
 
 				// add header dependencies
