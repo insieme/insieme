@@ -129,14 +129,16 @@ bool irt_rapl_is_supported() {
 
 	__asm__ __volatile__("cpuid" : "=a" (a) : "a" (0x00000001) : "ebx", "ecx", "edx");
 
-	unsigned model_number = (a>>4)&0xF; // bit 4-7
-	unsigned family_code = (a>>8)&0xF; // bit 8-11
-	unsigned extended_model = (a>>16)&0xF; // bit 16-19
+	unsigned model_number = (a>>4)&0xF; // bits 4-7
+	unsigned family_code = (a>>8)&0xF; // bits 8-11
+	unsigned extended_model = (a>>16)&0xF; // bits 16-19
 
 	if(family_code == 0x6) {
 		if(model_number == 0xA && extended_model == 0x2) // SandyBridge 32nm
 			return true;
-		if(model_number == 0xE && extended_model == 0x2) // SandyBridge EX 32nm
+		if(model_number == 0xE && extended_model == 0x2) // SandyBridge EN 32nm
+			return true;
+		if(model_number == 0xD && extended_model == 0x2) // SandyBridge EP 32nm
 			return true;
 		if(model_number == 0xA && extended_model == 0x3) // IvyBridge 22nm
 			return true;
