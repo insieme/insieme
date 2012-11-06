@@ -82,36 +82,42 @@ int32 _irt_close_msr(int32 file) {
 
 void _irt_get_rapl_energy_consumption(double *package_energy) {
 	int32 file = 0;
-	int32 numcores = irt_get_num_cpus();
 	int64 result = 0;
+	uint32 core_start = 0, core_end = irt_get_num_cpus();
 	double energy_units = -1.0;
-	double package = 0.0;
+	*package_energy = -1.0;
+	uint32 a = 0, d = 0;
 
-	for(int32 core = 0; core < numcores; ++core) {
-		if((file = _irt_open_msr(core)) < 1) {
-			*package_energy = -1.0;
-			return;
-		}
+	// ugly hack until there's runtime support for getting hw info like this:
 
-		if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) < 0) {
-			*package_energy = -1.0;
-			_irt_close_msr(file);
-			return;
-		}
+	// get the number of cores per socket (including all HT units)
+	__asm__ __volatile__("cpuid" : "=a" (a): "a" (0x4), "c" (0x0) : "ebx", "edx");
+	uint32 number_of_cores_per_socket = ((a>>26)&0x3F)+1; // just like the documentation says it...
 
-		energy_units = pow(0.5, (double)((result>>8) & 0x1F));
+	// get whether the CPU has HT unites
+	__asm__ __volatile__("cpuid" : "=d" (d): "a" (0x1), "c" (0x0) : "ebx");
+	bool hyperthreading_present = (d>>28)&0x1;
 
-		if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS)) < 0) {
-			*package_energy = -1.0;
-			_irt_close_msr(file);
-			return;
-		}
-
-		// upper 32 bit of the result are preserved, so discard them
-		package += (double) (result&0xFFFFFFFF) * energy_units;
-		_irt_close_msr(file);
+	if(hyperthreading_present) {
+		number_of_cores_per_socket /= 2;
+		core_end /= 2;
 	}
-	*package_energy = package;
+
+	// for (core 0) until (all cores excl. HT), stepsize (number of cores per socket)
+	for(uint32 core = core_start; core < (core_end/number_of_cores_per_socket); ++core) {
+		if((file = _irt_open_msr(core*number_of_cores_per_socket)) > 0) {
+			if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
+				energy_units = pow(0.5, (double)((result>>8) & 0x1F));
+				if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS)) >= 0)
+					*package_energy += (double)(result&0xFFFFFFFF) * energy_units;
+				//if((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS)) >= 0)
+				//	*package_energy += (double)(result&0xFFFFFFFF) * energy_units;
+				//if((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS)) >= 0)
+				//	*package_energy += (double)(result&0xFFFFFFFF) * energy_units;
+			}
+			_irt_close_msr(file);
+		}
+	}
 }
 
 bool irt_rapl_is_supported() {
