@@ -92,10 +92,10 @@ typedef typename ReachingDefinitions::value_type AnalysisDataType;
  */
 
 AnalysisDataType ReachingDefinitions::meet(const AnalysisDataType& lhs, const AnalysisDataType& rhs) const {
-	LOG(DEBUG) << "MEET ( " << lhs << ", " << rhs << ") -> ";
+	// LOG(DEBUG) << "MEET ( " << lhs << ", " << rhs << ") -> ";
 	AnalysisDataType ret;
 	std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
-	LOG(DEBUG) << ret;
+	// LOG(DEBUG) << ret;
 	return ret;
 }
 
@@ -107,22 +107,15 @@ void definitionsToAccesses(const AnalysisDataType& data, AccessManager& aMgr) {
 }
 
 
-void collectSubClasses(AccessClassSet& classes, const AccessClassPtr& classPtr) { 
-
-	classes.insert(classPtr);
-	
-
-	
-	
-
-}
-
 std::pair<AnalysisDataType,AnalysisDataType> 
 ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
 
 	AnalysisDataType gen, kill;
 	
 	if (block->empty()) { return {gen,kill}; }
+
+	// Get the generator 
+	const auto& basic = getCFG().getNodeManager().getLangBasic();
 
 	AccessManager mgr(&getCFG(), getCFG().getTmpVarMap());
 	definitionsToAccesses(in, mgr);
@@ -168,7 +161,7 @@ ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockP
 
 		} else if (core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(stmt)) {
 
-			if (core::analysis::isCallOf(call.getAddressedNode(), call->getNodeManager().getLangBasic().getRefAssign()) ) { 
+			if ( core::analysis::isCallOf(call.getAddressedNode(), basic.getRefAssign()) ) { 
 				handle_def( call->getArgument(0).as<core::VariableAddress>() );
 			}
 		}

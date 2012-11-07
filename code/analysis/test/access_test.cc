@@ -1027,7 +1027,6 @@ TEST(Access, CommonSubSubset) {
 		EXPECT_EQ(*cl2->getParentClass(), *cl1->getParentClass());
 
 		clSet1 = aMgr.getClassFor(rAccess1);
-		// LOG(INFO) << aMgr;
 		EXPECT_EQ(4u, aMgr.size());
 
 		// The access now has been split into 2 classes 

@@ -65,16 +65,14 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 		cfg = CFG::buildCFG(root);
 	}
 	
-	// LOG(INFO) << *cfg;
-
 	Solver<dfa::analyses::LiveVariables> s(*cfg);
 	auto&& result = s.solve();
 
 	/* print dataflow solver data */
-	// Solver<dfa::analyses::LiveVariables>::printDataflowData(std::cout, result);;
+	Solver<dfa::analyses::LiveVariables>::printDataflowData(std::cout, result);;
 
 	AccessManager aMgr = s.getProblemInstance().getAccessManager();
-	// LOG(INFO) << aMgr;
+	LOG(INFO) << aMgr;
 
 	// For each block fo the CFG remove declaration to variables which are dead
 	auto blockVisitor = [&] (const cfg::BlockPtr& block) {
@@ -154,6 +152,8 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 	cfg->visitDFS(blockVisitor);
 
 	if (replacements.empty()) { return root; }
+
+	LOG(INFO) << "**** Dead variables elimination: eliminating '" << replacements.size() << "' defintion(s)";
 
 	return core::transform::replaceAll(mgr, replacements);
 }
