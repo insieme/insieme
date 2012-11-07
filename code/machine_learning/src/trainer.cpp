@@ -573,6 +573,16 @@ void Trainer::valToOneOfN(size_t theOne, Array<double>& oneOfN){
 	oneOfN[theOne] = POS;
 }
 
+/**
+ * Generates an array where the elements form a fuzzy train vector with values between POS and NEG, depending on their measurements
+ */
+void Trainer::valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index, Array<double>& fuzzy) {
+	size_t nClasses = fuzzy.dim(0);
+
+	for(size_t i = 0; i < nClasses; ++i) {
+		fuzzy[i] = stmt->GetColumnDouble(index + i);
+	}
+}
 
 /*
  * Reads an entry for the training values form the database and appends it to the Array target in one-of-n coding
@@ -586,7 +596,9 @@ void Trainer::appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement*
 	}
 
 	if(genOut == GenNNoutput::ML_FUZZY_VECTOR) {
-		assert(false && "Not implemented yet");
+		valsToFuzzyTrainVector(stmt, queryIdx, oneOfN);
+		target.append_rows(oneOfN);
+//		assert(false && "Not implemented yet");
 	} else {
 		size_t theOne = valToClass(stmt, queryIdx, max, min);
 		valToOneOfN(theOne, oneOfN);
@@ -653,7 +665,7 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 
 	// read the maximum of the column in measurement for which to train
 	double max = 0.0, min = 0.0;
-	if(genOut != GenNNoutput::ML_KEEP_INT)
+	if(genOut != GenNNoutput::ML_KEEP_INT && genOut != GenNNoutput::ML_FUZZY_VECTOR)
 		max = getMaximum(trainForName), min = getMinimum(trainForName);
 
 	Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);

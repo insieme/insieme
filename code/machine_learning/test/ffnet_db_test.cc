@@ -721,7 +721,7 @@ TEST_F(MlTest, FuzzyTrain) {
 	// declare Machine
 	MyFFNet net = MyFFNet(nIn, nOut, con);
 	net.initWeights(-0.4, 0.4);
-/*
+
 //	std::cout << net.getInputDimension() << std::endl;
 
 	MeanSquaredError err;
@@ -737,26 +737,27 @@ TEST_F(MlTest, FuzzyTrain) {
 	rpm.init(net.getModel());
 
 	// create trainer
-	Trainer qpnn(dbPath, net, GenNNoutput::ML_FUZZY_VECTOR);
+	Trainer fuzzyNn(dbPath, net, GenNNoutput::ML_FUZZY_VECTOR);
+	fuzzyNn.setDefaultSplittingAsTarget();
 
 	std::vector<std::string> features;
 
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
-	qpnn.setStaticFeaturesByIndex(features);
+	fuzzyNn.setStaticFeaturesByIndex(features);
 
-	double error = qpnn.train(bfgs, err, 4);
+	double error = fuzzyNn.train(bfgs, err, 4);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
 
-	qpnn.saveModel("dummy");
+	fuzzyNn.saveModel("dummy");
 
 //	FFNetSource(std::cout, nIn, nOut, con, net.getWeights(), "tanh(#)", "#", 10);
 
 	// reevaluate the data on the model
-	error = qpnn.evaluateDatabase(err);
+	error = fuzzyNn.evaluateDatabase(err);
 
 	LOG(INFO) << "Error: " << error << std::endl;
-	EXPECT_LT(error, 1.0);*/
+	EXPECT_LT(error, 1.0);
 }

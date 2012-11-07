@@ -137,6 +137,14 @@ private:
 	 */
 	void valToOneOfN(size_t theOne, Array<double>& oneOfN);
 
+	/**
+	 * Generates an array where the elements form a fuzzy train vector with values between POS and NEG, depending on their measurements
+	 * @param stmt the SQLiteStatement with a prepared query to read the value from position index
+	 * @param index the index of the first measured value in the database
+     * @param oneOfN an array of nClasses size to store the fuzzy training signal
+	 */
+	void valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index, Array<double>& fuzzy);
+
 
     /**
      * puts the first numPatterns/n patterns in the first class, the second in the second etc
@@ -371,6 +379,17 @@ public:
 	 * @param targetName the name of the column in the database which holds the training target
 	 */
 	void setTargetByName(const std::string& targetName){ trainForName = targetName; }
+
+	/**
+	 * sets the default splitting values for a CPU+2GPU machine as targets. Only to be used in conjunciton
+	 * with GenNNoutput::ML_FUZZY_VECTOR
+	 */
+	void setDefaultSplittingAsTarget(){
+		assert(genOut == GenNNoutput::ML_FUZZY_VECTOR && "Fuzzy ouptut can only be used in conjunciton with GenNNoutput::ML_FUZZY_VECTOR");
+		trainForName = "s100_0_0, m.s90_10_0, m.s90_5_5, m.s80_20_0, m.s80_10_10, m.s70_30_0, m.s70_15_15, m.s60_40_0, \
+			m.s60_20_20, m.s50_50_0, m.s50_25_25, m.s40_60_0, m.s40_30_30, m.s30_70_0, m.s30_35_35, m.s20_80_0, m.s20_40_40, m.s10_90_0, m.s10_45_45, \
+			m.s0_100_0, m.s0_50_50";
+	}
 
 	/**
 	 * generates the default query, querying for all patterns which have all features set and using the column
