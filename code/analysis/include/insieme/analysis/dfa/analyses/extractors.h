@@ -73,44 +73,34 @@ extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, T& obj) {
 	std::set<AccessClassPtr> entities;
 	auto& aMgr = obj.getAccessManager();
 
-	core::NodeManager& mgr = cfg.getNodeManager();
-
 	auto collector = [&] (const cfg::BlockPtr& block) {
 		size_t stmt_idx=0;
 
-		auto storeAccess = [&](const core::ExpressionAddress& var) {
+		auto storeAccess = [&](const core::NodeAddress& var) {
+		
+			auto accesses = getAccesses(
+								var->getNodeManager(), 
+								cfg::Address(block, stmt_idx, var),
+								cfg.getTmpVarMap()
+							);
 
-			auto classes = 	
-				aMgr.getClassFor(
-					getImmediateAccess(
-							var->getNodeManager(), 
-							cfg::Address(block, stmt_idx-1, var),
-							cfg.getTmpVarMap()
-						)
-					);
-
-			std::copy(classes.begin(), classes.end(), std::inserter(entities, entities.begin()));
+			for (const auto& acc : accesses) {
+				auto classes = aMgr.getClassFor(acc);
+				std::copy(classes.begin(), classes.end(), std::inserter(entities, entities.begin()));
+			}
 		};
 
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
-			++stmt_idx;
+			// Update the stmt_idx when returning from this lambda
+			FinalActions fa([&](){ ++stmt_idx; });
 
 			auto stmt = core::NodeAddress(cur.getAnalysisStatement());
 
 			// The index access class has already been classified by the loop itself 
 			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { return; }
 
-			if (auto declStmt = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
-				storeAccess(declStmt->getVariable());
-				return;
-			}
+			storeAccess( stmt );
 
-			if(auto expr = core::dynamic_address_cast<const core::Expression>(stmt)) {
-				if (core::analysis::isCallOf(expr.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
-					storeAccess(expr.as<core::CallExprAddress>()->getArgument(0));
-					return;
-				}
-			}
 		});
 	};
 	cfg.visitDFS(collector);

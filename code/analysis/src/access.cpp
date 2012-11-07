@@ -336,8 +336,15 @@ std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress&
 			const auto& gen = callExpr->getNodeManager().getLangBasic();
 			const auto& func = callExpr->getFunctionExpr();
 
-			if (gen.isBitwiseOp(func) || gen.isCompOp(func) || 
-				gen.isArithOp(func) || gen.isRefAssign(func)) 
+			if (!gen.isBuiltIn(func) && func->getNodeType() == core::NT_Literal) {
+				// this is an external function
+				return false;
+			}
+
+			LOG(INFO) << *callExpr;
+
+			if (gen.isBitwiseOp(func) || gen.isCompOp(func) || gen.isArithOp(func) || 
+				gen.isRefAssign(func) || gen.isVarlistPack(func))
 			{
 				return false;
 			}

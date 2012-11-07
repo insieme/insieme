@@ -73,6 +73,8 @@ core::NodePtr removeDeadVariables(core::NodeManager& mgr, const core::NodePtr& r
 
 	AccessManager aMgr = s.getProblemInstance().getAccessManager();
 	LOG(INFO) << aMgr;
+	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	aMgr.printDotGraph(std::cout);
 
 	// For each block fo the CFG remove declaration to variables which are dead
 	auto blockVisitor = [&] (const cfg::BlockPtr& block) {

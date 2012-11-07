@@ -70,17 +70,19 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 	size_t stmt_idx = 0;
 	for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
 
-		core::StatementPtr stmtPtr  = cur.getAnalysisStatement();
-		core::StatementAddress stmt = core::StatementAddress(stmtPtr);
+		core::StatementPtr 		stmtPtr  = cur.getAnalysisStatement();
+		core::StatementAddress	stmt = core::StatementAddress(stmtPtr);
 
 		core::NodeManager& mgr = stmt->getNodeManager();
-
-		++stmt_idx; // because of early exit paths, we increase the counter now
+		
+		// Makes sure that whatever exit path is taken in the body of this lambda, the stmt_idx
+		// is going to be updated correctly 
+		FinalActions fa([&](){ ++stmt_idx; });
 
 		auto handle_rhs = [&](const core::ExpressionAddress& expr) {
 
 			auto accesses = getAccesses(mgr, 
-				UnifiedAddress(cfg::Address(block,stmt_idx-1,expr)), 
+				UnifiedAddress(cfg::Address(block,stmt_idx,expr)), 
 				getCFG().getTmpVarMap()
 			);
 
@@ -95,7 +97,7 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 		auto handle_def = [&](const core::ExpressionAddress& lhs, const core::ExpressionAddress& rhs) { 
 					
 			auto defAccess = getImmediateAccess(stmt->getNodeManager(), 
-								cfg::Address(block, stmt_idx-1, lhs), 
+								cfg::Address(block, stmt_idx, lhs), 
 								getCFG().getTmpVarMap()
 							);
 
@@ -137,7 +139,8 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 			if (core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign()) ) {
 				handle_def(call->getArgument(0), call->getArgument(1));
 				return;
-			} 
+			}
+
 			// function 
 			handle_rhs(call);
 
