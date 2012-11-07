@@ -65,6 +65,7 @@ enum GenNNoutput {
 	ML_MAP_FLOAT_HYBRID,
 	ML_MAP_TO_N_CLASSES,
 //	ML_COMPARE_BINARY,
+	ML_FUZZY_VECTOR,
 	size
 };
 
@@ -120,14 +121,21 @@ private:
 	double getMinimum(const std::string& param);
 
 	/**
-	 * Converts the value read from the database to an index in one of n coding, according to the policy defined in the variable genOut.
+	 * Converts the value read from the database to an index to a class, according to the policy defined in the variable genOut.
 	 * The returned should be set to POS, the rest to NEG
 	 * @param stmt the SQLiteStatement with a prepared query to read the value from position index
 	 * @param index the index of the value to be trained in the database joint table
 	 * @param max the maximum of the values in the columns. Will be ignored if genOut is set to ML_KEEP_INT
 	 * @return the index for the one of n coding of the current query
 	 */
-	size_t valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max, double min);
+	size_t valToClass(Kompex::SQLiteStatement* stmt, size_t index, double max, double min);
+
+	/**
+	 * Generates an array where the element at index is set to POS, the rest to NEG
+	 * @param theOne the index of actual class
+     * @param oneOfN an array of nClasses size, prefilled with NEG which will be set to POS at position theOne
+	 */
+	void valToOneOfN(size_t theOne, Array<double>& oneOfN);
 
 
     /**
