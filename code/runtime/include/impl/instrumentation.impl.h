@@ -755,7 +755,7 @@ void irt_inst_aggregated_data_output() {
 	if(stat_retval != 0)
 		mkdir(outputprefix, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for performance log writing: %s", strerror(errno));
+	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for efficiency log writing: %s", strerror(errno));
 
 	sprintf(outputfilename, "%s/worker_efficiency_log", outputprefix);
 

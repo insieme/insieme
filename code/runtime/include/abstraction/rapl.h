@@ -87,7 +87,7 @@
 //
 ///* PP0 RAPL Domain */
 //#define MSR_PP0_POWER_LIMIT		0x638
-//#define MSR_PP0_ENERGY_STATUS		0x639
+#define MSR_PP0_ENERGY_STATUS		0x639
 //#define MSR_PP0_POLICY			0x63A
 //#define MSR_PP0_PERF_STATUS		0x63B
 //
@@ -98,7 +98,7 @@
 //
 ///* DRAM RAPL Domain */
 //#define MSR_DRAM_POWER_LIMIT		0x618
-//#define MSR_DRAM_ENERGY_STATUS		0x619
+#define MSR_DRAM_ENERGY_STATUS		0x619
 //#define MSR_DRAM_PERF_STATUS		0x61B
 //#define MSR_DRAM_POWER_INFO		0x61C
 //
