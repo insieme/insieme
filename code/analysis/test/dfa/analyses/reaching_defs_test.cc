@@ -94,6 +94,8 @@ ExprAddrSet getDefinitions(
 		const NodeAddress& 		use) 
 {
 	
+	Solver<dfa::analyses::ReachingDefinitions>::printDataflowData(std::cout, ret);;
+	
 	cfg::Address addr = cfg->find(use);
 	auto blockID = addr.getBlock().getBlockID();
 
@@ -106,14 +108,14 @@ ExprAddrSet getDefinitions(
 	auto thisAccess = getImmediateAccess(use->getNodeManager(), use);
 
 	auto classes = aMgr.getClassFor(thisAccess);
-	//LOG(INFO) << aMgr;
-	//LOG(INFO) << "From access: " << classes;
+	LOG(INFO) << aMgr;
+	LOG(INFO) << "From access: " << classes;
 
 	// now get all the conflicting accesses 
 	auto confClasses = getConflicting(classes);
 	std::copy(classes.begin(), classes.end(), std::inserter(confClasses, confClasses.begin()));
 
-	//LOG(INFO) << "Conficting: " << confClasses;
+	LOG(INFO) << "Conficting: " << confClasses;
 
 	ExprAddrSet addrSet = lookup_accesses(confClasses, cfg);
 
@@ -121,6 +123,7 @@ ExprAddrSet getDefinitions(
 	// remove the address of the use 
 	addrSet.erase(use.as<ExpressionAddress>());
 
+	LOG(INFO) << addrSet; 
 	return addrSet;
 }
 
@@ -408,11 +411,9 @@ TEST(ReachingDefinitions, StructMemberWithControl) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	std::map<std::string, core::NodePtr> symbols;
-	symbols["s"] = builder.variable(builder.parseType("ref<struct{ int<4> a; int<4> b; }>"));
-
     auto addresses = builder.parseAddresses(
 		"${"
+		"	ref<struct{ int<4> a; int<4> b; }> s; "
 		"	int<4> i = 2; "
 		"	int<4> b = 3; "
 		"	$s.a$ = 3; "
@@ -420,7 +421,7 @@ TEST(ReachingDefinitions, StructMemberWithControl) {
 		"		$s.a$ = i+b; "
 		"	}"
 		"	int<4> c = *$s.a$;"
-		"}$", symbols
+		"}$"
     );
     EXPECT_EQ(4u, addresses.size());
 
@@ -553,6 +554,7 @@ TEST(ReachingDefinitions, VectorsNoControl) {
 		"${"
 		"	ref<vector<int<4>, 10>> v; "
 		"	int<4> i = 2; "
+		"	v[2u] = i; "
 		"	int<4> b = 3; "
 		"	$v[2u]$ = i+b; "
 		"	int<4> c = *$v[2u]$;"
@@ -561,6 +563,8 @@ TEST(ReachingDefinitions, VectorsNoControl) {
 	EXPECT_EQ(3u, addresses.size());
 
 	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	LOG(INFO) << *cfg;
 
 	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
 	auto ret = s.solve();

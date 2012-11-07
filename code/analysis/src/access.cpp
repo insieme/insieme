@@ -555,7 +555,7 @@ AccessClassSet AccessManager::findClass(const AccessPtr& access) const {
 	AccessClassSet ret;
 	for (const auto& accClass : classes) {
 		for (const auto& acc : accClass->getAccesses()) {
-			if (*acc == *access || equalPath(acc,access)) { 
+				if (*acc == *access || equalPath(acc,access)) { 
 				ret.insert( accClass );
 			}
 		}
@@ -590,117 +590,15 @@ void AccessManager::printDotGraph(std::ostream& out) const {
 }
 
 
-
-//AccessClassSet classify(AccessClassSet& 		parentClasses,  
-//						const AccessDecoratorPtr& 			subLevel, 
-//						const AccessPtr& 					currAccess) 
-//{
-//	
-//	AccessPtr skipDeref = currAccess;
-//	while (skipDeref->getType() == AccessType::AT_DEREF) {
-//		skipDeref = cast<Deref>(skipDeref)->getSubAccess();
-//	}
-//
-//	assert(skipDeref);
-//
-//	for (parentClass : parentClasses) { 
-//
-//		for(auto& dep : parentClass->getSubClasses()) {
-//			
-//			const auto& subClass  = std::get<0>(dep).lock();
-//			const auto& subAccess = std::get<1>(dep);
-//
-//			// assume that the subclasses are disjoints 
-//			if (subAccess->getType() == AccessType::AT_MEMBER) {
-//
-//				assert(skipDeref->getType() == AccessType::AT_MEMBER);
-//
-//				if (*cast<Member>(skipDeref)->getMember() == *cast<Member>(subAccess)->getMember()) {
-//					subClass->storeAccess(currAccess);
-//
-//					return std::make_tuple( depType, subClass, true );
-//				}
-//			}
-//
-		// Subscripts 
-	//	if (subAccess->getType() == AccessType::AT_SUBSCRIPT) {
-	//		
-	//		assert(skipDeref->getType() == AccessType::AT_SUBSCRIPT);
-
-	//		auto classRange = cast<Subscript>(subAccess);
-	//		auto accessRange = cast<Subscript>(skipDeref);
-
-	//		auto ctx = polyhedral::makeCtx();
-	//		auto classSet  = polyhedral::makeSet(ctx, 
-	//				classRange->getRange() ?
-	//					polyhedral::IterationDomain(classRange->getRange()) :
-	//					polyhedral::IterationDomain(classRange->getIterationVector(), false)
-	//				);
-	//		auto accessSet = polyhedral::makeSet(ctx, 
-	//					accessRange->getRange() ?
-	//					polyhedral::IterationDomain(accessRange->getRange()) :
-	//					polyhedral::IterationDomain(accessRange->getIterationVector(), false)
-	//				);
-	//		
-	//		// compute the difference, if it is empty then the two ranges are equivalent 
-	//		auto intersection = classSet * accessSet;
-	//		// LOG(INFO) << "intersection " << *intersection << " " << depType << ", " << subType; 
-
-	//		if ( !intersection->empty() ) { 
-	//			
-	//			// We hit the same class, add the access to the class  
-	//			if (subType == depType && 
-	//				*intersection == *accessSet && 
-	//				*intersection == *classSet ) 
-	//			{
-	//				subClass->storeAccess(currAccess);
-	//				return std::make_tuple( depType, subClass, true );
-	//			}
-
-	//			// We are in the case where the intersection is equal to the class set. 
-	//			// This means we have to create a new class and append the old class as a subrange 
-	//			if (depType == subType && *intersection == *classSet)  {
-	//				
-	//				// Creates a new alias class  (can't use make_shared because the constructor is private)
-	//				auto newClass = std::shared_ptr<AccessClass>(
-	//						new AccessClass(std::cref(*this), classes.size(), parent) 
-	//					);
-
-	//				newClass->storeAccess(currAccess);
-	//				classes.emplace_back( newClass );
-
-	//				newClass->addSubClass( 
-	//						std::make_tuple(AccessClass::DT_RANGE, std::get<1>(dep), std::get<2>(dep)) 
-	//					);
-
-	//				// Add the new class as direct child of the parent 
-	//				subClass->setParentClass(newClass);
-
-	//				std::get<1>(dep) = newClass;
-	//				std::get<2>(dep) = subLevel;
-
-	//				return std::make_tuple( depType, newClass, true );
-	//			} 
-
-	//					
-	//			if (*intersection == *accessSet && subType == depType) {
-	//				return classify(subClass, subLevel, AccessClass::DT_RANGE,  currAccess);
-	//			}
-	//		}
-	//	}
-//	 }
-//	}
-//	return std::make_tuple(depType, parent, false);
-
-// }
-
-AccessClassPtr AccessManager::addClass(AccessClassPtr parent, const AccessPtr& access, const AccessDecoratorPtr& dec) {
+AccessClassPtr AccessManager::addClass(AccessClassPtr parent, const AccessPtr& access, const AccessDecoratorPtr& dec, bool append_to_parent) {
 	// Creates a new alias class  (can't use make_shared because the constructor is private)
 	auto newClass = std::shared_ptr<AccessClass>(new AccessClass(std::cref(*this), classes.size(), parent));
-	newClass->storeAccess(access);
+	if (access) {
+		newClass->storeAccess(access);
+	}
 	classes.emplace_back( newClass );
 
-	if (parent) {
+	if (append_to_parent && parent) {
 		parent->addSubClass( AccessClass::Dependence( newClass, dec ) );
 	}
 	return newClass;
@@ -709,7 +607,6 @@ AccessClassPtr AccessManager::addClass(AccessClassPtr parent, const AccessPtr& a
 
 AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAccess) {
 
-	// LOG(INFO) << access;
 	AccessClassSet retClasses;
 
     /*
@@ -754,8 +651,8 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 
 		if (aliasedExpr.getAbsoluteAddress()) {
 			try {
-				auto aliasAccess = getImmediateAccess(potentialAlias->getNodeManager(), aliasedExpr, TmpVarMap(), !subAccess);
-				auto clSet = getClassFor(aliasAccess, true);
+				auto aliasAccess = getImmediateAccess(potentialAlias->getNodeManager(), aliasedExpr, TmpVarMap(), subAccess);
+				auto clSet = getClassFor(aliasAccess, subAccess);
 
 				for (auto& cl : clSet) {
 					cl->storeAccess(access);
@@ -783,14 +680,16 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 
 	// Check whether this access is accessing a sublevel 
 	if (skipDeref->getType() == AccessType::AT_MEMBER || skipDeref->getType() == AccessType::AT_SUBSCRIPT) {
-		parentClasses = getClassFor( cast<AccessDecorator>(skipDeref)->getSubAccess(), true );
+		parentClasses = getClassFor( cast<AccessDecorator>(skipDeref)->getSubAccess(), false );
 		subLevel = cast<AccessDecorator>(skipDeref)->switchSubAccess(AccessPtr());
 	}
 
 	// check if the parent class already has a child to represent this type of access
 	if (!parentClasses.empty()) {
+		assert(subLevel && "Invalid sublevel");
 
-		assert(subLevel);
+		typedef std::tuple<AccessClassPtr, AccessClassPtr, AccessDecoratorPtr> AccessInfo;
+		std::vector<AccessInfo> toAppend;
 
 		for (auto& parentClass : parentClasses) { 
 			
@@ -804,6 +703,11 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 				
 				const auto& subClass  = std::get<0>(dep).lock();
 				const auto& subAccess = std::get<1>(dep);
+				assert(subClass && subAccess);
+
+				//LOG(INFO) << subClass;
+				//LOG(INFO) << subAccess;
+				//LOG(INFO) << *this;
 
 				// assume that the subclasses are disjoints 
 				if (subAccess->getType() == AccessType::AT_MEMBER) {
@@ -842,7 +746,7 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 					
 					// compute the difference, if it is empty then the two ranges are equivalent 
 					auto intersection = classSet * accessSet;
-					// LOG(INFO) << "intersection " << *intersection << " " << depType << ", " << subType; 
+					// LOG(INFO) << "intersection " << *intersection << " " << ", "; 
 
 					if ( !intersection->empty() ) { 
 						
@@ -902,9 +806,10 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 							// modify the current access 
 							std::get<1>(dep) = diffLevel;
 
-
-							auto newClass = addClass(parentClass, access, accDecLevel);
+							auto newClass = addClass(parentClass, access, accDecLevel, false);
 							
+							toAppend.push_back( AccessInfo(newClass, parentClass, accDecLevel) );
+
 							for (auto& acc : subClass->getAccesses()) {
 								newClass->storeAccess( acc );
 							}
@@ -934,6 +839,7 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 						}
 
 						if (*intersection == *accessSet) {
+
 							splitClass();
 							classified = true;
 							continue;
@@ -948,9 +854,52 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 				}
 
 			}
+
+			if (!toAppend.empty()) {
+				for (const auto& cur : toAppend) 
+					std::get<1>(cur)->addSubClass( AccessClass::Dependence( std::get<0>(cur), std::get<2>(cur) ) );
+			}
+
 			if (!classified) {
 				// the access was not classified 
 				retClasses.insert( addClass(parentClass, access, subLevel) );
+
+				if (subLevel->getType() == AccessType::AT_SUBSCRIPT) {
+
+					// if there is an access for a subrange then we have to define a new class
+					// which contains the possible remaining accesses 
+
+					auto subAccess = cast<Subscript>(subLevel);
+
+					auto ctx = polyhedral::makeCtx();
+					auto universe = polyhedral::makeSet(ctx, 
+							polyhedral::IterationDomain(subAccess->getIterationVector())
+						);
+					auto accessSet = polyhedral::makeSet(ctx, 
+							subAccess->getRange() ?
+								polyhedral::IterationDomain(subAccess->getRange()) :
+								polyhedral::IterationDomain(subAccess->getIterationVector(), false)
+							);
+
+					polyhedral::IterationVector iv;
+					
+					auto diffCons = (universe-accessSet)->toConstraint(
+								access->getRoot().getVariable()->getNodeManager(), iv);
+
+					// Try to classify the remaining range 
+					auto accDecLevel = std::make_shared<Subscript>(
+											NodeAddress(),
+											AccessPtr(),
+											cmpAccess->isFinal(),
+											subAccess->getContext(),
+											iv,
+											diffCons
+										);
+														
+					addClass(parentClass, AccessPtr(), accDecLevel);
+							
+				}
+				
 			}
 		}
 

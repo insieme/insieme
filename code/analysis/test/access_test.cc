@@ -442,7 +442,7 @@ TEST(Access, ArrayAccess) {
 		AccessManager mgr;
 		auto clSet1 = mgr.getClassFor(access);
 
-		EXPECT_EQ(2u, mgr.size());
+		EXPECT_EQ(3u, mgr.size());
 		EXPECT_EQ(1u, clSet1.size());
 		auto cl1 = *clSet1.begin();
 
@@ -471,7 +471,7 @@ TEST(Access, ArrayAccess) {
 		AccessManager mgr;
 		auto clSet1 = mgr.getClassFor(access);
 
-		EXPECT_EQ(2u, mgr.size());
+		EXPECT_EQ(3u, mgr.size());
 		EXPECT_EQ(1u, clSet1.size());
 		
 		auto& cl1 = *clSet1.begin();
@@ -672,7 +672,7 @@ TEST(Access, ArrayAlias) {
 		AccessManager mgr(nullptr, tmpVarMap);
 		auto clSet1 = mgr.getClassFor(access);
 	
-		EXPECT_EQ(2u, mgr.size());
+		EXPECT_EQ(3u, mgr.size());
 
 		EXPECT_EQ(1u, clSet1.size());
 		auto cl1 = *clSet1.begin();
@@ -848,7 +848,7 @@ TEST(Access, CommonSubset) {
 	EXPECT_EQ(cl1, cl2);
 	EXPECT_EQ(*cl1, *cl2);
 
-	EXPECT_EQ(2u, aMgr.size());
+	EXPECT_EQ(3u, aMgr.size());
 }
 
 
@@ -911,18 +911,19 @@ TEST(Access, EmptySubset) {
 
 	AccessManager aMgr;
 	auto clSet1 = aMgr.getClassFor(rAccess1);
-	EXPECT_EQ(2u, aMgr.size());
+	EXPECT_EQ(3u, aMgr.size());
 
 	EXPECT_EQ(1u, clSet1.size());
 	auto cl1 = *clSet1.begin();
 	EXPECT_EQ(1u, cl1->getUID());
 
 	auto clSet2 = aMgr.getClassFor(rAccess2);
-	EXPECT_EQ(3u, aMgr.size());
+
+	EXPECT_EQ(4u, aMgr.size());
 	EXPECT_EQ(1u, clSet2.size());
 
 	auto cl2 = *clSet2.begin();
-	EXPECT_EQ(2u, cl2->getUID());
+	EXPECT_EQ(3u, cl2->getUID());
 
 }
 
@@ -985,7 +986,7 @@ TEST(Access, CommonSubSubset) {
 	{ 
 		AccessManager aMgr;
 		auto clSet1 = aMgr.getClassFor(rAccess2);
-		EXPECT_EQ(2u, aMgr.size());
+		EXPECT_EQ(3u, aMgr.size());
 		EXPECT_EQ(1u, clSet1.size());
 
 		auto cl1 = *clSet1.begin();
@@ -994,7 +995,7 @@ TEST(Access, CommonSubSubset) {
 
 
 		auto clSet2 = aMgr.getClassFor(rAccess1);
-		EXPECT_EQ(3u, aMgr.size());
+		EXPECT_EQ(4u, aMgr.size());
 		EXPECT_EQ(2u, clSet2.size());
 
 		auto cl2_1 = *clSet2.begin();
@@ -1002,14 +1003,14 @@ TEST(Access, CommonSubSubset) {
 		EXPECT_EQ(*cl2_1->getParentClass(), aMgr[0]);
 
 		auto cl2_2 = *(++clSet2.begin());
-		EXPECT_EQ(2u, cl2_2->getUID());
+		EXPECT_EQ(3u, cl2_2->getUID());
 		EXPECT_EQ(*cl2_2->getParentClass(), aMgr[0]);
 	}
 
 	{ 
 		AccessManager aMgr;
 		auto clSet1 = aMgr.getClassFor(rAccess1);
-		EXPECT_EQ(2u, aMgr.size());
+		EXPECT_EQ(3u, aMgr.size());
 		EXPECT_EQ(1u, clSet1.size());
 
 		auto cl1 = *clSet1.begin();
@@ -1017,22 +1018,23 @@ TEST(Access, CommonSubSubset) {
 		EXPECT_EQ(*cl1->getParentClass(), aMgr[0]);
 
 		auto clSet2 = aMgr.getClassFor(rAccess2);
-		EXPECT_EQ(3u, aMgr.size());
+		EXPECT_EQ(4u, aMgr.size());
 	
 		EXPECT_EQ(1u, clSet2.size());
 
 		auto cl2 = *clSet2.begin();
-		EXPECT_EQ(2u, cl2->getUID());
+		EXPECT_EQ(3u, cl2->getUID());
 		EXPECT_EQ(*cl2->getParentClass(), *cl1->getParentClass());
 
 		clSet1 = aMgr.getClassFor(rAccess1);
-		EXPECT_EQ(3u, aMgr.size());
+		// LOG(INFO) << aMgr;
+		EXPECT_EQ(4u, aMgr.size());
 
 		// The access now has been split into 2 classes 
 		EXPECT_EQ(2u, clSet1.size());
 
 		EXPECT_EQ(1u, (*clSet1.begin())->getUID());
-		EXPECT_EQ(2u, (*(++clSet1.begin()))->getUID());
+		EXPECT_EQ(3u, (*(++clSet1.begin()))->getUID());
 		
 	}
 }
@@ -1096,7 +1098,7 @@ TEST(Access, CommonInnerSubset) {
 	{ 
 		AccessManager aMgr;
 		auto clSet1 = aMgr.getClassFor(rAccess2);
-		EXPECT_EQ(2u, aMgr.size());
+		EXPECT_EQ(3u, aMgr.size());
 		EXPECT_EQ(1u, clSet1.size());
 
 		auto cl1 = *clSet1.begin();
@@ -1105,22 +1107,22 @@ TEST(Access, CommonInnerSubset) {
 
 
 		auto clSet2 = aMgr.getClassFor(rAccess1);
-		EXPECT_EQ(4u, aMgr.size());
+		EXPECT_EQ(5u, aMgr.size());
 		EXPECT_EQ(2u, clSet2.size());
 
 		auto cl2_1 = *clSet2.begin();
-		EXPECT_EQ(2u, cl2_1->getUID());
+		EXPECT_EQ(3u, cl2_1->getUID());
 		EXPECT_EQ(*cl2_1->getParentClass(), aMgr[0]);
 
 		auto cl2_2 = *(++clSet2.begin());
-		EXPECT_EQ(3u, cl2_2->getUID());
+		EXPECT_EQ(4u, cl2_2->getUID());
 		EXPECT_EQ(*cl2_2->getParentClass(), aMgr[0]);
 	}
 
 	{ 
 		AccessManager aMgr;
 		auto clSet1 = aMgr.getClassFor(rAccess1);
-		EXPECT_EQ(2u, aMgr.size());
+		EXPECT_EQ(3u, aMgr.size());
 		EXPECT_EQ(1u, clSet1.size());
 
 		auto cl1 = *clSet1.begin();
@@ -1128,22 +1130,22 @@ TEST(Access, CommonInnerSubset) {
 		EXPECT_EQ(*cl1->getParentClass(), aMgr[0]);
 
 		auto clSet2 = aMgr.getClassFor(rAccess2);
-		EXPECT_EQ(4u, aMgr.size());
+		EXPECT_EQ(5u, aMgr.size());
 	
 		EXPECT_EQ(2u, clSet2.size());
 
 		auto cl2 = *clSet2.begin();
-		EXPECT_EQ(2u, cl2->getUID());
+		EXPECT_EQ(3u, cl2->getUID());
 		EXPECT_EQ(*cl2->getParentClass(), *cl1->getParentClass());
 
 		clSet1 = aMgr.getClassFor(rAccess1);
-		EXPECT_EQ(4u, aMgr.size());
+		EXPECT_EQ(5u, aMgr.size());
 
 		// The access now has been split into 2 classes 
 		EXPECT_EQ(2u, clSet1.size());
 
 		EXPECT_EQ(1u, (*clSet1.begin())->getUID());
-		EXPECT_EQ(2u, (*(++clSet1.begin()))->getUID());
+		EXPECT_EQ(3u, (*(++clSet1.begin()))->getUID());
 		
 	}
 }

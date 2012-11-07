@@ -573,7 +573,8 @@ private:
 //			const AccessPtr& 					currAccess);
 
 
-	AccessClassPtr addClass(AccessClassPtr parent, const AccessPtr& access, const AccessDecoratorPtr& dec);
+	AccessClassPtr addClass(AccessClassPtr parent, const AccessPtr& access, const AccessDecoratorPtr& dec, 
+			bool append_to_parent=true);
 
 public:
 

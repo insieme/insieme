@@ -283,7 +283,7 @@ ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& bl
 		// Kill Entities 
 		for(auto it = in.begin(), end=in.end(); it != end; ++it) {
 			if (std::find_if( confClasses.begin(), confClasses.end(), [&](const AccessClassPtr& cur) { 
-						return *cur == *std::get<0>(*it); 
+						return *cur == *std::get<0>(*it);  
 					}) != confClasses.end() ) 
 			{ 
 				kill.insert( *it ); 
