@@ -40,6 +40,7 @@ def set_standard_path
     "#{$lib_dir}/ppl-latest/lib",
     "#{$lib_dir}/sqlite-latest/lib",
     "#{$lib_dir}/yaml-latest/lib",
+    "#{$lib_dir}/pm-latest/",
     ENV['LD_LIBRARY_PATH'],
   ].join(':')
 
@@ -52,8 +53,12 @@ end
 def install_gems host
   # needed ruby gems
   ENV['GEM_PATH'] = "#{$lib_dir}/gem/"
-  ENV['R_HOME'] = (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4") ? "/usr/lib64/R" : "/usr/lib/R"
-  ENV['LD_LIBRARY_PATH'] = ["RHOME/bin", ENV['LD_LIBRARY_PATH'], ].join(':')
+  if(host == "n160.intern.leo3")
+    ENV['R_HOME'] = "#{$lib_dir}/R-2.15.1"
+  else
+    ENV['R_HOME'] = (host == "mc1-ib" || host == "mc2-ib" || host == "mc3-ib" || host == "mc4-ib") ? "/usr/lib64/R" : "/usr/lib/R"
+  end
+  ENV['LD_LIBRARY_PATH'] = [ENV['R_HOME'] + "/lib/", ENV['LD_LIBRARY_PATH'], ].join(':')
   `mkdir #{$lib_dir}/gem/` if !File.directory?("#{$lib_dir}/gem/")
   gem_names = ["colorize", "sequel", "sqlite3", "rsruby"] #, "rb-libsvm"]
   gem_names.each do |name|
@@ -63,8 +68,10 @@ def install_gems host
         `gem install -i #{$lib_dir}gem sqlite3 -- --with-sqlite3-dir=#{$lib_dir}/sqlite-latest/ 2> file.tmp`
       elsif name == "rsruby"
         host = `hostname`.strip
-        if (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4")
+        if (host == "mc1-ib" || host == "mc2-ib" || host == "mc3-ib" || host == "mc4-ib")
           `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib64/R --with-R-include=/usr/include/R 2> file.tmp`
+	elsif (host == "n160.intern.leo3")
+          `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/scratch/c703489/insieme-libs/R-2.15.1/ --with-R-include=/scratch/c703489/insieme-libs/R-2.15.1/include &> file.tmp`
         elsif
           `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib/R --with-R-include=/usr/share/R/include 2> file.tmp`
         end
@@ -93,11 +100,20 @@ end
 def initialize_env
   host = `hostname`.strip
 
-  if (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4")
+  if (host == "mc1-ib" || host == "mc2-ib" || host == "mc3-ib" || host == "mc4-ib")
     $main_dir = '/software-local/insieme_build/code/'
     $lib_dir =  '/software-local/insieme-libs/'
     ENV['OPENCL_ROOT'] = '/software/AMD/AMD-APP-SDK-v2.6-RC3-lnx64/'
     ENV['LD_LIBRARY_PATH'] = ["/software/AMD/AMD-APP-SDK-v2.6-RC3-lnx64/lib/x86_64/", ENV['LD_LIBRARY_PATH'], ].join(':')
+    set_standard_path
+    ENV['CC'] = "#{$lib_dir}/gcc-latest/bin/gcc"
+  end
+
+  if (host == "n160.intern.leo3")
+    $main_dir = '/scratch/c703489/insieme_build/code/'
+    $lib_dir =  '/scratch/c703489/insieme-libs/'
+    ENV['OPENCL_ROOT'] = '/scratch/c703489/insieme-libs/opencl-latest/'
+    ENV['LD_LIBRARY_PATH'] = ["/scratch/c703489/insieme-libs/opencl-latest/lib/x86_64/", ENV['LD_LIBRARY_PATH'], ].join(':')
     set_standard_path
     ENV['CC'] = "#{$lib_dir}/gcc-latest/bin/gcc"
   end
@@ -147,6 +163,7 @@ class Test
 				SCF_NUM_integer_all_VEC_OPs_real 	SCF_COMP_scalarOPs-vectorOPs_real_sum 	SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio
 				SCF_NUM_real*_all_OPs_real	SCF_COMP_allOPs-memoryAccesses_real_2:1ratio 	SCF_NUM_loops_lambda_real
 				SCF_NUM_branches_lambda_real	SCF_NUM_barrier_Calls_real }
+#    @static_features = %w{     pca_1	pca_2	pca_3	pca_4	pca_5	pca_6 }
 
     @dynamic_features = %w{	splittable_write_transfer	unsplittable_write_transfer	splittable_read_transfer
 				unsplittable_read_transfer	size				splittable_write_transfer_per_computation
@@ -184,20 +201,20 @@ class Test
       File.delete("#{test_name}.insieme.ocl.c") if File.exist?("#{test_name}.insieme.ocl.c")
       puts " * #{test_name}".light_blue 
       puts " * Running Compiler => OCL..."
-      cmd = "#{$main_dir}/driver/main --std=c99 -I. -DINSIEME -I. -I../../ocl/common/ -I../../../code/frontend/test/inputs --opencl #{test_name}.c -b ocl:kernel.dat -o #{test_name}.insieme.ocl.c 2> file.tmp"
+      cmd = "#{$main_dir}/driver/main --std=c99 -I. -DINSIEME -I. -I../../ocl/common/ -I../../../code/frontend/test/inputs -I../../../code/frontend/test/inputs --opencl #{test_name}.c -b ocl:kernel.dat -o #{test_name}.insieme.ocl.c 2> file.tmp"
       `#{cmd}` 
       exist? "#{test_name}.insieme.ocl.c", cmd 
 
       File.delete("#{test_name}.ref") if File.exist?("#{test_name}.ref")
       puts " * Compiling C input..."
-      cmd = "$CC -fshow-column -Wall -pipe -O3 --std=c99 -I. -o #{test_name}.ref #{test_name}.c -lm -lpthread -lrt -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
+      cmd = "$CC -fshow-column -Wall -pipe -O3 --std=c99 -I. -o #{test_name}.ref #{test_name}.c -lm -lpthread -lrt -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I#{$lib_dir}/pm-latest/include -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL -L#{$lib_dir}/pm-latest/ -lPM 2> file.tmp"
       `#{cmd}` 
       exist? "#{test_name}.ref", cmd
 
       File.delete("#{test_name}.ocl.test") if File.exist?("#{test_name}.ocl.test")
       puts " * Compiling generated OCL output..."
-      cmd = "$CC -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
-      `#{cmd}` 
+      cmd = "$CC -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -DLOCAL_MODE -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I#{$lib_dir}/pm-latest/include -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL -L#{$lib_dir}/pm-latest/ -lPM 2> file.tmp"
+      `#{cmd}`
       exist? "#{test_name}.ocl.test", cmd
 
       puts " * Running input program..."
@@ -251,7 +268,7 @@ class Test
     puts "#####         " + "View Phase".light_blue + "        #####"
     puts "#####################################"
     init_db_run
-    t_run = 0; c_run = 0; m_run = 0; n_run = 0; 
+    t_run = 0; c_run = 0; m_run = 0; n_run = 0; n_energy = 0; 
     @test_names.each_with_index do |test_name, test_name_index|
       puts " * #{test_name}".green
       @sizes[test_name_index].to_a.map{ |x| 2**x }.each do |size|
@@ -263,8 +280,9 @@ class Test
           spaces = 20-split_values.size
           str = " * OpenCL program view with splitting:  #{split_values}" + (" " * spaces)
           qres = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values)
-          time_array = qres.select(:time).all.map!{|n| n[:time]}
-          #ocl_event = qres.select(:ocl_event).first[:ocl_event]
+          time_array = qres.select(:extended_time).all.map!{|n| n[:extended_time]}
+          energy_array = qres.select(:energy).all.map!{|n| n[:energy]}
+          loop_iteration_array = qres.select(:loop_iteration).all.map!{|n| n[:loop_iteration]} 
           ar_size = time_array.size
           if ar_size < @iterations
             puts ar_size != 0 ? str << "[" + "ONLY #{time_array.size} RUN".yellow + "]" : str << "[" + "NOT PRESENT".yellow + "]" 
@@ -275,17 +293,18 @@ class Test
               best_time = time_array.average
             end
             str << "[" + (time_array.average/1_000_000_000.0).round(4).to_s + "]  "
+
             not_relevant = !t_test_correct?(time_array)
             str <<  "[" + "NOT RELEVANT".red + "]" if not_relevant
-
-            #@num_devs.times do |n|
-            #  print " | #{@devices[n][0..2]} ->  "
-            #  ["WRITE", "ND", "READ"].each do |name|
-            #    perc = get_percentage n, name
-            #    print perc.to_s + "%  "
-            #  end
-            #end
-            #print "\n"
+            if energy_array.average != 0.0
+              str << " Wh [" + energy_array.average.round(6).to_s + "]"
+              if (!energy_array.collect{|x| x == energy_array.average}.all?{|x| x == true})
+                 not_relevant_energy = !t_test_correct?(energy_array)
+                 str <<  "[" + "NOT RELEVANT".red + "]" if not_relevant_energy
+                 n_energy += 1 if not_relevant_energy
+              end
+            end
+            str << " Iter [" + loop_iteration_array.average.round(5).to_s + "]" 
             puts str
             time_array.each_index{|i| puts " * " "#{i+1}: #{time_array[i]}".yellow } if not_relevant
             n_run += 1 if not_relevant
@@ -488,11 +507,18 @@ class Test
         puts " * #{test_name} - #{size}".light_blue
         @splits.each_index do |i|
           split_values = @splits[i]
-          time_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:time).all.map!{|n| n[:time]}
+          time_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:extended_time).all.map!{|n| n[:extended_time]}
+          energy_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:energy).all.map!{|n| n[:energy]}
           if time_array.size < @iterations
             (@iterations - time_array.size).times{|n| single_run datetime, test_name, size, n, i, 1}
           else
-            if !t_test_correct?(time_array) 
+            do_energy_t_test = !energy_array.collect{|x| x == energy_array.average}.all?{|x| x == true}
+            energy_t_test = false;
+            if do_energy_t_test
+				energy_t_test = !t_test_correct?(energy_array)
+            end
+
+            if ((!t_test_correct?(time_array)) || energy_t_test)
               $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).delete
               @iterations.times{|n| single_run datetime, test_name, size, n, i, 1}
             end
@@ -514,12 +540,30 @@ class Test
       @sizes[test_name_index].to_a.map{ |x| 2**x }.each do |size|
         @splits.each_index do |i|
           split_values = @splits[i]
-          time_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:time).all.map!{|n| n[:time]}
-          if !t_test_correct?(time_array)
+          time_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:extended_time).all.map!{|n| n[:extended_time]}
+          energy_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:energy).all.map!{|n| n[:energy]} 
+          loop_iteration_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:loop_iteration).all.map!{|n| n[:loop_iteration]}
+
+
+
+
+		  do_energy_t_test = !energy_array.collect{|x| x == energy_array.average}.all?{|x| x == true}
+		  energy_t_test = false;
+		  if do_energy_t_test
+   			energy_t_test = !t_test_correct?(energy_array)
+		  end
+puts t_test_correct?(time_array)
+		  if ((!t_test_correct?(time_array)) || energy_t_test)
+
+
+
+
             $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).delete
             time = time_array.median
+            energy = energy_array.median
+            loop_iteration = loop_iteration_array.median
             puts " * #{test_name}".light_blue + "  size #{size}  with splitting:  #{split_values}  => Inserting the median"
-            @iterations.times{ time += 1; $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :time => time, :timestamp => datetime) }
+            @iterations.times{ time += 1; energy += 0.000000001; $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :energy => energy, :loop_iteration => loop_iteration, :extended_time => time, :timestamp => datetime) }
           end
         end
       end
@@ -562,6 +606,25 @@ class Test
     end
   end
 
+  def delete 
+    puts "#####################################"
+    puts "#####         " + "Delete Phase".light_blue + "        #####"
+    puts "#####################################"
+    init_db_run
+    @test_names.each_with_index do |test_name, test_name_index|
+      Dir.chdir($path + test_name)
+      @sizes[test_name_index].to_a.map{ |x| 2**x }.each do |size|
+        puts " * #{test_name} - #{size}".light_blue
+        @splits.each_index do |i|
+          split_values = @splits[i]
+          $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).delete
+        end
+        puts
+      end
+    end
+    puts
+  end
+
 # utility functions
 private
   def get_devices
@@ -600,8 +663,8 @@ private
   end
 
   def get_result
-    first = `cat worker_event_log.000* | sort -k4 | grep CREATED | grep WI | head -2 | tail -1 | awk 'BEGIN { FS = "," } ; { print $4 }'`
-    last = `cat worker_event_log.000* | sort -k4 | grep FINISHED | grep WI | tail -2 | head -1 | awk 'BEGIN { FS = "," } ; { print $4 }'`
+    first = `cat worker_event_log.000* | sort -k4 -t "," | grep STARTED   | grep WI | head -2 | tail -1 | awk 'BEGIN { FS = "," } ; { print $4 }'`
+    last =  `cat worker_event_log.000* | sort -k4 -t "," | grep END_START | grep WI | tail -2 | head -1 | awk 'BEGIN { FS = "," } ; { print $4 }'`
     last.to_i - first.to_i
   end
 
@@ -615,6 +678,9 @@ private
           Fixnum   :size
           String   :split
           Bignum   :time
+          Bignum   :extended_time
+          Float    :energy
+          Bignum   :loop_iteration
           String   :worker_event
           String   :ocl_event
           DateTime :timestamp
@@ -677,22 +743,51 @@ private
   end
 
  def single_run datetime, test_name, size, n, i, print
-    `rm worker_event_log* 2> /dev/null` 
-    `rm ocl_event_log* 2> /dev/null`
-     split_values = @splits[i]
-     ENV['IRT_OCL_SPLIT_VALUES'] = split_values
-     print "\r * #{test_name}".light_blue + "  size: #{size}  iteration [#{n+1}/#{@iterations}]  split [#{i+1}/#{@splits.size}]" if print == 0
-     print "\r * #{test_name}".light_blue + "  size: #{size}  split [#{i+1}/#{@splits.size}]  iteration [#{n+1}/#{@iterations}]" if print == 1
-     `./#{test_name}.ocl.test -size #{size}`
-     worker_event = `cat worker_event_log.000* | sort -k4`
-     ocl_event = `cat ocl_event_log*`
-     time = get_result
-     $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :time => time, :worker_event => worker_event, :ocl_event => ocl_event, :timestamp => datetime)
+    `rm worker_event_log* 2> /dev/null`
+    #`rm ocl_event_log* 2> /dev/null`
+    split_values = @splits[i]
+    ENV['IRT_OCL_SPLIT_VALUES'] = split_values
+    print "\r * #{test_name}".light_blue + "  size: #{size}  iteration [#{n+1}/#{@iterations}]  split [#{i+1}/#{@splits.size}]" if print == 0
+    print "\r * #{test_name}".light_blue + "  size: #{size}  split [#{i+1}/#{@splits.size}]  iteration [#{n+1}/#{@iterations}]" if print == 1
+    `./#{test_name}.ocl.test -size #{size}`
+    worker_event = `cat worker_event_log.000* | sort -k4 -t ","`
+    #ocl_event = `cat ocl_event_log*`
+    ocl_event = ""
+    time = get_result
+    `rm worker_event_log* 2> /dev/null`
+    #`rm ocl_event_log* 2> /dev/null`
+    `rm energy.log 2> /dev/null`
+    
+    loop_iteration = 20_000_000_000/time.to_i
+    loop_iteration = 1 if loop_iteration < 1
+
+    `./#{test_name}.ocl.test -size #{size} -loop #{loop_iteration}`
+    extended_time = get_result
+    if File.exist?("energy.log")
+      energy = `cat energy.log`.to_f
+    else
+      puts "NO energy!"
+      energy = 0.0
+    end
+    `rm energy.log 2> /dev/null`
+
+    sleep(0.5)
+
+    $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :time => time, :extended_time => extended_time/loop_iteration, :energy => energy/loop_iteration, :loop_iteration => loop_iteration, :worker_event => worker_event, :ocl_event => ocl_event, :timestamp => datetime)
+    #puts
+    #puts "Time: #{time}"
+    #puts "Loop Iteration: #{loop_iteration}"
+    #puts "Extended Time: #{extended_time}"
+    #puts "Extended Energy: #{energy}"
+    #puts "Real Energy: #{energy/loop_iteration}"
+    # End
   end
 
   def t_test_correct? array
     # stat analysis
+
     r = RSRuby.instance # R in ruby
+if( array[0].class== NilClass) then return false end
     test = r.t_test(array)
     return test['p.value'] < 0.05
   end
@@ -733,7 +828,7 @@ $program = ["simple",           # 1
             "mol_dyn",          # 7
             "spmv",             # 8
             "lin_reg",          # 9 
-            "nbody",            # 10
+            "n_body",            # 10
             "k_means",          # 11
             "knn",              # 12
             "syr2k",            # 13
@@ -765,17 +860,21 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
+#test = Test.new(split, [2, 18], [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], [12..25, 12..27, 12..25, 12..27, 12..26, 12..27, 12..26, 12..23, 12..21, 12..20, 12..27, 12..25, 12..23, 12..28, 12..28, 12..24, 12..27, 12..25, 12..24, 12..26, 12..24, 12..26, 12..26, 12..19], 5) # ALL PROGRAMS
 
+#test = Test.new(split, [2, 18], [ 5, 6, 7, 8, 9, 10, 11, 12, 13,   16, 17, 18], [ 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21,  9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17 ], 5) # AL
+#test = Test.new(split, [2, 18], [1], [12..12, 12..25, 12..27, 12..26, 12..27, 12..25, 12..23, 12..28, 12..28, 12..24, 12..27, 12..25, 12..24, 12..26, 12..24, 12..26, 12..26, 12..19], 5) # ALL PROGRAMS
+
+test = Test.new(split, [2, 18], [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
 
 # run the test
-test.info
-test.compile
-test.check
+#test.info
+#test.compile
+#test.check
 #test.run
 #test.fix
 #test.fake
-#test.view
+test.view
+#test.delete
 #test.collect
 #test.evaluate :svm # or :ffnet
-
