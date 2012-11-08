@@ -50,7 +50,7 @@ OPTION("filter_cid,E",			"filter_cid",			FilterCids,		std::vector<std::string>, 
 OPTION("target_name,t",			"target_name",			TargetName,		std::string, 				"Name of the target to query form the database")
 OPTION("output_model,o",		"output_model",			OutputModel,	std::string,				"File name to store the generated model")
 OPTION("output_path,O",			"output_path",			OutputPath,		std::string,				"Path where to store the output files")
-OPTION("target_val_gen,g",      "target_value_gen",     TargetGen,      std::string,				"String that maps to an element of enum GenNNoutput")
+OPTION("target_val_gen,g",      "target_val_gen",       TargetGen,      std::string,				"String that maps to an element of enum GenNNoutput")
 #ifdef NNet
 OPTION("optimizer,m",			"optimizer",			Optimizer,		std::string,				"Optimizer to be used for the neural network")
 #endif

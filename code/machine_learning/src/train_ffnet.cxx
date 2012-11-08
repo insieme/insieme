@@ -171,7 +171,10 @@ int main(int argc, char* argv[]) {
 		delete qpnn;
 		return -1;
 	}
-	qpnn->setTargetByName(TrainCmdOptions::TargetName);
+	if(TrainCmdOptions::TargetName == "defaultSplit")
+		qpnn->setDefaultSplittingAsTarget();
+	else
+		qpnn->setTargetByName(TrainCmdOptions::TargetName);
 
 
 	OptimizerPtr optimizer = strToOptimizer(TrainCmdOptions::Optimizer, net);

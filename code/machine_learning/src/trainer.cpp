@@ -580,20 +580,20 @@ void Trainer::valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index
 	size_t nClasses = fuzzy.dim(0);
 	Array<double> values(nClasses);
 	size_t winner = 0;
-	double max = 0;
+	double min = DBL_MAX;
 
 	// read measured values form database, save winner index and it's value
 	for(size_t i = 0; i < nClasses; ++i) {
 		values(i) = stmt->GetColumnDouble(index + i);
-		if(values(i) > max) {
-			max = values(i);
+		if(values(i) < min) {
+			min = values(i);
 			winner = i;
 		}
 	}
 
 	double range = POS - NEG;
 	// upper limit for a non-NEG value
-	double limit = max * 0.70;
+	double limit = min * 1.20;
 
 	// create fuzzy vector, based on measured values
 	for(size_t i = 0; i < nClasses; ++i) {
@@ -604,13 +604,14 @@ void Trainer::valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index
 		}
 
 		// set everything below the relative limit to NEG
-		if(values(i) < limit) {
+		if(values(i) > limit) {
 			fuzzy(i) = NEG;
 			continue;
 		}
 
 		// calculate fuzzy value between POS and NEG for values between limit and max
-		fuzzy(i) = (values(i) - limit) / (max - limit);
+		fuzzy(i) = ((limit - values(i)) / (limit - min)) * range - NEG;
+
 	}
 
 }
