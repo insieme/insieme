@@ -104,7 +104,7 @@ OptimizerPtr strToOptimizer(std::string argString, MyFFNet net) {
 	}
 
 	LOG(WARNING) << "Optimizer '" << argString <<
-		"' not valid. Available optimizers are: ''CG', Quickprop[double nuP,double dMaxP]', 'BFGS', 'Rprop+', 'Rprop-'\n"
+		"' not valid. Available optimizers are: 'CG', Quickprop[double nuP,double dMaxP]', 'BFGS', 'Rprop+', 'Rprop-'\n"
 		"defaulting to CG"
 	   << std::endl;
 	return std::make_shared<CG>();
@@ -138,8 +138,7 @@ int main(int argc, char* argv[]) {
 	Trainer* qpnn;
 	// create trainer
 	try {
-		// TODO remove hard coding of keep int
-		qpnn = new Trainer(dbPath, net, GenNNoutput::ML_KEEP_INT);
+		qpnn = new Trainer(dbPath, net, strToGenNNoutput(TrainCmdOptions::TargetGen));
 	} catch(Kompex::SQLiteException& sle) {
 		LOG(ERROR) << "Cannot create trainer: \n";
 		sle.Show();

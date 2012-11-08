@@ -79,6 +79,7 @@ struct CmdOptions {
 	string databaseFile;			/* < the database file to store the extracted features. */
 	vector<string> sFeatures;		/* < a list of static features to extract. */
 //	vector<string> dFeatures;		/* < a list of dynamic features to extract. */
+	vector<string> targets;			/* < a list of names which should be used as targets. */
 	string dumpCid;					/* < the file to dump the cid of all processed codes in plain text*/
 	bool customCids;				/* < if flag is set, cids will be assigned form cidCnt to n for each code instead of using the code's hash */
 	bool recursive;                 /* < evaluate rootDir recursively and search for files named kernel.dat in the folder hierarchy */
@@ -132,6 +133,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 			("static-features,f",  bpo::value<vector<string>>(), "features to extract")
 			("default-features,F", 								 "add set of default features to extract")
 //			("dynamic-features,f", bpo::value<vector<string>>(), "features to extract")
+			("targets,t", 		   bpo::value<vector<string>>(), "add set of default features to extract")
 			("database-file,o",    bpo::value<string>(),         "the file the sqlite database will be stored, default: data.db")
 			("dump-cid,u",		   bpo::value<string>(), 		 "the file to dump the cid of all processed codes in plain text")
 			("log-level,L",        bpo::value<string>(),         "Log level: DEBUG|INFO|WARN|ERROR|FATAL")
@@ -204,6 +206,13 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	if (res.sFeatures.empty() /*&& res.dFeatures.empty()*/) {
 		LOG(ERROR) << "No features set!\n";
 		return fail;
+	}
+
+	// static targets
+	if (map.count("targets")) {
+		res.targets = map["targets"].as<vector<string>>();
+	} else { // set time as default target
+		res.targets.push_back("time");
 	}
 
 	if (map.count("custom-cids")) {
@@ -469,7 +478,7 @@ int main(int argc, char** argv) {
 
 	// create database to write the features to
 	// create and open database
-	ml::Database database(options.databaseFile, options.clear);
+	ml::Database database(options.databaseFile, options.targets, options.clear);
 
 	// vector containing the ids of all features (= hash of names) as they are inserted in the database
 	vector<int64_t> staticFeatureIds;//, dynamicFeatureIds;
