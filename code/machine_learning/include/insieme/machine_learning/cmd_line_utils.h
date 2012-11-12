@@ -195,3 +195,26 @@ public:
 #undef OPTION
 #undef INT_OPTION
 #undef REAL_OPTION
+
+#include "../include/insieme/machine_learning/trainer.h"
+using namespace insieme::ml;
+
+/**
+ *  map a string to a class of GenNNoutput
+ *  @param one of the strings keepInt, mapFloatLin, mapFloatLog, mapFloatHybrid, mapToNclasses, fuzzyVector
+ *  @return the corresponding enum
+ *
+ */
+enum GenNNoutput strToGenNNoutput(std::string argString) {
+	if(argString.empty() || argString == "keepInt") return GenNNoutput::ML_KEEP_INT;
+	if(argString == "mapFloatLin") return GenNNoutput::ML_MAP_FLOAT_LIN;
+	if(argString == "mapFloatLog") return GenNNoutput::ML_MAP_FLOAT_LOG;
+	if(argString == "mapFloatHybrid") return GenNNoutput::ML_MAP_FLOAT_HYBRID;
+	if(argString == "mapToNclasses") return GenNNoutput::ML_MAP_TO_N_CLASSES;
+	if(argString == "fuzzyVector") return GenNNoutput::ML_FUZZY_VECTOR;
+
+	LOG(WARNING) << "target_val_gen '" << argString << "' is not valid. Available options are: 'keepInt', 'mapFloatLin', 'mapFloatLog', 'mapFloatHybrid', " <<
+			"'mapToNclasses', and 'fuzzyVector'\n";
+
+	return GenNNoutput::ML_KEEP_INT;
+}

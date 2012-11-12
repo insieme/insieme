@@ -146,7 +146,7 @@ ${CUDD}: cudd_install.sh ${GCC}
 ## SHARK
 ${SHARK}: shark_install.sh ${GCC} ${BOOST} ${CMAKE}
 	@echo "#### INSTALL SHARK ${SHARK} ####"
-	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh shark_install.sh
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh shark_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## KOMPEX

@@ -58,7 +58,7 @@ namespace ml {
 #define NEG  0
 
 // enums defining how the measurement values should be mapped to the ml-algorithms output
-enum GenNNoutput {
+enum GenNNoutput : unsigned int {
 	ML_KEEP_INT,
 	ML_MAP_FLOAT_LIN,
 	ML_MAP_FLOAT_LOG,
