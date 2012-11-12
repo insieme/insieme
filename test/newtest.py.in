@@ -397,8 +397,12 @@ def runner( job ):
 		
 		m = re.match(r"^TIME\((?P<time>\d+(.\d+)?)\):MEM\((?P<mem>\d+)\)$", time_spec)
 
-		elapsed = float(m.group('time'))
-		tot_mem = int(m.group('mem'))
+		elapsed = -1
+		tot_mem = -1
+
+		if m is not None:
+			elapsed = float(m.group('time'))
+			tot_mem = int(m.group('mem'))
 
 		output = "\n".join(output.split('\n')[:-2])
 
