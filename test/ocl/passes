@@ -1,1 +1,1 @@
-^seq ocl ^mpi_ocl ^run
+^seq ocl mpi_ocl ^run
