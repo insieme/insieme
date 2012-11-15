@@ -112,6 +112,9 @@ Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 	core::NodeManager& mgr = expr->getNodeManager();
 	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
 
+	// LOG(INFO) << expr;
+	// LOG(INFO) << refs;
+
 	typedef std::set<RefPtr,comparator> RefSet;
 	RefSet ref_set;
 
@@ -144,6 +147,9 @@ Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 		// size of the displacement
 		assert(false && "Arrays with multiple displacements are not yet supported");
 	}
+	case Ref::MEMBER:
+	 return Piecewise();
+
 	default:
 		assert(false);
 	}

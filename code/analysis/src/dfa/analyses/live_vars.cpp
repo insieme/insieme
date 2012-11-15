@@ -51,8 +51,7 @@ typedef typename LiveVariables::value_type value_type;
  * LiveVariables Problem
  */
  
-value_type LiveVariables::meet(const value_type& lhs, const value_type& rhs) const 
-{
+value_type LiveVariables::meet(const value_type& lhs, const value_type& rhs) const {
 	value_type ret;
 	std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
 	return ret;
@@ -121,8 +120,7 @@ std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type&
 			// if the LHS is a not live variable then the RHS should not be detected as a live
 			// variable 
 			if (!found) { 
-				// then any of the uses in the LHS are relevant 
-				return;
+				return; // then any of the uses in the LHS are relevant 
 			}
 
 			handle_rhs(rhs);

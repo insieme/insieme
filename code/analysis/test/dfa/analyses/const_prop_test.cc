@@ -338,51 +338,9 @@ TEST(ConstantPropagation, TransitivePropagation) {
 	auto cons = find_constant_value(accClasses, consts);
 
 	EXPECT_EQ( builder.intLit(11), std::get<1>(cons).value() );
-
 }
 
-// TEST(ConstantPropagation, Aliasing) {
-// 
-// 	NodeManager mgr;
-// 	parse::IRParser parser(mgr);
-// 	IRBuilder builder(mgr);
-// 
-//     auto code = parser.parseStatement(
-// 		"{"
-// 		"	decl ref<struct<a:int<4>, b:int<4>>>:s=0;"
-// 		"	((op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>,int>)) = 5);"
-// 		"	decl ref<int<4>>:c = (op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>, int>));"
-// 		"	decl int<4>:d = (op<ref.deref>(c));"
-// 		"}"
-//     );
-// 
-//     EXPECT_TRUE(code);
-// 	CFGPtr cfg = CFG::buildCFG(code);
-// 
-// 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
-// 	auto&& ret = s.solve();
-// 
-// 	// lookup address of variable b in the last stmt
-// 	NodeAddress aRef = NodeAddress(code).getAddressOfChild(3).getAddressOfChild(1).getAddressOfChild(2);
-// 	
-// 	// Finds the CFG block containing the address of variable b
-// 	const cfg::BlockPtr& b = cfg->find(aRef);
-// 	EXPECT_EQ(2u, b->getBlockID());
-// 
-// 	auto access = getImmediateAccess(aRef.as<ExpressionAddress>());
-// 
-// 	unsigned occurrences=0;
-// 	for( auto def : ret[b->getBlockID()] ) {
-// 		if ( *std::get<0>(def).getAccessedVariable() == *aRef ) {
-// 			EXPECT_EQ(std::get<1>(def), builder.intLit(5));
-// 			occurrences++;
-// 		}
-// 	}
-// 	EXPECT_EQ(1u, occurrences);
-// 
-// }
-// 
-// 
+
 // TEST(ConstantPropagation, ArrayAlias) {
 // 
 // 	NodeManager mgr;

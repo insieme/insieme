@@ -69,3 +69,9 @@ FUNC(printf, "(ref<array<char,1>>, var_list) -> int<4>",
 // exit -- not really side effect free, but as far as the analysis is concerned it might as well be
 FUNC(exit, "(int<4>)->unit", false, NO_REF)
 
+FUNC(memcpy, "(anyref, anyref, uint<8>) -> unit",
+     true,
+	 ACCESS(RANGE_OFFSET(DEF,ARG(0),TO_PW(ARG(2)))),
+	 ACCESS(RANGE_OFFSET(USE,ARG(0),TO_PW(ARG(2)))),
+	 NO_REF);
+
