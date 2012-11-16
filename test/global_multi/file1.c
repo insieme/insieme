@@ -4,10 +4,10 @@
 
 int var1 = 5;
 
-static int func() {
-	static int var1 = 1;
+int func() {
+	static int var0 = 1;
 
-	return var1++;
+	return var0++;
 }
 
 int main(int argc, char* argv[]) {

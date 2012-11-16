@@ -1277,23 +1277,3 @@ TEST(Access, MultipleAccessesVector2) {
 	EXPECT_EQ(addresses[4], accesses[2]->getAddress());
 }
 
-//
-//TEST(Access, Tuple) {
-//
-//	NodeManager mgr;
-//	IRBuilder builder(mgr);
-//
-//	{	
-////		auto addresses = builder.parseAddresses(
-////			"${ "
-////			"	(int<4>) v = $(2)$;"
-////			"}$"
-////		);
-////		EXPECT_EQ(2u, addresses.size());
-////
-////		auto access = getImmediateAccess(  mgr, addresses[1] );
-////		LOG(INFO) << access;
-//
-//	}
-//}
-

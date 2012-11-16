@@ -1,9 +1,9 @@
 
-extern var1;
+extern int var1;
 
 int func2() {
-	static int var1 = 0;
-	return ++var1;
+	static int var0 = 0;
+	return ++var0;
 }
 
 static int __func3() {

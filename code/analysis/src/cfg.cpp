@@ -709,7 +709,10 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 
 		if (isLambda) { subExprMod = storeTemp(subExpr).second; }
 
-		blockMgr->appendElement( cfg::Element( assignTemp(castExpr,subExprMod), castExpr) );
+		StatementPtr stmtPtr = assignTemp(castExpr, subExprMod);
+		auto diff = DeclarationStmtAddress( stmtPtr.as<DeclarationStmtPtr>() )->getInitialization();
+
+		blockMgr->appendElement( cfg::Element(stmtPtr, castExpr, diff) );
 		append();
 
 		if (isLambda) { visit(subExpr); return; }
