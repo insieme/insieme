@@ -71,7 +71,7 @@ namespace ml {
 #define GL 12.0 // 120 -> 3620+
 #define TP 0.05 // 0.05 -> 1024; 0.01 -> 3660 +; 0.005 -> 5000+
 #define PQ 21.0 // 15 -> 1880; 500 -> 3574; 1000 -> 3622; 1500 -> 5000+
-#define UP 5 // 50 -> 5000+; 5 -> 600
+#define UP 8 // 50 -> 5000+; 5 -> 600
 
 namespace {
 /*
@@ -579,8 +579,8 @@ void Trainer::valToOneOfN(size_t theOne, Array<double>& oneOfN){
 void Trainer::valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index, Array<double>& fuzzy) {
 	size_t nClasses = fuzzy.dim(0);
 	Array<double> values(nClasses);
-	size_t winner = 0;
-	double min = DBL_MAX;
+	size_t winner = 0, looser = 0;
+	double min = DBL_MAX, max = 0;
 
 	// read measured values form database, save winner index and it's value
 	for(size_t i = 0; i < nClasses; ++i) {
@@ -589,11 +589,15 @@ void Trainer::valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index
 			min = values(i);
 			winner = i;
 		}
+		if(values(i) > max) {
+			max = values(i);
+			looser = i;
+		}
 	}
 
 	double range = POS - NEG;
 	// upper limit for a non-NEG value
-	double limit = min * 1.20;
+	double limit = min * 1.1;
 
 	// create fuzzy vector, based on measured values
 	for(size_t i = 0; i < nClasses; ++i) {
@@ -602,15 +606,24 @@ void Trainer::valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index
 			fuzzy(i) = POS;
 			continue;
 		}
-
-		// set everything below the relative limit to NEG
-		if(values(i) > limit) {
+		if(i == looser && false) {
 			fuzzy(i) = NEG;
 			continue;
 		}
 
+		if(values(i) > min * 10) {
+			fuzzy(i) = fmax(((values(i) - min * 5) / (min * 10 - min * 5)) * -1, NEG);
+			continue;
+		}
+
+		// set everything below the relative limit to NEG
+		if(values(i) > limit) {
+			fuzzy(i) = 0;
+			continue;
+		}
+
 		// calculate fuzzy value between POS and NEG for values between limit and max
-		fuzzy(i) = ((limit - values(i)) / (limit - min)) * range - NEG;
+		fuzzy(i) = ((limit - values(i)) / (limit - min));// * range - NEG;
 
 	}
 
