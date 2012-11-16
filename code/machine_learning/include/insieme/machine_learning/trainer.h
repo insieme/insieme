@@ -55,7 +55,7 @@ namespace ml {
 #define TRAINING_OUTPUT false
 
 #define POS  1
-#define NEG  0
+#define NEG -1
 
 // enums defining how the measurement values should be mapped to the ml-algorithms output
 enum GenNNoutput : unsigned int {
