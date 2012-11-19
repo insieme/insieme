@@ -224,8 +224,14 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 			core::Variable::get(mgr, gen.getUInt8(), std::numeric_limits<unsigned int>::max());
 
 		try {
+
+			// the access function is not a constant but a function
+			auto idxExpr = expr.getAddressOfChild(3);
+			auto idxExprAddr = idxExpr.getAbsoluteAddress(tmpVarMap).as<core::ExpressionAddress>();
+
 			// Extract the formula from the argument 1
-			arithmetic::Formula f = arithmetic::toFormula( args[1] );
+			arithmetic::Formula f = arithmetic::toFormula( idxExprAddr.getAddressedNode() );
+
 			if (f.isConstant()) {
 
 				polyhedral::IterationVector iterVec;
@@ -244,24 +250,14 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 					);
 			}
 
-			// the access function is not a constant but a function
-			auto idxExpr = expr.getAddressOfChild(3);
-			auto idxExprAddr = idxExpr.getAbsoluteAddress(tmpVarMap).as<core::ExpressionAddress>();
-			
-			if ( VariablePtr var = core::dynamic_pointer_cast<const Variable>( idxExprAddr.getAddressedNode() ) ) {
-				// if the index expression is a single variable we may be in the case where this
-				// variable is an alias for an other expression
-				if ( ExpressionAddress aliasExpr = tmpVarMap.getMappedExpr( var ) ) {
-					// If this was an alias, use the aliased expression as array access
-					idxExprAddr = aliasExpr;
-				}
-			}
-
 			auto dom = polyhedral::getVariableDomain(idxExprAddr);
 			if (dom.first) {
 
 				const polyhedral::IterationVector& oldIter =
 					dom.first.getAnnotation(polyhedral::scop::ScopRegion::KEY)->getIterationVector();
+
+
+				LOG(INFO) << *dom.second;
 
 				polyhedral::IterationVector iterVec;
 
@@ -272,6 +268,8 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 				iterVec.add( polyhedral::Iterator(idxVar) );
 
 				polyhedral::AffineFunction af(iterVec, core::arithmetic::Formula(idxVar) - f);
+				
+				LOG(INFO) << af;
 
 				return std::make_shared<Subscript>(
 						expr,
@@ -660,14 +658,12 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 				aliasedExpr = cfg->find(aliasedExpr.getAbsoluteAddress());
 			}
 		}
+
 		if (aliasedExpr.getAbsoluteAddress()) {
 			try {
 				auto aliasAccess = getImmediateAccess(potentialAlias->getNodeManager(), aliasedExpr, TmpVarMap(), subAccess);
 				auto clSet = getClassFor(aliasAccess, subAccess);
-
-				for (auto& cl : clSet) {
-					cl->storeAccess(access);
-				}
+				for (auto& cl : clSet) { cl->storeAccess(access); }
 
 				return clSet;
 			} catch (NotAnAccessException&& e) { }
@@ -726,6 +722,7 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 					assert(skipDeref->getType() == AccessType::AT_MEMBER);
 
 					if (*cast<Member>(skipDeref)->getMember() == *cast<Member>(subAccess)->getMember()) {
+
 						subClass->storeAccess(access);
 						retClasses.insert( subClass );
 						classified = true;
@@ -745,6 +742,7 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 					if (accessRange->isContextDependent()) {
 						// classfy it with the parent 
 						assert(parentClass && "parent class must be valid");
+						LOG(INFO) << "NOCTX";
 						parentClass->storeAccess(access);
 						retClasses.insert( parentClass );
 						classified = true;
@@ -766,7 +764,7 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 					
 					// compute the difference, if it is empty then the two ranges are equivalent 
 					auto intersection = classSet * accessSet;
-					// LOG(INFO) << "intersection " << *intersection << " " << ", "; 
+					LOG(INFO) << "intersection " << *intersection << " " << ", "; 
 
 					if ( !intersection->empty() ) { 
 						
@@ -919,7 +917,6 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 					addClass(parentClass, AccessPtr(), accDecLevel);
 							
 				}
-				
 			}
 		}
 
