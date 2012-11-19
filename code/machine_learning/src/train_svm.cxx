@@ -101,8 +101,6 @@ KernelFunctionPtr strToKernel(std::string argString) {
 
 
 int main(int argc, char* argv[]) {
-//TODO add flag for output class generation, at the moment only keepInt is needed
-
 	TrainCmdOptions::Parse(argc, argv);
 
 	const std::string dbPath(TrainCmdOptions::DataBase != std::string() ? TrainCmdOptions::DataBase : std::string("linear.db"));
@@ -127,8 +125,7 @@ int main(int argc, char* argv[]) {
 	Trainer* svmTrainer;
 	// create trainer
 	try {
-		// TODO remove hard coding of keep int
-		svmTrainer = new Trainer(dbPath, svm, GenNNoutput::ML_KEEP_INT);
+		svmTrainer = new Trainer(dbPath, svm, strToGenNNoutput(TrainCmdOptions::TargetGen));
 	} catch(Kompex::SQLiteException& sle) {
 		LOG(ERROR) << "Cannot create trainer: \n";
 		sle.Show();

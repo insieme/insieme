@@ -115,7 +115,9 @@ public:
 
 protected:
 	const CFG& cfg;
+	
 	extract_type extracted;
+
 	std::shared_ptr<LowerSemilattice<container_type>> lattice_ptr;
 };
 

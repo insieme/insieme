@@ -341,8 +341,6 @@ std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress&
 				return false;
 			}
 
-			LOG(INFO) << *callExpr;
-
 			if (gen.isBitwiseOp(func) || gen.isCompOp(func) || gen.isArithOp(func) || 
 				gen.isRefAssign(func) || gen.isVarlistPack(func))
 			{
@@ -653,9 +651,15 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 		UnifiedAddress aliasedExpr(tmpVarMap.getMappedExpr( potentialAlias ));
 
 		if (aliasedExpr.getAbsoluteAddress() && cfg) {
-			aliasedExpr = cfg->find(aliasedExpr.getAbsoluteAddress());
+			
+			if (aliasedExpr.getAddressedNode()->getNodeType() == core::NT_CastExpr) {
+				// If this is a cast expression we consider it as a no-op, therefore 
+				// we forward the the alias through the casted expression 
+				aliasedExpr = aliasedExpr.getAddressOfChild(1);
+			} else {
+				aliasedExpr = cfg->find(aliasedExpr.getAbsoluteAddress());
+			}
 		}
-
 		if (aliasedExpr.getAbsoluteAddress()) {
 			try {
 				auto aliasAccess = getImmediateAccess(potentialAlias->getNodeManager(), aliasedExpr, TmpVarMap(), subAccess);
@@ -737,6 +741,15 @@ AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAcces
 
 					auto classRange = cast<Subscript>(subAccess);
 					auto accessRange = cast<Subscript>(cmpAccess);
+
+					if (accessRange->isContextDependent()) {
+						// classfy it with the parent 
+						assert(parentClass && "parent class must be valid");
+						parentClass->storeAccess(access);
+						retClasses.insert( parentClass );
+						classified = true;
+						break;
+					}
 
 					// Create a polyhedral context so that we can work with sets 
 					auto ctx = polyhedral::makeCtx();

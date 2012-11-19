@@ -52,7 +52,7 @@ end
 def install_gems host
   # needed ruby gems
   ENV['GEM_PATH'] = "#{$lib_dir}/gem/"
-  ENV['R_HOME'] = (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4") ? "/usr/lib64/R" : "/usr/lib/R"
+  ENV['R_HOME'] = (host == "mc1-ib" || host == "mc2-ib" || host == "mc3-ib" || host == "mc4-ib") ? "/usr/lib64/R" : "/usr/lib/R"
   ENV['LD_LIBRARY_PATH'] = ["RHOME/bin", ENV['LD_LIBRARY_PATH'], ].join(':')
   `mkdir #{$lib_dir}/gem/` if !File.directory?("#{$lib_dir}/gem/")
   gem_names = ["colorize", "sequel", "sqlite3", "rsruby"] #, "rb-libsvm"]
@@ -63,7 +63,7 @@ def install_gems host
         `gem install -i #{$lib_dir}gem sqlite3 -- --with-sqlite3-dir=#{$lib_dir}/sqlite-latest/ 2> file.tmp`
       elsif name == "rsruby"
         host = `hostname`.strip
-        if (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4")
+        if (host == "mc1-ib" || host == "mc2-ib" || host == "mc3-ib" || host == "mc4-ib")
           `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib64/R --with-R-include=/usr/include/R 2> file.tmp`
         elsif
           `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib/R --with-R-include=/usr/share/R/include 2> file.tmp`
@@ -93,7 +93,7 @@ end
 def initialize_env
   host = `hostname`.strip
 
-  if (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4")
+  if (host == "mc1-ib" || host == "mc2-ib" || host == "mc3-ib" || host == "mc4-ib")
     $main_dir = '/software-local/insieme_build/code/'
     $lib_dir =  '/software-local/insieme-libs/'
     ENV['OPENCL_ROOT'] = '/software/AMD/AMD-APP-SDK-v2.6-RC3-lnx64/'
@@ -325,6 +325,7 @@ class Test
       end
       feat = @static_features.map{|f| "-s" + f }.join(" ") + " " + @dynamic_features.map{|f| "-d" + f}.join(" ")
       cmd = "#{$main_dir}/machine_learning/train_#{type.to_s} -b#{$path}/database/#{$db_ml_name} -ttime #{feat} -n21 -o#{type.to_s + test_name_id.to_s} -e#{test_name_id.to_s} 2> file.tmp"
+
       `#{cmd}`
       exist? "#{type.to_s + test_name_id.to_s}.fnp", cmd
 
@@ -539,24 +540,35 @@ class Test
       Dir.chdir($path + test_name)
       # with -c create a clean database every time... change it
       test_name_id = $program.index(test_name) + 1
+    
+      colNames = [];
+      $split.each do |split|;
+      	percentSplit = split[@num_devs-1].scan(/\d+\.\d+/).map {|ss| (ss.to_f*100).to_i }
+      	colNames << ("s" + percentSplit.join("_"))
+      end
+
+      flagsForAllSplittingColumns = "-t " + colNames.join(" -t ")
 
       feat = @static_features.map{|f| "-f" + f }.join(" ")
-      cmd = "#{$main_dir}/driver/genDB kernel.dat -C #{test_name_id} #{feat} -o #{$path}/database/#{$db_ml_name} 2> file.tmp"
+      cmd = "#{$main_dir}/driver/genDB kernel.dat -C #{test_name_id} #{feat} -o #{$path}/database/#{$db_ml_name} -t time " + flagsForAllSplittingColumns
       `#{cmd}`
       exist? "kernel.dat", cmd
 
       @sizes[test_name_index].to_a.map{ |x| 2**x }.each do |size|
+	    avgTimeArray = []
         best_split = 0; best_time = 0;
         @splits.each_index do |i| 
           split_values = @splits[i]
           time_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:time).all.map!{|n| n[:time]}
-          if best_time > time_array.average || best_time == 0
+          average = time_array.average
+          if best_time > average || best_time == 0
             best_split = i 
-            best_time = time_array.average
+            best_time = average
           end 
+          avgTimeArray << average
         end 
         #update db
-        update_features_db_ml size, best_split, test_name
+        update_features_db_ml size, best_split, test_name, colNames, avgTimeArray
       end
       puts
     end
@@ -634,7 +646,7 @@ private
     end
   end
 
-  def update_features_db_ml size, best_split, test_name
+  def update_features_db_ml size, best_split, test_name, colNames, time_array
     print " * Extracting the dynamic Features for size #{size} "
     # generate the dynamic features name if not in the DB
     @dynamic_features.each do |feature|
@@ -672,7 +684,17 @@ private
       fid =  $table_dynamic.filter(:name => name).select(:id).single_value
       $table_setup.insert(:sid => sid, :fid => fid, :value => value)
     end
-    $table_measurement.insert(:cid => cid, :sid => sid, :time => best_split)
+    
+    measurementInsert = " $table_measurement.insert(:cid => cid, :sid => sid, :time => best_split "
+
+    colNames.each_index do |i|
+      measurementInsert += ", :" + colNames[i].to_s + " => " + time_array[i].to_s
+    end
+    measurementInsert += ")"
+    
+    eval measurementInsert
+#    $table_measurement.insert(:cid => cid, :sid => sid, :time => best_split, colNames[0].intern => 8)
+    
     puts "\t [" + "DONE".green + "]"
   end
 
@@ -765,13 +787,14 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
+#test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
 
+test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) 
 
 # run the test
-test.info
-test.compile
-test.check
+#test.info
+#test.compile
+#test.check
 #test.run
 #test.fix
 #test.fake
