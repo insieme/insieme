@@ -293,6 +293,14 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_affinity_init_physical_mapping(&irt_g_affinity_physical_mapping);
 	irt_affinity_policy aff_policy = irt_load_affinity_from_env();
 
+	// debug output for frequency setting, needs to be moved
+	char cpu_freq_output[64];
+	if (getenv(IRT_CPU_FREQUENCY))
+		sprintf(cpu_freq_output, "set, %s", getenv(IRT_CPU_FREQUENCY));
+	else
+		sprintf(cpu_freq_output, "not set, %u", _irt_cpu_freq_read("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"));
+	irt_log_setting_s("IRT_CPU_FREQUENCY", cpu_freq_output);
+
 	// initialize workers
 	static irt_worker_init_signal signal;
 	signal.init_count = 0;

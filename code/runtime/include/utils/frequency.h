@@ -81,7 +81,7 @@ int irt_cpu_freq_get_available_frequencies_core(irt_worker* worker, unsigned int
 	(*frequencies) = (unsigned int*)malloc(counter*sizeof(unsigned int));
 
 	for(unsigned int j = 0; j < counter; ++j)
-		(*frequencies)[j] = frequencies_temp[j];
+		(*frequencies)[j] = frequencies_temp[j]/1000;
 
 	fclose(file);
 
@@ -97,12 +97,13 @@ int _irt_cpu_freq_write(const char* path_to_cpufreq, const unsigned int frequenc
 	FILE* file = fopen(path_to_cpufreq, "w");
 
 	if(file == NULL) {
-		IRT_DEBUG("Instrumentation: Unable to open frequency file for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to open frequency file %s for writing, reason: %s\n", path_to_cpufreq, strerror(errno));
 		return -2;
 	}
 
-	if((retval = fprintf(file, "%u\n", frequency) < 1)) {
-		IRT_DEBUG("Instrumentation: Unable to write frequency for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
+	// frequency is given in MHz, not KHz...
+	if((retval = fprintf(file, "%u\n", frequency*1000) < 1)) {
+		IRT_DEBUG("Instrumentation: Unable to write frequency to file %s, reason: %s\n", path_to_cpufreq, strerror(errno));
 		fclose(file);
 		return -1;
 	}
@@ -124,19 +125,20 @@ int _irt_cpu_freq_read(const char* path_to_cpufreq) {
 	FILE* file = fopen(path_to_cpufreq, "r");
 
 	if(file == NULL) {
-		IRT_DEBUG("Instrumentation: Unable to open frequency file for writing for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to open frequency file %s for reading, reason: %s\n", path_to_cpufreq, strerror(errno));
 		return -2;
 	}
 
 	if((retval = fscanf(file, "%u", &temp)) < 1) {
-		IRT_DEBUG("Instrumentation: Unable to read frequency for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to read frequency from file %s, reason: %s\n", path_to_cpufreq, strerror(errno));
 		fclose(file);
 		return -1;
 	}
 
 	fclose(file);
 
-	return temp;
+	// returning MHz here, not KHz......
+	return temp/1000;
 }
 
 /*

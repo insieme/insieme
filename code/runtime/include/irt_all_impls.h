@@ -52,6 +52,7 @@
 #include "wi_implementation.h"
 #include "utils/timing.h"
 #include "utils/impl/timing.impl.h"
+#include "utils/frequency.h"
 
 #ifndef IRT_MIN_MODE
 	#include "impl/irt_mqueue.impl.h"	
