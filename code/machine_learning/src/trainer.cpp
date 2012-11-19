@@ -39,6 +39,7 @@
 #include <iostream>
 #include <algorithm>
 #include <fstream>
+#include <float.h>
 
 #include "ReClaM/ValidationError.h"
 #include "ReClaM/EarlyStopping.h"
