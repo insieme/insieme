@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <unistd.h>
+
 static uint32 __irt_g_chached_cpu_count = 0xFFFFFFFF;
 
 uint32 irt_get_num_cpus() {

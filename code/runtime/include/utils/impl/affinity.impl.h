@@ -157,8 +157,8 @@ irt_affinity_policy irt_load_affinity_from_env() {
 			irt_throw_string_error(IRT_ERR_INIT, "Unknown affinity policy type: %s", tok);
 		}
 	} else {
-		irt_log_setting_s("IRT_AFFINTIY_POLICY", "IRT_AFFINITY_NONE");
-		policy.type = IRT_AFFINITY_NONE;
+		irt_log_setting_s("IRT_AFFINTIY_POLICY", "IRT_AFFINITY_FILL");
+		policy.type = IRT_AFFINITY_FILL;
 	}
 	return policy;
 }
