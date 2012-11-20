@@ -269,6 +269,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
 	signal(SIGTERM, &irt_term_handler);
 	signal(SIGINT, &irt_term_handler);
+	signal(SIGSEGV, &irt_term_handler);
 	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();
