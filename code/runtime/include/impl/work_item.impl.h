@@ -136,6 +136,9 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	wi->region = NULL;
 	wi->last_timestamp = 0;
 #endif //IRT_ENABLE_REGION_INSTRUMENTATION
+#ifdef IRT_ASTEROIDEA_STACKS
+	wi->stack_available = false;
+#endif //IRT_ASTEROIDEA_STACKS
 }
 
 irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
