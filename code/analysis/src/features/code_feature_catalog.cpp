@@ -429,6 +429,9 @@ using insieme::transform::pattern::any;
 				addBinaryComposedFeature("scalarOPs-vectorOPs_%s", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
 
+				addTernaryComposedFeature("any_any_OPs_%s", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",
+						"SCF_NUM_externalFunction_lambda_%s",	cur_mode.first.c_str(), catalog, composedFeatures);
+
 				addBinaryComposedFeature("localMemoryAccesses-allMemoryAccesses_%s", "SCF_NUM_localMemoryAccess_calls_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
 
