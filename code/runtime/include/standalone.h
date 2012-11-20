@@ -159,6 +159,9 @@ void irt_exit_handler() {
 	if (irt_exit_handling_done)
 		return;
 
+	// reset the clock frequency of the cores of all workers
+	irt_cpu_freq_reset_frequency();
+
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	
 #endif
