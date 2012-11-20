@@ -159,6 +159,9 @@ void irt_exit_handler() {
 	if (irt_exit_handling_done)
 		return;
 
+	// reset the clock frequency of the cores of all workers
+	irt_cpu_freq_reset_frequency();
+
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	
 #endif
@@ -266,6 +269,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
 	signal(SIGTERM, &irt_term_handler);
 	signal(SIGINT, &irt_term_handler);
+	signal(SIGSEGV, &irt_term_handler);
 	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();
@@ -280,6 +284,16 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	#endif
 	#ifdef IRT_ENABLE_INSTRUMENTATION
 		irt_inst_set_all_instrumentation_from_env();
+	#endif
+
+	#ifndef _WIN32
+		// debug output for frequency setting, needs to be moved
+		char cpu_freq_output[64];
+		if (getenv(IRT_CPU_FREQUENCY))
+			sprintf(cpu_freq_output, "set, %s", getenv(IRT_CPU_FREQUENCY));
+		else
+			sprintf(cpu_freq_output, "not set, %u", _irt_cpu_freq_read("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"));
+		irt_log_setting_s("IRT_CPU_FREQUENCY", cpu_freq_output);
 	#endif
 	
 	irt_log_comment("starting worker threads");

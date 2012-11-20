@@ -249,11 +249,11 @@ bool _irt_wi_join_all_event(irt_wi_event_register* source_event_register, void *
 }
 
 void irt_wi_join_all(irt_work_item* wi) {
-	IRT_DEBUG_ONLY(
+	/*IRT_DEBUG_ONLY(
 		irt_wi_event_register_id reg_id = ({ { wi->id.full }, NULL });
 		irt_wi_event_register *reg = irt_wi_event_register_table_lookup(reg_id);
 		if(reg->handler[IRT_WI_CHILDREN_COMPLETED] != NULL) irt_throw_string_error(IRT_ERR_INTERNAL, "join all registered before start");
-	);
+	);*/
 
 	// reset the occurrence count
 	irt_wi_event_set_occurrence_count(wi->id, IRT_WI_CHILDREN_COMPLETED, 0);
