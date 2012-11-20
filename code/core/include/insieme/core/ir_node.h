@@ -1165,15 +1165,6 @@ namespace core {
 } // end namespace core
 } // end namespace insieme
 
-namespace std {
-
-	/**
-	 * Allows node types to be printed using names.
-	 */
-	std::ostream& operator<<(std::ostream& out, const insieme::core::NodeType& type);
-
-} // end namespace std
-
 
 // for Debugging:
 

@@ -200,8 +200,8 @@ CompoundStmtPtr inlineMultiReturnInternal(StatementList& retStmts, NodeManager& 
 CompoundStmtPtr inlineMultiReturnAssignment(NodeManager& nodeMan, const CallExprPtr& assignment) {
 	StatementList retStmts;
 
-	const lang::BasicGenerator& basic = nodeMan.getLangBasic();
-	assert(assignment->getFunctionExpr() == basic.getRefAssign());
+	// ensure that it is really an assign statement
+	assert(assignment->getFunctionExpr() == nodeMan.getLangBasic().getRefAssign());
 
 	// split into left and right side of assignment
 	ExpressionPtr rhsExpr = assignment->getArgument(1);

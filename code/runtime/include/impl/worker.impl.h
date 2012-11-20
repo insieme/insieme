@@ -56,6 +56,7 @@
 #include "utils/impl/affinity.impl.h"
 #include "impl/error_handling.impl.h"
 #include "impl/instrumentation.impl.h"
+#include "utils/frequency.h"
 
 #ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self) {
@@ -152,8 +153,10 @@ void* _irt_worker_func(void *argvp) {
 		self->event_data = irt_ocl_create_event_table();
 	#endif
 	
-	irt_inst_insert_wo_event(self, IRT_INST_WORKER_CREATED, self->id);
-	
+	#ifndef _WIN32
+		irt_cpu_freq_set_frequency_core_env(self);
+	#endif
+
 	// init lazy wi
 	memset(&self->lazy_wi, 0, sizeof(irt_work_item));
 	self->lazy_wi.id.cached = &self->lazy_wi;

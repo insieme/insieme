@@ -34,63 +34,28 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/core/ir_node_types.h"
 
-#include <set>
-#include <memory>
-
-#include "insieme/utils/pointer.h"
+#include <ostream>
 
 namespace insieme {
-namespace backend {
-namespace c_ast {
-
-	/**
-	 * Adds forward declarations for all C AST node types. Further, for each
-	 * type a type definition for a corresponding annotated pointer is added.
-	 */
-	#define NODE(NAME) \
-	class NAME; \
-	typedef Ptr<NAME> NAME ## Ptr; \
-	// take all nodes from within the definition file
-	#include "insieme/backend/c_ast/c_nodes.def"
-	#undef NODE
-
-	#define CONCRETE(name) NT_ ## name,
-	enum NodeType {
-		// the necessary information is obtained from the node-definition file
-		#include "insieme/backend/c_ast/c_nodes.def"
-	};
-	#undef CONCRETE
+namespace core {
 
 
-	class CNodeManager;
-	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
-
-	class CodeFragmentManager;
-	typedef std::shared_ptr<CodeFragmentManager> SharedCodeFragmentManager;
-
-	class CCode;
-	typedef std::shared_ptr<CCode> CCodePtr;
-
-	class CodeFragment;
-	typedef Ptr<CodeFragment> CodeFragmentPtr;
-
-	class CCodeFragment;
-	typedef Ptr<CCodeFragment> CCodeFragmentPtr;
-
-	typedef std::set<CodeFragmentPtr> FragmentSet;
-
-} // end namespace c_ast
-} // end namespace backend
+} // end namespace core
 } // end namespace insieme
 
 namespace std {
 
-	/**
-	 * Allows node types to be printed using names.
-	 */
-	std::ostream& operator<<(std::ostream& out, const insieme::backend::c_ast::NodeType& type);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::NodeType& type) {
+		switch(type) {
+			#define CONCRETE(NAME) case insieme::core::NT_ ## NAME : return out << #NAME;
+				#include "insieme/core/ir_nodes.def"
+			#undef CONCRETE
+		}
+
+		assert(false && "Unsupported node type encountered!");
+		return out << "UnknownType";
+	}
 
 } // end namespace std
-
