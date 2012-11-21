@@ -47,6 +47,7 @@
  * These functions provide an interface to read and set cpu frequency settings
  */
 
+bool irt_g_frequency_setting_specified;
 
 /*
  * reads all available frequencies for a worker running on a specific core as a list into the provided pointer
@@ -262,20 +263,26 @@ int32 irt_cpu_freq_set_frequency_core(irt_worker* worker, uint32 frequency) {
 
 int32 irt_cpu_freq_set_frequency_core_env(irt_worker* worker) {
 	if(getenv(IRT_CPU_FREQUENCY)) {
-
-		if(strcmp(getenv(IRT_CPU_FREQUENCY), "OS") == 0)
-			return irt_cpu_freq_reset_frequency_core(worker);
+		if(strcmp(getenv(IRT_CPU_FREQUENCY), "OS") == 0) {
+			int32 retval = irt_cpu_freq_reset_frequency_core(worker);
+			irt_g_frequency_setting_specified = true;
+			return retval;
+		}
 
 		int32 retval;
 		uint32* freqs;
 		uint32 length;
 
 		if((retval = irt_cpu_freq_get_available_frequencies_core(worker, &freqs, &length)) == 0) {
-			if(strcmp(getenv(IRT_CPU_FREQUENCY), "MAX") == 0)
-				return irt_cpu_freq_set_frequency_core(worker, freqs[0]);
+			if(strcmp(getenv(IRT_CPU_FREQUENCY), "MAX") == 0) {
+				int32 retval = irt_cpu_freq_set_frequency_core(worker, freqs[0]);
+				irt_g_frequency_setting_specified = true;
+				return retval;
+			}
 			if(strcmp(getenv(IRT_CPU_FREQUENCY), "MIN") == 0) {
-				printf("min! %u\n", freqs[length-1]);
-				return irt_cpu_freq_set_frequency_core(worker, freqs[length-1]);
+				int32 retval = irt_cpu_freq_set_frequency_core(worker, freqs[length-1]);
+				irt_g_frequency_setting_specified = true;
+				return retval;
 			}
 
 			uint32 freq = atoi(getenv(IRT_CPU_FREQUENCY));
@@ -287,15 +294,22 @@ int32 irt_cpu_freq_set_frequency_core_env(irt_worker* worker) {
 				}
 			}
 
-			if(available)
-				return irt_cpu_freq_set_frequency_core(worker, freq);
-			else {
+			if(available) {
+				int32 retval = irt_cpu_freq_set_frequency_core(worker, freq);
+				irt_g_frequency_setting_specified = true;
+				return retval;
+			} else {
 				IRT_DEBUG("Instrumentation: Requested frequency setting %s unknown", getenv(IRT_CPU_FREQUENCY));
+				irt_g_frequency_setting_specified = false;
 				return -1;
 			}
 
-		} else
+		} else {
+			irt_g_frequency_setting_specified = false;
 			return retval;
+		}
+	} else {
+		irt_g_frequency_setting_specified = false;
 	}
 }
 
