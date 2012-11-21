@@ -99,7 +99,7 @@ static inline uint32 irt_affinity_mask_get_first_cpu(const irt_affinity_mask mas
 				}
 			}
 	}
-	IRT_ASSERT(false, IRT_ERR_INTERNAL, "Requested first CPU in empty affinity mask");
+	IRT_WARN("No affinity set but affinity information requested.\n");
 	return 0;
 }
 
@@ -157,8 +157,8 @@ irt_affinity_policy irt_load_affinity_from_env() {
 			irt_throw_string_error(IRT_ERR_INIT, "Unknown affinity policy type: %s", tok);
 		}
 	} else {
-		irt_log_setting_s("IRT_AFFINTIY_POLICY", "IRT_AFFINITY_FILL");
-		policy.type = IRT_AFFINITY_FILL;
+		irt_log_setting_s("IRT_AFFINTIY_POLICY", "IRT_AFFINITY_NONE");
+		policy.type = IRT_AFFINITY_NONE;
 	}
 	return policy;
 }
