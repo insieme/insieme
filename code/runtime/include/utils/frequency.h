@@ -310,7 +310,9 @@ int32 irt_cpu_freq_set_frequency_core_env(irt_worker* worker) {
 		}
 	} else {
 		irt_g_frequency_setting_specified = false;
+		return -1;
 	}
+	return 0;
 }
 
 /*
