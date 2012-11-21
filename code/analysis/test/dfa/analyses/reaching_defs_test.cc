@@ -108,7 +108,7 @@ ExprAddrSet getDefinitions(
 	auto thisAccess = getImmediateAccess(use->getNodeManager(), use);
 
 	auto classes = aMgr.getClassFor(thisAccess);
-	// LOG(INFO) << aMgr;
+	LOG(INFO) << aMgr;
 	// LOG(INFO) << "From access: " << classes;
 
 	// now get all the conflicting accesses 
@@ -808,6 +808,56 @@ TEST(ReachingDefinitions, Vectors2DWithControl5) {
 
 	EXPECT_EQ(++addrIt, addrSet.end());
 
+}
+
+
+TEST(ReachingDefinitions, Vectors2DWithControl6) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(
+	"${"
+	"	ref<vector<uint<4>,10>> v; "
+	"	uint<4> a = 2u; "
+	"	uint<4> b = 3u; "
+	" 	{ "
+	"		$v[2]$ = 3; "
+	"		for (int<4> i=0..10) { "
+	"			$v[i]$ = a+b; "
+	"		}"
+	"		*$v[2u]$;"
+	"	} "
+	"}$"
+	);
+	EXPECT_EQ(4u, addresses.size());
+
+	// mark for polyhedral 
+	polyhedral::scop::mark(addresses[0]);
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+   
+	// lookup address of variable A
+	ExpressionAddress aRef = addresses[3].as<ExpressionAddress>();
+
+	auto addrSet = getDefinitions(ret, cfg, aRef);
+	EXPECT_EQ(3u, addrSet.size());
+
+	auto addrIt = addrSet.begin();
+	++addrIt; // skip the declaration of vector 
+
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[1], *addrIt);
+
+	EXPECT_NE(++addrIt, addrSet.end());
+
+	EXPECT_EQ(addresses[0].getRootNode(), addrIt->getRootNode());
+	EXPECT_EQ(addresses[2], *addrIt);
+
+	EXPECT_EQ(++addrIt, addrSet.end());
 }
 
 //TEST(ReachingDefinitions, Vectors2DWithControl6) {

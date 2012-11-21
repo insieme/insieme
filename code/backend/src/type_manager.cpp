@@ -1181,6 +1181,11 @@ namespace backend {
 				// combine them and updated within type info map (not being owned by the pointer)
 				newInfo->declaration = curInfo->declaration;
 
+				// also take over the actual type definitions
+				newInfo->lValueType = curInfo->lValueType;
+				newInfo->rValueType = curInfo->rValueType;
+				newInfo->externalType = curInfo->externalType;
+
 				// remove old information
 				delete curInfo;
 

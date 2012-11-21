@@ -234,21 +234,6 @@ namespace core {
 } // end namespace core
 } // end namespace insieme
 
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::core::NodeType& type) {
-		switch(type) {
-			#define CONCRETE(NAME) case insieme::core::NT_ ## NAME : return out << #NAME;
-				#include "insieme/core/ir_nodes.def"
-			#undef CONCRETE
-		}
-
-		assert(false && "Unsupported node type encountered!");
-		return out << "UnknownType";
-	}
-
-} // end namespace std
-
 
 
 void dumpText(const void* node) {
