@@ -132,7 +132,7 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_
 		nex = cur->next; \
 		if(!cur->func(reg, cur->data)) { /* if event handled, remove */ \
 			if(prev == NULL) reg->handler[event_code] = nex; \
-			else prev->next = cur; \
+			else prev->next = nex; \
 		} else { /* else keep the handler in the list */ \
 			prev = cur; \
 		} \

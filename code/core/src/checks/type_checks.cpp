@@ -956,6 +956,15 @@ namespace {
 			return true; // this is allowed
 		}
 
+		// allow casts between recursive version and unrolled version
+		if (src->getNodeType() == NT_RecType && trg->getNodeType() != NT_RecType) {
+			return isValidCast(src.as<RecTypePtr>()->unroll(), trg);
+		}
+
+		if (src->getNodeType() != NT_RecType && trg->getNodeType() == NT_RecType) {
+			return isValidCast(src, trg.as<RecTypePtr>()->unroll());
+		}
+
 		// also allow references to be casted to boolean
 		if (src->getNodeType() == NT_RefType && basic.isBool(trg)) return true;
 
