@@ -112,6 +112,9 @@ Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 	core::NodeManager& mgr = expr->getNodeManager();
 	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
 
+	// LOG(INFO) << expr;
+	// LOG(INFO) << refs;
+
 	typedef std::set<RefPtr,comparator> RefSet;
 	RefSet ref_set;
 
@@ -144,6 +147,9 @@ Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 		// size of the displacement
 		assert(false && "Arrays with multiple displacements are not yet supported");
 	}
+	case Ref::MEMBER:
+	 return Piecewise();
+
 	default:
 		assert(false);
 	}
@@ -357,18 +363,18 @@ const boost::optional<FunctionSemaAnnotation> FunctionSemaAnnotation::getFunctio
 	if (std::shared_ptr<FunctionSemaAnnotation> ann = funcLit->getAnnotation( FunctionSemaAnnotation::KEY )) {
 		return boost::optional<FunctionSemaAnnotation>( *ann );
 	}
+
 	// make sure semantic information is loaded and try again
 	loadFunctionSemantics(funcLit->getNodeManager());
 	if (std::shared_ptr<FunctionSemaAnnotation> ann = funcLit->getAnnotation( FunctionSemaAnnotation::KEY )) {
 		return boost::optional<FunctionSemaAnnotation>( *ann );
 	}
+
 	return boost::optional<FunctionSemaAnnotation> ();
 }
 
 
 void loadFunctionSemantics(core::NodeManager& mgr) {
-
-	LOG(DEBUG) << "Loading semantic info" << std::endl;
 
 	// check whether it has been loaded before
 	core::NodePtr flagNode = core::StringValue::get(mgr, "SemanticLoaded");
@@ -376,19 +382,22 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 		return; 	// nothing to do any more
 	}
 
+	LOG(DEBUG) << "Loading semantic info" << std::endl;
+
 	insieme::utils::Timer t("Loading function.sema");
 	
 	core::IRBuilder builder(mgr);
 	
 	// declare a variable used to refer to the processor rank
-	core::VariablePtr rank = builder.variable( builder.getLangBasic().getInt4() );
+	//core::VariablePtr rank = builder.variable( builder.getLangBasic().getInt4() );
 
 	#define FUNC(Name, Type, SideEffects, args_info...)  \
 	{\
-	core::LiteralPtr&& funcLit = builder.literal(core::IRBuilder(mgr).parseType(Type), #Name); \
+	core::LiteralPtr funcLit = builder.literal(core::IRBuilder(mgr).parseType(Type), #Name); \
 	/*LOG(INFO) << funcLit << " || " << funcLit->getType(); */\
-	assert(funcLit->getType()->getNodeType() == core::NT_FunctionType && "Type in function db not a function type: " #Name); \
-	FunctionSemaAnnotation::Args&& args = makeArgumentInfo({ args_info }); \
+	assert(funcLit->getType()->getNodeType() == core::NT_FunctionType && \
+		   "Type in function db not a function type: " #Name); \
+	FunctionSemaAnnotation::Args args = makeArgumentInfo({ args_info }); \
 	assert(args.size() == core::static_pointer_cast<const core::FunctionType>(funcLit->getType())->getParameterTypeList().size()); \
 	funcLit->addAnnotation( std::make_shared<FunctionSemaAnnotation>(args, SideEffects) ); \
 	}
@@ -402,20 +411,23 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 	flagNode->attachValue<SemanticLoaded>();
 }
 
+
+
 bool isPure(const core::LiteralPtr& funcLit) {
-	if (boost::optional<FunctionSemaAnnotation> sema = FunctionSemaAnnotation::getFunctionSema(funcLit)) {
-		return (*sema).isPure();
+	
+	if (auto sema = FunctionSemaAnnotation::getFunctionSema(funcLit)) {
+		return sema->isPure();
 	}
+
 	// We don't have any semantics information for this function, therefore we try decide whether the function 
 	// is pure by looking at the input arguments, if they all are non-refs then we are sure the function is pure.
-	vector<core::TypePtr> args = 
-		core::static_pointer_cast<const core::FunctionType>(funcLit->getType())->getParameterTypeList();
-	bool isPure=true;
-	std::for_each(args.begin(), args.end(), [&](const core::TypePtr& cur) { 
-		if(cur->getNodeType() == core::NT_RefType) { isPure = false; }
-	} );
-	return isPure;
+	vector<core::TypePtr> args = funcLit->getType().as<core::FunctionTypePtr>()->getParameterTypeList();
+
+	return any(args, [&](const core::TypePtr& cur) { 
+				return cur->getNodeType() != core::NT_RefType;
+		   });
 }
+
 
 namespace {
 
@@ -432,23 +444,22 @@ struct CheckEmptyRange : public boost::static_visitor<CheckEmptyRange> {
 
 FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 
-	// LOG(DEBUG) << *callExpr;
-
-	core::LiteralPtr funcLit = core::static_pointer_cast<const core::Literal>(callExpr->getFunctionExpr());
-	boost::optional<FunctionSemaAnnotation> sema = FunctionSemaAnnotation::getFunctionSema(funcLit);
+	auto funcLit = callExpr->getFunctionExpr().as<core::LiteralPtr>();
+	auto semaOpt = FunctionSemaAnnotation::getFunctionSema(funcLit);
 	
-	if(!sema) {
+	if(!semaOpt) {
 		// Try to do your best finding the semantics of this function 
-		LOG(DEBUG) << "Tried to extract semantics for unknown function: '" 
-				     << *funcLit << "' with type '" << *funcLit->getType() << "'";
+		///LOG(DEBUG) << "Tried to extract semantics for unknown function: '" 
+		///		     << *funcLit << "' with type '" << *funcLit->getType() << "'";
 
+		// Assume the function has side-effects 
 		return FunctionSema(isPure(funcLit), true, FunctionSema::Accesses());
 	}
 	
 	FunctionSema::Accesses usages;
 
 	size_t arg=0;
-	for_each((*sema).begin(), (*sema).end(), [&](const ReferenceInfo& cur) { 
+	for_each((*semaOpt).begin(), (*semaOpt).end(), [&](const ReferenceInfo& cur) { 
 		for_each(cur.begin(), cur.end(), [&](const ReferenceInfo::AccessInfo& cur) {
 			
 			Range r = cur.range();
@@ -474,7 +485,7 @@ FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 		++arg;
 	});
 
-	return FunctionSema((*sema).isPure(), (*sema).hasSideEffects(), usages);
+	return FunctionSema((*semaOpt).isPure(), (*semaOpt).hasSideEffects(), usages);
 }
 
 } // end analysis namespace 

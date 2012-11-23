@@ -41,6 +41,7 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/analysis/attributes.h"
 
 #include "insieme/core/lang/basic.h"
@@ -368,6 +369,31 @@ VariableSet getAllVariables(const NodePtr& code) {
 }
 
 
+VariableSet getAllVariablesInScope(const NodePtr& code) {
+
+	// Collect variables in current scope
+	VariableSet res;
+	visitDepthFirstOncePrunable(code, [&](const NodePtr& cur)->bool {
+		auto type = cur->getNodeType();
+		if (type == NT_Variable) {
+			res.insert(cur.as<VariablePtr>());
+		}
+
+		// prune search
+		return cur->getNodeCategory() == NC_Type ||
+				type == NT_Variable ||
+				type == NT_LambdaExpr;
+	});
+
+	// + add free variables (recursive function variables)
+	for(const VariablePtr& var : getFreeVariables(code)) {
+		res.insert(var);
+	}
+
+	// done
+	return res;
+}
+
 namespace {
 class RenamingVarVisitor: public core::IRVisitor<void, Address> {
 	core::VariableAddress varAddr;
@@ -452,6 +478,13 @@ CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const Expre
 			return false;
 		});
 		return res;
+}
+
+
+bool contains(const NodePtr& code, const NodePtr& element) {
+	assert(element && "Element to be searched must not be empty!");
+	bool checkTypes = element->getNodeCategory() == NC_Type || element->getNodeCategory() == NC_IntTypeParam;
+	return code && makeCachedLambdaVisitor([&](const NodePtr& cur, const rec_call<bool>::type& rec)->bool { return *cur == *element || any(cur->getChildList(), rec); }, checkTypes)(code);
 }
 
 } // end namespace utils

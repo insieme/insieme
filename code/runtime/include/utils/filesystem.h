@@ -45,8 +45,12 @@
 const char* irt_get_tmp_dir() {
 	if(getenv("TMPDIR"))
 		return getenv("TMPDIR");
-	else if(P_tmpdir != NULL)
-		return P_tmpdir;
+
+#	ifdef P_tmpdir // might not be defined in some stdio.h files (like MinGW)
+		else if(P_tmpdir != NULL)
+			return P_tmpdir;
+#	endif
+
 	else {
 		return "/tmp";
 	}

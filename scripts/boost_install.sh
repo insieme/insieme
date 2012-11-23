@@ -3,7 +3,7 @@
 
 VERSION=1.50.0
 VERSION_FILENAME=1_50_0
-BOOST_LIBS=filesystem,program_options,random,system,regex,thread
+BOOST_LIBS=filesystem,program_options,random,system,regex,thread,serialization,context
 
 ########################################################################
 ##		                Boost

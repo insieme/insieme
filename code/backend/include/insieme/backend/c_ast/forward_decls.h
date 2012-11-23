@@ -84,3 +84,13 @@ namespace c_ast {
 } // end namespace c_ast
 } // end namespace backend
 } // end namespace insieme
+
+namespace std {
+
+	/**
+	 * Allows node types to be printed using names.
+	 */
+	std::ostream& operator<<(std::ostream& out, const insieme::backend::c_ast::NodeType& type);
+
+} // end namespace std
+

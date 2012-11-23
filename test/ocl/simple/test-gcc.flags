@@ -1,1 +1,1 @@
-../common/lib_icl.c ../common/lib_icl_ext.c 
+../common/lib_icl.c ../common/lib_icl_ext.c -lOpenCL

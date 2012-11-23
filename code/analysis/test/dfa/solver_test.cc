@@ -132,7 +132,7 @@ TEST(Problem, LiveVariables) {
 	CFGPtr cfg = CFG::buildCFG(code);
 
 	Solver<analyses::LiveVariables> s(*cfg);
-	std::cout << s.solve() << std::endl;
+
 
 }
 

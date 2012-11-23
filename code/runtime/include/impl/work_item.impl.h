@@ -186,10 +186,10 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 extern "C" {
 #endif
 void
-#if _M_IX86 && _MSC_VER 
+#if (defined(_M_IX86)  && defined(_MSC_VER)) || (defined(__MINGW32__) && !defined(__MINGW64__))
 __fastcall
 #endif
-_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
+_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func *func) {
 	func(wi);
 	irt_wi_end(wi);
 }
@@ -246,11 +246,11 @@ bool _irt_wi_join_all_event(irt_wi_event_register* source_event_register, void *
 }
 
 void irt_wi_join_all(irt_work_item* wi) {
-	IRT_DEBUG_ONLY(
+	/*IRT_DEBUG_ONLY(
 		irt_wi_event_register_id reg_id = ({ { wi->id.full }, NULL });
 		irt_wi_event_register *reg = irt_wi_event_register_table_lookup(reg_id);
 		if(reg->handler[IRT_WI_CHILDREN_COMPLETED] != NULL) irt_throw_string_error(IRT_ERR_INTERNAL, "join all registered before start");
-	);
+	);*/
 
 	// reset the occurrence count
 	irt_wi_event_set_occurrence_count(wi->id, IRT_WI_CHILDREN_COMPLETED, 0);

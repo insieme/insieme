@@ -512,6 +512,25 @@ bool isGeneric(const TypePtr& type);
  */
 TypeList getElementTypes(const TypePtr& type);
 
+/**
+ * Determines whether the given type is a variable sized data structure. A variable sized
+ * data structure is either an array or a struct / tuple / union containing a variable sized
+ * data structure as an element type (for structs / tuples it needs to be the laste element).
+ *
+ * @param cur the type to be checked
+ * @return true if it is a variable sized type, false otherwise
+ */
+bool isVariableSized(const TypePtr& type);
+
+/**
+ * Every variable sized type needs to contain an array of elements covering an variable amount
+ * of elements - this function obtains the type of elements stored within this array.
+ *
+ * @param type the type to be analysis - must be a variable sized type
+ * @return the type of element forming the variable sized array within the given type
+ */
+TypePtr getRepeatedType(const TypePtr& type);
+
 
 } // end namespace core
 } // end namespace insieme

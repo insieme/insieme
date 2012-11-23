@@ -66,9 +66,9 @@ namespace {
 	 */
 	struct NodeExtractorVisitor : public boost::static_visitor<core::NodePtr> {
 		template <class T>
-			core::NodePtr operator()(const T& addr) const {
-				return addr.getAddressedNode();
-			}
+		core::NodePtr operator()(const T& addr) const {
+			return addr.getAddressedNode();
+		}
 	};
 
 	struct AddrChildVisitor : public boost::static_visitor<UnifiedAddress> {
@@ -78,9 +78,9 @@ namespace {
 		AddrChildVisitor(unsigned idx) : idx(idx) { }
 
 		template <class T>
-			UnifiedAddress operator()(const T& addr) const {
-				return addr.getAddressOfChild(idx);
-			}
+		UnifiedAddress operator()(const T& addr) const {
+			return addr.getAddressOfChild(idx);
+		}
 	};
 
 } // end anonymous namespace
@@ -112,6 +112,15 @@ UnifiedAddress UnifiedAddress::getAddressOfChild(unsigned idx) const {
 }
 
 
+UnifiedAddress UnifiedAddress::extendAddressFor(const std::vector<unsigned>& idxs) const {
+
+	UnifiedAddress ret = *this;
+	for (auto idx : idxs) {
+		ret = ret.getAddressOfChild(idx);
+	}
+	return ret;
+
+}
 
 
 bool UnifiedAddress::operator==(const UnifiedAddress& other) const {
@@ -133,7 +142,7 @@ bool UnifiedAddress::operator==(const UnifiedAddress& other) const {
 /**
  * Get the immediate access
  */
-AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap) {
+AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap, bool final) {
 
 	NodePtr exprNode = expr.getAddressedNode();
 
@@ -145,44 +154,63 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 	}
 
 	// For cast expressions, we simply recur
-	// if (exprNode->getNodeType() == NT_CastExpr)
-	//	return getImmediateAccess(expr.as<CastExprAddress>()->getSubExpression(), tmpVarMap);
+	if (exprNode->getNodeType() == NT_CastExpr)
+		return getImmediateAccess(mgr, expr.getAddressOfChild(1), tmpVarMap, final);
 
 	// If this is a scalar variable, then return the access to this variable
 	if (exprNode->getNodeType() == NT_Variable) {
-		return std::make_shared<BaseAccess>(expr);
+		return std::make_shared<BaseAccess>(expr, final);
 	}
+	
+	if (exprNode->getNodeType() == NT_TupleExpr || 
+		exprNode->getNodeType() == NT_StructExpr ||
+		exprNode->getNodeType() == NT_VectorExpr) 
+		throw NotAnAccessException(toString(*exprNode));
 
-	assert(exprNode->getNodeType() == NT_CallExpr);
+	assert(exprNode->getNodeType() == NT_CallExpr && 
+			"Expected a call expression");
 
 	CallExprPtr callExpr = exprNode.as<CallExprPtr>();
 	auto args = callExpr->getArguments();
+
+	if (core::analysis::isCallOf(exprNode, gen.getRefReinterpret()) ||
+		core::analysis::isCallOf(exprNode, gen.getScalarToArray())) 
+	{
+		return getImmediateAccess(mgr, expr.getAddressOfChild(2), tmpVarMap, final);
+	}
 
 	// If the callexpr is not a subscript or a member access, then it means this is not
 	// a direct memory access, but it could be we are processing a binary operator or other
 	// which may contain multiple accesses. Therefore we throw an exception.
 	if (!gen.isMemberAccess(callExpr->getFunctionExpr()) &&
 			!gen.isSubscriptOperator(callExpr->getFunctionExpr()) &&
-			!gen.isRefDeref(callExpr->getFunctionExpr()) ) {
+			!gen.isRefDeref(callExpr->getFunctionExpr())  &&
+			!gen.isRefVar(callExpr->getFunctionExpr()) )
+	{
 		throw NotAnAccessException(toString(*callExpr));
 	}
 
-	auto subAccess = getImmediateAccess(mgr, expr.getAddressOfChild(2), tmpVarMap);
+	auto subAccess = getImmediateAccess(mgr, expr.getAddressOfChild(2), tmpVarMap, false);
+
+	
+	if (gen.isRefVar(callExpr->getFunctionExpr())) { return subAccess; }
+
 
 	if (gen.isRefDeref(callExpr->getFunctionExpr())) {
-		return std::make_shared<Deref>(expr, subAccess);
+		return std::make_shared<Deref>(expr, subAccess, final);
 	}
+
 
 	// Handle member access functions
 	if ( gen.isMemberAccess(callExpr->getFunctionExpr()) ) {
 
 		// this is a tuple access
 		if ( gen.isUnsignedInt( args[1]->getType() ) || gen.isIdentifier( args[1]->getType() ) ) {
-			return std::make_shared<Member>(expr, subAccess, args[1].as<LiteralPtr>());
+			return std::make_shared<Member>(expr, subAccess, args[1].as<LiteralPtr>(), final);
 		}
-
 		assert( false && "Type of member access not supported" );
 	}
+
 
 	// Handle Array/Vector subscript operator
 	if ( gen.isSubscriptOperator(callExpr->getFunctionExpr()) ) {
@@ -196,8 +224,14 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 			core::Variable::get(mgr, gen.getUInt8(), std::numeric_limits<unsigned int>::max());
 
 		try {
+
+			// the access function is not a constant but a function
+			auto idxExpr = expr.getAddressOfChild(3);
+			auto idxExprAddr = idxExpr.getAbsoluteAddress(tmpVarMap).as<core::ExpressionAddress>();
+
 			// Extract the formula from the argument 1
-			arithmetic::Formula f = arithmetic::toFormula( args[1] );
+			arithmetic::Formula f = arithmetic::toFormula( idxExprAddr.getAddressedNode() );
+
 			if (f.isConstant()) {
 
 				polyhedral::IterationVector iterVec;
@@ -209,23 +243,11 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 				return std::make_shared<Subscript>(
 						expr,
 						subAccess,
+						final,
 						core::NodeAddress(),
 						iterVec,
 						makeCombiner(utils::Constraint<polyhedral::AffineFunction>(af, utils::ConstraintType::EQ))
 					);
-			}
-
-			// the access function is not a constant but a function
-			auto idxExpr = expr.getAddressOfChild(3);
-			auto idxExprAddr = idxExpr.getAbsoluteAddress(tmpVarMap).as<core::ExpressionAddress>();
-			
-			if ( VariablePtr var = core::dynamic_pointer_cast<const Variable>( idxExprAddr.getAddressedNode() ) ) {
-				// if the index expression is a single variable we may be in the case where this
-				// variable is an alias for an other expression
-				if ( ExpressionAddress aliasExpr = tmpVarMap.getMappedExpr( var ) ) {
-					// If this was an alias, use the aliased expression as array access
-					idxExprAddr = aliasExpr;
-				}
 			}
 
 			auto dom = polyhedral::getVariableDomain(idxExprAddr);
@@ -233,6 +255,9 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 
 				const polyhedral::IterationVector& oldIter =
 					dom.first.getAnnotation(polyhedral::scop::ScopRegion::KEY)->getIterationVector();
+
+
+				LOG(INFO) << *dom.second;
 
 				polyhedral::IterationVector iterVec;
 
@@ -243,10 +268,13 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 				iterVec.add( polyhedral::Iterator(idxVar) );
 
 				polyhedral::AffineFunction af(iterVec, core::arithmetic::Formula(idxVar) - f);
+				
+				LOG(INFO) << af;
 
 				return std::make_shared<Subscript>(
 						expr,
 						subAccess,
+						final,
 						dom.first,
 						iterVec,
 						cloneConstraint(iterVec, dom.second) and
@@ -258,10 +286,82 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
 
 		} catch (arithmetic::NotAFormulaException&& e) {
 			// What if this is a piecewise? we can handle it
-			assert (false && "Array access is not a formula?");
+			assert (false && "Array access is not a formula");
 		}
 	}
 	assert(false && "Access not supported");
+}
+
+
+namespace {
+
+	void getAddressIndexes(const NodeAddress& addr, std::vector<unsigned>& idxs) {
+		if (addr.getDepth() > 2)
+			getAddressIndexes(addr.getParentAddress(), idxs);
+		if (addr.getDepth() > 1)
+			idxs.push_back(addr.getIndex());
+	}
+
+} // end empty namespace 
+
+std::vector<AccessPtr> getAccesses(core::NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap) {
+	
+	struct ExploreAccesses : public IRVisitor<bool, core::Address> {
+		
+		core::NodeManager& 		mgr;
+		const TmpVarMap& 		tmpVarMap;
+		const UnifiedAddress& 	base;
+		std::vector<AccessPtr>& accesses;
+
+		ExploreAccesses(core::NodeManager& mgr, 
+						const TmpVarMap& tmpVarMap,
+						const UnifiedAddress& base, 
+						std::vector<AccessPtr>& accesses) 
+			:  mgr(mgr), tmpVarMap(tmpVarMap), base(base), accesses(accesses) { }
+
+		bool visitVariable(const core::VariableAddress& addr) {
+			// turn the address into a vector of indexes from the root 
+			std::vector<unsigned> idxs;
+			getAddressIndexes(addr, idxs);
+			auto accessAddress = base.extendAddressFor(idxs);
+
+			accesses.push_back( getImmediateAccess(mgr, accessAddress, tmpVarMap) );
+			return true;
+		}
+
+		bool visitCallExpr(const core::CallExprAddress& callExpr) {
+			
+			const auto& gen = callExpr->getNodeManager().getLangBasic();
+			const auto& func = callExpr->getFunctionExpr();
+
+			if (!gen.isBuiltIn(func) && func->getNodeType() == core::NT_Literal) {
+				// this is an external function
+				return false;
+			}
+
+			if (gen.isBitwiseOp(func) || gen.isCompOp(func) || gen.isArithOp(func) || 
+				gen.isRefAssign(func) || gen.isVarlistPack(func))
+			{
+				return false;
+			}
+
+			std::vector<unsigned> idxs;
+			getAddressIndexes(callExpr, idxs);
+			auto accessAddress = base.extendAddressFor(idxs);
+			
+			try {
+				accesses.push_back( getImmediateAccess(mgr, accessAddress, tmpVarMap) );
+			} catch (NotAnAccessException&& e) { }
+			return true;
+		}
+
+	};
+
+	core::NodePtr node = expr.getAddressedNode();
+	std::vector<AccessPtr> accesses;
+	visitDepthFirstPrunable(NodeAddress(node), ExploreAccesses(mgr,tmpVarMap,expr,accesses));
+
+	return accesses;
 }
 
 /**
@@ -269,24 +369,25 @@ AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const
  */
 class AccessPrinter : public RecAccessVisitor<std::string> {
 
-	unsigned 		level;
+	unsigned level;
 
 	std::string indent(char sep=' ') const {
 		return ""; //return std::string(level*4, sep);
 	}
 
-	public:
+public:
 	AccessPrinter() : level(0)  { }
 
 	std::string visitBaseAccess(const BaseAccessPtr& access) {
 		std::ostringstream ss;
-		ss << indent() << *access->getAddress().getAddressedNode() << "{@" << access->getAddress() << "}";
+		ss << indent() << (access->isFinal()?"+":"") 
+			<< *access->getAddress().getAddressedNode() << "{@" << access->getAddress() << "}";
 		return ss.str();
 	}
 
 	std::string visitDeref(const DerefPtr& access) {
 		std::ostringstream ss;
-		ss << indent() << "deref:{@" << access->getAddress() << "}(";
+		ss << indent() << (access->isFinal()?"+":"")  << "deref:{@" << access->getAddress() << "}(";
 		++level;
 		ss << visit(access->getSubAccess());
 		--level;
@@ -297,7 +398,7 @@ class AccessPrinter : public RecAccessVisitor<std::string> {
 	std::string visitMember(const MemberPtr& access) {
 		std::ostringstream ss;
 		if (access->getSubAccess()) {
-			ss << indent() << "member{@" << access->getAddress() << "}(";
+			ss << indent() << (access->isFinal()?"+":"")  << "member{@" << access->getAddress() << "}(";
 			++level;
 			ss << visit(access->getSubAccess());
 		} else {
@@ -312,7 +413,7 @@ class AccessPrinter : public RecAccessVisitor<std::string> {
 	std::string visitSubscript(const SubscriptPtr& access) {
 		std::ostringstream ss;
 		if (access->getSubAccess()) {
-			ss << indent() << "subscript:{@" << access->getAddress() << "}(";
+			ss << indent() << (access->isFinal()?"+":"") << "subscript:{@" << access->getAddress() << "}(";
 			++level;
 			ss << visit(access->getSubAccess());
 		} else {
@@ -346,6 +447,7 @@ bool equalPath(const AccessPtr& lhs, const AccessPtr& rhs) {
 	// make sure to skip any deref nodes
 	if (lhs->getType() == AccessType::AT_DEREF)
 		return equalPath(cast<Deref>(lhs)->getSubAccess(), rhs);
+
 	if (rhs->getType() == AccessType::AT_DEREF)
 		return equalPath(lhs,cast<Deref>(rhs)->getSubAccess());
 
@@ -406,6 +508,7 @@ AccessPtr switchRoot(const AccessPtr& access, const AccessPtr& newRoot) {
 	}
 
 	auto decAccess = cast<AccessDecorator>(access);
+	assert(decAccess);
 	return decAccess->switchSubAccess( switchRoot(decAccess->getSubAccess(), newRoot) );
 }
 
@@ -428,8 +531,7 @@ std::ostream& AccessClass::printTo(std::ostream& out) const {
 		// Print the direct subclasses for this class
 		<< " SUB_CLASSES {" << join(",", subClasses,
 				[&](std::ostream& jout, const Dependence& cur) {
-				jout << std::get<0>(cur) << "#" << std::get<1>(cur).lock()->getUID() 
-					<< ":" << cast<Access>(std::get<2>(cur));
+				jout << std::get<0>(cur).lock()->getUID() << ":" << cast<Access>(std::get<1>(cur));
 				})
 	<< "}";
 }
@@ -439,9 +541,9 @@ std::ostream& AccessClass::printTo(std::ostream& out) const {
  */
 std::set<core::ExpressionAddress> extractRealAddresses(const AccessClass& cl, const TmpVarMap& map) {
 	std::set<core::ExpressionAddress> ret;
-	std::transform(cl.begin(), cl.end(), std::inserter(ret, ret.begin()), 
-			[&](const AccessPtr& cur) { 
-			 	return cur->getAddress().getAbsoluteAddress(map).as<core::ExpressionAddress>(); 
+	std::for_each(cl.begin(), cl.end(), [&](const AccessPtr& cur) { 
+				if (cur->isFinal())
+				 	ret.insert(cur->getAddress().getAbsoluteAddress(map).as<core::ExpressionAddress>()); 
 			});
 	return ret;
 }
@@ -449,10 +551,21 @@ std::set<core::ExpressionAddress> extractRealAddresses(const AccessClass& cl, co
 // AccessManager ==============================================================
 
 
-namespace {
 
 
-} // end anonymous namespace 
+AccessClassSet AccessManager::findClass(const AccessPtr& access) const {
+
+	AccessClassSet ret;
+	for (const auto& accClass : classes) {
+		for (const auto& acc : accClass->getAccesses()) {
+				if (*acc == *access || equalPath(acc,access)) { 
+				ret.insert( accClass );
+			}
+		}
+	}
+
+	return ret;
+}
 
 void AccessManager::printDotGraph(std::ostream& out) const { 
 
@@ -469,9 +582,9 @@ void AccessManager::printDotGraph(std::ostream& out) const {
 		// check dependencies 
 		for (const auto& dep : classes[idx]->getSubClasses()) {
 		
-			out << "\t" << idx << " -> " << std::get<1>(dep).lock()->getUID() 
-				<< " [label=\"" << std::static_pointer_cast<const Access>(std::get<2>(dep)) << "\",color=" <<
-				(std::get<0>(dep)==AccessClass::DT_RANGE?"red":"blue") << "];" << std::endl;
+			out << "\t" << idx << " -> " << std::get<0>(dep).lock()->getUID() 
+				<< " [label=\"" << std::static_pointer_cast<const Access>(std::get<1>(dep)) << "\"];" 
+				<< std::endl;
 
 		}
 	}
@@ -479,112 +592,25 @@ void AccessManager::printDotGraph(std::ostream& out) const {
 	out << "}" << std::endl;
 }
 
-std::tuple<AccessClass::DependenceType, AccessClassPtr, bool> 
-AccessManager::classify(const AccessClassPtr& 				parent,  
-						const AccessDecoratorPtr& 			subLevel, 
-						const AccessClass::DependenceType& 	depType,
-						const AccessPtr& 					currAccess) 
-{
-	
-	AccessPtr skipDeref = currAccess;
-	while (skipDeref->getType() == AccessType::AT_DEREF) {
-		skipDeref = cast<Deref>(skipDeref)->getSubAccess();
+
+AccessClassPtr AccessManager::addClass(AccessClassPtr parent, const AccessPtr& access, const AccessDecoratorPtr& dec, bool append_to_parent) {
+	// Creates a new alias class  (can't use make_shared because the constructor is private)
+	auto newClass = std::shared_ptr<AccessClass>(new AccessClass(std::cref(*this), classes.size(), parent));
+	if (access) {
+		newClass->storeAccess(access);
 	}
+	classes.emplace_back( newClass );
 
-	assert(skipDeref);
-
-	for(auto& dep : parent->getSubClasses()) {
-		
-		const auto& subType   = std::get<0>(dep);
-		const auto& subClass  = std::get<1>(dep).lock();
-		const auto& subAccess = std::get<2>(dep);
-
-		// assume that the subclasses are disjoints 
-		if (subAccess->getType() == AccessType::AT_MEMBER) {
-
-			assert(skipDeref->getType() == AccessType::AT_MEMBER);
-
-			if (*cast<Member>(skipDeref)->getMember() == *cast<Member>(subAccess)->getMember()) {
-				subClass->storeAccess(currAccess);
-				return std::make_tuple( depType, subClass, true );
-			}
-		}
-
-		// Subscripts 
-		if (subAccess->getType() == AccessType::AT_SUBSCRIPT) {
-			
-			assert(skipDeref->getType() == AccessType::AT_SUBSCRIPT);
-
-			auto classRange = cast<Subscript>(subAccess);
-			auto accessRange = cast<Subscript>(skipDeref);
-
-			auto ctx = polyhedral::makeCtx();
-			auto classSet  = polyhedral::makeSet(ctx, 
-					classRange->getRange() ?
-						polyhedral::IterationDomain(classRange->getRange()) :
-						polyhedral::IterationDomain(classRange->getIterationVector(), false)
-					);
-			auto accessSet = polyhedral::makeSet(ctx, 
-						accessRange->getRange() ?
-						polyhedral::IterationDomain(accessRange->getRange()) :
-						polyhedral::IterationDomain(accessRange->getIterationVector(), false)
-					);
-			
-			// compute the difference, if it is empty then the two ranges are equivalent 
-			auto intersection = classSet * accessSet;
-			// LOG(INFO) << "intersection " << *intersection << " " << depType << ", " << subType; 
-
-			if ( !intersection->empty() ) { 
-				
-				// We hit the same class, add the access to the class  
-				if (subType == depType && 
-					*intersection == *accessSet && 
-					*intersection == *classSet ) 
-				{
-					subClass->storeAccess(currAccess);
-					return std::make_tuple( depType, subClass, true );
-				}
-
-				// We are in the case where the intersection is equal to the class set. 
-				// This means we have to create a new class and append the old class as a subrange 
-				if (depType == subType && *intersection == *classSet)  {
-					
-					// Creates a new alias class  (can't use make_shared because the constructor is private)
-					auto newClass = std::shared_ptr<AccessClass>(
-							new AccessClass(std::cref(*this), classes.size(), parent) 
-						);
-
-					newClass->storeAccess(currAccess);
-					classes.emplace_back( newClass );
-
-					newClass->addSubClass( 
-							std::make_tuple(AccessClass::DT_RANGE, std::get<1>(dep), std::get<2>(dep)) 
-						);
-
-					// Add the new class as direct child of the parent 
-					subClass->setParentClass(newClass);
-
-					std::get<1>(dep) = newClass;
-					std::get<2>(dep) = subLevel;
-
-					return std::make_tuple( depType, newClass, true );
-				} 
-
-						
-				if (*intersection == *accessSet && subType == depType) {
-					return classify(subClass, subLevel, AccessClass::DT_RANGE,  currAccess);
-				}
-			}
-		}
+	if (append_to_parent && parent) {
+		parent->addSubClass( AccessClass::Dependence( newClass, dec ) );
 	}
-
-	return std::make_tuple(depType, parent, false);
-
+	return newClass;
 }
 
 
+AccessClassSet AccessManager::getClassFor(const AccessPtr& access, bool subAccess) {
 
-AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
+	AccessClassSet retClasses;
 
     /*
      * Iterate through the existing classes and determine whether this access belongs to one of
@@ -608,9 +634,12 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 		if (belongs) {
 			// the access is already stored in this class, therefore we simply return it
 			if (!found) { cl->storeAccess(access); }
-			return cl;
+			retClasses.insert(cl);
 		}
 	}
+
+	if (!retClasses.empty()) { return retClasses; }
+
 
 	// it might be that this access is an alias for an expression for which we already defined a
 	// class.
@@ -620,14 +649,24 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 		UnifiedAddress aliasedExpr(tmpVarMap.getMappedExpr( potentialAlias ));
 
 		if (aliasedExpr.getAbsoluteAddress() && cfg) {
-			aliasedExpr = cfg->find(aliasedExpr.getAbsoluteAddress());
+			
+			if (aliasedExpr.getAddressedNode()->getNodeType() == core::NT_CastExpr) {
+				// If this is a cast expression we consider it as a no-op, therefore 
+				// we forward the the alias through the casted expression 
+				aliasedExpr = aliasedExpr.getAddressOfChild(1);
+			} else {
+				aliasedExpr = cfg->find(aliasedExpr.getAbsoluteAddress());
+			}
 		}
 
 		if (aliasedExpr.getAbsoluteAddress()) {
-			auto aliasAccess = getImmediateAccess(potentialAlias->getNodeManager(), aliasedExpr);
-			auto cl = getClassFor(aliasAccess);
-			cl->storeAccess(access);
-			return cl;
+			try {
+				auto aliasAccess = getImmediateAccess(potentialAlias->getNodeManager(), aliasedExpr, TmpVarMap(), subAccess);
+				auto clSet = getClassFor(aliasAccess, subAccess);
+				for (auto& cl : clSet) { cl->storeAccess(access); }
+
+				return clSet;
+			} catch (NotAnAccessException&& e) { }
 		}
 	}
 
@@ -637,9 +676,8 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 	 * This can happen either when a compound member of a struct is accessed. or when the (N-x)th
 	 * dimension of a N dimensional array is accessed
 	 */
-	AccessClassPtr 				parentClass;
+	AccessClassSet 				parentClasses;
 	AccessDecoratorPtr 			subLevel;
-	AccessClass::DependenceType depType = AccessClass::DT_LEVEL;
 	
 	AccessPtr skipDeref = access;
 	// Skips any derefs present through the access. 
@@ -649,34 +687,243 @@ AccessClassPtr AccessManager::getClassFor(const AccessPtr& access) {
 
 	// Check whether this access is accessing a sublevel 
 	if (skipDeref->getType() == AccessType::AT_MEMBER || skipDeref->getType() == AccessType::AT_SUBSCRIPT) {
-		parentClass = getClassFor( cast<AccessDecorator>(skipDeref)->getSubAccess() );
+		parentClasses = getClassFor( cast<AccessDecorator>(skipDeref)->getSubAccess(), false );
 		subLevel = cast<AccessDecorator>(skipDeref)->switchSubAccess(AccessPtr());
 	}
 
 	// check if the parent class already has a child to represent this type of access
-	if (parentClass) {
+	if (!parentClasses.empty()) {
+		assert(subLevel && "Invalid sublevel");
 
-		assert(subLevel);
+		typedef std::tuple<AccessClassPtr, AccessClassPtr, AccessDecoratorPtr> AccessInfo;
+		std::vector<AccessInfo> toAppend;
 
-		auto ret = classify(parentClass, subLevel, depType, access);
+		for (auto& parentClass : parentClasses) { 
+			
+			bool classified = false;
 
-		if (std::get<2>(ret)) { return std::get<1>(ret); }
+			// This is the access used for comparison in the case we are threating 
+			// subscript accesses. 
+			auto cmpAccess = skipDeref;
 
-		// otherwise the update the parent class 
-		depType 	= std::get<0>(ret);
-		parentClass = std::get<1>(ret);
+			for(auto& dep : parentClass->getSubClasses()) {
+				
+				const auto& subClass  = std::get<0>(dep).lock();
+				const auto& subAccess = std::get<1>(dep);
+				assert(subClass && subAccess);
+
+				//LOG(INFO) << subClass;
+				//LOG(INFO) << subAccess;
+				//LOG(INFO) << *this;
+
+				// assume that the subclasses are disjoints 
+				if (subAccess->getType() == AccessType::AT_MEMBER) {
+
+					assert(skipDeref->getType() == AccessType::AT_MEMBER);
+
+					if (*cast<Member>(skipDeref)->getMember() == *cast<Member>(subAccess)->getMember()) {
+
+						subClass->storeAccess(access);
+						retClasses.insert( subClass );
+						classified = true;
+						break;
+					}
+					continue;
+				}
+
+				// Subscripts 
+				if (subAccess->getType() == AccessType::AT_SUBSCRIPT) {
+					
+					assert(skipDeref->getType() == AccessType::AT_SUBSCRIPT);
+
+					auto classRange = cast<Subscript>(subAccess);
+					auto accessRange = cast<Subscript>(cmpAccess);
+
+					if (accessRange->isContextDependent()) {
+						// classfy it with the parent 
+						assert(parentClass && "parent class must be valid");
+						LOG(INFO) << "NOCTX";
+						parentClass->storeAccess(access);
+						retClasses.insert( parentClass );
+						classified = true;
+						break;
+					}
+
+					// Create a polyhedral context so that we can work with sets 
+					auto ctx = polyhedral::makeCtx();
+					auto classSet  = polyhedral::makeSet(ctx, 
+							classRange->getRange() ?
+								polyhedral::IterationDomain(classRange->getRange()) :
+								polyhedral::IterationDomain(classRange->getIterationVector(), false)
+							);
+					auto accessSet = polyhedral::makeSet(ctx, 
+							accessRange->getRange() ?
+								polyhedral::IterationDomain(accessRange->getRange()) :
+								polyhedral::IterationDomain(accessRange->getIterationVector(), false)
+							);
+					
+					// compute the difference, if it is empty then the two ranges are equivalent 
+					auto intersection = classSet * accessSet;
+					LOG(INFO) << "intersection " << *intersection << " " << ", "; 
+
+					if ( !intersection->empty() ) { 
+						
+						auto splitAccess = [&]() {
+							auto diff = accessSet - intersection;
+
+							polyhedral::IterationVector iv;
+							auto diffCons = diff->toConstraint(access->getRoot().getVariable()->getNodeManager(), iv);
+								
+							// Try to classify the remaining range 
+							cmpAccess = std::make_shared<Subscript>(
+											cmpAccess->getAddress(),
+											cast<Subscript>(cmpAccess)->getSubAccess(),
+											cmpAccess->isFinal(),
+											cast<Subscript>(cmpAccess)->getContext(),
+											iv,
+											diffCons
+										);
+
+							subLevel = cast<AccessDecorator>(cmpAccess)->switchSubAccess(AccessPtr());
+						};
+
+						auto splitClass = [&]() {
+
+							polyhedral::IterationVector iv;
+							auto interCons = intersection->toConstraint(
+												access->getRoot().getVariable()->getNodeManager(), iv);
+	
+
+							// Try to classify the remaining range 
+							auto accDecLevel = std::make_shared<Subscript>(
+											NodeAddress(),
+											AccessPtr(),
+											cmpAccess->isFinal(),
+											cast<Subscript>(cmpAccess)->getContext(),
+											iv,
+											interCons
+										);
+														
+							// now change the orginal class by subclassing by the difference 
+							auto diff = classSet - intersection;
+
+							polyhedral::IterationVector iv2;
+							auto diffCons = diff->toConstraint(
+												access->getRoot().getVariable()->getNodeManager(), iv2);
+
+							// Try to classify the remaining range 
+							auto diffLevel = std::make_shared<Subscript>(
+											NodeAddress(),
+											AccessPtr(),
+											cmpAccess->isFinal(),
+											cast<Subscript>(cmpAccess)->getContext(),
+											iv2,
+											diffCons
+										);
+							
+							// modify the current access 
+							std::get<1>(dep) = diffLevel;
+
+							auto newClass = addClass(parentClass, access, accDecLevel, false);
+							
+							toAppend.push_back( AccessInfo(newClass, parentClass, accDecLevel) );
+
+							for (auto& acc : subClass->getAccesses()) {
+								newClass->storeAccess( acc );
+							}
+
+							retClasses.insert( newClass );
+						};
+
+						// We hit the same class, add the access to the class  
+						if (*intersection == *accessSet && *intersection == *classSet ) 
+						{
+							subClass->storeAccess(access);
+							retClasses.insert( subClass );
+							classified = true;
+							break;
+						}
+
+						// We are in the case where the intersection is equal to the class set. 
+						// This means we have to create a new class and append the old class as a subrange 
+						if (*intersection == *classSet)  {
+							
+							// Add a new class representing the intersection
+							subClass->storeAccess( access );
+							retClasses.insert( subClass );
+
+							splitAccess();
+							continue;
+						}
+
+						if (*intersection == *accessSet) {
+
+							splitClass();
+							classified = true;
+							continue;
+						}
+							
+						// We have an intersection, however this is a subset of both the current 
+						// access and the subclass selector of the parent class 
+						splitClass();
+						splitAccess();
+					}
+
+				}
+
+			}
+
+			if (!toAppend.empty()) {
+				for (const auto& cur : toAppend) 
+					std::get<1>(cur)->addSubClass( AccessClass::Dependence( std::get<0>(cur), std::get<2>(cur) ) );
+			}
+
+			if (!classified) {
+				// the access was not classified 
+				retClasses.insert( addClass(parentClass, access, subLevel) );
+
+				if (subLevel->getType() == AccessType::AT_SUBSCRIPT) {
+
+					// if there is an access for a subrange then we have to define a new class
+					// which contains the possible remaining accesses 
+
+					auto subAccess = cast<Subscript>(subLevel);
+
+					auto ctx = polyhedral::makeCtx();
+					auto universe = polyhedral::makeSet(ctx, 
+							polyhedral::IterationDomain(subAccess->getIterationVector())
+						);
+					auto accessSet = polyhedral::makeSet(ctx, 
+							subAccess->getRange() ?
+								polyhedral::IterationDomain(subAccess->getRange()) :
+								polyhedral::IterationDomain(subAccess->getIterationVector(), false)
+							);
+
+					polyhedral::IterationVector iv;
+					
+					auto diffCons = (universe-accessSet)->toConstraint(
+								access->getRoot().getVariable()->getNodeManager(), iv);
+
+					// Try to classify the remaining range 
+					auto accDecLevel = std::make_shared<Subscript>(
+											NodeAddress(),
+											AccessPtr(),
+											cmpAccess->isFinal(),
+											subAccess->getContext(),
+											iv,
+											diffCons
+										);
+														
+					addClass(parentClass, AccessPtr(), accDecLevel);
+							
+				}
+			}
+		}
+
+		return retClasses;
 	}
 
-	// Creates a new alias class  (can't use make_shared because the constructor is private)
-	auto newClass = std::shared_ptr<AccessClass>(new AccessClass(std::cref(*this), classes.size(), parentClass) );
-	newClass->storeAccess(access);
-	classes.emplace_back( newClass );
-
-	if (parentClass) {
-		parentClass->addSubClass( AccessClass::Dependence( depType, newClass, subLevel ) );
-	}
-
-	return newClass;
+	return { addClass(nullptr, access, subLevel) };
 }
 
 std::ostream& AccessManager::printTo(std::ostream& out) const {
@@ -691,20 +938,33 @@ void addSubClasses(const AccessClassPtr& thisClass, AccessClassSet& collect) {
 
 	for (const auto& cur : thisClass->getSubClasses()) {
 
-		// Visit the parent until the kind of access changes 
-		if (std::get<0>(cur) == AccessClass::DT_LEVEL)
-			break;
+		auto thisSubClass = std::get<0>(cur).lock();
 
-		auto thisSubClass = std::get<1>(cur).lock();
 		if(collect.insert(thisSubClass).second) {
 			addSubClasses(thisSubClass, collect);	
 		}
 	}
 }
 
+AccessClassSet getConflicting(const AccessClassSet& classes) {
+	
+	AccessClassSet ret;
+	for (const auto& classPtr : classes) {
+		addSubClasses(classPtr, ret);
+
+		AccessClassPtr cur = classPtr;
+
+		AccessClassPtr parent;
+		while ( parent = cur->getParentClass() )  {
+			ret.insert(parent);
+			cur = parent;
+		}
+	}
+	return ret;
 
 }
-} // end insieme::analysis namespace
+
+} } // end insieme::analysis namespace
 
 namespace std {
 

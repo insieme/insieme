@@ -243,6 +243,10 @@ struct Address : public utils::Printable {
 
 	inline unsigned getStmtIdx() const { return stmt_idx; }
 
+	inline core::NodeAddress getAddress() const { return addr; }
+
+	inline bool isValid() const { return addr.isValid(); }
+
 	/**
 	 * Retrieve the node addressed by this address (the name guarantee consistency with ir addresses 
 	 */
@@ -708,22 +712,35 @@ private:
 	boost::optional<Terminator>	term;
 };
 
+
+
 struct RetBlock;
 
 struct CallBlock: public Block {
 
-	CallBlock(const CFG& cfg): Block(cfg, CALL), ret(NULL) { }
+	CallBlock(const CFG& cfg, const core::CallExprAddress& expr): 
+		Block(cfg, CALL), expr(expr), ret(NULL) { }
+
+	const core::CallExprAddress& getCallExpr() const { 
+		return expr; 
+	}
 
 	inline const RetBlock& getReturnBlock() const { 
 		assert(ret && "Return block for this CALL block not set."); 
 		return *ret; 
 	}
+
 	inline void setReturnBlock(RetBlock& ret) { this->ret = &ret; }
 
 	virtual ~CallBlock() { }
+
 private:
+	core::CallExprAddress expr;
 	RetBlock* ret;
 };
+
+
+
 
 struct RetBlock: public Block {
 
@@ -743,6 +760,8 @@ private:
 } // end cfg namespace
 } // end analysis namespace
 } // end insieme namespace
+
+
 
 namespace std {
 

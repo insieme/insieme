@@ -76,21 +76,13 @@ public:
 				   type == other.type;
 		}
 
-		inline const std::string getFileName() const { 
-			return fileName; 
-		}
+		inline const std::string getFileName() const { return fileName; }
 
-		inline const SourceLocation getStartLoc() const { 
-			return locStart; 
-		}
+		inline const SourceLocation getStartLoc() const { return locStart; }
 		
-		inline const SourceLocation getEndLoc() const { 
-			return locEnd; 
-		}
+		inline const SourceLocation getEndLoc() const { return locEnd; }
 
-		inline const ModificationType getType() const { 
-			return type; 
-		}
+		inline const ModificationType getType() const { return type; }
 
 		inline const std::string getCode() const { return code; }
 

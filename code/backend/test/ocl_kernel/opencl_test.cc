@@ -95,11 +95,11 @@ TEST(ocl_hostKernel, baseTest) {
 	hc.compile();
 
 	insieme::core::printer::PrettyPrinter pp(program);
-	std::cout << "Printing the IR: " << pp;
+//	std::cout << "Printing the IR: " << pp;
 	
 	std::cout << "Start OpenCL Backend visit\n";
         
 	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
 	auto converted = backend->convert(program);
-	std::cout << "Converted code:\n" << *converted;
+//	std::cout << "Converted code:\n" << *converted;
 }

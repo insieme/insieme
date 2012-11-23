@@ -70,6 +70,7 @@ namespace frontend {
 		enum Option {
 			OpenMP			= 1<<0,
 			OpenCL			= 1<<1,
+			Cilk			= 1<<2
 		};
 
 		/**

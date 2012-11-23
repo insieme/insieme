@@ -386,29 +386,6 @@ OptionalMessageList LambdaTypeCheck::visitLambdaExpr(const LambdaExprAddress& ad
 	return res;
 }
 
-namespace {
-
-	bool isVariableSized(const TypePtr& cur) {
-		NodeType type = cur->getNodeType();
-		switch(type) {
-		case NT_ArrayType: return true;
-		case NT_StructType: {
-			StructTypePtr structType = cur.as<StructTypePtr>();
-			return !structType.empty() && isVariableSized(structType.back()->getType());
-		}
-		case NT_TupleType: {
-			TupleTypePtr tupleType = cur.as<TupleTypePtr>();
-			return !tupleType.empty() && isVariableSized(tupleType.back());
-		}
-		case NT_UnionType: {
-			UnionTypePtr unionType = cur.as<UnionTypePtr>();
-			return any(unionType, [](const NamedTypePtr& cur) { return isVariableSized(cur->getType()); });
-		}
-		default: return false;
-		}
-	}
-
-}
 
 OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
 
@@ -977,6 +954,15 @@ namespace {
 		// casts between integer values or reals are allowed
 		if (isPrimitiveType(src) && isPrimitiveType(trg)) {
 			return true; // this is allowed
+		}
+
+		// allow casts between recursive version and unrolled version
+		if (src->getNodeType() == NT_RecType && trg->getNodeType() != NT_RecType) {
+			return isValidCast(src.as<RecTypePtr>()->unroll(), trg);
+		}
+
+		if (src->getNodeType() != NT_RecType && trg->getNodeType() == NT_RecType) {
+			return isValidCast(src, trg.as<RecTypePtr>()->unroll());
 		}
 
 		// also allow references to be casted to boolean

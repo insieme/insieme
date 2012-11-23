@@ -38,6 +38,7 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_pointer.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace core {
@@ -60,7 +61,27 @@ namespace analysis {
 	 * @param node the node to be normalized
 	 * @param the normalized version of the given node
 	 */
-	template<typename T> T normalize(const T& node) { return normalize(NodePtr(node)).as<T>(); }
+	template<typename T> Pointer<T> normalize(const Pointer<T>& node) { return normalize(NodePtr(node)).as<Pointer<T>>(); }
+
+	/**
+	 * Normalizes the given address to match a fixed schema such that
+	 * structural name independent equivalence can be checked with the
+	 * equality operator. The normalization is applied to the root node.
+	 *
+	 * @param node the node to be normalized.
+	 * @return the normalized version of the given node.
+	 */
+	NodeAddress normalize(const NodeAddress& node);
+
+	/**
+	 * A generic wrapper for the normalization operation above.
+	 *
+	 * @tparam T the type of node to be normalized
+	 * @param node the node to be normalized
+	 * @param the normalized version of the given node
+	 */
+	template<typename T> Address<T> normalize(const Address<T>& node) { return normalize(NodeAddress(node)).as<Address<T>>(); }
+
 
 } // end namespace analysis
 } // end namespace core

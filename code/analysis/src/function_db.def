@@ -41,7 +41,7 @@
 //=================================================
 
 // Add Semantic info for MPI functions 
-// #include "mpi/mpi_func_sema.def"
+#include "mpi/mpi_func_sema.def"
 
 
 // Other definitions here...
@@ -60,11 +60,18 @@ FUNC(cos, "(real<8>) -> real<8>", false, NO_REF);
 FUNC(tan, "(real<8>) -> real<8>", false, NO_REF);
 
 // printf
-FUNC(printf, "(ref<array<char,1> >, var_list) -> int<4>", true,
+FUNC(printf, "(ref<array<char,1>>, var_list) -> int<4>", 
+	true,
 	NO_REF, // this may be right
 	NO_REF // this is wrong, ACCESS(USE, RANGE(PW(0),PW(1))) doesn't work
-	);
+);
 
 // exit -- not really side effect free, but as far as the analysis is concerned it might as well be
 FUNC(exit, "(int<4>)->unit", false, NO_REF)
+
+FUNC(memcpy, "(anyref, anyref, uint<8>) -> unit",
+     true,
+	 ACCESS(RANGE_OFFSET(DEF,ARG(0),TO_PW(ARG(2)))),
+	 ACCESS(RANGE_OFFSET(USE,ARG(0),TO_PW(ARG(2)))),
+	 NO_REF);
 

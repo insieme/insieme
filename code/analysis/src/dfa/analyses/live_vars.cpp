@@ -45,66 +45,122 @@ namespace analysis {
 namespace dfa {
 namespace analyses {
 
+typedef typename LiveVariables::value_type value_type;
+
 /**
  * LiveVariables Problem
  */
-typename LiveVariables::value_type 
-LiveVariables::meet(const typename LiveVariables::value_type& lhs, const typename LiveVariables::value_type& rhs) const 
-{
-	typename LiveVariables::value_type ret;
+ 
+value_type LiveVariables::meet(const value_type& lhs, const value_type& rhs) const {
+	value_type ret;
 	std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
 	return ret;
 }
 
-typename LiveVariables::value_type 
-LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const cfg::BlockPtr& block) const {
-	typename LiveVariables::value_type gen, kill;
+
+std::pair<value_type, value_type> LiveVariables::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
 	
-	if (block->empty()) { return in; }
+	value_type gen, kill;
 
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "Block " << block->getBlockID();
-	LOG(DEBUG) << "IN: " << in;
+	if (block->empty()) { return {gen,kill}; }
 
-	assert(block->size() == 1);
+	const AccessManager& aMgr = getAccessManager();
 
-	core::StatementPtr stmt = (*block)[0].getAnalysisStatement();
+	size_t stmt_idx = 0;
+	for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
 
-	auto visitor = core::makeLambdaVisitor(
-			[&gen] (const core::VariablePtr& var) { gen.insert( var ); }, true);
-	auto v = makeDepthFirstVisitor( visitor );
+		core::StatementPtr 		stmtPtr  = cur.getAnalysisStatement();
+		core::StatementAddress	stmt = core::StatementAddress(stmtPtr);
 
-	// assume scalar variables 
-	if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
+		core::NodeManager& mgr = stmt->getNodeManager();
+		
+		// Makes sure that whatever exit path is taken in the body of this lambda, the stmt_idx
+		// is going to be updated correctly 
+		FinalActions fa([&](){ ++stmt_idx; });
 
-		kill.insert( decl->getVariable() );
-		v.visit(decl->getInitialization());
+		auto handle_rhs = [&](const core::ExpressionAddress& expr) {
 
-	} else if (core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(stmt)) {
+			auto accesses = getAccesses(mgr, 
+				UnifiedAddress(cfg::Address(block,stmt_idx,expr)), 
+				getCFG().getTmpVarMap()
+			);
 
-		auto begin = call->getArguments().begin(), end = call->getArguments().end();
+			// for each usage of a variable add it to the gen set 
+			for (const auto& acc : accesses) { 
+				auto liveClasses = aMgr.findClass(acc);
+				std::copy(liveClasses.begin(), liveClasses.end(), std::inserter(gen, gen.begin()));
+			}
+		};
 
-		if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
-			kill.insert( call->getArgument(0).as<core::VariablePtr>() );
-			++begin;
+
+		auto handle_def = [&](const core::ExpressionAddress& lhs, const core::ExpressionAddress& rhs) { 
+					
+			auto defAccess = getImmediateAccess(stmt->getNodeManager(), 
+								cfg::Address(block, stmt_idx, lhs), 
+								getCFG().getTmpVarMap()
+							);
+
+			auto defClasses = aMgr.findClass(defAccess);
+			assert(!defClasses.empty() && "Invalid class for access. Something wrong in the extract() method");
+
+			AccessClassSet depClasses = getConflicting(defClasses);
+			std::copy(defClasses.begin(), defClasses.end(), std::inserter(depClasses, depClasses.begin()));
+
+			bool found = false;
+
+			// Kill Entities 
+			for(auto it = in.begin(), end=in.end(); it != end; ++it) {
+				if (std::find_if( depClasses.begin(), depClasses.end(), 
+						[&](const AccessClassPtr& cur) { return *cur == **it; }) != depClasses.end() ) { 
+							found = true; 
+							kill.insert( *it ); 
+				}
+			}
+
+			// if the LHS is a not live variable then the RHS should not be detected as a live
+			// variable 
+			if (!found) { 
+				return; // then any of the uses in the LHS are relevant 
+			}
+
+			handle_rhs(rhs);
+		};
+
+
+		// assume scalar variables 
+		if (auto decl = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
+
+			handle_def(decl->getVariable(), decl->getInitialization());
+
+		} else if (auto call = core::dynamic_address_cast<const core::CallExpr>(stmt)) {
+
+			if (core::analysis::isCallOf(call.getAddressedNode(), mgr.getLangBasic().getRefAssign()) ) {
+				handle_def(call->getArgument(0), call->getArgument(1));
+				return;
+			}
+
+			// function 
+			handle_rhs(call);
+
+		} else if (cur.getType() == cfg::Element::LOOP_INCREMENT) {
+
+			auto cfgAddr = getCFG().find(
+					cur.getStatementAddress().as<core::ForStmtAddress>()->getDeclaration()->getVariable()
+				);
+
+			auto accessPtr = getImmediateAccess(mgr, cfgAddr, getCFG().getTmpVarMap());
+			auto liveClasses = aMgr.findClass(accessPtr);
+
+			std::copy(liveClasses.begin(), liveClasses.end(), std::inserter(gen, gen.begin()));
+
+		} else {
+
+			handle_rhs( core::ExpressionAddress(stmt.as<core::ExpressionPtr>()) );
+
 		}
-
-		std::for_each(begin, end, [&](const core::ExpressionPtr& cur) { v.visit(cur); });
-
-	} else {
-		LOG(WARNING) << *block; 
-		// assert(false);
-	}
+	});
 	
-	LOG(DEBUG) << "KILL: " << kill;
-	LOG(DEBUG) << "GEN:  " << gen;
-
-	typename LiveVariables::value_type set_diff, ret;
-	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
-	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
-
-	LOG(DEBUG) << "RET: " << ret;
-	return ret;
+	return {gen,kill};
 }
 
 } // end analyses namespace 

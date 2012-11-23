@@ -122,6 +122,7 @@ irt_wi_implementation g_insieme_impl_table[] = {
 
 // OpenCL Kernel table
 #ifdef USE_OPENCL
+#include <CL/cl.h>
 unsigned g_kernel_code_table_size = 1;
 irt_ocl_kernel_code g_kernel_code_table[] = {
 	{
@@ -368,7 +369,7 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 }
 
 void insieme_wi_mul_implementation3(irt_work_item* wi) {
-	#ifdef USE_OPENCL
+/*	#ifdef USE_OPENCL
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
 
@@ -481,7 +482,7 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	irt_di_destroy(itemA);
 	irt_di_destroy(itemB);
 	irt_di_destroy(itemC);
-	#endif
+	#endif*/
 }
 
 void insieme_wi_mul_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {

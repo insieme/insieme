@@ -43,6 +43,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/simplify.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -51,6 +52,9 @@
 
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
+
+#include "insieme/transform/dfabased/const_prop.h"
+#include "insieme/transform/dfabased/dead_variables.h"
 
 #include "insieme/utils/cmd_line_utils.h"
 
@@ -136,7 +140,9 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 
 	if(CommandLineOptions::ConstantPropagation) {
 		LOG(INFO) << "Performing Constant Propagation on input program";
-		res = doConstantPropagation(res);
+		res = doConstProp(res->getNodeManager(), res);
+		res = removeDeadVariables(res->getNodeManager(), res);
+		res = core::transform::simplify(res->getNodeManager(), res);
 	}
 	// done
 	return res;

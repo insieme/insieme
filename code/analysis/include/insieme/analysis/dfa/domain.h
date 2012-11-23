@@ -133,7 +133,7 @@ expand(const Cont& cont) { return cont; }
 /**
  * Implementation of a generic set based on existing implementations.
  */
-template <class T, template <typename... R> class Impl=std::set>
+template <class T, template <typename... R> class Impl=std::unordered_set>
 struct Set : public SymbolicSet<T>, public Impl<T> {
 
 	typedef T 		value_type;
@@ -277,6 +277,11 @@ namespace {
 template <class Base1, class Base2>
 struct set_base_traits<CartProdSet<Base1,Base2>> {
 	typedef typename CartProdSet<Base1,Base2>::base_type type;
+};
+
+template <class Base1, class Base2, class Base3>
+struct set_base_traits<CartProdSet<Base1,CartProdSet<Base2,Base3>>> {
+	typedef typename CartProdSet<Base1,CartProdSet<Base2,Base3>>::base_type type;
 };
 
 } // end anonymous namespace 
@@ -486,6 +491,9 @@ public:
 
 	// Creates an empty cartesian-product
 	CartProdSet() { }
+
+	CartProdSet(const BaseSet1& b1, const Base2& b2, const Base3& b3) : 
+		base1(b1), base2(CartProdSet<Base2,Base3>(b2, b3)) { }
 
 	CartProdSet(const BaseSet1& b1, const BaseSet2& b2) : base1(b1), base2(b2) { }
 

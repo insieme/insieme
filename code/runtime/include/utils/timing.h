@@ -39,15 +39,45 @@
 // prototype of functions using rdtsc
 #include "abstraction/rdtsc.h"
 
+#ifdef _WIN32
+	#define CLOCK_REALTIME 1 // just to have some definition for CLOCK_REALTIME
+	#include "include_win32/time.h"
+	#include "include_win32/sys_time.h"
+#else
+	#include <time.h>
+	#include <unistd.h>
+	#include <sys/time.h>
+#endif
+
+
+/*
+// at this point it could still be, that CLOCK_REALTIME is not defined (eg with MinGWs time.h)
+#ifndef CLOCK_REALTIME
+	#define CLOCK_REALTIME 1
+#endif
+
+// same holds for struct timespec
+#if !defined(_TIMESPEC_DEFINED)
+#define _TIMESPEC_DEFINED
+struct timespec {
+	long  tv_sec;         // seconds
+	long  tv_nsec;        // nanoseconds
+};
+#endif
+*/
+
+
 uint64 irt_g_time_ticks_per_sec = 0;
 
 // ====== sleep functions ======================================
 
-int irt_nanosleep_timespec(const struct timespec* wait_time);
+int irt_nanosleep_timespec(const struct timespec *wait_time);
 
 int irt_nanosleep(uint64 wait_time);
 
 void irt_busy_nanosleep(uint64 wait_time);
+
+void irt_busy_ticksleep(uint64 wait_ticks);
 
 // ====== clock cycle measurements ======================================
 

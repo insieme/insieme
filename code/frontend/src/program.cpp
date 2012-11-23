@@ -40,6 +40,7 @@
 #include "insieme/frontend/pragma/insieme.h"
 
 #include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/cilk/cilk_pragma.h"
 
 #include "insieme/frontend/mpi/mpi_pragma.h"
 #include "insieme/frontend/mpi/mpi_sema.h"
@@ -145,6 +146,9 @@ public:
 		insieme::frontend::TranslationUnit(file_name) {
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
+
+		//register 'cilk' pragmas
+		cilk::registerPragmaHandlers( mClang.getPreprocessor() );
 
 		// register 'test' pragma
 		TestPragma::registerPragmaHandler( mClang.getPreprocessor() );
@@ -330,8 +334,8 @@ const core::ProgramPtr& Program::convert() {
 			// and create an anonymous lambda expression to enclose it
 			const clang::Stmt* body = insiemePragma.getStatement();
 			assert(body && "Pragma matching failed!");
-			core::LambdaExprPtr&& lambdaExpr = astConvPtr->handleBody(body, *(*pit).second);
-			mProgram = core::Program::addEntryPoint(mMgr, mProgram, lambdaExpr);
+			core::CallExprPtr callExpr = astConvPtr->handleBody(body, *(*pit).second);
+			mProgram = core::Program::addEntryPoint(mMgr, mProgram, callExpr);
 		}
 	}
 

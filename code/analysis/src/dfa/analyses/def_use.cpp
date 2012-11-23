@@ -47,21 +47,23 @@ namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 
 namespace {
 
-void lookup_accesses(AddressSet& addrSet, const AccessClassPtr& cl, const CFGPtr& cfg) {
+void lookup_accesses(AddressSet& addrSet, const AccessClassSet& clSet, const CFGPtr& cfg) {
 
-	auto addrs = extractRealAddresses(*cl, cfg->getTmpVarMap());
-	std::copy(addrs.begin(), addrs.end(), std::inserter(addrSet, addrSet.begin()));
+	for (auto& cl : clSet) {
+		auto addrs = extractRealAddresses(*cl, cfg->getTmpVarMap());
+		std::copy(addrs.begin(), addrs.end(), std::inserter(addrSet, addrSet.begin()));
 
-	auto parent = cl->getParentClass();
-	if (parent) { 
-		bool found=false;
-		for(const auto& dep : parent->getSubClasses()) {
-			if (std::get<0>(dep) == AccessClass::DT_RANGE && 
-				std::get<1>(dep).lock() == cl) { found = true; }
-
-		}
-		if (found) 
-		lookup_accesses(addrSet, cl->getParentClass(), cfg); 
+		auto parent = cl->getParentClass();
+//		if (parent) { 
+//			bool found=false;
+//			for(const auto& dep : parent->getSubClasses()) {
+//				if (std::get<0>(dep) == AccessClass::DT_RANGE && 
+//					std::get<1>(dep).lock() == cl) { found = true; }
+//
+//			}
+	//		if (found) 
+	//		lookup_accesses(addrSet, cl->getParentClass(), cfg); 
+//		}
 	}
 }
 
@@ -96,9 +98,11 @@ struct DefUse::DefUseImpl {
 	CFGPtr cfg;
 	std::map<size_t, typename ReachingDefinitions::value_type> analysis;
 
-	DefUseImpl(const core::NodePtr& root) : cfg(CFG::buildCFG(root))
+	DefUseImpl(const core::NodePtr& root, const CFGPtr& cfg) : cfg(cfg)
 	{
-		Solver<ReachingDefinitions> s(*cfg);
+		if (!this->cfg) { this->cfg = CFG::buildCFG(root); }
+
+		Solver<ReachingDefinitions> s(*this->cfg);
 		
 		// Collect polyhedral informations and attach it to the IR nodes 
 		polyhedral::scop::mark(root);
@@ -108,8 +112,8 @@ struct DefUse::DefUseImpl {
 	
 };
 
-DefUse::DefUse(const core::NodePtr& root) : 
-	pimpl( std::make_shared<DefUse::DefUseImpl>(root) ) { }
+DefUse::DefUse(const core::NodePtr& root, const CFGPtr& cfg) : 
+	pimpl( std::make_shared<DefUse::DefUseImpl>(root, cfg) ) { }
 
 
 AddressSet DefUse::getDefinitions(const core::ExpressionAddress& addr) {

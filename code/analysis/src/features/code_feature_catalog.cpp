@@ -353,6 +353,14 @@ using insieme::transform::pattern::any;
 					return 1;
 				return 0;
 			};
+			lambdas["breaks"] = [&](core::NodePtr node) {
+				if(node->getNodeType() == core::NT_ReturnStmt)
+					return 1;
+				if(node->getNodeType() == core::NT_ContinueStmt)
+					return 1;
+				if(node->getNodeType() == core::NT_BreakStmt)
+					return 1;
+			};
 
 			// not sure if all makes sense in this case...
 //			ops["all"] = vector<core::ExpressionPtr>();
@@ -428,6 +436,9 @@ using insieme::transform::pattern::any;
 
 				addBinaryComposedFeature("scalarOPs-vectorOPs_%s", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
+
+				addTernaryComposedFeature("any_any_OPs_%s", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",
+						"SCF_NUM_externalFunction_lambda_%s",	cur_mode.first.c_str(), catalog, composedFeatures);
 
 				addBinaryComposedFeature("localMemoryAccesses-allMemoryAccesses_%s", "SCF_NUM_localMemoryAccess_calls_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);

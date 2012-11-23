@@ -142,7 +142,7 @@ void _irt_inst_insert_di_event(irt_worker* worker, irt_instrumentation_event eve
 
 // ================= debug output functions ==================================
 
-#ifdef USE_OPENCL
+#if defined (USE_OPENCL) && defined (IRT_OCL_INSTR)
     bool irt_g_ocl_temp_event_dump_already_done = false;
 #endif
 
@@ -182,7 +182,7 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no event data!")
 	//fprintf(outputfile, "INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.thread);
 
-#ifdef USE_OPENCL
+#if defined (USE_OPENCL) && defined (IRT_OCL_INSTR)
 	irt_ocl_event_table* ocl_table = worker->event_data;
 	IRT_ASSERT(ocl_table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no OpenCL event data!")
 	int64 ocl_offset = 0;
@@ -203,14 +203,14 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 
 	for(int i = 0; i < ocl_table->num_events; ++i) {
 		cl_command_type retval;
-		cl_int err_code = clGetEventInfo(ocl_table->event_array[i].event, CL_EVENT_COMMAND_TYPE, sizeof(cl_command_type), &retval, NULL);
+		cl_int err_code = clGetEventInfo(ocl_table->event_array[i].cl_event, CL_EVENT_COMMAND_TYPE, sizeof(cl_command_type), &retval, NULL);
 		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL,"Error getting \"event command type\" info: \"%d\"", err_code);
 
 		cl_ulong events[4];
-		err_code = clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &events[IRT_INST_OCL_QUEUED], NULL);
-		err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_SUBMIT, sizeof(cl_ulong), &events[IRT_INST_OCL_SUBMITTED], NULL);
-		err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &events[IRT_INST_OCL_STARTED], NULL);
-		err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &events[IRT_INST_OCL_FINISHED], NULL);
+		err_code = clGetEventProfilingInfo(ocl_table->event_array[i].cl_event, CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &events[IRT_INST_OCL_QUEUED], NULL);
+		err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].cl_event, CL_PROFILING_COMMAND_SUBMIT, sizeof(cl_ulong), &events[IRT_INST_OCL_SUBMITTED], NULL);
+		err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].cl_event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &events[IRT_INST_OCL_STARTED], NULL);
+		err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].cl_event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &events[IRT_INST_OCL_FINISHED], NULL);
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%d\"",  err_code);
 
 		// convert all ocl event information into a flat table, only the ocl_events[j] changes over this run
@@ -334,7 +334,7 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 	}
 
 	fclose(outputfile);
-#ifdef USE_OPENCL
+#if defined (USE_OPENCL) && defined (IRT_OCL_INSTR)
 	free(ocl_helper_table);
 #endif
 }
@@ -720,7 +720,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 
 			// single fprintf for performance reasons
 			// outputs all data in pairs: value_when_entering_region, value_when_exiting_region
-			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.1f,%1.1f",
+			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f",
 					table->data[i].subject_id,
 					irt_time_convert_ticks_to_ns(start_data.timestamp), 
 					irt_time_convert_ticks_to_ns(table->data[i].timestamp),
@@ -755,7 +755,7 @@ void irt_inst_aggregated_data_output() {
 	if(stat_retval != 0)
 		mkdir(outputprefix, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for performance log writing: %s", strerror(errno));
+	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for efficiency log writing: %s", strerror(errno));
 
 	sprintf(outputfilename, "%s/worker_efficiency_log", outputprefix);
 

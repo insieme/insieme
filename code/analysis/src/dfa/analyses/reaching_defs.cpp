@@ -46,7 +46,7 @@ namespace insieme { namespace analysis { namespace dfa {
 
 template <>
 typename container_type_traits< dfa::elem< cfg::Address >  >::type 
-extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg) {
+extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg, analyses::ReachingDefinitions& def) {
 
 	std::set<cfg::Address> entities;
 
@@ -58,8 +58,10 @@ extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg) {
 			auto stmt = core::NodeAddress(cur.getAnalysisStatement());
 	
 			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { 
-				stmt.as<core::ForStmtPtr>()->getDeclaration()->getVariable();
-				// FIXME
+				entities.insert( cfg::Address(block, stmt_idx-1, 
+						stmt.as<core::ForStmtAddress>()->getDeclaration()->getVariable()
+					));
+				return;
 			}
 
 			if (auto declStmt = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
@@ -90,10 +92,10 @@ typedef typename ReachingDefinitions::value_type AnalysisDataType;
  */
 
 AnalysisDataType ReachingDefinitions::meet(const AnalysisDataType& lhs, const AnalysisDataType& rhs) const {
-	LOG(DEBUG) << "MEET ( " << lhs << ", " << rhs << ") -> ";
+	// LOG(DEBUG) << "MEET ( " << lhs << ", " << rhs << ") -> ";
 	AnalysisDataType ret;
 	std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
-	LOG(DEBUG) << ret;
+	// LOG(DEBUG) << ret;
 	return ret;
 }
 
@@ -104,15 +106,16 @@ void definitionsToAccesses(const AnalysisDataType& data, AccessManager& aMgr) {
 	}
 }
 
-AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
+
+std::pair<AnalysisDataType,AnalysisDataType> 
+ReachingDefinitions::transfer_func(const AnalysisDataType& in, const cfg::BlockPtr& block) const {
 
 	AnalysisDataType gen, kill;
 	
-	if (block->empty()) { return in; }
+	if (block->empty()) { return {gen,kill}; }
 
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "~ Block " << block->getBlockID();
-	LOG(DEBUG) << "~ IN: " << in;
+	// Get the generator 
+	const auto& basic = getCFG().getNodeManager().getLangBasic();
 
 	AccessManager mgr(&getCFG(), getCFG().getTmpVarMap());
 	definitionsToAccesses(in, mgr);
@@ -131,27 +134,24 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 			auto access = getImmediateAccess(stmt->getNodeManager(), cfgAddr, getCFG().getTmpVarMap());
 
 			// Get the class to which the access belongs to 
-			AccessClassPtr collisionClass = mgr.getClassFor(access);
+			AccessClassSet collisionSet = mgr.getClassFor(access);
 
-			AccessClassSet classes;
-			classes.insert(collisionClass);
-
-			// Add subclasses which are affected by this definition
-			addSubClasses(collisionClass, classes);
+			AccessClassSet subClasses;
+			for(const auto& curClass : collisionSet)  {
+				subClasses.insert(curClass);
+				addSubClasses(curClass, subClasses);
+			}
 
 			// Kill Entities 
 			if (access->isReference()) 
-				for (auto& curClass : classes) {
+				for (auto& curClass : subClasses) 
 					for (auto& acc : *curClass) {
 						kill.insert( acc->getAddress().as<cfg::Address>() );
 					}
-				}
 
 			gen.insert( access->getAddress().as<cfg::Address>() );
 
 		};
-
-		if (stmt->getNodeType() == core::NT_Literal) { return; }
 
 		if (core::DeclarationStmtAddress decl = core::dynamic_address_cast<const core::DeclarationStmt>(stmt)) {
 
@@ -161,7 +161,7 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 
 		} else if (core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(stmt)) {
 
-			if (core::analysis::isCallOf(call.getAddressedNode(), call->getNodeManager().getLangBasic().getRefAssign()) ) { 
+			if ( core::analysis::isCallOf(call.getAddressedNode(), basic.getRefAssign()) ) { 
 				handle_def( call->getArgument(0).as<core::VariableAddress>() );
 			}
 		}
@@ -173,16 +173,7 @@ AnalysisDataType ReachingDefinitions::transfer_func(const AnalysisDataType& in, 
 		++stmtIdx;
 	});
 
-	// TODO: Factorize outside the analysis code 
-	LOG(DEBUG) << "~ KILL: " << kill;
-	LOG(DEBUG) << "~ GEN:  " << gen;
-
-	AnalysisDataType set_diff, ret;
-	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
-	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
-	LOG(DEBUG) << "~ RET: " << ret;
-
-	return ret;
+	return {gen, kill};
 }
 
 } } } } // end insieme::analysis::dfa::analyses namespace 

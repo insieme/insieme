@@ -165,11 +165,11 @@ public:
 
 		if ( (isBottom() && other.isBottom()) || (!isBottom() && other.isBottom())) { return false; }
 
-		if ( (isTop() && other.isTop()) || (isTop() && !other.isTop())) { return false; }
+		if ( (isTop() && other.isTop()) || (isTop() && !other.isTop())) { 
+			return false; 
+		}
 
-		if ( isBottom() || other.isTop() ) { return true; }
-
-		return value() < other.value();
+		return ( isBottom() || other.isTop() ) || value() < other.value();
 	}
 };
 
@@ -193,4 +193,24 @@ inline Value<T> value(const T& e) { return Value<T>(e); }
 } // end dfa namespace 
 } // end analysis namespace 
 } // end insieme namespace 
+
+namespace std {
+
+	/** 
+	 * Define an hashing function for Values, the hashing is done by forwawding the call
+	 * to the hashing function of the contained object. In the case of bottom/top symbols 
+	 * their hashing is obtained by their address, since they are singletons.
+	 */
+	template <typename T>
+	struct hash<insieme::analysis::dfa::Value<T>> {
+		
+		size_t operator()(const insieme::analysis::dfa::Value<T>& val) const {
+			if (val.isTop()) 	{ return reinterpret_cast<size_t>(&insieme::analysis::dfa::top); }
+			if (val.isBottom()) { return reinterpret_cast<size_t>(&insieme::analysis::dfa::bottom); }
+			return std::hash<T>()(val.value());
+		}
+
+	};
+
+} // end std namespace 
 

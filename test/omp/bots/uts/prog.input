@@ -1,1 +1,1 @@
-{PATH}/{EXEC} -c -f {PATH}/test.input
+{PATH}/{EXEC} -c -f {PATH}/../../../bots/uts/test.input

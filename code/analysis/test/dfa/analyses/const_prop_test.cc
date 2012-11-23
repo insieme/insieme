@@ -45,6 +45,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
 
+#include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/dfa/analyses/reaching_defs.h"
 
 #include "insieme/core/printer/pretty_printer.h"
@@ -53,6 +54,58 @@ using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
+
+typedef dfa::analyses::ConstantPropagation::value_type AnalysisData;
+
+typename AnalysisData::value_type find_constant_value(const AccessClassSet& classes, const AnalysisData& in) {
+
+	for (const auto& cl : classes) {
+
+		auto fit = std::find_if(in.begin(), in.end(), 
+				[&](const typename AnalysisData::value_type& cur) { 
+					return *std::get<0>(cur) == *cl; 
+				});
+		
+		if (fit!=in.end()) { return *fit; }
+	}
+	
+	assert(false && "Big problem");
+}
+
+
+TEST(ConstantPropagation, PropagateConstantNoControl) {
+ 
+ 	NodeManager mgr;
+ 	IRBuilder builder(mgr);
+ 
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	ref<int<4>> a = 1;"
+		"	int<4> c = *$a$;"
+		"}$"
+    );
+ 
+	EXPECT_EQ(2u, addresses.size());
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+ 
+ 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+ 	auto ret = s.solve();
+
+ 	// lookup address of variable A
+ 	// Finds the CFG block containing the address of variable a
+ 	auto addr = cfg->find( addresses[1] );
+ 	EXPECT_EQ(2u, addr.getBlockPtr()->getBlockID());
+ 
+	auto accPtr = getImmediateAccess(mgr, addresses[1]);
+
+	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
+	assert( !accClasses.empty() );
+
+	auto consts = ret[addr.getBlockPtr()->getBlockID()];
+	auto cons = find_constant_value(accClasses, consts);
+
+	EXPECT_EQ( builder.intLit(1), std::get<1>(cons).value() );
+}
 
 TEST(ConstantPropagation, PropagateConstant) {
  
@@ -79,14 +132,15 @@ TEST(ConstantPropagation, PropagateConstant) {
  	// Finds the CFG block containing the address of variable a
  	auto addr = cfg->find( addresses[1] );
  	EXPECT_EQ(2u, addr.getBlockPtr()->getBlockID());
- 
-	auto consts = ret[addr.getBlockPtr()->getBlockID()];
-	auto fit = std::find_if(consts.begin(), consts.end(), 
-		[&](const dfa::analyses::ConstantPropagation::value_type::value_type& cur) {
-			return std::get<0>(cur).getAddressedNode() == addresses[1].getAddressedNode(); 
-		});
 
-	EXPECT_EQ( builder.intLit(1), std::get<1>(*fit).value() );
+	auto accPtr = getImmediateAccess(mgr, addresses[1]);
+	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor( accPtr );
+	assert( !accClasses.empty() );
+
+	auto consts = ret[addr.getBlockPtr()->getBlockID()];
+	auto cons = find_constant_value(accClasses, consts);
+
+	EXPECT_EQ( builder.intLit(1), std::get<1>(cons).value() );
 }
 
 
@@ -108,8 +162,6 @@ TEST(ConstantPropagation, PropagateNotConstant) {
   	EXPECT_EQ(2u, addresses.size());
 	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
  
-	std::cout << *cfg << std::endl;
-
  	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
  	auto ret = s.solve();
 
@@ -118,100 +170,177 @@ TEST(ConstantPropagation, PropagateNotConstant) {
  	auto addr = cfg->find( addresses[1] );
  	EXPECT_EQ(2u, addr.getBlockPtr()->getBlockID());
  
-	auto consts = ret[addr.getBlockPtr()->getBlockID()];
-	auto fit = std::find_if(consts.begin(), consts.end(), 
-		[&](const dfa::analyses::ConstantPropagation::value_type::value_type& cur) {
-			return std::get<0>(cur).getAddressedNode() == addresses[1].getAddressedNode(); 
-		});
+	auto accPtr = getImmediateAccess(mgr, addresses[1]);
+	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
+	assert( !accClasses.empty() );
 
-	EXPECT_EQ( dfa::bottom, std::get<1>(*fit) );
+	auto consts = ret[addr.getBlockPtr()->getBlockID()];
+	auto cons = find_constant_value(accClasses, consts);
+
+	EXPECT_EQ( dfa::bottom, std::get<1>(cons) );
 }
 
-// TEST(ConstantPropagation, TransitivePropagation) {
-// 
-// 	NodeManager mgr;
-// 	parse::IRParser parser(mgr);
-// 	IRBuilder builder(mgr);
-// 
-//     auto code = parser.parseStatement(
-// 		"{"
-// 		"	decl ref<int<4>>:a = 1;"
-// 		"	decl int<4>:b = (10+a);"
-// 		"	if ( (a<=0) ) { "
-// 		"		(a = 2); "
-// 		"	};"
-// 		"	decl int<4>:c = (op<ref.deref>(b));"
-// 		"}"
-//     );
-// 
-//     EXPECT_TRUE(code);
-// 	CFGPtr cfg = CFG::buildCFG(code);
-// 
-// 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
-// 	auto&& ret = s.solve();
-// 	
-// 	// lookup address of variable b in the last stmt
-// 	NodeAddress aRef = NodeAddress(code).getAddressOfChild(3).getAddressOfChild(1).getAddressOfChild(2);
-// 	
-// 	// Finds the CFG block containing the address of variable b
-// 	const cfg::BlockPtr& b = cfg->find(aRef);
-// 	EXPECT_EQ(2u, b->getBlockID());
-// 
-// 	auto access = getImmediateAccess(aRef.as<ExpressionAddress>());
-// 
-// 	unsigned occurrences=0;
-// 	for( auto def : ret[b->getBlockID()] ) {
-// 		if ( isConflicting(std::get<0>(def), access) ) {
-// 			EXPECT_EQ(std::get<1>(def), builder.intLit(11));
-// 			occurrences++;
-// 		}
-// 	}
-// 	EXPECT_EQ(1u, occurrences);
-// 
-// }
+TEST(ConstantPropagation, PropagateArrayElementConstant) {
 
-// TEST(ConstantPropagation, Aliasing) {
-// 
-// 	NodeManager mgr;
-// 	parse::IRParser parser(mgr);
-// 	IRBuilder builder(mgr);
-// 
-//     auto code = parser.parseStatement(
-// 		"{"
-// 		"	decl ref<struct<a:int<4>, b:int<4>>>:s=0;"
-// 		"	((op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>,int>)) = 5);"
-// 		"	decl ref<int<4>>:c = (op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>, int>));"
-// 		"	decl int<4>:d = (op<ref.deref>(c));"
-// 		"}"
-//     );
-// 
-//     EXPECT_TRUE(code);
-// 	CFGPtr cfg = CFG::buildCFG(code);
-// 
-// 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
-// 	auto&& ret = s.solve();
-// 
-// 	// lookup address of variable b in the last stmt
-// 	NodeAddress aRef = NodeAddress(code).getAddressOfChild(3).getAddressOfChild(1).getAddressOfChild(2);
-// 	
-// 	// Finds the CFG block containing the address of variable b
-// 	const cfg::BlockPtr& b = cfg->find(aRef);
-// 	EXPECT_EQ(2u, b->getBlockID());
-// 
-// 	auto access = getImmediateAccess(aRef.as<ExpressionAddress>());
-// 
-// 	unsigned occurrences=0;
-// 	for( auto def : ret[b->getBlockID()] ) {
-// 		if ( *std::get<0>(def).getAccessedVariable() == *aRef ) {
-// 			EXPECT_EQ(std::get<1>(def), builder.intLit(5));
-// 			occurrences++;
-// 		}
-// 	}
-// 	EXPECT_EQ(1u, occurrences);
-// 
-// }
-// 
-// 
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(
+			builder.parseType("ref<vector<int<4>,10>>")
+		);
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	v[3u] = 2; "
+		"	int<4> c = *$v[3u]$;"
+		"}$", symbols
+    );
+
+  	EXPECT_EQ(2u, addresses.size());
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+ 
+ 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+ 	auto ret = s.solve();
+
+ 	// lookup address of variable A
+ 	// Finds the CFG block containing the address of variable a
+ 	auto addr = cfg->find( addresses[1] );
+ 	EXPECT_EQ(3u, addr.getBlockPtr()->getBlockID());
+ 
+	auto accPtr = getImmediateAccess(mgr, addresses[1]);
+	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
+	assert( !accClasses.empty() );
+
+	auto consts = ret[addr.getBlockPtr()->getBlockID()];
+	auto cons = find_constant_value(accClasses, consts);
+
+	EXPECT_EQ( builder.intLit(2), std::get<1>(cons).value() );
+}
+
+TEST(ConstantPropagation, PropagateArrayElementLoop) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(
+			builder.parseType("ref<vector<int<4>,10>>")
+		);
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	v[3u] = 4; "
+		" 	for( uint<4> i = 2u .. 10u : 2u) {"
+		"		v[i] = 4; "
+		"	} "
+		"	int<4> c = *$v[3u]$;"
+		"}$", symbols
+    );
+
+  	EXPECT_EQ(2u, addresses.size());
+
+	// mark for polyhedral 
+	polyhedral::scop::mark(addresses[0]);
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+ 
+ 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+ 	auto ret = s.solve();
+
+ 	// lookup address of variable A
+ 	// Finds the CFG block containing the address of variable a
+ 	auto addr = cfg->find( addresses[1] );
+ 	EXPECT_EQ(3u, addr.getBlockPtr()->getBlockID());
+ 
+	auto accPtr = getImmediateAccess(mgr, addresses[1]);
+	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
+	assert( !accClasses.empty() );
+	
+	auto consts = ret[addr.getBlockPtr()->getBlockID()];
+	auto cons = find_constant_value(accClasses, consts);
+
+	EXPECT_EQ( builder.intLit(4), std::get<1>(cons).value() );
+
+}
+
+TEST(ConstantPropagation, Formulas) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	ref<int<4>> a = 10; "
+		"	int<4> b = a+2; "
+		"	a = b+a;"
+		"	int<4> c = $a$;"
+		"}$"
+    );
+
+  	EXPECT_EQ(2u, addresses.size());
+
+	// mark for polyhedral 
+	polyhedral::scop::mark(addresses[0]);
+
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+ 
+ 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+ 	auto ret = s.solve();
+
+ 	// lookup address of variable A
+ 	// Finds the CFG block containing the address of variable a
+ 	auto addr = cfg->find( addresses[1] );
+ 	EXPECT_EQ(2u, addr.getBlockPtr()->getBlockID());
+ 
+	auto accPtr = getImmediateAccess(mgr, addresses[1]);
+	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
+	assert( !accClasses.empty() );
+	
+	auto consts = ret[addr.getBlockPtr()->getBlockID()];
+	auto cons = find_constant_value(accClasses, consts);
+
+	EXPECT_EQ( builder.intLit(22), std::get<1>(cons).value() );
+
+}
+
+TEST(ConstantPropagation, TransitivePropagation) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	ref<int<4>> a = 1;"
+		"	int<4> b = (10+a);"
+		"	if ( a <= 0 ) { "
+		"		a = 2; "
+		"	}"
+		"	int<4> c = $b$;"
+		"}$"
+    );
+
+  	EXPECT_EQ(2u, addresses.size());
+	CFGPtr cfg = CFG::buildCFG(addresses[0]);
+
+	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+	auto&& ret = s.solve();
+	
+	// Finds the CFG block containing the address of variable b
+	auto addr = cfg->find( addresses[1] );
+ 	EXPECT_EQ(2u, addr.getBlockPtr()->getBlockID());
+
+	auto accPtr = getImmediateAccess(mgr, addresses[1]);
+	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
+	assert( !accClasses.empty() );
+	
+	auto consts = ret[addr.getBlockPtr()->getBlockID()];
+	auto cons = find_constant_value(accClasses, consts);
+
+	EXPECT_EQ( builder.intLit(11), std::get<1>(cons).value() );
+}
+
+
 // TEST(ConstantPropagation, ArrayAlias) {
 // 
 // 	NodeManager mgr;

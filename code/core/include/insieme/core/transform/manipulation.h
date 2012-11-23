@@ -360,6 +360,18 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 //VariablePtr makeAvailable(NodeManager& manager, const VariableAddress& var, const NodeAddress& location, NodePtr& outNewRoot);
 
 /**
+ * Replaces the given expression by the given variable of the root-node context. The variable will
+ * be passed as an argument through all functions between the root node and the targeted expression. If the
+ * variable is already passed along, it will not be added again.
+ *
+ * @param manager the manager used to create new nodes
+ * @param target the expression to be replaced by the variable
+ * @param var the variable to be implanted
+ * @return the address to the implanted variable
+ */
+VariableAddress pushInto(NodeManager& manager, const ExpressionAddress& target, const VariablePtr& var);
+
+/**
  * Removes superfluous lambda arguments.
  *
  * @param manager the manager used to create new nodes
@@ -369,18 +381,18 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 LambdaExprPtr correctRecursiveLambdaVariableUsage(NodeManager& manager, const LambdaExprPtr& lambda);
 
 /**
- * Converts the given job into a function containing a parallel for-loop processing the
+ * Converts the given job into a function of type ()->unit containing a parallel pfor-loop processing the
  * thread group range interval if possible. The loop will only iterate at most the number of
  * times indicated by the lower boundary of the job range.
  *
- * If collective operations (pfor or redistribute) are used within the body, the conversion will
+ * If a redistribute operation is triggered within the body, the conversion will
  * fail and a null-pointer will be returned.
  *
- * @param job the job to be converted into a parallel loop
+ * @param job the job to be converted into a pfor-based processing step
  * @return a lazy-expression (function without arguments) to be called for conducting the work
- * 		represented by the job.
+ * 		represented by the job or null if it can not be converted
  */
-ExpressionPtr toPFor(const JobExprPtr& job);
+ExpressionPtr tryToPFor(const JobExprPtr& job);
 
 } // end namespace transform
 } // end namespace core

@@ -55,9 +55,6 @@ enum CreateBufferFlags {
 		size
 };
 
-// set to store paths of loaded kernel files
-static std::set<string> kernelFileCache;
-
 /**
  * Class to visit the AST and return the value of a certain variable, holding the path to a OpenCL kernel, if it exists at all
  */
@@ -118,8 +115,13 @@ protected:
 	const core::IRBuilder& builder;
 	Ocl2Inspire o2i;
 	size_t argCnt;
+
+	// set to store paths of loaded kernel files
+	std::set<string>& kernelFileCache;
+
 public:
-	Handler(const core::IRBuilder& build, Ocl2Inspire& ocl2inspire) : builder(build), o2i(ocl2inspire), argCnt(0) {
+	Handler(const core::IRBuilder& build, Ocl2Inspire& ocl2inspire, std::set<string>& kernelFileCache)
+		: builder(build), o2i(ocl2inspire), argCnt(0), kernelFileCache(kernelFileCache) {
 		kernels = core::Program::get(build.getNodeManager());
 	}
 
@@ -154,8 +156,8 @@ class LambdaHandler: public Handler {
 	const char* fct;
 	Lambda body;
 public:
-	LambdaHandler(core::IRBuilder& build, Ocl2Inspire& ocl2inspire, const char* fun, Lambda lambda) :
-		Handler(build, ocl2inspire), fct(fun), body(lambda) {
+	LambdaHandler(core::IRBuilder& build, Ocl2Inspire& ocl2inspire, const char* fun, std::set<string>& kernelFileCache, Lambda lambda) :
+		Handler(build, ocl2inspire, kernelFileCache), fct(fun), body(lambda) {
 	}
 
 	// creating a shared pointer to a LambdaHandler
@@ -173,13 +175,13 @@ typedef std::shared_ptr<Handler> HandlerPtr;
 typedef boost::unordered_map<string, HandlerPtr, boost::hash<string> > HandlerTable;
 
 template<typename Lambda>
-HandlerPtr make_handler(core::IRBuilder& builder, Ocl2Inspire& o2i, const char* fct,
+HandlerPtr make_handler(core::IRBuilder& builder, Ocl2Inspire& o2i, const char* fct, std::set<string> kernelFileCache,
 		Lambda lambda) {
-	return std::make_shared<LambdaHandler<Lambda> >(builder, o2i, fct, lambda);
+	return std::make_shared<LambdaHandler<Lambda> >(builder, o2i, fct, kernelFileCache, lambda);
 }
 
 #define ADD_Handler(builder, o2i, fct, BODY) \
-    handles.insert(std::make_pair(fct, make_handler(builder, o2i, fct, [&](core::CallExprPtr node, core::ProgramPtr& kernels){ BODY }))).second;
+    handles.insert(std::make_pair(fct, make_handler(builder, o2i, fct, kernelFileCache, [&](core::CallExprPtr node, core::ProgramPtr& kernels){ BODY }))).second;
 
 /*
  * First pass when translating a program OpenCL to IR
@@ -213,6 +215,9 @@ class HostMapper: public core::transform::CachedNodeMapping {
 
 	// needed to be able to work with handlers, identified by prefixes of function names
 	HandlerPtr& findHandler(const string& fctName);
+
+	// set to store paths of loaded kernel files
+	std::set<string> kernelFileCache;
 
 	// functions to get set of flags out of an Expression
 	// recursiveFlagCheck is designed to be called form getFlags only

@@ -144,7 +144,9 @@ class MlTest : public ::testing::Test {
 			delete(setup);
 
 			measurement->BeginTransaction();
-			measurement->Sql("INSERT INTO measurement (cid, sid, time) VALUES (?, ?, ?)");
+			measurement->Sql("INSERT INTO measurement (cid, sid, time, s100_0_0, s90_10_0, s90_5_5, s80_20_0, s80_10_10, s70_30_0, s70_15_15, s60_40_0, \
+				s60_20_20, s50_50_0, s50_25_25, s40_60_0, s40_30_30, s30_70_0, s30_35_35, s20_80_0, s20_40_40, s10_90_0, s10_45_45, s0_100_0, s0_50_50) \
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 			code->Sql("INSERT INTO code (cid, fid, value) VALUES(?, ?, ?);");
 			int mid = 0; // assume database was empty and index increases one-by-one
 
@@ -158,6 +160,28 @@ class MlTest : public ::testing::Test {
 				measurement->BindInt(2, (mid+4)/5);
 				// target class is round robin
 				measurement->BindDouble(3, i%5);
+				// insert individual times for fuzzy classification
+				measurement->BindDouble( 4, 0.1);
+				measurement->BindDouble( 5, 0.11);
+				measurement->BindDouble( 6, 0.12);
+				measurement->BindDouble( 7, 0.13);
+				measurement->BindDouble( 8, 0.14);
+				measurement->BindDouble( 9, 0.15);
+				measurement->BindDouble(10, 0.16);
+				measurement->BindDouble(11, 0.17);
+				measurement->BindDouble(12, 0.18);
+				measurement->BindDouble(13, 0.19);
+				measurement->BindDouble(14, 0.111);
+				measurement->BindDouble(15, 0.112);
+				measurement->BindDouble(16, 0.113);
+				measurement->BindDouble(17, 0.114);
+				measurement->BindDouble(18, 0.115);
+				measurement->BindDouble(19, 0.116);
+				measurement->BindDouble(20, 0.117);
+				measurement->BindDouble(21, 0.118);
+				measurement->BindDouble(22, 0.119);
+				measurement->BindDouble(23, 0.121);
+				measurement->BindDouble(24, 0.122);
 
 				// write measurement result to database
 				measurement->Execute();
@@ -237,7 +261,7 @@ TEST_F(MlTest, CreateDb) {
 			value INTEGER NOT NULL, PRIMARY KEY(sid, fid))");
 		measurement->SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
 				cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT, \
-				time DOUBLE, power DOUBLE)");
+				time, power DOUBLE)");
 
 		staticFeatures->BeginTransaction();
 		// sql statements to write into the tables
@@ -682,3 +706,58 @@ TEST_F(MlTest, PCAcombined) {
 
 }
 
+
+TEST_F(MlTest, FuzzyTrain) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("linear.db");
+
+	// Create a connection matrix with 3 inputs, 5 output
+	// and a single, fully connected hidden layer with
+	// 8 neurons:
+	Array<int> con;
+	size_t nIn = 3, nOut = 5;
+	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
+
+	// declare Machine
+	MyFFNet net = MyFFNet(nIn, nOut, con);
+	net.initWeights(-0.4, 0.4);
+
+//	std::cout << net.getInputDimension() << std::endl;
+
+	MeanSquaredError err;
+	Array<double> in, target;
+	Quickprop qprop;
+	qprop.initUserDefined(net.getModel(), 1.5, 1.75);
+	BFGS bfgs;
+	bfgs.initBfgs(net.getModel());
+	CG cg;
+	RpropPlus rpp;
+	rpp.init(net.getModel());
+	RpropMinus rpm;
+	rpm.init(net.getModel());
+
+	// create trainer
+	Trainer fuzzyNn(dbPath, net, GenNNoutput::ML_FUZZY_VECTOR);
+	fuzzyNn.setDefaultSplittingAsTarget();
+
+	std::vector<std::string> features;
+
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	fuzzyNn.setStaticFeaturesByIndex(features);
+
+	double error = fuzzyNn.train(bfgs, err, 4);
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);
+
+	fuzzyNn.saveModel("dummy");
+
+//	FFNetSource(std::cout, nIn, nOut, con, net.getWeights(), "tanh(#)", "#", 10);
+
+	// reevaluate the data on the model
+	error = fuzzyNn.evaluateDatabase(err);
+
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);
+}

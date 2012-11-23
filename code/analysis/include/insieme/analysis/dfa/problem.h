@@ -63,6 +63,9 @@ class Problem {
 
 	// Builds the lattice 
 	void init_internal() {
+
+		extracted = extract(E(), cfg, static_cast<Impl&>(*this));
+
 		lattice_ptr = std::make_shared<LowerSemilattice<container_type>>(
 				container_type(extracted), 
 					top(), 
@@ -87,7 +90,7 @@ public:
 	typedef D direction_tag;
 
 
-	Problem(const CFG& cfg) : cfg(cfg), extracted( extract(E(), cfg) ) { }
+	Problem(const CFG& cfg) : cfg(cfg)  { }
 
 	void initialize() { init_internal(); }
 
@@ -99,7 +102,7 @@ public:
 
 	virtual value_type meet(const value_type& lhs, const value_type& rhs) const = 0;
 
-	virtual value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const = 0;
+	virtual std::pair<value_type,value_type> transfer_func(const value_type& in, const cfg::BlockPtr& block) const = 0;
 
 	const extract_type& getExtracted() const { return extracted; }
 
@@ -112,7 +115,9 @@ public:
 
 protected:
 	const CFG& cfg;
+	
 	extract_type extracted;
+
 	std::shared_ptr<LowerSemilattice<container_type>> lattice_ptr;
 };
 

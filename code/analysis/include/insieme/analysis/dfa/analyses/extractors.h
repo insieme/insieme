@@ -40,42 +40,69 @@
 
 #include "insieme/analysis/access.h"
 
+#include "insieme/core/ir_address.h"
+#include "insieme/core/analysis/ir_utils.h"
+
+#include <algorithm>
+
 namespace insieme { 
 namespace analysis {
 namespace dfa {
-
-// template <>
-// inline typename container_type_traits< dfa::elem<Access>  >::type
-// extract(const Entity< dfa::elem<Access> >& e, const CFG& cfg) { 
-
-//	std::set<Access> entities;
-
-//	auto collector = [&entities, &cfg] (const cfg::BlockPtr& block) {
-//		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
-//
-//			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { /* skip */ return; }
-//
-//	// 		extractFromStmt( core::StatementAddress(cur.getAnalysisStatement()), entities, cfg.getTmpVarMap() );
-//		});
-//	};
-//	cfg.visitDFS(collector);
-
-//	return entities;
-
-// }
 
 /**
  * Define the extractor for CFG Blocks. In this case we extract the address of
  * the CFG Blocks (an alternative would be to store the block ID)
  */
-template <>
+template <class T>
 inline typename container_type_traits< dfa::elem<cfg::BlockPtr> >::type 
-extract(const Entity< elem<cfg::BlockPtr> >& e, const CFG& cfg) {
+extract(const Entity< elem<cfg::BlockPtr> >& e, const CFG& cfg, T&) {
 	
 	typedef typename container_type_traits< dfa::elem<cfg::BlockPtr> >::type Container;
 
 	Container entities;
 	auto collector = [&entities] (const cfg::BlockPtr& block) { entities.insert( block ); };
+	cfg.visitDFS(collector);
+
+	return entities;
+}
+
+template <class T>
+typename container_type_traits< dfa::elem< AccessClassPtr >  >::type 
+extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, T& obj) {
+
+	std::set<AccessClassPtr> entities;
+	auto& aMgr = obj.getAccessManager();
+
+	auto collector = [&] (const cfg::BlockPtr& block) {
+		size_t stmt_idx=0;
+
+		auto storeAccess = [&](const core::NodeAddress& var) {
+		
+			auto accesses = getAccesses(
+								var->getNodeManager(), 
+								cfg::Address(block, stmt_idx, var),
+								cfg.getTmpVarMap()
+							);
+
+			for (const auto& acc : accesses) {
+				auto classes = aMgr.getClassFor(acc);
+				std::copy(classes.begin(), classes.end(), std::inserter(entities, entities.begin()));
+			}
+		};
+
+		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
+			// Update the stmt_idx when returning from this lambda
+			FinalActions fa([&](){ ++stmt_idx; });
+
+			auto stmt = core::NodeAddress(cur.getAnalysisStatement());
+
+			// The index access class has already been classified by the loop itself 
+			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { return; }
+
+			storeAccess( stmt );
+
+		});
+	};
 	cfg.visitDFS(collector);
 
 	return entities;

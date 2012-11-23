@@ -1,0 +1,1 @@
+MPI_HOSTS="-machinefile {PATH}/../hosts" {MPI_HOSTS} {PATH}/{EXEC} -check

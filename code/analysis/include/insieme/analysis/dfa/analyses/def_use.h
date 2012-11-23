@@ -39,6 +39,7 @@
 #include <set>
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/analysis/cfg.h"
 
 #include <iterator>
 
@@ -62,7 +63,7 @@ class DefUse {
 
 public:
 
-	DefUse(const core::NodePtr& root);
+	DefUse(const core::NodePtr& root, const CFGPtr& cfg=nullptr);
 
 	AddressSet getDefinitions(const core::ExpressionAddress& addr);
 	

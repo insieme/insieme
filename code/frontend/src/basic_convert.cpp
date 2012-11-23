@@ -69,6 +69,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
+#include "insieme/core/transform/manipulation.h"
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
@@ -417,18 +418,22 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 				defaultInitVal(core::analysis::getVolatileType(type)));
 	}
 
+	core::TypePtr curType = type;
+	if (type->getNodeType() == core::NT_RecType) {
+		curType = type.as<core::RecTypePtr>()->unroll();
+	}
 	// Handle structs initialization
-	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type)) {
+	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(curType)) {
 		return builder.callExpr(structTy, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(structTy));
 	}
 
 	// Handle unions initialization
-	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(type)) {
+	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(curType)) {
 		assert(unionTy);
 	}
 
 	// handle vectors initialization
-	if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type)) {
+	if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(curType)) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
 		return builder.callExpr(vecTy,
 				mgr.getLangBasic().getVectorInitUniform(),
@@ -442,9 +447,9 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 		return mgr.getLangBasic().getNull();
 	}
 
-	assert(core::analysis::isRefType(type) && "We cannot initialize any different type of non-ref");
+	assert(core::analysis::isRefType(curType) && "We cannot initialize any different type of non-ref");
 
-	core::RefTypePtr refType = type.as<core::RefTypePtr>();
+	core::RefTypePtr refType = curType.as<core::RefTypePtr>();
 	
 	// handle arrays initialization
 	if ( core::ArrayTypePtr&& arrTy = core::dynamic_pointer_cast<const core::ArrayType>(refType->getElementType())) {
@@ -604,8 +609,15 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 	LOG_EXPR_CONVERSION(retIr);
 
 	core::TypePtr currType = type;
+
 	if ( core::RefTypePtr&& refType = core::dynamic_pointer_cast<const core::RefType>(type)) {
 		currType = refType->getElementType();
+	}
+
+	// Handles recursive types. Unroll once in order to reveal the actual type (hopefully it will be
+	// a struct type)
+	if (currType->getNodeType() == core::NT_RecType) {
+		currType = currType.as<core::RecTypePtr>()->unroll();
 	}
 
 	if (currType->getNodeType() == core::NT_VectorType || currType->getNodeType() == core::NT_ArrayType) {
@@ -627,11 +639,13 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 		retIr = builder.vectorExpr(elements);
 	}
 
+	
+
 	/*
 	 * in the case the initexpr is used to initialize a struct/class we need to create a structExpr
 	 * to initialize the structure
 	 */
-	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(currType)) {
+	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(currType) ) {
 
 		core::StructExpr::Members members;
 		for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
@@ -825,6 +839,22 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				<< "): " << std::endl << "\tIsRecSubType: " << ctx.isRecSubFunc << std::endl
 				<< "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl << "\tEmpty map: "
 				<< ctx.recVarExprMap.size();
+
+
+	if (ctx.isResolvingRecFuncBody) { 
+  		// check if this type has a typevar already associated, in such case return it
+  		ConversionContext::RecVarExprMap::const_iterator fit = ctx.recVarExprMap.find(funcDecl);
+
+  		if (fit != ctx.recVarExprMap.end()) {
+  			/*
+  			 * we are resolving a parent recursive type, so when one of the recursive functions in the
+  			 * connected components are called, the introduced mu variable has to be used instead.
+  			 */
+  			return fit->second;
+  		}
+
+	}
+
 
 	if (!ctx.isRecSubFunc) {
 		// add this type to the type graph (if not present)
@@ -1167,48 +1197,34 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	return attachFuncAnnotations(retLambdaExpr, funcDecl);
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							AST CONVERTER
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::CallExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
 	mFact.currTU = &tu;
-//	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
-//	core::ExpressionPtr&& callExpr = mFact.createCallExpr( toVector<core::StatementPtr>(bodyStmt), mgr.getLangBasic().getUnit() );
+	
+	core::StatementPtr bodyStmt = mFact.convertStmt( body );
+	auto callExpr = core::transform::outline(mgr, bodyStmt);
 
-//	annotations::c::CLocAnnotation::ArgumentList args;
-//	if(core::CaptureInitExprPtr&& captureExpr = core::dynamic_pointer_cast<const core::CaptureInitExpr>(callExpr)) {
-//		// look for variable names
-//		for_each(captureExpr->getArguments().begin(), captureExpr->getArguments().end(), [ &args ](const core::ExpressionPtr& expr){
-//			// because this callexpr was created out of a stmt block, we are sure
-//			// input arguments are Variables
-//			core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(expr);
-//			assert(var && "Argument of call expression is not a variable.");
-//			// we also have to look at the CNameAnnotation in order to find the name of the original variable
-//
-//			std::shared_ptr<annotations::c::CNameAnnotation>&& nameAnn = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
-//			assert(nameAnn && "Variable has not CName associated");
-//			args.push_back( nameAnn->getName() );
-//		});
-//	}
+	annotations::c::CLocAnnotation::ArgumentList args;
+	auto lambdaExpr = callExpr->getFunctionExpr().as<core::LambdaExprPtr>();
 
-//	core::LambdaExprPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>( callExpr->getFunctionExpr() );
-//	// ------ Adding source location annotation (CLocAnnotation) -------
-//	std::pair<SourceLocation, SourceLocation> loc = std::make_pair(body->getLocStart(), body->getLocEnd());
-//	PragmaStmtMap::StmtMap::const_iterator fit = mFact.getPragmaMap().getStatementMap().find(body);
-//	if(fit != mFact.getPragmaMap().getStatementMap().end()) {
-//		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
-//		loc.first = fit->second->getStartLocation();
-//	}
-//
-//	lambdaExpr.addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
-//		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.first),
-//		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.second),
-//		false, // this is not a function decl
-//		args)
-//	);
-//
-//	return lambdaExpr;
-	return core::LambdaExprPtr();
+	// ------ Adding source location annotation (CLocAnnotation) -------
+	std::pair<SourceLocation, SourceLocation> loc = std::make_pair(body->getLocStart(), body->getLocEnd());
+	auto fit = mFact.getPragmaMap().getStatementMap().find(body);
+	if(fit != mFact.getPragmaMap().getStatementMap().end()) {
+		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
+		loc.first = fit->second->getStartLocation();
+	}
+
+	lambdaExpr.addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
+		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.first),
+		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.second),
+		false, // this is not a function decl
+		args)
+	);
+
+	return callExpr;
 }
 
 core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {

@@ -143,13 +143,15 @@ TEST(Access, Scalars) {
 		EXPECT_FALSE(access->isReference());
 
 		AccessManager mgr;
-		auto assClass = mgr.getClassFor(access);
-		EXPECT_EQ(0u, assClass->getUID());
+		auto accClassSet1 = mgr.getClassFor(access);
+		EXPECT_EQ(1u, accClassSet1.size());
+		EXPECT_EQ(0u, (*accClassSet1.begin())->getUID());
 
-		auto assClass2 = mgr.getClassFor(access);
-		EXPECT_EQ(0u, assClass2->getUID());
+		auto accClassSet2 = mgr.getClassFor(access);
+		EXPECT_EQ(1u, accClassSet2.size());
+		EXPECT_EQ(0u, (*accClassSet2.begin())->getUID());
 
-		EXPECT_EQ(assClass, assClass2);
+		EXPECT_EQ(accClassSet1, accClassSet2);
 	}
 
 	{
@@ -218,18 +220,21 @@ TEST(Access, ScalarAliasedAccess) {
 		map.storeTmpVar( declAddr->getInitialization(), declAddr->getVariable().getAddressedNode() );
 
 		auto access1 = getImmediateAccess( mgr, accessAddr1 );
-		// std::cout << access1 << std::endl;
 		auto access2 = getImmediateAccess( mgr, accessAddr2 );
-		// std::cout << access2 << std::endl;
 
 		AccessManager mgr(nullptr, map);
-		auto assClass = mgr.getClassFor(access1);
-		EXPECT_EQ(0u, assClass->getUID());
-		auto assClass2 = mgr.getClassFor(access2);
-		EXPECT_EQ(0u, assClass2->getUID());
+		auto accClassSet1 = mgr.getClassFor(access1);
+		EXPECT_EQ(1u, accClassSet1.size());
+		EXPECT_EQ(0u, (*accClassSet1.begin())->getUID());
 
-		EXPECT_EQ(*assClass, *assClass2);
-		EXPECT_EQ(*assClass, *assClass2);
+		auto accClassSet2 = mgr.getClassFor(access2);
+		EXPECT_EQ(1u, accClassSet2.size());
+		EXPECT_EQ(0u, (*accClassSet2.begin())->getUID());
+
+		EXPECT_EQ(accClassSet1, accClassSet2);
+		EXPECT_EQ(accClassSet1, accClassSet2);
+
+		EXPECT_EQ(3u, (*accClassSet1.begin())->size());
 	}
 }
 
@@ -334,13 +339,15 @@ TEST(Access, CompoundMemberAccess) {
 		tmpVarMap.storeTmpVar(declAddr->getInitialization(), declAddr->getVariable().getAddressedNode());
 
 		AccessManager mgr(NULL, tmpVarMap);
-		auto cl1 = mgr.getClassFor(access);
+		auto clSet1 = mgr.getClassFor(access);
 
+		EXPECT_EQ(1u, clSet1.size());
+		auto cl1 = *clSet1.begin();
 		EXPECT_EQ(1u, cl1->size());
 		EXPECT_EQ(2u, cl1->getUID());
 
 		EXPECT_EQ(3u, mgr.size());
-	
+
 		auto& cl2 = mgr[0];
 
 		EXPECT_EQ(1u, cl2.size());
@@ -391,14 +398,19 @@ TEST(Access, CompoundMemberAccess2) {
 		tmpVarMap.storeTmpVar(declAddr2->getInitialization(), declAddr2->getVariable().getAddressedNode());
 
 		AccessManager mgr(NULL, tmpVarMap);
-		auto class1 = mgr.getClassFor(access1);
-		auto class2 = mgr.getClassFor(access2);
+		auto clSet1 = mgr.getClassFor(access1);
+		auto clSet2 = mgr.getClassFor(access2);
+
+		EXPECT_EQ(1u, clSet1.size());
+		EXPECT_EQ(1u, clSet2.size());
+
+		auto cl1 = *clSet1.begin();
+		auto cl2 = *clSet2.begin();
 
 		EXPECT_EQ(3u, mgr.size());
-		EXPECT_EQ(2u, class1->getUID());
+		EXPECT_EQ(2u, cl1->getUID());
 
-		EXPECT_EQ(class1, class2);
-		EXPECT_EQ(*class1, *class2);
+		EXPECT_EQ(clSet1, clSet2);
 	}
 }
 
@@ -428,9 +440,12 @@ TEST(Access, ArrayAccess) {
 		EXPECT_FALSE(access->isContextDependent());
 
 		AccessManager mgr;
-		auto cl1 = mgr.getClassFor(access);
+		auto clSet1 = mgr.getClassFor(access);
 
-		EXPECT_EQ(2u, mgr.size());
+		EXPECT_EQ(3u, mgr.size());
+		EXPECT_EQ(1u, clSet1.size());
+		auto cl1 = *clSet1.begin();
+
 		EXPECT_EQ(1u, cl1->getUID());
 	}
 
@@ -454,9 +469,12 @@ TEST(Access, ArrayAccess) {
 		EXPECT_FALSE(access->isContextDependent());
 
 		AccessManager mgr;
-		auto cl1 = mgr.getClassFor(access);
+		auto clSet1 = mgr.getClassFor(access);
 
-		EXPECT_EQ(2u, mgr.size());
+		EXPECT_EQ(3u, mgr.size());
+		EXPECT_EQ(1u, clSet1.size());
+		
+		auto& cl1 = *clSet1.begin();
 		EXPECT_EQ(1u, cl1->getUID());
 	}
 
@@ -483,6 +501,7 @@ TEST(Access, ArrayAccess) {
 	std::map<string, NodePtr> symbols;
 	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
 	symbols["b"] = builder.variable(builder.getLangBasic().getUInt4());
+	symbols["a"] = builder.variable(builder.getLangBasic().getUInt4());
 
 	{
 		auto code = builder.parseAddresses(
@@ -503,7 +522,6 @@ TEST(Access, ArrayAccess) {
 	// 	std::cout << access << std::endl;
 		
 	}
-
 //	{
 //		auto address = builder.parseAddresses(
 //			"{"
@@ -533,59 +551,59 @@ TEST(Access, ArrayAccess) {
 //		EXPECT_TRUE(access.isContextDependent());
 //	}
 //
-	symbols["a"] = builder.variable(builder.getLangBasic().getUInt4());
-//	{
-//		auto address = builder.parseAddresses(
-//			"$if (b>0u && a<20u) {"
-//			"	$uint<4> c = a+b;$"
-//			"	$v[c]$; "
-//			"}$", symbols
-//		);
-//
-//		EXPECT_EQ(3u, address.size());
-//
-//		auto rootNode = address[0];
-//		auto declNode = address[1].as<DeclarationStmtAddress>();
-//		auto accessNode = address[2];
-//
-//		// perform the polyhedral analysis 
-//		auto scops = polyhedral::scop::mark(rootNode);
-//
-//		// Create an alias for the expression c = b+a;
-//		TmpVarMap map;
-//		map.storeTmpVar( declNode->getInitialization(), declNode->getVariable().getAddressedNode() );
-//
-//		auto access = getImmediateAccess( accessNode.as<ExpressionAddress>(), {nullptr, 0}, map );
-//
-//		EXPECT_EQ(VarType::ARRAY, access.getType());
-//		EXPECT_TRUE(access.isRef());
-//		EXPECT_FALSE(access.isContextDependent());
-//	}
-//
-//	{
-//		auto address = builder.parseAddresses(
-//			"$if (b>0u && a<20u) {"
-//			"	$v[a*b]$; "
-//			"}$", symbols
-//		);
-//
-//		EXPECT_EQ(2u, address.size());
-//
-//		auto rootNode = address[0];
-//		auto accessNode = address[1].as<ExpressionAddress>();
-//
-//		// perform the polyhedral analysis 
-//		polyhedral::scop::mark(rootNode);
-//
-//		auto access = getImmediateAccess( accessNode );
-//
-//		EXPECT_EQ(VarType::ARRAY, access.getType());
-//		EXPECT_TRUE(access.isRef());
-//
-//		EXPECT_FALSE( access.getContext() ); 
-//		EXPECT_FALSE(access.isContextDependent());
-//	}
-//
+//	symbols["a"] = builder.variable(builder.getLangBasic().getUInt4());
+////	{
+////		auto address = builder.parseAddresses(
+////			"$if (b>0u && a<20u) {"
+////			"	$uint<4> c = a+b;$"
+////			"	$v[c]$; "
+////			"}$", symbols
+////		);
+////
+////		EXPECT_EQ(3u, address.size());
+////
+////		auto rootNode = address[0];
+////		auto declNode = address[1].as<DeclarationStmtAddress>();
+////		auto accessNode = address[2];
+////
+////		// perform the polyhedral analysis 
+////		auto scops = polyhedral::scop::mark(rootNode);
+////
+////		// Create an alias for the expression c = b+a;
+////		TmpVarMap map;
+////		map.storeTmpVar( declNode->getInitialization(), declNode->getVariable().getAddressedNode() );
+////
+////		auto access = getImmediateAccess( accessNode.as<ExpressionAddress>(), {nullptr, 0}, map );
+////
+////		EXPECT_EQ(VarType::ARRAY, access.getType());
+////		EXPECT_TRUE(access.isRef());
+////		EXPECT_FALSE(access.isContextDependent());
+////	}
+////
+////	{
+////		auto address = builder.parseAddresses(
+////			"$if (b>0u && a<20u) {"
+////			"	$v[a*b]$; "
+////			"}$", symbols
+////		);
+////
+////		EXPECT_EQ(2u, address.size());
+////
+////		auto rootNode = address[0];
+////		auto accessNode = address[1].as<ExpressionAddress>();
+////
+////		// perform the polyhedral analysis 
+////		polyhedral::scop::mark(rootNode);
+////
+////		auto access = getImmediateAccess( accessNode );
+////
+////		EXPECT_EQ(VarType::ARRAY, access.getType());
+////		EXPECT_TRUE(access.isRef());
+////
+////		EXPECT_FALSE( access.getContext() ); 
+////		EXPECT_FALSE(access.isContextDependent());
+////	}
+////
 	{
 		auto address = builder.parseAddresses(
 			"${"
@@ -613,14 +631,13 @@ TEST(Access, ArrayAccess) {
 		auto subscript = cast<Subscript>(access);
 		EXPECT_TRUE(subscript->getContext());
 
-		EXPECT_EQ("(((-v12 + 19 >= 0) ^ (v10 + -1 >= 0)) ^ (v4294967295 + -v10 + -v12 == 0))", 
+		EXPECT_EQ("(((-v11 + 19 >= 0) ^ (v10 + -1 >= 0)) ^ (v4294967295 + -v10 + -v11 == 0))", 
 				  toString(*subscript->getRange()));
 
 		auto ctx = polyhedral::makeCtx();
 		auto set = polyhedral::makeSet(ctx, polyhedral::IterationDomain(subscript->getRange()));
-		EXPECT_EQ("[v10, v12] -> { [v10 + v12] : v12 <= 19 and v10 >= 1 }", toString(*set));
+		EXPECT_EQ("[v10, v11] -> { [v10 + v11] : v11 <= 19 and v10 >= 1 }", toString(*set));
 	}
-
 }
 
 TEST(Access, ArrayAlias) {
@@ -636,6 +653,7 @@ TEST(Access, ArrayAlias) {
 			"	$e$;"
 			"}"
 		);
+
 		EXPECT_EQ(2u, code.size());
 
 		auto declAddr = code[0].as<DeclarationStmtAddress>();
@@ -651,97 +669,101 @@ TEST(Access, ArrayAlias) {
 		EXPECT_FALSE(access->isContextDependent());
 
 		AccessManager mgr(nullptr, tmpVarMap);
-		auto cl1 = mgr.getClassFor(access);
+		auto clSet1 = mgr.getClassFor(access);
 	
-		EXPECT_EQ(2u, mgr.size());
+		EXPECT_EQ(3u, mgr.size());
+
+		EXPECT_EQ(1u, clSet1.size());
+		auto cl1 = *clSet1.begin();
 
 		EXPECT_EQ(1u, cl1->getUID());
 		EXPECT_EQ(2u, cl1->size());
 	}
 }
 
-//TEST(Access, SameAccess) {
-//
-//	NodeManager mgr;
-//	IRBuilder builder(mgr);
-//
-//	std::map<string, NodePtr> symbols;
-//	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
-//
-//	auto address = builder.parseAddresses(
-//		"$for (uint<4> i = 0u .. 10 : 1) {"
-//		"	$v[i]$; "
-//		"	$v[i]$; "
-//		"}$", symbols
-//	);
-//
-//	EXPECT_EQ(3u, address.size());
-//
-//	auto rootNode = address[0];
-//
-//	// perform the polyhedral analysis 
-//	polyhedral::scop::mark(rootNode.getAddressedNode());
-//
-//	auto accessNode1 = address[1].as<ExpressionAddress>();
-//	auto accessNode2 = address[2].as<ExpressionAddress>();
-//
-//	auto access1 = getImmediateAccess( accessNode1 );
-//	auto access2 = getImmediateAccess( accessNode2 );
-//
-//	EXPECT_TRUE(access1.getContext());
-//	EXPECT_FALSE(access1.isContextDependent());
-//	EXPECT_EQ(access1.getContext(), rootNode);
-//	EXPECT_EQ("(((-v2 + 9 >= 0) ^ (v2 >= 0)) ^ (-v2 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
-//
-//	EXPECT_TRUE(access2.getContext());
-//	EXPECT_FALSE(access2.isContextDependent());
-//	EXPECT_EQ(access2.getContext(), rootNode);
-//	EXPECT_EQ("(((-v2 + 9 >= 0) ^ (v2 >= 0)) ^ (-v2 + v4294967295 == 0))", toString(*access2.getAccessedRange()));
-//}
-//
-//TEST(Access, DifferentAccess) {
-//	
-//	NodeManager mgr;
-//	IRBuilder builder(mgr);
-//
-//	std::map<string, NodePtr> symbols;
-//	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
-//
-//	auto address = builder.parseAddresses(
-//		"$for (uint<4> i = 0u .. 10 : 1) {"
-//		"	$v[i]$; "
-//		"	$v[i+1u]$; "
-//		"}$", symbols
-//	);
-//
-//	EXPECT_EQ(3u, address.size());
-//
-//	auto rootNode = address[0];
-//
-//	// perform the polyhedral analysis 
-//	polyhedral::scop::mark(rootNode.getAddressedNode());
-//
-//	auto accessNode1 = address[1].as<ExpressionAddress>();
-//	auto accessNode2 = address[2].as<ExpressionAddress>();
-//
-//	auto access1 = getImmediateAccess( accessNode1 );
-//	auto access2 = getImmediateAccess( accessNode2 );
-//
-//	EXPECT_TRUE(access1.getContext());
-//	EXPECT_FALSE(access1.isContextDependent());
-//	EXPECT_EQ(access1.getContext(), rootNode);
-//	EXPECT_EQ("(((-v2 + 9 >= 0) ^ (v2 >= 0)) ^ (-v2 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
-//
-//
-//	EXPECT_TRUE(access2.getContext());
-//	EXPECT_FALSE(access2.isContextDependent());
-//	EXPECT_EQ(access2.getContext(), rootNode);
-//	EXPECT_EQ("(((-v2 + 9 >= 0) ^ (v2 >= 0)) ^ (-v2 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
-//
-//	auto ctx = polyhedral::makeCtx();
-//	auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
-//	EXPECT_EQ("{ [v4294967295] : v4294967295 <= 9 and v4294967295 >= 0 }", toString(*set1));
-//}
+
+////TEST(Access, SameAccess) {
+////
+////	NodeManager mgr;
+////	IRBuilder builder(mgr);
+////
+////	std::map<string, NodePtr> symbols;
+////	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+////
+////	auto address = builder.parseAddresses(
+////		"$for (uint<4> i = 0u .. 10 : 1) {"
+////		"	$v[i]$; "
+////		"	$v[i]$; "
+////		"}$", symbols
+////	);
+////
+////	EXPECT_EQ(3u, address.size());
+////
+////	auto rootNode = address[0];
+////
+////	// perform the polyhedral analysis 
+////	polyhedral::scop::mark(rootNode.getAddressedNode());
+////
+////	auto accessNode1 = address[1].as<ExpressionAddress>();
+////	auto accessNode2 = address[2].as<ExpressionAddress>();
+////
+////	auto access1 = getImmediateAccess( accessNode1 );
+////	auto access2 = getImmediateAccess( accessNode2 );
+////
+////	EXPECT_TRUE(access1.getContext());
+////	EXPECT_FALSE(access1.isContextDependent());
+////	EXPECT_EQ(access1.getContext(), rootNode);
+////	EXPECT_EQ("(((-v2 + 9 >= 0) ^ (v2 >= 0)) ^ (-v2 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+////
+////	EXPECT_TRUE(access2.getContext());
+////	EXPECT_FALSE(access2.isContextDependent());
+////	EXPECT_EQ(access2.getContext(), rootNode);
+////	EXPECT_EQ("(((-v2 + 9 >= 0) ^ (v2 >= 0)) ^ (-v2 + v4294967295 == 0))", toString(*access2.getAccessedRange()));
+////}
+////
+////TEST(Access, DifferentAccess) {
+////	
+////	NodeManager mgr;
+////	IRBuilder builder(mgr);
+////
+////	std::map<string, NodePtr> symbols;
+////	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+////
+////	auto address = builder.parseAddresses(
+////		"$for (uint<4> i = 0u .. 10 : 1) {"
+////		"	$v[i]$; "
+////		"	$v[i+1u]$; "
+////		"}$", symbols
+////	);
+////
+////	EXPECT_EQ(3u, address.size());
+////
+////	auto rootNode = address[0];
+////
+////	// perform the polyhedral analysis 
+////	polyhedral::scop::mark(rootNode.getAddressedNode());
+////
+////	auto accessNode1 = address[1].as<ExpressionAddress>();
+////	auto accessNode2 = address[2].as<ExpressionAddress>();
+////
+////	auto access1 = getImmediateAccess( accessNode1 );
+////	auto access2 = getImmediateAccess( accessNode2 );
+////
+////	EXPECT_TRUE(access1.getContext());
+////	EXPECT_FALSE(access1.isContextDependent());
+////	EXPECT_EQ(access1.getContext(), rootNode);
+////	EXPECT_EQ("(((-v2 + 9 >= 0) ^ (v2 >= 0)) ^ (-v2 + v4294967295 == 0))", toString(*access1.getAccessedRange()));
+////
+////
+////	EXPECT_TRUE(access2.getContext());
+////	EXPECT_FALSE(access2.isContextDependent());
+////	EXPECT_EQ(access2.getContext(), rootNode);
+////	EXPECT_EQ("(((-v2 + 9 >= 0) ^ (v2 >= 0)) ^ (-v2 + v4294967295 + -1 == 0))", toString(*access2.getAccessedRange()));
+////
+////	auto ctx = polyhedral::makeCtx();
+////	auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(access1.getAccessedRange()));
+////	EXPECT_EQ("{ [v4294967295] : v4294967295 <= 9 and v4294967295 >= 0 }", toString(*set1));
+////}
 
 TEST(Access, CommonSubset) {
 	
@@ -808,16 +830,25 @@ TEST(Access, CommonSubset) {
 	EXPECT_TRUE((set1-set2)->empty());
 
 
+
 	// Add the accesses to the class manager 
 	AccessManager aMgr;
-	auto cl1 = aMgr.getClassFor(access1);
+	auto clSet1 = aMgr.getClassFor(access1);
+	EXPECT_EQ(1u, clSet1.size());
+	
+	auto cl1 = *clSet1.begin();
 	EXPECT_EQ(1u, cl1->getUID());
-	auto cl2 = aMgr.getClassFor(access2);
+
+	
+	auto clSet2 = aMgr.getClassFor(access2);
+	EXPECT_EQ(1u, clSet2.size());
+
+	auto cl2 = *clSet2.begin();
 
 	EXPECT_EQ(cl1, cl2);
 	EXPECT_EQ(*cl1, *cl2);
 
-	EXPECT_EQ(2u, aMgr.size());
+	EXPECT_EQ(3u, aMgr.size());
 }
 
 
@@ -879,15 +910,21 @@ TEST(Access, EmptySubset) {
 
 
 	AccessManager aMgr;
-	auto cl1 = aMgr.getClassFor(rAccess1);
-	EXPECT_EQ(2u, aMgr.size());
+	auto clSet1 = aMgr.getClassFor(rAccess1);
+	EXPECT_EQ(3u, aMgr.size());
+
+	EXPECT_EQ(1u, clSet1.size());
+	auto cl1 = *clSet1.begin();
 	EXPECT_EQ(1u, cl1->getUID());
 
-	auto cl2 = aMgr.getClassFor(rAccess2);
-	EXPECT_EQ(3u, aMgr.size());
-	EXPECT_EQ(2u, cl2->getUID());
+	auto clSet2 = aMgr.getClassFor(rAccess2);
 
-	std::cout << aMgr << std::endl;
+	EXPECT_EQ(4u, aMgr.size());
+	EXPECT_EQ(1u, clSet2.size());
+
+	auto cl2 = *clSet2.begin();
+	EXPECT_EQ(3u, cl2->getUID());
+
 }
 
 TEST(Access, CommonSubSubset) {
@@ -903,8 +940,8 @@ TEST(Access, CommonSubSubset) {
 		"	for (uint<4> i1 = 1u .. 5u : 1) {"
 		"		$v[i1]$; "
 		"	}"
-		"	for (uint<4> i2 = 2u .. 3u : 1) {"
-		"		$v[i2+1u]$;"
+		"	for (uint<4> i2 = 1u .. 3u : 1) {"
+		"		$v[i2]$;"
 		"	}"
 		"}$", symbols
 	);
@@ -934,7 +971,7 @@ TEST(Access, CommonSubSubset) {
 	auto rAccess2 = cast<Subscript>(access2);
 	EXPECT_TRUE(rAccess2->getContext());
 	EXPECT_EQ(rAccess2->getContext(), rootNode);
-	EXPECT_EQ("(((-v4 + 2 >= 0) ^ (v4 + -2 >= 0)) ^ (-v4 + v4294967295 + -1 == 0))", 
+	EXPECT_EQ("(((-v4 + 2 >= 0) ^ (v4 + -1 >= 0)) ^ (-v4 + v4294967295 == 0))", 
 			toString(*rAccess2->getRange()));
 
 	auto ctx = polyhedral::makeCtx();
@@ -942,34 +979,173 @@ TEST(Access, CommonSubSubset) {
 	auto set2 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(rAccess2->getRange()));
 
 	EXPECT_EQ("{ [v4294967295] : v4294967295 <= 4 and v4294967295 >= 1 }", toString(*set1));
-	EXPECT_EQ("{ [3] }", toString(*set2));
+	EXPECT_EQ("{ [v4294967295] : v4294967295 <= 2 and v4294967295 >= 1 }", toString(*set2));
 
 	EXPECT_FALSE((set1 * set2)->empty());
 
 	{ 
 		AccessManager aMgr;
-		auto cl1 = aMgr.getClassFor(rAccess2);
-		EXPECT_EQ(2u, aMgr.size());
+		auto clSet1 = aMgr.getClassFor(rAccess2);
+		EXPECT_EQ(3u, aMgr.size());
+		EXPECT_EQ(1u, clSet1.size());
+
+		auto cl1 = *clSet1.begin();
 		EXPECT_EQ(1u, cl1->getUID());
 		EXPECT_EQ(*cl1->getParentClass(), aMgr[0]);
-		auto cl2 = aMgr.getClassFor(rAccess1);
-		EXPECT_EQ(3u, aMgr.size());
-		EXPECT_EQ(2u, cl2->getUID());
-		EXPECT_EQ(*cl2->getParentClass(), aMgr[0]);
-		EXPECT_EQ(*cl1->getParentClass(), *cl2);
+
+
+		auto clSet2 = aMgr.getClassFor(rAccess1);
+		EXPECT_EQ(4u, aMgr.size());
+		EXPECT_EQ(2u, clSet2.size());
+
+		auto cl2_1 = *clSet2.begin();
+		EXPECT_EQ(1u, cl2_1->getUID());
+		EXPECT_EQ(*cl2_1->getParentClass(), aMgr[0]);
+
+		auto cl2_2 = *(++clSet2.begin());
+		EXPECT_EQ(3u, cl2_2->getUID());
+		EXPECT_EQ(*cl2_2->getParentClass(), aMgr[0]);
 	}
 
 	{ 
 		AccessManager aMgr;
-		auto cl1 = aMgr.getClassFor(rAccess1);
-		EXPECT_EQ(2u, aMgr.size());
+		auto clSet1 = aMgr.getClassFor(rAccess1);
+		EXPECT_EQ(3u, aMgr.size());
+		EXPECT_EQ(1u, clSet1.size());
+
+		auto cl1 = *clSet1.begin();
 		EXPECT_EQ(1u, cl1->getUID());
 		EXPECT_EQ(*cl1->getParentClass(), aMgr[0]);
-		auto cl2 = aMgr.getClassFor(rAccess2);
+
+		auto clSet2 = aMgr.getClassFor(rAccess2);
+		EXPECT_EQ(4u, aMgr.size());
+	
+		EXPECT_EQ(1u, clSet2.size());
+
+		auto cl2 = *clSet2.begin();
+		EXPECT_EQ(3u, cl2->getUID());
+		EXPECT_EQ(*cl2->getParentClass(), *cl1->getParentClass());
+
+		clSet1 = aMgr.getClassFor(rAccess1);
+		EXPECT_EQ(4u, aMgr.size());
+
+		// The access now has been split into 2 classes 
+		EXPECT_EQ(2u, clSet1.size());
+
+		EXPECT_EQ(1u, (*clSet1.begin())->getUID());
+		EXPECT_EQ(3u, (*(++clSet1.begin()))->getUID());
+		
+	}
+}
+
+TEST(Access, CommonInnerSubset) {
+	
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<string, NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+
+	auto address = builder.parseAddresses(
+		"${ "
+		"	for (uint<4> i1 = 1u .. 6u : 1) {"
+		"		$v[i1]$; "
+		"	}"
+		"	for (uint<4> i2 = 4u .. 8u : 1) {"
+		"		$v[i2]$;"
+		"	}"
+		"}$", symbols
+	);
+
+	EXPECT_EQ(3u, address.size());
+
+	auto rootNode = address[0];
+
+	// perform the polyhedral analysis 
+	polyhedral::scop::mark(rootNode.getAddressedNode());
+
+	auto accessNode1 = address[1].as<ExpressionAddress>();
+	auto accessNode2 = address[2].as<ExpressionAddress>();
+
+	auto access1 = getImmediateAccess( mgr, accessNode1 );
+	auto access2 = getImmediateAccess( mgr, accessNode2 );
+
+	EXPECT_FALSE(access1->isContextDependent());
+	EXPECT_FALSE(access2->isContextDependent());
+
+	auto rAccess1 = cast<Subscript>(access1);
+	EXPECT_TRUE(rAccess1->getContext());
+	EXPECT_EQ(rAccess1->getContext(), rootNode);
+	EXPECT_EQ("(((-v2 + 5 >= 0) ^ (v2 + -1 >= 0)) ^ (-v2 + v4294967295 == 0))", 
+			toString(*rAccess1->getRange()));
+
+	auto rAccess2 = cast<Subscript>(access2);
+	EXPECT_TRUE(rAccess2->getContext());
+	EXPECT_EQ(rAccess2->getContext(), rootNode);
+	EXPECT_EQ("(((-v4 + 7 >= 0) ^ (v4 + -4 >= 0)) ^ (-v4 + v4294967295 == 0))", 
+			toString(*rAccess2->getRange()));
+
+	auto ctx = polyhedral::makeCtx();
+	auto set1 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(rAccess1->getRange()));
+	auto set2 = polyhedral::makeSet(ctx, polyhedral::IterationDomain(rAccess2->getRange()));
+
+	EXPECT_EQ("{ [v4294967295] : v4294967295 <= 5 and v4294967295 >= 1 }", toString(*set1));
+	EXPECT_EQ("{ [v4294967295] : v4294967295 <= 7 and v4294967295 >= 4 }", toString(*set2));
+
+	EXPECT_FALSE((set1 * set2)->empty());
+
+	{ 
+		AccessManager aMgr;
+		auto clSet1 = aMgr.getClassFor(rAccess2);
 		EXPECT_EQ(3u, aMgr.size());
-		EXPECT_EQ(2u, cl2->getUID());
-		EXPECT_EQ(*cl2->getParentClass(), *cl1);
+		EXPECT_EQ(1u, clSet1.size());
+
+		auto cl1 = *clSet1.begin();
+		EXPECT_EQ(1u, cl1->getUID());
 		EXPECT_EQ(*cl1->getParentClass(), aMgr[0]);
+
+
+		auto clSet2 = aMgr.getClassFor(rAccess1);
+		EXPECT_EQ(5u, aMgr.size());
+		EXPECT_EQ(2u, clSet2.size());
+
+		auto cl2_1 = *clSet2.begin();
+		EXPECT_EQ(3u, cl2_1->getUID());
+		EXPECT_EQ(*cl2_1->getParentClass(), aMgr[0]);
+
+		auto cl2_2 = *(++clSet2.begin());
+		EXPECT_EQ(4u, cl2_2->getUID());
+		EXPECT_EQ(*cl2_2->getParentClass(), aMgr[0]);
+	}
+
+	{ 
+		AccessManager aMgr;
+		auto clSet1 = aMgr.getClassFor(rAccess1);
+		EXPECT_EQ(3u, aMgr.size());
+		EXPECT_EQ(1u, clSet1.size());
+
+		auto cl1 = *clSet1.begin();
+		EXPECT_EQ(1u, cl1->getUID());
+		EXPECT_EQ(*cl1->getParentClass(), aMgr[0]);
+
+		auto clSet2 = aMgr.getClassFor(rAccess2);
+		EXPECT_EQ(5u, aMgr.size());
+	
+		EXPECT_EQ(2u, clSet2.size());
+
+		auto cl2 = *clSet2.begin();
+		EXPECT_EQ(3u, cl2->getUID());
+		EXPECT_EQ(*cl2->getParentClass(), *cl1->getParentClass());
+
+		clSet1 = aMgr.getClassFor(rAccess1);
+		EXPECT_EQ(5u, aMgr.size());
+
+		// The access now has been split into 2 classes 
+		EXPECT_EQ(2u, clSet1.size());
+
+		EXPECT_EQ(1u, (*clSet1.begin())->getUID());
+		EXPECT_EQ(3u, (*(++clSet1.begin()))->getUID());
+		
 	}
 }
 
@@ -1030,5 +1206,74 @@ TEST(Access, StridedSubset) {
 			toString(*set2));
 
 	EXPECT_TRUE((set1 * set2)->empty());
+}
+
+TEST(Access, MultipleAccessesSimple) {
+	
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(
+		"${"
+		"	int<4> a=2; "
+		"	int<4> b=3; "
+		"	$int<4> c = $a$ + $b$;$ "
+		"}$");
+
+	EXPECT_EQ(4u, addresses.size());
+
+	auto accesses = getAccesses(  mgr, UnifiedAddress(addresses[1]) );
+
+	EXPECT_EQ(3u, accesses.size());
+
+	EXPECT_EQ(addresses[1].as<DeclarationStmtAddress>()->getVariable(), accesses[0]->getAddress());
+	EXPECT_EQ(addresses[2], accesses[1]->getAddress());
+	EXPECT_EQ(addresses[3], accesses[2]->getAddress());
+}
+
+TEST(Access, MultipleAccessesVector) {
+	
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(
+		"${"
+		"	vector<uint<4>,4> a; "
+		"	uint<4> b=3; "
+		"	$uint<4> c = $a[b]$ + $b$;$ "
+		"}$");
+
+	EXPECT_EQ(4u, addresses.size());
+
+	auto accesses = getAccesses(  mgr, UnifiedAddress(addresses[1]) );
+
+	EXPECT_EQ(3u, accesses.size());
+
+	EXPECT_EQ(addresses[1].as<DeclarationStmtAddress>()->getVariable(), accesses[0]->getAddress());
+	EXPECT_EQ(addresses[2], accesses[1]->getAddress());
+	EXPECT_EQ(addresses[3], accesses[2]->getAddress());
+}
+
+TEST(Access, MultipleAccessesVector2) {
+	
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto addresses = builder.parseAddresses(
+		"${"
+		"	vector<uint<4>,4> a; "
+		"	ref<uint<4>> b=3; "
+		"	$$b$ = $a[b]$ + $b$;$"
+		"}$");
+
+	EXPECT_EQ(5u, addresses.size());
+
+	auto accesses = getAccesses(  mgr, UnifiedAddress(addresses[1]) );
+
+	EXPECT_EQ(3u, accesses.size());
+
+	EXPECT_EQ(addresses[2], accesses[0]->getAddress());
+	EXPECT_EQ(addresses[3], accesses[1]->getAddress());
+	EXPECT_EQ(addresses[4], accesses[2]->getAddress());
 }
 

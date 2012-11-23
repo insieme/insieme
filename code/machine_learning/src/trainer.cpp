@@ -39,6 +39,7 @@
 #include <iostream>
 #include <algorithm>
 #include <fstream>
+#include <float.h>
 
 #include "ReClaM/ValidationError.h"
 #include "ReClaM/EarlyStopping.h"
@@ -68,10 +69,10 @@ namespace ml {
 #define TP 0.05
 #define PQ 150.0
 #define UP 50*/
-#define GL 120.0 // 120 -> 3620+
-#define TP 0.01 // 0.05 -> 1024; 0.01 -> 3660 +; 0.005 -> 5000+
-#define PQ 1000.0 // 15 -> 1880; 500 -> 3574; 1000 -> 3622; 1500 -> 5000+
-#define UP 50 // 50 -> 5000+; 5 -> 600
+#define GL 12.0 // 120 -> 3620+
+#define TP 0.05 // 0.05 -> 1024; 0.01 -> 3660 +; 0.005 -> 5000+
+#define PQ 21.0 // 15 -> 1880; 500 -> 3574; 1000 -> 3622; 1500 -> 5000+
+#define UP 8 // 50 -> 5000+; 5 -> 600
 
 namespace {
 /*
@@ -176,10 +177,10 @@ double Trainer::getMinimum(const std::string& param) {
 }
 
 /*
- * Converts the value read from the database to an index in one of n coding, according to the policy defined in the variable genOut.
+ * Converts the value read from the database to an index to a class, according to the policy defined in the variable genOut.
  * The returned should be set to POS, the rest to NEG
  */
-size_t Trainer::valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max, double min) {
+size_t Trainer::valToClass(Kompex::SQLiteStatement* stmt, size_t index, double max, double min) {
 	switch(genOut) {
 	case GenNNoutput::ML_KEEP_INT :
 		return stmt->GetColumnInt(index);
@@ -557,18 +558,10 @@ void Trainer::setFilterCode(const std::string filterCid){
 	filterCodes.push_back(filterCid);
 }
 
-/*
- * Reads an entry for the training values form the database and appends it to the Array target in one-of-n coding
-*/
-void Trainer::appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement* stmt, size_t queryIdx, double max, double min, Array<double>& oneOfN) {
-	if(!model.usesOneOfNCoding()) {
-		// target must have dimesntion (nPatterns, 1)
-		oneOfN[0] = stmt->GetColumnDouble(queryIdx);
-		target.append_rows(oneOfN.subarr(0,0));
-		return;
-	}
-
-	size_t theOne = valToOneOfN(stmt, queryIdx, max, min);
+/**
+ * Generates an array where the element at index is set to POS, the rest to NEG
+ */
+void Trainer::valToOneOfN(size_t theOne, Array<double>& oneOfN){
 	size_t nClasses = oneOfN.dim(0);
 
 	if(theOne >= nClasses){
@@ -579,9 +572,87 @@ void Trainer::appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement*
 	}
 
 	oneOfN[theOne] = POS;
-	target.append_rows(oneOfN);
-	oneOfN[theOne] = NEG;
+}
 
+/**
+ * Generates an array where the elements form a fuzzy train vector with values between POS and NEG, depending on their measurements
+ */
+void Trainer::valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index, Array<double>& fuzzy) {
+	size_t nClasses = fuzzy.dim(0);
+	Array<double> values(nClasses);
+	size_t winner = 0, looser = 0;
+	double min = DBL_MAX, max = 0;
+
+	// read measured values form database, save winner index and it's value
+	for(size_t i = 0; i < nClasses; ++i) {
+		values(i) = stmt->GetColumnDouble(index + i);
+		if(values(i) < min) {
+			min = values(i);
+			winner = i;
+		}
+		if(values(i) > max) {
+			max = values(i);
+			looser = i;
+		}
+	}
+
+	double range = POS - NEG;
+	// upper limit for a non-NEG value
+	double limit = min * 1.1;
+
+	// create fuzzy vector, based on measured values
+	for(size_t i = 0; i < nClasses; ++i) {
+		// set winner to POS
+		if(i == winner) {
+			fuzzy(i) = POS;
+			continue;
+		}
+		if(i == looser && false) {
+			fuzzy(i) = NEG;
+			continue;
+		}
+
+		if(values(i) > min * 10) {
+			fuzzy(i) = fmax(((values(i) - min * 5) / (min * 10 - min * 5)) * -1, NEG);
+			continue;
+		}
+
+		// set everything below the relative limit to NEG
+		if(values(i) > limit) {
+			fuzzy(i) = 0;
+			continue;
+		}
+
+		// calculate fuzzy value between POS and NEG for values between limit and max
+		fuzzy(i) = ((limit - values(i)) / (limit - min));// * range - NEG;
+
+	}
+
+}
+
+/*
+ * Reads an entry for the training values form the database and appends it to the Array target in one-of-n coding
+*/
+void Trainer::appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement* stmt, size_t queryIdx, double max, double min, Array<double>& oneOfN) {
+	if(!model.usesOneOfNCoding()) {
+		// target must have dimesntion (nPatterns, 1)
+		oneOfN(0) = valToClass(stmt, queryIdx, max, min);
+		target.append_rows(oneOfN.subarr(0,0));
+		return;
+	}
+
+	if(genOut == GenNNoutput::ML_FUZZY_VECTOR) {
+		valsToFuzzyTrainVector(stmt, queryIdx, oneOfN);
+		target.append_rows(oneOfN);
+//		assert(false && "Not implemented yet");
+	} else {
+		size_t theOne = valToClass(stmt, queryIdx, max, min);
+		valToOneOfN(theOne, oneOfN);
+
+		target.append_rows(oneOfN);
+		// reset oneOfN to all NEG
+		oneOfN(theOne) = NEG;
+	}
 }
 
 /*
@@ -640,7 +711,7 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 
 	// read the maximum of the column in measurement for which to train
 	double max = 0.0, min = 0.0;
-	if(genOut != GenNNoutput::ML_KEEP_INT)
+	if(genOut != GenNNoutput::ML_KEEP_INT && genOut != GenNNoutput::ML_FUZZY_VECTOR)
 		max = getMaximum(trainForName), min = getMinimum(trainForName);
 
 	Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);

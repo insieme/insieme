@@ -95,11 +95,13 @@ class Conf:
 		return [flag.file_name for flag in self.flags if isinstance(flag, OutFileFlag) and flag.name == '-o']
 
 class Pass:
-	def __init__(self, frontend, tmp_file=None, backend=None, out_file=None):
+	def __init__(self, frontend, tmp_file=None, backend=None, out_file=None, executor=None):
 		self.frontend = copy.deepcopy(frontend)
 		self.tmp_file = tmp_file
-		if tmp_file:
+		if tmp_file and frontend:
 			self.frontend.flags.append( OutFileFlag('-o', tmp_file) )
+	
+		if tmp_file:
 			self.tmp_file = '{CASE_NAME}.'+tmp_file
 
 		assert not (frontend and not tmp_file and backend)
@@ -110,6 +112,9 @@ class Pass:
 		if out_file:
 			self.backend.flags.append( OutFileFlag('-o', out_file) )
 			self.out_file = '{CASE_NAME}.'+out_file
+		
+		self.executor = executor
+
 	@property
 	def files(self):
 		ret = []
@@ -118,6 +123,12 @@ class Pass:
 		if self.backend:
 			ret.extend(self.backend.files)
 		return set(ret)
+	
+	@property
+	def exec(self):
+		return "{0}".format(self.executor);
+
+
 
 class Commands:
 	COMPILE = (0, 'Compile')
@@ -203,6 +214,48 @@ class TestData:
 global benchmarks_data
 benchmarks_data = []
 
+def print_sum(benchmarks_data) :
+
+	entries = []
+	for bench in benchmarks_data:
+		entries.append( [bench.data.path] + [ (x.desc.split()[1], x.time, x.memory, x.stdev) \
+				for x in bench.data.reports[:-1] if x.type[0]	== 2 ] )
+	
+	header = ["bench_name", "orig_time", "seq_time", "run_time", "ocl_time", 
+										 "rel_seq_time",	"rel_run_time", "rel_ocl_time",  
+							"orig_mem",  "seq_mem",  "run_mem", "ocl_mem",
+										 "rel_seq_mem", "rel_run_mem", "rel_ocl_mem",
+							"orig_stdev","seq_stdev","run_stdev","ocl_stdev", 
+										 "rel_seq_stdev", "rel_run_stdev", "rel_ocl_stdev"]
+
+	table = []
+	table.append(header)
+	for entry in entries:
+		line = [0] * len(header)
+		# add name 
+		line[0] = entry[0]
+
+		for e in entry[1:]:
+			if e[0] == 'gcc':
+				line[1::7] = e[1:]
+
+			if e[0] == 'seq':
+				line[2::7] = e[1:]
+				line[5::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7]))
+
+			if e[0] == 'run':
+				line[3::7] = e[1:]
+				line[6::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7]))
+
+			if e[0] == 'ocl':
+				line[4::7] = e[1:]
+				line[7::7] = list(map(lambda x,y: x/y if y!=0 else 0, e[1:], line[1::7] ))
+
+		table.append( line )
+	
+	print ("\n".join(map(lambda x: "{0}".format( ",".join(map(lambda y: "{0}".format(y), x) )), table)))
+
+
 completed = Queue()
 
 def reporter( report_queue ):
@@ -284,39 +337,7 @@ def reporter( report_queue ):
 	
 
 	# print the summary table 
-	
-	entries = []
-	for bench in benchmarks_data:
-		entries.append( [bench.data.path] + [ (x.desc.split()[1], x.time, x.memory, x.stdev) for x in bench.data.reports[:-1] if x.type[0]	== 2 ] )
-
-	
-	header = ["bench_name", "orig_time", "seq_time", "run_time", "ocl_time", 
-							"orig_mem",  "seq_mem",  "run_mem", "ocl_mem",
-							"orig_stdev","seq_stdev","run_stdev","ocl_stdev" ]
-
-	table = []
-	table.append(header)
-	for entry in entries:
-		line = [0] * 13
-		# add name 
-		line[0] = entry[0]
-
-		for e in entry[1:]:
-			if e[0] == 'gcc':
-				line[1:13:4] = e[1:]
-
-			if e[0] == 'seq':
-				line[2:13:4] = e[1:]
-
-			if e[0] == 'run':
-				line[3:13:4] = e[1:]
-
-			if e[0] == 'ocl':
-				line[4:13:4] = e[1:]
-
-		table.append( line )
-	
-	print ("\n".join(map(lambda x: "{0}".format( ",".join(map(lambda y: "{0}".format(y), x) )), table)))
+	# print_summary(benchmarks_data)
 
 	report_queue.put( len(failedTests) )
 
@@ -376,8 +397,12 @@ def runner( job ):
 		
 		m = re.match(r"^TIME\((?P<time>\d+(.\d+)?)\):MEM\((?P<mem>\d+)\)$", time_spec)
 
-		elapsed = float(m.group('time'))
-		tot_mem = int(m.group('mem'))
+		elapsed = -1
+		tot_mem = -1
+
+		if m is not None:
+			elapsed = float(m.group('time'))
+			tot_mem = int(m.group('mem'))
 
 		output = "\n".join(output.split('\n')[:-2])
 
@@ -549,7 +574,10 @@ class TestJob:
 			for id, P in cur_passes:
 				if P.frontend is not None:
 					for file in P.frontend.files:
-						ref_file = "{0}.ref".format(file).format(**{
+						ext = os.path.split(file)[1].split('.')[-1]
+						abs_name = '/'.join( [os.path.split(file)[0], \
+							'.'.join(os.path.split(file)[1].split('.')[0:-1])])
+						ref_file = "{0}.ref.{1}".format(abs_name, ext).format(**{
 							'CASE_NAME': self.__data.name,
 							'PATH': path
 						})
@@ -557,7 +585,10 @@ class TestJob:
 
 				if P.backend is not None:
 					for file in P.backend.files:
-						ref_file = "{0}.ref".format(file).format(**{
+						ext = os.path.split(file)[1].split('.')[-1]
+						abs_name = '/'.join( [os.path.split(file)[0], \
+							'.'.join(os.path.split(file)[1].split('.')[0:-1])])
+						ref_file = "{0}.ref".format(abs_name,ref).format(**{
 							'CASE_NAME': self.__data.name,
 							'PATH': path
 						})
@@ -593,24 +624,30 @@ class TestJob:
 						'PATH': path
 					})
 
+					ext = os.path.split(file_name)[1].split('.')[-1]
+					abs_name = '/'.join( [os.path.split(file_name)[0], \
+								'.'.join(os.path.split(file_name)[1].split('.')[0:-1])])
+
+					ref_file = "{0}.ref.{1}".format(abs_name, ext)
 					# if we have a reference file, then check with a DIFF
-					if os.path.exists(file_name + ".ref"):
+					if os.path.exists(ref_file):
 						self.__cmds.append(
 							Cmd(Commands.SDIFF, "Comparing with reference {0}".format(id),
-							 "{0}/test/sortdiff {1}/{2} {1}/{2}.ref".format(SRC_DIR, path, file_name)
+							 "{0}/test/sortdiff {1}/{2} {1}/{3}".format(SRC_DIR, path, file_name,
+								 ref_file)
 							)
 						)
 						# If everything worked out, we overwrite the ref file 
 						finalize_cmds.append( 
 							Cmd(Commands.COPY, "Rewriting file as ref file {0}".format(id),
-							 "mv {0}/{1} {0}/{1}.ref".format(path, file_name)
+							 "mv {0}/{1} {0}/{2}".format(path, file_name, ref_file)
 							)
 						)
 
 					else:
 						self.__cmds.append(
 							Cmd(Commands.COPY, "Copying file as ref file {0}".format(id),
-							 "cp {0}/{1} {0}/{1}.ref".format(path, file_name)
+							 "cp {0}/{1} {0}/{2}".format(path, file_name, ref_file)
 							)
 						)
 
@@ -658,12 +695,17 @@ class TestJob:
 						env_vars = { x.split('=')[0].strip() : x.split('=')[1].strip() \
 								 for x in input_args[0:exec_idx].split() if '=' in x }
 
-					input_args = input_args[exec_idx:]
+						input_args = input_args[exec_idx:]
 
 				self.__cmds.append(
 					Cmd(Commands.RUN, "Run {0}".format(id),
-						"{0}".format(
-							input_args.format(**{'PATH':path,'EXEC': executable})
+						"{0} {1} {2}".format(
+							P.exec,
+							'-machinefile {0}/hosts'.format(path) if os.path.exists(path+'/hosts') and
+							P.exec.strip() != ''  else '',
+							input_args.format(**{'PATH':path, 
+												 'EXEC': executable
+												})
 							if input_args else "{0}/{1}".format(path, executable)
 					 	  ),
 						"{0}/{1}".format(path, file_name), 
@@ -889,7 +931,7 @@ def main(argv=None):
 	test_jobs = [TestJob(x) for x in test_cases]
 
 	# ldPath = os.getenv("LD_LIBRARY_PATH", "");
-	# os.putenv("LD_LIBRARY_PATH", ldPath + ":{0}/code/simple_backend".format(BIN_DIR));
+	os.putenv("SLOTS", "1");
 
 	# instantiate the pool of threads which are used to run test cases
 	pool = Pool(processes=num_cores)

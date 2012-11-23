@@ -201,11 +201,13 @@ bool KernelCodeRetriver::visitDeclarationStmt(const core::DeclarationStmtPtr& de
 }
 
 void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {
+	kernelFileCache.clear();
 	if(const CallExprPtr callSaC = dynamic_pointer_cast<const CallExpr>(path)) {
 		if(const LiteralPtr stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
 			if(BASIC.isRefVectorToRefArray(stringAsChar)) {
 				if(const LiteralPtr path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
 					// check if file has already been added
+std::cout << "\n using path string " << path->getStringValue() << " \n\n";
 					if(kernelFileCache.find(path->getStringValue()) == kernelFileCache.end()) {
 						kernelFileCache.insert(path->getStringValue());
 						kernels = loadKernelsFromFile(path->getStringValue(), builder);

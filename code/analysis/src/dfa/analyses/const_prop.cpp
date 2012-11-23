@@ -35,6 +35,9 @@
  */
 
 #include "insieme/analysis/dfa/analyses/const_prop.h"
+#include "insieme/analysis/dfa/analyses/extractors.h"
+
+#include "insieme/analysis/func_sema.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -45,10 +48,35 @@
 
 using namespace insieme::core;
 
-namespace insieme { namespace analysis { namespace dfa { namespace analyses {
-
+namespace insieme { 
+namespace analysis { 
+namespace dfa { 
+namespace analyses {
 
 typedef ConstantPropagation::value_type value_type;
+
+value_type ConstantPropagation::init() const {
+	const auto& lhsBase = extracted.getLeftBaseSet();
+	return makeCartProdSet(
+			lhsBase, 
+			std::set<dfa::Value<core::LiteralPtr>>( 
+				{ dfa::Value<core::LiteralPtr>(dfa::top) } 
+			) 
+		).expand();
+}
+
+value_type ConstantPropagation::top() const { return value_type(); }
+
+value_type ConstantPropagation::bottom() const {
+	const auto& lhsBase = extracted.getLeftBaseSet();
+
+	return makeCartProdSet(
+			lhsBase, 
+			std::set<dfa::Value<core::LiteralPtr>>( 
+				{ dfa::Value<core::LiteralPtr>(dfa::bottom) } 
+			) 
+		).expand();
+}
 
 /**
  * ConstantPropagation
@@ -96,7 +124,7 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
 	value_type::const_iterator lhs_it = lhs.begin(), rhs_it = rhs.begin(), it, end;
 
 	while(lhs_it != lhs.end() && rhs_it != rhs.end()) {
-		if(var(*lhs_it).getAddressedNode() == var(*rhs_it).getAddressedNode()) {
+		if(*var(*lhs_it) == *var(*rhs_it)) {
 			ret.insert( std::make_tuple(var(*lhs_it), eval(val(*lhs_it), val(*rhs_it))) );
 			++lhs_it; ++rhs_it;
 			continue;
@@ -112,6 +140,8 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
 
 	while( it != end) { ret.insert( *(it++) ); }
 
+	// LOG(DEBUG) << ret; 
+
 	return std::move(ret);
 }
 
@@ -120,28 +150,27 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
  * determined constant value which could be either a literal or the top/bottom element of the
  * lattice representing respectively "undefined" and "not constant". 
  */
-dfa::Value<LiteralPtr> lookup( NodeManager& mgr, const AccessPtr& var, const value_type& in, const CFG& cfg ) {
-	
-	AccessManager aMgr; 
-	std::vector<std::pair<AccessClassPtr, dfa::Value<LiteralPtr>>> classes;
+dfa::Value<LiteralPtr> lookup( const AccessManager& aMgr, const AccessPtr& var, const value_type& in, const CFG& cfg ) {
 
-	std::transform(in.begin(), in.end(), std::back_inserter(classes), [&](const value_type::value_type& cur) { 
-			return std::make_pair(
-						aMgr.getClassFor( getImmediateAccess(mgr, std::get<0>(cur), cfg.getTmpVarMap()) ), 
-						std::get<1>(cur) 
-					);
-		});
+	auto accessClasses = aMgr.findClass(var);
 
-	// LOG(INFO) << join(", ", classes.begin(), classes.end(), [&](std::ostream& jout, const AccessClassPtr& cur) { jout << *cur; } );
+	// If the class was not found, then return the top element 
+	if (accessClasses.empty()) { return dfa::top; }
 
-	auto accessClass = aMgr.getClassFor(var);
-	auto fit = std::find_if(classes.begin(), classes.end(), 
-			[&](const std::pair<AccessClassPtr, dfa::Value<LiteralPtr>>& cur) { return *cur.first==*accessClass; });
+	for (const auto& accessClass : accessClasses) {
+		auto fit = std::find_if(in.begin(), in.end(), [&](const value_type::value_type& cur) { 
+				return *std::get<0>(cur) == *accessClass; 
+			});
 
-	return fit->second; 
+		if( fit != in.end() ) return std::get<1>(*fit);
+	}
+
+	return dfa::top;
 }	
 
-dfa::Value<LiteralPtr> eval(const ExpressionAddress& 	lit, 
+
+dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
+							const ExpressionAddress& 	lit, 
 							const cfg::BlockPtr& 		block, 
 							const size_t& 				stmt_idx,
 							const value_type& 			in, 
@@ -149,7 +178,9 @@ dfa::Value<LiteralPtr> eval(const ExpressionAddress& 	lit,
 {
 	using namespace arithmetic;
 
-	const lang::BasicGenerator& basicGen = lit->getNodeManager().getLangBasic();
+	//const lang::BasicGenerator& basicGen = lit->getNodeManager().getLangBasic();
+
+	if (!lit) { return dfa::bottom; }
 
 	try {
 
@@ -172,17 +203,18 @@ dfa::Value<LiteralPtr> eval(const ExpressionAddress& 	lit,
 
 			for(const auto& value : f.extractValues()) {
 				ExpressionPtr expr = value;
+
 				/**
 				 * This expression could be the deref of a variable. However we are interested in
 				 * storing the variable in order to lookup for previous definitions. 
 				 *
 				 * We remove any deref operations present
 				 */
-				if (CallExprPtr call = dynamic_pointer_cast<const CallExpr>(expr)) {
-					if (core::analysis::isCallOf(call, basicGen.getRefDeref())) { 
-						expr = call->getArgument(0);
-					}
-				}
+				// if (CallExprPtr call = dynamic_pointer_cast<const CallExpr>(expr)) {
+				//	if (core::analysis::isCallOf(call, basicGen.getRefDeref())) { 
+				//		expr = call->getArgument(0);
+				//	}
+				//}
 
 				auto exprAddr = core::Address<const core::Expression>::find(expr, lit.getAddressedNode());
 				// Build an address starting from the analysis stmt 
@@ -191,7 +223,7 @@ dfa::Value<LiteralPtr> eval(const ExpressionAddress& 	lit,
 				cfg::Address cfgAddr(block, stmt_idx, exprAddr);
 				auto var = getImmediateAccess(exprAddr->getNodeManager(), cfgAddr, cfg.getTmpVarMap());
 
-				dfa::Value<LiteralPtr> lit = lookup(exprAddr->getNodeManager(), var, in, cfg);
+				dfa::Value<LiteralPtr> lit = lookup(aMgr, var, in, cfg);
 
 				if (lit.isBottom()) { return dfa::bottom; }
 				if (lit.isTop()) 	{ return dfa::top; 	  }
@@ -208,50 +240,60 @@ dfa::Value<LiteralPtr> eval(const ExpressionAddress& 	lit,
 		}
 
 	} catch(NotAFormulaException&& e) { 
-		// we cannot determine whether this is a constant value, we return the bottom symbol then 
-		return dfa::bottom; 
+
+		try {
+			// we cannot determine whether this is a constant value, we return the bottom symbol then 
+			return lookup(aMgr, 
+				      getImmediateAccess(lit->getNodeManager(), cfg::Address(block,stmt_idx,lit), cfg.getTmpVarMap()), 
+					  in, cfg);
+		} catch( NotAnAccessException&& e) { return dfa::top; }
 	}
 
 	assert( false  && "Something odd happened" );
 }
 
-void definitionsToAccesses(const value_type& data, AccessManager& aMgr) {
 
-	for(const auto& value : data) {
-		const auto& addr = std::get<0>(value);
 
-		aMgr.getClassFor( 
-				getImmediateAccess( addr.getAddressedNode()->getNodeManager(), addr ) 
-			);
-	}
 
-}
-
-value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
+std::pair<value_type,value_type> 
+ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
 
 	value_type gen, kill;
-	
-	if (block->empty()) { return in; }
 
-	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(INFO) << "~ Block " << block->getBlockID();
-	LOG(INFO) << "~ IN: " << in;
+	/** 
+	 * Given a definition happening in a block, this function update the gen and kill sets 
+	 * expecially by eliminating all the previous definitions in the in set which are 
+	 * being killed by the new definition. The comparision is done based on the class 
+	 * to which the access belongs to
+	 */
+	auto populateSets = [&](const AccessManager& aMgr, 
+							const AccessPtr& defAccess, 
+							const dfa::Value<LiteralPtr>& res) 
+	{
+		auto defClasses = aMgr.findClass(defAccess);
+		assert(!defClasses.empty() && "Invalid class for access. Something wrong in the extract() method");
 
+		for (const auto& defClass : defClasses) {
+			gen.insert( std::make_tuple(defClass, res) );
+		}
+
+		AccessClassSet confClasses = getConflicting(defClasses);
+		std::copy(defClasses.begin(), defClasses.end(), std::inserter(confClasses,confClasses.begin()));
+
+		// Kill Entities 
+		for(auto it = in.begin(), end=in.end(); it != end; ++it) {
+			if (std::find_if( confClasses.begin(), confClasses.end(), [&](const AccessClassPtr& cur) { 
+						return *cur == *std::get<0>(*it);  
+					}) != confClasses.end() ) 
+			{ 
+				kill.insert( *it ); 
+			}
+		}
+	};
+
+	if (block->empty()) { return {gen,kill}; }
 
 	core::NodeManager& mgr = getCFG().getNodeManager();
-
-	// Build the access manager which contains the incoming variables 
-	
-	AccessManager aMgr(&getCFG(), getCFG().getTmpVarMap());
-	std::vector<std::pair<AccessClassPtr, dfa::Value<LiteralPtr>>> classes;
-
-	std::transform(in.begin(), in.end(), std::back_inserter(classes), [&](const value_type::value_type& cur) { 
-			return std::make_pair(
-					aMgr.getClassFor( getImmediateAccess(mgr, std::get<0>(cur), cfg.getTmpVarMap()) ), 
-					std::get<1>(cur) 
-				);
-		});
-
 
 	size_t stmt_idx = 0;
 	for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
@@ -259,13 +301,20 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 		++stmt_idx;
 
 		StatementAddress stmt = core::StatementAddress(cur.getAnalysisStatement());
-
 		const lang::BasicGenerator& basicGen = stmt->getNodeManager().getLangBasic();
 
-		auto handle_def = [&](const VariableAddress& varAddr, const ExpressionAddress& init) { 
+		/** 
+		 * This lambda handles the definition of a variable (deriving from the construction of 
+		 * the CFG, the LHS of an assignment or a declaration statements it is always a variable.
+		 *
+		 * The RHS of the expression (init) is analyzed to determine whether it is a constant. In
+		 * that case the value is propagated through the CFG. Otherwise the bottom value is used to 
+		 * state that the variable is not a constant.
+		 */
+		auto handle_def = [&](const VariableAddress& varAddr, const ExpressionAddress& init, bool isDecl) { 
 				
 			cfg::Address cfgAddr(block, stmt_idx-1, varAddr);
-			auto def = getImmediateAccess(stmt->getNodeManager(), cfgAddr, getCFG().getTmpVarMap());
+			auto defAccess = getImmediateAccess(mgr, cfgAddr, getCFG().getTmpVarMap());
 
 			ExpressionAddress initVal = init;
 
@@ -274,7 +323,10 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 			 * expressions because they have no effect on constant propagation semantics.
 			 */
 			if (CallExprAddress call = dynamic_address_cast<const CallExpr>(init)) {
-
+			
+				/** 
+				 * Get rid of var-ref or var-new operations: FIXME
+				 */
 				if (core::analysis::isCallOf(call.getAddressedNode(), basicGen.getRefVar()) ||
 					core::analysis::isCallOf(call.getAddressedNode(), basicGen.getRefNew()) ) 
 				{ 
@@ -282,89 +334,72 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 				}
 			}
 
-			/** 
-			 * In the case the statement is creating an alias: 
-			 * ref<'a> a = b; => typeof(b) = ref<'a>
-			 *
-			 * we need to deref the variable b so that this is recognized to be a formula
-			 */
-			//if (core::analysis::isRefType(initVal->getType())) {
-			//	initVal = IRBuilder(stmt->getNodeManager()).deref(initVal);
-			//}
-
-			dfa::Value<LiteralPtr> res = eval(initVal, block, stmt_idx-1, in, getCFG());
-			gen.insert( std::make_tuple(cfgAddr, res) );
-
-			auto access = getImmediateAccess(varAddr->getNodeManager(), 
-											 cfg::Address(block, stmt_idx-1, varAddr), 
-											 cfg.getTmpVarMap()
-										);
-
-			AccessClassPtr collisionClass = aMgr.getClassFor(access);
-
-			AccessClassSet depClasses;
-			depClasses.insert(collisionClass);
-			// Add subclasses which are affected by this definition
-			addSubClasses(collisionClass, depClasses);
-
-			// Kill Entities 
-			if (access->isReference()) {
-				for(auto it = in.begin(), end=in.end(); it != end; ++it) {
-					if (std::find_if( depClasses.begin(), depClasses.end(), [&](const AccessClassPtr& cur) { 
-								return *cur == *classes[std::distance(in.begin(),it)].first; }) != depClasses.end() ) {
-						kill.insert( *it );
-					}
-				}
-			}
+			dfa::Value<LiteralPtr> res = eval(aMgr, initVal, block, stmt_idx-1, in, getCFG());
+			populateSets(aMgr, defAccess, res);
 		};
 
-		if (stmt->getNodeType() == NT_Literal) { return; }
 
-		// assume scalar variables 
+		/**
+		 * If the block contains a declaration stmt, then separate the LHS to the RHS and 
+		 * invoke the handle_def function
+		 */
 		if (DeclarationStmtAddress decl = dynamic_address_cast<const DeclarationStmt>(stmt)) {
-			handle_def( decl->getVariable(), decl->getInitialization() );
 
-		} else if (CallExprAddress call = dynamic_address_cast<const CallExpr>(stmt)) {
-
-			if (core::analysis::isCallOf(call.getAddressedNode(), basicGen.getRefAssign()) ) { 
-				handle_def( call->getArgument(0).as<VariableAddress>(), call->getArgument(1) );
-			}
-
-			// do nothing otherwise
-		} else if ( cur.getType() == cfg::Element::LOOP_INCREMENT ) {
-			// make sure that the loop iterator is not a constant 
-			//
-//			Access acc = getImmediateAccess(
-//					cur.getStatementAddress().as<ForStmtAddress>()->getDeclaration()->getVariable(),
-//					{ nullptr, 0 },
-//					getCFG().getTmpVarMap()
-//				);
-//			gen.insert( std::make_tuple(acc, dfa::bottom) );
-//			
-//			// kill all declarations reaching this block 
-//			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
-//					[&](const typename value_type::value_type& cur){
-//						return isConflicting(std::get<0>(cur), acc, getCFG().getTmpVarMap());
-//					} );
-//
-
-		} else {
-
-			LOG(WARNING) << stmt;
-			assert(false && "Stmt not handled");
+			handle_def( decl->getVariable(), decl->getInitialization(), true );
+			return;
 
 		}
+		
+		/** 
+		 * If the block contains a call-expr which is an assignment stmt, then we also separate
+		 * LHS and RHS and call the handling function
+		 */
+		if (CallExprAddress call = dynamic_address_cast<const CallExpr>(stmt)) {
+
+			if (core::analysis::isCallOf(call.getAddressedNode(), basicGen.getRefAssign()) ) { 
+				handle_def( call->getArgument(0).as<VariableAddress>(), call->getArgument(1), false );
+				return;
+			}
+
+			// Function calls to 
+			FunctionSema sema = extractSemantics(call);
+			if (sema.containsReferenceAccesses()) {
+
+				for_each(sema.accesses_begin(), sema.accesses_end(), [&](const FunctionSema::ReferenceAccess& cur) { 
+
+					// Extract the reference being accessed from this argument 
+					ExpressionAddress ref = cur.first.getReference();
+
+					if (std::get<0>(cur.second) == Ref::DEF) {
+						handle_def( ref.as<VariableAddress>(), ExpressionAddress(), false);
+					}
+
+				});
+
+			}
+			return;
+		} 
+
+		/** 
+		 * The last implicit definition in the IR is the update of the loop iterator in a for-loop
+		 * stmt. Because the IR doesn't contain an explicit expression representing this update
+		 * (definition) we use the variable in the loop initialization as a placeholder and
+		 * conseguently mark this as not a constant. 
+		 */
+		if ( cur.getType() == cfg::Element::LOOP_INCREMENT ) {
+			// make sure that the loop iterator is not a constant 
+			auto itAcc = getImmediateAccess(
+					mgr,
+					getCFG().find(cur.getStatementAddress().as<ForStmtAddress>()->getDeclaration()->getVariable()),
+					getCFG().getTmpVarMap()
+				);
+
+			populateSets(aMgr, itAcc, dfa::bottom);
+		} 	
+
 	});
 
-	LOG(INFO) << "~ KILL: " << kill;
-	LOG(INFO) << "~ GEN:  " << gen;
-
-	value_type set_diff, ret;
-	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
-	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
-
-	//LOG(INFO) << "~ RET: " << ret;
-	return ret;
+	return { gen, kill };
 }
 
 } } } } // end insieme::analysis::dfa::analyses namespace 

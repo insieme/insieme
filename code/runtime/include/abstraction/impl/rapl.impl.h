@@ -69,7 +69,7 @@ int64 _irt_read_msr(int32 file, int32 subject) {
 	int64 data;
 
 	if (pread(file, &data, sizeof data, subject) != sizeof data) {
-		IRT_DEBUG("Instrumentation: Unable to read MSR file %s, reason: %s\n", path_to_msr, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to read MSR file %d, reason: %s\n", file, strerror(errno));
 		return -1.0;
 	}
 
@@ -82,46 +82,52 @@ int32 _irt_close_msr(int32 file) {
 
 void _irt_get_rapl_energy_consumption(double *package_energy) {
 	int32 file = 0;
-	int32 core = 0;
 	int64 result = 0;
-	//double power_units = -1.0,
-	double energy_units = -1.0; //, time_units = -1.0;
-	double package = -1.0; //, dram = -1.0;
+	uint32 core_start = 0, core_end = irt_get_num_cpus();
+	double energy_units = -1.0;
+	*package_energy = -1.0;
+	uint32 a = 0, d = 0;
 
-	if((file = _irt_open_msr(core)) < 1) {
-		*package_energy = -1.0;
-		return;
+	// ugly hack until there's runtime support for getting hw info like this:
+
+	// get the number of cores per socket (including all HT units)
+	__asm__ __volatile__("cpuid" : "=a" (a): "a" (0x4), "c" (0x0) : "ebx", "edx");
+	uint32 number_of_cores_per_socket = ((a>>26)&0x3F)+1; // just like the documentation says it...
+
+	// get whether the CPU has HT unites
+	__asm__ __volatile__("cpuid" : "=d" (d): "a" (0x1), "c" (0x0) : "ebx");
+	bool hyperthreading_present = (d>>28)&0x1;
+
+	if(hyperthreading_present) {
+		number_of_cores_per_socket /= 2;
+		core_end /= 2;
 	}
 
-	if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) < 0) {
-		*package_energy = -1.0;
-		_irt_close_msr(file);
-		return;
+	// for (core 0) until (all cores excl. HT), stepsize (number of cores per socket)
+	for(uint32 core = core_start; core < (core_end/number_of_cores_per_socket); ++core) {
+		if((file = _irt_open_msr(core*number_of_cores_per_socket)) > 0) {
+			if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
+				energy_units = pow(0.5, (double)((result>>8) & 0x1F));
+				if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS)) >= 0)
+					*package_energy += (double)(result&0xFFFFFFFF) * energy_units;
+				//if((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS)) >= 0)
+				//	*package_energy += (double)(result&0xFFFFFFFF) * energy_units;
+				//if((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS)) >= 0)
+				//	*package_energy += (double)(result&0xFFFFFFFF) * energy_units;
+			}
+			_irt_close_msr(file);
+		}
 	}
-
-	energy_units = pow(0.5, (double)((result>>8) & 0x1F));
-
-	if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS)) < 0) {
-		*package_energy = -1.0;
-		_irt_close_msr(file);
-		return;
-	}
-
-	// upper 32 bit of the result are preserved, so discard them
-	package = (double) (result&0xFFFFFFFF) * energy_units;
-	*package_energy = package;
-
-	_irt_close_msr(file);
 }
 
 bool irt_rapl_is_supported() {
 	volatile unsigned a, b, c, d;
 
-	__asm__ __volatile__("cpuid" : "=b" (b), "=c" (c), "=d" (d) : "a" (0x0));
-
 	unsigned vendor_string_ebx = 0x756E6547; // Genu
 	unsigned vendor_string_ecx = 0x6C65746E; // ineI
 	unsigned vendor_string_edx = 0x49656E69; // ntel
+
+	__asm__ __volatile__("cpuid" : "=b" (b), "=c" (c), "=d" (d) : "a" (0x0));
 
 	// if not an intel cpu
 	if(b != vendor_string_ebx || c != vendor_string_ecx || d != vendor_string_edx)
@@ -129,16 +135,18 @@ bool irt_rapl_is_supported() {
 
 	__asm__ __volatile__("cpuid" : "=a" (a) : "a" (0x00000001) : "ebx", "ecx", "edx");
 
-	unsigned model_number = (a>>4)&0xF; // bit 4-7
-	unsigned family_code = (a>>8)&0xF; // bit 8-11
-	unsigned extended_model = (a>>16)&0xF; // bit 16-19
+	unsigned model_number = (a>>4)&0xF; // bits 4-7
+	unsigned family_code = (a>>8)&0xF; // bits 8-11
+	unsigned extended_model = (a>>16)&0xF; // bits 16-19
 
 	if(family_code == 0x6) {
 		if(model_number == 0xA && extended_model == 0x2) // SandyBridge 32nm
 			return true;
-		if(model_number == 0xE && extended_model == 0x2) // SandyBridge EX 32nm
+		if(model_number == 0xE && extended_model == 0x2) // SandyBridge EN 32nm
 			return true;
-		if(model_number == 0xA && extended_model == 0x3) // SandyBridge 22nm
+		if(model_number == 0xD && extended_model == 0x2) // SandyBridge EP 32nm
+			return true;
+		if(model_number == 0xA && extended_model == 0x3) // IvyBridge 22nm
 			return true;
 	}
 

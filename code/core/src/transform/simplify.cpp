@@ -77,6 +77,7 @@ namespace transform {
 			NodePtr simplifyCall(const NodePtr& ptr) {
 				// it has to be a call expression ...
 				if (ptr->getNodeType() != core::NT_CallExpr) return ptr;
+				if(manager.getLangBasic().isBuiltIn(ptr.as<CallExprPtr>()->getFunctionExpr())) return ptr;
 				// try in-lining of call expression
 				return tryInlineToExpr(manager, ptr.as<CallExprPtr>());
 			}
@@ -87,6 +88,19 @@ namespace transform {
 
 				// check condition
 				IfStmtPtr ifStmt = ptr.as<IfStmtPtr>();
+
+				IRBuilder builder(manager);
+				if (ifStmt->getThenBody() == builder.getNoOp() && 
+					ifStmt->getElseBody() == builder.getNoOp())
+				{
+					return builder.getNoOp();
+
+				}
+
+				// if the then body is empty and the else body is not, then negate the condition
+				if (ifStmt->getThenBody() == builder.getNoOp()) {
+					ifStmt = builder.ifStmt( builder.logicNeg(ifStmt->getCondition()), ifStmt->getElseBody() );
+				}
 
 				try {
 					// evaluate constraint
@@ -117,6 +131,12 @@ namespace transform {
 
 				// check condition
 				WhileStmtPtr whileStmt = ptr.as<WhileStmtPtr>();
+				IRBuilder builder(manager);
+
+				// If this is a while loop with no body, then get rid of it
+				if (whileStmt->getBody() == builder.getNoOp()) {
+					return builder.getNoOp();
+				}
 
 				try {
 					// evaluate constraint
@@ -125,7 +145,7 @@ namespace transform {
 					// if condition is always valid
 					if (cond.isUnsatisfiable()) {
 						// replace while-loop with no-op
-						return IRBuilder(manager).getNoOp();
+						return builder.getNoOp();
 					}
 
 				} catch (const arithmetic::NotAConstraintException& nce) {
@@ -138,6 +158,16 @@ namespace transform {
 			}
 
 			NodePtr simplifyFor(const NodePtr& ptr) {
+
+				if (ptr->getNodeType() != core::NT_ForStmt) return ptr;
+
+				auto forStmtPtr = ptr.as<ForStmtPtr>();
+
+				IRBuilder builder(manager);
+				if (forStmtPtr->getBody() == builder.getNoOp()) {
+					return builder.getNoOp();
+				}
+
 				// TODO: check iterator range ... if empty, drop loop
 				return ptr;
 			}
@@ -194,7 +224,9 @@ namespace transform {
 			 * Conducts the actual simplification.
 			 */
 			virtual const NodePtr resolveElement(const NodePtr& ptr) {
-
+				// skip built-ins
+				if(manager.getLangBasic().isBuiltIn(ptr)) return ptr;
+				
 				// skip types
 				if (ptr->getNodeCategory() == NC_Type) {
 					return ptr;
@@ -210,10 +242,10 @@ namespace transform {
 					CallExprPtr call = bind->getCall();
 
 					// improve function part and parameters, yet preserve call
-					ExpressionPtr newFun = call->getFunctionExpr()->substitute(manager, *this);
+					ExpressionPtr newFun = map(call->getFunctionExpr());//call->getFunctionExpr()->substitute(manager, *this);
 					vector<ExpressionPtr> args;
 					for(auto& cur : call->getArguments()) {
-						args.push_back(cur->substitute(manager, *this));
+						args.push_back(map(cur));
 					}
 
 					// construct bind with substituted call

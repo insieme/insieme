@@ -272,6 +272,7 @@ namespace core {
 		}
 
 		// Declaration Statements
+		DeclarationStmtPtr declarationStmt(const ExpressionPtr& value) const;
 		DeclarationStmtPtr declarationStmt(const TypePtr& type, const ExpressionPtr& value) const;
 
 		// Call Expressions

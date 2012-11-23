@@ -42,12 +42,19 @@
 
 namespace insieme { namespace analysis { namespace dfa { 
 
+namespace analyses {
+
+class ReachingDefinitions;
+
+} // end analyses namespace 
+
 /** 
  * Extractor for LValue entities from the CFG
  */
 template <>
 typename container_type_traits< dfa::elem<cfg::Address>  >::type 
-extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg);
+extract(const Entity< dfa::elem<cfg::Address> >& e, const CFG& cfg, analyses::ReachingDefinitions& def);
+
 
 
 namespace analyses {
@@ -101,7 +108,7 @@ public:
 
 	value_type meet(const value_type& lhs, const value_type& rhs) const;
 
-	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
+	std::pair<value_type,value_type> transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
 
 };
 

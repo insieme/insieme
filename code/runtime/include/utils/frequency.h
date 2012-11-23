@@ -47,18 +47,19 @@
  * These functions provide an interface to read and set cpu frequency settings
  */
 
+bool irt_g_frequency_setting_specified;
 
 /*
  * reads all available frequencies for a worker running on a specific core as a list into the provided pointer
  */
 
-int irt_cpu_freq_get_available_frequencies_core(irt_worker* worker, unsigned int** frequencies, unsigned int* length) {
+int32 irt_cpu_freq_get_available_frequencies_core(irt_worker* worker, uint32** frequencies, uint32* length) {
 
 	char path_to_cpufreq[1024] = { 0 };
-	unsigned int counter = 1;
+	uint32 counter = 1;
 	uint32 coreid = irt_affinity_mask_get_first_cpu(worker->affinity);
 
-	unsigned int frequencies_temp[IRT_INST_MAX_CPU_FREQUENCIES] = { 0 };
+	uint32 frequencies_temp[IRT_INST_MAX_CPU_FREQUENCIES] = { 0 };
 
 	sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_available_frequencies", coreid);
 
@@ -78,10 +79,10 @@ int irt_cpu_freq_get_available_frequencies_core(irt_worker* worker, unsigned int
 	while(fscanf(file, " %u", &frequencies_temp[counter]) == 1) ++counter;
 
 	*length = counter;
-	(*frequencies) = (unsigned int*)malloc(counter*sizeof(unsigned int));
+	(*frequencies) = (uint32*)malloc(counter*sizeof(uint32));
 
-	for(unsigned int j = 0; j < counter; ++j)
-		(*frequencies)[j] = frequencies_temp[j];
+	for(uint32 j = 0; j < counter; ++j)
+		(*frequencies)[j] = frequencies_temp[j]/1000;
 
 	fclose(file);
 
@@ -92,17 +93,18 @@ int irt_cpu_freq_get_available_frequencies_core(irt_worker* worker, unsigned int
  * low-level function that writes the frequency for a given /sys file path
  */
 
-int _irt_cpu_freq_write(const char* path_to_cpufreq, const unsigned int frequency) {
-	int retval = 0;
+int32 _irt_cpu_freq_write(const char* path_to_cpufreq, const uint32 frequency) {
+	int32 retval = 0;
 	FILE* file = fopen(path_to_cpufreq, "w");
 
 	if(file == NULL) {
-		IRT_DEBUG("Instrumentation: Unable to open frequency file for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to open frequency file %s for writing, reason: %s\n", path_to_cpufreq, strerror(errno));
 		return -2;
 	}
 
-	if((retval = fprintf(file, "%u\n", frequency) < 1)) {
-		IRT_DEBUG("Instrumentation: Unable to write frequency for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
+	// frequency is given in MHz, not KHz...
+	if((retval = fprintf(file, "%u\n", frequency*1000) < 1)) {
+		IRT_DEBUG("Instrumentation: Unable to write frequency to file %s, reason: %s\n", path_to_cpufreq, strerror(errno));
 		fclose(file);
 		return -1;
 	}
@@ -116,34 +118,35 @@ int _irt_cpu_freq_write(const char* path_to_cpufreq, const unsigned int frequenc
  * low-level function that reads the frequency for a given /sys file path
  */
 
-int _irt_cpu_freq_read(const char* path_to_cpufreq) {
+int32 _irt_cpu_freq_read(const char* path_to_cpufreq) {
 
-	unsigned int temp = 0;
-	int retval = 0;
+	uint32 temp = 0;
+	int32 retval = 0;
 
 	FILE* file = fopen(path_to_cpufreq, "r");
 
 	if(file == NULL) {
-		IRT_DEBUG("Instrumentation: Unable to open frequency file for writing for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to open frequency file %s for reading, reason: %s\n", path_to_cpufreq, strerror(errno));
 		return -2;
 	}
 
 	if((retval = fscanf(file, "%u", &temp)) < 1) {
-		IRT_DEBUG("Instrumentation: Unable to read frequency for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to read frequency from file %s, reason: %s\n", path_to_cpufreq, strerror(errno));
 		fclose(file);
 		return -1;
 	}
 
 	fclose(file);
 
-	return temp;
+	// returning MHz here, not KHz......
+	return temp/1000;
 }
 
 /*
  * gets the current frequency a core of a worker is running on
  */
 
-int irt_cpu_freq_get_cur_frequency_core(irt_worker* worker) {
+int32 irt_cpu_freq_get_cur_frequency_core(irt_worker* worker) {
 	char path_to_cpufreq[1024] = { 0 };
 	uint32 coreid = irt_affinity_mask_get_first_cpu(worker->affinity);
 	sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_cur_freq", coreid);
@@ -154,7 +157,7 @@ int irt_cpu_freq_get_cur_frequency_core(irt_worker* worker) {
  * sets the maximum frequency a core of a worker is allowed to run on
  */
 
-int irt_cpu_freq_set_max_frequency_core(irt_worker* worker, unsigned int frequency) {
+int32 irt_cpu_freq_set_max_frequency_core(irt_worker* worker, uint32 frequency) {
 	char path_to_cpufreq[1024] = { 0 };
 	uint32 coreid = irt_affinity_mask_get_first_cpu(worker->affinity);
 	sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_max_freq", coreid);
@@ -165,7 +168,7 @@ int irt_cpu_freq_set_max_frequency_core(irt_worker* worker, unsigned int frequen
  * gets the maximum frequency a core of a worker is allowed to run on
  */
 
-int irt_cpu_freq_get_max_frequency_core(irt_worker* worker) {
+int32 irt_cpu_freq_get_max_frequency_core(irt_worker* worker) {
 	char path_to_cpufreq[1024] = { 0 };
 	uint32 coreid = irt_affinity_mask_get_first_cpu(worker->affinity);
 	sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_max_freq", coreid);
@@ -176,7 +179,7 @@ int irt_cpu_freq_get_max_frequency_core(irt_worker* worker) {
  * sets the minimum frequency a core of a worker is allowed to run on
  */
 
-int irt_cpu_freq_set_min_frequency_core(irt_worker* worker, unsigned int frequency) {
+int32 irt_cpu_freq_set_min_frequency_core(irt_worker* worker, uint32 frequency) {
 	char path_to_cpufreq[1024] = { 0 };
 	uint32 coreid = irt_affinity_mask_get_first_cpu(worker->affinity);
 	sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_min_freq", coreid);
@@ -187,7 +190,7 @@ int irt_cpu_freq_set_min_frequency_core(irt_worker* worker, unsigned int frequen
  * gets the minimum frequency a core of a worker is allowed to run on
  */
 
-int irt_cpu_freq_get_min_frequency_core(irt_worker* worker) {
+int32 irt_cpu_freq_get_min_frequency_core(irt_worker* worker) {
 	char path_to_cpufreq[1024] = { 0 };
 	uint32 coreid = irt_affinity_mask_get_first_cpu(worker->affinity);
 	sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_min_freq", coreid);
@@ -195,14 +198,45 @@ int irt_cpu_freq_get_min_frequency_core(irt_worker* worker) {
 }
 
 /*
+ * resets all the min and max frequencies of all cores of all workers to the available min and max
+ */
+
+int32 irt_cpu_freq_reset_frequency() {
+	int32 retval = 0;
+	uint32* freqs;
+	uint32 length;
+	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
+		if((retval = irt_cpu_freq_get_available_frequencies_core(irt_g_workers[i], &freqs, &length)) == 0) {
+			irt_cpu_freq_set_max_frequency_core(irt_g_workers[i], freqs[0]);
+			irt_cpu_freq_set_min_frequency_core(irt_g_workers[i], freqs[length-1]);
+		} else
+			return retval;
+	}
+	return 0;
+}
+
+/*
+ * resets the min and max frequencies of a core of a worker to the available min and max
+ */
+
+int32 irt_cpu_freq_reset_frequency_core(irt_worker* worker) {
+	int32 retval = 0;
+	uint32* freqs;
+	uint32 length;
+	if((retval = irt_cpu_freq_get_available_frequencies_core(worker, &freqs, &length)) == 0) {
+		irt_cpu_freq_set_max_frequency_core(worker, freqs[0]);
+		irt_cpu_freq_set_min_frequency_core(worker, freqs[length-1]);
+	} else
+		return retval;
+	return 0;
+}
+
+/*
  * sets the frequency of a core of a worker to a specific value by setting both the min and max to this value
  */
 
-int irt_cpu_freq_set_frequency_core(irt_worker* worker, unsigned int frequency) {
-	int old_min_freq = 0;
-	char path_to_cpufreq[1024] = { 0 };
-
-	old_min_freq = irt_cpu_freq_get_min_frequency_core(worker);
+int32 irt_cpu_freq_set_frequency_core(irt_worker* worker, uint32 frequency) {
+	int32 old_min_freq = irt_cpu_freq_get_min_frequency_core(worker);
 
 	// min always has to be >= max, so if old_min is larger than max, first set new min
 	if(old_min_freq > frequency) {
@@ -217,13 +251,78 @@ int irt_cpu_freq_set_frequency_core(irt_worker* worker, unsigned int frequency) 
 }
 
 /*
+ * sets the frequency of a core of a worker to the value specified by the environment variable
+ *
+ * MAX = maximum value
+ * MIN = minimum value
+ * OS = leave it to the OS to do DVFS
+ * numerical value = clock frequency in MHz
+ *
+ * only frequencies offered by the operating system / hardware (c.f. scaling_available_frequencies) are actually written
+ */
+
+int32 irt_cpu_freq_set_frequency_core_env(irt_worker* worker) {
+	if(getenv(IRT_CPU_FREQUENCY)) {
+		if(strcmp(getenv(IRT_CPU_FREQUENCY), "OS") == 0) {
+			int32 retval = irt_cpu_freq_reset_frequency_core(worker);
+			irt_g_frequency_setting_specified = true;
+			return retval;
+		}
+
+		int32 retval;
+		uint32* freqs;
+		uint32 length;
+
+		if((retval = irt_cpu_freq_get_available_frequencies_core(worker, &freqs, &length)) == 0) {
+			if(strcmp(getenv(IRT_CPU_FREQUENCY), "MAX") == 0) {
+				int32 retval = irt_cpu_freq_set_frequency_core(worker, freqs[0]);
+				irt_g_frequency_setting_specified = true;
+				return retval;
+			}
+			if(strcmp(getenv(IRT_CPU_FREQUENCY), "MIN") == 0) {
+				int32 retval = irt_cpu_freq_set_frequency_core(worker, freqs[length-1]);
+				irt_g_frequency_setting_specified = true;
+				return retval;
+			}
+
+			uint32 freq = atoi(getenv(IRT_CPU_FREQUENCY));
+			bool available;
+			for(uint32 i = 0; i < length; ++i) {
+				if(freq == freqs[i]) {
+					available = true;
+					break;
+				}
+			}
+
+			if(available) {
+				int32 retval = irt_cpu_freq_set_frequency_core(worker, freq);
+				irt_g_frequency_setting_specified = true;
+				return retval;
+			} else {
+				IRT_DEBUG("Instrumentation: Requested frequency setting %s unknown", getenv(IRT_CPU_FREQUENCY));
+				irt_g_frequency_setting_specified = false;
+				return -1;
+			}
+
+		} else {
+			irt_g_frequency_setting_specified = false;
+			return retval;
+		}
+	} else {
+		irt_g_frequency_setting_specified = false;
+		return -1;
+	}
+	return 0;
+}
+
+/*
  * prints the current frequency of all cores of all workers to stdout
  */
 
-int irt_cpu_freq_print_cur_frequency() {
-	int retval = 0;
+int32 irt_cpu_freq_print_cur_frequency() {
+	int32 retval = 0;
 
-	for(unsigned int i = 0; i < irt_g_worker_count; ++i) {
+	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		if((retval = irt_cpu_freq_get_cur_frequency_core(irt_g_workers[i])) > 0) {
 			printf("%u:%u ", i, retval);
 		} else
@@ -237,30 +336,12 @@ int irt_cpu_freq_print_cur_frequency() {
  * sets the frequency of all cores of all workers to a given value
  */
 
-int irt_cpu_freq_set_frequency(unsigned int frequency) {
-	int retval = 0;
-	for(unsigned int i = 0; i < irt_g_worker_count; ++i) {
+int32 irt_cpu_freq_set_frequency(uint32 frequency) {
+	int32 retval = 0;
+	for(uint32 i = 0; i < irt_g_worker_count; ++i) {
 		if((retval = irt_cpu_freq_set_frequency_core(irt_g_workers[i], frequency)) != 0) {
 			return retval;
 		}
-	}
-	return 0;
-}
-
-/*
- * resets all the min and max frequencies of all cores of all workers to the available min and max
- */
-
-int irt_cpu_freq_reset_frequency() {
-	int retval = 0;
-	unsigned int* freqs;
-	unsigned int length;
-	for(unsigned int i = 0; i < irt_g_worker_count; ++i) {
-		if((retval = irt_cpu_freq_get_available_frequencies_core(irt_g_workers[i], &freqs, &length)) == 0) {
-			irt_cpu_freq_set_max_frequency_core(irt_g_workers[i], freqs[0]);
-			irt_cpu_freq_set_min_frequency_core(irt_g_workers[i], freqs[length-1]);
-		} else
-			return retval;
 	}
 	return 0;
 }

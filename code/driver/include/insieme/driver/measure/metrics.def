@@ -313,5 +313,7 @@ METRIC(TOTAL_DP_OPS,			"total_PAPI_DP_OPS",				unit,		sum(list(Metric::PAPI_DP_O
 METRIC(TOTAL_VEC_SP,			"total_PAPI_VEC_SP",				unit,		sum(list(Metric::PAPI_VEC_SP)));
 METRIC(TOTAL_VEC_DP,			"total_PAPI_VEC_DP",				unit,		sum(list(Metric::PAPI_VEC_DP)));
 
+METRIC(TOTAL_INS_PER_SEC,		"total_ins_per_sec",				unit,		div(Metric::TOTAL_TOT_INS, Metric::TOTAL_CPU_TIME));
+
 
 #undef METRIC

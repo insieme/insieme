@@ -50,13 +50,6 @@ namespace checks {
  */
 SIMPLE_CHECK(UndeclaredVariable, LambdaDefinition, false);
 
-/**
- * This check verifies whether the same variable is used within more than one situation.
- * Unlike other checks, this check is intrinsically recursive and does not need to be wrapped
- * into a recursive check.
- */
-SIMPLE_CHECK(DeclaredOnce, Node, false);
-
 
 #undef SIMPLE_CHECK
 
