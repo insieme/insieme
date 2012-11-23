@@ -248,15 +248,29 @@ TEST(SingleEntity, ValueType) {
 TEST(CompoundEntity, ValueType) {
 
 	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<std::string, NodePtr> symbols;
+
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+	symbols["b"] = builder.variable(builder.parseType("int<4>"));
+
+    auto code = builder.parseStmt(
+		"for(int<4> i = 10 .. 50 : 1) { "
+		"	v[i+b]; "
+		"}", symbols
+    );
+
+    EXPECT_TRUE(code);
+
+	CFGPtr cfg = CFG::buildCFG(code);
 
 	typedef dfa::Entity< dom<int>, elem<VariablePtr>, dom<double> > e;
+	EXPECT_EQ(3u, e::arity());
 
-	//typename dfa::entity_type_traits<e>::type v = 
-	//	std::make_tuple(10, IRBuilder(mgr).variable(mgr.getLangBasic().getBool()), 20.2F);
+	int v2;
+	auto d = dfa::extract(e(), *cfg, v2);
 
-	//EXPECT_EQ(3u, e::arity());
-
-	//EXPECT_EQ(typeid(std::tuple<int,VariablePtr,double>), typeid(v));
 
 }
 

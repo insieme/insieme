@@ -243,6 +243,10 @@ struct Address : public utils::Printable {
 
 	inline unsigned getStmtIdx() const { return stmt_idx; }
 
+	inline core::NodeAddress getAddress() const { return addr; }
+
+	inline bool isValid() const { return addr.isValid(); }
+
 	/**
 	 * Retrieve the node addressed by this address (the name guarantee consistency with ir addresses 
 	 */
