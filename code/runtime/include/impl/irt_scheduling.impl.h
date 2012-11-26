@@ -63,6 +63,13 @@ void irt_scheduling_loop(irt_worker* self) {
 				irt_wi_finalize(self->finalize_wi);
 				self->finalize_wi = NULL;
 			}
+			#ifdef IRT_ASTEROIDEA_STACKS
+			if(self->share_stack_wi != NULL) {
+				IRT_DEBUG(" ° %p allowing stack stealing: %d children\n", self->share_stack_wi, *self->share_stack_wi->num_active_children);
+				self->share_stack_wi->stack_available = true;
+				self->share_stack_wi = NULL;
+			}
+			#endif //IRT_ASTEROIDEA_STACKS
 		}
 #ifdef IRT_WORKER_SLEEPING
 		// check if self is the last worker

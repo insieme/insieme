@@ -163,7 +163,8 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 				IRT_DEBUG(" + %p taking stack from %p\n", wi, parent);
 				IRT_DEBUG("   %p child count: %d\n", parent, *parent->num_active_children);
 				wi->stack_storage = NULL;
-				wi->stack_ptr = parent->stack_ptr - 40;
+				wi->stack_ptr = parent->stack_ptr;
+				wi->stack_ptr -= wi->stack_ptr%128;
 				return;
 			}
 		}

@@ -86,11 +86,11 @@ struct _irt_work_item {
 	uint32 num_fragments;
 	// private implementation details, do not need to be migrated
 	irt_work_item *next_reuse;
+	lwt_reused_stack* stack_storage;
+	lwt_context stack_ptr;
 #ifdef IRT_ASTEROIDEA_STACKS
 	volatile bool stack_available;
 #endif
-	lwt_reused_stack* stack_storage;
-	lwt_context stack_ptr;
 	irt_wi_scheduling_data sched_data;
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	// region association for instrumentation
