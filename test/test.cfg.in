@@ -48,7 +48,8 @@ back.run:		Conf([
 					Flag('-I%(SRC_DIR)s/code/runtime/include'),
 					Flag('-D_XOPEN_SOURCE=700'),
 					Flag('-D_GNU_SOURCE'),
-					Flag('-ldl')
+					Flag('-ldl'),
+					Flag('-fno-strict-aliasing')
 				], "RUN")
 
 back.ocl.common: %(back.run)s + Conf([

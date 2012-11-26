@@ -129,6 +129,7 @@ void* _irt_worker_func(void *argvp) {
 	self->affinity = arg->affinity;
 	self->cur_context = irt_context_null_id();
 	self->cur_wi = NULL;
+	self->finalize_wi = NULL;
 	self->default_variant = 0;
 	if(getenv(IRT_DEFAULT_VARIANT_ENV)) {
 		self->default_variant = atoi(getenv(IRT_DEFAULT_VARIANT_ENV));
@@ -262,9 +263,9 @@ void irt_worker_run_immediate(irt_worker* target, const irt_work_item_range* ran
 	self->source_id = irt_work_item_null_id();
 	self->num_fragments = 0;
 	// need unique active child number, can re-use id (and thus register entry)
-	uint32 *prev_parent_active_child_count = self->parent_num_active_children;
+	volatile uint32 *prev_parent_active_child_count = self->parent_num_active_children;
 	self->parent_num_active_children = self->num_active_children;
-	uint32 active_child_count = 0;
+	volatile uint32 active_child_count = 0;
 	self->num_active_children = &active_child_count;
 	// call wi
 #ifndef IRT_TASK_OPT

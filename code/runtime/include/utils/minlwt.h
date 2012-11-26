@@ -91,3 +91,4 @@ static inline void lwt_recycle(int tid, irt_work_item *wi);
 void lwt_start(irt_work_item *wi, lwt_context *basestack, wi_implementation_func* func);
 void lwt_continue(lwt_context *newstack, lwt_context *basestack);
 void lwt_end(lwt_context *basestack);
+void lwt_get_stack_ptr(lwt_context *dest);

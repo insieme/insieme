@@ -72,7 +72,7 @@ struct _irt_error {
 
 /* ------------------------------ operations ----- */
 
-#if !defined(NDEBUG) || defined(IRT_VERBOSE)
+#if !defined(NDEBUG) || defined(IRT_VERBOSE) || defined(IRT_ENABLE_ASSERTS)
 #define IRT_ASSERT(__condition, __errcode, __message, ...) \
 if(!(__condition)) { \
 	fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
