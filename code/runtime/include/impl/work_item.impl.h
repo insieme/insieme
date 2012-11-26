@@ -272,9 +272,7 @@ void irt_wi_join_all(irt_work_item* wi) {
 		self->cur_wi = NULL;
 #ifdef IRT_ASTEROIDEA_STACKS
 		// make stack available for children
-		lwt_get_stack_ptr(&wi->stack_ptr);
-		IRT_DEBUG(" ° %p allowing stack stealing: %d children\n", wi, *wi->num_active_children);
-		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, false, true), IRT_ERR_INTERNAL, "Asteroidea: Stack already shared.\n");
+		self->share_stack_wi = wi;
 #endif //IRT_ASTEROIDEA_STACKS
 		lwt_continue(&self->basestack, &wi->stack_ptr);
 #ifdef IRT_ASTEROIDEA_STACKS

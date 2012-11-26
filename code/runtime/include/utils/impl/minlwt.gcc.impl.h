@@ -36,9 +36,7 @@
 
 // currently only a 64 bit implementation exists
 
-#ifdef __GNUC__
 __attribute__ ((noinline))
-#endif
 void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /*rsi*/, 
 		intptr_t *newstack /*rdx*/, intptr_t *basestack /*rcx*/) {
 	__asm__ (
@@ -69,9 +67,7 @@ void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /
 	: "a" (&_irt_wi_trampoline) );
 }
 
-#ifdef __GNUC__
 __attribute__ ((noinline))
-#endif
 void lwt_get_stack_ptr(intptr_t *dest /*rdi*/) {
 	__asm__ (
 		/* store sp */
