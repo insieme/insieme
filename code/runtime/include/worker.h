@@ -80,6 +80,10 @@ struct _irt_worker {
 	uint32 default_variant;
 	unsigned int rand_seed;
 
+#ifdef IRT_ASTEROIDEA_STACKS
+	irt_work_item* share_stack_wi;
+#endif
+
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_instrumentation_event_data_table* instrumentation_event_data;
 #endif
