@@ -2,9 +2,9 @@
 . ./environment.setup
 
 VERSION=3.1.8
-CFLAGS="-mtune=native -O3 -fgraphite-identity"
+CFLAGS="-mtune=native -O3"
 CXXFLAGS=$CFLAGS
-LDFLAGS="-mtune=native -O3 -fgraphite-identity"
+LDFLAGS="-mtune=native -O3"
 
 ########################################################################
 ##								CCache
