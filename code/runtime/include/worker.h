@@ -68,6 +68,7 @@ struct _irt_worker {
 	lwt_context basestack;
 	irt_context_id cur_context;
 	irt_work_item* cur_wi;
+	irt_work_item* finalize_wi;
 	volatile irt_worker_state state;
 	irt_worker_scheduling_data sched_data;
 	irt_work_item lazy_wi;

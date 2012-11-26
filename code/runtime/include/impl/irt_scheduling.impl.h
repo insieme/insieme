@@ -59,6 +59,10 @@ void irt_scheduling_loop(irt_worker* self) {
 		// while there is something to do, continue scheduling
 		while(irt_scheduling_iteration(self)) {
 			IRT_DEBUG("%sWorker %3d scheduled something.\n", self->id.thread==0?"":"\t\t\t\t\t\t", self->id.thread);
+			if(self->finalize_wi != NULL) { 
+				irt_wi_finalize(self->finalize_wi);
+				self->finalize_wi = NULL;
+			}
 		}
 #ifdef IRT_WORKER_SLEEPING
 		// check if self is the last worker

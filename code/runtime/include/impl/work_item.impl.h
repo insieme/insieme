@@ -85,7 +85,6 @@ static inline void _irt_wi_recycle(irt_work_item* wi, irt_worker* self) {
 	//IRT_DEBUG("WI_CYC\n");
 	wi->next_reuse = self->wi_reuse_stack;
 	self->wi_reuse_stack = wi;
-	lwt_recycle(self->id.thread, wi);
 	
 	/*IRT_VERBOSE_ONLY(
 		irt_work_item* last = self->wi_reuse_stack;
@@ -119,7 +118,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 	if(params != NULL) {
 		uint32 size = self->cur_context.cached->type_table[params->type_id].bytes;
 		if(size <= IRT_WI_PARAM_BUFFER_SIZE) 
-			wi->parameters = (irt_lw_data_item*)wi->param_buffer;
+			wi->parameters = &wi->param_buffer;
 		else 
 			wi->parameters = (irt_lw_data_item*)malloc(size); 
 		memcpy(wi->parameters, params, size); 
@@ -151,6 +150,7 @@ irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range
 		// increment child count in current wi
 		irt_atomic_inc(self->cur_wi->num_active_children);
 	}
+	IRT_DEBUG(" * %p created by %p (%d active children, address: %p) \n", retval, self->cur_wi, self->cur_wi ? *self->cur_wi->num_active_children : -1, self->cur_wi ? self->cur_wi->num_active_children : -1);
 	// create entry in event table
 	irt_wi_event_register *reg = _irt_get_wi_event_register();
 	reg->id.full = retval->id.full;
@@ -243,7 +243,8 @@ bool _irt_wi_join_all_event(irt_wi_event_register* source_event_register, void *
 	_irt_wi_join_event_data* join_data = (_irt_wi_join_event_data*)user_data;
 	// do not join wrong sink if multi-level optional wi in progress
 	// (signal received from inlined sibling child)
-	if(*(join_data->joining_wi->num_active_children) > 0) return true; 
+	if(*(join_data->joining_wi->num_active_children) > 0) return true;
+	IRT_DEBUG(" > %p releasing %p\n", irt_worker_get_current()->finalize_wi, join_data->joining_wi);
 	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
 	return false;
 }
@@ -257,7 +258,7 @@ void irt_wi_join_all(irt_work_item* wi) {
 
 	// reset the occurrence count
 	irt_wi_event_set_occurrence_count(wi->id, IRT_WI_CHILDREN_COMPLETED, 0);
-	if(*(wi->num_active_children) == 0) { 
+	if(*(wi->num_active_children) == 0) {
 		return; // early exit
 	}
 	// register event
@@ -269,12 +270,22 @@ void irt_wi_join_all(irt_work_item* wi) {
 		irt_inst_region_add_time(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN_ALL, wi->id);
 		self->cur_wi = NULL;
+#ifdef IRT_ASTEROIDEA_STACKS
+		// make stack available for children
+		lwt_get_stack_ptr(&wi->stack_ptr);
+		IRT_DEBUG(" ° %p allowing stack stealing: %d children\n", wi, *wi->num_active_children);
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, false, true), IRT_ERR_INTERNAL, "Asteroidea: Stack already shared.\n");
+#endif //IRT_ASTEROIDEA_STACKS
 		lwt_continue(&self->basestack, &wi->stack_ptr);
+#ifdef IRT_ASTEROIDEA_STACKS
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, true, false), IRT_ERR_INTERNAL, "Asteroidea: Stack still in use.\n");
+#endif //IRT_ASTEROIDEA_STACKS
 		irt_inst_region_set_timestamp(wi);
 	} else {
 		// check if multi-level immediate wi was signaled instead of current wi
 		if(*(wi->num_active_children) != 0) irt_wi_join_all(wi);
 	}
+	IRT_DEBUG(" J %p join_all ended\n", wi);
 }
 
 // end --------------------------------------------------------------------------------------------
@@ -287,14 +298,6 @@ void irt_wi_end(irt_work_item* wi) {
 	irt_inst_region_add_time(wi);
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_START, wi->id);
 
-	// check for parent, if there, notify
-	if(wi->parent_num_active_children) {
-		if(irt_atomic_sub_and_fetch(wi->parent_num_active_children, 1) == 0) {
-			irt_wi_event_trigger(wi->parent_id, IRT_WI_CHILDREN_COMPLETED);
-		}
-	}
-	IRT_DEBUG("Wi %p / Worker %p irt_wi_end GAMMA.", wi, irt_worker_get_current());
-
 	// check for fragment, handle
 	if(irt_wi_is_fragment(wi)) {
 		// ended wi was a fragment
@@ -304,7 +307,7 @@ void irt_wi_end(irt_work_item* wi) {
 		if(source->num_fragments == 0) irt_wi_end(source);
 	} else {
 		// delete params struct
-		if(wi->parameters != (irt_lw_data_item*)wi->param_buffer) free(wi->parameters);
+		if(wi->parameters != &wi->param_buffer) free(wi->parameters);
 	}
 
 	// remove from groups
@@ -319,10 +322,28 @@ void irt_wi_end(irt_work_item* wi) {
 
 	// cleanup
 	_irt_del_wi_event_register(wi->id);
-	_irt_wi_recycle(wi, worker);
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_FINISHED, wi->id);
+	worker->finalize_wi = wi;
+	
+	IRT_DEBUG(" ! %p end\n", wi);
+
+	// end
 	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
+}
+
+void irt_wi_finalize(irt_work_item* wi) {
+	irt_worker* worker = irt_worker_get_current();
+	lwt_recycle(worker->id.thread, wi);
+	// check for parent, if there, notify
+	if(wi->parent_num_active_children) {
+		//IRT_ASSERT(wi->parent_num_active_children == wi->parent_id.cached->num_active_children, IRT_ERR_INTERNAL, "Unequal parent num child counts");
+		if(irt_atomic_sub_and_fetch(wi->parent_num_active_children, 1) == 0) {
+			irt_wi_event_trigger(wi->parent_id, IRT_WI_CHILDREN_COMPLETED);
+		}
+	}
+	IRT_DEBUG(" ^ %p finalize\n", wi);
+	_irt_wi_recycle(wi, worker);
 }
 
 // splitting --------------------------------------------------------------------------------------

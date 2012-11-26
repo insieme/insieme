@@ -66,8 +66,8 @@ struct _irt_data_item {
 	// can be null_id if no parent
 	irt_data_item_id parent_id;
 	irt_type_id type_id;
-	uint16 use_count;
-	uint16 dimensions;
+	uint32 use_count;
+	uint32 dimensions;
 	//irt_data_mode mode;
 	// ranges has as many entries as data_item has dimensions
 	irt_data_range* ranges;
