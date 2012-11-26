@@ -143,15 +143,22 @@ class Test
     @test_names = []; tests.each{|n| value = $program[n-1]; @test_names << value if value != nil}
     @sizes = sizes
     @iterations = iterations
-    @static_features = %w{ 	SCF_IO_NUM_any_read/write_OPs_real	SCF_NUM_real*_all_VEC_OPs_real		SCF_NUM_externalFunction_lambda_real 	SCF_NUM_integer_all_OPs_real
-				SCF_NUM_integer_all_VEC_OPs_real 	SCF_COMP_scalarOPs-vectorOPs_real_sum 	SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio
-				SCF_NUM_real*_all_OPs_real	SCF_COMP_allOPs-memoryAccesses_real_2:1ratio 	SCF_NUM_loops_lambda_real
-				SCF_NUM_branches_lambda_real	SCF_NUM_barrier_Calls_real }
+    @static_features = %w{ 
+    SCF_IO_NUM_any_read/write_OPs_real    SCF_NUM_real*_all_VEC_OPs_real          SCF_NUM_externalFunction_lambda_real    SCF_NUM_integer_all_OPs_real
+                              SCF_NUM_integer_all_VEC_OPs_real        SCF_COMP_scalarOPs-vectorOPs_real_sum   SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio
+                               SCF_NUM_real*_all_OPs_real      SCF_COMP_allOPs-memoryAccesses_real_2:1ratio    SCF_NUM_loops_lambda_real
+                               SCF_NUM_branches_lambda_real    SCF_NUM_barrier_Calls_real }
+#    @static_features = %w{      
+#                                SCF_COMP_any_any_OPs_real_sum SCF_IO_NUM_any_read/write_OPs_real  SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio       SCF_COMP_allOPs-memoryAccesses_real_2:1ratio    SCF_NUM_loops_lambda_real
+#                               SCF_NUM_branches_lambda_real    SCF_NUM_barrier_Calls_real }
+
+#    @static_features = %w{ pca_1 pca_2 pca_3 pca_4 pca_5 pca_6 pca_7}
 
     @dynamic_features = %w{	splittable_write_transfer	unsplittable_write_transfer	splittable_read_transfer
-				unsplittable_read_transfer	size				splittable_write_transfer_per_computation
-				unsplittable_write_transfer_per_computation			splittable_read_transfer_per_computation
-				unsplittable_read_transfer_per_computation }
+				unsplittable_read_transfer size
+		splittable_write_transfer_per_computation
+                                unsplittable_write_transfer_per_computation                     splittable_read_transfer_per_computation
+                                unsplittable_read_transfer_per_computation		 }
   end
 
   def info
@@ -184,7 +191,7 @@ class Test
       File.delete("#{test_name}.insieme.ocl.c") if File.exist?("#{test_name}.insieme.ocl.c")
       puts " * #{test_name}".light_blue 
       puts " * Running Compiler => OCL..."
-      cmd = "#{$main_dir}/driver/main --std=c99 -I. -DINSIEME -I. -I../../ocl/common/ -I../../../code/frontend/test/inputs --opencl #{test_name}.c -b ocl:kernel.dat -o #{test_name}.insieme.ocl.c 2> file.tmp"
+      cmd = "#{$main_dir}/driver/main --std=c99 -I. -DINSIEME -I. -I../../ocl/common/ -I../../../code/frontend/test/inputs --opencl #{test_name}.c -b ocl:kernel.dat -o #{test_name}.insieme.ocl.c -DLOCAL_MODE &> file.tmp"
       `#{cmd}` 
       exist? "#{test_name}.insieme.ocl.c", cmd 
 
@@ -196,7 +203,7 @@ class Test
 
       File.delete("#{test_name}.ocl.test") if File.exist?("#{test_name}.ocl.test")
       puts " * Compiling generated OCL output..."
-      cmd = "$CC -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
+      cmd = "$CC -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL -DLOCAL_MODE 2> file.tmp"
       `#{cmd}` 
       exist? "#{test_name}.ocl.test", cmd
 
@@ -324,15 +331,14 @@ class Test
         exit
       end
       feat = @static_features.map{|f| "-s" + f }.join(" ") + " " + @dynamic_features.map{|f| "-d" + f}.join(" ")
-      cmd = "#{$main_dir}/machine_learning/train_#{type.to_s} -b#{$path}/database/#{$db_ml_name} -ttime #{feat} -n21 -o#{type.to_s + test_name_id.to_s} -e#{test_name_id.to_s} 2> file.tmp"
-
-      `#{cmd}`
+      cmd = "#{$main_dir}/machine_learning/train_#{type.to_s} -b#{$path}/database/#{$db_ml_name} -ttime #{feat} -n21 -o#{type.to_s + test_name_id.to_s} -e#{test_name_id.to_s} -c5 -kRBFKernel[1.5] 2> file.tmp"
+      #`#{cmd}`
       exist? "#{type.to_s + test_name_id.to_s}.fnp", cmd
 
       puts " * Machine Learning: Cross validation for #{test_name}..."
       cmd = "#{$main_dir}/machine_learning/evaluate_model -b#{$path}/database/#{$db_ml_name} -ttime #{feat} -m#{type.to_s + test_name_id.to_s} -f#{test_name_id}"
       cmd << " -v" if (type == :svm)
-	
+puts cmd
       res = `#{cmd}`
       print_check !(res =~ /ERROR/)
       ev_array = []
@@ -528,6 +534,25 @@ class Test
     puts
   end
 
+  def delete
+    puts "#####################################"
+    puts "#####         " + "Delete Phase".light_blue + "        #####"
+    puts "#####################################"
+    init_db_run
+    @test_names.each_with_index do |test_name, test_name_index|
+      Dir.chdir($path + test_name)
+      @sizes[test_name_index].to_a.map{ |x| 2**x }.each do |size|
+        puts " * #{test_name} - #{size}".light_blue
+        @splits.each_index do |i|
+          split_values = @splits[i]
+          $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).delete
+        end
+        puts
+      end
+    end
+    puts
+  end
+
   def collect
     puts "#####################################"
     puts "#####        " + "Collect Phase".light_blue + "      #####"
@@ -612,8 +637,8 @@ private
   end
 
   def get_result
-    first = `cat worker_event_log.000* | sort -k4 | grep CREATED | grep WI | head -2 | tail -1 | awk 'BEGIN { FS = "," } ; { print $4 }'`
-    last = `cat worker_event_log.000* | sort -k4 | grep FINISHED | grep WI | tail -2 | head -1 | awk 'BEGIN { FS = "," } ; { print $4 }'`
+    first = `cat worker_event_log.000* | sort -k4 -t"," | grep CREATED | grep WI | head -2 | tail -1 | awk 'BEGIN { FS = "," } ; { print $4 }'`
+    last = `cat worker_event_log.000* | sort -k4 -t"," | grep FINISHED | grep WI | tail -2 | head -1 | awk 'BEGIN { FS = "," } ; { print $4 }'`
     last.to_i - first.to_i
   end
 
@@ -666,6 +691,7 @@ private
     # find the static features SCF_COMP_scalarOPs-vectorOPs_real_sum and rewrite as a dynamic features
     cid = $program.index(test_name) + 1
     fid = $table_static.filter(:name => "SCF_COMP_scalarOPs-vectorOPs_real_sum").select(:id).single_value
+#fid = $table_static.filter(:name => "SCF_COMP_any_any_OPs_real_sum").select(:id).single_value
     op_value = $table_code.filter(:cid => cid, :fid => fid).select(:value).single_value
     if op_value != 0
       values[5] = values[0]/op_value
@@ -707,7 +733,7 @@ private
      print "\r * #{test_name}".light_blue + "  size: #{size}  split [#{i+1}/#{@splits.size}]  iteration [#{n+1}/#{@iterations}]" if print == 1
      `./#{test_name}.ocl.test -size #{size}`
      worker_event = `cat worker_event_log.000* | sort -k4`
-     ocl_event = `cat ocl_event_log*`
+     ocl_event = ""#`cat ocl_event_log*`
      time = get_result
      $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :time => time, :worker_event => worker_event, :ocl_event => ocl_event, :timestamp => datetime)
   end
@@ -790,15 +816,17 @@ split = (1..21).to_a
 #test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
 
 test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) 
+#test = Test.new(split, [2, 18], [24], [9..17], 5)
 
 # run the test
-#test.info
+test.info
 #test.compile
 #test.check
 #test.run
 #test.fix
 #test.fake
 #test.view
+#test.delete
 #test.collect
-#test.evaluate :svm # or :ffnet
+#test.evaluate :ffnet # or :ffnet
 

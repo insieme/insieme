@@ -353,6 +353,14 @@ using insieme::transform::pattern::any;
 					return 1;
 				return 0;
 			};
+			lambdas["breaks"] = [&](core::NodePtr node) {
+				if(node->getNodeType() == core::NT_ReturnStmt)
+					return 1;
+				if(node->getNodeType() == core::NT_ContinueStmt)
+					return 1;
+				if(node->getNodeType() == core::NT_BreakStmt)
+					return 1;
+			};
 
 			// not sure if all makes sense in this case...
 //			ops["all"] = vector<core::ExpressionPtr>();

@@ -41,6 +41,8 @@ NEW_CC	= ${PREFIX}/gcc-latest/bin/gcc
 
 all: INSIEME
 
+water: ${GCC} ${BOOST} ${CMAKE} ${OPENMPI}
+
 ## GMP
 ${GMP}: gmp_install.sh 
 	@echo "#### INSTALL GMP ${GMP} ####"
@@ -192,7 +194,7 @@ ${HWLOC}: hwloc_install.sh ${GCC}
 	@echo "@@@@ Done! @@@@"
 
 ## OpenMPI
-${OPENMPI}: openmpi_install.sh ${GCC} ${HWLOC}
+${OPENMPI}: openmpi_install.sh ${GCC} ${HWLOC} ${LIBTOOL}
 	@echo "#### INSTALL OpenMPI ${OPENMPI} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh openmpi_install.sh
 	@echo "@@@@ Done! @@@@"
