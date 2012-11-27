@@ -437,6 +437,8 @@ namespace backend {
 				// => use prototype of include file
 				res->prototype = c_ast::DummyFragment::createNew(converter.getFragmentManager());
 				res->prototype->addInclude(*header);
+			} else if(literal->getStringValue().substr(0,2) == "__") {
+				// => ignore built-ins
 			} else {
 				// => add prototype for this literal
 				c_ast::FunctionPrototypePtr code = manager->create<c_ast::FunctionPrototype>(fun.function);
