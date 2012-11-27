@@ -70,14 +70,9 @@ int solve_rec(problem* problem, solution* partial, int plant, int used_mask, int
 		return *best_known;
 	}
 
-	// storage for results of recursive tasks
-	int bests[problem->size];
 
 	// fix current position
-	int best = *best_known;
 	for(int i=0; i<problem->size; i++) {
-		bests[i] = best;
-
 		// check whether current spot is a free spot
 		#pragma omp task
 		if(!(1<<i & used_mask)) {
@@ -102,26 +97,20 @@ int solve_rec(problem* problem, solution* partial, int plant, int used_mask, int
 			}
 
 			// compute recursive rest
-//			int cur_best = solve_rec(problem, &tmp, plant+1, used_mask | (1<<i), cur_cost + new_cost, best);
-//			if (cur_best < best) best = cur_best;
+			int cur_best = solve_rec(problem, &tmp, plant+1, used_mask | (1<<i), cur_cost + new_cost, best_known);
 
-			bests[i] = solve_rec(problem, &tmp, plant+1, used_mask | (1<<i), cur_cost + new_cost, best_known);
+			// update best known solution
+			if (cur_best < *best_known) {
+				int best;
+				//   |--- read best ---|          |--- check ---|    |------------ update if cur_best is better ------------|
+				do { best = *best_known; } while (cur_best < best && __sync_bool_compare_and_swap(best_known, best, cur_best));
+			}
 		}
 	}
 
 	#pragma omp taskwait
 
-	// get best from best-vector
-	best = bests[0];
-	for(int i=0; i<problem->size; i++) {
-		if (best > bests[i]) best = bests[i];
-	}
-
-	if (best < *best_known) {
-		*best_known = best;
-	}
-
-	return best;
+	return *best_known;
 }
 
 int solve(problem* problem) {
