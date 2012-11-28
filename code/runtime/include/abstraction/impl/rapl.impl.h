@@ -80,7 +80,39 @@ int32 _irt_close_msr(int32 file) {
 	return close(file);
 }
 
-void _irt_get_rapl_energy_consumption(double *package_energy) {
+void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
+        int32 file = 0;
+        //int32 numcores = irt_get_num_cpus();
+        int64 result = 0;
+        double energy_units = -1.0;
+        uint32 core_start = (irt_affinity_mask_get_first_cpu(irt_worker_get_current()->affinity))/8;
+        uint32 core_end = (core_start + ceil((double)irt_g_worker_count/8));
+
+        // for core_end until (all cores excl. HT), stepsize (all cores excl. HT / number of sockets)
+        for(uint32 core = core_start; core < core_end; ++core) {
+                data->package[core] = 0.0;
+                data->mc[core] = 0.0;
+                data->cores[core] = 0.0;
+                if((file = _irt_open_msr(core*8)) > 0) {
+                        if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
+                                energy_units = pow(0.5, (double)((result>>8) & 0x1F));
+                                if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS)) >= 0)
+                                        data->package[core] = (double) (result&0xFFFFFFFF) * energy_units;
+                                if((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS)) >= 0)
+                                        data->mc[core] = (double) (result&0xFFFFFFFF) * energy_units;
+                                if((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS)) >= 0)
+                                        data->cores[core] = (double) (result&0xFFFFFFFF) * energy_units;
+                        }
+                        _irt_close_msr(file);
+                }
+        }
+}
+
+/*
+ * Alternative method
+ */
+
+/*void _irt_get_rapl_energy_consumption(double *package_energy) {
 	int32 file = 0;
 	int64 result = 0;
 	uint32 core_start = 0, core_end = irt_get_num_cpus();
@@ -118,7 +150,7 @@ void _irt_get_rapl_energy_consumption(double *package_energy) {
 			_irt_close_msr(file);
 		}
 	}
-}
+}*/
 
 bool irt_rapl_is_supported() {
 	volatile unsigned a, b, c, d;
@@ -144,7 +176,7 @@ bool irt_rapl_is_supported() {
 			return true;
 		if(model_number == 0xE && extended_model == 0x2) // SandyBridge EN 32nm
 			return true;
-		if(model_number == 0xD && extended_model == 0x2) // SandyBridge EP 32nm
+		if(model_number == 0xD && extended_model == 0x2) // dx1 = E5-2660
 			return true;
 		if(model_number == 0xA && extended_model == 0x3) // IvyBridge 22nm
 			return true;

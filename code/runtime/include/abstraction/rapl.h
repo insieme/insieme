@@ -113,6 +113,17 @@
 //#define TIME_UNIT_MASK		0xF000
 
 /*
+ * struct to hold RAPL data for all sockets/CPUs
+ */
+
+typedef struct _rapl_energy_data {
+	uint32 number_of_cpus;
+	double *package;
+	double *mc;
+	double *cores;
+} rapl_energy_data;
+
+/*
  * opens a file descriptor for an MSR of a given core
  */
 
@@ -136,7 +147,7 @@ int32 _irt_close_msr(int32 file);
  * values.
  */
 
-void _irt_get_rapl_energy_consumption(double *package_energy);
+void _irt_get_rapl_energy_consumption(rapl_energy_data *data);
 
 /*
  * checks if RAPL is supported - currently, only Sandy Bridge (EX) and Ivy Bridge processors are known
