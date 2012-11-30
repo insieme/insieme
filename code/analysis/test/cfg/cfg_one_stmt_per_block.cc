@@ -285,6 +285,59 @@ TEST(CFGBuilder, IfThenCmp) {
 
 }
 
+// TEST(CFGBuilder, TernaryOp) {
+// 
+// 	NodeManager mgr;
+// 	IRBuilder builder(mgr);
+// 
+//     auto code = builder.parseStmt(
+// 		"{"
+// 		"	ref<int<4>> a = 0;"
+// 		"	int<4> c = (true) ? 0 : 1; "
+// 		"}"
+//     );
+// 
+//     EXPECT_TRUE(code);
+// 	CFGPtr cfg = CFG::buildCFG(code);
+// 
+// 	std::cout << *cfg << std::endl;
+// 
+// 	EXPECT_EQ(5u+2u, cfg->size());
+// 
+// 	const auto& entry = cfg->getBlockPtr( cfg->entry() );
+// 	// entry point 1 single child
+// 	EXPECT_EQ(1u, entry->successors_count());
+// 
+// 	const auto& decl = entry->successor(0);
+// 	EXPECT_EQ(1u, decl->size());
+// 	EXPECT_EQ(core::NT_DeclarationStmt, (*decl)[0].getStatementAddress()->getNodeType());
+// 	EXPECT_EQ(1u, decl->successors_count());
+// 
+// 	const auto& ifHead = decl->successor(0);
+// 	EXPECT_EQ(1u, ifHead->size());
+// 	EXPECT_TRUE(ifHead->hasTerminator());
+// 	EXPECT_EQ(core::NT_Literal, (*ifHead)[0].getStatementAddress()->getNodeType());
+// 	EXPECT_EQ(2u, ifHead->successors_count());
+// 
+// 	const auto& ifThen1 = ifHead->successor(0);
+// 	EXPECT_EQ(1u, ifThen1->size());
+// 	EXPECT_EQ(core::NT_CallExpr, (*ifThen1)[0].getStatementAddress()->getNodeType());
+// 	EXPECT_EQ(1u, ifThen1->successors_count());
+// 
+// 	const auto& ifThen2 = ifThen1->successor(0);
+// 	EXPECT_EQ(1u, ifThen2->size());
+// 	EXPECT_EQ(core::NT_CallExpr, (*ifThen2)[0].getStatementAddress()->getNodeType());
+// 	EXPECT_EQ(1u, ifThen2->successors_count());
+// 
+// 	EXPECT_EQ(ifThen2->successor(0), ifHead->successor(1));
+// 
+// 	const auto& end = *ifThen2->successors_begin();
+// 	EXPECT_EQ(1u, end->size());
+// 	EXPECT_EQ(core::NT_DeclarationStmt, (*end)[0].getStatementAddress()->getNodeType());
+// 
+// }
+
+
 TEST(CFGBuilder, WhileSimple) {
 
 	NodeManager mgr;

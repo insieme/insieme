@@ -279,11 +279,6 @@ struct set_base_traits<CartProdSet<Base1,Base2>> {
 	typedef typename CartProdSet<Base1,Base2>::base_type type;
 };
 
-template <class Base1, class Base2, class Base3>
-struct set_base_traits<CartProdSet<Base1,CartProdSet<Base2,Base3>>> {
-	typedef typename CartProdSet<Base1,CartProdSet<Base2,Base3>>::base_type type;
-};
-
 } // end anonymous namespace 
 
 template <class Base1, class Base2> 
@@ -417,6 +412,10 @@ public:
 		return dfa::contains(base1, t1) && dfa::contains(base2, t2);
 	}
 
+	const BaseSet1& getLeftBaseSet() const { return base1; }
+
+	const BaseSet2& getRightBaseSet() const { return base2; }
+
 	size_t size() const { return base1.size() * base2.size(); }
 
 	bool bounded() const { return dfa::isBounded(base1) && dfa::isBounded(base2); }
@@ -447,6 +446,8 @@ public:
 
 	typedef typename TupleMerger<Tuple1,Tuple2>::type value_type;
 
+	typedef std::set<value_type> base_type;
+
 	// Creates an empty cartesian-product
 	CartProdSet() { }
 
@@ -458,6 +459,10 @@ public:
 
 		return dfa::contains(base1, t1) && dfa::contains(base2, std::get<0>(t2));
 	}
+
+	const BaseSet1& getLeftBaseSet() const { return base1; }
+
+	const BaseSet2& getRightBaseSet() const { return base2; }
 
 	size_t size() const { return base1.size() * base2.size(); }
 
@@ -489,6 +494,8 @@ public:
 
 	typedef typename TupleMerger<Tuple1,Tuple2>::type value_type;
 
+	typedef std::set<value_type> base_type;
+
 	// Creates an empty cartesian-product
 	CartProdSet() { }
 
@@ -498,10 +505,28 @@ public:
 	CartProdSet(const BaseSet1& b1, const BaseSet2& b2) : base1(b1), base2(b2) { }
 
 	bool contains(const value_type& elem) const {
-		Tuple1 t1;Tuple2 t2;
-		std::tie(t1, t2) = split<Tuple1,Tuple2>(elem);
-
+		Tuple1 t1;
+		Tuple2 t2;
+		std::tie(t1,t2) = split<Tuple1,Tuple2>(elem);
 		return dfa::contains(base1, std::get<0>(t1)) && dfa::contains(base2, t2);
+	}
+
+	const BaseSet1& getLeftBaseSet() const { return base1; }
+
+	const BaseSet2& getRightBaseSet() const { return base2; }
+
+	base_type expand() const { 
+
+		auto bt1 = dfa::expand(base1);
+		auto bt2 = dfa::expand(base2);
+
+		base_type res;
+		for(auto& it1 : bt1) 
+			for (auto& it2 : bt2) {
+				res.insert( std::make_tuple(it1,std::get<0>(it2),std::get<1>(it2)) ); 	
+			}
+
+		return res;
 	}
 
 	size_t size() const { return base1.size() * base2.size(); }

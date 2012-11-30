@@ -129,6 +129,8 @@ class Value : public utils::Printable {
 	};
 public:
 
+	Value() : m_value(dfa::bottom) { }
+
 	Value(const T& val) : m_value(val) { }
 	Value(const Top& t) : m_value(t) { }
 	Value(const Bottom& b): m_value(b) { }
