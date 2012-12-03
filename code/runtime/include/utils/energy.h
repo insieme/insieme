@@ -40,13 +40,13 @@
 
 
 // pointer to the function that is used to obtain energy readings
-void (*irt_get_energy_consumption)(double* energy);
+void (*irt_get_energy_consumption)(rapl_energy_data* data);
 
 /*
  * a dummy method if no energy instrumentation is available
  */
 
-void irt_get_energy_consumption_dummy(double* energy);
+void irt_get_energy_consumption_dummy(rapl_energy_data* data);
 
 /*
  * selects the method used to obtain energy readings

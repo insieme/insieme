@@ -360,6 +360,7 @@ using insieme::transform::pattern::any;
 					return 1;
 				if(node->getNodeType() == core::NT_BreakStmt)
 					return 1;
+				return 0;
 			};
 
 			// not sure if all makes sense in this case...
