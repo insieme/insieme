@@ -98,3 +98,53 @@ TEST(RankPropagation, PropagateConstantNoControl) {
 
 	//EXPECT_EQ( builder.intLit(1), std::get<1>(cons).value() );
 }
+
+
+TEST(RankPropagation, PropagateConstantControl) {
+ 
+ 	NodeManager mgr;
+ 	IRBuilder builder(mgr);
+ 
+    auto addresses = builder.parseAddresses(
+		"${"
+		"	let MPI_Comm_rank = lit(\"MPI_Comm_rank\" : (int, ref<int>) -> int); "
+		"	let MPI_Comm_size = lit(\"MPI_Comm_size\" : (int, ref<int>) -> int); "
+
+		"	ref<int<4>> a = 0;"
+		"	ref<int<4>> s = 0;"
+		"   MPI_Comm_rank(0, a); "
+		"	MPI_Comm_size(0, s); "
+		"	int<4> c = (a+1)%s;"
+		"	ref<int<4>> d = a; "
+		"	if (c>0) { "
+		"		d = c+a*c;"
+		"	}"
+		"	$d$; "
+		"}$"
+    );
+ 
+	EXPECT_EQ(2u, addresses.size());
+	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
+
+	LOG(INFO) << *cfg;
+
+ 	Solver<dfa::analyses::RankPropagation> s(*cfg);
+ 	auto ret = s.solve();
+
+ 	// lookup address of variable A
+ 	auto addr = cfg->find( addresses[1] );
+
+ 	EXPECT_EQ(2u, addr.getBlockPtr()->getBlockID());
+	auto accPtr = getImmediateAccess(mgr, addresses[1]);
+	LOG(INFO) << s.getProblemInstance().getAccessManager();
+
+	auto accClasses = s.getProblemInstance().getAccessManager().getClassFor(accPtr);
+	assert( !accClasses.empty() );
+
+	auto consts = ret[addr.getBlockPtr()->getBlockID()];
+	LOG(INFO) << consts;
+
+	//auto cons = find_constant_value(accClasses, consts);
+
+	//EXPECT_EQ( builder.intLit(1), std::get<1>(cons).value() );
+}

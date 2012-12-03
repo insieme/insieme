@@ -43,6 +43,7 @@
 #include "utils/minlwt.h"
 #include "irt_scheduling.h"
 #include "irt_events.h"
+#include "data_item.h"
 
 /* ------------------------------ data structures ----- */
 
@@ -74,9 +75,9 @@ struct _irt_work_item {
 	irt_wi_implementation_id impl_id;
 	irt_work_item_range range;
 	uint32 num_groups;
-	uint32 _num_active_children;
-	uint32 *num_active_children;
-	uint32 *parent_num_active_children;
+	volatile uint32 _num_active_children;
+	volatile uint32 *num_active_children;
+	volatile uint32 *parent_num_active_children;
 	irt_wi_wg_membership *wg_memberships;
 	volatile irt_work_item_state state;
 	irt_lw_data_item *parameters;
@@ -85,15 +86,21 @@ struct _irt_work_item {
 	uint32 num_fragments;
 	// private implementation details, do not need to be migrated
 	irt_work_item *next_reuse;
-	lwt_context stack_ptr;
 	lwt_reused_stack* stack_storage;
+	lwt_context stack_ptr;
+#ifdef IRT_ASTEROIDEA_STACKS
+	volatile bool stack_available;
+#endif
 	irt_wi_scheduling_data sched_data;
-	// region association for instrumentation
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	// region association for instrumentation
 	irt_region* region;
 	uint64 last_timestamp;
 #endif
-	char param_buffer[IRT_WI_PARAM_BUFFER_SIZE];
+	union {
+		char param_storage[IRT_WI_PARAM_BUFFER_SIZE];
+		irt_lw_data_item param_buffer;
+	};
 };
 
 /* ------------------------------ operations ----- */
@@ -129,8 +136,9 @@ irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementat
 
 void irt_wi_join(irt_work_item* wi);
 void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis); // bad idea
-void irt_wi_end(irt_work_item* wi);
 void irt_wi_join_all(irt_work_item* wi);
+void irt_wi_end(irt_work_item* wi);
+void irt_wi_finalize(irt_work_item* wi);
 
 void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis);
 void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]);

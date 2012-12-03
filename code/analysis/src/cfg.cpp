@@ -45,6 +45,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_expressions.h"
@@ -737,8 +738,59 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 	void visitUnionExpr(const UnionExprAddress& unionExpr) { visitInitializerExpr(unionExpr); }
 	void visitVectorExpr(const VectorExprAddress& vecExpr) { visitInitializerExpr(vecExpr); }
 
+	void visitTernaryOperator(const CallExprAddress& ternaryExpr) {
+
+		assert(false && "Ternarny operator support is still lacking the correct semantics");
+
+		// append any pending block before we fork the CFG for inserting the for stmt
+		blockMgr.close();
+
+		auto condExpr = ternaryExpr->getArgument(0);
+		auto thenBody = ternaryExpr->getArgument(1);
+		auto elseBody = ternaryExpr->getArgument(2);
+
+		// Store the current head of the CFG (stored in succ)
+		CFG::VertexTy sink = succ;
+		
+		// the THEN body of the IF stmt
+		visit( thenBody );
+		blockMgr.close();
+		CFG::VertexTy thenBlock = succ;
+	
+		succ = sink;
+
+		// the ELSE body of the IF stmt
+		visit( elseBody );
+		blockMgr.close();
+		CFG::VertexTy elseBlock = succ;
+
+		// Build the block representing the entry of the IF stmt
+		blockMgr->setTerminator( cfg::Terminator(ternaryExpr) );
+		CFG::VertexTy src = blockMgr.append();
+
+		// Connect the thenBlock with the head of the CFG 
+		blockMgr.connectTo(thenBlock, cfg::Edge( builder.getLangBasic().getTrue() )); 
+
+		// Connect the else block with the head of the CFG 
+		blockMgr.connectTo(elseBlock, cfg::Edge( builder.getLangBasic().getFalse() ));
+
+		// this is the successor now
+		succ = src;
+
+		// Visit the condition of the if stmt
+		visit( condExpr );
+	}
+
 	void visitCallExpr(const CallExprAddress& callExpr) {
 	
+		// Make sure to capture ternary operators 
+		const auto& gen = callExpr->getNodeManager().getLangBasic();
+
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), gen.getIfThenElse())) {
+			visitTernaryOperator(callExpr);
+			return;
+		}
+
 		vector<ExpressionPtr> newArgs;
 		for (const auto& arg : callExpr->getArguments()) {
 			newArgs.push_back( storeTemp(arg).second );
@@ -813,162 +865,6 @@ struct CFGBuilder: public IRVisitor< void, core::Address > {
 		// Visit the Arguments
 		for (const auto& cur : callExpr->getArguments()) { visitArgument(cur); }
 	}
-
-	//void visitCallExpr(const CallExprAddress& callExpr) {
-		//// if the call expression is calling a lambda the body of the lambda is processed and the
-		//// sub graph is built
-		//if ( callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr ) {
-			//const LambdaExprAddress& lambdaExpr = static_address_cast<const LambdaExpr>(callExpr->getFunctionExpr());
-
-			//if ( !cfg->hasSubGraph(lambdaExpr) ) {
-				//// In the case the body has not been visited yet, proceed with the graph construction
-				//// TODO: This can be executed in a separate thread (if necessary)
-				//CFG::buildCFG<CP>(lambdaExpr.getAddressedNode(), cfg);
-			//}
-
-			//appendPendingBlock();
-
-			//CFG::GraphBounds&& bounds = cfg->getNodeBounds(lambdaExpr);
-			//// A call expression creates 2 blocks, 1 spawning the function call and the second one
-			//// collecting the return value
-			//cfg::CallBlock* call = new cfg::CallBlock(*cfg);
-			//cfg::RetBlock* ret = new cfg::RetBlock(*cfg);
-
-			//// we interconnect the two blocks so that if we want to have intra-procedural analysis
-			//// we can jump directly to the return block without visiting the body of the function
-			//call->setReturnBlock( *ret );
-			//// call->appendElement( cfg::Element(callExpr) );
-
-			//ret->setCallBlock(*call);
-
-			//CFG::VertexTy&& callVertex = cfg->addBlock( call );
-
-			//const auto& params = lambdaExpr->getParameterList();
-			//const auto& args = callExpr->getArguments();
-			//assert(params.size() == args.size());
-
-			//for(size_t idx=0; idx<args.size(); ++idx) {
-				//const auto& param = params[idx];
-				//const auto& arg = storeTemp(args[idx]);
-
-				//call->appendElement( cfg::Element(builder.declarationStmt(param, arg.second), param) );
-			//}
-
-			//// lookup the retVar introduced for this lambdaexpr
-			//auto retVar = std::get<0>(bounds);
-
-			//// lookup for whether we need to introduce a temporary var for this
-			//// callExpr
-			//auto callIt = tmpVarMap.find(callExpr);
-			//if (callIt != tmpVarMap.end()) {
-				//ret->appendElement( cfg::Element(builder.declarationStmt( callIt->second, retVar ), callExpr) );
-			//}
-			//cfg->addEdge(callVertex, std::get<1>(bounds)); // CALL -> Function Entry
-
-			//CFG::VertexTy&& retVertex = cfg->addBlock( ret );
-			//cfg->addEdge(std::get<2>(bounds), retVertex); // Function Exit -> RET
-			//cfg->addEdge(retVertex, succ );
-
-			//succ = callVertex;
-			//resetCurrBlock();
-
-		//} else {
-			//// we are in the multistmt per block mode we should not append and create a new block
-			//// here
-			//assert(currBlock);
-
-			//// Analyze the call expression and introduce temporary variables 
-			//const vector<ExpressionAddress>& args = callExpr->getArguments();
-
-			//vector<ExpressionPtr> newArgs;
-			//std::for_each(args.begin(), args.end(), [ & ] (const ExpressionAddress& curr) {
-					//newArgs.push_back( this->storeTemp(curr).second );
-				//});
-
-			//StatementPtr toAppendStmt = builder.callExpr(callExpr->getFunctionExpr(), newArgs);
-			//auto fit = tmpVarMap.find(callExpr);
-			//if (fit!=tmpVarMap.end()) {
-				//toAppendStmt = builder.declarationStmt( fit->second, toAppendStmt.as<ExpressionPtr>() );
-			//}
-
-			//currBlock->appendElement( cfg::Element(toAppendStmt, callExpr) );
-
-			//if (CP == OneStmtPerBasicBlock)
-				//appendPendingBlock();
-		//}
-
-		//bool hasAllocated=false;
-		//if ( !hasHead ) {
-			//assert(!spawnBlock);
-			//spawnBlock = new cfg::Block( *cfg, cfg::Block::DEFAULT );
-			//head = cfg->addBlock( spawnBlock );
-			//hasHead = true;
-			//hasAllocated = true;
-			//maxSpawnedArg = 0;
-		//}
-
-		//CFG::VertexTy sink = succ;
-
-		//size_t spawnedArgs = 0;
-		//const auto& args = callExpr->getArguments();
-		//argNumStack.push(0);
-		//std::for_each(args.begin(), args.end(), [ this, sink, &spawnedArgs ] (const ExpressionAddress& curr) {
-
-			//// in the case the argument is a call expression, we need to allocate a separate block
-			//// in order to perform the inter-procedural function call
-			//if ( curr->getNodeType() == NT_CallExpr || 
-				 //curr->getNodeType() == NT_CastExpr ||
-				 //curr->getNodeType() == NT_MarkerExpr) 
-			//{
-				//this->createBlock();
-				//this->visit( curr );
-				//this->appendPendingBlock();
-				
-				//if ( this->succ != sink ) { ++spawnedArgs;	}
-
-				//this->succ = sink;
-			//}
-			//this->argNumStack.top()++;
-
-		//});
-		//argNumStack.pop();
-	
-		//if(spawnedArgs > maxSpawnedArg) {
-			//maxSpawnedArg = spawnedArgs;
-		//}
-		//// In the case a spawnblock has been created to capture arguments of the callExpr but no
-		//// arguments were call expressions, therefore the created spawnblock is not necessary. 
-		//if ( maxSpawnedArg<2 && hasAllocated ) {
-			//if (spawnedArgs == 1) {
-				//succ = **cfg->successors_begin(head);
-			//}
-
-			//// remove the spawned block from the CFG 
-			//cfg->removeBlock( head );
-			//// delete spawnBlock;
-			//spawnBlock = NULL;
-
-			//// set the head to false (for next calls to this function)
-			//hasHead = false;
-			//isPending = false;
-			//return;
-		//}
-
-		//if ( spawnedArgs==0 && !hasAllocated ) {
-			//cfg->addEdge(head, succ);
-		//}
-
-		//if ( hasAllocated ) {
-			//succ = head;
-			//currBlock = spawnBlock;
-			//isPending = false;
-			//hasHead = false;
-			//spawnBlock = NULL;
-			//hasAllocated=false;
-		//}
-	//}
-
-	
 
 	void visitLambdaExpr(const LambdaExprAddress& lambda) {
 		scopeStack.push( Scope(lambda, CFG::VertexTy(), succ) );
@@ -1444,7 +1340,9 @@ std::ostream& Terminator::printTo(std::ostream& out) const {
 	core::StatementPtr stmt = getAnalysisStatement();
 	switch ( stmt->getNodeType() ) {
 
+	case NT_CallExpr:
 	case NT_IfStmt: 		return out << "IF(...)\\l";
+	
 
 	case NT_ForStmt: {
 		ForStmtPtr forStmt = static_pointer_cast<const ForStmt>( stmt );

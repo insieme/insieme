@@ -68,6 +68,7 @@ struct _irt_worker {
 	lwt_context basestack;
 	irt_context_id cur_context;
 	irt_work_item* cur_wi;
+	irt_work_item* finalize_wi;
 	volatile irt_worker_state state;
 	irt_worker_scheduling_data sched_data;
 	irt_work_item lazy_wi;
@@ -78,6 +79,10 @@ struct _irt_worker {
 
 	uint32 default_variant;
 	unsigned int rand_seed;
+
+#ifdef IRT_ASTEROIDEA_STACKS
+	irt_work_item* share_stack_wi;
+#endif
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_instrumentation_event_data_table* instrumentation_event_data;

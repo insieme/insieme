@@ -87,14 +87,25 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 #endif
 	
 	// create new
-	//IRT_DEBUG("LWT_FU\n");
+	//static unsigned long long total = 0;
+	//total += sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE;
+	//printf("Total allocated: %6.2lf GB\n", total/(1024.0*1024.0*1024.0));
 	ret = (lwt_reused_stack*)malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE);
 	ret->next = NULL;
 	return ret;
 }
 
 static inline void lwt_recycle(int tid, irt_work_item *wi) {
-	if(!wi->stack_storage) return;
+	if(!wi->stack_storage) {
+#ifdef IRT_ASTEROIDEA_STACKS
+		// make parent stack available again
+		irt_work_item* parent = wi->parent_id.cached;
+		IRT_DEBUG(" + %p returning stack to %p\n", wi, parent);
+		IRT_ASSERT(parent != NULL, IRT_ERR_INTERNAL, "Asteroidea: No parent and no stack storage.\n");
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true), IRT_ERR_INTERNAL, "Asteroidea: Could not return stack.\n");
+#endif //IRT_ASTEROIDEA_STACKS
+		return;
+	}
 #ifdef LWT_STACK_STEALING_ENABLED
 	for(;;) {
 		lwt_reused_stack* top = lwt_g_stack_reuse.stacks[tid];
@@ -126,6 +137,7 @@ static inline void lwt_recycle(int tid, irt_work_item *wi) {
 	wi->stack_storage->next = lwt_g_stack_reuse.stacks[tid];
 	lwt_g_stack_reuse.stacks[tid] = wi->stack_storage;
 	wi->stack_storage = NULL;
+	//printf("Reuse!");
 	//IRT_DEBUG("LWT_CYC\n");
 #endif
 }
@@ -136,6 +148,24 @@ static inline void lwt_recycle(int tid, irt_work_item *wi) {
 // x86-64 implementation
 
 static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) {
+#ifdef IRT_ASTEROIDEA_STACKS
+	// if parent stack is available, reuse it
+	irt_work_item* parent = wi->parent_id.cached;
+	if(parent && parent->num_active_children == wi->parent_num_active_children) {
+		if(irt_atomic_bool_compare_and_swap(&parent->stack_available, true, false)) {
+			if(parent->num_active_children != wi->parent_num_active_children) irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true);
+			else {
+				IRT_DEBUG(" + %p taking stack from %p\n", wi, parent);
+				IRT_DEBUG("   %p child count: %d\n", parent, *parent->num_active_children);
+				wi->stack_storage = NULL;
+				wi->stack_ptr = parent->stack_ptr;
+				wi->stack_ptr -= wi->stack_ptr%128;
+				return;
+			}
+		}
+	}
+#endif
+
 	// heap allocated thread memory
 	wi->stack_storage = _lwt_get_stack(tid);
 	wi->stack_ptr = (intptr_t)(&wi->stack_storage->stack) + IRT_WI_STACK_SIZE;

@@ -42,6 +42,8 @@
 #include "insieme/analysis/access.h"
 #include "insieme/analysis/dfa/analyses/extractors.h"
 
+#include "insieme/core/arithmetic/arithmetic_utils.h"
+
 namespace insieme { 
 namespace analysis { 
 namespace dfa { 
@@ -58,6 +60,7 @@ typedef Problem<
 			ForwardAnalysisTag,
 			Entity<
 				dfa::elem<AccessClassPtr>, 
+				dfa::dom< dfa::Value<core::arithmetic::Constraint> >,
 				dfa::dom< dfa::Value<core::ExpressionPtr> > 
 			>,
 			PowerSet
@@ -99,13 +102,20 @@ namespace std {
 	using namespace insieme::analysis;
 	using namespace insieme::core;
 
-	std::ostream& operator<<(std::ostream& out, const std::tuple<AccessClassPtr, dfa::Value<ExpressionPtr>>& cur) {
+	std::ostream& operator<<(std::ostream& out, const dfa::analyses::RankPropagation::value_type::value_type& cur) {
 		out << "(cid:" << std::get<0>(cur)->getUID() << ","; 
 		if (std::get<1>(cur).isValue()) {
-			out << *std::get<1>(cur).value();
+			out << std::get<1>(cur).value();
 		} else {
 			out << std::get<1>(cur);
 		}
+		out << ",";
+		if (std::get<2>(cur).isValue()) {
+			out << *std::get<2>(cur).value();
+		} else {
+			out << std::get<2>(cur);
+		}
+
 		return out << ")";
 	}
 

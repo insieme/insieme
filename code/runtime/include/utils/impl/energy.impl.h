@@ -45,8 +45,12 @@
 	#include "abstraction/impl/rapl.impl.h"
 #endif
 
-void _irt_get_energy_consumption_dummy(double* energy) {
-	*energy = -1.0;
+void _irt_get_energy_consumption_dummy(rapl_energy_data* data) {
+        for(uint32 core = 0; core < data->number_of_cpus; ++core) {
+                data->package[core] = -1.0;
+                data->mc[core] = -1.0;
+                data->cores[core] = -1.0;
+        }	
 }
 
 void irt_energy_select_instrumentation_method() {
