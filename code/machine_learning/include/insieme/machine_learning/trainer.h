@@ -54,7 +54,7 @@ namespace ml {
 
 #define TRAINING_OUTPUT false
 
-#define DISTORT false
+#define DISTORT true
 
 #define POS  1
 #define NEG 0
@@ -254,7 +254,7 @@ public:
 	 *        range of 1 +/- distort factor
 	 */
 	void optimizeDistorted(Optimizer& optimizer, Model& model, ErrorFunction& errFct, Array<double>& features, Array<double>& target,
-			size_t increaseFactor = 5, double distortFactor = 0.05);
+			size_t increaseFactor = 1, double distortFactor = 0.001);
 
 	/**
 	 * trains the model using the patterns returned by the given query or the default query if none is given
