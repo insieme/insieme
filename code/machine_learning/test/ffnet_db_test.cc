@@ -161,27 +161,27 @@ class MlTest : public ::testing::Test {
 				// target class is round robin
 				measurement->BindDouble(3, i%5);
 				// insert individual times for fuzzy classification
-				measurement->BindDouble( 4, 0.1);
-				measurement->BindDouble( 5, 0.11);
-				measurement->BindDouble( 6, 0.12);
-				measurement->BindDouble( 7, 0.13);
-				measurement->BindDouble( 8, 0.14);
-				measurement->BindDouble( 9, 0.15);
-				measurement->BindDouble(10, 0.16);
-				measurement->BindDouble(11, 0.17);
-				measurement->BindDouble(12, 0.18);
-				measurement->BindDouble(13, 0.19);
-				measurement->BindDouble(14, 0.111);
-				measurement->BindDouble(15, 0.112);
-				measurement->BindDouble(16, 0.113);
-				measurement->BindDouble(17, 0.114);
-				measurement->BindDouble(18, 0.115);
-				measurement->BindDouble(19, 0.116);
-				measurement->BindDouble(20, 0.117);
-				measurement->BindDouble(21, 0.118);
-				measurement->BindDouble(22, 0.119);
-				measurement->BindDouble(23, 0.121);
-				measurement->BindDouble(24, 0.122);
+				measurement->BindDouble( 4, 0.1  + i%21);
+				measurement->BindDouble( 5, 0.11 + i%21);
+				measurement->BindDouble( 6, 0.12 + i%21);
+				measurement->BindDouble( 7, 0.13 + i%21);
+				measurement->BindDouble( 8, 0.14 + i%21);
+				measurement->BindDouble( 9, 0.15 + i%21);
+				measurement->BindDouble(10, 0.16 + i%21);
+				measurement->BindDouble(11, 0.17 + i%21);
+				measurement->BindDouble(12, 0.18 + i%21);
+				measurement->BindDouble(13, 0.19 + i%21);
+				measurement->BindDouble(14, 0.111+ i%21);
+				measurement->BindDouble(15, 0.112+ i%21);
+				measurement->BindDouble(16, 0.113+ i%21);
+				measurement->BindDouble(17, 0.114+ i%21);
+				measurement->BindDouble(18, 0.115+ i%21);
+				measurement->BindDouble(19, 0.116+ i%21);
+				measurement->BindDouble(20, 0.117+ i%21);
+				measurement->BindDouble(21, 0.118+ i%21);
+				measurement->BindDouble(22, 0.119+ i%21);
+				measurement->BindDouble(23, 0.121+ i%21);
+				measurement->BindDouble(24, 0.122+ i%21);
 
 				// write measurement result to database
 				measurement->Execute();
@@ -715,7 +715,7 @@ TEST_F(MlTest, FuzzyTrain) {
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
 	Array<int> con;
-	size_t nIn = 3, nOut = 5;
+	size_t nIn = 3, nOut = 21;
 	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
 
 	// declare Machine
@@ -747,7 +747,7 @@ TEST_F(MlTest, FuzzyTrain) {
 
 	fuzzyNn.setStaticFeaturesByIndex(features);
 
-	double error = fuzzyNn.train(bfgs, err, 4);
+	double error = fuzzyNn.train(bfgs, err, 15);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
 

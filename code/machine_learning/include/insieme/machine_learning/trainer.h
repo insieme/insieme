@@ -54,8 +54,10 @@ namespace ml {
 
 #define TRAINING_OUTPUT false
 
+#define DISTORT false
+
 #define POS  1
-#define NEG  0
+#define NEG 0
 
 // enums defining how the measurement values should be mapped to the ml-algorithms output
 enum GenNNoutput : unsigned int {
@@ -239,6 +241,20 @@ public:
 // FIXME find a way to avoid stack corruption in certain cases (-f2 -f1)
 		delete pDatabase;
 	}
+
+	/**
+	 * distorts the features Array before it is fed into the optimizer's train function
+	 * @param optimizer the Shark Optimizer to be used, eg. Quickprop, Bfgs etc.
+	 * @param model the Shark model to be trained, eg. MyMultiClassSVM, FFNet etc.
+	 * @param errFct the Shark error function to be used
+	 * @param features a 2D array holding the feature vectors (row wise)
+	 * @param target a 2D array holding the target values (row wise)
+	 * @param increaseFactor Determines how many distorted patterns should be generated form the actual patterns
+	 * @param distortFactor determines the distortion factor. Distorted paterns are the original ones where each feature is multiplied with a factor in the
+	 *        range of 1 +/- distort factor
+	 */
+	void optimizeDistorted(Optimizer& optimizer, Model& model, ErrorFunction& errFct, Array<double>& features, Array<double>& target,
+			size_t increaseFactor = 5, double distortFactor = 0.05);
 
 	/**
 	 * trains the model using the patterns returned by the given query or the default query if none is given
