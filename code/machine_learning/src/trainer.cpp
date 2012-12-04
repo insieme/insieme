@@ -253,7 +253,7 @@ void Trainer::mapToNClasses(std::list<std::pair<double, size_t> >& measurements,
  * writes informations about the current training run to a stream
  */
 void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct, const size_t iterations) const {
-	//TODO add output for output class generation, at the moment only keepInt is needed
+	//TODO add output for output class generation, at the moment only keepInt is supported
 
 	out << trainer << ", Targets: " << NEG << " - " << POS << std::endl;
 	out << model.getType()    << model.getStructure() << std::endl;
@@ -372,7 +372,7 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 
 		//perform online training
 		for(size_t i = 0; i < nBatches; ++i) {
-			optimizer.optimize(model.getModel(), errFct, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
+			optimizeDistorted(optimizer, model.getModel(), errFct, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
 			trainErr += errFct.error(model.getModel(), trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
 		}
 
@@ -612,8 +612,8 @@ void Trainer::valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index
 			continue;
 		}
 
-		if(values(i) > min * 10) {
-			fuzzy(i) = fmax(((values(i) - min * 5) / (min * 10 - min * 5)) * -1, NEG);
+		if(values(i) > min * 5) {
+			fuzzy(i) = fmax(((values(i) - min * 5) / (max - min * 5)) * -1, NEG);
 			continue;
 		}
 
@@ -697,7 +697,7 @@ void Trainer::genDefaultQuery() {
 	for(size_t i = 0; i < excludeCodes.size(); ++i)
 		qss << " AND m.cid!=" << excludeCodes[i] << std::endl;
 
-//std::cout << "Query: \n" << qss.str() << std::endl;
+//std::cerr << "Query: \n" << qss.str() << std::endl;
 	query = qss.str();
 }
 
@@ -773,6 +773,52 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 	return nRows;
 }
 
+/**
+ * distorts the features Array before it is fed into the optimizer's train function
+ */
+void Trainer::optimizeDistorted(Optimizer& optimizer, Model& model, ErrorFunction& errFct, Array<double>& features, Array<double>& target,
+		size_t increaseFactor, double distortFactor) {
+#if DISTORT //enable easy turn on/of in the header
+	LOG(INFO) << "Distorting " << increaseFactor << " times by " << distortFactor << std::endl;
+
+	Array<double> dfeatures = features;
+	Array<double> dtarget = target;
+
+	size_t rows = features.rows();
+	size_t cols = features.cols();
+
+	srand(time(NULL));
+
+	for(size_t d = 0; d < increaseFactor; ++d) {
+		for(size_t i = 0; i < rows; ++i) {
+			Array<double> tmpF = features.subarr(1,1)[0];
+
+			for(size_t j = 0; j < cols; ++j) {
+				double distortion = (double)rand()/((double)RAND_MAX/(2*distortFactor)) - distortFactor;
+				tmpF(j) = tmpF(j) * (1 + distortion);
+			}
+
+			dfeatures.append_rows(tmpF);
+			dtarget.append_rows(target.subarr(i,i)[0]);
+
+		}
+	}
+#else
+	Array<double>& dfeatures = features;
+	Array<double>& dtarget = target;
+#endif
+	if(SVM_Optimizer* svmOpt = dynamic_cast<SVM_Optimizer*>(&optimizer)){
+		MultiClassSVM* mcsvm = dynamic_cast<MultiClassSVM*>(&model);
+
+		svmOpt->optimize(*mcsvm, dfeatures, dtarget, true);
+	} else {
+		optimizer.optimize(model, errFct, dfeatures, dtarget);
+	}
+}
+
+/**
+ * trains the model using the patterns returned by the given query or the default query if none is given
+ */
 double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
 	double error = 0;
 
@@ -797,20 +843,18 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		// check if we are dealing with an svm, in this case the iterations argument is ignored
 		if(SVM_Optimizer* svmOpt = dynamic_cast<SVM_Optimizer*>(&optimizer)){
 			MyMultiClassSVM* csvm = dynamic_cast<MyMultiClassSVM*>(&model);
-
-//			csvm->setExamples(in, target);
-			svmOpt->optimize(csvm->getSVM(), in, target, true);
+			assert(csvm && "Trying to call SVM_Optimizer with a non MultiClassSVM model");
+			optimizeDistorted(*svmOpt, csvm->getSVM(), errFct, in, target);
 			error = errFct.error(model.getModel(), in, target);
 		}  else if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i) {
-				optimizer.optimize(model.getModel(), errFct, in, target);
+				optimizeDistorted(optimizer, model.getModel(), errFct, in, target);
 				if(TRAINING_OUTPUT)
 					writeStatistics(i, in, target, errFct, -1.0);
 			}
 
 			error = errFct.error(model.getModel(), in, target);
-		}
-		else
+		} else
 //			error = this->earlyStopping(optimizer, errFct, in, target, 10);
 			error = this->myEarlyStopping(optimizer, errFct, in, target, 10, std::max(static_cast<size_t>(1),nRows/1000));
 
