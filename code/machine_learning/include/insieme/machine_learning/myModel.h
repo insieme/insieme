@@ -396,7 +396,7 @@ public:
 	//! \param  Cminus   initial value of \f$ C_- \f$
 	//! \param  norm2	true if 2-norm slack penalty is to be used
 	//! \param  unconst  true if the parameters are to be represented as \f$ \log(C) \f$. This allows for unconstrained optimization.
-	MyEpsilon_SVM(KernelFunction* kernel, double C=0.0, double epsilon=0.0, bool unconst = false)
+	MyEpsilon_SVM(KernelFunction* kernel, double C=1.5, double epsilon=0.5, bool unconst = false)
 		: svm(kernel), shark(&svm, C, epsilon, unconst) {}
 
 	Model& getModel() { return shark; }

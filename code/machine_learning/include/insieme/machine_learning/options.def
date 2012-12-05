@@ -71,4 +71,5 @@ REAL_OPTION("init_interval,r",	"weight_init_boundaries",	Init,			0.125,		"Value 
 #endif
 #ifdef SVM
 REAL_OPTION("cParam,c",			"C parameter for SVM",		C,				1.0,		"Value of parameter C for the support vector machine")
+REAL_OPTION("epsilon,y",		"epsilon param for Y-SVM",	Y,				-1.0,		"Value of parameter epsilon for the epsilon support vector machine")
 #endif
