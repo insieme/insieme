@@ -384,6 +384,125 @@ public:
 	}
 };
 
+class MyEpsilon_SVM : public MyModel {
+private:
+	SVM svm;
+	Epsilon_SVM shark;
+	// needed for saving a model the svm does only store a reference of the input data
+	//Array<double> input;
+public:
+	//! \param  pSVM	 Pointer to the SVM to be optimized.
+	//! \param  Cplus	initial value of \f$ C_+ \f$
+	//! \param  Cminus   initial value of \f$ C_- \f$
+	//! \param  norm2	true if 2-norm slack penalty is to be used
+	//! \param  unconst  true if the parameters are to be represented as \f$ \log(C) \f$. This allows for unconstrained optimization.
+	MyEpsilon_SVM(KernelFunction* kernel, double C=0.0, double epsilon=0.0, bool unconst = false)
+		: svm(kernel), shark(&svm, C, epsilon, unconst) {}
+
+	Model& getModel() { return shark; }
+	SVM& getSVM() { return svm; }
+
+	// Model virtual methods -------------------------------------------------
+
+	void model(const Array<double>& input, Array<double>& output) {
+		shark.model(input, output);
+	}
+/*
+	void modelDerivative(const Array<double>& input, Array<double>& derivative) {
+		//shark.modelDerivative(input, derivative);
+	}
+
+	void modelDerivative(const Array<double>& input, Array<double>& output, Array<double>& derivative) {
+		//shark.modelDerivative(input, output, derivative);
+	}
+
+	void generalDerivative(const Array<double>& input, const Array<double>& coefficient, Array<double>& derivative) {
+		shark.generalDerivative(input, coefficient, derivative);
+	}
+*/
+	bool isFeasible() {
+		return shark.isFeasible();
+	}
+
+	double getParameter(unsigned int index) const {
+		return shark.getParameter(index);
+	}
+
+	void setParameter(unsigned int index, double value) {
+		setParameter(index, value);
+	}
+/* protected
+	Model* CloneI() {
+		return shark.CloneI();
+	}
+*/
+	void read(std::istream& is) {
+		shark.read(is);
+	}
+	virtual void load(const char* path) {
+		std::fstream file(path);
+		assert(file.is_open() && "Cannot open input file in MyEpsilon_SVM::load");
+
+		svm.LoadSVMModel(file);
+		shark = Epsilon_SVM(&svm, 0.0, 0.0);
+		file.close();
+	}
+
+
+	void write(std::ostream& os) const {
+		shark.write(os);
+	}
+	void save(const char* path) {
+		std::fstream file(path, std::ios::out);
+		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
+
+		svm.SaveSVMModel(file);
+		file.close();
+	}
+
+	const unsigned int getInputDimension() const {
+		return 0;
+	}
+
+	const unsigned int getOutputDimension() const {
+		return 1;
+	}
+
+	const unsigned int getParameterDimension() const {
+		return 0;
+	}
+
+	// additional information provided -----------------------------------------------
+	virtual bool usesOneOfNCoding() {
+		return false;
+	}
+
+	const Array<int> getConnections() {
+		Array<int> ret(1);
+		ret[0] = -1;
+		return ret;
+	}
+
+	const std::pair<double, double> getInitInterval() {
+		return std::make_pair(shark.get_C(), shark.get_epsilon());
+	}
+
+	const std::string getType() { return std::string("EpsilonSVM:    "); }
+
+	const std::string getStructure() {
+		std::stringstream out;
+		out << "Kernel Function:";
+		svm.getKernel()->write(out);
+		return out.str();
+	}
+
+	const bool iterativeTraining() const {
+		return false;
+	}
+};
+
+
+
 class MyMultiClassSVM : public MyModel {
 private:
 	MultiClassSVM svm;
@@ -445,7 +564,7 @@ public:
 	}
 	virtual void load(const char* path) {
 		std::fstream file(path);
-		assert(file.is_open() && "Cannot open output file in MyC_SVM::load");
+		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::load");
 
 		bool worked = svm.LoadSVMModel(file);
 		assert(worked && "Cannot load multi class SVM");
@@ -462,7 +581,7 @@ public:
 
 	void save(const char* path) {
 		std::fstream file(path, std::ios::out);
-		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
 
 		bool worked = svm.SaveSVMModel(file);
 		assert(worked && "Cannot save multi class SVM");
@@ -575,7 +694,7 @@ public:
 	}
 	virtual void load(const char* path) {
 /*		std::fstream file(path);
-		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
 
 		svm.LoadSVMModel(file);
 		shark = C_SVM(&svm, 0.0, 0.0);*/
@@ -587,7 +706,7 @@ public:
 	}
 	void save(const char* path) {
 /*		std::fstream file(path, std::ios::out);
-		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
 
 		shark.getSVM()->SaveSVMModel(file);
 		file.close();*/

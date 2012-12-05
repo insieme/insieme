@@ -795,7 +795,7 @@ void Trainer::optimizeDistorted(Optimizer& optimizer, Model& model, ErrorFunctio
 
 			for(size_t j = 0; j < cols; ++j) {
 				double distortion = (double)rand()/((double)RAND_MAX/(2*distortFactor)) - distortFactor;
-				tmpF(j) = tmpF(j) * (1 + distortion);
+				tmpF(j) = tmpF(j) + distortion;
 			}
 
 			dfeatures.append_rows(tmpF);
@@ -809,8 +809,12 @@ void Trainer::optimizeDistorted(Optimizer& optimizer, Model& model, ErrorFunctio
 #endif
 	if(SVM_Optimizer* svmOpt = dynamic_cast<SVM_Optimizer*>(&optimizer)){
 		MultiClassSVM* mcsvm = dynamic_cast<MultiClassSVM*>(&model);
-
-		svmOpt->optimize(*mcsvm, dfeatures, dtarget, true);
+		if(mcsvm)
+			svmOpt->optimize(*mcsvm, dfeatures, dtarget, true);
+		else {
+			SVM* svm = dynamic_cast<SVM*>(&model);
+			svmOpt->optimize(*svm, dfeatures, dtarget, true);
+		}
 	} else {
 		optimizer.optimize(model, errFct, dfeatures, dtarget);
 	}
@@ -843,8 +847,15 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		// check if we are dealing with an svm, in this case the iterations argument is ignored
 		if(SVM_Optimizer* svmOpt = dynamic_cast<SVM_Optimizer*>(&optimizer)){
 			MyMultiClassSVM* csvm = dynamic_cast<MyMultiClassSVM*>(&model);
-			assert(csvm && "Trying to call SVM_Optimizer with a non MultiClassSVM model");
-			optimizeDistorted(*svmOpt, csvm->getSVM(), errFct, in, target);
+			MyEpsilon_SVM* esvm = dynamic_cast<MyEpsilon_SVM*>(&model);
+			if(csvm) {
+				optimizeDistorted(*svmOpt, csvm->getSVM(), errFct, in, target);
+			} else if(esvm) {
+				optimizeDistorted(*svmOpt, esvm->getSVM(), errFct, in, target);
+			}
+			assert((esvm || csvm) && "Trying to call SVM_Optimizer with a non Epsilon- or MultiClassSVM model");
+
+
 			error = errFct.error(model.getModel(), in, target);
 		}  else if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i) {
@@ -861,15 +872,15 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		size_t misClass = 0;
 		for(size_t i = 0; i < in.dim(0); ++i ) {
 			model.model(in.subarr(i,i), out);
-//std::cout << in.subarr(i,i) << out(0) << std::endl;
+//std::cout << in.subarr(i,i) << round(out(0)) << std::endl;
 //std::cout << oneOfNtoIdx(target.subarr(i,i)) << " - " <<  oneOfNtoIdx(out) << std::endl;
 			if(model.usesOneOfNCoding()) {
 				if(oneOfNtoIdx(target.subarr(i,i)) != oneOfNtoIdx(out))
 					++misClass;
-			} else if(target.subarr(i,i)(0) != out(0))
+			} else if(target.subarr(i,i)(0) != round(out(0)))
 				++misClass;
 		}
-		LOG(INFO) << "Misclassification rate: " << (double(misClass)/in.dim(0)) * 100.0 << "%\n";
+		LOG(INFO) << "Missclassification rate: " << (double(misClass)/in.dim(0)) * 100.0 << "%\n";
 
 	} catch(Kompex::SQLiteException& sqle) {
 		const std::string err = "\nSQL query for training data failed\n" ;

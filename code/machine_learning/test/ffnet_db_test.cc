@@ -473,6 +473,53 @@ TEST_F(MlTest, MultiSvmTrain) {
 
 }
 
+TEST_F(MlTest, EpsilonSvmTrain) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("linear.db");
+
+	RBFKernel kernel(1.0);
+
+//	LinearKernel lk;
+	MyEpsilon_SVM msvm(&kernel, 1.5, 0.5);
+	SVM_Optimizer opt;
+
+	Trainer svmTrainer(dbPath, msvm, GenNNoutput::ML_KEEP_INT);
+
+	std::vector<std::string> features;
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	svmTrainer.setStaticFeaturesByIndex(features);
+
+	//SVM_Optimizer::dummyError
+	ClassificationError err;
+
+	double error = svmTrainer.train(opt, err, 1);
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LE(error, 1.0);
+
+	svmTrainer.saveModel("mesvm");
+
+	Array<double> fnp = svmTrainer.getFeatureNormalization();
+	Evaluator eval1(msvm, fnp);
+	RBFKernel k2(1.0);
+	MyEpsilon_SVM load(&k2, 5, 1);
+
+	Evaluator eval2 = Evaluator::loadEvaluator(load, "mesvm");
+
+	Array<double> testPattern(3);
+	for(size_t i = 0; i < 3; ++i) {
+		testPattern(i) = ((double)(rand()%100)/50)-1;
+	}
+
+	size_t trainerSais = svmTrainer.evaluate(testPattern);
+
+	EXPECT_EQ(eval1.evaluate(testPattern), trainerSais);
+//	EXPECT_EQ(eval2.evaluate(testPattern), trainerSais);
+
+}
+
+
 TEST_F(MlTest, FfNetTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");

@@ -415,7 +415,7 @@ int main(int argc, char** argv) {
 	try {
 		std::ofstream out(options.out);
 		if(out.is_open()) {
-			// print cmdOptions when writitng to a file
+			// print cmdOptions when writing to a file
 			printCmdOptions(options, out);
 			evaluateDatabase(options, database, out);
 			out.close();
