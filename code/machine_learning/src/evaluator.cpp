@@ -73,7 +73,7 @@ size_t Evaluator::eval_impl(Array<double>& pattern, Array<double>& out) {
 	model.model(pattern, out);
 
 	if(out.dim(0) == 1)
-		return out(0);
+		return round(out(0));
 
 	// search the maximum in the output
 	return getMaxIdx(out);
