@@ -191,8 +191,6 @@ METRIC(PAPI_DP_OPS,			"PAPI_DP_OPS",				unit,		none);
 METRIC(PAPI_VEC_SP,			"PAPI_VEC_SP",				unit,		none);
 METRIC(PAPI_VEC_DP,			"PAPI_VEC_DP",				unit,		none);
 
-
-
 // derived metrics
 METRIC(TOTAL_EXEC_TIME, 			"total_exec_time", 			ns,			sum(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
 METRIC(AVG_EXEC_TIME, 				"avg_exec_time", 			ns,			avg(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
@@ -212,8 +210,8 @@ METRIC(TOTAL_ENERGY_MC_2,                               "total_energy_mc_2",    
 METRIC(TOTAL_ENERGY,                                    "total_energy",                                 j,                      add(Metric::TOTAL_ENERGY_PACKAGE_1, Metric::TOTAL_ENERGY_PACKAGE_2));
 
 // TODO: re-enable when number of workers is fixed for regions 
-//METRIC(AVG_NUM_WORKERS,				"avg_num_workers",			unit,		avg(Metric::NUM_WORKERS));
-// METRIC(RESOURCE_USAGE,				"resource_usage",			ns,			mul(Metric::TOTAL_WALL_TIME, Metric::AVG_NUM_WORKERS));
+METRIC(AVG_NUM_WORKERS,				"avg_num_workers",			unit,		avg(Metric::NUM_WORKERS));
+METRIC(RESOURCE_USAGE,				"resource_usage",			ns,			mul(Metric::TOTAL_WALL_TIME, Metric::AVG_NUM_WORKERS));
 
 METRIC(WEIGHTED_EFFICIENCY, 		"weighted_efficiency",		unit,		div(sum(l_div(Metric::CPU_TIME, Metric::NUM_WORKERS)), Metric::TOTAL_WALL_TIME));
 
