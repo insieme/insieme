@@ -636,7 +636,8 @@ void _irt_instrumentation_aggregated_data_insert(irt_worker* worker, int64 id, u
 
 	apd->walltime = walltime;
 	apd->cputime = cputime;
-	apd->number_of_workers = 1;
+	//apd->number_of_workers = 1;
+	apd->number_of_workers = irt_g_worker_count;
 	apd->id = id;
 }
 
