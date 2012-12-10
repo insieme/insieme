@@ -547,7 +547,7 @@ core::ExpressionPtr ConversionFactory::attachFuncAnnotations(
 		}
 	}
 
-	pragma::attachPragma(node,funDecl,*this).as<core::StatementPtr>();
+	pragma::attachPragma(node,funcDecl,*this).as<core::StatementPtr>();
 
 // -------------------------------------------------- C NAME ------------------------------------------------------
 
