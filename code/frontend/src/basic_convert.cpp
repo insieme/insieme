@@ -1198,7 +1198,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	ctx.recVarExprMap.clear();
 
 	VLOG(2) << "Converted Into: " << *retLambdaExpr;
-	return attachFuncAnnotations(retLambdaExpr, funcDecl);
+	// attachFuncAnnotations(retLambdaExpr, funcDecl);
+
+	return retLambdaExpr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
