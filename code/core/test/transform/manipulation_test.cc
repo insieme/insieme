@@ -765,6 +765,39 @@ TEST(Manipulation, InlineFunction) {
 
 }
 
+TEST(Manipulation, InlineITE) {
+	// An expression of type fun(int x) { return (x<10)?x-1:x+1; } should be inline-able.
+	// Issue: multiple uses of the variable x within the body
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto call = builder.parseExpr(
+			"(int<4> x)->int<4> {"
+			"	return (x<10)?(x-1):(x+1);"
+			"}(3)"
+	).as<CallExprPtr>();
+
+	ASSERT_TRUE(call);
+
+	// std::cout << core::printer::PrettyPrinter(call, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY) << "\n";
+
+	// this call should be inline-able
+	auto inlined = transform::tryInlineToExpr(mgr, call);
+	EXPECT_TRUE(inlined);
+	EXPECT_NE(inlined, call);		// if it is different, it is fine
+
+	// check resulting IR
+	EXPECT_TRUE(core::checks::check(inlined).empty()) << core::checks::check(inlined);
+
+	// std::cout << core::printer::PrettyPrinter(inlined, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY) << "\n";
+
+	// auto simple = transform::simplify(mgr, call);
+	// std::cout << core::printer::PrettyPrinter(simple, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY) << "\n";
+
+
+}
+
 
 TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
 	NodeManager manager;
