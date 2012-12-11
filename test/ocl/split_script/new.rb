@@ -143,16 +143,13 @@ class Test
     @test_names = []; tests.each{|n| value = $program[n-1]; @test_names << value if value != nil}
     @sizes = sizes
     @iterations = iterations
-#    @static_features = %w{ 
+    @static_features = %w{ SCF_COMP_scalarOPs-vectorOPs_real_sum SCF_COMP_any_read/write_OPs_Calls_real_ratio SCF_COMP_real*_all_VEC_OPs_Calls_real_ratio SCF_COMP_externalFunction_Calls_real_ratio SCF_COMP_integer_all_OPs_Calls_real_ratio SCF_COMP_integer_all_VEC_OPs_Calls_real_ratio SCF_COMP_real*_all_OPs_Calls_real_ratio SCF_COMP_loops_Calls_real_ratio SCF_COMP_branches_Calls_real_ratio SCF_COMP_barrier_Calls_real_ratio SCF_COMP_scalarOPs-vectorOPs_Calls_real_2:1ratio SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio SCF_COMP_allOPs-memoryAccesses_real_2:1ratio }
+#        @static_features = %w{ SCF_COMP_instructions_real_sum SCF_NUM_calls_lambda_real 
 #    SCF_IO_NUM_any_read/write_OPs_real    SCF_NUM_real*_all_VEC_OPs_real          SCF_NUM_externalFunction_lambda_real    SCF_NUM_integer_all_OPs_real
 #                              SCF_NUM_integer_all_VEC_OPs_real        SCF_COMP_scalarOPs-vectorOPs_real_sum   SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio
 #                               SCF_NUM_real*_all_OPs_real      SCF_COMP_allOPs-memoryAccesses_real_2:1ratio    SCF_NUM_loops_lambda_real
 #                               SCF_NUM_branches_lambda_real    SCF_NUM_barrier_Calls_real }
-#    @static_features = %w{      
-#                                SCF_COMP_any_any_OPs_real_sum SCF_IO_NUM_any_read/write_OPs_real  SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio       SCF_COMP_allOPs-memoryAccesses_real_2:1ratio    SCF_NUM_loops_lambda_real
-#                               SCF_NUM_branches_lambda_real    SCF_NUM_barrier_Calls_real }
-
-    @static_features = %w{ pca_1 pca_2 pca_3 pca_4 pca_5 pca_6 }
+#    @static_features = %w{ pca_1 pca_2 pca_3 pca_4 pca_5 pca_6 }
 
     @dynamic_features = %w{	splittable_write_transfer	unsplittable_write_transfer	splittable_read_transfer
 				unsplittable_read_transfer size
@@ -331,7 +328,7 @@ class Test
         exit
       end
       feat = @static_features.map{|f| "-s" + f }.join(" ") + " " + @dynamic_features.map{|f| "-d" + f}.join(" ")
-      cmd = "#{$main_dir}/machine_learning/train_#{type.to_s} -b#{$path}/database/#{$db_ml_name} -ttime #{feat} -n21 -o#{type.to_s + test_name_id.to_s} -e#{test_name_id.to_s} -c5 -kRBFKernel[1.5] > ../split_script/features.txt"
+     cmd = "#{$main_dir}/machine_learning/train_#{type.to_s} -b#{$path}/database/#{$db_ml_name} -ttime #{feat} -n21 -o#{type.to_s + test_name_id.to_s} -e#{test_name_id.to_s} -c5 -kRBFKernel[1.5] > ../split_script/features.txt"
       `#{cmd}`
       exist? "#{type.to_s + test_name_id.to_s}.fnp", cmd
 
@@ -695,7 +692,7 @@ private
     # find the static features SCF_COMP_scalarOPs-vectorOPs_real_sum and rewrite as a dynamic features
     cid = $program.index(test_name) + 1
     fid = $table_static.filter(:name => "SCF_COMP_scalarOPs-vectorOPs_real_sum").select(:id).single_value
-#fid = $table_static.filter(:name => "SCF_COMP_any_any_OPs_real_sum").select(:id).single_value
+#    fid = $table_static.filter(:name => "SCF_COMP_any_any_OPs_real_sum").select(:id).single_value
     op_value = $table_code.filter(:cid => cid, :fid => fid).select(:value).single_value
     if op_value != 0
       values[5] = values[0]/op_value
@@ -820,6 +817,7 @@ split = (1..21).to_a
 #test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
 
 test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) 
+
 
 # run the test
 test.info
