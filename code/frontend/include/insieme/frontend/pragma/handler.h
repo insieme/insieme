@@ -283,6 +283,10 @@ struct PragmaHandlerFactory {
 core::NodePtr  attachPragma( const core::NodePtr& 			node, 
 		  				     const clang::Stmt* 				clangNode, 
 						     conversion::ConversionFactory& 	fact );
+
+core::NodePtr  attachPragma( const core::NodePtr& 			node, 
+		  				     const clang::Decl* 				clangDecl, 
+						     conversion::ConversionFactory& 	fact );
 } // end pragma namespace
 } // End frontend namespace
 } // End insieme namespace

@@ -58,7 +58,11 @@ struct TransformationHint {
 				LOOP_RESCHEDULE,
 				LOOP_PARALLELIZE,
 
-				REGION_STRIP
+				REGION_STRIP,
+
+				// for recursive functions
+				REC_FUN_UNROLL
+
 				// Add here new transformations 
 			  };
 	

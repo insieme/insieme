@@ -189,6 +189,12 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 					l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
     );
 
+	// Recursive Function Unrolling: takes a single integer constant which specifies the unrolling factor
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<REC_FUN_UNROLL>>(
+    	pp.getIdentifierInfo("fun_unroll"),
+			l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
+    );
+
 
 	//===========================================================================================================
 	// Insieme Info
@@ -293,6 +299,10 @@ void attach(const clang::SourceLocation& 	startLoc,
 						  break;
 		
 		case RSTRIP:	  type = annotations::TransformationHint::REGION_STRIP;
+						  break;
+
+		case REC_FUN_UNROLL:
+						  type = annotations::TransformationHint::REC_FUN_UNROLL;
 						  break;
 
 		default:
