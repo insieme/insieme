@@ -163,7 +163,8 @@ enum TransformationType {
 	STAMP,
 	RESCHEDULE,
 	PARALLELIZE,
-	RSTRIP
+	RSTRIP,
+	REC_FUN_UNROLL
 };
 
 typedef std::vector<unsigned> ValueVect;

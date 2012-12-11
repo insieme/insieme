@@ -84,6 +84,8 @@ using namespace core;
 		features.push_back(catalog.getFeature("SCF_NUM_function_calls_weighted"));     // 3
 		features.push_back(catalog.getFeature("SCF_NUM_variables_lambda_static"));     // 4
 		features.push_back(catalog.getFeature("SCF_NUM_branches_lambda_real"));        // 5
+		features.push_back(catalog.getFeature("SCF_COMP_instructions_real_sum"));      // 6
+		features.push_back(catalog.getFeature("SCF_NUM_calls_lambda_real"));           // 7
 
 		std::vector<features::Value> values = features::extractFrom(stmt, features);
 
@@ -93,6 +95,8 @@ using namespace core;
 		EXPECT_EQ(40100, features::getValue<double>(values.at(3)));
 		EXPECT_EQ(17,    features::getValue<double>(values.at(4)));
 		EXPECT_EQ(800,   features::getValue<double>(values.at(5)));
+		EXPECT_EQ(1600,  features::getValue<double>(values.at(6)));
+		EXPECT_EQ(3240,  features::getValue<double>(values.at(7)));
 	}
 
 } // end namespace features

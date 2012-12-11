@@ -101,6 +101,7 @@ void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
 		   "|~> Pragma: " << getType() << " -> " << toStr(sm) << "\n";
 }
 
+
 core::NodePtr attachPragma( const core::NodePtr& 			node, 
 						   const clang::Stmt* 				clangNode, 
 						   conversion::ConversionFactory& 	fact ) 
@@ -115,6 +116,29 @@ core::NodePtr attachPragma( const core::NodePtr& 			node,
 	core::NodePtr ret = node;
 	std::for_each(iter.first, iter.second,
 		[&] (const PragmaStmtMap::StmtMap::value_type& curr) {
+			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {
+				ret = pragma->attachTo(node, fact);
+				return;
+			}
+	});
+
+	return ret;
+}
+
+core::NodePtr attachPragma(const core::NodePtr& 			node, 
+						   const clang::Decl* 				clangDecl, 
+						   conversion::ConversionFactory& 	fact ) 
+{
+	const PragmaStmtMap::DeclMap& pragmaDeclMap = fact.getPragmaMap().getDeclarationMap();
+
+	typedef PragmaStmtMap::DeclMap::const_iterator PragmaDeclIter; 
+
+	// Get the list of pragmas attached to the clang node
+	std::pair<PragmaDeclIter, PragmaDeclIter>&& iter = pragmaDeclMap.equal_range(clangDecl);
+
+	core::NodePtr ret = node;
+	std::for_each(iter.first, iter.second,
+		[&] (const PragmaStmtMap::DeclMap::value_type& curr) {
 			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {
 				ret = pragma->attachTo(node, fact);
 				return;
