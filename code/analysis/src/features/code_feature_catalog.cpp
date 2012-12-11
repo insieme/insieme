@@ -174,7 +174,7 @@ using insieme::transform::pattern::any;
 						string desc = format("Counts the number of vectorized %s operations operating on %s - aggregation mode: %s",
 								cur_ops.first.c_str(), cur_type.first.c_str(), cur_mode.first.c_str());
 
-						catalog.addFeature(createSimpleCodeFeature(name, desc, createVectorOpSpec(cur_type.second, cur_ops.second, -1, cur_mode.second)));
+						catalog.addFeature(createSimpleCodeFeature(name, desc, createVectorOpSpec(cur_type.second, cur_ops.second, false, cur_mode.second)));
 					});
 				});
 			});
@@ -363,6 +363,12 @@ using insieme::transform::pattern::any;
 				return 0;
 			};
 
+			lambdas["calls"] = [&](core::NodePtr node) {
+				if(node->getNodeType() == core::NT_CallExpr)
+					return 1;
+				return 0;
+			};
+
 			// not sure if all makes sense in this case...
 //			ops["all"] = vector<core::ExpressionPtr>();
 //			addAll(ops["all"], ops["barrier"]);
@@ -417,6 +423,23 @@ using insieme::transform::pattern::any;
 			composedFeatures[format(name, mode)] = features;
 		}
 
+
+		void addQuaternaryComposedFeature(const char* name, const char* component0, const char* component1, const char* component2, const char* component3,
+				const char* mode, FeatureCatalog& catalog, std::map<string, std::vector<FeaturePtr> >& composedFeatures) {
+			std::vector<FeaturePtr> features;
+
+			features.push_back(catalog.getFeature(format(component0, mode)));
+			assert(features.back() && "Feature 1 of 4 is invalid");
+			features.push_back(catalog.getFeature(format(component1, mode)));
+			assert(features.back() && "Feature 2 of 4 is invalid");
+			features.push_back(catalog.getFeature(format(component2, mode)));
+			assert(features.back() && "Feature 3 of 4 is invalid");
+			features.push_back(catalog.getFeature(format(component3, mode)));
+			assert(features.back() && "Feature 4 of 4 is invalid");
+
+			composedFeatures[format(name, mode)] = features;
+		}
+
 		// add features that are composed of other features by a composing function
 		void addComposedFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
 
@@ -429,6 +452,38 @@ using insieme::transform::pattern::any;
 
 			std::map<string, std::vector<FeaturePtr> > composedFeatures;
 			for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
+
+				addBinaryComposedFeature("any_read/write_OPs_Calls_%s", "SCF_IO_NUM_any_read/write_OPs_%s", "SCF_NUM_calls_lambda_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
+				addBinaryComposedFeature("real*_all_VEC_OPs_Calls_%s", "SCF_NUM_real*_all_VEC_OPs_%s", "SCF_NUM_calls_lambda_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
+				addBinaryComposedFeature("externalFunction_Calls_%s", "SCF_NUM_externalFunction_lambda_%s", "SCF_NUM_calls_lambda_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
+				addBinaryComposedFeature("integer_all_OPs_Calls_%s", "SCF_NUM_integer_all_OPs_%s", "SCF_NUM_calls_lambda_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
+				addBinaryComposedFeature("integer_all_VEC_OPs_Calls_%s", "SCF_NUM_integer_all_VEC_OPs_%s", "SCF_NUM_calls_lambda_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
+				addBinaryComposedFeature("real*_all_OPs_Calls_%s", "SCF_NUM_real*_all_OPs_%s", "SCF_NUM_calls_lambda_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
+				addBinaryComposedFeature("loops_Calls_%s", "SCF_NUM_loops_lambda_%s", "SCF_NUM_calls_lambda_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
+				addBinaryComposedFeature("branches_Calls_%s", "SCF_NUM_branches_lambda_%s", "SCF_NUM_calls_lambda_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
+				addBinaryComposedFeature("barrier_Calls_%s", "SCF_NUM_barrier_Calls_%s", "SCF_NUM_calls_lambda_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
+				addTernaryComposedFeature("scalarOPs-vectorOPs_Calls_%s", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s", "SCF_NUM_calls_lambda_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
+
 				addBinaryComposedFeature("scalarOPs-memoryAccess_%s", "SCF_NUM_any_all_OPs_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
 
@@ -441,6 +496,9 @@ using insieme::transform::pattern::any;
 				addTernaryComposedFeature("any_any_OPs_%s", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",
 						"SCF_NUM_externalFunction_lambda_%s",	cur_mode.first.c_str(), catalog, composedFeatures);
 
+				addQuaternaryComposedFeature("instructions_%s", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",
+						"SCF_NUM_externalFunction_lambda_%s", "SCF_IO_NUM_any_read/write_OPs_%s", cur_mode.first.c_str(), catalog, composedFeatures);
+
 				addBinaryComposedFeature("localMemoryAccesses-allMemoryAccesses_%s", "SCF_NUM_localMemoryAccess_calls_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
 
@@ -448,7 +506,7 @@ using insieme::transform::pattern::any;
 						"SCF_IO_NUM_any_read/write_OPs_%s",	cur_mode.first.c_str(), catalog, composedFeatures);
 			});
 
-			std::map<string, ComposedFeature::composingFctTy > binaryComposingFunctions, ternaryComposingFunctions;
+			std::map<string, ComposedFeature::composingFctTy > binaryComposingFunctions, ternaryComposingFunctions, quaternaryComposingFunctions;
 			binaryComposingFunctions["sum"] = GEN_COMPOSING_FCT(
 					return (component(0) + component(1));
 			);
@@ -475,6 +533,13 @@ using insieme::transform::pattern::any;
 					return (component(0) * component(1) * component(2));
 			);
 
+			quaternaryComposingFunctions["sum"] = GEN_COMPOSING_FCT(
+					return (component(0) + component(1) + component(2) + component(3));
+			);
+			quaternaryComposingFunctions["product"] = GEN_COMPOSING_FCT(
+					return (component(0) * component(1) * component(2) * component(3));
+			);
+
 			// create the actual features
 			for_each(composedFeatures, [&](const std::pair<string, std::vector<FeaturePtr> > & cur_features){
 				if(cur_features.second.size() == 2) {
@@ -499,9 +564,20 @@ using insieme::transform::pattern::any;
 
 						catalog.addFeature(createComposedFeature(name, desc, cur_fct.second, cur_features.second));
 					});
+				} else if(cur_features.second.size() == 4) {
+					for_each(quaternaryComposingFunctions, [&](const std::pair<string, ComposedFeature::composingFctTy >& cur_fct) {
+
+						string name = format("SCF_COMP_%s_%s",
+								cur_features.first.c_str(), cur_fct.first.c_str());
+
+						string desc = format("Counts the %s of %s",
+								cur_fct.first.c_str(), cur_features.first.c_str());
+
+						catalog.addFeature(createComposedFeature(name, desc, cur_fct.second, cur_features.second));
+					});
 				} else {
 					LOG(ERROR) << "Invalid number of features: " <<  cur_features.second.size() << std::endl;
-					assert(cur_features.second.size() > 3 && "Too much components passed");
+					assert(cur_features.second.size() > 4 && "Too much components passed");
 					assert(cur_features.second.size() < 2 && "Too few components passed");
 				}
 			});
