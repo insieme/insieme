@@ -114,6 +114,46 @@ namespace analysis {
 			<< "Lambda:   " << core::printer::PrettyPrinter(fun->getLambda(), core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY);
 	}
 
+
+	TEST(FreeVariables, RecursiveVariableBug_2) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// BUG: - the recursive variable of a function is identified as a free variable outside the recursion
+		//      - this seems to only happens within mutual recursive functions
+		// Reason: the normalize operation is broken - recursive variables are not preserved properly!!
+
+		// create example
+		auto code = builder.parseExpr(
+				"let f = (int<4> x)->int<4> {"
+				"	return (int<4> y)->int<4> {"
+				"		return f(y);"
+				"	}(x);"
+				"} in f(3)"
+		);
+
+		ASSERT_TRUE(code);
+
+		// normalize
+//		code = builder.normalize(code);
+
+		std::cout << "\n";
+		std::cout << *code << "\n";
+		std::cout << *builder.normalize(code) << "\n";
+		std::cout << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS) << "\n";
+
+		// get list of free variables
+		auto freeVars = analysis::getFreeVariables(code);
+		EXPECT_TRUE(freeVars.empty()) << freeVars;
+
+		// should also be true for addresses
+		auto freeAds = analysis::getFreeVariableAddresses(code);
+		EXPECT_TRUE(freeAds.empty()) << freeAds;
+
+	}
+
+
+
 	TEST(AllVariables, BindTest) {
 		NodeManager manager;
 		IRBuilder builder(manager);

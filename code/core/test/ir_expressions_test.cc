@@ -799,7 +799,7 @@ TEST(ExpressionTest, UnrollCompactFib) {
 				core::printer::PrettyPrinter::NO_EVAL_LAZY);
 	};
 
-//	fun = transform::correctRecursiveLambdaVariableUsage(manager, fun);
+	fun = transform::correctRecursiveLambdaVariableUsage(manager, fun);
 	LambdaExprPtr unrolled = fun->unroll(2);
 
 	EXPECT_PRED2(notContainsSubString,
