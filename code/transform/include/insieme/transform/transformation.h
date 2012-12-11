@@ -64,6 +64,26 @@ namespace transform {
 	class TransformationType;
 	typedef const TransformationType* TransformationTypePtr;
 
+	/**
+	 * An exception which will be raised in case a transformation can not be applied to
+	 * a certain target node.
+	 */
+	class InvalidTargetException : public std::invalid_argument {
+	public:
+		InvalidTargetException(const string& cause) : invalid_argument(cause) {};
+		InvalidTargetException(const core::NodePtr& node);
+		virtual ~InvalidTargetException() throw() { }
+	};
+
+	/**
+	 * An exception which will be raised in case a transformation should be constructed
+	 * using an invalid set of parameters.
+	 */
+	class InvalidParametersException : public std::invalid_argument {
+	public:
+		InvalidParametersException(const string& cause = "Cannot instantiate Transformation based on given Parameters!") : invalid_argument(cause) {};
+		virtual ~InvalidParametersException() throw() { }
+	};
 
 	/**
 	 * Within the Catalog, transformations are represented via transformation types. Instances of this class
@@ -199,7 +219,7 @@ namespace transform {
 		 */
 		Transformation(const TransformationType& type, const parameter::Value& params)
 			: type(type), subTransformations(), parameters(params) {
-			assert(type.getParameterInfo()->isValid(params) && "Constructed using invalid parameters!");
+			if (!type.getParameterInfo()->isValid(params)) throw InvalidParametersException("Constructed using invalid parameters!");
 		}
 
 		/**
@@ -364,28 +384,6 @@ namespace transform {
 		 * @param other the transformation to be compared with
 		 */
 		bool operator<(const Transformation& other) const;
-	};
-
-
-	/**
-	 * An exception which will be raised in case a transformation can not be applied to
-	 * a certain target node.
-	 */
-	class InvalidTargetException : public std::invalid_argument {
-	public:
-		InvalidTargetException(const string& cause) : invalid_argument(cause) {};
-		InvalidTargetException(const core::NodePtr& node);
-		virtual ~InvalidTargetException() throw() { }
-	};
-
-	/**
-	 * An exception which will be raised in case a transformation should be constructed
-	 * using an invalid set of parameters.
-	 */
-	class InvalidParametersException : public std::invalid_argument {
-	public:
-		InvalidParametersException(const string& cause = "Cannot instantiate Transformation based on given Parameters!") : invalid_argument(cause) {};
-		virtual ~InvalidParametersException() throw() { }
 	};
 
 
