@@ -291,17 +291,17 @@ namespace {
 		}
 
 		bool visitBindExpr(const Ptr<const BindExpr>& bindExpr) {
-			// register recursive lambda variables
-//			for(const auto& param : bindExpr->getParameters()) {
-//				bound.insert(param);
-//			}
-//			return false;
 
-			// NOTE: this is the old bug version (does not consider variables within call expression)
+			// first search for free variables within bound expressions
 			auto expressions = bindExpr->getBoundExpressions();
 			for_each(expressions, [&](const Ptr<const Expression>& e) {
 				visitDepthFirstPrunable(e, *this);
 			} );
+
+			// add free variables encountered within call target
+			visitDepthFirstPrunable(bindExpr->getCall()->getFunctionExpr(), *this);
+
+			// that's all within this branch
 			return true;
 		}
 	};
