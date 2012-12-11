@@ -267,9 +267,19 @@ namespace {
 
 
 			// The type used to annotate free variable lists.
-			struct FreeVariableSet : public ResultSet {
+			struct FreeVariableSet : public ResultSet, public value_annotation::migratable {
 				FreeVariableSet(const ResultSet& set) : ResultSet(set) {}
 				FreeVariableSet(const ResultList& list) : ResultSet(list.begin(), list.end()) {}
+
+				static VariablePtr cloneTo(NodeManager& manager, const VariablePtr& ptr) { return manager.get(ptr); }
+				static VariableAddress cloneTo(NodeManager& manager, const VariableAddress& addr) { return addr.cloneTo(manager); }
+
+				// migrate free variable set to new node manager during clone operations
+				void migrateTo(const NodePtr& target) const {
+					ResultSet newSet;
+					for(auto cur : *this) { newSet.insert(cloneTo(target->getNodeManager(), cur)); }
+					target->attachValue(FreeVariableSet(newSet));
+				}
 			};
 
 			// check annotation
@@ -281,10 +291,14 @@ namespace {
 
 			// should be fixed now
 			assert(definition->template hasAttachedValue<FreeVariableSet>());
+			assert(all(definition->template getAttachedValue<FreeVariableSet>(), [&](const VariablePtr& cur)->bool { return definition->getNodeManager().contains(cur); }));
 
 			// add free variables to result set
 			for(const auto& cur : definition->template getAttachedValue<FreeVariableSet>()) {
-				free.insert(collectRecursive.extend(definition, cur));
+				// if variable is not defined by the enclosed lambda definition block
+				if (!definition->getDefinitionOf(cur)) {
+					free.insert(collectRecursive.extend(definition, cur));
+				}
 			}
 
 			return true;
