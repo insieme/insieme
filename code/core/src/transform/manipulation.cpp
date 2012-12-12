@@ -272,7 +272,7 @@ namespace {
 				return ptr->substitute(ptr->getNodeManager(), *this);
 			}
 
-			const VariablePtr& var = static_pointer_cast<const Variable>(ptr);
+			const VariablePtr& var = ptr.as<VariablePtr>();
 
 			// check whether variable has been already encountered
 			if (replacedOnce.find(var) != replacedOnce.end()) {
@@ -301,10 +301,9 @@ namespace {
 		}
 
 		static bool isSideEffectFree(const ExpressionPtr& expr) {
-
-			// all variables and literals are side-effect free accessable
+			// all variables and literals are side-effect free accessible
 			NodeType type = expr->getNodeType();
-			if (type != NT_Variable && type != NT_Literal) {
+			if (type == NT_Variable || type == NT_Literal) {
 				return true;
 			}
 
@@ -387,7 +386,7 @@ namespace {
 		// Step 2 - check body => has to be a return statement
 		StatementPtr bodyStmt = lambda->getLambda()->getBody();
 
-		if (CompoundStmtPtr compound = dynamic_pointer_cast<const CompoundStmt>(bodyStmt)) {
+		while (CompoundStmtPtr compound = dynamic_pointer_cast<const CompoundStmt>(bodyStmt)) {
 			const auto& stmts = compound->getStatements();
 			if (stmts.size() == 1) {
 				bodyStmt = stmts[0];
@@ -422,7 +421,7 @@ namespace {
 
 		// Step 4 - substitute variables within body
 		InlineSubstituter substituter(replacements);
-		ExpressionPtr res = static_pointer_cast<const Expression>(substituter.mapElement(0, body));
+		ExpressionPtr res = substituter.mapElement(0, body).as<ExpressionPtr>();
 
 		// check result
 		if (substituter.wasSuccessful()) {
@@ -439,7 +438,7 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call) {
 	bool successful = true;
 	ExpressionPtr res = call;
 	while(successful && res->getNodeType() == NT_CallExpr) {
-		ExpressionPtr tmp = tryInlineToExprInternal(manager, static_pointer_cast<const CallExpr>(res));
+		ExpressionPtr tmp = tryInlineToExprInternal(manager, res.as<CallExprPtr>());
 		successful = (*tmp != *res);
 		res = tmp;
 	}

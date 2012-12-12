@@ -73,6 +73,7 @@ namespace backend {
 		steps.push_back(makePreProcessor<InitZeroSubstitution>());
 		steps.push_back(makePreProcessor<MakeVectorArrayCastsExplicit>());
 		steps.push_back(makePreProcessor<RedundancyElimination>());
+		steps.push_back(makePreProcessor<CorrectRecVariableUsage>());
 		return makePreProcessor<PreProcessingSequence>(steps);
 	}
 
@@ -761,8 +762,18 @@ namespace backend {
 	}
 
 	core::NodePtr RedundancyElimination::process(core::NodeManager& manager, const core::NodePtr& code) {
-		// the converter does the magic
+		// this pass has been implemented as part of the core manipulation utils
 		return transform::eliminateRedundantAssignments(code);
+	}
+
+	core::NodePtr CorrectRecVariableUsage::process(core::NodeManager& manager, const core::NodePtr& code) {
+		// this pass has been implemented as part of the core manipulation utils
+		return core::transform::makeCachedLambdaMapper([&](const core::NodePtr& code)->core::NodePtr {
+			// only consider lambdas
+			if (code->getNodeType() != core::NT_LambdaExpr) return code;
+			// use core library utility to fix recursive variable usage
+			return core::transform::correctRecursiveLambdaVariableUsage(manager, code.as<core::LambdaExprPtr>());
+		}).map(code);
 	}
 
 } // end namespace backend

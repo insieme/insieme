@@ -53,6 +53,7 @@
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/simplify.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
@@ -82,7 +83,10 @@ namespace backend {
 			assert(exprPtr && "Lazy is not an expression!");
 
 			// use core functionality
-			return core::transform::evalLazy(manager, exprPtr);
+			auto res = core::transform::evalLazy(manager, exprPtr);
+
+			// simplify evaluated lazy expression
+			return core::transform::simplify(manager, res);
 		}
 
 		core::ExpressionPtr wrapNarrow(const core::ExpressionPtr& root, const core::ExpressionPtr& dataPath) {
