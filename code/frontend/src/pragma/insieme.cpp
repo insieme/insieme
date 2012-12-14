@@ -41,6 +41,7 @@
 #include "insieme/annotations/transform.h"
 #include "insieme/annotations/info.h"
 #include "insieme/annotations/data_annotations.h"
+#include "insieme/annotations/loop_annotations.h"
 #include "insieme/annotations/c/location.h"
 
 #include "insieme/core/ir_expressions.h"
@@ -117,6 +118,15 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
     insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeDatarange>(
             pp.getIdentifierInfo("datarange"), range_list["ranges"] >> eod, "insieme")
         );
+
+//*************************************************************************************************
+// Insieme Pragmas for Feature estimations
+//************************************************************************************************/
+
+	// Suggestion for the number of loop iterations. Will be used for feature extraction
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeLoop>(
+			pp.getIdentifierInfo("iterations"), tok::numeric_constant["value"] >> eod, "insieme")
+	);
 
 //*************************************************************************************************
 // Insieme Pragmas for Transformations 
@@ -246,6 +256,34 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
     if(annot)
         irNode->addAnnotation(annot);
 
+}
+
+
+void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::ConversionFactory& convFact) {
+    insieme::core::NodeAnnotationPtr annot;
+
+    // check if there is a datarange annotation
+    const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+    std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+
+    std::for_each(iter.first, iter.second,
+        [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
+            const frontend::InsiemeLoop* loop = dynamic_cast<const frontend::InsiemeLoop*>( &*(curr.second) );
+            if(loop) {
+            	pragma::MatchMap mmap = loop->getMatchMap();
+            	auto iter = mmap.find("value");
+
+            	if(iter == mmap.end())
+            		return;
+
+            	size_t n = insieme::utils::numeric_cast<size_t>(*iter->second.front()->get<std::string*>());
+                annot = std::make_shared<annotations::LoopAnnotation>(n);
+            }
+    });
+
+    if(annot) {
+        irNode->addAnnotation(annot);
+    }
 }
 
 namespace {

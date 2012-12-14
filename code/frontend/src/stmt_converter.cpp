@@ -401,6 +401,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		// check for datarange pragma
 		attatchDatarangeAnnotation(forIr, forStmt, convFact);
+		attatchLoopAnnotation(forIr, forStmt, convFact);
 
 		retStmt.push_back(omp::attachOmpAnnotation(forIr, forStmt, convFact));assert(
 				retStmt.back() && "Created for statement is not valid");
