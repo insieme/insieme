@@ -73,5 +73,5 @@ int main(int argc, char** argv) {
 	end_t = clock();
 	elapsed_time = (double)(end_t-start_t)/CLOCKS_PER_SEC;
 	//printf("%d, %0.2f, %0.2f, %0.2f\n", N, setup_time + elapsed_time, setup_time, elapsed_time);
-	//printf("%d\n", resv);
+	printf("%f %f\n", resv, tmp[0][1]);
 }

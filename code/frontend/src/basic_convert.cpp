@@ -517,8 +517,10 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	return retStmt;
 }
 
-core::ExpressionPtr ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node,
-		const clang::FunctionDecl* funcDecl) {
+core::ExpressionPtr ConversionFactory::attachFuncAnnotations(
+		const core::ExpressionPtr& node,
+		const clang::FunctionDecl* funcDecl) 
+{
 // ----------------------------------- Add annotations to this function -------------------------------------------
 // check Attributes of the function definition
 	annotations::ocl::BaseAnnotation::AnnotationList kernelAnnotation;
@@ -544,6 +546,8 @@ core::ExpressionPtr ConversionFactory::attachFuncAnnotations(const core::Express
 			}
 		}
 	}
+
+	pragma::attachPragma(node,funcDecl,*this).as<core::StatementPtr>();
 
 // -------------------------------------------------- C NAME ------------------------------------------------------
 
@@ -1194,7 +1198,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	ctx.recVarExprMap.clear();
 
 	VLOG(2) << "Converted Into: " << *retLambdaExpr;
-	return attachFuncAnnotations(retLambdaExpr, funcDecl);
+	// attachFuncAnnotations(retLambdaExpr, funcDecl);
+
+	return retLambdaExpr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -49,6 +49,7 @@
 #include "insieme/utils/logging.h"
 
 using namespace insieme::core;
+using namespace insieme::core::arithmetic;
 
 namespace insieme { 
 namespace analysis { 
@@ -61,8 +62,13 @@ value_type RankPropagation::init() const {
 	const auto& lhsBase = extracted.getLeftBaseSet();
 	return makeCartProdSet(
 			lhsBase, 
-			std::set<dfa::Value<core::ExpressionPtr>>( 
-				{ dfa::Value<core::ExpressionPtr>(dfa::top) } 
+			makeCartProdSet(
+				std::set<dfa::Value<core::arithmetic::Constraint>>( 
+					{ dfa::Value<core::arithmetic::Constraint>(dfa::top) } 
+				),
+				std::set<dfa::Value<core::ExpressionPtr>>( 
+					{ dfa::Value<core::ExpressionPtr>(dfa::top) } 
+				)
 			)
 		).expand();
 }
@@ -74,8 +80,13 @@ value_type RankPropagation::bottom() const {
 
 	return makeCartProdSet(
 			lhsBase, 
-			std::set<dfa::Value<core::ExpressionPtr>>( 
-				{ dfa::Value<core::ExpressionPtr>(dfa::bottom) } 
+			makeCartProdSet(
+				std::set<dfa::Value<core::arithmetic::Constraint>>( 
+					{ dfa::Value<core::arithmetic::Constraint>(dfa::bottom) } 
+				),
+				std::set<dfa::Value<core::ExpressionPtr>>( 
+					{ dfa::Value<core::ExpressionPtr>(dfa::bottom) } 
+				)
 			)
 		).expand();
 }
@@ -120,14 +131,14 @@ value_type RankPropagation::meet(const value_type& lhs, const value_type& rhs) c
 	};
 
 	auto var = [](const value_type::value_type& cur) { return std::get<0>(cur); };
-	auto val = [](const value_type::value_type& cur) { return std::get<1>(cur); };
+	auto val = [](const value_type::value_type& cur) { return std::get<2>(cur); };
 
 	value_type ret;
 	value_type::const_iterator lhs_it = lhs.begin(), rhs_it = rhs.begin(), it, end;
 
 	while(lhs_it != lhs.end() && rhs_it != rhs.end()) {
 		if(*var(*lhs_it) == *var(*rhs_it)) {
-			ret.insert( std::make_tuple(var(*lhs_it), eval(val(*lhs_it), val(*rhs_it))) );
+			ret.insert( std::make_tuple(var(*lhs_it), dfa::bottom, eval(val(*lhs_it), val(*rhs_it))) );
 			++lhs_it; ++rhs_it;
 			continue;
 		}
@@ -164,7 +175,7 @@ dfa::Value<ExpressionPtr> lookup( const AccessManager& aMgr, const AccessPtr& va
 				return *std::get<0>(cur) == *accessClass; 
 			});
 
-		if( fit != in.end() ) return std::get<1>(*fit);
+		if( fit != in.end() ) return std::get<2>(*fit);
 	}
 
 	return dfa::top;
@@ -237,15 +248,16 @@ RankPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block)
 	 * by the new definition. The comparision is done based on the class to which the access belongs
 	 * to
 	 */
-	auto populateSets = [&](const AccessManager& aMgr, 
-							const AccessPtr& defAccess, 
-							const dfa::Value<ExpressionPtr>& res) 
+	auto populateSets = [&](const AccessManager& 			 aMgr, 
+							const AccessPtr& 				 defAccess, 
+							const dfa::Value<ExpressionPtr>& res,
+							const Constraint&				 dom) 
 	{
 		auto defClasses = aMgr.findClass(defAccess);
 		assert(!defClasses.empty() && "Invalid class for access. Something wrong in the extract() method");
 
 		for (const auto& defClass : defClasses) {
-			gen.insert( std::make_tuple(defClass, res) );
+			gen.insert( std::make_tuple(defClass, dom, res) );
 		}
 
 		AccessClassSet confClasses = getConflicting(defClasses);
@@ -265,6 +277,25 @@ RankPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block)
 	if (block->empty()) { return {gen,kill}; }
 
 	core::NodeManager& mgr = getCFG().getNodeManager();
+		
+	Constraint dom;
+
+	/** 
+	 * We need to check wether the predecessor node is a terminal node and then 
+	 * determine from the edge expression if we are in the true or false branch
+	 */
+	if (std::distance(block->predecessors_begin(), block->predecessors_end()) == 1) { 
+
+		if ((*block->predecessors_begin())->hasTerminator()) {
+			
+			LOG(INFO) << (*block->predecessors_begin())->terminator();
+
+//			dom = toConstraint(  ); 
+			
+		}
+
+	}
+
 
 	size_t stmt_idx = 0;
 	for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
@@ -311,8 +342,9 @@ RankPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block)
 					? eval(aMgr, cfg::Address(block, stmt_idx-1, initVal), in, getCFG()) 
 					: dfa::Value<ExpressionPtr>(varAddr);
 
-			populateSets(aMgr, defAccess, res);
+			populateSets(aMgr, defAccess, res, dom);
 		};
+
 
 
 		/**
@@ -378,7 +410,7 @@ RankPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block)
 					getCFG().getTmpVarMap()
 				);
 
-			populateSets(aMgr, itAcc, dfa::bottom);
+			populateSets(aMgr, itAcc, dfa::bottom, dom);
 		} 	
 
 	});

@@ -50,6 +50,7 @@ int main() {
 	int* b;
 	int i;
 
+#pragma insieme iterations 10
 	for(i = 0; i < 10; ++i) {
 #pragma insieme datarange (a = i-1 : i+1), (b = i : i)
 	{

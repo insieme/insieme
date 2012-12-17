@@ -286,7 +286,7 @@ class Logger {
 	{ 
 #ifdef __GNUC__
 		/* Register an handler for segmentation faults */
- 		signal(SIGSEGV, handler); 
+ 		// signal(SIGSEGV, handler); 
 #endif
 	}
 

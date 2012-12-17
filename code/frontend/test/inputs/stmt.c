@@ -167,7 +167,7 @@ void if_stmt_test() {
 	}
 
 	#pragma test \
-	"if((( *v1)==0)) { (v1 := (( *v1)+( *v1)));} else { }"
+	"if((( *v1)==0)) { (v1 := (( *v1)+( *v1)));}"
 	if(cond == 0) {
 		cond += cond;
 	}
@@ -182,7 +182,7 @@ void if_stmt_test() {
 	a == 0 ? a+1 : a-1;
 
 	#pragma test \
-	"if(((( *v1)>0) && bind(){fun(ref<int<4>> v2){ return (( *v2)!=1);}(v1)})) { } else { }"
+	"if(((( *v1)>0) && bind(){fun(ref<int<4>> v2){ return (( *v2)!=1);}(v1)})) { }"
 	if(cond > 0 && cond != 1) {	; }
 }
 

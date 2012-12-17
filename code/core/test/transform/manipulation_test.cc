@@ -765,6 +765,39 @@ TEST(Manipulation, InlineFunction) {
 
 }
 
+TEST(Manipulation, InlineITE) {
+	// An expression of type fun(int x) { return (x<10)?x-1:x+1; } should be inline-able.
+	// Issue: multiple uses of the variable x within the body
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto call = builder.parseExpr(
+			"(int<4> x)->int<4> {"
+			"	return (x<10)?(x-1):(x+1);"
+			"}(3)"
+	).as<CallExprPtr>();
+
+	ASSERT_TRUE(call);
+
+	// std::cout << core::printer::PrettyPrinter(call, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY) << "\n";
+
+	// this call should be inline-able
+	auto inlined = transform::tryInlineToExpr(mgr, call);
+	EXPECT_TRUE(inlined);
+	EXPECT_NE(inlined, call);		// if it is different, it is fine
+
+	// check resulting IR
+	EXPECT_TRUE(core::checks::check(inlined).empty()) << core::checks::check(inlined);
+
+	// std::cout << core::printer::PrettyPrinter(inlined, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY) << "\n";
+
+	// auto simple = transform::simplify(mgr, call);
+	// std::cout << core::printer::PrettyPrinter(simple, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY) << "\n";
+
+
+}
+
 
 TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
 	NodeManager manager;
@@ -785,7 +818,7 @@ TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
 	// normalize representation (since parser is not deterministic)
 	in = analysis::normalize(in);
 
-	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {rec v1.{v1=fun() {v0(5);}}();}}",
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {rec v2.{v2=fun() {v0(5);}}();}}",
 		toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in)))
 	);
 
@@ -817,8 +850,8 @@ TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
 	in = analysis::normalize(in);
 
 	EXPECT_EQ("rec v0.{"
-			"v1=fun(int<4> v2) {1; rec v0.{v0=fun() {return v1(5);}}(); v1(4); v0(v1(4)); rec v1.{v1=fun() {return v0(5);}}();}, "
-			"v0=fun(int<4> v3) {2; rec v0.{v0=fun() {return v1(5);}}(); v1(v0(4)); v0(4); rec v1.{v1=fun() {return v0(5);}}();}"
+			"v1=fun(int<4> v2) {1; rec v3.{v3=fun() {return v1(5);}}(); v1(4); v0(v1(4)); rec v3.{v3=fun() {return v0(5);}}();}, "
+			"v0=fun(int<4> v4) {2; rec v3.{v3=fun() {return v1(5);}}(); v1(v0(4)); v0(4); rec v3.{v3=fun() {return v0(5);}}();}"
 			"}",
 		toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in)))
 	);

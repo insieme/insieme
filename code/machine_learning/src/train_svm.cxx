@@ -69,6 +69,7 @@ size_t numberOfFeatures() {
 }
 
 typedef std::shared_ptr<KernelFunction> KernelFunctionPtr;
+typedef std::shared_ptr<MyModel> MyModelPtr;
 
 template<typename T>
 T convertTo(std::string str, std::string start, std::string end) {
@@ -118,14 +119,22 @@ int main(int argc, char* argv[]) {
 //	GeneralGaussKernel a(3,1.0);
 
 	// declare Machine
-	MyMultiClassSVM svm(&*kernel, nOut, TrainCmdOptions::C);
+	MyModelPtr svm;
+	if(TrainCmdOptions::Y < 0) {
+		std::cerr << "TRaining a multi Class\n";
+		svm = std::make_shared<MyMultiClassSVM>(&*kernel, nOut, TrainCmdOptions::C);
+	}
+	else {
+		std::cerr << "TRaining an Epsilon\n";
+		svm = std::make_shared<MyEpsilon_SVM>(&*kernel, nOut, TrainCmdOptions::C, TrainCmdOptions::Y);
+	}
 	SVM_Optimizer optimizer;
 	MeanSquaredError err;
 
 	Trainer* svmTrainer;
 	// create trainer
 	try {
-		svmTrainer = new Trainer(dbPath, svm, strToGenNNoutput(TrainCmdOptions::TargetGen));
+		svmTrainer = new Trainer(dbPath, *svm, strToGenNNoutput(TrainCmdOptions::TargetGen));
 	} catch(Kompex::SQLiteException& sle) {
 		LOG(ERROR) << "Cannot create trainer: \n";
 		sle.Show();

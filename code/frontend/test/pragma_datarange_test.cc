@@ -39,6 +39,7 @@
 #include "insieme/core/ir_program.h"
 
 #include "insieme/annotations/data_annotations.h"
+#include "insieme/annotations/loop_annotations.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/compiler.h"
@@ -78,7 +79,7 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "/inputs/insieme_datarange.c" << "' to IR...";
 
 	program = prog.convert();
-	size_t cnt = 0;
+	size_t cnt = 0, cntLoopAnnot = 0;
 
 
 	auto lookForAnnot = makeLambdaVisitor([&](const NodePtr& node) {
@@ -89,11 +90,18 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 			++cnt;
 //			std::cout << node << std::endl << *node->getAnnotation(DataRangeAnnotation::KEY) << std::endl;
 		}
+
+		if(node->hasAnnotation(LoopAnnotation::KEY)) {
+			++cntLoopAnnot;
+			insieme::annotations::LoopAnnotationPtr lAnnot = node->getAnnotation(LoopAnnotation::KEY);
+			EXPECT_EQ(10u, lAnnot->getIterations());
+		}
 	});
 
 	visitDepthFirst(program, lookForAnnot);
 
 	EXPECT_EQ(2u, cnt);
+	EXPECT_EQ(1u, cntLoopAnnot);
 
 	printer::PrettyPrinter pp(program, printer::PrettyPrinter::OPTIONS_DETAIL);
 

@@ -81,7 +81,7 @@ struct CmdOptions {
 	std::string target;					/* < target name to evaluate on. */
 	std::vector<std::string> filter;	/* < cids to use for evaluation. */
 	bool calcError;						/* < flag to calculate the error of the entire dataset */
-	bool svm;							/* < flag use a svm instead of a neural network */
+	int svm;							/* < flag use a svm instead of a neural network 0 for MultiClassSVM, 1 for EpsilonSVM*/
 	std::string out;					/* < File where to write the output */
 };
 
@@ -128,7 +128,7 @@ CmdOptions parseCommandLine(int argc, char** argv, Kompex::SQLiteDatabase*& data
 			("target,t",			bpo::value<std::string>(),				"target name to evaluate on")
 			("filter-cid,f",		bpo::value<std::vector<std::string>>(),	"cids to use for evaluation")
 			("calculate-error,e",											"flag to calculate the error of the entire dataset")
-			("svm,v",														"flag use a svm instead of a neural network")
+			("svm,v",				bpo::value<int>(),						"flag use a svm instead of a neural network. 0 for MultiClassSVM, 1 for EpsilonSVM")
 			("output,o",			bpo::value<std::string>(),				"File where to write the output. Optional, default: std::out")
 			("log-level,L",     	bpo::value<std::string>(),        	 	"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
 	;
@@ -223,9 +223,9 @@ CmdOptions parseCommandLine(int argc, char** argv, Kompex::SQLiteDatabase*& data
 	}
 
 	if(map.count("svm")) {
-		res.svm = true;
+		res.svm = map["svm"].as<int>();
 	} else {
-		res.svm = false;
+		res.svm = -1;
 	}
 
 	if(map.count("output")) {
@@ -340,11 +340,16 @@ size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database, st
 	// declare Machine
 	RBFKernel kernel(1.0);
 	//LinearKernel kernel;
-	ModelPtr model = options.svm ? (ModelPtr)std::make_shared<MyMultiClassSVM>(&kernel) : (ModelPtr)std::make_shared<MyFFNet>();
+	ModelPtr model;
+	switch(options.svm) {
+	case 0: model = (ModelPtr)std::make_shared<MyMultiClassSVM>(&kernel); break;
+	case 1: model = (ModelPtr)std::make_shared<MyEpsilon_SVM>(&kernel); break;
+	default: model = (ModelPtr)std::make_shared<MyFFNet>(); break;
+	}
 
 	Evaluator eval = Evaluator::loadEvaluator(*model, options.modelPath);
 
-	assert((options.svm || num == model->getInputDimension()) && "The number of specified features does not match the input size of the loaded model");
+	assert((options.svm >= 0 || num == model->getInputDimension()) && "The number of specified features does not match the input size of the loaded model");
 
 	Kompex::SQLiteStatement stmt(database);
 
@@ -415,7 +420,7 @@ int main(int argc, char** argv) {
 	try {
 		std::ofstream out(options.out);
 		if(out.is_open()) {
-			// print cmdOptions when writitng to a file
+			// print cmdOptions when writing to a file
 			printCmdOptions(options, out);
 			evaluateDatabase(options, database, out);
 			out.close();

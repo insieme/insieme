@@ -125,6 +125,36 @@ namespace transform {
 				return ifStmt;
 			}
 
+			NodePtr simplifyITE(const NodePtr& ptr) {
+				// only applicable to ITE invocation
+				if (!analysis::isCallOf(ptr, manager.getLangBasic().getIfThenElse())) return ptr;
+
+				// check condition
+				CallExprPtr call = ptr.as<CallExprPtr>();
+
+				try {
+					// evaluate constraint
+					arithmetic::Constraint cond = arithmetic::toConstraint(call->getArgument(0));
+
+					// if condition is always valid
+					if (cond.isValid()) {
+						return transform::evalLazy(manager, call->getArgument(1));
+					}
+
+					// if condition is not satisfiable
+					if (cond.isUnsatisfiable()) {
+						return transform::evalLazy(manager, call->getArgument(2));
+					}
+
+				} catch (const arithmetic::NotAConstraintException& nce) {
+					// condition can not be statically evaluated
+					// => just ignore, return unmodified
+				}
+
+				// nothing to deduce => return statement as it is
+				return ptr;
+			}
+
 			NodePtr simplifyWhile(const NodePtr& ptr) {
 				// it has to be a while loop ...
 				if (ptr->getNodeType() != core::NT_WhileStmt) return ptr;
@@ -269,6 +299,7 @@ namespace transform {
 					res = simplifyFor(res);
 					res = simplifyExpr(res);
 					res = simplifyCompound(res);
+					res = simplifyITE(res);
 				}
 
 				// no more modifications possible => done
