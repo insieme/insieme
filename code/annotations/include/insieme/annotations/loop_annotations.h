@@ -34,31 +34,55 @@
  * regarding third party software licenses.
  */
 
-unsigned int localId;
-unsigned int globalId;
+/*
+ * data_annotations.h
+ *
+ *  Created on: Dec 6, 2011
+ *      Author: klaus
+ */
 
-int kernelFct(int* A) {
-#pragma insieme datarange (A = globalId-1 : globalId+1)
-{
-	return -1;
-}}
+#pragma once
 
 
+#include "insieme/utils/annotation.h"
+#include "insieme/core/ir_expressions.h"
 
-int main() {
-	int* a;
-	int* b;
-	int i;
+namespace insieme {
+namespace annotations {
 
-#pragma insieme iterations 10
-	for(i = 0; i < 10; ++i) {
-#pragma insieme datarange (a = i-1 : i+1), (b = i : i)
-	{
-		a[i] = i;
-		b[i] = 3;
-	}}
+using namespace insieme::core;
 
-	kernelFct(a);
 
-	return 0;
-}
+class LoopAnnotation : public NodeAnnotation {
+	size_t iterations;
+
+public:
+	static const string NAME;
+    static const utils::StringKey<LoopAnnotation> KEY;
+
+    const utils::AnnotationKey* getKey() const { return &KEY; }
+    const std::string& getAnnotationName() const { return NAME; }
+
+//    LoopAnnotation() {} iterations has to be initialized
+    LoopAnnotation(size_t iterations): iterations(iterations) {}
+
+	size_t getIterations() const;
+
+    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+		// always copy the annotation
+		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
+		after->addAnnotation(ptr);
+		return true;
+	}
+};
+
+typedef std::shared_ptr<LoopAnnotation> LoopAnnotationPtr;
+
+} // end namespace insieme
+} // end namespace annotations
+
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot);
+
+} // end namespace std

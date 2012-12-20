@@ -36,6 +36,7 @@
 
 #include "insieme/transform/functions/transformations.h"
 
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/simplify.h"
 
 namespace insieme {
@@ -54,17 +55,17 @@ namespace functions {
 		// start by obtaining the lambda
 		core::LambdaExprPtr lambda = target.as<core::LambdaExprPtr>();
 
+		// can only be applied to recursive functions
 		if (!lambda->isRecursive()) throw InvalidTargetException("Can only be applied on recursive functions!");
 
-		// unroll and simplify the targeted lambda
-		return core::transform::simplify(lambda->getNodeManager(), lambda->unroll(unrolling));
+		// fix recursive variable usage
+		lambda = core::transform::correctRecursiveLambdaVariableUsage(lambda->getNodeManager(), lambda);
 
-		/*
-		core::LambdaExprPtr res = lambda->unroll(unrolling);
+		// unroll lambda
+		lambda = lambda->unroll(unrolling);
 
-		// inline recursive calls if possible
-		core::transform::makeCachedLambdaMapper([](const NodePtr& node))
-		*/
+		// simplify resulting expression
+		return core::transform::simplify(lambda->getNodeManager(), lambda);
 	}
 
 } // end namespace functions

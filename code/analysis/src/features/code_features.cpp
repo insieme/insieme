@@ -55,6 +55,8 @@
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/features/type_features.h"
 
+#include "insieme/annotations/loop_annotations.h"
+
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/cache_utils.h"
 #include "insieme/utils/functional_utils.h"
@@ -186,22 +188,41 @@ namespace {
 
 				// TODO: consider init and checks
 
-				// obtain step size
-				int64_t stepSize = 1;
-				core::arithmetic::Formula formula = core::arithmetic::toFormula(ptr->getStep());
-				if (formula.isInteger()) {
-					stepSize = formula.getConstantValue();
-				}
+				size_t iterations = 0;
 
+				// check if there is a loop annotation
+				if(ptr->hasAnnotation(insieme::annotations::LoopAnnotation::KEY)) {
+					// if so, use the value in the annotation as estimation for the number of loops
+					iterations = ptr->getAnnotation(annotations::LoopAnnotation::KEY)->getIterations();
+				} else {
+					// try to estimate the number of iterations
+					int64_t stepSize = 1;
+					// obtain step size
+					core::arithmetic::Formula formula = core::arithmetic::toFormula(ptr->getStep());
+					if (formula.isInteger()) {
+						stepSize = formula.getConstantValue();
+					}
+					iterations = (numForLoopIterations * (1.0/stepSize));
+				}
 				// compute cost of entire loop based on cost of body * iterations
-				return this->visit(ptr->getBody()) * (numForLoopIterations * (1.0/stepSize)) + this->extractFrom(ptr);
+				return this->visit(ptr->getBody()) * iterations + this->extractFrom(ptr);
 			}
 
 			virtual Value visitWhileStmt(const core::WhileStmtPtr& ptr) {
 
 				// TODO: add cost for condition evaluation
 
-				return this->visit(ptr->getBody()) * numWhileLoopIterations + this->extractFrom(ptr);
+				size_t iterations = 0;
+
+				// check if there is a loop annotation
+				if(ptr->hasAnnotation(annotations::LoopAnnotation::KEY)) {
+					// if so, use the value in the annotation as estimation for the number of loops
+					iterations = ptr->getAnnotation(annotations::LoopAnnotation::KEY)->getIterations();
+				} else {
+					iterations = numWhileLoopIterations;
+				}
+
+				return this->visit(ptr->getBody()) * iterations + this->extractFrom(ptr);
 			}
 
 			virtual Value visitIfStmt(const core::IfStmtPtr& ptr) {

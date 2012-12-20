@@ -34,31 +34,39 @@
  * regarding third party software licenses.
  */
 
-unsigned int localId;
-unsigned int globalId;
+/*
+ * loop_annotations.cpp
+ *
+ *  Created on: Dec 13, 2012
+ *      Author: klaus
+ */
 
-int kernelFct(int* A) {
-#pragma insieme datarange (A = globalId-1 : globalId+1)
-{
-	return -1;
-}}
+#include "insieme/annotations/loop_annotations.h"
 
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/ir_builder.h"
 
+#include "insieme/utils/container_utils.h"
 
-int main() {
-	int* a;
-	int* b;
-	int i;
+namespace insieme {
+namespace annotations {
 
-#pragma insieme iterations 10
-	for(i = 0; i < 10; ++i) {
-#pragma insieme datarange (a = i-1 : i+1), (b = i : i)
-	{
-		a[i] = i;
-		b[i] = 3;
-	}}
+const string LoopAnnotation::NAME = "LoopAnnotation";
+const utils::StringKey<LoopAnnotation> LoopAnnotation::KEY("Loop");
 
-	kernelFct(a);
-
-	return 0;
+size_t LoopAnnotation::getIterations() const {
+	return iterations;
 }
+
+} // namespace annotations
+} // namespace insieme
+
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot) {
+		out << "LoopAnnotation:\n";
+		out << "Iterations: " << lAnnot.getIterations() << std::endl;
+		return out;
+	}
+
+} // end namespace std
