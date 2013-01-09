@@ -11,7 +11,7 @@ OPT_FLAGS="-mtune=native -O3"
 
 rm -Rf $PREFIX/barvinok-$VERSION
 echo "#### Downloading Barvinok library ####"
-wget -nc http://www.kotnet.org/~skimo/barvinok/barvinok-$VERSION.tar.bz2
+wget -nc ftp://ftp.linux.student.kuleuven.be/pub/people/skimo/barvinok/barvinok-$VERSION.tar.bz2
 
 RET=$?
 if [ $RET -ne 0 ]; then
