@@ -42,16 +42,20 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "insieme/frontend/program.h"
 
+#include "insieme/frontend/utils/indexer.h"
+
 #include <set>
 #include <map>
 #include <stack>
 
-namespace clang {
-namespace idx {
+/* clang [3.0]
+ * namespace clang {
+namespace idx {:w
+
 class Indexer;
 class TranslationUnit;
 } // end idx namespace
-}
+} */
 
 namespace insieme {
 namespace frontend {
@@ -80,7 +84,8 @@ public:
 	 */
 	typedef std::set<const clang::VarDecl*> GlobalVarSet;
 
-	typedef std::map<const clang::VarDecl*, const clang::idx::TranslationUnit*> VarTUMap;
+	// clang [3.0] typedef std::map<const clang::VarDecl*, const clang::idx::TranslationUnit*> VarTUMap;
+	typedef std::map<const clang::VarDecl*, const insieme::frontend::TranslationUnit*> VarTUMap;
 
 	/*
 	 * Set of functions already visited, this avoid the solver to loop in the
@@ -103,8 +108,11 @@ public:
 
 	GlobalVarCollector(
 		conversion::ConversionFactory& 		convFact,
-		const clang::idx::TranslationUnit* 	currTU, 
-		clang::idx::Indexer& 				indexer,
+		// clang [3.0] const clang::idx::TranslationUnit* 	currTU, 
+		const insieme::frontend::TranslationUnit* 	currTU, 
+		// FIXME find an indexer
+		//clang::idx::Indexer& 				indexer,
+		insieme::frontend::utils::Indexer& 				indexer,
 		UseGlobalFuncMap& 					globalFuncMap)
 	: 
 	  convFact(convFact),
@@ -122,11 +130,21 @@ public:
 
 	/* CXX specific methods -- not support in C version
 	 * implemented/used in CXXGlobalVarCollector*/
-	virtual bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) { assert(false && "not supported in GlobalVarCollector"); }
-	virtual bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) { assert(false && "not supported in GlobalVarCollector"); }
-	virtual bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) { assert(false && "not supported in GlobalVarCollector"); }
-	virtual bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr) { assert(false && "not supported in GlobalVarCollector"); }
-	virtual bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) { assert(false && "not supported in GlobalVarCollector"); }
+	virtual bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) { 
+		assert(false && "not supported in GlobalVarCollector"); 
+	}
+	virtual bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) { 
+		assert(false && "not supported in GlobalVarCollector"); 
+	}
+	virtual bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) { 
+		assert(false && "not supported in GlobalVarCollector"); 
+	}
+	virtual bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr) { 
+		assert(false && "not supported in GlobalVarCollector"); 
+	}
+	virtual bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) { 
+		assert(false && "not supported in GlobalVarCollector"); 
+	}
 
 	void operator()(const clang::Decl* decl);
 
@@ -161,34 +179,42 @@ protected:
 	GlobalVarSet						globals;
 	VarTUMap							varTU;
 	GlobalIdentMap						varIdentMap;
-	const clang::idx::TranslationUnit* 	currTU;
+	// clang [3.0] const clang::idx::TranslationUnit* 	currTU;
+	const insieme::frontend::TranslationUnit* 	currTU;
 	VisitedFuncSet 						visited;
 	FunctionStack						funcStack;
 
-	clang::idx::Indexer& 				indexer;
+	//clang::idx::Indexer& 				indexer;
+	insieme::frontend::utils::Indexer& 				indexer;
 	UseGlobalFuncMap& 					usingGlobals;
 };
 
+
+////////////////////////////////////////////////////////////////////////////////////
+///      CXX global var collector
+////////////////////////////////////////////////////////////////////////////////////
 class CXXGlobalVarCollector : public GlobalVarCollector {
-public:
+	public:
 
-	//virtual function stuff
-	typedef std::pair<unsigned int, unsigned int> ClassFuncPair; //first = classId, second = count of virtual functions
-	typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
-	typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
-	typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
-	typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
+		//virtual function stuff
+		typedef std::pair<unsigned int, unsigned int> ClassFuncPair; //first = classId, second = count of virtual functions
+		typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
+		typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
+		typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
+		typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
 
-	CXXGlobalVarCollector(
-		conversion::ConversionFactory& 		convFact,
-		const clang::idx::TranslationUnit* 	currTU,
-		clang::idx::Indexer& 				indexer,
-		UseGlobalFuncMap& 					globalFuncMap,
-		PolymorphicClassMap& 				polymorphicClassMap,
-		OffsetMap&							offsetMap,
-		VirtualFunctionIdMap&				virtualFunctionIdMap,
-		FinalOverriderMap&					finalOverriderMap)
+		CXXGlobalVarCollector(
+				conversion::ConversionFactory& 		convFact,
+				// clang [3.0] const clang::idx::TranslationUnit* 	currTU,
+				const insieme::frontend::TranslationUnit* 	currTU,
+				insieme::frontend::utils::Indexer& 				indexer,
+				UseGlobalFuncMap& 					globalFuncMap,
+				PolymorphicClassMap& 				polymorphicClassMap,
+				OffsetMap&							offsetMap,
+				VirtualFunctionIdMap&				virtualFunctionIdMap,
+				FinalOverriderMap&					finalOverriderMap)
 	:
+	  //GlobalVarCollector(convFact, currTU, indexer, globalFuncMap),
 	  GlobalVarCollector(convFact, currTU, indexer, globalFuncMap),
 	/*convFact(convFact),
 	  currTU(currTU),

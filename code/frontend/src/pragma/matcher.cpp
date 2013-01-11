@@ -40,10 +40,11 @@
 
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Parse/Parser.h>
-#include <clang/AST/Expr.h>
 #include "clang/Sema/Sema.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Basic/Diagnostic.h"
+#include <clang/AST/Expr.h>
+#include <clang/AST/ASTContext.h>
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -93,7 +94,8 @@ std::string ValueUnion::toStr() const {
 	std::string ret;
 	llvm::raw_string_ostream rs(ret);
 	if ( is<Stmt*>() ) {
-		get<Stmt*>()->printPretty(rs, *clangCtx, 0, clang::PrintingPolicy(clangCtx->getLangOptions()));
+		// [3.0] get<Stmt*>()->printPretty(rs, *clangCtx, 0, clang::PrintingPolicy(clangCtx->getLangOptions()));
+		get<Stmt*>()->printPretty(rs, 0, clangCtx->getPrintingPolicy());
 	} else {
 		rs << *get<std::string*>();
 	}
@@ -332,7 +334,8 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, bool resolve, std::
 		mmap[map_str].push_back(
 			ValueUnionPtr(
 				new ValueUnion(
-					A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
+					// [3.0] A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
+					A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, token.getLocation(), Name, false, false).takeAs<Stmt>(),
 					&static_cast<clang::Sema&>(A).Context
 				)
 			));

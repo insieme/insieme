@@ -83,8 +83,9 @@
 #include <clang/AST/CXXInheritance.h>
 #include "clang/AST/StmtVisitor.h"
 
-#include "clang/Index/Entity.h"
-#include "clang/Index/Indexer.h"
+// clang [3.0]
+//#include "clang/Index/Entity.h"
+//#include "clang/Index/Indexer.h"
 
 using namespace clang;
 using namespace insieme;
@@ -121,10 +122,10 @@ CXXConversionFactory::~CXXConversionFactory() {}
 void CXXConversionFactory::collectGlobalVar(const clang::FunctionDecl* funcDecl) {
 	// Extract globals starting from this entry point
 	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
-	const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(def);
+	const TranslationUnit* rightTU = getTranslationUnitForDefinition(def);
 
 	ctx.globalFuncMap.clear();
-	analysis::CXXGlobalVarCollector globColl(*this, clangTU, program.getClangIndexer(), ctx.globalFuncMap,
+	analysis::CXXGlobalVarCollector globColl(*this, rightTU, program.getIndexer(), ctx.globalFuncMap,
 				cxxCtx.polymorphicClassMap, cxxCtx.offsetMap, cxxCtx.virtualFunctionIdMap,
 				cxxCtx.finalOverriderMap);
 
@@ -385,7 +386,7 @@ core::ExpressionPtr CXXConversionFactory::convertInitExpr(const clang::Expr* exp
 	}
 
 	// init the cpp class / struct - check here for enabled cpp in compiler lang options
-	if (kind == core::NT_StructType && currTU->getCompiler().getPreprocessor().getLangOptions().CPlusPlus == 1) {
+	if (kind == core::NT_StructType && currTU->getCompiler().getPreprocessor().getLangOpts().CPlusPlus == 1) {
 
 		if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
 			const core::TypePtr& res = refTy->getElementType();
@@ -978,11 +979,12 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 
 					FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
 					VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
-					const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
+					const TranslationUnit* rightTU = this->getTranslationUnitForDefinition(decl);
 
-					if ( clangTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
+					if ( rightTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
 						// update the translation unit
-						this->currTU = &Program::getTranslationUnit(clangTU);
+						//this->currTU = &Program::getTranslationUnit(clangTU);
+						this->currTU = rightTU;
 						// look up the lambda cache to see if this function has been
 						// already converted into an IR lambda expression.
 						ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
@@ -1428,7 +1430,7 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 
 	std::for_each(components.begin(), components.end(),
 			[ this, &definitions, &recVarRef ] (std::set<const FunctionDecl*>::value_type fd) {
-
+/*
 				ConversionContext::RecVarExprMap::const_iterator tit = this->ctx.recVarExprMap.find(fd);
 				assert(tit != this->ctx.recVarExprMap.end() && "Recursive function has no TypeVar associated");
 				this->ctx.currVar = tit->second;
@@ -1438,17 +1440,15 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 				return;
 			}
 
-			/*
-			 * we remove the variable from the list in order to fool the solver, in this way it will create a descriptor
-			 * for this type (and he will not return the TypeVar associated with this recursive type). This behaviour
-			 * is enabled only when the isRecSubType flag is true
-			 */
+			// we remove the variable from the list in order to fool the solver, 
+			// in this way it will create a descriptor for this type (and he will 
+			// not return the TypeVar associated with this recursive type). This behaviour
+			// is enabled only when the isRecSubType flag is true
 			this->ctx.recVarExprMap.erase(fd);
 
-			/*
-			 * if the function is not defined in this translation unit, maybe it is defined in another we already loaded
-			 * use the clang indexer to lookup the definition for this function declarations
-			 */
+			// if the function is not defined in this translation unit, maybe it is defined 
+			// in another we already loaded use the clang indexer to lookup the definition 
+			// for this function declarations
 			clang::idx::Entity&& funcEntity =
 			clang::idx::Entity::get(const_cast<FunctionDecl*>(fd), this->program.getClangProgram());
 			ConversionFactory::TranslationUnitPair&& ret = this->program.getClangIndexer().getDefinitionFor(funcEntity);
@@ -1469,7 +1469,7 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 
 			// reinsert the TypeVar in the map in order to solve the other recursive types
 			this->ctx.recVarExprMap.insert( std::make_pair(fd, this->ctx.currVar) );
-			this->ctx.currVar = NULL;
+			this->ctx.currVar = NULL;*/
 		});
 	// we reset the behavior of the solver
 	ctx.isRecSubFunc = false;
@@ -1487,14 +1487,15 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 				assert(fit != this->ctx.recVarExprMap.end());
 
 				FunctionDecl* decl = const_cast<FunctionDecl*>(fd);
-				const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
+				const TranslationUnit* rightTU = this->getTranslationUnitForDefinition(decl);
 
-				assert ( clangTU );
+				assert ( rightTU );
 				// save old TU
 			const TranslationUnit* oldTU = this->currTU;
 
 			// update the translation unit
-			this->currTU = &Program::getTranslationUnit(clangTU);
+			//this->currTU = &Program::getTranslationUnit(clangTU);
+			this->currTU = rightTU;
 
 			core::ExpressionPtr&& func = builder.lambdaExpr(fit->second, definition);
 			ctx.lambdaExprCache.insert( std::make_pair(decl, func) );

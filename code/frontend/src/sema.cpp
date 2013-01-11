@@ -41,9 +41,10 @@
 
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/Parser.h"
+#include "clang/Sema/Sema.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Decl.h"
-#include "clang/Sema/Sema.h"
+#include "clang/AST/ASTContext.h"
 
 #include "insieme/utils/logging.h"
 
@@ -203,7 +204,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		}
 	}
 
-	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, clang::move(Elts), isStmtExpr);
+	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
 	clang::CompoundStmt* CS = cast<CompoundStmt>(ret.get());
 	Stmt* Prev = NULL;
 
@@ -260,7 +261,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 
 	// remove matched pragmas
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
-	return clang::move(ret);
+	return std::move(ret);
 }
 
 void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, const clang::SourceManager& sm,
@@ -280,7 +281,7 @@ InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg C
 
 	// VLOG(2) << "{InsiemeSema}: ActOnIfStmt()";
 	clang::StmtResult ret =
-			Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, clang::move(ThenVal), ElseLoc, clang::move(ElseVal));
+			Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, std::move(ThenVal), ElseLoc, std::move(ElseVal));
 
 	IfStmt* ifStmt = static_cast<IfStmt*>( ret.get() );
 	PragmaList matched;
@@ -300,7 +301,7 @@ InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg C
 	}
 
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
-	return clang::move(ret);
+	return std::move(ret);
 }
 
 clang::StmtResult
@@ -310,7 +311,7 @@ InsiemeSema::ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LP
 
 	// VLOG(2) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
 	clang::StmtResult ret =
-		Sema::ActOnForStmt(ForLoc, LParenLoc, clang::move(First), Second, SecondVar, Third, RParenLoc, clang::move(Body));
+		Sema::ActOnForStmt(ForLoc, LParenLoc, std::move(First), Second, SecondVar, Third, RParenLoc, std::move(Body));
 
 	ForStmt* forStmt = (ForStmt*) ret.get();
 	PragmaList matched;
@@ -320,7 +321,7 @@ InsiemeSema::ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LP
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 	matched.clear();
 
-	return clang::move(ret);
+	return std::move(ret);
 }
 
 clang::Decl* InsiemeSema::ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, clang::Declarator &D) {
@@ -335,7 +336,7 @@ clang::Decl* InsiemeSema::ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, cla
 
 clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt* Body) {
 	// VLOG(2) << "{InsiemeSema}: ActOnFinishFunctionBody()";
-	clang::Decl* ret = Sema::ActOnFinishFunctionBody(Decl, clang::move(Body));
+	clang::Decl* ret = Sema::ActOnFinishFunctionBody(Decl, std::move(Body));
 	// We are sure all the pragmas inside the function body have been matched
 
 	FunctionDecl* FD = dyn_cast<FunctionDecl>(ret);
@@ -385,7 +386,7 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 //		++I;
 //	}
 //	EraseMatchedPragmas(pimpl->pragma_list, pimpl->pending_pragma, matched);
-//	return clang::move(ret);
+//	return std::move(ret);
 //}
 
 clang::Decl* InsiemeSema::ActOnDeclarator(clang::Scope *S, clang::Declarator &D) {

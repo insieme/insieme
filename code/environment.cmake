@@ -162,13 +162,33 @@ if(NOT DEFINED LLVM_HOME)
 	endif()
 endif()
 
-# Full (?) list of clang libraries
-# TODO: needs some cmake feature to gather "lib/libLLVM*.lib"
+# FIXME: select only the needed libraries
 set(clang_LList
-    clangBasic clangSema clangIndex clangDriver clangAST
-    clangRewrite clangAnalysis clangLex clangFrontend clangFrontendTool 
-    clangParse clangSerialization
+	libclang.a
+	libclangAnalysis.a
+	libclangARCMigrate.a
+	libclangAST.a
+	libclangASTMatchers.a
+	libclangBasic.a
+	libclangCodeGen.a
+	libclangDriver.a
+	libclangEdit.a
+	libclangFrontend.a
+	libclangFrontendTool.a
+	libclangLex.a
+	libclangParse.a
+	libclangRewriteCore.a
+	libclangRewriteFrontend.a
+	libclangSema.a
+	libclangSerialization.a
+	libclang.so
+	libclangStaticAnalyzerCheckers.a
+	libclangStaticAnalyzerCore.a
+	libclangStaticAnalyzerFrontend.a
+	libclangTooling.a
 )
+	#clangBasic clangSema clangIndex clangDriver clangAST
+	#clangRewrite clangAnalysis clangLex clangFrontend clangFrontendTool 
 
 if(MSVC)
     # Manual list - TODO: needs some cmake feature to gather "lib/libLLVM*.lib"
@@ -184,7 +204,8 @@ if(MSVC)
 
 else(MSVC)
 	# On Linux we have a .so file for all LLVM
-    set(llvm_LList  LLVM-3.0 )
+	#set(llvm_LList  LLVM-3.0 )
+	set(llvm_LList  LLVM-3.2 )
     set(clang_LList clang ${clang_LList})
 endif(MSVC)
 

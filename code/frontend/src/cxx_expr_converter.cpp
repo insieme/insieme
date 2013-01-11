@@ -62,8 +62,9 @@
 #include "insieme/frontend/cpp/temporary_handler.h"
 #include "insieme/annotations/c/naming.h"
 
-#include "clang/Index/Entity.h"
-#include "clang/Index/Indexer.h"
+// [3.0]
+//#include "clang/Index/Entity.h"
+//#include "clang/Index/Indexer.h"
 
 #include "clang/AST/StmtVisitor.h"
 #include <clang/AST/DeclCXX.h>
@@ -82,7 +83,7 @@ namespace frontend {
 namespace utils {
 
 void CallExprVisitor::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
-	// connects the constructor expression to the function graph
+/*	// connects the constructor expression to the function graph
 	addFunctionDecl(ctorExpr->getConstructor());
 	VisitStmt(ctorExpr);
 
@@ -102,11 +103,11 @@ void CallExprVisitor::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
 	if ( clang::CXXRecordDecl* classDecl = GET_TYPE_PTR(ctorExpr)->getAsCXXRecordDecl()) {
 		clang::CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
 		addFunctionDecl(dtorDecl);
-	}
+	}*/
 }
 
 void CallExprVisitor::VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
-
+/*
 	//if there is an member with an initializer in the ctor we add it to the function graph
 	if (clang::CXXConstructorDecl * constructorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(callExpr->getConstructor())) {
 		// connects the constructor expression to the function graph
@@ -121,11 +122,11 @@ void CallExprVisitor::VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
 		}
 	}
 
-	VisitStmt(callExpr);
+	VisitStmt(callExpr);*/
 }
 
 void CallExprVisitor::VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
-	addFunctionDecl(callExpr->getOperatorDelete());
+	/*addFunctionDecl(callExpr->getOperatorDelete());
 
 	// if we delete a class object -> add destructor to function call
 	if ( clang::CXXRecordDecl* classDecl = callExpr->getDestroyedType()->getAsCXXRecordDecl()) {
@@ -133,14 +134,14 @@ void CallExprVisitor::VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
 		addFunctionDecl(dtorDecl);
 	}
 
-	VisitStmt(callExpr);
+	VisitStmt(callExpr);*/
 }
 
 void CallExprVisitor::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* mcExpr) {
-	// connects the member call expression to the function graph
+	/*// connects the member call expression to the function graph
 	//assert(false && "in next clang version");
 	addFunctionDecl(llvm::dyn_cast<clang::FunctionDecl>(mcExpr->getCalleeDecl()));
-	VisitStmt(mcExpr);
+	VisitStmt(mcExpr);*/
 }
 
 } // end utils namespace 
@@ -157,7 +158,7 @@ namespace conversion {
 //						  IMPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitImplicitCastExpr(clang::ImplicitCastExpr* castExpr) {
-	START_LOG_EXPR_CONVERSION(castExpr);
+	/*START_LOG_EXPR_CONVERSION(castExpr);
 	const core::IRBuilder& builder = convFact.builder;
 
 	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
@@ -220,14 +221,14 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitImplicitCastExp
 		// call base Visitor for ImplicitCastExpr
 		return (retIr = ExprConverter::VisitImplicitCastExpr(castExpr));
 	}
-	assert(false);
+	assert(false);*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						EXPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitExplicitCastExpr(clang::ExplicitCastExpr* castExpr) {
-	START_LOG_EXPR_CONVERSION(castExpr);
+	/*START_LOG_EXPR_CONVERSION(castExpr);
 
 	const core::IRBuilder& builder = convFact.builder;
 	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
@@ -307,14 +308,14 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitExplicitCastExp
 		return (retIr = ExprConverter::VisitExplicitCastExpr(castExpr));
 	}
 
-	assert(false);
+	assert(false); */
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							FUNCTION CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCallExpr(clang::CallExpr* callExpr) {
-
+/*
 	START_LOG_EXPR_CONVERSION(callExpr);
 
 	const core::IRBuilder& builder = convFact.builder;
@@ -338,15 +339,12 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCallExpr(clang:
 		const TranslationUnit* oldTU = convFact.currTU;
 		const FunctionDecl* definition = NULL;
 
-		/*
-		 * this will find function definitions if they are declared in  the same translation unit
-		 * (also defined as static)
-		 */
+		 // this will find function definitions if they are declared in  the same translation unit
+		 // (also defined as static)
+		 
 		if (!funcDecl->hasBody(definition)) {
-			/*
-			 * if the function is not defined in this translation unit, maybe it is defined in another we already
-			 * loaded use the clang indexer to lookup the definition for this function declarations
-			 */
+			// if the function is not defined in this translation unit, maybe it is defined in another we already
+			// loaded use the clang indexer to lookup the definition for this function declarations
 			FunctionDecl* fd = funcDecl;
 			const clang::idx::TranslationUnit* clangTU = convFact.getTranslationUnitForDefinition(fd);
 
@@ -411,31 +409,23 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCallExpr(clang:
 			return irNode;
 		}
 
-		/*
-		 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
-		 * list needs to be initialized with the value of global variable in the current scope
-		 */
+		// We find a definition, we lookup if this variable needs to access the globals, in that case the capture
+		// list needs to be initialized with the value of global variable in the current scope
 		if (ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end()) {
-			/*
-			 * we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
-			 * current context
-			 */
+			// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
+			// current context
 			assert( ctx.globalVar && "No global definitions forwarded to this point");
 			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 		}
 
-		/*
-		 * If we are resolving the body of a recursive function we have to return the associated variable every
-		 * time a function in the strongly connected graph of function calls is encountered.
-		 */
+		// If we are resolving the body of a recursive function we have to return the associated variable every
+		// time a function in the strongly connected graph of function calls is encountered.
 		if (ctx.isResolvingRecFuncBody) {
 			// check if this type has a typevar already associated, in such case return it
 			ConversionContext::RecVarExprMap::const_iterator fit = ctx.recVarExprMap.find(definition);
 			if (fit != ctx.recVarExprMap.end()) {
-				/*
-				 * we are resolving a parent recursive type, so when one of the recursive functions in the
-				 * connected components are called, the introduced mu variable has to be used instead.
-				 */
+				// we are resolving a parent recursive type, so when one of the recursive functions in the
+				// connected components are called, the introduced mu variable has to be used instead.
 				convFact.currTU = oldTU;
 				return (irNode = builder.callExpr(funcTy->getReturnType(),
 						static_cast<core::ExpressionPtr>(fit->second), packedArgs));
@@ -521,14 +511,14 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCallExpr(clang:
 	} else {
 		assert( false && "Call expression not referring a function");
 	}
-	assert(false);
+	assert(false);*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							VAR DECLARATION REFERENCE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
-	START_LOG_EXPR_CONVERSION(declRef);
+	/*START_LOG_EXPR_CONVERSION(declRef);
 
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(retIr);
@@ -565,13 +555,13 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitDeclRefExpr(cla
 		);
 	}
 	// todo: C++ check whether this is a reference to a class field, or method (function).
-	assert(false && "DeclRefExpr not supported!");
+	assert(false && "DeclRefExpr not supported!");*/
 }
 
 template<class ClangExprTy>
 ExpressionList CXXConversionFactory::CXXExprConverter::getFunctionArguments(const core::IRBuilder& builder, ClangExprTy* callExpr,
 		const core::FunctionTypePtr& funcTy) {
-	ExpressionList args;
+	/*ExpressionList args;
 	for (size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
 		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
 		// core::TypePtr&& argTy = arg->getType();
@@ -583,11 +573,12 @@ ExpressionList CXXConversionFactory::CXXExprConverter::getFunctionArguments(cons
 		}
 		args.push_back( arg );
 	}
-	return args;
+	return args;*/
 }
 
 ExpressionList CXXConversionFactory::CXXExprConverter::getFunctionArguments(const core::IRBuilder& builder, clang::CXXNewExpr* callExpr,
 		const core::FunctionTypePtr& funcTy) {
+	/*
 	ExpressionList args;
 	for (size_t argId = 0, end = callExpr->getNumConstructorArgs(); argId < end; ++argId) {
 		core::ExpressionPtr&& arg = Visit( callExpr->getConstructorArg(argId) );
@@ -600,12 +591,12 @@ ExpressionList CXXConversionFactory::CXXExprConverter::getFunctionArguments(cons
 		}
 		args.push_back( arg );
 	}
-	return args;
+	return args;*/
 }
 
 ExpressionList CXXConversionFactory::CXXExprConverter::getFunctionArguments(const core::IRBuilder& builder, clang::CXXOperatorCallExpr* callExpr,
 		const core::FunctionTypePtr& funcTy, bool isMember /* = false */) {
-	if (isMember) {
+	/*if (isMember) {
 		ExpressionList args;
 		// because CXXOperatorCallExpr has as arg0 for operators defined as member functions
 		// this == arg(0) == left, arg(1) == right, but funcTy is only for op@( argTy )
@@ -626,6 +617,7 @@ ExpressionList CXXConversionFactory::CXXExprConverter::getFunctionArguments(cons
 		//use the getFunctionArguments for "normal" CallExpr
 		return getFunctionArguments(builder, dynamic_cast<clang::CallExpr*>(callExpr), funcTy);
 	}
+	*/
 }
 
 //ExpressionList getFunctionArguments(const core::IRBuilder& 		builder,
@@ -649,6 +641,7 @@ ExpressionList CXXConversionFactory::CXXExprConverter::getFunctionArguments(cons
 
 // get the classId from the left-most dynamic base of recDecl
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::getClassId(const clang::CXXRecordDecl* recDecl, core::ExpressionPtr thisExpr) {
+	/*
 	const core::IRBuilder& builder = convFact.builder;
 	bool hasPolymorphicBaseClass = false;
 	core::TypePtr classTypePtr;
@@ -703,6 +696,7 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::getClassId(const cla
 	}
 
 	return retExpr;
+	*/
 }
 
 // takes the recordDecl of this argument of the called function, the methodDecl of the called function,
@@ -713,6 +707,7 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::createCastedVFuncPoi
 	const clang::CXXRecordDecl* recordDecl,
 	const clang::CXXMethodDecl* methodDecl,
 	core::ExpressionPtr thisPtr) {
+	/*
 const core::IRBuilder& builder = convFact.builder;
 core::FunctionTypePtr funcTy = 	( convFact.convertType( GET_TYPE_PTR(methodDecl) ) ).as<core::FunctionTypePtr>();
 
@@ -830,6 +825,7 @@ core::ExpressionPtr castedVFuncPointer = builder.callExpr(builder.refType(funcTy
 castedVFuncPointer = builder.callExpr(funcTy, builder.getLangBasic().getRefDeref(), castedVFuncPointer);
 
 return castedVFuncPointer;
+*/
 }
 
 // takes the given "this" of the CXXMemberCall
@@ -840,7 +836,7 @@ bool CXXConversionFactory::CXXExprConverter::canDevirtualizeCXXMemberCall(
 		const clang::Expr* thisArg,
 		const clang::MemberExpr* memberExpr,
 		const clang::CXXMethodDecl* methodDecl) {
-
+/*
 	//TODO support for "final" keyword needed?
 
 	//check if we have an actual object
@@ -863,12 +859,14 @@ bool CXXConversionFactory::CXXExprConverter::canDevirtualizeCXXMemberCall(
 
 	// can't devirtualize call
 	return false;
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								CXX BOOLEAN LITERAL
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr* boolLit) {
+	/*
 	START_LOG_EXPR_CONVERSION(boolLit);
 
 	core::ExpressionPtr retExpr;
@@ -879,12 +877,14 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXBoolLiteralE
 			convFact.builder.literal(
 					GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), boolLit->getExprLoc()),
 					convFact.mgr.getLangBasic().getBool()));
+					*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CXX MEMBER CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
+	/*
 	START_LOG_EXPR_CONVERSION(callExpr);
 	//const core::lang::BasicGenerator& gen = cxxConvFact.builder.getLangBasic();
 
@@ -978,15 +978,11 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXMemberCallEx
 	ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
 	const FunctionDecl* definition = funcDecl;
-	/*
-	 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
-	 * list needs to be initialized with the value of global variable in the current scope
-	 */
+	// We find a definition, we lookup if this variable needs to access the globals, in that case the capture
+	// list needs to be initialized with the value of global variable in the current scope
 	if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
-		/*
-		 * we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
-		 * current context
-		 */
+		// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
+		// current context
 		assert(ctx.globalVar && "No global definitions forwarded to this point");
 		packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 	}
@@ -1036,6 +1032,7 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXMemberCallEx
 
 	VLOG(2) << "End of expression CXXMemberCallExpr \n";
 	return retExpr;
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1044,6 +1041,7 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXMemberCallEx
 //  A call to an overloaded operator written using operator syntax.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) {
+	/*
 	START_LOG_EXPR_CONVERSION(callExpr);
 
 	core::ExpressionPtr retExpr;
@@ -1155,7 +1153,7 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXOperatorCall
 		funcTy = core::static_pointer_cast<const core::FunctionType>(convFact.convertType(GET_TYPE_PTR(funcDecl)) );
 
 		// get the arguments of the function -- differentiate between member/non-member operator
-		args = getFunctionArguments(builder, callExpr, funcTy /*, true*/);
+		args = getFunctionArguments(builder, callExpr, funcTy);  //, true);
 
 		// convert the function declaration
 		packedArgs = tryPack(builder, funcTy, args);
@@ -1256,15 +1254,11 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXOperatorCall
 	//			packedArgs.push_back(cxxConvFact.ctx.thisStack2);
 	//		}
 
-	/*
-	 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
-	 * list needs to be initialized with the value of global variable in the current scope
-	 */
+	// We find a definition, we lookup if this variable needs to access the globals, in that case the capture
+	// list needs to be initialized with the value of global variable in the current scope
 	if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
-		/*
-		 * we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
-		 * current context
-		 */
+		// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
+		// current context
 		assert(ctx.globalVar && "No global definitions forwarded to this point");
 		packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 	}
@@ -1284,12 +1278,14 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXOperatorCall
 	//assert(false && "CXXOperatorCallExpr not yet handled");
 	VLOG(2) << "End of expression CXXOperatorCallExpr \n";
 	return retExpr;
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CXX CONSTRUCTOR CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXConstructExpr(clang::CXXConstructExpr* callExpr) {
+	/*
 
 	START_LOG_EXPR_CONVERSION(callExpr);
 	const core::IRBuilder& builder = convFact.builder;
@@ -1363,15 +1359,13 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXConstructExp
 	core::VariablePtr isArrayTempGlobalVar = 0;
 	core::VariablePtr parentGlobalVar = ctx.globalVar;
 	const FunctionDecl* definition = funcDecl;
-	/*
-	 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
-	 * list needs to be initialized with the value of global variable in the current scope
-	 */
+
+	// We find a definition, we lookup if this variable needs to access the globals, in that case the capture
+	// list needs to be initialized with the value of global variable in the current scope
 	if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
-		/*
-		 * we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
-		 * current context
-		 */
+
+		// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
+		// current context
 		assert(ctx.globalVar && "No global definitions forwarded to this point");
 		packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 
@@ -1487,12 +1481,14 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXConstructExp
 
 	VLOG(2) << "End of CXXConstructExpr \n";
 	return retExpr;
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CXX NEW CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
+	/*
 	START_LOG_EXPR_CONVERSION(callExpr);
 
 	const core::IRBuilder& builder = convFact.getIRBuilder();
@@ -1613,15 +1609,11 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXNewExpr(clan
 		ExpressionList packedArgs = tryPack(builder, funcTy, args);
 
 		const FunctionDecl* definition = funcDecl;
-		/*
-		 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
-		 * list needs to be initialized with the value of global variable in the current scope
-		 */
+		// We find a definition, we lookup if this variable needs to access the globals, in that case the capture
+		// list needs to be initialized with the value of global variable in the current scope
 		if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
-			/*
-			 * we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
-			 * current context
-			 */
+			// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
+			// current context
 			assert(ctx.globalVar && "No global definitions forwarded to this point");
 			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 		}
@@ -1698,12 +1690,14 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXNewExpr(clan
 
 	VLOG(2) << "End of expression CXXNewExpr \n";
 	return retExpr;
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CXX DELETE CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
+	/*
 	START_LOG_EXPR_CONVERSION(deleteExpr);
 
 	core::ExpressionPtr retExpr;
@@ -1713,10 +1707,9 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(c
 	//check if argument is class/struct (with non-trivial dtor), otherwise just call "free" for builtin types
 	if(deleteExpr->getDestroyedType().getTypePtr()->isStructureOrClassType()
 			&& !deleteExpr->getDestroyedType()->getAsCXXRecordDecl()->hasTrivialDestructor() ) {
-		/* the call of the dtor and the "free" of the destroyed object is done in an
-		 * lambdaExpr so we have to pass the object we destroy and if we have a virtual dtor
-		 * also the globalVar to the lambdaExpr
-		 */
+		// the call of the dtor and the "free" of the destroyed object is done in an
+		// lambdaExpr so we have to pass the object we destroy and if we have a virtual dtor
+		// also the globalVar to the lambdaExpr
 
 		core::ExpressionPtr delOpIr;
 		core::ExpressionPtr dtorIr;
@@ -1932,12 +1925,14 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(c
 
 	VLOG(2) << "End of expression CXXDeleteExpr \n";
 	return retExpr;
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CXX THIS CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXThisExpr(clang::CXXThisExpr* callExpr) {
+	/*
 	START_LOG_EXPR_CONVERSION(callExpr);
 
 //		VLOG(2) << "thisStack2: " << cxxConvFact.ctx.thisStack2;
@@ -1954,21 +1949,25 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXThisExpr(cla
 	VLOG(2) << "End of expression CXXThisExpr \n";
 	//Need thisVar not Stack2 //return cxxConvFact.ctx.thisStack2;
 	return convFact.cxxCtx.thisVar;
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					EXCEPTION CXX THROW EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXThrowExpr(clang::CXXThrowExpr* throwExpr) {
+	/*
 	START_LOG_EXPR_CONVERSION(throwExpr);
 	assert(false && "VisitCXXThrowExpr not yet handled");
 	VLOG(2) << "End of expression\n";
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					CXX DEFAULT ARG EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXDefaultArgExpr(clang::CXXDefaultArgExpr* defaultArgExpr) {
+	/*
 	assert(convFact.currTU && "Translation unit not correctly set");
 	VLOG(1) << "\n****************************************************************************************\n"
 	<< "Converting expression [class: '" << defaultArgExpr->getStmtClassName() << "']\n"
@@ -1984,10 +1983,12 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXDefaultArgEx
 	VLOG(2) << "End of expression CXXDefaultArgExpr\n";
 
 	return Visit(defaultArgExpr->getExpr());
+	*/
 }
 
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXBindTemporaryExpr(
 		clang::CXXBindTemporaryExpr* bindTempExpr) {
+	/*
 
 	core::IRBuilder& builder =
 	const_cast<core::IRBuilder&>(convFact.builder);
@@ -2007,11 +2008,12 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXBindTemporar
 	convFact.cxxCtx.thisStack2 = parentThisStack;
 
 	return retExpr;
-
+	*/
 }
 
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitExprWithCleanups(
 		clang::ExprWithCleanups* cleanupExpr) {
+	/*
 
 	core::IRBuilder& builder =
 	const_cast<core::IRBuilder&>(convFact.builder);
@@ -2110,16 +2112,18 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitExprWithCleanup
 	core::LambdaExprPtr&& lambdaExpr = convFact.builder.lambdaExpr(funcType,body, params);
 
 	return convFact.builder.callExpr(funcType, lambdaExpr, args);
-
+	*/
 }
 
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitMaterializeTemporaryExpr(
 		clang::MaterializeTemporaryExpr* materTempExpr) {
+	/*
 
 	core::ExpressionPtr retExpr;
 	retExpr = Visit(materTempExpr->GetTemporaryExpr());
 
 	return retExpr;
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2127,11 +2131,13 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitMaterializeTemp
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::CXXExprConverter::Visit(clang::Expr* expr) {
+	/*
 	VLOG(2) << "CXX";
 	core::ExpressionPtr&& retIr = StmtVisitor<CXXConversionFactory::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
 
 	// check for OpenMP annotations
 	return omp::attachOmpAnnotation(retIr, expr, convFact);
+	*/
 }
 
 } // End conversion namespace

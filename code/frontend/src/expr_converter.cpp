@@ -65,8 +65,9 @@
 
 #include "clang/AST/StmtVisitor.h"
 
-#include "clang/Index/Entity.h"
-#include "clang/Index/Indexer.h"
+// clang [3.0]
+// #include "clang/Index/Entity.h"
+// #include "clang/Index/Indexer.h"
 
 #include "clang/Basic/FileManager.h"
 
@@ -298,16 +299,14 @@ void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDe
  * CallExprVisitor 
  *************************************************************************************************/
 void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
-	const clang::FunctionDecl* def = NULL;
 	/*
-	 * this will find function definitions if they are declared in  the same translation unit
-	 * (also defined as static)
-	 */
+	 * FIXME: clang [3.0]
+	const clang::FunctionDecl* def = NULL;
+	// this will find function definitions if they are declared in  the same translation unit
+	// (also defined as static)
 	if (!funcDecl->hasBody(def)) {
-		/*
-		 * if the function is not defined in this translation unit, maybe it is defined in another we already
-		 * loaded use the clang indexer to lookup the definition for this function declarations
-		 */
+		// if the function is not defined in this translation unit, maybe it is defined in another we already
+		// loaded use the clang indexer to lookup the definition for this function declarations
 		clang::idx::Entity&& funcEntity = clang::idx::Entity::get( funcDecl, indexer.getProgram() );
 		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
 		if ( ret.first ) {def = ret.first;}
@@ -316,6 +315,7 @@ void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
 	if (def) {
 		callGraph.insert(def);
 	}
+	*/
 }
 
 void CallExprVisitor::VisitCallExpr(clang::CallExpr* callExpr) {
@@ -714,13 +714,14 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 			 * loaded use the clang indexer to lookup the definition for this function declarations
 			 */
 			FunctionDecl* fd = funcDecl;
-			const clang::idx::TranslationUnit* clangTU = convFact.getTranslationUnitForDefinition(fd);
+			const TranslationUnit* rightTU = convFact.getTranslationUnitForDefinition(fd);
 
-			if (clangTU) {
-				convFact.currTU = &Program::getTranslationUnit(clangTU);
+			if (rightTU) {
+				// clang [3.0]convFact.currTU = &Program::getTranslationUnit(clangTU);
+				convFact.currTU = rightTU;
 			}
 
-			if (clangTU && fd->hasBody()) {
+			if (rightTU && fd->hasBody()) {
 				definition = fd;
 			}
 		}

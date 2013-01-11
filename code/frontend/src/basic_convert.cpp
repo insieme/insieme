@@ -84,8 +84,9 @@
 #include <clang/AST/CXXInheritance.h>
 #include "clang/AST/StmtVisitor.h"
 
-#include "clang/Index/Entity.h"
-#include "clang/Index/Indexer.h"
+// [3.0]
+//#include "clang/Index/Entity.h"
+//#include "clang/Index/Indexer.h"
 
 using namespace clang;
 using namespace insieme;
@@ -110,22 +111,39 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						C CONVERSION FACTORY
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-const clang::idx::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(FunctionDecl*& funcDecl) {
-	/*
-	 * if the function is not defined in this translation unit, maybe it is defined in another we already
-	 * loaded use the clang indexer to lookup the definition for this function declarations
-	 */
-	clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, program.getClangProgram());
-	ConversionFactory::TranslationUnitPair&& ret = program.getClangIndexer().getDefinitionFor(funcEntity);
+//clang [3.0] const clang::idx::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(FunctionDecl*& funcDecl) {
+const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(FunctionDecl*& funcDecl) {
+
+	// get symbol name
+	clang::NamedDecl *name = llvm::cast<clang::NamedDecl>(funcDecl);
+	assert(name && "must have a name");
+
+	ConversionFactory::TranslationUnitPair&& ret = 
+			program.getIndexer().getDefAndTUforDefinition (name->getNameAsString());
+
+	if (!ret.first)
+		VLOG(2) << "no TU for: " << name->getNameAsString();
 
 	// function declaration not found. return the current translation unit
 	if ( !ret.first ) {return NULL;}
 
 	assert(ret.first && ret.second && "Translation unit for function not found");
 
+	funcDecl = llvm::cast<FunctionDecl> ( ret.first);
+	return ret.second;
+
+/* FIXME: clang [3.0]
+	// if the function is not defined in this translation unit, maybe it is defined in another we already
+	// loaded use the clang indexer to lookup the definition for this function declarations
+	clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, program.getClangProgram());
+	ConversionFactory::TranslationUnitPair&& ret = program.getClangIndexer().getDefinitionFor(funcEntity);
+
+
+
 	// update the funcDecl pointer to point to the correct function declaration 
 	funcDecl = ret.first;
 	return ret.second;
+	*/
 }
 
 ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog) :
@@ -151,10 +169,11 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog,
 void ConversionFactory::collectGlobalVar(const clang::FunctionDecl* funcDecl) {
 	// Extract globals starting from this entry point
 	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
-	const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(def);
+ // clang [3.0]	const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(def);
+	const TranslationUnit* clangTU = getTranslationUnitForDefinition(def);
 
 	ctx.globalFuncMap.clear();
-	analysis::GlobalVarCollector globColl(*this, clangTU , program.getClangIndexer(), ctx.globalFuncMap);
+	analysis::GlobalVarCollector globColl(*this, clangTU , program.getIndexer(), ctx.globalFuncMap);
 
 	globColl(funcDecl);
 	globColl(getProgram().getTranslationUnits());
@@ -196,16 +215,13 @@ core::TypePtr ConversionFactory::tryDeref(const core::TypePtr& type) const {
 	return type;
 }
 
-/*  
- *  Register call expression handlers to be used during the clang to IR conversion
- */
+// Register call expression handlers to be used during the clang to IR conversion
 //void ConversionFactory::registerCallExprHandler(const clang::FunctionDecl* funcDecl, CustomFunctionHandler& handler) {
 //	auto it = callExprHanlders.insert( std::make_pair(funcDecl, handler) );
 //	assert( !it.second && "Handler for function declaration already registered." );
 //}
-/* Function to convert Clang attributes of declarations to IR annotations (local version) currently used for:
- * 	-> OpenCL address spaces
- */
+//  Function to convert Clang attributes of declarations to IR annotations (local version) currently used for:
+// 	-> OpenCL address spaces
 core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang::ValueDecl* varDecl) const {
 	if (!varDecl->hasAttrs()) {
 		return insieme::core::NodeAnnotationPtr();
@@ -285,21 +301,18 @@ core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang::ValueDe
 core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* valDecl) {
 
 	assert(currTU && "translation unit is null");
-	/*
-	 * Lookup the map of declared variable to see if the current varDecl is already associated with an IR entity
-	 */
+
+	// Lookup the map of declared variable to see if the current varDecl is already associated with an IR entity
 	ConversionContext::VarDeclMap::const_iterator fit = ctx.varDeclMap.find(valDecl);
 	if (fit != ctx.varDeclMap.end()) {
 		// variable found in the map
 		return fit->second;
 	}
 
-	/*
-	 * The variable has not been converted into IR variable yet, therefore we create the IR variable and insert it
-	 * to the map for successive lookups
-	 *
-	 * Conversion of the variable type
-	 */
+	// The variable has not been converted into IR variable yet, therefore we create the IR variable and insert it
+	// to the map for successive lookups
+	
+	// Conversion of the variable type
 	QualType&& varTy = valDecl->getType();
 	VLOG(2)	<< varTy.getAsString(); // cm
 
@@ -320,11 +333,9 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		irType = builder.refType(irType);
 	}
 
-	/*
-	 * Check whether this is variable is defined as global or static. If static, it means the variable has been already
-	 * defined in the global data structure so we don't have to create an IR variable but access (via the memberAccess
-	 * operation) the relative member of the global data structure.
-	 */
+	// Check whether this is variable is defined as global or static. If static, it means the variable has been already
+	// defined in the global data structure so we don't have to create an IR variable but access (via the memberAccess
+	// operation) the relative member of the global data structure.
 	const clang::VarDecl* varDecl = cast<clang::VarDecl>(valDecl);
 
 	if (varDecl && varDecl->hasGlobalStorage()) {
@@ -359,10 +370,8 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		return utils::cast(retExpr, irType);
 	}
 
-	/*
-	 * The variable is not in the map and not defined as global (or static) therefore we proceed with the creation of
-	 * the IR variable and insert it into the map for future lookups
-	 */
+	// The variable is not in the map and not defined as global (or static) therefore we proceed with the creation of
+	// the IR variable and insert it into the map for future lookups
 	core::VariablePtr&& var = builder.variable( irType );
 	VLOG(2) << "IR variable" << var.getType()->getNodeType() << "" << var<<":"<<varDecl->getNameAsString();
 
@@ -878,11 +887,14 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 					FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
 					VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
-					const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
 
-					if ( clangTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
+				//clang[3.0]const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
+					const TranslationUnit* rightTU = this->getTranslationUnitForDefinition(decl);
+
+					if ( rightTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
 						// update the translation unit
-						this->currTU = &Program::getTranslationUnit(clangTU);
+						// [3.0] this->currTU = &Program::getTranslationUnit(clangTU);
+						this->currTU = rightTU;
 						// look up the lambda cache to see if this function has been
 						// already converted into an IR lambda expression.
 						ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
@@ -1113,7 +1125,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// when a sub recursive type is visited.
 	ctx.isRecSubFunc = true;
 
-	for(auto fd : components) {
+/*	 FIXME: clang [3.0]
+ 	for(auto fd : components) {
 
 		ConversionContext::RecVarExprMap::const_iterator tit = ctx.recVarExprMap.find(fd);
 		assert(tit != ctx.recVarExprMap.end() && "Recursive function has no TypeVar associated");
@@ -1122,17 +1135,13 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		// test whether function has already been resolved
 		if (*tit->second == *recVarRef) { continue; }
 
-		/*
-		 * we remove the variable from the list in order to fool the solver, in this way it will create a descriptor
-		 * for this type (and he will not return the TypeVar associated with this recursive type). This behaviour
-		 * is enabled only when the isRecSubType flag is true
-		 */
+		// we remove the variable from the list in order to fool the solver, in this way it will create a descriptor
+		// for this type (and he will not return the TypeVar associated with this recursive type). This behaviour
+		// is enabled only when the isRecSubType flag is true
 		ctx.recVarExprMap.erase(fd);
 
-		/*
-		 * if the function is not defined in this translation unit, maybe it is defined in another we already loaded
-		 * use the clang indexer to lookup the definition for this function declarations
-		 */
+		// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
+		// use the clang indexer to lookup the definition for this function declarations
 		clang::idx::Entity&& funcEntity =
 			clang::idx::Entity::get(const_cast<FunctionDecl*>(fd), program.getClangProgram());
 
@@ -1153,7 +1162,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		// reinsert the TypeVar in the map in order to solve the other recursive types
 		ctx.recVarExprMap.insert( {fd, ctx.currVar} );
-	}
+	} */
+
 	ctx.currVar = NULL;
 
 	// we reset the behavior of the solver
@@ -1172,14 +1182,16 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		assert(fit != ctx.recVarExprMap.end());
 
 		FunctionDecl* decl = const_cast<FunctionDecl*>(fd);
-		const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(decl);
+		//clang [3.0]const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(decl);
+		const TranslationUnit* rightTU = getTranslationUnitForDefinition(decl);
 
-		assert ( clangTU );
+		assert (rightTU);
 			// save old TU
 		const TranslationUnit* oldTU = currTU;
 
 		// update the translation unit
-		currTU = &Program::getTranslationUnit(clangTU);
+		//currTU = &Program::getTranslationUnit(clangTU);
+		currTU = rightTU;
 
 		core::ExpressionPtr&& func = builder.lambdaExpr(fit->second, definition);
 		ctx.lambdaExprCache.insert( {decl, func} );
@@ -1228,16 +1240,16 @@ core::CallExprPtr ASTConverter::handleBody(const clang::Stmt* body, const Transl
 }
 
 core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
-	/*
-	 * Handling of the translation unit: we have to make sure to load the translation unit where the function is
-	 * defined before starting the parser otherwise reading literals results in wrong values.
-	 */
+	// Handling of the translation unit: we have to make sure to load the translation unit where the function is
+	// defined before starting the parser otherwise reading literals results in wrong values.
 	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
-	const clang::idx::TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
-	assert(clangTU && "Translation unit for function not found.");
+	//clang [3.0]const clang::idx::TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
+	const TranslationUnit* rightTU = mFact.getTranslationUnitForDefinition(def);
+	assert(rightTU && "Translation unit for function not found.");
 	const TranslationUnit* oldTU = mFact.currTU;
 
-	mFact.setTranslationUnit(Program::getTranslationUnit(clangTU));
+	mFact.setTranslationUnit(*rightTU);
+			// clang [3.0] Program::getTranslationUnit(clangTU));
 
 	insieme::utils::Timer t("Globals.collect");
 	mFact.collectGlobalVar(funcDecl);

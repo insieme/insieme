@@ -41,15 +41,27 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/frontend/compiler.h"
 
-namespace clang {
-namespace idx {
-class TranslationUnit;
-} // end idx namespace
-} // end clang namespace
+#include "insieme/utils/logging.h"
 
+
+
+// clang [3.0]
+//namespace clang {
+//namespace idx {
+//class TranslationUnit;
+//} // end idx namespace
+//} // end clang namespace
+
+//namespace clang {
+	//class TranslationUnitDecl;
+//} // end clang namespace
 
 namespace insieme {
 namespace frontend {
+
+	namespace utils{
+		class Indexer;
+	}
 
 namespace pragma {
 class Pragma;
@@ -133,6 +145,7 @@ public:
 	void addTranslationUnits(const std::vector<std::string>& fileNames) {
 		std::for_each(fileNames.begin(), fileNames.end(), 
 				[ this ](const std::string& fileName) { 
+				VLOG(2) << "  -tu for: " << fileName;
 				this->addTranslationUnit(fileName); 
 			});
 	}
@@ -147,9 +160,11 @@ public:
 	 */
 	const TranslationUnitSet& getTranslationUnits() const;
 
-	static const TranslationUnit& getTranslationUnit(const clang::idx::TranslationUnit* tu);
+	// clang [3.0] static const TranslationUnit& getTranslationUnit(const clang::idx::TranslationUnit* tu);
+	//static const TranslationUnit& getTranslationUnit(const clang::TranslationUnitDecl* tu);
 
-	static const clang::idx::TranslationUnit* getClangTranslationUnit(const TranslationUnit& tu);
+	// clang [3.0] static const clang::idx::TranslationUnit* getClangTranslationUnit(const TranslationUnit& tu);
+	//static const clang::TranslationUnitDecl* getClangTranslationUnit(const TranslationUnit& tu);
 
 	class PragmaIterator: public 
 				std::iterator<
@@ -186,8 +201,10 @@ public:
 	PragmaIterator pragmas_begin(const PragmaIterator::FilteringFunc& func) const;
 	PragmaIterator pragmas_end() const;
 
-	clang::idx::Program& getClangProgram() const;
-	clang::idx::Indexer& getClangIndexer() const;
+	// clang [3.0]
+//	clang::idx::Program& getClangProgram() const;
+// 	clang::idx::Indexer& getClangIndexer() const;
+	utils::Indexer& getIndexer() const;
 
 	void dumpCallGraph() const;
 };

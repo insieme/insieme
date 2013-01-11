@@ -53,10 +53,11 @@
 
 #include "insieme/annotations/c/naming.h"
 
-#include "clang/Index/Entity.h"
-#include "clang/Index/Indexer.h"
-#include "clang/Index/Program.h"
-#include "clang/Index/TranslationUnit.h"
+// [3.0]
+//#include "clang/Index/Entity.h"
+//#include "clang/Index/Indexer.h"
+//#include "clang/Index/Program.h"
+//#include "clang/Index/TranslationUnit.h"
 
 #include "clang/Basic/FileManager.h"
 
@@ -84,7 +85,7 @@ namespace analysis {
 
 core::StringValuePtr
 GlobalVarCollector::buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const clang::FunctionDecl* func ) const {
-
+/*
 	assert(currTU);
 	const clang::SourceManager& srcMgr = const_cast<clang::idx::TranslationUnit*>(currTU)->getASTContext().getSourceManager();
 			
@@ -109,6 +110,7 @@ GlobalVarCollector::buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const c
 		}
 	}
 	return convFact.getIRBuilder().stringValue( str );
+	*/
 }
 
 void GlobalVarCollector::operator()(const clang::Decl* decl) {
@@ -127,7 +129,10 @@ void GlobalVarCollector::operator()(const clang::Decl* decl) {
 }
 
 void GlobalVarCollector::operator()(const Program::TranslationUnitSet& tus) {
-	const clang::idx::TranslationUnit* saveTU = currTU;
+	/*
+	 * FIXME:  find a way with 3.2
+	
+	 const clang::idx::TranslationUnit* saveTU = currTU;
 
 	std::for_each(tus.begin(), tus.end(), [&](const TranslationUnitPtr& cur) {
 		currTU = Program::getClangTranslationUnit(*cur);
@@ -147,6 +152,7 @@ void GlobalVarCollector::operator()(const Program::TranslationUnitSet& tus) {
 	});
 
 	currTU = saveTU;
+	*/
 }
 
 void GlobalVarCollector::VisitExternVarDecl(clang::VarDecl* decl) {
@@ -289,17 +295,16 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 }
 
 bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
-	FunctionDecl* funcDecl = callExpr->getDirectCallee();
+	/*FunctionDecl* funcDecl = callExpr->getDirectCallee();
 	const FunctionDecl *definition = NULL;
 
 	// save the translation unit for the current function
 	const clang::idx::TranslationUnit* old = currTU;
 	if(!funcDecl->hasBody(definition)) {
-		/*******************************************************************************************
-		 * if the function is not defined in this translation unit, maybe it is defined in another
-		 * we already loaded  use the clang indexer to lookup the definition for this function
-		 * declarations
-		 ******************************************************************************************/
+
+		// if the function is not defined in this translation unit, maybe it is defined in another
+		// we already loaded  use the clang indexer to lookup the definition for this function
+		// declarations
 		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
 		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
 		definition = ret.first;
@@ -311,10 +316,8 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 		(*this)(definition);
 		funcStack.pop();
 
-		/*
-		 * if the called function access the global data structure also the current function
-		 * has to be marked (otherwise the global structure will not correctly forwarded)
-		 */
+		// if the called function access the global data structure also the current function
+		// has to be marked (otherwise the global structure will not correctly forwarded)
 		if(usingGlobals.find(definition) != usingGlobals.end()) {
 			usingGlobals.insert( funcStack.top() );
 		}
@@ -322,9 +325,11 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 	// reset the translation unit to the previous one
 	currTU = old;
 	return true;
+	*/
 }
 
 bool CXXGlobalVarCollector::VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) {
+	/*
 //	Expr* 		 callee = callExpr->getCallee()->IgnoreParens();
 //	MemberExpr* 	 memberExpr = cast<MemberExpr>(callee);
 //	CXXMethodDecl* methodDecl = cast<CXXMethodDecl>(memberExpr->getMemberDecl());
@@ -350,11 +355,10 @@ bool CXXGlobalVarCollector::VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr*
 	// save the translation unit for the current function
 	const clang::idx::TranslationUnit* old = currTU;
 	if(!funcDecl->hasBody(definition)) {
-		/*******************************************************************************************
-		 * if the function is not defined in this translation unit, maybe it is defined in another
-		 * we already loaded  use the clang indexer to lookup the definition for this function
-		 * declarations
-		 ******************************************************************************************/
+
+		// if the function is not defined in this translation unit, maybe it is defined in another
+		// we already loaded  use the clang indexer to lookup the definition for this function
+		// declarations
 		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
 		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
 		definition = ret.first;
@@ -366,10 +370,8 @@ bool CXXGlobalVarCollector::VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr*
 		(*this)(definition);
 		funcStack.pop();
 
-		/*
-		 * if the called function access the global data structure also the current function
-		 * has to be marked (otherwise the global structure will not correctly forwarded)
-		 */
+		// if the called function access the global data structure also the current function
+		// has to be marked (otherwise the global structure will not correctly forwarded)
 		if(usingGlobals.find(definition) != usingGlobals.end()) {
 			usingGlobals.insert( funcStack.top() );
 		}
@@ -377,10 +379,12 @@ bool CXXGlobalVarCollector::VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr*
 	// reset the translation unit to the previous one
 	currTU = old;
 
+	*/
 	return true;
 }
 
 bool CXXGlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
+	/*
 	Expr* 		 callee = callExpr->getCallee()->IgnoreParens();
 	MemberExpr* 	 memberExpr = cast<MemberExpr>(callee);
 	CXXMethodDecl* methodDecl = cast<CXXMethodDecl>(memberExpr->getMemberDecl());
@@ -391,11 +395,10 @@ bool CXXGlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* cal
 	// save the translation unit for the current function
 	const clang::idx::TranslationUnit* old = currTU;
 	if(!funcDecl->hasBody(definition)) {
-		/*******************************************************************************************
-		 * if the function is not defined in this translation unit, maybe it is defined in another
-		 * we already loaded  use the clang indexer to lookup the definition for this function
-		 * declarations
-		 ******************************************************************************************/
+
+		// if the function is not defined in this translation unit, maybe it is defined in another
+		// we already loaded  use the clang indexer to lookup the definition for this function
+		// declarations
 		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
 		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
 		definition = ret.first;
@@ -416,10 +419,8 @@ bool CXXGlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* cal
 		(*this)(definition);
 		funcStack.pop();
 
-		/*
-		 * if the called function access the global data structure also the current function
-		 * has to be marked (otherwise the global structure will not correctly forwarded)
-		 */
+		// if the called function access the global data structure also the current function
+		// has to be marked (otherwise the global structure will not correctly forwarded)
 		if(usingGlobals.find(definition) != usingGlobals.end()) {
 			usingGlobals.insert( funcStack.top() );
 		}
@@ -427,10 +428,12 @@ bool CXXGlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* cal
 	// reset the translation unit to the previous one
 	currTU = old;
 
+	*/
 	return true;
 }
 
 bool CXXGlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
+	/*
 	if(!deleteExpr->getDestroyedType().getTypePtr()->isStructureOrClassType()) {
 		//for non struct/class types (--> builtin) nothing to do
 		return true;
@@ -447,11 +450,10 @@ bool CXXGlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr)
 	// save the translation unit for the current function
 	const clang::idx::TranslationUnit* old = currTU;
 	if(!funcDecl->hasBody(definition)) {
-		/*******************************************************************************************
-		 * if the function is not defined in this translation unit, maybe it is defined in another
-		 * we already loaded  use the clang indexer to lookup the definition for this function
-		 * declarations
-		 ******************************************************************************************/
+
+		// if the function is not defined in this translation unit, maybe it is defined in another
+		// we already loaded  use the clang indexer to lookup the definition for this function
+		// declarations
 		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
 		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
 		definition = ret.first;
@@ -472,10 +474,8 @@ bool CXXGlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr)
 		(*this)(definition);
 		funcStack.pop();
 
-		/*
-		 * if the called function access the global data structure also the current function
-		 * has to be marked (otherwise the global structure will not correctly forwarded)
-		 */
+		// if the called function access the global data structure also the current function
+		// has to be marked (otherwise the global structure will not correctly forwarded)
 		if(usingGlobals.find(definition) != usingGlobals.end()) {
 			usingGlobals.insert( funcStack.top() );
 		}
@@ -483,10 +483,12 @@ bool CXXGlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr)
 	// reset the translation unit to the previous one
 	currTU = old;
 
+	*/
 	return true;
 }
 
 bool CXXGlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
+	/*
 
 	//check if allocated type is builtin
 	if( newExpr->getAllocatedType().getTypePtr()->isBuiltinType() ) {
@@ -516,11 +518,10 @@ bool CXXGlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 	// save the translation unit for the current function
 	const clang::idx::TranslationUnit* old = currTU;
 	if(!funcDecl->hasBody(definition)) {
-		/*******************************************************************************************
-		 * if the function is not defined in this translation unit, maybe it is defined in another
-		 * we already loaded  use the clang indexer to lookup the definition for this function
-		 * declarations
-		 ******************************************************************************************/
+
+		// if the function is not defined in this translation unit, maybe it is defined in another
+		// we already loaded  use the clang indexer to lookup the definition for this function
+		// declarations
 		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
 		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
 		definition = ret.first;
@@ -549,20 +550,20 @@ bool CXXGlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 		(*this)(definition);
 		funcStack.pop();
 
-		/*
-		 * if the called function access the global data structure also the current function
-		 * has to be marked (otherwise the global structure will not correctly forwarded)
-		 */
+		// if the called function access the global data structure also the current function
+		// has to be marked (otherwise the global structure will not correctly forwarded)
 		if(usingGlobals.find(definition) != usingGlobals.end()) {
 			usingGlobals.insert( funcStack.top() );
 		}
 	}
 	// reset the translation unit to the previous one
 	currTU = old;
+	*/
 	return true;
 }
 
 bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
+	/*
 	CXXConstructorDecl* ctorDecl = ctorExpr->getConstructor();
 	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(ctorDecl);
 	const FunctionDecl *definition = NULL;
@@ -586,11 +587,10 @@ bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorE
 	// save the translation unit for the current function
 	const clang::idx::TranslationUnit* old = currTU;
 	if(!funcDecl->hasBody(definition)) {
-		/*******************************************************************************************
-		 * if the function is not defined in this translation unit, maybe it is defined in another
-		 * we already loaded  use the clang indexer to lookup the definition for this function
-		 * declarations
-		 ******************************************************************************************/
+
+		// if the function is not defined in this translation unit, maybe it is defined in another
+		// we already loaded  use the clang indexer to lookup the definition for this function
+		// declarations
 		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
 		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
 		definition = ret.first;
@@ -619,10 +619,8 @@ bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorE
 		(*this)(definition);
 		funcStack.pop();
 
-		/*
-		 * if the called function access the global data structure also the current function
-		 * has to be marked (otherwise the global structure will not correctly forwarded)
-		 */
+		// if the called function access the global data structure also the current function
+		// has to be marked (otherwise the global structure will not correctly forwarded)
 		if(usingGlobals.find(definition) != usingGlobals.end()) {
 			usingGlobals.insert( funcStack.top() );
 		}
@@ -630,12 +628,13 @@ bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorE
 	// reset the translation unit to the previous one
 	currTU = old;
 
+	*/
 	return true;
 }
 
 // prepare vTable and offsetTable and necessary maps
 void CXXGlobalVarCollector::collectVTableData(const clang::CXXRecordDecl* recDecl) {
-
+	/*
 
 	if( polymorphicClassMap.find(recDecl) == polymorphicClassMap.end() ) {
 		//recDecl not yet collected
@@ -752,11 +751,13 @@ void CXXGlobalVarCollector::collectVTableData(const clang::CXXRecordDecl* recDec
 		//add list of final overriders to Context::finalOverriderMap (Class, finalOverriders of class)
 		finalOverriderMap.insert( std::make_pair(recDecl, finalOverriders) );
 	}
+*/
 }
 
 
 // Returns all bases of a c++ record declaration
 vector<CXXRecordDecl*> CXXGlobalVarCollector::getAllDynamicBases(const clang::CXXRecordDecl* recDeclCXX ){
+	/*
 	vector<CXXRecordDecl*> bases;
 
 	for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
@@ -774,14 +775,16 @@ vector<CXXRecordDecl*> CXXGlobalVarCollector::getAllDynamicBases(const clang::CX
 		}
 	}
 	return bases;
+	*/
 }
 
-/*
- * This function synthetized the global structure that will be used to hold the
- * global variables used within the functions of the input program.
- */
+/// This function synthetized the global structure that will be used to hold the
+/// global variables used within the functions of the input program.
 GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 
+	// FIXME: rebuild global collector
+		return std::make_pair(core::StructTypePtr(), core::StructExprPtr());
+/*
 
 	// no global variable found , we return an empty tuple
 	if ( globals.empty() ) {
@@ -796,11 +799,10 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		// get entry type and wrap it into a reference if necessary
 		auto fit = varTU.find(*it);
 		assert(fit != varTU.end());
-		/*
-		 * In the case we have to resolve the initial value the current translation
-		 * unit has to be set properly
-		 */
-		convFact.setTranslationUnit(convFact.getProgram().getTranslationUnit( fit->second ) );
+		
+		// In the case we have to resolve the initial value the current translation
+		// unit has to be set properly
+		c/nvFact.setTranslationUnit(convFact.getProgram().getTranslationUnit( fit->second ) );
 		
 		core::StringValuePtr ident = varIdentMap.find( *it )->second;
 
@@ -813,7 +815,8 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 
 		// If variable is marked to be volatile, make its tile volatile
 		//auto&& vit1 = std::find(convFact.getVolatiles().begin(), convFact.getVolatiles().end(), *it);
-	   	if(/*vit1 != convFact.getVolatiles().end() ||*/ (*it)->getType().isVolatileQualified()) {
+	   	//if(vit1 != convFact.getVolatiles().end() ||
+	   	if((*it)->getType().isVolatileQualified()) {
 			///[>*************************************
 			//// X-MASS2011 - HACK
 			///[>*************************************
@@ -821,10 +824,8 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		}
 
 		if ( (*it)->hasExternalStorage() ) {
-			/*
-			 * the variable is defined as extern, so we don't have to allocate memory
-			 * for it just refer to the memory location someone else has initialized
-			 */
+			// the variable is defined as extern, so we don't have to allocate memory
+			// for it just refer to the memory location someone else has initialized
 			type = builder.refType( type );
 		}
 
@@ -834,10 +835,8 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		// add initialization
 		varIdentMap.insert( std::make_pair(*it, ident) ); 
 
-		/*
-		 * we have to initialize the value of this ref with the value of the extern
-		 * variable which we assume will be visible from the entry point
-		 */
+		// we have to initialize the value of this ref with the value of the extern
+		// variable which we assume will be visible from the entry point
 		core::ExpressionPtr initExpr;
 		if( (*it)->hasExternalStorage() ) {
 			assert (type->getNodeType() == core::NT_RefType);
@@ -872,14 +871,13 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 	convFact.setTranslationUnit(convFact.getProgram().getTranslationUnit(currTU));
 
 	return std::make_pair(structTy, builder.structExpr(structTy, members) );
+	*/
 }
 
-/*
- * This function synthetized the global structure that will be used to hold the
- * global variables used within the functions of the input program.
- */
+/// This function synthetized the global structure that will be used to hold the
+/// global variables used within the functions of the input program.
 GlobalVarCollector::GlobalStructPair CXXGlobalVarCollector::createGlobalStruct()  {
-
+	/*
 
 	// no global variable AND NO POLYMORPHIC CLASS found , we return an empty tuple
 	if ( globals.empty() && polymorphicClassMap.empty()) {
@@ -933,10 +931,8 @@ GlobalVarCollector::GlobalStructPair CXXGlobalVarCollector::createGlobalStruct()
 		// get entry type and wrap it into a reference if necessary
 		auto fit = varTU.find(*it);
 		assert(fit != varTU.end());
-		/*
-		 * In the case we have to resolve the initial value the current translation
-		 * unit has to be set properly
-		 */
+		// In the case we have to resolve the initial value the current translation
+		// unit has to be set properly
 		convFact.setTranslationUnit(convFact.getProgram().getTranslationUnit( fit->second ) );
 
 		core::StringValuePtr ident = varIdentMap.find( *it )->second;
@@ -945,7 +941,8 @@ GlobalVarCollector::GlobalStructPair CXXGlobalVarCollector::createGlobalStruct()
 
 		// If variable is marked to be volatile, make its tile volatile
 		//auto&& vit1 = std::find(convFact.getVolatiles().begin(), convFact.getVolatiles().end(), *it);
-	   	if(/*vit1 != convFact.getVolatiles().end() ||*/ (*it)->getType().isVolatileQualified()) {
+	   	//if(vit1 != convFact.getVolatiles().end() || (*it)->getType().isVolatileQualified()) {
+	   	if((*it)->getType().isVolatileQualified()) {
 			///[>*************************************
 			//// X-MASS2011 - HACK
 			///[>*************************************
@@ -953,10 +950,8 @@ GlobalVarCollector::GlobalStructPair CXXGlobalVarCollector::createGlobalStruct()
 		}
 
 		if ( (*it)->hasExternalStorage() ) {
-			/*
-			 * the variable is defined as extern, so we don't have to allocate memory
-			 * for it just refer to the memory location someone else has initialized
-			 */
+			// the variable is defined as extern, so we don't have to allocate memory
+			// for it just refer to the memory location someone else has initialized
 			type = builder.refType( type );
 		}
 
@@ -966,10 +961,8 @@ GlobalVarCollector::GlobalStructPair CXXGlobalVarCollector::createGlobalStruct()
 		// add initialization
 		varIdentMap.insert( std::make_pair(*it, ident) );
 
-		/*
-		 * we have to initialize the value of this ref with the value of the extern
-		 * variable which we assume will be visible from the entry point
-		 */
+		// we have to initialize the value of this ref with the value of the extern
+		// variable which we assume will be visible from the entry point
 		core::ExpressionPtr initExpr;
 		if( (*it)->hasExternalStorage() ) {
 			assert (type->getNodeType() == core::NT_RefType);
@@ -1010,6 +1003,7 @@ GlobalVarCollector::GlobalStructPair CXXGlobalVarCollector::createGlobalStruct()
 	convFact.setTranslationUnit(convFact.getProgram().getTranslationUnit(currTU));
 
 	return std::make_pair(structTy, builder.structExpr(structTy, members) );
+	*/
 }
 
 

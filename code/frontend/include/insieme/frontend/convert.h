@@ -42,6 +42,7 @@
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/utils/map_utils.h"
+
 #include <memory>
 #include <set>
 #include <functional>
@@ -52,10 +53,13 @@ class ASTContext;
 class DeclGroupRef;
 class FunctionDecl;
 class InitListExpr;
-namespace idx {
-class Indexer;
-class Program;
-} // End idx namespace
+
+// class [3.0]
+//namespace idx {
+//class Indexer;
+//class Program;
+//} // End idx namespace
+
 } // End clang namespace
 
 namespace {
@@ -327,7 +331,9 @@ protected:
 
 public:
 
-	typedef std::pair<clang::FunctionDecl*, clang::idx::TranslationUnit*> TranslationUnitPair;
+	// clang [3.0] typedef std::pair<clang::FunctionDecl*, clang::idx::TranslationUnit*> TranslationUnitPair;
+	//typedef std::pair<clang::FunctionDecl*, TranslationUnit*> TranslationUnitPair;
+	typedef std::pair<clang::Decl*, TranslationUnit*> TranslationUnitPair;
 
 	ConversionFactory(core::NodeManager& mgr, Program& program);
 	ConversionFactory(core::NodeManager& mgr, Program& program,
@@ -372,7 +378,8 @@ public:
 	 *
 	 * Returns the previous translation unit in the case it has to be set back. 
 	 */
-	const clang::idx::TranslationUnit* getTranslationUnitForDefinition(
+	//clang [3.0 ]const clang::idx::TranslationUnit* getTranslationUnitForDefinition(
+	const insieme::frontend::TranslationUnit* getTranslationUnitForDefinition(
 			clang::FunctionDecl*& fd);
 
 	/**
