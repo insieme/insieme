@@ -179,3 +179,19 @@ TEST(PrettyPrinter, HiddenAttributes) {
 	EXPECT_EQ("1", toString(PrettyPrinter(expr)));
 	EXPECT_EQ("attr(1, ([unordered]))", toString(PrettyPrinter(expr, PrettyPrinter::OPTIONS_DETAIL)));
 }
+
+TEST(PrettyPrinter, StructSuperTypes) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr classA = builder.structType(toVector(builder.namedType("a", builder.genericType("A"))));
+	EXPECT_EQ("let type000 = struct<\n\ta:A\n>;\n\ntype000", toString(PrettyPrinter(classA)));
+
+	TypePtr classB = builder.structType(toVector(classA), toVector(builder.namedType("b", builder.genericType("B"))));
+	EXPECT_EQ("let type000 = struct<\n\ta:A\n>;\n\nlet type001 = struct : type000 <\n\tb:B\n>;\n\ntype001", toString(PrettyPrinter(classB)));
+
+	TypePtr classC = builder.structType(toVector(builder.parent(true, classB)), toVector(builder.namedType("c", builder.genericType("C"))));
+	EXPECT_EQ("let type000 = struct<\n\ta:A\n>;\n\nlet type001 = struct : type000 <\n\tb:B\n>;\n\nlet type002 = struct : virtual type001 <\n\tc:C\n>;\n\ntype002", toString(PrettyPrinter(classC)));
+
+}

@@ -374,8 +374,16 @@ namespace {
 				newLine = "";
 			}
 
-			out << ((node->getNodeType() == NT_UnionType)?"union<":"struct<");
-			out << newItem << join("," + newItem, node->getEntries(),
+			out << ((node->getNodeType() == NT_UnionType)?"union":"struct");
+
+			if (!node->getParents().empty()) {
+				out << " : " << join(", ", node->getParents(), [&](std::ostream& out, const ParentPtr& parent) {
+					if (parent->isVirtual()) out << "virtual ";
+					this->visit(parent->getType());
+				}) << " ";
+			}
+
+			out << "<" << newItem << join("," + newItem, node->getEntries(),
 				[&](std::ostream& out, const NamedTypePtr& cur) {
 					this->visit(cur->getName());
 					out << ":";
