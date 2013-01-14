@@ -190,7 +190,7 @@ namespace dump {
 	 */
 	#define REGISTER_ANNOTATION_CONVERTER(_CONVERTER, _ANNOTATION_TYPE) \
 			namespace { \
-				bool _reg = insieme::core::dump::AnnotationConverterRegister::getDefault().registerConverter<_CONVERTER,_ANNOTATION_TYPE>(); \
+				bool _reg ## _CONVERTER = insieme::core::dump::AnnotationConverterRegister::getDefault().registerConverter<_CONVERTER,_ANNOTATION_TYPE>(); \
 			} \
 
 	/**

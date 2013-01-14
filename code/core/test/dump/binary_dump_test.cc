@@ -315,6 +315,73 @@ TEST(BinaryDump, StoreLoadAnnotations2) {
 	// annotation should still be available
 	EXPECT_TRUE(restored->hasAttachedValue<DummyAnnotation2>());
 
+	// check properly restored value
+	EXPECT_EQ(12, restored->getAttachedValue<DummyAnnotation2>().x);
+
+}
+
+// --- test multiple annotations on the same node ---
+
+struct DummyAnnotation3 {
+	int x;
+	DummyAnnotation3(int x) : x(x) {}
+	bool operator==(const DummyAnnotation3& other) const { return x == other.x; };
+};
+
+// create a converter which is automatically registered
+VALUE_ANNOTATION_CONVERTER(DummyAnnotation3)
+
+	typedef core::value_node_annotation<DummyAnnotation3>::type annotation_type;
+
+	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+		assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only dummy annotations supported!");
+		int x = static_pointer_cast<annotation_type>(annotation)->getValue().x;
+		return encoder::toIR(manager, x);
+	}
+
+	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+		assert(encoder::isEncodingOf<int>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
+		return std::make_shared<annotation_type>(DummyAnnotation3(encoder::toValue<int>(node)));
+	}
+};
+
+
+TEST(BinaryDump, StoreLoadMultipleAnnotations) {
+
+	// create a code fragment using manager A
+	NodeManager managerA;
+	IRBuilder builder(managerA);
+
+	NodePtr code = builder.genericType("A");
+	EXPECT_TRUE(code) << *code;
+
+	// add annotation
+	code->attachValue(DummyAnnotation2(12));
+	code->attachValue(DummyAnnotation3(14));
+	EXPECT_TRUE(code->hasAttachedValue<DummyAnnotation2>());
+	EXPECT_TRUE(code->hasAttachedValue<DummyAnnotation3>());
+
+	// create a in-memory stream
+	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+	// dump IR using a binary format
+	binary::dumpIR(buffer, code);
+
+	// reload IR using a different node manager
+	NodeManager managerB;
+	NodePtr restored = binary::loadIR(buffer, managerB);
+
+	EXPECT_NE(code, restored);
+	EXPECT_EQ(*code, *restored);
+
+	// annotation should still be available
+	EXPECT_TRUE(restored->hasAttachedValue<DummyAnnotation2>());
+	EXPECT_TRUE(restored->hasAttachedValue<DummyAnnotation3>());
+
+	// check properly restored values
+	EXPECT_EQ(12, restored->getAttachedValue<DummyAnnotation2>().x);
+	EXPECT_EQ(14, restored->getAttachedValue<DummyAnnotation3>().x);
+
 }
 
 } // end namespace dump
