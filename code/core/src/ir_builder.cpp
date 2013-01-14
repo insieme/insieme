@@ -253,20 +253,30 @@ GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList
 
 
 StructTypePtr IRBuilder::structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
-	vector<NamedTypePtr> members;
-	::transform(entries, std::back_inserter(members), [&](const std::pair<StringValuePtr,TypePtr>& cur) {
-		return namedType(cur.first, cur.second);
-	});
-	return structType(members);
+	return structType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
 }
 
 UnionTypePtr IRBuilder::unionType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
-	vector<NamedTypePtr> members;
-	::transform(entries, std::back_inserter(members), [&](const std::pair<StringValuePtr,TypePtr>& cur) {
-		return namedType(cur.first, cur.second);
-	});
-	return unionType(members);
+	return unionType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
 }
+
+StructTypePtr IRBuilder::structType(const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const {
+	return structType(IRBuilder::parents(parents), entries);
+}
+
+StructTypePtr IRBuilder::structType(const vector<TypePtr>& parents, const vector<NamedTypePtr>& entries) const {
+	return structType(IRBuilder::parents(parents), entries);
+}
+
+StructTypePtr IRBuilder::structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
+	return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+}
+
+StructTypePtr IRBuilder::structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
+	return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+}
+
+
 
 NamedTypePtr IRBuilder::namedType(const string& name, const TypePtr& type) const {
 	return namedType(stringValue(name), type);
