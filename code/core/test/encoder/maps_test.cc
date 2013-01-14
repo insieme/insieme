@@ -34,60 +34,63 @@
  * regarding third party software licenses.
  */
 
-/*
- * data_annotations.h
- *
- *  Created on: Dec 6, 2011
- *      Author: klaus
- */
+#include <gtest/gtest.h>
 
-#pragma once
+#include <utility>
 
+#include "insieme/core/encoder/maps.h"
 
-#include "insieme/utils/annotation.h"
-#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/checks/full_check.h"
 
 namespace insieme {
-namespace annotations {
+namespace core {
+namespace encoder {
 
-using namespace insieme::core;
+
+TEST(Maps, MapsConversion) {
+
+	NodeManager manager;
+
+	// create a pair
+
+	map<string, int> value;
+
+	core::ExpressionPtr ir = toIR(manager, value);
+	auto back = toValue<map<string,int>>(ir);
+
+	EXPECT_EQ("{}", toString(value));
+	EXPECT_EQ("empty(pair<string,int<4>>)", toString(*ir));
 
 
-class LoopAnnotation : public NodeAnnotation {
-	size_t iterations;
+	EXPECT_TRUE((isEncodingOf<map<string,int>>(ir)));
+	EXPECT_TRUE((isEncodingOf<vector<pair<string,int>>>(ir)));
+	EXPECT_FALSE((isEncodingOf<pair<int,int>>(ir)));
+	EXPECT_EQ(value, back);
+	EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
 
-public:
-	static const string NAME;
-    static const utils::StringKey<LoopAnnotation> KEY;
 
-    const utils::AnnotationKey* getKey() const { return &KEY; }
-    const std::string& getAnnotationName() const { return NAME; }
+	// fill the map with something
 
-//    LoopAnnotation() {} iterations has to be initialized
-    LoopAnnotation(size_t iterations): iterations(iterations) {}
+	value["hello"] = 12;
+	value["world"] = 14;
 
-	size_t getIterations() const;
+	ir = toIR(manager, value);
+	back = toValue<map<string,int>>(ir);
 
-    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
-		// always copy the annotation
-		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
-		after->addAnnotation(ptr);
-		return true;
-	}
+	EXPECT_EQ("{hello=12, world=14}", toString(value));
+	EXPECT_EQ("cons(pair(hello, 12), cons(pair(world, 14), empty(pair<string,int<4>>)))", toString(*ir));
 
-    static void attach(const NodePtr& node, size_t iterations);
-    static bool hasAttachedValue(const NodePtr& node);
-    static size_t getValue(const NodePtr& node);
+	EXPECT_TRUE((isEncodingOf<map<string,int>>(ir)));
+	EXPECT_EQ(value, back);
 
-};
+	EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
 
-typedef std::shared_ptr<LoopAnnotation> LoopAnnotationPtr;
+}
 
+
+} // end namespace lists
+} // end namespace core
 } // end namespace insieme
-} // end namespace annotations
 
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot);
-
-} // end namespace std

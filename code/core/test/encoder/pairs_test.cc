@@ -34,60 +34,56 @@
  * regarding third party software licenses.
  */
 
-/*
- * data_annotations.h
- *
- *  Created on: Dec 6, 2011
- *      Author: klaus
- */
-
-#pragma once
+#include <gtest/gtest.h>
 
 
-#include "insieme/utils/annotation.h"
-#include "insieme/core/ir_expressions.h"
+#include "insieme/core/encoder/pairs.h"
+
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/checks/full_check.h"
 
 namespace insieme {
-namespace annotations {
+namespace core {
+namespace encoder {
 
-using namespace insieme::core;
+TEST(Pairs, LanguageExtension) {
+
+	NodeManager manager;
+	const PairExtension& ext = manager.getLangExtension<PairExtension>();
+
+	EXPECT_EQ("(('a,'b)->pair<'a,'b>)", toString(*ext.pair->getType()));
+
+}
 
 
-class LoopAnnotation : public NodeAnnotation {
-	size_t iterations;
+TEST(Pairs, PairConversion) {
 
-public:
-	static const string NAME;
-    static const utils::StringKey<LoopAnnotation> KEY;
+	NodeManager manager;
 
-    const utils::AnnotationKey* getKey() const { return &KEY; }
-    const std::string& getAnnotationName() const { return NAME; }
+	// create a pair
 
-//    LoopAnnotation() {} iterations has to be initialized
-    LoopAnnotation(size_t iterations): iterations(iterations) {}
+	auto value = std::make_pair(1,2);
+	core::ExpressionPtr ir = toIR(manager, value);
+	auto back = toValue<pair<int,int>>(ir);
 
-	size_t getIterations() const;
+	EXPECT_EQ("(1,2)", toString(value));
+	EXPECT_EQ("pair(1, 2)", toString(*ir));
 
-    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
-		// always copy the annotation
-		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
-		after->addAnnotation(ptr);
-		return true;
-	}
+	EXPECT_TRUE((isEncodingOf<pair<int,int>>(ir)));
+	EXPECT_EQ(value, back);
 
-    static void attach(const NodePtr& node, size_t iterations);
-    static bool hasAttachedValue(const NodePtr& node);
-    static size_t getValue(const NodePtr& node);
+	EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
 
-};
 
-typedef std::shared_ptr<LoopAnnotation> LoopAnnotationPtr;
+	// test another type
+	EXPECT_EQ("pair(12, 1.47)", toString(*toIR(manager, std::make_pair(12, 1.47))));
+	EXPECT_EQ("pair(12, pair(1.47, hello))", toString(*toIR(manager, std::make_pair(12, std::make_pair(1.47, string("hello"))))));
 
+}
+
+
+} // end namespace lists
+} // end namespace core
 } // end namespace insieme
-} // end namespace annotations
 
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot);
-
-} // end namespace std

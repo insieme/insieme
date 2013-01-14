@@ -53,18 +53,30 @@ namespace dump {
 	namespace binary {
 
 		// The binary format of the IR dump:
-		//		<MAGIC_NUMBER><NUM_NODES><NODE>+
+		//		<MAGIC_NUMBER> <NUM_CONVERTER> <CONVERTER_NAMES>+ <NUM_NODES> <NODE>+
 		//
 		// where the magic number is used to identify data streams,
-		// the number of nodes is recording the number of contained nodes
-		// and the list of nodes is containing the actual encoding of the
-		// nodes.
+		// the number of converters states the number of different annotation
+		// converters used for the encoding, the converter name list enumerates
+		// those converters, the number of nodes is recording the number of
+		// contained nodes and the list of nodes is containing the actual encoding
+		// of the nodes.
 		// Each node encoding starts with a type_t type (= NodeType). In case
 		// it is a value node, it is followed by the encoding of its value.
 		// for strings, the encoding consists of the string length followed
 		// by a character array (not null-terminated).
 		// All other nodes are encoded using the type, the number of children
 		// and the list of indices of children.
+		//
+		// A list of annotations is following the value fields or child list.
+		//		<NUM_ANNOTATIONS> ( <ANNOTATION_TYPE> <ROOT_NODE_ENCODING> )*
+		// It starts by given the number of annotations followed by pairs of
+		// annotation types and head-nodes for the actual encoding. Every
+		// annotation has to be encoded into an IR tree. The root of this tree
+		// is referenced within the annotation list. The annotation type determines
+		// which converter from the head of the encoding shell be used for
+		// restoring the annotation.
+		//
 		// Within the binary file, every node of the DAG is only stored once
 		// and referenced via its index.
 
@@ -135,17 +147,39 @@ namespace dump {
 			class BinaryDumper {
 
 				/**
+				 * The list of all involved annotation converter.
+				 */
+				vector<AnnotationConverterPtr> converter;
+
+				/**
+				 * The reverse index of the involved converter.
+				 */
+				std::map<AnnotationConverterPtr, int> converter_index;
+
+				/**
 				 * The list of all nodes to be dumped.
 				 */
 				vector<NodePtr> nodeList;
 
 				/**
 				 * An reverse index, assigning every node its index
-				 * within the node list.
+				 * within the node list and a the list of annotations mapped to their index.
 				 */
-				utils::map::PointerMap<NodePtr, index_t> index;
+				utils::map::PointerMap<NodePtr, pair<index_t, std::map<NodeAnnotationPtr, index_t>>> index;
+
+				/**
+				 * The register of annotation converters to be utilized for the encoding.
+				 */
+				const AnnotationConverterRegister& converterRegister;
 
 			public:
+
+				/**
+				 * A constructor creating a new instance of this binary dumper based on
+				 * the given converter register.
+				 */
+				BinaryDumper(const AnnotationConverterRegister& converterRegister)
+					: converterRegister(converterRegister) {}
 
 				/**
 				 * Dumps the given ir code fragment to the given output stream.
@@ -158,16 +192,66 @@ namespace dump {
 					// write magic number
 					write(out, MAGIC_NUMBER);
 
+					// write number of converters
+					write<index_t>(out, converter.size());
+
+					// write list of converters
+					for(auto cur : converter) {
+						dumpConverter(out, cur);
+					}
+
 					// write number of nodes
 					write<index_t>(out, nodeList.size());
 
 					// dump nodes
-					for_each(nodeList, [&](const NodePtr& cur) {
+					for(auto cur : nodeList) {
 						dumpNode(out, cur);
-					});
+					}
 				}
 
 			private:
+
+				/**
+				 * Dumps a string to the given output stream.
+				 */
+				void dumpString(std::ostream& out, const string& str) {
+
+					// write the string content
+					write<length_t>(out, str.length());
+
+					// write string (not including \0)
+					out.write(str.c_str(), str.length());
+				}
+
+				/**
+				 * Dumps a single annotation converter instance (the name of the converter).
+				 */
+				void dumpConverter(std::ostream& out, const AnnotationConverterPtr& converter) {
+					dumpString(out, converter->getName());
+				}
+
+				/**
+				 * Dumps the annotations attached to the given node.
+				 */
+				void dumpAnnotations(std::ostream& out, const NodePtr& node) {
+
+					// get all index information regarding the current nodes annotation
+					const auto& info = index[node].second;
+
+					// dump number of annotations
+					write<length_t>(out, info.size());
+
+					// write pairs of converter index / node index elements
+					for(const auto& cur : info) {
+
+						// write index of converter
+						write<index_t>(out, converter_index[converterRegister.getConverterFor(cur.first)]);
+
+						// write index of root node of converted annotation
+						write<index_t>(out, cur.second);
+					}
+
+				}
 
 				/**
 				 * Dumps a single node into the output stream.
@@ -180,13 +264,12 @@ namespace dump {
 
 					// check whether it is a string value
 					if (type == NT_StringValue) {
-						const string& str = static_pointer_cast<StringValuePtr>(node)->getValue();
+						// dump the string value
+						dumpString(out, node.as<StringValuePtr>()->getValue());
 
-						// write the string content
-						write<length_t>(out, str.length());
+						// also add annotations
+						dumpAnnotations(out, node);
 
-						// write string (not including \0)
-						out.write(str.c_str(), str.length());
 						return;
 					}
 
@@ -194,6 +277,10 @@ namespace dump {
 					if (node->isValue()) {
 						// dump content
 						boost::apply_visitor(ValueDumper(out), node->getNodeValue());
+
+						// also add annotations
+						dumpAnnotations(out, node);
+
 						return;
 					}
 
@@ -209,8 +296,11 @@ namespace dump {
 					for_each(children, [&](const core::NodePtr& cur) {
 						auto pos = index.find(cur);
 						assert(pos != index.end() && "Index not correctly established!");
-						write<index_t>(out, pos->second);
+						write<index_t>(out, pos->second.first);
 					});
+
+					// also add annotations
+					dumpAnnotations(out, node);
 				}
 
 				/**
@@ -218,16 +308,56 @@ namespace dump {
 				 * within the node list and the reverse lookup table (index).
 				 */
 				void createIndex(const NodePtr& ir) {
+
+					// obtain the manager used for the conversion of annotations
+					NodeManager& mgr = ir->getNodeManager();
+
 					// index all nodes
-					visitDepthFirstOnce(ir, [&](const NodePtr& cur) {
+					std::function<void(const NodePtr& cur)> indexer;
+					auto indexer_lambda = [&](const NodePtr& cur) {
 						// check whether index has been assigned before
 						auto pos = index.find(cur);
 						if (pos != index.end()) {
 							return;
 						}
-						index[cur] = (index_t)nodeList.size();
+						index[cur].first = (index_t)nodeList.size();
 						nodeList.push_back(cur);
-					});
+
+						// process annotations
+						for(auto cur_annotation : cur->getAnnotations()) {
+							auto cur_converter = converterRegister.getConverterFor(cur_annotation.second);
+							if (cur_converter) {
+
+								// 1. convert and index the annotation
+
+								// convert annotation ...
+								NodePtr converted = cur_converter->toIR(mgr, cur_annotation.second);
+								assert(converted && "Converted Annotation must not be NULL!");
+
+								// .. and index converted result ..
+								visitDepthFirstOnce(converted, indexer);
+
+								// .. and add annotation to index
+								assert(index.find(converted) != index.end() && "Indexed Annotation should now be present!");
+								index[cur].second[cur_annotation.second] = index[converted].first;
+
+								// 2. register the converter itself
+
+								// register converter for this annotation
+								auto pos = converter_index.find(cur_converter);
+								if (pos != converter_index.end()) {
+									continue;
+								}
+
+								converter_index[cur_converter] = (index_t)converter.size();
+								converter.push_back(cur_converter);
+							}
+						}
+					};
+					indexer = indexer_lambda;
+
+					// index ir node
+					visitDepthFirstOnce(ir, indexer);
 
 					// check whether index limit is sufficient
 					assert(nodeList.size() < std::numeric_limits<index_t>::max()
@@ -241,24 +371,55 @@ namespace dump {
 			class BinaryLoader {
 
 				/**
+				 * A simple data structure summarizing the information extracted from
+				 * an encoded node before restoring it.
+				 */
+				struct NodeInfo {
+
+					/**
+					 * The list of indices referencing the child nodes of a node.
+					 */
+					vector<index_t> children;
+
+					/**
+					 * The list of annotations of a node - the converter index followed
+					 * by the root node index.
+					 */
+					vector<pair<index_t, index_t>> annotations;
+
+				};
+
+				/**
 				 * The builder used to construct nodes.
 				 */
 				IRBuilder builder;
 
 				/**
 				 * A list of node skeletons extracted while passing through
-				 * the the file.
+				 * the the file. The first vector lists all child nodes, the second
+				 * vector all annotations.
 				 */
-				vector<pair<NodeType, vector<index_t>>> nodes;
+				vector<pair<NodeType, NodeInfo>> nodes;
 
 				/**
 				 * The index of all resolved nodes.
 				 */
 				vector<NodePtr> index;
 
+				/**
+				 * The register of annotation converters to be utilized for the decoding.
+				 */
+				const AnnotationConverterRegister& converterRegister;
+
+				/**
+				 * The index of the converters used to restore the annotations within the
+				 * binary file as specified within the header.
+				 */
+				vector<AnnotationConverterPtr> converter_index;
+
 			public:
 
-				BinaryLoader(NodeManager& manager) : builder(manager) {}
+				BinaryLoader(NodeManager& manager, const AnnotationConverterRegister& converterRegister) : builder(manager), converterRegister(converterRegister) {}
 
 				NodePtr load(std::istream& in) {
 
@@ -267,14 +428,48 @@ namespace dump {
 						throw InvalidEncodingException("Encoding error: wrong magic number!");
 					}
 
+					// load converter list
+					loadConverter(in);
+
 					// load index
 					loadIndex(in);
 
 					// restore nodes
-					return resolve(0); // root node has always index 0
+					NodePtr res = resolve(0); // root node has always index 0
+
+					// restore annotations
+					resolveAnnotations();
+
+					return res;
 				}
 
 			private:
+
+				string loadString(std::istream& in) {
+					// load string
+					length_t length = read<length_t>(in);
+
+					// load string
+					char data[length+1];
+					in.read(data, length);
+					data[length] = '\0';
+
+					// register string value
+					return string(data);
+				}
+
+				void loadConverter(std::istream& in) {
+
+					// get number of converters
+					index_t numConverter;
+					in.read((char*)&numConverter, sizeof(numConverter));
+
+					// load converters
+					for(index_t i=0; i<numConverter; i++) {
+						auto converterName = loadString(in);
+						converter_index.push_back(converterRegister.getConverterFor(converterName));
+					}
+				}
 
 				void loadIndex(std::istream& in) {
 
@@ -292,23 +487,39 @@ namespace dump {
 					}
 				}
 
+				void loadAnnotations(index_t pos, std::istream& in) {
+					// get list of annotations
+					vector<index_t> annotations;
+
+					// get number of annotations
+					length_t numAnnotations = read<length_t>(in);
+
+					for(length_t i=0; i<numAnnotations; i++) {
+						// read current annotation information
+						index_t converterID = read<index_t>(in);
+						index_t rootIndex = read<index_t>(in);
+
+						// add information to node skeletons
+						nodes[pos].second.annotations.push_back(std::make_pair(converterID, rootIndex));
+					}
+				}
+
 				void loadNode(index_t pos, std::istream& in) {
 
 					// load node type
 					type_t type;
 					in.read((char*)&type, sizeof(type));
 
+					// create node-index entry
+					nodes[pos].first = NodeType(type);		// child list and annotations are default-initialized
+
 					if (type == NT_StringValue) {
-						// load string
-						length_t length = read<length_t>(in);
+						// load and register string value
+						index[pos] = builder.stringValue(loadString(in));
 
-						// load string
-						char data[length+1];
-						in.read(data, length);
-						data[length] = '\0';
+						// load annotations
+						loadAnnotations(pos, in);
 
-						// register string value
-						index[pos] = builder.stringValue(string(data));
 						return;
 					}
 
@@ -332,6 +543,10 @@ namespace dump {
 
 						// register value
 						index[pos] = value;
+
+						// load annotations
+						loadAnnotations(pos, in);
+
 						return;
 					}
 
@@ -343,8 +558,11 @@ namespace dump {
 						children.push_back(read<index_t>(in));
 					}
 
-					// register node value
-					nodes[pos] = std::make_pair(NodeType(type), children);
+					// add child list
+					nodes[pos].second.children = children;
+
+					// load annotations
+					loadAnnotations(pos, in);
 				}
 
 				NodePtr resolve(index_t pos) {
@@ -355,12 +573,30 @@ namespace dump {
 					}
 
 					// resolve child list
-					NodeList children = ::transform(nodes[pos].second, fun(*this, &BinaryLoader::resolve));
+					NodeList children = ::transform(nodes[pos].second.children, fun(*this, &BinaryLoader::resolve));
 					NodePtr res = builder.get(nodes[pos].first, children);
 
 					// remember newly resolved node
 					index[pos] = res;
 					return res;
+				}
+
+				void resolveAnnotations() {
+
+					// restore all annotations
+					for(index_t i = 0; i<nodes.size(); i++) {
+						NodePtr node = resolve(i);
+						for(auto cur : nodes[i].second.annotations) {
+							// restores the encoding of the annotations
+							ExpressionPtr encoded = resolve(cur.second).as<ExpressionPtr>();
+
+							// decode the annotation
+							AnnotationConverterPtr converter = converter_index[cur.first];
+							if (converter) {
+								converter->attachAnnotation(node, encoded);
+							}
+						}
+					}
 				}
 			};
 
@@ -382,19 +618,19 @@ namespace dump {
 
 		}
 
-		void dumpIR(std::ostream& out, const NodePtr& ir) {
-			BinaryDumper().dump(out, ir);
+		void dumpIR(std::ostream& out, const NodePtr& ir, const AnnotationConverterRegister& converterRegister) {
+			BinaryDumper(converterRegister).dump(out, ir);
 		}
 
-		void dumpAddress(std::ostream& out, const NodeAddress& address) {
-			dumpAddresses(out, toVector(address));
+		void dumpAddress(std::ostream& out, const NodeAddress& address, const AnnotationConverterRegister& converterRegister) {
+			dumpAddresses(out, toVector(address), converterRegister);
 		}
 
-		void dumpAddresses(std::ostream& out, const vector<NodeAddress>& addresses) {
+		void dumpAddresses(std::ostream& out, const vector<NodeAddress>& addresses, const AnnotationConverterRegister& converterRegister) {
 			assert(!addresses.empty() && "Cannot dump empty list of addresses!");
 
 			// just dump full IR tree ...
-			dumpIR(out, addresses[0].getRootNode());
+			dumpIR(out, addresses[0].getRootNode(), converterRegister);
 
 			// .. followed by the address paths
 			for_each(addresses, [&](const NodeAddress& cur) {
@@ -403,19 +639,19 @@ namespace dump {
 		}
 
 
-		NodePtr loadIR(std::istream& in, core::NodeManager& manager) {
-			return BinaryLoader(manager).load(in);
+		NodePtr loadIR(std::istream& in, core::NodeManager& manager, const AnnotationConverterRegister& converterRegister) {
+			return BinaryLoader(manager, converterRegister).load(in);
 		}
 
-		NodeAddress loadAddress(std::istream& in, NodeManager& manager) {
-			vector<NodeAddress> list = loadAddresses(in, manager);
+		NodeAddress loadAddress(std::istream& in, NodeManager& manager, const AnnotationConverterRegister& converterRegister) {
+			vector<NodeAddress> list = loadAddresses(in, manager, converterRegister);
 			assert(!list.empty() && "Resolved address list must not be empty!");
 			return list[0];
 		}
 
-		vector<NodeAddress> loadAddresses(std::istream& in, NodeManager& manager) {
+		vector<NodeAddress> loadAddresses(std::istream& in, NodeManager& manager, const AnnotationConverterRegister& converterRegister) {
 			// first, load tree
-			NodePtr root = loadIR(in, manager);
+			NodePtr root = loadIR(in, manager, converterRegister);
 
 			// check whether there are any addresses.
 			if (in.eof()) {
