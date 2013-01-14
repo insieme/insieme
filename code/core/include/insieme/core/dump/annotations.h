@@ -185,6 +185,35 @@ namespace dump {
 	};
 
 
+	/**
+	 * A macro to be used for registering a annotation type converter to be used by the IR dump mechanisms.
+	 */
+	#define REGISTER_ANNOTATION_CONVERTER(_CONVERTER, _ANNOTATION_TYPE) \
+			namespace { \
+				bool _reg = insieme::core::dump::AnnotationConverterRegister::getDefault().registerConverter<_CONVERTER,_ANNOTATION_TYPE>(); \
+			} \
+
+	/**
+	 * A macro creating the boyler-plate code for a annotation converter including the registration
+	 * within the default converter register.
+	 */
+	#define ANNOTATION_CONVERTER(_ANNOTATION_NAME) \
+		struct _ANNOTATION_NAME ## Converter; \
+		REGISTER_ANNOTATION_CONVERTER(_ANNOTATION_NAME ## Converter, _ANNOTATION_NAME); \
+		struct _ANNOTATION_NAME ## Converter : public insieme::core::dump::AnnotationConverter { \
+			_ANNOTATION_NAME ## Converter() : insieme::core::dump::AnnotationConverter(#_ANNOTATION_NAME "Converter") {}; \
+
+	/**
+	 * A macro similar to the ANNOTATION_CONVERTER macro specialized for value annotations.
+	 *
+	 * @see ANNOTATION_CONVERTER
+	 */
+	#define VALUE_ANNOTATION_CONVERTER(_VALUE_TYPE) \
+		struct _VALUE_TYPE ## AnnotationConverter; \
+		REGISTER_ANNOTATION_CONVERTER(_VALUE_TYPE ## AnnotationConverter, core::value_node_annotation<_VALUE_TYPE>::type); \
+		struct _VALUE_TYPE ## AnnotationConverter : public insieme::core::dump::AnnotationConverter { \
+			_VALUE_TYPE ## AnnotationConverter() : insieme::core::dump::AnnotationConverter(#_VALUE_TYPE "AnnotationConverter") {}; \
+
 } // end namespace dump
 } // end namespace core
 } // end namespace insieme

@@ -74,6 +74,11 @@ public:
 		after->addAnnotation(ptr);
 		return true;
 	}
+
+    static void attach(const NodePtr& node, size_t iterations);
+    static bool hasAttachedValue(const NodePtr& node);
+    static size_t getValue(const NodePtr& node);
+
 };
 
 typedef std::shared_ptr<LoopAnnotation> LoopAnnotationPtr;
