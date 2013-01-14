@@ -1,0 +1,190 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+#pragma once
+
+#include <map>
+#include <memory>
+#include <string>
+#include <typeindex>
+
+#include "insieme/core/ir.h"
+#include "insieme/core/ir_node_annotation.h"
+
+namespace insieme {
+namespace core {
+namespace dump {
+
+	// forward declarations
+	class AnnotationConverter;
+	typedef std::shared_ptr<AnnotationConverter> AnnotationConverterPtr;
+
+
+	/**
+	 * A base class for all annotation converter implementations. The main
+	 * task of an annotation converter is to be named and to encode annotations
+	 * into IR data structures and to decode them again.
+	 */
+	class AnnotationConverter {
+
+		/**
+		 * The name of this converter.
+		 */
+		const string name;
+
+	public:
+
+		/**
+		 * Creates a new converter based on the given name. The given
+		 * name should be unique throughout the system. The name is used within the
+		 * binary dump-file to record the converter used to map annotations.
+		 */
+		AnnotationConverter(const string& name) : name(name) {}
+
+		/**
+		 * A virtual destructor doing nothing.
+		 */
+		virtual ~AnnotationConverter() {}
+
+		/**
+		 * Obtains the unique identifier name of this converter.
+		 */
+		const string& getName() const { return name; }
+
+		/**
+		 * Requests the given annotation to be encoded into an IR structure. If the
+		 * given annotation can not be converted by this converter, a NULL pointer shell be
+		 * returned.
+		 *
+		 * @param manager the node manager to be used for the conversion process
+		 * @param annotation the annotation to be encoded into an IR structure
+		 * @return the result of the encoding or NULL in case the given annotation can not
+		 * 			be encoded by this converter
+		 */
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const =0;
+
+		/**
+		 * Requests the given IR to be decoded into an annotation. If the given node
+		 * does not represent a proper encoding of any supported annotation, a NULL pointer
+		 * shell be returned.
+		 *
+		 * @param node the node encoding the annotation to be decoded
+		 * @return the decoded annotation or NULL if no valid annotation has been encoded
+		 */
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const =0;
+
+		/**
+		 * Requests an annotation to be decoded and attached to a given target node.
+		 *
+		 * @param target the node the decoded annotation shell be attached to
+		 * @param annotation the annotation to be decoded
+		 */
+		void attachAnnotation(const NodePtr& target, const ExpressionPtr& annotation) const {
+			if (!target) return;
+			auto res = toAnnotation(annotation);
+			if (res) target->addAnnotation(res);
+		}
+
+	};
+
+	/**
+	 * A class realizing a annotation converter register. This kind of register is capable
+	 * of indexing annotation converter instances with names and annotation types they are
+	 * capable of handling.
+	 */
+	class AnnotationConverterRegister {
+
+		/**
+		 * The index linking converters to the types they are capable of handling (required
+		 * during the store process).
+		 */
+		std::map<std::type_index, AnnotationConverterPtr> type_index;
+
+		/**
+		 * The index linking converters to their names (used for obtaining converters during
+		 * the load process)
+		 */
+		std::map<std::string, AnnotationConverterPtr> name_index;
+
+	public:
+
+		/**
+		 * Obtains the default register (singlton) to be used by default during the conversion process.
+		 */
+		static AnnotationConverterRegister& getDefault();
+
+		/**
+		 * Registers the given converter for the given type of annotation.
+		 *
+		 * @param converter the converter instance to be registered
+		 * @param index the type index of the element to be registered
+		 * @return true if registration has been successful, false otherwise
+		 */
+		bool registerConverter(const AnnotationConverterPtr& converter, const std::type_index& index);
+
+		/**
+		 * Registers the given converter for the given type of annotation.
+		 *
+		 * @tparam C the converter instance to be registered
+		 * @tparam A the type of annotation to be handled by the given converter
+		 * @return true if registration has been successful, false otherwise
+		 */
+		template<typename C, typename A>
+		bool registerConverter() {
+			return registerConverter(std::make_shared<C>(), typeid(A));
+		}
+
+		/**
+		 * Requests the converter linked to the given name.
+		 *
+		 * @param name the name of the converter to be looking for
+		 * @return a pointer to the obtained converter, a NULL pointer if no such converter is available
+		 */
+		const AnnotationConverterPtr& getConverterFor(const std::string& name) const;
+
+		/**
+		 * Requests the converter linked to the given annotation.
+		 *
+		 * @param annotation the annotation for which a converter is requested
+		 * @return a pointer to the obtained converter, a NULL pointer if no such converter is available
+		 */
+		const AnnotationConverterPtr& getConverterFor(const NodeAnnotationPtr& annotation) const;
+	};
+
+
+} // end namespace dump
+} // end namespace core
+} // end namespace insieme

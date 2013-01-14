@@ -40,6 +40,7 @@
 
 #include <sstream>
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/encoder/encoder.h"
 
 using std::shared_ptr;
 
@@ -184,6 +185,77 @@ TEST(BinaryDump, StoreLoadAddressList) {
 
 	auto restored3 = binary::loadIR(buffer, managerA);
 	EXPECT_EQ(list[0].getRootNode(), restored3);
+
+}
+
+
+// ------------ Test Annotations ----------------
+
+struct DummyAnnotation {
+	int x;
+	DummyAnnotation(int x) : x(x) {}
+	bool operator==(const DummyAnnotation& other) const { return x == other.x; };
+};
+
+struct DummyAnnotationConverter : public AnnotationConverter {
+	typedef core::value_node_annotation<DummyAnnotation>::type annotation_type;
+
+	DummyAnnotationConverter() : AnnotationConverter("DummyAnnotationConverter") {}
+
+	virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+		assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only dummy annotations supported!");
+		int x = static_pointer_cast<annotation_type>(annotation)->getValue().x;
+		return encoder::toIR(manager, x);
+	}
+
+	virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+		assert(encoder::isEncodingOf<int>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
+		return std::make_shared<annotation_type>(DummyAnnotation(encoder::toValue<int>(node)));
+	}
+};
+
+TEST(BinaryDump, StoreLoadAnnotations) {
+
+	// create a code fragment using manager A
+	NodeManager managerA;
+	IRBuilder builder(managerA);
+
+	// create conversion register
+	AnnotationConverterRegister registry;
+	registry.registerConverter<DummyAnnotationConverter, core::value_node_annotation<DummyAnnotation>::type>();
+
+	NodePtr code = builder.genericType("A");
+	EXPECT_TRUE(code) << *code;
+
+	// add annotation
+	code->attachValue(DummyAnnotation(12));
+	EXPECT_TRUE(code->hasAttachedValue<DummyAnnotation>());
+
+	// create a in-memory stream
+	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+	// dump IR using a binary format
+	binary::dumpIR(buffer, code, registry);
+
+	// reload IR using a different node manager
+	NodeManager managerB;
+	NodePtr restored = binary::loadIR(buffer, managerB, registry);
+
+	EXPECT_NE(code, restored);
+	EXPECT_EQ(*code, *restored);
+
+	// annotation should still be available
+	EXPECT_TRUE(restored->hasAttachedValue<DummyAnnotation>());
+
+	buffer.seekg(0); // reset stream
+
+	NodeManager managerC;
+	auto restored3 = binary::loadIR(buffer, managerC);
+	EXPECT_NE(code, restored);
+	EXPECT_EQ(*code, *restored3);
+
+	// annotation should not be available
+	EXPECT_FALSE(restored3->hasAttachedValue<DummyAnnotation>());
 
 }
 
