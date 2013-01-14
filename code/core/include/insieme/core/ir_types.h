@@ -123,6 +123,135 @@ namespace core {
 	};
 
 
+	// ------------------------------------ A class representing a parent type  ------------------------------
+
+	/**
+	 * The accessor associated to a parent type reference. A parent type reference is linking a
+	 * base type to a parent type via inheritance. The inheritance relation may be virtual.
+	 */
+	IR_NODE_ACCESSOR(Parent, Support, BoolValue, Type)
+
+		/**
+		 * Obtains the flag determining whether this parent type is a virtual or non-virtual parent type.
+		 */
+		IR_NODE_PROPERTY(BoolValue, Virtual, 0);
+
+		/**
+		 * Obtains the parent type this parent node is referring to.
+		 */
+		IR_NODE_PROPERTY(Type, Type, 1);
+
+		/**
+		 * Determines whether this parent node is referring to a type via virtual inheritance.
+		 */
+		bool isVirtual() const {
+			return getVirtual().getValue();
+		}
+	};
+
+	/**
+	 * The node type used to represent a link to a parent class within a base type.
+	 */
+	IR_NODE(Parent, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			if (isVirtual()) out << "virtual ";
+			return out << *getType();
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to construct a new parent-link instance referencing
+		 * the given type.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param virtul a flag determining whether the result should be a virtual inheritance link
+		 * @param type the type to be referenced as a parent class
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ParentPtr get(NodeManager& manager, const BoolValuePtr& virtul, const TypePtr& type) {
+			return manager.get(Parent(virtul, type));
+		}
+
+		/**
+		 * This static factory method allows to construct a new parent-link instance referencing
+		 * the given type.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param virtul a flag determining whether the result should be a virtual inheritance link
+		 * @param type the type to be referenced as a parent class
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ParentPtr get(NodeManager& manager, bool virtul, const TypePtr& type) {
+			return get(manager, BoolValue::get(manager, virtul), type);
+		}
+
+		/**
+		 * This static factory method allows to construct a new parent-link instance referencing
+		 * the given type as a  non-virtual parent
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type to be referenced as a parent class
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ParentPtr get(NodeManager& manager, const TypePtr& type) {
+			return get(manager, false, type);
+		}
+
+	};
+
+	// ------------------------------------ A class representing a list of parent types  ------------------------------
+
+	/**
+	 * The accessor associated to a list of parent types.
+	 */
+	IR_LIST_NODE_ACCESSOR(Parents, Support, Types, Parent)
+	};
+
+	/**
+	 * A node type representing a list of parent types.
+	 */
+	IR_NODE(Parents, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to construct a parent type list based
+		 * on a given parent list.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param parents the parents to be included within the resulting parents list
+		 * @return the requested parents list instance managed by the given manager
+		 */
+		static ParentsPtr get(NodeManager& manager, const vector<ParentPtr>& parents = vector<ParentPtr>()) {
+			return manager.get(Parents(convertList(parents)));
+		}
+
+		/**
+		 * This static factory method allows to construct a parent type list based
+		 * on the given type list.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param types the types to be included within the requested type parameter list
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ParentsPtr get(NodeManager& manager, const TypeList& types) {
+			return get(manager, ::transform(types, [&](const TypePtr& type) { return Parent::get(manager, type); }));
+		}
+	};
 
 
 	// ---------------------------------------- Generic Type ------------------------------
@@ -670,12 +799,19 @@ namespace core {
 	};
 
 
+
 	/**
 	 * The accessor associated to a named type. A named type is linking a name to
 	 * a type. Named types are the components named composite types (structs and unions)
 	 * are build form.
 	 */
-	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, Entries, NamedType)
+	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, Entries, Parents, NamedType)
+
+		/**
+		 * Obtains the list of parent classes associated to this named composite type (for unions
+		 * this list shell always be empty).
+		 */
+		IR_NODE_PROPERTY(Parents, Parents, 0);
 
 		/**
 		 * Retrieves the named type entry referencing the given member name within this
@@ -792,10 +928,31 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "struct<" << join(",",getChildList(), print<deref<NodePtr>>()) << ">";
+			out << "struct";
+			if (!getParents()->empty()) {
+				out << " : [" << join(", ", getParents(), print<deref<ParentPtr>>()) << "] ";
+			}
+			return out << "<" << join(",",getEntries(), print<deref<NodePtr>>()) << ">";
 		}
 
 	public:
+
+		/**
+		 * A factory method allowing to obtain a pointer to a struct type representing
+		 * an instance managed by the given manager.
+		 *
+		 * @param manager the manager which should be responsible for maintaining the new
+		 * 				  type instance and all its referenced elements.
+		 * @param parents the list of parent types to be referenced by the resulting struct
+		 * @param entries the list of entries the new type should consist of
+		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
+		static StructTypePtr get(NodeManager& manager, const ParentsPtr& parents, const vector<NamedTypePtr>& entries) {
+			NodeList children = convertList(entries);
+			children.insert(children.begin(), parents);
+			return manager.get(StructType(children));
+		}
 
 		/**
 		 * A factory method allowing to obtain a pointer to a struct type representing
@@ -808,7 +965,7 @@ namespace core {
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
 		static StructTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries) {
-			return manager.get(StructType(convertList(entries)));
+			return get(manager, Parents::get(manager), entries);
 		}
 
 	};
@@ -833,7 +990,8 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "union<" << join(",",getChildList(), print<deref<NodePtr>>()) << ">";
+			assert(getParents()->empty() && "Unions must not be derived!");
+			return out << "union<" << join(",",getEntries(), print<deref<NodePtr>>()) << ">";
 		}
 
 	public:
@@ -849,7 +1007,9 @@ namespace core {
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
 		static UnionTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries) {
-			return manager.get(UnionType(convertList(entries)));
+			NodeList children = convertList(entries);
+			children.insert(children.begin(), Parents::get(manager));
+			return manager.get(UnionType(children));
 		}
 
 	};
