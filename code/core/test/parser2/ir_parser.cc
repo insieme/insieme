@@ -518,6 +518,83 @@ namespace parser {
 
 	}
 
+	TEST(IR_Parser2, Constructors) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto ctor = builder.normalize(parse(manager, "C::(int<4> a, bool b) { this; }").as<LambdaExprPtr>());
+		ASSERT_TRUE(ctor);
+
+		auto ctorType = ctor->getLambda()->getType();
+		EXPECT_TRUE(ctorType->isConstructor());
+		EXPECT_EQ(builder.genericType("C"), ctorType->getObjectType());
+
+		EXPECT_EQ("(C::(int<4>,bool))", toString(*ctorType));
+		EXPECT_EQ("rec v0.{v0=fun(ref<C> v1, int<4> v2, bool v3) {v1;}}", toString(*ctor));
+		EXPECT_EQ("ctor C v1 :: (int<4> v2, bool v3) {\n    v1;\n}", toString(core::printer::PrettyPrinter(ctor, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+
+		// a default constructor
+		ctor = builder.normalize(parse(manager, "C::() { this; }").as<LambdaExprPtr>());
+		ASSERT_TRUE(ctor);
+
+		ctorType = ctor->getLambda()->getType();
+		EXPECT_TRUE(ctorType->isConstructor());
+		EXPECT_EQ(1u, ctorType->getParameterTypes().size());
+		EXPECT_EQ(builder.genericType("C"), ctorType->getObjectType());
+
+		EXPECT_EQ("(C::())", toString(*ctorType));
+		EXPECT_EQ("rec v0.{v0=fun(ref<C> v1) {v1;}}", toString(*ctor));
+		EXPECT_EQ("ctor C v1 :: () {\n    v1;\n}", toString(core::printer::PrettyPrinter(ctor, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+
+	}
+
+	TEST(IR_Parser2, Destructor) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto dtor = builder.normalize(parse(manager, "~C::() { this; }").as<LambdaExprPtr>());
+		ASSERT_TRUE(dtor);
+
+		auto dtorType = dtor->getLambda()->getType();
+		EXPECT_TRUE(dtorType->isDestructor());
+		EXPECT_EQ(builder.genericType("C"), dtorType->getObjectType());
+
+		EXPECT_EQ("(~C::())", toString(*dtorType));
+		EXPECT_EQ("rec v0.{v0=fun(ref<C> v1) {v1;}}", toString(*dtor));
+		EXPECT_EQ("dtor ~C v1 :: () {\n    v1;\n}", toString(core::printer::PrettyPrinter(dtor, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+
+	}
+
+	TEST(IR_Parser2, MemberFunction) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto fun = builder.normalize(parse(manager, "C::(int<4> a, bool b)->unit { this; }").as<LambdaExprPtr>());
+		ASSERT_TRUE(fun);
+
+		auto funType = fun->getLambda()->getType();
+		EXPECT_TRUE(funType->isMemberFunction());
+		EXPECT_EQ(builder.genericType("C"), funType->getObjectType());
+
+		EXPECT_EQ("(C::(int<4>,bool)->unit)", toString(*funType));
+		EXPECT_EQ("rec v0.{v0=fun(ref<C> v1, int<4> v2, bool v3) {v1;}}", toString(*fun));
+		EXPECT_EQ("mfun C v1 :: (int<4> v2, bool v3) -> unit {\n    v1;\n}", toString(core::printer::PrettyPrinter(fun, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+
+		// a default constructor
+		fun = builder.normalize(parse(manager, "C::()->unit { this; }").as<LambdaExprPtr>());
+		ASSERT_TRUE(fun);
+
+		funType = fun->getLambda()->getType();
+		EXPECT_TRUE(funType->isMemberFunction());
+		EXPECT_EQ(1u, funType->getParameterTypes().size());
+		EXPECT_EQ(builder.genericType("C"), funType->getObjectType());
+
+		EXPECT_EQ("(C::()->unit)", toString(*funType));
+		EXPECT_EQ("rec v0.{v0=fun(ref<C> v1) {v1;}}", toString(*fun));
+		EXPECT_EQ("mfun C v1 :: () -> unit {\n    v1;\n}", toString(core::printer::PrettyPrinter(fun, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+
+	}
+
 
 	TEST(IR_Parser2, LargeCode) {
 

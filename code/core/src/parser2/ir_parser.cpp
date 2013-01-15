@@ -1223,6 +1223,72 @@ namespace parser {
 					}
 			));
 
+
+			// -- this-pointer utilities --
+			struct register_this_pointer : public detail::actions {
+				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+
+					// a static token range representing a single this token
+					static auto thisString = toVector(Token::createIdentifier("this"));
+					static auto thisRange = TokenRange(thisString.begin(), thisString.end());
+
+					TypePtr type = cur.getTerms().back().as<TypePtr>();
+					VariablePtr param = cur.variable(cur.refType(type));
+					cur.getVarScopeManager().add(thisRange, param);
+					cur.swap(param); // exchange type with variable
+				}
+			};
+
+			static const auto classType = std::make_shared<Action<register_this_pointer>>(seq(T));
+
+			// -- constructors --
+			g.addRule("E", rule(
+					newScop(seq(classType, "::(", list(param, ","), ") ", S)),
+					[](Context& cur)->NodePtr {
+						// construct the lambda
+						NodeList terms = cur.getTerms();
+						StatementPtr body = terms.back().as<StatementPtr>();
+						terms.pop_back();
+
+						// build member function type
+						auto functionType = cur.functionType(extractTypes(convertList<VariablePtr>(terms)), FK_CONSTRUCTOR);
+						return cur.lambdaExpr(functionType, convertList<VariablePtr>(terms), body);
+					}
+			));
+
+			// -- constructors --
+			g.addRule("E", rule(
+					newScop(seq("~", classType, "::()", S)),
+					[](Context& cur)->NodePtr {
+						// construct the lambda
+						NodeList terms = cur.getTerms();
+						StatementPtr body = terms.back().as<StatementPtr>();
+						terms.pop_back();
+
+						// build member function type
+						auto functionType = cur.functionType(extractTypes(convertList<VariablePtr>(terms)), FK_DESTRUCTOR);
+						return cur.lambdaExpr(functionType, convertList<VariablePtr>(terms), body);
+					}
+			));
+
+			// -- member function --
+			g.addRule("E", rule(
+					newScop(seq(classType, "::(", list(param, ","), ")->", T, S)),
+					[](Context& cur)->NodePtr {
+						// construct the lambda
+						NodeList terms = cur.getTerms();
+						StatementPtr body = terms.back().as<StatementPtr>();
+						terms.pop_back();
+						TypePtr resType = terms.back().as<TypePtr>();
+						terms.pop_back();
+
+						// build member function type
+						auto functionType = cur.functionType(extractTypes(convertList<VariablePtr>(terms)), resType, FK_MEMBER_FUNCTION);
+						return cur.lambdaExpr(functionType, convertList<VariablePtr>(terms), body);
+					}
+			));
+
+
 			// ------------- add parallel constructs -------------
 
 			g.addRule("S", rule(
