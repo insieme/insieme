@@ -62,6 +62,8 @@
 
 #include "insieme/core/parser2/ir_parser.h"
 
+#include "insieme/core/datapath/datapath.h"
+
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
@@ -965,6 +967,23 @@ CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringVa
 	// create access instruction
 	core::ExpressionPtr access = getLangBasic().getCompositeRefElem();
 	return callExpr(refType(memberType), access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
+}
+
+CallExprPtr IRBuilder::refParent(const ExpressionPtr& structExpr, const TypePtr& parent) const {
+
+	// check some pre-conditions
+	TypePtr type = structExpr->getType();
+	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non-ref type");
+	type = type.as<RefTypePtr>()->getElementType();
+	assert(type->getNodeType() == core::NT_StructType || type->getNodeType() == core::NT_GenericType || type->getNodeType() == core::NT_RecType);
+
+	// compute result type
+	core::TypePtr resType = refType(parent);
+
+	// build up access operation
+	auto narrow = getLangBasic().getRefNarrow();
+	auto dataPath = datapath::DataPathBuilder(manager).parent(parent).getPath();
+	return callExpr(resType, narrow, structExpr, dataPath, getTypeLiteral(parent));
 }
 
 CallExprPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {

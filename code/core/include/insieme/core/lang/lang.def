@@ -389,6 +389,7 @@ LITERAL(DataPathRoot,		"dp.root", 				"datapath")
 LITERAL(DataPathMember,		"dp.member", 			"(datapath, identifier) -> datapath")
 LITERAL(DataPathElement,	"dp.element", 			"(datapath, uint<8>) -> datapath")
 LITERAL(DataPathComponent,	"dp.component", 		"(datapath, uint<8>) -> datapath")
+LITERAL(DataPathParent,     "dp.parent",            "(datapath, type<'a>) -> datapath")
 
 
 // Any References -----------------------------------------------------------------------------------------------------

@@ -982,6 +982,7 @@ namespace {
 		ADD_FORMATTER(basic.getDataPathMember(),  { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getDataPathElement(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getDataPathComponent(), { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getDataPathParent(), {PRINT_ARG(0); OUT(".as<"); PRINT_ARG(1); OUT(">"); });
 
 		ADD_FORMATTER(basic.getArraySubscript1D(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getArraySubscriptND(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
