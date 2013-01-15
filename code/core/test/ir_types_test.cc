@@ -40,6 +40,7 @@
 #include <vector>
 
 #include "insieme/core/ir_types.h"
+#include "insieme/core/lang/basic.h"
 
 #include "ir_node_test.inc"
 
@@ -256,47 +257,95 @@ TEST(TypeTest, FunctionType) {
 	TypePtr dummyA = GenericType::get(manager, "dummyA");
 	TypePtr dummyB = GenericType::get(manager, "dummyB");
 	TypePtr alpha = TypeVariable::get(manager, "alpha");
+	TypePtr obj = RefType::get(manager, GenericType::get(manager, "C"));
 
 	TypePtr resultA = GenericType::get(manager, "returnA");
 	TypePtr resultB = GenericType::get(manager, "returnB");
+	TypePtr unit = manager.getLangBasic().getUnit();
 
 	FunctionTypePtr funTypeA = FunctionType::get(manager, toVector(dummyA), resultA);
 	FunctionTypePtr funTypeB = FunctionType::get(manager, toVector(alpha), resultB);
 	FunctionTypePtr funTypeC = FunctionType::get(manager, toVector(alpha, dummyA), resultB);
 	FunctionTypePtr funTypeD = FunctionType::get(manager, toVector(dummyA), resultA, false);
 
+	FunctionTypePtr funTypeE = FunctionType::get(manager, toVector(obj, dummyA), FK_CONSTRUCTOR);
+	FunctionTypePtr funTypeF = FunctionType::get(manager, toVector(obj), FK_DESTRUCTOR);
+	FunctionTypePtr funTypeG = FunctionType::get(manager, toVector(obj, dummyA), resultA, FK_MEMBER_FUNCTION);
+
 	EXPECT_EQ ( "((dummyA)->returnA)" , toString(*funTypeA) );
 	EXPECT_EQ ( "(('alpha)->returnB)" , toString(*funTypeB) );
 	EXPECT_EQ ( "(('alpha,dummyA)->returnB)" , toString(*funTypeC) );
 	EXPECT_EQ ( "((dummyA)=>returnA)" , toString(*funTypeD) );
+
+	EXPECT_EQ( "(C::(dummyA))", toString(*funTypeE) );
+	EXPECT_EQ( "(~C::())", toString(*funTypeF) );
+	EXPECT_EQ( "(C::(dummyA)->returnA)", toString(*funTypeG) );
+
+	EXPECT_TRUE(funTypeA->isPlain());
+	EXPECT_TRUE(funTypeB->isPlain());
+	EXPECT_TRUE(funTypeC->isPlain());
+	EXPECT_FALSE(funTypeD->isPlain());
+	EXPECT_FALSE(funTypeE->isPlain());
+	EXPECT_FALSE(funTypeF->isPlain());
+	EXPECT_FALSE(funTypeG->isPlain());
+
+	EXPECT_FALSE(funTypeA->isClosure());
+	EXPECT_FALSE(funTypeB->isClosure());
+	EXPECT_FALSE(funTypeC->isClosure());
+	EXPECT_TRUE(funTypeD->isClosure());
+	EXPECT_FALSE(funTypeE->isClosure());
+	EXPECT_FALSE(funTypeF->isClosure());
+	EXPECT_FALSE(funTypeG->isClosure());
+
+	EXPECT_TRUE(funTypeE->isConstructor());
+	EXPECT_TRUE(funTypeF->isDestructor());
+	EXPECT_TRUE(funTypeG->isMemberFunction());
 
 	EXPECT_NE ( funTypeA, funTypeD );
 
 	vector<NodePtr> subNodesA;
 	subNodesA.push_back(Types::get(manager, toVector(dummyA)));
 	subNodesA.push_back(resultA);
-	subNodesA.push_back(BoolValue::get(manager, true));
+	subNodesA.push_back(UIntValue::get(manager, FK_PLAIN));
 
 	vector<NodePtr> subNodesB;
 	subNodesB.push_back(Types::get(manager, toVector(alpha)));
 	subNodesB.push_back(resultB);
-	subNodesB.push_back(BoolValue::get(manager, true));
+	subNodesB.push_back(UIntValue::get(manager, FK_PLAIN));
 
 	vector<NodePtr> subNodesC;
 	subNodesC.push_back(Types::get(manager, toVector(alpha, dummyA)));
 	subNodesC.push_back(resultB);
-	subNodesC.push_back(BoolValue::get(manager, true));
+	subNodesC.push_back(UIntValue::get(manager, FK_PLAIN));
 
 	vector<NodePtr> subNodesD;
 	subNodesD.push_back(Types::get(manager, toVector(dummyA)));
 	subNodesD.push_back(resultA);
-	subNodesD.push_back(BoolValue::get(manager, false));
+	subNodesD.push_back(UIntValue::get(manager, FK_CLOSURE));
+
+	vector<NodePtr> subNodesE;
+	subNodesE.push_back(Types::get(manager, toVector(obj, dummyA)));
+	subNodesE.push_back(unit);
+	subNodesE.push_back(UIntValue::get(manager, FK_CONSTRUCTOR));
+
+	vector<NodePtr> subNodesF;
+	subNodesF.push_back(Types::get(manager, toVector(obj)));
+	subNodesF.push_back(unit);
+	subNodesF.push_back(UIntValue::get(manager, FK_DESTRUCTOR));
+
+	vector<NodePtr> subNodesG;
+	subNodesG.push_back(Types::get(manager, toVector(obj, dummyA)));
+	subNodesG.push_back(resultA);
+	subNodesG.push_back(UIntValue::get(manager, FK_MEMBER_FUNCTION));
 
 	// perform basic type tests
 	basicTypeTests(funTypeA, true, toList(subNodesA));
 	basicTypeTests(funTypeB, true, toList(subNodesB));
 	basicTypeTests(funTypeC, true, toList(subNodesC));
 	basicTypeTests(funTypeD, true, toList(subNodesD));
+	basicTypeTests(funTypeE, true, toList(subNodesE));
+	basicTypeTests(funTypeF, true, toList(subNodesF));
+	basicTypeTests(funTypeG, true, toList(subNodesG));
 }
 
 TEST(TypeTest, RecType) {
@@ -699,7 +748,9 @@ void basicTypeTests(PT type, bool concrete, const NodeList& children) {
 		//EXPECT_EQ( concrete, cur->isConcrete() );
 
 		// check children
-		EXPECT_TRUE( equals(children, cur->getChildList(), equal_target<NodePtr>()) );
+		EXPECT_TRUE( equals(children, cur->getChildList(), equal_target<NodePtr>()) )
+			<< "Should: " << children << "\n"
+			<< "Actual: " << cur->getChildList() << "\n";
 	}
 }
 

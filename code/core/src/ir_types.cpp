@@ -63,6 +63,27 @@ namespace core {
 
 
 	std::ostream& FunctionType::printTo(std::ostream& out) const {
+
+		// handle constructors
+		if (isConstructor()) {
+			auto paramBegin = getParameterTypes().begin() + 1;
+			auto paramEnd = getParameterTypes().end();
+			return out << "(" << *getObjectType() << "::(" << join(",", paramBegin, paramEnd, print<deref<NodePtr>>()) << "))";
+		}
+
+		// handle destructor
+		if (isDestructor()) {
+			assert(1u == getParameterTypes().size());
+			return out << "(~" << *getObjectType() << "::())";
+		}
+
+		// handle member function types
+		if (isMemberFunction()) {
+			auto paramBegin = getParameterTypes().begin() + 1;
+			auto paramEnd = getParameterTypes().end();
+			return out << "(" << *getObjectType() << "::(" << join(",", paramBegin, paramEnd, print<deref<NodePtr>>()) << ")->" << *getReturnType() << ")";
+		}
+
 		out << "(";
 		// add parameters
 		out << "(" << join(",", getParameterTypes()->getChildList(), print<deref<NodePtr>>()) << ")";

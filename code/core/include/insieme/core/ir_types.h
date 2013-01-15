@@ -445,13 +445,23 @@ namespace core {
 
 	// ---------------------------------------- Function Type ------------------------------
 
+	/**
+	 * An enumeration used for distinguishing the various kinds of function types.
+	 */
+	enum FunctionKind {
+		FK_PLAIN = 1, 			/* < a plain function produced by a simple lambda */
+		FK_CLOSURE, 			/* < a closure function produced by a binding */
+		FK_CONSTRUCTOR, 		/* < a constructor used for creating object instances */
+		FK_DESTRUCTOR, 			/* < a destructor used for destroying object instances */
+		FK_MEMBER_FUNCTION		/* < a member function being associated to a class */
+	};
 
 	/**
 	 * The accessor associated to a function type. Each function type is composed of 3 sub-nodes.
-	 * The first is forming a list of parameters, the second the return type and the last marks
-	 * function types to be pure or closures.
+	 * The first is forming a list of parameters, the second the return type. The last node
+	 * determines the kind of function - according to the FunctionKind enumeration.
 	 */
-	IR_NODE_ACCESSOR(FunctionType, Type, Types, Type, BoolValue)
+	IR_NODE_ACCESSOR(FunctionType, Type, Types, Type, UIntValue)
 		/**
 		 * Obtains the list of parameters required for invoking functions of this type.
 		 */
@@ -463,21 +473,72 @@ namespace core {
 		IR_NODE_PROPERTY(Type, ReturnType, 1);
 
 		/**
-		 * Obtains a pointer to the child node determining whether this function type is a plain function type or not.
+		 * Obtains a pointer to the child node determining the kind of this function type.
 		 */
-		IR_NODE_PROPERTY(BoolValue, Plain, 2);
+		IR_NODE_PROPERTY(UIntValue, FunctionKind, 2);
 
 		/**
 		 * A utility function allowing to determine directly whether a function
 		 * is plain or not.
 		 */
-		bool isPlain() const { return FunctionTypeAccessor<Derived,Ptr>::getPlain()->getValue(); }
+		bool isPlain() const { return FunctionTypeAccessor<Derived,Ptr>::getKind() == FK_PLAIN; }
+
+		/**
+		 * A utility function allowing to determine directly whether a function
+		 * is a closure or not.
+		 */
+		bool isClosure() const { return FunctionTypeAccessor<Derived,Ptr>::getKind() == FK_CLOSURE; }
+
+		/**
+		 * A utility function allowing to determine directly whether a function
+		 * is a constructor or not.
+		 */
+		bool isConstructor() const { return FunctionTypeAccessor<Derived,Ptr>::getKind() == FK_CONSTRUCTOR; }
+
+		/**
+		 * A utility function allowing to determine directly whether a function
+		 * is a destructor or not.
+		 */
+		bool isDestructor() const { return FunctionTypeAccessor<Derived,Ptr>::getKind() == FK_DESTRUCTOR; }
+
+		/**
+		 * A utility function allowing to determine directly whether a function
+		 * is a member function or not.
+		 */
+		bool isMemberFunction() const { return FunctionTypeAccessor<Derived,Ptr>::getKind() == FK_MEMBER_FUNCTION; }
 
 		/**
 		 * Obtains a list of types forming the parameter types of this function type.
 		 */
 		vector<Ptr<const Type>> getParameterTypeList() const {
 			return getParameterTypes()->getElements();
+		}
+
+		/**
+		 * Obtains a reference to the requested parameter type.
+		 */
+		Ptr<const Type> getParameterType(unsigned index) const {
+			return FunctionTypeAccessor<Derived, Ptr>::getParameterTypes()->getElement(index);
+		}
+
+		/**
+		 * Obtains the kind of function this function type is representing.
+		 */
+		FunctionKind getKind() const {
+			return (FunctionKind)getFunctionKind()->getValue();
+		}
+
+		/**
+		 * Obtains the object type this function is attached to in case it is a constructor, destructor
+		 * or member function. In case it is a plain or closure function type a call to this function is
+		 * invalid.
+		 */
+		Ptr<const Type> getObjectType() const {
+			assert(isConstructor() || isDestructor() || isMemberFunction());
+			assert(!getParameterTypes().empty());
+			assert(getParameterType(0)->getNodeType() == NT_RefType);
+			static const auto caster = typename Ptr<const RefType>::StaticCast();
+			return caster.template operator()<const RefType>(getParameterType(0))->getElementType();
 		}
 	};
 
@@ -503,11 +564,69 @@ namespace core {
 		 * @param manager the manager to be used for handling the obtained type pointer
 		 * @param paramTypes the type of the single parameter accepted by the resulting function
 		 * @param returnType the type of value to be returned by the obtained function type
+		 * @param kind determining the kind of function type to be constructed
+		 * @return a pointer to a instance of the required type maintained by the given manager
+		 */
+		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, const TypePtr& returnType, FunctionKind kind) {
+			return manager.get(FunctionType(paramType, returnType, UIntValue::get(manager, kind)));
+		}
+
+		/**
+		 * This method provides a static factory method for function types. It will return a pointer to
+		 * a function type instance representing the requested function type and being maintained
+		 * within the given manager. Return type will be unit.
+		 *
+		 * @param manager the manager to be used for handling the obtained type pointer
+		 * @param paramTypes the type of the single parameter accepted by the resulting function
+		 * @param kind determining the kind of function type to be constructed
+		 * @return a pointer to a instance of the required type maintained by the given manager
+		 */
+		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, FunctionKind kind) {
+			return get(manager, paramType, GenericType::get(manager, "unit"), kind);
+		}
+
+		/**
+		 * This method provides a static factory method for function types. It will return a pointer to
+		 * a function type instance representing the requested function type and being maintained
+		 * within the given manager.
+		 *
+		 * @param manager the manager to be used for handling the obtained type pointer
+		 * @param parameterTypes the type of the single parameter accepted by the resulting function
+		 * @param returnType the type of value to be returned by the obtained function type
+		 * @param kind determining the kind of function type to be constructed
+		 * @return a pointer to a instance of the required type maintained by the given manager
+		 */
+		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType, FunctionKind kind) {
+			return get(manager, Types::get(manager, parameterTypes), returnType, kind);
+		}
+
+		/**
+		 * This method provides a static factory method for function types. It will return a pointer to
+		 * a function type instance representing the requested function type and being maintained
+		 * within the given manager. Return type will be unit.
+		 *
+		 * @param manager the manager to be used for handling the obtained type pointer
+		 * @param parameterTypes the type of the single parameter accepted by the resulting function
+		 * @param kind determining the kind of function type to be constructed
+		 * @return a pointer to a instance of the required type maintained by the given manager
+		 */
+		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, FunctionKind kind) {
+			return get(manager, Types::get(manager, parameterTypes), GenericType::get(manager, "unit"), kind);
+		}
+
+		/**
+		 * This method provides a static factory method for function types. It will return a pointer to
+		 * a function type instance representing the requested function type and being maintained
+		 * within the given manager.
+		 *
+		 * @param manager the manager to be used for handling the obtained type pointer
+		 * @param paramTypes the type of the single parameter accepted by the resulting function
+		 * @param returnType the type of value to be returned by the obtained function type
 		 * @param plain determining whether the resulting type covers closures or not
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
 		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, const TypePtr& returnType, bool plain = true) {
-			return manager.get(FunctionType(paramType, returnType, BoolValue::get(manager, plain)));
+			return get(manager, paramType, returnType, (plain)?FK_PLAIN:FK_CLOSURE);
 		}
 
 		/**
@@ -537,7 +656,7 @@ namespace core {
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
 		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType, bool plain = true){
-			return manager.get(FunctionType(Types::get(manager, parameterTypes), returnType, BoolValue::get(manager, plain)));
+			return get(manager, Types::get(manager, parameterTypes), returnType, (plain)?FK_PLAIN:FK_CLOSURE);
 		}
 
 	};
