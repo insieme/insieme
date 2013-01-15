@@ -316,7 +316,6 @@ namespace detail {
 		}
 
 		Result matchInfixSequence(Context& context, const utils::range<SubSeqIter>& sequence, const utils::range<TokenIter>& tokens, bool leftAssociative, vector<SubRange>& ranges) {
-
 			// some pre-condition (checking that sequence is an infix sequence)
 			assert(!sequence.empty());
 			assert(sequence.size() % 2 == 1); 			// uneven number of entries for infix
@@ -346,6 +345,9 @@ namespace detail {
 			// derive filters for before/after
 			const TokenSet& before = context.grammar.getSequenceEndSet(sequence[0]);
 			const TokenSet& after  = context.grammar.getSequenceStartSet(sequence[2]);
+
+			bool beforeMayBeEmpty = sequence[0].limit.getMin() == 0;
+			bool afterMayBeEmpty  = sequence[2].limit.getMin() == 0;
 
 			unsigned terminalSize = terminal.limit.getMin();
 			assert(terminalSize == terminal.limit.getMax());
@@ -404,8 +406,12 @@ namespace detail {
 				if (i < min) continue;
 
 				// check token before and after token sequence
-				if (i > 0 && !before.contains(tokens[i-1])) continue;
-				if (i+terminalSize < tokens.size() && !after.contains(tokens[i+terminalSize])) continue;
+				if (i > 0 && !beforeMayBeEmpty && !before.contains(tokens[i-1])) {
+					continue;
+				}
+				if (i+terminalSize < tokens.size() && !afterMayBeEmpty && !after.contains(tokens[i+terminalSize])) {
+					continue;
+				}
 
 				// check terminals at corresponding position
 				TokenIter pos = tokens.begin() + i;
