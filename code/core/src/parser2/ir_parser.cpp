@@ -559,6 +559,43 @@ namespace parser {
 					}
 			));
 
+			// add constructor type rule
+			g.addRule("T", rule(
+					seq(T, "::(", list(T, ","), ")"),
+					[](Context& cur)->NodePtr {
+						auto& terms = cur.getTerms();
+						assert(!terms.empty());
+						TypeList types = convertList<TypePtr>(terms);
+						types[0] = cur.refType(types[0]);
+						return cur.functionType(types, FK_CONSTRUCTOR);
+					}
+			));
+
+			// add destructor type rule
+			g.addRule("T", rule(
+					seq("~", T, "::()"),
+					[](Context& cur)->NodePtr {
+						auto& terms = cur.getTerms();
+						assert(terms.size() == 1u);
+						TypePtr classType = cur.refType(convertList<TypePtr>(terms)[0]);
+						return cur.functionType(toVector(classType), FK_DESTRUCTOR);
+					}
+			));
+
+			// add member function type rule
+			g.addRule("T", rule(
+					seq(T, "::(", list(T, ","), ")->", T),
+					[](Context& cur)->NodePtr {
+						auto& terms = cur.getTerms();
+						assert(terms.size() >= 2u);
+						TypeList types = convertList<TypePtr>(terms);
+						types[0] = cur.refType(types[0]);
+						TypePtr resType = types.back();
+						types.pop_back();
+						return cur.functionType(types, resType, FK_MEMBER_FUNCTION);
+					}
+			));
+
 			// add struct and union types
 			struct process_named_type : public detail::actions {
 				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {

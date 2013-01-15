@@ -132,6 +132,53 @@ namespace parser {
 
 	}
 
+	TEST(IR_Parser2, FunctionTypeConstructor) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr A = builder.genericType("A");
+		TypePtr B = builder.genericType("B");
+		TypePtr C = builder.genericType("C");
+
+		TypePtr O = builder.refType(C);
+
+		EXPECT_EQ(builder.functionType(toVector(O), FK_CONSTRUCTOR), parse(manager, "C::()"));
+		EXPECT_EQ(builder.functionType(toVector(O, A), FK_CONSTRUCTOR), parse(manager, "C::(A)"));
+		EXPECT_EQ(builder.functionType(toVector(O, A, B), FK_CONSTRUCTOR), parse(manager, "C::(A, B)"));
+
+	}
+
+	TEST(IR_Parser2, FunctionTypeDestructor) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr C = builder.genericType("C");
+		TypePtr O = builder.refType(C);
+
+		EXPECT_EQ(builder.functionType(toVector(O), FK_DESTRUCTOR), parse(manager, "~C::()"));
+
+	}
+
+	TEST(IR_Parser2, MemberFunctionType) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr A = builder.genericType("A");
+		TypePtr B = builder.genericType("B");
+		TypePtr C = builder.genericType("C");
+		TypePtr R = builder.genericType("R");
+
+		TypePtr O = builder.refType(C);
+
+		EXPECT_EQ(builder.functionType(toVector(O), R, FK_MEMBER_FUNCTION), parse(manager, "C::()->R"));
+		EXPECT_EQ(builder.functionType(toVector(O, A), R, FK_MEMBER_FUNCTION), parse(manager, "C::(A)->R"));
+		EXPECT_EQ(builder.functionType(toVector(O, A, B), R, FK_MEMBER_FUNCTION), parse(manager, "C::(A, B)->R"));
+
+	}
+
 	TEST(IR_Parser2, TypeVariables) {
 
 		NodeManager manager;
