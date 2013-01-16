@@ -161,6 +161,113 @@ TEST(CallExprTypeCheck, Basic) {
 	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
 }
 
+TEST(FunctionKindCheck, Basic) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// build some ingredients
+	TypePtr A = builder.genericType("A");
+	TypePtr refA = builder.refType(A);
+
+	// ------- function kind -----------
+
+	// use an invalid function kind
+	FunctionTypePtr funType = builder.functionType(toVector(A), A, ((FunctionKind)777));
+	EXPECT_EQ((unsigned)777, funType->getFunctionKind()->getValue());
+
+	// check function type
+	auto issues = check(funType);	// use full checks
+	EXPECT_EQ((std::size_t)1, issues.size()) << issues;
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_FUNCTION_TYPE_KIND, "", Message::ERROR));
+
+	// use a valid function type
+	funType = builder.functionType(toVector(A), A, FK_PLAIN);
+	EXPECT_EQ((unsigned)FK_PLAIN, funType->getFunctionKind()->getValue());
+	issues = check(funType);	// use full checks
+	EXPECT_TRUE(issues.empty()) << issues;
+
+
+	// -------- object type -----------
+
+	// an example that is correct
+	funType = builder.functionType(toVector(refA), refA, FK_CONSTRUCTOR);
+	issues = check(funType);
+	EXPECT_TRUE(issues.empty()) << issues;
+
+	funType = builder.functionType(toVector(refA), refA, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_TRUE(issues.empty()) << issues;
+
+	funType = builder.functionType(toVector(refA), A, FK_MEMBER_FUNCTION);
+	issues = check(funType);
+	EXPECT_TRUE(issues.empty()) << issues;
+
+	// an few invalid example
+	funType = builder.functionType(toVector(A), A, FK_CONSTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+	funType = builder.functionType(toVector(A), A, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+	funType = builder.functionType(toVector(A), A, FK_MEMBER_FUNCTION);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+	funType = builder.functionType(TypeList(), A, FK_CONSTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+	funType = builder.functionType(TypeList(), A, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+	funType = builder.functionType(TypeList(), A, FK_MEMBER_FUNCTION);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+
+	// -------- destructor parameters -----------
+
+	// cases that are fine
+	funType = builder.functionType(toVector(refA), refA, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_TRUE(issues.empty()) << issues;
+
+	// invalid case
+	funType = builder.functionType(toVector(refA, A), refA, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_DESTRUCTOR_PARAMETERS, "", Message::ERROR));
+
+
+	// -------- constructor return type -----------
+
+	// cases that are fine
+	funType = builder.functionType(toVector(refA, A), refA, FK_CONSTRUCTOR);
+	issues = check(funType);
+	EXPECT_TRUE(issues.empty()) << issues;
+
+	// invalid case
+	funType = builder.functionType(toVector(refA, A), A, FK_CONSTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_CONSTRUCTOR_RETURN_TYPE, "", Message::ERROR));
+
+
+	// -------- destructor return type -----------
+
+	// cases that are fine
+	funType = builder.functionType(toVector(refA), refA, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_TRUE(issues.empty()) << issues;
+
+	// invalid case
+	funType = builder.functionType(toVector(refA), A, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_DESTRUCTOR_RETURN_TYPE, "", Message::ERROR));
+
+}
 
 TEST(FunctionType, Basic) {
 

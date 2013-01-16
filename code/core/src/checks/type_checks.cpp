@@ -39,6 +39,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/core/analysis/type_variable_deduction.h"
@@ -140,6 +141,90 @@ OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& add
 				Message::WARNING));
 	}
 	return res;
+}
+
+OptionalMessageList FunctionKindCheck::visitFunctionType(const FunctionTypeAddress& address) {
+
+	OptionalMessageList res;
+
+	// check value of kind-flag (must be within the enumeration)
+	switch(address->getKind()) {
+	case FK_PLAIN:
+	case FK_CLOSURE:
+	case FK_CONSTRUCTOR:
+	case FK_DESTRUCTOR:
+	case FK_MEMBER_FUNCTION:
+		break;	// all valid values
+	default:
+		// this is an invalid value
+		add(res, Message(address,
+				EC_TYPE_ILLEGAL_FUNCTION_TYPE_KIND,
+				format("Invalid value for function-type kind field: %d", toString(address->getKind())),
+				Message::ERROR
+		));
+	}
+
+	// check object type for ctors / dtors / member functions
+	if (address->isConstructor() || address->isDestructor() || address->isMemberFunction()) {
+		if (address->getParameterTypes().empty()) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_OBJECT_TYPE,
+					format("Missing object type within ctor / dtor / member function."),
+					Message::ERROR
+			));
+		} else if (!analysis::isObjectReferenceType(address->getParameterType(0))) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_OBJECT_TYPE,
+					format("Invalid type for target object: %s", toString(address->getParameterType(0))),
+					Message::ERROR
+			));
+		}
+	}
+
+//	CODE(TYPE, ILLEGAL_DESTRUCTOR_PARAMETERS)
+//	CODE(TYPE, ILLEGAL_CONSTRUCTOR_RETURN_TYPE)
+//	CODE(TYPE, ILLEGAL_DESTRUCTOR_RETURN_TYPE)
+
+
+	// check no-arguments for destructor
+	if (address->isDestructor()) {
+		if (address->getParameterTypes().size() > 1u) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_DESTRUCTOR_PARAMETERS,
+					format("Destructor type must not exhibit parameters!"),
+					Message::ERROR
+			));
+		}
+	}
+
+	// check return type of constructor
+	if (address->isConstructor() && !address->getParameterTypes().empty()) {
+		if (*address->getParameterType(0) != *address->getReturnType()) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_CONSTRUCTOR_RETURN_TYPE,
+					format("Invalid return type of constructor - is: %s, should %s",
+							toString(*address->getReturnType()),
+							toString(*address->getParameterType(0))),
+					Message::ERROR
+			));
+		}
+	}
+
+	// check return type of destructor
+	if (address->isDestructor() && !address->getParameterTypes().empty()) {
+		if (*address->getParameterType(0) != *address->getReturnType()) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_DESTRUCTOR_RETURN_TYPE,
+					format("Invalid return type of destructor - is: %s, should %s",
+							toString(*address->getReturnType()),
+							toString(*address->getParameterType(0))),
+					Message::ERROR
+			));
+		}
+	}
+
+	return res;
+
 }
 
 OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {

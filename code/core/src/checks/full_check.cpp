@@ -51,6 +51,7 @@ namespace checks {
 
 			std::vector<CheckPtr> checks;
 			checks.push_back(make_check<KeywordCheck>());
+			checks.push_back(make_check<FunctionKindCheck>());
 			checks.push_back(make_check<CallExprTypeCheck>());
 			checks.push_back(make_check<FunctionTypeCheck>());
 			checks.push_back(make_check<BindExprTypeCheck>());

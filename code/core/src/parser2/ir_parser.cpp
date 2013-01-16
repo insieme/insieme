@@ -567,7 +567,7 @@ namespace parser {
 						assert(!terms.empty());
 						TypeList types = convertList<TypePtr>(terms);
 						types[0] = cur.refType(types[0]);
-						return cur.functionType(types, FK_CONSTRUCTOR);
+						return cur.functionType(types, types[0], FK_CONSTRUCTOR);
 					}
 			));
 
@@ -578,7 +578,7 @@ namespace parser {
 						auto& terms = cur.getTerms();
 						assert(terms.size() == 1u);
 						TypePtr classType = cur.refType(convertList<TypePtr>(terms)[0]);
-						return cur.functionType(toVector(classType), FK_DESTRUCTOR);
+						return cur.functionType(toVector(classType), classType, FK_DESTRUCTOR);
 					}
 			));
 
@@ -1333,7 +1333,8 @@ namespace parser {
 						terms.pop_back();
 
 						// build member function type
-						auto functionType = cur.functionType(extractTypes(convertList<VariablePtr>(terms)), FK_CONSTRUCTOR);
+						auto types = extractTypes(convertList<VariablePtr>(terms));
+						auto functionType = cur.functionType(types, types[0], FK_CONSTRUCTOR);
 						return cur.lambdaExpr(functionType, convertList<VariablePtr>(terms), body);
 					}
 			));
@@ -1348,7 +1349,8 @@ namespace parser {
 						terms.pop_back();
 
 						// build member function type
-						auto functionType = cur.functionType(extractTypes(convertList<VariablePtr>(terms)), FK_DESTRUCTOR);
+						auto types = extractTypes(convertList<VariablePtr>(terms));
+						auto functionType = cur.functionType(types, types[0], FK_DESTRUCTOR);
 						return cur.lambdaExpr(functionType, convertList<VariablePtr>(terms), body);
 					}
 			));

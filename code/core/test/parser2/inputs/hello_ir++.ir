@@ -17,13 +17,14 @@ let getSum = C::()->int {
 	return *this->sum;
 };
 
+let newObj = ('a::() ctor)->ref<'a> {
+	return ctor(new(undefined(lit('a))));
+};
+
 unit main() {
 
 	// create a new object instance
-	ref<C> c;	
-	
-	// call constructor
-	Ctor(c);	
+	ref<C> c = newObj(Ctor);
 	
 	// work with the object
 	print("%d\n", c.getSum());

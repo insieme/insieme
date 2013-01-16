@@ -46,6 +46,7 @@ namespace checks {
 #include "insieme/core/checks/check_macros.inc"
 
 SIMPLE_CHECK(Keyword, GenericType, true);
+SIMPLE_CHECK(FunctionKind, FunctionType, true);
 
 SIMPLE_CHECK(CallExprType, CallExpr, false);
 SIMPLE_CHECK(FunctionType, LambdaExpr, false);
