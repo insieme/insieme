@@ -497,23 +497,23 @@ TEST(Transform, LoopStamping3) {
 	symbols["v"] = builder.variable(builder.parseType("ref<vector<int<4>,100>>"));
 	symbols["b"] = builder.variable(builder.parseType("int<4>"));
 
-    auto forStmt = builder.parseStmt(
+    auto forStmt = builder.normalize(builder.parseStmt(
 		"for(uint<4> i = 10u .. b ) { "
 		"	for(uint<4> j = 1u .. 25u) { "
 		"		for(uint<4> k = 1u .. 100u) { "
 		"			v[i+j]; "
 		"		} "
 		"	} "
-		"}", symbols).as<ForStmtPtr>();
+		"}", symbols)).as<ForStmtPtr>();
 
 	EXPECT_TRUE(forStmt);
 
 	scop::mark(forStmt);
 
 	LoopStamping ls( 7, { 0 } );
-	NodePtr newIR = ls.apply(forStmt);
+	NodePtr newIR = builder.normalize(ls.apply(forStmt));
 
-	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v120 = 10 .. int.add(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 1) : 1) {for(int<4> v121 = 1 .. int.add(24, 1) : 1) {for(int<4> v122 = 1 .. int.add(99, 1) : 1) {vector.ref.elem(v1, uint.add(v120, v121));};};}; for(int<4> v123 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 1) : 1) {for(int<4> v124 = 1 .. int.add(24, 1) : 1) {for(int<4> v125 = 1 .. int.add(99, 1) : 1) {vector.ref.elem(v1, uint.add(v123, v124));};};};} else {}", toString(*newIR) );
+	EXPECT_EQ( "if(int.ge(v2, 11)) {for(int<4> v0 = 10 .. int.add(int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-5)), 1) : 1) {for(int<4> v3 = 1 .. int.add(24, 1) : 1) {for(int<4> v4 = 1 .. int.add(99, 1) : 1) {vector.ref.elem(v1, uint.add(v0, v3));};};}; for(int<4> v5 = int.add(cast<int<4>>(int.mul(cast<int<4>>(-7), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 7)))), cast<int<4>>(-4)) .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 1) : 1) {for(int<4> v6 = 1 .. int.add(24, 1) : 1) {for(int<4> v7 = 1 .. int.add(99, 1) : 1) {vector.ref.elem(v1, uint.add(v5, v6));};};};} else {}", toString(*newIR) );
 
 	//checkSCoPCorrectness(newIR);
 }
