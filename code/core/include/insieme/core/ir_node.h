@@ -37,6 +37,7 @@
 #pragma once
 
 #include <map>
+#include <typeindex>
 
 #include <boost/mpl/or.hpp>
 
@@ -548,7 +549,7 @@ namespace core {
 		 * Language extensions are handled via pointers. No smart pointer required here
 		 * since ownership is never leafing the object.
 		 */
-		typedef std::map<const char*, lang::Extension*> ExtensionMap;
+		typedef std::map<std::type_index, lang::Extension*> ExtensionMap;
 
 		/**
 		 * A struct summarizing data managed by the root of a node manager hierarchy.
@@ -643,7 +644,7 @@ namespace core {
 		>
 		const E& getLangExtension() {
 			// look up type information within map
-			const char* key = typeid(E).name();
+			std::type_index key = typeid(E);
 			auto& ext = data->extensions;
 			auto pos = ext.find(key);
 			if (pos != ext.end()) {

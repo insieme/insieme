@@ -145,6 +145,26 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
         frontend::conversion::ConversionFactory& convFact);
 
 
+
+struct InsiemeLoop: public InsiemePragma {
+
+    InsiemeLoop(const clang::SourceLocation& 	startLoc,
+					  const clang::SourceLocation& 	endLoc,
+					  const std::string& 			type,
+					  const pragma::MatchMap& 		mmap)
+		: InsiemePragma(startLoc, endLoc, type, mmap), mmap(mmap) { }
+
+    const pragma::MatchMap& getMatchMap() const { return mmap; }
+
+private:
+	pragma::MatchMap mmap;
+};
+
+void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
+        frontend::conversion::ConversionFactory& convFact);
+
+
+
 /**
  * InsiemeTransformation: This pragma is utilizied by the user to give transformation hints to the
  * compiler. It can be placed anywhere and node marked with such pragmas will be marked with an
@@ -163,7 +183,8 @@ enum TransformationType {
 	STAMP,
 	RESCHEDULE,
 	PARALLELIZE,
-	RSTRIP
+	RSTRIP,
+	REC_FUN_UNROLL
 };
 
 typedef std::vector<unsigned> ValueVect;

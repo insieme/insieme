@@ -270,9 +270,10 @@ namespace detail {
 	template<
 		typename V,
 		typename AnnotationType,
-		typename KeyType
+		typename KeyType,
+		typename Derived
 	>
-	class ValueAnnotation : public AnnotationType {
+	class ValueAnnotationBase : public AnnotationType {
 
 	public:
 
@@ -300,7 +301,7 @@ namespace detail {
 		 *
 		 * @param value the value to be represented
 		 */
-		ValueAnnotation(const V& value) : value(value) {}
+		ValueAnnotationBase(const V& value) : value(value) {}
 
 		/**
 		 * Obtains the key to be used to identify this annotation within an annotatable object.
@@ -326,7 +327,7 @@ namespace detail {
 			}
 
 			// check types
-			if (typeid(other) != typeid(ValueAnnotation<V,AnnotationType,KeyType>)) {
+			if (typeid(other) != typeid(Derived)) {
 				return false;
 			}
 
@@ -357,8 +358,18 @@ namespace detail {
 	};
 
 	// the initialization of the static key used for value annotations
-	template<typename V,typename A, typename K>
-	const ValueAnnotationKey<V,A,K> ValueAnnotation<V,A,K>::KEY;
+	template<typename V,typename A, typename K, typename D>
+	const ValueAnnotationKey<V,A,K> ValueAnnotationBase<V,A,K,D>::KEY;
+
+	/**
+	 * The implementation of the standard value annotation. This implementation may
+	 * be specialized for specific annotation types.
+	 */
+	template<typename V, typename AnnotationType, typename KeyType>
+	class ValueAnnotation : public ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>> {
+	public:
+		ValueAnnotation(const V& value) : ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>>(value) {}
+	};
 
 }
 

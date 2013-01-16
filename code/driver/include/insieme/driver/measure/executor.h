@@ -107,7 +107,7 @@ namespace measure {
 		 * The list of supported job-submission systems.
 		 */
 		enum JobSystem {
-			SSH, SGE, PBS
+			SSH, SGE, PBS, LL
 		};
 
 	private:
@@ -170,6 +170,7 @@ namespace measure {
 	ExecutorPtr makeRemoteSSHExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
 	ExecutorPtr makeRemoteSGEExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
 	ExecutorPtr makeRemotePBSExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
+	ExecutorPtr makeRemoteLLExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp/di72zen");
 
 
 

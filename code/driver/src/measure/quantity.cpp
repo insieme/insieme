@@ -164,6 +164,7 @@ namespace measure {
 			case s:			return toVector(Unit::Term("s",1));
 			case kg:		return toVector(Unit::Term("kg",1));
 			case byte:		return toVector(Unit::Term("byte",1));
+			case celsius:	return toVector(Unit::Term("celsius",1));
 			case percent:	return Unit::Terms();	// empty!
 			}
 			assert(false && "Unsupported known unit!");

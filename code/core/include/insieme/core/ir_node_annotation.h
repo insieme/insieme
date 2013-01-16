@@ -89,6 +89,89 @@ namespace core {
 	};
 
 
+	namespace value_annotation {
+
+		/**
+		 * A marker type to be used for marking value annotations which should be dropped in case
+		 * the annotated node is cloned to another node manager.
+		 */
+		struct drop_on_clone {};
+
+		/**
+		 * A marker type to be used for marking value annotations providing a user defined migration
+		 * function which will be used for migrating it when cloning a node to another manager.
+		 *
+		 * Values extending this interface have to implement a member function
+		 *
+		 * 			void migrateTo(const NodePtr& target) const;
+		 */
+		struct migratable {
+			// void migrateTo(const NodePtr& target) const;   // -- to be implemented by sub-classes!
+		};
+
+		/**
+		 * A utility function used by move_to_clone to conduct the actual migration without
+		 * the requirement of including the definition of the NodePtr class within this file
+		 * (which would result in a cyclic dependency).
+		 */
+		void add_annotation(const NodeAnnotationPtr& annotation, const NodePtr& target);
+
+		// the default variant for all non-specialized value types
+		template<typename V>
+		typename std::enable_if<!std::is_base_of<drop_on_clone,V>::value && !std::is_base_of<migratable,V>::value>::type
+		move_to_clone(const NodeAnnotationPtr& ptr, const NodePtr& target, const V& value) {
+			add_annotation(ptr, target);		// default behavior => link same annotation
+		}
+
+		// support drop-on-clone option
+		inline void move_to_clone(const NodeAnnotationPtr& ptr, const NodePtr& target, const drop_on_clone& value) {
+			// just do nothing ..
+		}
+
+		// support user defined migration operation
+		template<typename V>
+		typename std::enable_if<std::is_base_of<migratable,V>::value>::type
+		move_to_clone(const NodeAnnotationPtr& ptr, const NodePtr& target, const V& value) {
+			value.migrateTo(target);	// let value annotation do the work
+		}
+
+	}
+
+	/**
+	 * A type trade definition allowing to determine the type of a value annotation based on the
+	 * value type.
+	 */
+	template<typename ValueType>
+	struct value_node_annotation {
+		typedef utils::detail::ValueAnnotation<ValueType, core::NodeAnnotation, utils::AnnotationKey> type;
+	};
+
+
 } // end namespace core
+
+namespace utils {
+namespace detail {
+
+	/**
+	 * A partial template specialization of the general ValueAnnotation template used for attaching values
+	 * to annotatable objects. This template allows the value to be attached to select the mode for being
+	 * migrated when cloning the underlying IR node to another node manager.
+	 */
+	template<typename V, typename KeyType>
+	class ValueAnnotation<V, core::NodeAnnotation, KeyType> : public ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>> {
+	public:
+			ValueAnnotation(const V& value) : ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>>(value) {}
+
+			virtual ~ValueAnnotation() {}
+
+			virtual void clone(const core::NodeAnnotationPtr& ptr, const core::NodePtr& copy) const {
+				core::value_annotation::move_to_clone(ptr, copy, ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>>::getValue());
+			}
+	};
+
+} // end namespace detail
+} // end namespace utils
+
 } // end namespace insieme
+
 

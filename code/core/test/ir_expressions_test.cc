@@ -44,10 +44,12 @@
 #include "insieme/core/analysis/normalize.h"
 
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/test/test_utils.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/transform/manipulation.h"
 
 #include "ir_node_test.inc"
 
@@ -501,7 +503,7 @@ TEST(ExpressionsTest, JobExpr) {
 	basicExprTests(job, type, childList);
 }
 
-TEST(ExpressionTest, LambdaPeeling) {
+TEST(ExpressionsTest, LambdaPeeling) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	LambdaExprPtr lambda;
@@ -580,7 +582,7 @@ TEST(ExpressionTest, LambdaPeeling) {
 
 }
 
-TEST(ExpressionTest, LambdaPeelingEvenOdd) {
+TEST(ExpressionsTest, LambdaPeelingEvenOdd) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
@@ -639,7 +641,7 @@ TEST(ExpressionTest, LambdaPeelingEvenOdd) {
 }
 
 
-TEST(ExpressionTest, LambdaUnrollingEvenOdd) {
+TEST(ExpressionsTest, LambdaUnrollingEvenOdd) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
@@ -705,7 +707,7 @@ TEST(ExpressionTest, LambdaUnrollingEvenOdd) {
 }
 
 
-TEST(ExpressionTest, LambdaUnrollingNonRecursive) {
+TEST(ExpressionsTest, LambdaUnrollingNonRecursive) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
@@ -727,7 +729,7 @@ TEST(ExpressionTest, LambdaUnrollingNonRecursive) {
 
 }
 
-TEST(ExpressionTest, LambdaUnrollingExponential) {
+TEST(ExpressionsTest, LambdaUnrollingExponential) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
@@ -754,6 +756,60 @@ TEST(ExpressionTest, LambdaUnrollingExponential) {
 	EXPECT_EQ(0u, analysis::getFreeVariableAddresses(fun->peel(3)).size());
 }
 
+
+TEST(ExpressionsTest, LambdaIsRecursiveTest) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	LambdaExprPtr fun = builder.parseExpr(
+			"let f = (int<4> x)->int<4> {"
+			"	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
+			"} in f"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(fun);
+
+	std::cout << core::printer::PrettyPrinter(fun, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS) << "\n";
+	EXPECT_TRUE(fun->isRecursive());
+
+	// fix usage of recursive variables
+	fun = transform::correctRecursiveLambdaVariableUsage(manager, fun);
+
+	std::cout << core::printer::PrettyPrinter(fun, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS) << "\n";
+	EXPECT_TRUE(fun->isRecursive());
+
+}
+
+TEST(ExpressionTest, UnrollCompactFib) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	LambdaExprPtr fun = builder.parseExpr(
+			"let f = (int<4> x)->int<4> {"
+			"	return (x==0)?0:((x==1)?1:f(x-1)+f(x-2));"
+			"} in f"
+	).as<LambdaExprPtr>();
+
+	ASSERT_TRUE(fun);
+	EXPECT_TRUE(fun->isRecursive());
+
+	auto print = [](const NodePtr& node) {
+		return core::printer::PrettyPrinter(node,
+				core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS |
+				core::printer::PrettyPrinter::NO_EVAL_LAZY);
+	};
+
+	fun = transform::correctRecursiveLambdaVariableUsage(manager, fun);
+	LambdaExprPtr unrolled = fun->unroll(2);
+
+	EXPECT_PRED2(notContainsSubString,
+			toString(print(unrolled)),
+			"(int<4>) -> int<4>"
+	);
+
+	EXPECT_TRUE(unrolled->isRecursive());
+
+}
 
 template<typename PT>
 void basicExprTests(PT expression, const TypePtr& type, const NodeList& children) {

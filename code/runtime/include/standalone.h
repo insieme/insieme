@@ -85,6 +85,7 @@ IRT_CREATE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_E
 
 // initialize global variables and set up global data structures
 void irt_init_globals() {
+
 	irt_log_init();
 
 	#ifdef IRT_ENABLE_INSTRUMENTATION
@@ -115,6 +116,7 @@ void irt_init_globals() {
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_inst_create_aggregated_data_table();
 	irt_energy_select_instrumentation_method();
+	irt_temperature_select_instrumentation_method();
 #endif
 }
 
@@ -145,6 +147,16 @@ void irt_term_handler(int signal) {
 void irt_exit(int i) {
 	irt_exit_handler();
 	exit(i);
+}
+
+// abort handler, to be called in case of segmentation faults of the application, ...
+void irt_abort_handler(int signum) {
+	// performing cleanup
+	irt_exit_handler();
+	// reset default behavior for the caught signal (= usually means killing the process)
+	signal(signum, SIG_DFL);
+	// raise the signal
+	raise(signum);
 }
 
 // the irt exit handler
@@ -274,7 +286,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
 	signal(SIGTERM, &irt_term_handler);
 	signal(SIGINT, &irt_term_handler);
-	signal(SIGSEGV, &irt_term_handler);
+	signal(SIGSEGV, &irt_abort_handler);
 	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();

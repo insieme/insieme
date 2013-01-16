@@ -42,6 +42,8 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 namespace core {
@@ -90,6 +92,67 @@ namespace analysis {
 		EXPECT_EQ("rec v0.{v0=fun(((int<4>)=>int<4>) v1) {return v1(2);}}(bind(v0){int.add(int.add(2, v77), v0)})", toString(*call));
 		EXPECT_EQ("[0-2-2-2-3]", toString(getFreeVariableAddresses(call)));
 	}
+
+	TEST(FreeVariables, RecursiveVariableBug_1) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// BUG: in a code fragment using the ?: operator free variables are not detected properly
+		// reason: the lazy-construct created for the required arguments are based on a bind - binds
+		// have not been handled correctly by the "getFreeVariable" utility
+
+		// create example
+		auto fun = builder.parseExpr(
+				"let f = (int<4> x)->int<4> {"
+				"	return (x==0)?1:f(x-1)*x;"
+				"} in f"
+		).as<LambdaExprPtr>();
+
+		fun = transform::correctRecursiveLambdaVariableUsage(manager, fun);
+
+		EXPECT_EQ(toVector(fun->getVariable()), getFreeVariables(fun->getLambda()))
+			<< "Lambda:   " << core::printer::PrettyPrinter(fun->getLambda(), core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS | core::printer::PrettyPrinter::NO_EVAL_LAZY);
+	}
+
+
+	TEST(FreeVariables, RecursiveVariableBug_2) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// BUG: - the recursive variable of a function is identified as a free variable outside the recursion
+		//      - this seems to only happens within mutual recursive functions
+		// Reason: the normalize operation is broken - recursive variables are not preserved properly!!
+
+		// create example
+		auto code = builder.parseExpr(
+				"let f = (int<4> x)->int<4> {"
+				"	return (int<4> y)->int<4> {"
+				"		return f(y);"
+				"	}(x);"
+				"} in f(3)"
+		);
+
+		ASSERT_TRUE(code);
+
+		// normalize
+//		code = builder.normalize(code);
+
+		std::cout << "\n";
+		std::cout << *code << "\n";
+		std::cout << *builder.normalize(code) << "\n";
+		std::cout << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS) << "\n";
+
+		// get list of free variables
+		auto freeVars = analysis::getFreeVariables(code);
+		EXPECT_TRUE(freeVars.empty()) << freeVars;
+
+		// should also be true for addresses
+		auto freeAds = analysis::getFreeVariableAddresses(code);
+		EXPECT_TRUE(freeAds.empty()) << freeAds;
+
+	}
+
+
 
 	TEST(AllVariables, BindTest) {
 		NodeManager manager;

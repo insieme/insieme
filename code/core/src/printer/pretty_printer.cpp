@@ -50,6 +50,7 @@
 #include "insieme/core/encoder/lists.h"
 
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/attributes.h"
 
 #include <boost/iostreams/stream.hpp>
@@ -499,8 +500,10 @@ namespace {
 				this->visit(node->getCondition());
 				out << ") ";
 				this->visit(node->getThenBody());
-				out << " else ";
-				this->visit(node->getElseBody());
+				if (!analysis::isNoOp(node->getElseBody())) {
+					out << " else ";
+					this->visit(node->getElseBody());
+				}
 		});
 
 		PRINT(SwitchStmt, {
