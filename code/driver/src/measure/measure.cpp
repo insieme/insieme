@@ -80,6 +80,7 @@ namespace measure {
 		auto kb = makeUnitPtr(kilo * byte);
 		auto j = makeUnitPtr((kg * (m^2)) / (s^2)); // 1 joule
 		auto cycle = makeUnitPtr(Unit("cycle"));
+		auto c = makeUnitPtr(celsius);
 		auto unit = makeUnitPtr(Unit());
 
 

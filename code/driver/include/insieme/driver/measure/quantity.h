@@ -215,6 +215,7 @@ namespace measure {
 		kg,			// < kg
 		percent,	// < percent are defined as prefix(-100) * unit()
 		byte,		// < byte
+		celsius,			// < degrees celsius
 	};
 
 	/**
