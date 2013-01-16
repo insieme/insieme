@@ -112,12 +112,12 @@ public:
 	/**
 	 * Consumes the current token (by moving the input stream pointer) and returns a reference to it
 	 */
-	clang::Token& ConsumeToken();
+	const clang::Token& ConsumeToken();
 	clang::Scope* CurrentScope();
 	/**
 	 * Returns the last consumed token without advancing in the input stream
 	 */
-	clang::Token& CurrentToken();
+	const clang::Token& CurrentToken();
 	clang::Parser* getParser() const { return mParser; }
 };
 
