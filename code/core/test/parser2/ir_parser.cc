@@ -143,9 +143,9 @@ namespace parser {
 
 		TypePtr O = builder.refType(C);
 
-		EXPECT_EQ(builder.functionType(toVector(O), FK_CONSTRUCTOR), parse(manager, "C::()"));
-		EXPECT_EQ(builder.functionType(toVector(O, A), FK_CONSTRUCTOR), parse(manager, "C::(A)"));
-		EXPECT_EQ(builder.functionType(toVector(O, A, B), FK_CONSTRUCTOR), parse(manager, "C::(A, B)"));
+		EXPECT_EQ(builder.functionType(toVector(O), O, FK_CONSTRUCTOR), parse(manager, "C::()"));
+		EXPECT_EQ(builder.functionType(toVector(O, A), O, FK_CONSTRUCTOR), parse(manager, "C::(A)"));
+		EXPECT_EQ(builder.functionType(toVector(O, A, B), O, FK_CONSTRUCTOR), parse(manager, "C::(A, B)"));
 
 	}
 
@@ -157,7 +157,7 @@ namespace parser {
 		TypePtr C = builder.genericType("C");
 		TypePtr O = builder.refType(C);
 
-		EXPECT_EQ(builder.functionType(toVector(O), FK_DESTRUCTOR), parse(manager, "~C::()"));
+		EXPECT_EQ(builder.functionType(toVector(O), O, FK_DESTRUCTOR), parse(manager, "~C::()"));
 
 	}
 
@@ -619,7 +619,7 @@ namespace parser {
 		ASSERT_TRUE(call);
 
 		EXPECT_EQ(fun, call->getFunctionExpr());
-		EXPECT_EQ(manager.getLangBasic().getUnit(), call->getType());
+		EXPECT_EQ(builder.parseType("ref<O>"), call->getType());
 	}
 
 
@@ -647,7 +647,7 @@ namespace parser {
 		ASSERT_TRUE(call);
 
 		EXPECT_EQ(fun, call->getFunctionExpr());
-		EXPECT_EQ(manager.getLangBasic().getUnit(), call->getType());
+		EXPECT_EQ(builder.parseType("ref<O>"), call->getType());
 	}
 
 	TEST(IR_Parser2, MemberFunctionLetBinding) {
