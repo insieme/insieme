@@ -595,6 +595,117 @@ namespace parser {
 
 	}
 
+	TEST(IR_Parser2, ConstructorLetBinding) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create constructor solely
+		auto fun = builder.normalize(builder.parseExpr(
+				"let C = O::(int<4> a) { } in C"
+		)).as<LambdaExprPtr>();
+
+		ASSERT_TRUE(fun);
+
+		FunctionTypePtr funType = fun->getLambda()->getType();
+		EXPECT_EQ(FK_CONSTRUCTOR, funType->getKind());
+		EXPECT_EQ("(O::(int<4>))", toString(*funType));
+
+		// create constructor call
+		auto call = builder.normalize(builder.parseExpr(
+				"let Ctor = O::(int<4> a) {} in Ctor(var(undefined(lit(O))), 3)"
+		)).as<CallExprPtr>();
+
+		ASSERT_TRUE(call);
+
+		EXPECT_EQ(fun, call->getFunctionExpr());
+		EXPECT_EQ(manager.getLangBasic().getUnit(), call->getType());
+	}
+
+
+	TEST(IR_Parser2, DestructorLetBinding) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create constructor solely
+		auto fun = builder.normalize(builder.parseExpr(
+				"let Dtor = ~O::() { } in Dtor"
+		)).as<LambdaExprPtr>();
+
+		ASSERT_TRUE(fun);
+
+		FunctionTypePtr funType = fun->getLambda()->getType();
+		EXPECT_EQ(FK_DESTRUCTOR, funType->getKind());
+		EXPECT_EQ("(~O::())", toString(*funType));
+
+		// create constructor call
+		auto call = builder.normalize(builder.parseExpr(
+				"let Dtor = ~O::() {} in Dtor(var(undefined(lit(O))))"
+		)).as<CallExprPtr>();
+
+		ASSERT_TRUE(call);
+
+		EXPECT_EQ(fun, call->getFunctionExpr());
+		EXPECT_EQ(manager.getLangBasic().getUnit(), call->getType());
+	}
+
+	TEST(IR_Parser2, MemberFunctionLetBinding) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create constructor solely
+		auto fun = builder.normalize(builder.parseExpr(
+				"let f = O::(int<4> a)->int<4> { return a; } in f"
+		)).as<LambdaExprPtr>();
+
+		ASSERT_TRUE(fun);
+
+		FunctionTypePtr funType = fun->getLambda()->getType();
+		EXPECT_EQ(FK_MEMBER_FUNCTION, funType->getKind());
+		EXPECT_EQ("(O::(int<4>)->int<4>)", toString(*funType));
+
+		// create constructor call
+		auto call = builder.normalize(builder.parseExpr(
+				"let f = O::(int<4> a)->int<4> { return a; } in f(var(undefined(lit(O))), 3)"
+		)).as<CallExprPtr>();
+
+		ASSERT_TRUE(call);
+
+		EXPECT_EQ(fun, call->getFunctionExpr());
+		EXPECT_EQ(manager.getLangBasic().getInt4(), call->getType());
+	}
+
+	TEST(IR_Parser2, MemberFunctionCall) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create constructor solely
+		auto fun = builder.normalize(builder.parseExpr(
+				"let f = O::(int<4> a)->int<4> { return a; } in f"
+		)).as<LambdaExprPtr>();
+
+		ASSERT_TRUE(fun);
+
+		FunctionTypePtr funType = fun->getLambda()->getType();
+		EXPECT_EQ(FK_MEMBER_FUNCTION, funType->getKind());
+		EXPECT_EQ("(O::(int<4>)->int<4>)", toString(*funType));
+
+		// create constructor call
+		auto call = builder.normalize(builder.parseExpr(
+				"let x = var(undefined(lit(O))) in "
+				"let f = O::(int<4> a)->int<4> { return a; } in "
+				"x.f(3)"
+		)).as<CallExprPtr>();
+
+		ASSERT_TRUE(call);
+
+		EXPECT_EQ(fun, call->getFunctionExpr());
+		EXPECT_EQ(manager.getLangBasic().getInt4(), call->getType());
+		EXPECT_EQ("[AP(ref.var(undefined(O))),AP(3)]", toString(call->getArguments()));
+	}
 
 	TEST(IR_Parser2, LargeCode) {
 

@@ -1097,12 +1097,65 @@ namespace parser {
 					seq(E, ".", cap(id)),
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+
+						// check whether access is valid
+						StructTypePtr structType;
+						if (a->getType()->getNodeType() == NT_StructType) {
+							structType = a->getType().as<StructTypePtr>();
+						} else if (a->getType()->getNodeType() == NT_RefType) {
+							TypePtr type = a->getType().as<RefTypePtr>()->getElementType();
+							structType = type.isa<StructTypePtr>();
+							if (!structType) {
+								return fail(cur, "Accessing element of non-struct type!");
+							}
+						} else {
+							return fail(cur, "Accessing element of non-struct type!");
+						}
+
+						// check field
+						if (!structType->getNamedTypeEntryOf(cur.getSubRange(0)[0])) {
+							return NodePtr();  // invalid field!
+						}
+
+						// create access
 						if (a->getType()->getNodeType() == NT_RefType) {
 							return cur.refMember(a, cur.getSubRange(0)[0]);
 						}
 						return cur.accessMember(a, cur.getSubRange(0)[0]);
 					},
 					-15
+			));
+
+			// member function call
+			g.addRule("E", rule(
+					seq(E, ".", E, "(", list(E, ","), ")"),
+					[](Context& cur)->NodePtr {
+						NodeList terms = cur.getTerms();
+						assert(terms.size() >= 2u);
+
+						// get the object
+						ExpressionPtr obj = terms.front().as<ExpressionPtr>();
+
+						// get member function
+						ExpressionPtr fun = terms[1].as<ExpressionPtr>();
+						terms.erase(terms.begin()+1);
+
+						// check function type
+						TypePtr type = fun->getType();
+						if (type->getNodeType()!=NT_FunctionType || !type.as<FunctionTypePtr>()->isMemberFunction()) {
+							return fail(cur, "Calling non-member-function type!");
+						}
+
+						// check number of arguments
+						FunctionTypePtr funType = type.as<FunctionTypePtr>();
+						if (funType->getParameterTypes().size() != terms.size()) {
+							return fail(cur, "Invalid number of arguments!");
+						}
+
+						// build member function call expression
+						return cur.callExpr(fun, convertList<ExpressionPtr>(terms));
+					},
+					-15			// same precedence than member element access
 			));
 
 			// -- parentheses --
