@@ -83,28 +83,48 @@ int32 _irt_close_msr(int32 file) {
 void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
         int32 file = 0;
         //int32 numcores = irt_get_num_cpus();
-        int64 result = 0;
+        uint64 result = 0;
         double energy_units = -1.0;
+
         const uint32 core_start = (irt_affinity_mask_get_first_cpu(irt_worker_get_current()->affinity))/8;
         const uint32 core_end = (core_start + ceil((double)irt_g_worker_count/8));
 
         // for core_end until (all cores excl. HT), stepsize (all cores excl. HT / number of sockets)
         for(uint32 core = core_start; core < core_end; ++core) {
-                data->package[core] = 0.0;
-                data->mc[core] = 0.0;
-                data->cores[core] = 0.0;
-                if((file = _irt_open_msr(core*8)) > 0) {
-                        if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
-                                energy_units = pow(0.5, (double)((result>>8) & 0x1F));
-                                if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS)) >= 0)
-                                        data->package[core] = (double) (result&0xFFFFFFFF) * energy_units;
-                                if((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS)) >= 0)
-                                        data->mc[core] = (double) (result&0xFFFFFFFF) * energy_units;
-                                if((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS)) >= 0)
-                                        data->cores[core] = (double) (result&0xFFFFFFFF) * energy_units;
-                        }
-                        _irt_close_msr(file);
-                }
+        	data->package[core] = 0.0;
+        	data->mc[core] = 0.0;
+        	data->cores[core] = 0.0;
+        	if((file = _irt_open_msr(core*8)) > 0) {
+        		if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
+        			energy_units = pow(0.5, (double)((result>>8) & 0x1F));
+        			uint32 temp_result = 0;
+        			if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS)&0xFFFFFFFF) >= 0) {
+        				static uint32 temp_reg = 0;
+        				temp_result = result;
+        				if(result < temp_reg)
+        					result = (double)((0xFFFFFFFF - temp_reg) + result);
+        				temp_reg = temp_result;
+        				data->package[core] = (double) (result) * energy_units;
+        			}
+        			if((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS)&0xFFFFFFFF) >= 0) {
+        				static uint32 temp_reg = 0;
+						temp_result = result;
+						if(result < temp_reg)
+							result = (double)((0xFFFFFFFF - temp_reg) + result);
+						temp_reg = temp_result;
+        				data->mc[core] = (double) (result) * energy_units;
+        			}
+        			if((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS)&0xFFFFFFFF) >= 0) {
+        				static uint32 temp_reg = 0;
+						temp_result = result;
+						if(result < temp_reg)
+							result = (double)((0xFFFFFFFF - temp_reg) + result);
+						temp_reg = temp_result;
+        				data->cores[core] = (double) (result) * energy_units;
+        			}
+        		}
+        		_irt_close_msr(file);
+        	}
         }
 }
 

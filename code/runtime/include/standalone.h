@@ -84,6 +84,7 @@ IRT_CREATE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_E
 
 // initialize global variables and set up global data structures
 void irt_init_globals() {
+
 	irt_log_init();
 
 	#ifdef IRT_ENABLE_INSTRUMENTATION
@@ -113,6 +114,7 @@ void irt_init_globals() {
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_inst_create_aggregated_data_table();
 	irt_energy_select_instrumentation_method();
+	irt_temperature_select_instrumentation_method();
 #endif
 }
 
