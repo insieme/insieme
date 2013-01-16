@@ -161,6 +161,70 @@ TEST(CallExprTypeCheck, Basic) {
 	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
 }
 
+
+TEST(FunctionType, Basic) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// check whether variations of function types are tolleratred
+	//  options: ctors, dtors, member function types and plain functions
+
+	// create some types
+	TypePtr A = builder.genericType("A");
+	TypePtr refA = builder.refType(A);
+	TypePtr B = builder.genericType("B");
+
+	// create variations of function types
+	FunctionTypePtr funTypeA = builder.functionType(toVector(refA, B), refA, FK_PLAIN);
+	FunctionTypePtr funTypeB = builder.functionType(toVector(refA, B), refA, FK_CONSTRUCTOR);
+	FunctionTypePtr funTypeC = builder.functionType(toVector(refA, B), refA, FK_MEMBER_FUNCTION);
+	FunctionTypePtr funTypeD = builder.functionType(toVector(refA), refA, FK_DESTRUCTOR);
+
+
+	// create lambda body
+	StatementPtr body = builder.returnStmt(builder.refNew(builder.undefined(A)));
+
+	// create lambdas
+	auto params = toVector(builder.variable(refA), builder.variable(B));
+	auto funA = builder.lambdaExpr(funTypeA, params, body);
+	auto funB = builder.lambdaExpr(funTypeB, params, body);
+	auto funC = builder.lambdaExpr(funTypeC, params, body);
+	auto funD = builder.lambdaExpr(funTypeD, toVector(params[0]), body);
+
+	// all those should be typed correctly
+	CheckPtr typeCheck = make_check<FunctionTypeCheck>();
+	EXPECT_EQ("[]", toString(check(funA, typeCheck)));
+	EXPECT_EQ("[]", toString(check(funB, typeCheck)));
+	EXPECT_EQ("[]", toString(check(funC, typeCheck)));
+	EXPECT_EQ("[]", toString(check(funD, typeCheck)));
+
+
+	// also check some faulty configurations
+	params = toVector(builder.variable(B), builder.variable(refA));
+
+	ExpressionPtr fun = builder.lambdaExpr(funTypeA, params, body);
+	auto issues = check(fun, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(fun), EC_TYPE_INVALID_FUNCTION_TYPE, "", Message::ERROR));
+
+	fun = builder.lambdaExpr(funTypeB, params, body);
+	issues = check(fun, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(fun), EC_TYPE_INVALID_FUNCTION_TYPE, "", Message::ERROR));
+
+	fun = builder.lambdaExpr(funTypeC, params, body);
+	issues = check(fun, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(fun), EC_TYPE_INVALID_FUNCTION_TYPE, "", Message::ERROR));
+
+	fun = builder.lambdaExpr(funTypeD, toVector(params[0]), body);
+	issues = check(fun, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(fun), EC_TYPE_INVALID_FUNCTION_TYPE, "", Message::ERROR));
+
+}
+
 TEST(StructExprTypeCheck, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);
@@ -842,7 +906,7 @@ TEST(ArrayTypeChecks, Basic) {
 }
 
 
-TEST(NarrowExpresion, Basic) {
+TEST(NarrowExpression, Basic) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
@@ -879,7 +943,7 @@ TEST(NarrowExpresion, Basic) {
 }
 
 
-TEST(ExpandExpresion, Basic) {
+TEST(ExpandExpression, Basic) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);

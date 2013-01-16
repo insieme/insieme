@@ -64,24 +64,34 @@ namespace core {
 
 	std::ostream& FunctionType::printTo(std::ostream& out) const {
 
+		// fetch object type if required
+		TypePtr objType;
+		if (isConstructor() || isDestructor() || isMemberFunction()) {
+			if (getParameterTypes().empty() || getParameterTypes()[0].getNodeType() != NT_RefType) {
+				objType = GenericType::get(getNodeManager(), "%error%");
+			} else {
+				objType = getObjectType();
+			}
+		}
+
 		// handle constructors
 		if (isConstructor()) {
 			auto paramBegin = getParameterTypes().begin() + 1;
 			auto paramEnd = getParameterTypes().end();
-			return out << "(" << *getObjectType() << "::(" << join(",", paramBegin, paramEnd, print<deref<NodePtr>>()) << "))";
+			return out << "(" << *objType << "::(" << join(",", paramBegin, paramEnd, print<deref<NodePtr>>()) << "))";
 		}
 
 		// handle destructor
 		if (isDestructor()) {
 			assert(1u == getParameterTypes().size());
-			return out << "(~" << *getObjectType() << "::())";
+			return out << "(~" << *objType << "::())";
 		}
 
 		// handle member function types
 		if (isMemberFunction()) {
 			auto paramBegin = getParameterTypes().begin() + 1;
 			auto paramEnd = getParameterTypes().end();
-			return out << "(" << *getObjectType() << "::(" << join(",", paramBegin, paramEnd, print<deref<NodePtr>>()) << ")->" << *getReturnType() << ")";
+			return out << "(" << *objType << "::(" << join(",", paramBegin, paramEnd, print<deref<NodePtr>>()) << ")->" << *getReturnType() << ")";
 		}
 
 		out << "(";

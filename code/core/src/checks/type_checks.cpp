@@ -220,9 +220,12 @@ OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& 
 	transform(address.getAddressedNode()->getParameterList()->getElements(), back_inserter(param), extractType);
 
 	FunctionTypePtr isType = address->getLambda()->getType();
-	TypePtr result = address->getLambda()->getType()->getReturnType();
 
-	FunctionTypePtr funType = FunctionType::get(manager, param, result, true);
+	// assume return type and function type to be correct
+	auto result = isType->getReturnType();
+	auto kind = isType->getKind();
+
+	FunctionTypePtr funType = FunctionType::get(manager, param, result, kind);
 	if (*funType != *isType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_FUNCTION_TYPE,
@@ -371,7 +374,7 @@ OptionalMessageList LambdaTypeCheck::visitLambdaExpr(const LambdaExprAddress& ad
 	// check type of lambda
 	IRBuilder builder(lambda->getNodeManager());
 	FunctionTypePtr funTypeIs = lambda->getLambda()->getType();
-	FunctionTypePtr funTypeShould = builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur) { return cur->getType(); }), funTypeIs->getReturnType());
+	FunctionTypePtr funTypeShould = builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur) { return cur->getType(); }), funTypeIs->getReturnType(), funTypeIs->getKind());
 	if (*funTypeIs != *funTypeShould) {
 		add(res, Message(address,
 				EC_TYPE_INVALID_LAMBDA_TYPE,
