@@ -1114,7 +1114,7 @@ namespace parser {
 
 						// check field
 						if (!structType->getNamedTypeEntryOf(cur.getSubRange(0)[0])) {
-							return NodePtr();  // invalid field!
+							return fail(cur, "Accessing unknown field!");
 						}
 
 						// create access
@@ -1125,6 +1125,35 @@ namespace parser {
 					},
 					-15
 			));
+
+			// member access based on the -> operator
+			g.addRule("E", rule(
+					seq(E, "->", cap(id)),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+
+						// check whether target is a reference
+						if (a->getType()->getNodeType() != NT_RefType) {
+							return fail(cur, "Accessing non-pointer element!");
+						}
+
+						// extract struct type
+						StructTypePtr structType = a->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>();
+						if (!structType) {
+							return fail(cur, "Accessing non-struct element!");
+						}
+
+						// check field
+						if (!structType->getNamedTypeEntryOf(cur.getSubRange(0)[0])) {
+							return fail(cur, "Accessing unknown field!");
+						}
+
+						// create access
+						return cur.refMember(a, cur.getSubRange(0)[0]);
+					},
+					-15
+			));
+
 
 			// member function call
 			g.addRule("E", rule(
