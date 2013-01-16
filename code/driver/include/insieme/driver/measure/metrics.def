@@ -77,6 +77,9 @@ METRIC(ENERGY_MC_2_END,                 "energy_mc_2_end_(j)",                  
 METRIC(ENERGY_START,		"energy_start_(j)",			j,			none);
 METRIC(ENERGY_END,			"energy_end_(j)",			j,			none);
 
+METRIC(TEMPERATURE_START,	"temperature_start_(c)",	c,			none);
+METRIC(TEMPERATURE_END,		"temperature_end_(c)",		c,			none);	
+
 METRIC(WALL_TIME,			"wall_time(ns)",			ns,			none);
 METRIC(CPU_TIME,			"cpu_time(ns)",				ns,			none);
 
@@ -208,6 +211,9 @@ METRIC(TOTAL_ENERGY_CORES_2,                            "total_energy_cores_2", 
 METRIC(TOTAL_ENERGY_MC_1,                               "total_energy_mc_1",                            j,                      first(l_sub(Metric::ENERGY_MC_1_END, Metric::ENERGY_MC_1_START)));
 METRIC(TOTAL_ENERGY_MC_2,                               "total_energy_mc_2",                            j,                      first(l_sub(Metric::ENERGY_MC_2_END, Metric::ENERGY_MC_2_START)));
 METRIC(TOTAL_ENERGY,                                    "total_energy",                                 j,                      add(Metric::TOTAL_ENERGY_PACKAGE_1, Metric::TOTAL_ENERGY_PACKAGE_2));
+
+METRIC(AVG_TEMPERATURE_START,							"avg_temperature_start",						c,				avg(Metric::TEMPERATURE_START));
+METRIC(AVG_TEMPERATURE_END,								"avg_temperature_end",							c,				avg(Metric::TEMPERATURE_END));
 
 // TODO: re-enable when number of workers is fixed for regions 
 METRIC(AVG_NUM_WORKERS,				"avg_num_workers",			unit,		avg(Metric::NUM_WORKERS));
