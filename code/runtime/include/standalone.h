@@ -70,6 +70,7 @@ irt_lock_obj irt_g_exit_handler_mutex;
 irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
 uint32 irt_g_active_worker_count;
+irt_lock_obj irt_g_active_worker_mutex;
 struct _irt_worker **irt_g_workers;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 #ifndef IRT_MIN_MODE
@@ -100,6 +101,7 @@ void irt_init_globals() {
 	}
 	irt_mutex_init(&irt_g_error_mutex);
 	irt_mutex_init(&irt_g_exit_handler_mutex);
+	irt_mutex_init(&irt_g_active_worker_mutex);
 	irt_data_item_table_init();
 	irt_context_table_init();
 	irt_wi_event_register_table_init();
