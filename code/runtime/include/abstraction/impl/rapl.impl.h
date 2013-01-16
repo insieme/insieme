@@ -36,49 +36,15 @@
 
 #pragma once
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <math.h>
 #include "irt_inttypes.h"
+#include "abstraction/impl/msr.impl.h"
 
 #ifdef _MSC_VER
 	#include <io.h>
 #else
 	#include <unistd.h>
 #endif
-
-int32 _irt_open_msr(uint32 core) {
-	char path_to_msr[512];
-	int32 file;
-
-	sprintf(path_to_msr, "/dev/cpu/%u/msr", core);
-
-	if ((file = open(path_to_msr, O_RDONLY)) < 0) {
-		IRT_DEBUG("Instrumentation: Unable to open MSR file for reading, file %s, reason: %s\n", path_to_msr, strerror(errno));
-		return -1;
-	}
-
-	return file;
-}
-
-int64 _irt_read_msr(int32 file, int32 subject) {
-	int64 data;
-
-	if (pread(file, &data, sizeof data, subject) != sizeof data) {
-		IRT_DEBUG("Instrumentation: Unable to read MSR file %d, reason: %s\n", file, strerror(errno));
-		return -1.0;
-	}
-
-	return data;
-}
-
-int32 _irt_close_msr(int32 file) {
-	return close(file);
-}
 
 void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
         int32 file = 0;

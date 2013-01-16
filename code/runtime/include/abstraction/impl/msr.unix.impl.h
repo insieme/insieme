@@ -36,45 +36,38 @@
 
 #pragma once
 
-#include "abstraction/temperature_intel.h"
-#include "abstraction/impl/msr.impl.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
 
-uint64 irt_get_temperature_intel(irt_worker* worker) {
+int32 _irt_open_msr(uint32 core) {
+	char path_to_msr[512];
 	int32 file;
-	uint64 result;
 
-	uint64 core_temperature = 0;
+	sprintf(path_to_msr, "/dev/cpu/%u/msr", core);
 
-	if((file = _irt_open_msr(irt_affinity_mask_get_first_cpu(worker->affinity))) >= 0) {
-		if((result = _irt_read_msr(file, IA32_THERM_STATUS)&0xFFFFFFFF) >= 0) {
-			// check if temperature reading is valid at all
-			if(result >> 31) {
-				core_temperature = TCC_ACTIVATION_TEMPERATURE - ((result >> 16)&0x3F);
-				//printf("resolution: %u\n", (unsigned)(result >> 27)&0xF);
-				//printf("readout absolute: %u\n", 100-(unsigned)(result >> 16)&0x3F);
-				//printf("readout diff: %u\n", (unsigned)(result >> 16)&0x3F);
-			}
-		}
-		_irt_close_msr(file);
+	if ((file = open(path_to_msr, O_RDONLY)) < 0) {
+		IRT_DEBUG("Instrumentation: Unable to open MSR file for reading, file %s, reason: %s\n", path_to_msr, strerror(errno));
+		return -1;
 	}
-	return core_temperature;
+
+	return file;
 }
 
-bool irt_temperature_intel_is_supported() {
-	volatile unsigned a, b, c, d;
+int64 _irt_read_msr(int32 file, int32 subject) {
+	int64 data;
 
-	const unsigned vendor_string_ebx = 0x756E6547; // Genu
-	const unsigned vendor_string_ecx = 0x6C65746E; // ineI
-	const unsigned vendor_string_edx = 0x49656E69; // ntel
+	if (pread(file, &data, sizeof data, subject) != sizeof data) {
+		IRT_DEBUG("Instrumentation: Unable to read MSR file %d, reason: %s\n", file, strerror(errno));
+		return -1.0;
+	}
 
-	__asm__ __volatile__("cpuid" : "=b" (b), "=c" (c), "=d" (d) : "a" (0x0));
+	return data;
+}
 
-	// if not an intel cpu
-	if(b != vendor_string_ebx || c != vendor_string_ecx || d != vendor_string_edx)
-		return false;
-
-	__asm__ __volatile__("cpuid" : "=a" (a) : "a" (0x00000006) : "ebx", "ecx", "edx");
-
-	// CPUID.06H.EAX[0]: digital sensors present or not
-	return (a&0x1);
+int32 _irt_close_msr(int32 file) {
+	return close(file);
 }
