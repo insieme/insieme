@@ -147,6 +147,16 @@ void irt_exit(int i) {
 	exit(i);
 }
 
+// abort handler, to be called in case of segmentation faults of the application, ...
+void irt_abort_handler(int signum) {
+	// performing cleanup
+	irt_exit_handler();
+	// reset default behavior for the caught signal (= usually means killing the process)
+	signal(signum, SIG_DFL);
+	// raise the signal
+	raise(signum);
+}
+
 // the irt exit handler
 // needs to correctly shutdown all workers regardless of the situation it was called in
 void irt_exit_handler() {
@@ -274,7 +284,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
 	signal(SIGTERM, &irt_term_handler);
 	signal(SIGINT, &irt_term_handler);
-	signal(SIGSEGV, &irt_term_handler);
+	signal(SIGSEGV, &irt_abort_handler);
 	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();
