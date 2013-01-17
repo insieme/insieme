@@ -83,9 +83,7 @@ using namespace insieme::frontend;
 ParserProxy* ParserProxy::currParser = NULL;
 
 clang::Expr* ParserProxy::ParseExpression(clang::Preprocessor& PP) {
-	// CLANG 3.2 fix
-	clang::Token t(mParser->getCurToken());
-	PP.Lex(t);
+	PP.Lex(mParser->Tok);
 
 	Parser::ExprResult ownedResult = mParser->ParseExpression();
 	Expr* result = ownedResult.takeAs<Expr> ();
@@ -96,7 +94,7 @@ void ParserProxy::EnterTokenStream(clang::Preprocessor& PP) {
 	PP.EnterTokenStream(&(CurrentToken()), 1, true, false);
 }
 
-const Token& ParserProxy::ConsumeToken() {
+Token& ParserProxy::ConsumeToken() {
 	mParser->ConsumeAnyToken();
 	// Token token = PP.LookAhead(0);
 	return CurrentToken();
@@ -106,10 +104,8 @@ clang::Scope* ParserProxy::CurrentScope() {
 	return mParser->getCurScope();
 }
 
-const Token& ParserProxy::CurrentToken() {
-	// CLANG 3.2 fix
-//	return mParser->Tok;
-	return mParser->getCurToken();
+Token& ParserProxy::CurrentToken() {
+	return mParser->Tok;
 }
 
 namespace {

@@ -389,7 +389,7 @@ struct Tok: public MappableNode<Tok<T>> {
 	}
 
 	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
-		const clang::Token& token = ParserProxy::get().ConsumeToken();
+		clang::Token& token = ParserProxy::get().ConsumeToken();
 		if (token.is(T)) {
 			if (MappableNode<Tok<T>>::isAddToMap()) { 
 				AddToMap(T, token, resolve, MappableNode<Tok<T>>::getMapName(), mmap); 

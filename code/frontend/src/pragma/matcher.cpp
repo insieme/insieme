@@ -265,7 +265,7 @@ bool expr_p::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStac
 }
 
 bool kwd::match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
-	const clang::Token& token = ParserProxy::get().ConsumeToken();
+	clang::Token& token = ParserProxy::get().ConsumeToken();
 	if (token.is(clang::tok::identifier) && ParserProxy::get().CurrentToken().getIdentifierInfo()->getName() == kw) {
 		if(isAddToMap() && getMapName().empty())
 			mmap[kw];
