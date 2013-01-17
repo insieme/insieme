@@ -333,7 +333,8 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 /// global variables used within the functions of the input program.
 GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 
-
+		return std::make_pair(core::StructTypePtr(), core::StructExprPtr());
+/*
 	// no global variable found , we return an empty tuple
 	if ( globals.empty() ) {
 		return std::make_pair(core::StructTypePtr(), core::StructExprPtr());
@@ -419,6 +420,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 	convFact.setTranslationUnit(convFact.getProgram().getTranslationUnit(currTU));
 
 	return std::make_pair(structTy, builder.structExpr(structTy, members) );
+	*/
 }
 
 void GlobalVarCollector::dump(std::ostream& out) const {

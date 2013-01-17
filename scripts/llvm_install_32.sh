@@ -34,6 +34,11 @@ echo "***********************************"
 
 patch -d llvm-$VERSION-src -p1  < $CURRENT/patches/insieme-clang-$VERSION.patch
 
+RET=$?
+if [ $RET -ne 0 ]; then
+	echo " ERROR: patching failed"
+	exit $RET
+fi
 
 echo "*******************"
 echo "* Compiling CLANG *"
