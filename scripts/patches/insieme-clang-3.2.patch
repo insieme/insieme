@@ -1,0 +1,207 @@
+diff -crB llvm-src-org/tools/clang/include/clang/Parse/Parser.h llvm-src/tools/clang/include/clang/Parse/Parser.h
+*** llvm-src-org/tools/clang/include/clang/Parse/Parser.h	2012-11-27 13:30:00.456342833 +0100
+--- llvm-src/tools/clang/include/clang/Parse/Parser.h	2012-11-27 14:08:11.816347648 +0100
+***************
+*** 26,31 ****
+--- 26,35 ----
+  #include "llvm/Support/SaveAndRestore.h"
+  #include <stack>
+  
++ //--- INSIEME COMPILER ---//
++ class ParserProxy;
++ //------------------------//
++ 
+  namespace clang {
+    class PragmaHandler;
+    class Scope;
+***************
+*** 89,95 ****
+    friend class ObjCDeclContextSwitch;
+    friend class ParenBraceBracketBalancer;
+    friend class BalancedDelimiterTracker;
+! 
+    Preprocessor &PP;
+  
+    /// Tok - The current token we are peeking ahead.  All parsing methods assume
+--- 93,101 ----
+    friend class ObjCDeclContextSwitch;
+    friend class ParenBraceBracketBalancer;
+    friend class BalancedDelimiterTracker;
+!   //--- INSIEME COMPILER ---//
+!   friend class ::ParserProxy;
+!   //------------------------//
+    Preprocessor &PP;
+  
+    /// Tok - The current token we are peeking ahead.  All parsing methods assume
+diff -crB llvm-src-org/tools/clang/include/clang/Sema/Sema.h llvm-src/tools/clang/include/clang/Sema/Sema.h
+*** llvm-src-org/tools/clang/include/clang/Sema/Sema.h	2012-11-27 13:30:00.461342880 +0100
+--- llvm-src/tools/clang/include/clang/Sema/Sema.h	2012-11-27 14:15:58.994579840 +0100
+***************
+*** 777,783 ****
+    Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
+         TranslationUnitKind TUKind = TU_Complete,
+         CodeCompleteConsumer *CompletionConsumer = 0);
+!   ~Sema();
+  
+    /// \brief Perform initialization that occurs after the parser has been
+    /// initialized but before it parses anything.
+--- 777,783 ----
+    Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
+         TranslationUnitKind TUKind = TU_Complete,
+         CodeCompleteConsumer *CompletionConsumer = 0);
+!   virtual ~Sema();
+  
+    /// \brief Perform initialization that occurs after the parser has been
+    /// initialized but before it parses anything.
+***************
+*** 1289,1295 ****
+                                    bool IsAddressOfOperand,
+                                    CorrectionCandidateCallback *CCC = 0);
+  
+!   Decl *ActOnDeclarator(Scope *S, Declarator &D);
+  
+    Decl *HandleDeclarator(Scope *S, Declarator &D,
+                           MultiTemplateParamsArg TemplateParameterLists);
+--- 1289,1295 ----
+                                    bool IsAddressOfOperand,
+                                    CorrectionCandidateCallback *CCC = 0);
+  
+!   virtual Decl *ActOnDeclarator(Scope *S, Declarator &D);
+  
+    Decl *HandleDeclarator(Scope *S, Declarator &D,
+                           MultiTemplateParamsArg TemplateParameterLists);
+***************
+*** 1376,1390 ****
+    void ActOnFinishKNRParamDeclarations(Scope *S, Declarator &D,
+                                         SourceLocation LocAfterDecls);
+    void CheckForFunctionRedefinition(FunctionDecl *FD);
+!   Decl *ActOnStartOfFunctionDef(Scope *S, Declarator &D);
+!   Decl *ActOnStartOfFunctionDef(Scope *S, Decl *D);
+    void ActOnStartOfObjCMethodDef(Scope *S, Decl *D);
+    bool isObjCMethodDecl(Decl *D) {
+      return D && isa<ObjCMethodDecl>(D);
+    }
+  
+    void computeNRVO(Stmt *Body, sema::FunctionScopeInfo *Scope);
+!   Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body);
+    Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body, bool IsInstantiation);
+  
+    /// ActOnFinishDelayedAttribute - Invoked when we have finished parsing an
+--- 1376,1390 ----
+    void ActOnFinishKNRParamDeclarations(Scope *S, Declarator &D,
+                                         SourceLocation LocAfterDecls);
+    void CheckForFunctionRedefinition(FunctionDecl *FD);
+!   virtual Decl *ActOnStartOfFunctionDef(Scope *S, Declarator &D);
+!   virtual Decl *ActOnStartOfFunctionDef(Scope *S, Decl *D);
+    void ActOnStartOfObjCMethodDef(Scope *S, Decl *D);
+    bool isObjCMethodDecl(Decl *D) {
+      return D && isa<ObjCMethodDecl>(D);
+    }
+  
+    void computeNRVO(Stmt *Body, sema::FunctionScopeInfo *Scope);
+!   virtual Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body);
+    Decl *ActOnFinishFunctionBody(Decl *Decl, Stmt *Body, bool IsInstantiation);
+  
+    /// ActOnFinishDelayedAttribute - Invoked when we have finished parsing an
+***************
+*** 1485,1491 ****
+    void ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
+                   IdentifierInfo *ClassName,
+                   SmallVectorImpl<Decl *> &Decls);
+!   Decl *ActOnField(Scope *S, Decl *TagD, SourceLocation DeclStart,
+                     Declarator &D, Expr *BitfieldWidth);
+  
+    FieldDecl *HandleField(Scope *S, RecordDecl *TagD, SourceLocation DeclStart,
+--- 1485,1491 ----
+    void ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
+                   IdentifierInfo *ClassName,
+                   SmallVectorImpl<Decl *> &Decls);
+!   virtual Decl *ActOnField(Scope *S, Decl *TagD, SourceLocation DeclStart,
+                     Declarator &D, Expr *BitfieldWidth);
+  
+    FieldDecl *HandleField(Scope *S, RecordDecl *TagD, SourceLocation DeclStart,
+***************
+*** 1542,1548 ****
+  
+    /// ActOnTagFinishDefinition - Invoked once we have finished parsing
+    /// the definition of a tag (enumeration, class, struct, or union).
+!   void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
+                                  SourceLocation RBraceLoc);
+  
+    void ActOnObjCContainerFinishDefinition();
+--- 1542,1548 ----
+  
+    /// ActOnTagFinishDefinition - Invoked once we have finished parsing
+    /// the definition of a tag (enumeration, class, struct, or union).
+!   virtual void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
+                                  SourceLocation RBraceLoc);
+  
+    void ActOnObjCContainerFinishDefinition();
+***************
+*** 2515,2521 ****
+  
+    void ActOnStartOfCompoundStmt();
+    void ActOnFinishOfCompoundStmt();
+!   StmtResult ActOnCompoundStmt(SourceLocation L, SourceLocation R,
+                                         MultiStmtArg Elts,
+                                         bool isStmtExpr);
+  
+--- 2515,2521 ----
+  
+    void ActOnStartOfCompoundStmt();
+    void ActOnFinishOfCompoundStmt();
+!   virtual StmtResult ActOnCompoundStmt(SourceLocation L, SourceLocation R,
+                                         MultiStmtArg Elts,
+                                         bool isStmtExpr);
+  
+***************
+*** 2534,2540 ****
+      Sema &S;
+    };
+  
+!   StmtResult ActOnDeclStmt(DeclGroupPtrTy Decl,
+                                     SourceLocation StartLoc,
+                                     SourceLocation EndLoc);
+    void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
+--- 2534,2540 ----
+      Sema &S;
+    };
+  
+!   virtual StmtResult ActOnDeclStmt(DeclGroupPtrTy Decl,
+                                     SourceLocation StartLoc,
+                                     SourceLocation EndLoc);
+    void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
+***************
+*** 2554,2560 ****
+                                   ArrayRef<const Attr*> Attrs,
+                                   Stmt *SubStmt);
+  
+!   StmtResult ActOnIfStmt(SourceLocation IfLoc,
+                           FullExprArg CondVal, Decl *CondVar,
+                           Stmt *ThenVal,
+                           SourceLocation ElseLoc, Stmt *ElseVal);
+--- 2554,2560 ----
+                                   ArrayRef<const Attr*> Attrs,
+                                   Stmt *SubStmt);
+  
+!   virtual StmtResult ActOnIfStmt(SourceLocation IfLoc,
+                           FullExprArg CondVal, Decl *CondVar,
+                           Stmt *ThenVal,
+                           SourceLocation ElseLoc, Stmt *ElseVal);
+***************
+*** 2571,2577 ****
+                                   SourceLocation CondLParen, Expr *Cond,
+                                   SourceLocation CondRParen);
+  
+!   StmtResult ActOnForStmt(SourceLocation ForLoc,
+                            SourceLocation LParenLoc,
+                            Stmt *First, FullExprArg Second,
+                            Decl *SecondVar,
+--- 2571,2577 ----
+                                   SourceLocation CondLParen, Expr *Cond,
+                                   SourceLocation CondRParen);
+  
+!   virtual StmtResult ActOnForStmt(SourceLocation ForLoc,
+                            SourceLocation LParenLoc,
+                            Stmt *First, FullExprArg Second,
+                            Decl *SecondVar,
