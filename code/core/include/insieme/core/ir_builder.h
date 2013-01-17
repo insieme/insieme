@@ -191,7 +191,14 @@ namespace core {
 			return genericType("volatile", {type}, IntParamList());
 		}
 
-		TupleExprPtr tupleExpr(const ExpressionList& values) const;
+		TupleExprPtr tupleExpr(const ExpressionList& values = ExpressionList()) const;
+
+		template<typename ... T>
+		TupleExprPtr tupleExpr(const ExpressionPtr& expr, const T& ... rest) const {
+			return tupleExpr(toVector<ExpressionPtr>(expr, rest...));
+		}
+
+
 		StructExprPtr structExpr(const StructTypePtr& structType, const vector<NamedValuePtr>& values) const;
 		StructExprPtr structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const;
 		StructExprPtr structExpr(const vector<NamedValuePtr>& values) const;
