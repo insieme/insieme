@@ -609,12 +609,33 @@ namespace parser {
 
 			static const auto member = std::make_shared<Action<process_named_type>>(seq(T, cap(id)));
 
+			// add handler for parents
+			struct process_parent : public detail::actions {
+				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+					TypePtr type = cur.getTerms().back().as<TypePtr>();
+					auto virtualFlag = cur.getSubRanges().back();
+					ParentPtr parent = cur.parent(!virtualFlag.empty(), type);
+					cur.swap(parent);	// use parent node instead of type
+					cur.popRange();     // forget about the current sub-range (the virtual flag)
+				}
+			};
+
+			static const auto parent = std::make_shared<Action<process_parent>>(seq(cap(opt(lit("virtual"))), T));
+
 			g.addRule("T", rule(
-					seq("struct {", loop(seq(member, ";")), "}"),
+					seq("struct", opt(seq(":", non_empty_list(parent, ","))), "{", loop(seq(member, ";")), "}"),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
-						NamedTypeList members = convertList<NamedTypePtr>(terms);
-						return cur.structType(members);
+						ParentList parents;
+						NamedTypeList members;
+						for(auto curNode : terms) {
+							if (curNode->getNodeType() == NT_Parent) {
+								parents.push_back(curNode.as<ParentPtr>());
+							} else {
+								members.push_back(curNode.as<NamedTypePtr>());
+							}
+						}
+						return cur.structType(parents, members);
 					}
 			));
 

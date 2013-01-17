@@ -211,6 +211,23 @@ namespace parser {
 
 	}
 
+	TEST(IR_Parser2, StructInheritance) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// test some structs with inheritance
+		EXPECT_EQ("struct<a:A,b:B,c:int<4>>", toString(*parse(manager, "struct { A a; B b; int<4> c; }")));
+		EXPECT_EQ("struct : [A] <a:A,b:B,c:int<4>>", toString(*parse(manager, "struct : A { A a; B b; int<4> c; }")));
+		EXPECT_EQ("struct : [A, B] <a:A,b:B,c:int<4>>", toString(*parse(manager, "struct : A, B { A a; B b; int<4> c; }")));
+		EXPECT_EQ("struct : [A, virtual B] <a:A,b:B,c:int<4>>", toString(*parse(manager, "struct : A, virtual B { A a; B b; int<4> c; }")));
+		EXPECT_EQ("struct : [virtual A, virtual B] <a:A,b:B,c:int<4>>", toString(*parse(manager, "struct : virtual A, virtual B { A a; B b; int<4> c; }")));
+
+		// something that should not work
+		EXPECT_FALSE(parse(manager, "struct : { A a; }"));
+	}
+
+
 	TEST(IR_Parser2, ArrayVectorRefAndChannelTypes) {
 
 		NodeManager manager;
