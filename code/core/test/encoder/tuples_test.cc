@@ -38,6 +38,7 @@
 
 
 #include "insieme/core/encoder/tuples.h"
+#include "insieme/core/encoder/pairs.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
@@ -84,6 +85,16 @@ TEST(Tuples, TupleConversion) {
 
 	EXPECT_EQ("[]", toString(check(ir, checks::getFullCheck())));
 
+
+	// check something more complex
+	auto value2 = std::make_tuple(1,2,std::make_pair(string("hello"), true), std::make_tuple(4,3,2));
+	core::ExpressionPtr ir2 = toIR(manager, value2);
+	auto back2 = toValue<decltype(value2)>(ir2);
+
+	EXPECT_TRUE((isEncodingOf<decltype(value2)>(ir2)));
+	EXPECT_EQ(value2, back2);
+
+	EXPECT_EQ("[]", toString(check(ir2, checks::getFullCheck())));
 }
 
 
