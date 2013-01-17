@@ -45,6 +45,12 @@ namespace core {
 		// create output buffer
 		out << *getName();
 
+		// check whether there are parent types
+		if (!getParents().empty()) {
+			// print parents list
+			out << ":" << *getParents();
+		}
+
 		// check whether there are type parameters
 		auto typeParam = getTypeParameter();
 		auto intParam = getIntTypeParameter();

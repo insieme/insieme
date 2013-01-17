@@ -212,7 +212,7 @@ TEST(IRVisitor, RecursiveVisitorTest) {
 
 	visitor.reset();
 	recVisitor.visit(type2);
-	EXPECT_EQ ( 14, visitor.counter );
+	EXPECT_EQ ( 17, visitor.counter );
 
 	IfStmtPtr ifStmt = builder.ifStmt(
 		Literal::get(manager, type, "12"),
@@ -226,7 +226,7 @@ TEST(IRVisitor, RecursiveVisitorTest) {
 
 	visitor.reset();
 	recVisitor.visit(ifStmt);
-	EXPECT_EQ ( 15, visitor.counter );
+	EXPECT_EQ ( 17, visitor.counter );
 
 
 	// ------ test for addresses ----
@@ -239,7 +239,7 @@ TEST(IRVisitor, RecursiveVisitorTest) {
 
 	adrVisitor.reset();
 	recAdrVisitor.visit(NodeAddress(ifStmt));
-	EXPECT_EQ ( 15, adrVisitor.counter );
+	EXPECT_EQ ( 17, adrVisitor.counter );
 
 
 	// test without types
@@ -300,26 +300,32 @@ TEST(IRVisitor, BreadthFirstIRVisitorTest) {
 	vector<NodePtr> expected;
 	expected.push_back(typeA);
 	expected.push_back(typeA->getName());
+	expected.push_back(typeA->getParents());
 	expected.push_back(typeA->getTypeParameter());
 	expected.push_back(typeA->getIntTypeParameter());
 	expected.push_back(typeB);
 	expected.push_back(typeC);
 	expected.push_back(typeB->getName());
+	expected.push_back(typeB->getParents());
 	expected.push_back(typeB->getTypeParameter());
 	expected.push_back(typeB->getIntTypeParameter());
 	expected.push_back(typeC->getName());
+	expected.push_back(typeC->getParents());
 	expected.push_back(typeC->getTypeParameter());
 	expected.push_back(typeC->getIntTypeParameter());
 	expected.push_back(typeD);
 	expected.push_back(typeE);
 	expected.push_back(typeF);
 	expected.push_back(typeD->getName());
+	expected.push_back(typeD->getParents());
 	expected.push_back(typeD->getTypeParameter());
 	expected.push_back(typeD->getIntTypeParameter());
 	expected.push_back(typeE->getName());
+	expected.push_back(typeE->getParents());
 	expected.push_back(typeE->getTypeParameter());
 	expected.push_back(typeE->getIntTypeParameter());
 	expected.push_back(typeF->getName());
+	expected.push_back(typeF->getParents());
 	expected.push_back(typeF->getTypeParameter());
 	expected.push_back(typeF->getIntTypeParameter());
 
@@ -650,7 +656,7 @@ TEST(IRVisitor, VisitOncePrunableVisitorTest) {
 	// check number of nodes when visiting all nodes
 	limitB.reset();
 	visitDepthFirstOnce(NodeAddress(ifStmt), limitB);
-	EXPECT_EQ( 11, limitB.counter);
+	EXPECT_EQ( 12, limitB.counter);
 }
 
 
@@ -773,8 +779,8 @@ TEST(IRVisitor, ParameterTest) {
 	m = 0;
 	auto recVisitor = makeDepthFirstVisitor(visitor);
 	recVisitor.visit(ifStmt, n, m);
-	EXPECT_EQ(15, n);
-	EXPECT_EQ(-15, m);
+	EXPECT_EQ(17, n);
+	EXPECT_EQ(-17, m);
 
 	// this should work - but it does not ...
 //	visitAllP(type, visitor, false, n, m);

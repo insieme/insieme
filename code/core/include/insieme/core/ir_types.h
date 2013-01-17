@@ -236,7 +236,7 @@ namespace core {
 		 * @param parents the parents to be included within the resulting parents list
 		 * @return the requested parents list instance managed by the given manager
 		 */
-		static ParentsPtr get(NodeManager& manager, const vector<ParentPtr>& parents = vector<ParentPtr>()) {
+		static ParentsPtr get(NodeManager& manager, const ParentList& parents = ParentList()) {
 			return manager.get(Parents(convertList(parents)));
 		}
 
@@ -259,21 +259,26 @@ namespace core {
 	/**
 	 * The accessor associated to generic types.
 	 */
-	IR_NODE_ACCESSOR(GenericType, Type, StringValue, Types, IntTypeParams)
+	IR_NODE_ACCESSOR(GenericType, Type, StringValue, Parents, Types, IntTypeParams)
 		/**
 		 * Obtains the name of this generic type.
 		 */
 		IR_NODE_PROPERTY(StringValue, Name, 0);
 
 		/**
+		 * Obtains the list of types this type is derived from.
+		 */
+		IR_NODE_PROPERTY(Parents, Parents, 1);
+
+		/**
 		 * Obtains the list of type parameters of this generic type.
 		 */
-		IR_NODE_PROPERTY(Types, TypeParameter, 1);
+		IR_NODE_PROPERTY(Types, TypeParameter, 2);
 
 		/**
 		 * Obtains the list of int-type parameters of this generic type.
 		 */
-		IR_NODE_PROPERTY(IntTypeParams, IntTypeParameter, 2);
+		IR_NODE_PROPERTY(IntTypeParams, IntTypeParameter, 3);
 
 		/**
 		 * Obtains the name portion of this generic type.
@@ -305,6 +310,23 @@ namespace core {
 
 	public:
 
+
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a generic type pointer pointing toward a variable with the given name, parents, type
+		 * parameters and int-type parameters which is maintained by the given manager.
+		 *
+		 * @param manager		the manager to be used for creating the node (memory management)
+		 * @param name 			the name of the new type (only the prefix)
+		 * @param parents		the list of parent types (for the inheritance hierarchy)
+		 * @param typeParams	the type parameters of this type, concrete or variable
+		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
+		 */
+		static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents,
+				const TypesPtr& typeParams, const IntTypeParamsPtr& intTypeParams) {
+			return manager.get(GenericType(name, parents, typeParams, intTypeParams));
+		}
+
 		/**
 		 * This method provides a static factory method for this type of node. It will return
 		 * a generic type pointer pointing toward a variable with the given name maintained by the
@@ -317,9 +339,27 @@ namespace core {
 		 */
 		static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name,
 				const TypesPtr& typeParams, const IntTypeParamsPtr& intTypeParams) {
-			return manager.get(GenericType(name, typeParams, intTypeParams));
+			return get(manager, name, Parents::get(manager), typeParams, intTypeParams);
 		}
 
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a generic type pointer pointing toward a variable with the given properties maintained by the
+		 * given manager.
+		 *
+		 * @param manager		the manager to be used for creating the node (memory management)
+		 * @param name 			the name of the new type (only the prefix)
+		 * @param parentTypes	the list of parent types to be exhibited
+		 * @param typeParams	the type parameters of this type, concrete or variable
+		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
+		 */
+		static GenericTypePtr get(NodeManager& manager,
+				const string& name,
+				const ParentList& parentTypes,
+				const TypeList& typeParams = TypeList(),
+				const IntParamList& intTypeParams = IntParamList()) {
+			return get(manager, StringValue::get(manager, name), Parents::get(manager, parentTypes), Types::get(manager, typeParams), IntTypeParams::get(manager, intTypeParams));
+		}
 
 		/**
 		 * This method provides a static factory method for this type of node. It will return

@@ -106,13 +106,13 @@ TEST(TypeTest, MultipleNodeManager ) {
 	typesB.push_back(baseB);
 	GenericTypePtr rootA = GenericType::get(managerA, "R", typesB);
 
-	EXPECT_EQ ( 12u, managerA.size() );
+	EXPECT_EQ ( 13u, managerA.size() );
 	EXPECT_EQ ( 0u, managerB.size() );
 
 	// try to obtain the same type from the other manager
 	GenericTypePtr rootB = GenericType::get(managerB, "R", typesB);
-	EXPECT_EQ ( 12u, managerA.size() );
-	EXPECT_EQ ( 12u, managerB.size() );
+	EXPECT_EQ ( 13u, managerA.size() );
+	EXPECT_EQ ( 13u, managerB.size() );
 
 	EXPECT_NE ( rootA, rootB );
 	EXPECT_EQ ( *rootA, *rootB );
@@ -155,39 +155,31 @@ TEST(TypeTest, GenericType) {
 	GenericTypePtr typeE = GenericType::get(manager, "E", typeListA);
 	EXPECT_EQ ( "E<A,B>" , toString(*typeE) );
 
-	// create type with base type
-	// TODO: in case base type is re-enabled, do so for this test
-//	GenericTypePtr typeF = GenericType::get(manager, "F", emptyPtr, emptyPar, typeA );
-//	EXPECT_EQ ( "F" , toString(*typeF) );
-//
-//	GenericTypePtr typeG = GenericType::get(manager, "G", typeListA, toVector(paramB), typeA );
-//	EXPECT_EQ ( "G<A,B,12>" , toString(*typeG) );
+	// create a type with parents
+	auto typeListF = toVector<TypePtr>(typeA, typeB);
+	auto parents = toVector(Parent::get(manager, typeA), Parent::get(manager, true, typeB));
+	GenericTypePtr typeF = GenericType::get(manager, "F", parents, typeListF);
+	EXPECT_EQ( "F:[A,virtual B]<A,B>", toString(*typeF) );
 
 	// perform general test cases
 	{
 		SCOPED_TRACE ( "typeA" );
-		basicTypeTests(typeA, true, toVector<NodePtr>(typeA->getName(), typeA->getTypeParameter(), typeA->getIntTypeParameter()));
+		basicTypeTests(typeA, true, toVector<NodePtr>(typeA->getName(), typeA->getParents(), typeA->getTypeParameter(), typeA->getIntTypeParameter()));
 	}{
 		SCOPED_TRACE ( "typeB" );
-		basicTypeTests(typeB, true, toVector<NodePtr>(typeB->getName(), typeB->getTypeParameter(), typeB->getIntTypeParameter()));
+		basicTypeTests(typeB, true, toVector<NodePtr>(typeB->getName(), typeB->getParents(), typeB->getTypeParameter(), typeB->getIntTypeParameter()));
 	}{
 		SCOPED_TRACE ( "typeC" );
-		basicTypeTests(typeC, false, toVector<NodePtr>(typeC->getName(), typeC->getTypeParameter(), typeC->getIntTypeParameter()));
+		basicTypeTests(typeC, false, toVector<NodePtr>(typeC->getName(), typeC->getParents(), typeC->getTypeParameter(), typeC->getIntTypeParameter()));
 	}{
 		SCOPED_TRACE ( "typeD" );
-		basicTypeTests(typeD, false, toVector<NodePtr>(typeD->getName(), typeD->getTypeParameter(), typeD->getIntTypeParameter()));
+		basicTypeTests(typeD, false, toVector<NodePtr>(typeD->getName(), typeD->getParents(), typeD->getTypeParameter(), typeD->getIntTypeParameter()));
 	}{
 		SCOPED_TRACE ( "typeE" );
-		basicTypeTests(typeE, true, toVector<NodePtr>(typeE->getName(), typeE->getTypeParameter(), typeE->getIntTypeParameter()));
-//	}{
-//		SCOPED_TRACE ( "typeF" );
-//		basicTypeTests(typeF, true, toVector<NodePtr>(typeA));
-//	}{
-//		SCOPED_TRACE ( "typeG" );
-//		NodeList list = toList(typeListA);
-//		list.push_back(paramB);
-//		list.push_back(typeA);
-//		basicTypeTests(typeG, true, list);
+		basicTypeTests(typeE, true, toVector<NodePtr>(typeE->getName(), typeE->getParents(), typeE->getTypeParameter(), typeE->getIntTypeParameter()));
+	}{
+		SCOPED_TRACE ( "typeF" );
+		basicTypeTests(typeF, true, toVector<NodePtr>(typeF->getName(), typeF->getParents(), typeF->getTypeParameter(), typeF->getIntTypeParameter()));
 	}
 
 	// selected equality checks (not after copy)
@@ -204,7 +196,7 @@ TEST(TypeTest, GenericType) {
 	types.push_back(typeC);
 	types.push_back(typeD);
 	types.push_back(typeE);
-//	types.push_back(typeF);
+	types.push_back(typeF);
 
 	// check whether equality is working properly
 	for (unsigned i=0; i<types.size(); i++) {

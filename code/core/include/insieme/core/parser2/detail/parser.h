@@ -1200,13 +1200,23 @@ namespace detail {
 		return std::make_shared<Loop>(body, terminators...);
 	}
 
+
+	inline TermPtr non_empty_list(const TermPtr& element, const TermPtr& seperator) {
+		return (element << loop(seperator << element));
+	}
+
+	inline TermPtr non_empty_list(const TermPtr& element, const string& seperator) {
+		return non_empty_list(element, lit(seperator));
+	}
+
 	inline TermPtr list(const TermPtr& element, const TermPtr& seperator) {
-		return empty() | (element << loop(seperator << element));
+		return empty() | non_empty_list(element, seperator);
 	}
 
 	inline TermPtr list(const TermPtr& element, const string& seperator) {
 		return list(element, lit(seperator));
 	}
+
 
 	inline RulePtr rule(const TermPtr& pattern, const typename Rule::Action& action, int priority = 0) {
 		return std::make_shared<Rule>(pattern, action, priority);
