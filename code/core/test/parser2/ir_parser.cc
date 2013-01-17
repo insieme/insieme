@@ -81,8 +81,12 @@ namespace parser {
 		// something that should fail
 		EXPECT_FALSE(parse(manager, "hello world"));
 
+		// test combinations of type parameters and int-type parameters
 		EXPECT_EQ(testB, parse(manager, "test<12,#c,#inf,12>"));
 		EXPECT_EQ(testC, parse(manager, "test<A,test<A>,12,#inf>"));
+
+		// something with parents
+		EXPECT_EQ("test:[A,virtual B]<A,B>", toString(*parse(manager, "test : A, virtual B <A,B>")));
 	}
 
 	TEST(IR_Parser2, TupleType) {
