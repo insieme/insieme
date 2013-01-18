@@ -777,7 +777,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 			// single fprintf for performance reasons
 			// outputs all data in pairs: value_when_entering_region, value_when_exiting_region
 	//		fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f",
-			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%u,%u,%u,%u",
+			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%lu,%lu,%lu,%lu",
 					table->data[i].subject_id,
 					irt_time_convert_ticks_to_ns(start_data.timestamp), 
 					irt_time_convert_ticks_to_ns(table->data[i].timestamp),
@@ -801,10 +801,10 @@ void irt_inst_region_data_output(irt_worker* worker) {
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double,
 					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double,
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double,
-					start_data.data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_double,
-					table->data[i].data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_double,
-					start_data.data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_double,
-					table->data[i].data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_double);
+					start_data.data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_uint64,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_uint64,
+					start_data.data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_uint64,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_uint64);
 			// prints all performance counters, assumes that the order of the enums is correct (contiguous from ...COUNTER_1 to ...COUNTER_N
 			for(int j = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; j < (worker->irt_papi_number_of_events + PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++j) {
 				if( table->data[i].data[j].value_uint64 == UINT_MAX) // used to filter missing results, replace with -1 in output
