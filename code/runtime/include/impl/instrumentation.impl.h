@@ -581,7 +581,8 @@ void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uin
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double = data.mc[1];
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double = data.cores[1];
 
-			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE].value_uint64 = irt_get_temperature(worker);
+			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_uint64 = irt_get_temperature_core(worker);
+			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_uint64 = irt_get_temperature_package(worker);
 
 //			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = -1;
 			// set all papi counter fields for REGION_START to -1 since we don't use them here
@@ -622,7 +623,8 @@ void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uin
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double = data.mc[1];
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double = data.cores[1];
 
-			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE].value_uint64 = irt_get_temperature(worker);
+			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_uint64 = irt_get_temperature_core(worker);
+			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_uint64 = irt_get_temperature_package(worker);
 
 			for(int i=PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i<(worker->irt_papi_number_of_events+PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++i)
 				epd->data[i].value_uint64 = papi_temp[i-PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1];
@@ -741,8 +743,10 @@ void irt_inst_region_data_output(irt_worker* worker) {
 			"energy_mc_2_end_(j),"
 			"energy_cores_2_start_(j),"
 			"energy_cores_2_end_(j),"
-			"temperature_start_(c),"
-			"temperature_end_(c)");
+			"temperature_core_start_(c),"
+			"temperature_core_end_(c),"
+			"temperature_pkg_start_(c),"
+			"temperature_pkg_end_(c)");
 
 	// get the papi event names and print them to the header
 	for(int i = 0; i < number_of_papi_events; ++i) {
@@ -773,7 +777,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 			// single fprintf for performance reasons
 			// outputs all data in pairs: value_when_entering_region, value_when_exiting_region
 	//		fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f",
-			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%u,%u",
+			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%u,%u,%u,%u",
 					table->data[i].subject_id,
 					irt_time_convert_ticks_to_ns(start_data.timestamp), 
 					irt_time_convert_ticks_to_ns(table->data[i].timestamp),
@@ -784,21 +788,23 @@ void irt_inst_region_data_output(irt_worker* worker) {
 //					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double,
 //					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double);
 
-					fabs(start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_1].value_double),
-					fabs(table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_1].value_double),
-					fabs(start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_1].value_double),
-					fabs(table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_1].value_double),
-					fabs(start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_1].value_double),
-					fabs(table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_1].value_double),
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_1].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_1].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_1].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_1].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_1].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_1].value_double,
 
-					fabs(start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2].value_double),
-					fabs(table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2].value_double),
-					fabs(start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double),
-					fabs(table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double),
-					fabs(start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double),
-					fabs(table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double),
-					start_data.data[PERFORMANCE_DATA_ENTRY_TEMPERATURE].value_double,
-					table->data[i].data[PERFORMANCE_DATA_ENTRY_TEMPERATURE].value_double);
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_double);
 			// prints all performance counters, assumes that the order of the enums is correct (contiguous from ...COUNTER_1 to ...COUNTER_N
 			for(int j = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; j < (worker->irt_papi_number_of_events + PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++j) {
 				if( table->data[i].data[j].value_uint64 == UINT_MAX) // used to filter missing results, replace with -1 in output
