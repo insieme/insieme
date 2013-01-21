@@ -137,6 +137,16 @@ namespace core {
 
 	}
 
+	/**
+	 * A type trade definition allowing to determine the type of a value annotation based on the
+	 * value type.
+	 */
+	template<typename ValueType>
+	struct value_node_annotation {
+		typedef utils::detail::ValueAnnotation<ValueType, core::NodeAnnotation, utils::AnnotationKey> type;
+	};
+
+
 } // end namespace core
 
 namespace utils {
@@ -151,6 +161,8 @@ namespace detail {
 	class ValueAnnotation<V, core::NodeAnnotation, KeyType> : public ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>> {
 	public:
 			ValueAnnotation(const V& value) : ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>>(value) {}
+
+			virtual ~ValueAnnotation() {}
 
 			virtual void clone(const core::NodeAnnotationPtr& ptr, const core::NodePtr& copy) const {
 				core::value_annotation::move_to_clone(ptr, copy, ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>>::getValue());

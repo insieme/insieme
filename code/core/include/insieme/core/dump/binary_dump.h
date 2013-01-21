@@ -42,6 +42,7 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/dump/dump.h"
+#include "insieme/core/dump/annotations.h"
 
 #include "insieme/utils/printable.h"
 
@@ -57,24 +58,27 @@ namespace dump {
 		 *
 		 * @param out the stream to be writing to
 		 * @param ir the code fragment to be written
+		 * @param converterRegister the register of annotation converter to be used
 		 */
-		void dumpIR(std::ostream& out, const NodePtr& ir);
+		void dumpIR(std::ostream& out, const NodePtr& ir, const AnnotationConverterRegister& converterRegister = AnnotationConverterRegister::getDefault());
 
 		/**
 		 * Writes a binary encoding of a given IR address into the given output stream.
 		 *
 		 * @param out the stream to be writing to
 		 * @param address the address to be written
+		 * @param converterRegister the register of annotation converter to be used
 		 */
-		void dumpAddress(std::ostream& out, const NodeAddress& address);
+		void dumpAddress(std::ostream& out, const NodeAddress& address, const AnnotationConverterRegister& converterRegister = AnnotationConverterRegister::getDefault());
 
 		/**
 		 * Writes a binary encoding of a given list of IR address into the given output stream.
 		 *
 		 * @param out the stream to be writing to
 		 * @param addresses the addresses to be written
+		 * @param converterRegister the register of annotation converter to be used
 		 */
-		void dumpAddresses(std::ostream& out, const vector<NodeAddress>& addresses);
+		void dumpAddresses(std::ostream& out, const vector<NodeAddress>& addresses, const AnnotationConverterRegister& converterRegister = AnnotationConverterRegister::getDefault());
 
 		/**
 		 * Restores an IR code fragment from the given input stream. For constructing
@@ -83,9 +87,10 @@ namespace dump {
 		 *
 		 * @param in the stream to be reading from
 		 * @param manager the node manager to be used for creating nodes
+		 * @param converterRegister the register of annotation converter to be used
 		 * @return the resolved node
 		 */
-		NodePtr loadIR(std::istream& in, NodeManager& manager);
+		NodePtr loadIR(std::istream& in, NodeManager& manager, const AnnotationConverterRegister& converterRegister = AnnotationConverterRegister::getDefault());
 
 		/**
 		 * Restores a node address and the associated IR constructs from the given input
@@ -95,9 +100,10 @@ namespace dump {
 		 *
 		 * @param in the stream to be reading from
 		 * @param manager the node manager to be used for creating nodes
+		 * @param converterRegister the register of annotation converter to be used
 		 * @return the resolved address
 		 */
-		NodeAddress loadAddress(std::istream& in, NodeManager& manager);
+		NodeAddress loadAddress(std::istream& in, NodeManager& manager, const AnnotationConverterRegister& converterRegister = AnnotationConverterRegister::getDefault());
 
 		/**
 		 * Restores a list of node address and the associated IR constructs from the given
@@ -107,9 +113,10 @@ namespace dump {
 		 *
 		 * @param in the stream to be reading from
 		 * @param manager the node manager to be used for creating nodes
+		 * @param converterRegister the register of annotation converter to be used
 		 * @return the resolved addresses
 		 */
-		vector<NodeAddress> loadAddresses(std::istream& in, NodeManager& manager);
+		vector<NodeAddress> loadAddresses(std::istream& in, NodeManager& manager, const AnnotationConverterRegister& converterRegister = AnnotationConverterRegister::getDefault());
 
 		/**
 		 * A wrapper to be streamed into an output stream when aiming on dumping some
@@ -122,6 +129,11 @@ namespace dump {
 			 */
 			const vector<NodeAddress> addresses;
 
+			/**
+			 * A converter register to be used for converting annotations.
+			 */
+			const AnnotationConverterRegister& converterRegister;
+
 		public:
 
 			/**
@@ -129,27 +141,27 @@ namespace dump {
 			 *
 			 * @param ir the node to be dumped.
 			 */
-			BinaryDump(const NodePtr& ir) : addresses(toVector(NodeAddress(ir))) {}
+			BinaryDump(const NodePtr& ir, const AnnotationConverterRegister& converterRegister = AnnotationConverterRegister::getDefault()) : addresses(toVector(NodeAddress(ir))), converterRegister(converterRegister) {}
 
 			/**
 			 * Creates a new instance dumping the given node address.
 			 *
 			 * @param address the address to be dumped.
 			 */
-			BinaryDump(const NodeAddress& address) : addresses(toVector(address)) {}
+			BinaryDump(const NodeAddress& address, const AnnotationConverterRegister& converterRegister = AnnotationConverterRegister::getDefault()) : addresses(toVector(address)), converterRegister(converterRegister) {}
 
 			/**
 			 * Creates a new instance dumping the given list of node addresses.
 			 *
 			 * @param addresses the addresses to be dumped.
 			 */
-			BinaryDump(const vector<NodeAddress>& addresses) : addresses(addresses) {}
+			BinaryDump(const vector<NodeAddress>& addresses, const AnnotationConverterRegister& converterRegister = AnnotationConverterRegister::getDefault()) : addresses(addresses), converterRegister(converterRegister) {}
 
 			/**
 			 * Bridges the gap to the actual binary dump function.
 			 */
 			virtual std::ostream& printTo(std::ostream& out) const {
-				dumpAddresses(out, addresses);
+				dumpAddresses(out, addresses, converterRegister);
 				return out;
 			}
 		};

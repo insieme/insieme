@@ -307,6 +307,8 @@ namespace encoder {
 		ADD_CONVERTER(float,  Float);
 		ADD_CONVERTER(double, Double);
 
+		ADD_CONVERTER(string, String);
+
 	#undef ADD_CONVERTER
 
 

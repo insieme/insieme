@@ -34,60 +34,19 @@
  * regarding third party software licenses.
  */
 
-/*
- * data_annotations.h
- *
- *  Created on: Dec 6, 2011
- *      Author: klaus
- */
-
 #pragma once
 
+#include "declarations.h"
 
-#include "insieme/utils/annotation.h"
-#include "insieme/core/ir_expressions.h"
+// holds the temperature of cores on Intel processors (DTS sensors)
+#define IA32_THERM_STATUS 0x19C
+// holds the temperature of the package on Intel processors (DTS sensors)
+#define IA32_PACKAGE_THERM_STATUS 0x1B1
+// TCC activation temperature in °C (real temperature = TCC - sensor_value)
+#define TCC_ACTIVATION_TEMPERATURE 100
 
-namespace insieme {
-namespace annotations {
+uint64 irt_get_temperature_intel_core(const irt_worker* worker);
+uint64 irt_get_temperature_intel_package(const irt_worker* worker);
 
-using namespace insieme::core;
-
-
-class LoopAnnotation : public NodeAnnotation {
-	size_t iterations;
-
-public:
-	static const string NAME;
-    static const utils::StringKey<LoopAnnotation> KEY;
-
-    const utils::AnnotationKey* getKey() const { return &KEY; }
-    const std::string& getAnnotationName() const { return NAME; }
-
-//    LoopAnnotation() {} iterations has to be initialized
-    LoopAnnotation(size_t iterations): iterations(iterations) {}
-
-	size_t getIterations() const;
-
-    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
-		// always copy the annotation
-		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
-		after->addAnnotation(ptr);
-		return true;
-	}
-
-    static void attach(const NodePtr& node, size_t iterations);
-    static bool hasAttachedValue(const NodePtr& node);
-    static size_t getValue(const NodePtr& node);
-
-};
-
-typedef std::shared_ptr<LoopAnnotation> LoopAnnotationPtr;
-
-} // end namespace insieme
-} // end namespace annotations
-
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot);
-
-} // end namespace std
+bool irt_temperature_intel_is_core_supported();
+bool irt_temperature_intel_is_package_supported();

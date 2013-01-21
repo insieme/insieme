@@ -34,60 +34,51 @@
  * regarding third party software licenses.
  */
 
-/*
- * data_annotations.h
- *
- *  Created on: Dec 6, 2011
- *      Author: klaus
- */
-
-#pragma once
-
-
-#include "insieme/utils/annotation.h"
-#include "insieme/core/ir_expressions.h"
+#include "insieme/core/dump/annotations.h"
 
 namespace insieme {
-namespace annotations {
+namespace core {
+namespace dump {
 
-using namespace insieme::core;
 
 
-class LoopAnnotation : public NodeAnnotation {
-	size_t iterations;
 
-public:
-	static const string NAME;
-    static const utils::StringKey<LoopAnnotation> KEY;
+	// ------------- Annotation Converter Register -----------------
 
-    const utils::AnnotationKey* getKey() const { return &KEY; }
-    const std::string& getAnnotationName() const { return NAME; }
+	AnnotationConverterRegister& AnnotationConverterRegister::getDefault() {
+		static AnnotationConverterRegister registry;
+		return registry;
+	}
 
-//    LoopAnnotation() {} iterations has to be initialized
-    LoopAnnotation(size_t iterations): iterations(iterations) {}
-
-	size_t getIterations() const;
-
-    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
-		// always copy the annotation
-		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
-		after->addAnnotation(ptr);
+	bool AnnotationConverterRegister::registerConverter(const AnnotationConverterPtr& converter, const std::type_index& type) {
+		name_index[converter->getName()] = converter;
+		type_index[type] = converter;
 		return true;
 	}
 
-    static void attach(const NodePtr& node, size_t iterations);
-    static bool hasAttachedValue(const NodePtr& node);
-    static size_t getValue(const NodePtr& node);
+	const AnnotationConverterPtr& AnnotationConverterRegister::getConverterFor(const std::string& name) const {
+		static AnnotationConverterPtr notFound;
 
-};
+		// look-up converter within name-based index
+		auto pos = name_index.find(name);
+		if (pos != name_index.end()) {
+			return pos->second;
+		}
+		return notFound;
+	}
 
-typedef std::shared_ptr<LoopAnnotation> LoopAnnotationPtr;
+	const AnnotationConverterPtr& AnnotationConverterRegister::getConverterFor(const NodeAnnotationPtr& annotation) const {
+		static AnnotationConverterPtr notFound;
 
+		// look-up converter within index
+		auto pos = type_index.find(typeid(*annotation));
+		if (pos != type_index.end()) {
+			return pos->second;
+		}
+		return notFound;
+	}
+
+
+} // end namespace dump
+} // end namespace core
 } // end namespace insieme
-} // end namespace annotations
-
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot);
-
-} // end namespace std

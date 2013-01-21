@@ -44,9 +44,12 @@
 #include "insieme/annotations/loop_annotations.h"
 
 #include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/ir_builder.h"
+#include "insieme/core/encoder/encoder.h"
 
 #include "insieme/utils/container_utils.h"
+
+#include "insieme/core/dump/annotations.h"
+
 
 namespace insieme {
 namespace annotations {
@@ -56,6 +59,37 @@ const utils::StringKey<LoopAnnotation> LoopAnnotation::KEY("Loop");
 
 size_t LoopAnnotation::getIterations() const {
 	return iterations;
+}
+
+
+void LoopAnnotation::attach(const core::NodePtr& node, size_t iterations) {
+	node->addAnnotation(std::make_shared<LoopAnnotation>(iterations));
+}
+
+bool LoopAnnotation::hasAttachedValue(const core::NodePtr& node) {
+	return node->hasAnnotation(LoopAnnotation::KEY);
+}
+
+size_t LoopAnnotation::getValue(const core::NodePtr& node) {
+	assert(hasAttachedValue(node) && "Loop Annotation Counter has to be attached!");
+	return node->getAnnotation(LoopAnnotation::KEY)->getIterations();
+}
+
+namespace {
+
+	ANNOTATION_CONVERTER(LoopAnnotation)
+
+		core::ExpressionPtr toIR(core::NodeManager& manager, const core::NodeAnnotationPtr& annotation) const {
+			assert(dynamic_pointer_cast<LoopAnnotation>(annotation) && "Only supports the conversion of Loop Annotations!");
+			return core::encoder::toIR<size_t>(manager, static_pointer_cast<LoopAnnotation>(annotation)->getIterations());
+		};
+
+		core::NodeAnnotationPtr toAnnotation(const core::ExpressionPtr& node) const {
+			assert(core::encoder::isEncodingOf<size_t>(node) && "Invalid Encoding!");
+			return std::make_shared<LoopAnnotation>(core::encoder::toValue<size_t>(node));
+		};
+	};
+
 }
 
 } // namespace annotations

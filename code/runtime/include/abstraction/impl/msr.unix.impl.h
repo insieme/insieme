@@ -34,60 +34,40 @@
  * regarding third party software licenses.
  */
 
-/*
- * data_annotations.h
- *
- *  Created on: Dec 6, 2011
- *      Author: klaus
- */
-
 #pragma once
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
 
-#include "insieme/utils/annotation.h"
-#include "insieme/core/ir_expressions.h"
+int32 _irt_open_msr(uint32 core) {
+	char path_to_msr[512];
+	int32 file;
 
-namespace insieme {
-namespace annotations {
+	sprintf(path_to_msr, "/dev/cpu/%u/msr", core);
 
-using namespace insieme::core;
-
-
-class LoopAnnotation : public NodeAnnotation {
-	size_t iterations;
-
-public:
-	static const string NAME;
-    static const utils::StringKey<LoopAnnotation> KEY;
-
-    const utils::AnnotationKey* getKey() const { return &KEY; }
-    const std::string& getAnnotationName() const { return NAME; }
-
-//    LoopAnnotation() {} iterations has to be initialized
-    LoopAnnotation(size_t iterations): iterations(iterations) {}
-
-	size_t getIterations() const;
-
-    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
-		// always copy the annotation
-		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
-		after->addAnnotation(ptr);
-		return true;
+	if ((file = open(path_to_msr, O_RDONLY)) < 0) {
+		IRT_DEBUG("Instrumentation: Unable to open MSR file for reading, file %s, reason: %s\n", path_to_msr, strerror(errno));
+		return -1;
 	}
 
-    static void attach(const NodePtr& node, size_t iterations);
-    static bool hasAttachedValue(const NodePtr& node);
-    static size_t getValue(const NodePtr& node);
+	return file;
+}
 
-};
+int64 _irt_read_msr(int32 file, int32 subject) {
+	int64 data;
 
-typedef std::shared_ptr<LoopAnnotation> LoopAnnotationPtr;
+	if (pread(file, &data, sizeof data, subject) != sizeof data) {
+		IRT_DEBUG("Instrumentation: Unable to read MSR file %d, reason: %s\n", file, strerror(errno));
+		return -1.0;
+	}
 
-} // end namespace insieme
-} // end namespace annotations
+	return data;
+}
 
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::annotations::LoopAnnotation& lAnnot);
-
-} // end namespace std
+int32 _irt_close_msr(int32 file) {
+	return close(file);
+}

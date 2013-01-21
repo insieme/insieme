@@ -36,14 +36,9 @@
 
 #pragma once
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <math.h>
 #include "irt_inttypes.h"
+#include "abstraction/impl/msr.impl.h"
 
 #ifdef _MSC_VER
 	#include <io.h>
@@ -51,113 +46,60 @@
 	#include <unistd.h>
 #endif
 
-int32 _irt_open_msr(uint32 core) {
-	char path_to_msr[512];
-	int32 file;
-
-	sprintf(path_to_msr, "/dev/cpu/%u/msr", core);
-
-	if ((file = open(path_to_msr, O_RDONLY)) < 0) {
-		IRT_DEBUG("Instrumentation: Unable to open MSR file for reading, file %s, reason: %s\n", path_to_msr, strerror(errno));
-		return -1;
-	}
-
-	return file;
-}
-
-int64 _irt_read_msr(int32 file, int32 subject) {
-	int64 data;
-
-	if (pread(file, &data, sizeof data, subject) != sizeof data) {
-		IRT_DEBUG("Instrumentation: Unable to read MSR file %d, reason: %s\n", file, strerror(errno));
-		return -1.0;
-	}
-
-	return data;
-}
-
-int32 _irt_close_msr(int32 file) {
-	return close(file);
-}
-
 void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
         int32 file = 0;
         //int32 numcores = irt_get_num_cpus();
-        int64 result = 0;
+        uint64 result = 0;
         double energy_units = -1.0;
-        uint32 core_start = (irt_affinity_mask_get_first_cpu(irt_worker_get_current()->affinity))/8;
-        uint32 core_end = (core_start + ceil((double)irt_g_worker_count/8));
+
+        const uint32 core_start = (irt_affinity_mask_get_first_cpu(irt_worker_get_current()->affinity))/8;
+        const uint32 core_end = (core_start + ceil((double)irt_g_worker_count/8));
 
         // for core_end until (all cores excl. HT), stepsize (all cores excl. HT / number of sockets)
         for(uint32 core = core_start; core < core_end; ++core) {
-                data->package[core] = 0.0;
-                data->mc[core] = 0.0;
-                data->cores[core] = 0.0;
-                if((file = _irt_open_msr(core*8)) > 0) {
-                        if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
-                                energy_units = pow(0.5, (double)((result>>8) & 0x1F));
-                                if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS)) >= 0)
-                                        data->package[core] = (double) (result&0xFFFFFFFF) * energy_units;
-                                if((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS)) >= 0)
-                                        data->mc[core] = (double) (result&0xFFFFFFFF) * energy_units;
-                                if((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS)) >= 0)
-                                        data->cores[core] = (double) (result&0xFFFFFFFF) * energy_units;
-                        }
-                        _irt_close_msr(file);
-                }
+        	data->package[core] = 0.0;
+        	data->mc[core] = 0.0;
+        	data->cores[core] = 0.0;
+        	if((file = _irt_open_msr(core*8)) > 0) {
+        		if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
+        			energy_units = pow(0.5, (double)((result>>8) & 0x1F));
+        			uint32 temp_result = 0;
+        			if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS)&0xFFFFFFFF) >= 0) {
+        				static uint32 temp_reg = 0;
+        				temp_result = result;
+        				if(result < temp_reg)
+        					result = (double)((0xFFFFFFFF - temp_reg) + result);
+        				temp_reg = temp_result;
+        				data->package[core] = (double) (result) * energy_units;
+        			}
+        			if((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS)&0xFFFFFFFF) >= 0) {
+        				static uint32 temp_reg = 0;
+						temp_result = result;
+						if(result < temp_reg)
+							result = (double)((0xFFFFFFFF - temp_reg) + result);
+						temp_reg = temp_result;
+        				data->mc[core] = (double) (result) * energy_units;
+        			}
+        			if((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS)&0xFFFFFFFF) >= 0) {
+        				static uint32 temp_reg = 0;
+						temp_result = result;
+						if(result < temp_reg)
+							result = (double)((0xFFFFFFFF - temp_reg) + result);
+						temp_reg = temp_result;
+        				data->cores[core] = (double) (result) * energy_units;
+        			}
+        		}
+        		_irt_close_msr(file);
+        	}
         }
 }
-
-/*
- * Alternative method
- */
-
-/*void _irt_get_rapl_energy_consumption(double *package_energy) {
-	int32 file = 0;
-	int64 result = 0;
-	uint32 core_start = 0, core_end = irt_get_num_cpus();
-	double energy_units = -1.0;
-	*package_energy = -1.0;
-	uint32 a = 0, d = 0;
-
-	// ugly hack until there's runtime support for getting hw info like this:
-
-	// get the number of cores per socket (including all HT units)
-	__asm__ __volatile__("cpuid" : "=a" (a): "a" (0x4), "c" (0x0) : "ebx", "edx");
-	uint32 number_of_cores_per_socket = ((a>>26)&0x3F)+1; // just like the documentation says it...
-
-	// get whether the CPU has HT unites
-	__asm__ __volatile__("cpuid" : "=d" (d): "a" (0x1), "c" (0x0) : "ebx");
-	bool hyperthreading_present = (d>>28)&0x1;
-
-	if(hyperthreading_present) {
-		number_of_cores_per_socket /= 2;
-		core_end /= 2;
-	}
-
-	// for (core 0) until (all cores excl. HT), stepsize (number of cores per socket)
-	for(uint32 core = core_start; core < (core_end/number_of_cores_per_socket); ++core) {
-		if((file = _irt_open_msr(core*number_of_cores_per_socket)) > 0) {
-			if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
-				energy_units = pow(0.5, (double)((result>>8) & 0x1F));
-				if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS)) >= 0)
-					*package_energy += (double)(result&0xFFFFFFFF) * energy_units;
-				//if((result = _irt_read_msr(file, MSR_DRAM_ENERGY_STATUS)) >= 0)
-				//	*package_energy += (double)(result&0xFFFFFFFF) * energy_units;
-				//if((result = _irt_read_msr(file, MSR_PP0_ENERGY_STATUS)) >= 0)
-				//	*package_energy += (double)(result&0xFFFFFFFF) * energy_units;
-			}
-			_irt_close_msr(file);
-		}
-	}
-}*/
 
 bool irt_rapl_is_supported() {
 	volatile unsigned a, b, c, d;
 
-	unsigned vendor_string_ebx = 0x756E6547; // Genu
-	unsigned vendor_string_ecx = 0x6C65746E; // ineI
-	unsigned vendor_string_edx = 0x49656E69; // ntel
+	const unsigned vendor_string_ebx = 0x756E6547; // Genu
+	const unsigned vendor_string_ecx = 0x6C65746E; // ineI
+	const unsigned vendor_string_edx = 0x49656E69; // ntel
 
 	__asm__ __volatile__("cpuid" : "=b" (b), "=c" (c), "=d" (d) : "a" (0x0));
 
@@ -167,9 +109,9 @@ bool irt_rapl_is_supported() {
 
 	__asm__ __volatile__("cpuid" : "=a" (a) : "a" (0x00000001) : "ebx", "ecx", "edx");
 
-	unsigned model_number = (a>>4)&0xF; // bits 4-7
-	unsigned family_code = (a>>8)&0xF; // bits 8-11
-	unsigned extended_model = (a>>16)&0xF; // bits 16-19
+	const unsigned model_number = (a>>4)&0xF; // bits 4-7
+	const unsigned family_code = (a>>8)&0xF; // bits 8-11
+	const unsigned extended_model = (a>>16)&0xF; // bits 16-19
 
 	if(family_code == 0x6) {
 		if(model_number == 0xA && extended_model == 0x2) // SandyBridge 32nm
