@@ -1667,17 +1667,7 @@ namespace parser {
 			g.addRule("E", rule(
 					seq("[",E,loop(seq(",",E)),"]"),
 					[](Context& cur)->NodePtr {
-						const encoder::ListExtension& ext = cur.getNodeManager().getLangExtension<encoder::ListExtension>();
-						const auto& terms = convertList<ExpressionPtr>(cur.getTerms());
-
-						// build up list
-						auto elementType = terms.back()->getType();
-						TypePtr type = encoder::getListType(elementType);
-						ExpressionPtr res = cur.callExpr(type, ext.empty, cur.getTypeLiteral(elementType));
-						for(auto it = terms.rbegin(); it != terms.rend(); ++it) {
-							res = cur.callExpr(type, ext.cons, *it, res);
-						}
-						return res;
+						return encoder::toIR(cur.manager, convertList<ExpressionPtr>(cur.getTerms()));
 					}
 			));
 

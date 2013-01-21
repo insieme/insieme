@@ -73,7 +73,7 @@ TEST(Attributes, Basic) {
 	set.insert(a1);
 	tmp = addAttribute(expr, a1);
 	EXPECT_EQ(set, getAttributes(tmp));
-	EXPECT_EQ("attr(1, cons(wrap_ExpressionPtr(unordered), empty(attribute)))", toString(*tmp));
+	EXPECT_EQ("attr(1, cons(unordered, empty(attribute)))", toString(*tmp));
 
 	// add another attribute
 	set.insert(a2);
