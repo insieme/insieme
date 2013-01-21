@@ -111,11 +111,8 @@ public:
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-// the indexer generates an index of 
-//////////////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////
-// the context will be the owner of all generated AST nodes
+/// the indexer generates an index of 
+/// the context will be the owner of all generated AST nodes
 Indexer::Indexer()
 : mIndex() { 
 	clang::Decl* ptr1 = NULL;
@@ -138,37 +135,57 @@ void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 	clang::Sema mySema (preprocessor, mASTContext, *consumer);
 	ParseAST(mySema, false, false);
 
-	delete consumer;
+	// FIXME: who releases this?
+	//delete consumer;
 }
 
 ////////////////////////////////////////////////
 //
-tStored Indexer::getDefAndTUforDefinition (std::string symbol){
+tStored Indexer::getDefAndTUforDefinition (const std::string& symbol) const{
 
-	tIndex::iterator match = this->mIndex.find(symbol);
-	if (match != this->mIndex.end())
+	tIndex::const_iterator match = this->mIndex.find(symbol);
+	if (match != this->mIndex.end()){
+		assert(match->second.first && match->second.second && " found a wrong definition");
 		return match->second;
-	else 
+	}else {
 		return  voidPair;
+	}
 
 }
 
 ////////////////////////////////////////////////
 //
-clang::Decl* Indexer::getDefDefinitionFor (std::string symbol){
+clang::Decl* Indexer::getDefDefinitionFor (const std::string& symbol) const{
 
-	tIndex::iterator match = this->mIndex.find(symbol);
-	if (match != this->mIndex.end())
+	tIndex::const_iterator match = this->mIndex.find(symbol);
+	if (match != this->mIndex.end()){
+		assert(match->second.first && " found a wrong definition");
 		return match->second.first;
-	else 
+	}
+	else {
 		return  NULL;
+	}
 }
 
 ////////////////////////////////////////////////
+///
+tStored Indexer::getDefAndTUforDefinition (clang::Decl* decl) const{
+	return getDefAndTUforDefinition(llvm::cast<clang::NamedDecl>(decl)->getNameAsString());
+}
+
+
+////////////////////////////////////////////////
 //
-void Indexer::dump(){
-	tIndex::iterator it = mIndex.begin();
-	tIndex::iterator end = mIndex.end();
+clang::Decl* Indexer::getDefDefinitionFor (clang::Decl* decl) const{
+	return getDefDefinitionFor(llvm::cast<clang::NamedDecl>(decl)->getNameAsString());
+}
+
+
+////////////////////////////////////////////////
+//
+void Indexer::dump() const{
+	tIndex::const_iterator it = mIndex.begin();
+	tIndex::const_iterator end = mIndex.end();
 	for (;it != end; it++){
 		std::cout << "\t[" << it->first << " ," << it->second << "]" << std::endl;
 	}

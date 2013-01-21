@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include <assert.h>
 #include <string>
 #include <map>
@@ -42,6 +44,8 @@
 #include "insieme/frontend/program.h"
 
 #include "clang/AST/Decl.h"
+
+
 
 namespace insieme{
 namespace frontend{
@@ -71,16 +75,24 @@ public:
 	void indexTU(insieme::frontend::TranslationUnit* tu);
 
 	////////////////////////////////////////////////
-	//
-	tStored getDefAndTUforDefinition (std::string symbol);
+	///
+	tStored getDefAndTUforDefinition (const std::string &symbol) const;
 
 	////////////////////////////////////////////////
 	//
-	clang::Decl* getDefDefinitionFor (std::string symbol);
+	clang::Decl* getDefDefinitionFor (const std::string &symbol) const;
 
 	////////////////////////////////////////////////
 	//
-	void dump();
+	clang::Decl* getDefDefinitionFor (clang::Decl* decl) const;
+
+	////////////////////////////////////////////////
+	///
+	tStored getDefAndTUforDefinition (clang::Decl* decl) const;
+
+	////////////////////////////////////////////////
+	//
+	void dump() const;
 };
 
 } // end namespace utils

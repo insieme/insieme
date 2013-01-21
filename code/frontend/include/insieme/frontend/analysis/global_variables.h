@@ -147,7 +147,6 @@ public:
 	}
 
 	void operator()(const clang::Decl* decl);
-
 	void operator()(const Program::TranslationUnitSet& tus);
 
 	/**
