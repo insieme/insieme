@@ -36,7 +36,7 @@
 
 #pragma once
 
-//#include <locale.h> // needed to use thousands separator
+#include <locale.h> // needed to use thousands separator
 #include <stdio.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -146,6 +146,19 @@ void _irt_inst_insert_di_event(irt_worker* worker, irt_instrumentation_event eve
 #if defined (USE_OPENCL) && defined (IRT_OCL_INSTR)
     bool irt_g_ocl_temp_event_dump_already_done = false;
 #endif
+
+void irt_inst_event_data_output_single(irt_instrumentation_event_data data, FILE* outputfile, bool readable) {
+	irt_work_item_id temp_id;
+	temp_id.cached = NULL;
+	temp_id.index = data.index;
+	temp_id.thread = data.thread;
+	temp_id.node = 0;
+	if(readable) {
+		setlocale(LC_ALL, "");
+		fprintf(outputfile, "%s,%'16lu,%20s,%'32lu\n", irt_g_instrumentation_group_names[data.event_id], temp_id.full, irt_g_instrumentation_event_names[data.event_id], irt_time_convert_ticks_to_ns(data.timestamp));
+	} else
+		fprintf(outputfile, "%s,%lu,%s,%lu\n", irt_g_instrumentation_group_names[data.event_id], temp_id.full, irt_g_instrumentation_event_names[data.event_id], irt_time_convert_ticks_to_ns(data.timestamp));
+}
 
 void irt_inst_event_data_output_all(bool binary_format) {
 	for(int i = 0; i < irt_g_worker_count; ++i)
@@ -325,12 +338,7 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 	} else {
 		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "disabled");
 		for(int i = 0; i < table->number_of_elements; ++i) {
-			irt_work_item_id temp_id;
-			temp_id.cached = NULL;
-			temp_id.index = table->data[i].index;
-			temp_id.thread = table->data[i].thread;
-			temp_id.node = 0;
-			fprintf(outputfile, "%s,%lu,%s,%lu\n", irt_g_instrumentation_group_names[table->data[i].event_id], temp_id.full, irt_g_instrumentation_event_names[table->data[i].event_id], irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+			irt_inst_event_data_output_single(table->data[i], outputfile, false);
 		}
 	}
 
