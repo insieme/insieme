@@ -53,6 +53,14 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
 
+/**
+ * A functor imposing no default clone action.
+ */
+template<typename T>
+struct no_post_add_action {
+	void operator()(const T* original, const T* copy) const { /* do nothing */ }
+
+};
 
 /**
  * An instance manager is capable of handling a set of instances of a generic type T. Instances
@@ -68,6 +76,7 @@
 template<
 	typename T,
 	template<class C> class R = Ptr,
+	typename PostAddAction = no_post_add_action<T>,
 	typename boost::enable_if<boost::is_base_of<Ptr<T>, R<T> >,int>::type = 0
 	>
 class InstanceManager : private boost::noncopyable {
@@ -160,6 +169,7 @@ public:
 	 */
 	template<class S>
 	typename boost::enable_if<boost::is_base_of<T,S>, std::pair<R<const S>,bool>>::type add(const S* instance) {
+		static const PostAddAction postAddAction;
 
 		assert ( instance && "Instance must not be NULL!");
 
@@ -174,11 +184,17 @@ public:
 		const S* newElement = clone(instance);
 		auto  __attribute__((unused)) check = storage.insert(newElement); 
 
+		// ensure this is a clone
+		assert ( instance != newElement );
+
 		// ensure the element has really been added (hash and equals is properly implemented)
-		assert ( check.second );
+		assert ( *check.first == newElement || check.second );
 
 		// ensure the element can be found again
 		assert ( check.first == storage.find(instance) && "Unable to add clone - value already present!" );
+
+		// apply post-insert action
+		postAddAction(instance, newElement);
 
 		return std::make_pair(R<const S>(newElement), true);
 	}
