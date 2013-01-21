@@ -38,6 +38,7 @@
 
 #include "abstraction/temperature_intel.h"
 
-uint64 (*irt_get_temperature)();
+uint64 (*irt_get_temperature_core)();
+uint64 (*irt_get_temperature_package)();
 
 void irt_temperature_select_instrumentation_method();

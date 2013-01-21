@@ -124,24 +124,6 @@ typedef struct _rapl_energy_data {
 } rapl_energy_data;
 
 /*
- * opens a file descriptor for an MSR of a given core
- */
-
-int32 _irt_open_msr(uint32 core);
-
-/*
- * reads given subject information from an MSR
- */
-
-int64 _irt_read_msr(int32 file, int32 subject);
-
-/*
- * closes an MSR file descriptor
- */
-
-int32 _irt_close_msr(int32 file);
-
-/*
  * Reads the package energy consumption in joules into the provided pointer. Calling
  * this function too often (e.g. in less than 100ms intervals) might result in wrong
  * values.
