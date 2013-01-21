@@ -39,6 +39,10 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/core/dump/annotations.h"
+#include "insieme/core/encoder/lists.h"
+#include "insieme/core/encoder/tuples.h"
+
 namespace insieme {
 namespace core {
 
@@ -179,6 +183,63 @@ namespace core {
 		target->attachValue(newInfo);
 
 	}
+
+	// --------- Class Meta-Info Dump-Support --------------------
+
+	// create and register a IR-Dump converter for the meta-info class
+	VALUE_ANNOTATION_CONVERTER(ClassMetaInfo)
+
+		typedef core::value_node_annotation<ClassMetaInfo>::type annotation_type;
+
+		typedef std::tuple<string, LambdaExprPtr, bool, bool> encoded_member_fun_type;
+		typedef std::tuple<vector<LambdaExprPtr>, LambdaExprPtr, bool, vector<encoded_member_fun_type>> encoded_class_info_type;
+
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only Class-Info annotations are supported!");
+			const ClassMetaInfo& info = static_pointer_cast<annotation_type>(annotation)->getValue();
+
+			// convert member functions
+			auto encodedMemberFuns = ::transform(info.getMemberFunctions(), [](const MemberFunction& cur)->encoded_member_fun_type {
+				return encoded_member_fun_type(
+						cur.getName(),
+						cur.getLambdaExpr(),
+						cur.isVirtual(),
+						cur.isConst()
+				);
+			});
+
+			// encode class meta-info object
+			return encoder::toIR(
+				manager,
+				encoded_class_info_type (
+						info.getConstructors(),
+						info.getDestructor(),
+						info.isDestructorVirtual(),
+						encodedMemberFuns
+				)
+			);
+		}
+
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert(encoder::isEncodingOf<encoded_class_info_type>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
+
+			// decode the class object
+			auto tuple = encoder::toValue<encoded_class_info_type>(node);
+
+			// restore info
+			ClassMetaInfo res;
+
+			res.setConstructors(std::get<0>(tuple));
+			res.setDestructor(std::get<1>(tuple));
+			res.setDestructorVirtual(std::get<2>(tuple));
+			res.setMemberFunctions(::transform(std::get<3>(tuple), [](const encoded_member_fun_type& cur) {
+				return MemberFunction(std::get<0>(cur), std::get<1>(cur), std::get<2>(cur), std::get<3>(cur));
+			}));
+
+			// convert
+			return std::make_shared<annotation_type>(res);
+		}
+	};
 
 	// --------- Class Meta-Info Utilities --------------------
 

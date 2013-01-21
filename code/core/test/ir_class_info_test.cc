@@ -232,51 +232,51 @@ namespace core {
 
 	}
 
-//	TEST(ClassInfo, BinaryDump) {
-//
-//		// create a code fragment using manager A
-//		NodeManager mgrA;
-//		IRBuilder builderA(mgrA);
-//
-//		StructTypePtr typeA = builderA.parse("struct { int<4> a; real<8> b; }").as<StructTypePtr>();
-//		EXPECT_TRUE(typeA);
-//
-//		// create a class info
-//		std::map<string, NodePtr> symbols;
-//		symbols["T"] = typeA;
-//
-//		ClassMetaInfo info;
-//		info.addConstructor(builderA.parse("T::() {}", symbols).as<LambdaExprPtr>());
-//		info.addConstructor(builderA.parse("T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
-//		info.setDestructor(builderA.parse("~T::() {}", symbols).as<LambdaExprPtr>());
-//		info.addMemberFunction("f", builderA.parse("T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
-//
-//		// attach to type
-//		setMetaInfo(typeA, info);
-//		EXPECT_TRUE(typeA->hasAttachedValue<ClassMetaInfo>());
-//
-//		// ---------------------------
-//
-//		// create a in-memory stream
-//		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
-//
-//		// dump IR using a binary format
-//		dump::binary::dumpIR(buffer, typeA);
-//
-//		// reload IR using a different node manager
-//		NodeManager mgrB;
-//		TypePtr restored = dump::binary::loadIR(buffer, mgrB).as<TypePtr>();
-//
-//		EXPECT_NE(typeA, restored);
-//		EXPECT_EQ(*typeA, *restored);
-//
-//		// annotation should still be available
-//		EXPECT_TRUE(restored->hasAttachedValue<ClassMetaInfo>());
-//
-//		// annotation should be restored correctly
-//		EXPECT_EQ(info, getMetaInfo(restored)) << "Original:\n" << info << "\nRestored:\n" << getMetaInfo(restored);
-//
-//	}
+	TEST(ClassInfo, BinaryDump) {
+
+		// create a code fragment using manager A
+		NodeManager mgrA;
+		IRBuilder builderA(mgrA);
+
+		StructTypePtr typeA = builderA.parse("struct { int<4> a; real<8> b; }").as<StructTypePtr>();
+		EXPECT_TRUE(typeA);
+
+		// create a class info
+		std::map<string, NodePtr> symbols;
+		symbols["T"] = typeA;
+
+		ClassMetaInfo info;
+		info.addConstructor(builderA.parse("T::() {}", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builderA.parse("T::(int<4> x) {}", symbols).as<LambdaExprPtr>());
+		info.setDestructor(builderA.parse("~T::() {}", symbols).as<LambdaExprPtr>());
+		info.addMemberFunction("f", builderA.parse("T::(int<4> a)->int<4> { return a; }", symbols).as<LambdaExprPtr>());
+
+		// attach to type
+		setMetaInfo(typeA, info);
+		EXPECT_TRUE(typeA->hasAttachedValue<ClassMetaInfo>());
+
+		// ---------------------------
+
+		// create a in-memory stream
+		stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+		// dump IR using a binary format
+		dump::binary::dumpIR(buffer, typeA);
+
+		// reload IR using a different node manager
+		NodeManager mgrB;
+		TypePtr restored = dump::binary::loadIR(buffer, mgrB).as<TypePtr>();
+
+		EXPECT_NE(typeA, restored);
+		EXPECT_EQ(*typeA, *restored);
+
+		// annotation should still be available
+		EXPECT_TRUE(restored->hasAttachedValue<ClassMetaInfo>());
+
+		// annotation should be restored correctly
+		EXPECT_EQ(info, getMetaInfo(restored)) << "Original:\n" << info << "\nRestored:\n" << getMetaInfo(restored);
+
+	}
 
 } // end namespace core
 } // end namespace insieme

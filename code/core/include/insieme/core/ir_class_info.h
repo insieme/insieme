@@ -243,7 +243,7 @@ namespace core {
 		/**
 		 * Obtains a reference to the member functions listed by this meta-info object.
 		 */
-		const vector<MemberFunction>& getMemberFunctions() {
+		const vector<MemberFunction>& getMemberFunctions() const {
 			return memberFunctions;
 		}
 

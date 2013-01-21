@@ -44,6 +44,7 @@
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/type_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace core {
@@ -316,35 +317,47 @@ namespace encoder {
 	//   Add support for encoding expressions directly into expressions
 	// --------------------------------------------------------------------
 
-	template<>
-	struct type_factory<core::ExpressionPtr> {
-		core::TypePtr operator()(core::NodeManager& manager) const {
-			assert(false && "Not applicable in the general case!");
-			throw InvalidExpression("Cannot define generic type for all expressions!");
+	#define ADD_EXPRESSION_CONVERTER(_TYPE) \
+		template<> \
+		struct type_factory<_TYPE> { \
+			core::TypePtr operator()(core::NodeManager& manager) const { \
+				return GenericType::get(manager, "encoded_" #_TYPE); \
+			} \
+		}; \
+		\
+		template<> \
+		struct is_encoding_of<_TYPE> { \
+			bool operator()(const core::ExpressionPtr& expr) const { \
+				IRBuilder builder(expr->getNodeManager()); \
+				auto resType = builder.genericType("encoded_" #_TYPE); \
+				auto alpha = builder.typeVariable("a"); \
+				auto wrapFun = builder.literal("wrap_" #_TYPE, builder.functionType(alpha, resType)); \
+				return core::analysis::isCallOf(expr, wrapFun); \
+			} \
+		}; \
+		\
+		template<> \
+		struct value_to_ir_converter<_TYPE> { \
+			core::ExpressionPtr operator()(core::NodeManager& manager, const _TYPE& value) const { \
+				IRBuilder builder(manager); \
+				auto resType = builder.genericType("encoded_" #_TYPE); \
+				auto alpha = builder.typeVariable("a"); \
+				auto wrapFun = builder.literal("wrap_" #_TYPE, builder.functionType(alpha, resType)); \
+				return builder.callExpr(resType, wrapFun, value); \
+			} \
+		}; \
+		\
+		template<> \
+		struct ir_to_value_converter<_TYPE> { \
+			_TYPE operator()(const core::ExpressionPtr& expr) const { \
+				assert(is_encoding_of<_TYPE>()(expr) && "Invalid encoding!"); \
+				return expr.as<CallExprPtr>().getArgument(0).as<_TYPE>(); \
+			} \
 		}
-	};
 
-	template<>
-	struct value_to_ir_converter<core::ExpressionPtr> {
-		core::ExpressionPtr operator()(core::NodeManager& manager, const core::ExpressionPtr& value) const {
-			return manager.get(value);
-		}
-	};
 
-	template<>
-	struct ir_to_value_converter<core::ExpressionPtr> {
-		core::ExpressionPtr operator()(const core::ExpressionPtr& expr) const {
-			return expr;
-		}
-	};
-
-	template<>
-	struct is_encoding_of<core::ExpressionPtr> {
-		bool operator()(const core::ExpressionPtr& expr) const {
-			return true;
-		}
-	};
-
+	ADD_EXPRESSION_CONVERTER(ExpressionPtr);
+	ADD_EXPRESSION_CONVERTER(LambdaExprPtr);
 
 	// --------------------------------------------------------------------
 	//       Add support for encoding of types within expressions
