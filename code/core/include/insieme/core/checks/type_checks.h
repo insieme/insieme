@@ -47,6 +47,7 @@ namespace checks {
 
 SIMPLE_CHECK(Keyword, GenericType, true);
 SIMPLE_CHECK(FunctionKind, FunctionType, true);
+SIMPLE_CHECK(Parent, Parent, true);
 
 SIMPLE_CHECK(CallExprType, CallExpr, false);
 SIMPLE_CHECK(FunctionType, LambdaExpr, false);

@@ -332,6 +332,40 @@ TEST(FunctionType, Basic) {
 
 }
 
+TEST(ParentCheck, Basic) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// create a few parent nodes
+	auto ok1 = builder.parent(builder.genericType("A"));
+	auto ok2 = builder.parent(builder.structType());
+	auto ok3 = builder.parent(builder.typeVariable("a"));
+	auto ok4 = builder.parent(builder.parseType("let a,b = struct { ref<b> x; }, struct { ref<a> x; } in a"));
+
+	auto err1 = builder.parent(builder.parseType("union { int<4> x; }"));
+	auto err2 = builder.parent(builder.parseType("(A,B)->R"));
+	auto err3 = builder.parent(builder.parseType("ref<A>"));
+	auto err4 = builder.parent(builder.parseType("array<A,1>"));
+	auto err5 = builder.parent(builder.parseType("vector<A,2>"));
+	auto err6 = builder.parent(builder.parseType("channel<A,2>"));
+
+	// check the correct types
+	EXPECT_TRUE(check(ok1).empty()) << check(ok1);
+	EXPECT_TRUE(check(ok2).empty()) << check(ok2);
+	EXPECT_TRUE(check(ok3).empty()) << check(ok3);
+	EXPECT_TRUE(check(ok4).empty()) << check(ok4);
+
+	// check the invalid types
+	EXPECT_PRED2(containsMSG, check(err1), Message(NodeAddress(err1), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err2), Message(NodeAddress(err2), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err3), Message(NodeAddress(err3), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err4), Message(NodeAddress(err4), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err5), Message(NodeAddress(err5), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err6), Message(NodeAddress(err6), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+}
+
 TEST(StructExprTypeCheck, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);

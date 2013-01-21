@@ -181,11 +181,6 @@ OptionalMessageList FunctionKindCheck::visitFunctionType(const FunctionTypeAddre
 		}
 	}
 
-//	CODE(TYPE, ILLEGAL_DESTRUCTOR_PARAMETERS)
-//	CODE(TYPE, ILLEGAL_CONSTRUCTOR_RETURN_TYPE)
-//	CODE(TYPE, ILLEGAL_DESTRUCTOR_RETURN_TYPE)
-
-
 	// check no-arguments for destructor
 	if (address->isDestructor()) {
 		if (address->getParameterTypes().size() > 1u) {
@@ -225,6 +220,24 @@ OptionalMessageList FunctionKindCheck::visitFunctionType(const FunctionTypeAddre
 
 	return res;
 
+}
+
+OptionalMessageList ParentCheck::visitParent(const ParentAddress& address) {
+
+	OptionalMessageList res;
+
+	// just check whether parent type is a potential object type
+	auto type = address.as<ParentPtr>()->getType();
+	if (!analysis::isObjectType(type)) {
+		add(res, Message(address,
+				EC_TYPE_ILLEGAL_OBJECT_TYPE,
+				format("Invalid parent type - not an object: %s",
+						toString(*type)),
+				Message::ERROR
+		));
+	}
+
+	return res;
 }
 
 OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {

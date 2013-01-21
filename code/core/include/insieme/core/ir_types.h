@@ -1107,7 +1107,7 @@ namespace core {
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructTypePtr get(NodeManager& manager, const ParentsPtr& parents, const vector<NamedTypePtr>& entries) {
+		static StructTypePtr get(NodeManager& manager, const ParentsPtr& parents, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
 			NodeList children = convertList(entries);
 			children.insert(children.begin(), parents);
 			return manager.get(StructType(children));
@@ -1123,7 +1123,7 @@ namespace core {
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries) {
+		static StructTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
 			return get(manager, Parents::get(manager), entries);
 		}
 
