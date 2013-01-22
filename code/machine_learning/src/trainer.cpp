@@ -409,6 +409,8 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 
 
 void Trainer::setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices) {
+std::cout << "pcaFeatures: " << pcaFeatures.size() << std::endl;
+std::cout << "0: " << pcaFeatures.at(0) << std::endl;
 	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
 		staticFeatures.push_back(*I);
@@ -795,7 +797,7 @@ void Trainer::optimizeDistorted(Optimizer& optimizer, Model& model, ErrorFunctio
 
 			for(size_t j = 0; j < cols; ++j) {
 				double distortion = (double)rand()/((double)RAND_MAX/(2*distortFactor)) - distortFactor;
-				tmpF(j) = tmpF(j) + distortion;
+				tmpF(j) = tmpF(j) * (1 + distortion);
 			}
 
 			dfeatures.append_rows(tmpF);
