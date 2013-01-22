@@ -409,8 +409,6 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 
 
 void Trainer::setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices) {
-std::cout << "pcaFeatures: " << pcaFeatures.size() << std::endl;
-std::cout << "0: " << pcaFeatures.at(0) << std::endl;
 	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
 		staticFeatures.push_back(*I);
