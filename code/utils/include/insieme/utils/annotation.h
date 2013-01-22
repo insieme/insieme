@@ -74,6 +74,12 @@ protected:
 };
 
 /**
+ * Define the managed type pointer variant of an annotation key (keys are always
+ * static, so plain pointers are managed).
+ */
+typedef const AnnotationKey* AnnotationKeyPtr;
+
+/**
  * An abstract base class for any kind of annotation to be attached to a AST node or pointer.
  */
 class Annotation : public utils::Printable {
@@ -87,7 +93,7 @@ public:
 	 *
 	 * NOTE: best practice would be to use static variables to represent annotation keys
 	 */
-	virtual const AnnotationKey* getKey() const = 0;
+	virtual const AnnotationKeyPtr getKey() const = 0;
 	
 	/**
 	 * Requests the name of this annotation. The name should be a constant class member.
@@ -306,7 +312,7 @@ namespace detail {
 		/**
 		 * Obtains the key to be used to identify this annotation within an annotatable object.
 		 */
-		virtual const AnnotationKey* getKey() const {
+		virtual const AnnotationKeyPtr getKey() const {
 			return &KEY;
 		}
 

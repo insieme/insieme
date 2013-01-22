@@ -96,7 +96,7 @@ public:
     BaseAnnotation(const utils::CompoundAnnotation< omp::Annotation >::AnnotationList& annotationList):
     	utils::CompoundAnnotation< omp::Annotation , core::NodeAnnotation >(annotationList) { }
 
-    const utils::AnnotationKey* getKey() const { return &KEY; }
+    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 	const std::string& getAnnotationName() const { return NAME; }
 
 	const std::string toString() const;

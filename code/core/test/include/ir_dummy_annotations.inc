@@ -46,7 +46,7 @@ namespace core {
 		int value;
 		DummyAnnotation(int value) : value(value) { };
 
-		virtual const utils::AnnotationKey* getKey() const {
+		virtual const utils::AnnotationKeyPtr getKey() const {
 			return &DummyKey;
 		}
 
@@ -66,7 +66,7 @@ namespace core {
 		int value;
 		DummyAnnotation2(int value) : value(value) { };
 
-		virtual const utils::AnnotationKey* getKey() const {
+		virtual const utils::AnnotationKeyPtr getKey() const {
 			return &DummyKey;
 		}
 
