@@ -28,7 +28,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
-#include <alloca.h>
+
+#ifdef _WIN32
+	#include <malloc.h>
+#else
+	#include <alloca.h>
+#endif
+
 #include "bots.h"
 #include "app-desc.h"
 
