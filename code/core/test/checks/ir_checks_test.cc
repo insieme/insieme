@@ -151,6 +151,51 @@ TEST(IRCheck, Decorators) {
 }
 
 
+struct InspectableAnnotation : public value_annotation::has_child_list {
+
+	NodeList nodes;
+
+	InspectableAnnotation(const NodeList& list) : nodes(list) {}
+
+	template<typename ... T>
+	InspectableAnnotation(const T& ... values) : nodes(toVector<NodePtr>(values...)) {}
+
+	const NodeList& getChildNodes() const {
+		return nodes;
+	}
+
+	bool operator==(const InspectableAnnotation& other) const {
+		return nodes == other.nodes;
+	}
+};
+
+
+TEST(IRCheck, Annotations) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// make recursive check
+	CheckPtr recCheck = makeRecursive(make_check<IDontLikeAnythingCheck>());
+
+	// create a node having a inspectable annotation
+	NodePtr nodeA = builder.genericType("A");
+	NodePtr nodeB = builder.genericType("B");
+
+	// simply A => there should be 1 error
+	EXPECT_EQ(1u, check(nodeA, recCheck).size());
+
+	// adding the annotation => there should be 2 errors now
+	nodeA->attachValue(InspectableAnnotation(nodeB));
+	EXPECT_EQ(2u, check(nodeA, recCheck).size());
+
+	// check that cycle is not followed indefinitely
+	nodeB->attachValue(InspectableAnnotation(nodeA));
+	EXPECT_EQ(2u, check(nodeA, recCheck).size());
+
+}
+
+
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme

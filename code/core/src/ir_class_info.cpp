@@ -69,6 +69,9 @@ namespace core {
 
 		// exchange the list of constructors
 		this->constructors = constructors;
+
+		// invalidate child list
+		childList.reset();
 	}
 
 	void ClassMetaInfo::addConstructor(const LambdaExprPtr& constructor) {
@@ -78,6 +81,9 @@ namespace core {
 
 		// add new constructor
 		this->constructors.push_back(constructor);
+
+		// invalidate child list
+		childList.reset();
 	}
 
 	void ClassMetaInfo::setDestructor(const LambdaExprPtr& destructor) {
@@ -87,6 +93,9 @@ namespace core {
 
 		// update destructor
 		this->destructor = destructor;
+
+		// invalidate child list
+		childList.reset();
 	}
 
 	void ClassMetaInfo::setMemberFunctions(const vector<MemberFunction>& functions) {
@@ -96,6 +105,9 @@ namespace core {
 
 		// exchange the list of member functions
 		this->memberFunctions = functions;
+
+		// invalidate child list
+		childList.reset();
 	}
 
 	void ClassMetaInfo::addMemberFunction(const MemberFunction& function) {
@@ -105,6 +117,9 @@ namespace core {
 
 		// add new member function
 		this->memberFunctions.push_back(function);
+
+		// invalidate child list
+		childList.reset();
 	}
 
 	TypePtr ClassMetaInfo::getClassType() const {
@@ -163,7 +178,7 @@ namespace core {
 		return out;
 	}
 
-	void ClassMetaInfo::migrateTo(const NodePtr& target) const {
+	void ClassMetaInfo::cloneTo(const NodePtr& target) const {
 
 		// create a copy of this class referencing instances managed by the new target node manager
 		NodeManager& newMgr = target->getNodeManager();
@@ -182,6 +197,23 @@ namespace core {
 		// attach info value
 		target->attachValue(newInfo);
 
+	}
+
+	const NodeList& ClassMetaInfo::getChildNodes() const {
+
+		// use lazy-evaluated value if possible
+		if (childList) {
+			return childList;
+		}
+
+		// update child list
+		NodeList res;
+		for(auto cur : constructors) res.push_back(cur);
+		res.push_back(destructor);
+		for(auto cur : memberFunctions) res.push_back(cur.getLambdaExpr());
+
+		// update lazy and return internal value
+		return childList = res;
 	}
 
 	// --------- Class Meta-Info Dump-Support --------------------
@@ -247,6 +279,10 @@ namespace core {
 
 		static ClassMetaInfo defaultInfo;
 
+	}
+
+	const bool hasMetaInfo(const TypePtr& type) {
+		return type->hasAttachedValue<ClassMetaInfo>();
 	}
 
 	const ClassMetaInfo& getMetaInfo(const TypePtr& type) {

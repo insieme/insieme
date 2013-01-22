@@ -369,6 +369,10 @@ namespace core {
 			getNode().getAnnotationContainer().addAnnotation<Annotation>(p...);
 		}
 
+		const std::shared_ptr<core::NodeAnnotation>& getAnnotation(const utils::AnnotationKeyPtr& key) const {
+			return getNode().getAnnotationContainer().getAnnotation(key);
+		}
+
 		template<typename Key>
 		typename std::shared_ptr<typename Key::annotation_type> getAnnotation(const Key* key) const {
 			return getNode().getAnnotationContainer().getAnnotation(key);

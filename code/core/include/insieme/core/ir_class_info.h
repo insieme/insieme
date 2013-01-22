@@ -42,6 +42,7 @@
 #include "insieme/core/ir.h"
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/lazy.h"
 
 namespace insieme {
 namespace core {
@@ -153,7 +154,10 @@ namespace core {
 	/**
 	 * A class aggregating meta-information regarding class types.
 	 */
-	class ClassMetaInfo : public utils::Printable, public core::value_annotation::migratable {
+	class ClassMetaInfo :
+			public utils::Printable,
+			public core::value_annotation::cloneable,
+			public core::value_annotation::has_child_list {
 
 		/**
 		 * The list of constructors to be associated to the class
@@ -176,6 +180,12 @@ namespace core {
 		 * attached to the class annoated by this info-collection.
 		 */
 		vector<MemberFunction> memberFunctions;
+
+		/**
+		 * A lazy-evaluated list of child nodes required to be accessible
+		 * by IR utilities including semantic checks.
+		 */
+		mutable utils::Lazy<NodeList> childList;
 
 	public:
 
@@ -310,7 +320,12 @@ namespace core {
 		 * Required to enable instances to be migrated when cloning the
 		 * carrier-object to another node manager.
 		 */
-		void migrateTo(const NodePtr& target) const;
+		void cloneTo(const NodePtr& target) const;
+
+		/**
+		 * Required to enable instances to be inspected by IR utilities.
+		 */
+		const NodeList& getChildNodes() const;
 
 		/**
 		 * Obtains the object type this meta-info class is describing. The
@@ -333,6 +348,14 @@ namespace core {
 		 */
 		bool checkObjectType(const LambdaExprPtr& lambda) const;
 	};
+
+	/**
+	 * Determines whether class information is attached to the given type.
+	 *
+	 * @param type the type to be tested
+	 * @return true if there is info attached, false otherwise
+	 */
+	const bool hasMetaInfo(const TypePtr& type);
 
 	/**
 	 * Obtains a reference to the class-meta information currently attached to the

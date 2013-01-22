@@ -45,15 +45,34 @@ namespace core {
 namespace checks {
 
 
+Message Message::shiftAddress(const NodeAddress& outer, const utils::AnnotationKeyPtr& key) const {
+
+	// make some assumptions
+	assert(outer.hasAnnotation(key));
+	assert(any(outer.getAnnotation(key)->getChildNodes(), [&](const NodePtr& cur) { return cur == address.getRootNode(); }));
+
+	// create new path
+	annotation_path new_path = annotationPath;
+	new_path.insert(new_path.begin(), std::make_pair(key, address));
+
+	// create shifted address
+	return Message(outer, new_path, errorCode, message, type);
+}
+
 bool Message::operator==(const Message& other) const {
-	return type == other.type && address == other.address && errorCode == other.errorCode;
+	return type == other.type && address == other.address && annotationPath == other.annotationPath && errorCode == other.errorCode;
 }
 
 bool Message::operator<(const Message& other) const {
 	if (type != other.type) {
 		return type < other.type;
 	}
-	return address < other.address;
+
+	if (address != other.address) {
+		return address < other.address;
+	}
+
+	return annotationPath < other.annotationPath;
 }
 
 namespace {
@@ -117,32 +136,63 @@ namespace {
 	protected:
 
 		OptionalMessageList visitNode(const NodeAddress& node) {
-
 			// create resulting message list
 			OptionalMessageList res;
 
-			// create internally maintained visitor performing the actual check
-			// NOTE: the visitor pointer is required to support recursion
-			IRVisitor<void, Address>* visitor;
-			auto lambdaVisitor = makeLambdaVisitor([&res, &visitor, this](const NodeAddress& node) {
+			// create a node list tracing the decent (through annotations) to prevent cycles
+			NodeList trace;
 
-				// check the current node and collect results
-				addAll(res, this->check->visit(node));
+			// conduct recursive check
+			visitNodeInternal(node, res, trace);
 
-				// visit / check all child nodes
-				for (int i=0, e=node->getChildList().size(); i<e; i++) {
-					visitor->visit(node.getAddressOfChild(i));
-				}
-			}, this->isVisitingTypes());
-
-			// update pointer ..
-			visitor = &lambdaVisitor;
-
-			// trigger the visit (only once)
-			visitor->visit(node);
-
-			// return collected messages
+			// done
 			return res;
+		}
+
+		void visitNodeInternal(const NodeAddress& node, OptionalMessageList& res, NodeList& trace) {
+
+			// prevent infinite cycles => do not check something that is already on the path
+			if (contains(trace, node.as<NodePtr>(), equal_target<NodePtr>())) {
+				return;
+			}
+
+			// process current node
+			addAll(res, this->check->visit(node));
+
+			// add node to trace
+			trace.push_back(node.as<NodePtr>());
+
+			// check annotations of current node
+			for (const auto& cur : node->getAnnotations()) {
+				for(const NodePtr& innerNode : cur.second->getChildNodes()) {
+
+					// create an inner list of issues
+					OptionalMessageList innerList;
+
+					// collect messages from current annotation node
+					visitNodeInternal(NodeAddress(innerNode), innerList, trace);
+
+					// merge inner message list with outer list
+					if (innerList) {
+						for(auto msg : innerList->getErrors()) {
+							add(res, msg.shiftAddress(node, cur.first));
+						}
+						for(auto msg : innerList->getWarnings()) {
+							add(res, msg.shiftAddress(node, cur.first));
+						}
+					}
+				}
+			}
+
+			// visit / check all child nodes
+			for (int i=0, e=node->getChildList().size(); i<e; i++) {
+				visitNodeInternal(node.getAddressOfChild(i), res, trace);
+			}
+
+			// pop from trace
+			assert(!trace.empty() && "Invalid stack state!");
+			assert(trace.back() == node.as<NodePtr>() && "Invalid stack state!");
+			trace.pop_back();
 		}
 	};
 
@@ -189,6 +239,17 @@ namespace {
 
 				// check the current node and collect results
 				addAll(res, this->check->visit(node));
+
+				// check annotations of current node
+				for (const auto& cur : node->getAnnotations()) {
+					if (!cur.second->getChildNodes().empty()) {
+						// TODO: add support for checking annotations once required
+						assert(false && "I owe you an implementation of the annotation checks!");
+					}
+//					for(const NodePtr& innerNode : cur.second->getChildNodes()) {
+//
+//					}
+				}
 
 				// visit / check all child nodes
 				for (std::size_t i=0, e=node->getChildList().size(); i<e; ++i) {
@@ -297,6 +358,13 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::checks::Message
 		out << address;
 	} else {
 		out << "<unknown>";
+	}
+
+	const auto& annotationPath = message.getAnnotationPath();
+	if (!annotationPath.empty()) {
+		out << " / " << join(" / ", annotationPath, [](std::ostream& out, const std::pair<insieme::utils::AnnotationKeyPtr, insieme::core::NodeAddress>& cur) {
+			out << *cur.first << ":" << cur.second;
+		});
 	}
 
 	// .. and conclude with the message.
