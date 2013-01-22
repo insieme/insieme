@@ -34,38 +34,9 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "impl/client_app.impl.h"
-#include "impl/irt_context.impl.h"
-#include "impl/error_handling.impl.h"
-#include "impl/worker.impl.h"
-#include "impl/irt_scheduling.impl.h"
-#include "impl/data_item.impl.h"
-#include "impl/work_group.impl.h"
-#include "impl/irt_events.impl.h"
-#include "impl/irt_lock.impl.h"
-#include "impl/ir_interface.impl.h"
-#include "impl/irt_loop_sched.impl.h"
-#include "impl/irt_logging.impl.h"
-#include "irt_types.h"
-#include "wi_implementation.h"
-#include "utils/timing.h"
-#include "utils/impl/timing.impl.h"
-#include "utils/frequency.h"
-
-#ifndef IRT_MIN_MODE
-	#include "impl/irt_mqueue.impl.h"	
-	#include "utils/impl/affinity.impl.h"
+// this is from mingw's pthread.h (really implementing a threadsafe and reentrant rand?)
+#ifndef rand_r
+	#define rand_r(__seed) (__seed == __seed ? rand () : rand ())
 #endif
 
-#ifdef _WIN32
-	#include "include_win32/memalign.h"	
-#endif
-
-#include "runtime.h"
-//#include "context/impl/capture.impl.h"
-
-#ifdef USE_OPENCL 
-	#include "impl/irt_ocl.impl.h"
-#endif
+							

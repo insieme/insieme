@@ -92,11 +92,14 @@ bots_get_date(char *str)
 
 void bots_get_architecture(char *str)
 {
-   int ncpus = sysconf(_SC_NPROCESSORS_CONF);
-   struct utsname architecture;
-
-   uname(&architecture);
-   snprintf(str, BOTS_TMP_STR_SZ, "%s-%s;%d" ,architecture.sysname, architecture.machine, ncpus);
+   #ifdef _WIN32
+     str = "Win32"
+   #else
+     int ncpus = sysconf(_SC_NPROCESSORS_CONF);
+     struct utsname architecture;
+     uname(&architecture);
+     snprintf(str, BOTS_TMP_STR_SZ, "%s-%s;%d" ,architecture.sysname, architecture.machine, ncpus);
+   #endif
 }
 
 #if defined (DISABLED_FOR_INSIEME_TEST)
