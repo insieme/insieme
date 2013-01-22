@@ -38,6 +38,7 @@
 
 #include <map>
 #include <string>
+#include <tuple>
 
 #include "insieme/core/ir.h"
 
@@ -46,6 +47,11 @@
 
 namespace insieme {
 namespace core {
+
+	using std::map;
+	using std::string;
+	using std::pair;
+	using std::tuple;
 
 
 	/**
@@ -99,7 +105,7 @@ namespace core {
 		/**
 		 * Obtains the implementation of the represented member function.
 		 */
-		const LambdaExprPtr& getLambdaExpr() const {
+		const LambdaExprPtr& getImplementation() const {
 			return lambda;
 		}
 
@@ -150,6 +156,10 @@ namespace core {
 		virtual std::ostream& printTo(std::ostream& out) const;
 	};
 
+	/**
+	 * A type definition for pointers referencing managed member functions.
+	 */
+	typedef MemberFunction* MemberFunctionPtr;
 
 	/**
 	 * A class aggregating meta-information regarding class types.
@@ -180,6 +190,13 @@ namespace core {
 		 * attached to the class annoated by this info-collection.
 		 */
 		vector<MemberFunction> memberFunctions;
+
+		/**
+		 * An index structure kept synchronized with the member function list to ensure
+		 * that no duplicates collisions are present. Also, this index is used for looking
+		 * up implementations.
+		 */
+		map<tuple<string, FunctionTypePtr, bool>, MemberFunctionPtr> memberFunctionIndex;
 
 		/**
 		 * A lazy-evaluated list of child nodes required to be accessible
@@ -283,6 +300,57 @@ namespace core {
 		 */
 		void addMemberFunction(const string& name, const LambdaExprPtr& impl, bool _virtual = false, bool _const = false) {
 			addMemberFunction(MemberFunction(name, impl, _virtual, _const));
+		}
+
+		/**
+		 * Determines whether this class info covers a member function with the given name, type and const-state.
+		 *
+		 * @param name the name to be tested
+		 * @param type the type to be searched for
+		 * @param _const the const-state
+		 * @return true if so, false otherwise
+		 */
+		bool hasMemberFunction(const string& name, const FunctionTypePtr& type, bool _const) const {
+			return memberFunctionIndex.find(std::make_tuple(name, type, _const)) != memberFunctionIndex.end();
+		}
+
+		/**
+		 * Determines whether this class info covers a member function with the given name and type, independently
+		 * of whether it is marked const or not.
+		 *
+		 * @param name the name to be tested
+		 * @param type the type to be searched for
+		 * @return true if so, false otherwise
+		 */
+		bool hasMemberFunction(const string& name, const FunctionTypePtr& type) const {
+			return hasMemberFunction(name, type, true) || hasMemberFunction(name, type, false);
+		}
+
+		/**
+		 * Obtains a pointer to the internally managed member function indexed by the given name, type and const state.
+		 * If there is no such function, a NULL pointer will be returned.
+		 *
+		 * @param name the name of the function to be looking for
+		 * @param type the type of the function to be looking for
+		 * @param _const the const-state of the function to be looking for
+		 * @return a pointer to the requested function or null if there is no such function
+		 */
+		const MemberFunctionPtr getMemberFunction(const string& name, const FunctionTypePtr& type, bool _const) const {
+			auto res = memberFunctionIndex.find(std::make_tuple(name, type, _const));
+			return (res == memberFunctionIndex.end())?NULL:res->second;
+		}
+
+		/**
+		 * Obtains a pointer to the internally managed member function indexed by the given name, type and const state.
+		 * If there is no such function, a NULL pointer will be returned.
+		 *
+		 * @param name the name of the function to be looking for
+		 * @param type the type of the function to be looking for
+		 * @return a pointer to the requested function or null if there is no such function
+		 */
+		const MemberFunctionPtr getMemberFunction(const string& name, const FunctionTypePtr& type) const {
+			auto res = getMemberFunction(name, type, true);
+			return (res)?res:getMemberFunction(name, type, false);
 		}
 
 		// ----- derived operations ------

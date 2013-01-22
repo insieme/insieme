@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/checks/type_checks.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/parser2/ir_parser.h"
@@ -1183,6 +1184,51 @@ TEST(ArrayTypeChecks, Exceptions) {
 	cur = builder.tupleExpr(toVector(arrayPtr));
 	errors = check(cur, typeCheck);
 	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+}
+
+TEST(ClassMetaInfo, TargetType) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// create types to be tested
+	TypePtr ok = builder.genericType("A");
+	TypePtr err = builder.refType(ok);
+
+	// create some class info object
+	ClassMetaInfo info;
+	ok->attachValue(info);
+	err->attachValue(info);
+
+	EXPECT_TRUE(check(ok).empty());
+	EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+}
+
+TEST(ClassMetaInfo, InfoObjectType) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// create types to be tested
+	auto ok = builder.genericType("A");
+	auto err = ok;
+
+	ClassMetaInfo infoA;
+	infoA.addConstructor(builder.parse("A::() {}").as<LambdaExprPtr>());
+
+	ClassMetaInfo infoB;
+	infoB.addConstructor(builder.parse("B::() {}").as<LambdaExprPtr>());
+
+
+	// check the correct version (no information)
+	EXPECT_TRUE(check(ok).empty());
+
+	// use correct extra information
+	ok->attachValue(infoA);
+	EXPECT_TRUE(check(ok).empty());
+
+	// use invalid extra information
+	err->attachValue(infoB);
+	EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err), EC_TYPE_MISMATCHING_OBJECT_TYPE, "", Message::ERROR));
 
 }
 

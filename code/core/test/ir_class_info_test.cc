@@ -97,6 +97,36 @@ namespace core {
 
 	}
 
+	TEST(ClassInfo, MemberFunctionLookup) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		ClassMetaInfo info;
+
+		auto fun = builder.parse("A::()->int<4> { return 3; }").as<LambdaExprPtr>();
+		auto funType = fun->getFunctionType();
+
+		MemberFunctionPtr not_found = NULL;
+
+		EXPECT_FALSE(info.hasMemberFunction("test", funType));
+		EXPECT_FALSE(info.hasMemberFunction("test", funType, true));
+		EXPECT_FALSE(info.hasMemberFunction("test", funType, false));
+
+		EXPECT_EQ(not_found, info.getMemberFunction("test", funType));
+		EXPECT_EQ(not_found, info.getMemberFunction("test", funType, true));
+		EXPECT_EQ(not_found, info.getMemberFunction("test", funType, false));
+
+		info.addMemberFunction("test", fun, true, true);
+
+		EXPECT_TRUE(info.hasMemberFunction("test", funType));
+		EXPECT_TRUE(info.hasMemberFunction("test", funType, true));
+		EXPECT_FALSE(info.hasMemberFunction("test", funType, false));
+
+		EXPECT_NE(not_found, info.getMemberFunction("test", funType));
+		EXPECT_NE(not_found, info.getMemberFunction("test", funType, true));
+		EXPECT_EQ(not_found, info.getMemberFunction("test", funType, false));
+	}
+
 	TEST(ClassInfo, ManagerMigration) {
 
 		NodeManager mgrA;
@@ -148,7 +178,7 @@ namespace core {
 		// also the components of the meta-information class
 		EXPECT_TRUE(all(infoB.getConstructors(), isManagedByB));
 		EXPECT_TRUE(isManagedByB(infoB.getDestructor()));
-		EXPECT_TRUE(all(info.getMemberFunctions(), [&](const MemberFunction& cur) { return mgrB.contains(cur.getLambdaExpr()); }));
+		EXPECT_TRUE(all(info.getMemberFunctions(), [&](const MemberFunction& cur) { return mgrB.contains(cur.getImplementation()); }));
 
 	}
 
@@ -227,7 +257,7 @@ namespace core {
 		// also the components of the meta-information class
 		EXPECT_TRUE(all(infoB.getConstructors(), isManagedByB));
 		EXPECT_TRUE(isManagedByB(infoB.getDestructor()));
-		EXPECT_TRUE(all(info.getMemberFunctions(), [&](const MemberFunction& cur) { return mgrB.contains(cur.getLambdaExpr()); }));
+		EXPECT_TRUE(all(info.getMemberFunctions(), [&](const MemberFunction& cur) { return mgrB.contains(cur.getImplementation()); }));
 
 
 	}

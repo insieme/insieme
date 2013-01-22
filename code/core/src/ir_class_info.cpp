@@ -100,11 +100,14 @@ namespace core {
 
 	void ClassMetaInfo::setMemberFunctions(const vector<MemberFunction>& functions) {
 		// check new functions
-		assert(all(functions, [&](const MemberFunction& cur) { return cur.getLambdaExpr()->getFunctionType()->isMemberFunction(); }));
-		assert(all(functions, [&](const MemberFunction& cur) { return checkObjectType(cur.getLambdaExpr()); }));
+		assert(all(functions, [&](const MemberFunction& cur) { return cur.getImplementation()->getFunctionType()->isMemberFunction(); }));
+		assert(all(functions, [&](const MemberFunction& cur) { return checkObjectType(cur.getImplementation()); }));
 
 		// exchange the list of member functions
-		this->memberFunctions = functions;
+		this->memberFunctions.clear();
+		for(auto cur : functions) {
+			addMemberFunction(cur);
+		}
 
 		// invalidate child list
 		childList.reset();
@@ -112,11 +115,21 @@ namespace core {
 
 	void ClassMetaInfo::addMemberFunction(const MemberFunction& function) {
 		// check member function type
-		assert(function.getLambdaExpr()->getFunctionType()->isMemberFunction());
-		assert(checkObjectType(function.getLambdaExpr()));
+		assert(function.getImplementation()->getFunctionType()->isMemberFunction());
+		assert(checkObjectType(function.getImplementation()));
+
+		// create the index key for this function
+		auto key = std::make_tuple(function.getName(), function.getImplementation()->getFunctionType(), function.isConst());
+
+		// check that there are not duplicates
+		assert(memberFunctionIndex.find(key) == memberFunctionIndex.end() &&
+				"Member functions may not exhibit the same name, type and const-flag state.");
 
 		// add new member function
 		this->memberFunctions.push_back(function);
+
+		// add to index
+		memberFunctionIndex[key] = &memberFunctions.back();
 
 		// invalidate child list
 		childList.reset();
@@ -131,7 +144,7 @@ namespace core {
 		if (!constructors.empty()) return constructors.front()->getLambda()->getType()->getObjectType();
 
 		// try member functions
-		if (!memberFunctions.empty()) return memberFunctions.front().getLambdaExpr()->getLambda()->getType()->getObjectType();
+		if (!memberFunctions.empty()) return memberFunctions.front().getImplementation()->getLambda()->getType()->getObjectType();
 
 		// type is unknown
 		return TypePtr();
@@ -192,7 +205,7 @@ namespace core {
 		if (newInfo.destructor) newInfo.destructor = newMgr.get(newInfo.destructor);
 
 		// migrate member functions
-		for (auto& cur : newInfo.memberFunctions) { cur.setLambdaExpr(newMgr.get(cur.getLambdaExpr())); }
+		for (auto& cur : newInfo.memberFunctions) { cur.setLambdaExpr(newMgr.get(cur.getImplementation())); }
 
 		// attach info value
 		target->attachValue(newInfo);
@@ -209,8 +222,8 @@ namespace core {
 		// update child list
 		NodeList res;
 		for(auto cur : constructors) res.push_back(cur);
-		res.push_back(destructor);
-		for(auto cur : memberFunctions) res.push_back(cur.getLambdaExpr());
+		if (destructor) res.push_back(destructor);
+		for(auto cur : memberFunctions) res.push_back(cur.getImplementation());
 
 		// update lazy and return internal value
 		return childList = res;
@@ -234,7 +247,7 @@ namespace core {
 			auto encodedMemberFuns = ::transform(info.getMemberFunctions(), [](const MemberFunction& cur)->encoded_member_fun_type {
 				return encoded_member_fun_type(
 						cur.getName(),
-						cur.getLambdaExpr(),
+						cur.getImplementation(),
 						cur.isVirtual(),
 						cur.isConst()
 				);

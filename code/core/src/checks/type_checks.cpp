@@ -37,6 +37,7 @@
 #include "insieme/core/checks/type_checks.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -233,6 +234,48 @@ OptionalMessageList ParentCheck::visitParent(const ParentAddress& address) {
 				EC_TYPE_ILLEGAL_OBJECT_TYPE,
 				format("Invalid parent type - not an object: %s",
 						toString(*type)),
+				Message::ERROR
+		));
+	}
+
+	return res;
+}
+
+OptionalMessageList ClassInfoCheck::visitType(const TypeAddress& address) {
+
+	OptionalMessageList res;
+
+	// check whether there is something to check
+	if (!hasMetaInfo(address)) {
+		return res;
+	}
+
+	// extract the class type
+	TypePtr type = address.as<TypePtr>();
+
+	// check whether address is referencing object type
+	if (!analysis::isObjectType(type)) {
+		add(res, Message(address,
+				EC_TYPE_ILLEGAL_OBJECT_TYPE,
+				format("Invalid type exhibiting class-meta-info: %s",
+						toString(*type)),
+				Message::ERROR
+		));
+
+		// skip rest of the checks
+		return res;
+	}
+
+	// extract information
+	const ClassMetaInfo& info = getMetaInfo(type);
+
+	// check whether class info is covering target type
+	TypePtr should = info.getClassType();
+	if (should && should != type) {
+		add(res, Message(address,
+				EC_TYPE_MISMATCHING_OBJECT_TYPE,
+				format("Class-Meta-Info attached to mismatching type - is: %s - should: %s",
+						toString(*type), toString(*should)),
 				Message::ERROR
 		));
 	}
