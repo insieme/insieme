@@ -51,6 +51,7 @@ FLAG("benchmark-core", 		"benchmark-core", 		BenchmarkCore, 	false,	"runs some s
 FLAG("test,T", 				"test", 				Test, 			false,	"Enable the test function which should test some pre-released features of insieme")
 FLAG("feat-extract,f",		"feat-extract",			FeatureExtract,	false,	"Enables feature extraction")
 FLAG("task-opt",			"task-opt",				TaskOpt,		false,	"Enables task optimization by means of multi-versioning")
+FLAG("win-cross-compile", "win-cross-compile", WinCrossCompile, false, "Set cross compilation for a Windows target")       
 
 // backend options
 FLAG("estimate-effort",		"estimate-effort",		EstimateEffort,	false,	"Enables generation of the effort estimation function")
