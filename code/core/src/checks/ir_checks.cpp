@@ -165,6 +165,7 @@ namespace {
 			// check annotations of current node
 			for (const auto& cur : node->getAnnotations()) {
 				for(const NodePtr& innerNode : cur.second->getChildNodes()) {
+					assert(innerNode && "Nodes must not be null!");
 
 					// create an inner list of issues
 					OptionalMessageList innerList;
@@ -185,8 +186,8 @@ namespace {
 			}
 
 			// visit / check all child nodes
-			for (int i=0, e=node->getChildList().size(); i<e; i++) {
-				visitNodeInternal(node.getAddressOfChild(i), res, trace);
+			for (auto cur : node->getChildList()) {
+				visitNodeInternal(cur, res, trace);
 			}
 
 			// pop from trace
@@ -220,51 +221,58 @@ namespace {
 
 		OptionalMessageList visitNode(const NodeAddress& node) {
 
-			// create resulting message list
+			// create result list
 			OptionalMessageList res;
 
-			// the list of nodes already visited
-			std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> all;
+			// create node set to eliminate double-visits
+			NodeSet all;
 
-			// create internally maintained visitor performing the actual check
-			// NOTE: the visitor pointer is required to support recursion
-			IRVisitor<void, Address>* visitor;
-			auto lambdaVisitor = makeLambdaVisitor([&res, &visitor, &all, this](const NodeAddress& node) {
-				// add current node to set ...
-				bool isNew = all.insert(node.getAddressedNode()).second;
-				if (!isNew) {
-					// ... and if already checked, we are done!
-					return;
-				}
+			// use internal implementation for processing
+			checkNode(node, res, all);
 
-				// check the current node and collect results
-				addAll(res, this->check->visit(node));
-
-				// check annotations of current node
-				for (const auto& cur : node->getAnnotations()) {
-					if (!cur.second->getChildNodes().empty()) {
-						// TODO: add support for checking annotations once required
-						assert(false && "I owe you an implementation of the annotation checks!");
-					}
-//					for(const NodePtr& innerNode : cur.second->getChildNodes()) {
-//
-//					}
-				}
-
-				// visit / check all child nodes
-				for (std::size_t i=0, e=node->getChildList().size(); i<e; ++i) {
-					visitor->visit(node.getAddressOfChild(i));
-				}
-			}, this->isVisitingTypes());
-
-			// update pointer ..
-			visitor = &lambdaVisitor;
-
-			// trigger the visit (only once)
-			visitor->visit(node);
-
-			// return collected messages
+			// done
 			return res;
+		}
+
+		void checkNode(const NodeAddress& node, OptionalMessageList& res, NodeSet& all) {
+
+			// add current node to set ...
+			bool isNew = all.insert(node.getAddressedNode()).second;
+			if (!isNew) {
+				// ... and if already checked, we are done!
+				return;
+			}
+
+			// check the current node and collect results
+			addAll(res, this->check->visit(node));
+
+			// check annotations of current node
+			for (const auto& cur : node->getAnnotations()) {
+				for(const NodePtr& innerNode : cur.second->getChildNodes()) {
+					assert(innerNode && "Nodes must not be null!");
+
+					// create an inner list of issues
+					OptionalMessageList innerList;
+
+					// collect messages from current annotation node
+					checkNode(NodeAddress(innerNode), innerList, all);
+
+					// merge inner message list with outer list
+					if (innerList) {
+						for(auto msg : innerList->getErrors()) {
+							add(res, msg.shiftAddress(node, cur.first));
+						}
+						for(auto msg : innerList->getWarnings()) {
+							add(res, msg.shiftAddress(node, cur.first));
+						}
+					}
+				}
+			}
+
+			// visit / check all child nodes
+			for (auto cur : node->getChildList()) {
+				checkNode(cur, res, all);
+			}
 		}
 	};
 
