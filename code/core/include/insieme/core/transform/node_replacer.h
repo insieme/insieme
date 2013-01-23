@@ -153,6 +153,7 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
 typedef std::function<StatementPtr(const StatementPtr&)> TypeHandler;
 typedef std::function<ExpressionPtr(const ExpressionPtr&, const ExpressionPtr&)> TypeRecoveryHandler;
 
+ExpressionPtr no_type_fixes(const ExpressionPtr&, const ExpressionPtr&);
 ExpressionPtr defaultTypeRecovery(const ExpressionPtr& oldExpr, const ExpressionPtr& newExpr);
 
 // functor which updates the type literal inside a call to undefined in a declaration

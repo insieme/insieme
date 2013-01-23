@@ -1008,6 +1008,10 @@ namespace {
 
 }
 
+ExpressionPtr no_type_fixes(const ExpressionPtr&, const ExpressionPtr& newExpr) {
+	return newExpr;
+}
+
 ExpressionPtr defaultTypeRecovery(const ExpressionPtr& oldExpr, const ExpressionPtr& newExpr) {
 
 	// rule out everything that is no change
