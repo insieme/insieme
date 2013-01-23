@@ -51,7 +51,6 @@ static inline irt_##__short__##_event_register* _irt_get_##__short__##_event_reg
 	} else {*/ \
 		irt_##__short__##_event_register* ret = (irt_##__short__##_event_register*)calloc(1, sizeof(irt_##__short__##_event_register)); \
 		irt_spin_init(&ret->lock); /* TODO check destroy */ \
-		IRT_ASSERT(ret->buffer == 0, IRT_ERR_INTERNAL, "Oh fuck"); \
 		return ret; \
 	/*}*/ \
 } \

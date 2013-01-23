@@ -53,7 +53,6 @@ typedef struct _irt_##__short__##_event_lambda { \
 struct _irt_##__short__##_event_register { \
 	irt_spinlock lock; \
 	irt_##__short__##_event_register_id id; \
-	uint32 buffer; \
 	uint32 occurrence_count[__num_events__]; \
 	irt_##__short__##_event_lambda *handler[__num_events__]; \
 	struct _irt_##__short__##_event_register *lookup_table_next; \

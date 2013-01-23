@@ -63,7 +63,12 @@ const char* irt_dbg_get_worker_state_string(irt_worker_state state) {
 
 void irt_dbg_print_worker_state(int32 wid) {
 	printf("Worker #%03d: %32s - q:%4d\n", wid, irt_dbg_get_worker_state_string(irt_g_workers[wid]->state), 
-		irt_cwb_size(&irt_g_workers[wid]->sched_data.queue));
+#if IRT_SCHED_POLICY == IRT_SCHED_POLICY_UBER || IRT_SCHED_POLICY == IRT_SCHED_POLICY_STEALING_CIRCULAR
+		irt_cwb_size(&irt_g_workers[wid]->sched_data.queue)
+#else
+		irt_g_workers[wid]->sched_data.queue.size
+#endif
+		);
 	irt_dbg_print_worker_events(wid, 1);
 }
 
