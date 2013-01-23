@@ -105,6 +105,35 @@ namespace core {
 
 		// --------------- Migration ----------------------
 
+		/**
+		 * A marker type to be used for marking value annotations providing a user defined
+		 * operation handling the annotation migration in case the annotated node is
+		 * transformed.
+		 *
+		 * Values extending this interface have to implement a member function
+		 *
+		 * 			bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const;
+		 *
+		 * For details see the mirgrate method description of the NodeAnnotation class.
+		 */
+		struct migratable {
+			// bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const;   // -- to be implemented by sub-classes!
+		};
+
+		// support user defined migration operation
+		template<typename V>
+		typename std::enable_if<std::is_base_of<migratable,V>::value, bool>::type
+		migrate_annotation(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after, const V& value) {
+			return value.migrate(ptr, before, after);
+		}
+
+		// the default case - no migration
+		template<typename V>
+		typename std::enable_if<!std::is_base_of<migratable,V>::value, bool>::type
+		migrate_annotation(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after, const V& value) {
+			return false;	// default case => no migration
+		}
+
 
 		// ---------------- Cloning -----------------------
 
@@ -202,7 +231,9 @@ namespace detail {
 	/**
 	 * A partial template specialization of the general ValueAnnotation template used for attaching values
 	 * to annotatable objects. This template allows the value to be attached to select the mode for being
-	 * migrated when cloning the underlying IR node to another node manager.
+	 * migrated when cloning the underlying IR node to another node manager, specialize the migration
+	 * operation (in case the annotated node is transformed) and its child list (to extend utility
+	 * coverage to the annotation, e.g. for semantic checks).
 	 */
 	template<typename V, typename KeyType>
 	class ValueAnnotation<V, core::NodeAnnotation, KeyType> : public ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>> {
@@ -210,6 +241,10 @@ namespace detail {
 			ValueAnnotation(const V& value) : ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>>(value) {}
 
 			virtual ~ValueAnnotation() {}
+
+			virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+				return core::value_annotation::migrate_annotation(ptr, before, after, ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>>::getValue());
+			}
 
 			virtual void clone(const core::NodeAnnotationPtr& ptr, const core::NodePtr& copy) const {
 				core::value_annotation::move_to_clone(ptr, copy, ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>>::getValue());
