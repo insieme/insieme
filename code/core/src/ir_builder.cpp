@@ -487,6 +487,11 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 		return callExpr(type, manager.getLangBasic().getAnyRefToRef(), manager.getLangBasic().getNull(), getTypeLiteral(elementType));
 	}
 
+	// if it is a bool type
+	if(manager.getLangBasic().isBool(type)) {
+		return boolLit(false);
+	}
+
 	// TODO: extend for more types
 	LOG(FATAL) << "Encountered unsupported type: " << *type;
 	assert(false && "Given type not supported yet!");
