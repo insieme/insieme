@@ -41,6 +41,8 @@
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/core/dump/binary_dump.h"
 
@@ -127,7 +129,7 @@ namespace core {
 		EXPECT_EQ(not_found, info.getMemberFunction("test", funType, false));
 	}
 
-	TEST(ClassInfo, ManagerMigration) {
+	TEST(ClassInfo, ManagerClone) {
 
 		NodeManager mgrA;
 		NodeManager mgrB;
@@ -182,7 +184,7 @@ namespace core {
 
 	}
 
-	TEST(ClassInfo, ManagerMigrationIndirect) {
+	TEST(ClassInfo, ManagerCloneIndirect) {
 
 		/**
 		 * To be tested: whether the migration of annotations exhibiting a cyclic
@@ -259,8 +261,62 @@ namespace core {
 		EXPECT_TRUE(isManagedByB(infoB.getDestructor()));
 		EXPECT_TRUE(all(info.getMemberFunctions(), [&](const MemberFunction& cur) { return mgrB.contains(cur.getImplementation()); }));
 
+	}
+
+	TEST(ClassInfo, Transformation) {
+
+		/**
+		 * The class info instance should be automatically adjusted in case the
+		 * node it is annotating is modified.
+		 */
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// create a type
+		TypePtr type = builder.parseType("struct { int<4> x; int<4> y; }");
+
+		std::map<string, NodePtr> symbols;
+		symbols["T"] = type;
+
+		// add information regarding a default constructor
+		ClassMetaInfo info;
+		info.addConstructor(builder.parseExpr("T::() { this->x = 0; this->y = 0; }", symbols).as<LambdaExprPtr>());
+		info.addConstructor(builder.parseExpr("T::(int<4> x, int<4> y) { this->x = x; this->y = y; }", symbols).as<LambdaExprPtr>());
+
+		info.setDestructor(builder.parseExpr("~T::() {}", symbols).as<LambdaExprPtr>());
+		info.setDestructorVirtual(true);
+
+		info.addMemberFunction("abs", builder.parseExpr(
+				"let sqrt = lit(\"sqrt\" : (int<4>)->int<4>) in "
+				"T::()->int<4> { return sqrt(this->x*this->x + this->y * this->y); }"
+				,symbols).as<LambdaExprPtr>());
+
+		setMetaInfo(type, info);
+
+
+		// run semantic checks - they should be fine
+		EXPECT_TRUE(checks::check(type).empty()) << checks::check(type);
+
+//		std::cout << "Class Info: \n" << info << "\n";
+
+		// transform type - by adding a new field and using std-replacement utils
+		TypePtr newType = builder.parseType("struct { int<4> x; int<4> y; int<4> z; }");
+
+		auto transformed = core::transform::replaceAll(mgr, type, type, newType).as<TypePtr>();;
+
+		EXPECT_EQ(transformed, newType);
+		ASSERT_TRUE(hasMetaInfo(transformed));
+
+		// inspect meta-information
+//		const ClassMetaInfo& newInfo = getMetaInfo(transformed);
+//		std::cout << "New Class Info: \n" << newInfo << "\n";
+
+		// apply semantic checks
+		EXPECT_TRUE(checks::check(transformed).empty()) << checks::check(transformed);
 
 	}
+
 
 	TEST(ClassInfo, BinaryDump) {
 

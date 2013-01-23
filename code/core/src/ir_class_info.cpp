@@ -43,6 +43,8 @@
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/encoder/tuples.h"
 
+#include "insieme/core/transform/node_replacer.h"
+
 namespace insieme {
 namespace core {
 
@@ -191,6 +193,62 @@ namespace core {
 		return out;
 	}
 
+	bool ClassMetaInfo::migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+		assert(before != after);
+		assert(before.isa<TypePtr>());
+
+		// check whether new version is still an object type
+		if (after->getNodeCategory() != NC_Type || !analysis::isObjectType(after.as<TypePtr>())) {
+			return false;	// can not migrate this information to such a type
+		}
+
+		TypePtr oldClassType = before.as<TypePtr>();
+		TypePtr newClassType = after.as<TypePtr>();
+
+		NodeManager& mgr = after.getNodeManager();
+		IRBuilder builder(mgr);
+		VariablePtr newParam = builder.variable(builder.refType(newClassType));
+
+		// create helper for updating functions
+		auto alter = [&](const LambdaExprPtr& in)->LambdaExprPtr {
+			assert(!in->getParameterList().empty());
+
+			VariableMap replacement;
+			replacement[in->getParameterList()->getElement(0)] = newParam;
+
+			// update first parameter => switch to new variable
+			return core::transform::replaceVarsRecursiveGen(mgr, in, replacement);
+		};
+
+		// create a copy of this class meta info and replace parameters
+		ClassMetaInfo res;
+
+		// move constructors
+		for(auto cur : constructors) {
+			res.addConstructor(alter(cur));
+		}
+
+		// move destructor
+		if (destructor) {
+			res.setDestructor(alter(destructor));
+		}
+
+		// update virtual destructor field
+		res.setDestructorVirtual(isDestructorVirtual());
+
+		// update members
+		for(auto cur : memberFunctions) {
+			MemberFunction newMember = cur;
+			newMember.setImplementation(alter(newMember.getImplementation()));
+			res.addMemberFunction(newMember);
+		}
+
+		// attach result to modified node
+		setMetaInfo(newClassType, res);
+		return true;
+	}
+
+
 	void ClassMetaInfo::cloneTo(const NodePtr& target) const {
 
 		// create a copy of this class referencing instances managed by the new target node manager
@@ -205,7 +263,7 @@ namespace core {
 		if (newInfo.destructor) newInfo.destructor = newMgr.get(newInfo.destructor);
 
 		// migrate member functions
-		for (auto& cur : newInfo.memberFunctions) { cur.setLambdaExpr(newMgr.get(cur.getImplementation())); }
+		for (auto& cur : newInfo.memberFunctions) { cur.setImplementation(newMgr.get(cur.getImplementation())); }
 
 		// attach info value
 		target->attachValue(newInfo);

@@ -112,7 +112,7 @@ namespace core {
 		/**
 		 * Updates the implementation of this member function.
 		 */
-		void setLambdaExpr(const LambdaExprPtr& newImpl) {
+		void setImplementation(const LambdaExprPtr& newImpl) {
 			lambda = newImpl;
 		}
 
@@ -166,6 +166,7 @@ namespace core {
 	 */
 	class ClassMetaInfo :
 			public utils::Printable,
+			public core::value_annotation::migratable,
 			public core::value_annotation::cloneable,
 			public core::value_annotation::has_child_list {
 
@@ -383,6 +384,12 @@ namespace core {
 		 * Required to implement the printable interface.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const;
+
+		/**
+		 * Required to enable instances to be adapted when transforming
+		 * the node this annotation is attached to.
+		 */
+		bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const;
 
 		/**
 		 * Required to enable instances to be migrated when cloning the
