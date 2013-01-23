@@ -89,7 +89,7 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 	// create new
 	//static unsigned long long total = 0;
 	//total += sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE;
-	//printf("Total allocated: %6.2lf GB\n", total/(1024.0*1024.0*1024.0));
+	//printf("Total allocated: %6.2lf MB\n", total/(1024.0*1024.0));
 	ret = (lwt_reused_stack*)malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE);
 	ret->next = NULL;
 	return ret;
@@ -153,13 +153,14 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 	irt_work_item* parent = wi->parent_id.cached;
 	if(parent && parent->num_active_children == wi->parent_num_active_children) {
 		if(irt_atomic_bool_compare_and_swap(&parent->stack_available, true, false)) {
+			// check required to see if stack is not in use by directly evaluated child wi
 			if(parent->num_active_children != wi->parent_num_active_children) irt_atomic_bool_compare_and_swap(&parent->stack_available, false, true);
 			else {
 				IRT_DEBUG(" + %p taking stack from %p\n", wi, parent);
 				IRT_DEBUG("   %p child count: %d\n", parent, *parent->num_active_children);
 				wi->stack_storage = NULL;
-				wi->stack_ptr = parent->stack_ptr;
-				wi->stack_ptr -= wi->stack_ptr%128;
+				wi->stack_ptr = parent->stack_ptr - 8;
+				wi->stack_ptr -= wi->stack_ptr % LWT_STACK_ALIGNMENT;
 				return;
 			}
 		}
