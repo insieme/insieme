@@ -266,6 +266,8 @@ class RecVariableMapReplacer : public CachedNodeMapping {
 	const TypeRecoveryHandler& recoverTypes;
 	const TypeHandler& typeHandler;
 
+	mutable NodePtr root;
+
 public:
 
 	RecVariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope,
@@ -274,6 +276,26 @@ public:
 		  recoverTypes(recoverTypes), typeHandler(typeHandler) {}
 
 private:
+
+	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+
+		// check whether this is the first entry ...
+		if (root) {
+			// it is not
+			return CachedNodeMapping::mapElement(index, ptr);
+		}
+
+		// remember root element
+		root = ptr;
+
+		// the rest is the same
+		auto res = CachedNodeMapping::mapElement(index, ptr);
+
+		// delete root element
+		root = NodePtr();
+
+		return res;
+	}
 
 	/**
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
@@ -293,7 +315,7 @@ private:
 		}
 
 		// handle scope limiting elements
-        if(limitScope && ptr->getNodeType() == NT_LambdaExpr) {
+        if(limitScope && ptr->getNodeType() == NT_LambdaExpr && ptr != root) {
 			// enters a new scope => variable will no longer occur
             return ptr;
 		}
@@ -315,6 +337,11 @@ private:
 		// special handling for declaration statements
 		if (res->getNodeType() == NT_DeclarationStmt) {
 			res = handleDeclStmt(res.as<DeclarationStmtPtr>());
+		}
+
+		// run it through the type recovery handler if applicable
+		if (ptr->getNodeCategory() == NC_Expression && res->getNodeCategory() == NC_Expression) {
+			res = recoverTypes(ptr.as<ExpressionPtr>(), res.as<ExpressionPtr>());
 		}
 
 		// preserve annotations
@@ -357,13 +384,7 @@ private:
 		if (fun->getNodeType() == NT_LambdaExpr) {
 			return handleCallToLamba(call);
 		}
-
-		if (fun->getNodeType() != NT_Literal) {
-			return call;
-		}
-
-		// run it through the type recovery handler
-		return recoverTypes(call);
+		return call;
 	}
 
     CallExprPtr handleCallToLamba(const CallExprPtr& call) {
@@ -947,42 +968,167 @@ namespace {
 
 }
 
+namespace {
 
-ExpressionPtr defaultTypeRecovery(const CallExprPtr& call) {
+	ExpressionPtr defaultCallExprTypeRecovery(const CallExprPtr& call) {
 
-	// check whether target of call is a literal
-	if (call->getFunctionExpr()->getNodeType() == NT_Literal) {
-		NodeManager& manager = call->getNodeManager();
-		IRBuilder builder(manager);
-		const auto& basic = manager.getLangBasic();
+		// check whether target of call is a literal
+		if (call->getFunctionExpr()->getNodeType() == NT_Literal) {
+			NodeManager& manager = call->getNodeManager();
+			IRBuilder builder(manager);
+			const auto& basic = manager.getLangBasic();
 
-		auto args = call->getArguments();
+			auto args = call->getArguments();
 
-		const LiteralPtr& literal = call->getFunctionExpr().as<LiteralPtr>();
+			const LiteralPtr& literal = call->getFunctionExpr().as<LiteralPtr>();
 
-		// deal with standard build-in literals
-		if (basic.isCompositeRefElem(literal)) {
-			return builder.refMember(args[0], args[1].as<LiteralPtr>()->getValue());
+			// deal with standard build-in literals
+			if (basic.isCompositeRefElem(literal)) {
+				return builder.refMember(args[0], args[1].as<LiteralPtr>()->getValue());
+			}
+			if (basic.isCompositeMemberAccess(literal)) {
+				return builder.accessMember(args[0], args[1].as<LiteralPtr>()->getValue());
+			}
+			if (basic.isTupleRefElem(literal)) {
+				return builder.refComponent(args[0], args[1]);
+			}
+			if (basic.isTupleMemberAccess(literal)) {
+				return builder.accessComponent(args[0], args[1]);
+			}
+
+			// eliminate unnecessary dereferencing
+			if (basic.isRefDeref(literal) && !analysis::isRefType(args[0]->getType())) {
+				return args[0];
+			}
 		}
-		if (basic.isCompositeMemberAccess(literal)) {
-			return builder.accessMember(args[0], args[1].as<LiteralPtr>()->getValue());
-		}
-		if (basic.isTupleRefElem(literal)) {
-			return builder.refComponent(args[0], args[1]);
-		}
-		if (basic.isTupleMemberAccess(literal)) {
-			return builder.accessComponent(args[0], args[1]);
-		}
 
-		// eliminate unnecessary dereferencing
-		if (basic.isRefDeref(literal) && !analysis::isRefType(args[0]->getType())) {
-			return args[0];
-		}
+		// use generic fall-back solution
+		return typeDeductionBasedTypeRecovery(call);
 	}
 
-	// use generic fall-back solution
-	return typeDeductionBasedTypeRecovery(call);
+}
 
+ExpressionPtr defaultTypeRecovery(const ExpressionPtr& oldExpr, const ExpressionPtr& newExpr) {
+
+	// rule out everything that is no change
+	if (*oldExpr == *newExpr) return newExpr;
+
+	// handle call expressions externally
+	if (CallExprPtr call = newExpr.isa<CallExprPtr>()) {
+		return defaultCallExprTypeRecovery(call);
+	}
+
+	// handle lambda expressions
+	if (LambdaExprPtr lambda = newExpr.isa<LambdaExprPtr>()) {
+
+		auto newParams = lambda->getLambda()->getParameters();
+
+		// see whether old version also has been a lambda
+		if (LambdaExprPtr oldLambda = oldExpr.isa<LambdaExprPtr>()) {
+
+			// check whether any of the lambdas in the definition has changed its parameter list or type
+			LambdaDefinitionPtr oldDef = oldLambda->getDefinition();
+			LambdaDefinitionPtr newDef = lambda->getDefinition();
+
+			// if there is no change or a fundamental change => abort
+			if (oldDef == newDef || oldDef.size() != newDef.size()) {
+				return newExpr;
+			}
+
+			// see whether types are altered
+			bool altered = false;
+			for(decltype(oldDef.size()) i = 0; !altered && i<oldDef.size(); i++) {
+
+				LambdaPtr oldEntry = oldDef[i]->getLambda();
+				LambdaPtr newEntry = newDef[i]->getLambda();
+
+				auto oldParams = oldEntry->getParameters();
+				auto newParams = newEntry->getParameters();
+
+				// test whether the types of the parameters have changed
+				if (*oldParams == *newParams || extractTypes(oldParams->getElements()) == extractTypes(newParams->getElements())) {
+					continue;
+				}
+
+				// types have changed => lambdas need to be updated
+				altered = true;
+			}
+
+			// if there is no change in the types => nothing to fix
+			if (!altered) return newExpr;
+
+
+			// ---------- re-build lambda -------------
+			IRBuilder builder(newExpr->getNodeManager());
+
+			// 1. rebuild definition
+			NodeMap recVarMap;
+			vector<LambdaBindingPtr> bindings;
+
+			for(decltype(oldDef.size()) i = 0; i<oldDef.size(); i++) {
+
+				LambdaBindingPtr oldBinding = oldDef[i];
+				LambdaBindingPtr newBinding = newDef[i];
+
+				// check whether something has changed
+				if (oldBinding == newBinding) {
+					bindings.push_back(newBinding);
+					continue;
+				}
+
+				// rebuild lambda using parameters and body ..
+				auto newLambda = newBinding->getLambda();
+
+				// re-build function type
+				FunctionKind kind = newLambda->getType()->getKind();
+				FunctionTypePtr funType;
+				{
+					auto paramTypes = extractTypes(newLambda->getParameters()->getElements());
+					if (kind == FK_CONSTRUCTOR || kind == FK_DESTRUCTOR) {
+						funType = builder.functionType(paramTypes, paramTypes[0], kind);
+					} else {
+						funType = builder.functionType(paramTypes, newLambda->getType()->getReturnType(), kind);
+					}
+				}
+
+				// re-build lambda
+				LambdaPtr lambda = builder.lambda(funType, newLambda->getParameters(), newLambda->getBody());
+
+				// re-build recursive variable
+				VariablePtr recVar = builder.variable(funType, newBinding->getVariable()->getID());
+				recVarMap[newBinding->getVariable()] = recVar;
+
+				// add new binding
+				bindings.push_back(builder.lambdaBinding(recVar, lambda));
+			}
+
+			// 2. update recursive variables
+			if (oldLambda->isRecursive()) {
+
+				// update all lambda bodies to reflect new recursive variables
+				for (auto cur : bindings) {
+					auto curLambda = cur->getLambda();
+					auto curBody = curLambda->getBody();
+
+					auto newBody = replaceAllGen(newExpr->getNodeManager(), curBody, recVarMap, false);
+
+					cur = builder.lambdaBinding(
+							cur->getVariable(),
+							builder.lambda(curLambda->getType(), curLambda->getParameters(), newBody)
+					);
+				}
+			}
+
+			// re-build definition
+			LambdaDefinitionPtr resDef = builder.lambdaDefinition(bindings);
+
+			// 3. re-build lambda expression
+			return builder.lambdaExpr(recVarMap[lambda->getVariable()].as<VariablePtr>(), resDef);
+		}
+
+	}
+
+	return newExpr;
 }
 
 // functor which updates the type literal inside a call to undefined in a declareation

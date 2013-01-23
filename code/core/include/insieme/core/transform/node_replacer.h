@@ -150,10 +150,10 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
  * pre-implemented functors to be used with replaceVarRecursive[Gen]
  */
 
-typedef std::function<StatementPtr(const StatementPtr)> TypeHandler;
-typedef std::function<ExpressionPtr(const CallExprPtr)> TypeRecoveryHandler;
+typedef std::function<StatementPtr(const StatementPtr&)> TypeHandler;
+typedef std::function<ExpressionPtr(const ExpressionPtr&, const ExpressionPtr&)> TypeRecoveryHandler;
 
-ExpressionPtr defaultTypeRecovery(const CallExprPtr& call);
+ExpressionPtr defaultTypeRecovery(const ExpressionPtr& oldExpr, const ExpressionPtr& newExpr);
 
 // functor which updates the type literal inside a call to undefined in a declaration
 TypeHandler getVarInitUpdater(NodeManager& manager);
