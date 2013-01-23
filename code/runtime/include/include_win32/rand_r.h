@@ -34,11 +34,9 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+// this is from mingw's pthread.h (really implementing a threadsafe and reentrant rand?)
+#ifndef rand_r
+	#define rand_r(__seed) (__seed == __seed ? rand () : rand ())
+#endif
 
-#include "abstraction/temperature_intel.h"
-
-uint64 (*irt_get_temperature_core)();
-uint64 (*irt_get_temperature_package)();
-
-void irt_temperature_select_instrumentation_method();
+							

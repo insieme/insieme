@@ -71,7 +71,7 @@ void irt_thread_exit(int exit_code){
 }
 
 bool irt_thread_check_equality(irt_thread *t1, irt_thread *t2){
-	#ifdef _MSC_VER
+	#ifdef _WIN32
 		return t1->p == t2->p;
 	#else
 		return t1 == t2;

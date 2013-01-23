@@ -38,10 +38,15 @@
 
 #include "declarations.h"
 
+// holds the temperature of cores on Intel processors (DTS sensors)
 #define IA32_THERM_STATUS 0x19C
+// holds the temperature of the package on Intel processors (DTS sensors)
+#define IA32_PACKAGE_THERM_STATUS 0x1B1
 // TCC activation temperature in °C (real temperature = TCC - sensor_value)
 #define TCC_ACTIVATION_TEMPERATURE 100
 
-uint64 irt_get_temperature_intel(irt_worker* worker);
+uint64 irt_get_temperature_intel_core(const irt_worker* worker);
+uint64 irt_get_temperature_intel_package(const irt_worker* worker);
 
-bool irt_temperature_intel_is_supported();
+bool irt_temperature_intel_is_core_supported();
+bool irt_temperature_intel_is_package_supported();

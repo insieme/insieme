@@ -50,11 +50,19 @@ uint64 irt_get_temperature_dummy() {
 }
 
 void irt_temperature_select_instrumentation_method() {
-	if(irt_temperature_intel_is_supported()) {
-		irt_get_temperature = irt_get_temperature_intel;
-		irt_log_setting_s("irt temperature measurement method", "intel");
+	if(irt_temperature_intel_core_is_supported()) {
+		irt_get_temperature_core = irt_get_temperature_intel_core;
+		irt_log_setting_s("irt core temperature measurement method", "intel");
 	} else {
-		irt_get_temperature = irt_get_temperature_dummy;
-		irt_log_setting_s("irt temperature measurement method", "none");
+		irt_get_temperature_core = irt_get_temperature_dummy;
+		irt_log_setting_s("irt core temperature measurement method", "none");
+	}
+
+	if(irt_temperature_intel_package_is_supported()) {
+		irt_get_temperature_package = irt_get_temperature_intel_package;
+		irt_log_setting_s("irt pkg temperature measurement method", "intel");
+	} else {
+		irt_get_temperature_package = irt_get_temperature_dummy;
+		irt_log_setting_s("irt pkg temperature measurement method", "none");
 	}
 }

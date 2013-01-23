@@ -34,11 +34,16 @@
  * regarding third party software licenses.
  */
 
+/* mapping memalign function to malloc on Windows
+ (it is mapped to malloc because on Windows must use _aligend_free if _aligned_malloc was used, which makes things complicated */
+
 #pragma once
 
-#include "abstraction/temperature_intel.h"
+#ifdef _WIN32
+	#include <malloc.h>
 
-uint64 (*irt_get_temperature_core)();
-uint64 (*irt_get_temperature_package)();
+	void* memalign(size_t boundary, size_t size){
+		return malloc(size);
+	}
 
-void irt_temperature_select_instrumentation_method();
+#endif
