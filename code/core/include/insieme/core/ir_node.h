@@ -55,6 +55,7 @@
 namespace insieme {
 namespace core {
 
+	struct move_annotation_on_clone;
 
 	// **********************************************************************************
 	// 							    Abstract Node Base
@@ -80,7 +81,7 @@ namespace core {
 			/**
 			 * Allow the instance manager to access private methods to create / destroy nodes.
 			 */
-			friend class InstanceManager<Node, Pointer>;
+			friend class InstanceManager<Node, Pointer, move_annotation_on_clone>;
 
 			/**
 			 * The Node Accessor may access any internal data element.
@@ -534,12 +535,20 @@ namespace core {
 	}
 
 	/**
+	 * A functor realizing the migration of annotations after nodes have been moved
+	 * between node-manager instances.
+	 */
+	struct move_annotation_on_clone {
+		void operator()(const Node* src, const Node* trg) const;
+	};
+
+	/**
 	 * Instances of the NodeManager class can be used to control the life cycle
 	 * of IR nodes. The life cycle of every node is bound to a single manager and
 	 * all children of the node have to be bound to the same manager. This constraint
 	 * is automatically enforced by the node implementations.
 	 */
-	class NodeManager: public InstanceManager<Node, Pointer> {
+	class NodeManager: public InstanceManager<Node, Pointer, move_annotation_on_clone> {
 
 		/**
 		 * The data type used to maintain language extensions. Language extensions
@@ -620,7 +629,7 @@ namespace core {
 		 * Null if this manager is the root of the manager hierarchy.
 		 */
 		NodeManager* getBaseManager() {
-			return static_cast<NodeManager*>(InstanceManager<Node, Pointer>::getBaseManager());
+			return static_cast<NodeManager*>(InstanceManager<Node, Pointer, move_annotation_on_clone>::getBaseManager());
 		}
 
 		/**

@@ -688,7 +688,7 @@ namespace analysis {
 
 			VariableInstantionInfo() {}
 
-			virtual const utils::AnnotationKey* getKey() const {
+			virtual const utils::AnnotationKeyPtr getKey() const {
 				return &KEY;
 			}
 

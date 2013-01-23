@@ -267,15 +267,15 @@ namespace {
 
 
 			// The type used to annotate free variable lists.
-			struct FreeVariableSet : public ResultSet, public value_annotation::migratable {
+			struct FreeVariableSet : public ResultSet, public value_annotation::cloneable {
 				FreeVariableSet(const ResultSet& set) : ResultSet(set) {}
 				FreeVariableSet(const ResultList& list) : ResultSet(list.begin(), list.end()) {}
 
 				static VariablePtr cloneTo(NodeManager& manager, const VariablePtr& ptr) { return manager.get(ptr); }
 				static VariableAddress cloneTo(NodeManager& manager, const VariableAddress& addr) { return addr.cloneTo(manager); }
 
-				// migrate free variable set to new node manager during clone operations
-				void migrateTo(const NodePtr& target) const {
+				// clone free variable set to new node manager during clone operations
+				void cloneTo(const NodePtr& target) const {
 					ResultSet newSet;
 					for(auto cur : *this) { newSet.insert(cloneTo(target->getNodeManager(), cur)); }
 					target->attachValue(FreeVariableSet(newSet));

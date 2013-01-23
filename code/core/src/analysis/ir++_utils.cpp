@@ -34,47 +34,40 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/core/analysis/ir++_utils.h"
 
-#include <string>
-
-#include "insieme/utils/annotation.h"
-#include "insieme/core/ir_node.h"
+#include "insieme/core/ir.h"
 
 namespace insieme {
-namespace annotations {
-namespace c {
+namespace core {
+namespace analysis {
 
-/**
- * Annotation which contains the range within an element in the IR was defined.
- */
-class IncludeFileAnnotation : public core::NodeAnnotation {
-	const string file;
-public:
-	static const string NAME;
-	static const utils::StringKey<IncludeFileAnnotation> KEY;
+	bool isObjectType(const TypePtr& type) {
 
-	IncludeFileAnnotation(const string& fileName): file(fileName) {}
+		// decide whether something is an object type based on the node type
+		switch(type->getNodeType()) {
+		case NT_StructType:
+		case NT_GenericType:
+		case NT_TypeVariable:
+			return true;			// all this types are always object types
+		case NT_RecType:
+			return isObjectType(type.as<RecTypePtr>()->unroll());
+		default: break;
+		}
 
-	const std::string& getAnnotationName() const { return NAME; }
-	const utils::AnnotationKeyPtr getKey() const { return &KEY; }
-
-	std::ostream& printTo(std::ostream& out) const { return out << getAnnotationName() << ": " << file; }
-
-	bool operator==(const IncludeFileAnnotation& other) const {
-		if(this == &other)
-			return true;
-		return file == other.getFileName();
+		// everything else is not an object type
+		return false;
 	}
 
-	bool operator!=(const IncludeFileAnnotation& other) const {
-		return !(*this==other);
+	bool isObjectReferenceType(const TypePtr& type) {
+		return type->getNodeType() == NT_RefType && isObjectReferenceType(type.as<RefTypePtr>());
+	}
+
+	bool isObjectReferenceType(const RefTypePtr& type) {
+		return isObjectType(type->getElementType());
 	}
 
 
-	const string& getFileName() const { return file; }
-};
-
-} // end namespace c_info
-} // end namespace annotations
+} // end namespace analysis
+} // end namespace core
 } // end namespace insieme

@@ -56,7 +56,7 @@ public:
 	string value;
 	DummyAnnotation(string value) : value(value) { };
 	
-	virtual const AnnotationKey* getKey() const {
+	virtual const AnnotationKeyPtr getKey() const {
 		return &DummyKey;
 	}
 	
@@ -107,7 +107,7 @@ public:
 	vector<string> values;
 	VectorAnnotation(vector<string> values) : values(values) { };
 
-	virtual const AnnotationKey* getKey() const {
+	virtual const AnnotationKeyPtr getKey() const {
 		return &VectorKey;
 	}
 	

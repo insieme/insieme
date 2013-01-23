@@ -113,7 +113,7 @@ public:
 	 * Returns if a class is an instance of R
 	 */
 	template<typename R>
-	typename boost::enable_if<is_ir_pointer<R>, bool>::type isa() const {
+	typename boost::enable_if<is_ir_pointer<R>, R>::type isa() const {
 		return dynamic_pointer_cast<R>(*this);
 	}
 };

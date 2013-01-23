@@ -37,8 +37,10 @@
 #include "insieme/core/checks/type_checks.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/core/analysis/type_variable_deduction.h"
@@ -142,6 +144,145 @@ OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& add
 	return res;
 }
 
+OptionalMessageList FunctionKindCheck::visitFunctionType(const FunctionTypeAddress& address) {
+
+	OptionalMessageList res;
+
+	// check value of kind-flag (must be within the enumeration)
+	switch(address->getKind()) {
+	case FK_PLAIN:
+	case FK_CLOSURE:
+	case FK_CONSTRUCTOR:
+	case FK_DESTRUCTOR:
+	case FK_MEMBER_FUNCTION:
+		break;	// all valid values
+	default:
+		// this is an invalid value
+		add(res, Message(address,
+				EC_TYPE_ILLEGAL_FUNCTION_TYPE_KIND,
+				format("Invalid value for function-type kind field: %d", toString(address->getKind())),
+				Message::ERROR
+		));
+	}
+
+	// check object type for ctors / dtors / member functions
+	if (address->isConstructor() || address->isDestructor() || address->isMemberFunction()) {
+		if (address->getParameterTypes().empty()) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_OBJECT_TYPE,
+					format("Missing object type within ctor / dtor / member function."),
+					Message::ERROR
+			));
+		} else if (!analysis::isObjectReferenceType(address->getParameterType(0))) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_OBJECT_TYPE,
+					format("Invalid type for target object: %s", toString(address->getParameterType(0))),
+					Message::ERROR
+			));
+		}
+	}
+
+	// check no-arguments for destructor
+	if (address->isDestructor()) {
+		if (address->getParameterTypes().size() > 1u) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_DESTRUCTOR_PARAMETERS,
+					format("Destructor type must not exhibit parameters!"),
+					Message::ERROR
+			));
+		}
+	}
+
+	// check return type of constructor
+	if (address->isConstructor() && !address->getParameterTypes().empty()) {
+		if (*address->getParameterType(0) != *address->getReturnType()) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_CONSTRUCTOR_RETURN_TYPE,
+					format("Invalid return type of constructor - is: %s, should %s",
+							toString(*address->getReturnType()),
+							toString(*address->getParameterType(0))),
+					Message::ERROR
+			));
+		}
+	}
+
+	// check return type of destructor
+	if (address->isDestructor() && !address->getParameterTypes().empty()) {
+		if (*address->getParameterType(0) != *address->getReturnType()) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_DESTRUCTOR_RETURN_TYPE,
+					format("Invalid return type of destructor - is: %s, should %s",
+							toString(*address->getReturnType()),
+							toString(*address->getParameterType(0))),
+					Message::ERROR
+			));
+		}
+	}
+
+	return res;
+
+}
+
+OptionalMessageList ParentCheck::visitParent(const ParentAddress& address) {
+
+	OptionalMessageList res;
+
+	// just check whether parent type is a potential object type
+	auto type = address.as<ParentPtr>()->getType();
+	if (!analysis::isObjectType(type)) {
+		add(res, Message(address,
+				EC_TYPE_ILLEGAL_OBJECT_TYPE,
+				format("Invalid parent type - not an object: %s",
+						toString(*type)),
+				Message::ERROR
+		));
+	}
+
+	return res;
+}
+
+OptionalMessageList ClassInfoCheck::visitType(const TypeAddress& address) {
+
+	OptionalMessageList res;
+
+	// check whether there is something to check
+	if (!hasMetaInfo(address)) {
+		return res;
+	}
+
+	// extract the class type
+	TypePtr type = address.as<TypePtr>();
+
+	// check whether address is referencing object type
+	if (!analysis::isObjectType(type)) {
+		add(res, Message(address,
+				EC_TYPE_ILLEGAL_OBJECT_TYPE,
+				format("Invalid type exhibiting class-meta-info: %s",
+						toString(*type)),
+				Message::ERROR
+		));
+
+		// skip rest of the checks
+		return res;
+	}
+
+	// extract information
+	const ClassMetaInfo& info = getMetaInfo(type);
+
+	// check whether class info is covering target type
+	TypePtr should = info.getClassType();
+	if (should && should != type) {
+		add(res, Message(address,
+				EC_TYPE_MISMATCHING_OBJECT_TYPE,
+				format("Class-Meta-Info attached to mismatching type - is: %s - should: %s",
+						toString(*type), toString(*should)),
+				Message::ERROR
+		));
+	}
+
+	return res;
+}
+
 OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& address) {
 
 	NodeManager& manager = address->getNodeManager();
@@ -220,9 +361,12 @@ OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& 
 	transform(address.getAddressedNode()->getParameterList()->getElements(), back_inserter(param), extractType);
 
 	FunctionTypePtr isType = address->getLambda()->getType();
-	TypePtr result = address->getLambda()->getType()->getReturnType();
 
-	FunctionTypePtr funType = FunctionType::get(manager, param, result, true);
+	// assume return type and function type to be correct
+	auto result = isType->getReturnType();
+	auto kind = isType->getKind();
+
+	FunctionTypePtr funType = FunctionType::get(manager, param, result, kind);
 	if (*funType != *isType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_FUNCTION_TYPE,
@@ -371,7 +515,7 @@ OptionalMessageList LambdaTypeCheck::visitLambdaExpr(const LambdaExprAddress& ad
 	// check type of lambda
 	IRBuilder builder(lambda->getNodeManager());
 	FunctionTypePtr funTypeIs = lambda->getLambda()->getType();
-	FunctionTypePtr funTypeShould = builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur) { return cur->getType(); }), funTypeIs->getReturnType());
+	FunctionTypePtr funTypeShould = builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur) { return cur->getType(); }), funTypeIs->getReturnType(), funTypeIs->getKind());
 	if (*funTypeIs != *funTypeShould) {
 		add(res, Message(address,
 				EC_TYPE_INVALID_LAMBDA_TYPE,

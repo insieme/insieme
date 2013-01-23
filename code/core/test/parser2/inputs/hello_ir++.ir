@@ -1,0 +1,34 @@
+
+let int = int<4>;
+
+let C = struct {
+	int sum;
+};
+
+let Ctor = C::() {
+	this->sum = 0;
+};
+
+let add = C::(int x)->unit {
+	this->sum = this->sum + x;
+};
+
+let getSum = C::()->int {
+	return *this->sum;
+};
+
+let newObj = ('a::() ctor)->ref<'a> {
+	return ctor(new(undefined(lit('a))));
+};
+
+unit main() {
+
+	// create a new object instance
+	ref<C> c = newObj(Ctor);
+	
+	// work with the object
+	print("%d\n", c.getSum());
+	print("%d\n", c.add(3));
+	print("%d\n", c.getSum());
+	
+}

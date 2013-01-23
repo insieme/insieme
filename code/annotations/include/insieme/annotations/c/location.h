@@ -78,7 +78,7 @@ public:
 	bool isFunctionDefinition() const { return isFunctionDef; }
 	const ArgumentList& getArgumentList() const { return args; }
 
-	const utils::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
 	// Always transfer the source location annotation anytime the node is being copied to a new node
 	// manager (for example during replacements)

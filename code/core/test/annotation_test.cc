@@ -192,10 +192,10 @@ TEST(Annotation, CopyOnMigrateTest) {
 		bool operator==(const AnnotationDrop& other) const { return x == other.x; }
 	};
 
-	struct AnnotationMigrate : public value_annotation::migratable {
+	struct AnnotationMigrate : public value_annotation::cloneable {
 		int x; AnnotationMigrate(int x = 0) : x(x) {};
 		bool operator==(const AnnotationMigrate& other) const { return x == other.x; }
-		 void migrateTo(const NodePtr& target) const {
+		 void cloneTo(const NodePtr& target) const {
 			 target->attachValue(AnnotationMigrate(x+1));	// modify during migration
 		 }
 	};

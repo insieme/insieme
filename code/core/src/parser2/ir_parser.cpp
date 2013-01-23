@@ -480,6 +480,19 @@ namespace parser {
 
 			// --------------- add type rules ---------------
 
+			// add handler for parents
+			struct process_parent : public detail::actions {
+				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+					TypePtr type = cur.getTerms().back().as<TypePtr>();
+					auto virtualFlag = cur.getSubRanges().back();
+					ParentPtr parent = cur.parent(!virtualFlag.empty(), type);
+					cur.swap(parent);	// use parent node instead of type
+					cur.popRange();     // forget about the current sub-range (the virtual flag)
+				}
+			};
+
+			static const auto parent = std::make_shared<Action<process_parent>>(seq(cap(opt(lit("virtual"))), T));
+
 			// add type variables
 			g.addRule("T", rule(
 					seq("'", id),
@@ -491,13 +504,24 @@ namespace parser {
 
 			// add generic type
 			g.addRule("T", rule(
-					seq(id, opt(seq("<", list(P|T, ","), ">"))),
+					seq(id, opt(seq(":", non_empty_list(parent, ","))), opt(seq("<", list(P|T, ","), ">"))),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 
+						// extract parent types
+						ParentList parents;
+						auto it = terms.begin();
+						while (it != terms.end()) {
+							if (it->getNodeType() == NT_Parent) {
+								parents.push_back(it->as<ParentPtr>());
+							} else {
+								break;
+							}
+							++it;
+						}
+
 						// extract type parameters
 						TypeList typeParams;
-						auto it = terms.begin();
 						while (it != terms.end()) {
 							if (it->getNodeCategory() == NC_Type) {
 								typeParams.push_back(it->as<TypePtr>());
@@ -522,7 +546,7 @@ namespace parser {
 							++it;
 						}
 
-						return cur.genericType(*cur.begin, typeParams, intTypeParams);
+						return cur.genericType(*cur.begin, parents, typeParams, intTypeParams);
 					}
 			));
 
@@ -559,6 +583,43 @@ namespace parser {
 					}
 			));
 
+			// add constructor type rule
+			g.addRule("T", rule(
+					seq(T, "::(", list(T, ","), ")"),
+					[](Context& cur)->NodePtr {
+						auto& terms = cur.getTerms();
+						assert(!terms.empty());
+						TypeList types = convertList<TypePtr>(terms);
+						types[0] = cur.refType(types[0]);
+						return cur.functionType(types, types[0], FK_CONSTRUCTOR);
+					}
+			));
+
+			// add destructor type rule
+			g.addRule("T", rule(
+					seq("~", T, "::()"),
+					[](Context& cur)->NodePtr {
+						auto& terms = cur.getTerms();
+						assert(terms.size() == 1u);
+						TypePtr classType = cur.refType(convertList<TypePtr>(terms)[0]);
+						return cur.functionType(toVector(classType), classType, FK_DESTRUCTOR);
+					}
+			));
+
+			// add member function type rule
+			g.addRule("T", rule(
+					seq(T, "::(", list(T, ","), ")->", T),
+					[](Context& cur)->NodePtr {
+						auto& terms = cur.getTerms();
+						assert(terms.size() >= 2u);
+						TypeList types = convertList<TypePtr>(terms);
+						types[0] = cur.refType(types[0]);
+						TypePtr resType = types.back();
+						types.pop_back();
+						return cur.functionType(types, resType, FK_MEMBER_FUNCTION);
+					}
+			));
+
 			// add struct and union types
 			struct process_named_type : public detail::actions {
 				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
@@ -573,11 +634,19 @@ namespace parser {
 			static const auto member = std::make_shared<Action<process_named_type>>(seq(T, cap(id)));
 
 			g.addRule("T", rule(
-					seq("struct {", loop(seq(member, ";")), "}"),
+					seq("struct", opt(seq(":", non_empty_list(parent, ","))), "{", loop(seq(member, ";")), "}"),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
-						NamedTypeList members = convertList<NamedTypePtr>(terms);
-						return cur.structType(members);
+						ParentList parents;
+						NamedTypeList members;
+						for(auto curNode : terms) {
+							if (curNode->getNodeType() == NT_Parent) {
+								parents.push_back(curNode.as<ParentPtr>());
+							} else {
+								members.push_back(curNode.as<NamedTypePtr>());
+							}
+						}
+						return cur.structType(parents, members);
 					}
 			));
 
@@ -1060,12 +1129,94 @@ namespace parser {
 					seq(E, ".", cap(id)),
 					[](Context& cur)->NodePtr {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+
+						// check whether access is valid
+						StructTypePtr structType;
+						if (a->getType()->getNodeType() == NT_StructType) {
+							structType = a->getType().as<StructTypePtr>();
+						} else if (a->getType()->getNodeType() == NT_RefType) {
+							TypePtr type = a->getType().as<RefTypePtr>()->getElementType();
+							structType = type.isa<StructTypePtr>();
+							if (!structType) {
+								return fail(cur, "Accessing element of non-struct type!");
+							}
+						} else {
+							return fail(cur, "Accessing element of non-struct type!");
+						}
+
+						// check field
+						if (!structType->getNamedTypeEntryOf(cur.getSubRange(0)[0])) {
+							return fail(cur, "Accessing unknown field!");
+						}
+
+						// create access
 						if (a->getType()->getNodeType() == NT_RefType) {
 							return cur.refMember(a, cur.getSubRange(0)[0]);
 						}
 						return cur.accessMember(a, cur.getSubRange(0)[0]);
 					},
 					-15
+			));
+
+			// member access based on the -> operator
+			g.addRule("E", rule(
+					seq(E, "->", cap(id)),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+
+						// check whether target is a reference
+						if (a->getType()->getNodeType() != NT_RefType) {
+							return fail(cur, "Accessing non-pointer element!");
+						}
+
+						// extract struct type
+						StructTypePtr structType = a->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>();
+						if (!structType) {
+							return fail(cur, "Accessing non-struct element!");
+						}
+
+						// check field
+						if (!structType->getNamedTypeEntryOf(cur.getSubRange(0)[0])) {
+							return fail(cur, "Accessing unknown field!");
+						}
+
+						// create access
+						return cur.refMember(a, cur.getSubRange(0)[0]);
+					},
+					-15
+			));
+
+
+			// member function call
+			g.addRule("E", rule(
+					seq(E, ".", E, "(", list(E, ","), ")"),
+					[](Context& cur)->NodePtr {
+						NodeList terms = cur.getTerms();
+						assert(terms.size() >= 2u);
+
+						// get the object
+						ExpressionPtr obj = terms.front().as<ExpressionPtr>();
+
+						// get member function
+						ExpressionPtr fun = terms[1].as<ExpressionPtr>();
+						terms.erase(terms.begin()+1);
+
+						// check function type
+						TypePtr type = fun->getType();
+						if (type->getNodeType()!=NT_FunctionType || !type.as<FunctionTypePtr>()->isMemberFunction()) {
+							return fail(cur, "Calling non-member-function type!");
+						}
+
+						// check number of arguments
+						FunctionTypePtr funType = type.as<FunctionTypePtr>();
+						if (funType->getParameterTypes().size() != terms.size()) {
+							return fail(cur, "Invalid number of arguments!");
+						}
+
+						// build member function call expression
+						return cur.callExpr(fun, convertList<ExpressionPtr>(terms));
+					},
+					-15			// same precedence than member element access
 			));
 
 			// -- parentheses --
@@ -1185,6 +1336,74 @@ namespace parser {
 						return cur.bindExpr(convertList<VariablePtr>(terms), call);
 					}
 			));
+
+
+			// -- this-pointer utilities --
+			struct register_this_pointer : public detail::actions {
+				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+
+					// a static token range representing a single this token
+					static auto thisString = toVector(Token::createIdentifier("this"));
+					static auto thisRange = TokenRange(thisString.begin(), thisString.end());
+
+					TypePtr type = cur.getTerms().back().as<TypePtr>();
+					VariablePtr param = cur.variable(cur.refType(type));
+					cur.getVarScopeManager().add(thisRange, param);
+					cur.swap(param); // exchange type with variable
+				}
+			};
+
+			static const auto classType = std::make_shared<Action<register_this_pointer>>(seq(T));
+
+			// -- constructors --
+			g.addRule("E", rule(
+					newScop(seq(classType, "::(", list(param, ","), ") ", S)),
+					[](Context& cur)->NodePtr {
+						// construct the lambda
+						NodeList terms = cur.getTerms();
+						StatementPtr body = terms.back().as<StatementPtr>();
+						terms.pop_back();
+
+						// build member function type
+						auto types = extractTypes(convertList<VariablePtr>(terms));
+						auto functionType = cur.functionType(types, types[0], FK_CONSTRUCTOR);
+						return cur.lambdaExpr(functionType, convertList<VariablePtr>(terms), body);
+					}
+			));
+
+			// -- constructors --
+			g.addRule("E", rule(
+					newScop(seq("~", classType, "::()", S)),
+					[](Context& cur)->NodePtr {
+						// construct the lambda
+						NodeList terms = cur.getTerms();
+						StatementPtr body = terms.back().as<StatementPtr>();
+						terms.pop_back();
+
+						// build member function type
+						auto types = extractTypes(convertList<VariablePtr>(terms));
+						auto functionType = cur.functionType(types, types[0], FK_DESTRUCTOR);
+						return cur.lambdaExpr(functionType, convertList<VariablePtr>(terms), body);
+					}
+			));
+
+			// -- member function --
+			g.addRule("E", rule(
+					newScop(seq(classType, "::(", list(param, ","), ")->", T, S)),
+					[](Context& cur)->NodePtr {
+						// construct the lambda
+						NodeList terms = cur.getTerms();
+						StatementPtr body = terms.back().as<StatementPtr>();
+						terms.pop_back();
+						TypePtr resType = terms.back().as<TypePtr>();
+						terms.pop_back();
+
+						// build member function type
+						auto functionType = cur.functionType(extractTypes(convertList<VariablePtr>(terms)), resType, FK_MEMBER_FUNCTION);
+						return cur.lambdaExpr(functionType, convertList<VariablePtr>(terms), body);
+					}
+			));
+
 
 			// ------------- add parallel constructs -------------
 

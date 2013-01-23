@@ -259,6 +259,9 @@ AST_TERMINAL(NamedType, Support)
 AST_TERMINAL(NamedValue, Support)
 AST_TERMINAL(NamedValues, Support)
 
+AST_TERMINAL(Parent, Support)
+AST_TERMINAL(Parents, Support)
+
 AST_TERMINAL(SwitchCase, Support)
 AST_TERMINAL(SwitchCases, Support)
 

@@ -86,10 +86,56 @@ namespace core {
 		 * @param copy the copy of the original node this annotation has been attached to
 		 */
 		virtual void clone(const NodeAnnotationPtr& ptr, const NodePtr& copy) const;
+
+		/**
+		 * A method which will return a list of child nodes included within this annotation
+		 * to be accessible by utilities including the semantic checks.
+		 *
+		 * The default implementation returns an empty list.
+		 *
+		 * @return the list of IR nodes included within this annotation
+		 */
+		virtual const NodeList& getChildNodes() const {
+			static const NodeList empty; return empty;
+		}
 	};
 
 
 	namespace value_annotation {
+
+		// --------------- Migration ----------------------
+
+		/**
+		 * A marker type to be used for marking value annotations providing a user defined
+		 * operation handling the annotation migration in case the annotated node is
+		 * transformed.
+		 *
+		 * Values extending this interface have to implement a member function
+		 *
+		 * 			bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const;
+		 *
+		 * For details see the mirgrate method description of the NodeAnnotation class.
+		 */
+		struct migratable {
+			// bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const;   // -- to be implemented by sub-classes!
+		};
+
+		// support user defined migration operation
+		template<typename V>
+		typename std::enable_if<std::is_base_of<migratable,V>::value, bool>::type
+		migrate_annotation(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after, const V& value) {
+			return value.migrate(ptr, before, after);
+		}
+
+		// the default case - no migration
+		template<typename V>
+		typename std::enable_if<!std::is_base_of<migratable,V>::value, bool>::type
+		migrate_annotation(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after, const V& value) {
+			return false;	// default case => no migration
+		}
+
+
+		// ---------------- Cloning -----------------------
 
 		/**
 		 * A marker type to be used for marking value annotations which should be dropped in case
@@ -98,15 +144,15 @@ namespace core {
 		struct drop_on_clone {};
 
 		/**
-		 * A marker type to be used for marking value annotations providing a user defined migration
+		 * A marker type to be used for marking value annotations providing a user defined clone
 		 * function which will be used for migrating it when cloning a node to another manager.
 		 *
 		 * Values extending this interface have to implement a member function
 		 *
-		 * 			void migrateTo(const NodePtr& target) const;
+		 * 			void cloneTo(const NodePtr& target) const;
 		 */
-		struct migratable {
-			// void migrateTo(const NodePtr& target) const;   // -- to be implemented by sub-classes!
+		struct cloneable {
+			// void cloneTo(const NodePtr& target) const;   // -- to be implemented by sub-classes!
 		};
 
 		/**
@@ -118,7 +164,7 @@ namespace core {
 
 		// the default variant for all non-specialized value types
 		template<typename V>
-		typename std::enable_if<!std::is_base_of<drop_on_clone,V>::value && !std::is_base_of<migratable,V>::value>::type
+		typename std::enable_if<!std::is_base_of<drop_on_clone,V>::value && !std::is_base_of<cloneable,V>::value>::type
 		move_to_clone(const NodeAnnotationPtr& ptr, const NodePtr& target, const V& value) {
 			add_annotation(ptr, target);		// default behavior => link same annotation
 		}
@@ -130,9 +176,39 @@ namespace core {
 
 		// support user defined migration operation
 		template<typename V>
-		typename std::enable_if<std::is_base_of<migratable,V>::value>::type
+		typename std::enable_if<std::is_base_of<cloneable,V>::value>::type
 		move_to_clone(const NodeAnnotationPtr& ptr, const NodePtr& target, const V& value) {
-			value.migrateTo(target);	// let value annotation do the work
+			value.cloneTo(target);	// let value annotation do the work
+		}
+
+
+		// --------------- ChildList ----------------------
+
+		/**
+		 * A marker type to be used for marking value annotations providing a user defined
+		 * list of child nodes to be considered by e.g. semantic checks.
+		 *
+		 * Values extending this interface have to implement a member function
+		 *
+		 * 			const NodeList& getChildNodes() const;
+		 */
+		struct has_child_list {
+			// const NodeList& getChildNodes() const; 		// -- to be implemented by sub-classes
+		};
+
+		// support user defined child list
+		template<typename V>
+		typename std::enable_if<std::is_base_of<has_child_list,V>::value, const NodeList&>::type
+		get_child_list(const V& value) {
+			return value.getChildNodes();
+		}
+
+		// the default case - no child list
+		template<typename V>
+		typename std::enable_if<!std::is_base_of<has_child_list,V>::value, const NodeList&>::type
+		get_child_list(const V& value) {
+			static const NodeList empty;
+			return empty;
 		}
 
 	}
@@ -155,7 +231,9 @@ namespace detail {
 	/**
 	 * A partial template specialization of the general ValueAnnotation template used for attaching values
 	 * to annotatable objects. This template allows the value to be attached to select the mode for being
-	 * migrated when cloning the underlying IR node to another node manager.
+	 * migrated when cloning the underlying IR node to another node manager, specialize the migration
+	 * operation (in case the annotated node is transformed) and its child list (to extend utility
+	 * coverage to the annotation, e.g. for semantic checks).
 	 */
 	template<typename V, typename KeyType>
 	class ValueAnnotation<V, core::NodeAnnotation, KeyType> : public ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>> {
@@ -164,8 +242,16 @@ namespace detail {
 
 			virtual ~ValueAnnotation() {}
 
+			virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+				return core::value_annotation::migrate_annotation(ptr, before, after, ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>>::getValue());
+			}
+
 			virtual void clone(const core::NodeAnnotationPtr& ptr, const core::NodePtr& copy) const {
 				core::value_annotation::move_to_clone(ptr, copy, ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>>::getValue());
+			}
+
+			virtual const core::NodeList& getChildNodes() const {
+				return core::value_annotation::get_child_list(ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>>::getValue());
 			}
 	};
 
