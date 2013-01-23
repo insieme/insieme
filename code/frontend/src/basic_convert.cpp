@@ -429,7 +429,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 
 	// Handle unions initialization
 	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(curType)) {
-		assert(unionTy);
+		return builder.callExpr(unionTy, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(unionTy));
 	}
 
 	// handle vectors initialization
@@ -446,7 +446,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 	if (mgr.getLangBasic().isAnyRef(type)) {
 		return mgr.getLangBasic().getNull();
 	}
-
+	
 	assert(core::analysis::isRefType(curType) && "We cannot initialize any different type of non-ref");
 
 	core::RefTypePtr refType = curType.as<core::RefTypePtr>();
