@@ -368,7 +368,7 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	irt_work_group* outer_wg = _irt_wg_create(irt_g_workers[0]);
 	irt_wg_insert(outer_wg, main_wi);
 	// event handling for outer work item [[
-	irt_lock_obj mutex;
+	irt_lock_obj mutex; // TODO don't use mutex
 	irt_mutex_init(&mutex);
 	irt_mutex_lock(&mutex);
 	irt_wi_event_lambda handler;
@@ -379,5 +379,4 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 	irt_mutex_lock(&mutex);
-	_irt_worker_end_all();
 }
