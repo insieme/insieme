@@ -474,7 +474,7 @@ void showIR(const core::ProgramPtr& program, MessageList& errors) {
 
 void applyOpenMPFrontend(core::ProgramPtr& program) {
 	if (!CommandLineOptions::OpenMP) { return; }
-	
+
 	LOG(INFO) << "============================= OMP conversion ====================================";
 	program = measureTimeFor<core::ProgramPtr>("OpenMP ",
 			[&]() {return fe::omp::applySema(program, program->getNodeManager()); }
@@ -582,11 +582,11 @@ int main(int argc, char** argv) {
 			program = measureTimeFor<ProgramPtr>("Pragma.Info",  
 					[&]() { return insieme::driver::handlePragmaInfo(program); } );
 
-			// printIR(program, stmtMap);
+			printIR(program, stmtMap);
 
 			// perform checks
 			MessageList errors;
-			// if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
+			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
 
 			printIR(program, stmtMap);
 
