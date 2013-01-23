@@ -134,29 +134,31 @@ void* _irt_worker_func(void *argvp) {
 	if(getenv(IRT_DEFAULT_VARIANT_ENV)) {
 		self->default_variant = atoi(getenv(IRT_DEFAULT_VARIANT_ENV));
 	}
-	
+
+#ifdef IRT_WORKER_SLEEPING
 	irt_cond_var_init(&self->wait_cond);
-	irt_mutex_init(&self->wait_mutex);
+	self->wake_signal = true;
+#endif
 	
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(irt_tls_set(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 
-	#ifdef IRT_ENABLE_INSTRUMENTATION
-		self->instrumentation_event_data = irt_inst_create_event_data_table();
-	#endif
-	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		self->instrumentation_region_data = irt_inst_create_region_data_table();
-		// initialize papi's threading support and add events to be measured
-		//self->irt_papi_number_of_events = 0;
-		irt_initialize_papi_thread(&(self->irt_papi_event_set));
-	#endif
-	#ifdef IRT_OCL_INSTR
-		self->event_data = irt_ocl_create_event_table();
-	#endif
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	self->instrumentation_event_data = irt_inst_create_event_data_table();
+#endif
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	self->instrumentation_region_data = irt_inst_create_region_data_table();
+	// initialize papi's threading support and add events to be measured
+	//self->irt_papi_number_of_events = 0;
+	irt_initialize_papi_thread(&(self->irt_papi_event_set));
+#endif
+#ifdef IRT_OCL_INSTR
+	self->event_data = irt_ocl_create_event_table();
+#endif
 	
-	#ifndef _WIN32
-		irt_cpu_freq_set_frequency_core_env(self);
-	#endif
+#ifndef _WIN32
+	irt_cpu_freq_set_frequency_core_env(self);
+#endif
 
 	// init lazy wi
 	memset(&self->lazy_wi, 0, sizeof(irt_work_item));
@@ -184,25 +186,25 @@ void* _irt_worker_func(void *argvp) {
 	// wait until all workers are initialized
 	_irt_await_all_workers_init(signal);
 
-	self->state = IRT_WORKER_STATE_RUNNING;
-	irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
-	irt_scheduling_loop(self);
+	if(irt_atomic_bool_compare_and_swap(&self->state, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_RUNNING)) {
+		irt_inst_insert_wo_event(self, IRT_INST_WORKER_RUNNING, self->id);
+		irt_scheduling_loop(self);
+	}
 	irt_worker_cleanup(self);
 	return NULL;
 }
 
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	IRT_ASSERT(self->cur_wi == NULL, IRT_ERR_INTERNAL, "Worker %p _irt_worker_switch_to_wi with non-null current WI", self);
-	if(self->have_wait_mutex) {
-		irt_mutex_unlock(&self->wait_mutex);
-		self->have_wait_mutex = false;
-	}
+	// wait for previous operations on WI to complete
+	while(wi->state != IRT_WI_STATE_NEW && wi->state != IRT_WI_STATE_SUSPENDED);
+	IRT_ASSERT(wi->state == IRT_WI_STATE_NEW || wi->state == IRT_WI_STATE_SUSPENDED, 
+		IRT_ERR_INTERNAL, "Worker %p switching to WI %p, WI not ready", self, wi);
 	self->cur_context = wi->context_id;
 	if(wi->state == IRT_WI_STATE_NEW) {
 		// start WI from scratch
 		wi->state = IRT_WI_STATE_STARTED;
 		lwt_prepare(self->id.thread, wi, &self->basestack);
-
 		self->cur_wi = wi;
 #ifdef USING_MINLWT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
@@ -220,14 +222,15 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 			lwt_start(wi, &self->basestack, wimpl->variants[0].implementation);
 		}
 #else // !IRT_TASK_OPT
-        	irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
-        	uint32 opt = wimpl->num_variants > 1 ? irt_scheduling_select_taskopt_variant(wi, self) : 0;
+        irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
+        uint32 opt = wimpl->num_variants > 1 ? irt_scheduling_select_taskopt_variant(wi, self) : 0;
 		lwt_start(wi, &self->basestack, wimpl->variants[opt].implementation);
 #endif // !IRT_TASK_OPT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	} else { 
 		// resume WI
+		wi->state = IRT_WI_STATE_STARTED;
 		self->cur_wi = wi;
 #ifdef USING_MINLWT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
@@ -308,21 +311,18 @@ void _irt_worker_cancel_all_others() {
 }
 
 void _irt_worker_end_all() {
-
 	// get info about calling thread
 	irt_thread calling_thread;
 	irt_thread_get_current(&calling_thread);
 
 	for(uint32 i=0; i<irt_g_worker_count; ++i) {
 		irt_worker *cur = irt_g_workers[i];
-		if(cur->state == IRT_WORKER_STATE_RUNNING) {
-			cur->state = IRT_WORKER_STATE_STOP;
-			irt_signal_worker(cur);
+		cur->state = IRT_WORKER_STATE_STOP;
+		irt_signal_worker(cur);
 
-			// avoid calling thread awaiting its own termination
-			if(!irt_thread_check_equality(&calling_thread, &(cur->thread)))
-				irt_thread_join(&(cur->thread));
-		}   
+		// avoid calling thread awaiting its own termination
+		if(!irt_thread_check_equality(&calling_thread, &(cur->thread)))
+			irt_thread_join(&(cur->thread));   
 	}
 }
 
