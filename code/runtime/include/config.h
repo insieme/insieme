@@ -44,8 +44,9 @@
 #define IRT_EVENT_LT_BUCKETS /*65536*/ /*64567*/ 97 /*7207301*/
 
 // scheduling policy
-#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
+//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
 //#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
+#define IRT_SCHED_POLICY IRT_SCHED_POLICY_UBER
 
 // determines if workers should ever go to sleep
 // - needs to be unset for the stealing policies!
