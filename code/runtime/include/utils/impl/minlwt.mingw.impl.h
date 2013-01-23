@@ -77,12 +77,21 @@
 		);
 	} 
 
+	__attribute__ ((noinline))
+	void lwt_get_stack_ptr(intptr_t *dest /*rcx*/) {
+		__asm__ (
+			/* store sp */
+			"movq %%rsp, (%%rcx);"
+		: : );
+	}
+	
 
 #elif defined(__MINGW32__)
 
 	// 32 bit implementation
 
 	// we use __fastcall calling convention to have first two parameters put into registers ecx and edx
+	__attribute__ ((noinline))
 	void __fastcall lwt_continue_impl(irt_work_item *wi /*ecx*/, wi_implementation_func* func /*edx*/, 
 			intptr_t *newstack /* pushed on stack */, intptr_t *basestack /* pushed on stack */) { 
 		__asm__ (
@@ -127,6 +136,18 @@
 			: /* no output registers */
 			: "a" (&_irt_wi_trampoline) // move address of trampoline function to eax
 		);
-	} 
+	}
+	
+	__attribute__ ((noinline))
+	void __fastcall lwt_get_stack_ptr(intptr_t *dest /*ecx*/) {
+		__asm__ (
+			/* store sp */
+			"movq %%esp, (%%ecx);"
+		: : );
+	}
 
 #endif
+
+
+
+

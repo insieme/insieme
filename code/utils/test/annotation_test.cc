@@ -52,7 +52,7 @@ namespace {
 		int value;
 		DummyAnnotation(int value) : value(value) { };
 
-		virtual const AnnotationKey* getKey() const {
+		virtual const AnnotationKeyPtr getKey() const {
 			return &DummyKey;
 		}
 
@@ -68,7 +68,7 @@ namespace {
 		int value;
 		DummyAnnotation2(int value) : value(value) { };
 
-		virtual const AnnotationKey* getKey() const {
+		virtual const AnnotationKeyPtr getKey() const {
 			return &DummyKey;
 		}
 

@@ -98,6 +98,7 @@ namespace core {
 	typedef std::vector<VariablePtr> VariableList;
 	typedef std::vector<NamedTypePtr> NamedTypeList;
 	typedef std::vector<NamedValuePtr> NamedValueList;
+	typedef std::vector<ParentPtr> ParentList;
 
 	typedef utils::set::PointerSet<NodePtr> NodeSet;
 	typedef utils::set::PointerSet<TypePtr> TypeSet;

@@ -602,7 +602,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 	);
 
 	ADD_Handler(builder, o2i, "icl_get_num_devices",
-			return builder.castExpr(BASIC.getUInt4(), builder.literal("1", BASIC.getInt4()));
+			return builder.literal("1u", BASIC.getUInt4());
 	);
 
 	ADD_Handler(builder, o2i, "clCreateBuffer",

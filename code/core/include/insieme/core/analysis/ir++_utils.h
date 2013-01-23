@@ -34,53 +34,58 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+#pragma once
 
-#include <gtest/gtest.h>
-
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_address.h"
-#include "insieme/core/datapath/datapath.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace core {
-namespace datapath {
+namespace analysis {
 
-TEST(DataPathBuilder, Basic) {
+	/**
+	 * A test verifying whether the given type is a valid object type to
+	 * be used as an object type for a ctor / dtor / member function.
+	 *
+	 * @param type the type to be tested
+	 * @return true if type is a valid object type, false otherwise
+	 */
+	bool isObjectType(const TypePtr& type);
 
-	NodeManager mgr;
-	TypePtr typeA = GenericType::get(mgr, "A");
+	/**
+	 * A shortcut for the isObjectType function above obtaining the result
+	 * statically since any struct type is a valid object type.
+	 */
+	static inline bool isObjectType(const StructTypePtr& type) { return true; }
 
-	EXPECT_EQ("dp.root", toString(*DataPathBuilder(mgr).getPath()));
-	EXPECT_EQ("dp.member(dp.root, hello)", toString(*DataPathBuilder(mgr).member("hello").getPath()));
-	EXPECT_EQ("dp.element(dp.root, 12)", toString(*DataPathBuilder(mgr).element(12).getPath()));
-	EXPECT_EQ("dp.component(dp.root, 3)", toString(*DataPathBuilder(mgr).component(3).getPath()));
-	EXPECT_EQ("dp.parent(dp.root, A)", toString(*DataPathBuilder(mgr).parent(typeA).getPath()));
+	/**
+	 * A shortcut for the isObjectType function above obtaining the result
+	 * statically since any generic type is a valid object type.
+	 */
+	static inline bool isObjectType(const GenericTypePtr& type) { return true; }
 
+	/**
+	 * A shortcut for the isObjectType function above obtaining the result
+	 * statically since any type variable is a valid object type.
+	 */
+	static inline bool isObjectType(const TypeVariablePtr& type) { return true; }
 
-	EXPECT_EQ("dp.parent(dp.component(dp.member(dp.element(dp.root, 12), hello), 3), A)", toString(*DataPathBuilder(mgr)
-			.element(12)
-			.member("hello")
-			.component(3)
-			.parent(typeA)
-			.getPath())
-	);
+	/**
+	 * A test determining whether some type is a reference to a valid object
+	 * type structure (hence a potential type for a this pointer).
+	 *
+	 * @param type the type to be tested
+	 * @return true if the given type is a reference to a valid object type.
+	 */
+	bool isObjectReferenceType(const TypePtr& type);
 
-}
-
-TEST(DataPath, Basic) {
-	NodeManager mgr;
-	TypePtr typeA = GenericType::get(mgr, "A");
-
-	DataPath path(mgr);
-
-	EXPECT_EQ("<>", toString(path));
-	EXPECT_EQ("<>[4]", toString(path.element(4)));
-	EXPECT_EQ("<>[4].test", toString(path.element(4).member("test")));
-	EXPECT_EQ("<>[4].test.c3", toString(path.element(4).member("test").component(3)));
-	EXPECT_EQ("<>[4].test.c3.as<A>", toString(path.element(4).member("test").component(3).parent(typeA)));
-
-}
+	/**
+	 * A test determining whether some type is a reference to a valid object
+	 * type structure (hence a potential type for a this pointer).
+	 *
+	 * @param type the type to be tested
+	 * @return true if the given type is a reference to a valid object type.
+	 */
+	bool isObjectReferenceType(const RefTypePtr& type);
 
 } // end namespace analysis
 } // end namespace core

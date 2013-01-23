@@ -72,7 +72,7 @@ public:
     BaseAnnotation(utils::CompoundAnnotation<ocl::Annotation>::AnnotationList& annotationList) :
     	utils::CompoundAnnotation<ocl::Annotation, core::NodeAnnotation>(annotationList) { }
 
-    const utils::AnnotationKey* getKey() const { return &KEY; }
+    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
     const std::string& getAnnotationName() const { return NAME; }
 
     virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
@@ -114,7 +114,7 @@ public:
 
 	bool isKernelFct() const;
 
-	const utils::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
 	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// just always copy annotation
@@ -177,7 +177,7 @@ public:
 
     addressSpace getAddressSpace() const;
 
-	const utils::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
 	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// just ignore
@@ -205,7 +205,7 @@ public:
 
     core::LiteralPtr getBuiltinLiteral() const;
 
-	const utils::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
 	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// just always copy annotation
@@ -230,7 +230,7 @@ public:
 
     const string& getKernelPath() const { return path; }
 
-    const utils::AnnotationKey* getKey() const { return &KEY; }
+    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
     bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
     	// always copy the annotation

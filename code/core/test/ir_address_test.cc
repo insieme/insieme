@@ -68,7 +68,7 @@ TEST(NodeAddressTest, Basic) {
 	EXPECT_EQ("0", toString(addrRoot));
 
 	// go to node R-A
-	NodeAddress addrA = addrRoot.getAddressOfChild(1).getAddressOfChild(0);
+	NodeAddress addrA = addrRoot.getAddressOfChild(2).getAddressOfChild(0);
 	EXPECT_TRUE(addrA);
 	EXPECT_TRUE(addrA.isValid());
 	EXPECT_EQ(static_cast<unsigned short>(3), addrA.getDepth());
@@ -76,16 +76,16 @@ TEST(NodeAddressTest, Basic) {
 	EXPECT_EQ(typeA, addrA.getAddressedNode());
 	EXPECT_EQ(root, addrA.getRootNode());
 	EXPECT_EQ(addrA, addrA.getParentAddress(0));
-	EXPECT_EQ(addrRoot.getAddressOfChild(1), addrA.getParentAddress(1));
+	EXPECT_EQ(addrRoot.getAddressOfChild(2), addrA.getParentAddress(1));
 	EXPECT_EQ(addrRoot, addrA.getParentAddress(2));
 	EXPECT_EQ(typeA, addrA.getParentNode(0));
 	EXPECT_EQ(root,  addrA.getParentNode(2));
 
-	EXPECT_EQ("0-1-0", toString(addrA));
+	EXPECT_EQ("0-2-0", toString(addrA));
 
 	// go to child R-A-2
 	TypePtr type2 = builder.genericType("2");
-	NodeAddress addrA2 = addrA.getAddressOfChild(1).getAddressOfChild(1);
+	NodeAddress addrA2 = addrA.getAddressOfChild(2).getAddressOfChild(1);
 	EXPECT_TRUE(addrA2);
 	EXPECT_TRUE(addrA2.isValid());
 	EXPECT_EQ(static_cast<unsigned short>(5), addrA2.getDepth());
@@ -94,21 +94,21 @@ TEST(NodeAddressTest, Basic) {
 	EXPECT_EQ(root, addrA2.getRootNode());
 
 	EXPECT_EQ(addrA2, addrA2.getParentAddress(0));
-	EXPECT_EQ(addrA.getAddressOfChild(1), addrA2.getParentAddress(1));
+	EXPECT_EQ(addrA.getAddressOfChild(2), addrA2.getParentAddress(1));
 	EXPECT_EQ(addrA, addrA2.getParentAddress(2));
-	EXPECT_EQ(addrRoot.getAddressOfChild(1), addrA2.getParentAddress(3));
+	EXPECT_EQ(addrRoot.getAddressOfChild(2), addrA2.getParentAddress(3));
 	EXPECT_EQ(addrRoot, addrA2.getParentAddress(4));
 
 	EXPECT_EQ(type2, addrA2.getParentNode(0));
-	EXPECT_EQ(typeA->getChildList()[1], addrA2.getParentNode(1));
+	EXPECT_EQ(typeA->getChildList()[2], addrA2.getParentNode(1));
 	EXPECT_EQ(typeA, addrA2.getParentNode(2));
-	EXPECT_EQ(root->getChildList()[1], addrA2.getParentNode(3));
+	EXPECT_EQ(root->getChildList()[2], addrA2.getParentNode(3));
 	EXPECT_EQ(root,  addrA2.getParentNode(4));
 
-	EXPECT_EQ("0-1-0-1-1", toString(addrA2));
+	EXPECT_EQ("0-2-0-2-1", toString(addrA2));
 
-	EXPECT_EQ(addrA2, NodeAddress(Path(root).extendForChild(1).extendForChild(0).extendForChild(1).extendForChild(1)));
-	EXPECT_NE(addrA2, NodeAddress(Path(root).extendForChild(1).extendForChild(0).extendForChild(1).extendForChild(0)));
+	EXPECT_EQ(addrA2, NodeAddress(Path(root).extendForChild(2).extendForChild(0).extendForChild(2).extendForChild(1)));
+	EXPECT_NE(addrA2, NodeAddress(Path(root).extendForChild(2).extendForChild(0).extendForChild(2).extendForChild(0)));
 }
 
 TEST(NodeAddressTest, NullTest) {
@@ -170,9 +170,9 @@ TEST(NodeAddressTest, EqualityTest) {
 	EXPECT_EQ("A<B<D>,C<D>>", toString(*typeA));
 
 	// start with root node R
-	NodeAddress ABD1(Path(typeA).extendForChild(1).extendForChild(0).extendForChild(1).extendForChild(0));
-	NodeAddress ABD2(Path(typeA).extendForChild(1).extendForChild(0).extendForChild(1).extendForChild(0));
-	NodeAddress ACD(Path(typeA).extendForChild(1).extendForChild(1).extendForChild(1).extendForChild(0));
+	NodeAddress ABD1(Path(typeA).extendForChild(2).extendForChild(0).extendForChild(2).extendForChild(0));
+	NodeAddress ABD2(Path(typeA).extendForChild(2).extendForChild(0).extendForChild(2).extendForChild(0));
+	NodeAddress ACD(Path(typeA).extendForChild(2).extendForChild(1).extendForChild(2).extendForChild(0));
 
 	EXPECT_EQ(ABD1, ABD2);
 	EXPECT_NE(ABD1, ACD);
@@ -197,9 +197,9 @@ NodeManager manager;
 	EXPECT_EQ("A<B<D>,C<D<E>>>", toString(*typeA));
 
 	// start with root node R
-	NodeAddress ABD1(Path(typeA).extendForChild(1).extendForChild(0).extendForChild(1).extendForChild(0));
-	NodeAddress ABD2(Path(typeA).extendForChild(1).extendForChild(0).extendForChild(1).extendForChild(0));
-	NodeAddress AC(Path(typeA).extendForChild(1).extendForChild(1).extendForChild(1));
+	NodeAddress ABD1(Path(typeA).extendForChild(2).extendForChild(0).extendForChild(2).extendForChild(0));
+	NodeAddress ABD2(Path(typeA).extendForChild(2).extendForChild(0).extendForChild(2).extendForChild(0));
+	NodeAddress AC(Path(typeA).extendForChild(2).extendForChild(1).extendForChild(2));
 
 	EXPECT_FALSE(ABD1 < ABD2);
 	EXPECT_FALSE(ABD2 < ABD1);
@@ -211,9 +211,9 @@ NodeManager manager;
 	EXPECT_TRUE(ABD1 < AC);
 	EXPECT_FALSE(AC < ABD1);
 
-	NodeAddress BD( Path(typeB).extendForChild(1) );
+	NodeAddress BD( Path(typeB).extendForChild(2) );
 	EXPECT_EQ("[D]", toString(*BD));
-	NodeAddress CDE( Path(typeC).extendForChild(1).extendForChild(0) );
+	NodeAddress CDE( Path(typeC).extendForChild(2).extendForChild(0) );
 	EXPECT_EQ("D<E>", toString(*CDE));
 
 	EXPECT_FALSE(BD < CDE);
@@ -237,11 +237,11 @@ TEST(NodeAddressTest, MergePaths) {
 	EXPECT_EQ("A<B<D>,C<D>>", toString(*typeA));
 
 	// start with root node R
-	NodeAddress BD(Path(typeB).extendForChild(1).extendForChild(0));
-	NodeAddress AB(Path(typeA).extendForChild(1).extendForChild(0));
+	NodeAddress BD(Path(typeB).extendForChild(2).extendForChild(0));
+	NodeAddress AB(Path(typeA).extendForChild(2).extendForChild(0));
 
 	NodeAddress ABD1 = concat(AB, BD);
-	EXPECT_EQ("0-1-0-1-0", toString(ABD1));
+	EXPECT_EQ("0-2-0-2-0", toString(ABD1));
 
 	EXPECT_EQ(typeD, ABD1.getAddressedNode());
 
@@ -261,7 +261,7 @@ TEST(NodeAddressTest, Find) {
 
 	NodeAddress addrRoot(root);
 
-	EXPECT_EQ(Address<const Type>::find(typeC, root), addrRoot.getAddressOfChild(1,2));
+	EXPECT_EQ(Address<const Type>::find(typeC, root), addrRoot.getAddressOfChild(2,2));
 }
 
 TEST(NodeAddressTest, Visiting) {
@@ -277,7 +277,7 @@ TEST(NodeAddressTest, Visiting) {
 	EXPECT_EQ("A<B<D>,C<D>>", toString(*typeA));
 
 	// start with root node R
-	NodeAddress ABD(Path(typeA).extendForChild(1).extendForChild(0).extendForChild(1).extendForChild(0));
+	NodeAddress ABD(Path(typeA).extendForChild(2).extendForChild(0).extendForChild(2).extendForChild(0));
 
 	vector<TypePtr> list;
 	auto collector = makeLambdaVisitor([&](const TypePtr& type) {
@@ -330,11 +330,11 @@ TEST(NodeAddressTest, IsChildOf) {
 
 	NodeAddress addr(root);
 
-	NodeAddress addr1 = addr.getAddressOfChild(1);
-	NodeAddress addr2 = addr.getAddressOfChild(1).getAddressOfChild(0);
+	NodeAddress addr1 = addr.getAddressOfChild(2);
+	NodeAddress addr2 = addr.getAddressOfChild(2).getAddressOfChild(0);
 
-	EXPECT_EQ("0-1", toString(addr1));
-	EXPECT_EQ("0-1-0", toString(addr2));
+	EXPECT_EQ("0-2", toString(addr1));
+	EXPECT_EQ("0-2-0", toString(addr2));
 
 	EXPECT_TRUE(isChildOf(addr, addr1));
 	EXPECT_TRUE(isChildOf(addr, addr2));
@@ -361,9 +361,9 @@ TEST(NodeAddressTest, UpdateRoot) {
 
 	NodeAddress addr(root);
 
-	NodeAddress addr1 = addr.getAddressOfChild(1);
+	NodeAddress addr1 = addr.getAddressOfChild(2);
 	EXPECT_EQ("[A<1,2>,B<3>,C]", toString(*addr1));
-	NodeAddress addr2 = addr.getAddressOfChild(1).getAddressOfChild(0);
+	NodeAddress addr2 = addr.getAddressOfChild(2).getAddressOfChild(0);
 	EXPECT_EQ(typeA, addr2);
 
 	NodeAddress addr3 = cropRootNode(addr2, addr1);

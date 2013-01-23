@@ -179,3 +179,83 @@ TEST(PrettyPrinter, HiddenAttributes) {
 	EXPECT_EQ("1", toString(PrettyPrinter(expr)));
 	EXPECT_EQ("attr(1, ([unordered]))", toString(PrettyPrinter(expr, PrettyPrinter::OPTIONS_DETAIL)));
 }
+
+TEST(PrettyPrinter, StructSuperTypes) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr classA = builder.structType(toVector(builder.namedType("a", builder.genericType("A"))));
+	EXPECT_EQ("let type000 = struct<\n\ta:A\n>;\n\ntype000", toString(PrettyPrinter(classA)));
+
+	TypePtr classB = builder.structType(toVector(classA), toVector(builder.namedType("b", builder.genericType("B"))));
+	EXPECT_EQ("let type000 = struct<\n\ta:A\n>;\n\nlet type001 = struct : type000 <\n\tb:B\n>;\n\ntype001", toString(PrettyPrinter(classB)));
+
+	TypePtr classC = builder.structType(toVector(builder.parent(true, classB)), toVector(builder.namedType("c", builder.genericType("C"))));
+	EXPECT_EQ("let type000 = struct<\n\ta:A\n>;\n\nlet type001 = struct : type000 <\n\tb:B\n>;\n\nlet type002 = struct : virtual type001 <\n\tc:C\n>;\n\ntype002", toString(PrettyPrinter(classC)));
+
+}
+
+TEST(PrettyPrinter, FunctionTypes) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr typeA = builder.genericType("A");
+	TypePtr typeB = builder.genericType("B");
+	TypePtr typeC = builder.genericType("C");
+	TypePtr typeR = builder.genericType("R");
+
+	TypePtr objC = builder.refType(typeC);
+
+	TypePtr funA = builder.functionType(toVector(typeA, typeB), typeR, FK_PLAIN);
+	TypePtr funB = builder.functionType(toVector(typeA, typeB), typeR, FK_CLOSURE);
+	TypePtr funC = builder.functionType(toVector(objC, typeA, typeB), FK_CONSTRUCTOR);
+	TypePtr funD = builder.functionType(toVector(objC), FK_DESTRUCTOR);
+	TypePtr funE = builder.functionType(toVector(objC, typeA, typeB), typeR, FK_MEMBER_FUNCTION);
+
+	EXPECT_EQ("(A, B) -> R", toString(PrettyPrinter(funA)));
+	EXPECT_EQ("(A, B) => R", toString(PrettyPrinter(funB)));
+	EXPECT_EQ("C::(A, B)", toString(PrettyPrinter(funC)));
+	EXPECT_EQ("~C::()", toString(PrettyPrinter(funD)));
+	EXPECT_EQ("C::(A, B) -> R", toString(PrettyPrinter(funE)));
+
+}
+
+TEST(PrettyPrinter, LambdaTypes) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr typeA = builder.genericType("A");
+	TypePtr typeB = builder.genericType("B");
+	TypePtr typeC = builder.genericType("C");
+	TypePtr typeR = builder.genericType("R");
+
+	TypePtr objC = builder.refType(typeC);
+
+	FunctionTypePtr funA = builder.functionType(toVector(objC, typeA, typeB), typeR, FK_PLAIN);
+	FunctionTypePtr funB = builder.functionType(toVector(objC, typeA, typeB), FK_CONSTRUCTOR);
+	FunctionTypePtr funC = builder.functionType(toVector(objC), FK_DESTRUCTOR);
+	FunctionTypePtr funD = builder.functionType(toVector(objC, typeA, typeB), typeR, FK_MEMBER_FUNCTION);
+
+	StatementPtr body = builder.compoundStmt();
+
+	VariablePtr varO = builder.variable(objC, 0);
+	VariablePtr varA = builder.variable(typeA, 1);
+	VariablePtr varB = builder.variable(typeB, 2);
+	VariablePtr varC = builder.variable(typeC, 3);
+	VariablePtr varR = builder.variable(typeR, 4);
+
+	LambdaExprPtr lambdaA = builder.lambdaExpr(funA, toVector(varO, varA, varB), body);
+	LambdaExprPtr lambdaB = builder.lambdaExpr(funB, toVector(varO, varA, varB), body);
+	LambdaExprPtr lambdaC = builder.lambdaExpr(funC, toVector(varO), body);
+	LambdaExprPtr lambdaD = builder.lambdaExpr(funD, toVector(varO, varA, varB), body);
+
+	EXPECT_EQ("fun(ref<C> v0, A v1, B v2) -> R { }", toString(PrettyPrinter(lambdaA, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("ctor C v0 :: (A v1, B v2) { }", toString(PrettyPrinter(lambdaB, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("dtor ~C v0 :: () { }", toString(PrettyPrinter(lambdaC, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+	EXPECT_EQ("mfun C v0 :: (A v1, B v2) -> R { }", toString(PrettyPrinter(lambdaD, PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+
+}
+

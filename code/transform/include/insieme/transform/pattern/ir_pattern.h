@@ -63,9 +63,11 @@ namespace irp {
 		return node(core::NT_CompoundStmt, single(body)) | body;
 	}
 
-
+	inline TreePatternPtr genericType(const TreePatternPtr& family, const ListPatternPtr& parents, const ListPatternPtr& subtypes, const ListPatternPtr& typeParams) {
+		return node(core::NT_GenericType, family << single(node(parents)) << single(node(subtypes)) << single(node(typeParams)));
+	}
 	inline TreePatternPtr genericType(const TreePatternPtr& family, const ListPatternPtr& subtypes = empty, const ListPatternPtr& typeParams = empty) {
-		return node(core::NT_GenericType, family << single(node(subtypes)) << single(node(typeParams)));
+		return genericType(family, empty, subtypes, typeParams);
 	}
 	inline TreePatternPtr genericType(const core::StringValuePtr& family, const ListPatternPtr& typeParams = empty, const ListPatternPtr& intParams = empty) {
 		return genericType(atom(family), typeParams, intParams);

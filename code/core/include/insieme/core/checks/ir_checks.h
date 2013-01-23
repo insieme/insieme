@@ -121,6 +121,11 @@ namespace checks {
 			WARNING 	/* < in case something has been discovered that shouldn't be used but is */
 		};
 
+		/**
+		 * The type used to model a path through annotations and nodes.
+		 */
+		typedef vector<pair<utils::AnnotationKeyPtr, NodeAddress>> annotation_path;
+
 	private:
 
 		/**
@@ -134,6 +139,16 @@ namespace checks {
 		 * The address of the node where this issue has been discovered on.
 		 */
 		NodeAddress address;
+
+		/**
+		 * The address within the annotation the problem has been discovered.
+		 * It is a list of keys and addresses to be followed to reach the origin
+		 * of the problem, starting at the node addressed using the address field.
+		 *
+		 * This list is empty if the problem occurred at the node addressed
+		 * by the address field (most typical case).
+		 */
+		annotation_path annotationPath;
 
 		/**
 		 * The error code of this message - added since it is easier to automatically process
@@ -160,12 +175,56 @@ namespace checks {
 			: type(type), address(address), errorCode(errorCode), message(message) {};
 
 		/**
+		 * Creates a new message based on the given parameters.
+		 *
+		 * @param address the address of the node this error has been discovered on
+		 * @param errorCode the error code describing the problem
+		 * @param annotationPath the path within the annotation identifying the problem
+		 * @param message a message describing the issue
+		 * @param type the type of the new message (ERROR by default)
+		 */
+		Message(const NodeAddress& address, const annotation_path& annotatioPath, ErrorCode errorCode, const string& message, Type type = ERROR)
+			: type(type), address(address), annotationPath(annotatioPath), errorCode(errorCode), message(message) {};
+
+		/**
+		 * Shifts the address of this message such that it becomes a message addressing a
+		 * problem within a node of an annotation of an outer node.
+		 *
+		 * @param outer the address of the outer node
+		 * @param key the key of the annotation causing this issue
+		 * @return the modified message
+		 */
+		Message shiftAddress(const NodeAddress& outer, const utils::AnnotationKeyPtr& key) const;
+
+		/**
 		 * Obtains the address of the node this message is associated to.
 		 *
 		 * @return the node address - might be invalid in case the error cannot be associated to a single node.
 		 */
 		const NodeAddress& getAddress() const {
 			return address;
+		}
+
+		/**
+		 * Obtains the annotation path of the node this message is associated to.
+		 *
+		 * @return the annotation path - might be empty if the error is associated to a node not accessed
+		 * 			via an annotation (most typical case)
+		 */
+		const annotation_path& getAnnotationPath() const {
+			return annotationPath;
+		}
+
+		/**
+		 * Obtains the address of the node causing the issue. If the annotation path is
+		 * empty, the address is equivalent to the address associated to this message.
+		 * Otherwise it is the address within the most deeply nested annotation path.
+		 *
+		 * @return the address of the actual source of the problem
+		 */
+		const NodeAddress& getOrigin() const {
+			if (annotationPath.empty()) return address;
+			return annotationPath.back().second;
 		}
 
 		/**

@@ -81,8 +81,12 @@ namespace parser {
 		// something that should fail
 		EXPECT_FALSE(parse(manager, "hello world"));
 
+		// test combinations of type parameters and int-type parameters
 		EXPECT_EQ(testB, parse(manager, "test<12,#c,#inf,12>"));
 		EXPECT_EQ(testC, parse(manager, "test<A,test<A>,12,#inf>"));
+
+		// something with parents
+		EXPECT_EQ("test:[A,virtual B]<A,B>", toString(*parse(manager, "test : A, virtual B <A,B>")));
 	}
 
 	TEST(IR_Parser2, TupleType) {
@@ -132,6 +136,53 @@ namespace parser {
 
 	}
 
+	TEST(IR_Parser2, FunctionTypeConstructor) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr A = builder.genericType("A");
+		TypePtr B = builder.genericType("B");
+		TypePtr C = builder.genericType("C");
+
+		TypePtr O = builder.refType(C);
+
+		EXPECT_EQ(builder.functionType(toVector(O), O, FK_CONSTRUCTOR), parse(manager, "C::()"));
+		EXPECT_EQ(builder.functionType(toVector(O, A), O, FK_CONSTRUCTOR), parse(manager, "C::(A)"));
+		EXPECT_EQ(builder.functionType(toVector(O, A, B), O, FK_CONSTRUCTOR), parse(manager, "C::(A, B)"));
+
+	}
+
+	TEST(IR_Parser2, FunctionTypeDestructor) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr C = builder.genericType("C");
+		TypePtr O = builder.refType(C);
+
+		EXPECT_EQ(builder.functionType(toVector(O), O, FK_DESTRUCTOR), parse(manager, "~C::()"));
+
+	}
+
+	TEST(IR_Parser2, MemberFunctionType) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr A = builder.genericType("A");
+		TypePtr B = builder.genericType("B");
+		TypePtr C = builder.genericType("C");
+		TypePtr R = builder.genericType("R");
+
+		TypePtr O = builder.refType(C);
+
+		EXPECT_EQ(builder.functionType(toVector(O), R, FK_MEMBER_FUNCTION), parse(manager, "C::()->R"));
+		EXPECT_EQ(builder.functionType(toVector(O, A), R, FK_MEMBER_FUNCTION), parse(manager, "C::(A)->R"));
+		EXPECT_EQ(builder.functionType(toVector(O, A, B), R, FK_MEMBER_FUNCTION), parse(manager, "C::(A, B)->R"));
+
+	}
+
 	TEST(IR_Parser2, TypeVariables) {
 
 		NodeManager manager;
@@ -163,6 +214,23 @@ namespace parser {
 		EXPECT_EQ(core::NT_TupleType, parse(manager, "(10, \"string\")").as<ExpressionPtr>()->getType()->getNodeType());
 
 	}
+
+	TEST(IR_Parser2, StructInheritance) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// test some structs with inheritance
+		EXPECT_EQ("struct<a:A,b:B,c:int<4>>", toString(*parse(manager, "struct { A a; B b; int<4> c; }")));
+		EXPECT_EQ("struct : [A] <a:A,b:B,c:int<4>>", toString(*parse(manager, "struct : A { A a; B b; int<4> c; }")));
+		EXPECT_EQ("struct : [A, B] <a:A,b:B,c:int<4>>", toString(*parse(manager, "struct : A, B { A a; B b; int<4> c; }")));
+		EXPECT_EQ("struct : [A, virtual B] <a:A,b:B,c:int<4>>", toString(*parse(manager, "struct : A, virtual B { A a; B b; int<4> c; }")));
+		EXPECT_EQ("struct : [virtual A, virtual B] <a:A,b:B,c:int<4>>", toString(*parse(manager, "struct : virtual A, virtual B { A a; B b; int<4> c; }")));
+
+		// something that should not work
+		EXPECT_FALSE(parse(manager, "struct : { A a; }"));
+	}
+
 
 	TEST(IR_Parser2, ArrayVectorRefAndChannelTypes) {
 
@@ -471,6 +539,194 @@ namespace parser {
 
 	}
 
+	TEST(IR_Parser2, Constructors) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto ctor = builder.normalize(parse(manager, "C::(int<4> a, bool b) { this; }").as<LambdaExprPtr>());
+		ASSERT_TRUE(ctor);
+
+		auto ctorType = ctor->getLambda()->getType();
+		EXPECT_TRUE(ctorType->isConstructor());
+		EXPECT_EQ(builder.genericType("C"), ctorType->getObjectType());
+
+		EXPECT_EQ("(C::(int<4>,bool))", toString(*ctorType));
+		EXPECT_EQ("rec v0.{v0=fun(ref<C> v1, int<4> v2, bool v3) {v1;}}", toString(*ctor));
+		EXPECT_EQ("ctor C v1 :: (int<4> v2, bool v3) {\n    v1;\n}", toString(core::printer::PrettyPrinter(ctor, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+
+		// a default constructor
+		ctor = builder.normalize(parse(manager, "C::() { this; }").as<LambdaExprPtr>());
+		ASSERT_TRUE(ctor);
+
+		ctorType = ctor->getLambda()->getType();
+		EXPECT_TRUE(ctorType->isConstructor());
+		EXPECT_EQ(1u, ctorType->getParameterTypes().size());
+		EXPECT_EQ(builder.genericType("C"), ctorType->getObjectType());
+
+		EXPECT_EQ("(C::())", toString(*ctorType));
+		EXPECT_EQ("rec v0.{v0=fun(ref<C> v1) {v1;}}", toString(*ctor));
+		EXPECT_EQ("ctor C v1 :: () {\n    v1;\n}", toString(core::printer::PrettyPrinter(ctor, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+
+	}
+
+	TEST(IR_Parser2, Destructor) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto dtor = builder.normalize(parse(manager, "~C::() { this; }").as<LambdaExprPtr>());
+		ASSERT_TRUE(dtor);
+
+		auto dtorType = dtor->getLambda()->getType();
+		EXPECT_TRUE(dtorType->isDestructor());
+		EXPECT_EQ(builder.genericType("C"), dtorType->getObjectType());
+
+		EXPECT_EQ("(~C::())", toString(*dtorType));
+		EXPECT_EQ("rec v0.{v0=fun(ref<C> v1) {v1;}}", toString(*dtor));
+		EXPECT_EQ("dtor ~C v1 :: () {\n    v1;\n}", toString(core::printer::PrettyPrinter(dtor, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+
+	}
+
+	TEST(IR_Parser2, MemberFunction) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto fun = builder.normalize(parse(manager, "C::(int<4> a, bool b)->unit { this; }").as<LambdaExprPtr>());
+		ASSERT_TRUE(fun);
+
+		auto funType = fun->getLambda()->getType();
+		EXPECT_TRUE(funType->isMemberFunction());
+		EXPECT_EQ(builder.genericType("C"), funType->getObjectType());
+
+		EXPECT_EQ("(C::(int<4>,bool)->unit)", toString(*funType));
+		EXPECT_EQ("rec v0.{v0=fun(ref<C> v1, int<4> v2, bool v3) {v1;}}", toString(*fun));
+		EXPECT_EQ("mfun C v1 :: (int<4> v2, bool v3) -> unit {\n    v1;\n}", toString(core::printer::PrettyPrinter(fun, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+
+		// a default constructor
+		fun = builder.normalize(parse(manager, "C::()->unit { this; }").as<LambdaExprPtr>());
+		ASSERT_TRUE(fun);
+
+		funType = fun->getLambda()->getType();
+		EXPECT_TRUE(funType->isMemberFunction());
+		EXPECT_EQ(1u, funType->getParameterTypes().size());
+		EXPECT_EQ(builder.genericType("C"), funType->getObjectType());
+
+		EXPECT_EQ("(C::()->unit)", toString(*funType));
+		EXPECT_EQ("rec v0.{v0=fun(ref<C> v1) {v1;}}", toString(*fun));
+		EXPECT_EQ("mfun C v1 :: () -> unit {\n    v1;\n}", toString(core::printer::PrettyPrinter(fun, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS)));
+
+	}
+
+	TEST(IR_Parser2, ConstructorLetBinding) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create constructor solely
+		auto fun = builder.normalize(builder.parseExpr(
+				"let C = O::(int<4> a) { } in C"
+		)).as<LambdaExprPtr>();
+
+		ASSERT_TRUE(fun);
+
+		FunctionTypePtr funType = fun->getLambda()->getType();
+		EXPECT_EQ(FK_CONSTRUCTOR, funType->getKind());
+		EXPECT_EQ("(O::(int<4>))", toString(*funType));
+
+		// create constructor call
+		auto call = builder.normalize(builder.parseExpr(
+				"let Ctor = O::(int<4> a) {} in Ctor(var(undefined(lit(O))), 3)"
+		)).as<CallExprPtr>();
+
+		ASSERT_TRUE(call);
+
+		EXPECT_EQ(fun, call->getFunctionExpr());
+		EXPECT_EQ(builder.parseType("ref<O>"), call->getType());
+	}
+
+
+	TEST(IR_Parser2, DestructorLetBinding) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create constructor solely
+		auto fun = builder.normalize(builder.parseExpr(
+				"let Dtor = ~O::() { } in Dtor"
+		)).as<LambdaExprPtr>();
+
+		ASSERT_TRUE(fun);
+
+		FunctionTypePtr funType = fun->getLambda()->getType();
+		EXPECT_EQ(FK_DESTRUCTOR, funType->getKind());
+		EXPECT_EQ("(~O::())", toString(*funType));
+
+		// create constructor call
+		auto call = builder.normalize(builder.parseExpr(
+				"let Dtor = ~O::() {} in Dtor(var(undefined(lit(O))))"
+		)).as<CallExprPtr>();
+
+		ASSERT_TRUE(call);
+
+		EXPECT_EQ(fun, call->getFunctionExpr());
+		EXPECT_EQ(builder.parseType("ref<O>"), call->getType());
+	}
+
+	TEST(IR_Parser2, MemberFunctionLetBinding) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create constructor solely
+		auto fun = builder.normalize(builder.parseExpr(
+				"let f = O::(int<4> a)->int<4> { return a; } in f"
+		)).as<LambdaExprPtr>();
+
+		ASSERT_TRUE(fun);
+
+		FunctionTypePtr funType = fun->getLambda()->getType();
+		EXPECT_EQ(FK_MEMBER_FUNCTION, funType->getKind());
+		EXPECT_EQ("(O::(int<4>)->int<4>)", toString(*funType));
+
+		// create constructor call
+		auto call = builder.normalize(builder.parseExpr(
+				"let f = O::(int<4> a)->int<4> { return a; } in f(var(undefined(lit(O))), 3)"
+		)).as<CallExprPtr>();
+
+		ASSERT_TRUE(call);
+
+		EXPECT_EQ(fun, call->getFunctionExpr());
+		EXPECT_EQ(manager.getLangBasic().getInt4(), call->getType());
+	}
+
+	TEST(IR_Parser2, MemberFunctionCall) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create constructor solely
+		auto fun = builder.normalize(builder.parseExpr(
+				"let f = O::(int<4> a)->int<4> { return a; } in f"
+		)).as<LambdaExprPtr>();
+
+		ASSERT_TRUE(fun);
+
+		FunctionTypePtr funType = fun->getLambda()->getType();
+		EXPECT_EQ(FK_MEMBER_FUNCTION, funType->getKind());
+		EXPECT_EQ("(O::(int<4>)->int<4>)", toString(*funType));
+
+		// create constructor call
+		auto call = builder.normalize(builder.parseExpr(
+				"let x = var(undefined(lit(O))) in "
+				"let f = O::(int<4> a)->int<4> { return a; } in "
+				"x.f(3)"
+		)).as<CallExprPtr>();
+
+		ASSERT_TRUE(call);
+
+		EXPECT_EQ(fun, call->getFunctionExpr());
+		EXPECT_EQ(manager.getLangBasic().getInt4(), call->getType());
+		EXPECT_EQ("[AP(ref.var(undefined(O))),AP(3)]", toString(call->getArguments()));
+	}
 
 	TEST(IR_Parser2, LargeCode) {
 

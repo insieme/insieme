@@ -94,8 +94,34 @@ namespace utils {
 		 * Resets this lazy container to an unevaluated state.
 		 */
 		void reset() {
-			evaluated = false;
-			value = V();
+			if (evaluated) {
+				evaluated = false;
+				value = V();
+			}
+		}
+
+		/**
+		 * An implicit conversion to the value type.
+		 */
+		operator const V&() const {
+			return getValue();
+		}
+
+		/**
+		 * An implicit conversion to a boolean allowing to check
+		 * whether the lazy object has been evaluated or not.
+		 */
+		operator bool() const {
+			return isEvaluated();
+		}
+
+		/**
+		 * An overloaded assignment operator to simplify the assignment
+		 * of values to this lazy type.
+		 */
+		Lazy<V>& operator=(const V& value) {
+			setValue(value);
+			return *this;
 		}
 
 	};

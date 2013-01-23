@@ -34,47 +34,9 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+// this is from mingw's pthread.h (really implementing a threadsafe and reentrant rand?)
+#ifndef rand_r
+	#define rand_r(__seed) (__seed == __seed ? rand () : rand ())
+#endif
 
-#include <string>
-
-#include "insieme/utils/annotation.h"
-#include "insieme/core/ir_node.h"
-
-namespace insieme {
-namespace annotations {
-namespace c {
-
-/**
- * Annotation which contains the range within an element in the IR was defined.
- */
-class IncludeFileAnnotation : public core::NodeAnnotation {
-	const string file;
-public:
-	static const string NAME;
-	static const utils::StringKey<IncludeFileAnnotation> KEY;
-
-	IncludeFileAnnotation(const string& fileName): file(fileName) {}
-
-	const std::string& getAnnotationName() const { return NAME; }
-	const utils::AnnotationKeyPtr getKey() const { return &KEY; }
-
-	std::ostream& printTo(std::ostream& out) const { return out << getAnnotationName() << ": " << file; }
-
-	bool operator==(const IncludeFileAnnotation& other) const {
-		if(this == &other)
-			return true;
-		return file == other.getFileName();
-	}
-
-	bool operator!=(const IncludeFileAnnotation& other) const {
-		return !(*this==other);
-	}
-
-
-	const string& getFileName() const { return file; }
-};
-
-} // end namespace c_info
-} // end namespace annotations
-} // end namespace insieme
+							

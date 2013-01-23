@@ -40,6 +40,10 @@
 #include "sched_policies/irt_sched_stealing_circular.h"
 #include "impl/worker.impl.h"
 
+#ifdef _WIN32
+	#include "../../include_win32/rand_r.h"
+#endif
+
 // ============================================================================ Scheduling (general)
 
 void irt_scheduling_init_worker(irt_worker* self) {

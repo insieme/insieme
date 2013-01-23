@@ -68,7 +68,7 @@ public:
 
 	std::ostream& printTo(std::ostream& out) const { return out << name; }
 
-	const utils::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
 	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		assert(&*ptr == this && "Annotation Pointer should point to this!");

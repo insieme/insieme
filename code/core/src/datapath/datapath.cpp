@@ -83,6 +83,13 @@ namespace datapath {
 		return component(IRBuilder(path.getNodeManager()).uintLit(index));
 	}
 
+	DataPath DataPath::parent(const TypePtr& type) const {
+		auto& mgr = path.getNodeManager();
+		auto& basic = mgr.getLangBasic();
+		IRBuilder builder(mgr);
+		return DataPath(builder.callExpr(basic.getDataPath(), basic.getDataPathParent(), path, builder.getTypeLiteral(type)));
+	}
+
 	namespace {
 
 		/**
@@ -108,6 +115,7 @@ namespace datapath {
 				auto& basic = call.getNodeManager().getLangBasic();
 				const auto& fun = call->getFunctionExpr();
 
+
 				// visit in post-fix order
 				visit(call->getArgument(0), out);
 
@@ -129,6 +137,11 @@ namespace datapath {
 					return;
 				}
 
+				// handle pre-fix notation of parent access
+				if (basic.isDataPathParent(fun)) {
+					out << ".as<" << core::printer::PrettyPrinter(call->getArgument(1)->getType().as<GenericTypePtr>().getTypeParameter(0)) << ">";
+					return;
+				}
 
 				LOG(FATAL) << "Invalid data path encountered: " << core::printer::PrettyPrinter(call);
 				assert(false && "Invalid Data Path encountered!");
@@ -178,6 +191,12 @@ namespace datapath {
 		path = path.component(index);
 		return *this;
 	}
+
+	DataPathBuilder& DataPathBuilder::parent(const TypePtr& type) {
+		path = path.parent(type);
+		return *this;
+	}
+
 
 } // end namespace datapath
 } // end namespace core

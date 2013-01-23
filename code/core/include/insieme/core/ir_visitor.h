@@ -1296,22 +1296,22 @@ inline void visitBreadthFirst(const Ptr<Node>& root, IRVisitor<Result, Ptr, P...
 template<template<class Target> class Ptr, typename Node, typename Lambda,
 	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
 inline void visitBreadthFirst(const Ptr<Node>& root, Lambda lambda, bool visitTypes = false) {
-	return visitBreadthFirst(root, makeLambdaVisitor(lambda, visitTypes));
+	visitBreadthFirst(root, makeLambdaVisitor(lambda, visitTypes));
 }
 
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline void visitBreadthFirstInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor) {
-	makeBreadthFirstInterruptibleVisitor(visitor).visit(root);
+inline bool visitBreadthFirstInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor) {
+	return makeBreadthFirstInterruptibleVisitor(visitor).visit(root);
 }
 
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline void visitBreadthFirstInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor) {
-	makeBreadthFirstInterruptibleVisitor(visitor).visit(root);
+inline bool visitBreadthFirstInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor) {
+	return makeBreadthFirstInterruptibleVisitor(visitor).visit(root);
 }
 
 template<template<class Target> class Ptr, typename Node, typename Lambda,
 	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
-inline void visitBreadthFirstInterruptible(const Ptr<Node>& root, Lambda lambda, bool visitTypes = false) {
+inline bool visitBreadthFirstInterruptible(const Ptr<Node>& root, Lambda lambda, bool visitTypes = false) {
 	return visitBreadthFirstInterruptible(root, makeLambdaVisitor(lambda, visitTypes));
 }
 

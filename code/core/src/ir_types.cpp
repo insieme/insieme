@@ -45,6 +45,12 @@ namespace core {
 		// create output buffer
 		out << *getName();
 
+		// check whether there are parent types
+		if (!getParents().empty()) {
+			// print parents list
+			out << ":" << *getParents();
+		}
+
 		// check whether there are type parameters
 		auto typeParam = getTypeParameter();
 		auto intParam = getIntTypeParameter();
@@ -63,6 +69,37 @@ namespace core {
 
 
 	std::ostream& FunctionType::printTo(std::ostream& out) const {
+
+		// fetch object type if required
+		TypePtr objType;
+		if (isConstructor() || isDestructor() || isMemberFunction()) {
+			if (getParameterTypes().empty() || getParameterTypes()[0].getNodeType() != NT_RefType) {
+				objType = GenericType::get(getNodeManager(), "%error%");
+			} else {
+				objType = getObjectType();
+			}
+		}
+
+		// handle constructors
+		if (isConstructor()) {
+			auto paramBegin = getParameterTypes().begin() + 1;
+			auto paramEnd = getParameterTypes().end();
+			return out << "(" << *objType << "::(" << join(",", paramBegin, paramEnd, print<deref<NodePtr>>()) << "))";
+		}
+
+		// handle destructor
+		if (isDestructor()) {
+			assert(1u == getParameterTypes().size());
+			return out << "(~" << *objType << "::())";
+		}
+
+		// handle member function types
+		if (isMemberFunction()) {
+			auto paramBegin = getParameterTypes().begin() + 1;
+			auto paramEnd = getParameterTypes().end();
+			return out << "(" << *objType << "::(" << join(",", paramBegin, paramEnd, print<deref<NodePtr>>()) << ")->" << *getReturnType() << ")";
+		}
+
 		out << "(";
 		// add parameters
 		out << "(" << join(",", getParameterTypes()->getChildList(), print<deref<NodePtr>>()) << ")";
@@ -127,7 +164,7 @@ namespace core {
 		void checkForNameCollisions(const vector<NamedTypePtr>& elements) {
 
 			// get projection to the name
-			auto start = boost::make_transform_iterator(elements.begin(), name_extractor());
+			auto start = boost::make_transform_iterator(elements.begin(), name_extractor()) + 1;
 			auto end = boost::make_transform_iterator(elements.end(), name_extractor());
 
 			if (hasDuplicates(start, end)) { // nice way using projections => but crashes in GCC

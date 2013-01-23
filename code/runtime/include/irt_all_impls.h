@@ -59,6 +59,10 @@
 	#include "utils/impl/affinity.impl.h"
 #endif
 
+#ifdef _WIN32
+	#include "include_win32/memalign.h"	
+#endif
+
 #include "runtime.h"
 //#include "context/impl/capture.impl.h"
 

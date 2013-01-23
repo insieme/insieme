@@ -91,6 +91,10 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 	//total += sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE;
 	//printf("Total allocated: %6.2lf MB\n", total/(1024.0*1024.0));
 	ret = (lwt_reused_stack*)malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE);
+		
+	if (ret == NULL)
+		perror("FAIL");
+		
 	ret->next = NULL;
 	return ret;
 }

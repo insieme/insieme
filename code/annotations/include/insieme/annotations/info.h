@@ -65,7 +65,7 @@ public:
 	Info(unsigned id, const StrValueVect& values) : id(id), values(values) { }
 
 
-	const utils::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 	const std::string& getAnnotationName() const { return NAME; }
 
 
