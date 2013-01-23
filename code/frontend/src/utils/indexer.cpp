@@ -44,71 +44,27 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
+#include "insieme/frontend/compiler.h"
 #include "insieme/frontend/utils/indexer.h"
+#include "insieme/frontend/pragma/handler.h"
+
 #include "insieme/utils/logging.h"
 
 #include "clang/Sema/Sema.h"
-#include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Parse/ParseAST.h"
+
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclBase.h"
+
+
+
 
 
 namespace insieme{
 namespace frontend{
 namespace utils{
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-// the indexer consumer populates the index as
-// the first pass parse generates AST
-//////////////////////////////////////////////////////////////////////////////////////////////
-
-
-/////////////////////////////////////////////////////////////////////
-template <class tIndex>
-class indexerASTConsumer : public clang::ASTConsumer {
-
-	tIndex& mIndex;
-	insieme::frontend::TranslationUnit* tu;
-
-public:
-	//////////////////////////////////////////////////
-	//
-    indexerASTConsumer(tIndex& index, insieme::frontend::TranslationUnit* tu_)
-	: mIndex(index),
-	  tu(tu_)
-    {}
-
-	//////////////////////////////////////////////////
-    /// Override the method that gets called for each parsed top-level
-    /// declaration.
-    virtual bool HandleTopLevelDecl(clang::DeclGroupRef DR) {
-
-		for (clang::DeclGroupRef::iterator b = DR.begin(), e = DR.end();
-				b != e; ++b){
-
-			if (llvm::isa<clang::NamedDecl>(*b)){
-				clang::Decl *decl = llvm::cast<clang::Decl>(*b);
-				clang::NamedDecl *named = llvm::cast<clang::NamedDecl>(*b);
-
-				assert (decl && "no declaration");
-				assert (named && "no name");
-
-				
-				if (named->hasBody()){
-					//tStored elem = 
-					std::pair<clang::Decl*, insieme::frontend::TranslationUnit*> elem =  std::make_pair(decl,tu); 
-																					//decl->getTranslationUnitDecl();
-					// FIXME: check if qualified name needed, or just name
-					mIndex[named->getNameAsString()] = elem;
-				}
-			}
-		}
-
-		return true;
-    }
-};
-
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 /// the indexer generates an index of 
@@ -121,27 +77,43 @@ Indexer::Indexer()
 }
 
 ////////////////////////////////////////////////
-//
+//  AST has being already gerated at the parse step
+//  It could be parsed here, but there are spetial requirements for the #pragma handeling.
+//  As is already build, we just need to iterate the ASTContext and anotate those
+//  elements which have a body. those correspond to the Definition and not just declarations.
 void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
-	
 	const ClangCompiler& compiler = tu->getCompiler();
 
-	clang::Preprocessor& preprocessor = compiler.getPreprocessor();
-	clang::ASTContext& mASTContext   = compiler.getASTContext();
+	VLOG(1) << "=== Indexing TU ====";
+	clang::TranslationUnitDecl* tuDecl = compiler.getASTContext().getTranslationUnitDecl();
+	assert(tuDecl && "AST has not being build");
 
-	clang::ASTConsumer *consumer = new indexerASTConsumer<tIndex>(mIndex, tu);
+	clang::DeclContext* ctx= clang::TranslationUnitDecl::castToDeclContext (tuDecl);
+	assert(ctx && "AST has no decl context");
 
-	// FIXME: is needed to use our sema??
-	clang::Sema mySema (preprocessor, mASTContext, *consumer);
-	ParseAST(mySema, false, false);
+	clang::DeclContext::decl_iterator it = ctx->decls_begin();
+	clang::DeclContext::decl_iterator end = ctx->decls_end();
+	for (; it != end; it++){
+		if (llvm::isa<clang::FunctionDecl>(*it)){
 
-	// FIXME: who releases this?
-	//delete consumer;
+			clang::Decl *decl = llvm::cast<clang::Decl>(*it);
+			clang::NamedDecl *named = llvm::cast<clang::NamedDecl>(*it);
+
+			assert (decl && "no declaration");
+			assert (named && "no name");
+		
+			if (named->hasBody()){
+				tStored elem =  std::make_pair(decl,tu); 
+				mIndex[named->getNameAsString()] = elem; // FIXME: check if qualified name needed, or just name
+			}
+		}
+	}
+	VLOG(1) << "=== Indexing DONE ====";
 }
 
 ////////////////////////////////////////////////
 //
-tStored Indexer::getDefAndTUforDefinition (const std::string& symbol) const{
+Indexer::tStored Indexer::getDefAndTUforDefinition (const std::string& symbol) const{
 
 	tIndex::const_iterator match = this->mIndex.find(symbol);
 	if (match != this->mIndex.end()){
@@ -169,7 +141,7 @@ clang::Decl* Indexer::getDefDefinitionFor (const std::string& symbol) const{
 
 ////////////////////////////////////////////////
 ///
-tStored Indexer::getDefAndTUforDefinition (clang::Decl* decl) const{
+Indexer::tStored Indexer::getDefAndTUforDefinition (clang::Decl* decl) const{
 	return getDefAndTUforDefinition(llvm::cast<clang::NamedDecl>(decl)->getNameAsString());
 }
 

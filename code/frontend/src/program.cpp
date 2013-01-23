@@ -85,18 +85,17 @@ using namespace clang;
 
 namespace {
 
-/*
- * Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
- */
+// Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
+///
 void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL) {
 
 	InsiemeSema S(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
 
 	//Parser P(comp.getPreprocessor(), S); // clang [3.0]
-	Parser P(comp.getPreprocessor(), S, true); 
-	comp.getPreprocessor().EnterMainSourceFile();  //FIXME: this is the thing, it has being already preprocessed
+	Parser P(comp.getPreprocessor(), S, false);  // do not skip function bodies
+	comp.getPreprocessor().EnterMainSourceFile();  
 
-	P.Initialize();
+	P.Initialize();	  //FIXME
 	ParserProxy::init(&P);
 	Consumer->Initialize(comp.getASTContext());
 	if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
@@ -113,7 +112,7 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 		if(ADecl) Consumer->HandleTopLevelDecl(ADecl.getAsVal<DeclGroupRef>());
 
 	Consumer->HandleTranslationUnit(comp.getASTContext());
-	ParserProxy::discard();
+	ParserProxy::discard();  // FIXME
 
 	S.dump();
 
@@ -138,10 +137,8 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 	//////////////////////////////////////////////////////////////////////////////
 }
 
-/**
- * A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
- * and the insieme IR which has been generated from the source file.
- */
+///  A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
+///  and the insieme IR which has been generated from the source file.
 // clang [3.0]class TranslationUnitImpl: public insieme::frontend::TranslationUnit, public clang::idx::TranslationUnit {
 class TranslationUnitImpl: public insieme::frontend::TranslationUnit{
 
@@ -150,7 +147,7 @@ class TranslationUnitImpl: public insieme::frontend::TranslationUnit{
 	//std::shared_ptr<clang::idx::SelectorMap>		   	mSelMap;
 
 public:
-	TranslationUnitImpl(const std::string& file_name):
+	TranslationUnitImpl(const std::string& file_name, insieme::frontend::utils::Indexer& indexer):
 		insieme::frontend::TranslationUnit(file_name) {
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
@@ -167,15 +164,17 @@ public:
 		// register 'mpi' pragma
 		mpi::registerPragmaHandler( mClang.getPreprocessor() );
 
-		/*  FIXME: preprocess here or in indexer?
+		//  FIXME: preprocess here or in indexer?
+		//clang::ASTConsumer emptyCons;
 		clang::ASTConsumer emptyCons;
+		//insieme::frontend::utils::indexerASTConsumer consumer(indexer, 
+	//									dynamic_cast<insieme::frontend::TranslationUnit*>(this));
 		parseClangAST(mClang, &emptyCons, true, mPragmaList);
 
 		if( mClang.getDiagnostics().hasErrorOccurred() ) {
 			// errors are always fatal!
 			throw ClangParsingError(file_name);
 		}
-		*/
 
 		// clang [3.0]
 		// the translation unit has been correctly parsed
@@ -225,12 +224,12 @@ Program::~Program() {
 }
 
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
-	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name);
+	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name, pimpl->mIdx);
 
 	//pimpl->mIdx.IndexAST( dynamic_cast<clang::idx::TranslationUnit*>(tuImpl) );
 	pimpl->mIdx.indexTU(tuImpl);
 	pimpl->mIdx.dump();
-	//
+
 	//FIXME:  fill the callgraph
 	//pimpl->mCallGraph.addTU( tuImpl->getASTContext() );
 	

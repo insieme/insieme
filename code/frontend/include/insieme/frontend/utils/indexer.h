@@ -44,6 +44,9 @@
 #include "insieme/frontend/program.h"
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclBase.h"
 
 
 
@@ -51,20 +54,23 @@ namespace insieme{
 namespace frontend{
 namespace utils{
 
-	typedef std::pair<clang::Decl*, insieme::frontend::TranslationUnit*> tStored;
+
+class indexerASTConsumer;
+
+
 //////////////////////////////////////////////////////////////////
 // the indexer generates an index of 
 class Indexer{
+public:
+	typedef std::pair<clang::Decl*, insieme::frontend::TranslationUnit*> tStored;
 
 private:
-	//FIXME:  what do we store?
-	typedef std::map<std::string, tStored> tIndex;
+	typedef std::map<std::string, tStored> tIndex; 
 
 	tIndex   mIndex;
 	tStored  voidPair;
 
 public:
-
 
 	////////////////////////////////////////////////
 	// the context will be the owner of all generated AST nodes
@@ -93,7 +99,16 @@ public:
 	////////////////////////////////////////////////
 	//
 	void dump() const;
+
+
+	friend class indexerASTConsumer;
 };
+
+
+
+
+
+
 
 } // end namespace utils
 } // end namespace frontend

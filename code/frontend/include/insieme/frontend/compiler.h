@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <iostream>
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -84,6 +86,8 @@ public:
 	 * call this method with a NULL parser causes an assertion.
 	 */
 	static void init(clang::Parser* parser=NULL) {
+
+		std::cout << " ************ Init ParserProxy ";
 		assert(parser && "ParserProxy cannot be initialized with a NULL parser");
 		currParser = new ParserProxy(parser);
 	}
@@ -92,6 +96,7 @@ public:
 	 * the discard method is called when the Parser is no longer valid.
 	 */
 	static void discard() {
+		std::cout << " ************ Discard ParserProxy ";
 		delete currParser;
 		currParser = NULL;
 	}
