@@ -8,7 +8,7 @@ add_subdirectory(insieme_dev_doc)
 
 add_subdirectory(coding_standards)
 add_subdirectory(ir_language_specification)
-# add_subdirectory(ir++_language_specification)
+add_subdirectory(ir++_language_specification)
 add_subdirectory(ir_translation)
 
 add_subdirectory(insieme_runtime)
