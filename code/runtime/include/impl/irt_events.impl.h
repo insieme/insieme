@@ -41,18 +41,18 @@
 #define IRT_DEFINE_EVENTS(__subject__, __short__, __num_events__) \
 static inline irt_##__short__##_event_register* _irt_get_##__short__##_event_register() { \
 	irt_worker* self = irt_worker_get_current(); \
-	/*irt_##__short__##_event_register* reg = self->__short__##_ev_register_list; \
+	irt_##__short__##_event_register* reg = self->__short__##_ev_register_list; \
 	if(reg) { \
 		self->__short__##_ev_register_list = reg->lookup_table_next; \
 		reg->lookup_table_next = NULL; \
 		memset(reg->occurrence_count, 0, __num_events__*sizeof(uint32)); \
 		memset(reg->handler, 0, __num_events__*sizeof(irt_##__short__##_event_lambda*)); \
 		return reg; \
-	} else {*/ \
+	} else { \
 		irt_##__short__##_event_register* ret = (irt_##__short__##_event_register*)calloc(1, sizeof(irt_##__short__##_event_register)); \
 		irt_spin_init(&ret->lock); /* TODO check destroy */ \
 		return ret; \
-	/*}*/ \
+	} \
 } \
  \
 static inline void _irt_del_##__short__##_event_register(irt_##__subject__##_id __short__##_id) { \
