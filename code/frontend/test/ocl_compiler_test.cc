@@ -149,7 +149,7 @@ TEST(OclCompilerTest, HelloCLTest) {
     fe::Program prog(manager);
 
     std::cout << SRC_DIR << std::endl;
-    prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello.cl");
+    prog.addTranslationUnit("/home/klaus/testcases/svn/Insieme_testcase/src/insieme/floyd/floyd.cl");//std::string(SRC_DIR) + "inputs/hello.cl");
     program = prog.convert();
     LOG(INFO) << "Done.";
 
