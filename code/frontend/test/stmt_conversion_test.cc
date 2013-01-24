@@ -53,8 +53,9 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
 
-#include "clang/Index/Indexer.h"
-#include "clang/Index/Program.h"
+// clang [3.0]
+//#include "clang/Index/Indexer.h"
+//#include "clang/Index/Program.h"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;
@@ -121,7 +122,7 @@ TEST(StmtConversion, FileTest) {
 				// do semantics checking
 				checkSemanticErrors(type);
 			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
-				LambdaExprPtr&& expr = dynamic_pointer_cast<const LambdaExpr>(convFactory.convertFunctionDecl(fd));
+				LambdaExprPtr&& expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(convFactory.convertFunctionDecl(fd));
 				assert(expr);
 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(expr) + '\"' );
 				// do semantics checking
