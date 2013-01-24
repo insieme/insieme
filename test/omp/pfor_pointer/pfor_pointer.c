@@ -13,13 +13,13 @@ int main() {
 	int* e = s + N;
 
 	#pragma omp parallel for
-	for(int* p = a; p < e; p++) {
+	for(int* p = s; p < e; p++) {
 		*p = 2;
 	}
 
 	int sum = 0;
 	#pragma omp parallel for reduction(+ : sum)
-	for(int* p = a; p < e; p++) {
+	for(int* p = s; p < e; p++) {
 		sum += *p;
 	}
 
