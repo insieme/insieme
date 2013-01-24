@@ -37,6 +37,7 @@
 //FLAG(opt_name, opt_id, var_name, def_value, var_help)
 FLAG("help,h", 				"help", 				Help, 			false, 	"produce help message")
 FLAG("version,V", 			"version", 				Version, 		false, 	"print version string")
+FLAG("show_features,f", 	"show_features",		ShowFeatures, 	false, 	"print used features to console")
 
 OPTION("database,b",			"database",				DataBase,		std::string,				"Data base path")
 OPTION("static_feature,S",		"static_feature", 		SFeatures, 		std::vector<std::string>, 	"Indices of static features to query form the database")
