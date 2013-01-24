@@ -82,9 +82,12 @@ void irt_scheduling_loop(irt_worker* self) {
 			irt_mutex_unlock(&irt_g_active_worker_mutex);
 			continue;
 		}
+		if(!irt_scheduling_worker_sleep(self)) {
+			irt_mutex_unlock(&irt_g_active_worker_mutex);
+			continue;
+		}
 		irt_g_active_worker_count--;
 		// nothing to schedule, wait for signal
-		irt_scheduling_worker_sleep(self);
 		int wait_err = irt_cond_wait(&self->wait_cond, &irt_g_active_worker_mutex);
 		IRT_ASSERT(wait_err == 0, IRT_ERR_INTERNAL, "Worker failed to wait on scheduling condition");
 		// we were woken up by the signal and now own the mutex

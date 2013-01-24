@@ -110,6 +110,9 @@ uint32 irt_scheduling_select_taskopt_variant(irt_work_item* wi, irt_worker* wo) 
 }
 #endif //IRT_TASK_OPT
 
+void irt_scheduling_generate_wi(irt_worker* target, irt_work_item* wi) {
+	irt_scheduling_assign_wi(target, wi);
+}
 
 // ============================================================================ Scheduling (LINEAR STEALING)
 #if 0

@@ -57,6 +57,7 @@ void irt_scheduling_generate_wi(irt_worker* target, irt_work_item* wi) {
 		irt_signal_worker(t);
 	} else {
 		irt_cwb_push_front(queue, wi);
+		if(target->state == IRT_WORKER_STATE_SLEEPING) irt_signal_worker(target);
 	}
 }
 
@@ -85,16 +86,29 @@ irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_r
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	irt_circular_work_buffer *queue = &target->sched_data.queue;
 	irt_signal_worker(target);
-	irt_cwb_push_front(queue, wi);
-	irt_signal_worker(target);
+	if(irt_cwb_size(queue) >= IRT_CWBUFFER_LENGTH/2 && target->sched_data.wake_target) {
+		irt_worker *t = target->sched_data.wake_target;
+		target->sched_data.wake_target = NULL;
+		irt_cwb_push_front(&t->sched_data.queue, wi);
+		irt_signal_worker(t);
+	} else {
+		irt_cwb_push_front(queue, wi);
+		irt_signal_worker(target);
+	}
 }
 
-void irt_scheduling_worker_sleep(irt_worker *self) {
-	self->state = IRT_WORKER_STATE_SLEEPING;
+bool irt_scheduling_worker_sleep(irt_worker *self) {
 	uint32 id = self->id.thread;
 	irt_worker* waker = irt_g_workers[(id+1)%irt_g_worker_count];
+	irt_work_item* stolen = irt_cwb_pop_back(&waker->sched_data.queue);
+	if(stolen) {
+		irt_cwb_push_front(&self->sched_data.queue, stolen);
+		return false;
+	}
 	IRT_DEBUG("Worker %d sleeping. Waker: %d\n", id, waker->id.thread);
 	waker->sched_data.wake_target = self;
+	self->state = IRT_WORKER_STATE_SLEEPING;
+	return true;
 }
 
 // ============================================================================ Scheduling (RANDOM STEALING)

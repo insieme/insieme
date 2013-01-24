@@ -45,7 +45,12 @@ void irt_scheduling_init_worker(irt_worker* self) {
 	irt_work_item_deque_init(&self->sched_data.pool);
 }
 
-void irt_scheduling_worker_sleep(irt_worker *self) {
+bool irt_scheduling_worker_sleep(irt_worker *self) {
+	return true;
+}
+
+void irt_scheduling_generate_wi(irt_worker* target, irt_work_item* wi) {
+	irt_scheduling_assign_wi(target, wi);
 }
 
 int irt_scheduling_iteration(irt_worker* self) {

@@ -113,9 +113,10 @@ inline irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work
  */
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi);
 
-/* Send worker to sleep. Self must be executing the call.
+/* Prepare worker for sleep. Self must be executing the call.
+ * returns true if sleep should proceed, false to stay awake
  */
-void irt_scheduling_worker_sleep(irt_worker *self);
+bool irt_scheduling_worker_sleep(irt_worker *self);
 
 #if IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC
 #include "sched_policies/irt_sched_static.h"
