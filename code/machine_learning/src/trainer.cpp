@@ -607,7 +607,7 @@ void Trainer::valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index
 			fuzzy(i) = POS;
 			continue;
 		}
-		if(i == looser && false) {
+		if((i == looser) && false) {
 			fuzzy(i) = NEG;
 			continue;
 		}
