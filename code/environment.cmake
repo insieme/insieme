@@ -164,7 +164,7 @@ endif()
 
 # FIXME: select only the needed libraries
 set(clang_LList
-	libclang.a
+	#libclang.a
 	libclangAnalysis.a
 	libclangARCMigrate.a
 	libclangAST.a
@@ -181,7 +181,7 @@ set(clang_LList
 	libclangRewriteFrontend.a
 	libclangSema.a
 	libclangSerialization.a
-	libclang.so
+	#libclang.so
 	libclangStaticAnalyzerCheckers.a
 	libclangStaticAnalyzerCore.a
 	libclangStaticAnalyzerFrontend.a
