@@ -81,7 +81,11 @@ T convertTo(std::string str, std::string start, std::string end) {
 
 OptimizerPtr strToOptimizer(std::string argString, MyFFNet net) {
 	if(argString.empty())	return std::make_shared<CG>();
-	if(argString == "CG")	return std::make_shared<CG>();
+	if(argString == "CG"){
+		std::shared_ptr<CG> cg =  std::make_shared<CG>();
+		cg->init(net.getModel(), CG::Dlinmin, 100, -1, 1);
+		return cg;
+	}
 	if(argString.find("Quickprop") == 0) {
 		std::shared_ptr<Quickprop> qprop = std::make_shared<Quickprop>();
 		qprop->initUserDefined(net.getModel(), convertTo<double>(argString, "[", ","), convertTo<double>(argString, ",", "]"));
@@ -179,7 +183,20 @@ int main(int argc, char* argv[]) {
 
 	OptimizerPtr optimizer = strToOptimizer(TrainCmdOptions::Optimizer, net);
 
-	LOG(INFO)<< "Error: " << qpnn->train(*optimizer, err, TrainCmdOptions::TrainingIter) << std::endl;
+        std::stringstream fss;
+
+        if(TrainCmdOptions::SFeatureNames.size() > 0) {
+                for(std::vector<std::string>::const_iterator I = TrainCmdOptions::SFeatureNames.begin(); I != TrainCmdOptions::SFeatureNames.end(); ++I) {
+                        fss << " -s" << *I;
+                }
+        }
+        if(TrainCmdOptions::DFeatureNames.size() > 0) {
+                for(std::vector<std::string>::const_iterator I = TrainCmdOptions::DFeatureNames.begin(); I != TrainCmdOptions::DFeatureNames.end(); ++I) {
+                        fss << " -d" << *I;
+                }
+        }
+
+	LOG(INFO) << fss.str() << " Error: " << qpnn->train(*optimizer, err, TrainCmdOptions::TrainingIter) << std::endl;
 
 	if(TrainCmdOptions::OutputModel.size() > 0 || TrainCmdOptions::OutputPath.size() > 0)
 		writeModel(qpnn);
