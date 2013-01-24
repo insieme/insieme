@@ -93,6 +93,13 @@ TEST(Lists, TestBaseTypes) {
 	// EXPECT_EQ(x, toValue<double>(expr));
 
 
+	// check strings
+	string test = "Hello";
+	expr = toIR(manager, test);
+	EXPECT_EQ("string", toString(*expr->getType()));
+	EXPECT_EQ("Hello", toString(*expr));
+	EXPECT_EQ(test, toValue<string>(expr));
+
 	// check exceptions
 	expr = builder.variable(basic.getInt4());
 	EXPECT_THROW(toValue<double>(expr), InvalidExpression); // wrong type

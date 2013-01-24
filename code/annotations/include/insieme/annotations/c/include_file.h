@@ -57,7 +57,7 @@ public:
 	IncludeFileAnnotation(const string& fileName): file(fileName) {}
 
 	const std::string& getAnnotationName() const { return NAME; }
-	const utils::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
 	std::ostream& printTo(std::ostream& out) const { return out << getAnnotationName() << ": " << file; }
 

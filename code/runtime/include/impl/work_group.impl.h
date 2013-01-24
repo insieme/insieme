@@ -42,32 +42,36 @@
 #include "irt_atomic.h"
 #include "impl/instrumentation.impl.h"
 
-#ifdef _MSC_VER
-	#include <Windows.h>
-#endif
-
-
 static inline irt_work_group* _irt_wg_new() {
 	return (irt_work_group*)malloc(sizeof(irt_work_group));
 }
 static inline void _irt_wg_recycle(irt_work_group* wg) {
 	free(wg->redistribute_data_array);
-	free(wg);
+	//free(wg);
 }
 
 irt_work_group* _irt_wg_create(irt_worker* self) {
 	irt_work_group* wg = _irt_wg_new();
 	wg->id = irt_generate_work_group_id(IRT_LOOKUP_GENERATOR_ID_PTR);
+	//IRT_ASSERT((wg->id.thread<100) && (wg->id.index<30000), IRT_ERR_INTERNAL, "ALB! t: %d, id: %d", wg->id.thread, wg->id.index); // TODO DEBUG remove!
 	wg->id.cached = wg;
-	wg->distributed = false;
+	//wg->distributed = false;
 	wg->local_member_count = 0;
 	wg->ended_member_count = 0;
 	wg->cur_barrier_count = 0;
+	wg->cur_busy_barrier_count = 0;
+	wg->tot_barrier_count = 0;
+	wg->barrier_start_ticks = 1;
 	wg->pfor_count = 0;
 	wg->joined_pfor_count = 0;
 	wg->redistribute_data_array = NULL;
 	wg->cur_sched = irt_g_loop_sched_policy_default;
 	irt_spin_init(&wg->lock);
+	// create entry in event table
+	irt_wg_event_register *reg = _irt_get_wg_event_register();
+	reg->id.full = wg->id.full;
+	reg->id.cached = reg;
+	_irt_wg_event_register_only(reg);
 	return wg;
 }
 
@@ -78,6 +82,12 @@ irt_work_group* irt_wg_create() {
 	return wg;
 }
 void irt_wg_destroy(irt_work_group* wg) {
+	irt_wg_event_register_id tgid;
+	tgid.full = wg->id.full;
+	tgid.cached = NULL;
+	irt_wg_event_register* reg = irt_wg_event_register_table_lookup(tgid);
+	IRT_ASSERT(reg->handler[IRT_WG_EV_COMPLETED] == NULL, IRT_ERR_INTERNAL, "Unfinished business");
+	IRT_ASSERT(reg->occurrence_count[IRT_WG_EV_COMPLETED] == 1, IRT_ERR_INTERNAL, "Incomplete triggering");
 	_irt_del_wg_event_register(wg->id);
 	irt_spin_destroy(&wg->lock);
 	_irt_wg_recycle(wg);
@@ -85,9 +95,8 @@ void irt_wg_destroy(irt_work_group* wg) {
 
 static inline void _irt_wg_end_member(irt_work_group* wg) {
 	//IRT_INFO("_irt_wg_end_member: %u / %u\n", wg->ended_member_count, wg->local_member_count);
-	irt_atomic_inc(&wg->ended_member_count);
-	if(irt_atomic_bool_compare_and_swap(&wg->ended_member_count, wg->local_member_count, 0)) { // TODO set to 0 ok? delete group?
-		irt_wg_event_trigger(wg->id, IRT_WG_EV_COMPLETED);
+	if(irt_atomic_add_and_fetch(&wg->ended_member_count, 1) == wg->local_member_count) {
+		irt_wg_event_trigger_existing(wg->id, IRT_WG_EV_COMPLETED);
 		irt_wg_destroy(wg);
 	}
 }
@@ -130,35 +139,78 @@ bool _irt_wg_barrier_event_complete(irt_wg_event_register* source_event_register
 	irt_scheduling_continue_wi(data->join_to, data->involved_wi);
 	return false;
 }
-void irt_wg_barrier(irt_work_group* wg) {
+void irt_wg_barrier_scheduled(irt_work_group* wg) {
 	irt_worker* self = irt_worker_get_current();
  	irt_work_item* swi = self->cur_wi;
-
-	uint32 pre_occurances = irt_wg_event_check(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
-	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1) < wg->local_member_count) {
-		// enter barrier
-		//IRT_INFO("BARRIER - WI %3d: [[[ UP\n", irt_wi_get_wg_num(swi, 0));
-		_irt_wg_barrier_event_data barrier_ev_data = {swi, self};
-		irt_wg_event_lambda barrier_lambda = {_irt_wg_barrier_event_complete, &barrier_ev_data, NULL};
-		if(irt_wg_event_check_gt_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda, pre_occurances) == 0) {
-			irt_inst_region_add_time(swi);
-			irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
-			// suspend until allowed to leave barrier
-			self->cur_wi = NULL;
-			lwt_continue(&self->basestack, &swi->stack_ptr);
-			irt_inst_region_set_timestamp(swi);
-			irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, swi->id);
-		}
-		//IRT_INFO("BARRIER - WI %3d: ]]] UP\n", irt_wi_get_wg_num(swi, 0));
+	// enter barrier
+	IRT_ASSERT(wg->id.index != 0, IRT_ERR_INTERNAL, "WG 0 barrier");
+	_irt_wg_barrier_event_data barrier_ev_data = {swi, self};
+	irt_wg_event_lambda barrier_lambda = {_irt_wg_barrier_event_complete, &barrier_ev_data, NULL};
+	IRT_ASSERT(irt_wg_event_check_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda) == 0, IRT_ERR_INTERNAL, "Orphaned Barrier event occurance");
+	// check if last
+	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1) == wg->local_member_count) {
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0), IRT_ERR_INTERNAL, "Barrier count reset failed");
+		// remove own handler from event register
+		irt_wg_event_remove(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda);
+		irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_BARRIER_COMPLETE, wg->id);
+		irt_wg_event_trigger_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
 	} else {
-		// last wi to reach barrier, set count and signal event
-		if(!irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0)) IRT_ASSERT(false, IRT_ERR_INTERNAL, "Barrier insanity");
-		//IRT_INFO("BARRIER - WI %3d: --- TRIGGER\n", irt_wi_get_wg_num(swi, 0));
-		irt_wg_event_trigger(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
+		// suspend
+		irt_inst_region_add_time(swi);
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
+		// suspend until allowed to leave barrier
+		lwt_continue(&self->basestack, &swi->stack_ptr);
+		irt_inst_region_set_timestamp(swi);
+		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
 	}
-	//IRT_INFO("BARRIER - WI %3d: EXIT }}}}}}}}}}}}\n", irt_wi_get_wg_num(swi, 0));
 }
-
+void irt_wg_barrier_busy(irt_work_group* wg) {
+	irt_worker* self = irt_worker_get_current();
+ 	irt_work_item* swi = self->cur_wi;
+	// check if last
+	uint32 pre_barrier_count = wg->tot_barrier_count;
+	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1) == wg->local_member_count) {
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0), IRT_ERR_INTERNAL, "Barrier count reset failed");
+		irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_BARRIER_COMPLETE, wg->id);
+		irt_atomic_inc(&wg->tot_barrier_count);
+	} else {
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
+		while(wg->tot_barrier_count == pre_barrier_count) {
+			irt_signal_worker(irt_g_workers[rand()%irt_g_worker_count]); 
+			irt_busy_ticksleep(1000);
+		}
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, swi->id);
+	}
+}
+//void irt_wg_barrier_timed_busy(irt_work_group* wg) {
+//	if(wg->barrier_start_ticks == 0) irt_wg_barrier_scheduled(wg);
+//	irt_worker* self = irt_worker_get_current();
+// 	irt_work_item* swi = self->cur_wi;
+//	uint32 pre_barrier_count = wg->tot_barrier_count;
+//	wg->barrier_start_ticks = irt_time_ticks();
+//	// check if last
+//	if(irt_atomic_add_and_fetch(&wg->cur_busy_barrier_count, 1) == wg->local_member_count) {
+//		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_busy_barrier_count, wg->local_member_count, 0), IRT_ERR_INTERNAL, "Barrier count reset failed");
+//		irt_atomic_inc(&wg->tot_barrier_count);
+//	} else {
+//		while(wg->tot_barrier_count == pre_barrier_count) {
+//			if(wg->barrier_start_ticks == 0 || irt_time_ticks()-wg->barrier_start_ticks > 100000) {
+//				wg->barrier_start_ticks = 0;
+//				return;
+//			}
+//		}
+//	}
+//}
+void irt_wg_barrier_smart(irt_work_group* wg) {
+	if(wg->local_member_count <= irt_g_worker_count) {
+		irt_wg_barrier_busy(wg);
+	} else {
+		irt_wg_barrier_scheduled(wg);
+	}
+}
+inline void irt_wg_barrier(irt_work_group* wg) {
+	irt_wg_barrier_smart(wg);
+}
 
 
 void _irt_wg_allocate_redist_array(irt_work_group* wg) {
@@ -190,12 +242,14 @@ void irt_wg_join(irt_work_group* wg) {
 	irt_work_item* swi = self->cur_wi;
 	_irt_wg_join_event_data clo = {swi, self};
 	irt_wg_event_lambda lambda = { &_irt_wg_join_event, &clo, NULL };
-	uint32 occ = irt_wg_event_check_and_register(wg->id, IRT_WG_EV_COMPLETED, &lambda);
+	irt_work_group_id wgid = wg->id;
+	//IRT_ASSERT((wgid.thread<100) && (wgid.index<100000), IRT_ERR_INTERNAL, "BLA! t: %d, id: %d", wgid.thread, wgid.index); // TODO DEBUG remove!
+	int64 occ = irt_wg_event_check_exists_and_register(wgid, IRT_WG_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
 		irt_inst_region_add_time(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_GROUPJOIN, swi->id);
-		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &swi->stack_ptr);
 		irt_inst_region_set_timestamp(swi);
+		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
 	}
 }

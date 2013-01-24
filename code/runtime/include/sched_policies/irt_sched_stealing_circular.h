@@ -38,34 +38,9 @@
 
 #include "declarations.h"
 
-#define IRT_CWBUFFER_LENGTH 64
-#define IRT_CWBUFFER_MASK (IRT_CWBUFFER_LENGTH-1)
+#define IRT_CWBUFFER_LENGTH 16
 
-
-typedef union _irt_cwb_state {
-	uint64 all;
-	struct {
-		union {
-			uint32 top;
-			struct {
-				uint16 top_val;
-				uint16 top_update;
-			};
-		};
-		union {
-			uint32 bot;
-			struct {
-				uint16 bot_val;
-				uint16 bot_update;
-			};
-		};
-	};
-} irt_cwb_state;
-
-typedef struct _irt_circular_work_buffer {
-	volatile irt_cwb_state state;
-	irt_work_item* items[IRT_CWBUFFER_LENGTH];
-} irt_circular_work_buffer;
+#include "utils/circular_work_buffers.h"
 
 typedef struct _irt_cw_data {
 	irt_circular_work_buffer queue;

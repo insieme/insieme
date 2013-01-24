@@ -317,6 +317,6 @@ namespace encoder {
 
 
 
-} // end namespace lists
+} // end namespace encoder
 } // end namespace core
 } // end namespace insieme

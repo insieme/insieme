@@ -73,7 +73,9 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	
 	float16 sixteen;
 
-	dst[0] = a - sixteen.sA5c8;
+#pragma insieme iterations 7
+	for(int i = 0; i < factor; ++i)
+		dst[0] = a - sixteen.sA5c8;
 	dst[1] = b[1] / c.wzyx;
 	dst[2] = (float)src[0] + b[0];
 	dst[3] = 5.0f + c;

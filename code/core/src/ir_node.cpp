@@ -131,21 +131,31 @@ namespace core {
 			return this;
 		}
 
-		// trigger the create a clone using children within the new manager
-		Node* res = (isValueInternal())?
-				createInstanceUsing(emptyList) :
-				createInstanceUsing(manager.getAll(getChildListInternal()));
+		// create a clone using children within the new manager
+		Node* res;
+		if (isValueInternal()) {
+			res = createInstanceUsing(emptyList);
+		} else {
+
+			// clone the child list
+			auto clonedChildList = manager.getAll(getChildListInternal());
+
+			// check whether this node was cloned as a side-effect of the child-list cloning
+			// (in case this node is somewhere refereed to within an annotation)
+			if (auto res = manager.lookupPlain(this)) {
+				assert(res != this);
+				return res;
+			}
+
+			// otherwise: create a new node
+			res = createInstanceUsing(clonedChildList);
+		}
 
 		// update manager
 		res->manager = &manager;
 
 		// update equality ID
 		res->equalityID = equalityID;
-
-		// copy annotations
-		for_each(annotations.getAnnotations(), [&](const typename annotation_container::annotation_map_type::value_type& cur) {
-			cur.second->clone(cur.second, res);
-		});
 
 		// done
 		return res;
@@ -211,11 +221,17 @@ namespace core {
 		});
 	}
 
+	void move_annotation_on_clone::operator()(const Node* src, const Node* trg) const {
+		// copy annotations
+		for_each(src->getAnnotationContainer().getAnnotations(), [&](const typename Node::annotation_container::annotation_map_type::value_type& cur) {
+			cur.second->clone(cur.second, trg);
+		});
+	}
 
 	NodeManager::NodeManager() : data(new NodeManagerData(*this)) { }
 
 	NodeManager::NodeManager(NodeManager& manager)
-		: InstanceManager<Node, Pointer>(manager), data(manager.data) {}
+		: InstanceManager<Node, Pointer, move_annotation_on_clone>(manager), data(manager.data) {}
 
 	NodeManager::NodeManager(unsigned initialFreshID)
 		: data(new NodeManagerData(*this)) { setNextFreshID(initialFreshID); }

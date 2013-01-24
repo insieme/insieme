@@ -91,7 +91,7 @@ public:
 
     TransformAnnotation(): utils::CompoundAnnotation<TransformationHint, core::NodeAnnotation>() { }
 
-    const utils::AnnotationKey* getKey() const { return &KEY; }
+    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 	const std::string& getAnnotationName() const { return NAME; }
 
 	const std::string toString() const;

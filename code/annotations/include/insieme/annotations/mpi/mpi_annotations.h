@@ -60,7 +60,7 @@ struct CallID : public core::NodeAnnotation {
 						const core::NodePtr& after) const { return false; }
 
 	inline const std::string& getAnnotationName() const {return NAME;}
-	inline const utils::AnnotationKey* getKey() const { return &KEY; }
+	inline const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
 	inline std::ostream& printTo(std::ostream& out) const {
 		return out << "mpi::call id(" << m_id << ") deps(" << join(", ", m_deps) << ")";

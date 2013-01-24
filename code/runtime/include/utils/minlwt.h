@@ -55,16 +55,18 @@
 // determine if reusable stacks can be stolen from other worker's pools 
 //#define LWT_STACK_STEALING_ENABLED
 
+#define LWT_STACK_ALIGNMENT 128
+
 typedef struct _lwt_reused_stack {
 	struct _lwt_reused_stack *next;
 
 	#if defined(__GNUC__)
-		char stack[] __attribute__ ((aligned (128)));
+		char stack[] __attribute__ ((aligned (LWT_STACK_ALIGNMENT)));
 	//	char stack[] __attribute__ ((aligned (__BIGGEST_ALIGNMENT__))); // older versions of gcc don't like this
 	#elif defined(__MINGW32__) || defined(__MINGW64__)
-		char stack[] __attribute__((aligned(128)));
+		char stack[] __attribute__((aligned(LWT_STACK_ALIGNMENT)));
 	#elif _MSC_VER
-		__declspec(align(128))
+		__declspec(align(LWT_STACK_ALIGNMENT))
 		char stack[];
 	#else
 		#pragma warning "Unknown platform, stack unaligned" 

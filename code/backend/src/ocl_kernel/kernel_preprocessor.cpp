@@ -536,7 +536,7 @@ namespace {
 				});
 
                 // replace parameters by variables with wrapped types
-                core = core::transform::replaceVarsRecursiveGen(manager, core, parameters, true, id<core::CallExprPtr>());
+                core = core::transform::replaceVarsRecursiveGen(manager, core, parameters, true, core::transform::no_type_fixes);
                 //std::cout << "CORE OUTPUT: " << core::printer::PrettyPrinter(core, core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL) << std::endl;
 
                 // unwrap types before being passed to build-in / external functions
@@ -562,7 +562,7 @@ namespace {
                     }
                 });
 
-                core = core::transform::replaceVarsRecursiveGen(manager, core, varToGlobalize, false, id<core::CallExprPtr>());
+                core = core::transform::replaceVarsRecursiveGen(manager, core, varToGlobalize, false, core::transform::no_type_fixes);
 
                 core = unwrapTypes(core, varVec);
 

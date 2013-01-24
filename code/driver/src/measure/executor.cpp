@@ -121,6 +121,32 @@ namespace measure {
 			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && qsub -l select=1:ncpus=4:mem=2gb -W block=true -- ./" + binaryName + "\"");
 			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
 			break;
+		case LL:
+			std::string jobscript = "#!/bin/bash\n"
+									"#@ energy_policy_tag=my_energy_tag\n"
+									"#@ max_perf_decrease_allowed=1\n"
+									"#@ wall_clock_limit = 00:05:00\n"
+									"#@ job_name = insieme\n"
+									"#@ job_type = parallel\n"
+									"#@ class = test\n"
+									"#@ node = 1\n"
+									"#@ total_tasks = 1\n"
+									"#@ node_usage = not_shared\n"
+									"#@ initialdir = " + remoteDir + "\n"
+									"#@ output = job$(jobid).out\n"
+									"#@ error = job$(jobid).err\n"
+									"#@ notification=error\n"
+									"#@ notify_user=philipp.gschwandtner@uibk.ac.at\n"
+									"#@ restart=no\n"
+									"#@ queue\n"
+									". /etc/profile\n"
+									". /etc/profile.d/modules.sh\n" +
+									setupEnv(env);
+			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && echo \"" + jobscript + "\" | llsubmit -s -\"");
+			//std::cout << "ssh " + url + " \"cd " + remoteDir + " && echo \"" + jobscript + "\" | llsubmit -s -\"\n";
+			//if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + " && rm " + binaryName + "\"");
+			//if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
+			break;
 		}
 
 		// copy back log files
@@ -154,6 +180,10 @@ namespace measure {
 
 	ExecutorPtr makeRemotePBSExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
 		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::PBS);
+	}
+
+	ExecutorPtr makeRemoteLLExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
+		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::LL);
 	}
 
 

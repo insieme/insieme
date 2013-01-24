@@ -43,6 +43,7 @@
 #define IRT_SCHED_POLICY_LAZY_BINARY_SPLIT 2
 #define IRT_SCHED_POLICY_STEALING 3
 #define IRT_SCHED_POLICY_STEALING_CIRCULAR 4
+#define IRT_SCHED_POLICY_UBER 9000
 
 // default scheduling policy
 #ifndef IRT_SCHED_POLICY
@@ -112,6 +113,9 @@ inline irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work
  */
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi);
 
+/* Send worker to sleep. Self must be executing the call.
+ */
+void irt_scheduling_worker_sleep(irt_worker *self);
 
 #if IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC
 #include "sched_policies/irt_sched_static.h"
@@ -121,6 +125,8 @@ void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi);
 #include "sched_policies/irt_sched_stealing.h"
 #elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_STEALING_CIRCULAR
 #include "sched_policies/irt_sched_stealing_circular.h"
+#elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_UBER
+#include "sched_policies/irt_sched_uber.h"
 #else
 #error "No scheduling policy set"
 #endif

@@ -89,7 +89,7 @@ namespace analysis {
 			/**
 			 * Obtains a pointer to the Key associated to this annotation class.
 			 */
-			virtual const utils::AnnotationKey* getKey() const {
+			virtual const utils::AnnotationKeyPtr getKey() const {
 				return &KEY;
 			}
 
