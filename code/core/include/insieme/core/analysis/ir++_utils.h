@@ -43,6 +43,15 @@ namespace core {
 namespace analysis {
 
 	/**
+	 * A test which can be applied to the an arbitrary IR structure to determine
+	 * whether the represented structure includes object-oriented elements.
+	 *
+	 * @param node the IR structure to be tested
+	 * @return true if IR++ elements are included, false otherwise.
+	 */
+	bool isIRpp(const NodePtr& node);
+
+	/**
 	 * A test verifying whether the given type is a valid object type to
 	 * be used as an object type for a ctor / dtor / member function.
 	 *

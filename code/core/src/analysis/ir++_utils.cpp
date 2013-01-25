@@ -37,10 +37,32 @@
 #include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/core/ir.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace core {
 namespace analysis {
+
+	bool isIRpp(const NodePtr& node) {
+		return visitDepthFirstOnceInterruptible(node, [](const NodePtr& cur)->bool {
+			// TODO: filter out IR++ constructs
+
+			// check whether there are structs using inheritance
+			if (StructTypePtr structType = cur.isa<StructTypePtr>()) {
+
+				// if not empty => it is a IR++ code
+				if (!structType->getParents().empty()) {
+					return true;
+				}
+
+				// TODO: check for class-meta data!
+			}
+
+			// TODO: check for special function types
+
+			return false;
+		}, true);
+	}
 
 	bool isObjectType(const TypePtr& type) {
 
