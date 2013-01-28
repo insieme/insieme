@@ -130,7 +130,7 @@ lookup_lib( LUAJIT luajit-5.1 )
 lookup_lib( PAPI papi )
 
 # lookup ruby
-find_package( Ruby )
+#find_package( Ruby )
 
 # lookup Xerces library
 if (USE_XML) 	
