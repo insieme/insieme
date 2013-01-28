@@ -17,7 +17,7 @@ include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 
 # automatically run the script for generating IRBuilder interface
-execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb )
+execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ${RUBY_EXECUTABLE} builderbuilder.rb )
          
 # Build the core library
 add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${insieme_core_defs})
