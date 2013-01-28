@@ -75,57 +75,57 @@ namespace insieme {
 namespace analysis {
 namespace access {
 
-bool UnifiedAddress::isCFGAddress() const {
-	struct checkCFGAddrVisitor : public boost::static_visitor<bool> {
-		bool operator()(const cfg::Address&) const { return true; }
-		bool operator()(const core::NodeAddress&) const { return false; }
-	};
-	return boost::apply_visitor(checkCFGAddrVisitor(), address);
-}
-
-
-core::NodePtr UnifiedAddress::getAddressedNode() const {
-	return boost::apply_visitor(NodeExtractorVisitor(), address);
-}
-
-core::NodeAddress UnifiedAddress::getAbsoluteAddress(const TmpVarMap& varMap) const {
-
-	if (isCFGAddress()) {
-		return boost::get<const cfg::Address&>(address).toAbsoluteAddress(varMap);
+	bool UnifiedAddress::isCFGAddress() const {
+		struct checkCFGAddrVisitor : public boost::static_visitor<bool> {
+			bool operator()(const cfg::Address&) const { return true; }
+			bool operator()(const core::NodeAddress&) const { return false; }
+		};
+		return boost::apply_visitor(checkCFGAddrVisitor(), address);
 	}
 
-	return boost::get<const core::NodeAddress&>(address);
-}
 
-UnifiedAddress UnifiedAddress::getAddressOfChild(unsigned idx) const {
-	return boost::apply_visitor(AddrChildVisitor(idx), address);
-}
-
-
-UnifiedAddress UnifiedAddress::extendAddressFor(const std::vector<unsigned>& idxs) const {
-
-	UnifiedAddress ret = *this;
-	for (auto idx : idxs) {
-		ret = ret.getAddressOfChild(idx);
+	core::NodePtr UnifiedAddress::getAddressedNode() const {
+		return boost::apply_visitor(NodeExtractorVisitor(), address);
 	}
-	return ret;
 
-}
+	core::NodeAddress UnifiedAddress::getAbsoluteAddress(const TmpVarMap& varMap) const {
 
-
-bool UnifiedAddress::operator==(const UnifiedAddress& other) const {
-	
-	if (this == &other) { return true; }
-
-	if (isCFGAddress() == other.isCFGAddress()) {
 		if (isCFGAddress()) {
-			return as<cfg::Address>() == other.as<cfg::Address>();
+			return boost::get<const cfg::Address&>(address).toAbsoluteAddress(varMap);
 		}
-		return as<core::NodeAddress>() == other.as<core::NodeAddress>();
+
+		return boost::get<const core::NodeAddress&>(address);
 	}
 
-	return false;
-}
+	UnifiedAddress UnifiedAddress::getAddressOfChild(unsigned idx) const {
+		return boost::apply_visitor(AddrChildVisitor(idx), address);
+	}
+
+
+	UnifiedAddress UnifiedAddress::extendAddressFor(const std::vector<unsigned>& idxs) const {
+
+		UnifiedAddress ret = *this;
+		for (auto idx : idxs) {
+			ret = ret.getAddressOfChild(idx);
+		}
+		return ret;
+
+	}
+
+
+	bool UnifiedAddress::operator==(const UnifiedAddress& other) const {
+		
+		if (this == &other) { return true; }
+
+		if (isCFGAddress() == other.isCFGAddress()) {
+			if (isCFGAddress()) {
+				return as<cfg::Address>() == other.as<cfg::Address>();
+			}
+			return as<core::NodeAddress>() == other.as<core::NodeAddress>();
+		}
+
+		return false;
+	}
 
 } // end access namespace  
 } // end analysis namespace 

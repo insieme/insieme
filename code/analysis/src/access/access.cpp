@@ -238,7 +238,7 @@ namespace access {
 						dom.first.getAnnotation(polyhedral::scop::ScopRegion::KEY)->getIterationVector();
 
 
-					LOG(INFO) << *dom.second;
+					// LOG(INFO) << *dom.second;
 
 					polyhedral::IterationVector iterVec;
 
@@ -250,7 +250,7 @@ namespace access {
 
 					polyhedral::AffineFunction af(iterVec, core::arithmetic::Formula(idxVar) - f);
 					
-					LOG(INFO) << af;
+					// LOG(INFO) << af;
 
 					return std::make_shared<Subscript>(
 							expr,
