@@ -186,11 +186,8 @@ void irt_exit_handler() {
 	_irt_worker_end_all();
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
-	if(irt_g_instrumentation_event_output_is_enabled) {
-		bool binary_format = getenv(IRT_INST_BINARY_OUTPUT_ENV) && (strcmp(getenv(IRT_INST_BINARY_OUTPUT_ENV), "true") == 0);
-		for(int i = 0; i < irt_g_worker_count; ++i)
-			irt_inst_event_data_output(irt_g_workers[i], binary_format);
-	}
+	if(irt_g_instrumentation_event_output_is_enabled)
+		irt_inst_event_data_output_all(irt_g_instrumentation_event_output_is_binary);
 	for(int i = 0; i < irt_g_worker_count; ++i)
 		irt_inst_destroy_event_data_table(irt_g_workers[i]->instrumentation_event_data);
 #endif
