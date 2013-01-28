@@ -59,6 +59,7 @@ void (*irt_inst_insert_wg_event)(irt_worker* worker, irt_instrumentation_event e
 void (*irt_inst_insert_di_event)(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) = &_irt_inst_insert_no_di_event;
 void (*irt_inst_insert_wo_event)(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) = &_irt_inst_insert_no_wo_event;
 bool irt_g_instrumentation_event_output_is_enabled = false;
+bool irt_g_instrumentation_event_output_is_binary = false;
 
 // ============================ dummy functions ======================================
 // dummy functions to be used via function pointer to disable
@@ -279,7 +280,6 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 
 
 	if(binary_format) {
-		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "enabled");
 
 		/*
 		 * TODO: this format description is outdated and wrong
@@ -336,7 +336,6 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 		fwrite(table->data, sizeof(irt_instrumentation_event_data), table->number_of_elements, outputfile);
 
 	} else {
-		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "disabled");
 		for(int i = 0; i < table->number_of_elements; ++i) {
 			irt_inst_event_data_output_single(table->data[i], outputfile, false);
 		}
@@ -387,8 +386,19 @@ void irt_inst_set_all_instrumentation(bool enable) {
 }
 
 void irt_inst_set_all_instrumentation_from_env() {
+	// set whether worker event logging is enabled, and if so, what event types will be logged
 	if (getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV), "true") == 0) {
 		irt_log_setting_s("IRT_INST_WORKER_EVENT_LOGGING", "enabled");
+		
+		// set whether binary format is enabled
+		if(getenv(IRT_INST_BINARY_OUTPUT_ENV) && (strcmp(getenv(IRT_INST_BINARY_OUTPUT_ENV), "true") == 0)) {
+			irt_g_instrumentation_event_output_is_binary = true;
+			irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "enabled");
+		} else {
+			irt_g_instrumentation_event_output_is_binary = false;
+			irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "disabled");
+		}
+
 		char* types = getenv(IRT_INST_WORKER_EVENT_TYPES_ENV);
 		if(!types) {
 			irt_inst_set_all_instrumentation(true);
