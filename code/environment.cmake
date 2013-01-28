@@ -129,6 +129,9 @@ lookup_lib( LUAJIT luajit-5.1 )
 # lookup PAPI library
 lookup_lib( PAPI papi )
 
+# lookup ruby
+lookup_lib( RUBY ruby )
+
 # lookup Xerces library
 if (USE_XML) 	
 	lookup_lib( XERCES xerces-c )
