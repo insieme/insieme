@@ -52,6 +52,7 @@ namespace transform {
 
 using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
+using namespace insieme::analysis::access;
  
 core::NodePtr doConstProp(core::NodeManager& mgr, const core::NodePtr& root, CFGPtr cfg) {
 	

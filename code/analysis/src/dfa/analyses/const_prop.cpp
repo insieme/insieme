@@ -47,6 +47,7 @@
 #include "insieme/utils/logging.h"
 
 using namespace insieme::core;
+using namespace insieme::analysis::access;
 
 namespace insieme { 
 namespace analysis { 

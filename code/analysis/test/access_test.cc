@@ -39,7 +39,9 @@
 #include <algorithm>
 
 #include "insieme/utils/logging.h"
-#include "insieme/analysis/access.h"
+#include "insieme/analysis/access/access.h"
+#include "insieme/analysis/access/access_mgr.h"
+#include "insieme/analysis/access/unified_address.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
@@ -55,6 +57,7 @@
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::analysis;
+using namespace insieme::analysis::access;
 
 TEST(UnifiedAddress, IRAddress) {
 

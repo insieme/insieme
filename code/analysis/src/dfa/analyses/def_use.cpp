@@ -43,6 +43,8 @@
 
 #include "insieme/analysis/polyhedral/scop.h"
 
+using namespace insieme::analysis::access;
+
 namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 
 namespace {

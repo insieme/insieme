@@ -116,7 +116,7 @@ public:
  * Given a set of definitions reaching a block in the CFG, this method add those definitions to the
  * given AccessManager.
  */
-void definitionsToAccesses(const typename ReachingDefinitions::value_type& data, AccessManager& mgr);
+void definitionsToAccesses(const typename ReachingDefinitions::value_type& data, insieme::analysis::access::AccessManager& mgr);
 
 
 } } } } // end insieme::analysis::dfa::analyses namespace 

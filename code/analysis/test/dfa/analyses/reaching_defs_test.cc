@@ -59,6 +59,7 @@ using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
+using namespace insieme::analysis::access;
 
 
 typedef std::set<ExpressionAddress> ExprAddrSet;
@@ -144,7 +145,7 @@ TEST(ReachingDefinition, ScalarNoControl) {
 		"	int<4> c = *$a$;"
 		"}$"
     );
-    EXPECT_EQ(4u, addresses.size());
+    EXPECT_EQ(4u, addresses.size()); 
 
 	CFGPtr cfg = CFG::buildCFG(addresses[0].getAddressedNode());
 

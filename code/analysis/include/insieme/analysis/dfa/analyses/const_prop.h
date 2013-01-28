@@ -39,7 +39,7 @@
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/problem.h"
 
-#include "insieme/analysis/access.h"
+#include "insieme/analysis/access/access_mgr.h"
 #include "insieme/analysis/dfa/analyses/extractors.h"
 
 namespace insieme { 
@@ -54,7 +54,7 @@ typedef Problem<
 			ConstantPropagation, 
 			ForwardAnalysisTag,
 			Entity<
-				dfa::elem<AccessClassPtr>, 
+				dfa::elem<access::AccessClassPtr>, 
 				dfa::dom<dfa::Value<core::LiteralPtr>>
 			>,
 			PowerSet
@@ -71,12 +71,12 @@ public:
 
 	typedef typename Base::value_type value_type;
 
-	AccessManager aMgr;
+	access::AccessManager aMgr;
 
 	ConstantPropagation(const CFG& cfg): Base(cfg), aMgr(&cfg, cfg.getTmpVarMap()) { }
 
-	AccessManager& getAccessManager() { return aMgr; }
-	const AccessManager& getAccessManager() const { return aMgr; }
+	access::AccessManager& getAccessManager() { return aMgr; }
+	const access::AccessManager& getAccessManager() const { return aMgr; }
 
 	virtual value_type init() const;
 
@@ -96,7 +96,7 @@ namespace std {
 	using namespace insieme::analysis;
 	using namespace insieme::core;
 
-	std::ostream& operator<<(std::ostream& out, const std::tuple<AccessClassPtr, dfa::Value<LiteralPtr>>& cur) {
+	std::ostream& operator<<(std::ostream& out, const std::tuple<access::AccessClassPtr, dfa::Value<LiteralPtr>>& cur) {
 		out << "(cid:" << std::get<0>(cur)->getUID() << ","; 
 		if (std::get<1>(cur).isValue()) {
 			out << *std::get<1>(cur).value();
