@@ -422,6 +422,12 @@ namespace backend {
 		// add code dependency
 		context.getDependencies().insert(info.typeInfo->definition);
 
+		// if a reference variable is put on the stack, the element type definition is also required
+		if (location == VariableInfo::DIRECT) {
+			auto elementType = core::analysis::getReferencedType(var->getType());
+			context.getDependencies().insert(context.getConverter().getTypeManager().getTypeInfo(elementType).definition);
+		}
+
 		// create declaration statement
 		c_ast::ExpressionPtr initValue = convertInitExpression(context, init);
 		return manager->create<c_ast::VarDecl>(info.var, initValue);
