@@ -40,7 +40,10 @@
 
 #include "insieme/utils/logging.h"
 
-#include "insieme/analysis/access.h"
+#include "insieme/analysis/access/access.h"
+#include "insieme/analysis/access/access_mgr.h"
+
+using namespace insieme::analysis::access;
 
 namespace insieme { namespace analysis { namespace dfa {
 

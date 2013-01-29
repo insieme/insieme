@@ -17,7 +17,7 @@ include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 
 # automatically run the script for generating IRBuilder interface
-execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ${RUBY_EXECUTABLE} builderbuilder.rb  RESULT_VARIABLE builderbuilderSuccess)
+execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby builderbuilder.rb  RESULT_VARIABLE builderbuilderSuccess)
 
 if (NOT ${builderbuilderSuccess} EQUAL 0)
 	message(FATAL_ERROR "Ruby builder builder script failed to execute!")
