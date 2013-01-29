@@ -55,6 +55,7 @@ namespace compiler {
 		// create a default version of a C99 compiler
 //		Compiler res(C_COMPILER); // TODO: re-enable when constant is set properly
 		Compiler res("gcc");
+		res.addFlag("-x c");
 		res.addFlag("--std=gnu99 -Wl,--no-as-needed");
 		return res;
 	}
@@ -77,14 +78,26 @@ namespace compiler {
 		return res;
 	}
 
+	Compiler Compiler::getDefaultCppCompiler() {
+		Compiler res("gcc");
+		res.addFlag("-x c++ -Wall");
+		res.addFlag("--std=c++98 -Wl,--no-as-needed");
+		return res;
+	}
+
+	Compiler Compiler::getDefaultCppCompilerO3() {
+		Compiler res = getDefaultCppCompiler();
+		res.addFlag("-O3");
+		return res;
+	}
+
 	string Compiler::getCommand(const vector<string>& inputFiles, const string& outputFile) const {
 		// build up compiler command
 		std::stringstream cmd;
 
 		cmd << executable;
-		cmd << " -x c ";
-		cmd << " " << join(" ", inputFiles);
 		cmd << " " << join(" ", flags);
+		cmd << " " << join(" ", inputFiles);
 		cmd << " -o " << outputFile;
 
 		return cmd.str();
