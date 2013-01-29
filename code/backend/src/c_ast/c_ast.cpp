@@ -191,6 +191,20 @@ namespace c_ast {
 		return *name == *other.name && ::equals(elements, other.elements, equal_target<VariablePtr>());
 	}
 
+	bool Parent::equals(const Node& node) const {
+		assert(dynamic_cast<const Parent*>(&node));
+		auto other = static_cast<const Parent&>(node);
+		return isVirtual == other.isVirtual && *parent == *other.parent;
+	}
+
+	bool StructType::equals(const Node& node) const {
+		assert(dynamic_cast<const StructType*>(&node));
+		auto other = static_cast<const StructType&>(node);
+		return NamedCompositeType::equals(other) &&
+				::equals(parents, other.parents, equal_target<ParentPtr>()) &&
+				::equals(members, other.members, equal_target<MemberFunctionPrototypePtr>());
+	}
+
 	bool FunctionType::equals(const Node& node) const {
 		assert(dynamic_cast<const FunctionType*>(&node));
 		auto other = static_cast<const FunctionType&>(node);
@@ -336,6 +350,24 @@ namespace c_ast {
 		return *type==*other.type && name==other.name;
 	}
 
+	bool ConstructorPrototype::equals(const Node& node) const {
+		assert(dynamic_cast<const ConstructorPrototype*>(&node));
+		auto other = static_cast<const ConstructorPrototype&>(node);
+		return *ctor == *other.ctor;
+	}
+
+	bool DestructorPrototype::equals(const Node& node) const {
+		assert(dynamic_cast<const DestructorPrototype*>(&node));
+		auto other = static_cast<const DestructorPrototype&>(node);
+		return isVirtual == other.isVirtual && *dtor == *other.dtor;
+	}
+
+	bool MemberFunctionPrototype::equals(const Node& node) const {
+		assert(dynamic_cast<const MemberFunctionPrototype*>(&node));
+		auto other = static_cast<const MemberFunctionPrototype&>(node);
+		return isVirtual == other.isVirtual && ((!fun && !other.fun) || *fun == *other.fun);
+	}
+
 	bool TypeDefinition::equals(const Node& node) const {
 		assert(dynamic_cast<const TypeDefinition*>(&node));
 		auto other = static_cast<const TypeDefinition&>(node);
@@ -352,6 +384,30 @@ namespace c_ast {
 				*body==*other.body;
 	}
 
+	bool Constructor::equals(const Node& node) const {
+		assert(dynamic_cast<const Constructor*>(&node));
+		auto other = static_cast<const Constructor&>(node);
+		return *className == *other.className && *function == *other.function;
+	}
+
+	bool Destructor::equals(const Node& node) const {
+		assert(dynamic_cast<const Destructor*>(&node));
+		auto other = static_cast<const Destructor&>(node);
+		return *className == *other.className && *function == *other.function;
+	}
+
+	bool MemberFunction::equals(const Node& node) const {
+		assert(dynamic_cast<const MemberFunction*>(&node));
+		auto other = static_cast<const MemberFunction&>(node);
+		return isConstant == other.isConstant && *className == *other.className && *function == *other.function;
+	}
+
+	bool Namespace::equals(const Node& node) const {
+		assert(dynamic_cast<const Namespace*>(&node));
+		auto other = static_cast<const Namespace&>(node);
+		return name == other.name && *definition == *other.definition;
+
+	}
 
 } // end namespace c_ast
 } // end namespace backend

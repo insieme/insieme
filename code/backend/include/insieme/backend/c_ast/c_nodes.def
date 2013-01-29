@@ -229,6 +229,25 @@ AST_TERMINAL(TypeDefinition, Definition)
 AST_TERMINAL(Function, Definition)
 
 
+//
+// --- C++ Extensions ---
+//
+
+AST_TERMINAL(Namespace, Definition)
+
+AST_TERMINAL(Parent, Node)
+
+AST_TERMINAL(ConstructorPrototype, Node)
+AST_TERMINAL(Constructor, Definition)
+
+AST_TERMINAL(DestructorPrototype, Node)
+AST_TERMINAL(Destructor, Definition)
+
+AST_TERMINAL(MemberFunctionPrototype, Node)
+AST_TERMINAL(MemberFunction, Definition)
+
+
+
 // ------------------------- END: AST NODE DEFINITONS ----------------------------
 
 // --- Cleaning up Macro definitions ---

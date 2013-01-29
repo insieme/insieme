@@ -461,8 +461,35 @@ namespace c_ast {
 				return out << print(fun->returnType) << " " << print(fun->name) << "(" << printParam(fun->parameter) << ");\n";
 			}
 
+			PRINT(ConstructorPrototype) {
+				// <class name> ( <parameter list > );
+				auto ctor = node->ctor;
+				return out << print(ctor->className) << "(" << printParam(ctor->function->parameter)<< ");\n";
+			}
+
+			PRINT(DestructorPrototype) {
+				// <virtual> ~ <class name> ( <parameter list > );
+				auto dtor = node->dtor;
+				return out << (node->isVirtual?"virtual ":"") << "~" << print(dtor->className) << "();\n";
+			}
+
+			PRINT(MemberFunctionPrototype) {
+				// <virtual> <return type> <name> ( <parameter list > ) <const>;
+				auto fun = node->fun->function;
+				return out
+						<< (node->isVirtual?"virtual ":"")
+						<< print(fun->returnType)
+						<< print(fun->name)
+						<< "(" << printParam(fun->parameter)<< ")"
+						<< (node->fun->isConstant?" const":"") << ";\n";
+			}
+
 			PRINT(ExtVarDecl) {
 				return out << "extern " << print(node->type) << " " << node->name << ";\n";
+			}
+
+			PRINT(Parent) {
+				return out << (node->isVirtual?"virtual ":"") << print(node->parent);
 			}
 
 			PRINT(TypeDefinition) {
@@ -477,10 +504,21 @@ namespace c_ast {
 				// define type
 				out << print(node->type);
 				if (c_ast::NamedCompositeTypePtr composite = dynamic_pointer_cast<c_ast::NamedCompositeType>(node->type)) {
+
+					// special handling for struct types
+					c_ast::StructTypePtr structType = dynamic_pointer_cast<c_ast::StructType>(composite);
+
+					// print parents
+					if (structType && !structType->parents.empty()) {
+						out << " : public " << join(", ", structType->parents, [&](std::ostream& out, const ParentPtr& cur) { out << print(cur); });
+					}
+
 					out << " {\n    " << join(";\n    ", composite->elements,
 							[&](std::ostream& out, const VariablePtr& cur) {
 								out << printParam(cur);
 					}) << ";\n}";
+
+					// TODO: add constructors / destructors / member functions
 				}
 
 				// print name and finish
@@ -488,6 +526,13 @@ namespace c_ast {
 					out << " " << print(node->name);
 				}
 				return out << ";\n";
+			}
+
+			c_ast::StatementPtr wrapBody(const c_ast::StatementPtr& body) {
+				if (body->getType() == c_ast::NT_Compound) {
+					return body;
+				}
+				return body->getManager()->create<c_ast::Compound>(body);
 			}
 
 			PRINT(Function) {
@@ -504,12 +549,63 @@ namespace c_ast {
 
 				out << print(node->returnType) << " " << print(node->name) << "(" << printParam(node->parameter) << ") ";
 
-				c_ast::StatementPtr body = node->body;
-				if (node->body->getType() != c_ast::NT_Compound) {
-					body = body->getManager()->create<c_ast::Compound>(body);
-				}
+				return out << print(wrapBody(node->body));
+			}
 
-				return out << print(body);
+			PRINT(Constructor) {
+				// <className> :: <name> ( <parameter list> ) <body> \n
+
+				auto fun = node->function;
+
+				// print header
+				out << print(node->className) << "(" << printParam(fun->parameter) << ")" << print(fun->body) << "\n";
+
+				// TODO: add initializer list
+
+				// print body
+				return out << print(wrapBody(fun->body));
+			}
+
+			PRINT(Destructor) {
+				// ~ <className> :: <name> ( ) <body> \n
+
+				auto fun = node->function;
+
+				// print header
+				out << "~" << print(node->className) << "()" << print(fun->body) << "\n";
+
+				// print body
+				return out << print(wrapBody(fun->body));
+			}
+
+			PRINT(MemberFunction) {
+				// <returnType> <className> :: <name> ( <parameter list> ) <const> <body> \n
+
+				auto fun = node->function;
+
+				// print header
+				out << print(fun->returnType) << " " << print(node->className) << "::" << print(fun->name)
+						<< "(" << printParam(fun->parameter) << ")" << (node->isConstant?" const":"") << print(fun->body) << "\n";
+
+				// print body
+				return out << print(wrapBody(fun->body));
+			}
+
+			PRINT(Namespace) {
+				// namespace <name> { \n <inner def> \n }
+
+				out << "namespace " << print(node->name) << "{";
+				incIndent();
+				newLine(out);
+
+				// print definition
+				out << print(node->definition);
+
+				decIndent();
+				newLine(out);
+				out << "}";
+				newLine(out);
+				return out;
 			}
 
 			#undef PRINT
