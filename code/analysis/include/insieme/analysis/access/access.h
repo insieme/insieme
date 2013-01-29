@@ -279,8 +279,10 @@ namespace access {
 	 * Returns the root access given a composed access 
 	 */
 	inline BaseAccessPtr getRoot(const AccessPtr& access) {
+		/* This is already a baseaccess, return it */
 		if (auto base = std::dynamic_pointer_cast<const BaseAccess>(access)) { return base; }
 		
+		/* recur otherwise */
 		auto dec = std::static_pointer_cast<const AccessDecorator>(access);
 		return getRoot(dec->getSubAccess());
 	}
