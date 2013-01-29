@@ -35,6 +35,7 @@
  */
 
 #include "insieme/analysis/access/access.h"
+#include "insieme/analysis/access/visitor.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic.h"
@@ -50,26 +51,25 @@
 using namespace insieme::core;
 
 
-namespace {
-
-	void getAddressIndexes(const NodeAddress& addr, std::vector<unsigned>& idxs) {
-		if (addr.getDepth() > 2)
-			getAddressIndexes(addr.getParentAddress(), idxs);
-		if (addr.getDepth() > 1)
-			idxs.push_back(addr.getIndex());
-	}
-
-} // end empty namespace 
 
 
 namespace insieme {
 namespace analysis {
 namespace access {
 
+	bool Access::isReference() const {
+		return addr.getAddressedNode().as<core::ExpressionPtr>()->getType()->getNodeType() == core::NT_RefType; 
+	}
+
+	//========================== PrettyPrinting ===============================================
 	std::ostream& BaseAccess::printTo(std::ostream& out) const {
 		return out << (isFinal()?"+":"") 
 				   << *getAddress().getAddressedNode() << "{@" << getAddress() << "}";
 
+	}
+
+	std::ostream& Ref::printTo(std::ostream& out) const {
+		return out << "ref:{@" << getAddress() << "}(" << getSubAccess() << ")";
 	}
 
 	std::ostream& Deref::printTo(std::ostream& out) const {
@@ -107,7 +107,7 @@ namespace access {
 
 		return out;
 	}
-
+	//==========================================================================================
 
 	AccessPtr switchRoot(const AccessPtr& access, const AccessPtr& newRoot) {
 
@@ -120,11 +120,100 @@ namespace access {
 		return decAccess->switchSubAccess( switchRoot(decAccess->getSubAccess(), newRoot) );
 	}
 
+	namespace {
+
+		// handle subscript expressions 
+		SubscriptPtr extractArrayAccess(core::NodeManager& 		mgr, 
+										const UnifiedAddress& 	expr,
+								 		const AccessPtr& 		subAccess, 
+										const TmpVarMap& 		tmpVarMap,
+										bool 					final) 
+		{
+
+			const lang::BasicGenerator& gen = mgr.getLangBasic();
+
+			// Create the variable used to express the range information for this access.
+			// Because we need to be able to compare accesses of different arrays for inclusion we need
+			// to make sure the variable used to access the array i (i.e. A[i]) is the same for all the
+			// generated accesses. This is obtained using a variable whose ID is very large
+
+			core::VariablePtr idxVar =
+				core::Variable::get(mgr, gen.getUInt8(), std::numeric_limits<unsigned int>::max());
+
+			try {
+
+				// the access function is not a constant but a function
+				auto idxExpr 	 = expr.getAddressOfChild(3);
+				auto idxExprAddr = idxExpr.getAbsoluteAddress(tmpVarMap).as<core::ExpressionAddress>();
+
+				// Extract the formula from the argument 1
+				arithmetic::Formula f = arithmetic::toFormula( idxExprAddr.getAddressedNode() );
+
+				if (f.isConstant()) {
+
+					polyhedral::IterationVector iterVec;
+					iterVec.add( polyhedral::Iterator( idxVar ) );
+					polyhedral::AffineFunction af(
+							iterVec, { 1, -static_cast<int>(static_cast<int64_t>(f.getConstantValue())) }
+						);
+
+					return std::make_shared<Subscript>(
+							expr,
+							subAccess,
+							final,
+							core::NodeAddress(),
+							iterVec,
+							makeCombiner(utils::Constraint<polyhedral::AffineFunction>(af, utils::ConstraintType::EQ))
+						);
+				}
+
+				auto dom = polyhedral::getVariableDomain(idxExprAddr);
+				if (dom.first) {
+
+					const polyhedral::IterationVector& oldIter =
+						dom.first.getAnnotation(polyhedral::scop::ScopRegion::KEY)->getIterationVector();
+
+
+					polyhedral::IterationVector iterVec;
+
+					std::for_each(oldIter.iter_begin(), oldIter.iter_end(), 
+						[&](const polyhedral::Iterator& iter) {
+							iterVec.add( polyhedral::Iterator(iter.getExpr().as<VariablePtr>(), true) );
+						});
+
+					iterVec.add( polyhedral::Iterator(idxVar) );
+
+					polyhedral::AffineFunction af(iterVec, core::arithmetic::Formula(idxVar) - f);
+					
+					return std::make_shared<Subscript>(
+							expr,
+							subAccess,
+							final,
+							dom.first,
+							iterVec,
+							cloneConstraint(iterVec, dom.second) and
+							utils::Constraint<polyhedral::AffineFunction>(af, utils::ConstraintType::EQ)
+						);
+				}
+
+				return std::make_shared<Subscript>(expr, subAccess);
+
+			} catch (arithmetic::NotAFormulaException&& e) {
+				// What if this is a piecewise? we can handle it
+				assert (false && "Array access is not a formula");
+			}
+		}
+
+	} // end anonymous namespace 
 
 	/**
-	 * Get the immediate access given an IR expression 
+	 * Analyze an IR expression and creates an Access descriptor representing the expression. 
 	 */
-	AccessPtr getImmediateAccess(NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap, bool final) {
+	AccessPtr getImmediateAccess(NodeManager& mgr, 
+							     const UnifiedAddress& expr, 
+								 const TmpVarMap& tmpVarMap, 
+								 bool final) 
+	{
 
 		NodePtr exprNode = expr.getAddressedNode();
 
@@ -166,25 +255,24 @@ namespace access {
 		if (!gen.isMemberAccess(callExpr->getFunctionExpr()) &&
 				!gen.isSubscriptOperator(callExpr->getFunctionExpr()) &&
 				!gen.isRefDeref(callExpr->getFunctionExpr())  &&
-				!gen.isRefVar(callExpr->getFunctionExpr()) )
+				!gen.isRefVar(callExpr->getFunctionExpr()) && 
+				!gen.isRefNew(callExpr->getFunctionExpr()) )
 		{
 			throw NotAnAccessException(toString(*callExpr));
 		}
 
 		auto subAccess = getImmediateAccess(mgr, expr.getAddressOfChild(2), tmpVarMap, false);
 
-		
-		if (gen.isRefVar(callExpr->getFunctionExpr())) { return subAccess; }
+		auto funcExpr = callExpr->getFunctionExpr();
 
+		/* The variable is weapped into a ref.var or ref.new expression */
+		if (gen.isRefVar(funcExpr) || gen.isRefNew(funcExpr)) { return std::make_shared<Ref>(expr, subAccess); }
 
-		if (gen.isRefDeref(callExpr->getFunctionExpr())) {
-			return std::make_shared<Deref>(expr, subAccess, final);
-		}
-
+		/* This is a deref expression */
+		if (gen.isRefDeref(funcExpr)) { return std::make_shared<Deref>(expr, subAccess, final); }
 
 		// Handle member access functions
-		if ( gen.isMemberAccess(callExpr->getFunctionExpr()) ) {
-
+		if ( gen.isMemberAccess(funcExpr) ) {
 			// this is a tuple access
 			if ( gen.isUnsignedInt( args[1]->getType() ) || gen.isIdentifier( args[1]->getType() ) ) {
 				return std::make_shared<Member>(expr, subAccess, args[1].as<LiteralPtr>(), final);
@@ -192,88 +280,53 @@ namespace access {
 			assert( false && "Type of member access not supported" );
 		}
 
-
 		// Handle Array/Vector subscript operator
-		if ( gen.isSubscriptOperator(callExpr->getFunctionExpr()) ) {
-
-			// Create the variable used to express the range information for this access.
-			// Because we need to be able to compare accesses of different arrays for inclusion we need
-			// to make sure the variable used to access the array i (i.e. A[i]) is the same for all the
-			// generated accesses. This is obtained using a variable whose ID is very large
-
-			core::VariablePtr idxVar =
-				core::Variable::get(mgr, gen.getUInt8(), std::numeric_limits<unsigned int>::max());
-
-			try {
-
-				// the access function is not a constant but a function
-				auto idxExpr = expr.getAddressOfChild(3);
-				auto idxExprAddr = idxExpr.getAbsoluteAddress(tmpVarMap).as<core::ExpressionAddress>();
-
-				// Extract the formula from the argument 1
-				arithmetic::Formula f = arithmetic::toFormula( idxExprAddr.getAddressedNode() );
-
-				if (f.isConstant()) {
-
-					polyhedral::IterationVector iterVec;
-					iterVec.add( polyhedral::Iterator( idxVar ) );
-					polyhedral::AffineFunction af(
-							iterVec, { 1, -static_cast<int>(static_cast<int64_t>(f.getConstantValue())) }
-						);
-
-					return std::make_shared<Subscript>(
-							expr,
-							subAccess,
-							final,
-							core::NodeAddress(),
-							iterVec,
-							makeCombiner(utils::Constraint<polyhedral::AffineFunction>(af, utils::ConstraintType::EQ))
-						);
-				}
-
-				auto dom = polyhedral::getVariableDomain(idxExprAddr);
-				if (dom.first) {
-
-					const polyhedral::IterationVector& oldIter =
-						dom.first.getAnnotation(polyhedral::scop::ScopRegion::KEY)->getIterationVector();
-
-
-					// LOG(INFO) << *dom.second;
-
-					polyhedral::IterationVector iterVec;
-
-					std::for_each(oldIter.iter_begin(), oldIter.iter_end(), [&](const polyhedral::Iterator& iter) {
-							iterVec.add( polyhedral::Iterator(iter.getExpr().as<VariablePtr>(), true) );
-							});
-
-					iterVec.add( polyhedral::Iterator(idxVar) );
-
-					polyhedral::AffineFunction af(iterVec, core::arithmetic::Formula(idxVar) - f);
-					
-					// LOG(INFO) << af;
-
-					return std::make_shared<Subscript>(
-							expr,
-							subAccess,
-							final,
-							dom.first,
-							iterVec,
-							cloneConstraint(iterVec, dom.second) and
-							utils::Constraint<polyhedral::AffineFunction>(af, utils::ConstraintType::EQ)
-						);
-				}
-
-				return std::make_shared<Subscript>(expr, subAccess);
-
-			} catch (arithmetic::NotAFormulaException&& e) {
-				// What if this is a piecewise? we can handle it
-				assert (false && "Array access is not a formula");
-			}
+		if ( gen.isSubscriptOperator(funcExpr) ) {
+			return extractArrayAccess(mgr, expr, subAccess, tmpVarMap, final);
 		}
 		assert(false && "Access not supported");
 	}
 
+	namespace {
 
+		void getAddressIndexes(const NodeAddress& addr, std::vector<unsigned>& idxs) {
+			if (addr.getDepth() > 2)
+				getAddressIndexes(addr.getParentAddress(), idxs);
+			if (addr.getDepth() > 1)
+				idxs.push_back(addr.getIndex());
+		}
+
+		class SubscriptVisitor : public RecAccessVisitor<void> {
+
+			core::NodeManager&	mgr;
+			AccessVector& 		ret;	
+			const TmpVarMap& 	tmpVarMap;
+
+		public:
+			SubscriptVisitor(core::NodeManager& mgr, AccessVector& ret, const TmpVarMap& tmpVarMap) : 
+				mgr(mgr), ret(ret), tmpVarMap(tmpVarMap) { }
+
+		private:
+			void visitBaseAccess(const BaseAccessPtr& access) { }
+
+			// whenever we have a subscript operation we take the address to the subscript
+			// expression and extract variables from there 
+			void visitSubscript(const SubscriptPtr& access) {
+				// access the second argument of the call expression which contains the index
+				// expression
+				auto idxExpr = access->getAddress().getAddressOfChild(3);
+
+				auto sub = getAccesses(mgr, idxExpr, tmpVarMap);
+				std::copy(sub.begin(), sub.end(), std::back_inserter(ret));
+			}
+		};
+
+
+	} // end empty namespace 
+
+	/** 
+	 * Given an expression, this method scans and returns a vector of (top-level) accesses within the expression
+	 */
 	AccessVector getAccesses(core::NodeManager& mgr, const UnifiedAddress& expr, const TmpVarMap& tmpVarMap) {
 		
 		struct ExploreAccesses : public IRVisitor<bool, core::Address> {
@@ -283,9 +336,9 @@ namespace access {
 			const UnifiedAddress& 	base;
 			std::vector<AccessPtr>& accesses;
 
-			ExploreAccesses(core::NodeManager& mgr, 
-							const TmpVarMap& tmpVarMap,
-							const UnifiedAddress& base, 
+			ExploreAccesses(core::NodeManager& 		mgr, 
+							const TmpVarMap& 		tmpVarMap,
+							const UnifiedAddress& 	base, 
 							std::vector<AccessPtr>& accesses) 
 				:  mgr(mgr), tmpVarMap(tmpVarMap), base(base), accesses(accesses) { }
 
@@ -293,6 +346,8 @@ namespace access {
 				// turn the address into a vector of indexes from the root 
 				std::vector<unsigned> idxs;
 				getAddressIndexes(addr, idxs);
+
+				// update the unified address representation to point to the current addr 
 				auto accessAddress = base.extendAddressFor(idxs);
 
 				accesses.push_back( getImmediateAccess(mgr, accessAddress, tmpVarMap) );
@@ -301,7 +356,7 @@ namespace access {
 
 			bool visitCallExpr(const core::CallExprAddress& callExpr) {
 				
-				const auto& gen = callExpr->getNodeManager().getLangBasic();
+				const auto& gen  = callExpr->getNodeManager().getLangBasic();
 				const auto& func = callExpr->getFunctionExpr();
 
 				if (!gen.isBuiltIn(func) && func->getNodeType() == core::NT_Literal) {
@@ -320,8 +375,15 @@ namespace access {
 				auto accessAddress = base.extendAddressFor(idxs);
 				
 				try {
+
 					accesses.push_back( getImmediateAccess(mgr, accessAddress, tmpVarMap) );
+
+					auto& last = accesses.back(); 
+					SubscriptVisitor sv(mgr, accesses, tmpVarMap);
+					sv.visit(last);
+
 				} catch (NotAnAccessException&& e) { }
+
 				return true;
 			}
 

@@ -64,14 +64,22 @@ namespace access {
 	DEFINE(Access);
 	DEFINE(BaseAccess);
 	DEFINE(AccessDecorator);
+	DEFINE(Ref);
 	DEFINE(Deref);
 	DEFINE(Member);
 	DEFINE(Subscript);
 
-	enum class AccessType { AT_BASE, AT_DEREF, AT_MEMBER, AT_SUBSCRIPT };
+	enum class AccessType { AT_BASE, AT_REF, AT_DEREF, AT_MEMBER, AT_SUBSCRIPT };
 
+	/** 
+	 * Abstract the access to either an L-Value or to an R-Value. 
+	 *
+	 * This representation can be used to address expressions in the IR based on their address or in
+	 * a CFG based on the cfg::Address. For this purpose the UnifiedAddress abstraction is utilized.
+	 */
 	class Access : public utils::Printable { 
 
+		/* Address of the expression */
 		UnifiedAddress 	addr;
 		AccessType 	   	type;
 		bool 			final;
@@ -88,23 +96,30 @@ namespace access {
 			return type; 
 		}
 
-		virtual bool isBaseAccess() const = 0;
+		bool isBaseAccess() const { return type == AccessType::AT_BASE; }
 
-		inline bool isReference() const {
-			return addr.getAddressedNode().as<core::ExpressionPtr>()->getType()->getNodeType() == core::NT_RefType; 
-		}
+		/**
+		 * Returns true when the expression is an R-Value
+		 */
+		bool isReference() const;
 
 		inline bool isFinal() const { return final; }
 
+		/** 
+		 * For expressions depending on a context (for example array accesses based on an index
+		 * expression) this function says whether this representation is dependent on context
+		 * information
+		 */
 		virtual bool isContextDependent() const { return false; }
 
+		/** 
+		 * Compare two access for equality
+		 */
 		inline bool operator==(const Access& other) const { 
 			// Test the trivial case first 
 			if (this == &other) { return true; }
 			return addr == other.addr;
 		}
-
-		virtual const BaseAccess& getRoot() const = 0;
 
 		virtual std::ostream& printTo(std::ostream& out) const = 0;
 
@@ -112,6 +127,11 @@ namespace access {
 	};
 
 
+
+	/** 
+	 * An access to an IR variable. Since the IR allows variables as L-Values and R-Values is not
+	 * given that a base access is an L-Value. 
+	 */
 	class BaseAccess : public Access {
 
 	public:
@@ -122,9 +142,8 @@ namespace access {
 			return getAddress().getAddressedNode().as<core::VariablePtr>();
 		}
 
-		inline bool isBaseAccess() const { return true; }
-
 		inline const BaseAccess& getRoot() const { return *this; }
+		inline BaseAccessPtr getRootPtr() const { assert(false); }
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 	};
@@ -141,18 +160,26 @@ namespace access {
 
 		inline const AccessPtr& getSubAccess() const { return subAccess; }
 
-		inline bool isBaseAccess() const { return false; }
-
-		inline const BaseAccess& getRoot() const {
-			return subAccess->getRoot();
-		}
-
 		virtual AccessDecoratorPtr switchSubAccess(const AccessPtr& sub) const = 0;
 
 	private:
 
 		AccessPtr 	subAccess;
 		AccessType 	type;
+	};
+
+	
+	class Ref: public AccessDecorator {
+
+	public:
+		Ref(const UnifiedAddress& addr,
+			const AccessPtr&	  subAccess) : AccessDecorator(addr, subAccess, AccessType::AT_REF) { }
+
+		inline AccessDecoratorPtr switchSubAccess(const AccessPtr& newRoot) const {
+			return std::make_shared<Ref>(getAddress(), newRoot);
+		}
+
+		std::ostream& printTo(std::ostream& out) const;
 	};
 
 
@@ -247,6 +274,16 @@ namespace access {
 		virtual std::ostream& printTo(std::ostream& out) const;
 	};
 
+
+	/** 
+	 * Returns the root access given a composed access 
+	 */
+	inline BaseAccessPtr getRoot(const AccessPtr& access) {
+		if (auto base = std::dynamic_pointer_cast<const BaseAccess>(access)) { return base; }
+		
+		auto dec = std::static_pointer_cast<const AccessDecorator>(access);
+		return getRoot(dec->getSubAccess());
+	}
 
 	/**
 	 * Replace the root node of access with the access represented by newRoot. 

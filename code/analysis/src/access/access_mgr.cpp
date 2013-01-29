@@ -249,7 +249,7 @@ namespace access {
 						if (accessRange->isContextDependent()) {
 							// classfy it with the parent 
 							assert(parentClass && "parent class must be valid");
-							LOG(INFO) << "NOCTX";
+							// LOG(INFO) << "NOCTX";
 							parentClass->storeAccess(access);
 							retClasses.insert( parentClass );
 							classified = true;
@@ -271,7 +271,7 @@ namespace access {
 						
 						// compute the difference, if it is empty then the two ranges are equivalent 
 						auto intersection = classSet * accessSet;
-						LOG(INFO) << "intersection " << *intersection << " " << ", "; 
+						// LOG(INFO) << "intersection " << *intersection << " " << ", "; 
 
 						if ( !intersection->empty() ) { 
 							
@@ -279,7 +279,7 @@ namespace access {
 								auto diff = accessSet - intersection;
 
 								polyhedral::IterationVector iv;
-								auto diffCons = diff->toConstraint(access->getRoot().getVariable()->getNodeManager(), iv);
+								auto diffCons = diff->toConstraint(getRoot(access)->getVariable()->getNodeManager(), iv);
 									
 								// Try to classify the remaining range 
 								cmpAccess = std::make_shared<Subscript>(
@@ -298,7 +298,7 @@ namespace access {
 
 								polyhedral::IterationVector iv;
 								auto interCons = intersection->toConstraint(
-													access->getRoot().getVariable()->getNodeManager(), iv);
+													getRoot(access)->getVariable()->getNodeManager(), iv);
 		
 
 								// Try to classify the remaining range 
@@ -316,7 +316,7 @@ namespace access {
 
 								polyhedral::IterationVector iv2;
 								auto diffCons = diff->toConstraint(
-													access->getRoot().getVariable()->getNodeManager(), iv2);
+													getRoot(access)->getVariable()->getNodeManager(), iv2);
 
 								// Try to classify the remaining range 
 								auto diffLevel = std::make_shared<Subscript>(
@@ -409,7 +409,7 @@ namespace access {
 						polyhedral::IterationVector iv;
 						
 						auto diffCons = (universe-accessSet)->toConstraint(
-									access->getRoot().getVariable()->getNodeManager(), iv);
+									getRoot(access)->getVariable()->getNodeManager(), iv);
 
 						// Try to classify the remaining range 
 						auto accDecLevel = std::make_shared<Subscript>(
