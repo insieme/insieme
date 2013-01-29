@@ -1,0 +1,46 @@
+
+let int = int<4>;
+
+let A = struct {
+	int x;
+};
+
+let B = struct : A {
+	int y;
+};
+
+let C = struct : A, B {
+	int z;
+};
+
+int main() {
+
+	// -------- handle an instance of A --------
+	ref<A> a;
+	a.x = 1;
+	
+	
+	// -------- handle an instance of B --------
+	ref<B> b;
+	
+	// direct access
+	b.as(A).x = 1;
+	b.y = 2;
+	
+	// indirect access of A's x
+	auto bA = b.as(A);
+	bA.x = 3;
+	
+	
+	// -------- handle an instance of C --------
+	ref<C> c;
+	
+	// access B's A's x
+	c.as(B).as(A).x = 1;
+
+	// access C's A's x
+	c.as(A).x = 2;
+	
+	c.as(B).y = 3;
+	c.z = 4;
+}

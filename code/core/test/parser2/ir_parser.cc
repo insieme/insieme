@@ -726,6 +726,14 @@ namespace parser {
 		EXPECT_EQ(fun, call->getFunctionExpr());
 		EXPECT_EQ(manager.getLangBasic().getInt4(), call->getType());
 		EXPECT_EQ("[AP(ref.var(undefined(O))),AP(3)]", toString(call->getArguments()));
+
+		// create construct using -> instead of .
+		auto call2 = builder.normalize(builder.parseExpr(
+				"let x = var(undefined(lit(O))) in "
+				"let f = O::(int<4> a)->int<4> { return a; } in "
+				"x->f(3)"
+		)).as<CallExprPtr>();
+		EXPECT_EQ(call, call2);
 	}
 
 	TEST(IR_Parser2, LargeCode) {

@@ -44,6 +44,8 @@
 #include "insieme/core/parser2/detail/parser.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
+
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/encoder/lists.h"
@@ -1186,10 +1188,23 @@ namespace parser {
 					-15
 			));
 
+			// parent access / cast
+			g.addRule("E", rule(
+					seq(E, ".as(", T, ")"),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						TypePtr t = cur.getTerm(1).as<TypePtr>();
+						if (!core::analysis::isObjectReferenceType(a->getType()) || !core::analysis::isObjectType(t)) {
+							return fail(cur, "No valid object parent access!");
+						}
+						return cur.refParent(a, t);
+					},
+					-15
+			));
 
 			// member function call
 			g.addRule("E", rule(
-					seq(E, ".", E, "(", list(E, ","), ")"),
+					seq(E, lit(".") | lit("->"), E, "(", list(E, ","), ")"),
 					[](Context& cur)->NodePtr {
 						NodeList terms = cur.getTerms();
 						assert(terms.size() >= 2u);
