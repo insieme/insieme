@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/printer/pretty_printer.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/utils/compiler/compiler.h"
 
@@ -124,6 +125,77 @@ namespace backend {
 
 		ASSERT_TRUE(program);
 		std::cout << "Program: " << *program << std::endl;
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		// use sequential backend to convert into C++ code
+		auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+		ASSERT_TRUE((bool)converted);
+		std::cout << "Converted: \n" << *converted << std::endl;
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+
+	}
+
+	TEST(CppSnippet, Inheritance) {
+
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create a code fragment implementing a counter class
+		core::ProgramPtr program = builder.parseProgram(
+				R"(
+				let int = int<4>;
+
+				let A = struct {
+					int x;
+				};
+
+				let B = struct : A {
+					int y;
+				};
+
+				let C = struct : B {
+					int z;
+				};
+
+				int main() {
+
+					// -------- handle an instance of A --------
+					ref<A> a;
+					a.x = 1;
+					
+					
+					// -------- handle an instance of B --------
+					ref<B> b;
+					
+					// direct access
+					b.as(A).x = 1;
+					b.y = 2;
+					
+					// indirect access of A's x
+					auto bA = b.as(A);
+					bA.x = 3;
+					
+					
+					// -------- handle an instance of C --------
+					ref<C> c;
+					
+					// access B's A's x
+					c.as(B).as(A).x = 1;
+
+					// access C's A's x
+					c.as(B).y = 2;
+					
+					c.z = 3;
+				}
+				)"
+		);
+
+		ASSERT_TRUE(program);
+		std::cout << "Program: " << core::printer::PrettyPrinter(program) << std::endl;
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 
 		// use sequential backend to convert into C++ code

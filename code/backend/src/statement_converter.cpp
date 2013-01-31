@@ -315,12 +315,35 @@ namespace backend {
 		// to be created: an initialization of the corresponding union
 		//     (<type>){<single member>}
 
-        auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
+		core::TypePtr unionType = ptr->getType();
+        auto typeInfo = converter.getTypeManager().getTypeInfo(unionType);
         context.addDependency(typeInfo.definition);
 
         // get type and create init expression
         c_ast::TypePtr type = typeInfo.rValueType;
-		return c_ast::init(type, convert(context, ptr->getMember()));
+
+        std::cout << "\nMember is of type: " << ptr->getMember()->getNodeType() << "\n" << ptr->getMember() << "\n";
+
+        auto cmgr = context.getConverter().getCNodeManager();
+
+        // special handling for vector initialization (should not be turned into a struct)
+        auto value = convertExpression(context, ptr->getMember());
+        if (ptr->getMember()->getNodeType() == core::NT_VectorExpr) {
+        	assert(dynamic_pointer_cast<c_ast::Initializer>(value));
+        	std::cout << "Number of elements: " << static_pointer_cast<c_ast::Initializer>(value)->values.size() << "\n";
+        	value = cmgr->create<c_ast::VectorInit>(
+        			static_pointer_cast<c_ast::VectorInit>(
+        					static_pointer_cast<c_ast::Initializer>(value)->values[0]
+        			)->values
+        	);
+        }
+
+        return c_ast::init(
+        		type,
+        		cmgr->create(ptr->getMemberName()->getValue()),
+        		value
+        );
+//		return c_ast::init(type, convert(context, ptr->getMember()));
 	}
 
 	c_ast::NodePtr StmtConverter::visitTupleExpr(const core::TupleExprPtr& ptr, ConversionContext& context) {

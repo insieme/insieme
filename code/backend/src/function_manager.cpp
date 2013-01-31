@@ -474,9 +474,6 @@ namespace backend {
 			res->mapperName = manager->create(name + "_mapper");
 			res->constructorName = manager->create(name + "_ctr");
 
-			// get the name of the inner struct
-			c_ast::IdentifierPtr innerStructName = manager->create("_" + name + "_closure");
-
 			// create a map between expressions in the IR and parameter / captured variable names in C
 			utils::map::PointerMap<core::ExpressionPtr, c_ast::VariablePtr> variableMap;
 
@@ -506,7 +503,7 @@ namespace backend {
 			// ----------- define closure type ---------------
 
 			// create closure struct
-			c_ast::StructTypePtr closureStruct = manager->create<c_ast::StructType>(innerStructName);
+			c_ast::StructTypePtr closureStruct = manager->create<c_ast::StructType>(res->closureName);
 
 			// get function type of mapper
 			core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(bind->getType());
@@ -532,7 +529,8 @@ namespace backend {
 			closureStruct->elements.push_back(varNested);
 			addAll(closureStruct->elements, varsCaptured);
 
-			c_ast::NodePtr closure = manager->create<c_ast::TypeDefinition>(closureStruct, res->closureName);
+			c_ast::NodePtr closureDecl = manager->create<c_ast::TypeDeclaration>(closureStruct);
+			c_ast::NodePtr closureDef = manager->create<c_ast::TypeDefinition>(closureStruct);
 			res->closureType = manager->create<c_ast::NamedType>(res->closureName);
 
 
@@ -608,7 +606,7 @@ namespace backend {
 			// attach definitions of closure, mapper and constructor
 			res->definitions = c_ast::CCodeFragment::createNew(converter.getFragmentManager(),
 					manager->create<c_ast::Comment>("-- Begin - Bind Constructs ------------------------------------------------------------"),
-					closure, mapper, constructor,
+					closureDecl, closureDef, mapper, constructor,
 					manager->create<c_ast::Comment>("--  End  - Bind Constructs ------------------------------------------------------------"));
 
 			res->definitions->addDependency(funInfo.declaration);
