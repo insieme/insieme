@@ -290,6 +290,12 @@ namespace c_ast {
 		return *type==*other.type && ::equals(values, other.values, equal_target<NodePtr>());
 	}
 
+	bool DesignatedInitializer::equals(const Node& node) const {
+		assert(dynamic_cast<const DesignatedInitializer*>(&node));
+		auto other = static_cast<const DesignatedInitializer&>(node);
+		return *type==*other.type && *member == *other.member && *value == *other.value;
+	}
+
 	bool VectorInit::equals(const Node& node) const {
 		assert(dynamic_cast<const VectorInit*>(&node));
 		auto other = static_cast<const VectorInit&>(node);

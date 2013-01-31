@@ -107,6 +107,8 @@ namespace c_ast {
 		case BinaryOperation::Subscript: 				return 15;
 		case BinaryOperation::Cast: 					return 14;
 		case BinaryOperation::Comma:					return 1;
+		case BinaryOperation::StaticCast: 				return 14;
+		case BinaryOperation::DynamicCast: 				return 14;
 		}
 		assert(false && "Uncovered operator encountered!");
 		return 0;
@@ -411,6 +413,14 @@ namespace c_ast {
 		return binaryOp(BinaryOperation::Cast, type, expr);
 	}
 
+	inline ExpressionPtr staticCast(TypePtr type, NodePtr expr) {
+		return binaryOp(BinaryOperation::StaticCast, type, expr);
+	}
+
+	inline ExpressionPtr dynamicCast(TypePtr type, NodePtr expr) {
+		return binaryOp(BinaryOperation::DynamicCast, type, expr);
+	}
+
 	inline ExpressionPtr access(ExpressionPtr expr, const string& element) {
 		return binaryOp(BinaryOperation::MemberAccess, expr, expr->getManager()->create(element));
 	}
@@ -457,6 +467,10 @@ namespace c_ast {
 
 	inline InitializerPtr init(TypePtr type, const vector<c_ast::NodePtr>& elements) {
 		return type->getManager()->create<c_ast::Initializer>(type, elements);
+	}
+
+	inline DesignatedInitializerPtr init(TypePtr type, IdentifierPtr member, ExpressionPtr value) {
+		return type->getManager()->create<c_ast::DesignatedInitializer>(type, member, value);
 	}
 
 	template<typename ... E>

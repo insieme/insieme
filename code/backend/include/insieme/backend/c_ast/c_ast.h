@@ -327,6 +327,15 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct DesignatedInitializer : public Expression {
+		TypePtr type;
+		IdentifierPtr member;
+		ExpressionPtr value;
+		DesignatedInitializer(TypePtr type, IdentifierPtr member, ExpressionPtr value)
+			: Expression(NT_DesignatedInitializer), type(type), member(member), value(value) {};
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct VectorInit : public Expression {
 		vector<NodePtr> values;
 		VectorInit() : Expression(NT_VectorInit) {};
@@ -403,7 +412,11 @@ namespace c_ast {
 			IndirectMemberAccess,
 			Subscript,
 			Cast,
-			Comma
+			Comma,
+
+			// C++ operators
+			StaticCast,
+			DynamicCast
 		};
 
 		BinaryOp operation;

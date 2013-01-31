@@ -160,11 +160,11 @@ namespace c_ast {
 			}
 
 			PRINT(StructType) {
-				return out << "struct " << print(node->name);
+				return out << print(node->name);
 			}
 
 			PRINT(UnionType) {
-				return out << "union " << print(node->name);
+				return out << print(node->name);
 			}
 
 			PRINT(FunctionType) {
@@ -333,6 +333,10 @@ namespace c_ast {
 				}) << "}";
 			}
 
+			PRINT(DesignatedInitializer) {
+				return out << "(" << print(node->type) << "){ ." << print(node->member) << " = " << print(node->value) << " }";
+			}
+
 			PRINT(VectorInit) {
 				return out << "{"
 						<< join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) {
@@ -409,6 +413,8 @@ namespace c_ast {
 					case BinaryOperation::Subscript: return out << print(node->operandA) << "[" << print(node->operandB) << "]";
 					case BinaryOperation::Cast: return out << "(" << print(node->operandA) << ")" << print(node->operandB);
 
+					case BinaryOperation::StaticCast:  return out << "static_cast<"  << print(node->operandA) << ">(" << print(node->operandB) << ")";
+					case BinaryOperation::DynamicCast: return out << "dynamic_cast<" << print(node->operandA) << ">(" << print(node->operandB) << ")";
 				}
 
 				assert(op != "" && "Invalid binary operation encountered!");
@@ -452,7 +458,17 @@ namespace c_ast {
 			}
 
 			PRINT(TypeDeclaration) {
-				return out << print(node->type) << ";\n";
+				// forward declaration + type definition
+				bool isStruct = (node->type->getNodeType() == NT_StructType);
+
+				// forward declaration
+				out << ((isStruct)?"struct ":"union ") << print(node->type) << ";\n";
+
+				// type definition
+				out << "typedef " << ((isStruct)?"struct ":"union ") << print(node->type) << " " << print(node->type) << ";\n";
+
+				// done
+				return out;
 			}
 
 			PRINT(FunctionPrototype) {
@@ -494,38 +510,40 @@ namespace c_ast {
 
 			PRINT(TypeDefinition) {
 
-				bool explicitTypeDef = (bool)(node->name);
-
-				// print prefix
-				if (explicitTypeDef) {
-					out << "typedef ";
+				// handle type definitions
+				if ((bool)(node->name)) {
+					return out << "typedef " << print(node->type) << " " << print(node->name) << ";\n";
 				}
 
-				// define type
-				out << print(node->type);
-				if (c_ast::NamedCompositeTypePtr composite = dynamic_pointer_cast<c_ast::NamedCompositeType>(node->type)) {
+				// handle struct / union types
+				c_ast::NamedCompositeTypePtr composite = dynamic_pointer_cast<c_ast::NamedCompositeType>(node->type);
+				assert(composite && "Must be a struct or union type!");
 
-					// special handling for struct types
-					c_ast::StructTypePtr structType = dynamic_pointer_cast<c_ast::StructType>(composite);
+				// special handling for struct types
+				c_ast::StructTypePtr structType = dynamic_pointer_cast<c_ast::StructType>(composite);
 
-					// print parents
-					if (structType && !structType->parents.empty()) {
-						out << " : public " << join(", ", structType->parents, [&](std::ostream& out, const ParentPtr& cur) { out << print(cur); });
-					}
+				// define struct / type as part of a type definition (C/C++ compatible)
+				out << ((structType)?"struct":"union") << " " << print(composite->name);
 
-					out << " {\n    " << join(";\n    ", composite->elements,
-							[&](std::ostream& out, const VariablePtr& cur) {
-								out << printParam(cur);
-					}) << ";\n}";
-
-					// TODO: add constructors / destructors / member functions
+				// print parents
+				if (structType && !structType->parents.empty()) {
+					out << " : public " << join(", public ", structType->parents, [&](std::ostream& out, const ParentPtr& cur) { out << print(cur); });
 				}
 
-				// print name and finish
-				if (explicitTypeDef) {
-					out << " " << print(node->name);
-				}
-				return out << ";\n";
+				// start definition
+				out << " {\n    ";
+
+				// add fields
+				out << join(";\n    ", composite->elements,
+						[&](std::ostream& out, const VariablePtr& cur) {
+							out << printParam(cur);
+				});
+
+				// todo: add ctors / dtors / member function prototypes
+
+
+				// finish type definition
+				return out << ";\n};\n";
 			}
 
 			c_ast::StatementPtr wrapBody(const c_ast::StatementPtr& body) {
