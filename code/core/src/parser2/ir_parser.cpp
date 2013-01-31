@@ -42,6 +42,7 @@
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/core/parser2/detail/parser.h"
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
@@ -306,6 +307,7 @@ namespace parser {
 					// add mappings ...
 					if (!isRecursive) {
 						for(std::size_t i=0; i<names.size(); i++) {
+							annotations::attachName(values[i], names[i].front().getLexeme());
 							manager.add(names[i], values[i]);
 						}
 						return;
@@ -345,6 +347,7 @@ namespace parser {
 
 					// substitute temporal mappings with real mappings
 					for(std::size_t i=0; i<names.size(); i++) {
+						annotations::attachName(values[i], names[i].front().getLexeme());
 						manager.replace(names[i], values[i]);
 					}
 				}
@@ -1463,9 +1466,15 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						TypePtr type = cur.getTerm(0).as<TypePtr>();
 						ExpressionPtr value = cur.getTerm(1).as<ExpressionPtr>();
+
 						auto decl = cur.declarationStmt(type, value);
+
 						// register name within variable manager
 						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
+
+						// attach name
+						annotations::attachName(decl->getVariable(), cur.getSubRange(0).front());
+
 						return decl;
 					}
 			));
@@ -1484,8 +1493,13 @@ namespace parser {
 						}
 
 						auto decl = builder.declarationStmt(type, value);
+
 						// register name within variable manager
 						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
+
+						// attach name
+						annotations::attachName(decl->getVariable(), cur.getSubRange(0).front());
+
 						return decl;
 					}
 			));
@@ -1496,8 +1510,13 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						ExpressionPtr value = cur.getTerm(0).as<ExpressionPtr>();
 						auto decl = cur.declarationStmt(value->getType(), value);
+
 						// register name within variable manager
 						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
+
+						// attach name
+						annotations::attachName(decl->getVariable(), cur.getSubRange(0).front());
+
 						return decl;
 					},
 					1 // higher priority than ordinary declaration
