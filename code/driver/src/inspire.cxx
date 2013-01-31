@@ -43,6 +43,7 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/ir.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/parser2/ir_parser.h"
@@ -118,7 +119,7 @@
 		}
 		double time = timer.stop();
 
-std::cout << core::printer::PrettyPrinter(res) << "\n";
+//std::cout << core::printer::PrettyPrinter(res) << "\n";
 		std::cout << "Parsing took " << time << "sec.\n";
 
 		auto msg = checks::check(res);
@@ -129,8 +130,18 @@ std::cout << core::printer::PrettyPrinter(res) << "\n";
 
 		// convert to target code and compile code
 		auto code = backend::sequential::SequentialBackend().convert(res);
-//std::cout << *code;
-		bool success = utils::compiler::compileToBinary(*code, options.outFile);
+std::cout << *code;
+
+		// pick C / C++ compiler depending on IR
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99CompilerO3();
+		if (core::analysis::isIRpp(res)) {
+			std::cout << "Compiling using C++ compiler ...\n";
+			compiler = utils::compiler::Compiler::getDefaultCppCompilerO3();
+		} else {
+			std::cout << "Compiling using C compiler ...\n";
+		}
+
+		bool success = utils::compiler::compileToBinary(*code, options.outFile, compiler);
 
 		// works fine
 		return (success)?0:1;
