@@ -129,3 +129,24 @@ TEST(Ptr, Casts) {
 	refB = dynamic_pointer_cast<const B >(refA);
 	EXPECT_TRUE( refB == Ptr<B>(NULL) );
 }
+
+TEST(Ptr, CastShortcuts) {
+
+	A a;
+	B b;
+	C c;
+
+	Ptr<A> refA(&a);
+	Ptr<B> refB(&b);
+	Ptr<C> refC(&c);
+
+	EXPECT_TRUE(refB == refB.as<Ptr<B>>());
+	EXPECT_TRUE(refB == refB.as<Ptr<A>>());
+
+	// should not compile
+//	refC.as<Ptr<B>>();
+
+	refA = refC;
+	refB = refA.isa<Ptr<B>>();
+	EXPECT_FALSE(refB);
+}
