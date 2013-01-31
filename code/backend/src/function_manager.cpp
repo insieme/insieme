@@ -73,6 +73,7 @@ namespace backend {
 
 		struct FunctionCodeInfo {
 			c_ast::FunctionPtr function;
+			c_ast::DefinitionPtr definition;
 			c_ast::FragmentSet prototypeDependencies;
 			c_ast::FragmentSet definitionDependencies;
 			std::set<string> includes;
@@ -256,15 +257,34 @@ namespace backend {
 			// obtain lambda information
 			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
 
-			// produce call to internal lambda
-			c_ast::CallPtr res = c_ast::call(info.function->name);
-			appendAsArguments(context, res, call->getArguments(), false);
-
 			// add dependencies and requirements
 			context.getDependencies().insert(info.prototype);
 			context.getRequirements().insert(info.definition);
 
-			// return internal function call
+			// deal with different call mechanisms
+			auto funType = fun.as<core::LambdaExprPtr>()->getFunctionType();
+
+			// -------------- standard function call ------------
+
+			// produce call to internal lambda
+			c_ast::CallPtr c_call = c_ast::call(info.function->name);
+			appendAsArguments(context, c_call, call->getArguments(), false);
+			c_ast::NodePtr res = c_call;
+
+			// --------------- member function call -------------
+
+			// re-structure call in case it is a member function call
+			if (funType->isMemberFunction()) {
+
+				vector<c_ast::NodePtr> args = c_call->arguments;
+				assert(!args.empty());
+
+				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
+				args.erase(args.begin());
+
+				res = c_ast::memberCall(obj, c_call->function, args);
+			}
+
 			return res;
 		}
 
@@ -633,6 +653,7 @@ namespace backend {
 			core::NodeManager& manager = converter.getNodeManager();
 			auto& cManager = converter.getCNodeManager();
 			auto& fragmentManager = converter.getFragmentManager();
+			auto& typeManager = converter.getTypeManager();
 
 			// create definition and declaration block
 			c_ast::CCodeFragmentPtr declarations = c_ast::CCodeFragment::createNew(fragmentManager);
@@ -659,21 +680,34 @@ namespace backend {
 				const c_ast::IdentifierPtr& name = pair.first;
 				const core::LambdaExprPtr& lambda = pair.second;
 
+				auto funType = lambda->getFunctionType();
+				bool isMember = funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction();
+
 				// create information
 				LambdaInfo* info = new LambdaInfo();
 				info->prototype = declarations;
 				info->definition = definitions;
 
-				// if not recursive, skip prototype
-				if (!lambda->isRecursive()) {
+				// member functions are declared within object definition
+				c_ast::StructTypePtr classDecl;
+				if (isMember) {
+					const auto& typeInfo = typeManager.getTypeInfo(funType->getObjectType());
+					info->prototype = typeInfo.definition;
+					classDecl = typeInfo.lValueType.as<c_ast::StructTypePtr>();
+
+					// add requirement of implementation
+					info->prototype->addRequirement(info->definition);
+				}
+
+				// if not member and not recursive, skip prototype
+				if (!isMember && !lambda->isRecursive()) {
 					info->prototype = definitions;
 				} else {
-					definitions->addDependency(declarations);
+					definitions->addDependency(info->prototype);
 				}
 
 				// create dummy function ... no body
 				core::LambdaPtr body;
-				const core::FunctionTypePtr& funType = static_pointer_cast<const core::FunctionType>(lambda->getType());
 				FunctionCodeInfo codeInfo = resolveFunction(name, funType, body, false);
 				info->function = codeInfo.function;
 
@@ -687,8 +721,32 @@ namespace backend {
 				auto res = funInfos.insert(std::make_pair(lambda, info));
 				if(!res.second) assert(false && "Entry should not be already present!");
 
-				// add prototype to prototype block
-				declarations->getCode().push_back(cManager->create<c_ast::FunctionPrototype>(codeInfo.function));
+				// add prototype ...
+				if (isMember) {
+
+					// add declaration
+					if (funType.isConstructor()) {
+						// add constructor
+						auto ctor = cManager->create<c_ast::Constructor>(classDecl->name, info->function);
+						classDecl->ctors.push_back(cManager->create<c_ast::ConstructorPrototype>(ctor));
+					} else if (funType.isDestructor()) {
+						// add destructor
+						assert(!classDecl->dtor && "Destructor already defined!");
+						auto dtor = cManager->create<c_ast::Destructor>(classDecl->name, info->function);
+						classDecl->dtor = cManager->create<c_ast::DestructorPrototype>(dtor);
+					} else {
+						// add member function
+						assert(funType.isMemberFunction());
+						auto mfun = cManager->create<c_ast::MemberFunction>(classDecl->name, info->function);
+						classDecl->members.push_back(cManager->create<c_ast::MemberFunctionPrototype>(mfun));
+					}
+
+				} else {
+					// ... to prototype block
+					declarations->getCode().push_back(cManager->create<c_ast::FunctionPrototype>(codeInfo.function));
+				}
+
+				// import dependency from resolved code fragment
 				declarations->addDependencies(codeInfo.prototypeDependencies);
 
 				// add includes
@@ -706,7 +764,7 @@ namespace backend {
 				core::LambdaExprPtr unrolled = lambdaDefinition->peel(manager, lambda->getVariable());
 				assert(!unrolled->isRecursive() && "Peeled function must not be recursive!");
 
-				// create dummy function ... no body
+				// resolve function ... now with body
 				const core::FunctionTypePtr& funType = static_pointer_cast<const core::FunctionType>(lambda->getType());
 				FunctionCodeInfo codeInfo = resolveFunction(name, funType, unrolled->getLambda(), false);
 
@@ -715,7 +773,7 @@ namespace backend {
 				info->function = codeInfo.function;
 
 				// add definition to definition block
-				definitions->getCode().push_back(codeInfo.function);
+				definitions->getCode().push_back(codeInfo.definition);
 
 				// add code dependencies
 				definitions->addDependencies(codeInfo.definitionDependencies);
@@ -738,6 +796,9 @@ namespace backend {
 			// get other managers
 			TypeManager& typeManager = converter.getTypeManager();
 			NameManager& nameManager = converter.getNameManager();
+
+			// check whether this is a member function
+			bool isMember = funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction();
 
 			// resolve return type
 			const TypeInfo& returnTypeInfo = typeManager.getTypeInfo(funType->getReturnType());
@@ -763,7 +824,13 @@ namespace backend {
 
 				string paramName;
 				if (lambda) {
-					paramName = nameManager.getName(lambda->getParameterList()[counter]);
+					if (isMember && counter == 0) {
+						// first parameter of member functions is this!
+						paramName = "this";
+						nameManager.setName(lambda->getParameterList()[counter], paramName);
+					} else {
+						paramName = nameManager.getName(lambda->getParameterList()[counter]);
+					}
 				} else {
 					paramName = format("p%d", counter+1);
 				}
@@ -794,6 +861,28 @@ namespace backend {
 
 			// create function
 			res.function = manager->create<c_ast::Function>(returnType, name, parameter, cBody);
+			res.definition = res.function;
+
+			// modify function if required
+			if (funType->isMemberFunction()) {
+
+				// update definition to define a member function
+				auto className = typeManager.getTypeInfo(funType->getObjectType()).lValueType.as<c_ast::StructTypePtr>()->name;
+				res.definition = manager->create<c_ast::MemberFunction>(className, res.function);
+
+			} else if (funType->isConstructor()) {
+
+				// update definition to define a member function
+				auto className = typeManager.getTypeInfo(funType->getObjectType()).lValueType.as<c_ast::StructTypePtr>()->name;
+				res.definition = manager->create<c_ast::Constructor>(className, res.function);
+
+			} else if (funType->isDestructor()) {
+
+				// update definition to define a member function
+				auto className = typeManager.getTypeInfo(funType->getObjectType()).lValueType.as<c_ast::StructTypePtr>()->name;
+				res.definition = manager->create<c_ast::Destructor>(className, res.function);
+
+			}
 			return res;
 		}
 

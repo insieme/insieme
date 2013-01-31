@@ -93,6 +93,11 @@ namespace c_ast {
 				return ParameterPrinter(param...);
 			}
 
+			ParameterPrinter printMemberParam(const vector<VariablePtr>& params) {
+				vector<VariablePtr> subset(params.begin()+1, params.end());
+				return ParameterPrinter(subset);
+			}
+
 			std::ostream& newLine(std::ostream& out) {
 				return out << "\n" << times(indentStep, indent);
 			}
@@ -453,6 +458,14 @@ namespace c_ast {
 				}) << ")";
 			}
 
+			PRINT(MemberCall) {
+				// <obj> . <function> ( <arguments> )
+				return out << print(node->object) << "." << print(node->memberFun) << "("
+						<< join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) {
+							out << print(cur);
+				}) << ")";
+			}
+
 			PRINT(Parentheses) {
 				return out << "(" << print(node->expression) << ")";
 			}
@@ -539,11 +552,32 @@ namespace c_ast {
 							out << printParam(cur);
 				});
 
-				// todo: add ctors / dtors / member function prototypes
+				if (!composite->elements.empty()) out << ";";
 
+				// add member functions
+				if (structType) {
+
+					// todo: add ctor / dtor
+
+					// add member functions
+					if (!structType->members.empty()) out << "\n    ";
+					out << join(";\n    ", structType->members,
+							[&](std::ostream& out, const MemberFunctionPrototypePtr& cur) {
+								out 	<< (cur->isVirtual?"virtual ":"")
+										<< print(cur->fun->function->returnType) << " "
+										<< print(cur->fun->function->name)
+										<< "(" << printMemberParam(cur->fun->function->parameter) << ")"
+										<< (cur->fun->isConstant?" const":"")
+										;
+					});
+					if (!structType->members.empty()) out << ";";
+
+					// todo: add ctors / dtors / member function prototypes
+
+				}
 
 				// finish type definition
-				return out << ";\n};\n";
+				return out << "\n};\n";
 			}
 
 			c_ast::StatementPtr wrapBody(const c_ast::StatementPtr& body) {
@@ -576,7 +610,7 @@ namespace c_ast {
 				auto fun = node->function;
 
 				// print header
-				out << print(node->className) << "(" << printParam(fun->parameter) << ")" << print(fun->body) << "\n";
+				out << print(node->className) << "(" << printParam(fun->parameter) << ") ";
 
 				// TODO: add initializer list
 
@@ -590,7 +624,7 @@ namespace c_ast {
 				auto fun = node->function;
 
 				// print header
-				out << "~" << print(node->className) << "()" << print(fun->body) << "\n";
+				out << "~" << print(node->className) << "() ";
 
 				// print body
 				return out << print(wrapBody(fun->body));
@@ -603,7 +637,7 @@ namespace c_ast {
 
 				// print header
 				out << print(fun->returnType) << " " << print(node->className) << "::" << print(fun->name)
-						<< "(" << printParam(fun->parameter) << ")" << (node->isConstant?" const":"") << print(fun->body) << "\n";
+						<< "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant?" const ":" ");
 
 				// print body
 				return out << print(wrapBody(fun->body));

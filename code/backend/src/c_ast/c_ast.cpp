@@ -202,6 +202,8 @@ namespace c_ast {
 		auto other = static_cast<const StructType&>(node);
 		return NamedCompositeType::equals(other) &&
 				::equals(parents, other.parents, equal_target<ParentPtr>()) &&
+				::equals(ctors, other.ctors, equal_target<ConstructorPrototypePtr>()) &&
+				((!dtor && !other.dtor) || (dtor && other.dtor && *dtor == *other.dtor)) &&
 				::equals(members, other.members, equal_target<MemberFunctionPrototypePtr>());
 	}
 
@@ -330,6 +332,12 @@ namespace c_ast {
 		assert(dynamic_cast<const Call*>(&node));
 		auto other = static_cast<const Call&>(node);
 		return *function==*other.function && ::equals(arguments, other.arguments, equal_target<NodePtr>());
+	}
+
+	bool MemberCall::equals(const Node& node) const {
+		assert(dynamic_cast<const MemberCall*>(&node));
+		auto other = static_cast<const MemberCall&>(node);
+		return *memberFun==*other.memberFun && *object == *other.object && ::equals(arguments, other.arguments, equal_target<NodePtr>());
 	}
 
 	bool Parentheses::equals(const Node& node) const {

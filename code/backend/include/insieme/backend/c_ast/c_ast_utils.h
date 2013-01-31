@@ -235,6 +235,11 @@ namespace c_ast {
 		return fun->getManager()->create<c_ast::Call>(fun, args);
 	}
 
+	inline MemberCallPtr memberCall(NodePtr obj, NodePtr fun, const vector<NodePtr>& args) {
+		if (getPriority(obj) < 15) obj = parenthese(obj);
+		return fun->getManager()->create<c_ast::MemberCall>(fun, obj, args);
+	}
+
 	// -- Unary Operations --------------------------------------
 
 	inline ExpressionPtr unaryOp(UnaryOperation::UnaryOp op, NodePtr a) {

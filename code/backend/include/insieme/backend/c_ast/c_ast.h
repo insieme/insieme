@@ -189,6 +189,8 @@ namespace c_ast {
 
 	struct StructType : public NamedCompositeType {
 		vector<ParentPtr> parents;
+		vector<ConstructorPrototypePtr> ctors;
+		DestructorPrototypePtr dtor;
 		vector<MemberFunctionPrototypePtr> members;
 		StructType(IdentifierPtr name) : NamedCompositeType(NT_StructType, name) {}
 		virtual bool equals(const Node& node) const;
@@ -462,6 +464,17 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct MemberCall : public Expression {
+		NodePtr memberFun;
+		NodePtr object;
+		vector<NodePtr> arguments;
+
+		MemberCall(NodePtr memberFun, NodePtr object, const vector<NodePtr>& args)
+			: Expression(NT_MemberCall), memberFun(memberFun), object(object), arguments(args) {}
+
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct Parentheses : public Expression {
 		ExpressionPtr expression;
 		Parentheses(ExpressionPtr expression) : Expression(NT_Parentheses), expression(expression) {}
@@ -511,7 +524,7 @@ namespace c_ast {
 	struct MemberFunctionPrototype : public Node {
 		bool isVirtual;
 		MemberFunctionPtr fun;		// this is a null pointer if it is pure-virtual
-		MemberFunctionPrototype(bool isVirtual, const MemberFunctionPtr& fun)
+		MemberFunctionPrototype(const MemberFunctionPtr& fun, bool isVirtual = false)
 			: Node(NT_MemberFunctionPrototype), isVirtual(isVirtual), fun(fun) {}
 		virtual bool equals(const Node& node) const;
 	};
@@ -575,7 +588,7 @@ namespace c_ast {
 		IdentifierPtr className;
 		FunctionPtr function;
 		bool isConstant;
-		MemberFunction(const IdentifierPtr& className, const FunctionPtr& function, bool isConstant)
+		MemberFunction(const IdentifierPtr& className, const FunctionPtr& function, bool isConstant = false)
 			: Definition(NT_MemberFunction), className(className), function(function), isConstant(isConstant) {}
 		virtual bool equals(const Node& node) const;
 	};

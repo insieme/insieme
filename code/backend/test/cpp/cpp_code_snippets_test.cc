@@ -92,35 +92,53 @@ namespace backend {
 
 		// create a code fragment implementing a counter class
 		core::ProgramPtr program = builder.parseProgram(
-				"let int = int<4>;"
-				""
-				"let Counter = struct { int value; };"
-				""
-				"let reset = Counter::()->unit {"
-				"	this->value = 0;"
-				"};"
-				""
-				"let inc = Counter::()->int { "
-				"	this->value = this->value + 1;"
-				"	return *this->value;"
-				"};"
-				""
-				"let get = Counter::()->int { "
-				"	return *this->value; "
-				"};"
-				""
-				"let p = Counter::()->unit {"
-				"	print(\"%d\\n\", this->get());"
-				"};"
-				""
-				"int main() {"
-				"	ref<Counter> c;"
-				"	"
-				"	c.reset();"
-				"	c.p();"
-				"	c.inc();"
-				"	c.p();"
-				"}"
+				R"(
+				let int = int<4>;
+				
+				let Counter = struct {
+					int value;
+				};
+				
+				let reset = Counter::()->unit {
+					this->value = 0;
+				};
+				
+				let inc = Counter::()->int {
+					this->value = this->value + 1;
+					return *this->value;
+				};
+				
+				let dec = Counter::()->int {
+					this->value = this->value - 1;
+					return *this->value;
+				};
+				
+				let get = Counter::()->int {
+					return *this->value;
+				};
+				
+				let set = Counter::(int x)->unit { 
+					this->value = x;
+				};
+				
+				let p = Counter::()->unit {
+					print("%d\n", this->get());
+				};
+				
+				int main() {
+					ref<Counter> c;
+					c.reset();
+					c.p();
+					c.inc();
+					c.p();
+					c.inc();
+					c.p();
+					c.dec();
+					c.p();
+					c.set(14);
+					c.p();
+				}
+				)"
 		);
 
 		ASSERT_TRUE(program);
@@ -134,7 +152,7 @@ namespace backend {
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
-		compiler.addFlag("-c"); // do not run the linker
+		// compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 
 	}
