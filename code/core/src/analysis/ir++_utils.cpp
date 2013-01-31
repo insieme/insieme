@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_class_info.h"
 
 namespace insieme {
 namespace core {
@@ -45,7 +46,6 @@ namespace analysis {
 
 	bool isIRpp(const NodePtr& node) {
 		return visitDepthFirstOnceInterruptible(node, [](const NodePtr& cur)->bool {
-			// TODO: filter out IR++ constructs
 
 			// check whether there are structs using inheritance
 			if (StructTypePtr structType = cur.isa<StructTypePtr>()) {
@@ -55,11 +55,18 @@ namespace analysis {
 					return true;
 				}
 
-				// TODO: check for class-meta data!
+				// if there is meta-info => it is a IR++ code
+				if (hasMetaInfo(structType)) {
+					return true;
+				}
 			}
 
-			// TODO: check for special function types
+			// check function types
+			if (FunctionTypePtr funType = cur.isa<FunctionTypePtr>()) {
+				return funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction();
+			}
 
+			// no C++ content found
 			return false;
 		}, true);
 	}
