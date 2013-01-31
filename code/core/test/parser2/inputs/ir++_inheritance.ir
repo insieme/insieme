@@ -9,7 +9,7 @@ let B = struct : A {
 	int y;
 };
 
-let C = struct : A, B {
+let C = struct : B {
 	int z;
 };
 
@@ -38,9 +38,14 @@ int main() {
 	// access B's A's x
 	c.as(B).as(A).x = 1;
 
-	// access C's A's x
-	c.as(A).x = 2;
+	// access B's y
+	c.as(B).y = 2;
 	
-	c.as(B).y = 3;
-	c.z = 4;
+	// access C's z
+	c.z = 3;
+	
+	print("x = %d\n", *c.as(B).as(A).x);
+	print("y = %d\n", *c.as(B).y);
+	print("z = %d\n", *c.z);
+	
 }
