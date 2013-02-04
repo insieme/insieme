@@ -1,6 +1,15 @@
 # setup environment variables
 . ./environment.setup
 
+###########################################################################
+#  instalation notes:  
+#  ==================
+#
+#   make sure which llvm llvm-latest is pointing to
+#   libLLVM-3.2.so may not exist after compilation    
+#             create an alias to libLLVM-3.2svn.so in $PREFIX/llvm-3.2/libs
+###########################################################################
+
 VERSION=3.2
 
 rm -R $PREFIX/llvm-$VERSION-src
@@ -52,7 +61,7 @@ echo `pwd`
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/mpc-latest/lib/:$LD_LIBRARY_PATH 
 
-CFLAGS="-mtune=native -O3 -fgraphite-identity"
+CFLAGS="-mtune=native -O3 -fgraphite-identity -std=c++0x"
 CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CFLAGS LDFLAGS="-mtune=native -O3" ../llvm-$VERSION-src/configure --prefix=$PREFIX/llvm-$VERSION --enable-shared=yes\
   	 --enable-assert=yes --enable-debug-runtime=no --enable-debug-symbols=no --enable-optimized=yes
 
@@ -72,5 +81,6 @@ echo "* Removing LLVM installation directory *"
 echo "****************************************"
 
 rm -r build llvm-$VERSION-src
+
 
 exit 0
