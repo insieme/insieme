@@ -39,7 +39,7 @@
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/problem.h"
 
-#include "insieme/analysis/access.h"
+#include "insieme/analysis/access/access_mgr.h"
 #include "insieme/analysis/dfa/analyses/extractors.h"
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -59,7 +59,7 @@ typedef Problem<
 			RankPropagation, 
 			ForwardAnalysisTag,
 			Entity<
-				dfa::elem<AccessClassPtr>, 
+				dfa::elem<access::AccessClassPtr>, 
 				dfa::dom< dfa::Value<core::arithmetic::Constraint> >,
 				dfa::dom< dfa::Value<core::ExpressionPtr> > 
 			>,
@@ -77,12 +77,12 @@ public:
 
 	typedef typename Base::value_type value_type;
 
-	AccessManager aMgr;
+	access::AccessManager aMgr;
 
 	RankPropagation(const CFG& cfg): Base(cfg), aMgr(&cfg, cfg.getTmpVarMap()) { }
 
-	AccessManager& getAccessManager() { return aMgr; }
-	const AccessManager& getAccessManager() const { return aMgr; }
+	access::AccessManager& getAccessManager() { return aMgr; }
+	const access::AccessManager& getAccessManager() const { return aMgr; }
 
 	virtual value_type init() const;
 

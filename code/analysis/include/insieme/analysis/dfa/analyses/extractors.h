@@ -38,7 +38,8 @@
 
 #include "insieme/analysis/dfa/entity.h"
 
-#include "insieme/analysis/access.h"
+#include "insieme/analysis/access/access.h"
+#include "insieme/analysis/access/access_mgr.h"
 
 #include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -67,8 +68,10 @@ extract(const Entity< elem<cfg::BlockPtr> >& e, const CFG& cfg, T&) {
 }
 
 template <class T>
-typename container_type_traits< dfa::elem< AccessClassPtr >  >::type 
-extract(const Entity< dfa::elem<AccessClassPtr> >& e, const CFG& cfg, T& obj) {
+typename container_type_traits< dfa::elem< insieme::analysis::access::AccessClassPtr >  >::type 
+extract(const Entity< dfa::elem<insieme::analysis::access::AccessClassPtr> >& e, const CFG& cfg, T& obj) {
+
+	using namespace insieme::analysis::access;
 
 	std::set<AccessClassPtr> entities;
 	auto& aMgr = obj.getAccessManager();

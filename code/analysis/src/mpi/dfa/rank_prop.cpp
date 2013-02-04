@@ -50,6 +50,7 @@
 
 using namespace insieme::core;
 using namespace insieme::core::arithmetic;
+using namespace insieme::analysis::access;
 
 namespace insieme { 
 namespace analysis { 
