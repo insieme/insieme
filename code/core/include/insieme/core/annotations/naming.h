@@ -34,69 +34,51 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/analysis/ir++_utils.h"
+#pragma once
 
-#include "insieme/core/ir.h"
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/ir_class_info.h"
+#include <string>
+#include "insieme/core/forward_decls.h"
+
+/**
+ * A header file for naming annotations to be considered by IR utilities.
+ * Name annotations will be utilized by the pretty printer, the parser,
+ * the backends and other utilities for attaching / resolving names of
+ * objects. Names are also preserved by the binary dump.
+ */
 
 namespace insieme {
 namespace core {
-namespace analysis {
+namespace annotations {
 
-	bool isIRpp(const NodePtr& node) {
-		return visitDepthFirstOnceInterruptible(node, [](const NodePtr& cur)->bool {
+	using std::string;
 
-			// check whether there are structs using inheritance
-			if (StructTypePtr structType = cur.isa<StructTypePtr>()) {
+	/**
+	 * Checks whether a name is attached to the given node.
+	 *
+	 * @param node the node to be tested
+	 * @return true if a name is attached, false otherwise
+	 */
+	bool hasNameAttached(const NodePtr& node);
 
-				// if not empty => it is a IR++ code
-				if (!structType->getParents().empty()) {
-					return true;
-				}
+	/**
+	 * Obtains a reference to the name attached to the given node. If
+	 * no name has been attached the result is undefined (an assertion
+	 * in debug mode).
+	 *
+	 * @param node the node to obtain the attached name from
+	 * @return the name attached to the given node
+	 */
+	const string& getAttachedName(const NodePtr& node);
 
-				// if there is meta-info => it is a IR++ code
-				if (hasMetaInfo(structType)) {
-					return true;
-				}
-			}
-
-			// check function types
-			if (FunctionTypePtr funType = cur.isa<FunctionTypePtr>()) {
-				return funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction();
-			}
-
-			// no C++ content found
-			return false;
-		}, true);
-	}
-
-	bool isObjectType(const TypePtr& type) {
-
-		// decide whether something is an object type based on the node type
-		switch(type->getNodeType()) {
-		case NT_StructType:
-		case NT_GenericType:
-		case NT_TypeVariable:
-			return true;			// all this types are always object types
-		case NT_RecType:
-			return isObjectType(type.as<RecTypePtr>()->unroll());
-		default: break;
-		}
-
-		// everything else is not an object type
-		return false;
-	}
-
-	bool isObjectReferenceType(const TypePtr& type) {
-		return type->getNodeType() == NT_RefType && isObjectReferenceType(type.as<RefTypePtr>());
-	}
-
-	bool isObjectReferenceType(const RefTypePtr& type) {
-		return isObjectType(type->getElementType());
-	}
+	/**
+	 * Updates the name attached to the given node.
+	 *
+	 * @param node the node to attach a name to
+	 * @param name the name to be attached to the node
+	 */
+	void attachName(const NodePtr& node, const string& name);
 
 
-} // end namespace analysis
+} // end namespace annotations
 } // end namespace core
 } // end namespace insieme

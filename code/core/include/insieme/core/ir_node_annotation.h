@@ -103,6 +103,13 @@ namespace core {
 
 	namespace value_annotation {
 
+		/**
+		 * A utility function used by move_to_clone to conduct the actual migration without
+		 * the requirement of including the definition of the NodePtr class within this file
+		 * (which would result in a cyclic dependency).
+		 */
+		void add_annotation(const NodeAnnotationPtr& annotation, const NodePtr& target);
+
 		// --------------- Migration ----------------------
 
 		/**
@@ -120,11 +127,22 @@ namespace core {
 			// bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const;   // -- to be implemented by sub-classes!
 		};
 
+		/**
+		 * A marker type to be used for marking value annotations which should be simply
+		 * copied in the node it is attached to is transformed.
+		 */
+		struct copy_on_migration {};
+
 		// support user defined migration operation
 		template<typename V>
 		typename std::enable_if<std::is_base_of<migratable,V>::value, bool>::type
 		migrate_annotation(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after, const V& value) {
 			return value.migrate(ptr, before, after);
+		}
+
+		// support copy-on-migrate option
+		inline bool migrate_annotation(const NodeAnnotationPtr& ptr, const NodePtr& target, const copy_on_migration& value) {
+			add_annotation(ptr, target); return true;
 		}
 
 		// the default case - no migration
@@ -154,13 +172,6 @@ namespace core {
 		struct cloneable {
 			// void cloneTo(const NodePtr& target) const;   // -- to be implemented by sub-classes!
 		};
-
-		/**
-		 * A utility function used by move_to_clone to conduct the actual migration without
-		 * the requirement of including the definition of the NodePtr class within this file
-		 * (which would result in a cyclic dependency).
-		 */
-		void add_annotation(const NodeAnnotationPtr& annotation, const NodePtr& target);
 
 		// the default variant for all non-specialized value types
 		template<typename V>

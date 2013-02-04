@@ -223,38 +223,38 @@ namespace transform {
 
 	}
 
-	TEST(DeadAssignments, VectorsForControl) {
-
-		NodeManager mgr;
-		IRBuilder builder(mgr);
-
-		auto code = builder.parse(
-			"{"
-			"	ref<vector<int<4>,10>> v; "
-			"	for(uint<4> i=0u .. 10u : 2u) {"
-			"		v[i] = i; "
-			"	} "
-			"	ref<int<4>> a = v[1u];"
-			"	a; "
-			"}"
-		);
-
-		// mark SCoPs
-		insieme::analysis::polyhedral::scop::mark(code);
-
-		NodePtr ret = removeDeadVariables(mgr,code);
-		
-		EXPECT_EQ(
-			"{"
-				"ref<vector<int<4>,10>> v1 = ref.var(undefined(vector<int<4>,10>)); "
-				"for(uint<4> v2 = 0u .. 10u : 2u) {"
-					"{};"
-				"}; "
-				"ref<int<4>> v3 = vector.ref.elem(v1, 1u); "
-				"v3;"
-			"}"
-			, toString(*ret));
-	}
+//	TEST(DeadAssignments, VectorsForControl) {
+//
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		auto code = builder.parse(
+//			"{"
+//			"	ref<vector<int<4>,10>> v; "
+//			"	for(uint<4> i=0u .. 10u : 2u) {"
+//			"		v[i] = i; "
+//			"	} "
+//			"	ref<int<4>> a = v[1u];"
+//			"	a; "
+//			"}"
+//		);
+//
+//		// mark SCoPs
+//		insieme::analysis::polyhedral::scop::mark(code);
+//
+//		NodePtr ret = removeDeadVariables(mgr,code);
+//		
+//		EXPECT_EQ(
+//			"{"
+//				"ref<vector<int<4>,10>> v1 = ref.var(undefined(vector<int<4>,10>)); "
+//				"for(uint<4> v2 = 0u .. 10u : 2u) {"
+//					"{};"
+//				"}; "
+//				"ref<int<4>> v3 = vector.ref.elem(v1, 1u); "
+//				"v3;"
+//			"}"
+//			, toString(*ret));
+//	}
 
 //	TEST(DeadAssignments, VectorsForControlNotDead) {
 //

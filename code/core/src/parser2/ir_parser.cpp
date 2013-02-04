@@ -42,8 +42,11 @@
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/core/parser2/detail/parser.h"
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
+
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/encoder/lists.h"
@@ -108,11 +111,12 @@ namespace parser {
 					parenthese.push_back(info.getClosingParenthese(*cur));
 				}
 
+				// special handling for enabling the parenthese pair < >
 				if (angleBackets && *cur == '<') {
 					parenthese.push_back(Token::createSymbol('>'));
 				}
 
-				if (info.isRightParenthese(*cur) || (angleBackets && *cur == '>')) {
+				if (info.isRightParenthese(*cur) || (angleBackets && *cur == '>' && cur != begin && *(cur-1) != '-' && *(cur-1) != '=')) {
 					// if this is not matching => return end (no next token)
 					if (parenthese.empty() || parenthese.back() != *cur) {
 						return end;
@@ -304,6 +308,7 @@ namespace parser {
 					// add mappings ...
 					if (!isRecursive) {
 						for(std::size_t i=0; i<names.size(); i++) {
+							annotations::attachName(values[i], names[i].front().getLexeme());
 							manager.add(names[i], values[i]);
 						}
 						return;
@@ -343,6 +348,7 @@ namespace parser {
 
 					// substitute temporal mappings with real mappings
 					for(std::size_t i=0; i<names.size(); i++) {
+						annotations::attachName(values[i], names[i].front().getLexeme());
 						manager.replace(names[i], values[i]);
 					}
 				}
@@ -1186,10 +1192,23 @@ namespace parser {
 					-15
 			));
 
+			// parent access / cast
+			g.addRule("E", rule(
+					seq(E, ".as(", T, ")"),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						TypePtr t = cur.getTerm(1).as<TypePtr>();
+						if (!core::analysis::isObjectReferenceType(a->getType()) || !core::analysis::isObjectType(t)) {
+							return fail(cur, "No valid object parent access!");
+						}
+						return cur.refParent(a, t);
+					},
+					-15
+			));
 
 			// member function call
 			g.addRule("E", rule(
-					seq(E, ".", E, "(", list(E, ","), ")"),
+					seq(E, lit(".") | lit("->"), E, "(", list(E, ","), ")"),
 					[](Context& cur)->NodePtr {
 						NodeList terms = cur.getTerms();
 						assert(terms.size() >= 2u);
@@ -1448,9 +1467,15 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						TypePtr type = cur.getTerm(0).as<TypePtr>();
 						ExpressionPtr value = cur.getTerm(1).as<ExpressionPtr>();
+
 						auto decl = cur.declarationStmt(type, value);
+
 						// register name within variable manager
 						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
+
+						// attach name
+						annotations::attachName(decl->getVariable(), cur.getSubRange(0).front());
+
 						return decl;
 					}
 			));
@@ -1469,8 +1494,13 @@ namespace parser {
 						}
 
 						auto decl = builder.declarationStmt(type, value);
+
 						// register name within variable manager
 						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
+
+						// attach name
+						annotations::attachName(decl->getVariable(), cur.getSubRange(0).front());
+
 						return decl;
 					}
 			));
@@ -1481,8 +1511,13 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						ExpressionPtr value = cur.getTerm(0).as<ExpressionPtr>();
 						auto decl = cur.declarationStmt(value->getType(), value);
+
 						// register name within variable manager
 						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
+
+						// attach name
+						annotations::attachName(decl->getVariable(), cur.getSubRange(0).front());
+
 						return decl;
 					},
 					1 // higher priority than ordinary declaration

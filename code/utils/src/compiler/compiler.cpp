@@ -55,7 +55,10 @@ namespace compiler {
 		// create a default version of a C99 compiler
 //		Compiler res(C_COMPILER); // TODO: re-enable when constant is set properly
 		Compiler res("gcc");
-		res.addFlag("--std=gnu99 -Wl,--no-as-needed");
+		res.addFlag("-x c");
+		res.addFlag("-Wall");
+		res.addFlag("--std=gnu99");
+		res.addFlag("-Wl,--no-as-needed");
 		return res;
 	}
 
@@ -77,14 +80,43 @@ namespace compiler {
 		return res;
 	}
 
+	Compiler Compiler::getDefaultCppCompiler() {
+		Compiler res("gcc");
+		res.addFlag("-x c++");
+		res.addFlag("-Wall");
+		res.addFlag("--std=c++98");
+		res.addFlag("-Wl,--no-as-needed");
+		return res;
+	}
+
+	Compiler Compiler::getDefaultCppCompilerO3() {
+		Compiler res = getDefaultCppCompiler();
+		res.addFlag("-O3");
+		return res;
+	}
+
 	string Compiler::getCommand(const vector<string>& inputFiles, const string& outputFile) const {
 		// build up compiler command
 		std::stringstream cmd;
 
+		// some flags are known to be required to be place before the source file
+		vector<string> before;
+		vector<string> after;
+
+		// split up flags
+		for(auto cur : flags) {
+			// the -x option has to be before the input file
+			if (cur[0] == '-' && cur[1] == 'x') {
+				before.push_back(cur);
+			} else {
+				after.push_back(cur);
+			}
+		}
+
 		cmd << executable;
-		cmd << " -x c ";
+		cmd << " " << join(" ", before);
 		cmd << " " << join(" ", inputFiles);
-		cmd << " " << join(" ", flags);
+		cmd << " " << join(" ", after);
 		cmd << " -o " << outputFile;
 
 		return cmd.str();

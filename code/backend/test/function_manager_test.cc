@@ -338,10 +338,10 @@ TEST(FunctionManager, Bind) {
 	EXPECT_EQ("name_closure", toC(info.closureType));
 
 	string def = toC(info.definitions);
-	EXPECT_PRED2(containsSubString, def, "bool(* call)(struct _name_closure*,float,int32_t);");
+	EXPECT_PRED2(containsSubString, def, "bool(* call)(name_closure*,float,int32_t);");
 	EXPECT_PRED2(containsSubString, def, "bool(* nested)(float,int32_t*,int32_t);");
 	EXPECT_PRED2(containsSubString, def, "int32_t* c2;");
-	EXPECT_PRED2(containsSubString, def, "} name_closure;");
+	EXPECT_PRED2(containsSubString, def, "typedef struct name_closure name_closure;");
 
 	EXPECT_PRED2(containsSubString, def,
 		"bool name_mapper(name_closure* closure, float c1, int32_t c3) {\n"
@@ -441,10 +441,10 @@ TEST(FunctionManager, NestedBind) {
 	EXPECT_EQ("name_closure", toC(info.closureType));
 
 	string def = toC(info.definitions);
-	EXPECT_PRED2(containsSubString, def, "bool(* call)(struct _name_closure*,int32_t);");
+	EXPECT_PRED2(containsSubString, def, "bool(* call)(name_closure*,int32_t);");
 	EXPECT_PRED2(containsSubString, def, "name* nested;");
 	EXPECT_PRED2(containsSubString, def, "float c1;");
-	EXPECT_PRED2(containsSubString, def, "} name_closure;");
+	EXPECT_PRED2(containsSubString, def, "typedef struct name_closure name_closure;");
 
 	EXPECT_PRED2(containsSubString, def,
 		"bool name_mapper(name_closure* closure, int32_t c2) {\n"

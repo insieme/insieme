@@ -154,7 +154,6 @@ static inline TypePtr getReferencedType(const TypePtr& type) {
  */
 bool isTypeLiteralType(const GenericTypePtr& type);
 
-
 /**
  * Tests whether the given type is a type used for type literals. Hence, whether
  * the type is of the from type<'a> where 'a may be a variable or concrete type.
@@ -163,6 +162,26 @@ bool isTypeLiteralType(const GenericTypePtr& type);
  * @return true if the given type is a type literal type, false otherwise
  */
 bool isTypeLiteralType(const TypePtr& type);
+
+/**
+ * Tests whether the given literal is a type literal.
+ *
+ * @param literal the literal to be tested
+ * @return true if it is a type literal, false otherwise
+ */
+static inline bool isTypeLiteral(const LiteralPtr& literal) {
+	return literal && isTypeLiteralType(literal->getType());
+}
+
+/**
+ * Test whether the given node is a type literal
+ *
+ * @param node the node to be tested
+ * @return true if it is a type literal, false otherwise
+ */
+static inline bool isTypeLiteral(const NodePtr& node) {
+	return node && isTypeLiteral(node.isa<LiteralPtr>());
+}
 
 /**
  * Tests whether the given node is a constructor expression.

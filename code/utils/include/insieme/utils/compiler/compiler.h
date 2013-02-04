@@ -68,6 +68,9 @@ namespace compiler {
 		static Compiler getRuntimeCompiler();
 		static Compiler getRuntimeCompilerO3();
 
+		static Compiler getDefaultCppCompiler();
+		static Compiler getDefaultCppCompilerO3();
+
 		const string& getExecutable() const {
 			return executable;
 		}

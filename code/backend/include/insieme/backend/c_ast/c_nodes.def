@@ -197,6 +197,7 @@ ABSTRACT(Expression)
 AST_TERMINAL(Literal, Expression)
 AST_TERMINAL(Variable, Expression)
 AST_TERMINAL(Initializer, Expression)
+AST_TERMINAL(DesignatedInitializer, Expression)
 AST_TERMINAL(VectorInit, Expression)
 AST_TERMINAL(OCLVectorInit, Expression)
 
@@ -204,8 +205,9 @@ AST_TERMINAL(UnaryOperation, Expression)
 AST_TERMINAL(BinaryOperation, Expression)
 AST_TERMINAL(TernaryOperation, Expression)
 
-AST_TERMINAL(Call, Expression)
 AST_TERMINAL(Parentheses, Expression)
+AST_TERMINAL(Call, Expression)
+AST_TERMINAL(MemberCall, Expression)
 
 //
 // --- Declarations ---
@@ -227,6 +229,25 @@ ABSTRACT(Definition)
 
 AST_TERMINAL(TypeDefinition, Definition)
 AST_TERMINAL(Function, Definition)
+
+
+//
+// --- C++ Extensions ---
+//
+
+AST_TERMINAL(Namespace, Definition)
+
+AST_TERMINAL(Parent, Node)
+
+AST_TERMINAL(ConstructorPrototype, Node)
+AST_TERMINAL(Constructor, Definition)
+
+AST_TERMINAL(DestructorPrototype, Node)
+AST_TERMINAL(Destructor, Definition)
+
+AST_TERMINAL(MemberFunctionPrototype, Node)
+AST_TERMINAL(MemberFunction, Definition)
+
 
 
 // ------------------------- END: AST NODE DEFINITONS ----------------------------

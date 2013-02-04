@@ -80,6 +80,8 @@ namespace ocl_host {
 		TypeHandlerList getTypeHandlerList();
 
 		StmtHandlerList getStmtHandlerList();
+
+		TypeIncludeTable getTypeIncludeTable();
 	}
 
 	OCLHostBackendPtr OCLHostBackend::getDefault() {
@@ -121,9 +123,7 @@ namespace ocl_host {
 		SimpleNameManager nameManager;
 		converter.setNameManager(&nameManager);
 
-		TypeIncludeTable typeIncludeTable = getBasicTypeIncludeTable();
-		runtime::addRuntimeTypeIncludes(typeIncludeTable);
-		TypeManager typeManager(converter, typeIncludeTable, getTypeHandlerList());
+		TypeManager typeManager(converter, getTypeIncludeTable(), getTypeHandlerList());
 		converter.setTypeManager(&typeManager);
 
 		StmtConverter stmtConverter(converter, getStmtHandlerList());
@@ -169,6 +169,62 @@ namespace ocl_host {
 			StmtHandlerList res;
 			res.push_back(OclHostStmtHandler);
 			res.push_back(runtime::RuntimeStmtHandler);
+			return res;
+		}
+
+		TypeIncludeTable getTypeIncludeTable() {
+
+			TypeIncludeTable res = getBasicTypeIncludeTable();
+
+			// add runtime specific stuff
+			runtime::addRuntimeTypeIncludes(res);
+
+			// for the following types no include is necessary (part of the runtime)
+			res["cl_float2"] = "CL/cl.h";
+			res["cl_float4"] = "CL/cl.h";
+			res["cl_float8"] = "CL/cl.h";
+			res["cl_float16"] = "CL/cl.h";
+
+			res["cl_char2"] = "CL/cl.h";
+			res["cl_char4"] = "CL/cl.h";
+			res["cl_char8"] = "CL/cl.h";
+			res["cl_char16"] = "CL/cl.h";
+
+			res["cl_uchar2"] = "CL/cl.h";
+			res["cl_uchar4"] = "CL/cl.h";
+			res["cl_uchar8"] = "CL/cl.h";
+			res["cl_uchar16"] = "CL/cl.h";
+
+			res["cl_short2"] = "CL/cl.h";
+			res["cl_short4"] = "CL/cl.h";
+			res["cl_short8"] = "CL/cl.h";
+			res["cl_short16"] = "CL/cl.h";
+
+			res["cl_ushort2"] = "CL/cl.h";
+			res["cl_ushort4"] = "CL/cl.h";
+			res["cl_ushort8"] = "CL/cl.h";
+			res["cl_ushort16"] = "CL/cl.h";
+
+			res["cl_int2"] = "CL/cl.h";
+			res["cl_int4"] = "CL/cl.h";
+			res["cl_int8"] = "CL/cl.h";
+			res["cl_int16"] = "CL/cl.h";
+
+			res["cl_uint2"] = "CL/cl.h";
+			res["cl_uint4"] = "CL/cl.h";
+			res["cl_uint8"] = "CL/cl.h";
+			res["cl_uint16"] = "CL/cl.h";
+
+			res["cl_long2"] = "CL/cl.h";
+			res["cl_long4"] = "CL/cl.h";
+			res["cl_long8"] = "CL/cl.h";
+			res["cl_long16"] = "CL/cl.h";
+
+			res["cl_ulong2"] = "CL/cl.h";
+			res["cl_ulong4"] = "CL/cl.h";
+			res["cl_ulong8"] = "CL/cl.h";
+			res["cl_ulong16"] = "CL/cl.h";
+
 			return res;
 		}
 	}

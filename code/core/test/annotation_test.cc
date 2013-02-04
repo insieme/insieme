@@ -180,7 +180,7 @@ TEST(Annotation, ValueAnnotations2) {
 }
 
 
-TEST(Annotation, CopyOnMigrateTest) {
+TEST(Annotation, CopyOnCloneTest) {
 
 	struct AnnotationDefault {
 		int x; AnnotationDefault(int x = 0) : x(x) {};

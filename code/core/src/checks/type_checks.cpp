@@ -42,8 +42,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
-
 #include "insieme/core/analysis/type_variable_deduction.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/numeric_cast.h"
 
@@ -54,75 +54,106 @@ namespace checks {
 #define CAST(TargetType, value) \
 	static_pointer_cast<const TargetType>(value)
 
-namespace{
+namespace {
 
-TypePtr ResolveDataPath (const IRBuilder& builder, 
-					  	 const TypePtr& source,
-					  	 const ExpressionPtr& datapath) {
+	TypePtr followDataPath(const TypePtr& source, const ExpressionPtr& datapath) {
 
-	TypePtr fail;
+		TypePtr fail;
+		const auto& basic = source.getNodeManager().getLangBasic();
 
-	// if ROOT, target and source must be equal
-	if (builder.getLangBasic().isDataPathRoot(datapath)){
+		// if data path is ROOT, the target type is equal to the source type
+		if (basic.isDataPathRoot(datapath)){
+			return source;		// no step to be taken
+		}
 
-		if (auto ret= analysis::getReferencedType(source))
-			return ret;									// narrow case
-		else
-			return source;								// expand case
+		// if not root, it has to be a composed data path (based on call Expressions)
+		auto call = datapath.isa<CallExprPtr>();
+		if (!call || !basic.isDataPathPrimitive(call->getFunctionExpr())) {
+			return fail; // not a valid data path
+		}
+
+		// resolve target type recursively
+		TypePtr localSrc = followDataPath(source, call->getArgument(0));
+		if (!localSrc) return fail; 	// unable to follow path recursively
+
+		// unroll recursive types to make those transparent
+		if (localSrc->getNodeType() == NT_RecType) {
+			localSrc = localSrc.as<RecTypePtr>()->unroll();
+		}
+
+		// process local step
+		auto step = call->getFunctionExpr();
+		if (basic.isDataPathMember(step)) {
+
+			// check input type
+			NamedCompositeTypePtr compositeType = localSrc.isa<NamedCompositeTypePtr>();
+			if (!compositeType) return fail;	// invalid source
+
+			// check member argument
+			auto member = call->getArgument(1);
+			if (!member.isa<LiteralPtr>()) return fail; 	// invalid member name
+
+			// return type of member
+			return compositeType->getTypeOfMember(member.as<LiteralPtr>()->getValue());
+
+		}
+
+		// check whether it is accessing an element of an array / vector
+		if (basic.isDataPathElement(step)) {
+
+			// input needs to be an array or a vector
+			if (localSrc->getNodeType() != NT_ArrayType && localSrc->getNodeType() != NT_VectorType) {
+				return fail;		// no valid type
+			}
+
+			// the rest is fine, get the element type
+			return localSrc.as<SingleElementTypePtr>()->getElementType();
+
+		}
+
+		// check whether it is accessing an element of a tuple
+		if (basic.isDataPathComponent(step)) {
+
+			// source has to be a tuple type
+			if (localSrc->getNodeType() != NT_TupleType) return fail;
+			auto tupleType = localSrc.as<TupleTypePtr>();
+
+			// check whether the given index is an integer constant
+			auto f = arithmetic::toFormula(call->getArgument(1));
+			if (!f.isConstant() || !f.isInteger()) return fail;
+
+			// extract index
+			size_t n = (int64_t)f.getConstantValue();
+
+			// return type of n-th component
+			return (0<=n && n<tupleType.size())? tupleType[n] : fail;
+		}
+
+		// check whether it is navigating along the inheritance hierarchy
+		if (basic.isDataPathParent(step)) {
+
+			// local source needs to be a struct
+			if (localSrc->getNodeType() != NT_StructType) return fail;
+			StructTypePtr structType = localSrc.as<StructTypePtr>();
+
+			// second argument needs to be a type literal
+			auto parentTypeLiteral = call->getArgument(1);
+			if (!analysis::isTypeLiteral(parentTypeLiteral)) return fail; // not a type literal
+			TypePtr parent = analysis::getRepresentedType(parentTypeLiteral);
+
+			// there has to be a parent of the requested type
+			for(auto cur : structType->getParents()) {
+				if (*cur->getType() == *parent) return parent;
+			}
+
+			return fail; 		// no matching parent found
+		}
+
+		std::cerr << "Invalid DataPath step encountered: " << *step << "\n";
+		assert(false && "Unsupported DataPath step encountered!");
+
+		return fail;
 	}
-	else{
-		// if not root, datapath is function shaped
-		if (!datapath.isa<CallExprPtr>())
-			return fail;
-
-		const CallExprPtr& dpExp = datapath.as<CallExprPtr>();
-		const ExpressionPtr& innerDP = dpExp->getArgument(0);
-		const ExpressionPtr& member  = dpExp->getArgument(1);
-		const TypePtr& inType = ResolveDataPath(builder, source, innerDP);
-
-		// if Member, check that member exist inside of source
-		if (builder.getLangBasic().isDataPathMember(dpExp->getFunctionExpr())){
-
-			if (inType.isa<NamedCompositeTypePtr>()){
-				const NamedCompositeTypePtr& structType = inType.as<NamedCompositeTypePtr>();
-				return structType->getTypeOfMember (member.as<core::LiteralPtr>()->getValue());
-			}
-			else{
-				// TODO: recursive types not supported
-				return fail;
-			}
-		}
-		else if (builder.getLangBasic().isDataPathElement(dpExp->getFunctionExpr())){
-
-			if (inType.isa<ArrayTypePtr>()) {
-				return inType.as<ArrayTypePtr>()->getElementType();
-			}
-			else if(inType.isa<VectorTypePtr>()){
-				return inType.as<VectorTypePtr>()->getElementType();
-			}
-			else{
-				return fail;
-			}
-		}
-		else if (builder.getLangBasic().isDataPathComponent(dpExp->getFunctionExpr())){
-
-			if (!inType.isa<TupleTypePtr>())
-				return fail;
-
-			auto f = arithmetic::toFormula(member);
-			if (!f.isConstant())
-				return fail;
-			if (!f.isInteger())
-				return  fail;
-
-			int n = (int64_t)f.getConstantValue();
-			if (((int)inType.as<TupleTypePtr>()->size() <= n) || (n <0))
-				return  fail;
-			return inType.as<TupleTypePtr>()->getElement(n);
-		}
-	}
-	return fail;
-}
 
 
 } // end anonymous namespace
@@ -1166,46 +1197,50 @@ OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 	NodeManager& manager = call->getNodeManager();
 	OptionalMessageList res;
 
-	// obtain function type ...
-	TypePtr funType = call->getFunctionExpr()->getType();
-	assert( call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
+	CallExprPtr callExpr = call.getAddressedNode();
 
 	// the function call must be narrow
-	if (!analysis::isCallOf(call.getAddressedNode(), manager.getLangBasic().getRefNarrow()))
+	if (!analysis::isCallOf(callExpr, manager.getLangBasic().getRefNarrow()))
 		return res;
 
 	if (call.getArguments().size() != 3u)
 		return res;
 
 	// Obtain argument type
-	ExpressionPtr srcArg = call.as<CallExprPtr>()->getArgument(0);
-	ExpressionPtr dpArg  = call.as<CallExprPtr>()->getArgument(1);
-	ExpressionPtr trgArg = call.as<CallExprPtr>()->getArgument(2);
+	ExpressionPtr srcArg = callExpr->getArgument(0);
+	ExpressionPtr dpArg  = callExpr->getArgument(1);
+	ExpressionPtr trgArg = callExpr->getArgument(2);
 
-	IRBuilder builder(call.getNodeManager());
+	// check whether src argument is of a reference type
+	auto srcType = analysis::getReferencedType(srcArg->getType());
+	if (!srcType) return res; // => parameter error is handled by standard type checker
 
 	// check recursively the inner types of the expression
-	TypePtr narrowType = ResolveDataPath(builder, srcArg->getType(), dpArg);
+	TypePtr narrowType = followDataPath(srcType, dpArg);
+
+	// check whether data path was valid
 	if (!narrowType){
 		add(res, Message(call,
 						EC_TYPE_MALFORM_NARROW_CALL,
-						format ("Malform dataPath in Narrow expresion %s, %s, %s",
-								toString(*srcArg).c_str(),
-								toString(*dpArg).c_str(),
-								toString(*trgArg).c_str()),
+						format ("Malformed dataPath in Narrow expression %s, %s, %s",
+								toString(*srcArg),
+								toString(core::printer::PrettyPrinter(dpArg, core::printer::PrettyPrinter::NO_LET_BINDINGS)),
+								toString(*trgArg)),
 						Message::ERROR));
+		return res;
 	}
-	else{
-		if (*narrowType != *analysis::getRepresentedType(trgArg)){
+
+	// check whether specified target type is correct
+	if (*narrowType != *analysis::getRepresentedType(trgArg)){
 		add(res, Message(call,
 						EC_TYPE_MALFORM_NARROW_CALL,
 						format (" Wrong return type in Narrow Expression %s, %s, %s",
-								toString(*srcArg).c_str(),
-								toString(*dpArg).c_str(),
-								toString(*trgArg).c_str()),
+								toString(*srcArg),
+								toString(core::printer::PrettyPrinter(dpArg, core::printer::PrettyPrinter::NO_LET_BINDINGS)),
+								toString(*trgArg)),
 						Message::ERROR));
-		}
 	}
+
 	return res;
 }
 
@@ -1221,58 +1256,50 @@ OptionalMessageList ExpandCheck::visitCallExpr(const CallExprAddress& call) {
 	NodeManager& manager = call->getNodeManager();
 	OptionalMessageList res;
 
-	// obtain function type ...
-	TypePtr funType = call->getFunctionExpr()->getType();
-	assert( call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
+	CallExprPtr callExpr = call.getAddressedNode();
 
 	// the function call must be Expand
-	if (!analysis::isCallOf(call.getAddressedNode(), manager.getLangBasic().getRefExpand()))
+	if (!analysis::isCallOf(callExpr, manager.getLangBasic().getRefExpand()))
 		return res;
 
-	if (call.getArguments().size() != 3u)
+	if (callExpr->getArguments().size() != 3u)
 		return res;
 
 	// Obtain argument type
-	ExpressionPtr srcArg = call.as<CallExprPtr>()->getArgument(0);  // variable
-	ExpressionPtr dpArg  = call.as<CallExprPtr>()->getArgument(1);  // datapath
-	ExpressionPtr trgArg = call.as<CallExprPtr>()->getArgument(2);  // outher data structure type literal
+	ExpressionPtr srcArg = callExpr->getArgument(0);  // variable
+	ExpressionPtr dpArg  = callExpr->getArgument(1);  // datapath
+	ExpressionPtr trgArg = callExpr->getArgument(2);  // outher data structure type literal
 
-	IRBuilder builder(call.getNodeManager());
+	// test whether source is a reference
+	auto srcType = analysis::getReferencedType(srcArg->getType());
+	if (!srcType) return res; // => parameter error is handled by standard type checker
 
 	// check recursively the inner types of the expression
-	TypePtr extractType = ResolveDataPath(builder, analysis::getRepresentedType(trgArg), dpArg);
+	TypePtr extractType = followDataPath(analysis::getRepresentedType(trgArg), dpArg);
+
+	// check whether data path was valid
 	if (!extractType){
 		add(res, Message(call,
 						EC_TYPE_MALFORM_EXPAND_CALL,
-						format ("Malform dataPath in Expand expresion %s, %s, %s",
-								toString(*srcArg).c_str(),
-								toString(*dpArg).c_str(),
-								toString(*trgArg).c_str()),
+						format ("Malformed dataPath in Expand expression %s, %s, %s",
+								toString(*srcArg),
+								toString(core::printer::PrettyPrinter(dpArg, core::printer::PrettyPrinter::NO_LET_BINDINGS)),
+								toString(*trgArg)),
 						Message::ERROR));
+		return res;
 	}
-	else{
-		auto srcType = analysis::getReferencedType(srcArg->getType());
-		if (!srcType){
-			add(res, Message(call,
-						EC_TYPE_MALFORM_EXPAND_CALL,
-						format (" First parameter must be a reference in Expand Expression %s, %s, %s",
-								toString(*srcArg).c_str(),
-								toString(*dpArg).c_str(),
-								toString(*trgArg).c_str()),
-						Message::ERROR));
-		}
 
-
-		if (*extractType != *srcType){
-			add(res, Message(call,
-						EC_TYPE_MALFORM_EXPAND_CALL,
-						format (" Wrong return type in Expand Expression %s, %s, %s",
-								toString(*srcArg).c_str(),
-								toString(*dpArg).c_str(),
-								toString(*trgArg).c_str()),
-						Message::ERROR));
-		}
+	// check whether src/dp/trg combination is valid
+	if (*extractType != *srcType){
+		add(res, Message(call,
+					EC_TYPE_MALFORM_EXPAND_CALL,
+					format (" Wrong return type in Expand Expression %s, %s, %s",
+							toString(*srcArg),
+							toString(core::printer::PrettyPrinter(dpArg, core::printer::PrettyPrinter::NO_LET_BINDINGS)),
+							toString(*trgArg)),
+					Message::ERROR));
 	}
+
 	return res;
 }
 

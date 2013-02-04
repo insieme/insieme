@@ -44,6 +44,65 @@
 #include <boost/utility/enable_if.hpp>
 #include <boost/mpl/logical.hpp>
 
+template<typename T> class Ptr;
+
+// a simple type trait to filter pointer types
+template<typename P> struct is_ptr : public boost::false_type {};
+template<typename T> struct is_ptr<Ptr<T>> : public boost::true_type {};
+
+
+/**
+ * Allows to dynamically down-cast between instance pointer of related types.
+ *
+ * @tparam B the type the resulting pointer should point to
+ * @tparam T the type the given pointer is pointing to
+ * @param src the pointer to be down-casted
+ * @return the down-casted pointer pointing to the same location
+ */
+template<typename B, typename T>
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, Ptr<B>>::type
+dynamic_pointer_cast(const Ptr<T>& src) {
+	return Ptr<B>((src)?dynamic_cast<B*>(&(*src)):NULL);
+}
+
+// a variant of the version above accepting B being a Ptr<...> type
+template<typename B, typename T, typename E = typename B::element_type>
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
+dynamic_pointer_cast(const Ptr<T>& src) {
+	return B((src)?dynamic_cast<E*>(&(*src)):NULL);
+}
+
+/**
+ * Allows to statically down-cast between instance pointer of related types. Unlike for the dynamic cast, no runtime
+ * checks will be conducted.
+ *
+ * @tparam B the type the resulting pointer should point to
+ * @tparam T the type the given pointer is pointing to
+ * @param src the pointer to be down-casted
+ * @return the down-casted pointer pointing to the same location
+ */
+template<typename B, typename T>
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, Ptr<B>>::type
+static_pointer_cast(Ptr<T>& src) {
+	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
+	return Ptr<B>(static_cast<B*>(src.ptr));
+}
+
+// the same as above, only for constant pointers
+template<typename B, typename T>
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, const Ptr<B>>::type
+static_pointer_cast(const Ptr<T>& src) {
+	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
+	return Ptr<B>(static_cast<B*>(src.ptr));
+}
+
+// a variant of the version above accepting B being a Ptr<...> type
+template<typename B, typename T, typename E = typename B::element_type>
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
+static_pointer_cast(const Ptr<T>& src) {
+	assert((!src || dynamic_cast<E*>(&(*src))) && "Invalid static cast!");
+	return B(static_cast<E*>(src.ptr));
+}
 
 template<typename T>
 class Ptr {
@@ -86,6 +145,22 @@ public:
 
 	T* operator->() const {
 		return ptr;
+	}
+
+	/**
+	 * A short-cut for static pointer casts supporting a reduced syntax.
+	 */
+	template<typename R>
+	typename boost::enable_if<is_ptr<R>, R>::type as() const {
+		return static_pointer_cast<R>(*this);
+	}
+
+	/**
+	 * A short-cut for dynamic pointer casts supporting a reduced syntax.
+	 */
+	template<typename R>
+	typename boost::enable_if<is_ptr<R>, R>::type isa() const {
+		return dynamic_pointer_cast<R>(*this);
 	}
 
 	/**
@@ -165,41 +240,6 @@ public:
 	}
 	
 };
-
-/**
- * Allows to dynamically down-cast between instance pointer of related types.
- *
- * @tparam B the type the resulting pointer should point to
- * @tparam T the type the given pointer is pointing to
- * @param src the pointer to be down-casted
- * @return the down-casted pointer pointing to the same location
- */
-template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, Ptr<B>>::type dynamic_pointer_cast(const Ptr<T>& src) {
-	return Ptr<B>((src)?dynamic_cast<B*>(&(*src)):NULL);
-}
-
-/**
- * Allows to statically down-cast between instance pointer of related types. Unlike for the dynamic cast, no runtime
- * checks will be conducted.
- *
- * @tparam B the type the resulting pointer should point to
- * @tparam T the type the given pointer is pointing to
- * @param src the pointer to be down-casted
- * @return the down-casted pointer pointing to the same location
- */
-template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, Ptr<B>>::type static_pointer_cast(Ptr<T>& src) {
-	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
-	return Ptr<B>(static_cast<B*>(src.ptr));
-}
-
-// the same as above, only for constant pointers
-template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, const Ptr<B>>::type static_pointer_cast(const Ptr<T>& src) {
-	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
-	return Ptr<B>(static_cast<B*>(src.ptr));
-}
 
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const Ptr<T>& ptr) {

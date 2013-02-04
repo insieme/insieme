@@ -1054,7 +1054,7 @@ TEST(NarrowExpression, Basic) {
 	IRBuilder builder(manager);
 	CheckPtr typeCheck = getFullCheck();
 
-	NodePtr res = core::parser::parse(manager,
+	NodePtr res = builder.parse(
 		"{"
 		" let inner = struct{ int<4> a;};"
 		" let two   = struct{ inner a; int<4> b;};"
@@ -1069,7 +1069,7 @@ TEST(NarrowExpression, Basic) {
 	EXPECT_EQ("AP({ref<struct<a:struct<a:int<4>>,b:int<4>>> v1 = ref.var(undefined(struct<a:struct<a:int<4>>,b:int<4>>)); ref<int<4>> v2 = ref.narrow(v1, dp.member(dp.root, b), int<4>); ref<int<4>> v3 = ref.narrow(v1, dp.member(dp.member(dp.root, a), a), int<4>);})",
 			  toString(res));
 	
-	res = core::parser::parse(manager,
+	res = builder.parse(
 		"{"
 		" let inner = struct{ int<4> a;};"
 		" let two   = struct{ inner a; int<4> b;};"
@@ -1082,6 +1082,42 @@ TEST(NarrowExpression, Basic) {
 	ASSERT_TRUE (res);
 	errors = check(res, typeCheck);
 	EXPECT_EQ(3u, errors.size());
+}
+
+TEST(NarrowExpression, Parents) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	NodePtr ok = builder.parse(
+		"{"
+		"	let int = int<4>;"
+		"	let A = struct { int a; };"
+		"	let B = struct : A { int b; };"
+		"	ref<B> b;"
+		"	auto ref2A = ref.narrow( b, dp.parent( dp.root, lit(A) ), lit(A) );"
+		"	auto ref2a = ref.narrow( b, dp.member( dp.parent( dp.root, lit(A) ), lit(\"a\")), lit(int) );"
+		"}"
+	);
+
+	ASSERT_TRUE(ok);
+
+	EXPECT_TRUE(checks::check(ok).empty()) << checks::check(ok);
+
+	NodePtr err = builder.parse(
+		"{"
+		"	let int = int<4>;"
+		"	let A = struct { int a; };"
+		"	let B = struct : A { int b; };"
+		"	ref<B> b; "
+		"	auto x = ref.narrow( b, dp.parent( dp.root, lit(B) ), lit(B) );"
+		"}"
+	);
+	ASSERT_TRUE(err);
+
+	auto errors = checks::check(err);
+	EXPECT_FALSE(errors.empty());
+	EXPECT_EQ(1u, errors.size());
 }
 
 
@@ -1133,6 +1169,40 @@ TEST(ExpandExpression, Basic) {
 	ASSERT_TRUE (res);
 	errors = check(res, typeCheck);
 	EXPECT_EQ(3u, errors.size());
+}
+
+TEST(ExpandExpression, Parents) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	NodePtr ok = builder.parse(
+		"{"
+		"	let int = int<4>;"
+		"	let A = struct { int a; };"
+		"	let B = struct : A { int b; };"
+		"	ref<A> a;"
+		"	auto ref2B = ref.expand( a, dp.parent( dp.root, lit(A) ), lit(B) );"
+		"}"
+	);
+
+	ASSERT_TRUE(ok);
+	EXPECT_TRUE(checks::check(ok).empty()) << checks::check(ok);
+
+	NodePtr err = builder.parse(
+		"{"
+		"	let int = int<4>;"
+		"	let A = struct { int a; };"
+		"	let B = struct { int b; };"
+		"	ref<A> a;"
+		"	auto ref2B = ref.expand( a, dp.parent( dp.root, lit(A) ), lit(B) );"
+		"}"
+	);
+	ASSERT_TRUE(err);
+
+	auto errors = checks::check(err);
+	EXPECT_FALSE(errors.empty());
+	EXPECT_EQ(1u, errors.size());
 }
 
 

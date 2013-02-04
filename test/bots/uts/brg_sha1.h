@@ -59,7 +59,9 @@ extern "C"
 typedef uint8_t RNG_state;
 typedef uint32_t  uint32;
 
-//typedef uint8_t u_int8_t; // map from existing type to strange bots type
+#ifdef _WIN32
+	typedef uint8_t u_int8_t; // map from existing type to strange bots type
+#endif
 
 //typedef char *   caddr_t;
 
