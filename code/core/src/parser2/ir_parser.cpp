@@ -111,11 +111,12 @@ namespace parser {
 					parenthese.push_back(info.getClosingParenthese(*cur));
 				}
 
+				// special handling for enabling the parenthese pair < >
 				if (angleBackets && *cur == '<') {
 					parenthese.push_back(Token::createSymbol('>'));
 				}
 
-				if (info.isRightParenthese(*cur) || (angleBackets && *cur == '>')) {
+				if (info.isRightParenthese(*cur) || (angleBackets && *cur == '>' && cur != begin && *(cur-1) != '-' && *(cur-1) != '=')) {
 					// if this is not matching => return end (no next token)
 					if (parenthese.empty() || parenthese.back() != *cur) {
 						return end;

@@ -1117,6 +1117,22 @@ namespace parser {
 //		FAIL() << "An exception should have been raised!";
 //	}
 
+	TEST(IR_Parser2, LetFunctionTypeBug) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		NodePtr res;
+
+		// the following was reported to be not working
+		res = builder.parseExpr("let delObj = ((ref<array<'a,1>>)->unit delOp, ref<array<'a,1>> ptr)->unit { } in delObj");
+		ASSERT_TRUE(res);
+
+		// this was working and should still work
+		res = builder.parseExpr("let delObj = (ref<array<'a,1>> ptr ,(ref<array<'a,1>>)->unit delOp)->unit { } in delObj");
+		ASSERT_TRUE(res);
+	}
+
 } // end namespace parser2
 } // end namespace core
 } // end namespace insieme
