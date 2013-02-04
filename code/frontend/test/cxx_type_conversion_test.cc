@@ -48,8 +48,9 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 
-#include "clang/Index/Indexer.h"
-#include "clang/Index/Program.h"
+// clang [3.0]
+//#include "clang/Index/Indexer.h"
+//#include "clang/Index/Program.h"
 
 using namespace insieme;
 using namespace insieme::core;

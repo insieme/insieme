@@ -20,6 +20,7 @@ BARVINOK := ${PREFIX}/barvinok-$(shell ${AWK_CMD} barvinok_install.sh | cut -d= 
 
 # INSIEME STUFF
 LLVM 	:= ${PREFIX}/llvm-$(shell ${AWK_CMD} llvm_install.sh | cut -d= -f2 )
+LLVM32 	:= ${PREFIX}/llvm-$(shell ${AWK_CMD} llvm_install_32.sh | cut -d= -f2 )
 BOOST 	:= ${PREFIX}/boost-$(shell ${AWK_CMD} boost_install.sh | cut -d= -f2 )
 CMAKE 	:= ${PREFIX}/cmake-$(shell ${AWK_CMD} cmake_install.sh | cut -d= -f2 )
 GTEST 	:= ${PREFIX}/gtest-$(shell ${AWK_CMD} gtest_install.sh | cut -d= -f2 )
@@ -115,6 +116,12 @@ ${LLVM}: llvm_install.sh ${GCC}
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh llvm_install.sh
 	@echo "@@@@ Done! @@@@"
 
+## LLVM32
+${LLVM32}: llvm_install_32.sh ${GCC}
+	@echo "#### INSTALL LLVM 3.2 ${LLVM32} ####"
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh llvm_install_32.sh
+	@echo "@@@@ Done! @@@@"
+
 ## BOOST
 ${BOOST}: boost_install.sh ${GCC}
 	@echo "#### INSTALL BOOST ${BOOST} ####"
@@ -200,6 +207,6 @@ ${OPENMPI}: openmpi_install.sh ${GCC} ${HWLOC} ${LIBTOOL}
 	@echo "@@@@ Done! @@@@"
 
 
-INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${BOOST} \
+INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${LLVM32} ${BOOST} \
 		 ${CMAKE} ${GTEST} ${LUAJIT} ${CUDD} ${SHARK} ${KOMPEX} \
 		 ${XERCES} ${PYTHON} ${RUBY} ${PAPI} ${OPENMPI} ${CCACHE}
