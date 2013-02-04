@@ -212,7 +212,7 @@ namespace encoder {
 		 * expression pointers.
 		 */
 		template<>
-		struct encode_list<ExpressionPtr, Converter<ExpressionPtr>> {
+		struct encode_list<ExpressionPtr, DirectExprConverter> {
 
 			core::ExpressionPtr operator()(NodeManager& manager, const vector<ExpressionPtr>& list) const {
 
@@ -231,7 +231,7 @@ namespace encoder {
 
 				// append remaining tokens back to front
 				for(auto it = list.rbegin(); it != list.rend(); ++it) {
-					core::ExpressionPtr head = toIR<ExpressionPtr,Converter<ExpressionPtr>>(manager, *it);
+					core::ExpressionPtr head = toIR<ExpressionPtr,DirectExprConverter>(manager, *it);
 					res = builder.callExpr(listType, ext.cons, head, res);
 				}
 

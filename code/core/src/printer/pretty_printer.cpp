@@ -1120,9 +1120,11 @@ namespace {
 			// add semantic sugar for list handling
 			const encoder::ListExtension& ext = config.root->getNodeManager().getLangExtension<encoder::ListExtension>();
 
+			typedef encoder::ListConverter<ExpressionPtr, encoder::DirectExprConverter> AttributConverter;
+
 			ADD_FORMATTER(ext.empty, { OUT("[]"); });
 			ADD_FORMATTER(ext.cons, {
-					vector<ExpressionPtr> list = encoder::toValue<vector<ExpressionPtr>>(call);
+					vector<ExpressionPtr> list = (encoder::toValue<vector<ExpressionPtr>, AttributConverter>(call));
 					printer.out << "[" << join(",", list, [&](std::ostream& out, const ExpressionPtr& cur) {
 						printer.visit(cur);
 					}) << "]";
