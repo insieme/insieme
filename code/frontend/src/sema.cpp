@@ -155,23 +155,19 @@ const char* strbchr(const char* stream, char c) {
 clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 												 clang::MultiStmtArg Elts, bool isStmtExpr) {
 
-	// VLOG(2) << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
+	VLOG(1) << "{InsiemeSema}: ActOnCompoundStmt()";
+	VLOG(2) << "LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr);
+	VLOG(2) << "RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr);
 
-	/*
-	 * when pragmas are just after the beginning of a compound stmt, example:
-	 * {
-	 * 		#pragma xxx
-	 * 		...
-	 * }
-	 * the location of the opening bracket is wrong because of a bug in the clang parser.
-	 *
-	 * We solve the problem by searching for the bracket in the input stream and overwrite
-	 * the value of L (which contains the wrong location) with the correct value.
-	 *
-	 */
-//	DLOG(INFO) << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
-//				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
-
+	/// when pragmas are just after the beginning of a compound stmt, example:
+	/// {
+	/// 		#pragma xxx
+	/// 		...
+	/// }
+	/// the location of the opening bracket is wrong because of a bug in the clang parser.
+	///
+	/// We solve the problem by searching for the bracket in the input stream and overwrite
+	/// the value of L (which contains the wrong location) with the correct value.
 	enum {MacroIDBit = 1U << 31}; // from clang/Basic/SourceLocation.h for use with cpp classes
 	{
 		SourceLocation&& leftBracketLoc = SourceMgr.getImmediateSpellingLoc(L);
@@ -187,10 +183,6 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		}
 	}
 	// the same is done for the right bracket
-
-//	DLOG(INFO) << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
-//				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
-
 	{
 		SourceLocation&& rightBracketLoc = SourceMgr.getImmediateSpellingLoc(R);
 		std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(rightBracketLoc);
@@ -204,16 +196,75 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		}
 	}
 
+	VLOG(2) << "corrected LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr);
+	VLOG(2) << "corrected RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr);
+
 	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
 	clang::CompoundStmt* CS = cast<CompoundStmt>(ret.get());
-	Stmt* Prev = NULL;
 
 	PragmaList matched;
-
 	SourceRange SR(CS->getLBracLoc(), CS->getRBracLoc());
+
+
+	// for each of the pragmas in the range between brackets
 	for ( PragmaFilter&& filter = PragmaFilter(SR, SourceMgr, pimpl->pending_pragma); *filter; ++filter ) {
 		PragmaPtr P = *filter;
-		for ( CompoundStmt::reverse_body_iterator I = CS->body_rbegin(), E = CS->body_rend(); I != E; ) {
+		// iterate throug statements of the compound in reverse order 
+		
+		CompoundStmt::reverse_body_iterator I = CS->body_rbegin(), E = CS->body_rend(); 
+		Stmt* Prev = *I;
+		VLOG(2) << "iterate from " << Line((*I)->getLocStart(), SourceMgr) << ":" <<
+								      Line((*(E-1))->getLocStart(), SourceMgr);
+		++I;
+		for (;I != E; ++I) {
+			VLOG(2) << " compare:" << Line((*I)->getLocStart(), SourceMgr) << ":" <<
+								      Line(P->getEndLocation(), SourceMgr);
+			if (Line((*I)->getLocStart(), SourceMgr) < Line(P->getEndLocation(), SourceMgr) ) {
+				if ( Line(Prev->getLocStart(), SourceMgr) >= Line(P->getEndLocation(), SourceMgr) ) {
+					// set the statement for the current pragma
+					P->setStatement(Prev);
+					// add pragma to the list of matched pragmas
+					matched.push_back(P);
+					break;
+				}
+
+				// add a ';' (NullStmt) before the end of the block in order to associate the pragma
+				Stmt** stmts = new Stmt*[CS->size() + 1];
+
+				CompoundStmt* newCS =
+						new (Context) CompoundStmt(Context, stmts, CS->size()+1, CS->getSourceRange().getBegin(),
+								CS->getSourceRange().getEnd()
+							);
+
+				std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
+				std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
+				newCS->setLastStmt( new (Context) NullStmt(SourceLocation()) );
+				P->setStatement( *newCS->body_rbegin() );
+				matched.push_back(P);
+
+				// transfer the ownership of the statement
+				CompoundStmt* oldStmt = ret.takeAs<CompoundStmt>();
+				oldStmt->setStmts(Context, NULL, 0);
+				ret = newCS;
+				CS = newCS;
+
+				// destroy the old compound stmt
+				Context.Deallocate(oldStmt);
+				delete[] stmts;
+				break;
+			}
+		}
+
+			VLOG(2) << " compare:" << Line(Prev->getLocStart(), SourceMgr) << ":" <<
+								      Line(P->getEndLocation(), SourceMgr);
+		// check for latest pair
+		if (Line(Prev->getLocStart(), SourceMgr) > Line(P->getEndLocation(), SourceMgr) ) {
+			VLOG(2) << "!";
+			P->setStatement(Prev);
+			matched.push_back(P);
+		}
+
+		/*for ( CompoundStmt::reverse_body_iterator I = CS->body_rbegin(), E = CS->body_rend(); I != E; ) {
 			Prev = *I;
 			++I;
 
@@ -256,17 +307,19 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 				matched.push_back(P);
 				break;
 			}
-		}
+		}*/
 	}
+	VLOG(2) << matched.size()<< " pragmas withing locations";
 
 	// remove matched pragmas
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
+
+	VLOG(2) << std::endl;
 	return std::move(ret);
 }
 
 void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, const clang::SourceManager& sm,
 							PragmaList& matched) {
-
 	for ( PragmaFilter filter(bounds, sm,  pimpl->pending_pragma); *filter; ++filter ) {
 		PragmaPtr&& P = *filter;
 		
@@ -278,7 +331,6 @@ void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, co
 clang::StmtResult
 InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg CondVal, clang::Decl* CondVar,
 		clang::Stmt* ThenVal, clang::SourceLocation ElseLoc, clang::Stmt* ElseVal) {
-
 	// VLOG(2) << "{InsiemeSema}: ActOnIfStmt()";
 	clang::StmtResult ret =
 			Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, std::move(ThenVal), ElseLoc, std::move(ElseVal));
@@ -308,7 +360,6 @@ clang::StmtResult
 InsiemeSema::ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LParenLoc, clang::Stmt* First,
 		clang::Sema::FullExprArg Second, clang::Decl* SecondVar, clang::Sema::FullExprArg Third,
 		clang::SourceLocation RParenLoc, clang::Stmt* Body) {
-
 	// VLOG(2) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
 	clang::StmtResult ret =
 		Sema::ActOnForStmt(ForLoc, LParenLoc, std::move(First), Second, SecondVar, Third, RParenLoc, std::move(Body));

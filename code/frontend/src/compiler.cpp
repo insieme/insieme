@@ -62,6 +62,8 @@
 
 #include "llvm/LLVMContext.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+
+#include "llvm/Support/Host.h"
 // #include "llvm/System/Host.h"
 // #include "llvm/System/Path.h"
 
@@ -149,15 +151,15 @@ ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 	
 
 	// A compiler invocation object has to be created in order for the diagnostic object to work
-/*	CompilerInvocation* CI = new CompilerInvocation; // CompilerInvocation will be deleted by CompilerInstance
+	CompilerInvocation* CI = new CompilerInvocation; // CompilerInvocation will be deleted by CompilerInstance
 	CompilerInvocation::CreateFromArgs(*CI, 0, 0, pimpl->clang.getDiagnostics());
 	pimpl->clang.setInvocation(CI);
-	*/
 
 	TargetOptions TO;
 	// fix the target architecture to be a 64 bit machine:
 	// 		in this way we don't have differences between the size of integer/float types across architecture
-	TO.Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
+	//TO.Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
+	TO.Triple = llvm::sys::getDefaultTargetTriple();
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), TO) );
 
 
