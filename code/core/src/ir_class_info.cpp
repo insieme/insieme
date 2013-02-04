@@ -57,7 +57,7 @@ namespace core {
 		if (isVirtual()) out << "virtual ";
 		if (isConst()) out << "const ";
 		out << name << " = ";
-		out << PrettyPrinter(lambda, PrettyPrinter::NO_LET_BINDINGS);
+		out << PrettyPrinter(impl, PrettyPrinter::NO_LET_BINDINGS);
 		return out;
 	}
 
@@ -102,7 +102,7 @@ namespace core {
 
 	void ClassMetaInfo::setMemberFunctions(const vector<MemberFunction>& functions) {
 		// check new functions
-		assert(all(functions, [&](const MemberFunction& cur) { return cur.getImplementation()->getFunctionType()->isMemberFunction(); }));
+		assert(all(functions, [&](const MemberFunction& cur) { return cur.getImplementation()->getType().as<FunctionTypePtr>()->isMemberFunction(); }));
 		assert(all(functions, [&](const MemberFunction& cur) { return checkObjectType(cur.getImplementation()); }));
 
 		// exchange the list of member functions
@@ -117,11 +117,12 @@ namespace core {
 
 	void ClassMetaInfo::addMemberFunction(const MemberFunction& function) {
 		// check member function type
-		assert(function.getImplementation()->getFunctionType()->isMemberFunction());
+		assert(function.getImplementation()->getType()->getNodeType() == NT_FunctionType);
+		assert(function.getImplementation()->getType().as<FunctionTypePtr>()->isMemberFunction());
 		assert(checkObjectType(function.getImplementation()));
 
 		// create the index key for this function
-		auto key = std::make_tuple(function.getName(), function.getImplementation()->getFunctionType(), function.isConst());
+		auto key = std::make_tuple(function.getName(), function.getImplementation()->getType().as<FunctionTypePtr>(), function.isConst());
 
 		// check that there are not duplicates
 		assert(memberFunctionIndex.find(key) == memberFunctionIndex.end() &&
@@ -146,15 +147,17 @@ namespace core {
 		if (!constructors.empty()) return constructors.front()->getLambda()->getType()->getObjectType();
 
 		// try member functions
-		if (!memberFunctions.empty()) return memberFunctions.front().getImplementation()->getLambda()->getType()->getObjectType();
+		if (!memberFunctions.empty()) return memberFunctions.front().getImplementation()->getType().as<FunctionTypePtr>()->getObjectType();
 
 		// type is unknown
 		return TypePtr();
 	}
 
-	bool ClassMetaInfo::checkObjectType(const LambdaExprPtr& lambda) const {
+	bool ClassMetaInfo::checkObjectType(const ExpressionPtr& lambda) const {
 
-		FunctionTypePtr funType = lambda->getFunctionType();
+		assert(lambda->getType()->getNodeType() == NT_FunctionType);
+
+		FunctionTypePtr funType = lambda->getType().as<FunctionTypePtr>();
 		assert(funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction());
 
 		TypePtr classType = getClassType();
@@ -239,7 +242,28 @@ namespace core {
 		// update members
 		for(auto cur : memberFunctions) {
 			MemberFunction newMember = cur;
-			newMember.setImplementation(alter(newMember.getImplementation()));
+
+			// extract implementation
+			auto impl = newMember.getImplementation();
+
+			// update implementation
+			if (analysis::isPureVirtual(impl)) {
+				// update type
+				auto oldFunType = impl->getType().as<FunctionTypePtr>();
+				auto newFunType = core::transform::replaceNode(
+						mgr,
+						FunctionTypeAddress(oldFunType)->getParameterType(0),
+						builder.refType(newClassType)
+				).as<FunctionTypePtr>();
+
+				// create new pure-virtual implementation
+				newMember.setImplementation(builder.getPureVirtual(newFunType));
+
+			} else {
+				// handle as all other implementations
+				newMember.setImplementation(alter(impl.as<LambdaExprPtr>()));
+			}
+
 			res.addMemberFunction(newMember);
 		}
 
@@ -294,7 +318,7 @@ namespace core {
 
 		typedef core::value_node_annotation<ClassMetaInfo>::type annotation_type;
 
-		typedef std::tuple<string, LambdaExprPtr, bool, bool> encoded_member_fun_type;
+		typedef std::tuple<string, ExpressionPtr, bool, bool> encoded_member_fun_type;
 		typedef std::tuple<vector<LambdaExprPtr>, LambdaExprPtr, bool, vector<encoded_member_fun_type>> encoded_class_info_type;
 
 		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {

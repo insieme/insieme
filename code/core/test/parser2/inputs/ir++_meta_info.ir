@@ -1,0 +1,57 @@
+
+let int = int<4>;
+
+let Counter = struct {
+	int value;
+	
+	// add constructors
+	
+	// add a destructor
+	
+	// add member functions
+	
+//	virtual const reset : ()->unit {
+//		this->value = 0;
+//	}
+//	
+//	set : (int x) -> unit {
+//		this->value = x;
+//	}
+//	
+//	const get : () -> int {
+//		return *this->value;
+//	}
+//	
+//	inc : () -> int {
+//		this->value = this->value + 1;
+//		return *this->value;
+//	}
+//	
+//	dec : () -> int {
+//		this->value = this->value - 1;
+//		return *this->value;
+//	}
+//	
+//	const p : () -> unit {
+//		print("%d\n", this->get());
+//	}
+	
+//	// a pure virtual function
+//
+//	virtual pure_virtual : () -> unit; 
+//	
+};
+
+int main() {
+	ref<Counter> c;
+//	c.reset();
+//	c.p();
+//	c.inc();
+//	c.p();
+//	c.inc();
+//	c.p();
+//	c.dec();
+//	c.p();
+//	c.set(14);
+//	c.p();
+}

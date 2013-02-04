@@ -58,9 +58,11 @@
 
 #include "insieme/core/encoder/lists.h"
 
-#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/core/parser2/ir_parser.h"
+
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/core/datapath/datapath.h"
 
@@ -1348,6 +1350,12 @@ CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const Express
 	const TypePtr retTy = vectorType(dataType->getElementType(), permuteType->getSize());
 
 	return callExpr(retTy, basic.getVectorPermute(), dataVec, permutationVec);
+}
+
+ExpressionPtr IRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
+	assert(type->isMemberFunction());
+	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
+	return callExpr(type, ext.getPureVirtual(), getTypeLiteral(type));
 }
 
 } // namespace core

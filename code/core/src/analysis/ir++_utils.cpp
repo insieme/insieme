@@ -39,6 +39,8 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_class_info.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/ir++_extension.h"
 
 namespace insieme {
 namespace core {
@@ -96,6 +98,18 @@ namespace analysis {
 		return isObjectType(type->getElementType());
 	}
 
+	bool isPureVirtual(const CallExprPtr& call) {
+		// check for null
+		if (!call) return false;
+
+		// check whether it is a call to the pure-virtual literal
+		const auto& ext = call->getNodeManager().getLangExtension<lang::IRppExtensions>();
+		return isCallOf(call, ext.getPureVirtual());
+	}
+
+	bool isPureVirtual(const NodePtr& node) {
+		return isPureVirtual(node.isa<CallExprPtr>());
+	}
 
 } // end namespace analysis
 } // end namespace core
