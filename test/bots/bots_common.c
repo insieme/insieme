@@ -24,8 +24,11 @@
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
-#include <sys/utsname.h>
-#include <sys/resource.h>
+#ifndef _WIN32
+	#include <sys/utsname.h>
+	#include <sys/resource.h>
+#endif
+
 
 #include "bots_common.h"
 #include "bots_main.h"
@@ -93,7 +96,7 @@ bots_get_date(char *str)
 void bots_get_architecture(char *str)
 {
    #ifdef _WIN32
-     str = "Win32"
+     str = "Win32";
    #else
      int ncpus = sysconf(_SC_NPROCESSORS_CONF);
      struct utsname architecture;
