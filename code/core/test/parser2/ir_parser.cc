@@ -1133,6 +1133,109 @@ namespace parser {
 		ASSERT_TRUE(res);
 	}
 
+//	TEST(IR_Parser2, ClassMetaInfo) {
+//
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		NodePtr res;
+//
+//		// try parsing the following code section including class-meta-infos
+//		res = builder.parseType(
+//				R"(
+//					let int = int<4> in
+//					let Counter = struct {
+//						int value;
+//
+//						virtual const reset : ()->unit {
+//							this->value = 0;
+//						};
+//
+//					} in Counter
+//				)"
+//		);
+//
+//		ASSERT_TRUE(res);
+//
+//
+//
+//	}
+//
+//	TEST(IR_Parser2, ClassMetaInfo) {
+//
+//		NodeManager mgr;
+//		IRBuilder builder(mgr);
+//
+//		NodePtr res;
+//
+//		// try parsing the following code section including class-meta-infos
+//		res = builder.parseProgram(
+//				R"(
+//					let int = int<4>;
+//
+//					let Counter = struct {
+//						int value;
+//
+//						// add constructors
+//
+//						// add a destructor
+//
+//						// add member functions
+//
+//						virtual const reset : ()->unit {
+//							this->value = 0;
+//						}
+//
+//						set : (int x) -> unit {
+//							this->value = x;
+//						}
+//
+//						const get : () -> int {
+//							return *this->value;
+//						}
+//
+//						inc : () -> int {
+//							this->value = this->value + 1;
+//							return *this->value;
+//						}
+//
+//						dec : () -> int {
+//							this->value = this->value - 1;
+//							return *this->value;
+//						}
+//
+//						const p : () -> unit {
+//							print("%d\n", this->get());
+//						}
+//
+//						// a pure virtual function
+//
+//						virtual pure_virtual : () -> unit;
+//
+//					};
+//
+//					int main() {
+//						ref<Counter> c;
+//						c.reset();
+//						c.p();
+//						c.inc();
+//						c.p();
+//						c.inc();
+//						c.p();
+//						c.dec();
+//						c.p();
+//						c.set(14);
+//						c.p();
+//					}
+//				)"
+//		);
+//
+//		ASSERT_TRUE(res);
+//
+//
+//
+//	}
+
 } // end namespace parser2
 } // end namespace core
 } // end namespace insieme
