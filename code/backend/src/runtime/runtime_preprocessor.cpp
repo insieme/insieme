@@ -353,7 +353,7 @@ using namespace insieme::transform::pattern;
 
 				// ---- default only but various variants ------
 				auto alternatives = job->getDefaultExpr().as<core::CallExprPtr>()->getArgument(0);
-				auto impls = core::encoder::toValue<vector<core::ExpressionPtr>>(alternatives);
+				auto impls = core::encoder::toValue<vector<core::ExpressionPtr>, core::encoder::DirectExprListConverter>(alternatives);
 
 				assert(!impls.empty() && "There must be at least one implementation!");
 
