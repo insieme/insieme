@@ -83,6 +83,7 @@ namespace compiler {
 	Compiler Compiler::getDefaultCppCompiler() {
 		Compiler res("gcc");
 		res.addFlag("-x c++");
+		res.addFlag("-lstdc++");
 		res.addFlag("-Wall");
 		res.addFlag("--std=c++98");
 		res.addFlag("-Wl,--no-as-needed");
