@@ -746,6 +746,34 @@ CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& 
 	return createCall(*this, resultType, functionExpr, toVector(arg1, arg2, arg3));
 }
 
+CallExprPtr IRBuilder::virtualCall(const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
+	// some checks
+	assert(virtualFun->getType().isa<FunctionTypePtr>());
+	assert(virtualFun->getType().as<FunctionTypePtr>()->isMemberFunction());
+
+	vector<ExpressionPtr> realArgs;
+	realArgs.push_back(obj);
+	realArgs.insert(realArgs.end(), args.begin(), args.end());
+	return callExpr(virtualFun, args);
+}
+CallExprPtr IRBuilder::virtualCall(const StringValuePtr& name, const FunctionTypePtr& funType, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
+	return virtualCall(literal(name, funType), obj, args);
+}
+CallExprPtr IRBuilder::virtualCall(const TypePtr& resultType, const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
+	// some checks
+	assert(virtualFun->getType().isa<FunctionTypePtr>());
+	assert(virtualFun->getType().as<FunctionTypePtr>()->isMemberFunction());
+
+	vector<ExpressionPtr> realArgs;
+	realArgs.push_back(obj);
+	realArgs.insert(realArgs.end(), args.begin(), args.end());
+	return callExpr(resultType, virtualFun.as<ExpressionPtr>(), args);
+}
+CallExprPtr IRBuilder::virtualCall(const TypePtr& resultType, const StringValuePtr& name, const FunctionTypePtr& funType, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
+	return virtualCall(resultType, literal(name, funType), obj, args);
+}
+
+
 LambdaPtr IRBuilder::lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const {
 	return lambda(type, params, wrapBody(body));
 }
