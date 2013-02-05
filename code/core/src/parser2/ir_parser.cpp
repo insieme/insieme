@@ -1060,9 +1060,24 @@ namespace parser {
 			));
 
 			g.addRule("E", rule(
+					seq("var(",T,")"),
+					[](Context& cur)->NodePtr {
+						return cur.refVar(cur.undefined(cur.getTerm(0).as<TypePtr>()));
+					}
+			));
+
+			g.addRule("E", rule(
 					seq("new(",E,")"),
 					[](Context& cur)->NodePtr {
+				std::cout << cur.getTerm(0) << " of type " << cur.getTerm(0)->getNodeType() << "\n";
 						return cur.refNew(cur.getTerm(0).as<ExpressionPtr>());
+					}
+			));
+
+			g.addRule("E", rule(
+					seq("new(",T,")"),
+					[](Context& cur)->NodePtr {
+						return cur.refNew(cur.undefined(cur.getTerm(0).as<TypePtr>()));
 					}
 			));
 
@@ -1248,8 +1263,8 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						// simply lookup name within variable manager
 						NodePtr res = cur.getVarScopeManager().lookup(cur.getSubRange(0));
-						if (res) return res;
-						return cur.getSymbolManager().lookup(cur.getSubRange(0));
+						if (res && res->getNodeCategory() == NC_Expression) return res;
+						return cur.getSymbolManager().lookup(cur.getSubRange(0)).isa<ExpressionPtr>();
 					},
 					1 // higher priority than other rules
 			));
