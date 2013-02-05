@@ -288,6 +288,12 @@ namespace encoder {
 	struct ListConverter : public Converter<vector<E>, detail::create_list_type<E,C>, detail::encode_list<E,C>, detail::decode_list<E,C>, detail::is_list<E,C>> {};
 
 	/**
+	 * Defines a list converter functor customized to encode vectors of expressions directly into lists
+	 * of expressions within the IR without wrapping up expressions.
+	 */
+	struct DirectExprListConverter : public ListConverter<ExpressionPtr, DirectExprConverter> {};
+
+	/**
 	 * A partial template specialization for the type_factory struct to support the encoding
 	 * of vectors using default element type converters.
 	 */
