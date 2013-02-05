@@ -85,7 +85,11 @@ namespace backend {
 
 		const FunctionInfo& getInfo(const core::LiteralPtr& literal);
 
+		const FunctionInfo& getInfo(const core::LiteralPtr& pureVirtualMemberFun, bool isConst);
+
 		const LambdaInfo& getInfo(const core::LambdaExprPtr& lambda);
+
+		const LambdaInfo& getInfo(const core::LambdaExprPtr& memberFun, bool isConst, bool isVirtual);
 
 		const BindInfo& getInfo(const core::BindExprPtr& bind);
 

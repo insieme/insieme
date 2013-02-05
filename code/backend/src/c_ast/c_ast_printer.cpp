@@ -507,10 +507,11 @@ namespace c_ast {
 				auto fun = node->fun->function;
 				return out
 						<< (node->isVirtual?"virtual ":"")
-						<< print(fun->returnType)
+						<< print(fun->returnType) << " "
 						<< print(fun->name)
-						<< "(" << printParam(fun->parameter)<< ")"
-						<< (node->fun->isConstant?" const":"") << ";\n";
+						<< "(" << printMemberParam(fun->parameter)<< ")"
+						<< (node->fun->isConstant?" const":"")
+						<< (node->pureVirtual?" =0":"");
 			}
 
 			PRINT(ExtVarDecl) {
@@ -563,12 +564,7 @@ namespace c_ast {
 					if (!structType->members.empty()) out << "\n    ";
 					out << join(";\n    ", structType->members,
 							[&](std::ostream& out, const MemberFunctionPrototypePtr& cur) {
-								out 	<< (cur->isVirtual?"virtual ":"")
-										<< print(cur->fun->function->returnType) << " "
-										<< print(cur->fun->function->name)
-										<< "(" << printMemberParam(cur->fun->function->parameter) << ")"
-										<< (cur->fun->isConstant?" const":"")
-										;
+								out << print(cur);
 					});
 					if (!structType->members.empty()) out << ";";
 

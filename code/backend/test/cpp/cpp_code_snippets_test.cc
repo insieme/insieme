@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/backend/sequential/sequential_backend.h"
@@ -225,6 +226,81 @@ namespace backend {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+
+	}
+
+	TEST(CppSnippet, ClassMetaInfo) {
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		// create a class type
+		auto counterType = builder.parseType("struct { int<4> value; }");
+		ASSERT_TRUE(counterType);
+
+		// create symbol map for remaining task
+		std::map<string, core::NodePtr> symbols;
+		symbols["Counter"] = counterType;
+
+		auto parse = [&](const string& code) { return builder.parseExpr(code, symbols).as<core::LambdaExprPtr>(); };
+		auto parseType = [&](const string& code) { return builder.parseType(code, symbols).as<core::FunctionTypePtr>(); };
+
+		// add member functions to meta info
+		core::ClassMetaInfo info;
+
+		// TODO: add constructors
+		// TODO: add a destrutor
+
+		// a non-virtual, const function
+		info.addMemberFunction("get", parse("Counter::()->int<4> { return *this->value; }"), false, true);
+
+		// a non-virtual, non-const function
+		info.addMemberFunction("set", parse("Counter::(int<4> x)->unit { this->value = x; }"), false, false);
+
+		// a virtual, const function
+		info.addMemberFunction("print", parse(R"(Counter::()->unit { print("%d\n", *this->value); })"), true, true);
+
+		// a virtual, non-const function
+		info.addMemberFunction("clear", parse("Counter::()->unit { }"), true, false);
+
+		// a pure virtual, non-const function
+		info.addMemberFunction("dummy1", builder.getPureVirtual(parseType("Counter::()->int<4>")), true, false);
+
+		// a pure virtual, const function
+		info.addMemberFunction("dummy2", builder.getPureVirtual(parseType("Counter::()->int<4>")), true, true);
+
+		std::cout << info << "\n";
+
+		// attach
+		core::setMetaInfo(counterType, info);
+
+		// verify proper construction
+		EXPECT_TRUE(core::checks::check(counterType).empty()) << core::checks::check(counterType);
+
+		// ------------ create code using the counter type --------
+
+		auto prog = builder.parseProgram("int<4> main() { ref<ref<Counter>> c; return *(*c->value); }", symbols);
+
+		// generate code
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(prog);
+		ASSERT_TRUE((bool)targetCode);
+
+		// check generated code
+		string code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "int32_t get() const;");
+		EXPECT_PRED2(containsSubString, code, "void set(int32_t p2);");
+		EXPECT_PRED2(containsSubString, code, "virtual void print() const;");
+		EXPECT_PRED2(containsSubString, code, "virtual void clear();");
+
+		EXPECT_PRED2(containsSubString, code, "virtual int32_t dummy1() =0;");
+		EXPECT_PRED2(containsSubString, code, "virtual int32_t dummy2() const =0;");
+
+		std::cout << *targetCode;
+
+		// try compiling the code fragment
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 
 	}
 

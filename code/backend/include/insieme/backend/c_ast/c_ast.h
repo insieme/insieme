@@ -523,9 +523,10 @@ namespace c_ast {
 
 	struct MemberFunctionPrototype : public Node {
 		bool isVirtual;
-		MemberFunctionPtr fun;		// this is a null pointer if it is pure-virtual
-		MemberFunctionPrototype(const MemberFunctionPtr& fun, bool isVirtual = false)
-			: Node(NT_MemberFunctionPrototype), isVirtual(isVirtual), fun(fun) {}
+		MemberFunctionPtr fun;
+		bool pureVirtual;
+		MemberFunctionPrototype(const MemberFunctionPtr& fun, bool isVirtual = false, bool isPureVirtual = false)
+			: Node(NT_MemberFunctionPrototype), isVirtual(isVirtual), fun(fun), pureVirtual(isPureVirtual) {}
 		virtual bool equals(const Node& node) const;
 	};
 

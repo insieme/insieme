@@ -44,13 +44,16 @@
 
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
+#include "insieme/backend/function_manager.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -613,7 +616,41 @@ namespace backend {
 				type->parents.push_back(manager->create<c_ast::Parent>(parent->isVirtual(), parentInfo->lValueType));
 			}
 
-			// TODO: process class meta infos
+			// -- Process Meta-Infos --
+
+			// save current info (otherwise the following code will result in an infinite recursion)
+			addInfo(ptr, res);
+
+			auto& nameMgr = converter.getNameManager();
+			const core::ClassMetaInfo& info = core::getMetaInfo(ptr);
+
+			// member types
+			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
+
+				// process function using function manager
+				auto impl = cur.getImplementation();
+				if (!core::analysis::isPureVirtual(impl)) {
+
+					// fix name
+					nameMgr.setName(impl, cur.getName());
+
+					// generate code for member function
+					converter.getFunctionManager().getInfo(cur.getImplementation().as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
+
+				} else {
+
+					// resolve the type of this function and all its dependencies using the function manager
+					// by asking for an temporary "external function"
+
+					// create temporary literal ...
+					core::NodeManager& nodeMgr = ptr->getNodeManager();
+
+					// ... and resolve dependencies (that's all, function manager will do the rest)
+					converter.getFunctionManager().getInfo(core::Literal::get(nodeMgr, impl.getType(), cur.getName()), cur.isConst());
+				}
+			}
+
+			// TODO: process class ctors and dtors
 
 			// done
 			return res;

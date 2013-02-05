@@ -379,7 +379,7 @@ namespace c_ast {
 	bool MemberFunctionPrototype::equals(const Node& node) const {
 		assert(dynamic_cast<const MemberFunctionPrototype*>(&node));
 		auto other = static_cast<const MemberFunctionPrototype&>(node);
-		return isVirtual == other.isVirtual && ((!fun && !other.fun) || *fun == *other.fun);
+		return isVirtual == other.isVirtual && pureVirtual == other.pureVirtual && ((!fun && !other.fun) || *fun == *other.fun);
 	}
 
 	bool TypeDefinition::equals(const Node& node) const {
