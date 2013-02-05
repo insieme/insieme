@@ -340,6 +340,12 @@ namespace c_ast {
 		return *memberFun==*other.memberFun && *object == *other.object && ::equals(arguments, other.arguments, equal_target<NodePtr>());
 	}
 
+	bool ConstructorCall::equals(const Node& node) const {
+		assert(dynamic_cast<const ConstructorCall*>(&node));
+		auto other = static_cast<const ConstructorCall&>(node);
+		return *classType == *other.classType && onHeap == other.onHeap && ::equals(arguments, other.arguments, equal_target<NodePtr>());
+	}
+
 	bool Parentheses::equals(const Node& node) const {
 		assert(dynamic_cast<const Parentheses*>(&node));
 		auto other = static_cast<const Parentheses&>(node);

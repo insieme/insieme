@@ -353,8 +353,67 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "virtual ~Counter();");
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 
+	}
+
+
+	TEST(CppSnippet, VirtualFunctionCall) {
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		std::map<string, core::NodePtr> symbols;
+
+		// create a class A with a virtual function
+		core::TypePtr classA = builder.parseType("let A = struct { } in A");
+		symbols["A"] = classA;
+
+		auto funType = builder.parseType("A::(int<4>)->int<4>", symbols).as<core::FunctionTypePtr>();
+
+		core::ClassMetaInfo infoA;
+		infoA.addMemberFunction("f", builder.getPureVirtual(funType), true);
+		core::setMetaInfo(classA, infoA);
+
+		// create a class B
+		core::TypePtr classB = builder.parseType("let B = struct : A { } in B", symbols);
+		symbols["B"] = classB;
+
+		core::ClassMetaInfo infoB;
+		infoB.addMemberFunction("f", builder.parseExpr("B::(int<4> x)->int<4> { return x + 1; }", symbols).as<core::LambdaExprPtr>(), true);
+		core::setMetaInfo(classB, infoB);
+
+		auto res = builder.parseProgram(
+				"let f = lit(\"f\":A::(int<4>)->int<4>);"
+				""
+				"let ctorB1 = B::() { };"
+				"let ctorB2 = B::(int<4> x) { };"
+				""
+				"int<4> main() {"
+				"	ref<A> x = ctorB1(new(B));"
+				"	ref<A> y = ctorB2(new(B), 5);"
+				"	x->f(3);"
+				"	delete(x);"
+				"	return 0;"
+				"}", symbols);
+
+		ASSERT_TRUE(res);
+
+//		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "(*x).f(3);");
+
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 
 	}
+
 
 } // namespace backend
 } // namespace insieme

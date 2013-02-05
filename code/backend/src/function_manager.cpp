@@ -236,6 +236,21 @@ namespace backend {
 			// add dependencies
 			context.getDependencies().insert(info.prototype);
 
+			// --------------- member function call -------------
+
+			// re-structure call in case it is a member function call
+			if (fun->getType().as<core::FunctionTypePtr>()->isMemberFunction()) {
+
+				vector<c_ast::NodePtr> args = res->arguments;
+				assert(!args.empty());
+
+				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
+				args.erase(args.begin());
+
+				// return member function call
+				return c_ast::memberCall(obj, res->function, args);
+			}
+
 			// return external function call
 			return res;
 		}
@@ -278,6 +293,33 @@ namespace backend {
 			c_ast::CallPtr c_call = c_ast::call(info.function->name);
 			appendAsArguments(context, c_call, call->getArguments(), false);
 			c_ast::NodePtr res = c_call;
+
+			// ----------------- constructor call ---------------
+
+			// re-structure call into a constructor call
+			if (funType->isConstructor()) {
+
+				vector<c_ast::NodePtr> args = c_call->arguments;
+				assert(!args.empty());
+
+				const auto& basic = call->getNodeManager().getLangBasic();
+				auto location = args[0];
+				args.erase(args.begin());
+
+				// distinguish memory location to be utilized
+				// case a) create object on stack
+				// case b) create object on heap
+				// case c) create object in-place 	- not supported yet
+
+				// check whether it is case a) or b)
+				assert(core::analysis::isCallOf(call[0], basic.getRefVar()) || core::analysis::isCallOf(call[0], basic.getRefNew()));
+
+				// extract class type
+				auto classType = converter.getTypeManager().getTypeInfo(funType->getObjectType()).lValueType;
+
+				bool isOnHeap = core::analysis::isCallOf(call[0], basic.getRefNew());
+				res = c_ast::ctorCall(classType, args, isOnHeap);
+			}
 
 			// --------------- member function call -------------
 

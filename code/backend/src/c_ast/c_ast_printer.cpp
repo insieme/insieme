@@ -216,6 +216,10 @@ namespace c_ast {
 			}
 
 			PRINT(Compound) {
+
+				// short-cut for empty blocks
+				if (node->statements.empty()) return out << "{ }";
+
 				out << "{";
 				incIndent();
 				newLine(out);
@@ -466,6 +470,14 @@ namespace c_ast {
 				}) << ")";
 			}
 
+			PRINT(ConstructorCall) {
+				// <new> <className> ( <arguments> )
+				return out << (node->onHeap?"new ":"") << print(node->classType) << "("
+						<< join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) {
+							out << print(cur);
+				}) << ")";
+			}
+
 			PRINT(Parentheses) {
 				return out << "(" << print(node->expression) << ")";
 			}
@@ -545,14 +557,14 @@ namespace c_ast {
 				}
 
 				// start definition
-				out << " {\n    ";
+				out << " {";
 
 				// add fields
+				if (!composite->elements.empty()) out << "\n    ";
 				out << join(";\n    ", composite->elements,
 						[&](std::ostream& out, const VariablePtr& cur) {
 							out << printParam(cur);
 				});
-
 				if (!composite->elements.empty()) out << ";";
 
 				// add member functions
@@ -571,7 +583,7 @@ namespace c_ast {
 					// add destructor
 					if (structType->dtor) out << "\n    ";
 					out << print(structType->dtor);
-					if (!structType->ctors.empty()) out << ";";
+					if (structType->dtor) out << ";";
 
 
 					// add member functions

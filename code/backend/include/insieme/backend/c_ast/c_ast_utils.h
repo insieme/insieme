@@ -240,6 +240,10 @@ namespace c_ast {
 		return fun->getManager()->create<c_ast::MemberCall>(fun, obj, args);
 	}
 
+	inline ConstructorCallPtr ctorCall(TypePtr classType, const vector<NodePtr>& args, bool onHeap = false) {
+		return classType->getManager()->create<c_ast::ConstructorCall>(classType, args, onHeap);
+	}
+
 	// -- Unary Operations --------------------------------------
 
 	inline ExpressionPtr unaryOp(UnaryOperation::UnaryOp op, NodePtr a) {
