@@ -200,16 +200,21 @@ namespace detail {
 			return type == other.type && lexeme == other.lexeme;
 		}
 
+		bool operator==(const string& str) const {
+			return lexeme == str;
+		}
+
+		bool operator==(const char* str) const {
+			return lexeme == str;
+		}
+
 		bool operator==(char symbol) const {
 			return type == Symbol && lexeme[0] == symbol;
 		}
 
-		bool operator!=(const Token& other) const {
+		template<typename T>
+		bool operator!=(const T& other) const {
 			return !(*this == other);
-		}
-
-		bool operator!=(char symbol) const {
-			return !(*this == symbol);
 		}
 
 		bool operator<(const Token& other) const {
