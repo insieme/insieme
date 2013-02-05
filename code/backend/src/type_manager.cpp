@@ -618,13 +618,31 @@ namespace backend {
 
 			// -- Process Meta-Infos --
 
+			// skip rest if there is no meta-info present
+			if (!core::hasMetaInfo(ptr)) {
+				return res;
+			}
+
 			// save current info (otherwise the following code will result in an infinite recursion)
 			addInfo(ptr, res);
 
 			auto& nameMgr = converter.getNameManager();
 			const core::ClassMetaInfo& info = core::getMetaInfo(ptr);
+			auto& funMgr = converter.getFunctionManager();
 
-			// member types
+			// add constructors
+			for(const core::LambdaExprPtr& cur : info.getConstructors()) {
+				// let function manager handle it
+				funMgr.getInfo(cur);
+			}
+
+			// add destructor
+			if (auto dtor = info.getDestructor()) {
+				// let function manager handle it
+				funMgr.getInfo(dtor, false, info.isDestructorVirtual());
+			}
+
+			// add member functions
 			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
 
 				// process function using function manager
@@ -635,7 +653,7 @@ namespace backend {
 					nameMgr.setName(impl, cur.getName());
 
 					// generate code for member function
-					converter.getFunctionManager().getInfo(cur.getImplementation().as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
+					funMgr.getInfo(cur.getImplementation().as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
 
 				} else {
 
@@ -646,7 +664,7 @@ namespace backend {
 					core::NodeManager& nodeMgr = ptr->getNodeManager();
 
 					// ... and resolve dependencies (that's all, function manager will do the rest)
-					converter.getFunctionManager().getInfo(core::Literal::get(nodeMgr, impl.getType(), cur.getName()), cur.isConst());
+					funMgr.getInfo(core::Literal::get(nodeMgr, impl.getType(), cur.getName()), cur.isConst());
 				}
 			}
 

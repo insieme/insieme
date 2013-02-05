@@ -44,6 +44,7 @@
 #include "insieme/utils/compiler/compiler.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
 namespace backend {
@@ -235,7 +236,7 @@ namespace backend {
 		core::IRBuilder builder(mgr);
 
 		// create a class type
-		auto counterType = builder.parseType("struct { int<4> value; }");
+		auto counterType = builder.parseType("let Counter = struct { int<4> value; } in Counter");
 		ASSERT_TRUE(counterType);
 
 		// create symbol map for remaining task
@@ -248,8 +249,19 @@ namespace backend {
 		// add member functions to meta info
 		core::ClassMetaInfo info;
 
-		// TODO: add constructors
-		// TODO: add a destrutor
+
+		// ------- Constructor ----------
+
+		// default
+		info.addConstructor(parse("Counter::() { }"));
+
+		// with value
+		info.addConstructor(parse("Counter::(int<4> x) { this->value = x; }"));
+
+		// copy constructor
+		info.addConstructor(parse("Counter::(ref<Counter> c) { this->value = *c->value; }"));
+
+		// ------- member functions ----------
 
 		// a non-virtual, const function
 		info.addMemberFunction("get", parse("Counter::()->int<4> { return *this->value; }"), false, true);
@@ -287,6 +299,10 @@ namespace backend {
 
 		// check generated code
 		string code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "Counter();");
+		EXPECT_PRED2(containsSubString, code, "Counter(int32_t p2);");
+		EXPECT_PRED2(containsSubString, code, "Counter(Counter* p2);");
+
 		EXPECT_PRED2(containsSubString, code, "int32_t get() const;");
 		EXPECT_PRED2(containsSubString, code, "void set(int32_t p2);");
 		EXPECT_PRED2(containsSubString, code, "virtual void print() const;");
@@ -295,12 +311,48 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "virtual int32_t dummy1() =0;");
 		EXPECT_PRED2(containsSubString, code, "virtual int32_t dummy2() const =0;");
 
-		std::cout << *targetCode;
+//		std::cout << *targetCode;
 
 		// try compiling the code fragment
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+
+
+		// -------------------------------------------- add destructor -----------------------------------------
+
+		info.setDestructor(parse("~Counter::() {}"));
+		core::setMetaInfo(counterType, info);
+		EXPECT_TRUE(core::checks::check(counterType).empty()) << core::checks::check(counterType);
+
+		targetCode = sequential::SequentialBackend::getDefault()->convert(prog);
+		ASSERT_TRUE((bool)targetCode);
+
+//		std::cout << *targetCode;
+
+		// check generated code
+		code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "~Counter();");
+		EXPECT_PRED2(notContainsSubString, code, "virtual ~Counter();");
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+
+
+		// ---------------------------------------- add virtual destructor -----------------------------------------
+
+		info.setDestructorVirtual();
+		core::setMetaInfo(counterType, info);
+		EXPECT_TRUE(core::checks::check(counterType).empty()) << core::checks::check(counterType);
+
+		targetCode = sequential::SequentialBackend::getDefault()->convert(prog);
+		ASSERT_TRUE((bool)targetCode);
+
+//		std::cout << *targetCode;
+
+		// check generated code
+		code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "virtual ~Counter();");
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+
 
 	}
 
