@@ -202,6 +202,8 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 
 
 void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::ConversionFactory& convFact) {
+
+
     insieme::core::NodeAnnotationPtr annot;
 
     // check if there is a datarange annotation
@@ -212,6 +214,9 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
         [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
             const frontend::InsiemeDatarange* dr = dynamic_cast<const frontend::InsiemeDatarange*>( &*(curr.second) );
             if(dr) {
+				// FIXME: this is failing, find a solution
+				assert(false && "deprecated pragma data range annotation");
+
             	pragma::MatchMap mmap = dr->getMatchMap();
 
             	auto ranges = mmap.find("ranges");
@@ -219,6 +224,7 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
             		return;
 
             	annotations::DataRangeAnnotation dataRanges;
+
 
 				for(auto I = ranges->second.begin(); I != ranges->second.end(); ++I){
             		core::VariablePtr var = static_pointer_cast<core::VariablePtr>(

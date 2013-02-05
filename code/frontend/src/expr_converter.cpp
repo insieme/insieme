@@ -455,8 +455,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitIntegerLiteral(clang:
 	START_LOG_EXPR_CONVERSION(intLit);
 
 	core::ExpressionPtr retExpr;
-	LOG_EXPR_CONVERSION(retExpr);
 
+	/**********************************************
+	 *  DEPRECATED CODE: do not read raw code
+	 *  1)  translation unit use is deprecated
+	 *  2)	templating may fail with this aproach
+	 *
 	std::string&& strVal =
 	GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), intLit->getExprLoc() );
 
@@ -466,6 +470,36 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitIntegerLiteral(clang:
 	return (retExpr = builder.literal(
 	// retrieve the string representation from the source code
 			strVal, intTy));
+	*************************************************/
+
+	std::string value;
+	if (!intLit->getValue().isNegative()) {
+		value = toString(intLit->getValue().getLimitedValue());
+	}
+	else{
+		value = toString(intLit->getValue().getSExtValue());
+	}
+
+	core::TypePtr type;
+	int width = intLit->getValue().getBitWidth()/8;
+	switch(width){
+		case 4:
+			type = builder.getLangBasic().getInt4();
+			break;
+		case 8:
+			type = builder.getLangBasic().getInt8();
+			break;
+		case 16:
+			type = builder.getLangBasic().getInt16();
+			break;
+		default:
+			assert(false && "unknow integer literal width");
+	}
+
+    retExpr =  builder.literal(type, toString(value));
+	END_LOG_EXPR_CONVERSION(retExpr);
+	return retExpr; 
+
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -475,13 +509,28 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitFloatingLiteral(clang
 	START_LOG_EXPR_CONVERSION(floatLit);
 
 	core::ExpressionPtr retExpr;
-	LOG_EXPR_CONVERSION(retExpr);
 
+	/* ****************************************************
+	 * DEPRECATED CODE
 	return (retExpr =
 	// retrieve the string representation from the source code
 			builder.literal(
 					GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), floatLit->getExprLoc()),
 					convFact.convertType(GET_TYPE_PTR(floatLit))));
+	**************************************************/
+
+	const llvm::fltSemantics& sema = floatLit->getValue().getSemantics();
+
+	if (llvm::APFloat::semanticsPrecision(sema) == llvm::APFloat::semanticsPrecision(llvm::APFloat::IEEEsingle))
+		retExpr = builder.floatLit (floatLit->getValue().convertToFloat());
+	else if (llvm::APFloat::semanticsPrecision(sema) == llvm::APFloat::semanticsPrecision(llvm::APFloat::IEEEdouble))
+		retExpr = builder.doubleLit (floatLit->getValue().convertToDouble());
+	else
+		assert (false &&"no idea how you got here, but only single/double precission literals are allowed in insieme");
+
+
+	END_LOG_EXPR_CONVERSION(retExpr);
+	return retExpr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -491,47 +540,83 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCharacterLiteral(Char
 	START_LOG_EXPR_CONVERSION(charLit);
 
 	core::ExpressionPtr retExpr;
-	LOG_EXPR_CONVERSION(retExpr);
 
+	/* ****************************************************
+	 * DEPRECATED CODE
 	return (retExpr = builder.literal(
 			// retrieve the string representation from the source code
 			GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), charLit->getExprLoc()),
 			(charLit->getKind() == CharacterLiteral::Wide ?
 					mgr.getLangBasic().getWChar() : mgr.getLangBasic().getChar())));
+	********************************************************/
+	
+	string value;
+	unsigned int v = charLit->getValue();
+	if (charLit->getKind() == clang::CharacterLiteral::Ascii){
+
+		value.append("\'");
+		if(v == '\\') value.append("\\\\"); 
+		else if(v == '\n') value.append("\\n");
+		else if(v == '\t') value.append("\\t");
+		else if(v == '\b') value.append("\\b");
+		else if(v == '\a') value.append("\\a");
+		else if(v == '\v') value.append("\\v");
+		else if(v == '\r') value.append("\\r");
+		else if(v == '\f') value.append("\\f");
+		else if(v == '\?') value.append("\\\?");
+		else if(v == '\'') value.append("\\\'");
+		else if(v == '\"') value.append("\\\"");
+		else{
+			char cad[2];
+			cad[0] = v;
+			cad[1] = '\0';
+			value.append(cad);
+		}
+		value.append("\'");
+	}
+	else
+		/// FIXME: windows and linux implementation may differ here, need to study the case
+		assert (false && "widechar not supported");
+		
+	retExpr = builder.literal(
+			value,
+			(charLit->getKind() == CharacterLiteral::Wide ?
+					mgr.getLangBasic().getWChar() : mgr.getLangBasic().getChar()));
+
+	END_LOG_EXPR_CONVERSION(retExpr);
+	return retExpr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								STRING LITERAL
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitStringLiteral(clang::StringLiteral* stringLit) {
-	START_LOG_EXPR_CONVERSION(stringLit);
-
 	core::ExpressionPtr retExpr;
 	LOG_EXPR_CONVERSION(retExpr);
 
-	std::string strValue = GetStringFromStream(
-			convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc()
-	);
+	std::string strValue = stringLit->getString().str();
+	auto expand = [&](char lookup, const char *replacement) { 
+		int last = 0;
+		int it;
+		string rep = replacement;
+		while((it = strValue.find(lookup, last)) < strValue.length()){
+			last = it + rep.length();
+			strValue.replace(it, 1, rep);
+		}
+	};
 
-//	size_t vecSize = strValue.length();
-//	// a string literal is converted into a ref<vector<char,#n>> type 
-//	ExpressionList vals(vecSize+1);
-//	size_t it;
-//	for(it=0; it<vecSize; ++it) {
-//		char c = strValue.at(it);
-//		std::string str(1,c);
-//		switch(c) {
-//			case '\n': str = "\\n";	   break;
-//			case '\\': str = "\\\\";   break;
-//			case '\r': str = "\\r";	   break;
-//			case '\t': str = "\\t";	   break;
-//			case '\0': str = "\\0";	   break;
-//		}
-//		vals[it] = convFact.builder.literal( std::string("\'") + str + "\'", gen.getChar() );
-//	}
-//	// put '\0' terminators on the remaining elements
-//	vals[vecSize] = convFact.builder.literal( std::string("\'") + "\\0" + "\'", gen.getChar() ); 
-//	// Add the string terminator
+	expand('\\', "\\\\"); 
+	expand('\n', "\\n");
+	expand('\t', "\\t");
+	expand('\b', "\\b");
+	expand('\a', "\\a");
+	expand('\v', "\\v");
+	expand('\r', "\\r");
+	expand('\f', "\\f");
+	expand('\?', "\\\?");
+	expand('\'', "\\\'");
+	expand('\"', "\\\"");
+
 	auto vecType = 
 		builder.refType(
 			builder.vectorType(
@@ -540,7 +625,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitStringLiteral(clang::
 			)
 		);
 
-	return retExpr = builder.literal(strValue, vecType);
+	retExpr = builder.literal("\"" + strValue + "\"", vecType);
+	VLOG(2) << retExpr;
+
+	return retExpr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -700,9 +788,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 		// collects the type of each argument of the expression
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
-		assert( convFact.currTU && "Translation unit not set.");
-
+		assert(convFact.currTU && "Translation unit not set.");
 		const TranslationUnit* oldTU = convFact.currTU;
+
 		const FunctionDecl* definition = NULL;
 		/*
 		 * this will find function definitions if they are declared in  the same translation unit
@@ -792,10 +880,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 		ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
 		if (fit != ctx.lambdaExprCache.end()) {
 			convFact.currTU = oldTU;
-			
 			irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
 					 packedArgs);
-
 			convFact.currTU = oldTU;
 
 			return irNode;
