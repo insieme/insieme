@@ -323,6 +323,37 @@ namespace encoder {
 
 
 
+	// ---- make the direct expression encoding the default for the type vector<ExpressionPtr>
+
+	/**
+	 * A partial template specialization for the type_factory struct to support the encoding
+	 * of expression lists.
+	 */
+	template<>
+	struct type_factory<vector<ExpressionPtr>> : public detail::create_list_type<ExpressionPtr, DirectExprConverter> {};
+
+	/**
+	 * A partial template specialization for the value_to_ir_converter struct to support the encoding
+	 * of expression lists.
+	 */
+	template<>
+	struct value_to_ir_converter<vector<ExpressionPtr>> : public detail::encode_list<ExpressionPtr, DirectExprConverter> {};
+
+	/**
+	 * A partial template specialization for the ir_to_value_converter struct to support the encoding
+	 * of expression lists.
+	 */
+	template<>
+	struct ir_to_value_converter<vector<ExpressionPtr>> : public detail::decode_list<ExpressionPtr, DirectExprConverter> {};
+
+	/**
+	 * A partial template specialization for the is_encoding_of struct to support the encoding
+	 * of expression lists.
+	 */
+	template<>
+	struct is_encoding_of<vector<ExpressionPtr>> : public detail::is_list<ExpressionPtr, DirectExprConverter> { };
+
+
 } // end namespace encoder
 } // end namespace core
 } // end namespace insieme
