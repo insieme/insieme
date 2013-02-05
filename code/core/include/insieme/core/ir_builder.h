@@ -634,6 +634,18 @@ namespace core {
 		// helper for vector permute
 		CallExprPtr vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const;
 
+
+
+		// --------------------------- C++ -----------------------------
+
+		/**
+		 * Creates an expression representing a pure virtual function of the given type.
+		 *
+		 * @param memberFunctionType the type of the resulting pure virtual function
+		 * @return an expression representing a pure virtual function of the given type
+		 */
+		ExpressionPtr getPureVirtual(const FunctionTypePtr& memberFunctionType) const;
+
 	private:
 
 		unsigned extractNumberFromExpression(ExpressionPtr& expr) const;

@@ -148,8 +148,8 @@ namespace encoder {
 	 * A generic utility function supporting the encoding of a given value into an
 	 * equivalent IR representation.
 	 *
-	 * @tparam T the type of value to be encoded
 	 * @tparam C the converter to be used
+	 * @tparam T the type of value to be encoded
 	 * @param manager the manager to be used to create the resulting IR node
 	 * @param value the value to be encoded
 	 * @return the encoded equivalent IR structure
@@ -317,37 +317,45 @@ namespace encoder {
 	//   Add support for encoding expressions directly into expressions
 	// --------------------------------------------------------------------
 
-	template<>
-	struct type_factory<core::ExpressionPtr> {
-		core::TypePtr operator()(core::NodeManager& manager) const {
-			assert(false && "Not applicable in the general case!");
-			throw InvalidExpression("Cannot define generic type for all expressions!");
-		}
-	};
+	namespace detail {
 
-	template<>
-	struct value_to_ir_converter<core::ExpressionPtr> {
-		core::ExpressionPtr operator()(core::NodeManager& manager, const core::ExpressionPtr& value) const {
-			return manager.get(value);
-		}
-	};
+		struct create_expr_type {
+			core::TypePtr operator()(core::NodeManager& manager) const {
+				assert(false && "Not applicable in the general case!");
+				throw InvalidExpression("Cannot define generic type for all expressions!");
+			}
+		};
 
-	template<>
-	struct ir_to_value_converter<core::ExpressionPtr> {
-		core::ExpressionPtr operator()(const core::ExpressionPtr& expr) const {
-			return expr;
-		}
-	};
+		struct is_expr {
+			bool operator()(const core::ExpressionPtr& expr) const {
+				return true;	// every expression is a direct encoding of itself
+			}
+		};
 
-	template<>
-	struct is_encoding_of<core::ExpressionPtr> {
-		bool operator()(const core::ExpressionPtr& expr) const {
-			return true;
-		}
-	};
+		struct encode_expr {
+			core::ExpressionPtr operator()(core::NodeManager& manager, const core::ExpressionPtr& value) const {
+				return manager.get(value);
+			}
+		};
+
+		struct decode_expr {
+			core::ExpressionPtr operator()(const core::ExpressionPtr& expr) const {
+				return expr;
+			}
+		};
+
+	}
+
+	/**
+	 * Defines a converter for IR expressions mapping expressions 1:1 to themselves.
+	 *
+	 * @tparam E the element type within the list
+	 * @tparam C the converter to be used for encoding element types
+	 */
+	struct DirectExprConverter : public Converter<ExpressionPtr, detail::create_expr_type, detail::encode_expr, detail::decode_expr, detail::is_expr> {};
 
 
-	// ------------ Also support derived expression types -----------------
+	// ------------ Also support general and derived expression types -----------------
 
 	#define ADD_EXPRESSION_CONVERTER(_TYPE) \
 		template<> \
@@ -387,6 +395,7 @@ namespace encoder {
 			} \
 		}
 
+	ADD_EXPRESSION_CONVERTER(ExpressionPtr);
 	ADD_EXPRESSION_CONVERTER(LambdaExprPtr);
 
 	// --------------------------------------------------------------------
