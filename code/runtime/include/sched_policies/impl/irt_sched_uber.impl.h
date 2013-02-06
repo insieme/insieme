@@ -40,6 +40,9 @@
 #include "sched_policies/irt_sched_uber.h"
 #include "impl/worker.impl.h"
 
+#ifdef _WIN32
+	#include "../../include_win32/rand_r.h"
+#endif
 
 
 // ============================================================================ Scheduling (general)
