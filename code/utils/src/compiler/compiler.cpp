@@ -83,6 +83,7 @@ namespace compiler {
 	Compiler Compiler::getDefaultCppCompiler() {
 		Compiler res("gcc");
 		res.addFlag("-x c++");
+		res.addFlag("-lstdc++");
 		res.addFlag("-Wall");
 		res.addFlag("--std=c++98");
 		res.addFlag("-Wl,--no-as-needed");
@@ -159,15 +160,12 @@ namespace compiler {
 	string compileToBinary(const Printable& source, const Compiler& compiler) {
 
 		// create temporary target file name
-		char targetFile[] = P_tmpdir "/trgXXXXXX";
-		int trg = mkstemp(targetFile);
-		assert(trg != -1);
-		close(trg);
+		fs::path targetFile = fs::unique_path(fs::temp_directory_path() / "trg%%%%%%%%");
 
-		LOG(DEBUG) << "Using temporary file " << string(targetFile) << " as a target file for compilation.";
+		LOG(DEBUG) << "Using temporary file " << targetFile << " as a target file for compilation.";
 
-		if (compileToBinary(source, targetFile, compiler)) {
-			return string(targetFile);
+		if (compileToBinary(source, targetFile.string(), compiler)) {
+			return targetFile.string();
 		}
 		return string();
 	}
@@ -176,21 +174,17 @@ namespace compiler {
 	bool compileToBinary(const Printable& source, const string& targetFile, const Compiler& compiler) {
 
 		// create a temporary source file
-		// TODO: replace with boost::filesystem::temp_directory_path() when version 1.46 is available
-		char sourceFile[] = P_tmpdir "/srcXXXXXX";
-		int src = mkstemp(sourceFile);
-		assert(src != -1);
-		close(src);
+		fs::path sourceFile = fs::unique_path(fs::temp_directory_path() / "src%%%%%%%%");
 
-		LOG(DEBUG) << "Using temporary file " << string(sourceFile) << " as a source file for compilation.";
+		LOG(DEBUG) << "Using temporary file " << sourceFile << " as a source file for compilation.";
 
 		// write source to file
-		std::fstream srcFile(sourceFile, std::fstream::out);
+		std::fstream srcFile(sourceFile.string(), std::fstream::out);
 		srcFile << source << "\n";
 		srcFile.close();
 
 		// conduct compilation
-		bool res = compile(sourceFile, targetFile, compiler);
+		bool res = compile(sourceFile.string(), targetFile, compiler);
 		
 		// delete source file
 		if (boost::filesystem::exists(sourceFile)) {

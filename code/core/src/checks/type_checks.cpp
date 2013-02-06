@@ -448,10 +448,10 @@ OptionalMessageList ExternalFunctionTypeCheck::visitLiteral(const LiteralAddress
 	}
 
 	core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(type);
-	if (!funType->isPlain()) {
+	if (funType->isClosure()) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_FUNCTION_TYPE,
-						format("External literals have to have plain function types!"),
+						format("External literals must not be closure types!"),
 						Message::ERROR));
 	}
 	return res;
