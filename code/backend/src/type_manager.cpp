@@ -888,9 +888,6 @@ namespace backend {
 
 			auto manager = converter.getCNodeManager();
 
-			// create result
-			RefTypeInfo* res = new RefTypeInfo();
-
 			// obtain information covering sub-type
 			auto elementNodeType = ptr->getElementType()->getNodeType();
 			const TypeInfo* subType = resolveType(ptr->getElementType());
@@ -901,6 +898,9 @@ namespace backend {
 				assert(dynamic_cast<const RefTypeInfo*>(pos->second));
 				return static_cast<const RefTypeInfo*>(pos->second);
 			}
+
+			// create result
+			RefTypeInfo* res = new RefTypeInfo();
 
 			// produce R and L value type
 			// generally, a level of indirection needs to be added
