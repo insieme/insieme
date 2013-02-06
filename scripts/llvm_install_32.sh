@@ -62,7 +62,7 @@ echo "*******************"
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/mpc-latest/lib/:$LD_LIBRARY_PATH 
 
 CFLAGS="-mtune=native -O3 -fgraphite-identity -std=c++0x"
-CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CFLAGS LDFLAGS="-mtune=native -O3" ../llvm-$VERSION.src/configure --prefix=$PREFIX/llvm-$VERSION --enable-shared=yes\
+CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CFLAGS LDFLAGS="-mtune=native -O3 -std=c++0x" ../llvm-$VERSION.src/configure --prefix=$PREFIX/llvm-$VERSION --enable-shared=yes\
   	 --enable-assert=yes --enable-debug-runtime=no --enable-debug-symbols=no --enable-optimized=yes
 # --enable-doxygen=yes
 
