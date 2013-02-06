@@ -714,8 +714,19 @@ TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumen
 
 namespace {
 
+	void addParents(const ParentsPtr& parents, TypeSet& res) {
+		for(auto cur : parents) res.insert(cur->getType());
+	}
+
+	void addParents(const TypePtr& type, TypeSet& res) {
+		if (StructTypePtr cur = type.isa<StructTypePtr>()) addParents(cur->getParents(), res);
+		if (GenericTypePtr cur = type.isa<GenericTypePtr>()) addParents(cur->getParents(), res);
+	}
+
 	const TypeSet getSuperTypes(const TypePtr& type) {
-		return type->getNodeManager().getLangBasic().getDirectSuperTypesOf(type);
+		TypeSet res = type->getNodeManager().getLangBasic().getDirectSuperTypesOf(type);
+		addParents(type, res);
+		return res;
 	}
 
 	const TypeSet getSubTypes(const TypePtr& type) {
@@ -731,7 +742,7 @@ namespace {
 		return res;
 	}
 
-	bool isSubTypeOf(const GenericTypePtr& subType, const TypePtr& superType) {
+	bool isSubTypeOfInternal(const TypePtr& subType, const TypePtr& superType) {
 		// start from the sub-type and work toward the top.
 		// As soon as the super type is included, the procedure can stop.
 
@@ -806,9 +817,9 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 //	}
 
 	// check whether the sub-type is generic
-	if (subType->getNodeType() == NT_GenericType) {
+	if (subType->getNodeType() == NT_GenericType || subType->getNodeType() == NT_StructType) {
 		// use the delta algorithm for computing all the super-types of the given sub-type
-		return isSubTypeOf(static_pointer_cast<const GenericType>(subType), superType);
+		return isSubTypeOfInternal(subType, superType);
 	}
 
 	// check for vector types
@@ -830,9 +841,12 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 		FunctionTypePtr funTypeA = static_pointer_cast<const FunctionType>(subType);
 		FunctionTypePtr funTypeB = static_pointer_cast<const FunctionType>(superType);
 
-		// check plain/non-plain relation
-		if (funTypeB->isPlain() && !funTypeA->isPlain()) {
-			return false;
+		// check kind of functions
+		if (funTypeA->getKind() != funTypeB->getKind()) {
+			// only closure to plain conversion is allowed
+			if (!(funTypeB->isClosure() && funTypeA->isPlain())) {
+				return false;
+			}
 		}
 
 		bool res = true;
@@ -842,6 +856,12 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 			res = res && isSubTypeOf(funTypeB->getParameterTypes()[i], funTypeA->getParameterTypes()[i]);
 		}
 		return res;
+	}
+
+	// check reference types
+	if (subType->getNodeType() == NT_RefType) {
+		// check relation between reference types
+		return isSubTypeOf(subType.as<RefTypePtr>()->getElementType(), superType.as<RefTypePtr>()->getElementType());
 	}
 
 	// no other relations are supported

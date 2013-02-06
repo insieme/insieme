@@ -397,7 +397,7 @@ namespace backend {
 
 		ASSERT_TRUE(res);
 
-//		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
 
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
