@@ -228,7 +228,7 @@ TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
 
 	//pimpl->mIdx.IndexAST( dynamic_cast<clang::idx::TranslationUnit*>(tuImpl) );
 	pimpl->mIdx.indexTU(tuImpl);
-	pimpl->mIdx.dump();
+//	pimpl->mIdx.dump();
 
 	//FIXME:  fill the callgraph
 	//pimpl->mCallGraph.addTU( tuImpl->getASTContext() );

@@ -184,71 +184,7 @@ protected:
 		 */
 		typedef insieme::utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
 		WrapRefMap wrapRefMap;
-/*
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		//						Dtor handling
-		//				maps, variables for destructor handling
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-		typedef std::stack<core::VariablePtr> ScopeObjects;
-		ScopeObjects scopeObjects;
-		ScopeObjects downStreamScopeObjects;
-
-		typedef std::map<const clang::FunctionDecl*,
-				vector<insieme::core::VariablePtr>> FunToTemporariesMap;
-		FunToTemporariesMap fun2TempMap;
-		typedef std::map <core::VariablePtr,clang::CXXRecordDecl*> ObjectMap;
-				ObjectMap objectMap;
-
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		//						Polymorphic Classes
-		//				maps, variables for virtual function tables
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-		typedef std::pair<unsigned int, unsigned int> ClassFuncPair;
-		typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
-		PolymorphicClassMap polymorphicClassMap;
-
-		typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
-		VirtualFunctionIdMap virtualFunctionIdMap;
-
-		typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
-		OffsetMap offsetMap;
-
-		typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
-		FinalOverriderMap finalOverriderMap;
-
-		core::ExpressionPtr offsetTableExpr;	//access offsetTable via globalVar
-		core::ExpressionPtr vFuncTableExpr;		//access offsetTable via globalVar
-
-		core::ExpressionPtr thisStack2; // not only of type core::Variable - in nested classes
-		core::ExpressionPtr thisVar; // used in Functions as reference
-
-		typedef std::map<const clang::SourceLocation, core::VariablePtr> ThisMap;
-		ThisMap thisMap;
-
-		// current Type of class
-		core::TypePtr curTy;
-
-		bool useClassCast;
-
-		// for operators
-		bool isCXXOperator;
-
-		// type on which the operator is called
-		core::TypePtr operatorTy;
-
-		core::ExpressionPtr lhsThis;
-		core::ExpressionPtr rhsThis;
-
-		// maps a constructor declaration to the call expression with memory allocation - such
-		// a call expression returns a pointer to the allocated and initialized object
-		LambdaExprMap lambdaExprCacheNewObject;
-
-		// maps the values of each constructor initializer to its declaration, e.g. A() a(0) {} => a...field, 0...value
-		typedef std::map<const clang::FieldDecl*, core::ExpressionPtr> CtorInitializerMap;
-		CtorInitializerMap ctorInitializerMap;
-*/
+		
 		/*	FIXME: rename --> takes care of TagDecl not ClassDecl!
 			TagDecl are for struct/union/class/enum --> used in C and CXX */
 		// maps the resulting type pointer to the declaration of a class
@@ -256,8 +192,8 @@ protected:
 		ClassDeclMap classDeclMap;
 
 		ConversionContext() :
-				isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(
-						0), isRecSubType(false), isResolvingFunctionType(false) {
+				isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), 
+				isRecSubType(false), isResolvingFunctionType(false) {
 		}
 
 	};
@@ -300,7 +236,7 @@ protected:
 	 * Every time a function belonging to a different translation unit is called this pointer
 	 * is set to translation unit containing the function definition.
 	 */
-	const TranslationUnit* currTU;
+	 std::stack<const TranslationUnit*> currTU;
 
 	/**
 	 * Returns a reference to the IR data structure used to represent a variable of the input C program.
@@ -355,20 +291,18 @@ public:
 	}
 
 	clang::SourceManager& getCurrentSourceManager() const {
-		assert(currTU && "FATAL: Translation unit not correctly set");
-		return currTU->getCompiler().getSourceManager();
+		assert(!currTU.empty() && "FATAL: Translation unit not correctly set");
+		return currTU.top()->getCompiler().getSourceManager();
 	}
 
 	const ClangCompiler& getCurrentCompiler() const {
-		assert(currTU && "FATAL: Translation unit not correctly set");
-		return currTU->getCompiler();
+		assert(!currTU.empty() && "FATAL: Translation unit not correctly set");
+		return currTU.top()->getCompiler();
 	}
-	/**
-	 * Force the current translation.
-	 * @param tu new translation unit
-	 */
-	void setTranslationUnit(const TranslationUnit& tu) {
-		currTU = &tu;
+
+	/** DEPRECATED */
+	void setTranslationUnit(const TranslationUnit& tu){
+		currTU.push(&tu);
 	}
 
 	/**

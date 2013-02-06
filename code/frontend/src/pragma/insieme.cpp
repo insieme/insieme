@@ -202,16 +202,19 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 
 
 void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::ConversionFactory& convFact) {
+
+
     insieme::core::NodeAnnotationPtr annot;
 
     // check if there is a datarange annotation
     const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
     std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
 
-    std::for_each(iter.first, iter.second,
+   std::for_each(iter.first, iter.second,
         [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
             const frontend::InsiemeDatarange* dr = dynamic_cast<const frontend::InsiemeDatarange*>( &*(curr.second) );
             if(dr) {
+
             	pragma::MatchMap mmap = dr->getMatchMap();
 
             	auto ranges = mmap.find("ranges");
@@ -219,6 +222,7 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
             		return;
 
             	annotations::DataRangeAnnotation dataRanges;
+
 
 				for(auto I = ranges->second.begin(); I != ranges->second.end(); ++I){
             		core::VariablePtr var = static_pointer_cast<core::VariablePtr>(

@@ -62,6 +62,8 @@
 
 #include "llvm/LLVMContext.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+
+#include "llvm/Support/Host.h"
 // #include "llvm/System/Host.h"
 // #include "llvm/System/Path.h"
 
@@ -141,39 +143,29 @@ struct ClangCompiler::ClangCompilerImpl {
 
 ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 
-	// TODO: remove
-	std::cout << "********** init compiler copy ctor ************" << std::endl;
-
 	setDiagnosticClient(pimpl->clang, &pimpl->diagOpts);
 	pimpl->clang.createFileManager();
 	pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
 	
 
 	// A compiler invocation object has to be created in order for the diagnostic object to work
-/*	CompilerInvocation* CI = new CompilerInvocation; // CompilerInvocation will be deleted by CompilerInstance
+	CompilerInvocation* CI = new CompilerInvocation; // CompilerInvocation will be deleted by CompilerInstance
 	CompilerInvocation::CreateFromArgs(*CI, 0, 0, pimpl->clang.getDiagnostics());
 	pimpl->clang.setInvocation(CI);
-	*/
 
 	// fix the target architecture to be a 64 bit machine:
 	// 		in this way we don't have differences between the size of integer/float types across architecture
 	pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
+	//pimpl->TO->Triple = llvm::sys::getDefaultTargetTriple();
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
 
 
 	pimpl->clang.createPreprocessor();
 	pimpl->clang.createASTContext();
-
-
-	// TODO: remove
-	std::cout << "********** done compiler copy ctor ************" << std::endl;
 }
 
 ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangCompilerImpl) {
 	// pimpl->clang.setLLVMContext(new llvm::LLVMContext);
-	
-	// TODO: remove
-	std::cout << "********** init compiler for file: " << file_name << " ************" << std::endl;
 
 	// set diagnostic options for the error reporting
 	pimpl->diagOpts.ShowLocation = 1;
@@ -239,9 +231,8 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 		pimpl->m_isCXX = true;
 		LO.CPlusPlus = 1; 	// set C++ 98 support
 		LO.CXXOperatorNames = 1;
-		if(CommandLineOptions::STD == "c++0x") {
-			LO.CPlusPlus0x = 1; // set C++0x support
-		}
+		if(CommandLineOptions::STD == "c++0x") { LO.CPlusPlus0x = 1; }
+		else { 									 LO.CPlusPlus0x = 0; }
 		LO.RTTI = 1;
 		LO.Exceptions = 1;
 		LO.CXXExceptions = 1;
@@ -289,9 +280,6 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	pimpl->clang.getDiagnosticClient().BeginSourceFile(
 										pimpl->clang.getLangOpts(),
 										&pimpl->clang.getPreprocessor());
-
-	// TODO: remove
-	std::cout << "********** done compiler intitiaziation for " << file_name << "************" << std::endl;
 }
 
 ASTContext& 		ClangCompiler::getASTContext()    const { return pimpl->clang.getASTContext(); }
