@@ -142,9 +142,6 @@ struct ClangCompiler::ClangCompilerImpl {
 
 ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 
-	// TODO: remove
-	std::cout << "********** init compiler copy ctor ************" << std::endl;
-
 	setDiagnosticClient(pimpl->clang, &pimpl->diagOpts);
 	pimpl->clang.createFileManager();
 	pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
@@ -165,17 +162,10 @@ ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 
 	pimpl->clang.createPreprocessor();
 	pimpl->clang.createASTContext();
-
-
-	// TODO: remove
-	std::cout << "********** done compiler copy ctor ************" << std::endl;
 }
 
 ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangCompilerImpl) {
 	// pimpl->clang.setLLVMContext(new llvm::LLVMContext);
-	
-	// TODO: remove
-	std::cout << "********** init compiler for file: " << file_name << " ************" << std::endl;
 
 	// set diagnostic options for the error reporting
 	pimpl->diagOpts.ShowLocation = 1;
@@ -243,9 +233,8 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 		pimpl->m_isCXX = true;
 		LO.CPlusPlus = 1; 	// set C++ 98 support
 		LO.CXXOperatorNames = 1;
-		if(CommandLineOptions::STD == "c++0x") {
-			LO.CPlusPlus0x = 1; // set C++0x support
-		}
+		if(CommandLineOptions::STD == "c++0x") { LO.CPlusPlus0x = 1; }
+		else { 									 LO.CPlusPlus0x = 0; }
 		LO.RTTI = 1;
 		LO.Exceptions = 1;
 		LO.CXXExceptions = 1;
@@ -293,9 +282,6 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	pimpl->clang.getDiagnosticClient().BeginSourceFile(
 										pimpl->clang.getLangOpts(),
 										&pimpl->clang.getPreprocessor());
-
-	// TODO: remove
-	std::cout << "********** done compiler intitiaziation for " << file_name << "************" << std::endl;
 }
 
 ASTContext& 		ClangCompiler::getASTContext()    const { return pimpl->clang.getASTContext(); }

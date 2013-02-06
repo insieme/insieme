@@ -161,11 +161,10 @@ namespace conversion {
 	FinalActions attachLog( [&] () { END_LOG_EXPR_CONVERSION(retIr); } )
 
 #define START_LOG_EXPR_CONVERSION(expr) \
-	assert(convFact.currTU && "Translation unit not correctly set"); \
 	VLOG(1) << "\n****************************************************************************************\n" \
 			 << "Converting expression [class: '" << expr->getStmtClassName() << "']\n" \
 			 << "-> at location: (" <<	\
-				utils::location(expr->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
+				utils::location(expr->getLocStart(), convFact.currTU.top()->getCompiler().getSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
 		VLOG(2) << "Dump of clang expression: \n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
@@ -383,7 +382,13 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, PredefinedExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryExprOrTypeTraitExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, MemberExpr)
-	CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
+
+	//CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
+	core::ExpressionPtr VisitBinaryOperator( clang::BinaryOperator* expr ) { 
+		expr->dump();
+		return ExprConverter::VisitBinaryOperator( expr ); 
+	}
+
 	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ConditionalOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ArraySubscriptExpr)

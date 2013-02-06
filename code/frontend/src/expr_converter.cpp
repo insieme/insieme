@@ -445,6 +445,7 @@ ExpressionList ConversionFactory::ExprConverter::getFunctionArguments(const core
 		}
 		args.push_back( arg );
 	}
+
 	return args;
 }
 
@@ -773,7 +774,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(clang::CastE
 //							FUNCTION CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallExpr* callExpr) {
-
 	START_LOG_EXPR_CONVERSION(callExpr);
 
 	// return converted node
@@ -782,37 +782,33 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 
 	if (callExpr->getDirectCallee()) {
 
-		FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee());
+		FunctionDecl* funcDecl = llvm::cast<FunctionDecl>(callExpr->getDirectCallee());
 		auto funcTy = convFact.convertType(GET_TYPE_PTR(funcDecl)).as<core::FunctionTypePtr>() ;
 
 		// collects the type of each argument of the expression
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
-		assert(convFact.currTU && "Translation unit not set.");
-		const TranslationUnit* oldTU = convFact.currTU;
+		assert(!convFact.currTU.empty() && "Translation unit not set.");
 
 		const FunctionDecl* definition = NULL;
-		/*
-		 * this will find function definitions if they are declared in  the same translation unit
-		 * (also defined as static)
-		 */
+		const TranslationUnit* rightTU = NULL;
+
+		// this will find function definitions if they are declared in  the same translation unit
+		// (also defined as static)
 		if (!funcDecl->hasBody(definition)) {
-			/*
-			 * if the function is not defined in this translation unit, maybe it is defined in another we already
-			 * loaded use the clang indexer to lookup the definition for this function declarations
-			 */
+			// if the function is not defined in this translation unit, maybe it is defined in another we already
+			// loaded use the clang indexer to lookup the definition for this function declarations
 			FunctionDecl* fd = funcDecl;
-			const TranslationUnit* rightTU = convFact.getTranslationUnitForDefinition(fd);
-
-			if (rightTU) {
-				// clang [3.0]convFact.currTU = &Program::getTranslationUnit(clangTU);
-				convFact.currTU = rightTU;
-			}
-
-			if (rightTU && fd->hasBody()) {
-				definition = fd;
-			}
+			rightTU = convFact.getTranslationUnitForDefinition(fd);
+			if (rightTU && fd->hasBody()) { definition = fd; }
 		}
+
+		// point to the right TU
+		if (rightTU)
+			convFact.currTU.push (rightTU);
+		else
+			convFact.currTU.push (convFact.currTU.top());
+
 
 		if (!definition) {
 			//-----------------------------------------------------------------------------------------------------
@@ -839,9 +835,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
+		// No definition has been found in any translation unit, 
+		// we mark this function as extern. and return
 		if (!definition) {
 			std::string callName = funcDecl->getNameAsString();
-			// No definition has been found in any of the translation units, we mark this function as extern!
 			irNode = builder.callExpr(funcTy->getReturnType(), builder.literal(callName, funcTy),
 					packedArgs);
 
@@ -859,31 +856,29 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 								convertClangSrcLoc(convFact.getCurrentSourceManager(), loc.second))
 				);
 			}
-			convFact.currTU = oldTU;
 
 			return irNode;
 		}
 
-		/*
-		 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
-		 * list needs to be initialized with the value of global variable in the current scope
-		 */
+		// =====  We found a definition for funcion, need to be translated ======
+		
+		// need tolookup if this fuction needs to access the globals, in that case the capture
+		// list needs to be initialized with the value of global variable in the current scope
 		if (ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end()) {
-			/*
-			 * we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
-			 * current context
-			 */
+			// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
+			// current context
 			assert( ctx.globalVar && "No global definitions forwarded to this point");
 			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 		}
 
+		// function definition might be already processed and cached, 
+		// otherwise create the call expression node,
 		ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
 		if (fit != ctx.lambdaExprCache.end()) {
-			convFact.currTU = oldTU;
 			irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
 					 packedArgs);
-			convFact.currTU = oldTU;
 
+			convFact.currTU.pop();
 			return irNode;
 		}
 
@@ -892,11 +887,13 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 		auto lambdaExpr = core::static_pointer_cast<const core::Expression>(
 				convFact.convertFunctionDecl(definition));
 
-		convFact.currTU = oldTU;
-
+		convFact.currTU.pop();
 		return (irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs));
 	} 
 
+
+	// if there callee is not a fuctionDecl we need to use other method.
+	// it might be a pointer to function. or another artifact
 	if ( callExpr->getCallee() ) {
 		core::ExpressionPtr funcPtr = convFact.tryDeref(Visit(callExpr->getCallee()));
 		core::TypePtr subTy = funcPtr->getType();
@@ -913,9 +910,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 		auto funcTy = subTy.as<core::FunctionTypePtr>();
 
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
-
 		return irNode = builder.callExpr(funcPtr, args);
-
 	} 
 	
 	assert( false && "Call expression not referring a function");
@@ -1076,9 +1071,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitMemberExpr(clang::Mem
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang::BinaryOperator* binOp) {
 	START_LOG_EXPR_CONVERSION(binOp);
-
 	core::ExpressionPtr retIr;
-	LOG_EXPR_CONVERSION(retIr);
 
 	core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
 	core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
@@ -1091,10 +1084,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		rhs = builder.callExpr( builder.getLangBasic().getVolatileRead(), rhs);
 	}
 
-	/*
-	 * if the binary operator is a comma separated expression, we convert it into a function call which returns the
-	 * value of the last expression
-	 */
+	// if the binary operator is a comma separated expression, we convert it into a function call which returns the
+	// value of the last expression
 	if ( binOp->getOpcode() == BO_Comma ) {
 		
 		core::TypePtr retType;
@@ -1157,6 +1148,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 		isCompound = false;
 	}
 
+	// perform any pointer arithmetic needed
 	auto doPointerArithmetic = [&] () {
 		// LHS must be a ref<array<'a>>
 		core::TypePtr subRefTy = GET_REF_ELEM_TYPE(lhs->getType());
@@ -1318,13 +1310,15 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 			
 			lhs = utils::cast(lhs, exprTy);
 			// check if lhs is not an ocl-vector, in this case create a vector form the scalar
-//			if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) { // the rhs is a scalar, implicitly casted to a vector
+//			if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) { 
+//			// the rhs is a scalar, implicitly casted to a vector
 //				// lhs is a scalar
 //				lhs = scalarToVector(lhs, rhsTy, builder, convFact);
 //			} else
 //				lhs = convFact.tryDeref(lhs); // lhs is an ocl-vector
 //
-//			if(binOp->getRHS()->getStmtClass() == Stmt::ImplicitCastExprClass ) { // the rhs is a scalar, implicitly casted to a vector
+//			if(binOp->getRHS()->getStmtClass() == Stmt::ImplicitCastExprClass ) { 
+//			// the rhs is a scalar, implicitly casted to a vector
 //				// rhs is a scalar
 //				rhs = scalarToVector(rhs, lhsTy, builder, convFact);
 //			} else
@@ -1438,9 +1432,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 	// add source code annotation to the rhs if present
 	
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-	" RHS(" << *rhs << "[" << *rhs->getType() << "])";
+				" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 
-	return (retIr = builder.callExpr( exprTy, opFunc, lhs, rhs ));
+	retIr = builder.callExpr( exprTy, opFunc, lhs, rhs );
+	return retIr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

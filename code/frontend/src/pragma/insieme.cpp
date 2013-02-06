@@ -210,12 +210,10 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
     const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
     std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
 
-    std::for_each(iter.first, iter.second,
+   std::for_each(iter.first, iter.second,
         [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
             const frontend::InsiemeDatarange* dr = dynamic_cast<const frontend::InsiemeDatarange*>( &*(curr.second) );
             if(dr) {
-				// FIXME: this is failing, find a solution
-				assert(false && "deprecated pragma data range annotation");
 
             	pragma::MatchMap mmap = dr->getMatchMap();
 
