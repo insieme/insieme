@@ -134,8 +134,9 @@ namespace frontend {
 struct ClangCompiler::ClangCompilerImpl {
 	CompilerInstance clang;
 	DiagnosticOptions diagOpts;
+	llvm::IntrusiveRefCntPtr<TargetOptions> TO;
 	bool m_isCXX;
-	ClangCompilerImpl() : clang(), diagOpts(), m_isCXX(false) {}
+	ClangCompilerImpl() : clang(), diagOpts(), TO(new TargetOptions), m_isCXX(false) {}
 };
 
 ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
@@ -154,11 +155,10 @@ ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 	pimpl->clang.setInvocation(CI);
 	*/
 
-	TargetOptions TO;
 	// fix the target architecture to be a 64 bit machine:
 	// 		in this way we don't have differences between the size of integer/float types across architecture
-	TO.Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
-	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), TO) );
+	pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
+	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
 
 
 	pimpl->clang.createPreprocessor();
@@ -217,11 +217,9 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 		}
 	);
 
-	TargetOptions TO;
 	// fix the target architecture to be a 64 bit machine
-	TO.Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
-	// TO.Triple = llvm::sys::getHostTriple();
-	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), TO) );
+	pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
+	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
 
 	std::string extension(file_name.substr(file_name.rfind('.')+1, std::string::npos));
 	bool enableCpp = extension == "C" || 
