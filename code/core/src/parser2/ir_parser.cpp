@@ -1056,14 +1056,16 @@ namespace parser {
 					seq("var(",E,")"),
 					[](Context& cur)->NodePtr {
 						return cur.refVar(cur.getTerm(0).as<ExpressionPtr>());
-					}
+					},
+					0
 			));
 
 			g.addRule("E", rule(
 					seq("var(",T,")"),
 					[](Context& cur)->NodePtr {
 						return cur.refVar(cur.undefined(cur.getTerm(0).as<TypePtr>()));
-					}
+					},
+					-1		// less priority than the expression based variant
 			));
 
 			g.addRule("E", rule(
@@ -1071,14 +1073,16 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 				std::cout << cur.getTerm(0) << " of type " << cur.getTerm(0)->getNodeType() << "\n";
 						return cur.refNew(cur.getTerm(0).as<ExpressionPtr>());
-					}
+					},
+					0
 			));
 
 			g.addRule("E", rule(
 					seq("new(",T,")"),
 					[](Context& cur)->NodePtr {
 						return cur.refNew(cur.undefined(cur.getTerm(0).as<TypePtr>()));
-					}
+					},
+					-1		// less priority than the expression based variant
 			));
 
 			g.addRule("E", rule(
