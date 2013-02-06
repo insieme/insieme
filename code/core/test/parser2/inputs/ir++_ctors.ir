@@ -26,9 +26,13 @@ int main() {
 	// create a stack based A with initial value
 	ref<A> a4 = ctorA2(new(A), 3);
 	
+	// re-initialize an existing variable (placement new)
+	ref<A> a5; ctorA2(a5, 4);
+	
 	print("a1.x = %d\n", *a1.x);
 	print("a2.x = %d\n", *a2.x);
 	print("a3.x = %d\n", *a3.x);
 	print("a4.x = %d\n", *a4.x);
-		
+	print("a5.x = %d\n", *a5.x);
+			
 }

@@ -479,8 +479,9 @@ namespace c_ast {
 		TypePtr classType;
 		vector<NodePtr> arguments;
 		bool onHeap;
-		ConstructorCall(TypePtr classType, const vector<NodePtr>& args, bool onHeap = false)
-			: Expression(NT_ConstructorCall), classType(classType), arguments(args), onHeap(onHeap) {}
+		ExpressionPtr location;
+		ConstructorCall(TypePtr classType, const vector<NodePtr>& args, bool onHeap = false, ExpressionPtr location = ExpressionPtr())
+			: Expression(NT_ConstructorCall), classType(classType), arguments(args), onHeap(onHeap), location(location) {}
 		virtual bool equals(const Node& node) const;
 	};
 
