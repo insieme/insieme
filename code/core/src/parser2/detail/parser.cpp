@@ -711,6 +711,7 @@ namespace detail {
 
 
 	bool Sequence::SubSequence::updateStartSet(const Grammar& g, TokenSet& start) const {
+		if (terms.empty()) return false;
 		bool res = false;
 		auto it = terms.begin();
 		do {

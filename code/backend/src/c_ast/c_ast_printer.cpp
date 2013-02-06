@@ -216,6 +216,10 @@ namespace c_ast {
 			}
 
 			PRINT(Compound) {
+
+				// short-cut for empty blocks
+				if (node->statements.empty()) return out << "{ }";
+
 				out << "{";
 				incIndent();
 				newLine(out);
@@ -466,6 +470,14 @@ namespace c_ast {
 				}) << ")";
 			}
 
+			PRINT(ConstructorCall) {
+				// <new> <className> ( <arguments> )
+				return out << (node->onHeap?"new ":"") << print(node->classType) << "("
+						<< join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) {
+							out << print(cur);
+				}) << ")";
+			}
+
 			PRINT(Parentheses) {
 				return out << "(" << print(node->expression) << ")";
 			}
@@ -493,13 +505,13 @@ namespace c_ast {
 			PRINT(ConstructorPrototype) {
 				// <class name> ( <parameter list > );
 				auto ctor = node->ctor;
-				return out << print(ctor->className) << "(" << printParam(ctor->function->parameter)<< ");\n";
+				return out << print(ctor->className) << "(" << printMemberParam(ctor->function->parameter)<< ")";
 			}
 
 			PRINT(DestructorPrototype) {
 				// <virtual> ~ <class name> ( <parameter list > );
 				auto dtor = node->dtor;
-				return out << (node->isVirtual?"virtual ":"") << "~" << print(dtor->className) << "();\n";
+				return out << (node->isVirtual?"virtual ":"") << "~" << print(dtor->className) << "()";
 			}
 
 			PRINT(MemberFunctionPrototype) {
@@ -507,10 +519,11 @@ namespace c_ast {
 				auto fun = node->fun->function;
 				return out
 						<< (node->isVirtual?"virtual ":"")
-						<< print(fun->returnType)
+						<< print(fun->returnType) << " "
 						<< print(fun->name)
-						<< "(" << printParam(fun->parameter)<< ")"
-						<< (node->fun->isConstant?" const":"") << ";\n";
+						<< "(" << printMemberParam(fun->parameter)<< ")"
+						<< (node->fun->isConstant?" const":"")
+						<< (node->pureVirtual?" =0":"");
 			}
 
 			PRINT(ExtVarDecl) {
@@ -544,14 +557,14 @@ namespace c_ast {
 				}
 
 				// start definition
-				out << " {\n    ";
+				out << " {";
 
 				// add fields
+				if (!composite->elements.empty()) out << "\n    ";
 				out << join(";\n    ", composite->elements,
 						[&](std::ostream& out, const VariablePtr& cur) {
 							out << printParam(cur);
 				});
-
 				if (!composite->elements.empty()) out << ";";
 
 				// add member functions
@@ -559,16 +572,25 @@ namespace c_ast {
 
 					// todo: add ctor / dtor
 
+					// add constructors
+					if (!structType->ctors.empty()) out << "\n    ";
+					out << join(";\n    ", structType->ctors,
+							[&](std::ostream& out, const ConstructorPrototypePtr& cur) {
+								out << print(cur);
+					});
+					if (!structType->ctors.empty()) out << ";";
+
+					// add destructor
+					if (structType->dtor) out << "\n    ";
+					out << print(structType->dtor);
+					if (structType->dtor) out << ";";
+
+
 					// add member functions
 					if (!structType->members.empty()) out << "\n    ";
 					out << join(";\n    ", structType->members,
 							[&](std::ostream& out, const MemberFunctionPrototypePtr& cur) {
-								out 	<< (cur->isVirtual?"virtual ":"")
-										<< print(cur->fun->function->returnType) << " "
-										<< print(cur->fun->function->name)
-										<< "(" << printMemberParam(cur->fun->function->parameter) << ")"
-										<< (cur->fun->isConstant?" const":"")
-										;
+								out << print(cur);
 					});
 					if (!structType->members.empty()) out << ";";
 
@@ -610,7 +632,7 @@ namespace c_ast {
 				auto fun = node->function;
 
 				// print header
-				out << print(node->className) << "(" << printParam(fun->parameter) << ") ";
+				out << print(node->className) << "::" << print(node->className) << "(" << printMemberParam(fun->parameter) << ") ";
 
 				// TODO: add initializer list
 
@@ -624,7 +646,7 @@ namespace c_ast {
 				auto fun = node->function;
 
 				// print header
-				out << "~" << print(node->className) << "() ";
+				out << print(node->className) << "::~" << print(node->className) << "() ";
 
 				// print body
 				return out << print(wrapBody(fun->body));

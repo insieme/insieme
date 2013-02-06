@@ -419,11 +419,30 @@ namespace backend {
 		return converter.getCNodeManager()->create<c_ast::Continue>();
 	}
 
+	namespace {
+
+		bool toBeAllocatedOnStack(const core::ExpressionPtr& initValue) {
+			auto& basic = initValue->getNodeManager().getLangBasic();
+
+			// if it is a call to a ref.var => put it on the stack
+			if (core::analysis::isCallOf(initValue, basic.getRefVar())) {
+				return true;
+			}
+
+			// if it is a constructor call ..
+			if (core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) {
+				return core::analysis::isCallOf(call[0], basic.getRefVar());
+			}
+
+			// everything else is heap based
+			return false;
+		}
+
+	}
+
 	c_ast::NodePtr StmtConverter::visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, ConversionContext& context) {
 
 		// goal: create a variable declaration and register new variable within variable manager
-
-		auto& basic = converter.getNodeManager().getLangBasic();
 		auto manager = converter.getCNodeManager();
 
 		core::VariablePtr var = ptr->getVariable();
@@ -432,7 +451,7 @@ namespace backend {
 		// decide storage location of variable
 		VariableInfo::MemoryLocation location = VariableInfo::NONE;
 		if (core::analysis::hasRefType(var)) {
-			if (core::analysis::isCallOf(init, basic.getRefVar())) {
+			if (toBeAllocatedOnStack(init)) {
 				location = VariableInfo::DIRECT;
 			} else {
 				location = VariableInfo::INDIRECT;

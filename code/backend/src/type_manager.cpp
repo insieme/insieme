@@ -44,13 +44,16 @@
 
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
+#include "insieme/backend/function_manager.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -613,7 +616,59 @@ namespace backend {
 				type->parents.push_back(manager->create<c_ast::Parent>(parent->isVirtual(), parentInfo->lValueType));
 			}
 
-			// TODO: process class meta infos
+			// -- Process Meta-Infos --
+
+			// skip rest if there is no meta-info present
+			if (!core::hasMetaInfo(ptr)) {
+				return res;
+			}
+
+			// save current info (otherwise the following code will result in an infinite recursion)
+			addInfo(ptr, res);
+
+			auto& nameMgr = converter.getNameManager();
+			const core::ClassMetaInfo& info = core::getMetaInfo(ptr);
+			auto& funMgr = converter.getFunctionManager();
+
+			// add constructors
+			for(const core::LambdaExprPtr& cur : info.getConstructors()) {
+				// let function manager handle it
+				funMgr.getInfo(cur);
+			}
+
+			// add destructor
+			if (auto dtor = info.getDestructor()) {
+				// let function manager handle it
+				funMgr.getInfo(dtor, false, info.isDestructorVirtual());
+			}
+
+			// add member functions
+			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
+
+				// process function using function manager
+				auto impl = cur.getImplementation();
+				if (!core::analysis::isPureVirtual(impl)) {
+
+					// fix name
+					nameMgr.setName(impl, cur.getName());
+
+					// generate code for member function
+					funMgr.getInfo(cur.getImplementation().as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
+
+				} else {
+
+					// resolve the type of this function and all its dependencies using the function manager
+					// by asking for an temporary "external function"
+
+					// create temporary literal ...
+					core::NodeManager& nodeMgr = ptr->getNodeManager();
+
+					// ... and resolve dependencies (that's all, function manager will do the rest)
+					funMgr.getInfo(core::Literal::get(nodeMgr, impl.getType(), cur.getName()), cur.isConst());
+				}
+			}
+
+			// TODO: process class ctors and dtors
 
 			// done
 			return res;
@@ -833,9 +888,6 @@ namespace backend {
 
 			auto manager = converter.getCNodeManager();
 
-			// create result
-			RefTypeInfo* res = new RefTypeInfo();
-
 			// obtain information covering sub-type
 			auto elementNodeType = ptr->getElementType()->getNodeType();
 			const TypeInfo* subType = resolveType(ptr->getElementType());
@@ -846,6 +898,9 @@ namespace backend {
 				assert(dynamic_cast<const RefTypeInfo*>(pos->second));
 				return static_cast<const RefTypeInfo*>(pos->second);
 			}
+
+			// create result
+			RefTypeInfo* res = new RefTypeInfo();
 
 			// produce R and L value type
 			// generally, a level of indirection needs to be added

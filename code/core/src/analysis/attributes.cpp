@@ -56,6 +56,8 @@ namespace analysis {
 
 	}
 
+	typedef encoder::ListConverter<ExpressionPtr, encoder::DirectExprConverter> AttributConverter;
+
 
 	bool hasAttribute(const ExpressionPtr& expr, const AttributePtr& attribute) {
 		assert(isAttribute(attribute) && "Checking for non-attribute!");
@@ -121,7 +123,7 @@ namespace analysis {
 		auto res = getAttributes(call->getArgument(0));
 
 		// add local attributes
-		auto attributes = core::encoder::toValue<vector<ExpressionPtr>>(call->getArgument(1));
+		auto attributes = core::encoder::toValue<vector<ExpressionPtr>, AttributConverter>(call->getArgument(1));
 		res.insert(attributes.begin(), attributes.end());
 
 		// return united result
@@ -135,7 +137,7 @@ namespace analysis {
 
 		// build up attribute list
 		std::vector<AttributePtr> list(attributes.begin(), attributes.end());
-		ExpressionPtr attrExpr = core::encoder::toIR(mgr, list);
+		ExpressionPtr attrExpr = core::encoder::toIR<decltype(list), AttributConverter>(mgr, list);
 
 		// build wrapped expression
 		return builder.callExpr(expr->getType(), ext.getAttr(), stripAttributes(expr), attrExpr);

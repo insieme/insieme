@@ -340,6 +340,12 @@ namespace c_ast {
 		return *memberFun==*other.memberFun && *object == *other.object && ::equals(arguments, other.arguments, equal_target<NodePtr>());
 	}
 
+	bool ConstructorCall::equals(const Node& node) const {
+		assert(dynamic_cast<const ConstructorCall*>(&node));
+		auto other = static_cast<const ConstructorCall&>(node);
+		return *classType == *other.classType && onHeap == other.onHeap && ::equals(arguments, other.arguments, equal_target<NodePtr>());
+	}
+
 	bool Parentheses::equals(const Node& node) const {
 		assert(dynamic_cast<const Parentheses*>(&node));
 		auto other = static_cast<const Parentheses&>(node);
@@ -379,7 +385,7 @@ namespace c_ast {
 	bool MemberFunctionPrototype::equals(const Node& node) const {
 		assert(dynamic_cast<const MemberFunctionPrototype*>(&node));
 		auto other = static_cast<const MemberFunctionPrototype&>(node);
-		return isVirtual == other.isVirtual && ((!fun && !other.fun) || *fun == *other.fun);
+		return isVirtual == other.isVirtual && pureVirtual == other.pureVirtual && ((!fun && !other.fun) || *fun == *other.fun);
 	}
 
 	bool TypeDefinition::equals(const Node& node) const {

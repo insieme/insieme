@@ -475,6 +475,15 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct ConstructorCall : public Expression {
+		TypePtr classType;
+		vector<NodePtr> arguments;
+		bool onHeap;
+		ConstructorCall(TypePtr classType, const vector<NodePtr>& args, bool onHeap = false)
+			: Expression(NT_ConstructorCall), classType(classType), arguments(args), onHeap(onHeap) {}
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct Parentheses : public Expression {
 		ExpressionPtr expression;
 		Parentheses(ExpressionPtr expression) : Expression(NT_Parentheses), expression(expression) {}
@@ -523,9 +532,10 @@ namespace c_ast {
 
 	struct MemberFunctionPrototype : public Node {
 		bool isVirtual;
-		MemberFunctionPtr fun;		// this is a null pointer if it is pure-virtual
-		MemberFunctionPrototype(const MemberFunctionPtr& fun, bool isVirtual = false)
-			: Node(NT_MemberFunctionPrototype), isVirtual(isVirtual), fun(fun) {}
+		MemberFunctionPtr fun;
+		bool pureVirtual;
+		MemberFunctionPrototype(const MemberFunctionPtr& fun, bool isVirtual = false, bool isPureVirtual = false)
+			: Node(NT_MemberFunctionPrototype), isVirtual(isVirtual), fun(fun), pureVirtual(isPureVirtual) {}
 		virtual bool equals(const Node& node) const;
 	};
 

@@ -292,6 +292,8 @@ namespace core {
 				"T::()->int<4> { return sqrt(this->x*this->x + this->y * this->y); }"
 				,symbols).as<LambdaExprPtr>());
 
+		info.addMemberFunction("magic", builder.getPureVirtual(builder.parseType("T::()->bool", symbols).as<FunctionTypePtr>()));
+
 		setMetaInfo(type, info);
 
 

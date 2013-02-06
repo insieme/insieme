@@ -41,6 +41,7 @@
 #include <tuple>
 
 #include "insieme/core/ir.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/lazy.h"
@@ -67,8 +68,7 @@ namespace core {
 		/**
 		 * The implementation of the member function.
 		 */
-		LambdaExprPtr lambda;
-
+		ExpressionPtr impl;
 		/**
 		 * Marks this member function to be virtual or not.
 		 */
@@ -86,12 +86,14 @@ namespace core {
 		 * the full list of parameters describing a member function.
 		 *
 		 * @param name the name of the member function
-		 * @param lambda the implementation of the member function
+		 * @param impl the implementation of the member function
 		 * @param _virtual marks the resulting member function to be virtual
 		 * @param _const marks the resulting member function to be const
 		 */
-		MemberFunction(const string& name, const LambdaExprPtr& lambda, bool _virtual = false, bool _const = false)
-			: name(name), lambda(lambda), m_virtual(_virtual), m_const(_const) {}
+		MemberFunction(const string& name, const ExpressionPtr& impl, bool _virtual = false, bool _const = false)
+			: name(name), impl(impl), m_virtual(_virtual), m_const(_const) {
+			assert(impl->getNodeType() == NT_LambdaExpr || analysis::isPureVirtual(impl));
+		}
 
 		/**
 		 * Obtains the name of this member function.
@@ -105,15 +107,18 @@ namespace core {
 		/**
 		 * Obtains the implementation of the represented member function.
 		 */
-		const LambdaExprPtr& getImplementation() const {
-			return lambda;
+		const ExpressionPtr& getImplementation() const {
+			return impl;
 		}
 
 		/**
 		 * Updates the implementation of this member function.
 		 */
-		void setImplementation(const LambdaExprPtr& newImpl) {
-			lambda = newImpl;
+		void setImplementation(const ExpressionPtr& newImpl) {
+			assert(newImpl->getType()->getNodeType() == NT_FunctionType);
+			assert(newImpl->getType().as<FunctionTypePtr>()->isMemberFunction());
+			assert(newImpl->getNodeType() == NT_LambdaExpr || analysis::isPureVirtual(newImpl));
+			impl = newImpl;
 		}
 
 		/**
@@ -136,8 +141,8 @@ namespace core {
 		bool operator==(const MemberFunction& other) const {
 			return this == &other || (
 					name == other.name &&
-					*lambda == *other.lambda &&
-					m_virtual==other.m_virtual &&
+					*impl == *other.impl &&
+					m_virtual == other.m_virtual &&
 					m_const == other.m_const
 			);
 		}
@@ -299,7 +304,7 @@ namespace core {
 		 * @param _virtual determines whether the function to be added should be marked virtual
 		 * @param _const determines whether the function to be added should be marked const
 		 */
-		void addMemberFunction(const string& name, const LambdaExprPtr& impl, bool _virtual = false, bool _const = false) {
+		void addMemberFunction(const string& name, const ExpressionPtr& impl, bool _virtual = false, bool _const = false) {
 			addMemberFunction(MemberFunction(name, impl, _virtual, _const));
 		}
 
@@ -421,7 +426,7 @@ namespace core {
 		 *
 		 * @return true if valid, false otherwise
 		 */
-		bool checkObjectType(const LambdaExprPtr& lambda) const;
+		bool checkObjectType(const ExpressionPtr& lambda) const;
 	};
 
 	/**
