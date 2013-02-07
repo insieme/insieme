@@ -38,7 +38,6 @@
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/utils/member_access_literal_updater.h"
-#include "insieme/core/type_utils.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 

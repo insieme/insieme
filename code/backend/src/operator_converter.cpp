@@ -57,6 +57,7 @@
 #include "insieme/core/transform/simplify.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/types/variable_sized_struct_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -462,7 +463,7 @@ namespace backend {
 			}
 
 			// special handling for variable sized structs
-			if (core::isVariableSized(resType->getElementType())) {
+			if (core::types::isVariableSized(resType->getElementType())) {
 				// Create code similar to this:
 				// 		(A*)memcpy(malloc(sizeof(A) + sizeof(float) * v2), &(struct A){ v2 }, sizeof(A))
 
@@ -471,7 +472,7 @@ namespace backend {
 
 				// get types of struct and element
 				auto structType = initValue->getType();
-				auto elementType = core::getRepeatedType(structType);
+				auto elementType = core::types::getRepeatedType(structType);
 
 				// get size of variable part
 				auto arrayInitValue = initValue->getMembers().back()->getValue();

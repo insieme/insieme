@@ -39,14 +39,17 @@
 #include <boost/unordered_set.hpp>
 
 #include "insieme/core/ir_node.h"
-#include "insieme/core/type_utils.h"
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/map_utils.h"
 
+#include "insieme/core/types/subtyping.h"
+#include "insieme/core/types/substitution.h"
+#include "insieme/core/types/unification.h"
+
 namespace insieme {
 namespace core {
-namespace analysis {
+namespace types {
 
 	/**
 	 * This class is forming a collection of sub-type constraints.
@@ -192,6 +195,6 @@ namespace analysis {
 
 	};
 
-} // end namespace analysis
+} // end namespace types
 } // end namespace core
 } // end namespace insieme

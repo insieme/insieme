@@ -41,18 +41,21 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/type_utils.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/type_utils.h"
+
+#include "insieme/core/types/subtyping.h"
+#include "insieme/core/types/return_type_deduction.h"
+
 #include "insieme/utils/logging.h"
 
 namespace {
 
 using namespace insieme::core;
 using namespace insieme::core::transform;
+using namespace insieme::core::types;
 
 using namespace insieme::utils::map;
 

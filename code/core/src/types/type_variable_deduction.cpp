@@ -34,14 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/analysis/type_variable_deduction.h"
+#include "insieme/core/types/type_variable_deduction.h"
 
 #include <iterator>
 
 #include "insieme/utils/annotation.h"
 
-#include "insieme/core/analysis/type_variable_renamer.h"
-#include "insieme/core/analysis/subtype_constraints.h"
+#include "insieme/core/types/type_variable_renamer.h"
+#include "insieme/core/types/subtype_constraints.h"
 
 #include "insieme/core/transform/node_replacer.h"
 
@@ -51,7 +51,7 @@
 
 namespace insieme {
 namespace core {
-namespace analysis {
+namespace types {
 
 	namespace {
 
@@ -802,6 +802,6 @@ namespace analysis {
 		return res;
 	}
 
-} // end namespace analysis
+} // end namespace types
 } // end namespace core
 } // end namespace insieme

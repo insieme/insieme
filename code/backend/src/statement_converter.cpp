@@ -48,9 +48,9 @@
 #include "insieme/backend/variable_manager.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/types/variable_sized_struct_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -302,7 +302,7 @@ namespace backend {
 		});
 
 		// remove last element if it is a variable sized struct
-		if (core::isVariableSized(ptr->getType())) {
+		if (core::types::isVariableSized(ptr->getType())) {
 			assert(!init->values.empty());
 			init->values.pop_back();
 		}

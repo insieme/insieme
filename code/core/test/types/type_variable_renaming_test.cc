@@ -39,11 +39,11 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/analysis/type_variable_renamer.h"
+#include "insieme/core/types/type_variable_renamer.h"
 
 namespace insieme {
 namespace core {
-namespace analysis {
+namespace types {
 
 TEST(TypeVariableRenamer, Basic) {
 

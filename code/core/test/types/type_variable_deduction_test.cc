@@ -38,12 +38,12 @@
 
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/core/analysis/type_variable_deduction.h"
-#include "insieme/core/analysis/subtype_constraints.h"
+#include "insieme/core/types/type_variable_deduction.h"
+#include "insieme/core/types/subtype_constraints.h"
 
 namespace insieme {
 namespace core {
-namespace analysis {
+namespace types {
 
 using namespace utils::set;
 
