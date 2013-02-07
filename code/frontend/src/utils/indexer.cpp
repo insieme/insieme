@@ -127,7 +127,7 @@ Indexer::tStored Indexer::getDefAndTUforDefinition (const std::string& symbol) c
 
 ////////////////////////////////////////////////
 //
-clang::Decl* Indexer::getDefDefinitionFor (const std::string& symbol) const{
+clang::Decl* Indexer::getDefinitionFor (const std::string& symbol) const{
 
 	tIndex::const_iterator match = this->mIndex.find(symbol);
 	if (match != this->mIndex.end()){
@@ -141,15 +141,15 @@ clang::Decl* Indexer::getDefDefinitionFor (const std::string& symbol) const{
 
 ////////////////////////////////////////////////
 ///
-Indexer::tStored Indexer::getDefAndTUforDefinition (clang::Decl* decl) const{
+Indexer::tStored Indexer::getDefAndTUforDefinition (const clang::Decl* decl) const{
 	return getDefAndTUforDefinition(llvm::cast<clang::NamedDecl>(decl)->getNameAsString());
 }
 
 
 ////////////////////////////////////////////////
 //
-clang::Decl* Indexer::getDefDefinitionFor (clang::Decl* decl) const{
-	return getDefDefinitionFor(llvm::cast<clang::NamedDecl>(decl)->getNameAsString());
+clang::Decl* Indexer::getDefinitionFor (const clang::Decl* decl) const{
+	return getDefinitionFor(llvm::cast<clang::NamedDecl>(decl)->getNameAsString());
 }
 
 

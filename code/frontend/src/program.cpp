@@ -226,12 +226,8 @@ Program::~Program() {
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
 	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name, pimpl->mIdx);
 
-	//pimpl->mIdx.IndexAST( dynamic_cast<clang::idx::TranslationUnit*>(tuImpl) );
 	pimpl->mIdx.indexTU(tuImpl);
 //	pimpl->mIdx.dump();
-
-	//FIXME:  fill the callgraph
-	//pimpl->mCallGraph.addTU( tuImpl->getASTContext() );
 	
 	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	return *tuImpl;
@@ -365,14 +361,9 @@ const core::ProgramPtr& Program::convert() {
 		// called functions according to the callgraph of the input program.
 		clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
 		assert(main && "Program has no main()");
-		// FIXME: get the main function declaration from somewhere.
-		//   callgraph
-		//   indexer
-	//mProgram = astConvPtr->handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
-	//
 	
 		mProgram = astConvPtr->handleFunctionDecl(
-								dyn_cast<const FunctionDecl>(pimpl->mIdx.getDefDefinitionFor("main")));
+								dyn_cast<const FunctionDecl>(pimpl->mIdx.getDefinitionFor("main")));
 	}
 
 	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";

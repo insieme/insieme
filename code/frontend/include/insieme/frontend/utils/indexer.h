@@ -86,15 +86,15 @@ public:
 
 	////////////////////////////////////////////////
 	//
-	clang::Decl* getDefDefinitionFor (const std::string &symbol) const;
+	clang::Decl* getDefinitionFor (const std::string &symbol) const;
 
 	////////////////////////////////////////////////
 	//
-	clang::Decl* getDefDefinitionFor (clang::Decl* decl) const;
+	clang::Decl* getDefinitionFor (const clang::Decl* decl) const;
 
 	////////////////////////////////////////////////
 	///
-	tStored getDefAndTUforDefinition (clang::Decl* decl) const;
+	tStored getDefAndTUforDefinition (const clang::Decl* decl) const;
 
 	////////////////////////////////////////////////
 	//

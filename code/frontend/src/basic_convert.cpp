@@ -75,14 +75,14 @@
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
-#include "clang/Basic/FileManager.h"
+#include <clang/Basic/FileManager.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/ASTContext.h"
+#include <clang/AST/ASTConsumer.h>
+#include <clang/AST/ASTContext.h>
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
 #include <clang/AST/CXXInheritance.h>
-#include "clang/AST/StmtVisitor.h"
+#include <clang/AST/StmtVisitor.h>
 
 // [3.0]
 //#include "clang/Index/Entity.h"
@@ -122,16 +122,10 @@ namespace conversion {
 ///
 const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(FunctionDecl*& funcDecl) {
 
-	// get symbol name
-	clang::NamedDecl *name = llvm::cast<clang::NamedDecl>(funcDecl);
-	assert(name && "must have a name");
-
+	// if the function is not defined in this translation unit, maybe it is defined in another we already
+	// loaded use the clang indexer to lookup the definition for this function declarations
 	ConversionFactory::TranslationUnitPair&& ret = 
-			program.getIndexer().getDefAndTUforDefinition (name->getNameAsString());
-
-	if (!ret.first){
-		VLOG(2) << "no TU for: " << name->getNameAsString();
-	}
+			program.getIndexer().getDefAndTUforDefinition (funcDecl);
 
 	// function declaration not found. return the current translation unit
 	if ( !ret.first ) {return NULL;}
@@ -141,9 +135,7 @@ const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitF
 	funcDecl = llvm::cast<FunctionDecl> ( ret.first);
 	return ret.second;
 
-/* FIXME: clang [3.0]
-	// if the function is not defined in this translation unit, maybe it is defined in another we already
-	// loaded use the clang indexer to lookup the definition for this function declarations
+/* clang [3.0]
 	clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, program.getClangProgram());
 	ConversionFactory::TranslationUnitPair&& ret = program.getClangIndexer().getDefinitionFor(funcEntity);
 
@@ -886,10 +878,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
   		ConversionContext::RecVarExprMap::const_iterator fit = ctx.recVarExprMap.find(funcDecl);
 
   		if (fit != ctx.recVarExprMap.end()) {
-  			/*
-  			 * we are resolving a parent recursive type, so when one of the recursive functions in the
-  			 * connected components are called, the introduced mu variable has to be used instead.
-  			 */
+  			// we are resolving a parent recursive type, so when one of the recursive functions in the
+  			// connected components are called, the introduced mu variable has to be used instead.
   			return fit->second;
   		}
 	}
@@ -945,11 +935,11 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	if (!components.empty()) {
 		// we are dealing with a recursive type
-		VLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
+		//VLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
 				<< "Number of components in the cycle: " << components.size();
 
 		std::for_each(components.begin(), components.end(), [ ] (std::set<const FunctionDecl*>::value_type c) {
-			VLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
+			//VLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
 		});
 
 		/** 
@@ -987,7 +977,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		}
 		if (VLOG_IS_ON(2)) {
-
 			VLOG(2) << "MAP: ";
 			std::for_each(ctx.recVarExprMap.begin(), ctx.recVarExprMap.end(),
 				[] (ConversionContext::RecVarExprMap::value_type c) {
@@ -995,7 +984,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				});
 
 		}
-	}
+	} // endif function call components
 
 	// init parameter set
 	vector<core::VariablePtr> params;
@@ -1041,7 +1030,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// if any of the parameters of this function has been marked as needRef, we need to add a declaration just before
 	// the body of this function
 	vector<core::StatementPtr> decls;
-	std::for_each(params.begin(), params.end(), [ &decls, &body, this ] (core::VariablePtr currParam) {
+	for (auto currParam : params){
 		auto fit = this->ctx.wrapRefMap.find(currParam);
 
 		if ( fit != this->ctx.wrapRefMap.end() ) {
@@ -1066,8 +1055,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 							this->tryDeref(fit->second))
 			);
 		}
-
-	});
+	}
 
 	// if we introduce new decls we have to introduce them just before the body of the function
 	if (!decls.empty()) {
@@ -1125,11 +1113,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, params, body );
 
 	// this is a recurive function call
+	// if we are visiting a nested recursive type it means someone else will take care of building the rectype
+	// node, we just return an intermediate type
 	if (ctx.isRecSubFunc) {
-		/*
-		 * if we are visiting a nested recursive type it means someone else will take care of building the rectype
-		 * node, we just return an intermediate type
-		 */
 		return retLambdaNode;
 	}
 
@@ -1146,9 +1132,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// when a sub recursive type is visited.
 	ctx.isRecSubFunc = true;
 
-/*	 FIXME: clang [3.0]
  	for(auto fd : components) {
-
 		ConversionContext::RecVarExprMap::const_iterator tit = ctx.recVarExprMap.find(fd);
 		assert(tit != ctx.recVarExprMap.end() && "Recursive function has no TypeVar associated");
 		ctx.currVar = tit->second;
@@ -1161,29 +1145,32 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		// is enabled only when the isRecSubType flag is true
 		ctx.recVarExprMap.erase(fd);
 
+		// clang [3.0] 
+		//clang::idx::Entity&& funcEntity =
+		//	clang::idx::Entity::get(const_cast<FunctionDecl*>(fd), program.getClangProgram());
+
 		// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
 		// use the clang indexer to lookup the definition for this function declarations
-		clang::idx::Entity&& funcEntity =
-			clang::idx::Entity::get(const_cast<FunctionDecl*>(fd), program.getClangProgram());
-
-		ConversionFactory::TranslationUnitPair&& ret = program.getClangIndexer().getDefinitionFor(funcEntity);
-		const TranslationUnit* oldTU = currTU;
+		ConversionFactory::TranslationUnitPair&& ret = program.getIndexer().getDefAndTUforDefinition(llvm::cast<Decl>(fd));
 
 		if ( ret.first ) {
-			fd = ret.first;
+			fd = llvm::cast<FunctionDecl>(ret.first);
 			assert(ret.second && "Error loading translation unit for function definition");
-			currTU = &Program::getTranslationUnit(ret.second);
+			currTU.push(ret.second);
 		}
 
 		const core::LambdaPtr& lambda = convertFunctionDecl(fd).as<core::LambdaPtr>();
 		assert(lambda && "Resolution of sub recursive lambda yields a wrong result");
-		currTU = oldTU;
+
+		if (ret.first){
+			currTU.pop();
+		}
 
 		definitions.push_back( builder.lambdaBinding(ctx.currVar, lambda) );
 
 		// reinsert the TypeVar in the map in order to solve the other recursive types
 		ctx.recVarExprMap.insert( {fd, ctx.currVar} );
-	} */
+	} 
 
 	ctx.currVar = NULL;
 

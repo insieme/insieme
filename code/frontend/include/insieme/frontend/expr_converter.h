@@ -382,13 +382,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, PredefinedExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryExprOrTypeTraitExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, MemberExpr)
-
-	//CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
-	core::ExpressionPtr VisitBinaryOperator( clang::BinaryOperator* expr ) { 
-		expr->dump();
-		return ExprConverter::VisitBinaryOperator( expr ); 
-	}
-
+	CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ConditionalOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ArraySubscriptExpr)

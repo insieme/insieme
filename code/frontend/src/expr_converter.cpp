@@ -43,6 +43,7 @@
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -311,11 +312,21 @@ void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
 		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
 		if ( ret.first ) {def = ret.first;}
 	}
+	*/
 
-	if (def) {
+	const clang::FunctionDecl* def = NULL;
+	// if the function has no body, we need to find the right declaration with
+	// the definition in another translation unit
+	if (!funcDecl->hasBody(def)) {
+		clang::Decl* raw = indexer.getDefinitionFor (funcDecl);
+		if (raw){
+			def = llvm::cast<clang::FunctionDecl>(raw);
+		}
+	}
+
+	if (def){
 		callGraph.insert(def);
 	}
-	*/
 }
 
 void CallExprVisitor::VisitCallExpr(clang::CallExpr* callExpr) {

@@ -128,7 +128,7 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 //	res = normalizeLoops(res);
 //	res = removeUnecessaryDerefs(res);
 
-	insieme::analysis::polyhedral::scop::mark(res);
+//	insieme::analysis::polyhedral::scop::mark(res);
 
 	res = deadBranchElimination(res);
 
