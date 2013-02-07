@@ -38,11 +38,12 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_class_info.h"
-#include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
-#include "insieme/core/analysis/type_variable_deduction.h"
+#include "insieme/core/types/subtyping.h"
+#include "insieme/core/types/type_variable_deduction.h"
+#include "insieme/core/types/variable_sized_struct_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/numeric_cast.h"
@@ -347,7 +348,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	}
 
 	// 2) check types of arguments => using variable deduction
-	auto substitution = analysis::getTypeVariableInstantiation(manager, address);
+	auto substitution = types::getTypeVariableInstantiation(manager, address);
 
 	if (!substitution) {
 		TupleTypePtr argumentTuple = TupleType::get(manager, argumentTypes);
@@ -605,7 +606,7 @@ OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
 		StructTypePtr structType = address.as<StructTypePtr>();
 		if (structType.empty()) return res;
 		for(auto it = structType.begin(); it != structType.end() - 1; ++it) {
-			if (isVariableSized(it->getType())) {
+			if (types::isVariableSized(it->getType())) {
 				add(res, Message(address,
 						EC_TYPE_INVALID_ARRAY_CONTEXT,
 						"Variable sized data structure has to be the last component of enclosing struct type.",
@@ -621,7 +622,7 @@ OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
 		TupleTypePtr tupleType = address.as<TupleTypePtr>();
 		if (tupleType.empty()) return res;
 		for(auto it = tupleType.begin(); it != tupleType.end() - 1; ++it) {
-			if (isVariableSized(*it)) {
+			if (types::isVariableSized(*it)) {
 				add(res, Message(address,
 						EC_TYPE_INVALID_ARRAY_CONTEXT,
 						"Variable sized data structure has to be the last component of enclosing tuple type.",
@@ -647,7 +648,7 @@ OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const Declara
 	TypePtr variableType = declaration->getVariable()->getType();
 	TypePtr initType = declaration->getInitialization()->getType();
 
-	if (!isSubTypeOf(initType, variableType)) {
+	if (!types::isSubTypeOf(initType, variableType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_INITIALIZATION_EXPR,
 						format("Invalid type of initial value - expected: \n%s, actual: \n%s",
@@ -696,7 +697,7 @@ OptionalMessageList ForStmtTypeCheck::visitForStmt(const ForStmtAddress& address
 		return res;
 	}
 
-	if (!isSubTypeOf(node->getEnd().getType(), iteratorType)) {
+	if (!types::isSubTypeOf(node->getEnd().getType(), iteratorType)) {
 		add(res, Message(address,
 			EC_TYPE_INVALID_BOUNDARY_TYPE,
 			format("Invalid type of upper loop boundary - expected: %s, actual: %s\n",
@@ -705,7 +706,7 @@ OptionalMessageList ForStmtTypeCheck::visitForStmt(const ForStmtAddress& address
 			Message::ERROR));
 	}
 
-	if (!isSubTypeOf(node->getStep().getType(), iteratorType)) {
+	if (!types::isSubTypeOf(node->getStep().getType(), iteratorType)) {
 		add(res, Message(address,
 			EC_TYPE_INVALID_BOUNDARY_TYPE,
 			format("Invalid type of step size - expected: %s, actual: %s\n",

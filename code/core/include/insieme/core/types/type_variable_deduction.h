@@ -38,13 +38,13 @@
 
 #include <boost/unordered_set.hpp>
 
-#include "insieme/core/type_utils.h"
-
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/types/substitution.h"
 #include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace core {
-namespace analysis {
+namespace types {
 
 /**
  * Tries to compute a valid type variable substitution for a call to a function accepting the given parameter type using
@@ -91,6 +91,6 @@ SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const Functio
 SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExprPtr& call);
 
 
-} // end namespace analysis
+} // end namespace types
 } // end namespace core
 } // end namespace insieme

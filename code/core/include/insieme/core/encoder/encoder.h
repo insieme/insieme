@@ -43,8 +43,8 @@
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/types/subtyping.h"
 
 namespace insieme {
 namespace core {
@@ -241,7 +241,7 @@ namespace encoder {
 				// check type
 				TypePtr should = type_factory<T>()(expr->getNodeManager());
 				TypePtr is = expr->getType();
-				if (!isSubTypeOf(is, should))
+				if (!types::isSubTypeOf(is, should))
 				if (should != is) {
 					throw InvalidExpression(should, is);
 				}
@@ -257,7 +257,7 @@ namespace encoder {
 				}
 
 				// check values again ...
-				assert(isSubTypeOf(expr->getType(), type_factory<T>()(expr->getNodeManager())) && "Cannot convert non-related type!");
+				assert(types::isSubTypeOf(expr->getType(), type_factory<T>()(expr->getNodeManager())) && "Cannot convert non-related type!");
 				assert(expr->getNodeType() == core::NT_Literal && "Simple conversion only works for literals!");
 
 				// convert
@@ -271,7 +271,7 @@ namespace encoder {
 		template<typename T>
 		struct simple_is_encoding_of_test {
 			bool operator()(const core::ExpressionPtr& expr) const {
-				return expr->getNodeType() == NT_Literal && core::isSubTypeOf(expr->getType(), type_factory<T>()(expr->getNodeManager()));
+				return expr->getNodeType() == NT_Literal && types::isSubTypeOf(expr->getType(), type_factory<T>()(expr->getNodeManager()));
 			}
 		};
 	}

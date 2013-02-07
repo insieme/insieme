@@ -35,7 +35,7 @@
  */
 
 #include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/type_utils.h"
+#include "insieme/core/types/subtyping.h"
 
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 
@@ -247,7 +247,7 @@ core::TypePtr vectorArrayTypeToScalarArrayType(core::TypePtr arrayTy, const core
  * checkes if the type of expr is type, otherwise a refReinterpred is added around expr and returned;
  */
 core::ExpressionPtr tryRefReinterpret(core::ExpressionPtr expr, core::TypePtr type, core::IRBuilder builder) {
-	if(!core::isSubTypeOf(expr->getType(), type)) {
+	if(!core::types::isSubTypeOf(expr->getType(), type)) {
 		core::TypePtr exprTy = expr->getType();
 
 		// if there is a deref around the argument and a refReinterpret is needed, remove it and add it around the reinterpret

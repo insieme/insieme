@@ -38,12 +38,10 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/types/substitution.h"
 
 namespace insieme {
 namespace core {
-
-class Substitution;
-typedef boost::optional<Substitution> SubstitutionOpt;
 
 namespace transform {
 	
@@ -327,7 +325,7 @@ LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root
  * @param variableInstantiation the substitution describing the instantiation of the various type and int-param variables.
  * @return the instantiated lambda expression
  */
-LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const SubstitutionOpt& variableInstantiation);
+LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const types::SubstitutionOpt& variableInstantiation);
 
 /**
  * Creates a top-level structure for the program prog.

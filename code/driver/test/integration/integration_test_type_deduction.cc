@@ -41,9 +41,9 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/types/type_variable_deduction.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
 
@@ -80,7 +80,7 @@ namespace insieme {
 
 		// and now, apply the check and see whether a solution could be found
 		core::visitDepthFirstOnce(code, [&](const core::CallExprPtr& call){
-			EXPECT_TRUE(analysis::getTypeVariableInstantiation(manager, call))
+			EXPECT_TRUE(types::getTypeVariableInstantiation(manager, call))
 	//					<< "Processing:     " << core::printer::PrettyPrinter(call) << "\n"
 					<< "FunctionType:   " << *(call->getFunctionExpr()->getType()) << "\n"
 					<< "Argument Types: " << getTypes(call->getArguments());

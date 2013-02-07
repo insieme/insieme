@@ -34,16 +34,18 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/analysis/subtype_constraints.h"
+#include "insieme/core/types/subtype_constraints.h"
 
 #include <boost/graph/strong_components.hpp>
 #include <boost/graph/topological_sort.hpp>
+
+#include "insieme/core/ir_types.h"
 
 #include "insieme/utils/graph_utils.h"
 
 namespace insieme {
 namespace core {
-namespace analysis {
+namespace types {
 
 	namespace {
 
@@ -489,6 +491,6 @@ namespace analysis {
 		return out << "[" << constraintList << " / " << intTypeParameter << "]";
 	}
 
-} // end namespace analysis
+} // end namespace types
 } // end namespace core
 } // end namespace insieme

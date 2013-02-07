@@ -37,15 +37,14 @@
 #pragma once
 
 #include "insieme/core/ir_node.h"
-#include "insieme/core/type_utils.h"
-
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace core {
-namespace analysis {
+namespace types {
 
 	/**
 	 * A variable mapping is a one-to-one mapping between two sets of variables (not necessarily distinct). It is the result produced
@@ -351,6 +350,6 @@ namespace analysis {
 
 	};
 
-} // end namespace analysis
+} // end namespace types
 } // end namespace core
 } // end namespace insieme
