@@ -343,7 +343,15 @@ namespace c_ast {
 	bool ConstructorCall::equals(const Node& node) const {
 		assert(dynamic_cast<const ConstructorCall*>(&node));
 		auto other = static_cast<const ConstructorCall&>(node);
-		return *classType == *other.classType && onHeap == other.onHeap && ::equals(arguments, other.arguments, equal_target<NodePtr>());
+		return *classType == *other.classType && onHeap == other.onHeap &&
+				equalTarget(location, other.location) &&
+				::equals(arguments, other.arguments, equal_target<NodePtr>());
+	}
+
+	bool DestructorCall::equals(const Node& node) const {
+		assert(dynamic_cast<const DestructorCall*>(&node));
+		auto other = static_cast<const DestructorCall&>(node);
+		return *classType == *other.classType && *location == *other.location && isVirtual == other.isVirtual;
 	}
 
 	bool Parentheses::equals(const Node& node) const {

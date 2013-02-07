@@ -240,8 +240,13 @@ namespace c_ast {
 		return fun->getManager()->create<c_ast::MemberCall>(fun, obj, args);
 	}
 
-	inline ConstructorCallPtr ctorCall(TypePtr classType, const vector<NodePtr>& args, bool onHeap = false) {
-		return classType->getManager()->create<c_ast::ConstructorCall>(classType, args, onHeap);
+	inline ConstructorCallPtr ctorCall(TypePtr classType, const vector<NodePtr>& args, bool onHeap = false, ExpressionPtr location = ExpressionPtr()) {
+		return classType->getManager()->create<c_ast::ConstructorCall>(classType, args, onHeap, location);
+	}
+
+	inline DestructorCallPtr dtorCall(TypePtr classType, ExpressionPtr obj, bool isVirtual = true) {
+		if (getPriority(obj) < 15) obj = parenthese(obj);
+		return classType->getManager()->create<c_ast::DestructorCall>(classType, obj, isVirtual);
 	}
 
 	// -- Unary Operations --------------------------------------

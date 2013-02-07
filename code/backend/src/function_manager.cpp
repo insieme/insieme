@@ -306,19 +306,41 @@ namespace backend {
 				auto location = args[0];
 				args.erase(args.begin());
 
-				// distinguish memory location to be utilized
-				// case a) create object on stack
-				// case b) create object on heap
-				// case c) create object in-place 	- not supported yet
+				// extract class type
+				auto classType = converter.getTypeManager().getTypeInfo(funType->getObjectType()).lValueType;
 
-				// check whether it is case a) or b)
-				assert(core::analysis::isCallOf(call[0], basic.getRefVar()) || core::analysis::isCallOf(call[0], basic.getRefNew()));
+				// distinguish memory location to be utilized
+				// case a) create object on stack => default
+
+				// case b) create object on heap
+				bool isOnHeap = core::analysis::isCallOf(call[0], basic.getRefNew());
+
+				// case c) create object in-place (placement new)
+				c_ast::ExpressionPtr loc =
+						(!core::analysis::isCallOf(call[0], basic.getRefVar()) && !core::analysis::isCallOf(call[0], basic.getRefNew()))
+						?location.as<c_ast::ExpressionPtr>():c_ast::ExpressionPtr();
+
+				// to get support for the placement new the new header is required
+				if (loc) context.addInclude("<new>");
+
+				// create constructor call
+				res = c_ast::ctorCall(classType, args, isOnHeap, loc);
+			}
+
+			// ---------------- destructor call -----------------
+
+			if (funType->isDestructor()) {
+
+				// obtain object
+				vector<c_ast::NodePtr> args = c_call->arguments;
+				assert(args.size() == 1u);
+				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
 
 				// extract class type
 				auto classType = converter.getTypeManager().getTypeInfo(funType->getObjectType()).lValueType;
 
-				bool isOnHeap = core::analysis::isCallOf(call[0], basic.getRefNew());
-				res = c_ast::ctorCall(classType, args, isOnHeap);
+				// create resulting call
+				res = c_ast::dtorCall(classType, obj, false);		// it is not a virtual destructor if it is explicitly mentioned
 			}
 
 			// --------------- member function call -------------

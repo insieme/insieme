@@ -209,6 +209,7 @@ AST_TERMINAL(Parentheses, Expression)
 AST_TERMINAL(Call, Expression)
 AST_TERMINAL(MemberCall, Expression)
 AST_TERMINAL(ConstructorCall, Expression)
+AST_TERMINAL(DestructorCall, Expression)
 
 //
 // --- Declarations ---

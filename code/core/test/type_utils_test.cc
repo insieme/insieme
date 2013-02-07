@@ -591,6 +591,59 @@ TEST(TypeUtils, IsSubTypeOfFunctionType) {
 	EXPECT_PRED2(isSubTypeOf, funB, funB);
 }
 
+TEST(TypeUtils, IsSubTypeOfClassType) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	std::map<string, NodePtr> symbols;
+
+	// create a type hierarchy
+	TypePtr A = builder.parseType("struct { int a; }");
+	symbols["A"] = A;
+
+	TypePtr B = builder.parseType("struct : A { int b; }", symbols);
+	symbols["B"] = B;
+
+	TypePtr C = builder.parseType("struct : B { int c; }", symbols);
+	symbols["C"] = C;
+
+	TypePtr D = builder.parseType("D");
+	symbols["D"] = D;
+
+	TypePtr E = builder.parseType("E : D", symbols);
+	symbols["E"] = E;
+
+	TypePtr F = builder.parseType("F : B, E", symbols);
+
+	// now check the relations
+
+	// reflexive
+	EXPECT_PRED2(isSubTypeOf, A, A);
+	EXPECT_PRED2(isSubTypeOf, B, B);
+	EXPECT_PRED2(isSubTypeOf, C, C);
+	EXPECT_PRED2(isSubTypeOf, D, D);
+	EXPECT_PRED2(isSubTypeOf, E, E);
+
+	// direct relations
+	EXPECT_PRED2(isSubTypeOf, B, A);
+	EXPECT_PRED2(isSubTypeOf, C, B);
+	EXPECT_PRED2(isSubTypeOf, E, D);
+	EXPECT_PRED2(isSubTypeOf, F, B);
+	EXPECT_PRED2(isSubTypeOf, F, E);
+
+	// indirect relations
+	EXPECT_PRED2(isSubTypeOf, C, A);
+	EXPECT_PRED2(isSubTypeOf, F, A);
+	EXPECT_PRED2(isSubTypeOf, F, D);
+
+	// non-existing sub-type relations (subset)
+	EXPECT_PRED2(isNotSubTypeOf, A, B);
+	EXPECT_PRED2(isNotSubTypeOf, A, C);
+	EXPECT_PRED2(isNotSubTypeOf, D, E);
+
+}
+
 
 TEST(TypeUtils, JoinMeetTypeComputation) {
 

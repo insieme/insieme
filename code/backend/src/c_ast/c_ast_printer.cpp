@@ -472,10 +472,27 @@ namespace c_ast {
 
 			PRINT(ConstructorCall) {
 				// <new> <className> ( <arguments> )
-				return out << (node->onHeap?"new ":"") << print(node->classType) << "("
+				out << ((node->onHeap || node->location)?"new ":"");
+
+				// the location for a placement new
+				if (node->location) {
+					out << "(" << print(node->location) << ") ";
+				}
+
+				// the rest
+				return out
+						<< print(node->classType) << "("
 						<< join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) {
 							out << print(cur);
-				}) << ")";
+						}) << ")";
+			}
+
+			PRINT(DestructorCall) {
+				// <location> . <classType> :: ~<classType> ( )
+				out << print(node->location) << ".";
+				if (!node->isVirtual) out << print(node->classType) << "::";
+				out << "~" << print(node->classType) << "()";
+				return out;
 			}
 
 			PRINT(Parentheses) {
