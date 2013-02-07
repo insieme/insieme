@@ -348,6 +348,12 @@ namespace c_ast {
 				::equals(arguments, other.arguments, equal_target<NodePtr>());
 	}
 
+	bool DestructorCall::equals(const Node& node) const {
+		assert(dynamic_cast<const DestructorCall*>(&node));
+		auto other = static_cast<const DestructorCall&>(node);
+		return *classType == *other.classType && *location == *other.location && isVirtual == other.isVirtual;
+	}
+
 	bool Parentheses::equals(const Node& node) const {
 		assert(dynamic_cast<const Parentheses*>(&node));
 		auto other = static_cast<const Parentheses&>(node);

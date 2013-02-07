@@ -327,6 +327,22 @@ namespace backend {
 				res = c_ast::ctorCall(classType, args, isOnHeap, loc);
 			}
 
+			// ---------------- destructor call -----------------
+
+			if (funType->isDestructor()) {
+
+				// obtain object
+				vector<c_ast::NodePtr> args = c_call->arguments;
+				assert(args.size() == 1u);
+				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
+
+				// extract class type
+				auto classType = converter.getTypeManager().getTypeInfo(funType->getObjectType()).lValueType;
+
+				// create resulting call
+				res = c_ast::dtorCall(classType, obj, false);		// it is not a virtual destructor if it is explicitly mentioned
+			}
+
 			// --------------- member function call -------------
 
 			// re-structure call in case it is a member function call

@@ -485,6 +485,15 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct DestructorCall : public Expression {
+		TypePtr classType;
+		ExpressionPtr location;
+		bool isVirtual;
+		DestructorCall(TypePtr classType, ExpressionPtr location, bool isVirtual)
+			: Expression(NT_DestructorCall), classType(classType), location(location), isVirtual(isVirtual) {}
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct Parentheses : public Expression {
 		ExpressionPtr expression;
 		Parentheses(ExpressionPtr expression) : Expression(NT_Parentheses), expression(expression) {}

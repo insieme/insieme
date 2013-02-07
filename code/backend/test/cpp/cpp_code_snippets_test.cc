@@ -419,8 +419,6 @@ namespace backend {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 
-		std::map<string, core::NodePtr> symbols;
-
 		// create a example code using all 3 ctor variants
 		auto res = builder.parseProgram(
 				R"(
@@ -464,6 +462,60 @@ namespace backend {
 		EXPECT_PRED2(containsSubString, code, "A* a4 = new A(1);");
 		EXPECT_PRED2(containsSubString, code, "new (&a5) A();");
 		EXPECT_PRED2(containsSubString, code, "new (&a6) A(1);");
+
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+
+	}
+
+	TEST(CppSnippet, DestructorCall) {
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.parseProgram(
+				R"(
+					let int = int<4>;
+					
+					let A = struct { int x; };
+					
+					let ctorA = A::(int<4> x) { 
+						this->x = x; 
+						print("Creating: %d\n", x);
+					};
+					
+					let dtorA = ~A::() { 
+						print("Clearing: %d\n", *this->x);
+						this->x = 0; 
+					};
+					
+					int main() {
+					
+						// create an un-initialized memory location
+						ref<A> a = ctorA(new(A), 3);
+						
+						// init using in-place constructor
+						ctorA(a, 2);
+					
+						// invoce destructor
+						dtorA(a);
+					
+						return 0;
+					}
+				)"
+		);
+
+		ASSERT_TRUE(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "(*a).A::~A()");
 
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-c"); // do not run the linker

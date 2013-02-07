@@ -244,6 +244,11 @@ namespace c_ast {
 		return classType->getManager()->create<c_ast::ConstructorCall>(classType, args, onHeap, location);
 	}
 
+	inline DestructorCallPtr dtorCall(TypePtr classType, ExpressionPtr obj, bool isVirtual = true) {
+		if (getPriority(obj) < 15) obj = parenthese(obj);
+		return classType->getManager()->create<c_ast::DestructorCall>(classType, obj, isVirtual);
+	}
+
 	// -- Unary Operations --------------------------------------
 
 	inline ExpressionPtr unaryOp(UnaryOperation::UnaryOp op, NodePtr a) {

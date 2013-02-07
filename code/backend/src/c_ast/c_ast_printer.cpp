@@ -487,6 +487,14 @@ namespace c_ast {
 						}) << ")";
 			}
 
+			PRINT(DestructorCall) {
+				// <location> . <classType> :: ~<classType> ( )
+				out << print(node->location) << ".";
+				if (!node->isVirtual) out << print(node->classType) << "::";
+				out << "~" << print(node->classType) << "()";
+				return out;
+			}
+
 			PRINT(Parentheses) {
 				return out << "(" << print(node->expression) << ")";
 			}
