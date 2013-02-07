@@ -564,6 +564,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCharacterLiteral(Char
 	
 	string value;
 	unsigned int v = charLit->getValue();
+
 	if (charLit->getKind() == clang::CharacterLiteral::Ascii){
 
 		value.append("\'");
@@ -578,6 +579,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCharacterLiteral(Char
 		else if(v == '\?') value.append("\\\?");
 		else if(v == '\'') value.append("\\\'");
 		else if(v == '\"') value.append("\\\"");
+		else if(v == '\0') value.append("\\0");
 		else{
 			char cad[2];
 			cad[0] = v;
@@ -628,6 +630,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitStringLiteral(clang::
 	expand('\?', "\\\?");
 	expand('\'', "\\\'");
 	expand('\"', "\\\"");
+	expand('\0', "\\0");
 
 	auto vecType = 
 		builder.refType(
