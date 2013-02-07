@@ -936,7 +936,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	if (!components.empty()) {
 		// we are dealing with a recursive type
 		//VLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
-				<< "Number of components in the cycle: " << components.size();
+				//<< "Number of components in the cycle: " << components.size();
 
 		std::for_each(components.begin(), components.end(), [ ] (std::set<const FunctionDecl*>::value_type c) {
 			//VLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
