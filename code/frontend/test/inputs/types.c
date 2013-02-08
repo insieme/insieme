@@ -42,7 +42,7 @@ void basic_type_test() {
 	#pragma test "ref<int<8>> v1 = ref.var(0)"
 	long b;
 
-	#pragma test "ref<int<2>> v1 = ref.var(cast<int<2>>(0xFFFF))"
+	#pragma test "ref<int<2>> v1 = ref.var(cast<int<2>>(65535))"
 	short c = 0xFFFF;
 
 	#pragma test "ref<char> v1 = ref.var('a')"
@@ -51,12 +51,12 @@ void basic_type_test() {
 	#pragma test "ref<anyRef> v1 = ref.var(null)"
 	void* e;
 
-	#pragma test "ref<real<4>> v1 = ref.var(0.00f)"
+	#pragma test "ref<real<4>> v1 = ref.var(0)"
 	float f = 0.00f;
 
 	#pragma test "ref<real<8>> v1 = ref.var(0.0)"
 	double g;
-	
+
 	#pragma test "ref<vector<real<4>,3>> v1 = ref.var(undefined(vector<real<4>,3>))"
 	float v[3];
 
@@ -76,7 +76,7 @@ void basic_type_test() {
 	int*** c1 = 0;
 
 	#pragma test "ref.assign(v1, get.null(array<ref<array<ref<array<int<4>,1>>,1>>,1>))"
-	c1 = 0; 
+	c1 = 0;
 
 	//#pragma test "ref<vector<char,10>> v1 = ref.var(\"Hello Mum\")"
 	//char str[10] = "Hello Mum";
