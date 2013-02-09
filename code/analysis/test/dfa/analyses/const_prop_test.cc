@@ -53,6 +53,7 @@
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::analysis;
+using namespace insieme::analysis::access;
 using namespace insieme::analysis::dfa;
 
 typedef dfa::analyses::ConstantPropagation::value_type AnalysisData;

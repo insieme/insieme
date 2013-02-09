@@ -101,7 +101,7 @@ irt_joinable* irt_parallel(const irt_parallel_job* job) {
 			irt_wg_insert(retwg, wis[i]);
 		}
 		for(uint32 i=0; i<num_threads; ++i) {
-			irt_scheduling_assign_wi(irt_g_workers[(i+irt_g_worker_count/2-1)%irt_g_worker_count], wis[i]);
+			irt_scheduling_generate_wi(irt_g_workers[(i+irt_g_worker_count/2-1)%irt_g_worker_count], wis[i]);
 		}
 		return IRT_TAG_WG_PTR(retwg);
 	}

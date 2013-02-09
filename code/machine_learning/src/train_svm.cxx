@@ -168,8 +168,43 @@ int main(int argc, char* argv[]) {
 	}
 	svmTrainer->setTargetByName(TrainCmdOptions::TargetName);
 
+	std::stringstream fss;
 
-	LOG(INFO)<< "Error: " << svmTrainer->train(optimizer, err, 0) << std::endl;
+	if(TrainCmdOptions::ShowFeatures) {
+		if(TrainCmdOptions::SFeatureNames.size() > 0) {
+			for(std::vector<std::string>::const_iterator I = TrainCmdOptions::SFeatureNames.begin(); I != TrainCmdOptions::SFeatureNames.end(); ++I) {
+				fss << " -s" << *I;
+			}
+		}
+		if(TrainCmdOptions::SFeatures.size() > 0) {
+			for(std::vector<std::string>::const_iterator I = TrainCmdOptions::SFeatureNames.begin(); I != TrainCmdOptions::SFeatureNames.end(); ++I) {
+				fss << " -S" << *I;
+			}
+		}
+		if(TrainCmdOptions::DFeatureNames.size() > 0) {
+			for(std::vector<std::string>::const_iterator I = TrainCmdOptions::DFeatureNames.begin(); I != TrainCmdOptions::DFeatureNames.end(); ++I) {
+				fss << " -d" << *I;
+			}
+		}
+		if(TrainCmdOptions::DFeatures.size() > 0) {
+			for(std::vector<std::string>::const_iterator I = TrainCmdOptions::DFeatureNames.begin(); I != TrainCmdOptions::DFeatureNames.end(); ++I) {
+				fss << " -D" << *I;
+			}
+		}
+		if(TrainCmdOptions::PFeatureNames.size() > 0) {
+			for(std::vector<std::string>::const_iterator I = TrainCmdOptions::DFeatureNames.begin(); I != TrainCmdOptions::DFeatureNames.end(); ++I) {
+				fss << " -p" << *I;
+			}
+		}
+		if(TrainCmdOptions::PFeatures.size() > 0) {
+			for(std::vector<std::string>::const_iterator I = TrainCmdOptions::DFeatureNames.begin(); I != TrainCmdOptions::DFeatureNames.end(); ++I) {
+				fss << " -P" << *I;
+			}
+		}
+		fss << " ";
+	}
+
+	LOG(INFO)<< fss.str() << "Error: " << svmTrainer->train(optimizer, err, 0) << std::endl;
 
 	if(TrainCmdOptions::OutputModel.size() > 0 || TrainCmdOptions::OutputPath.size() > 0)
 		writeModel(svmTrainer);

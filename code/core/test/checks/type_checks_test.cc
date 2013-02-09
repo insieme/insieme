@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/checks/type_checks.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/parser2/ir_parser.h"
@@ -159,6 +160,211 @@ TEST(CallExprTypeCheck, Basic) {
 	issues = check(expr, typeCheck);
 	EXPECT_EQ((std::size_t)1, issues.size());
 	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
+}
+
+TEST(FunctionKindCheck, Basic) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// build some ingredients
+	TypePtr A = builder.genericType("A");
+	TypePtr refA = builder.refType(A);
+
+	// ------- function kind -----------
+
+	// use an invalid function kind
+	FunctionTypePtr funType = builder.functionType(toVector(A), A, ((FunctionKind)777));
+	EXPECT_EQ((unsigned)777, funType->getFunctionKind()->getValue());
+
+	// check function type
+	auto issues = check(funType);	// use full checks
+	EXPECT_EQ((std::size_t)1, issues.size()) << issues;
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_FUNCTION_TYPE_KIND, "", Message::ERROR));
+
+	// use a valid function type
+	funType = builder.functionType(toVector(A), A, FK_PLAIN);
+	EXPECT_EQ((unsigned)FK_PLAIN, funType->getFunctionKind()->getValue());
+	issues = check(funType);	// use full checks
+	EXPECT_TRUE(issues.empty()) << issues;
+
+
+	// -------- object type -----------
+
+	// an example that is correct
+	funType = builder.functionType(toVector(refA), refA, FK_CONSTRUCTOR);
+	issues = check(funType);
+	EXPECT_TRUE(issues.empty()) << issues;
+
+	funType = builder.functionType(toVector(refA), refA, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_TRUE(issues.empty()) << issues;
+
+	funType = builder.functionType(toVector(refA), A, FK_MEMBER_FUNCTION);
+	issues = check(funType);
+	EXPECT_TRUE(issues.empty()) << issues;
+
+	// an few invalid example
+	funType = builder.functionType(toVector(A), A, FK_CONSTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+	funType = builder.functionType(toVector(A), A, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+	funType = builder.functionType(toVector(A), A, FK_MEMBER_FUNCTION);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+	funType = builder.functionType(TypeList(), A, FK_CONSTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+	funType = builder.functionType(TypeList(), A, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+	funType = builder.functionType(TypeList(), A, FK_MEMBER_FUNCTION);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
+
+	// -------- destructor parameters -----------
+
+	// cases that are fine
+	funType = builder.functionType(toVector(refA), refA, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_TRUE(issues.empty()) << issues;
+
+	// invalid case
+	funType = builder.functionType(toVector(refA, A), refA, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_DESTRUCTOR_PARAMETERS, "", Message::ERROR));
+
+
+	// -------- constructor return type -----------
+
+	// cases that are fine
+	funType = builder.functionType(toVector(refA, A), refA, FK_CONSTRUCTOR);
+	issues = check(funType);
+	EXPECT_TRUE(issues.empty()) << issues;
+
+	// invalid case
+	funType = builder.functionType(toVector(refA, A), A, FK_CONSTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_CONSTRUCTOR_RETURN_TYPE, "", Message::ERROR));
+
+
+	// -------- destructor return type -----------
+
+	// cases that are fine
+	funType = builder.functionType(toVector(refA), refA, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_TRUE(issues.empty()) << issues;
+
+	// invalid case
+	funType = builder.functionType(toVector(refA), A, FK_DESTRUCTOR);
+	issues = check(funType);
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(funType), EC_TYPE_ILLEGAL_DESTRUCTOR_RETURN_TYPE, "", Message::ERROR));
+
+}
+
+TEST(FunctionType, Basic) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// check whether variations of function types are tolleratred
+	//  options: ctors, dtors, member function types and plain functions
+
+	// create some types
+	TypePtr A = builder.genericType("A");
+	TypePtr refA = builder.refType(A);
+	TypePtr B = builder.genericType("B");
+
+	// create variations of function types
+	FunctionTypePtr funTypeA = builder.functionType(toVector(refA, B), refA, FK_PLAIN);
+	FunctionTypePtr funTypeB = builder.functionType(toVector(refA, B), refA, FK_CONSTRUCTOR);
+	FunctionTypePtr funTypeC = builder.functionType(toVector(refA, B), refA, FK_MEMBER_FUNCTION);
+	FunctionTypePtr funTypeD = builder.functionType(toVector(refA), refA, FK_DESTRUCTOR);
+
+
+	// create lambda body
+	StatementPtr body = builder.returnStmt(builder.refNew(builder.undefined(A)));
+
+	// create lambdas
+	auto params = toVector(builder.variable(refA), builder.variable(B));
+	auto funA = builder.lambdaExpr(funTypeA, params, body);
+	auto funB = builder.lambdaExpr(funTypeB, params, body);
+	auto funC = builder.lambdaExpr(funTypeC, params, body);
+	auto funD = builder.lambdaExpr(funTypeD, toVector(params[0]), body);
+
+	// all those should be typed correctly
+	CheckPtr typeCheck = make_check<FunctionTypeCheck>();
+	EXPECT_EQ("[]", toString(check(funA, typeCheck)));
+	EXPECT_EQ("[]", toString(check(funB, typeCheck)));
+	EXPECT_EQ("[]", toString(check(funC, typeCheck)));
+	EXPECT_EQ("[]", toString(check(funD, typeCheck)));
+
+
+	// also check some faulty configurations
+	params = toVector(builder.variable(B), builder.variable(refA));
+
+	ExpressionPtr fun = builder.lambdaExpr(funTypeA, params, body);
+	auto issues = check(fun, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(fun), EC_TYPE_INVALID_FUNCTION_TYPE, "", Message::ERROR));
+
+	fun = builder.lambdaExpr(funTypeB, params, body);
+	issues = check(fun, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(fun), EC_TYPE_INVALID_FUNCTION_TYPE, "", Message::ERROR));
+
+	fun = builder.lambdaExpr(funTypeC, params, body);
+	issues = check(fun, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(fun), EC_TYPE_INVALID_FUNCTION_TYPE, "", Message::ERROR));
+
+	fun = builder.lambdaExpr(funTypeD, toVector(params[0]), body);
+	issues = check(fun, typeCheck);
+	EXPECT_EQ((std::size_t)1, issues.size());
+	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(fun), EC_TYPE_INVALID_FUNCTION_TYPE, "", Message::ERROR));
+
+}
+
+TEST(ParentCheck, Basic) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// create a few parent nodes
+	auto ok1 = builder.parent(builder.genericType("A"));
+	auto ok2 = builder.parent(builder.structType());
+	auto ok3 = builder.parent(builder.typeVariable("a"));
+	auto ok4 = builder.parent(builder.parseType("let a,b = struct { ref<b> x; }, struct { ref<a> x; } in a"));
+
+	auto err1 = builder.parent(builder.parseType("union { int<4> x; }"));
+	auto err2 = builder.parent(builder.parseType("(A,B)->R"));
+	auto err3 = builder.parent(builder.parseType("ref<A>"));
+	auto err4 = builder.parent(builder.parseType("array<A,1>"));
+	auto err5 = builder.parent(builder.parseType("vector<A,2>"));
+	auto err6 = builder.parent(builder.parseType("channel<A,2>"));
+
+	// check the correct types
+	EXPECT_TRUE(check(ok1).empty()) << check(ok1);
+	EXPECT_TRUE(check(ok2).empty()) << check(ok2);
+	EXPECT_TRUE(check(ok3).empty()) << check(ok3);
+	EXPECT_TRUE(check(ok4).empty()) << check(ok4);
+
+	// check the invalid types
+	EXPECT_PRED2(containsMSG, check(err1), Message(NodeAddress(err1), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err2), Message(NodeAddress(err2), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err3), Message(NodeAddress(err3), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err4), Message(NodeAddress(err4), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err5), Message(NodeAddress(err5), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err6), Message(NodeAddress(err6), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+
 }
 
 TEST(StructExprTypeCheck, Basic) {
@@ -842,13 +1048,13 @@ TEST(ArrayTypeChecks, Basic) {
 }
 
 
-TEST(NarrowExpresion, Basic) {
+TEST(NarrowExpression, Basic) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
 	CheckPtr typeCheck = getFullCheck();
 
-	NodePtr res = core::parser::parse(manager,
+	NodePtr res = builder.parse(
 		"{"
 		" let inner = struct{ int<4> a;};"
 		" let two   = struct{ inner a; int<4> b;};"
@@ -863,7 +1069,7 @@ TEST(NarrowExpresion, Basic) {
 	EXPECT_EQ("AP({ref<struct<a:struct<a:int<4>>,b:int<4>>> v1 = ref.var(undefined(struct<a:struct<a:int<4>>,b:int<4>>)); ref<int<4>> v2 = ref.narrow(v1, dp.member(dp.root, b), int<4>); ref<int<4>> v3 = ref.narrow(v1, dp.member(dp.member(dp.root, a), a), int<4>);})",
 			  toString(res));
 	
-	res = core::parser::parse(manager,
+	res = builder.parse(
 		"{"
 		" let inner = struct{ int<4> a;};"
 		" let two   = struct{ inner a; int<4> b;};"
@@ -878,8 +1084,44 @@ TEST(NarrowExpresion, Basic) {
 	EXPECT_EQ(3u, errors.size());
 }
 
+TEST(NarrowExpression, Parents) {
 
-TEST(ExpandExpresion, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	NodePtr ok = builder.parse(
+		"{"
+		"	let int = int<4>;"
+		"	let A = struct { int a; };"
+		"	let B = struct : A { int b; };"
+		"	ref<B> b;"
+		"	auto ref2A = ref.narrow( b, dp.parent( dp.root, lit(A) ), lit(A) );"
+		"	auto ref2a = ref.narrow( b, dp.member( dp.parent( dp.root, lit(A) ), lit(\"a\")), lit(int) );"
+		"}"
+	);
+
+	ASSERT_TRUE(ok);
+
+	EXPECT_TRUE(checks::check(ok).empty()) << checks::check(ok);
+
+	NodePtr err = builder.parse(
+		"{"
+		"	let int = int<4>;"
+		"	let A = struct { int a; };"
+		"	let B = struct : A { int b; };"
+		"	ref<B> b; "
+		"	auto x = ref.narrow( b, dp.parent( dp.root, lit(B) ), lit(B) );"
+		"}"
+	);
+	ASSERT_TRUE(err);
+
+	auto errors = checks::check(err);
+	EXPECT_FALSE(errors.empty());
+	EXPECT_EQ(1u, errors.size());
+}
+
+
+TEST(ExpandExpression, Basic) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
@@ -927,6 +1169,40 @@ TEST(ExpandExpresion, Basic) {
 	ASSERT_TRUE (res);
 	errors = check(res, typeCheck);
 	EXPECT_EQ(3u, errors.size());
+}
+
+TEST(ExpandExpression, Parents) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	NodePtr ok = builder.parse(
+		"{"
+		"	let int = int<4>;"
+		"	let A = struct { int a; };"
+		"	let B = struct : A { int b; };"
+		"	ref<A> a;"
+		"	auto ref2B = ref.expand( a, dp.parent( dp.root, lit(A) ), lit(B) );"
+		"}"
+	);
+
+	ASSERT_TRUE(ok);
+	EXPECT_TRUE(checks::check(ok).empty()) << checks::check(ok);
+
+	NodePtr err = builder.parse(
+		"{"
+		"	let int = int<4>;"
+		"	let A = struct { int a; };"
+		"	let B = struct { int b; };"
+		"	ref<A> a;"
+		"	auto ref2B = ref.expand( a, dp.parent( dp.root, lit(A) ), lit(B) );"
+		"}"
+	);
+	ASSERT_TRUE(err);
+
+	auto errors = checks::check(err);
+	EXPECT_FALSE(errors.empty());
+	EXPECT_EQ(1u, errors.size());
 }
 
 
@@ -978,6 +1254,51 @@ TEST(ArrayTypeChecks, Exceptions) {
 	cur = builder.tupleExpr(toVector(arrayPtr));
 	errors = check(cur, typeCheck);
 	EXPECT_TRUE(errors.empty()) << cur << "\n" << errors;
+
+}
+
+TEST(ClassMetaInfo, TargetType) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// create types to be tested
+	TypePtr ok = builder.genericType("A");
+	TypePtr err = builder.refType(ok);
+
+	// create some class info object
+	ClassMetaInfo info;
+	ok->attachValue(info);
+	err->attachValue(info);
+
+	EXPECT_TRUE(check(ok).empty());
+	EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err), EC_TYPE_ILLEGAL_OBJECT_TYPE, "", Message::ERROR));
+}
+
+TEST(ClassMetaInfo, InfoObjectType) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// create types to be tested
+	auto ok = builder.genericType("A");
+	auto err = ok;
+
+	ClassMetaInfo infoA;
+	infoA.addConstructor(builder.parse("A::() {}").as<LambdaExprPtr>());
+
+	ClassMetaInfo infoB;
+	infoB.addConstructor(builder.parse("B::() {}").as<LambdaExprPtr>());
+
+
+	// check the correct version (no information)
+	EXPECT_TRUE(check(ok).empty());
+
+	// use correct extra information
+	ok->attachValue(infoA);
+	EXPECT_TRUE(check(ok).empty());
+
+	// use invalid extra information
+	err->attachValue(infoB);
+	EXPECT_PRED2(containsMSG, check(err), Message(NodeAddress(err), EC_TYPE_MISMATCHING_OBJECT_TYPE, "", Message::ERROR));
 
 }
 

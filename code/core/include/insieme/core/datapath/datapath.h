@@ -134,6 +134,16 @@ namespace datapath {
 		DataPath component(unsigned index) const;
 
 		/**
+		 * Extends this data path by an access to the given parent type.
+		 * This call is only supported if the accessed element is a struct
+		 * exhibiting the corresponding parent class.
+		 *
+		 * @param parent the type of parent to be accessed
+		 * @return the extended data path
+		 */
+		DataPath parent(const TypePtr& parent) const;
+
+		/**
 		 * A conversion operation to an ExpressionPtr.
 		 */
 		operator ExpressionPtr() const {
@@ -247,6 +257,15 @@ namespace datapath {
 		 * @return a reference to this builder to chain build-commands
 		 */
 		DataPathBuilder& component(unsigned index);
+
+		/**
+		 * This function will extend the internally constructed path by
+		 * an access to the given parent type.
+		 *
+		 * @param type the parent type to be accessed
+		 * @return a reference to this builder to chain build-commands
+		 */
+		DataPathBuilder& parent(const TypePtr& type);
 
 		/**
 		 * Obtains a copy of the internally constructed data path.

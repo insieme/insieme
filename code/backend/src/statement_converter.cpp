@@ -48,9 +48,9 @@
 #include "insieme/backend/variable_manager.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/types/variable_sized_struct_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -302,7 +302,7 @@ namespace backend {
 		});
 
 		// remove last element if it is a variable sized struct
-		if (core::isVariableSized(ptr->getType())) {
+		if (core::types::isVariableSized(ptr->getType())) {
 			assert(!init->values.empty());
 			init->values.pop_back();
 		}
@@ -315,12 +315,35 @@ namespace backend {
 		// to be created: an initialization of the corresponding union
 		//     (<type>){<single member>}
 
-        auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
+		core::TypePtr unionType = ptr->getType();
+        auto typeInfo = converter.getTypeManager().getTypeInfo(unionType);
         context.addDependency(typeInfo.definition);
 
         // get type and create init expression
         c_ast::TypePtr type = typeInfo.rValueType;
-		return c_ast::init(type, convert(context, ptr->getMember()));
+
+        std::cout << "\nMember is of type: " << ptr->getMember()->getNodeType() << "\n" << ptr->getMember() << "\n";
+
+        auto cmgr = context.getConverter().getCNodeManager();
+
+        // special handling for vector initialization (should not be turned into a struct)
+        auto value = convertExpression(context, ptr->getMember());
+        if (ptr->getMember()->getNodeType() == core::NT_VectorExpr) {
+        	assert(dynamic_pointer_cast<c_ast::Initializer>(value));
+        	std::cout << "Number of elements: " << static_pointer_cast<c_ast::Initializer>(value)->values.size() << "\n";
+        	value = cmgr->create<c_ast::VectorInit>(
+        			static_pointer_cast<c_ast::VectorInit>(
+        					static_pointer_cast<c_ast::Initializer>(value)->values[0]
+        			)->values
+        	);
+        }
+
+        return c_ast::init(
+        		type,
+        		cmgr->create(ptr->getMemberName()->getValue()),
+        		value
+        );
+//		return c_ast::init(type, convert(context, ptr->getMember()));
 	}
 
 	c_ast::NodePtr StmtConverter::visitTupleExpr(const core::TupleExprPtr& ptr, ConversionContext& context) {
@@ -396,11 +419,30 @@ namespace backend {
 		return converter.getCNodeManager()->create<c_ast::Continue>();
 	}
 
+	namespace {
+
+		bool toBeAllocatedOnStack(const core::ExpressionPtr& initValue) {
+			auto& basic = initValue->getNodeManager().getLangBasic();
+
+			// if it is a call to a ref.var => put it on the stack
+			if (core::analysis::isCallOf(initValue, basic.getRefVar())) {
+				return true;
+			}
+
+			// if it is a constructor call ..
+			if (core::CallExprPtr call = initValue.isa<core::CallExprPtr>()) {
+				return core::analysis::isCallOf(call[0], basic.getRefVar());
+			}
+
+			// everything else is heap based
+			return false;
+		}
+
+	}
+
 	c_ast::NodePtr StmtConverter::visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, ConversionContext& context) {
 
 		// goal: create a variable declaration and register new variable within variable manager
-
-		auto& basic = converter.getNodeManager().getLangBasic();
 		auto manager = converter.getCNodeManager();
 
 		core::VariablePtr var = ptr->getVariable();
@@ -409,7 +451,7 @@ namespace backend {
 		// decide storage location of variable
 		VariableInfo::MemoryLocation location = VariableInfo::NONE;
 		if (core::analysis::hasRefType(var)) {
-			if (core::analysis::isCallOf(init, basic.getRefVar())) {
+			if (toBeAllocatedOnStack(init)) {
 				location = VariableInfo::DIRECT;
 			} else {
 				location = VariableInfo::INDIRECT;
@@ -421,6 +463,12 @@ namespace backend {
 
 		// add code dependency
 		context.getDependencies().insert(info.typeInfo->definition);
+
+		// if a reference variable is put on the stack, the element type definition is also required
+		if (location == VariableInfo::DIRECT) {
+			auto elementType = core::analysis::getReferencedType(var->getType());
+			context.getDependencies().insert(context.getConverter().getTypeManager().getTypeInfo(elementType).definition);
+		}
 
 		// create declaration statement
 		c_ast::ExpressionPtr initValue = convertInitExpression(context, init);

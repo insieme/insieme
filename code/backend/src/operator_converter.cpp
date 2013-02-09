@@ -43,6 +43,7 @@
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/ir_extensions.h"
+#include "insieme/backend/ir++_extensions.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
@@ -53,8 +54,10 @@
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/simplify.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/types/variable_sized_struct_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -82,7 +85,10 @@ namespace backend {
 			assert(exprPtr && "Lazy is not an expression!");
 
 			// use core functionality
-			return core::transform::evalLazy(manager, exprPtr);
+			auto res = core::transform::evalLazy(manager, exprPtr);
+
+			// simplify evaluated lazy expression
+			return core::transform::simplify(manager, res);
 		}
 
 		core::ExpressionPtr wrapNarrow(const core::ExpressionPtr& root, const core::ExpressionPtr& dataPath) {
@@ -111,6 +117,10 @@ namespace backend {
 			} else if (basic.isDataPathComponent(fun)) {
 				// access tuple component
 				return builder.refComponent(res, call->getArgument(1));
+			} else if (basic.isDataPathParent(fun)) {
+				// cast to parent type using a static cast
+				const auto& ext = mgr.getLangExtension<IRppExtensions>();
+				return builder.callExpr(ext.getStaticCast(), res, call->getArgument(1));
 			}
 
 			// this is not a valid data path
@@ -453,7 +463,7 @@ namespace backend {
 			}
 
 			// special handling for variable sized structs
-			if (core::isVariableSized(resType->getElementType())) {
+			if (core::types::isVariableSized(resType->getElementType())) {
 				// Create code similar to this:
 				// 		(A*)memcpy(malloc(sizeof(A) + sizeof(float) * v2), &(struct A){ v2 }, sizeof(A))
 
@@ -462,7 +472,7 @@ namespace backend {
 
 				// get types of struct and element
 				auto structType = initValue->getType();
-				auto elementType = core::getRepeatedType(structType);
+				auto elementType = core::types::getRepeatedType(structType);
 
 				// get size of variable part
 				auto arrayInitValue = initValue->getMembers().back()->getValue();
@@ -653,6 +663,11 @@ namespace backend {
 
 		res[basic.getVectorRefElem()] = OP_CONVERTER({
 			//   operator type:  (ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>
+
+			// fix dependency
+			const TypeInfo& infoSrc = GET_TYPE_INFO(core::analysis::getReferencedType(call->getArgument(0)->getType()));
+			context.getDependencies().insert(infoSrc.definition);
+
 			//   generated code: &((*X).data[Y])
 			return c_ast::ref(c_ast::subscript(c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data"), CONVERT_ARG(1)));
 		});
@@ -697,8 +712,11 @@ namespace backend {
 
 		res[basic.getRefVectorToRefArray()] = OP_CONVERTER({
 			// Operator type: (ref<vector<'elem,#l>>) -> ref<array<'elem,1>>
-			const TypeInfo& info = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
-			context.getDependencies().insert(info.definition);
+			const TypeInfo& infoSrc = GET_TYPE_INFO(core::analysis::getReferencedType(call->getArgument(0)->getType()));
+			context.getDependencies().insert(infoSrc.definition);
+
+			const TypeInfo& infoRes = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
+			context.getDependencies().insert(infoRes.definition);
 
 			// special handling for string literals
 			if (call->getArgument(0)->getNodeType() == core::NT_Literal) {
@@ -1003,6 +1021,22 @@ namespace backend {
 			// just skip this attribute
 			return CONVERT_ARG(0);
 		});
+
+
+
+		// ---------------------------- IR++ / C++ --------------------------
+
+		const auto& irppExt = manager.getLangExtension<IRppExtensions>();
+		res[irppExt.getStaticCast()] = OP_CONVERTER({
+			// build up a static cast operator
+			return c_ast::staticCast(c_ast::ptr(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(1)))), CONVERT_ARG(0));
+		});
+
+		res[irppExt.getDynamicCast()] = OP_CONVERTER({
+			// build up a static cast operator
+			return c_ast::dynamicCast(c_ast::ptr(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(1)))), CONVERT_ARG(0));
+		});
+
 
 		#include "insieme/backend/operator_converter_end.inc"
 

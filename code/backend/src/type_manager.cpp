@@ -44,13 +44,16 @@
 
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
+#include "insieme/backend/function_manager.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -545,6 +548,7 @@ namespace backend {
 			// create definition of named composite type
 			auto defCode = manager->create<c_ast::TypeDefinition>(type);
 			c_ast::CodeFragmentPtr definition = c_ast::CCodeFragment::createNew(fragmentManager, defCode);
+			definition->addDependency(declaration);
 			definition->addDependencies(definitions);
 
 			// create resulting type info
@@ -557,6 +561,9 @@ namespace backend {
 			// get C node manager
 			auto manager = converter.getCNodeManager();
 			auto fragmentManager = converter.getFragmentManager();
+
+
+			// ------------- C utilities -----------------
 
 			// define c ast nodes for constructor
 			c_ast::NodePtr ifdef = manager->create<c_ast::OpaqueCode>("#ifdef _MSC_VER");
@@ -579,7 +586,7 @@ namespace backend {
 				c_ast::ret(resVar)
 			);
 
-			// create constructor
+			// create constructor (C-style)
 			string name = converter.getNameManager().getName(ptr, "type");
 			c_ast::NodePtr ctr = manager->create<c_ast::Function>(
 					c_ast::Function::INLINE,
@@ -589,8 +596,79 @@ namespace backend {
 					body
 			);
 
-			// add constructor
+			// add constructor (C-style)
 			res->constructor = c_ast::CCodeFragment::createNew(fragmentManager, toVector(ifdef, ctr, endif));
+
+
+			// ----------------- C++ ---------------------
+
+			// add parent types
+			c_ast::StructTypePtr type = static_pointer_cast<c_ast::StructType>(res->lValueType);
+			for(auto parent : ptr->getParents()) {
+
+				// resolve parent type
+				const TypeInfo* parentInfo = resolveType(parent->getType());
+
+				// add dependency
+				res->definition->addDependency(parentInfo->definition);
+
+				// add parent to struct definition
+				type->parents.push_back(manager->create<c_ast::Parent>(parent->isVirtual(), parentInfo->lValueType));
+			}
+
+			// -- Process Meta-Infos --
+
+			// skip rest if there is no meta-info present
+			if (!core::hasMetaInfo(ptr)) {
+				return res;
+			}
+
+			// save current info (otherwise the following code will result in an infinite recursion)
+			addInfo(ptr, res);
+
+			auto& nameMgr = converter.getNameManager();
+			const core::ClassMetaInfo& info = core::getMetaInfo(ptr);
+			auto& funMgr = converter.getFunctionManager();
+
+			// add constructors
+			for(const core::LambdaExprPtr& cur : info.getConstructors()) {
+				// let function manager handle it
+				funMgr.getInfo(cur);
+			}
+
+			// add destructor
+			if (auto dtor = info.getDestructor()) {
+				// let function manager handle it
+				funMgr.getInfo(dtor, false, info.isDestructorVirtual());
+			}
+
+			// add member functions
+			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
+
+				// process function using function manager
+				auto impl = cur.getImplementation();
+				if (!core::analysis::isPureVirtual(impl)) {
+
+					// fix name
+					nameMgr.setName(impl, cur.getName());
+
+					// generate code for member function
+					funMgr.getInfo(cur.getImplementation().as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
+
+				} else {
+
+					// resolve the type of this function and all its dependencies using the function manager
+					// by asking for an temporary "external function"
+
+					// create temporary literal ...
+					core::NodeManager& nodeMgr = ptr->getNodeManager();
+
+					// ... and resolve dependencies (that's all, function manager will do the rest)
+					funMgr.getInfo(core::Literal::get(nodeMgr, impl.getType(), cur.getName()), cur.isConst());
+				}
+			}
+
+			// TODO: process class ctors and dtors
 
 			// done
 			return res;
@@ -735,7 +813,6 @@ namespace backend {
 			VectorTypeInfo* res = new VectorTypeInfo();
 			string vectorName = converter.getNameManager().getName(ptr);
 			auto name = manager->create(vectorName);
-			auto structName = manager->create("_" + vectorName);
 
 			// create L / R value name
 			c_ast::NamedTypePtr vectorType = manager->create<c_ast::NamedType>(name);
@@ -759,14 +836,18 @@ namespace backend {
 				return init(vectorType, node);
 			};
 
-			// create declaration = definition ... create struct
-			c_ast::StructTypePtr vectorStructType = manager->create<c_ast::StructType>(structName);
+			// create declaration
+			c_ast::StructTypePtr vectorStructType = manager->create<c_ast::StructType>(name);
 			vectorStructType->elements.push_back(var(pureVectorType, dataElementName));
 
-			c_ast::NodePtr definition = manager->create<c_ast::TypeDefinition>(vectorStructType, name);
-			res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), definition);
-			res->definition = res->declaration;
-			res->declaration->addDependency(elementTypeInfo->definition);
+			c_ast::NodePtr declaration = manager->create<c_ast::TypeDeclaration>(vectorStructType);
+			res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), declaration);
+
+			// create definition
+			c_ast::NodePtr definition = manager->create<c_ast::TypeDefinition>(vectorStructType);
+			res->definition = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), definition);
+			res->definition->addDependency(res->declaration);
+			res->definition->addDependency(elementTypeInfo->definition);
 
 
 			// ---------------------- add init uniform operator ---------------------
@@ -807,9 +888,6 @@ namespace backend {
 
 			auto manager = converter.getCNodeManager();
 
-			// create result
-			RefTypeInfo* res = new RefTypeInfo();
-
 			// obtain information covering sub-type
 			auto elementNodeType = ptr->getElementType()->getNodeType();
 			const TypeInfo* subType = resolveType(ptr->getElementType());
@@ -820,6 +898,9 @@ namespace backend {
 				assert(dynamic_cast<const RefTypeInfo*>(pos->second));
 				return static_cast<const RefTypeInfo*>(pos->second);
 			}
+
+			// create result
+			RefTypeInfo* res = new RefTypeInfo();
 
 			// produce R and L value type
 			// generally, a level of indirection needs to be added
@@ -998,7 +1079,7 @@ namespace backend {
 			// create the struct type defining the closure
 			vector<c_ast::CodeFragmentPtr> declDependencies;
 			vector<c_ast::CodeFragmentPtr> defDependencies;
-			c_ast::StructTypePtr structType = manager->create<c_ast::StructType>(manager->create("_" + name));
+			c_ast::StructTypePtr structType = manager->create<c_ast::StructType>(manager->create(name));
 
 
 			// construct the C AST function type token
@@ -1025,9 +1106,14 @@ namespace backend {
 			// construct the function type => struct including a function pointer
 			c_ast::VariablePtr varCall = var(c_ast::ptr(functionType), "call");
 			structType->elements.push_back(varCall);
-			res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), manager->create<c_ast::TypeDefinition>(structType, manager->create(name)));
-			res->declaration->addDependencies(declDependencies);
-			res->definition = res->declaration;
+
+			// create declaration
+			res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), manager->create<c_ast::TypeDeclaration>(structType));
+
+			// create definition
+			res->definition = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), manager->create<c_ast::TypeDefinition>(structType));
+			res->definition->addDependency(res->declaration);
+			res->definition->addDependencies(declDependencies);
 
 			// R / L value names
 			c_ast::TypePtr namedType = manager->create<c_ast::NamedType>(manager->create(name));

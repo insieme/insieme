@@ -174,9 +174,9 @@ TEST(TypeManager, StructTypes) {
 
 	core::TypePtr type = builder.structType(core::NamedCompositeType::Entries());
 	info = typeManager.getTypeInfo(type);
-	EXPECT_EQ("struct name", toC(info.lValueType));
-	EXPECT_EQ("struct name", toC(info.rValueType));
-	EXPECT_EQ("struct name", toC(info.externalType));
+	EXPECT_EQ("name", toC(info.lValueType));
+	EXPECT_EQ("name", toC(info.rValueType));
+	EXPECT_EQ("name", toC(info.externalType));
 	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
@@ -188,9 +188,9 @@ TEST(TypeManager, StructTypes) {
 	elements.push_back(builder.namedType(builder.stringValue("b"), basic.getBool()));
 	type = builder.structType(elements);
 	info = typeManager.getTypeInfo(type);
-	EXPECT_EQ("struct name", toC(info.lValueType));
-	EXPECT_EQ("struct name", toC(info.rValueType));
-	EXPECT_EQ("struct name", toC(info.externalType));
+	EXPECT_EQ("name", toC(info.lValueType));
+	EXPECT_EQ("name", toC(info.rValueType));
+	EXPECT_EQ("name", toC(info.externalType));
 	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 
@@ -271,9 +271,9 @@ TEST(TypeManager, RefTypes) {
 
 	type = builder.refType(builder.structType(core::NamedCompositeType::Entries()));
 	info = typeManager.getTypeInfo(type);
-	EXPECT_EQ("struct name", toC(info.lValueType));
-	EXPECT_EQ("struct name*", toC(info.rValueType));
-	EXPECT_EQ("struct name*", toC(info.externalType));
+	EXPECT_EQ("name", toC(info.lValueType));
+	EXPECT_EQ("name*", toC(info.rValueType));
+	EXPECT_EQ("name*", toC(info.externalType));
 	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
@@ -413,8 +413,8 @@ TEST(TypeManager, ArrayTypes) {
 	core::TypePtr structType = builder.structType(core::NamedCompositeType::Entries());
 	type = builder.arrayType(structType);
 	info = typeManager.getTypeInfo(type);
-	EXPECT_EQ("struct name*", toC(info.lValueType));
-	EXPECT_EQ("struct name*", toC(info.rValueType));
+	EXPECT_EQ("name*", toC(info.lValueType));
+	EXPECT_EQ("name*", toC(info.rValueType));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_EQ(typeManager.getTypeInfo(structType).definition, info.definition);
@@ -459,7 +459,7 @@ TEST(TypeManager, VectorTypes) {
 	EXPECT_EQ("name", toC(info.rValueType));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
-	EXPECT_PRED2(containsSubString, toC(info.definition), "struct _name");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "struct name");
 	EXPECT_PRED2(containsSubString, toC(info.definition), "int32_t data[4];");
 
 	EXPECT_TRUE((bool)info.initUniform);
@@ -472,7 +472,7 @@ TEST(TypeManager, VectorTypes) {
 	EXPECT_EQ("name", toC(info.rValueType));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
-	EXPECT_PRED2(containsSubString, toC(info.definition), "struct _name");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "struct name");
 	EXPECT_PRED2(containsSubString, toC(info.definition), "int64_t data[4];");
 
 	EXPECT_TRUE((bool)info.initUniform);
@@ -486,7 +486,7 @@ TEST(TypeManager, VectorTypes) {
 	EXPECT_EQ("name", toC(info.rValueType));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
-	EXPECT_PRED2(containsSubString, toC(info.definition), "struct _name");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "struct name");
 	EXPECT_PRED2(containsSubString, toC(info.definition), "name data[4];");
 
 	EXPECT_TRUE((bool)info.initUniform);
@@ -503,7 +503,7 @@ TEST(TypeManager, VectorTypes) {
 	EXPECT_EQ("name", toC(info.rValueType));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
-	EXPECT_PRED2(containsSubString, toC(info.definition), "struct _name");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "struct name");
 	EXPECT_PRED2(containsSubString, toC(info.definition), "name data[84];");
 
 	EXPECT_TRUE((bool)info.initUniform);
@@ -561,13 +561,15 @@ TEST(TypeManager, FunctionTypes) {
 	EXPECT_EQ("name_call", toC(info.callerName));
 	EXPECT_EQ("name_ctr", toC(info.constructorName));
 
-	EXPECT_PRED2(containsSubString, toC(info.definition), "struct _name");
-	EXPECT_PRED2(containsSubString, toC(info.definition), "float(* call)(struct _name*,int32_t,bool);");
+	EXPECT_PRED2(containsSubString, toC(info.declaration), "name");
+
+	EXPECT_PRED2(containsSubString, toC(info.definition), "name");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "float(* call)(name*,int32_t,bool);");
 
 	EXPECT_PRED2(containsSubString, toC(info.caller), "static inline float name_call(name* closure, int32_t p1, bool p2) {\n    return closure->call(closure, p1, p2);\n}\n");
 
 	EXPECT_PRED2(containsSubString, toC(info.constructor),
-			"static inline name* name_ctr(name* target, float(* call)(struct _name*,int32_t,bool)) {\n"
+			"static inline name* name_ctr(name* target, float(* call)(name*,int32_t,bool)) {\n"
 			"    *target = (name){call};\n"
 			"    return target;\n"
 			"}");
@@ -658,8 +660,8 @@ TEST(TypeManager, RecursiveTypes) {
 
 	TypeInfo infoA = typeManager.getTypeInfo(recTypeA);
 
-	EXPECT_EQ("struct name", toC(infoA.lValueType));
-	EXPECT_EQ("struct name", toC(infoA.rValueType));
+	EXPECT_EQ("name", toC(infoA.lValueType));
+	EXPECT_EQ("name", toC(infoA.rValueType));
 	EXPECT_TRUE((bool)infoA.declaration);
 	EXPECT_TRUE((bool)infoA.definition);
 
@@ -718,11 +720,11 @@ TEST(TypeManager, MutalRecursiveTypes) {
 	TypeInfo infoA = typeManager.getTypeInfo(recTypeA);
 	TypeInfo infoB = typeManager.getTypeInfo(recTypeB);
 
-	EXPECT_EQ("struct name", toC(infoA.lValueType));
-	EXPECT_EQ("struct name", toC(infoA.rValueType));
+	EXPECT_EQ("name", toC(infoA.lValueType));
+	EXPECT_EQ("name", toC(infoA.rValueType));
 
-	EXPECT_EQ("struct name", toC(infoB.lValueType));
-	EXPECT_EQ("struct name", toC(infoB.rValueType));
+	EXPECT_EQ("name", toC(infoB.lValueType));
+	EXPECT_EQ("name", toC(infoB.rValueType));
 
 	EXPECT_TRUE((bool)infoA.declaration);
 	EXPECT_TRUE((bool)infoA.definition);
@@ -762,9 +764,9 @@ TEST(TypeManager, TupleType) {
 
 	core::TypePtr type = builder.tupleType(core::TypeList());
 	info = typeManager.getTypeInfo(type);
-	EXPECT_EQ("struct name", toC(info.lValueType));
-	EXPECT_EQ("struct name", toC(info.rValueType));
-	EXPECT_EQ("struct name", toC(info.externalType));
+	EXPECT_EQ("name", toC(info.lValueType));
+	EXPECT_EQ("name", toC(info.rValueType));
+	EXPECT_EQ("name", toC(info.externalType));
 	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
@@ -773,9 +775,9 @@ TEST(TypeManager, TupleType) {
 	// members should not have an effect on the types
 	type = builder.tupleType(toVector(basic.getInt4(), basic.getBool()));
 	info = typeManager.getTypeInfo(type);
-	EXPECT_EQ("struct name", toC(info.lValueType));
-	EXPECT_EQ("struct name", toC(info.rValueType));
-	EXPECT_EQ("struct name", toC(info.externalType));
+	EXPECT_EQ("name", toC(info.lValueType));
+	EXPECT_EQ("name", toC(info.rValueType));
+	EXPECT_EQ("name", toC(info.externalType));
 	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 

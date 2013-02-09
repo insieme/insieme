@@ -80,6 +80,7 @@ namespace measure {
 		auto kb = makeUnitPtr(kilo * byte);
 		auto j = makeUnitPtr((kg * (m^2)) / (s^2)); // 1 joule
 		auto cycle = makeUnitPtr(Unit("cycle"));
+		auto c = makeUnitPtr(celsius);
 		auto unit = makeUnitPtr(Unit());
 
 
@@ -202,7 +203,7 @@ namespace measure {
 		}
 
 		/**
-		 * Computes the product of two region metrics.
+		 * Computes the difference of two region metrics.
 		 */
 		template<typename SourceA, typename SourceB>
 		binary_connector<std::minus<Quantity>, SourceA, SourceB> sub(const SourceA& a, const SourceB& b) {

@@ -39,7 +39,9 @@
 #include <algorithm>
 
 #include "insieme/utils/logging.h"
-#include "insieme/analysis/access.h"
+#include "insieme/analysis/access/access.h"
+#include "insieme/analysis/access/access_mgr.h"
+#include "insieme/analysis/access/unified_address.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
@@ -55,6 +57,7 @@
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::analysis;
+using namespace insieme::analysis::access;
 
 TEST(UnifiedAddress, IRAddress) {
 
@@ -176,6 +179,26 @@ TEST(Access, Scalars) {
 	{
 		auto code = builder.parseAddresses(
 			"{"
+			"	ref<int<4>> a;"
+			"	$var(*a)$;"
+			"}"
+		);
+		
+		EXPECT_EQ(1u, code.size());
+
+		auto accessAddr = code[0].as<ExpressionAddress>();
+
+		auto access = getImmediateAccess(  mgr, accessAddr );
+		EXPECT_TRUE(access->isReference());
+		EXPECT_FALSE(access->isBaseAccess());
+
+		EXPECT_TRUE(getRoot(access)->isReference());
+	}
+
+
+	{
+		auto code = builder.parseAddresses(
+			"{"
 			"	ref<struct{int<4> a; int<4> b;}> s;"
 			"	$s$;"
 			"}"
@@ -236,6 +259,8 @@ TEST(Access, ScalarAliasedAccess) {
 
 		EXPECT_EQ(3u, (*accClassSet1.begin())->size());
 	}
+
+
 }
 
 TEST(Access, MemberAccess) {
@@ -330,7 +355,7 @@ TEST(Access, CompoundMemberAccess) {
 
 		EXPECT_EQ(UnifiedAddress(accessAddr), access->getAddress());
 
-		EXPECT_EQ(declAddr->getVariable().getAddressedNode(), access->getRoot().getVariable());
+		EXPECT_EQ(declAddr->getVariable().getAddressedNode(), getRoot(access)->getVariable());
 		EXPECT_EQ(AccessType::AT_MEMBER, access->getType());
 
 		EXPECT_TRUE(access->isReference());
@@ -435,7 +460,7 @@ TEST(Access, ArrayAccess) {
 		
 		EXPECT_EQ(UnifiedAddress(accessAddr), access->getAddress());
 		EXPECT_EQ(AccessType::AT_SUBSCRIPT, access->getType());
-		EXPECT_EQ(varAddr.getAddressedNode(), access->getRoot().getVariable());
+		EXPECT_EQ(varAddr.getAddressedNode(), getRoot(access)->getVariable());
 		EXPECT_TRUE(access->isReference());
 		EXPECT_FALSE(access->isContextDependent());
 
@@ -464,7 +489,7 @@ TEST(Access, ArrayAccess) {
 		
 		EXPECT_EQ(UnifiedAddress(accessAddr), access->getAddress());
 		EXPECT_EQ(AccessType::AT_DEREF, access->getType());
-		EXPECT_EQ(varAddr.getAddressedNode(), access->getRoot().getVariable());
+		EXPECT_EQ(varAddr.getAddressedNode(), getRoot(access)->getVariable());
 		EXPECT_FALSE(access->isReference());
 		EXPECT_FALSE(access->isContextDependent());
 
@@ -623,7 +648,7 @@ TEST(Access, ArrayAccess) {
 
 		auto access = getImmediateAccess( mgr, accessNode );
 		EXPECT_EQ(AccessType::AT_SUBSCRIPT, access->getType());
-		EXPECT_EQ(address[2].getAddressedNode(), access->getRoot().getVariable());
+		EXPECT_EQ(address[2].getAddressedNode(), getRoot(access)->getVariable());
 
 		EXPECT_TRUE(access->isReference());
 		EXPECT_TRUE(access->isContextDependent());
@@ -1227,8 +1252,13 @@ TEST(Access, MultipleAccessesSimple) {
 	EXPECT_EQ(3u, accesses.size());
 
 	EXPECT_EQ(addresses[1].as<DeclarationStmtAddress>()->getVariable(), accesses[0]->getAddress());
+	EXPECT_FALSE(accesses[0]->isReference());
+
 	EXPECT_EQ(addresses[2], accesses[1]->getAddress());
+	EXPECT_FALSE(accesses[1]->isReference());
+
 	EXPECT_EQ(addresses[3], accesses[2]->getAddress());
+	EXPECT_FALSE(accesses[2]->isReference());
 }
 
 TEST(Access, MultipleAccessesVector) {
@@ -1239,19 +1269,28 @@ TEST(Access, MultipleAccessesVector) {
 	auto addresses = builder.parseAddresses(
 		"${"
 		"	vector<uint<4>,4> a; "
-		"	uint<4> b=3; "
-		"	$uint<4> c = $a[b]$ + $b$;$ "
+		"	ref<uint<4>> b=3; "
+		"	ref<uint<4>> c; "
+		"	$c = $a[$b$]$ + $b$;$ "
 		"}$");
 
-	EXPECT_EQ(4u, addresses.size());
+	EXPECT_EQ(5u, addresses.size());
 
-	auto accesses = getAccesses(  mgr, UnifiedAddress(addresses[1]) );
+	auto accesses = getAccesses( mgr, UnifiedAddress(addresses[1]) );
 
-	EXPECT_EQ(3u, accesses.size());
+	EXPECT_EQ(4u, accesses.size());
 
-	EXPECT_EQ(addresses[1].as<DeclarationStmtAddress>()->getVariable(), accesses[0]->getAddress());
+	EXPECT_EQ(addresses[1].as<CallExprAddress>()->getArgument(0), accesses[0]->getAddress());
+	EXPECT_TRUE(accesses[0]->isReference());
+
 	EXPECT_EQ(addresses[2], accesses[1]->getAddress());
-	EXPECT_EQ(addresses[3], accesses[2]->getAddress());
+	EXPECT_FALSE(accesses[1]->isReference());
+
+	EXPECT_EQ(addresses[2], accesses[2]->getAddress());
+	EXPECT_FALSE(accesses[1]->isReference());
+
+	EXPECT_EQ(addresses[4], accesses[3]->getAddress());
+	EXPECT_FALSE(accesses[2]->isReference());
 }
 
 TEST(Access, MultipleAccessesVector2) {
@@ -1263,17 +1302,17 @@ TEST(Access, MultipleAccessesVector2) {
 		"${"
 		"	vector<uint<4>,4> a; "
 		"	ref<uint<4>> b=3; "
-		"	$$b$ = $a[b]$ + $b$;$"
+		"	$uint<4> c = $a[$b$]$ + 4u;$"
 		"}$");
 
-	EXPECT_EQ(5u, addresses.size());
+	EXPECT_EQ(4u, addresses.size());
 
-	auto accesses = getAccesses(  mgr, UnifiedAddress(addresses[1]) );
+	auto accesses = getAccesses( mgr, UnifiedAddress(addresses[1]) );
 
 	EXPECT_EQ(3u, accesses.size());
 
-	EXPECT_EQ(addresses[2], accesses[0]->getAddress());
-	EXPECT_EQ(addresses[3], accesses[1]->getAddress());
-	EXPECT_EQ(addresses[4], accesses[2]->getAddress());
+	EXPECT_EQ(addresses[1].as<DeclarationStmtAddress>()->getVariable(), accesses[0]->getAddress());
+	EXPECT_EQ(addresses[2], accesses[1]->getAddress());
+	EXPECT_EQ(addresses[3], accesses[2]->getAddress());
 }
 

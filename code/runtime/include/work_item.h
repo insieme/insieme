@@ -50,7 +50,7 @@
 IRT_MAKE_ID_TYPE(work_item);
 
 typedef enum _irt_work_item_state {
-	IRT_WI_STATE_NEW, IRT_WI_STATE_STARTED, IRT_WI_STATE_DONE, 
+	IRT_WI_STATE_NEW, IRT_WI_STATE_STARTED, IRT_WI_STATE_SUSPENDED, IRT_WI_STATE_DONE, 
 } irt_work_item_state;
 
 struct _irt_work_item_range {

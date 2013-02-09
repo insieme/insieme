@@ -74,6 +74,12 @@ protected:
 };
 
 /**
+ * Define the managed type pointer variant of an annotation key (keys are always
+ * static, so plain pointers are managed).
+ */
+typedef const AnnotationKey* AnnotationKeyPtr;
+
+/**
  * An abstract base class for any kind of annotation to be attached to a AST node or pointer.
  */
 class Annotation : public utils::Printable {
@@ -87,7 +93,7 @@ public:
 	 *
 	 * NOTE: best practice would be to use static variables to represent annotation keys
 	 */
-	virtual const AnnotationKey* getKey() const = 0;
+	virtual const AnnotationKeyPtr getKey() const = 0;
 	
 	/**
 	 * Requests the name of this annotation. The name should be a constant class member.
@@ -123,6 +129,12 @@ public:
 	}
 
 };
+
+/**
+ * Define the managed type pointer variant of an annotation. Annotations are
+ * always managed using a shared pointer.
+ */
+typedef std::shared_ptr<Annotation> AnnotationPtr;
 
 /**
  * An abstract base class for compound annotations to be attached to an annotatable objects.
@@ -270,9 +282,10 @@ namespace detail {
 	template<
 		typename V,
 		typename AnnotationType,
-		typename KeyType
+		typename KeyType,
+		typename Derived
 	>
-	class ValueAnnotation : public AnnotationType {
+	class ValueAnnotationBase : public AnnotationType {
 
 	public:
 
@@ -300,12 +313,12 @@ namespace detail {
 		 *
 		 * @param value the value to be represented
 		 */
-		ValueAnnotation(const V& value) : value(value) {}
+		ValueAnnotationBase(const V& value) : value(value) {}
 
 		/**
 		 * Obtains the key to be used to identify this annotation within an annotatable object.
 		 */
-		virtual const AnnotationKey* getKey() const {
+		virtual const AnnotationKeyPtr getKey() const {
 			return &KEY;
 		}
 
@@ -326,7 +339,7 @@ namespace detail {
 			}
 
 			// check types
-			if (typeid(other) != typeid(ValueAnnotation<V,AnnotationType,KeyType>)) {
+			if (typeid(other) != typeid(Derived)) {
 				return false;
 			}
 
@@ -357,8 +370,18 @@ namespace detail {
 	};
 
 	// the initialization of the static key used for value annotations
-	template<typename V,typename A, typename K>
-	const ValueAnnotationKey<V,A,K> ValueAnnotation<V,A,K>::KEY;
+	template<typename V,typename A, typename K, typename D>
+	const ValueAnnotationKey<V,A,K> ValueAnnotationBase<V,A,K,D>::KEY;
+
+	/**
+	 * The implementation of the standard value annotation. This implementation may
+	 * be specialized for specific annotation types.
+	 */
+	template<typename V, typename AnnotationType, typename KeyType>
+	class ValueAnnotation : public ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>> {
+	public:
+		ValueAnnotation(const V& value) : ValueAnnotationBase<V,AnnotationType,KeyType, ValueAnnotation<V, AnnotationType, KeyType>>(value) {}
+	};
 
 }
 
@@ -389,7 +412,7 @@ public:
 	/**
 	 * A type definition for the internal data structure used for storing the annotations.
 	 */
-	typedef utils::map::PointerMap<const KeyType*, std::shared_ptr<AnnotationType>> annotation_map_type;
+	typedef utils::map::PointerMap<const KeyType*, annotation_ptr_type> annotation_map_type;
 
 private:
 
@@ -469,6 +492,24 @@ public:
 		addAnnotation(std::make_shared<Annotation>(p...));
 	}
 
+	const annotation_ptr_type& getAnnotation(const AnnotationKeyPtr& key) const {
+		static const annotation_ptr_type none;
+
+		// check whether there are annotations
+		if (!hasAnnotations()) {
+			return none;
+		}
+
+		// search for entry
+		auto pos = map->find(key);
+		if (pos == map->end() ) {
+			return none;
+		}
+
+		// return pointer to result
+		return pos->second;
+	}
+
 	/**
 	 * Obtains a pointer to an Annotation associated to this annotatable class.
 	 *
@@ -479,23 +520,17 @@ public:
 	template<typename Key>
 	typename std::shared_ptr<typename Key::annotation_type> getAnnotation(const Key* key) const {
 
-		// check whether there are annotations
-		if (!hasAnnotations()) {
-			return std::shared_ptr<typename Key::annotation_type>();
-		}
+		auto res = getAnnotation((AnnotationKeyPtr)key);
 
-		// search for entry
-		auto pos = map->find(key);
-		if (pos == map->end() ) {
-			return std::shared_ptr<typename Key::annotation_type>();
-		}
+		// handle null-pointer
+		if (!res) return std::shared_ptr<typename Key::annotation_type>();
 
 		// check type
-		assert (dynamic_cast<typename Key::annotation_type*>(&*(*pos).second)
+		assert (std::dynamic_pointer_cast<typename Key::annotation_type>(res)
 				&& "Annotation Type of Key does not match actual annotation!" );
 
 		// return pointer to result
-		return std::static_pointer_cast<typename Key::annotation_type>((*pos).second);
+		return std::static_pointer_cast<typename Key::annotation_type>(res);
 	}
 
 	/**
@@ -561,8 +596,8 @@ public:
 	 * Obtains an immutable reference to the internally maintained annotations.
 	 */
 	const annotation_map_type& getAnnotations() const {
-		initAnnotationMap();
-		return *map;
+		static const annotation_map_type empty;
+		return (map)?*map:empty;
 	}
 
 	/**
@@ -574,6 +609,13 @@ public:
 	 * @param annotations the annotations to be assigned
 	 */
 	void setAnnotations(const annotation_map_type& annotations) const {
+
+		// special handling for cleaning annotations
+		if (annotations.empty()) {
+			map.reset();
+			return;
+		}
+
 		// replace all currently assigned annotations
 		initAnnotationMap();
 		*map = annotations;

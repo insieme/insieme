@@ -40,6 +40,8 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_statements.h"
 
+#include "insieme/core/annotations/naming.h"
+
 #include "insieme/annotations/c/naming.h"
 
 
@@ -55,11 +57,23 @@ namespace backend {
 		auto it = nameMap.find(ptr);
 		if(it != nameMap.end()) return it->second;
 
-		// test whether the node has an annotation
-		if(auto cnameAnn = ptr->getAnnotation(annotations::c::CNameAnnotation::KEY)) {
-			// => take original c name
-			string name = cnameAnn->getName();
-			if (usedNames.find(name) == usedNames.end()) {
+		{
+			string name;
+
+			// test whether the node has a name attached
+			if (core::annotations::hasNameAttached(ptr)) {
+				// => take the attached name
+				name = core::annotations::getAttachedName(ptr);
+			}
+
+			// test whether the node has an annotation
+			if(auto cnameAnn = ptr->getAnnotation(insieme::annotations::c::CNameAnnotation::KEY)) {
+				// => take original c name
+				name = cnameAnn->getName();
+			}
+
+			// use attached name if present
+			if (!name.empty() && usedNames.find(name) == usedNames.end()) {
 				nameMap.insert(make_pair(ptr, name));
 				usedNames.insert(name);
 				return name;

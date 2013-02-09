@@ -899,6 +899,46 @@ namespace detail {
 		EXPECT_FALSE(g.match(manager, "-+-+"));
 	}
 
+	TEST(Parser, BeforeAfterSetOfSubSequences) {
+		NodeManager manager;
+
+		// The problem: in cases where sub-sequences may be empty (e.g. E*) the start / end set of the
+		//		sub-sequences next to it are incorrectly computed.
+		//
+		// Example: E = x | E ::( E* )-> E
+		//
+		// Fix: matching sub-sequences is now checking for this case
+
+		auto E = rec("E");
+		Grammar g("E");
+
+		// add a rule containing a potentially empty sequence
+		g.addRule("E", rule(seq("X"), accept));
+		g.addRule("E", rule(seq(E, "::(", list(E, ","), ")->", E), accept));
+
+//		std::cout << g << "\n";
+//		std::cout << g.getTermInfo() << "\n";
+//
+//		const auto& termInfo = g.getTermInfo();
+//
+//		for (auto cur : termInfo.subSequenceInfo) {
+//			// type of cur: pair<Sequence::SubSequence const*, StartEndSets>
+//
+//			std::cout << "Sequence: " << join(", ", cur.first->terms, print<deref<TermPtr>>()) << "\n";
+//			std::cout << "StartSet: " << cur.second.first << "\n";
+//			std::cout << "EndSet:   " << cur.second.second << "\n";
+//			std::cout << "\n";
+//
+//		}
+
+
+		EXPECT_TRUE(g.match(manager, "X"));
+		EXPECT_TRUE(g.match(manager, "X::()->X"));
+		EXPECT_TRUE(g.match(manager, "X::(X)->X"));
+		EXPECT_TRUE(g.match(manager, "X::(X,X)->X"));
+
+	}
+
 } // end namespace detail
 } // end namespace parser
 } // end namespace core

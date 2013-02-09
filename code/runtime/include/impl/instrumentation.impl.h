@@ -36,7 +36,7 @@
 
 #pragma once
 
-//#include <locale.h> // needed to use thousands separator
+#include <locale.h> // needed to use thousands separator
 #include <stdio.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -49,6 +49,7 @@
 #include "papi_helper.h"
 #include "utils/impl/energy.impl.h"
 #include "utils/impl/timing.impl.h"
+#include "utils/impl/temperature.impl.h"
 #endif
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
@@ -58,6 +59,7 @@ void (*irt_inst_insert_wg_event)(irt_worker* worker, irt_instrumentation_event e
 void (*irt_inst_insert_di_event)(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id) = &_irt_inst_insert_no_di_event;
 void (*irt_inst_insert_wo_event)(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id) = &_irt_inst_insert_no_wo_event;
 bool irt_g_instrumentation_event_output_is_enabled = false;
+bool irt_g_instrumentation_event_output_is_binary = false;
 
 // ============================ dummy functions ======================================
 // dummy functions to be used via function pointer to disable
@@ -145,6 +147,19 @@ void _irt_inst_insert_di_event(irt_worker* worker, irt_instrumentation_event eve
 #if defined (USE_OPENCL) && defined (IRT_OCL_INSTR)
     bool irt_g_ocl_temp_event_dump_already_done = false;
 #endif
+
+void irt_inst_event_data_output_single(irt_instrumentation_event_data data, FILE* outputfile, bool readable) {
+	irt_work_item_id temp_id;
+	temp_id.cached = NULL;
+	temp_id.index = data.index;
+	temp_id.thread = data.thread;
+	temp_id.node = 0;
+	if(readable) {
+		setlocale(LC_ALL, "");
+		fprintf(outputfile, "%s,%'16lu,%20s,%'32lu\n", irt_g_instrumentation_group_names[data.event_id], temp_id.full, irt_g_instrumentation_event_names[data.event_id], irt_time_convert_ticks_to_ns(data.timestamp));
+	} else
+		fprintf(outputfile, "%s,%lu,%s,%lu\n", irt_g_instrumentation_group_names[data.event_id], temp_id.full, irt_g_instrumentation_event_names[data.event_id], irt_time_convert_ticks_to_ns(data.timestamp));
+}
 
 void irt_inst_event_data_output_all(bool binary_format) {
 	for(int i = 0; i < irt_g_worker_count; ++i)
@@ -265,7 +280,6 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 
 
 	if(binary_format) {
-		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "enabled");
 
 		/*
 		 * TODO: this format description is outdated and wrong
@@ -322,14 +336,8 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {
 		fwrite(table->data, sizeof(irt_instrumentation_event_data), table->number_of_elements, outputfile);
 
 	} else {
-		irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "disabled");
 		for(int i = 0; i < table->number_of_elements; ++i) {
-			irt_work_item_id temp_id;
-			temp_id.cached = NULL;
-			temp_id.index = table->data[i].index;
-			temp_id.thread = table->data[i].thread;
-			temp_id.node = 0;
-			fprintf(outputfile, "%s,%lu,%s,%lu\n", irt_g_instrumentation_group_names[table->data[i].event_id], temp_id.full, irt_g_instrumentation_event_names[table->data[i].event_id], irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+			irt_inst_event_data_output_single(table->data[i], outputfile, false);
 		}
 	}
 
@@ -378,8 +386,19 @@ void irt_inst_set_all_instrumentation(bool enable) {
 }
 
 void irt_inst_set_all_instrumentation_from_env() {
+	// set whether worker event logging is enabled, and if so, what event types will be logged
 	if (getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING_ENV), "true") == 0) {
 		irt_log_setting_s("IRT_INST_WORKER_EVENT_LOGGING", "enabled");
+		
+		// set whether binary format is enabled
+		if(getenv(IRT_INST_BINARY_OUTPUT_ENV) && (strcmp(getenv(IRT_INST_BINARY_OUTPUT_ENV), "true") == 0)) {
+			irt_g_instrumentation_event_output_is_binary = true;
+			irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "enabled");
+		} else {
+			irt_g_instrumentation_event_output_is_binary = false;
+			irt_log_setting_s("IRT_INST_BINARY_OUTPUT", "disabled");
+		}
+
 		char* types = getenv(IRT_INST_WORKER_EVENT_TYPES_ENV);
 		if(!types) {
 			irt_inst_set_all_instrumentation(true);
@@ -580,6 +599,9 @@ void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uin
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double = data.mc[1];
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double = data.cores[1];
 
+			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_uint64 = irt_get_temperature_core(worker);
+			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_uint64 = irt_get_temperature_package(worker);
+
 //			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = -1;
 			// set all papi counter fields for REGION_START to -1 since we don't use them here
 			for(int i = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i < PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1 + worker->irt_papi_number_of_events; ++i)
@@ -618,6 +640,9 @@ void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uin
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2].value_double = data.package[1];
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double = data.mc[1];
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double = data.cores[1];
+
+			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_uint64 = irt_get_temperature_core(worker);
+			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_uint64 = irt_get_temperature_package(worker);
 
 			for(int i=PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i<(worker->irt_papi_number_of_events+PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++i)
 				epd->data[i].value_uint64 = papi_temp[i-PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1];
@@ -717,7 +742,29 @@ void irt_inst_region_data_output(irt_worker* worker) {
 	FILE* outputfile = fopen(outputfilename, "w");
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for performance log writing: %s\n", strerror(errno));
 	//fprintf(outputfile, "#subject,id,timestamp_start_(ns),timestamp_end_(ns),virt_memory_start_(kb),virt_memory_end_(kb),res_memory_start_(kb),res_memory_end_(kb),energy_start_(j),energy_end_(j)");
-	fprintf(outputfile, "#subject,id,timestamp_start_(ns),timestamp_end_(ns),virt_memory_start_(kb),virt_memory_end_(kb),res_memory_start_(kb),res_memory_end_(kb),energy_package_1_start_(j),energy_package_1_end_(j),energy_mc_1_start_(j),energy_mc_1_end_(j),energy_cores_1_start_(j),energy_cores_1_end_(j),energy_package_2_start_(j),energy_package_2_end_(j),energy_mc_2_start_(j),energy_mc_2_end_(j),energy_cores_2_start_(j),energy_cores_2_end_(j)");
+	fprintf(outputfile, "#subject,"
+			"id,timestamp_start_(ns),"
+			"timestamp_end_(ns),"
+			"virt_memory_start_(kb),"
+			"virt_memory_end_(kb),"
+			"res_memory_start_(kb),"
+			"res_memory_end_(kb),"
+			"energy_package_1_start_(j),"
+			"energy_package_1_end_(j),"
+			"energy_mc_1_start_(j),"
+			"energy_mc_1_end_(j),"
+			"energy_cores_1_start_(j),"
+			"energy_cores_1_end_(j),"
+			"energy_package_2_start_(j),"
+			"energy_package_2_end_(j),"
+			"energy_mc_2_start_(j),"
+			"energy_mc_2_end_(j),"
+			"energy_cores_2_start_(j),"
+			"energy_cores_2_end_(j),"
+			"temperature_core_start_(c),"
+			"temperature_core_end_(c),"
+			"temperature_pkg_start_(c),"
+			"temperature_pkg_end_(c)");
 
 	// get the papi event names and print them to the header
 	for(int i = 0; i < number_of_papi_events; ++i) {
@@ -748,7 +795,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 			// single fprintf for performance reasons
 			// outputs all data in pairs: value_when_entering_region, value_when_exiting_region
 	//		fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f",
-			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f",
+			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%lu,%lu,%lu,%lu",
 					table->data[i].subject_id,
 					irt_time_convert_ticks_to_ns(start_data.timestamp), 
 					irt_time_convert_ticks_to_ns(table->data[i].timestamp),
@@ -760,18 +807,22 @@ void irt_inst_region_data_output(irt_worker* worker) {
 //					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double);
 
 					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_1].value_double,
-                                        table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_1].value_double,
-                                        start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_1].value_double,
-                                        table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_1].value_double,
-                                        start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_1].value_double,
-                                        table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_1].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_1].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_1].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_1].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_1].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_1].value_double,
 
-                                        start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2].value_double,
-                                        table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2].value_double,
-                                        start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double,
-                                        table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double,
-                                        start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double,
-                                        table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double);
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_uint64,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_uint64,
+					start_data.data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_uint64,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_uint64);
 			// prints all performance counters, assumes that the order of the enums is correct (contiguous from ...COUNTER_1 to ...COUNTER_N
 			for(int j = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; j < (worker->irt_papi_number_of_events + PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++j) {
 				if( table->data[i].data[j].value_uint64 == UINT_MAX) // used to filter missing results, replace with -1 in output

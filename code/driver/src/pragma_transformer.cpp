@@ -46,6 +46,7 @@
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/rulebased/transformations.h"
+#include "insieme/transform/functions/transformations.h"
 
 #include "insieme/utils/logging.h"
 
@@ -188,6 +189,17 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 						
 						assert(values.size() == 1 && "Region Strip accepts only 1 value");
 						tr.push_back(polyhedral::makeRegionStripMining(values.front()));
+						break;
+					}
+
+					// REC_FUN_UNROLL annotation handling
+					case annotations::TransformationHint::REC_FUN_UNROLL:
+					{
+						LOG(INFO) << "Unrolling recursive function according to "
+								  << " transformation hint at location: [ "
+								  << getStartLocation(cur) << "]";
+						assert(values.size() == 1 && "Function-Unrolling requires exactly 1 value");
+						tr.push_back(functions::makeRecFunUnrolling(values.front()));
 						break;
 					}
 

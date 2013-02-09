@@ -207,7 +207,7 @@ struct ScopRegion: public core::NodeAnnotation {
 
 	inline const std::string& getAnnotationName() const { return NAME; }
 
-	inline const utils::AnnotationKey* getKey() const { return &KEY; }
+	inline const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
 	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
 						const core::NodePtr& before, 
@@ -314,7 +314,7 @@ public:
 
 	inline const std::string& getAnnotationName() const { return NAME; }
 
-	inline const utils::AnnotationKey* getKey() const { return &KEY; }
+	inline const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
 	std::ostream& printTo(std::ostream& out) const;
 

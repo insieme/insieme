@@ -93,6 +93,11 @@ namespace c_ast {
 				return ParameterPrinter(param...);
 			}
 
+			ParameterPrinter printMemberParam(const vector<VariablePtr>& params) {
+				vector<VariablePtr> subset(params.begin()+1, params.end());
+				return ParameterPrinter(subset);
+			}
+
 			std::ostream& newLine(std::ostream& out) {
 				return out << "\n" << times(indentStep, indent);
 			}
@@ -160,11 +165,11 @@ namespace c_ast {
 			}
 
 			PRINT(StructType) {
-				return out << "struct " << print(node->name);
+				return out << print(node->name);
 			}
 
 			PRINT(UnionType) {
-				return out << "union " << print(node->name);
+				return out << print(node->name);
 			}
 
 			PRINT(FunctionType) {
@@ -211,6 +216,10 @@ namespace c_ast {
 			}
 
 			PRINT(Compound) {
+
+				// short-cut for empty blocks
+				if (node->statements.empty()) return out << "{ }";
+
 				out << "{";
 				incIndent();
 				newLine(out);
@@ -333,6 +342,10 @@ namespace c_ast {
 				}) << "}";
 			}
 
+			PRINT(DesignatedInitializer) {
+				return out << "(" << print(node->type) << "){ ." << print(node->member) << " = " << print(node->value) << " }";
+			}
+
 			PRINT(VectorInit) {
 				return out << "{"
 						<< join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) {
@@ -409,6 +422,8 @@ namespace c_ast {
 					case BinaryOperation::Subscript: return out << print(node->operandA) << "[" << print(node->operandB) << "]";
 					case BinaryOperation::Cast: return out << "(" << print(node->operandA) << ")" << print(node->operandB);
 
+					case BinaryOperation::StaticCast:  return out << "static_cast<"  << print(node->operandA) << ">(" << print(node->operandB) << ")";
+					case BinaryOperation::DynamicCast: return out << "dynamic_cast<" << print(node->operandA) << ">(" << print(node->operandB) << ")";
 				}
 
 				assert(op != "" && "Invalid binary operation encountered!");
@@ -447,12 +462,55 @@ namespace c_ast {
 				}) << ")";
 			}
 
+			PRINT(MemberCall) {
+				// <obj> . <function> ( <arguments> )
+				return out << print(node->object) << "." << print(node->memberFun) << "("
+						<< join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) {
+							out << print(cur);
+				}) << ")";
+			}
+
+			PRINT(ConstructorCall) {
+				// <new> <className> ( <arguments> )
+				out << ((node->onHeap || node->location)?"new ":"");
+
+				// the location for a placement new
+				if (node->location) {
+					out << "(" << print(node->location) << ") ";
+				}
+
+				// the rest
+				return out
+						<< print(node->classType) << "("
+						<< join(", ", node->arguments, [&](std::ostream& out, const NodePtr& cur) {
+							out << print(cur);
+						}) << ")";
+			}
+
+			PRINT(DestructorCall) {
+				// <location> . <classType> :: ~<classType> ( )
+				out << print(node->location) << ".";
+				if (!node->isVirtual) out << print(node->classType) << "::";
+				out << "~" << print(node->classType) << "()";
+				return out;
+			}
+
 			PRINT(Parentheses) {
 				return out << "(" << print(node->expression) << ")";
 			}
 
 			PRINT(TypeDeclaration) {
-				return out << print(node->type) << ";\n";
+				// forward declaration + type definition
+				bool isStruct = (node->type->getNodeType() == NT_StructType);
+
+				// forward declaration
+				out << ((isStruct)?"struct ":"union ") << print(node->type) << ";\n";
+
+				// type definition
+				out << "typedef " << ((isStruct)?"struct ":"union ") << print(node->type) << " " << print(node->type) << ";\n";
+
+				// done
+				return out;
 			}
 
 			PRINT(FunctionPrototype) {
@@ -461,33 +519,111 @@ namespace c_ast {
 				return out << print(fun->returnType) << " " << print(fun->name) << "(" << printParam(fun->parameter) << ");\n";
 			}
 
+			PRINT(ConstructorPrototype) {
+				// <class name> ( <parameter list > );
+				auto ctor = node->ctor;
+				return out << print(ctor->className) << "(" << printMemberParam(ctor->function->parameter)<< ")";
+			}
+
+			PRINT(DestructorPrototype) {
+				// <virtual> ~ <class name> ( <parameter list > );
+				auto dtor = node->dtor;
+				return out << (node->isVirtual?"virtual ":"") << "~" << print(dtor->className) << "()";
+			}
+
+			PRINT(MemberFunctionPrototype) {
+				// <virtual> <return type> <name> ( <parameter list > ) <const>;
+				auto fun = node->fun->function;
+				return out
+						<< (node->isVirtual?"virtual ":"")
+						<< print(fun->returnType) << " "
+						<< print(fun->name)
+						<< "(" << printMemberParam(fun->parameter)<< ")"
+						<< (node->fun->isConstant?" const":"")
+						<< (node->pureVirtual?" =0":"");
+			}
+
 			PRINT(ExtVarDecl) {
 				return out << "extern " << print(node->type) << " " << node->name << ";\n";
 			}
 
+			PRINT(Parent) {
+				return out << (node->isVirtual?"virtual ":"") << print(node->parent);
+			}
+
 			PRINT(TypeDefinition) {
 
-				bool explicitTypeDef = (bool)(node->name);
-
-				// print prefix
-				if (explicitTypeDef) {
-					out << "typedef ";
+				// handle type definitions
+				if ((bool)(node->name)) {
+					return out << "typedef " << print(node->type) << " " << print(node->name) << ";\n";
 				}
 
-				// define type
-				out << print(node->type);
-				if (c_ast::NamedCompositeTypePtr composite = dynamic_pointer_cast<c_ast::NamedCompositeType>(node->type)) {
-					out << " {\n    " << join(";\n    ", composite->elements,
-							[&](std::ostream& out, const VariablePtr& cur) {
-								out << printParam(cur);
-					}) << ";\n}";
+				// handle struct / union types
+				c_ast::NamedCompositeTypePtr composite = dynamic_pointer_cast<c_ast::NamedCompositeType>(node->type);
+				assert(composite && "Must be a struct or union type!");
+
+				// special handling for struct types
+				c_ast::StructTypePtr structType = dynamic_pointer_cast<c_ast::StructType>(composite);
+
+				// define struct / type as part of a type definition (C/C++ compatible)
+				out << ((structType)?"struct":"union") << " " << print(composite->name);
+
+				// print parents
+				if (structType && !structType->parents.empty()) {
+					out << " : public " << join(", public ", structType->parents, [&](std::ostream& out, const ParentPtr& cur) { out << print(cur); });
 				}
 
-				// print name and finish
-				if (explicitTypeDef) {
-					out << " " << print(node->name);
+				// start definition
+				out << " {";
+
+				// add fields
+				if (!composite->elements.empty()) out << "\n    ";
+				out << join(";\n    ", composite->elements,
+						[&](std::ostream& out, const VariablePtr& cur) {
+							out << printParam(cur);
+				});
+				if (!composite->elements.empty()) out << ";";
+
+				// add member functions
+				if (structType) {
+
+					// todo: add ctor / dtor
+
+					// add constructors
+					if (!structType->ctors.empty()) out << "\n    ";
+					out << join(";\n    ", structType->ctors,
+							[&](std::ostream& out, const ConstructorPrototypePtr& cur) {
+								out << print(cur);
+					});
+					if (!structType->ctors.empty()) out << ";";
+
+					// add destructor
+					if (structType->dtor) out << "\n    ";
+					out << print(structType->dtor);
+					if (structType->dtor) out << ";";
+
+
+					// add member functions
+					if (!structType->members.empty()) out << "\n    ";
+					out << join(";\n    ", structType->members,
+							[&](std::ostream& out, const MemberFunctionPrototypePtr& cur) {
+								out << print(cur);
+					});
+					if (!structType->members.empty()) out << ";";
+
+					// todo: add ctors / dtors / member function prototypes
+
 				}
-				return out << ";\n";
+
+				// finish type definition
+				return out << "\n};\n";
+			}
+
+			c_ast::StatementPtr wrapBody(const c_ast::StatementPtr& body) {
+				if (body->getType() == c_ast::NT_Compound) {
+					return body;
+				}
+				return body->getManager()->create<c_ast::Compound>(body);
 			}
 
 			PRINT(Function) {
@@ -504,12 +640,63 @@ namespace c_ast {
 
 				out << print(node->returnType) << " " << print(node->name) << "(" << printParam(node->parameter) << ") ";
 
-				c_ast::StatementPtr body = node->body;
-				if (node->body->getType() != c_ast::NT_Compound) {
-					body = body->getManager()->create<c_ast::Compound>(body);
-				}
+				return out << print(wrapBody(node->body));
+			}
 
-				return out << print(body);
+			PRINT(Constructor) {
+				// <className> :: <name> ( <parameter list> ) <body> \n
+
+				auto fun = node->function;
+
+				// print header
+				out << print(node->className) << "::" << print(node->className) << "(" << printMemberParam(fun->parameter) << ") ";
+
+				// TODO: add initializer list
+
+				// print body
+				return out << print(wrapBody(fun->body));
+			}
+
+			PRINT(Destructor) {
+				// ~ <className> :: <name> ( ) <body> \n
+
+				auto fun = node->function;
+
+				// print header
+				out << print(node->className) << "::~" << print(node->className) << "() ";
+
+				// print body
+				return out << print(wrapBody(fun->body));
+			}
+
+			PRINT(MemberFunction) {
+				// <returnType> <className> :: <name> ( <parameter list> ) <const> <body> \n
+
+				auto fun = node->function;
+
+				// print header
+				out << print(fun->returnType) << " " << print(node->className) << "::" << print(fun->name)
+						<< "(" << printMemberParam(fun->parameter) << ")" << (node->isConstant?" const ":" ");
+
+				// print body
+				return out << print(wrapBody(fun->body));
+			}
+
+			PRINT(Namespace) {
+				// namespace <name> { \n <inner def> \n }
+
+				out << "namespace " << print(node->name) << "{";
+				incIndent();
+				newLine(out);
+
+				// print definition
+				out << print(node->definition);
+
+				decIndent();
+				newLine(out);
+				out << "}";
+				newLine(out);
+				return out;
 			}
 
 			#undef PRINT

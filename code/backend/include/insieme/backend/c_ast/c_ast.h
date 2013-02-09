@@ -179,8 +179,21 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct Parent : public Node {
+		bool isVirtual;
+		TypePtr parent;
+		Parent(bool isVirtual, const TypePtr& parent)
+			: Node(NT_Parent), isVirtual(isVirtual), parent(parent) {}
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct StructType : public NamedCompositeType {
+		vector<ParentPtr> parents;
+		vector<ConstructorPrototypePtr> ctors;
+		DestructorPrototypePtr dtor;
+		vector<MemberFunctionPrototypePtr> members;
 		StructType(IdentifierPtr name) : NamedCompositeType(NT_StructType, name) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct UnionType : public NamedCompositeType {
@@ -316,6 +329,15 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct DesignatedInitializer : public Expression {
+		TypePtr type;
+		IdentifierPtr member;
+		ExpressionPtr value;
+		DesignatedInitializer(TypePtr type, IdentifierPtr member, ExpressionPtr value)
+			: Expression(NT_DesignatedInitializer), type(type), member(member), value(value) {};
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct VectorInit : public Expression {
 		vector<NodePtr> values;
 		VectorInit() : Expression(NT_VectorInit) {};
@@ -392,7 +414,11 @@ namespace c_ast {
 			IndirectMemberAccess,
 			Subscript,
 			Cast,
-			Comma
+			Comma,
+
+			// C++ operators
+			StaticCast,
+			DynamicCast
 		};
 
 		BinaryOp operation;
@@ -438,6 +464,36 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct MemberCall : public Expression {
+		NodePtr memberFun;
+		NodePtr object;
+		vector<NodePtr> arguments;
+
+		MemberCall(NodePtr memberFun, NodePtr object, const vector<NodePtr>& args)
+			: Expression(NT_MemberCall), memberFun(memberFun), object(object), arguments(args) {}
+
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct ConstructorCall : public Expression {
+		TypePtr classType;
+		vector<NodePtr> arguments;
+		bool onHeap;
+		ExpressionPtr location;
+		ConstructorCall(TypePtr classType, const vector<NodePtr>& args, bool onHeap = false, ExpressionPtr location = ExpressionPtr())
+			: Expression(NT_ConstructorCall), classType(classType), arguments(args), onHeap(onHeap), location(location) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct DestructorCall : public Expression {
+		TypePtr classType;
+		ExpressionPtr location;
+		bool isVirtual;
+		DestructorCall(TypePtr classType, ExpressionPtr location, bool isVirtual)
+			: Expression(NT_DestructorCall), classType(classType), location(location), isVirtual(isVirtual) {}
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct Parentheses : public Expression {
 		ExpressionPtr expression;
 		Parentheses(ExpressionPtr expression) : Expression(NT_Parentheses), expression(expression) {}
@@ -468,6 +524,31 @@ namespace c_ast {
 		ExtVarDecl(TypePtr type, const string& name) : Declaration(NT_ExtVarDecl), type(type), name(name) {}
 		virtual bool equals(const Node& node) const;
 	};
+
+	struct ConstructorPrototype : public Node {
+		ConstructorPtr ctor;
+		ConstructorPrototype(const ConstructorPtr& ctor)
+			: Node(NT_ConstructorPrototype), ctor(ctor) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct DestructorPrototype : public Node {
+		DestructorPtr dtor;
+		bool isVirtual;
+		DestructorPrototype(const DestructorPtr& dtor, bool isVirtual = false)
+			: Node(NT_DestructorPrototype), dtor(dtor), isVirtual(isVirtual) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct MemberFunctionPrototype : public Node {
+		bool isVirtual;
+		MemberFunctionPtr fun;
+		bool pureVirtual;
+		MemberFunctionPrototype(const MemberFunctionPtr& fun, bool isVirtual = false, bool isPureVirtual = false)
+			: Node(NT_MemberFunctionPrototype), isVirtual(isVirtual), fun(fun), pureVirtual(isPureVirtual) {}
+		virtual bool equals(const Node& node) const;
+	};
+
 
 	// -- Definitions ----------------------------
 
@@ -503,6 +584,40 @@ namespace c_ast {
 			: Definition(NT_Function), flags(0), returnType(returnType), name(name), parameter(params), body(body) {};
 		Function(unsigned flags, TypePtr returnType, IdentifierPtr name, const vector<VariablePtr> params, StatementPtr body)
 					: Definition(NT_Function), flags(flags), returnType(returnType), name(name), parameter(params), body(body) {};
+		virtual bool equals(const Node& node) const;
+	};
+
+
+	struct Constructor : public Definition {
+		IdentifierPtr className;
+		FunctionPtr function;
+		Constructor(const IdentifierPtr& className, const FunctionPtr& function)
+			: Definition(NT_Constructor), className(className), function(function) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct Destructor : public Definition {
+		IdentifierPtr className;
+		FunctionPtr function;
+		Destructor(const IdentifierPtr& className, const FunctionPtr& function)
+			: Definition(NT_Destructor), className(className), function(function) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct MemberFunction : public Definition {
+		IdentifierPtr className;
+		FunctionPtr function;
+		bool isConstant;
+		MemberFunction(const IdentifierPtr& className, const FunctionPtr& function, bool isConstant = false)
+			: Definition(NT_MemberFunction), className(className), function(function), isConstant(isConstant) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct Namespace : public Definition {
+		IdentifierPtr name;
+		DefinitionPtr definition;
+		Namespace(const IdentifierPtr& name, const DefinitionPtr& definition)
+			: Definition(NT_Namespace), name(name), definition(definition) {}
 		virtual bool equals(const Node& node) const;
 	};
 

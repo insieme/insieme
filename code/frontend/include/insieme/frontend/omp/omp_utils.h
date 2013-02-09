@@ -51,7 +51,7 @@ namespace omp {
 struct GlobalRequiredAnnotation : public core::NodeAnnotation { 
 	const static string name;
 	const static utils::StringKey<GlobalRequiredAnnotation> key; 
-	virtual const utils::AnnotationKey* getKey() const {
+	virtual const utils::AnnotationKeyPtr getKey() const {
 		return &key;
 	}
 	virtual const std::string& getAnnotationName() const {

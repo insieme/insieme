@@ -22,10 +22,7 @@ int main(int argc, const char* argv[]) {
 	cl_uint4* input = (cl_uint4*) malloc(sizeof(cl_uint4) * size);
 	cl_uint* output = (cl_uint*) malloc(sizeof(cl_uint) * size);
 	for (cl_uint i = 0; i < size; ++i) {
-		input[i].s[0] = 15;
-		input[i].s[1] = 15;
-		input[i].s[2] = 15;
-		input[i].s[3] = 15;
+		input[i] = (cl_uint4){15, 15, 15, 15};
 		num_bits[i] = (int)pow(2, ((i % 3) + 1));
 	}
 	

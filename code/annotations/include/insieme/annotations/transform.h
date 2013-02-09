@@ -58,7 +58,11 @@ struct TransformationHint {
 				LOOP_RESCHEDULE,
 				LOOP_PARALLELIZE,
 
-				REGION_STRIP
+				REGION_STRIP,
+
+				// for recursive functions
+				REC_FUN_UNROLL
+
 				// Add here new transformations 
 			  };
 	
@@ -87,7 +91,7 @@ public:
 
     TransformAnnotation(): utils::CompoundAnnotation<TransformationHint, core::NodeAnnotation>() { }
 
-    const utils::AnnotationKey* getKey() const { return &KEY; }
+    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 	const std::string& getAnnotationName() const { return NAME; }
 
 	const std::string toString() const;

@@ -25,7 +25,7 @@
  ALTERNATIVELY, provided that this notice is retained in full, this product
  may be distributed under the terms of the GNU General Public License (GPL),
  in which case the provisions of the GPL apply INSTEAD OF those given above.
-
+typedef uint8_t RNG_state;
  DISCLAIMER
 
  This software is provided 'as is' with no explicit or implied warranties
@@ -39,6 +39,7 @@
 #define _SHA1_H
 
 #include <stdlib.h>
+#include <stdint.h>
 #include "brg_types.h"
 
 #define SHA1_BLOCK_SIZE  64
@@ -55,15 +56,20 @@ extern "C"
 #define HIGH_BITS   0x80000000
 
 #define sha1_context sha1_ctx_s
-typedef u_int8_t RNG_state;
-typedef u_int32_t  uint32;
+typedef uint8_t RNG_state;
+typedef uint32_t  uint32;
+
+#ifdef _WIN32
+	typedef uint8_t u_int8_t; // map from existing type to strange bots type
+#endif
+
 //typedef char *   caddr_t;
 
 /**********************************/
 /* random number generator state  */
 /**********************************/
 struct state_t {
-  u_int8_t state[20];
+  uint8_t state[20];
 };
 
 

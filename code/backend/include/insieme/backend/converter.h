@@ -330,6 +330,10 @@ namespace backend {
 			return includes;
 		}
 
+		void addInclude(const string& include) {
+			includes.insert(include);
+		}
+
 	};
 
 

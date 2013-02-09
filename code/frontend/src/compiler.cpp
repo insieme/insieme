@@ -155,10 +155,15 @@ ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 
 	// fix the target architecture to be a 64 bit machine:
 	// 		in this way we don't have differences between the size of integer/float types across architecture
-	pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
-	//pimpl->TO->Triple = llvm::sys::getDefaultTargetTriple();
-	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
 
+	if(CommandLineOptions::WinCrossCompile) {
+		// fix the target architecture to be a 64 bit machine
+		pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Win32").getTriple();
+	} else {
+		// TO.Triple = llvm::sys::getHostTriple();
+		pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
+	}
+	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
 
 	pimpl->clang.createPreprocessor();
 	pimpl->clang.createASTContext();
@@ -202,6 +207,12 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	/// clang [3.2] seems that we only need this std libraries, do not use system ones
 	pimpl->clang.getHeaderSearchOpts().ResourceDir =  LLVM_PREFIX "/lib/clang/" CLANG_VERSION_STRING; 
 
+	// Add default header, for non-Windows target
+	if(!CommandLineOptions::WinCrossCompile) {
+		pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER, clang::frontend::System, true, false, false);
+		pimpl->clang.getHeaderSearchOpts().AddPath( "/usr/include/x86_64-linux-gnu", clang::frontend::System, true, false, false);
+	}		
+
 	// add headers
 	std::for_each(CommandLineOptions::IncludePaths.begin(), CommandLineOptions::IncludePaths.end(),
 		[ this ](std::string& curr) {
@@ -209,8 +220,14 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 		}
 	);
 
-	// fix the target architecture to be a 64 bit machine
-	pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
+	if(CommandLineOptions::WinCrossCompile) {
+		// fix the target architecture to be a 64 bit machine
+		pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Win32").getTriple();
+	} else {
+		// TO.Triple = llvm::sys::getHostTriple();
+		pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
+	}
+
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
 
 	std::string extension(file_name.substr(file_name.rfind('.')+1, std::string::npos));

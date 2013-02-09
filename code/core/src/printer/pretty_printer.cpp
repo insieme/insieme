@@ -50,6 +50,7 @@
 #include "insieme/core/encoder/lists.h"
 
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/attributes.h"
 
 #include <boost/iostreams/stream.hpp>
@@ -337,10 +338,30 @@ namespace {
 		});
 
 		PRINT(FunctionType, {
-				out << "(" << join(", ", node->getParameterTypes(), 
-						[&](std::ostream&, const TypePtr& cur){ this->visit(cur); }) 
-					<< ") -> ";
-				visit( node->getReturnType() );
+
+				auto printer = [&](std::ostream&, const TypePtr& cur){ this->visit(cur); };
+
+				if (node->isConstructor()) {
+					visit(node->getObjectType());
+					auto begin = node->getParameterTypes().begin() + 1;
+					auto end = node->getParameterTypes().end();
+					out << "::(" << join(", ", begin, end, printer) << ")";
+				} else if (node->isDestructor()) {
+					out << "~";
+					visit(node->getObjectType());
+					out << "::()";
+				} else if (node->isMemberFunction()) {
+					visit(node->getObjectType());
+					auto begin = node->getParameterTypes().begin() + 1;
+					auto end = node->getParameterTypes().end();
+					out << "::(" << join(", ", begin, end, printer) << ") -> ";
+					visit(node->getReturnType());
+				} else {
+					out << "(" << join(", ", node->getParameterTypes(), printer) << ") ";
+					out << ((node->isPlain())?"->":"=>");
+					out << " ";
+					visit( node->getReturnType() );
+				}
 		});
 
 		PRINT(RecType, {
@@ -373,8 +394,16 @@ namespace {
 				newLine = "";
 			}
 
-			out << ((node->getNodeType() == NT_UnionType)?"union<":"struct<");
-			out << newItem << join("," + newItem, node->getEntries(),
+			out << ((node->getNodeType() == NT_UnionType)?"union":"struct");
+
+			if (!node->getParents().empty()) {
+				out << " : " << join(", ", node->getParents(), [&](std::ostream& out, const ParentPtr& parent) {
+					if (parent->isVirtual()) out << "virtual ";
+					this->visit(parent->getType());
+				}) << " ";
+			}
+
+			out << "<" << newItem << join("," + newItem, node->getEntries(),
 				[&](std::ostream& out, const NamedTypePtr& cur) {
 					this->visit(cur->getName());
 					out << ":";
@@ -499,8 +528,10 @@ namespace {
 				this->visit(node->getCondition());
 				out << ") ";
 				this->visit(node->getThenBody());
-				out << " else ";
-				this->visit(node->getElseBody());
+				if (!analysis::isNoOp(node->getElseBody())) {
+					out << " else ";
+					this->visit(node->getElseBody());
+				}
 		});
 
 		PRINT(SwitchStmt, {
@@ -594,7 +625,42 @@ namespace {
 				    this->visit(cur);
 				};
 
-				out << "fun(" << join(", ", node->getParameterList(), paramPrinter) << ")";
+				auto funType = node->getType();
+
+				// print header ...
+				if (funType->isConstructor()) {
+					// print constructor header
+					out << "ctor ";
+					this->visit(funType->getObjectType());
+					out << " ";
+					this->visit(node->getParameters()->getElement(0));
+					out << " :: (" << join(", ", node->getParameters().begin() + 1, node->getParameters().end(), paramPrinter) << ") ";
+
+				} else if (funType->isDestructor()) {
+					// print destructor header
+					out << "dtor ~";
+					this->visit(funType->getObjectType());
+					out << " ";
+					this->visit(node->getParameters()->getElement(0));
+					out << " :: (" << join(", ", node->getParameters().begin() + 1, node->getParameters().end(), paramPrinter) << ") ";
+
+				} else if (funType->isMemberFunction()) {
+					// print member function header
+					out << "mfun ";
+					this->visit(funType->getObjectType());
+					out << " ";
+					this->visit(node->getParameters()->getElement(0));
+					out << " :: (" << join(", ", node->getParameters().begin() + 1, node->getParameters().end(), paramPrinter) << ") -> ";
+					this->visit(funType->getReturnType());
+					out << " ";
+				} else {
+					// print plain header function
+					out << "fun(" << join(", ", node->getParameterList(), paramPrinter) << ") -> ";
+					this->visit(funType->getReturnType());
+					out << " ";
+				}
+
+				// .. and body
 				visit(node->getBody());
 		});
 
@@ -971,6 +1037,7 @@ namespace {
 		ADD_FORMATTER(basic.getDataPathMember(),  { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getDataPathElement(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getDataPathComponent(), { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getDataPathParent(), {PRINT_ARG(0); OUT(".as<"); PRINT_ARG(1); OUT(">"); });
 
 		ADD_FORMATTER(basic.getArraySubscript1D(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getArraySubscriptND(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
@@ -1053,9 +1120,11 @@ namespace {
 			// add semantic sugar for list handling
 			const encoder::ListExtension& ext = config.root->getNodeManager().getLangExtension<encoder::ListExtension>();
 
+			typedef encoder::ListConverter<ExpressionPtr, encoder::DirectExprConverter> AttributConverter;
+
 			ADD_FORMATTER(ext.empty, { OUT("[]"); });
 			ADD_FORMATTER(ext.cons, {
-					vector<ExpressionPtr> list = encoder::toValue<vector<ExpressionPtr>>(call);
+					vector<ExpressionPtr> list = (encoder::toValue<vector<ExpressionPtr>, AttributConverter>(call));
 					printer.out << "[" << join(",", list, [&](std::ostream& out, const ExpressionPtr& cur) {
 						printer.visit(cur);
 					}) << "]";

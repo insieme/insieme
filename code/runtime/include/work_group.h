@@ -47,18 +47,19 @@ IRT_MAKE_ID_TYPE(work_group);
 
 struct _irt_work_group {
 	irt_work_group_id id;
-	bool distributed;	// starts at false, set to true if part of the group is not on the same shared memory node
-	irt_worker_id coordinator;  // only set if distributed == true
+	//bool distributed;	// starts at false, set to true if part of the group is not on the same shared memory node
+	//irt_worker_id coordinator;  // only set if distributed == true
 	/* implementation stuff */
 	irt_spinlock lock;
-	uint32 local_member_count;
-	uint32 ended_member_count;
-	uint32 cur_barrier_count;
+	volatile uint32 local_member_count;
+	volatile uint32 ended_member_count;
+	volatile uint32 cur_barrier_count;
+	volatile uint32 cur_busy_barrier_count;
+	volatile uint32 tot_barrier_count;
+	volatile uint64 barrier_start_ticks;
 	void** redistribute_data_array;
-//	irt_work_item* pfor_wi_list[IRT_WG_RING_BUFFER_SIZE];
-	uint32 pfor_count; // index of the most recently added pfor
-	uint32 joined_pfor_count; // index of the latest joined pfor
-//	irt_pd_table* performance_data;
+	volatile uint32 pfor_count; // index of the most recently added pfor
+	volatile uint32 joined_pfor_count; // index of the latest joined pfor
 	irt_loop_sched_policy cur_sched; // current scheduling policy
 	irt_loop_sched_data loop_sched_data[IRT_WG_RING_BUFFER_SIZE];
 };

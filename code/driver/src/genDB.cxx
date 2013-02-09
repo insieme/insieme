@@ -60,6 +60,10 @@
 #include "insieme/driver/handle_fetures.h"
 
 
+#include "insieme/annotations/loop_annotations.h"
+#include "insieme/core/ir_visitor.h"
+
+
 using namespace insieme;
 namespace bpo = boost::program_options;
 namespace bfs = boost::filesystem;
@@ -411,6 +415,18 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 						auto kernel 	= version.parent_path();
 						auto benchmark 	= kernel.parent_path();
 				*/
+
+
+
+				auto lookForAnnot = core::makeLambdaVisitor([&](const core::NodePtr& node) {
+					if(node->hasAnnotation(annotations::LoopAnnotation::KEY)) {
+			std::cout << "Found the annotation in for " << (node->getNodeType() == insieme::core::NT_ForStmt) << std::endl;
+			assert(false);
+					}
+				});
+
+				visitDepthFirst(kernelCode.as<core::NodePtr>(), lookForAnnot);
+
 
 				size_t cid = extractFeaturesFromAddress(kernelCode, options, database, staticFeatures, staticFeatureIds, cCheck, path.string());
 				if(dump) {

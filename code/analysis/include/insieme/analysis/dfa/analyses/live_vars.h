@@ -37,7 +37,8 @@
 #pragma once 
 
 #include "insieme/analysis/dfa/problem.h"
-#include "insieme/analysis/access.h"
+
+#include "insieme/analysis/access/access_mgr.h"
 
 #include "insieme/analysis/dfa/analyses/extractors.h"
 
@@ -51,7 +52,7 @@ class LiveVariables;
 typedef Problem<
 			LiveVariables, 
 			BackwardAnalysisTag, 
-			Entity< dfa::elem<AccessClassPtr> >, 
+			Entity< dfa::elem<access::AccessClassPtr> >, 
 			PowerSet
 		> LiveVarBase;
 
@@ -71,7 +72,7 @@ class LiveVariables: public LiveVarBase {
 
 	typedef LiveVarBase Base;
 
-	AccessManager aMgr;
+	access::AccessManager aMgr;
 
 public:
 
@@ -81,8 +82,8 @@ public:
 	
 	LiveVariables(const CFG& cfg): Base(cfg), aMgr(&cfg, cfg.getTmpVarMap()) { }
 
-	AccessManager& getAccessManager() { return aMgr; }
-	const AccessManager& getAccessManager() const { return aMgr; }
+	access::AccessManager& getAccessManager() { return aMgr; }
+	const access::AccessManager& getAccessManager() const { return aMgr; }
 
 	inline value_type init() const { return top(); }
 

@@ -59,9 +59,15 @@
 	#include "utils/impl/affinity.impl.h"
 #endif
 
+#ifdef _WIN32
+	#include "include_win32/memalign.h"	
+#endif
+
 #include "runtime.h"
 //#include "context/impl/capture.impl.h"
 
 #ifdef USE_OPENCL 
 	#include "impl/irt_ocl.impl.h"
 #endif
+
+#include "impl/irt_debug.impl.h"

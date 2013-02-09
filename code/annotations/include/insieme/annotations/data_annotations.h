@@ -94,7 +94,7 @@ public:
 	static const string NAME;
     static const utils::StringKey<DataRangeAnnotation> KEY;
 
-    const utils::AnnotationKey* getKey() const { return &KEY; }
+    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
     const std::string& getAnnotationName() const { return NAME; }
 
     DataRangeAnnotation() {}

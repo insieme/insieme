@@ -231,7 +231,6 @@ void irt_wi_join(irt_work_item* wi) {
 	if(occ==0) { // if not completed, suspend this wi
 		irt_inst_region_add_time(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN, swi->id);
-		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &swi->stack_ptr);
 		irt_inst_region_set_timestamp(swi);
 	}
@@ -269,7 +268,6 @@ void irt_wi_join_all(irt_work_item* wi) {
 	if(occ==0) { // if not completed, suspend this wi
 		irt_inst_region_add_time(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN_ALL, wi->id);
-		self->cur_wi = NULL;
 #ifdef IRT_ASTEROIDEA_STACKS
 		// make stack available for children
 		self->share_stack_wi = wi;
@@ -308,15 +306,14 @@ void irt_wi_end(irt_work_item* wi) {
 		if(wi->parameters != &wi->param_buffer) free(wi->parameters);
 	}
 
+	// update state, trigger completion event
+	wi->state = IRT_WI_STATE_DONE;
+	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
+
 	// remove from groups
 	for(uint32 g=0; g<wi->num_groups; ++g) {
 		_irt_wg_end_member(wi->wg_memberships[g].wg_id.cached); // TODO
 	}
-
-	// update state, trigger completion event
-	worker->cur_wi = NULL;
-	wi->state = IRT_WI_STATE_DONE;
-	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
 
 	// cleanup
 	_irt_del_wi_event_register(wi->id);

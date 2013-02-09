@@ -212,7 +212,7 @@ namespace encoder {
 		 * expression pointers.
 		 */
 		template<>
-		struct encode_list<ExpressionPtr, Converter<ExpressionPtr>> {
+		struct encode_list<ExpressionPtr, DirectExprConverter> {
 
 			core::ExpressionPtr operator()(NodeManager& manager, const vector<ExpressionPtr>& list) const {
 
@@ -231,7 +231,7 @@ namespace encoder {
 
 				// append remaining tokens back to front
 				for(auto it = list.rbegin(); it != list.rend(); ++it) {
-					core::ExpressionPtr head = toIR<ExpressionPtr,Converter<ExpressionPtr>>(manager, *it);
+					core::ExpressionPtr head = toIR<ExpressionPtr,DirectExprConverter>(manager, *it);
 					res = builder.callExpr(listType, ext.cons, head, res);
 				}
 
@@ -288,6 +288,12 @@ namespace encoder {
 	struct ListConverter : public Converter<vector<E>, detail::create_list_type<E,C>, detail::encode_list<E,C>, detail::decode_list<E,C>, detail::is_list<E,C>> {};
 
 	/**
+	 * Defines a list converter functor customized to encode vectors of expressions directly into lists
+	 * of expressions within the IR without wrapping up expressions.
+	 */
+	struct DirectExprListConverter : public ListConverter<ExpressionPtr, DirectExprConverter> {};
+
+	/**
 	 * A partial template specialization for the type_factory struct to support the encoding
 	 * of vectors using default element type converters.
 	 */
@@ -317,6 +323,37 @@ namespace encoder {
 
 
 
-} // end namespace lists
+	// ---- make the direct expression encoding the default for the type vector<ExpressionPtr>
+
+	/**
+	 * A partial template specialization for the type_factory struct to support the encoding
+	 * of expression lists.
+	 */
+	template<>
+	struct type_factory<vector<ExpressionPtr>> : public detail::create_list_type<ExpressionPtr, DirectExprConverter> {};
+
+	/**
+	 * A partial template specialization for the value_to_ir_converter struct to support the encoding
+	 * of expression lists.
+	 */
+	template<>
+	struct value_to_ir_converter<vector<ExpressionPtr>> : public detail::encode_list<ExpressionPtr, DirectExprConverter> {};
+
+	/**
+	 * A partial template specialization for the ir_to_value_converter struct to support the encoding
+	 * of expression lists.
+	 */
+	template<>
+	struct ir_to_value_converter<vector<ExpressionPtr>> : public detail::decode_list<ExpressionPtr, DirectExprConverter> {};
+
+	/**
+	 * A partial template specialization for the is_encoding_of struct to support the encoding
+	 * of expression lists.
+	 */
+	template<>
+	struct is_encoding_of<vector<ExpressionPtr>> : public detail::is_list<ExpressionPtr, DirectExprConverter> { };
+
+
+} // end namespace encoder
 } // end namespace core
 } // end namespace insieme

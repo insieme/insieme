@@ -77,9 +77,37 @@ uint32 irt_##__short__##_event_check(irt_##__subject__##_id __short__##_id, irt_
 	reg_id.cached = NULL; \
 	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup(reg_id); \
 	if(reg) { \
-		return reg->occurrence_count[event_code]; \
+		irt_spin_lock(&reg->lock); \
+		uint32 ret = reg->occurrence_count[event_code]; \
+		irt_spin_unlock(&reg->lock); \
+		return ret; \
 	} \
 	return 0; \
+} \
+ \
+void irt_##__short__##_event_remove(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler) { \
+	irt_##__short__##_event_register_id reg_id; \
+	reg_id.full = __short__##_id.full; \
+	reg_id.cached = NULL; \
+	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup(reg_id); \
+	IRT_ASSERT(reg != NULL, IRT_ERR_INTERNAL, "Deleting event handler for register that doesn't exist"); \
+	irt_spin_lock(&reg->lock); \
+	/* go through all event handlers */ \
+	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \
+	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \
+	while(cur != NULL) { \
+		nex = cur->next; \
+		if(cur == handler) { /* if found, delete */ \
+			if(prev == NULL) reg->handler[event_code] = nex; \
+			else prev->next = nex; \
+			break; \
+		} else { /* else keep iterating */ \
+			prev = cur; \
+		} \
+		cur = nex; \
+	} \
+	IRT_ASSERT(cur != NULL, IRT_ERR_INTERNAL, "Deleting event handler which doesn't exist (but register does)"); \
+	irt_spin_unlock(&reg->lock); \
 } \
  \
 uint32 irt_##__short__##_event_check_gt_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler, uint32 p_val) { \
@@ -107,6 +135,32 @@ uint32 irt_##__short__##_event_check_gt_and_register(irt_##__subject__##_id __sh
 	return 0; \
 } \
  \
+int64 irt_##__short__##_event_check_exists_gt_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler, uint32 p_val) { \
+	irt_##__short__##_event_register_id reg_id; \
+	reg_id.full = __short__##_id.full; \
+	reg_id.cached = NULL; \
+	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup(reg_id); \
+	/* if reg not available return -1 */ \
+	if(reg == NULL) { \
+		return -1; \
+	} \
+	irt_spin_lock(&reg->lock); \
+	/* check if event already occurred */ \
+	if(reg->occurrence_count[event_code] > p_val) { \
+		/* if so, return occurrence count */ \
+		irt_spin_unlock(&reg->lock); \
+		return reg->occurrence_count[event_code]; \
+	} \
+	/* else insert additional handler */ \
+	handler->next = reg->handler[event_code]; \
+	reg->handler[event_code] = handler; \
+	irt_spin_unlock(&reg->lock); \
+	return 0; \
+} \
+ \
+int64 irt_##__short__##_event_check_exists_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler) { \
+	return irt_##__short__##_event_check_exists_gt_and_register(__short__##_id, event_code, handler, 0); \
+} \
 uint32 irt_##__short__##_event_check_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler) { \
 	return irt_##__short__##_event_check_gt_and_register(__short__##_id, event_code, handler, 0); \
 } \
@@ -125,6 +179,58 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_
 	irt_spin_lock(&reg->lock); \
 	/* increase event count */ \
 	++reg->occurrence_count[event_code]; \
+	/* go through all event handlers */ \
+	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \
+	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \
+	while(cur != NULL) { \
+		nex = cur->next; \
+		if(!cur->func(reg, cur->data)) { /* if event handled, remove */ \
+			if(prev == NULL) reg->handler[event_code] = nex; \
+			else prev->next = nex; \
+		} else { /* else keep the handler in the list */ \
+			prev = cur; \
+		} \
+		cur = nex; \
+	} \
+	irt_spin_unlock(&reg->lock); \
+} \
+ \
+void irt_##__short__##_event_trigger_existing(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code) { \
+	irt_##__short__##_event_register_id id; \
+	id.full = __short__##_id.full; \
+	id.cached = NULL; \
+	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup(id); \
+	irt_spin_lock(&reg->lock); \
+	/* increase event count */ \
+	++(reg->occurrence_count[event_code]); \
+	/* go through all event handlers */ \
+	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \
+	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \
+	while(cur != NULL) { \
+		nex = cur->next; \
+		if(!cur->func(reg, cur->data)) { /* if event handled, remove */ \
+			if(prev == NULL) reg->handler[event_code] = nex; \
+			else prev->next = nex; \
+		} else { /* else keep the handler in the list */ \
+			prev = cur; \
+		} \
+		cur = nex; \
+	} \
+	irt_spin_unlock(&reg->lock); \
+} \
+ \
+void irt_##__short__##_event_trigger_no_count(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code) { \
+	irt_##__short__##_event_register *newreg = _irt_get_##__short__##_event_register(); \
+	newreg->id.full = __short__##_id.full; \
+	newreg->id.cached = newreg; \
+	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
+	/* put new reg on reuse list if it was not used */ \
+	if(reg != newreg) { \
+		irt_worker* self = irt_worker_get_current(); \
+		newreg->lookup_table_next = self->__short__##_ev_register_list; \
+		self->__short__##_ev_register_list = newreg; \
+	} \
+	irt_spin_lock(&reg->lock); \
 	/* go through all event handlers */ \
 	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \
 	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \

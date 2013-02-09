@@ -178,6 +178,12 @@ namespace core {
 		StructTypePtr structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const;
 		UnionTypePtr unionType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const;
 
+		// some constructors for derived classes
+		StructTypePtr structType(const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const;
+		StructTypePtr structType(const vector<TypePtr>& parents, const vector<NamedTypePtr>& entries) const;
+		StructTypePtr structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const;
+		StructTypePtr structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const;
+
 		NamedTypePtr namedType(const string& name, const TypePtr& type) const;
 		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
 
@@ -185,7 +191,14 @@ namespace core {
 			return genericType("volatile", {type}, IntParamList());
 		}
 
-		TupleExprPtr tupleExpr(const ExpressionList& values) const;
+		TupleExprPtr tupleExpr(const ExpressionList& values = ExpressionList()) const;
+
+		template<typename ... T>
+		TupleExprPtr tupleExpr(const ExpressionPtr& expr, const T& ... rest) const {
+			return tupleExpr(toVector<ExpressionPtr>(expr, rest...));
+		}
+
+
 		StructExprPtr structExpr(const StructTypePtr& structType, const vector<NamedValuePtr>& values) const;
 		StructExprPtr structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const;
 		StructExprPtr structExpr(const vector<NamedValuePtr>& values) const;
@@ -287,6 +300,12 @@ namespace core {
 		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
 		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const;
 
+		// create a call to a virtual member function of an object type
+		CallExprPtr virtualCall(const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args = vector<ExpressionPtr>()) const;
+		CallExprPtr virtualCall(const StringValuePtr& name, const FunctionTypePtr& funType, const ExpressionPtr& obj, const vector<ExpressionPtr>& args = vector<ExpressionPtr>()) const;
+
+		CallExprPtr virtualCall(const TypePtr& resultType, const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args = vector<ExpressionPtr>()) const;
+		CallExprPtr virtualCall(const TypePtr& resultType, const StringValuePtr& name, const FunctionTypePtr& funType, const ExpressionPtr& obj, const vector<ExpressionPtr>& args = vector<ExpressionPtr>()) const;
 
 		// Lambda Nodes
 		LambdaPtr lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const;
@@ -366,6 +385,11 @@ namespace core {
 		 * Creates an expression obtaining a reference to a member of a struct.
 		 */
 		CallExprPtr refMember(const ExpressionPtr& structExpr, const string& member) const;
+
+		/**
+		 * Creates an expression obtaining a references to a parent of a struct expression.
+		 */
+		CallExprPtr refParent(const ExpressionPtr& structExpr, const TypePtr& parent) const;
 
 		/**
 		 * Creates an expression accessing the given component of the given tuple value.
@@ -615,6 +639,18 @@ namespace core {
 
 		// helper for vector permute
 		CallExprPtr vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const;
+
+
+
+		// --------------------------- C++ -----------------------------
+
+		/**
+		 * Creates an expression representing a pure virtual function of the given type.
+		 *
+		 * @param memberFunctionType the type of the resulting pure virtual function
+		 * @return an expression representing a pure virtual function of the given type
+		 */
+		ExpressionPtr getPureVirtual(const FunctionTypePtr& memberFunctionType) const;
 
 	private:
 

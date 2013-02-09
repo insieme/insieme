@@ -123,6 +123,135 @@ namespace core {
 	};
 
 
+	// ------------------------------------ A class representing a parent type  ------------------------------
+
+	/**
+	 * The accessor associated to a parent type reference. A parent type reference is linking a
+	 * base type to a parent type via inheritance. The inheritance relation may be virtual.
+	 */
+	IR_NODE_ACCESSOR(Parent, Support, BoolValue, Type)
+
+		/**
+		 * Obtains the flag determining whether this parent type is a virtual or non-virtual parent type.
+		 */
+		IR_NODE_PROPERTY(BoolValue, Virtual, 0);
+
+		/**
+		 * Obtains the parent type this parent node is referring to.
+		 */
+		IR_NODE_PROPERTY(Type, Type, 1);
+
+		/**
+		 * Determines whether this parent node is referring to a type via virtual inheritance.
+		 */
+		bool isVirtual() const {
+			return getVirtual().getValue();
+		}
+	};
+
+	/**
+	 * The node type used to represent a link to a parent class within a base type.
+	 */
+	IR_NODE(Parent, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			if (isVirtual()) out << "virtual ";
+			return out << *getType();
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to construct a new parent-link instance referencing
+		 * the given type.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param virtul a flag determining whether the result should be a virtual inheritance link
+		 * @param type the type to be referenced as a parent class
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ParentPtr get(NodeManager& manager, const BoolValuePtr& virtul, const TypePtr& type) {
+			return manager.get(Parent(virtul, type));
+		}
+
+		/**
+		 * This static factory method allows to construct a new parent-link instance referencing
+		 * the given type.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param virtul a flag determining whether the result should be a virtual inheritance link
+		 * @param type the type to be referenced as a parent class
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ParentPtr get(NodeManager& manager, bool virtul, const TypePtr& type) {
+			return get(manager, BoolValue::get(manager, virtul), type);
+		}
+
+		/**
+		 * This static factory method allows to construct a new parent-link instance referencing
+		 * the given type as a  non-virtual parent
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type to be referenced as a parent class
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ParentPtr get(NodeManager& manager, const TypePtr& type) {
+			return get(manager, false, type);
+		}
+
+	};
+
+	// ------------------------------------ A class representing a list of parent types  ------------------------------
+
+	/**
+	 * The accessor associated to a list of parent types.
+	 */
+	IR_LIST_NODE_ACCESSOR(Parents, Support, Types, Parent)
+	};
+
+	/**
+	 * A node type representing a list of parent types.
+	 */
+	IR_NODE(Parents, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to construct a parent type list based
+		 * on a given parent list.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param parents the parents to be included within the resulting parents list
+		 * @return the requested parents list instance managed by the given manager
+		 */
+		static ParentsPtr get(NodeManager& manager, const ParentList& parents = ParentList()) {
+			return manager.get(Parents(convertList(parents)));
+		}
+
+		/**
+		 * This static factory method allows to construct a parent type list based
+		 * on the given type list.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param types the types to be included within the requested type parameter list
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ParentsPtr get(NodeManager& manager, const TypeList& types) {
+			return get(manager, ::transform(types, [&](const TypePtr& type) { return Parent::get(manager, type); }));
+		}
+	};
 
 
 	// ---------------------------------------- Generic Type ------------------------------
@@ -130,21 +259,26 @@ namespace core {
 	/**
 	 * The accessor associated to generic types.
 	 */
-	IR_NODE_ACCESSOR(GenericType, Type, StringValue, Types, IntTypeParams)
+	IR_NODE_ACCESSOR(GenericType, Type, StringValue, Parents, Types, IntTypeParams)
 		/**
 		 * Obtains the name of this generic type.
 		 */
 		IR_NODE_PROPERTY(StringValue, Name, 0);
 
 		/**
+		 * Obtains the list of types this type is derived from.
+		 */
+		IR_NODE_PROPERTY(Parents, Parents, 1);
+
+		/**
 		 * Obtains the list of type parameters of this generic type.
 		 */
-		IR_NODE_PROPERTY(Types, TypeParameter, 1);
+		IR_NODE_PROPERTY(Types, TypeParameter, 2);
 
 		/**
 		 * Obtains the list of int-type parameters of this generic type.
 		 */
-		IR_NODE_PROPERTY(IntTypeParams, IntTypeParameter, 2);
+		IR_NODE_PROPERTY(IntTypeParams, IntTypeParameter, 3);
 
 		/**
 		 * Obtains the name portion of this generic type.
@@ -176,6 +310,23 @@ namespace core {
 
 	public:
 
+
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a generic type pointer pointing toward a variable with the given name, parents, type
+		 * parameters and int-type parameters which is maintained by the given manager.
+		 *
+		 * @param manager		the manager to be used for creating the node (memory management)
+		 * @param name 			the name of the new type (only the prefix)
+		 * @param parents		the list of parent types (for the inheritance hierarchy)
+		 * @param typeParams	the type parameters of this type, concrete or variable
+		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
+		 */
+		static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents,
+				const TypesPtr& typeParams, const IntTypeParamsPtr& intTypeParams) {
+			return manager.get(GenericType(name, parents, typeParams, intTypeParams));
+		}
+
 		/**
 		 * This method provides a static factory method for this type of node. It will return
 		 * a generic type pointer pointing toward a variable with the given name maintained by the
@@ -188,9 +339,27 @@ namespace core {
 		 */
 		static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name,
 				const TypesPtr& typeParams, const IntTypeParamsPtr& intTypeParams) {
-			return manager.get(GenericType(name, typeParams, intTypeParams));
+			return get(manager, name, Parents::get(manager), typeParams, intTypeParams);
 		}
 
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a generic type pointer pointing toward a variable with the given properties maintained by the
+		 * given manager.
+		 *
+		 * @param manager		the manager to be used for creating the node (memory management)
+		 * @param name 			the name of the new type (only the prefix)
+		 * @param parentTypes	the list of parent types to be exhibited
+		 * @param typeParams	the type parameters of this type, concrete or variable
+		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
+		 */
+		static GenericTypePtr get(NodeManager& manager,
+				const string& name,
+				const ParentList& parentTypes,
+				const TypeList& typeParams = TypeList(),
+				const IntParamList& intTypeParams = IntParamList()) {
+			return get(manager, StringValue::get(manager, name), Parents::get(manager, parentTypes), Types::get(manager, typeParams), IntTypeParams::get(manager, intTypeParams));
+		}
 
 		/**
 		 * This method provides a static factory method for this type of node. It will return
@@ -316,13 +485,23 @@ namespace core {
 
 	// ---------------------------------------- Function Type ------------------------------
 
+	/**
+	 * An enumeration used for distinguishing the various kinds of function types.
+	 */
+	enum FunctionKind {
+		FK_PLAIN = 1, 			/* < a plain function produced by a simple lambda */
+		FK_CLOSURE, 			/* < a closure function produced by a binding */
+		FK_CONSTRUCTOR, 		/* < a constructor used for creating object instances */
+		FK_DESTRUCTOR, 			/* < a destructor used for destroying object instances */
+		FK_MEMBER_FUNCTION		/* < a member function being associated to a class */
+	};
 
 	/**
 	 * The accessor associated to a function type. Each function type is composed of 3 sub-nodes.
-	 * The first is forming a list of parameters, the second the return type and the last marks
-	 * function types to be pure or closures.
+	 * The first is forming a list of parameters, the second the return type. The last node
+	 * determines the kind of function - according to the FunctionKind enumeration.
 	 */
-	IR_NODE_ACCESSOR(FunctionType, Type, Types, Type, BoolValue)
+	IR_NODE_ACCESSOR(FunctionType, Type, Types, Type, UIntValue)
 		/**
 		 * Obtains the list of parameters required for invoking functions of this type.
 		 */
@@ -334,21 +513,72 @@ namespace core {
 		IR_NODE_PROPERTY(Type, ReturnType, 1);
 
 		/**
-		 * Obtains a pointer to the child node determining whether this function type is a plain function type or not.
+		 * Obtains a pointer to the child node determining the kind of this function type.
 		 */
-		IR_NODE_PROPERTY(BoolValue, Plain, 2);
+		IR_NODE_PROPERTY(UIntValue, FunctionKind, 2);
 
 		/**
 		 * A utility function allowing to determine directly whether a function
 		 * is plain or not.
 		 */
-		bool isPlain() const { return FunctionTypeAccessor<Derived,Ptr>::getPlain()->getValue(); }
+		bool isPlain() const { return FunctionTypeAccessor<Derived,Ptr>::getKind() == FK_PLAIN; }
+
+		/**
+		 * A utility function allowing to determine directly whether a function
+		 * is a closure or not.
+		 */
+		bool isClosure() const { return FunctionTypeAccessor<Derived,Ptr>::getKind() == FK_CLOSURE; }
+
+		/**
+		 * A utility function allowing to determine directly whether a function
+		 * is a constructor or not.
+		 */
+		bool isConstructor() const { return FunctionTypeAccessor<Derived,Ptr>::getKind() == FK_CONSTRUCTOR; }
+
+		/**
+		 * A utility function allowing to determine directly whether a function
+		 * is a destructor or not.
+		 */
+		bool isDestructor() const { return FunctionTypeAccessor<Derived,Ptr>::getKind() == FK_DESTRUCTOR; }
+
+		/**
+		 * A utility function allowing to determine directly whether a function
+		 * is a member function or not.
+		 */
+		bool isMemberFunction() const { return FunctionTypeAccessor<Derived,Ptr>::getKind() == FK_MEMBER_FUNCTION; }
 
 		/**
 		 * Obtains a list of types forming the parameter types of this function type.
 		 */
 		vector<Ptr<const Type>> getParameterTypeList() const {
 			return getParameterTypes()->getElements();
+		}
+
+		/**
+		 * Obtains a reference to the requested parameter type.
+		 */
+		Ptr<const Type> getParameterType(unsigned index) const {
+			return FunctionTypeAccessor<Derived, Ptr>::getParameterTypes()->getElement(index);
+		}
+
+		/**
+		 * Obtains the kind of function this function type is representing.
+		 */
+		FunctionKind getKind() const {
+			return (FunctionKind)getFunctionKind()->getValue();
+		}
+
+		/**
+		 * Obtains the object type this function is attached to in case it is a constructor, destructor
+		 * or member function. In case it is a plain or closure function type a call to this function is
+		 * invalid.
+		 */
+		Ptr<const Type> getObjectType() const {
+			assert(isConstructor() || isDestructor() || isMemberFunction());
+			assert(!getParameterTypes().empty());
+			assert(getParameterType(0)->getNodeType() == NT_RefType);
+			static const auto caster = typename Ptr<const RefType>::StaticCast();
+			return caster.template operator()<const RefType>(getParameterType(0))->getElementType();
 		}
 	};
 
@@ -374,11 +604,69 @@ namespace core {
 		 * @param manager the manager to be used for handling the obtained type pointer
 		 * @param paramTypes the type of the single parameter accepted by the resulting function
 		 * @param returnType the type of value to be returned by the obtained function type
+		 * @param kind determining the kind of function type to be constructed
+		 * @return a pointer to a instance of the required type maintained by the given manager
+		 */
+		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, const TypePtr& returnType, FunctionKind kind) {
+			return manager.get(FunctionType(paramType, returnType, UIntValue::get(manager, kind)));
+		}
+
+		/**
+		 * This method provides a static factory method for function types. It will return a pointer to
+		 * a function type instance representing the requested function type and being maintained
+		 * within the given manager. Return type will be unit.
+		 *
+		 * @param manager the manager to be used for handling the obtained type pointer
+		 * @param paramTypes the type of the single parameter accepted by the resulting function
+		 * @param kind determining the kind of function type to be constructed
+		 * @return a pointer to a instance of the required type maintained by the given manager
+		 */
+		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, FunctionKind kind) {
+			return get(manager, paramType, GenericType::get(manager, "unit"), kind);
+		}
+
+		/**
+		 * This method provides a static factory method for function types. It will return a pointer to
+		 * a function type instance representing the requested function type and being maintained
+		 * within the given manager.
+		 *
+		 * @param manager the manager to be used for handling the obtained type pointer
+		 * @param parameterTypes the type of the single parameter accepted by the resulting function
+		 * @param returnType the type of value to be returned by the obtained function type
+		 * @param kind determining the kind of function type to be constructed
+		 * @return a pointer to a instance of the required type maintained by the given manager
+		 */
+		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType, FunctionKind kind) {
+			return get(manager, Types::get(manager, parameterTypes), returnType, kind);
+		}
+
+		/**
+		 * This method provides a static factory method for function types. It will return a pointer to
+		 * a function type instance representing the requested function type and being maintained
+		 * within the given manager. Return type will be unit.
+		 *
+		 * @param manager the manager to be used for handling the obtained type pointer
+		 * @param parameterTypes the type of the single parameter accepted by the resulting function
+		 * @param kind determining the kind of function type to be constructed
+		 * @return a pointer to a instance of the required type maintained by the given manager
+		 */
+		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, FunctionKind kind) {
+			return get(manager, Types::get(manager, parameterTypes), GenericType::get(manager, "unit"), kind);
+		}
+
+		/**
+		 * This method provides a static factory method for function types. It will return a pointer to
+		 * a function type instance representing the requested function type and being maintained
+		 * within the given manager.
+		 *
+		 * @param manager the manager to be used for handling the obtained type pointer
+		 * @param paramTypes the type of the single parameter accepted by the resulting function
+		 * @param returnType the type of value to be returned by the obtained function type
 		 * @param plain determining whether the resulting type covers closures or not
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
 		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, const TypePtr& returnType, bool plain = true) {
-			return manager.get(FunctionType(paramType, returnType, BoolValue::get(manager, plain)));
+			return get(manager, paramType, returnType, (plain)?FK_PLAIN:FK_CLOSURE);
 		}
 
 		/**
@@ -408,7 +696,7 @@ namespace core {
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
 		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType, bool plain = true){
-			return manager.get(FunctionType(Types::get(manager, parameterTypes), returnType, BoolValue::get(manager, plain)));
+			return get(manager, Types::get(manager, parameterTypes), returnType, (plain)?FK_PLAIN:FK_CLOSURE);
 		}
 
 	};
@@ -670,12 +958,19 @@ namespace core {
 	};
 
 
+
 	/**
 	 * The accessor associated to a named type. A named type is linking a name to
 	 * a type. Named types are the components named composite types (structs and unions)
 	 * are build form.
 	 */
-	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, Entries, NamedType)
+	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, Entries, Parents, NamedType)
+
+		/**
+		 * Obtains the list of parent classes associated to this named composite type (for unions
+		 * this list shell always be empty).
+		 */
+		IR_NODE_PROPERTY(Parents, Parents, 0);
 
 		/**
 		 * Retrieves the named type entry referencing the given member name within this
@@ -792,10 +1087,31 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "struct<" << join(",",getChildList(), print<deref<NodePtr>>()) << ">";
+			out << "struct";
+			if (!getParents()->empty()) {
+				out << " : [" << join(", ", getParents(), print<deref<ParentPtr>>()) << "] ";
+			}
+			return out << "<" << join(",",getEntries(), print<deref<NodePtr>>()) << ">";
 		}
 
 	public:
+
+		/**
+		 * A factory method allowing to obtain a pointer to a struct type representing
+		 * an instance managed by the given manager.
+		 *
+		 * @param manager the manager which should be responsible for maintaining the new
+		 * 				  type instance and all its referenced elements.
+		 * @param parents the list of parent types to be referenced by the resulting struct
+		 * @param entries the list of entries the new type should consist of
+		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
+		static StructTypePtr get(NodeManager& manager, const ParentsPtr& parents, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
+			NodeList children = convertList(entries);
+			children.insert(children.begin(), parents);
+			return manager.get(StructType(children));
+		}
 
 		/**
 		 * A factory method allowing to obtain a pointer to a struct type representing
@@ -807,8 +1123,8 @@ namespace core {
 		 * @return a pointer to a instance of the requested type. Multiple requests using
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
-		static StructTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries) {
-			return manager.get(StructType(convertList(entries)));
+		static StructTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
+			return get(manager, Parents::get(manager), entries);
 		}
 
 	};
@@ -833,7 +1149,8 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "union<" << join(",",getChildList(), print<deref<NodePtr>>()) << ">";
+			assert(getParents()->empty() && "Unions must not be derived!");
+			return out << "union<" << join(",",getEntries(), print<deref<NodePtr>>()) << ">";
 		}
 
 	public:
@@ -849,7 +1166,9 @@ namespace core {
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
 		static UnionTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries) {
-			return manager.get(UnionType(convertList(entries)));
+			NodeList children = convertList(entries);
+			children.insert(children.begin(), Parents::get(manager));
+			return manager.get(UnionType(children));
 		}
 
 	};

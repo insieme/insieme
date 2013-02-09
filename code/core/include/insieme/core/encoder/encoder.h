@@ -43,7 +43,8 @@
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/type_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/types/subtyping.h"
 
 namespace insieme {
 namespace core {
@@ -147,8 +148,8 @@ namespace encoder {
 	 * A generic utility function supporting the encoding of a given value into an
 	 * equivalent IR representation.
 	 *
-	 * @tparam T the type of value to be encoded
 	 * @tparam C the converter to be used
+	 * @tparam T the type of value to be encoded
 	 * @param manager the manager to be used to create the resulting IR node
 	 * @param value the value to be encoded
 	 * @return the encoded equivalent IR structure
@@ -240,7 +241,7 @@ namespace encoder {
 				// check type
 				TypePtr should = type_factory<T>()(expr->getNodeManager());
 				TypePtr is = expr->getType();
-				if (!isSubTypeOf(is, should))
+				if (!types::isSubTypeOf(is, should))
 				if (should != is) {
 					throw InvalidExpression(should, is);
 				}
@@ -256,7 +257,7 @@ namespace encoder {
 				}
 
 				// check values again ...
-				assert(isSubTypeOf(expr->getType(), type_factory<T>()(expr->getNodeManager())) && "Cannot convert non-related type!");
+				assert(types::isSubTypeOf(expr->getType(), type_factory<T>()(expr->getNodeManager())) && "Cannot convert non-related type!");
 				assert(expr->getNodeType() == core::NT_Literal && "Simple conversion only works for literals!");
 
 				// convert
@@ -270,7 +271,7 @@ namespace encoder {
 		template<typename T>
 		struct simple_is_encoding_of_test {
 			bool operator()(const core::ExpressionPtr& expr) const {
-				return expr->getNodeType() == NT_Literal && core::isSubTypeOf(expr->getType(), type_factory<T>()(expr->getNodeManager()));
+				return expr->getNodeType() == NT_Literal && types::isSubTypeOf(expr->getType(), type_factory<T>()(expr->getNodeManager()));
 			}
 		};
 	}
@@ -307,6 +308,8 @@ namespace encoder {
 		ADD_CONVERTER(float,  Float);
 		ADD_CONVERTER(double, Double);
 
+		ADD_CONVERTER(string, String);
+
 	#undef ADD_CONVERTER
 
 
@@ -314,35 +317,86 @@ namespace encoder {
 	//   Add support for encoding expressions directly into expressions
 	// --------------------------------------------------------------------
 
-	template<>
-	struct type_factory<core::ExpressionPtr> {
-		core::TypePtr operator()(core::NodeManager& manager) const {
-			assert(false && "Not applicable in the general case!");
-			throw InvalidExpression("Cannot define generic type for all expressions!");
-		}
-	};
+	namespace detail {
 
-	template<>
-	struct value_to_ir_converter<core::ExpressionPtr> {
-		core::ExpressionPtr operator()(core::NodeManager& manager, const core::ExpressionPtr& value) const {
-			return manager.get(value);
-		}
-	};
+		struct create_expr_type {
+			core::TypePtr operator()(core::NodeManager& manager) const {
+				assert(false && "Not applicable in the general case!");
+				throw InvalidExpression("Cannot define generic type for all expressions!");
+			}
+		};
 
-	template<>
-	struct ir_to_value_converter<core::ExpressionPtr> {
-		core::ExpressionPtr operator()(const core::ExpressionPtr& expr) const {
-			return expr;
-		}
-	};
+		struct is_expr {
+			bool operator()(const core::ExpressionPtr& expr) const {
+				return true;	// every expression is a direct encoding of itself
+			}
+		};
 
-	template<>
-	struct is_encoding_of<core::ExpressionPtr> {
-		bool operator()(const core::ExpressionPtr& expr) const {
-			return true;
-		}
-	};
+		struct encode_expr {
+			core::ExpressionPtr operator()(core::NodeManager& manager, const core::ExpressionPtr& value) const {
+				return manager.get(value);
+			}
+		};
 
+		struct decode_expr {
+			core::ExpressionPtr operator()(const core::ExpressionPtr& expr) const {
+				return expr;
+			}
+		};
+
+	}
+
+	/**
+	 * Defines a converter for IR expressions mapping expressions 1:1 to themselves.
+	 *
+	 * @tparam E the element type within the list
+	 * @tparam C the converter to be used for encoding element types
+	 */
+	struct DirectExprConverter : public Converter<ExpressionPtr, detail::create_expr_type, detail::encode_expr, detail::decode_expr, detail::is_expr> {};
+
+
+	// ------------ Also support general and derived expression types -----------------
+
+	#define ADD_EXPRESSION_CONVERTER(_TYPE) \
+		template<> \
+		struct type_factory<_TYPE> { \
+			core::TypePtr operator()(core::NodeManager& manager) const { \
+				return GenericType::get(manager, "encoded_" #_TYPE); \
+			} \
+		}; \
+		\
+		template<> \
+		struct is_encoding_of<_TYPE> { \
+			bool operator()(const core::ExpressionPtr& expr) const { \
+				IRBuilder builder(expr->getNodeManager()); \
+				auto resType = builder.genericType("encoded_" #_TYPE); \
+				auto alpha = builder.typeVariable("a"); \
+				auto wrapFun = builder.literal("wrap_" #_TYPE, builder.functionType(alpha, resType)); \
+				return core::analysis::isCallOf(expr, wrapFun); \
+			} \
+		}; \
+		\
+		template<> \
+		struct value_to_ir_converter<_TYPE> { \
+			core::ExpressionPtr operator()(core::NodeManager& manager, const _TYPE& value) const { \
+				IRBuilder builder(manager); \
+				auto resType = builder.genericType("encoded_" #_TYPE); \
+				auto alpha = builder.typeVariable("a"); \
+				auto wrapFun = builder.literal("wrap_" #_TYPE, builder.functionType(alpha, resType)); \
+				return builder.callExpr(resType, wrapFun, value); \
+			} \
+		}; \
+		\
+		template<> \
+		struct ir_to_value_converter<_TYPE> { \
+			_TYPE operator()(const core::ExpressionPtr& expr) const { \
+				assert(is_encoding_of<_TYPE>()(expr) && "Invalid encoding!"); \
+				return expr.as<CallExprPtr>().getArgument(0).as<_TYPE>(); \
+			} \
+		}
+
+	ADD_EXPRESSION_CONVERTER(ExpressionPtr);
+	ADD_EXPRESSION_CONVERTER(LambdaExprPtr);
 
 	// --------------------------------------------------------------------
 	//       Add support for encoding of types within expressions

@@ -46,7 +46,6 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_cached_visitor.h"
 
-#include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/encoder/encoder.h"
@@ -272,7 +271,7 @@ namespace {
 				return ptr->substitute(ptr->getNodeManager(), *this);
 			}
 
-			const VariablePtr& var = static_pointer_cast<const Variable>(ptr);
+			const VariablePtr& var = ptr.as<VariablePtr>();
 
 			// check whether variable has been already encountered
 			if (replacedOnce.find(var) != replacedOnce.end()) {
@@ -301,10 +300,9 @@ namespace {
 		}
 
 		static bool isSideEffectFree(const ExpressionPtr& expr) {
-
-			// all variables and literals are side-effect free accessable
+			// all variables and literals are side-effect free accessible
 			NodeType type = expr->getNodeType();
-			if (type != NT_Variable && type != NT_Literal) {
+			if (type == NT_Variable || type == NT_Literal) {
 				return true;
 			}
 
@@ -387,7 +385,7 @@ namespace {
 		// Step 2 - check body => has to be a return statement
 		StatementPtr bodyStmt = lambda->getLambda()->getBody();
 
-		if (CompoundStmtPtr compound = dynamic_pointer_cast<const CompoundStmt>(bodyStmt)) {
+		while (CompoundStmtPtr compound = dynamic_pointer_cast<const CompoundStmt>(bodyStmt)) {
 			const auto& stmts = compound->getStatements();
 			if (stmts.size() == 1) {
 				bodyStmt = stmts[0];
@@ -422,7 +420,7 @@ namespace {
 
 		// Step 4 - substitute variables within body
 		InlineSubstituter substituter(replacements);
-		ExpressionPtr res = static_pointer_cast<const Expression>(substituter.mapElement(0, body));
+		ExpressionPtr res = substituter.mapElement(0, body).as<ExpressionPtr>();
 
 		// check result
 		if (substituter.wasSuccessful()) {
@@ -439,7 +437,7 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call) {
 	bool successful = true;
 	ExpressionPtr res = call;
 	while(successful && res->getNodeType() == NT_CallExpr) {
-		ExpressionPtr tmp = tryInlineToExprInternal(manager, static_pointer_cast<const CallExpr>(res));
+		ExpressionPtr tmp = tryInlineToExprInternal(manager, res.as<CallExprPtr>());
 		successful = (*tmp != *res);
 		res = tmp;
 	}
@@ -654,7 +652,7 @@ namespace {
 //		FunctionTypePtr funType = lambda->getFunctionType();
 //		TypeList paramTypes = funType->getParameterTypeList();
 //		assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
-//		assert(isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
+//		assert(types::isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
 //
 //		// replace parameter within body
 //		const VariablePtr& param = lambda->getParameterList()[index];
@@ -701,7 +699,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	TypeList paramTypes = funType->getParameterTypes()->getTypes();
 	assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
 
-	assert(isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
+	assert(types::isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
 
 	// make sure replacement value does not have any free variables except it is a variable itself (used for fixing recursive variables)
 	assert((value->getNodeType() == NT_Variable || core::analysis::getFreeVariables(value).empty()) && "Replacement value must not have free variables!");
@@ -1037,7 +1035,7 @@ LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root
 	return dynamic_pointer_cast<const LambdaExpr>(newBody);
 }
 
-LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const SubstitutionOpt& substitution) {
+LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const types::SubstitutionOpt& substitution) {
 
 	// check for early exit
 	if (!substitution || substitution->empty()) {

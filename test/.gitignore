@@ -11,6 +11,8 @@ build*
 *.sh
 *~
 \#*/*
+worker_performance_log.*
+worker_efficiency_log
 
 *.cfg
 *.xml

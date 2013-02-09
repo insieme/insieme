@@ -50,17 +50,23 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_program.h"
 
-#include "insieme/core/type_utils.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
+
+#include "insieme/core/types/unification.h"
+#include "insieme/core/types/return_type_deduction.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/core/encoder/lists.h"
 
-#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/core/parser2/ir_parser.h"
+
+#include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/core/datapath/datapath.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
@@ -244,7 +250,7 @@ bool IRBuilder::matchType(const std::string& typeStr, const core::TypePtr& irTyp
 	}
 
 	// try unify the parsed type and the given type
-	return unify(manager, type, irType);
+	return types::unify(manager, type, irType);
 }
 
 GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intParams) const {
@@ -253,20 +259,30 @@ GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList
 
 
 StructTypePtr IRBuilder::structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
-	vector<NamedTypePtr> members;
-	::transform(entries, std::back_inserter(members), [&](const std::pair<StringValuePtr,TypePtr>& cur) {
-		return namedType(cur.first, cur.second);
-	});
-	return structType(members);
+	return structType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
 }
 
 UnionTypePtr IRBuilder::unionType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
-	vector<NamedTypePtr> members;
-	::transform(entries, std::back_inserter(members), [&](const std::pair<StringValuePtr,TypePtr>& cur) {
-		return namedType(cur.first, cur.second);
-	});
-	return unionType(members);
+	return unionType(::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
 }
+
+StructTypePtr IRBuilder::structType(const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const {
+	return structType(IRBuilder::parents(parents), entries);
+}
+
+StructTypePtr IRBuilder::structType(const vector<TypePtr>& parents, const vector<NamedTypePtr>& entries) const {
+	return structType(IRBuilder::parents(parents), entries);
+}
+
+StructTypePtr IRBuilder::structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
+	return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+}
+
+StructTypePtr IRBuilder::structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
+	return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+}
+
+
 
 NamedTypePtr IRBuilder::namedType(const string& name, const TypePtr& type) const {
 	return namedType(stringValue(name), type);
@@ -487,6 +503,11 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 		return callExpr(type, manager.getLangBasic().getAnyRefToRef(), manager.getLangBasic().getNull(), getTypeLiteral(elementType));
 	}
 
+	// if it is a bool type
+	if(manager.getLangBasic().isBool(type)) {
+		return boolLit(false);
+	}
+
 	// TODO: extend for more types
 	LOG(FATAL) << "Encountered unsupported type: " << *type;
 	assert(false && "Given type not supported yet!");
@@ -533,7 +554,7 @@ CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& 
 		if(nrtt->getNodeType() != NT_UnionType) {
 			auto list = uType.getEntries();
 			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
-				return isSubTypeOf(cur->getType(), nrtt);
+				return types::isSubTypeOf(cur->getType(), nrtt);
 			});
 
 			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
@@ -671,7 +692,7 @@ namespace {
 		// deduce return type
 		core::TypeList argumentTypes;
 		::transform(arguments, back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
-		return deduceReturnType(funType, argumentTypes);
+		return types::deduceReturnType(funType, argumentTypes);
 	}
 
 	/**
@@ -726,6 +747,34 @@ CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& 
 CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
 	return createCall(*this, resultType, functionExpr, toVector(arg1, arg2, arg3));
 }
+
+CallExprPtr IRBuilder::virtualCall(const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
+	// some checks
+	assert(virtualFun->getType().isa<FunctionTypePtr>());
+	assert(virtualFun->getType().as<FunctionTypePtr>()->isMemberFunction());
+
+	vector<ExpressionPtr> realArgs;
+	realArgs.push_back(obj);
+	realArgs.insert(realArgs.end(), args.begin(), args.end());
+	return callExpr(virtualFun, args);
+}
+CallExprPtr IRBuilder::virtualCall(const StringValuePtr& name, const FunctionTypePtr& funType, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
+	return virtualCall(literal(name, funType), obj, args);
+}
+CallExprPtr IRBuilder::virtualCall(const TypePtr& resultType, const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
+	// some checks
+	assert(virtualFun->getType().isa<FunctionTypePtr>());
+	assert(virtualFun->getType().as<FunctionTypePtr>()->isMemberFunction());
+
+	vector<ExpressionPtr> realArgs;
+	realArgs.push_back(obj);
+	realArgs.insert(realArgs.end(), args.begin(), args.end());
+	return callExpr(resultType, virtualFun.as<ExpressionPtr>(), args);
+}
+CallExprPtr IRBuilder::virtualCall(const TypePtr& resultType, const StringValuePtr& name, const FunctionTypePtr& funType, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
+	return virtualCall(resultType, literal(name, funType), obj, args);
+}
+
 
 LambdaPtr IRBuilder::lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const {
 	return lambda(type, params, wrapBody(body));
@@ -957,6 +1006,23 @@ CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringVa
 	return callExpr(refType(memberType), access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 }
 
+CallExprPtr IRBuilder::refParent(const ExpressionPtr& structExpr, const TypePtr& parent) const {
+
+	// check some pre-conditions
+	TypePtr type = structExpr->getType();
+	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non-ref type");
+	type = type.as<RefTypePtr>()->getElementType();
+	assert(type->getNodeType() == core::NT_StructType || type->getNodeType() == core::NT_GenericType || type->getNodeType() == core::NT_RecType);
+
+	// compute result type
+	core::TypePtr resType = refType(parent);
+
+	// build up access operation
+	auto narrow = getLangBasic().getRefNarrow();
+	auto dataPath = datapath::DataPathBuilder(manager).parent(parent).getPath();
+	return callExpr(resType, narrow, structExpr, dataPath, getTypeLiteral(parent));
+}
+
 CallExprPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
 	unsigned idx = extractNumberFromExpression(component);
 	return accessComponent(tupleExpr, idx);
@@ -1090,7 +1156,7 @@ namespace {
 	TypePtr infereExprTypeInternal(const ExpressionPtr& op, const T& ... operators) {
 		assert(op->getType()->getNodeType() == NT_FunctionType && "Operation is not a function!");
 		FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(op->getType());
-		return tryDeduceReturnType(funType, extractTypes(toVector(operators ...)));
+		return types::tryDeduceReturnType(funType, extractTypes(toVector(operators ...)));
 	}
 }
 
@@ -1309,11 +1375,17 @@ CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const Express
 	const auto& basic = manager.getLangBasic();
 	const VectorTypePtr permuteType = dynamic_pointer_cast<const VectorType>(permutationVec->getType());
 	assert(permuteType && "Secont argument of vector.permute must be a vector");
-	assert(isSubTypeOf(permuteType->getElementType(), basic.getUIntInf()) && "The stecond argument of vector.permute must be of type vector<uint<#a>,#m>");
+	assert(types::isSubTypeOf(permuteType->getElementType(), basic.getUIntInf()) && "The stecond argument of vector.permute must be of type vector<uint<#a>,#m>");
 
 	const TypePtr retTy = vectorType(dataType->getElementType(), permuteType->getSize());
 
 	return callExpr(retTy, basic.getVectorPermute(), dataVec, permutationVec);
+}
+
+ExpressionPtr IRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
+	assert(type->isMemberFunction());
+	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
+	return callExpr(type, ext.getPureVirtual(), getTypeLiteral(type));
 }
 
 } // namespace core

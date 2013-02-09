@@ -43,11 +43,10 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
 
+#include "insieme/core/types/substitution.h"
+
 namespace insieme {
 namespace core {
-
-class Substitution;
-typedef boost::optional<Substitution> SubstitutionOpt;
 
 class IRBuilder;
 
@@ -150,10 +149,11 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
  * pre-implemented functors to be used with replaceVarRecursive[Gen]
  */
 
-typedef std::function<StatementPtr(const StatementPtr)> TypeHandler;
-typedef std::function<ExpressionPtr(const CallExprPtr)> TypeRecoveryHandler;
+typedef std::function<StatementPtr(const StatementPtr&)> TypeHandler;
+typedef std::function<ExpressionPtr(const ExpressionPtr&, const ExpressionPtr&)> TypeRecoveryHandler;
 
-ExpressionPtr defaultTypeRecovery(const CallExprPtr& call);
+ExpressionPtr no_type_fixes(const ExpressionPtr&, const ExpressionPtr&);
+ExpressionPtr defaultTypeRecovery(const ExpressionPtr& oldExpr, const ExpressionPtr& newExpr);
 
 // functor which updates the type literal inside a call to undefined in a declaration
 TypeHandler getVarInitUpdater(NodeManager& manager);
@@ -237,7 +237,7 @@ Pointer<const T> fixTypesGen(NodeManager& mgr, const Pointer<const T> root, cons
  * @param root the root of the sub-tree to be manipulated
  * @param substitution the substitution defining the mapping of variables to their instantiations
  */
-NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const SubstitutionOpt& substitution);
+NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const types::SubstitutionOpt& substitution);
 
 /**
  * Replaces the node specified by the given address and returns the root node of the modified tree.

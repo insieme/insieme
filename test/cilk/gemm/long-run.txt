@@ -1,0 +1,15 @@
+TILE = (tile_sizes){64, 256, 32};
+CUT = 256;
+Problem Size: 8192
+naive: time = 539.704137sec, success: true
+naipl: time = 286.605508sec, success: true
+tiled: time = 438.166314sec, success: true
+tilpl: time = 116.480016sec, success: true
+recur: time = 558.080741sec, success: true
+recpl: time = 160.869508sec, success: true
+Successfull
+
+
+
+
+

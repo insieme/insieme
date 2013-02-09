@@ -607,7 +607,7 @@ void Trainer::valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index
 			fuzzy(i) = POS;
 			continue;
 		}
-		if(i == looser && false) {
+		if((i == looser) && false) {
 			fuzzy(i) = NEG;
 			continue;
 		}
@@ -795,7 +795,7 @@ void Trainer::optimizeDistorted(Optimizer& optimizer, Model& model, ErrorFunctio
 
 			for(size_t j = 0; j < cols; ++j) {
 				double distortion = (double)rand()/((double)RAND_MAX/(2*distortFactor)) - distortFactor;
-				tmpF(j) = tmpF(j) + distortion;
+				tmpF(j) = tmpF(j) * (1 + distortion);
 			}
 
 			dfeatures.append_rows(tmpF);

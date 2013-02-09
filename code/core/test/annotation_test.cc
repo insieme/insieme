@@ -180,6 +180,88 @@ TEST(Annotation, ValueAnnotations2) {
 }
 
 
+TEST(Annotation, CopyOnCloneTest) {
+
+	struct AnnotationDefault {
+		int x; AnnotationDefault(int x = 0) : x(x) {};
+		bool operator==(const AnnotationDefault& other) const { return x == other.x; }
+	};
+
+	struct AnnotationDrop : public value_annotation::drop_on_clone {
+		int x; AnnotationDrop(int x = 0) : x(x) {};
+		bool operator==(const AnnotationDrop& other) const { return x == other.x; }
+	};
+
+	struct AnnotationMigrate : public value_annotation::cloneable {
+		int x; AnnotationMigrate(int x = 0) : x(x) {};
+		bool operator==(const AnnotationMigrate& other) const { return x == other.x; }
+		 void cloneTo(const NodePtr& target) const {
+			 target->attachValue(AnnotationMigrate(x+1));	// modify during migration
+		 }
+	};
+
+
+	// create two managers
+	NodeManager mgrA, mgrB, mgrC;
+
+	// get a node in A
+	NodePtr nodeA = GenericType::get(mgrA, "A");
+	NodePtr nodeB = mgrB.get(nodeA);
+	NodePtr nodeC;
+
+	EXPECT_TRUE(nodeA);
+	EXPECT_FALSE(nodeA->hasAttachedValue<AnnotationDefault>());
+	EXPECT_FALSE(nodeA->hasAttachedValue<AnnotationDrop>());
+	EXPECT_FALSE(nodeA->hasAttachedValue<AnnotationMigrate>());
+
+	EXPECT_TRUE(nodeB);
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationDefault>());
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationDrop>());
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationMigrate>());
+
+	// attach values to node
+	nodeA->attachValue(AnnotationDefault(12));
+	nodeA->attachValue(AnnotationDrop(22));
+	nodeA->attachValue(AnnotationMigrate(32));
+
+	EXPECT_TRUE(nodeA->hasAttachedValue<AnnotationDefault>());
+	EXPECT_TRUE(nodeA->hasAttachedValue<AnnotationDrop>());
+	EXPECT_TRUE(nodeA->hasAttachedValue<AnnotationMigrate>());
+
+	EXPECT_EQ(12, nodeA->getAttachedValue<AnnotationDefault>().x);
+	EXPECT_EQ(22, nodeA->getAttachedValue<AnnotationDrop>().x);
+	EXPECT_EQ(32, nodeA->getAttachedValue<AnnotationMigrate>().x);
+
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationDefault>());
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationDrop>());
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationMigrate>());
+
+	// migrate node to third node manager
+	EXPECT_FALSE(mgrC.contains(nodeA));
+	nodeC = mgrC.get(nodeA);
+
+	EXPECT_TRUE(nodeA->hasAttachedValue<AnnotationDefault>());
+	EXPECT_TRUE(nodeA->hasAttachedValue<AnnotationDrop>());
+	EXPECT_TRUE(nodeA->hasAttachedValue<AnnotationMigrate>());
+
+	EXPECT_EQ(12, nodeA->getAttachedValue<AnnotationDefault>().x);
+	EXPECT_EQ(22, nodeA->getAttachedValue<AnnotationDrop>().x);
+	EXPECT_EQ(32, nodeA->getAttachedValue<AnnotationMigrate>().x);
+
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationDefault>());
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationDrop>());
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationMigrate>());
+
+	EXPECT_TRUE(nodeC->hasAttachedValue<AnnotationDefault>());
+	EXPECT_FALSE(nodeC->hasAttachedValue<AnnotationDrop>());
+	EXPECT_TRUE(nodeC->hasAttachedValue<AnnotationMigrate>());
+
+	EXPECT_EQ(12, nodeC->getAttachedValue<AnnotationDefault>().x);
+	EXPECT_EQ(33, nodeC->getAttachedValue<AnnotationMigrate>().x);
+
+}
+
+
 } // end namespace core
 } // end namespace insieme
 

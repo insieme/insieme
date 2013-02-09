@@ -70,6 +70,7 @@ irt_lock_obj irt_g_exit_handler_mutex;
 irt_tls_key irt_g_worker_key;
 uint32 irt_g_worker_count;
 uint32 irt_g_active_worker_count;
+irt_lock_obj irt_g_active_worker_mutex;
 struct _irt_worker **irt_g_workers;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 #ifndef IRT_MIN_MODE
@@ -84,6 +85,7 @@ IRT_CREATE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_E
 
 // initialize global variables and set up global data structures
 void irt_init_globals() {
+
 	irt_log_init();
 
 	#ifdef IRT_ENABLE_INSTRUMENTATION
@@ -100,6 +102,7 @@ void irt_init_globals() {
 	}
 	irt_mutex_init(&irt_g_error_mutex);
 	irt_mutex_init(&irt_g_exit_handler_mutex);
+	irt_mutex_init(&irt_g_active_worker_mutex);
 	irt_data_item_table_init();
 	irt_context_table_init();
 	irt_wi_event_register_table_init();
@@ -113,6 +116,7 @@ void irt_init_globals() {
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_inst_create_aggregated_data_table();
 	irt_energy_select_instrumentation_method();
+	irt_temperature_select_instrumentation_method();
 #endif
 }
 
@@ -145,6 +149,16 @@ void irt_exit(int i) {
 	exit(i);
 }
 
+// abort handler, to be called in case of segmentation faults of the application, ...
+void irt_abort_handler(int signum) {
+	// performing cleanup
+	irt_exit_handler();
+	// reset default behavior for the caught signal (= usually means killing the process)
+	signal(signum, SIG_DFL);
+	// raise the signal
+	raise(signum);
+}
+
 // the irt exit handler
 // needs to correctly shutdown all workers regardless of the situation it was called in
 void irt_exit_handler() {
@@ -172,11 +186,8 @@ void irt_exit_handler() {
 	_irt_worker_end_all();
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
-	if(irt_g_instrumentation_event_output_is_enabled) {
-		bool binary_format = getenv(IRT_INST_BINARY_OUTPUT_ENV) && (strcmp(getenv(IRT_INST_BINARY_OUTPUT_ENV), "true") == 0);
-		for(int i = 0; i < irt_g_worker_count; ++i)
-			irt_inst_event_data_output(irt_g_workers[i], binary_format);
-	}
+	if(irt_g_instrumentation_event_output_is_enabled)
+		irt_inst_event_data_output_all(irt_g_instrumentation_event_output_is_binary);
 	for(int i = 0; i < irt_g_worker_count; ++i)
 		irt_inst_destroy_event_data_table(irt_g_workers[i]->instrumentation_event_data);
 #endif
@@ -272,7 +283,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
 	signal(SIGTERM, &irt_term_handler);
 	signal(SIGINT, &irt_term_handler);
-	signal(SIGSEGV, &irt_term_handler);
+	signal(SIGSEGV, &irt_abort_handler);
 	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();
@@ -354,7 +365,7 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	irt_work_group* outer_wg = _irt_wg_create(irt_g_workers[0]);
 	irt_wg_insert(outer_wg, main_wi);
 	// event handling for outer work item [[
-	irt_lock_obj mutex;
+	irt_lock_obj mutex; // TODO don't use mutex
 	irt_mutex_init(&mutex);
 	irt_mutex_lock(&mutex);
 	irt_wi_event_lambda handler;
@@ -365,5 +376,4 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 	irt_mutex_lock(&mutex);
-	_irt_worker_end_all();
 }

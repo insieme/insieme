@@ -1,0 +1,27 @@
+let int = int<4>;
+
+let A = struct { int x; };
+
+let ctorA = A::(int<4> x) { 
+	this->x = x; 
+	print("Creating: %d\n", x);
+};
+
+let dtorA = ~A::() { 
+	print("Clearing: %d\n", *this->x);
+	this->x = 0; 
+};
+
+int main() {
+
+	// create an un-initialized memory location
+	ref<A> a = ctorA(var(A), 1);
+	
+	// init using in-place constructor
+	ctorA(a, 2);
+
+	// invoce destructor
+	dtorA(a);
+
+	return 0;
+}

@@ -37,11 +37,14 @@
 #include "insieme/core/checks/type_checks.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/type_utils.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
-
-#include "insieme/core/analysis/type_variable_deduction.h"
+#include "insieme/core/types/subtyping.h"
+#include "insieme/core/types/type_variable_deduction.h"
+#include "insieme/core/types/variable_sized_struct_utils.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/numeric_cast.h"
 
@@ -52,75 +55,106 @@ namespace checks {
 #define CAST(TargetType, value) \
 	static_pointer_cast<const TargetType>(value)
 
-namespace{
+namespace {
 
-TypePtr ResolveDataPath (const IRBuilder& builder, 
-					  	 const TypePtr& source,
-					  	 const ExpressionPtr& datapath) {
+	TypePtr followDataPath(const TypePtr& source, const ExpressionPtr& datapath) {
 
-	TypePtr fail;
+		TypePtr fail;
+		const auto& basic = source.getNodeManager().getLangBasic();
 
-	// if ROOT, target and source must be equal
-	if (builder.getLangBasic().isDataPathRoot(datapath)){
+		// if data path is ROOT, the target type is equal to the source type
+		if (basic.isDataPathRoot(datapath)){
+			return source;		// no step to be taken
+		}
 
-		if (auto ret= analysis::getReferencedType(source))
-			return ret;									// narrow case
-		else
-			return source;								// expand case
+		// if not root, it has to be a composed data path (based on call Expressions)
+		auto call = datapath.isa<CallExprPtr>();
+		if (!call || !basic.isDataPathPrimitive(call->getFunctionExpr())) {
+			return fail; // not a valid data path
+		}
+
+		// resolve target type recursively
+		TypePtr localSrc = followDataPath(source, call->getArgument(0));
+		if (!localSrc) return fail; 	// unable to follow path recursively
+
+		// unroll recursive types to make those transparent
+		if (localSrc->getNodeType() == NT_RecType) {
+			localSrc = localSrc.as<RecTypePtr>()->unroll();
+		}
+
+		// process local step
+		auto step = call->getFunctionExpr();
+		if (basic.isDataPathMember(step)) {
+
+			// check input type
+			NamedCompositeTypePtr compositeType = localSrc.isa<NamedCompositeTypePtr>();
+			if (!compositeType) return fail;	// invalid source
+
+			// check member argument
+			auto member = call->getArgument(1);
+			if (!member.isa<LiteralPtr>()) return fail; 	// invalid member name
+
+			// return type of member
+			return compositeType->getTypeOfMember(member.as<LiteralPtr>()->getValue());
+
+		}
+
+		// check whether it is accessing an element of an array / vector
+		if (basic.isDataPathElement(step)) {
+
+			// input needs to be an array or a vector
+			if (localSrc->getNodeType() != NT_ArrayType && localSrc->getNodeType() != NT_VectorType) {
+				return fail;		// no valid type
+			}
+
+			// the rest is fine, get the element type
+			return localSrc.as<SingleElementTypePtr>()->getElementType();
+
+		}
+
+		// check whether it is accessing an element of a tuple
+		if (basic.isDataPathComponent(step)) {
+
+			// source has to be a tuple type
+			if (localSrc->getNodeType() != NT_TupleType) return fail;
+			auto tupleType = localSrc.as<TupleTypePtr>();
+
+			// check whether the given index is an integer constant
+			auto f = arithmetic::toFormula(call->getArgument(1));
+			if (!f.isConstant() || !f.isInteger()) return fail;
+
+			// extract index
+			size_t n = (int64_t)f.getConstantValue();
+
+			// return type of n-th component
+			return (0<=n && n<tupleType.size())? tupleType[n] : fail;
+		}
+
+		// check whether it is navigating along the inheritance hierarchy
+		if (basic.isDataPathParent(step)) {
+
+			// local source needs to be a struct
+			if (localSrc->getNodeType() != NT_StructType) return fail;
+			StructTypePtr structType = localSrc.as<StructTypePtr>();
+
+			// second argument needs to be a type literal
+			auto parentTypeLiteral = call->getArgument(1);
+			if (!analysis::isTypeLiteral(parentTypeLiteral)) return fail; // not a type literal
+			TypePtr parent = analysis::getRepresentedType(parentTypeLiteral);
+
+			// there has to be a parent of the requested type
+			for(auto cur : structType->getParents()) {
+				if (*cur->getType() == *parent) return parent;
+			}
+
+			return fail; 		// no matching parent found
+		}
+
+		std::cerr << "Invalid DataPath step encountered: " << *step << "\n";
+		assert(false && "Unsupported DataPath step encountered!");
+
+		return fail;
 	}
-	else{
-		// if not root, datapath is function shaped
-		if (!datapath.isa<CallExprPtr>())
-			return fail;
-
-		const CallExprPtr& dpExp = datapath.as<CallExprPtr>();
-		const ExpressionPtr& innerDP = dpExp->getArgument(0);
-		const ExpressionPtr& member  = dpExp->getArgument(1);
-		const TypePtr& inType = ResolveDataPath(builder, source, innerDP);
-
-		// if Member, check that member exist inside of source
-		if (builder.getLangBasic().isDataPathMember(dpExp->getFunctionExpr())){
-
-			if (inType.isa<NamedCompositeTypePtr>()){
-				const NamedCompositeTypePtr& structType = inType.as<NamedCompositeTypePtr>();
-				return structType->getTypeOfMember (member.as<core::LiteralPtr>()->getValue());
-			}
-			else{
-				// TODO: recursive types not supported
-				return fail;
-			}
-		}
-		else if (builder.getLangBasic().isDataPathElement(dpExp->getFunctionExpr())){
-
-			if (inType.isa<ArrayTypePtr>()) {
-				return inType.as<ArrayTypePtr>()->getElementType();
-			}
-			else if(inType.isa<VectorTypePtr>()){
-				return inType.as<VectorTypePtr>()->getElementType();
-			}
-			else{
-				return fail;
-			}
-		}
-		else if (builder.getLangBasic().isDataPathComponent(dpExp->getFunctionExpr())){
-
-			if (!inType.isa<TupleTypePtr>())
-				return fail;
-
-			auto f = arithmetic::toFormula(member);
-			if (!f.isConstant())
-				return fail;
-			if (!f.isInteger())
-				return  fail;
-
-			int n = (int64_t)f.getConstantValue();
-			if (((int)inType.as<TupleTypePtr>()->size() <= n) || (n <0))
-				return  fail;
-			return inType.as<TupleTypePtr>()->getElement(n);
-		}
-	}
-	return fail;
-}
 
 
 } // end anonymous namespace
@@ -139,6 +173,145 @@ OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& add
 				format("Name of generic type %s is a reserved keyword.", toString(*address).c_str()),
 				Message::WARNING));
 	}
+	return res;
+}
+
+OptionalMessageList FunctionKindCheck::visitFunctionType(const FunctionTypeAddress& address) {
+
+	OptionalMessageList res;
+
+	// check value of kind-flag (must be within the enumeration)
+	switch(address->getKind()) {
+	case FK_PLAIN:
+	case FK_CLOSURE:
+	case FK_CONSTRUCTOR:
+	case FK_DESTRUCTOR:
+	case FK_MEMBER_FUNCTION:
+		break;	// all valid values
+	default:
+		// this is an invalid value
+		add(res, Message(address,
+				EC_TYPE_ILLEGAL_FUNCTION_TYPE_KIND,
+				format("Invalid value for function-type kind field: %d", toString(address->getKind())),
+				Message::ERROR
+		));
+	}
+
+	// check object type for ctors / dtors / member functions
+	if (address->isConstructor() || address->isDestructor() || address->isMemberFunction()) {
+		if (address->getParameterTypes().empty()) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_OBJECT_TYPE,
+					format("Missing object type within ctor / dtor / member function."),
+					Message::ERROR
+			));
+		} else if (!analysis::isObjectReferenceType(address->getParameterType(0))) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_OBJECT_TYPE,
+					format("Invalid type for target object: %s", toString(address->getParameterType(0))),
+					Message::ERROR
+			));
+		}
+	}
+
+	// check no-arguments for destructor
+	if (address->isDestructor()) {
+		if (address->getParameterTypes().size() > 1u) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_DESTRUCTOR_PARAMETERS,
+					format("Destructor type must not exhibit parameters!"),
+					Message::ERROR
+			));
+		}
+	}
+
+	// check return type of constructor
+	if (address->isConstructor() && !address->getParameterTypes().empty()) {
+		if (*address->getParameterType(0) != *address->getReturnType()) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_CONSTRUCTOR_RETURN_TYPE,
+					format("Invalid return type of constructor - is: %s, should %s",
+							toString(*address->getReturnType()),
+							toString(*address->getParameterType(0))),
+					Message::ERROR
+			));
+		}
+	}
+
+	// check return type of destructor
+	if (address->isDestructor() && !address->getParameterTypes().empty()) {
+		if (*address->getParameterType(0) != *address->getReturnType()) {
+			add(res, Message(address,
+					EC_TYPE_ILLEGAL_DESTRUCTOR_RETURN_TYPE,
+					format("Invalid return type of destructor - is: %s, should %s",
+							toString(*address->getReturnType()),
+							toString(*address->getParameterType(0))),
+					Message::ERROR
+			));
+		}
+	}
+
+	return res;
+
+}
+
+OptionalMessageList ParentCheck::visitParent(const ParentAddress& address) {
+
+	OptionalMessageList res;
+
+	// just check whether parent type is a potential object type
+	auto type = address.as<ParentPtr>()->getType();
+	if (!analysis::isObjectType(type)) {
+		add(res, Message(address,
+				EC_TYPE_ILLEGAL_OBJECT_TYPE,
+				format("Invalid parent type - not an object: %s",
+						toString(*type)),
+				Message::ERROR
+		));
+	}
+
+	return res;
+}
+
+OptionalMessageList ClassInfoCheck::visitType(const TypeAddress& address) {
+
+	OptionalMessageList res;
+
+	// check whether there is something to check
+	if (!hasMetaInfo(address)) {
+		return res;
+	}
+
+	// extract the class type
+	TypePtr type = address.as<TypePtr>();
+
+	// check whether address is referencing object type
+	if (!analysis::isObjectType(type)) {
+		add(res, Message(address,
+				EC_TYPE_ILLEGAL_OBJECT_TYPE,
+				format("Invalid type exhibiting class-meta-info: %s",
+						toString(*type)),
+				Message::ERROR
+		));
+
+		// skip rest of the checks
+		return res;
+	}
+
+	// extract information
+	const ClassMetaInfo& info = getMetaInfo(type);
+
+	// check whether class info is covering target type
+	TypePtr should = info.getClassType();
+	if (should && should != type) {
+		add(res, Message(address,
+				EC_TYPE_MISMATCHING_OBJECT_TYPE,
+				format("Class-Meta-Info attached to mismatching type - is: %s - should: %s",
+						toString(*type), toString(*should)),
+				Message::ERROR
+		));
+	}
+
 	return res;
 }
 
@@ -175,7 +348,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	}
 
 	// 2) check types of arguments => using variable deduction
-	auto substitution = analysis::getTypeVariableInstantiation(manager, address);
+	auto substitution = types::getTypeVariableInstantiation(manager, address);
 
 	if (!substitution) {
 		TupleTypePtr argumentTuple = TupleType::get(manager, argumentTypes);
@@ -220,9 +393,12 @@ OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& 
 	transform(address.getAddressedNode()->getParameterList()->getElements(), back_inserter(param), extractType);
 
 	FunctionTypePtr isType = address->getLambda()->getType();
-	TypePtr result = address->getLambda()->getType()->getReturnType();
 
-	FunctionTypePtr funType = FunctionType::get(manager, param, result, true);
+	// assume return type and function type to be correct
+	auto result = isType->getReturnType();
+	auto kind = isType->getKind();
+
+	FunctionTypePtr funType = FunctionType::get(manager, param, result, kind);
 	if (*funType != *isType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_FUNCTION_TYPE,
@@ -273,10 +449,10 @@ OptionalMessageList ExternalFunctionTypeCheck::visitLiteral(const LiteralAddress
 	}
 
 	core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(type);
-	if (!funType->isPlain()) {
+	if (funType->isClosure()) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_FUNCTION_TYPE,
-						format("External literals have to have plain function types!"),
+						format("External literals must not be closure types!"),
 						Message::ERROR));
 	}
 	return res;
@@ -371,7 +547,7 @@ OptionalMessageList LambdaTypeCheck::visitLambdaExpr(const LambdaExprAddress& ad
 	// check type of lambda
 	IRBuilder builder(lambda->getNodeManager());
 	FunctionTypePtr funTypeIs = lambda->getLambda()->getType();
-	FunctionTypePtr funTypeShould = builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur) { return cur->getType(); }), funTypeIs->getReturnType());
+	FunctionTypePtr funTypeShould = builder.functionType(::transform(lambda->getLambda()->getParameterList(), [](const VariablePtr& cur) { return cur->getType(); }), funTypeIs->getReturnType(), funTypeIs->getKind());
 	if (*funTypeIs != *funTypeShould) {
 		add(res, Message(address,
 				EC_TYPE_INVALID_LAMBDA_TYPE,
@@ -430,7 +606,7 @@ OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
 		StructTypePtr structType = address.as<StructTypePtr>();
 		if (structType.empty()) return res;
 		for(auto it = structType.begin(); it != structType.end() - 1; ++it) {
-			if (isVariableSized(it->getType())) {
+			if (types::isVariableSized(it->getType())) {
 				add(res, Message(address,
 						EC_TYPE_INVALID_ARRAY_CONTEXT,
 						"Variable sized data structure has to be the last component of enclosing struct type.",
@@ -446,7 +622,7 @@ OptionalMessageList ArrayTypeCheck::visitNode(const NodeAddress& address) {
 		TupleTypePtr tupleType = address.as<TupleTypePtr>();
 		if (tupleType.empty()) return res;
 		for(auto it = tupleType.begin(); it != tupleType.end() - 1; ++it) {
-			if (isVariableSized(*it)) {
+			if (types::isVariableSized(*it)) {
 				add(res, Message(address,
 						EC_TYPE_INVALID_ARRAY_CONTEXT,
 						"Variable sized data structure has to be the last component of enclosing tuple type.",
@@ -472,7 +648,7 @@ OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const Declara
 	TypePtr variableType = declaration->getVariable()->getType();
 	TypePtr initType = declaration->getInitialization()->getType();
 
-	if (!isSubTypeOf(initType, variableType)) {
+	if (!types::isSubTypeOf(initType, variableType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_INITIALIZATION_EXPR,
 						format("Invalid type of initial value - expected: \n%s, actual: \n%s",
@@ -521,7 +697,7 @@ OptionalMessageList ForStmtTypeCheck::visitForStmt(const ForStmtAddress& address
 		return res;
 	}
 
-	if (!isSubTypeOf(node->getEnd().getType(), iteratorType)) {
+	if (!types::isSubTypeOf(node->getEnd().getType(), iteratorType)) {
 		add(res, Message(address,
 			EC_TYPE_INVALID_BOUNDARY_TYPE,
 			format("Invalid type of upper loop boundary - expected: %s, actual: %s\n",
@@ -530,7 +706,7 @@ OptionalMessageList ForStmtTypeCheck::visitForStmt(const ForStmtAddress& address
 			Message::ERROR));
 	}
 
-	if (!isSubTypeOf(node->getStep().getType(), iteratorType)) {
+	if (!types::isSubTypeOf(node->getStep().getType(), iteratorType)) {
 		add(res, Message(address,
 			EC_TYPE_INVALID_BOUNDARY_TYPE,
 			format("Invalid type of step size - expected: %s, actual: %s\n",
@@ -1022,46 +1198,50 @@ OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 	NodeManager& manager = call->getNodeManager();
 	OptionalMessageList res;
 
-	// obtain function type ...
-	TypePtr funType = call->getFunctionExpr()->getType();
-	assert( call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
+	CallExprPtr callExpr = call.getAddressedNode();
 
 	// the function call must be narrow
-	if (!analysis::isCallOf(call.getAddressedNode(), manager.getLangBasic().getRefNarrow()))
+	if (!analysis::isCallOf(callExpr, manager.getLangBasic().getRefNarrow()))
 		return res;
 
 	if (call.getArguments().size() != 3u)
 		return res;
 
 	// Obtain argument type
-	ExpressionPtr srcArg = call.as<CallExprPtr>()->getArgument(0);
-	ExpressionPtr dpArg  = call.as<CallExprPtr>()->getArgument(1);
-	ExpressionPtr trgArg = call.as<CallExprPtr>()->getArgument(2);
+	ExpressionPtr srcArg = callExpr->getArgument(0);
+	ExpressionPtr dpArg  = callExpr->getArgument(1);
+	ExpressionPtr trgArg = callExpr->getArgument(2);
 
-	IRBuilder builder(call.getNodeManager());
+	// check whether src argument is of a reference type
+	auto srcType = analysis::getReferencedType(srcArg->getType());
+	if (!srcType) return res; // => parameter error is handled by standard type checker
 
 	// check recursively the inner types of the expression
-	TypePtr narrowType = ResolveDataPath(builder, srcArg->getType(), dpArg);
+	TypePtr narrowType = followDataPath(srcType, dpArg);
+
+	// check whether data path was valid
 	if (!narrowType){
 		add(res, Message(call,
 						EC_TYPE_MALFORM_NARROW_CALL,
-						format ("Malform dataPath in Narrow expresion %s, %s, %s",
-								toString(*srcArg).c_str(),
-								toString(*dpArg).c_str(),
-								toString(*trgArg).c_str()),
+						format ("Malformed dataPath in Narrow expression %s, %s, %s",
+								toString(*srcArg),
+								toString(core::printer::PrettyPrinter(dpArg, core::printer::PrettyPrinter::NO_LET_BINDINGS)),
+								toString(*trgArg)),
 						Message::ERROR));
+		return res;
 	}
-	else{
-		if (*narrowType != *analysis::getRepresentedType(trgArg)){
+
+	// check whether specified target type is correct
+	if (*narrowType != *analysis::getRepresentedType(trgArg)){
 		add(res, Message(call,
 						EC_TYPE_MALFORM_NARROW_CALL,
 						format (" Wrong return type in Narrow Expression %s, %s, %s",
-								toString(*srcArg).c_str(),
-								toString(*dpArg).c_str(),
-								toString(*trgArg).c_str()),
+								toString(*srcArg),
+								toString(core::printer::PrettyPrinter(dpArg, core::printer::PrettyPrinter::NO_LET_BINDINGS)),
+								toString(*trgArg)),
 						Message::ERROR));
-		}
 	}
+
 	return res;
 }
 
@@ -1077,58 +1257,50 @@ OptionalMessageList ExpandCheck::visitCallExpr(const CallExprAddress& call) {
 	NodeManager& manager = call->getNodeManager();
 	OptionalMessageList res;
 
-	// obtain function type ...
-	TypePtr funType = call->getFunctionExpr()->getType();
-	assert( call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
+	CallExprPtr callExpr = call.getAddressedNode();
 
 	// the function call must be Expand
-	if (!analysis::isCallOf(call.getAddressedNode(), manager.getLangBasic().getRefExpand()))
+	if (!analysis::isCallOf(callExpr, manager.getLangBasic().getRefExpand()))
 		return res;
 
-	if (call.getArguments().size() != 3u)
+	if (callExpr->getArguments().size() != 3u)
 		return res;
 
 	// Obtain argument type
-	ExpressionPtr srcArg = call.as<CallExprPtr>()->getArgument(0);  // variable
-	ExpressionPtr dpArg  = call.as<CallExprPtr>()->getArgument(1);  // datapath
-	ExpressionPtr trgArg = call.as<CallExprPtr>()->getArgument(2);  // outher data structure type literal
+	ExpressionPtr srcArg = callExpr->getArgument(0);  // variable
+	ExpressionPtr dpArg  = callExpr->getArgument(1);  // datapath
+	ExpressionPtr trgArg = callExpr->getArgument(2);  // outher data structure type literal
 
-	IRBuilder builder(call.getNodeManager());
+	// test whether source is a reference
+	auto srcType = analysis::getReferencedType(srcArg->getType());
+	if (!srcType) return res; // => parameter error is handled by standard type checker
 
 	// check recursively the inner types of the expression
-	TypePtr extractType = ResolveDataPath(builder, analysis::getRepresentedType(trgArg), dpArg);
+	TypePtr extractType = followDataPath(analysis::getRepresentedType(trgArg), dpArg);
+
+	// check whether data path was valid
 	if (!extractType){
 		add(res, Message(call,
 						EC_TYPE_MALFORM_EXPAND_CALL,
-						format ("Malform dataPath in Expand expresion %s, %s, %s",
-								toString(*srcArg).c_str(),
-								toString(*dpArg).c_str(),
-								toString(*trgArg).c_str()),
+						format ("Malformed dataPath in Expand expression %s, %s, %s",
+								toString(*srcArg),
+								toString(core::printer::PrettyPrinter(dpArg, core::printer::PrettyPrinter::NO_LET_BINDINGS)),
+								toString(*trgArg)),
 						Message::ERROR));
+		return res;
 	}
-	else{
-		auto srcType = analysis::getReferencedType(srcArg->getType());
-		if (!srcType){
-			add(res, Message(call,
-						EC_TYPE_MALFORM_EXPAND_CALL,
-						format (" First parameter must be a reference in Expand Expression %s, %s, %s",
-								toString(*srcArg).c_str(),
-								toString(*dpArg).c_str(),
-								toString(*trgArg).c_str()),
-						Message::ERROR));
-		}
 
-
-		if (*extractType != *srcType){
-			add(res, Message(call,
-						EC_TYPE_MALFORM_EXPAND_CALL,
-						format (" Wrong return type in Expand Expression %s, %s, %s",
-								toString(*srcArg).c_str(),
-								toString(*dpArg).c_str(),
-								toString(*trgArg).c_str()),
-						Message::ERROR));
-		}
+	// check whether src/dp/trg combination is valid
+	if (*extractType != *srcType){
+		add(res, Message(call,
+					EC_TYPE_MALFORM_EXPAND_CALL,
+					format (" Wrong return type in Expand Expression %s, %s, %s",
+							toString(*srcArg),
+							toString(core::printer::PrettyPrinter(dpArg, core::printer::PrettyPrinter::NO_LET_BINDINGS)),
+							toString(*trgArg)),
+					Message::ERROR));
 	}
+
 	return res;
 }
 

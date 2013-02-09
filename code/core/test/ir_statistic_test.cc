@@ -56,10 +56,10 @@ TEST(IRStatistic, Basic) {
 
 	IRStatistic stat = IRStatistic::evaluate(typeA);
 
-	EXPECT_EQ(static_cast<unsigned>(20), stat.getNumAddressableNodes());
-	EXPECT_EQ(static_cast<unsigned>(12), stat.getNumSharedNodes());
+	EXPECT_EQ(static_cast<unsigned>(25), stat.getNumAddressableNodes());
+	EXPECT_EQ(static_cast<unsigned>(13), stat.getNumSharedNodes());
 	EXPECT_EQ(static_cast<unsigned>(6), stat.getHeight());
-	EXPECT_EQ(5/static_cast<float>(3), stat.getShareRatio());
+	EXPECT_EQ(25/static_cast<float>(13), stat.getShareRatio());
 
 	EXPECT_EQ(static_cast<unsigned>(0), stat.getNodeTypeInfo(NT_ArrayType).numShared);
 	EXPECT_EQ(static_cast<unsigned>(0), stat.getNodeTypeInfo(NT_ArrayType).numAddressable);

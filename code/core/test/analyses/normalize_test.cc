@@ -105,6 +105,23 @@ namespace analysis {
 
 	}
 
+	TEST(Normalizing, MutualRecursion) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto code = builder.parseExpr(
+				"let f = (int<4> x)->int<4> {"
+				"	return (int<4> y)->int<4> {"
+				"		return f(y);"
+				"	}(x);"
+				"} in f(3)"
+		);
+
+		EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return rec v2.{v2=fun(int<4> v3) {return v0(v3);}}(v1);}}(3)", toString(*normalize(code)));
+
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

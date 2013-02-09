@@ -210,5 +210,15 @@ namespace backend {
 		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
 
+	/**
+	 * Eliminated unnecessary function pointers being passed as argument within mutual
+	 * recursive functions.
+	 */
+	class CorrectRecVariableUsage : public PreProcessor {
+	public:
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+	};
+
+
 } // end namespace backend
 } // end namespace insieme

@@ -43,10 +43,9 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 
-#include "insieme/core/type_utils.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/analysis/type_variable_deduction.h"
+#include "insieme/core/types/type_variable_deduction.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
@@ -73,6 +72,7 @@ namespace backend {
 		steps.push_back(makePreProcessor<InitZeroSubstitution>());
 		steps.push_back(makePreProcessor<MakeVectorArrayCastsExplicit>());
 		steps.push_back(makePreProcessor<RedundancyElimination>());
+		steps.push_back(makePreProcessor<CorrectRecVariableUsage>());
 		return makePreProcessor<PreProcessingSequence>(steps);
 	}
 
@@ -183,12 +183,12 @@ namespace backend {
 					core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
 
 					// check whether the lambda is generic and not a built-in
-					if (core::isGeneric(fun->getType())) {
+					if (core::analysis::isGeneric(fun->getType())) {
 
 						// instantiate generic non-built-in function
 						if (!manager.getLangBasic().isBuiltIn(fun)) {
 							// compute substitutions
-							core::SubstitutionOpt&& map = core::analysis::getTypeVariableInstantiation(manager, call);
+							core::types::SubstitutionOpt&& map = core::types::getTypeVariableInstantiation(manager, call);
 
 							// instantiate type variables according to map
 							lambda = core::transform::instantiate(manager, lambda, map);
@@ -698,7 +698,7 @@ namespace backend {
 			}
 
 			// derive type variable instantiation
-			auto instantiation = core::analysis::getTypeVariableInstantiation(manager, call);
+			auto instantiation = core::types::getTypeVariableInstantiation(manager, call);
 			if (!instantiation) {
 				// => invalid call, don't touch this
 				return call;
@@ -761,8 +761,18 @@ namespace backend {
 	}
 
 	core::NodePtr RedundancyElimination::process(core::NodeManager& manager, const core::NodePtr& code) {
-		// the converter does the magic
+		// this pass has been implemented as part of the core manipulation utils
 		return transform::eliminateRedundantAssignments(code);
+	}
+
+	core::NodePtr CorrectRecVariableUsage::process(core::NodeManager& manager, const core::NodePtr& code) {
+		// this pass has been implemented as part of the core manipulation utils
+		return core::transform::makeCachedLambdaMapper([&](const core::NodePtr& code)->core::NodePtr {
+			// only consider lambdas
+			if (code->getNodeType() != core::NT_LambdaExpr) return code;
+			// use core library utility to fix recursive variable usage
+			return core::transform::correctRecursiveLambdaVariableUsage(manager, code.as<core::LambdaExprPtr>());
+		}).map(code);
 	}
 
 } // end namespace backend

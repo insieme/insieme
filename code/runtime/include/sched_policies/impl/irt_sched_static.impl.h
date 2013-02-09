@@ -45,6 +45,14 @@ void irt_scheduling_init_worker(irt_worker* self) {
 	irt_work_item_deque_init(&self->sched_data.pool);
 }
 
+bool irt_scheduling_worker_sleep(irt_worker *self) {
+	return true;
+}
+
+void irt_scheduling_generate_wi(irt_worker* target, irt_work_item* wi) {
+	irt_scheduling_assign_wi(target, wi);
+}
+
 int irt_scheduling_iteration(irt_worker* self) {
 	// try to take a WI from the pool
 	irt_work_item* next_wi = irt_work_item_deque_pop_front(&self->sched_data.pool);
@@ -90,11 +98,4 @@ irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi)
 		irt_scheduling_assign_wi(target, real_wi);
 		return real_wi;
 	}
-}
-
-void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {
-	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, yielding_wi);
-	irt_work_item_deque_insert_back(&self->sched_data.pool, yielding_wi);
-	self->cur_wi = NULL;
-	lwt_continue(&self->basestack, &yielding_wi->stack_ptr);
 }

@@ -113,7 +113,7 @@ TEST(C_AST_Printer, ParameterFormatting) {
 	type = manager.create<PointerType>(manager.create<FunctionType>(intType, toVector(intType)));
 	structType->elements.push_back(var(type, "x10"));
 
-	NodePtr def = manager.create<TypeDefinition>(structType, manager.create("Z"));
+	NodePtr def = manager.create<TypeDefinition>(structType);
 
 	auto code = toC(def);
 	EXPECT_PRED2(containsSubString, code, "int32_t x1");

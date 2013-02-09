@@ -89,7 +89,7 @@ namespace analysis {
 			/**
 			 * Obtains a pointer to the Key associated to this annotation class.
 			 */
-			virtual const utils::AnnotationKey* getKey() const {
+			virtual const utils::AnnotationKeyPtr getKey() const {
 				return &KEY;
 			}
 
@@ -203,7 +203,7 @@ namespace analysis {
 				}
 
 				// invoke normalization recursively on lambda expressions
-				if (type == NT_LambdaExpr) {
+				if (type == NT_LambdaExpr && getFreeVariables(cur).empty()) {
 					return normalize(cur);	// entering new scope
 				}
 
@@ -217,6 +217,10 @@ namespace analysis {
 		/**
 		 * The internal implementation of the normalization not considering any
 		 * normalization-annotations.
+		 *
+		 * The normalizer is "normalizing" the variables within individually
+		 * regions not exhibiting any free variables. Those regions are identified
+		 * on the fly during the normalization process.
 		 *
 		 * @param node the node to be normalized
 		 * @return the normalized code fragment
@@ -258,7 +262,7 @@ namespace analysis {
 						break;
 					}
 					case NT_LambdaExpr: {
-						return cur != node;		// prune here if not root
+						return cur != node && getFreeVariables(cur).empty();	// prune here
 					}
 					default: break;
 				}
@@ -274,6 +278,7 @@ namespace analysis {
 
 			// use recursive normalizer and be done
 			return normalizer.map(node);
+
 		}
 
 	}

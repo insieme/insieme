@@ -40,6 +40,8 @@
 
 #include "insieme/utils/logging.h"
 
+using namespace insieme::analysis::access;
+
 namespace insieme {
 namespace analysis {
 namespace dfa {

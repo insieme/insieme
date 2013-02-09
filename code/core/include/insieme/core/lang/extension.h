@@ -147,13 +147,13 @@ namespace lang {
 	 * @param NAME the name of the type literal to be added
 	 * @param TYPE the IR type to be represented as a string
 	 */
-	#define LANG_EXT_LITERAL(NAME,TYPE,VALUE) \
+	#define LANG_EXT_LITERAL(NAME,VALUE,TYPE) \
 		private: \
 			mutable insieme::core::LiteralPtr lit_ ## NAME; \
 		public: \
 			const insieme::core::LiteralPtr& get ## NAME () const { \
 				if (!lit_##NAME) { \
-					lit_ ## NAME = insieme::core::lang::getLiteral(getNodeManager(), VALUE, TYPE); \
+					lit_ ## NAME = insieme::core::lang::getLiteral(getNodeManager(), TYPE, VALUE); \
 				} \
 				return lit_##NAME; \
 			} \

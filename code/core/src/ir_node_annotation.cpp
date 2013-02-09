@@ -45,6 +45,14 @@ namespace core {
 		copy->addAnnotation(ptr);
 	};
 
+	namespace value_annotation {
+
+		void add_annotation(const NodeAnnotationPtr& annotation, const NodePtr& target) {
+			target->addAnnotation(annotation);
+		}
+
+	} // end namespace value_annotation
+
 } // end namespace core
 } // end namespace insieme
 

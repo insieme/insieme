@@ -176,7 +176,7 @@ struct FunctionSemaAnnotation : public core::NodeAnnotation {
 	
 	inline const std::string& getAnnotationName() const { return NAME; }
 
-	inline const utils::AnnotationKey* getKey() const { return &KEY; }
+	inline const utils::AnnotationKeyPtr getKey() const { return &KEY; }
 
 	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
 						const core::NodePtr& before, 
