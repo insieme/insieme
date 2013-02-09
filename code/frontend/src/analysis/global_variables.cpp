@@ -94,12 +94,12 @@ namespace analysis {
 /////////////////////////////////////////////////////////////////////////////////
 ///
 core::StringValuePtr
-GlobalVarCollector::buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const clang::FunctionDecl* func ) const {
+GlobalVarCollector::buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, const clang::FunctionDecl* func ) const {
 
 	//assert(currTU);
 //	const clang::SourceManager& srcMgr = const_cast<clang::idx::TranslationUnit*>(currTU)->getASTContext().getSourceManager();
 			
-	clang::Decl* d = llvm::cast<Decl>(varDecl);
+	const clang::Decl* d = llvm::cast<Decl>(varDecl);
 	const clang::SourceManager& srcMgr = d->getASTContext().getSourceManager();
 
 	FileID&& fileId = srcMgr.getMainFileID();
@@ -291,7 +291,7 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 		core::StringValuePtr&& ident = buildIdentifierFromVarDecl(varDecl);
 
 		auto&& fit = std::find_if(globals.begin(), globals.end(), 
-				[&varDecl](const VarDecl* cur) -> bool { return varDecl->getNameAsString() == cur->getNameAsString();} 
+				[&](const VarDecl* cur) -> bool { return varDecl->getNameAsString() == cur->getNameAsString();}
 			);
 
 		//auto&& fit = globals.find(varDecl);
@@ -337,6 +337,9 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 				// If is now new, and is not extern, is because is a name reuse. 
 				// name exist, is another declaration, DO NO USE ITS identifier
 
+				// use ident utilized the first time this identifier was encountered
+				ident = buildIdentifierFromVarDecl(*fit);
+
 				varIdentMap.insert( std::make_pair(varDecl, ident ) );
 			}
 		}
@@ -348,6 +351,10 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 ///
 bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 	FunctionDecl* calleeDecl = callExpr->getDirectCallee();
+
+	// if no definition has been obtained => skip body .. (not a direct function call)
+	if (!calleeDecl) return true;
+
 	const FunctionDecl *definition = calleeDecl;
 
 	//FIXME: do we need this?
@@ -357,7 +364,7 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 	std::pair<clang::Decl*, insieme::frontend::TranslationUnit*> ret;
 
 	// if has no body, this might be defined in another translation unit
-	if(!calleeDecl->hasBody(definition)) {
+	if(calleeDecl && !calleeDecl->hasBody(definition)) {
 
 		/* CLANG [3.0]
 		// if the function is not defined in this translation unit, maybe it is defined in another
@@ -485,6 +492,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 	}
 
 	VLOG(1) << "Building '__insieme_globals' data structure";
+
 	core::StructTypePtr&& structTy = builder.structType(entries);
 	// we name this structure as '__insieme_globals'
 	structTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(std::string("__insieme_globals")) );

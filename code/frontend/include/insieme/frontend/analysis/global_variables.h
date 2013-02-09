@@ -172,7 +172,7 @@ public:
 protected:
 
 	core::StringValuePtr
-	buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const clang::FunctionDecl* func = NULL ) const;
+	buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, const clang::FunctionDecl* func = NULL ) const;
 
 	conversion::ConversionFactory& 		convFact;
 	GlobalVarSet						globals;

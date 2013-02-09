@@ -119,10 +119,9 @@ Indexer::tStored Indexer::getDefAndTUforDefinition (const std::string& symbol) c
 	if (match != this->mIndex.end()){
 		assert(match->second.first && match->second.second && " found a wrong definition");
 		return match->second;
-	}else {
-		return  voidPair;
 	}
 
+	return  voidPair;
 }
 
 ////////////////////////////////////////////////
@@ -142,6 +141,7 @@ clang::Decl* Indexer::getDefinitionFor (const std::string& symbol) const{
 ////////////////////////////////////////////////
 ///
 Indexer::tStored Indexer::getDefAndTUforDefinition (const clang::Decl* decl) const{
+	assert(decl && "Cannot look up null pointer!");
 	return getDefAndTUforDefinition(llvm::cast<clang::NamedDecl>(decl)->getNameAsString());
 }
 
