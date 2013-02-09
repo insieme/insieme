@@ -330,8 +330,10 @@ void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
 }
 
 void CallExprVisitor::VisitCallExpr(clang::CallExpr* callExpr) {
-	if (clang::FunctionDecl * funcDecl = llvm::dyn_cast<clang::FunctionDecl>(callExpr->getDirectCallee())) {
-		addFunctionDecl(funcDecl);
+	if (callExpr->getDirectCallee()) {
+		if (clang::FunctionDecl * funcDecl = llvm::dyn_cast<clang::FunctionDecl>(callExpr->getDirectCallee())) {
+			addFunctionDecl(funcDecl);
+		}
 	}
 	VisitStmt(callExpr);
 }
@@ -636,11 +638,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitStringLiteral(clang::
 		builder.refType(
 			builder.vectorType(
 				gen.getChar(), 
-				core::ConcreteIntTypeParam::get(builder.getNodeManager(), strValue.length()-1)
+				core::ConcreteIntTypeParam::get(builder.getNodeManager(), strValue.length()+1)
 			)
 		);
 
 	retExpr = builder.literal("\"" + strValue + "\"", vecType);
+
 	VLOG(2) << retExpr;
 
 	return retExpr;
@@ -1803,7 +1806,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitDeclRefExpr(clang::De
 	if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
 
 		retIr = convFact.lookUpVariable( varDecl );
-
 		return retIr;
 	}
 	if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
