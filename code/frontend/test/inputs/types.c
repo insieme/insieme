@@ -51,7 +51,7 @@ void basic_type_test() {
 	#pragma test "ref<anyRef> v1 = ref.var(null)"
 	void* e;
 
-	#pragma test "ref<real<4>> v1 = ref.var(0)"
+	#pragma test "ref<real<4>> v1 = ref.var(0.0000000)"
 	float f = 0.00f;
 
 	#pragma test "ref<real<8>> v1 = ref.var(0.0)"
@@ -77,6 +77,9 @@ void basic_type_test() {
 
 	#pragma test "ref.assign(v1, get.null(array<ref<array<ref<array<int<4>,1>>,1>>,1>))"
 	c1 = 0;
+
+	#pragma test "ref<real<8>> v1 = ref.var(3.1415926535897931)"
+	double pi = 3.14159265358979323846;
 
 	//#pragma test "ref<vector<char,10>> v1 = ref.var(\"Hello Mum\")"
 	//char str[10] = "Hello Mum";

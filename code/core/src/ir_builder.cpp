@@ -439,7 +439,12 @@ LiteralPtr IRBuilder::floatLit(const string& value) const {
 }
 
 LiteralPtr IRBuilder::floatLit(float value) const {
-	return floatLit(toString(value));
+	std::stringstream out;
+	out << std::scientific
+		<< std::fixed
+		<< std::setprecision(std::numeric_limits<float>::digits10 + 1)
+		<< value;
+	return floatLit(out.str());
 }
 
 LiteralPtr IRBuilder::doubleLit(const string& value) const {
@@ -447,7 +452,12 @@ LiteralPtr IRBuilder::doubleLit(const string& value) const {
 }
 
 LiteralPtr IRBuilder::doubleLit(double value) const {
-	return doubleLit(toString(value));
+	std::stringstream out;
+	out << std::scientific
+		<< std::fixed
+		<< std::setprecision(std::numeric_limits<double>::digits10 + 1)
+		<< value;
+	return doubleLit(out.str());
 }
 
 ExpressionPtr IRBuilder::undefined(const TypePtr& type) const {
