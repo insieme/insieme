@@ -443,7 +443,7 @@ LiteralPtr IRBuilder::floatLit(float value) const {
 	out << std::scientific
 		<< std::fixed
 		<< std::setprecision(std::numeric_limits<float>::digits10 + 1)
-		<< value;
+		<< value << "f";
 	return floatLit(out.str());
 }
 

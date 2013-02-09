@@ -51,7 +51,7 @@ void basic_type_test() {
 	#pragma test "ref<anyRef> v1 = ref.var(null)"
 	void* e;
 
-	#pragma test "ref<real<4>> v1 = ref.var(0.0000000)"
+	#pragma test "ref<real<4>> v1 = ref.var(0.0000000f)"
 	float f = 0.00f;
 
 	#pragma test "ref<real<8>> v1 = ref.var(0.0)"
