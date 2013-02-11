@@ -107,13 +107,10 @@ public:
 	typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
 
 	GlobalVarCollector(
-		conversion::ConversionFactory& 		convFact,
-		// clang [3.0] const clang::idx::TranslationUnit* 	currTU, 
+		conversion::ConversionFactory& 				convFact,
 		const insieme::frontend::TranslationUnit* 	currTU, 
-		// FIXME find an indexer
-		//clang::idx::Indexer& 				indexer,
-		insieme::frontend::utils::Indexer& 				indexer,
-		UseGlobalFuncMap& 					globalFuncMap)
+		insieme::frontend::utils::Indexer& 			indexer,
+		UseGlobalFuncMap& 							globalFuncMap)
 	: 
 	  convFact(convFact),
 	  currTU(currTU), 
@@ -197,35 +194,29 @@ class CXXGlobalVarCollector : public GlobalVarCollector {
 
 		//virtual function stuff
 		typedef std::pair<unsigned int, unsigned int> ClassFuncPair; //first = classId, second = count of virtual functions
-		typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
-		typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
-		typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
-		typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
+		//typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
+		//typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
+		//typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
+		//typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
 
 		CXXGlobalVarCollector(
 				conversion::ConversionFactory& 		convFact,
-				// clang [3.0] const clang::idx::TranslationUnit* 	currTU,
 				const insieme::frontend::TranslationUnit* 	currTU,
 				insieme::frontend::utils::Indexer& 				indexer,
-				UseGlobalFuncMap& 					globalFuncMap,
+				UseGlobalFuncMap& 					globalFuncMap)
+				/* FIXME :: do we need this anymore??
 				PolymorphicClassMap& 				polymorphicClassMap,
 				OffsetMap&							offsetMap,
 				VirtualFunctionIdMap&				virtualFunctionIdMap,
-				FinalOverriderMap&					finalOverriderMap)
+				FinalOverriderMap&					finalOverriderMap) */
 	:
-	  //GlobalVarCollector(convFact, currTU, indexer, globalFuncMap),
 	  GlobalVarCollector(convFact, currTU, indexer, globalFuncMap),
-	/*convFact(convFact),
-	  currTU(currTU),
-	  indexer(indexer),
-	  usingGlobals(globalFuncMap),
-	*/
-	  polymorphicClassMap(polymorphicClassMap),
-	  offsetMap(offsetMap),
-	  virtualFunctionIdMap(virtualFunctionIdMap),
-	  finalOverriderMap(finalOverriderMap) {
-		maxFunctionCounter = -1;
-	}
+	 // polymorphicClassMap(polymorphicClassMap),
+	 // offsetMap(offsetMap),
+	 // virtualFunctionIdMap(virtualFunctionIdMap),
+	 // finalOverriderMap(finalOverriderMap), 
+		maxFunctionCounter (-1) 
+		{ }
 	virtual ~CXXGlobalVarCollector() {};
 
 	virtual bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr);
@@ -242,10 +233,10 @@ private:
 	void collectVTableData(const clang::CXXRecordDecl* recDecl);
 
 	//used for virtual functions
-	PolymorphicClassMap& 				polymorphicClassMap;
-	OffsetMap&							offsetMap;
-	VirtualFunctionIdMap&				virtualFunctionIdMap;
-	FinalOverriderMap&					finalOverriderMap;
+	//PolymorphicClassMap& 				polymorphicClassMap;
+	//OffsetMap&							offsetMap;
+	//VirtualFunctionIdMap&				virtualFunctionIdMap;
+	//FinalOverriderMap&					finalOverriderMap;
 	int									maxFunctionCounter;
 };
 

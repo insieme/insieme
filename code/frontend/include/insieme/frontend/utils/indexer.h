@@ -54,9 +54,8 @@ namespace insieme{
 namespace frontend{
 namespace utils{
 
-
+typedef std::pair<clang::Decl*, TranslationUnit*> TranslationUnitPair;
 class indexerASTConsumer;
-
 
 //////////////////////////////////////////////////////////////////
 // the indexer generates an index of 

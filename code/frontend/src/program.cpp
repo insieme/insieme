@@ -225,9 +225,16 @@ Program::~Program() {
 
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
 	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name, pimpl->mIdx);
+	
+	VLOG(1)  << " ************ File Parsed and AST generated******************";
 
 	pimpl->mIdx.indexTU(tuImpl);
-//	pimpl->mIdx.dump();
+
+	VLOG(1)  << " ************ File Indexed ******************";
+	if (VLOG_IS_ON(2)){
+		pimpl->mIdx.dump();
+	}
+
 	
 	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	return *tuImpl;
@@ -327,9 +334,10 @@ const core::ProgramPtr& Program::convert() {
 
 	std::shared_ptr<conversion::ASTConverter> astConvPtr;
 	if(isCXX) {
-		astConvPtr = std::make_shared<conversion::CXXASTConverter>( mMgr, *this);
+		VLOG(1) << "detected C++ file";
+		astConvPtr = std::make_shared<conversion::CXXASTConverter>(mMgr, *this);
 	} else {
-		astConvPtr = std::make_shared<conversion::CASTConverter>(  mMgr, *this);
+		astConvPtr = std::make_shared<conversion::CASTConverter>  (mMgr, *this);
 	}
 
 	// filters all the pragma across all the compilation units which are of type insieme::mark

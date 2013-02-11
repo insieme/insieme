@@ -43,6 +43,8 @@
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/utils/map_utils.h"
 
+#include "insieme/frontend/analysis/global_variables.h"
+
 #include <memory>
 #include <set>
 #include <functional>
@@ -53,13 +55,6 @@ class ASTContext;
 class DeclGroupRef;
 class FunctionDecl;
 class InitListExpr;
-
-// class [3.0]
-//namespace idx {
-//class Indexer;
-//class Program;
-//} // End idx namespace
-
 } // End clang namespace
 
 namespace {
@@ -85,7 +80,6 @@ class ASTConverter;
 class CASTConverter;
 class CXXASTConverter;
 class ConversionFactory;
-class CXXConversionFactory;
 
 // ------------------------------------ ConversionFactory ---------------------------
 /**
@@ -94,49 +88,65 @@ class CXXConversionFactory;
 class ConversionFactory: public boost::noncopyable {
 
 protected:
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							ConversionContext
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// Keeps all the information gathered during the conversion process.
-	// Maps for variable names, cached resolved function definitions and so on...
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	///							ConversionContext
+	///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	/// Keeps all the information gathered during the conversion process.
+	/// Maps for variable names, cached resolved function definitions and so on...
+	///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	struct ConversionContext: public boost::noncopyable {
+		
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// 					Cache of already converted elements
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// 						Recursive Function resolution
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// Maps Clang variable declarations (VarDecls and ParmVarDecls) to IR variables.
+		/**
+		 * Maps Clang variable declarations (VarDecls and ParmVarDecls) to IR variables.
+		 */
 		typedef std::map<const clang::ValueDecl*, core::VariablePtr> VarDeclMap;
 		VarDeclMap varDeclMap;
 
-		// Stores the generated IR for function declarations
+		/**
+		 * Stores the generated IR for function declarations
+		 */
 		typedef std::map<const clang::FunctionDecl*,
 				insieme::core::ExpressionPtr> LambdaExprMap;
 		LambdaExprMap lambdaExprCache;
 
-		/*
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// 						Recursive Function resolution
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		/**
 		 * Maps a function with the variable which has been introduced to represent
 		 * the function in the recursive definition
 		 */
 		typedef std::map<const clang::FunctionDecl*, insieme::core::VariablePtr> RecVarExprMap;
 		RecVarExprMap recVarExprMap;
 
-		/*
+		/**
 		 * When set this variable tells the frontend to resolve eventual recursive function call
 		 * using the mu variables which has been previously placed in the recVarExprMap
 		 */
 		bool isRecSubFunc;
 
-		// It tells the frontend the body of a recursive function is being resolved and
-		// eventual functions which are already been resolved should be not converted again
-		// but read from the map
+		/**
+		 * It tells the frontend the body of a recursive function is being resolved and
+		 * eventual functions which are already been resolved should be not converted again
+		 * but read from the map
+		 */
 		bool isResolvingRecFuncBody;
 
-		// This variable points to the current mu variable representing the start of the recursion
+		/**
+		 * This variable points to the current mu variable representing the start of the recursion
+		 * is used while resolving recursive functions 
+		 */
 		core::VariablePtr currVar;
 
-		// This variable stores the list of parameters passed as an argument to the currently processed
-		// function.
+		/**
+		 * This variable stores the list of parameters passed as an argument to the currently processed
+		 * function.
+		 */
 		typedef const vector<core::VariablePtr>* ParameterList;
 		ParameterList curParameter;
 
@@ -154,14 +164,19 @@ protected:
 
 		typedef std::map<const clang::Type*, insieme::core::TypePtr> TypeCache;
 		TypeCache typeCache;
+
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Global variables utility
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		/** 
+		 * Keeps the type and initialization of the global variables within the entry point
+		 */
 		typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
-		// Keeps the type and initialization of the global variables within the entry point
 		GlobalStructPair globalStruct;
 
-		// Global and static variables
+		/**
+		 * Global and static variables
+		 */
 		core::VariablePtr globalVar;
 
 		std::set<const clang::VarDecl*> thread_private;
@@ -191,11 +206,13 @@ protected:
 		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
 		ClassDeclMap classDeclMap;
 
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// 						context structure Constructor
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		ConversionContext() :
 				isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), 
 				isRecSubType(false), isResolvingFunctionType(false) {
 		}
-
 	};
 
 	ConversionContext ctx;
@@ -209,6 +226,7 @@ protected:
 	 */
 	class StmtConverter;
 	class CStmtConverter;
+	class CXXStmtConverter;
 	std::shared_ptr<StmtConverter> stmtConvPtr;
 
 	/**
@@ -216,6 +234,7 @@ protected:
 	 */
 	class TypeConverter;
 	class CTypeConverter;
+	class CXXTypeConverter;
 	std::shared_ptr<TypeConverter> typeConvPtr;
 
 	/**
@@ -223,9 +242,14 @@ protected:
 	 */
 	class ExprConverter;
 	class CExprConverter;
+	class CXXExprConverter;
 	std::shared_ptr<ExprConverter> exprConvPtr;
 
+	/**
+	 * the program itself
+	 */
 	Program& program;
+
 	/**
 	 * Maps of statements to pragmas.
 	 */
@@ -264,14 +288,12 @@ protected:
 
 	friend class ASTConverter;
 	friend class CASTConverter;
+	friend class CXXASTConverter;
 
 public:
 
-	// clang [3.0] typedef std::pair<clang::FunctionDecl*, clang::idx::TranslationUnit*> TranslationUnitPair;
-	//typedef std::pair<clang::FunctionDecl*, TranslationUnit*> TranslationUnitPair;
-	typedef std::pair<clang::Decl*, TranslationUnit*> TranslationUnitPair;
 
-	ConversionFactory(core::NodeManager& mgr, Program& program);
+	ConversionFactory(core::NodeManager& mgr, Program& program, bool isCxx = false);
 	ConversionFactory(core::NodeManager& mgr, Program& program,
 					std::shared_ptr<StmtConverter> stmtConvPtr,
 					std::shared_ptr<TypeConverter> typeConvPtr,
@@ -312,7 +334,6 @@ public:
 	 *
 	 * Returns the previous translation unit in the case it has to be set back. 
 	 */
-	//clang [3.0 ]const clang::idx::TranslationUnit* getTranslationUnitForDefinition(
 	const insieme::frontend::TranslationUnit* getTranslationUnitForDefinition(
 			clang::FunctionDecl*& fd);
 
@@ -425,166 +446,14 @@ public:
 	virtual core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
 			const core::TypePtr& type, const bool zeroInit) const;
 
-	virtual void collectGlobalVar(const clang::FunctionDecl* funcDecl);
+//	virtual void collectGlobalVar(const clang::FunctionDecl* funcDecl);
+	void buildGlobalStruct(analysis::GlobalVarCollector &collector);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {
 	GlobalVariableDeclarationException() :
 			std::runtime_error("") {
 	}
-};
-
-
-// ------------------------------------ CXXConversionFactory ---------------------------
-/**
- * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
- */
-class CXXConversionFactory: public ConversionFactory {
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							ConversionContext
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// Keeps all the information gathered during the conversion process.
-	// Maps for variable names, cached resolved function definitions and so on...
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	struct CXXConversionContext: public boost::noncopyable  {
-
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		//						Dtor handling
-		//				maps, variables for destructor handling
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-		typedef std::stack<core::VariablePtr> ScopeObjects;
-		ScopeObjects scopeObjects;
-		ScopeObjects downStreamScopeObjects;
-
-		typedef std::map<const clang::FunctionDecl*,
-				vector<insieme::core::VariablePtr>> FunToTemporariesMap;
-		FunToTemporariesMap fun2TempMap;
-		typedef std::map <core::VariablePtr,clang::CXXRecordDecl*> ObjectMap;
-				ObjectMap objectMap;
-
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		//						Polymorphic Classes
-		//				maps, variables for virtual function tables
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-		typedef std::pair<unsigned int, unsigned int> ClassFuncPair;
-		typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
-		PolymorphicClassMap polymorphicClassMap;
-
-		typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
-		VirtualFunctionIdMap virtualFunctionIdMap;
-
-		typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
-		OffsetMap offsetMap;
-
-		typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
-		FinalOverriderMap finalOverriderMap;
-
-		core::ExpressionPtr offsetTableExpr;	//access offsetTable via globalVar
-		core::ExpressionPtr vFuncTableExpr;		//access offsetTable v{ia globalVar
-
-		core::ExpressionPtr thisStack2; // not only of type core::Variable - in nested classes
-		core::ExpressionPtr thisVar; // used in Functions as reference
-
-		// current Type of class
-		core::TypePtr curTy;
-
-		bool useClassCast;
-
-		// for operators
-		bool isCXXOperator;
-
-		// type on which the operator is called
-		core::TypePtr operatorTy;
-
-		core::ExpressionPtr lhsThis;
-		core::ExpressionPtr rhsThis;
-
-		// maps the values of each constructor initializer to its declaration, e.g. A() a(0) {} => a...field, 0...value
-//		typedef std::map<const clang::FieldDecl*, core::ExpressionPtr> CtorInitializerMap;
-//		CtorInitializerMap ctorInitializerMap;
-
-		CXXConversionContext() : useClassCast(false), isCXXOperator(false) {
-		}
-	};
-
-	CXXConversionContext cxxCtx;
-
-	/**
-	 * Converts a Clang statements into an IR statements.
-	 */
-	class CXXStmtConverter;
-
-	/**
-	 * Converts a Clang types into an IR types.
-	 */
-	class CXXTypeConverter;
-
-	/**
-	 * Converts a Clang expression into an IR expression.
-	 */
-	class CXXExprConverter;
-
-
-	//virtual function support: update classId
-	vector<core::StatementPtr> updateClassId(	const clang::CXXRecordDecl* recDecl,
-												core::ExpressionPtr expr,
-												unsigned int classId);
-
-	// virtual function support: create initializations statments for the offsetTable
-	vector<core::StatementPtr> initOffsetTable();
-
-	// virtual function support: create initializations statments for the vFuncTable
-	vector<core::StatementPtr> initVFuncTable();
-
-	//create/update access vfunc offset table
-	void updateVFuncOffsetTableExpr();
-
-	//create/update access vfunc table
-	void updateVFuncTableExpr();
-
-	core::FunctionTypePtr addThisArgToFunctionType(	const core::IRBuilder& builder,
-													const core::TypePtr& structTy,
-													const core::FunctionTypePtr& funcType);
-
-	friend class CXXASTConverter;
-	friend class cpp::TemporaryHandler;
-public:
-
-	CXXConversionFactory(core::NodeManager& mgr, Program& program);
-	virtual ~CXXConversionFactory();
-
-	/**
-	 * Converts a function declaration into an IR lambda.
-	 * @param funcDecl is a clang FunctionDecl which represent a definition for the function
-	 * @param isEntryPoint determine if this function is an entry point of the generated IR
-	 * @return Converted lambda
-	 */
-	virtual core::NodePtr convertFunctionDecl(const clang::FunctionDecl* funcDecl,
-			bool isEntryPoint = false);
-
-	/**
-	 * Converts variable declarations into IR an declaration statement. This method is also responsible
-	 * to map the generated IR variable with the translated variable declaration, so that later uses
-	 * of the variable can be mapped to the same IR variable (see lookupVariable method).
-	 * @param varDecl a clang variable declaration
-	 * @return The IR translation of the variable declaration
-	 */
-	virtual core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* varDecl);
-
-	/**
-	 * Returns the default initialization value of the IR type passed as input.
-	 * @param type is the IR type
-	 * @return The default initialization value for the IR type
-	 */
-	virtual core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
-
-	virtual core::ExpressionPtr convertInitExpr(const clang::Expr* expr,
-			const core::TypePtr& type, const bool zeroInit) const;
-
-	virtual void collectGlobalVar(const clang::FunctionDecl* funcDecl);
 };
 
 // ------------------------------------ ASTConverter ---------------------------
@@ -608,6 +477,8 @@ public:
 	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain = false);
 
 	core::CallExprPtr handleBody(const clang::Stmt* body, const TranslationUnit& tu);
+
+	virtual	void collectGlobals(const clang::FunctionDecl* fDecl)=0;
 };
 
 // ----------------------------------- CASTConverter ---------------------------
@@ -616,17 +487,46 @@ class CASTConverter : public ASTConverter {
 
 public:
 	CASTConverter(core::NodeManager& mgr, Program& prog) :
-		ASTConverter(mgr, prog, mFact), mFact(mgr, prog) {
+		 ASTConverter(mgr, prog, mFact), mFact(mgr, prog){
+	}
+
+	//FIXME: less duplicated?
+	virtual	void collectGlobals(const clang::FunctionDecl* fDecl){
+		// Extract globals starting from this entry point
+		clang::FunctionDecl* def = const_cast<clang::FunctionDecl*>(fDecl);
+		const TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
+
+		mFact.ctx.globalFuncMap.clear();
+		analysis::GlobalVarCollector globColl(mFact, clangTU , mFact.program.getIndexer(), mFact.ctx.globalFuncMap);
+
+		globColl(fDecl);
+		globColl(mFact.getProgram().getTranslationUnits());
+
+		mFact.buildGlobalStruct(globColl);
 	}
 };
 
 // --------------------------------- CXXASTConverter ---------------------------
 class CXXASTConverter : public ASTConverter {
-	CXXConversionFactory mFact;
+	ConversionFactory mFact;
 
 public:
 	CXXASTConverter(core::NodeManager& mgr, Program& prog) :
-		ASTConverter(mgr, prog, mFact), mFact(mgr, prog) {
+		ASTConverter(mgr, prog, mFact), mFact(mgr, prog){
+	}
+	
+	virtual	void collectGlobals(const clang::FunctionDecl* fDecl){
+		// Extract globals starting from this entry point
+		clang::FunctionDecl* def = const_cast<clang::FunctionDecl*>(fDecl);
+		const TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
+
+		mFact.ctx.globalFuncMap.clear();
+		analysis::CXXGlobalVarCollector globColl(mFact, clangTU , mFact.program.getIndexer(), mFact.ctx.globalFuncMap);
+
+		globColl(fDecl);
+		globColl(mFact.getProgram().getTranslationUnits());
+
+		mFact.buildGlobalStruct(globColl);
 	}
 };
 

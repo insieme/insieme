@@ -45,9 +45,9 @@
 
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/cpp/temporary_handler.h"
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -83,9 +83,6 @@
 #include <clang/AST/CXXInheritance.h>
 #include <clang/AST/StmtVisitor.h>
 
-// [3.0]
-//#include "clang/Index/Entity.h"
-//#include "clang/Index/Indexer.h"
 
 using namespace clang;
 using namespace insieme;
@@ -116,14 +113,13 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						C CONVERSION FACTORY
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//clang [3.0] const clang::idx::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(FunctionDecl*& funcDecl) {
 //////////////////////////////////////////////////////////////////
 ///
 const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(FunctionDecl*& funcDecl) {
 
 	// if the function is not defined in this translation unit, maybe it is defined in another we already
 	// loaded use the clang indexer to lookup the definition for this function declarations
-	ConversionFactory::TranslationUnitPair&& ret = 
+	utils::TranslationUnitPair&& ret = 
 			program.getIndexer().getDefAndTUforDefinition (funcDecl);
 
 	// function declaration not found. return the current translation unit
@@ -133,28 +129,25 @@ const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitF
 	// update the funcDecl pointer to point to the correct function declaration 
 	funcDecl = llvm::cast<FunctionDecl> ( ret.first);
 	return ret.second;
-
-/* clang [3.0]
-	clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, program.getClangProgram());
-	ConversionFactory::TranslationUnitPair&& ret = program.getClangIndexer().getDefinitionFor(funcEntity);
-
-
-
-	// update the funcDecl pointer to point to the correct function declaration 
-	funcDecl = ret.first;
-	return ret.second;
-	*/
 }
 
 //////////////////////////////////////////////////////////////////
 ///
-ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog) :
+ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool isCpp) :
 		mgr(mgr), builder(mgr),
-		stmtConvPtr(std::make_shared<CStmtConverter>(*this)),
-		typeConvPtr(std::make_shared<CTypeConverter>(*this, prog)),
-		exprConvPtr(std::make_shared<CExprConverter>(*this, prog)),
 		// cppcheck-suppress exceptNew
 		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()){
+
+		if (!isCpp){
+			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
+			typeConvPtr = std::make_shared<CTypeConverter>(*this, prog);
+			exprConvPtr = std::make_shared<CExprConverter>(*this, prog);
+		}
+		else{
+			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
+			typeConvPtr = std::make_shared<CXXTypeConverter>(*this, prog);
+			exprConvPtr = std::make_shared<CXXExprConverter>(*this, prog);
+		}
 }
 
 //////////////////////////////////////////////////////////////////
@@ -172,19 +165,7 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog,
 
 //////////////////////////////////////////////////////////////////
 ///
-void ConversionFactory::collectGlobalVar(const clang::FunctionDecl* funcDecl) {
-	// Extract globals starting from this entry point
-	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
- // clang [3.0]	const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(def);
-	const TranslationUnit* clangTU = getTranslationUnitForDefinition(def);
-
-	ctx.globalFuncMap.clear();
-	analysis::GlobalVarCollector globColl(*this, clangTU , program.getIndexer(), ctx.globalFuncMap);
-
-	globColl(funcDecl);
-	globColl(getProgram().getTranslationUnits());
-
-	VLOG(1) << globColl;
+void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector &collector){
 
 	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Thread private requires to collect all the variables which are marked to be threadprivate
@@ -195,16 +176,18 @@ void ConversionFactory::collectGlobalVar(const clang::FunctionDecl* funcDecl) {
 	//omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
 	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	ctx.globalStruct = globColl.createGlobalStruct();
+	ctx.globalStruct = collector.createGlobalStruct();
 	if (ctx.globalStruct.first) {
 		ctx.globalVar = builder.variable(builder.refType(ctx.globalStruct.first));
 	}
-	ctx.globalIdentMap = globColl.getIdentifierMap();
+	ctx.globalIdentMap = collector.getIdentifierMap();
 
+	VLOG(1) << "globals collected";
 	VLOG(2) << ctx.globalStruct.first;
 	VLOG(2) << ctx.globalStruct.second;
 	VLOG(2) << ctx.globalVar;
 }
+
 
 //////////////////////////////////////////////////////////////////
 ///
@@ -906,12 +889,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
 			VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
 
-			//clang[3.0]const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
 			const TranslationUnit* rightTU = this->getTranslationUnitForDefinition(decl);
 
 			if ( rightTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
-				// update the translation unit
-				// [3.0] this->currTU = &Program::getTranslationUnit(clangTU);
 				this->currTU.push(rightTU);
 
 				// look up the lambda cache to see if this function has been
@@ -1153,7 +1133,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
 		// use the clang indexer to lookup the definition for this function declarations
-		ConversionFactory::TranslationUnitPair&& ret = program.getIndexer().getDefAndTUforDefinition(llvm::cast<Decl>(fd));
+		utils::TranslationUnitPair&& ret = program.getIndexer().getDefAndTUforDefinition(llvm::cast<Decl>(fd));
 
 		if ( ret.first ) {
 			fd = llvm::cast<FunctionDecl>(ret.first);
@@ -1192,7 +1172,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		assert(fit != ctx.recVarExprMap.end());
 
 		FunctionDecl* decl = const_cast<FunctionDecl*>(fd);
-		//clang [3.0]const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(decl);
 		const TranslationUnit* rightTU = getTranslationUnitForDefinition(decl);
 
 		assert (rightTU);
@@ -1251,38 +1230,17 @@ core::CallExprPtr ASTConverter::handleBody(const clang::Stmt* body, const Transl
 }
 
 core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
+
 	// Handling of the translation unit: we have to make sure to load the translation unit where the function is
 	// defined before starting the parser otherwise reading literals results in wrong values.
 	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
-	//clang [3.0]const clang::idx::TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
 	const TranslationUnit* rightTU = mFact.getTranslationUnitForDefinition(def);
 	assert(rightTU && "Translation unit for function not found.");
 	mFact.currTU.push(rightTU);
 
+	// Collect global variables for the whole program
 	insieme::utils::Timer t("Globals.collect");
-	mFact.collectGlobalVar(funcDecl);
-
-//	VLOG(1) << globColl;
-//
-//	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//	// Thread private requires to collect all the variables which are marked to be threadprivate
-//	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.ctx.thread_private);
-//
-//	//~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//	//Omp flush clause forces the flushed variable to be volatile
-//	//omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
-//	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//
-//	mFact.ctx.globalStruct = globColl.createGlobalStruct();
-//	if (mFact.ctx.globalStruct.first) {
-//		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(mFact.ctx.globalStruct.first));
-//	}
-//	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
-//
-//	VLOG(2) << mFact.ctx.globalStruct.first;
-//	VLOG(2) << mFact.ctx.globalStruct.second;
-//	VLOG(2) << mFact.ctx.globalVar;
-
+	collectGlobals(funcDecl);
 	t.stop();
 	LOG(INFO) << t;
 

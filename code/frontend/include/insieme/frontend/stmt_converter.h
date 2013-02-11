@@ -37,7 +37,6 @@
 #pragma once 
 
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/cpp/temporary_handler.h"
 
 #include "insieme/core/forward_decls.h"
 
@@ -251,17 +250,16 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //							CXX STMT CONVERTER  -- takes care of CXX nodes and C nodes with CXX code mixed in
 //---------------------------------------------------------------------------------------------------------------------
-class CXXConversionFactory::CXXStmtConverter: 
+class ConversionFactory::CXXStmtConverter: 
 	public ConversionFactory::StmtConverter, 
-	public clang::StmtVisitor<CXXConversionFactory::CXXStmtConverter, stmtutils::StmtWrapper> 
+	public clang::StmtVisitor<ConversionFactory::CXXStmtConverter, stmtutils::StmtWrapper> 
 {
 
-	cpp::TemporaryHandler tempHandler;
-	CXXConversionFactory& cxxConvFact;
+	ConversionFactory& ConvFact;
 
 public:
-	CXXStmtConverter(CXXConversionFactory& cxxConvFact) :
-		StmtConverter(cxxConvFact), tempHandler(&cxxConvFact), cxxConvFact(cxxConvFact) {
+	CXXStmtConverter(ConversionFactory& ConvFact) :
+		StmtConverter(ConvFact), ConvFact(ConvFact) {
 	}
 	virtual ~CXXStmtConverter() {}
 

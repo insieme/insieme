@@ -59,9 +59,6 @@
 #include "clang/AST/DeclBase.h"
 
 
-
-
-
 namespace insieme{
 namespace frontend{
 namespace utils{
@@ -84,7 +81,6 @@ Indexer::Indexer()
 void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 	const ClangCompiler& compiler = tu->getCompiler();
 
-	VLOG(1) << "=== Indexing TU ====";
 	clang::TranslationUnitDecl* tuDecl = compiler.getASTContext().getTranslationUnitDecl();
 	assert(tuDecl && "AST has not being build");
 
@@ -108,7 +104,6 @@ void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 			}
 		}
 	}
-	VLOG(1) << "=== Indexing DONE ====";
 }
 
 ////////////////////////////////////////////////

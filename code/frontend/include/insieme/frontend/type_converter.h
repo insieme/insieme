@@ -76,6 +76,9 @@ namespace conversion {
 
 
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 							Type converter: Common Interface
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class ConversionFactory::TypeConverter {
 
 protected:
@@ -117,7 +120,9 @@ protected:
 
 
 
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 							Type converter: C types
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class ConversionFactory::CTypeConverter: 
 	public ConversionFactory::TypeConverter, 
 	public clang::TypeVisitor<ConversionFactory::CTypeConverter, core::TypePtr>
@@ -160,18 +165,20 @@ protected:
 
 
 
-
-class CXXConversionFactory::CXXTypeConverter :
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 							Type converter: C++ types
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+class ConversionFactory::CXXTypeConverter :
 	public ConversionFactory::TypeConverter, 
-	public clang::TypeVisitor<CXXConversionFactory::CXXTypeConverter, core::TypePtr>{
+	public clang::TypeVisitor<ConversionFactory::CXXTypeConverter, core::TypePtr>{
 
-	CXXConversionFactory& convFact;
+	ConversionFactory& convFact;
 
 protected:
 	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
 public:
-	CXXTypeConverter(CXXConversionFactory& fact, Program& program) :
+	CXXTypeConverter(ConversionFactory& fact, Program& program) :
 		TypeConverter(fact, program),
 		convFact(fact)
 	{}
@@ -184,6 +191,8 @@ public:
 												   const core::TypePtr& globals,
 												   const core::FunctionTypePtr& funcType);
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//  COMMON TYPES
 	CALL_BASE_TYPE_VISIT(TypeConverter, ComplexType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ConstantArrayType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, IncompleteArrayType)
@@ -198,24 +207,17 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, PointerType)
 
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//  C++ specific types
 	core::TypePtr VisitBuiltinType(const clang::BuiltinType* buldInTy);
-
 	core::TypePtr VisitTagType(const clang::TagType* tagType);
-
 	core::TypePtr VisitDependentSizedArrayType(const clang::DependentSizedArrayType* arrTy);
-
 	core::TypePtr VisitReferenceType(const clang::ReferenceType* refTy);
-
 	core::TypePtr VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy) ;
-
 	core::TypePtr VisitDependentTemplateSpecializationType(const clang::DependentTemplateSpecializationType* tempTy);
-
 	core::TypePtr VisitInjectedClassNameType(const clang::InjectedClassNameType* tempTy);
-
 	core::TypePtr VisitSubstTemplateTypeParmType(const clang::SubstTemplateTypeParmType* substTy);
-
 	core::TypePtr Visit(const clang::Type* type);
-
 };
 
 }

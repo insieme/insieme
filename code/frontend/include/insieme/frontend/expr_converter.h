@@ -42,7 +42,6 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/dep_graph.h"
 
-#include "insieme/frontend/cpp/temporary_handler.h"
 #include "insieme/annotations/c/naming.h"
 
 #include "clang/AST/StmtVisitor.h"
@@ -397,61 +396,16 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //										CXX EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class CXXConversionFactory::CXXExprConverter : 
+class ConversionFactory::CXXExprConverter : 
 	public ExprConverter, 
 	public clang::StmtVisitor<CXXExprConverter, core::ExpressionPtr> 
 {
-	CXXConversionFactory& convFact;
-	CXXConversionFactory::CXXConversionContext& cxxCtx;
-	// FIXME:  need depGraph
-	//utils::FunctionDependencyGraph funcDepGraph;
 
 public:
-	cpp::TemporaryHandler tempHandler;
 
-	CXXExprConverter(CXXConversionFactory& cxxConvFact, Program& program) :
-		ExprConverter(cxxConvFact, program),
-		convFact(cxxConvFact),
-		cxxCtx(cxxConvFact.cxxCtx),
-		//funcDepGraph(program.getClangIndexer()),
-		tempHandler(&cxxConvFact)
-	{ }
-
+	CXXExprConverter(ConversionFactory& ConvFact, Program& program) :
+		ExprConverter(ConvFact, program){}
 	virtual ~CXXExprConverter() {}
-
-private:
-	template<class ClangExprTy>
-	ExpressionList getFunctionArguments(const core::IRBuilder& builder, ClangExprTy* callExpr,
-			const core::FunctionTypePtr& funcTy);
-
-	ExpressionList getFunctionArguments(const core::IRBuilder& builder, clang::CXXNewExpr* callExpr,
-			const core::FunctionTypePtr& funcTy);
-
-	ExpressionList getFunctionArguments(const core::IRBuilder& builder, clang::CXXOperatorCallExpr* callExpr,
-			const core::FunctionTypePtr& funcTy, bool isMember = false);
-
-	// get the classId from the left-most dynamic base of recDecl
-	core::ExpressionPtr getClassId(const clang::CXXRecordDecl* recDecl, core::ExpressionPtr thisExpr);
-
-	// takes the recordDecl of this argument of the called function, the methodDecl of the called function,
-	// and the "this" object and gets the according functionPointer from the vFuncTable
-	// (function Pointer is stored as AnyRef, gets already casted to the correct function type)
-	// and is deRef --> ready to use. the resulting ExpressionPtr can be used as Argument to a callExpr
-	core::ExpressionPtr createCastedVFuncPointer(
-		const clang::CXXRecordDecl* recordDecl,
-		const clang::CXXMethodDecl* methodDecl,
-		core::ExpressionPtr thisPtr);
-
-	// takes the given "this" of the CXXMemberCall
-	// the callee of the CXXMemberCall
-	// and the CXXMethodDecl of the called method
-	// returns if a virtual func can be called non-virtual
-	bool canDevirtualizeCXXMemberCall(
-			const clang::Expr* thisArg,
-			const clang::MemberExpr* memberExpr,
-			const clang::CXXMethodDecl* methodDecl);
-
-public:
 
 	CALL_BASE_EXPR_VISIT(ExprConverter, IntegerLiteral)
 	CALL_BASE_EXPR_VISIT(ExprConverter, FloatingLiteral)

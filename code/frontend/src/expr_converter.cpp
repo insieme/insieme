@@ -61,7 +61,6 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 
-#include "insieme/frontend/cpp/temporary_handler.h"
 #include "insieme/annotations/c/naming.h"
 
 #include "clang/AST/StmtVisitor.h"
@@ -300,19 +299,6 @@ void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDe
  * CallExprVisitor 
  *************************************************************************************************/
 void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
-	/*
-	 * FIXME: clang [3.0]
-	const clang::FunctionDecl* def = NULL;
-	// this will find function definitions if they are declared in  the same translation unit
-	// (also defined as static)
-	if (!funcDecl->hasBody(def)) {
-		// if the function is not defined in this translation unit, maybe it is defined in another we already
-		// loaded use the clang indexer to lookup the definition for this function declarations
-		clang::idx::Entity&& funcEntity = clang::idx::Entity::get( funcDecl, indexer.getProgram() );
-		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
-		if ( ret.first ) {def = ret.first;}
-	}
-	*/
 
 	const clang::FunctionDecl* def = NULL;
 	// if the function has no body, we need to find the right declaration with
