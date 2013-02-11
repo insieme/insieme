@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <stdlib.h>
+
 // builtin types
 void basic_type_test() {
 	#pragma test "ref<int<4>> v1 = ref.var(1)"

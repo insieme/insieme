@@ -112,15 +112,25 @@ Token& ParserProxy::CurrentToken() {
 
 namespace {
 
-void setDiagnosticClient(clang::CompilerInstance& clang, clang::DiagnosticOptions* diagOpts) {
+void setDiagnosticClient(clang::CompilerInstance& clang) {
+
+	// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the printer object!
+	clang::DiagnosticOptions* options = new clang::DiagnosticOptions();
+
+	// set diagnostic options for the error reporting
+	options->ShowLocation = 1;
+	options->ShowCarets = 1;
+	options->ShowColors = 1; // REMOVE FOR BETTER ERROR REPORT IN ECLIPSE
+	options->TabStop = 4;
+
 	// clang [3.0]TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), diagOpts);
-	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), diagOpts);
+	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), options);
 	// cppcheck-suppress exceptNew
 	
 	// FIXME: if the diagEngine takes care of diagClient ownership, it double-deletes the pointer.
 	// check why, it might be a double insert in list, or a isolated delete somewhere
 	DiagnosticsEngine* diags = new DiagnosticsEngine(llvm::IntrusiveRefCntPtr<DiagnosticIDs>( new DiagnosticIDs() ), 
-													diagOpts, diagClient, false);
+													options, diagClient, true);
 	clang.setDiagnostics(diags);
 }
 
@@ -135,15 +145,14 @@ namespace frontend {
 
 struct ClangCompiler::ClangCompilerImpl {
 	CompilerInstance clang;
-	DiagnosticOptions diagOpts;
 	llvm::IntrusiveRefCntPtr<TargetOptions> TO;
 	bool m_isCXX;
-	ClangCompilerImpl() : clang(), diagOpts(), TO(new TargetOptions), m_isCXX(false) {}
+	ClangCompilerImpl() : clang(), TO(new TargetOptions), m_isCXX(false) {}
 };
 
 ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 
-	setDiagnosticClient(pimpl->clang, &pimpl->diagOpts);
+	setDiagnosticClient(pimpl->clang);
 	pimpl->clang.createFileManager();
 	pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
 	
@@ -172,13 +181,8 @@ ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangCompilerImpl) {
 	// pimpl->clang.setLLVMContext(new llvm::LLVMContext);
 
-	// set diagnostic options for the error reporting
-	pimpl->diagOpts.ShowLocation = 1;
-	pimpl->diagOpts.ShowCarets = 1;
-	pimpl->diagOpts.ShowColors = 1; // REMOVE FOR BETTER ERROR REPORT IN ECLIPSE
-	pimpl->diagOpts.TabStop = 4;
-
-	setDiagnosticClient(pimpl->clang, &pimpl->diagOpts);
+	// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the diagOpts object!
+	setDiagnosticClient(pimpl->clang);
 
 	pimpl->clang.createFileManager();
 	pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
