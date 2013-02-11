@@ -564,7 +564,7 @@ int main(int argc, char** argv) {
 
 			InverseStmtMap stmtMap;
 
-			// printIR(program, stmtMap);
+			printIR(program, stmtMap);
 
 			doCleanup(program);
 
