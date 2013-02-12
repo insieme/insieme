@@ -197,30 +197,13 @@ protected:
 class CXXGlobalVarCollector : public GlobalVarCollector {
 	public:
 
-		//virtual function stuff
-		typedef std::pair<unsigned int, unsigned int> ClassFuncPair; //first = classId, second = count of virtual functions
-		//typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
-		//typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
-		//typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
-		//typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
-
 		CXXGlobalVarCollector(
 				conversion::ConversionFactory& 		convFact,
 				const insieme::frontend::TranslationUnit* 	currTU,
 				insieme::frontend::utils::Indexer& 				indexer,
 				UseGlobalFuncMap& 					globalFuncMap)
-				/* FIXME :: do we need this anymore??
-				PolymorphicClassMap& 				polymorphicClassMap,
-				OffsetMap&							offsetMap,
-				VirtualFunctionIdMap&				virtualFunctionIdMap,
-				FinalOverriderMap&					finalOverriderMap) */
 	:
-	  GlobalVarCollector(convFact, currTU, indexer, globalFuncMap),
-	 // polymorphicClassMap(polymorphicClassMap),
-	 // offsetMap(offsetMap),
-	 // virtualFunctionIdMap(virtualFunctionIdMap),
-	 // finalOverriderMap(finalOverriderMap), 
-		maxFunctionCounter (-1) 
+	  GlobalVarCollector(convFact, currTU, indexer, globalFuncMap)
 		{ }
 	virtual ~CXXGlobalVarCollector() {};
 
@@ -229,20 +212,6 @@ class CXXGlobalVarCollector : public GlobalVarCollector {
 	virtual bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr);
 	virtual bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr);
 	virtual bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
-	vector<clang::CXXRecordDecl*> getAllDynamicBases(const clang::CXXRecordDecl* recDeclCXX );
-
-	virtual GlobalStructPair createGlobalStruct();
-
-private:
-
-	void collectVTableData(const clang::CXXRecordDecl* recDecl);
-
-	//used for virtual functions
-	//PolymorphicClassMap& 				polymorphicClassMap;
-	//OffsetMap&							offsetMap;
-	//VirtualFunctionIdMap&				virtualFunctionIdMap;
-	//FinalOverriderMap&					finalOverriderMap;
-	int									maxFunctionCounter;
 };
 
 } // end analysis namespace
