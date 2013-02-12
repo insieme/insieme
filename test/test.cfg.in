@@ -36,7 +36,8 @@ back.gcc.flags: Conf([
 					Flag("-I.")
 				])
 back.gcc: 		%(back.gcc.flags)s + Conf(Flag("-std=gnu99"))
-back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++11")) 
+#back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++11")) 
+back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++0x")) 
 
 back.icc.flags: Conf(Flag('-I.'))
 back.icc:		%(back.icc.flags)s + Conf(Flag("-c99"))
