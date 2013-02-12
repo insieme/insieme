@@ -48,9 +48,8 @@
 
 #include "insieme/utils/logging.h"
 
-#include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/convert.h"
+//#include "insieme/frontend/convert.h"
 
 #include "insieme/frontend/pragma/insieme.h"
 
@@ -62,7 +61,6 @@ using namespace insieme::core;
 using namespace insieme::core::checks;
 using namespace insieme::utils::log;
 namespace fe = insieme::frontend;
-using namespace clang;
 
 
 void checkSemanticErrors(const NodePtr& node) {

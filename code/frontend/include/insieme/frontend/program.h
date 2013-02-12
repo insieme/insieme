@@ -43,19 +43,6 @@
 
 #include "insieme/utils/logging.h"
 
-
-
-// clang [3.0]
-//namespace clang {
-//namespace idx {
-//class TranslationUnit;
-//} // end idx namespace
-//} // end clang namespace
-
-//namespace clang {
-	//class TranslationUnitDecl;
-//} // end clang namespace
-
 namespace insieme {
 namespace frontend {
 

@@ -39,10 +39,15 @@
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_expressions.h"
 
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "insieme/frontend/program.h"
 
 #include "insieme/frontend/utils/indexer.h"
+
+#include "clang/AST/Decl.h"
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 
 #include <set>
 #include <map>

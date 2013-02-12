@@ -42,6 +42,10 @@
 
 #include <gtest/gtest.h>
 
+#include "insieme/frontend/stmt_converter.h"
+#include "insieme/frontend/expr_converter.h"
+#include "insieme/frontend/type_converter.h"
+
 #include "insieme/core/ir_program.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
