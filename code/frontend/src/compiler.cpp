@@ -123,11 +123,9 @@ void setDiagnosticClient(clang::CompilerInstance& clang) {
 	options->ShowColors = 1; // REMOVE FOR BETTER ERROR REPORT IN ECLIPSE
 	options->TabStop = 4;
 
-	// clang [3.0]TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), diagOpts);
 	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), options);
 	// cppcheck-suppress exceptNew
 	
-	// FIXME: if the diagEngine takes care of diagClient ownership, it double-deletes the pointer.
 	// check why, it might be a double insert in list, or a isolated delete somewhere
 	DiagnosticsEngine* diags = new DiagnosticsEngine(llvm::IntrusiveRefCntPtr<DiagnosticIDs>( new DiagnosticIDs() ), 
 													options, diagClient, true);

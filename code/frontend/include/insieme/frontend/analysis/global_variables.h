@@ -53,15 +53,6 @@
 #include <map>
 #include <stack>
 
-/* clang [3.0]
- * namespace clang {
-namespace idx {:w
-
-class Indexer;
-class TranslationUnit;
-} // end idx namespace
-} */
-
 namespace insieme {
 namespace frontend {
 
@@ -180,7 +171,6 @@ protected:
 	GlobalVarSet						globals;
 	VarTUMap							varTU;
 	GlobalIdentMap						varIdentMap;
-	// clang [3.0] const clang::idx::TranslationUnit* 	currTU;
 	const insieme::frontend::TranslationUnit* 	currTU;
 	VisitedFuncSet 						visited;
 	FunctionStack						funcStack;
