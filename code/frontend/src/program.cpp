@@ -371,7 +371,7 @@ const core::ProgramPtr& Program::convert() {
 		assert(main && "Program has no main()");
 	
 		mProgram = astConvPtr->handleFunctionDecl(
-								dyn_cast<const FunctionDecl>(pimpl->mIdx.getDefinitionFor("main")));
+								dyn_cast<const FunctionDecl>(pimpl->mIdx.getMainFunctionDefinition()));
 	}
 
 	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";

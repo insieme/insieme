@@ -64,8 +64,8 @@ public:
 	typedef std::pair<clang::Decl*, insieme::frontend::TranslationUnit*> tStored;
 
 private:
-	typedef std::map<std::string, tStored> tIndex; 
 
+	typedef std::map<std::string, tStored> tIndex; 
 	tIndex   mIndex;
 	tStored  voidPair;
 
@@ -79,7 +79,29 @@ public:
 	//
 	void indexTU(insieme::frontend::TranslationUnit* tu);
 
+
 	////////////////////////////////////////////////
+	//
+	clang::Decl* getDefinitionFor (const clang::Decl* decl) const;
+
+
+	////////////////////////////////////////////////
+	///
+	tStored getDefAndTUforDefinition (const clang::Decl* decl) const;
+
+
+	////////////////////////////////////////////////
+	//
+	clang::Decl* getMainFunctionDefinition () const;
+
+
+	////////////////////////////////////////////////
+	//
+	void dump() const;
+
+private:
+	////////////////////////////////////////////////
+	//
 	///
 	tStored getDefAndTUforDefinition (const std::string &symbol) const;
 
@@ -87,20 +109,14 @@ public:
 	//
 	clang::Decl* getDefinitionFor (const std::string &symbol) const;
 
-	////////////////////////////////////////////////
-	//
-	clang::Decl* getDefinitionFor (const clang::Decl* decl) const;
-
-	////////////////////////////////////////////////
-	///
-	tStored getDefAndTUforDefinition (const clang::Decl* decl) const;
 
 	////////////////////////////////////////////////
 	//
-	void dump() const;
-
+	void indexDeclaration(clang::Decl* decl, insieme::frontend::TranslationUnit* tu);
+	
 
 	friend class indexerASTConsumer;
+	friend class IndexerVisitor;
 };
 
 
