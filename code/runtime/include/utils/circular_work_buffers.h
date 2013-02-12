@@ -65,20 +65,20 @@
 //  0 |       |  <- bot_update
 
 typedef union _irt_cwb_state {
-	uint64 all;
+	volatile uint64 all;
 	struct {
 		union {
-			uint32 top;
+			volatile uint32 top;
 			struct {
-				uint16 top_val;
-				uint16 top_update;
+				volatile uint16 top_val;
+				volatile uint16 top_update;
 			};
 		};
 		union {
-			uint32 bot;
+			volatile uint32 bot;
 			struct {
-				uint16 bot_val;
-				uint16 bot_update;
+				volatile uint16 bot_val;
+				volatile uint16 bot_update;
 			};
 		};
 	};
@@ -104,7 +104,7 @@ static inline uint32 irt_cwb_size(irt_circular_work_buffer* wb) {
 
 static inline void irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
 	// check feasibility
-	irt_cwb_state state, newstate;
+	volatile irt_cwb_state state, newstate;
 	for(;;) {
 		state.all = wb->state.all;
 		if(state.top_update != state.top_val) continue; // operation in progress on top
@@ -125,7 +125,7 @@ static inline void irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_ite
 
 static inline void irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item* wi) {
 	// check feasibility
-	irt_cwb_state state, newstate;
+	volatile irt_cwb_state state, newstate;
 	for(;;) {
 		state.all = wb->state.all;
 		if(state.bot_update != state.bot_val) continue; // operation in progress on bot
