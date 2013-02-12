@@ -77,7 +77,6 @@ namespace cpp {
 namespace conversion {
 
 class ASTConverter;
-class CASTConverter;
 class CXXASTConverter;
 class ConversionFactory;
 
@@ -287,7 +286,6 @@ protected:
 													const core::FunctionTypePtr& funcType);
 
 	friend class ASTConverter;
-	friend class CASTConverter;
 	friend class CXXASTConverter;
 
 public:
@@ -456,19 +454,21 @@ struct GlobalVariableDeclarationException: public std::runtime_error {
 	}
 };
 
-// ------------------------------------ ASTConverter ---------------------------
+/// ------------------------------------ ASTConverter ---------------------------
+///
+///  AST converter holds the functionality to transform a C program AST into IR
 class ASTConverter {
 protected:
 	core::NodeManager& mgr;
 	Program& mProg;
-	ConversionFactory& mFact;
+	ConversionFactory mFact;
 	core::ProgramPtr mProgram;
 
 public:
-	ASTConverter(core::NodeManager& mgr, Program& prog, ConversionFactory& fact) :
+	ASTConverter(core::NodeManager& mgr, Program& prog):
 			mgr(mgr),
 			mProg(prog),
-			mFact(fact),
+			mFact(mgr, prog),
 			mProgram(prog.getProgram()) {
 	}
 
@@ -478,19 +478,6 @@ public:
 
 	core::CallExprPtr handleBody(const clang::Stmt* body, const TranslationUnit& tu);
 
-	virtual	void collectGlobals(const clang::FunctionDecl* fDecl)=0;
-};
-
-// ----------------------------------- CASTConverter ---------------------------
-class CASTConverter : public ASTConverter {
-	ConversionFactory mFact;
-
-public:
-	CASTConverter(core::NodeManager& mgr, Program& prog) :
-		 ASTConverter(mgr, prog, mFact), mFact(mgr, prog){
-	}
-
-	//FIXME: less duplicated?
 	virtual	void collectGlobals(const clang::FunctionDecl* fDecl){
 		// Extract globals starting from this entry point
 		clang::FunctionDecl* def = const_cast<clang::FunctionDecl*>(fDecl);
@@ -506,13 +493,15 @@ public:
 	}
 };
 
-// --------------------------------- CXXASTConverter ---------------------------
+/// --------------------------------- CXXASTConverter ---------------------------
+///
+///   since C++ is a superset of C, it makes sense that most of the functionaly of the
+///   translation is hold by the C converter
 class CXXASTConverter : public ASTConverter {
-	ConversionFactory mFact;
 
 public:
 	CXXASTConverter(core::NodeManager& mgr, Program& prog) :
-		ASTConverter(mgr, prog, mFact), mFact(mgr, prog){
+		ASTConverter(mgr, prog){
 	}
 	
 	virtual	void collectGlobals(const clang::FunctionDecl* fDecl){

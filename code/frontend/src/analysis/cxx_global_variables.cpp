@@ -231,6 +231,7 @@ bool CXXGlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr)
 }
 
 bool CXXGlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
+
 	/*
 
 	//check if allocated type is builtin
@@ -525,6 +526,7 @@ vector<CXXRecordDecl*> CXXGlobalVarCollector::getAllDynamicBases(const clang::CX
 /// This function synthetized the global structure that will be used to hold the
 /// global variables used within the functions of the input program.
 GlobalVarCollector::GlobalStructPair CXXGlobalVarCollector::createGlobalStruct()  {
+
 	/*
 
 	// no global variable AND NO POLYMORPHIC CLASS found , we return an empty tuple
