@@ -119,7 +119,7 @@ const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitF
 
 	// if the function is not defined in this translation unit, maybe it is defined in another we already
 	// loaded use the clang indexer to lookup the definition for this function declarations
-	utils::TranslationUnitPair&& ret = 
+	utils::Indexer::TranslationUnitPair&& ret = 
 			program.getIndexer().getDefAndTUforDefinition (funcDecl);
 
 	// function declaration not found. return the current translation unit
@@ -869,20 +869,22 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
   		}
 	}
 
-
-	if (!ctx.isRecSubFunc) {
-		// add this type to the type graph (if not present)
-		exprConvPtr->funcDepGraph.addNode(funcDecl);
-		if (VLOG_IS_ON(2)) {
-			exprConvPtr->funcDepGraph.print(std::cout);
-		}
-	}
+//
+//	if (!ctx.isRecSubFunc) {
+//		// add this type to the type graph (if not present)
+//		exprConvPtr->funcDepGraph.addNode(funcDecl);
+//		if (VLOG_IS_ON(2)) {
+//			exprConvPtr->funcDepGraph.print(std::cout);
+//		}
+//	}
+//
 
 	// retrieve the strongly connected components for this type
-	std::set<const FunctionDecl*>&& components = exprConvPtr->funcDepGraph.getStronglyConnectedComponents( funcDecl );
+	//std::set<const FunctionDecl*>&& components = exprConvPtr->funcDepGraph.getStronglyConnectedComponents( funcDecl );
+	std::set<const FunctionDecl*>&& components = program.getCallGraph().getStronglyConnectedComponents( funcDecl );
 
 	if (!components.empty()) {
-		std::set<const FunctionDecl*>&& subComponents = exprConvPtr->funcDepGraph.getSubComponents( funcDecl );
+		std::set<const FunctionDecl*>&& subComponents = program.getCallGraph().getSubComponents( funcDecl );
 
 		for (auto cur: subComponents){
 
@@ -1133,7 +1135,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
 		// use the clang indexer to lookup the definition for this function declarations
-		utils::TranslationUnitPair&& ret = program.getIndexer().getDefAndTUforDefinition(llvm::cast<Decl>(fd));
+		utils::Indexer::TranslationUnitPair&& ret = program.getIndexer().getDefAndTUforDefinition(llvm::cast<Decl>(fd));
 
 		if ( ret.first ) {
 			fd = llvm::cast<FunctionDecl>(ret.first);

@@ -39,7 +39,6 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/frontend/program.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/utils/map_utils.h"
 
@@ -49,6 +48,7 @@
 #include <set>
 #include <functional>
 
+// FIXME: cleanup includes and stuff, find tradeof between compilation time and code complexity
 // Forward declarations
 namespace clang {
 class ASTContext;
@@ -454,7 +454,7 @@ struct GlobalVariableDeclarationException: public std::runtime_error {
 	}
 };
 
-/// ------------------------------------ ASTConverter ---------------------------
+// ------------------------------------ ASTConverter ---------------------------
 ///
 ///  AST converter holds the functionality to transform a C program AST into IR
 class ASTConverter {
@@ -493,10 +493,11 @@ public:
 	}
 };
 
-/// --------------------------------- CXXASTConverter ---------------------------
+// --------------------------------- CXXASTConverter ---------------------------
 ///
 ///   since C++ is a superset of C, it makes sense that most of the functionaly of the
 ///   translation is hold by the C converter
+///	  this class only implements the specific C++ functionalities
 class CXXASTConverter : public ASTConverter {
 
 public:

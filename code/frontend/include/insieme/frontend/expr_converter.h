@@ -37,12 +37,12 @@
 #pragma once 
 
 #include "insieme/frontend/convert.h"
-#include "insieme/annotations/c/location.h"
-
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/dep_graph.h"
+#include "insieme/frontend/utils/functionDependencyGraph.h"
 
 #include "insieme/annotations/c/naming.h"
+#include "insieme/annotations/c/location.h"
 
 #include "clang/AST/StmtVisitor.h"
 
@@ -83,65 +83,6 @@ core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr
 
 namespace insieme {
 namespace frontend {
-
-namespace utils {
-
-struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
-
-	//clang::idx::Indexer& indexer;
-	insieme::frontend::utils::Indexer& indexer;
-	typedef std::set<const clang::FunctionDecl*> CallGraph;
-	CallGraph callGraph;
-
-	//CallExprVisitor(clang::idx::Indexer& indexer) : indexer(indexer) { }
-	CallExprVisitor(insieme::frontend::utils::Indexer& indexer) : indexer(indexer) { }
-
-	CallGraph getCallGraph(const clang::FunctionDecl* func) {
-		assert(func->hasBody() && "Function in the dependency graph has no body");
-
-		Visit(func->getBody());
-		return callGraph;
-	}
-
-	void addFunctionDecl(clang::FunctionDecl* funcDecl);
-
-	void VisitCallExpr(clang::CallExpr* callExpr);
-
-	void VisitDeclRefExpr(clang::DeclRefExpr* expr);
-
-	void VisitStmt(clang::Stmt* stmt) {
-		std::for_each(stmt->child_begin(), stmt->child_end(),
-				[ this ](clang::Stmt* curr) {if(curr) this->Visit(curr);});
-	}
-
-	void VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
-
-	void VisitCXXNewExpr(clang::CXXNewExpr* callExpr);
-
-	void VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr);
-
-	void VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* mcExpr);
-
-};
-
-/**
- * In order for DepGraph to build the dependency graph for functions the clang indexer is needed,
- * FunctionDependencyGraph adds the indexer to member functions of DependencyGraph
- */
-class FunctionDependencyGraph: public DependencyGraph<const clang::FunctionDecl*> {
-	//clang::idx::Indexer& idx;
-	insieme::frontend::utils::Indexer& idx;
-public:
-	CallExprVisitor callExprVis;
-	//FunctionDependencyGraph(clang::idx::Indexer& idx) :
-	FunctionDependencyGraph(insieme::frontend::utils::Indexer& idx) :
-			DependencyGraph<const clang::FunctionDecl*>(), idx(idx), callExprVis(idx) {
-	}
-	inline insieme::frontend::utils::Indexer& getIndexer() const { return idx; }
-};
-
-} // end namespace utils
-
 namespace conversion {
 
 #define CALL_BASE_EXPR_VISIT(Base, ExprTy) \
@@ -197,15 +138,13 @@ protected:
 
 public:
 	// CallGraph for functions, used to resolved eventual recursive functions
-	utils::FunctionDependencyGraph funcDepGraph;
 
 	ExprConverter(ConversionFactory& convFact, Program& program) :
 		convFact(convFact),
 		ctx(convFact.ctx),
 		mgr(convFact.mgr),
 		builder(convFact.builder),
-		gen(convFact.builder.getLangBasic()),
-		funcDepGraph(program.getIndexer())
+		gen(convFact.builder.getLangBasic())
 	{  }
 
 	virtual ~ExprConverter() { }
@@ -361,8 +300,6 @@ protected:
 //			const core::FunctionTypePtr& funcTy);
 
 public:
-	// CallGraph for functions, used to resolved eventual recursive functions
-//	utils::FunctionDependencyGraph funcDepGraph;
 
 	CExprConverter(ConversionFactory& convFact, Program& program) :
 		ExprConverter(convFact, program) {}

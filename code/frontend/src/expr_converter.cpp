@@ -279,62 +279,6 @@ core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr
 
 namespace insieme {
 namespace frontend {
-
-namespace utils {
-
-template<>
-void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDecl* func,
-		const DependencyGraph<const clang::FunctionDecl*>::VertexTy& v) {
-	// This is potentially dangerous
-	FunctionDependencyGraph& funcDepGraph = static_cast<FunctionDependencyGraph&>(*this);
-
-	CallExprVisitor callExprVis(funcDepGraph.getIndexer());
-	CallExprVisitor::CallGraph&& graph = callExprVis.getCallGraph(func);
-
-	std::for_each(graph.begin(), graph.end(),
-			[ this, v ](const clang::FunctionDecl* currFunc) {assert(currFunc); this->addNode(currFunc, &v);});
-}
-
-/*************************************************************************************************
- * CallExprVisitor 
- *************************************************************************************************/
-void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
-
-	const clang::FunctionDecl* def = NULL;
-	// if the function has no body, we need to find the right declaration with
-	// the definition in another translation unit
-	if (!funcDecl->hasBody(def)) {
-		clang::Decl* raw = indexer.getDefinitionFor (funcDecl);
-		if (raw){
-			def = llvm::cast<clang::FunctionDecl>(raw);
-		}
-	}
-
-	if (def){
-		callGraph.insert(def);
-	}
-}
-
-void CallExprVisitor::VisitCallExpr(clang::CallExpr* callExpr) {
-	if (callExpr->getDirectCallee()) {
-		if (clang::FunctionDecl * funcDecl = llvm::dyn_cast<clang::FunctionDecl>(callExpr->getDirectCallee())) {
-			addFunctionDecl(funcDecl);
-		}
-	}
-	VisitStmt(callExpr);
-}
-
-void CallExprVisitor::VisitDeclRefExpr(clang::DeclRefExpr* expr) {
-	// if this variable is used to invoke a function (therefore is a
-	// function pointer) and it has been defined here, we add a potentially
-	// dependency to the current definition
-	//if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(expr->getDecl()) ) {
-	// addFunctionDecl(funcDecl);
-	//}
-}
-
-} // end utils namespace 
-
 namespace conversion {
 
 //---------------------------------------------------------------------------------------------------------------------

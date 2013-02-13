@@ -48,6 +48,7 @@ namespace frontend {
 
 	namespace utils{
 		class Indexer;
+		class FunctionDependencyGraph;
 	}
 
 namespace pragma {
@@ -120,6 +121,11 @@ public:
 	 * Add a single file to the program
 	 */
 	TranslationUnit& addTranslationUnit(const std::string& fileName);
+	
+	/**
+	 * index and analyzes recursive functions
+	 */
+	void indexAndAnalyze();
 
 	/**
 	 * Add a single file to the program
@@ -132,7 +138,6 @@ public:
 	void addTranslationUnits(const std::vector<std::string>& fileNames) {
 		std::for_each(fileNames.begin(), fileNames.end(), 
 				[ this ](const std::string& fileName) { 
-				VLOG(2) << "  -tu for: " << fileName;
 				this->addTranslationUnit(fileName); 
 			});
 	}
@@ -146,12 +151,6 @@ public:
 	 * Returns a list of parsed translation units
 	 */
 	const TranslationUnitSet& getTranslationUnits() const;
-
-	// clang [3.0] static const TranslationUnit& getTranslationUnit(const clang::idx::TranslationUnit* tu);
-	//static const TranslationUnit& getTranslationUnit(const clang::TranslationUnitDecl* tu);
-
-	// clang [3.0] static const clang::idx::TranslationUnit* getClangTranslationUnit(const TranslationUnit& tu);
-	//static const clang::TranslationUnitDecl* getClangTranslationUnit(const TranslationUnit& tu);
 
 	class PragmaIterator: public 
 				std::iterator<
@@ -188,10 +187,8 @@ public:
 	PragmaIterator pragmas_begin(const PragmaIterator::FilteringFunc& func) const;
 	PragmaIterator pragmas_end() const;
 
-	// clang [3.0]
-//	clang::idx::Program& getClangProgram() const;
-// 	clang::idx::Indexer& getClangIndexer() const;
 	utils::Indexer& getIndexer() const;
+	utils::FunctionDependencyGraph& getCallGraph() const;
 
 	void dumpCallGraph() const;
 };

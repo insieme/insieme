@@ -54,20 +54,19 @@ namespace insieme{
 namespace frontend{
 namespace utils{
 
-typedef std::pair<clang::Decl*, TranslationUnit*> TranslationUnitPair;
 class indexerASTConsumer;
 
 //////////////////////////////////////////////////////////////////
 // the indexer generates an index of 
 class Indexer{
 public:
-	typedef std::pair<clang::Decl*, insieme::frontend::TranslationUnit*> tStored;
+	typedef std::pair<clang::Decl*, insieme::frontend::TranslationUnit*> TranslationUnitPair;
 
 private:
 
-	typedef std::map<std::string, tStored> tIndex; 
+	typedef std::map<std::string, TranslationUnitPair> tIndex; 
 	tIndex   mIndex;
-	tStored  voidPair;
+	TranslationUnitPair  voidPair;
 
 public:
 
@@ -87,7 +86,7 @@ public:
 
 	////////////////////////////////////////////////
 	///
-	tStored getDefAndTUforDefinition (const clang::Decl* decl) const;
+	TranslationUnitPair getDefAndTUforDefinition (const clang::Decl* decl) const;
 
 
 	////////////////////////////////////////////////
@@ -99,11 +98,31 @@ public:
 	//
 	void dump() const;
 
+	////////////////////////////////////////////////
+	//
+	class iterator{
+	private:
+		tIndex::iterator curr;
+	public:
+		iterator(const tIndex::iterator& c):
+			curr(c) {}
+		clang::Decl*& operator*();
+		clang::Decl** operator->();
+
+		iterator operator++(); 
+		iterator operator++(int); 
+
+		bool operator!=(const iterator&) const; 
+	};
+
+	iterator begin();
+	iterator end();
+
 private:
 	////////////////////////////////////////////////
 	//
 	///
-	tStored getDefAndTUforDefinition (const std::string &symbol) const;
+	TranslationUnitPair getDefAndTUforDefinition (const std::string &symbol) const;
 
 	////////////////////////////////////////////////
 	//

@@ -84,14 +84,14 @@ class IndexerVisitor{
 
 		if (llvm::isa<clang::FunctionDecl>(decl)) {
 			if (decl->hasBody()){
-				Indexer::tStored elem =  std::make_pair(decl,mTu); 
+				Indexer::TranslationUnitPair elem =  std::make_pair(decl,mTu); 
 				mIndex[named->getQualifiedNameAsString()] = elem; 
 			}
 		}
 		else if (llvm::isa<clang::CXXRecordDecl>(decl)){
 			clang::CXXRecordDecl *recDecl = llvm::cast<clang::CXXRecordDecl>(decl);
 			if (recDecl->hasDefinition()){
-				Indexer::tStored elem =  std::make_pair(llvm::cast<clang::Decl>(recDecl->getDefinition()),mTu); 
+				Indexer::TranslationUnitPair elem =  std::make_pair(llvm::cast<clang::Decl>(recDecl->getDefinition()),mTu); 
 				mIndex[named->getQualifiedNameAsString()] = elem;
 			}
 			// index inner functions as well
@@ -148,7 +148,7 @@ void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 
 ////////////////////////////////////////////////
 //
-Indexer::tStored Indexer::getDefAndTUforDefinition (const std::string& symbol) const{
+Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const std::string& symbol) const{
 
 	tIndex::const_iterator match = this->mIndex.find(symbol);
 	if (match != this->mIndex.end()){
@@ -175,7 +175,7 @@ clang::Decl* Indexer::getDefinitionFor (const std::string& symbol) const{
 
 ////////////////////////////////////////////////
 ///
-Indexer::tStored Indexer::getDefAndTUforDefinition (const clang::Decl* decl) const{
+Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Decl* decl) const{
 	assert(decl && "Cannot look up null pointer!");
 	return getDefAndTUforDefinition(llvm::cast<clang::NamedDecl>(decl)->getQualifiedNameAsString());
 }
@@ -202,6 +202,39 @@ void Indexer::dump() const{
 	for (;it != end; it++){
 		std::cout << "\t[" << it->first << " ," << it->second << "]" << std::endl;
 	}
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//            Indexer iterators
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+clang::Decl*& Indexer::iterator::operator*(){
+	return curr->second.first;
+}
+
+clang::Decl** Indexer::iterator::operator->(){
+	return &(curr->second.first);
+}
+
+Indexer::iterator Indexer::iterator::operator++(){
+	++curr;
+	return *this;
+}
+
+Indexer::iterator Indexer::iterator::operator++(int d){
+	++curr;
+	return *this;
+}
+
+bool Indexer::iterator::operator!=(const Indexer::iterator& i) const{
+	return this->curr != i.curr;
+}
+
+Indexer::iterator Indexer::begin(){
+	return iterator(mIndex.begin());
+}
+
+Indexer::iterator Indexer::end(){
+	return iterator(mIndex.end());
 }
 
 } // end namespace utils

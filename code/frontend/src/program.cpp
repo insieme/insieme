@@ -40,6 +40,7 @@
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/indexer.h"
+#include "insieme/frontend/utils/functionDependencyGraph.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -54,12 +55,10 @@
 #include "clang/AST/DeclGroup.h"
 
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/CallGraph.h"
 
 // [3.0]
 //#include "clang/Index/Indexer.h"
 //#include "clang/Index/Analyzer.h"
-//#include "clang/Index/CallGraph.h"
 //#include "clang/Index/TranslationUnit.h"
 //#include "clang/Index/DeclReferenceMap.h"
 //#include "clang/Index/SelectorMap.h"
@@ -175,11 +174,6 @@ public:
 			// errors are always fatal!
 			throw ClangParsingError(file_name);
 		}
-
-		// clang [3.0]
-		// the translation unit has been correctly parsed
-		//mDeclRefMap = std::make_shared<clang::idx::DeclReferenceMap>( mClang.getASTContext() );
-		//mSelMap = std::make_shared<clang::idx::SelectorMap>( mClang.getASTContext() );
 	}
 
 	// getters
@@ -191,10 +185,6 @@ public:
 
 	clang::DiagnosticsEngine& getDiagnostic() { return getCompiler().getDiagnostics(); }
 	const clang::DiagnosticsEngine& getDiagnostic() const { return getCompiler().getDiagnostics(); }
-
-	// clang [3.0]
-	// clang::idx::DeclReferenceMap& getDeclReferenceMap() { assert(mDeclRefMap); return *mDeclRefMap; }
-	// clang::idx::SelectorMap& getSelectorMap() { assert(mSelMap); return *mSelMap; }
 };
 } // end anonymous namespace
 
@@ -203,17 +193,9 @@ namespace frontend {
 
 struct Program::ProgramImpl {
 	TranslationUnitSet tranUnits;
-
-	// clang [3.0]
-	//clang::idx::Program  mProg;
-	//clang::idx::Indexer  mIdx;
-	//clang::idx::Analyzer mAnalyzer;
-	
 	utils::Indexer mIdx;
-
-	clang::CallGraph mCallGraph;
-
-	ProgramImpl() : mIdx(), mCallGraph() { }
+	utils::FunctionDependencyGraph funcDepGraph;
+	ProgramImpl() : mIdx(), funcDepGraph(mIdx) { }
 };
 
 Program::Program(core::NodeManager& mgr):
@@ -226,18 +208,33 @@ Program::~Program() {
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
 	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name, pimpl->mIdx);
 	
-	VLOG(1)  << " ************ File Parsed and AST generated******************";
+	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
+	return *tuImpl;
+}
 
-	pimpl->mIdx.indexTU(tuImpl);
-
-	VLOG(1)  << " ************ File Indexed ******************";
+void Program::indexAndAnalyze(){
+	for (auto tu : pimpl->tranUnits){
+		VLOG(1) << " ************* Indexing: " << tu->getFileName() << " ****************";
+		pimpl->mIdx.indexTU(&(*tu));
+	}
+	VLOG(1) << " ************* Indexing DONE ****************";
 	if (VLOG_IS_ON(2)){
 		pimpl->mIdx.dump();
 	}
 
-	
-	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
-	return *tuImpl;
+	VLOG(1) << " ************* Analyze function dependencies (recursion)***************";
+	auto elem = pimpl->mIdx.begin();
+	auto end = pimpl->mIdx.end();
+	for (; elem != end; ++elem){
+		if (llvm::isa<clang::FunctionDecl>(*elem)){
+			std::cout << "incorporate: " << llvm::cast<clang::NamedDecl>(*elem)->getNameAsString() << std::endl;
+			pimpl->funcDepGraph.addNode(llvm::cast<clang::FunctionDecl>(*elem));
+		}
+	}
+	VLOG(1) << " ************* Analyze function dependencies DONE***************";
+	if (VLOG_IS_ON(2)){
+		pimpl->funcDepGraph.print(std::cout);
+	}
 }
 
 TranslationUnit& Program::createEmptyTranslationUnit() {
@@ -248,19 +245,8 @@ TranslationUnit& Program::createEmptyTranslationUnit() {
 
 const Program::TranslationUnitSet& Program::getTranslationUnits() const { return pimpl->tranUnits; }
 
-//clang::idx::Program& Program::getClangProgram() const { return pimpl->mProg; }
 utils::Indexer& Program::getIndexer() const { return pimpl->mIdx; }
-
-void Program::dumpCallGraph() const { pimpl->mCallGraph.dump(); }
-
-// clang [3.0]
-//const TranslationUnit& Program::getTranslationUnit(const clang::idx::TranslationUnit* tu) {
-//	return *dynamic_cast<const TranslationUnit*>(reinterpret_cast<const TranslationUnitImpl*>(tu));
-//}
-//
-//const clang::idx::TranslationUnit* Program::getClangTranslationUnit(const TranslationUnit& tu) {
-//	return dynamic_cast<const clang::idx::TranslationUnit*>(static_cast<const TranslationUnitImpl*>(&tu));
-//}
+utils::FunctionDependencyGraph& Program::getCallGraph() const {return pimpl->funcDepGraph;}
 
 Program::PragmaIterator Program::pragmas_begin() const {
 	auto filtering = [](const Pragma&) -> bool { return true; };
@@ -365,11 +351,6 @@ const core::ProgramPtr& Program::convert() {
 	}
 
 	if(!insiemePragmaFound) {
-		// We start the conversion from the main function and then visit all the
-		// called functions according to the callgraph of the input program.
-		clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
-		assert(main && "Program has no main()");
-	
 		mProgram = astConvPtr->handleFunctionDecl(
 								dyn_cast<const FunctionDecl>(pimpl->mIdx.getMainFunctionDefinition()));
 	}
