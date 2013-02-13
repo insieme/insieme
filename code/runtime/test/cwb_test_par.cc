@@ -54,7 +54,7 @@ TEST(circular_work_buffers, token_passing_single) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_circular_work_buffer cwb;
 		irt_cwb_init(&cwb);
-		uint32 num = 0;
+		volatile uint32 num = 0;
 
 		irt_work_item wi;
 		wi.id.index = 5;
@@ -62,11 +62,11 @@ TEST(circular_work_buffers, token_passing_single) {
 		wi.id.node = 0;
 		irt_cwb_push_front(&cwb, &wi);
 
-		#pragma omp parallel
+		#pragma omp parallel num_threads(NUM_THREADS)
 		{
 			while(num < TEST_ITERATIONS) {
 				if(irt_work_item* swi = irt_cwb_pop_back(&cwb)) {
-					num++;
+					irt_atomic_inc(&num);
 					irt_cwb_push_front(&cwb, swi);
 				} 
 			}
@@ -74,11 +74,38 @@ TEST(circular_work_buffers, token_passing_single) {
 	}
 }
 
+TEST(circular_work_buffers, two_token_passing_single) {
+	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
+		irt_circular_work_buffer cwb;
+		irt_cwb_init(&cwb);
+		volatile uint32 num = 0;
+
+		irt_work_item wi;
+		wi.id.index = 5;
+		wi.id.thread = 1;
+		wi.id.node = 0;
+		irt_cwb_push_front(&cwb, &wi);
+		irt_cwb_push_front(&cwb, &wi);
+
+		#pragma omp parallel num_threads(NUM_THREADS)
+		{
+			while(num < TEST_ITERATIONS) {
+				if(irt_work_item* swi = irt_cwb_pop_back(&cwb)) {
+					irt_atomic_inc(&num);
+					irt_cwb_push_front(&cwb, swi);
+				}
+			}
+		}
+
+		EXPECT_EQ(2, irt_cwb_size(&cwb));
+	}
+}
+
 TEST(circular_work_buffers, token_passing_multi_self) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_circular_work_buffer cwb[NUM_THREADS];
 		for(int i=0; i<NUM_THREADS; ++i) irt_cwb_init(&cwb[i]);
-		uint32 num = 0;
+		volatile uint32 num = 0;
 
 		irt_work_item wi;
 		wi.id.index = 5;
@@ -88,9 +115,10 @@ TEST(circular_work_buffers, token_passing_multi_self) {
 
 		#pragma omp parallel num_threads(NUM_THREADS)
 		{
+			unsigned rand_seed = 1237 * omp_get_thread_num();
 			while(num < TEST_ITERATIONS) {
-				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand()%NUM_THREADS])) {
-					num++;
+				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand_r(&rand_seed)%NUM_THREADS])) {
+					irt_atomic_inc(&num);
 					irt_cwb_push_front(&cwb[omp_get_thread_num()], swi);
 				} 
 			}
@@ -102,7 +130,7 @@ TEST(circular_work_buffers, token_passing_multi_rand) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_circular_work_buffer cwb[NUM_THREADS];
 		for(int i=0; i<NUM_THREADS; ++i) irt_cwb_init(&cwb[i]);
-		uint32 num = 0;
+		volatile uint32 num = 0;
 
 		irt_work_item wi;
 		wi.id.index = 5;
@@ -112,10 +140,11 @@ TEST(circular_work_buffers, token_passing_multi_rand) {
 
 		#pragma omp parallel num_threads(NUM_THREADS)
 		{
+			unsigned rand_seed = 1237 + omp_get_thread_num();
 			while(num < TEST_ITERATIONS) {
-				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand()%NUM_THREADS])) {
-					num++;
-					irt_cwb_push_front(&cwb[rand()%NUM_THREADS], swi);
+				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand_r(&rand_seed)%NUM_THREADS])) {
+					irt_atomic_inc(&num);
+					irt_cwb_push_front(&cwb[rand_r(&rand_seed)%NUM_THREADS], swi);
 				} 
 			}
 		}
@@ -126,7 +155,7 @@ TEST(circular_work_buffers, token_passing_multi_dual_rand) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_circular_work_buffer cwb[NUM_THREADS];
 		for(int i=0; i<NUM_THREADS; ++i) irt_cwb_init(&cwb[i]);
-		uint32 num = 0;
+		volatile uint32 num = 0;
 
 		irt_work_item wi1;
 		wi1.id.index = 5;
@@ -142,10 +171,11 @@ TEST(circular_work_buffers, token_passing_multi_dual_rand) {
 
 		#pragma omp parallel num_threads(NUM_THREADS)
 		{
+			unsigned rand_seed = 1237 + omp_get_thread_num();
 			while(num < TEST_ITERATIONS) {
-				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand()%NUM_THREADS])) {
+				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand_r(&rand_seed)%NUM_THREADS])) {
 					irt_atomic_inc(&num);
-					irt_cwb_push_front(&cwb[rand()%NUM_THREADS], swi);
+					irt_cwb_push_front(&cwb[rand_r(&rand_seed)%NUM_THREADS], swi);
 				} 
 			}
 		}
@@ -162,7 +192,7 @@ TEST(circular_work_buffers, token_passing_multi_multi_rand) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_circular_work_buffer cwb[NUM_THREADS];
 		for(int i=0; i<NUM_THREADS; ++i) irt_cwb_init(&cwb[i]);
-		uint32 num = 0;
+		volatile uint32 num = 0;
 
 		irt_work_item wis[NUM_MULTI_WIS];
 		for(int i=0; i<NUM_MULTI_WIS; ++i) {
@@ -174,10 +204,11 @@ TEST(circular_work_buffers, token_passing_multi_multi_rand) {
 
 		#pragma omp parallel num_threads(NUM_THREADS)
 		{
+			unsigned rand_seed = 1237 + omp_get_thread_num();
 			while(num < TEST_ITERATIONS) {
-				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand()%NUM_THREADS])) {
+				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand_r(&rand_seed)%NUM_THREADS])) {
 					irt_atomic_inc(&num);
-					irt_cwb_push_front(&cwb[rand()%NUM_THREADS], swi);
+					irt_cwb_push_front(&cwb[rand_r(&rand_seed)%NUM_THREADS], swi);
 				} 
 			}
 		}
