@@ -111,8 +111,8 @@ rm -f llvm-$VERSION.src.tar.gz
 #echo "****************************************************************"
 #patch -d $PREFIX/llvm-$VERSION/lib/clang/$VERSION/include < ./patches/stdarg.patch
 
-#rm -f $PREFIX/llvm-latest
-#ln -s $PREFIX/llvm-$VERSION $PREFIX/llvm-latest
+rm -f $PREFIX/llvm-latest
+ln -s $PREFIX/llvm-$VERSION $PREFIX/llvm-latest
 ln -s $PREFIX/llvm-$VERSION/lib/libLLVM-3.2svn.so $PREFIX/llvm-$VERSION/lib/libLLVM-3.2.so
 
 
