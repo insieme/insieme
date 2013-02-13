@@ -60,7 +60,7 @@ if [ $RET -ne 0 ]; then
 fi
 
 tar -xf compiler-rt-$VERSION.src.tar.gz
-mv compilert-rt-$VERSION.src compiler-rt
+mv compiler-rt-$VERSION.src compiler-rt
 rm -f compiler-rt-$VERSION.src.tar.gz
 cd $CURRENT
 
