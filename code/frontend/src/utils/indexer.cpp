@@ -79,6 +79,11 @@ class IndexerVisitor{
 	{ }
 
 	void indexDeclaration(clang::Decl* decl){
+		// if it does not have a name, it is another artifact
+		// and we dont want to index it
+		if (!llvm::isa<clang::NamedDecl>(decl))
+				return;
+
 		clang::NamedDecl *named = llvm::cast<clang::NamedDecl>(decl);
 		assert (named && "no name Decl, can not be indexed and we dont know what it is");
 
