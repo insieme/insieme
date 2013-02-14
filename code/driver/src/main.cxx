@@ -559,8 +559,6 @@ int main(int argc, char** argv) {
 			
 			measureTimeFor<void>("Frontend.load [clang]", [&]() { p.addTranslationUnits(inputFiles); } );
 
-			measureTimeFor<void>("Frontend.Index ", [&]() { p.indexAndAnalyze(); } );
-			
 			// do the actual clang to IR conversion
 			program = measureTimeFor<core::ProgramPtr>("Frontend.convert ", [&]() { return p.convert(); } );
 

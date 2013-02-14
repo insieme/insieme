@@ -313,10 +313,11 @@ core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr) 
 } // end anonymous namespace
 
 const core::ProgramPtr& Program::convert() {
-	bool insiemePragmaFound = false;
 	// We check for insieme pragmas in each translation unit
-
+	bool insiemePragmaFound = false;
 	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
+
+	indexAndAnalyze();
 
 	std::shared_ptr<conversion::ASTConverter> astConvPtr;
 	if(isCXX) {

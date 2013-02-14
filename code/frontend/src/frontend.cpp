@@ -99,9 +99,6 @@ core::ProgramPtr ConversionJob::execute() {
 	// set up the translation units
 	program.addTranslationUnits(files);
 
-	//index and prepare to convert
-	program.indexAndAnalyze();
-
 	// convert the program
 	auto res = program.convert();
 
