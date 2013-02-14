@@ -45,6 +45,8 @@
 
 #define IRT_CWBUFFER_MASK (IRT_CWBUFFER_LENGTH-1)
 
+#if 1
+
 // ============================================================================ Circular work buffers
 // front = top, back = bottom
 // top INCLUSIVE, bottom EXCLUSIVE
@@ -65,20 +67,20 @@
 //  0 |       |  <- bot_update
 
 typedef union _irt_cwb_state {
-	volatile uint64 all;
+	uint64 all;
 	struct {
 		union {
-			volatile uint32 top;
+			uint32 top;
 			struct {
-				volatile uint16 top_val;
-				volatile uint16 top_update;
+				uint16 top_val;
+				uint16 top_update;
 			};
 		};
 		union {
-			volatile uint32 bot;
+			uint32 bot;
 			struct {
-				volatile uint16 bot_val;
-				volatile uint16 bot_update;
+				uint16 bot_val;
+				uint16 bot_update;
 			};
 		};
 	};
@@ -102,9 +104,9 @@ static inline uint32 irt_cwb_size(irt_circular_work_buffer* wb) {
 	return (wb->state.top_val - wb->state.bot_val) & IRT_CWBUFFER_MASK;
 }
 
-static inline void irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
+void irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
 	// check feasibility
-	volatile irt_cwb_state state, newstate;
+	irt_cwb_state state, newstate;
 	for(;;) {
 		state.all = wb->state.all;
 		if(state.top_update != state.top_val) continue; // operation in progress on top
@@ -118,14 +120,15 @@ static inline void irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_ite
 	}
 
 	// write actual data to buffer
-	wb->items[newstate.top_update] = wi;
-	// finish operation
-	wb->state.top_val = newstate.top_update;
+	//wb->items[newstate.top_update] = wi;
+	// finish operation - force compiler to maintain operation order by using atomic for assignment
+	//irt_atomic_bool_compare_and_swap(&wb->state.top_val, wb->state.top_val, newstate.top_update);
+	(wb->items[newstate.top_update] = wi) && (wb->state.top_val = newstate.top_update);
 }
 
 static inline void irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item* wi) {
 	// check feasibility
-	volatile irt_cwb_state state, newstate;
+	irt_cwb_state state, newstate;
 	for(;;) {
 		state.all = wb->state.all;
 		if(state.bot_update != state.bot_val) continue; // operation in progress on bot
@@ -139,9 +142,10 @@ static inline void irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item
 	}
 
 	// write actual data to buffer
-	wb->items[newstate.bot_val] = wi;
-	// finish operation
-	wb->state.bot_val = newstate.bot_update;
+	//wb->items[newstate.bot_val] = wi;
+	// finish operation - force compiler to maintain operation order by using atomic for assignment
+	//irt_atomic_bool_compare_and_swap(&wb->state.bot_val, wb->state.bot_val, newstate.bot_update);
+	(wb->items[newstate.bot_val] = wi) && (wb->state.bot_val = newstate.bot_update);
 }
 
 static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {
@@ -161,9 +165,12 @@ static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {
 	}
 
 	// read actual data from buffer
-	irt_work_item *ret = wb->items[newstate.top_val];
+	//irt_work_item *ret = wb->items[newstate.top_val];
 	// finish operation
-	wb->state.top_val = newstate.top_update;
+	//__sync_synchronize();
+	//wb->state.top_val = newstate.top_update;
+	irt_work_item *ret;
+	(ret = wb->items[newstate.top_val]) && (wb->state.top_val = newstate.top_update);
 	return ret;
 }
 	
@@ -183,8 +190,88 @@ static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
 	}
 
 	// read actual data from buffer
-	irt_work_item *ret = wb->items[newstate.bot_update];
+	//irt_work_item *ret = wb->items[newstate.bot_update];
 	// finish operation
-	wb->state.bot_val = newstate.bot_update;
+	//__sync_synchronize();
+	//wb->state.bot_val = newstate.bot_update;
+	irt_work_item *ret;
+	(ret = wb->items[newstate.bot_update]) && (wb->state.bot_val = newstate.bot_update);
 	return ret;
 }
+
+#else
+
+// ============================================================================ Circular work buffers
+// dummy implementation using locks
+
+typedef struct _irt_circular_work_buffer {
+	irt_spinlock lock;
+	volatile uint16 top, bot;
+	irt_work_item* items[IRT_CWBUFFER_LENGTH];
+} irt_circular_work_buffer;
+
+// ============================================================================ Circular work buffers implementation
+
+static inline void irt_cwb_init(irt_circular_work_buffer* wb) {
+	irt_spin_init(&wb->lock);
+	wb->top = IRT_CWBUFFER_LENGTH/2;
+	wb->bot = IRT_CWBUFFER_LENGTH/2;
+}
+
+static inline uint32 irt_cwb_size(irt_circular_work_buffer* wb) {
+	return (wb->top - wb->bot) & IRT_CWBUFFER_MASK;
+}
+
+static inline void irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
+	for(;;) {
+		irt_spin_lock(&wb->lock);
+		if(irt_cwb_size(wb)==IRT_CWBUFFER_LENGTH-1) {
+			irt_spin_unlock(&wb->lock);
+			continue;
+		}
+		wb->top = (wb->top+1) & IRT_CWBUFFER_MASK;
+		wb->items[wb->top] = wi;
+		irt_spin_unlock(&wb->lock);
+		break;
+	}
+}
+
+static inline void irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item* wi) {
+	for(;;) {
+		irt_spin_lock(&wb->lock);
+		if(irt_cwb_size(wb)==IRT_CWBUFFER_LENGTH-1) {
+			irt_spin_unlock(&wb->lock);
+			continue;
+		}
+		wb->items[wb->bot] = wi;
+		wb->bot = (wb->bot-1) & IRT_CWBUFFER_MASK;
+		irt_spin_unlock(&wb->lock);
+		break;
+	}
+}
+
+static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {
+	irt_spin_lock(&wb->lock);
+	if(irt_cwb_size(wb)==0) {
+		irt_spin_unlock(&wb->lock);
+		return NULL;
+	}
+	irt_work_item *ret = wb->items[wb->top];
+	wb->top = (wb->top-1) & IRT_CWBUFFER_MASK;
+	irt_spin_unlock(&wb->lock);
+	return ret;
+}
+	
+static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
+	irt_spin_lock(&wb->lock);
+	if(irt_cwb_size(wb)==0) {
+		irt_spin_unlock(&wb->lock);
+		return NULL;
+	}
+	wb->bot = (wb->bot+1) & IRT_CWBUFFER_MASK;
+	irt_work_item *ret = wb->items[wb->bot];
+	irt_spin_unlock(&wb->lock);
+	return ret;
+}
+
+#endif
