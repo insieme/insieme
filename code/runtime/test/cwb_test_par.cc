@@ -211,7 +211,7 @@ TEST(circular_work_buffers, token_passing_multi_multi_rand) {
 		{
 			uint32 rand_seed = 123;
 			while(num < TEST_ITERATIONS) {
-				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand()%NUM_THREADS])) {
+				if(irt_work_item* swi = irt_cwb_pop_back(&cwb[rand_r(&rand_seed)%NUM_THREADS])) {
 					irt_cwb_push_front(&cwb[rand_r(&rand_seed)%NUM_THREADS], swi);
 					irt_atomic_inc(&num);
 				} 
