@@ -3,7 +3,7 @@
 
 struct outer_s;
 
-typedef struct {
+typedef struct inner_s {
         void (*func_ptr)(struct outer_s *_outer);
 } inner_t;
 
