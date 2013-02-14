@@ -227,7 +227,6 @@ void Program::indexAndAnalyze(){
 	auto end = pimpl->mIdx.end();
 	for (; elem != end; ++elem){
 		if (llvm::isa<clang::FunctionDecl>(*elem)){
-			std::cout << "incorporate: " << llvm::cast<clang::NamedDecl>(*elem)->getNameAsString() << std::endl;
 			pimpl->funcDepGraph.addNode(llvm::cast<clang::FunctionDecl>(*elem));
 		}
 	}

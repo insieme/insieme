@@ -869,6 +869,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
   		}
 	}
 
+//   RECURSION HANDLING CLEANUP 
 //
 //	if (!ctx.isRecSubFunc) {
 //		// add this type to the type graph (if not present)

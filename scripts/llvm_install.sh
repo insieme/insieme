@@ -60,7 +60,7 @@ if [ $RET -ne 0 ]; then
 fi
 
 tar -xf compiler-rt-$VERSION.src.tar.gz
-mv compilert-rt-$VERSION.src compiler-rt
+mv compiler-rt-$VERSION.src compiler-rt
 rm -f compiler-rt-$VERSION.src.tar.gz
 cd $CURRENT
 
@@ -111,9 +111,8 @@ rm -f llvm-$VERSION.src.tar.gz
 #echo "****************************************************************"
 #patch -d $PREFIX/llvm-$VERSION/lib/clang/$VERSION/include < ./patches/stdarg.patch
 
-#rm -f $PREFIX/llvm-latest
-#ln -s $PREFIX/llvm-$VERSION $PREFIX/llvm-latest
+rm -f $PREFIX/llvm-latest
+ln -s $PREFIX/llvm-$VERSION $PREFIX/llvm-latest
 ln -s $PREFIX/llvm-$VERSION/lib/libLLVM-3.2svn.so $PREFIX/llvm-$VERSION/lib/libLLVM-3.2.so
-
 
 exit 0

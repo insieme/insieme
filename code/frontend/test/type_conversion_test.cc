@@ -402,6 +402,7 @@ TEST(TypeConversion, FileTest) {
 	NodeManager manager;
 	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
+	prog.indexAndAnalyze();
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
