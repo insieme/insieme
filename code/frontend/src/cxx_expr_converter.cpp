@@ -526,7 +526,59 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBoolLiteralExpr
 //						CXX MEMBER CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(const clang::CXXMemberCallExpr* callExpr) {
-	assert (false && "callExpr");
+	START_LOG_EXPR_CONVERSION(callExpr);
+	const core::IRBuilder& builder = convFact.builder;
+
+	// FIXME: this is almost duplicated code from constructor case in which a single object is created
+
+	// to begin with we translate the constructor as a regular function
+	auto f = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (callExpr->getMethodDecl()), false);
+	assert(f.isa<core::LambdaExprPtr>());
+
+	// with the transformed lambda, we can extract the body and re-type it into a constructor type
+	core::StatementPtr body = f.as<core::LambdaExprPtr>()->getBody();
+	auto params = f.as<core::LambdaExprPtr>()->getParameterList();
+
+	// update parameter list with a class-typed parameter in the first possition
+	core::TypePtr&& irClassType = builder.refType(convFact.convertType( callExpr->getType().getTypePtr() ));
+	auto thisVar = builder.variable(irClassType);
+	core::VariableList paramList = params.getElements();
+	paramList.insert(paramList.begin(), thisVar);
+	
+	// build the new function, type FK_MEMBER_FUNCTION
+	auto newFunctionType = builder.functionType(extractTypes(paramList), irClassType, core::FK_MEMBER_FUNCTION);
+
+	// every usage of this has being defined as a literal "this" typed alike the class
+	// substute every usage of this with the right variable
+	auto thisLit =  builder.literal("this", irClassType);
+	core::StatementPtr newBody = core::transform::replaceAllGen (convFact.mgr, body, thisLit, thisVar, true);
+	
+	core::LambdaExprPtr newFunc = builder.lambdaExpr (newFunctionType, paramList, newBody);
+
+	// reconstruct Arguments list, fist one is a scope location for the object 
+	// because is a member call, it should exist an instance of it somewhere
+	core::ExpressionList args;
+	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
+	args.push_back (ownerObj);
+
+	// afterwards come the original arguments in the order AST specifies
+	clang::CXXMemberCallExpr::const_arg_iterator arg = callExpr->arg_begin();
+	clang::CXXMemberCallExpr::const_arg_iterator end = callExpr->arg_end();
+	for (; arg!=end; ++arg){
+		args.push_back(Visit(*arg));
+	}
+
+	// get correct return value for the function
+	core::TypePtr retTy = f.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
+
+	// build expression and we are done!!!
+	core::CallExprPtr      ret  = builder.callExpr   (retTy, newFunc, args);
+	if (VLOG_IS_ON(2)){
+		dumpPretty(&(*ret));
+	}
+	END_LOG_EXPR_CONVERSION(ret);
+	return ret;
+
 	/*
 	START_LOG_EXPR_CONVERSION(callExpr);
 	//const core::lang::BasicGenerator& gen = cxxConvFact.builder.getLangBasic();
@@ -954,9 +1006,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	auto thisLit =  builder.literal("this", irClassType);
 	core::StatementPtr newBody = core::transform::replaceAllGen (convFact.mgr, body, thisLit, thisVar, true);
 	
-	core::LambdaExprPtr ctor = builder.lambdaExpr (newFunctionType, paramList, newBody);
+	core::LambdaExprPtr method = builder.lambdaExpr (newFunctionType, paramList, newBody);
 
-	// reconstruct Arguments list, fist one is a stack location for the object (undefined)
+	// reconstruct Arguments list, fist one is a scope location for the object
 	core::ExpressionList args;
 	args.push_back (builder.undefinedVar(irClassType));
 
@@ -968,7 +1020,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	}
 
 	// build expression and we are done!!!
-	core::CallExprPtr      ret  = builder.callExpr   (irClassType, ctor, args);
+	core::CallExprPtr      ret  = builder.callExpr   (irClassType, method, args);
 	if (VLOG_IS_ON(2)){
 		dumpPretty(&(*ret));
 	}
