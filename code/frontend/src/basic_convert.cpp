@@ -525,7 +525,8 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 			llvm::isa<clang::CXXNewExpr>(definition->getInit()) && 
 			llvm::cast<clang::CXXNewExpr>(definition->getInit())){
 			
-			var = builder.variable( initExpr->getType() );
+			//var = builder.variable( builder.refType(initExpr->getType() ));
+			var = builder.variable(initExpr->getType());
 			ctx.varDeclMap[definition] = var;
 		}
 

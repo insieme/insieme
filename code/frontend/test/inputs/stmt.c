@@ -352,7 +352,7 @@ int f(int x) {
 }
 
 #pragma test \
-	"recFun v16 { v16 = fun(int<4> v18) -> int<4> { return v17((v18-1)); }; v17 = fun(int<4> v19) -> int<4> { return v16((v19+1)); };}"
+	"recFun v16 { v16 = fun(int<4> v18) -> int<4> { return v17((v18+1)); }; v17 = fun(int<4> v19) -> int<4> { return v16((v19-1)); };}"
 int g(int x) {
 	return f(x+1);
 }

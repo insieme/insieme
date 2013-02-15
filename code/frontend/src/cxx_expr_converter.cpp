@@ -540,13 +540,16 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	auto params = f.as<core::LambdaExprPtr>()->getParameterList();
 
 	// update parameter list with a class-typed parameter in the first possition
-	core::TypePtr&& irClassType = builder.refType(convFact.convertType( callExpr->getType().getTypePtr() ));
+	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
+	core::TypePtr&& irClassType = ownerObj->getType();
 	auto thisVar = builder.variable(irClassType);
 	core::VariableList paramList = params.getElements();
 	paramList.insert(paramList.begin(), thisVar);
 	
 	// build the new function, type FK_MEMBER_FUNCTION
-	auto newFunctionType = builder.functionType(extractTypes(paramList), irClassType, core::FK_MEMBER_FUNCTION);
+	// oposite to constructor, member functions have their own return value
+	core::TypePtr retTy = f.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
+	auto newFunctionType = builder.functionType(extractTypes(paramList), retTy, core::FK_MEMBER_FUNCTION);
 
 	// every usage of this has being defined as a literal "this" typed alike the class
 	// substute every usage of this with the right variable
@@ -558,7 +561,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	// reconstruct Arguments list, fist one is a scope location for the object 
 	// because is a member call, it should exist an instance of it somewhere
 	core::ExpressionList args;
-	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
 	args.push_back (ownerObj);
 
 	// afterwards come the original arguments in the order AST specifies
@@ -567,9 +569,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	for (; arg!=end; ++arg){
 		args.push_back(Visit(*arg));
 	}
-
-	// get correct return value for the function
-	core::TypePtr retTy = f.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
 
 	// build expression and we are done!!!
 	core::CallExprPtr      ret  = builder.callExpr   (retTy, newFunc, args);
@@ -1243,8 +1242,11 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 	// in order to turn this into a diynamic memory allocation, we only need to substitute 
 	// the first argument for a heap location
 	core::CallExprAddress addr(ctorCall.as<core::CallExprPtr>());
-	core::CallExprPtr newCtor = core::transform::replaceNode (convFact.mgr, addr->getArgument(0), newCall ).as<core::CallExprPtr>();
+	core::CallExprPtr newCtor = core::transform::replaceNode (convFact.mgr, 
+															  addr->getArgument(0), 
+															  newCall ).as<core::CallExprPtr>();
 
+	newCtor = builder.refVar(newCtor);
 	END_LOG_EXPR_CONVERSION(newCtor);
 	return newCtor;
 
