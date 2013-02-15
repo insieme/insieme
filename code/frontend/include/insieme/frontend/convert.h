@@ -292,10 +292,10 @@ public:
 
 
 	ConversionFactory(core::NodeManager& mgr, Program& program, bool isCxx = false);
-	ConversionFactory(core::NodeManager& mgr, Program& program,
-					std::shared_ptr<StmtConverter> stmtConvPtr,
-					std::shared_ptr<TypeConverter> typeConvPtr,
-					std::shared_ptr<ExprConverter> exprConvPtr);
+	//ConversionFactory(core::NodeManager& mgr, Program& program,
+	//				std::shared_ptr<StmtConverter> stmtConvPtr,
+	//				std::shared_ptr<TypeConverter> typeConvPtr,
+	//				std::shared_ptr<ExprConverter> exprConvPtr);
 
 	virtual ~ConversionFactory() { }
 
@@ -332,8 +332,8 @@ public:
 	 *
 	 * Returns the previous translation unit in the case it has to be set back. 
 	 */
-	const insieme::frontend::TranslationUnit* getTranslationUnitForDefinition(
-			clang::FunctionDecl*& fd);
+	const insieme::frontend::TranslationUnit* getTranslationUnitForDefinition (const clang::FunctionDecl*& fd);
+
 
 	/**
 	 * Returns a map which associates a statement of the clang AST to a pragma (if any)
@@ -465,10 +465,10 @@ protected:
 	core::ProgramPtr mProgram;
 
 public:
-	ASTConverter(core::NodeManager& mgr, Program& prog):
+	ASTConverter(core::NodeManager& mgr, Program& prog, bool cpp =false):
 			mgr(mgr),
 			mProg(prog),
-			mFact(mgr, prog),
+			mFact(mgr, prog, cpp),
 			mProgram(prog.getProgram()) {
 	}
 
@@ -480,7 +480,7 @@ public:
 
 	virtual	void collectGlobals(const clang::FunctionDecl* fDecl){
 		// Extract globals starting from this entry point
-		clang::FunctionDecl* def = const_cast<clang::FunctionDecl*>(fDecl);
+		const clang::FunctionDecl* def = const_cast<clang::FunctionDecl*>(fDecl);
 		const TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
 
 		mFact.ctx.globalFuncMap.clear();
@@ -502,12 +502,12 @@ class CXXASTConverter : public ASTConverter {
 
 public:
 	CXXASTConverter(core::NodeManager& mgr, Program& prog) :
-		ASTConverter(mgr, prog){
+		ASTConverter(mgr, prog, true){
 	}
 	
 	virtual	void collectGlobals(const clang::FunctionDecl* fDecl){
 		// Extract globals starting from this entry point
-		clang::FunctionDecl* def = const_cast<clang::FunctionDecl*>(fDecl);
+		const clang::FunctionDecl* def = const_cast<clang::FunctionDecl*>(fDecl);
 		const TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
 
 		mFact.ctx.globalFuncMap.clear();

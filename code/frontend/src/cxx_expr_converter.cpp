@@ -93,8 +93,9 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						  IMPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(clang::ImplicitCastExpr* castExpr) {
-	assert(false && "implicit cast expression");
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
+	return ExprConverter::VisitImplicitCastExpr(castExpr);
+
 	/*// connects the member call expression to the function graph
 	START_LOG_EXPR_CONVERSION(castExpr);
 	const core::IRBuilder& builder = convFact.builder;
@@ -165,7 +166,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(c
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						EXPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(clang::ExplicitCastExpr* castExpr) {
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr) {
 	assert(false && "explicit cast cast expression");
 	/*START_LOG_EXPR_CONVERSION(castExpr);
 
@@ -253,7 +254,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(c
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							FUNCTION CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(clang::CallExpr* callExpr) {
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const clang::CallExpr* callExpr) {
 	assert(false && "call expression ");
 /*
 	START_LOG_EXPR_CONVERSION(callExpr);
@@ -457,8 +458,11 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(clang::Ca
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							VAR DECLARATION REFERENCE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
-	assert(false && "declRef expression ");
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitDeclRefExpr(const clang::DeclRefExpr* declRef) {
+
+	//FIXME:  this may be related with c++ references
+	return ExprConverter::VisitDeclRefExpr (declRef);
+
 	/*START_LOG_EXPR_CONVERSION(declRef);
 
 	core::ExpressionPtr retIr;
@@ -502,7 +506,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitDeclRefExpr(clang:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								CXX BOOLEAN LITERAL
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr* boolLit) {
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBoolLiteralExpr(const clang::CXXBoolLiteralExpr* boolLit) {
 	assert (false && "boolean literal");
 	/*
 	START_LOG_EXPR_CONVERSION(boolLit);
@@ -521,7 +525,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBoolLiteralExpr
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CXX MEMBER CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(const clang::CXXMemberCallExpr* callExpr) {
 	assert (false && "callExpr");
 	/*
 	START_LOG_EXPR_CONVERSION(callExpr);
@@ -679,7 +683,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 //
 //  A call to an overloaded operator written using operator syntax.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) {
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExpr(const clang::CXXOperatorCallExpr* callExpr) {
 	assert (false && "operator call expr");
 	/*
 	START_LOG_EXPR_CONVERSION(callExpr);
@@ -924,12 +928,55 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CXX CONSTRUCTOR CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(clang::CXXConstructExpr* callExpr) {
-	assert (false && "construct expr");
-	/*
-
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(const clang::CXXConstructExpr* callExpr) {
 	START_LOG_EXPR_CONVERSION(callExpr);
 	const core::IRBuilder& builder = convFact.builder;
+
+	// to begin with we translate the constructor as a regular function
+	auto f = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (callExpr->getConstructor()), false);
+	assert(f.isa<core::LambdaExprPtr>());
+
+	// with the transformed lambda, we can extract the body and re-type it into a constructor type
+	core::StatementPtr body = f.as<core::LambdaExprPtr>()->getBody();
+	auto params = f.as<core::LambdaExprPtr>()->getParameterList();
+
+	// update parameter list with a class-typed parameter in the first possition
+	core::TypePtr&& irClassType = builder.refType(convFact.convertType( callExpr->getType().getTypePtr() ));
+	auto thisVar = builder.variable(irClassType);
+	core::VariableList paramList = params.getElements();
+	paramList.insert(paramList.begin(), thisVar);
+	
+	// build the new function, type FK_CONSTRUCTOR
+	auto newFunctionType = builder.functionType(extractTypes(paramList), irClassType, core::FK_CONSTRUCTOR);
+
+	// every usage of this has being defined as a literal "this" typed alike the class
+	// substute every usage of this with the right variable
+	auto thisLit =  builder.literal("this", irClassType);
+	core::StatementPtr newBody = core::transform::replaceAllGen (convFact.mgr, body, thisLit, thisVar, true);
+	
+	core::LambdaExprPtr ctor = builder.lambdaExpr (newFunctionType, paramList, newBody);
+
+	// reconstruct Arguments list, fist one is a stack location for the object (undefined)
+	core::ExpressionList args;
+	args.push_back (builder.undefinedVar(irClassType));
+
+	// afterwards come the original arguments in the order AST specifies
+	clang::CXXConstructExpr::const_arg_iterator arg = callExpr->arg_begin();
+	clang::CXXConstructExpr::const_arg_iterator end = callExpr->arg_end();
+	for (; arg!=end; ++arg){
+		args.push_back(Visit(*arg));
+	}
+
+	// build expression and we are done!!!
+	core::CallExprPtr      ret  = builder.callExpr   (irClassType, ctor, args);
+	if (VLOG_IS_ON(2)){
+		dumpPretty(&(*ret));
+	}
+	END_LOG_EXPR_CONVERSION(ret);
+	return ret;
+
+	/*
+
 
 	// We get a pointer to the object that is constructed and we store the pointer to tv8he scope objects stack
 	//that holds the objects that are constructed in the current scope
@@ -1128,8 +1175,23 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CXX NEW CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
-	assert (false && "new expr");
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const clang::CXXNewExpr* callExpr) {
+	START_LOG_EXPR_CONVERSION(callExpr);
+
+	core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
+	assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
+
+	core::ExpressionPtr newCall = builder.undefinedNew(ctorCall->getType());
+
+	// the basic constructor translation defines a stack variable as argument for the call
+	// in order to turn this into a diynamic memory allocation, we only need to substitute 
+	// the first argument for a heap location
+	core::CallExprAddress addr(ctorCall.as<core::CallExprPtr>());
+	core::CallExprPtr newCtor = core::transform::replaceNode (convFact.mgr, addr->getArgument(0), newCall ).as<core::CallExprPtr>();
+
+	END_LOG_EXPR_CONVERSION(newCtor);
+	return newCtor;
+
 	/*
 	START_LOG_EXPR_CONVERSION(callExpr);
 
@@ -1338,7 +1400,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(clang::
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CXX DELETE CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(const clang::CXXDeleteExpr* deleteExpr) {
 	assert (false && "delete expr");
 	/*
 	START_LOG_EXPR_CONVERSION(deleteExpr);
@@ -1574,11 +1636,20 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(clan
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CXX THIS CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThisExpr(clang::CXXThisExpr* callExpr) {
-	assert (false && "this  expr");
-	/*
-	START_LOG_EXPR_CONVERSION(callExpr);
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThisExpr(const clang::CXXThisExpr* thisExpr) {
+	START_LOG_EXPR_CONVERSION(thisExpr);
 
+	//figure out the type of the expression
+	core::TypePtr&& irType = convFact.convertType( llvm::cast<clang::TypeDecl>(thisExpr->getBestDynamicClassType())->getTypeForDecl() );
+	irType = builder.refType(irType);
+
+	// build a literal as a placeholder (has to be substituted later by function call expression)
+	auto ret =  builder.literal("this", irType);
+	END_LOG_EXPR_CONVERSION(ret);
+	return ret;
+
+	/*irType = bu
+	ilder.refType(irType);
 //		VLOG(2) << "thisStack2: " << cxxConvFact.ctx.thisStack2;
 //		VLOG(2) << "thisVar: " << cxxConvFact.ctx.thisVar;
 
@@ -1599,7 +1670,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThisExpr(clang:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					EXCEPTION CXX THROW EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThrowExpr(clang::CXXThrowExpr* throwExpr) {
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThrowExpr(const clang::CXXThrowExpr* throwExpr) {
 	assert (false && "throw expr");
 	/*
 	START_LOG_EXPR_CONVERSION(throwExpr);
@@ -1611,8 +1682,11 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThrowExpr(clang
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					CXX DEFAULT ARG EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDefaultArgExpr(clang::CXXDefaultArgExpr* defaultArgExpr) {
-	assert (false && "default expr");
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDefaultArgExpr(const clang::CXXDefaultArgExpr* defaultArgExpr) {
+	START_LOG_EXPR_CONVERSION(defaultArgExpr);
+	auto ret = Visit(defaultArgExpr->getExpr());
+	END_LOG_EXPR_CONVERSION(ret);
+	return ret;
 	/*
 	assert(convFact.currTU && "Translation unit not correctly set");
 	VLOG(1) << "\n****************************************************************************************\n"
@@ -1633,7 +1707,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDefaultArgExpr(
 }
 
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryExpr(
-		clang::CXXBindTemporaryExpr* bindTempExpr) {
+		const clang::CXXBindTemporaryExpr* bindTempExpr) {
 	assert (false && "bind temporary expr");
 	/*
 
@@ -1659,7 +1733,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryEx
 }
 
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(
-		clang::ExprWithCleanups* cleanupExpr) {
+		const clang::ExprWithCleanups* cleanupExpr) {
 	assert (false && "exp with cleanpus expr");
 	/*
 
@@ -1764,7 +1838,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(
 }
 
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTemporaryExpr(
-		clang::MaterializeTemporaryExpr* materTempExpr) {
+		const clang::MaterializeTemporaryExpr* materTempExpr) {
 	assert(false && "materialize temp");
 	/*
 
@@ -1779,10 +1853,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTempora
 // Overwrite the basic visit method for expression in order to automatically
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::Visit(clang::Expr* expr) {
+core::ExpressionPtr ConversionFactory::CXXExprConverter::Visit(const clang::Expr* expr) {
 	
 	VLOG(2) << "CXX";
-	core::ExpressionPtr&& retIr = StmtVisitor<ConversionFactory::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
+	core::ExpressionPtr&& retIr = ConstStmtVisitor<ConversionFactory::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
 
 	// check for OpenMP annotations
 	return omp::attachOmpAnnotation(retIr, expr, convFact);

@@ -117,7 +117,12 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitBuiltinType(const Builti
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* tagType) {
 	VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
-	assert(false && "REWRITE, REMOVE THE C PART");
+
+	auto ret = TypeConverter::VisitTagType(tagType);
+	END_LOG_TYPE_CONVERSION(ret) ;
+	return ret;
+
+	//assert(false && "REWRITE, REMOVE THE C PART");
 
 //	START_LOG_TYPE_CONVERSION( tagType );
 //

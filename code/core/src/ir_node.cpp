@@ -253,16 +253,16 @@ namespace core {
 
 
 void dumpText(const void* node) {
-	std::cout << insieme::core::dump::text::TextDump(insieme::core::NodePtr((insieme::core::Node*)node));
+	std::cout << insieme::core::dump::text::TextDump(insieme::core::NodePtr((insieme::core::Node*)node)) << std::endl;
 }
 
 void dumpPretty(const void* node) {
-	std::cout << insieme::core::printer::PrettyPrinter(insieme::core::NodePtr((insieme::core::Node*)node));
+	std::cout << insieme::core::printer::PrettyPrinter(insieme::core::NodePtr((insieme::core::Node*)node)) << std::endl;
 }
 
 void dumpPrettyFull(const void* node) {
 	std::cout << insieme::core::printer::PrettyPrinter(insieme::core::NodePtr((insieme::core::Node*)node),
 				insieme::core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL
-			);
+			) << std::endl;
 }
 

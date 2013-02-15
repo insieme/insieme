@@ -52,7 +52,10 @@ namespace utils {
 
 string FileName(SourceLocation const& l, SourceManager const& sm) {
 	PresumedLoc pl = sm.getPresumedLoc(l);
-	return string(pl.getFilename());
+	if (pl.isValid())
+		return string(pl.getFilename());
+	else
+		return string("UNKNOWN FILE");
 }
 
 string FileId(SourceLocation const& l, SourceManager const& sm) {

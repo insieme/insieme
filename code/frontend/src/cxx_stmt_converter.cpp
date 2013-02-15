@@ -72,8 +72,8 @@ namespace conversion {
 // 			In clang a declstmt is represented as a list of VarDecl
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
+	return StmtConverter::VisitDeclStmt(declStmt);
 
-	assert(false && "declaration STMT");
 	/*
 	// if there is only one declaration in the DeclStmt we return it
 
@@ -134,7 +134,8 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitDeclStmt(clang:
 //							RETURN STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
-	assert(false && "return STMT");
+	return StmtConverter::VisitReturnStmt(retStmt);
+
 	/*
 	//START_LOG_STMT_CONVERSION(retStmt);
 
@@ -189,9 +190,10 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 //							COMPOUND STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
-	assert(false && "compound STMT");
-	/*
 
+	return StmtConverter::VisitCompoundStmt(compStmt);
+
+	/*
 	//START_LOG_STMT_CONVERSION(compStmt);
 	core::StatementPtr retIr;
 	LOG_STMT_CONVERSION(retIr);

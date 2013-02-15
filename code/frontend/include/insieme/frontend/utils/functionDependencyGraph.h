@@ -67,9 +67,9 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 
 	void VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
 
-	void VisitCXXNewExpr(clang::CXXNewExpr* callExpr);
+//	void VisitCXXNewExpr(clang::CXXNewExpr* callExpr);
 
-	void VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr);
+//	void VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr);
 
 	void VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* mcExpr);
 

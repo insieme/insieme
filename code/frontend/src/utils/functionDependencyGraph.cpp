@@ -39,9 +39,10 @@
 #define __STDC_CONSTANT_MACROS
 #include "insieme/frontend/utils/functionDependencyGraph.h"
 
+#include "insieme/frontend/convert.h"
 
-
-
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 
 
 namespace insieme {
@@ -73,6 +74,7 @@ CallExprVisitor::CallGraph CallExprVisitor::getCallGraph(const clang::FunctionDe
 }
 
 void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
+	assert(funcDecl && "no function to index");
 
 	const clang::FunctionDecl* def = NULL;
 	// if the function has no body, we need to find the right declaration with
@@ -115,14 +117,21 @@ void CallExprVisitor::VisitStmt(clang::Stmt* stmt) {
 
 void CallExprVisitor::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
 
-	assert(false && "constructor expression");
+	//assert(false && "constructor expression");
 
-/*	// connects the constructor expression to the function graph
-	addFunctionDecl(ctorExpr->getConstructor());
-	VisitStmt(ctorExpr);
+	clang::CXXConstructorDecl* constructorDecl = ctorExpr->getConstructor();
+	assert(constructorDecl);
+
+	// if there is implementation for the constructor, procceed
+	// if there is not, no function to analyze
+	if (!constructorDecl->isImplicitlyDefined()){
+		// connects the constructor expression to the function graph
+		clang::FunctionDecl* fDecl = llvm::cast<clang::FunctionDecl>(constructorDecl);
+		addFunctionDecl(fDecl);
+		VisitStmt(ctorExpr);
+	}
 
 	// if there is an member with an initializer in the ctor we add it to the function graph
-	clang::CXXConstructorDecl* constructorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(ctorExpr->getConstructor());
 	for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(), iend =
 			constructorDecl->init_end(); iit != iend; iit++) {
 		clang::CXXCtorInitializer * initializer = *iit;
@@ -136,33 +145,39 @@ void CallExprVisitor::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
 	// we have to add it to the function graph
 	if ( clang::CXXRecordDecl* classDecl = GET_TYPE_PTR(ctorExpr)->getAsCXXRecordDecl()) {
 		clang::CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
-		addFunctionDecl(dtorDecl);
-	}*/
-}
-
-void CallExprVisitor::VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
-	assert(false && "NEW expression");
-/*
-	//if there is an member with an initializer in the ctor we add it to the function graph
-	if (clang::CXXConstructorDecl * constructorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(callExpr->getConstructor())) {
-		// connects the constructor expression to the function graph
-		addFunctionDecl(constructorDecl);
-		for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(), iend =
-				constructorDecl->init_end(); iit != iend; iit++) {
-			clang::CXXCtorInitializer * initializer = *iit;
-
-			if (initializer->isMemberInitializer()) {
-				Visit(initializer->getInit());
-			}
-		}
+		if (dtorDecl)
+			addFunctionDecl(dtorDecl);
 	}
-
-	VisitStmt(callExpr);*/
 }
 
-void CallExprVisitor::VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
-	assert(false && "delete expression");
-	/*addFunctionDecl(callExpr->getOperatorDelete());
+//void CallExprVisitor::VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
+	//if there is an member with an initializer in the ctor we add it to the function graph
+	//if (clang::CXXConstructorDecl * constructorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(llvm::cast<clang::FunctionDecl>(callExpr->getConstructor()))) {
+//		// connects the constructor expression to the function graph
+//		addFunctionDecl(constructorDecl);
+//		for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(), iend =
+//				constructorDecl->init_end(); iit != iend; iit++) {
+//			clang::CXXCtorInitializer * initializer = *iit;
+//
+//			if (initializer->isMemberInitializer()) {
+//				Visit(initializer->getInit());
+//			}
+//		}
+
+	//VisitCXXConstructExpr(callExpr->getConstructorExp());
+
+	//}
+
+//	VisitStmt(callExpr);
+//}
+
+//void CallExprVisitor::VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
+
+
+	//assert(false && "delete expression");
+
+	/*
+	addFunctionDecl(callExpr->getOperatorDelete());
 
 	// if we delete a class object -> add destructor to function call
 	if ( clang::CXXRecordDecl* classDecl = callExpr->getDestroyedType()->getAsCXXRecordDecl()) {
@@ -170,15 +185,16 @@ void CallExprVisitor::VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
 		addFunctionDecl(dtorDecl);
 	}
 
-	VisitStmt(callExpr);*/
-}
+	VisitStmt(callExpr);
+	*/
+//}
 
 void CallExprVisitor::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* mcExpr) {
-	assert(false && "memberCall expression");
-	/*// connects the member call expression to the function graph
+	//assert(false && "memberCall expression");
+	// connects the member call expression to the function graph
 	//assert(false && "in next clang version");
 	addFunctionDecl(llvm::dyn_cast<clang::FunctionDecl>(mcExpr->getCalleeDecl()));
-	VisitStmt(mcExpr);*/
+	VisitStmt(mcExpr);
 }
 
 } // end utils namespace 

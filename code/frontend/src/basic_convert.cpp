@@ -115,7 +115,7 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //////////////////////////////////////////////////////////////////
 ///
-const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(FunctionDecl*& funcDecl) {
+const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(const FunctionDecl*& funcDecl) {
 
 	// if the function is not defined in this translation unit, maybe it is defined in another we already
 	// loaded use the clang indexer to lookup the definition for this function declarations
@@ -152,16 +152,16 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool
 
 //////////////////////////////////////////////////////////////////
 ///
-ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog,
-	std::shared_ptr<StmtConverter> stmtConvPtr,
-	std::shared_ptr<TypeConverter> typeConvPtr,
-	std::shared_ptr<ExprConverter> exprConvPtr) :
-		mgr(mgr), builder(mgr), 
-		stmtConvPtr(stmtConvPtr),
-		typeConvPtr(typeConvPtr),
-		exprConvPtr(exprConvPtr),
-		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()) {
-}
+//ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog,
+//	std::shared_ptr<StmtConverter> stmtConvPtr,
+//	std::shared_ptr<TypeConverter> typeConvPtr,
+//	std::shared_ptr<ExprConverter> exprConvPtr) :
+//		mgr(mgr), builder(mgr), 
+//		stmtConvPtr(stmtConvPtr),
+//		typeConvPtr(typeConvPtr),
+//		exprConvPtr(exprConvPtr),
+//		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()) {
+//}
 
 //////////////////////////////////////////////////////////////////
 ///
@@ -309,10 +309,10 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	
 	// Conversion of the variable type
 	QualType&& varTy = valDecl->getType();
-	VLOG(2)	<< varTy.getAsString(); // cm
-
 	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
 
+	VLOG(2)	<< "clang type: " << varTy.getAsString(); // cm
+	VLOG(2)	<< "ir type:    " << irType;
 
 	//// check wether the variable is marked to be volatile 
 	if (varTy.isVolatileQualified()) {
@@ -372,7 +372,8 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	// the IR variable and insert it into the map for future lookups
 	core::VariablePtr&& var = builder.variable( irType );
 	VLOG(2) << "IR variable" << var.getType()->getNodeType() << "" << var<<":"<<varDecl->getNameAsString();
-
+	VLOG(2) << "IR var type" << var.getType();
+	
 	ctx.varDeclMap.insert( { valDecl, var } );
 
 	if ( !valDecl->getNameAsString().empty() ) {
@@ -515,6 +516,20 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		// initialization value
 		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), var->getType(), false);
 		assert(initExpr && "not correct initialization of the variable");
+
+		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ HANDLE SPETIAL CASES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		// if is is a new operator, and is not an array, we can be sure that it will be a pointer to
+		// a single element, so drop the array[1]  thing
+		if (definition->getInit() &&
+			llvm::isa<clang::CXXNewExpr>(definition->getInit()) && 
+			llvm::cast<clang::CXXNewExpr>(definition->getInit())){
+			
+			var = builder.variable( initExpr->getType() );
+			ctx.varDeclMap[definition] = var;
+		}
+
+		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 		retStmt = builder.declarationStmt(var, initExpr);
 	} else {
@@ -705,6 +720,7 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	core::NodeType&& kind =
 		(type->getNodeType() != core::NT_RefType ? type->getNodeType() : GET_REF_ELEM_TYPE(type)->getNodeType() );
 
+	// if there is no initialization expression
 	if (!expr) {
 
 		// If the type of this declaration is translated as a array type then it may also include
@@ -755,10 +771,15 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 
 	// Convert the expression like any other expression
 	retIr = convertExpr(expr);
+	
 
 	// ============================================================================================
 	// =============================== Handling of special cases  =================================
 	// ============================================================================================
+	
+	// if is a constructor call, we are done
+	if (llvm::isa<clang::CXXConstructExpr>(expr) || llvm::isa<clang::CXXNewExpr>(expr))
+		return retIr;
 	
 	// If this is an initialization of an array using array.create (meaning it was originally a
 	// malloc) then we expliticly invoke the ref.new to allocate the memory on the heap 
@@ -768,8 +789,7 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 
 	// In the case the object we need to initialize is a ref<array...> then we are not allowed to
 	// deref the actual initializer, therefore we assign the object as it is 
-	if ( utils::isRefArray(retIr->getType()) && utils::isRefArray(type ) ) 
-	{
+	if ( utils::isRefArray(retIr->getType()) && utils::isRefArray(type ) ) {
 		return retIr = utils::cast(retIr, type);
 	}
 
@@ -777,13 +797,12 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// can directly cast it using the ref.vector.to.ref.array and perform the assignment. We do not
 	// need to create a copy of the object in the right hand side 
 	if ( utils::isRefVector(retIr->getType()) && retIr->getNodeType() == core::NT_Literal &&
-		 utils::isRefArray(type ) ) 
-	{
+		 utils::isRefArray(type ) ) {
 		return retIr = utils::cast(retIr, type);
 	}
 	// ============================== End Special Handlings =======================================
 	
-	// Anythime we have to initialize a ref<'a> from another type of object we have to deref the
+	// Anytime we have to initialize a ref<'a> from another type of object we have to deref the
 	// object in the right hand side and create a copy (ref.var). 
 	if (type->getNodeType() == core::NT_RefType ) {
 		retIr = builder.refVar(utils::cast(retIr, GET_REF_ELEM_TYPE(type)));
@@ -889,7 +908,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		for (auto cur: subComponents){
 
-			FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
+			const FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
 			VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
 
 			const TranslationUnit* rightTU = this->getTranslationUnitForDefinition(decl);
@@ -1174,7 +1193,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		auto fit = ctx.recVarExprMap.find(fd);
 		assert(fit != ctx.recVarExprMap.end());
 
-		FunctionDecl* decl = const_cast<FunctionDecl*>(fd);
+		const FunctionDecl* decl = const_cast<FunctionDecl*>(fd);
 		const TranslationUnit* rightTU = getTranslationUnitForDefinition(decl);
 
 		assert (rightTU);
@@ -1236,7 +1255,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 
 	// Handling of the translation unit: we have to make sure to load the translation unit where the function is
 	// defined before starting the parser otherwise reading literals results in wrong values.
-	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
+	const FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
 	const TranslationUnit* rightTU = mFact.getTranslationUnitForDefinition(def);
 	assert(rightTU && "Translation unit for function not found.");
 	mFact.currTU.push(rightTU);
