@@ -255,7 +255,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(c
 //							FUNCTION CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const clang::CallExpr* callExpr) {
-	assert(false && "call expression ");
+	return ExprConverter::VisitCallExpr(callExpr);
 /*
 	START_LOG_EXPR_CONVERSION(callExpr);
 
@@ -1178,6 +1178,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const clang::CXXNewExpr* callExpr) {
 	START_LOG_EXPR_CONVERSION(callExpr);
 
+	//TODO: 
+	// - array allocation
+	// - inplace allocation
+
 	core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 	assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
 
@@ -1215,7 +1219,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 
 		funcDecl = constructorDecl;
 
-		//TODO: remove -> problem with globalVar if cached Expr is used as the call to the CTor is called with wrong globalVar
 		// find the function in cache
 //			ConversionContext::LambdaExprMap::const_iterator fit = cxxConvFact.ctx.lambdaExprCacheNewObject.find( funcDecl );
 //			if ( fit != cxxConvFact.ctx.lambdaExprCacheNewObject.end() ) {
