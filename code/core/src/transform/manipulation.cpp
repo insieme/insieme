@@ -46,7 +46,6 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_cached_visitor.h"
 
-#include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/encoder/encoder.h"
@@ -653,7 +652,7 @@ namespace {
 //		FunctionTypePtr funType = lambda->getFunctionType();
 //		TypeList paramTypes = funType->getParameterTypeList();
 //		assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
-//		assert(isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
+//		assert(types::isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
 //
 //		// replace parameter within body
 //		const VariablePtr& param = lambda->getParameterList()[index];
@@ -700,7 +699,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	TypeList paramTypes = funType->getParameterTypes()->getTypes();
 	assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
 
-	assert(isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
+	assert(types::isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
 
 	// make sure replacement value does not have any free variables except it is a variable itself (used for fixing recursive variables)
 	assert((value->getNodeType() == NT_Variable || core::analysis::getFreeVariables(value).empty()) && "Replacement value must not have free variables!");
@@ -1036,7 +1035,7 @@ LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root
 	return dynamic_pointer_cast<const LambdaExpr>(newBody);
 }
 
-LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const SubstitutionOpt& substitution) {
+LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const types::SubstitutionOpt& substitution) {
 
 	// check for early exit
 	if (!substitution || substitution->empty()) {

@@ -54,7 +54,7 @@ TEST(circular_work_buffers, token_passing_single) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_circular_work_buffer cwb;
 		irt_cwb_init(&cwb);
-		uint32 num = 0;
+		volatile uint32 num = 0;
 
 		irt_work_item wi;
 		wi.id.index = 5;
@@ -66,8 +66,8 @@ TEST(circular_work_buffers, token_passing_single) {
 		{
 			while(num < TEST_ITERATIONS) {
 				if(irt_work_item* swi = irt_cwb_pop_back(&cwb)) {
-					irt_cwb_push_front(&cwb, swi);
 					irt_atomic_inc(&num);
+					irt_cwb_push_front(&cwb, swi);
 				} 
 			}
 		}
@@ -110,7 +110,7 @@ TEST(circular_work_buffers, token_passing_multi_self) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_circular_work_buffer cwb[NUM_THREADS];
 		for(int i=0; i<NUM_THREADS; ++i) irt_cwb_init(&cwb[i]);
-		uint32 num = 0;
+		volatile uint32 num = 0;
 
 		irt_work_item wi;
 		wi.id.index = 5;
@@ -135,7 +135,7 @@ TEST(circular_work_buffers, token_passing_multi_rand) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_circular_work_buffer cwb[NUM_THREADS];
 		for(int i=0; i<NUM_THREADS; ++i) irt_cwb_init(&cwb[i]);
-		uint32 num = 0;
+		volatile uint32 num = 0;
 
 		irt_work_item wi;
 		wi.id.index = 5;
@@ -160,7 +160,7 @@ TEST(circular_work_buffers, token_passing_multi_dual_rand) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_circular_work_buffer cwb[NUM_THREADS];
 		for(int i=0; i<NUM_THREADS; ++i) irt_cwb_init(&cwb[i]);
-		uint32 num = 0;
+		volatile uint32 num = 0;
 
 		irt_work_item wi1;
 		wi1.id.index = 5;
@@ -197,7 +197,7 @@ TEST(circular_work_buffers, token_passing_multi_multi_rand) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_circular_work_buffer cwb[NUM_THREADS];
 		for(int i=0; i<NUM_THREADS; ++i) irt_cwb_init(&cwb[i]);
-		uint32 num = 0;
+		volatile uint32 num = 0;
 
 		irt_work_item wis[NUM_MULTI_WIS];
 		for(int i=0; i<NUM_MULTI_WIS; ++i) {

@@ -183,6 +183,69 @@ namespace analysis {
 	}
 
 
+	TEST(TypeUtils, isGeneric) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr var = builder.typeVariable("a");
+		TypePtr constA = builder.genericType("type");
+
+		EXPECT_TRUE(isGeneric(var));
+		EXPECT_FALSE(isGeneric(constA));
+
+		EXPECT_TRUE(isGeneric(builder.functionType(toVector(var), var)));
+		EXPECT_TRUE(isGeneric(builder.functionType(toVector(var), constA)));
+		EXPECT_FALSE(isGeneric(builder.functionType(toVector(constA), constA)));
+
+		// also make sure that recursive types are not recognized
+		{
+			TypeVariablePtr rec = builder.typeVariable("list");
+			TypePtr listElem = builder.structType(toVector(
+					builder.namedType("load", manager.getLangBasic().getInt4()),
+					builder.namedType("next", builder.refType(rec))
+			));
+			TypePtr constRecType = builder.recType(rec, builder.recTypeDefinition(toVector(builder.recTypeBinding(rec, listElem))));
+
+			EXPECT_EQ("rec 'list.{'list=struct<load:int<4>,next:ref<'list>>}", toString(*constRecType));
+			EXPECT_FALSE(isGeneric(constRecType));
+		}
+
+		// yet, a generic recursive type should be recognized
+		{
+			TypeVariablePtr rec = builder.typeVariable("list");
+			TypePtr listElem = builder.structType(toVector(
+					builder.namedType("load", builder.typeVariable("b")),
+					builder.namedType("next", builder.refType(rec))
+			));
+			TypePtr constRecType = builder.recType(rec, builder.recTypeDefinition(toVector(builder.recTypeBinding(rec, listElem))));
+
+			EXPECT_EQ("rec 'list.{'list=struct<load:'b,next:ref<'list>>}", toString(*constRecType));
+			EXPECT_TRUE(isGeneric(constRecType));
+		}
+	}
+
+
+	TEST(TypeUtils, getElementTypes) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr A = builder.genericType("A");
+		TypePtr B = builder.genericType("B");
+		TypePtr C = builder.genericType("C");
+		EXPECT_EQ(toVector<TypePtr>(), getElementTypes(A));
+
+		TypePtr D = builder.genericType("D", toVector(A,B));
+		EXPECT_EQ(toVector(A,B), getElementTypes(D));
+
+		TypePtr fun = builder.functionType(toVector(A,B), C);
+		EXPECT_EQ(toVector(A,B,C), getElementTypes(fun));
+
+		TypePtr structType = builder.structType(toVector(builder.namedType("a", A), builder.namedType("d",D)));
+		EXPECT_EQ(toVector(A,D), getElementTypes(structType));
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

@@ -41,7 +41,6 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_builder.h"
 

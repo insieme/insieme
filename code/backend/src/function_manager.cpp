@@ -52,10 +52,9 @@
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/normalize.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/type_utils.h"
 #include "insieme/core/transform/manipulation.h"
 
-#include "insieme/core/analysis/type_variable_deduction.h"
+#include "insieme/core/types/type_variable_deduction.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
@@ -256,11 +255,11 @@ namespace backend {
 		}
 
 		// 3) test whether target is generic => instantiate
-		if (fun->getNodeType() == core::NT_LambdaExpr && core::isGeneric(fun->getType())) {
+		if (fun->getNodeType() == core::NT_LambdaExpr && core::analysis::isGeneric(fun->getType())) {
 			auto& manager = call->getNodeManager();
 
 			// compute substitutions
-			core::SubstitutionOpt&& map = core::analysis::getTypeVariableInstantiation(manager, call);
+			core::types::SubstitutionOpt&& map = core::types::getTypeVariableInstantiation(manager, call);
 
 			// instantiate type variables according to map
 			auto lambda = core::transform::instantiate(manager, fun.as<core::LambdaExprPtr>(), map);

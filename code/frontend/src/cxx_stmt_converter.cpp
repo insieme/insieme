@@ -72,6 +72,7 @@ namespace conversion {
 // 			In clang a declstmt is represented as a list of VarDecl
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
+	/*
 	// if there is only one declaration in the DeclStmt we return it
 
 	if (declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl())) {
@@ -124,12 +125,14 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitDeclStmt(cla
 	}
 
 	return retList;
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							RETURN STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
+	/*
 	//START_LOG_STMT_CONVERSION(retStmt);
 
 	CXXConversionFactory::CXXConversionContext::ScopeObjects parentDownStreamSScopeObjects =
@@ -152,12 +155,10 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitReturnStmt(c
 		retTy = cxxConvFact.builder.getLangBasic().getUnit();
 	}
 
-	/*
-	 * arrays and vectors in C are always returned as reference, so the type of the return
-	 * expression is of array (or vector) type we are sure we have to return a reference, in the
-	 * other case we can safely deref the retExpr
-	 * Obviously Ocl vectors are an exception and must be handled like scalars
-	 */
+	// arrays and vectors in C are always returned as reference, so the type of the return
+	// expression is of array (or vector) type we are sure we have to return a reference, in the
+	// other case we can safely deref the retExpr
+	// Obviously Ocl vectors are an exception and must be handled like scalars
 	if ((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
 					!clangTy.getUnqualifiedType()->isExtVectorType()) {
 		retTy = cxxConvFact.builder.refType(retTy);
@@ -178,12 +179,14 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitReturnStmt(c
 	cxxConvFact.cxxCtx.downStreamScopeObjects = parentDownStreamSScopeObjects;
 
 	return body;
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							COMPOUND STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
+	/*
 
 	//START_LOG_STMT_CONVERSION(compStmt);
 	core::StatementPtr retIr;
@@ -233,6 +236,7 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCompoundStmt
 	attatchDatarangeAnnotation(retIr, compStmt, cxxConvFact);
 
 	return retIr;
+	*/
 }
 
 stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
@@ -252,6 +256,7 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCXXForRangeS
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::Visit(clang::Stmt* stmt) {
+	/*
 	VLOG(2) << "CXX";
 	stmtutils::StmtWrapper&& retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 
@@ -269,6 +274,7 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::Visit(clang::Stmt
 		return omp::attachOmpAnnotation(irStmt, stmt, convFact);
 	}
 	return retStmt;
+	*/
 }
 
 }

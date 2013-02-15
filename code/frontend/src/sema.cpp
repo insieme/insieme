@@ -41,9 +41,10 @@
 
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/Parser.h"
+#include "clang/Sema/Sema.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Decl.h"
-#include "clang/Sema/Sema.h"
+#include "clang/AST/ASTContext.h"
 
 #include "insieme/utils/logging.h"
 
@@ -154,23 +155,19 @@ const char* strbchr(const char* stream, char c) {
 clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 												 clang::MultiStmtArg Elts, bool isStmtExpr) {
 
-	// VLOG(2) << "{InsiemeSema}: ActOnCompoundStmt()" << std::endl;
+	//VLOG(1) << "{InsiemeSema}: ActOnCompoundStmt()";
+	//VLOG(2) << "LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr);
+	//VLOG(2) << "RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr);
 
-	/*
-	 * when pragmas are just after the beginning of a compound stmt, example:
-	 * {
-	 * 		#pragma xxx
-	 * 		...
-	 * }
-	 * the location of the opening bracket is wrong because of a bug in the clang parser.
-	 *
-	 * We solve the problem by searching for the bracket in the input stream and overwrite
-	 * the value of L (which contains the wrong location) with the correct value.
-	 *
-	 */
-//	DLOG(INFO) << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
-//				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
-
+	/// when pragmas are just after the beginning of a compound stmt, example:
+	/// {
+	/// 		#pragma xxx
+	/// 		...
+	/// }
+	/// the location of the opening bracket is wrong because of a bug in the clang parser.
+	///
+	/// We solve the problem by searching for the bracket in the input stream and overwrite
+	/// the value of L (which contains the wrong location) with the correct value.
 	enum {MacroIDBit = 1U << 31}; // from clang/Basic/SourceLocation.h for use with cpp classes
 	{
 		SourceLocation&& leftBracketLoc = SourceMgr.getImmediateSpellingLoc(L);
@@ -186,10 +183,6 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		}
 	}
 	// the same is done for the right bracket
-
-//	DLOG(INFO) << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
-//				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
-
 	{
 		SourceLocation&& rightBracketLoc = SourceMgr.getImmediateSpellingLoc(R);
 		std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(rightBracketLoc);
@@ -203,15 +196,22 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		}
 	}
 
-	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, clang::move(Elts), isStmtExpr);
+	//VLOG(2) << "corrected LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr);
+	//VLOG(2) << "corrected RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr);
+
+	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
 	clang::CompoundStmt* CS = cast<CompoundStmt>(ret.get());
-	Stmt* Prev = NULL;
 
 	PragmaList matched;
-
 	SourceRange SR(CS->getLBracLoc(), CS->getRBracLoc());
+
+
+	// for each of the pragmas in the range between brackets
 	for ( PragmaFilter&& filter = PragmaFilter(SR, SourceMgr, pimpl->pending_pragma); *filter; ++filter ) {
 		PragmaPtr P = *filter;
+		// iterate throug statements of the compound in reverse order 
+		
+		Stmt* Prev;
 		for ( CompoundStmt::reverse_body_iterator I = CS->body_rbegin(), E = CS->body_rend(); I != E; ) {
 			Prev = *I;
 			++I;
@@ -257,15 +257,15 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 			}
 		}
 	}
+	//VLOG(2) << matched.size()<< " pragmas withing locations";
 
 	// remove matched pragmas
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
-	return clang::move(ret);
+	return std::move(ret);
 }
 
 void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, const clang::SourceManager& sm,
 							PragmaList& matched) {
-
 	for ( PragmaFilter filter(bounds, sm,  pimpl->pending_pragma); *filter; ++filter ) {
 		PragmaPtr&& P = *filter;
 		
@@ -277,10 +277,9 @@ void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, co
 clang::StmtResult
 InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg CondVal, clang::Decl* CondVar,
 		clang::Stmt* ThenVal, clang::SourceLocation ElseLoc, clang::Stmt* ElseVal) {
-
 	// VLOG(2) << "{InsiemeSema}: ActOnIfStmt()";
 	clang::StmtResult ret =
-			Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, clang::move(ThenVal), ElseLoc, clang::move(ElseVal));
+			Sema::ActOnIfStmt(IfLoc, CondVal, CondVar, std::move(ThenVal), ElseLoc, std::move(ElseVal));
 
 	IfStmt* ifStmt = static_cast<IfStmt*>( ret.get() );
 	PragmaList matched;
@@ -300,17 +299,16 @@ InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg C
 	}
 
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
-	return clang::move(ret);
+	return std::move(ret);
 }
 
 clang::StmtResult
 InsiemeSema::ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LParenLoc, clang::Stmt* First,
 		clang::Sema::FullExprArg Second, clang::Decl* SecondVar, clang::Sema::FullExprArg Third,
 		clang::SourceLocation RParenLoc, clang::Stmt* Body) {
-
 	// VLOG(2) << "{InsiemeSema}: ActOnForStmt()" << std::endl;
 	clang::StmtResult ret =
-		Sema::ActOnForStmt(ForLoc, LParenLoc, clang::move(First), Second, SecondVar, Third, RParenLoc, clang::move(Body));
+		Sema::ActOnForStmt(ForLoc, LParenLoc, std::move(First), Second, SecondVar, Third, RParenLoc, std::move(Body));
 
 	ForStmt* forStmt = (ForStmt*) ret.get();
 	PragmaList matched;
@@ -320,7 +318,7 @@ InsiemeSema::ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LP
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 	matched.clear();
 
-	return clang::move(ret);
+	return std::move(ret);
 }
 
 clang::Decl* InsiemeSema::ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, clang::Declarator &D) {
@@ -335,7 +333,7 @@ clang::Decl* InsiemeSema::ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, cla
 
 clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt* Body) {
 	// VLOG(2) << "{InsiemeSema}: ActOnFinishFunctionBody()";
-	clang::Decl* ret = Sema::ActOnFinishFunctionBody(Decl, clang::move(Body));
+	clang::Decl* ret = Sema::ActOnFinishFunctionBody(Decl, std::move(Body));
 	// We are sure all the pragmas inside the function body have been matched
 
 	FunctionDecl* FD = dyn_cast<FunctionDecl>(ret);
@@ -385,7 +383,7 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 //		++I;
 //	}
 //	EraseMatchedPragmas(pimpl->pragma_list, pimpl->pending_pragma, matched);
-//	return clang::move(ret);
+//	return std::move(ret);
 //}
 
 clang::Decl* InsiemeSema::ActOnDeclarator(clang::Scope *S, clang::Declarator &D) {

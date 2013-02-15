@@ -47,8 +47,9 @@
 
 #include "clang/AST/StmtVisitor.h"
 
-#include "clang/Index/Entity.h"
-#include "clang/Index/Indexer.h"
+// [3.0]
+//#include "clang/Index/Entity.h"
+//#include "clang/Index/Indexer.h"
 
 namespace fe = insieme::frontend;
 
@@ -88,11 +89,13 @@ namespace utils {
 
 struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 
-	clang::idx::Indexer& indexer;
+	//clang::idx::Indexer& indexer;
+	insieme::frontend::utils::Indexer& indexer;
 	typedef std::set<const clang::FunctionDecl*> CallGraph;
 	CallGraph callGraph;
 
-	CallExprVisitor(clang::idx::Indexer& indexer) : indexer(indexer) { }
+	//CallExprVisitor(clang::idx::Indexer& indexer) : indexer(indexer) { }
+	CallExprVisitor(insieme::frontend::utils::Indexer& indexer) : indexer(indexer) { }
 
 	CallGraph getCallGraph(const clang::FunctionDecl* func) {
 		assert(func->hasBody() && "Function in the dependency graph has no body");
@@ -127,13 +130,15 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
  * FunctionDependencyGraph adds the indexer to member functions of DependencyGraph
  */
 class FunctionDependencyGraph: public DependencyGraph<const clang::FunctionDecl*> {
-	clang::idx::Indexer& idx;
+	//clang::idx::Indexer& idx;
+	insieme::frontend::utils::Indexer& idx;
 public:
 	CallExprVisitor callExprVis;
-	FunctionDependencyGraph(clang::idx::Indexer& idx) :
+	//FunctionDependencyGraph(clang::idx::Indexer& idx) :
+	FunctionDependencyGraph(insieme::frontend::utils::Indexer& idx) :
 			DependencyGraph<const clang::FunctionDecl*>(), idx(idx), callExprVis(idx) {
 	}
-	inline clang::idx::Indexer& getIndexer() const { return idx; }
+	inline insieme::frontend::utils::Indexer& getIndexer() const { return idx; }
 };
 
 } // end namespace utils
@@ -156,11 +161,10 @@ namespace conversion {
 	FinalActions attachLog( [&] () { END_LOG_EXPR_CONVERSION(retIr); } )
 
 #define START_LOG_EXPR_CONVERSION(expr) \
-	assert(convFact.currTU && "Translation unit not correctly set"); \
 	VLOG(1) << "\n****************************************************************************************\n" \
 			 << "Converting expression [class: '" << expr->getStmtClassName() << "']\n" \
 			 << "-> at location: (" <<	\
-				utils::location(expr->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
+				utils::location(expr->getLocStart(), convFact.currTU.top()->getCompiler().getSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
 		VLOG(2) << "Dump of clang expression: \n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
@@ -202,7 +206,7 @@ public:
 		mgr(convFact.mgr),
 		builder(convFact.builder),
 		gen(convFact.builder.getLangBasic()),
-		funcDepGraph(program.getClangIndexer())
+		funcDepGraph(program.getIndexer())
 	{  }
 
 	virtual ~ExprConverter() { }
@@ -399,7 +403,8 @@ class CXXConversionFactory::CXXExprConverter :
 {
 	CXXConversionFactory& convFact;
 	CXXConversionFactory::CXXConversionContext& cxxCtx;
-	utils::FunctionDependencyGraph funcDepGraph;
+	// FIXME:  need depGraph
+	//utils::FunctionDependencyGraph funcDepGraph;
 
 public:
 	cpp::TemporaryHandler tempHandler;
@@ -408,7 +413,7 @@ public:
 		ExprConverter(cxxConvFact, program),
 		convFact(cxxConvFact),
 		cxxCtx(cxxConvFact.cxxCtx),
-		funcDepGraph(program.getClangIndexer()),
+		//funcDepGraph(program.getClangIndexer()),
 		tempHandler(&cxxConvFact)
 	{ }
 

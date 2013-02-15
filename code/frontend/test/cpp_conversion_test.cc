@@ -54,8 +54,9 @@
 
 #include "insieme/frontend/pragma/insieme.h"
 
-#include "clang/Index/Indexer.h"
-#include "clang/Index/Program.h"
+// clang [3.0]
+//#include "clang/Index/Indexer.h"
+//#include "clang/Index/Program.h"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;

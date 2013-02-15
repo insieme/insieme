@@ -36,6 +36,7 @@
 
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/frontend/omp/omp_utils.h"
+#include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"

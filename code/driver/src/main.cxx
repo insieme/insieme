@@ -117,7 +117,9 @@ using namespace insieme::annotations::ocl;
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
 namespace be = insieme::backend;
-namespace xml = insieme::xml;
+#ifdef USE_XML
+	namespace xml = insieme::xml;
+#endif
 namespace utils = insieme::utils;
 namespace anal = insieme::analysis;
 

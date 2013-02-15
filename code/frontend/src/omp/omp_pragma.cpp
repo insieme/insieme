@@ -414,8 +414,8 @@ VarListPtr handleIdentifierList(const MatchMap& mmap, const std::string& key, co
 
 	const ValueList& vars = fit->second;
 	VarList* varList = new VarList;
-	for(ValueList::const_iterator it = vars.begin(), end = vars.end(); it != end; ++it) {
-		clang::Stmt* varIdent = (*it)->get<clang::Stmt*>();
+	for(auto it : vars){
+		clang::Stmt* varIdent = (it)->get<clang::Stmt*>();
 		assert(varIdent && "Clause not containing var exps");
 
 		clang::DeclRefExpr* refVarIdent = llvm::dyn_cast<clang::DeclRefExpr>(varIdent);

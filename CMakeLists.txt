@@ -18,5 +18,5 @@ endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test.py.in ${CMAKE_BINARY_DIR}/test.py)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/newtest.py.in ${CMAKE_BINARY_DIR}/newtest.py @ONLY)
 
-add_subdirectory(docs)
+#add_subdirectory(docs)
 add_subdirectory(code)

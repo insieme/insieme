@@ -96,7 +96,7 @@ namespace conversion {
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
 	// if there is only one declaration in the DeclStmt we return it
 
-	if (declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl())) {
+	if (declStmt->isSingleDecl() && llvm::isa<clang::VarDecl>(declStmt->getSingleDecl())) {
 
 		stmtutils::StmtWrapper retList;
 		clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
@@ -121,7 +121,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDeclStmt(clang::De
 	for (auto it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
 	if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
 		try {
-			assert(convFact.currTU&& "translation unit is null");
+			assert(!convFact.currTU.empty() && "translation unit is null");
 			auto retStmt = convFact.convertVarDecl(varDecl);
 			// handle eventual OpenMP pragmas attached to the Clang node
 			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, convFact) );
@@ -222,7 +222,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		// The loop is using as induction variable a function parameter, therefore we have to
 		// introduce a new variable which acts as loop induction variable
-		if (isa<clang::ParmVarDecl>(iv)) {
+		if (llvm::isa<clang::ParmVarDecl>(iv)) {
 			core::VariablePtr var = core::static_pointer_cast<const core::VariablePtr>(saveInductionVar);
 			auto fit = convFact.ctx.wrapRefMap.find(var);
 
@@ -242,7 +242,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		stmtutils::StmtWrapper initExpr = Visit( forStmt->getInit() );
 
-		if (isa<clang::ParmVarDecl>(iv)) {
+		if (llvm::isa<clang::ParmVarDecl>(iv)) {
 			fit->second = core::static_pointer_cast<const core::VariablePtr>(saveInductionVar);
 		}
 
@@ -512,7 +512,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		// handle eventual pragmas attached to the Clang node
 		retStmt.push_back( omp::attachOmpAnnotation(whileStmt, forStmt, convFact) );
 
-		clang::Preprocessor& pp = convFact.currTU->getCompiler().getPreprocessor();
+		clang::Preprocessor& pp = convFact.currTU.top()->getCompiler().getPreprocessor();
 		pp.Diag(forStmt->getLocStart(),
 				pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
 						std::string("For loop converted into while loop, cause: ") + e.what() )
@@ -794,7 +794,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 	for (auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
 		clang::Stmt* curr = *it;
 		// statements which are before the first case.
-		if (!caseStart && !isa<clang::SwitchCase>(curr)) {
+		if (!caseStart && !llvm::isa<clang::SwitchCase>(curr)) {
 			stmtutils::StmtWrapper visitedStmt = this->Visit(curr);
 			// append these statements before the switch statement
 			std::copy(visitedStmt.begin(), visitedStmt.end(), std::back_inserter(retStmt));
@@ -823,7 +823,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 				subStmt = this->convFact.convertExpr(rhs);
 			} else if ( clang::Stmt* sub = caseStmt->getSubStmt()) {
 				// if the sub statement is a case, skip until the end of the loop
-				if (isa<clang::SwitchCase>(sub)) {
+				if (llvm::isa<clang::SwitchCase>(sub)) {
 					curr = sub;
 					continue;
 				}
@@ -858,7 +858,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 			caseStmts.push_back(subStmt);
 		}
 
-		if (isa<const clang::ContinueStmt>(curr) || isa<const clang::ReturnStmt>(curr)) {
+		if (llvm::isa<const clang::ContinueStmt>(curr) || llvm::isa<const clang::ReturnStmt>(curr)) {
 			core::StatementPtr subStmt = stmtutils::tryAggregateStmts(builder, Visit(const_cast<clang::Stmt*>(curr)));
 			breakEncountred = true;
 			caseStmts.push_back(subStmt);
@@ -867,14 +867,14 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 		 * if the current statement is a break, or we encountred a break in the current case we
 		 * create a new case and add to the list of cases for this switch statement
 		 */
-		if (breakEncountred || isa<const clang::BreakStmt>(curr)) {
+		if (breakEncountred || llvm::isa<const clang::BreakStmt>(curr)) {
 			addCase();
 			// clear the list of statements collected until now
 			caseExprs.clear();
 			caseStmts.clear();
 
 			breakEncountred = false;
-		} else if (!isa<clang::SwitchCase>(curr)) {
+		} else if (!llvm::isa<clang::SwitchCase>(curr)) {
 			stmtutils::StmtWrapper visitedStmt = Visit( const_cast<clang::Stmt*>(curr));
 			std::copy(visitedStmt.begin(), visitedStmt.end(), std::back_inserter(caseStmts));
 		}
@@ -964,7 +964,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitNullStmt(clang::Nu
 }
 
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitGotoStmt(clang::GotoStmt* gotoStmt) {
-	clang::Preprocessor& pp = convFact.currTU->getCompiler().getPreprocessor();
+	clang::Preprocessor& pp = convFact.currTU.top()->getCompiler().getPreprocessor();
 	pp.Diag(
 			gotoStmt->getLocStart(),
 			pp.getDiagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error,

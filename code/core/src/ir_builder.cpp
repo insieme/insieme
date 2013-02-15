@@ -50,9 +50,11 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_program.h"
 
-#include "insieme/core/type_utils.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
+
+#include "insieme/core/types/unification.h"
+#include "insieme/core/types/return_type_deduction.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 
@@ -248,7 +250,7 @@ bool IRBuilder::matchType(const std::string& typeStr, const core::TypePtr& irTyp
 	}
 
 	// try unify the parsed type and the given type
-	return unify(manager, type, irType);
+	return types::unify(manager, type, irType);
 }
 
 GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intParams) const {
@@ -437,7 +439,12 @@ LiteralPtr IRBuilder::floatLit(const string& value) const {
 }
 
 LiteralPtr IRBuilder::floatLit(float value) const {
-	return floatLit(toString(value));
+	std::stringstream out;
+	out << std::scientific
+		<< std::fixed
+		<< std::setprecision(std::numeric_limits<float>::digits10 + 1)
+		<< value << "f";
+	return floatLit(out.str());
 }
 
 LiteralPtr IRBuilder::doubleLit(const string& value) const {
@@ -445,7 +452,12 @@ LiteralPtr IRBuilder::doubleLit(const string& value) const {
 }
 
 LiteralPtr IRBuilder::doubleLit(double value) const {
-	return doubleLit(toString(value));
+	std::stringstream out;
+	out << std::scientific
+		<< std::fixed
+		<< std::setprecision(std::numeric_limits<double>::digits10 + 1)
+		<< value;
+	return doubleLit(out.str());
 }
 
 ExpressionPtr IRBuilder::undefined(const TypePtr& type) const {
@@ -552,7 +564,7 @@ CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& 
 		if(nrtt->getNodeType() != NT_UnionType) {
 			auto list = uType.getEntries();
 			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
-				return isSubTypeOf(cur->getType(), nrtt);
+				return types::isSubTypeOf(cur->getType(), nrtt);
 			});
 
 			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
@@ -690,7 +702,7 @@ namespace {
 		// deduce return type
 		core::TypeList argumentTypes;
 		::transform(arguments, back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
-		return deduceReturnType(funType, argumentTypes);
+		return types::deduceReturnType(funType, argumentTypes);
 	}
 
 	/**
@@ -1154,7 +1166,7 @@ namespace {
 	TypePtr infereExprTypeInternal(const ExpressionPtr& op, const T& ... operators) {
 		assert(op->getType()->getNodeType() == NT_FunctionType && "Operation is not a function!");
 		FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(op->getType());
-		return tryDeduceReturnType(funType, extractTypes(toVector(operators ...)));
+		return types::tryDeduceReturnType(funType, extractTypes(toVector(operators ...)));
 	}
 }
 
@@ -1373,7 +1385,7 @@ CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const Express
 	const auto& basic = manager.getLangBasic();
 	const VectorTypePtr permuteType = dynamic_pointer_cast<const VectorType>(permutationVec->getType());
 	assert(permuteType && "Secont argument of vector.permute must be a vector");
-	assert(isSubTypeOf(permuteType->getElementType(), basic.getUIntInf()) && "The stecond argument of vector.permute must be of type vector<uint<#a>,#m>");
+	assert(types::isSubTypeOf(permuteType->getElementType(), basic.getUIntInf()) && "The stecond argument of vector.permute must be of type vector<uint<#a>,#m>");
 
 	const TypePtr retTy = vectorType(dataType->getElementType(), permuteType->getSize());
 

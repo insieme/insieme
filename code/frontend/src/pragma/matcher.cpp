@@ -40,10 +40,12 @@
 
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Parse/Parser.h>
-#include <clang/AST/Expr.h>
 #include "clang/Sema/Sema.h"
+#include <clang/Sema/Lookup.h>
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Basic/Diagnostic.h"
+#include <clang/AST/Expr.h>
+#include <clang/AST/ASTContext.h>
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -93,7 +95,8 @@ std::string ValueUnion::toStr() const {
 	std::string ret;
 	llvm::raw_string_ostream rs(ret);
 	if ( is<Stmt*>() ) {
-		get<Stmt*>()->printPretty(rs, *clangCtx, 0, clang::PrintingPolicy(clangCtx->getLangOptions()));
+		// [3.0] get<Stmt*>()->printPretty(rs, *clangCtx, 0, clang::PrintingPolicy(clangCtx->getLangOptions()));
+		get<Stmt*>()->printPretty(rs, 0, clangCtx->getPrintingPolicy());
 	} else {
 		rs << *get<std::string*>();
 	}
@@ -328,12 +331,21 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, bool resolve, std::
 		UnqualifiedId Name;
 		CXXScopeSpec ScopeSpec;
 		Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
-			
+
+		// look up the identifier name
+		LookupResult res(A, clang::DeclarationName(token.getIdentifierInfo()), token.getLocation(), clang::Sema::LookupOrdinaryName);
+		if (!A.LookupName(res, ParserProxy::get().CurrentScope(), false)) {
+			// TODO: Identifier could not be resolved => report error!
+			assert(false && "Unable to obtain declaration of identifier!");
+		}
+		auto varDecl = res.getAsSingle<clang::VarDecl>();
+
 		mmap[map_str].push_back(
 			ValueUnionPtr(
 				new ValueUnion(
-					A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
-					&static_cast<clang::Sema&>(A).Context
+					// [3.0] A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
+					new (A.Context) clang::DeclRefExpr(varDecl, false, varDecl->getType(), VK_LValue, varDecl->getLocation()),
+					&A.Context
 				)
 			));
 		break;

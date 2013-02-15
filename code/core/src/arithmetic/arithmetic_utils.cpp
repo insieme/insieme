@@ -39,10 +39,9 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
-#include "insieme/core/type_utils.h"
-
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/types/subtyping.h"
 
 #include "insieme/utils/numeric_cast.h"
 
@@ -463,7 +462,7 @@ namespace {
 		}
 
 		// for the rest => use generic solution
-		TypePtr res = getSmallestCommonSuperType(a, b);
+		TypePtr res = types::getSmallestCommonSuperType(a, b);
 		assert(!a->getNodeManager().getLangBasic().isUnit(res) && "Invalid arguments passed to function!");
 		return res;
 	}

@@ -38,27 +38,31 @@
 
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/utils/indexer.h"
+
+#include "insieme/frontend/ocl/ocl_compiler.h"
+#include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/cilk/cilk_pragma.h"
-
 #include "insieme/frontend/mpi/mpi_pragma.h"
 #include "insieme/frontend/mpi/mpi_sema.h"
-
-#include "insieme/frontend/convert.h"
-#include "insieme/frontend/ocl/ocl_compiler.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/DeclGroup.h"
-#include "clang/Analysis/CFG.h"
 
-#include "clang/Index/Indexer.h"
-#include "clang/Index/Analyzer.h"
-#include "clang/Index/CallGraph.h"
-#include "clang/Index/TranslationUnit.h"
-#include "clang/Index/DeclReferenceMap.h"
-#include "clang/Index/SelectorMap.h"
+#include "clang/Analysis/CFG.h"
+#include "clang/Analysis/CallGraph.h"
+
+// [3.0]
+//#include "clang/Index/Indexer.h"
+//#include "clang/Index/Analyzer.h"
+//#include "clang/Index/CallGraph.h"
+//#include "clang/Index/TranslationUnit.h"
+//#include "clang/Index/DeclReferenceMap.h"
+//#include "clang/Index/SelectorMap.h"
 
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/ParseAST.h"
@@ -72,7 +76,6 @@
 #include "insieme/utils/timer.h"
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 using namespace insieme;
 using namespace insieme::core;
@@ -82,17 +85,17 @@ using namespace clang;
 
 namespace {
 
-/*
- * Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
- */
+// Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
+///
 void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL) {
 
 	InsiemeSema S(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
 
-	Parser P(comp.getPreprocessor(), S);
-	comp.getPreprocessor().EnterMainSourceFile();
+	//Parser P(comp.getPreprocessor(), S); // clang [3.0]
+	Parser P(comp.getPreprocessor(), S, false);  // do not skip function bodies
+	comp.getPreprocessor().EnterMainSourceFile();  
 
-	P.Initialize();
+	P.Initialize();	  //FIXME
 	ParserProxy::init(&P);
 	Consumer->Initialize(comp.getASTContext());
 	if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
@@ -109,7 +112,7 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 		if(ADecl) Consumer->HandleTopLevelDecl(ADecl.getAsVal<DeclGroupRef>());
 
 	Consumer->HandleTranslationUnit(comp.getASTContext());
-	ParserProxy::discard();
+	ParserProxy::discard();  // FIXME
 
 	S.dump();
 
@@ -125,7 +128,8 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 					clang::CFG* cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
 					assert(cfg);
 					std::cerr << "~~~ Function: "  << func_decl->getNameAsString() << " ~~~~~" << std::endl;
-					cfg->dump(comp.getPreprocessor().getLangOptions());
+					// clang [3.0 ]cfg->dump(comp.getPreprocessor().getLangOptions());
+					cfg->dump(comp.getPreprocessor().getLangOpts(), true);
 				}
 			}
 		});
@@ -133,16 +137,17 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 	//////////////////////////////////////////////////////////////////////////////
 }
 
-/**
- * A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
- * and the insieme IR which has been generated from the source file.
- */
-class TranslationUnitImpl: public insieme::frontend::TranslationUnit, public clang::idx::TranslationUnit {
-	std::shared_ptr<clang::idx::DeclReferenceMap>   	mDeclRefMap;
-	std::shared_ptr<clang::idx::SelectorMap>		   	mSelMap;
+///  A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
+///  and the insieme IR which has been generated from the source file.
+// clang [3.0]class TranslationUnitImpl: public insieme::frontend::TranslationUnit, public clang::idx::TranslationUnit {
+class TranslationUnitImpl: public insieme::frontend::TranslationUnit{
+
+	// clang [3.0]
+	//std::shared_ptr<clang::idx::DeclReferenceMap>   	mDeclRefMap;
+	//std::shared_ptr<clang::idx::SelectorMap>		   	mSelMap;
 
 public:
-	TranslationUnitImpl(const std::string& file_name):
+	TranslationUnitImpl(const std::string& file_name, insieme::frontend::utils::Indexer& indexer):
 		insieme::frontend::TranslationUnit(file_name) {
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
@@ -159,7 +164,11 @@ public:
 		// register 'mpi' pragma
 		mpi::registerPragmaHandler( mClang.getPreprocessor() );
 
+		//  FIXME: preprocess here or in indexer?
+		//clang::ASTConsumer emptyCons;
 		clang::ASTConsumer emptyCons;
+		//insieme::frontend::utils::indexerASTConsumer consumer(indexer, 
+	//									dynamic_cast<insieme::frontend::TranslationUnit*>(this));
 		parseClangAST(mClang, &emptyCons, true, mPragmaList);
 
 		if( mClang.getDiagnostics().hasErrorOccurred() ) {
@@ -167,9 +176,10 @@ public:
 			throw ClangParsingError(file_name);
 		}
 
+		// clang [3.0]
 		// the translation unit has been correctly parsed
-		mDeclRefMap = std::make_shared<clang::idx::DeclReferenceMap>( mClang.getASTContext() );
-		mSelMap = std::make_shared<clang::idx::SelectorMap>( mClang.getASTContext() );
+		//mDeclRefMap = std::make_shared<clang::idx::DeclReferenceMap>( mClang.getASTContext() );
+		//mSelMap = std::make_shared<clang::idx::SelectorMap>( mClang.getASTContext() );
 	}
 
 	// getters
@@ -182,8 +192,9 @@ public:
 	clang::DiagnosticsEngine& getDiagnostic() { return getCompiler().getDiagnostics(); }
 	const clang::DiagnosticsEngine& getDiagnostic() const { return getCompiler().getDiagnostics(); }
 
-	clang::idx::DeclReferenceMap& getDeclReferenceMap() { assert(mDeclRefMap); return *mDeclRefMap; }
-	clang::idx::SelectorMap& getSelectorMap() { assert(mSelMap); return *mSelMap; }
+	// clang [3.0]
+	// clang::idx::DeclReferenceMap& getDeclReferenceMap() { assert(mDeclRefMap); return *mDeclRefMap; }
+	// clang::idx::SelectorMap& getSelectorMap() { assert(mSelMap); return *mSelMap; }
 };
 } // end anonymous namespace
 
@@ -193,13 +204,16 @@ namespace frontend {
 struct Program::ProgramImpl {
 	TranslationUnitSet tranUnits;
 
-	clang::idx::Program  mProg;
-	clang::idx::Indexer  mIdx;
-	clang::idx::Analyzer mAnalyzer;
+	// clang [3.0]
+	//clang::idx::Program  mProg;
+	//clang::idx::Indexer  mIdx;
+	//clang::idx::Analyzer mAnalyzer;
+	
+	utils::Indexer mIdx;
 
 	clang::CallGraph mCallGraph;
 
-	ProgramImpl() : mIdx(mProg), mAnalyzer(mProg, mIdx), mCallGraph(mProg) { }
+	ProgramImpl() : mIdx(), mCallGraph() { }
 };
 
 Program::Program(core::NodeManager& mgr):
@@ -210,10 +224,12 @@ Program::~Program() {
 }
 
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
-	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name);
+	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name, pimpl->mIdx);
+
+	pimpl->mIdx.indexTU(tuImpl);
+//	pimpl->mIdx.dump();
+	
 	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
-	pimpl->mIdx.IndexAST( dynamic_cast<clang::idx::TranslationUnit*>(tuImpl) );
-	pimpl->mCallGraph.addTU( tuImpl->getASTContext() );
 	return *tuImpl;
 }
 
@@ -225,18 +241,19 @@ TranslationUnit& Program::createEmptyTranslationUnit() {
 
 const Program::TranslationUnitSet& Program::getTranslationUnits() const { return pimpl->tranUnits; }
 
-clang::idx::Program& Program::getClangProgram() const { return pimpl->mProg; }
-clang::idx::Indexer& Program::getClangIndexer() const { return pimpl->mIdx; }
+//clang::idx::Program& Program::getClangProgram() const { return pimpl->mProg; }
+utils::Indexer& Program::getIndexer() const { return pimpl->mIdx; }
 
 void Program::dumpCallGraph() const { pimpl->mCallGraph.dump(); }
 
-const TranslationUnit& Program::getTranslationUnit(const clang::idx::TranslationUnit* tu) {
-	return *dynamic_cast<const TranslationUnit*>(reinterpret_cast<const TranslationUnitImpl*>(tu));
-}
-
-const clang::idx::TranslationUnit* Program::getClangTranslationUnit(const TranslationUnit& tu) {
-	return dynamic_cast<const clang::idx::TranslationUnit*>(static_cast<const TranslationUnitImpl*>(&tu));
-}
+// clang [3.0]
+//const TranslationUnit& Program::getTranslationUnit(const clang::idx::TranslationUnit* tu) {
+//	return *dynamic_cast<const TranslationUnit*>(reinterpret_cast<const TranslationUnitImpl*>(tu));
+//}
+//
+//const clang::idx::TranslationUnit* Program::getClangTranslationUnit(const TranslationUnit& tu) {
+//	return dynamic_cast<const clang::idx::TranslationUnit*>(static_cast<const TranslationUnitImpl*>(&tu));
+//}
 
 Program::PragmaIterator Program::pragmas_begin() const {
 	auto filtering = [](const Pragma&) -> bool { return true; };
@@ -344,7 +361,9 @@ const core::ProgramPtr& Program::convert() {
 		// called functions according to the callgraph of the input program.
 		clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
 		assert(main && "Program has no main()");
-		mProgram = astConvPtr->handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
+	
+		mProgram = astConvPtr->handleFunctionDecl(
+								dyn_cast<const FunctionDecl>(pimpl->mIdx.getDefinitionFor("main")));
 	}
 
 	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";

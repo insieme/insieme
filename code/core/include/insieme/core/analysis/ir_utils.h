@@ -81,6 +81,26 @@ static inline core::ExpressionPtr getArgument(const NodePtr& call, int index) {
 bool isNoOp(const StatementPtr& candidate);
 
 /**
+ * Determines whether the given type is generic or not. A type is considered to be generic if it
+ * includes type variables. Hence, a function accepting a generic input parameter or a value type
+ * including a variable type parameter will be considered generic.
+ *
+ * @param type the type to be checked
+ * @return true if the type is generic, false otherwise
+ */
+bool isGeneric(const TypePtr& type);
+
+/**
+ * A universial utility extracting a list of element types from any given
+ * type (e.g. parameter types of an abstract type, element types of a
+ * reference, channel, array or vector type, ...)
+ *
+ * @param type the type which's direct sub-types should be determined.
+ * @return the list of identified sub-types
+ */
+TypeList getElementTypes(const TypePtr& type);
+
+/**
  * Tests whether the given node is of a reference type to the given type.
  * For Types: direct test
  * For Expressions: the expression type is tested
