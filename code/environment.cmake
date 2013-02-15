@@ -86,7 +86,11 @@ endif(MSVC)
 
 # set up third-part library home
 if (NOT third_part_libs_home )
-	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
+	if ( DEFINED INSIEME_LIBS_HOME ) 
+		set ( third_part_libs_home ${INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
+	else()
+		set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
+	endif()
 endif()
 
 # - boost

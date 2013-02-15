@@ -80,6 +80,6 @@ void irt_merge(irt_joinable* joinable);
 
 #define par_printf printf
 
-double omp_get_wtime() {
-	return irt_time_ms()/1000.0;
+static inline double irt_get_wtime() {
+	return irt_time_ns()/1000000000.0;
 }
