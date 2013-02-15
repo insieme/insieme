@@ -104,6 +104,11 @@ void irt_log_init() {
 #else
 	irt_log_setting_s("IRT_ENABLE_ENERGY_INSTRUMENTATION", "disabled");
 #endif
+#ifdef IRT_ASTEROIDEA_STACKS
+	irt_log_setting_s("IRT_ASTEROIDEA_STACKS", "enabled");
+#else
+	irt_log_setting_s("IRT_ASTEROIDEA_STACKS", "disabled");
+#endif
 
 	irt_log_comment("Environment:");
 	irt_log_setting_u("cores_available", irt_affinity_cores_available());
