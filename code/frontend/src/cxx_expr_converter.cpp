@@ -973,10 +973,12 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	START_LOG_EXPR_CONVERSION(callExpr);
 	const core::IRBuilder& builder = convFact.builder;
 
-// TODO: initialization , array constructor
+// TODO:  array constructor
+
+	core::TypePtr&& irClassType = convFact.convertType( callExpr->getType().getTypePtr() );
 
 	// to begin with we translate the constructor as a regular function
-	auto f = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (callExpr->getConstructor()), false);
+	auto f = convFact.convertCtor(callExpr->getConstructor(), irClassType);
 	assert(f.isa<core::LambdaExprPtr>());
 
 	// with the transformed lambda, we can extract the body and re-type it into a constructor type
@@ -984,16 +986,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	auto params = f.as<core::LambdaExprPtr>()->getParameterList();
 
 	// update parameter list with a class-typed parameter in the first possition
-	core::TypePtr&& irClassType = builder.refType(convFact.convertType( callExpr->getType().getTypePtr() ));
-	
+	core::TypePtr&&  refToClass = builder.refType(irClassType);
 	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(callExpr->getConstructor()), 
 													 f.as<core::ExpressionPtr>(),
-													 irClassType, 
+													 refToClass, 
 													 core::FK_CONSTRUCTOR);
 
 	// reconstruct Arguments list, fist one is a scope location for the object
 	core::ExpressionList args;
-	args.push_back (builder.undefinedVar(irClassType));
+	args.push_back (builder.undefinedVar(refToClass));
 
 	// afterwards come the original arguments in the order AST specifies
 	clang::CXXConstructExpr::const_arg_iterator arg = callExpr->arg_begin();
@@ -1003,7 +1004,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	}
 
 	// build expression and we are done!!!
-	core::CallExprPtr ret  = builder.callExpr   (irClassType, newFunc, args);
+	core::CallExprPtr ret  = builder.callExpr (refToClass, newFunc, args);
 	if (VLOG_IS_ON(2)){
 		dumpPretty(&(*ret));
 	}
@@ -1011,8 +1012,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	return ret;
 
 	/*
-
-
 	// We get a pointer to the object that is constructed and we store the pointer to tv8he scope objects stack
 	//that holds the objects that are constructed in the current scope
 	core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(convFact.cxxCtx.thisStack2);

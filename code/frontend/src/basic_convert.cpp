@@ -69,6 +69,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/dump/text_dump.h"
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
@@ -833,65 +834,6 @@ core::FunctionTypePtr ConversionFactory::addGlobalsToFunctionType(const core::IR
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-//
-core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* callExpr,
-												   core::ExpressionPtr func, 
-												   core::TypePtr ownerClassType, 
-											   	   core::FunctionKind funcKind){
-
-	core::FunctionTypePtr ty = func.getType().as<core::FunctionTypePtr>();
-	// NOTE: has being already memberized???
-	if (ty.isMemberFunction() ||
-		ty.isConstructor() ||
-		ty.isDestructor() ){
-		return func.as<core::LambdaExprPtr>();
-	}
-
-
-	// with the transformed lambda, we can extract the body and re-type it into a constructor type
-	core::StatementPtr body = func.as<core::LambdaExprPtr>()->getBody();
-	auto params = func.as<core::LambdaExprPtr>()->getParameterList();
-
-	// update parameter list with a class-typed parameter in the first possition
-	auto thisVar = builder.variable(ownerClassType);
-	core::VariableList paramList = params.getElements();
-	paramList.insert(paramList.begin(), thisVar);
-	
-
-	// build the new function, 
-	// return type depends on type of function
-	core::TypePtr retTy; 
-	switch (funcKind){
-		case core::FK_MEMBER_FUNCTION:
-			retTy = func.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
-			break;
-		case core::FK_CONSTRUCTOR:
-			retTy = ownerClassType;
-			break;
-		default:
-			assert(false && "not implemented");
-	}
-	auto newFunctionType = builder.functionType(extractTypes(paramList), retTy, funcKind);
-
-	// every usage of this has being defined as a literal "this" typed alike the class
-	// substute every usage of this with the right variable
-	core::LiteralPtr thisLit =  builder.literal("this", ownerClassType);
-	core::StatementPtr newBody = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
-
-	// build the member function
-	core::LambdaExprPtr memberized =  builder.lambdaExpr (newFunctionType, paramList, newBody);
-	
-	// cache it
-	ctx.lambdaExprCache.erase(callExpr);
-	ctx.lambdaExprCache[callExpr] = memberized;
-	
-	return memberized;
-}
-
-
-
-
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) const {
@@ -1280,6 +1222,149 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	return retLambdaExpr;
 }
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//							CXX STUFF
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+////////////////////////////////////////////////////////////////////////////////
+//
+core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* callExpr,
+												   core::ExpressionPtr func, 
+												   core::TypePtr ownerClassType, 
+											   	   core::FunctionKind funcKind){
+
+	core::FunctionTypePtr ty = func.getType().as<core::FunctionTypePtr>();
+	// NOTE: has being already memberized???
+	if (ty.isMemberFunction() ||
+		ty.isConstructor() ||
+		ty.isDestructor() ){
+		return func.as<core::LambdaExprPtr>();
+	}
+
+
+	// with the transformed lambda, we can extract the body and re-type it into a constructor type
+	core::StatementPtr body = func.as<core::LambdaExprPtr>()->getBody();
+	auto params = func.as<core::LambdaExprPtr>()->getParameterList();
+
+	// update parameter list with a class-typed parameter in the first possition
+	auto thisVar = builder.variable(ownerClassType);
+	core::VariableList paramList = params.getElements();
+	paramList.insert(paramList.begin(), thisVar);
+	
+
+	// build the new function, 
+	// return type depends on type of function
+	core::TypePtr retTy; 
+	switch (funcKind){
+		case core::FK_MEMBER_FUNCTION:
+			retTy = func.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
+			break;
+		case core::FK_CONSTRUCTOR:
+			retTy = ownerClassType;
+			break;
+		default:
+			assert(false && "not implemented");
+	}
+	auto newFunctionType = builder.functionType(extractTypes(paramList), retTy, funcKind);
+
+	// every usage of this has being defined as a literal "this" typed alike the class
+	// substute every usage of this with the right variable
+	core::LiteralPtr thisLit =  builder.literal("this", ownerClassType);
+	core::StatementPtr newBody = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
+
+	// build the member function
+	core::LambdaExprPtr memberized =  builder.lambdaExpr (newFunctionType, paramList, newBody);
+	
+	// cache it
+	ctx.lambdaExprCache.erase(callExpr);
+	ctx.lambdaExprCache[callExpr] = memberized;
+	
+	return memberized;
+}
+
+//////////////////////////////////////////////////////////////////
+///
+core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorDecl* ctorDecl, core::TypePtr irClassType){
+
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	core::LambdaExprPtr oldCtor= convertFunctionDecl (llvm::cast<clang::FunctionDecl>(ctorDecl)).as<core::LambdaExprPtr>();
+	
+	core::FunctionTypePtr ty = oldCtor.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>();
+	//  has being already memberized??? then is already solved
+	if (ty.isMemberFunction() ||
+		ty.isConstructor() ||
+		ty.isDestructor() ){
+		return oldCtor.as<core::LambdaExprPtr>();
+	}
+
+	// this, and other stuff will be handled by memberize
+	// here we only need to care about initialization list.
+	
+	// generate code for each initialization
+	core::StatementList newBody;
+	
+	std::cout  << "ir class type: " << std::endl;
+
+	// for each initializer, transform it
+	clang::CXXConstructorDecl::init_const_iterator it  = ctorDecl->init_begin();
+	clang::CXXConstructorDecl::init_const_iterator end = ctorDecl->init_end();
+	for(; it != end; it++){
+
+		core::StringValuePtr ident;
+
+		if((*it)->isBaseInitializer ()){
+			assert(false && "base init not implemented");
+		}
+		else if ((*it)->isMemberInitializer ()){
+			ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
+		}
+		else if ((*it)->isAnyMemberInitializer ()){
+			assert(false && "any member not implemented");
+		}
+		else if ((*it)->isIndirectMemberInitializer ()){
+			assert(false && "indirect init not implemented");
+		}
+		else if ((*it)->isInClassMemberInitializer ()){
+			assert(false && "in class member not implemented");
+		}
+		else if ((*it)->isDelegatingInitializer ()){
+			assert(false && "delegating init not implemented");
+		}
+		else if ((*it)->isPackExpansion () ){
+			assert(false && "pack expansion not implemented");
+		}
+
+		// create access to the member of the struct/class
+		core::TypePtr memberTy = irClassType.as<core::StructTypePtr>()->getTypeOfMember(ident);
+		core::ExpressionPtr&& init = builder.callExpr(
+					builder.refType( memberTy ),
+					gen.getCompositeRefElem(),
+					toVector<core::ExpressionPtr>  (builder.literal("this", builder.refType(irClassType)),
+													builder.getIdentifierLiteral(ident), 
+													builder.getTypeLiteral(memberTy) )
+			);
+
+
+		core::ExpressionPtr expr = convertExpr((*it)->getInit());
+		core::StatementPtr assign = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, tryDeref(expr));
+
+		// append to statements
+		newBody.push_back(assign);
+	}
+	
+	// push original body
+	core::StatementPtr body = oldCtor->getBody();
+	newBody.push_back(body);
+
+
+	// NOTE: function type and paramList do not change here
+	core::LambdaExprPtr newCtor =  builder.lambdaExpr  (ty, 
+														oldCtor.getLambda().getParameterList(), 
+														builder.compoundStmt(newBody));
+	return newCtor;
+}
+
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							AST CONVERTER
