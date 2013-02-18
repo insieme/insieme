@@ -1,1 +1,1 @@
-g++ ^gcc ^c_seq cxx_seq
+g++ ^gcc ^c_seq cxx_seq cxx_run
