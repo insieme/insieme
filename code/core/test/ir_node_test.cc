@@ -191,6 +191,24 @@ namespace new_core {
 
 	}
 
+	TEST(Node, DumpTest) {
+
+		// just create some node and dump it
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto node = builder.genericType("A");
+
+		// to std::cout
+		dump(node);
+
+		// to selected output stream
+		std::stringstream buf;
+		dump(node, buf);
+		EXPECT_EQ("A\n", buf.str());
+
+	}
+
 } // end namespace new_core
 } // end namespace core
 } // end namespace insieme
