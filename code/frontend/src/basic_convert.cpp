@@ -832,6 +832,66 @@ core::FunctionTypePtr ConversionFactory::addGlobalsToFunctionType(const core::IR
 
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+//
+core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* callExpr,
+												   core::ExpressionPtr func, 
+												   core::TypePtr ownerClassType, 
+											   	   core::FunctionKind funcKind){
+
+	core::FunctionTypePtr ty = func.getType().as<core::FunctionTypePtr>();
+	// NOTE: has being already memberized???
+	if (ty.isMemberFunction() ||
+		ty.isConstructor() ||
+		ty.isDestructor() ){
+		return func.as<core::LambdaExprPtr>();
+	}
+
+
+	// with the transformed lambda, we can extract the body and re-type it into a constructor type
+	core::StatementPtr body = func.as<core::LambdaExprPtr>()->getBody();
+	auto params = func.as<core::LambdaExprPtr>()->getParameterList();
+
+	// update parameter list with a class-typed parameter in the first possition
+	auto thisVar = builder.variable(ownerClassType);
+	core::VariableList paramList = params.getElements();
+	paramList.insert(paramList.begin(), thisVar);
+	
+
+	// build the new function, 
+	// return type depends on type of function
+	core::TypePtr retTy; 
+	switch (funcKind){
+		case core::FK_MEMBER_FUNCTION:
+			retTy = func.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
+			break;
+		case core::FK_CONSTRUCTOR:
+			retTy = ownerClassType;
+			break;
+		default:
+			assert(false && "not implemented");
+	}
+	auto newFunctionType = builder.functionType(extractTypes(paramList), retTy, funcKind);
+
+	// every usage of this has being defined as a literal "this" typed alike the class
+	// substute every usage of this with the right variable
+	core::LiteralPtr thisLit =  builder.literal("this", ownerClassType);
+	core::StatementPtr newBody = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
+
+	// build the member function
+	core::LambdaExprPtr memberized =  builder.lambdaExpr (newFunctionType, paramList, newBody);
+	
+	// cache it
+	ctx.lambdaExprCache.erase(callExpr);
+	ctx.lambdaExprCache[callExpr] = memberized;
+	
+	return memberized;
+}
+
+
+
+
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) const {

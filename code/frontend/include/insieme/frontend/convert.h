@@ -285,6 +285,14 @@ protected:
 													const core::TypePtr& globals,
 													const core::FunctionTypePtr& funcType);
 
+	/**
+	 * turns an ir converted function into a member funtion of an object of specified class
+	 */
+	core::LambdaExprPtr  memberize (const clang::FunctionDecl* callExpr,
+									core::ExpressionPtr func, 
+									core::TypePtr ownerClassType, 
+									core::FunctionKind funcKind);
+
 	friend class ASTConverter;
 	friend class CXXASTConverter;
 
