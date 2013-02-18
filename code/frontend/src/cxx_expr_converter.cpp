@@ -79,8 +79,11 @@ using namespace exprutils;
 namespace insieme {
 namespace frontend {
 
-namespace utils {
-} // end utils namespace 
+namespace {
+
+
+
+} // end anonymous namespace 
 
 
 namespace conversion {
@@ -530,34 +533,20 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	const core::IRBuilder& builder = convFact.builder;
 
 	// FIXME: this is almost duplicated code from constructor case in which a single object is created
+	
+	// TODO: static methods
 
 	// to begin with we translate the constructor as a regular function
 	auto f = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (callExpr->getMethodDecl()), false);
 	assert(f.isa<core::LambdaExprPtr>());
 
-	// with the transformed lambda, we can extract the body and re-type it into a constructor type
-	core::StatementPtr body = f.as<core::LambdaExprPtr>()->getBody();
-	auto params = f.as<core::LambdaExprPtr>()->getParameterList();
-
-	// update parameter list with a class-typed parameter in the first possition
 	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
 	core::TypePtr&& irClassType = ownerObj->getType();
-	auto thisVar = builder.variable(irClassType);
-	core::VariableList paramList = params.getElements();
-	paramList.insert(paramList.begin(), thisVar);
-	
-	// build the new function, type FK_MEMBER_FUNCTION
-	// oposite to constructor, member functions have their own return value
-	core::TypePtr retTy = f.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
-	auto newFunctionType = builder.functionType(extractTypes(paramList), retTy, core::FK_MEMBER_FUNCTION);
-
-	// every usage of this has being defined as a literal "this" typed alike the class
-	// substute every usage of this with the right variable
-	auto thisLit =  builder.literal("this", irClassType);
-	core::StatementPtr newBody = core::transform::replaceAllGen (convFact.mgr, body, thisLit, thisVar, true);
-	
-	core::LambdaExprPtr newFunc = builder.lambdaExpr (newFunctionType, paramList, newBody);
-
+	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(callExpr->getMethodDecl()), 
+													 f.as<core::ExpressionPtr>(),
+													 irClassType, 
+													 core::FK_MEMBER_FUNCTION);
+ 
 	// reconstruct Arguments list, fist one is a scope location for the object 
 	// because is a member call, it should exist an instance of it somewhere
 	core::ExpressionList args;
@@ -571,6 +560,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	}
 
 	// build expression and we are done!!!
+	core::TypePtr retTy = newFunc.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
 	core::CallExprPtr      ret  = builder.callExpr   (retTy, newFunc, args);
 	if (VLOG_IS_ON(2)){
 		dumpPretty(&(*ret));
@@ -983,6 +973,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	START_LOG_EXPR_CONVERSION(callExpr);
 	const core::IRBuilder& builder = convFact.builder;
 
+// TODO: initialization , array constructor
+
 	// to begin with we translate the constructor as a regular function
 	auto f = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (callExpr->getConstructor()), false);
 	assert(f.isa<core::LambdaExprPtr>());
@@ -993,19 +985,11 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 
 	// update parameter list with a class-typed parameter in the first possition
 	core::TypePtr&& irClassType = builder.refType(convFact.convertType( callExpr->getType().getTypePtr() ));
-	auto thisVar = builder.variable(irClassType);
-	core::VariableList paramList = params.getElements();
-	paramList.insert(paramList.begin(), thisVar);
 	
-	// build the new function, type FK_CONSTRUCTOR
-	auto newFunctionType = builder.functionType(extractTypes(paramList), irClassType, core::FK_CONSTRUCTOR);
-
-	// every usage of this has being defined as a literal "this" typed alike the class
-	// substute every usage of this with the right variable
-	auto thisLit =  builder.literal("this", irClassType);
-	core::StatementPtr newBody = core::transform::replaceAllGen (convFact.mgr, body, thisLit, thisVar, true);
-	
-	core::LambdaExprPtr method = builder.lambdaExpr (newFunctionType, paramList, newBody);
+	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(callExpr->getConstructor()), 
+													 f.as<core::ExpressionPtr>(),
+													 irClassType, 
+													 core::FK_CONSTRUCTOR);
 
 	// reconstruct Arguments list, fist one is a scope location for the object
 	core::ExpressionList args;
@@ -1019,7 +1003,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	}
 
 	// build expression and we are done!!!
-	core::CallExprPtr      ret  = builder.callExpr   (irClassType, method, args);
+	core::CallExprPtr ret  = builder.callExpr   (irClassType, newFunc, args);
 	if (VLOG_IS_ON(2)){
 		dumpPretty(&(*ret));
 	}
@@ -1229,9 +1213,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const clang::CXXNewExpr* callExpr) {
 	START_LOG_EXPR_CONVERSION(callExpr);
 
-	//TODO: 
-	// - array allocation
-	// - inplace allocation
+	//TODO:  - array allocation - inplace allocation
 
 	core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 	assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
@@ -1763,8 +1745,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDefaultArgExpr(
 	*/
 }
 
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryExpr(
-		const clang::CXXBindTemporaryExpr* bindTempExpr) {
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryExpr(const clang::CXXBindTemporaryExpr* bindTempExpr) {
 	assert (false && "bind temporary expr");
 	/*
 
@@ -1789,8 +1770,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryEx
 	*/
 }
 
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(
-		const clang::ExprWithCleanups* cleanupExpr) {
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(const clang::ExprWithCleanups* cleanupExpr) {
 	assert (false && "exp with cleanpus expr");
 	/*
 
