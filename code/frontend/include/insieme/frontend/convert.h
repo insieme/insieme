@@ -285,13 +285,6 @@ protected:
 													const core::TypePtr& globals,
 													const core::FunctionTypePtr& funcType);
 
-	/**
-	 * turns an ir converted function into a member funtion of an object of specified class
-	 */
-	core::LambdaExprPtr  memberize (const clang::FunctionDecl* callExpr,
-									core::ExpressionPtr func, 
-									core::TypePtr ownerClassType, 
-									core::FunctionKind funcKind);
 
 	friend class ASTConverter;
 	friend class CXXASTConverter;
@@ -453,7 +446,34 @@ public:
 			const core::TypePtr& type, const bool zeroInit) const;
 
 //	virtual void collectGlobalVar(const clang::FunctionDecl* funcDecl);
+
 	void buildGlobalStruct(analysis::GlobalVarCollector &collector);
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  CPP STUFF   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	/**
+	 * turns an ir converted function into a member funtion of an object of specified class
+	 * @param callExpr the clang Decl of the function to be converted, it might be a Ctor, member
+	 * or dtor
+	 * @param func the Insieme IR converted function, might come from the cache or just converted
+	 * with convertFuncDecl
+	 * @param ownerClassType, the IR type of the owner class of the member function
+	 * @param funcKind is it a Ctor, Member or dtor?
+	 * @return the lambda expression corresponding a Member function 
+	 */
+	core::LambdaExprPtr  memberize (const clang::FunctionDecl* callDecl,
+									core::ExpressionPtr func, 
+									core::TypePtr ownerClassType, 
+									core::FunctionKind funcKind);
+
+	/**
+	 * handles implicit behaviour of a constructor call,
+	 * NOTE!! does not memberize, still need to call memberize afterwards
+	 * @param ctorDecl the constructor function declaration
+	 * @param irClassType the class to be build
+	 * @return the lambda expression of the constructor, NOT memberized
+	 */
+	core::LambdaExprPtr convertCtor (const clang::CXXConstructorDecl* ctorDecl, core::TypePtr irClassType);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {
