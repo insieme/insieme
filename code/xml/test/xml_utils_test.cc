@@ -48,6 +48,9 @@ using namespace insieme::core;
 using namespace insieme::core::lang;
 using namespace insieme::xml;
 
+namespace insieme {
+namespace xml {
+
 // ------------------- DummyAnnotation ---------------------------------
 class DummyAnnotation : public NodeAnnotation {
 public:
@@ -1250,3 +1253,44 @@ TEST(XmlTest, VariableIntTypeParamTest) {
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
+
+bool check(NodePtr node) {
+
+	XmlUtil xml;
+	xml.convertIrToDom(node);
+	string s1 = xml.convertDomToString();
+	xml.convertStringToDom(s1, true);
+
+	NodeManager manager2;
+	NodePtr restored = xml.convertDomToIr(manager2);
+
+	EXPECT_TRUE(*node == *restored)
+		<< "Orig: " << *node << "\n"
+		<< "Rest: " << *restored << "\n";
+
+	return node!=restored && *node == *restored;
+}
+
+TEST(XmlTest, FunctionKindTest) {
+	NodeManager mgr;
+
+	IRBuilder builder(mgr);
+
+	TypePtr A = builder.refType(builder.genericType("A"));
+	TypePtr B = builder.genericType("B");
+
+	FunctionTypePtr funA = builder.functionType(toVector(A), B, FK_PLAIN);
+	FunctionTypePtr funB = builder.functionType(toVector(A), B, FK_CLOSURE);
+	FunctionTypePtr funC = builder.functionType(toVector(A), B, FK_CONSTRUCTOR);
+	FunctionTypePtr funD = builder.functionType(toVector(A), B, FK_DESTRUCTOR);
+	FunctionTypePtr funE = builder.functionType(toVector(A), B, FK_MEMBER_FUNCTION);
+
+	EXPECT_TRUE(check(funA)) << *funA;
+	EXPECT_TRUE(check(funB)) << *funB;
+	EXPECT_TRUE(check(funC)) << *funC;
+	EXPECT_TRUE(check(funD)) << *funD;
+	EXPECT_TRUE(check(funE)) << *funE;
+}
+
+} // end namespace xml
+} // end namespace insieme
