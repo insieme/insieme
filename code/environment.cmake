@@ -94,6 +94,13 @@ if (NOT third_part_libs_home )
 endif()
 
 # - boost
+if ( NOT DEFINED BOOST_ROOT )
+	if ( DEFINED $ENV{BOOST_ROOT} )
+		set ( BOOST_ROOT $ENV{BOOST_ROOT} CACHE PATH "Boost installation directory." )
+	else()
+		set ( BOOST_ROOT "${third_part_libs_home}/boost-latest" CACHE PATH "Boost installation directory." )
+	endif()
+endif()
 set(Boost_USE_MULTITHREADED Off)
 find_package( Boost 1.48 COMPONENTS program_options system filesystem regex )
 include_directories( ${Boost_INCLUDE_DIRS} )
