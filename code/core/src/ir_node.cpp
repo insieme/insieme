@@ -250,7 +250,9 @@ namespace core {
 } // end namespace core
 } // end namespace insieme
 
-
+void dump(const insieme::core::NodePtr& node, std::ostream& out) {
+	out << insieme::core::printer::PrettyPrinter(node) << std::endl;
+}
 
 void dumpText(const void* node) {
 	std::cout << insieme::core::dump::text::TextDump(insieme::core::NodePtr((insieme::core::Node*)node)) << std::endl;

@@ -1183,6 +1183,7 @@ namespace core {
  * compiler within gdb to print IR nodes.
  */
 
+void dump(const insieme::core::NodePtr&, std::ostream& out = std::cout);
 void dumpText(const void* node);
 void dumpPretty(const void* node);
 void dumpPrettyFull(const void* node);
