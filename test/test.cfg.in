@@ -2,8 +2,8 @@
 SRC_DIR: 	${CMAKE_SOURCE_DIR}
 BIN_DIR: 	${CMAKE_BINARY_DIR}
 
-comp.gcc: 	 	Conf("${CMAKE_C_COMPILER}", "GCC")
-comp.g++: 		Conf("${CMAKE_CXX_COMPILER}", "G++")
+comp.gcc: 	 	Conf("gcc", "GCC")
+comp.g++: 		Conf("g++", "G++")
 comp.insieme: 	Conf("%(BIN_DIR)s/code/driver/main", "InsiemeC")
 comp.mpicc:		Conf("${MPI_C_COMPILER}", "MPICC")
 
