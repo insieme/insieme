@@ -532,17 +532,17 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	START_LOG_EXPR_CONVERSION(callExpr);
 	const core::IRBuilder& builder = convFact.builder;
 
-	// FIXME: this is almost duplicated code from constructor case in which a single object is created
-	
 	// TODO: static methods
+	
+	const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
 	// to begin with we translate the constructor as a regular function
-	auto f = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (callExpr->getMethodDecl()), false);
+	auto f = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (methodDecl), false);
 	assert(f.isa<core::LambdaExprPtr>());
 
 	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
 	core::TypePtr&& irClassType = ownerObj->getType();
-	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(callExpr->getMethodDecl()), 
+	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl), 
 													 f.as<core::ExpressionPtr>(),
 													 irClassType, 
 													 core::FK_MEMBER_FUNCTION);
@@ -551,6 +551,11 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	// because is a member call, it should exist an instance of it somewhere
 	core::ExpressionList args;
 	args.push_back (ownerObj);
+
+	// append globalVar to arguments if needed
+	if ( ctx.globalFuncSet.find(methodDecl) != ctx.globalFuncSet.end() ) {
+		args.push_back(ctx.globalVar);
+	}
 
 	// afterwards come the original arguments in the order AST specifies
 	clang::CXXMemberCallExpr::const_arg_iterator arg = callExpr->arg_begin();
@@ -975,10 +980,12 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 
 // TODO:  array constructor
 
+	const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
+
 	core::TypePtr&& irClassType = convFact.convertType( callExpr->getType().getTypePtr() );
 
 	// to begin with we translate the constructor as a regular function
-	auto f = convFact.convertCtor(callExpr->getConstructor(), irClassType);
+	auto f = convFact.convertCtor(ctorDecl, irClassType);
 	assert(f.isa<core::LambdaExprPtr>());
 
 	// with the transformed lambda, we can extract the body and re-type it into a constructor type
@@ -987,7 +994,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 
 	// update parameter list with a class-typed parameter in the first possition
 	core::TypePtr&&  refToClass = builder.refType(irClassType);
-	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(callExpr->getConstructor()), 
+	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
 													 f.as<core::ExpressionPtr>(),
 													 refToClass, 
 													 core::FK_CONSTRUCTOR);
@@ -995,6 +1002,11 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	// reconstruct Arguments list, fist one is a scope location for the object
 	core::ExpressionList args;
 	args.push_back (builder.undefinedVar(refToClass));
+
+	// append globalVar to arguments if needed
+	if ( ctx.globalFuncSet.find(ctorDecl) != ctx.globalFuncSet.end() ) {
+		args.push_back(ctx.globalVar);
+	}
 
 	// afterwards come the original arguments in the order AST specifies
 	clang::CXXConstructExpr::const_arg_iterator arg = callExpr->arg_begin();

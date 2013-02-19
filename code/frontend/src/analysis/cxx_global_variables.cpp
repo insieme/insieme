@@ -127,7 +127,6 @@ bool CXXGlobalVarCollector::VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr*
 }
 
 bool CXXGlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
-	/*
 	Expr* 		 callee = callExpr->getCallee()->IgnoreParens();
 	MemberExpr* 	 memberExpr = cast<MemberExpr>(callee);
 	CXXMethodDecl* methodDecl = cast<CXXMethodDecl>(memberExpr->getMemberDecl());
@@ -135,26 +134,16 @@ bool CXXGlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* cal
 	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(methodDecl);
 	const FunctionDecl *definition = NULL;
 
-	// save the translation unit for the current function
-	const clang::idx::TranslationUnit* old = currTU;
+	std::pair<clang::Decl*, insieme::frontend::TranslationUnit*> ret;
 	if(!funcDecl->hasBody(definition)) {
 
 		// if the function is not defined in this translation unit, maybe it is defined in another
 		// we already loaded  use the clang indexer to lookup the definition for this function
 		// declarations
-		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
-		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
-		definition = ret.first;
-		currTU = ret.second;
-	}
-
-	//if virtual function call -> add the enclosing function to usingGlobals
-	if( methodDecl->isVirtual() ) {
-		collectVTableData(methodDecl->getParent());
-
-		//enclosing function needs access to globals as virtual function tables are stored as global variable
-		VLOG(2) << "possible virtual call " << methodDecl->getParent()->getNameAsString() << "->" << methodDecl->getNameAsString();
-		usingGlobals.insert( funcStack.top() );
+		ret = indexer.getDefAndTUforDefinition(funcDecl);
+		if (!ret.first)
+			return true;
+		definition = llvm::cast<FunctionDecl>(ret.first);
 	}
 
 	if(definition) {
@@ -168,10 +157,7 @@ bool CXXGlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* cal
 			usingGlobals.insert( funcStack.top() );
 		}
 	}
-	// reset the translation unit to the previous one
-	currTU = old;
 
-	*/
 	return true;
 }
 

@@ -1237,7 +1237,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* callExpr,
+core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl,
 												   core::ExpressionPtr func, 
 												   core::TypePtr ownerClassType, 
 											   	   core::FunctionKind funcKind){
@@ -1285,8 +1285,8 @@ core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* ca
 	core::LambdaExprPtr memberized =  builder.lambdaExpr (newFunctionType, paramList, newBody);
 	
 	// cache it
-	ctx.lambdaExprCache.erase(callExpr);
-	ctx.lambdaExprCache[callExpr] = memberized;
+	ctx.lambdaExprCache.erase(funcDecl);
+	ctx.lambdaExprCache[funcDecl] = memberized;
 	
 	return memberized;
 }
@@ -1312,8 +1312,6 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 	// generate code for each initialization
 	core::StatementList newBody;
 	
-	std::cout  << "ir class type: " << std::endl;
-
 	// for each initializer, transform it
 	clang::CXXConstructorDecl::init_const_iterator it  = ctorDecl->init_begin();
 	clang::CXXConstructorDecl::init_const_iterator end = ctorDecl->init_end();
