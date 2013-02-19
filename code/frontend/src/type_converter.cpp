@@ -124,6 +124,10 @@ namespace utils {
 				 return elabTy->getNamedType().getTypePtr();
 			}
 
+			if( const ArrayType* arrTy = llvm::dyn_cast<ArrayType>(type) ) {
+				 return arrTy->getElementType().getTypePtr();
+			}
+
 			return type;
 		};
 
@@ -548,18 +552,34 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 					);
 					typeGraph.print(std::cerr);
 				}
+				
+				// get the name of the struct which are converting into IR 
+				auto decl_name = recDecl->getName();
+				static int cnt = 0;
+
+				if (decl_name.empty()) {
+					// this is an anonymous struct, we need to generate a name 
+					decl_name = "__insieme_struct_" + std::to_string(cnt++);
+				}
 
 				// we create a TypeVar for each type in the mutual dependence
 				convFact.ctx.recVarMap.insert(
-						std::make_pair(tagDecl, builder.typeVariable(recDecl->getName()))
+						std::make_pair(tagDecl, builder.typeVariable(decl_name))
 					);
 
 				// when a subtype is resolved we aspect to already have these variables in the map
 				if(!convFact.ctx.isRecSubType) {
 					std::for_each(components.begin(), components.end(),
 						[ this ] (std::set<const TagDecl*>::value_type cur) {
+							auto decl_name = cur->getName();
+
+							if (decl_name.empty()) {
+								// this is an anonymous struct, we need to generate a name 
+								decl_name = "__insieme_struct_" + std::to_string(cnt++);
+							}
+
 							this->convFact.ctx.recVarMap.insert(
-									std::make_pair(cur, builder.typeVariable(cur->getName()))
+									std::make_pair(cur, builder.typeVariable(decl_name))
 								);
 						}
 					);
@@ -628,7 +648,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 						this->convFact.ctx.recVarMap.erase(decl);
 
 						definitions.push_back( this->builder.recTypeBinding(var, this->Visit(const_cast<Type*>(decl->getTypeForDecl()))) );
-						var->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(decl->getNameAsString()) );
+						var->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(var->getVarName()->getValue()) );
 
 						// reinsert the TypeVar in the map in order to solve the other recursive types
 						this->convFact.ctx.recVarMap.insert( std::make_pair(decl, var) );
