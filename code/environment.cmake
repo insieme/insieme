@@ -95,7 +95,7 @@ endif()
 
 # - boost
 if ( NOT DEFINED BOOST_ROOT )
-	if ( DEFINED $ENV{BOOST_ROOT} )
+	if ( NOT $ENV{BOOST_ROOT} EQUAL "" )
 		set ( BOOST_ROOT $ENV{BOOST_ROOT} CACHE PATH "Boost installation directory." )
 	else()
 		set ( BOOST_ROOT "${third_part_libs_home}/boost-latest" CACHE PATH "Boost installation directory." )
