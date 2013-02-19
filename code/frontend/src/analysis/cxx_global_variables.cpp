@@ -325,11 +325,12 @@ bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorE
 		}
 	}
 
+	std::pair<clang::Decl*, insieme::frontend::TranslationUnit*> ret;
 	if(!funcDecl->hasBody(definition)) {
 		// if the function is not defined in this translation unit, maybe it is defined in another
 		// we already loaded  use the clang indexer to lookup the definition for this function
 		// declarations
-		ret = indexer.getDefAndTUforDefinition(calleeDecl);
+		ret = indexer.getDefAndTUforDefinition(funcDecl);
 		if (!ret.first)
 			return true;
 		definition = llvm::cast<FunctionDecl>(ret.first);
