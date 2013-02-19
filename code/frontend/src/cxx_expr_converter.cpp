@@ -355,7 +355,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const cla
 
 		// We find a definition, we lookup if this variable needs to access the globals, in that case the capture
 		// list needs to be initialized with the value of global variable in the current scope
-		if (ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end()) {
+		if (ctx.globalFuncSet.find(definition) != ctx.globalFuncSet.end()) {
 			// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
 			// current context
 			assert( ctx.globalVar && "No global definitions forwarded to this point");
@@ -664,7 +664,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	const FunctionDecl* definition = funcDecl;
 	// We find a definition, we lookup if this variable needs to access the globals, in that case the capture
 	// list needs to be initialized with the value of global variable in the current scope
-	if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
+	if ( ctx.globalFuncSet.find(definition) != ctx.globalFuncSet.end() ) {
 		// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
 		// current context
 		assert(ctx.globalVar && "No global definitions forwarded to this point");
@@ -941,7 +941,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 
 	// We find a definition, we lookup if this variable needs to access the globals, in that case the capture
 	// list needs to be initialized with the value of global variable in the current scope
-	if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
+	if ( ctx.globalFuncSet.find(definition) != ctx.globalFuncSet.end() ) {
 		// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
 		// current context
 		assert(ctx.globalVar && "No global definitions forwarded to this point");
@@ -1084,7 +1084,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 
 	// We find a definition, we lookup if this variable needs to access the globals, in that case the capture
 	// list needs to be initialized with the value of global variable in the current scope
-	if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
+	if ( ctx.globalFuncSet.find(definition) != ctx.globalFuncSet.end() ) {
 
 		// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
 		// current context
@@ -1353,7 +1353,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 		const FunctionDecl* definition = funcDecl;
 		// We find a definition, we lookup if this variable needs to access the globals, in that case the capture
 		// list needs to be initialized with the value of global variable in the current scope
-		if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
+		if ( ctx.globalFuncSet.find(definition) != ctx.globalFuncSet.end() ) {
 			// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
 			// current context
 			assert(ctx.globalVar && "No global definitions forwarded to this point");
@@ -1475,7 +1475,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(cons
 		bool isVirtualDtor = dtorDecl->isVirtual();
 		bool isDtorUsingGlobals = false;
 		//check if dtor uses globals
-		if ( ctx.globalFuncMap.find(dtorDecl) != ctx.globalFuncMap.end() ) {
+		if ( ctx.globalFuncSet.find(dtorDecl) != ctx.globalFuncSet.end() ) {
 			isDtorUsingGlobals=true;
 		}
 

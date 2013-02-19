@@ -58,7 +58,6 @@ namespace frontend {
 
 namespace conversion {
 class ConversionFactory;
-class CXXConversionFactory;
 }
 
 namespace analysis {
@@ -80,9 +79,6 @@ public:
 	 */
 	typedef std::set<const clang::VarDecl*> GlobalVarSet;
 
-	// clang [3.0] typedef std::map<const clang::VarDecl*, const clang::idx::TranslationUnit*> VarTUMap;
-	typedef std::map<const clang::VarDecl*, const insieme::frontend::TranslationUnit*> VarTUMap;
-
 	/*
 	 * Set of functions already visited, this avoid the solver to loop in the
 	 * case of recursive function calls
@@ -97,22 +93,13 @@ public:
 	 * be used to decide whether the data structure containing the global variables
 	 * has to be forwarded through this function via the capture list
 	 */
-	typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
+	typedef std::set<const clang::FunctionDecl*> UseGlobalFuncSet;
 
 	typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
 	typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
 
-	GlobalVarCollector(
-		conversion::ConversionFactory& 				convFact,
-		const insieme::frontend::TranslationUnit* 	currTU, 
-		insieme::frontend::utils::Indexer& 			indexer,
-		UseGlobalFuncMap& 							globalFuncMap)
-	: 
-	  convFact(convFact),
-	  currTU(currTU), 
-	  indexer(indexer), 
-	  usingGlobals(globalFuncMap) {
-	}
+	GlobalVarCollector(conversion::ConversionFactory& convFact);
+
 	virtual ~GlobalVarCollector() {};
 
 	bool VisitStmt(clang::Stmt* stmt);
@@ -154,9 +141,20 @@ public:
 	 * indirectly) to the global struct which will be passed accordingly
 	 * @return
 	 */
-	const UseGlobalFuncMap& getUsingGlobals() const { return usingGlobals; }
+	const UseGlobalFuncSet& getUsingGlobals() const { return usingGlobals; }
 	
 	const GlobalIdentMap& getIdentifierMap() const { return varIdentMap; }
+
+	/**/
+	void reset() { 
+		globals.clear();
+		varIdentMap.clear();
+		visited.clear();
+		while(!funcStack.empty()) {
+			funcStack.pop();
+		}
+		usingGlobals.clear();
+	}
 
 	void dump(std::ostream& out) const ;
 
@@ -168,16 +166,12 @@ protected:
 	buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, const clang::FunctionDecl* func = NULL ) const;
 
 	conversion::ConversionFactory& 		convFact;
+	insieme::frontend::utils::Indexer& 	indexer;
 	GlobalVarSet						globals;
-	VarTUMap							varTU;
 	GlobalIdentMap						varIdentMap;
-	const insieme::frontend::TranslationUnit* 	currTU;
 	VisitedFuncSet 						visited;
 	FunctionStack						funcStack;
-
-	//clang::idx::Indexer& 				indexer;
-	insieme::frontend::utils::Indexer& 				indexer;
-	UseGlobalFuncMap& 					usingGlobals;
+	UseGlobalFuncSet 					usingGlobals;
 };
 
 
@@ -187,14 +181,10 @@ protected:
 class CXXGlobalVarCollector : public GlobalVarCollector {
 	public:
 
-		CXXGlobalVarCollector(
-				conversion::ConversionFactory& 		convFact,
-				const insieme::frontend::TranslationUnit* 	currTU,
-				insieme::frontend::utils::Indexer& 				indexer,
-				UseGlobalFuncMap& 					globalFuncMap)
-	:
-	  GlobalVarCollector(convFact, currTU, indexer, globalFuncMap)
-		{ }
+	CXXGlobalVarCollector(
+				conversion::ConversionFactory& 		convFact)
+	: GlobalVarCollector(convFact) { }
+
 	virtual ~CXXGlobalVarCollector() {};
 
 	virtual bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr);

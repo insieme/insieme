@@ -318,13 +318,7 @@ const core::ProgramPtr& Program::convert() {
 
 	indexAndAnalyze();
 
-	std::shared_ptr<conversion::ASTConverter> astConvPtr;
-	if(isCXX) {
-		VLOG(1) << "detected C++ file";
-		astConvPtr = std::make_shared<conversion::CXXASTConverter>(mMgr, *this);
-	} else {
-		astConvPtr = std::make_shared<conversion::ASTConverter>  (mMgr, *this);
-	}
+	std::shared_ptr<conversion::ASTConverter> astConvPtr(std::make_shared<conversion::ASTConverter>  (mMgr, *this, isCXX));
 
 	// filters all the pragma across all the compilation units which are of type insieme::mark
 	auto pragmaMarkFilter = [](const pragma::Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };

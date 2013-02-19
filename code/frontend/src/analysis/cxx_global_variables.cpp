@@ -307,7 +307,6 @@ bool CXXGlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 }
 
 bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
-	/*
 	CXXConstructorDecl* ctorDecl = ctorExpr->getConstructor();
 	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(ctorDecl);
 	const FunctionDecl *definition = NULL;
@@ -315,8 +314,6 @@ bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorE
 	CXXRecordDecl* recDecl = ctorExpr->getConstructor()->getParent();
 
 	if( recDecl->isPolymorphic() ) {
-		collectVTableData(recDecl);
-
 		// go through virtual functions and check them for globals/virtual function calls
 		for(clang::CXXRecordDecl::method_iterator mit = recDecl->method_begin(); mit != recDecl->method_end(); mit++) {
 			if( mit->isVirtual() ) {
@@ -328,17 +325,14 @@ bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorE
 		}
 	}
 
-	// save the translation unit for the current function
-	const clang::idx::TranslationUnit* old = currTU;
 	if(!funcDecl->hasBody(definition)) {
-
 		// if the function is not defined in this translation unit, maybe it is defined in another
 		// we already loaded  use the clang indexer to lookup the definition for this function
 		// declarations
-		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
-		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
-		definition = ret.first;
-		currTU = ret.second;
+		ret = indexer.getDefAndTUforDefinition(calleeDecl);
+		if (!ret.first)
+			return true;
+		definition = llvm::cast<FunctionDecl>(ret.first);
 	}
 
 	// handle initializers
@@ -369,10 +363,7 @@ bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorE
 			usingGlobals.insert( funcStack.top() );
 		}
 	}
-	// reset the translation unit to the previous one
-	currTU = old;
 
-	*/
 	return true;
 }
 

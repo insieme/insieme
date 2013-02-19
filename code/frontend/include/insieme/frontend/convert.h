@@ -186,8 +186,8 @@ protected:
 		 * function is converted the data structure containing global variables has to
 		 * be correctly forwarded by using the capture list
 		 */
-		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
-		UseGlobalFuncMap globalFuncMap;
+		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncSet;
+		UseGlobalFuncSet globalFuncSet;
 
 		typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
 		GlobalIdentMap globalIdentMap;
@@ -244,6 +244,8 @@ protected:
 	class CXXExprConverter;
 	std::shared_ptr<ExprConverter> exprConvPtr;
 
+	std::shared_ptr<analysis::GlobalVarCollector> globColl;
+
 	/**
 	 * the program itself
 	 */
@@ -287,7 +289,6 @@ protected:
 
 
 	friend class ASTConverter;
-	friend class CXXASTConverter;
 
 public:
 
@@ -445,10 +446,6 @@ public:
 	virtual core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
 			const core::TypePtr& type, const bool zeroInit) const;
 
-//	virtual void collectGlobalVar(const clang::FunctionDecl* funcDecl);
-
-	void buildGlobalStruct(analysis::GlobalVarCollector &collector);
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  CPP STUFF   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
@@ -474,6 +471,8 @@ public:
 	 * @return the lambda expression of the constructor, NOT memberized
 	 */
 	core::LambdaExprPtr convertCtor (const clang::CXXConstructorDecl* ctorDecl, core::TypePtr irClassType);
+
+	void buildGlobalStruct(const clang::FunctionDecl* funcDecl);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {
@@ -493,7 +492,8 @@ protected:
 	core::ProgramPtr mProgram;
 
 public:
-	ASTConverter(core::NodeManager& mgr, Program& prog, bool cpp =false):
+	
+	ASTConverter(core::NodeManager& mgr, Program& prog, bool cpp=false):
 			mgr(mgr),
 			mProg(prog),
 			mFact(mgr, prog, cpp),
@@ -506,48 +506,7 @@ public:
 
 	core::CallExprPtr handleBody(const clang::Stmt* body, const TranslationUnit& tu);
 
-	virtual	void collectGlobals(const clang::FunctionDecl* fDecl){
-		// Extract globals starting from this entry point
-		const clang::FunctionDecl* def = const_cast<clang::FunctionDecl*>(fDecl);
-		const TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
-
-		mFact.ctx.globalFuncMap.clear();
-		analysis::GlobalVarCollector globColl(mFact, clangTU , mFact.program.getIndexer(), mFact.ctx.globalFuncMap);
-
-		globColl(fDecl);
-		globColl(mFact.getProgram().getTranslationUnits());
-
-		mFact.buildGlobalStruct(globColl);
-	}
 };
-
-// --------------------------------- CXXASTConverter ---------------------------
-///
-///   since C++ is a superset of C, it makes sense that most of the functionaly of the
-///   translation is hold by the C converter
-///	  this class only implements the specific C++ functionalities
-class CXXASTConverter : public ASTConverter {
-
-public:
-	CXXASTConverter(core::NodeManager& mgr, Program& prog) :
-		ASTConverter(mgr, prog, true){
-	}
-	
-	virtual	void collectGlobals(const clang::FunctionDecl* fDecl){
-		// Extract globals starting from this entry point
-		const clang::FunctionDecl* def = const_cast<clang::FunctionDecl*>(fDecl);
-		const TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
-
-		mFact.ctx.globalFuncMap.clear();
-		analysis::CXXGlobalVarCollector globColl(mFact, clangTU , mFact.program.getIndexer(), mFact.ctx.globalFuncMap);
-
-		globColl(fDecl);
-		globColl(mFact.getProgram().getTranslationUnits());
-
-		mFact.buildGlobalStruct(globColl);
-	}
-};
-
 
 } // End conversion namespace
 } // End frontend namespace

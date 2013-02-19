@@ -811,7 +811,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 		
 		// need tolookup if this fuction needs to access the globals, in that case the capture
 		// list needs to be initialized with the value of global variable in the current scope
-		if (ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end()) {
+		if (ctx.globalFuncSet.find(definition) != ctx.globalFuncSet.end()) {
 			// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
 			// current context
 			assert( ctx.globalVar && "No global definitions forwarded to this point");

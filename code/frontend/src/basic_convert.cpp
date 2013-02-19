@@ -139,15 +139,16 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool
 		// cppcheck-suppress exceptNew
 		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()){
 
-		if (!isCpp){
-			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
-			typeConvPtr = std::make_shared<CTypeConverter>(*this, prog);
-			exprConvPtr = std::make_shared<CExprConverter>(*this, prog);
-		}
-		else{
+		if (isCpp){
 			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
 			typeConvPtr = std::make_shared<CXXTypeConverter>(*this, prog);
 			exprConvPtr = std::make_shared<CXXExprConverter>(*this, prog);
+			globColl = std::make_shared<analysis::CXXGlobalVarCollector>(*this);
+		} else{
+			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
+			typeConvPtr = std::make_shared<CTypeConverter>(*this, prog);
+			exprConvPtr = std::make_shared<CExprConverter>(*this, prog);
+			globColl = std::make_shared<analysis::GlobalVarCollector>(*this);
 		}
 }
 
@@ -166,7 +167,13 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool
 
 //////////////////////////////////////////////////////////////////
 ///
-void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector &collector){
+void ConversionFactory::buildGlobalStruct(const clang::FunctionDecl* fDecl){
+	// Reset globalVarCollector
+	globColl->reset();	
+
+	// Extract globals starting from this entry point
+	(*globColl)(fDecl);
+	(*globColl)(getProgram().getTranslationUnits());
 
 	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Thread private requires to collect all the variables which are marked to be threadprivate
@@ -174,14 +181,15 @@ void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector &collecto
 
 	//~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//Omp flush clause forces the flushed variable to be volatile
-	//omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
+	//omp::collectVolatile(getPragmaMap(), ctx.volatiles);
 	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	ctx.globalStruct = collector.createGlobalStruct();
+	ctx.globalStruct = globColl->createGlobalStruct();
 	if (ctx.globalStruct.first) {
 		ctx.globalVar = builder.variable(builder.refType(ctx.globalStruct.first));
 	}
-	ctx.globalIdentMap = collector.getIdentifierMap();
+	ctx.globalIdentMap = globColl->getIdentifierMap();
+	ctx.globalFuncSet = globColl->getUsingGlobals();
 
 	VLOG(1) << "globals collected";
 	VLOG(2) << ctx.globalStruct.first;
@@ -962,7 +970,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			
 			// In the case the function is receiving the global variables the signature needs to be
 			// modified by allowing the global struct to be passed as an argument
-			if ( ctx.globalFuncMap.find(funDecl) != ctx.globalFuncMap.end() ) {
+			if ( ctx.globalFuncSet.find(funDecl) != ctx.globalFuncSet.end() ) {
 				funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
 			}
 			core::VariablePtr&& var = builder.variable( funcType );
@@ -1000,7 +1008,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// global struct or not
 	core::VariablePtr parentGlobalVar = ctx.globalVar;
 
-	if (!isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end()) {
+	if (!isEntryPoint && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end()) {
 		// declare a new variable that will be used to hold a reference to the global data stucture
 		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStruct.first) );
 		params.push_back( var );
@@ -1096,7 +1104,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
 
 	// if this function gets the globals in the capture list we have to create a different type
-	if (!isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end()) {
+	if (!isEntryPoint && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end()) {
 		// declare a new variable that will be used to hold a reference to the global data stucture
 		funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
 	}
@@ -1401,18 +1409,17 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 
 	// Handling of the translation unit: we have to make sure to load the translation unit where the function is
 	// defined before starting the parser otherwise reading literals results in wrong values.
-	const FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
-	const TranslationUnit* rightTU = mFact.getTranslationUnitForDefinition(def);
+	const TranslationUnit* rightTU = mFact.getTranslationUnitForDefinition(funcDecl);
 	assert(rightTU && "Translation unit for function not found.");
 	mFact.currTU.push(rightTU);
 
-	// Collect global variables for the whole program
+	// Collect global variables for the whole program and build globalStruct
 	insieme::utils::Timer t("Globals.collect");
-	collectGlobals(funcDecl);
+	mFact.buildGlobalStruct(funcDecl);
 	t.stop();
 	LOG(INFO) << t;
 
-	const core::ExpressionPtr& expr = mFact.convertFunctionDecl(def, true).as<core::ExpressionPtr>();
+	const core::ExpressionPtr& expr = mFact.convertFunctionDecl(funcDecl, true).as<core::ExpressionPtr>();
 
 	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
 
