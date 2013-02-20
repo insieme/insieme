@@ -239,8 +239,8 @@ namespace types {
 
 		// -- plain function types vs. closure types
 
-		funA = builder.functionType(toVector(int4), int2, true);
-		funB = builder.functionType(toVector(int4), int2, false);
+		funA = builder.functionType(toVector(int4), int2, FK_PLAIN);
+		funB = builder.functionType(toVector(int4), int2, FK_CLOSURE);
 
 		EXPECT_EQ("((int<4>)->int<2>)", toString(*funA));
 		EXPECT_EQ("((int<4>)=>int<2>)", toString(*funB));
@@ -251,8 +251,8 @@ namespace types {
 		EXPECT_PRED2(isSubTypeOf, funB, funB);
 
 
-		funA = builder.functionType(toVector(int4), int2, true);
-		funB = builder.functionType(toVector(int2), int2, false);
+		funA = builder.functionType(toVector(int4), int2, FK_PLAIN);
+		funB = builder.functionType(toVector(int2), int2, FK_CLOSURE);
 
 		EXPECT_EQ("((int<4>)->int<2>)", toString(*funA));
 		EXPECT_EQ("((int<2>)=>int<2>)", toString(*funB));

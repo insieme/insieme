@@ -426,7 +426,7 @@ OptionalMessageList BindExprTypeCheck::visitBindExpr(const BindExprAddress& addr
 	TypePtr isType = address->getType();
 	TypePtr result = address->getCall()->getType();
 
-	FunctionTypePtr funType = FunctionType::get(manager, param, result, false);
+	FunctionTypePtr funType = FunctionType::get(manager, param, result, FK_CLOSURE);
 	if (*funType != *isType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_FUNCTION_TYPE,

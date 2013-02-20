@@ -258,7 +258,7 @@ TEST(TypeTest, FunctionType) {
 	FunctionTypePtr funTypeA = FunctionType::get(manager, toVector(dummyA), resultA);
 	FunctionTypePtr funTypeB = FunctionType::get(manager, toVector(alpha), resultB);
 	FunctionTypePtr funTypeC = FunctionType::get(manager, toVector(alpha, dummyA), resultB);
-	FunctionTypePtr funTypeD = FunctionType::get(manager, toVector(dummyA), resultA, false);
+	FunctionTypePtr funTypeD = FunctionType::get(manager, toVector(dummyA), resultA, FK_CLOSURE);
 
 	FunctionTypePtr funTypeE = FunctionType::get(manager, toVector(obj, dummyA), FK_CONSTRUCTOR);
 	FunctionTypePtr funTypeF = FunctionType::get(manager, toVector(obj), FK_DESTRUCTOR);

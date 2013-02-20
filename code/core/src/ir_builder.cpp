@@ -367,14 +367,14 @@ FunctionTypePtr IRBuilder::toPlainFunctionType(const FunctionTypePtr& funType) c
 	if (funType->isPlain()) {
 		return funType;
 	}
-	return functionType(funType->getParameterTypes(), funType->getReturnType(), true);
+	return functionType(funType->getParameterTypes(), funType->getReturnType(), FK_PLAIN);
 }
 
 FunctionTypePtr IRBuilder::toThickFunctionType(const FunctionTypePtr& funType) const {
 	if (!funType->isPlain()) {
 		return funType;
 	}
-	return functionType(funType->getParameterTypes(), funType->getReturnType(), false);
+	return functionType(funType->getParameterTypes(), funType->getReturnType(), FK_CLOSURE);
 }
 
 
@@ -795,13 +795,13 @@ LambdaPtr IRBuilder::lambda(const FunctionTypePtr& type, const VariableList& par
 }
 
 LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const {
-	return lambdaExpr(functionType(extractTypes(params->getParameters()), manager.getLangBasic().getUnit(), true), params, wrapBody(body));
+	return lambdaExpr(functionType(extractTypes(params->getParameters()), manager.getLangBasic().getUnit(), FK_PLAIN), params, wrapBody(body));
 }
 LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const VariableList& params) const {
 	return lambdaExpr(body, parameters(params));
 }
 LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const {
-	return lambdaExpr(functionType(extractTypes(params->getParameters()), returnType, true), params, wrapBody(body));
+	return lambdaExpr(functionType(extractTypes(params->getParameters()), returnType, FK_PLAIN), params, wrapBody(body));
 }
 LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const {
 	return lambdaExpr(returnType, body, parameters(params));
@@ -812,7 +812,7 @@ LambdaExprPtr IRBuilder::lambdaExpr(const FunctionTypePtr& type, const VariableL
 }
 
 BindExprPtr IRBuilder::bindExpr(const VariableList& params, const CallExprPtr& call) const {
-	FunctionTypePtr type = functionType(extractTypes(params), call->getType(), false);
+	FunctionTypePtr type = functionType(extractTypes(params), call->getType(), FK_CLOSURE);
 	return bindExpr(type, parameters(params), call);
 }
 
@@ -972,7 +972,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     		);
     }
 
-    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, true), params, wrapBody(body) );
+    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, FK_PLAIN), params, wrapBody(body) );
     core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);
 
     if ( !lazy ) 	return callExpr;

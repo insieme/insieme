@@ -176,9 +176,9 @@ namespace analysis {
 		EXPECT_EQ("rec v0.{v0=fun(((int<4>)=>int<4>) v1) {return v1(2);}}(bind(v0){int.add(int.add(2, v77), v0)})", toString(*call));
 		EXPECT_EQ(utils::set::toSet<VariableSet>(
 			builder.variable(int4, 0),
-			builder.variable(builder.functionType(int4, int4, false), 1),
+			builder.variable(builder.functionType(int4, int4, FK_CLOSURE), 1),
 			builder.variable(int4, 77),
-			builder.variable(builder.functionType(builder.functionType(int4, int4, false), int4), 0)
+			builder.variable(builder.functionType(builder.functionType(int4, int4, FK_CLOSURE), int4), 0)
 		), getAllVariables(call));
 	}
 

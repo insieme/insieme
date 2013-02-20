@@ -64,7 +64,7 @@ namespace ocl_kernel{
 
 			core::TypePtr alpha = builder.typeVariable("a");
 			core::TypePtr wrapped = getWrapperType(name, alpha);
-			core::TypePtr funType = builder.functionType(toVector(alpha), wrapped, true);
+			core::TypePtr funType = builder.functionType(toVector(alpha), wrapped);
 			return builder.literal(funType, WRAP_TYPE_PREFIX + "wrap_" + name);
 		}
 
@@ -73,7 +73,7 @@ namespace ocl_kernel{
 
 			core::TypePtr alpha = builder.typeVariable("a");
 			core::TypePtr wrapped = getWrapperType(name, alpha);
-			core::TypePtr funType = builder.functionType(toVector(wrapped), alpha, true);
+			core::TypePtr funType = builder.functionType(toVector(wrapped), alpha);
 			return builder.literal(funType, WRAP_TYPE_PREFIX + "unwrap_" + name);
 		}
 
@@ -81,7 +81,7 @@ namespace ocl_kernel{
 			core::IRBuilder builder(manager);
 
 			core::TypePtr uint4 = manager.getLangBasic().getUInt4();
-			core::TypePtr funType = builder.functionType(toVector(uint4), uint4, true);
+			core::TypePtr funType = builder.functionType(toVector(uint4), uint4);
 			return builder.literal(funType, name);
 		}
 
@@ -89,7 +89,7 @@ namespace ocl_kernel{
 			core::IRBuilder builder(manager);
 
 			core::TypePtr alpha = builder.typeVariable("a");
-			core::TypePtr funType = builder.functionType(toVector(alpha), alpha, true);
+			core::TypePtr funType = builder.functionType(toVector(alpha), alpha);
 			return builder.literal(funType, "_ocl_kernel_wrapper");
 		}
 
@@ -99,7 +99,7 @@ namespace ocl_kernel{
 			core::TypePtr alpha = builder.typeVariable("a");
 			core::TypePtr beta = builder.typeVariable("b");
 			core::TypePtr typeBeta = builder.genericType("type", toVector(beta));
-			core::TypePtr funType = builder.functionType(toVector(alpha, typeBeta), beta, true);
+			core::TypePtr funType = builder.functionType(toVector(alpha, typeBeta), beta);
 			return builder.literal(funType, "_ocl_convert");
 			/* // TO DO
 			core::IRBuilder builder(manager);

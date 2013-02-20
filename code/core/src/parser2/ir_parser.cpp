@@ -573,7 +573,7 @@ namespace parser {
 						TypeList types = convertList<TypePtr>(terms);
 						TypePtr resType = types.back();
 						types.pop_back();
-						return cur.functionType(types, resType, true);
+						return cur.functionType(types, resType, FK_PLAIN);
 					}
 			));
 
@@ -585,7 +585,7 @@ namespace parser {
 						TypeList types = convertList<TypePtr>(terms);
 						TypePtr resType = types.back();
 						types.pop_back();
-						return cur.functionType(types, resType, false);
+						return cur.functionType(types, resType, FK_CLOSURE);
 					}
 			));
 

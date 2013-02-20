@@ -544,7 +544,7 @@ TEST(TypeManager, FunctionTypes) {
 
 	// -- test a thick function pointer first => should generate closure, constructor and caller --
 
-	type = builder.functionType(toVector(typeA, typeB), typeC, false);
+	type = builder.functionType(toVector(typeA, typeB), typeC, core::FK_CLOSURE);
 	info = typeManager.getTypeInfo(type);
 	EXPECT_EQ("((int<4>,bool)=>real<4>)", toString(*type));
 	EXPECT_FALSE(info.plain);
@@ -583,7 +583,7 @@ TEST(TypeManager, FunctionTypes) {
 
 	// -- test a plain function type --
 
-	type = builder.functionType(toVector(typeA, typeB), typeC, true);
+	type = builder.functionType(toVector(typeA, typeB), typeC);
 	info = typeManager.getTypeInfo(type);
 	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
 	EXPECT_TRUE(info.plain);
@@ -610,7 +610,7 @@ TEST(TypeManager, FunctionTypes) {
 	EXPECT_EQ("float(* var)(int32_t,bool)", toC(decl));
 
 	// test the same with a function not accepting any arguments
-	type = builder.functionType(core::TypeList(), typeA, true);
+	type = builder.functionType(core::TypeList(), typeA);
 	info = typeManager.getTypeInfo(type);
 	EXPECT_EQ("(()->int<4>)", toString(*type));
 

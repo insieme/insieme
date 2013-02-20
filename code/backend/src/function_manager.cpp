@@ -987,7 +987,7 @@ namespace backend {
 			auto manager = converter.getCNodeManager();
 
 			// obtain function type information
-			core::FunctionTypePtr closureType = core::FunctionType::get(funType->getNodeManager(), funType->getParameterTypes(), funType->getReturnType(), false);
+			core::FunctionTypePtr closureType = core::FunctionType::get(funType->getNodeManager(), funType->getParameterTypes(), funType->getReturnType(), core::FK_CLOSURE);
 			TypeManager& typeManager = converter.getTypeManager();
 			const FunctionTypeInfo& funTypeInfo = typeManager.getTypeInfo(closureType);
 

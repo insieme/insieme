@@ -965,8 +965,8 @@ TEST(TypeVariableDeduction, PlainFunctionTest) {
 	TypePtr A = builder.genericType("A");
 	TypePtr B = builder.genericType("B");
 
-	TypePtr funA = builder.functionType(toVector(A), B, true);
-	TypePtr funB = builder.functionType(toVector(A), B, false);
+	TypePtr funA = builder.functionType(toVector(A), B, FK_PLAIN);
+	TypePtr funB = builder.functionType(toVector(A), B, FK_CLOSURE);
 
 	// create a plain and a standard function type
 	EXPECT_EQ("((A)->B)", toString(*funA));
@@ -983,7 +983,7 @@ TEST(TypeVariableDeduction, PlainFunctionTest) {
 	// also test type variable deduction
 	TypePtr alpha = builder.typeVariable("a");
 	TypePtr beta = builder.typeVariable("b");
-	TypePtr funG = builder.functionType(toVector(alpha), beta, false);
+	TypePtr funG = builder.functionType(toVector(alpha), beta, FK_CLOSURE);
 
 	EXPECT_EQ("(('a)=>'b)", toString(*funG));
 
@@ -1005,7 +1005,7 @@ TEST(TypeVariableDeduction, VectorSubTypeOfArray) {
 //	EXPECT_PRED2(isSubTypeOf, vecTy, arrTy);
 
 	// create a function which takes an array as arugment
-	TypePtr fun = builder.functionType(toVector(arrTy), basic.getInt8(), true);
+	TypePtr fun = builder.functionType(toVector(arrTy), basic.getInt8(), FK_PLAIN);
 
 	EXPECT_EQ("((array<'a,1>)->int<8>)", toString(*fun));
 

@@ -125,12 +125,12 @@ namespace parser {
 		EXPECT_EQ(builder.functionType(toVector(A,B,C,A), C), parse(manager, "(A,B,C,A)->C"));
 
 		// also some non-plain types
-		EXPECT_EQ(builder.functionType(toVector(B,C,A), A, false), parse(manager, "(B, C, A) => A"));
+		EXPECT_EQ(builder.functionType(toVector(B,C,A), A, FK_CLOSURE), parse(manager, "(B, C, A) => A"));
 
 		// a function taking a function as an argument + integration of tuples
 		TypePtr tuple = builder.tupleType(toVector(A,C));
-		TypePtr funA = builder.functionType(toVector(B,C,A), A, false);
-		TypePtr funB = builder.functionType(toVector(C,tuple, A), B, false);
+		TypePtr funA = builder.functionType(toVector(B,C,A), A, FK_CLOSURE);
+		TypePtr funB = builder.functionType(toVector(C,tuple, A), B, FK_CLOSURE);
 
 		EXPECT_EQ(builder.functionType(toVector(funA, tuple), funB), parse(manager,"((B,C,A)=>A,(A,C))->(C,(A,C),A)=>B"));
 

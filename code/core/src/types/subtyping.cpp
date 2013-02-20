@@ -209,6 +209,7 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
  * whether the join or meet type is computed.
  */
 TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
+	static const TypePtr fail = 0;
 
 	// add a structure based algorithm for computing the Join-Type
 
@@ -248,13 +249,13 @@ TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
 			return array;
 		}
 		// no common super type!
-		return 0;
+		return fail;
 	}
 
 	// the rest can only work if it is of the same kind
 	if (nodeTypeA != nodeTypeB) {
 		// => no common super type
-		return 0;
+		return fail;
 	}
 
 	// check for functions
@@ -267,7 +268,18 @@ TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
 		auto paramsB = funTypeB->getParameterTypes();
 		if (paramsA.size() != paramsB.size()) {
 			// not matching
-			return 0;
+			return fail;
+		}
+
+		// check function kind
+		FunctionKind resKind = funTypeA->getKind();
+		if (funTypeA->getKind() != funTypeB->getKind()) {
+			// differences are only allowed when going from plain to closure type
+			if ((funTypeA->isPlain() && funTypeB->isClosure()) || (funTypeA->isClosure() && funTypeB->isPlain())) {
+				resKind = FK_CLOSURE;
+			} else {
+				return fail;
+			}
 		}
 
 		// compute join type
@@ -275,28 +287,25 @@ TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
 		TypePtr cur = getJoinMeetType(funTypeA->getReturnType(), funTypeB->getReturnType(), join);
 		TypePtr resType = cur;
 
-		// continue with arguments
-		TypeList args;
-		for (std::size_t i=0; cur && i<paramsA.size(); i++) {
+		// continue with parameters
+		TypeList params;
+		for (std::size_t i=0; i<paramsA.size(); i++) {
 			// ATTENTION: this goes in the reverse direction
 			cur = getJoinMeetType(paramsA[i], paramsB[i], !join);
-			args.push_back(cur);
-		}
 
-		// check whether for all pairs a match has been found
-		if (!cur) {
-			// no => no result
-			return 0;
+			// if a pair can not be matched => fail
+			if (!cur) return fail;
+
+			params.push_back(cur);
 		}
 
 		// construct resulting type
 		IRBuilder builder(funTypeA->getNodeManager());
-		bool plane = funTypeA->isPlain() && funTypeB->isPlain();
-		return builder.functionType(args, resType, plane);
+		return builder.functionType(params, resType, resKind);
 	}
 
 	// everything else does not have a common join/meet type
-	return 0;
+	return fail;
 }
 
 
