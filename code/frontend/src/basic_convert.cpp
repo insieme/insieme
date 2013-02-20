@@ -121,7 +121,7 @@ const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitF
 	// if the function is not defined in this translation unit, maybe it is defined in another we already
 	// loaded use the clang indexer to lookup the definition for this function declarations
 	utils::Indexer::TranslationUnitPair&& ret = 
-			program.getIndexer().getDefAndTUforDefinition (funcDecl);
+			mIdx.getDefAndTUforDefinition (funcDecl);
 
 	// function declaration not found. return the current translation unit
 	if ( !ret.first ) {return NULL;}
@@ -137,7 +137,8 @@ const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitF
 ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool isCpp) :
 		mgr(mgr), builder(mgr),
 		// cppcheck-suppress exceptNew
-		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()){
+		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
+		mIdx(), funcDepGraph(mIdx) {
 
 		if (isCpp){
 			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
@@ -150,20 +151,34 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool
 			exprConvPtr = std::make_shared<CExprConverter>(*this, prog);
 			globColl = std::make_shared<analysis::GlobalVarCollector>(*this);
 		}
+
+		//FIXME: move out of ctor
+		indexAndAnalyze();
 }
 
-//////////////////////////////////////////////////////////////////
-///
-//ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog,
-//	std::shared_ptr<StmtConverter> stmtConvPtr,
-//	std::shared_ptr<TypeConverter> typeConvPtr,
-//	std::shared_ptr<ExprConverter> exprConvPtr) :
-//		mgr(mgr), builder(mgr), 
-//		stmtConvPtr(stmtConvPtr),
-//		typeConvPtr(typeConvPtr),
-//		exprConvPtr(exprConvPtr),
-//		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()) {
-//}
+void ConversionFactory::indexAndAnalyze(){
+	for (auto tu : program.getTranslationUnits()){
+		VLOG(1) << " ************* Indexing: " << tu->getFileName() << " ****************";
+		mIdx.indexTU(&(*tu));
+	}
+	VLOG(1) << " ************* Indexing DONE ****************";
+	if (VLOG_IS_ON(2)){
+		mIdx.dump();
+	}
+
+	VLOG(1) << " ************* Analyze function dependencies (recursion)***************";
+	auto elem = mIdx.begin();
+	auto end = mIdx.end();
+	for (; elem != end; ++elem){
+		if (llvm::isa<clang::FunctionDecl>(*elem)){
+			funcDepGraph.addNode(llvm::cast<clang::FunctionDecl>(*elem));
+		}
+	}
+	VLOG(1) << " ************* Analyze function dependencies DONE***************";
+	if (VLOG_IS_ON(2)){
+		funcDepGraph.print(std::cout);
+	}
+}
 
 //////////////////////////////////////////////////////////////////
 ///
@@ -912,10 +927,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	// retrieve the strongly connected components for this type
 	//std::set<const FunctionDecl*>&& components = exprConvPtr->funcDepGraph.getStronglyConnectedComponents( funcDecl );
-	std::set<const FunctionDecl*>&& components = program.getCallGraph().getStronglyConnectedComponents( funcDecl );
+	std::set<const FunctionDecl*>&& components = funcDepGraph.getStronglyConnectedComponents( funcDecl );
 
 	if (!components.empty()) {
-		std::set<const FunctionDecl*>&& subComponents = program.getCallGraph().getSubComponents( funcDecl );
+		std::set<const FunctionDecl*>&& subComponents = funcDepGraph.getSubComponents( funcDecl );
 
 		for (auto cur: subComponents){
 
@@ -1166,7 +1181,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
 		// use the clang indexer to lookup the definition for this function declarations
-		utils::Indexer::TranslationUnitPair&& ret = program.getIndexer().getDefAndTUforDefinition(llvm::cast<Decl>(fd));
+		utils::Indexer::TranslationUnitPair&& ret = mIdx.getDefAndTUforDefinition(llvm::cast<Decl>(fd));
 
 		if ( ret.first ) {
 			fd = llvm::cast<FunctionDecl>(ret.first);

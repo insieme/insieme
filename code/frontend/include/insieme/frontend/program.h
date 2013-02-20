@@ -46,11 +46,6 @@
 namespace insieme {
 namespace frontend {
 
-	namespace utils{
-		class Indexer;
-		class FunctionDependencyGraph;
-	}
-
 namespace pragma {
 class Pragma;
 typedef std::shared_ptr<Pragma> PragmaPtr;
@@ -97,11 +92,10 @@ typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
  */
 class Program: public boost::noncopyable {
 
-	// Implements the pimpl pattern so we don't need to introduce an explicit dependency to Clang
-	// headers
-	class ProgramImpl;
-	typedef ProgramImpl* ProgramImplPtr;
-	ProgramImplPtr pimpl;
+public:
+	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
+private:
+	TranslationUnitSet tranUnits;
 
 	// Reference to the NodeManager used to convert the translation units into IR code
 	insieme::core::NodeManager& mMgr;
@@ -112,8 +106,6 @@ class Program: public boost::noncopyable {
 	friend class ::TypeConversion_FileTest_Test;
 	friend class ::StmtConversion_FileTest_Test;
 public:
-	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
-
 	Program(insieme::core::NodeManager& mgr);
 
 	~Program();
@@ -122,11 +114,6 @@ public:
 	 */
 	TranslationUnit& addTranslationUnit(const std::string& fileName);
 	
-	/**
-	 * index and analyzes recursive functions
-	 */
-	void indexAndAnalyze();
-
 	/**
 	 * Add a single file to the program
 	 */
@@ -187,10 +174,6 @@ public:
 	PragmaIterator pragmas_begin(const PragmaIterator::FilteringFunc& func) const;
 	PragmaIterator pragmas_end() const;
 
-	utils::Indexer& getIndexer() const;
-	utils::FunctionDependencyGraph& getCallGraph() const;
-
-	void dumpCallGraph() const;
 };
 
 } // end frontend namespace

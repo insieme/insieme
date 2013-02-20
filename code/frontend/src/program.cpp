@@ -39,8 +39,6 @@
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/utils/indexer.h"
-#include "insieme/frontend/utils/functionDependencyGraph.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -146,7 +144,7 @@ class TranslationUnitImpl: public insieme::frontend::TranslationUnit{
 	//std::shared_ptr<clang::idx::SelectorMap>		   	mSelMap;
 
 public:
-	TranslationUnitImpl(const std::string& file_name, insieme::frontend::utils::Indexer& indexer):
+	TranslationUnitImpl(const std::string& file_name):
 		insieme::frontend::TranslationUnit(file_name) {
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
@@ -191,73 +189,37 @@ public:
 namespace insieme {
 namespace frontend {
 
-struct Program::ProgramImpl {
-	TranslationUnitSet tranUnits;
-	utils::Indexer mIdx;
-	utils::FunctionDependencyGraph funcDepGraph;
-	ProgramImpl() : mIdx(), funcDepGraph(mIdx) { }
-};
-
 Program::Program(core::NodeManager& mgr):
-	pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::get(mgr) ) { }
+	mMgr(mgr), mProgram( core::Program::get(mgr) ) { }
 
-Program::~Program() {
-	delete pimpl;
-}
+Program::~Program() { }
 
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
-	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name, pimpl->mIdx);
+	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name);
 	
-	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
+	tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	return *tuImpl;
-}
-
-void Program::indexAndAnalyze(){
-	for (auto tu : pimpl->tranUnits){
-		VLOG(1) << " ************* Indexing: " << tu->getFileName() << " ****************";
-		pimpl->mIdx.indexTU(&(*tu));
-	}
-	VLOG(1) << " ************* Indexing DONE ****************";
-	if (VLOG_IS_ON(2)){
-		pimpl->mIdx.dump();
-	}
-
-	VLOG(1) << " ************* Analyze function dependencies (recursion)***************";
-	auto elem = pimpl->mIdx.begin();
-	auto end = pimpl->mIdx.end();
-	for (; elem != end; ++elem){
-		if (llvm::isa<clang::FunctionDecl>(*elem)){
-			pimpl->funcDepGraph.addNode(llvm::cast<clang::FunctionDecl>(*elem));
-		}
-	}
-	VLOG(1) << " ************* Analyze function dependencies DONE***************";
-	if (VLOG_IS_ON(2)){
-		pimpl->funcDepGraph.print(std::cout);
-	}
 }
 
 TranslationUnit& Program::createEmptyTranslationUnit() {
 	TranslationUnit* tuImpl = new TranslationUnit;
-	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
+	tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	return *tuImpl;
 }
 
-const Program::TranslationUnitSet& Program::getTranslationUnits() const { return pimpl->tranUnits; }
-
-utils::Indexer& Program::getIndexer() const { return pimpl->mIdx; }
-utils::FunctionDependencyGraph& Program::getCallGraph() const {return pimpl->funcDepGraph;}
+const Program::TranslationUnitSet& Program::getTranslationUnits() const { return tranUnits; }
 
 Program::PragmaIterator Program::pragmas_begin() const {
 	auto filtering = [](const Pragma&) -> bool { return true; };
-	return Program::PragmaIterator(pimpl->tranUnits, filtering);
+	return Program::PragmaIterator(tranUnits, filtering);
 }
 
 Program::PragmaIterator Program::pragmas_begin(const Program::PragmaIterator::FilteringFunc& func) const {
-	return Program::PragmaIterator(pimpl->tranUnits, func);
+	return Program::PragmaIterator(tranUnits, func);
 }
 
 Program::PragmaIterator Program::pragmas_end() const {
-	return Program::PragmaIterator(pimpl->tranUnits.end());
+	return Program::PragmaIterator(tranUnits.end());
 }
 
 bool Program::PragmaIterator::operator!=(const PragmaIterator& iter) const {
@@ -314,9 +276,7 @@ core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr) 
 const core::ProgramPtr& Program::convert() {
 	// We check for insieme pragmas in each translation unit
 	bool insiemePragmaFound = false;
-	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
-
-	indexAndAnalyze();
+	bool isCXX = any(tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
 
 	std::shared_ptr<conversion::ASTConverter> astConvPtr(std::make_shared<conversion::ASTConverter>  (mMgr, *this, isCXX));
 
@@ -345,8 +305,7 @@ const core::ProgramPtr& Program::convert() {
 	}
 
 	if(!insiemePragmaFound) {
-		mProgram = astConvPtr->handleFunctionDecl(
-								dyn_cast<const FunctionDecl>(pimpl->mIdx.getMainFunctionDefinition()));
+		mProgram = astConvPtr->handleMainFunctionDecl();
 	}
 
 	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";

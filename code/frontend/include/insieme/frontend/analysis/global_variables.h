@@ -166,7 +166,7 @@ protected:
 	buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, const clang::FunctionDecl* func = NULL ) const;
 
 	conversion::ConversionFactory& 		convFact;
-	insieme::frontend::utils::Indexer& 	indexer;
+	const insieme::frontend::utils::Indexer& 	indexer;
 	GlobalVarSet						globals;
 	GlobalIdentMap						varIdentMap;
 	VisitedFuncSet 						visited;

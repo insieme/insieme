@@ -54,8 +54,6 @@ namespace insieme{
 namespace frontend{
 namespace utils{
 
-class indexerASTConsumer;
-
 //////////////////////////////////////////////////////////////////
 // the indexer generates an index of 
 class Indexer{
@@ -134,7 +132,6 @@ private:
 	void indexDeclaration(clang::Decl* decl, insieme::frontend::TranslationUnit* tu);
 	
 
-	friend class indexerASTConsumer;
 	friend class IndexerVisitor;
 };
 

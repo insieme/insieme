@@ -87,7 +87,7 @@ namespace analysis {
 GlobalVarCollector::GlobalVarCollector(
 	conversion::ConversionFactory&	convFact)
 	: convFact(convFact),
-	  indexer(convFact.getProgram().getIndexer())
+	  indexer(convFact.getIndexer())
 	{
 }
 /////////////////////////////////////////////////////////////////////////////////
@@ -322,6 +322,7 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 	if(calleeDecl && !calleeDecl->hasBody(definition)) {
 		// it might not be indexed, in this case is a third party function, and 
 		// body is not known. No globals can be extracted from there.
+		// FIXME: do we need the indexer as member? use factory to get DefAndTU
 		ret = indexer.getDefAndTUforDefinition(calleeDecl);
 		if (!ret.first)
 			return true;

@@ -101,7 +101,6 @@ TEST(CppConversion, FileTest) {
 	NodeManager manager;
 	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/cpp.cpp" );
-	prog.indexAndAnalyze();
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
@@ -110,7 +109,7 @@ TEST(CppConversion, FileTest) {
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
-		fe::conversion::ConversionFactory convFact( mgr, prog );
+		fe::conversion::ConversionFactory convFact( mgr, prog, true/*=isCXX*/ );
 		convFact.setTranslationUnit(tu);
 /*
 		if(tp.isStatement()){

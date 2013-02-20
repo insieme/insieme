@@ -44,6 +44,9 @@
 
 #include "insieme/frontend/analysis/global_variables.h"
 
+#include "insieme/frontend/utils/indexer.h"
+#include "insieme/frontend/utils/functionDependencyGraph.h"
+
 #include <memory>
 #include <set>
 #include <functional>
@@ -290,16 +293,23 @@ protected:
 
 	friend class ASTConverter;
 
+	utils::Indexer mIdx;
+	utils::FunctionDependencyGraph funcDepGraph;
+
 public:
 
 
 	ConversionFactory(core::NodeManager& mgr, Program& program, bool isCxx = false);
-	//ConversionFactory(core::NodeManager& mgr, Program& program,
-	//				std::shared_ptr<StmtConverter> stmtConvPtr,
-	//				std::shared_ptr<TypeConverter> typeConvPtr,
-	//				std::shared_ptr<ExprConverter> exprConvPtr);
 
-	virtual ~ConversionFactory() { }
+	/**
+	 * index and analyzes recursive functions
+	 */
+	void indexAndAnalyze();
+
+	const utils::Indexer& getIndexer() const { return mIdx; }
+	const utils::FunctionDependencyGraph& getCallGraph() const {return funcDepGraph; }
+
+	void dumpCallGraph() const;
 
 	// Getters & Setters
 	const core::IRBuilder& getIRBuilder() const {
@@ -503,6 +513,10 @@ public:
 	core::ProgramPtr getProgram() const { return mProgram; }
 
 	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain = false);
+
+	core::ProgramPtr handleMainFunctionDecl() {
+		return handleFunctionDecl(llvm::cast<const clang::FunctionDecl>(mFact.getIndexer().getMainFunctionDefinition()), true);
+	}
 
 	core::CallExprPtr handleBody(const clang::Stmt* body, const TranslationUnit& tu);
 
