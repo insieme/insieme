@@ -67,7 +67,7 @@ const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | P
 	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY;
 const unsigned PrettyPrinter::OPTIONS_MAX_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
 	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ANNOTATIONS | PrettyPrinter::NO_LIST_SUGAR
-	| PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY;
+	| PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY | PrettyPrinter::PRINT_LITERAL_TYPES;
 const unsigned PrettyPrinter::OPTIONS_SINGLE_LINE = PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE;
 
 /**
@@ -557,11 +557,10 @@ namespace {
 		});
 
 		PRINT(Literal, {
-				if (GenericTypePtr&& genTy = core::dynamic_pointer_cast<const GenericType>(node->getType()) ) {
-					if(genTy->getName()->getValue() == "type") {
-						visit(genTy);
-						return;
-					}
+				// special handling of type literals (ignore value)
+				if (!printer.hasOption(PrettyPrinter::PRINT_LITERAL_TYPES) && analysis::isTypeLiteral(node)) {
+					visit(node->getType());
+					return;
 				}
 
 				const string& str = node->getStringValue();
@@ -569,6 +568,12 @@ namespace {
 					out << str.substr(0,3) << "..." << str.substr(str.size()-3, str.size());
 				} else {
 					out << str;
+				}
+
+				// add type if requested
+				if (printer.hasOption(PrettyPrinter::PRINT_LITERAL_TYPES)) {
+					out << ":";
+					visit(node->getType());
 				}
 		});
 

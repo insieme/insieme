@@ -178,7 +178,7 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 	// analyze the condition expression
 	if(const Expr* cond = forStmt->getCond()) {
 		if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(cond) ) {
-			DeclRefExpr* lhs = utils::skipSugar<DeclRefExpr>(binOp->getLHS());
+			const DeclRefExpr* lhs = utils::skipSugar<const DeclRefExpr>(binOp->getLHS());
 			if(lhs && lhs->getDecl() == loopHelper.inductionVar) {
 				core::ExpressionPtr&& condExpr = convFact.tryDeref(convFact.convertExpr( binOp->getRHS() ));
 				switch(binOp->getOpcode()) {

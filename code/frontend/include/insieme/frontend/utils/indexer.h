@@ -54,21 +54,17 @@ namespace insieme{
 namespace frontend{
 namespace utils{
 
-
-class indexerASTConsumer;
-
-
 //////////////////////////////////////////////////////////////////
 // the indexer generates an index of 
 class Indexer{
 public:
-	typedef std::pair<clang::Decl*, insieme::frontend::TranslationUnit*> tStored;
+	typedef std::pair<clang::Decl*, insieme::frontend::TranslationUnit*> TranslationUnitPair;
 
 private:
-	typedef std::map<std::string, tStored> tIndex; 
 
+	typedef std::map<std::string, TranslationUnitPair> tIndex; 
 	tIndex   mIndex;
-	tStored  voidPair;
+	TranslationUnitPair  voidPair;
 
 public:
 
@@ -80,28 +76,63 @@ public:
 	//
 	void indexTU(insieme::frontend::TranslationUnit* tu);
 
-	////////////////////////////////////////////////
-	///
-	tStored getDefAndTUforDefinition (const std::string &symbol) const;
-
-	////////////////////////////////////////////////
-	//
-	clang::Decl* getDefinitionFor (const std::string &symbol) const;
 
 	////////////////////////////////////////////////
 	//
 	clang::Decl* getDefinitionFor (const clang::Decl* decl) const;
 
+
 	////////////////////////////////////////////////
 	///
-	tStored getDefAndTUforDefinition (const clang::Decl* decl) const;
+	TranslationUnitPair getDefAndTUforDefinition (const clang::Decl* decl) const;
+
+
+	////////////////////////////////////////////////
+	//
+	clang::Decl* getMainFunctionDefinition () const;
+
 
 	////////////////////////////////////////////////
 	//
 	void dump() const;
 
+	////////////////////////////////////////////////
+	//
+	class iterator{
+	private:
+		tIndex::iterator curr;
+	public:
+		iterator(const tIndex::iterator& c):
+			curr(c) {}
+		clang::Decl*& operator*();
+		clang::Decl** operator->();
 
-	friend class indexerASTConsumer;
+		iterator operator++(); 
+		iterator operator++(int); 
+
+		bool operator!=(const iterator&) const; 
+	};
+
+	iterator begin();
+	iterator end();
+
+private:
+	////////////////////////////////////////////////
+	//
+	///
+	TranslationUnitPair getDefAndTUforDefinition (const std::string &symbol) const;
+
+	////////////////////////////////////////////////
+	//
+	clang::Decl* getDefinitionFor (const std::string &symbol) const;
+
+
+	////////////////////////////////////////////////
+	//
+	void indexDeclaration(clang::Decl* decl, insieme::frontend::TranslationUnit* tu);
+	
+
+	friend class IndexerVisitor;
 };
 
 

@@ -345,12 +345,14 @@ void while_stmt_test() {
 	do{ it+=1; }while(it < 10);
 }
 
-#pragma test "recFun v1 { v1 = fun(int<4> v3) -> int<4> { return v2((v3-1)); }; v2 = fun(int<4> v4) -> int<4> { return v1((v4+1)); };}"
+#pragma test \
+	"recFun v16 { v16 = fun(int<4> v18) -> int<4> { return v17((v18-1)); }; v17 = fun(int<4> v19) -> int<4> { return v16((v19+1)); };}"
 int f(int x) {
 	return g(x-1);
 }
 
-#pragma test "recFun v1 { v1 = fun(int<4> v3) -> int<4> { return v2((v3+1)); }; v2 = fun(int<4> v4) -> int<4> { return v1((v4-1)); };}"
+#pragma test \
+	"recFun v16 { v16 = fun(int<4> v18) -> int<4> { return v17((v18+1)); }; v17 = fun(int<4> v19) -> int<4> { return v16((v19-1)); };}"
 int g(int x) {
 	return f(x+1);
 }
@@ -364,7 +366,8 @@ int g(int x) {
 //}
 
 void rec_function_call_test() {
-	#pragma test "recFun v1 { v1 = fun(int<4> v3) -> int<4> { return v2((v3-1)); }; v2 = fun(int<4> v4) -> int<4> { return v1((v4+1)); };}(10)"
+	#pragma test \
+	"recFun v16 { v16 = fun(int<4> v18) -> int<4> { return v17((v18-1)); }; v17 = fun(int<4> v19) -> int<4> { return v16((v19+1)); };}(10)"
 	f(10);
 }
 

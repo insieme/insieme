@@ -499,7 +499,7 @@
 		<xs:element name="returnType" type="T_typePtr" minOccurs="1" maxOccurs="1"/>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
 	</xs:sequence>
-		<xs:attribute name="plain" type="xs:boolean" use="required"/>
+		<xs:attribute name="kind" type="xs:integer" use="required"/>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 

@@ -115,5 +115,4 @@ rm -f $PREFIX/llvm-latest
 ln -s $PREFIX/llvm-$VERSION $PREFIX/llvm-latest
 ln -s $PREFIX/llvm-$VERSION/lib/libLLVM-3.2svn.so $PREFIX/llvm-$VERSION/lib/libLLVM-3.2.so
 
-
 exit 0

@@ -36,41 +36,60 @@
 
 #pragma once
 
+#include "insieme/frontend/utils/indexer.h"
+#include "insieme/frontend/utils/dep_graph.h"
+
+
 #include "clang/AST/Expr.h"
-#include "llvm/Support/Casting.h"
+#include "clang/AST/StmtVisitor.h"
 
 namespace insieme {
 namespace frontend {
 namespace utils {
 
-using namespace llvm;
+struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
+
+	insieme::frontend::utils::Indexer& indexer;
+	typedef std::set<const clang::FunctionDecl*> CallGraph;
+	CallGraph callGraph;
+
+	CallExprVisitor(insieme::frontend::utils::Indexer& indexer) : indexer(indexer) { }
+
+	CallGraph getCallGraph(const clang::FunctionDecl* func);
+
+	void addFunctionDecl(clang::FunctionDecl* funcDecl);
+
+	void VisitCallExpr(clang::CallExpr* callExpr);
+
+	void VisitDeclRefExpr(clang::DeclRefExpr* expr);
+
+	void VisitStmt(clang::Stmt* stmt); 
+
+	void VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
+
+//	void VisitCXXNewExpr(clang::CXXNewExpr* callExpr);
+
+//	void VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr);
+
+	void VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* mcExpr);
+
+};
 
 /**
- * Utility function which removes eventual cast/implicit_cast/parenthesis and returns
- * the expected statement if found
- * @return
+ * In order for DepGraph to build the dependency graph for functions the clang indexer is needed,
+ * FunctionDependencyGraph adds the indexer to member functions of DependencyGraph
  */
-template <class ExpectedTy>
-const ExpectedTy* skipSugar(const clang::Expr* expr) {
-
-	// remove eventual parenthesis
-	if(const clang::ParenExpr* parenExpr = dyn_cast<clang::ParenExpr>(expr)) {
-		return skipSugar<ExpectedTy>(parenExpr->getSubExpr());
+class FunctionDependencyGraph: public DependencyGraph<const clang::FunctionDecl*> {
+	insieme::frontend::utils::Indexer& idx;
+public:
+	CallExprVisitor callExprVis;
+	FunctionDependencyGraph(insieme::frontend::utils::Indexer& idx) :
+			DependencyGraph<const clang::FunctionDecl*>(), idx(idx), callExprVis(idx) {
 	}
 
-	// remove eventual casts
-	if(const clang::CastExpr* castExpr = dyn_cast<clang::CastExpr>(expr)) {
-		return skipSugar<ExpectedTy>(castExpr->getSubExpr());
-	}
+	insieme::frontend::utils::Indexer& getIndexer(){ return idx;}
+};
 
-	if(const clang::UnaryOperator* unOp = dyn_cast<clang::UnaryOperator>(expr)) {
-		if(unOp->getOpcode() == clang::UO_Minus)
-			return skipSugar<ExpectedTy>(unOp->getSubExpr());
-	}
-
-	return dyn_cast<const ExpectedTy>(expr);
-}
-
-} // End utils namespace
-} // End frontend namespace
-} // End insieme namespace
+} // end namespace utils
+} // end namespace frontend
+} // end namespace insieme

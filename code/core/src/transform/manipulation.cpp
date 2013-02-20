@@ -712,7 +712,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 
 	// create new function type
 	paramTypes.erase(paramTypes.begin() + index);
-	FunctionTypePtr newFunType = FunctionType::get(manager, paramTypes, funType->getReturnType(), true);
+	FunctionTypePtr newFunType = FunctionType::get(manager, paramTypes, funType->getReturnType(), funType->getKind());
 
 	// create new recursive variable
 	auto newRecVar = Variable::get(manager, newFunType, lambda->getVariable()->getId());

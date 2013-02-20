@@ -560,7 +560,7 @@ int main(int argc, char** argv) {
 			fe::Program p(manager);
 			
 			measureTimeFor<void>("Frontend.load [clang]", [&]() { p.addTranslationUnits(inputFiles); } );
-			
+
 			// do the actual clang to IR conversion
 			program = measureTimeFor<core::ProgramPtr>("Frontend.convert ", [&]() { return p.convert(); } );
 

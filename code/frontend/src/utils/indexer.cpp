@@ -59,15 +59,70 @@
 #include "clang/AST/DeclBase.h"
 
 
-
-
-
 namespace insieme{
 namespace frontend{
 namespace utils{
 
-//////////////////////////////////////////////////////////////////////////////////////////////
-/// the indexer generates an index of 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+class IndexerVisitor{
+
+	private:
+		insieme::frontend::TranslationUnit* mTu;
+		Indexer::tIndex& mIndex; 
+
+	public:
+	IndexerVisitor	(insieme::frontend::TranslationUnit* tu,
+					 Indexer::tIndex& index):
+		mTu(tu), mIndex(index)
+	{ }
+
+	void indexDeclaration(clang::Decl* decl){
+		// if it does not have a name, it is another artifact
+		// and we dont want to index it
+		if (!llvm::isa<clang::NamedDecl>(decl))
+				return;
+
+		clang::NamedDecl *named = llvm::cast<clang::NamedDecl>(decl);
+		assert (named && "no name Decl, can not be indexed and we dont know what it is");
+
+		if (llvm::isa<clang::FunctionDecl>(decl)) {
+			if (decl->hasBody()){
+				Indexer::TranslationUnitPair elem =  std::make_pair(decl,mTu); 
+				mIndex[named->getQualifiedNameAsString()] = elem; 
+			}
+		}
+		else if (llvm::isa<clang::CXXRecordDecl>(decl)){
+			clang::CXXRecordDecl *recDecl = llvm::cast<clang::CXXRecordDecl>(decl);
+			if (recDecl->hasDefinition()){
+				Indexer::TranslationUnitPair elem =  std::make_pair(llvm::cast<clang::Decl>(recDecl->getDefinition()),mTu); 
+				mIndex[named->getQualifiedNameAsString()] = elem;
+			}
+			// index inner functions as well
+			indexDeclContext(llvm::cast<clang::DeclContext>(decl));
+		}
+		else if (llvm::isa<clang::NamespaceDecl>(decl)){
+			indexDeclContext(llvm::cast<clang::DeclContext>(decl));
+		}
+	}
+
+	void indexDeclContext(clang::DeclContext* ctx){
+		clang::DeclContext::decl_iterator it = ctx->decls_begin();
+		clang::DeclContext::decl_iterator end = ctx->decls_end();
+		for (; it != end; it++){
+			indexDeclaration(llvm::cast<clang::Decl>(*it));
+		}
+	}
+};
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+/////////////////////////////////////////////////
+/// the indexer generates an index of all function definitions and Classes
 /// the context will be the owner of all generated AST nodes
 Indexer::Indexer()
 : mIndex() { 
@@ -77,43 +132,28 @@ Indexer::Indexer()
 }
 
 ////////////////////////////////////////////////
-//  AST has being already gerated at the parse step
-//  It could be parsed here, but there are spetial requirements for the #pragma handeling.
-//  As is already build, we just need to iterate the ASTContext and anotate those
-//  elements which have a body. those correspond to the Definition and not just declarations.
+///  AST has being already gerated at the parse step
+///  It could be parsed here, but there are spetial requirements for the #pragma handeling.
+///  As is already build, we just need to iterate the ASTContext and anotate those
+///  elements which have a body. those correspond to the Definition and not just declarations.
 void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 	const ClangCompiler& compiler = tu->getCompiler();
 
-	VLOG(1) << "=== Indexing TU ====";
 	clang::TranslationUnitDecl* tuDecl = compiler.getASTContext().getTranslationUnitDecl();
 	assert(tuDecl && "AST has not being build");
 
 	clang::DeclContext* ctx= clang::TranslationUnitDecl::castToDeclContext (tuDecl);
 	assert(ctx && "AST has no decl context");
 
-	clang::DeclContext::decl_iterator it = ctx->decls_begin();
-	clang::DeclContext::decl_iterator end = ctx->decls_end();
-	for (; it != end; it++){
-		if (llvm::isa<clang::FunctionDecl>(*it)){
-
-			clang::Decl *decl = llvm::cast<clang::Decl>(*it);
-			clang::NamedDecl *named = llvm::cast<clang::NamedDecl>(*it);
-
-			assert (decl && "no declaration");
-			assert (named && "no name");
-		
-			if (named->hasBody()){
-				tStored elem =  std::make_pair(decl,tu); 
-				mIndex[named->getNameAsString()] = elem; // FIXME: check if qualified name needed, or just name
-			}
-		}
-	}
-	VLOG(1) << "=== Indexing DONE ====";
+	IndexerVisitor indexer(tu, mIndex);
+	indexer.indexDeclContext(ctx);
 }
+
+
 
 ////////////////////////////////////////////////
 //
-Indexer::tStored Indexer::getDefAndTUforDefinition (const std::string& symbol) const{
+Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const std::string& symbol) const{
 
 	tIndex::const_iterator match = this->mIndex.find(symbol);
 	if (match != this->mIndex.end()){
@@ -140,18 +180,24 @@ clang::Decl* Indexer::getDefinitionFor (const std::string& symbol) const{
 
 ////////////////////////////////////////////////
 ///
-Indexer::tStored Indexer::getDefAndTUforDefinition (const clang::Decl* decl) const{
+Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Decl* decl) const{
 	assert(decl && "Cannot look up null pointer!");
-	return getDefAndTUforDefinition(llvm::cast<clang::NamedDecl>(decl)->getNameAsString());
+	return getDefAndTUforDefinition(llvm::cast<clang::NamedDecl>(decl)->getQualifiedNameAsString());
 }
 
 
 ////////////////////////////////////////////////
 //
 clang::Decl* Indexer::getDefinitionFor (const clang::Decl* decl) const{
-	return getDefinitionFor(llvm::cast<clang::NamedDecl>(decl)->getNameAsString());
+	return getDefinitionFor(llvm::cast<clang::NamedDecl>(decl)->getQualifiedNameAsString());
 }
 
+
+////////////////////////////////////////////////
+//
+clang::Decl* Indexer::getMainFunctionDefinition () const{
+	return getDefinitionFor("main");
+}
 
 ////////////////////////////////////////////////
 //
@@ -161,6 +207,39 @@ void Indexer::dump() const{
 	for (;it != end; it++){
 		std::cout << "\t[" << it->first << " ," << it->second << "]" << std::endl;
 	}
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//            Indexer iterators
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+clang::Decl*& Indexer::iterator::operator*(){
+	return curr->second.first;
+}
+
+clang::Decl** Indexer::iterator::operator->(){
+	return &(curr->second.first);
+}
+
+Indexer::iterator Indexer::iterator::operator++(){
+	++curr;
+	return *this;
+}
+
+Indexer::iterator Indexer::iterator::operator++(int d){
+	++curr;
+	return *this;
+}
+
+bool Indexer::iterator::operator!=(const Indexer::iterator& i) const{
+	return this->curr != i.curr;
+}
+
+Indexer::iterator Indexer::begin(){
+	return iterator(mIndex.begin());
+}
+
+Indexer::iterator Indexer::end(){
+	return iterator(mIndex.end());
 }
 
 } // end namespace utils

@@ -39,7 +39,6 @@
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/utils/indexer.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -54,12 +53,10 @@
 #include "clang/AST/DeclGroup.h"
 
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/CallGraph.h"
 
 // [3.0]
 //#include "clang/Index/Indexer.h"
 //#include "clang/Index/Analyzer.h"
-//#include "clang/Index/CallGraph.h"
 //#include "clang/Index/TranslationUnit.h"
 //#include "clang/Index/DeclReferenceMap.h"
 //#include "clang/Index/SelectorMap.h"
@@ -147,7 +144,7 @@ class TranslationUnitImpl: public insieme::frontend::TranslationUnit{
 	//std::shared_ptr<clang::idx::SelectorMap>		   	mSelMap;
 
 public:
-	TranslationUnitImpl(const std::string& file_name, insieme::frontend::utils::Indexer& indexer):
+	TranslationUnitImpl(const std::string& file_name):
 		insieme::frontend::TranslationUnit(file_name) {
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
@@ -175,11 +172,6 @@ public:
 			// errors are always fatal!
 			throw ClangParsingError(file_name);
 		}
-
-		// clang [3.0]
-		// the translation unit has been correctly parsed
-		//mDeclRefMap = std::make_shared<clang::idx::DeclReferenceMap>( mClang.getASTContext() );
-		//mSelMap = std::make_shared<clang::idx::SelectorMap>( mClang.getASTContext() );
 	}
 
 	// getters
@@ -191,81 +183,43 @@ public:
 
 	clang::DiagnosticsEngine& getDiagnostic() { return getCompiler().getDiagnostics(); }
 	const clang::DiagnosticsEngine& getDiagnostic() const { return getCompiler().getDiagnostics(); }
-
-	// clang [3.0]
-	// clang::idx::DeclReferenceMap& getDeclReferenceMap() { assert(mDeclRefMap); return *mDeclRefMap; }
-	// clang::idx::SelectorMap& getSelectorMap() { assert(mSelMap); return *mSelMap; }
 };
 } // end anonymous namespace
 
 namespace insieme {
 namespace frontend {
 
-struct Program::ProgramImpl {
-	TranslationUnitSet tranUnits;
-
-	// clang [3.0]
-	//clang::idx::Program  mProg;
-	//clang::idx::Indexer  mIdx;
-	//clang::idx::Analyzer mAnalyzer;
-	
-	utils::Indexer mIdx;
-
-	clang::CallGraph mCallGraph;
-
-	ProgramImpl() : mIdx(), mCallGraph() { }
-};
-
 Program::Program(core::NodeManager& mgr):
-	pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::get(mgr) ) { }
+	mMgr(mgr), mProgram( core::Program::get(mgr) ) { }
 
-Program::~Program() {
-	delete pimpl;
-}
+Program::~Program() { }
 
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
-	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name, pimpl->mIdx);
-
-	pimpl->mIdx.indexTU(tuImpl);
-//	pimpl->mIdx.dump();
+	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name);
 	
-	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
+	tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	return *tuImpl;
 }
 
 TranslationUnit& Program::createEmptyTranslationUnit() {
 	TranslationUnit* tuImpl = new TranslationUnit;
-	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
+	tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	return *tuImpl;
 }
 
-const Program::TranslationUnitSet& Program::getTranslationUnits() const { return pimpl->tranUnits; }
-
-//clang::idx::Program& Program::getClangProgram() const { return pimpl->mProg; }
-utils::Indexer& Program::getIndexer() const { return pimpl->mIdx; }
-
-void Program::dumpCallGraph() const { pimpl->mCallGraph.dump(); }
-
-// clang [3.0]
-//const TranslationUnit& Program::getTranslationUnit(const clang::idx::TranslationUnit* tu) {
-//	return *dynamic_cast<const TranslationUnit*>(reinterpret_cast<const TranslationUnitImpl*>(tu));
-//}
-//
-//const clang::idx::TranslationUnit* Program::getClangTranslationUnit(const TranslationUnit& tu) {
-//	return dynamic_cast<const clang::idx::TranslationUnit*>(static_cast<const TranslationUnitImpl*>(&tu));
-//}
+const Program::TranslationUnitSet& Program::getTranslationUnits() const { return tranUnits; }
 
 Program::PragmaIterator Program::pragmas_begin() const {
 	auto filtering = [](const Pragma&) -> bool { return true; };
-	return Program::PragmaIterator(pimpl->tranUnits, filtering);
+	return Program::PragmaIterator(tranUnits, filtering);
 }
 
 Program::PragmaIterator Program::pragmas_begin(const Program::PragmaIterator::FilteringFunc& func) const {
-	return Program::PragmaIterator(pimpl->tranUnits, func);
+	return Program::PragmaIterator(tranUnits, func);
 }
 
 Program::PragmaIterator Program::pragmas_end() const {
-	return Program::PragmaIterator(pimpl->tranUnits.end());
+	return Program::PragmaIterator(tranUnits.end());
 }
 
 bool Program::PragmaIterator::operator!=(const PragmaIterator& iter) const {
@@ -320,17 +274,11 @@ core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr) 
 } // end anonymous namespace
 
 const core::ProgramPtr& Program::convert() {
-	bool insiemePragmaFound = false;
 	// We check for insieme pragmas in each translation unit
+	bool insiemePragmaFound = false;
+	bool isCXX = any(tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
 
-	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
-
-	std::shared_ptr<conversion::ASTConverter> astConvPtr;
-	if(isCXX) {
-		astConvPtr = std::make_shared<conversion::CXXASTConverter>( mMgr, *this);
-	} else {
-		astConvPtr = std::make_shared<conversion::CASTConverter>(  mMgr, *this);
-	}
+	std::shared_ptr<conversion::ASTConverter> astConvPtr(std::make_shared<conversion::ASTConverter>  (mMgr, *this, isCXX));
 
 	// filters all the pragma across all the compilation units which are of type insieme::mark
 	auto pragmaMarkFilter = [](const pragma::Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };
@@ -357,13 +305,7 @@ const core::ProgramPtr& Program::convert() {
 	}
 
 	if(!insiemePragmaFound) {
-		// We start the conversion from the main function and then visit all the
-		// called functions according to the callgraph of the input program.
-		clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
-		assert(main && "Program has no main()");
-	
-		mProgram = astConvPtr->handleFunctionDecl(
-								dyn_cast<const FunctionDecl>(pimpl->mIdx.getDefinitionFor("main")));
+		mProgram = astConvPtr->handleMainFunctionDecl();
 	}
 
 	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";

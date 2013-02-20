@@ -45,9 +45,9 @@
 
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/cpp/temporary_handler.h"
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -69,6 +69,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/dump/text_dump.h"
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
@@ -83,9 +84,6 @@
 #include <clang/AST/CXXInheritance.h>
 #include <clang/AST/StmtVisitor.h>
 
-// [3.0]
-//#include "clang/Index/Entity.h"
-//#include "clang/Index/Indexer.h"
 
 using namespace clang;
 using namespace insieme;
@@ -116,15 +114,14 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						C CONVERSION FACTORY
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//clang [3.0] const clang::idx::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(FunctionDecl*& funcDecl) {
 //////////////////////////////////////////////////////////////////
 ///
-const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(FunctionDecl*& funcDecl) {
+const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(const FunctionDecl*& funcDecl) {
 
 	// if the function is not defined in this translation unit, maybe it is defined in another we already
 	// loaded use the clang indexer to lookup the definition for this function declarations
-	ConversionFactory::TranslationUnitPair&& ret = 
-			program.getIndexer().getDefAndTUforDefinition (funcDecl);
+	utils::Indexer::TranslationUnitPair&& ret = 
+			mIdx.getDefAndTUforDefinition (funcDecl);
 
 	// function declaration not found. return the current translation unit
 	if ( !ret.first ) {return NULL;}
@@ -133,58 +130,65 @@ const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitF
 	// update the funcDecl pointer to point to the correct function declaration 
 	funcDecl = llvm::cast<FunctionDecl> ( ret.first);
 	return ret.second;
-
-/* clang [3.0]
-	clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, program.getClangProgram());
-	ConversionFactory::TranslationUnitPair&& ret = program.getClangIndexer().getDefinitionFor(funcEntity);
-
-
-
-	// update the funcDecl pointer to point to the correct function declaration 
-	funcDecl = ret.first;
-	return ret.second;
-	*/
 }
 
 //////////////////////////////////////////////////////////////////
 ///
-ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog) :
+ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool isCpp) :
 		mgr(mgr), builder(mgr),
-		stmtConvPtr(std::make_shared<CStmtConverter>(*this)),
-		typeConvPtr(std::make_shared<CTypeConverter>(*this, prog)),
-		exprConvPtr(std::make_shared<CExprConverter>(*this, prog)),
 		// cppcheck-suppress exceptNew
-		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()){
+		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
+		mIdx(), funcDepGraph(mIdx) {
+
+		if (isCpp){
+			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
+			typeConvPtr = std::make_shared<CXXTypeConverter>(*this, prog);
+			exprConvPtr = std::make_shared<CXXExprConverter>(*this, prog);
+			globColl = std::make_shared<analysis::CXXGlobalVarCollector>(*this);
+		} else{
+			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
+			typeConvPtr = std::make_shared<CTypeConverter>(*this, prog);
+			exprConvPtr = std::make_shared<CExprConverter>(*this, prog);
+			globColl = std::make_shared<analysis::GlobalVarCollector>(*this);
+		}
+
+		//FIXME: move out of ctor
+		indexAndAnalyze();
+}
+
+void ConversionFactory::indexAndAnalyze(){
+	for (auto tu : program.getTranslationUnits()){
+		VLOG(1) << " ************* Indexing: " << tu->getFileName() << " ****************";
+		mIdx.indexTU(&(*tu));
+	}
+	VLOG(1) << " ************* Indexing DONE ****************";
+	if (VLOG_IS_ON(2)){
+		mIdx.dump();
+	}
+
+	VLOG(1) << " ************* Analyze function dependencies (recursion)***************";
+	auto elem = mIdx.begin();
+	auto end = mIdx.end();
+	for (; elem != end; ++elem){
+		if (llvm::isa<clang::FunctionDecl>(*elem)){
+			funcDepGraph.addNode(llvm::cast<clang::FunctionDecl>(*elem));
+		}
+	}
+	VLOG(1) << " ************* Analyze function dependencies DONE***************";
+	if (VLOG_IS_ON(2)){
+		funcDepGraph.print(std::cout);
+	}
 }
 
 //////////////////////////////////////////////////////////////////
 ///
-ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog,
-	std::shared_ptr<StmtConverter> stmtConvPtr,
-	std::shared_ptr<TypeConverter> typeConvPtr,
-	std::shared_ptr<ExprConverter> exprConvPtr) :
-		mgr(mgr), builder(mgr), 
-		stmtConvPtr(stmtConvPtr),
-		typeConvPtr(typeConvPtr),
-		exprConvPtr(exprConvPtr),
-		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()) {
-}
+void ConversionFactory::buildGlobalStruct(const clang::FunctionDecl* fDecl){
+	// Reset globalVarCollector
+	globColl->reset();	
 
-//////////////////////////////////////////////////////////////////
-///
-void ConversionFactory::collectGlobalVar(const clang::FunctionDecl* funcDecl) {
 	// Extract globals starting from this entry point
-	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
- // clang [3.0]	const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(def);
-	const TranslationUnit* clangTU = getTranslationUnitForDefinition(def);
-
-	ctx.globalFuncMap.clear();
-	analysis::GlobalVarCollector globColl(*this, clangTU , program.getIndexer(), ctx.globalFuncMap);
-
-	globColl(funcDecl);
-	globColl(getProgram().getTranslationUnits());
-
-	VLOG(1) << globColl;
+	(*globColl)(fDecl);
+	(*globColl)(getProgram().getTranslationUnits());
 
 	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Thread private requires to collect all the variables which are marked to be threadprivate
@@ -192,19 +196,22 @@ void ConversionFactory::collectGlobalVar(const clang::FunctionDecl* funcDecl) {
 
 	//~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//Omp flush clause forces the flushed variable to be volatile
-	//omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
+	//omp::collectVolatile(getPragmaMap(), ctx.volatiles);
 	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	ctx.globalStruct = globColl.createGlobalStruct();
+	ctx.globalStruct = globColl->createGlobalStruct();
 	if (ctx.globalStruct.first) {
 		ctx.globalVar = builder.variable(builder.refType(ctx.globalStruct.first));
 	}
-	ctx.globalIdentMap = globColl.getIdentifierMap();
+	ctx.globalIdentMap = globColl->getIdentifierMap();
+	ctx.globalFuncSet = globColl->getUsingGlobals();
 
+	VLOG(1) << "globals collected";
 	VLOG(2) << ctx.globalStruct.first;
 	VLOG(2) << ctx.globalStruct.second;
 	VLOG(2) << ctx.globalVar;
 }
+
 
 //////////////////////////////////////////////////////////////////
 ///
@@ -326,10 +333,10 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	
 	// Conversion of the variable type
 	QualType&& varTy = valDecl->getType();
-	VLOG(2)	<< varTy.getAsString(); // cm
-
 	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
 
+	VLOG(2)	<< "clang type: " << varTy.getAsString(); // cm
+	VLOG(2)	<< "ir type:    " << irType;
 
 	//// check wether the variable is marked to be volatile 
 	if (varTy.isVolatileQualified()) {
@@ -389,7 +396,8 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	// the IR variable and insert it into the map for future lookups
 	core::VariablePtr&& var = builder.variable( irType );
 	VLOG(2) << "IR variable" << var.getType()->getNodeType() << "" << var<<":"<<varDecl->getNameAsString();
-
+	VLOG(2) << "IR var type" << var.getType();
+	
 	ctx.varDeclMap.insert( { valDecl, var } );
 
 	if ( !valDecl->getNameAsString().empty() ) {
@@ -532,6 +540,21 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		// initialization value
 		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), var->getType(), false);
 		assert(initExpr && "not correct initialization of the variable");
+
+		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ HANDLE SPETIAL CASES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		// if is is a new operator, and is not an array, we can be sure that it will be a pointer to
+		// a single element, so drop the array[1]  thing
+		if (definition->getInit() &&
+			llvm::isa<clang::CXXNewExpr>(definition->getInit()) && 
+			llvm::cast<clang::CXXNewExpr>(definition->getInit())){
+			
+			//var = builder.variable( builder.refType(initExpr->getType() ));
+			var = builder.variable(initExpr->getType());
+			ctx.varDeclMap[definition] = var;
+		}
+
+		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 		retStmt = builder.declarationStmt(var, initExpr);
 	} else {
@@ -722,6 +745,7 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	core::NodeType&& kind =
 		(type->getNodeType() != core::NT_RefType ? type->getNodeType() : GET_REF_ELEM_TYPE(type)->getNodeType() );
 
+	// if there is no initialization expression
 	if (!expr) {
 
 		// If the type of this declaration is translated as a array type then it may also include
@@ -772,10 +796,15 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 
 	// Convert the expression like any other expression
 	retIr = convertExpr(expr);
+	
 
 	// ============================================================================================
 	// =============================== Handling of special cases  =================================
 	// ============================================================================================
+	
+	// if is a constructor call, we are done
+	if (llvm::isa<clang::CXXConstructExpr>(expr) || llvm::isa<clang::CXXNewExpr>(expr))
+		return retIr;
 	
 	// If this is an initialization of an array using array.create (meaning it was originally a
 	// malloc) then we expliticly invoke the ref.new to allocate the memory on the heap 
@@ -785,8 +814,7 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 
 	// In the case the object we need to initialize is a ref<array...> then we are not allowed to
 	// deref the actual initializer, therefore we assign the object as it is 
-	if ( utils::isRefArray(retIr->getType()) && utils::isRefArray(type ) ) 
-	{
+	if ( utils::isRefArray(retIr->getType()) && utils::isRefArray(type ) ) {
 		return retIr = utils::cast(retIr, type);
 	}
 
@@ -794,13 +822,12 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// can directly cast it using the ref.vector.to.ref.array and perform the assignment. We do not
 	// need to create a copy of the object in the right hand side 
 	if ( utils::isRefVector(retIr->getType()) && retIr->getNodeType() == core::NT_Literal &&
-		 utils::isRefArray(type ) ) 
-	{
+		 utils::isRefArray(type ) ) {
 		return retIr = utils::cast(retIr, type);
 	}
 	// ============================== End Special Handlings =======================================
 	
-	// Anythime we have to initialize a ref<'a> from another type of object we have to deref the
+	// Anytime we have to initialize a ref<'a> from another type of object we have to deref the
 	// object in the right hand side and create a copy (ref.var). 
 	if (type->getNodeType() == core::NT_RefType ) {
 		retIr = builder.refVar(utils::cast(retIr, GET_REF_ELEM_TYPE(type)));
@@ -828,6 +855,7 @@ core::FunctionTypePtr ConversionFactory::addGlobalsToFunctionType(const core::IR
 	return builder.functionType(argTypes, funcType->getReturnType());
 
 }
+
 
 //////////////////////////////////////////////////////////////////
 ///
@@ -886,32 +914,32 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
   		}
 	}
 
-
-	if (!ctx.isRecSubFunc) {
-		// add this type to the type graph (if not present)
-		exprConvPtr->funcDepGraph.addNode(funcDecl);
-		if (VLOG_IS_ON(2)) {
-			exprConvPtr->funcDepGraph.print(std::cout);
-		}
-	}
+//   RECURSION HANDLING CLEANUP 
+//
+//	if (!ctx.isRecSubFunc) {
+//		// add this type to the type graph (if not present)
+//		exprConvPtr->funcDepGraph.addNode(funcDecl);
+//		if (VLOG_IS_ON(2)) {
+//			exprConvPtr->funcDepGraph.print(std::cout);
+//		}
+//	}
+//
 
 	// retrieve the strongly connected components for this type
-	std::set<const FunctionDecl*>&& components = exprConvPtr->funcDepGraph.getStronglyConnectedComponents( funcDecl );
+	//std::set<const FunctionDecl*>&& components = exprConvPtr->funcDepGraph.getStronglyConnectedComponents( funcDecl );
+	std::set<const FunctionDecl*>&& components = funcDepGraph.getStronglyConnectedComponents( funcDecl );
 
 	if (!components.empty()) {
-		std::set<const FunctionDecl*>&& subComponents = exprConvPtr->funcDepGraph.getSubComponents( funcDecl );
+		std::set<const FunctionDecl*>&& subComponents = funcDepGraph.getSubComponents( funcDecl );
 
 		for (auto cur: subComponents){
 
-			FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
+			const FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
 			VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
 
-			//clang[3.0]const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
 			const TranslationUnit* rightTU = this->getTranslationUnitForDefinition(decl);
 
 			if ( rightTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
-				// update the translation unit
-				// [3.0] this->currTU = &Program::getTranslationUnit(clangTU);
 				this->currTU.push(rightTU);
 
 				// look up the lambda cache to see if this function has been
@@ -957,7 +985,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			
 			// In the case the function is receiving the global variables the signature needs to be
 			// modified by allowing the global struct to be passed as an argument
-			if ( ctx.globalFuncMap.find(funDecl) != ctx.globalFuncMap.end() ) {
+			if ( ctx.globalFuncSet.find(funDecl) != ctx.globalFuncSet.end() ) {
 				funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
 			}
 			core::VariablePtr&& var = builder.variable( funcType );
@@ -995,7 +1023,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// global struct or not
 	core::VariablePtr parentGlobalVar = ctx.globalVar;
 
-	if (!isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end()) {
+	if (!isEntryPoint && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end()) {
 		// declare a new variable that will be used to hold a reference to the global data stucture
 		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStruct.first) );
 		params.push_back( var );
@@ -1091,7 +1119,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
 
 	// if this function gets the globals in the capture list we have to create a different type
-	if (!isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end()) {
+	if (!isEntryPoint && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end()) {
 		// declare a new variable that will be used to hold a reference to the global data stucture
 		funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
 	}
@@ -1153,7 +1181,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
 		// use the clang indexer to lookup the definition for this function declarations
-		ConversionFactory::TranslationUnitPair&& ret = program.getIndexer().getDefAndTUforDefinition(llvm::cast<Decl>(fd));
+		utils::Indexer::TranslationUnitPair&& ret = mIdx.getDefAndTUforDefinition(llvm::cast<Decl>(fd));
 
 		if ( ret.first ) {
 			fd = llvm::cast<FunctionDecl>(ret.first);
@@ -1191,8 +1219,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		auto fit = ctx.recVarExprMap.find(fd);
 		assert(fit != ctx.recVarExprMap.end());
 
-		FunctionDecl* decl = const_cast<FunctionDecl*>(fd);
-		//clang [3.0]const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(decl);
+		const FunctionDecl* decl = const_cast<FunctionDecl*>(fd);
 		const TranslationUnit* rightTU = getTranslationUnitForDefinition(decl);
 
 		assert (rightTU);
@@ -1218,6 +1245,147 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	return retLambdaExpr;
 }
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//							CXX STUFF
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+////////////////////////////////////////////////////////////////////////////////
+//
+core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl,
+												   core::ExpressionPtr func, 
+												   core::TypePtr ownerClassType, 
+											   	   core::FunctionKind funcKind){
+
+	core::FunctionTypePtr ty = func.getType().as<core::FunctionTypePtr>();
+	// NOTE: has being already memberized???
+	if (ty.isMemberFunction() ||
+		ty.isConstructor() ||
+		ty.isDestructor() ){
+		return func.as<core::LambdaExprPtr>();
+	}
+
+
+	// with the transformed lambda, we can extract the body and re-type it into a constructor type
+	core::StatementPtr body = func.as<core::LambdaExprPtr>()->getBody();
+	auto params = func.as<core::LambdaExprPtr>()->getParameterList();
+
+	// update parameter list with a class-typed parameter in the first possition
+	auto thisVar = builder.variable(ownerClassType);
+	core::VariableList paramList = params.getElements();
+	paramList.insert(paramList.begin(), thisVar);
+	
+
+	// build the new function, 
+	// return type depends on type of function
+	core::TypePtr retTy; 
+	switch (funcKind){
+		case core::FK_MEMBER_FUNCTION:
+			retTy = func.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
+			break;
+		case core::FK_CONSTRUCTOR:
+			retTy = ownerClassType;
+			break;
+		default:
+			assert(false && "not implemented");
+	}
+	auto newFunctionType = builder.functionType(extractTypes(paramList), retTy, funcKind);
+
+	// every usage of this has being defined as a literal "this" typed alike the class
+	// substute every usage of this with the right variable
+	core::LiteralPtr thisLit =  builder.literal("this", ownerClassType);
+	core::StatementPtr newBody = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
+
+	// build the member function
+	core::LambdaExprPtr memberized =  builder.lambdaExpr (newFunctionType, paramList, newBody);
+	
+	// cache it
+	ctx.lambdaExprCache.erase(funcDecl);
+	ctx.lambdaExprCache[funcDecl] = memberized;
+	
+	return memberized;
+}
+
+//////////////////////////////////////////////////////////////////
+///
+core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorDecl* ctorDecl, core::TypePtr irClassType){
+
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	core::LambdaExprPtr oldCtor= convertFunctionDecl (llvm::cast<clang::FunctionDecl>(ctorDecl)).as<core::LambdaExprPtr>();
+	
+	core::FunctionTypePtr ty = oldCtor.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>();
+	//  has being already memberized??? then is already solved
+	if (ty.isMemberFunction() ||
+		ty.isConstructor() ||
+		ty.isDestructor() ){
+		return oldCtor.as<core::LambdaExprPtr>();
+	}
+
+	// this, and other stuff will be handled by memberize
+	// here we only need to care about initialization list.
+	
+	// generate code for each initialization
+	core::StatementList newBody;
+	
+	// for each initializer, transform it
+	clang::CXXConstructorDecl::init_const_iterator it  = ctorDecl->init_begin();
+	clang::CXXConstructorDecl::init_const_iterator end = ctorDecl->init_end();
+	for(; it != end; it++){
+
+		core::StringValuePtr ident;
+
+		if((*it)->isBaseInitializer ()){
+			assert(false && "base init not implemented");
+		}
+		else if ((*it)->isMemberInitializer ()){
+			ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
+		}
+		else if ((*it)->isAnyMemberInitializer ()){
+			assert(false && "any member not implemented");
+		}
+		else if ((*it)->isIndirectMemberInitializer ()){
+			assert(false && "indirect init not implemented");
+		}
+		else if ((*it)->isInClassMemberInitializer ()){
+			assert(false && "in class member not implemented");
+		}
+		else if ((*it)->isDelegatingInitializer ()){
+			assert(false && "delegating init not implemented");
+		}
+		else if ((*it)->isPackExpansion () ){
+			assert(false && "pack expansion not implemented");
+		}
+
+		// create access to the member of the struct/class
+		core::TypePtr memberTy = irClassType.as<core::StructTypePtr>()->getTypeOfMember(ident);
+		core::ExpressionPtr&& init = builder.callExpr(
+					builder.refType( memberTy ),
+					gen.getCompositeRefElem(),
+					toVector<core::ExpressionPtr>  (builder.literal("this", builder.refType(irClassType)),
+													builder.getIdentifierLiteral(ident), 
+													builder.getTypeLiteral(memberTy) )
+			);
+
+
+		core::ExpressionPtr expr = convertExpr((*it)->getInit());
+		core::StatementPtr assign = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, tryDeref(expr));
+
+		// append to statements
+		newBody.push_back(assign);
+	}
+	
+	// push original body
+	core::StatementPtr body = oldCtor->getBody();
+	newBody.push_back(body);
+
+
+	// NOTE: function type and paramList do not change here
+	core::LambdaExprPtr newCtor =  builder.lambdaExpr  (ty, 
+														oldCtor.getLambda().getParameterList(), 
+														builder.compoundStmt(newBody));
+	return newCtor;
+}
+
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							AST CONVERTER
@@ -1251,42 +1419,20 @@ core::CallExprPtr ASTConverter::handleBody(const clang::Stmt* body, const Transl
 }
 
 core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
+
 	// Handling of the translation unit: we have to make sure to load the translation unit where the function is
 	// defined before starting the parser otherwise reading literals results in wrong values.
-	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
-	//clang [3.0]const clang::idx::TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
-	const TranslationUnit* rightTU = mFact.getTranslationUnitForDefinition(def);
+	const TranslationUnit* rightTU = mFact.getTranslationUnitForDefinition(funcDecl);
 	assert(rightTU && "Translation unit for function not found.");
 	mFact.currTU.push(rightTU);
 
+	// Collect global variables for the whole program and build globalStruct
 	insieme::utils::Timer t("Globals.collect");
-	mFact.collectGlobalVar(funcDecl);
-
-//	VLOG(1) << globColl;
-//
-//	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//	// Thread private requires to collect all the variables which are marked to be threadprivate
-//	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.ctx.thread_private);
-//
-//	//~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//	//Omp flush clause forces the flushed variable to be volatile
-//	//omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
-//	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//
-//	mFact.ctx.globalStruct = globColl.createGlobalStruct();
-//	if (mFact.ctx.globalStruct.first) {
-//		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(mFact.ctx.globalStruct.first));
-//	}
-//	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
-//
-//	VLOG(2) << mFact.ctx.globalStruct.first;
-//	VLOG(2) << mFact.ctx.globalStruct.second;
-//	VLOG(2) << mFact.ctx.globalVar;
-
+	mFact.buildGlobalStruct(funcDecl);
 	t.stop();
 	LOG(INFO) << t;
 
-	const core::ExpressionPtr& expr = mFact.convertFunctionDecl(def, true).as<core::ExpressionPtr>();
+	const core::ExpressionPtr& expr = mFact.convertFunctionDecl(funcDecl, true).as<core::ExpressionPtr>();
 
 	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
 

@@ -71,7 +71,9 @@ namespace conversion {
 //							DECLARATION STATEMENT
 // 			In clang a declstmt is represented as a list of VarDecl
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
+	return StmtConverter::VisitDeclStmt(declStmt);
+
 	/*
 	// if there is only one declaration in the DeclStmt we return it
 
@@ -131,7 +133,9 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitDeclStmt(cla
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							RETURN STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
+	return StmtConverter::VisitReturnStmt(retStmt);
+
 	/*
 	//START_LOG_STMT_CONVERSION(retStmt);
 
@@ -185,9 +189,11 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitReturnStmt(c
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							COMPOUND STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
-	/*
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
 
+	return StmtConverter::VisitCompoundStmt(compStmt);
+
+	/*
 	//START_LOG_STMT_CONVERSION(compStmt);
 	core::StatementPtr retIr;
 	LOG_STMT_CONVERSION(retIr);
@@ -239,15 +245,15 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCompoundStmt
 	*/
 }
 
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
 	assert(false && "Catch -- Currently not supported!");
 }
 
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
 	assert(false && "Try -- Currently not supported!");
 }
 
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
 	assert(false && "ForRange -- Currently not supported!");
 }
 
@@ -255,8 +261,7 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCXXForRangeS
 // Overwrite the basic visit method for expression in order to automatically
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::Visit(clang::Stmt* stmt) {
-	/*
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	VLOG(2) << "CXX";
 	stmtutils::StmtWrapper&& retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 
@@ -274,7 +279,6 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::Visit(clang::Stmt
 		return omp::attachOmpAnnotation(irStmt, stmt, convFact);
 	}
 	return retStmt;
-	*/
 }
 
 }

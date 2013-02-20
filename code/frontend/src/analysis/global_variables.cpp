@@ -53,13 +53,6 @@
 
 #include "insieme/annotations/c/naming.h"
 
-// [3.0]
-//#include "clang/Index/Entity.h"
-//#include "clang/Index/Indexer.h"
-//#include "clang/Index/Program.h"
-//#include "clang/Index/TranslationUnit.h"
-
-
 #include "clang/Basic/FileManager.h"
 
 #include "clang/AST/ASTContext.h"
@@ -91,14 +84,17 @@ namespace insieme {
 namespace frontend {
 namespace analysis {
 
+GlobalVarCollector::GlobalVarCollector(
+	conversion::ConversionFactory&	convFact)
+	: convFact(convFact),
+	  indexer(convFact.getIndexer())
+	{
+}
 /////////////////////////////////////////////////////////////////////////////////
 ///
 core::StringValuePtr
-GlobalVarCollector::buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, const clang::FunctionDecl* func ) const {
+GlobalVarCollector::buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, const clang::FunctionDecl* func /*=NULL*/) const {
 
-	//assert(currTU);
-//	const clang::SourceManager& srcMgr = const_cast<clang::idx::TranslationUnit*>(currTU)->getASTContext().getSourceManager();
-			
 	const clang::Decl* d = llvm::cast<Decl>(varDecl);
 	const clang::SourceManager& srcMgr = d->getASTContext().getSourceManager();
 
@@ -146,31 +142,6 @@ void GlobalVarCollector::operator()(const clang::Decl* decl) {
 /////////////////////////////////////////////////////////////////////////////////
 ///
 void GlobalVarCollector::operator()(const Program::TranslationUnitSet& tus) {
-	/*
-	 * FIXME:  clang [3.0]
-	
-	 const clang::idx::TranslationUnit* saveTU = currTU;
-
-	std::for_each(tus.begin(), tus.end(), [&](const TranslationUnitPtr& cur) {
-		currTU = Program::getClangTranslationUnit(*cur);
-		assert(currTU);
-
-		const clang::ASTContext& ctx = cur->getCompiler().getASTContext();
-
-		clang::DeclContext* declCtx = clang::TranslationUnitDecl::castToDeclContext(ctx.getTranslationUnitDecl());
-
-		std::for_each(declCtx->decls_begin(), declCtx->decls_end(), [&](clang::Decl* cur) {
-				
-				if(clang::VarDecl* vDecl = llvm::dyn_cast<clang::VarDecl>(cur)) {
-					VisitExternVarDecl(vDecl);
-				}
-
-			});
-	});
-
-	currTU = saveTU;
-	*/
-
 
 	for (auto cur : tus){
 		const clang::ASTContext& ctx = cur->getCompiler().getASTContext();
@@ -197,21 +168,18 @@ void GlobalVarCollector::VisitExternVarDecl(clang::VarDecl* decl) {
 		[&decl] (const VarDecl* cur) -> bool { 
 			return decl->getNameAsString() == cur->getNameAsString(); 
 		}  
-		);
+	);
 
 	if (git == globals.end()) { return; }
-
-	varTU.erase( varTU.find( *git ) );
 	globals.erase( git );
 
 	globals.insert( decl );
-	varTU.insert( std::make_pair(decl, currTU) );
 
 	core::StringValuePtr&& ident = buildIdentifierFromVarDecl(decl);
 
 	// Switch the value of the identifier for the variable already in the map to the
 	// this varDecl because the fit is defined extern 
-	for(GlobalIdentMap::iterator it = varIdentMap.begin(), end =varIdentMap.end(); it!=end; ++it) {
+	for(GlobalIdentMap::iterator it=varIdentMap.begin(), end=varIdentMap.end(); it!=end; ++it) {
 		if (it->first->getNameAsString() == decl->getNameAsString()) 
 			it->second = ident;
 	}
@@ -244,12 +212,10 @@ bool GlobalVarCollector::VisitStmt(clang::Stmt* stmt) {
 			for(auto I = ranges->second.begin(); I != ranges->second.end(); ++I){
 				clang::Stmt* token = (*I)->get<clang::Stmt*>();
 
-				this->TraverseStmt(token);
-
+				TraverseStmt(token);
 			}
 		}
     });
-
 
     return this->clang::RecursiveASTVisitor<GlobalVarCollector>::VisitStmt(stmt);
 }
@@ -259,7 +225,6 @@ bool GlobalVarCollector::VisitStmt(clang::Stmt* stmt) {
 bool GlobalVarCollector::VisitVarDecl(clang::VarDecl* varDecl) {
 	if(varDecl->hasGlobalStorage()) {
 		globals.insert( varDecl );
-		varTU.insert( std::make_pair(varDecl, currTU) );
 
 		assert(!funcStack.empty());
 		const FunctionDecl* enclosingFunc = funcStack.top();
@@ -298,8 +263,7 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 
 		// add the variable to the list of global vars (if not already there)
 		if(fit == globals.end()) {
-			globals.insert( varDecl );
-			auto ret = varTU.insert( std::make_pair(varDecl, currTU) );
+			auto ret = globals.insert( varDecl );
 			assert(ret.second && "Variable name already exists within the list of global variables.");
 			
 			assert(varDecl && "no dec");
@@ -315,25 +279,20 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 				LOG(INFO) << saveFit->getNameAsString();
 
 				globals.erase(fit);
-				
-				auto&& vit = varTU.find( saveFit );
-				varTU.erase( vit );
 	
 				// Switch the value of the identifier for the variable already in the map to the
 				// this decl because the fit is defined extern 
-				for(GlobalIdentMap::iterator it = varIdentMap.begin(), end =varIdentMap.end(); it!=end; ++it) {
+				for(GlobalIdentMap::iterator it=varIdentMap.begin(), end=varIdentMap.end(); it!=end; ++it) {
 					if (it->first->getNameAsString() == saveFit->getNameAsString()) 
 						it->second = ident;
 				}
 				
 				globals.insert( varDecl );
-				varTU.insert( std::make_pair(varDecl, currTU) );
 
 				assert(varDecl && "no dec");
 				assert(ident && "no identifier");
 				varIdentMap.insert( std::make_pair(varDecl, ident) );
 			} else {
-
 				// If is now new, and is not extern, is because is a name reuse. 
 				// name exist, is another declaration, DO NO USE ITS identifier
 
@@ -357,31 +316,16 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 
 	const FunctionDecl *definition = calleeDecl;
 
-	//FIXME: do we need this?
-	//save the translation unit for the current function
-	//auto old = currTU;
-	
 	std::pair<clang::Decl*, insieme::frontend::TranslationUnit*> ret;
 
 	// if has no body, this might be defined in another translation unit
 	if(calleeDecl && !calleeDecl->hasBody(definition)) {
-
-		/* CLANG [3.0]
-		// if the function is not defined in this translation unit, maybe it is defined in another
-		// we already loaded  use the clang indexer to lookup the definition for this function
-		// declarations
-		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(calleeDecl, indexer.getProgram());
-		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
-		definition = ret.first;
-		currTU = ret.second;
-		*/
-
 		// it might not be indexed, in this case is a third party function, and 
 		// body is not known. No globals can be extracted from there.
-		ret = convFact.getProgram().getIndexer().getDefAndTUforDefinition(calleeDecl);
+		// FIXME: do we need the indexer as member? use factory to get DefAndTU
+		ret = indexer.getDefAndTUforDefinition(calleeDecl);
 		if (!ret.first)
 			return true;
-	//	currTU = ret.second;
 		definition = llvm::cast<FunctionDecl>(ret.first);
 	}
 
@@ -394,9 +338,6 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 	if(usingGlobals.find(definition) != usingGlobals.end()) {
 		usingGlobals.insert( funcStack.top() );
 	}
-
-	// reset the translation unit to the previous one
-	//currTU = old;
 
 	return true;
 }
@@ -422,19 +363,8 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 	for ( auto it = globals.begin(), end = globals.end(); it != end; ++it ) {
 		VLOG(2) << "    - " << *it;
 
-		// get entry type and wrap it into a reference if necessary
-		auto fit = varTU.find(*it);
-		assert(fit != varTU.end());
-		
-		// In the case we have to resolve the initial value the current translation
-		// unit has to be set properly
-		//
-	// FIXME: is needed
-	 //currTU = fit->second;
-//		convFact.setTranslationUnit(convFact.getProgram().getTranslationUnit( fit->second ) );
-		
 		core::StringValuePtr ident = varIdentMap.find( *it )->second;
-
+		// get entry type and wrap it into a reference if necessary
 		core::TypePtr&& type = convFact.convertType((*it)->getType().getTypePtr());
 
 		// if ((*it)->getNameAsString() == "ompi_mpi_comm_world") {
@@ -458,11 +388,10 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 			type = builder.refType( type );
 		}
 
-
 		// add type to the global struct
 		entries.push_back( builder.namedType( ident, type ) );
+
 		// add initialization
-		varIdentMap.insert( std::make_pair(*it, ident) ); 
 
 		// we have to initialize the value of this ref with the value of the extern
 		// variable which we assume will be visible from the entry point
@@ -488,7 +417,6 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		}
 
 		members.push_back( member );
-
 	}
 
 	VLOG(1) << "Building '__insieme_globals' data structure";
@@ -496,11 +424,6 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 	core::StructTypePtr&& structTy = builder.structType(entries);
 	// we name this structure as '__insieme_globals'
 	structTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(std::string("__insieme_globals")) );
-	// set back the original TU
-	assert(currTU && "Lost reference to the translation unit");
-
-	// FIXME: is needed?
-//	convFact.setTranslationUnit(convFact.getProgram().getTranslationUnit(currTU));
 
 	return std::make_pair(structTy, builder.structExpr(structTy, members) );
 }

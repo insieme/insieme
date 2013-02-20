@@ -40,6 +40,7 @@
 #include "insieme/frontend/frontend.h"
 
 #include "insieme/core/ir_node.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
@@ -88,6 +89,11 @@ namespace insieme {
 
 		// see whether target code can be compiled
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
+
+		// switch to C++ compiler if necessary
+		if (core::analysis::isIRpp(code)) {
+			compiler = utils::compiler::Compiler::getRuntimeCompiler(utils::compiler::Compiler::getDefaultCppCompiler());
+		}
 
 //		// add OCL specific compiler flags
 //		compiler.addFlag("-lOpenCL");

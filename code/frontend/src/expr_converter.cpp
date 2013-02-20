@@ -61,7 +61,6 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 
-#include "insieme/frontend/cpp/temporary_handler.h"
 #include "insieme/annotations/c/naming.h"
 
 #include "clang/AST/StmtVisitor.h"
@@ -87,7 +86,7 @@ std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl)
 namespace exprutils {
 // FIXME
 // Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
-annotations::c::SourceLocation convertClangSrcLoc(clang::SourceManager& sm, const clang::SourceLocation& loc) {
+annotations::c::SourceLocation convertClangSrcLoc(const clang::SourceManager& sm, const clang::SourceLocation& loc) {
 
 	clang::SourceLocation cloc = loc;
 
@@ -280,83 +279,14 @@ core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr
 
 namespace insieme {
 namespace frontend {
-
-namespace utils {
-
-template<>
-void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDecl* func,
-		const DependencyGraph<const clang::FunctionDecl*>::VertexTy& v) {
-	// This is potentially dangerous
-	FunctionDependencyGraph& funcDepGraph = static_cast<FunctionDependencyGraph&>(*this);
-
-	CallExprVisitor callExprVis(funcDepGraph.getIndexer());
-	CallExprVisitor::CallGraph&& graph = callExprVis.getCallGraph(func);
-
-	std::for_each(graph.begin(), graph.end(),
-			[ this, v ](const clang::FunctionDecl* currFunc) {assert(currFunc); this->addNode(currFunc, &v);});
-}
-
-/*************************************************************************************************
- * CallExprVisitor 
- *************************************************************************************************/
-void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
-	/*
-	 * FIXME: clang [3.0]
-	const clang::FunctionDecl* def = NULL;
-	// this will find function definitions if they are declared in  the same translation unit
-	// (also defined as static)
-	if (!funcDecl->hasBody(def)) {
-		// if the function is not defined in this translation unit, maybe it is defined in another we already
-		// loaded use the clang indexer to lookup the definition for this function declarations
-		clang::idx::Entity&& funcEntity = clang::idx::Entity::get( funcDecl, indexer.getProgram() );
-		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
-		if ( ret.first ) {def = ret.first;}
-	}
-	*/
-
-	const clang::FunctionDecl* def = NULL;
-	// if the function has no body, we need to find the right declaration with
-	// the definition in another translation unit
-	if (!funcDecl->hasBody(def)) {
-		clang::Decl* raw = indexer.getDefinitionFor (funcDecl);
-		if (raw){
-			def = llvm::cast<clang::FunctionDecl>(raw);
-		}
-	}
-
-	if (def){
-		callGraph.insert(def);
-	}
-}
-
-void CallExprVisitor::VisitCallExpr(clang::CallExpr* callExpr) {
-	if (callExpr->getDirectCallee()) {
-		if (clang::FunctionDecl * funcDecl = llvm::dyn_cast<clang::FunctionDecl>(callExpr->getDirectCallee())) {
-			addFunctionDecl(funcDecl);
-		}
-	}
-	VisitStmt(callExpr);
-}
-
-void CallExprVisitor::VisitDeclRefExpr(clang::DeclRefExpr* expr) {
-	// if this variable is used to invoke a function (therefore is a
-	// function pointer) and it has been defined here, we add a potentially
-	// dependency to the current definition
-	//if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(expr->getDecl()) ) {
-	// addFunctionDecl(funcDecl);
-	//}
-}
-
-} // end utils namespace 
-
 namespace conversion {
 
 //---------------------------------------------------------------------------------------------------------------------
 //										BASE EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
 
-core::ExpressionPtr ConversionFactory::ExprConverter::wrapVariable(clang::Expr* expr) {
-	const DeclRefExpr* ref = utils::skipSugar<const DeclRefExpr>(expr);
+core::ExpressionPtr ConversionFactory::ExprConverter::wrapVariable(const clang::Expr* expr) {
+	const DeclRefExpr* ref = utils::skipSugar<DeclRefExpr>(expr);
 	if (ref && isa<const ParmVarDecl>(ref->getDecl())) {
 		const core::VariablePtr& parmVar = core::static_pointer_cast<const core::Variable>(
 				convFact.convertExpr(ref));
@@ -465,7 +395,7 @@ ExpressionList ConversionFactory::ExprConverter::getFunctionArguments(const core
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								INTEGER LITERAL
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitIntegerLiteral(const clang::IntegerLiteral* intLit) {
 	START_LOG_EXPR_CONVERSION(intLit);
 
 	core::ExpressionPtr retExpr;
@@ -519,7 +449,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitIntegerLiteral(clang:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								FLOATING LITERAL
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitFloatingLiteral(clang::FloatingLiteral* floatLit) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitFloatingLiteral(const clang::FloatingLiteral* floatLit) {
 	START_LOG_EXPR_CONVERSION(floatLit);
 
 	core::ExpressionPtr retExpr;
@@ -550,7 +480,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitFloatingLiteral(clang
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								CHARACTER LITERAL
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitCharacterLiteral(CharacterLiteral* charLit) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitCharacterLiteral(const clang::CharacterLiteral* charLit) {
 	START_LOG_EXPR_CONVERSION(charLit);
 
 	core::ExpressionPtr retExpr;
@@ -606,7 +536,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCharacterLiteral(Char
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								STRING LITERAL
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitStringLiteral(clang::StringLiteral* stringLit) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitStringLiteral(const clang::StringLiteral* stringLit) {
 	core::ExpressionPtr retExpr;
 	LOG_EXPR_CONVERSION(retExpr);
 
@@ -652,7 +582,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitStringLiteral(clang::
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							PARENTESIS EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitParenExpr(clang::ParenExpr* parExpr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitParenExpr(const clang::ParenExpr* parExpr) {
 	core::ExpressionPtr retExpr;
 
 	LOG_EXPR_CONVERSION(retExpr);
@@ -669,7 +599,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitParenExpr(clang::Pare
 // C++ rather than using 0 (which is an integer that may not match the size
 // of a pointer).
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitGNUNullExpr(clang::GNUNullExpr* nullExpr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitGNUNullExpr(const clang::GNUNullExpr* nullExpr) {
 	core::TypePtr&& type = convFact.convertType(GET_TYPE_PTR(nullExpr));
 	assert(type->getNodeType() != core::NT_ArrayType && "C pointer type must of type array<'a,1>");
 	return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(type));
@@ -678,7 +608,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitGNUNullExpr(clang::GN
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						  IMPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(clang::ImplicitCastExpr* castExpr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
 	START_LOG_EXPR_CONVERSION(castExpr);
 
 	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
@@ -715,7 +645,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(clan
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						EXPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitExplicitCastExpr(clang::ExplicitCastExpr* castExpr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr) {
 	START_LOG_EXPR_CONVERSION(castExpr);
 
 	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
@@ -739,7 +669,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitExplicitCastExpr(clan
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(clang::CastExpr* castExpr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(const clang::CastExpr* castExpr) {
 	START_LOG_EXPR_CONVERSION(castExpr);
 
 	core::ExpressionPtr retIr;
@@ -790,7 +720,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(clang::CastE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							FUNCTION CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallExpr* callExpr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang::CallExpr* callExpr) {
 	START_LOG_EXPR_CONVERSION(callExpr);
 
 	// return converted node
@@ -799,7 +729,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 
 	if (callExpr->getDirectCallee()) {
 
-		FunctionDecl* funcDecl = llvm::cast<FunctionDecl>(callExpr->getDirectCallee());
+		const FunctionDecl* funcDecl = llvm::cast<FunctionDecl>(callExpr->getDirectCallee());
 		auto funcTy = convFact.convertType(GET_TYPE_PTR(funcDecl)).as<core::FunctionTypePtr>() ;
 
 		// collects the type of each argument of the expression
@@ -815,7 +745,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 		if (!funcDecl->hasBody(definition)) {
 			// if the function is not defined in this translation unit, maybe it is defined in another we already
 			// loaded use the clang indexer to lookup the definition for this function declarations
-			FunctionDecl* fd = funcDecl;
+			const FunctionDecl* fd = funcDecl;
 			rightTU = convFact.getTranslationUnitForDefinition(fd);
 			if (rightTU && fd->hasBody()) { definition = fd; }
 		}
@@ -881,7 +811,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 		
 		// need tolookup if this fuction needs to access the globals, in that case the capture
 		// list needs to be initialized with the value of global variable in the current scope
-		if (ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end()) {
+		if (ctx.globalFuncSet.find(definition) != ctx.globalFuncSet.end()) {
 			// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
 			// current context
 			assert( ctx.globalVar && "No global definitions forwarded to this point");
@@ -940,7 +870,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(clang::CallE
 //
 // [C99 6.4.2.2] - A predefined identifier such as __func__.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitPredefinedExpr(clang::PredefinedExpr* preExpr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitPredefinedExpr(const clang::PredefinedExpr* preExpr) {
 	
 	string lit;
 	switch(preExpr->getIdentType()) {
@@ -964,7 +894,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitPredefinedExpr(clang:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						SIZEOF ALIGNOF EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//core::ExpressionPtr VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
+//core::ExpressionPtr VisitSizeOfAlignOfExpr(const clang::SizeOfAlignOfExpr* expr) {
 //START_LOG_EXPR_CONVERSION(expr);
 
 //core::ExpressionPtr irNode;
@@ -985,7 +915,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitPredefinedExpr(clang:
 // UnaryExprOrTypeTraitExpr - expression with either a type or (unevaluated)
 // expression operand. Used for sizeof/alignof (C99 6.5.3.4) and vec_step
 // (OpenCL 1.1 6.11.12).
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryExprOrTypeTraitExpr(const clang::UnaryExprOrTypeTraitExpr* expr) {
 	START_LOG_EXPR_CONVERSION(expr);
 	core::ExpressionPtr irNode;
 
@@ -1010,7 +940,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryExprOrTypeTraitE
 //
 // [C99 6.5.2.3] Structure and Union Members. X->F and X.F.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitMemberExpr(clang::MemberExpr* membExpr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr) {
 	START_LOG_EXPR_CONVERSION(membExpr);
 
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
@@ -1086,7 +1016,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitMemberExpr(clang::Mem
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							BINARY OPERATOR
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang::BinaryOperator* binOp) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const clang::BinaryOperator* binOp) {
 	START_LOG_EXPR_CONVERSION(binOp);
 	core::ExpressionPtr retIr;
 
@@ -1417,7 +1347,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 			assert(*lhsTy == *rhsTy && "Comparing incompatible types");
 			opFunc = gen.getOperator(lhsTy, op);
 		}
-		if ( DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS()) ) {
+		if ( const DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS()) ) {
 			if ( isa<ArrayType>(declRefExpr->getDecl()->getType().getTypePtr()) )
 				assert(false && "Pointer arithmetic not yet supported");
 		}
@@ -1458,7 +1388,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(clang:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							UNARY OPERATOR
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::UnaryOperator *unOp) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(const clang::UnaryOperator *unOp) {
 	START_LOG_EXPR_CONVERSION(unOp);
 
 	core::ExpressionPtr retIr;
@@ -1609,7 +1539,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(clang::
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							CONDITIONAL OPERATOR
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(clang::ConditionalOperator* condOp) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(const clang::ConditionalOperator* condOp) {
 	START_LOG_EXPR_CONVERSION(condOp);
 
 	core::ExpressionPtr retIr;
@@ -1657,7 +1587,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						ARRAY SUBSCRIPT EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitArraySubscriptExpr(clang::ArraySubscriptExpr* arraySubExpr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitArraySubscriptExpr(const clang::ArraySubscriptExpr* arraySubExpr) {
 	START_LOG_EXPR_CONVERSION(arraySubExpr);
 
 	core::ExpressionPtr retIr;
@@ -1668,7 +1598,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitArraySubscriptExpr(cl
 	 * simple pointer. As insieme supports subscripts only for array or vector types, we skip eventual implicit
 	 * cast operations.
 	 */
-	Expr* baseExpr = arraySubExpr->getBase();
+	const clang::Expr* baseExpr = arraySubExpr->getBase();
 
 	// IDX
 	core::ExpressionPtr idx = convFact.tryDeref( Visit( arraySubExpr->getIdx() ) );
@@ -1718,7 +1648,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitArraySubscriptExpr(cl
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						EXT VECTOR ELEMENT EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitExtVectorElementExpr(ExtVectorElementExpr* vecElemExpr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitExtVectorElementExpr(const clang::ExtVectorElementExpr* vecElemExpr) {
 	START_LOG_EXPR_CONVERSION(vecElemExpr);
 	core::ExpressionPtr&& base = Visit( vecElemExpr->getBase() );
 
@@ -1791,7 +1721,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitExtVectorElementExpr(
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							VAR DECLARATION REFERENCE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitDeclRefExpr(const clang::DeclRefExpr* declRef) {
 	START_LOG_EXPR_CONVERSION(declRef);
 
 	core::ExpressionPtr retIr;
@@ -1799,23 +1729,23 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitDeclRefExpr(clang::De
 
 	// check whether this is a reference to a variable
 	core::ExpressionPtr retExpr;
-	if (ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())) {
+	if (const ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())) {
 		VLOG(2) << "Parameter type: " << convFact.convertType(parmDecl->getOriginalType().getTypePtr() );
 		return ( retIr = convFact.lookUpVariable( parmDecl ) );
 	}
-	if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
+	if ( const VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
 
 		retIr = convFact.lookUpVariable( varDecl );
 		return retIr;
 	}
-	if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
+	if( const FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
 		return (retIr =
 				core::static_pointer_cast<const core::Expression>(
 						convFact.convertFunctionDecl(funcDecl)
 				)
 		);
 	}
-	if (EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) {
+	if (const EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) {
 		return (retIr =
 				builder.literal(
 						enumDecl->getInitVal().toString(10),
@@ -1830,7 +1760,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitDeclRefExpr(clang::De
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //                  VECTOR/STRUCT INITALIZATION EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitInitListExpr(clang::InitListExpr* initList) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitInitListExpr(const clang::InitListExpr* initList) {
 	assert(false && "Visiting of initializer list is not allowed!"); return core::ExpressionPtr();
 }
 
@@ -1844,13 +1774,13 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitInitListExpr(clang::I
 //	or:
 //		((int [3]){1,2,3})[2]  -> 2
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitCompoundLiteralExpr(clang::CompoundLiteralExpr* compLitExpr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitCompoundLiteralExpr(const clang::CompoundLiteralExpr* compLitExpr) {
 	START_LOG_EXPR_CONVERSION(compLitExpr);
 
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(retIr);
 
-	if ( clang::InitListExpr* initList =
+	if ( const clang::InitListExpr* initList =
 			dyn_cast<clang::InitListExpr>(compLitExpr->getInitializer())
 	) {
 		return (retIr =
@@ -1875,8 +1805,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCompoundLiteralExpr(c
 // Overwrite the basic visit method for expression in order to automatically
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CExprConverter::Visit(clang::Expr* expr) {
-	core::ExpressionPtr retIr = StmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
+core::ExpressionPtr ConversionFactory::CExprConverter::Visit(const clang::Expr* expr) {
+	core::ExpressionPtr retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
 
 	// check for OpenMP annotations
 	return omp::attachOmpAnnotation(retIr, expr, convFact);
