@@ -510,19 +510,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitDeclRefExpr(const 
 //								CXX BOOLEAN LITERAL
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBoolLiteralExpr(const clang::CXXBoolLiteralExpr* boolLit) {
-	assert (false && "boolean literal");
-	/*
 	START_LOG_EXPR_CONVERSION(boolLit);
 
-	core::ExpressionPtr retExpr;
-	LOG_EXPR_CONVERSION(retExpr);
-
-	return (retExpr =
-	// retrieve the string representation from the source code
+	core::ExpressionPtr retExpr =
 			convFact.builder.literal(
-					GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), boolLit->getExprLoc()),
-					convFact.mgr.getLangBasic().getBool()));
-					*/
+					(boolLit->getValue())? std::string("true"): std::string("false"),
+					convFact.mgr.getLangBasic().getBool());
+
+	END_LOG_EXPR_CONVERSION(retExpr);
+	return retExpr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
