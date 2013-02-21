@@ -1333,6 +1333,7 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 	for(; it != end; it++){
 
 		core::StringValuePtr ident;
+		core::StatementPtr initStmt;
 
 		if((*it)->isBaseInitializer ()){
 			assert(false && "base init not implemented");
@@ -1366,12 +1367,26 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 													builder.getTypeLiteral(memberTy) )
 			);
 
-
 		core::ExpressionPtr expr = convertExpr((*it)->getInit());
-		core::StatementPtr assign = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, tryDeref(expr));
+		
+		// if the expr is a constructor then we are initializing a member an object, 
+		// we have to substitute first argument on constructor by the
+		// right reference to the member object (addressed by init)
+		if (expr.isa<core::CallExprPtr>() &&
+		    expr.as<core::CallExprPtr>().getFunctionExpr().as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
+			dumpPretty(expr);
+			core::CallExprAddress addr(expr.as<core::CallExprPtr>());
+			initStmt = core::transform::replaceNode (mgr, 
+																	  addr->getArgument(0), 
+																	  init ).as<core::CallExprPtr>();
+		}
+		else{
+			//otherwise is a regular assigment intialization
+			initStmt = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, tryDeref(expr));
+		}
 
-		// append to statements
-		newBody.push_back(assign);
+		// append statement to initialization list
+		newBody.push_back(initStmt);
 	}
 	
 	// push original body
