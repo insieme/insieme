@@ -40,7 +40,6 @@
 #include <map>
 #include <stdint.h>
 
-// FIXME this needs a cleaner solution
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
