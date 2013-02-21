@@ -61,8 +61,8 @@ struct _irt_loop_sched_policy {
 	} param;
 };
 
-static const irt_loop_sched_policy irt_g_loop_sched_policy_default = { IRT_STATIC, 128, { 0 } };
-static const irt_loop_sched_policy irt_g_loop_sched_policy_single = { IRT_DYNAMIC_CHUNKED, 128, { 1000 } };
+static const irt_loop_sched_policy irt_g_loop_sched_policy_default = { IRT_STATIC, 2048, { 0 } };
+static const irt_loop_sched_policy irt_g_loop_sched_policy_single = { IRT_DYNAMIC_CHUNKED, 2048, { 1000 } };
 
 struct _irt_loop_sched_data {
 	irt_loop_sched_policy policy;
