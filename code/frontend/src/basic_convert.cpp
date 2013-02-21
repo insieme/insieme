@@ -543,13 +543,13 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ HANDLE SPETIAL CASES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+		// allocation of a single Object
 		// if is is a new operator, and is not an array, we can be sure that it will be a pointer to
 		// a single element, so drop the array[1]  thing
 		if (definition->getInit() &&
 			llvm::isa<clang::CXXNewExpr>(definition->getInit()) && 
-			llvm::cast<clang::CXXNewExpr>(definition->getInit())){
+			!llvm::cast<clang::CXXNewExpr>(definition->getInit())->isArray() ){
 			
-			//var = builder.variable( builder.refType(initExpr->getType() ));
 			var = builder.variable(initExpr->getType());
 			ctx.varDeclMap[definition] = var;
 		}

@@ -93,7 +93,7 @@ namespace conversion {
 //---------------------------------------------------------------------------------------------------------------------
 
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						  IMPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
@@ -1221,23 +1221,36 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 	START_LOG_EXPR_CONVERSION(callExpr);
 
 	//TODO:  - array allocation - inplace allocation
+	core::ExpressionPtr retExp;
 
-	core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
-	assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
+	if (callExpr->getAllocatedType().getTypePtr()->isBuiltinType()){
+		core::TypePtr type = convFact.convertType(callExpr->getAllocatedType().getTypePtr());
+		const core::TypePtr& arrayType = builder.arrayType(type);
 
-	core::ExpressionPtr newCall = builder.undefinedNew(ctorCall->getType());
+		// fixme, array size
+		retExp = builder.refNew(builder.refVar( Visit (callExpr->getInitializer ())));
 
-	// the basic constructor translation defines a stack variable as argument for the call
-	// in order to turn this into a diynamic memory allocation, we only need to substitute 
-	// the first argument for a heap location
-	core::CallExprAddress addr(ctorCall.as<core::CallExprPtr>());
-	core::CallExprPtr newCtor = core::transform::replaceNode (convFact.mgr, 
-															  addr->getArgument(0), 
-															  newCall ).as<core::CallExprPtr>();
+		std::cout << retExp << std::endl;
+		dumpPretty(retExp);
+	}
+	else{
+		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
+		assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
 
-	newCtor = builder.refVar(newCtor);
-	END_LOG_EXPR_CONVERSION(newCtor);
-	return newCtor;
+		core::ExpressionPtr newCall = builder.undefinedNew(ctorCall->getType());
+
+		// the basic constructor translation defines a stack variable as argument for the call
+		// in order to turn this into a diynamic memory allocation, we only need to substitute 
+		// the first argument for a heap location
+		core::CallExprAddress addr(ctorCall.as<core::CallExprPtr>());
+		core::CallExprPtr newCtor = core::transform::replaceNode (convFact.mgr, 
+																  addr->getArgument(0), 
+																  newCall ).as<core::CallExprPtr>();
+		retExp = builder.refVar(newCtor);
+	}
+
+	END_LOG_EXPR_CONVERSION(retExp);
+	return retExp;
 
 	/*
 	START_LOG_EXPR_CONVERSION(callExpr);
@@ -1447,10 +1460,17 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 //						CXX DELETE CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(const clang::CXXDeleteExpr* deleteExpr) {
-	assert (false && "delete expr");
-	/*
 	START_LOG_EXPR_CONVERSION(deleteExpr);
+	core::ExpressionPtr retExpr;
+	core::ExpressionPtr deleteExp = Visit(deleteExpr->getArgument());
 
+	retExpr = builder.callExpr (builder.getLangBasic().getRefDelete(),
+								deleteExp);
+	
+	END_LOG_EXPR_CONVERSION(retExpr);
+	return retExpr;
+
+	/*
 	core::ExpressionPtr retExpr;
 	const core::IRBuilder& builder = convFact.builder;
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
