@@ -82,9 +82,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 	// check if this type has being already translated.
 	// this boost conversion but also avoids infinite recursion while resolving class member
 	// function
-	core::TypePtr match = mClassTypeMap.find(tagType)->second;
-	if(match){
-		return match;
+	std::map<const TagType*, core::TypePtr>::iterator match = mClassTypeMap.find(tagType);
+	if(match != mClassTypeMap.end()){
+		return match->second;
 	}
 
 	auto classType = TypeConverter::VisitTagType(tagType);
@@ -95,10 +95,26 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		if (!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl()))
 			return classType;
 
+		std::cout << "is a class" << std::endl;
 		core::ClassMetaInfo classInfo;
 
 		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl());
 
+		
+		// copy ctor, move ctor, default ctor
+		clang::CXXRecordDecl::ctor_iterator ctorIt = classDecl->ctor_begin();
+		clang::CXXRecordDecl::ctor_iterator ctorEnd= classDecl->ctor_end();
+		for (; ctorIt != ctorEnd; ctorIt ++){
+			const CXXConstructorDecl* ctorDecl = *ctorIt;
+			if (ctorDecl->isDefaultConstructor() ||
+				ctorDecl->isCopyConstructor() ||
+				ctorDecl->isMoveConstructor() ){
+
+				core::LambdaExprPtr&& ctorLambda = convFact.convertCtor(ctorDecl, classType).as<core::LambdaExprPtr>();
+				ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
+				classInfo.addConstructor(ctorLambda);
+			}
+		} 
 
 		// convert destructor
 		if(classDecl->hasUserDeclaredDestructor()){
@@ -106,7 +122,12 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			core::LambdaExprPtr&& dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::LambdaExprPtr>();
 			dtorLambda = convFact.memberize  (dtorDecl, dtorLambda, builder.refType(classType), core::FK_DESTRUCTOR);
 			classInfo.setDestructor(dtorLambda);
+			if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
+				classInfo.setDestructorVirtual();
 		}
+
+		// operator overloads
+		//
 
 		core::setMetaInfo(classType, classInfo);
 	}

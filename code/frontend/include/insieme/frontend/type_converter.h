@@ -176,6 +176,8 @@ class ConversionFactory::CXXTypeConverter :
 
 	/** 
 	 * caches classes definitions
+	 * this boost conversion but also avoids infinite recursion while resolving class member
+	 * function
 	 */
 	std::map<const clang::TagType*, core::TypePtr> mClassTypeMap;
 

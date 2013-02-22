@@ -1249,6 +1249,8 @@ core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 												   core::TypePtr ownerClassType, 
 											   	   core::FunctionKind funcKind){
 
+	currTU.push(getTranslationUnitForDefinition(funcDecl));
+
 	core::FunctionTypePtr ty = func.getType().as<core::FunctionTypePtr>();
 	// NOTE: has being already memberized???
 	if (ty.isMemberFunction() ||
@@ -1295,6 +1297,8 @@ core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 	// cache it
 	ctx.lambdaExprCache.erase(funcDecl);
 	ctx.lambdaExprCache[funcDecl] = memberized;
+
+	currTU.pop();
 	
 	return memberized;
 }
@@ -1303,8 +1307,11 @@ core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 ///
 core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorDecl* ctorDecl, core::TypePtr irClassType){
 
+	const clang::FunctionDecl* innerFunc = llvm::cast<clang::FunctionDecl>(ctorDecl);
+	currTU.push(getTranslationUnitForDefinition(innerFunc));
+
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-	core::LambdaExprPtr oldCtor= convertFunctionDecl (llvm::cast<clang::FunctionDecl>(ctorDecl)).as<core::LambdaExprPtr>();
+	core::LambdaExprPtr oldCtor= convertFunctionDecl (innerFunc).as<core::LambdaExprPtr>();
 	
 	core::FunctionTypePtr ty = oldCtor.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>();
 	//  has being already memberized??? then is already solved
@@ -1391,6 +1398,9 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 	core::LambdaExprPtr newCtor =  builder.lambdaExpr  (ty, 
 														oldCtor.getLambda().getParameterList(), 
 														builder.compoundStmt(newBody));
+
+
+	currTU.pop();
 	return newCtor;
 }
 
