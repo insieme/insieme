@@ -620,6 +620,11 @@ bool isRefArray(const core::TypePtr& type) {
 		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType;
 }
 
+bool isRefRef(const core::TypePtr& type) {
+	return type->getNodeType() == core::NT_RefType && 
+		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_RefType;
+}
+
 bool isVector(const core::TypePtr& type) {
 	return type->getNodeType() == core::NT_VectorType;
 }

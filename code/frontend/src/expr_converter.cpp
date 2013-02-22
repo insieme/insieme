@@ -363,11 +363,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::asRValue(const core::Expre
 	}
 
 	auto type = value->getType();
-	// adds a deref to expression in case expression is of a ref type, only if the target tpye is
-	// not a vector or an array 
+	// adds a deref to expression in case expression is of a ref type, only if the target type is
+	// not a vector, nor an array, and not a ref ref
 	if (core::analysis::isRefType(value->getType()) && 
-		!(utils::isRefVector(type) || utils::isRefArray(type))) 
-	{
+		!(utils::isRefVector(type) || utils::isRefArray(type)) ){ 
 		return builder.deref(value);
 	}
 	return value;

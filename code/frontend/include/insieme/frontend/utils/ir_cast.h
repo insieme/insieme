@@ -71,6 +71,7 @@ core::TypePtr getArrayElement(const core::TypePtr& type);
 
 bool isVector(const core::TypePtr& type);
 bool isRefVector(const core::TypePtr& type);
+bool isRefRef(const core::TypePtr& type);
 
 core::TypePtr getVectorElement(const core::TypePtr& type);
 
