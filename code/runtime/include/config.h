@@ -47,6 +47,7 @@
 //#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
 //#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
 #define IRT_SCHED_POLICY IRT_SCHED_POLICY_UBER
+#define IRT_LOOP_SCHED_POLICY_ENV "IRT_LOOP_SCHED_POLICY"
 
 // determines if workers should ever go to sleep
 // - needs to be unset for the stealing policies!

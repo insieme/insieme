@@ -297,10 +297,12 @@ inline static void irt_schedule_loop(
 		// define per-loop scheduling policy in group
 		group->pfor_count = mem->pfor_count;
 		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+
 		#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 		sched_data->cputime = 0;
 		#endif
 		sched_data->policy = group->cur_sched;
+
 		sched_data->policy.participants = MIN(sched_data->policy.participants, group->local_member_count);
 
 		// initialise data for instrumentation
@@ -387,4 +389,65 @@ inline static void irt_schedule_loop(
 void irt_wg_set_loop_scheduling_policy(irt_work_group* group, const irt_loop_sched_policy* policy) {
 	// set current group policy, will activate upon next loop entry
 	group->cur_sched = *policy;
+}
+
+void irt_loop_sched_policy_init() {
+	char* policy_env = getenv(IRT_LOOP_SCHED_POLICY_ENV);
+	if (policy_env){
+		char policy_env_copy[strlen(policy_env)]; // needed for logging output, since strtok modifies the string it's working on
+		strcpy(policy_env_copy, policy_env);
+
+		char* policy_str = strtok(policy_env, ",");
+		char* chunksize_str = strtok(NULL, ",");
+		if(policy_str) {
+			if(strcmp("IRT_STATIC", policy_str) == 0) {
+				if(chunksize_str) {
+					irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
+					irt_g_loop_sched_policy_default.type = IRT_STATIC_CHUNKED;
+					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
+					irt_g_loop_sched_policy_default.param.chunk_size = atoi(chunksize_str);
+				} else {
+					irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
+					irt_g_loop_sched_policy_default.type = IRT_STATIC;
+					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
+					irt_g_loop_sched_policy_default.param.chunk_size = 0;
+				}
+			} else if(strcmp("IRT_DYNAMIC", policy_str) == 0) {
+				if(chunksize_str) {
+					irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
+					irt_g_loop_sched_policy_default.type = IRT_DYNAMIC_CHUNKED;
+					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
+					irt_g_loop_sched_policy_default.param.chunk_size = atoi(chunksize_str);
+				} else {
+					irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
+					irt_g_loop_sched_policy_default.type = IRT_DYNAMIC;
+					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
+					irt_g_loop_sched_policy_default.param.chunk_size = 0;
+				}
+			} else if(strcmp("IRT_GUIDED", policy_str) == 0) {
+				if(chunksize_str) {
+					irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
+					irt_g_loop_sched_policy_default.type = IRT_GUIDED_CHUNKED;
+					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
+					irt_g_loop_sched_policy_default.param.chunk_size = atoi(chunksize_str);
+				} else {
+					irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
+					irt_g_loop_sched_policy_default.type = IRT_GUIDED;
+					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
+					irt_g_loop_sched_policy_default.param.chunk_size = 0;
+				}
+			} else {
+				fprintf(stderr, "unknown loop scheduler policy requested: %s\n", policy_env_copy);
+				exit(-1);
+			}
+		}
+	} else {
+		irt_log_setting_s("IRT_LOOP_SCHED_POLICY", "IRT_STATIC");
+		irt_g_loop_sched_policy_default.type = IRT_STATIC;
+		irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
+		irt_g_loop_sched_policy_default.param.chunk_size = 0;
+	}
+	irt_g_loop_sched_policy_single.type = IRT_DYNAMIC_CHUNKED;
+	irt_g_loop_sched_policy_single.participants = IRT_SANE_PARALLEL_MAX;
+	irt_g_loop_sched_policy_single.param.chunk_size = 1000;
 }
