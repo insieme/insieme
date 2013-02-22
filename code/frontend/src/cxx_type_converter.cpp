@@ -44,6 +44,7 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/ir_types.h"
+#include "insieme/core/ir_class_info.h"
 
 #include "insieme/annotations/c/naming.h"
 
@@ -69,47 +70,7 @@ namespace conversion {
 //								BUILTIN TYPES
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::CXXTypeConverter::VisitBuiltinType(const BuiltinType* buldInTy) {
-	START_LOG_TYPE_CONVERSION( buldInTy );
-	const core::lang::BasicGenerator& gen = convFact.mgr.getLangBasic();
-
-	switch(buldInTy->getKind()) {
-	case BuiltinType::Void:			return gen.getUnit();
-	case BuiltinType::Bool:			return gen.getBool();
-
-	// char types
-	case BuiltinType::Char_U:
-	case BuiltinType::UChar:		return gen.getUInt1();
-	case BuiltinType::Char16:		return gen.getInt2();
-	case BuiltinType::Char32:		return gen.getInt4();
-	case BuiltinType::Char_S:
-	case BuiltinType::SChar:		return gen.getChar();
-	// case BuiltinType::WChar:		return gen.getWChar();
-
-	// integer types
-	case BuiltinType::UShort:		return gen.getUInt2();
-	case BuiltinType::Short:		return gen.getInt2();
-	case BuiltinType::UInt:			return gen.getUInt4();
-	case BuiltinType::Int:			return gen.getInt4();
-	case BuiltinType::UInt128:		return gen.getUInt16();
-	case BuiltinType::Int128:		return gen.getInt16();
-	case BuiltinType::ULong:		return gen.getUInt8();
-	case BuiltinType::ULongLong:	return gen.getUInt8();
-	case BuiltinType::Long:			return gen.getInt8();
-	case BuiltinType::LongLong:		return gen.getInt8();
-
-	// real types
-	case BuiltinType::Float:		return gen.getFloat();
-	case BuiltinType::Double:		return gen.getDouble();
-	case BuiltinType::LongDouble:	return gen.getDouble(); // unsopported FIXME
-
-	// not supported types
-	case BuiltinType::NullPtr:
-	case BuiltinType::Overload:
-	case BuiltinType::Dependent:
-	default:
-		throw "type not supported"; //todo introduce exception class
-	}
-	assert(false && "Built-in type conversion not supported!");
+	return TypeConverter::VisitBuiltinType(buldInTy);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -118,9 +79,43 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitBuiltinType(const Builti
 core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* tagType) {
 	VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
 
-	auto ret = TypeConverter::VisitTagType(tagType);
-	END_LOG_TYPE_CONVERSION(ret) ;
-	return ret;
+	// check if this type has being already translated.
+	// this boost conversion but also avoids infinite recursion while resolving class member
+	// function
+	core::TypePtr match = mClassTypeMap.find(tagType)->second;
+	if(match){
+		return match;
+	}
+
+	auto classType = TypeConverter::VisitTagType(tagType);
+	mClassTypeMap[tagType] = classType;
+
+	// if is a c++ class, we need to annotate some stuff
+	if (llvm::isa<clang::RecordType>(tagType)){
+		if (!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl()))
+			return classType;
+
+		core::ClassMetaInfo classInfo;
+
+		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl());
+
+
+		// convert destructor
+		if(classDecl->hasUserDeclaredDestructor()){
+			const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
+			core::LambdaExprPtr&& dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::LambdaExprPtr>();
+			dtorLambda = convFact.memberize  (dtorDecl, dtorLambda, builder.refType(classType), core::FK_DESTRUCTOR);
+			classInfo.setDestructor(dtorLambda);
+		}
+
+		core::setMetaInfo(classType, classInfo);
+	}
+
+	mClassTypeMap.erase(tagType);
+	mClassTypeMap[tagType] = classType;
+
+	END_LOG_TYPE_CONVERSION(classType) ;
+	return classType;
 
 	//assert(false && "REWRITE, REMOVE THE C PART");
 

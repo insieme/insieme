@@ -74,13 +74,6 @@
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
-
-#include <clang/Basic/FileManager.h>
-#include <clang/Frontend/TextDiagnosticPrinter.h>
-#include <clang/AST/ASTConsumer.h>
-#include <clang/AST/ASTContext.h>
-#include <clang/AST/DeclCXX.h>
-#include <clang/AST/ExprCXX.h>
 #include <clang/AST/CXXInheritance.h>
 #include <clang/AST/StmtVisitor.h>
 
@@ -369,8 +362,6 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		VLOG(2) << "  " << ctx.globalIdentMap;
 		assert( fit != ctx.globalIdentMap.end() && "Variable not within global identifiers");
 
-		// LOG(DEBUG) << *fit;
-
 		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(fit->second);
 		assert( memberTy && "Member not found within global struct");
 		assert( ctx.globalVar->getType()->getNodeType() == core::NT_RefType && 
@@ -384,6 +375,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 				)
 		);
 
+		// check if is thread private
 		auto&& vit = std::find(ctx.thread_private.begin(), ctx.thread_private.end(), varDecl);
 		if (vit != ctx.thread_private.end()) {
 			omp::addThreadPrivateAnnotation(retExpr);
@@ -1284,6 +1276,7 @@ core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 			retTy = func.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
 			break;
 		case core::FK_CONSTRUCTOR:
+		case core::FK_DESTRUCTOR:  //FIXME: what type returns a destructor???
 			retTy = ownerClassType;
 			break;
 		default:

@@ -174,6 +174,11 @@ class ConversionFactory::CXXTypeConverter :
 
 	ConversionFactory& convFact;
 
+	/** 
+	 * caches classes definitions
+	 */
+	std::map<const clang::TagType*, core::TypePtr> mClassTypeMap;
+
 protected:
 	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
