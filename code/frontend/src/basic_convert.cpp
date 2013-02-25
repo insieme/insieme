@@ -1328,8 +1328,8 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 	core::StatementList newBody;
 	
 	// for each initializer, transform it
-	clang::CXXConstructorDecl::init_const_iterator it  = ctorDecl->init_begin();
-	clang::CXXConstructorDecl::init_const_iterator end = ctorDecl->init_end();
+	clang::CXXConstructorDecl::init_const_iterator it  = llvm::cast<clang::CXXConstructorDecl>(innerFunc)->init_begin();
+	clang::CXXConstructorDecl::init_const_iterator end = llvm::cast<clang::CXXConstructorDecl>(innerFunc)->init_end();
 	for(; it != end; it++){
 
 		core::StringValuePtr ident;
@@ -1376,9 +1376,7 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 		    expr.as<core::CallExprPtr>().getFunctionExpr().as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
 			dumpPretty(expr);
 			core::CallExprAddress addr(expr.as<core::CallExprPtr>());
-			initStmt = core::transform::replaceNode (mgr, 
-																	  addr->getArgument(0), 
-																	  init ).as<core::CallExprPtr>();
+			initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
 		}
 		else{
 			//otherwise is a regular assigment intialization

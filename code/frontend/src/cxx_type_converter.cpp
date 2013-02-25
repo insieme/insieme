@@ -95,17 +95,15 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		if (!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl()))
 			return classType;
 
-		std::cout << "is a class" << std::endl;
 		core::ClassMetaInfo classInfo;
-
 		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl());
 
-		
 		// copy ctor, move ctor, default ctor
 		clang::CXXRecordDecl::ctor_iterator ctorIt = classDecl->ctor_begin();
 		clang::CXXRecordDecl::ctor_iterator ctorEnd= classDecl->ctor_end();
 		for (; ctorIt != ctorEnd; ctorIt ++){
 			const CXXConstructorDecl* ctorDecl = *ctorIt;
+
 			if (ctorDecl->isDefaultConstructor() ||
 				ctorDecl->isCopyConstructor() ||
 				ctorDecl->isMoveConstructor() ){
@@ -127,8 +125,8 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		}
 
 		// operator overloads
-		//
-
+		
+		// append metha information to the class definition
 		core::setMetaInfo(classType, classInfo);
 	}
 
