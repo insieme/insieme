@@ -85,9 +85,10 @@ namespace frontend {
 namespace analysis {
 
 GlobalVarCollector::GlobalVarCollector(
+	insieme::frontend::utils::Indexer& indexer,
 	conversion::ConversionFactory&	convFact)
 	: convFact(convFact),
-	  indexer(convFact.getIndexer())
+	  indexer(indexer)
 	{
 }
 /////////////////////////////////////////////////////////////////////////////////

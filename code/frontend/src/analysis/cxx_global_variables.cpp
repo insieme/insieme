@@ -340,7 +340,6 @@ bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorE
 	}
 
 	//handle if the class has user defined dtor
-	// TODO: how should this look like with base classes
 	if (recDecl->hasUserDeclaredDestructor()){
 		const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(recDecl->getDestructor () );
 		ret = indexer.getDefAndTUforDefinition(dtorDecl);

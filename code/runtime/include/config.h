@@ -92,7 +92,7 @@
 
 // standalone
 #define IRT_NUM_WORKERS_ENV "IRT_NUM_WORKERS"
-#define IRT_CPU_FREQUENCY "IRT_CPU_FREQUENCY"
+#define IRT_CPU_FREQUENCIES "IRT_CPU_FREQUENCIES"
 
 // for using a minimal variant of the runtime without affinity and message queues => standalone mode only
 #define IRT_MIN_MODE

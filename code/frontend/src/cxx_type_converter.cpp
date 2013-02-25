@@ -95,24 +95,24 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		if (!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl()))
 			return classType;
 
-		std::cout << "is a class" << std::endl;
 		core::ClassMetaInfo classInfo;
-
 		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl());
 
-		
 		// copy ctor, move ctor, default ctor
 		clang::CXXRecordDecl::ctor_iterator ctorIt = classDecl->ctor_begin();
 		clang::CXXRecordDecl::ctor_iterator ctorEnd= classDecl->ctor_end();
 		for (; ctorIt != ctorEnd; ctorIt ++){
 			const CXXConstructorDecl* ctorDecl = *ctorIt;
-			if (ctorDecl->isDefaultConstructor() ||
-				ctorDecl->isCopyConstructor() ||
-				ctorDecl->isMoveConstructor() ){
+
+			if (ctorDecl->isDefaultConstructor() ||      // if is a ctor without parameters, or all default
+				ctorDecl->isCopyConstructor() ||		  // accepts a reference as parameter
+				ctorDecl->isMoveConstructor() ){		  // accepts a right side reference as paramenter
 
 				core::LambdaExprPtr&& ctorLambda = convFact.convertCtor(ctorDecl, classType).as<core::LambdaExprPtr>();
-				ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
-				classInfo.addConstructor(ctorLambda);
+				if (ctorLambda){
+					ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
+					classInfo.addConstructor(ctorLambda);
+				}
 			}
 		} 
 
@@ -126,12 +126,41 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				classInfo.setDestructorVirtual();
 		}
 
-		// operator overloads
-		//
+		// member functions
+		clang::CXXRecordDecl::method_iterator methodIt = classDecl->method_begin();
+		clang::CXXRecordDecl::method_iterator methodEnd= classDecl->method_end();
+		for (; methodIt != methodEnd; methodIt ++){
+			if (llvm::isa<clang::CXXConstructorDecl>(*methodIt) ||
+				llvm::isa<clang::CXXDestructorDecl>(*methodIt))
+				continue;
 
+			const clang::FunctionDecl* method = llvm::cast<clang::FunctionDecl>(*methodIt);
+
+			// FIXME: we should not have to look for the F$%ing TU everyplace, this should be
+			// responsability of the convert func function
+			convFact.getTranslationUnitForDefinition(method);  // FIXME:: remove this crap
+			core::LambdaExprPtr&& methodLambda = convFact.convertFunctionDecl(method).as<core::LambdaExprPtr>();
+			methodLambda = convFact.memberize  (method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION);
+
+			std::cout << " ############ member! #############" << std::endl;
+			std::cout << llvm::cast<clang::NamedDecl>(method)->getNameAsString() << std::endl;
+			dumpPretty(methodLambda);
+			method->dump();
+			std::cout << ( (*methodIt)->isVirtual()? "virtual!\n":"\n");
+			std::cout << ((*methodIt)->isConst()? "const!\n":"\n");
+			std::cout << "           ############" << std::endl;
+
+			classInfo.addMemberFunction(llvm::cast<clang::NamedDecl>(method)->getNameAsString(), 
+										methodLambda,
+										(*methodIt)->isVirtual(), 
+										(*methodIt)->isConst());
+		}
+		
+		// append metha information to the class definition
 		core::setMetaInfo(classType, classInfo);
 	}
 
+	// cache the new implementation
 	mClassTypeMap.erase(tagType);
 	mClassTypeMap[tagType] = classType;
 

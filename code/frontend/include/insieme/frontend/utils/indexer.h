@@ -48,8 +48,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
 
-
-
 namespace insieme{
 namespace frontend{
 namespace utils{
