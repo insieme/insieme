@@ -114,7 +114,7 @@ const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitF
 	// if the function is not defined in this translation unit, maybe it is defined in another we already
 	// loaded use the clang indexer to lookup the definition for this function declarations
 	utils::Indexer::TranslationUnitPair&& ret = 
-			mIdx.getDefAndTUforDefinition (funcDecl);
+			program.getIndexer().getDefAndTUforDefinition (funcDecl);
 
 	// function declaration not found. return the current translation unit
 	if ( !ret.first ) {return NULL;}
@@ -130,58 +130,23 @@ const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitF
 ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool isCpp) :
 		mgr(mgr), builder(mgr),
 		// cppcheck-suppress exceptNew
-		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
-		mIdx(), funcDepGraph(mIdx) {
+		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end())
+		{
 
 		if (isCpp){
 			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
 			typeConvPtr = std::make_shared<CXXTypeConverter>(*this, prog);
 			exprConvPtr = std::make_shared<CXXExprConverter>(*this, prog);
-			globColl = std::make_shared<analysis::CXXGlobalVarCollector>(*this);
 		} else{
 			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
 			typeConvPtr = std::make_shared<CTypeConverter>(*this, prog);
 			exprConvPtr = std::make_shared<CExprConverter>(*this, prog);
-			globColl = std::make_shared<analysis::GlobalVarCollector>(*this);
 		}
-
-		//FIXME: move out of ctor
-		indexAndAnalyze();
-}
-
-void ConversionFactory::indexAndAnalyze(){
-	for (auto tu : program.getTranslationUnits()){
-		VLOG(1) << " ************* Indexing: " << tu->getFileName() << " ****************";
-		mIdx.indexTU(&(*tu));
-	}
-	VLOG(1) << " ************* Indexing DONE ****************";
-	if (VLOG_IS_ON(2)){
-		mIdx.dump();
-	}
-
-	VLOG(1) << " ************* Analyze function dependencies (recursion)***************";
-	auto elem = mIdx.begin();
-	auto end = mIdx.end();
-	for (; elem != end; ++elem){
-		if (llvm::isa<clang::FunctionDecl>(*elem)){
-			funcDepGraph.addNode(llvm::cast<clang::FunctionDecl>(*elem));
-		}
-	}
-	VLOG(1) << " ************* Analyze function dependencies DONE***************";
-	if (VLOG_IS_ON(2)){
-		funcDepGraph.print(std::cout);
-	}
 }
 
 //////////////////////////////////////////////////////////////////
 ///
-void ConversionFactory::buildGlobalStruct(const clang::FunctionDecl* fDecl){
-	// Reset globalVarCollector
-	globColl->reset();	
-
-	// Extract globals starting from this entry point
-	(*globColl)(fDecl);
-	(*globColl)(getProgram().getTranslationUnits());
+void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector& globColl){
 
 	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Thread private requires to collect all the variables which are marked to be threadprivate
@@ -192,12 +157,13 @@ void ConversionFactory::buildGlobalStruct(const clang::FunctionDecl* fDecl){
 	//omp::collectVolatile(getPragmaMap(), ctx.volatiles);
 	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	ctx.globalStruct = globColl->createGlobalStruct();
+	ctx.globalStruct = globColl.createGlobalStruct();
 	if (ctx.globalStruct.first) {
 		ctx.globalVar = builder.variable(builder.refType(ctx.globalStruct.first));
 	}
-	ctx.globalIdentMap = globColl->getIdentifierMap();
-	ctx.globalFuncSet = globColl->getUsingGlobals();
+
+	ctx.globalIdentMap = globColl.getIdentifierMap();
+	ctx.globalFuncSet = globColl.getUsingGlobals();
 
 	VLOG(1) << "globals collected";
 	VLOG(2) << ctx.globalStruct.first;
@@ -918,11 +884,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 //
 
 	// retrieve the strongly connected components for this type
-	//std::set<const FunctionDecl*>&& components = exprConvPtr->funcDepGraph.getStronglyConnectedComponents( funcDecl );
-	std::set<const FunctionDecl*>&& components = funcDepGraph.getStronglyConnectedComponents( funcDecl );
+	std::set<const FunctionDecl*>&& components = program.getCallGraph().getStronglyConnectedComponents( funcDecl );
 
 	if (!components.empty()) {
-		std::set<const FunctionDecl*>&& subComponents = funcDepGraph.getSubComponents( funcDecl );
+		std::set<const FunctionDecl*>&& subComponents = program.getCallGraph().getSubComponents( funcDecl );
 
 		for (auto cur: subComponents){
 
@@ -1173,7 +1138,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		// if the function is not defined in this translation unit, maybe it is defined in another we already loaded
 		// use the clang indexer to lookup the definition for this function declarations
-		utils::Indexer::TranslationUnitPair&& ret = mIdx.getDefAndTUforDefinition(llvm::cast<Decl>(fd));
+		utils::Indexer::TranslationUnitPair&& ret = program.getIndexer().getDefAndTUforDefinition(llvm::cast<Decl>(fd));
 
 		if ( ret.first ) {
 			fd = llvm::cast<FunctionDecl>(ret.first);
@@ -1328,8 +1293,8 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 	core::StatementList newBody;
 	
 	// for each initializer, transform it
-	clang::CXXConstructorDecl::init_const_iterator it  = ctorDecl->init_begin();
-	clang::CXXConstructorDecl::init_const_iterator end = ctorDecl->init_end();
+	clang::CXXConstructorDecl::init_const_iterator it  = llvm::cast<clang::CXXConstructorDecl>(innerFunc)->init_begin();
+	clang::CXXConstructorDecl::init_const_iterator end = llvm::cast<clang::CXXConstructorDecl>(innerFunc)->init_end();
 	for(; it != end; it++){
 
 		core::StringValuePtr ident;
@@ -1376,9 +1341,7 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 		    expr.as<core::CallExprPtr>().getFunctionExpr().as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
 			dumpPretty(expr);
 			core::CallExprAddress addr(expr.as<core::CallExprPtr>());
-			initStmt = core::transform::replaceNode (mgr, 
-																	  addr->getArgument(0), 
-																	  init ).as<core::CallExprPtr>();
+			initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
 		}
 		else{
 			//otherwise is a regular assigment intialization
@@ -1446,7 +1409,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 
 	// Collect global variables for the whole program and build globalStruct
 	insieme::utils::Timer t("Globals.collect");
-	mFact.buildGlobalStruct(funcDecl);
+	collectGlobals(funcDecl);
 	t.stop();
 	LOG(INFO) << t;
 

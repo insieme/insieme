@@ -262,55 +262,79 @@ int32 irt_cpu_freq_set_frequency_core(irt_worker* worker, uint32 frequency) {
  */
 
 int32 irt_cpu_freq_set_frequency_core_env(irt_worker* worker) {
-	if(getenv(IRT_CPU_FREQUENCY)) {
-		if(strcmp(getenv(IRT_CPU_FREQUENCY), "OS") == 0) {
-			int32 retval = irt_cpu_freq_reset_frequency_core(worker);
-			irt_g_frequency_setting_specified = true;
-			return retval;
-		}
+	char* freq_str_orig = getenv(IRT_CPU_FREQUENCIES);
+	if(freq_str_orig) {
+		char freq_str[strlen(freq_str_orig)]; // needed since strtok modifies the string it's working on
+		strcpy(freq_str, freq_str_orig);
 
 		int32 retval;
 		uint32* freqs;
 		uint32 length;
 
 		if((retval = irt_cpu_freq_get_available_frequencies_core(worker, &freqs, &length)) == 0) {
-			if(strcmp(getenv(IRT_CPU_FREQUENCY), "MAX") == 0) {
-				int32 retval = irt_cpu_freq_set_frequency_core(worker, freqs[0]);
-				irt_g_frequency_setting_specified = true;
-				return retval;
-			}
-			if(strcmp(getenv(IRT_CPU_FREQUENCY), "MIN") == 0) {
-				int32 retval = irt_cpu_freq_set_frequency_core(worker, freqs[length-1]);
-				irt_g_frequency_setting_specified = true;
-				return retval;
+			char *tok = strtok(freq_str, ",");
+			// copies the first entry, to be used by all workers if it was the only one supplied
+			char first_copy[strlen(tok)];
+			strcpy(first_copy, tok);
+
+			// used to check if only one setting was supplied
+			int i;
+			// skip nonrelevant entries - the n-th tok is the setting for worker with id n
+			for(i = 1; i <= worker->id.thread; ++i) {
+				tok = strtok(NULL, ",");
+				if(!tok)
+					break;
 			}
 
-			uint32 freq = atoi(getenv(IRT_CPU_FREQUENCY));
-			bool available;
-			for(uint32 i = 0; i < length; ++i) {
-				if(freq == freqs[i]) {
-					available = true;
-					break;
+			// if i != 1 we did at least one iteration => numbers of workers and frequencies must match
+			if(!tok) {
+				if(i != 1) {
+					IRT_ASSERT(tok != NULL, IRT_ERR_INSTRUMENTATION, "Number of workers is higher than number of cpu frequencies provided!")
+				} else {
+					tok = first_copy;
 				}
 			}
 
-			if(available) {
-				int32 retval = irt_cpu_freq_set_frequency_core(worker, freq);
+			if(strcmp(tok, "OS") == 0) {
+				int32 retval = irt_cpu_freq_reset_frequency_core(worker);
+				irt_g_frequency_setting_specified = true;
+				return retval;
+			} else if(strcmp(tok, "MAX") == 0) {
+				int32 retval = irt_cpu_freq_set_frequency_core(worker, freqs[0]);
+				irt_g_frequency_setting_specified = true;
+				return retval;
+			} else if(strcmp(tok, "MIN") == 0) {
+				int32 retval = irt_cpu_freq_set_frequency_core(worker, freqs[length-1]);
 				irt_g_frequency_setting_specified = true;
 				return retval;
 			} else {
-				IRT_DEBUG("Instrumentation: Requested frequency setting %s unknown", getenv(IRT_CPU_FREQUENCY));
-				irt_g_frequency_setting_specified = false;
-				return -1;
-			}
 
+				uint32 freq = atoi(tok);
+				bool available;
+				for(uint32 i = 0; i < length; ++i) {
+					if(freq == freqs[i]) {
+						available = true;
+						break;
+					}
+				}
+
+				if(available) {
+					int32 retval = irt_cpu_freq_set_frequency_core(worker, freq);
+					irt_g_frequency_setting_specified = true;
+					return retval;
+				} else {
+					IRT_DEBUG("Instrumentation: Requested frequency setting %s unknown", getenv(IRT_CPU_FREQUENCY));
+					irt_g_frequency_setting_specified = false;
+					return -1;
+				}
+			}
 		} else {
 			irt_g_frequency_setting_specified = false;
 			return retval;
 		}
 	} else {
 		irt_g_frequency_setting_specified = false;
-		return -1;
+		return 0;
 	}
 	return 0;
 }

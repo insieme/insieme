@@ -6,7 +6,9 @@ class C {
 public:
 	int mC;
 
-	C(int a) : mA(a), mB(100), mC(100) {}
+	C(int a) : mA(a), mB(100){
+		mC = 1000;
+	}
 
 	~C() {
 		printf("~C(%d)\n",mA);
