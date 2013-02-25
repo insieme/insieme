@@ -247,8 +247,6 @@ protected:
 	class CXXExprConverter;
 	std::shared_ptr<ExprConverter> exprConvPtr;
 
-	std::shared_ptr<analysis::GlobalVarCollector> globColl;
-
 	/**
 	 * the program itself
 	 */
@@ -292,24 +290,9 @@ protected:
 
 
 	friend class ASTConverter;
-
-	utils::Indexer mIdx;
-	utils::FunctionDependencyGraph funcDepGraph;
-
+	friend class CXXASTConverter;
 public:
-
-
 	ConversionFactory(core::NodeManager& mgr, Program& program, bool isCxx = false);
-
-	/**
-	 * index and analyzes recursive functions
-	 */
-	void indexAndAnalyze();
-
-	const utils::Indexer& getIndexer() const { return mIdx; }
-	const utils::FunctionDependencyGraph& getCallGraph() const {return funcDepGraph; }
-
-	void dumpCallGraph() const;
 
 	// Getters & Setters
 	const core::IRBuilder& getIRBuilder() const {
@@ -482,7 +465,7 @@ public:
 	 */
 	core::LambdaExprPtr convertCtor (const clang::CXXConstructorDecl* ctorDecl, core::TypePtr irClassType);
 
-	void buildGlobalStruct(const clang::FunctionDecl* funcDecl);
+	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {
@@ -500,6 +483,7 @@ protected:
 	Program& mProg;
 	ConversionFactory mFact;
 	core::ProgramPtr mProgram;
+	utils::Indexer& mIndexer;
 
 public:
 	
@@ -507,7 +491,8 @@ public:
 			mgr(mgr),
 			mProg(prog),
 			mFact(mgr, prog, cpp),
-			mProgram(prog.getProgram()) {
+			mProgram(prog.getProgram()),
+			mIndexer(prog.getIndexer()) {
 	}
 
 	core::ProgramPtr getProgram() const { return mProgram; }
@@ -515,13 +500,39 @@ public:
 	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain = false);
 
 	core::ProgramPtr handleMainFunctionDecl() {
-		return handleFunctionDecl(llvm::cast<const clang::FunctionDecl>(mFact.getIndexer().getMainFunctionDefinition()), true);
+		return handleFunctionDecl(llvm::cast<const clang::FunctionDecl>(mIndexer.getMainFunctionDefinition()), true);
 	}
 
 	core::CallExprPtr handleBody(const clang::Stmt* body, const TranslationUnit& tu);
 
+	void collectGlobals(const clang::FunctionDecl* fDecl) {
+		std::shared_ptr<analysis::GlobalVarCollector> globColl = getFreshGlobalCollector();
+	
+		// Extract globals starting from this entry point
+		(*globColl)(fDecl);
+		(*globColl)(mProg.getTranslationUnits());
+
+		mFact.buildGlobalStruct(*globColl);
+	}
+
+	virtual std::shared_ptr<analysis::GlobalVarCollector> getFreshGlobalCollector() {
+		return std::make_shared<analysis::GlobalVarCollector>(mIndexer, mFact);
+	}
 };
 
+// ------------------------------------ ASTConverter ---------------------------
+///
+///  CXXAST converter extends ASTConverter for the functionality to transform a C++ program AST into IR
+class CXXASTConverter : public ASTConverter {
+
+public:
+	CXXASTConverter(core::NodeManager& mgr, Program& prog) :
+		ASTConverter(mgr, prog, true) { }
+
+	virtual std::shared_ptr<analysis::GlobalVarCollector> getFreshGlobalCollector() {
+		return std::make_shared<analysis::CXXGlobalVarCollector>(mIndexer, mFact);
+	}
+};
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace
