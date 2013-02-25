@@ -98,7 +98,9 @@ public:
 	typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
 	typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
 
-	GlobalVarCollector(conversion::ConversionFactory& convFact);
+	GlobalVarCollector(
+			insieme::frontend::utils::Indexer& indexer,
+			conversion::ConversionFactory& convFact);
 
 	virtual ~GlobalVarCollector() {};
 
@@ -145,17 +147,6 @@ public:
 	
 	const GlobalIdentMap& getIdentifierMap() const { return varIdentMap; }
 
-	/**/
-	void reset() { 
-		globals.clear();
-		varIdentMap.clear();
-		visited.clear();
-		while(!funcStack.empty()) {
-			funcStack.pop();
-		}
-		usingGlobals.clear();
-	}
-
 	void dump(std::ostream& out) const ;
 
 	virtual GlobalStructPair createGlobalStruct();
@@ -182,8 +173,9 @@ class CXXGlobalVarCollector : public GlobalVarCollector {
 	public:
 
 	CXXGlobalVarCollector(
+				insieme::frontend::utils::Indexer& 	indexer, 
 				conversion::ConversionFactory& 		convFact)
-	: GlobalVarCollector(convFact) { }
+	: GlobalVarCollector(indexer, convFact) { }
 
 	virtual ~CXXGlobalVarCollector() {};
 

@@ -46,6 +46,11 @@
 namespace insieme {
 namespace frontend {
 
+namespace utils {
+	class Indexer;
+	class FunctionDependencyGraph;
+}
+
 namespace pragma {
 class Pragma;
 typedef std::shared_ptr<Pragma> PragmaPtr;
@@ -92,23 +97,29 @@ typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
  */
 class Program: public boost::noncopyable {
 
-public:
-	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
-private:
-	TranslationUnitSet tranUnits;
-
+	class ProgramImpl;
+	typedef ProgramImpl* ProgramImplPtr;
+	ProgramImplPtr pimpl;
+	
 	// Reference to the NodeManager used to convert the translation units into IR code
 	insieme::core::NodeManager& mMgr;
 
 	// The IR program node containing the converted IR
 	insieme::core::ProgramPtr mProgram;
+	
 
 	friend class ::TypeConversion_FileTest_Test;
 	friend class ::StmtConversion_FileTest_Test;
 public:
+	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
 	Program(insieme::core::NodeManager& mgr);
 
 	~Program();
+	
+	utils::Indexer& getIndexer() const;
+	utils::FunctionDependencyGraph& getCallGraph() const;
+	void dumpCallGraph() const;
+
 	/**
 	 * Add a single file to the program
 	 */

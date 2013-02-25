@@ -136,6 +136,7 @@ Indexer::Indexer()
 ///  As is already build, we just need to iterate the ASTContext and anotate those
 ///  elements which have a body. those correspond to the Definition and not just declarations.
 void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
+	VLOG(1) << " ************* Indexing: " << tu->getFileName() << " ****************";
 	const ClangCompiler& compiler = tu->getCompiler();
 
 	clang::TranslationUnitDecl* tuDecl = compiler.getASTContext().getTranslationUnitDecl();
@@ -146,6 +147,11 @@ void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 
 	IndexerVisitor indexer(tu, mIndex);
 	indexer.indexDeclContext(ctx);
+	
+	VLOG(1) << " ************* Indexing DONE ****************";
+	if (VLOG_IS_ON(2)){
+		dump();
+	}
 }
 
 
