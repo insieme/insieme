@@ -414,14 +414,18 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 	if (type->getNodeType() == core::NT_RecType) {
 		curType = type.as<core::RecTypePtr>()->unroll();
 	}
+
+	// FIXME: this 2 should not be unrolled:  Ferdinando's weird recursion issue
 	// Handle structs initialization
 	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(curType)) {
-		return builder.callExpr(type, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(type));
+		//return builder.callExpr(type, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(type));
+		return builder.callExpr(structTy, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(structTy));
 	}
 
 	// Handle unions initialization
 	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(curType)) {
-		return builder.callExpr(type, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(type));
+		//return builder.callExpr(type, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(type));
+		return builder.callExpr(unionTy, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(unionTy));
 	}
 
 	// handle vectors initialization
