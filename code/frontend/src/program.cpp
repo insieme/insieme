@@ -39,6 +39,8 @@
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/convert.h"
+#include "insieme/frontend/utils/indexer.h"
+#include "insieme/frontend/utils/functionDependencyGraph.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -54,13 +56,6 @@
 
 #include "clang/Analysis/CFG.h"
 
-// [3.0]
-//#include "clang/Index/Indexer.h"
-//#include "clang/Index/Analyzer.h"
-//#include "clang/Index/TranslationUnit.h"
-//#include "clang/Index/DeclReferenceMap.h"
-//#include "clang/Index/SelectorMap.h"
-
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/ParseAST.h"
 
@@ -72,7 +67,6 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
 #include "insieme/utils/container_utils.h"
-
 
 using namespace insieme;
 using namespace insieme::core;
@@ -189,37 +183,68 @@ public:
 namespace insieme {
 namespace frontend {
 
-Program::Program(core::NodeManager& mgr):
-	mMgr(mgr), mProgram( core::Program::get(mgr) ) { }
+struct Program::ProgramImpl {
+	utils::Indexer mIdx;
+	TranslationUnitSet tranUnits;
+	utils::FunctionDependencyGraph funcDepGraph;
+	ProgramImpl() : mIdx(),  funcDepGraph(mIdx) {}
+};
 
-Program::~Program() { }
+Program::Program(core::NodeManager& mgr):
+	pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::get(mgr) ) { }
+
+Program::~Program() { delete pimpl; }
+
+utils::Indexer& Program::getIndexer() const { return pimpl->mIdx; }
+utils::FunctionDependencyGraph& Program::getCallGraph() const {return pimpl->funcDepGraph; }
+
+void Program::analyzeFuncDependencies() {
+	VLOG(1) << " ************* Analyze function dependencies (recursion)***************";
+	auto elem = getIndexer().begin();
+	auto end = getIndexer().end();
+	for (; elem != end; ++elem){
+		if (llvm::isa<clang::FunctionDecl>(*elem)){
+			pimpl->funcDepGraph.addNode(llvm::cast<clang::FunctionDecl>(*elem));
+		}
+	}
+	VLOG(1) << " ************* Analyze function dependencies DONE***************";
+	if (VLOG_IS_ON(2)){
+		dumpCallGraph();
+	}
+}
+
+void Program::dumpCallGraph() const { 
+	pimpl->funcDepGraph.print(std::cout);
+}
 
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
 	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name);
-	
-	tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
+
+	pimpl->mIdx.indexTU(tuImpl);
+
+	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	return *tuImpl;
 }
 
 TranslationUnit& Program::createEmptyTranslationUnit() {
 	TranslationUnit* tuImpl = new TranslationUnit;
-	tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
+	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	return *tuImpl;
 }
 
-const Program::TranslationUnitSet& Program::getTranslationUnits() const { return tranUnits; }
+const Program::TranslationUnitSet& Program::getTranslationUnits() const { return pimpl->tranUnits; }
 
 Program::PragmaIterator Program::pragmas_begin() const {
 	auto filtering = [](const Pragma&) -> bool { return true; };
-	return Program::PragmaIterator(tranUnits, filtering);
+	return Program::PragmaIterator(pimpl->tranUnits, filtering);
 }
 
 Program::PragmaIterator Program::pragmas_begin(const Program::PragmaIterator::FilteringFunc& func) const {
-	return Program::PragmaIterator(tranUnits, func);
+	return Program::PragmaIterator(pimpl->tranUnits, func);
 }
 
 Program::PragmaIterator Program::pragmas_end() const {
-	return Program::PragmaIterator(tranUnits.end());
+	return Program::PragmaIterator(pimpl->tranUnits.end());
 }
 
 bool Program::PragmaIterator::operator!=(const PragmaIterator& iter) const {
@@ -276,9 +301,16 @@ core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr) 
 const core::ProgramPtr& Program::convert() {
 	// We check for insieme pragmas in each translation unit
 	bool insiemePragmaFound = false;
-	bool isCXX = any(tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
+	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
 
-	std::shared_ptr<conversion::ASTConverter> astConvPtr(std::make_shared<conversion::ASTConverter>  (mMgr, *this, isCXX));
+	analyzeFuncDependencies();
+
+	std::shared_ptr<conversion::ASTConverter> astConvPtr;
+	if(isCXX) {
+		astConvPtr = std::make_shared<conversion::CXXASTConverter>(mMgr, *this);
+	} else {
+		astConvPtr = std::make_shared<conversion::ASTConverter>(mMgr, *this);
+	}
 
 	// filters all the pragma across all the compilation units which are of type insieme::mark
 	auto pragmaMarkFilter = [](const pragma::Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };
