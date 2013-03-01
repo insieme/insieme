@@ -114,7 +114,6 @@ void CallExprVisitor::VisitStmt(clang::Stmt* stmt) {
 			[ this ](clang::Stmt* curr) {if(curr) this->Visit(curr);});
 }
 
-
 void CallExprVisitor::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
 
 	//assert(false && "constructor expression");
