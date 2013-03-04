@@ -394,44 +394,39 @@ void irt_wg_set_loop_scheduling_policy(irt_work_group* group, const irt_loop_sch
 void irt_loop_sched_policy_init() {
 	char* policy_env = getenv(IRT_LOOP_SCHED_POLICY_ENV);
 	if (policy_env){
-		char policy_env_copy[strlen(policy_env)]; // needed for logging output, since strtok modifies the string it's working on
+		char *policy_env_copy = (char*)alloca(strlen(policy_env)*sizeof(char)); // needed for logging output, since strtok modifies the string it's working on
 		strcpy(policy_env_copy, policy_env);
 
 		char* policy_str = strtok(policy_env, ",");
 		char* chunksize_str = strtok(NULL, ",");
 		if(policy_str) {
+			irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
 			if(strcmp("IRT_STATIC", policy_str) == 0) {
 				if(chunksize_str) {
-					irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
 					irt_g_loop_sched_policy_default.type = IRT_STATIC_CHUNKED;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 					irt_g_loop_sched_policy_default.param.chunk_size = atoi(chunksize_str);
 				} else {
-					irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
 					irt_g_loop_sched_policy_default.type = IRT_STATIC;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 					irt_g_loop_sched_policy_default.param.chunk_size = 0;
 				}
 			} else if(strcmp("IRT_DYNAMIC", policy_str) == 0) {
 				if(chunksize_str) {
-					irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
 					irt_g_loop_sched_policy_default.type = IRT_DYNAMIC_CHUNKED;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 					irt_g_loop_sched_policy_default.param.chunk_size = atoi(chunksize_str);
 				} else {
-					irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
 					irt_g_loop_sched_policy_default.type = IRT_DYNAMIC;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 					irt_g_loop_sched_policy_default.param.chunk_size = 0;
 				}
 			} else if(strcmp("IRT_GUIDED", policy_str) == 0) {
 				if(chunksize_str) {
-					irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
 					irt_g_loop_sched_policy_default.type = IRT_GUIDED_CHUNKED;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 					irt_g_loop_sched_policy_default.param.chunk_size = atoi(chunksize_str);
 				} else {
-					irt_log_setting_s("IRT_LOOP_SCHED_POLICY", policy_env_copy);
 					irt_g_loop_sched_policy_default.type = IRT_GUIDED;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 					irt_g_loop_sched_policy_default.param.chunk_size = 0;
@@ -447,7 +442,5 @@ void irt_loop_sched_policy_init() {
 		irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 		irt_g_loop_sched_policy_default.param.chunk_size = 0;
 	}
-	irt_g_loop_sched_policy_single.type = IRT_DYNAMIC_CHUNKED;
-	irt_g_loop_sched_policy_single.participants = IRT_SANE_PARALLEL_MAX;
-	irt_g_loop_sched_policy_single.param.chunk_size = 1000;
+	irt_g_loop_sched_policy_single = (irt_loop_sched_policy){ IRT_DYNAMIC_CHUNKED, IRT_SANE_PARALLEL_MAX, { 1000 } };
 }
