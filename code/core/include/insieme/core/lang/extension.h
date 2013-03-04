@@ -39,6 +39,9 @@
 #include <boost/noncopyable.hpp>
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_types.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace core {
@@ -158,7 +161,28 @@ namespace lang {
 				return lit_##NAME; \
 			} \
 			const bool is ## NAME (const insieme::core::NodePtr& node) const { \
-				return *node == *get ## NAME(); \
+				return node && (*node == *get ## NAME()); \
+			}
+
+	/**
+	 * A macro supporting the simple declaration and definition of a derived language extension implementation.
+	 *
+	 * @param NAME the name of the language construct
+	 * @param SPEC the implementation of the derived construct (using INSPIRE)
+	 */
+	#define LANG_EXT_DERIVED(NAME, SPEC) \
+		private: \
+			mutable insieme::core::ExpressionPtr expr_ ## NAME; \
+		public: \
+			const insieme::core::ExpressionPtr& get ## NAME () const { \
+				if (!expr_##NAME) { \
+					insieme::core::IRBuilder builder(getNodeManager()); \
+					expr_ ## NAME = builder.normalize(builder.parseExpr(SPEC)).as<insieme::core::ExpressionPtr>(); \
+				} \
+				return expr_##NAME; \
+			} \
+			const bool is ## NAME (const insieme::core::NodePtr& node) const { \
+				return node && (*node == *get ## NAME()); \
 			}
 
 } // end namespace lang
