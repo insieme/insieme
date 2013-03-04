@@ -64,7 +64,7 @@ namespace lang {
 		/**
 		 * A literal to be used to represent pure virtual functions.
 		 */
-		LANG_EXT_LITERAL(PureVirtual, "<pure virtual>", "(type<'a>)->'a")
+		LANG_EXT_LITERAL(PureVirtual, "<pure virtual>", "(type<'a>)->'a");
 
 		/**
 		 * A construct supporting the construction and initialization of an array
@@ -73,26 +73,42 @@ namespace lang {
 		LANG_EXT_DERIVED(ArrayCtor,
 				"let int = uint<8> in "
 				""
-				"(('a)->ref<'a> allocator, 'b::() ctor, int size)->ref<array<'b,1>> { \n"
+				"(('a)->ref<'a> allocator, 'b::() ctor, int size)->ref<array<'b,1>> { "
 				"	// define the type to be allocated \n"
- 				"	let wrapper = struct { int size; array<'b,1> data; }; \n"
-				"	\n"
-				"	// allocate the memory \n"
-				"	ref<wrapper> res = allocator(undefined(lit(wrapper)));		// TODO: replace with struct init!"
-				"	 \n"
-				"	// init array \n"
-				"	res->size = size;"
-				"	res->data = array.create.1D(lit('b), size);"
+ 				"	let wrapper = struct { int size; array<'b,1> data; }; "
 				"	"
-				"	// init elements"
-				"	for(int i=0 .. size : 1) {"
+				"	// allocate the memory \n"
+				"	ref<wrapper> res = allocator((wrapper){ size, array.create.1D(lit('b), size) }); "
+				"	"
+				"	// init elements \n"
+				"	for(int i=0u .. size) {"
 				"		ctor(res->data[i]);"
 				"	}"
 				"	"
 				"	// return array reference \n"
 				"	return res->data;"
-				"}")
+				"}"
+		);
 
+		LANG_EXT_DERIVED(ArrayDtor,
+				"let int = uint<8> in "
+				""
+				"(ref<array<'b,1>> data, (ref<'a>)->unit deallocator, ~'b::() dtor) -> unit { "
+				"	// define the type to be allocated \n"
+				"	let wrapper = struct { int size; array<'b,1> data; }; "
+				"	"
+				"	// access wrapper struct \n"
+				"	ref<wrapper> block = ref.expand(data, dp.member(dp.root, lit(\"data\")), lit(wrapper)); "
+				"	"
+				"	// destroy all elments within the array \n"
+				"	for(int i=0u .. *(block->size)) {"
+				"		dtor(block->data[i]);"
+				"	}"
+				"	"
+				"	// free memory \n"
+				"	deallocator(block);"
+				"}"
+		);
 	};
 
 } // end namespace lang
