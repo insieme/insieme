@@ -77,7 +77,6 @@ namespace {
 			res.append(" {class}");
 		}
 
-		std::cout << "looking for: "<< res << std::endl;
 		return res;
 	}
 }

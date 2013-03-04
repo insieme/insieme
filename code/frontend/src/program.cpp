@@ -198,6 +198,25 @@ Program::~Program() { delete pimpl; }
 utils::Indexer& Program::getIndexer() const { return pimpl->mIdx; }
 utils::FunctionDependencyGraph& Program::getCallGraph() const {return pimpl->funcDepGraph; }
 
+void Program::analyzeFuncDependencies() {
+	VLOG(1) << " ************* Analyze function dependencies (recursion)***************";
+	auto elem = getIndexer().begin();
+	auto end = getIndexer().end();
+	for (; elem != end; ++elem){
+		if (llvm::isa<clang::FunctionDecl>(*elem)){
+			pimpl->funcDepGraph.addNode(llvm::cast<clang::FunctionDecl>(*elem));
+		}
+	}
+	VLOG(1) << " ************* Analyze function dependencies DONE***************";
+	if (VLOG_IS_ON(2)){
+		dumpCallGraph();
+	}
+}
+
+void Program::dumpCallGraph() const { 
+	pimpl->funcDepGraph.print(std::cout);
+}
+
 TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
 	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name);
 
@@ -284,19 +303,7 @@ const core::ProgramPtr& Program::convert() {
 	bool insiemePragmaFound = false;
 	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
 
-	VLOG(1) << " ************* Analyze function dependencies (recursion)***************";
-	auto elem = getIndexer().begin();
-	auto end = getIndexer().end();
-	for (; elem != end; ++elem){
-		if (llvm::isa<clang::FunctionDecl>(*elem)){
-			pimpl->funcDepGraph.addNode(llvm::cast<clang::FunctionDecl>(*elem));
-		}
-	}
-
-	VLOG(1) << " ************* Analyze function dependencies DONE***************";
-	if (VLOG_IS_ON(2)){
-		pimpl->funcDepGraph.print(std::cout);
-	}
+	analyzeFuncDependencies();
 
 	std::shared_ptr<conversion::ASTConverter> astConvPtr;
 	if(isCXX) {

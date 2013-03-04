@@ -104,9 +104,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		for (; ctorIt != ctorEnd; ctorIt ++){
 			const CXXConstructorDecl* ctorDecl = *ctorIt;
 
-			if (ctorDecl->isDefaultConstructor() ||      // if is a ctor without parameters, or all default
-				ctorDecl->isCopyConstructor() ||		  // accepts a reference as parameter
-				ctorDecl->isMoveConstructor() ){		  // accepts a right side reference as paramenter
+			if (ctorDecl->isDefaultConstructor() ||
+				ctorDecl->isCopyConstructor() ||
+				ctorDecl->isMoveConstructor() ){
 
 				core::LambdaExprPtr&& ctorLambda = convFact.convertCtor(ctorDecl, classType).as<core::LambdaExprPtr>();
 				if (ctorLambda){
@@ -142,13 +142,15 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			core::LambdaExprPtr&& methodLambda = convFact.convertFunctionDecl(method).as<core::LambdaExprPtr>();
 			methodLambda = convFact.memberize  (method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION);
 
-			std::cout << " ############ member! #############" << std::endl;
-			std::cout << llvm::cast<clang::NamedDecl>(method)->getNameAsString() << std::endl;
-			dumpPretty(methodLambda);
-			method->dump();
-			std::cout << ( (*methodIt)->isVirtual()? "virtual!\n":"\n");
-			std::cout << ((*methodIt)->isConst()? "const!\n":"\n");
-			std::cout << "           ############" << std::endl;
+			if (VLOG_IS_ON(2)){
+				VLOG(2) << " ############ member! #############";
+				VLOG(2)<< llvm::cast<clang::NamedDecl>(method)->getNameAsString();
+				dumpPretty(methodLambda);
+				method->dump();
+				VLOG(2) << ( (*methodIt)->isVirtual()? "virtual!":" ");
+				VLOG(2) << ((*methodIt)->isConst()? "const!":" ");
+				VLOG(2) << "           ############";
+			}
 
 			classInfo.addMemberFunction(llvm::cast<clang::NamedDecl>(method)->getNameAsString(), 
 										methodLambda,

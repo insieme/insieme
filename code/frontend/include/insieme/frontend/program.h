@@ -117,7 +117,9 @@ public:
 	~Program();
 	
 	utils::Indexer& getIndexer() const;
+	
 	utils::FunctionDependencyGraph& getCallGraph() const;
+	void analyzeFuncDependencies();
 	void dumpCallGraph() const;
 
 	/**
