@@ -822,6 +822,45 @@ namespace parser {
 					}
 			));
 
+			// struct expression
+			g.addRule("E", rule(
+					seq("(", T, ") {", list(E,","), "}"),
+					[](Context& cur)->NodePtr {
+						// check whether the given type is a struct type
+						StructTypePtr structType = cur.getTerm(0).isa<StructTypePtr>();
+						if (!structType) return fail(cur, "Not a struct type!");
+						if (structType->size() != cur.getTerms().size() - 1) return fail(cur, "Field list does not match type!");
+
+						// build up struct expression
+						auto begin = make_paired_iterator(structType->begin(), cur.getTerms().begin()+1);
+						auto end = make_paired_iterator(structType->end(), cur.getTerms().end());
+
+						// extract name / value pairs
+						NamedValueList values;
+						for (auto it = begin; it != end; ++it) {
+							values.push_back(cur.namedValue(it->first->getName(), it->second.as<ExpressionPtr>()));
+						}
+
+						// build struct expression
+						return cur.structExpr(structType, values);
+					}
+			));
+
+			// union expression
+			g.addRule("E", rule(
+					seq("(", T, ") {", cap(id), "=", E, "}"),
+					[](Context& cur)->NodePtr {
+						// check whether the given type is a union type
+						UnionTypePtr unionType = cur.getTerm(0).isa<UnionTypePtr>();
+						if (!unionType) return fail(cur, "Not a union type!");
+
+						// build union expression
+						auto name = cur.stringValue(cur.getSubRange(0).front().getLexeme());
+						auto value = cur.getTerm(1).as<ExpressionPtr>();
+						return cur.unionExpr(unionType, name, value);
+					}
+			));
+
 			// add lang-basic literals
 			auto part = id | keyword("ref") | keyword("array") | keyword("vector") | keyword("channel");
 			g.addRule("E", rule(

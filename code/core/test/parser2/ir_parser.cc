@@ -959,6 +959,44 @@ namespace parser {
 
 	}
 
+	TEST(IR_Parser2, StructExpr) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		ExpressionPtr expr = builder.parseExpr(
+				"let pair = struct { int<4> x; real<8> y; } in "
+				"(pair){ 1, 2.0 }"
+		);
+
+		ASSERT_TRUE(expr);
+		EXPECT_EQ("struct{x=1, y=2.0}", toString(*expr));
+	}
+
+	TEST(IR_Parser2, UnionExpr) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		{
+			ExpressionPtr expr = builder.parseExpr(
+					"let pair = union { int<4> x; real<8> y; } in "
+					"(pair){ x = 1 }"
+			);
+
+			ASSERT_TRUE(expr);
+			EXPECT_EQ("union{x=1}", toString(*expr));
+		}
+
+		{
+			ExpressionPtr expr = builder.parseExpr(
+					"let pair = union { int<4> x; real<8> y; } in "
+					"(pair){ y = 2.0 }"
+			);
+
+			ASSERT_TRUE(expr);
+			EXPECT_EQ("union{y=2.0}", toString(*expr));
+		}
+	}
+
 	TEST(IR_Parser2, SizeOfBug) {
 		NodeManager manager;
 		IRBuilder builder(manager);
