@@ -62,6 +62,25 @@ namespace insieme{
 namespace frontend{
 namespace utils{
 
+namespace {
+
+	std::string buildNameTypeChain(const  clang::Decl* decl){
+		assert(llvm::isa<clang::NamedDecl>(decl) && "only named decl can be converted to name + type");
+		std::string res  = llvm::cast<clang::NamedDecl>(decl)->getQualifiedNameAsString();
+		
+		if (llvm::isa<clang::FunctionDecl>(decl)){
+			res.append(" {");
+			res.append(llvm::cast<clang::ValueDecl>(decl)->getType().getAsString());
+			res.append("}");
+		}
+		else if (llvm::isa<clang::CXXRecordDecl>(decl)){
+			res.append(" {class}");
+		}
+
+		return res;
+	}
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,14 +108,20 @@ class IndexerVisitor{
 		if (llvm::isa<clang::FunctionDecl>(decl)) {
 			if (decl->hasBody()){
 				Indexer::TranslationUnitPair elem =  std::make_pair(decl,mTu); 
-				mIndex[named->getQualifiedNameAsString()] = elem; 
+				mIndex[buildNameTypeChain(decl)] = elem; 
+
+				// we could write main function in many different ways,
+				// best way to find it, is to keep a simple record to address it
+				if(named->getNameAsString() == "main")
+					mIndex["main"] = elem; 
 			}
 		}
 		else if (llvm::isa<clang::CXXRecordDecl>(decl)){
 			clang::CXXRecordDecl *recDecl = llvm::cast<clang::CXXRecordDecl>(decl);
+		
 			if (recDecl->hasDefinition()){
 				Indexer::TranslationUnitPair elem =  std::make_pair(llvm::cast<clang::Decl>(recDecl->getDefinition()),mTu); 
-				mIndex[named->getQualifiedNameAsString()] = elem;
+				mIndex[buildNameTypeChain(decl)] = elem;
 			}
 			// index inner functions as well
 			indexDeclContext(llvm::cast<clang::DeclContext>(decl));
@@ -187,14 +212,14 @@ clang::Decl* Indexer::getDefinitionFor (const std::string& symbol) const{
 ///
 Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Decl* decl) const{
 	assert(decl && "Cannot look up null pointer!");
-	return getDefAndTUforDefinition(llvm::cast<clang::NamedDecl>(decl)->getQualifiedNameAsString());
+	return getDefAndTUforDefinition(buildNameTypeChain(decl));
 }
 
 
 ////////////////////////////////////////////////
 //
 clang::Decl* Indexer::getDefinitionFor (const clang::Decl* decl) const{
-	return getDefinitionFor(llvm::cast<clang::NamedDecl>(decl)->getQualifiedNameAsString());
+	return getDefinitionFor(buildNameTypeChain(decl));
 }
 
 

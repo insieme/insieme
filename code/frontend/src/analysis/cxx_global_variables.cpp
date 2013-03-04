@@ -109,9 +109,7 @@ bool CXXGlobalVarCollector::VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr*
 	}
 
 	if(definition) {
-		funcStack.push(definition);
 		(*this)(definition);
-		funcStack.pop();
 
 		// if the called function access the global data structure also the current function
 		// has to be marked (otherwise the global structure will not correctly forwarded)
@@ -147,9 +145,7 @@ bool CXXGlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* cal
 	}
 
 	if(definition) {
-		funcStack.push(definition);
 		(*this)(definition);
-		funcStack.pop();
 
 		// if the called function access the global data structure also the current function
 		// has to be marked (otherwise the global structure will not correctly forwarded)
@@ -199,9 +195,7 @@ bool CXXGlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr)
 	}
 
 	if(definition) {
-		funcStack.push(definition);
 		(*this)(definition);
-		funcStack.pop();
 
 		// if the called function access the global data structure also the current function
 		// has to be marked (otherwise the global structure will not correctly forwarded)
@@ -238,9 +232,7 @@ bool CXXGlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 		for(clang::CXXRecordDecl::method_iterator mit = recDecl->method_begin(); mit != recDecl->method_end(); mit++) {
 			if( mit->isVirtual() ) {
 				FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(*mit);
-				funcStack.push(funcDecl);
 				(*this)(funcDecl);
-				funcStack.pop();
 			}
 		}
 	}
@@ -276,9 +268,7 @@ bool CXXGlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 	}
 
 	if(definition) {
-		funcStack.push(definition);
 		(*this)(definition);
-		funcStack.pop();
 
 		// if the called function access the global data structure also the current function
 		// has to be marked (otherwise the global structure will not correctly forwarded)
@@ -304,9 +294,7 @@ bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorE
 		for(clang::CXXRecordDecl::method_iterator mit = recDecl->method_begin(); mit != recDecl->method_end(); mit++) {
 			if( mit->isVirtual() ) {
 				FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(*mit);
-				funcStack.push(funcDecl);
 				(*this)(funcDecl);
-				funcStack.pop();
 			}
 		}
 	}
@@ -346,15 +334,11 @@ bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorE
 		if (!ret.first)
 			return true;
 		dtorDecl = llvm::cast<FunctionDecl>(ret.first);
-		funcStack.push(dtorDecl);
 		(*this)(dtorDecl);
-		funcStack.pop();
 	}
 
 	if(definition) {
-		funcStack.push(definition);
 		(*this)(definition);
-		funcStack.pop();
 
 		// if the called function access the global data structure also the current function
 		// has to be marked (otherwise the global structure will not correctly forwarded)
