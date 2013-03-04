@@ -160,7 +160,11 @@ void GlobalVarCollector::operator()(const Program::TranslationUnitSet& tus) {
 ///
 void GlobalVarCollector::VisitExternVarDecl(clang::VarDecl* decl) {
 
-	if (decl->hasExternalStorage()) return;
+	if (decl->hasExternalStorage()) {
+		//VarDecl is defined extern 
+		//variable already defined somewhere else
+		return;
+	}
 
 	//LOG(DEBUG) << "GLOBS: " << globals;
 	//LOG(DEBUG) << "IdMap: " << varIdentMap;
@@ -250,6 +254,9 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 		VarDecl* varDecl = llvm::cast<VarDecl>(declRef->getDecl());
 		if( !varDecl->hasGlobalStorage() ) { return true; }
 
+		//TODO is it possible to merge into visitvardecl?
+		//TODO check decl for definition?
+
 		const FunctionDecl* enclosingFunc = funcStack.top();
 		assert(enclosingFunc);
 		usingGlobals.insert(enclosingFunc); // the enclosing function uses globals
@@ -330,9 +337,7 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 		definition = llvm::cast<FunctionDecl>(ret.first);
 	}
 
-	funcStack.push(definition);
 	(*this)(definition);
-	funcStack.pop();
 
 	// if the called function access the global data structure also the current function
 	// has to be marked (otherwise the global structure will not correctly forwarded)
