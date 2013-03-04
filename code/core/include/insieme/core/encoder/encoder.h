@@ -372,7 +372,8 @@ namespace encoder {
 				auto resType = builder.genericType("encoded_" #_TYPE); \
 				auto alpha = builder.typeVariable("a"); \
 				auto wrapFun = builder.literal("wrap_" #_TYPE, builder.functionType(alpha, resType)); \
-				return core::analysis::isCallOf(expr, wrapFun); \
+				auto nullFun = builder.literal("null_" # _TYPE, builder.functionType(TypeList(), resType)); \
+				return core::analysis::isCallOf(expr, wrapFun) || core::analysis::isCallOf(expr, nullFun); \
 			} \
 		}; \
 		\
@@ -381,6 +382,10 @@ namespace encoder {
 			core::ExpressionPtr operator()(core::NodeManager& manager, const _TYPE& value) const { \
 				IRBuilder builder(manager); \
 				auto resType = builder.genericType("encoded_" #_TYPE); \
+				if (!value) { \
+					auto nullFun = builder.literal("null_" # _TYPE, builder.functionType(TypeList(), resType)); \
+					return builder.callExpr(resType, nullFun); \
+				} \
 				auto alpha = builder.typeVariable("a"); \
 				auto wrapFun = builder.literal("wrap_" #_TYPE, builder.functionType(alpha, resType)); \
 				return builder.callExpr(resType, wrapFun, value); \
@@ -391,6 +396,12 @@ namespace encoder {
 		struct ir_to_value_converter<_TYPE> { \
 			_TYPE operator()(const core::ExpressionPtr& expr) const { \
 				assert(is_encoding_of<_TYPE>()(expr) && "Invalid encoding!"); \
+				IRBuilder builder(expr->getNodeManager()); \
+				auto resType = builder.genericType("encoded_" #_TYPE); \
+				auto nullFun = builder.literal("null_" # _TYPE, builder.functionType(TypeList(), resType)); \
+				if (core::analysis::isCallOf(expr, nullFun)) { \
+					return _TYPE(); \
+				} \
 				return expr.as<CallExprPtr>().getArgument(0).as<_TYPE>(); \
 			} \
 		}

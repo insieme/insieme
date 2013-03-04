@@ -241,6 +241,13 @@ namespace core {
 		void addConstructor(const LambdaExprPtr& constructor);
 
 		/**
+		 * Tests whether a destructor is defined for this type.
+		 */
+		const bool hasDestructor() const {
+			return destructor;
+		}
+
+		/**
 		 * Obtains a reference to the destructor implementation associated
 		 * to this meta-info collection or null if no destructor has been
 		 * attached.
