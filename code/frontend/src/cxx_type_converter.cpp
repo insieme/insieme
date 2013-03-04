@@ -109,8 +109,10 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				ctorDecl->isMoveConstructor() ){
 
 				core::LambdaExprPtr&& ctorLambda = convFact.convertCtor(ctorDecl, classType).as<core::LambdaExprPtr>();
-				ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
-				classInfo.addConstructor(ctorLambda);
+				if (ctorLambda){
+					ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
+					classInfo.addConstructor(ctorLambda);
+				}
 			}
 		} 
 
@@ -124,12 +126,43 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				classInfo.setDestructorVirtual();
 		}
 
-		// operator overloads
+		// member functions
+		clang::CXXRecordDecl::method_iterator methodIt = classDecl->method_begin();
+		clang::CXXRecordDecl::method_iterator methodEnd= classDecl->method_end();
+		for (; methodIt != methodEnd; methodIt ++){
+			if (llvm::isa<clang::CXXConstructorDecl>(*methodIt) ||
+				llvm::isa<clang::CXXDestructorDecl>(*methodIt))
+				continue;
+
+			const clang::FunctionDecl* method = llvm::cast<clang::FunctionDecl>(*methodIt);
+
+			// FIXME: we should not have to look for the F$%ing TU everyplace, this should be
+			// responsability of the convert func function
+			convFact.getTranslationUnitForDefinition(method);  // FIXME:: remove this crap
+			core::LambdaExprPtr&& methodLambda = convFact.convertFunctionDecl(method).as<core::LambdaExprPtr>();
+			methodLambda = convFact.memberize  (method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION);
+
+			if (VLOG_IS_ON(2)){
+				VLOG(2) << " ############ member! #############";
+				VLOG(2)<< llvm::cast<clang::NamedDecl>(method)->getNameAsString();
+				dumpPretty(methodLambda);
+				method->dump();
+				VLOG(2) << ( (*methodIt)->isVirtual()? "virtual!":" ");
+				VLOG(2) << ((*methodIt)->isConst()? "const!":" ");
+				VLOG(2) << "           ############";
+			}
+
+			classInfo.addMemberFunction(llvm::cast<clang::NamedDecl>(method)->getNameAsString(), 
+										methodLambda,
+										(*methodIt)->isVirtual(), 
+										(*methodIt)->isConst());
+		}
 		
 		// append metha information to the class definition
 		core::setMetaInfo(classType, classInfo);
 	}
 
+	// cache the new implementation
 	mClassTypeMap.erase(tagType);
 	mClassTypeMap[tagType] = classType;
 
