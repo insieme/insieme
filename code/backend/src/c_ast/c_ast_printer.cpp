@@ -346,6 +346,10 @@ namespace c_ast {
 				return out << "(" << print(node->type) << "){ ." << print(node->member) << " = " << print(node->value) << " }";
 			}
 
+			PRINT(ArrayInit) {
+				return out << print(node->type) << "[" << print(node->size) << "]";
+			}
+
 			PRINT(VectorInit) {
 				return out << "{"
 						<< join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) {
@@ -375,6 +379,7 @@ namespace c_ast {
 					case UnaryOperation::Indirection: 	return out << "*" << print(node->operand);
 					case UnaryOperation::Reference: 	return out << "&" << print(node->operand);
 					case UnaryOperation::SizeOf: 		return out << "sizeof(" << print(node->operand) << ")";
+					case UnaryOperation::New:			return out << "new " << print(node->operand);
 				}
 
 				assert(false && "Invalid unary operation encountered!");
@@ -472,7 +477,7 @@ namespace c_ast {
 
 			PRINT(ConstructorCall) {
 				// <new> <className> ( <arguments> )
-				out << ((node->onHeap || node->location)?"new ":"");
+				out << ((node->location)?"new ":"");
 
 				// the location for a placement new
 				if (node->location) {
