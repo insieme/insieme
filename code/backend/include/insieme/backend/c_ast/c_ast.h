@@ -338,6 +338,14 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct ArrayInit : public Expression {
+		TypePtr type;
+		ExpressionPtr size;
+		ArrayInit(TypePtr type, ExpressionPtr size)
+			: Expression(NT_ArrayInit), type(type), size(size) {};
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct VectorInit : public Expression {
 		vector<NodePtr> values;
 		VectorInit() : Expression(NT_VectorInit) {};
@@ -367,6 +375,7 @@ namespace c_ast {
 			Indirection,
 			Reference,
 			SizeOf,
+			New,
 		};
 
 		UnaryOp operation;
@@ -478,10 +487,9 @@ namespace c_ast {
 	struct ConstructorCall : public Expression {
 		TypePtr classType;
 		vector<NodePtr> arguments;
-		bool onHeap;
 		ExpressionPtr location;
-		ConstructorCall(TypePtr classType, const vector<NodePtr>& args, bool onHeap = false, ExpressionPtr location = ExpressionPtr())
-			: Expression(NT_ConstructorCall), classType(classType), arguments(args), onHeap(onHeap), location(location) {}
+		ConstructorCall(TypePtr classType, const vector<NodePtr>& args, ExpressionPtr location = ExpressionPtr())
+			: Expression(NT_ConstructorCall), classType(classType), arguments(args), location(location) {}
 		virtual bool equals(const Node& node) const;
 	};
 

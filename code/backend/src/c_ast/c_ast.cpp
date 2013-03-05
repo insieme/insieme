@@ -298,6 +298,12 @@ namespace c_ast {
 		return *type==*other.type && *member == *other.member && *value == *other.value;
 	}
 
+	bool ArrayInit::equals(const Node& node) const {
+		assert(dynamic_cast<const ArrayInit*>(&node));
+		auto other = static_cast<const ArrayInit&>(node);
+		return *type==*other.type && *size == *other.size;
+	}
+
 	bool VectorInit::equals(const Node& node) const {
 		assert(dynamic_cast<const VectorInit*>(&node));
 		auto other = static_cast<const VectorInit&>(node);
@@ -343,7 +349,7 @@ namespace c_ast {
 	bool ConstructorCall::equals(const Node& node) const {
 		assert(dynamic_cast<const ConstructorCall*>(&node));
 		auto other = static_cast<const ConstructorCall&>(node);
-		return *classType == *other.classType && onHeap == other.onHeap &&
+		return *classType == *other.classType &&
 				equalTarget(location, other.location) &&
 				::equals(arguments, other.arguments, equal_target<NodePtr>());
 	}

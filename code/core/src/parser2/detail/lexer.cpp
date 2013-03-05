@@ -218,7 +218,6 @@ namespace detail {
 				static const vector<string> KEYWORD = {
 						"if", "else", "while", "for", "let", "in", "auto",
 						"return", "break", "continue",
-						"var", "new", "delete", "print",
 						"struct", "union",
 						"array", "vector", "ref", "channel",
 						"spawn", "syncAll"

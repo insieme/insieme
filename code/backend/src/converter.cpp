@@ -66,7 +66,7 @@ namespace backend {
 		utils::Timer timer = insieme::utils::Timer(getConverterName() + " Preprocessing");
 
 		// pre-process program
-		core::NodePtr processed = getPreProcessor()->process(getNodeManager(), source);
+		core::NodePtr processed = getPreProcessor()->process(*this, source);
 
 		timer.stop();
 		LOG(INFO) << timer;
