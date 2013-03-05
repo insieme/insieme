@@ -34,38 +34,41 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/backend/preprocessor.h"
+#include "insieme/core/lang/basic.h"
+
+#include "insieme/core/ir_node.h"
+#include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/checks/full_check.h"
 
 namespace insieme {
-namespace backend {
-namespace runtime {
+namespace core {
+namespace lang {
 
-	enum class PickImplementationHint { CALL, SWITCH };
-	
-	/**
-	 * A pre-processor wrapping the entry point of the given code into a newly generated
-	 * lambda instantiating and running a standalone version of the insieme runtime.
-	 */
-	class StandaloneWrapper : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
-	};
+	TEST(IRppExtensions, ArrayCtor) {
+		NodeManager nm;
 
-	/**
-	 * A pre-processor converting all job expressions, calls to parallel and pfors into runtime
-	 * equivalents. After this pass, the resulting program will no longer contain any of those
-	 * primitives.
-	 *
-	 * Yes, the name is a working title ...
-	 */
-	class WorkItemizer : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
-	};
+		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
+		auto element = ext.getArrayCtor();
+		dump(element);
 
-} // end namespace runtime
-} // end namespace backend
+		// just check whether the code is not exhibiting errors
+		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+	}
+
+	TEST(IRppExtensions, ArrayDtor) {
+		NodeManager nm;
+
+		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
+		auto element = ext.getArrayDtor();
+		dump(element);
+
+		// just check whether the code is not exhibiting errors
+		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+	}
+
+} // end namespace lang
+} // end namespace core
 } // end namespace insieme
+

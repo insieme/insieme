@@ -128,7 +128,7 @@ irt_affinity_policy irt_load_affinity_from_env() {
 	irt_affinity_policy policy = {IRT_AFFINITY_NONE, 0};
 	if(policy_str) {
 		irt_log_setting_s("IRT_AFFINTIY_POLICY", policy_str);
-		char *tok = strtok(policy_str, ", ");
+		char *tok = strtok(policy_str, ", :");
 		if(strcmp("IRT_AFFINITY_NONE", tok) == 0) {
 			policy.type = IRT_AFFINITY_NONE;
 		}

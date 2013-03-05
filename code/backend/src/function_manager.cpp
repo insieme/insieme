@@ -163,6 +163,10 @@ namespace backend {
 		(store->resolve(lambda))->function->name->name = name;
 	}
 
+	bool FunctionManager::isBuiltIn(const core::ExpressionPtr& op) const {
+		return operatorTable.find(op) != operatorTable.end();
+	}
+
 	namespace {
 
 		void appendAsArguments(ConversionContext& context, c_ast::CallPtr& call, const vector<core::ExpressionPtr>& arguments, bool external) {
@@ -266,6 +270,7 @@ namespace backend {
 
 			// check result
 			assert(lambda && lambda != fun && "Lambda-Instantiation failed!");
+			assert(!core::analysis::isGeneric(lambda->getType()) && "Still generic!");
 
 			// produce new call expression
 			auto res = core::CallExpr::get(manager, call->getType(), lambda, call->getArguments());
@@ -291,7 +296,7 @@ namespace backend {
 			// produce call to internal lambda
 			c_ast::CallPtr c_call = c_ast::call(info.function->name);
 			appendAsArguments(context, c_call, call->getArguments(), false);
-			c_ast::NodePtr res = c_call;
+			c_ast::ExpressionPtr res = c_call;
 
 			// ----------------- constructor call ---------------
 
@@ -323,7 +328,10 @@ namespace backend {
 				if (loc) context.addInclude("<new>");
 
 				// create constructor call
-				res = c_ast::ctorCall(classType, args, isOnHeap, loc);
+				res = c_ast::ctorCall(classType, args, loc);
+
+				// add new call if required
+				if (isOnHeap) res = c_ast::newCall(res);
 			}
 
 			// ---------------- destructor call -----------------

@@ -50,7 +50,7 @@ namespace insieme {
 namespace core {
 namespace encoder {
 
-TEST(Lists, TestBaseTypes) {
+TEST(PrimitiveTypes, Base) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
@@ -112,7 +112,7 @@ TEST(Lists, TestBaseTypes) {
 
 }
 
-TEST(Lists, SubTypeSupport) {
+TEST(PrimitiveTypes, SubTypeSupport) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
@@ -137,6 +137,35 @@ TEST(Lists, SubTypeSupport) {
 	EXPECT_EQ(14u, toValue<uint64_t>(exprB));
 }
 
+
+TEST(Expressions, Basic) {
+
+	// tests the encoding of expressions
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	ExpressionPtr exp = builder.boolLit(true);
+
+	EXPECT_TRUE(exp);
+
+
+	EXPECT_EQ("AP(wrap_ExpressionPtr(true))", toString(toIR(manager, exp)));
+	EXPECT_EQ(exp, toValue<ExpressionPtr>(toIR(manager, exp)));
+
+}
+
+TEST(Expressions, NullPointer) {
+
+	// test the encoding of null pointer
+	NodeManager mgr;
+
+	ExpressionPtr nothing;
+
+	EXPECT_FALSE(nothing);
+	EXPECT_EQ("AP(null_ExpressionPtr())", toString(toIR(mgr, nothing)));
+	EXPECT_EQ(nothing, toValue<ExpressionPtr>(toIR(mgr, nothing)));
+
+}
 
 
 } // end namespace lists

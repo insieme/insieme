@@ -11,7 +11,7 @@ void fail() {
 
 int main() {
 	int tmax = omp_get_max_threads();
-	if(tmax < 16) fail();
+	if(tmax < 1) fail();
 	
 	#pragma omp parallel num_threads(THREADS)
 	{
