@@ -90,6 +90,9 @@ namespace lang {
 				"}"
 		);
 
+		/**
+		 * A destructor supporting the destruction of an array of objects.
+		 */
 		LANG_EXT_DERIVED(ArrayDtor,
 				"let int = uint<8> in "
 				""
