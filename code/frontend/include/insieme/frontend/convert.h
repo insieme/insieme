@@ -46,6 +46,7 @@
 
 #include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/utils/functionDependencyGraph.h"
+#include "insieme/frontend/utils/interceptor.h"
 
 #include <memory>
 #include <set>
@@ -71,11 +72,6 @@ typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
 namespace insieme {
 namespace frontend {
-
-namespace cpp {
-	class TemporaryHandler;
-} // end cpp namespace
-
 
 namespace conversion {
 
@@ -516,7 +512,7 @@ public:
 	}
 
 	virtual std::shared_ptr<analysis::GlobalVarCollector> getFreshGlobalCollector() {
-		return std::make_shared<analysis::GlobalVarCollector>(mIndexer, mFact);
+		return std::make_shared<analysis::GlobalVarCollector>(mIndexer, mProg.getInterceptor(), mFact);
 	}
 };
 
@@ -530,7 +526,7 @@ public:
 		ASTConverter(mgr, prog, true) { }
 
 	virtual std::shared_ptr<analysis::GlobalVarCollector> getFreshGlobalCollector() {
-		return std::make_shared<analysis::CXXGlobalVarCollector>(mIndexer, mFact);
+		return std::make_shared<analysis::CXXGlobalVarCollector>(mIndexer, mProg.getInterceptor(), mFact);
 	}
 };
 } // End conversion namespace

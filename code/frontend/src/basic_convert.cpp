@@ -142,6 +142,12 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool
 			typeConvPtr = std::make_shared<CTypeConverter>(*this, prog);
 			exprConvPtr = std::make_shared<CExprConverter>(*this, prog);
 		}
+
+		//FIXME find better place to fill lambdaExprCache with interceptedExpr
+		//copy interceptor exprcache into lambdaexpr cache
+		ctx.lambdaExprCache = prog.getInterceptor().getInterceptedExprCache();
+		VLOG(2) << "interceptedExprCache: " << prog.getInterceptor().getInterceptedExprCache(); 
+		VLOG(2) << "lambdaExprCache: " << ctx.lambdaExprCache;
 }
 
 //////////////////////////////////////////////////////////////////
@@ -1095,6 +1101,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		core::LambdaExprPtr retLambdaExpr = builder.lambdaExpr(funcType, params, body);
 
 		// Adding the lambda function to the list of converted functions
+		assert( (funcDecl == program.getIndexer().getDefinitionFor(funcDecl)) && "wrong function declaration in lambdaExprCache");
 		ctx.lambdaExprCache.insert( { funcDecl, retLambdaExpr} );
 
 		VLOG(2) << retLambdaExpr << " + function declaration: " << funcDecl;
@@ -1168,10 +1175,11 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// we reset the behavior of the solver
 	ctx.isRecSubFunc = false;
 
-	core::LambdaDefinitionPtr&& definition = builder.lambdaDefinition(definitions);
-	core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr(recVarRef, definition);
+	core::LambdaDefinitionPtr&& lambdaDef = builder.lambdaDefinition(definitions);
+	core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr(recVarRef, lambdaDef);
 
 	// Adding the lambda function to the list of converted functions
+	assert( (funcDecl == program.getIndexer().getDefinitionFor(funcDecl)) && "wrong function declaration in lambdaExprCache");
 	ctx.lambdaExprCache.insert( {funcDecl, retLambdaExpr} );
 	// we also need to cache all the other recursive definition, so when we will resolve
 	// another function in the recursion we will not repeat the process again
@@ -1188,7 +1196,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		// update the translation unit
 		currTU.push(rightTU);
 
-		core::ExpressionPtr&& func = builder.lambdaExpr(fit->second, definition);
+		core::ExpressionPtr&& func = builder.lambdaExpr(fit->second, lambdaDef);
+		assert( (decl== program.getIndexer().getDefinitionFor(decl)) && "wrong function declaration in lambdaExprCache");
 		ctx.lambdaExprCache.insert( {decl, func} );
 
 		func = attachFuncAnnotations(func, decl);

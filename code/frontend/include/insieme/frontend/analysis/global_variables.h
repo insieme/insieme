@@ -100,6 +100,7 @@ public:
 
 	GlobalVarCollector(
 			insieme::frontend::utils::Indexer& indexer,
+			insieme::frontend::utils::Interceptor& 	interceptor, 
 			conversion::ConversionFactory& convFact);
 
 	virtual ~GlobalVarCollector() {};
@@ -158,6 +159,7 @@ protected:
 
 	conversion::ConversionFactory& 		convFact;
 	const insieme::frontend::utils::Indexer& 	indexer;
+	const insieme::frontend::utils::Interceptor& 	interceptor;
 	GlobalVarSet						globals;
 	GlobalIdentMap						varIdentMap;
 	VisitedFuncSet 						visited;
@@ -174,8 +176,9 @@ class CXXGlobalVarCollector : public GlobalVarCollector {
 
 	CXXGlobalVarCollector(
 				insieme::frontend::utils::Indexer& 	indexer, 
+				insieme::frontend::utils::Interceptor& 	interceptor, 
 				conversion::ConversionFactory& 		convFact)
-	: GlobalVarCollector(indexer, convFact) { }
+	: GlobalVarCollector(indexer, interceptor, convFact) { }
 
 	virtual ~CXXGlobalVarCollector() {};
 

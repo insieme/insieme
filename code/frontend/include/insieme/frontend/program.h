@@ -47,6 +47,7 @@ namespace insieme {
 namespace frontend {
 
 namespace utils {
+	class Interceptor;
 	class Indexer;
 	class FunctionDependencyGraph;
 }
@@ -116,6 +117,7 @@ public:
 
 	~Program();
 	
+	utils::Interceptor& getInterceptor() const;
 	utils::Indexer& getIndexer() const;
 	
 	utils::FunctionDependencyGraph& getCallGraph() const;

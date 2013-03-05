@@ -86,11 +86,13 @@ namespace analysis {
 
 GlobalVarCollector::GlobalVarCollector(
 	insieme::frontend::utils::Indexer& indexer,
+	insieme::frontend::utils::Interceptor& 	interceptor,
 	conversion::ConversionFactory&	convFact)
 	: convFact(convFact),
-	  indexer(indexer)
-	{
-}
+	  indexer(indexer),
+	  interceptor(interceptor)
+	{ }
+
 /////////////////////////////////////////////////////////////////////////////////
 ///
 core::StringValuePtr
@@ -128,8 +130,13 @@ GlobalVarCollector::buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, co
 void GlobalVarCollector::operator()(const clang::Decl* decl) {
 	bool isFuncDecl = false;
 	if(const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(decl)) {
-		if(visited.find(funcDecl) != visited.end())
-			return; // function declaration already visited
+		if( visited.find(funcDecl) != visited.end() || interceptor.isIntercepted(funcDecl) ) {
+			// function declaration already visited
+			// or funcDecl is intercepted
+			VLOG(2) << "isIntercepted " << funcDecl;
+			return; 
+		}
+
 		visited.insert(funcDecl);
 		isFuncDecl = true;
 		funcStack.push(funcDecl);

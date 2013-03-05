@@ -50,10 +50,15 @@ namespace utils {
 struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 
 	insieme::frontend::utils::Indexer& indexer;
+	insieme::frontend::utils::Interceptor& interceptor;
 	typedef std::set<const clang::FunctionDecl*> CallGraph;
 	CallGraph callGraph;
 
-	CallExprVisitor(insieme::frontend::utils::Indexer& indexer) : indexer(indexer) { }
+	CallExprVisitor(
+			insieme::frontend::utils::Indexer& indexer,
+			insieme::frontend::utils::Interceptor& interceptor) : 
+		indexer(indexer), 
+		interceptor(interceptor) { }
 
 	CallGraph getCallGraph(const clang::FunctionDecl* func);
 
@@ -81,13 +86,17 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
  */
 class FunctionDependencyGraph: public DependencyGraph<const clang::FunctionDecl*> {
 	insieme::frontend::utils::Indexer& idx;
+	insieme::frontend::utils::Interceptor& interceptor;
 public:
 	CallExprVisitor callExprVis;
-	FunctionDependencyGraph(insieme::frontend::utils::Indexer& idx) :
-			DependencyGraph<const clang::FunctionDecl*>(), idx(idx), callExprVis(idx) {
+	FunctionDependencyGraph(
+			insieme::frontend::utils::Indexer& idx,
+			insieme::frontend::utils::Interceptor& interceptor) :
+			DependencyGraph<const clang::FunctionDecl*>(), idx(idx), interceptor(interceptor), callExprVis(idx,interceptor) {
 	}
 
 	insieme::frontend::utils::Indexer& getIndexer(){ return idx;}
+	insieme::frontend::utils::Interceptor& getInterceptor(){ return interceptor;}
 };
 
 } // end namespace utils
