@@ -1110,7 +1110,6 @@ namespace parser {
 			g.addRule("E", rule(
 					seq("new(",E,")"),
 					[](Context& cur)->NodePtr {
-				std::cout << cur.getTerm(0) << " of type " << cur.getTerm(0)->getNodeType() << "\n";
 						return cur.refNew(cur.getTerm(0).as<ExpressionPtr>());
 					},
 					0

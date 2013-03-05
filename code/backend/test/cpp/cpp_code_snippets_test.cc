@@ -39,6 +39,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/utils/compiler/compiler.h"
@@ -521,6 +522,68 @@ namespace backend {
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 
+	}
+
+	TEST(CppSnippet, ArrayConstruction) {
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		std::map<string, core::NodePtr> symbols;
+		symbols["createArray"] = mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor();
+
+		auto res = builder.parseProgram(
+				R"(
+					let int = int<4>;
+					
+					let A = struct { int x; };
+					
+					let ctorA = A::() { 
+						this->x = 4; 
+					};
+					
+					int main() {
+						
+						// create an array of objects of type A on the stack
+						ref<array<A,1>> a = createArray(ref.var, ctorA, 5u);
+						
+						// create an array of objects of type A on the heap
+						ref<array<A,1>> b = createArray(ref.new, ctorA, 5u);
+						
+						// update an element
+						a[3]->x = 12;
+						b[3]->x = 12;
+						
+						return 0;
+					}
+				)",
+				symbols
+		);
+
+		ASSERT_TRUE(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "A a[5u];");
+		EXPECT_PRED2(containsSubString, code, "A* b = new A[5u];");
+
+		EXPECT_PRED2(containsSubString, code, "a[3].x = 12;");
+		EXPECT_PRED2(containsSubString, code, "b[3].x = 12;");
+
+
+		// check whether ctor is present!
+		EXPECT_PRED2(containsSubString, code, "A();");
+		EXPECT_PRED2(containsSubString, code, "A::A() {");
+		EXPECT_PRED2(containsSubString, code, "(*this).x = 4;");
+
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}
 
 } // namespace backend

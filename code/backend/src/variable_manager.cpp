@@ -62,11 +62,17 @@ namespace backend {
 	}
 
 	const VariableInfo& VariableManager::addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location) {
+		// forward call more detailed implementation
+		return addInfo(converter, var, location, converter.getTypeManager().getTypeInfo(var->getType()));
+	}
 
+	const VariableInfo& VariableManager::addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location, const TypeInfo& typeInfo) {
+
+		// create new variable info instance (implicit)
 		VariableInfo& info = infos[var];
 
-		// obtain type
-		info.typeInfo = &converter.getTypeManager().getTypeInfo(var->getType());
+		// obtain type info
+		info.typeInfo = &typeInfo;
 
 		// obtain name and type of the variable
 		c_ast::TypePtr type = (location == VariableInfo::DIRECT)?info.typeInfo->lValueType:info.typeInfo->rValueType;
@@ -77,6 +83,7 @@ namespace backend {
 
 		return info;
 	}
+
 
 	void VariableManager::remInfo(const core::VariablePtr& var) {
 		// just delete from internal map

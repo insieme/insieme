@@ -193,11 +193,13 @@ namespace c_ast {
 					// print a variable declaration
 					out << printParam(node->varInit[0].first);
 
-					if (!node->varInit[0].second) {
-						return out;
+					// add init value
+					if (node->varInit[0].second) {
+						out << " = " << print(node->varInit[0].second);
 					}
 
-					return out << " = " << print(node->varInit[0].second);
+					// done
+					return out;
 				}
 
 				// multiple declarations

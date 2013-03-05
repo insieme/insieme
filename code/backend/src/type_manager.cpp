@@ -121,6 +121,8 @@ namespace backend {
 				return static_cast<result_type>(info);
 			}
 
+			const TypeInfo* resolveCVectorType(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size);
+
 			const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type) const {
 				auto pos = std::find_if(allInfos.begin(), allInfos.end(), [&](const TypeInfo* cur) { return *cur->rValueType == *type; });
 				if (pos != allInfos.end()) {
@@ -219,6 +221,12 @@ namespace backend {
 		// take value from store
 		return *(store->resolveType(type));
 	}
+
+	const TypeInfo& TypeManager::getCVectorTypeInfo(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size) {
+		// take value from store
+		return *(store->resolveCVectorType(elementType, size));
+	}
+
 
 	const c_ast::CodeFragmentPtr TypeManager::getDefinitionOf(const c_ast::TypePtr& type) {
 		// as usual, ask store ...
@@ -1281,7 +1289,27 @@ namespace backend {
 
 		}
 
-	}
+		const TypeInfo* TypeInfoStore::resolveCVectorType(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size) {
+			// obtain reference to CNodeManager
+			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+
+			// resolve type information
+			const TypeInfo* elementInfo = resolveType(elementType);
+
+			// create vector type to be used within C-AST
+			auto cType = manager.create<c_ast::VectorType>(elementInfo->lValueType, size);
+
+			// create new type information
+			TypeInfo* res = type_info_utils::createInfo(cType);
+
+			// register it (for destruction)
+			allInfos.insert(res);
+
+			// return created type info
+			return res;
+		}
+
+	} // end namespace detail
 
 	TypeIncludeTable getBasicTypeIncludeTable() {
 		// create table
