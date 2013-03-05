@@ -66,6 +66,33 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(PureVirtual, "<pure virtual>", "(type<'a>)->'a")
 
+		/**
+		 * A construct supporting the construction and initialization of an array
+		 * of objects.
+		 */
+		LANG_EXT_DERIVED(ArrayCtor,
+				"let int = uint<8> in "
+				""
+				"(('a)->ref<'a> allocator, 'b::() ctor, int size)->ref<array<'b,1>> { \n"
+				"	// define the type to be allocated \n"
+ 				"	let wrapper = struct { int size; array<'b,1> data; }; \n"
+				"	\n"
+				"	// allocate the memory \n"
+				"	ref<wrapper> res = allocator(undefined(lit(wrapper)));		// TODO: replace with struct init!"
+				"	 \n"
+				"	// init array \n"
+				"	res->size = size;"
+				"	res->data = array.create.1D(lit('b), size);"
+				"	"
+				"	// init elements"
+				"	for(int i=0 .. size : 1) {"
+				"		ctor(res->data[i]);"
+				"	}"
+				"	"
+				"	// return array reference \n"
+				"	return res->data;"
+				"}")
+
 	};
 
 } // end namespace lang
