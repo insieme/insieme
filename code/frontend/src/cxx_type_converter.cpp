@@ -80,8 +80,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 	VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
 
 	// check if this type has being already translated.
-	// this boost conversion but also avoids infinite recursion while resolving class member
-	// function
+	// this boost conversion but also avoids infinite recursion while resolving class member function
 	std::map<const TagType*, core::TypePtr>::iterator match = mClassTypeMap.find(tagType);
 	if(match != mClassTypeMap.end()){
 		return match->second;
@@ -97,6 +96,22 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 
 		core::ClassMetaInfo classInfo;
 		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl());
+
+
+		// base clases if any:
+		clang::CXXRecordDecl::base_class_const_iterator it = classDecl->bases_begin();
+		if (classDecl->getNumBases() > 0){
+			std::vector<core::ParentPtr> parents;
+			for (; it != classDecl->bases_end(); it++){
+
+				// visit the parent to build its type
+				auto parentIrType = Visit((it)->getType().getTypePtr());
+				parents.push_back(builder.parent(it->isVirtual(), parentIrType));
+			}
+			// if we have base classes, we need to create again the IR type, with the 
+			// parent list this time
+			classType = builder.structType(parents, classType.as<core::StructTypePtr>()->getElements());
+		}
 
 		// copy ctor, move ctor, default ctor
 		clang::CXXRecordDecl::ctor_iterator ctorIt = classDecl->ctor_begin();
