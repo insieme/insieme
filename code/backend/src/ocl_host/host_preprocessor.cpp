@@ -466,7 +466,9 @@ using insieme::transform::pattern::anyList;
 
 
 
-	core::NodePtr HostPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
+	core::NodePtr HostPreprocessor::process(const Converter& converter, const core::NodePtr& code) {
+		auto& manager = converter.getNodeManager();
+
 		core::IRBuilder builder(manager);
 		auto& ext = manager.getLangExtension<Extensions>();
 		auto& kernelExt = manager.getLangExtension<ocl_kernel::Extensions>();

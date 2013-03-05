@@ -165,7 +165,8 @@ using namespace insieme::transform::pattern;
 	}
 
 
-	core::NodePtr StandaloneWrapper::process(core::NodeManager& manager, const core::NodePtr& node) {
+	core::NodePtr StandaloneWrapper::process(const backend::Converter& converter, const core::NodePtr& node) {
+		core::NodeManager& manager = converter.getNodeManager();
 
 		// simply convert entry points to work items and add new main
 		auto nodeType = node->getNodeType();
@@ -849,8 +850,8 @@ using namespace insieme::transform::pattern;
 	}
 
 
-	core::NodePtr WorkItemizer::process(core::NodeManager& manager, const core::NodePtr& node) {
-		return WorkItemIntroducer(manager).resolveElement(node);
+	core::NodePtr WorkItemizer::process(const backend::Converter& converter, const core::NodePtr& node) {
+		return WorkItemIntroducer(converter.getNodeManager()).resolveElement(node);
 	}
 
 

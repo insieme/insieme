@@ -41,6 +41,7 @@
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/core/forward_decls.h"
+#include "insieme/backend/converter.h"
 
 namespace insieme {
 namespace backend {
@@ -64,11 +65,11 @@ namespace backend {
 		 * and the result will be returned. In the likely case that new nodes need to be constructed
 		 * during the processing, the given manager will be used.
 		 *
-		 * @param manager the manager to be used to create new node instances
+		 * @param converter the converter forming the context of this pre-processor invocation
 		 * @param code the code to be pre-processed
 		 * @return the result of the pre-processing step.
 		 */
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code) =0;
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code) =0;
 
 	};
 
@@ -83,7 +84,7 @@ namespace backend {
 	 * A generic factory method creating pre-processor pointer instances.
 	 */
 	template<typename T, typename ... E>
-	PreProcessorPtr makePreProcessor(E ... args) {
+	std::shared_ptr<T> makePreProcessor(E ... args) {
 		return std::make_shared<T>(args...);
 	}
 
@@ -94,8 +95,7 @@ namespace backend {
 	enum BasicPreprocessorFlags {
 		NONE 									= 0,
 		SKIP_POINTWISE_EXPANSION 				= 1,
-		SKIP_GENERIC_LAMBDA_INSTANTIATION 		= 2,
-		SKIP_RESTORE_GLOBALS 					= 4
+		SKIP_RESTORE_GLOBALS 					= 2
 	};
 
 	/**
@@ -140,11 +140,11 @@ namespace backend {
 		 * Applies this pre-processor on the given target code. Therefore, the internally maintained
 		 * sequence of pre-processing steps will be applied in order.
 		 *
-		 * @param manager the manager to be used to create new node instances
+		 * @param converter the converter forming the context of this pre-processor invocation
 		 * @param code the code to be pre-processed
 		 * @return the result of the pre-processing step.
 		 */
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 
 	};
 
@@ -157,7 +157,7 @@ namespace backend {
 	 */
 	class NoPreProcessing : public PreProcessor {
 	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};
 
 	/**
@@ -165,7 +165,7 @@ namespace backend {
 	 */
 	class InitZeroSubstitution : public PreProcessor {
 	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};
 
 	/**
@@ -174,6 +174,7 @@ namespace backend {
 	 */
 	class RestoreGlobals : public PreProcessor {
 	public:
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
 
@@ -182,16 +183,7 @@ namespace backend {
 	 */
 	class InlinePointwise : public PreProcessor {
 	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
-
-	/**
-	 * A pre-processor replacing generic lambdas operating on type variables with their actual instantiation
-	 * based on the invocation context.
-	 */
-	class GenericLambdaInstantiator : public PreProcessor {
-	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};
 
 	/**
@@ -199,7 +191,7 @@ namespace backend {
 	 */
 	class MakeVectorArrayCastsExplicit : public PreProcessor {
 	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};
 
 	/**
@@ -207,7 +199,7 @@ namespace backend {
 	 */
 	class RedundancyElimination : public PreProcessor {
 	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};
 
 	/**
@@ -216,7 +208,7 @@ namespace backend {
 	 */
 	class CorrectRecVariableUsage : public PreProcessor {
 	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};
 
 

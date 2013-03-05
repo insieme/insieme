@@ -48,7 +48,7 @@ namespace sequential {
 	 */
 	class Sequentializer : public PreProcessor {
 	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
 	};
 
 } // end namespace runtime
