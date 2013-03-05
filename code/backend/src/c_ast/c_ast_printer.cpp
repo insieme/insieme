@@ -651,14 +651,19 @@ namespace c_ast {
 			}
 
 			PRINT(Constructor) {
-				// <className> :: <name> ( <parameter list> ) <body> \n
+				// <className> :: <name> ( <parameter list> ) : <initializer_list>  <body> \n
 
 				auto fun = node->function;
 
 				// print header
 				out << print(node->className) << "::" << print(node->className) << "(" << printMemberParam(fun->parameter) << ") ";
 
-				// TODO: add initializer list
+				// add initializer list
+				if (!node->initialization.empty()) {
+					out << ": " << join(", ", node->initialization, [&](std::ostream& out, const pair<IdentifierPtr, ExpressionPtr>& cur) {
+						out << print(cur.first) << "(" << print(cur.second) << ")";
+					}) << " ";
+				}
 
 				// print body
 				return out << print(wrapBody(fun->body));

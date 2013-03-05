@@ -578,9 +578,61 @@ namespace backend {
 
 		// check whether ctor is present!
 		EXPECT_PRED2(containsSubString, code, "A();");
-		EXPECT_PRED2(containsSubString, code, "A::A() {");
-		EXPECT_PRED2(containsSubString, code, "(*this).x = 4;");
+		EXPECT_PRED2(containsSubString, code, "A::A() : x(4) {");
 
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, InitializerList) {
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(builder.parseProgram(
+				R"(
+					let int = int<4>;
+					
+					let B = struct { };
+					let A = struct : B { int x; int y; int z; };
+
+					let ctorA = A::(int y) {
+						this->y = y; 
+						for ( int i = 0 .. 10 ) {
+							this->y = 1;
+							this->z = 3;
+						}
+						this->x = 4; 
+						this->z = 2;
+					};
+					
+					int main() {
+						
+						// call constructor
+						ref<A> a = ctorA(ref.var(undefined(lit(A))), 10);
+						
+						return 0;
+					}
+				)"
+		));
+
+		ASSERT_TRUE(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "A var_1 = A(10);");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2) : x(4), y(var_2) {");
+		EXPECT_PRED2(containsSubString, code, "(*this).z = 2;");
+
+		EXPECT_PRED2(notContainsSubString, code, "(*this).x = 4;");
+
+		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
