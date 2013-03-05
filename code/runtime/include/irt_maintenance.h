@@ -158,11 +158,13 @@ void irt_maintenance_register(irt_maintenance_lambda *lam) {
 	for(;;) {
 		uint64 mi = irt_g_maintenance_min_interval_slot;
 		if(slot < mi) {
+			irt_mutex_lock(&irt_g_maintenance_mutex);
 			if(irt_atomic_bool_compare_and_swap(&irt_g_maintenance_min_interval_slot, mi, slot)) {
 //printf("set sleep slot from %lu to %lu\n", mi, slot);
 				// wake maintenance thread, interval was reduced
 				irt_cond_wake_one(&irt_g_maintenance_cond);
 			}
+			irt_mutex_unlock(&irt_g_maintenance_mutex);
 		} else break;
 	}
 
@@ -226,12 +228,12 @@ void* irt_maintenance_thread_func(void *) {
 		}
 
 		// sleep until next required timestep
+		irt_mutex_lock(&irt_g_maintenance_mutex);
 		uint64 maintenance_time_ns = (irt_time_ns() - starttime_ns);
 		uint64 interval_ns = irt_g_maintenance_events[irt_g_maintenance_min_interval_slot].interval * 1000 * 1000;
 		if(maintenance_time_ns < interval_ns) {
 			uint64 sleeptime_ns = interval_ns - maintenance_time_ns;
 //printf("go to sleep, slot: %u   interval: %lu   time: %lu ns\n", irt_g_maintenance_min_interval_slot, irt_g_maintenance_events[irt_g_maintenance_min_interval_slot].interval, sleeptime_ns);
-			irt_mutex_lock(&irt_g_maintenance_mutex);
 			irt_cond_timedwait(&irt_g_maintenance_cond, &irt_g_maintenance_mutex, sleeptime_ns);
 			irt_mutex_unlock(&irt_g_maintenance_mutex);
 //printf("woke up\n");

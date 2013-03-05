@@ -43,7 +43,7 @@
 
 #include <irt_maintenance.h>
 
-#define TEST_TIME_MS (10ULL * 1000)
+#define TEST_TIME_MS (5ULL * 1000)
 #define THREADS 12
 #define ITERATIONS 1
 
@@ -91,9 +91,9 @@ TEST(maintenance, timing) {
 	EXPECT_INTERVAL(TEST_TIME_MS/150-2, (TEST_TIME_MS*2)/150, mt_150_t.call_count);
 	EXPECT_INTERVAL(TEST_TIME_MS/20-2, (TEST_TIME_MS*2)/20, mt_20_t.call_count);
 	EXPECT_INTERVAL(TEST_TIME_MS/1000-2, (TEST_TIME_MS*2)/1000, mt_1000_t.call_count);
-	EXPECT_INTERVAL(150/2, 150*11/10, mt_150_t.sliding_avg_ms);
-	EXPECT_INTERVAL(20/2, 20*11/10, mt_20_t.sliding_avg_ms);
-	EXPECT_INTERVAL(1000/2, 1000*11/10, mt_1000_t.sliding_avg_ms);
+	EXPECT_INTERVAL(150/2, 150*12/10, mt_150_t.sliding_avg_ms);
+	EXPECT_INTERVAL(20/2, 20*12/10, mt_20_t.sliding_avg_ms);
+	EXPECT_INTERVAL(1000/2, 1000*12/10, mt_1000_t.sliding_avg_ms);
 
 	irt_maintenance_cleanup();
 }
@@ -126,8 +126,8 @@ TEST(maintenance, efficiency) {
 	
 	EXPECT_INTERVAL(TEST_TIME_MS/400/2-2, (TEST_TIME_MS*2)/400/2, mt_400_t.call_count);
 	EXPECT_INTERVAL(TEST_TIME_MS/2000-2, (TEST_TIME_MS*2)/2000, mt_2000_t.call_count);
-	EXPECT_INTERVAL(400/2, 400*11/10, mt_400_t.sliding_avg_ms);
-	EXPECT_INTERVAL(2000/2, 2000*11/10, mt_2000_t.sliding_avg_ms);
+	EXPECT_INTERVAL(400/2, 400*12/10, mt_400_t.sliding_avg_ms);
+	EXPECT_INTERVAL(2000/2, 2000*12/10, mt_2000_t.sliding_avg_ms);
 
 	irt_maintenance_cleanup();
 }
@@ -156,7 +156,7 @@ TEST(maintenance, parallel) {
 		for(uint32 i=0; i<ITERATIONS; ++i) {
 			EXPECT_INTERVAL((((TEST_TIME_MS/timings[i].interval)*9)/10)-1, 
 							(TEST_TIME_MS*2)/timings[i].interval+1, timings[i].call_count);
-			EXPECT_INTERVAL(((timings[i].interval/2)*9)/10, timings[i].interval*11/10, timings[i].sliding_avg_ms);
+			EXPECT_INTERVAL(((timings[i].interval/2)*9)/10, timings[i].interval*12/10, timings[i].sliding_avg_ms);
 		}
 		
 		#pragma omp barrier
@@ -190,9 +190,9 @@ TEST(maintenance, load) {
 	EXPECT_INTERVAL(TEST_TIME_MS/150-2, (TEST_TIME_MS*2)/150, mt_150_t.call_count);
 	EXPECT_INTERVAL(TEST_TIME_MS/20-2, (TEST_TIME_MS*2)/20, mt_20_t.call_count);
 	EXPECT_INTERVAL(TEST_TIME_MS/1000-2, (TEST_TIME_MS*2)/1000, mt_1000_t.call_count);
-	EXPECT_INTERVAL(150/2, 150*11/10, mt_150_t.sliding_avg_ms);
-	EXPECT_INTERVAL(20/2, 20*11/10, mt_20_t.sliding_avg_ms);
-	EXPECT_INTERVAL(1000/2, 1000*11/10, mt_1000_t.sliding_avg_ms);
+	EXPECT_INTERVAL(150/2, 150*12/10, mt_150_t.sliding_avg_ms);
+	EXPECT_INTERVAL(20/2, 20*12/10, mt_20_t.sliding_avg_ms);
+	EXPECT_INTERVAL(1000/2, 1000*12/10, mt_1000_t.sliding_avg_ms);
 
 	irt_maintenance_cleanup();
 }
