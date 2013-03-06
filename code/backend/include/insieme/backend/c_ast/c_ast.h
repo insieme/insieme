@@ -597,7 +597,8 @@ namespace c_ast {
 
 
 	struct Constructor : public Definition {
-		typedef vector<pair<IdentifierPtr, ExpressionPtr>> InitializationList;
+		typedef pair<IdentifierPtr, vector<NodePtr>> InitializerListEntry;
+		typedef vector<InitializerListEntry> InitializationList;
 		IdentifierPtr className;
 		FunctionPtr function;
 		InitializationList initialization;

@@ -660,8 +660,8 @@ namespace c_ast {
 
 				// add initializer list
 				if (!node->initialization.empty()) {
-					out << ": " << join(", ", node->initialization, [&](std::ostream& out, const pair<IdentifierPtr, ExpressionPtr>& cur) {
-						out << print(cur.first) << "(" << print(cur.second) << ")";
+					out << ": " << join(", ", node->initialization, [&](std::ostream& out, const Constructor::InitializerListEntry& cur) {
+						out << print(cur.first) << "(" << join(", ", cur.second, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << ")";
 					}) << " ";
 				}
 

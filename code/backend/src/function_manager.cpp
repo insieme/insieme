@@ -888,23 +888,35 @@ namespace backend {
 
 		namespace {
 
-			core::NodePtr getAccessedField(const core::VariablePtr& thisVar, const core::ExpressionPtr& access) {
+			core::NodePtr getAccessedField(const core::VariablePtr& thisVar, const core::ExpressionPtr& candidate) {
 				static const core::NodePtr NO_ACCESS;
 
 				// check whether it is accessing an element
-				if (access->getNodeType() != core::NT_CallExpr) return NO_ACCESS;
-				core::CallExprPtr call = access.as<core::CallExprPtr>();
+				if (candidate->getNodeType() != core::NT_CallExpr) return NO_ACCESS;
+				core::CallExprPtr call = candidate.as<core::CallExprPtr>();
 
+				// check whether it is a filed access
 				const auto& basic = thisVar->getNodeManager().getLangBasic();
-				if (core::analysis::isCallOf(call, basic.getCompositeRefElem())) {
-					// check whether it is accessing this
-					if (call->getArgument(0) != thisVar) return NO_ACCESS;
+				if (core::analysis::isCallOf(call, basic.getRefAssign())) {
+					core::ExpressionPtr target = call->getArgument(0);
+					if (core::analysis::isCallOf(target, basic.getCompositeRefElem())) {
+						// check whether it is accessing this
+						auto deref = target.as<core::CallExprPtr>();
+						if (deref->getArgument(0) != thisVar) return NO_ACCESS;
 
-					// extract identifier name
-					return call->getArgument(1);
+						// extract identifier name
+						return deref->getArgument(1);
+					}
 				}
 
-				// TODO: check for super class access
+				// check whether it is a super-constructor call
+				auto funType = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>();
+				if (funType->isConstructor()) {
+					// test whether argument is this (super-constructor call)
+					if (call->getArgument(0) == thisVar) {
+						return funType->getObjectType();
+					}
+				}
 
 				return NO_ACCESS;
 			}
@@ -913,7 +925,9 @@ namespace backend {
 
 			struct FirstWriteCollector : public core::IRVisitor<void, core::Address, const core::VariablePtr&, core::NodeSet&, std::vector<core::StatementAddress>&, bool> {
 
-				std::vector<core::StatementAddress> collect(const core::VariablePtr& thisVar, const core::CompoundStmtAddress& body) {
+				std::vector<core::StatementAddress> collect(const core::VariablePtr& thisVar, const core::VariableList& params, const core::CompoundStmtAddress& body) {
+
+					// TODO: forward parameters!
 
 					// prepare context information
 					core::NodeSet touched;
@@ -951,15 +965,9 @@ namespace backend {
 				}
 
 				void visitCallExpr(const core::CallExprAddress& cur, const core::VariablePtr& thisVar, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
-					const auto& basic = cur->getNodeManager().getLangBasic();
-
-					// check whether it is an assignment
-					if (!core::analysis::isCallOf(cur.getAddressedNode(), basic.getRefAssign())) {
-						return; // only interested in assignments
-					}
 
 					// extract field
-					auto field = getAccessedField(thisVar, cur->getArgument(0));
+					auto field = getAccessedField(thisVar, cur);
 					if (!field) return; 		// not accessing a field
 
 					// check whether field has been touched before
@@ -968,11 +976,14 @@ namespace backend {
 					// mark field as being touched
 					touched.insert(field);
 
+					// we must not be inside a loop
+					if (iterating) return;
+
 					// TODO: check whether value is only depending on input parameters
 
 
-					// if not touched before and not iterating => first assign
-					if (!iterating) res.push_back(cur);
+					// we have found a first assign
+					res.push_back(cur);
 				}
 
 				void visitExpression(const core::ExpressionAddress& cur, const core::VariablePtr& thisVar, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
@@ -1035,7 +1046,7 @@ namespace backend {
 				// collect all first write operations only depending on parameters
 				auto thisVar = ctor->getParameters()[0];
 				core::CompoundStmtAddress oldBody(ctor->getBody());
-				auto firstWriteOps = FirstWriteCollector().collect(thisVar, oldBody);
+				auto firstWriteOps = FirstWriteCollector().collect(thisVar, params, oldBody);
 
 				// stop here if there is nothing to do
 				if (firstWriteOps.empty()) return std::make_pair(initializer, oldBody);
@@ -1044,13 +1055,27 @@ namespace backend {
 				core::CompoundStmtPtr newBody = core::transform::remove(ctor->getNodeManager(), firstWriteOps).as<core::CompoundStmtPtr>();
 
 				// assemble initializer list in correct order
+				const auto& basic = thisVar->getNodeManager().getLangBasic();
 				for(const c_ast::IdentifierPtr& cur : all) {
 					for(const auto& write : firstWriteOps) {
 
 						// check whether write target is current identifier
-						if (cur == getIdentifierFor(converter, getAccessedField(thisVar, write.as<core::CallExprPtr>()[0]))) {
-							auto value = converter.getStmtConverter().convertExpression(context, write.as<core::CallExprPtr>()[1]);
-							initializer.push_back(std::make_pair(cur, value));
+						core::CallExprPtr call = write.as<core::CallExprPtr>();
+						if (cur == getIdentifierFor(converter, getAccessedField(thisVar, call))) {
+							// add filed assignment
+							if (core::analysis::isCallOf(call, basic.getRefAssign())) {
+								c_ast::NodePtr value = converter.getStmtConverter().convertExpression(context, call[1]);
+								initializer.push_back(c_ast::Constructor::InitializerListEntry(cur, toVector(value)));
+							} else {
+								// otherwise it needs to be a constructor
+								assert(call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor());
+
+								// convert constructor call as if it would be an in-place constructor (resolves dependencies!)
+								auto ctorCall = converter.getStmtConverter().convertExpression(context, call).as<c_ast::ConstructorCallPtr>();
+
+								// add constructor call to initializer list
+								initializer.push_back(c_ast::Constructor::InitializerListEntry(cur, ctorCall->arguments));
+							}
 						}
 					}
 				}
