@@ -1031,6 +1031,7 @@ namespace backend {
 		{	// core C++ extensions
 
 			const auto& irppExt = manager.getLangExtension<core::lang::IRppExtensions>();
+
 			res[irppExt.getArrayCtor()] = OP_CONVERTER({
 
 				// init array using a vector expression
@@ -1053,11 +1054,17 @@ namespace backend {
 				return res;
 			});
 
+			res[irppExt.getArrayDtor()] = OP_CONVERTER({
+				assert(false && "Not implemented Operation!");
+				return CONVERT_ARG(0);
+			});
+
 		}
 
 		{	// backend C++ extensions
 
 			const auto& irppExt = manager.getLangExtension<IRppExtensions>();
+
 			res[irppExt.getStaticCast()] = OP_CONVERTER({
 				// build up a static cast operator
 				return c_ast::staticCast(c_ast::ptr(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(1)))), CONVERT_ARG(0));

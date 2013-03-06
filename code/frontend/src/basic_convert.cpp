@@ -1239,7 +1239,7 @@ core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 	}
 
 
-	// with the transformed lambda, we can extract the body and re-type it into a constructor type
+	// with the transformed lambda, we can extract the body and re-type it into the right type
 	core::StatementPtr body = func.as<core::LambdaExprPtr>()->getBody();
 	auto params = func.as<core::LambdaExprPtr>()->getParameterList();
 
@@ -1319,11 +1319,30 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 		core::StringValuePtr ident;
 		core::StatementPtr initStmt;
 
+		// the translated initialization expression
+		core::ExpressionPtr expr;
+		// the variable to be initialized
+		core::ExpressionPtr init;
+
 		if((*it)->isBaseInitializer ()){
-			assert(false && "base init not implemented");
+
+			expr = convertExpr((*it)->getInit());
+			init = builder.literal("this", builder.refType(irClassType));
+			
+		//	assert(false && "base init not implemented");
 		}
 		else if ((*it)->isMemberInitializer ()){
+			// create access to the member of the struct/class
 			ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
+		
+			core::TypePtr memberTy = irClassType.as<core::StructTypePtr>()->getTypeOfMember(ident);
+			init = builder.callExpr( builder.refType( memberTy ),
+									 gen.getCompositeRefElem(),
+									 toVector<core::ExpressionPtr>  (builder.literal("this", builder.refType(irClassType)),
+									   								 builder.getIdentifierLiteral(ident), 
+																	 builder.getTypeLiteral(memberTy) ));
+
+			expr = convertExpr((*it)->getInit());
 		}
 		else if ((*it)->isAnyMemberInitializer ()){
 			assert(false && "any member not implemented");
@@ -1341,24 +1360,12 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 			assert(false && "pack expansion not implemented");
 		}
 
-		// create access to the member of the struct/class
-		core::TypePtr memberTy = irClassType.as<core::StructTypePtr>()->getTypeOfMember(ident);
-		core::ExpressionPtr&& init = builder.callExpr(
-					builder.refType( memberTy ),
-					gen.getCompositeRefElem(),
-					toVector<core::ExpressionPtr>  (builder.literal("this", builder.refType(irClassType)),
-													builder.getIdentifierLiteral(ident), 
-													builder.getTypeLiteral(memberTy) )
-			);
-
-		core::ExpressionPtr expr = convertExpr((*it)->getInit());
 		
 		// if the expr is a constructor then we are initializing a member an object, 
 		// we have to substitute first argument on constructor by the
 		// right reference to the member object (addressed by init)
 		if (expr.isa<core::CallExprPtr>() &&
 		    expr.as<core::CallExprPtr>().getFunctionExpr().as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
-			dumpPretty(expr);
 			core::CallExprAddress addr(expr.as<core::CallExprPtr>());
 			initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
 		}
