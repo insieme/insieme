@@ -354,7 +354,6 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, CastExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, PredefinedExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryExprOrTypeTraitExpr)
-	CALL_BASE_EXPR_VISIT(ExprConverter, MemberExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryOperator)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ConditionalOperator)
@@ -377,6 +376,12 @@ public:
 	//							FUNCTION CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCallExpr(const clang::CallExpr* callExpr);
+	
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						  MEMBER EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitMemberExpr(const clang::MemberExpr* memExpr);
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							VAR DECLARATION REFERENCE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

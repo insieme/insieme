@@ -655,9 +655,11 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 					}
 				);
 
-				// sort definitions - this will produce the same list of definitions for each of the related types => shared structure
+				// sort definitions - this will produce the same list of definitions for each of the 
+				// related types => shared structure
 				if (definitions.size() > 1) {
-					std::sort(definitions.begin(), definitions.end(), [](const core::RecTypeBindingPtr& a, const core::RecTypeBindingPtr& b){
+					std::sort(definitions.begin(), definitions.end(), [](const core::RecTypeBindingPtr& a, 
+																		 const core::RecTypeBindingPtr& b){
 						return a->getVariable()->getVarName()->getValue() < b->getVariable()->getVarName()->getValue();
 					});
 				}
@@ -757,7 +759,6 @@ core::TypePtr ConversionFactory::TypeConverter::handleTagType(const TagDecl* tag
 	}
 	assert(false && "TagType not supported");
 }
-
 
 core::TypePtr ConversionFactory::CTypeConverter::Visit(const clang::Type* type) {
 	VLOG(2) << "C";
