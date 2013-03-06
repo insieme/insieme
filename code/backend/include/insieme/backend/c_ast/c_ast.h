@@ -597,10 +597,12 @@ namespace c_ast {
 
 
 	struct Constructor : public Definition {
+		typedef vector<pair<IdentifierPtr, ExpressionPtr>> InitializationList;
 		IdentifierPtr className;
 		FunctionPtr function;
-		Constructor(const IdentifierPtr& className, const FunctionPtr& function)
-			: Definition(NT_Constructor), className(className), function(function) {}
+		InitializationList initialization;
+		Constructor(const IdentifierPtr& className, const FunctionPtr& function, const InitializationList& initializer = InitializationList())
+			: Definition(NT_Constructor), className(className), function(function), initialization(initializer) {}
 		virtual bool equals(const Node& node) const;
 	};
 
