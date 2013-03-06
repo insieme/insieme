@@ -238,7 +238,7 @@ void* irt_maintenance_thread_func(void *) {
 				irt_cond_timedwait(&irt_g_maintenance_cond, &irt_g_maintenance_mutex, sleeptime_ns);
 	//printf("woke up\n");
 			} else {
-				IRT_ASSERT(false, IRT_ERR_INTERNAL, "Maintenance time (%lu ns) exceeded required time slot (%lu ns)", maintenance_time_ns, interval_ns);
+				IRT_WARN("Maintenance time (%lu ns) exceeded required time slot (%lu ns)", maintenance_time_ns, interval_ns);
 			}
 			irt_mutex_unlock(&irt_g_maintenance_mutex);
 		}
