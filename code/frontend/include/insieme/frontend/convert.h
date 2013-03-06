@@ -46,6 +46,7 @@
 
 #include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/utils/functionDependencyGraph.h"
+#include "insieme/frontend/utils/interceptor.h"
 
 #include <memory>
 #include <set>
@@ -71,11 +72,6 @@ typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
 namespace insieme {
 namespace frontend {
-
-namespace cpp {
-	class TemporaryHandler;
-} // end cpp namespace
-
 
 namespace conversion {
 
@@ -466,6 +462,8 @@ public:
 	core::LambdaExprPtr convertCtor (const clang::CXXConstructorDecl* ctorDecl, core::TypePtr irClassType);
 
 	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
+
+	void buildInterceptedExprCache(utils::Interceptor& interceptor);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {
@@ -500,7 +498,7 @@ public:
 	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain = false);
 
 	core::ProgramPtr handleMainFunctionDecl() {
-		return handleFunctionDecl(llvm::cast<const clang::FunctionDecl>(mIndexer.getMainFunctionDefinition()), true);
+		return handleFunctionDecl(llvm::cast<const clang::FunctionDecl>(mIndexer.getMainFunctionDefinition()), /*isMain=*/true);
 	}
 
 	core::CallExprPtr handleBody(const clang::Stmt* body, const TranslationUnit& tu);
@@ -516,7 +514,7 @@ public:
 	}
 
 	virtual std::shared_ptr<analysis::GlobalVarCollector> getFreshGlobalCollector() {
-		return std::make_shared<analysis::GlobalVarCollector>(mIndexer, mFact);
+		return std::make_shared<analysis::GlobalVarCollector>(mIndexer, mProg.getInterceptor(), mFact);
 	}
 };
 
@@ -530,7 +528,7 @@ public:
 		ASTConverter(mgr, prog, true) { }
 
 	virtual std::shared_ptr<analysis::GlobalVarCollector> getFreshGlobalCollector() {
-		return std::make_shared<analysis::CXXGlobalVarCollector>(mIndexer, mFact);
+		return std::make_shared<analysis::CXXGlobalVarCollector>(mIndexer, mProg.getInterceptor(), mFact);
 	}
 };
 } // End conversion namespace
