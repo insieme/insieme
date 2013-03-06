@@ -462,6 +462,8 @@ public:
 	core::LambdaExprPtr convertCtor (const clang::CXXConstructorDecl* ctorDecl, core::TypePtr irClassType);
 
 	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
+
+	void buildInterceptedExprCache(utils::Interceptor& interceptor);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {
@@ -496,7 +498,7 @@ public:
 	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain = false);
 
 	core::ProgramPtr handleMainFunctionDecl() {
-		return handleFunctionDecl(llvm::cast<const clang::FunctionDecl>(mIndexer.getMainFunctionDefinition()), true);
+		return handleFunctionDecl(llvm::cast<const clang::FunctionDecl>(mIndexer.getMainFunctionDefinition()), /*isMain=*/true);
 	}
 
 	core::CallExprPtr handleBody(const clang::Stmt* body, const TranslationUnit& tu);

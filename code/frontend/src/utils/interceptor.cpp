@@ -38,34 +38,44 @@
 #define __STDC_CONSTANT_MACROS
 #include "insieme/frontend/utils/interceptor.h"
 
+#include "insieme/frontend/convert.h"
+
 namespace insieme {
 namespace frontend { 
 namespace utils {
 
-void Interceptor::intercept(std::pair<std::string, std::string> interceptWith) {
+/// takes a pair of strings and looks for functionsi (funcDecl) with the same name as the first string, 
+/// adds the second string associated with the funcDecl to the interceptedFuncCache
+void Interceptor::interceptFunc(std::map<std::string, std::string> interceptMap) {
 	auto elem = indexer.begin();
 	auto end = indexer.end();
 	for(;elem != end; elem++) {
 		if(llvm::isa<clang::FunctionDecl>(*elem)) {
 			const clang::FunctionDecl* decl = llvm::cast<clang::FunctionDecl>(*elem);
-			//FIXME unique name? -- use buildNameTypeChain from indexer?
-			if((decl)->getNameAsString() == interceptWith.first && (decl)->hasBody()) {
-				interceptedDecls.insert(decl);
+			std::string toIntercept = decl->getQualifiedNameAsString();
 
-				//insert a literal with funcType: ()->unit
-				interceptedExprCache.insert( 
-					{	decl,
-						builder.literal(
-							interceptWith.second, 
-							builder.functionType( insieme::core::TypeList(), builder.getLangBasic().getUnit())
-						)
-					} );
-				VLOG(2) << "intercept " << (decl)->getNameAsString() << " with " << interceptedExprCache[decl];
+			//FIXME unique name? -- use buildNameTypeChain from indexer?
+			if( interceptMap.find(toIntercept) != interceptMap.end() && (decl)->hasBody()) {
+				std::string interceptWith =  interceptMap[decl->getQualifiedNameAsString()];
+				interceptedDecls.insert(decl);
+				interceptedFuncMap.insert( {decl,interceptWith} );
+				VLOG(2) << "intercept " << (decl)->getQualifiedNameAsString() << " with " << interceptedFuncMap[decl];
 			}
 		}
 	}
-	VLOG(2) << interceptedDecls;
-	VLOG(2) << interceptedExprCache;
+}
+
+Interceptor::InterceptedExprCache Interceptor::buildInterceptedExprCache(insieme::frontend::conversion::ConversionFactory& convFact) {
+	InterceptedExprCache cache;
+
+	for ( auto it = interceptedFuncMap.begin(), end = interceptedFuncMap.end(); it != end; ++it ) {
+		core::TypePtr&& type = convFact.convertType((it->first)->getType().getTypePtr());
+
+		core::ExpressionPtr interceptExpr = builder.literal( it->second, type);
+
+		cache.insert( {it->first, interceptExpr});
+	}
+	return cache;
 }
 
 } // end utils namespace

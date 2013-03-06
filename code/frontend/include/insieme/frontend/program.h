@@ -121,6 +121,7 @@ public:
 	utils::Indexer& getIndexer() const;
 	
 	utils::FunctionDependencyGraph& getCallGraph() const;
+	void intercept();
 	void analyzeFuncDependencies();
 	void dumpCallGraph() const;
 

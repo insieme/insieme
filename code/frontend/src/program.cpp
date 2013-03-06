@@ -202,6 +202,14 @@ utils::Interceptor& Program::getInterceptor() const { return pimpl->interceptor;
 utils::Indexer& Program::getIndexer() const { return pimpl->mIdx; }
 utils::FunctionDependencyGraph& Program::getCallGraph() const {return pimpl->funcDepGraph; }
 
+void Program::intercept() {
+	//FIXME need a way to specify which functios/classes/etc should be intercepted
+	std::map<std::string, std::string> interceptMap;
+	interceptMap.insert({"f", "intercepted_f"});
+	interceptMap.insert({"g", "intercepted_g"});
+	pimpl->interceptor.interceptFunc( interceptMap );
+}
+
 void Program::analyzeFuncDependencies() {
 	VLOG(1) << " ************* Analyze function dependencies (recursion)***************";
 	auto elem = getIndexer().begin();
@@ -311,10 +319,11 @@ const core::ProgramPtr& Program::convert() {
 	bool insiemePragmaFound = false;
 	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
 
-	//FIXME need a way to specify which functios/classes/etc should be intercepted
-	//pimpl->interceptor.intercept( {"f", "intercepted_f"});
+	//FIXME some way to configure the interception
+	//intercept();
 	
 	analyzeFuncDependencies();
+
 
 	std::shared_ptr<conversion::ASTConverter> astConvPtr;
 	if(isCXX) {

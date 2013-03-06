@@ -47,6 +47,11 @@
 
 namespace insieme {
 namespace frontend { 
+
+namespace conversion {
+class ConversionFactory;
+}
+
 namespace utils {
 
 class Interceptor {
@@ -57,21 +62,24 @@ public:
 		: indexer(indexer), builder(mgr)
 	{}
 
-	typedef std::set<const clang::FunctionDecl*> InterceptedDeclSet;
-	typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> InterceptedExprMap;
-	InterceptedExprMap interceptedExprCache;
+	typedef std::set<const clang::Decl*> InterceptedDeclSet;
+	typedef std::map<const clang::FunctionDecl*, std::string> InterceptedFuncMap;
+	typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> InterceptedExprCache;
 
 	InterceptedDeclSet& getInterceptedDecls() { return interceptedDecls; }
-	InterceptedExprMap& getInterceptedExprCache() { return interceptedExprCache; }
+	InterceptedFuncMap& getInterceptedFuncMap() { return interceptedFuncMap; }
 	
-	void intercept(std::pair<std::string, std::string> interceptWith);
+	void interceptFunc(std::map<std::string, std::string> interceptMap);
 	
-	bool isIntercepted(const clang::FunctionDecl* funcDecl) const { return interceptedDecls.find(funcDecl) != interceptedDecls.end(); }
+	bool isIntercepted(const clang::Decl* decl) const { return interceptedDecls.find(decl) != interceptedDecls.end(); }
+
+	InterceptedExprCache buildInterceptedExprCache(insieme::frontend::conversion::ConversionFactory& convFact);
 
 private:
 	insieme::frontend::utils::Indexer& indexer;
 	insieme::core::IRBuilder builder;
 	InterceptedDeclSet interceptedDecls;
+	InterceptedFuncMap interceptedFuncMap;
 };
 } // end utils namespace
 } // end frontend namespace

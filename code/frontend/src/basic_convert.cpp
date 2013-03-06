@@ -143,11 +143,6 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool
 			exprConvPtr = std::make_shared<CExprConverter>(*this, prog);
 		}
 
-		//FIXME find better place to fill lambdaExprCache with interceptedExpr
-		//copy interceptor exprcache into lambdaexpr cache
-		ctx.lambdaExprCache = prog.getInterceptor().getInterceptedExprCache();
-		VLOG(2) << "interceptedExprCache: " << prog.getInterceptor().getInterceptedExprCache(); 
-		VLOG(2) << "lambdaExprCache: " << ctx.lambdaExprCache;
 }
 
 //////////////////////////////////////////////////////////////////
@@ -175,6 +170,12 @@ void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector& globColl
 	VLOG(2) << ctx.globalStruct.first;
 	VLOG(2) << ctx.globalStruct.second;
 	VLOG(2) << ctx.globalVar;
+}
+
+void ConversionFactory::buildInterceptedExprCache(utils::Interceptor& interceptor) {
+	//copy interceptor exprcache into lambdaexpr cache
+	ctx.lambdaExprCache = interceptor.buildInterceptedExprCache(*this);
+	VLOG(2) << "lambdaExprCache: " << ctx.lambdaExprCache;
 }
 
 
@@ -1417,7 +1418,7 @@ core::CallExprPtr ASTConverter::handleBody(const clang::Stmt* body, const Transl
 	return callExpr;
 }
 
-core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
+core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain /*=false*/) {
 
 	// Handling of the translation unit: we have to make sure to load the translation unit where the function is
 	// defined before starting the parser otherwise reading literals results in wrong values.
@@ -1430,6 +1431,9 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	collectGlobals(funcDecl);
 	t.stop();
 	LOG(INFO) << t;
+
+	//FIXME fill ctx.LambdaExprCache with literals for intercepted functions/...
+	mFact.buildInterceptedExprCache(mProg.getInterceptor());
 
 	const core::ExpressionPtr& expr = mFact.convertFunctionDecl(funcDecl, true).as<core::ExpressionPtr>();
 
