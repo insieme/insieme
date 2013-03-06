@@ -1229,9 +1229,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 
 		// fixme, array size
 		retExp = builder.refNew(builder.refVar( Visit (callExpr->getInitializer ())));
-
-		std::cout << retExp << std::endl;
-		dumpPretty(retExp);
 	}
 	else{
 		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());

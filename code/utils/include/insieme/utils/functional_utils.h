@@ -462,17 +462,6 @@ namespace detail {
 	  typedef type_list<T1,T2> argument_types;
 	};
 
-	template<typename R, typename T1, typename T2, typename T3>
-	struct lambda_traits_helper<R(T1, T2, T3)>
-	{
-	  BOOST_STATIC_CONSTANT(unsigned, arity = 3);
-	  typedef R result_type;
-	  typedef T1 arg1_type;
-	  typedef T2 arg2_type;
-	  typedef T3 arg3_type;
-	  typedef type_list<T1,T2,T3> argument_types;
-	};
-
 	template <typename R, typename T1, typename T2, typename T3, typename ... A >
 	struct lambda_traits_helper<R( T1, T2, T3, A ... )>  {
 		BOOST_STATIC_CONSTANT(unsigned, arity = 3 + sizeof...(A));

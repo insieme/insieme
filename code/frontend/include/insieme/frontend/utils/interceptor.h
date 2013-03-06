@@ -34,38 +34,53 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma once 
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/backend/preprocessor.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/utils/map_utils.h"
+
+#include "insieme/frontend/utils/indexer.h"
+
+#include "clang/AST/Decl.h"
+
+#include <map>
 
 namespace insieme {
-namespace backend {
-namespace runtime {
+namespace frontend { 
 
-	enum class PickImplementationHint { CALL, SWITCH };
+namespace conversion {
+class ConversionFactory;
+}
+
+namespace utils {
+
+class Interceptor {
+public:
+	Interceptor(
+			insieme::core::NodeManager& mgr,
+			insieme::frontend::utils::Indexer& indexer)
+		: indexer(indexer), builder(mgr)
+	{}
+
+	typedef std::set<const clang::Decl*> InterceptedDeclSet;
+	typedef std::map<const clang::FunctionDecl*, std::string> InterceptedFuncMap;
+	typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> InterceptedExprCache;
+
+	InterceptedDeclSet& getInterceptedDecls() { return interceptedDecls; }
+	InterceptedFuncMap& getInterceptedFuncMap() { return interceptedFuncMap; }
 	
-	/**
-	 * A pre-processor wrapping the entry point of the given code into a newly generated
-	 * lambda instantiating and running a standalone version of the insieme runtime.
-	 */
-	class StandaloneWrapper : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
-	};
+	void interceptFunc(std::map<std::string, std::string> interceptMap);
+	
+	bool isIntercepted(const clang::Decl* decl) const { return interceptedDecls.find(decl) != interceptedDecls.end(); }
 
-	/**
-	 * A pre-processor converting all job expressions, calls to parallel and pfors into runtime
-	 * equivalents. After this pass, the resulting program will no longer contain any of those
-	 * primitives.
-	 *
-	 * Yes, the name is a working title ...
-	 */
-	class WorkItemizer : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
-	};
+	InterceptedExprCache buildInterceptedExprCache(insieme::frontend::conversion::ConversionFactory& convFact);
 
-} // end namespace runtime
-} // end namespace backend
-} // end namespace insieme
+private:
+	insieme::frontend::utils::Indexer& indexer;
+	insieme::core::IRBuilder builder;
+	InterceptedDeclSet interceptedDecls;
+	InterceptedFuncMap interceptedFuncMap;
+};
+} // end utils namespace
+} // end frontend namespace
+} // end insieme namespace

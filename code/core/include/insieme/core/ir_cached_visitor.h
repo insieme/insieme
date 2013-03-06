@@ -79,6 +79,13 @@ namespace core {
 
 	// ----- A Lambda Visitor Variant of the Cached Visitor ------
 
+
+	template<typename ResType>
+	struct rec_call {
+		typedef CachedVisitor<ResType>& type;
+	};
+
+
 	template<
 		typename Lambda,
 		typename ResultType = typename lambda_traits<Lambda>::result_type
@@ -93,17 +100,24 @@ namespace core {
 	protected:
 
 		virtual ResultType resolve(const NodePtr& node) {
-			return lambda(node, *this);
+			return callLambda<ResultType>(node);
 		}
 
 	private:
 
-		Lambda lambda;
-	};
+		template<typename ResType>
+		typename std::enable_if<lambda_traits<Lambda>::arity == 1, ResType>::type
+		callLambda(const NodePtr& node) {
+			return lambda(node);
+		}
 
-	template<typename ResType>
-	struct rec_call {
-		typedef CachedVisitor<ResType>& type;
+		template<typename ResType>
+		typename std::enable_if<lambda_traits<Lambda>::arity == 2, ResType>::type
+		callLambda(const NodePtr& node) {
+			return lambda(node, *this);
+		}
+
+		Lambda lambda;
 	};
 
 

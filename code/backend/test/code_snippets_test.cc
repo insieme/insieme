@@ -305,5 +305,49 @@ TEST(Literals, BoolLiterals) {
 }
 
 
+TEST(Arrays, Allocation) {
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+
+	// create a code fragment allocating an array on the stack and using it
+	core::ProgramPtr program = builder.parseProgram(
+			R"(
+			let int = int<4>;
+			let uint = uint<4>;
+
+			int main() {
+				// determine array size
+				uint size = 10u;
+
+				// create two arrays on the stack and the heap
+				ref<array<int,1>> a = var(array.create.1D(lit(int), size));
+				ref<array<int,1>> b = new(array.create.1D(lit(int), size));
+
+				// use the two arrays
+				a[2] = 123;
+				b[4] = 321;
+			}
+			)"
+	);
+
+	ASSERT_TRUE(program);
+
+	std::cout << "Program: " << std::endl; dump(program); std::cout << std::endl;
+
+	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+	std::cout << "Converted: \n" << *converted << std::endl;
+
+	string code = toString(*converted);
+	EXPECT_PRED2(containsSubString, code, "int32_t a[size];");
+	EXPECT_PRED2(containsSubString, code, "int32_t* b = malloc(sizeof(int32_t)*size)");
+
+	// try compiling the code fragment
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
+
 } // namespace backend
 } // namespace insieme
