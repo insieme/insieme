@@ -81,23 +81,6 @@ namespace frontend {
 
 namespace {
 
-/**
- *  create a datapath to an specified class type
- */
-	core::datapath::DataPathPtr buildDataPathToParent (core::TypePtr& targetClass, core::datapath::DataPathBuilder& dpb){
-		/**
-		 * This function will extend the internally constructed path by
-		 * an access to the given parent type.
-		 *
-		 * @param type the parent type to be accessed
-		 * @return a reference to this builder to chain build-commands
-		DataPathBuilder& parent(const TypePtr& type);
-		*/
-		std::cout << toString(*dpb.getPath()) << std::endl;
-		dpb.parent( targetClass );
-		std::cout << toString(*dpb.getPath()) << std::endl;
-		return dpb.getPath();
-	}
 } // end anonymous namespace 
 
 
@@ -129,20 +112,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(c
 			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
 				//(*it)->getType().dump();
 				targetTy = convFact.convertType((*it)->getType().getTypePtr());
-//				path = buildDataPathToParent(targetTy, dpb);
 				retIr = convFact.builder.refParent(retIr, targetTy);
 			}
 
-/*
-			castExpr->dump();
-			castExpr->getSubExpr()->dump();
-			dumpPretty(retIr);
-
-			auto narrow = convFact.builder.getLangBasic().getRefNarrow();
-			retIr = convFact.builder.callExpr(targetTy, narrow, retIr, path );
-
-			std::cout << *retIr << std::endl;
-*/
 			break;
 		}
 		default:
