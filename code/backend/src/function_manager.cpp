@@ -49,6 +49,7 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/attributes.h"
 #include "insieme/core/analysis/normalize.h"
@@ -921,50 +922,100 @@ namespace backend {
 				return NO_ACCESS;
 			}
 
+			bool valuesDerivedFromParametersOnly(const core::VariablePtr& thisVar, const core::VariableList& params, const core::CallExprPtr& call) {
+				assert(getAccessedField(thisVar, call) && "not an access!");
+
+				// collect values
+				core::ExpressionList values;
+				{
+					// in case it is an assignment
+					const auto& basic = call->getNodeManager().getLangBasic();
+					if (core::analysis::isCallOf(call, basic.getRefAssign())) {
+						values.push_back(call->getArgument(1));		// that is the value
+					} else {
+						// it is a constructor call => collect all arguments but the first
+						values.insert(values.end(), call->begin() + 1, call->end());
+					}
+				}
+
+				// check variables within values
+				bool parametersOnly = true;
+
+				// build up a checker
+				auto check = core::makeCachedLambdaVisitor([&](const core::NodePtr& cur)->bool {
+					static const bool PRUNE = true;
+					static const bool CONTINUE = false;
+
+					// see whether a problem has been found before
+					if (!parametersOnly) return PRUNE;
+
+					// do not enter nested scopes
+					if (cur.getNodeType() == core::NT_LambdaExpr) return PRUNE;
+
+					// only interested in variables
+					if (cur.getNodeType() != core::NT_Variable) return CONTINUE;
+
+					// check the variable
+					auto curVar = cur.as<core::VariablePtr>();
+					if (!contains(params, curVar)) {
+						parametersOnly = false;
+						return PRUNE;
+					}
+
+					// no problem, continue search
+					return CONTINUE;
+				}, false);
+
+				// check all the values
+				for(const auto& cur : values) {
+					if (parametersOnly) core::visitDepthFirstOncePrunable(cur, check);
+				}
+
+				return parametersOnly;
+			}
 
 
-			struct FirstWriteCollector : public core::IRVisitor<void, core::Address, const core::VariablePtr&, core::NodeSet&, std::vector<core::StatementAddress>&, bool> {
+
+			struct FirstWriteCollector : public core::IRVisitor<void, core::Address, const core::VariablePtr&, const core::VariableList&, core::NodeSet&, std::vector<core::StatementAddress>&, bool> {
 
 				std::vector<core::StatementAddress> collect(const core::VariablePtr& thisVar, const core::VariableList& params, const core::CompoundStmtAddress& body) {
-
-					// TODO: forward parameters!
 
 					// prepare context information
 					core::NodeSet touched;
 					std::vector<core::StatementAddress> res;
 
 					// use visitor infrastructure
-					visit(body, thisVar, touched, res, false);
+					visit(body, thisVar, params, touched, res, false);
 
 					// return result list
 					return res;
 				}
 
-				void visitCompoundStmt(const core::CompoundStmtAddress& cur, const core::VariablePtr& thisVar, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+				void visitCompoundStmt(const core::CompoundStmtAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 					// iterate through sub-statements
-					visitAll(cur->getChildList(), thisVar, touched, res, iterating);
+					visitAll(cur->getChildList(), thisVar, params, touched, res, iterating);
 				}
 
-				void visitSwitchStmt(const core::SwitchStmtAddress& cur, const core::VariablePtr& thisVar, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+				void visitSwitchStmt(const core::SwitchStmtAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 					// iterate through sub-statements
-					visitAll(cur->getChildList(), thisVar, touched, res, iterating);
+					visitAll(cur->getChildList(), thisVar, params, touched, res, iterating);
 				}
 
-				void visitForStmt(const core::ForStmtAddress& cur, const core::VariablePtr& thisVar, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+				void visitForStmt(const core::ForStmtAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 					// iterate through sub-statements
-					visitAll(cur->getChildList(), thisVar, touched, res, true);
+					visitAll(cur->getChildList(), thisVar, params, touched, res, true);
 				}
 
-				void visitWhileStmt(const core::WhileStmtAddress& cur, const core::VariablePtr& thisVar, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+				void visitWhileStmt(const core::WhileStmtAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 					// iterate through sub-statements
-					visitAll(cur->getChildList(), thisVar, touched, res, true);
+					visitAll(cur->getChildList(), thisVar, params, touched, res, true);
 				}
 
-				void visitDeclarationStmt(const core::DeclarationStmtAddress& cur, const core::VariablePtr& thisVar, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+				void visitDeclarationStmt(const core::DeclarationStmtAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 					// we can stop here
 				}
 
-				void visitCallExpr(const core::CallExprAddress& cur, const core::VariablePtr& thisVar, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+				void visitCallExpr(const core::CallExprAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 
 					// extract field
 					auto field = getAccessedField(thisVar, cur);
@@ -979,18 +1030,18 @@ namespace backend {
 					// we must not be inside a loop
 					if (iterating) return;
 
-					// TODO: check whether value is only depending on input parameters
-
+					// check whether value is only depending on input parameters
+					if (!valuesDerivedFromParametersOnly(thisVar, params, cur)) return;
 
 					// we have found a first assign
 					res.push_back(cur);
 				}
 
-				void visitExpression(const core::ExpressionAddress& cur, const core::VariablePtr& thisVar, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+				void visitExpression(const core::ExpressionAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 					// terminate decent here!
 				}
 
-				void visitNode(const core::NodeAddress& cur, const core::VariablePtr& thisVar, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
+				void visitNode(const core::NodeAddress& cur, const core::VariablePtr& thisVar, const core::VariableList& params, core::NodeSet& touched, std::vector<core::StatementAddress>& res, bool iterating) {
 					std::cout << "\n\n --------------------- ASSERTION ERROR -------------------\n";
 					std::cout << "Node of type " << cur->getNodeType() << " should not be reachable!\n";
 					assert(false && "Must not be reached!");
