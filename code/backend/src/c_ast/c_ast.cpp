@@ -421,7 +421,10 @@ namespace c_ast {
 	bool Constructor::equals(const Node& node) const {
 		assert(dynamic_cast<const Constructor*>(&node));
 		auto other = static_cast<const Constructor&>(node);
-		return *className == *other.className && *function == *other.function;
+		return *className == *other.className && *function == *other.function &&
+				::equals(initialization, other.initialization, [](const InitializerListEntry& a, const InitializerListEntry& b) {
+					return *a.first == *b.first && ::equals(a.second, b.second, equal_target<NodePtr>());
+				});
 	}
 
 	bool Destructor::equals(const Node& node) const {

@@ -41,6 +41,7 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/utils/functionDependencyGraph.h"
+#include "insieme/frontend/utils/interceptor.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -186,17 +187,28 @@ namespace frontend {
 struct Program::ProgramImpl {
 	utils::Indexer mIdx;
 	TranslationUnitSet tranUnits;
+	utils::Interceptor interceptor;
 	utils::FunctionDependencyGraph funcDepGraph;
-	ProgramImpl() : mIdx(),  funcDepGraph(mIdx) {}
+		
+	ProgramImpl(core::NodeManager& mgr) : mIdx(), interceptor(mgr, mIdx),  funcDepGraph(mIdx,interceptor) {}
 };
 
 Program::Program(core::NodeManager& mgr):
-	pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::get(mgr) ) { }
+	pimpl( new ProgramImpl(mgr) ), mMgr(mgr), mProgram( core::Program::get(mgr) ) { }
 
 Program::~Program() { delete pimpl; }
 
+utils::Interceptor& Program::getInterceptor() const { return pimpl->interceptor; }
 utils::Indexer& Program::getIndexer() const { return pimpl->mIdx; }
 utils::FunctionDependencyGraph& Program::getCallGraph() const {return pimpl->funcDepGraph; }
+
+void Program::intercept() {
+	//FIXME need a way to specify which functios/classes/etc should be intercepted
+	std::map<std::string, std::string> interceptMap;
+	interceptMap.insert({"f", "intercepted_f"});
+	interceptMap.insert({"g", "intercepted_g"});
+	pimpl->interceptor.interceptFunc( interceptMap );
+}
 
 void Program::analyzeFuncDependencies() {
 	VLOG(1) << " ************* Analyze function dependencies (recursion)***************";
@@ -204,7 +216,11 @@ void Program::analyzeFuncDependencies() {
 	auto end = getIndexer().end();
 	for (; elem != end; ++elem){
 		if (llvm::isa<clang::FunctionDecl>(*elem)){
-			pimpl->funcDepGraph.addNode(llvm::cast<clang::FunctionDecl>(*elem));
+			const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(*elem);
+			if( !(getInterceptor().isIntercepted(funcDecl)) ) {
+				//if the funcDecl was intercepted we ignore it for the funcDepAnalysis
+				pimpl->funcDepGraph.addNode(funcDecl);
+			} 
 		}
 	}
 	VLOG(1) << " ************* Analyze function dependencies DONE***************";
@@ -303,7 +319,11 @@ const core::ProgramPtr& Program::convert() {
 	bool insiemePragmaFound = false;
 	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
 
+	//FIXME some way to configure the interception
+	//intercept();
+	
 	analyzeFuncDependencies();
+
 
 	std::shared_ptr<conversion::ASTConverter> astConvPtr;
 	if(isCXX) {

@@ -561,6 +561,7 @@ namespace backend {
 		);
 
 		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
 
 		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
 		ASSERT_TRUE((bool)targetCode);
@@ -578,9 +579,219 @@ namespace backend {
 
 		// check whether ctor is present!
 		EXPECT_PRED2(containsSubString, code, "A();");
-		EXPECT_PRED2(containsSubString, code, "A::A() {");
-		EXPECT_PRED2(containsSubString, code, "(*this).x = 4;");
+		EXPECT_PRED2(containsSubString, code, "A::A() : x(4) {");
 
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, InitializerList) {
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(builder.parseProgram(
+				R"(
+					let int = int<4>;
+					
+					let B = struct { };
+					let A = struct : B { int x; int y; int z; };
+
+					let ctorA = A::(int y) {
+						this->y = y; 
+						for ( int i = 0 .. 10 ) {
+							this->y = 1;
+							this->z = 3;
+						}
+						this->x = 4; 
+						this->z = 2;
+					};
+					
+					int main() {
+						
+						// call constructor
+						ref<A> a = ctorA(ref.var(undefined(lit(A))), 10);
+						
+						return 0;
+					}
+				)"
+		));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "A var_1 = A(10);");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2) : x(4), y(var_2) {");
+		EXPECT_PRED2(containsSubString, code, "(*this).z = 2;");
+
+		EXPECT_PRED2(notContainsSubString, code, "(*this).x = 4;");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+
+	TEST(CppSnippet, InitializerList2) {
+
+		// something including a super-constructor call
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(builder.parseProgram(
+				R"(
+					let int = int<4>;
+					
+					let A = struct { int x; };
+					let B = struct : A { int y; };
+
+					let ctorA = A::(int x) {
+						this->x = x;
+					};
+
+
+					let ctorB = B::(int x, int y) {
+						ctorA(this, x);
+						this->y = y; 
+					};
+					
+					int main() {
+						
+						// call constructor
+						ref<B> b = ctorB(ref.var(undefined(lit(B))), 1, 2);
+						
+						return 0;
+					}
+				)"
+		));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "B var_1 = B(1, 2);");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2) : x(var_2) {");
+		EXPECT_PRED2(containsSubString, code, "B::B(int32_t var_2, int32_t var_3) : A(var_2), y(var_3) {");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, InitializerList3) {
+
+		// something including a super-constructor call
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(builder.parseProgram(
+				R"(
+					let int = int<4>;
+					
+					let A = struct { int x; int y; };
+					let B = struct : A { int z; };
+
+					let ctorA = A::(int x, int y) {
+						this->x = x;
+						this->y = y;
+					};
+
+
+					let ctorB = B::(int x, int y, int z) {
+						ctorA(this, x, y+z);
+						this->z = z; 
+					};
+					
+					int main() {
+						
+						// call constructor
+						ref<B> b = ctorB(ref.var(undefined(lit(B))), 1, 2, 3);
+						
+						return 0;
+					}
+				)"
+		));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "B var_1 = B(1, 2, 3);");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2, int32_t var_3) : x(var_2), y(var_3) {");
+		EXPECT_PRED2(containsSubString, code, "B::B(int32_t var_2, int32_t var_3, int32_t var_4) : A(var_2, var_3+var_4), z(var_4) {");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
+	TEST(CppSnippet, InitializerList4) {
+
+		// something including a non-parameter!
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(builder.parseProgram(
+				R"(
+					let int = int<4>;
+					
+					let A = struct { int x; int y; };
+
+					let ctorA = A::(int x, int y) {
+						this->x = x;
+						this->y = this->x + y;
+					};
+
+					int main() {
+						
+						// call constructor
+						ref<A> b = ctorA(ref.var(undefined(lit(A))), 1, 2);
+						
+						return 0;
+					}
+				)"
+		));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "A var_1 = A(1, 2);");
+		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2, int32_t var_3) : x(var_2) {");
+
+		// check whether code is compiling
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
 		compiler.addFlag("-c"); // do not run the linker
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));

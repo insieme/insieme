@@ -56,7 +56,7 @@ void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDe
 	// This is potentially dangerous
 	FunctionDependencyGraph& funcDepGraph = static_cast<FunctionDependencyGraph&>(*this);
 
-	CallExprVisitor callExprVis(funcDepGraph.getIndexer());
+	CallExprVisitor callExprVis(funcDepGraph.getIndexer(), funcDepGraph.getInterceptor());
 	CallExprVisitor::CallGraph&& graph = callExprVis.getCallGraph(func);
 
 	std::for_each(graph.begin(), graph.end(),
@@ -86,7 +86,7 @@ void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
 		}
 	}
 
-	if (def){
+	if (def && !interceptor.isIntercepted(def) ){
 		callGraph.insert(def);
 	}
 }

@@ -86,11 +86,13 @@ namespace analysis {
 
 GlobalVarCollector::GlobalVarCollector(
 	insieme::frontend::utils::Indexer& indexer,
+	insieme::frontend::utils::Interceptor& 	interceptor,
 	conversion::ConversionFactory&	convFact)
 	: convFact(convFact),
-	  indexer(indexer)
-	{
-}
+	  indexer(indexer),
+	  interceptor(interceptor)
+	{ }
+
 /////////////////////////////////////////////////////////////////////////////////
 ///
 core::StringValuePtr
@@ -126,10 +128,19 @@ GlobalVarCollector::buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, co
 /////////////////////////////////////////////////////////////////////////////////
 ///
 void GlobalVarCollector::operator()(const clang::Decl* decl) {
+	if( interceptor.isIntercepted(decl) ) {
+		// or funcDecl is intercepted
+		VLOG(2) << "isIntercepted " << decl;
+		return; 
+	}
+
 	bool isFuncDecl = false;
 	if(const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(decl)) {
-		if(visited.find(funcDecl) != visited.end())
-			return; // function declaration already visited
+		if( visited.find(funcDecl) != visited.end() ) {
+			// function declaration already visited
+			return; 
+		}
+
 		visited.insert(funcDecl);
 		isFuncDecl = true;
 		funcStack.push(funcDecl);
@@ -284,7 +295,7 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 			if ( !varDecl->hasExternalStorage() && (*fit)->hasExternalStorage() ) {
 				// do replace
 				auto saveFit = *fit;
-				LOG(INFO) << saveFit->getNameAsString();
+				LOG(DEBUG) << saveFit->getNameAsString();
 
 				globals.erase(fit);
 	

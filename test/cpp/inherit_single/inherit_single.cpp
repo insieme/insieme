@@ -21,27 +21,8 @@ class Circle2: public Shape {
 		~Circle2() { printf("Circle2::~Circle2()\n"); }
 };
 
-class A
-{
-public:
-	A() : x(1) {}
-	int x;
-};
-
-
-class B : public A
-{
-	public:
-	int x;
-	B() : x(10) {}
-};
-
 
 int main() {
-
-	B b;
-	printf("B::x %d\n", b.x);
-	printf("B::A::x %d\n", b.A::x);
 
 	Shape s;
 	Circle c1;
@@ -51,17 +32,16 @@ int main() {
 	c1.draw();		// Circle::draw()
 	c2.draw();		// Circle2::draw()
 
+	Shape *p1 = &c1;
+	/*p1->draw();   	// Circle::draw()
+	p1 = &c1;
+	p1->draw();   	// Circle::draw()*/
+
 //	automatically added operator= has no name -> problem with CAnnotation
 //	Shape& r1 = c1;
 //	r1.draw();    	// Circle::draw()
 //
 //	r1 = c2;
 //	r1.draw();    	// Circle::draw()
-
-	Shape *p1 = &c1;
-	p1->draw();   	// Circle::draw()
-	p1 = &c1;
-	p1->draw();   	// Circle::draw()
-
 	return 0;
 }
