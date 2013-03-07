@@ -199,9 +199,16 @@ private:
 			TypePtr&& el = createNode<Type>(*iter, "typePtr");
 			entryVec.push_back( builder.namedType(ident, el) );
 		}
+		XmlElementList&& papas = elem.getFirstChildByName("parents")->getChildrenByName("parentPtr");
 		return entryVec;
 	}
 public:
+
+	NodePtr handle_parent(const XmlElement& elem) {
+		TypePtr&& typeT = createNode<Type>(elem, "type", "typePtr");
+		return createIrNode<Variable>(elem, typeT, numeric_cast<int>(elem.getAttr("id")));
+	}
+
 	NodePtr handle_unionType(const XmlElement& elem) {
 		return createIrNode<UnionType>(elem, visit_namedCompositeType(elem));
 	}
@@ -507,7 +514,7 @@ public:
 		DISPATCH(vectorExpr)		DISPATCH(tupleExpr)			DISPATCH(castExpr) 			DISPATCH(callExpr)				DISPATCH(variable)
 		DISPATCH(jobExpr)			DISPATCH(lambdaExpr)		DISPATCH(program)			DISPATCH(lambdaDefinition)		DISPATCH(lambda)
 		DISPATCH(rootNode)			DISPATCH(bindExpr)			DISPATCH(markerStmt)		DISPATCH(returnStmt)			DISPATCH(breakStmt)
-		DISPATCH(markerExpr)		DISPATCH(tupleType)			DISPATCH(identifier)
+		DISPATCH(markerExpr)		DISPATCH(tupleType)			DISPATCH(identifier)		DISPATCH(parent)DISPATCH(parent)
 		assert(false && "XML node not handled!");
 		return 0;
 	}
