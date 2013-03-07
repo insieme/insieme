@@ -104,6 +104,11 @@ public:
 				<< XmlElement::Attribute("familyName", cur->getFamilyName());
 		rootElem << genType;
 
+		const auto& parents = cur->getParents()->getElements();
+		if (!parents.empty()) {
+			appendList(genType, parents, "parents", "parentPtr");
+		}
+
 		typedef vector<TypePtr> ParamList;
 		const ParamList& param = cur->getTypeParameter()->getElements();
 		if (!param.empty()) {
@@ -217,6 +222,11 @@ public:
 	void visitNamedCompositeType_(XmlElement& el, const NamedCompositeTypePtr& cur) {
 		rootElem << (el << XmlElement::Attribute("id", GET_ID(cur)));
 
+		// start with parents
+		if (!cur->getParents().empty()) {
+			appendList(el, cur->getParents()->getElements(), "parents", "parentPtr");
+		}
+
 		XmlElement entries("entries",doc);
 		el << entries;
 
@@ -229,7 +239,7 @@ public:
 				entries << entry;
 			}
 		);
-		appendList(el, cur->getParents()->getElements(), "parents", "parentPtr");
+
 		visitAnnotations(cur->getAnnotations(), el);
 	}
 
