@@ -46,14 +46,26 @@ namespace insieme {
 namespace core {
 namespace lang {
 
-	TEST(IRppExtensions, Basic) {
+	TEST(IRppExtensions, ArrayCtor) {
 		NodeManager nm;
 
 		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
+		auto element = ext.getArrayCtor();
+		dump(element);
 
-//		dump(ext.getArrayCtor());
-//
-//		EXPECT_TRUE(checks::check(ext.getArrayCtor()).empty()) << checks::check(ext.getArrayCtor());
+		// just check whether the code is not exhibiting errors
+		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+	}
+
+	TEST(IRppExtensions, ArrayDtor) {
+		NodeManager nm;
+
+		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
+		auto element = ext.getArrayDtor();
+		dump(element);
+
+		// just check whether the code is not exhibiting errors
+		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
 	}
 
 } // end namespace lang

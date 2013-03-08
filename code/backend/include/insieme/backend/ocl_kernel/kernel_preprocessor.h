@@ -93,7 +93,8 @@ bool isGetGroupID(const core::ExpressionPtr& expr);
 		KernelPreprocessor() : outFilePath(std::string()) {}
 		KernelPreprocessor(const std::string outFilePath) : outFilePath(outFilePath) {}
 
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
+		core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
 
 } // end namespace ocl_kernel

@@ -671,6 +671,10 @@ namespace {
 	}
 
 
+	core::NodePtr KernelPreprocessor::process(const backend::Converter& converter, const core::NodePtr& code) {
+		return process(converter.getNodeManager(), code);
+	}
+
 	core::NodePtr KernelPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
 		// the converter does the magic
 		TypeWrapper wrapper(manager, outFilePath);

@@ -30,6 +30,21 @@
 	</xs:sequence>
 </xs:complexType>
 
+<xs:complexType name="T_parent">
+	<xs:sequence>
+		<xs:element name="type" type="T_typePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+		<xs:attribute name="virtual" type="xs:boolean" use="required" />
+</xs:complexType>
+
+<xs:complexType name="T_listParents">
+	<xs:sequence>
+		<xs:element name="parentPtr" type="T_nodePtr" minOccurs="0" maxOccurs="unbounded"/>
+	</xs:sequence>
+</xs:complexType>
+
 <xs:complexType name="T_variablePtr">
 	<xs:sequence>
 		<xs:element name="variablePtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
@@ -474,17 +489,26 @@
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
-<xs:complexType name="T_namedCompositeType">
+<xs:complexType name="T_structType">
+	<xs:sequence>
+		<xs:element name="parents" type="T_listParents" minOccurs="0" maxOccurs="1"/>
+		<xs:element name="entries" type="T_entries" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
+	<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_unionType">
 	<xs:sequence>
 		<xs:element name="entries" type="T_entries" minOccurs="1" maxOccurs="1"/>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
 	</xs:sequence>
-		<xs:attribute name="id" type="xs:integer" use="required"/>
+	<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
 <xs:complexType name="T_genType">
 	<xs:sequence>
-		<xs:element name="baseType" type="T_typePtr" minOccurs="0" maxOccurs="1"/>
+		<xs:element name="parents" type="T_listParents" minOccurs="0" maxOccurs="1"/>
 		<xs:element name="typeParams" type="T_listTypePtr" minOccurs="0" maxOccurs="1"/>
 		<xs:element name="intTypeParams" type="T_listIntTypeParamPtr" minOccurs="0" maxOccurs="1"/>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
@@ -603,11 +627,13 @@
 		
 		<xs:element name="functionType" type="T_functionType"/>
 		<xs:element name="genType" type="T_genType"/>
-		<xs:element name="structType" type="T_namedCompositeType"/>
-		<xs:element name="unionType" type="T_namedCompositeType"/>
+		<xs:element name="structType" type="T_structType"/>
+		<xs:element name="unionType" type="T_unionType"/>
 		<xs:element name="recType" type="T_recType"/>
 		<xs:element name="tupleType" type="T_tupleType"/>
 		<xs:element name="typeVariable" type="T_typeVariable"/>
+		<xs:element name="parents" type="T_listParents" />
+		<xs:element name="parent" type="T_parent" />
 	</xs:choice>
 </xs:group>
 

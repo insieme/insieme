@@ -81,8 +81,6 @@ namespace frontend {
 
 namespace {
 
-
-
 } // end anonymous namespace 
 
 
@@ -97,7 +95,34 @@ namespace conversion {
 //						  IMPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
-	return ExprConverter::VisitImplicitCastExpr(castExpr);
+	START_LOG_EXPR_CONVERSION(castExpr);
+	core::ExpressionPtr retIr;
+	switch (castExpr->getCastKind()) {
+		case CK_UncheckedDerivedToBase:
+		case CK_DerivedToBase: 
+		{
+			// if is a derived class, we will return a narrow expression with the datapath
+			// to access the right superclass
+			core::datapath::DataPathBuilder dpb(convFact.mgr);
+			core::datapath::DataPathPtr path;
+			core::TypePtr targetTy;
+			retIr = Visit(castExpr->getSubExpr());
+
+			clang::CastExpr::path_const_iterator it;
+			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
+				//(*it)->getType().dump();
+				targetTy = convFact.convertType((*it)->getType().getTypePtr());
+				retIr = convFact.builder.refParent(retIr, targetTy);
+			}
+
+			break;
+		}
+		default:
+			retIr = ExprConverter::VisitImplicitCastExpr(castExpr);
+			break;
+	}
+	END_LOG_EXPR_CONVERSION(retIr);
+	return retIr;
 
 	/*// connects the member call expression to the function graph
 	START_LOG_EXPR_CONVERSION(castExpr);
@@ -456,6 +481,37 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const cla
 		assert( false && "Call expression not referring a function");
 	}
 	assert(false);*/
+}
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//						  MEMBER EXPRESSION
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMemberExpr(const clang::MemberExpr* memExpr){
+	START_LOG_EXPR_CONVERSION(memExpr);
+	core::ExpressionPtr retIr;
+
+	// we have the situation here in which we might want to access a field of a superclass
+	// this will not be resolved by the C frontend. and we need to build the right datapath to
+	// reach the definition
+	
+	return ConversionFactory::ExprConverter::VisitMemberExpr(memExpr);
+		/*
+
+	
+	if (llvm::isa<clang::FieldDecl>(memExpr->getMemberDecl())){
+		clang::FieldDecl *fieldDecl = llvm::cast<clang::FieldDecl>(memExpr->getMemberDecl());
+		
+		fieldDecl->dump();
+		assert(false);
+
+
+	}
+	
+
+	END_LOG_EXPR_CONVERSION(retIr);
+	return retIr;
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1229,9 +1285,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 
 		// fixme, array size
 		retExp = builder.refNew(builder.refVar( Visit (callExpr->getInitializer ())));
-
-		std::cout << retExp << std::endl;
-		dumpPretty(retExp);
 	}
 	else{
 		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());

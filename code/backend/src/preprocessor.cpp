@@ -37,6 +37,7 @@
 #include "insieme/backend/preprocessor.h"
 
 #include "insieme/backend/ir_extensions.h"
+#include "insieme/backend/function_manager.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
@@ -63,9 +64,6 @@ namespace backend {
 		if (!(options & SKIP_POINTWISE_EXPANSION)) {
 			steps.push_back(makePreProcessor<InlinePointwise>());
 		}
-		if (!(options & SKIP_GENERIC_LAMBDA_INSTANTIATION)) {
-			steps.push_back(makePreProcessor<GenericLambdaInstantiator>());
-		}
 		if (!(options & SKIP_RESTORE_GLOBALS)) {
 			steps.push_back(makePreProcessor<RestoreGlobals>());
 		}
@@ -77,14 +75,15 @@ namespace backend {
 	}
 
 
-	core::NodePtr PreProcessingSequence::process(core::NodeManager& manager, const core::NodePtr& code) {
+	core::NodePtr PreProcessingSequence::process(const Converter& converter, const core::NodePtr& code) {
+		auto& manager = converter.getNodeManager();
 
 		// start by copying code to given target manager
 		core::NodePtr res = manager.get(code);
 
 		// apply sequence of pre-processing steps
 		for_each(preprocessor, [&](const PreProcessorPtr& cur) {
-			res = cur->process(manager, res);
+			res = cur->process(converter, res);
 		});
 
 		// return final result
@@ -94,9 +93,9 @@ namespace backend {
 
 	// ------- concrete pre-processing step implementations ---------
 
-	core::NodePtr NoPreProcessing::process(core::NodeManager& manager, const core::NodePtr& code) {
+	core::NodePtr NoPreProcessing::process(const Converter& converter, const core::NodePtr& code) {
 		// just copy to target manager
-		return manager.get(code);
+		return converter.getNodeManager().get(code);
 	}
 
 
@@ -143,87 +142,11 @@ namespace backend {
 	};
 
 
-	core::NodePtr InitZeroSubstitution::process(core::NodeManager& manager, const core::NodePtr& code) {
+	core::NodePtr InitZeroSubstitution::process(const Converter& converter, const core::NodePtr& code) {
 		// the converter does the magic
-		InitZeroReplacer converter(manager);
-		return converter.map(code);
+		return InitZeroReplacer(converter.getNodeManager()).map(code);
 	}
 
-
-
-	// --------------------------------------------------------------------------------------------------------------
-	//      PreProcessor GenericLambdaInstantiator => instantiates generic lambda implementations
-	// --------------------------------------------------------------------------------------------------------------
-
-	class LambdaInstantiater : public core::transform::CachedNodeMapping {
-
-		core::NodeManager& manager;
-
-	public:
-
-		LambdaInstantiater(core::NodeManager& manager) : manager(manager) {};
-
-		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
-
-			// check types => abort
-			if (ptr->getNodeCategory() == core::NC_Type) {
-				return ptr;
-			}
-
-			// look for call expressions
-			if (ptr->getNodeType() == core::NT_CallExpr) {
-				// extract the call
-				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(ptr);
-
-				// only care about lambdas
-				core::ExpressionPtr fun = call->getFunctionExpr();
-				if (fun->getNodeType() == core::NT_LambdaExpr) {
-
-					// convert to lambda
-					core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
-
-					// check whether the lambda is generic and not a built-in
-					if (core::analysis::isGeneric(fun->getType())) {
-
-						// instantiate generic non-built-in function
-						if (!manager.getLangBasic().isBuiltIn(fun)) {
-							// compute substitutions
-							core::types::SubstitutionOpt&& map = core::types::getTypeVariableInstantiation(manager, call);
-
-							// instantiate type variables according to map
-							lambda = core::transform::instantiate(manager, lambda, map);
-
-							// if lambda has not changed => do not change anything
-							if (lambda != fun) {
-								// create new call node
-								core::ExpressionList arguments;
-								::transform(call->getArguments(), std::back_inserter(arguments), [&](const core::ExpressionPtr& cur) {
-									return static_pointer_cast<const core::Expression>(this->mapElement(0, cur));
-								});
-
-								// produce new call expression
-								auto res = core::CallExpr::get(manager, call->getType(), lambda, arguments);
-
-								// instantiate sub-expressions recursively
-								return res->substitute(manager, *this);
-							}
-
-						}
-					}
-				}
-			}
-
-			// decent recursively
-			return ptr->substitute(manager, *this);
-		}
-
-	};
-
-	core::NodePtr GenericLambdaInstantiator::process(core::NodeManager& manager, const core::NodePtr& code) {
-		// the converter does the magic
-		LambdaInstantiater converter(manager);
-		return converter.map(code);
-	}
 
 
 	// --------------------------------------------------------------------------------------------------------------
@@ -311,10 +234,9 @@ namespace backend {
 
 	};
 
-	core::NodePtr InlinePointwise::process(core::NodeManager& manager, const core::NodePtr& code) {
+	core::NodePtr InlinePointwise::process(const Converter& converter, const core::NodePtr& code) {
 		// the converter does the magic
-		PointwiseReplacer converter(manager);
-		return converter.map(code);
+		return PointwiseReplacer(converter.getNodeManager()).map(code);
 	}
 
 
@@ -512,6 +434,9 @@ namespace backend {
 	}
 
 
+	core::NodePtr RestoreGlobals::process(const Converter& converter, const core::NodePtr& code) {
+		return process(converter.getNodeManager(), code);
+	}
 
 	core::NodePtr RestoreGlobals::process(core::NodeManager& manager, const core::NodePtr& code) {
 
@@ -754,18 +679,19 @@ namespace backend {
 
 	};
 
-	core::NodePtr MakeVectorArrayCastsExplicit::process(core::NodeManager& manager, const core::NodePtr& code) {
+	core::NodePtr MakeVectorArrayCastsExplicit::process(const Converter& converter, const core::NodePtr& code) {
 		// the converter does the magic
-		VectorToArrayConverter converter(manager);
-		return converter.map(code);
+		return VectorToArrayConverter(converter.getNodeManager()).map(code);
 	}
 
-	core::NodePtr RedundancyElimination::process(core::NodeManager& manager, const core::NodePtr& code) {
+	core::NodePtr RedundancyElimination::process(const Converter& converter, const core::NodePtr& code) {
 		// this pass has been implemented as part of the core manipulation utils
 		return transform::eliminateRedundantAssignments(code);
 	}
 
-	core::NodePtr CorrectRecVariableUsage::process(core::NodeManager& manager, const core::NodePtr& code) {
+	core::NodePtr CorrectRecVariableUsage::process(const Converter& converter, const core::NodePtr& code) {
+		core::NodeManager& manager = converter.getNodeManager();
+
 		// this pass has been implemented as part of the core manipulation utils
 		return core::transform::makeCachedLambdaMapper([&](const core::NodePtr& code)->core::NodePtr {
 			// only consider lambdas

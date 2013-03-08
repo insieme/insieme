@@ -86,15 +86,18 @@ namespace insieme {
 		xml.convertIrToDom(code);
 		string res = xml.convertDomToString();
 
+
+
 		NodeManager manager2;
 		xml::XmlUtil xml2;
 		xml.convertStringToDom(res, true);
+		
 		core::NodePtr code2 = xml.convertDomToIr(manager2);
 
 		EXPECT_EQ(*code, *code2);
 		EXPECT_NE(code, code2);
 	//	EXPECT_TRUE(core::equalsWithAnnotations(code, code2));
-
+			
 	}
 
 	// instantiate the test case

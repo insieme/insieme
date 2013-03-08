@@ -60,6 +60,7 @@ namespace backend {
 	class VectorTypeInfo;
 	class ChannelTypeInfo;
 
+	typedef TypeInfo* TypeInfoPtr;
 	typedef std::map<string, string> TypeIncludeTable;
 
 	TypeIncludeTable getBasicTypeIncludeTable();
@@ -102,6 +103,8 @@ namespace backend {
 		virtual const VectorTypeInfo& getTypeInfo(const core::VectorTypePtr& type);
 
 		virtual const ChannelTypeInfo& getTypeInfo(const core::ChannelTypePtr& type);
+
+		virtual const TypeInfo& getCVectorTypeInfo(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size);
 
 		// this one is only working for already resolved types
 		virtual const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type);
