@@ -42,6 +42,7 @@
 #include "insieme/frontend/utils/indexer.h"
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/StmtVisitor.h"
 
 #include <map>
 
@@ -63,13 +64,17 @@ public:
 	{}
 
 	typedef std::set<const clang::Decl*> InterceptedDeclSet;
+	typedef std::set<const clang::Type*> InterceptedTypeSet;
+
 	typedef std::map<const clang::FunctionDecl*, std::string> InterceptedFuncMap;
 	typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> InterceptedExprCache;
 
 	InterceptedDeclSet& getInterceptedDecls() { return interceptedDecls; }
 	InterceptedFuncMap& getInterceptedFuncMap() { return interceptedFuncMap; }
-	
-	void interceptFunc(std::map<std::string, std::string> interceptMap);
+
+	void loadConfigFile(std::string fileName);	
+	void loadConfigSet(std::set<std::string> toIntercept);	
+	void intercept();
 	
 	bool isIntercepted(const clang::Decl* decl) const { return interceptedDecls.find(decl) != interceptedDecls.end(); }
 
@@ -80,7 +85,38 @@ private:
 	insieme::core::IRBuilder builder;
 	InterceptedDeclSet interceptedDecls;
 	InterceptedFuncMap interceptedFuncMap;
+	InterceptedTypeSet interceptedTypes;
+
+	//FIXME use regex instead of strings
+	std::set<std::string> toIntercept;
 };
-} // end utils namespace
+
+struct InterceptVisitor : public clang::StmtVisitor<InterceptVisitor> {
+
+	insieme::frontend::utils::Interceptor::InterceptedDeclSet& interceptedDecls;
+	insieme::frontend::utils::Interceptor::InterceptedTypeSet& interceptedTypes;
+	std::set<std::string>& toIntercept;
+
+	InterceptVisitor(
+			insieme::frontend::utils::Interceptor::InterceptedDeclSet& interceptedDecls, 
+			insieme::frontend::utils::Interceptor::InterceptedTypeSet& interceptedTypes,
+			std::set<std::string>& toIntercept) 
+		: interceptedDecls(interceptedDecls), 
+		interceptedTypes(interceptedTypes),
+		toIntercept(toIntercept)
+	{}
+
+	void intercept(const clang::FunctionDecl* d);
+	
+	void VisitStmt(clang::Stmt* stmt);
+
+	void VisitDeclStmt(const clang::DeclStmt* declStmt);
+
+	//void VisitCallExpr(const clang::CallExpr* callExpr) {};
+
+	//void VisitDeclRefExpr(const clang::DeclRefExpr* declRefExpr) {};
+}
+
+;} // end utils namespace
 } // end frontend namespace
 } // end insieme namespace

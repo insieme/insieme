@@ -121,7 +121,7 @@ public:
 	utils::Indexer& getIndexer() const;
 	
 	utils::FunctionDependencyGraph& getCallGraph() const;
-	void intercept();
+	void intercept(std::string fileName);
 	void analyzeFuncDependencies();
 	void dumpCallGraph() const;
 
