@@ -101,6 +101,7 @@ void CallExprVisitor::VisitCallExpr(clang::CallExpr* callExpr) {
 }
 
 void CallExprVisitor::VisitDeclRefExpr(clang::DeclRefExpr* expr) {
+	//FIXME: why is this commented??
 	// if this variable is used to invoke a function (therefore is a
 	// function pointer) and it has been defined here, we add a potentially
 	// dependency to the current definition
@@ -121,14 +122,11 @@ void CallExprVisitor::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
 	clang::CXXConstructorDecl* constructorDecl = ctorExpr->getConstructor();
 	assert(constructorDecl);
 
-	// if there is implementation for the constructor, procceed
-	// if there is not, no function to analyze
-	if (!constructorDecl->isImplicitlyDefined()){
-		// connects the constructor expression to the function graph
-		clang::FunctionDecl* fDecl = llvm::cast<clang::FunctionDecl>(constructorDecl);
-		addFunctionDecl(fDecl);
-		VisitStmt(ctorExpr);
-	}
+	// connects the constructor expression to the function graph
+	// if constructor has no body, addFunctionDecl wont count it
+	clang::FunctionDecl* fDecl = llvm::cast<clang::FunctionDecl>(constructorDecl);
+	addFunctionDecl(fDecl);
+	VisitStmt(ctorExpr);
 
 	// if there is an member with an initializer in the ctor we add it to the function graph
 	for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(), iend =
