@@ -37,8 +37,6 @@
 #include <iostream>
 
 
-
-
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/sema.h"
@@ -75,6 +73,8 @@
 
 #include "clang/Parse/Parser.h"
 
+//FIXME: debug
+#include "clang/Lex/HeaderSearch.h"
 using namespace clang;
 using namespace insieme::frontend;
 
@@ -111,6 +111,30 @@ Token& ParserProxy::CurrentToken() {
 }
 
 namespace {
+
+	void printHeader (clang::HeaderSearchOptions& ho){
+		std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++"<<std::endl;
+		for (clang::HeaderSearchOptions::Entry path : ho.UserEntries){
+			std::cout << path.Path << std::endl;
+		}
+				std::cout << "sysroot: " << ho.Sysroot << std::endl;
+				std::cout << "resourceDir: " << ho.ResourceDir << std::endl;
+
+		for (clang::HeaderSearchOptions::SystemHeaderPrefix path : ho.SystemHeaderPrefixes){
+			std::cout << path.Prefix << std::endl;
+		}
+		if (ho.UseBuiltinIncludes){
+			std::cout << "built in" <<std::endl;
+		}
+		if (ho.UseStandardSystemIncludes){
+			std::cout << "UseStandardSystemIncludes" <<std::endl;
+		}
+		if (ho.UseStandardCXXIncludes){
+			std::cout << "UseStandardCXXIncludes" <<std::endl;
+		}
+		std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++"<<std::endl;
+	}
+
 
 void setDiagnosticClient(clang::CompilerInstance& clang) {
 
@@ -177,50 +201,33 @@ ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
 }
 
 ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangCompilerImpl) {
-	// pimpl->clang.setLLVMContext(new llvm::LLVMContext);
-
 	// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the diagOpts object!
 	setDiagnosticClient(pimpl->clang);
 
 	pimpl->clang.createFileManager();
 	pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
-	// clang [3.0]pimpl->clang.InitializeSourceManager(file_name);
-	//pimpl->clang.InitializeSourceManager(FrontendInputFile(file_name, IK_None));
 
 
 	// A compiler invocation object has to be created in order for the diagnostic object to work
 	CompilerInvocation* CI = new CompilerInvocation; // CompilerInvocation will be deleted by CompilerInstance
 	CompilerInvocation::CreateFromArgs(*CI, 0, 0, pimpl->clang.getDiagnostics());
 	pimpl->clang.setInvocation(CI);
+	
 
-	// Add default header
-	/// clang [3.0] beware where u get the headers from
-/*	pimpl->clang.getHeaderSearchOpts().AddPath (CLANG_SYSTEM_INCLUDE_FOLDER, 
-			 									clang::frontend::System, true, false, false);
-	pimpl->clang.getHeaderSearchOpts().AddPath ("/usr/include", 
-												clang::frontend::Angled, false, false, false);
-	pimpl->clang.getHeaderSearchOpts().AddPath ("/usr/include/linux", 
-												clang::frontend::Angled, false, false, false);
-	pimpl->clang.getHeaderSearchOpts().AddPath ("/usr/include/c++/4.7.2/", 
-												clang::frontend::Angled, false, false, false);
-	pimpl->clang.getHeaderSearchOpts().AddPath ("/home/luis/assets/clang/llvm/tools/clang/lib/Headers/", 
-												clang::frontend::Angled, false, false, false);
-*/	
-	/// clang [3.2] seems that we only need this std libraries, do not use system ones
-	pimpl->clang.getHeaderSearchOpts().ResourceDir =  LLVM_PREFIX "/lib/clang/" CLANG_VERSION_STRING; 
+	//setup headers 
+	pimpl->clang.getHeaderSearchOpts().UseBuiltinIncludes = 0;
+	pimpl->clang.getHeaderSearchOpts().UseStandardSystemIncludes = 1;  // Includes system includes, usually  /usr/include
+	pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0;
 
 	// Add default header, for non-Windows target
 	if(!CommandLineOptions::WinCrossCompile) {
-		pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER, clang::frontend::System, true, false, false);
-		pimpl->clang.getHeaderSearchOpts().AddPath( "/usr/include/x86_64-linux-gnu", clang::frontend::System, true, false, false);
+		//FIXME: check if this is still valid
+		//	pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER, 
+		//												clang::frontend::CSystem, true, false, false);
+		//pimpl->clang.getHeaderSearchOpts().AddPath( "/usr/include/x86_64-linux-gnu", 
+		//												clang::frontend::System, true, false, false);
 	}		
 
-	// add headers
-	std::for_each(CommandLineOptions::IncludePaths.begin(), CommandLineOptions::IncludePaths.end(),
-		[ this ](std::string& curr) {
-			this->pimpl->clang.getHeaderSearchOpts().AddPath( curr, clang::frontend::System, true, false, false);
-		}
-	);
 
 	if(CommandLineOptions::WinCrossCompile) {
 		// fix the target architecture to be a 64 bit machine
@@ -231,7 +238,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	}
 
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
-
+	
 	std::string extension(file_name.substr(file_name.rfind('.')+1, std::string::npos));
 	bool enableCpp = extension == "C" || 
 					 extension == "cpp" || 
@@ -240,35 +247,57 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 					 extension == "hxx";
 
 	LangOptions& LO = pimpl->clang.getLangOpts();
+
+	/*
+	 FIXME: decide if we need this or not
 	LO.GNUMode = 1;
 	LO.Bool = 1;
 	LO.POSIXThreads = 1;
+	*/
 
 	if(CommandLineOptions::STD == "c99") LO.C99 = 1; 		// set c99
-
+	
 	if(enableCpp ) {
 		pimpl->m_isCXX = true;
 		LO.CPlusPlus = 1; 	// set C++ 98 support
-		LO.CXXOperatorNames = 1;
-		if(CommandLineOptions::STD == "c++0x") { LO.CPlusPlus0x = 1; }
-		else { 									 LO.CPlusPlus0x = 0; }
-		LO.RTTI = 1;
-		LO.Exceptions = 1;
-		LO.CXXExceptions = 1;
+		LO.WChar     = 1; 	// setup wchar support: C++ 3.9.1p5
+
+		// libcxx headers require to use cpp11 by default. otherwhise annoying warnings are
+		// prompted, no side efects detected
+		LO.CPlusPlus0x = 1; 
+		
+		pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 1;
+		pimpl->clang.getHeaderSearchOpts().AddPath (CXX_INCLUDES,
+													clang::frontend::System, true, false, false);
+
+		// FIXME: decide if we need this or not
+		//	LO.RTTI = 1;
+		//	LO.Exceptions = 1;
+		//	LO.CXXExceptions = 1;
+		//	LO.CXXOperatorNames = 1;
 	}
 	else{
 		LO.CPlusPlus = 0;
+	}
+	
+	// Add default header 
+	pimpl->clang.getHeaderSearchOpts().AddPath (LLVM_PREFIX "/lib/clang/" CLANG_VERSION_STRING "/include",
+			 									clang::frontend::System, true, false, false);
+
+	// add user provided headers
+	for (std::string curr : CommandLineOptions::IncludePaths){
+		this->pimpl->clang.getHeaderSearchOpts().AddPath( curr, clang::frontend::System, true, false, false);
 	}
 
 	// Enable OpenCL
 	// LO.OpenCL = 1;
 	LO.AltiVec = 1;
 	LO.LaxVectorConversions = 1;
-
+	
 	// set -D macros
-	std::for_each(CommandLineOptions::Defs.begin(), CommandLineOptions::Defs.end(), [ this ](std::string& curr) {
+	for (std::string curr : CommandLineOptions::Defs){
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef(curr);
-	});
+	}
 
 	// Set OMP define if compiling with OpenMP
 	if(CommandLineOptions::OpenMP) {
@@ -293,12 +322,16 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 			getPreprocessor().getLangOpts()
 	);
 
+
 	//pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
 	const FileEntry *FileIn = pimpl->clang.getFileManager().getFile(file_name);
 	pimpl->clang.getSourceManager().createMainFileID(FileIn);
 	pimpl->clang.getDiagnosticClient().BeginSourceFile(
 										pimpl->clang.getLangOpts(),
 										&pimpl->clang.getPreprocessor());
+
+	if (VLOG_IS_ON(2))
+			printHeader (getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts ());
 }
 
 ASTContext& 		ClangCompiler::getASTContext()    const { return pimpl->clang.getASTContext(); }
