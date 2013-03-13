@@ -91,104 +91,54 @@ namespace conversion {
 //---------------------------------------------------------------------------------------------------------------------
 
 
-//~~~~~~~~~~~~~~~~~~~~~		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						  IMPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
 	START_LOG_EXPR_CONVERSION(castExpr);
 	core::ExpressionPtr retIr;
+
 	switch (castExpr->getCastKind()) {
 		case CK_UncheckedDerivedToBase:
-		case CK_DerivedToBase: 
-		{
-			// if is a derived class, we will return a narrow expression with the datapath
-			// to access the right superclass
-			core::datapath::DataPathBuilder dpb(convFact.mgr);
-			core::datapath::DataPathPtr path;
-			core::TypePtr targetTy;
-			retIr = Visit(castExpr->getSubExpr());
+			//A conversion from a C++ class pointer/reference to a base class that can assume that
+			//the derived pointer is not null. const A &a = B(); b->method_from_a(); 
+			{
+				// if is a derived class, we will return a narrow expression with the datapath
+				// to access the right superclass
+				core::TypePtr targetTy;
+				retIr = Visit(castExpr->getSubExpr());
+			
+				// in case of pointer, the inner expression is modeled as ref< array < C, 1> >
+				// it is needed to deref the first element
+				retIr = getCArrayElemRef(builder, retIr);
 
-			clang::CastExpr::path_const_iterator it;
-			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
-				//(*it)->getType().dump();
-				targetTy = convFact.convertType((*it)->getType().getTypePtr());
-				retIr = convFact.builder.refParent(retIr, targetTy);
+				clang::CastExpr::path_const_iterator it;
+				for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
+					targetTy = convFact.convertType((*it)->getType().getTypePtr());
+					retIr = convFact.builder.refParent(retIr, targetTy);
+				}
+				break;
 			}
-
-			break;
-		}
+		case CK_DerivedToBase:  
+			//A conversion from a C++ class pointer to a base class pointer. A *a = new B();
+			{
+				retIr = Visit(castExpr->getSubExpr());
+				break;
+		//		assert(false && "derived to base cast  not implementd");
+			}
+		
+		case CK_BaseToDerived: 
+			//A conversion from a C++ class pointer/reference to a derived class pointer/reference. B *b = static_cast<B*>(a); 
+			{
+				assert(false && "base to derived cast  not implementd B* b = static_cast<B*>(A)");
+				break;
+			}
 		default:
 			retIr = ExprConverter::VisitImplicitCastExpr(castExpr);
 			break;
 	}
 	END_LOG_EXPR_CONVERSION(retIr);
 	return retIr;
-
-	/*// connects the member call expression to the function graph
-	START_LOG_EXPR_CONVERSION(castExpr);
-	const core::IRBuilder& builder = convFact.builder;
-
-	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
-	LOG_EXPR_CONVERSION(retIr);
-
-	core::TypePtr classTypePtr; // used for CK_DerivedToBase
-	core::StringValuePtr ident;
-
-	// handle implicit casts according to their kind
-	switch (castExpr->getCastKind()) {
-
-	case CK_UncheckedDerivedToBase:
-	case CK_DerivedToBase: {
-		// add CArray access
-		if (GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
-			//VLOG(2) << retIr;
-			// deref not needed??? (Unchecked)DerviedToBase gets deref from LValueToRValue cast?
-			//retIr = builder.deref(retIr);
-			retIr = getCArrayElemRef(builder, retIr);
-		}
-
-		// for an inheritance like D -> C -> B -> A , and a cast of D to A
-		// there is only one ImplicitCastExpr from clang, so we walk trough the inheritance
-		// and create the member access. the iterator is in order so one gets C then B then A
-		for (CastExpr::path_iterator I = castExpr->path_begin(), E = castExpr->path_end(); I != E; ++I) {
-			const CXXBaseSpecifier* base = *I;
-			const CXXRecordDecl* recordDecl = cast<CXXRecordDecl>(base->getType()->getAs<RecordType>()->getDecl());
-
-			// find the class type - if not converted yet, converts and adds it
-			classTypePtr = convFact.convertType(GET_TYPE_PTR(base));
-			assert(classTypePtr && "no class declaration to type pointer mapping");
-
-			//VLOG(2) << "member name " << recordDecl->getName().data();
-			ident = builder.stringValue(recordDecl->getName().data());
-
-			VLOG(2) << "(Unchecked)DerivedToBase Cast on " << classTypePtr;
-
-			core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
-			core::TypePtr structTy = retIr->getType();
-
-			if (structTy->getNodeType() == core::NT_RefType) {
-				// skip over reference wrapper
-				structTy = core::analysis::getReferencedType(structTy);
-				op = builder.getLangBasic().getCompositeRefElem();
-			}
-			VLOG(2) << structTy;
-
-			const core::TypePtr& memberTy =
-					core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
-			core::TypePtr resType = builder.refType(classTypePtr);
-
-			retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident),
-					builder.getTypeLiteral(memberTy));
-			VLOG(2) << retIr;
-		}
-		return retIr;
-	}
-
-	default:
-		// call base Visitor for ImplicitCastExpr
-		return (retIr = ExprConverter::VisitImplicitCastExpr(castExpr));
-	}
-	assert(false);*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -599,6 +549,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 													 irClassType, 
 													 core::FK_MEMBER_FUNCTION);
  
+	// correct the owner object reference, in case of pointer (ref<array<struct<...>,1>>) we need to
+	// index the first element
+	ownerObj = getCArrayElemRef(builder, ownerObj);
+
 	// reconstruct Arguments list, fist one is a scope location for the object 
 	// because is a member call, it should exist an instance of it somewhere
 	core::ExpressionList args;
