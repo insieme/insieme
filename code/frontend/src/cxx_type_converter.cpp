@@ -97,17 +97,17 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		core::ClassMetaInfo classInfo;
 		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl());
 
-
 		// base clases if any:
-		clang::CXXRecordDecl::base_class_const_iterator it = classDecl->bases_begin();
 		if (classDecl->getNumBases() > 0){
 			std::vector<core::ParentPtr> parents;
-			for (; it != classDecl->bases_end(); it++){
 
+			clang::CXXRecordDecl::base_class_const_iterator it = classDecl->bases_begin();
+			for (; it != classDecl->bases_end(); it++){
 				// visit the parent to build its type
 				auto parentIrType = Visit((it)->getType().getTypePtr());
 				parents.push_back(builder.parent(it->isVirtual(), parentIrType));
 			}
+
 			// if we have base classes, we need to create again the IR type, with the 
 			// parent list this time
 			classType = builder.structType(parents, classType.as<core::StructTypePtr>()->getElements());
@@ -122,11 +122,13 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			if (ctorDecl->isDefaultConstructor() ||
 				ctorDecl->isCopyConstructor() ||
 				ctorDecl->isMoveConstructor() ){
-
-				core::LambdaExprPtr&& ctorLambda = convFact.convertCtor(ctorDecl, classType).as<core::LambdaExprPtr>();
-				if (ctorLambda){
-					ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
-					classInfo.addConstructor(ctorLambda);
+				
+				if (ctorDecl->isUserProvided ()){
+					core::LambdaExprPtr&& ctorLambda = convFact.convertCtor(ctorDecl, classType).as<core::LambdaExprPtr>();
+					if (ctorLambda){
+						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
+						classInfo.addConstructor(ctorLambda);
+					}
 				}
 			}
 		} 

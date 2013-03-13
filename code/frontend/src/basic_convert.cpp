@@ -1293,7 +1293,6 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 		return core::LambdaExprPtr();
 	}
 
-
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	core::LambdaExprPtr oldCtor= convertFunctionDecl (innerFunc).as<core::LambdaExprPtr>();
 	
@@ -1305,8 +1304,8 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 		return oldCtor.as<core::LambdaExprPtr>();
 	}
 
-	// this, and other stuff will be handled by memberize
-	// here we only need to care about initialization list.
+	// NOTE: this, and other stuff will be handled by memberize
+	// -- HERE WE ONLY NEED TO CARE ABOUT INITIALIZATION LIST --
 	
 	// generate code for each initialization
 	core::StatementList newBody;
@@ -1360,7 +1359,6 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 			assert(false && "pack expansion not implemented");
 		}
 
-		
 		// if the expr is a constructor then we are initializing a member an object, 
 		// we have to substitute first argument on constructor by the
 		// right reference to the member object (addressed by init)
@@ -1382,12 +1380,10 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 	core::StatementPtr body = oldCtor->getBody();
 	newBody.push_back(body);
 
-
 	// NOTE: function type and paramList do not change here
 	core::LambdaExprPtr newCtor =  builder.lambdaExpr  (ty, 
 														oldCtor.getLambda().getParameterList(), 
 														builder.compoundStmt(newBody));
-
 
 	currTU.pop();
 	return newCtor;
