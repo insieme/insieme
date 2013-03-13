@@ -1278,7 +1278,6 @@ core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 	ctx.lambdaExprCache[funcDecl] = memberized;
 
 	currTU.pop();
-	
 	return memberized;
 }
 

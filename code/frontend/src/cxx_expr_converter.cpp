@@ -988,9 +988,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 
 	const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
 
-	core::TypePtr&& irClassType = convFact.convertType( callExpr->getType().getTypePtr() );
+	const clang::Type* classType= callExpr->getType().getTypePtr();
+	core::TypePtr&& irClassType = convFact.convertType(classType);
 
-	// to begin with we translate the constructor as a regular function
+	// to begin with we translate the constructor as a regular function but with initialization list
 	auto f = convFact.convertCtor(ctorDecl, irClassType);
 	assert(f.isa<core::LambdaExprPtr>());
 
@@ -1234,17 +1235,36 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 	core::ExpressionPtr retExp;
 
 	if (callExpr->getAllocatedType().getTypePtr()->isBuiltinType()){
+
 		core::TypePtr type = convFact.convertType(callExpr->getAllocatedType().getTypePtr());
-		const core::TypePtr& arrayType = builder.arrayType(type);
+		core::ExpressionPtr placeHolder = builder.undefinedNew(type);
+
+		if (callExpr->isArray()){
+			core::ExpressionPtr&& arrSizeExpr = convFact.convertExpr( callExpr->getArraySize() );
+			placeHolder = builder.callExpr( builder.arrayType(type), 
+											builder.getLangBasic().getArrayCreate1D(),
+											builder.getTypeLiteral(type),
+											utils::cast(arrSizeExpr, gen.getUInt4()));
+		}
 
 		// fixme, array size
-		retExp = builder.refNew(builder.refVar( Visit (callExpr->getInitializer ())));
+		retExp = builder.refNew(builder.refVar(placeHolder));
 	}
 	else{
 		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
 
-		core::ExpressionPtr newCall = builder.undefinedNew(ctorCall->getType());
+
+		core::TypePtr type = ctorCall->getType();
+		core::ExpressionPtr newCall = builder.undefinedNew(type);
+		
+		if (callExpr->isArray()){
+			core::ExpressionPtr&& arrSizeExpr = convFact.convertExpr( callExpr->getArraySize() );
+			newCall = builder.callExpr( builder.arrayType(type), 
+											builder.getLangBasic().getArrayCreate1D(),
+											builder.getTypeLiteral(type),
+											utils::cast(arrSizeExpr, gen.getUInt4()));
+		}
 
 		// the basic constructor translation defines a stack variable as argument for the call
 		// in order to turn this into a diynamic memory allocation, we only need to substitute 
