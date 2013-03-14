@@ -63,7 +63,7 @@ void _irt_get_rapl_energy_consumption(rapl_energy_data* data) {
 			data->package[socket] = 0.0;
 			data->mc[socket] = 0.0;
 			data->cores[socket] = 0.0;
-			if((file = _irt_open_msr(socket)) > 0) {
+			if((file = _irt_open_msr(socket*8)) > 0) {
 				if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) >= 0) {
 					energy_units = pow(0.5, (double)((result>>8) & 0x1F));
 					uint32 temp_result = 0;
