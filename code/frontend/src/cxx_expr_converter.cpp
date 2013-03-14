@@ -55,6 +55,8 @@
 #include "insieme/utils/functional_utils.h"
 
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/ir++_extension.h"
+
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -544,6 +546,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 
 	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
 	core::TypePtr&& irClassType = ownerObj->getType();
+
 	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl), 
 													 f.as<core::ExpressionPtr>(),
 													 irClassType, 
@@ -984,12 +987,19 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	START_LOG_EXPR_CONVERSION(callExpr);
 	const core::IRBuilder& builder = convFact.builder;
 
-// TODO:  array constructor
+// TODO:  array constructor with no default initialization (CXX11)
 
 	const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
 
 	const clang::Type* classType= callExpr->getType().getTypePtr();
 	core::TypePtr&& irClassType = convFact.convertType(classType);
+
+	// it might be an array construction
+	size_t numElements =0;
+	if (irClassType->getNodeType() == core::NT_VectorType) {
+		numElements = irClassType.as<core::VectorTypePtr>()->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
+		irClassType	= irClassType.as<core::VectorTypePtr>()->getElementType();
+	}
 
 	// to begin with we translate the constructor as a regular function but with initialization list
 	auto f = convFact.convertCtor(ctorDecl, irClassType);
@@ -1000,15 +1010,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	auto params = f.as<core::LambdaExprPtr>()->getParameterList();
 
 	// update parameter list with a class-typed parameter in the first possition
-	core::TypePtr&&  refToClass = builder.refType(irClassType);
-	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
+	core::TypePtr&&  refToClassTy = builder.refType(irClassType);
+	core::LambdaExprPtr ctorFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
 													 f.as<core::ExpressionPtr>(),
-													 refToClass, 
+													 refToClassTy, 
 													 core::FK_CONSTRUCTOR);
 
 	// reconstruct Arguments list, fist one is a scope location for the object
 	core::ExpressionList args;
-	args.push_back (builder.undefinedVar(refToClass));
+	args.push_back (builder.undefinedVar(refToClassTy));
 
 	// append globalVar to arguments if needed
 	if ( ctx.globalFuncSet.find(ctorDecl) != ctx.globalFuncSet.end() ) {
@@ -1023,9 +1033,28 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	}
 
 	// build expression and we are done!!!
-	core::CallExprPtr ret  = builder.callExpr (refToClass, newFunc, args);
+	core::ExpressionPtr ret;
+	if (numElements){
+		std::map<string, core::NodePtr> symbols;
+		symbols["createArray"] = mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor();
+		symbols["ctor"] = ctorFunc;
+		symbols["size"] = builder.literal(gen.getUInt8(), toString(numElements));
+		symbols["TYPE"] = convFact.convertType(classType);
+
+		// FIXME: can not make this simpler, better use builder
+		auto tmp = builder.parseStmt(
+				"TYPE a = createArray(ref.var, ctor, size);",
+				symbols
+		);
+		ret = tmp.as<core::DeclarationStmtPtr>()->getInitialization();
+	}
+	else{
+		//single object constructor
+		ret = builder.callExpr (refToClassTy, ctorFunc, args);
+	}
+
 	if (VLOG_IS_ON(2)){
-		dumpPretty(&(*ret));
+		dumpPretty(ret);
 	}
 	END_LOG_EXPR_CONVERSION(ret);
 	return ret;
