@@ -204,6 +204,14 @@ protected:
 		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
 		ClassDeclMap classDeclMap;
 
+
+		/*
+		 * Keeps the CXXTemporaries together with their IR declaration stmt
+		 */
+		typedef std::map<const clang::CXXTemporary*, core::DeclarationStmtPtr> TemporaryInitMap;
+		TemporaryInitMap tempInitMap;
+
+
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						context structure Constructor
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
