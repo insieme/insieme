@@ -20,7 +20,6 @@ BARVINOK := ${PREFIX}/barvinok-$(shell ${AWK_CMD} barvinok_install.sh | cut -d= 
 
 # INSIEME STUFF
 LLVM 	:= ${PREFIX}/llvm-$(shell ${AWK_CMD} llvm_install.sh | cut -d= -f2 )
-LLVM32 	:= ${PREFIX}/llvm-$(shell ${AWK_CMD} llvm_install_32.sh | cut -d= -f2 )
 BOOST 	:= ${PREFIX}/boost-$(shell ${AWK_CMD} boost_install.sh | cut -d= -f2 )
 CMAKE 	:= ${PREFIX}/cmake-$(shell ${AWK_CMD} cmake_install.sh | cut -d= -f2 )
 GTEST 	:= ${PREFIX}/gtest-$(shell ${AWK_CMD} gtest_install.sh | cut -d= -f2 )
@@ -114,12 +113,6 @@ ${BARVINOK}: barvinok_install.sh ${GMP} ${ISL} ${NTL} ${GCC} ${CLOOG}
 ${LLVM}: llvm_install.sh ${GCC}
 	@echo "#### INSTALL LLVM ${LLVM} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh llvm_install.sh
-	@echo "@@@@ Done! @@@@"
-
-## LLVM32
-${LLVM32}: llvm_install_32.sh ${GCC}
-	@echo "#### INSTALL LLVM 3.2 ${LLVM32} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh llvm_install_32.sh
 	@echo "@@@@ Done! @@@@"
 
 ## BOOST
