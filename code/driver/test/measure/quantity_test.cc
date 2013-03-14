@@ -116,20 +116,20 @@ namespace measure {
 		auto a = 1 * m;		// should be 1 meter
 		auto b = 1.5 * m;	// another distance
 
-		EXPECT_EQ("1.0m", toString(a));
-		EXPECT_EQ("1.5m", toString(b));
-		EXPECT_EQ("1.5m^2", toString(a*b));
+		EXPECT_EQ("1.000m", toString(a));
+		EXPECT_EQ("1.500m", toString(b));
+		EXPECT_EQ("1.500m^2", toString(a*b));
 
 		auto d = 150 * m;
 		auto t = 20 * s;
-		EXPECT_EQ("150.0m", toString(d));
-		EXPECT_EQ("20.0s", toString(t));
-		EXPECT_EQ("7.5m*s^-1", toString(d/t));
+		EXPECT_EQ("150.000m", toString(d));
+		EXPECT_EQ("20.000s", toString(t));
+		EXPECT_EQ("7.500m*s^-1", toString(d/t));
 
 
 		// do some scaling
 		auto mm = milli * m;
-		EXPECT_EQ("1000.0mm", toString(a.to(mm)));
+		EXPECT_EQ("1000.000mm", toString(a.to(mm)));
 
 
 
@@ -142,8 +142,8 @@ namespace measure {
 
 		EXPECT_EQ(15000 * ns, 15 * us);
 
-		EXPECT_EQ("10.0us", toString(t1));
-		EXPECT_EQ("1500.0ns", toString(t2));
+		EXPECT_EQ("10.000us", toString(t1));
+		EXPECT_EQ("1500.000ns", toString(t2));
 
 		EXPECT_EQ(11500 * ns, t1 + t2);
 		EXPECT_EQ(8500 * ns, t1 - t2);
@@ -192,17 +192,17 @@ namespace measure {
 		auto b = 200 * m;
 		auto c = 20 * (milli * s);
 
-		EXPECT_EQ("350.0m", toString(a + b));
-		EXPECT_EQ("-50.0m", toString(a - b));
-		EXPECT_EQ("30000.0m^2", toString(a * b));
-		EXPECT_EQ("0.8", toString(a / b));
+		EXPECT_EQ("350.000m", toString(a + b));
+		EXPECT_EQ("-50.000m", toString(a - b));
+		EXPECT_EQ("30000.000m^2", toString(a * b));
+		EXPECT_EQ("0.750", toString(a / b));
 
-		EXPECT_EQ("3000.0m m*s", toString(a * c));
-		EXPECT_EQ("7.5k m*s^-1", toString(a / c));
+		EXPECT_EQ("3000.000m m*s", toString(a * c));
+		EXPECT_EQ("7.500k m*s^-1", toString(a / c));
 
 		auto x = 36 * (nano * s);
 		auto y = 72 * (nano * s);
-		EXPECT_EQ("0.5", toString(x / y));
+		EXPECT_EQ("0.500", toString(x / y));
 	}
 
 } // end namespace measure
