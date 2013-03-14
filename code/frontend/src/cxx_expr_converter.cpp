@@ -146,7 +146,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(c
 //						EXPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr) {
-
+// FIXME: do the thing here
 	return (ExprConverter::VisitExplicitCastExpr(castExpr));
 
 	/*START_LOG_EXPR_CONVERSION(castExpr);
@@ -1808,8 +1808,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryEx
 
 	 core::DeclarationStmtPtr declStmt;
 
-	  declStmt = convFact.builder.declarationStmt(convFact.builder.refType(irType),
-	          convFact.builder.refVar(builder.tryDeref(body)));
+	  declStmt = convFact.builder.declarationStmt(convFact.builder.refType(irType),(body));
 
 	 // store temporary and declaration stmt in Map
 	 convFact.ctx.tempInitMap.insert(std::make_pair(temp,declStmt));
