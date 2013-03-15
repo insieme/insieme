@@ -172,20 +172,25 @@ void InterceptVisitor::VisitStmt(clang::Stmt* stmt) {
 void InterceptVisitor::VisitDeclStmt(const clang::DeclStmt* declStmt) {
 
 	//FIXME currently only for SingleDecls
-	if( llvm::isa<clang::VarDecl>(declStmt->getSingleDecl()) ) {
-		const clang::VarDecl* varDecl = llvm::cast<clang::VarDecl>(declStmt->getSingleDecl());
-		
-		if(const clang::CXXRecordDecl* cxxRecDecl = varDecl->getType().getTypePtr()->getAsCXXRecordDecl()) {
-			if( toIntercept.find(cxxRecDecl->getQualifiedNameAsString()) != toIntercept.end()) {
-				//if we have a varDecl with an intercepted Type
-				VLOG(2) << "intercept VarDecl (class type) " << cxxRecDecl->getQualifiedNameAsString() << " name " << varDecl->getQualifiedNameAsString();
-				interceptedDecls.insert(varDecl);
-				interceptedTypes.insert(varDecl->getType().getTypePtr());
+	
+	
+	for (auto it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it ) {
+		if( llvm::isa<clang::VarDecl>(*it) ) {
+			const clang::VarDecl* varDecl = llvm::cast<clang::VarDecl>(*it);
+			
+			if(const clang::CXXRecordDecl* cxxRecDecl = varDecl->getType().getTypePtr()->getAsCXXRecordDecl()) {
+				if( toIntercept.find(cxxRecDecl->getQualifiedNameAsString()) != toIntercept.end()) {
+					//if we have a varDecl with an intercepted Type
+					VLOG(2) << "intercept VarDecl (class type) " << cxxRecDecl->getQualifiedNameAsString() 
+							<< " name " << varDecl->getQualifiedNameAsString();
+					interceptedDecls.insert(varDecl);
+					interceptedTypes.insert(varDecl->getType().getTypePtr());
+				}
 			}
 		}
-	} else {
-		assert(false && "only single decls are intercepted currently");
 	}
+
+
 }
 
 
