@@ -734,7 +734,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 		// collects the type of each argument of the expression
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
-		assert(!convFact.currTU.empty() && "Translation unit not set.");
+//		assert(!convFact.currTU.empty() && "Translation unit not set.");
 
 		const FunctionDecl* definition = NULL;
 		const TranslationUnit* rightTU = NULL;
@@ -750,10 +750,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 		}
 
 		// point to the right TU
-		if (rightTU)
-			convFact.currTU.push (rightTU);
-		else
-			convFact.currTU.push (convFact.currTU.top());
+//		if (rightTU)
+//			convFact.currTU.push (rightTU);
+//		else
+//			convFact.currTU.push (convFact.currTU.top());
 
 
 		if (!definition) {
@@ -824,7 +824,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
 					 packedArgs);
 
-			convFact.currTU.pop();
+//			convFact.currTU.pop();
 			return irNode;
 		}
 
@@ -833,7 +833,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 		auto lambdaExpr = core::static_pointer_cast<const core::Expression>(
 				convFact.convertFunctionDecl(definition));
 
-		convFact.currTU.pop();
+//		convFact.currTU.pop();
 		return (irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs));
 	} 
 

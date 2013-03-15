@@ -81,6 +81,8 @@
 using namespace clang;
 using namespace insieme;
 
+#define GETTU(X) \
+		program.getIndexer().getDefinitionFor(X);
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //   ANONYMOUS NAMESPACE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -277,7 +279,7 @@ core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang::ValueDe
 		fe::utils::compilerMessage(fe::utils::DiagnosticLevel::Warning,
 				varDecl->getLocStart(),
 				errMsg->str(),
-				currTU.top()->getCompiler()
+				currTU.->getCompiler()
 		);
 	}
 	return std::make_shared < annotations::ocl::BaseAnnotation > (declAnnotation);
@@ -480,11 +482,11 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 //////////////////////////////////////////////////////////////////
 ///
 core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
-	assert(!currTU.empty() && "translation unit is null");
+	assert(currTU && "translation unit is null");
 	// logging
 	VLOG(1)	<< "\n****************************************************************************************\n"
 			<< "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n" << "-> at location: ("
-			<< utils::location(varDecl->getLocation(), currTU.top()->getCompiler().getSourceManager()) << "): ";
+			<< utils::location(varDecl->getLocation(), currTU->getCompiler().getSourceManager()) << "): ";
 	if (VLOG_IS_ON(2)) {
 		VLOG(2)	<< "Dump of clang VarDecl: \n"
 				<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
@@ -492,7 +494,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 	}
 
 	core::DeclarationStmtPtr retStmt;
-	assert(!currTU.empty() && "translation unit is null");
+	assert(currTU && "translation unit is null");
 	if ( const VarDecl* definition = varDecl->getDefinition()) {
 
 		if (definition->hasGlobalStorage()) {
@@ -503,7 +505,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		// lookup for the variable in the map
 		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
 
-		assert(!currTU.empty() && "translation unit is null");
+		assert(currTU && "translation unit is null");
 		assert(var);
 
 		// initialization value
@@ -595,11 +597,11 @@ core::ExpressionPtr ConversionFactory::attachFuncAnnotations(const core::Express
 		loc.first = fit->second->getStartLocation();
 	}
 
-	assert(!currTU.empty() && "Translation unit not correctly set");
+	assert(currTU && "Translation unit not correctly set");
 	node->addAnnotation(
 			std::make_shared < annotations::c::CLocAnnotation
-					> (convertClangSrcLoc(currTU.top()->getCompiler().getSourceManager(), loc.first), convertClangSrcLoc(
-							currTU.top()->getCompiler().getSourceManager(), loc.second)));
+					> (convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.first), convertClangSrcLoc(
+							currTU->getCompiler().getSourceManager(), loc.second)));
 
 // ---------------------------------------------------- OPENCL ----------------------------------------------------
 // if OpenCL related annotations have been found, create OclBaseAnnotation and add it to the funciton's attribute
@@ -836,7 +838,7 @@ core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) cons
 //////////////////////////////////////////////////////////////////
 ///
 core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const {
-	assert(!currTU.empty() && "translation unit is null");
+	assert(currTU && "translation unit is null");
 	assert(stmt && "Calling convertStmt with a NULL pointer");
 	return stmtutils::tryAggregateStmts(builder, stmtConvPtr->Visit(const_cast<Stmt*>(stmt)));
 }
@@ -859,14 +861,14 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 ///  CONVERT FUNCTION DECLARATION
 core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint) {
 
-	assert(!currTU.empty() && funcDecl->hasBody() && "Function has no body!");
+	assert(currTU.empty() && funcDecl->hasBody() && "Function has no body!");
 
 	VLOG(1) << "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
 
 	VLOG(1) << "#----------------------------------------------------------------------------------#";
 	VLOG(1)
 		<< "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl << "-> at location: ("
-				<< utils::location(funcDecl->getSourceRange().getBegin(), currTU.top()->getCompiler().getSourceManager())
+				<< utils::location(funcDecl->getSourceRange().getBegin(), currTU->getCompiler().getSourceManager())
 				<< "): " << std::endl << "\tIsRecSubType: " << ctx.isRecSubFunc << std::endl
 				<< "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl << "\tEmpty map: "
 				<< ctx.recVarExprMap.size();
@@ -908,7 +910,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			const TranslationUnit* rightTU = this->getTranslationUnitForDefinition(decl);
 
 			if ( rightTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
-				this->currTU.push(rightTU);
+				this->currTU = rightTU;
 
 				// look up the lambda cache to see if this function has been
 				// already converted into an IR lambda expression.
@@ -921,7 +923,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				}
 
 				// reset the translation unit
-				currTU.pop();
+				currTU = GETTU(funcDecl);
 			}
 		}
 	}
@@ -1385,7 +1387,6 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 														oldCtor.getLambda().getParameterList(), 
 														builder.compoundStmt(newBody));
 
-	currTU.pop();
 	return newCtor;
 }
 
@@ -1394,8 +1395,8 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 //							AST CONVERTER
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::CallExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
-	mFact.currTU.push(&tu);
-	
+	mFact.setTranslationUnit(&tu);
+
 	core::StatementPtr bodyStmt = mFact.convertStmt( body );
 	auto callExpr = core::transform::outline(mgr, bodyStmt);
 
@@ -1417,7 +1418,6 @@ core::CallExprPtr ASTConverter::handleBody(const clang::Stmt* body, const Transl
 		args)
 	);
 
-	mFact.currTU.pop();
 	return callExpr;
 }
 
@@ -1427,7 +1427,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	// defined before starting the parser otherwise reading literals results in wrong values.
 	const TranslationUnit* rightTU = mFact.getTranslationUnitForDefinition(funcDecl);
 	assert(rightTU && "Translation unit for function not found.");
-	mFact.currTU.push(rightTU);
+	mFact.setTranslationUnit(rightTU);
 
 	// Collect global variables for the whole program and build globalStruct
 	insieme::utils::Timer t("Globals.collect");
@@ -1455,7 +1455,6 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	assert( lambdaExpr && "Conversion of function did not return a lambda expression");
 
 	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
-	mFact.currTU.pop();
 	return mProgram;
 }
 
