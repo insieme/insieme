@@ -90,15 +90,14 @@ namespace conversion {
 	FinalActions attachLog( [&] () { END_LOG_STMT_CONVERSION(retIr); } )
 
 #define START_LOG_STMT_CONVERSION(stmt) \
-	assert(!convFact.currTU.empty()); \
 	VLOG(1) << "\n****************************************************************************************\n" \
 			 << "Converting statement [class: '" << stmt->getStmtClassName() << "'] \n" \
 			 << "-> at location: (" \
-			 << utils::location(stmt->getLocStart(), convFact.currTU.top()->getCompiler().getSourceManager()) << "): "; \
+			 << utils::location(stmt->getLocStart(), convFact.getCurrentSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
 		VLOG(2) << "Dump of clang statement:\n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
-		stmt->dump(convFact.currTU.top()->getCompiler().getSourceManager()); \
+		stmt->dump(convFact.getCurrentSourceManager()); \
 	}
 
 #define END_LOG_STMT_CONVERSION(stmt) \
