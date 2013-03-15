@@ -110,7 +110,7 @@ TEST(CppConversion, FileTest) {
 		NodeManager mgr;
 
 		fe::conversion::ConversionFactory convFact( mgr, prog, true/*=isCXX*/ );
-		convFact.setTranslationUnit(tu);
+		convFact.setTranslationUnit(&tu);
 /*
 		if(tp.isStatement()){
 			const clang::Stmt* td = tp.getStatement();
