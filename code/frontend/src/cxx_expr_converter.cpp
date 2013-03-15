@@ -1042,11 +1042,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 		symbols["TYPE"] = convFact.convertType(classType);
 
 		// FIXME: can not make this simpler, better use builder
-		auto tmp = builder.parseStmt(
-				"TYPE a = createArray(ref.var, ctor, size);",
+		ret = builder.parseExpr(
+				"createArray(ref.var, ctor, size)",
 				symbols
 		);
-		ret = tmp.as<core::DeclarationStmtPtr>()->getInitialization();
+
+		auto exp = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
+									mgr.getLangBasic().getRefVar(),
+						  			ctorFunc,
+					  	  			builder.literal(gen.getUInt8(), toString(numElements)));
 	}
 	else{
 		//single object constructor
