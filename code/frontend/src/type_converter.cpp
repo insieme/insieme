@@ -761,7 +761,6 @@ core::TypePtr ConversionFactory::TypeConverter::handleTagType(const TagDecl* tag
 }
 
 core::TypePtr ConversionFactory::CTypeConverter::Visit(const clang::Type* type) {
-	VLOG(2) << "C";
 	return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type);
 }
 

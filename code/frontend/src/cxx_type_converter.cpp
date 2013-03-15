@@ -81,13 +81,13 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 
 	// check if this type has being already translated.
 	// this boost conversion but also avoids infinite recursion while resolving class member function
-	std::map<const TagType*, core::TypePtr>::iterator match = mClassTypeMap.find(tagType);
-	if(match != mClassTypeMap.end()){
+	std::map<const TagType*, core::TypePtr>::iterator match = convFact.ctx.typeCache.find(tagType);
+	if(match != convFact.ctx.typeCache.end()){
 		return match->second;
 	}
 
 	auto classType = TypeConverter::VisitTagType(tagType);
-	mClassTypeMap[tagType] = classType;
+	convFact.ctx.typeCache[tagType] = classType;
 
 	// if is a c++ class, we need to annotate some stuff
 	if (llvm::isa<clang::RecordType>(tagType)){
@@ -124,10 +124,10 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				ctorDecl->isMoveConstructor() ){
 				
 				if (ctorDecl->isUserProvided ()){
-					core::LambdaExprPtr&& ctorLambda = convFact.convertCtor(ctorDecl, classType).as<core::LambdaExprPtr>();
-					if (ctorLambda){
+					core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
+					if (ctorLambda && ctorLambda.isa<core::LambdaExprPtr>()){
 						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
-						classInfo.addConstructor(ctorLambda);
+						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 					}
 				}
 			}
@@ -156,8 +156,11 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			// FIXME: we should not have to look for the F$%ing TU everyplace, this should be
 			// responsability of the convert func function
 			convFact.getTranslationUnitForDefinition(method);  // FIXME:: remove this crap
-			core::LambdaExprPtr&& methodLambda = convFact.convertFunctionDecl(method).as<core::LambdaExprPtr>();
-			methodLambda = convFact.memberize  (method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION);
+			core::ExpressionPtr&& methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
+
+			if(methodLambda.isa<core::LambdaExprPtr>()) {
+				methodLambda = convFact.memberize  (method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION);
+			}
 
 			if (VLOG_IS_ON(2)){
 				VLOG(2) << " ############ member! #############";
@@ -169,10 +172,12 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				VLOG(2) << "           ############";
 			}
 
-			classInfo.addMemberFunction(llvm::cast<clang::NamedDecl>(method)->getNameAsString(), 
-										methodLambda,
+			if(methodLambda.isa<core::LambdaExprPtr>()) {
+				classInfo.addMemberFunction(llvm::cast<clang::NamedDecl>(method)->getNameAsString(), 
+										methodLambda.as<core::LambdaExprPtr>(),
 										(*methodIt)->isVirtual(), 
 										(*methodIt)->isConst());
+			}
 		}
 		
 		// append metha information to the class definition
@@ -180,8 +185,8 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 	}
 
 	// cache the new implementation
-	mClassTypeMap.erase(tagType);
-	mClassTypeMap[tagType] = classType;
+	convFact.ctx.typeCache.erase(tagType);
+	convFact.ctx.typeCache[tagType] = classType;
 
 	END_LOG_TYPE_CONVERSION(classType) ;
 	return classType;
@@ -588,7 +593,12 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitSubstTemplateTypeParmTy
 }
 
 core::TypePtr ConversionFactory::CXXTypeConverter::Visit(const clang::Type* type) {
-	VLOG(2) << "CXX";
+	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
+	//check cache for type
+	auto fit = convFact.ctx.typeCache.find(type);
+	if(fit != convFact.ctx.typeCache.end()) {
+		return fit->second;
+	}
 	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
 }
 
