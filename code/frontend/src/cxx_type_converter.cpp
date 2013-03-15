@@ -81,7 +81,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 
 	// check if this type has being already translated.
 	// this boost conversion but also avoids infinite recursion while resolving class member function
-	std::map<const TagType*, core::TypePtr>::iterator match = convFact.ctx.typeCache.find(tagType);
+	auto match = convFact.ctx.typeCache.find(tagType);
 	if(match != convFact.ctx.typeCache.end()){
 		return match->second;
 	}
