@@ -87,8 +87,8 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 	}
 
 	auto classType = TypeConverter::VisitTagType(tagType);
-	convFact.ctx.typeCache[tagType] = classType;
 
+	convFact.ctx.typeCache[tagType] = classType;
 	// if is a c++ class, we need to annotate some stuff
 	if (llvm::isa<clang::RecordType>(tagType)){
 		if (!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl()))
@@ -113,6 +113,10 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			classType = builder.structType(parents, classType.as<core::StructTypePtr>()->getElements());
 		}
 
+		// update cache with base classes, for upcomming uses
+		convFact.ctx.typeCache.erase(tagType);
+		convFact.ctx.typeCache[tagType] = classType;
+
 		// copy ctor, move ctor, default ctor
 		clang::CXXRecordDecl::ctor_iterator ctorIt = classDecl->ctor_begin();
 		clang::CXXRecordDecl::ctor_iterator ctorEnd= classDecl->ctor_end();
@@ -131,7 +135,8 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 					}
 					*/
-					core::LambdaExprPtr&& ctorLambda = convFact.convertCtor(ctorDecl, classType).as<core::LambdaExprPtr>();
+
+					core::LambdaExprPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::LambdaExprPtr>();
 					if (ctorLambda ){
 						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
 						classInfo.addConstructor(ctorLambda);

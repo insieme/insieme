@@ -1258,18 +1258,29 @@ core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 
 //////////////////////////////////////////////////////////////////
 ///
-core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorDecl* ctorDecl, core::TypePtr irClassType){
+core::LambdaExprPtr ConversionFactory::convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl){ 
 
-	const clang::FunctionDecl* innerFunc = llvm::cast<clang::FunctionDecl>(ctorDecl);
-	SET_TU(innerFunc);
-
-	if (!innerFunc){
+	const clang::FunctionDecl* ctorAsFunct = llvm::cast<clang::FunctionDecl>(ctorDecl);
+	SET_TU(ctorAsFunct);
+	if (!ctorAsFunct){
 		RESTORE_TU();
 		return core::LambdaExprPtr();
 	}
 
+	const clang::Type* recordType = (llvm::cast<clang::TypeDecl> (llvm::cast<clang::CXXMethodDecl>(ctorDecl)->getParent())
+											  )->getTypeForDecl();
+	auto fit = ctx.typeCache.find(recordType);
+	core::TypePtr irClassType;
+	if (fit != ctx.typeCache.end()){
+		irClassType = fit->second;
+	}
+	else{
+		 irClassType =  convertType (recordType);
+		 assert(false && "make sure this is right, a type should be stored already in cache");
+	}
+
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-	core::LambdaExprPtr oldCtor= convertFunctionDecl (innerFunc).as<core::LambdaExprPtr>();
+	core::LambdaExprPtr oldCtor= convertFunctionDecl (ctorAsFunct).as<core::LambdaExprPtr>();
 	
 	core::FunctionTypePtr ty = oldCtor.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>();
 	//  has being already memberized??? then is already solved
@@ -1286,8 +1297,8 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 	core::StatementList newBody;
 	
 	// for each initializer, transform it
-	clang::CXXConstructorDecl::init_const_iterator it  = llvm::cast<clang::CXXConstructorDecl>(innerFunc)->init_begin();
-	clang::CXXConstructorDecl::init_const_iterator end = llvm::cast<clang::CXXConstructorDecl>(innerFunc)->init_end();
+	clang::CXXConstructorDecl::init_const_iterator it  = llvm::cast<clang::CXXConstructorDecl>(ctorAsFunct)->init_begin();
+	clang::CXXConstructorDecl::init_const_iterator end = llvm::cast<clang::CXXConstructorDecl>(ctorAsFunct)->init_end();
 	for(; it != end; it++){
 
 		core::StringValuePtr ident;

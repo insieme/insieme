@@ -470,7 +470,7 @@ public:
 	 * @param irClassType the class to be build
 	 * @return the lambda expression of the constructor, NOT memberized
 	 */
-	core::LambdaExprPtr convertCtor (const clang::CXXConstructorDecl* ctorDecl, core::TypePtr irClassType);
+	core::LambdaExprPtr convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl);
 
 	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
 
