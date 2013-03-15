@@ -991,10 +991,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 
 	const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
 
-	core::TypePtr&& irClassType = convFact.convertType( callExpr->getType().getTypePtr() );
-
 	// to begin with we translate the constructor as a regular function
-	auto f = convFact.convertCtor(ctorDecl, irClassType);
+	auto f = convFact.convertFunctionDecl(ctorDecl);
 	assert(f.isa<core::LambdaExprPtr>());
 
 	// with the transformed lambda, we can extract the body and re-type it into a constructor type
@@ -1002,6 +1000,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	auto params = f.as<core::LambdaExprPtr>()->getParameterList();
 
 	// update parameter list with a class-typed parameter in the first possition
+	core::TypePtr&& irClassType = convFact.convertType( callExpr->getType().getTypePtr() );
 	core::TypePtr&&  refToClass = builder.refType(irClassType);
 	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
 													 f.as<core::ExpressionPtr>(),

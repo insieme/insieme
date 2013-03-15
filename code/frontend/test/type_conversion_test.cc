@@ -412,7 +412,7 @@ TEST(TypeConversion, FileTest) {
 		NodeManager mgr;
 
 		ConversionFactory convFactory( mgr, prog );
-		convFactory.setTranslationUnit(tu);
+		convFactory.setTranslationUnit(&tu);
 
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
 
