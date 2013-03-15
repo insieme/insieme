@@ -136,7 +136,8 @@ namespace utils {
 		while( (purified = purifyType(type)) != type )
 			type = purified;
 		
-		purified->dump();
+		if (VLOG_IS_ON(2))
+			purified->dump();
 		LOG(DEBUG) << purified->getTypeClassName();
 
 		if( const TagType* tagTy = llvm::dyn_cast<TagType>(purified) ) {

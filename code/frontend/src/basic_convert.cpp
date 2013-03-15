@@ -1215,7 +1215,6 @@ core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 		return func.as<core::LambdaExprPtr>();
 	}
 
-
 	// with the transformed lambda, we can extract the body and re-type it into the right type
 	core::StatementPtr body = func.as<core::LambdaExprPtr>()->getBody();
 	auto params = func.as<core::LambdaExprPtr>()->getParameterList();
@@ -1224,7 +1223,6 @@ core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 	auto thisVar = builder.variable(ownerClassType);
 	core::VariableList paramList = params.getElements();
 	paramList.insert(paramList.begin(), thisVar);
-	
 
 	// build the new function, 
 	// return type depends on type of function
@@ -1304,8 +1302,6 @@ core::LambdaExprPtr ConversionFactory::convertCtor (const clang::CXXConstructorD
 
 			expr = convertExpr((*it)->getInit());
 			init = builder.literal("this", builder.refType(irClassType));
-			
-		//	assert(false && "base init not implemented");
 		}
 		else if ((*it)->isMemberInitializer ()){
 			// create access to the member of the struct/class
