@@ -124,10 +124,17 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				ctorDecl->isMoveConstructor() ){
 				
 				if (ctorDecl->isUserProvided ()){
-					core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
+					/*
+					core::ExpressionPtr&& ctorLambda = convFact.convertCtor(ctorDecl, classType).as<core::ExpressionPtr>();
 					if (ctorLambda && ctorLambda.isa<core::LambdaExprPtr>()){
 						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
 						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
+					}
+					*/
+					core::LambdaExprPtr&& ctorLambda = convFact.convertCtor(ctorDecl, classType).as<core::LambdaExprPtr>();
+					if (ctorLambda ){
+						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
+						classInfo.addConstructor(ctorLambda);
 					}
 				}
 			}
@@ -156,11 +163,16 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			// FIXME: we should not have to look for the F$%ing TU everyplace, this should be
 			// responsability of the convert func function
 			convFact.getTranslationUnitForDefinition(method);  // FIXME:: remove this crap
+			
+			core::LambdaExprPtr&& methodLambda = convFact.convertFunctionDecl(method).as<core::LambdaExprPtr>();
+			methodLambda = convFact.memberize  (method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION);
+			/*
 			core::ExpressionPtr&& methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
 
 			if(methodLambda.isa<core::LambdaExprPtr>()) {
 				methodLambda = convFact.memberize  (method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION);
 			}
+			*/
 
 			if (VLOG_IS_ON(2)){
 				VLOG(2) << " ############ member! #############";
@@ -172,12 +184,18 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				VLOG(2) << "           ############";
 			}
 
+			classInfo.addMemberFunction(llvm::cast<clang::NamedDecl>(method)->getNameAsString(), 
+										methodLambda,
+										(*methodIt)->isVirtual(), 
+										(*methodIt)->isConst());
+			/*
 			if(methodLambda.isa<core::LambdaExprPtr>()) {
 				classInfo.addMemberFunction(llvm::cast<clang::NamedDecl>(method)->getNameAsString(), 
 										methodLambda.as<core::LambdaExprPtr>(),
 										(*methodIt)->isVirtual(), 
 										(*methodIt)->isConst());
 			}
+			*/
 		}
 		
 		// append metha information to the class definition
