@@ -307,6 +307,11 @@ public:
 		return program;
 	}
 
+	clang::Preprocessor& getCurrentPreprocessor() const {
+		assert(currTU && "FATAL: Translation unit not correctly set");
+		return currTU->getCompiler().getPreprocessor();
+	}
+
 	clang::SourceManager& getCurrentSourceManager() const {
 		assert(currTU && "FATAL: Translation unit not correctly set");
 		return currTU->getCompiler().getSourceManager();
@@ -319,7 +324,7 @@ public:
 
 	/** DEPRECATED */
 	void setTranslationUnit(const TranslationUnit* tu){
-		currTU;
+		currTU = tu;
 	}
 
 	/**

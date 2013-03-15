@@ -101,11 +101,10 @@ namespace conversion {
 	FinalActions attachLog( [&] () { END_LOG_EXPR_CONVERSION(retIr); } )
 
 #define START_LOG_EXPR_CONVERSION(expr) \
-	assert(!convFact.currTU.empty() && "we have no translation unit"); \
 	VLOG(1) <<  "\n****************************************************************************************\n" \
 			 << "Converting expression [class: '" << expr->getStmtClassName() << "']\n" \
 			 << "-> at location: (" <<	\
-				utils::location(expr->getLocStart(), convFact.currTU.top()->getCompiler().getSourceManager()) << "): "; \
+				utils::location(expr->getLocStart(), convFact.getCurrentSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
 		VLOG(2) << "Dump of clang expression: \n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
