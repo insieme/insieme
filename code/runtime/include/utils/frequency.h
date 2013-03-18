@@ -291,18 +291,14 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 
 	if(freq_str_orig) {
 
-		char freq_str[strlen(freq_str_orig)]; // needed since strtok modifies the string it's working on
-		strcpy(freq_str, freq_str_orig);
-
-		uint32* freqs;
-		uint32 length;
 		uint32 socketid = 0;
 
 		// get information from first core of the system, assume homogeneity
-		char *tok = strtok(freq_str, ",");
+		char *tok = strtok(freq_str_orig, ",");
 		uint32 freq = atoi(tok);
 
 		while(tok) {
+			freq = atoi(tok);
 			if(irt_cpu_freq_set_frequency_socket(socketid, freq) == 0)
 				irt_g_frequency_setting_specified = true;
 			else
