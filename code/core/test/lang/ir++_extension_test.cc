@@ -57,6 +57,17 @@ namespace lang {
 		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
 	}
 
+	TEST(IRppExtensions, VectorCtor) {
+		NodeManager nm;
+
+		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
+		auto element = ext.getVectorCtor();
+		dump(element);
+
+		// just check whether the code is not exhibiting errors
+		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+	}
+
 	TEST(IRppExtensions, ArrayDtor) {
 		NodeManager nm;
 

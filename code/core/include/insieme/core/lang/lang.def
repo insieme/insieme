@@ -425,7 +425,7 @@ LITERAL(RealToInt,			"real.to.int",				"(real<#a>, intTypeParam<#b>) -> int<#b>"
 LITERAL(Undefined, 			"undefined", 				"(type<'a>) -> 'a")
 LITERAL(InitZero,			"initZero",	 				"(type<'a>) -> 'a")
 LITERAL(Sizeof, 			"sizeof", 					"(type<'a>) -> uint<8>")
-LITERAL(IntTypeParamToInt, 	"int.type.param.to.int", 	"(intTypeParam<#n>)->int<8>")
+LITERAL(IntTypeParamToInt, 	"to.uint", 					"(intTypeParam<#n>)->uint<8>")
 
 // Arrays -------------------------------------------------------------------------------------------------------------
 
@@ -479,7 +479,7 @@ GROUP(Pointwise, VectorPointwise, VectorPointwiseUnary)
 // deprecated
 LITERAL(VectorSubscript,      	"vector.subscript",      	"(vector<'elem,#l>, uint<#a>) -> 'elem")
 LITERAL(VectorInitUniform,    	"vector.init.uniform",    	"('elem, intTypeParam<#a>) -> vector<'elem,#a>")
-LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(intTypeParam<#a>) -> vector<'elem,#a>")
+LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(type<'elem>, intTypeParam<#a>) -> vector<'elem,#a>")
 LITERAL(VectorInitPartial, 		"vector.init.partial",		"(list<'elem>, intTypeParam<#n>) -> vector<'elem,#n>")
 
 LITERAL(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>")
