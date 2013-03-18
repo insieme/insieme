@@ -62,12 +62,12 @@ int32 irt_cpu_freq_get_available_frequencies_core(uint32 coreid, uint32** freque
 	FILE* file = fopen(path_to_cpufreq, "r");
 
 	if(file == NULL) {
-		IRT_DEBUG("Instrumentation: Unable to open frequency file for reading for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to open frequency file for reading for core %u, file %s, reason: %s\n", coreid, path_to_cpufreq, strerror(errno));
 		return -2;
 	}
 
 	if(fscanf(file, "%u", &frequencies_temp[0]) != 1) {
-		IRT_DEBUG("Instrumentation: Unable to read available frequencies for worker %lu, file %s, reason: %s\n", worker->id.full, path_to_cpufreq, strerror(errno));
+		IRT_DEBUG("Instrumentation: Unable to read available frequencies for core %u, file %s, reason: %s\n", coreid, path_to_cpufreq, strerror(errno));
 		fclose(file);
 		return -1;
 	}
@@ -262,17 +262,19 @@ int32 irt_cpu_freq_set_frequency_core(irt_worker* worker, uint32 frequency) {
 int32 irt_cpu_freq_set_frequency_socket(uint32 socket, uint32 frequency) {
 	char path_to_cpufreq[1024] = { 0 };
 
+	int32 retval = 0;
+
 	for(uint32 coreid = (socket * IRT_HW_CORES_PER_SOCKET); coreid < ((socket + 1) * IRT_HW_CORES_PER_SOCKET); ++coreid) {
 		// write max, min, max because we don't know the old frequency and setting max below min is rejected by the OS
 		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_max_freq", coreid);
-		_irt_cpu_freq_write(path_to_cpufreq, frequency);
+		retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
 		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_min_freq", coreid);
-		_irt_cpu_freq_write(path_to_cpufreq, frequency);
+		retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
 		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_max_freq", coreid);
-		_irt_cpu_freq_write(path_to_cpufreq, frequency);
+		retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
 	}
 
-	return 0;
+	return retval;
 }
 
 /*
@@ -293,32 +295,16 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 		uint32 socketid = 0;
 
 		// get information from first core of the system, assume homogeneity
-		if((retval = irt_cpu_freq_get_available_frequencies_core(0, &freqs, &length)) == 0) {
+		char *tok = strtok(freq_str, ",");
+		uint32 freq = atoi(tok);
 
-			char *tok = strtok(freq_str, ",");
-			uint32 freq = atoi(tok);
-
-			while(tok) {
-				bool available;
-				for(uint32 i = 0; i < length; ++i) {
-					if(freq == freqs[i]) {
-						available = true;
-						break;
-					}
-				}
-				if(available) {
-					irt_g_frequency_setting_specified = true;
-					irt_cpu_freq_set_frequency_socket(socketid, freq);
-				} else {
-					IRT_DEBUG("Instrumentation: Requested frequency setting %s unknown", getenv(IRT_CPU_FREQUENCY));
-					irt_g_frequency_setting_specified = false;
-					retval = -1;
-				}
-				tok = strtok(NULL, ",");
-				++socketid;
-			}
-		} else {
-			irt_g_frequency_setting_specified = false;
+		while(tok) {
+			if(irt_cpu_freq_set_frequency_socket(socketid, freq) == 0)
+				irt_g_frequency_setting_specified = true;
+			else
+				irt_g_frequency_setting_specified = false;
+			tok = strtok(NULL, ",");
+			++socketid;
 		}
 	} else {
 		irt_g_frequency_setting_specified = false;
@@ -418,7 +404,7 @@ int32 irt_cpu_freq_set_frequency_core_env(irt_worker* worker) {
 					irt_g_frequency_setting_specified = true;
 					return retval;
 				} else {
-					IRT_DEBUG("Instrumentation: Requested frequency setting %s unknown", getenv(IRT_CPU_FREQUENCY));
+					IRT_DEBUG("Instrumentation: Requested frequency setting %s unknown", getenv(IRT_CPU_FREQUENCIES));
 					irt_g_frequency_setting_specified = false;
 					return -1;
 				}
