@@ -245,7 +245,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitBuiltinType(const BuiltinTy
 	case BuiltinType::LongDouble:	return gen.getDouble(); // unsopported FIXME
 
 	// not supported types
-	case BuiltinType::NullPtr:
+	case BuiltinType::NullPtr:		return builder.typeVariable("nullptr_t"); //gen.getAnyRef(); //FIXME how do we handle the std::nullptr_t??
 	case BuiltinType::Overload:
 	case BuiltinType::Dependent:
 	default:

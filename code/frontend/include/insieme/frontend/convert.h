@@ -470,11 +470,11 @@ public:
 	 * @param irClassType the class to be build
 	 * @return the lambda expression of the constructor, NOT memberized
 	 */
-	core::LambdaExprPtr convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl);
+	core::ExpressionPtr convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl);
 
 	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
 
-	void buildInterceptedExprCache(utils::Interceptor& interceptor);
+	void buildInterceptedCaches(utils::Interceptor& interceptor);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {

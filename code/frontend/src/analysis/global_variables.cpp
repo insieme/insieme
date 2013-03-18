@@ -128,8 +128,9 @@ GlobalVarCollector::buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, co
 /////////////////////////////////////////////////////////////////////////////////
 ///
 void GlobalVarCollector::operator()(const clang::Decl* decl) {
+	
 	if( interceptor.isIntercepted(decl) ) {
-		// or funcDecl is intercepted
+		// funcDecl is intercepted
 		VLOG(2) << "isIntercepted " << decl;
 		return; 
 	}
