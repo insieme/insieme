@@ -542,15 +542,18 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
 	// to begin with we translate the constructor as a regular function
-	auto f = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (methodDecl), false);
-	assert(f.isa<core::LambdaExprPtr>());
+	auto f = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (methodDecl), false).as<core::ExpressionPtr>();
 
 	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
 	core::TypePtr&& irClassType = ownerObj->getType();
-	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl), 
+	
+	core::LambdaExprPtr newFunc;
+	if(f.isa<core::LambdaExprPtr>()) {
+		newFunc = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl), 
 													 f.as<core::ExpressionPtr>(),
 													 irClassType, 
 													 core::FK_MEMBER_FUNCTION);
+	}
  
 	// correct the owner object reference, in case of pointer (ref<array<struct<...>,1>>) we need to
 	// index the first element
@@ -574,8 +577,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	}
 
 	// build expression and we are done!!!
-	core::TypePtr retTy = newFunc.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
-	core::CallExprPtr      ret  = builder.callExpr   (retTy, newFunc, args);
+	core::TypePtr retTy;
+	core::CallExprPtr ret;
+	if(f.isa<core::LambdaExprPtr>()) {
+		retTy = newFunc.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
+		ret  = builder.callExpr   (retTy, newFunc, args);
+	} else {
+		retTy = f.as<core::ExpressionPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
+		ret  = builder.callExpr (retTy, f, args);
+	}
 	if (VLOG_IS_ON(2)){
 		dumpPretty(&(*ret));
 	}
@@ -991,22 +1001,22 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 
 	const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
 
+	VLOG(2) << ctorDecl;
+
 	// to begin with we translate the constructor as a regular function
 	auto f = convFact.convertFunctionDecl(ctorDecl);
-	assert(f.isa<core::LambdaExprPtr>());
+	//assert(f.isa<core::LambdaExprPtr>());
 
+	//FIXME not needed? remove
 	// with the transformed lambda, we can extract the body and re-type it into a constructor type
-	core::StatementPtr body = f.as<core::LambdaExprPtr>()->getBody();
-	auto params = f.as<core::LambdaExprPtr>()->getParameterList();
+	//core::StatementPtr body = f.as<core::LambdaExprPtr>()->getBody();
+	//auto params = f.as<core::LambdaExprPtr>()->getParameterList();
 
 	// update parameter list with a class-typed parameter in the first possition
 	core::TypePtr&& irClassType = convFact.convertType( callExpr->getType().getTypePtr() );
+	//ref<CLASSTYPE> -- type for "this" pointer
 	core::TypePtr&&  refToClass = builder.refType(irClassType);
-	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
-													 f.as<core::ExpressionPtr>(),
-													 refToClass, 
-													 core::FK_CONSTRUCTOR);
-
+	
 	// reconstruct Arguments list, fist one is a scope location for the object
 	core::ExpressionList args;
 	args.push_back (builder.undefinedVar(refToClass));
@@ -1021,6 +1031,17 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	clang::CXXConstructExpr::const_arg_iterator end = callExpr->arg_end();
 	for (; arg!=end; ++arg){
 		args.push_back(Visit(*arg));
+	}
+
+	core::ExpressionPtr newFunc;
+	if(!f.isa<core::LambdaExprPtr>()) { 
+		//intercepted if !lambdaexpr
+		newFunc = f; 
+	} else {
+		newFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
+													 f.as<core::ExpressionPtr>(),
+													 refToClass, 
+													 core::FK_CONSTRUCTOR);
 	}
 
 	// build expression and we are done!!!

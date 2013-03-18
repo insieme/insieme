@@ -317,7 +317,11 @@ const core::ProgramPtr& Program::convert() {
 	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
 
 	if(!CommandLineOptions::Intercept.empty()) {
+		LOG(INFO) << "=== Intercepting functions ===";
 		intercept(CommandLineOptions::Intercept);
+		insieme::utils::Timer interceptTimer("Frontend.Intercept");
+		interceptTimer.stop();
+		LOG(INFO) << interceptTimer; 
 	}
 
 	analyzeFuncDependencies();
