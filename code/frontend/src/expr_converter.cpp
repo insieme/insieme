@@ -396,24 +396,7 @@ ExpressionList ConversionFactory::ExprConverter::getFunctionArguments(const core
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitIntegerLiteral(const clang::IntegerLiteral* intLit) {
 	START_LOG_EXPR_CONVERSION(intLit);
-
 	core::ExpressionPtr retExpr;
-
-	/**********************************************
-	 *  DEPRECATED CODE: do not read raw code
-	 *  1)  translation unit use is deprecated
-	 *  2)	templating may fail with this aproach
-	 *
-	std::string&& strVal =
-	GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), intLit->getExprLoc() );
-
-	core::GenericTypePtr intTy = core::static_pointer_cast<const core::GenericType>(
-			convFact.convertType(GET_TYPE_PTR(intLit)));
-
-	return (retExpr = builder.literal(
-	// retrieve the string representation from the source code
-			strVal, intTy));
-	*************************************************/
 
 	std::string value;
 	if (!intLit->getValue().isNegative()) {
@@ -450,17 +433,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitIntegerLiteral(const 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitFloatingLiteral(const clang::FloatingLiteral* floatLit) {
 	START_LOG_EXPR_CONVERSION(floatLit);
-
 	core::ExpressionPtr retExpr;
-
-	/* ****************************************************
-	 * DEPRECATED CODE
-	return (retExpr =
-	// retrieve the string representation from the source code
-			builder.literal(
-					GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), floatLit->getExprLoc()),
-					convFact.convertType(GET_TYPE_PTR(floatLit))));
-	**************************************************/
 
 	const llvm::fltSemantics& sema = floatLit->getValue().getSemantics();
 
@@ -481,17 +454,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitFloatingLiteral(const
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitCharacterLiteral(const clang::CharacterLiteral* charLit) {
 	START_LOG_EXPR_CONVERSION(charLit);
-
 	core::ExpressionPtr retExpr;
-
-	/* ****************************************************
-	 * DEPRECATED CODE
-	return (retExpr = builder.literal(
-			// retrieve the string representation from the source code
-			GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), charLit->getExprLoc()),
-			(charLit->getKind() == CharacterLiteral::Wide ?
-					mgr.getLangBasic().getWChar() : mgr.getLangBasic().getChar())));
-	********************************************************/
 	
 	string value;
 	unsigned int v = charLit->getValue();
@@ -734,8 +697,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 		// collects the type of each argument of the expression
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
-		assert(!convFact.currTU.empty() && "Translation unit not set.");
-
 		const FunctionDecl* definition = NULL;
 		const TranslationUnit* rightTU = NULL;
 
@@ -748,13 +709,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			rightTU = convFact.getTranslationUnitForDefinition(fd);
 			if (rightTU && fd->hasBody()) { definition = fd; }
 		}
-
-		// point to the right TU
-		if (rightTU)
-			convFact.currTU.push (rightTU);
-		else
-			convFact.currTU.push (convFact.currTU.top());
-
 
 		if (!definition) {
 			//-----------------------------------------------------------------------------------------------------
@@ -824,7 +778,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
 					 packedArgs);
 
-			convFact.currTU.pop();
 			return irNode;
 		}
 
@@ -833,7 +786,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 		auto lambdaExpr = core::static_pointer_cast<const core::Expression>(
 				convFact.convertFunctionDecl(definition));
 
-		convFact.currTU.pop();
 		return (irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs));
 	} 
 

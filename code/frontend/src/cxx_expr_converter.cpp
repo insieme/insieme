@@ -146,7 +146,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(c
 //						EXPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr) {
-	assert(false && "explicit cast cast expression");
+// FIXME: do the thing here
+	return (ExprConverter::VisitExplicitCastExpr(castExpr));
+
 	/*START_LOG_EXPR_CONVERSION(castExpr);
 
 	const core::IRBuilder& builder = convFact.builder;
@@ -989,10 +991,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 
 	const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
 
-	core::TypePtr&& irClassType = convFact.convertType( callExpr->getType().getTypePtr() );
-
 	// to begin with we translate the constructor as a regular function
-	auto f = convFact.convertCtor(ctorDecl, irClassType);
+	auto f = convFact.convertFunctionDecl(ctorDecl);
 	assert(f.isa<core::LambdaExprPtr>());
 
 	// with the transformed lambda, we can extract the body and re-type it into a constructor type
@@ -1000,6 +1000,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	auto params = f.as<core::LambdaExprPtr>()->getParameterList();
 
 	// update parameter list with a class-typed parameter in the first possition
+	core::TypePtr&& irClassType = convFact.convertType( callExpr->getType().getTypePtr() );
 	core::TypePtr&&  refToClass = builder.refType(irClassType);
 	core::LambdaExprPtr newFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
 													 f.as<core::ExpressionPtr>(),
@@ -1781,145 +1782,93 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDefaultArgExpr(
 }
 
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryExpr(const clang::CXXBindTemporaryExpr* bindTempExpr) {
-	assert (false && "bind temporary expr");
-	/*
 
-	core::IRBuilder& builder =
-	const_cast<core::IRBuilder&>(convFact.builder);
 
-	core::ExpressionPtr retExpr;
+	 const clang::CXXTemporary* temp = bindTempExpr->getTemporary();
 
-	core::ExpressionPtr parentThisStack = convFact.cxxCtx.thisStack2;
+	 // we may visit the BindTemporaryExpr twice. Once in the temporary lookup and
+	 // then when we visit the subexpr of the expression with cleanups. If this is the second time that we
+	 // visit the expr do not create a new declaration statement and just return the previous one.
+	 ConversionFactory::ConversionContext::TemporaryInitMap::const_iterator fit = convFact.ctx.tempInitMap.find(temp);
+	 if (fit != convFact.ctx.tempInitMap.end()) {
+		// variable found in the map
+		return(fit->second.getVariable());
+	 }
 
-	const Type* classDecl = bindTempExpr->getType().getTypePtr();
-	const core::TypePtr& classTypePtr = convFact.convertType(classDecl);
+	 const clang::CXXDestructorDecl* dtorDecl = temp->getDestructor();
+	 const clang::CXXRecordDecl* classDecl = dtorDecl->getParent();
 
-	core::VariablePtr var = builder.variable(builder.refType(classTypePtr));
-	cxxCtx.thisStack2 = var;
+	 core::TypePtr&& irType = convFact.convertType(classDecl->getTypeForDecl());
 
-	retExpr = Visit(bindTempExpr->getSubExpr());
 
-	convFact.cxxCtx.thisStack2 = parentThisStack;
+	 // create a new var for the temporary and initialize it with the inner expr IR
+	 const clang::Expr * inner = bindTempExpr->getSubExpr();
+	 core::ExpressionPtr body = convFact.convertExpr(inner);
 
-	return retExpr;
-	*/
+	 core::DeclarationStmtPtr declStmt;
+
+	  declStmt = convFact.builder.declarationStmt(convFact.builder.refType(irType),(body));
+
+	 // store temporary and declaration stmt in Map
+	 convFact.ctx.tempInitMap.insert(std::make_pair(temp,declStmt));
+
+	 return declStmt.getVariable();
+
 }
 
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(const clang::ExprWithCleanups* cleanupExpr) {
+
+	// perform subtree traversal and get the temporaries that the cleanup expression creates
 	std::vector<const clang::CXXTemporary*>&& tmps = utils::lookupTemporaries (cleanupExpr->getSubExpr ());
-	assert (false && "exp with cleanpus expr");
-	/*
 
-	core::IRBuilder& builder =
-	const_cast<core::IRBuilder&>(convFact.builder);
-
-	CXXConversionFactory::CXXConversionContext::ScopeObjects parentScopeObjects =
-	convFact.cxxCtx.scopeObjects;
-	CXXConversionFactory::CXXConversionContext::ScopeObjects parentScopeObjectsCopy =
-	parentScopeObjects;
-
-	while (!convFact.cxxCtx.scopeObjects.empty()) {
-		convFact.cxxCtx.scopeObjects.pop();
-	}
-
-	core::ExpressionPtr retExpr;
-	retExpr = Visit(cleanupExpr->getSubExpr());
+	// convert the subexpr to IR
+	const Expr* inner = cleanupExpr->getSubExpr();
+	core::ExpressionPtr innerIR = convFact.convertExpr(inner);
 
 	vector<core::StatementPtr> stmtList;
-	stmtList.push_back(retExpr);
 
-	vector<core::VariablePtr> params;
-	vector<core::ExpressionPtr> args;
-	core::VariablePtr var = 0;
-	core::VariablePtr result = 0;
-	bool addReturn = false;
+	// for each of the temporaries(reverse) create an IR var decl and push it at the beginning of the
+	// lambda body
+	for (std::vector<const clang::CXXTemporary*>::reverse_iterator it = tmps.rbegin() ; it != tmps.rend(); ++it) {
 
-	//if this stack is reference (this means that the temporary expression is bound to a reference)
-	// we pass it to the upper scope.
-	if (core::dynamic_pointer_cast<const core::Variable>(
-					convFact.cxxCtx.thisStack2)) {
-
-		const ValueDecl* varDecl = tempHandler.getVariableDeclaration(
-				core::dynamic_pointer_cast<const core::Variable>(
-						convFact.cxxCtx.thisStack2),
-				convFact.ctx.varDeclMap);
-
-		if (varDecl) {
-			if (GET_TYPE_PTR(varDecl)->isReferenceType()) {
-
-				if (!convFact.cxxCtx.scopeObjects.empty()) {
-
-					var = convFact.cxxCtx.scopeObjects.top();
-					convFact.cxxCtx.scopeObjects.pop();
-					params.push_back(var);
-					args.push_back(builder.undefinedVar(var.getType()));
-					result = var;
-					addReturn = true;
-				}
-			}
-		} else {
-			result = core::dynamic_pointer_cast<const core::Variable>(
-					convFact.cxxCtx.thisStack2);
+		ConversionFactory::ConversionContext::TemporaryInitMap::const_iterator fit = convFact.ctx.tempInitMap.find(*it);
+	    if (fit != convFact.ctx.tempInitMap.end()) {
+		       // variable found in the map
+		       stmtList.push_back(fit->second);
 		}
-	}
+	 }
 
-	tempHandler.handleTemporariesinScope(params,
-			stmtList, args, convFact.cxxCtx.scopeObjects,
-			parentScopeObjects, true, true);
 
-	convFact.cxxCtx.scopeObjects = parentScopeObjectsCopy;
 
-	while (!convFact.cxxCtx.scopeObjects.empty()) {
+	core::TypePtr lambdaType = convFact.convertType(cleanupExpr->getType().getTypePtr());
+	stmtList.push_back(convFact.builder.returnStmt(innerIR));
 
-		var = convFact.cxxCtx.scopeObjects.top();
-		convFact.cxxCtx.scopeObjects.pop();
-		const ValueDecl* varDecl = tempHandler.getVariableDeclaration(
-				var, convFact.ctx.varDeclMap);
-		if (!GET_TYPE_PTR(varDecl)->isReferenceType()) {
-			params.push_back(var);
-			args.push_back(var);
-		}
-	}
+	//build the lambda and its parameters
 
-	convFact.cxxCtx.scopeObjects = parentScopeObjects;
+	core::StatementPtr&& lambdaBody = convFact.builder.compoundStmt(stmtList);
+	vector<core::VariablePtr> params = core::analysis::getFreeVariables(lambdaBody);
+	core::LambdaExprPtr lambda = convFact.builder.lambdaExpr(lambdaType, lambdaBody, params);
 
-	core::TypePtr funcType;
 
-	if (result) {
-		if (addReturn) {
-			stmtList.push_back(
-					convFact.builder.returnStmt(result));
-		}
-		funcType = result.getType();
+	//build the lambda call and its arguments
+	vector<core::ExpressionPtr> packedArgs;
 
-	} else {
+	std::for_each(params.begin(), params.end(), [&packedArgs] (core::VariablePtr varPtr) {
+		 packedArgs.push_back(varPtr);
+	});
 
-		funcType = convFact.builder.getLangBasic().getUnit();
-	}
+	core::ExpressionPtr irNode = convFact.builder.callExpr(lambdaType, lambda, packedArgs);
 
-	if (core::StructTypePtr globalStruct= convFact.ctx.globalStruct.first){
-
-		params.push_back(convFact.ctx.globalVar);
-		args.push_back(convFact.ctx.globalVar);
-	}
-
-	core::StatementPtr body = convFact.builder.compoundStmt(stmtList);
-	core::LambdaExprPtr&& lambdaExpr = convFact.builder.lambdaExpr(funcType,body, params);
-
-	return convFact.builder.callExpr(funcType, lambdaExpr, args);
-	*/
+	return irNode;
 }
+
 
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTemporaryExpr(
 		const clang::MaterializeTemporaryExpr* materTempExpr) {
-	assert(false && "materialize temp");
-	/*
 
-	core::ExpressionPtr retExpr;
-	retExpr = Visit(materTempExpr->GetTemporaryExpr());
+	return Visit(materTempExpr->GetTemporaryExpr());
 
-	return retExpr;
-	*/
+
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

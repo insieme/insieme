@@ -112,7 +112,7 @@ TEST(StmtConversion, FileTest) {
 		NodeManager mgr;
 
 		fe::conversion::ConversionFactory convFactory( mgr, prog );
-		convFactory.setTranslationUnit(tu);
+		convFactory.setTranslationUnit(&tu);
 
 		if(tp.isStatement()) {
 			StatementPtr&& stmt = convFactory.convertStmt( tp.getStatement() );

@@ -64,8 +64,12 @@ class temporariesVisitor : public clang::ConstStmtVisitor<temporariesVisitor, bo
 
 		bool 	Visit (const clang::Stmt *S){
 			std::cout << " ************************* " << std::endl;
+
 			if (llvm::isa<clang::CXXBindTemporaryExpr>(S))
 				tempList.push_back(llvm::cast<clang::CXXBindTemporaryExpr>(S)->getTemporary ());
+
+			for( clang::Stmt::const_child_iterator child_it = S->child_begin(); child_it!= S->child_end(); child_it++)
+				Visit(*child_it);
 
 			return false;
 		}
