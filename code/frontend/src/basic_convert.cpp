@@ -181,10 +181,12 @@ void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector& globColl
 	VLOG(2) << ctx.globalVar;
 }
 
-void ConversionFactory::buildInterceptedExprCache(utils::Interceptor& interceptor) {
+void ConversionFactory::buildInterceptedCaches(utils::Interceptor& interceptor) {
 	//copy interceptor exprcache into lambdaexpr cache
+	ctx.typeCache = interceptor.buildInterceptedTypeCache(*this);
 	ctx.lambdaExprCache = interceptor.buildInterceptedExprCache(*this);
 	VLOG(2) << "lambdaExprCache: " << ctx.lambdaExprCache;
+	VLOG(2) << "typeCache " << ctx.typeCache;
 }
 
 
@@ -310,7 +312,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	QualType&& varTy = valDecl->getType();
 	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
 
-	VLOG(2)	<< "clang type: " << varTy.getAsString(); // cm
+	VLOG(2)	<< "clang type: " << varTy.getAsString();
 	VLOG(2)	<< "ir type:    " << irType;
 
 	//// check wether the variable is marked to be volatile 
@@ -867,6 +869,13 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	SET_TU(funcDecl);
 	assert(currTU && funcDecl->hasBody() && "Function has no body!");
 
+	// check if the funcDecl was already converted into an lambdaExpr
+	ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(funcDecl);
+	if (fit != ctx.lambdaExprCache.end()) {
+		RESTORE_TU();
+		return fit->second;
+	}	
+
 	VLOG(1) << "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
 
 	VLOG(1) << "#----------------------------------------------------------------------------------#";
@@ -920,11 +929,16 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	}
 
+	/* moved to begining of convertfunctiondecl
+	 * FIXME remove
+	 * */
+	/*
 	ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(funcDecl);
 	if (fit != ctx.lambdaExprCache.end()) {
 		RESTORE_TU();
 		return fit->second;
 	}
+	*/
 
 	if (!components.empty()) {
 		// we are dealing with a recursive type
@@ -1258,17 +1272,17 @@ core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 
 //////////////////////////////////////////////////////////////////
 ///
-core::LambdaExprPtr ConversionFactory::convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl){ 
+core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl){ 
 
 	const clang::FunctionDecl* ctorAsFunct = llvm::cast<clang::FunctionDecl>(ctorDecl);
 	SET_TU(ctorAsFunct);
+
 	if (!ctorAsFunct){
 		RESTORE_TU();
 		return core::LambdaExprPtr();
 	}
 
-	const clang::Type* recordType = (llvm::cast<clang::TypeDecl> (llvm::cast<clang::CXXMethodDecl>(ctorDecl)->getParent())
-											  )->getTypeForDecl();
+	const clang::Type* recordType = (llvm::cast<clang::TypeDecl> (llvm::cast<clang::CXXMethodDecl>(ctorDecl)->getParent()))->getTypeForDecl();
 	auto fit = ctx.typeCache.find(recordType);
 	core::TypePtr irClassType;
 	if (fit != ctx.typeCache.end()){
@@ -1280,13 +1294,19 @@ core::LambdaExprPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 	}
 
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-	core::LambdaExprPtr oldCtor= convertFunctionDecl (ctorAsFunct).as<core::LambdaExprPtr>();
+	core::ExpressionPtr oldCtor = convertFunctionDecl(ctorAsFunct).as<core::ExpressionPtr>();
+
+	if( !oldCtor.isa<core::LambdaExprPtr>() ) {
+		RESTORE_TU();
+		return oldCtor;
+	}
 	
 	core::FunctionTypePtr ty = oldCtor.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>();
 	//  has being already memberized??? then is already solved
 	if (ty.isMemberFunction() ||
 		ty.isConstructor() ||
 		ty.isDestructor() ){
+		RESTORE_TU();
 		return oldCtor.as<core::LambdaExprPtr>();
 	}
 
@@ -1313,6 +1333,7 @@ core::LambdaExprPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 
 			expr = convertExpr((*it)->getInit());
 			init = builder.literal("this", builder.refType(irClassType));
+		std::cout << "********** BASE ***********" << std::endl;
 		}
 		else if ((*it)->isMemberInitializer ()){
 			// create access to the member of the struct/class
@@ -1326,30 +1347,34 @@ core::LambdaExprPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 																	 builder.getTypeLiteral(memberTy) ));
 
 			expr = convertExpr((*it)->getInit());
+		std::cout << "********** MEMBER  ***********" << std::endl;
 		}
-		else if ((*it)->isAnyMemberInitializer ()){
-			assert(false && "any member not implemented");
-		}
-		else if ((*it)->isIndirectMemberInitializer ()){
+		if ((*it)->isIndirectMemberInitializer ()){
 			assert(false && "indirect init not implemented");
 		}
-		else if ((*it)->isInClassMemberInitializer ()){
+		if ((*it)->isInClassMemberInitializer ()){
 			assert(false && "in class member not implemented");
 		}
-		else if ((*it)->isDelegatingInitializer ()){
+		if ((*it)->isDelegatingInitializer ()){
 			assert(false && "delegating init not implemented");
 		}
-		else if ((*it)->isPackExpansion () ){
+		if ((*it)->isPackExpansion () ){
 			assert(false && "pack expansion not implemented");
 		}
 
 		// if the expr is a constructor then we are initializing a member an object, 
 		// we have to substitute first argument on constructor by the
 		// right reference to the member object (addressed by init)
-		if (expr.isa<core::CallExprPtr>() &&
-		    expr.as<core::CallExprPtr>().getFunctionExpr().as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
-			core::CallExprAddress addr(expr.as<core::CallExprPtr>());
-			initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
+		if (expr.isa<core::CallExprPtr>()){
+			core::ExpressionPtr ptr = expr.as<core::CallExprPtr>().getFunctionExpr();
+			if (ptr.isa<core::LambdaExprPtr>() && 
+				ptr.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
+				core::CallExprAddress addr(expr.as<core::CallExprPtr>());
+				initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
+			}
+			else{
+				 assert(false && "you should not be here, contact Luis");
+			}
 		}
 		else{
 			//otherwise is a regular assigment intialization
@@ -1361,14 +1386,15 @@ core::LambdaExprPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 	}
 	
 	// push original body
-	core::StatementPtr body = oldCtor->getBody();
+	core::StatementPtr body = oldCtor.as<core::LambdaExprPtr>().getBody();
 	newBody.push_back(body);
 
 	// NOTE: function type and paramList do not change here
 	core::LambdaExprPtr newCtor =  builder.lambdaExpr  (ty, 
-														oldCtor.getLambda().getParameterList(), 
+														oldCtor.as<core::LambdaExprPtr>().getLambda().getParameterList(), 
 														builder.compoundStmt(newBody));
 
+	RESTORE_TU();
 	return newCtor;
 }
 
@@ -1417,8 +1443,8 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	t.stop();
 	LOG(INFO) << t;
 
-	//FIXME fill ctx.LambdaExprCache with literals for intercepted functions/...
-	mFact.buildInterceptedExprCache(mProg.getInterceptor());
+	//fills exprcache and type cache with types/literals for intercepted functions/...
+	mFact.buildInterceptedCaches(mProg.getInterceptor());
 
 	const core::ExpressionPtr& expr = mFact.convertFunctionDecl(funcDecl, true).as<core::ExpressionPtr>();
 

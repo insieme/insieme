@@ -56,6 +56,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclTemplate.h"
 
 
 namespace insieme{
@@ -212,6 +213,27 @@ clang::Decl* Indexer::getDefinitionFor (const std::string& symbol) const{
 ///
 Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Decl* decl) const{
 	assert(decl && "Cannot look up null pointer!");
+
+	if(llvm::isa<clang::FunctionDecl>(decl) ) {
+		const clang::FunctionDecl* fd = llvm::cast<clang::FunctionDecl>(decl);
+		switch( fd->getTemplatedKind() ) {
+			case clang::FunctionDecl::TemplatedKind::TK_NonTemplate:
+				return getDefAndTUforDefinition(buildNameTypeChain(fd));
+				break;
+			case clang::FunctionDecl::TemplatedKind::TK_FunctionTemplate:
+				break;
+			case clang::FunctionDecl::TemplatedKind::TK_MemberSpecialization:
+				VLOG(2) << buildNameTypeChain(fd);
+				VLOG(2) << buildNameTypeChain(fd->getMemberSpecializationInfo()->getInstantiatedFrom());
+				//FIXME hack (for interception) to get correct translationunit for templatespecialization
+				return TranslationUnitPair( { const_cast<clang::FunctionDecl*>(fd), getDefAndTUforDefinition(buildNameTypeChain(fd->getMemberSpecializationInfo()->getInstantiatedFrom())).second});
+				break;
+			case clang::FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
+				break;
+			case clang::FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:
+				break;
+		}
+	}
 	return getDefAndTUforDefinition(buildNameTypeChain(decl));
 }
 
