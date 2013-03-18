@@ -1313,6 +1313,7 @@ core::LambdaExprPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 
 			expr = convertExpr((*it)->getInit());
 			init = builder.literal("this", builder.refType(irClassType));
+		std::cout << "********** BASE ***********" << std::endl;
 		}
 		else if ((*it)->isMemberInitializer ()){
 			// create access to the member of the struct/class
@@ -1326,30 +1327,34 @@ core::LambdaExprPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 																	 builder.getTypeLiteral(memberTy) ));
 
 			expr = convertExpr((*it)->getInit());
+		std::cout << "********** MEMBER  ***********" << std::endl;
 		}
-		else if ((*it)->isAnyMemberInitializer ()){
-			assert(false && "any member not implemented");
-		}
-		else if ((*it)->isIndirectMemberInitializer ()){
+		if ((*it)->isIndirectMemberInitializer ()){
 			assert(false && "indirect init not implemented");
 		}
-		else if ((*it)->isInClassMemberInitializer ()){
+		if ((*it)->isInClassMemberInitializer ()){
 			assert(false && "in class member not implemented");
 		}
-		else if ((*it)->isDelegatingInitializer ()){
+		if ((*it)->isDelegatingInitializer ()){
 			assert(false && "delegating init not implemented");
 		}
-		else if ((*it)->isPackExpansion () ){
+		if ((*it)->isPackExpansion () ){
 			assert(false && "pack expansion not implemented");
 		}
 
 		// if the expr is a constructor then we are initializing a member an object, 
 		// we have to substitute first argument on constructor by the
 		// right reference to the member object (addressed by init)
-		if (expr.isa<core::CallExprPtr>() &&
-		    expr.as<core::CallExprPtr>().getFunctionExpr().as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
-			core::CallExprAddress addr(expr.as<core::CallExprPtr>());
-			initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
+		if (expr.isa<core::CallExprPtr>()){
+			core::ExpressionPtr ptr = expr.as<core::CallExprPtr>().getFunctionExpr();
+			if (ptr.isa<core::LambdaExprPtr>() && 
+				ptr.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
+				core::CallExprAddress addr(expr.as<core::CallExprPtr>());
+				initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
+			}
+			else{
+				 assert(false && "you should not be here, contact Luis");
+			}
 		}
 		else{
 			//otherwise is a regular assigment intialization
