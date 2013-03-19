@@ -136,6 +136,38 @@ namespace lang {
 				"	deallocator(block);"
 				"}"
 		);
+
+
+		/**
+		 * An operator converting a C++ reference into an IR reference.
+		 */
+		LANG_EXT_DERIVED(RefCppToIR,
+				"(struct { ref<'a> _cpp_ref } x)->ref<'a> { return x._cpp_ref; }"
+		);
+
+		/**
+		 * An operator converting an IR reference into a C++ reference.
+		 */
+		LANG_EXT_DERIVED(RefIRToCpp,
+				"let cppRef = struct { ref<'a> _cpp_ref } in "
+				"(ref<'a> x)->cppRef { return (cppRef) { x }; }"
+		);
+
+		/**
+		 * An operator converting a const C++ reference into an IR reference.
+		 */
+		LANG_EXT_DERIVED(RefConstCppToIR,
+				"(struct { ref<'a> _const_cpp_ref } x)->ref<'a> { return x._const_cpp_ref; }"
+		);
+
+		/**
+		 * An operator converting an IR reference into a const C++ reference.
+		 */
+		LANG_EXT_DERIVED(RefIRToConstCpp,
+				"let cppRef = struct { ref<'a> _const_cpp_ref } in "
+				"(ref<'a> x)->cppRef { return (cppRef) { x }; }"
+		);
+
 	};
 
 } // end namespace lang
