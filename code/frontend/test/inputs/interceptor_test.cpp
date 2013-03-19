@@ -34,63 +34,31 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+// ignore warnings
+#pragma GCC diagnostic ignored "-Wall"
 
-#include <gtest/gtest.h>
+namespace ns {
+	int simpleFunc(int x) { return x; }
+	struct S {
+		int memberFunc(int x) { return x; }
+	};
+}
 
-#include "insieme/core/analysis/ir++_utils.h"
+void intercept_simpleFunc() {
+	int a = 0;
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/full_check.h"
+	#pragma test "ns::simpleFunc(1)"
+	ns::simpleFunc(1);
+	
+	#pragma test "ns::simpleFunc(( *v1))"
+	ns::simpleFunc(a);
+}
 
-namespace insieme {
-namespace core {
-namespace analysis {
-
-	TEST(IRppUtils, PureVirtual) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		// BUG: free variables within binds have not been recognized correctly
-		// reason: recursive call for bound parameters was wrong =>
-
-		auto funType = builder.parseType("A::()->unit").as<FunctionTypePtr>();
-
-		ASSERT_TRUE(funType);
-		EXPECT_TRUE(funType->isMemberFunction());
-
-		// create a pure virtual version
-		auto pureVirtual = builder.getPureVirtual(funType);
-
-		// should be correct
-		EXPECT_TRUE(checks::check(pureVirtual).empty()) << checks::check(pureVirtual);
-
-		EXPECT_TRUE(isPureVirtual(pureVirtual));
-	}
-
-	TEST(IRppUtils, References) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		auto type = builder.genericType("A");
-
-		// test references
-		EXPECT_FALSE(isCppRef(type));
-		EXPECT_PRED1(isCppRef, getCppRef(type));
-		EXPECT_EQ(type,getCppRefElementType(getCppRef(type)));
+void intercept_memFunc() {
+	ns::S s;
+	int a = 0;
+	#pragma test "ns::S::memberFunc(v1, ( *v2))"
+	s.memberFunc(a);
+}
 
 
-		// test const references
-		EXPECT_FALSE(isConstCppRef(type));
-		EXPECT_PRED1(isConstCppRef, getConstCppRef(type));
-		EXPECT_EQ(type,getConstCppRefElementType(getConstCppRef(type)));
-
-
-		// test mixture
-		EXPECT_FALSE(isCppRef(getConstCppRef(type)));
-		EXPECT_FALSE(isConstCppRef(getCppRef(type)));
-	}
-
-} // end namespace analysis
-} // end namespace core
-} // end namespace insieme

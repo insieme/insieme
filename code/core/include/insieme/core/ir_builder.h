@@ -652,6 +652,22 @@ namespace core {
 		 */
 		ExpressionPtr getPureVirtual(const FunctionTypePtr& memberFunctionType) const;
 
+
+		/**
+		 * Converts a given IR reference into a C++ reference.
+		 */
+		ExpressionPtr toCppRef(const ExpressionPtr& ref) const;
+
+		/**
+		 * Converts a given IR reference into a const C++ reference.
+		 */
+		ExpressionPtr toConstCppRef(const ExpressionPtr& ref) const;
+
+		/**
+		 * Converts a (const) C++ reference in an IR reference.
+		 */
+		ExpressionPtr toIRRef(const ExpressionPtr& ref) const;
+
 	private:
 
 		unsigned extractNumberFromExpression(ExpressionPtr& expr) const;

@@ -106,6 +106,65 @@ namespace analysis {
 	 */
 	bool isPureVirtual(const NodePtr& node);
 
+
+	// ---------------------------- References --------------------------------------
+
+	/**
+	 * Checks whether the given type is a C++ reference type. A type is a C++ reference
+	 * type in case it has the shape
+	 *
+	 * 			struct { ref<'a> _cpp_ref; }
+	 *
+	 * @param type the type to be tested
+	 * @return true if it is a C++ reference type, false otherwise
+	 */
+	bool isCppRef(const TypePtr& type);
+
+	/**
+	 * Creates a C++ reference type referencing an instance of the given element type.
+	 *
+	 * @param elementType the type of the element to be referenced
+	 * @return the C++ reference type referencing an element of the given type
+	 */
+	TypePtr getCppRef(const TypePtr& elementType);
+
+	/**
+	 * Extracts the element type of a given C++ reference type.
+	 *
+	 * @param cppRefType the type to be processed, must satisfy isCppRef(..)
+	 * @return the element type referenced by the given type
+	 */
+	TypePtr getCppRefElementType(const TypePtr& cppRefType);
+
+	/**
+	 * Checks whether the given type is a const C++ reference type. A type is a const C++ reference
+	 * type in case it has the shape
+	 *
+	 * 			struct { ref<'a> _const_cpp_ref; }
+	 *
+	 * @param type the type to be tested
+	 * @return true if it is a const C++ reference type, false otherwise
+	 */
+	bool isConstCppRef(const TypePtr& type);
+
+	/**
+	 * Creates a const C++ reference type referencing an instance of the given element type.
+	 *
+	 * @param elementType the type of the element to be referenced
+	 * @return the const C++ reference type referencing an element of the given type
+	 */
+	TypePtr getConstCppRef(const TypePtr& elementType);
+
+	/**
+	 * Extracts the element type of a given const C++ reference type.
+	 *
+	 * @param cppRefType the type to be processed, must satisfy isConstCppRef(..)
+	 * @return the element type referenced by the given type
+	 */
+	TypePtr getConstCppRefElementType(const TypePtr& cppRefType);
+
+
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

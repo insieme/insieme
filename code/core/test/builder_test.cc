@@ -41,6 +41,8 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/core/checks/full_check.h"
+#include "insieme/core/analysis/ir++_utils.h"
+
 #include "insieme/utils/logging.h"
 
 using namespace insieme::core;
@@ -127,5 +129,32 @@ TEST(IRBuilder, Assign) {
 	ExpressionPtr unionAssign = builder.assign(lhs, unionRhs);
 
 	check(unionAssign);
+
+}
+
+TEST(IRBuilder, References) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// create an IR, C++ and const C++ reference
+	TypePtr T = builder.genericType("T");
+	ExpressionPtr a = builder.literal(builder.refType(T),"a");
+	ExpressionPtr b = builder.literal(analysis::getCppRef(T),"b");
+	ExpressionPtr c = builder.literal(analysis::getConstCppRef(T),"c");
+
+	// apply sequence of semantic checks
+	for(auto cur : {
+			a, b, c,
+			builder.toCppRef(a), builder.toConstCppRef(a),
+			builder.toIRRef(b), builder.toIRRef(c)
+	}) {
+		// just apply checks
+		EXPECT_TRUE(checks::check(cur).empty()) << "\nNode: \n" << cur << "\nErrors: \n" << check(cur);
+	}
+
+	// check identities
+	EXPECT_EQ(a, builder.toIRRef(builder.toCppRef(a)));
+	EXPECT_EQ(a, builder.toIRRef(builder.toConstCppRef(a)));
 
 }
