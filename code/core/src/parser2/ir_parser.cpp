@@ -640,7 +640,7 @@ namespace parser {
 			static const auto member = std::make_shared<Action<process_named_type>>(seq(T, cap(id)));
 
 			g.addRule("T", rule(
-					seq("struct", opt(seq(":", non_empty_list(parent, ","))), "{", loop(seq(member, ";")), "}"),
+					seq("struct", opt(seq(":", non_empty_list(parent, ","))), "{", list(member,";"), opt(";"), "}"),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 						ParentList parents;
