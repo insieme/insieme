@@ -255,9 +255,9 @@ int irt_parse_papi_names(int32* irt_papi_event_set, const char* param_events, bo
 	const char papi_event_names_default[] = "PAPI_TOT_CYC:PAPI_L2_TCM:PAPI_L3_TCA:PAPI_L3_TCM";
 	// holds the actually requested papi event names (whether default or specified)
 	uint32 size = strlen(papi_event_names_default);
-	if(size < strlen(param_events))
+	if(param_events && size < strlen(param_events))
 		size = strlen(param_events);
-	char* papi_event_names = (char*)alloca(size*sizeof(char));
+	char* papi_event_names = (char*)alloca(size*sizeof(char) + 1);
 
 	int retval = 0;
 
