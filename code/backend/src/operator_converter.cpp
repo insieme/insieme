@@ -1054,6 +1054,28 @@ namespace backend {
 				return res;
 			});
 
+			res[irppExt.getVectorCtor()] = OP_CONVERTER({
+
+				// init array using a vector expression
+				auto type = CONVERT_TYPE(ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType());
+				auto size = CONVERT_ARG(2);
+				c_ast::ExpressionPtr res = c_ast::initArray(type, size);
+
+				// convert default constructor
+				auto ctor = CONVERT_ARG(1);
+
+				// add new if required
+				const auto& basic = LANG_BASIC;
+				if (basic.isRefVar(ARG(0))) {
+					// nothing to do
+				} else if (basic.isRefNew(ARG(0))) {
+					res = c_ast::newCall(res);
+				} else {
+					assert(false && "Creating Arrays of objects neither on heap nor stack isn't supported!");
+				}
+				return res;
+			});
+
 			res[irppExt.getArrayDtor()] = OP_CONVERTER({
 				assert(false && "Not implemented Operation!");
 				return CONVERT_ARG(0);

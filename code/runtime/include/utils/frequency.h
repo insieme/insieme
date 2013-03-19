@@ -213,7 +213,7 @@ int32 irt_cpu_freq_reset_frequency() {
 
 	for(uint32 coreid = 0; coreid < IRT_HW_CORES_PER_SOCKET * IRT_HW_NUM_SOCKETS; ++coreid) {
 		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/cpuinfo_max_freq", coreid);
-		if(frequency = _irt_cpu_freq_read(path_to_cpufreq) > 0)
+		frequency = _irt_cpu_freq_read(path_to_cpufreq);
 		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_max_freq", coreid);
 		retval |= _irt_cpu_freq_write(path_to_cpufreq, frequency);
 		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/cpuinfo_min_freq", coreid);
@@ -317,14 +317,15 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 
 	char path_to_cpufreq[1024] = { 0 };
 	char cpu_freq_output[1024] = { 0 };
-	char cpu_freq_output_frequencies[4*IRT_HW_NUM_SOCKETS];
+	char cpu_freq_output_frequencies[6*IRT_HW_NUM_SOCKETS];
+	uint32 output_counter = 0;
 
 	for(uint32 i = 0; i < IRT_HW_NUM_SOCKETS; ++i) {
 		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_cur_freq", i * IRT_HW_CORES_PER_SOCKET);
-		snprintf(cpu_freq_output_frequencies + i * 5, 5, "%4u,", _irt_cpu_freq_read(path_to_cpufreq));
+		output_counter += snprintf(&cpu_freq_output_frequencies[output_counter], 6, "%4u,", _irt_cpu_freq_read(path_to_cpufreq));
 	}
 
-	cpu_freq_output_frequencies[IRT_HW_NUM_SOCKETS] = '\0';
+	cpu_freq_output_frequencies[output_counter-1] = '\0';
 
 	if(irt_g_frequency_setting_specified)
 		sprintf(cpu_freq_output, "set, %s", cpu_freq_output_frequencies);

@@ -286,7 +286,7 @@ METRIC(TOTAL_L2_STM,			"total_PAPI_L2_STM",				unit,		sum(list(Metric::PAPI_L2_S
 //METRIC(TOTAL_MEM_SCY,			"total_PAPI_MEM_SCY",				unit,		sum(list(Metric::PAPI_MEM_SCY)));
 //METRIC(TOTAL_MEM_RCY,			"total_PAPI_MEM_RCY",				unit,		sum(list(Metric::PAPI_MEM_RCY)));
 //METRIC(TOTAL_MEM_WCY,			"total_PAPI_MEM_WCY",				unit,		sum(list(Metric::PAPI_MEM_WCY)));
-//METRIC(TOTAL_STL_ICY,			"total_PAPI_STL_ICY",				unit,		sum(list(Metric::PAPI_STL_ICY)));
+METRIC(TOTAL_STL_ICY,			"total_PAPI_STL_ICY",				unit,		sum(list(Metric::PAPI_STL_ICY)));
 //METRIC(TOTAL_FUL_ICY,			"total_PAPI_FUL_ICY",				unit,		sum(list(Metric::PAPI_FUL_ICY)));
 //METRIC(TOTAL_STL_CCY,			"total_PAPI_STL_CCY",				unit,		sum(list(Metric::PAPI_STL_CCY)));
 //METRIC(TOTAL_FUL_CCY,			"total_PAPI_FUL_CCY",				unit,		sum(list(Metric::PAPI_FUL_CCY)));
@@ -348,7 +348,7 @@ METRIC(TOTAL_L2_TCW,			"total_PAPI_L2_TCW",				unit,		sum(list(Metric::PAPI_L2_T
 METRIC(TOTAL_L3_TCW,			"total_PAPI_L3_TCW",				unit,		sum(list(Metric::PAPI_L3_TCW)));
 //METRIC(TOTAL_FML_INS,			"total_PAPI_FML_INS",				unit,		sum(list(Metric::PAPI_FML_INS)));
 //METRIC(TOTAL_FAD_INS,			"total_PAPI_FAD_INS",				unit,		sum(list(Metric::PAPI_FAD_INS)));
-//METRIC(TOTAL_FDV_INS,			"total_PAPI_FDV_INS",				unit,		sum(list(Metric::PAPI_FDV_INS)));
+METRIC(TOTAL_FDV_INS,			"total_PAPI_FDV_INS",				unit,		sum(list(Metric::PAPI_FDV_INS)));
 //METRIC(TOTAL_FSQ_INS,			"total_PAPI_FSQ_INS",				unit,		sum(list(Metric::PAPI_FSQ_INS)));
 //METRIC(TOTAL_FNV_INS,			"total_PAPI_FNV_INS",				unit,		sum(list(Metric::PAPI_FNV_INS)));
 METRIC(TOTAL_FP_OPS,			"total_PAPI_FP_OPS",				unit,		sum(list(Metric::PAPI_FP_OPS)));
