@@ -57,6 +57,7 @@
 #include "insieme/core/types/return_type_deduction.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/core/encoder/lists.h"
 
@@ -1396,6 +1397,49 @@ ExpressionPtr IRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
 	assert(type->isMemberFunction());
 	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
 	return callExpr(type, ext.getPureVirtual(), getTypeLiteral(type));
+}
+
+ExpressionPtr IRBuilder::toCppRef(const ExpressionPtr& ref) const {
+	assert(ref && ref->getType()->getNodeType() == NT_RefType);
+	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
+
+	// avoid multiple nesting of wrapping / unwrapping
+	if (core::analysis::isCallOf(ref, ext.getRefCppToIR())) {
+		return ref.as<CallExprPtr>()[0];	// strip of previous call
+	}
+
+	// use converter function all
+	return callExpr(core::analysis::getCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToCpp(), ref);
+}
+
+ExpressionPtr IRBuilder::toConstCppRef(const ExpressionPtr& ref) const {
+	assert(ref && ref->getType()->getNodeType() == NT_RefType);
+	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
+
+	// avoid multiple nesting of wrapping / unwrapping
+	if (core::analysis::isCallOf(ref, ext.getRefConstCppToIR())) {
+		return ref.as<CallExprPtr>()[0];	// strip of previous call
+	}
+
+	return callExpr(core::analysis::getConstCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToConstCpp(), ref);
+}
+
+ExpressionPtr IRBuilder::toIRRef(const ExpressionPtr& ref) const {
+	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
+	assert(ref && (analysis::isCppRef(ref->getType()) || analysis::isConstCppRef(ref->getType())));
+
+	// see whether this is a value which has just been wrapped
+	if (analysis::isCallOf(ref, ext.getRefIRToCpp()) || analysis::isCallOf(ref, ext.getRefIRToConstCpp())) {
+		return ref.as<CallExprPtr>()[0];		// strip of nested wrapper
+	}
+
+	// check whether it is a non-const reference
+	if (analysis::isCppRef(ref->getType())) {
+		return callExpr(refType(analysis::getCppRefElementType(ref->getType())), ext.getRefCppToIR(), ref);
+	}
+
+	// handle a const reference
+	return callExpr(refType(analysis::getConstCppRefElementType(ref->getType())), ext.getRefConstCppToIR(), ref);
 }
 
 } // namespace core

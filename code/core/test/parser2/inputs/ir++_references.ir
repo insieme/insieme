@@ -1,0 +1,23 @@
+
+let int = int<4>;
+
+let intRef = struct { ref<int> _cpp_ref; };
+
+let cpp2ir = (struct { ref<'a> _cpp_ref; } x)->ref<'a> { return x._cpp_ref; };
+
+let ir2cpp = (ref<'a> x)->struct { ref<'a> _cpp_ref; } { return (struct { ref<'a> _cpp_ref; }) { x }; };
+
+let dummy = (struct {} x) -> struct {} { return x; };
+
+unit main() {
+	
+	// create a reference
+	ref<int> x;
+	
+	// should work with explict type ..
+	intRef y = ir2cpp(x);
+
+	// ... and auto
+	auto z = ir2cpp(x);
+	
+}
