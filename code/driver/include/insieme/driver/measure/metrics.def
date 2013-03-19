@@ -73,9 +73,18 @@ METRIC(ENERGY_CORES_2_START,            "energy_cores_2_start_(j)",             
 METRIC(ENERGY_CORES_2_END,                      "energy_cores_2_end_(j)",                       j,                      none);
 METRIC(ENERGY_MC_2_START,               "energy_mc_2_start_(j)",                        j,                      none);
 METRIC(ENERGY_MC_2_END,                 "energy_mc_2_end_(j)",                  j,                      none);
-
-METRIC(ENERGY_START,		"energy_start_(j)",			j,			none);
-METRIC(ENERGY_END,			"energy_end_(j)",			j,			none);
+METRIC(ENERGY_PACKAGE_3_START,          "energy_package_3_start_(j)",                   j,                      none);
+METRIC(ENERGY_PACKAGE_3_END,                    "energy_package_3_end_(j)",                     j,                      none);
+METRIC(ENERGY_CORES_3_START,            "energy_cores_3_start_(j)",                     j,                      none);
+METRIC(ENERGY_CORES_3_END,                      "energy_cores_3_end_(j)",                       j,                      none);
+METRIC(ENERGY_MC_3_START,               "energy_mc_3_start_(j)",                        j,                      none);
+METRIC(ENERGY_MC_3_END,                 "energy_mc_3_end_(j)",                  j,                      none);
+METRIC(ENERGY_PACKAGE_4_START,          "energy_package_4_start_(j)",                   j,                      none);
+METRIC(ENERGY_PACKAGE_4_END,                    "energy_package_4_end_(j)",                     j,                      none);
+METRIC(ENERGY_CORES_4_START,            "energy_cores_4_start_(j)",                     j,                      none);
+METRIC(ENERGY_CORES_4_END,                      "energy_cores_4_end_(j)",                       j,                      none);
+METRIC(ENERGY_MC_4_START,               "energy_mc_4_start_(j)",                        j,                      none);
+METRIC(ENERGY_MC_4_END,                 "energy_mc_4_end_(j)",                  j,                      none);
 
 METRIC(TEMPERATURE_CORE_START,	"temperature_core_start_(c)",	c,			none);
 METRIC(TEMPERATURE_CORE_END,		"temperature_core_end_(c)",		c,			none);
@@ -208,11 +217,17 @@ METRIC(AVG_EFFICIENCY,				"avg_efficiency",			unit,		avg(l_div(l_div(Metric::CPU
 
 METRIC(TOTAL_ENERGY_PACKAGE_1,                          "total_energy_package_1",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_1_END, Metric::ENERGY_PACKAGE_1_START)));
 METRIC(TOTAL_ENERGY_PACKAGE_2,                          "total_energy_package_2",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_2_END, Metric::ENERGY_PACKAGE_2_START)));
+METRIC(TOTAL_ENERGY_PACKAGE_3,                          "total_energy_package_3",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_3_END, Metric::ENERGY_PACKAGE_3_START)));
+METRIC(TOTAL_ENERGY_PACKAGE_4,                          "total_energy_package_4",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_4_END, Metric::ENERGY_PACKAGE_4_START)));
 METRIC(TOTAL_ENERGY_CORES_1,                            "total_energy_cores_1",                         j,                      first(l_sub(Metric::ENERGY_CORES_1_END, Metric::ENERGY_CORES_1_START)));
 METRIC(TOTAL_ENERGY_CORES_2,                            "total_energy_cores_2",                         j,                      first(l_sub(Metric::ENERGY_CORES_2_END, Metric::ENERGY_CORES_2_START)));
+METRIC(TOTAL_ENERGY_CORES_3,                            "total_energy_cores_3",                         j,                      first(l_sub(Metric::ENERGY_CORES_3_END, Metric::ENERGY_CORES_3_START)));
+METRIC(TOTAL_ENERGY_CORES_4,                            "total_energy_cores_4",                         j,                      first(l_sub(Metric::ENERGY_CORES_4_END, Metric::ENERGY_CORES_4_START)));
 METRIC(TOTAL_ENERGY_MC_1,                               "total_energy_mc_1",                            j,                      first(l_sub(Metric::ENERGY_MC_1_END, Metric::ENERGY_MC_1_START)));
 METRIC(TOTAL_ENERGY_MC_2,                               "total_energy_mc_2",                            j,                      first(l_sub(Metric::ENERGY_MC_2_END, Metric::ENERGY_MC_2_START)));
-METRIC(TOTAL_ENERGY,                                    "total_energy",                                 j,                      add(Metric::TOTAL_ENERGY_PACKAGE_1, Metric::TOTAL_ENERGY_PACKAGE_2));
+METRIC(TOTAL_ENERGY_MC_3,                               "total_energy_mc_3",                            j,                      first(l_sub(Metric::ENERGY_MC_3_END, Metric::ENERGY_MC_3_START)));
+METRIC(TOTAL_ENERGY_MC_4,                               "total_energy_mc_4",                            j,                      first(l_sub(Metric::ENERGY_MC_4_END, Metric::ENERGY_MC_4_START)));
+METRIC(TOTAL_ENERGY,                                    "total_energy",                                 j,                      add(Metric::TOTAL_ENERGY_PACKAGE_1, add(Metric::TOTAL_ENERGY_PACKAGE_2, add(Metric::TOTAL_ENERGY_PACKAGE_3, Metric::TOTAL_ENERGY_PACKAGE_4))));
 
 METRIC(AVG_TEMPERATURE_CORE_START,							"avg_temperature_core_start",						c,				avg(Metric::TEMPERATURE_CORE_START));
 METRIC(AVG_TEMPERATURE_CORE_END,								"avg_temperature_core_end",							c,				avg(Metric::TEMPERATURE_CORE_END));
@@ -271,7 +286,7 @@ METRIC(TOTAL_L2_STM,			"total_PAPI_L2_STM",				unit,		sum(list(Metric::PAPI_L2_S
 //METRIC(TOTAL_MEM_SCY,			"total_PAPI_MEM_SCY",				unit,		sum(list(Metric::PAPI_MEM_SCY)));
 //METRIC(TOTAL_MEM_RCY,			"total_PAPI_MEM_RCY",				unit,		sum(list(Metric::PAPI_MEM_RCY)));
 //METRIC(TOTAL_MEM_WCY,			"total_PAPI_MEM_WCY",				unit,		sum(list(Metric::PAPI_MEM_WCY)));
-//METRIC(TOTAL_STL_ICY,			"total_PAPI_STL_ICY",				unit,		sum(list(Metric::PAPI_STL_ICY)));
+METRIC(TOTAL_STL_ICY,			"total_PAPI_STL_ICY",				unit,		sum(list(Metric::PAPI_STL_ICY)));
 //METRIC(TOTAL_FUL_ICY,			"total_PAPI_FUL_ICY",				unit,		sum(list(Metric::PAPI_FUL_ICY)));
 //METRIC(TOTAL_STL_CCY,			"total_PAPI_STL_CCY",				unit,		sum(list(Metric::PAPI_STL_CCY)));
 //METRIC(TOTAL_FUL_CCY,			"total_PAPI_FUL_CCY",				unit,		sum(list(Metric::PAPI_FUL_CCY)));
@@ -333,7 +348,7 @@ METRIC(TOTAL_L2_TCW,			"total_PAPI_L2_TCW",				unit,		sum(list(Metric::PAPI_L2_T
 METRIC(TOTAL_L3_TCW,			"total_PAPI_L3_TCW",				unit,		sum(list(Metric::PAPI_L3_TCW)));
 //METRIC(TOTAL_FML_INS,			"total_PAPI_FML_INS",				unit,		sum(list(Metric::PAPI_FML_INS)));
 //METRIC(TOTAL_FAD_INS,			"total_PAPI_FAD_INS",				unit,		sum(list(Metric::PAPI_FAD_INS)));
-//METRIC(TOTAL_FDV_INS,			"total_PAPI_FDV_INS",				unit,		sum(list(Metric::PAPI_FDV_INS)));
+METRIC(TOTAL_FDV_INS,			"total_PAPI_FDV_INS",				unit,		sum(list(Metric::PAPI_FDV_INS)));
 //METRIC(TOTAL_FSQ_INS,			"total_PAPI_FSQ_INS",				unit,		sum(list(Metric::PAPI_FSQ_INS)));
 //METRIC(TOTAL_FNV_INS,			"total_PAPI_FNV_INS",				unit,		sum(list(Metric::PAPI_FNV_INS)));
 METRIC(TOTAL_FP_OPS,			"total_PAPI_FP_OPS",				unit,		sum(list(Metric::PAPI_FP_OPS)));

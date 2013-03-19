@@ -365,7 +365,7 @@ namespace measure {
 
 	std::ostream& Quantity::printTo(std::ostream& out) const {
 		if (!valid) { return out << "invalid"; }
-		out << format("%.1f", value);
+		out << format("%.3f", value);
 		if (!unit->isUnit()) out << *unit;
 		return out;
 	}

@@ -45,6 +45,13 @@ typedef enum {
         PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2, // energy consumed
         PERFORMANCE_DATA_ENTRY_ENERGY_MC_2, // energy consumed
         PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2, // energy consumed
+        PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_3, // energy consumed
+        PERFORMANCE_DATA_ENTRY_ENERGY_MC_3, // energy consumed
+        PERFORMANCE_DATA_ENTRY_ENERGY_CORES_3, // energy consumed
+        PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_4, // energy consumed
+        PERFORMANCE_DATA_ENTRY_ENERGY_MC_4, // energy consumed
+        PERFORMANCE_DATA_ENTRY_ENERGY_CORES_4, // energy consumed
+
         PERFORMANCE_DATA_ENTRY_MEMORY_VIRT, // virtual memory size
         PERFORMANCE_DATA_ENTRY_MEMORY_RES, // resident set size
         PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE,

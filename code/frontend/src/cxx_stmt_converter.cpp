@@ -134,56 +134,29 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitDeclStmt(clang:
 //							RETURN STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
-	return StmtConverter::VisitReturnStmt(retStmt);
 
-	/*
-	//START_LOG_STMT_CONVERSION(retStmt);
+	stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
+	core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
 
-	CXXConversionFactory::CXXConversionContext::ScopeObjects parentDownStreamSScopeObjects =
-			cxxConvFact.cxxCtx.downStreamScopeObjects;
-	cxxConvFact.cxxCtx.downStreamScopeObjects = cxxConvFact.cxxCtx.scopeObjects;
+	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
+	// this is produced by the AST, but we should delegate this matters to the backend compiler
+	if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
 
-	core::StatementPtr retIr;
-
-	LOG_STMT_CONVERSION(retIr);
-
-	core::ExpressionPtr retExpr;
-	core::TypePtr retTy;
-	QualType clangTy;
-	if ( Expr* expr = retStmt->getRetValue()) {
-		retExpr = cxxConvFact.convertExpr(expr);
-		clangTy = expr->getType();
-		retTy = cxxConvFact.convertType(clangTy.getTypePtr());
-	} else {
-		retExpr = cxxConvFact.builder.getLangBasic().getUnitConstant();
-		retTy = cxxConvFact.builder.getLangBasic().getUnit();
+		retExpr = retExpr.as<core::CallExprPtr>()[0];
 	}
 
-	// arrays and vectors in C are always returned as reference, so the type of the return
-	// expression is of array (or vector) type we are sure we have to return a reference, in the
-	// other case we can safely deref the retExpr
-	// Obviously Ocl vectors are an exception and must be handled like scalars
-	if ((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
-					!clangTy.getUnqualifiedType()->isExtVectorType()) {
-		retTy = cxxConvFact.builder.refType(retTy);
+	if (retExpr.isa<core::CallExprPtr>()){
+		auto ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>();
+
+		if (ty.isConstructor()){
+			vector<core::StatementPtr> stmtList;
+			// copy ctor, what we actualy want to return is the second param
+			stmtList.push_back(builder.returnStmt(retExpr.as<core::CallExprPtr>()[1]));
+			core::StatementPtr retStatement = builder.compoundStmt(stmtList);
+			stmt = stmtutils::tryAggregateStmts(builder,stmtList );
+		}
 	}
-
-	vector<core::StatementPtr> stmtList;
-
-	tempHandler.handleTemporariesinScope(stmtList, cxxConvFact.cxxCtx.downStreamScopeObjects,
-			parentDownStreamSScopeObjects, false);
-
-	retIr = cxxConvFact.builder.returnStmt(utils::cast(retExpr, retTy));
-	stmtList.push_back(retIr);
-
-	core::StatementPtr retStatement = cxxConvFact.builder.compoundStmt(stmtList);
-
-	stmtutils::StmtWrapper&& body = stmtutils::tryAggregateStmts(cxxConvFact.builder,stmtList );
-
-	cxxConvFact.cxxCtx.downStreamScopeObjects = parentDownStreamSScopeObjects;
-
-	return body;
-	*/
+	return stmt;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

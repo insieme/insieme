@@ -34,52 +34,71 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
 
-#include "insieme/core/lang/basic.h"
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/checks/full_check.h"
+#include "clang/AST/StmtVisitor.h"
 
+#include <clang/AST/ExprCXX.h>
+#include <clang/AST/Expr.h>
+
+#include <iostream>
+#include <vector>
 namespace insieme {
-namespace core {
-namespace lang {
+namespace frontend { 
+namespace utils {
 
-	TEST(IRppExtensions, ArrayCtor) {
-		NodeManager nm;
+namespace{
 
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getArrayCtor();
-		dump(element);
+class temporariesVisitor : public clang::ConstStmtVisitor<temporariesVisitor, bool> {
 
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+
+	private:
+		std::vector<const clang::CXXTemporary*>& tempList;
+
+	public:
+		temporariesVisitor (std::vector<const clang::CXXTemporary*>& list) 
+			: tempList(list) {}
+
+
+		bool 	Visit (const clang::Stmt *S){
+			std::cout << " ************************* " << std::endl;
+
+			if (llvm::isa<clang::CXXBindTemporaryExpr>(S))
+				tempList.push_back(llvm::cast<clang::CXXBindTemporaryExpr>(S)->getTemporary ());
+
+			for( clang::Stmt::const_child_iterator child_it = S->child_begin(); child_it!= S->child_end(); child_it++)
+				Visit(*child_it);
+
+			return false;
+		}
+
+		std::vector<const clang::CXXTemporary*>& lookTemporaries (const clang::Expr* start){
+
+			this->Visit (llvm::cast<clang::Stmt>(start));
+			return tempList;
+		}
+
+};
+
+
+} //annonymous namespace
+
+	/**
+	 *  search in the inner tree for the used temporaries
+	 */
+	std::vector<const clang::CXXTemporary*> lookupTemporaries (const clang::Expr* innerExpr){
+
+		std::vector<const clang::CXXTemporary*> temporaries;
+		temporariesVisitor vis(temporaries);
+		vis.lookTemporaries(innerExpr);
+
+		return temporaries;
 	}
 
-	TEST(IRppExtensions, VectorCtor) {
-		NodeManager nm;
 
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getVectorCtor();
-		dump(element);
 
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-	}
-
-	TEST(IRppExtensions, ArrayDtor) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getArrayDtor();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-	}
-
-} // end namespace lang
-} // end namespace core
-} // end namespace insieme
-
+} //namespace utils 
+} //namespace frontend 
+} //namespace insieme 

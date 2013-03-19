@@ -10,7 +10,8 @@ PACKAGE=mpfr-$VERSION
 FILE=mpfr-$VERSION.tar.bz2
 
 echo "#### Downloading MPFR library ####"
-wget -nc http://www.mpfr.org/mpfr-current/$FILE
+#wget -nc http://www.mpfr.org/mpfr-current/$FILE
+wget -nc http://www.mpfr.org/mpfr-3.1.1/mpfr-3.1.1.tar.bz2
 
 RET=$?
 if [ $RET -ne 0 ]; then

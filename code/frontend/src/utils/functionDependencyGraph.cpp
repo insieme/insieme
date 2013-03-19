@@ -68,8 +68,12 @@ void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDe
  *************************************************************************************************/
 CallExprVisitor::CallGraph CallExprVisitor::getCallGraph(const clang::FunctionDecl* func) {
 	assert(func->hasBody() && "Function in the dependency graph has no body");
-
-	Visit(func->getBody());
+	
+	if( interceptor.isIntercepted(func)) {
+		VLOG(2) << "isIntercepted " << func << "("<<((void*)func)<<")";
+	} else  {
+		Visit(func->getBody());
+	}
 	return callGraph;
 }
 
@@ -86,7 +90,7 @@ void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
 		}
 	}
 
-	if (def && !interceptor.isIntercepted(def) ){
+	if (def){
 		callGraph.insert(def);
 	}
 }

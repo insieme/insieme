@@ -34,52 +34,19 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-
-#include "insieme/core/lang/basic.h"
-
-#include "insieme/core/ir_node.h"
-#include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/checks/full_check.h"
+#include <vector>
 
 namespace insieme {
-namespace core {
-namespace lang {
+namespace frontend { 
+namespace utils {
 
-	TEST(IRppExtensions, ArrayCtor) {
-		NodeManager nm;
+	/**
+	 *  search in the inner tree for the used temporaries
+	 */
+	std::vector<const clang::CXXTemporary*> lookupTemporaries (const clang::Expr* innerExpr);
 
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getArrayCtor();
-		dump(element);
 
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-	}
 
-	TEST(IRppExtensions, VectorCtor) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getVectorCtor();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-	}
-
-	TEST(IRppExtensions, ArrayDtor) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getArrayDtor();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-	}
-
-} // end namespace lang
-} // end namespace core
-} // end namespace insieme
-
+} //namespace utils 
+} //namespace frontend 
+} //namespace insieme 

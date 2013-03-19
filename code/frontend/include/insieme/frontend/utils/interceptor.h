@@ -44,6 +44,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/StmtVisitor.h"
 
+#include <boost/regex.hpp>
 #include <map>
 
 namespace insieme {
@@ -64,10 +65,11 @@ public:
 	{}
 
 	typedef std::set<const clang::Decl*> InterceptedDeclSet;
-	typedef std::set<const clang::Type*> InterceptedTypeSet;
+	typedef std::set<const clang::TypeDecl*> InterceptedTypeDeclSet;
 
 	typedef std::map<const clang::FunctionDecl*, std::string> InterceptedFuncMap;
 	typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> InterceptedExprCache;
+	typedef std::map<const clang::Type*, insieme::core::TypePtr> InterceptedTypeCache;
 
 	InterceptedDeclSet& getInterceptedDecls() { return interceptedDecls; }
 	InterceptedFuncMap& getInterceptedFuncMap() { return interceptedFuncMap; }
@@ -79,34 +81,38 @@ public:
 	bool isIntercepted(const clang::Decl* decl) const { return interceptedDecls.find(decl) != interceptedDecls.end(); }
 
 	InterceptedExprCache buildInterceptedExprCache(insieme::frontend::conversion::ConversionFactory& convFact);
+	Interceptor::InterceptedTypeCache buildInterceptedTypeCache(insieme::frontend::conversion::ConversionFactory& convFact);
 
 private:
 	insieme::frontend::utils::Indexer& indexer;
 	insieme::core::IRBuilder builder;
 	InterceptedDeclSet interceptedDecls;
 	InterceptedFuncMap interceptedFuncMap;
-	InterceptedTypeSet interceptedTypes;
+	InterceptedTypeDeclSet interceptedTypes;
 
-	//FIXME use regex instead of strings
 	std::set<std::string> toIntercept;
 };
 
 struct InterceptVisitor : public clang::StmtVisitor<InterceptVisitor> {
 
 	insieme::frontend::utils::Interceptor::InterceptedDeclSet& interceptedDecls;
-	insieme::frontend::utils::Interceptor::InterceptedTypeSet& interceptedTypes;
+	insieme::frontend::utils::Interceptor::InterceptedFuncMap& interceptedFuncMap;
+	insieme::frontend::utils::Interceptor::InterceptedTypeDeclSet& interceptedTypes;
 	std::set<std::string>& toIntercept;
+	boost::regex rx;
 
 	InterceptVisitor(
 			insieme::frontend::utils::Interceptor::InterceptedDeclSet& interceptedDecls, 
-			insieme::frontend::utils::Interceptor::InterceptedTypeSet& interceptedTypes,
+			insieme::frontend::utils::Interceptor::InterceptedFuncMap& interceptedFuncMap,
+			insieme::frontend::utils::Interceptor::InterceptedTypeDeclSet& interceptedTypes,
 			std::set<std::string>& toIntercept) 
 		: interceptedDecls(interceptedDecls), 
+		interceptedFuncMap(interceptedFuncMap), 
 		interceptedTypes(interceptedTypes),
 		toIntercept(toIntercept)
 	{}
 
-	void intercept(const clang::FunctionDecl* d);
+	void intercept(const clang::FunctionDecl* d, boost::regex rx);
 	
 	void VisitStmt(clang::Stmt* stmt);
 
