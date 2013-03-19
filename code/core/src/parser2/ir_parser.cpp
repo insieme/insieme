@@ -251,8 +251,11 @@ namespace parser {
 			TokenIter resEnd = findNext(info, begin, range.end(), '{');
 			if (resEnd == range.end()) {
 				resEnd = findNext(info, begin, range.end(), Token::createIdentifier("return"));
+			} else if (resEnd->getLexeme() == "{" && (begin->getLexeme() == "struct" || begin->getLexeme() == "union")) {
+				resEnd = findNext(info, resEnd+1, range.end(), '}') + 1;
 			}
 			TypePtr resType = cur.grammar.match(cur, begin, resEnd, "T").as<TypePtr>();
+			assert(resType && "Unable to parse result type!");
 
 			// build resulting type
 			return cur.functionType(params, resType);
