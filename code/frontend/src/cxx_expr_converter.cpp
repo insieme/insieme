@@ -1086,7 +1086,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 											utils::cast(arrSizeExpr, gen.getUInt4()));
 		}
 
-		// fixme, array size
+		// FIXME, array size
 		retExp = builder.refNew(builder.refVar(placeHolder));
 	}
 	else{
@@ -1131,7 +1131,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(const clang::CXXDeleteExpr* deleteExpr) {
 	START_LOG_EXPR_CONVERSION(deleteExpr);
 
-	if (deleteExp->isArrayForm () )
+	if (deleteExpr->isArrayForm () )
 		assert(false && "array delete not supported yet");
 
 	core::ExpressionPtr retExpr;
