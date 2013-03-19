@@ -295,10 +295,9 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 
 		// get information from first core of the system, assume homogeneity
 		char *tok = strtok(freq_str_orig, ",");
-		uint32 freq = atoi(tok);
 
 		while(tok) {
-			freq = atoi(tok);
+			uint32 freq = atoi(tok);
 			if(irt_cpu_freq_set_frequency_socket(socketid, freq) == 0)
 				irt_g_frequency_setting_specified = true;
 			else
