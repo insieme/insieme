@@ -73,16 +73,13 @@
 
 int32 irt_check_papi_counter_combinations(const char* param_events) {
 
-	char list_of_events[IRT_INST_PAPI_MAX_COUNTERS_COMBINATIONS*PAPI_MAX_STR_LEN];
+	char* list_of_events = (char*)alloca(strlen(param_events)*sizeof(char));
 
-	if(strcmp(param_events,"") != 0) {
-		strcpy(list_of_events, param_events);
-	} else if(getenv(IRT_INST_PAPI_EVENTS)) {
-		// get papi counter names from environment variable if present, take default otherwise
-		strcpy(list_of_events, getenv(IRT_INST_PAPI_EVENTS));
-	} else {
-		IRT_ASSERT(false, IRT_ERR_INSTRUMENTATION, "ERROR: No PAPI event names supplied via parameter or environment variable to check combinations!\n");
+	if(param_events) {
+		if(strlen(param_events) > 0)
+			strcpy(list_of_events, param_events);
 	}
+	IRT_ASSERT(strlen(list_of_events) > 0, IRT_ERR_INSTRUMENTATION, "ERROR: No PAPI event names supplied via parameter or environment variable to check combinations!\n");
 
 	int retval = 0;
 
@@ -246,7 +243,7 @@ int32 irt_check_papi_counter_combinations(const char* param_events) {
  */
 
 int irt_check_papi_counter_combinations_from_env() {
-	return irt_check_papi_counter_combinations("");
+	return irt_check_papi_counter_combinations(getenv(IRT_INST_PAPI_EVENTS));
 }
 
 /*
@@ -257,16 +254,17 @@ int irt_parse_papi_names(int32* irt_papi_event_set, const char* param_events, bo
 	// default papi events if environment variable and param_events are not set
 	const char papi_event_names_default[] = "PAPI_TOT_CYC:PAPI_L2_TCM:PAPI_L3_TCA:PAPI_L3_TCM";
 	// holds the actually requested papi event names (whether default or specified)
-	char papi_event_names[IRT_INST_PAPI_MAX_COUNTERS*PAPI_MAX_STR_LEN];
+	uint32 size = strlen(papi_event_names_default);
+	if(size < strlen(param_events))
+		size = strlen(param_events);
+	char* papi_event_names = (char*)alloca(size*sizeof(char));
 
 	int retval = 0;
 
-	if(strcmp(param_events, "") != 0)
-		strcpy(papi_event_names, param_events);
-	else if(getenv(IRT_INST_PAPI_EVENTS))
-		// get papi counter names from environment variable if present, take default otherwise
-		strcpy(papi_event_names, getenv(IRT_INST_PAPI_EVENTS));
-	else
+	if(param_events) {
+		if(strlen(param_events) > 0)
+			strcpy(papi_event_names, param_events);
+	} else
 		strcpy(papi_event_names, papi_event_names_default);
 
 	// used for string token parsing
@@ -274,16 +272,22 @@ int irt_parse_papi_names(int32* irt_papi_event_set, const char* param_events, bo
 	char* cur_tok;
 	uint32 number_of_events_supplied = 0;
 	uint32 number_of_events_added = 0;
+	uint32 index = 0;
 
 	// get the first event
 	if((papi_event_toks[0] = strtok(papi_event_names, ":")) != NULL)
-		number_of_events_supplied++;
+		++number_of_events_supplied;
 	else
 		return -1;
 
-	// get all remaining events
-	while((cur_tok = strtok(NULL, ":")) != NULL)
+	index += strlen(papi_event_toks[0]) + 1;
+
+	// get all remaining events, using own indexing to make strtok thread-safe
+	while((cur_tok = strtok(papi_event_names + index, ":")) != NULL) {
+		//printf("worker: %u, event: %s\n", irt_worker_get_current()->id.thread, cur_tok);
 		papi_event_toks[number_of_events_supplied++] = cur_tok;
+		index += strlen(cur_tok) + 1;
+	}
 
 	IRT_ASSERT(number_of_events_supplied <= IRT_INST_PAPI_MAX_COUNTERS, IRT_ERR_INSTRUMENTATION, "ERROR: Runtime currently supports max %u counters, but %u were supplied!\n", IRT_INST_PAPI_MAX_COUNTERS, number_of_events_supplied)
 
@@ -319,7 +323,7 @@ int irt_parse_papi_names(int32* irt_papi_event_set, const char* param_events, bo
  */
 
 void irt_parse_papi_names_from_env(int32* irt_papi_event_set) {
-	irt_parse_papi_names(irt_papi_event_set, "", false);
+	irt_parse_papi_names(irt_papi_event_set, getenv(IRT_INST_PAPI_EVENTS), false);
 }
 
 /*
@@ -348,11 +352,11 @@ void irt_initialize_papi() {
 
 void irt_initialize_papi_thread(int32* irt_papi_event_set ) {
 
-	//int32 retval = 0;
+	int32 retval = 0;
 
 	*irt_papi_event_set = PAPI_NULL; // necessary, otherwise PAPI_create_eventset() will fail
 
-	if(PAPI_create_eventset(irt_papi_event_set) != PAPI_OK)
+	if((retval = PAPI_create_eventset(irt_papi_event_set)) != PAPI_OK)
 		IRT_DEBUG("Instrumentation: Error while trying to create PAPI event set! Reason: %s\n", PAPI_strerror(retval));
 
 	// parse event names and add them	
