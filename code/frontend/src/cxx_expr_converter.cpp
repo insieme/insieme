@@ -56,6 +56,8 @@
 #include "insieme/utils/functional_utils.h"
 
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/ir++_extension.h"
+
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -997,30 +999,29 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	START_LOG_EXPR_CONVERSION(callExpr);
 	const core::IRBuilder& builder = convFact.builder;
 
-// TODO:  array constructor
-
+// TODO:  array constructor with no default initialization (CXX11)
 
 	const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
 
-	VLOG(2) << ctorDecl;
+	const clang::Type* classType= callExpr->getType().getTypePtr();
+	core::TypePtr&& irClassType = convFact.convertType(classType);
 
-	// to begin with we translate the constructor as a regular function
+	// it might be an array construction
+	size_t numElements =0;
+	if (irClassType->getNodeType() == core::NT_VectorType) {
+		numElements = irClassType.as<core::VectorTypePtr>()->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
+		irClassType	= irClassType.as<core::VectorTypePtr>()->getElementType();
+	}
+
+	// to begin with we translate the constructor as a regular function but with initialization list
 	auto f = convFact.convertFunctionDecl(ctorDecl);
-	//assert(f.isa<core::LambdaExprPtr>());
-
-	//FIXME not needed? remove
-	// with the transformed lambda, we can extract the body and re-type it into a constructor type
-	//core::StatementPtr body = f.as<core::LambdaExprPtr>()->getBody();
-	//auto params = f.as<core::LambdaExprPtr>()->getParameterList();
 
 	// update parameter list with a class-typed parameter in the first possition
-	core::TypePtr&& irClassType = convFact.convertType( callExpr->getType().getTypePtr() );
-	//ref<CLASSTYPE> -- type for "this" pointer
-	core::TypePtr&&  refToClass = builder.refType(irClassType);
-	
+	core::TypePtr&&  refToClassTy = builder.refType(irClassType);
+
 	// reconstruct Arguments list, fist one is a scope location for the object
 	core::ExpressionList args;
-	args.push_back (builder.undefinedVar(refToClass));
+	args.push_back (builder.undefinedVar(refToClassTy));
 
 	// append globalVar to arguments if needed
 	if ( ctx.globalFuncSet.find(ctorDecl) != ctx.globalFuncSet.end() ) {
@@ -1034,21 +1035,30 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 		args.push_back(Visit(*arg));
 	}
 
-	core::ExpressionPtr newFunc;
+	core::ExpressionPtr ctorFunc;
 	if(!f.isa<core::LambdaExprPtr>()) { 
 		//intercepted if !lambdaexpr
-		newFunc = f; 
+		ctorFunc = f; 
 	} else {
-		newFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
+		ctorFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
 													 f.as<core::ExpressionPtr>(),
-													 refToClass, 
+													 refToClassTy, 
 													 core::FK_CONSTRUCTOR);
 	}
 
 	// build expression and we are done!!!
-	core::CallExprPtr ret  = builder.callExpr (refToClass, newFunc, args);
+	core::ExpressionPtr ret;
+	if (numElements){
+		ret = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor(),
+								mgr.getLangBasic().getRefVar(), ctorFunc, builder.getIntParamLiteral(numElements));
+	}
+	else{
+		//single object constructor
+		ret = builder.callExpr (refToClassTy, ctorFunc, args);
+	}
+
 	if (VLOG_IS_ON(2)){
-		dumpPretty(&(*ret));
+		dumpPretty(ret);
 	}
 	END_LOG_EXPR_CONVERSION(ret);
 	return ret;
@@ -1060,30 +1070,55 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const clang::CXXNewExpr* callExpr) {
 	START_LOG_EXPR_CONVERSION(callExpr);
 
-	//TODO:  - array allocation - inplace allocation
+	//TODO:  - inplace allocation - non default ctor array?
 	core::ExpressionPtr retExp;
 
 	if (callExpr->getAllocatedType().getTypePtr()->isBuiltinType()){
+
 		core::TypePtr type = convFact.convertType(callExpr->getAllocatedType().getTypePtr());
-		const core::TypePtr& arrayType = builder.arrayType(type);
+		core::ExpressionPtr placeHolder = builder.undefinedNew(type);
+
+		if (callExpr->isArray()){
+			core::ExpressionPtr&& arrSizeExpr = convFact.convertExpr( callExpr->getArraySize() );
+			placeHolder = builder.callExpr( builder.arrayType(type), 
+											builder.getLangBasic().getArrayCreate1D(),
+											builder.getTypeLiteral(type),
+											utils::cast(arrSizeExpr, gen.getUInt4()));
+		}
 
 		// fixme, array size
-		retExp = builder.refNew(builder.refVar( Visit (callExpr->getInitializer ())));
+		retExp = builder.refNew(builder.refVar(placeHolder));
 	}
 	else{
 		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
 
-		core::ExpressionPtr newCall = builder.undefinedNew(ctorCall->getType());
+		core::TypePtr type = ctorCall->getType();
+		core::ExpressionPtr newCall = builder.undefinedNew(type);
+		
+		if (callExpr->isArray()){
+			core::ExpressionPtr arrSizeExpr = convFact.convertExpr( callExpr->getArraySize() );
+ 			arrSizeExpr =  builder.callExpr(mgr.getLangBasic().getTypeCast(), 
+											arrSizeExpr,
+											builder.getTypeLiteral(mgr.getLangBasic().getUInt8()) );
 
-		// the basic constructor translation defines a stack variable as argument for the call
-		// in order to turn this into a diynamic memory allocation, we only need to substitute 
-		// the first argument for a heap location
-		core::CallExprAddress addr(ctorCall.as<core::CallExprPtr>());
-		core::CallExprPtr newCtor = core::transform::replaceNode (convFact.mgr, 
-																  addr->getArgument(0), 
-																  newCall ).as<core::CallExprPtr>();
-		retExp = builder.refVar(newCtor);
+			// extract only the ctor function from the converted ctor call
+			core::ExpressionPtr ctorFunc = ctorCall.as<core::CallExprPtr>().getFunctionExpr();
+
+			retExp = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
+			 						   mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr);
+		}
+		else{
+
+			// the basic constructor translation defines a stack variable as argument for the call
+			// in order to turn this into a diynamic memory allocation, we only need to substitute 
+			// the first argument for a heap location
+			core::CallExprAddress addr(ctorCall.as<core::CallExprPtr>());
+			retExp = core::transform::replaceNode (convFact.mgr, 
+												  addr->getArgument(0), 
+												  newCall ).as<core::CallExprPtr>();
+		}
+		retExp = builder.refVar(retExp);
 	}
 
 	END_LOG_EXPR_CONVERSION(retExp);
@@ -1095,6 +1130,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(const clang::CXXDeleteExpr* deleteExpr) {
 	START_LOG_EXPR_CONVERSION(deleteExpr);
+
+	if (deleteExp->isArrayForm () )
+		assert(false && "array delete not supported yet");
+
 	core::ExpressionPtr retExpr;
 	core::ExpressionPtr deleteExp = Visit(deleteExpr->getArgument());
 
