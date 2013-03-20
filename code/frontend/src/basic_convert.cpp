@@ -65,6 +65,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
@@ -321,9 +322,11 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	}
 
 	bool isOclVector = !!dyn_cast<const ExtVectorType>(varTy->getUnqualifiedDesugaredType());
-	if (!(varTy.isConstQualified()
-			|| (isa<const clang::ParmVarDecl>(valDecl) && ((irType->getNodeType() != core::NT_VectorType
-					&& irType->getNodeType() != core::NT_ArrayType) || isOclVector ) ))) {
+	if (!(varTy.isConstQualified() ||    						// is a constant
+		  varTy.getTypePtr()->isReferenceType()  ||             // is a c++ reference
+ 	 	  (isa<const clang::ParmVarDecl>(valDecl) && 			// is the declaration of a parameter
+		  ((irType->getNodeType() != core::NT_VectorType && irType->getNodeType() != core::NT_ArrayType) || 
+		   isOclVector ) ))) {
 		// if the variable is not const, or a function parameter or an array type we enclose it in a ref type
 		// only exception are OpenCL vectors
 		irType = builder.refType(irType);
@@ -386,6 +389,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	if (attr) {
 		var->addAnnotation(attr);
 	}
+
 	return var;
 }
 
@@ -772,7 +776,6 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 
 	// Convert the expression like any other expression
 	retIr = convertExpr(expr);
-	
 
 	// ============================================================================================
 	// =============================== Handling of special cases  =================================
@@ -801,6 +804,14 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 		 utils::isRefArray(type ) ) {
 		return retIr = utils::cast(retIr, type);
 	}
+
+	// this is a C++ reference ( int& ref = x)
+	if (clangType->isReferenceType()){
+		
+		return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(),
+								retIr);
+	}
+
 	// ============================== End Special Handlings =======================================
 	
 	// Anytime we have to initialize a ref<'a> from another type of object we have to deref the

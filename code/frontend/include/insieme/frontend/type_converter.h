@@ -187,10 +187,6 @@ public:
 
 	vector<clang::RecordDecl*> getAllBases(const clang::CXXRecordDecl* recDeclCXX );
 
-	core::FunctionTypePtr addCXXThisToFunctionType(const core::IRBuilder& builder,
-												   const core::TypePtr& globals,
-												   const core::FunctionTypePtr& funcType);
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  COMMON TYPES
 	CALL_BASE_TYPE_VISIT(TypeConverter, ComplexType)
