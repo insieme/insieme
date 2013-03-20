@@ -42,6 +42,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/utils/unused.h"
+
 namespace {
 
 using namespace insieme;
@@ -157,7 +159,7 @@ bool AffineFunction::operator<(const AffineFunction& other) const {
 	if (getIterationVector() == other.getIterationVector()) {
 		
 		auto thisIt = begin(), thisEnd = end();
-		auto otherIt = other.begin(), otherEnd = other.end();
+		__unused auto otherIt = other.begin(), otherEnd = other.end();
 
 		assert((std::distance(thisIt, thisEnd) == std::distance(otherIt, otherEnd)) && 
 				"size of 2 iterators differs");

@@ -510,6 +510,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::handleTagType(const TagDecl* 
 		return convFact.builder.unionType( structElements );
 	}
 	assert(false && "TagType not supported");
+	return core::TypePtr();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -528,6 +529,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::handleTagType(const TagDecl* 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::CXXTypeConverter ::VisitDependentSizedArrayType(const DependentSizedArrayType* arrTy) {
 	assert(false && "DependentSizedArrayType not yet handled!");
+	return core::TypePtr();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -45,6 +45,8 @@
 
 #include <cassert>
 
+#include "insieme/utils/unused.h"
+
 #include "ReClaM/FFNet.h"
 #include "ReClaM/Svm.h"
 #include "ReClaM/LinearModel.h"
@@ -566,7 +568,7 @@ public:
 		std::fstream file(path);
 		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::load");
 
-		bool worked = svm.LoadSVMModel(file);
+		__unused bool worked = svm.LoadSVMModel(file);
 		assert(worked && "Cannot load multi class SVM");
 
 		shark = AllInOneMcSVM(&svm, 1.0);
@@ -583,7 +585,7 @@ public:
 		std::fstream file(path, std::ios::out);
 		assert(file.is_open() && "Cannot open output file in MyEpsilon_SVM::save");
 
-		bool worked = svm.SaveSVMModel(file);
+		__unused bool worked = svm.SaveSVMModel(file);
 		assert(worked && "Cannot save multi class SVM");
 
 		file.close();

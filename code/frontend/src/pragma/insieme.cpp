@@ -319,7 +319,7 @@ void attach(const clang::SourceLocation& 	startLoc,
 			conversion::ConversionFactory& 	fact) 
 {
 	
-	annotations::TransformationHint::Type type;
+	annotations::TransformationHint::Type type = annotations::TransformationHint::LOOP_FUSE;
 	switch( trans ) {
 		case INTERCHANGE: type = annotations::TransformationHint::LOOP_INTERCHANGE;
 						  break;

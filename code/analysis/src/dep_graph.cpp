@@ -49,6 +49,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/unused.h"
 
 #include <boost/graph/graphviz.hpp>
 #include <boost/graph/strong_components.hpp>
@@ -95,7 +96,7 @@ int addDependence(isl_basic_map *bmap, void *user) {
 	// make the union 
 	size_t idx=0;
 	for(; idx<std::min(srcNest.size(), sinkNest.size()) && srcNest[idx] == sinkNest[idx]; ++idx)  ;
-	size_t size = srcNest.size() + sinkNest.size()-idx;
+	__unused size_t size = srcNest.size() + sinkNest.size()-idx;
 	
 	// the first idx dimensions are the same, therefore this is the size of our distance vector
 	std::vector<VariablePtr> distVecSkel;
@@ -162,7 +163,7 @@ std::string depTypeToStr(const dep::DependenceType& dep) {
 	case RAR: return "RAR";
 	default : assert( false && "Dependence type not supported");
 	}
-
+	return "-unknown-";
 }
 
 //==== Stmt =====================================================================================
@@ -382,6 +383,7 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 		// Because the constraint containing a distance vector is a basic_set, 
 		// there should not be any negations in this constraint 
 		assert(false);
+		return AffineConstraintPtr();
 	}
 
 	AffineConstraintPtr visitBinConstraint(const BinAffineConstraint& bcc) {

@@ -19,7 +19,7 @@ macro ( lookup_lib lib_name lib_file_name)
 	
 	set ( ${lib_name}_HOME ${CUR_HOME} ) # CACHE PATH "Home of ${lib_name} library" )
 
-	include_directories( ${${lib_name}_HOME}/include )
+	include_directories( SYSTEM ${${lib_name}_HOME}/include )
 
 	if(MSVC) 
 		set (${lib_name_lower_case}_LIB dummy)

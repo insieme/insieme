@@ -43,6 +43,7 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/unused.h"
 
 #include <stack>
 
@@ -60,6 +61,7 @@ std::string Ref::useTypeToStr(const UseType& usage) {
 	case Ref::UNKNOWN:	return "UNKNOWN"; 
 	default:			assert(false);
 	}
+	return "-unknown-";
 }
 
 std::string Ref::refTypeToStr(const RefType& type) {
@@ -70,6 +72,7 @@ std::string Ref::refTypeToStr(const RefType& type) {
 	case Ref::CALL: 	return "CALL"; 
 	default:  			assert(false);
 	}
+	return "-unknown-";
 }
 
 //===== Ref =========================================================================================
@@ -118,7 +121,7 @@ MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& us
 { 
 	assert (memberAcc->getNodeType() == core::NT_CallExpr);
 
-	core::NodeManager& mgr = memberAcc->getNodeManager();
+	__unused core::NodeManager& mgr = memberAcc->getNodeManager();
 	assert (core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.getLangBasic().getCompositeMemberAccess()) || 
 		core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.getLangBasic().getCompositeRefElem() ) );
 

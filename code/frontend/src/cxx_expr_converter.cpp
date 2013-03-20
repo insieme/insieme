@@ -752,6 +752,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExpr(const clang::CXXOperatorCallExpr* callExpr) {
 	assert (false && "operator call expr");
+	return core::ExpressionPtr();
 	/*
 	START_LOG_EXPR_CONVERSION(callExpr);
 
@@ -1411,6 +1412,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThisExpr(const 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThrowExpr(const clang::CXXThrowExpr* throwExpr) {
 	assert (false && "throw expr");
+	return core::ExpressionPtr();
 	/*
 	START_LOG_EXPR_CONVERSION(throwExpr);
 	assert(false && "VisitCXXThrowExpr not yet handled");

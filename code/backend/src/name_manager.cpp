@@ -44,6 +44,8 @@
 
 #include "insieme/annotations/c/naming.h"
 
+#include "insieme/utils/unused.h"
+
 
 namespace insieme {
 namespace backend {
@@ -126,7 +128,7 @@ namespace backend {
 
 	void SimpleNameManager::setName(const core::NodePtr& ptr, const string& name) {
 		assert((usedNames.find(name) == usedNames.end() || *(usedNames.find(name)) == name) && "Cannot bind name already used!");
-		auto res = nameMap.insert(make_pair(ptr, name));
+		__unused auto res = nameMap.insert(make_pair(ptr, name));
 		usedNames.insert(name);
 		assert(res.second && "Tried to alter name after first assignment!");
 	}

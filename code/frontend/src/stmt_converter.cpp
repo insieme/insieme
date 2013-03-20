@@ -328,8 +328,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 			assert(init && "Initialization statement for loop is not an expression");
 
-			const core::TypePtr& varTy = inductionVar->getType();
-			assert(varTy->getNodeType() != core::NT_RefType);
+			assert(inductionVar->getType()->getNodeType() != core::NT_RefType);
 
 			// Initialize the value of the new induction variable with the value of the old one
 			if ( core::analysis::isCallOf(init, gen.getRefAssign()) ) {
@@ -904,6 +903,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
  */
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchCase(clang::SwitchCase* caseStmt) {
 	assert(false && "Visitor is visiting a 'case' stmt");
+	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitBreakStmt(clang::BreakStmt* breakStmt) {
@@ -969,6 +969,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitGotoStmt(clang::Go
 			pp.getDiagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error,
 					"Gotos are not handled by the Insieme compielr"));
 	assert(false);
+	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitStmt(clang::Stmt* stmt) {

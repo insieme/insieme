@@ -49,6 +49,7 @@
 #include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/utils/timer.h"
+#include "insieme/utils/unused.h"
 
 namespace insieme { namespace transform { namespace polyhedral {
 
@@ -714,7 +715,7 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 		if (iters.empty() && stmt->getNodeType() == core::NT_CallExpr) {
 			core::CallExprPtr callExpr = stmt.as<core::CallExprPtr>();
 
-			unsigned ranges = curStmt->getSubRangeNum();
+			__unused unsigned ranges = curStmt->getSubRangeNum();
 			assert(ranges == 1 && "Multiple ranges not supported");
 		
 			// Extract the variable which should be stripped 

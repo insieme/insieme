@@ -53,6 +53,8 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
 
+#include "insieme/utils/unused.h"
+
 /**
  * A functor imposing no default clone action.
  */
@@ -182,7 +184,7 @@ public:
 
 		// clone element (to ensure private copy)
 		const S* newElement = clone(instance);
-		auto  __attribute__((unused)) check = storage.insert(newElement); 
+		__unused auto check = storage.insert(newElement);
 
 		// ensure this is a clone
 		assert ( instance != newElement );
