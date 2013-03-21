@@ -480,9 +480,9 @@ OptionalMessageList ReturnTypeCheck::visitLambda(const LambdaAddress& address) {
 		if (returnType != actualType) {
 			add(res, Message(cur,
 				EC_TYPE_INVALID_RETURN_VALUE_TYPE,
-				format("Invalid return type - expected: \n%s, actual: \n%s",
-						toString(*returnType).c_str(),
-						toString(*actualType).c_str()),
+				format("Invalid type of return value - expected: \n%s, actual: \n%s",
+						toString(*returnType),
+						toString(*actualType)),
 				Message::ERROR));
 		}
 
