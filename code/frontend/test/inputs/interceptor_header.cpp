@@ -34,31 +34,10 @@
  * regarding third party software licenses.
  */
 
-// ignore warnings
-#pragma GCC diagnostic ignored "-Wall"
-
 #include "interceptor_header.h"
+//intercepted
+namespace ns {
+	int simpleFunc(int x) { return x; }
 
-void intercept_simpleFunc() {
-
-#pragma test "{ decl ref<int<4>> v1 = ( var(0)); ns::simpleFunc(1); ns::simpleFunc(( *v1));}"
-	{
-		int a = 0;
-		ns::simpleFunc(1);
-		ns::simpleFunc(a);
-	}
+	int S::memberFunc(int x) { return x; }
 }
-
-void intercept_memFunc() {
-#pragma test "{ decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ns::S::S(( var(undefined(type<ns::S>)))); ns::S::memberFunc(v2, ( *v1));}"
-	{
-		int a = 0;
-		ns::S s;
-		s.memberFunc(a);
-	}
-}
-
-int main() {
-	intercept_simpleFunc();
-	intercept_memFunc();
-};
