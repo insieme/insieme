@@ -253,6 +253,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(c
 //							FUNCTION CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const clang::CallExpr* callExpr) {
+
 	return ExprConverter::VisitCallExpr(callExpr);
 }
 
@@ -498,11 +499,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 
 	retIr = builder.callExpr(mgr.getLangBasic().getUnit(), func, args);
 
-	std::cout <<  (args) << std::endl;
-	std::cout << "*************************" << std::endl;
-	dumpDetail (retIr);
-	std::cout << "*************************" << std::endl;
-	dumpPretty(retIr);
 	return retIr;
 
 	/*
