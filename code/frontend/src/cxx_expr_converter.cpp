@@ -348,6 +348,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 
 	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
 	core::TypePtr&& irClassType = ownerObj->getType();
+	core::TypePtr funcTy;
 	
 	core::LambdaExprPtr newFunc;
 	if(f.isa<core::LambdaExprPtr>()) {
@@ -355,8 +356,11 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 													 f.as<core::ExpressionPtr>(),
 													 irClassType, 
 													 core::FK_MEMBER_FUNCTION);
+		funcTy = newFunc.as<core::LambdaExprPtr>().getType();
 	}
-	core::TypePtr funcTy = newFunc.as<core::LambdaExprPtr>().getType();
+	else{
+		funcTy = f.getType();
+	}
  
 	// correct the owner object reference, in case of pointer (ref<array<struct<...>,1>>) we need to
 	// index the first element
@@ -662,16 +666,18 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	// update parameter list with a class-typed parameter in the first possition
 	core::TypePtr&&  refToClassTy = builder.refType(irClassType);
 	core::ExpressionPtr ctorFunc;
+	core::TypePtr funcTy;
 	if(!f.isa<core::LambdaExprPtr>()) { 
 		//intercepted if !lambdaexpr
 		ctorFunc = f; 
+		funcTy = f.getType();
 	} else {
 		ctorFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
 													 f.as<core::ExpressionPtr>(),
 													 refToClassTy, 
 													 core::FK_CONSTRUCTOR);
+		funcTy = ctorFunc.as<core::LambdaExprPtr>().getType();
 	}
-	core::TypePtr funcTy = ctorFunc.as<core::LambdaExprPtr>().getType();
 	
 	// reconstruct Arguments list, fist one is a scope location for the object
 	ExpressionList&& args = ExprConverter::getFunctionArguments(builder, callExpr, funcTy.as<core::FunctionTypePtr>());
