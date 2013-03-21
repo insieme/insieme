@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
 	SVM_Optimizer optimizer;
 	MeanSquaredError err;
 
-	Trainer* svmTrainer;
+	Trainer* svmTrainer = 0;
 	// create trainer
 	try {
 		svmTrainer = new Trainer(dbPath, *svm, strToGenNNoutput(TrainCmdOptions::TargetGen));

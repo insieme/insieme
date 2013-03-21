@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include <boost/unordered_set.hpp>
+#include <unordered_set>
 
 #include "insieme/core/ir_node.h"
 
@@ -72,7 +72,7 @@ namespace types {
 		/**
 		 * The set of type constraints to be considered.
 		 */
-		boost::unordered_set<Constraint> constraints;
+		std::unordered_set<Constraint> constraints;
 
 		/**
 		 * The mapping for int-type parameter variables resulting from the constraints.

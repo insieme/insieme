@@ -140,19 +140,18 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 
 	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
 	// this is produced by the AST, but we should delegate this matters to the backend compiler
-	core::ExpressionPtr ptr;
 	if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
 
-		ptr = retExpr.as<core::CallExprPtr>()[0];
+		retExpr = retExpr.as<core::CallExprPtr>()[0];
 	}
 
-	if (ptr.isa<core::CallExprPtr>()){
-		auto ty = ptr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>();
+	if (retExpr.isa<core::CallExprPtr>()){
+		auto ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>();
 
 		if (ty.isConstructor()){
 			vector<core::StatementPtr> stmtList;
 			// copy ctor, what we actualy want to return is the second param
-			stmtList.push_back(builder.returnStmt(ptr.as<core::CallExprPtr>()[1]));
+			stmtList.push_back(builder.returnStmt(retExpr.as<core::CallExprPtr>()[1]));
 			core::StatementPtr retStatement = builder.compoundStmt(stmtList);
 			stmt = stmtutils::tryAggregateStmts(builder,stmtList );
 		}
@@ -221,14 +220,17 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(cl
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
 	assert(false && "Catch -- Currently not supported!");
+	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
 	assert(false && "Try -- Currently not supported!");
+	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
 	assert(false && "ForRange -- Currently not supported!");
+	return stmtutils::StmtWrapper();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -75,6 +75,7 @@ namespace compiler {
 		res.addFlag("-Wall");
 		res.addFlag("--std=c++98");
 		res.addFlag("-Wl,--no-as-needed");
+		res.addFlag("-fpermissive");
 		return res;
 	}
 
@@ -87,7 +88,6 @@ namespace compiler {
 	Compiler Compiler::getRuntimeCompiler(const Compiler& base) {
 		Compiler res = base;
 		res.addFlag("-I " SRC_ROOT_DIR "runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
-		res.addFlag("-fpermissive");
 		return res;
 	}
 

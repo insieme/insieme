@@ -37,6 +37,7 @@
 #include "insieme/frontend/utils/ir_cast.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/unused.h"
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
@@ -180,7 +181,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 
 		const core::LiteralPtr& lit = expr.as<core::LiteralPtr>();
 
-		char val;
+		char val = ' ';
 		if ( lit->getStringValue().length() == 3) {
 			val = lit->getStringValue()[1]; 
 			// chars are encoded as 'V', therefore position 1 always contains the char value
@@ -417,7 +418,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 
 		if ( *vecArgTy->getSize() != *vecTrgTy->getSize() ) {
 			// converting from a vector size X to vector size Y, only possible if X <= Y
-			size_t vecTrgSize = vecTrgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
+			__unused size_t vecTrgSize = vecTrgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 			size_t vecArgSize = vecArgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 
 			core::ExpressionPtr plainExpr = expr;

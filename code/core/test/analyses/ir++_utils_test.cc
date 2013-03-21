@@ -68,6 +68,29 @@ namespace analysis {
 		EXPECT_TRUE(isPureVirtual(pureVirtual));
 	}
 
+	TEST(IRppUtils, References) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto type = builder.genericType("A");
+
+		// test references
+		EXPECT_FALSE(isCppRef(type));
+		EXPECT_PRED1(isCppRef, getCppRef(type));
+		EXPECT_EQ(type,getCppRefElementType(getCppRef(type)));
+
+
+		// test const references
+		EXPECT_FALSE(isConstCppRef(type));
+		EXPECT_PRED1(isConstCppRef, getConstCppRef(type));
+		EXPECT_EQ(type,getConstCppRefElementType(getConstCppRef(type)));
+
+
+		// test mixture
+		EXPECT_FALSE(isCppRef(getConstCppRef(type)));
+		EXPECT_FALSE(isConstCppRef(getCppRef(type)));
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

@@ -843,7 +843,13 @@ namespace backend {
 
 						classDecl->members.push_back(decl);
 					}
+					
+					// add dependencies to class declaration
+					info->prototype->addDependencies(codeInfo.prototypeDependencies);
 
+					// add includes
+					info->prototype->addIncludes(codeInfo.includes);
+					
 				} else {
 					// ... to prototype block
 					declarations->getCode().push_back(cManager->create<c_ast::FunctionPrototype>(codeInfo.function));

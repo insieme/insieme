@@ -159,6 +159,7 @@ public:
 		case LOR:	return "||";
 		}
 		assert(false && "Operator doesn't exist");
+		return "?";
 	}
 
 private:
@@ -196,6 +197,7 @@ public:
 		case RUNTIME: 	return "runtime";
 		}
 		assert(false && "Scheduling kind doesn't exist");
+		return "?";
 	}
 private:
 	Kind kind;
@@ -223,6 +225,7 @@ public:
 		case NONE: 		return "none";
 		}
 		assert(false && "Mode doesn't exist");
+		return "?";
 	}
 
 private:

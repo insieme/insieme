@@ -1333,7 +1333,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 
 			expr = convertExpr((*it)->getInit());
 			init = builder.literal("this", builder.refType(irClassType));
-		std::cout << "********** BASE ***********" << std::endl;
 		}
 		else if ((*it)->isMemberInitializer ()){
 			// create access to the member of the struct/class
@@ -1347,7 +1346,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 																	 builder.getTypeLiteral(memberTy) ));
 
 			expr = convertExpr((*it)->getInit());
-		std::cout << "********** MEMBER  ***********" << std::endl;
 		}
 		if ((*it)->isIndirectMemberInitializer ()){
 			assert(false && "indirect init not implemented");

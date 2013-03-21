@@ -291,18 +291,13 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 
 	if(freq_str_orig) {
 
-		char freq_str[strlen(freq_str_orig)]; // needed since strtok modifies the string it's working on
-		strcpy(freq_str, freq_str_orig);
-
-		uint32* freqs;
-		uint32 length;
 		uint32 socketid = 0;
 
 		// get information from first core of the system, assume homogeneity
-		char *tok = strtok(freq_str, ",");
-		uint32 freq = atoi(tok);
+		char *tok = strtok(freq_str_orig, ",");
 
 		while(tok) {
+			uint32 freq = atoi(tok);
 			if(irt_cpu_freq_set_frequency_socket(socketid, freq) == 0)
 				irt_g_frequency_setting_specified = true;
 			else
@@ -316,21 +311,24 @@ int32 irt_cpu_freq_set_frequency_socket_env() {
 	}
 
 	char path_to_cpufreq[1024] = { 0 };
-	char cpu_freq_output[1024] = { 0 };
-	char cpu_freq_output_frequencies[6*IRT_HW_NUM_SOCKETS];
-	uint32 output_counter = 0;
+	uint32 cpu_freq_list[IRT_HW_NUM_SOCKETS];
 
 	for(uint32 i = 0; i < IRT_HW_NUM_SOCKETS; ++i) {
 		sprintf(path_to_cpufreq, "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_cur_freq", i * IRT_HW_CORES_PER_SOCKET);
-		output_counter += snprintf(&cpu_freq_output_frequencies[output_counter], 6, "%4u,", _irt_cpu_freq_read(path_to_cpufreq));
+		cpu_freq_list[i] = _irt_cpu_freq_read(path_to_cpufreq);
 	}
 
-	cpu_freq_output_frequencies[output_counter-1] = '\0';
-
+	char cpu_freq_output[1024] = { 0 };
+	char* cur = cpu_freq_output;
 	if(irt_g_frequency_setting_specified)
-		sprintf(cpu_freq_output, "set, %s", cpu_freq_output_frequencies);
+		cur += sprintf(cur, "set, ");
 	else
-		sprintf(cpu_freq_output, "not set, %s", cpu_freq_output_frequencies);
+		cur += sprintf(cur, "not set, ");
+
+	for(uint32 i = 0; i < IRT_HW_NUM_SOCKETS; ++i) {
+		cur += sprintf(cur, "%u, ", cpu_freq_list[i]);
+	}
+	*(cur-2) = '\0';
 
 	irt_log_setting_s("IRT_CPU_FREQUENCIES", cpu_freq_output);
 	return retval;

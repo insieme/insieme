@@ -114,19 +114,24 @@ public:
 	/* CXX specific methods -- not support in C version
 	 * implemented/used in CXXGlobalVarCollector*/
 	virtual bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) { 
-		assert(false && "not supported in GlobalVarCollector"); 
+		assert(false && "not supported in GlobalVarCollector");
+		return false;
 	}
 	virtual bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) { 
-		assert(false && "not supported in GlobalVarCollector"); 
+		assert(false && "not supported in GlobalVarCollector");
+		return false;
 	}
 	virtual bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) { 
-		assert(false && "not supported in GlobalVarCollector"); 
+		assert(false && "not supported in GlobalVarCollector");
+		return false;
 	}
 	virtual bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr) { 
-		assert(false && "not supported in GlobalVarCollector"); 
+		assert(false && "not supported in GlobalVarCollector");
+		return false;
 	}
 	virtual bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) { 
-		assert(false && "not supported in GlobalVarCollector"); 
+		assert(false && "not supported in GlobalVarCollector");
+		return false;
 	}
 
 	void operator()(const clang::Decl* decl);

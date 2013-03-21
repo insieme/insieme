@@ -237,7 +237,7 @@ TEST(FunctionPipeline2, Composition) {
 	typedef square<int> SQ;
 	typedef std::plus<int> SUM;
 
-	SUM f; SQ g;
+	SQ g;
 	auto pg = pipeline::makePipeline( g, g );
 
 	// compute (g*g*g)+(g*g)

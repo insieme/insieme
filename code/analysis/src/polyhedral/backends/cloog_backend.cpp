@@ -49,6 +49,7 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
+#include "insieme/utils/unused.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -142,7 +143,7 @@ struct ClastVisitor {
 		default:
 			assert(false && "Clast Expression not valid!");
 		}
-
+		return RetTy();
 	}
 
 	virtual RetTy visit(const clast_stmt* clast_node) {
@@ -167,6 +168,7 @@ struct ClastVisitor {
 			return visitClastGuard( reinterpret_cast<const clast_guard*>(clast_node) );
 
 		assert(false && "Clast node not supported");
+		return RetTy();
 	}
 
 	virtual RetTy visit(const CloogStatement* cloogStmt) {
@@ -592,8 +594,7 @@ public:
 		// In those case we need to perform special handling as the semantic information 
 		// could have introduced new domain which the cloog library wrongly interpret as for loops 
 		
-		auto&& fit = varMap.find(forStmt->iterator);
-		assert(fit == varMap.end() && "Induction variable being utilizied!");
+		assert(varMap.find(forStmt->iterator) == varMap.end() && "Induction variable being utilizied!");
 		core::VariablePtr&& inductionVar = builder.variable( mgr.getLangBasic().getInt4() );
 
 		auto&& indPtr = varMap.insert( std::make_pair(std::string(forStmt->iterator), inductionVar) );
@@ -628,7 +629,7 @@ public:
 							body );
 
 		}catch(RangedFunction&& ex) {
-			const RangedFunction::VarVect& ranges = ex.getRangedVariables();
+			__unused const RangedFunction::VarVect& ranges = ex.getRangedVariables();
 			irStmt = stmtStack.top().front();
 
 			assert((ranges.size() == 1 && *ranges.front() == *inductionVar));
