@@ -157,7 +157,11 @@ namespace c_ast {
 
 			PRINT(PointerType) {
 				return out << ParameterPrinter(node, node->getManager()->create(""));
-				//return out << print(node->elementType) << "*";
+			}
+
+			PRINT(ReferenceType) {
+				if (node->isConst) out << "const ";
+				return out << print(node->elementType) << "&";
 			}
 
 			PRINT(VectorType) {

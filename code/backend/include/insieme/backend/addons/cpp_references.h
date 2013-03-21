@@ -34,63 +34,37 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
+#pragma once
 
-#include <gtest/gtest.h>
+#include "insieme/core/forward_decls.h"
 
-#include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/backend/converter.h"
+#include "insieme/backend/type_manager.h"
+#include "insieme/backend/operator_converter.h"
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/full_check.h"
-
+/**
+ * This header file defines the components required to be registered within
+ * a backend instance to handle C++ references properly.
+ */
 namespace insieme {
-namespace core {
-namespace analysis {
+namespace backend {
+namespace addons {
 
-	TEST(IRppUtils, PureVirtual) {
-		NodeManager manager;
-		IRBuilder builder(manager);
+	// TODO: establish plug-able add-on infrastructure by combining the following elements
+	//		into a common add-on container class + installation routines.
 
-		// BUG: free variables within binds have not been recognized correctly
-		// reason: recursive call for bound parameters was wrong =>
-
-		auto funType = builder.parseType("A::()->unit").as<FunctionTypePtr>();
-
-		ASSERT_TRUE(funType);
-		EXPECT_TRUE(funType->isMemberFunction());
-
-		// create a pure virtual version
-		auto pureVirtual = builder.getPureVirtual(funType);
-
-		// should be correct
-		EXPECT_TRUE(checks::check(pureVirtual).empty()) << checks::check(pureVirtual);
-
-		EXPECT_TRUE(isPureVirtual(pureVirtual));
-	}
-
-	TEST(IRppUtils, References) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		auto type = builder.genericType("A");
-
-		// test references
-		EXPECT_FALSE(isCppRef(type));
-		EXPECT_PRED1(isCppRef, getCppRef(type));
-		EXPECT_EQ(type,getCppRefElementType(getCppRef(type)));
+	/**
+	 * The type handler extension.
+	 */
+	const TypeInfo* CppRefTypeHandler(const Converter&, const core::TypePtr&);
 
 
-		// test const references
-		EXPECT_FALSE(isConstCppRef(type));
-		EXPECT_PRED1(isConstCppRef, getConstCppRef(type));
-		EXPECT_EQ(type,getCppRefElementType(getConstCppRef(type)));
+	/**
+	 * The operator table extensions.
+	 */
+	OperatorConverterTable getCppRefOperatorTable(core::NodeManager& manager);
 
 
-		// test mixture
-		EXPECT_FALSE(isCppRef(getConstCppRef(type)));
-		EXPECT_FALSE(isConstCppRef(getCppRef(type)));
-	}
-
-} // end namespace analysis
-} // end namespace core
+} // end namespace addons
+} // end namespace backend
 } // end namespace insieme

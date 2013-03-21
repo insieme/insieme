@@ -58,6 +58,8 @@
 #include "insieme/backend/sequential/sequential_preprocessor.h"
 #include "insieme/backend/sequential/sequential_type_handler.h"
 
+#include "insieme/backend/addons/cpp_references.h"
+
 namespace insieme {
 namespace backend {
 namespace sequential {
@@ -95,13 +97,19 @@ namespace sequential {
 		SimpleNameManager nameManager;
 		converter.setNameManager(&nameManager);
 
-		TypeManager typeManager(converter, getBasicTypeIncludeTable(), toVector<TypeHandler>(SequentialTypeHandler));
+		TypeManager typeManager(converter,
+				getBasicTypeIncludeTable(),
+				toVector<TypeHandler>(addons::CppRefTypeHandler, SequentialTypeHandler)
+		);
 		converter.setTypeManager(&typeManager);
 
 		StmtConverter stmtConverter(converter);
 		converter.setStmtConverter(&stmtConverter);
 
-		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager), getBasicFunctionIncludeTable());
+		auto opTable = getBasicOperatorTable(nodeManager);
+		opTable.insertAll(addons::getCppRefOperatorTable(nodeManager));
+
+		FunctionManager functionManager(converter, opTable, getBasicFunctionIncludeTable());
 		converter.setFunctionManager(&functionManager);
 
 		// conduct conversion

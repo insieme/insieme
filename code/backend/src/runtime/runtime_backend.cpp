@@ -60,6 +60,8 @@
 
 #include "insieme/backend/c_ast/c_code.h"
 
+#include "insieme/backend/addons/cpp_references.h"
+
 
 namespace insieme {
 namespace backend {
@@ -188,12 +190,14 @@ namespace runtime {
 
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
 			OperatorConverterTable res = getBasicOperatorTable(manager);
+			res.insertAll(addons::getCppRefOperatorTable(manager));
 			return addRuntimeSpecificOps(manager, res);
 		}
 
 		TypeHandlerList getTypeHandlerList() {
-			TypeHandlerList res;
+			TypeHandlerList res = getBasicTypeHandlerList();
 			res.push_back(RuntimeTypeHandler);
+			res.push_back(addons::CppRefTypeHandler);
 			return res;
 		}
 

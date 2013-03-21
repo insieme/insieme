@@ -398,8 +398,113 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 //  A call to an overloaded operator written using operator syntax.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExpr(const clang::CXXOperatorCallExpr* callExpr) {
-	assert (false && "operator call expr");
-	return core::ExpressionPtr();
+	START_LOG_EXPR_CONVERSION(callExpr);
+	core::ExpressionPtr retIr;
+
+	/*if (callExpr->getCalleeDecl()) {
+		if (llvm::isa<clang::FunctionDecl>(callExpr->getCalleeDecl()) ) {
+			//check if right
+			return Visit(llvm::cast<clang::CXXMemberCallExpr>(callExpr));
+		}
+
+		if (llvm::isa<clang::FunctionDecl>(callExpr->getCalleeDecl()) ) {
+			assert(false && "func " );
+		}
+	}
+	else{
+		assert(false && "no callee");
+	}*/
+
+	core::ExpressionPtr func;
+
+	switch (callExpr->getOperator()){
+
+		case OO_None:
+			assert(false && "no operator!!");
+
+		case OO_New:
+		case OO_Delete         :
+		case OO_Array_New      :
+		case OO_Array_Delete   :
+			assert(false && " new and delete overload not implemented");
+
+		case OO_Plus                 :
+		case OO_Minus                :
+		case OO_Star                 :
+		case OO_Slash                :
+		case OO_Percent              :
+		case OO_Caret                :
+		case OO_Amp                  :
+		case OO_Pipe                 :
+		case OO_Tilde                :
+		case OO_Exclaim              :
+		case OO_Less                 :
+		case OO_Greater              :
+		case OO_PlusEqual            :
+		case OO_MinusEqual           :
+		case OO_StarEqual            :
+		case OO_SlashEqual           :
+		case OO_PercentEqual         :
+		case OO_CaretEqual           :
+		case OO_AmpEqual             :
+		case OO_PipeEqual            :
+		case OO_LessLess             :
+		case OO_GreaterGreater       :
+		case OO_LessLessEqual        :
+		case OO_GreaterGreaterEqual  :
+		case OO_EqualEqual           :
+		case OO_ExclaimEqual         :
+		case OO_LessEqual            :
+		case OO_GreaterEqual         :
+		case OO_AmpAmp               :
+		case OO_PipePipe             :
+		case OO_PlusPlus             :
+		case OO_MinusMinus           :
+		case OO_Comma                :
+		case OO_ArrowStar            :
+		case OO_Arrow               :
+		case OO_Call           :
+		case OO_Subscript      :
+			assert(false && "CXXOperator not implemented yet");
+		case OO_Equal                :
+			func = gen.getRefAssign();
+			break;
+
+		default:
+			assert(false && " no specified operator, did u upgraded clang from 3.2? ");
+
+	}
+
+	ExpressionList args;
+
+	const clang::CallExpr* call = llvm::cast<clang::CallExpr> (callExpr);
+	for(unsigned argId= 0; argId < call->getNumArgs (); ++argId){
+
+		// visit the subexpression
+		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
+		core::TypePtr&& argTy = arg->getType();
+
+		// if is a CPP ref, convert to IR
+		if (core::analysis::isCppRef(argTy)) {
+			arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), arg);
+		}
+		// if is a IR ref, deref it
+		if (argTy->getNodeType() == core::NT_RefType) {
+			arg = builder.deref(arg);
+		}
+
+		args.push_back( arg );
+	}
+
+	retIr = builder.callExpr(mgr.getLangBasic().getUnit(), func, args);
+
+	std::cout <<  (args) << std::endl;
+	std::cout << "*************************" << std::endl;
+	dumpDetail (retIr);
+	std::cout << "*************************" << std::endl;
+	dumpPretty(retIr);
+	return retIr;
+
 	/*
 	START_LOG_EXPR_CONVERSION(callExpr);
 

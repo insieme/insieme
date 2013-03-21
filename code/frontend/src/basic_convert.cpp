@@ -1373,16 +1373,13 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 		// if the expr is a constructor then we are initializing a member an object, 
 		// we have to substitute first argument on constructor by the
 		// right reference to the member object (addressed by init)
-		if (expr.isa<core::CallExprPtr>()){
-			core::ExpressionPtr ptr = expr.as<core::CallExprPtr>().getFunctionExpr();
-			if (ptr.isa<core::LambdaExprPtr>() && 
-				ptr.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
+		//  -> is a call expression of a constructor
+		core::ExpressionPtr ptr;
+		if (expr.isa<core::CallExprPtr>() &&
+			(ptr = expr.as<core::CallExprPtr>().getFunctionExpr()).isa<core::LambdaExprPtr>() && 
+			 ptr.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
 				core::CallExprAddress addr(expr.as<core::CallExprPtr>());
 				initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
-			}
-			else{
-				 assert(false && "you should not be here, contact Luis");
-			}
 		}
 		else{
 			//otherwise is a regular assigment intialization
