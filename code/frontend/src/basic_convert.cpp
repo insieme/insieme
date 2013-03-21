@@ -806,8 +806,7 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	}
 
 	// this is a C++ reference ( int& ref = x)
-	if (clangType->isReferenceType()){
-		
+	if (clangType && clangType->isReferenceType()){
 		return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(),
 								retIr);
 	}
