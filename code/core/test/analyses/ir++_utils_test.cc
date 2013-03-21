@@ -83,7 +83,7 @@ namespace analysis {
 		// test const references
 		EXPECT_FALSE(isConstCppRef(type));
 		EXPECT_PRED1(isConstCppRef, getConstCppRef(type));
-		EXPECT_EQ(type,getConstCppRefElementType(getConstCppRef(type)));
+		EXPECT_EQ(type,getCppRefElementType(getConstCppRef(type)));
 
 
 		// test mixture
