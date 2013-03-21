@@ -1439,7 +1439,7 @@ ExpressionPtr IRBuilder::toIRRef(const ExpressionPtr& ref) const {
 	}
 
 	// handle a const reference
-	return callExpr(refType(analysis::getConstCppRefElementType(ref->getType())), ext.getRefConstCppToIR(), ref);
+	return callExpr(refType(analysis::getCppRefElementType(ref->getType())), ext.getRefConstCppToIR(), ref);
 }
 
 } // namespace core

@@ -143,10 +143,6 @@ namespace analysis {
 			));
 		}
 
-		TypePtr getRefElementType(const TypePtr& refType) {
-			return refType.as<StructTypePtr>()[0]->getType().as<RefTypePtr>()->getElementType();
-		}
-
 		const string CppRefStringMember = "_cpp_ref";
 		const string CppConstRefStringMember = "_const_cpp_ref";
 	}
@@ -159,11 +155,6 @@ namespace analysis {
 		return getRef(elementType, CppRefStringMember);
 	}
 
-	TypePtr getCppRefElementType(const TypePtr& cppRefType) {
-		assert(isCppRef(cppRefType));
-		return getRefElementType(cppRefType);
-	}
-
 	bool isConstCppRef(const TypePtr& type) {
 		return isRef(type, CppConstRefStringMember);
 	}
@@ -172,9 +163,9 @@ namespace analysis {
 		return getRef(elementType, CppConstRefStringMember);
 	}
 
-	TypePtr getConstCppRefElementType(const TypePtr& cppRefType) {
-		assert(isConstCppRef(cppRefType));
-		return getRefElementType(cppRefType);
+	TypePtr getCppRefElementType(const TypePtr& cppRefType) {
+		assert(isCppRef(cppRefType) || isConstCppRef(cppRefType));
+		return cppRefType.as<StructTypePtr>()[0]->getType().as<RefTypePtr>()->getElementType();
 	}
 
 
