@@ -23,7 +23,6 @@ void valParam(Obj a){
 
 
 int  main (){
-/*
 	// just declare
 	{
 		Obj a (1);
@@ -32,20 +31,16 @@ int  main (){
 		printf("1=%d\n", ref.val);
 
 	}
-*/
 	// assign
 	{
 		Obj a (2);
 		Obj b (3);
 		Obj& ref = a;
 		ref = b;
-		/*
 		printf("2=%d\n", ref.val);
 		a = ref;
 		printf("3=%d\n", a.val);
-		*/
 	}
-	/*
 	// func call
 	{
 		Obj a (4);
@@ -57,6 +52,5 @@ int  main (){
 		refParam(ref);
 		valParam(ref);
 	}
-	*/
 	return 0;
 }
