@@ -179,6 +179,12 @@ namespace c_ast {
 		return *elementType == *static_cast<const PointerType&>(other).elementType;
 	}
 
+	bool ReferenceType::equals(const Node& node) const {
+		assert(dynamic_cast<const ReferenceType*>(&node));
+		auto other = static_cast<const ReferenceType&>(node);
+		return isConst == other.isConst && *elementType == *other.elementType;
+	}
+
 	bool VectorType::equals(const Node& node) const {
 		assert(dynamic_cast<const VectorType*>(&node));
 		auto other = static_cast<const VectorType&>(node);

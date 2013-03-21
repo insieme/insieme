@@ -164,6 +164,13 @@ namespace c_ast {
 		virtual bool equals(const Node& other) const;
 	};
 
+	struct ReferenceType : public Type {
+		bool isConst;
+		TypePtr elementType;
+		ReferenceType(bool isConst, TypePtr elementType) : Type(NT_ReferenceType), isConst(isConst), elementType(elementType) {}
+		virtual bool equals(const Node& other) const;
+	};
+
 	struct VectorType : public Type {
 		TypePtr elementType;
 		ExpressionPtr size;		// could be null to represent T[]; - no size given
