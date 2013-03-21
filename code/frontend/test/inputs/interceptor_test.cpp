@@ -37,28 +37,28 @@
 // ignore warnings
 #pragma GCC diagnostic ignored "-Wall"
 
-namespace ns {
-	int simpleFunc(int x) { return x; }
-	struct S {
-		int memberFunc(int x) { return x; }
-	};
-}
+#include "interceptor_header.h"
 
 void intercept_simpleFunc() {
-	int a = 0;
 
-	#pragma test "ns::simpleFunc(1)"
-	ns::simpleFunc(1);
-	
-	#pragma test "ns::simpleFunc(( *v1))"
-	ns::simpleFunc(a);
+#pragma test "{ decl ref<int<4>> v1 = ( var(0)); ns::simpleFunc(1); ns::simpleFunc(( *v1));}"
+	{
+		int a = 0;
+		ns::simpleFunc(1);
+		ns::simpleFunc(a);
+	}
 }
 
 void intercept_memFunc() {
-	ns::S s;
-	int a = 0;
-	#pragma test "ns::S::memberFunc(v1, ( *v2))"
-	s.memberFunc(a);
+#pragma test "{ decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ns::S::S(( var(undefined(type<ns::S>)))); ns::S::memberFunc(v2, ( *v1));}"
+	{
+		int a = 0;
+		ns::S s;
+		s.memberFunc(a);
+	}
 }
 
-
+int main() {
+	intercept_simpleFunc();
+	intercept_memFunc();
+};

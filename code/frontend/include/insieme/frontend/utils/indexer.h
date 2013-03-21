@@ -43,10 +43,13 @@
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/program.h"
 
-#include "clang/AST/Decl.h"
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclBase.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#include <clang/AST/Decl.h>
+#include <clang/AST/ASTConsumer.h>
+#include <clang/AST/ASTContext.h>
+#include <clang/AST/DeclBase.h>
+#pragma GCC diagnostic pop
 
 namespace insieme{
 namespace frontend{

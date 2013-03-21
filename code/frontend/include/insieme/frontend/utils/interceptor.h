@@ -36,13 +36,16 @@
 
 #pragma once 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#include <clang/AST/Decl.h>
+#include <clang/AST/StmtVisitor.h>
+#pragma GCC diagnostic pop
+
 #include "insieme/core/ir_builder.h"
 #include "insieme/utils/map_utils.h"
 
 #include "insieme/frontend/utils/indexer.h"
-
-#include "clang/AST/Decl.h"
-#include "clang/AST/StmtVisitor.h"
 
 #include <boost/regex.hpp>
 #include <map>

@@ -358,6 +358,7 @@ protected:
 			 
 		}
 		assert(false && "OMP threadprivate annotation on non-member / non-call");
+		return NodePtr();
 	}
 
 	// implements omp flush by generating INSPIRE flush() calls

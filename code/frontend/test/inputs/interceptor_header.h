@@ -34,36 +34,11 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/dfa/solver.h"
-#include "insieme/utils/unused.h"
+//intercepted
+namespace ns {
+	int simpleFunc(int x);
 
-namespace insieme {
-namespace analysis {
-namespace dfa {
-
-void WorklistQueue::enqueue(const cfg::BlockPtr& block) {
-	if (block_set.find(block) == block_set.end()) {
-		block_queue.push(block);
-		block_set.insert(block);
-	}
+	struct S {
+		int memberFunc(int x);
+	};
 }
-
-cfg::BlockPtr WorklistQueue::dequeue() {
-
-	if (empty()) { assert(false && "Worklist Queue is empty"); }
-
-	__unused size_t s = block_queue.size();
-
-	cfg::BlockPtr block = block_queue.front();
-	block_set.erase(block);
-	block_queue.pop();
-
-	assert(block_queue.size() == s-1);
-
-	return block;
-}
-
-
-} // end dfa namespace 
-} // end analysis namespace 
-} // end insieme namespace 

@@ -156,8 +156,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		case BO_AddAssign:
 		case BO_SubAssign: {
 			assert(isa<const DeclRefExpr>(binOp->getLHS()));
-			const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
-			assert(lhs->getDecl() == loopHelper.inductionVar);
+			assert(dyn_cast<const DeclRefExpr>(binOp->getLHS())->getDecl() == loopHelper.inductionVar);
 			loopHelper.incrExpr = convFact.convertExpr( binOp->getRHS() );
 			if (loopHelper.incrExpr->getType()->getNodeType() == core::NT_RefType) {
 				loopHelper.incrExpr = convFact.getIRBuilder().deref(loopHelper.incrExpr);

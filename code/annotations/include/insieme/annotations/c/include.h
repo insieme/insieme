@@ -34,36 +34,51 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/dfa/solver.h"
-#include "insieme/utils/unused.h"
+#pragma once
+
+#include <string>
+#include "insieme/core/forward_decls.h"
+
+/**
+ * A header file for naming annotations to be considered by IR utilities.
+ * Name annotations will be utilized by the pretty printer, the parser,
+ * the backends and other utilities for attaching / resolving names of
+ * objects. Names are also preserved by the binary dump.
+ */
 
 namespace insieme {
-namespace analysis {
-namespace dfa {
+namespace annotations {
+namespace c {
 
-void WorklistQueue::enqueue(const cfg::BlockPtr& block) {
-	if (block_set.find(block) == block_set.end()) {
-		block_queue.push(block);
-		block_set.insert(block);
-	}
-}
+	using std::string;
 
-cfg::BlockPtr WorklistQueue::dequeue() {
+	/**
+	 * Checks whether a include is attached to the given node.
+	 *
+	 * @param node the node to be tested
+	 * @return true if a include-file is attached, false otherwise
+	 */
+	bool hasIncludeAttached(const insieme::core::NodePtr& node);
 
-	if (empty()) { assert(false && "Worklist Queue is empty"); }
+	/**
+	 * Obtains a reference to the include-file attached to the given node. If
+	 * no include-file has been attached the result is undefined (an assertion
+	 * in debug mode).
+	 *
+	 * @param node the node to obtain the attached include-file from
+	 * @return the include attached to the given node
+	 */
+	const string& getAttachedInclude(const insieme::core::NodePtr& node);
 
-	__unused size_t s = block_queue.size();
-
-	cfg::BlockPtr block = block_queue.front();
-	block_set.erase(block);
-	block_queue.pop();
-
-	assert(block_queue.size() == s-1);
-
-	return block;
-}
+	/**
+	 * Updates the include-file attached to the given node.
+	 *
+	 * @param node the node to attach a include-file to
+	 * @param include-file the include-file to be attached to the node
+	 */
+	void attachInclude(const insieme::core::NodePtr& node, const string& include);
 
 
-} // end dfa namespace 
-} // end analysis namespace 
-} // end insieme namespace 
+} // end namespace c
+} // end namespace annotations
+} // end namespace insieme

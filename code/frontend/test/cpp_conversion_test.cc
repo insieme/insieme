@@ -37,7 +37,11 @@
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include "clang/AST/Decl.h"
+#pragma GCC diagnostic pop
 // DON'T MOVE THIS!
 
 #include <gtest/gtest.h>
@@ -105,7 +109,7 @@ TEST(CppConversion, FileTest) {
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+//		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 

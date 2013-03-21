@@ -37,7 +37,11 @@
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include "clang/AST/Decl.h"
+#pragma GCC diagnostic pop
 // DON'T MOVE THIS!
 
 #include <gtest/gtest.h>
@@ -94,13 +98,14 @@ std::string getPrettyPrinted(const NodePtr& node) {
 	return std::string(res.begin(), res.end());
 }
 
-TEST(StmtConversion, FileTest) {
+TEST(Interception, FileTest) {
 
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
 	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/interceptor_test.cpp" );
+	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/interceptor_header.cpp" );
 	
 	prog.intercept(std::string(SRC_DIR) + "/inputs/interceptor_test.cfg");
 	
@@ -122,18 +127,17 @@ TEST(StmtConversion, FileTest) {
 		if(tp.isStatement()) {
 			StatementPtr&& stmt = convFactory.convertStmt( tp.getStatement() );
 			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
-
 			// do semantics checking
 			checkSemanticErrors(stmt);
 
 		} else {
-			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp.getDecl())) {
+			if(const clang::TypeDecl* td = llvm::dyn_cast<clang::TypeDecl>(tp.getDecl())) {
 				TypePtr&& type = convFactory.convertType( td->getTypeForDecl() );
 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
 				// do semantics checking
 				checkSemanticErrors(type);
-			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
-				LambdaExprPtr&& expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(convFactory.convertFunctionDecl(fd));
+			}else if(const clang::FunctionDecl* fd = llvm::dyn_cast<clang::FunctionDecl>(tp.getDecl())) {
+				LambdaExprPtr&& expr = convFactory.convertFunctionDecl(fd).as<insieme::core::LambdaExprPtr>();
 				assert(expr);
 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(expr) + '\"' );
 				// do semantics checking
