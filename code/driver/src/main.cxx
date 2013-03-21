@@ -366,7 +366,7 @@ void checkSema(const core::NodePtr& program, MessageList& list, const InverseStm
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [&](const Message& cur) {
 		LOG(INFO) << cur;
-		NodeAddress address = cur.getAddress();
+		NodeAddress address = cur.getOrigin();
 		stringstream ss;
 		unsigned contextSize = 1;
 		do {
@@ -383,7 +383,10 @@ void checkSema(const core::NodePtr& program, MessageList& list, const InverseStm
 			}
 
 		} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
+//		LOG(INFO) << "\t Source-Node-Type: " << address->getNodeType();
+//		LOG(INFO) << "\t Source: " << PrettyPrinter(address, PrettyPrinter::OPTIONS_SINGLE_LINE);
 		LOG(INFO) << "\t Context: " << ss.str() << std::endl;
+//		LOG(INFO) << "\t All: " << PrettyPrinter(address.getRootNode());
 	});
 
 	// In the case of semantic errors, quit

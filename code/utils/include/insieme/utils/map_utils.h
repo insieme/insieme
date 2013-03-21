@@ -55,7 +55,9 @@ namespace utils {
 namespace map {
 
 template<class KeyPtr, class ValueType>
-class PointerMap : public std::unordered_map<KeyPtr, ValueType, hash_target<KeyPtr>, equal_target<KeyPtr>> { };
+struct PointerMap : public std::unordered_map<KeyPtr, ValueType, hash_target<KeyPtr>, equal_target<KeyPtr>> {
+	template<typename Container> void insertAll(const Container& c) { insert(c.begin(), c.end()); }
+};
 
 template<class KeyPtr, class ValueType>
 class PointerMultiMap : public boost::unordered_multimap<KeyPtr, ValueType, hash_target<KeyPtr>, equal_target<KeyPtr>> { };

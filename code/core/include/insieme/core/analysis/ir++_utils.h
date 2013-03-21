@@ -129,14 +129,6 @@ namespace analysis {
 	TypePtr getCppRef(const TypePtr& elementType);
 
 	/**
-	 * Extracts the element type of a given C++ reference type.
-	 *
-	 * @param cppRefType the type to be processed, must satisfy isCppRef(..)
-	 * @return the element type referenced by the given type
-	 */
-	TypePtr getCppRefElementType(const TypePtr& cppRefType);
-
-	/**
 	 * Checks whether the given type is a const C++ reference type. A type is a const C++ reference
 	 * type in case it has the shape
 	 *
@@ -156,12 +148,12 @@ namespace analysis {
 	TypePtr getConstCppRef(const TypePtr& elementType);
 
 	/**
-	 * Extracts the element type of a given const C++ reference type.
+	 * Extracts the element type of a given (const) C++ reference type.
 	 *
-	 * @param cppRefType the type to be processed, must satisfy isConstCppRef(..)
+	 * @param cppRefType the type to be processed, must satisfy isCppRef(..) or isConstCppRef(..)
 	 * @return the element type referenced by the given type
 	 */
-	TypePtr getConstCppRefElementType(const TypePtr& cppRefType);
+	TypePtr getCppRefElementType(const TypePtr& cppRefType);
 
 
 
