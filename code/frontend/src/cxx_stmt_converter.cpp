@@ -162,6 +162,9 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 			if (core::analysis::isCppRef(ret->getType())) {
 				ret =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), ret));
 			}
+			else if (core::analysis::isConstCppRef(ret->getType())) {
+				ret =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), ret));
+			}
 
 			stmtList.push_back(builder.returnStmt(ret));
 			core::StatementPtr retStatement = builder.compoundStmt(stmtList);
