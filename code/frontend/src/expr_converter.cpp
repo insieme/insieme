@@ -308,12 +308,15 @@ core::ExpressionPtr ConversionFactory::ExprConverter::wrapVariable(const clang::
 
 core::ExpressionPtr ConversionFactory::ExprConverter::asLValue(const core::ExpressionPtr& value) {
 
-	// CPP references are Left side exprs
+	// CPP references are Left side exprs but need to be IRized
 	core::TypePtr irType = value->getType();
 	if (core::analysis::isCppRef(irType)) {
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), value);
 	}
 	
+	if (core::analysis::isConstCppRef(irType)) {
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), value);
+	}
 
 	// this only works for call-expressions
 	if (value->getNodeType() != core::NT_CallExpr || value->getType()->getNodeType() == core::NT_RefType) {
@@ -369,6 +372,11 @@ core::ExpressionPtr ConversionFactory::ExprConverter::asRValue(const core::Expre
 	if (core::analysis::isCppRef(irType)) {
 		assert(false && "check if ever used!");
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), value);
+	}
+	
+	if (core::analysis::isConstCppRef(irType)) {
+		assert(false && "check if ever used!");
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), value);
 	}
 
 	// check whether value is parameter to the current function
@@ -904,6 +912,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitMemberExpr(const clan
 		core::TypePtr irType = base->getType();
 		if (core::analysis::isCppRef(irType)) {
 			base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), base);
+		}
+		else if (core::analysis::isConstCppRef(irType)) {
+			base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), base);
 		}
 	}
 

@@ -144,6 +144,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(c
 				if (core::analysis::isCppRef(type)){
 					return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
 				}
+				else if (core::analysis::isConstCppRef(type)){
+					return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
+				}
 				// this is Ref -> CppRef
 				// handled wherever is used
 			}
@@ -253,6 +256,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(c
 //							FUNCTION CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const clang::CallExpr* callExpr) {
+
 	return ExprConverter::VisitCallExpr(callExpr);
 }
 
@@ -488,6 +492,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		if (core::analysis::isCppRef(argTy)) {
 			arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), arg);
 		}
+		else if (core::analysis::isCppRef(argTy)) {
+			arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), arg);
+		}
 		// if is a IR ref, deref it
 		if (argTy->getNodeType() == core::NT_RefType) {
 			arg = builder.deref(arg);
@@ -498,11 +505,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 
 	retIr = builder.callExpr(mgr.getLangBasic().getUnit(), func, args);
 
-	std::cout <<  (args) << std::endl;
-	std::cout << "*************************" << std::endl;
-	dumpDetail (retIr);
-	std::cout << "*************************" << std::endl;
-	dumpPretty(retIr);
 	return retIr;
 
 	/*

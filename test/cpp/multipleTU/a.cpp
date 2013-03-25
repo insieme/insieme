@@ -1,6 +1,7 @@
 #include "a.h"
 
-int f(Obj o){
+int f(int i){
 
+	Obj o(i);
 	return o.f();
 }
