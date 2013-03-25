@@ -185,9 +185,9 @@ void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector& globColl
 void ConversionFactory::buildInterceptedCaches(utils::Interceptor& interceptor) {
 	//copy interceptor exprcache into lambdaexpr cache
 	ctx.typeCache = interceptor.buildInterceptedTypeCache(*this);
+	VLOG(2) << "typeCache " << ctx.typeCache;
 	ctx.lambdaExprCache = interceptor.buildInterceptedExprCache(*this);
 	VLOG(2) << "lambdaExprCache: " << ctx.lambdaExprCache;
-	VLOG(2) << "typeCache " << ctx.typeCache;
 }
 
 
