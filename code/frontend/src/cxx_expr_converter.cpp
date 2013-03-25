@@ -45,6 +45,8 @@
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/temporariesLookup.h"
+#include "insieme/frontend/utils/ir++_utils.h"
+
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -64,10 +66,6 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 
-
-// [3.0]
-//#include "clang/Index/Entity.h"
-//#include "clang/Index/Indexer.h"
 
 #include "clang/AST/StmtVisitor.h"
 #include <clang/AST/DeclCXX.h>
@@ -761,6 +759,12 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	const clang::Type* classType= callExpr->getType().getTypePtr();
 	core::TypePtr&& irClassType = convFact.convertType(classType);
 
+	// we do NOT instantiate elidable ctors, this will be generated and ignored if needed by the
+	// back end compiler
+	if (callExpr->isElidable () ){
+		return (Visit(callExpr->getArg (0)));
+	}
+
 	// it might be an array construction
 	size_t numElements =0;
 	if (irClassType->getNodeType() == core::NT_VectorType) {
@@ -810,6 +814,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	if (VLOG_IS_ON(2)){
 		dumpPretty(ret);
 	}
+
 	END_LOG_EXPR_CONVERSION(ret);
 	return ret;
 }
@@ -1196,6 +1201,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDefaultArgExpr(
 	*/
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//					CXX Bind Temporary expr
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryExpr(const clang::CXXBindTemporaryExpr* bindTempExpr) {
 
 
@@ -1231,6 +1239,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryEx
 
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//					CXX Expression with cleanups
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(const clang::ExprWithCleanups* cleanupExpr) {
 
 	// perform subtree traversal and get the temporaries that the cleanup expression creates
@@ -1253,13 +1264,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 		}
 	 }
 
-
-
 	core::TypePtr lambdaType = convFact.convertType(cleanupExpr->getType().getTypePtr());
 	stmtList.push_back(convFact.builder.returnStmt(innerIR));
 
 	//build the lambda and its parameters
-
 	core::StatementPtr&& lambdaBody = convFact.builder.compoundStmt(stmtList);
 	vector<core::VariablePtr> params = core::analysis::getFreeVariables(lambdaBody);
 	core::LambdaExprPtr lambda = convFact.builder.lambdaExpr(lambdaType, lambdaBody, params);
@@ -1267,23 +1275,31 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 
 	//build the lambda call and its arguments
 	vector<core::ExpressionPtr> packedArgs;
-
 	std::for_each(params.begin(), params.end(), [&packedArgs] (core::VariablePtr varPtr) {
 		 packedArgs.push_back(varPtr);
 	});
-
 	core::ExpressionPtr irNode = convFact.builder.callExpr(lambdaType, lambda, packedArgs);
 
 	return irNode;
 }
 
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//					Materialize temporary expr
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTemporaryExpr(
-		const clang::MaterializeTemporaryExpr* materTempExpr) {
-
-	return Visit(materTempExpr->GetTemporaryExpr());
+																const clang::MaterializeTemporaryExpr* materTempExpr) {
 
 
+	core::ExpressionPtr expr =  Visit(materTempExpr->GetTemporaryExpr());
+//	core::ExpressionPtr ptr;
+//	if (expr.isa<core::CallExprPtr>() &&
+//		(ptr = expr.as<core::CallExprPtr>().getFunctionExpr()).isa<core::LambdaExprPtr>() && 
+//		 ptr.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
+//		dumpPretty(expr);
+//		return expr;
+//	}
+//	else 
+		return builder.refVar( expr);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
