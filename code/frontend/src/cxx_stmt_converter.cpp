@@ -172,8 +172,6 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 		}
 	}
 
-
-
 	return stmt;
 }
 

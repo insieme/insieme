@@ -273,16 +273,19 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitReferenceType(const Refe
 	core::TypePtr inTy = convFact.convertType( refTy->getPointeeType().getTypePtr());
 
 // we need to check where is a const ref or not	
+	QualType  qual;
 	if(llvm::isa<clang::RValueReferenceType>(refTy))
-		assert(false && "right side value ref not supported");
+		//assert(false && "right side value ref not supported");
+		qual = llvm::cast<clang::RValueReferenceType>(refTy)->desugar();
 	else{
-		QualType&& qual = llvm::cast<clang::LValueReferenceType>(refTy)->desugar();
-		// FIXME: find a better way... i got annoyed
-		if (boost::starts_with (qual.getAsString (), "const"))
-			retTy =  core::analysis::getConstCppRef(inTy);
-		else
-			retTy =  core::analysis::getCppRef(inTy);
+		qual = llvm::cast<clang::LValueReferenceType>(refTy)->desugar();
 	}
+	// FIXME: find a better way... i got annoyed
+	if (boost::starts_with (qual.getAsString (), "const"))
+		retTy =  core::analysis::getConstCppRef(inTy);
+	else
+		retTy =  core::analysis::getCppRef(inTy);
+	
 	END_LOG_TYPE_CONVERSION( retTy );
 	return retTy;
 }
