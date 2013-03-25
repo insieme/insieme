@@ -63,7 +63,7 @@ namespace c {
 		typedef core::value_node_annotation<IncludeTag>::type annotation_type;
 
 		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
-			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only dummy annotations supported!");
+			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only include annotations supported!");
 			return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().include);
 		}
 

@@ -219,7 +219,6 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 
 void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::ConversionFactory& convFact) {
 
-
     insieme::core::NodeAnnotationPtr annot;
 
     // check if there is a datarange annotation

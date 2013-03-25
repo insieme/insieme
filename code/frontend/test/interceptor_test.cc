@@ -103,9 +103,11 @@ TEST(Interception, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/interceptor_test.cpp" );
-	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/interceptor_header.cpp" );
+	fe::ConversionJob job;
+	fe::Program prog( manager, job );
+
+	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob( SRC_DIR "/inputs/interceptor_test.cpp" ) );
+	prog.addTranslationUnit( fe::ConversionJob( SRC_DIR "/inputs/interceptor_header.cpp" ) );
 	
 	prog.intercept(std::string(SRC_DIR) + "/inputs/interceptor_test.cfg");
 	

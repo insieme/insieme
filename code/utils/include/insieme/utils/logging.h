@@ -47,8 +47,6 @@
 #include <mutex>
 #include <thread>
 
-#include "insieme/utils/cmd_line_utils.h"
-
 #include <stdexcept>
 
 #ifdef __GNUC__
@@ -300,8 +298,7 @@ public:
 	 * Sequent calls to this method with different input parameters has no
 	 * effect on the underlying logger, the same logger is always returned.
 	 */
-	static Logger& get(std::ostream& out = std::cout, const Level& level = INFO,
-			unsigned short verbosity = CommandLineOptions::Verbosity) {
+	static Logger& get(std::ostream& out = std::cout, const Level& level = INFO, unsigned short verbosity = 0) {
 		static Logger logger(out, level, verbosity);
 		return logger;
 	}

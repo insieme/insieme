@@ -43,8 +43,6 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_program.h"
 
-#include "insieme/frontend/compiler.h"
-
 namespace insieme {
 
 namespace core {
@@ -57,6 +55,14 @@ namespace core {
 
 namespace frontend {
 
+	/**
+	 * Used to report a parsing error occurred during the parsing of the input file
+	 */
+	struct ClangParsingError: public std::logic_error {
+		ClangParsingError(const std::string& file_name): std::logic_error(file_name) { }
+	};
+
+
 	using std::vector;
 	using std::string;
 
@@ -65,12 +71,16 @@ namespace frontend {
 	public:
 
 		/**
-		 * A list of options to adjust the print.
+		 * A list of options to adjust the conversion job.
 		 */
 		enum Option {
 			OpenMP			= 1<<0,
 			OpenCL			= 1<<1,
-			Cilk			= 1<<2
+			Cilk			= 1<<2,
+
+			WinCrossCompile	= 1<<3,
+			DumpCFG			= 1<<4,
+			TAG_MPI			= 1<<5
 		};
 
 		/**
@@ -79,11 +89,6 @@ namespace frontend {
 		static const unsigned DEFAULT_FLAGS;
 
 	private:
-
-		/**
-		 * The node manager to be used for the conversion.
-		 */
-		core::NodeManager& manager;
 
 		/**
 		 * The translation units to be converted.
@@ -106,6 +111,11 @@ namespace frontend {
 		vector<string> definitions;
 
 		/**
+		 * The name of the configuration file of the intercepter.
+		 */
+		string intercepterConfigFile;
+
+		/**
 		 * Additional flags - a bitwise boolean combination of Options (see Option)
 		 */
 		unsigned flags;
@@ -115,12 +125,48 @@ namespace frontend {
 		/**
 		 * Creates a new conversion job covering a single file.
 		 */
-		ConversionJob(core::NodeManager& manager, const string& file);
+		ConversionJob(const string& file);
 
 		/**
 		 * Creates a new conversion job based on the given options.
 		 */
-		ConversionJob(core::NodeManager& manager, const vector<string>& files, const vector<string>& includeDirs = vector<string>());
+		ConversionJob(const vector<string>& files = vector<string>(), const vector<string>& includeDirs = vector<string>());
+
+		/**
+		 * Obtains a reference to the files covered by this conversion job.
+		 */
+		const vector<string>& getFiles() const {
+			return files;
+		}
+
+		/**
+		 * Obtains the one input file covered by this conversion job if there is only one file.
+		 */
+		const string& getFile() const {
+			assert(files.size() == 1u);
+			return files[0];
+		}
+
+		/**
+		 * Exchanges the files covered by this conversion job by the given file.
+		 */
+		void setFile(const string& file) {
+			this->files.clear(); this->files.push_back(file);
+		}
+
+		/**
+		 * Updates the files covered by this conversion job.
+		 */
+		void setFiles(const vector<string>& files) {
+			this->files = files;
+		}
+
+		/**
+		 * Adds a file to be covered by this conversion job.
+		 */
+		void addFile(const string& file) {
+			this->files.push_back(file);
+		}
 
 		/**
 		 * Allows to check for an option.
@@ -144,6 +190,20 @@ namespace frontend {
 		}
 
 		/**
+		 * Obtains the standard to be used for parsing input files.
+		 */
+		const string& getStandard() const {
+			return standard;
+		}
+
+		/**
+		 * Updates the standard to be used for parsing input files.
+		 */
+		void setStandard(const string& standard) {
+			this->standard = standard;
+		}
+
+		/**
 		 * Obtains a reference to the currently defined definitions.
 		 */
 		const vector<string>& getDefinitions() const {
@@ -160,15 +220,51 @@ namespace frontend {
 		/**
 		 * Adds a pre-processor definition to this conversion job.
 		 */
-		void addDefinition(const string& name, const string& value);
+		void addDefinition(const string& name, const string& value = "");
+
+		/**
+		 * Obtains a reference to the covered set of include directories.
+		 */
+		const vector<string>& getIncludeDirectories() const {
+			return includeDirs;
+		}
+
+		/**
+		 * Updates the set of considered include directories.
+		 */
+		void setIncludeDirectories(const vector<string>& includeDirectories) {
+			this->includeDirs = includeDirectories;
+		}
+
+		/**
+		 * Adds an additional include directory.
+		 */
+		void addIncludeDirectory(const string& directory) {
+			this->includeDirs.push_back(directory);
+		}
+
+		/**
+		 * Obtains the name of the intercepter configuration file.
+		 */
+		const string& getIntercepterConfigFile() const {
+			return intercepterConfigFile;
+		}
+
+		/**
+		 * Updates the name of the intercepter configuration file.
+		 */
+		void setIntercepterConfigFile(const string& configFile) {
+			this->intercepterConfigFile = configFile;
+		}
 
 		/**
 		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
 		 *
+		 * @param manager the node manager to be used for building the IR
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */
-		core::ProgramPtr execute();
+		core::ProgramPtr execute(core::NodeManager& manager);
 	};
 
 

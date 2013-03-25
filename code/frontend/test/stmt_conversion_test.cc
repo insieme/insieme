@@ -104,7 +104,7 @@ TEST(StmtConversion, FileTest) {
 
 	NodeManager manager;
 	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
+	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/stmt.c") );
 	
 	prog.analyzeFuncDependencies();
 
