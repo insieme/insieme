@@ -238,7 +238,7 @@ METRIC(AVG_TEMPERATURE_PACKAGE_END,								"avg_temperature_pkg_end",							c,		
 
 // TODO: re-enable when number of workers is fixed for regions 
 METRIC(AVG_NUM_WORKERS,				"avg_num_workers",			unit,		avg(Metric::NUM_WORKERS));
-METRIC(RESOURCE_USAGE,				"resource_usage",			ns,			mul(Metric::TOTAL_WALL_TIME, Metric::AVG_NUM_WORKERS));
+METRIC(TOTAL_RESOURCE_USAGE,				"total_resource_usage",			ns,			none);
 
 METRIC(WEIGHTED_EFFICIENCY, 		"weighted_efficiency",		unit,		div(sum(l_div(Metric::CPU_TIME, Metric::NUM_WORKERS)), Metric::TOTAL_WALL_TIME));
 

@@ -185,9 +185,9 @@ void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector& globColl
 void ConversionFactory::buildInterceptedCaches(utils::Interceptor& interceptor) {
 	//copy interceptor exprcache into lambdaexpr cache
 	ctx.typeCache = interceptor.buildInterceptedTypeCache(*this);
+	VLOG(2) << "typeCache " << ctx.typeCache;
 	ctx.lambdaExprCache = interceptor.buildInterceptedExprCache(*this);
 	VLOG(2) << "lambdaExprCache: " << ctx.lambdaExprCache;
-	VLOG(2) << "typeCache " << ctx.typeCache;
 }
 
 
@@ -807,8 +807,16 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 
 	// this is a C++ reference ( int& ref = x)
 	if (clangType && clangType->isReferenceType()){
-		return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(),
-								retIr);
+
+		// if is a CPP ref, convert to IR
+		if (core::analysis::isCppRef(retIr->getType())) {
+			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(),
+									retIr);
+		}
+		else{
+			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(),
+									retIr);
+		}
 	}
 
 	// ============================== End Special Handlings =======================================

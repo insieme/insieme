@@ -487,6 +487,10 @@ void irt_inst_region_add_time(irt_work_item* wi) {}
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 
+#if !(IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC)
+	#error "IRT INSTRUMENTATION ONLY SUPPORTS STATIC SCHEDULING AT THIS POINT"
+#endif
+
 irt_instrumentation_aggregated_data_table* irt_g_aggregated_performance_table;
 
 irt_region_list* irt_inst_create_region_list() {

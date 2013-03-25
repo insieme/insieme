@@ -40,6 +40,8 @@
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include <clang/AST/Decl.h>
 #include <clang/AST/StmtVisitor.h>
+#include <clang/AST/TypeVisitor.h>
+#include <clang/AST/DeclTemplate.h>
 #pragma GCC diagnostic pop
 
 #include "insieme/core/ir_builder.h"
@@ -94,6 +96,21 @@ private:
 	InterceptedTypeDeclSet interceptedTypes;
 
 	std::set<std::string> toIntercept;
+};
+
+struct InterceptTypeVisitor : public clang::TypeVisitor<InterceptTypeVisitor, core::TypePtr> {
+
+	insieme::frontend::conversion::ConversionFactory& convFact;
+	const insieme::core::IRBuilder& builder;
+	
+	InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const insieme::core::IRBuilder& builder); 
+	core::TypePtr Visit(const clang::Type* type);
+	core::TypePtr VisitTagType(const clang::TagType* tagType);
+	core::TypePtr VisitInjectedClassNameType(const clang::InjectedClassNameType* type);
+	core::TypePtr VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy);
+	core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType);
+	core::TypePtr VisitElaboratedType(const clang::ElaboratedType* elabType);
+	core::TypePtr VisitBuiltinType(const clang::BuiltinType* type);
 };
 
 struct InterceptVisitor : public clang::StmtVisitor<InterceptVisitor> {

@@ -55,6 +55,8 @@
 #include <clang/AST/ExprCXX.h>
 #include <clang/AST/DeclTemplate.h>
 
+#include <boost/algorithm/string/predicate.hpp>
+
 using namespace clang;
 using namespace insieme;
 
@@ -264,9 +266,25 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitDependentSizedArrayType
 //						REFERENCE TYPE 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::CXXTypeConverter::VisitReferenceType(const ReferenceType* refTy) {
+	START_LOG_TYPE_CONVERSION(refTy);
+	core::TypePtr retTy;
 
+// this is a cpp reference not pointer 
 	core::TypePtr inTy = convFact.convertType( refTy->getPointeeType().getTypePtr());
-	return core::analysis::getCppRef(inTy);
+
+// we need to check where is a const ref or not	
+	if(llvm::isa<clang::RValueReferenceType>(refTy))
+		assert(false && "right side value ref not supported");
+	else{
+		QualType&& qual = llvm::cast<clang::LValueReferenceType>(refTy)->desugar();
+		// FIXME: find a better way... i got annoyed
+		if (boost::starts_with (qual.getAsString (), "const"))
+			retTy =  core::analysis::getConstCppRef(inTy);
+		else
+			retTy =  core::analysis::getCppRef(inTy);
+	}
+	END_LOG_TYPE_CONVERSION( retTy );
+	return retTy;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

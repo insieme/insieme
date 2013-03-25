@@ -728,6 +728,35 @@ namespace measure {
 
 		// partition the papi parameters
 		auto papiPartition = partitionPapiCounter(metrics);
+		/*auto papiPartition = vector<vector<MetricPtr> >(3);
+
+		namespace idm = insieme::driver::measure;
+
+		papiPartition[0] = vector<MetricPtr>{
+			  idm::Metric::TOTAL_L1_DCM,
+			  idm::Metric::TOTAL_L2_DCM,
+			  idm::Metric::TOTAL_L3_TCM,
+			  idm::Metric::TOTAL_BR_MSP,
+			  idm::Metric::TOTAL_BR_PRC,
+			  idm::Metric::TOTAL_TOT_INS,
+			  idm::Metric::TOTAL_FDV_INS,
+			  idm::Metric::TOTAL_LD_INS,
+		};
+
+		papiPartition[1] = vector<MetricPtr>{
+			  idm::Metric::TOTAL_FP_INS,
+			  idm::Metric::TOTAL_SR_INS,
+			  idm::Metric::TOTAL_L2_DCH,
+			  idm::Metric::TOTAL_FP_OPS,
+			  idm::Metric::TOTAL_VEC_SP,
+		};
+
+		papiPartition[2] = vector<MetricPtr>{
+			  idm::Metric::TOTAL_VEC_DP,
+			  idm::Metric::TOTAL_STL_ICY,
+			  idm::Metric::TOTAL_TLB_DM,
+			  idm::Metric::TOTAL_TLB_IM,
+		};*/
 
 		// run experiments and collect results
 		vector<std::map<region_id, std::map<MetricPtr, Quantity>>> res;
