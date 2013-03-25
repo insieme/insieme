@@ -384,7 +384,7 @@ void checkSema(const core::NodePtr& program, MessageList& list, const InverseStm
 
 		} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
 //		LOG(INFO) << "\t Source-Node-Type: " << address->getNodeType();
-//		LOG(INFO) << "\t Source: " << PrettyPrinter(address, PrettyPrinter::OPTIONS_SINGLE_LINE);
+		LOG(INFO) << "\t Source: " << PrettyPrinter(address, PrettyPrinter::OPTIONS_SINGLE_LINE);
 		LOG(INFO) << "\t Context: " << ss.str() << std::endl;
 //		LOG(INFO) << "\t All: " << PrettyPrinter(address.getRootNode());
 	});
