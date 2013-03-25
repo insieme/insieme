@@ -1,7 +1,9 @@
 
 class Obj{
+	int x;
 public:
+	Obj (int x);
 	int f();
 };
 
-int f(Obj o);
+int f(int o);
