@@ -56,6 +56,13 @@ void intercept_memFunc() {
 		ns::S s;
 		s.memberFunc(a);
 	}
+#pragma test "{ decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ns::S::S(( var(undefined(type<ns::S>)))); ns::S::memberFunc(v2, ( *v1));}"
+	{
+		using namespace ns;
+		int a = 0;
+		S s;
+		s.memberFunc(a);
+	}
 }
 
 int main() {
