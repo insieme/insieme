@@ -138,7 +138,6 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 	START_LOG_STMT_CONVERSION(retStmt);
 
 	core::StatementPtr retIr;
-
 	LOG_STMT_CONVERSION(retIr);
 
 	core::ExpressionPtr retExpr;
@@ -146,6 +145,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 	QualType clangTy;
 	if ( clang::Expr* expr = retStmt->getRetValue()) {
 		retExpr = convFact.convertExpr(expr);
+
 		clangTy = expr->getType();
 		retTy = convFact.convertType(clangTy.getTypePtr());
 	} else {
@@ -159,18 +159,19 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 	 * other case we can safely deref the retExpr
 	 * Obviously Ocl vectors are an exception and must be handled like scalars
 	 */
-	if ((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
-					!clangTy.getUnqualifiedType()->isExtVectorType()) {
+	if (((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
+					!clangTy.getUnqualifiedType()->isExtVectorType())) {
 		retTy = builder.refType(retTy);
+		retExpr = utils::cast(retExpr, retTy);              
 	}
+	else if ( builder.getLangBasic().isBool( retExpr->getType()))
+		retExpr = utils::cast(retExpr, retTy);                 // attention with this, bools cast not handled in AST in C
+
 
 	vector<core::StatementPtr> stmtList;
-
-	retIr = builder.returnStmt(utils::cast(retExpr, retTy));
+	retIr = builder.returnStmt(retExpr);
 	stmtList.push_back(retIr);
-
 	core::StatementPtr retStatement = builder.compoundStmt(stmtList);
-
 	stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder,stmtList );
 
 	return body;
