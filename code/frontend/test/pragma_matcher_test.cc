@@ -60,8 +60,13 @@ using namespace insieme::core;
 TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 	NodeManager manager;
-	insieme::frontend::Program prog(manager);
-	TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/omp_parallel.c" );
+	ConversionJob job;
+
+	insieme::frontend::Program prog(manager, job);
+
+	ConversionJob file = job;
+	file.setFile( SRC_DIR "/inputs/omp_parallel.c" );
+	TranslationUnit& tu = prog.addTranslationUnit( file );
 
 	const PragmaList& pl = tu.getPragmaList();
 	const ClangCompiler& comp = tu.getCompiler();
@@ -194,8 +199,12 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
 	NodeManager manager;
-	insieme::frontend::Program prog(manager);
-	prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/omp_for.c" );
+	ConversionJob job;
+	insieme::frontend::Program prog(manager, job);
+
+	ConversionJob file = job;
+	file.setFile(SRC_DIR "/inputs/omp_for.c");
+	prog.addTranslationUnit( file );
 
 	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
 	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();

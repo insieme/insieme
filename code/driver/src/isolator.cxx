@@ -482,13 +482,10 @@
 
 	core::ProgramPtr loadSources(core::NodeManager& manager, const CmdOptions& options) {
 		// use frontend to load program files
-		auto job = frontend::ConversionJob(manager, options.inputs, options.includes);
+		auto job = frontend::ConversionJob(options.inputs, options.includes);
 		job.setOption(frontend::ConversionJob::OpenMP);
 		job.setDefinitions(options.definitions);
-		return job.execute();
-//		auto program = job.execute();
-//		program = frontend::omp::applySema(program, program->getNodeManager());
-//		return program;
+		return job.execute(manager);
 	}
 
 	vector<Kernel> extractKernels(const core::ProgramPtr& program) {

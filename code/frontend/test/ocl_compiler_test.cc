@@ -138,19 +138,15 @@ public:
 
 TEST(OclCompilerTest, HelloCLTest) {
 	Logger::get(std::cerr, DEBUG, 2);
-    CommandLineOptions::Verbosity = 2;
-    core::NodeManager manager;
-    core::ProgramPtr program = core::Program::get(manager);
 
-    CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
-	CommandLineOptions::Defs.push_back("INSIEME");
+	core::NodeManager manager;
+
+    fe::ConversionJob job(SRC_DIR "inputs/hello.cl");
+    job.addIncludeDirectory(SRC_DIR "inputs");
+    job.setOption(fe::ConversionJob::OpenCL);
 
     LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";
-    fe::Program prog(manager);
-
-    std::cout << SRC_DIR << std::endl;
-    prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello.cl");
-    program = prog.convert();
+    core::ProgramPtr program = job.execute(manager);
     LOG(INFO) << "Done.";
 
     core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);

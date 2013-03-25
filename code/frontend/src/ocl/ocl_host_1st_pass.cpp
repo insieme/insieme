@@ -55,28 +55,28 @@ using namespace insieme::core;
 
 #define POINTER(type) builder.refType(builder.refType(builder.arrayType(type)))
 
-const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder) {
+const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, const ConversionJob& job) {
 	// delete quotation marks form path
 	if (path[0] == '"')
 		path = path.substr(1, path.length() - 2);
 
 	std::ifstream check;
 			string root = path;
-	size_t nIncludes = CommandLineOptions::IncludePaths.size();
+	size_t nIncludes = job.getIncludeDirectories().size();
 	// try relative path first
 	check.open(path);
 	// if not found now, check the include directories
 	for (size_t i = 0; i < nIncludes && check.fail(); ++i) {
 		check.close();
 		// try with include paths
-		path = CommandLineOptions::IncludePaths.at(i) + "/" + root;
+		path = job.getIncludeDirectories().at(i) + "/" + root;
 		check.open(path);
 	}
 	// if there is still no match, try the paths of the input files
-	size_t nInputFiles = CommandLineOptions::InputFiles.size();
+	size_t nInputFiles = job.getFiles().size();
 	for (size_t i = 0; i < nInputFiles && check.fail(); ++i) {
 		// try the paths of the input files
-		string ifp = CommandLineOptions::InputFiles.at(i);
+		string ifp = job.getFiles().at(i);
 		size_t slash = ifp.find_last_of("/");
 		path = ifp.substr(0u, slash + 1) + root;
 		check.open(path);
@@ -91,8 +91,11 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder) {
 
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
 
-	frontend::Program fkernels(builder.getNodeManager());
-	fkernels.addTranslationUnit(path);
+
+	ConversionJob kernelJob = job;
+	kernelJob.setFile(path);
+	frontend::Program fkernels(builder.getNodeManager(), kernelJob);
+	fkernels.addTranslationUnit(kernelJob);
 
 	return fkernels.convert();
 }
@@ -210,7 +213,7 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 std::cout << "\n using path string " << path->getStringValue() << " \n\n";
 					if(kernelFileCache.find(path->getStringValue()) == kernelFileCache.end()) {
 						kernelFileCache.insert(path->getStringValue());
-						kernels = loadKernelsFromFile(path->getStringValue(), builder);
+						kernels = loadKernelsFromFile(path->getStringValue(), builder, job);
 					}
 					//return;
 // set source string to an empty char array
@@ -238,7 +241,7 @@ std::cout << "\n using path string " << path->getStringValue() << " \n\n";
 		// check if file has already been added
 		if(kernelFileCache.find(kernelFilePath) == kernelFileCache.end()) {
 			kernelFileCache.insert(kernelFilePath);
-			kernels = loadKernelsFromFile(kernelFilePath, builder);
+			kernels = loadKernelsFromFile(kernelFilePath, builder, job);
 		}
 	}
 }
@@ -571,8 +574,8 @@ ExpressionPtr Ocl2Inspire::getClSetKernelArg() {
   		"}");
 }
 
-HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
-	builder(build), o2i(build), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
+HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJob& job) :
+	builder(build), job(job), o2i(build), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
 		hash_target_specialized(build, eqMap), equal_variables(build, program)), localMemDecls(
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
@@ -1122,7 +1125,7 @@ bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::
 						// check if file has already been added
 						if(kernelFileCache.find(path) == kernelFileCache.end()) {
 							kernelFileCache.insert(path);
-							const ProgramPtr kernels = loadKernelsFromFile(path, builder);
+							const ProgramPtr kernels = loadKernelsFromFile(path, builder, job);
 							for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
 									kernelEntries.push_back(kernel);
 							});

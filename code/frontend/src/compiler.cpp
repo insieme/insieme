@@ -41,7 +41,6 @@
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/sema.h"
 
-#include "insieme/utils/cmd_line_utils.h"
 #include "insieme/utils/logging.h"
 
 // defines which are needed by LLVM
@@ -172,35 +171,7 @@ struct ClangCompiler::ClangCompilerImpl {
 	ClangCompilerImpl() : clang(), TO(new TargetOptions), m_isCXX(false) {}
 };
 
-ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
-
-	setDiagnosticClient(pimpl->clang);
-	pimpl->clang.createFileManager();
-	pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
-	
-
-	// A compiler invocation object has to be created in order for the diagnostic object to work
-	CompilerInvocation* CI = new CompilerInvocation; // CompilerInvocation will be deleted by CompilerInstance
-	CompilerInvocation::CreateFromArgs(*CI, 0, 0, pimpl->clang.getDiagnostics());
-	pimpl->clang.setInvocation(CI);
-
-	// fix the target architecture to be a 64 bit machine:
-	// 		in this way we don't have differences between the size of integer/float types across architecture
-
-	if(CommandLineOptions::WinCrossCompile) {
-		// fix the target architecture to be a 64 bit machine
-		pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Win32").getTriple();
-	} else {
-		// TO.Triple = llvm::sys::getHostTriple();
-		pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
-	}
-	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
-
-	pimpl->clang.createPreprocessor();
-	pimpl->clang.createASTContext();
-}
-
-ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangCompilerImpl) {
+ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompilerImpl), config(config) {
 	// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the diagOpts object!
 	setDiagnosticClient(pimpl->clang);
 
@@ -220,7 +191,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0;
 
 	// Add default header, for non-Windows target
-	if(!CommandLineOptions::WinCrossCompile) {
+	if(!config.hasOption(ConversionJob::WinCrossCompile)) {
 		//FIXME: check if this is still valid
 		//	pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER, 
 		//												clang::frontend::CSystem, true, false, false);
@@ -229,7 +200,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	}		
 
 
-	if(CommandLineOptions::WinCrossCompile) {
+	if(config.hasOption(ConversionJob::WinCrossCompile)) {
 		// fix the target architecture to be a 64 bit machine
 		pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Win32").getTriple();
 	} else {
@@ -239,12 +210,15 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
 	
-	std::string extension(file_name.substr(file_name.rfind('.')+1, std::string::npos));
-	bool enableCpp = extension == "C" || 
-					 extension == "cpp" || 
-					 extension == "cxx" || 
-					 extension == "hpp" || 
-					 extension == "hxx";
+	bool enableCpp = false;
+	if (config.getFiles().size() == 1) {
+		std::string extension(config.getFile().substr(config.getFile().rfind('.')+1, std::string::npos));
+		enableCpp = extension == "C" ||
+						 extension == "cpp" ||
+						 extension == "cxx" ||
+						 extension == "hpp" ||
+						 extension == "hxx";
+	}
 
 	LangOptions& LO = pimpl->clang.getLangOpts();
 
@@ -255,7 +229,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	LO.POSIXThreads = 1;
 	*/
 
-	if(CommandLineOptions::STD == "c99") LO.C99 = 1; 		// set c99
+	if(config.getStandard() == "c99") LO.C99 = 1; 		// set c99
 	
 	if(enableCpp ) {
 		pimpl->m_isCXX = true;
@@ -285,7 +259,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 			 									clang::frontend::System, true, false, false);
 
 	// add user provided headers
-	for (std::string curr : CommandLineOptions::IncludePaths){
+	for (std::string curr : config.getIncludeDirectories()){
 		this->pimpl->clang.getHeaderSearchOpts().AddPath( curr, clang::frontend::System, true, false, false);
 	}
 
@@ -295,19 +269,19 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	LO.LaxVectorConversions = 1;
 	
 	// set -D macros
-	for (std::string curr : CommandLineOptions::Defs){
+	for (std::string curr : config.getDefinitions()){
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef(curr);
 	}
 
 	// Set OMP define if compiling with OpenMP
-	if(CommandLineOptions::OpenMP) {
+	if(config.hasOption(ConversionJob::OpenMP)) {
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("_OPENMP");
 		this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/omp/input/", 
 			clang::frontend::System, true, false, false);
 	}
 
 	// add Cilk definitions if required
-	if (CommandLineOptions::Cilk) {
+	if(config.hasOption(ConversionJob::Cilk)) {
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("cilk=");
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("spawn=_Pragma(\"cilk spawn\")");
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("sync=_Pragma(\"cilk sync\")");
@@ -324,11 +298,13 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 
 
 	//pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
-	const FileEntry *FileIn = pimpl->clang.getFileManager().getFile(file_name);
-	pimpl->clang.getSourceManager().createMainFileID(FileIn);
-	pimpl->clang.getDiagnosticClient().BeginSourceFile(
-										pimpl->clang.getLangOpts(),
-										&pimpl->clang.getPreprocessor());
+	if (config.getFiles().size() == 1) {
+		const FileEntry *FileIn = pimpl->clang.getFileManager().getFile(config.getFile());
+		pimpl->clang.getSourceManager().createMainFileID(FileIn);
+		pimpl->clang.getDiagnosticClient().BeginSourceFile(
+											pimpl->clang.getLangOpts(),
+											&pimpl->clang.getPreprocessor());
+	}
 
 	if (VLOG_IS_ON(2))
 			printHeader (getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts ());

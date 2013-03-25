@@ -81,7 +81,7 @@ ProgramPtr HostCompiler::compile() {
 //	visitDepthFirst(transformedProg,FAKK);
 
 	//    HostVisitor oclHostVisitor(builder, mProgram);
-	HostMapper oclHostMapper(builder, mProgram);
+	HostMapper oclHostMapper(builder, mProgram, job);
 
 	const ProgramPtr& interProg = dynamic_pointer_cast<const core::Program>(oclHostMapper.mapElement(0, mProgram));
 	assert(interProg && "First pass of OclHostCompiler corrupted the program");
