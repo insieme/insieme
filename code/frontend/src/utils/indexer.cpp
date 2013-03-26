@@ -187,7 +187,6 @@ void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 //
 Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const std::string& symbol) const{
 
-	VLOG(2) << "looking for "<< symbol;
 	tIndex::const_iterator match = this->mIndex.find(symbol);
 	if (match != this->mIndex.end()){
 		assert(match->second.first && match->second.second && " found a wrong definition");
@@ -217,7 +216,7 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Dec
 	assert(decl && "Cannot look up null pointer!");
 
 	if(const clang::FunctionDecl* fd = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
-		VLOG(2) << fd->getTemplatedKind();
+		//VLOG(2) << fd->getTemplatedKind();
 		switch( fd->getTemplatedKind() ) {
 			case clang::FunctionDecl::TemplatedKind::TK_NonTemplate:
 				return getDefAndTUforDefinition(buildNameTypeChain(fd));

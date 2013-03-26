@@ -563,7 +563,7 @@ int main(int argc, char** argv) {
 			auto inputFiles = options.InputFiles;
 			// LOG(INFO) << "Parsing input files: ";
 			// std::copy(inputFiles.begin(), inputFiles.end(), std::ostream_iterator<std::string>( std::cout, ", " ) );
-			fe::Program p(manager);
+			fe::Program p(manager, options);
 			
 			measureTimeFor<void>("Frontend.load [clang]", [&]() { p.addTranslationUnits(options); } );
 
