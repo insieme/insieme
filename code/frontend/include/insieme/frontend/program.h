@@ -111,7 +111,7 @@ class Program: public boost::noncopyable {
 	// The IR program node containing the converted IR
 	insieme::core::ProgramPtr mProgram;
 	
-	const ConversionJob& config;
+	const ConversionJob config;
 
 	friend class ::TypeConversion_FileTest_Test;
 	friend class ::StmtConversion_FileTest_Test;
