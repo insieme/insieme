@@ -1138,7 +1138,11 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThisExpr(const 
 	irType = builder.refType(irType);
 
 	// build a literal as a placeholder (has to be substituted later by function call expression)
-	auto ret =  builder.literal("this", irType);
+	core::ExpressionPtr ret =  builder.literal("this", irType);
+
+	// this is a pointer, make it pointer
+	ret =  builder.callExpr(builder.getLangBasic().getScalarToArray(), ret);
+
 	END_LOG_EXPR_CONVERSION(ret);
 	return ret;
 
