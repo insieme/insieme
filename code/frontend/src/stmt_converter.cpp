@@ -148,25 +148,43 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 
 		clangTy = expr->getType();
 		retTy = convFact.convertType(clangTy.getTypePtr());
+
+		// arrays and vectors in C are always returned as reference, so the type of the return
+		// expression is of array (or vector) type we are sure we have to return a reference, in the
+		// other case we can safely deref the retExpr
+		if ((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
+						!clangTy.getUnqualifiedType()->isExtVectorType()) {
+			retTy = builder.refType(retTy);
+			retExpr = utils::cast(retExpr, retTy);              
+		}
+		else if ( builder.getLangBasic().isBool( retExpr->getType())){
+			retExpr = utils::cast(retExpr, retTy);                 // attention with this, bools cast not handled in AST in C
+		}
+
+		if (retExpr->getType()->getNodeType() == core::NT_RefType) {
+		
+			// Obviously Ocl vectors are an exception and must be handled like scalars
+			// no reference returned
+			if (clangTy->isExtVectorType()) {
+				retExpr = utils::cast(retExpr, retTy);  
+			}
+
+			// vector to array
+			if(retTy->getNodeType() == core::NT_RefType){
+				core::TypePtr expectedTy = core::analysis::getReferencedType(retTy) ;
+				core::TypePtr currentTy = core::analysis::getReferencedType(retExpr->getType()) ;
+				if (expectedTy->getNodeType() == core::NT_ArrayType && 
+					currentTy->getNodeType()  == core::NT_VectorType){
+					retExpr = utils::cast(retExpr, retTy);  
+				}
+			}
+		}
+		
 	} else {
+		// no return expression
 		retExpr = gen.getUnitConstant();
 		retTy = gen.getUnit();
 	}
-
-	/*
-	 * arrays and vectors in C are always returned as reference, so the type of the return
-	 * expression is of array (or vector) type we are sure we have to return a reference, in the
-	 * other case we can safely deref the retExpr
-	 * Obviously Ocl vectors are an exception and must be handled like scalars
-	 */
-	if (((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
-					!clangTy.getUnqualifiedType()->isExtVectorType())) {
-		retTy = builder.refType(retTy);
-		retExpr = utils::cast(retExpr, retTy);              
-	}
-	else if ( builder.getLangBasic().isBool( retExpr->getType()))
-		retExpr = utils::cast(retExpr, retTy);                 // attention with this, bools cast not handled in AST in C
-
 
 	vector<core::StatementPtr> stmtList;
 	retIr = builder.returnStmt(retExpr);
