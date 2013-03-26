@@ -156,9 +156,9 @@ void* _irt_worker_func(void *argvp) {
 	self->event_data = irt_ocl_create_event_table();
 #endif
 	
-#ifndef _WIN32
-	irt_cpu_freq_set_frequency_core_env(self);
-#endif
+//#ifndef _WIN32
+//	irt_cpu_freq_set_frequency_core_env(self);
+//#endif
 
 	// init lazy wi
 	memset(&self->lazy_wi, 0, sizeof(irt_work_item));

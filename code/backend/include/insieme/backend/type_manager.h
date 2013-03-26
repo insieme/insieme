@@ -70,6 +70,8 @@ namespace backend {
 
 	typedef vector<TypeHandler> TypeHandlerList;
 
+	static inline TypeHandlerList getBasicTypeHandlerList() { return TypeHandlerList(); }
+
 	namespace detail {
 		class TypeInfoStore;
 	}

@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/core/ir_builder.h"
-//#include "insieme/frontend/program.h"
+#include "insieme/frontend/frontend.h"
 
 namespace insieme {
 namespace frontend {
@@ -52,9 +52,11 @@ class HostCompiler {
 	//    frontend::Program& mProg;
 	core::IRBuilder builder;
 
+	ConversionJob job;
+
 public:
-	HostCompiler(core::ProgramPtr& program) :
-		mProgram(program), builder(program->getNodeManager()) {
+	HostCompiler(core::ProgramPtr& program, const ConversionJob& job) :
+		mProgram(program), builder(program->getNodeManager()), job(job) {
 	}
 
 	core::ProgramPtr compile();

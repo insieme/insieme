@@ -205,7 +205,7 @@ void fun_ptr() {
 	#pragma test "ref<((int<4>,int<4>)->int<4>)> v1 = ref.var(rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}})"
 	int(* f)(int,int) = &add;
 
-	#pragma test "ref.assign(v4, rec v3.{v3=fun(int<4> v1, int<4> v2) {return int.sub(v1, v2);}})"
+	#pragma test "ref.assign(v1, rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.sub(v2, v3);}})"
 	f = &sub;
 
 	#pragma test "ref.deref(v1)(3, 4)"

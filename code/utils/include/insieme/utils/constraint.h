@@ -85,6 +85,7 @@ inline ConstraintType getLogicNegation(const ConstraintType& c) {
 
 	default: assert(false && "Constraint type not supported");
 	}
+	return ConstraintType::GT;	// some return is required!
 }
 
 /******************************************************************************************************

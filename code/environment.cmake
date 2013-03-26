@@ -103,7 +103,7 @@ if ( NOT DEFINED BOOST_ROOT )
 endif()
 set(Boost_USE_MULTITHREADED Off)
 find_package( Boost 1.48 COMPONENTS program_options system filesystem regex )
-include_directories( ${Boost_INCLUDE_DIRS} )
+include_directories( SYSTEM ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
 # lookup perl
@@ -279,6 +279,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions( -fdiagnostics-show-option )
 	add_definitions( -Wall )
 	# add_definitions( -Wextra )
+	# add_definitions( -Werror )
 	# add_definitions( -pedantic )
 
 	# add flag allowing arbitrary library ordering (not default in newer distributions)

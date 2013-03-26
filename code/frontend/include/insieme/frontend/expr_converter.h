@@ -40,6 +40,13 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/functionDependencyGraph.h"
+#include "insieme/frontend/utils/ir_cast.h"
+
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/ir++_extension.h"
+
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
@@ -101,11 +108,10 @@ namespace conversion {
 	FinalActions attachLog( [&] () { END_LOG_EXPR_CONVERSION(retIr); } )
 
 #define START_LOG_EXPR_CONVERSION(expr) \
-	assert(!convFact.currTU.empty() && "we have no translation unit"); \
 	VLOG(1) <<  "\n****************************************************************************************\n" \
 			 << "Converting expression [class: '" << expr->getStmtClassName() << "']\n" \
 			 << "-> at location: (" <<	\
-				utils::location(expr->getLocStart(), convFact.currTU.top()->getCompiler().getSourceManager()) << "): "; \
+				utils::location(expr->getLocStart(), convFact.getCurrentSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
 		VLOG(2) << "Dump of clang expression: \n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
@@ -133,9 +139,54 @@ protected:
 	core::ExpressionPtr asLValue(const core::ExpressionPtr& value);
 	core::ExpressionPtr asRValue(const core::ExpressionPtr& value);
 
-	template<class ClangExprTy>
-	ExpressionList getFunctionArguments(const core::IRBuilder& builder, ClangExprTy* callExpr,
-			const core::FunctionTypePtr& funcTy);
+	// FIXME: do the globals here as well
+template<class ClangExprTy>
+ExpressionList getFunctionArguments(const core::IRBuilder& builder, ClangExprTy* callExpr,
+		const core::FunctionTypePtr& funcTy) {
+	ExpressionList args;
+
+	// if member function, need to skip one arg (the local scope arg)
+	int off =0;
+	if (funcTy->isMemberFunction() ||
+		funcTy->isConstructor() ||
+		funcTy->isDestructor() ){
+		off =1;
+	}
+
+	for (size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
+		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
+		core::TypePtr&& argTy = arg->getType();
+		if ( argId < funcTy->getParameterTypes().size() ) {
+			const core::TypePtr& funcParamTy = funcTy->getParameterTypes()[argId+off];
+
+			if (*funcParamTy != *argTy){
+
+				// if is a CPP ref, do not cast, do a transformation
+				if (core::analysis::isCppRef(funcParamTy)) {
+					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), arg);
+				}
+				else if (core::analysis::isConstCppRef(funcParamTy)) {
+					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), arg);
+				}
+				else if (core::analysis::isCppRef(argTy)) {
+					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), arg);
+				}
+				else if (core::analysis::isConstCppRef(argTy)) {
+					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), arg);
+				}
+				else{
+					arg = utils::cast(arg, funcParamTy);
+				}
+
+			}
+		} else {
+			arg = utils::cast(arg, builder.getNodeManager().getLangBasic().getVarList());
+		}
+		args.push_back( arg );
+	}
+
+	return args;
+}
 
 public:
 	// CallGraph for functions, used to resolved eventual recursive functions
@@ -281,6 +332,7 @@ public:
 	// and transparently attach annotations to node which are annotated
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	virtual core::ExpressionPtr Visit(const clang::Expr* expr) = 0;
+
 };
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -361,8 +413,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, ExtVectorElementExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
-
-
+	
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						  IMPLICIT CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

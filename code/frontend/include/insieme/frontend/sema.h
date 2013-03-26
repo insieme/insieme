@@ -40,8 +40,11 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Ownership.h"
+#pragma GCC diagnostic pop
 
 using clang::SourceLocation;
 

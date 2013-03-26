@@ -121,7 +121,6 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDeclStmt(clang::De
 	for (auto it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
 	if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
 		try {
-			assert(!convFact.currTU.empty() && "translation unit is null");
 			auto retStmt = convFact.convertVarDecl(varDecl);
 			// handle eventual OpenMP pragmas attached to the Clang node
 			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, convFact) );
@@ -329,8 +328,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 			assert(init && "Initialization statement for loop is not an expression");
 
-			const core::TypePtr& varTy = inductionVar->getType();
-			assert(varTy->getNodeType() != core::NT_RefType);
+			assert(inductionVar->getType()->getNodeType() != core::NT_RefType);
 
 			// Initialize the value of the new induction variable with the value of the old one
 			if ( core::analysis::isCallOf(init, gen.getRefAssign()) ) {
@@ -512,7 +510,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		// handle eventual pragmas attached to the Clang node
 		retStmt.push_back( omp::attachOmpAnnotation(whileStmt, forStmt, convFact) );
 
-		clang::Preprocessor& pp = convFact.currTU.top()->getCompiler().getPreprocessor();
+		clang::Preprocessor& pp = convFact.getCurrentPreprocessor();
 		pp.Diag(forStmt->getLocStart(),
 				pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
 						std::string("For loop converted into while loop, cause: ") + e.what() )
@@ -905,6 +903,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
  */
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchCase(clang::SwitchCase* caseStmt) {
 	assert(false && "Visitor is visiting a 'case' stmt");
+	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitBreakStmt(clang::BreakStmt* breakStmt) {
@@ -964,12 +963,13 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitNullStmt(clang::Nu
 }
 
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitGotoStmt(clang::GotoStmt* gotoStmt) {
-	clang::Preprocessor& pp = convFact.currTU.top()->getCompiler().getPreprocessor();
+	clang::Preprocessor& pp = convFact.getCurrentPreprocessor();
 	pp.Diag(
 			gotoStmt->getLocStart(),
 			pp.getDiagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error,
 					"Gotos are not handled by the Insieme compielr"));
 	assert(false);
+	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitStmt(clang::Stmt* stmt) {

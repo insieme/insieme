@@ -676,8 +676,6 @@ namespace backend {
 				}
 			}
 
-			// TODO: process class ctors and dtors
-
 			// done
 			return res;
 		}
@@ -1225,6 +1223,9 @@ namespace backend {
 			auto manager = converter.getCNodeManager();
 			NameManager& nameManager = converter.getNameManager();
 
+			// the one common declaration block for all types in the recursive block
+			c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
+
 			// A) create a type info instance for each defined type and add definition
 			for_each(ptr->getDefinitions(), [&](const core::RecTypeBindingPtr& cur) {
 
@@ -1233,7 +1234,6 @@ namespace backend {
 
 				// create prototype
 				c_ast::IdentifierPtr name = manager->create(nameManager.getName(type, "userdefined_rec_type"));
-
 				// create declaration code
 				c_ast::TypePtr cType;
 
@@ -1246,8 +1246,12 @@ namespace backend {
 					assert(false && "Cannot support recursive type which isn't a struct or union!");
 				}
 
+				// add declaration
+				declaration->appendCode(manager->create<c_ast::TypeDeclaration>(cType));
+
+				// create type info block
 				TypeInfo* info = new TypeInfo();
-				info->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), manager->create<c_ast::TypeDeclaration>(cType));
+				info->declaration = declaration;
 				info->lValueType = cType;
 				info->rValueType = cType;
 				info->externalType = cType;
@@ -1272,8 +1276,11 @@ namespace backend {
 				assert(curInfo && newInfo && "Both should be available now!");
 				assert(curInfo != newInfo);
 
+				// remove dependency to old declaration (would produce duplicated declaration)
+				newInfo->definition->remDependency(newInfo->declaration);
+
 				// combine them and updated within type info map (not being owned by the pointer)
-				newInfo->declaration = curInfo->declaration;
+				newInfo->declaration = declaration;
 
 				// also take over the actual type definitions
 				newInfo->lValueType = curInfo->lValueType;

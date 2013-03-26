@@ -89,8 +89,11 @@ namespace types {
 				auto cur = *it;
 
 				// get components this edge is connection
+				#pragma GCC diagnostic push
+				#pragma GCC diagnostic ignored "-Wuninitialized"
 				auto src = componentMap[source(cur, boostGraph)];
 				auto trg = componentMap[target(cur, boostGraph)];
+				#pragma GCC diagnostic pop
 
 				// if edge is crossing component boarders ...
 				if (src != trg) {

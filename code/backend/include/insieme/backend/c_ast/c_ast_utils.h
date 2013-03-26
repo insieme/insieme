@@ -153,6 +153,10 @@ namespace c_ast {
 		return type->getManager()->create<c_ast::PointerType>(type);
 	}
 
+	inline ReferenceTypePtr ref(const TypePtr& type, bool isConst = false) {
+		return type->getManager()->create<c_ast::ReferenceType>(isConst, type);
+	}
+
 	inline VectorTypePtr vec(const TypePtr& element, unsigned size) {
 		return element->getManager()->create<c_ast::VectorType>(
 				element,

@@ -34,36 +34,70 @@
  * regarding third party software licenses.
  */
 
-#include <string>
-#include "insieme/frontend/frontend.h"
-#include "insieme/utils/test/integration_tests.h"
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
 
-namespace {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#include <clang/AST/StmtVisitor.h>
+#include <clang/AST/ExprCXX.h>
+#include <clang/AST/Expr.h>
+#pragma GCC diagnostic pop
 
-	// a node manager bound to the life cycle of the entire program
-	insieme::core::NodeManager testGlobalManager;
+#include <iostream>
+#include <vector>
+namespace insieme {
+namespace frontend { 
+namespace utils {
 
-	// a cache for already loaded Integreation tests
-	std::map<insieme::utils::test::IntegrationTestCase, insieme::core::ProgramPtr> loadedCodes;
+namespace{
 
-	// a helper method for loading program code
-	insieme::core::ProgramPtr load(insieme::core::NodeManager& manager, const insieme::utils::test::IntegrationTestCase& testCase) {
+class temporariesVisitor : public clang::ConstStmtVisitor<temporariesVisitor, bool> {
 
-		// check whether the code is already in the cache
-		auto pos = loadedCodes.find(testCase);
-		if (pos != loadedCodes.end()) {
-			return manager.get(pos->second);
+
+	private:
+		std::vector<const clang::CXXTemporary*>& tempList;
+
+	public:
+		temporariesVisitor (std::vector<const clang::CXXTemporary*>& list) 
+			: tempList(list) {}
+
+
+		bool 	Visit (const clang::Stmt *S){
+			if (llvm::isa<clang::CXXBindTemporaryExpr>(S))
+				tempList.push_back(llvm::cast<clang::CXXBindTemporaryExpr>(S)->getTemporary ());
+
+			for( clang::Stmt::const_child_iterator child_it = S->child_begin(); child_it!= S->child_end(); child_it++)
+				Visit(*child_it);
+
+			return false;
 		}
 
-		// not loaded yet => load and cache code
-		insieme::core::ProgramPtr code = insieme::frontend::ConversionJob(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
+		std::vector<const clang::CXXTemporary*>& lookTemporaries (const clang::Expr* start){
 
-		loadedCodes.insert(std::make_pair(testCase, code));
-		return manager.get(code);
+			this->Visit (llvm::cast<clang::Stmt>(start));
+			return tempList;
+		}
+
+};
+
+
+} //annonymous namespace
+
+	/**
+	 *  search in the inner tree for the used temporaries
+	 */
+	std::vector<const clang::CXXTemporary*> lookupTemporaries (const clang::Expr* innerExpr){
+
+		std::vector<const clang::CXXTemporary*> temporaries;
+		temporariesVisitor vis(temporaries);
+		vis.lookTemporaries(innerExpr);
+
+		return temporaries;
 	}
 
-	insieme::core::ProgramPtr load(insieme::core::NodeManager& manager, const std::string& name) {
-		return load(manager, *utils::test::getCase(name));
-	}
 
-}
+
+} //namespace utils 
+} //namespace frontend 
+} //namespace insieme 

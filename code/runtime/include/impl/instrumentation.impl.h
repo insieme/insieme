@@ -487,6 +487,10 @@ void irt_inst_region_add_time(irt_work_item* wi) {}
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 
+#if !(IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC)
+	#error "IRT INSTRUMENTATION ONLY SUPPORTS STATIC SCHEDULING AT THIS POINT"
+#endif
+
 irt_instrumentation_aggregated_data_table* irt_g_aggregated_performance_table;
 
 irt_region_list* irt_inst_create_region_list() {
@@ -599,10 +603,10 @@ void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uin
 	irt_instrumentation_region_data* epd = &(table->data[table->number_of_elements++]);
 
 	rapl_energy_data data;
-	data.number_of_cpus = 2;
-	double package[2];
-	double mc[2];
-	double cores[2];
+	data.number_of_cpus = 4;
+	double package[4];
+	double mc[4];
+	double cores[4];
 	data.package = package;
 	data.mc = mc;
 	data.cores = cores;
@@ -619,6 +623,12 @@ void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uin
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2].value_double = data.package[1];
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double = data.mc[1];
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double = data.cores[1];
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_3].value_double = data.package[2];
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_3].value_double = data.mc[2];
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_3].value_double = data.cores[2];
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_4].value_double = data.package[3];
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_4].value_double = data.mc[3];
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_4].value_double = data.cores[3];
 
 			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_uint64 = irt_get_temperature_core(worker);
 			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_uint64 = irt_get_temperature_package(worker);
@@ -661,6 +671,12 @@ void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uin
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_2].value_double = data.package[1];
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double = data.mc[1];
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double = data.cores[1];
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_3].value_double = data.package[2];
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_3].value_double = data.mc[2];
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_3].value_double = data.cores[2];
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_4].value_double = data.package[3];
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_4].value_double = data.mc[3];
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_4].value_double = data.cores[3];
 
 			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_uint64 = irt_get_temperature_core(worker);
 			epd->data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_uint64 = irt_get_temperature_package(worker);
@@ -782,6 +798,18 @@ void irt_inst_region_data_output(irt_worker* worker) {
 			"energy_mc_2_end_(j),"
 			"energy_cores_2_start_(j),"
 			"energy_cores_2_end_(j),"
+			"energy_package_3_start_(j),"
+			"energy_package_3_end_(j),"
+			"energy_mc_3_start_(j),"
+			"energy_mc_3_end_(j),"
+			"energy_cores_3_start_(j),"
+			"energy_cores_3_end_(j),"
+			"energy_package_4_start_(j),"
+			"energy_package_4_end_(j),"
+			"energy_mc_4_start_(j),"
+			"energy_mc_4_end_(j),"
+			"energy_cores_4_start_(j),"
+			"energy_cores_4_end_(j),"
 			"temperature_core_start_(c),"
 			"temperature_core_end_(c),"
 			"temperature_pkg_start_(c),"
@@ -816,7 +844,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 			// single fprintf for performance reasons
 			// outputs all data in pairs: value_when_entering_region, value_when_exiting_region
 	//		fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f",
-			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%lu,%lu,%lu,%lu",
+			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%1.8f,%lu,%lu,%lu,%lu",
 					table->data[i].subject_id,
 					irt_time_convert_ticks_to_ns(start_data.timestamp), 
 					irt_time_convert_ticks_to_ns(table->data[i].timestamp),
@@ -840,6 +868,21 @@ void irt_inst_region_data_output(irt_worker* worker) {
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_2].value_double,
 					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double,
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_2].value_double,
+
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_3].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_3].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_3].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_3].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_3].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_3].value_double,
+
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_4].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_PACKAGE_4].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_4].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_MC_4].value_double,
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_4].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY_CORES_4].value_double,
+
 					start_data.data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_uint64,
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_CORE].value_uint64,
 					start_data.data[PERFORMANCE_DATA_ENTRY_TEMPERATURE_PACKAGE].value_uint64,

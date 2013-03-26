@@ -143,7 +143,7 @@ namespace access {
 		}
 
 		inline const BaseAccess& getRoot() const { return *this; }
-		inline BaseAccessPtr getRootPtr() const { assert(false); }
+		inline BaseAccessPtr getRootPtr() const { assert(false); return BaseAccessPtr(); }
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 	};

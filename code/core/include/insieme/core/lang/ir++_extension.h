@@ -91,6 +91,30 @@ namespace lang {
 		);
 
 		/**
+		 * A construct supporting the construction and initialization of a vector
+		 * of objects.
+		 */
+		LANG_EXT_DERIVED(VectorCtor,
+				"let int = uint<8> in "
+				""
+				"(('a)->ref<'a> allocator, 'b::() ctor, intTypeParam<#s> size)->ref<vector<'b,#s>> { "
+				"	// define the type to be allocated \n"
+				"	let wrapper = struct { int size; vector<'b,#s> data; }; "
+				"	"
+				"	// allocate the memory \n"
+				"	ref<wrapper> res = allocator((wrapper){ to.uint(size), vector.init.undefined(lit('b), size) });"
+				"	"
+				"	// init elements \n"
+				"	for(int i=0u .. *res->size) {"
+				"		ctor(res->data[i]);"
+				"	}"
+				"	"
+				"	// return array reference \n"
+				"	return res->data;"
+				"}"
+		);
+
+		/**
 		 * A destructor supporting the destruction of an array of objects.
 		 */
 		LANG_EXT_DERIVED(ArrayDtor,
@@ -112,6 +136,38 @@ namespace lang {
 				"	deallocator(block);"
 				"}"
 		);
+
+
+		/**
+		 * An operator converting a C++ reference into an IR reference.
+		 */
+		LANG_EXT_DERIVED(RefCppToIR,
+				"(struct { ref<'a> _cpp_ref } x)->ref<'a> { return x._cpp_ref; }"
+		);
+
+		/**
+		 * An operator converting an IR reference into a C++ reference.
+		 */
+		LANG_EXT_DERIVED(RefIRToCpp,
+				"let cppRef = struct { ref<'a> _cpp_ref } in "
+				"(ref<'a> x)->cppRef { return (cppRef) { x }; }"
+		);
+
+		/**
+		 * An operator converting a const C++ reference into an IR reference.
+		 */
+		LANG_EXT_DERIVED(RefConstCppToIR,
+				"(struct { ref<'a> _const_cpp_ref } x)->ref<'a> { return x._const_cpp_ref; }"
+		);
+
+		/**
+		 * An operator converting an IR reference into a const C++ reference.
+		 */
+		LANG_EXT_DERIVED(RefIRToConstCpp,
+				"let cppRef = struct { ref<'a> _const_cpp_ref } in "
+				"(ref<'a> x)->cppRef { return (cppRef) { x }; }"
+		);
+
 	};
 
 } // end namespace lang

@@ -37,7 +37,11 @@
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include "clang/AST/Decl.h"
+#pragma GCC diagnostic pop
 // DON'T MOVE THIS!
 
 #include <gtest/gtest.h>
@@ -100,7 +104,7 @@ TEST(StmtConversion, FileTest) {
 
 	NodeManager manager;
 	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
+	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/stmt.c") );
 	
 	prog.analyzeFuncDependencies();
 
@@ -112,7 +116,7 @@ TEST(StmtConversion, FileTest) {
 		NodeManager mgr;
 
 		fe::conversion::ConversionFactory convFactory( mgr, prog );
-		convFactory.setTranslationUnit(tu);
+		convFactory.setTranslationUnit(&tu);
 
 		if(tp.isStatement()) {
 			StatementPtr&& stmt = convFactory.convertStmt( tp.getStatement() );

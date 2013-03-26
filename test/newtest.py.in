@@ -549,7 +549,7 @@ class TestJob:
 		for id, val in passes:
 			if id in pas: 
 				cur_passes.append( (id, val) )
-				if id == "g++" or id == "icpc": isCxx = True
+				if id == "g++" or id == "icpc" or id.startswith("cxx"): isCxx = True
 
 		self.__data = TestData(test_case_name)
 		self.__cmds = [ ]

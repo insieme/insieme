@@ -46,7 +46,6 @@
 #include "insieme/core/checks/full_check.h"
 
 #include "insieme/utils/test/integration_tests.h"
-#include "insieme/utils/cmd_line_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"

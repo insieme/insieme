@@ -26,22 +26,16 @@ int main() {
 
 	Shape s;
 	Circle c1;
-	Circle2 c2;
+	//Circle2 c2;
 
 	s.draw();		// Shape::draw()
 	c1.draw();		// Circle::draw()
-	c2.draw();		// Circle2::draw()
+	//c2.draw();		// Circle2::draw()
 
 	Shape *p1 = &c1;
-	/*p1->draw();   	// Circle::draw()
-	p1 = &c1;
-	p1->draw();   	// Circle::draw()*/
+	p1->draw();   	// Circle::draw()
+	//p1 = &c1;
+	//p1->draw();   	// Circle::draw()
 
-//	automatically added operator= has no name -> problem with CAnnotation
-//	Shape& r1 = c1;
-//	r1.draw();    	// Circle::draw()
-//
-//	r1 = c2;
-//	r1.draw();    	// Circle::draw()
 	return 0;
 }

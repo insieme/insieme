@@ -236,6 +236,14 @@ namespace c_ast {
 		}
 
 		/**
+		 * Removes a dependency to the given fragment.
+		 *
+		 * @param fragment the code fragment dependency to be eliminated
+		 * @return true if the dependency was present, false otherwise
+		 */
+		bool remDependency(const CodeFragmentPtr& fragment);
+
+		/**
 		 * Obtains the list of all code fragments this fragment is depending on, hence, all fragments
 		 * which have to occur before this fragment within the resulting code.
 		 *
@@ -383,6 +391,13 @@ namespace c_ast {
 		 * @return a constant reference to the represented code body
 		 */
 		vector<NodePtr>& getCode() { return code; }
+
+		/**
+		 * Appends the given C-Code construct to the list of constructs covered by this fragment.
+		 *
+		 * @param code the construct to be appended
+		 */
+		void appendCode(const NodePtr& code) { this->code.push_back(code); }
 
 		/**
 		 * Prints the code covered by this fragment to the given output stream.

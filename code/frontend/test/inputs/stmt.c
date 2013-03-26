@@ -60,15 +60,15 @@ void binary_op_test() {
 	unsigned c;
 
 	#pragma test \
-	"(( *v2)+( *v1))"
+	"(( *v1)+( *v2))"
 	a + b;
 
 	#pragma test \
-	"(v2 := (( *v2)+( *v1)))"
+	"(v1 := (( *v1)+( *v2)))"
 	a += b;
 
 	#pragma test \
-	"(( *v2)-( *v1))"
+	"(( *v1)-( *v2))"
 	a - b;
 
 	#pragma test \
@@ -76,11 +76,11 @@ void binary_op_test() {
 	c - 1;
 
 	#pragma test \
-	"(v2 := (( *v2)-( *v1)))"
+	"(v1 := (( *v1)-( *v2)))"
 	a -= b;
 
 	#pragma test \
-	"fun(ref<int<4>> v3, ref<int<4>> v4) -> int<4> { (( *v4)+1); return (( *v3)-1);}(v1, v2)"
+	"fun(ref<int<4>> v3, ref<int<4>> v4) -> int<4> { (( *v3)+1); return (( *v4)-1);}(v1, v2)"
 	(a+1, b-1);
 }
 
@@ -214,8 +214,7 @@ void for_stmt_test() {
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
-	#pragma test \
-	"{ (v1 := 0); while((( *v2)>1)) { { }; fun(ref<int<4>> v6, ref<int<4>> v7) -> ref<int<4>> { fun(ref<'a> v1) -> 'a { decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v6); (v7 := (( *v7)/2)); return v7; }(v1, v2); };}"
+	#pragma test "{ (v1 := 0); while((( *v5)>1)) { { }; fun(ref<int<4>> v6, ref<int<4>> v7) -> ref<int<4>> { fun(ref<'a> v1) -> 'a { decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v6); (v7 := (( *v7)/2)); return v7; }(v1, v5); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 
 	//(v1 := 0);

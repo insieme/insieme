@@ -188,6 +188,13 @@ namespace backend {
 			);
 		}
 
+		// special handling for int-type-parameter literal
+		if (core::analysis::isIntTypeParamLiteral(ptr)) {
+			core::IntTypeParamPtr value = core::analysis::getRepresentedTypeParam(ptr);
+			assert(value.isa<core::ConcreteIntTypeParamPtr>() && "Uninstantiated int-type-parameter literal encountered!");
+			return converter.getCNodeManager()->create<c_ast::Literal>(toString(*value) + "u");
+		}
+
 		// convert literal
 		c_ast::ExpressionPtr res = converter.getCNodeManager()->create<c_ast::Literal>(ptr->getStringValue());
 
@@ -457,7 +464,7 @@ namespace backend {
 			const auto& ext = initValue->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
 
 			// check whether it is a array ctor call
-			if (!core::analysis::isCallOf(initValue, ext.getArrayCtor())) {
+			if (!core::analysis::isCallOf(initValue, ext.getArrayCtor()) && !core::analysis::isCallOf(initValue, ext.getVectorCtor())) {
 				return false;
 			}
 
@@ -477,7 +484,7 @@ namespace backend {
 
 			// resolve type (needs to be explicitly handled here)
 			auto size = converter.getStmtConverter().convertExpression(context, sizeExpr);
-			auto elementType = var->getType().as<core::RefTypePtr>()->getElementType().as<core::ArrayTypePtr>()->getElementType();
+			auto elementType = var->getType().as<core::RefTypePtr>()->getElementType().as<core::SingleElementTypePtr>()->getElementType();
 			const TypeInfo& typeInfo = converter.getTypeManager().getCVectorTypeInfo(elementType, size);
 
 			// although it is on the stack, it is to be treated as it would be indirect (implicit pointer!)

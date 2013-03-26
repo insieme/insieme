@@ -48,8 +48,9 @@
 #include "insieme/frontend/convert.h"
 
 #include "insieme/utils/string_utils.h"
-#include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/logging.h"
+#include "insieme/utils/unused.h"
 
 #include "insieme/annotations/c/naming.h"
 
@@ -128,8 +129,9 @@ GlobalVarCollector::buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, co
 /////////////////////////////////////////////////////////////////////////////////
 ///
 void GlobalVarCollector::operator()(const clang::Decl* decl) {
+	
 	if( interceptor.isIntercepted(decl) ) {
-		// or funcDecl is intercepted
+		// funcDecl is intercepted
 		VLOG(2) << "isIntercepted " << decl;
 		return; 
 	}
@@ -247,8 +249,7 @@ bool GlobalVarCollector::VisitVarDecl(clang::VarDecl* varDecl) {
 		assert(enclosingFunc);
 		usingGlobals.insert(enclosingFunc); // the enclosing function uses globals
 
-		auto&& fit = varIdentMap.find(varDecl);
-		assert(fit == varIdentMap.end() && "Variable already declared");
+		assert(varIdentMap.find(varDecl) == varIdentMap.end() && "Variable already declared");
 
 		auto ident = buildIdentifierFromVarDecl(varDecl, enclosingFunc);
 		assert(varDecl && "no dec");
@@ -282,8 +283,8 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 
 		// add the variable to the list of global vars (if not already there)
 		if(fit == globals.end()) {
-			auto ret = globals.insert( varDecl );
-			assert(ret.second && "Variable name already exists within the list of global variables.");
+			__unused auto res = globals.insert( varDecl );
+			assert(res.second && "Variable name already exists within the list of global variables.");
 			
 			assert(varDecl && "no dec");
 			assert(ident && "no identifier");

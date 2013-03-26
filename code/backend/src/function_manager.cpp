@@ -843,7 +843,13 @@ namespace backend {
 
 						classDecl->members.push_back(decl);
 					}
+					
+					// add dependencies to class declaration
+					info->prototype->addDependencies(codeInfo.prototypeDependencies);
 
+					// add includes
+					info->prototype->addIncludes(codeInfo.includes);
+					
 				} else {
 					// ... to prototype block
 					declarations->getCode().push_back(cManager->create<c_ast::FunctionPrototype>(codeInfo.function));
@@ -913,9 +919,21 @@ namespace backend {
 				// check whether it is a super-constructor call
 				auto funType = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>();
 				if (funType->isConstructor()) {
+					auto target = call->getArgument(0);
+
 					// test whether argument is this (super-constructor call)
-					if (call->getArgument(0) == thisVar) {
+					if (target == thisVar) {
 						return funType->getObjectType();
+					}
+
+					// test whether argument is a member (member initializer)
+					if (core::analysis::isCallOf(target, basic.getCompositeRefElem())) {
+						// check whether it is accessing this
+						auto deref = target.as<core::CallExprPtr>();
+						if (deref->getArgument(0) != thisVar) return NO_ACCESS;
+
+						// extract identifier name
+						return deref->getArgument(1);
 					}
 				}
 

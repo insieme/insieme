@@ -48,8 +48,10 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 
+#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
@@ -134,56 +136,45 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitDeclStmt(clang:
 //							RETURN STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
-	return StmtConverter::VisitReturnStmt(retStmt);
 
-	/*
-	//START_LOG_STMT_CONVERSION(retStmt);
+	stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
+	core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
 
-	CXXConversionFactory::CXXConversionContext::ScopeObjects parentDownStreamSScopeObjects =
-			cxxConvFact.cxxCtx.downStreamScopeObjects;
-	cxxConvFact.cxxCtx.downStreamScopeObjects = cxxConvFact.cxxCtx.scopeObjects;
-
-	core::StatementPtr retIr;
-
-	LOG_STMT_CONVERSION(retIr);
-
-	core::ExpressionPtr retExpr;
-	core::TypePtr retTy;
-	QualType clangTy;
-	if ( Expr* expr = retStmt->getRetValue()) {
-		retExpr = cxxConvFact.convertExpr(expr);
-		clangTy = expr->getType();
-		retTy = cxxConvFact.convertType(clangTy.getTypePtr());
-	} else {
-		retExpr = cxxConvFact.builder.getLangBasic().getUnitConstant();
-		retTy = cxxConvFact.builder.getLangBasic().getUnit();
+	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
+	// this is produced by the AST, but we should delegate this matters to the backend compiler
+	
+	// fist of all, have a look of what is behind the deRef
+	if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
+		retExpr = retExpr.as<core::CallExprPtr>()[0];
 	}
 
-	// arrays and vectors in C are always returned as reference, so the type of the return
-	// expression is of array (or vector) type we are sure we have to return a reference, in the
-	// other case we can safely deref the retExpr
-	// Obviously Ocl vectors are an exception and must be handled like scalars
-	if ((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
-					!clangTy.getUnqualifiedType()->isExtVectorType()) {
-		retTy = cxxConvFact.builder.refType(retTy);
+	// check if is a ctor
+	if (retExpr.isa<core::CallExprPtr>()){
+		auto ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>();
+
+		if (ty.isConstructor()){
+			vector<core::StatementPtr> stmtList;
+
+			// copy ctor, what we actualy want to return is the second param (first is placeholder)
+			// if it turns to be a cpp ref, we do not need to do so
+			// but it might be that the variable is a ref, so is safer to deref it.
+			core::ExpressionPtr ret = retExpr.as<core::CallExprPtr>()[1];
+			if (core::analysis::isCppRef(ret->getType())) {
+				ret =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), ret));
+			}
+			else if (core::analysis::isConstCppRef(ret->getType())) {
+				ret =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), ret));
+			}
+
+			stmtList.push_back(builder.returnStmt(ret));
+			core::StatementPtr retStatement = builder.compoundStmt(stmtList);
+			stmt = stmtutils::tryAggregateStmts(builder,stmtList );
+		}
 	}
 
-	vector<core::StatementPtr> stmtList;
 
-	tempHandler.handleTemporariesinScope(stmtList, cxxConvFact.cxxCtx.downStreamScopeObjects,
-			parentDownStreamSScopeObjects, false);
 
-	retIr = cxxConvFact.builder.returnStmt(utils::cast(retExpr, retTy));
-	stmtList.push_back(retIr);
-
-	core::StatementPtr retStatement = cxxConvFact.builder.compoundStmt(stmtList);
-
-	stmtutils::StmtWrapper&& body = stmtutils::tryAggregateStmts(cxxConvFact.builder,stmtList );
-
-	cxxConvFact.cxxCtx.downStreamScopeObjects = parentDownStreamSScopeObjects;
-
-	return body;
-	*/
+	return stmt;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -247,14 +238,17 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(cl
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
 	assert(false && "Catch -- Currently not supported!");
+	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
 	assert(false && "Try -- Currently not supported!");
+	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
 	assert(false && "ForRange -- Currently not supported!");
+	return stmtutils::StmtWrapper();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

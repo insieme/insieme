@@ -219,7 +219,6 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 
 void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::ConversionFactory& convFact) {
 
-
     insieme::core::NodeAnnotationPtr annot;
 
     // check if there is a datarange annotation
@@ -319,7 +318,7 @@ void attach(const clang::SourceLocation& 	startLoc,
 			conversion::ConversionFactory& 	fact) 
 {
 	
-	annotations::TransformationHint::Type type;
+	annotations::TransformationHint::Type type = annotations::TransformationHint::LOOP_FUSE;
 	switch( trans ) {
 		case INTERCHANGE: type = annotations::TransformationHint::LOOP_INTERCHANGE;
 						  break;

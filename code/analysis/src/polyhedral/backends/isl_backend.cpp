@@ -41,6 +41,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/unused.h"
 
 #include "isl/space.h"
 #include "isl/set.h"
@@ -274,14 +275,14 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 
 	for (unsigned i = 0; i < iter_num; ++i) {
 
-		size_t pos = iterVec.add(Iterator(extract_ir_expr(i, isl_dim_set).as<core::VariablePtr>()));
+		__unused size_t pos = iterVec.add(Iterator(extract_ir_expr(i, isl_dim_set).as<core::VariablePtr>()));
 		// LOG(DEBUG) << core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set)) << pos << " " << i;
 		assert(pos == i);
 
 	}
 	
 	for (unsigned i = 0; i < param_num; ++i) {
-		size_t pos = iterVec.add( Parameter(extract_ir_expr(i, isl_dim_param)) );
+		__unused size_t pos = iterVec.add( Parameter(extract_ir_expr(i, isl_dim_param)) );
 		assert(pos-iter_num == i);
 	}
 }
@@ -1108,7 +1109,7 @@ double IslPiecewise::upperBound() const {
 
 	FoldUserData data;
 	// Inspect the pw_qpolynomial_fold
-	int ret = isl_union_pw_qpolynomial_fold_foreach_pw_qpolynomial_fold(fold, visit_pw_qpolynomial_fold, &data);
+	__unused int ret = isl_union_pw_qpolynomial_fold_foreach_pw_qpolynomial_fold(fold, visit_pw_qpolynomial_fold, &data);
 
 	isl_union_pw_qpolynomial_fold_free(fold);
 

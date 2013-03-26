@@ -60,6 +60,8 @@
 
 #include "insieme/backend/c_ast/c_code.h"
 
+#include "insieme/backend/addons/cpp_references.h"
+
 
 namespace insieme {
 namespace backend {
@@ -75,8 +77,8 @@ namespace runtime {
 
 	}
 
-	RuntimeBackendPtr RuntimeBackend::getDefault() {
-		return std::make_shared<RuntimeBackend>();
+	RuntimeBackendPtr RuntimeBackend::getDefault(bool includeEffortEstimation) {
+		return std::make_shared<RuntimeBackend>(includeEffortEstimation);
 	}
 
 	TargetCodePtr RuntimeBackend::convert(const core::NodePtr& code) const {
@@ -95,7 +97,7 @@ namespace runtime {
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
 				getBasicPreProcessorSequence(),
-				makePreProcessor<runtime::WorkItemizer>(),
+				makePreProcessor<runtime::WorkItemizer>(includeEffortEstimation),
 				makePreProcessor<runtime::StandaloneWrapper>()
 		);
 		converter.setPreProcessor(preprocessor);
@@ -188,12 +190,14 @@ namespace runtime {
 
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
 			OperatorConverterTable res = getBasicOperatorTable(manager);
+			res.insertAll(addons::getCppRefOperatorTable(manager));
 			return addRuntimeSpecificOps(manager, res);
 		}
 
 		TypeHandlerList getTypeHandlerList() {
-			TypeHandlerList res;
+			TypeHandlerList res = getBasicTypeHandlerList();
 			res.push_back(RuntimeTypeHandler);
+			res.push_back(addons::CppRefTypeHandler);
 			return res;
 		}
 

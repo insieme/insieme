@@ -285,6 +285,18 @@ bool isTypeLiteralType(const TypePtr& type) {
 	return isTypeLiteralType(static_pointer_cast<const core::GenericType>(type));
 }
 
+bool isIntTypeParamType(const GenericTypePtr& type) {
+	// check family name as well as type of parameters
+	return type->getName()->getValue() == "intTypeParam"
+			&& type->getTypeParameter().empty()
+			&& type->getIntTypeParameter().size() == static_cast<std::size_t>(1);
+}
+
+bool isIntTypeParamType(const TypePtr& type) {
+	// check node type
+	return type && type->getNodeType() == core::NT_GenericType && isIntTypeParamType(type.as<GenericTypePtr>());
+}
+
 bool isConstructorExpr(const NodePtr& node) {
 	NodeType pnt = node->getNodeType();
 	return pnt == NT_VectorExpr || pnt == NT_StructExpr || pnt == NT_UnionExpr || pnt == NT_TupleExpr || pnt == NT_JobExpr;

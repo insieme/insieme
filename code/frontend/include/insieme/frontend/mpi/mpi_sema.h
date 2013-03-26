@@ -68,7 +68,7 @@ typedef std::vector<core::CallExprAddress> MPICalls;
 
 MPICalls extractMPICalls( const core::NodeAddress& node);
 
-core::ProgramPtr handleMPICalls( const core::ProgramPtr& program );
+core::ProgramPtr handleMPICalls( const core::ProgramPtr& program , bool tag);
 
 } // end mpi namespace
 } // end frontend namespace 
