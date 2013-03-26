@@ -180,14 +180,6 @@ namespace core {
 		checkForNameCollisions(convertList<NamedType>(elements));
 	}
 
-	NamedCompositeType::NamedCompositeType(const NodeType& type, const vector<NamedTypePtr>& elements)
-		: Type(type, convertList(elements)), NamedCompositeTypeAccessor<NamedCompositeType, Pointer>::node_helper(getChildNodeList()) {
-
-		checkChildList(convertList(elements));
-		checkForNameCollisions(elements);
-	}
-
-
 
 } // end namespace core
 } // end namespace insieme
