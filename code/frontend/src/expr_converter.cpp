@@ -585,8 +585,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(cons
 
 	LOG_EXPR_CONVERSION(retIr);
 
-	std::cout << "CAST:" << castExpr->getCastKindName () << std::endl;
-
 	// capture the case of cast to arrays. because arrays cannot exists without a ref we need 
 	// to make sure to add a refVar to the element 
 	if (utils::isRefArray(type) && utils::isVector(retIr->getType()))

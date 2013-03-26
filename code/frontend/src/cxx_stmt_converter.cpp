@@ -137,40 +137,75 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitDeclStmt(clang:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
 
+	vector<core::StatementPtr> stmtList;
 	stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
+
+	if (llvm::isa<clang::IntegerLiteral>(retStmt->getRetValue()) ||
+		llvm::isa<clang::BinaryOperator>(retStmt->getRetValue()) || 
+		llvm::isa<clang::CXXMemberCallExpr>(retStmt->getRetValue()))
+		return stmt;
+
 	core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
 
 	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
 	// this is produced by the AST, but we should delegate this matters to the backend compiler
 	
-	// fist of all, have a look of what is behind the deRef
-	if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
-		retExpr = retExpr.as<core::CallExprPtr>()[0];
+
+	// if the function returns references, we wont realize, there is no cast, and the inner
+	// expresion might have  no reference type
+	// if there is no copy constructor on return... it seems that this is the case in which a
+	// ref is returned
+	// if is a ref: no cast, if is a const ref, there is a Nop cast to qualify
+
+	core::TypePtr funcRetTy = convFact.convertType(retStmt->getRetValue()->getType().getTypePtr());
+	// we only operate this on classes
+	clang::CastExpr* cast;
+	clang::CXXConstructExpr* ctorExpr;
+	if ((cast = llvm::dyn_cast<clang::CastExpr>(retStmt->getRetValue())) != NULL){
+		switch(cast->getCastKind () ){
+			case CK_NoOp : // make constant?
+	
+				retExpr =  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retExpr);
+				break;
+			case CK_LValueToRValue: //deref, not a ref
+			default:
+				break;
+		}
 	}
+	else if ((ctorExpr = llvm::dyn_cast<clang::CXXConstructExpr>(retStmt->getRetValue())) != NULL){
 
-	// check if is a ctor
-	if (retExpr.isa<core::CallExprPtr>()){
+		// fist of all, have a look of what is behind the deRef
+		if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
+			retExpr = retExpr.as<core::CallExprPtr>()[0];
+		}
+
 		auto ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>();
-
 		if (ty.isConstructor()){
-			vector<core::StatementPtr> stmtList;
 
 			// copy ctor, what we actualy want to return is the second param (first is placeholder)
 			// if it turns to be a cpp ref, we do not need to do so
 			// but it might be that the variable is a ref, so is safer to deref it.
-			core::ExpressionPtr ret = retExpr.as<core::CallExprPtr>()[1];
-			if (core::analysis::isCppRef(ret->getType())) {
-				ret =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), ret));
+			retExpr = retExpr.as<core::CallExprPtr>()[1];
+			if (core::analysis::isCppRef(retExpr->getType())) {
+				retExpr =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), retExpr));
 			}
-			else if (core::analysis::isConstCppRef(ret->getType())) {
-				ret =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), ret));
+			else if (core::analysis::isConstCppRef(retExpr->getType())) {
+				retExpr =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), 
+															retExpr));
 			}
-
-			stmtList.push_back(builder.returnStmt(ret));
-			core::StatementPtr retStatement = builder.compoundStmt(stmtList);
-			stmt = stmtutils::tryAggregateStmts(builder,stmtList );
 		}
 	}
+	else{
+		// not a cast, it is a ref then... only if not array
+		if (!core::analysis::isCallOf(retExpr,mgr.getLangBasic().getScalarToArray()) &&
+			!core::analysis::isCppRef(retExpr->getType())) {
+				retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retExpr);
+		}
+	}
+
+	stmtList.push_back(builder.returnStmt(retExpr));
+	core::StatementPtr retStatement = builder.compoundStmt(stmtList);
+	stmt = stmtutils::tryAggregateStmts(builder,stmtList );
 
 	return stmt;
 }

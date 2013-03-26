@@ -168,6 +168,16 @@ namespace lang {
 				"(ref<'a> x)->cppRef { return (cppRef) { x }; }"
 		);
 
+		/**
+		 * An operator converting a C++ reference into a const C++ reference.
+		 */
+		LANG_EXT_DERIVED(RefCppToConstCpp,
+				"let cppRef = struct { ref<'a> _cpp_ref } in "
+				"let constCppRef = struct { ref<'a> _const_cpp_ref } in "
+				"(cppRef x)->constCppRef { return (constCppRef) { x._cpp_ref }; }"
+		);
+
+
 	};
 
 } // end namespace lang
