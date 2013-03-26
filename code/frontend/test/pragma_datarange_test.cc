@@ -63,8 +63,11 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 //	CommandLineOptions::Verbosity = 2;
 
 	NodeManager manager;
-	insieme::frontend::Program prog(manager);
-	TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/insieme_datarange.c" );
+
+	ConversionJob job;
+
+	insieme::frontend::Program prog(manager, job);
+	TranslationUnit& tu = prog.addTranslationUnit( ConversionJob( SRC_DIR "/inputs/insieme_datarange.c" ) );
 
 	const PragmaList& pl = tu.getPragmaList();
 

@@ -137,10 +137,11 @@ namespace {
 		};
 		std::set<VariablePtr, decltype(cmp)> nonDecls(cmp);
 
-		std::set_difference( 
+		std::set_difference(
 				visitor.usedVars.begin(), visitor.usedVars.end(),
-				visitor.declaredVars.begin(), visitor.declaredVars.end(), 
-				std::inserter(nonDecls, nonDecls.begin())
+				visitor.declaredVars.begin(), visitor.declaredVars.end(),
+				std::inserter(nonDecls, nonDecls.begin()),
+				cmp
 			);
 
 		return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());

@@ -61,7 +61,7 @@ namespace predictor {
 	namespace {
 
 		core::ProgramPtr loadExample(core::NodeManager& manager, const std::string& fileName) {
-			return insieme::frontend::ConversionJob(manager, fileName).execute();
+			return insieme::frontend::ConversionJob(fileName).execute(manager);
 		}
 
 		region::Region getExampleRegion(core::NodeManager& manager) {

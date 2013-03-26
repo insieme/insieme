@@ -165,8 +165,14 @@ ExpressionList getFunctionArguments(const core::IRBuilder& builder, ClangExprTy*
 				if (core::analysis::isCppRef(funcParamTy)) {
 					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), arg);
 				}
+				else if (core::analysis::isConstCppRef(funcParamTy)) {
+					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), arg);
+				}
 				else if (core::analysis::isCppRef(argTy)) {
 					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), arg);
+				}
+				else if (core::analysis::isConstCppRef(argTy)) {
+					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), arg);
 				}
 				else{
 					arg = utils::cast(arg, funcParamTy);

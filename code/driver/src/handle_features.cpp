@@ -76,10 +76,10 @@ namespace driver {
 		try {
 
 			// use frontend to load program files
-			auto job = frontend::ConversionJob(manager, inputs, includes);
+			auto job = frontend::ConversionJob(inputs, includes);
 			job.setOption(frontend::ConversionJob::OpenMP);
 			job.setDefinitions(definitions);
-			return core::NodeAddress(job.execute());
+			return core::NodeAddress(job.execute(manager));
 
 		} catch (const frontend::ClangParsingError& e) {
 			std::cerr << "Unexpected error encountered: " << e.what() << std::endl;

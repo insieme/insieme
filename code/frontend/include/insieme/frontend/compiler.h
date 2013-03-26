@@ -47,6 +47,8 @@
 
 #include <boost/utility.hpp>
 
+#include "insieme/frontend/frontend.h"
+
 // forward declarations
 namespace clang {
 class ASTContext;
@@ -125,12 +127,6 @@ public:
 
 namespace insieme {
 namespace frontend {
-/**
- * Used to report a parsing error occurred during the parsing of the input file
- */
-struct ClangParsingError: public std::logic_error {
-	ClangParsingError(const std::string& file_name): std::logic_error(file_name) { }
-};
 
 
 // ------------------------------------ ClangCompiler ---------------------------
@@ -142,16 +138,14 @@ class ClangCompiler: boost::noncopyable {
 	struct ClangCompilerImpl;
 
 	ClangCompilerImpl* pimpl;
+
+	const ConversionJob& config;
+
 public:
 	/**
-	 * Creates an empty compiler instance, usefull for test cases
+	 * Creates a compiler instance from the given conversion job.
 	 */
-	ClangCompiler();
-
-	/**
-	 * Creates a compiler instance from an input file
-	 */
-	ClangCompiler(const std::string& file_name);
+	ClangCompiler(const ConversionJob& config);
 
 	/**
 	 * Returns clang's ASTContext

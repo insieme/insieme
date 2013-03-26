@@ -117,9 +117,7 @@ class IndexerVisitor{
 					mIndex["main"] = elem; 
 			}
 		}
-		else if (llvm::isa<clang::CXXRecordDecl>(decl)){
-			clang::CXXRecordDecl *recDecl = llvm::cast<clang::CXXRecordDecl>(decl);
-		
+		else if (const clang::CXXRecordDecl *recDecl = llvm::dyn_cast<clang::CXXRecordDecl>(decl)){
 			if (recDecl->hasDefinition()){
 				Indexer::TranslationUnitPair elem =  std::make_pair(llvm::cast<clang::Decl>(recDecl->getDefinition()),mTu); 
 				mIndex[buildNameTypeChain(decl)] = elem;
@@ -129,6 +127,9 @@ class IndexerVisitor{
 		}
 		else if (llvm::isa<clang::NamespaceDecl>(decl)){
 			indexDeclContext(llvm::cast<clang::DeclContext>(decl));
+		} 
+		else if(const clang::TemplateDecl* templDecl = llvm::dyn_cast<clang::TemplateDecl>(decl)) {
+			indexDeclaration(templDecl->getTemplatedDecl());
 		}
 	}
 
@@ -214,8 +215,8 @@ clang::Decl* Indexer::getDefinitionFor (const std::string& symbol) const{
 Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Decl* decl) const{
 	assert(decl && "Cannot look up null pointer!");
 
-	if(llvm::isa<clang::FunctionDecl>(decl) ) {
-		const clang::FunctionDecl* fd = llvm::cast<clang::FunctionDecl>(decl);
+	if(const clang::FunctionDecl* fd = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
+		//VLOG(2) << fd->getTemplatedKind();
 		switch( fd->getTemplatedKind() ) {
 			case clang::FunctionDecl::TemplatedKind::TK_NonTemplate:
 				return getDefAndTUforDefinition(buildNameTypeChain(fd));
@@ -227,6 +228,7 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Dec
 				VLOG(2) << buildNameTypeChain(fd->getMemberSpecializationInfo()->getInstantiatedFrom());
 				//FIXME hack (for interception) to get correct translationunit for templatespecialization
 				return TranslationUnitPair( { const_cast<clang::FunctionDecl*>(fd), getDefAndTUforDefinition(buildNameTypeChain(fd->getMemberSpecializationInfo()->getInstantiatedFrom())).second});
+				//return getDefAndTUforDefinition(buildNameTypeChain(fd->getMemberSpecializationInfo()->getInstantiatedFrom()));
 				break;
 			case clang::FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
 				break;

@@ -59,37 +59,28 @@ using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
 TEST(OclHostCompilerTest, HelloHostTest) {
-	Logger::get(std::cerr, DEBUG);
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
+	Logger::get(std::cerr, DEBUG, 2);
 
-//	CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/shared/inc");
-//	CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc");
-
-	CommandLineOptions::Defs.push_back("INSIEME");
-	//    string kernelSrc = SRC_DIR + "../../frontend/test/hello.cl" + string(SRC_DIR) + "";
-	//    CommandLineOptions::Defs.push_back("KERNEL=\"/home/klaus/insieme/code/frontend/test/hello.cl\"");
-
-	CommandLineOptions::Verbosity = 2;
 	core::NodeManager manager;
-	core::ProgramPtr program;
 
-	std::string srcDir = std::string(SRC_DIR) + std::string("inputs/hello_host.c");
+	// create and customize conversion job
+	fe::ConversionJob job(SRC_DIR "inputs/hello_host.c");
+	job.addIncludeDirectory(SRC_DIR "inputs");
+	job.addIncludeDirectory(SRC_DIR);
+	job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");
+	job.setOption(fe::ConversionJob::OpenCL);
+
+	std::string srcDir = SRC_DIR "inputs/hello_host.c";
 
 	LOG(INFO) << "Converting input program '" << srcDir << "' to IR...";
-	fe::Program prog(manager);
-
-	prog.addTranslationUnit( srcDir);
-	program = prog.convert();
+	core::ProgramPtr program = job.execute(manager);
+	LOG(INFO) << "Done.";
 
 	EXPECT_EQ(&program->getNodeManager(), &manager);
 	EXPECT_TRUE(manager.contains(program));
 
-	LOG(INFO) << "Done.";
-
 	LOG(INFO) << "Starting OpenCL host code transformations";
-	fe::ocl::HostCompiler hc(program);
+	fe::ocl::HostCompiler hc(program, job);
 	hc.compile();
 
 	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
@@ -131,27 +122,24 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 }
 
 TEST(OclHostCompilerTest, VecAddTest) {
-	Logger::get(std::cerr, DEBUG);
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../backend/test/ocl_kernel");
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
+	Logger::get(std::cerr, DEBUG, 2);
 
-	CommandLineOptions::Defs.push_back("INSIEME");
-
-	CommandLineOptions::Verbosity = 2;
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::get(manager);
+
+	// create and customize conversion job
+	fe::ConversionJob job(SRC_DIR "../../backend/test/ocl_kernel/vec_add.c");
+	job.addIncludeDirectory(SRC_DIR "inputs");
+	job.addIncludeDirectory(SRC_DIR "../../backend/test/ocl_kernel");
+	job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");
+
+	job.setOption(fe::ConversionJob::OpenCL);
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "../../backend/test/ocl_kernel/vec_add.c" << "' to IR...";
-	fe::Program prog(manager);
-
-	prog.addTranslationUnit(std::string(SRC_DIR) + "../../backend/test/ocl_kernel/vec_add.c");
-	program = prog.convert();
+	core::ProgramPtr program = job.execute(manager);
 	LOG(INFO) << "Done.";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
-	fe::ocl::HostCompiler hc(program);
+	fe::ocl::HostCompiler hc(program, job);
 	hc.compile();
 
 	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);

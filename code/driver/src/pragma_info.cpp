@@ -50,13 +50,14 @@
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/modeling/cache.h"
 
-#include "insieme/utils/cmd_line_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/constraint.h"
 
 using namespace insieme;
 using namespace insieme::analysis;
 using namespace insieme::analysis::polyhedral;
+
+namespace insieme { namespace driver {
 
 namespace {
 
@@ -116,7 +117,7 @@ void sampling(	int 				id,
 
 }
 
-void handleCacheInfo(const core::NodePtr& node, int id) {
+void handleCacheInfo(const core::NodePtr& node, int id, const cmd_options::CommandLineOptions& options) {
 
 	using insieme::core::arithmetic::Formula;
 	
@@ -131,16 +132,16 @@ void handleCacheInfo(const core::NodePtr& node, int id) {
 
 	PiecewisePtr<> misses = 
 		analysis::modeling::getCacheMisses(ctx, node, 
-				CommandLineOptions::CacheLineSize, 
-				CommandLineOptions::CacheSize,
-				CommandLineOptions::CacheAssociativity
+				options.CacheLineSize,
+				options.CacheSize,
+				options.CacheAssociativity
 			);
 	
 	// LOG(INFO) << "Cache misses model for this code is: " << std::endl << *misses;
 	file << "#  Sampling the model for sender process" << std::endl;
 	file << "# id, arr_size, cache_misses" << std::endl;
 
-	for(size_t size=32*1024; size <= static_cast<unsigned>(CommandLineOptions::CacheSize*4); size *= 2) {
+	for(size_t size=32*1024; size <= static_cast<unsigned>(options.CacheSize*4); size *= 2) {
 		sampling(id, file, ctx, mgr, misses, 0, size);
 	}
 	file.close();
@@ -149,9 +150,8 @@ void handleCacheInfo(const core::NodePtr& node, int id) {
 } // end anonymous namespace 
 
 
-namespace insieme { namespace driver {
 
-core::ProgramPtr handlePragmaInfo(const core::ProgramPtr& program) {
+core::ProgramPtr handlePragmaInfo(const core::ProgramPtr& program, const cmd_options::CommandLineOptions& options) {
 
 	typedef annotations::Info::StrValueVect StrValueVect;
 
@@ -163,7 +163,7 @@ core::ProgramPtr handlePragmaInfo(const core::ProgramPtr& program) {
 				
 				LOG(INFO) << "PragmaInfo.Handling -- ID: " << info->getId() << " (" << what << ")";
 				if (what == "scop") { return handleScopInfo(cur); }
-				if (what == "cache") { return handleCacheInfo(cur, info->getId()); }
+				if (what == "cache") { return handleCacheInfo(cur, info->getId(), options); }
 
 			});
 		}

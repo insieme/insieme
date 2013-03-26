@@ -62,7 +62,9 @@ namespace runtime {
 	 * Yes, the name is a working title ...
 	 */
 	class WorkItemizer : public PreProcessor {
+		bool includeEffortEstimation;
 	public:
+		WorkItemizer(bool includeEffortEstimation = false) : includeEffortEstimation(includeEffortEstimation) {}
 		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
 	};
 
