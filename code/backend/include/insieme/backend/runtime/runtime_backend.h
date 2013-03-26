@@ -69,13 +69,18 @@ namespace runtime {
 		 */
 		OperationTableExtender operationTableExtender;
 
+		/**
+		 * A flag enabling the inclusion of effort estimations within work-item tables.
+		 */
+		bool includeEffortEstimation;
+
 	public:
 
 		/**
 		 * A constructor of this kind of backend accepting an operator table extender.
 		 */
-		RuntimeBackend(const OperationTableExtender& extender = &RuntimeBackend::unchanged)
-			: operationTableExtender(extender) {}
+		RuntimeBackend(bool includeEffortEstimation, const OperationTableExtender& extender = &RuntimeBackend::unchanged)
+			: operationTableExtender(extender), includeEffortEstimation(includeEffortEstimation) {}
 
 
 		/**
@@ -84,7 +89,7 @@ namespace runtime {
 		 *
 		 * @return a smart pointer to a fresh instance of the runtime backend
 		 */
-		static RuntimeBackendPtr getDefault();
+		static RuntimeBackendPtr getDefault(bool includeEffortEstimation = false);
 
 		/**
 		 * The main facade function of the runtime backend. This function converts the given

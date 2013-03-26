@@ -70,7 +70,6 @@
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
-#include "insieme/utils/cmd_line_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
 #include "insieme/utils/map_utils.h"
@@ -90,6 +89,7 @@
 #include "insieme/driver/pragma_transformer.h"
 #include "insieme/driver/pragma_info.h"
 #include "insieme/driver/task_optimizer.h"
+#include "insieme/driver/cmd_options/cmd_line_utils.h"
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -113,6 +113,7 @@
 using namespace std;
 using namespace insieme::utils::log;
 using namespace insieme::annotations::ocl;
+using namespace insieme::driver::cmd_options;
 
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
@@ -148,9 +149,9 @@ void measureTimeFor<void>(const std::string& timerName, const std::function<void
 //****************************************************************************************
 //                BENCHMARK CORE: Perform some performance benchmarks
 //****************************************************************************************
-void doBenchmarkCore(NodeManager& mgr, const NodePtr& program) {
+void doBenchmarkCore(NodeManager& mgr, const NodePtr& program, const CommandLineOptions& options) {
 
-	if (!CommandLineOptions::BenchmarkCore) return;
+	if (!options.BenchmarkCore) return;
 
 	int count = 0;
 	// Benchmark pointer-based visitor
@@ -247,8 +248,8 @@ void dumpCFG(const NodePtr& program, const std::string& outFile) {
 // Function utilized to add temporary (non-clean) solution to the IR this is enabled only 
 // when the --test flag is passed to the compiler
 //***************************************************************************************
-void testModule(const core::ProgramPtr& program) {
-	if ( !CommandLineOptions::Test ) { return; }
+void testModule(const core::ProgramPtr& program, const CommandLineOptions& options) {
+	if ( !options.Test ) { return; }
 
 	// do nasty stuff
 	anal::RefList&& refs = anal::collectDefUse(program);
@@ -309,18 +310,18 @@ void createInvMap(const core::printer::SourceLocationMap& locMap, InverseStmtMap
 	);
 }
 
-void printIR(const NodePtr& program, InverseStmtMap& stmtMap) {
+void printIR(const NodePtr& program, InverseStmtMap& stmtMap, const CommandLineOptions& options) {
 	using namespace insieme::core::printer;
 
-	if ( !CommandLineOptions::PrettyPrint && CommandLineOptions::DumpIR.empty() ) { return; }
+	if ( !options.PrettyPrint && options.DumpIR.empty() ) { return; }
 
 	// A pretty print of the AST
 	measureTimeFor<void>("IR.PrettyPrint ", 
 		[&]() {
 			LOG(INFO) << "========================= Pretty Print INSPIRE ==================================";
-			if(!CommandLineOptions::DumpIR.empty()) {
+			if(!options.DumpIR.empty()) {
 				// write into the file
-				std::fstream fout(CommandLineOptions::DumpIR,  std::fstream::out | std::fstream::trunc);
+				std::fstream fout(options.DumpIR,  std::fstream::out | std::fstream::trunc);
 				fout << "// -------------- Pretty Print Inspire --------------" << std::endl;
 				fout << PrettyPrinter(program);
 				fout << std::endl << std::endl << std::endl;
@@ -330,7 +331,7 @@ void printIR(const NodePtr& program, InverseStmtMap& stmtMap) {
 				SourceLocationMap&& srcMap = 
 					printAndMap( LOG_STREAM(INFO), 
 						PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL), 
-						CommandLineOptions::ShowLineNo, CommandLineOptions::ColumnWrap 
+						options.ShowLineNo, options.ColumnWrap
 					);
 				LOG(INFO) << "Number of generated source code mappings: " << srcMap.size();
 				createInvMap(srcMap, stmtMap);
@@ -348,12 +349,12 @@ void printIR(const NodePtr& program, InverseStmtMap& stmtMap) {
 //***************************************************************************************
 // Check Semantics 
 //***************************************************************************************
-void checkSema(const core::NodePtr& program, MessageList& list, const InverseStmtMap& stmtMap) {
+void checkSema(const core::NodePtr& program, MessageList& list, const InverseStmtMap& stmtMap, const CommandLineOptions& options) {
 
 	using namespace insieme::core::printer;
 
 	// Skip semantics checks if the flag is not set
-	if (!CommandLineOptions::CheckSema) { return; }
+	if (!options.CheckSema) { return; }
 
 	LOG(INFO) << "=========================== IR Semantic Checks ==================================";
 	insieme::utils::Timer timer("Checks");
@@ -401,8 +402,8 @@ void checkSema(const core::NodePtr& program, MessageList& list, const InverseStm
 //***************************************************************************************
 // Mark SCoPs 
 //***************************************************************************************
-void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& stmtMap) {
-	if (!CommandLineOptions::MarkScop) { return; }
+void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& stmtMap, const CommandLineOptions& options) {
+	if (!options.MarkScop) { return; }
 	using namespace anal::polyhedral::scop;
 	using namespace insieme::transform::pattern;
 	using namespace insieme::transform::polyhedral;
@@ -466,19 +467,19 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 //***************************************************************************************
 // Dump IR 
 //***************************************************************************************
-void showIR(const core::ProgramPtr& program, MessageList& errors) {
+void showIR(const core::ProgramPtr& program, MessageList& errors, const CommandLineOptions& options) {
 	// Creates dot graph of the generated IR
-	if(CommandLineOptions::ShowIR.empty()) { return; }
+	if(options.ShowIR.empty()) { return; }
 	measureTimeFor<void>("Show.graph", 
 		[&]() {
-			std::fstream dotOut(CommandLineOptions::ShowIR.c_str(), std::fstream::out | std::fstream::trunc);
+			std::fstream dotOut(options.ShowIR.c_str(), std::fstream::out | std::fstream::trunc);
 			insieme::driver::printDotGraph(program, errors, dotOut);
 		} 
 	);
 }
 
-void applyOpenMPFrontend(core::ProgramPtr& program) {
-	if (!CommandLineOptions::OpenMP) { return; }
+void applyOpenMPFrontend(core::ProgramPtr& program, const CommandLineOptions& options) {
+	if (!options.OpenMP) { return; }
 
 	LOG(INFO) << "============================= OMP conversion ====================================";
 	program = measureTimeFor<core::ProgramPtr>("OpenMP ",
@@ -487,19 +488,19 @@ void applyOpenMPFrontend(core::ProgramPtr& program) {
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
 
-void applyOpenCLFrontend(core::ProgramPtr& program) {
-	if (!CommandLineOptions::OpenCL) { return; }
+void applyOpenCLFrontend(core::ProgramPtr& program, const CommandLineOptions& options) {
+	if (!options.OpenCL) { return; }
 
 	LOG(INFO) << "============================= OpenCL conversion ====================================";
-	fe::ocl::HostCompiler oclHostCompiler(program);
+	fe::ocl::HostCompiler oclHostCompiler(program, options);
 	program = measureTimeFor<core::ProgramPtr>("OpenCL ",
 			[&]() {return oclHostCompiler.compile(); }
 		);
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
 
-void applyCilkFrontend(core::ProgramPtr& program) {
-	if (!CommandLineOptions::Cilk) { return; }
+void applyCilkFrontend(core::ProgramPtr& program, const CommandLineOptions& options) {
+	if (!options.Cilk) { return; }
 
 	LOG(INFO) << "============================= Cilk conversion ====================================";
 	program = measureTimeFor<core::ProgramPtr>("Cilk ",
@@ -508,8 +509,8 @@ void applyCilkFrontend(core::ProgramPtr& program) {
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
 
-void showStatistics(const core::ProgramPtr& program) {
-	if (!CommandLineOptions::ShowStats) { return; }
+void showStatistics(const core::ProgramPtr& program, const CommandLineOptions& options) {
+	if (!options.ShowStats) { return; }
 
 	LOG(INFO) << "============================ IR Statistics ======================================";
 	measureTimeFor<void>("ir.statistics ", [&]() {
@@ -518,24 +519,24 @@ void showStatistics(const core::ProgramPtr& program) {
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
 
-void doCleanup(core::ProgramPtr& program) {
-	// if (!CommandLineOptions::Cleanup) { return; }
+void doCleanup(core::ProgramPtr& program, const CommandLineOptions& options) {
+	// if (!options.Cleanup) { return; }
 
 	LOG(INFO) << "================================ IR CLEANUP =====================================";
 	program = measureTimeFor<core::ProgramPtr>("ir.cleanup", [&]() {
-		 return static_pointer_cast<const core::Program>( insieme::transform::cleanup(program) );
+		 return static_pointer_cast<const core::Program>( insieme::transform::cleanup(program, options.ConstantPropagation) );
 	} );
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 
 	// IR statistics
-	showStatistics(program);
+	showStatistics(program, options);
 }
 
 //***************************************************************************************
 // Feature Extractor
 //***************************************************************************************
-void featureExtract(const core::ProgramPtr& program) {
-	if (!CommandLineOptions::FeatureExtract) { return; }
+void featureExtract(const core::ProgramPtr& program, const CommandLineOptions& options) {
+	if (!options.FeatureExtract) { return; }
 	LOG(INFO) << "Feature extract mode";
 	// anal::collectFeatures(program); -- seriously, this wasn't doing a shit!!
 	return;
@@ -549,20 +550,22 @@ void featureExtract(const core::ProgramPtr& program) {
  */
 int main(int argc, char** argv) {
 
-	CommandLineOptions::Parse(argc, argv);
-	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(CommandLineOptions::LogLevel));
+	const CommandLineOptions options = CommandLineOptions::parse(argc, argv);
+	if (!options.valid) return 0;		// it was a help or about request
+
+	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(options.LogLevel), options.Verbosity);
 	LOG(INFO) << "Insieme compiler - Version: " << utils::getVersion();
 
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::get(manager);
 	try {
-		if(!CommandLineOptions::InputFiles.empty()) {
-			auto inputFiles = CommandLineOptions::InputFiles;
+		if(!options.InputFiles.empty()) {
+			auto inputFiles = options.InputFiles;
 			// LOG(INFO) << "Parsing input files: ";
 			// std::copy(inputFiles.begin(), inputFiles.end(), std::ostream_iterator<std::string>( std::cout, ", " ) );
 			fe::Program p(manager);
 			
-			measureTimeFor<void>("Frontend.load [clang]", [&]() { p.addTranslationUnits(inputFiles); } );
+			measureTimeFor<void>("Frontend.load [clang]", [&]() { p.addTranslationUnits(options); } );
 
 			// do the actual clang to IR conversion
 			program = measureTimeFor<core::ProgramPtr>("Frontend.convert ", [&]() { return p.convert(); } );
@@ -571,10 +574,10 @@ int main(int argc, char** argv) {
 
 			// printIR(program, stmtMap);
 
-			doCleanup(program);
+			doCleanup(program, options);
 
 			// run OpenCL frontend
-			applyOpenCLFrontend(program);
+			applyOpenCLFrontend(program, options);
 
 			// Load known function semantics from the function database
 			anal::loadFunctionSemantics(program->getNodeManager());
@@ -585,38 +588,38 @@ int main(int argc, char** argv) {
 
 			// Handling of pragma info
 			program = measureTimeFor<ProgramPtr>("Pragma.Info",  
-					[&]() { return insieme::driver::handlePragmaInfo(program); } );
+					[&]() { return insieme::driver::handlePragmaInfo(program, options); } );
 
-			printIR(program, stmtMap);
+			printIR(program, stmtMap, options);
 
 			// perform checks
 			MessageList errors;
-			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
+			if(options.CheckSema) {	checkSema(program, errors, stmtMap, options);	}
 
-			printIR(program, stmtMap);
+			printIR(program, stmtMap, options);
 
 			// run OMP frontend
-			if(CommandLineOptions::OpenMP) {
+			if(options.OpenMP) {
 				stmtMap.clear();
-				applyOpenMPFrontend(program);
-				printIR(program, stmtMap);
+				applyOpenMPFrontend(program, options);
+				printIR(program, stmtMap, options);
 				// check again if the OMP flag is on
-				if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
+				if(options.CheckSema) { checkSema(program, errors, stmtMap, options); }
 			}
 
 			// run Cilk frontend
-			if(CommandLineOptions::Cilk) {
-				applyCilkFrontend(program);
+			if(options.Cilk) {
+				applyCilkFrontend(program, options);
 				// check again if the OMP flag is on
-				printIR(program, stmtMap);
-				if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
+				printIR(program, stmtMap, options);
+				if(options.CheckSema) { checkSema(program, errors, stmtMap, options); }
 			}
 
-			if(CommandLineOptions::TaskOpt) {
+			if(options.TaskOpt) {
 				program = measureTimeFor<core::ProgramPtr>("Task Optimization ", [&]() {
 					return insieme::applyTaskOptimization(program);
 				});
-				printIR(program, stmtMap);
+				printIR(program, stmtMap, options);
 			}
 
 
@@ -630,34 +633,34 @@ int main(int argc, char** argv) {
 			/**************######################################################################################################***/
 
 			// This function is a hook useful when some hack needs to be tested
-			testModule(program);
+			testModule(program, options);
 
 			// Performs some benchmarks 
-			doBenchmarkCore(manager, program);
+			doBenchmarkCore(manager, program, options);
 		
 			// Dump the Inter procedural Control Flow Graph associated to this program
-			dumpCFG(program, CommandLineOptions::CFG);
+			dumpCFG(program, options.CFG);
 
 			//printIR(program, stmtMap);
 
 			// Perform SCoP region analysis 
-			markSCoPs(program, errors, stmtMap);
+			markSCoPs(program, errors, stmtMap, options);
 			// printIR(program, stmtMap);
 			
-			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap); }
+			if(options.CheckSema) {	checkSema(program, errors, stmtMap, options); }
 
 			// IR statistics
-			showStatistics(program);
+			showStatistics(program, options);
 
 			// Creates dot graph of the generated IR
-			showIR(program, errors);
+			showIR(program, errors, options);
 
 			#ifdef USE_XML
 			// XML dump
-			if(!CommandLineOptions::DumpXML.empty()) {
+			if(!options.DumpXML.empty()) {
 				LOG(INFO) << "================================== XML DUMP =====================================";
 				measureTimeFor<void>("Xml.dump ", 
-						[&]() { xml::XmlUtil::write(program, CommandLineOptions::DumpXML); }
+						[&]() { xml::XmlUtil::write(program, options.DumpXML); }
 					);
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			}
@@ -666,17 +669,17 @@ int main(int argc, char** argv) {
 			// do some cleanup 
 			//doCleanup(program);
 			//printIR(program, stmtMap);
-			//if (CommandLineOptions::Cleanup) { checkSema(program, errors, stmtMap); }
+			//if (options.Cleanup) { checkSema(program, errors, stmtMap); }
 
 			// Extract features
-			if (CommandLineOptions::FeatureExtract) { featureExtract(program); }
+			if (options.FeatureExtract) { featureExtract(program, options); }
 		}
 
 		#ifdef USE_XML
-		if(!CommandLineOptions::LoadXML.empty()) {
+		if(!options.LoadXML.empty()) {
 			LOG(INFO) << "================================== XML LOAD =====================================";
 			insieme::utils::Timer timer("Xml.load");
-			NodePtr&& xmlNode= xml::XmlUtil::read(manager, CommandLineOptions::LoadXML);
+			NodePtr&& xmlNode= xml::XmlUtil::read(manager, options.LoadXML);
 			program = core::dynamic_pointer_cast<const Program>(xmlNode);
 			assert(program && "Loaded XML doesn't represent a valid program");
 			timer.stop();
@@ -694,10 +697,10 @@ int main(int argc, char** argv) {
 //			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 //		}
 
-		if(CommandLineOptions::DoRegionInstrumentation) {
+		if(options.DoRegionInstrumentation) {
 			LOG(INFO) << "============================ Generating region instrumentation =========================";
 			insieme::driver::region::RegionList regions = insieme::driver::region::SizeBasedRegionSelector(
-					CommandLineOptions::MinRegionSize, CommandLineOptions::MaxRegionSize
+					options.MinRegionSize, options.MaxRegionSize
 				).getRegions(program);
 
 			if (regions.empty()) {
@@ -730,10 +733,10 @@ int main(int argc, char** argv) {
 			be::BackendPtr backend;
 
 			// see whether a backend has been selected
-			if (!CommandLineOptions::Backend.empty()) {
+			if (!options.Backend.empty()) {
 
 				// get option
-				char selection = CommandLineOptions::Backend[0];
+				char selection = options.Backend[0];
 				if (selection < 'a') { // to lower case
 					selection += 'a' - 'A';
 				}
@@ -767,9 +770,9 @@ int main(int argc, char** argv) {
 
 						// check if a path to dump the binary representation of the kernel is passed (form: -b ocl:PATH)
 						std::string kernelDumpPath;
-						size_t idx = CommandLineOptions::Backend.find(":");
+						size_t idx = options.Backend.find(":");
 						if(idx != std::string::npos) {
-							kernelDumpPath = CommandLineOptions::Backend.substr(idx+1, CommandLineOptions::Backend.size());
+							kernelDumpPath = options.Backend.substr(idx+1, options.Backend.size());
 //							std::cout << idx << " hallo " << binaryDumpPath << std::endl;
 						}
 
@@ -790,7 +793,7 @@ int main(int argc, char** argv) {
 					case 'r':
 					default: {
 						backendName = "Runtime.Backend";
-						backend = insieme::backend::runtime::RuntimeBackend::getDefault();
+						backend = insieme::backend::runtime::RuntimeBackend::getDefault(options.EstimateEffort);
 						break;
 					}
 				}
@@ -803,7 +806,7 @@ int main(int argc, char** argv) {
 				be::TargetCodePtr targetCode = backend->convert(program);
 				
 				// If instrumenting, generate and read back per-region performance data
-				if(CommandLineOptions::DoRegionInstrumentation) {
+				if(options.DoRegionInstrumentation) {
 					// compile code
 					utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 					compiler.addFlag("-I " SRC_DIR "../../runtime/include -g -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm -lpapi -L" PAPI_HOME "/lib");
@@ -825,7 +828,7 @@ int main(int argc, char** argv) {
 					}
 				
 					// read performance data pack and output
-					if(CommandLineOptions::DoRegionInstrumentation) {
+					if(options.DoRegionInstrumentation) {
 						RegionPerformanceParser parser = RegionPerformanceParser();
 						PerformanceMap map = PerformanceMap();
 						if(parser.parseAll("worker_event_log", &map) != 0) {
@@ -839,14 +842,14 @@ int main(int argc, char** argv) {
 				}
 
 				// select output target
-				if(!CommandLineOptions::Output.empty()) {
+				if(!options.Output.empty()) {
 					// write result to file ...
-					std::fstream outFile(CommandLineOptions::Output, std::fstream::out | std::fstream::trunc);
+					std::fstream outFile(options.Output, std::fstream::out | std::fstream::trunc);
 					outFile << *targetCode;
 					outFile.close();
 
 					// TODO: reinstate rewriter when fractions of programs are supported as entry points
-//					insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), CommandLineOptions::Output);
+//					insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), options.Output);
 
 				} else {
 					// just write result to logger

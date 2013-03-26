@@ -51,7 +51,7 @@ namespace loader {
 		}
 
 		// load code using frontend
-		auto job = frontend::ConversionJob(manager, curCase->getFiles(), curCase->getIncludeDirs());
+		auto job = frontend::ConversionJob(curCase->getFiles(), curCase->getIncludeDirs());
 		job.setOption(frontend::ConversionJob::OpenMP, enableOpenMP);
 
 		// add pre-processor definitions
@@ -59,7 +59,7 @@ namespace loader {
 			job.addDefinition(def.first, def.second);
 		});
 
-		return job.execute();
+		return job.execute(manager);
 	}
 
 } // end namespace loader

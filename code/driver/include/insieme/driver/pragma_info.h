@@ -37,11 +37,12 @@
 #pragma once 
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/driver/cmd_options/cmd_line_utils.h"
 
 namespace insieme {
 namespace driver {
 
-core::ProgramPtr handlePragmaInfo(const core::ProgramPtr& program);
+core::ProgramPtr handlePragmaInfo(const core::ProgramPtr& program, const cmd_options::CommandLineOptions& options);
 
 } // end driver namespace
 } // end insieme namespace

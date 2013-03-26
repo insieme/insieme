@@ -34,36 +34,68 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
+#include <vector>
 #include <string>
+#include <iterator>
+
+#include <boost/optional.hpp>
+
 #include "insieme/frontend/frontend.h"
-#include "insieme/utils/test/integration_tests.h"
 
-namespace {
+namespace insieme {
+namespace driver {
+namespace cmd_options {
 
-	// a node manager bound to the life cycle of the entire program
-	insieme::core::NodeManager testGlobalManager;
+	/**
+	 * The CommandLineOptions is a container for input arguments to the main Insieme compiler executable.
+	 */
+	class CommandLineOptions {
 
-	// a cache for already loaded Integreation tests
-	std::map<insieme::utils::test::IntegrationTestCase, insieme::core::ProgramPtr> loadedCodes;
+	public:
 
-	// a helper method for loading program code
-	insieme::core::ProgramPtr load(insieme::core::NodeManager& manager, const insieme::utils::test::IntegrationTestCase& testCase) {
+		/**
+		 * A flag indicating whether the parsed options are valid.
+		 */
+		bool valid;
 
-		// check whether the code is already in the cache
-		auto pos = loadedCodes.find(testCase);
-		if (pos != loadedCodes.end()) {
-			return manager.get(pos->second);
-		}
+		#define FLAG(opt_name, opt_id, var_name, def_value, var_help) \
+			bool var_name;
+		#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
+			var_type var_name;
+		#define INT_OPTION(opt_name, opt_id, var_name, def_value, var_help) \
+			int var_name;
 
-		// not loaded yet => load and cache code
-		insieme::core::ProgramPtr code = insieme::frontend::ConversionJob(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
+		#include "options.def"
 
-		loadedCodes.insert(std::make_pair(testCase, code));
-		return manager.get(code);
-	}
+		#undef FLAG
+		#undef OPTION
+		#undef INT_OPTION
 
-	insieme::core::ProgramPtr load(insieme::core::NodeManager& manager, const std::string& name) {
-		return load(manager, *utils::test::getCase(name));
-	}
+		/**
+		 * This method reads the input arguments from the command line and parses them. The values are then stored inside
+		 * the the returned command-line-options instance.
+		 *
+		 * The debug flags enable the Parser to print the list of parsed commands into the standard output
+		 */
+		static CommandLineOptions parse(int argc, char** argv, bool debug=false);
 
-}
+	private:
+
+		// avoid constructing instances of CommandLineOptions
+		CommandLineOptions() : valid(true) { }
+
+	public:
+
+		/**
+		 * Converts the command line options into a frontend conversion job.
+		 */
+		operator frontend::ConversionJob() const;
+
+	};
+
+
+} // end namespace cmd_options
+} // end namespace driver
+} // end namespace insieme

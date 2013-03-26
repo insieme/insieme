@@ -58,7 +58,7 @@ TEST(FullBackend, HelloWorld) {
 	ASSERT_TRUE(testCase) << "Could not load hello world test case!";
 
 	// convert test case into IR using the frontend
-	auto code = frontend::ConversionJob(manager, testCase->getFiles(), testCase->getIncludeDirs()).execute();
+	auto code = frontend::ConversionJob(testCase->getFiles(), testCase->getIncludeDirs()).execute(manager);
 	ASSERT_TRUE(code) << "Unable to load input code!";
 
 	// create target code using real backend

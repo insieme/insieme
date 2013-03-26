@@ -48,6 +48,7 @@
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
+#include "insieme/frontend/frontend.h"
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -65,33 +66,28 @@ using namespace insieme::utils::log;
 
 TEST(ocl_hostKernel, baseTest) {
 	NodeManager manager;
-	ProgramPtr program = Program::get(manager);
 
 	std::cout << "Test Directory: " << std::string(OCL_KERNEL_TEST_DIR) << std::endl;
 
-	// Frontend PATH
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs"); // this is for CL/cl.h in host.c 
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR)); // this is for ocl_device.h in kernel.cl
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
-	//CommandLineOptions::IncludePaths.push_back(std::string("/home/sh4dow/libs/llvm30/lib/clang/3.0/include"));
-    CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/mat_mul");
+	insieme::frontend::ConversionJob job;
+	job.addFile(SRC_DIR "../../../test/ocl/mat_mul/mat_mul.c");
 
+	// Frontend PATH
+	job.addIncludeDirectory(SRC_DIR);								// this is for ocl_device.h in kernel.cl
+	job.addIncludeDirectory(SRC_DIR "inputs");						// this is for CL/cl.h in host.c
+	job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");	// lib_icl
+	job.addIncludeDirectory(SRC_DIR "../../../test/ocl/mat_mul");
 
 	// Backend PATH
-	CommandLineOptions::IncludePaths.push_back(std::string(OCL_KERNEL_TEST_DIR));
-	CommandLineOptions::Defs.push_back("INSIEME");	
+	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
+	job.setOption(insieme::frontend::ConversionJob::OpenCL);
 
 	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
-	insieme::frontend::Program prog(manager);
-
-    prog.addTranslationUnit(std::string(SRC_DIR) + "../../../test/ocl/mat_mul/mat_mul.c");
-	// 	prog.addTranslationUnit(std::string(SRC_DIR) + "/inputs/hello_host.c"); // Other Input test :)
-	//prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "kernel.cl");
-	program = prog.convert();
+	auto program = job.execute(manager);
 	std::cout << "Done.\n";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
-	insieme::frontend::ocl::HostCompiler hc(program);
+	insieme::frontend::ocl::HostCompiler hc(program, job);
 	hc.compile();
 
 	insieme::core::printer::PrettyPrinter pp(program);

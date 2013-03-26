@@ -75,8 +75,6 @@ using namespace core;
 using namespace core::printer;
 using namespace driver::measure;
 
-#include "../include/integration_tests.inc"
-
 
 	TEST(CacheSimulator, Dummy) {
 		// no test-case is not supported

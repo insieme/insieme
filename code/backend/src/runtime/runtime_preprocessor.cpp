@@ -57,8 +57,6 @@
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
-#include "insieme/utils/cmd_line_utils.h"
-
 namespace insieme {
 namespace backend {
 namespace runtime {
@@ -404,12 +402,14 @@ using namespace insieme::transform::pattern;
 			const core::lang::BasicGenerator& basic;
 			const Extensions& ext;
 			core::IRBuilder builder;
+			bool includeEffortEstimation;
 
 		public:
 
-			WorkItemIntroducer(core::NodeManager& manager)
+			WorkItemIntroducer(core::NodeManager& manager, bool includeEffortEstimation)
 				: manager(manager), basic(manager.getLangBasic()),
-				  ext(manager.getLangExtension<Extensions>()), builder(manager) {}
+				  ext(manager.getLangExtension<Extensions>()), builder(manager),
+				  includeEffortEstimation(includeEffortEstimation) {}
 
 			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
@@ -688,7 +688,7 @@ using namespace insieme::transform::pattern;
 				// ------------- try build up function estimating loop range effort -------------
 
 				core::LambdaExprPtr effort;
-				if(CommandLineOptions::EstimateEffort) effort = getLoopEffortEstimationFunction(body);
+				if(includeEffortEstimation) effort = getLoopEffortEstimationFunction(body);
 				WorkItemVariantFeatures features = getFeatures(builder.callExpr(basic.getUnit(), body, builder.intLit(1), builder.intLit(2), builder.intLit(1)));
 
 				// ------------- finish process -------------
@@ -851,7 +851,7 @@ using namespace insieme::transform::pattern;
 
 
 	core::NodePtr WorkItemizer::process(const backend::Converter& converter, const core::NodePtr& node) {
-		return WorkItemIntroducer(converter.getNodeManager()).resolveElement(node);
+		return WorkItemIntroducer(converter.getNodeManager(), includeEffortEstimation).resolveElement(node);
 	}
 
 

@@ -30,7 +30,7 @@ class D {
 
 public:
 	int ma;
-	D() {
+	D() : ma(12) {
 		printf("D()\n");
 	}
 	D(const D& o) { printf("D(const D&)\n"); }

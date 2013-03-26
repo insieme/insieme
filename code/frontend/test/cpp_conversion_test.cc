@@ -103,8 +103,10 @@ TEST(CppConversion, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/cpp.cpp" );
+	fe::ConversionJob job;
+
+	fe::Program prog(manager, job);
+	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/cpp.cpp") );
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
