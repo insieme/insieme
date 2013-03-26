@@ -114,7 +114,6 @@ void Interceptor::intercept() {
 	for(;elem != end; elem++) {
 		if(const clang::FunctionDecl* decl = llvm::dyn_cast<clang::FunctionDecl>(*elem)) {
 			if( regex_match(decl->getQualifiedNameAsString(), rx) ) {
-					VLOG(2) << "intercept funcDecl " << decl->getQualifiedNameAsString();
 					interceptedDecls.insert(decl);
 					interceptedFuncMap.insert( {decl,decl->getQualifiedNameAsString()} );
 			} else {
@@ -123,13 +122,11 @@ void Interceptor::intercept() {
 			}	
 		} else if( const clang::TypeDecl* typeDecl = llvm::dyn_cast<clang::TypeDecl>(*elem) ) {
 			if( regex_match(typeDecl->getQualifiedNameAsString(), rx) ) {
-				VLOG(2) << "intercept TypeDecl " << typeDecl->getQualifiedNameAsString();
 				interceptedTypes.insert( typeDecl );
 		
 				if(const clang::CXXRecordDecl* cxxRecDecl = llvm::dyn_cast<clang::CXXRecordDecl>(typeDecl)) {
 					for(auto mit=cxxRecDecl->method_begin(), end=cxxRecDecl->method_end(); mit!=end;mit++) {
 						if( regex_match((*mit)->getQualifiedNameAsString(), rx) ) {
-							VLOG(2) << "intercept CXXMethodDecl " << (*mit)->getQualifiedNameAsString();
 							interceptedDecls.insert(*mit);
 							interceptedFuncMap.insert( {(*mit), (*mit)->getQualifiedNameAsString() } ); 
 						}
@@ -137,7 +134,6 @@ void Interceptor::intercept() {
 					
 					for(auto cit=cxxRecDecl->ctor_begin(), end=cxxRecDecl->ctor_end(); cit!=end;cit++) {
 						if( regex_match((*cit)->getQualifiedNameAsString(), rx) ) {
-							VLOG(2) << "intercept CXXConstructorDecl " << (*cit)->getQualifiedNameAsString();
 							interceptedDecls.insert(*cit);
 							interceptedFuncMap.insert( {(*cit), (*cit)->getQualifiedNameAsString() } ); 
 						}
@@ -166,7 +162,7 @@ Interceptor::InterceptedTypeCache Interceptor::buildInterceptedTypeCache(insieme
 		//TODO annotate header in type, see buildInterceptedCache
 		core::TypePtr irType = iTV.Visit( currInterceptedType );
 		cache.insert( { currInterceptedType, irType } );
-		VLOG(2) << "buildInterceptedType " << (*it)->getQualifiedNameAsString() << " ## " << irType;
+		VLOG(1) << "build interceptedType " << (*it)->getQualifiedNameAsString() << " ## " << irType;
 	}
 	return cache;
 }
@@ -232,6 +228,10 @@ Interceptor::InterceptedExprCache Interceptor::buildInterceptedExprCache(insieme
 
 		insieme::annotations::c::attachInclude(interceptExpr, getHeaderForDecl(decl, indexer));
 		cache.insert( {decl, interceptExpr} );
+
+		if(insieme::annotations::c::hasIncludeAttached(interceptExpr)) {
+			VLOG(2) << insieme::annotations::c::getAttachedInclude(interceptExpr);
+		}
 	}
 
 	return cache;
@@ -260,13 +260,11 @@ void InterceptVisitor::VisitDeclStmt(const clang::DeclStmt* declStmt) {
 				if( regex_match(tagDecl->getQualifiedNameAsString(), rx) ) {
 					//if we have a varDecl with an intercepted Type
 					interceptedDecls.insert( varDecl );
-					VLOG(2) << "intercept TypeDecl " << tagDecl->getQualifiedNameAsString() << ((void*) tagDecl);
 					interceptedTypes.insert( tagDecl );
 
 					if(const clang::CXXRecordDecl* cxxRecDecl = llvm::dyn_cast<clang::CXXRecordDecl>(tagDecl)) {
 						for(auto it=cxxRecDecl->method_begin(), end=cxxRecDecl->method_end(); it!=end;it++) {
 							if( regex_match((*it)->getQualifiedNameAsString(), rx) ) {
-								VLOG(2) << "intercept CXXMethodDecl " << (*it)->getQualifiedNameAsString();
 								interceptedDecls.insert(*it);
 								interceptedFuncMap.insert( {(*it), (*it)->getQualifiedNameAsString() } ); 
 							}
@@ -274,7 +272,6 @@ void InterceptVisitor::VisitDeclStmt(const clang::DeclStmt* declStmt) {
 						
 						for(auto it=cxxRecDecl->ctor_begin(), end=cxxRecDecl->ctor_end(); it!=end;it++) {
 							if( regex_match((*it)->getQualifiedNameAsString(), rx) ) {
-								VLOG(2) << "intercept CXXConstructorDecl " << (*it)->getQualifiedNameAsString();
 								interceptedDecls.insert(*it);
 								interceptedFuncMap.insert( {(*it), (*it)->getQualifiedNameAsString() } ); 
 							}
@@ -342,8 +339,6 @@ core::TypePtr InterceptTypeVisitor::VisitTemplateSpecializationType(const clang:
 			case clang::TemplateArgument::ArgKind::Type:
 				{
 					const clang::Type* argType = arg.getAsType().getTypePtr();
-					VLOG(2) << argType->getTypeClassName();
-					
 					core::TypePtr irArgType = Visit(argType);
 					if(irArgType) {
 						typeList.insert( typeList.end(), irArgType );
@@ -363,7 +358,6 @@ core::TypePtr InterceptTypeVisitor::VisitTemplateSpecializationType(const clang:
 			case clang::TemplateArgument::ArgKind::Pack: VLOG(2) << "ArgKind::Pack not supported"; break;
 		}
 	}
-	VLOG(2) << typeList;
 	core::TypePtr retTy = builder.genericType(templTy->getTemplateName().getAsTemplateDecl()->getQualifiedNameAsString(), typeList, insieme::core::IntParamList());
 	VLOG(2)<<retTy;
 	return retTy;
