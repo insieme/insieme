@@ -49,6 +49,8 @@ namespace ocl_kernel {
 	/**
 	 * The OpenCL Kernel backend aims on generating pure sequential code without
 	 * any dependencies to any runtime implementation.
+	 *
+	 * This backend converts the given IR representation into OpenCL host/kernel code.
 	 */
 	class OCLKernelBackend : public Backend {
 		// optional path to dump the binary of the kernel after preprocessing
@@ -82,14 +84,15 @@ namespace ocl_kernel {
 		 */
 		static OCLKernelBackendPtr getDefault(const std::string& kernelDumpPath);
 
+	protected:
+
 		/**
-		 * The main facade function of the OpenCL Kernel backend. This function converts the given
-		 * IR representation into OpenCL host/kernel code.
+		 * Creates the converter instance realizing the OpenCL Kernel backend conversion job.
 		 *
-		 * @param source the program to be converted
-		 * @return a pointer to the converted target code
+		 * @param manager the manager to be utilized for the conversion
+		 * @return a converter instance conducting the code conversion
 		 */
-		backend::TargetCodePtr convert(const core::NodePtr& source) const;
+		virtual Converter buildConverter(core::NodeManager& manager) const;
 
 	};
 

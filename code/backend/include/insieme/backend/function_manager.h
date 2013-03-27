@@ -71,9 +71,9 @@ namespace backend {
 
 		detail::FunctionInfoStore* store;
 
-		const OperatorConverterTable operatorTable;
+		OperatorConverterTable operatorTable;
 
-		const FunctionIncludeTable includeTable;
+		FunctionIncludeTable includeTable;
 
 	public:
 
@@ -104,6 +104,16 @@ namespace backend {
 		void rename(const core::LambdaExprPtr& lambda, const string& name);
 
 		bool isBuiltIn(const core::ExpressionPtr& op) const;
+
+		// ------------------------- Management ---------------------
+
+		OperatorConverterTable& getOperatorConverterTable() {
+			return operatorTable;
+		}
+
+		FunctionIncludeTable& getFunctionIncludeTable() {
+			return includeTable;
+		}
 	};
 
 

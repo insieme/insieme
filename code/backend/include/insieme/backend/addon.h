@@ -36,64 +36,46 @@
 
 #pragma once
 
-#include "insieme/backend/backend.h"
-#include "insieme/backend/function_manager.h"
-#include "insieme/backend/type_manager.h"
+#include <memory>
 
-#include "insieme/backend/operator_converter.h"
+#include "insieme/core/forward_decls.h"
+
+#include "insieme/backend/converter.h"
 
 namespace insieme {
 namespace backend {
-namespace runtime {
-
-	// A forward declaration of the sequential backend implementation
-	class RuntimeBackend;
-	typedef std::shared_ptr<RuntimeBackend> RuntimeBackendPtr;
 
 	/**
-	 * The facade for the backend capable of generating code to be used by the runtime backend.
-	 *
-	 * This backend converts the given IR representation into C99 / C++98 target code interacting with
-	 * the Insieme Runtime environment.
+	 * The base class for backend add-ons allowing to customize
+	 * the behavior of backend instances.
 	 */
-	class RuntimeBackend : public Backend {
-
-		/**
-		 * A flag enabling the inclusion of effort estimations within work-item tables.
-		 */
-		bool includeEffortEstimation;
-
+	class AddOn {
 	public:
 
 		/**
-		 * A constructor of this kind of backend accepting an operator table extender.
+		 * A virtual destructor.
 		 */
-		RuntimeBackend(bool includeEffortEstimation)
-			: includeEffortEstimation(includeEffortEstimation) {}
-
+		virtual ~AddOn() {};
 
 		/**
-		 * A factory method obtaining a smart pointer referencing a
-		 * fresh instance of the runtime backend using the default configuration.
-		 *
-		 * @return a smart pointer to a fresh instance of the runtime backend
+		 * Installs this add-on within the given converter.
 		 */
-		static RuntimeBackendPtr getDefault(bool includeEffortEstimation = false);
-
-
-	protected:
-
-		/**
-		 * Creates a converter instance capable of converting IR code into C / C++ code utilizing
-		 * the runtime for realizing parallel constructs.
-		 *
-		 * @param manager the manager to be utilized for the conversion
-		 * @return a converter instance conducting the code conversion
-		 */
-		virtual Converter buildConverter(core::NodeManager& manager) const;
+		virtual void installOn(Converter& converter) const =0;
 
 	};
 
-} // end namespace runtime
+	/**
+	 * A type definition for an AddOn-Pointer (since AddOns are polymorph).
+	 */
+	typedef std::shared_ptr<AddOn> AddOnPtr;
+
+	/**
+	 * A utility class to instantiate Add-On classes.
+	 */
+	template<typename A, typename ... T>
+	AddOnPtr makeAddOn(T ... args) {
+		return std::make_shared<A>(args...);
+	}
+
 } // end namespace backend
 } // end namespace insieme

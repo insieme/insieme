@@ -48,7 +48,8 @@ namespace sequential {
 
 	/**
 	 * The sequential backend aims on generating pure sequential code without
-	 * any dependencies to any runtime implementation.
+	 * any dependencies to any runtime implementation. This backend converts
+	 * IR into pure C99 / C++98 target code.
 	 */
 	class SequentialBackend : public Backend {
 	public:
@@ -61,18 +62,18 @@ namespace sequential {
 		 */
 		static SequentialBackendPtr getDefault();
 
+	protected:
+
 		/**
-		 * The main facade function of the sequential backend. This function converts the given
-		 * IR representation into pure C99-target code.
+		 * Creates the converter instance realizing the sequential backend conversion job.
 		 *
-		 * @param source the program to be converted
-		 * @return a pointer to the converted target code
+		 * @param manager the manager to be utilized for the conversion
+		 * @return a converter instance conducting the code conversion
 		 */
-		backend::TargetCodePtr convert(const core::NodePtr& source) const;
+		virtual Converter buildConverter(core::NodeManager& manager) const;
 
 	};
 
-
-}
-}
-}
+} // end namespace sequential
+} // end namespace backend
+} // end namespace insieme

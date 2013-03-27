@@ -102,7 +102,13 @@ namespace backend {
 				});
 			}
 
+			TypeIncludeTable& getTypeIncludeTable() {
+				return includeTable;
+			}
 
+			void addTypeHandler(const TypeHandlerList& handler) {
+				typeHandlers.insert(typeHandlers.end(), handler.begin(), handler.end());
+			}
 
 			/**
 			 * Obtains the type information stored for the given function type within this container. If not
@@ -232,6 +238,20 @@ namespace backend {
 		// as usual, ask store ...
 		return store->getDefinitionOf(type);
 	}
+
+
+	TypeIncludeTable& TypeManager::getTypeIncludeTable() {
+		return store->getTypeIncludeTable();
+	}
+
+	void TypeManager::addTypeHandler(const TypeHandler& handler) {
+		store->addTypeHandler(toVector(handler));
+	}
+
+	void TypeManager::addTypeHandler(const TypeHandlerList& list) {
+		store->addTypeHandler(list);
+	}
+
 
 	namespace type_info_utils {
 
