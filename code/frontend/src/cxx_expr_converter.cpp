@@ -65,6 +65,7 @@
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
+#include "insieme/core/ir_class_info.h"
 
 
 #include "clang/AST/StmtVisitor.h"
@@ -860,6 +861,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 			// extract only the ctor function from the converted ctor call
 			core::ExpressionPtr ctorFunc = ctorCall.as<core::CallExprPtr>().getFunctionExpr();
 
+			assert( ctorFunc.as<core::LambdaExprPtr>()->getParameterList().size() > 0 && "not default ctor used in array construction");
+
 			retExp = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
 			 						   mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr);
 		}
@@ -886,245 +889,43 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(const clang::CXXDeleteExpr* deleteExpr) {
 	START_LOG_EXPR_CONVERSION(deleteExpr);
 
-	if (deleteExpr->isArrayForm () )
-		assert(false && "array delete not supported yet");
-
 	core::ExpressionPtr retExpr;
-	core::ExpressionPtr deleteExp = Visit(deleteExpr->getArgument());
+	core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
 
-	retExpr = builder.callExpr (builder.getLangBasic().getRefDelete(),
-								deleteExp);
-	
+	if (deleteExpr->isArrayForm () ){
+
+		// we need to call arratDtor, with the object, refdelete and the dtorFunc
+		core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr() );
+		if( core::hasMetaInfo(desTy)){
+			const core::ClassMetaInfo& info = core::getMetaInfo (exprToDelete->getType());
+			assert(!info.isDestructorVirtual() && "no virtual dtor allowed for array dtor");
+
+			core::ExpressionPtr dtor;
+			if (info.hasDestructor())
+				dtor = info.getDestructor();
+			else
+				assert (false && "no dtor for this");
+		
+			std::vector<core::ExpressionPtr> args;
+			args.push_back(exprToDelete);
+			args.push_back( builder.getLangBasic().getRefDelete());
+			args.push_back( dtor);
+
+			retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayDtor(), args);
+		}
+		else{
+			// this is a built in type, we need to build a empty dtor with the right type
+			// FIXME: is backend does not reproduce the right operator we might have memory leaks
+			// maybe is better to call arraydtor with a fake dtor
+			retExpr = builder.callExpr ( builder.getLangBasic().getRefDelete(), exprToDelete);
+		}
+	}
+	else{
+		retExpr = builder.callExpr ( builder.getLangBasic().getRefDelete(), exprToDelete);
+	}
+		
 	END_LOG_EXPR_CONVERSION(retExpr);
 	return retExpr;
-
-	/*
-	core::ExpressionPtr retExpr;
-	const core::IRBuilder& builder = convFact.builder;
-	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-
-	//check if argument is class/struct (with non-trivial dtor), otherwise just call "free" for builtin types
-	if(deleteExpr->getDestroyedType().getTypePtr()->isStructureOrClassType()
-			&& !deleteExpr->getDestroyedType()->getAsCXXRecordDecl()->hasTrivialDestructor() ) {
-		// the call of the dtor and the "free" of the destroyed object is done in an
-		// lambdaExpr so we have to pass the object we destroy and if we have a virtual dtor
-		// also the globalVar to the lambdaExpr
-
-		core::ExpressionPtr delOpIr;
-		core::ExpressionPtr dtorIr;
-		core::ExpressionPtr parentThisStack = convFact.cxxCtx.thisStack2;
-
-		const FunctionDecl* operatorDeleteDecl = deleteExpr->getOperatorDelete();
-
-		//get the destructor decl
-		const CXXRecordDecl* classDecl = deleteExpr->getDestroyedType()->getAsCXXRecordDecl();
-		const CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
-
-		//use the implicit object argument to determine type
-		clang::Expr* thisArg = deleteExpr->getArgument()->IgnoreParenImpCasts();
-
-		// delete gets only pointertypes
-		const clang::CXXRecordDecl* recordDecl = thisArg->getType()->getPointeeType()->getAsCXXRecordDecl();
-		VLOG(2) << "Pointer of type " << recordDecl->getNameAsString();
-
-		bool isArray = deleteExpr->isArrayForm();
-		bool isVirtualDtor = dtorDecl->isVirtual();
-		bool isDtorUsingGlobals = false;
-		//check if dtor uses globals
-		if ( ctx.globalFuncSet.find(dtorDecl) != ctx.globalFuncSet.end() ) {
-			isDtorUsingGlobals=true;
-		}
-
-		// new variable for the object to be destroied, inside the lambdaExpr
-		core::TypePtr classTypePtr = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr() );
-
-		core::VariablePtr&& var = builder.variable( builder.refType( builder.refType( builder.arrayType( classTypePtr ))));
-		convFact.cxxCtx.thisStack2 = var;
-
-		// for virtual dtor's globalVar, offsetTable and vfuncTable need to be updated
-		const core::VariablePtr parentGlobalVar = ctx.globalVar;
-		const core::ExpressionPtr parentOffsetTableExpr = cxxCtx.offsetTableExpr;
-		const core::ExpressionPtr parentVFuncTableExpr = cxxCtx.vFuncTableExpr;
-
-		if( isVirtualDtor || isDtorUsingGlobals ) {
-			//"new" globalVar for arguments
-			ctx.globalVar = builder.variable( ctx.globalVar->getType());
-		}
-
-		if( isVirtualDtor ) {
-			// create/update access to offsetTable
-			convFact.updateVFuncOffsetTableExpr();
-
-			// create/update access to vFuncTable
-			convFact.updateVFuncTableExpr();
-		}
-
-		core::CompoundStmtPtr body;
-		core::StatementPtr tupleVarAssign;	//only for delete[]
-		core::VariablePtr tupleVar;			//only for delete[]
-		core::VariablePtr itVar;			//only for delete[]
-		core::ExpressionPtr thisPtr;
-		if(isArray) {
-			VLOG(2) << classDecl->getNameAsString() << " " << "has trivial Destructor " << classDecl->hasTrivialDestructor();
-
-			//adjust the given pointer
-			core::datapath::DataPathBuilder dpManager(convFact.mgr);
-			dpManager.element(1);
-
-			// the adjust pointer to free the correct memory -> arg-1
-			vector<core::TypePtr> tupleTy;
-			tupleTy.push_back( gen.getUInt4() );
-			tupleTy.push_back( builder.refType( builder.arrayType( classTypePtr ) ) );
-
-			tupleVar =	builder.variable( builder.refType( builder.tupleType(tupleTy) ) );
-
-			//(ref<'a>, datapath, type<'b>) -> ref<'b>
-			tupleVarAssign = builder.declarationStmt(
-				tupleVar,
-				builder.callExpr(
-					builder.refType( builder.tupleType(tupleTy) ),
-					builder.getLangBasic().getRefExpand(),
-					toVector<core::ExpressionPtr>(var, dpManager.getPath(), builder.getTypeLiteral( builder.tupleType(tupleTy) ) )
-				)
-			);
-
-			// variable to iterate over array
-			itVar = builder.variable(builder.getLangBasic().getUInt4());
-
-			// thisPtr is pointing to elements of the array
-			thisPtr = builder.callExpr(
-					builder.refType(classTypePtr),
-					gen.getArrayRefElem1D(),
-					builder.deref(
-						builder.callExpr(
-								gen.getTupleRefElem(),
-								tupleVar,
-								builder.literal("1", gen.getUInt4()),
-								builder.getTypeLiteral(builder.refType(builder.arrayType( classTypePtr )))
-						)
-					),
-					itVar
-				);
-		} else {
-			thisPtr = getCArrayElemRef(convFact.builder, builder.deref(var) );
-		}
-
-		if( isVirtualDtor ) {
-			// get the deRef'd function pointer for methodDecl accessed via a ptr/ref of recordDecl
-			dtorIr = createCastedVFuncPointer(recordDecl, dtorDecl, thisPtr );
-		} else {
-			dtorIr = core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(dtorDecl) );
-		}
-
-		//TODO: Dtor has no arguments... (except the "this", and globals, which are added by us)
-		core::FunctionTypePtr funcTy =
-			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(dtorDecl) ) );
-		ExpressionList args;
-		ExpressionList packedArgs = tryPack(builder, funcTy, args);
-
-		if( isDtorUsingGlobals ) {
-			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
-		}
-		packedArgs.push_back(thisPtr);
-
-		// build the dtor Call
-		core::ExpressionPtr&& dtorCall = builder.callExpr(
-				gen.getUnit(),
-				dtorIr,
-				//thisPtr
-				packedArgs
-			);
-
-		//create delete call
-		if( operatorDeleteDecl ->hasBody() ) {
-			//if we have an overloaded delete operator
-			//				delOpIr = core::static_pointer_cast<const core::LambdaExpr>( cxxConvFact.convertFunctionDecl(funcDecl) );
-			//TODO: add support for overloaded delete operator
-			assert(false && "Overloaded delete operator not supported at the moment");
-		} else {
-			if( isArray ) {
-				//call delOp on the tupleVar
-				delOpIr = builder.callExpr(
-					builder.getLangBasic().getRefDelete(),
-					getCArrayElemRef(builder, tupleVar)
-				);
-			} else {
-				//call delOp on the object
-				delOpIr = builder.callExpr(
-						builder.getLangBasic().getRefDelete(),
-						getCArrayElemRef(builder, builder.deref(var))
-					);
-			}
-		}
-
-		if(isArray) {
-			// read arraysize from extra element for delete[]
-			core::ExpressionPtr&& arraySize =
-				builder.callExpr(
-					gen.getUInt4(),
-					gen.getTupleMemberAccess(),
-					builder.deref( tupleVar ),
-					builder.literal("0", gen.getUInt4()),
-					builder.getTypeLiteral(gen.getUInt4())
-				);
-
-			// loop over all elements of array and call dtor
-			// Dtors are called in reverse order of construction!
-			core::ForStmtPtr dtorLoop = builder.forStmt(
-				itVar,
-				arraySize,
-				builder.literal(gen.getUInt4(), toString(0)),
-				builder.literal(gen.getUInt4(), toString(1)),
-				dtorCall
-			);
-
-			body = builder.compoundStmt(
-					tupleVarAssign,
-					dtorLoop,
-					delOpIr
-				);
-
-		} else {
-			//add destructor call of class/struct before free-call
-			body = builder.compoundStmt(
-					dtorCall,
-					delOpIr
-				);
-		}
-
-		vector<core::VariablePtr> params;
-		params.push_back(var);
-
-		//we need access to globalVar -> add globalVar to the parameters
-		if( isVirtualDtor || isDtorUsingGlobals ) {
-			params.insert(params.begin(), ctx.globalVar);
-		}
-
-		core::LambdaExprPtr&& lambdaExpr = builder.lambdaExpr( body, params);
-
-		//thisPtr - argument to be deleted
-		core::ExpressionPtr argToDelete = convFact.convertExpr( deleteExpr->getArgument() );
-		if( isVirtualDtor || isDtorUsingGlobals ) {
-			ctx.globalVar = parentGlobalVar;
-			cxxCtx.offsetTableExpr = parentOffsetTableExpr;
-			cxxCtx.vFuncTableExpr = parentVFuncTableExpr;
-			retExpr = builder.callExpr(lambdaExpr, ctx.globalVar, argToDelete);
-		} else {
-			retExpr = builder.callExpr(lambdaExpr, argToDelete);
-		}
-
-		convFact.cxxCtx.thisStack2 = parentThisStack;
-	} else {
-		// build the free statement with the correct variable
-		retExpr = builder.callExpr(
-				builder.getLangBasic().getRefDelete(),
-				builder.deref( Visit(deleteExpr->getArgument()) )
-		);
-	}
-
-	VLOG(2) << "End of expression CXXDeleteExpr \n";
-	return retExpr;
-	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
