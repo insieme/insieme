@@ -42,6 +42,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/type_traits/remove_const.hpp>
 
+#include "insieme/annotations/c/include.h"
+
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
 #include "insieme/backend/function_manager.h"
@@ -291,6 +293,15 @@ namespace backend {
 			auto pos = typeInfos.find(type);
 			if (pos != typeInfos.end()) {
 				return pos->second;
+			}
+
+			// check whether there is an annotated include file (intercepted type)
+			if (type->getNodeType() == core::NT_GenericType && annotations::c::hasIncludeAttached(type)) {
+				const string& name = type.as<core::GenericTypePtr>()->getFamilyName();
+				const string& header = annotations::c::getAttachedInclude(type);
+				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+				addInfo(type,info);
+				return info;
 			}
 
 			// lookup type within include table

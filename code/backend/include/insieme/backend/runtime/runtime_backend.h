@@ -37,10 +37,6 @@
 #pragma once
 
 #include "insieme/backend/backend.h"
-#include "insieme/backend/function_manager.h"
-#include "insieme/backend/type_manager.h"
-
-#include "insieme/backend/operator_converter.h"
 
 namespace insieme {
 namespace backend {

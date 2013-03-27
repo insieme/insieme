@@ -83,12 +83,10 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visit(const core::NodePtr& node, ConversionContext& context) {
 		// first ask the handlers
-		if (!stmtHandler.empty()) {
-			for(auto it = stmtHandler.begin(); it != stmtHandler.end(); ++it) {
-				c_ast::NodePtr res = (*it)(context, node);
-				if (res) {
-					return res;
-				}
+		for(auto cur : stmtHandler) {
+			c_ast::NodePtr res = cur(context, node);
+			if (res) {
+				return res;
 			}
 		}
 

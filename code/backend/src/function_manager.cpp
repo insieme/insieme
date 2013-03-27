@@ -58,6 +58,8 @@
 
 #include "insieme/core/types/type_variable_deduction.h"
 
+#include "insieme/annotations/c/include.h"
+
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 
@@ -166,7 +168,7 @@ namespace backend {
 	}
 
 	bool FunctionManager::isBuiltIn(const core::ExpressionPtr& op) const {
-		return operatorTable.find(op) != operatorTable.end();
+		return operatorTable.find(op) != operatorTable.end() || annotations::c::hasIncludeAttached(op);
 	}
 
 	namespace {
@@ -479,6 +481,15 @@ namespace backend {
 		return boost::optional<string>();
 	}
 
+	const boost::optional<string> FunctionManager::getHeaderFor(const core::LiteralPtr& function) const {
+		// check whether there is a annotated header
+		if (annotations::c::hasIncludeAttached(function)) {
+			return annotations::c::getAttachedInclude(function);
+		}
+		// check header table
+		return getHeaderFor(function->getStringValue());
+	}
+
 	namespace detail {
 
 
@@ -535,7 +546,7 @@ namespace backend {
 
 			// ------------------------ add prototype -------------------------
 
-			auto header = converter.getFunctionManager().getHeaderFor(literal->getStringValue());
+			auto header = converter.getFunctionManager().getHeaderFor(literal);
 			if (header) {
 				// => use prototype of include file
 				res->prototype = c_ast::DummyFragment::createNew(converter.getFragmentManager());

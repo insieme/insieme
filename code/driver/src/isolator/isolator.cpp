@@ -56,7 +56,9 @@
 
 #include "insieme/backend/addon.h"
 #include "insieme/backend/converter.h"
+#include "insieme/backend/operator_converter.h"
 #include "insieme/backend/statement_converter.h"
+#include "insieme/backend/function_manager.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"

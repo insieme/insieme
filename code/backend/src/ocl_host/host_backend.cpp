@@ -65,6 +65,8 @@
 #include "insieme/backend/runtime/runtime_type_handler.h"
 #include "insieme/backend/runtime/runtime_stmt_handler.h"
 
+#include "insieme/backend/addons/cpp_references.h"
+
 #include "insieme/backend/c_ast/c_code.h"
 
 
@@ -82,7 +84,9 @@ namespace ocl_host {
 	}
 
 	OCLHostBackendPtr OCLHostBackend::getDefault(const std::string& kernelDumpPath, bool includeEffortEstimation) {
-		return std::make_shared<OCLHostBackend>(includeEffortEstimation, kernelDumpPath);
+		auto res = std::make_shared<OCLHostBackend>(includeEffortEstimation, kernelDumpPath);
+		res->addAddOn<addons::CppReferences>();
+		return res;
 	}
 
 	Converter OCLHostBackend::buildConverter(core::NodeManager& manager) const {
