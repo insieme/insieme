@@ -881,7 +881,6 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 		ctx.typeCache.insert( {type, retTy} );
 		return retTy;
 	}
-
 	return fit->second;
 }
 

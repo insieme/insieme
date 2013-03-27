@@ -895,16 +895,28 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(cons
 	if (deleteExpr->isArrayForm () ){
 
 		// we need to call arratDtor, with the object, refdelete and the dtorFunc
-		core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr() );
+		core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr());
 		if( core::hasMetaInfo(desTy)){
-			const core::ClassMetaInfo& info = core::getMetaInfo (exprToDelete->getType());
+			const core::ClassMetaInfo& info = core::getMetaInfo (desTy);
 			assert(!info.isDestructorVirtual() && "no virtual dtor allowed for array dtor");
 
 			core::ExpressionPtr dtor;
 			if (info.hasDestructor())
 				dtor = info.getDestructor();
-			else
-				assert (false && "no dtor for this");
+			else{
+				// build a fake default dtor
+				// FIXME: this is just a work around, it might not be correct with base clases
+				auto thisVar = builder.variable(builder.refType(desTy));
+				core::VariableList paramList;
+				paramList.push_back( thisVar);
+
+				auto newFunctionType = builder.functionType(core::extractTypes(paramList), 
+															builder.refType(desTy),
+															core::FK_DESTRUCTOR);
+
+				vector<core::StatementPtr> stmtList;
+				dtor =  builder.lambdaExpr (newFunctionType, paramList, builder.compoundStmt(stmtList));
+			}
 		
 			std::vector<core::ExpressionPtr> args;
 			args.push_back(exprToDelete);

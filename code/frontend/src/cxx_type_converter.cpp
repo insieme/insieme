@@ -209,10 +209,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			*/
 		}
 		
-		// append metha information to the class definition
-		core::setMetaInfo(classType, classInfo);
-
-	}
+			// append metha information to the class definition
+			core::setMetaInfo(classType, classInfo);
+		}
 	
 	// cache the new implementation
 	convFact.ctx.typeCache.erase(tagType);
