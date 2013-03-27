@@ -34,48 +34,37 @@
  * regarding third party software licenses.
  */
 
-#pragma once 
+#pragma once
+
+#include "insieme/core/lang/extension.h"
 
 namespace insieme {
-
-// forward declarations
-namespace core { 
-template <class T>
-class Pointer;
-
-class Expression;
-typedef Pointer<const Expression> ExpressionPtr;
-
-class Type;
-typedef Pointer<const Type> TypePtr;
-} // end core namespace 
-
 namespace frontend {
 namespace utils {
 
-	/**
-	 * This function tries to restructure the given expression of a reference to a scalar
-	 * into a reference to an array - if possible without using the scalar.to.ref.array literal.
-	 *
-	 * @param expr the expression to be converted
-	 * @return the rewritten, equivalent expression exposing a reference to an array
-	 */
-	core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr);
+	class IRppUtils : public core::lang::Extension{
 
-	core::ExpressionPtr cast(const core::ExpressionPtr& expr, const core::TypePtr& trgTy);
+		/**
+		 * Allow the node manager to create instances of this class.
+		 */
+		friend class core::NodeManager;
 
-	bool isArray(const core::TypePtr& type);
-	bool isRefArray(const core::TypePtr& type);
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		IRppUtils(core::NodeManager& manager)
+				: core::lang::Extension(manager) {}
 
-	core::TypePtr getArrayElement(const core::TypePtr& type);
+	public:
 
-	bool isVector(const core::TypePtr& type);
-	bool isRefVector(const core::TypePtr& type);
-	bool isRefRef(const core::TypePtr& type);
+		/**
+		 * A literal to be used to represent temporaries
+		 */
+		LANG_EXT_LITERAL(MaterializeTemp, "materializeTemp", "('a)->ref<'a>");
 
-	core::TypePtr getVectorElement(const core::TypePtr& type);
+	};
 
 
-} // end utils namespace 
-} // end frontend namespace
-} // end insisme namespace
+} //namespace utils 
+} //namespace frontend 
+} //namespace insieme 
