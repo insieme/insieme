@@ -300,8 +300,10 @@ int main(int argc, char** argv) {
 	}
 	printf("Number of steps calculated: %llu .. %llu\n", minSteps, maxSteps);
 
+#ifndef NOIMAGE
 	print_target_image_ASCII(image, num_sources);
 	write_image(image, dist, "out.bmp", minSteps, maxSteps);
+#endif
 
 	delete_image(&image);
 	delete_image(&dist);
