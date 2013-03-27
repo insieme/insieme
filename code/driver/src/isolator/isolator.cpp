@@ -53,6 +53,8 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
+
+#include "insieme/backend/addon.h"
 #include "insieme/backend/converter.h"
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
@@ -292,7 +294,7 @@ namespace isolator {
 
 		// create instrumented code
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
-		backend->setOperatorTableExtender(&addOpSupport);
+		backend->addAddOn<IsolatorAddOn>();
 		auto targetCode = backend->convert(instrumented);
 
 		// print target code ...
@@ -345,96 +347,104 @@ std::cout << "Running instrumented binary file " << binFile << " ... \n";
 	}
 
 
+	namespace {
 
-	backend::OperatorConverterTable& addOpSupport(core::NodeManager& manager, backend::OperatorConverterTable& table) {
+		backend::OperatorConverterTable& addOpSupport(core::NodeManager& manager, backend::OperatorConverterTable& table) {
 
-		const Extension& ext = manager.getLangExtension<Extension>();
+			const Extension& ext = manager.getLangExtension<Extension>();
 
-		#include "insieme/backend/operator_converter_begin.inc"
-
-
-		// add support for INIT / FINISH
-
-		table[ext.getInit()] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("INIT"));
-		});
-
-		table[ext.getFinish()] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("FINISH"));
-		});
+			#include "insieme/backend/operator_converter_begin.inc"
 
 
-		// add support for START / STOP
+			// add support for INIT / FINISH
 
-		table[ext.getStart()] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("START"), CONVERT_ARG(0));
-		});
+			table[ext.getInit()] = OP_CONVERTER({
+				return c_ast::call(C_NODE_MANAGER->create("INIT"));
+			});
 
-		table[ext.getStop()] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("STOP"), CONVERT_ARG(0));
-		});
-
-
-		// add block registration
-
-		table[ext.getRegisterBlock()] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("REG_BLOCK"), CONVERT_ARG(0), CONVERT_ARG(1));
-		});
-
-		// tagging of blocks
-
-		table[ext.getTagBlock()] = OP_CONVERTER({
-			core::IRBuilder builder(ARG(0)->getNodeManager());
-			return c_ast::call(C_NODE_MANAGER->create("TAG_BLOCK"), CONVERT_EXPR(builder.deref(ARG(0))), CONVERT_ARG(1));
-		});
+			table[ext.getFinish()] = OP_CONVERTER({
+				return c_ast::call(C_NODE_MANAGER->create("FINISH"));
+			});
 
 
-		// add read / write operators
+			// add support for START / STOP
 
-		table[ext.getRead()] = OP_CONVERTER({
-			core::IRBuilder builder(ARG(0)->getNodeManager());
-			return c_ast::call(C_NODE_MANAGER->create("READ"), CONVERT_EXPR(builder.deref(ARG(0))));
-		});
+			table[ext.getStart()] = OP_CONVERTER({
+				return c_ast::call(C_NODE_MANAGER->create("START"), CONVERT_ARG(0));
+			});
 
-		table[ext.getReadPtr()] = OP_CONVERTER({
-			core::IRBuilder builder(ARG(0)->getNodeManager());
-			return c_ast::call(C_NODE_MANAGER->create("READ_PTR"), CONVERT_EXPR(builder.deref(ARG(0))));
-		});
-
-		table[ext.getWrite()] = OP_CONVERTER({
-			core::IRBuilder builder(ARG(0)->getNodeManager());
-			c_ast::BinaryOperationPtr assignment =
-					static_pointer_cast<c_ast::BinaryOperation>(CONVERT_EXPR(builder.assign(ARG(0), ARG(1))));
-			return c_ast::call(C_NODE_MANAGER->create("WRITE"),
-					static_pointer_cast<c_ast::Expression>(assignment->operandA),
-					static_pointer_cast<c_ast::Expression>(assignment->operandB));
-		});
-
-		table[ext.getWritePtr()] = OP_CONVERTER({
-			core::IRBuilder builder(ARG(0)->getNodeManager());
-			c_ast::BinaryOperationPtr assignment =
-					static_pointer_cast<c_ast::BinaryOperation>(CONVERT_EXPR(builder.assign(ARG(0), ARG(1))));
-			return c_ast::call(C_NODE_MANAGER->create("WRITE_PTR"),
-					static_pointer_cast<c_ast::Expression>(assignment->operandA),
-					static_pointer_cast<c_ast::Expression>(assignment->operandB));
-		});
+			table[ext.getStop()] = OP_CONVERTER({
+				return c_ast::call(C_NODE_MANAGER->create("STOP"), CONVERT_ARG(0));
+			});
 
 
-		// -- Restore Utilities --
+			// add block registration
 
-		table[ext.getLoad()] = OP_CONVERTER({
-			core::IRBuilder builder(ARG(0)->getNodeManager());
-			return c_ast::call(C_NODE_MANAGER->create("LOAD_VALUE"),
-					CONVERT_EXPR(builder.deref(ARG(0))), CONVERT_ARG(1), CONVERT_ARG(2));
-		});
+			table[ext.getRegisterBlock()] = OP_CONVERTER({
+				return c_ast::call(C_NODE_MANAGER->create("REG_BLOCK"), CONVERT_ARG(0), CONVERT_ARG(1));
+			});
 
-		table[ext.getFinalize()] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("FINALIZE"));
-		});
+			// tagging of blocks
 
-		#include "insieme/backend/operator_converter_end.inc"
+			table[ext.getTagBlock()] = OP_CONVERTER({
+				core::IRBuilder builder(ARG(0)->getNodeManager());
+				return c_ast::call(C_NODE_MANAGER->create("TAG_BLOCK"), CONVERT_EXPR(builder.deref(ARG(0))), CONVERT_ARG(1));
+			});
 
-		return table;
+
+			// add read / write operators
+
+			table[ext.getRead()] = OP_CONVERTER({
+				core::IRBuilder builder(ARG(0)->getNodeManager());
+				return c_ast::call(C_NODE_MANAGER->create("READ"), CONVERT_EXPR(builder.deref(ARG(0))));
+			});
+
+			table[ext.getReadPtr()] = OP_CONVERTER({
+				core::IRBuilder builder(ARG(0)->getNodeManager());
+				return c_ast::call(C_NODE_MANAGER->create("READ_PTR"), CONVERT_EXPR(builder.deref(ARG(0))));
+			});
+
+			table[ext.getWrite()] = OP_CONVERTER({
+				core::IRBuilder builder(ARG(0)->getNodeManager());
+				c_ast::BinaryOperationPtr assignment =
+						static_pointer_cast<c_ast::BinaryOperation>(CONVERT_EXPR(builder.assign(ARG(0), ARG(1))));
+				return c_ast::call(C_NODE_MANAGER->create("WRITE"),
+						static_pointer_cast<c_ast::Expression>(assignment->operandA),
+						static_pointer_cast<c_ast::Expression>(assignment->operandB));
+			});
+
+			table[ext.getWritePtr()] = OP_CONVERTER({
+				core::IRBuilder builder(ARG(0)->getNodeManager());
+				c_ast::BinaryOperationPtr assignment =
+						static_pointer_cast<c_ast::BinaryOperation>(CONVERT_EXPR(builder.assign(ARG(0), ARG(1))));
+				return c_ast::call(C_NODE_MANAGER->create("WRITE_PTR"),
+						static_pointer_cast<c_ast::Expression>(assignment->operandA),
+						static_pointer_cast<c_ast::Expression>(assignment->operandB));
+			});
+
+
+			// -- Restore Utilities --
+
+			table[ext.getLoad()] = OP_CONVERTER({
+				core::IRBuilder builder(ARG(0)->getNodeManager());
+				return c_ast::call(C_NODE_MANAGER->create("LOAD_VALUE"),
+						CONVERT_EXPR(builder.deref(ARG(0))), CONVERT_ARG(1), CONVERT_ARG(2));
+			});
+
+			table[ext.getFinalize()] = OP_CONVERTER({
+				return c_ast::call(C_NODE_MANAGER->create("FINALIZE"));
+			});
+
+			#include "insieme/backend/operator_converter_end.inc"
+
+			return table;
+		}
+
+	}
+
+	void IsolatorAddOn::installOn(backend::Converter& converter) const {
+		// register additional operators
+		addOpSupport(converter.getNodeManager(), converter.getFunctionManager().getOperatorConverterTable());
 	}
 
 

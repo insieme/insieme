@@ -38,7 +38,7 @@
 
 #include "insieme/core/ir_program.h"
 
-#include "insieme/backend/operator_converter.h"
+#include "insieme/backend/addon.h"
 
 namespace insieme {
 namespace driver {
@@ -47,7 +47,12 @@ namespace isolator {
 
 	vector<core::StatementAddress> isolate(const core::ProgramPtr& program, const vector<core::StatementAddress>& regions, const string& captureFile);
 
-	backend::OperatorConverterTable& addOpSupport(core::NodeManager& manager, backend::OperatorConverterTable& table);
+	/**
+	 * The backend Add-On to be utilized for the isolation instrumentation.
+	 */
+	struct IsolatorAddOn : public backend::AddOn {
+		virtual void installOn(backend::Converter& converter) const;
+	};
 
 } // end namespace isolator
 } // end namespace driver

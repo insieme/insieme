@@ -8,3 +8,4 @@ create*.sh
 worker_event_log.*
 Thumbs.db
 tags
+CMakeLists.txt.user

@@ -41,6 +41,8 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/utils/printable.h"
 
+#include "insieme/backend/addon.h"
+
 /**
  * This header file is defining the general interface to be implemented
  * by any backend implementation.
@@ -119,12 +121,45 @@ namespace backend {
 	 */
 	class Backend {
 
+		/**
+		 * The list of installed Add-Ons.
+		 */
+		vector<AddOnPtr> addons;
+
 	public:
+
+		/**
+		 * Creates a new backend instance based on an optional list of add-ons to
+		 * be installed within this backend.
+		 */
+		Backend(const vector<AddOnPtr>& addons = std::vector<AddOnPtr>())
+			: addons(addons) { }
 
 		/**
 		 * A virtual default constructor allowing subclasses to be properly destroyed.
 		 */
 		virtual ~Backend() {};
+
+		/**
+		 * Installs an additional Add-On within this backend instance.
+		 *
+		 * @param addon the AddOn to be installed.
+		 */
+		void addAddOn(const AddOnPtr& addon) {
+			addons.push_back(addon);
+		}
+
+		/**
+		 * Creates and installs an additional Add-On within this backend instance.
+		 *
+		 * @tparam A the type of the add-on to be installed
+		 * @tparam T the types of parameters required for the constructor of A
+		 * @param addon the AddOn to be installed.
+		 */
+		template<typename A, typename ... T>
+		void addAddOn(T ... args) {
+			addons.push_back(makeAddOn<A>(args ...));
+		}
 
 		/**
 		 * The method performing the actual conversion of the given program into
@@ -134,7 +169,31 @@ namespace backend {
 		 * specific target code. Multiple (parallel) invocations of this function have to
 		 * be supported.
 		 */
-		virtual TargetCodePtr convert(const core::NodePtr& program) const =0;
+		TargetCodePtr convert(const core::NodePtr& program) const {
+			Converter converter = buildConverter(program->getNodeManager());
+			installAddons(converter);
+			return converter.convert(program);
+		}
+
+	protected:
+
+		// ---------------- to be implemented by sub-classes -----------------
+
+		/**
+		 * This member function needs to be implemented by sub-types by constructing
+		 * a converter instance ready to convert input codes according to the corresponding
+		 * backend specification - not considering AddOns.
+		 */
+		virtual Converter buildConverter(core::NodeManager& manager) const =0;
+
+	private:
+
+		/**
+		 * Installs all Add-Ons defined for this backend instance within the given converter.
+		 */
+		void installAddons(Converter& converter) const {
+			for(auto cur : addons) cur->installOn(converter);
+		}
 
 	};
 

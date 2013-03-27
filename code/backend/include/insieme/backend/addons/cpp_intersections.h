@@ -36,32 +36,11 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
-
-#include "insieme/backend/addon.h"
-
-/**
- * This header file defines the components required to be registered within
- * a backend instance to handle C++ references properly.
- */
 namespace insieme {
 namespace backend {
 namespace addons {
 
 
-	/**
-	 * An Add-On realizing support for C++ style reference types.
-	 */
-	struct CppReferences : public AddOn {
-
-		/**
-		 * Installs the this Add-On within the given converter.
-		 */
-		virtual void installOn(Converter& converter) const;
-
-	};
-
-
-} // end namespace addons
+} // end namespace addon
 } // end namespace backend
 } // end namespace insieme

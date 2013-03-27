@@ -75,35 +75,23 @@ namespace ocl_host {
 
 	namespace {
 
-		OperatorConverterTable getOperatorTable(core::NodeManager& manager);
+		FunctionIncludeTable& addOpenclHostFunctionIncludes(FunctionIncludeTable& table);
 
-		TypeHandlerList getTypeHandlerList();
+		void addOCLTypeIncludes(TypeIncludeTable& table);
 
-		StmtHandlerList getStmtHandlerList();
-
-		TypeIncludeTable getTypeIncludeTable();
 	}
 
-	OCLHostBackendPtr OCLHostBackend::getDefault() {
-		return std::make_shared<OCLHostBackend>();
+	OCLHostBackendPtr OCLHostBackend::getDefault(const std::string& kernelDumpPath, bool includeEffortEstimation) {
+		return std::make_shared<OCLHostBackend>(includeEffortEstimation, kernelDumpPath);
 	}
 
-	OCLHostBackendPtr OCLHostBackend::getDefault(const std::string& kernelDumpPath) {
-		return std::make_shared<OCLHostBackend>(kernelDumpPath);
-	}
+	Converter OCLHostBackend::buildConverter(core::NodeManager& manager) const {
 
-	TargetCodePtr OCLHostBackend::convert(const core::NodePtr& code) const {
+		// get standard converter from runtime backend
+		Converter converter = runtime::RuntimeBackend::buildConverter(manager);
 
-		// create and set up the converter
-		Converter converter("OpenCL Host Backend");
-
-		// set up the node manager (for temporals)
-		core::NodeManager& nodeManager = code->getNodeManager();
-		converter.setNodeManager(&nodeManager);
-
-		// set up the shared code fragment manager (for the result)
-		c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
-		converter.setFragmentManager(fragmentManager);
+		// update converter name
+		converter.setConverterName("OpenCL Host Backend");
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
@@ -115,117 +103,87 @@ namespace ocl_host {
 		);
 		converter.setPreProcessor(preprocessor);
 
-		// set up post-processing
-		PostProcessorPtr postprocessor = makePostProcessor<NoPostProcessing>();
-		converter.setPostProcessor(postprocessor);
+		// update type manager
+		TypeManager& typeManager = converter.getTypeManager();
+		addOCLTypeIncludes(typeManager.getTypeIncludeTable());
+		typeManager.addTypeHandler(OclHostTypeHandler);
 
-		// Prepare managers
-		SimpleNameManager nameManager;
-		converter.setNameManager(&nameManager);
 
-		TypeManager typeManager(converter, getTypeIncludeTable(), getTypeHandlerList());
-		converter.setTypeManager(&typeManager);
+		// update statement converter
+		StmtConverter& stmtConverter = converter.getStmtConverter();
+		stmtConverter.addStmtHandler(OclHostStmtHandler);
 
-		StmtConverter stmtConverter(converter, getStmtHandlerList());
-		converter.setStmtConverter(&stmtConverter);
+		// update function manager
+		FunctionManager& functionManager = converter.getFunctionManager();
+		addOpenclHostFunctionIncludes(functionManager.getFunctionIncludeTable());
+		addOpenCLHostSpecificOps(manager, functionManager.getOperatorConverterTable());
 
-		FunctionIncludeTable functionIncludeTable = getBasicFunctionIncludeTable();
-		addOpenclHostFunctionIncludes(functionIncludeTable);
-		runtime::addRuntimeFunctionIncludes(functionIncludeTable);
-		FunctionManager functionManager(converter, getOperatorTable(nodeManager), functionIncludeTable);
-		converter.setFunctionManager(&functionManager);
-
-		// conduct conversion
-		return converter.convert(code);
+		// done
+		return converter;
 	}
-
-	FunctionIncludeTable& addOpenclHostFunctionIncludes(FunctionIncludeTable& table) {
-
-		// add OpenCL Host specific includes
-		table["irt_ocl_rt_create_buffer"]		= "irt_all_impls.h";
-		table["irt_ocl_write_buffer"]			= "irt_all_impls.h";
-		table["irt_ocl_read_buffer"]			= "irt_all_impls.h";
-		table["irt_ocl_release_buffer"]			= "irt_all_impls.h";
-
-		return table;
-	}
-
 
 	namespace {
-		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
-			OperatorConverterTable res = getBasicOperatorTable(manager);
-			runtime::addRuntimeSpecificOps(manager, res);
-			return addOpenCLHostSpecificOps(manager, res);
+
+		FunctionIncludeTable& addOpenclHostFunctionIncludes(FunctionIncludeTable& table) {
+
+			// add OpenCL Host specific includes
+			table["irt_ocl_rt_create_buffer"]		= "irt_all_impls.h";
+			table["irt_ocl_write_buffer"]			= "irt_all_impls.h";
+			table["irt_ocl_read_buffer"]			= "irt_all_impls.h";
+			table["irt_ocl_release_buffer"]			= "irt_all_impls.h";
+
+			return table;
 		}
 
-		TypeHandlerList getTypeHandlerList() {
-			TypeHandlerList res;
-			res.push_back(OclHostTypeHandler);
-			res.push_back(runtime::RuntimeTypeHandler);
-			return res;
-		}
 
-		StmtHandlerList getStmtHandlerList() {
-			StmtHandlerList res;
-			res.push_back(OclHostStmtHandler);
-			res.push_back(runtime::RuntimeStmtHandler);
-			return res;
-		}
-
-		TypeIncludeTable getTypeIncludeTable() {
-
-			TypeIncludeTable res = getBasicTypeIncludeTable();
-
-			// add runtime specific stuff
-			runtime::addRuntimeTypeIncludes(res);
+		void addOCLTypeIncludes(TypeIncludeTable& table) {
 
 			// for the following types no include is necessary (part of the runtime)
-			res["cl_float2"] = "CL/cl.h";
-			res["cl_float4"] = "CL/cl.h";
-			res["cl_float8"] = "CL/cl.h";
-			res["cl_float16"] = "CL/cl.h";
+			table["cl_float2"] = "CL/cl.h";
+			table["cl_float4"] = "CL/cl.h";
+			table["cl_float8"] = "CL/cl.h";
+			table["cl_float16"] = "CL/cl.h";
 
-			res["cl_char2"] = "CL/cl.h";
-			res["cl_char4"] = "CL/cl.h";
-			res["cl_char8"] = "CL/cl.h";
-			res["cl_char16"] = "CL/cl.h";
+			table["cl_char2"] = "CL/cl.h";
+			table["cl_char4"] = "CL/cl.h";
+			table["cl_char8"] = "CL/cl.h";
+			table["cl_char16"] = "CL/cl.h";
 
-			res["cl_uchar2"] = "CL/cl.h";
-			res["cl_uchar4"] = "CL/cl.h";
-			res["cl_uchar8"] = "CL/cl.h";
-			res["cl_uchar16"] = "CL/cl.h";
+			table["cl_uchar2"] = "CL/cl.h";
+			table["cl_uchar4"] = "CL/cl.h";
+			table["cl_uchar8"] = "CL/cl.h";
+			table["cl_uchar16"] = "CL/cl.h";
 
-			res["cl_short2"] = "CL/cl.h";
-			res["cl_short4"] = "CL/cl.h";
-			res["cl_short8"] = "CL/cl.h";
-			res["cl_short16"] = "CL/cl.h";
+			table["cl_short2"] = "CL/cl.h";
+			table["cl_short4"] = "CL/cl.h";
+			table["cl_short8"] = "CL/cl.h";
+			table["cl_short16"] = "CL/cl.h";
 
-			res["cl_ushort2"] = "CL/cl.h";
-			res["cl_ushort4"] = "CL/cl.h";
-			res["cl_ushort8"] = "CL/cl.h";
-			res["cl_ushort16"] = "CL/cl.h";
+			table["cl_ushort2"] = "CL/cl.h";
+			table["cl_ushort4"] = "CL/cl.h";
+			table["cl_ushort8"] = "CL/cl.h";
+			table["cl_ushort16"] = "CL/cl.h";
 
-			res["cl_int2"] = "CL/cl.h";
-			res["cl_int4"] = "CL/cl.h";
-			res["cl_int8"] = "CL/cl.h";
-			res["cl_int16"] = "CL/cl.h";
+			table["cl_int2"] = "CL/cl.h";
+			table["cl_int4"] = "CL/cl.h";
+			table["cl_int8"] = "CL/cl.h";
+			table["cl_int16"] = "CL/cl.h";
 
-			res["cl_uint2"] = "CL/cl.h";
-			res["cl_uint4"] = "CL/cl.h";
-			res["cl_uint8"] = "CL/cl.h";
-			res["cl_uint16"] = "CL/cl.h";
+			table["cl_uint2"] = "CL/cl.h";
+			table["cl_uint4"] = "CL/cl.h";
+			table["cl_uint8"] = "CL/cl.h";
+			table["cl_uint16"] = "CL/cl.h";
 
-			res["cl_long2"] = "CL/cl.h";
-			res["cl_long4"] = "CL/cl.h";
-			res["cl_long8"] = "CL/cl.h";
-			res["cl_long16"] = "CL/cl.h";
+			table["cl_long2"] = "CL/cl.h";
+			table["cl_long4"] = "CL/cl.h";
+			table["cl_long8"] = "CL/cl.h";
+			table["cl_long16"] = "CL/cl.h";
 
-			res["cl_ulong2"] = "CL/cl.h";
-			res["cl_ulong4"] = "CL/cl.h";
-			res["cl_ulong8"] = "CL/cl.h";
-			res["cl_ulong16"] = "CL/cl.h";
+			table["cl_ulong2"] = "CL/cl.h";
+			table["cl_ulong4"] = "CL/cl.h";
+			table["cl_ulong8"] = "CL/cl.h";
+			table["cl_ulong16"] = "CL/cl.h";
 
-			return res;
 		}
 	}
 

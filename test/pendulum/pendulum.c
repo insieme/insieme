@@ -7,6 +7,12 @@
 
 #define POS(Image, X, Y) Image.data[(X)][(Y)]
 
+#ifndef N
+	#define N 60
+#endif
+#define SIZEX N
+#define SIZEY N
+
 #define FILE_BUF 512*8
 
 typedef unsigned long long ull;
@@ -213,7 +219,7 @@ Source readSource(char* line) {
 
 int main(int argc, char** argv) {
 	
-	Settings settings = {4, 60, 60, 800.0, 0.01, 0.01, 0.3, 0.01, 400, 100000};
+	Settings settings = {4, SIZEX, SIZEY, 800.0, 0.01, 0.01, 0.3, 0.01, 400, 100000};
 	Source *sources;
 	
 	// read input file
@@ -294,8 +300,10 @@ int main(int argc, char** argv) {
 	}
 	printf("Number of steps calculated: %llu .. %llu\n", minSteps, maxSteps);
 
+#ifndef NOIMAGE
 	print_target_image_ASCII(image, num_sources);
 	write_image(image, dist, "out.bmp", minSteps, maxSteps);
+#endif
 
 	delete_image(&image);
 	delete_image(&dist);
