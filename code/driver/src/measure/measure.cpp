@@ -806,7 +806,6 @@ namespace measure {
 
 			});
 
-
 			// extract results
 			res.push_back(std::map<region_id, std::map<MetricPtr, Quantity>>());
 			auto& curRes = res.back();
@@ -914,15 +913,14 @@ namespace measure {
 
 		// a lambda merging region data
 		auto collectRegionData = [&](const RegionDataStore& src) {
-			for_each(src, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
-				if (cur.first == region) {
-					auto pos = cur.second.find(metric);
-					if (pos != cur.second.end()) {
-						const vector<Quantity>& list = pos->second;
-						res.insert(res.end(), list.begin(), list.end());
-					}
+			auto outer_pos = src.find(region);
+			if (outer_pos != src.end()) {
+				auto pos = outer_pos->second.find(metric);
+				if (pos != outer_pos->second.end()) {
+					const vector<Quantity>& list = pos->second;
+					res.insert(res.end(), list.begin(), list.end());
 				}
-			});
+			}
 		};
 
 		// collect data from region store
