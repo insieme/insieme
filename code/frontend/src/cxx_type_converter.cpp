@@ -112,6 +112,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 
 			// if we have base classes, we need to create again the IR type, with the 
 			// parent list this time
+			//FIXME: typename
 			classType = builder.structType(parents, classType.as<core::StructTypePtr>()->getElements());
 		}
 
@@ -162,8 +163,10 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		clang::CXXRecordDecl::method_iterator methodEnd= classDecl->method_end();
 		for (; methodIt != methodEnd; methodIt ++){
 			if (llvm::isa<clang::CXXConstructorDecl>(*methodIt) ||
-				llvm::isa<clang::CXXDestructorDecl>(*methodIt))
+				llvm::isa<clang::CXXDestructorDecl>(*methodIt)){
+				//FIXME: here might be a problem
 				continue;
+			}
 
 			const clang::FunctionDecl* method = llvm::cast<clang::FunctionDecl>(*methodIt);
 
@@ -184,7 +187,8 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			if (VLOG_IS_ON(2)){
 				VLOG(2) << " ############ member! #############";
 				VLOG(2)<< llvm::cast<clang::NamedDecl>(method)->getNameAsString();
-				dumpPretty(methodLambda);
+				dumpDetail(methodLambda);
+				VLOG(2) << "###";
 				method->dump();
 				VLOG(2) << ( (*methodIt)->isVirtual()? "virtual!":" ");
 				VLOG(2) << ((*methodIt)->isConst()? "const!":" ");
@@ -207,8 +211,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		
 		// append metha information to the class definition
 		core::setMetaInfo(classType, classInfo);
-	}
 
+	}
+	
 	// cache the new implementation
 	convFact.ctx.typeCache.erase(tagType);
 	convFact.ctx.typeCache[tagType] = classType;
@@ -273,16 +278,19 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitReferenceType(const Refe
 	core::TypePtr inTy = convFact.convertType( refTy->getPointeeType().getTypePtr());
 
 // we need to check where is a const ref or not	
+	QualType  qual;
 	if(llvm::isa<clang::RValueReferenceType>(refTy))
-		assert(false && "right side value ref not supported");
+		//assert(false && "right side value ref not supported");
+		qual = llvm::cast<clang::RValueReferenceType>(refTy)->desugar();
 	else{
-		QualType&& qual = llvm::cast<clang::LValueReferenceType>(refTy)->desugar();
-		// FIXME: find a better way... i got annoyed
-		if (boost::starts_with (qual.getAsString (), "const"))
-			retTy =  core::analysis::getConstCppRef(inTy);
-		else
-			retTy =  core::analysis::getCppRef(inTy);
+		qual = llvm::cast<clang::LValueReferenceType>(refTy)->desugar();
 	}
+	// FIXME: find a better way... i got annoyed
+	if (boost::starts_with (qual.getAsString (), "const"))
+		retTy =  core::analysis::getConstCppRef(inTy);
+	else
+		retTy =  core::analysis::getCppRef(inTy);
+	
 	END_LOG_TYPE_CONVERSION( retTy );
 	return retTy;
 }

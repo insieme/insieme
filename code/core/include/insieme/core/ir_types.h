@@ -1006,14 +1006,6 @@ namespace core {
 		 */
 		NamedCompositeType(const NodeType& type, const NodeList& elements);
 
-		/**
-		 * A simple constructor creating a new named composite type based on the
-		 * given element types.
-		 *
-		 * @param elements the elements of the resulting composite type
-		 */
-		NamedCompositeType(const NodeType& type, const Entries& elements);
-
 	};
 
 	/**
@@ -1077,8 +1069,9 @@ namespace core {
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
 		static StructTypePtr get(NodeManager& manager, const ParentsPtr& parents, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
-			NodeList children = convertList(entries);
-			children.insert(children.begin(), parents);
+			NodeList children;
+			children.push_back(parents);
+			children.insert(children.end(), entries.begin(), entries.end());
 			return manager.get(StructType(children));
 		}
 
@@ -1135,8 +1128,9 @@ namespace core {
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
 		static UnionTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries) {
-			NodeList children = convertList(entries);
-			children.insert(children.begin(), Parents::get(manager));
+			NodeList children;
+			children.push_back(Parents::get(manager));
+			children.insert(children.end(), entries.begin(), entries.end());
 			return manager.get(UnionType(children));
 		}
 

@@ -581,7 +581,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(cons
 	START_LOG_EXPR_CONVERSION(castExpr);
 
 	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
-	auto type = convFact.convertType(GET_TYPE_PTR(castExpr));
+	core::TypePtr  type = convFact.convertType(GET_TYPE_PTR(castExpr));
 
 	LOG_EXPR_CONVERSION(retIr);
 
@@ -594,12 +594,29 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(cons
 
 	// handle implicit casts according to their kind
 	switch (castExpr->getCastKind()) {
+	case CK_IntegralCast:
+
+		//A cast between integral types (other than to boolean). Variously a bitcast, a truncation,
+		//a sign-extension, or a zero-extension. long l = 5; (unsigned) 
+		
+		return  utils::cast(retIr, type);
+
 	case CK_LValueToRValue:
 		return (retIr = asRValue(retIr));
 
 	case CK_ArrayToPointerDecay:
 		return retIr;
 
+	//case CK_BitCast:
+		// A conversion which causes a bit pattern of one type to be reinterpreted as a bit pattern
+		// of another type. Generally the operands must have equivalent size and unrelated types.
+		//
+		// The pointer conversion char* -> int* is a bitcast. A conversion from any pointer type to
+		// a C pointer type is a bitcast unless it's actually BaseToDerived or DerivedToBase. A
+		// conversion to a block pointer or ObjC pointer type is a bitcast only if the operand has
+		// the same type kind; otherwise, it's one of the specialized casts below.
+		//
+		// Vector coercions are bitcasts. 
 	case CK_NoOp:
 		//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
 		return retIr;
@@ -1180,7 +1197,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			lhs = wrapVariable(binOp->getLHS());
 
 			// make sure the lhs is a L-Value
-			lhs = asLValue(lhs);
+			lhs = asLValue(lhs); // FIXME: must have an implicit cast, or deref operation... dont we?
 			//rhs = asRValue(rhs);
 
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>

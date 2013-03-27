@@ -697,8 +697,15 @@ namespace measure {
 			return vector<std::map<region_id, std::map<MetricPtr, Quantity>>>(numRuns);
 		}
 
-		// create the instrumented binary
-		auto binFile = buildBinary(regions, compiler);
+		// fix static scheduling
+		auto modifiedCompiler = compiler;
+		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
+
+		// build target code
+		auto binFile = buildBinary(regions, modifiedCompiler);
+
+//		// create the instrumented binary
+//		auto binFile = buildBinary(regions, compiler);
 		if (binFile.empty()) {
 			throw MeasureException("Unable to compiling executable for measurement!");
 		}
