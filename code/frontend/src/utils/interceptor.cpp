@@ -38,32 +38,81 @@
 #define __STDC_CONSTANT_MACROS
 #include "insieme/frontend/utils/interceptor.h"
 
+#include <iostream>
+
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/optional.hpp>
+#include <boost/regex.hpp>
+#include <boost/algorithm/string/replace.hpp>
+
 #include "insieme/annotations/c/include.h"
 
 #include "insieme/frontend/convert.h"
-#include <iostream>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-#include <boost/regex.hpp>
+#include "insieme/frontend/clang_config.h"
 		
 namespace insieme {
 namespace frontend { 
 namespace utils {
 
 namespace {
-	
-const char* getHeaderForDecl(const clang::Decl* decl, const Indexer& indexer) {
-	//TODO currently only gets the fileName where the declaration is located need a way to get includeFile for declaration
-	if( const TranslationUnit* tu = ((indexer.getDefAndTUforDefinition(decl)).second) ) {
-		clang::SourceLocation loc = tu->getCompiler().getSourceManager().getFileLoc(decl->getLocation());
-		std::pair<clang::FileID, unsigned> loc_info = tu->getCompiler().getSourceManager().getDecomposedLoc(loc);
-		const clang::FileEntry* fileEntry = tu->getCompiler().getSourceManager().getFileEntryForID(loc_info.first);
-		return fileEntry->getName();
-	} else {
-		//assert(false && "couldn't get header for decl");
-		return "not-found";//NULL;
+
+namespace fs = boost::filesystem;
+
+boost::optional<fs::path> toStdLibHeader(const fs::path& path) {
+	static const fs::path stdLibRoot = fs::canonical(CXX_INCLUDES);
+	static const boost::optional<fs::path> fail;
+
+	if (path == stdLibRoot) {
+		return fs::path();
 	}
+
+	if (!path.has_parent_path()) {
+		return fail;
+	}
+
+	// if it is within the std-lib directory, build relative path
+	auto res = toStdLibHeader(path.parent_path());
+	return (res)? (*res/path.filename()) : fail;
+	
 }
+
+void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const Indexer& indexer) {
+
+	// check whether there is a declaration at all
+	if (!decl) return;
+
+
+	//TODO currently only gets the fileName where the declaration is located need a way to get includeFile for declaration
+	const TranslationUnit* tu = (indexer.getDefAndTUforDefinition(decl)).second;
+	if( !tu ) return;
+
+	std::cout << "Searching header for: " << node << " of type " << node->getNodeType() << "\n";
+	clang::SourceLocation loc = tu->getCompiler().getSourceManager().getFileLoc(decl->getLocation());
+	if (loc.isInvalid()) return;
+
+	std::pair<clang::FileID, unsigned> loc_info = tu->getCompiler().getSourceManager().getDecomposedLoc(loc);
+	const clang::FileEntry* fileEntry = tu->getCompiler().getSourceManager().getFileEntryForID(loc_info.first);
+
+	// get absolute path of header file
+	fs::path header = fs::canonical(fileEntry->getName());
+
+	// check whether it is within the clang STL header library
+	if (auto stdLibHeader = toStdLibHeader(header)) {
+		header = *stdLibHeader;
+	}
+
+	// use resulting header
+	insieme::annotations::c::attachInclude(node, header.string());
+
+}
+
+std::string fixQualifiedName(std::string name) {
+	// get rid of inline namespace utilized by the clang headers
+	boost::replace_all(name, "std::__1::", "std::");
+	return name;
+}
+
 } //end anonymous namespace
 
 //void InterceptVisitor::VisitCallExpr(const clang::CallExpr* callExpr) {};
@@ -80,11 +129,15 @@ void Interceptor::loadConfigFile(std::string fileName) {
 			return;
 		}
 
+		std::set<std::string> set;
 		std::string nameToIntercept;
 		while( getline(configFile, nameToIntercept) ) {
-			toIntercept.insert(nameToIntercept);
+			set.insert(nameToIntercept);
 		}
 		configFile.close();
+
+		// adapt configuration
+		loadConfigSet(set);
 	} else {
 		LOG(WARNING) << "Interceptor didn't find config file " << fileName;	
 		return;
@@ -93,6 +146,11 @@ void Interceptor::loadConfigFile(std::string fileName) {
 
 void Interceptor::loadConfigSet(std::set<std::string> tI) {
 	toIntercept.insert(tI.begin(), tI.end());
+
+	// update regular expression:
+
+	//use one big regex for all strings to intercept
+	rx = boost::regex("("+toString(join(")|(", toIntercept))+")");
 }
 
 /// takes a pair of strings and looks for functionsi (funcDecl) with the same name as the first string, 
@@ -101,11 +159,6 @@ void Interceptor::intercept() {
 	if(toIntercept.empty()) {
 		return;
 	}
-
-	//use one big regex for all strings to intercept
-	using boost::regex;
-	std::string tI("("+toString(join(")|(", toIntercept))+")");
-	regex rx(tI);
 
 	InterceptVisitor vis(interceptedDecls, interceptedFuncMap, interceptedTypes, toIntercept);
 
@@ -121,19 +174,19 @@ void Interceptor::intercept() {
 				vis.intercept(decl, rx);
 			}	
 		} else if( const clang::TypeDecl* typeDecl = llvm::dyn_cast<clang::TypeDecl>(*elem) ) {
-			if( regex_match(typeDecl->getQualifiedNameAsString(), rx) ) {
+			if( regex_match(fixQualifiedName(typeDecl->getQualifiedNameAsString()), rx) ) {
 				interceptedTypes.insert( typeDecl );
 		
 				if(const clang::CXXRecordDecl* cxxRecDecl = llvm::dyn_cast<clang::CXXRecordDecl>(typeDecl)) {
 					for(auto mit=cxxRecDecl->method_begin(), end=cxxRecDecl->method_end(); mit!=end;mit++) {
-						if( regex_match((*mit)->getQualifiedNameAsString(), rx) ) {
+						if( regex_match(fixQualifiedName((*mit)->getQualifiedNameAsString()), rx) ) {
 							interceptedDecls.insert(*mit);
 							interceptedFuncMap.insert( {(*mit), (*mit)->getQualifiedNameAsString() } ); 
 						}
 					}
 					
 					for(auto cit=cxxRecDecl->ctor_begin(), end=cxxRecDecl->ctor_end(); cit!=end;cit++) {
-						if( regex_match((*cit)->getQualifiedNameAsString(), rx) ) {
+						if( regex_match(fixQualifiedName((*cit)->getQualifiedNameAsString()), rx) ) {
 							interceptedDecls.insert(*cit);
 							interceptedFuncMap.insert( {(*cit), (*cit)->getQualifiedNameAsString() } ); 
 						}
@@ -153,7 +206,7 @@ void Interceptor::intercept() {
 /// conversion step
 Interceptor::InterceptedTypeCache Interceptor::buildInterceptedTypeCache(insieme::frontend::conversion::ConversionFactory& convFact) {
 	InterceptedTypeCache cache;
-	InterceptTypeVisitor iTV(convFact, convFact.getIRBuilder());
+	InterceptTypeVisitor iTV(convFact, indexer, rx);
 
 	for( auto it = interceptedTypes.begin(), end=interceptedTypes.end(); it != end; it++) {
 		const clang::TypeDecl* typeDecl = *it;
@@ -165,7 +218,7 @@ Interceptor::InterceptedTypeCache Interceptor::buildInterceptedTypeCache(insieme
 		VLOG(1) << "build interceptedType " << (*it)->getQualifiedNameAsString() << " ## " << irType;
 
 		// add header file
-		insieme::annotations::c::attachInclude(irType, getHeaderForDecl(typeDecl, indexer));
+		addHeaderForDecl(irType, typeDecl, indexer);
 	}
 	return cache;
 }
@@ -228,12 +281,18 @@ Interceptor::InterceptedExprCache Interceptor::buildInterceptedExprCache(insieme
 
 			//FIXME can we use memberize()?
 			type = builder.functionType( paramTys, type.getReturnType(), core::FK_MEMBER_FUNCTION);
+
+			// just use name of method as the resulting literal name
+			literalName = methodDecl->getNameAsString();
 		}
+
+		// remove Clang inline namespace from header literal name (if present)
+		literalName = fixQualifiedName(literalName);
 
 		core::ExpressionPtr interceptExpr = builder.literal( literalName, type);
 		VLOG(2) << interceptExpr << " " << type;
 
-		insieme::annotations::c::attachInclude(interceptExpr, getHeaderForDecl(decl, indexer));
+		addHeaderForDecl(interceptExpr, decl, indexer);
 		cache.insert( {decl, interceptExpr} );
 
 		if(insieme::annotations::c::hasIncludeAttached(interceptExpr)) {
@@ -292,10 +351,8 @@ void InterceptVisitor::VisitDeclStmt(const clang::DeclStmt* declStmt) {
 
 }
 
-InterceptTypeVisitor::InterceptTypeVisitor(
-		insieme::frontend::conversion::ConversionFactory& convFact, 
-		const insieme::core::IRBuilder& builder) 
-	: convFact(convFact), builder(convFact.getIRBuilder()) {}
+InterceptTypeVisitor::InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const insieme::frontend::utils::Indexer& indexer, const boost::regex& rx)
+		: convFact(convFact), builder(convFact.getIRBuilder()), indexer(indexer), rx(rx) {}
 
 core::TypePtr InterceptTypeVisitor::VisitTagType(const clang::TagType* tagType) {
 	const clang::TagDecl* tagDecl = tagType->getDecl();
@@ -323,7 +380,10 @@ core::TypePtr InterceptTypeVisitor::VisitTagType(const clang::TagType* tagType) 
 		}
 	}
 
-	core::TypePtr irType = builder.genericType(tagDecl->getQualifiedNameAsString(), typeList, insieme::core::IntParamList());
+	// obtain type name
+	std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
+
+	core::TypePtr irType = builder.genericType(typeName, typeList, insieme::core::IntParamList());
 	return irType;
 }
 
@@ -365,7 +425,13 @@ core::TypePtr InterceptTypeVisitor::VisitTemplateSpecializationType(const clang:
 			case clang::TemplateArgument::ArgKind::Pack: VLOG(2) << "ArgKind::Pack not supported"; break;
 		}
 	}
-	core::TypePtr retTy = builder.genericType(templTy->getTemplateName().getAsTemplateDecl()->getQualifiedNameAsString(), typeList, insieme::core::IntParamList());
+
+	// compute resulting type name
+	string typeName = fixQualifiedName(templTy->getTemplateName().getAsTemplateDecl()->getQualifiedNameAsString());
+
+	// build resulting type
+	core::TypePtr retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
+
 	VLOG(2)<<retTy;
 	return retTy;
 }
@@ -373,7 +439,7 @@ core::TypePtr InterceptTypeVisitor::VisitTemplateSpecializationType(const clang:
 core::TypePtr InterceptTypeVisitor::VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType) {
 	if( const clang::TemplateTypeParmDecl* tD = templParmType->getDecl() ) {
 		VLOG(2) << tD->getNameAsString();
-		return builder.genericType(tD->getNameAsString(), insieme::core::TypeList(), insieme::core::IntParamList());
+		return builder.genericType(fixQualifiedName(tD->getNameAsString()), insieme::core::TypeList(), insieme::core::IntParamList());
 	} 
 	return builder.genericType("asdf", insieme::core::TypeList(), insieme::core::IntParamList());
 }
@@ -387,7 +453,18 @@ core::TypePtr InterceptTypeVisitor::VisitBuiltinType(const clang::BuiltinType* t
 }
 
 core::TypePtr InterceptTypeVisitor::Visit(const clang::Type* type) {
-	return TypeVisitor<InterceptTypeVisitor, core::TypePtr>::Visit(type);
+//	return TypeVisitor<InterceptTypeVisitor, core::TypePtr>::Visit(type);
+	auto res = TypeVisitor<InterceptTypeVisitor, core::TypePtr>::Visit(type);
+
+	// ensure include files are annotated
+	if (res && res->getNodeType() == core::NT_GenericType) {
+		const string& name = res.as<core::GenericTypePtr>()->getFamilyName();
+		if (boost::regex_match(name, rx)) {
+			addHeaderForDecl(res, type->getAsCXXRecordDecl(), indexer);
+		}
+	}
+
+	return res;
 }	
 
 } // end utils namespace

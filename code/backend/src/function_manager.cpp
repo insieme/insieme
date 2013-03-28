@@ -1260,24 +1260,39 @@ namespace backend {
 			res.function = manager->create<c_ast::Function>(returnType, name, parameter, cBody);
 			res.definition = res.function;
 
+			// a lazy-evaluated utility to obtain the name of a class a member function is associated to
+			auto getClassName = [&]()->c_ast::IdentifierPtr {
+
+				const auto& type = typeManager.getTypeInfo(funType->getObjectType()).lValueType;
+
+				if (const auto& structType = type.isa<c_ast::StructTypePtr>()) {
+					return structType->name;
+				}
+
+				if (const auto& namedType = type.isa<c_ast::NamedTypePtr>()) {
+					return namedType->name;
+				}
+				std::cout << "Unable to determine class-name for member function: " << funType << "\n";
+				assert(false && "Unsupported case!");
+				return c_ast::IdentifierPtr();
+			};
+
+
 			// modify function if required
 			if (funType->isMemberFunction()) {
 
 				// update definition to define a member function
-				auto className = typeManager.getTypeInfo(funType->getObjectType()).lValueType.as<c_ast::StructTypePtr>()->name;
-				res.definition = manager->create<c_ast::MemberFunction>(className, res.function, isConst);
+				res.definition = manager->create<c_ast::MemberFunction>(getClassName(), res.function, isConst);
 
 			} else if (funType->isConstructor()) {
 
 				// update definition to define a member function
-				auto className = typeManager.getTypeInfo(funType->getObjectType()).lValueType.as<c_ast::StructTypePtr>()->name;
-				res.definition = manager->create<c_ast::Constructor>(className, res.function, initializer);
+				res.definition = manager->create<c_ast::Constructor>(getClassName(), res.function, initializer);
 
 			} else if (funType->isDestructor()) {
 
 				// update definition to define a member function
-				auto className = typeManager.getTypeInfo(funType->getObjectType()).lValueType.as<c_ast::StructTypePtr>()->name;
-				res.definition = manager->create<c_ast::Destructor>(className, res.function);
+				res.definition = manager->create<c_ast::Destructor>(getClassName(), res.function);
 
 			}
 			return res;
