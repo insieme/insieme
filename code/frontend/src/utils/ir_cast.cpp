@@ -49,6 +49,7 @@
 
 #include "insieme/core/types/subtyping.h"
 
+
 #define CAST(expr, type) convertExprToType(builder, expr, type)
 
 #define GET_REF_ELEM_TYPE(type) \
@@ -59,7 +60,6 @@
 
 #define GET_ARRAY_ELEM_TYPE(type) \
 	(core::static_pointer_cast<const core::ArrayType>(type)->getElementType())
-
 
 using namespace insieme;
 using namespace insieme::frontend::utils;
@@ -658,7 +658,6 @@ bool isRefVector(const core::TypePtr& type) {
 	return type->getNodeType() == core::NT_RefType && 
 		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_VectorType;
 }
-
 
 
 } // end utils namespace

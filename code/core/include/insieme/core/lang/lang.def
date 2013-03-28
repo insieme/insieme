@@ -284,6 +284,44 @@ OPERATION(Real, Gt, "real.gt", "(real<#a>,real<#a>) -> bool")
 OPERATION(Real, Le, "real.le", "(real<#a>,real<#a>) -> bool")
 OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
 
+// Type conversion Operations -----------------------------------------------------------------------------------------
+
+GROUP(Cast, ToInt, ToUint, ToReal, ToChar, ToBool)
+
+      // TO INT
+GROUP( ToInt, UnsignedToInt, RealToInt, CharToInt, BoolToInt)
+LITERAL (UnsignedToInt,    "uint.to.int",    "(uint<#a>) -> int<#a>")
+LITERAL (RealToInt	  ,    "real.to.int",    "(real<#a>) -> int<#a>")
+LITERAL (CharToInt    ,    "char.to.int",    "(char) -> int<#a>")
+LITERAL (BoolToInt    ,    "bool.to.int",    "(bool) -> int<#a>")
+
+      // TO UINT
+GROUP( ToUint, SignedToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned)
+LITERAL (SignedToUnsigned,    "int.to.uint" ,    "(int<#a>) -> uint<#a>")
+LITERAL (RealToUnsigned  ,    "real.to.uint",    "(real<#a>) -> uint<#a>")
+LITERAL (CharToUnsigned  ,    "char.to.uint",    "(char) -> uint<#a>")
+LITERAL (BoolToUnsigned  ,    "bool.to.uint",    "(bool) -> uint<#a>")
+
+      // TO REAL
+GROUP( ToReal, SignedToReal, UnsignedToReal, CharToReal, BoolToReal)
+LITERAL (SignedToReal,    "int.to.Real" ,    "(int<#a>) -> real<#a>")
+LITERAL (UnsignedToReal  ,    "uint.to.Real",    "(uint<#a>) -> real<#a>")
+LITERAL (CharToReal  ,    "char.to.Real",    "(char) -> real<#a>")
+LITERAL (BoolToReal  ,    "bool.to.Real",    "(bool) -> real<#a>")
+
+      // TO CHAR
+GROUP( ToChar, SignedToChar, UnsignedToChar, RealToChar, BoolToChar)
+LITERAL (SignedToChar,    "int.to.Char" ,    "(int<#a>) -> char")
+LITERAL (UnsignedToChar  ,    "uint.to.Char",    "(uint<#a>) -> char")
+LITERAL (RealToChar  ,    "real.to.Char",    "(real<#a>) -> char")
+LITERAL (BoolToChar  ,    "bool.to.Char",    "(bool) -> char")
+
+      // TO Bool
+GROUP( ToBool, SignedToBool, UnsignedToBool, RealToBool, CharToBool)
+LITERAL (SignedToBool,    "int.to.Bool" ,    "(int<#a>) -> bool")
+LITERAL (UnsignedToBool  ,    "uint.to.Bool",    "(uint<#a>) -> bool")
+LITERAL (RealToBool  ,    "real.to.Bool",    "(real<#a>) -> bool")
+LITERAL (CharToBool  ,    "char.to.bool",    "(char) -> bool")
 
 // Bitwise Operations -------------------------------------------------------------------------------------------------
 
@@ -415,12 +453,9 @@ LITERAL(Flush, "flush", "(ref<'a>) -> unit")
 
 // General ------------------------------------------------------------------------------------------------------------
 
-GROUP(GeneralOp, BoolToInt, RealToInt, Undefined, InitZero, Sizeof, IntTypeParamToInt)
+GROUP(GeneralOp, Undefined, InitZero, Sizeof, IntTypeParamToInt)
 
 DERIVED(Id, 				"id", "('a x)->'a { return x; }")		
-
-LITERAL(BoolToInt, 			"bool.to.int", 				"(bool) -> int<4>")
-LITERAL(RealToInt,			"real.to.int",				"(real<#a>, intTypeParam<#b>) -> int<#b>")
 
 LITERAL(Undefined, 			"undefined", 				"(type<'a>) -> 'a")
 LITERAL(InitZero,			"initZero",	 				"(type<'a>) -> 'a")

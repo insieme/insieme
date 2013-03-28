@@ -35,45 +35,34 @@
  */
 
 #pragma once 
+//
+//// forward declaration
+//namespace insieme {
+//
+//class core::IRBuilder;
+//class clang::CastExpr;
+//class core::ExpressionPtr;
+//class core::TypePtr;
+//
+//} // end core namespace 
+//
 
 namespace insieme {
-
-// forward declarations
-namespace core { 
-template <class T>
-class Pointer;
-
-class Expression;
-typedef Pointer<const Expression> ExpressionPtr;
-
-class Type;
-typedef Pointer<const Type> TypePtr;
-} // end core namespace 
-
 namespace frontend {
 namespace utils {
 
 	/**
-	 * This function tries to restructure the given expression of a reference to a scalar
-	 * into a reference to an array - if possible without using the scalar.to.ref.array literal.
+	 * Creates a cast expression arround an IR expression driven by the corresponding clang::CastExpr
 	 *
-	 * @param expr the expression to be converted
-	 * @return the rewritten, equivalent expression exposing a reference to an array
+	 * @param builder, builder tool to create new IR
+	 * @param cast the clang cast expression
+	 * @param expr the IR expression to be casted
+	 * return right typed expression
 	 */
-	core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr);
-
-	core::ExpressionPtr cast(const core::ExpressionPtr& expr, const core::TypePtr& trgTy);
-
-	bool isArray(const core::TypePtr& type);
-	bool isRefArray(const core::TypePtr& type);
-
-	core::TypePtr getArrayElement(const core::TypePtr& type);
-
-	bool isVector(const core::TypePtr& type);
-	bool isRefVector(const core::TypePtr& type);
-	bool isRefRef(const core::TypePtr& type);
-
-	core::TypePtr getVectorElement(const core::TypePtr& type);
+	core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builder, 
+											  const clang::CastExpr* cast, 
+										  	  const core::TypePtr    targetTy,
+											  const core::ExpressionPtr& expr);
 
 } // end utils namespace 
 } // end frontend namespace
