@@ -166,6 +166,13 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(c
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr) {
 // FIXME: do the thing here
+
+	if (castExpr->getCastKind() == CK_NoOp) {
+		core::ExpressionPtr&& exp = Visit(castExpr->getSubExpr ());
+		return exp;
+	}
+
+
 	return (ExprConverter::VisitExplicitCastExpr(castExpr));
 
 	/*START_LOG_EXPR_CONVERSION(castExpr);
@@ -846,6 +853,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 		retExp = builder.refNew(builder.refVar(placeHolder));
 	}
 	else{
+		// is a class, handle construction
 		core::ExpressionPtr ctorCall = Visit(callExpr->getConstructExpr());
 		assert(ctorCall.isa<core::CallExprPtr>() && "aint no constructor call in here, no way to translate NEW");
 
@@ -876,7 +884,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 												  addr->getArgument(0), 
 												  newCall ).as<core::CallExprPtr>();
 		}
-		retExp = builder.refVar(retExp);
 	}
 
 	END_LOG_EXPR_CONVERSION(retExp);

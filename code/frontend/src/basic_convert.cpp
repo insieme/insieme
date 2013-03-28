@@ -783,8 +783,13 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// ============================================================================================
 	
 	// if is a constructor call, we are done
-	if (llvm::isa<clang::CXXConstructExpr>(expr) || llvm::isa<clang::CXXNewExpr>(expr)){
+	if (llvm::isa<clang::CXXConstructExpr>(expr)){
 		return retIr;
+	}
+
+	// if is a new operator, we need another ref in the type
+	if (llvm::isa<clang::CXXNewExpr>(expr)){
+		return builder.refVar(retIr);
 	}
 	
 	// If this is an initialization of an array using array.create (meaning it was originally a
