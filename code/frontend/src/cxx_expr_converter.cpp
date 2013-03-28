@@ -149,6 +149,18 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(c
 				// this is Ref -> CppRef
 				// handled wherever is used
 			}
+		case CK_NoOp:
+			{
+				core::ExpressionPtr expr = Visit(castExpr->getSubExpr ());
+				core::TypePtr type = expr->getType();
+				if (core::analysis::isCppRef(type)){
+
+					dumpDetail (type);
+
+					return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), expr);
+				}
+				// do no break, otherwhise continue to default
+			}
 
 		default:
 			// cast which should look like C 

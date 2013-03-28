@@ -815,17 +815,19 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// this is a C++ reference ( int& ref = x)
 	if (clangType && clangType->isReferenceType()){
 
+		dumpDetail (retIr);
+
 		// if is a CPP ref, convert to IR
 		if (core::analysis::isCppRef(retIr->getType())) {
 			if (!core::analysis::isCppRef(retIr->getType())) {
 				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retIr);
 			}
 		}
-		else{
-			if (!core::analysis::isConstCppRef(retIr->getType())) {
-				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retIr);
-			}
-		}
+//		else{
+//			if (!core::analysis::isConstCppRef(retIr->getType())) {
+//				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retIr);
+//			}
+//		}
 	}
 	
 
