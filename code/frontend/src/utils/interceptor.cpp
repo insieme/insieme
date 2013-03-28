@@ -158,11 +158,14 @@ Interceptor::InterceptedTypeCache Interceptor::buildInterceptedTypeCache(insieme
 	for( auto it = interceptedTypes.begin(), end=interceptedTypes.end(); it != end; it++) {
 		const clang::TypeDecl* typeDecl = *it;
 		const clang::Type* currInterceptedType = typeDecl->getTypeForDecl();
-		
-		//TODO annotate header in type, see buildInterceptedCache
+
+		// resolve type and save in cache
 		core::TypePtr irType = iTV.Visit( currInterceptedType );
 		cache.insert( { currInterceptedType, irType } );
 		VLOG(1) << "build interceptedType " << (*it)->getQualifiedNameAsString() << " ## " << irType;
+
+		// add header file
+		insieme::annotations::c::attachInclude(irType, getHeaderForDecl(typeDecl, indexer));
 	}
 	return cache;
 }
@@ -206,6 +209,7 @@ Interceptor::InterceptedExprCache Interceptor::buildInterceptedExprCache(insieme
 		//convertType only works if convFact.ctx.type cache was filled properly with buildInterceptedTypeCache
 		core::FunctionTypePtr type = convFact.convertType( decl->getType().getTypePtr() ).as<core::FunctionTypePtr>();
 		//fix types for ctor, mfunc, ...
+		std::string literalName = it->second;
 		if( const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
 			core::TypePtr thisTy = convFact.convertType(ctorDecl->getParent()->getTypeForDecl());
 			core::TypeList paramTys = type->getParameterTypeList();
@@ -214,6 +218,9 @@ Interceptor::InterceptedExprCache Interceptor::buildInterceptedExprCache(insieme
 			//FIXME can we use memberize()?
 			type = builder.functionType( paramTys, builder.refType(thisTy), core::FK_CONSTRUCTOR);
 			
+			// update literal name (only class name type)
+			literalName = ctorDecl->getParent()->getQualifiedNameAsString();
+
 		} else if(const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl) ) {
 			core::TypePtr thisTy = convFact.convertType(methodDecl->getParent()->getTypeForDecl());
 			core::TypeList paramTys = type->getParameterTypeList();
@@ -223,7 +230,7 @@ Interceptor::InterceptedExprCache Interceptor::buildInterceptedExprCache(insieme
 			type = builder.functionType( paramTys, type.getReturnType(), core::FK_MEMBER_FUNCTION);
 		}
 
-		core::ExpressionPtr interceptExpr = builder.literal( it->second, type);
+		core::ExpressionPtr interceptExpr = builder.literal( literalName, type);
 		VLOG(2) << interceptExpr << " " << type;
 
 		insieme::annotations::c::attachInclude(interceptExpr, getHeaderForDecl(decl, indexer));
