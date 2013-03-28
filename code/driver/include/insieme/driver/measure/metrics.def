@@ -214,6 +214,7 @@ METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
 
 METRIC(PARALLELISM, 				"parallelism",				unit,		div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_WALL_TIME));
 METRIC(AVG_EFFICIENCY,				"avg_efficiency",			unit,		avg(l_div(l_div(Metric::CPU_TIME, Metric::WALL_TIME), Metric::NUM_WORKERS)));
+METRIC(LOAD_BALANCE,				"load_balance",				unit,		div(min(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)), max(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START))));
 
 METRIC(TOTAL_ENERGY_PACKAGE_1,                          "total_energy_package_1",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_1_END, Metric::ENERGY_PACKAGE_1_START)));
 METRIC(TOTAL_ENERGY_PACKAGE_2,                          "total_energy_package_2",                               j,                      first(l_sub(Metric::ENERGY_PACKAGE_2_END, Metric::ENERGY_PACKAGE_2_START)));
