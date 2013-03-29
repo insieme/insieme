@@ -47,6 +47,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/core/types/subtyping.h"
+
 #define CAST(expr, type) convertExprToType(builder, expr, type)
 
 #define GET_REF_ELEM_TYPE(type) \
@@ -68,7 +70,7 @@ namespace {
 
 // This function performs the requires type conversion, from converting an expression. 
 core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder, 
-									  const core::ExpressionPtr& 	expr, 
+									  core::ExpressionPtr 	expr, 
 									  const core::TypePtr& 			trgTy) 
 {
 	// list the all possible conversions 
@@ -519,13 +521,35 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		if (*subArgTy == *trgTy) { return builder.deref( expr ); }
 	}
 
+
+
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 							  ref<'a> -> ref<'b>
 	///////////////////////////////////////////////////////////////////////////////////////
 	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
 
-		core::TypePtr nonRefTrgTy = trgTy.as<core::RefTypePtr>()->getElementType();
+		///////////////////////////////////////////////////////////////////////////////////////
+		// pointer (ref<ref< converted to base class... no need to reinterpret
+		///////////////////////////////////////////////////////////////////////////////////////
+		if(core::types::isSubTypeOf (argTy, trgTy)){
+			return expr;
+		}
 
+		///////////////////////////////////////////////////////////////////////////////////////
+		// 							  <ref<'a> -> ref<array<'b,1>>
+		//////////////////////////////////////////////////////////////////////////////////////
+		const core::TypePtr& trgInnerTy = core::analysis::getReferencedType(trgTy);
+		const core::TypePtr& argInnerTy = core::analysis::getReferencedType(argTy);
+		if(trgInnerTy->getNodeType() == core::NT_ArrayType &&
+		   argInnerTy->getNodeType() != core::NT_ArrayType){
+			
+			expr = builder.callExpr(builder.getLangBasic().getScalarToArray(), expr);
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////
+		// 							  ref<'a> -> ref<'b>
+		///////////////////////////////////////////////////////////////////////////////////////
+		core::TypePtr nonRefTrgTy = trgTy.as<core::RefTypePtr>()->getElementType();
 		return builder.callExpr(
 				trgTy, 
 				builder.getNodeManager().getLangBasic().getRefReinterpret(), 
