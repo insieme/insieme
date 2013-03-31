@@ -80,19 +80,9 @@ TEST(FunctionManager, Literals) {
 	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
-	TestNameManager nameManager;
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
-
-	Converter converter;
-	TypeManager typeManager(converter);
-	converter.setTypeManager(&typeManager);
-	converter.setNameManager(&nameManager);
-	converter.setNodeManager(&nodeManager);
-	converter.setFragmentManager(fragmentManager);
-
-	FunctionManager funManager(converter);
-	converter.setFunctionManager(&funManager);
-
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	FunctionManager& funManager = converter.getFunctionManager();
 
 	// create a function type
 	core::TypePtr int4 = basic.getInt4();
@@ -137,24 +127,9 @@ TEST(FunctionManager, Lambda) {
 	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
-	Converter converter;
-	converter.setNodeManager(&nodeManager);
-
-	TestNameManager nameManager;
-	converter.setNameManager(&nameManager);
-
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
-	converter.setTypeManager(&typeManager);
-
-	StmtConverter stmtConverter(converter);
-	converter.setStmtConverter(&stmtConverter);
-
-	FunctionManager funManager(converter);
-	converter.setFunctionManager(&funManager);
-
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	FunctionManager& funManager = converter.getFunctionManager();
 
 	// create a function type
 	core::TypePtr int4 = basic.getInt4();
@@ -211,23 +186,9 @@ TEST(FunctionManager, MutualRecursiveLambda) {
 	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
-	Converter converter;
-	converter.setNodeManager(&nodeManager);
-
-	TestNameManager nameManager;
-	converter.setNameManager(&nameManager);
-
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
-	converter.setTypeManager(&typeManager);
-
-	StmtConverter stmtConverter(converter);
-	converter.setStmtConverter(&stmtConverter);
-
-	FunctionManager funManager(converter);
-	converter.setFunctionManager(&funManager);
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	FunctionManager& funManager = converter.getFunctionManager();
 
 	// create a function type
 	core::TypePtr int4 = basic.getInt4();
@@ -283,23 +244,9 @@ TEST(FunctionManager, Bind) {
 	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
-	Converter converter;
-	converter.setNodeManager(&nodeManager);
-
-	TestNameManager nameManager;
-	converter.setNameManager(&nameManager);
-
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
-	converter.setTypeManager(&typeManager);
-
-	StmtConverter stmtConverter(converter);
-	converter.setStmtConverter(&stmtConverter);
-
-	FunctionManager funManager(converter);
-	converter.setFunctionManager(&funManager);
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	FunctionManager& funManager = converter.getFunctionManager();
 
 	// ----------------- Create a bind -----------
 
@@ -357,7 +304,7 @@ TEST(FunctionManager, Bind) {
 	);
 
 	// full code example - just make sure that no dependency cycle has been produced
-	toString(c_ast::CCode(fragmentManager, bind, info.definitions));
+	toString(c_ast::CCode(converter.getFragmentManager(), bind, info.definitions));
 
 	// check get value (value to be used when passing function as an argument)
 	ConversionContext context(converter);
@@ -377,23 +324,9 @@ TEST(FunctionManager, NestedBind) {
 	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
-	Converter converter;
-	converter.setNodeManager(&nodeManager);
-
-	TestNameManager nameManager;
-	converter.setNameManager(&nameManager);
-
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
-	converter.setTypeManager(&typeManager);
-
-	StmtConverter stmtConverter(converter);
-	converter.setStmtConverter(&stmtConverter);
-
-	FunctionManager funManager(converter);
-	converter.setFunctionManager(&funManager);
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	FunctionManager& funManager = converter.getFunctionManager();
 
 	// ----------------- Create a bind -----------
 
@@ -460,7 +393,7 @@ TEST(FunctionManager, NestedBind) {
 	);
 
 	// full code example - just make sure that no dependency cycle has been produced
-	toString(c_ast::CCode(fragmentManager, bind, info.definitions));
+	toString(c_ast::CCode(converter.getFragmentManager(), bind, info.definitions));
 
 	// check get value (value to be used when passing function as an argument)
 	ConversionContext context(converter);

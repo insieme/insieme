@@ -36,6 +36,12 @@
 
 #include "insieme/backend/addons/cpp_references.h"
 
+
+#include "insieme/backend/converter.h"
+#include "insieme/backend/type_manager.h"
+#include "insieme/backend/function_manager.h"
+#include "insieme/backend/operator_converter.h"
+
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/statement_converter.h"
 
@@ -47,54 +53,67 @@ namespace insieme {
 namespace backend {
 namespace addons {
 
-	const TypeInfo* CppRefTypeHandler(const Converter& converter, const core::TypePtr& type) {
-		static const TypeInfo* NOT_HANDLED = NULL;
+	namespace {
 
-		// check whether it is a cpp reference
-		if (!(core::analysis::isCppRef(type) || core::analysis::isConstCppRef(type))) {
-			return NOT_HANDLED;	// not handled by this handler
+		const TypeInfo* CppRefTypeHandler(const Converter& converter, const core::TypePtr& type) {
+			static const TypeInfo* NOT_HANDLED = NULL;
+
+			// check whether it is a cpp reference
+			if (!(core::analysis::isCppRef(type) || core::analysis::isConstCppRef(type))) {
+				return NOT_HANDLED;	// not handled by this handler
+			}
+
+			// build up TypeInfo for C++ reference
+			TypeManager& typeManager = converter.getTypeManager();
+
+			// determine const flag
+			bool isConst = core::analysis::isConstCppRef(type);
+
+			// get information regarding base type
+			const TypeInfo& baseInfo = typeManager.getTypeInfo(core::analysis::getCppRefElementType(type));
+
+			// copy base information
+			TypeInfo* refInfo = new TypeInfo(baseInfo);
+
+			// alter r / l / external C type
+			refInfo->lValueType = c_ast::ref(refInfo->lValueType, isConst);
+
+			refInfo->rValueType = c_ast::ref(refInfo->rValueType, isConst);
+
+			refInfo->externalType = c_ast::ref(refInfo->externalType, isConst);
+
+			return refInfo;
 		}
 
-		// build up TypeInfo for C++ reference
-		TypeManager& typeManager = converter.getTypeManager();
 
-		// determine const flag
-		bool isConst = core::analysis::isConstCppRef(type);
+		OperatorConverterTable getCppRefOperatorTable(core::NodeManager& manager) {
+			OperatorConverterTable res;
 
-		// get information regarding base type
-		const TypeInfo& baseInfo = typeManager.getTypeInfo(core::analysis::getCppRefElementType(type));
+			const auto& ext = manager.getLangExtension<core::lang::IRppExtensions>();
 
-		// copy base information
-		TypeInfo* refInfo = new TypeInfo(baseInfo);
+			#include "insieme/backend/operator_converter_begin.inc"
 
-		// alter r / l / external C type
-		refInfo->lValueType = c_ast::ref(refInfo->lValueType, isConst);
+			res[ext.getRefCppToIR()] 	  = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
+			res[ext.getRefConstCppToIR()] = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
 
-		refInfo->rValueType = c_ast::ref(refInfo->rValueType, isConst);
+			res[ext.getRefIRToCpp()] 	  = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
+			res[ext.getRefIRToConstCpp()] = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
 
-		refInfo->externalType = c_ast::ref(refInfo->externalType, isConst);
+			#include "insieme/backend/operator_converter_end.inc"
+			return res;
+		}
 
-		return refInfo;
 	}
 
+	void CppReferences::installOn(Converter& converter) const {
 
-	OperatorConverterTable getCppRefOperatorTable(core::NodeManager& manager) {
-		OperatorConverterTable res;
+		// registers type handler
+		converter.getTypeManager().addTypeHandler(CppRefTypeHandler);
 
-		const auto& ext = manager.getLangExtension<core::lang::IRppExtensions>();
+		// register additional operators
+		converter.getFunctionManager().getOperatorConverterTable().insertAll(getCppRefOperatorTable(converter.getNodeManager()));
 
-		#include "insieme/backend/operator_converter_begin.inc"
-
-		res[ext.getRefCppToIR()] 	  = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
-		res[ext.getRefConstCppToIR()] = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
-
-		res[ext.getRefIRToCpp()] 	  = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
-		res[ext.getRefIRToConstCpp()] = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
-
-		#include "insieme/backend/operator_converter_end.inc"
-		return res;
 	}
-
 
 } // end namespace addons
 } // end namespace backend

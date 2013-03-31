@@ -37,10 +37,6 @@
 #pragma once
 
 #include "insieme/backend/backend.h"
-#include "insieme/backend/function_manager.h"
-#include "insieme/backend/type_manager.h"
-
-#include "insieme/backend/operator_converter.h"
 
 namespace insieme {
 namespace backend {
@@ -50,24 +46,13 @@ namespace runtime {
 	class RuntimeBackend;
 	typedef std::shared_ptr<RuntimeBackend> RuntimeBackendPtr;
 
-
 	/**
-	 * A signature for functions to be passed to backends to influence the operator converter table.
-	 * Using this mechanism, the operator table can be manipulated by an external component.
-	 */
-	typedef std::function<OperatorConverterTable&(core::NodeManager&, OperatorConverterTable&)> OperationTableExtender;
-
-	/**
-	 * The facade for the backend capable of generating code to be used
-	 * by the runtime backend.
+	 * The facade for the backend capable of generating code to be used by the runtime backend.
+	 *
+	 * This backend converts the given IR representation into C99 / C++98 target code interacting with
+	 * the Insieme Runtime environment.
 	 */
 	class RuntimeBackend : public Backend {
-
-		/**
-		 * The table containing operator converters to be used during the
-		 * conversion process.
-		 */
-		OperationTableExtender operationTableExtender;
 
 		/**
 		 * A flag enabling the inclusion of effort estimations within work-item tables.
@@ -79,8 +64,8 @@ namespace runtime {
 		/**
 		 * A constructor of this kind of backend accepting an operator table extender.
 		 */
-		RuntimeBackend(bool includeEffortEstimation, const OperationTableExtender& extender = &RuntimeBackend::unchanged)
-			: operationTableExtender(extender), includeEffortEstimation(includeEffortEstimation) {}
+		RuntimeBackend(bool includeEffortEstimation)
+			: includeEffortEstimation(includeEffortEstimation) {}
 
 
 		/**
@@ -91,47 +76,20 @@ namespace runtime {
 		 */
 		static RuntimeBackendPtr getDefault(bool includeEffortEstimation = false);
 
+
+	protected:
+
 		/**
-		 * The main facade function of the runtime backend. This function converts the given
-		 * IR representation into C99-target code interacting with the Insieme Runtime environment.
+		 * Creates a converter instance capable of converting IR code into C / C++ code utilizing
+		 * the runtime for realizing parallel constructs.
 		 *
-		 * @param source the program to be converted
-		 * @return a pointer to the converted target code
+		 * @param manager the manager to be utilized for the conversion
+		 * @return a converter instance conducting the code conversion
 		 */
-		backend::TargetCodePtr convert(const core::NodePtr& source) const;
+		virtual Converter buildConverter(core::NodeManager& manager) const;
 
-		/**
-		 * Obtains a reference to the operator table this backend instance has been instantiated
-		 * with.
-		 */
-		const OperationTableExtender& getOperatorTableExtender() const {
-			return operationTableExtender;
-		}
-
-		/**
-		 * Updates the operator table extender.
-		 *
-		 * @param extender the new extender to be used
-		 */
-		void setOperatorTableExtender(const OperationTableExtender& extender) {
-			operationTableExtender = extender;
-		}
-
-	private:
-
-		/**
-		 * A private op-table extender leafing the operator table unchanged.
-		 */
-		static OperatorConverterTable& unchanged(core::NodeManager&, OperatorConverterTable& table) {
-			return table;
-		}
 	};
 
-	FunctionIncludeTable& addRuntimeFunctionIncludes(FunctionIncludeTable& table);
-
-	TypeIncludeTable& addRuntimeTypeIncludes(TypeIncludeTable& table);
-
-
-}
-}
-}
+} // end namespace runtime
+} // end namespace backend
+} // end namespace insieme

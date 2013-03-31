@@ -96,14 +96,18 @@ private:
 	InterceptedTypeDeclSet interceptedTypes;
 
 	std::set<std::string> toIntercept;
+	boost::regex rx;
 };
 
 struct InterceptTypeVisitor : public clang::TypeVisitor<InterceptTypeVisitor, core::TypePtr> {
 
 	insieme::frontend::conversion::ConversionFactory& convFact;
 	const insieme::core::IRBuilder& builder;
+	const insieme::frontend::utils::Indexer& indexer;
+	const boost::regex& rx;
 	
-	InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const insieme::core::IRBuilder& builder); 
+	InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const insieme::frontend::utils::Indexer& indexer, const boost::regex& rx);
+
 	core::TypePtr Visit(const clang::Type* type);
 	core::TypePtr VisitTagType(const clang::TagType* tagType);
 	core::TypePtr VisitInjectedClassNameType(const clang::InjectedClassNameType* type);
@@ -141,8 +145,8 @@ struct InterceptVisitor : public clang::StmtVisitor<InterceptVisitor> {
 	//void VisitCallExpr(const clang::CallExpr* callExpr) {};
 
 	//void VisitDeclRefExpr(const clang::DeclRefExpr* declRefExpr) {};
-}
+};
 
-;} // end utils namespace
+} // end utils namespace
 } // end frontend namespace
 } // end insieme namespace

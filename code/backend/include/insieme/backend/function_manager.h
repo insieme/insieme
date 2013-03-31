@@ -71,9 +71,9 @@ namespace backend {
 
 		detail::FunctionInfoStore* store;
 
-		const OperatorConverterTable operatorTable;
+		OperatorConverterTable operatorTable;
 
-		const FunctionIncludeTable includeTable;
+		FunctionIncludeTable includeTable;
 
 	public:
 
@@ -101,9 +101,21 @@ namespace backend {
 
 		const boost::optional<string> getHeaderFor(const string& function) const;
 
+		const boost::optional<string> getHeaderFor(const core::LiteralPtr& function) const;
+
 		void rename(const core::LambdaExprPtr& lambda, const string& name);
 
 		bool isBuiltIn(const core::ExpressionPtr& op) const;
+
+		// ------------------------- Management ---------------------
+
+		OperatorConverterTable& getOperatorConverterTable() {
+			return operatorTable;
+		}
+
+		FunctionIncludeTable& getFunctionIncludeTable() {
+			return includeTable;
+		}
 	};
 
 

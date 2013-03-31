@@ -1,1 +1,1 @@
---intercept-file ./interceptor_test.cfg
+--intercept-file ./interceptor_test.config

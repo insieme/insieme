@@ -36,54 +36,46 @@
 
 #pragma once
 
-#include "insieme/backend/backend.h"
-#include "insieme/backend/runtime/runtime_backend.h"
+#include <memory>
+
+#include "insieme/core/forward_decls.h"
+
+#include "insieme/backend/converter.h"
 
 namespace insieme {
 namespace backend {
-namespace ocl_host {
-
-	// A forward declaration of the OpenCL Host backend implementation
-	class OCLHostBackend;
-	typedef std::shared_ptr<OCLHostBackend> OCLHostBackendPtr;
 
 	/**
-	 * The OpenCL Host backend aims on generating pure sequential code without
-	 * any dependencies to any runtime implementation.
-	 *
-	 * This backend converts the given IR representation into pure C99-target code.
+	 * The base class for backend add-ons allowing to customize
+	 * the behavior of backend instances.
 	 */
-	class OCLHostBackend : public runtime::RuntimeBackend {
-		// optional path to dump the binary of the kernel after preprocessing
-		const std::string kernelDumpPath;
+	class AddOn {
 	public:
-		/**
-		 * A (default) constructor allowing to set up the kernel dump-path.
-		 */
-		OCLHostBackend(bool includeEffortEstimation, const string& kernelDumpPath)
-			: runtime::RuntimeBackend(includeEffortEstimation), kernelDumpPath(kernelDumpPath) {}
 
 		/**
-		 * A factory method obtaining a smart pointer referencing a
-		 * fresh instance of the OpenCL Host backend using the default configuration.
-		 *
-		 * @param kernelDumpPath a path to dump the binary of the kernel after preprocessing
-		 * @return a smart pointer to a fresh instance of the sequential backend
+		 * A virtual destructor.
 		 */
-		static OCLHostBackendPtr getDefault(const std::string& kernelDumpPath = "", bool includeEffortEstimations = false);
-
-	protected:
+		virtual ~AddOn() {};
 
 		/**
-		 * Creates the converter instance realizing the OpenCL Host backend conversion job.
-		 *
-		 * @param manager the manager to be utilized for the conversion
-		 * @return a converter instance conducting the code conversion
+		 * Installs this add-on within the given converter.
 		 */
-		virtual Converter buildConverter(core::NodeManager& manager) const;
+		virtual void installOn(Converter& converter) const =0;
 
 	};
 
-} // end namespace ocl_host
+	/**
+	 * A type definition for an AddOn-Pointer (since AddOns are polymorph).
+	 */
+	typedef std::shared_ptr<AddOn> AddOnPtr;
+
+	/**
+	 * A utility class to instantiate Add-On classes.
+	 */
+	template<typename A, typename ... T>
+	AddOnPtr makeAddOn(T ... args) {
+		return std::make_shared<A>(args...);
+	}
+
 } // end namespace backend
 } // end namespace insieme

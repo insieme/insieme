@@ -36,32 +36,35 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
+#include "insieme/core/lang/extension.h"
 
-#include "insieme/backend/addon.h"
-
-/**
- * This header file defines the components required to be registered within
- * a backend instance to handle C++ references properly.
- */
 namespace insieme {
-namespace backend {
-namespace addons {
+namespace frontend {
+namespace utils {
 
-
-	/**
-	 * An Add-On realizing support for C++ style reference types.
-	 */
-	struct CppReferences : public AddOn {
+	class IRppUtils : public core::lang::Extension{
 
 		/**
-		 * Installs the this Add-On within the given converter.
+		 * Allow the node manager to create instances of this class.
 		 */
-		virtual void installOn(Converter& converter) const;
+		friend class core::NodeManager;
+
+		/**
+		 * Creates a new instance based on the given node manager.
+		 */
+		IRppUtils(core::NodeManager& manager)
+				: core::lang::Extension(manager) {}
+
+	public:
+
+		/**
+		 * A literal to be used to represent temporaries
+		 */
+		LANG_EXT_LITERAL(MaterializeTemp, "materializeTemp", "('a)->ref<'a>");
 
 	};
 
 
-} // end namespace addons
-} // end namespace backend
-} // end namespace insieme
+} //namespace utils 
+} //namespace frontend 
+} //namespace insieme 

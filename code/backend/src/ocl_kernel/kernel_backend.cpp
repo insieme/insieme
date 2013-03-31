@@ -68,13 +68,7 @@ namespace ocl_kernel {
 
 	namespace {
 
-		OperatorConverterTable getOperatorTable(core::NodeManager& manager);
-
-		FunctionIncludeTable getFunctionIncludeTable();
-
-		TypeHandlerList getTypeHandlerList();
-
-		StmtHandlerList getStmtHandlerList();
+		void extendFunctionIncludeTable(FunctionIncludeTable& table);
 
 	}
 
@@ -86,17 +80,10 @@ namespace ocl_kernel {
 		return std::make_shared<OCLKernelBackend>(kernelDumpPath);
 	}
 
-	TargetCodePtr OCLKernelBackend::convert(const core::NodePtr& code) const {
+	Converter OCLKernelBackend::buildConverter(core::NodeManager& manager) const {
+
 		// create and set up the converter
-		Converter converter("OpenCL Kernel Backend");
-
-		// set up the node manager (for temporals)
-		core::NodeManager& nodeManager = code->getNodeManager();
-		converter.setNodeManager(&nodeManager);
-
-		// set up the shared code fragment manager (for the result)
-		c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
-		converter.setFragmentManager(fragmentManager);
+		Converter converter(manager, "OpenCL Kernel Backend");
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
@@ -105,80 +92,50 @@ namespace ocl_kernel {
 		);
 		converter.setPreProcessor(preprocessor);
 
-		// set up post-processing
-		PostProcessorPtr postprocessor = makePostProcessor<NoPostProcessing>();
-		converter.setPostProcessor(postprocessor);
+		// update type manager configuration
+		TypeManager& typeManager = converter.getTypeManager();
+		typeManager.addTypeHandler(OclKernelTypeHandler);
 
-		// Prepare managers
-		SimpleNameManager nameManager;
-		converter.setNameManager(&nameManager);
+		// update stmt converter
+		StmtConverter& stmtConverter = converter.getStmtConverter();
+		stmtConverter.addStmtHandler(OclKernelStmtHandler);
 
-		TypeManager typeManager(converter, getBasicTypeIncludeTable(), getTypeHandlerList());
-		converter.setTypeManager(&typeManager);
+		// update function manager
+		FunctionManager& functionManager = converter.getFunctionManager();
+		addOpenCLKernelSpecificOps(manager, functionManager.getOperatorConverterTable());
+		extendFunctionIncludeTable(functionManager.getFunctionIncludeTable());
 
-		StmtConverter stmtConverter(converter, getStmtHandlerList());
-		converter.setStmtConverter(&stmtConverter);
-
-		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getFunctionIncludeTable());
-		converter.setFunctionManager(&functionManager);
-
-		// dump kernel to binary file
-//		std::fstream outFile("kernel.bin", std::fstream::out);
-
-//		core::dump::binary::dumpIR(outFile, code);
-//		outFile.close();
-
-		// conduct conversion
-		return converter.convert(code);
+		// done
+		return converter;
 	}
 
 	namespace {
 
-		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
-			OperatorConverterTable res = getBasicOperatorTable(manager);
-			return addOpenCLKernelSpecificOps(manager, res);
-		}
-
-		FunctionIncludeTable getFunctionIncludeTable() {
-			FunctionIncludeTable res = getBasicFunctionIncludeTable();
+		void extendFunctionIncludeTable(FunctionIncludeTable& table) {
 			
 			// add OpenCL-specific includes
+			table["get_local_id"]                     = "";
+			table["get_global_id"]                    = "";
+			table["get_local_size"]                   = "";
+			table["get_global_size"]                  = "";
+			table["get_num_groups"]                   = "";
+			table["barrier"]                          = "";
+			table["exp"]                              = "";
+			table["fabs"]                             = "";
+			table["sqrt"]                             = "";
+			table["log"]                              = "";
+			table["hypot"]                            = "";
+			table["cos"]                              = "";
+			table["sin"]                              = "";
+			table["min"]                              = "";
+			table["max"]                              = "";
+			table["normalize"]                        = "";
+			table["floor"]                            = "";
+			table["mix"]                              = "";
+			table["pow"]                              = "";
+			table["ceil"]                             = "";
 
-			res["get_local_id"]                     = "";
-			res["get_global_id"]                    = "";
-			res["get_local_size"]                   = "";
-			res["get_global_size"]                  = "";
-			res["get_num_groups"]                   = "";
-			res["barrier"]                          = "";
-			res["exp"]                              = "";
-			res["fabs"]                             = "";
-			res["sqrt"]                             = "";
-			res["log"]                              = "";
-			res["hypot"]                            = "";
-			res["cos"]                              = "";
-			res["sin"]                              = "";
-			res["min"]                              = "";
-			res["max"]                              = "";
-			res["normalize"]                        = "";
-			res["floor"]                            = "";
-			res["mix"]                              = "";
-			res["pow"]                              = "";
-			res["ceil"]                             = "";
-			return res;
 		}
-
-		TypeHandlerList getTypeHandlerList() {
-			TypeHandlerList res;
-			res.push_back(OclKernelTypeHandler);
-			return res;
-		}
-
-		StmtHandlerList getStmtHandlerList() {
-			StmtHandlerList res;
-			res.push_back(OclKernelStmtHandler);
-			return res;
-		}
-
 
 	}
 

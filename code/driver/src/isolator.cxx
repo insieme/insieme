@@ -759,7 +759,7 @@
 
 		// create kernel code
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
-		backend->setOperatorTableExtender(&insieme::driver::isolator::addOpSupport);
+		backend->addAddOn<insieme::driver::isolator::IsolatorAddOn>();
 		toFile(dir / "kernel.c", *backend->convert(instrumented));
 
 		// compile c file

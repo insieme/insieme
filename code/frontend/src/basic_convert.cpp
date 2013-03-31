@@ -48,6 +48,7 @@
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/indexer.h"
+#include "insieme/frontend/utils/ir++_utils.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -782,8 +783,14 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// ============================================================================================
 	
 	// if is a constructor call, we are done
-	if (llvm::isa<clang::CXXConstructExpr>(expr) || llvm::isa<clang::CXXNewExpr>(expr))
+	if (llvm::isa<clang::CXXConstructExpr>(expr)){
 		return retIr;
+	}
+
+	// if is a new operator, we need another ref in the type
+	if (llvm::isa<clang::CXXNewExpr>(expr)){
+		return builder.refVar(retIr);
+	}
 	
 	// If this is an initialization of an array using array.create (meaning it was originally a
 	// malloc) then we expliticly invoke the ref.new to allocate the memory on the heap 
@@ -810,14 +817,17 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 
 		// if is a CPP ref, convert to IR
 		if (core::analysis::isCppRef(retIr->getType())) {
-			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(),
-									retIr);
+			if (!core::analysis::isCppRef(retIr->getType())) {
+				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retIr);
+			}
 		}
 		else{
-			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(),
-									retIr);
+			if (!core::analysis::isConstCppRef(retIr->getType())) {
+				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retIr);
+			}
 		}
 	}
+	
 
 	// ============================== End Special Handlings =======================================
 	
@@ -876,7 +886,6 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 		ctx.typeCache.insert( {type, retTy} );
 		return retTy;
 	}
-
 	return fit->second;
 }
 

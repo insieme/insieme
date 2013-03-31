@@ -378,7 +378,7 @@ namespace core {
 		bool operator==(const ClassMetaInfo& other) const {
 			return  this == &other || (
 						virtualDestructor == other.virtualDestructor &&
-						equals(constructors, constructors, equal_target<LambdaExprPtr>()) &&
+						equals(constructors, other.constructors, equal_target<LambdaExprPtr>()) &&
 						equalTarget(destructor, other.destructor) &&
 						memberFunctions == other.memberFunctions
 					);

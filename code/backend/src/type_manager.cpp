@@ -42,6 +42,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/type_traits/remove_const.hpp>
 
+#include "insieme/annotations/c/include.h"
+
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
 #include "insieme/backend/function_manager.h"
@@ -102,7 +104,13 @@ namespace backend {
 				});
 			}
 
+			TypeIncludeTable& getTypeIncludeTable() {
+				return includeTable;
+			}
 
+			void addTypeHandler(const TypeHandlerList& handler) {
+				typeHandlers.insert(typeHandlers.end(), handler.begin(), handler.end());
+			}
 
 			/**
 			 * Obtains the type information stored for the given function type within this container. If not
@@ -233,6 +241,20 @@ namespace backend {
 		return store->getDefinitionOf(type);
 	}
 
+
+	TypeIncludeTable& TypeManager::getTypeIncludeTable() {
+		return store->getTypeIncludeTable();
+	}
+
+	void TypeManager::addTypeHandler(const TypeHandler& handler) {
+		store->addTypeHandler(toVector(handler));
+	}
+
+	void TypeManager::addTypeHandler(const TypeHandlerList& list) {
+		store->addTypeHandler(list);
+	}
+
+
 	namespace type_info_utils {
 
 		c_ast::ExpressionPtr NoOp(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr& node) {
@@ -271,6 +293,38 @@ namespace backend {
 			auto pos = typeInfos.find(type);
 			if (pos != typeInfos.end()) {
 				return pos->second;
+			}
+
+			// check whether there is an annotated include file (intercepted type)
+			if (type->getNodeType() == core::NT_GenericType && annotations::c::hasIncludeAttached(type)) {
+				auto genericType = type.as<core::GenericTypePtr>();
+				const string& name = genericType->getFamilyName();
+				const string& header = annotations::c::getAttachedInclude(type);
+				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+
+				// extract resulting c-type
+				c_ast::NamedTypePtr cType = info->rValueType.as<c_ast::NamedTypePtr>();
+
+				// add generic parameters
+				for(auto cur : genericType->getTypeParameter()) {
+
+					// resolve info for current parameter
+					const TypeInfo* curInfo = resolveInternal(cur);
+
+					// add dependency to inner type
+					info->declaration->addDependency(curInfo->declaration);
+					info->definition->addDependency(curInfo->definition);
+
+					// add type to parameter list
+					cType->parameters.push_back(curInfo->rValueType);
+				}
+
+				// TODO: add int-type parameters
+
+				// TODO: add type-parameter permutation support
+
+				addInfo(type,info);
+				return info;
 			}
 
 			// lookup type within include table

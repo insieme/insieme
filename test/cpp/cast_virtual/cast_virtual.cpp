@@ -1,13 +1,10 @@
 #include <stdio.h>
 
 class Base {
+	virtual void dummy() {}
 public:
 	Base() {  }
 	~Base() {  }
-	
-	void g(){
-		printf("papa\n");
-	}
 };
 
 class Derived: public Base {
@@ -15,10 +12,6 @@ class Derived: public Base {
 public:
 	Derived() {  }
 	~Derived() {  }
-
-	void f(){
-		printf("child\n");
-	}
 };
 
 class A {};
@@ -28,49 +21,34 @@ int main() {
 
 	//builtin types
 	{
-		int aInt = 1, bInt =2;
-		long aLong = 3, bLong = 4;
-		double aDouble = 5.0, bDouble = 5.1;
+		int aInt, bInt;
+		long aLong, bLong;
+		double aDouble, bDouble;
 
 		aInt = bLong;		// implicit
-		printf("%d\n", aInt);
 		aInt = (int) bLong;	// c style
-		printf("%d\n", aInt);
 		aInt = int(bLong);	// functional
-		printf("%d\n", aInt);
 
 		aLong = bInt;			// implicit
-		printf("%d\n", aLong);
 		aLong = (long) bInt;	// c style
-		printf("%d\n", aLong);
 		aLong = long(bInt);		// functional
-		printf("%d\n", aLong);
 
 		aInt = bDouble;			// implicit
-		printf("%d\n", aInt);
 		aInt = (int) bDouble;	// c style
-		printf("%d\n", aInt);
 		aInt = int(bDouble);	// functional
-		printf("%d\n", aInt);
 
 		aDouble = bInt;				// implicit
-		printf("%f\n", aDouble);
 		aDouble = (double) bInt;	// c style
-		printf("%f\n", aDouble);
 		aDouble = double(bInt);		// functional
-		printf("%f\n", aDouble);
 	}
 
 	//pointers cast
 	{
 		Base* pba;
 		Base* pbb = new Base();
-		pbb->g();
 
 		Base* pbc = new Derived();			//implicit
-		pbc->g();
-		Base* pbd ;
-		 pbd = (Base* ) new Derived();	//explicit c-style
+		Base* pbd = (Base* ) new Derived();	//explicit c-style
 
 		Derived* pda;
 		Derived* pdb = new Derived();
@@ -93,6 +71,19 @@ int main() {
 
 		//base to derived cast
 		Derived& r1 = (Derived&) b;	//explicit
+	}
+
+	//dynamic_cast <new_type> (expression)
+	{
+		Base* pba = new Derived();
+		Base* pbb = new Base();
+		Derived* pd;
+
+		pd = dynamic_cast<Derived*>(pba);
+		if (pd==0) printf("Null pointer on first type-cast\n");
+
+		pd = dynamic_cast<Derived*>(pbb);
+		if (pd==0) printf("Null pointer on second type-cast\n");
 	}
 
 	//reinterpret_cast <new_type> (expression)
