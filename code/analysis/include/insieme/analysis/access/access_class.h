@@ -90,18 +90,18 @@ namespace access {
 		typedef std::vector<Dependence> SubClasses;
 
 	private:
-		/*
+		/** 
 		 * List of dependencies to sub-classes 
 		 */
 		SubClasses subClasses;
 
-		/*
+		/**
 		 * Reference to the parent class 
 		 */
 		AccessClassWPtr parentClass;
 
 
-		/* 
+		/** 
 		 * AccessClass instances can only be created by the AccessMaanger class
 		 */
 		AccessClass(

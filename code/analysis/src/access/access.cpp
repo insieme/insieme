@@ -336,24 +336,21 @@ namespace access {
 			core::NodeManager& 		mgr;
 			const TmpVarMap& 		tmpVarMap;
 			const UnifiedAddress& 	base;
-			AccessVector& 			accesses;
+			std::vector<AccessPtr>& accesses;
 
 			ExploreAccesses(core::NodeManager& 		mgr, 
 							const TmpVarMap& 		tmpVarMap,
 							const UnifiedAddress& 	base, 
-							AccessVector& 			accesses) 
+							std::vector<AccessPtr>& accesses) 
 				:  mgr(mgr), tmpVarMap(tmpVarMap), base(base), accesses(accesses) { }
 
-		private:
-			
-			UnifiedAddress updateAddress(const core::ExpressionAddress& addr, const UnifiedAddress& base) {
+			bool visitVariable(const core::VariableAddress& addr) {
+				// turn the address into a vector of indexes from the root 
 				std::vector<unsigned> idxs;
 				getAddressIndexes(addr, idxs);
-				return base.extendAddressFor(idxs);
-			}
 
-			bool visitVariable(const core::VariableAddress& addr) {
-				auto accessAddress = updateAddress(addr, base);
+				// update the unified address representation to point to the current addr 
+				auto accessAddress = base.extendAddressFor(idxs);
 
 				accesses.push_back( getImmediateAccess(mgr, accessAddress, tmpVarMap) );
 				return true;
@@ -375,7 +372,10 @@ namespace access {
 					return false;
 				}
 
-				auto accessAddress = updateAddress(callExpr, base);
+				std::vector<unsigned> idxs;
+				getAddressIndexes(callExpr, idxs);
+				auto accessAddress = base.extendAddressFor(idxs);
+				
 				try {
 
 					accesses.push_back( getImmediateAccess(mgr, accessAddress, tmpVarMap) );
@@ -409,33 +409,27 @@ namespace access {
 		// this must hold at this point
 		assert ( lhs && rhs );
 
-	//	if (lhs->getType() == AccessType::AT_DEREF)
-	//		return equalPath(cast<Deref>(lhs)->getSubAccess(), rhs);
+		// make sure to skip any deref nodes
+		if (lhs->getType() == AccessType::AT_DEREF)
+			return equalPath(cast<Deref>(lhs)->getSubAccess(), rhs);
 
-	//	if (rhs->getType() == AccessType::AT_DEREF)
-	//		return equalPath(lhs,cast<Deref>(rhs)->getSubAccess());
+		if (rhs->getType() == AccessType::AT_DEREF)
+			return equalPath(lhs,cast<Deref>(rhs)->getSubAccess());
 
 		// despite removing derefs, the current component is not the same, therefore the two paths are
 		// not equal
 		if (lhs->getType() != rhs->getType()) { return false; }
 
 		switch(lhs->getType()) {
-		
-			// For ref/deref just recur on the path
-			case AccessType::AT_DEREF:
-			case AccessType::AT_REF:
-			{
-				return equalPath(lhs, rhs);
-			}
 
 			case AccessType::AT_BASE:
-				return cast<BaseAccess>(lhs)->getVariable() == cast<BaseAccess>(rhs)->getVariable();
+				return cast<BaseAccess>(lhs)->getVariable() ==
+					cast<BaseAccess>(rhs)->getVariable();
 
 			case AccessType::AT_MEMBER: 
 			{
 				auto lhsM = cast<Member>(lhs);
 				auto rhsM = cast<Member>(rhs);
-
 				return equalPath(lhsM->getSubAccess(),rhsM->getSubAccess()) &&
 								 (lhsM->getMember() == rhsM->getMember());
 			}
@@ -445,7 +439,7 @@ namespace access {
 				auto lhsS = cast<Subscript>(lhs);
 				auto rhsS = cast<Subscript>(rhs);
 
-				if (equalPath(lhsS->getSubAccess(), rhsS->getSubAccess())) {
+				if(equalPath(lhsS->getSubAccess(), rhsS->getSubAccess())) {
 
 					auto ctx = polyhedral::makeCtx();
 					// Build up a set from the contraint expression of the LHS expr
@@ -454,25 +448,24 @@ namespace access {
 								polyhedral::IterationDomain(lhsS->getRange()) :
 								polyhedral::IterationDomain(lhsS->getIterationVector(), false)
 						);
-
 					// Build up a set from the contraint expression of the RHS expr
 					auto rhsSet = polyhedral::makeSet(ctx, 
 							rhsS->getRange() ?
 								polyhedral::IterationDomain(rhsS->getRange()) :
 								polyhedral::IterationDomain(rhsS->getIterationVector(), false)
 						);
-
 					// compute the difference, if it is empty then the two ranges are equivalent 
 					return *lhsSet == *rhsSet;
 				}
-
 				return false;
 			}
 
-			default: 
+			default:
 				assert(false && "not supported");
+				return false;
 		}
 	}
+
 
 } // end access namespace 
 } // end analysis namespace 
