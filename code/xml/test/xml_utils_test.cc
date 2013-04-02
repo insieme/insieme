@@ -48,6 +48,9 @@ using namespace insieme::core;
 using namespace insieme::core::lang;
 using namespace insieme::xml;
 
+namespace insieme {
+namespace xml {
+
 // ------------------- DummyAnnotation ---------------------------------
 class DummyAnnotation : public NodeAnnotation {
 public:
@@ -179,7 +182,10 @@ TEST(XmlTest, GenericTypeTest) {
 	type2->addAnnotation(dummy_tp2n);
 	GenericTypePtr type3 = GenericType::get(manager, "type3");
 	type3->addAnnotation(dummy_bn);
-	GenericTypePtr type4 = GenericType::get(manager, "int", toVector<TypePtr>(type1, type2), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'p')));
+	GenericTypePtr type4 = GenericType::get(manager, "int",
+			toVector(Parent::get(manager, true, type1), Parent::get(manager, false, type2)),
+			toVector<TypePtr>(type1, type2), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'p')));
+
 	type4->addAnnotation(dummy_gtn);
 	
 	NodePtr root = type4;
@@ -214,8 +220,8 @@ TEST(XmlTest, FunctionTypeTest) {
 	list.push_back(type1);
 	list.push_back(type2);
 
-	FunctionTypePtr funType1 = FunctionType::get(manager, list, type3, true);
-	FunctionTypePtr funType2 = FunctionType::get(manager, list, type3, false);
+	FunctionTypePtr funType1 = FunctionType::get(manager, list, type3, FK_PLAIN);
+	FunctionTypePtr funType2 = FunctionType::get(manager, list, type3, FK_CLOSURE);
 
 	funType1->addAnnotation(dummy_fn);
 	funType2->addAnnotation(dummy_fn);
@@ -287,6 +293,48 @@ TEST(XmlTest, StructTypeTest) {
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
 	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
+}
+
+TEST(XmlTest, StructWithParentsTest) {
+	NodeManager manager;
+
+	StringValuePtr identA = StringValue::get(manager, "a");
+	StringValuePtr identB = StringValue::get(manager, "b");
+
+	DummyAnnotationPtr dummy_an(new DummyAnnotation("typeA n"));
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("typeB n"));
+
+	ParentPtr parentA = Parent::get(manager, false, GenericType::get(manager, "SimpleParent"));
+	ParentPtr parentB = Parent::get(manager, true, GenericType::get(manager, "VirtualParent"));
+
+	TypePtr typeA = GenericType::get(manager, "A");
+	typeA->addAnnotation(dummy_an);
+
+	TypePtr typeB = GenericType::get(manager, "B");
+	typeB->addAnnotation(dummy_bn);
+
+	StructType::Entries entriesA;
+	entriesA.push_back(NamedType::get(manager, identA, typeA));
+	entriesA.push_back(NamedType::get(manager, identB, typeB));
+
+	StructTypePtr structA = StructType::get(manager, Parents::get(manager, toVector(parentA, parentB)), entriesA);
+	DummyAnnotationPtr dummy_sn(new DummyAnnotation("struct n"));
+	structA->addAnnotation(dummy_sn);
+
+	NodePtr root = structA;
+
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+
+	xml.convertStringToDom(s1, true);
+
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
@@ -1250,3 +1298,44 @@ TEST(XmlTest, VariableIntTypeParamTest) {
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
+
+bool check(NodePtr node) {
+
+	XmlUtil xml;
+	xml.convertIrToDom(node);
+	string s1 = xml.convertDomToString();
+	xml.convertStringToDom(s1, true);
+
+	NodeManager manager2;
+	NodePtr restored = xml.convertDomToIr(manager2);
+
+	EXPECT_TRUE(*node == *restored)
+		<< "Orig: " << *node << "\n"
+		<< "Rest: " << *restored << "\n";
+
+	return node!=restored && *node == *restored;
+}
+
+TEST(XmlTest, FunctionKindTest) {
+	NodeManager mgr;
+
+	IRBuilder builder(mgr);
+
+	TypePtr A = builder.refType(builder.genericType("A"));
+	TypePtr B = builder.genericType("B");
+
+	FunctionTypePtr funA = builder.functionType(toVector(A), B, FK_PLAIN);
+	FunctionTypePtr funB = builder.functionType(toVector(A), B, FK_CLOSURE);
+	FunctionTypePtr funC = builder.functionType(toVector(A), B, FK_CONSTRUCTOR);
+	FunctionTypePtr funD = builder.functionType(toVector(A), B, FK_DESTRUCTOR);
+	FunctionTypePtr funE = builder.functionType(toVector(A), B, FK_MEMBER_FUNCTION);
+
+	EXPECT_TRUE(check(funA)) << *funA;
+	EXPECT_TRUE(check(funB)) << *funB;
+	EXPECT_TRUE(check(funC)) << *funC;
+	EXPECT_TRUE(check(funD)) << *funD;
+	EXPECT_TRUE(check(funE)) << *funE;
+}
+
+} // end namespace xml
+} // end namespace insieme

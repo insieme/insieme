@@ -39,17 +39,19 @@
 #include <set>
 
 #include "insieme/core/ir_program.h"
+#include "insieme/frontend/frontend.h"
 #include "insieme/frontend/compiler.h"
 
-namespace clang {
-namespace idx {
-class TranslationUnit;
-} // end idx namespace
-} // end clang namespace
-
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace frontend {
+
+namespace utils {
+	class Interceptor;
+	class Indexer;
+	class FunctionDependencyGraph;
+}
 
 namespace pragma {
 class Pragma;
@@ -69,8 +71,10 @@ protected:
 	ClangCompiler			mClang;
 	insieme::frontend::pragma::PragmaList 		mPragmaList;
 public:
-	TranslationUnit() { }
-	TranslationUnit(const std::string& fileName): mFileName(fileName), mClang(fileName) { }
+	TranslationUnit(const ConversionJob& job) : mFileName(job.getFile()), mClang(job) {
+		assert(job.getFiles().size() == 1u && "Only a single file per translation unit allowed!");
+	}
+
 	/**
 	 * Returns a list of pragmas defined in the translation unit
 	 */
@@ -97,44 +101,50 @@ typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
  */
 class Program: public boost::noncopyable {
 
-	// Implements the pimpl pattern so we don't need to introduce an explicit dependency to Clang
-	// headers
 	class ProgramImpl;
 	typedef ProgramImpl* ProgramImplPtr;
 	ProgramImplPtr pimpl;
-
+	
 	// Reference to the NodeManager used to convert the translation units into IR code
 	insieme::core::NodeManager& mMgr;
 
 	// The IR program node containing the converted IR
 	insieme::core::ProgramPtr mProgram;
+	
+	const ConversionJob config;
 
 	friend class ::TypeConversion_FileTest_Test;
 	friend class ::StmtConversion_FileTest_Test;
 public:
 	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
-
-	Program(insieme::core::NodeManager& mgr);
+	Program(core::NodeManager& mgr, const ConversionJob& job = ConversionJob());
 
 	~Program();
-	/**
-	 * Add a single file to the program
-	 */
-	TranslationUnit& addTranslationUnit(const std::string& fileName);
+	
+	utils::Interceptor& getInterceptor() const;
+	utils::Indexer& getIndexer() const;
+	
+	utils::FunctionDependencyGraph& getCallGraph() const;
+	void intercept(std::string fileName);
+	void analyzeFuncDependencies();
+	void dumpCallGraph() const;
 
 	/**
-	 * Add a single file to the program
+	 * Add a single file to the program.
+	 *
+	 * @param job a job covering a single translation unit (one input file only!)
 	 */
-	TranslationUnit& createEmptyTranslationUnit();
-
+	TranslationUnit& addTranslationUnit(const ConversionJob& job);
+	
 	/**
 	 * Add multiple files to the program
 	 */
-	void addTranslationUnits(const std::vector<std::string>& fileNames) {
-		std::for_each(fileNames.begin(), fileNames.end(), 
-				[ this ](const std::string& fileName) { 
-				this->addTranslationUnit(fileName); 
-			});
+	void addTranslationUnits(const ConversionJob& job) {
+		for(const auto& cur : job.getFiles()) {
+			ConversionJob single = job;
+			single.setFiles(toVector(cur));
+			addTranslationUnit(single);
+		}
 	}
 
 	// convert the program into the IR representation
@@ -146,10 +156,6 @@ public:
 	 * Returns a list of parsed translation units
 	 */
 	const TranslationUnitSet& getTranslationUnits() const;
-
-	static const TranslationUnit& getTranslationUnit(const clang::idx::TranslationUnit* tu);
-
-	static const clang::idx::TranslationUnit* getClangTranslationUnit(const TranslationUnit& tu);
 
 	class PragmaIterator: public 
 				std::iterator<
@@ -186,10 +192,6 @@ public:
 	PragmaIterator pragmas_begin(const PragmaIterator::FilteringFunc& func) const;
 	PragmaIterator pragmas_end() const;
 
-	clang::idx::Program& getClangProgram() const;
-	clang::idx::Indexer& getClangIndexer() const;
-
-	void dumpCallGraph() const;
 };
 
 } // end frontend namespace

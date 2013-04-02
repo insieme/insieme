@@ -44,9 +44,13 @@
 #define IRT_EVENT_LT_BUCKETS /*65536*/ /*64567*/ 97 /*7207301*/
 
 // scheduling policy
-//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
-//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
-#define IRT_SCHED_POLICY IRT_SCHED_POLICY_UBER
+#ifndef IRT_SCHED_POLICY
+	//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
+	//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
+	#define IRT_SCHED_POLICY IRT_SCHED_POLICY_UBER
+#endif
+
+#define IRT_LOOP_SCHED_POLICY_ENV "IRT_LOOP_SCHED_POLICY"
 
 // determines if workers should ever go to sleep
 // - needs to be unset for the stealing policies!
@@ -63,6 +67,10 @@
 #define IRT_MAX_CORES ((uint64)2048)
 #endif
 #define IRT_AFFINITY_POLICY_ENV "IRT_AFFINITY_POLICY"
+
+// minimal "hardware model", used for some hardware interaction like DVFS
+#define IRT_HW_CORES_PER_SOCKET 8
+#define IRT_HW_NUM_SOCKETS 4
 
 // maximum number of frequencies that can be stored
 #define IRT_INST_MAX_CPU_FREQUENCIES 32
@@ -91,7 +99,7 @@
 
 // standalone
 #define IRT_NUM_WORKERS_ENV "IRT_NUM_WORKERS"
-#define IRT_CPU_FREQUENCY "IRT_CPU_FREQUENCY"
+#define IRT_CPU_FREQUENCIES "IRT_CPU_FREQUENCIES"
 
 // for using a minimal variant of the runtime without affinity and message queues => standalone mode only
 #define IRT_MIN_MODE

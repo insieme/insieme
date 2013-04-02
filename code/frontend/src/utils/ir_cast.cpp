@@ -37,6 +37,7 @@
 #include "insieme/frontend/utils/ir_cast.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/unused.h"
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
@@ -45,6 +46,8 @@
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+
+#include "insieme/core/types/subtyping.h"
 
 #define CAST(expr, type) convertExprToType(builder, expr, type)
 
@@ -67,7 +70,7 @@ namespace {
 
 // This function performs the requires type conversion, from converting an expression. 
 core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder, 
-									  const core::ExpressionPtr& 	expr, 
+									  core::ExpressionPtr 	expr, 
 									  const core::TypePtr& 			trgTy) 
 {
 	// list the all possible conversions 
@@ -180,7 +183,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 
 		const core::LiteralPtr& lit = expr.as<core::LiteralPtr>();
 
-		char val;
+		char val = ' ';
 		if ( lit->getStringValue().length() == 3) {
 			val = lit->getStringValue()[1]; 
 			// chars are encoded as 'V', therefore position 1 always contains the char value
@@ -417,7 +420,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 
 		if ( *vecArgTy->getSize() != *vecTrgTy->getSize() ) {
 			// converting from a vector size X to vector size Y, only possible if X <= Y
-			size_t vecTrgSize = vecTrgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
+			__unused size_t vecTrgSize = vecTrgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 			size_t vecArgSize = vecArgTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
 
 			core::ExpressionPtr plainExpr = expr;
@@ -518,13 +521,35 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		if (*subArgTy == *trgTy) { return builder.deref( expr ); }
 	}
 
+
+
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 							  ref<'a> -> ref<'b>
 	///////////////////////////////////////////////////////////////////////////////////////
 	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
 
-		core::TypePtr nonRefTrgTy = trgTy.as<core::RefTypePtr>()->getElementType();
+		///////////////////////////////////////////////////////////////////////////////////////
+		// pointer (ref<ref< converted to base class... no need to reinterpret
+		///////////////////////////////////////////////////////////////////////////////////////
+		if(core::types::isSubTypeOf (argTy, trgTy)){
+			return expr;
+		}
 
+		///////////////////////////////////////////////////////////////////////////////////////
+		// 							  <ref<'a> -> ref<array<'b,1>>
+		//////////////////////////////////////////////////////////////////////////////////////
+		const core::TypePtr& trgInnerTy = core::analysis::getReferencedType(trgTy);
+		const core::TypePtr& argInnerTy = core::analysis::getReferencedType(argTy);
+		if(trgInnerTy->getNodeType() == core::NT_ArrayType &&
+		   argInnerTy->getNodeType() != core::NT_ArrayType){
+			
+			expr = builder.callExpr(builder.getLangBasic().getScalarToArray(), expr);
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////
+		// 							  ref<'a> -> ref<'b>
+		///////////////////////////////////////////////////////////////////////////////////////
+		core::TypePtr nonRefTrgTy = trgTy.as<core::RefTypePtr>()->getElementType();
 		return builder.callExpr(
 				trgTy, 
 				builder.getNodeManager().getLangBasic().getRefReinterpret(), 
@@ -618,6 +643,11 @@ bool isArray(const core::TypePtr& type) {
 bool isRefArray(const core::TypePtr& type) {
 	return type->getNodeType() == core::NT_RefType && 
 		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_ArrayType;
+}
+
+bool isRefRef(const core::TypePtr& type) {
+	return type->getNodeType() == core::NT_RefType && 
+		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_RefType;
 }
 
 bool isVector(const core::TypePtr& type) {

@@ -23,6 +23,7 @@ echo "done!"
 
 echo -n "Changing permissions of cpufreq files..."
 chmod 666 /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq
+chmod 666 /sys/devices/system/cpu/cpu*/cpufreq/scaling_min_freq
 if [ $? -ne 0 ]; then
 	echo "failed!"
 	exit

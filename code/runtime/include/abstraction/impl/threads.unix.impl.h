@@ -41,6 +41,8 @@
 #include "abstraction/threads.h"
 #include "error_handling.h"
 
+#include <sys/time.h>
+
 void irt_thread_create(irt_thread_func *fun, void *args, irt_thread *t) {
 	irt_thread thread;
 	if (t == NULL) {
@@ -104,42 +106,52 @@ void irt_cond_var_init(irt_cond_var *cv) {
 	 pthread_cond_init(cv, NULL);
 }
 
-void irt_mutex_init(irt_lock_obj *m){
+void irt_mutex_init(irt_lock_obj *m) {
 	pthread_mutex_init(m, NULL);
 }
 
-void irt_mutex_lock(irt_lock_obj *m){
+void irt_mutex_lock(irt_lock_obj *m) {
 	pthread_mutex_lock(m);
 }
 
-int irt_mutex_trylock(irt_lock_obj *m){
+int irt_mutex_trylock(irt_lock_obj *m) {
 	return pthread_mutex_trylock(m);
 }
 
-void irt_mutex_unlock(irt_lock_obj *m){
+void irt_mutex_unlock(irt_lock_obj *m) {
 	pthread_mutex_unlock(m);
 }
 
-void irt_mutex_destroy(irt_lock_obj *m){
+void irt_mutex_destroy(irt_lock_obj *m) {
 	pthread_mutex_destroy(m);
 }
 
-void irt_cond_wake_all(irt_cond_var *cv){
+void irt_cond_wake_all(irt_cond_var *cv) {
 	pthread_cond_broadcast(cv);
 }
 
-int irt_cond_wait(irt_cond_var *cv, irt_lock_obj *m){
+int irt_cond_wait(irt_cond_var *cv, irt_lock_obj *m) {
 	return pthread_cond_wait(cv, m);
 }
 
-void irt_cond_wake_one(irt_cond_var *cv){
+int irt_cond_timedwait(irt_cond_var *cv, irt_lock_obj *m, uint64 time_ns) {
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	uint64 new_nsecs = ts.tv_nsec + time_ns%(1000ULL*1000*1000);
+	uint64 new_secs = ts.tv_sec + time_ns/(1000ULL*1000*1000) + new_nsecs/(1000ULL*1000*1000);
+	ts.tv_nsec = new_nsecs%(1000ULL*1000*1000);
+	ts.tv_sec = new_secs;
+	return pthread_cond_timedwait(cv, m, &ts);
+}
+
+void irt_cond_wake_one(irt_cond_var *cv) {
 	pthread_cond_signal(cv);
 }
 
 
 /* THREAD LOCAL STORAGE FUNCTIONS ------------------------------------------------------------------- */
 
-int irt_tls_key_create(irt_tls_key* k){
+int irt_tls_key_create(irt_tls_key* k) {
 	return pthread_key_create(k, NULL);
 }
 
@@ -147,11 +159,11 @@ void irt_tls_key_delete(irt_tls_key k) {
 	pthread_key_delete(k);
 }
 
-void* irt_tls_get(irt_tls_key k){
+void* irt_tls_get(irt_tls_key k) {
 	return pthread_getspecific(k);
 }
 
-int irt_tls_set(irt_tls_key k, void *val){
+int irt_tls_set(irt_tls_key k, void *val) {
 	return pthread_setspecific(k, val);
 }
 

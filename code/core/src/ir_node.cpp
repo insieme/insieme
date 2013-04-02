@@ -250,19 +250,21 @@ namespace core {
 } // end namespace core
 } // end namespace insieme
 
-
-
-void dumpText(const void* node) {
-	std::cout << insieme::core::dump::text::TextDump(insieme::core::NodePtr((insieme::core::Node*)node));
+void dump(const insieme::core::NodePtr& node, std::ostream& out) {
+	out << insieme::core::printer::PrettyPrinter(node) << std::endl;
 }
 
-void dumpPretty(const void* node) {
-	std::cout << insieme::core::printer::PrettyPrinter(insieme::core::NodePtr((insieme::core::Node*)node));
+void dumpText(const insieme::core::NodePtr& node, std::ostream& out) {
+	out << insieme::core::dump::text::TextDump(node) << std::endl;
 }
 
-void dumpPrettyFull(const void* node) {
-	std::cout << insieme::core::printer::PrettyPrinter(insieme::core::NodePtr((insieme::core::Node*)node),
+void dumpPretty(const insieme::core::NodePtr& node, std::ostream& out) {
+	out << insieme::core::printer::PrettyPrinter(node) << std::endl;
+}
+
+void dumpDetail(const insieme::core::NodePtr& node, std::ostream& out) {
+	out << insieme::core::printer::PrettyPrinter(node,
 				insieme::core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL
-			);
+			) << std::endl;
 }
 

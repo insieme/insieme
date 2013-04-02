@@ -37,10 +37,18 @@
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include "clang/AST/Decl.h"
+#pragma GCC diagnostic pop
 // DON'T MOVE THIS!
 
 #include <gtest/gtest.h>
+
+#include "insieme/frontend/stmt_converter.h"
+#include "insieme/frontend/expr_converter.h"
+#include "insieme/frontend/type_converter.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/checks/full_check.h"
@@ -51,11 +59,11 @@
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
-
 #include "insieme/frontend/pragma/insieme.h"
 
-#include "clang/Index/Indexer.h"
-#include "clang/Index/Program.h"
+// clang [3.0]
+//#include "clang/Index/Indexer.h"
+//#include "clang/Index/Program.h"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;
@@ -63,9 +71,8 @@ using namespace insieme::utils::log;
 namespace fe = insieme::frontend;
 using namespace clang;
 
-
 void checkSemanticErrors(const NodePtr& node) {
-	auto msgList = check( node ).getAll();
+	auto msgList = check( node, checks::getFullCheck() ).getAll();
 	EXPECT_EQ(static_cast<unsigned int>(0), msgList.size());
 	std::sort(msgList.begin(), msgList.end());
 	std::for_each(msgList.begin(), msgList.end(), [&node](const Message& cur) {
@@ -76,7 +83,10 @@ void checkSemanticErrors(const NodePtr& node) {
 
 std::string getPrettyPrinted(const NodePtr& node) {
 	std::ostringstream ss;
-	ss << insieme::core::printer::PrettyPrinter(node, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	ss << insieme::core::printer::PrettyPrinter(node,
+			insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL |
+			insieme::core::printer::PrettyPrinter::NO_LET_BINDINGS
+	);
 
 	// Remove new lines and leading spaces
 	std::vector<char> res;
@@ -92,40 +102,38 @@ TEST(CppConversion, FileTest) {
 
 	Logger::get(std::cerr, DEBUG, 0);
 
-// 	NodeManager manager;
-// 	fe::Program prog(manager);
-// 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "inputs/cpp.cpp" );
-// 
-// 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
-// 
-// 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-// 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
-// 		// we use an internal manager to have private counter for variables so we can write independent tests
-// 		NodeManager mgr;
-// 
-// 		fe::conversion::CXXConversionFactory convFactory( mgr, prog );
-// 		convFactory.setTranslationUnit(tu);
-// 
-// 		if(tp.isStatement()) {
-// 			StatementPtr&& stmt = convFactory.convertStmt( tp.getStatement() );
-// 			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
-// 
-// 			// do semantics checking
-// 			checkSemanticErrors(stmt);
-// 
-// 		} else {
-// 			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp.getDecl())) {
-// 				TypePtr&& type = convFactory.convertType( td->getTypeForDecl() );
-// 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
-// 				// do semantics checking
-// 				checkSemanticErrors(type);
-// 			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
-// 				LambdaExprPtr&& expr = dynamic_pointer_cast<const LambdaExpr>(convFactory.convertFunctionDecl(fd));
-// 				assert(expr);
-// 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(expr) + '\"' );
-// 				// do semantics checking
-// 				checkSemanticErrors(expr);
-// 			}
-// 		}
-// 	}
+	NodeManager manager;
+	fe::ConversionJob job;
+
+	fe::Program prog(manager, job);
+	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/cpp.cpp") );
+
+	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
+
+	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
+//		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+		// we use an internal manager to have private counter for variables so we can write independent tests
+		NodeManager mgr;
+
+		fe::conversion::ConversionFactory convFact( mgr, prog, true/*=isCXX*/ );
+		convFact.setTranslationUnit(&tu);
+/*
+		if(tp.isStatement()){
+			const clang::Stmt* td = tp.getStatement();
+			const clang::DeclStmt* declStmt = llvm::dyn_cast<clang::DeclStmt>(td);
+
+			EXPECT_TRUE(declStmt);
+			declStmt->dump();
+
+			if (declStmt->isSingleDecl() && llvm::isa<clang::VarDecl>(declStmt->getSingleDecl())) {
+				stmtutils::StmtWrapper retList;
+				const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
+				auto retStmt = convFact.convertVarDecl(varDecl);
+				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(retStmt) + '\"' );
+				// do semantics checking
+				checkSemanticErrors(retStmt);
+			}
+		}
+		*/
+	}
 }

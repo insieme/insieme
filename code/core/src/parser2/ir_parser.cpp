@@ -251,8 +251,11 @@ namespace parser {
 			TokenIter resEnd = findNext(info, begin, range.end(), '{');
 			if (resEnd == range.end()) {
 				resEnd = findNext(info, begin, range.end(), Token::createIdentifier("return"));
+			} else if (resEnd->getLexeme() == "{" && (begin->getLexeme() == "struct" || begin->getLexeme() == "union")) {
+				resEnd = findNext(info, resEnd+1, range.end(), '}') + 1;
 			}
 			TypePtr resType = cur.grammar.match(cur, begin, resEnd, "T").as<TypePtr>();
+			assert(resType && "Unable to parse result type!");
 
 			// build resulting type
 			return cur.functionType(params, resType);
@@ -573,7 +576,7 @@ namespace parser {
 						TypeList types = convertList<TypePtr>(terms);
 						TypePtr resType = types.back();
 						types.pop_back();
-						return cur.functionType(types, resType, true);
+						return cur.functionType(types, resType, FK_PLAIN);
 					}
 			));
 
@@ -585,7 +588,7 @@ namespace parser {
 						TypeList types = convertList<TypePtr>(terms);
 						TypePtr resType = types.back();
 						types.pop_back();
-						return cur.functionType(types, resType, false);
+						return cur.functionType(types, resType, FK_CLOSURE);
 					}
 			));
 
@@ -640,7 +643,7 @@ namespace parser {
 			static const auto member = std::make_shared<Action<process_named_type>>(seq(T, cap(id)));
 
 			g.addRule("T", rule(
-					seq("struct", opt(seq(":", non_empty_list(parent, ","))), "{", loop(seq(member, ";")), "}"),
+					seq("struct", opt(seq(":", non_empty_list(parent, ","))), "{", list(member,";"), opt(";"), "}"),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 						ParentList parents;
@@ -819,6 +822,45 @@ namespace parser {
 						string value = cur.getSubRange(0).front().getLexeme();
 						value = value.substr(1,value.size()-2);
 						return cur.getIdentifierLiteral(value);
+					}
+			));
+
+			// struct expression
+			g.addRule("E", rule(
+					seq("(", T, ") {", list(E,","), "}"),
+					[](Context& cur)->NodePtr {
+						// check whether the given type is a struct type
+						StructTypePtr structType = cur.getTerm(0).isa<StructTypePtr>();
+						if (!structType) return fail(cur, "Not a struct type!");
+						if (structType->size() != cur.getTerms().size() - 1) return fail(cur, "Field list does not match type!");
+
+						// build up struct expression
+						auto begin = make_paired_iterator(structType->begin(), cur.getTerms().begin()+1);
+						auto end = make_paired_iterator(structType->end(), cur.getTerms().end());
+
+						// extract name / value pairs
+						NamedValueList values;
+						for (auto it = begin; it != end; ++it) {
+							values.push_back(cur.namedValue(it->first->getName(), it->second.as<ExpressionPtr>()));
+						}
+
+						// build struct expression
+						return cur.structExpr(structType, values);
+					}
+			));
+
+			// union expression
+			g.addRule("E", rule(
+					seq("(", T, ") {", cap(id), "=", E, "}"),
+					[](Context& cur)->NodePtr {
+						// check whether the given type is a union type
+						UnionTypePtr unionType = cur.getTerm(0).isa<UnionTypePtr>();
+						if (!unionType) return fail(cur, "Not a union type!");
+
+						// build union expression
+						auto name = cur.stringValue(cur.getSubRange(0).front().getLexeme());
+						auto value = cur.getTerm(1).as<ExpressionPtr>();
+						return cur.unionExpr(unionType, name, value);
 					}
 			));
 
@@ -1071,7 +1113,6 @@ namespace parser {
 			g.addRule("E", rule(
 					seq("new(",E,")"),
 					[](Context& cur)->NodePtr {
-				std::cout << cur.getTerm(0) << " of type " << cur.getTerm(0)->getNodeType() << "\n";
 						return cur.refNew(cur.getTerm(0).as<ExpressionPtr>());
 					},
 					0

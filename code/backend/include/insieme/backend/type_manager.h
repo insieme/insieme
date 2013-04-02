@@ -38,6 +38,8 @@
 
 #include <functional>
 
+#include <boost/noncopyable.hpp>
+
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_types.h"
 
@@ -60,6 +62,7 @@ namespace backend {
 	class VectorTypeInfo;
 	class ChannelTypeInfo;
 
+	typedef TypeInfo* TypeInfoPtr;
 	typedef std::map<string, string> TypeIncludeTable;
 
 	TypeIncludeTable getBasicTypeIncludeTable();
@@ -69,11 +72,13 @@ namespace backend {
 
 	typedef vector<TypeHandler> TypeHandlerList;
 
+	static inline TypeHandlerList getBasicTypeHandlerList() { return TypeHandlerList(); }
+
 	namespace detail {
 		class TypeInfoStore;
 	}
 
-	class TypeManager {
+	class TypeManager : private boost::noncopyable {
 
 		detail::TypeInfoStore* store;
 
@@ -83,28 +88,39 @@ namespace backend {
 
 		TypeManager(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& handlers);
 
-		virtual ~TypeManager();
+		~TypeManager();
 
-		virtual const TypeInfo& getTypeInfo(const core::TypePtr&);
+		const TypeInfo& getTypeInfo(const core::TypePtr&);
 
-		virtual const StructTypeInfo& getTypeInfo(const core::StructTypePtr&);
+		const StructTypeInfo& getTypeInfo(const core::StructTypePtr&);
 
-		virtual const StructTypeInfo& getTypeInfo(const core::TupleTypePtr&);
+		const StructTypeInfo& getTypeInfo(const core::TupleTypePtr&);
 
-		virtual const UnionTypeInfo& getTypeInfo(const core::UnionTypePtr&);
+		const UnionTypeInfo& getTypeInfo(const core::UnionTypePtr&);
 
-		virtual const FunctionTypeInfo& getTypeInfo(const core::FunctionTypePtr&);
+		const FunctionTypeInfo& getTypeInfo(const core::FunctionTypePtr&);
 
-		virtual const RefTypeInfo& getTypeInfo(const core::RefTypePtr&);
+		const RefTypeInfo& getTypeInfo(const core::RefTypePtr&);
 
-		virtual const ArrayTypeInfo& getTypeInfo(const core::ArrayTypePtr& type);
+		const ArrayTypeInfo& getTypeInfo(const core::ArrayTypePtr& type);
 
-		virtual const VectorTypeInfo& getTypeInfo(const core::VectorTypePtr& type);
+		const VectorTypeInfo& getTypeInfo(const core::VectorTypePtr& type);
 
-		virtual const ChannelTypeInfo& getTypeInfo(const core::ChannelTypePtr& type);
+		const ChannelTypeInfo& getTypeInfo(const core::ChannelTypePtr& type);
+
+		const TypeInfo& getCVectorTypeInfo(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size);
 
 		// this one is only working for already resolved types
-		virtual const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type);
+		const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type);
+
+		// ----------------------- Management -----------------------
+
+		TypeIncludeTable& getTypeIncludeTable();
+
+		void addTypeHandler(const TypeHandler& handler);
+
+		void addTypeHandler(const TypeHandlerList& list);
+
 	};
 
 

@@ -88,6 +88,7 @@ void _irt_inst_insert_wi_event(irt_worker* worker, irt_instrumentation_event eve
 void _irt_inst_insert_wg_event(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id);
 void _irt_inst_insert_wo_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id);
 void _irt_inst_insert_di_event(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id);
+void _irt_inst_insert_db_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id);
 
 // debug output functions
 
@@ -103,6 +104,7 @@ void irt_inst_set_wi_instrumentation(bool enable);
 void irt_inst_set_wg_instrumentation(bool enable);
 void irt_inst_set_wo_instrumentation(bool enable);
 void irt_inst_set_di_instrumentation(bool enable);
+void irt_inst_set_db_instrumentation(bool enable);
 void irt_inst_set_region_instrumentation(bool enable);
 void irt_inst_set_all_instrumentation(bool enable);
 
@@ -113,6 +115,7 @@ void _irt_inst_insert_no_wi_event(irt_worker* worker, irt_instrumentation_event 
 void _irt_inst_insert_no_wg_event(irt_worker* worker, irt_instrumentation_event event, irt_work_group_id subject_id);
 void _irt_inst_insert_no_wo_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id);
 void _irt_inst_insert_no_di_event(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id);
+void _irt_inst_insert_no_db_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id);
 
 typedef uint64 region_id;
 

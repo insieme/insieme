@@ -1,6 +1,5 @@
 #include <stdio.h>
 
-int globalVar;
 
 class C {
 	int mA;
@@ -12,7 +11,7 @@ public:
 class GC {
 	int mA;
 public:
-	GC() : mA(10) { globalVar = 0; printf("GC()"); }
+	GC() : mA(10) { printf("GC()"); }
 	~GC() { printf("~GC()"); mA = 0; }
 };
 
@@ -34,7 +33,6 @@ int main() {
 		delete[] pC;
 	}
 
-	//test mem-alloc with globalVar used in ctor
 	{
 		GC* pC = new GC();
 		delete pC;

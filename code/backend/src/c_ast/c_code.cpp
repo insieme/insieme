@@ -114,6 +114,10 @@ namespace c_ast {
 		}
 	}
 
+	bool CodeFragment::remDependency(const CodeFragmentPtr& fragment) {
+		return dependencies.erase(fragment) == 1;
+	}
+
 	void CodeFragment::addRequirement(const CodeFragmentPtr& fragment) {
 		// only add if it is not a null pointer and not self
 		if (fragment && this != &*fragment) {

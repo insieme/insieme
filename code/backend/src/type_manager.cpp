@@ -42,6 +42,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/type_traits/remove_const.hpp>
 
+#include "insieme/annotations/c/include.h"
+
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
 #include "insieme/backend/function_manager.h"
@@ -102,7 +104,13 @@ namespace backend {
 				});
 			}
 
+			TypeIncludeTable& getTypeIncludeTable() {
+				return includeTable;
+			}
 
+			void addTypeHandler(const TypeHandlerList& handler) {
+				typeHandlers.insert(typeHandlers.end(), handler.begin(), handler.end());
+			}
 
 			/**
 			 * Obtains the type information stored for the given function type within this container. If not
@@ -120,6 +128,8 @@ namespace backend {
 				assert(dynamic_cast<result_type>(info));
 				return static_cast<result_type>(info);
 			}
+
+			const TypeInfo* resolveCVectorType(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size);
 
 			const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type) const {
 				auto pos = std::find_if(allInfos.begin(), allInfos.end(), [&](const TypeInfo* cur) { return *cur->rValueType == *type; });
@@ -220,10 +230,30 @@ namespace backend {
 		return *(store->resolveType(type));
 	}
 
+	const TypeInfo& TypeManager::getCVectorTypeInfo(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size) {
+		// take value from store
+		return *(store->resolveCVectorType(elementType, size));
+	}
+
+
 	const c_ast::CodeFragmentPtr TypeManager::getDefinitionOf(const c_ast::TypePtr& type) {
 		// as usual, ask store ...
 		return store->getDefinitionOf(type);
 	}
+
+
+	TypeIncludeTable& TypeManager::getTypeIncludeTable() {
+		return store->getTypeIncludeTable();
+	}
+
+	void TypeManager::addTypeHandler(const TypeHandler& handler) {
+		store->addTypeHandler(toVector(handler));
+	}
+
+	void TypeManager::addTypeHandler(const TypeHandlerList& list) {
+		store->addTypeHandler(list);
+	}
+
 
 	namespace type_info_utils {
 
@@ -263,6 +293,38 @@ namespace backend {
 			auto pos = typeInfos.find(type);
 			if (pos != typeInfos.end()) {
 				return pos->second;
+			}
+
+			// check whether there is an annotated include file (intercepted type)
+			if (type->getNodeType() == core::NT_GenericType && annotations::c::hasIncludeAttached(type)) {
+				auto genericType = type.as<core::GenericTypePtr>();
+				const string& name = genericType->getFamilyName();
+				const string& header = annotations::c::getAttachedInclude(type);
+				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+
+				// extract resulting c-type
+				c_ast::NamedTypePtr cType = info->rValueType.as<c_ast::NamedTypePtr>();
+
+				// add generic parameters
+				for(auto cur : genericType->getTypeParameter()) {
+
+					// resolve info for current parameter
+					const TypeInfo* curInfo = resolveInternal(cur);
+
+					// add dependency to inner type
+					info->declaration->addDependency(curInfo->declaration);
+					info->definition->addDependency(curInfo->definition);
+
+					// add type to parameter list
+					cType->parameters.push_back(curInfo->rValueType);
+				}
+
+				// TODO: add int-type parameters
+
+				// TODO: add type-parameter permutation support
+
+				addInfo(type,info);
+				return info;
 			}
 
 			// lookup type within include table
@@ -667,8 +729,6 @@ namespace backend {
 					funMgr.getInfo(core::Literal::get(nodeMgr, impl.getType(), cur.getName()), cur.isConst());
 				}
 			}
-
-			// TODO: process class ctors and dtors
 
 			// done
 			return res;
@@ -1217,6 +1277,9 @@ namespace backend {
 			auto manager = converter.getCNodeManager();
 			NameManager& nameManager = converter.getNameManager();
 
+			// the one common declaration block for all types in the recursive block
+			c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager());
+
 			// A) create a type info instance for each defined type and add definition
 			for_each(ptr->getDefinitions(), [&](const core::RecTypeBindingPtr& cur) {
 
@@ -1225,7 +1288,6 @@ namespace backend {
 
 				// create prototype
 				c_ast::IdentifierPtr name = manager->create(nameManager.getName(type, "userdefined_rec_type"));
-
 				// create declaration code
 				c_ast::TypePtr cType;
 
@@ -1238,8 +1300,12 @@ namespace backend {
 					assert(false && "Cannot support recursive type which isn't a struct or union!");
 				}
 
+				// add declaration
+				declaration->appendCode(manager->create<c_ast::TypeDeclaration>(cType));
+
+				// create type info block
 				TypeInfo* info = new TypeInfo();
-				info->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), manager->create<c_ast::TypeDeclaration>(cType));
+				info->declaration = declaration;
 				info->lValueType = cType;
 				info->rValueType = cType;
 				info->externalType = cType;
@@ -1264,8 +1330,11 @@ namespace backend {
 				assert(curInfo && newInfo && "Both should be available now!");
 				assert(curInfo != newInfo);
 
+				// remove dependency to old declaration (would produce duplicated declaration)
+				newInfo->definition->remDependency(newInfo->declaration);
+
 				// combine them and updated within type info map (not being owned by the pointer)
-				newInfo->declaration = curInfo->declaration;
+				newInfo->declaration = declaration;
 
 				// also take over the actual type definitions
 				newInfo->lValueType = curInfo->lValueType;
@@ -1281,7 +1350,27 @@ namespace backend {
 
 		}
 
-	}
+		const TypeInfo* TypeInfoStore::resolveCVectorType(const core::TypePtr& elementType, const c_ast::ExpressionPtr& size) {
+			// obtain reference to CNodeManager
+			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+
+			// resolve type information
+			const TypeInfo* elementInfo = resolveType(elementType);
+
+			// create vector type to be used within C-AST
+			auto cType = manager.create<c_ast::VectorType>(elementInfo->lValueType, size);
+
+			// create new type information
+			TypeInfo* res = type_info_utils::createInfo(cType);
+
+			// register it (for destruction)
+			allInfos.insert(res);
+
+			// return created type info
+			return res;
+		}
+
+	} // end namespace detail
 
 	TypeIncludeTable getBasicTypeIncludeTable() {
 		// create table

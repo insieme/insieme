@@ -607,7 +607,7 @@ namespace core {
 		 * @param kind determining the kind of function type to be constructed
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
-		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, const TypePtr& returnType, FunctionKind kind) {
+		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, const TypePtr& returnType, FunctionKind kind = FK_PLAIN) {
 			return manager.get(FunctionType(paramType, returnType, UIntValue::get(manager, kind)));
 		}
 
@@ -621,7 +621,7 @@ namespace core {
 		 * @param kind determining the kind of function type to be constructed
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
-		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, FunctionKind kind) {
+		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, FunctionKind kind = FK_PLAIN) {
 			return get(manager, paramType, GenericType::get(manager, "unit"), kind);
 		}
 
@@ -636,7 +636,7 @@ namespace core {
 		 * @param kind determining the kind of function type to be constructed
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
-		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType, FunctionKind kind) {
+		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType, FunctionKind kind = FK_PLAIN) {
 			return get(manager, Types::get(manager, parameterTypes), returnType, kind);
 		}
 
@@ -650,7 +650,7 @@ namespace core {
 		 * @param kind determining the kind of function type to be constructed
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
-		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, FunctionKind kind) {
+		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, FunctionKind kind = FK_PLAIN) {
 			return get(manager, Types::get(manager, parameterTypes), GenericType::get(manager, "unit"), kind);
 		}
 
@@ -662,43 +662,12 @@ namespace core {
 		 * @param manager the manager to be used for handling the obtained type pointer
 		 * @param paramTypes the type of the single parameter accepted by the resulting function
 		 * @param returnType the type of value to be returned by the obtained function type
-		 * @param plain determining whether the resulting type covers closures or not
+		 * @param kind determining the kind of function type to be constructed
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
-		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, const TypePtr& returnType, bool plain = true) {
-			return get(manager, paramType, returnType, (plain)?FK_PLAIN:FK_CLOSURE);
+		static FunctionTypePtr get(NodeManager& manager, const TypePtr& paramType, const TypePtr& returnType, FunctionKind kind = FK_PLAIN) {
+			return get(manager, Types::get(manager, toVector(paramType)), returnType, kind);
 		}
-
-		/**
-		 * This method provides a static factory method for function types. It will return a pointer to
-		 * a function type instance representing the requested function type and being maintained
-		 * within the given manager.
-		 *
-		 * @param manager the manager to be used for handling the obtained type pointer
-		 * @param paramTypes the type of the single parameter accepted by the resulting function
-		 * @param returnType the type of value to be returned by the obtained function type
-		 * @param plain determining whether the resulting type covers closures or not
-		 * @return a pointer to a instance of the required type maintained by the given manager
-		 */
-		static FunctionTypePtr get(NodeManager& manager, const TypePtr& paramType, const TypePtr& returnType, bool plain = true) {
-			return get(manager, Types::get(manager, toVector(paramType)), returnType, plain);
-		}
-
-		/**
-		 * This method provides a static factory method for this type of node. It will return
-		 * a function type pointer pointing toward a variable with the given name maintained by the
-		 * given manager.
-		 *
-		 * @param manager the manager to be used for handling the obtained type pointer
-		 * @param parameterTypes the arguments accepted by the resulting function type
-		 * @param returnType the type of value to be returned by the obtained function type
-		 * @param plain determining whether the resulting type covers closures or not
-		 * @return a pointer to a instance of the required type maintained by the given manager
-		 */
-		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType, bool plain = true){
-			return get(manager, Types::get(manager, parameterTypes), returnType, (plain)?FK_PLAIN:FK_CLOSURE);
-		}
-
 	};
 
 
@@ -1037,14 +1006,6 @@ namespace core {
 		 */
 		NamedCompositeType(const NodeType& type, const NodeList& elements);
 
-		/**
-		 * A simple constructor creating a new named composite type based on the
-		 * given element types.
-		 *
-		 * @param elements the elements of the resulting composite type
-		 */
-		NamedCompositeType(const NodeType& type, const Entries& elements);
-
 	};
 
 	/**
@@ -1108,8 +1069,9 @@ namespace core {
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
 		static StructTypePtr get(NodeManager& manager, const ParentsPtr& parents, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
-			NodeList children = convertList(entries);
-			children.insert(children.begin(), parents);
+			NodeList children;
+			children.push_back(parents);
+			children.insert(children.end(), entries.begin(), entries.end());
 			return manager.get(StructType(children));
 		}
 
@@ -1166,8 +1128,9 @@ namespace core {
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
 		static UnionTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries) {
-			NodeList children = convertList(entries);
-			children.insert(children.begin(), Parents::get(manager));
+			NodeList children;
+			children.push_back(Parents::get(manager));
+			children.insert(children.end(), entries.begin(), entries.end());
 			return manager.get(UnionType(children));
 		}
 

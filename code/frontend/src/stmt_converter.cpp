@@ -96,7 +96,7 @@ namespace conversion {
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
 	// if there is only one declaration in the DeclStmt we return it
 
-	if (declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl())) {
+	if (declStmt->isSingleDecl() && llvm::isa<clang::VarDecl>(declStmt->getSingleDecl())) {
 
 		stmtutils::StmtWrapper retList;
 		clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
@@ -121,7 +121,6 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDeclStmt(clang::De
 	for (auto it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
 	if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
 		try {
-			assert(convFact.currTU&& "translation unit is null");
 			auto retStmt = convFact.convertVarDecl(varDecl);
 			// handle eventual OpenMP pragmas attached to the Clang node
 			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, convFact) );
@@ -139,7 +138,6 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 	START_LOG_STMT_CONVERSION(retStmt);
 
 	core::StatementPtr retIr;
-
 	LOG_STMT_CONVERSION(retIr);
 
 	core::ExpressionPtr retExpr;
@@ -147,31 +145,51 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 	QualType clangTy;
 	if ( clang::Expr* expr = retStmt->getRetValue()) {
 		retExpr = convFact.convertExpr(expr);
+
 		clangTy = expr->getType();
 		retTy = convFact.convertType(clangTy.getTypePtr());
+
+		// arrays and vectors in C are always returned as reference, so the type of the return
+		// expression is of array (or vector) type we are sure we have to return a reference, in the
+		// other case we can safely deref the retExpr
+		if ((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
+						!clangTy.getUnqualifiedType()->isExtVectorType()) {
+			retTy = builder.refType(retTy);
+			retExpr = utils::cast(retExpr, retTy);              
+		}
+		else if ( builder.getLangBasic().isBool( retExpr->getType())){
+			retExpr = utils::cast(retExpr, retTy);                 // attention with this, bools cast not handled in AST in C
+		}
+
+		if (retExpr->getType()->getNodeType() == core::NT_RefType) {
+		
+			// Obviously Ocl vectors are an exception and must be handled like scalars
+			// no reference returned
+			if (clangTy->isExtVectorType()) {
+				retExpr = utils::cast(retExpr, retTy);  
+			}
+
+			// vector to array
+			if(retTy->getNodeType() == core::NT_RefType){
+				core::TypePtr expectedTy = core::analysis::getReferencedType(retTy) ;
+				core::TypePtr currentTy = core::analysis::getReferencedType(retExpr->getType()) ;
+				if (expectedTy->getNodeType() == core::NT_ArrayType && 
+					currentTy->getNodeType()  == core::NT_VectorType){
+					retExpr = utils::cast(retExpr, retTy);  
+				}
+			}
+		}
+		
 	} else {
+		// no return expression
 		retExpr = gen.getUnitConstant();
 		retTy = gen.getUnit();
 	}
 
-	/*
-	 * arrays and vectors in C are always returned as reference, so the type of the return
-	 * expression is of array (or vector) type we are sure we have to return a reference, in the
-	 * other case we can safely deref the retExpr
-	 * Obviously Ocl vectors are an exception and must be handled like scalars
-	 */
-	if ((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
-					!clangTy.getUnqualifiedType()->isExtVectorType()) {
-		retTy = builder.refType(retTy);
-	}
-
 	vector<core::StatementPtr> stmtList;
-
-	retIr = builder.returnStmt(utils::cast(retExpr, retTy));
+	retIr = builder.returnStmt(retExpr);
 	stmtList.push_back(retIr);
-
 	core::StatementPtr retStatement = builder.compoundStmt(stmtList);
-
 	stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder,stmtList );
 
 	return body;
@@ -222,7 +240,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		// The loop is using as induction variable a function parameter, therefore we have to
 		// introduce a new variable which acts as loop induction variable
-		if (isa<clang::ParmVarDecl>(iv)) {
+		if (llvm::isa<clang::ParmVarDecl>(iv)) {
 			core::VariablePtr var = core::static_pointer_cast<const core::VariablePtr>(saveInductionVar);
 			auto fit = convFact.ctx.wrapRefMap.find(var);
 
@@ -242,7 +260,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		stmtutils::StmtWrapper initExpr = Visit( forStmt->getInit() );
 
-		if (isa<clang::ParmVarDecl>(iv)) {
+		if (llvm::isa<clang::ParmVarDecl>(iv)) {
 			fit->second = core::static_pointer_cast<const core::VariablePtr>(saveInductionVar);
 		}
 
@@ -329,8 +347,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 			assert(init && "Initialization statement for loop is not an expression");
 
-			const core::TypePtr& varTy = inductionVar->getType();
-			assert(varTy->getNodeType() != core::NT_RefType);
+			assert(inductionVar->getType()->getNodeType() != core::NT_RefType);
 
 			// Initialize the value of the new induction variable with the value of the old one
 			if ( core::analysis::isCallOf(init, gen.getRefAssign()) ) {
@@ -512,7 +529,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		// handle eventual pragmas attached to the Clang node
 		retStmt.push_back( omp::attachOmpAnnotation(whileStmt, forStmt, convFact) );
 
-		clang::Preprocessor& pp = convFact.currTU->getCompiler().getPreprocessor();
+		clang::Preprocessor& pp = convFact.getCurrentPreprocessor();
 		pp.Diag(forStmt->getLocStart(),
 				pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
 						std::string("For loop converted into while loop, cause: ") + e.what() )
@@ -794,7 +811,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 	for (auto it = compStmt->body_begin(), end = compStmt->body_end(); it != end; ++it) {
 		clang::Stmt* curr = *it;
 		// statements which are before the first case.
-		if (!caseStart && !isa<clang::SwitchCase>(curr)) {
+		if (!caseStart && !llvm::isa<clang::SwitchCase>(curr)) {
 			stmtutils::StmtWrapper visitedStmt = this->Visit(curr);
 			// append these statements before the switch statement
 			std::copy(visitedStmt.begin(), visitedStmt.end(), std::back_inserter(retStmt));
@@ -823,7 +840,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 				subStmt = this->convFact.convertExpr(rhs);
 			} else if ( clang::Stmt* sub = caseStmt->getSubStmt()) {
 				// if the sub statement is a case, skip until the end of the loop
-				if (isa<clang::SwitchCase>(sub)) {
+				if (llvm::isa<clang::SwitchCase>(sub)) {
 					curr = sub;
 					continue;
 				}
@@ -858,7 +875,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 			caseStmts.push_back(subStmt);
 		}
 
-		if (isa<const clang::ContinueStmt>(curr) || isa<const clang::ReturnStmt>(curr)) {
+		if (llvm::isa<const clang::ContinueStmt>(curr) || llvm::isa<const clang::ReturnStmt>(curr)) {
 			core::StatementPtr subStmt = stmtutils::tryAggregateStmts(builder, Visit(const_cast<clang::Stmt*>(curr)));
 			breakEncountred = true;
 			caseStmts.push_back(subStmt);
@@ -867,14 +884,14 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 		 * if the current statement is a break, or we encountred a break in the current case we
 		 * create a new case and add to the list of cases for this switch statement
 		 */
-		if (breakEncountred || isa<const clang::BreakStmt>(curr)) {
+		if (breakEncountred || llvm::isa<const clang::BreakStmt>(curr)) {
 			addCase();
 			// clear the list of statements collected until now
 			caseExprs.clear();
 			caseStmts.clear();
 
 			breakEncountred = false;
-		} else if (!isa<clang::SwitchCase>(curr)) {
+		} else if (!llvm::isa<clang::SwitchCase>(curr)) {
 			stmtutils::StmtWrapper visitedStmt = Visit( const_cast<clang::Stmt*>(curr));
 			std::copy(visitedStmt.begin(), visitedStmt.end(), std::back_inserter(caseStmts));
 		}
@@ -905,6 +922,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
  */
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchCase(clang::SwitchCase* caseStmt) {
 	assert(false && "Visitor is visiting a 'case' stmt");
+	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitBreakStmt(clang::BreakStmt* breakStmt) {
@@ -964,12 +982,13 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitNullStmt(clang::Nu
 }
 
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitGotoStmt(clang::GotoStmt* gotoStmt) {
-	clang::Preprocessor& pp = convFact.currTU->getCompiler().getPreprocessor();
+	clang::Preprocessor& pp = convFact.getCurrentPreprocessor();
 	pp.Diag(
 			gotoStmt->getLocStart(),
 			pp.getDiagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error,
 					"Gotos are not handled by the Insieme compielr"));
 	assert(false);
+	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitStmt(clang::Stmt* stmt) {

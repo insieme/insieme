@@ -35,6 +35,7 @@
  */
 
 #include "insieme/analysis/dfa/solver.h"
+#include "insieme/utils/unused.h"
 
 namespace insieme {
 namespace analysis {
@@ -51,7 +52,7 @@ cfg::BlockPtr WorklistQueue::dequeue() {
 
 	if (empty()) { assert(false && "Worklist Queue is empty"); }
 
-	size_t s = block_queue.size();
+	__unused size_t s = block_queue.size();
 
 	cfg::BlockPtr block = block_queue.front();
 	block_set.erase(block);

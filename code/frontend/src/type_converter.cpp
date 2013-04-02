@@ -102,6 +102,77 @@ namespace frontend {
 
 namespace utils {
 
+	void addType ( DependencyGraph<const clang::TagDecl*>& obj, const clang::Type* type, const DependencyGraph<const clang::TagDecl*>::VertexTy& v) {
+
+		auto purifyType = [](const clang::Type* type) -> const clang::Type* {
+
+			if( const PointerType *ptrTy = dyn_cast<PointerType>(type) )
+				return ptrTy->getPointeeType().getTypePtr();
+
+			if( const ReferenceType *refTy = dyn_cast<ReferenceType>(type) )
+				return refTy->getPointeeType().getTypePtr();
+
+			if( const TypedefType* typeDefTy = llvm::dyn_cast<TypedefType>(type) ) {
+				 return typeDefTy->getDecl()->getUnderlyingType().getTypePtr();
+			}
+
+			if( const ParenType* parTy = llvm::dyn_cast<ParenType>(type) ) {
+				 return parTy->getInnerType().getTypePtr();
+			}
+
+			if( const ElaboratedType* elabTy = llvm::dyn_cast<ElaboratedType>(type) ) {
+				 return elabTy->getNamedType().getTypePtr();
+			}
+
+			if( const ArrayType* arrTy = llvm::dyn_cast<ArrayType>(type) ) {
+				 return arrTy->getElementType().getTypePtr();
+			}
+
+			return type;
+		};
+
+		// purify the type until a fixpoint is reached 
+		const Type* purified = type;
+		while( (purified = purifyType(type)) != type )
+			type = purified;
+		
+		if (VLOG_IS_ON(2))
+			purified->dump();
+		LOG(DEBUG) << purified->getTypeClassName();
+
+		if( const TagType* tagTy = llvm::dyn_cast<TagType>(purified) ) {
+			// LOG(DEBUG) << "Adding " << tagTy->getDecl()->getNameAsString();
+			if ( llvm::isa<RecordDecl>(tagTy->getDecl()) ) {
+				// find the definition
+				auto def = findDefinition(tagTy);
+
+				// we may have no definition for the type
+				if (!def) { return; }
+
+				obj.addNode( def, &v );
+			}
+		}
+
+		// if the filed is a function pointer then we need to examine both the return type and the
+		// argument list
+		if (const FunctionType* funcType = llvm::dyn_cast<FunctionType>(type)) {
+			
+			addType(obj, funcType->getResultType().getTypePtr(), v);
+
+			// If this is a function proto then look for the arguments type
+			if (const FunctionProtoType* funcProtType = llvm::dyn_cast<FunctionProtoType>(funcType)) {
+							
+				std::for_each(funcProtType->arg_type_begin(), funcProtType->arg_type_end(),
+					[ & ] (const QualType& currArgType) {
+						addType(obj, currArgType.getTypePtr(), v);
+					}
+				);
+			}
+		} 
+
+	};
+
+
 template <>
 void DependencyGraph<const clang::TagDecl*>::Handle(
 		const clang::TagDecl* tagDecl,
@@ -118,49 +189,12 @@ void DependencyGraph<const clang::TagDecl*>::Handle(
 	if (!tag) { return; }
 
 
-	auto purifyType = [](const clang::Type* type) -> const clang::Type* {
-
-		if( const PointerType *ptrTy = dyn_cast<PointerType>(type) )
-			return ptrTy->getPointeeType().getTypePtr();
-
-		if( const ReferenceType *refTy = dyn_cast<ReferenceType>(type) )
-			return refTy->getPointeeType().getTypePtr();
-
-		if( const TypedefType* typeDefTy = llvm::dyn_cast<TypedefType>(type) ) {
-			 return typeDefTy->getDecl()->getUnderlyingType().getTypePtr();
-		}
-
-		if( const ElaboratedType* elabTy = llvm::dyn_cast<ElaboratedType>(type) ) {
-			 return elabTy->getNamedType().getTypePtr();
-		}
-
-		return type;
-	};
-
-	for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
-		const Type* fieldType = (*it)->getType().getTypePtr();
 	
-		// purify the type until a fixpoint is reached 
-		const Type* purified = fieldType;
-		while( (purified = purifyType(fieldType)) != fieldType )
-			fieldType = purified;
-		
-		// purified->dump();
-		// LOG(DEBUG) << purified->getTypeClassName();
-
-		if( const TagType* tagTy = llvm::dyn_cast<TagType>(purified) ) {
-			// LOG(DEBUG) << "Adding " << tagTy->getDecl()->getNameAsString();
-			if ( llvm::isa<RecordDecl>(tagTy->getDecl()) ) {
-				// find the definition
-				auto def = findDefinition(tagTy);
-
-				// we may have no definition for the type
-				if (!def) { return; }
-
-				addNode( def, &v );
-			}
-		}
+	
+	for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
+		addType(*this, (*it)->getType().getTypePtr(), v);
 	}
+
 }
 
 } // end utils namespace
@@ -211,7 +245,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitBuiltinType(const BuiltinTy
 	case BuiltinType::LongDouble:	return gen.getDouble(); // unsopported FIXME
 
 	// not supported types
-	case BuiltinType::NullPtr:
+	case BuiltinType::NullPtr:		return builder.typeVariable("nullptr_t"); //gen.getAnyRef(); //FIXME how do we handle the std::nullptr_t??
 	case BuiltinType::Overload:
 	case BuiltinType::Dependent:
 	default:
@@ -226,6 +260,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitBuiltinType(const BuiltinTy
 core::TypePtr ConversionFactory::TypeConverter::VisitComplexType(const ComplexType* bulinTy) {
 	// FIXME
 	assert(false && "ComplexType not yet handled!");
+	return core::TypePtr();
 }
 
 // ------------------------   ARRAYS  -------------------------------------
@@ -519,18 +554,34 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 					);
 					typeGraph.print(std::cerr);
 				}
+				
+				// get the name of the struct which are converting into IR 
+				auto decl_name = recDecl->getName();
+				static int cnt = 0;
+
+				if (decl_name.empty()) {
+					// this is an anonymous struct, we need to generate a name 
+					decl_name = "__insieme_struct_" + std::to_string(cnt++);
+				}
 
 				// we create a TypeVar for each type in the mutual dependence
 				convFact.ctx.recVarMap.insert(
-						std::make_pair(tagDecl, builder.typeVariable(recDecl->getName()))
+						std::make_pair(tagDecl, builder.typeVariable(decl_name))
 					);
 
 				// when a subtype is resolved we aspect to already have these variables in the map
 				if(!convFact.ctx.isRecSubType) {
 					std::for_each(components.begin(), components.end(),
 						[ this ] (std::set<const TagDecl*>::value_type cur) {
+							auto decl_name = cur->getName();
+
+							if (decl_name.empty()) {
+								// this is an anonymous struct, we need to generate a name 
+								decl_name = "__insieme_struct_" + std::to_string(cnt++);
+							}
+
 							this->convFact.ctx.recVarMap.insert(
-									std::make_pair(cur, builder.typeVariable(cur->getName()))
+									std::make_pair(cur, builder.typeVariable(decl_name))
 								);
 						}
 					);
@@ -599,16 +650,18 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 						this->convFact.ctx.recVarMap.erase(decl);
 
 						definitions.push_back( this->builder.recTypeBinding(var, this->Visit(const_cast<Type*>(decl->getTypeForDecl()))) );
-						var->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(decl->getNameAsString()) );
+						var->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(var->getVarName()->getValue()) );
 
 						// reinsert the TypeVar in the map in order to solve the other recursive types
 						this->convFact.ctx.recVarMap.insert( std::make_pair(decl, var) );
 					}
 				);
 
-				// sort definitions - this will produce the same list of definitions for each of the related types => shared structure
+				// sort definitions - this will produce the same list of definitions for each of the 
+				// related types => shared structure
 				if (definitions.size() > 1) {
-					std::sort(definitions.begin(), definitions.end(), [](const core::RecTypeBindingPtr& a, const core::RecTypeBindingPtr& b){
+					std::sort(definitions.begin(), definitions.end(), [](const core::RecTypeBindingPtr& a, 
+																		 const core::RecTypeBindingPtr& b){
 						return a->getVariable()->getVarName()->getValue() < b->getVariable()->getVarName()->getValue();
 					});
 				}
@@ -707,11 +760,10 @@ core::TypePtr ConversionFactory::TypeConverter::handleTagType(const TagDecl* tag
 		return builder.unionType( structElements );
 	}
 	assert(false && "TagType not supported");
+	return core::TypePtr();
 }
 
-
 core::TypePtr ConversionFactory::CTypeConverter::Visit(const clang::Type* type) {
-	VLOG(2) << "C";
 	return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type);
 }
 
@@ -722,6 +774,7 @@ core::TypePtr ConversionFactory::CTypeConverter::handleTagType(const TagDecl* ta
 		return builder.unionType( structElements );
 	}
 	assert(false && "TagType not supported");
+	return core::TypePtr();
 }
 
 } // End conversion namespace

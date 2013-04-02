@@ -177,17 +177,21 @@ namespace runtime {
 				return addType(static_pointer_cast<c_ast::NamedCompositeType>(type));
 			case c_ast::NT_PointerType:
 				return addType(static_pointer_cast<c_ast::PointerType>(type));
+			case c_ast::NT_VectorType:
+				return addType(static_pointer_cast<c_ast::VectorType>(type));
 			case c_ast::NT_NamedType:
 				return addType(static_pointer_cast<c_ast::NamedType>(type));
 			case c_ast::NT_FunctionType:
 				return addType(c_ast::ptr(type->getManager()->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int64))); // TODO
+			case c_ast::NT_ModifiedType:
+				return addType(static_pointer_cast<c_ast::ModifiedType>(type)->type);
 			default:
 				LOG(FATAL) << "Unsupported type: " << c_ast::toC(type);
 				assert(false && "Unsupported type encountered!");
 			}
 			return unknown;
 		}
-
+		
 		const Entry& addType(const c_ast::PrimitiveTypePtr& type) {
 
 			char const * kind = "";
@@ -252,6 +256,17 @@ namespace runtime {
 			entry.components.push_back(resolve(type->elementType).index);
 			return addEntry(entry);
 		}
+		
+		const Entry& addType(const c_ast::VectorTypePtr& type) {
+			
+			char const* kind = "IRT_T_VAR_VECTOR";
+
+			Entry entry;
+			entry.kind = converter.getCNodeManager()->create(kind);
+			entry.type = type;
+			entry.components.push_back(resolve(type->elementType).index);
+			return addEntry(entry);
+		}
 
 	};
 
@@ -298,7 +313,13 @@ namespace runtime {
 			   "irt_type " TYPE_TABLE_NAME "[] = {\n";
 
 		out << join(",\n",store->getEntries(), [&](std::ostream& out, const TypeTableStore::Entry& cur) {
-			out << "    {" << toC(cur.kind) << ", sizeof(" << toC(cur.type) << "), " << cur.components.size() << ", ";
+			out << "    {" << toC(cur.kind) << ", ";
+			if(cur.type.isa<c_ast::VectorTypePtr>()) {
+				out << "0";
+			} else {
+				out << "sizeof(" << toC(cur.type) << ")";
+			}
+			out << ", " << cur.components.size() << ", ";
 			if (cur.components.empty()) {
 				out << "0";
 			} else {

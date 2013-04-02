@@ -582,7 +582,7 @@ namespace detail {
 			}
 			return builder.callExpr(
 					builder.getLangBasic().getInt4(),
-					builder.literal("f", builder.functionType(paramTypes, intType, true)),
+					builder.literal("f", builder.functionType(paramTypes, intType, FK_PLAIN)),
 					args
 			);
 		});

@@ -7,6 +7,12 @@
 
 #define POS(Image, X, Y) Image.data[(X)][(Y)]
 
+#ifndef N
+	#define N 60
+#endif
+#define SIZEX N
+#define SIZEY N
+
 #define FILE_BUF 512*8
 
 typedef unsigned long long ull;
@@ -213,7 +219,7 @@ Source readSource(char* line) {
 
 int main(int argc, char** argv) {
 	
-	Settings settings = {4, 60, 60, 800.0, 0.01, 0.01, 0.3, 0.01, 400, 100000};
+	Settings settings = {4, SIZEX, SIZEY, 800.0, 0.01, 0.01, 0.3, 0.01, 400, 100000};
 	Source *sources;
 	
 	// read input file
@@ -286,16 +292,29 @@ int main(int argc, char** argv) {
 	}
 	ull maxSteps = 0;
 	ull minSteps = max_steps;
+	ull a_count = 0, b_count = 0, c_count = 0;
 	for(int i=0; i<x; i++) {
 		for(int j=0; j<y; j++) {
 			maxSteps =  POS(dist, i,j) > maxSteps ? POS(dist, i,j) : maxSteps;
 			minSteps =  POS(dist, i,j) < minSteps ? POS(dist, i,j) : minSteps;
+			if(POS(image, i, j) == 1)
+				++a_count;
+			else if(POS(image, i, j) == 2)
+				++b_count;
+			else
+				++c_count;
 		}
 	}
-	printf("Number of steps calculated: %llu .. %llu\n", minSteps, maxSteps);
+	printf("Number of steps calculated: %llu .. %llu; winner count: A %llu, B %llu, C %llu; Verification: ", minSteps, maxSteps, a_count, b_count, c_count);
+	if((a_count + b_count + c_count) == (SIZEX * SIZEY))
+		printf("OK\n");
+	else
+		printf("ERR\n");
 
+#ifndef NOIMAGE
 	print_target_image_ASCII(image, num_sources);
 	write_image(image, dist, "out.bmp", minSteps, maxSteps);
+#endif
 
 	delete_image(&image);
 	delete_image(&dist);

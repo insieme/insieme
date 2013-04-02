@@ -58,27 +58,22 @@
 #include "insieme/backend/sequential/sequential_preprocessor.h"
 #include "insieme/backend/sequential/sequential_type_handler.h"
 
+#include "insieme/backend/addons/cpp_references.h"
+
 namespace insieme {
 namespace backend {
 namespace sequential {
 
-
 	SequentialBackendPtr SequentialBackend::getDefault() {
-		return std::make_shared<SequentialBackend>();
+		auto res = std::make_shared<SequentialBackend>();
+		res->addAddOn<addons::CppReferences>();
+		return res;
 	}
 
-	TargetCodePtr SequentialBackend::convert(const core::NodePtr& code) const {
+	Converter SequentialBackend::buildConverter(core::NodeManager& manager) const {
 
 		// create and set up the converter
-		Converter converter("SequentialBackend");
-
-		// set up the node manager (for temporals)
-		core::NodeManager& nodeManager = code->getNodeManager();
-		converter.setNodeManager(&nodeManager);
-
-		// set up the shared code fragment manager (for the result)
-		c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
-		converter.setFragmentManager(fragmentManager);
+		Converter converter(manager, "SequentialBackend");
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
@@ -87,25 +82,12 @@ namespace sequential {
 		);
 		converter.setPreProcessor(preprocessor);
 
-		// set up post-processing
-		PostProcessorPtr postprocessor = makePostProcessor<NoPostProcessing>();
-		converter.setPostProcessor(postprocessor);
+		// update type manager
+		TypeManager& typeManager = converter.getTypeManager();
+		typeManager.addTypeHandler(SequentialTypeHandler);
 
-		// Prepare managers
-		SimpleNameManager nameManager;
-		converter.setNameManager(&nameManager);
-
-		TypeManager typeManager(converter, getBasicTypeIncludeTable(), toVector<TypeHandler>(SequentialTypeHandler));
-		converter.setTypeManager(&typeManager);
-
-		StmtConverter stmtConverter(converter);
-		converter.setStmtConverter(&stmtConverter);
-
-		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager), getBasicFunctionIncludeTable());
-		converter.setFunctionManager(&functionManager);
-
-		// conduct conversion
-		return converter.convert(code);
+		// done
+		return converter;
 	}
 
 } // end namespace sequential

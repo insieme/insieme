@@ -44,7 +44,7 @@ namespace ocl_host {
 
 	class HostPreprocessor : public PreProcessor {
 	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
 	};
 
 } // end namespace ocl_host

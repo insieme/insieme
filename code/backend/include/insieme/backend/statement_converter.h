@@ -56,7 +56,7 @@ namespace backend {
 
 		const Converter& converter;
 
-		const StmtHandlerList stmtHandler;
+		StmtHandlerList stmtHandler;
 
 	public:
 
@@ -64,6 +64,14 @@ namespace backend {
 			: core::IRVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&>(true), converter(converter), stmtHandler(stmtHandler) {}
 
 		c_ast::NodePtr convert(ConversionContext& context, const core::NodePtr& node);
+
+		void addStmtHandler(const StmtHandler& handler) {
+			stmtHandler.push_back(handler);
+		}
+
+		void addStmtHandler(const StmtHandlerList& list) {
+			stmtHandler.insert(stmtHandler.end(), list.begin(), list.end());
+		}
 
 		////////////////////////////////////////////////////////////////////////// Utilities
 

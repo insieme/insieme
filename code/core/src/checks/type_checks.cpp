@@ -426,7 +426,7 @@ OptionalMessageList BindExprTypeCheck::visitBindExpr(const BindExprAddress& addr
 	TypePtr isType = address->getType();
 	TypePtr result = address->getCall()->getType();
 
-	FunctionTypePtr funType = FunctionType::get(manager, param, result, false);
+	FunctionTypePtr funType = FunctionType::get(manager, param, result, FK_CLOSURE);
 	if (*funType != *isType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_FUNCTION_TYPE,
@@ -480,9 +480,9 @@ OptionalMessageList ReturnTypeCheck::visitLambda(const LambdaAddress& address) {
 		if (returnType != actualType) {
 			add(res, Message(cur,
 				EC_TYPE_INVALID_RETURN_VALUE_TYPE,
-				format("Invalid return type - expected: \n%s, actual: \n%s",
-						toString(*returnType).c_str(),
-						toString(*actualType).c_str()),
+				format("Invalid type of return value - expected: \n%s, actual: \n%s",
+						toString(*returnType),
+						toString(*actualType)),
 				Message::ERROR));
 		}
 

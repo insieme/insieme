@@ -1,7 +1,7 @@
 # setup environment variables
 . ./environment.setup
 
-VERSION=0.10
+VERSION=0.11.1
 
 OPT_FLAGS="-mtune=native -O3"
 

@@ -66,6 +66,7 @@ namespace c_ast {
 		case UnaryOperation::Indirection: 	return 14;
 		case UnaryOperation::Reference: 	return 14;
 		case UnaryOperation::SizeOf: 		return 14;
+		case UnaryOperation::New:			return  1;
 		}
 		assert(false && "Uncovered operator encountered!");
 		return 0;
@@ -150,6 +151,10 @@ namespace c_ast {
 
 	inline PointerTypePtr ptr(const TypePtr& type) {
 		return type->getManager()->create<c_ast::PointerType>(type);
+	}
+
+	inline ReferenceTypePtr ref(const TypePtr& type, bool isConst = false) {
+		return type->getManager()->create<c_ast::ReferenceType>(isConst, type);
 	}
 
 	inline VectorTypePtr vec(const TypePtr& element, unsigned size) {
@@ -240,8 +245,8 @@ namespace c_ast {
 		return fun->getManager()->create<c_ast::MemberCall>(fun, obj, args);
 	}
 
-	inline ConstructorCallPtr ctorCall(TypePtr classType, const vector<NodePtr>& args, bool onHeap = false, ExpressionPtr location = ExpressionPtr()) {
-		return classType->getManager()->create<c_ast::ConstructorCall>(classType, args, onHeap, location);
+	inline ConstructorCallPtr ctorCall(TypePtr classType, const vector<NodePtr>& args, ExpressionPtr location = ExpressionPtr()) {
+		return classType->getManager()->create<c_ast::ConstructorCall>(classType, args, location);
 	}
 
 	inline DestructorCallPtr dtorCall(TypePtr classType, ExpressionPtr obj, bool isVirtual = true) {
@@ -324,6 +329,10 @@ namespace c_ast {
 
 	inline ExpressionPtr sizeOf(NodePtr element) {
 		return unaryOp(UnaryOperation::SizeOf, element);
+	}
+
+	inline ExpressionPtr newCall(ExpressionPtr expr) {
+		return unaryOp(UnaryOperation::New, expr);
 	}
 
 	// -- Binary Operations -------------------------------------
@@ -485,6 +494,10 @@ namespace c_ast {
 
 	inline DesignatedInitializerPtr init(TypePtr type, IdentifierPtr member, ExpressionPtr value) {
 		return type->getManager()->create<c_ast::DesignatedInitializer>(type, member, value);
+	}
+
+	inline ArrayInitPtr initArray(TypePtr type, ExpressionPtr size) {
+		return type->getManager()->create<c_ast::ArrayInit>(type, size);
 	}
 
 	template<typename ... E>

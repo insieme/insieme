@@ -48,8 +48,10 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 
+#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
@@ -71,7 +73,10 @@ namespace conversion {
 //							DECLARATION STATEMENT
 // 			In clang a declstmt is represented as a list of VarDecl
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
+	return StmtConverter::VisitDeclStmt(declStmt);
+
+	/*
 	// if there is only one declaration in the DeclStmt we return it
 
 	if (declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl())) {
@@ -124,67 +129,95 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitDeclStmt(cla
 	}
 
 	return retList;
+	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							RETURN STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
-	//START_LOG_STMT_CONVERSION(retStmt);
-
-	CXXConversionFactory::CXXConversionContext::ScopeObjects parentDownStreamSScopeObjects =
-			cxxConvFact.cxxCtx.downStreamScopeObjects;
-	cxxConvFact.cxxCtx.downStreamScopeObjects = cxxConvFact.cxxCtx.scopeObjects;
-
-	core::StatementPtr retIr;
-
-	LOG_STMT_CONVERSION(retIr);
-
-	core::ExpressionPtr retExpr;
-	core::TypePtr retTy;
-	QualType clangTy;
-	if ( Expr* expr = retStmt->getRetValue()) {
-		retExpr = cxxConvFact.convertExpr(expr);
-		clangTy = expr->getType();
-		retTy = cxxConvFact.convertType(clangTy.getTypePtr());
-	} else {
-		retExpr = cxxConvFact.builder.getLangBasic().getUnitConstant();
-		retTy = cxxConvFact.builder.getLangBasic().getUnit();
-	}
-
-	/*
-	 * arrays and vectors in C are always returned as reference, so the type of the return
-	 * expression is of array (or vector) type we are sure we have to return a reference, in the
-	 * other case we can safely deref the retExpr
-	 * Obviously Ocl vectors are an exception and must be handled like scalars
-	 */
-	if ((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
-					!clangTy.getUnqualifiedType()->isExtVectorType()) {
-		retTy = cxxConvFact.builder.refType(retTy);
-	}
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
 
 	vector<core::StatementPtr> stmtList;
+	stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
 
-	tempHandler.handleTemporariesinScope(stmtList, cxxConvFact.cxxCtx.downStreamScopeObjects,
-			parentDownStreamSScopeObjects, false);
+	if (llvm::isa<clang::IntegerLiteral>(retStmt->getRetValue()) ||
+		llvm::isa<clang::BinaryOperator>(retStmt->getRetValue()) || 
+		llvm::isa<clang::CXXMemberCallExpr>(retStmt->getRetValue()))
+		return stmt;
 
-	retIr = cxxConvFact.builder.returnStmt(utils::cast(retExpr, retTy));
-	stmtList.push_back(retIr);
+	core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
 
-	core::StatementPtr retStatement = cxxConvFact.builder.compoundStmt(stmtList);
+	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
+	// this is produced by the AST, but we should delegate this matters to the backend compiler
+	
 
-	stmtutils::StmtWrapper&& body = stmtutils::tryAggregateStmts(cxxConvFact.builder,stmtList );
+	// if the function returns references, we wont realize, there is no cast, and the inner
+	// expresion might have  no reference type
+	// if there is no copy constructor on return... it seems that this is the case in which a
+	// ref is returned
+	// if is a ref: no cast, if is a const ref, there is a Nop cast to qualify
 
-	cxxConvFact.cxxCtx.downStreamScopeObjects = parentDownStreamSScopeObjects;
+	core::TypePtr funcRetTy = convFact.convertType(retStmt->getRetValue()->getType().getTypePtr());
+	// we only operate this on classes
+	clang::CastExpr* cast;
+	clang::CXXConstructExpr* ctorExpr;
+	if ((cast = llvm::dyn_cast<clang::CastExpr>(retStmt->getRetValue())) != NULL){
+		switch(cast->getCastKind () ){
+			case CK_NoOp : // make constant?
+	
+				retExpr =  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retExpr);
+				break;
+			case CK_LValueToRValue: //deref, not a ref
+			default:
+				break;
+		}
+	}
+	else if ((ctorExpr = llvm::dyn_cast<clang::CXXConstructExpr>(retStmt->getRetValue())) != NULL){
 
-	return body;
+		// fist of all, have a look of what is behind the deRef
+		if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
+			retExpr = retExpr.as<core::CallExprPtr>()[0];
+		}
+
+		auto ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>();
+		if (ty.isConstructor()){
+
+			// copy ctor, what we actualy want to return is the second param (first is placeholder)
+			// if it turns to be a cpp ref, we do not need to do so
+			// but it might be that the variable is a ref, so is safer to deref it.
+			retExpr = retExpr.as<core::CallExprPtr>()[1];
+			if (core::analysis::isCppRef(retExpr->getType())) {
+				retExpr =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), retExpr));
+			}
+			else if (core::analysis::isConstCppRef(retExpr->getType())) {
+				retExpr =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), 
+															retExpr));
+			}
+		}
+	}
+	else{
+		// not a cast, it is a ref then... only if not array
+		if (!core::analysis::isCallOf(retExpr,mgr.getLangBasic().getScalarToArray()) &&
+			!core::analysis::isCppRef(retExpr->getType())) {
+				retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retExpr);
+		}
+	}
+
+	stmtList.push_back(builder.returnStmt(retExpr));
+	core::StatementPtr retStatement = builder.compoundStmt(stmtList);
+	stmt = stmtutils::tryAggregateStmts(builder,stmtList );
+
+	return stmt;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							COMPOUND STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
 
+	return StmtConverter::VisitCompoundStmt(compStmt);
+
+	/*
 	//START_LOG_STMT_CONVERSION(compStmt);
 	core::StatementPtr retIr;
 	LOG_STMT_CONVERSION(retIr);
@@ -233,25 +266,29 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCompoundStmt
 	attatchDatarangeAnnotation(retIr, compStmt, cxxConvFact);
 
 	return retIr;
+	*/
 }
 
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
 	assert(false && "Catch -- Currently not supported!");
+	return stmtutils::StmtWrapper();
 }
 
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
 	assert(false && "Try -- Currently not supported!");
+	return stmtutils::StmtWrapper();
 }
 
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
 	assert(false && "ForRange -- Currently not supported!");
+	return stmtutils::StmtWrapper();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Overwrite the basic visit method for expression in order to automatically
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::Visit(clang::Stmt* stmt) {
+stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	VLOG(2) << "CXX";
 	stmtutils::StmtWrapper&& retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 

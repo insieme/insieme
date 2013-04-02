@@ -59,7 +59,6 @@ using namespace transform::polyhedral;
 using namespace core;
 using namespace core::printer;
 
-#include "../include/integration_tests.inc"
 
 	TEST(TilingSearch, Dummy) {
 		// no test-case is not supported

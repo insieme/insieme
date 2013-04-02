@@ -415,7 +415,9 @@ namespace dump {
 			out << "\n";
 
 			// .. followed by the address path
-			dumpPath(out, address.getPath());
+			if (!address.isRoot()) {				// we can skip the address if it is the root
+				dumpPath(out, address.getPath());
+			}
 		}
 
 

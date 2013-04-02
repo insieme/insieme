@@ -1,4 +1,4 @@
 # Ignore all generated files
-build*
+build*/
 *.inl
 *~

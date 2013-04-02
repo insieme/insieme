@@ -70,15 +70,17 @@ class XmlVisitor : public IRVisitor<void> {
 	
 	template <typename Container>
 	void appendList(XmlElement& xmlParentNode, const Container& list, const std::string& groupName, const std::string& elemName) {
+
 		typedef typename Container::value_type ElemTyp;
 		XmlElement subNode(groupName, this->doc);
 		xmlParentNode << subNode;
-		std::for_each(list.begin(), list.end(),
-			[this, &subNode, elemName](const ElemTyp& curr) {
+
+		for (const ElemTyp& curr : list){
 				this->append(subNode, curr, elemName);
-			}
-		);
+
+		}
 	}
+
 
 public:
 	XmlVisitor(DOMDocument* udoc): IRVisitor<void>(true), doc(udoc), rootElem(doc->getDocumentElement()) { }
@@ -101,6 +103,11 @@ public:
 		genType << XmlElement::Attribute("id", GET_ID(cur))
 				<< XmlElement::Attribute("familyName", cur->getFamilyName());
 		rootElem << genType;
+
+		const auto& parents = cur->getParents()->getElements();
+		if (!parents.empty()) {
+			appendList(genType, parents, "parents", "parentPtr");
+		}
 
 		typedef vector<TypePtr> ParamList;
 		const ParamList& param = cur->getTypeParameter()->getElements();
@@ -191,7 +198,7 @@ public:
 	void visitFunctionType(const FunctionTypePtr& cur) {
 		XmlElement functionType("functionType", doc);
 		rootElem << (functionType << XmlElement::Attribute("id", GET_ID(cur))
-								  << XmlElement::Attribute("plain", numeric_cast<std::string>(cur->isPlain())));
+								  << XmlElement::Attribute("kind", toString(numeric_cast<int>(cur->getKind()))));
 		
 		appendList(functionType, cur->getParameterTypes()->getElements(), "parameterTypeList", "typePtr");
 
@@ -215,6 +222,11 @@ public:
 	void visitNamedCompositeType_(XmlElement& el, const NamedCompositeTypePtr& cur) {
 		rootElem << (el << XmlElement::Attribute("id", GET_ID(cur)));
 
+		// start with parents
+		if (!cur->getParents().empty()) {
+			appendList(el, cur->getParents()->getElements(), "parents", "parentPtr");
+		}
+
 		XmlElement entries("entries",doc);
 		el << entries;
 
@@ -227,6 +239,7 @@ public:
 				entries << entry;
 			}
 		);
+
 		visitAnnotations(cur->getAnnotations(), el);
 	}
 
@@ -432,6 +445,18 @@ public:
 		structExpr << members;
 
 		visitAnnotations(cur->getAnnotations(), structExpr);
+	}
+
+	void visitParent(const ParentPtr& cur){
+		XmlElement papa("parent",doc);
+		rootElem << (papa << XmlElement::Attribute("id", GET_ID(cur))
+				          << XmlElement::Attribute("virtual",  cur->isVirtual()? "true":"false"));
+
+		XmlElement type("type", doc);
+		append(type, cur->getType(), "typePtr");
+		papa << type;
+
+		visitAnnotations(cur->getAnnotations(), papa);
 	}
 
 	void visitUnionExpr(const UnionExprPtr& cur) {

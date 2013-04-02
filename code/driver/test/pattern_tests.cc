@@ -78,7 +78,7 @@ using namespace core;
 			}
 
 			// not loaded yet => load and cache code
-			core::ProgramPtr code = frontend::ConversionJob(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
+			core::ProgramPtr code = frontend::ConversionJob(testCase.getFiles(), testCase.getIncludeDirs()).execute(testGlobalManager);
 
 			loadedCodes.insert(std::make_pair(testCase, code));
 			return manager.get(code);

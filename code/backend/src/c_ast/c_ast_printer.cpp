@@ -152,12 +152,20 @@ namespace c_ast {
 			}
 
 			PRINT(NamedType) {
-				return out << print(node->name);
+				out << print(node->name);
+				if (!node->parameters.empty()) {
+					out << "<" << join(", ", node->parameters, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << ">";
+				}
+				return out;
 			}
 
 			PRINT(PointerType) {
 				return out << ParameterPrinter(node, node->getManager()->create(""));
-				//return out << print(node->elementType) << "*";
+			}
+
+			PRINT(ReferenceType) {
+				if (node->isConst) out << "const ";
+				return out << print(node->elementType) << "&";
 			}
 
 			PRINT(VectorType) {
@@ -193,11 +201,13 @@ namespace c_ast {
 					// print a variable declaration
 					out << printParam(node->varInit[0].first);
 
-					if (!node->varInit[0].second) {
-						return out;
+					// add init value
+					if (node->varInit[0].second) {
+						out << " = " << print(node->varInit[0].second);
 					}
 
-					return out << " = " << print(node->varInit[0].second);
+					// done
+					return out;
 				}
 
 				// multiple declarations
@@ -346,6 +356,10 @@ namespace c_ast {
 				return out << "(" << print(node->type) << "){ ." << print(node->member) << " = " << print(node->value) << " }";
 			}
 
+			PRINT(ArrayInit) {
+				return out << print(node->type) << "[" << print(node->size) << "]";
+			}
+
 			PRINT(VectorInit) {
 				return out << "{"
 						<< join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) {
@@ -375,6 +389,7 @@ namespace c_ast {
 					case UnaryOperation::Indirection: 	return out << "*" << print(node->operand);
 					case UnaryOperation::Reference: 	return out << "&" << print(node->operand);
 					case UnaryOperation::SizeOf: 		return out << "sizeof(" << print(node->operand) << ")";
+					case UnaryOperation::New:			return out << "new " << print(node->operand);
 				}
 
 				assert(false && "Invalid unary operation encountered!");
@@ -472,7 +487,7 @@ namespace c_ast {
 
 			PRINT(ConstructorCall) {
 				// <new> <className> ( <arguments> )
-				out << ((node->onHeap || node->location)?"new ":"");
+				out << ((node->location)?"new ":"");
 
 				// the location for a placement new
 				if (node->location) {
@@ -644,14 +659,19 @@ namespace c_ast {
 			}
 
 			PRINT(Constructor) {
-				// <className> :: <name> ( <parameter list> ) <body> \n
+				// <className> :: <name> ( <parameter list> ) : <initializer_list>  <body> \n
 
 				auto fun = node->function;
 
 				// print header
 				out << print(node->className) << "::" << print(node->className) << "(" << printMemberParam(fun->parameter) << ") ";
 
-				// TODO: add initializer list
+				// add initializer list
+				if (!node->initialization.empty()) {
+					out << ": " << join(", ", node->initialization, [&](std::ostream& out, const Constructor::InitializerListEntry& cur) {
+						out << print(cur.first) << "(" << join(", ", cur.second, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << ")";
+					}) << " ";
+				}
 
 				// print body
 				return out << print(wrapBody(fun->body));

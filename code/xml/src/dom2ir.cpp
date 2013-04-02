@@ -140,6 +140,13 @@ public:
 			baseType = createNode<Type>(*base, "typePtr");
 		}
 
+		ParentList parents;
+		if (auto parentsEntry = elem.getFirstChildByName("parents")) {
+			for(const auto& cur : parentsEntry->getChildrenByName("parentPtr")) {
+				parents.push_back(createNode<Parent>(cur));
+			}
+		}
+
 		vector<TypePtr> typeParams;
 		XmlElementPtr&& param = elem.getFirstChildByName("typeParams");
 		if (param){
@@ -162,7 +169,7 @@ public:
 		if (name == "array")   	return createIrNode<ArrayType>(elem, typeParams[0], intTypeParams[0]);
 		if (name == "channel") 	return createIrNode<ChannelType>(elem, typeParams[0], intTypeParams[0]);
 		if (name == "ref")		return createIrNode<RefType>(elem, typeParams[0]);
-		return createIrNode<GenericType>(elem, builder.stringValue(name), builder.types(typeParams), builder.intTypeParams(intTypeParams));
+		return createIrNode<GenericType>(elem, builder.stringValue(name), builder.parents(parents), builder.types(typeParams), builder.intTypeParams(intTypeParams));
 	}
 	
 	NodePtr handle_concreteIntTypeParam(const XmlElement& elem) {
@@ -186,8 +193,8 @@ public:
 			paramTypes.push_back(createNode<Type>(*iter));
 		}
 		TypePtr&& retType = createNode<Type>(elem, "returnType","typePtr");
-		bool plain = numeric_cast<bool>(elem.getAttr("plain"));
-		return createIrNode<FunctionType>(elem, paramTypes, retType, plain);
+		FunctionKind kind = (FunctionKind)numeric_cast<int>(elem.getAttr("kind"));
+		return createIrNode<FunctionType>(elem, paramTypes, retType, kind);
 	}
 
 private:
@@ -202,12 +209,25 @@ private:
 		return entryVec;
 	}
 public:
+
+	NodePtr handle_parent(const XmlElement& elem) {
+		TypePtr&& typeT = createNode<Type>(elem, "type", "typePtr");
+		return createIrNode<Parent>(elem, elem.getAttr("virtual") == "true", typeT);
+	}
+
 	NodePtr handle_unionType(const XmlElement& elem) {
 		return createIrNode<UnionType>(elem, visit_namedCompositeType(elem));
 	}
 
 	NodePtr handle_structType(const XmlElement& elem) {
-		return createIrNode<StructType>(elem, visit_namedCompositeType(elem));
+		// load parents
+		ParentList parents;
+		if (auto parentsEntry = elem.getFirstChildByName("parents")) {
+			for(const auto& cur : parentsEntry->getChildrenByName("parentPtr")) {
+				parents.push_back(createNode<Parent>(cur));
+			}
+		}
+		return createIrNode<StructType>(elem, builder.parents(parents), visit_namedCompositeType(elem));
 	}
 
 	NodePtr handle_tupleType(const XmlElement& elem) {
@@ -507,7 +527,7 @@ public:
 		DISPATCH(vectorExpr)		DISPATCH(tupleExpr)			DISPATCH(castExpr) 			DISPATCH(callExpr)				DISPATCH(variable)
 		DISPATCH(jobExpr)			DISPATCH(lambdaExpr)		DISPATCH(program)			DISPATCH(lambdaDefinition)		DISPATCH(lambda)
 		DISPATCH(rootNode)			DISPATCH(bindExpr)			DISPATCH(markerStmt)		DISPATCH(returnStmt)			DISPATCH(breakStmt)
-		DISPATCH(markerExpr)		DISPATCH(tupleType)			DISPATCH(identifier)
+		DISPATCH(markerExpr)		DISPATCH(tupleType)			DISPATCH(identifier)		DISPATCH(parent)DISPATCH(parent)
 		assert(false && "XML node not handled!");
 		return 0;
 	}

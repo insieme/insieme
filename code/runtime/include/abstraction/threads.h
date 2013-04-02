@@ -136,6 +136,9 @@ inline void irt_cond_var_init(irt_cond_var*);
 /** releases the lock and sleeps the thread on the condition variable */
 inline int irt_cond_wait(irt_cond_var*, irt_lock_obj*);
 
+/** releases the lock and sleeps the thread on the condition variable, for a maximum amount of time */
+inline int irt_cond_timedwait(irt_cond_var*, irt_lock_obj*, uint64);
+
 /** singal and wake a thread which is blocked by the condition variable cv */
 inline void irt_cond_wake_one(irt_cond_var *cv);
 

@@ -107,6 +107,7 @@ void irt_init_globals() {
 	irt_context_table_init();
 	irt_wi_event_register_table_init();
 	irt_wg_event_register_table_init();
+	irt_loop_sched_policy_init();
 #ifndef IRT_MIN_MODE
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_init();
 #endif
@@ -301,15 +302,9 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	#endif
 
 	#ifndef _WIN32
-		// debug output for frequency setting, needs to be moved
-		char cpu_freq_output[64];
-		if (getenv(IRT_CPU_FREQUENCY))
-			sprintf(cpu_freq_output, "set, %s", getenv(IRT_CPU_FREQUENCY));
-		else
-			sprintf(cpu_freq_output, "not set, %u", _irt_cpu_freq_read("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"));
-		irt_log_setting_s("IRT_CPU_FREQUENCY", cpu_freq_output);
+		irt_cpu_freq_set_frequency_socket_env();
 	#endif
-	
+
 	irt_log_comment("starting worker threads");
 	irt_log_setting_u("irt_g_worker_count", worker_count);
 	// get worker count & allocate global worker storage

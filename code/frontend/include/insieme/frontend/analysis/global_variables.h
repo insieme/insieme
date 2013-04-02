@@ -39,26 +39,25 @@
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_expressions.h"
 
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "insieme/frontend/program.h"
+
+#include "insieme/frontend/utils/indexer.h"
+
+#include "clang/AST/Decl.h"
+#include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 
 #include <set>
 #include <map>
 #include <stack>
-
-namespace clang {
-namespace idx {
-class Indexer;
-class TranslationUnit;
-} // end idx namespace
-}
 
 namespace insieme {
 namespace frontend {
 
 namespace conversion {
 class ConversionFactory;
-class CXXConversionFactory;
 }
 
 namespace analysis {
@@ -80,8 +79,6 @@ public:
 	 */
 	typedef std::set<const clang::VarDecl*> GlobalVarSet;
 
-	typedef std::map<const clang::VarDecl*, const clang::idx::TranslationUnit*> VarTUMap;
-
 	/*
 	 * Set of functions already visited, this avoid the solver to loop in the
 	 * case of recursive function calls
@@ -96,22 +93,16 @@ public:
 	 * be used to decide whether the data structure containing the global variables
 	 * has to be forwarded through this function via the capture list
 	 */
-	typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
+	typedef std::set<const clang::FunctionDecl*> UseGlobalFuncSet;
 
 	typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
 	typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
 
 	GlobalVarCollector(
-		conversion::ConversionFactory& 		convFact,
-		const clang::idx::TranslationUnit* 	currTU, 
-		clang::idx::Indexer& 				indexer,
-		UseGlobalFuncMap& 					globalFuncMap)
-	: 
-	  convFact(convFact),
-	  currTU(currTU), 
-	  indexer(indexer), 
-	  usingGlobals(globalFuncMap) {
-	}
+			insieme::frontend::utils::Indexer& indexer,
+			insieme::frontend::utils::Interceptor& 	interceptor, 
+			conversion::ConversionFactory& convFact);
+
 	virtual ~GlobalVarCollector() {};
 
 	bool VisitStmt(clang::Stmt* stmt);
@@ -122,14 +113,28 @@ public:
 
 	/* CXX specific methods -- not support in C version
 	 * implemented/used in CXXGlobalVarCollector*/
-	virtual bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) { assert(false && "not supported in GlobalVarCollector"); }
-	virtual bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) { assert(false && "not supported in GlobalVarCollector"); }
-	virtual bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) { assert(false && "not supported in GlobalVarCollector"); }
-	virtual bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr) { assert(false && "not supported in GlobalVarCollector"); }
-	virtual bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) { assert(false && "not supported in GlobalVarCollector"); }
+	virtual bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) { 
+		assert(false && "not supported in GlobalVarCollector");
+		return false;
+	}
+	virtual bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) { 
+		assert(false && "not supported in GlobalVarCollector");
+		return false;
+	}
+	virtual bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) { 
+		assert(false && "not supported in GlobalVarCollector");
+		return false;
+	}
+	virtual bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr) { 
+		assert(false && "not supported in GlobalVarCollector");
+		return false;
+	}
+	virtual bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) { 
+		assert(false && "not supported in GlobalVarCollector");
+		return false;
+	}
 
 	void operator()(const clang::Decl* decl);
-
 	void operator()(const Program::TranslationUnitSet& tus);
 
 	/**
@@ -144,7 +149,7 @@ public:
 	 * indirectly) to the global struct which will be passed accordingly
 	 * @return
 	 */
-	const UseGlobalFuncMap& getUsingGlobals() const { return usingGlobals; }
+	const UseGlobalFuncSet& getUsingGlobals() const { return usingGlobals; }
 	
 	const GlobalIdentMap& getIdentifierMap() const { return varIdentMap; }
 
@@ -155,52 +160,31 @@ public:
 protected:
 
 	core::StringValuePtr
-	buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const clang::FunctionDecl* func = NULL ) const;
+	buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, const clang::FunctionDecl* func = NULL ) const;
 
 	conversion::ConversionFactory& 		convFact;
+	const insieme::frontend::utils::Indexer& 	indexer;
+	const insieme::frontend::utils::Interceptor& 	interceptor;
 	GlobalVarSet						globals;
-	VarTUMap							varTU;
 	GlobalIdentMap						varIdentMap;
-	const clang::idx::TranslationUnit* 	currTU;
 	VisitedFuncSet 						visited;
 	FunctionStack						funcStack;
-
-	clang::idx::Indexer& 				indexer;
-	UseGlobalFuncMap& 					usingGlobals;
+	UseGlobalFuncSet 					usingGlobals;
 };
 
-class CXXGlobalVarCollector : public GlobalVarCollector {
-public:
 
-	//virtual function stuff
-	typedef std::pair<unsigned int, unsigned int> ClassFuncPair; //first = classId, second = count of virtual functions
-	typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
-	typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
-	typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
-	typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
+////////////////////////////////////////////////////////////////////////////////////
+///      CXX global var collector
+////////////////////////////////////////////////////////////////////////////////////
+class CXXGlobalVarCollector : public GlobalVarCollector {
+	public:
 
 	CXXGlobalVarCollector(
-		conversion::ConversionFactory& 		convFact,
-		const clang::idx::TranslationUnit* 	currTU,
-		clang::idx::Indexer& 				indexer,
-		UseGlobalFuncMap& 					globalFuncMap,
-		PolymorphicClassMap& 				polymorphicClassMap,
-		OffsetMap&							offsetMap,
-		VirtualFunctionIdMap&				virtualFunctionIdMap,
-		FinalOverriderMap&					finalOverriderMap)
-	:
-	  GlobalVarCollector(convFact, currTU, indexer, globalFuncMap),
-	/*convFact(convFact),
-	  currTU(currTU),
-	  indexer(indexer),
-	  usingGlobals(globalFuncMap),
-	*/
-	  polymorphicClassMap(polymorphicClassMap),
-	  offsetMap(offsetMap),
-	  virtualFunctionIdMap(virtualFunctionIdMap),
-	  finalOverriderMap(finalOverriderMap) {
-		maxFunctionCounter = -1;
-	}
+				insieme::frontend::utils::Indexer& 	indexer, 
+				insieme::frontend::utils::Interceptor& 	interceptor, 
+				conversion::ConversionFactory& 		convFact)
+	: GlobalVarCollector(indexer, interceptor, convFact) { }
+
 	virtual ~CXXGlobalVarCollector() {};
 
 	virtual bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr);
@@ -208,20 +192,6 @@ public:
 	virtual bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr);
 	virtual bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr);
 	virtual bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
-	vector<clang::CXXRecordDecl*> getAllDynamicBases(const clang::CXXRecordDecl* recDeclCXX );
-
-	virtual GlobalStructPair createGlobalStruct();
-
-private:
-
-	void collectVTableData(const clang::CXXRecordDecl* recDecl);
-
-	//used for virtual functions
-	PolymorphicClassMap& 				polymorphicClassMap;
-	OffsetMap&							offsetMap;
-	VirtualFunctionIdMap&				virtualFunctionIdMap;
-	FinalOverriderMap&					finalOverriderMap;
-	int									maxFunctionCounter;
 };
 
 } // end analysis namespace

@@ -47,7 +47,7 @@ namespace transform {
  * This simple method cleaning up the given IR sub-tree. It therefore uses
  * a set of default cleanup operations.
  */
-core::NodePtr cleanup(const core::NodePtr& node);
+core::NodePtr cleanup(const core::NodePtr& node, bool constantPropagation /* = false */);
 
 /**
  * This method replaces all arrays in the given sub-tree with scalars if they

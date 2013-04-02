@@ -37,7 +37,6 @@
 #pragma once 
 
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/cpp/temporary_handler.h"
 
 #include "insieme/core/forward_decls.h"
 
@@ -91,15 +90,14 @@ namespace conversion {
 	FinalActions attachLog( [&] () { END_LOG_STMT_CONVERSION(retIr); } )
 
 #define START_LOG_STMT_CONVERSION(stmt) \
-	assert(convFact.currTU); \
 	VLOG(1) << "\n****************************************************************************************\n" \
 			 << "Converting statement [class: '" << stmt->getStmtClassName() << "'] \n" \
 			 << "-> at location: (" \
-			 << utils::location(stmt->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
+			 << utils::location(stmt->getLocStart(), convFact.getCurrentSourceManager()) << "): "; \
 	if( VLOG_IS_ON(2) ) { \
 		VLOG(2) << "Dump of clang statement:\n" \
 				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
-		stmt->dump(convFact.currTU->getCompiler().getSourceManager()); \
+		stmt->dump(convFact.getCurrentSourceManager()); \
 	}
 
 #define END_LOG_STMT_CONVERSION(stmt) \
@@ -251,17 +249,16 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //							CXX STMT CONVERTER  -- takes care of CXX nodes and C nodes with CXX code mixed in
 //---------------------------------------------------------------------------------------------------------------------
-class CXXConversionFactory::CXXStmtConverter: 
+class ConversionFactory::CXXStmtConverter: 
 	public ConversionFactory::StmtConverter, 
-	public clang::StmtVisitor<CXXConversionFactory::CXXStmtConverter, stmtutils::StmtWrapper> 
+	public clang::StmtVisitor<ConversionFactory::CXXStmtConverter, stmtutils::StmtWrapper> 
 {
 
-	cpp::TemporaryHandler tempHandler;
-	CXXConversionFactory& cxxConvFact;
+	ConversionFactory& ConvFact;
 
 public:
-	CXXStmtConverter(CXXConversionFactory& cxxConvFact) :
-		StmtConverter(cxxConvFact), tempHandler(&cxxConvFact), cxxConvFact(cxxConvFact) {
+	CXXStmtConverter(ConversionFactory& ConvFact) :
+		StmtConverter(ConvFact), ConvFact(ConvFact) {
 	}
 	virtual ~CXXStmtConverter() {}
 

@@ -4,13 +4,8 @@ BIN_DIR: 	${CMAKE_BINARY_DIR}
 
 comp.gcc: 	 	Conf("gcc", "GCC")
 comp.g++: 		Conf("g++", "G++")
-comp.icc:		Conf("icc", "ICC")
-comp.icpc:		Conf("icpc","ICPC")
 comp.insieme: 	Conf("%(BIN_DIR)s/code/driver/main", "InsiemeC")
 comp.mpicc:		Conf("${MPI_C_COMPILER}", "MPICC")
-
-SMP_HEADER:		%(SRC_DIR)s/code/simple_backend/include/insieme/simple_backend/runtime
-SMP_BUILD: 		%(BIN_DIR)s/code/simple_backend/
 
 act.sema: 		Conf(Flag("-S"), "Sema")
 act.ir: 		Conf(OutFileFlag("--dump-ir", "ir"))
@@ -25,8 +20,6 @@ front.insieme: %(comp.insieme)s + Conf([ Flag("--std=c99"),
 										 Flag("--log-level=INFO")]
 									  )
 
-
-
 # LIST of INSIEME BACKENDS
 back.gcc.flags: Conf([ 
 					Flag("-fshow-column"), 
@@ -36,11 +29,7 @@ back.gcc.flags: Conf([
 					Flag("-I.")
 				])
 back.gcc: 		%(back.gcc.flags)s + Conf(Flag("-std=gnu99"))
-back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++11")) 
-
-back.icc.flags: Conf(Flag('-I.'))
-back.icc:		%(back.icc.flags)s + Conf(Flag("-c99"))
-back.icpc:		%(back.icc.flags)s + Conf(Flag("-c11"))
+back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++0x -fpermissive")) 
 
 back.c.opt: 	Conf(Flag('-O3'))
 back.seq: 		Conf(Flag("-lm"), "SEQ")
@@ -74,41 +63,38 @@ execute.mpi:		Conf('${MPI_C_INCLUDE_PATH}/../bin/mpirun', 'MPIRUN') + Conf([Flag
 
 # LIST OF PASSES (it's important that passes names begins with the pass keyword)
 pass.00.gcc: 		Pass(None,None,%(comp.gcc)s+%(back.c.opt)s+%(back.gcc)s,'ref',%(execute.seq)s)
-pass.01.icc: 		Pass(None,None,%(comp.icc)s+%(back.c.opt)s+%(back.icc)s,'ref',%(execute.seq)s)
 
 pass.01.mpi: 		Pass(None,None,%(comp.mpicc)s+%(back.c.opt)s+%(back.gcc)s,'ref.mpi',%(execute.mpi)s)
 
 pass.02.g++:		Pass(None,None,%(comp.g++)s+%(back.c.opt)s+%(back.g++)s,'ref',%(execute.seq)s)
-pass.03.icpc:		Pass(None,None,%(comp.icpc)s+%(back.c.opt)s+%(back.icpc)s,'ref',%(execute.seq)s )
 
 pass.05.sema: 		Pass(%(front.insieme)s+%(act.sema)s+%(act.ir)s)
 
-pass.07.seq:   		Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
+# Sequential backend passes
+pass.07.c_seq:   	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
 					 %(comp.gcc)s+%(back.gcc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test',%(execute.seq)s  
 					)
-pass.08.seq_icc:	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
-					 %(comp.icc)s+%(back.icc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test.icc',%(execute.seq)s 
+pass.07.cxx_seq:   	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.cpp', 
+					 %(comp.g++)s+%(back.g++)s+%(back.seq)s+%(back.c.opt)s, 'seq.test',%(execute.seq)s  
 					)
-
-pass.07.seq_mpi: 	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
+pass.07.mpi_seq: 	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
 					 %(comp.gcc)s+%(back.gcc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test',%(execute.mpi)s  
 					)
 
-pass.09.run:		Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.c', 
+# Runtime backend passes
+pass.09.c_run:		Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.c', 
 					 %(comp.gcc)s+%(back.gcc)s+%(back.run)s+%(back.c.opt)s, 'run.test',%(execute.seq)s 
 					)
-pass.09.run_win:	Pass(None, 'insieme.run.ref.c', 
+pass.09.cxx_run:	Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.cpp', 
+					 %(comp.g++)s+%(back.g++)s+%(back.run)s+%(back.c.opt)s, 'run.test',%(execute.seq)s 
+					)
+pass.09.win_run:	Pass(None, 'insieme.run.ref.c', 
 					 %(comp.gcc)s+%(back.gcc)s+%(back.run)s+%(back.c.opt)s, 'run.test',%(execute.seq)s 
 					)
 
-pass.10.run_icc:	Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.c', 
-					 %(comp.icc)s+%(back.icc)s+%(back.run)s+%(back.c.opt)s, 'run.test',%(execute.seq)s
-					)
+# OpenCL backend passes
 pass.11.ocl:		Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c',  
 					 %(comp.gcc)s+%(back.gcc)s+%(back.ocl)s+%(back.c.opt)s, 'ocl.test',%(execute.seq)s
-					)
-pass.12.ocl_icc:	Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c', 
-					 %(back.ocl)s + %(back.c.opt)s, 'ocl.test',%(execute.seq)s
 					)
 pass.13.mpi_ocl:	Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c',  
 					 %(comp.mpicc)s+%(back.gcc)s+%(back.mpi_ocl)s+%(back.c.opt)s, 'mpi_ocl.test', %(execute.mpi)s

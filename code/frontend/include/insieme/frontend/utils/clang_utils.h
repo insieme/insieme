@@ -51,24 +51,24 @@ using namespace llvm;
  * @return
  */
 template <class ExpectedTy>
-ExpectedTy* skipSugar(clang::Expr* expr) {
+const ExpectedTy* skipSugar(const clang::Expr* expr) {
 
 	// remove eventual parenthesis
-	if(clang::ParenExpr* parenExpr = dyn_cast<clang::ParenExpr>(expr)) {
+	if(const clang::ParenExpr* parenExpr = dyn_cast<clang::ParenExpr>(expr)) {
 		return skipSugar<ExpectedTy>(parenExpr->getSubExpr());
 	}
 
 	// remove eventual casts
-	if(clang::CastExpr* castExpr = dyn_cast<clang::CastExpr>(expr)) {
+	if(const clang::CastExpr* castExpr = dyn_cast<clang::CastExpr>(expr)) {
 		return skipSugar<ExpectedTy>(castExpr->getSubExpr());
 	}
 
-	if(clang::UnaryOperator* unOp = dyn_cast<clang::UnaryOperator>(expr)) {
+	if(const clang::UnaryOperator* unOp = dyn_cast<clang::UnaryOperator>(expr)) {
 		if(unOp->getOpcode() == clang::UO_Minus)
 			return skipSugar<ExpectedTy>(unOp->getSubExpr());
 	}
 
-	return dyn_cast<ExpectedTy>(expr);
+	return dyn_cast<const ExpectedTy>(expr);
 }
 
 } // End utils namespace

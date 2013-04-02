@@ -36,6 +36,7 @@
 
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/frontend/omp/omp_utils.h"
+#include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -216,6 +217,8 @@ protected:
 				} else if(funName == "omp_get_max_threads") {
 					return build.intLit(65536); // The maximum number of threads shall be 65536. 
 					// Thou shalt not count to 65537, and neither shalt thou count to 65535, unless swiftly proceeding to 65536.
+				} else if(funName == "omp_get_wtime") {
+					return build.callExpr(build.literal("irt_get_wtime", build.functionType(TypeList(), basic.getDouble())));
 				} 
 				// OMP Locks --------------------------------------------
 				else if(funName == "omp_init_lock") {
@@ -355,6 +358,7 @@ protected:
 			 
 		}
 		assert(false && "OMP threadprivate annotation on non-member / non-call");
+		return NodePtr();
 	}
 
 	// implements omp flush by generating INSPIRE flush() calls
@@ -408,7 +412,7 @@ protected:
 		return ret;
 	}
 
-	StatementPtr implementDataClauses(const StatementPtr& stmtNode, const DatasharingClause* clause, StatementList& outsideDecls) {
+	StatementPtr implementDataClauses(const StatementPtr& stmtNode, const DatasharingClause* clause, StatementList& outsideDecls, StatementList postFix = StatementList() ) {
 		const For* forP = dynamic_cast<const For*>(clause);
 		const Parallel* parallelP = dynamic_cast<const Parallel*>(clause);
 		StatementList replacements;
@@ -460,6 +464,8 @@ protected:
 		if(clause->hasReduction()) replacements.push_back(implementReductions(clause, publicToPrivateMap));
 		// specific handling if clause is a omp for (insert barrier if not nowait)
 		if(forP && !forP->hasNoWait()) replacements.push_back(build.barrier());
+		// append postfix
+		copy(postFix.cbegin(), postFix.cend(), back_inserter(replacements));
 		// handle threadprivates before it is too late!
 		auto res = handleTPVarsInternal(build.compoundStmt(replacements), true);
 
@@ -474,7 +480,10 @@ protected:
 	
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 		StatementList resultStmts;
-		auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts);
+		// handle implicit taskwait in postfix of task 
+		StatementList postFix;
+		postFix.push_back(build.mergeAll());
+		auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts, postFix);
 		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
 		// mark printf as unordered
 		parLambda = markUnordered(parLambda).as<BindExprPtr>();
@@ -484,7 +493,7 @@ protected:
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 		resultStmts.push_back(mergeCall);
-		resultStmts.push_back(build.mergeAll()); // implicit mergeall
+		//resultStmts.push_back(build.mergeAll()); 
 		return build.compoundStmt(resultStmts);
 	}
 	

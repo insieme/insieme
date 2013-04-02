@@ -40,7 +40,7 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/frontend.h"
 #include "insieme/frontend/clang_config.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
@@ -58,18 +58,14 @@ using namespace insieme;
 namespace af = analysis::features;
 
 TEST(OclFeaturesTest, StaticFeaturesTest) {
-	Logger::get(std::cerr, INFO);
-	CommandLineOptions::Verbosity = 2;
+	Logger::get(std::cerr, INFO, 2);
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::get(manager);
-
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";
-	insieme::frontend::Program prog(manager);
 
 	std::cout << SRC_DIR << std::endl;
-	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello.cl");
-	program = prog.convert();
+	insieme::frontend::ConversionJob job(SRC_DIR "inputs/hello.cl");
+	core::ProgramPtr program = job.execute(manager);
 	LOG(INFO) << "Done.";
 
 	backend::ocl_kernel::KernelPreprocessor kpp("kernel.dat");

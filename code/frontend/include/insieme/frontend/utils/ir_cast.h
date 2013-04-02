@@ -53,26 +53,28 @@ typedef Pointer<const Type> TypePtr;
 namespace frontend {
 namespace utils {
 
-/**
- * This function tries to restructure the given expression of a reference to a scalar
- * into a reference to an array - if possible without using the scalar.to.ref.array literal.
- *
- * @param expr the expression to be converted
- * @return the rewritten, equivalent expression exposing a reference to an array
- */
-core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr);
+	/**
+	 * This function tries to restructure the given expression of a reference to a scalar
+	 * into a reference to an array - if possible without using the scalar.to.ref.array literal.
+	 *
+	 * @param expr the expression to be converted
+	 * @return the rewritten, equivalent expression exposing a reference to an array
+	 */
+	core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr);
 
-core::ExpressionPtr cast(const core::ExpressionPtr& expr, const core::TypePtr& trgTy);
+	core::ExpressionPtr cast(const core::ExpressionPtr& expr, const core::TypePtr& trgTy);
 
-bool isArray(const core::TypePtr& type);
-bool isRefArray(const core::TypePtr& type);
+	bool isArray(const core::TypePtr& type);
+	bool isRefArray(const core::TypePtr& type);
 
-core::TypePtr getArrayElement(const core::TypePtr& type);
+	core::TypePtr getArrayElement(const core::TypePtr& type);
 
-bool isVector(const core::TypePtr& type);
-bool isRefVector(const core::TypePtr& type);
+	bool isVector(const core::TypePtr& type);
+	bool isRefVector(const core::TypePtr& type);
+	bool isRefRef(const core::TypePtr& type);
 
-core::TypePtr getVectorElement(const core::TypePtr& type);
+	core::TypePtr getVectorElement(const core::TypePtr& type);
+
 
 } // end utils namespace 
 } // end frontend namespace

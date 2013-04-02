@@ -166,7 +166,7 @@ TEST(ExpressionsTest, Lambda) {
 	CompoundStmtPtr body = CompoundStmt::get(manager, Literal::get(manager, type, "a"));
 	VariablePtr varA = Variable::get(manager, type, 1);
 	VariablePtr varB = Variable::get(manager, type, 2);
-	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), type, true);
+	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), type);
 	LambdaPtr empty = Lambda::get(manager, funType, VariableList(), body);
 	LambdaPtr little = Lambda::get(manager, funType, toVector(varA), body);
 	LambdaPtr more = Lambda::get(manager, funType, toVector(varA, varB), body);
@@ -321,53 +321,53 @@ TEST(ExpressionsTest, BindExpr) {
 
 	BindExprPtr empty = builder.bindExpr(toVector<VariablePtr>(), callA);
 	EXPECT_EQ("bind(){f()}", toString(*empty));
-	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(), typeRes, false)), *(empty->getType()));
+	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(), typeRes, FK_CLOSURE)), *(empty->getType()));
 
 	BindExprPtr B1 = builder.bindExpr(toVector<VariablePtr>(), callB1);
 	EXPECT_EQ("bind(){g(12)}", toString(*B1));
-	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(), typeRes, false)), *(B1->getType()));
+	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(), typeRes, FK_CLOSURE)), *(B1->getType()));
 
 	BindExprPtr B2 = builder.bindExpr(toVector<VariablePtr>(captureVar1), callB2);
 	EXPECT_EQ("bind(v1){g(v1)}", toString(*B2));
-	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(typeA), typeRes, false)), *(B2->getType()));
+	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(typeA), typeRes, FK_CLOSURE)), *(B2->getType()));
 
 	BindExprPtr C1 = builder.bindExpr(toVector<VariablePtr>(), callC1);
 	EXPECT_EQ("bind(){h(12, 14)}", toString(*C1));
-	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(), typeRes, false)), *(C1->getType()));
+	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(), typeRes, FK_CLOSURE)), *(C1->getType()));
 
 	BindExprPtr C2 = builder.bindExpr(toVector<VariablePtr>(captureVar1), callC2);
 	EXPECT_EQ("bind(v1){h(12, v1)}", toString(*C2));
-	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(typeA), typeRes, false)), *(C2->getType()));
+	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(typeA), typeRes, FK_CLOSURE)), *(C2->getType()));
 
 	BindExprPtr C3 = builder.bindExpr(toVector<VariablePtr>(captureVar2), callC3);
 	EXPECT_EQ("bind(v2){h(v2, 14)}", toString(*C3));
-	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(typeA), typeRes, false)), *(C3->getType()));
+	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(typeA), typeRes, FK_CLOSURE)), *(C3->getType()));
 
 	BindExprPtr C4 = builder.bindExpr(toVector<VariablePtr>(captureVar1,captureVar2), callC4);
 	EXPECT_EQ("bind(v1,v2){h(v2, v1)}", toString(*C4));
-	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(typeA,typeA), typeRes, false)), *(C4->getType()));
+	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(typeA,typeA), typeRes, FK_CLOSURE)), *(C4->getType()));
 
 
 	// check hash codes, children and cloning
-	FunctionTypePtr funType = builder.functionType(toVector<TypePtr>(), typeRes, false);
+	FunctionTypePtr funType = builder.functionType(toVector<TypePtr>(), typeRes, FK_CLOSURE);
 	basicExprTests(empty, funType, toVector<NodePtr>(funType, builder.parameters(), callA));
 
-	funType = builder.functionType(toVector<TypePtr>(), typeRes, false);
+	funType = builder.functionType(toVector<TypePtr>(), typeRes, FK_CLOSURE);
 	basicExprTests(B1, funType, toVector<NodePtr>(funType, builder.parameters(), callB1));
 
-	funType = builder.functionType(toVector<TypePtr>(typeA), typeRes, false);
+	funType = builder.functionType(toVector<TypePtr>(typeA), typeRes, FK_CLOSURE);
 	basicExprTests(B2, funType, toVector<NodePtr>(funType, builder.parameters(captureVar1), callB2));
 
-	funType = builder.functionType(toVector<TypePtr>(), typeRes, false);
+	funType = builder.functionType(toVector<TypePtr>(), typeRes, FK_CLOSURE);
 	basicExprTests(C1, funType, toVector<NodePtr>(funType, builder.parameters(), callC1));
 
-	funType = builder.functionType(toVector<TypePtr>(typeA), typeRes, false);
+	funType = builder.functionType(toVector<TypePtr>(typeA), typeRes, FK_CLOSURE);
 	basicExprTests(C2, funType, toVector<NodePtr>(funType, builder.parameters(captureVar1), callC2));
 
-	funType = builder.functionType(toVector<TypePtr>(typeA), typeRes, false);
+	funType = builder.functionType(toVector<TypePtr>(typeA), typeRes, FK_CLOSURE);
 	basicExprTests(C3, funType, toVector<NodePtr>(funType, builder.parameters(captureVar2), callC3));
 
-	funType = builder.functionType(toVector<TypePtr>(typeA, typeA), typeRes, false);
+	funType = builder.functionType(toVector<TypePtr>(typeA, typeA), typeRes, FK_CLOSURE);
 	basicExprTests(C4, funType, toVector<NodePtr>(funType, builder.parameters(captureVar1, captureVar2), callC4));
 }
 

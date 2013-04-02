@@ -117,6 +117,7 @@ Some options can be set independently for each run of the system, without recomp
 	IRT\_INST \_WORKER\_EVENT \_TYPES    & string  & sets the event types that should be logged, separated by commas, i.e. WO,WI,WG,DI                               & WO,WI,WG,DI         \\ \hline
         IRT\_INST \_PAPI\_EVENTS           & string & list of papi events that should be measured, separated by colons; examples: examples: "PAPI\_TOT\_CYC:PAPI\_L1\_TCM", "PAPI\_L2\_DCM"                                                & none                \\ \hline
         IRT\_DEFAULT \_VARIANT               & uint32 & default variant of multiversioned WIs to select; if this variant is not available for a WI, variant 0 is chosen & 0                   \\ \hline
+        IRT\_LOOP \_SCHED\_POLICY               & string & default loop scheduling policy and optionally chunk size, examples: "IRT\_STATIC", "IRT\_DYNAMIC,2" "IRT\_GUIDED" & IRT\_STATIC                   \\ \hline
     \end{tabular}
 	\caption{Insieme Runtime -- Environment Variables}
 	\label{tab:runtime:options:environment}

@@ -57,6 +57,7 @@
 #include "insieme/core/types/return_type_deduction.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/core/encoder/lists.h"
 
@@ -136,10 +137,11 @@ namespace {
 		};
 		std::set<VariablePtr, decltype(cmp)> nonDecls(cmp);
 
-		std::set_difference( 
+		std::set_difference(
 				visitor.usedVars.begin(), visitor.usedVars.end(),
-				visitor.declaredVars.begin(), visitor.declaredVars.end(), 
-				std::inserter(nonDecls, nonDecls.begin())
+				visitor.declaredVars.begin(), visitor.declaredVars.end(),
+				std::inserter(nonDecls, nonDecls.begin()),
+				cmp
 			);
 
 		return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
@@ -367,14 +369,14 @@ FunctionTypePtr IRBuilder::toPlainFunctionType(const FunctionTypePtr& funType) c
 	if (funType->isPlain()) {
 		return funType;
 	}
-	return functionType(funType->getParameterTypes(), funType->getReturnType(), true);
+	return functionType(funType->getParameterTypes(), funType->getReturnType(), FK_PLAIN);
 }
 
 FunctionTypePtr IRBuilder::toThickFunctionType(const FunctionTypePtr& funType) const {
 	if (!funType->isPlain()) {
 		return funType;
 	}
-	return functionType(funType->getParameterTypes(), funType->getReturnType(), false);
+	return functionType(funType->getParameterTypes(), funType->getReturnType(), FK_CLOSURE);
 }
 
 
@@ -439,7 +441,12 @@ LiteralPtr IRBuilder::floatLit(const string& value) const {
 }
 
 LiteralPtr IRBuilder::floatLit(float value) const {
-	return floatLit(toString(value));
+	std::stringstream out;
+	out << std::scientific
+		<< std::fixed
+		<< std::setprecision(std::numeric_limits<float>::digits10 + 1)
+		<< value << "f";
+	return floatLit(out.str());
 }
 
 LiteralPtr IRBuilder::doubleLit(const string& value) const {
@@ -447,7 +454,12 @@ LiteralPtr IRBuilder::doubleLit(const string& value) const {
 }
 
 LiteralPtr IRBuilder::doubleLit(double value) const {
-	return doubleLit(toString(value));
+	std::stringstream out;
+	out << std::scientific
+		<< std::fixed
+		<< std::setprecision(std::numeric_limits<double>::digits10 + 1)
+		<< value;
+	return doubleLit(out.str());
 }
 
 ExpressionPtr IRBuilder::undefined(const TypePtr& type) const {
@@ -785,13 +797,13 @@ LambdaPtr IRBuilder::lambda(const FunctionTypePtr& type, const VariableList& par
 }
 
 LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const {
-	return lambdaExpr(functionType(extractTypes(params->getParameters()), manager.getLangBasic().getUnit(), true), params, wrapBody(body));
+	return lambdaExpr(functionType(extractTypes(params->getParameters()), manager.getLangBasic().getUnit(), FK_PLAIN), params, wrapBody(body));
 }
 LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const VariableList& params) const {
 	return lambdaExpr(body, parameters(params));
 }
 LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const {
-	return lambdaExpr(functionType(extractTypes(params->getParameters()), returnType, true), params, wrapBody(body));
+	return lambdaExpr(functionType(extractTypes(params->getParameters()), returnType, FK_PLAIN), params, wrapBody(body));
 }
 LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const {
 	return lambdaExpr(returnType, body, parameters(params));
@@ -802,7 +814,7 @@ LambdaExprPtr IRBuilder::lambdaExpr(const FunctionTypePtr& type, const VariableL
 }
 
 BindExprPtr IRBuilder::bindExpr(const VariableList& params, const CallExprPtr& call) const {
-	FunctionTypePtr type = functionType(extractTypes(params), call->getType(), false);
+	FunctionTypePtr type = functionType(extractTypes(params), call->getType(), FK_CLOSURE);
 	return bindExpr(type, parameters(params), call);
 }
 
@@ -962,7 +974,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     		);
     }
 
-    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, true), params, wrapBody(body) );
+    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, FK_PLAIN), params, wrapBody(body) );
     core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);
 
     if ( !lazy ) 	return callExpr;
@@ -1386,6 +1398,49 @@ ExpressionPtr IRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
 	assert(type->isMemberFunction());
 	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
 	return callExpr(type, ext.getPureVirtual(), getTypeLiteral(type));
+}
+
+ExpressionPtr IRBuilder::toCppRef(const ExpressionPtr& ref) const {
+	assert(ref && ref->getType()->getNodeType() == NT_RefType);
+	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
+
+	// avoid multiple nesting of wrapping / unwrapping
+	if (core::analysis::isCallOf(ref, ext.getRefCppToIR())) {
+		return ref.as<CallExprPtr>()[0];	// strip of previous call
+	}
+
+	// use converter function all
+	return callExpr(core::analysis::getCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToCpp(), ref);
+}
+
+ExpressionPtr IRBuilder::toConstCppRef(const ExpressionPtr& ref) const {
+	assert(ref && ref->getType()->getNodeType() == NT_RefType);
+	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
+
+	// avoid multiple nesting of wrapping / unwrapping
+	if (core::analysis::isCallOf(ref, ext.getRefConstCppToIR())) {
+		return ref.as<CallExprPtr>()[0];	// strip of previous call
+	}
+
+	return callExpr(core::analysis::getConstCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToConstCpp(), ref);
+}
+
+ExpressionPtr IRBuilder::toIRRef(const ExpressionPtr& ref) const {
+	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
+	assert(ref && (analysis::isCppRef(ref->getType()) || analysis::isConstCppRef(ref->getType())));
+
+	// see whether this is a value which has just been wrapped
+	if (analysis::isCallOf(ref, ext.getRefIRToCpp()) || analysis::isCallOf(ref, ext.getRefIRToConstCpp())) {
+		return ref.as<CallExprPtr>()[0];		// strip of nested wrapper
+	}
+
+	// check whether it is a non-const reference
+	if (analysis::isCppRef(ref->getType())) {
+		return callExpr(refType(analysis::getCppRefElementType(ref->getType())), ext.getRefCppToIR(), ref);
+	}
+
+	// handle a const reference
+	return callExpr(refType(analysis::getCppRefElementType(ref->getType())), ext.getRefConstCppToIR(), ref);
 }
 
 } // namespace core

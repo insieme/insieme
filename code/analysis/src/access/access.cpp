@@ -201,6 +201,7 @@ namespace access {
 			} catch (arithmetic::NotAFormulaException&& e) {
 				// What if this is a piecewise? we can handle it
 				assert (false && "Array access is not a formula");
+				return SubscriptPtr();
 			}
 		}
 
@@ -285,6 +286,7 @@ namespace access {
 			return extractArrayAccess(mgr, expr, subAccess, tmpVarMap, final);
 		}
 		assert(false && "Access not supported");
+		return AccessPtr();
 	}
 
 	namespace {
@@ -467,7 +469,8 @@ namespace access {
 				return false;
 			}
 
-			default: assert(false && "not supported");
+			default: 
+				assert(false && "not supported");
 		}
 	}
 

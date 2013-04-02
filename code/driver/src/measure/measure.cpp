@@ -321,6 +321,131 @@ namespace measure {
 		template<typename T> first_impl<T> first(const T& list) { return first_impl<T>(list); }
 
 		/**
+		 *  Computes the standard deviation of quantities extracted as a list.
+		 *
+		 *  @param T the functor used to extract the list.
+		 */
+		template<typename T>
+		struct var_impl {
+			T list_extractor;
+			var_impl(T list_extractor) : list_extractor(list_extractor) {}
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				// check whether there is something
+				vector<Quantity> list = list_extractor(data, metric, region);
+				if (list.empty()) {
+					return Quantity::invalid(metric->getUnit());
+				}
+
+				// get sum
+				Quantity res(0, list[0].getUnit());
+				for_each(list, [&](const Quantity& cur) {
+					res += cur;
+				});
+
+				// compute average
+				Quantity average = res/Quantity(list.size());
+
+				auto ns2 = makeUnitPtr((nano * s)^2);
+
+				// compute variance
+				Quantity varianceTemp(0, ns2);
+				for_each(list, [&](const Quantity& cur) {
+					varianceTemp += Quantity(cur - average) * Quantity(cur - average);
+				});
+
+				return varianceTemp/average;
+			}
+			std::set<MetricPtr> getDependencies() const { return list_extractor.getDependencies(); };
+		};
+
+		// a specialization for metric pointer
+		template<> struct var_impl<MetricPtr> : public var_impl<list> {
+			var_impl(MetricPtr m) : var_impl<list>(list(m)) {}
+		};
+
+		/**
+		 * Since template-structs cannot be constructed nicely without specifying the template
+		 * parameters, this function is introducing the necessary automated type deduction.
+		 */
+		template<typename T> var_impl<T> var(const T& list) { return var_impl<T>(list); }
+
+		/**
+		 * Computes the min of quantities extracted as a list.
+		 *
+		 * @param T the functor used to extract the list.
+		 */
+		template<typename T>
+		struct min_impl {
+			T list_extractor;
+			min_impl(T list_extractor) : list_extractor(list_extractor) {}
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				// check whether there is something
+				vector<Quantity> list = list_extractor(data, metric, region);
+				if (list.empty()) {
+					return Quantity::invalid(metric->getUnit());
+				}
+
+				// compute min
+				Quantity res = list[0];
+				for_each(list, [&](const Quantity& cur) {
+					if(cur < res)
+						res = cur;
+				});
+				return res;
+			}
+			std::set<MetricPtr> getDependencies() const { return list_extractor.getDependencies(); };
+		};
+
+		// a specialization for metric pointer
+		template<> struct min_impl<MetricPtr> : public min_impl<list> {
+			min_impl(MetricPtr m) : min_impl<list>(list(m)) {}
+		};
+
+		/**
+		 * Since template-structs cannot be constructed nicely without specifying the template
+		 * parameters, this function is introducing the necessary automated type deduction.
+		 */
+		template<typename T> min_impl<T> min(const T& list) { return min_impl<T>(list); }
+
+		/**
+		 * Computes the max of quantities extracted as a list.
+		 *
+		 * @param T the functor used to extract the list.
+		 */
+		template<typename T>
+		struct max_impl {
+			T list_extractor;
+			max_impl(T list_extractor) : list_extractor(list_extractor) {}
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				// check whether there is something
+				vector<Quantity> list = list_extractor(data, metric, region);
+				if (list.empty()) {
+					return Quantity::invalid(metric->getUnit());
+				}
+
+				// compute max
+				Quantity res = list[0];
+				for_each(list, [&](const Quantity& cur) {
+					if(cur > res)
+						res = cur;
+				});
+				return res;
+			}
+			std::set<MetricPtr> getDependencies() const { return list_extractor.getDependencies(); };
+		};
+
+		// a specialization for metric pointer
+		template<> struct max_impl<MetricPtr> : public max_impl<list> {
+			max_impl(MetricPtr m) : max_impl<list>(list(m)) {}
+		};
+
+		/**
+		 * Since template-structs cannot be constructed nicely without specifying the template
+		 * parameters, this function is introducing the necessary automated type deduction.
+		 */
+		template<typename T> max_impl<T> max(const T& list) { return max_impl<T>(list); }
+
+		/**
 		 * Computes the sum of quantities extracted as a list.
 		 *
 		 * @param T the functor used to extract the list.
@@ -697,8 +822,15 @@ namespace measure {
 			return vector<std::map<region_id, std::map<MetricPtr, Quantity>>>(numRuns);
 		}
 
-		// create the instrumented binary
-		auto binFile = buildBinary(regions, compiler);
+		// fix static scheduling
+		auto modifiedCompiler = compiler;
+		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
+
+		// build target code
+		auto binFile = buildBinary(regions, modifiedCompiler);
+
+//		// create the instrumented binary
+//		auto binFile = buildBinary(regions, compiler);
 		if (binFile.empty()) {
 			throw MeasureException("Unable to compiling executable for measurement!");
 		}
@@ -728,6 +860,35 @@ namespace measure {
 
 		// partition the papi parameters
 		auto papiPartition = partitionPapiCounter(metrics);
+		/*auto papiPartition = vector<vector<MetricPtr> >(3);
+
+		namespace idm = insieme::driver::measure;
+
+		papiPartition[0] = vector<MetricPtr>{
+			  idm::Metric::TOTAL_L1_DCM,
+			  idm::Metric::TOTAL_L2_DCM,
+			  idm::Metric::TOTAL_L3_TCM,
+			  idm::Metric::TOTAL_BR_MSP,
+			  idm::Metric::TOTAL_BR_PRC,
+			  idm::Metric::TOTAL_TOT_INS,
+			  idm::Metric::TOTAL_FDV_INS,
+			  idm::Metric::TOTAL_LD_INS,
+		};
+
+		papiPartition[1] = vector<MetricPtr>{
+			  idm::Metric::TOTAL_FP_INS,
+			  idm::Metric::TOTAL_SR_INS,
+			  idm::Metric::TOTAL_L2_DCH,
+			  idm::Metric::TOTAL_FP_OPS,
+			  idm::Metric::TOTAL_VEC_SP,
+		};
+
+		papiPartition[2] = vector<MetricPtr>{
+			  idm::Metric::TOTAL_VEC_DP,
+			  idm::Metric::TOTAL_STL_ICY,
+			  idm::Metric::TOTAL_TLB_DM,
+			  idm::Metric::TOTAL_TLB_IM,
+		};*/
 
 		// run experiments and collect results
 		vector<std::map<region_id, std::map<MetricPtr, Quantity>>> res;
@@ -769,7 +930,6 @@ namespace measure {
 				}
 
 			});
-
 
 			// extract results
 			res.push_back(std::map<region_id, std::map<MetricPtr, Quantity>>());
@@ -878,15 +1038,14 @@ namespace measure {
 
 		// a lambda merging region data
 		auto collectRegionData = [&](const RegionDataStore& src) {
-			for_each(src, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
-				if (cur.first == region) {
-					auto pos = cur.second.find(metric);
-					if (pos != cur.second.end()) {
-						const vector<Quantity>& list = pos->second;
-						res.insert(res.end(), list.begin(), list.end());
-					}
+			auto outer_pos = src.find(region);
+			if (outer_pos != src.end()) {
+				auto pos = outer_pos->second.find(metric);
+				if (pos != outer_pos->second.end()) {
+					const vector<Quantity>& list = pos->second;
+					res.insert(res.end(), list.begin(), list.end());
 				}
-			});
+			}
 		};
 
 		// collect data from region store

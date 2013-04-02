@@ -138,7 +138,7 @@ void irt_wi_join(irt_work_item* wi);
 void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis); // bad idea
 void irt_wi_join_all(irt_work_item* wi);
 void irt_wi_end(irt_work_item* wi);
-void irt_wi_finalize(irt_work_item* wi);
+void irt_wi_finalize(irt_worker* worker, irt_work_item* wi);
 
 void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis);
 void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]);

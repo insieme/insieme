@@ -152,6 +152,7 @@ Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 
 	default:
 		assert(false);
+		return Piecewise();
 	}
 	//}
 	//std::ostringstream ss;
@@ -217,6 +218,7 @@ core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piece
 		}
 		default:
 			assert(false);
+			return core::ExpressionPtr();
 	}
 }
 

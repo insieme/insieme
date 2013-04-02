@@ -45,6 +45,7 @@
 
 #include "insieme/utils/iterator_utils.h"
 #include "insieme/utils/numeric_cast.h"
+#include "insieme/utils/unused.h"
 
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/mpi/mpi_annotations.h"
@@ -80,7 +81,7 @@ MPIStmtPragma::MPIStmtPragma(const clang::SourceLocation& startLoc,
 	assert(fit != mmap.end());
 
 	for_each(fit->second, [&](const pragma::ValueUnionPtr& cur) {
-		auto&& ret = this->m_deps.insert( extract_int_val(cur) );
+		__unused auto ret = this->m_deps.insert( extract_int_val(cur) );
 		assert(ret.second && "Dependence list for MPI statement contains the same element twice");
 	});
 }

@@ -200,6 +200,6 @@ ${OPENMPI}: openmpi_install.sh ${GCC} ${HWLOC} ${LIBTOOL}
 	@echo "@@@@ Done! @@@@"
 
 
-INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${BOOST} \
+INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${LLVM32} ${BOOST} \
 		 ${CMAKE} ${GTEST} ${LUAJIT} ${CUDD} ${SHARK} ${KOMPEX} \
 		 ${XERCES} ${PYTHON} ${RUBY} ${PAPI} ${OPENMPI} ${CCACHE}

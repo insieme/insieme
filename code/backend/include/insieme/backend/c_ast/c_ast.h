@@ -154,6 +154,7 @@ namespace c_ast {
 
 	struct NamedType : public Type {
 		IdentifierPtr name;
+		vector<NodePtr> parameters;
 		NamedType(IdentifierPtr name) : Type(NT_NamedType), name(name) {}
 		virtual bool equals(const Node& other) const;
 	};
@@ -161,6 +162,13 @@ namespace c_ast {
 	struct PointerType : public Type {
 		TypePtr elementType;
 		PointerType(TypePtr elementType) : Type(NT_PointerType), elementType(elementType) {}
+		virtual bool equals(const Node& other) const;
+	};
+
+	struct ReferenceType : public Type {
+		bool isConst;
+		TypePtr elementType;
+		ReferenceType(bool isConst, TypePtr elementType) : Type(NT_ReferenceType), isConst(isConst), elementType(elementType) {}
 		virtual bool equals(const Node& other) const;
 	};
 
@@ -338,6 +346,14 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct ArrayInit : public Expression {
+		TypePtr type;
+		ExpressionPtr size;
+		ArrayInit(TypePtr type, ExpressionPtr size)
+			: Expression(NT_ArrayInit), type(type), size(size) {};
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct VectorInit : public Expression {
 		vector<NodePtr> values;
 		VectorInit() : Expression(NT_VectorInit) {};
@@ -367,6 +383,7 @@ namespace c_ast {
 			Indirection,
 			Reference,
 			SizeOf,
+			New,
 		};
 
 		UnaryOp operation;
@@ -478,10 +495,9 @@ namespace c_ast {
 	struct ConstructorCall : public Expression {
 		TypePtr classType;
 		vector<NodePtr> arguments;
-		bool onHeap;
 		ExpressionPtr location;
-		ConstructorCall(TypePtr classType, const vector<NodePtr>& args, bool onHeap = false, ExpressionPtr location = ExpressionPtr())
-			: Expression(NT_ConstructorCall), classType(classType), arguments(args), onHeap(onHeap), location(location) {}
+		ConstructorCall(TypePtr classType, const vector<NodePtr>& args, ExpressionPtr location = ExpressionPtr())
+			: Expression(NT_ConstructorCall), classType(classType), arguments(args), location(location) {}
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -589,10 +605,13 @@ namespace c_ast {
 
 
 	struct Constructor : public Definition {
+		typedef pair<IdentifierPtr, vector<NodePtr>> InitializerListEntry;
+		typedef vector<InitializerListEntry> InitializationList;
 		IdentifierPtr className;
 		FunctionPtr function;
-		Constructor(const IdentifierPtr& className, const FunctionPtr& function)
-			: Definition(NT_Constructor), className(className), function(function) {}
+		InitializationList initialization;
+		Constructor(const IdentifierPtr& className, const FunctionPtr& function, const InitializationList& initializer = InitializationList())
+			: Definition(NT_Constructor), className(className), function(function), initialization(initializer) {}
 		virtual bool equals(const Node& node) const;
 	};
 

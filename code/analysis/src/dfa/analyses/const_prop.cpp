@@ -251,6 +251,7 @@ dfa::Value<LiteralPtr> eval(const AccessManager&		aMgr,
 	}
 
 	assert( false  && "Something odd happened" );
+	return dfa::Value<LiteralPtr>();
 }
 
 

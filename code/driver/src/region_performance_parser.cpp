@@ -122,8 +122,7 @@ int RegionPerformanceParser::parseSingle(std::string filename, PerformanceMap* p
 		}
 	}
 
-	PerformanceMap::iterator final_it = performance_map_final->begin();
-	unsigned long long start_key = 0, start_value = 0, end_key = -1, end_value = 0;
+	unsigned long long start_key = 0, start_value = 0, end_value = 0;
 
 	// iterate through multimap, merge every pair of values per key into a map containing a sum of all time values for each region
 	for(PerformanceMapRaw::iterator it = performance_data_raw.begin(); it != performance_data_raw.end(); ++it) {
@@ -135,7 +134,6 @@ int RegionPerformanceParser::parseSingle(std::string filename, PerformanceMap* p
 		if(it == performance_data_raw.end())
 			return NO_MATCHING_END_EVENT_FOUND;
 
-		end_key = it->first;
 		end_value = it->second.getTimespan();
 
 		PerformanceMap::iterator found_it = performance_map_final->find(start_key);

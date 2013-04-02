@@ -45,11 +45,16 @@
 
 #include "insieme/utils/logging.h"
 
+// clang [3.2]
+#include "clang/AST/ASTContext.h"
+// /clang [3.2]
+
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 
-#include "clang/Index/Indexer.h"
-#include "clang/Index/Program.h"
+// clang [3.0]
+//#include "clang/Index/Indexer.h"
+//#include "clang/Index/Program.h"
 
 using namespace insieme;
 using namespace insieme::core;
@@ -121,9 +126,9 @@ TEST(TypeConversion, HandlePointerType) {
 	using namespace clang;
 
 	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
-	const fe::ClangCompiler& clang = tu.getCompiler();
+	fe::ConversionJob job;
+	fe::Program prog(manager, job);
+	const fe::ClangCompiler& clang = fe::ClangCompiler(job);
 	ConversionFactory convFactory( manager, prog );
 
 	clang::Type* intTy = new clang::BuiltinType(clang::BuiltinType::Int);
@@ -359,9 +364,9 @@ TEST(TypeConversion, HandleArrayType) {
 	using namespace clang;
 
 	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
-	const fe::ClangCompiler& clang = tu.getCompiler();
+	fe::ConversionJob config;
+	fe::Program prog(manager, config);
+	const fe::ClangCompiler& clang = fe::ClangCompiler(config);
 	ConversionFactory convFactory( manager, prog );
 
 	ASTContext& ctx = clang.getASTContext();
@@ -396,7 +401,9 @@ TEST(TypeConversion, FileTest) {
 
 	NodeManager manager;
 	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
+	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/types.c") );
+	
+	prog.analyzeFuncDependencies();
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
@@ -405,7 +412,7 @@ TEST(TypeConversion, FileTest) {
 		NodeManager mgr;
 
 		ConversionFactory convFactory( mgr, prog );
-		convFactory.setTranslationUnit(tu);
+		convFactory.setTranslationUnit(&tu);
 
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
 

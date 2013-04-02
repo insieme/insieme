@@ -125,12 +125,12 @@ namespace parser {
 		EXPECT_EQ(builder.functionType(toVector(A,B,C,A), C), parse(manager, "(A,B,C,A)->C"));
 
 		// also some non-plain types
-		EXPECT_EQ(builder.functionType(toVector(B,C,A), A, false), parse(manager, "(B, C, A) => A"));
+		EXPECT_EQ(builder.functionType(toVector(B,C,A), A, FK_CLOSURE), parse(manager, "(B, C, A) => A"));
 
 		// a function taking a function as an argument + integration of tuples
 		TypePtr tuple = builder.tupleType(toVector(A,C));
-		TypePtr funA = builder.functionType(toVector(B,C,A), A, false);
-		TypePtr funB = builder.functionType(toVector(C,tuple, A), B, false);
+		TypePtr funA = builder.functionType(toVector(B,C,A), A, FK_CLOSURE);
+		TypePtr funB = builder.functionType(toVector(C,tuple, A), B, FK_CLOSURE);
 
 		EXPECT_EQ(builder.functionType(toVector(funA, tuple), funB), parse(manager,"((B,C,A)=>A,(A,C))->(C,(A,C),A)=>B"));
 
@@ -957,6 +957,44 @@ namespace parser {
 				"}"
 		))));
 
+	}
+
+	TEST(IR_Parser2, StructExpr) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		ExpressionPtr expr = builder.parseExpr(
+				"let pair = struct { int<4> x; real<8> y; } in "
+				"(pair){ 1, 2.0 }"
+		);
+
+		ASSERT_TRUE(expr);
+		EXPECT_EQ("struct{x=1, y=2.0}", toString(*expr));
+	}
+
+	TEST(IR_Parser2, UnionExpr) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		{
+			ExpressionPtr expr = builder.parseExpr(
+					"let pair = union { int<4> x; real<8> y; } in "
+					"(pair){ x = 1 }"
+			);
+
+			ASSERT_TRUE(expr);
+			EXPECT_EQ("union{x=1}", toString(*expr));
+		}
+
+		{
+			ExpressionPtr expr = builder.parseExpr(
+					"let pair = union { int<4> x; real<8> y; } in "
+					"(pair){ y = 2.0 }"
+			);
+
+			ASSERT_TRUE(expr);
+			EXPECT_EQ("union{y=2.0}", toString(*expr));
+		}
 	}
 
 	TEST(IR_Parser2, SizeOfBug) {

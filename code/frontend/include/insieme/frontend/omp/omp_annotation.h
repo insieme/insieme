@@ -88,7 +88,7 @@ DEFINE_TYPE(Atomic);
  *
  * The omp::BaseAnnotation node will contains a list of omp pragmas which are associated to the IR node.
  */
-class BaseAnnotation : public utils::CompoundAnnotation< omp::Annotation , core::NodeAnnotation > {
+class BaseAnnotation : public utils::CompoundAnnotation<omp::Annotation ,core::NodeAnnotation> {
 public:
 	static const string NAME;
     static const utils::StringKey<BaseAnnotation> KEY;
@@ -159,6 +159,7 @@ public:
 		case LOR:	return "||";
 		}
 		assert(false && "Operator doesn't exist");
+		return "?";
 	}
 
 private:
@@ -196,6 +197,7 @@ public:
 		case RUNTIME: 	return "runtime";
 		}
 		assert(false && "Scheduling kind doesn't exist");
+		return "?";
 	}
 private:
 	Kind kind;
@@ -223,6 +225,7 @@ public:
 		case NONE: 		return "none";
 		}
 		assert(false && "Mode doesn't exist");
+		return "?";
 	}
 
 private:

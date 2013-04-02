@@ -156,8 +156,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		case BO_AddAssign:
 		case BO_SubAssign: {
 			assert(isa<const DeclRefExpr>(binOp->getLHS()));
-			const DeclRefExpr* lhs = dyn_cast<const DeclRefExpr>(binOp->getLHS());
-			assert(lhs->getDecl() == loopHelper.inductionVar);
+			assert(dyn_cast<const DeclRefExpr>(binOp->getLHS())->getDecl() == loopHelper.inductionVar);
 			loopHelper.incrExpr = convFact.convertExpr( binOp->getRHS() );
 			if (loopHelper.incrExpr->getType()->getNodeType() == core::NT_RefType) {
 				loopHelper.incrExpr = convFact.getIRBuilder().deref(loopHelper.incrExpr);
@@ -178,7 +177,7 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 	// analyze the condition expression
 	if(const Expr* cond = forStmt->getCond()) {
 		if( const BinaryOperator* binOp = dyn_cast<const BinaryOperator>(cond) ) {
-			DeclRefExpr* lhs = utils::skipSugar<DeclRefExpr>(binOp->getLHS());
+			const DeclRefExpr* lhs = utils::skipSugar<const DeclRefExpr>(binOp->getLHS());
 			if(lhs && lhs->getDecl() == loopHelper.inductionVar) {
 				core::ExpressionPtr&& condExpr = convFact.tryDeref(convFact.convertExpr( binOp->getRHS() ));
 				switch(binOp->getOpcode()) {

@@ -37,10 +37,18 @@
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include "clang/AST/Decl.h"
+#pragma GCC diagnostic pop
 // DON'T MOVE THIS!
 
 #include <gtest/gtest.h>
+
+#include "insieme/frontend/stmt_converter.h"
+#include "insieme/frontend/expr_converter.h"
+#include "insieme/frontend/type_converter.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/checks/full_check.h"
@@ -53,8 +61,9 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
 
-#include "clang/Index/Indexer.h"
-#include "clang/Index/Program.h"
+// clang [3.0]
+//#include "clang/Index/Indexer.h"
+//#include "clang/Index/Program.h"
 
 using namespace insieme::core;
 using namespace insieme::core::checks;
@@ -95,7 +104,9 @@ TEST(StmtConversion, FileTest) {
 
 	NodeManager manager;
 	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/stmt.c" );
+	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/stmt.c") );
+	
+	prog.analyzeFuncDependencies();
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
@@ -105,7 +116,7 @@ TEST(StmtConversion, FileTest) {
 		NodeManager mgr;
 
 		fe::conversion::ConversionFactory convFactory( mgr, prog );
-		convFactory.setTranslationUnit(tu);
+		convFactory.setTranslationUnit(&tu);
 
 		if(tp.isStatement()) {
 			StatementPtr&& stmt = convFactory.convertStmt( tp.getStatement() );
@@ -121,7 +132,7 @@ TEST(StmtConversion, FileTest) {
 				// do semantics checking
 				checkSemanticErrors(type);
 			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
-				LambdaExprPtr&& expr = dynamic_pointer_cast<const LambdaExpr>(convFactory.convertFunctionDecl(fd));
+				LambdaExprPtr&& expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(convFactory.convertFunctionDecl(fd));
 				assert(expr);
 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(expr) + '\"' );
 				// do semantics checking

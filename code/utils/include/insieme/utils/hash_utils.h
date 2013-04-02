@@ -288,20 +288,50 @@ void hashList(std::size_t& seed, const Container& container, Hasher hasher) {
 namespace std
 {
 
-	// NOTE: isn't working - and solution is ugly
-	// see: http://stackoverflow.com/questions/1032973/how-to-partially-specialize-a-class-template-for-all-derived-types
-	// TODO: find a work-around
+	/**
+	 * Integrates the exposition of hashable immutable data into the std::hash infrastrcuture.
+	 *
+	 * @param instance the instance for which a hash code should be obtained.
+	 * @return the hash code of the given instance
+	 */
+	template<typename T>
+	struct hash<insieme::utils::HashableImmutableData<T>> {
+		size_t operator()(const insieme::utils::HashableImmutableData<T>& instance) const {
+			return instance.hash();
+		}
+	};
+
 
 	/**
-	 * A specialization of the std-hash struct to be used for realizing hashing of
-	 * HashableImmutableData within the std-based hashing data structures.
+	 * Add hash support for pairs.
 	 */
-//	template <typename Derived>
-//	struct hash<Derived, typename boost::enable_if<boost::is_base_of<insieme::utils::Hashable,Derived>, Derived>::type> : public std::unary_function<insieme::utils::Hashable, size_t> {
-//		size_t operator()(const insieme::utils::Hashable& instance) {
-//			return instance.hash();
-//		}
-//	};
+	template<typename A, typename B>
+	struct hash<pair<A,B>> {
+		size_t operator()(const pair<A,B>& instance) const {
+			return boost::hash_value(instance); // bridge to boost solution
+		}
+	};
+
+	/**
+	 * Add hash support for vectors.
+	 */
+	template<typename T, typename A>
+	struct hash<vector<T,A>> {
+		size_t operator()(const vector<T,A>& instance) const {
+			return boost::hash_value(instance); // bridge to boost solution
+		}
+	};
+
+
+	/**
+	 * Add hash support for vectors.
+	 */
+	template<typename K, typename C, typename A>
+	struct hash<set<K,C,A>> {
+		size_t operator()(const set<K,C,A>& instance) const {
+			return boost::hash_value(instance); // bridge to boost solution
+		}
+	};
 }
 
 

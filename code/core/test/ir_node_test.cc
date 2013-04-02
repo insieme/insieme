@@ -191,6 +191,52 @@ namespace new_core {
 
 	}
 
+	TEST(Node, DumpTest) {
+
+		// just create some node and dump it
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		TypePtr A = builder.genericType("A");
+		TypePtr B = builder.genericType("B", toVector(A));
+		auto node = B;
+
+		// to selected output stream
+		{
+			dump(node);
+			std::stringstream buf;
+			dump(node, buf);
+			EXPECT_EQ("B<A>\n", buf.str());
+		}
+
+		{
+			dumpText(node);
+			std::stringstream buf;
+			dumpText(node, buf);
+			EXPECT_EQ("(GenericType |\n    (StringValue \"B\")\n    (Parents )\n    (Types |\n        (GenericType |\n            (StringValue \"A\")\n            (Parents )\n            (Types )\n            (IntTypeParams )\n        )\n    )\n    (IntTypeParams )\n)\n\n", buf.str());
+		}
+
+		{
+			std::stringstream buf;
+			dumpDetail(node, buf);
+			EXPECT_EQ("B<A>\n", buf.str());
+		}
+
+		// test literal printing
+		ExpressionPtr E = builder.literal("x", B);
+		{
+			std::stringstream buf;
+			dump(E, buf);
+			EXPECT_EQ("x\n", buf.str());
+		}
+
+		{
+			std::stringstream buf;
+			dumpDetail(E, buf);
+			EXPECT_EQ("x:B<A>\n", buf.str());
+		}
+	}
+
 } // end namespace new_core
 } // end namespace core
 } // end namespace insieme

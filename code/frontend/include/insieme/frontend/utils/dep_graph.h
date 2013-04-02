@@ -135,13 +135,14 @@ public:
 		// We return a set of Types which are connected with the input type t
 		std::set<T> ret;
 		typename boost::property_map<NodeDepGraph, T NodeProperty::*>::type node = get(&NodeProperty::node, graph);
-		for (std::vector<size_t>::size_type i = 0, e = strongComponents.size(); i != e; ++i)
+		for (std::vector<size_t>::size_type i = 0, e = strongComponents.size(); i != e; ++i){
 			// we have check if the two nodes are in the same component
 			if((i != v && strongComponents[i] == strongComponents[v]) || (i == v && boost::edge(v, v, graph).second)) {
 				// in the case we are comparing the same node, we add it to the result only if there is an explicit
 				// link from the node to itself
 				ret.insert( node[i] );
 			}
+		}
 
 		return ret;
 	}

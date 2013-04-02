@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/utils/map_utils.h"
+
 #include "insieme/core/ir_node.h"
 
 #include "insieme/core/transform/node_replacer.h"
@@ -79,7 +81,7 @@ ProgramPtr HostCompiler::compile() {
 //	visitDepthFirst(transformedProg,FAKK);
 
 	//    HostVisitor oclHostVisitor(builder, mProgram);
-	HostMapper oclHostMapper(builder, mProgram);
+	HostMapper oclHostMapper(builder, mProgram, job);
 
 	const ProgramPtr& interProg = dynamic_pointer_cast<const core::Program>(oclHostMapper.mapElement(0, mProgram));
 	assert(interProg && "First pass of OclHostCompiler corrupted the program");
@@ -116,7 +118,7 @@ ProgramPtr HostCompiler::compile() {
 	 */
 	NodePtr transformedProg = ohm3rd.mapElement(0, progWithKernels);
 
-	utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
+	insieme::utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
 	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
 		tmp[t.first] = t.second;
 //		if(dynamic_pointer_cast<const StructType>(t.second->getType())) {

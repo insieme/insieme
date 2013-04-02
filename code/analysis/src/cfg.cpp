@@ -1364,6 +1364,7 @@ std::ostream& Terminator::printTo(std::ostream& out) const {
 	default:
 		assert(false && "Terminator statement is not supported");
 	}
+	return out;
 }
 
 } // end cfg namespace 

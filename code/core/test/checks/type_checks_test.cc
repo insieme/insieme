@@ -867,8 +867,8 @@ TEST(ExternalFunctionType, Basic) {
 	// OK ... create a function literal
 	TypePtr intType = builder.genericType("int");
 	TypePtr boolType = builder.genericType("bool");
-	FunctionTypePtr funTypeOK  = builder.functionType(toVector(intType), boolType, true);
-	FunctionTypePtr funTypeERR = builder.functionType(toVector(intType), boolType, false);
+	FunctionTypePtr funTypeOK  = builder.functionType(toVector(intType), boolType, FK_PLAIN);
+	FunctionTypePtr funTypeERR = builder.functionType(toVector(intType), boolType, FK_CLOSURE);
 
 	NodePtr ok = builder.literal(funTypeOK, "fun");
 	NodePtr err = builder.literal(funTypeERR, "fun");

@@ -63,7 +63,7 @@ void irt_scheduling_loop(irt_worker* self) {
 			self->cur_wi->state = IRT_WI_STATE_SUSPENDED;
 			self->cur_wi = NULL;
 			if(self->finalize_wi != NULL) {
-				irt_wi_finalize(self->finalize_wi);
+				irt_wi_finalize(self, self->finalize_wi);
 				self->finalize_wi = NULL;
 			}
 			#ifdef IRT_ASTEROIDEA_STACKS

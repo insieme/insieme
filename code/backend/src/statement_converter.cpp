@@ -51,6 +51,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/types/variable_sized_struct_utils.h"
+#include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/utils/logging.h"
 
@@ -82,12 +83,10 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visit(const core::NodePtr& node, ConversionContext& context) {
 		// first ask the handlers
-		if (!stmtHandler.empty()) {
-			for(auto it = stmtHandler.begin(); it != stmtHandler.end(); ++it) {
-				c_ast::NodePtr res = (*it)(context, node);
-				if (res) {
-					return res;
-				}
+		for(auto cur : stmtHandler) {
+			c_ast::NodePtr res = cur(context, node);
+			if (res) {
+				return res;
 			}
 		}
 
@@ -185,6 +184,13 @@ namespace backend {
 				converter.getCNodeManager()->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void),
 				converter.getCNodeManager()->create<c_ast::Literal>("0")
 			);
+		}
+
+		// special handling for int-type-parameter literal
+		if (core::analysis::isIntTypeParamLiteral(ptr)) {
+			core::IntTypeParamPtr value = core::analysis::getRepresentedTypeParam(ptr);
+			assert(value.isa<core::ConcreteIntTypeParamPtr>() && "Uninstantiated int-type-parameter literal encountered!");
+			return converter.getCNodeManager()->create<c_ast::Literal>(toString(*value) + "u");
 		}
 
 		// convert literal
@@ -438,6 +444,74 @@ namespace backend {
 			return false;
 		}
 
+		bool isStackBasedCArray(const core::ExpressionPtr& initValue) {
+			const auto& basic = initValue->getNodeManager().getLangBasic();
+
+			// it has to be stack based ..
+			if (!core::analysis::isCallOf(initValue, basic.getRefVar())) {
+				return false;
+			}
+
+			// .. and a newly created array
+			auto value = initValue.as<core::CallExprPtr>()->getArgument(0);
+			return core::analysis::isCallOf(value, basic.getArrayCreate1D());
+		}
+
+		bool isStackBasedCppArray(const core::ExpressionPtr& initValue) {
+			const auto& basic = initValue->getNodeManager().getLangBasic();
+			const auto& ext = initValue->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
+
+			// check whether it is a array ctor call
+			if (!core::analysis::isCallOf(initValue, ext.getArrayCtor()) && !core::analysis::isCallOf(initValue, ext.getVectorCtor())) {
+				return false;
+			}
+
+			// first argument needs to be a ref.var
+			return basic.isRefVar(initValue.as<core::CallExprPtr>()->getArgument(0));
+		}
+
+		bool isStackBasedArray(const core::ExpressionPtr& initValue) {
+			return isStackBasedCArray(initValue) || isStackBasedCppArray(initValue);
+		}
+
+		c_ast::NodePtr resolveStackBasedArrayInternal(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& sizeExpr) {
+
+			// obtain c-ast node manager
+			const auto& converter = context.getConverter();
+			auto manager = converter.getCNodeManager();
+
+			// resolve type (needs to be explicitly handled here)
+			auto size = converter.getStmtConverter().convertExpression(context, sizeExpr);
+			auto elementType = var->getType().as<core::RefTypePtr>()->getElementType().as<core::SingleElementTypePtr>()->getElementType();
+			const TypeInfo& typeInfo = converter.getTypeManager().getCVectorTypeInfo(elementType, size);
+
+			// although it is on the stack, it is to be treated as it would be indirect (implicit pointer!)
+			const VariableInfo& info = context.getVariableManager().addInfo(converter, var, VariableInfo::INDIRECT, typeInfo);
+
+			// add dependency to type definition of variable
+			context.getDependencies().insert(info.typeInfo->definition);
+
+			// create a variable declaration without init value
+			return manager->create<c_ast::VarDecl>(info.var);
+		}
+
+		c_ast::NodePtr resolveStackBasedCArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
+			assert(isStackBasedCArray(init) && "Invalid input parameter!");
+			return resolveStackBasedArrayInternal(context, var, init.as<core::CallExprPtr>()->getArgument(0).as<core::CallExprPtr>()->getArgument(1));
+		}
+
+		c_ast::NodePtr resolveStackBasedCppArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
+			assert(isStackBasedCppArray(init) && "Invalid input parameter!");
+			return resolveStackBasedArrayInternal(context, var, init.as<core::CallExprPtr>()->getArgument(2));
+		}
+
+		c_ast::NodePtr resolveStackBasedArray(ConversionContext& context, const core::VariablePtr& var, const core::ExpressionPtr& init) {
+			if (isStackBasedCArray(init)) return resolveStackBasedCArray(context, var, init);
+			if (isStackBasedCppArray(init)) return resolveStackBasedCppArray(context, var, init);
+			assert(false && "Init value is not a stack based array!");
+			return 0;
+		}
+
 	}
 
 	c_ast::NodePtr StmtConverter::visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, ConversionContext& context) {
@@ -447,6 +521,12 @@ namespace backend {
 
 		core::VariablePtr var = ptr->getVariable();
 		core::ExpressionPtr init = ptr->getInitialization();
+
+		// special handling for stack based arrays (special case in C)
+		if (isStackBasedArray(init)) {
+			// delegate processing
+			return resolveStackBasedArray(context, var, init);
+		}
 
 		// decide storage location of variable
 		VariableInfo::MemoryLocation location = VariableInfo::NONE;

@@ -86,13 +86,24 @@ endif(MSVC)
 
 # set up third-part library home
 if (NOT third_part_libs_home )
-	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
+	if ( DEFINED INSIEME_LIBS_HOME ) 
+		set ( third_part_libs_home ${INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
+	else()
+		set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home" )
+	endif()
 endif()
 
 # - boost
+if ( NOT DEFINED BOOST_ROOT )
+	if ( NOT $ENV{BOOST_ROOT} EQUAL "" )
+		set ( BOOST_ROOT $ENV{BOOST_ROOT} CACHE PATH "Boost installation directory." )
+	else()
+		set ( BOOST_ROOT "${third_part_libs_home}/boost-latest" CACHE PATH "Boost installation directory." )
+	endif()
+endif()
 set(Boost_USE_MULTITHREADED Off)
 find_package( Boost 1.48 COMPONENTS program_options system filesystem regex )
-include_directories( ${Boost_INCLUDE_DIRS} )
+include_directories( SYSTEM ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
 # lookup perl
@@ -165,13 +176,33 @@ if(NOT DEFINED LLVM_HOME)
 	endif()
 endif()
 
-# Full (?) list of clang libraries
-# TODO: needs some cmake feature to gather "lib/libLLVM*.lib"
+# FIXME: select only the needed libraries
 set(clang_LList
-    clangBasic clangSema clangIndex clangDriver clangAST
-    clangRewrite clangAnalysis clangLex clangFrontend clangFrontendTool 
-    clangParse clangSerialization
+	#libclang.a
+	libclangAnalysis.a
+	libclangARCMigrate.a
+	libclangAST.a
+	libclangASTMatchers.a
+	libclangBasic.a
+	libclangCodeGen.a
+	libclangDriver.a
+	libclangEdit.a
+	libclangFrontend.a
+	libclangFrontendTool.a
+	libclangLex.a
+	libclangParse.a
+	libclangRewriteCore.a
+	libclangRewriteFrontend.a
+	libclangSema.a
+	libclangSerialization.a
+	#libclang.so
+	libclangStaticAnalyzerCheckers.a
+	libclangStaticAnalyzerCore.a
+	libclangStaticAnalyzerFrontend.a
+	libclangTooling.a
 )
+	#clangBasic clangSema clangIndex clangDriver clangAST
+	#clangRewrite clangAnalysis clangLex clangFrontend clangFrontendTool 
 
 if(MSVC)
     # Manual list - TODO: needs some cmake feature to gather "lib/libLLVM*.lib"
@@ -187,7 +218,8 @@ if(MSVC)
 
 else(MSVC)
 	# On Linux we have a .so file for all LLVM
-    set(llvm_LList  LLVM-3.0 )
+	#set(llvm_LList  LLVM-3.0 )
+	set(llvm_LList  LLVM-3.2 )
     set(clang_LList clang ${clang_LList})
 endif(MSVC)
 
@@ -247,6 +279,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	add_definitions( -fdiagnostics-show-option )
 	add_definitions( -Wall )
 	# add_definitions( -Wextra )
+	# add_definitions( -Werror )
 	# add_definitions( -pedantic )
 
 	# add flag allowing arbitrary library ordering (not default in newer distributions)

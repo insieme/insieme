@@ -1,1 +1,1 @@
-all ^g++ ^icpc ^ocl ^mpi ^seq_mpi ^mpi_ocl ^run_win ^run
+all ^g++ ^cxx_seq ^ocl ^mpi ^mpi_seq ^mpi_ocl ^win_run ^c_run ^cxx_run

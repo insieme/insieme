@@ -56,8 +56,6 @@
 #include "insieme/transform/dfabased/const_prop.h"
 #include "insieme/transform/dfabased/dead_variables.h"
 
-#include "insieme/utils/cmd_line_utils.h"
-
 namespace insieme { namespace transform {
 
 using namespace insieme::core;
@@ -118,7 +116,7 @@ core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
 } // end anonymous namespace
 
 
-core::NodePtr cleanup(const core::NodePtr& node) {
+core::NodePtr cleanup(const core::NodePtr& node, bool constantPropagation) {
 
 	// start by doing nothing ..
 	core::NodePtr res = node;
@@ -128,7 +126,7 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 //	res = normalizeLoops(res);
 //	res = removeUnecessaryDerefs(res);
 
-	insieme::analysis::polyhedral::scop::mark(res);
+//	insieme::analysis::polyhedral::scop::mark(res);
 
 	res = deadBranchElimination(res);
 
@@ -138,7 +136,7 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 
 	res = eliminatePseudoArrays(res);
 
-	if(CommandLineOptions::ConstantPropagation) {
+	if(constantPropagation) {
 		LOG(INFO) << "Performing Constant Propagation on input program";
 		res = doConstProp(res->getNodeManager(), res);
 		res = removeDeadVariables(res->getNodeManager(), res);

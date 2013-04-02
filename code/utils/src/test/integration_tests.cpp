@@ -81,11 +81,12 @@ namespace test {
 				return res;
 			}
 			vector<string> testCases;
-			while (!configFile.eof()) {
-				string testCase;
-				configFile >> testCase;
+
+			string testCase ;
+			while ( getline(configFile, testCase) ) {  
 				std::remove(testCase.begin(), testCase.end(), ' ');
 				if (!testCase.empty() && testCase[0] != '#') {
+
 					testCases.push_back(testCase);
 				}
 			}

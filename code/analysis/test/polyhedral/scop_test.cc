@@ -360,45 +360,47 @@ TEST(ScopRegion, ForStmt5) {
 	EXPECT_EQ("((((((-3*v6 + v7 + v4 == 0) ^ (v7 + -3 < 0)) ^ (v7 >= 0)) ^ (v0 + -v6 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v6 + -5*v8 == 0))", toString(ann.getDomainConstraints()));
 }
 
-//TEST(ScopRegion, SwitchStmt) {
-//	NodeManager mgr;
-//	parse::IRParser parser(mgr);
-//
-//    auto compStmt = static_pointer_cast<const CompoundStmt>( 
-//		parser.parseStatement("\
-//			{ \
-//			int<4>:i; \
-//			int<4>:b; \
-//			switch(i) { \
-//				case 0: \
-//					{ (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-b))); } \
-//				case 1: \
-//					{ (int<4>:h = (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, ((int<4>:n+i)-1)))); }\
-//				default: \
-//					{ (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+b))); } \
-//				}; \
-//			}") 
-//		);
-//	// std::cout << "Parsed Stmt: " << compStmt << std::endl;
-//	scop::mark(compStmt);
-//
-//	EXPECT_TRUE( compStmt->hasAnnotation(scop::ScopRegion::KEY) );
-//	EXPECT_EQ( NT_SwitchStmt, (*compStmt)[2]->getNodeType() );
-//
-//	const SwitchStmtPtr& switchStmt = static_pointer_cast<const SwitchStmt>((*compStmt)[2]);
-//	EXPECT_TRUE( switchStmt->hasAnnotation(scop::ScopRegion::KEY) );
-//
-//	// check the then body
-//	scop::ScopRegion& ann = *switchStmt->getAnnotation(scop::ScopRegion::KEY);
-//	const IterationVector& iterVec = ann.getIterationVector(); 
-//
-//	EXPECT_EQ(4u, iterVec.size()) << iterVec;
-//	EXPECT_EQ(0u, iterVec.getIteratorNum()) << iterVec;
-//	EXPECT_EQ(3u, iterVec.getParameterNum()) << iterVec;
-//	
-//	EXPECT_EQ("(|v1,v5,v2|1)", toString(iterVec));
-//	scop::mark(compStmt);
-//}
+/*
+TEST(ScopRegion, SwitchStmt) {
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto compStmt = static_pointer_cast<const CompoundStmt>(
+		parser.parseStatement("\
+			{ \
+			int<4>:i; \
+			int<4>:b; \
+			switch(i) { \
+				case 0: \
+					{ (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-b))); } \
+				case 1: \
+					{ (int<4>:h = (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, ((int<4>:n+i)-1)))); }\
+				default: \
+					{ (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+b))); } \
+				}; \
+			}")
+		);
+	// std::cout << "Parsed Stmt: " << compStmt << std::endl;
+	scop::mark(compStmt);
+
+	EXPECT_TRUE( compStmt->hasAnnotation(scop::ScopRegion::KEY) );
+	EXPECT_EQ( NT_SwitchStmt, (*compStmt)[2]->getNodeType() );
+
+	const SwitchStmtPtr& switchStmt = static_pointer_cast<const SwitchStmt>((*compStmt)[2]);
+	EXPECT_TRUE( switchStmt->hasAnnotation(scop::ScopRegion::KEY) );
+
+	// check the then body
+	scop::ScopRegion& ann = *switchStmt->getAnnotation(scop::ScopRegion::KEY);
+	const IterationVector& iterVec = ann.getIterationVector();
+
+	EXPECT_EQ(4u, iterVec.size()) << iterVec;
+	EXPECT_EQ(0u, iterVec.getIteratorNum()) << iterVec;
+	EXPECT_EQ(3u, iterVec.getParameterNum()) << iterVec;
+
+	EXPECT_EQ("(|v1,v5,v2|1)", toString(iterVec));
+	scop::mark(compStmt);
+}
+*/
 
 TEST(ScopRegion, WhileStmt) {
 	
