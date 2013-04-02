@@ -406,6 +406,7 @@ void irt_loop_sched_policy_init() {
 					irt_g_loop_sched_policy_default.type = IRT_STATIC_CHUNKED;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 					irt_g_loop_sched_policy_default.param.chunk_size = atoi(chunksize_str);
+					IRT_ASSERT(irt_g_loop_sched_policy_default.param.chunk_size > 0, IRT_ERR_INTERNAL, "Chunk size must not be 0");
 				} else {
 					irt_g_loop_sched_policy_default.type = IRT_STATIC;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
@@ -416,6 +417,7 @@ void irt_loop_sched_policy_init() {
 					irt_g_loop_sched_policy_default.type = IRT_DYNAMIC_CHUNKED;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 					irt_g_loop_sched_policy_default.param.chunk_size = atoi(chunksize_str);
+					IRT_ASSERT(irt_g_loop_sched_policy_default.param.chunk_size > 0, IRT_ERR_INTERNAL, "Chunk size must not be 0");
 				} else {
 					irt_g_loop_sched_policy_default.type = IRT_DYNAMIC;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
@@ -426,6 +428,7 @@ void irt_loop_sched_policy_init() {
 					irt_g_loop_sched_policy_default.type = IRT_GUIDED_CHUNKED;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 					irt_g_loop_sched_policy_default.param.chunk_size = atoi(chunksize_str);
+					IRT_ASSERT(irt_g_loop_sched_policy_default.param.chunk_size > 0, IRT_ERR_INTERNAL, "Chunk size must not be 0");
 				} else {
 					irt_g_loop_sched_policy_default.type = IRT_GUIDED;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;

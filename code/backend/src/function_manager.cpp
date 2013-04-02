@@ -219,6 +219,90 @@ namespace backend {
 
 	}
 
+	namespace {
+
+		c_ast::NodePtr handleMemberCall(const core::CallExprPtr& call, c_ast::CallPtr c_call, ConversionContext& context) {
+
+			// by default, do nothing
+			c_ast::ExpressionPtr res = c_call;
+
+			// extract type of target function
+			const core::FunctionTypePtr funType = call->getFunctionExpr()->getType().as<core::FunctionTypePtr>();
+
+			// ----------------- constructor call ---------------
+
+			// re-structure call into a constructor call
+			if (funType->isConstructor()) {
+
+				vector<c_ast::NodePtr> args = c_call->arguments;
+				assert(!args.empty());
+
+				const auto& basic = call->getNodeManager().getLangBasic();
+				auto location = args[0];
+				args.erase(args.begin());
+
+				// extract class type
+				auto classType = context.getConverter().getTypeManager().getTypeInfo(funType->getObjectType()).lValueType;
+
+				// distinguish memory location to be utilized
+				// case a) create object on stack => default
+
+				// case b) create object on heap
+				bool isOnHeap = core::analysis::isCallOf(call[0], basic.getRefNew());
+
+				// case c) create object in-place (placement new)
+				c_ast::ExpressionPtr loc =
+						(!core::analysis::isCallOf(call[0], basic.getRefVar()) && !core::analysis::isCallOf(call[0], basic.getRefNew()))
+						?location.as<c_ast::ExpressionPtr>():c_ast::ExpressionPtr();
+
+				// to get support for the placement new the new header is required
+				if (loc) context.addInclude("<new>");
+
+				// create constructor call
+				res = c_ast::ctorCall(classType, args, loc);
+
+				// add new call if required
+				if (isOnHeap) res = c_ast::newCall(res);
+			}
+
+			// ---------------- destructor call -----------------
+
+			if (funType->isDestructor()) {
+
+				// obtain object
+				vector<c_ast::NodePtr> args = c_call->arguments;
+				assert(args.size() == 1u);
+				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
+
+				// extract class type
+				auto classType = context.getConverter().getTypeManager().getTypeInfo(funType->getObjectType()).lValueType;
+
+				// create resulting call
+				res = c_ast::dtorCall(classType, obj, false);		// it is not a virtual destructor if it is explicitly mentioned
+			}
+
+			// --------------- member function call -------------
+
+			// re-structure call in case it is a member function call
+			if (funType->isMemberFunction()) {
+
+				vector<c_ast::NodePtr> args = c_call->arguments;
+				assert(!args.empty());
+
+				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
+				args.erase(args.begin());
+
+				res = c_ast::memberCall(obj, c_call->function, args);
+			}
+
+			// use result
+			return res;
+		}
+
+	}
+
+
+
 	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& call, ConversionContext& context) {
 
 		// extract target function
@@ -243,23 +327,8 @@ namespace backend {
 			// add dependencies
 			context.getDependencies().insert(info.prototype);
 
-			// --------------- member function call -------------
-
-			// re-structure call in case it is a member function call
-			if (fun->getType().as<core::FunctionTypePtr>()->isMemberFunction()) {
-
-				vector<c_ast::NodePtr> args = res->arguments;
-				assert(!args.empty());
-
-				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
-				args.erase(args.begin());
-
-				// return member function call
-				return c_ast::memberCall(obj, res->function, args);
-			}
-
 			// return external function call
-			return res;
+			return handleMemberCall(call, res, context);
 		}
 
 		// 3) test whether target is generic => instantiate
@@ -300,75 +369,9 @@ namespace backend {
 			// produce call to internal lambda
 			c_ast::CallPtr c_call = c_ast::call(info.function->name);
 			appendAsArguments(context, c_call, call->getArguments(), false);
-			c_ast::ExpressionPtr res = c_call;
 
-			// ----------------- constructor call ---------------
-
-			// re-structure call into a constructor call
-			if (funType->isConstructor()) {
-
-				vector<c_ast::NodePtr> args = c_call->arguments;
-				assert(!args.empty());
-
-				const auto& basic = call->getNodeManager().getLangBasic();
-				auto location = args[0];
-				args.erase(args.begin());
-
-				// extract class type
-				auto classType = converter.getTypeManager().getTypeInfo(funType->getObjectType()).lValueType;
-
-				// distinguish memory location to be utilized
-				// case a) create object on stack => default
-
-				// case b) create object on heap
-				bool isOnHeap = core::analysis::isCallOf(call[0], basic.getRefNew());
-
-				// case c) create object in-place (placement new)
-				c_ast::ExpressionPtr loc =
-						(!core::analysis::isCallOf(call[0], basic.getRefVar()) && !core::analysis::isCallOf(call[0], basic.getRefNew()))
-						?location.as<c_ast::ExpressionPtr>():c_ast::ExpressionPtr();
-
-				// to get support for the placement new the new header is required
-				if (loc) context.addInclude("<new>");
-
-				// create constructor call
-				res = c_ast::ctorCall(classType, args, loc);
-
-				// add new call if required
-				if (isOnHeap) res = c_ast::newCall(res);
-			}
-
-			// ---------------- destructor call -----------------
-
-			if (funType->isDestructor()) {
-
-				// obtain object
-				vector<c_ast::NodePtr> args = c_call->arguments;
-				assert(args.size() == 1u);
-				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
-
-				// extract class type
-				auto classType = converter.getTypeManager().getTypeInfo(funType->getObjectType()).lValueType;
-
-				// create resulting call
-				res = c_ast::dtorCall(classType, obj, false);		// it is not a virtual destructor if it is explicitly mentioned
-			}
-
-			// --------------- member function call -------------
-
-			// re-structure call in case it is a member function call
-			if (funType->isMemberFunction()) {
-
-				vector<c_ast::NodePtr> args = c_call->arguments;
-				assert(!args.empty());
-
-				auto obj = c_ast::deref(args[0].as<c_ast::ExpressionPtr>());
-				args.erase(args.begin());
-
-				res = c_ast::memberCall(obj, c_call->function, args);
-			}
-
-			return res;
+			// handle potential member calls
+			return handleMemberCall(call, c_call, context);
 		}
 
 		core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
@@ -1257,24 +1260,39 @@ namespace backend {
 			res.function = manager->create<c_ast::Function>(returnType, name, parameter, cBody);
 			res.definition = res.function;
 
+			// a lazy-evaluated utility to obtain the name of a class a member function is associated to
+			auto getClassName = [&]()->c_ast::IdentifierPtr {
+
+				const auto& type = typeManager.getTypeInfo(funType->getObjectType()).lValueType;
+
+				if (const auto& structType = type.isa<c_ast::StructTypePtr>()) {
+					return structType->name;
+				}
+
+				if (const auto& namedType = type.isa<c_ast::NamedTypePtr>()) {
+					return namedType->name;
+				}
+				std::cout << "Unable to determine class-name for member function: " << funType << "\n";
+				assert(false && "Unsupported case!");
+				return c_ast::IdentifierPtr();
+			};
+
+
 			// modify function if required
 			if (funType->isMemberFunction()) {
 
 				// update definition to define a member function
-				auto className = typeManager.getTypeInfo(funType->getObjectType()).lValueType.as<c_ast::StructTypePtr>()->name;
-				res.definition = manager->create<c_ast::MemberFunction>(className, res.function, isConst);
+				res.definition = manager->create<c_ast::MemberFunction>(getClassName(), res.function, isConst);
 
 			} else if (funType->isConstructor()) {
 
 				// update definition to define a member function
-				auto className = typeManager.getTypeInfo(funType->getObjectType()).lValueType.as<c_ast::StructTypePtr>()->name;
-				res.definition = manager->create<c_ast::Constructor>(className, res.function, initializer);
+				res.definition = manager->create<c_ast::Constructor>(getClassName(), res.function, initializer);
 
 			} else if (funType->isDestructor()) {
 
 				// update definition to define a member function
-				auto className = typeManager.getTypeInfo(funType->getObjectType()).lValueType.as<c_ast::StructTypePtr>()->name;
-				res.definition = manager->create<c_ast::Destructor>(className, res.function);
+				res.definition = manager->create<c_ast::Destructor>(getClassName(), res.function);
 
 			}
 			return res;

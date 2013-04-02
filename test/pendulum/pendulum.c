@@ -292,13 +292,24 @@ int main(int argc, char** argv) {
 	}
 	ull maxSteps = 0;
 	ull minSteps = max_steps;
+	ull a_count = 0, b_count = 0, c_count = 0;
 	for(int i=0; i<x; i++) {
 		for(int j=0; j<y; j++) {
 			maxSteps =  POS(dist, i,j) > maxSteps ? POS(dist, i,j) : maxSteps;
 			minSteps =  POS(dist, i,j) < minSteps ? POS(dist, i,j) : minSteps;
+			if(POS(image, i, j) == 1)
+				++a_count;
+			else if(POS(image, i, j) == 2)
+				++b_count;
+			else
+				++c_count;
 		}
 	}
-	printf("Number of steps calculated: %llu .. %llu\n", minSteps, maxSteps);
+	printf("Number of steps calculated: %llu .. %llu; winner count: A %llu, B %llu, C %llu; Verification: ", minSteps, maxSteps, a_count, b_count, c_count);
+	if((a_count + b_count + c_count) == (SIZEX * SIZEY))
+		printf("OK\n");
+	else
+		printf("ERR\n");
 
 #ifndef NOIMAGE
 	print_target_image_ASCII(image, num_sources);

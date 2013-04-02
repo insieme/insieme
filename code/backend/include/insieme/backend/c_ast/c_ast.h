@@ -154,6 +154,7 @@ namespace c_ast {
 
 	struct NamedType : public Type {
 		IdentifierPtr name;
+		vector<NodePtr> parameters;
 		NamedType(IdentifierPtr name) : Type(NT_NamedType), name(name) {}
 		virtual bool equals(const Node& other) const;
 	};
