@@ -90,11 +90,12 @@ class IndexerVisitor{
 	private:
 		insieme::frontend::TranslationUnit* mTu;
 		Indexer::tIndex& mIndex; 
+		Indexer::tIndex& mDeclIndex; 
 
 	public:
 	IndexerVisitor	(insieme::frontend::TranslationUnit* tu,
-					 Indexer::tIndex& index):
-		mTu(tu), mIndex(index)
+					 Indexer::tIndex& index, Indexer::tIndex& declIndex):
+		mTu(tu), mIndex(index), mDeclIndex(declIndex)
 	{ }
 
 	void indexDeclaration(clang::Decl* decl){
@@ -107,21 +108,26 @@ class IndexerVisitor{
 		assert (named && "no name Decl, can not be indexed and we dont know what it is");
 
 		if (llvm::isa<clang::FunctionDecl>(decl)) {
+			Indexer::TranslationUnitPair elem =  std::make_pair(decl,mTu); 
 			if (decl->hasBody()){
-				Indexer::TranslationUnitPair elem =  std::make_pair(decl,mTu); 
 				mIndex[buildNameTypeChain(decl)] = elem; 
 
 				// we could write main function in many different ways,
 				// best way to find it, is to keep a simple record to address it
 				if(named->getNameAsString() == "main")
 					mIndex["main"] = elem; 
-			}
+			} 
+
+			mDeclIndex[buildNameTypeChain(decl)] = elem; 
 		}
 		else if (const clang::CXXRecordDecl *recDecl = llvm::dyn_cast<clang::CXXRecordDecl>(decl)){
 			if (recDecl->hasDefinition()){
 				Indexer::TranslationUnitPair elem =  std::make_pair(llvm::cast<clang::Decl>(recDecl->getDefinition()),mTu); 
 				mIndex[buildNameTypeChain(decl)] = elem;
 			}
+
+			mDeclIndex[buildNameTypeChain(decl)] = std::make_pair(decl, mTu);
+
 			// index inner functions as well
 			indexDeclContext(llvm::cast<clang::DeclContext>(decl));
 		}
@@ -172,7 +178,7 @@ void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 	clang::DeclContext* ctx= clang::TranslationUnitDecl::castToDeclContext (tuDecl);
 	assert(ctx && "AST has no decl context");
 
-	IndexerVisitor indexer(tu, mIndex);
+	IndexerVisitor indexer(tu, mIndex, mDeclIndex);
 	indexer.indexDeclContext(ctx);
 	
 	VLOG(1) << " ************* Indexing DONE ****************";
@@ -296,6 +302,13 @@ Indexer::iterator Indexer::end(){
 	return iterator(mIndex.end());
 }
 
+Indexer::iterator Indexer::decl_begin(){
+	return iterator(mDeclIndex.begin());
+}
+
+Indexer::iterator Indexer::decl_end(){
+	return iterator(mDeclIndex.end());
+}
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme

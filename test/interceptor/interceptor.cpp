@@ -1,5 +1,6 @@
 #include<fun.h>
 #include<class.h>
+#include<stdio.h>
 
 using namespace ns;
 
@@ -12,15 +13,15 @@ struct B {
 int main() {
 
 	// an intersected function
-	func(0);
+	printf("%d\n", func(0));
 
 	// an intersected type
 	A a;
-	a.f(4);
+	printf("%d\n", a.f(4));
 
 	// a non-intersected type
 	B b;
-	b.f();
+	printf("%d\n", b.f());
 
 	return 0;
 }

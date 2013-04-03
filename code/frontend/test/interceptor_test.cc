@@ -106,10 +106,10 @@ TEST(Interception, FileTest) {
 	fe::ConversionJob job;
 	fe::Program prog( manager, job );
 
-	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob( SRC_DIR "/inputs/interceptor_test.cpp" ) );
-	prog.addTranslationUnit( fe::ConversionJob( SRC_DIR "/inputs/interceptor_header.cpp" ) );
+	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob( SRC_DIR "/inputs/interceptor/interceptor_test.cpp" ) );
+	//prog.addTranslationUnit( fe::ConversionJob( SRC_DIR "/inputs/interceptor/interceptor_header.cpp" ) );
 	
-	prog.intercept(std::string(SRC_DIR) + "/inputs/interceptor_test.cfg");
+	prog.intercept(std::string(SRC_DIR) + "/inputs/interceptor/interceptor_test.cfg");
 	
 	prog.analyzeFuncDependencies();
 
