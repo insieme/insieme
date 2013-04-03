@@ -87,8 +87,8 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 	Parser P(comp.getPreprocessor(), S, false);  // do not skip function bodies
 	comp.getPreprocessor().EnterMainSourceFile();  
 
-	P.Initialize();	  //FIXME
 	ParserProxy::init(&P);
+	P.Initialize();	  //FIXME
 	Consumer->Initialize(comp.getASTContext());
 	if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
 		SC->InitializeSema(S);
