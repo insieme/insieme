@@ -762,6 +762,15 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 		// No definition has been found in any translation unit, 
 		// we mark this function as extern. and return
 		if (!definition) {
+
+			// function might be intercepted - already processed and cached 
+			ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(funcDecl);
+			if (fit != ctx.lambdaExprCache.end()) {
+				irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
+						packedArgs);
+				return irNode;
+			}
+
 			std::string callName = funcDecl->getNameAsString();
 			irNode = builder.callExpr(funcTy->getReturnType(), builder.literal(callName, funcTy),
 					packedArgs);
