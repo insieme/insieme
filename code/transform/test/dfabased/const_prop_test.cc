@@ -132,7 +132,7 @@ namespace transform {
 				"ref<int<4>> v1 = 10; "
 				"ref<int<4>> v2 = 20; "
 				"{"
-					"int<4> v3 = int.add(10, 2); "
+					"int<4> v3 = 12; "
 					"ref.assign(v1, 22);"
 				"}; "
 				"ref.assign(v2, v1); "

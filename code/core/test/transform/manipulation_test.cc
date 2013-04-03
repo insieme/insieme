@@ -882,7 +882,7 @@ TEST(Manipulation, pushBindIntoLambdaTest) {
 	CallExprPtr res = analysis::normalize(transform::pushBindIntoLambda(manager, call, 0));
 
 	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return bind(v2){int.add(v1, v2)}(2);}}(int.add(2, v77))", toString(*res));
-	EXPECT_EQ("int.add(int.add(2, v77), 2)", toString(*transform::simplify(manager, res)));
+	EXPECT_EQ("int.add(v77, 4)", toString(*transform::simplify(manager, res)));
 
 	EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
 
@@ -904,7 +904,7 @@ TEST(Manipulation, pushBindIntoLambdaTest) {
 	res = analysis::normalize(transform::pushBindIntoLambda(manager, call, 0));
 
 	EXPECT_EQ("rec v0.{v0=fun() {return bind(v1){int.add(int.add(2, 3), v1)}(2);}}()", toString(*res));
-	EXPECT_EQ("int.add(int.add(2, 3), 2)", toString(*transform::simplify(manager, res)));
+	EXPECT_EQ("7", toString(*transform::simplify(manager, res.as<NodePtr>())));
 
 	EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
 }
