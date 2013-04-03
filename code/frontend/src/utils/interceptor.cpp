@@ -174,8 +174,8 @@ void Interceptor::intercept() {
 
 	InterceptVisitor vis(interceptedDecls, interceptedFuncMap, interceptedTypes, toIntercept);
 
-	auto elem = indexer.begin();
-	auto end = indexer.end();
+	auto elem = indexer.decl_begin();
+	auto end = indexer.decl_end();
 	for(;elem != end; elem++) {
 		if(const clang::FunctionDecl* decl = llvm::dyn_cast<clang::FunctionDecl>(*elem)) {
 			if( regex_match(decl->getQualifiedNameAsString(), rx) ) {

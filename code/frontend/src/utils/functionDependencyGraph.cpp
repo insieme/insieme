@@ -67,11 +67,12 @@ void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDe
  * CallExprVisitor 
  *************************************************************************************************/
 CallExprVisitor::CallGraph CallExprVisitor::getCallGraph(const clang::FunctionDecl* func) {
-	assert(func->hasBody() && "Function in the dependency graph has no body");
 	
 	if( interceptor.isIntercepted(func)) {
+		// we don't care about interanls of intercepted function 
 		VLOG(2) << "isIntercepted " << func << "("<<((void*)func)<<")";
 	} else  {
+		assert(func->hasBody() && "Function in the dependency graph has no body");
 		Visit(func->getBody());
 	}
 	return callGraph;
@@ -91,7 +92,11 @@ void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
 	}
 
 	if (def){
+		// add the funcDecl
 		callGraph.insert(def);
+	} else if( interceptor.isIntercepted(funcDecl)) {
+		// call to an intercepted function (without body) 
+		callGraph.insert(funcDecl);
 	}
 }
 
@@ -191,10 +196,11 @@ void CallExprVisitor::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
 //}
 
 void CallExprVisitor::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* mcExpr) {
-	//assert(false && "memberCall expression");
 	// connects the member call expression to the function graph
-	//assert(false && "in next clang version");
-	addFunctionDecl(llvm::dyn_cast<clang::FunctionDecl>(mcExpr->getCalleeDecl()));
+	if(clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(mcExpr->getCalleeDecl())) {
+		addFunctionDecl(funcDecl);
+	}
+
 	VisitStmt(mcExpr);
 }
 
