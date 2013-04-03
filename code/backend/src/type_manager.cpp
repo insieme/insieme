@@ -463,6 +463,9 @@ namespace backend {
 			if (basic.isChar(ptr)) {
 				return type_info_utils::createInfo(manager, "char");
 			}
+			if (basic.isWChar(ptr)) {
+				return type_info_utils::createInfo(manager, "wchar_t");
+			}
 
 			if (basic.isString(ptr)) {
 				return type_info_utils::createInfo(manager, "char*");
