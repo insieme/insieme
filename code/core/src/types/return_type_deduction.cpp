@@ -186,12 +186,6 @@ TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argu
 
 	NodeManager& manager = funType->getNodeManager();
 
-	// first try to use a simple substitution
-	if (auto sub = unifyAll(manager, funType->getParameterTypes()->getTypes(), argumentTypes)) {
-		// substitution algorithm was sufficient => done
-		return sub->applyTo(funType->getReturnType());
-	}
-
 	// try deducing variable instantiations the argument types
 	auto varInstantiation = types::getTypeVariableInstantiation(manager, funType->getParameterTypes()->getTypes(), argumentTypes);
 
@@ -223,7 +217,6 @@ TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumen
 		// didn't work => print a warning
 		LOG(DEBUG) << "Unable to deduce return type for call to function of type "
 				<< toString(*funType) << " using arguments " << join(", ", argumentTypes, print<deref<TypePtr>>());
-
 	}
 	// return null ptr
 	return unitOnFail ? funType->getNodeManager().getLangBasic().getUnit() : TypePtr();

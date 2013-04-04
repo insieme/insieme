@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 namespace insieme {
 namespace core {
@@ -147,11 +148,6 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 		return true;
 	}
 
-//	// sub-type check regarding type variables (variables are super/sub type of all other types)
-//	if (subType->getNodeType() == NT_TypeVariable || superType->getNodeType() == NT_TypeVariable) {
-//		return true;
-//	}
-
 	// check whether the sub-type is generic
 	if (subType->getNodeType() == NT_GenericType || subType->getNodeType() == NT_StructType) {
 		// use the delta algorithm for computing all the super-types of the given sub-type
@@ -196,8 +192,32 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 
 	// check reference types
 	if (subType->getNodeType() == NT_RefType) {
-		// check relation between reference types
-		return isSubTypeOf(subType.as<RefTypePtr>()->getElementType(), superType.as<RefTypePtr>()->getElementType());
+		const auto& basic = subType->getNodeManager().getLangBasic();
+
+		auto srcElement = subType.as<RefTypePtr>()->getElementType();
+		auto trgElement = superType.as<RefTypePtr>()->getElementType();
+
+		// only if sub-type is ref<any>
+		if (basic.isAny(trgElement)) {
+			return true;
+		}
+
+		// a ref<vector<X,Y>> is a sub-type of a ref<array<X,1>>
+		if (trgElement.isa<ArrayTypePtr>() && srcElement.isa<VectorTypePtr>()) {
+			IRBuilder builder(srcElement.getNodeManager());
+			auto one = builder.concreteIntTypeParam(1);
+
+			// array needs to be 1-dimensional and both have to have the same element type
+			return trgElement.as<ArrayTypePtr>()->getDimension() == one &&
+				   trgElement.as<ArrayTypePtr>()->getElementType() == srcElement.as<VectorTypePtr>()->getElementType();
+		}
+
+		// also support references of derived classes being passed to base-type pointer
+		if (core::analysis::isObjectType(srcElement) && core::analysis::isObjectType(trgElement)) {
+			if (isSubTypeOf(srcElement, trgElement)) {
+				return true;
+			}
+		}
 	}
 
 	// no other relations are supported

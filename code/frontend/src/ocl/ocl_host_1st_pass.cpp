@@ -404,11 +404,11 @@ ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr, bool setErrcodeRe
 		"	type<'a> 				elemType, "
 		"	uint<8> 				flags, "
 		"	uint<8> 				size, "
-		"	anyRef 					hostPtr, "
+		"	ref<any> 				hostPtr, "
 		"	ref<array<int<4>,1> > 	errorcode_ret"
 		") -> ref<array<'a, 1> >  { "
 		"		ref<array<'a,1>> devicePtr = new( array.create.1D( elemType, size ) ); "
-		"		ref<array<'a,1>> 		hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
+		"		ref<array<'a,1>> 		hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
 		"		for(uint<8> i = 0u .. size) { "
 		"			devicePtr[i] = *hp[i]; "
 		"		} "
@@ -479,9 +479,9 @@ ExpressionPtr Ocl2Inspire::getClWriteBuffer() {
 		"	uint<4>				blocking_write, "
 		"	uint<8>				offset, "
 		"	uint<8>				cb, "
-		"	anyRef				hostPtr"
+		"	ref<any>			hostPtr"
 		") -> int<4> { "
-		"	ref<array<'a,1>> hp = anyref.to.ref(hostPtr, lit(array<'a, 1>)); "
+		"	ref<array<'a,1>> hp = ref.reinterpret(hostPtr, lit(array<'a, 1>)); "
 		"	uint<8> 	  	  o = offset / sizeof( lit('a) ); "
 		"	for(uint<8> i = 0u .. cb) { "
 		"		devicePtr[i + o] = *hp[i]; "
@@ -500,9 +500,9 @@ ExpressionPtr Ocl2Inspire::getClWriteBufferFallback() {
 		"	uint<4> 			blocking_write, "
 		"	uint<8>				offset, "
 		"	uint<8>				cb, "
-		"	anyRef				hostPtr"
+		"	ref<any>			hostPtr"
 		") -> int<4> { "
-		"	ref<array<'a,1>> hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
+		"	ref<array<'a,1>> hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
 		"	uint<8> 		  o = offset / sizeof( lit('a) ); "
         "	uint<8> 	   size = cb / sizeof( lit('a) ); "
         "	for(uint<8> i = 0u .. size) { "
@@ -522,9 +522,9 @@ ExpressionPtr Ocl2Inspire::getClReadBuffer() {
 		"	uint<4> 			blocking_read, "
 		"	uint<8>				offset, "
 		"	uint<8>				cb, "
-		"	anyRef 				hostPtr"
+		"	ref<any> 			hostPtr"
 		") -> int<4> { "
-		"	ref<array<'a,1>> hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
+		"	ref<array<'a,1>> hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
 		"	uint<8>			  o = offset / sizeof( lit('a) ); "
 		"	for(uint<8> i = 0u .. cb) { "
 		"		hp[i] = *devicePtr[i + o]; "
@@ -543,9 +543,9 @@ ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
 		"	uint<4> 			blocking_read, "
 		"	uint<8> 			offset, "
 		"	uint<8> 			cb, "
-		"	anyRef 				hostPtr"
+		"	ref<any> 			hostPtr"
 		") -> int<4> { "
-        "	ref<array<'a, 1> > hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
+        "	ref<array<'a, 1> > hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
 		"	uint<8> 		 size = cb / sizeof( lit('a) ); "
 		"	uint<8> 			o = offset / sizeof( lit('a) ); "
 		"	for(uint<8> i = 0u .. size) { "
@@ -623,7 +623,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 			if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(node->getArgument(3))) {
 				assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
 				if(c->getSubExpression()->getType() != BASIC.getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
-					hostPtr = builder.callExpr(BASIC.getRefToAnyRef(), builder.callExpr(BASIC.getRefVar(), c->getSubExpression()));
+					hostPtr = builder.callExpr(BASIC.getRefVar(), c->getSubExpression());
 				}
 			}
 

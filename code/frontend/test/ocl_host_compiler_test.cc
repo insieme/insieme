@@ -59,7 +59,7 @@ using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
 TEST(OclHostCompilerTest, HelloHostTest) {
-	Logger::get(std::cerr, DEBUG, 2);
+	Logger::get(std::cerr, ERROR, 0);
 
 	core::NodeManager manager;
 
@@ -95,15 +95,14 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	});
 
 	auto errors = semantic.getErrors();
-	EXPECT_EQ(0u, errors.size());
+	EXPECT_EQ(0u, errors.size()) << errors;
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::checks::Message& cur) {
 		LOG(INFO) << cur << std::endl;
-		/*        core::NodeAddress address = cur.getAddress();
-		 core::NodePtr context = address.getParentNode(address.getDepth()-1);
-		 std::cout << "\t Context: " <<
-		 insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
-		 */
+//		core::NodeAddress address = cur.getAddress();
+//		core::NodePtr context = address.getAddressedNode();
+//		std::cout << "\t Context: " <<
+//		insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << std::endl;
 	});
 
 	// check for the kernel's datarange pragma

@@ -75,10 +75,13 @@ namespace analysis {
 
 	bool isObjectType(const TypePtr& type) {
 
+
 		// decide whether something is an object type based on the node type
 		switch(type->getNodeType()) {
-		case NT_StructType:
 		case NT_GenericType:
+			// no built-in type is an object type
+			return !type->getNodeManager().getLangBasic().isPrimitive(type);
+		case NT_StructType:
 		case NT_TypeVariable:
 			return true;			// all this types are always object types
 		case NT_RecType:

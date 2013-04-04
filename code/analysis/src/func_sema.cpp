@@ -75,7 +75,7 @@ RefList filterUnwanted(core::NodeManager& mgr, const RefList& refs) {
 	core::ExpressionList unwanted = {
 		mgr.getLangBasic().getScalarToArray(),
 		mgr.getLangBasic().getRefVar(),
-		mgr.getLangBasic().getRefToAnyRef()
+		mgr.getLangBasic().getRefReinterpret()
 	};
 
 	RefList filteredRefs;

@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 	cl_mem dev_ptr3 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
 	cl_mem dev_ptr4[2];
 
-	dev_ptr1 = clCreateBuffer(gcontext, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, 100 * sizeof(cl_short), short_host_ptr, &err);
+	dev_ptr1 = clCreateBuffer(gcontext, CL_MEM_READ_ONLY, 100 * sizeof(cl_short), short_host_ptr, &err);
 	dev_ptr4[0] = clCreateBuffer(gcontext, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
 	dev_ptr4[1] = clCreateBuffer(gcontext, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
 
