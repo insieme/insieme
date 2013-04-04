@@ -274,6 +274,7 @@ Interceptor::InterceptedExprCache Interceptor::buildInterceptedExprCache(insieme
 
 		//convertType only works if convFact.ctx.type cache was filled properly with buildInterceptedTypeCache
 		core::FunctionTypePtr type = convFact.convertType( decl->getType().getTypePtr() ).as<core::FunctionTypePtr>();
+		VLOG(2) << decl << " functionType " << type;
 		//fix types for ctor, mfunc, ...
 		std::string literalName = it->second;
 		if( const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
@@ -303,13 +304,13 @@ Interceptor::InterceptedExprCache Interceptor::buildInterceptedExprCache(insieme
 		literalName = fixQualifiedName(literalName);
 
 		core::ExpressionPtr interceptExpr = builder.literal( literalName, type);
-		VLOG(2) << interceptExpr << " " << type;
 
 		addHeaderForDecl(interceptExpr, decl, indexer);
 		cache.insert( {decl, interceptExpr} );
 
+		VLOG(2) << interceptExpr << " " << type;
 		if(insieme::annotations::c::hasIncludeAttached(interceptExpr)) {
-			VLOG(2) << insieme::annotations::c::getAttachedInclude(interceptExpr);
+			VLOG(2) << "\t attached header: " << insieme::annotations::c::getAttachedInclude(interceptExpr);
 		}
 	}
 
