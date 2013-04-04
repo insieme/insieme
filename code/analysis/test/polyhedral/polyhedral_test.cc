@@ -415,7 +415,7 @@ TEST(Constraint, Combiner) {
 
 	ExpressionPtr expr = toIR(mgr, ptr);
 	EXPECT_EQ("bool.or(int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0), "
-			  "bind(){rec v6.{v6=fun(int<4> v4, int<4> v5) {"
+			  "bind(){rec v0.{v0=fun(int<4> v4, int<4> v5) {"
 			  	"return bool.not(int.le(int.add(int.add(int.mul(2, v4), int.mul(3, v5)), 10), 0));"
 			  "}}(v1, v2)})", toString(*expr));
 	
