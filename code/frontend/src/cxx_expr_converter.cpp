@@ -1131,8 +1131,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTempora
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::Visit(const clang::Expr* expr) {
-	
-	VLOG(2) << "CXX";
 	core::ExpressionPtr&& retIr = ConstStmtVisitor<ConversionFactory::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
 
 	// check for OpenMP annotations

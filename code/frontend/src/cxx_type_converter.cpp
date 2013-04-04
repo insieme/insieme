@@ -379,6 +379,14 @@ core::TypePtr ConversionFactory::CXXTypeConverter::Visit(const clang::Type* type
 	if(fit != convFact.ctx.typeCache.end()) {
 		return fit->second;
 	}
+
+	//check if type is intercepted
+	if(convFact.program.getInterceptor().isIntercepted(type)) {
+		VLOG(2) << type << " isIntercepted";
+		return convFact.program.getInterceptor().intercept(type, convFact); 
+	}
+	
+	
 	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
 }
 

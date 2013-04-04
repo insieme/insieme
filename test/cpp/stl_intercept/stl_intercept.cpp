@@ -12,10 +12,13 @@ int main() {
 	list.push_back(12);
 	list.push_back(14);
 
+	vector<int>::value_type x = list.at(0);
+
 //	printf("[%d,%d]\n", list[0], list[1]);
 
 	vector<wchar_t> list1;
-	list.push_back(L'c');
+	//list.push_back(L'c');
+	list.push_back('c');
 
 //	printf("[%d,%d]\n", list1[0], list1[1]);
 

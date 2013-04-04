@@ -81,9 +81,11 @@ public:
 
 	void loadConfigFile(std::string fileName);	
 	void loadConfigSet(std::set<std::string> toIntercept);	
-	void intercept();
+	void collectDeclsToIntercept();
+	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::ConversionFactory& convFact);
 	
 	bool isIntercepted(const clang::Decl* decl) const { return interceptedDecls.find(decl) != interceptedDecls.end(); }
+	bool isIntercepted(const clang::Type* type) const;
 
 	InterceptedExprCache buildInterceptedExprCache(insieme::frontend::conversion::ConversionFactory& convFact);
 	Interceptor::InterceptedTypeCache buildInterceptedTypeCache(insieme::frontend::conversion::ConversionFactory& convFact);
@@ -93,7 +95,6 @@ private:
 	insieme::core::IRBuilder builder;
 	InterceptedDeclSet interceptedDecls;
 	InterceptedFuncMap interceptedFuncMap;
-	InterceptedTypeDeclSet interceptedTypes;
 
 	std::set<std::string> toIntercept;
 	boost::regex rx;
@@ -110,29 +111,23 @@ struct InterceptTypeVisitor : public clang::TypeVisitor<InterceptTypeVisitor, co
 
 	core::TypePtr Visit(const clang::Type* type);
 	core::TypePtr VisitTagType(const clang::TagType* tagType);
-	core::TypePtr VisitInjectedClassNameType(const clang::InjectedClassNameType* type);
 	core::TypePtr VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy);
 	core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType);
-	core::TypePtr VisitElaboratedType(const clang::ElaboratedType* elabType);
-	core::TypePtr VisitBuiltinType(const clang::BuiltinType* type);
 };
 
 struct InterceptVisitor : public clang::StmtVisitor<InterceptVisitor> {
 
 	insieme::frontend::utils::Interceptor::InterceptedDeclSet& interceptedDecls;
 	insieme::frontend::utils::Interceptor::InterceptedFuncMap& interceptedFuncMap;
-	insieme::frontend::utils::Interceptor::InterceptedTypeDeclSet& interceptedTypes;
 	std::set<std::string>& toIntercept;
 	boost::regex rx;
 
 	InterceptVisitor(
 			insieme::frontend::utils::Interceptor::InterceptedDeclSet& interceptedDecls, 
 			insieme::frontend::utils::Interceptor::InterceptedFuncMap& interceptedFuncMap,
-			insieme::frontend::utils::Interceptor::InterceptedTypeDeclSet& interceptedTypes,
 			std::set<std::string>& toIntercept) 
 		: interceptedDecls(interceptedDecls), 
 		interceptedFuncMap(interceptedFuncMap), 
-		interceptedTypes(interceptedTypes),
 		toIntercept(toIntercept)
 	{}
 
