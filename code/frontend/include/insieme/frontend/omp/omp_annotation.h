@@ -137,7 +137,7 @@ typedef std::shared_ptr<VarList> VarListPtr;
 class Reduction {
 public:
 	// operator = + or - or * or & or | or ^ or && or ||
-	enum Operator { PLUS, MINUS, STAR, AND, OR, XOR, LAND, LOR };
+	enum Operator { PLUS, MINUS, MUL, AND, OR, XOR, LAND, LOR };
 
 	Reduction(const Operator& op, const VarListPtr& vars): op(op), vars(vars) { }
 	const Operator& getOperator() const { return op; }
@@ -151,7 +151,7 @@ public:
 		switch(op) {
 		case PLUS: 	return "+";
 		case MINUS: return "-";
-		case STAR: 	return "*";
+		case MUL: 	return "*";
 		case AND: 	return "&";
 		case OR:	return "|";
 		case XOR:	return "^";
