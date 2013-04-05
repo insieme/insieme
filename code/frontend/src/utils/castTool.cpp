@@ -246,8 +246,15 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		case clang::CK_ArrayToPointerDecay 	:
 		/*case clang::CK_ArrayToPointerDecay - Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
 		* */
-		return builder.callExpr(targetTy, builder.getNodeManager().getLangBasic().getRefReinterpret(), 
-								expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
+		{
+			//FIXME: if inner expression is not ref.... what is it? is a deref or a compound initializer
+			core::ExpressionPtr retIr = expr;
+			if (!IS_IR_REF(exprTy)){
+				retIr = builder.callExpr(gen.getRefVar(),expr);
+			}
+		
+			return builder.callExpr(gen.getRefVectorToRefArray(), retIr);
+		}
 
 		case clang::CK_BitCast 	:
 		/*case clang::CK_BitCast - A conversion which causes a bit pattern of one type to be reinterpreted as a bit pattern 
@@ -263,7 +270,10 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 			if (*targetTy == *exprTy) return expr;
 
 			// cast to void*
-			if (gen.isAnyRef(targetTy)) { return builder.callExpr(builder.getLangBasic().getRefToAnyRef(), expr); }
+			if (gen.isAnyRef(targetTy)) {
+				//return builder.callExpr(builder.getLangBasic().getRefToAnyRef(), expr); }
+				return expr;
+			}
 
 			// is a cast of Null to another pointer type: 
 			// we rebuild null
@@ -274,7 +284,7 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 			// cast from void*
 			if (gen.isAnyRef(exprTy)) { 
 				core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
-				return builder.callExpr(targetTy, gen.getNodeManager().getLangBasic().getAnyRefToRef(), 
+				return builder.callExpr(targetTy, gen.getNodeManager().getLangBasic().getRefReinterpret(), 
 										expr, builder.getTypeLiteral(elementType));
 			}
 

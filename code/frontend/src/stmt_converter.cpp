@@ -40,6 +40,7 @@
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/frontend/utils/castTool.h"
 
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -230,13 +231,15 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 			fit = convFact.ctx.varDeclMap.insert(std::make_pair(loopAnalysis.getInductionVar(), inductionVar)).first;
 		}
 
+		assert(gen.isInt(inductionVar->getType()) && "Non integral iterators not supported");
+
 		// Visit Body
 		stmtutils::StmtWrapper body = tryAggregateStmts(builder, Visit(forStmt->getBody()));
 
-		//core::ExpressionPtr incExpr = utils::cast(loopAnalysis.getIncrExpr(), inductionVar->getType());
-		core::ExpressionPtr incExpr = loopAnalysis.getIncrExpr();
-		//core::ExpressionPtr condExpr = utils::cast(loopAnalysis.getCondExpr(), inductionVar->getType());
+		core::ExpressionPtr incExpr  = loopAnalysis.getIncrExpr();
+		incExpr = utils::castScalar(inductionVar->getType(), incExpr->getType(), incExpr, builder);
 		core::ExpressionPtr condExpr = loopAnalysis.getCondExpr();
+		condExpr = utils::castScalar(inductionVar->getType(), condExpr->getType(), condExpr, builder);
 
 		assert(inductionVar->getType()->getNodeType() != core::NT_RefType);
 
@@ -559,8 +562,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitIfStmt(clang::IfSt
 
 	core::ExpressionPtr condExpr;
 	if ( const clang::VarDecl* condVarDecl = ifStmt->getConditionVariable()) {
-		assert(
-				ifStmt->getCond() == NULL && "IfStmt condition cannot contains both a variable declaration and an expression");
+		assert(ifStmt->getCond() == NULL && "IfStmt condition cannot contains both a variable declaration and an expression");
 		/*
 		 * we are in the situation where a variable is declared in the if condition, i.e.:
 		 *
@@ -585,13 +587,13 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitIfStmt(clang::IfSt
 		assert( cond && "If statement with no condition." );
 
 		condExpr = convFact.convertExpr(cond);
+
 		if (core::analysis::isCallOf(condExpr, builder.getLangBasic().getRefAssign())) {
 			// an assignment as condition is not allowed in IR, prepend the assignment operation 
 			retStmt.push_back( condExpr );
 			// use the first argument as condition 
 			condExpr = builder.deref( condExpr.as<core::CallExprPtr>()->getArgument(0) );
 		}
-
 	}
 
 	assert( condExpr && "Couldn't convert 'condition' expression of the IfStmt");
