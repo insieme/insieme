@@ -66,9 +66,10 @@ namespace detail {
 	 * a list of tokens.
 	 *
 	 * @param code the code to be tokenized
+	 * @param filterCommentAndWhiteSpace if set, no comment and whitespace tokens will be returned
 	 * @return the list of identified tokens.
 	 */
-	vector<Token> lex(const std::string& code);
+	vector<Token> lex(const std::string& code, bool filterCommentAndWhiteSpace = true);
 
 
 
@@ -95,7 +96,9 @@ namespace detail {
 			Float_Literal,			// < floating point literals, including e-notation
 			Double_Literal,			// < double literals
 			Char_Literal,			// < character literals like 'x' and '\n', including the ''
-			String_Literal			// < string literals, including the ""
+			String_Literal,			// < string literals, including the ""
+			Comment,				// < a token representing a comment
+			WhiteSpace				// < a token representing a white space
 		};
 
 	private:
@@ -192,6 +195,26 @@ namespace detail {
 			assert(!lexeme.empty());
 			assert(Bool_Literal <= type && type <= String_Literal);
 			return Token(type, lexeme);
+		}
+
+		/**
+		 * Creates a comment token based on the given lexeme.
+		 *
+		 * @param lexeme the text of the comment to be covered
+		 * @return a comment token for the given text
+		 */
+		static Token createComment(const string& lexeme) {
+			return Token(Comment, lexeme);
+		}
+
+		/**
+		 * Creates a comment token based on the given lexeme.
+		 *
+		 * @param lexeme the text of the whitespace to be covered
+		 * @return a whitespace token for the given text
+		 */
+		static Token createWhitespace(const string& lexeme) {
+			return Token(WhiteSpace, lexeme);
 		}
 
 		// Operator:

@@ -151,7 +151,7 @@ namespace detail {
 	}
 
 	TEST(Lexer, NonLiterals) {
-		EXPECT_EQ("[(Keyword:array),(Symbol:.),(Ident:create),(Symbol:.),(Ident:1d)]", toString(lex("array.create.1d")));
+		EXPECT_EQ("[(Ident:array),(Symbol:.),(Ident:create),(Symbol:.),(Ident:1d)]", toString(lex("array.create.1d")));
 	}
 
 } // end namespace detail
