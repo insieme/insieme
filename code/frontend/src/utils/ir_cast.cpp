@@ -210,7 +210,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 
 
 	///////////////////////////////////////////////////////////////////////////////////////
-	// 									anyRef -> ref<'a>
+	// 									ref<any> -> ref<'a>
 	///////////////////////////////////////////////////////////////////////////////////////
 	// Converts anyRef to the required ref target type. If the target type is not a ref this is 
 	// considered a frontend error, therefore we are allowed to fail.
@@ -220,19 +220,19 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 				"AnyRef can only be converted to an L-Value (RefType)" 
 			);
 		const core::TypePtr& subTy = GET_REF_ELEM_TYPE(trgTy);
-		return builder.callExpr(trgTy, gen.getAnyRefToRef(), expr, builder.getTypeLiteral(subTy));
+		return builder.callExpr(trgTy, gen.getRefReinterpret(), expr, builder.getTypeLiteral(subTy));
 	}
 
 	
 	///////////////////////////////////////////////////////////////////////////////////////
-	//	 								ref<'a> -> anyRef
+	//	 								ref<'a> -> ref<any>
 	///////////////////////////////////////////////////////////////////////////////////////
-	// Convert a ref<'a> type to anyRef. 
+	// Convert a ref<'a> type to ref<any>.
 	///////////////////////////////////////////////////////////////////////////////////////
 	if ( argTy->getNodeType() == core::NT_RefType && gen.isAnyRef(trgTy) ) {
 		assert( argTy->getNodeType() == core::NT_RefType && 
 				"AnyRef can only be converted to an L-Value (RefType)" );
-		return builder.callExpr(trgTy, gen.getRefToAnyRef(), expr);
+		return expr;		// conversion is implicit
 	}
 
 	///////////////////////////////////////////////////////////////////////////////////////

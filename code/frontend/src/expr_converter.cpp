@@ -236,8 +236,8 @@ core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::T
 			auto declStmt = builder.declarationStmt(var, memAlloc);
 
 			auto memSet = builder.callExpr(
-					builder.literal(builder.parseType("(anyRef, int<4>, uint<8>) -> anyRef"), "memset"),
-					builder.callExpr(gen.getRefToAnyRef(), var), 
+					builder.literal(builder.parseType("(ref<any>, int<4>, uint<8>) -> ref<any>"), "memset"),
+					var,
 					builder.intLit(0), 
 					size);
 
@@ -636,9 +636,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 
 				// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
 				core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
-				core::ExpressionPtr delOp =
-						*arg->getType() == *builder.getLangBasic().getAnyRef() ?
-								builder.getLangBasic().getAnyRefDelete() : builder.getLangBasic().getRefDelete();
+				core::ExpressionPtr delOp = builder.getLangBasic().getRefDelete();
 
 				// otherwise this is not a L-Value so it needs to be wrapped into a variable
 				return (irNode = builder.callExpr(builder.getLangBasic().getUnit(), delOp, arg));
@@ -650,6 +648,15 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 		// No definition has been found in any translation unit, 
 		// we mark this function as extern. and return
 		if (!definition) {
+
+			// function might be intercepted - already processed and cached 
+			ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(funcDecl);
+			if (fit != ctx.lambdaExprCache.end()) {
+				irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
+						packedArgs);
+				return irNode;
+			}
+
 			std::string callName = funcDecl->getNameAsString();
 			irNode = builder.callExpr(funcTy->getReturnType(), builder.literal(callName, funcTy),
 					packedArgs);

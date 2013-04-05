@@ -564,7 +564,7 @@ TEST(Manipulation, TryFixParameter_recursive) {
 	// now, try fixing non-propagated parameter b
 	fixed = transform::tryFixParameter(manager, lambda, 1, builder.intLit(5));
 	EXPECT_NE(lambda, fixed);
-	EXPECT_EQ("AP(rec v5.{v5=fun(ref<int<4>> v2) {if(int.eq(5, 0)) {return unit;} else {}; ref.assign(v2, int.add(ref.deref(v2), 5)); rec v1.{v1=fun(ref<int<4>> v2, int<4> v3) {if(int.eq(v3, 0)) {return unit;} else {}; ref.assign(v2, int.add(ref.deref(v2), v3)); v1(v2, int.sub(v3, 1));}}(v2, int.sub(5, 1));}})", toString(fixed));
+	EXPECT_EQ("AP(rec v0.{v0=fun(ref<int<4>> v2) {if(int.eq(5, 0)) {return unit;} else {}; ref.assign(v2, int.add(ref.deref(v2), 5)); rec v1.{v1=fun(ref<int<4>> v2, int<4> v3) {if(int.eq(v3, 0)) {return unit;} else {}; ref.assign(v2, int.add(ref.deref(v2), v3)); v1(v2, int.sub(v3, 1));}}(v2, int.sub(5, 1));}})", toString(fixed));
 	EXPECT_EQ("[]", toString(core::checks::check(fixed)));
 
 }
@@ -697,7 +697,7 @@ TEST(Manipulation, OutlineExpr) {
 	ExpressionPtr sum = builder.add(a,b);
 
 	EXPECT_EQ("int.add(v1, v2)", toString(*sum));
-	EXPECT_EQ("rec v5.{v5=fun(int<4> v3, int<4> v4) {return int.add(v3, v4);}}(v1, v2)", toString(*transform::outline(mgr, sum)));
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v3, int<4> v4) {return int.add(v3, v4);}}(v1, v2)", toString(*transform::outline(mgr, sum)));
 
 	EXPECT_EQ(sum, transform::tryInlineToExpr(mgr, transform::outline(mgr, sum)));
 }
@@ -751,7 +751,7 @@ TEST(Manipulation, InlineFunction) {
 
 	LambdaExprPtr fun = builder.lambdaExpr(body, toVector(p1,p2));
 
-	EXPECT_EQ("rec v1.{v1=fun(int<4> v3, int<4> v4) {int.add(v3, v4); int.sub(v4, v3);}}", toString(*fun));
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v3, int<4> v4) {int.add(v3, v4); int.sub(v4, v3);}}", toString(*fun));
 
 
 	// -- create a call --
@@ -760,7 +760,7 @@ TEST(Manipulation, InlineFunction) {
 	VariablePtr v2 = builder.variable(type, 2);
 
 	CallExprPtr call = builder.callExpr(fun, v1, builder.add(v1,v2));
-	EXPECT_EQ("rec v1.{v1=fun(int<4> v3, int<4> v4) {int.add(v3, v4); int.sub(v4, v3);}}(v1, int.add(v1, v2))", toString(*call));
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v3, int<4> v4) {int.add(v3, v4); int.sub(v4, v3);}}(v1, int.add(v1, v2))", toString(*call));
 	EXPECT_EQ("{int<4> v5 = int.add(v1, v2); int.add(v1, v5); int.sub(v5, v1);}", toString(*transform::tryInlineToStmt(mgr, call)));
 
 }
@@ -882,7 +882,7 @@ TEST(Manipulation, pushBindIntoLambdaTest) {
 	CallExprPtr res = analysis::normalize(transform::pushBindIntoLambda(manager, call, 0));
 
 	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return bind(v2){int.add(v1, v2)}(2);}}(int.add(2, v77))", toString(*res));
-	EXPECT_EQ("int.add(int.add(2, v77), 2)", toString(*transform::simplify(manager, res)));
+	EXPECT_EQ("int.add(v77, 4)", toString(*transform::simplify(manager, res)));
 
 	EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
 
@@ -904,7 +904,7 @@ TEST(Manipulation, pushBindIntoLambdaTest) {
 	res = analysis::normalize(transform::pushBindIntoLambda(manager, call, 0));
 
 	EXPECT_EQ("rec v0.{v0=fun() {return bind(v1){int.add(int.add(2, 3), v1)}(2);}}()", toString(*res));
-	EXPECT_EQ("int.add(int.add(2, 3), 2)", toString(*transform::simplify(manager, res)));
+	EXPECT_EQ("7", toString(*transform::simplify(manager, res.as<NodePtr>())));
 
 	EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
 }

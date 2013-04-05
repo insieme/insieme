@@ -896,14 +896,16 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint) {
 
 	SET_TU(funcDecl);
-	assert(currTU && funcDecl->hasBody() && "Function has no body!");
 
-	// check if the funcDecl was already converted into an lambdaExpr
+	// check if the funcDecl was already converted into an lambdaExpr, before asserting that
+	// funcDecl has a body -> intercepted functions may have no body
 	ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(funcDecl);
 	if (fit != ctx.lambdaExprCache.end()) {
 		RESTORE_TU();
 		return fit->second;
 	}	
+	
+	assert(currTU && funcDecl->hasBody() && "Function has no body!");
 
 	VLOG(1) << "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
 

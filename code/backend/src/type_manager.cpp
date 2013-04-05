@@ -410,11 +410,8 @@ namespace backend {
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 
 			// try find a match
-			if (basic.isUnit(ptr)) {
+			if (basic.isUnit(ptr) || basic.isAny(ptr)) {
 				return type_info_utils::createInfo(manager, "void");
-			}
-			if (basic.isAnyRef(ptr)) {
-				return type_info_utils::createInfo(manager, "void*");
 			}
 
 			// ------------ integers -------------
@@ -462,6 +459,9 @@ namespace backend {
 
 			if (basic.isChar(ptr)) {
 				return type_info_utils::createInfo(manager, "char");
+			}
+			if (basic.isWChar(ptr)) {
+				return type_info_utils::createInfo(manager, "wchar_t");
 			}
 
 			if (basic.isString(ptr)) {
@@ -529,7 +529,7 @@ namespace backend {
 
 			// no match found => return unsupported type info
 			LOG(FATAL) << "Unsupported type: " << *ptr;
-			return type_info_utils::createUnsupportedInfo(manager);
+			return type_info_utils::createUnsupportedInfo(manager, toString(*ptr));
 		}
 
 		template<typename ResInfo>

@@ -68,36 +68,6 @@ namespace core {
 		return ::toString(*getType()) < ::toString(*other->getType());
 	}
 
-	std::ostream& LambdaExpr::printTo(std::ostream& out) const {
-		return out << "rec " << *getVariable() << "." << *getDefinition();
-	}
-
-	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
-		VariablePtr var = Variable::get(manager, lambda->getType());
-		LambdaBindingPtr binding = LambdaBinding::get(manager, var, lambda);
-		LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
-		return get(manager, lambda->getType(), var, def);
-	}
-
-	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
-		return get(manager, Lambda::get(manager, type, params, body));
-	}
-
-
-	bool LambdaExpr::isRecursiveInternal() const {
-		// evaluate lazily
-		if (!recursive.isEvaluated()) {
-			recursive.setValue(getDefinition()->isRecursive(getVariable()));
-		}
-		return recursive.getValue();
-	}
-
-	LambdaExprPtr LambdaExpr::unroll(NodeManager& manager, unsigned numTimes) const {
-		// TODO: check whether unrolled definitions are still mutual recursive!
-		if (!isRecursive()) return manager.get(this);
-		return LambdaExpr::get(manager, getVariable(), getDefinition()->unroll(manager, numTimes));
-	}
-
 
 	namespace {
 
@@ -208,6 +178,38 @@ namespace core {
 
 
 	}
+
+	std::ostream& LambdaExpr::printTo(std::ostream& out) const {
+		return out << "rec " << *getVariable() << "." << *getDefinition();
+	}
+
+	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
+		VariablePtr var = Variable::get(manager, lambda->getType(), 0);
+		LambdaBindingPtr binding = LambdaBinding::get(manager, var, lambda);
+		binding->attachValue(RecursiveCallLocations());			// this is not a recursive function!
+		LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
+		return get(manager, lambda->getType(), var, def);
+	}
+
+	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
+		return get(manager, Lambda::get(manager, type, params, body));
+	}
+
+
+	bool LambdaExpr::isRecursiveInternal() const {
+		// evaluate lazily
+		if (!recursive.isEvaluated()) {
+			recursive.setValue(getDefinition()->isRecursive(getVariable()));
+		}
+		return recursive.getValue();
+	}
+
+	LambdaExprPtr LambdaExpr::unroll(NodeManager& manager, unsigned numTimes) const {
+		// TODO: check whether unrolled definitions are still mutual recursive!
+		if (!isRecursive()) return manager.get(this);
+		return LambdaExpr::get(manager, getVariable(), getDefinition()->unroll(manager, numTimes));
+	}
+
 
 	bool LambdaDefinition::isRecursivelyDefined(const VariablePtr& variable) const {
 		return !getRecursiveCallLocations(this, variable).empty();

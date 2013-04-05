@@ -59,10 +59,10 @@ namespace core {
 		auto impl = builder.parse("C::(int<4> a)->int<4> { return a; }").as<LambdaExprPtr>();
 		MemberFunction fun("f", impl);
 
-		EXPECT_EQ("f = mfun C v3 :: (int<4> v4) -> int<4> {\n    return v4;\n}", toString(fun));
+		EXPECT_EQ("f = mfun C v1 :: (int<4> v2) -> int<4> {\n    return v2;\n}", toString(fun));
 
 		MemberFunction fun2("f", impl, true, true);
-		EXPECT_EQ("virtual const f = mfun C v3 :: (int<4> v4) -> int<4> {\n    return v4;\n}", toString(fun2));
+		EXPECT_EQ("virtual const f = mfun C v1 :: (int<4> v2) -> int<4> {\n    return v2;\n}", toString(fun2));
 
 		EXPECT_NE(fun, fun2);
 		EXPECT_EQ(fun, MemberFunction("f", impl));

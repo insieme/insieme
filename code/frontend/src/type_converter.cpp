@@ -225,7 +225,8 @@ core::TypePtr ConversionFactory::TypeConverter::VisitBuiltinType(const BuiltinTy
 	case BuiltinType::Char32:		return gen.getInt4();
 	case BuiltinType::Char_S:
 	case BuiltinType::SChar:		return gen.getChar();
-	// case BuiltinType::WChar:		return gen.getWChar();
+	case BuiltinType::WChar_S:		return gen.getWChar();	
+	case BuiltinType::WChar_U:		return gen.getWChar();
 
 	// integer types
 	case BuiltinType::UShort:		return gen.getUInt2();

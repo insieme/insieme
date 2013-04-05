@@ -82,17 +82,31 @@ void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const 
 	// check whether there is a declaration at all
 	if (!decl) return;
 
+	/*
+	clang::SourceManager& sm = decl->getASTContext().getSourceManager();
+	clang::SourceLocation loc = sm.getSpellingLoc(decl->getLocation());
+	if(!sm.getFilename(loc).empty()) {
+		return sm.getFilename(loc).data();
+	}
+	*/
 
+	/*
 	//TODO currently only gets the fileName where the declaration is located need a way to get includeFile for declaration
+	//TODO currently gets the TU for the definition of an declaration -- no problem for header-only
+	//libs but need solution if .h and .cpp are indexed
 	const TranslationUnit* tu = (indexer.getDefAndTUforDefinition(decl)).second;
 	if( !tu ) return;
+	clang::SourceManager& sm = tu->getCompiler().getSourceManager(); 
+	*/
+
+	clang::SourceManager& sm = decl->getASTContext().getSourceManager();
 
 	std::cout << "Searching header for: " << node << " of type " << node->getNodeType() << "\n";
-	clang::SourceLocation loc = tu->getCompiler().getSourceManager().getFileLoc(decl->getLocation());
+	clang::SourceLocation loc = sm.getFileLoc(decl->getLocation());
 	if (loc.isInvalid()) return;
 
-	std::pair<clang::FileID, unsigned> loc_info = tu->getCompiler().getSourceManager().getDecomposedLoc(loc);
-	const clang::FileEntry* fileEntry = tu->getCompiler().getSourceManager().getFileEntryForID(loc_info.first);
+	std::pair<clang::FileID, unsigned> loc_info = sm.getDecomposedLoc(loc);
+	const clang::FileEntry* fileEntry = sm.getFileEntryForID(loc_info.first);
 
 	// get absolute path of header file
 	fs::path header = fs::canonical(fileEntry->getName());
@@ -104,7 +118,6 @@ void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const 
 
 	// use resulting header
 	insieme::annotations::c::attachInclude(node, header.string());
-
 }
 
 std::string fixQualifiedName(std::string name) {
@@ -156,14 +169,13 @@ void Interceptor::loadConfigSet(std::set<std::string> tI) {
 /// takes a pair of strings and looks for functionsi (funcDecl) with the same name as the first string, 
 /// adds the second string associated with the funcDecl to the interceptedFuncCache
 void Interceptor::intercept() {
-	if(toIntercept.empty()) {
-		return;
-	}
+	//nothing to intercept
+	if(toIntercept.empty()) { return; }
 
 	InterceptVisitor vis(interceptedDecls, interceptedFuncMap, interceptedTypes, toIntercept);
 
-	auto elem = indexer.begin();
-	auto end = indexer.end();
+	auto elem = indexer.decl_begin();
+	auto end = indexer.decl_end();
 	for(;elem != end; elem++) {
 		if(const clang::FunctionDecl* decl = llvm::dyn_cast<clang::FunctionDecl>(*elem)) {
 			if( regex_match(decl->getQualifiedNameAsString(), rx) ) {
@@ -214,11 +226,12 @@ Interceptor::InterceptedTypeCache Interceptor::buildInterceptedTypeCache(insieme
 
 		// resolve type and save in cache
 		core::TypePtr irType = iTV.Visit( currInterceptedType );
-		cache.insert( { currInterceptedType, irType } );
-		VLOG(1) << "build interceptedType " << (*it)->getQualifiedNameAsString() << " ## " << irType;
-
+	
 		// add header file
 		addHeaderForDecl(irType, typeDecl, indexer);
+
+		cache.insert( { currInterceptedType, irType } );
+		VLOG(1) << "build interceptedType " << (*it)->getQualifiedNameAsString() << " ## " << irType;
 	}
 	return cache;
 }
@@ -261,6 +274,7 @@ Interceptor::InterceptedExprCache Interceptor::buildInterceptedExprCache(insieme
 
 		//convertType only works if convFact.ctx.type cache was filled properly with buildInterceptedTypeCache
 		core::FunctionTypePtr type = convFact.convertType( decl->getType().getTypePtr() ).as<core::FunctionTypePtr>();
+		VLOG(2) << decl << " functionType " << type;
 		//fix types for ctor, mfunc, ...
 		std::string literalName = it->second;
 		if( const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
@@ -290,13 +304,13 @@ Interceptor::InterceptedExprCache Interceptor::buildInterceptedExprCache(insieme
 		literalName = fixQualifiedName(literalName);
 
 		core::ExpressionPtr interceptExpr = builder.literal( literalName, type);
-		VLOG(2) << interceptExpr << " " << type;
 
 		addHeaderForDecl(interceptExpr, decl, indexer);
 		cache.insert( {decl, interceptExpr} );
 
+		VLOG(2) << interceptExpr << " " << type;
 		if(insieme::annotations::c::hasIncludeAttached(interceptExpr)) {
-			VLOG(2) << insieme::annotations::c::getAttachedInclude(interceptExpr);
+			VLOG(2) << "\t attached header: " << insieme::annotations::c::getAttachedInclude(interceptExpr);
 		}
 	}
 
@@ -307,7 +321,9 @@ Interceptor::InterceptedExprCache Interceptor::buildInterceptedExprCache(insieme
 
 void InterceptVisitor::intercept(const clang::FunctionDecl* d, boost::regex rx) {
 	this->rx = rx;
-	Visit(d->getBody());
+	if(d->hasBody()) {
+		Visit(d->getBody());
+	}
 }
 
 void InterceptVisitor::VisitStmt(clang::Stmt* stmt) {

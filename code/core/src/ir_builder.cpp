@@ -510,9 +510,8 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// if it is a ref type ...
 	if (type->getNodeType() == core::NT_RefType) {
-		// return the corresponding flavor of NULL
-		core::TypePtr elementType = core::analysis::getReferencedType(type);
-		return callExpr(type, manager.getLangBasic().getAnyRefToRef(), manager.getLangBasic().getNull(), getTypeLiteral(elementType));
+		// return NULL
+		return manager.getLangBasic().getNull();
 	}
 
 	// if it is a bool type
@@ -550,9 +549,6 @@ CallExprPtr IRBuilder::refNew(const ExpressionPtr& subExpr) const {
 
 CallExprPtr IRBuilder::refDelete(const ExpressionPtr& subExpr) const {
 	auto& basic = manager.getLangBasic();
-	if (basic.isAnyRef(subExpr->getType())) {
-		return callExpr(basic.getUnit(), basic.getAnyRefDelete(), subExpr);
-	}
 	return callExpr(basic.getUnit(), basic.getRefDelete(), subExpr);
 }
 

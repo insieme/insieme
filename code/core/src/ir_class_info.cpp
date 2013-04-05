@@ -72,6 +72,11 @@ namespace core {
 		// exchange the list of constructors
 		this->constructors = constructors;
 
+		// normalize constructors
+		for(auto& cur : this->constructors) {
+			cur = core::analysis::normalize(cur);
+		}
+
 		// invalidate child list
 		childList.reset();
 	}
@@ -82,7 +87,7 @@ namespace core {
 		assert(checkObjectType(constructor));
 
 		// add new constructor
-		this->constructors.push_back(constructor);
+		this->constructors.push_back(core::analysis::normalize(constructor));
 
 		// invalidate child list
 		childList.reset();
@@ -94,7 +99,7 @@ namespace core {
 		assert(!destructor || checkObjectType(destructor));
 
 		// update destructor
-		this->destructor = destructor;
+		this->destructor = (destructor)?core::analysis::normalize(destructor):LambdaExprPtr();
 
 		// invalidate child list
 		childList.reset();

@@ -548,6 +548,16 @@ namespace core {
 		bool isMemberFunction() const { return FunctionTypeAccessor<Derived,Ptr>::getKind() == FK_MEMBER_FUNCTION; }
 
 		/**
+		 * A utility function allowing to determine directly whether a function
+		 * is a constructor, destructor or member function.
+		 */
+		bool isMember() const {
+			return FunctionTypeAccessor<Derived,Ptr>::isConstructor() ||
+				   FunctionTypeAccessor<Derived,Ptr>::isDestructor() ||
+				   FunctionTypeAccessor<Derived,Ptr>::isMemberFunction();
+		}
+
+		/**
 		 * Obtains a list of types forming the parameter types of this function type.
 		 */
 		vector<Ptr<const Type>> getParameterTypeList() const {

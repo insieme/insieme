@@ -174,11 +174,11 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"(((( *v1)!=0))?bind(){fun(ref<int<4>> v4) -> int<4> { return (( *v4)+1);}(v1)}:bind(){fun(ref<int<4>> v2) -> int<4> { return (( *v2)-1);}(v1)})"
+	"(((( *v1)!=0))?bind(){fun(ref<int<4>> v3) -> int<4> { return (( *v3)+1);}(v1)}:bind(){fun(ref<int<4>> v2) -> int<4> { return (( *v2)-1);}(v1)})"
 	a ? a+1 : a-1;
 
 	#pragma test \
-	"(((( *v1)==0))?bind(){fun(ref<int<4>> v4) -> int<4> { return (( *v4)+1);}(v1)}:bind(){fun(ref<int<4>> v2) -> int<4> { return (( *v2)-1);}(v1)})"
+	"(((( *v1)==0))?bind(){fun(ref<int<4>> v3) -> int<4> { return (( *v3)+1);}(v1)}:bind(){fun(ref<int<4>> v2) -> int<4> { return (( *v2)-1);}(v1)})"
 	a == 0 ? a+1 : a-1;
 
 	#pragma test \
@@ -214,7 +214,7 @@ void for_stmt_test() {
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
-	#pragma test "{ (v1 := 0); while((( *v5)>1)) { { }; fun(ref<int<4>> v6, ref<int<4>> v7) -> ref<int<4>> { fun(ref<'a> v1) -> 'a { decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v6); (v7 := (( *v7)/2)); return v7; }(v1, v5); };}"
+	#pragma test "{ (v1 := 0); while((( *v4)>1)) { { }; fun(ref<int<4>> v5, ref<int<4>> v6) -> ref<int<4>> { fun(ref<'a> v1) -> 'a { decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v5); (v6 := (( *v6)/2)); return v6; }(v1, v4); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 
 	//(v1 := 0);
@@ -345,13 +345,13 @@ void while_stmt_test() {
 }
 
 #pragma test \
-	"recFun v16 { v16 = fun(int<4> v18) -> int<4> { return v17((v18-1)); }; v17 = fun(int<4> v19) -> int<4> { return v16((v19+1)); };}"
+	"recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13-1)); }; v12 = fun(int<4> v14) -> int<4> { return v11((v14+1)); };}"
 int f(int x) {
 	return g(x-1);
 }
 
 #pragma test \
-	"recFun v16 { v16 = fun(int<4> v18) -> int<4> { return v17((v18+1)); }; v17 = fun(int<4> v19) -> int<4> { return v16((v19-1)); };}"
+	"recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13+1)); }; v12 = fun(int<4> v14) -> int<4> { return v11((v14-1)); };}"
 int g(int x) {
 	return f(x+1);
 }
@@ -366,7 +366,7 @@ int g(int x) {
 
 void rec_function_call_test() {
 	#pragma test \
-	"recFun v16 { v16 = fun(int<4> v18) -> int<4> { return v17((v18-1)); }; v17 = fun(int<4> v19) -> int<4> { return v16((v19+1)); };}(10)"
+	"recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13-1)); }; v12 = fun(int<4> v14) -> int<4> { return v11((v14+1)); };}(10)"
 	f(10);
 }
 

@@ -287,7 +287,7 @@ using insieme::transform::pattern::anyList;
 								getVariableArg(call->getArgument(4), builder)), builder.castExpr(basic.getUInt4(), subScriptValue));
                         if(hostPtr->getType()->getNodeType() != NT_RefType) // to do a scalarToAnyRef we need an Expression with ref type
                         	hostPtr = builder.refVar(hostPtr);
-						ExpressionPtr pos = builder.callExpr(basic.getRefToAnyRef(), builder.callExpr(basic.getScalarToArray(), hostPtr));
+						ExpressionPtr pos = builder.callExpr(basic.getScalarToArray(), hostPtr);
 						ExpressionList args;
 						args.push_back(call->getArgument(0));
 						args.push_back(call->getArgument(1));

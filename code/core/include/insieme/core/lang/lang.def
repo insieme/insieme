@@ -60,7 +60,8 @@
 // Types --------------------------------------------------------------------------------------------------------------
 TYPE(Unit,   "unit")
 
-TYPE(AnyRef, "anyRef")
+TYPE(Any, "any")
+TYPE(AnyRef, "ref<any>")
 
 TYPE(Char,   "char")
 TYPE(WChar,  "wchar")
@@ -70,6 +71,8 @@ TYPE(Identifier, "identifier")
 GROUP(UnsignedInt, UInt1, UInt2, UInt4, UInt8, UInt16, UIntInf, UIntGen)
 GROUP(SignedInt, Int1, Int2, Int4, Int8, Int16, IntInf, IntGen)
 GROUP(Int, UnsignedInt, SignedInt)
+
+GROUP(Primitive, Any, Bool, Char, WChar, Int, Real) 
 
 TYPE(IntGen, "int<#a>")
 TYPE(UIntGen,"uint<#a>")
@@ -347,8 +350,8 @@ GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
 // References ---------------------------------------------------------------------------------------------------------
 
-GROUP(RefOp, RefVar, RefNew, RefDelete, RefEqual, RefAssign, RefDeref, ScalarToArray, RefToAnyRef, AnyRefToRef, AnyRefDelete)
-GROUP(Delete, RefDelete, AnyRefDelete)
+GROUP(RefOp, RefVar, RefNew, RefDelete, RefEqual, RefAssign, RefDeref, ScalarToArray)
+GROUP(Delete, RefDelete)
 
 LITERAL(RefVar,    		"ref.var",    			"('a) -> ref<'a>")
 LITERAL(RefNew,    		"ref.new",    			"('a) -> ref<'a>")
@@ -433,11 +436,7 @@ GROUP(DataPathPrimitive, DataPathRoot, DataPathMember, DataPathElement, DataPath
 
 // Any References -----------------------------------------------------------------------------------------------------
 
-LITERAL(Null,           "null",                 "anyRef")
-LITERAL(RefToAnyRef,    "ref.to.anyref",    	"(ref<'a>) -> anyRef")
-LITERAL(AnyRefToRef,    "anyref.to.ref",    	"(anyRef, type<'a>) -> ref<'a>")
-LITERAL(AnyRefDelete,	"anyref.delete", 		"(anyRef) -> unit")
-
+LITERAL(Null,           "null",                 "ref<any>")
 
 // Volatile -----------------------------------------------------------------------------------------------------------
 // Volatile types mark memory locations that may be changed by some outside agency

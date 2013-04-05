@@ -172,7 +172,7 @@ namespace transform {
 	 * @return a transformation which will invoke the given lambda when being applied
 	 */
 	template<typename Lambda>
-	TransformationPtr lambdaTransformation(const Lambda& lambda) {
+	TransformationPtr makeLambdaTransformation(const Lambda& lambda) {
 		return std::make_shared<LambdaTransformation>(lambda, "");
 	}
 
@@ -184,7 +184,7 @@ namespace transform {
 	 * @return a transformation which will invoke the given lambda when being applied
 	 */
 	template<typename Lambda>
-	TransformationPtr lambdaTransformation(const string& desc, const Lambda& lambda) {
+	TransformationPtr makeLambdaTransformation(const string& desc, const Lambda& lambda) {
 		return std::make_shared<LambdaTransformation>(lambda, desc);
 	}
 

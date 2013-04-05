@@ -649,11 +649,8 @@ public:
 				//
 				replacements.insert( 
 						std::make_pair(callExpr->getArgument(0),
-							builder.callExpr(
-								builder.getLangBasic().getRefToAnyRef(),
-								insieme::analysis::setDisplacement(callExpr->getArgument(0), 
-									insieme::core::arithmetic::toFormula(lowerBound))
-							)
+							insieme::analysis::setDisplacement(callExpr->getArgument(0),
+								insieme::core::arithmetic::toFormula(lowerBound))
 						) 
 					);
 				

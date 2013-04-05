@@ -93,6 +93,7 @@ FUN("alloca.h", alloca)
 FUN("malloc.h", memalign)
 
 FUN("string.h", memcpy)
+FUN("string.h", memset)
 FUN("string.h", strcmp)
 FUN("string.h", strtok)
 FUN("string.h", strtol)
