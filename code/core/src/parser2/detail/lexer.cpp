@@ -135,34 +135,40 @@ namespace detail {
 			 * Consumes the heading white-spaces of the given range.
 			 */
 			template<typename InputIterator>
-			void consumeWhiteSpaces(InputIterator& next, const InputIterator& end) const {
+			bool consumeWhiteSpaces(InputIterator& next, const InputIterator& end, Token& tok) const {
+
+				// consume spaces
+				InputIterator start = next;
 				while(next != end && isspace(*next)) ++next;
+
+				// see whether there is a white-space
+				if (start == next) return false;
+
+				// create white-space token
+				tok = Token::createWhitespace(string(start, next));
+				return true;
 			}
 
 			/**
 			 * Consumes commends at the head of the given range.
 			 */
 			template<typename InputIterator>
-			void consumeComment(InputIterator& next, const InputIterator& end) const {
+			bool consumeComment(InputIterator& next, const InputIterator& end, Token& tok) const {
 
 				// consume white-spaces
-				consumeWhiteSpaces(next,end);
-				if (next == end) { return; }
+				if (consumeWhiteSpaces(next, end, tok)) return true;
+				if (next == end) { return false; }
 
 				// check for start commend symbol ( // or /* )
 				InputIterator a = next;
 				InputIterator b = next+1;
-				if (a == end || b == end) { return; }
+				if (a == end || b == end) { return false; }
 
 				// search for // commend
 				if (*a=='/' && *b=='/') {
 					// => lasts until end of line
 					next = b;
 					while (next != end && *next != '\n') ++next;
-
-					// consume potential successive comment
-					consumeComment(next, end);
-					return;
 				}
 
 				// search for /* commend
@@ -171,10 +177,14 @@ namespace detail {
 					// search for */ ending the comment
 					while(b!=end && (*a!='*' || *b!='/')) { ++a; ++b; }
 					next = (b==end)?end:b+1;
-
-					// consume potential successive comments
-					consumeComment(next,end);
 				}
+
+				// check whether a comment has been found
+				if(a == next) return false;
+
+				// create comment token
+				tok = Token::createComment(string(a,next));
+				return true;
 			}
 
 			/**
@@ -186,7 +196,7 @@ namespace detail {
 			bool operator()(InputIterator& next, InputIterator end, Token& tok) const {
 
 				// skip over white spaces and comments
-				consumeComment(next, end);
+				if (consumeComment(next, end, tok)) return true;
 
 				// check end-position
 				if (next == end) {
@@ -216,10 +226,10 @@ namespace detail {
 
 				// define set of keywords to be considered
 				static const vector<string> KEYWORD = {
-						"if", "else", "while", "for", "let", "in", "auto",
+						"if", "else", "while", "for", "let", "in", "auto", "decl",
 						"return", "break", "continue",
 						"struct", "union",
-						"array", "vector", "ref", "channel",
+//						"array", "vector", "ref", "channel",
 						"spawn", "syncAll"
 				};
 
@@ -251,11 +261,19 @@ namespace detail {
 	}
 
 
-	vector<Token> lex(const std::string& code) {
+	vector<Token> lex(const std::string& code, bool filterCommentAndWhiteSpace) {
 		// just create and run tokenizer
 		Tokenizer tokenizer(code);
-		// TODO: think about lazy evaluation by returning tokenizer instance itself
-		return vector<Token>(tokenizer.begin(), tokenizer.end());
+
+		// create list of tokens, filtering comments and whitespaces if requested
+		vector<Token> res;
+		for(auto it = tokenizer.begin(); it != tokenizer.end(); it++) {
+			const Token& cur = *it;
+			if (!filterCommentAndWhiteSpace || (cur.getType() != Token::Type::Comment && cur.getType() != Token::Type::WhiteSpace)) {
+				res.push_back(cur);
+			}
+		}
+		return res;
 	}
 
 
@@ -274,6 +292,8 @@ namespace detail {
 			case Token::Double_Literal: 	out << "DoubleLit"; break;
 			case Token::Char_Literal: 		out << "CharLit"; break;
 			case Token::String_Literal: 	out << "StrLit"; break;
+			case Token::Comment: 			out << "Comment"; break;
+			case Token::WhiteSpace: 		out << "WhiteSpace"; break;
 		}
 		return out;
 	}

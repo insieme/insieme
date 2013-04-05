@@ -38,6 +38,7 @@
 
 #include "declarations.h"
 #include "irt_atomic.h"
+#include "abstraction/unused.h"
 
 #ifndef IRT_CWBUFFER_LENGTH
 #define IRT_CWBUFFER_LENGTH 16
@@ -123,7 +124,7 @@ void irt_cwb_push_front(irt_circular_work_buffer* wb, irt_work_item* wi) {
 	//wb->items[newstate.top_update] = wi;
 	// finish operation - force compiler to maintain operation order by using atomic for assignment
 	//irt_atomic_bool_compare_and_swap(&wb->state.top_val, wb->state.top_val, newstate.top_update);
-	(wb->items[newstate.top_update] = wi) && (wb->state.top_val = newstate.top_update);
+	__irt_unused bool x = (wb->items[newstate.top_update] = wi) && (wb->state.top_val = newstate.top_update);
 }
 
 static inline void irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item* wi) {
@@ -145,7 +146,7 @@ static inline void irt_cwb_push_back(irt_circular_work_buffer* wb, irt_work_item
 	//wb->items[newstate.bot_val] = wi;
 	// finish operation - force compiler to maintain operation order by using atomic for assignment
 	//irt_atomic_bool_compare_and_swap(&wb->state.bot_val, wb->state.bot_val, newstate.bot_update);
-	(wb->items[newstate.bot_val] = wi) && (wb->state.bot_val = newstate.bot_update);
+	__irt_unused bool x = (wb->items[newstate.bot_val] = wi) && (wb->state.bot_val = newstate.bot_update);
 }
 
 static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {
@@ -170,7 +171,7 @@ static inline irt_work_item* irt_cwb_pop_front(irt_circular_work_buffer* wb) {
 	//__sync_synchronize();
 	//wb->state.top_val = newstate.top_update;
 	irt_work_item *ret;
-	(ret = wb->items[newstate.top_val]) && (wb->state.top_val = newstate.top_update);
+	__irt_unused bool x = (ret = wb->items[newstate.top_val]) && (wb->state.top_val = newstate.top_update);
 	return ret;
 }
 	
@@ -195,7 +196,7 @@ static inline irt_work_item* irt_cwb_pop_back(irt_circular_work_buffer* wb) {
 	//__sync_synchronize();
 	//wb->state.bot_val = newstate.bot_update;
 	irt_work_item *ret;
-	(ret = wb->items[newstate.bot_update]) && (wb->state.bot_val = newstate.bot_update);
+	__irt_unused bool x = (ret = wb->items[newstate.bot_update]) && (wb->state.bot_val = newstate.bot_update);
 	return ret;
 }
 
