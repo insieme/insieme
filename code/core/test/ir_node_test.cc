@@ -219,7 +219,7 @@ namespace new_core {
 		{
 			std::stringstream buf;
 			dumpDetail(node, buf);
-			EXPECT_EQ("B<A>\n", buf.str());
+			EXPECT_EQ("\x1B[0mB\x1B[0m\x1B[0m<\x1B[0m\x1B[0mA\x1B[0m\x1B[0m>\x1B[0m\n", buf.str());
 		}
 
 		// test literal printing
@@ -233,7 +233,7 @@ namespace new_core {
 		{
 			std::stringstream buf;
 			dumpDetail(E, buf);
-			EXPECT_EQ("x:B<A>\n", buf.str());
+			EXPECT_EQ("\x1B[0mx\x1B[0m\x1B[0m:\x1B[0m\x1B[0mB\x1B[0m\x1B[0m<\x1B[0m\x1B[0mA\x1B[0m\x1B[0m>\x1B[0m\n", buf.str());
 		}
 	}
 
