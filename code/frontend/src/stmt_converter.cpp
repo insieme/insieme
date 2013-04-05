@@ -233,8 +233,10 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		// Visit Body
 		stmtutils::StmtWrapper body = tryAggregateStmts(builder, Visit(forStmt->getBody()));
 
-		core::ExpressionPtr incExpr = utils::cast(loopAnalysis.getIncrExpr(), inductionVar->getType());
-		core::ExpressionPtr condExpr = utils::cast(loopAnalysis.getCondExpr(), inductionVar->getType());
+		//core::ExpressionPtr incExpr = utils::cast(loopAnalysis.getIncrExpr(), inductionVar->getType());
+		core::ExpressionPtr incExpr = loopAnalysis.getIncrExpr();
+		//core::ExpressionPtr condExpr = utils::cast(loopAnalysis.getCondExpr(), inductionVar->getType());
+		core::ExpressionPtr condExpr = loopAnalysis.getCondExpr();
 
 		assert(inductionVar->getType()->getNodeType() != core::NT_RefType);
 
@@ -831,7 +833,18 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 				}
 			}
 
-			core::LiteralPtr caseLiteral = static_pointer_cast<core::LiteralPtr>(caseExpr);
+			core::LiteralPtr caseLiteral;
+			if (caseExpr->getNodeType() != core::NT_Literal){
+				// clang casts the literal to fit the condition type... and is not a literal anymore
+				// it might be a scalar cast, we retrive the literal
+				//FIXME: checks here?
+				caseLiteral= caseExpr.as<core::CallExprPtr>()->getArgument(0).as<core::LiteralPtr>();
+			}
+			else{
+				//caseLiteral = static_pointer_cast<core::LiteralPtr>(caseExpr);
+				caseLiteral = caseExpr.as<core::LiteralPtr>();
+			}
+
 			caseExprs.push_back(std::make_pair(caseLiteral, caseStmts.size()));
 
 			core::StatementPtr subStmt;
@@ -981,6 +994,9 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitNullStmt(clang::Nu
 	return retStmt;
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//							GOTO  STATEMENT
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitGotoStmt(clang::GotoStmt* gotoStmt) {
 	clang::Preprocessor& pp = convFact.getCurrentPreprocessor();
 	pp.Diag(
@@ -991,13 +1007,14 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitGotoStmt(clang::Go
 	return stmtutils::StmtWrapper();
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//							  STATEMENT
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitStmt(clang::Stmt* stmt) {
 	std::for_each(stmt->child_begin(), stmt->child_end(),
 			[ this ] (clang::Stmt* stmt) {this->Visit(stmt);});
 	return stmtutils::StmtWrapper();
 }
-
-
 
 //---------------------------------------------------------------------------------------------------------------------
 //							CLANG STMT CONVERTER

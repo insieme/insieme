@@ -96,7 +96,7 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						  IMPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
+/*core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
 	START_LOG_EXPR_CONVERSION(castExpr);
 	core::ExpressionPtr retIr;
 
@@ -171,12 +171,12 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(c
 	}
 	END_LOG_EXPR_CONVERSION(retIr);
 	return retIr;
-}
+}*/
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						EXPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr) {
+/*core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr) {
 // FIXME: do the thing here
 
 	if (castExpr->getCastKind() == CK_NoOp) {
@@ -187,7 +187,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(c
 
 	return (ExprConverter::VisitExplicitCastExpr(castExpr));
 
-	/*START_LOG_EXPR_CONVERSION(castExpr);
+	START_LOG_EXPR_CONVERSION(castExpr);
 
 	const core::IRBuilder& builder = convFact.builder;
 	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
@@ -267,8 +267,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(c
 		return (retIr = ExprConverter::VisitExplicitCastExpr(castExpr));
 	}
 
-	assert(false); */
-}
+	assert(false); 
+}*/
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							FUNCTION CALL EXPRESSION

@@ -577,185 +577,68 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitGNUNullExpr(const cla
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//						  IMPLICIT CAST EXPRESSION
+//						  CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(const clang::CastExpr* castExpr) {
 	START_LOG_EXPR_CONVERSION(castExpr);
 
-	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
+	core::ExpressionPtr inIr = Visit(castExpr->getSubExpr());
 	core::TypePtr  type = convFact.convertType(GET_TYPE_PTR(castExpr));
 
-	return  utils::performClangCastOnIR (builder, castExpr, type, retIr);
+	core::ExpressionPtr&& retIr = utils::performClangCastOnIR (builder, castExpr, type, inIr);
+	END_LOG_EXPR_CONVERSION(retIr);
+	return retIr;
+}
 
-	LOG_EXPR_CONVERSION(retIr);
 
-	// capture the case of cast to arrays. because arrays cannot exists without a ref we need 
-	// to make sure to add a refVar to the element 
-	if (utils::isRefArray(type) && utils::isVector(retIr->getType()))
-	{
-		return retIr = utils::cast(builder.refVar(retIr), type);
-	}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//							FUNCTION CALL EXPRESSION
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang::CallExpr* callExpr) {
+	START_LOG_EXPR_CONVERSION(callExpr);
 
-	// handle implicit casts according to their kind
-	switch (castExpr->getCastKind()) {
+	// return converted node
+	core::ExpressionPtr irNode;
+	LOG_EXPR_CONVERSION(irNode);
 
-		case CK_IntegralCast:
+	if (callExpr->getDirectCallee()) {
 
-			//A cast between integral types (other than to boolean). Variously a bitcast, a truncation,
-			//a sign-extension, or a zero-extension. long l = 5; (unsigned) 
-			
-			return  utils::cast(retIr, type);
+		const FunctionDecl* funcDecl = llvm::cast<FunctionDecl>(callExpr->getDirectCallee());
+		auto funcTy = convFact.convertType(GET_TYPE_PTR(funcDecl)).as<core::FunctionTypePtr>() ;
 
-		case CK_LValueToRValue:
-			return (retIr = asRValue(retIr));
+		// collects the type of each argument of the expression
+		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
-		case CK_ArrayToPointerDecay:
-			return retIr;
+		const FunctionDecl* definition = NULL;
+		const TranslationUnit* rightTU = NULL;
 
-		//case CK_BitCast:
-			// A conversion which causes a bit pattern of one type to be reinterpreted as a bit pattern
-			// of another type. Generally the operands must have equivalent size and unrelated types.
-			//
-			// The pointer conversion char* -> int* is a bitcast. A conversion from any pointer type to
-			// a C pointer type is a bitcast unless it's actually BaseToDerived or DerivedToBase. A
-			// conversion to a block pointer or ObjC pointer type is a bitcast only if the operand has
-			// the same type kind; otherwise, it's one of the specialized casts below.
-			//
-			// Vector coercions are bitcasts. 
-		case CK_NoOp:
-			//case CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
-			return retIr;
-
-		default:
-			// use default cast expr handling (fallback)
-			return (retIr = VisitCastExpr(castExpr));
-		}
-		assert(false);
-	}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						EXPLICIT CAST EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr ConversionFactory::ExprConverter::VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr) {
-		START_LOG_EXPR_CONVERSION(castExpr);
-
-		core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
-		LOG_EXPR_CONVERSION(retIr);
-
-		VLOG(2) << retIr << " " << retIr->getType();
-		switch (castExpr->getCastKind()) {
-
-		case CK_NoOp:
-			//case CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
-			return retIr;
-
-		default:
-			// use default cast expr handling (fallback)
-			return (retIr = VisitCastExpr(castExpr));
+		// this will find function definitions if they are declared in  the same translation unit
+		// (also defined as static)
+		if (!funcDecl->hasBody(definition)) {
+			// if the function is not defined in this translation unit, maybe it is defined in another we already
+			// loaded use the clang indexer to lookup the definition for this function declarations
+			const FunctionDecl* fd = funcDecl;
+			rightTU = convFact.getTranslationUnitForDefinition(fd);
+			if (rightTU && fd->hasBody()) { definition = fd; }
 		}
 
-		assert(false);
-	}
+		if (!definition) {
+			//-----------------------------------------------------------------------------------------------------
+			//     						Handle of 'special' built-in functions
+			//-----------------------------------------------------------------------------------------------------
+			// free(): check whether this is a call to the free() function
+			if (funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
+				// in the case the free uses an input parameter
+				if (args.front()->getType()->getNodeType() == core::NT_RefType) {
+					return (irNode = builder.callExpr(builder.getLangBasic().getUnit(),
+							builder.getLangBasic().getRefDelete(), args.front()));
+				}
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//								CAST EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(const clang::CastExpr* castExpr) {
-		START_LOG_EXPR_CONVERSION(castExpr);
-
-		core::ExpressionPtr retIr;
-		LOG_EXPR_CONVERSION(retIr);
-
-		retIr = Visit(castExpr->getSubExpr());
-		auto nonRefExpr = convFact.tryDeref(retIr);
-
-		auto type = convFact.convertType(GET_TYPE_PTR(castExpr));
-
-		if (gen.isUnit(type)) { return gen.getUnitConstant(); }
-
-		// if the cast is to a 'void*' type then we simply skip it
-		if (gen.isAnyRef(type)) { return retIr; }
-
-		if ((type->getNodeType() == core::NT_RefType) && (*retIr == *builder.literal(retIr->getType(), "0"))) {
-			return (retIr = builder.callExpr(gen.getGetNull(),
-					builder.getTypeLiteral(GET_REF_ELEM_TYPE(type))));
-		}
-
-		// Mallocs/Allocs are replaced with ref.new expression
-		if (core::ExpressionPtr&& retExpr = handleMemAlloc(builder, type, retIr))
-			return (retIr = retExpr);
-
-		// If the subexpression is a string, remove the implicit casts
-		if (gen.isString(retIr->getType())) {
-			return retIr;
-		}
-
-		// handle truncation of floating point numbers
-		const core::TypePtr& subExprType = retIr->getType();
-		if (subExprType->getNodeType() == core::NT_RefType) {
-			// check whether it is a truncation
-			if (gen.isReal(GET_REF_ELEM_TYPE(subExprType)) && gen.isSignedInt(type)) {
-				const core::GenericTypePtr& intType = static_pointer_cast<const core::GenericType>(type);
-				return (retIr = builder.callExpr(type, gen.getRealToInt(), nonRefExpr,
-						builder.getIntTypeParamLiteral(intType->getIntTypeParameter()[0])));
-			}
-		}
-
-		VLOG(2) << retIr << retIr->getType();
-		// LOG(DEBUG) << *subExpr << " -> " << *type;
-		// Convert casts form scalars to vectors to vector init exrpessions
-		return (retIr = utils::cast(retIr, type));
-	}
-
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							FUNCTION CALL EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang::CallExpr* callExpr) {
-		START_LOG_EXPR_CONVERSION(callExpr);
-
-		// return converted node
-		core::ExpressionPtr irNode;
-		LOG_EXPR_CONVERSION(irNode);
-
-		if (callExpr->getDirectCallee()) {
-
-			const FunctionDecl* funcDecl = llvm::cast<FunctionDecl>(callExpr->getDirectCallee());
-			auto funcTy = convFact.convertType(GET_TYPE_PTR(funcDecl)).as<core::FunctionTypePtr>() ;
-
-			// collects the type of each argument of the expression
-			ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
-
-			const FunctionDecl* definition = NULL;
-			const TranslationUnit* rightTU = NULL;
-
-			// this will find function definitions if they are declared in  the same translation unit
-			// (also defined as static)
-			if (!funcDecl->hasBody(definition)) {
-				// if the function is not defined in this translation unit, maybe it is defined in another we already
-				// loaded use the clang indexer to lookup the definition for this function declarations
-				const FunctionDecl* fd = funcDecl;
-				rightTU = convFact.getTranslationUnitForDefinition(fd);
-				if (rightTU && fd->hasBody()) { definition = fd; }
-			}
-
-			if (!definition) {
-				//-----------------------------------------------------------------------------------------------------
-				//     						Handle of 'special' built-in functions
-				//-----------------------------------------------------------------------------------------------------
-				// free(): check whether this is a call to the free() function
-				if (funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
-					// in the case the free uses an input parameter
-					if (args.front()->getType()->getNodeType() == core::NT_RefType) {
-						return (irNode = builder.callExpr(builder.getLangBasic().getUnit(),
-								builder.getLangBasic().getRefDelete(), args.front()));
-					}
-
-					// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
-					core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
-					core::ExpressionPtr delOp =
-							*arg->getType() == *builder.getLangBasic().getAnyRef() ?
-									builder.getLangBasic().getAnyRefDelete() : builder.getLangBasic().getRefDelete();
+				// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
+				core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
+				core::ExpressionPtr delOp =
+						*arg->getType() == *builder.getLangBasic().getAnyRef() ?
+								builder.getLangBasic().getAnyRefDelete() : builder.getLangBasic().getRefDelete();
 
 				// otherwise this is not a L-Value so it needs to be wrapped into a variable
 				return (irNode = builder.callExpr(builder.getLangBasic().getUnit(), delOp, arg));
@@ -1589,7 +1472,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitArraySubscriptExpr(co
 	// IDX
 	core::ExpressionPtr idx = convFact.tryDeref( Visit( arraySubExpr->getIdx() ) );
 	if (!gen.isUInt4(idx->getType())) {
-		idx = builder.castExpr(gen.getUInt4(), idx);
+		idx =  utils::castScalar(gen.getUInt4(), idx->getType(), idx, builder);
 	}
 
 	// BASE

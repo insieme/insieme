@@ -235,11 +235,11 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						  IMPLICIT CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr);
+	//core::ExpressionPtr VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr);
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						EXPLICIT CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr);
+	//core::ExpressionPtr VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr);
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -364,8 +364,8 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, StringLiteral)
 	CALL_BASE_EXPR_VISIT(ExprConverter, ParenExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, GNUNullExpr)
-	CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitCastExpr)
-	CALL_BASE_EXPR_VISIT(ExprConverter, ExplicitCastExpr)
+	//CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitCastExpr)
+	//CALL_BASE_EXPR_VISIT(ExprConverter, ExplicitCastExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CastExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CallExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, PredefinedExpr)
@@ -417,11 +417,11 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						  IMPLICIT CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr);
+	//core::ExpressionPtr VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr);
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						EXPLICIT CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr);
+	//core::ExpressionPtr VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							FUNCTION CALL EXPRESSION
