@@ -528,12 +528,12 @@ namespace parser {
 //		EXPECT_EQ("rec v4.{v4=fun(int<4> v2, int<4> v3) {}}", toString(*parse(manager, "(int<4> a, int<4> b)->int<4> { }")));
 
 		// add call
-		EXPECT_EQ("AP({rec v3.{v3=fun(int<4> v1, int<4> v2) {return v1;}}(12, 14);})",
+		EXPECT_EQ("AP({rec v0.{v0=fun(int<4> v1, int<4> v2) {return v1;}}(12, 14);})",
 				toString(parse(manager, "{ (int<4> a, int<4> b)->int<4> { return a; }(12,14); }"))
 		);
 
 		// add call to empty function
-		EXPECT_EQ("AP({rec v4.{v4=fun() {return 3;}}();})",
+		EXPECT_EQ("AP({rec v0.{v0=fun() {return 3;}}();})",
 				toString(parse(manager, "{ ()->int<4> { return 3; } (); }", true))
 		);
 
@@ -830,7 +830,7 @@ namespace parser {
 
 		// test non-recursive function
 		manager.setNextFreshID(0);
-		EXPECT_EQ("AP(rec v2.{v2=fun(bool v1) {return bool.not(v1);}}(false))",
+		EXPECT_EQ("AP(rec v0.{v0=fun(bool v1) {return bool.not(v1);}}(false))",
 				toString(parse_expr(manager, "let f = (bool a)->bool { return !a; } in f(false)"))
 		);
 
@@ -849,7 +849,7 @@ namespace parser {
 		// test mutal recursive function
 		manager.setNextFreshID(0);
 		EXPECT_EQ("AP(rec v1.{v0=fun(int<4> v4) {if(int.eq(v4, 0)) {return true;} else {}; return v1(int.sub(v4, 1));}, "
-				             "v1=fun(int<4> v6) {if(int.eq(v6, 0)) {return false;} else {}; return v0(int.sub(v6, 1));}})",
+				             "v1=fun(int<4> v5) {if(int.eq(v5, 0)) {return false;} else {}; return v0(int.sub(v5, 1));}})",
 			toString(parse_expr(manager, ""
 					"let even,odd = "
 					"	(int<4> a)->bool { if (a == 0) return true; return odd(a-1); }, "

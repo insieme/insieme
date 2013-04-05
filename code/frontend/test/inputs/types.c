@@ -50,7 +50,7 @@ void basic_type_test() {
 	#pragma test "ref<char> v1 = ref.var('a')"
 	char d = 'a';
 
-	#pragma test "ref<anyRef> v1 = ref.var(null)"
+	#pragma test "ref<ref<any>> v1 = ref.var(undefined(ref<any>))"
 	void* e;
 
 	#pragma test "ref<real<4>> v1 = ref.var(0.0000000f)"
@@ -202,10 +202,10 @@ void fun_ptr() {
 
 	// test declaration, assignment and call of function pointers
 
-	#pragma test "ref<((int<4>,int<4>)->int<4>)> v1 = ref.var(rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}})"
+	#pragma test "ref<((int<4>,int<4>)->int<4>)> v1 = ref.var(rec v0.{v0=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}})"
 	int(* f)(int,int) = &add;
 
-	#pragma test "ref.assign(v1, rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.sub(v2, v3);}})"
+	#pragma test "ref.assign(v1, rec v0.{v0=fun(int<4> v2, int<4> v3) {return int.sub(v2, v3);}})"
 	f = &sub;
 
 	#pragma test "ref.deref(v1)(3, 4)"

@@ -164,6 +164,55 @@ namespace types {
 		EXPECT_PRED2(isNotSubTypeOf, vecA2, arrB1);
 	}
 
+	TEST(TypeUtils, IsSubTypeOfRefType) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const auto& basic = manager.getLangBasic();
+
+		TypePtr any = basic.getAny();
+
+		TypePtr int4 = basic.getInt4();
+		TypePtr int8 = basic.getInt8();
+
+		TypePtr real4 = basic.getReal4();
+		TypePtr real8 = basic.getReal8();
+
+		TypePtr refAny = builder.refType(any);
+		TypePtr refInt4 = builder.refType(int4);
+		TypePtr refInt8 = builder.refType(int8);
+		TypePtr refReal4 = builder.refType(real4);
+		TypePtr refReal8 = builder.refType(real8);
+
+		EXPECT_PRED2(isSubTypeOf, int4, int8);
+		EXPECT_PRED2(isSubTypeOf, real4, real8);
+
+		EXPECT_PRED2(isNotSubTypeOf, refInt4, refInt8);
+		EXPECT_PRED2(isNotSubTypeOf, refReal4, refReal8);
+
+		EXPECT_PRED2(isSubTypeOf, refInt4, refAny);
+		EXPECT_PRED2(isSubTypeOf, refInt8, refAny);
+		EXPECT_PRED2(isSubTypeOf, refReal4, refAny);
+		EXPECT_PRED2(isSubTypeOf, refReal8, refAny);
+
+		EXPECT_PRED2(isNotSubTypeOf, refAny, refInt4);
+		EXPECT_PRED2(isNotSubTypeOf, refAny, refInt8);
+		EXPECT_PRED2(isNotSubTypeOf, refAny, refReal4);
+		EXPECT_PRED2(isNotSubTypeOf, refAny, refReal8);
+
+		// check arrays - vector relation
+		TypePtr refArray  = builder.parseType("ref<array<int<4>,1>>");
+		TypePtr refVector = builder.parseType("ref<vector<int<4>,50>>");
+
+		EXPECT_PRED2(isSubTypeOf, refVector, refArray);
+		EXPECT_PRED2(isNotSubTypeOf, refArray, refVector);
+
+		TypePtr refArray2 = builder.parseType("ref<array<int<8>,1>>");
+		EXPECT_PRED2(isNotSubTypeOf, refArray, refArray2);
+		EXPECT_PRED2(isNotSubTypeOf, refArray, refArray2);
+
+	}
+
 	//TEST(TypeUtils, IsSubTypeOfTypeVariable) {
 	//
 	//	NodeManager manager;

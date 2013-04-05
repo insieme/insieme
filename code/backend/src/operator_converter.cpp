@@ -528,14 +528,6 @@ namespace backend {
 			return c_ast::call(C_NODE_MANAGER->create("free"), arg);
 		});
 
-		res[basic.getRefToAnyRef()] = OP_CONVERTER({
-			// operator signature: (ref<'a>) -> anyRef
-			// cast result to void* and externalize value
-			c_ast::TypePtr type = c_ast::ptr(C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void));
-			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
-			return c_ast::cast(type, value);
-		});
-
 		res[basic.getRefReinterpret()] = OP_CONVERTER({
 			c_ast::TypePtr type = CONVERT_TYPE(call->getType());
 			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
@@ -870,20 +862,6 @@ namespace backend {
 			// generated code: X == 0
 			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int32);
 			return c_ast::eq(CONVERT_ARG(0), c_ast::lit(intType,"0"));
-		});
-
-		res[basic.getAnyRefToRef()] = OP_CONVERTER({
-			return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0));
-		});
-
-		res[basic.getAnyRefDelete()] = OP_CONVERTER({
-			// ensure correct type
-			assert(LANG_BASIC.isAnyRef(ARG(0)->getType()) && "Cannot anyref delete anything other than anyref!");
-
-			// add dependency to stdlib.h (contains the free)
-			ADD_HEADER_FOR("free");
-			
-			return c_ast::call(C_NODE_MANAGER->create("free"), CONVERT_ARG(0));
 		});
 
 

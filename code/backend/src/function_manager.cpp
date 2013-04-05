@@ -496,7 +496,13 @@ namespace backend {
 	namespace detail {
 
 
-		ElementInfo* FunctionInfoStore::resolveInternal(const core::ExpressionPtr& expression, bool isConst, bool isVirtual) {
+		ElementInfo* FunctionInfoStore::resolveInternal(const core::ExpressionPtr& expr, bool isConst, bool isVirtual) {
+
+			// normalize member functions to avoid unintended duplication and resulting name collisions
+			core::ExpressionPtr expression = expr;
+			if (expr->getType().as<core::FunctionTypePtr>()->isMember()) {
+				expression = core::analysis::normalize(expression);
+			}
 
 			// lookup information within store
 			auto pos = funInfos.find(expression);
@@ -1191,6 +1197,9 @@ namespace backend {
 			res.prototypeDependencies.insert(returnTypeInfo.definition);
 			c_ast::TypePtr returnType = (external)?returnTypeInfo.externalType:returnTypeInfo.rValueType;
 
+			// create a new variable scope for the resolution of the body
+			nameManager.pushVarScope(true);
+
 			// resolve parameters
 			int counter = 0;
 			vector<c_ast::VariablePtr> parameter;
@@ -1255,6 +1264,9 @@ namespace backend {
 				// also attach includes
 				res.includes = context.getIncludes();
 			}
+
+			// drop nested variable scope
+			nameManager.popVarScope();
 
 			// create function
 			res.function = manager->create<c_ast::Function>(returnType, name, parameter, cBody);

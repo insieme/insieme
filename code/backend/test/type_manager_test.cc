@@ -59,6 +59,7 @@ namespace {
 		virtual string getName(const core::NodePtr& ptr, const string& fragment) {
 			return "name";
 		}
+		virtual void setName(const core::NodePtr& ptr, const string& name) { /* ignore */ }
 	};
 }
 

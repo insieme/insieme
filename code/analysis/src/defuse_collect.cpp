@@ -318,7 +318,7 @@ public:
 		// to convert a ref into another ref 
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefVectorToRefArray()) ||
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getStringToCharPointer()) ||
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefToAnyRef()) )
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefReinterpret()) )
 		{
 			visit( callExpr->getArgument(0) ); // arg(0)
 			return;

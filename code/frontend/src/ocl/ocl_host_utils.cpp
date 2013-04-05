@@ -46,15 +46,17 @@ namespace ocl {
 // shortcut
 
 core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg, const core::IRBuilder& builder) {
-	core::CallExprPtr&& stripped = dynamic_pointer_cast<const core::CallExpr>(arg);
 // remove stuff added by (void*)&
-	if(const core::CallExprPtr& refToAnyref = dynamic_pointer_cast<const core::CallExpr>(arg))
-		if(BASIC.isRefToAnyRef(refToAnyref->getFunctionExpr()) )
-			if(const core::CallExprPtr& makingRef = dynamic_pointer_cast<const core::CallExpr>(refToAnyref->getArgument(0)))
-				stripped = makingRef;
+	core::CallExprPtr stripped = arg.isa<core::CallExprPtr>();
 
-	if(!!stripped && (BASIC.isScalarToArray(stripped->getFunctionExpr()) || BASIC.isRefDeref(stripped->getFunctionExpr())))
-		return stripped->getArgument(0);
+	if (!stripped) {
+		return arg;
+	}
+
+	auto funExpr = stripped->getFunctionExpr();
+	if(BASIC.isScalarToArray(funExpr) || BASIC.isRefDeref(funExpr) || BASIC.isRefReinterpret(funExpr)) {
+		return getVarOutOfCrazyInspireConstruct(stripped->getArgument(0), builder);
+	}
 
 	return arg;
 }
