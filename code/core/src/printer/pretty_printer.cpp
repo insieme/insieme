@@ -1221,6 +1221,8 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::printer::Pretty
 
 		// special cases (differences between parser and printer)
 		if (cur.getLexeme() == "fun") out << "\033[1m";
+		if (cur.getLexeme() == "job") out << "\033[1m";
+		if (cur.getLexeme() == "bind") out << "\033[1m";
 
 		// print token
 		out << cur.getLexeme();
