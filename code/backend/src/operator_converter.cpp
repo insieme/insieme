@@ -265,7 +265,8 @@ namespace backend {
 		res[basic.getBoolEq()]   = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getBoolNe()]   = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		res[basic.getBoolToInt()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+		//moved whit the new cast operations
+		//res[basic.getBoolToInt()] = OP_CONVERTER({ return CONVERT_ARG(0); });
 
 
 		// -- unsigned integers --
@@ -325,6 +326,33 @@ namespace backend {
 		res[basic.getSignedIntLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getSignedIntLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
+		// -- CASTS --
+		auto cast = OP_CONVERTER({ return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); });
+
+		res[basic.getUnsignedToInt()] = cast; 
+		res[basic.getRealToInt()] 	  = cast; 
+		res[basic.getCharToInt()] 	  = cast; 
+		res[basic.getBoolToInt()] 	  = OP_CONVERTER({ return CONVERT_ARG(0); });
+
+		res[basic.getSignedToUnsigned()]= cast; 
+		res[basic.getRealToUnsigned()] 	= cast; 
+		res[basic.getCharToUnsigned()] 	= cast; 
+		res[basic.getBoolToUnsigned()] 	= OP_CONVERTER({ return CONVERT_ARG(0); });
+
+		res[basic.getSignedToReal()]  = cast; 
+		res[basic.getUnsignedToReal()]= cast; 
+		res[basic.getCharToReal()] 	  = cast; 
+		res[basic.getBoolToReal()] 	  = cast; 
+
+		res[basic.getSignedToChar()]  = cast;
+		res[basic.getUnsignedToChar()]= cast;
+		res[basic.getRealToChar()] 	  = cast;
+		res[basic.getBoolToChar()] 	  = cast;
+
+		res[basic.getSignedToBool()]  = cast;
+		res[basic.getUnsignedToBool()]= cast;
+		res[basic.getRealToBool()] 	  = cast;
+		res[basic.getCharToBool()] 	  = cast;
 
 		// -- reals --
 
