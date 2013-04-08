@@ -148,7 +148,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	// 							SCALAR CASTING
 	///////////////////////////////////////////////////////////////////////////////////////
 	if( gen.isPrimitive (trgTy) && gen.isPrimitive(argTy))
-		return castScalar (trgTy, argTy, expr, builder);
+		return castScalar (trgTy, expr);
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 							Signed integer -> Boolean

@@ -54,9 +54,7 @@ namespace utils {
 	 * cast between 2 scalar types an IR expression
 	 */
 	core::ExpressionPtr castScalar(const core::TypePtr& targetTy, 
-								   const core::TypePtr& exprTy, 
-								   const core::ExpressionPtr& expr,
-							   	   const insieme::core::IRBuilder& builder);
+								   const core::ExpressionPtr& expr);
 
 	/**
 	 * Creates a cast expression arround an IR expression driven by the corresponding clang::CastExpr

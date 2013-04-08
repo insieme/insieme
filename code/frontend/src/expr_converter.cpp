@@ -1097,7 +1097,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 
 			// bools are not casted to int in AST
 			if (gen.isBool(rhs->getType()))
-				rhs = utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs->getType(), rhs, builder);
+				rhs = utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
 			
 			
 			isAssignment = true;
@@ -1482,7 +1482,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitArraySubscriptExpr(co
 	// IDX
 	core::ExpressionPtr idx = convFact.tryDeref( Visit( arraySubExpr->getIdx() ) );
 	if (!gen.isUInt4(idx->getType())) {
-		idx =  utils::castScalar(gen.getUInt4(), idx->getType(), idx, builder);
+		idx =  utils::castScalar(gen.getUInt4(), idx);
 	}
 
 	// BASE

@@ -106,8 +106,9 @@ namespace {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::TypePtr& exprTy, 
-							   const core::ExpressionPtr& expr, const insieme::core::IRBuilder& builder){
+core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::ExpressionPtr& expr){
+	const core::TypePtr& exprTy = expr->getType();
+	core::IRBuilder builder( exprTy->getNodeManager() );
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
    	unsigned char code;
 	// identify source type, to write right cast
@@ -187,7 +188,7 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr, const insieme::
 		assert(false && "this type can not be converted now to bool. implement it! ");
 	}
 
-	return castScalar (gen.getBool(), expr->getType(), expr, builder);
+	return castScalar (gen.getBool(), expr);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -248,7 +249,7 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		//case clang::CK_FloatingToBoolean - Floating point to boolean. (bool) f
 		case clang::CK_FloatingCast 	:
 		//case clang::CK_FloatingCast - Casting between floating types of different size. (double) f (float) ld
-			return castScalar( targetTy, exprTy, expr, builder);
+			return castScalar( targetTy, expr);
 		
 		case clang::CK_NoOp 	:
 		/*case clang::CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. i
@@ -258,7 +259,7 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 			// this as the same type. but we might intepret it in a diff way. (ex, char literals are
 			// int for clang, we build a char type
 			
-			return castScalar( targetTy, exprTy, expr, builder);
+			return castScalar( targetTy, expr);
 
 
 		case clang::CK_ArrayToPointerDecay 	:

@@ -160,7 +160,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 		}
 		else if ( builder.getLangBasic().isBool( retExpr->getType())){
 			// attention with this, bools cast not handled in AST in C
-			retExpr = utils::castScalar(retTy, retExpr->getType(), retExpr, builder);
+			retExpr = utils::castScalar(retTy, retExpr);
 		}
 
 		if (retExpr->getType()->getNodeType() == core::NT_RefType) {
@@ -238,9 +238,9 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		stmtutils::StmtWrapper body = tryAggregateStmts(builder, Visit(forStmt->getBody()));
 
 		core::ExpressionPtr incExpr  = loopAnalysis.getIncrExpr();
-		incExpr = utils::castScalar(inductionVar->getType(), incExpr->getType(), incExpr, builder);
+		incExpr = utils::castScalar(inductionVar->getType(), incExpr);
 		core::ExpressionPtr condExpr = loopAnalysis.getCondExpr();
-		condExpr = utils::castScalar(inductionVar->getType(), condExpr->getType(), condExpr, builder);
+		condExpr = utils::castScalar(inductionVar->getType(), condExpr);
 
 		assert(inductionVar->getType()->getNodeType() != core::NT_RefType);
 
