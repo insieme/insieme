@@ -592,9 +592,7 @@ namespace measure {
 
 	utils::compiler::Compiler getDefaultCompilerForMeasurments() {
 		// just take default optimizing compiler
-		auto res = utils::compiler::Compiler::getDefaultC99Compiler();
-		res.addFlag("-g");
-		return res;
+		return utils::compiler::Compiler::getDefaultC99CompilerO3();
 	}
 
 	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
@@ -925,7 +923,7 @@ namespace measure {
 
 				// load data and merge it
 				data.mergeIn(loadResults(workdir));
-exit(1);
+
 				// delete local files
 				if (boost::filesystem::exists(workdir)) {
 					bfs::remove_all(workdir);
