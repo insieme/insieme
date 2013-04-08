@@ -192,8 +192,8 @@ namespace measure {
 		auto res = measure(regions, toVector(
 			Metric::TOTAL_EXEC_TIME,
 			Metric::TOTAL_WALL_TIME, Metric::TOTAL_CPU_TIME,
-			Metric::PARALLELISM,     // Metric::AVG_NUM_WORKERS,
-			Metric::AVG_EFFICIENCY,  Metric::WEIGHTED_EFFICIENCY
+			Metric::PARALLELISM     // Metric::AVG_NUM_WORKERS,
+			// Metric::AVG_EFFICIENCY,  Metric::WEIGHTED_EFFICIENCY
 		));
 
 //		std::cout << res << "\n";
@@ -210,8 +210,8 @@ namespace measure {
 			auto parallelism = res[i][Metric::PARALLELISM];
 //			auto num_worker = res[i][Metric::AVG_NUM_WORKERS];
 
-			auto avg_efficiency = res[i][Metric::AVG_EFFICIENCY];
-			auto weighted_efficiency = res[i][Metric::WEIGHTED_EFFICIENCY];
+//			auto avg_efficiency = res[i][Metric::AVG_EFFICIENCY];
+//			auto weighted_efficiency = res[i][Metric::WEIGHTED_EFFICIENCY];
 
 			ASSERT_TRUE(totalTime.isValid());
 			ASSERT_TRUE(wallTime.isValid());
@@ -225,9 +225,9 @@ namespace measure {
 			EXPECT_GT(parallelism.getValue(), 0);
 //			EXPECT_GE(num_worker.getValue(), 1);
 
-			EXPECT_GT(avg_efficiency.getValue(), 0);
-			EXPECT_GT(weighted_efficiency.getValue(), 0);
-			EXPECT_EQ(avg_efficiency, weighted_efficiency);
+//			EXPECT_GT(avg_efficiency.getValue(), 0);
+//			EXPECT_GT(weighted_efficiency.getValue(), 0);
+//			EXPECT_EQ(avg_efficiency, weighted_efficiency);
 
 			// cpu time should be roughly equal to the wall time
 //			EXPECT_EQ((int)(totalTime.getValue() / (1000*1000)), (int)(cpuTime.getValue() / (1000*1000)));
@@ -424,7 +424,7 @@ namespace measure {
 		// measure execution time of this fragment
 		auto res = measure(regions, metrics);
 
-		ASSERT_EQ(3u, res.size());
+		ASSERT_EQ(9u, res.size());		// intermediate regions should be filled
 
 		ASSERT_EQ(2u, res[4].size());
 		ASSERT_EQ(2u, res[7].size());
@@ -450,7 +450,7 @@ namespace measure {
 		for(unsigned i = 0; i<res2.size(); i++) {
 			auto& res = res2[i];
 
-			ASSERT_EQ(3u, res.size());
+			ASSERT_EQ(9u, res.size());
 
 			ASSERT_EQ(2u, res[4].size());
 			ASSERT_EQ(2u, res[7].size());

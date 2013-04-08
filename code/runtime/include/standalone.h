@@ -115,7 +115,6 @@ void irt_init_globals() {
 	irt_time_ticks_per_sec_calibration_mark();
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_inst_create_aggregated_data_table();
 	irt_energy_select_instrumentation_method();
 	irt_temperature_select_instrumentation_method();
 #endif
@@ -129,9 +128,6 @@ void irt_cleanup_globals() {
 	irt_wg_event_register_table_cleanup();
 #ifndef IRT_MIN_MODE
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
-#endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_inst_destroy_aggregated_data_table();
 #endif
 	irt_mutex_destroy(&irt_g_error_mutex);
 	irt_tls_key_delete(irt_g_error_key);
@@ -196,7 +192,6 @@ void irt_exit_handler() {
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	for(int i = 0; i < irt_g_worker_count; ++i)
 		irt_inst_region_data_output(irt_g_workers[i]);
-	irt_inst_aggregated_data_output();
 	for(int i = 0; i < irt_g_worker_count; ++i) {
 			irt_inst_destroy_region_data_table(irt_g_workers[i]->instrumentation_region_data);
 			irt_inst_destroy_region_list(irt_g_workers[i]->region_reuse_list);
@@ -370,5 +365,10 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	irt_wi_event_check_and_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
+
+	// wait for workers to finish the main work-item
 	irt_mutex_lock(&mutex);
+
+	// shut-down context
+	irt_context_destroy(context);
 }

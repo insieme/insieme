@@ -99,7 +99,7 @@ static inline uint32 irt_affinity_mask_get_first_cpu(const irt_affinity_mask mas
 				}
 			}
 	}
-	IRT_WARN("No affinity set but affinity information requested.\n");
+	//IRT_WARN("No affinity set but affinity information requested.\n");
 	return 0;
 }
 

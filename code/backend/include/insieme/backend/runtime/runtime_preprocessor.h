@@ -68,6 +68,14 @@ namespace runtime {
 		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
 	};
 
+	/**
+	 * A pre-processor counting the number of regions marked within the application and adding a call to an
+	 * instrumentation init-function forwarding this information to the init_context method.
+	 */
+	struct InstrumentationSupport : public PreProcessor {
+		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
+	};
+
 } // end namespace runtime
 } // end namespace backend
 } // end namespace insieme

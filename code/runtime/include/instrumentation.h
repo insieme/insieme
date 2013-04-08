@@ -125,3 +125,7 @@ void _irt_inst_region_end(region_id id);
 void irt_inst_region_set_timestamp(irt_work_item* wi);
 void irt_inst_region_add_time(irt_work_item* wi);
 
+// some management operations
+void irt_inst_init(irt_context* context);
+void irt_inst_finalize(irt_context* context);
+
