@@ -117,7 +117,7 @@ void sampling(	int 				id,
 
 }
 
-void handleCacheInfo(const core::NodePtr& node, int id, const cmd_options::CommandLineOptions& options) {
+void handleCacheInfo(const core::NodePtr& node, int id, const cmd::CommandLineOptions& options) {
 
 	using insieme::core::arithmetic::Formula;
 	
@@ -151,7 +151,7 @@ void handleCacheInfo(const core::NodePtr& node, int id, const cmd_options::Comma
 
 
 
-core::ProgramPtr handlePragmaInfo(const core::ProgramPtr& program, const cmd_options::CommandLineOptions& options) {
+core::ProgramPtr handlePragmaInfo(const core::ProgramPtr& program, const cmd::CommandLineOptions& options) {
 
 	typedef annotations::Info::StrValueVect StrValueVect;
 

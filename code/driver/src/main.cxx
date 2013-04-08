@@ -89,7 +89,7 @@
 #include "insieme/driver/pragma_transformer.h"
 #include "insieme/driver/pragma_info.h"
 #include "insieme/driver/task_optimizer.h"
-#include "insieme/driver/cmd_options/cmd_line_utils.h"
+#include "insieme/driver/cmd/main_options.h"
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -113,7 +113,7 @@
 using namespace std;
 using namespace insieme::utils::log;
 using namespace insieme::annotations::ocl;
-using namespace insieme::driver::cmd_options;
+using namespace insieme::driver::cmd;
 
 namespace fe = insieme::frontend;
 namespace core = insieme::core;

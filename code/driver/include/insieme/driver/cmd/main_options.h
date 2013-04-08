@@ -46,7 +46,7 @@
 
 namespace insieme {
 namespace driver {
-namespace cmd_options {
+namespace cmd {
 
 	/**
 	 * The CommandLineOptions is a container for input arguments to the main Insieme compiler executable.

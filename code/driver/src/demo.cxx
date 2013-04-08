@@ -44,20 +44,17 @@
 
 #include <string>
 
-#include <boost/program_options.hpp>
+#include "insieme/utils/logging.h"
+#include "insieme/utils/compiler/compiler.h"
+#include "insieme/frontend/frontend.h"
+#include "insieme/backend/runtime/runtime_backend.h"
+#include "insieme/driver/cmd/options.h"
 
-#include <insieme/utils/logging.h>
-#include <insieme/utils/compiler/compiler.h>
-#include <insieme/frontend/frontend.h>
-#include <insieme/backend/runtime/runtime_backend.h>
-
-#include <insieme/transform/connectors.h>
-#include <insieme/transform/filter/standard_filter.h>
-#include <insieme/transform/rulebased/transformations.h>
+#include "insieme/transform/connectors.h"
+#include "insieme/transform/filter/standard_filter.h"
+#include "insieme/transform/rulebased/transformations.h"
 
 using namespace std;
-
-namespace bpo = boost::program_options;
 
 namespace fe = insieme::frontend;
 namespace co = insieme::core;
@@ -65,19 +62,8 @@ namespace be = insieme::backend;
 namespace ut = insieme::utils;
 namespace cp = insieme::utils::compiler;
 namespace tr = insieme::transform;
+namespace cmd = insieme::driver::cmd;
 
-namespace {
-
-	struct CmdOptions {
-		bool valid;
-		fe::ConversionJob job;
-		string outFile;
-
-		CmdOptions(bool valid = true) : valid(valid) {}
-	};
-
-	CmdOptions parseCommandLine(int argc, char** argv);
-}
 
 int main(int argc, char** argv) {
 	// filter logging messages
@@ -87,8 +73,12 @@ int main(int argc, char** argv) {
 	// Step 1: parse input parameters
 	//		This part is application specific and need to be customized. Within this
 	//		example a few standard options are considered.
-	CmdOptions options = parseCommandLine(argc, argv);
-	if (!options.valid) return 1;
+	unsigned unrollingFactor = 1;
+	cmd::Options options = cmd::Options::parse(argc, argv)
+		// one extra parameter - unrolling factor, default should be 5
+		("unrolling,u", &unrollingFactor, 5u, "The factor by which the innermost loops should be unrolled.")
+	;
+	if (!options.valid) return (options.help)?0:1;
 
 
 	// Step 2: load input code
@@ -106,14 +96,14 @@ int main(int argc, char** argv) {
 	//		In this example we are simply unrolling all innermost loops by a factor
 	//		of 5 which is always a safe transformation.
 
-	cout << "Before:\n";
+	cout << "Before Transformation:\n";
 	dumpPretty(program);
 
 	// for all nodes x | if x is "innermostLoop" => unroll(x)
-	auto transform = tr::makeForAll(tr::filter::innermostLoops(), tr::rulebased::makeLoopUnrolling(5));
+	auto transform = tr::makeForAll(tr::filter::innermostLoops(), tr::rulebased::makeLoopUnrolling(unrollingFactor));
 	program = transform->apply(program);
 
-	cout << "After:\n";
+	cout << "After Transformation:\n";
 	dumpPretty(program);
 
 
@@ -122,93 +112,18 @@ int main(int argc, char** argv) {
 	//		backend producing parallel code to be executed using the Insieme runtime
 	//		system. Backends targeting alternative platforms may be present in the
 	//		backend modul as well.
+	cout << "Creating target code ...\n";
 	auto targetCode = be::runtime::RuntimeBackend::getDefault()->convert(program);
 
 
 	// Step 5: build output code
 	//		A final, optional step is using a third-party C compiler to build an actual
 	//		executable.
+	cout << "Building binaries ...\n";
 	cp::Compiler compiler = cp::Compiler::getDefaultC99CompilerO3();
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
 	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
 
-
 	// done
 	return (success)?0:1;
-}
-
-
-namespace {
-
-	CmdOptions parseCommandLine(int argc, char** argv) {
-		CmdOptions fail(false);
-
-		// -- parsing -------------------------------------------
-
-		// define options
-		bpo::options_description desc("Supported Parameters");
-		desc.add_options()
-				("help,h", "produce this help message")
-				("input-file,i", bpo::value<vector<string>>(), "input files - required!")
-				("include-path,I", bpo::value<vector<string>>(), "include files - optional")
-				("definitions,D", bpo::value<vector<string>>(), "preprocessor definitions - optional")
-				("std,s", bpo::value<string>(), "determines the language standard - default: c99")
-				("output-file,o", bpo::value<string>(), "the output file - default: a.out")
-		;
-
-		// define positional options (all options not being named)
-		bpo::positional_options_description pos;
-		pos.add("input-file", -1);
-
-		// parse parameters
-		bpo::variables_map map;
-		bpo::store(bpo::command_line_parser(argc, argv).options(desc).positional(pos).run(), map);
-		bpo::notify(map);
-
-
-		// -- processing -----------------------------------------
-
-		// check whether help was requested
-		if (map.count("help")) {
-			cout << desc << "\n";
-			exit(0);
-		}
-
-		// build up result
-		CmdOptions res(true);
-
-		// enable support for OpenMP and Cilk
-		res.job.setOption(fe::ConversionJob::OpenMP);
-		res.job.setOption(fe::ConversionJob::Cilk);
-
-		// input files
-		if (map.count("input-file")) {
-			res.job.setFiles(map["input-file"].as<vector<string>>());
-		} else {
-			cout << "No input files provided!\n";
-			return fail;
-		}
-		// include path
-		if (map.count("include-path")) {
-			res.job.setIncludeDirectories(map["include-path"].as<vector<string>>());
-		}
-		// preprocessor directives
-		if (map.count("definitions")) {
-			res.job.setDefinitions(map["definitions"].as<vector<string>>());
-		}
-		// insert
-		res.job.setStandard("c99");
-		if (map.count("std")) {
-			res.job.setStandard(map["std"].as<string>());
-		}
-
-		// output file (optional)
-		res.outFile = "a.out";
-		if (map.count("output-file")) {
-			res.outFile = map["output-file"].as<string>();
-		}
-
-		// done
-		return res;
-	}
 }
