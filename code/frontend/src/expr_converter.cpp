@@ -1093,12 +1093,13 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 
 			// make sure the lhs is a L-Value
 			lhs = asLValue(lhs); // FIXME: must have an implicit cast, or deref operation... dont we?
-			//rhs = asRValue(rhs);
 
-			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
-		//	assert( lhs->getType()->getNodeType() == core::NT_RefType && "LHS operand must be of type ref<'a>.");
 
-			rhs = utils::cast(rhs, GET_REF_ELEM_TYPE(lhs->getType()));
+			// bools are not casted to int in AST
+			if (gen.isBool(rhs->getType()))
+				rhs = utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs->getType(), rhs, builder);
+			
+			
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
 			exprTy = gen.getUnit();
@@ -1426,7 +1427,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 	core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr());
 	core::ExpressionPtr condExpr  = Visit( condOp->getCond() );
 
-	condExpr = utils::cast(condExpr, gen.getBool());
+	// FIXME: use new utils
+	//condExpr = utils::cast(condExpr, gen.getBool());
+	condExpr = utils::castToBool(condExpr,builder);
 
 	// Dereference eventual references
 	if ( retTy->getNodeType() == core::NT_RefType && !utils::isRefArray(retTy) ) 

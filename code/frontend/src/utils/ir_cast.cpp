@@ -48,6 +48,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/core/types/subtyping.h"
+#include "insieme/frontend/utils/castTool.h"
 
 
 #define CAST(expr, type) convertExprToType(builder, expr, type)
@@ -142,6 +143,12 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 				);
 	}
 
+	
+	///////////////////////////////////////////////////////////////////////////////////////
+	// 							SCALAR CASTING
+	///////////////////////////////////////////////////////////////////////////////////////
+	if( gen.isPrimitive (trgTy) && gen.isPrimitive(argTy))
+		return castScalar (trgTy, argTy, expr, builder);
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 							Signed integer -> Boolean
@@ -181,6 +188,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	///////////////////////////////////////////////////////////////////////////////////////
 	if ( gen.isChar(argTy) && gen.isInt(trgTy) &&  expr->getNodeType() == core::NT_Literal ) {
 
+		assert(false && "deprecated: who uses this?");
 		const core::LiteralPtr& lit = expr.as<core::LiteralPtr>();
 
 		char val = ' ';

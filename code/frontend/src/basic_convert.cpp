@@ -44,6 +44,7 @@
 #include "insieme/frontend/omp/omp_pragma.h"
 
 #include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/frontend/utils/castTool.h"
 #include "insieme/frontend/utils/error_report.h"
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
@@ -832,17 +833,17 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	
 
 	// ============================== End Special Handlings =======================================
-	
+
 	// Anytime we have to initialize a ref<'a> from another type of object we have to deref the
 	// object in the right hand side and create a copy (ref.var). 
 	if (type->getNodeType() == core::NT_RefType ) {
-		retIr = builder.refVar(utils::cast(retIr, GET_REF_ELEM_TYPE(type)));
+		retIr = utils::cast(retIr, GET_REF_ELEM_TYPE(type));
+		retIr = builder.refVar(retIr);
 	} else {
 		retIr = utils::cast(retIr, type);
 	}
 
 	assert(retIr);
-
 	return retIr;
 }
 

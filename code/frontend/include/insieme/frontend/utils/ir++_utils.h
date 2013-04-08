@@ -61,7 +61,6 @@ namespace utils {
 		 * A literal to be used to represent temporaries
 		 */
 		LANG_EXT_LITERAL(MaterializeTemp, "materializeTemp", "('a)->ref<'a>");
-
 	};
 
 

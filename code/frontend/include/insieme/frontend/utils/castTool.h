@@ -34,22 +34,21 @@
  * regarding third party software licenses.
  */
 
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+#include "clang/AST/Expr.h"
+
 #pragma once 
-//
-//// forward declaration
-//namespace insieme {
-//
-//class core::IRBuilder;
-//class clang::CastExpr;
-//class core::ExpressionPtr;
-//class core::TypePtr;
-//
-//} // end core namespace 
-//
 
 namespace insieme {
 namespace frontend {
 namespace utils {
+
+
+	/**
+	 * casts to bool an expression
+	 */
+	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr, const insieme::core::IRBuilder& builder);
 
 	/**
 	 * cast between 2 scalar types an IR expression

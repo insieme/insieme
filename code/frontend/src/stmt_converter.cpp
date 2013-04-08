@@ -159,7 +159,8 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 			retExpr = utils::cast(retExpr, retTy);              
 		}
 		else if ( builder.getLangBasic().isBool( retExpr->getType())){
-			retExpr = utils::cast(retExpr, retTy);                 // attention with this, bools cast not handled in AST in C
+			// attention with this, bools cast not handled in AST in C
+			retExpr = utils::castScalar(retTy, retExpr->getType(), retExpr, builder);
 		}
 
 		if (retExpr->getType()->getNodeType() == core::NT_RefType) {

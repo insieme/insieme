@@ -102,6 +102,7 @@ namespace {
 } // anonimous namespace
 
 
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -132,7 +133,8 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::TypePt
 			// this is a cast withing the same type.
 			// is a preccision adjust, if is on the same type,
 			// no need to adjust anything
-			return expr;
+			
+			return  builder.callExpr(gen.getTypeCast(), expr,  builder.getTypeLiteral(targetTy));
 			break;
 		case 12: op = gen.getUnsignedToInt(); break;
 		case 13: op = gen.getRealToInt(); break;
@@ -159,7 +161,9 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::TypePt
 		case 53: op = gen.getRealToBool();    precision=false; break;
 		case 54: op = gen.getCharToBool();    precision=false; break;
 
-		default: assert(false && "cast not defined");
+		default: 
+				 std::cerr << "code: " << (int) code << std::endl;
+				 assert(false && "cast not defined");
 	}
 	if (precision) {
 		core::ExpressionList args;
@@ -175,6 +179,20 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::TypePt
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+core::ExpressionPtr castToBool (const core::ExpressionPtr& expr, const insieme::core::IRBuilder& builder){
+	
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	if (gen.isBool(expr->getType())) return expr;
+	if (!gen.isInt(expr->getType())  && !gen.isReal(expr->getType()) && !gen.isChar(expr->getType())){
+		assert(false && "this type can not be converted now to bool. implement it! ");
+	}
+
+	return castScalar (gen.getBool(), expr->getType(), expr, builder);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builder, 
 										  const clang::CastExpr* castExpr, 
 										  const core::TypePtr&    targetTy,
@@ -182,15 +200,15 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	core::TypePtr&& exprTy = expr->getType();
 
-	std::cout << "####### Expr: #######" << std::endl;
-	dumpDetail(expr);
-	std::cout << "####### Expr Type: #######" << std::endl;
-	dumpDetail(exprTy);
-	std::cout << "####### cast Type: #######" << std::endl;
-	dumpDetail(targetTy);
-	std::cout << "####### clang: #######" << std::endl;
-	castExpr->dump();
-	std::cout << std::endl;
+	//std::cout << "####### Expr: #######" << std::endl;
+	//dumpDetail(expr);
+	//std::cout << "####### Expr Type: #######" << std::endl;
+	//dumpDetail(exprTy);
+	//std::cout << "####### cast Type: #######" << std::endl;
+	//dumpDetail(targetTy);
+	//std::cout << "####### clang: #######" << std::endl;
+	//castExpr->dump();
+	//std::cout << std::endl;
 
 	// it might be that the types are already fixed:
 	// like LtoR in arrays, they will allways be a ref<...>
@@ -247,7 +265,7 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		/*case clang::CK_ArrayToPointerDecay - Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
 		* */
 		{
-			//FIXME: if inner expression is not ref.... what is it? is a deref or a compound initializer
+			// if inner expression is not ref.... it might be a compound initializer
 			core::ExpressionPtr retIr = expr;
 			if (!IS_IR_REF(exprTy)){
 				retIr = builder.callExpr(gen.getRefVar(),expr);
@@ -515,8 +533,6 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 	}
 
 }
-
-
 
 } // end utils namespace
 } // end frontend namespace 
