@@ -90,12 +90,11 @@ class IndexerVisitor{
 	private:
 		insieme::frontend::TranslationUnit* mTu;
 		Indexer::tIndex& mIndex; 
-		Indexer::tIndex& mDeclIndex; 
 
 	public:
 	IndexerVisitor	(insieme::frontend::TranslationUnit* tu,
-					 Indexer::tIndex& index, Indexer::tIndex& declIndex):
-		mTu(tu), mIndex(index), mDeclIndex(declIndex)
+					 Indexer::tIndex& index):
+		mTu(tu), mIndex(index) 
 	{ }
 
 	void indexDeclaration(clang::Decl* decl){
@@ -117,16 +116,12 @@ class IndexerVisitor{
 				if(named->getNameAsString() == "main")
 					mIndex["main"] = elem; 
 			} 
-
-			mDeclIndex[buildNameTypeChain(decl)] = elem; 
 		}
 		else if (const clang::CXXRecordDecl *recDecl = llvm::dyn_cast<clang::CXXRecordDecl>(decl)){
 			if (recDecl->hasDefinition()){
 				Indexer::TranslationUnitPair elem =  std::make_pair(llvm::cast<clang::Decl>(recDecl->getDefinition()),mTu); 
 				mIndex[buildNameTypeChain(decl)] = elem;
 			}
-
-			mDeclIndex[buildNameTypeChain(decl)] = std::make_pair(decl, mTu);
 
 			// index inner functions as well
 			indexDeclContext(llvm::cast<clang::DeclContext>(decl));
@@ -178,7 +173,7 @@ void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 	clang::DeclContext* ctx= clang::TranslationUnitDecl::castToDeclContext (tuDecl);
 	assert(ctx && "AST has no decl context");
 
-	IndexerVisitor indexer(tu, mIndex, mDeclIndex);
+	IndexerVisitor indexer(tu, mIndex);
 	indexer.indexDeclContext(ctx);
 	
 	VLOG(1) << " ************* Indexing DONE ****************";
@@ -302,13 +297,6 @@ Indexer::iterator Indexer::end(){
 	return iterator(mIndex.end());
 }
 
-Indexer::iterator Indexer::decl_begin(){
-	return iterator(mDeclIndex.begin());
-}
-
-Indexer::iterator Indexer::decl_end(){
-	return iterator(mDeclIndex.end());
-}
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme

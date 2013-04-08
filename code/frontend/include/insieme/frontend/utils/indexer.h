@@ -65,7 +65,6 @@ private:
 
 	typedef std::map<std::string, TranslationUnitPair> tIndex; 
 	tIndex   mIndex;
-	tIndex   mDeclIndex;	//index for all Decls with and without body
 	TranslationUnitPair  voidPair;
 
 public:
@@ -117,8 +116,6 @@ public:
 
 	iterator begin();
 	iterator end();
-	iterator decl_begin();
-	iterator decl_end();
 
 private:
 	////////////////////////////////////////////////

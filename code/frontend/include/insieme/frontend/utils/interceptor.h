@@ -69,32 +69,18 @@ public:
 		: indexer(indexer), builder(mgr)
 	{}
 
-	typedef std::set<const clang::Decl*> InterceptedDeclSet;
-	typedef std::set<const clang::TypeDecl*> InterceptedTypeDeclSet;
-
-	typedef std::map<const clang::FunctionDecl*, std::string> InterceptedFuncMap;
-	typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> InterceptedExprCache;
-	typedef std::map<const clang::Type*, insieme::core::TypePtr> InterceptedTypeCache;
-
-	InterceptedDeclSet& getInterceptedDecls() { return interceptedDecls; }
-	InterceptedFuncMap& getInterceptedFuncMap() { return interceptedFuncMap; }
-
 	void loadConfigFile(std::string fileName);	
 	void loadConfigSet(std::set<std::string> toIntercept);	
-	void collectDeclsToIntercept();
-	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::ConversionFactory& convFact);
 	
-	bool isIntercepted(const clang::Decl* decl) const { return interceptedDecls.find(decl) != interceptedDecls.end(); }
 	bool isIntercepted(const clang::Type* type) const;
+	bool isIntercepted(const clang::FunctionDecl* decl) const;
 
-	InterceptedExprCache buildInterceptedExprCache(insieme::frontend::conversion::ConversionFactory& convFact);
-	Interceptor::InterceptedTypeCache buildInterceptedTypeCache(insieme::frontend::conversion::ConversionFactory& convFact);
+	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::ConversionFactory& convFact);
+	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::ConversionFactory& convFact);
 
 private:
 	insieme::frontend::utils::Indexer& indexer;
 	insieme::core::IRBuilder builder;
-	InterceptedDeclSet interceptedDecls;
-	InterceptedFuncMap interceptedFuncMap;
 
 	std::set<std::string> toIntercept;
 	boost::regex rx;
@@ -113,33 +99,6 @@ struct InterceptTypeVisitor : public clang::TypeVisitor<InterceptTypeVisitor, co
 	core::TypePtr VisitTagType(const clang::TagType* tagType);
 	core::TypePtr VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy);
 	core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType);
-};
-
-struct InterceptVisitor : public clang::StmtVisitor<InterceptVisitor> {
-
-	insieme::frontend::utils::Interceptor::InterceptedDeclSet& interceptedDecls;
-	insieme::frontend::utils::Interceptor::InterceptedFuncMap& interceptedFuncMap;
-	std::set<std::string>& toIntercept;
-	boost::regex rx;
-
-	InterceptVisitor(
-			insieme::frontend::utils::Interceptor::InterceptedDeclSet& interceptedDecls, 
-			insieme::frontend::utils::Interceptor::InterceptedFuncMap& interceptedFuncMap,
-			std::set<std::string>& toIntercept) 
-		: interceptedDecls(interceptedDecls), 
-		interceptedFuncMap(interceptedFuncMap), 
-		toIntercept(toIntercept)
-	{}
-
-	void intercept(const clang::FunctionDecl* d, boost::regex rx);
-	
-	void VisitStmt(clang::Stmt* stmt);
-
-	void VisitDeclStmt(const clang::DeclStmt* declStmt);
-
-	//void VisitCallExpr(const clang::CallExpr* callExpr) {};
-
-	//void VisitDeclRefExpr(const clang::DeclRefExpr* declRefExpr) {};
 };
 
 } // end utils namespace
