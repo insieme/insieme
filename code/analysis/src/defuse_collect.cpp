@@ -39,7 +39,9 @@
 #include "insieme/core/ir_address.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
@@ -318,10 +320,23 @@ public:
 		// to convert a ref into another ref 
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefVectorToRefArray()) ||
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getStringToCharPointer()) ||
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefReinterpret()) )
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefReinterpret()) ) 
 		{
 			visit( callExpr->getArgument(0) ); // arg(0)
 			return;
+		}
+
+		// take care of Cpp reference representatoin in ir
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), callExpr->getNodeManager().getLangExtension<core::lang::IRppExtensions>().getRefCppToIR()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), callExpr->getNodeManager().getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), callExpr->getNodeManager().getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), callExpr->getNodeManager().getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), callExpr->getNodeManager().getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp())	)
+		{
+			//FIXME correct for DEFUSE?
+			visit( callExpr->getArgument(0) ); // arg(0)
+			return;
+			assert(false && "cppRef in defUse");
 		}
 
 		// This call expression could return a reference to a variable which can be either used or
