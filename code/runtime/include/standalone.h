@@ -88,10 +88,6 @@ void irt_init_globals() {
 
 	irt_log_init();
 
-#if defined(IRT_ENABLE_INSTRUMENTATION) || defined(IRT_ENABLE_REGION_INSTRUMENTATION)
-	irt_time_ticks_per_sec_calibration_mark();
-#endif
-
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
 	err_flag |= irt_tls_key_create(&irt_g_error_key);
@@ -111,9 +107,8 @@ void irt_init_globals() {
 #ifndef IRT_MIN_MODE
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_init();
 #endif
-#if defined(IRT_ENABLE_INSTRUMENTATION) || defined(IRT_ENABLE_REGION_INSTRUMENTATION)
+	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark();
-#endif
 #ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 	irt_energy_select_instrumentation_method();
 	irt_temperature_select_instrumentation_method();
@@ -181,9 +176,8 @@ void irt_exit_handler() {
 #endif
 	irt_exit_handling_done = true;
 	_irt_worker_end_all();
-#if defined(IRT_ENABLE_INSTRUMENTATION) || defined(IRT_ENABLE_REGION_INSTRUMENTATION)
+	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
-#endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	if(irt_g_instrumentation_event_output_is_enabled)
 		irt_inst_event_data_output_all(irt_g_instrumentation_event_output_is_binary);
