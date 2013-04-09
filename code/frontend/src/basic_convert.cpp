@@ -806,6 +806,7 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// this is a C++ reference ( int& ref = x)
 	if (clangType && clangType->isReferenceType()){
 
+		//FIXME this looks fishy!!! ask luis
 		// if is a CPP ref, convert to IR
 		if (core::analysis::isCppRef(retIr->getType())) {
 			if (!core::analysis::isCppRef(retIr->getType())) {

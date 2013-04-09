@@ -498,7 +498,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		if (core::analysis::isCppRef(argTy)) {
 			arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), arg);
 		}
-		else if (core::analysis::isCppRef(argTy)) {
+		//FIXME was: else if (core::analysis::isCppRef(argTy)) ask luis
+		else if (core::analysis::isConstCppRef(argTy)) {
 			arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), arg);
 		}
 		// if is a IR ref, deref it
