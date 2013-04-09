@@ -88,6 +88,8 @@ void irt_init_globals() {
 
 	irt_log_init();
 
+	// this call seems superflous but it is not - needs to be investigated TODO
+	irt_time_ticks_per_sec_calibration_mark();
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
 	err_flag |= irt_tls_key_create(&irt_g_error_key);
