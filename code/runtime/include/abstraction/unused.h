@@ -34,52 +34,9 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "irt_context.h"
-
-#include "irt_optimizer.h"
-#include "irt_logging.h"
-#include "instrumentation.h"
-
-#include "utils/lookup_tables.h"
-#include "impl/worker.impl.h"
-
-IRT_DEFINE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
-
-static inline irt_context* irt_context_get_current() {
-	return irt_context_table_lookup(irt_worker_get_current()->cur_context);
-}
-
-
-irt_context* irt_context_create_standalone(init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
-	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
-	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
-	context->id.cached = context;
-	context->client_app = NULL;
-	init_fun(context);
-	irt_optimizer_context_startup(context);
-	irt_inst_init(context);
-	irt_context_table_insert(context);
-	return context;
-}
-
-irt_context* irt_context_create(irt_client_app* app) {
-	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
-	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
-	context->client_app = app;
-	context->client_app->init_context(context);
-	irt_log_comment("starting new context");
-	irt_optimizer_context_startup(context);
-	irt_inst_init(context);
-	irt_context_table_insert(context);
-	return context;
-}
-
-void irt_context_destroy(irt_context* context) {
-	irt_inst_finalize(context);
-	if (context->client_app && context->client_app->cleanup_context) {
-		context->client_app->cleanup_context(context);
-	}
-	free(context);
-}
+/**
+ * Just defines a nicer alternative to the attribute syntax.
+ */
+#if defined(__GNUC__)
+	#define __irt_unused __attribute__((unused))
+#endif

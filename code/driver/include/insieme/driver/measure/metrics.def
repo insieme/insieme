@@ -94,7 +94,8 @@ METRIC(TEMPERATURE_PACKAGE_END,		"temperature_pkg_end_(c)",		c,			none);
 METRIC(WALL_TIME,			"wall_time(ns)",			ns,			none);
 METRIC(CPU_TIME,			"cpu_time(ns)",				ns,			none);
 
-METRIC(NUM_WORKERS,			"num_workers",				unit,		none);
+// TODO: re-enable when available again
+// METRIC(NUM_WORKERS,			"num_workers",				unit,		none);
 
 // imported from PAPI
 METRIC(PAPI_L1_DCM,			"PAPI_L1_DCM",				unit,		none);
@@ -213,7 +214,7 @@ METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(Metric::WALL_TIME));
 METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
 
 METRIC(PARALLELISM, 				"parallelism",				unit,		div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_WALL_TIME));
-METRIC(AVG_EFFICIENCY,				"avg_efficiency",			unit,		avg(l_div(l_div(Metric::CPU_TIME, Metric::WALL_TIME), Metric::NUM_WORKERS)));
+//METRIC(AVG_EFFICIENCY,				"avg_efficiency",			unit,		avg(l_div(l_div(Metric::CPU_TIME, Metric::WALL_TIME), Metric::NUM_WORKERS)));
 METRIC(LOAD_BALANCE,				"load_balance",				unit,		div(min(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)), max(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START))));
 METRIC(LOAD_VARIANCE,				"load_variance",			unit,		var(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
 
@@ -239,10 +240,10 @@ METRIC(AVG_TEMPERATURE_PACKAGE_END,								"avg_temperature_pkg_end",							c,		
 //METRIC(TOTAL_TEMPERATURE,								"total_temperature",							c,				avg(Metric::TEMPERATURE_START, Metric::TEMPERATURE_END));
 
 // TODO: re-enable when number of workers is fixed for regions 
-METRIC(AVG_NUM_WORKERS,				"avg_num_workers",			unit,		avg(Metric::NUM_WORKERS));
+//METRIC(AVG_NUM_WORKERS,				"avg_num_workers",			unit,		avg(Metric::NUM_WORKERS));
 METRIC(TOTAL_RESOURCE_USAGE,				"total_resource_usage",			ns,			none);
 
-METRIC(WEIGHTED_EFFICIENCY, 		"weighted_efficiency",		unit,		div(sum(l_div(Metric::CPU_TIME, Metric::NUM_WORKERS)), Metric::TOTAL_WALL_TIME));
+// METRIC(WEIGHTED_EFFICIENCY, 		"weighted_efficiency",		unit,		div(sum(l_div(Metric::CPU_TIME, Metric::NUM_WORKERS)), Metric::TOTAL_WALL_TIME));
 
 
 METRIC(TOTAL_L1_DATA_CACHE_MISS, 	"total_L1_data_cache_miss", 	unit,		sum(Metric::PAPI_L1_DCM));

@@ -88,9 +88,9 @@ void irt_init_globals() {
 
 	irt_log_init();
 
-	#ifdef IRT_ENABLE_INSTRUMENTATION
-		irt_time_ticks_per_sec_calibration_mark();
-	#endif
+#if defined(IRT_ENABLE_INSTRUMENTATION) || defined(IRT_ENABLE_REGION_INSTRUMENTATION)
+	irt_time_ticks_per_sec_calibration_mark();
+#endif
 
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
@@ -111,11 +111,10 @@ void irt_init_globals() {
 #ifndef IRT_MIN_MODE
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_init();
 #endif
-#ifdef IRT_ENABLE_INSTRUMENTATION
+#if defined(IRT_ENABLE_INSTRUMENTATION) || defined(IRT_ENABLE_REGION_INSTRUMENTATION)
 	irt_time_ticks_per_sec_calibration_mark();
 #endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_inst_create_aggregated_data_table();
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 	irt_energy_select_instrumentation_method();
 	irt_temperature_select_instrumentation_method();
 #endif
@@ -129,9 +128,6 @@ void irt_cleanup_globals() {
 	irt_wg_event_register_table_cleanup();
 #ifndef IRT_MIN_MODE
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
-#endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_inst_destroy_aggregated_data_table();
 #endif
 	irt_mutex_destroy(&irt_g_error_mutex);
 	irt_tls_key_delete(irt_g_error_key);
@@ -185,23 +181,26 @@ void irt_exit_handler() {
 #endif
 	irt_exit_handling_done = true;
 	_irt_worker_end_all();
-#ifdef IRT_ENABLE_INSTRUMENTATION
+#if defined(IRT_ENABLE_INSTRUMENTATION) || defined(IRT_ENABLE_REGION_INSTRUMENTATION)
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
+#endif
+#ifdef IRT_ENABLE_INSTRUMENTATION
 	if(irt_g_instrumentation_event_output_is_enabled)
 		irt_inst_event_data_output_all(irt_g_instrumentation_event_output_is_binary);
 	for(int i = 0; i < irt_g_worker_count; ++i)
 		irt_inst_destroy_event_data_table(irt_g_workers[i]->instrumentation_event_data);
 #endif
 
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	for(int i = 0; i < irt_g_worker_count; ++i)
-		irt_inst_region_data_output(irt_g_workers[i]);
-	irt_inst_aggregated_data_output();
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 	for(int i = 0; i < irt_g_worker_count; ++i) {
-			irt_inst_destroy_region_data_table(irt_g_workers[i]->instrumentation_region_data);
-			irt_inst_destroy_region_list(irt_g_workers[i]->region_reuse_list);
+		irt_inst_region_data_output(irt_g_workers[i]);
+		irt_inst_destroy_region_data_table(irt_g_workers[i]->instrumentation_region_data);
 	}
 	PAPI_shutdown();
+#endif
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	for(int i = 0; i < irt_g_worker_count; ++i)
+		irt_inst_destroy_region_list(irt_g_workers[i]->region_reuse_list);
 #endif
 	irt_cleanup_globals();
 	free(irt_g_workers);
@@ -289,12 +288,17 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	// initialize globals
 	irt_init_globals();
 
-	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
-			irt_instrumentation_init_energy_instrumentation();
-		#endif
+	#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 		// initialize PAPI and check version
 		irt_initialize_papi();
+		
+	#endif
+
+	#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
+		irt_instrumentation_init_energy_instrumentation();
+	#endif
+
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 		irt_inst_set_region_instrumentation(true);
 	#endif
 	#ifdef IRT_ENABLE_INSTRUMENTATION
@@ -370,5 +374,10 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	irt_wi_event_check_and_register(main_wi->id, IRT_WI_EV_COMPLETED, &handler);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
+
+	// wait for workers to finish the main work-item
 	irt_mutex_lock(&mutex);
+
+	// shut-down context
+	irt_context_destroy(context);
 }

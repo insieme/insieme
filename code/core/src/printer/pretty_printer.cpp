@@ -54,7 +54,9 @@
 #include "insieme/core/analysis/attributes.h"
 
 #include <boost/iostreams/stream.hpp>
-#include <boost/iostreams/concepts.hpp> 
+#include <boost/iostreams/concepts.hpp>
+
+#include "insieme/core/parser2/detail/lexer.h"
 
 namespace insieme {
 namespace core {
@@ -1183,9 +1185,53 @@ namespace std {
  * @return a reference to the output stream
  */
 std::ostream& operator<<(std::ostream& out, const insieme::core::printer::PrettyPrinter& print) {
-	// use inspire printer to print the code ...
-	insieme::core::printer::InspirePrinter printer(out, print);
-	printer.print(print.root);
+
+	// print code into string buffer
+	std::stringstream buffer;
+	insieme::core::printer::InspirePrinter(buffer, print).print(print.root);
+
+	// use buffer content if there is no color highlighting required
+	if (!print.hasOption(insieme::core::printer::PrettyPrinter::USE_COLOR)) {
+		return out << buffer.str();
+	}
+
+
+	// add syntax highlighting to output code by using the lexer from the parser
+	using namespace insieme::core::parser::detail;
+	auto tokens = lex(buffer.str(), false);
+
+	// print tokens one-by-one
+	for (auto cur : tokens) {
+
+		// select formating of current token
+		// color codes - see: http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
+		switch(cur.getType()) {
+		case Token::Type::Symbol: 			out << "\033[0m"; break;
+		case Token::Type::Keyword: 			out << "\033[1m"; break;
+		case Token::Type::Comment: 			out << "\033[2m"; break;
+		case Token::Type::Identifier: 		out << "\033[0m"; break;
+		case Token::Type::Bool_Literal:		out << "\033[1m"; break;
+		case Token::Type::Char_Literal:		out << "\033[2m"; break;
+		case Token::Type::Int_Literal:		out << "\033[1m"; break;
+		case Token::Type::Float_Literal:	out << "\033[1m"; break;
+		case Token::Type::Double_Literal:	out << "\033[1m"; break;
+		case Token::Type::String_Literal:	out << "\033[2m"; break;
+		case Token::Type::WhiteSpace:		out << "\033[0m"; break;
+		}
+
+		// special cases (differences between parser and printer)
+		if (cur.getLexeme() == "fun") out << "\033[1m";
+		if (cur.getLexeme() == "job") out << "\033[1m";
+		if (cur.getLexeme() == "bind") out << "\033[1m";
+
+		// print token
+		out << cur.getLexeme();
+
+		// clear formating
+		out << "\033[0m";
+	}
+
+	// done
 	return out;
 }
 

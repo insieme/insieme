@@ -47,6 +47,8 @@
 
 IRT_MAKE_ID_TYPE(context);
 
+typedef struct _irt_instrumentation_aggregated_data_table irt_instrumentation_aggregated_data_table;
+
 struct _irt_context {
 	irt_context_id id;
 	irt_client_app* client_app;
@@ -54,6 +56,10 @@ struct _irt_context {
 	irt_type* type_table;
 	uint32 impl_table_size;
 	irt_wi_implementation* impl_table;
+
+	// instrumentation
+	uint32 num_regions;													// initialized by compiler
+	irt_instrumentation_aggregated_data_table* inst_region_table;		// initialized by runtime
 
 #ifdef USE_OPENCL
 	irt_ocl_kernel_code* kernel_code_table;

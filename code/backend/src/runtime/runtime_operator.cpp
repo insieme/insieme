@@ -283,6 +283,14 @@ namespace runtime {
 			return c_ast::call( C_NODE_MANAGER->create("irt_exit"), CONVERT_ARG(0));
 		});
 
+		table[ext.instrumentationInitRegions] = OP_CONVERTER({
+			// just add info to context init
+			ContextHandlingFragment::get(context.getConverter())->addInitExpression(format("    context->num_regions = %s;\n", call[0].as<core::LiteralPtr>()->getStringValue()));
+			return NULL; // this is not producing an expression
+		});
+
+
+
 		#include "insieme/backend/operator_converter_end.inc"
 
 		return table;

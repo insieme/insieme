@@ -449,7 +449,7 @@ ReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionF
 	Reduction::Operator op = Reduction::PLUS;
 	if(*opStr == "+")		op = Reduction::PLUS;
 	else if(*opStr == "-")	op = Reduction::MINUS;
-	else if(*opStr == "*")	op = Reduction::STAR;
+	else if(*opStr == "*")	op = Reduction::MUL;
 	else if(*opStr == "&")	op = Reduction::AND;
 	else if(*opStr == "|")	op = Reduction::OR;
 	else if(*opStr == "^")	op = Reduction::XOR;

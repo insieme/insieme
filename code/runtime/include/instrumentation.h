@@ -43,8 +43,8 @@
 #define IRT_ENABLE_INSTRUMENTATION
 #endif
 
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-#define IRT_ENABLE_INSTRUMENTATION
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
+#define IRT_ENABLE_REGION_INSTRUMENTATION
 #endif
 
 #ifndef IRT_ENABLE_INSTRUMENTATION
@@ -66,7 +66,7 @@
 typedef struct _irt_##__type__##_table irt_##__table__##_table; \
 
 
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 #include "papi.h"
 #endif
 
@@ -124,4 +124,8 @@ void _irt_inst_region_end(region_id id);
 
 void irt_inst_region_set_timestamp(irt_work_item* wi);
 void irt_inst_region_add_time(irt_work_item* wi);
+
+// some management operations
+void irt_inst_init(irt_context* context);
+void irt_inst_finalize(irt_context* context);
 

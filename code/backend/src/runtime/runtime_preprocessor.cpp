@@ -855,6 +855,46 @@ using namespace insieme::transform::pattern;
 	}
 
 
+	core::NodePtr InstrumentationSupport::process(const backend::Converter& converter, const core::NodePtr& node) {
+		// get language extension
+		auto& mgr = converter.getNodeManager();
+		auto& rtExt = mgr.getLangExtension<insieme::backend::runtime::Extensions>();
+
+		// get max region id
+		unsigned max = 0;
+		core::visitDepthFirstOnce(node, [&](const core::CallExprPtr& call) {
+
+			// check whether this call is specifying some region ID
+			if (!(core::analysis::isCallOf(call, rtExt.instrumentationRegionStart) || core::analysis::isCallOf(call, rtExt.regionAttribute))) {
+				return;
+			}
+
+			// take first argument
+			assert(call[0]->getNodeType() == core::NT_Literal && "Region ID is expected to be a literal!");
+			unsigned regionId = call[0].as<core::LiteralPtr>()->getValueAs<unsigned>();
+			if (max < regionId) max = regionId;
+		});
+
+		// add information to application
+		core::NodeAddress root(node);
+		assert(node->getNodeType() == core::NT_Program);
+
+		core::ProgramAddress program = root.as<core::ProgramAddress>();
+		assert(program->size() == 1u);
+
+		// get body of lambda expression
+		core::LambdaExprAddress main = program[0].as<core::LambdaExprAddress>();
+		core::CompoundStmtAddress body = main->getBody();
+
+		// build init call
+		core::IRBuilder builder(mgr);
+		auto initStmt = builder.callExpr(mgr.getLangBasic().getUnit(), rtExt.instrumentationInitRegions, builder.uintLit(max + 1));
+
+		// insert into body
+		return core::transform::insert(mgr, body, initStmt, 0);
+	}
+
+
 } // end namespace runtime
 } // end namespace backend
 } // end namespace insieme
