@@ -988,7 +988,7 @@ namespace measure {
 		compiler.addFlag("-I " PAPI_HOME "/include");
 		compiler.addFlag("-L " PAPI_HOME "/lib/");
 		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
-		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
+		compiler.addFlag("-DIRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION");
 		compiler.addFlag("-DIRT_RUNTIME_TUNING");
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
 		compiler.addFlag("-Wl,-Bstatic -lpapi -Wl,-Bdynamic");

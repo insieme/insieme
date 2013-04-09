@@ -45,11 +45,14 @@
 #include "instrumentation.h"
 #include "impl/error_handling.impl.h"
 
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 #include "papi_helper.h"
 #include "utils/impl/energy.impl.h"
-#include "utils/impl/timing.impl.h"
 #include "utils/impl/temperature.impl.h"
+#endif
+
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#include "utils/impl/timing.impl.h"
 #endif
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
@@ -667,6 +670,8 @@ void irt_inst_set_region_instrumentation(bool enable) {
 	}
 }
 
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
+
 void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uint64 id) {
 
 	irt_instrumentation_region_data_table* table = worker->instrumentation_region_data;
@@ -763,11 +768,17 @@ void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uin
 
 }
 
+#endif
+
 
 void _irt_instrumentation_mark_start(region_id id) {
 	irt_worker* worker = irt_worker_get_current();
-	_irt_inst_event_insert(worker, IRT_INST_REGION_START, (uint64)id);
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	//_irt_inst_event_insert(worker, IRT_INST_REGION_START, (uint64)id);
+#endif
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 	_irt_inst_region_data_insert(worker, IRT_INST_REGION_START, (uint64)id);
+#endif
 
 	irt_region* region = irt_inst_region_list_new_item(worker);
 	region->cputime = 0;
@@ -797,19 +808,55 @@ void _irt_instrumentation_mark_end(region_id id, bool insert_aggregated) {
 
 	if(worker->cur_wi->region) // if the ended region was a nested one, add execution time to outer region
 		irt_atomic_fetch_and_add(&(worker->cur_wi->region->cputime), ending_region_cputime);
-
+#ifdef IRT_ENABLE_INSTRUMENTATION
 	_irt_inst_event_insert(worker, IRT_INST_REGION_END, (uint64)id);
+#endif
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 	_irt_inst_region_data_insert(worker, IRT_INST_REGION_END, (uint64)id);
+#endif
 }
 
-void _irt_inst_region_start(region_id id) { _irt_instrumentation_mark_start(id); }
+/*
+ * ifdef inside function, because the statement is called in compiler-generated code
+ */
 
-void _irt_inst_region_end(region_id id) { _irt_instrumentation_mark_end(id, true); }
+void _irt_inst_region_start(region_id id) { 
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+_irt_instrumentation_mark_start(id); 
+#endif
+}
 
-void _irt_inst_pfor_start(region_id id) { _irt_instrumentation_mark_start(id); }
+/*
+ * ifdef inside function, because the statement is called in compiler-generated code
+ */
 
-void _irt_inst_pfor_end(region_id id) { _irt_instrumentation_mark_end(id, false); }
+void _irt_inst_region_end(region_id id) { 
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+_irt_instrumentation_mark_end(id, true); 
+#endif
+}
 
+/*
+ * ifdef inside function, because of keeping style compared to _irt_inst_region_end()
+ */
+
+void _irt_inst_pfor_start(region_id id) { 
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+_irt_instrumentation_mark_start(id); 
+#endif
+}
+
+/*
+ * ifdef inside function, because of keeping style compared to _irt_inst_region_end()
+ */
+
+void _irt_inst_pfor_end(region_id id) { 
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+_irt_instrumentation_mark_end(id, false); 
+#endif
+}
+
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 void irt_inst_region_data_output(irt_worker* worker) {
 	// environmental variable can hold the output path for the performance logs, default is .
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
@@ -899,7 +946,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 						break;
 					}
 			}
-				
+
 			IRT_ASSERT(start_data.timestamp != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Cannot find a matching start statement")
 
 			// single fprintf for performance reasons
@@ -960,6 +1007,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 	}
 	fclose(outputfile);
 }
+#endif // IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 
 void irt_inst_region_set_timestamp(irt_work_item* wi) {
 	wi->last_timestamp = irt_time_ticks();
@@ -978,12 +1026,16 @@ void irt_inst_region_add_time(irt_work_item* wi) {
 
 void irt_inst_init(irt_context* context) {
 	// initialize aggregated data table
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_inst_create_aggregated_data_table(context);
+#endif
 }
 
 void irt_inst_finalize(irt_context* context) {
 	// TODO: code for writing resulting log should be moved here!
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	_irt_inst_destroy_aggregated_data_table(context);
+#endif
 }
 
 

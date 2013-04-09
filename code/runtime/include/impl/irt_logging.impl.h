@@ -99,6 +99,11 @@ void irt_log_init() {
 #else
 	irt_log_setting_s("IRT_ENABLE_REGION_INSTRUMENTATION", "disabled");
 #endif
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
+	irt_log_setting_s("IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION", "enabled");
+#else
+	irt_log_setting_s("IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION", "disabled");
+#endif
 #ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
 	irt_log_setting_s("IRT_ENABLE_ENERGY_INSTRUMENTATION", "enabled");
 #else
