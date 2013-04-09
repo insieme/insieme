@@ -139,4 +139,6 @@ IRT_DECLARE_ID_TYPE(worker);
 typedef struct _irt_affinity_mask irt_affinity_mask;
 typedef struct _irt_worker irt_worker;
 
+/* ------------------------------ region instrumentation ----- */
 
+typedef struct _irt_inst_region_data irt_inst_region_data;

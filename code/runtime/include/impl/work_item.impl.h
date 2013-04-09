@@ -229,10 +229,10 @@ void irt_wi_join(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_inst_region_add_time(swi);
+		irt_inst_region_suspend(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN, swi->id);
 		lwt_continue(&self->basestack, &swi->stack_ptr);
-		irt_inst_region_set_timestamp(swi);
+		irt_inst_region_continue(swi);
 	}
 }
 
@@ -266,7 +266,7 @@ void irt_wi_join_all(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_all_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_CHILDREN_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_inst_region_add_time(wi);
+		irt_inst_region_suspend(wi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_JOIN_ALL, wi->id);
 #ifdef IRT_ASTEROIDEA_STACKS
 		// make stack available for children
@@ -276,7 +276,7 @@ void irt_wi_join_all(irt_work_item* wi) {
 #ifdef IRT_ASTEROIDEA_STACKS
 		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wi->stack_available, true, false), IRT_ERR_INTERNAL, "Asteroidea: Stack still in use.\n");
 #endif //IRT_ASTEROIDEA_STACKS
-		irt_inst_region_set_timestamp(wi);
+		irt_inst_region_continue(wi);
 	} else {
 		// check if multi-level immediate wi was signaled instead of current wi
 		if(*(wi->num_active_children) != 0) irt_wi_join_all(wi);
@@ -291,7 +291,7 @@ void irt_wi_end(irt_work_item* wi) {
 	irt_worker* worker = irt_worker_get_current();
 
 	// instrumentation update
-	irt_inst_region_add_time(wi);
+	irt_inst_region_suspend(wi);
 	irt_inst_insert_wi_event(worker, IRT_INST_WORK_ITEM_END_START, wi->id);
 
 	// check for fragment, handle

@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <stdio.h>
+
 #include "declarations.h"
 #include "performance_table.h"
 
@@ -105,7 +107,6 @@ void irt_inst_set_wg_instrumentation(bool enable);
 void irt_inst_set_wo_instrumentation(bool enable);
 void irt_inst_set_di_instrumentation(bool enable);
 void irt_inst_set_db_instrumentation(bool enable);
-void irt_inst_set_region_instrumentation(bool enable);
 void irt_inst_set_all_instrumentation(bool enable);
 
 // dummy functions to be used via function pointer to disable 
@@ -117,15 +118,37 @@ void _irt_inst_insert_no_wo_event(irt_worker* worker, irt_instrumentation_event 
 void _irt_inst_insert_no_di_event(irt_worker* worker, irt_instrumentation_event event, irt_data_item_id subject_id);
 void _irt_inst_insert_no_db_event(irt_worker* worker, irt_instrumentation_event event, irt_worker_id subject_id);
 
-typedef uint64 region_id;
 
-void _irt_inst_region_start(region_id id);
-void _irt_inst_region_end(region_id id);
+// -----------------------------------------------------------------------------------------------------------------
+//													Regions
+// -----------------------------------------------------------------------------------------------------------------
 
-void irt_inst_region_set_timestamp(irt_work_item* wi);
-void irt_inst_region_add_time(irt_work_item* wi);
+typedef uint32 region_id;
 
-// some management operations
-void irt_inst_init(irt_context* context);
-void irt_inst_finalize(irt_context* context);
+// -------------------- region markers ---------------------
+
+void irt_inst_region_start(irt_context* context, irt_worker* worker, region_id id);
+void irt_inst_region_end(irt_context* context, irt_worker* worker, region_id id);
+
+// a special variation of region start / end for pfor-regions (accounting for the parallel execution)
+// TODO: unify the two variants
+void irt_inst_region_start_pfor(irt_context* context, region_id id);
+void irt_inst_region_end_pfor(irt_context* context, region_id id, uint64 walltime, uint64 cputime);
+
+void irt_inst_region_suspend(irt_work_item* wi);
+void irt_inst_region_continue(irt_work_item* wi);
+
+// ------------------ management operations ----------------
+
+void irt_inst_region_init(irt_context* context);
+void irt_inst_region_finalize(irt_context* context);
+
+typedef enum _irt_inst_region_mode {
+	IRT_INST_REGION_NONE,
+	IRT_INST_REGION_AGGREGATED,
+	IRT_INST_REGION_DETAIL
+} irt_inst_region_mode;
+
+void irt_inst_region_set_mode(irt_context* context, irt_inst_region_mode mode);
+void irt_inst_region_set_mode_for_region(irt_context* context, region_id id, irt_inst_region_mode mode);
 

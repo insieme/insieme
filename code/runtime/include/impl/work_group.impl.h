@@ -156,11 +156,11 @@ void irt_wg_barrier_scheduled(irt_work_group* wg) {
 		irt_wg_event_trigger_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
 	} else {
 		// suspend
-		irt_inst_region_add_time(swi);
+		irt_inst_region_suspend(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
 		// suspend until allowed to leave barrier
 		lwt_continue(&self->basestack, &swi->stack_ptr);
-		irt_inst_region_set_timestamp(swi);
+		irt_inst_region_continue(swi);
 		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
 	}
 }
@@ -246,10 +246,10 @@ void irt_wg_join(irt_work_group* wg) {
 	//IRT_ASSERT((wgid.thread<100) && (wgid.index<100000), IRT_ERR_INTERNAL, "BLA! t: %d, id: %d", wgid.thread, wgid.index); // TODO DEBUG remove!
 	int64 occ = irt_wg_event_check_exists_and_register(wgid, IRT_WG_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_inst_region_add_time(swi);
+		irt_inst_region_suspend(swi);
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_GROUPJOIN, swi->id);
 		lwt_continue(&self->basestack, &swi->stack_ptr);
-		irt_inst_region_set_timestamp(swi);
+		irt_inst_region_continue(swi);
 		irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
 	}
 }

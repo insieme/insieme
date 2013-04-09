@@ -858,6 +858,11 @@ namespace measure {
 		// extract name of executable
 		std::string executable = bfs::path(binary).filename().string();
 
+		// see whether aggregated log can be utilized
+		bool aggregatedOnly = all(metrics, [](const MetricPtr& cur) {
+			return cur == Metric::TOTAL_WALL_TIME || cur == Metric::TOTAL_CPU_TIME;
+		});
+
 		// partition the papi parameters
 		auto papiPartition = partitionPapiCounter(metrics);
 		/*auto papiPartition = vector<vector<MetricPtr> >(3);
@@ -913,6 +918,10 @@ namespace measure {
 				std::map<string,string> mod_env = env;
 				if (!paramList.empty()) {		// only set if there are any parameters (otherwise collection is disabled)
 					mod_env["IRT_INST_PAPI_EVENTS"] = getPapiCounterSelector(paramList);
+					mod_env["IRT_INST_REGION_MODE"] = "detail";
+				} else {
+					// fix region instrumentation mode
+					mod_env["IRT_INST_REGION_MODE"] = aggregatedOnly?"aggregated":"detail";
 				}
 
 				// run code
