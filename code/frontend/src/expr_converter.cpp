@@ -734,36 +734,37 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			if (rightTU && fd->hasBody()) { definition = fd; }
 		}
 
-		if (!definition) {
-			//-----------------------------------------------------------------------------------------------------
-			//     						Handle of 'special' built-in functions
-			//-----------------------------------------------------------------------------------------------------
-			// free(): check whether this is a call to the free() function
-			if (funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
-				//FIXME doesn't free always use one parameter? (bernhard)
-				// in the case the free uses an input parameter
-				if (args.front()->getType()->getNodeType() == core::NT_RefType) {
-					VLOG(2) << "free -- arg is reftype";
-					return (irNode = builder.callExpr(builder.getLangBasic().getUnit(),
-							builder.getLangBasic().getRefDelete(), args.front()));
-				}
-
-				// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
-				core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
-				core::ExpressionPtr delOp = builder.getLangBasic().getRefDelete();
-
-				VLOG(2) << "free -- arg is wrapped";
-
-				// otherwise this is not a L-Value so it needs to be wrapped into a variable
-				return (irNode = builder.callExpr(builder.getLangBasic().getUnit(), delOp, arg));
-			}
-		}
+			
 
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
 		// No definition has been found in any translation unit, 
 		// we mark this function as extern. and return
 		if (!definition) {
+
+			//-----------------------------------------------------------------------------------------------------
+			//     						Handle of 'special' built-in functions
+			//-----------------------------------------------------------------------------------------------------
+			// free(): check whether this is a call to the free() function
+			if (funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
+				//FIXME remove -- deprecated  -- use normal agrument handling code
+				/*
+				// in the case the free uses an input parameter
+				if (args.front()->getType()->getNodeType() == core::NT_RefType) {
+					return (irNode = builder.callExpr(builder.getLangBasic().getUnit(),
+							builder.getLangBasic().getRefDelete(), args.front()));
+				}
+				*/
+				if (args.front()->getType()->getNodeType() != core::NT_RefType) {
+					assert(false && "free should not use byValue");
+					// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
+					core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
+					core::ExpressionPtr delOp = builder.getLangBasic().getRefDelete();
+
+					// otherwise this is not a L-Value so it needs to be wrapped into a variable
+					return (irNode = builder.callExpr(builder.getLangBasic().getUnit(), delOp, arg));
+				}
+			}
 
 			irNode = convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
 

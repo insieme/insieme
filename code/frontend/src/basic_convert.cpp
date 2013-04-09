@@ -902,12 +902,12 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		return irExpr;
 	}
 	
-	//TODO idea: check/get definitionAndTU for declareation here (bernhard)
+	//TODO check/get definitionAndTU for declareation here (bernhard)
+
 	if(!funcDecl->hasBody()) {
 		core::ExpressionPtr retExpr;
 		if (funcDecl->getNameAsString() == "free") {
 			//handle special function -- "free" -- here instead of in CallExr
-			assert(false && "work in progress");
 			retExpr = builder.getLangBasic().getRefDelete();
 		} 
 		else {
