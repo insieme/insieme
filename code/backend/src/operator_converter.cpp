@@ -354,6 +354,10 @@ namespace backend {
 		res[basic.getRealToBool()] 	  = cast;
 		res[basic.getCharToBool()] 	  = cast;
 
+		res[basic.getIntPrecisionFix()]   = cast;
+		res[basic.getUintPrecisionFix()]  = cast;
+		res[basic.getRealPrecisionFix()] = cast;
+
 		// -- reals --
 
 		res[basic.getRealAdd()] = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
