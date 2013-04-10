@@ -325,6 +325,24 @@ VariableList getFreeVariables(const NodePtr& code);
 vector<VariableAddress> getFreeVariableAddresses(const NodePtr& code);
 
 /**
+ * Extracts a list of exit point addresses within the given statement. All
+ * exit points are either break, continue or return statements.
+ *
+ * @param stmt the statement for which the exit points should be computed
+ * @return the list of exit point addresses rooted by the stmt
+ */
+vector<StatementAddress> getExitPoints(const StatementPtr& stmt);
+
+/**
+ * Extracts a list of exit point addresses within the given statement. All
+ * exit points are either break, continue or return statements.
+ *
+ * @param stmt the statement for which the exit points should be computed
+ * @return the list of exit point addresses extending the given stmt address
+ */
+vector<StatementAddress> getExitPoints(const StatementAddress& stmt);
+
+/**
  * Retrieves the name of variable in the outer scope where it has been declared.
  *
  * @param varlist the list of adresses of renamed variables
