@@ -300,12 +300,14 @@ core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang::ValueDe
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* valDecl) {
+	VLOG(1) << "LOOKUP Variable: ";
+	if (VLOG_IS_ON(1)) valDecl->dump();
 
 	// Lookup the map of declared variable to see if the current varDecl is already associated with an IR entity
-	ConversionContext::VarDeclMap::const_iterator fit = ctx.varDeclMap.find(valDecl);
-	if (fit != ctx.varDeclMap.end()) {
+	auto varCacheHit = ctx.varDeclMap.find(valDecl);
+	if (varCacheHit != ctx.varDeclMap.end()) {
 		// variable found in the map
-		return fit->second;
+		return varCacheHit->second;
 	}
 
 	// The variable has not been converted into IR variable yet, therefore we create the IR variable and insert it
@@ -773,7 +775,9 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	 * structs and unions
 	 */
 	if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr )) {
-		return retIr = utils::cast( convertInitializerList(listExpr, type), type);
+		//return retIr =  convertInitializerList(listExpr, type);
+		retIr = utils::cast( convertInitializerList(listExpr, type), type);
+		return retIr;
 	}
 
 	// Convert the expression like any other expression

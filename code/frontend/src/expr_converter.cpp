@@ -599,7 +599,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 
 	// return converted node
 	core::ExpressionPtr irNode;
-	LOG_EXPR_CONVERSION(irNode);
 
 	if (callExpr->getDirectCallee()) {
 
@@ -630,16 +629,21 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			if (funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
 				// in the case the free uses an input parameter
 				if (args.front()->getType()->getNodeType() == core::NT_RefType) {
-					return (irNode = builder.callExpr(builder.getLangBasic().getUnit(),
-							builder.getLangBasic().getRefDelete(), args.front()));
+					
+					irNode = builder.callExpr(builder.getLangBasic().getUnit(),
+							builder.getLangBasic().getRefDelete(), args.front());
+				}
+				else{
+					// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
+					core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
+					core::ExpressionPtr delOp = builder.getLangBasic().getRefDelete();
+
+					// otherwise this is not a L-Value so it needs to be wrapped into a variable
+					irNode = builder.callExpr(builder.getLangBasic().getUnit(), delOp, arg);
 				}
 
-				// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
-				core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
-				core::ExpressionPtr delOp = builder.getLangBasic().getRefDelete();
-
-				// otherwise this is not a L-Value so it needs to be wrapped into a variable
-				return (irNode = builder.callExpr(builder.getLangBasic().getUnit(), delOp, arg));
+				END_LOG_EXPR_CONVERSION(irNode);
+				return irNode;
 			}
 		}
 
@@ -654,6 +658,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			if (fit != ctx.lambdaExprCache.end()) {
 				irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
 						packedArgs);
+				END_LOG_EXPR_CONVERSION(irNode);
 				return irNode;
 			}
 
@@ -676,6 +681,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 				);
 			}
 
+			END_LOG_EXPR_CONVERSION(irNode);
 			return irNode;
 		}
 
@@ -697,6 +703,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
 					 packedArgs);
 
+			END_LOG_EXPR_CONVERSION(irNode);
 			return irNode;
 		}
 
@@ -704,8 +711,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 
 		auto lambdaExpr = core::static_pointer_cast<const core::Expression>(
 				convFact.convertFunctionDecl(definition));
-
-		return (irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs));
+			
+		irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
+		END_LOG_EXPR_CONVERSION(irNode);
+		return irNode;
 	} 
 
 
@@ -727,7 +736,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 		auto funcTy = subTy.as<core::FunctionTypePtr>();
 
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
-		return irNode = builder.callExpr(funcPtr, args);
+		irNode = builder.callExpr(funcPtr, args);
+		END_LOG_EXPR_CONVERSION(irNode);
+		return irNode;
 	} 
 	
 	assert( false && "Call expression not referring a function");
@@ -1089,16 +1100,15 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			 * non REF type. What we need to do is introduce a declaration for these variables and use the created
 			 * variable on the stack instead of the input parameters
 			 */
-			lhs = wrapVariable(binOp->getLHS());
-
+			// FIXME: checkout this 
+			//lhs = wrapVariable(binOp->getLHS());
+			
 			// make sure the lhs is a L-Value
-			lhs = asLValue(lhs); // FIXME: must have an implicit cast, or deref operation... dont we?
-
+			lhs = asLValue(lhs);
 
 			// bools are not casted to int in AST
-			if (gen.isBool(rhs->getType()))
+			if (gen.isPrimitive(rhs->getType()))
 				rhs = utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
-			
 			
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
@@ -1111,11 +1121,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 
 	// Operators && and || introduce short circuit operations, this has to be directly supported in the IR.
 	if ( baseOp == BO_LAnd || baseOp == BO_LOr ) {
-		lhs = utils::cast(lhs, gen.getBool());
-		rhs = utils::cast(rhs, gen.getBool());
-		// lazy evaluation of RHS
-		exprTy = gen.getBool();
+		lhs = utils::castToBool(lhs);
+		rhs = utils::castToBool(rhs);
 
+		// lazy evaluation of RHS
+		// generate a bind call
+		exprTy = gen.getBool();
 		rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 	}
 
@@ -1129,8 +1140,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 		" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 
-		if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
-				binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
+		if (binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
+			binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
 			
 			lhs = utils::cast(lhs, exprTy);
 			// check if lhs is not an ocl-vector, in this case create a vector form the scalar
@@ -1166,53 +1177,43 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		}
 
 		if (!core::analysis::isRefType(rhs->getType()) && 
-			(utils::isRefArray(lhs->getType()) || utils::isRefVector(lhs->getType()))
-		) {
+			(utils::isRefArray(lhs->getType()) || utils::isRefVector(lhs->getType()))) {
 			doPointerArithmetic();	
 			return (retIr = rhs);
 		}
 
 		if (!core::analysis::isRefType(lhs->getType()) && 
-			(utils::isRefArray(rhs->getType()) || utils::isRefVector(rhs->getType()))
-		) {
+			(utils::isRefArray(rhs->getType()) || utils::isRefVector(rhs->getType()))) {
 			std::swap(rhs, lhs);
 			doPointerArithmetic();	
 			return (retIr = rhs);
 		}
 	
 		if (utils::isRefArray(lhs->getType()) &&  utils::isRefArray(rhs->getType()) &&
-			baseOp == BO_Sub)
-		{
+			baseOp == BO_Sub) {
 			return retIr = builder.callExpr( gen.getArrayRefDistance(), lhs, rhs);
 		}
 
-		if ( lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType)
-		{
-			// ----------------------------- Hack begin --------------------------------
-			// TODO: this is a quick solution => maybe clang allows you to determine the actual type
-			// => otherwise the sub-type checks within the core may be used
-			//
-			// Bug fixed by this:
-			//		when multiplying an integer with a double, the double is casted to an integer and the
-			//		results is an integer.
-			//
-
-			// check whether result type needs to be adjusted
-			// if (*lhsTy != *rhsTy) {
-			//	// if second argument is a real
-			//	if (!gen.isReal(lhsTy) && gen.isReal(rhsTy)) {
-			//		exprTy = rhsTy;
-			//	}
-			//}
-			// ----------------------------- Hack end --------------------------------
+		if (lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
 			// all binary operators have the same input and result types
 			if (baseOp != BO_LAnd && baseOp != BO_LOr) {
+
 				lhs = utils::cast(lhs, convFact.convertType( GET_TYPE_PTR(binOp->getLHS())) );
 				rhs = utils::cast(rhs, convFact.convertType( GET_TYPE_PTR(binOp->getRHS())) );
 				
 				// LOG(INFO) << lhs->getType() << " " << rhs->getType(); 
 				if (*lhs->getType()==*rhs->getType()) {
 					exprTy = lhs->getType();
+				}
+				else{
+					// both expressions have same type but different precission
+					// one of the two expressions has widder precission this is the return value we want
+					if ( utils::getPrecission(lhs->getType(),gen) < utils::getPrecission(rhs->getType(),gen)){
+						exprTy = rhs->getType();
+					}
+					else{
+						exprTy = lhs->getType();
+					}
 				}
 				// LOG(INFO) << exprTy;
 			}
@@ -1234,26 +1235,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		// check if there is a kernelFile annotation
 		ocl::attatchOclAnnotation(rhs, binOp, convFact);
 	}
-
 	assert(opFunc);
-
-	/*if ( !isAssignment ) {*/
-	//// We know thie operator now we have to make sure that all the arguments are of the correct type
-	//core::FunctionTypePtr funcTy = core::static_pointer_cast<const core::FunctionType>( opFunc->getType() );
-	//assert(funcTy->getParameterTypes().size() == 2);
-	//core::TypePtr lhsFuncTy = funcTy->getParameterTypes()[0];
-	//if (!gen.isUIntGen(lhsFuncTy) && !gen.isRealGen(lhsFuncTy) && !gen.isIntGen(lhsFuncTy)) {
-	//lhs = cast(lhsFuncTy, lhs);
-	//}
-	//core::TypePtr rhsFuncTy = funcTy->getParameterTypes()[1];
-	//if (!gen.isUIntGen(rhsFuncTy) && !gen.isRealGen(rhsFuncTy) && !gen.isIntGen(rhsFuncTy)) {
-	//rhs = cast(rhsFuncTy, rhs);
-	//}
-	//if (*lhsFuncTy == *rhsFuncType && *lhs->getType() != *rhs->getType()) {
-	//// we still need to adjust
-	//}
-	/*}*/
-	// add source code annotation to the rhs if present
 	
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 				" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
@@ -1429,11 +1411,11 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 
 	// FIXME: use new utils
 	//condExpr = utils::cast(condExpr, gen.getBool());
-	condExpr = utils::castToBool(condExpr,builder);
+	condExpr = utils::castToBool(condExpr);
 
 	// Dereference eventual references
-	if ( retTy->getNodeType() == core::NT_RefType && !utils::isRefArray(retTy) ) 
-	{
+	if ( retTy->getNodeType() == core::NT_RefType && !utils::isRefArray(retTy) ) {
+
 		retTy = GET_REF_ELEM_TYPE(retTy);
 	}
 
@@ -1610,7 +1592,15 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitDeclRefExpr(const cla
 	core::ExpressionPtr retExpr;
 	if (const ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())) {
 		VLOG(2) << "Parameter type: " << convFact.convertType(parmDecl->getOriginalType().getTypePtr() );
-		return ( retIr = convFact.lookUpVariable( parmDecl ) );
+		retIr = convFact.lookUpVariable( parmDecl );
+		
+		auto fit = ctx.wrapRefMap.find(retIr.as<core::VariablePtr>());
+		if (fit == ctx.wrapRefMap.end()) {
+			fit = ctx.wrapRefMap.insert(std::make_pair(retIr.as<core::VariablePtr>(),
+													   builder.variable(builder.refType(retIr->getType())))).first;
+		}
+
+		return fit->second;
 	}
 	if ( const VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
 

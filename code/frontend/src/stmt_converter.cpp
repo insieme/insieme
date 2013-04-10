@@ -51,6 +51,7 @@
 
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
@@ -215,27 +216,36 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		const clang::VarDecl* iv = loopAnalysis.getInductionVar();
 		core::ExpressionPtr fakeInductionVar = convFact.lookUpVariable(iv);
-		core::ExpressionPtr saveInductionVar = fakeInductionVar;
-
-		core::VariablePtr inductionVar;
-
+	
 		// before the body is visited we have to make sure to register the loop induction variable
 		// with the correct type
-		auto fit = convFact.ctx.varDeclMap.find(iv);
-		if (fit != convFact.ctx.varDeclMap.end()) {
-			fit->second = builder.variable(convFact.convertType(GET_TYPE_PTR(iv)));
-			inductionVar = fit->second;
-		} else {
-			// this is a new variable therefore declared by this loop stmt
-			inductionVar = builder.variable(convFact.convertType(GET_TYPE_PTR(iv)));
-			// Add the induction variable to the varDeclMap
-			fit = convFact.ctx.varDeclMap.insert(std::make_pair(loopAnalysis.getInductionVar(), inductionVar)).first;
-		}
-
-		assert(gen.isInt(inductionVar->getType()) && "Non integral iterators not supported");
+		core::VariablePtr inductionVar = builder.variable(convFact.convertType(GET_TYPE_PTR(iv)));
 
 		// Visit Body
-		stmtutils::StmtWrapper body = tryAggregateStmts(builder, Visit(forStmt->getBody()));
+		// substitute all usage of the induction variable (original) by the corrected induction var
+		// and build the body compound
+		StatementList stmtsOld = Visit(forStmt->getBody());
+	
+		// after evaluating loop body, we reconsider the induction var,
+		// it might be a parameter wrapper, first used in the loop
+		if (llvm::isa<clang::ParmVarDecl>(iv)) {
+			auto fit = convFact.ctx.wrapRefMap.find(fakeInductionVar.as<core::VariablePtr>());
+			if (fit != convFact.ctx.wrapRefMap.end()) {
+				fakeInductionVar = fit->second;	
+			}
+		}
+
+		StatementList stmtsNew;
+
+		for (auto stmt : stmtsOld){
+			auto tmpStmt = core::transform::replaceAllGen(mgr, stmt, builder.deref(fakeInductionVar) , inductionVar, true);
+			stmtsNew.push_back(tmpStmt);
+
+			//TODO: if after substitutions, there is still any usage of the old induction variable
+			//is because it hasn't been derefed  (left-sided) so is being modified inside of the
+			//loop therefore we need to avoid for form and convert to while
+		}
+		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsNew);
 
 		core::ExpressionPtr incExpr  = loopAnalysis.getIncrExpr();
 		incExpr = utils::castScalar(inductionVar->getType(), incExpr);
@@ -244,31 +254,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		assert(inductionVar->getType()->getNodeType() != core::NT_RefType);
 
-		// The loop is using as induction variable a function parameter, therefore we have to
-		// introduce a new variable which acts as loop induction variable
-		if (llvm::isa<clang::ParmVarDecl>(iv)) {
-			core::VariablePtr var = core::static_pointer_cast<const core::VariablePtr>(saveInductionVar);
-			auto fit = convFact.ctx.wrapRefMap.find(var);
-
-			if (fit == convFact.ctx.wrapRefMap.end()) {
-				fit = convFact.ctx.wrapRefMap.insert(
-						std::make_pair(var, builder.variable(builder.refType(inductionVar->getType())))).first;
-			}
-			fakeInductionVar = fit->second;
-		}
-
-		assert(inductionVar && fakeInductionVar);
-
-		if (fakeInductionVar->getNodeType() == core::NT_Variable)
-			fit->second = core::static_pointer_cast<const core::VariablePtr>(fakeInductionVar);
-		else
-			convFact.ctx.varDeclMap.erase(fit);
-
 		stmtutils::StmtWrapper initExpr = Visit( forStmt->getInit() );
-
-		if (llvm::isa<clang::ParmVarDecl>(iv)) {
-			fit->second = core::static_pointer_cast<const core::VariablePtr>(saveInductionVar);
-		}
 
 		if (!initExpr.isSingleStmt()) {
 			assert(core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) &&
@@ -956,7 +942,6 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitCompoundStmt(clang
 
 	START_LOG_STMT_CONVERSION(compStmt);
 	core::StatementPtr retIr;
-	LOG_STMT_CONVERSION(retIr);
 
 	bool hasReturn = false;
 
@@ -984,7 +969,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitCompoundStmt(clang
 
 	// check for datarange pragma
 	attatchDatarangeAnnotation(retIr, compStmt, convFact);
-
+	END_LOG_STMT_CONVERSION(retIr);
 	return retIr;
 }
 

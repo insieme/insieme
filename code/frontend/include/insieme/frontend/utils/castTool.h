@@ -44,11 +44,12 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
+	std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
 
 	/**
 	 * casts to bool an expression
 	 */
-	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr, const insieme::core::IRBuilder& builder);
+	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr);
 
 	/**
 	 * cast between 2 scalar types an IR expression

@@ -35,6 +35,7 @@
  */
 
 #include "insieme/frontend/convert.h"
+#include "insieme/frontend/utils/ir_cast.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/unused.h"
@@ -68,39 +69,38 @@ namespace frontend {
 namespace utils {
 
 
-namespace {
 
-	// FIXME: we can do this in a smarter way
-	inline std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen){
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// FIXME: we can do this in a smarter way
+inline std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen){
 
-		if (gen.isReal(type)){
-		 	if 		(gen.isReal4(type)) return 4;
-			else if (gen.isReal8(type)) return 8;
-			else if (gen.isFloat(type)) return 4;
-			else if (gen.isDouble(type)) return 8;
-		}
-		else if (gen.isSignedInt(type)){
-		 	if 		(gen.isInt1(type)) return 1;
-			else if (gen.isInt2(type)) return 2;
-			else if (gen.isInt4(type)) return 4;
-			else if (gen.isInt8(type)) return 8;
-			else if (gen.isInt16(type))return 16;
-		}
-		else if (gen.isUnsignedInt(type)){
-		 	if 		(gen.isUInt1(type)) return 1;
-			else if (gen.isUInt2(type)) return 2;
-			else if (gen.isUInt4(type)) return 4;
-			else if (gen.isUInt8(type)) return 8;
-			else if (gen.isUInt16(type))return 16;
-		}
-		else if (gen.isBool(type) || gen.isChar(type))
-			return 1;
-
-		return 0;
+	if (gen.isReal(type)){
+		if 		(gen.isReal4(type)) return 4;
+		else if (gen.isReal8(type)) return 8;
+		else if (gen.isFloat(type)) return 4;
+		else if (gen.isDouble(type)) return 8;
 	}
+	else if (gen.isSignedInt(type)){
+		if 		(gen.isInt1(type)) return 1;
+		else if (gen.isInt2(type)) return 2;
+		else if (gen.isInt4(type)) return 4;
+		else if (gen.isInt8(type)) return 8;
+		else if (gen.isInt16(type))return 16;
+	}
+	else if (gen.isUnsignedInt(type)){
+		if 		(gen.isUInt1(type)) return 1;
+		else if (gen.isUInt2(type)) return 2;
+		else if (gen.isUInt4(type)) return 4;
+		else if (gen.isUInt8(type)) return 8;
+		else if (gen.isUInt16(type))return 16;
+	}
+	else if (gen.isBool(type) || gen.isChar(type))
+		return 1;
 
-} // anonimous namespace
-
+	return 0;
+}
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -110,6 +110,14 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	const core::TypePtr& exprTy = expr->getType();
 	core::IRBuilder builder( exprTy->getNodeManager() );
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+
+	std::cout << "####### Expr: #######" << std::endl;
+	dumpDetail(expr);
+	std::cout << "####### Expr Type: #######" << std::endl;
+	dumpDetail(exprTy);
+	std::cout << "####### cast Type: #######" << std::endl;
+	dumpDetail(targetTy);
+
    	unsigned char code;
 	// identify source type, to write right cast
 	if (gen.isSignedInt (exprTy)) 	code = 1;
@@ -127,15 +135,26 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 
 	core::ExpressionPtr op;
 	bool precision = true;
-	core::LiteralPtr bytes = builder.getIntParamLiteral(getPrecission(targetTy, gen));
+	core::LiteralPtr bytes    = builder.getIntParamLiteral(getPrecission(targetTy, gen));
+	core::LiteralPtr bytesSrc = builder.getIntParamLiteral(getPrecission(exprTy, gen));
 	switch(code){
-		case 11: case 22: case 33:
-		case 44: case 55: // no cast;
+		case 11: 
+			// only if target precission is smaller, we may have a precission loosse. 
+			if (bytes < bytesSrc) return  builder.callExpr(gen.getIntPrecisionFix(), expr, bytes);
+			else return expr;
+		case 22: 
+			if (bytes < bytesSrc) return  builder.callExpr(gen.getUintPrecisionFix(), expr, bytes);
+			else return expr;
+		case 33:
+			if (bytes < bytesSrc) return  builder.callExpr(gen.getRealPrecisionFix(), expr, bytes);
+			else return expr;
+		case 44: 
+		case 55: // no cast;
 			// this is a cast withing the same type.
 			// is a preccision adjust, if is on the same type,
 			// no need to adjust anything
+			return expr;
 			
-			return  builder.callExpr(gen.getTypeCast(), expr,  builder.getTypeLiteral(targetTy));
 			break;
 		case 12: op = gen.getUnsignedToInt(); break;
 		case 13: op = gen.getRealToInt(); break;
@@ -180,11 +199,22 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-core::ExpressionPtr castToBool (const core::ExpressionPtr& expr, const insieme::core::IRBuilder& builder){
+core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 	
+	const core::TypePtr& exprTy = expr->getType();
+	core::IRBuilder builder( exprTy->getNodeManager() );
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+
 	if (gen.isBool(expr->getType())) return expr;
+
+	if (isRefArray(expr->getType())) {
+		return builder.callExpr(gen.getBool(), gen.getIsNull(), expr);
+	}
 	if (!gen.isInt(expr->getType())  && !gen.isReal(expr->getType()) && !gen.isChar(expr->getType())){
+
+		dumpDetail(expr);
+		std::cout << "****" << std::endl;
+		dumpDetail(expr->getType());
 		assert(false && "this type can not be converted now to bool. implement it! ");
 	}
 
@@ -201,15 +231,15 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	core::TypePtr&& exprTy = expr->getType();
 
-	//std::cout << "####### Expr: #######" << std::endl;
-	//dumpDetail(expr);
-	//std::cout << "####### Expr Type: #######" << std::endl;
-	//dumpDetail(exprTy);
-	//std::cout << "####### cast Type: #######" << std::endl;
-	//dumpDetail(targetTy);
-	//std::cout << "####### clang: #######" << std::endl;
-	//castExpr->dump();
-	//std::cout << std::endl;
+//	std::cout << "####### Expr: #######" << std::endl;
+//	dumpDetail(expr);
+//	std::cout << "####### Expr Type: #######" << std::endl;
+//	dumpDetail(exprTy);
+//	std::cout << "####### cast Type: #######" << std::endl;
+//	dumpDetail(targetTy);
+//	std::cout << "####### clang: #######" << std::endl;
+//	castExpr->dump();
+//	std::cout << std::endl;
 
 	// it might be that the types are already fixed:
 	// like LtoR in arrays, they will allways be a ref<...>
