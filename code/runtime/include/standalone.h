@@ -348,10 +348,12 @@ bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_regist
 void _irt_runtime_init_region_instrumentation(irt_context* context) {
 
 	// obtain mode from environment
-	irt_inst_region_mode mode = IRT_INST_REGION_NONE;
+	irt_inst_region_mode mode = IRT_INST_REGION_DETAIL;
 	const char* selection = getenv(IRT_INST_REGION_MODE_ENV);
 	if(selection) {
-		if (selection[0] == 'a' || selection[0] == 'A') {
+		if (selection[0] == 'n' || selection[0] == 'N') {
+			mode = IRT_INST_REGION_NONE;
+		} else if (selection[0] == 'a' || selection[0] == 'A') {
 			mode = IRT_INST_REGION_AGGREGATED;
 		} else if (selection[0] == 'd' || selection[0] == 'D') {
 			mode = IRT_INST_REGION_DETAIL;
