@@ -88,10 +88,8 @@ void irt_init_globals() {
 
 	irt_log_init();
 
-#if defined(IRT_ENABLE_INSTRUMENTATION) || defined(IRT_ENABLE_REGION_INSTRUMENTATION)
+	// this call seems superflous but it is not - needs to be investigated TODO
 	irt_time_ticks_per_sec_calibration_mark();
-#endif
-
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
 	err_flag |= irt_tls_key_create(&irt_g_error_key);
@@ -111,9 +109,8 @@ void irt_init_globals() {
 #ifndef IRT_MIN_MODE
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_init();
 #endif
-#if defined(IRT_ENABLE_INSTRUMENTATION) || defined(IRT_ENABLE_REGION_INSTRUMENTATION)
+	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark();
-#endif
 #ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 	irt_energy_select_instrumentation_method();
 	irt_temperature_select_instrumentation_method();
@@ -181,9 +178,8 @@ void irt_exit_handler() {
 #endif
 	irt_exit_handling_done = true;
 	_irt_worker_end_all();
-#if defined(IRT_ENABLE_INSTRUMENTATION) || defined(IRT_ENABLE_REGION_INSTRUMENTATION)
+	// keep this call even without instrumentation, it might be needed for scheduling purposes
 	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
-#endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	if(irt_g_instrumentation_event_output_is_enabled)
 		irt_inst_event_data_output_all(irt_g_instrumentation_event_output_is_binary);
@@ -193,7 +189,7 @@ void irt_exit_handler() {
 
 #ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 	for(int i = 0; i < irt_g_worker_count; ++i) {
-		irt_inst_region_data_output(irt_g_workers[i]);
+		irt_inst_region_detail_data_output(irt_g_workers[i]);
 		irt_inst_destroy_region_data_table(irt_g_workers[i]->instrumentation_region_data);
 	}
 	PAPI_shutdown();
@@ -298,9 +294,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 		irt_instrumentation_init_energy_instrumentation();
 	#endif
 
-	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		irt_inst_set_region_instrumentation(true);
-	#endif
 	#ifdef IRT_ENABLE_INSTRUMENTATION
 		irt_inst_set_all_instrumentation_from_env();
 	#endif
@@ -352,10 +345,31 @@ bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_regist
 	return false;
 }
 
+void _irt_runtime_init_region_instrumentation(irt_context* context) {
+
+	// obtain mode from environment
+	irt_inst_region_mode mode = IRT_INST_REGION_NONE;
+	const char* selection = getenv(IRT_INST_REGION_MODE_ENV);
+	if(selection) {
+		if (selection[0] == 'a' || selection[0] == 'A') {
+			mode = IRT_INST_REGION_AGGREGATED;
+		} else if (selection[0] == 'd' || selection[0] == 'D') {
+			mode = IRT_INST_REGION_DETAIL;
+		} else {
+			IRT_ASSERT(false, IRT_ERR_INVALIDARGUMENT, "Invalid selection of region-instrumentation mode!");
+		}
+	}
+
+	// set mode
+	irt_inst_region_set_mode(context, mode);
+}
+
 void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation_id impl_id, irt_lw_data_item *startup_params) {
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count);
 	irt_tls_set(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
+	_irt_runtime_init_region_instrumentation(context);
+
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;
 	}

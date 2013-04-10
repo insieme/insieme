@@ -72,16 +72,7 @@ void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item
 
 #ifndef IRT_RUNTIME_TUNING_EXTENDED
 
-void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 walltime, irt_loop_sched_data* sched_data) {
-
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_wi_implementation *impl = &irt_context_get_current()->impl_table[impl_id];
-
-	if(impl->variants[0].features.implicit_region_id >= 0) {
-		irt_inst_aggregated_data_insert_pfor(impl->variants[0].features.implicit_region_id, walltime, sched_data);
-	}
-#endif
-}
+void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 walltime, irt_loop_sched_data* sched_data) { }
 
 #else
 

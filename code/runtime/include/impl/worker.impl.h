@@ -213,7 +213,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 #endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		irt_inst_region_set_timestamp(wi);
+		irt_inst_region_continue(wi);
 #endif
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_STARTED, wi->id);
 #ifndef IRT_TASK_OPT
@@ -241,7 +241,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 #endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-		irt_inst_region_set_timestamp(wi);
+		irt_inst_region_continue(wi);
 #endif
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, wi->id);
 		lwt_continue(&wi->stack_ptr, &self->basestack);

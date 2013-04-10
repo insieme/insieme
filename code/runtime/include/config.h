@@ -89,6 +89,7 @@
 #define IRT_INST_WORKER_EVENT_TYPES_ENV "IRT_INST_WORKER_EVENT_TYPES"
 #define IRT_INST_WORKER_PD_BLOCKSIZE	512
 #define IRT_INST_REGION_LIST_SIZE 1024
+#define IRT_INST_REGION_MODE_ENV "IRT_INST_REGION_MODE"
 
 // performance counters
 // environment variable holding the papi events, separated by colons
