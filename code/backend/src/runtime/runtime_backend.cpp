@@ -90,6 +90,7 @@ namespace runtime {
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
 				getBasicPreProcessorSequence(),
+				makePreProcessor<runtime::InstrumentationSupport>(),				// needs to be before the conversion to work-items
 				makePreProcessor<runtime::WorkItemizer>(includeEffortEstimation),
 				makePreProcessor<runtime::StandaloneWrapper>()
 		);

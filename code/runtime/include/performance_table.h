@@ -145,19 +145,6 @@ typedef struct _irt_instrumentation_region_data_table {
 	irt_instrumentation_region_data* data;
 } irt_instrumentation_region_data_table;
 
-typedef struct _irt_instrumentation_aggregated_data {
-	uint64 cputime;
-	uint64 walltime;
-	uint32 number_of_workers;
-	int64 id;
-} irt_instrumentation_aggregated_data;
-
-typedef struct _irt_instrumentation_aggregated_data_table {
-	uint32 size;
-	uint32 number_of_elements;
-	irt_instrumentation_aggregated_data* data;
-} irt_instrumentation_aggregated_data_table;
-
 #ifdef USE_OPENCL
 
 typedef struct _irt_inst_ocl_performance_helper {

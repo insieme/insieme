@@ -40,6 +40,7 @@
 
 #include "irt_optimizer.h"
 #include "irt_logging.h"
+#include "instrumentation.h"
 
 #include "utils/lookup_tables.h"
 #include "impl/worker.impl.h"
@@ -58,6 +59,7 @@ irt_context* irt_context_create_standalone(init_context_fun* init_fun, cleanup_c
 	context->client_app = NULL;
 	init_fun(context);
 	irt_optimizer_context_startup(context);
+	irt_inst_region_init(context);
 	irt_context_table_insert(context);
 	return context;
 }
@@ -69,11 +71,15 @@ irt_context* irt_context_create(irt_client_app* app) {
 	context->client_app->init_context(context);
 	irt_log_comment("starting new context");
 	irt_optimizer_context_startup(context);
+	irt_inst_region_init(context);
 	irt_context_table_insert(context);
 	return context;
 }
 
 void irt_context_destroy(irt_context* context) {
-	context->client_app->cleanup_context(context);
+	irt_inst_region_finalize(context);
+	if (context->client_app && context->client_app->cleanup_context) {
+		context->client_app->cleanup_context(context);
+	}
 	free(context);
 }

@@ -45,11 +45,14 @@
 #include "instrumentation.h"
 #include "impl/error_handling.impl.h"
 
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 #include "papi_helper.h"
 #include "utils/impl/energy.impl.h"
-#include "utils/impl/timing.impl.h"
 #include "utils/impl/temperature.impl.h"
+#endif
+
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#include "utils/impl/timing.impl.h"
 #endif
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
@@ -474,24 +477,90 @@ void irt_inst_event_data_output(irt_worker* worker, bool binary_format) {}
 
 #endif // IRT_ENABLE_INSTRUMENTATION
 
+
+
+
+
+
+
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//
+//																				Regions
+//
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 #ifndef IRT_ENABLE_REGION_INSTRUMENTATION
-irt_instrumentation_region_data_table* irt_inst_create_region_data_table() { return NULL; }
-void irt_inst_destroy_region_data_table(irt_instrumentation_region_data_table* table) {}
-void irt_inst_region_start(region_id id) {}
-void irt_inst_region_end(region_id id) {}
-void irt_inst_region_data_output(irt_worker* worker) {}
-void irt_inst_aggregated_data_output() {}
-void irt_inst_region_set_timestamp(irt_work_item* wi) {}
-void irt_inst_region_add_time(irt_work_item* wi) {}
-#endif
 
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+typedef struct _irt_inst_region_data {} irt_inst_region_data;
 
+void irt_inst_region_start(irt_context* context, irt_worker* wi, region_id id) { }
+void irt_inst_region_end(irt_context* context, irt_worker* wi, region_id id) { }
+
+void irt_inst_region_start_pfor(irt_context* context, region_id id) { }
+void irt_inst_region_end_pfor(irt_context* context, region_id id, uint64 walltime, uint64 cputime) { }
+
+void irt_inst_region_suspend(irt_work_item* wi) { }
+void irt_inst_region_continue(irt_work_item* wi) { }
+
+void irt_inst_region_init(irt_context* context) {};
+void irt_inst_region_finalize(irt_context* context) {};
+
+void irt_inst_region_set_mode(irt_context* context, irt_inst_region_mode mode) { }
+void irt_inst_region_set_mode_for_region(irt_context* context, region_id id, irt_inst_region_mode mode) { }
+
+#else
+
+// make sure scheduling policy is fixed to static
 #if !(IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC)
 	#error "IRT INSTRUMENTATION ONLY SUPPORTS STATIC SCHEDULING AT THIS POINT"
 #endif
 
-irt_instrumentation_aggregated_data_table* irt_g_aggregated_performance_table;
+
+// ------------------------------------------------------------- type definitions
+
+
+typedef struct __irt_inst_region_setup {
+	void (*region_start)(irt_context* context, irt_worker* worker, region_id id);
+	void (*region_end)(irt_context* context, irt_worker* worker, region_id id);
+	void (*region_start_pfor)(irt_context* context, region_id id);
+	void (*region_end_pfor)(irt_context* context, region_id id, uint64 walltime, uint64 cputime);
+} _irt_inst_region_setup;
+
+typedef struct __irt_inst_aggregated_data {
+	uint64 cputime;
+	uint64 walltime;
+} _irt_inst_aggregated_data;
+
+typedef struct _irt_inst_region_data {
+	_irt_inst_region_setup setup;
+	_irt_inst_aggregated_data data;
+} irt_inst_region_data;
+
+// ------------------------------------------------------------- utilities
+
+#define IRT_INST_REGION_CHECK_ID(context, id) \
+		IRT_ASSERT(0 <= id && id < context->num_regions, IRT_ERR_INSTRUMENTATION, "Instrumentation: Invalid region specified!");
+
+
+
+static inline void _irt_inst_region_set_timestamp(irt_work_item* wi) {
+	wi->last_timestamp = irt_time_ticks();
+}
+
+static inline void _irt_inst_region_add_time(irt_work_item* wi) {
+	if(wi->region) {
+		uint64 temp = irt_time_ticks();
+		irt_atomic_fetch_and_add(&(wi->region->cputime), temp - wi->last_timestamp);		// @Philipp: this might not be necessary
+	}
+}
+
+
+// ---------- region list management --------------
+
+/**
+ * The region list is the stack maintained by workers to realize support for nested regions.
+ */
+
 
 irt_region_list* irt_inst_create_region_list() {
 	irt_region_list* list = (irt_region_list*)malloc(sizeof(irt_region_list));
@@ -527,11 +596,124 @@ void irt_inst_region_list_recycle_item(irt_worker* worker, irt_region* region) {
 	worker->region_reuse_list->head = region;
 }
 
-void (*irt_inst_region_start)(region_id id) = &_irt_inst_region_start;
-void (*irt_inst_region_end)(region_id id) = &_irt_inst_region_end;
 
-void _irt_no_inst_region_start(region_id id) { }
-void _irt_no_inst_region_end(region_id id) { }
+
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//																		aggregated data table (efficiency log)
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+void _irt_inst_region_aggregated_data_insert(irt_context* context, int64 id, uint64 walltime, uint64 cputime) {
+
+	// check region id
+	IRT_INST_REGION_CHECK_ID(context, id);
+
+	// get entry
+	_irt_inst_aggregated_data* apd = &(context->inst_region_data[id].data);
+
+	// update values (atomic operations to synchronize access)
+	irt_atomic_fetch_and_add(&apd->walltime, walltime);
+	irt_atomic_fetch_and_add(&apd->cputime, cputime);
+}
+
+
+void _irt_inst_region_start_aggregated(irt_context* context, irt_worker* worker, region_id id) {
+
+	irt_region* region = irt_inst_region_list_new_item(worker);
+	region->cputime = 0;
+	region->start_time = irt_time_ticks();
+	region->next = worker->cur_wi->region;
+
+	_irt_inst_region_add_time(worker->cur_wi);
+	worker->cur_wi->region = region;
+	_irt_inst_region_set_timestamp(worker->cur_wi);
+}
+
+void _irt_inst_region_end_aggregated_internal(irt_worker* worker) {
+	// pop top element of region stack
+	irt_region* ending_region = worker->cur_wi->region;
+	worker->cur_wi->region = ending_region->next;
+
+	// update cpu time counter of surrounding region if present
+	if(worker->cur_wi->region) // if the ended region was a nested one, add execution time to outer region
+		irt_atomic_fetch_and_add(&(worker->cur_wi->region->cputime), ending_region->cputime);		// @Philipp: this should not be required to be atomic!
+
+	// recycle region
+	irt_inst_region_list_recycle_item(worker, ending_region);
+}
+
+void _irt_inst_region_end_aggregated(irt_context* context, irt_worker* worker, region_id id) {
+	uint64 timestamp = irt_time_ticks();
+
+	// TODO: request worker as argument!
+	// TODO: improve the following calls ... (timestamp is already available)
+	_irt_inst_region_add_time(worker->cur_wi);
+	_irt_inst_region_set_timestamp(worker->cur_wi);
+
+	// record data
+	uint64 ending_region_cputime = worker->cur_wi->region->cputime;
+	_irt_inst_region_aggregated_data_insert(context, id, timestamp - worker->cur_wi->region->start_time, ending_region_cputime);
+
+	// pop nested region stack
+	_irt_inst_region_end_aggregated_internal(worker);
+}
+
+void _irt_inst_region_start_pfor_aggregated(irt_context* context, region_id id) {
+	// forward call to standard implementation using current worker
+	_irt_inst_region_start_aggregated(context, irt_worker_get_current(), id);
+}
+
+void _irt_inst_region_end_pfor_aggregated(irt_context* context, region_id id, uint64 walltime, uint64 cputime) {
+
+	// accumulated data
+	if (walltime > 0 || cputime > 0) {
+		_irt_inst_region_aggregated_data_insert(context, id, walltime, cputime);
+	}
+
+	// pop nested region stack
+	_irt_inst_region_end_aggregated_internal(irt_worker_get_current());
+}
+
+void _irt_inst_region_aggregated_data_output(uint32 num_regions, irt_inst_region_data* table) {
+
+	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no performance data!")
+
+	// environmental variable can hold the output path for the performance logs, default is .
+	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
+	char defaultoutput[] = ".";
+	char* outputprefix = defaultoutput;
+	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
+
+	struct stat st;
+	int stat_retval = stat(outputprefix,&st);
+	if(stat_retval != 0)
+		mkdir(outputprefix, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for efficiency log writing: %s", strerror(errno));
+
+	sprintf(outputfilename, "%s/worker_efficiency_log", outputprefix);
+
+	FILE* outputfile = fopen(outputfilename, "w");
+	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for efficiency log writing: %s", strerror(errno));
+
+
+	fprintf(outputfile, "#subject,id,wall_time(ns),cpu_time(ns)\n");
+
+	for(int i = 0; i < num_regions; ++i) {
+		fprintf(outputfile, "RG,%d,%lu,%lu\n",
+			i,
+			irt_time_convert_ticks_to_ns(table[i].data.walltime),
+			irt_time_convert_ticks_to_ns(table[i].data.cputime));
+	}
+	fclose(outputfile);
+}
+
+
+
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//																		detailed instrumentation log (performance log)
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 // =============== initialization functions ===============
 
@@ -559,40 +741,8 @@ void irt_inst_destroy_region_data_table(irt_instrumentation_region_data_table* t
 	}
 }
 
-void _irt_inst_aggregated_data_table_resize() {
-	irt_instrumentation_aggregated_data_table* table = irt_g_aggregated_performance_table;
-	table->size = table->size * 2;
-	table->data = (irt_instrumentation_aggregated_data*)realloc(table->data, sizeof(irt_instrumentation_aggregated_data)*table->size);
-	IRT_ASSERT(table->data != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Could not perform realloc for aggregated instrumentation data table: %s", strerror(errno))
-}
 
-void irt_inst_create_aggregated_data_table() {
-	irt_instrumentation_aggregated_data_table* table = (irt_instrumentation_aggregated_data_table*)malloc(sizeof(irt_instrumentation_aggregated_data_table));
-	table->size = IRT_INST_WORKER_PD_BLOCKSIZE * 2;
-	table->number_of_elements = 0;
-	table->data = (irt_instrumentation_aggregated_data*)malloc(sizeof(irt_instrumentation_aggregated_data) * table->size);
-	irt_g_aggregated_performance_table = table;
-}
-
-void irt_inst_destroy_aggregated_data_table() {
-	if(irt_g_aggregated_performance_table != NULL) {
-		if(irt_g_aggregated_performance_table->data != NULL)
-			free(irt_g_aggregated_performance_table->data);
-		free(irt_g_aggregated_performance_table);
-	}
-}
-
-void irt_inst_set_region_instrumentation(bool enable) {
-	if(enable) {
-		irt_inst_region_start = &_irt_inst_region_start;
-		irt_inst_region_end = &_irt_inst_region_end;
-	} else {
-		irt_inst_region_start = &_irt_no_inst_region_start;
-		irt_inst_region_end = &_irt_no_inst_region_end;
-	}
-}
-
-void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uint64 id) {
+void _irt_inst_region_detail_data_insert(irt_worker* worker, const int event, const uint64 id) {
 
 	irt_instrumentation_region_data_table* table = worker->instrumentation_region_data;
 		
@@ -688,68 +838,8 @@ void _irt_inst_region_data_insert(irt_worker* worker, const int event, const uin
 
 }
 
-void _irt_instrumentation_aggregated_data_insert(irt_worker* worker, int64 id, uint64 walltime, uint64 cputime) {
 
-	IRT_ASSERT(irt_g_aggregated_performance_table->number_of_elements <= irt_g_aggregated_performance_table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size")
-
-	if(irt_g_aggregated_performance_table->number_of_elements >= irt_g_aggregated_performance_table->size)
-		_irt_inst_aggregated_data_table_resize();
-	irt_instrumentation_aggregated_data* apd = &(irt_g_aggregated_performance_table->data[irt_g_aggregated_performance_table->number_of_elements++]);
-
-	apd->walltime = walltime;
-	apd->cputime = cputime;
-	//apd->number_of_workers = 1;
-	apd->number_of_workers = irt_g_worker_count;
-	apd->id = id;
-}
-
-void _irt_instrumentation_mark_start(region_id id) {
-	irt_worker* worker = irt_worker_get_current();
-	_irt_inst_event_insert(worker, IRT_INST_REGION_START, (uint64)id);
-	_irt_inst_region_data_insert(worker, IRT_INST_REGION_START, (uint64)id);
-
-	irt_region* region = irt_inst_region_list_new_item(worker);
-	region->cputime = 0;
-	region->start_time = irt_time_ticks();
-	region->next = worker->cur_wi->region;
-
-	irt_inst_region_add_time(worker->cur_wi);
-	worker->cur_wi->region = region;
-	irt_inst_region_set_timestamp(worker->cur_wi);
-}
-
-void _irt_instrumentation_mark_end(region_id id, bool insert_aggregated) {
-	uint64 timestamp = irt_time_ticks();
-	irt_worker* worker = irt_worker_get_current();
-	irt_inst_region_add_time(worker->cur_wi);
-	irt_inst_region_set_timestamp(worker->cur_wi);
-
-	uint64 ending_region_cputime = worker->cur_wi->region->cputime;
-
-	irt_region* region = worker->cur_wi->region;
-
-	if(insert_aggregated)
-		_irt_instrumentation_aggregated_data_insert(worker, id, timestamp - region->start_time, ending_region_cputime);
-
-	worker->cur_wi->region = region->next;
-	irt_inst_region_list_recycle_item(worker, region);
-
-	if(worker->cur_wi->region) // if the ended region was a nested one, add execution time to outer region
-		irt_atomic_fetch_and_add(&(worker->cur_wi->region->cputime), ending_region_cputime);
-
-	_irt_inst_event_insert(worker, IRT_INST_REGION_END, (uint64)id);
-	_irt_inst_region_data_insert(worker, IRT_INST_REGION_END, (uint64)id);
-}
-
-void _irt_inst_region_start(region_id id) { _irt_instrumentation_mark_start(id); }
-
-void _irt_inst_region_end(region_id id) { _irt_instrumentation_mark_end(id, true); }
-
-void _irt_inst_pfor_start(region_id id) { _irt_instrumentation_mark_start(id); }
-
-void _irt_inst_pfor_end(region_id id) { _irt_instrumentation_mark_end(id, false); }
-
-void irt_inst_region_data_output(irt_worker* worker) {
+void irt_inst_region_detail_data_output(irt_worker* worker) {
 	// environmental variable can hold the output path for the performance logs, default is .
 	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
@@ -838,7 +928,7 @@ void irt_inst_region_data_output(irt_worker* worker) {
 						break;
 					}
 			}
-				
+
 			IRT_ASSERT(start_data.timestamp != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Cannot find a matching start statement")
 
 			// single fprintf for performance reasons
@@ -900,64 +990,170 @@ void irt_inst_region_data_output(irt_worker* worker) {
 	fclose(outputfile);
 }
 
-void irt_inst_aggregated_data_output() {
-	// environmental variable can hold the output path for the performance logs, default is .
-	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
-	char defaultoutput[] = ".";
-	char* outputprefix = defaultoutput;
-	if(getenv(IRT_INST_OUTPUT_PATH_ENV)) outputprefix = getenv(IRT_INST_OUTPUT_PATH_ENV);
 
-	struct stat st;
-	int stat_retval = stat(outputprefix,&st);
-	if(stat_retval != 0)
-		mkdir(outputprefix, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+// the region start / end routines for aggregated and detailed modes
+void _irt_inst_region_start_detail(irt_context* context, irt_worker* worker, region_id id) {
 
-	IRT_ASSERT(stat(outputprefix,&st) == 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Error creating directory for efficiency log writing: %s", strerror(errno));
+	// add entry within detail log
+	_irt_inst_region_detail_data_insert(worker, IRT_INST_REGION_START, id);
 
-	sprintf(outputfilename, "%s/worker_efficiency_log", outputprefix);
+	// .. and within the aggregated log
+	_irt_inst_region_start_aggregated(context, worker, id);
 
-	FILE* outputfile = fopen(outputfilename, "w");
-	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for efficiency log writing: %s", strerror(errno));
+}
 
-	irt_instrumentation_aggregated_data_table* table = irt_g_aggregated_performance_table;
-	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no performance data!")
+void _irt_inst_region_end_detail(irt_context* context, irt_worker* worker, region_id id) {
 
-//	setlocale(LC_ALL, "");
+	// include the aggregated log ...
+	_irt_inst_region_end_aggregated(context, worker, id);
 
-	fprintf(outputfile, "#subject,id,wall_time(ns),cpu_time(ns),num_workers\n");
+	// ... and the details
+	_irt_inst_region_detail_data_insert(worker, IRT_INST_REGION_END, id);
 
-	for(int i = 0; i < table->number_of_elements; ++i) {
-		fprintf(outputfile, "RG,%lu,%lu,%lu,%u\n",
-			table->data[i].id,
-			irt_time_convert_ticks_to_ns(table->data[i].walltime),
-			irt_time_convert_ticks_to_ns(table->data[i].cputime),
-			table->data[i].number_of_workers);
+}
+
+void _irt_inst_region_start_pfor_detail(irt_context* context, region_id id) {
+
+	// add entry within detail log
+	_irt_inst_region_detail_data_insert(irt_worker_get_current(), IRT_INST_REGION_START, id);
+
+	// .. and within the aggregated log
+	_irt_inst_region_start_pfor_aggregated(context, id);
+
+}
+
+void _irt_inst_region_end_pfor_detail(irt_context* context, region_id id, uint64 walltime, uint64 cputime) {
+
+	// include the aggregated log ...
+	_irt_inst_region_end_pfor_aggregated(context, id, walltime, cputime);
+
+	// ... and the details
+	_irt_inst_region_detail_data_insert(irt_worker_get_current(), IRT_INST_REGION_END, id);
+
+}
+
+
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//																			region marking
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+void irt_inst_region_start(irt_context* context, irt_worker* worker, region_id id) {
+	IRT_INST_REGION_CHECK_ID(context, id);
+
+	// check whether region-start function is present
+	if (context->inst_region_data[id].setup.region_start) {
+		(*context->inst_region_data[id].setup.region_start)(context, worker, id);		// call it
 	}
-	fclose(outputfile);
 }
 
-void irt_inst_aggregated_data_insert_pfor(int64 id, uint64 walltime, irt_loop_sched_data* sched_data) {
+void irt_inst_region_end(irt_context* context, irt_worker* worker, region_id id) {
+	IRT_INST_REGION_CHECK_ID(context, id);
 
-	IRT_ASSERT(irt_g_aggregated_performance_table->number_of_elements <= irt_g_aggregated_performance_table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size")
-
-	if(irt_g_aggregated_performance_table->number_of_elements >= irt_g_aggregated_performance_table->size)
-		_irt_inst_aggregated_data_table_resize();
-	irt_instrumentation_aggregated_data* apd = &(irt_g_aggregated_performance_table->data[irt_g_aggregated_performance_table->number_of_elements++]);
-
-	apd->walltime = walltime;
-	apd->cputime = sched_data->cputime;
-	apd->number_of_workers = sched_data->policy.participants;
-	apd->id = id;
+	// check whether region-start function is present
+	if (context->inst_region_data[id].setup.region_end) {
+		(*context->inst_region_data[id].setup.region_end)(context, worker, id);		// call it
+	}
 }
 
-void irt_inst_region_set_timestamp(irt_work_item* wi) {
-	wi->last_timestamp = irt_time_ticks();
+void irt_inst_region_start_pfor(irt_context* context, region_id id) {
+	IRT_INST_REGION_CHECK_ID(context, id);
+
+	// check whether region-start function is present
+	if (context->inst_region_data[id].setup.region_start_pfor) {
+		(*context->inst_region_data[id].setup.region_start_pfor)(context, id);		// call it
+	}
 }
 
-void irt_inst_region_add_time(irt_work_item* wi) {
-	uint64 temp = irt_time_ticks();
-	if(wi->region)
-		irt_atomic_fetch_and_add(&(wi->region->cputime), temp - wi->last_timestamp);
+void irt_inst_region_end_pfor(irt_context* context, region_id id, uint64 walltime, uint64 cputime) {
+	IRT_INST_REGION_CHECK_ID(context, id);
+
+	// check whether region-start function is present
+	if (context->inst_region_data[id].setup.region_end_pfor) {
+		(*context->inst_region_data[id].setup.region_end_pfor)(context, id, walltime, cputime);		// call it
+	}
 }
+
+void irt_inst_region_suspend(irt_work_item* wi) {
+	_irt_inst_region_add_time(wi);
+}
+
+void irt_inst_region_continue(irt_work_item* wi) {
+	_irt_inst_region_set_timestamp(wi);
+}
+
+
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//																		instrumentation management
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+void irt_inst_region_init(irt_context* context) {
+
+	// ----- initialize region instrumentation table ---------
+
+	// create table
+	context->inst_region_data = (irt_inst_region_data*)malloc(sizeof(irt_inst_region_data) * context->num_regions);
+
+	// init table
+	for(uint32 i=0; i < context->num_regions; i++) {
+		context->inst_region_data[i].data.cputime = 0;
+		context->inst_region_data[i].data.walltime = 0;
+	}
+
+	// init mode
+	irt_inst_region_set_mode(context, IRT_INST_REGION_NONE);
+}
+
+void irt_inst_region_finalize(irt_context* context) {
+
+	// dump data - aggregated log
+	_irt_inst_region_aggregated_data_output(context->num_regions, context->inst_region_data);
+
+	// free region instrumentation data
+	free(context->inst_region_data);
+}
+
+void irt_inst_region_set_mode(irt_context* context, irt_inst_region_mode mode) {
+	// just set the same mode for all individual regions
+	for(uint32 i = 0; i<context->num_regions; i++) {
+		irt_inst_region_set_mode_for_region(context, i, mode);
+	}
+}
+
+void irt_inst_region_set_mode_for_region(irt_context* context, uint32 region_id, irt_inst_region_mode mode) {
+
+	// obtain pointer to setup of requested region
+	_irt_inst_region_setup* setup = &(context->inst_region_data[region_id].setup);
+
+	switch(mode) {
+		case IRT_INST_REGION_NONE: {
+			setup->region_start = NULL;
+			setup->region_end = NULL;
+			setup->region_start_pfor = NULL;
+			setup->region_end_pfor = NULL;
+			break;
+		}
+		case IRT_INST_REGION_AGGREGATED: {
+			setup->region_start = _irt_inst_region_start_aggregated;
+			setup->region_end = _irt_inst_region_end_aggregated;
+			setup->region_start_pfor = _irt_inst_region_start_pfor_aggregated;				// modified variant using current worker
+			setup->region_end_pfor = _irt_inst_region_end_pfor_aggregated;					// modified variant
+			break;
+		}
+		case IRT_INST_REGION_DETAIL: {
+			setup->region_start = _irt_inst_region_start_detail;
+			setup->region_end = _irt_inst_region_end_detail;
+			setup->region_start_pfor = _irt_inst_region_start_pfor_detail;
+			setup->region_end_pfor = _irt_inst_region_end_pfor_detail;
+			break;
+		}
+		default: {
+			IRT_ASSERT(false, IRT_ERR_INVALIDARGUMENT, "Invalid region instrumentation mode selected!");
+			break;
+		}
+	}
+}
+
+
 
 #endif

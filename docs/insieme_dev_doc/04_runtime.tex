@@ -90,7 +90,10 @@ Table \ref{tab:runtime:options:compile} summarizes the compile-time options avai
         IRT\_RUNTIME \_TUNING                & bool   & enables runtime tuning of parallel loop scheduling                                                                     & false         \\ \hline
         IRT\_RUNTIME \_TUNING\_EXTENDED       & bool   & enables extended runtime tuning of parallel loop scheduling                                                            & false         \\ \hline
         IRT\_ENABLE \_INSTRUMENTATION        & bool   & enables instrumentation of runtime objects                                                                             & false         \\ \hline
-        IRT\_ENABLE\_REGION \_INSTRUMENTATION & bool   & enables instrumentation of user-defined regions (depends on IRT\_ENABLE\_INSTRUMENTATION, will be enabled automatically) & false         \\ \hline
+        IRT\_ENABLE\_REGION \_INSTRUMENTATION & bool   & enables instrumentation
+	of user-defined regions	with aggregated information only			& false         \\ \hline
+        IRT\_ENABLE\_INDIVIDUAL\_REGION \_INSTRUMENTATION & bool   & enables
+	instrumentation of user-defined regions with full information (depends on IRT\_ENABLE\_REGION\_INSTRUMENTATION, will be enabled automatically) & false         \\ \hline
         IRT\_SANE \_PARALLEL\_MAX             & uint64 & maximum amount of chunks a loop or splittable work item will be divided into                                           & 2048          \\ \hline
         IRT\_MAX \_CORES                     & uint64 & maximum amount of hardware threads supported by the system                                                             & 2048          \\ \hline
         IRT\_MAX \_WORKERS                   & uint64 & maximum number of workers that can be spawned                                                                          & 2048          \\ \hline
@@ -162,12 +165,14 @@ to code regions of the application program (e.g. how long did a code region run,
 how efficient was its parallelism, how many floating point instructions did it
 use).
 
-The two different systems can be switched on and off for overhead and
+The three different systems can be switched on and off for overhead and
 pertubation reasons by defining \srcCodeInl{IRT_ENABLE_INSTRUMENTATION} (the
-event-based instrumentation) and \srcCodeInl{IRT_ENABLE_REGION_INSTRUMENTATION}
-(the region-based instrumentation) in instrumentation.h. Since the latter uses
-some parts of the event instrumentation system, both of them must be switched on
-for region-based instrumentation to work.
+event-based instrumentation), \srcCodeInl{IRT_ENABLE_REGION_INSTRUMENTATION}
+(the region-based instrumentation providing only aggregated information) and
+\srcCodeInl{IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION} (the region-based
+instrumentation providing detailed feedback for each worker) in instrumentation.h. 
+Since the latter uses some parts of the event instrumentation system, both of them 
+must be switched on for region-based instrumentation to work.
 
 \subsubsection{Time measurements in the runtime}
 

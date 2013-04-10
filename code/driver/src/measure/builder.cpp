@@ -115,23 +115,10 @@ namespace measure {
 			res = res && nfs::copy(src, buildDir / inputFiles.back());
 		});
 
-		// customize compiler
-		utils::compiler::Compiler compiler = compilerSetup;
-
-		// add flags required by the runtime
-		compiler.addFlag("-I ./include");
-		compiler.addFlag("-I " + targetHost.papi_home + "/include");
-		compiler.addFlag("-L " + targetHost.papi_home + "/lib/");
-		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
-		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
-		compiler.addFlag("-DIRT_RUNTIME_TUNING");
-		compiler.addFlag("-ldl -lrt -lpthread -lm");
-		compiler.addFlag("-Wl,-Bstatic -lpapi -Wl,-Bdynamic");
-
 		// build source file on remote machine
 		res = res && runCommand("ssh " + workDir.getUserHostnamePrefix() + " \""
 					"cd " + buildDir.path.string() + " && " +
-					compiler.getCommand(inputFiles, "../" + targetFileName) +
+					compilerSetup.getCommand(inputFiles, "../" + targetFileName) +
 				"\"") == 0;
 
 		// check whether everything was successful

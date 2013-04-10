@@ -38,6 +38,7 @@
 
 #include "declarations.h"
 #include "performance_table.h"
+#include "instrumentation.h"
 
 #include "irt_context.h"
 #include "utils/minlwt.h"

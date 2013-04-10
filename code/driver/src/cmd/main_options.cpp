@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/cmd_options/cmd_line_utils.h"
+#include "insieme/driver/cmd/main_options.h"
 
 #include <iostream>
 
@@ -47,7 +47,7 @@
 
 namespace insieme {
 namespace driver {
-namespace cmd_options {
+namespace cmd {
 
 	using namespace std;
 	namespace po = boost::program_options;
@@ -77,7 +77,7 @@ namespace cmd_options {
 			(opt_name, var_help)
 		// Declare a group of options that will be allowed on the command line
 		cmdLineOpts.add_options()
-			#include "insieme/driver/cmd_options/options.def"
+			#include "insieme/driver/cmd/options.def"
 		;
 		#undef OPTION
 		#undef FLAG
@@ -102,7 +102,7 @@ namespace cmd_options {
 					varsMap.count(opt_id) && cout << "\t--" << opt_id << ": " << varsMap[opt_id].as< var_type >() << endl;
 				#define INT_OPTION(opt_name, opt_id, var_name, def_val, var_help) \
 					varsMap.count(opt_id) && cout << "\t--" << opt_id << ": " << varsMap[opt_id].as< int >() << endl;
-				#include "insieme/driver/cmd_options/options.def"
+				#include "insieme/driver/cmd/options.def"
 				#undef OPTION
 				#undef FLAG
 				#undef INT_OPTION
@@ -114,7 +114,7 @@ namespace cmd_options {
 			#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
 				if(varsMap.count(opt_id)) res.var_name = varsMap[opt_id].as< var_type >();
 			#define INT_OPTION(opt_name, opt_id, var_name, def_val, var_help)
-			#include "insieme/driver/cmd_options/options.def"
+			#include "insieme/driver/cmd/options.def"
 			#undef OPTION
 			#undef INT_OPTION
 			#undef FLAG
