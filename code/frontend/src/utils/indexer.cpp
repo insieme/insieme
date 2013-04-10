@@ -56,6 +56,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 
 
@@ -90,53 +91,56 @@ class IndexerVisitor{
 	private:
 		insieme::frontend::TranslationUnit* mTu;
 		Indexer::tIndex& mIndex; 
-		Indexer::tIndex& mDeclIndex; 
 
 	public:
 	IndexerVisitor	(insieme::frontend::TranslationUnit* tu,
-					 Indexer::tIndex& index, Indexer::tIndex& declIndex):
-		mTu(tu), mIndex(index), mDeclIndex(declIndex)
+					 Indexer::tIndex& index):
+		mTu(tu), mIndex(index) 
 	{ }
 
 	void indexDeclaration(clang::Decl* decl){
+
+		if( const clang::FriendDecl* f = llvm::dyn_cast<clang::FriendDecl>(decl) ) {
+			//friendDecl is not a nameDecl
+			if(f->getFriendDecl()) {	
+				//get the actual friendDecl
+				indexDeclaration(f->getFriendDecl());	
+			} else {
+				//friendType --> getFriendType()
+			}
+		} else if (const clang::NamedDecl *named = llvm::dyn_cast<clang::NamedDecl>(decl)) {
+			assert (named && "no name Decl, can not be indexed and we dont know what it is");
+
+			if (llvm::isa<clang::FunctionDecl>(decl)) {
+				Indexer::TranslationUnitPair elem =  std::make_pair(decl,mTu); 
+				if (decl->hasBody()){
+					mIndex[buildNameTypeChain(decl)] = elem; 
+
+					// we could write main function in many different ways,
+					// best way to find it, is to keep a simple record to address it
+					if(named->getNameAsString() == "main")
+						mIndex["main"] = elem; 
+				} 
+			}
+			else if (const clang::CXXRecordDecl *recDecl = llvm::dyn_cast<clang::CXXRecordDecl>(decl)){
+				if (recDecl->hasDefinition()){
+					Indexer::TranslationUnitPair elem =  std::make_pair(llvm::cast<clang::Decl>(recDecl->getDefinition()),mTu); 
+					mIndex[buildNameTypeChain(decl)] = elem;
+				}
+
+				// index inner functions as well
+				indexDeclContext(llvm::cast<clang::DeclContext>(decl));
+			}
+			else if (llvm::isa<clang::NamespaceDecl>(decl)){
+				indexDeclContext(llvm::cast<clang::DeclContext>(decl));
+			} 
+			else if(const clang::TemplateDecl* templDecl = llvm::dyn_cast<clang::TemplateDecl>(decl)) {
+				indexDeclaration(templDecl->getTemplatedDecl());
+			}
+		}
+				
 		// if it does not have a name, it is another artifact
 		// and we dont want to index it
-		if (!llvm::isa<clang::NamedDecl>(decl))
-				return;
-
-		clang::NamedDecl *named = llvm::cast<clang::NamedDecl>(decl);
-		assert (named && "no name Decl, can not be indexed and we dont know what it is");
-
-		if (llvm::isa<clang::FunctionDecl>(decl)) {
-			Indexer::TranslationUnitPair elem =  std::make_pair(decl,mTu); 
-			if (decl->hasBody()){
-				mIndex[buildNameTypeChain(decl)] = elem; 
-
-				// we could write main function in many different ways,
-				// best way to find it, is to keep a simple record to address it
-				if(named->getNameAsString() == "main")
-					mIndex["main"] = elem; 
-			} 
-
-			mDeclIndex[buildNameTypeChain(decl)] = elem; 
-		}
-		else if (const clang::CXXRecordDecl *recDecl = llvm::dyn_cast<clang::CXXRecordDecl>(decl)){
-			if (recDecl->hasDefinition()){
-				Indexer::TranslationUnitPair elem =  std::make_pair(llvm::cast<clang::Decl>(recDecl->getDefinition()),mTu); 
-				mIndex[buildNameTypeChain(decl)] = elem;
-			}
-
-			mDeclIndex[buildNameTypeChain(decl)] = std::make_pair(decl, mTu);
-
-			// index inner functions as well
-			indexDeclContext(llvm::cast<clang::DeclContext>(decl));
-		}
-		else if (llvm::isa<clang::NamespaceDecl>(decl)){
-			indexDeclContext(llvm::cast<clang::DeclContext>(decl));
-		} 
-		else if(const clang::TemplateDecl* templDecl = llvm::dyn_cast<clang::TemplateDecl>(decl)) {
-			indexDeclaration(templDecl->getTemplatedDecl());
-		}
 	}
 
 	void indexDeclContext(clang::DeclContext* ctx){
@@ -178,7 +182,7 @@ void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 	clang::DeclContext* ctx= clang::TranslationUnitDecl::castToDeclContext (tuDecl);
 	assert(ctx && "AST has no decl context");
 
-	IndexerVisitor indexer(tu, mIndex, mDeclIndex);
+	IndexerVisitor indexer(tu, mIndex);
 	indexer.indexDeclContext(ctx);
 	
 	VLOG(1) << " ************* Indexing DONE ****************";
@@ -222,7 +226,6 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Dec
 	assert(decl && "Cannot look up null pointer!");
 
 	if(const clang::FunctionDecl* fd = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
-		//VLOG(2) << fd->getTemplatedKind();
 		switch( fd->getTemplatedKind() ) {
 			case clang::FunctionDecl::TemplatedKind::TK_NonTemplate:
 				return getDefAndTUforDefinition(buildNameTypeChain(fd));
@@ -230,6 +233,7 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Dec
 			case clang::FunctionDecl::TemplatedKind::TK_FunctionTemplate:
 				break;
 			case clang::FunctionDecl::TemplatedKind::TK_MemberSpecialization:
+				VLOG(2) << "TK_MemberSpecialization";
 				VLOG(2) << buildNameTypeChain(fd);
 				VLOG(2) << buildNameTypeChain(fd->getMemberSpecializationInfo()->getInstantiatedFrom());
 				//FIXME hack (for interception) to get correct translationunit for templatespecialization
@@ -242,6 +246,7 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Dec
 				break;
 		}
 	}
+
 	return getDefAndTUforDefinition(buildNameTypeChain(decl));
 }
 
@@ -302,13 +307,6 @@ Indexer::iterator Indexer::end(){
 	return iterator(mIndex.end());
 }
 
-Indexer::iterator Indexer::decl_begin(){
-	return iterator(mDeclIndex.begin());
-}
-
-Indexer::iterator Indexer::decl_end(){
-	return iterator(mDeclIndex.end());
-}
 } // end namespace utils
 } // end namespace frontend
 } // end namespace insieme

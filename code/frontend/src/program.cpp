@@ -204,7 +204,7 @@ utils::FunctionDependencyGraph& Program::getCallGraph() const {return pimpl->fun
 
 void Program::intercept(std::string fileName) {
 	pimpl->interceptor.loadConfigFile(fileName);
-	pimpl->interceptor.intercept();
+	//pimpl->interceptor.collectDeclsToIntercept();
 }
 
 void Program::analyzeFuncDependencies() {

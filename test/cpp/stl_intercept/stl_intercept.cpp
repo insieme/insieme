@@ -5,17 +5,25 @@
 
 using namespace std;
 
+//vector<int> globalList;
+//int globalInt;
+
 int main() {
 
-	vector<int> list;
+	//globalInt = 0;
+	//globalList.push_back(10);
 
+	vector<int> list;
 	list.push_back(12);
 	list.push_back(14);
 
-//	printf("[%d,%d]\n", list[0], list[1]);
+	vector<int>::value_type x = list.at(0);
 
-	vector<wchar_t> list1;
-	list.push_back(L'c');
+	//printf("[%d,%d]\n", list[0], list[1]);
+
+	vector<char> list1;
+	//list1.push_back(L'c');
+	list1.push_back('c');
 
 //	printf("[%d,%d]\n", list1[0], list1[1]);
 

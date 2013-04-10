@@ -268,8 +268,8 @@ TEST(ScopRegion, ForStmt3) {
 	
 	EXPECT_EQ(Element::ITER, iterVec[1].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[1]).isExistential());
-	EXPECT_EQ("(v0,v6|v2,v3,v4|1)", toString(iterVec));
-	EXPECT_EQ("(((v0 + -v3 >= 0) ^ (v0 + -v4 < 0)) ^ (v0 + -5*v6 + -v3 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v11|v2,v3,v4|1)", toString(iterVec));
+	EXPECT_EQ("(((v0 + -v3 >= 0) ^ (v0 + -v4 < 0)) ^ (v0 + -5*v11 + -v3 == 0))", toString(ann.getDomainConstraints()));
 }
 
 TEST(ScopRegion, ForStmt4) {
@@ -308,8 +308,8 @@ TEST(ScopRegion, ForStmt4) {
 	EXPECT_EQ(Element::ITER, iterVec[3].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
-	EXPECT_EQ("(v0,v4,v5,v6|v2|1)",toString(iterVec));
-	EXPECT_EQ("((((((-2*v4 + -v5 + 5 == 0) ^ (v5 + -2 < 0)) ^ (v5 >= 0)) ^ (v0 + -v4 >= 0)) ^ (v0 + -20 < 0)) ^ (v0 + -v4 + -5*v6 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v9,v10,v11|v2|1)",toString(iterVec));
+	EXPECT_EQ("((((((-2*v9 + -v10 + 5 == 0) ^ (v10 + -2 < 0)) ^ (v10 >= 0)) ^ (v0 + -v9 >= 0)) ^ (v0 + -20 < 0)) ^ (v0 + -v9 + -5*v11 == 0))", toString(ann.getDomainConstraints()));
 	
 	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
 	Piecewise pw = cardinality(mgr,  ann.getDomainConstraints());
@@ -356,8 +356,8 @@ TEST(ScopRegion, ForStmt5) {
 	EXPECT_EQ(Element::ITER, iterVec[3].getType());
 	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
 
-	EXPECT_EQ("(v0,v6,v7,v8|v2,v4,v3|1)", toString(iterVec));
-	EXPECT_EQ("((((((-3*v6 + v7 + v4 == 0) ^ (v7 + -3 < 0)) ^ (v7 >= 0)) ^ (v0 + -v6 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v6 + -5*v8 == 0))", toString(ann.getDomainConstraints()));
+	EXPECT_EQ("(v0,v11,v12,v13|v2,v4,v3|1)", toString(iterVec));
+	EXPECT_EQ("((((((-3*v11 + v12 + v4 == 0) ^ (v12 + -3 < 0)) ^ (v12 >= 0)) ^ (v0 + -v11 >= 0)) ^ (v0 + -v3 < 0)) ^ (v0 + -v11 + -5*v13 == 0))", toString(ann.getDomainConstraints()));
 }
 
 /*
@@ -475,8 +475,9 @@ TEST(ScopRegion, ForStmtToIR) {
 
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr);
-	EXPECT_EQ("for(int<4> v4 = 10 .. int.add(49, 1) : 1) {"
-				"vector.ref.elem(v1, cast<uint<8>>(int.add(v4, v2)));"
+	res = analysis::normalize(res);
+	EXPECT_EQ("for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
+				"vector.ref.elem(v1, cast<uint<8>>(int.add(v0, v2)));"
 			  "}", 
 			  toString(*res)
 			 );
@@ -508,11 +509,12 @@ TEST(ScopRegion, ForStmtToIR2) {
 
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr);
+	res = analysis::normalize(res);
 	EXPECT_EQ(
 		"{"
 			"ref.assign(v3, 0); "
-			"for(int<4> v5 = 10 .. int.add(49, 1) : 1) {"
-				"vector.ref.elem(v1, cast<uint<8>>(int.add(v5, v2)));"
+			"for(int<4> v0 = 10 .. int.add(49, 1) : 1) {"
+				"vector.ref.elem(v1, cast<uint<8>>(int.add(v0, v2)));"
 			"};"
 		"}", toString(*res));
 
@@ -795,7 +797,9 @@ TEST(ScopRegion, ForStmtToIR4) {
 
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr);
-	EXPECT_EQ("{ref<int<4>> v0 = ref.var(0); ref<int<4>> v4 = ref.var(0); {ref.assign(v0, ref.deref(ref.var(0))); for(int<4> v7 = 10 .. int.add(49, 1) : 1) {ref.assign(v4, ref.deref(ref.var(0))); vector.ref.elem(v1, cast<uint<8>>(int.add(v7, v3)));};};}", toString(*res));
+	// normalize varnames
+	res = analysis::normalize(res);
+	EXPECT_EQ("{ref<int<4>> v0 = ref.var(0); ref<int<4>> v2 = ref.var(0); {ref.assign(v0, ref.deref(ref.var(0))); for(int<4> v4 = 10 .. int.add(49, 1) : 1) {ref.assign(v2, ref.deref(ref.var(0))); vector.ref.elem(v1, cast<uint<8>>(int.add(v4, v3)));};};}", toString(*res));
 
 }
 

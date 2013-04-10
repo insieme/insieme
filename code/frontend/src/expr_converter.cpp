@@ -734,26 +734,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			if (rightTU && fd->hasBody()) { definition = fd; }
 		}
 
-		if (!definition) {
-			//-----------------------------------------------------------------------------------------------------
-			//     						Handle of 'special' built-in functions
-			//-----------------------------------------------------------------------------------------------------
-			// free(): check whether this is a call to the free() function
-			if (funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
-				// in the case the free uses an input parameter
-				if (args.front()->getType()->getNodeType() == core::NT_RefType) {
-					return (irNode = builder.callExpr(builder.getLangBasic().getUnit(),
-							builder.getLangBasic().getRefDelete(), args.front()));
-				}
-
-				// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
-				core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
-				core::ExpressionPtr delOp = builder.getLangBasic().getRefDelete();
-
-				// otherwise this is not a L-Value so it needs to be wrapped into a variable
-				return (irNode = builder.callExpr(builder.getLangBasic().getUnit(), delOp, arg));
-			}
-		}
+			
 
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
@@ -761,20 +742,38 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 		// we mark this function as extern. and return
 		if (!definition) {
 
-			// function might be intercepted - already processed and cached 
-			ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(funcDecl);
-			if (fit != ctx.lambdaExprCache.end()) {
-				irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
-						packedArgs);
-				return irNode;
+			//-----------------------------------------------------------------------------------------------------
+			//     						Handle of 'special' built-in functions
+			//-----------------------------------------------------------------------------------------------------
+			// free(): check whether this is a call to the free() function
+			if (funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
+				//FIXME remove -- deprecated  -- use normal agrument handling code
+				/*
+				// in the case the free uses an input parameter
+				if (args.front()->getType()->getNodeType() == core::NT_RefType) {
+					return (irNode = builder.callExpr(builder.getLangBasic().getUnit(),
+							builder.getLangBasic().getRefDelete(), args.front()));
+				}
+				*/
+				if (args.front()->getType()->getNodeType() != core::NT_RefType) {
+					assert(false && "free should not use byValue");
+					// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
+					core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
+					core::ExpressionPtr delOp = builder.getLangBasic().getRefDelete();
+
+					// otherwise this is not a L-Value so it needs to be wrapped into a variable
+					return (irNode = builder.callExpr(builder.getLangBasic().getUnit(), delOp, arg));
+				}
 			}
 
-			std::string callName = funcDecl->getNameAsString();
-			irNode = builder.callExpr(funcTy->getReturnType(), builder.literal(callName, funcTy),
-					packedArgs);
+			irNode = convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
+
+			//build callExpr
+			irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs);
 
 			// In the case this is a call to MPI, attach the loc annotation, handlling of those
 			// statements will be then applied by mpi_sema
+			std::string callName = funcDecl->getNameAsString();
 			if (callName.compare(0, 4, "MPI_") == 0) {
 
 				auto loc = std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
@@ -802,20 +801,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 		}
 
-		// function definition might be already processed and cached, 
-		// otherwise create the call expression node,
-		ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
-		if (fit != ctx.lambdaExprCache.end()) {
-			irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
-					 packedArgs);
-
-			return irNode;
-		}
-
 		assert(definition && "No definition found for function");
 
-		auto lambdaExpr = core::static_pointer_cast<const core::Expression>(
-				convFact.convertFunctionDecl(definition));
+		auto lambdaExpr = convFact.convertFunctionDecl(definition).as<core::ExpressionPtr>();
 
 		return (irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs));
 	} 

@@ -130,14 +130,15 @@ GlobalVarCollector::buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, co
 ///
 void GlobalVarCollector::operator()(const clang::Decl* decl) {
 	
-	if( interceptor.isIntercepted(decl) ) {
-		// funcDecl is intercepted
-		VLOG(2) << "isIntercepted " << decl;
-		return; 
-	}
-
 	bool isFuncDecl = false;
 	if(const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(decl)) {
+		
+		if( interceptor.isIntercepted(funcDecl) ) {
+			// funcDecl is intercepted
+			VLOG(2) << "isIntercepted " << decl;
+			return; 
+		}
+
 		if( visited.find(funcDecl) != visited.end() ) {
 			// function declaration already visited
 			return; 

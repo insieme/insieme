@@ -473,8 +473,6 @@ public:
 	core::ExpressionPtr convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl);
 
 	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
-
-	void buildInterceptedCaches(utils::Interceptor& interceptor);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {
