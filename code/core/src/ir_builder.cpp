@@ -947,21 +947,40 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
 
     utils::map::PointerMap<VariablePtr, VariablePtr> replVariableMap;
 
-    std::for_each(args.begin(), args.end(), [ & ] (const core::ExpressionPtr& curr) {
-            assert(curr->getNodeType() == core::NT_Variable);
+	for (const core::ExpressionPtr& curr : args){
+		assert(curr->getNodeType() == core::NT_Variable);
 
-            const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
-            const core::TypePtr& varType = bodyVar->getType();
+		const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
+		core::TypePtr       varType = bodyVar->getType();
+		core::VariablePtr   parmVar = this->variable( varType );
+		core::ExpressionPtr argExpr = curr;
+		
+	// if the variables are accessed only as right sides, then we'll deref the variable in the 
+	// parameters and it will be a const value inside of the function
+		if (analysis::isRefType(varType)){
 
-            // we create a new variable to replace the captured variable
-            core::VariablePtr&& parmVar = this->variable( varType );
-            argsType.push_back( varType );
-            callArgs.push_back(curr);
-            params.push_back( parmVar );
+			varType = analysis::getReferencedType(bodyVar->getType());
+			parmVar = this->variable( varType);
+			auto stmtCheck = core::transform::replaceAllGen(getNodeManager(), body, deref(curr), parmVar, false);
+			if (!core::analysis::contains(stmtCheck, curr)){
+				//if no deref uses, this is a read only var, and well pass it as value
+				//the deref is done in the function call
+				body = stmtCheck;
+				argExpr = deref(curr);
+			}
+			else{
+				varType = bodyVar->getType();
+				parmVar = this->variable( varType );
+			}
+		}
 
-            replVariableMap.insert( std::make_pair(bodyVar, parmVar) );
-        }
-    );
+		// we create a new variable to replace the captured variable
+		argsType.push_back( varType );
+		callArgs.push_back(argExpr);
+		params.push_back( parmVar );
+
+		replVariableMap.insert( std::make_pair(bodyVar, parmVar) );
+	}
 
     // Replace the variables in the body with the input parameters which have been created
     if ( !replVariableMap.empty() ) {
