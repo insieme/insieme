@@ -635,6 +635,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 				}
 				else{
 					// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
+					 assert(false && "who uses this???");
 					core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
 					core::ExpressionPtr delOp = builder.getLangBasic().getRefDelete();
 
@@ -908,6 +909,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 
 	core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
 	core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
+	core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
 
 	// handle of volatile variables
 	if (binOp->getOpcode() != BO_Assign && core::analysis::isVolatileType(lhs->getType()) ) {
@@ -925,7 +927,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		// the return type of this lambda is the type of the last expression (according to the C
 		// standard) 
 		std::vector<core::StatementPtr> stmts { lhs };
-		// LOG(INFO) << core::analysis::isCallOf(rhs, gen.getRefAssign());
 		if (core::analysis::isCallOf(rhs, gen.getRefAssign())) {
 			stmts.push_back(rhs);
 			auto retExpr = rhs.as<core::CallExprPtr>()->getArgument(0);
@@ -936,14 +937,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			stmts.push_back(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs));
 			retType = rhs->getType();
 		}
-		// LOG(INFO) << stmts;
 		return (retIr = builder.createCallExprFromBody(builder.compoundStmt(stmts), retType));
 	}
-
-	// the type of this expression is the type of the LHS expression
-	core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
-	//	lhs->getType()->getNodeType() == core::NT_RefType ?
-	//		GET_REF_ELEM_TYPE(lhs->getType()) : lhs->getType();
 
 	// get basic element type
 	core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
@@ -1100,16 +1095,15 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			 * non REF type. What we need to do is introduce a declaration for these variables and use the created
 			 * variable on the stack instead of the input parameters
 			 */
-			// FIXME: checkout this 
-			//lhs = wrapVariable(binOp->getLHS());
 			
 			// make sure the lhs is a L-Value
 			lhs = asLValue(lhs);
 
-			// bools are not casted to int in AST
+			// why to cast? 
+			// some casts are not pressent in IR
 			if (gen.isPrimitive(rhs->getType()))
 				rhs = utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
-			
+
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
 			exprTy = gen.getUnit();

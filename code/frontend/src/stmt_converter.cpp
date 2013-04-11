@@ -235,15 +235,18 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 			}
 		}
 
+		assert(*inductionVar->getType() == *builder.deref(fakeInductionVar)->getType() && "different induction var... something wrong");
 		StatementList stmtsNew;
-
 		for (auto stmt : stmtsOld){
 			auto tmpStmt = core::transform::replaceAllGen(mgr, stmt, builder.deref(fakeInductionVar) , inductionVar, true);
 			stmtsNew.push_back(tmpStmt);
 
-			//TODO: if after substitutions, there is still any usage of the old induction variable
+			//if after substitutions, there is still any usage of the old induction variable
 			//is because it hasn't been derefed  (left-sided) so is being modified inside of the
 			//loop therefore we need to avoid for form and convert to while
+			if (core::analysis::contains(tmpStmt, fakeInductionVar)){
+				throw analysis::InductionVariableNotReadOnly();
+			}
 		}
 		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsNew);
 
