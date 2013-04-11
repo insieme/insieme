@@ -77,6 +77,11 @@ public:
 	InductionVariableNotFoundException(): LoopNormalizationError("failed to determine loop induction variable") { }
 };
 
+class InductionVariableNotReadOnly: public LoopNormalizationError {
+public:
+	InductionVariableNotReadOnly(): LoopNormalizationError("it seems that the induction variable is written inside of the loop") { }
+};
+
 using insieme::frontend::conversion::ConversionFactory;
 
 /**
