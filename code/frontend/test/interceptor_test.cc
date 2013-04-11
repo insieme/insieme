@@ -123,9 +123,6 @@ TEST(Interception, FileTest) {
 		fe::conversion::ConversionFactory convFactory( mgr, prog, true /*isCxx*/);
 		convFactory.setTranslationUnit(&tu);
 
-		// fill the type/expr cache of the convFact with the intercepted literals 
-		convFactory.buildInterceptedCaches(prog.getInterceptor());
-
 		if(tp.isStatement()) {
 			StatementPtr&& stmt = convFactory.convertStmt( tp.getStatement() );
 			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );

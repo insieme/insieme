@@ -184,15 +184,6 @@ void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector& globColl
 	VLOG(2) << ctx.globalVar;
 }
 
-void ConversionFactory::buildInterceptedCaches(utils::Interceptor& interceptor) {
-	//copy interceptor exprcache into lambdaexpr cache
-	ctx.typeCache = interceptor.buildInterceptedTypeCache(*this);
-	VLOG(2) << "typeCache " << ctx.typeCache;
-	ctx.lambdaExprCache = interceptor.buildInterceptedExprCache(*this);
-	VLOG(2) << "lambdaExprCache: " << ctx.lambdaExprCache;
-}
-
-
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
@@ -819,6 +810,8 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 
 	// this is a C++ reference ( int& ref = x)
 	if (clangType && clangType->isReferenceType()){
+
+		//FIXME this looks fishy!!! ask luis
 		// if is a CPP ref, convert to IR
 		if (core::analysis::isCppRef(retIr->getType())) {
 			if (!core::analysis::isCppRef(retIr->getType())) {
@@ -906,6 +899,32 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		RESTORE_TU();
 		return fit->second;
 	}	
+
+	//intercept functionDecls here
+	if( getProgram().getInterceptor().isIntercepted(funcDecl) ) {
+		auto irExpr = getProgram().getInterceptor().intercept(funcDecl, *this);
+		ctx.lambdaExprCache.insert( {funcDecl, irExpr} );
+		RESTORE_TU();
+		return irExpr;
+	}
+	
+	//TODO check/get definitionAndTU for declareation here (bernhard)
+
+	if(!funcDecl->hasBody()) {
+		core::ExpressionPtr retExpr;
+		if (funcDecl->getNameAsString() == "free") {
+			//handle special function -- "free" -- here instead of in CallExr
+			retExpr = builder.getLangBasic().getRefDelete();
+		} 
+		else {
+			//handle extern functions  -- here instead of in CallExr
+			auto funcTy = convertType(GET_TYPE_PTR(funcDecl)).as<core::FunctionTypePtr>();
+			std::string callName = funcDecl->getNameAsString();
+			retExpr = builder.literal(callName, funcTy);
+		} 
+		RESTORE_TU();
+		return retExpr;
+	}
 	
 	assert(currTU && funcDecl->hasBody() && "Function has no body!");
 
@@ -1316,15 +1335,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 	}
 
 	const clang::Type* recordType = (llvm::cast<clang::TypeDecl> (llvm::cast<clang::CXXMethodDecl>(ctorDecl)->getParent()))->getTypeForDecl();
-	auto fit = ctx.typeCache.find(recordType);
-	core::TypePtr irClassType;
-	if (fit != ctx.typeCache.end()){
-		irClassType = fit->second;
-	}
-	else{
-		 irClassType =  convertType (recordType);
-		 assert(false && "make sure this is right, a type should be stored already in cache");
-	}
+	core::TypePtr irClassType =  convertType (recordType);
 
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	core::ExpressionPtr oldCtor = convertFunctionDecl(ctorAsFunct).as<core::ExpressionPtr>();
@@ -1471,9 +1482,6 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	t.stop();
 	LOG(INFO) << t;
 
-	//fills exprcache and type cache with types/literals for intercepted functions/...
-	mFact.buildInterceptedCaches(mProg.getInterceptor());
-
 	const core::ExpressionPtr& expr = mFact.convertFunctionDecl(funcDecl, true).as<core::ExpressionPtr>();
 
 	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
@@ -1497,3 +1505,4 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace
+
