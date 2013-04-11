@@ -137,17 +137,16 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	bool precision = true;
 	std::size_t bytes    = getPrecission(targetTy, gen);
 	std::size_t bytesSrc = getPrecission(exprTy, gen);
-	std::cout << "precission: " << bytes << " < " << bytesSrc << std::endl;
 	switch(code){
 		case 11: 
 			// only if target precission is smaller, we may have a precission loosse. 
-			if (bytes < bytesSrc) return  builder.callExpr(gen.getIntPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
+			if (bytes != bytesSrc) return builder.callExpr(gen.getIntPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
 		case 22: 
-			if (bytes < bytesSrc) return  builder.callExpr(gen.getUintPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
+			if (bytes != bytesSrc) return builder.callExpr(gen.getUintPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
 		case 33:
-			if (bytes < bytesSrc) return  builder.callExpr(gen.getRealPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
+			if (bytes != bytesSrc) return builder.callExpr(gen.getRealPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
 		case 44: 
 		case 55: // no cast;
@@ -194,7 +193,6 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	}
 	else 
 		return builder.callExpr(targetTy, op, expr);
-
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -232,15 +230,15 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	core::TypePtr&& exprTy = expr->getType();
 
-	std::cout << "####### Expr: #######" << std::endl;
-	dumpDetail(expr);
-	std::cout << "####### Expr Type: #######" << std::endl;
-	dumpDetail(exprTy);
-	std::cout << "####### cast Type: #######" << std::endl;
-	dumpDetail(targetTy);
-	std::cout << "####### clang: #######" << std::endl;
-	castExpr->dump();
-	std::cout << std::endl;
+//	std::cout << "####### Expr: #######" << std::endl;
+//	dumpDetail(expr);
+//	std::cout << "####### Expr Type: #######" << std::endl;
+//	dumpDetail(exprTy);
+//	std::cout << "####### cast Type: #######" << std::endl;
+//	dumpDetail(targetTy);
+//	std::cout << "####### clang: #######" << std::endl;
+//	castExpr->dump();
+//	std::cout << std::endl;
 
 	// it might be that the types are already fixed:
 	// like LtoR in arrays, they will allways be a ref<...>

@@ -997,6 +997,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		if (core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType()) &&
 			core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType) 
 		{
+			assert(false && "who uses this?");
 			lhs = wrapVariable(binOp->getLHS());
 		}
 
@@ -1233,6 +1234,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(const c
 	[ this, &builder, &gen ]
 	(core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
 
+		/*
+		 * FIXME: sure ok?
 		if ((subExpr->getNodeType() == core::NT_Variable && 
 			 subExpr->getType()->getNodeType() != core::NT_RefType) 
 			|| 
@@ -1252,7 +1255,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(const c
 			}
 
 			subExpr = fit->second;
-		}
+		}*/
 
 		core::TypePtr type = subExpr->getType();
 		assert( type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type" );
@@ -1302,12 +1305,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(const c
 	// &a
 	case UO_AddrOf:
 		{
-			/*
-			 * We need to be careful paramvars are not dereferenced and the address passed around. If this happens
-			 * we have to declare a variable holding the memory location for that value and replace every use of
-			 * the paramvar with the newly generated variable: the structure needRef in the ctx is used for this
-			 */
-			retIr = wrapVariable(unOp->getSubExpr());
+			retIr = subExpr;
 
 			// in the case we are getting the address of a function the & operator
 			// has no effects, therefore we return
@@ -1565,14 +1563,13 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitDeclRefExpr(const cla
 	core::ExpressionPtr retExpr;
 	if (const ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())) {
 		VLOG(2) << "Parameter type: " << convFact.convertType(parmDecl->getOriginalType().getTypePtr() );
-		retIr = convFact.lookUpVariable( parmDecl );
 		
+		retIr = convFact.lookUpVariable( parmDecl );
 		auto fit = ctx.wrapRefMap.find(retIr.as<core::VariablePtr>());
 		if (fit == ctx.wrapRefMap.end()) {
 			fit = ctx.wrapRefMap.insert(std::make_pair(retIr.as<core::VariablePtr>(),
 													   builder.variable(builder.refType(retIr->getType())))).first;
 		}
-
 		return fit->second;
 	}
 	if ( const VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
