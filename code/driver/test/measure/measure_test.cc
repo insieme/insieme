@@ -357,7 +357,6 @@ namespace measure {
 
 	}
 
-
 	TEST(Measuring, Measure) {
 		Logger::setLevel(WARNING);
 
