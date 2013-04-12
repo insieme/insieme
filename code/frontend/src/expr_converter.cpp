@@ -888,6 +888,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 
 	core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
 	core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
+
 	core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
 
 	// handle of volatile variables
@@ -960,12 +961,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		// LHS must be a ref<array<'a>>
 		core::TypePtr subRefTy = GET_REF_ELEM_TYPE(lhs->getType());
 
-		// In the case we have ref<ref<array<>>> then we deref again the argument 
-		if (core::analysis::isRefType(subRefTy)) {
-			lhs = builder.deref(lhs);
-			subRefTy = lhs->getType();
-		}
-
 		assert( core::analysis::isRefType(lhs->getType()) );
 		if(subRefTy->getNodeType() == core::NT_VectorType)
 			lhs = builder.callExpr(gen.getRefVectorToRefArray(), lhs);
@@ -975,21 +970,25 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		assert( (baseOp == BO_Add || baseOp == BO_Sub) &&
 				"Operators allowed in pointer arithmetic are + and - only");
 
-		assert(GET_REF_ELEM_TYPE(lhs->getType())->getNodeType() == core::NT_ArrayType &&
-				"LHS operator must be of type ref<array<'a,#l>>");
-
 		// LOG(INFO) << rhs->getType();
 		assert(gen.isInt(rhs->getType()) && "Array view displacement must be a signed int");
 		if (gen.isUnsignedInt(rhs->getType()))
 			rhs = builder.castExpr(gen.getInt8(), rhs);
 
+
+		// compound operator do not deref the target var (no implicit LtoR cast)
+		// we need a right side in the operation call
+		core::ExpressionPtr arg = lhs;
+		if (isCompound)
+			arg = builder.deref(lhs);
+
 		// check whether the RHS is of integer type
-		rhs = builder.callExpr(gen.getArrayView(), lhs, baseOp == BO_Add ? rhs : builder.invertSign(rhs));
+		rhs = builder.callExpr(gen.getArrayView(), arg, baseOp == BO_Add ? rhs : builder.invertSign(rhs));
 	};
 
 	if ( isCompound ) {
 		// we check if the RHS is a ref, in that case we use the deref operator
-		rhs = convFact.tryDeref(rhs);
+		//rhs = convFact.tryDeref(rhs);
 
 		// We have a compound operation applied to a ref<array<'a>> type which is probably one of
 		// the function parameters, We have to wrap this variable in a way it becomes a
@@ -1150,12 +1149,14 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			assert(false && "Never reach this point");
 		}
 
+		// FIXME: need some coments in here....
 		if (!core::analysis::isRefType(rhs->getType()) && 
 			(utils::isRefArray(lhs->getType()) || utils::isRefVector(lhs->getType()))) {
 			doPointerArithmetic();	
 			return (retIr = rhs);
 		}
 
+		// FIXME: need some coments in here....
 		if (!core::analysis::isRefType(lhs->getType()) && 
 			(utils::isRefArray(rhs->getType()) || utils::isRefVector(rhs->getType()))) {
 			std::swap(rhs, lhs);
@@ -1199,10 +1200,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			assert(*lhsTy == *rhsTy && "Comparing incompatible types");
 			opFunc = gen.getOperator(lhsTy, op);
 		}
-		if ( const DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS()) ) {
+		/*if ( const DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS()) ) {
 			if ( isa<ArrayType>(declRefExpr->getDecl()->getType().getTypePtr()) )
 				assert(false && "Pointer arithmetic not yet supported");
-		}
+		}*/
 		if(isLogical) { exprTy = gen.getBool(); }
 
 	} else {
@@ -1215,6 +1216,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 				" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 
 	retIr = builder.callExpr( exprTy, opFunc, lhs, rhs );
+	END_LOG_EXPR_CONVERSION(retIr);
 	return retIr;
 }
 
@@ -1380,8 +1382,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 	core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr());
 	core::ExpressionPtr condExpr  = Visit( condOp->getCond() );
 
-	// FIXME: use new utils
-	//condExpr = utils::cast(condExpr, gen.getBool());
 	condExpr = utils::castToBool(condExpr);
 
 	// Dereference eventual references
