@@ -734,26 +734,8 @@ CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<
 	// use deduced return type to construct call
 	return callExpr(deduceReturnTypeForCall(functionExpr, arguments), functionExpr, arguments);
 }
-CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
-	return callExpr(functionExpr, toVector(arg1));
-}
-CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
-	return callExpr(functionExpr, toVector(arg1, arg2));
-}
-CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
-	return callExpr(functionExpr, toVector(arg1, arg2, arg3));
-}
 CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const {
 	return createCall(*this, resultType, functionExpr, toVector<ExpressionPtr>());
-}
-CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
-	return createCall(*this, resultType, functionExpr, toVector(arg1));
-}
-CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
-	return createCall(*this, resultType, functionExpr, toVector(arg1, arg2));
-}
-CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
-	return createCall(*this, resultType, functionExpr, toVector(arg1, arg2, arg3));
 }
 
 CallExprPtr IRBuilder::virtualCall(const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
