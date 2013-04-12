@@ -50,7 +50,7 @@
 namespace insieme {
 namespace frontend {
 
-const unsigned ConversionJob::DEFAULT_FLAGS = 0;
+const unsigned ConversionJob::DEFAULT_FLAGS = PrintDiag;
 
 ConversionJob::ConversionJob(const string& file)
 	: files(toVector(file)), standard("c99"), flags(DEFAULT_FLAGS) {};
