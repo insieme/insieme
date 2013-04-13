@@ -97,3 +97,24 @@ static inline void ir_inst_region_start(region_id id) {
 static inline void ir_inst_region_end(region_id id) {
 	irt_inst_region_end(irt_context_get_current(), irt_worker_get_current(), id);
 }
+
+
+#include <vector>
+
+static inline void* ir_gc_register(std::vector<void*>* list, void* ptr) {
+	list->push_back(ptr);
+	return ptr;
+}
+
+static inline void* ir_gc_filter(std::vector<void*>* list, void* ptr) {
+	for(int i=0; i<list->size(); i++) {
+		if (list->at(i) == ptr) return 0;
+	}
+	return ptr;
+}
+
+static inline void ir_gc_free(std::vector<void*>* list) {
+	for(int i=0; i<list->size(); i++) {
+		free(list->at(i));
+	}
+}
