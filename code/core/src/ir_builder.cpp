@@ -519,6 +519,11 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 		return boolLit(false);
 	}
 
+	// add support for unit
+	if(manager.getLangBasic().isUnit(type)) {
+		return manager.getLangBasic().getUnitConstant();
+	}
+
 	// TODO: extend for more types
 	LOG(FATAL) << "Encountered unsupported type: " << *type;
 	assert(false && "Given type not supported yet!");
