@@ -562,10 +562,23 @@ namespace backend {
 		// test whether initialization is required ...
 		if (core::analysis::isCallOf(init, basic.getRefVar())) {
 			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(init);
-			if (core::analysis::isCallOf(call->getArgument(0), basic.getUndefined())) {
+			core::ExpressionPtr init = call->getArgument(0);
+			if (core::analysis::isCallOf(init, basic.getUndefined())) {
 				// => undefined initialization, hence no initialization!
 				return c_ast::ExpressionPtr();
 			}
+
+			if (init->getNodeType() == core::NT_StructExpr) {
+				auto isUndefined = [&](const core::NamedValuePtr& cur) { return core::analysis::isCallOf(cur->getValue(), basic.getUndefined()); };
+				if (all(init.as<core::StructExprPtr>()->getMembers(), isUndefined)) {
+					// no init required
+					return c_ast::ExpressionPtr();
+				}
+
+				// this is not supported yet - TODO: update struct expression to use names and initialize members individually
+				assert(!any(init.as<core::StructExprPtr>()->getMembers(), isUndefined) && "Unsupported combination of defined and undefined values!");
+			}
+
 		}
 
 		// TODO: handle initUndefine and init struct cases
