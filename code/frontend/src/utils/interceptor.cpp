@@ -82,34 +82,20 @@ void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const 
 	// check whether there is a declaration at all
 	if (!decl) return;
 
-	/*
+	VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType() << "\n";
 	clang::SourceManager& sm = decl->getASTContext().getSourceManager();
-	clang::SourceLocation loc = sm.getSpellingLoc(decl->getLocation());
-	if(!sm.getFilename(loc).empty()) {
-		return sm.getFilename(loc).data();
+	clang::SourceLocation includeLoc = sm.getIncludeLoc(sm.getFileID(decl->getLocation()));
+	std::string fileName;
+	if(includeLoc.isValid()) {
+		// decl comes from included header
+		fileName = sm.getPresumedLoc(includeLoc).getFilename();
+	} else {
+		assert(false && "no includeLoc found");
+		return;
 	}
-	*/
-
-	/*
-	//TODO currently only gets the fileName where the declaration is located need a way to get includeFile for declaration
-	//TODO currently gets the TU for the definition of an declaration -- no problem for header-only
-	//libs but need solution if .h and .cpp are indexed
-	const TranslationUnit* tu = (indexer.getDefAndTUforDefinition(decl)).second;
-	if( !tu ) return;
-	clang::SourceManager& sm = tu->getCompiler().getSourceManager(); 
-	*/
-
-	clang::SourceManager& sm = decl->getASTContext().getSourceManager();
-
-	std::cout << "Searching header for: " << node << " of type " << node->getNodeType() << "\n";
-	clang::SourceLocation loc = sm.getFileLoc(decl->getLocation());
-	if (loc.isInvalid()) return;
-
-	std::pair<clang::FileID, unsigned> loc_info = sm.getDecomposedLoc(loc);
-	const clang::FileEntry* fileEntry = sm.getFileEntryForID(loc_info.first);
 
 	// get absolute path of header file
-	fs::path header = fs::canonical(fileEntry->getName());
+	fs::path header = fs::canonical(fileName);
 
 	// check whether it is within the clang STL header library
 	if (auto stdLibHeader = toStdLibHeader(header)) {
@@ -173,9 +159,10 @@ insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::
 		typeDecl = tagType->getDecl();
 	} else if( const clang::TemplateTypeParmType* tempType = llvm::dyn_cast<clang::TemplateTypeParmType>(type) ){
 		typeDecl = tempType->getDecl();
-	} else if( llvm::isa<clang::TypedefType>(type) ) {
-		// we use the underlying type of the typedef -- don't intercept typedef
-		assert(false && "intercepting TypedefType");
+	} else if( const clang::TypedefType* typeDefType = llvm::dyn_cast<clang::TypedefType>(type) ) {
+		typeDecl = typeDefType->getDecl();
+		// typedef is sugar
+		assert(false && "not used");
 	}
 	//we should only call intercept if type has a typeDecl
 	assert(typeDecl && "Type has no TypeDecl");
@@ -201,6 +188,10 @@ bool Interceptor::isIntercepted(const clang::Type* type) const {
 		//we don't intercept typedef -> only sugar, we can use underlying type
 		return false;
 	}
+	/*} else if( const clang::TypedefType* typeDefType = llvm::dyn_cast<clang::TypedefType>(type) ) {
+		//typeDecl = typeDefType->getDecl();
+	}
+	*/
 
 	if(typeDecl) {
 		return regex_match(typeDecl->getQualifiedNameAsString(), rx);
@@ -305,6 +296,13 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 InterceptTypeVisitor::InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const insieme::frontend::utils::Indexer& indexer, const boost::regex& rx)
 		: convFact(convFact), builder(convFact.getIRBuilder()), indexer(indexer), rx(rx) {}
 
+/*
+core::TypePtr InterceptTypeVisitor::VisitTypedefType(const clang::TypedefType* typedefType) {
+	std::string typeName = fixQualifiedName(typedefType->getDecl()->getQualifiedNameAsString());
+	VLOG(2) << typeName;
+	return builder.genericType(typeName, insieme::core::TypeList(), insieme::core::IntParamList());
+}
+*/
 core::TypePtr InterceptTypeVisitor::VisitTagType(const clang::TagType* tagType) {
 	const clang::TagDecl* tagDecl = tagType->getDecl();
 	VLOG(2) << tagDecl;

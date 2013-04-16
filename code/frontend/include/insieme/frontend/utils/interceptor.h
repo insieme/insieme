@@ -95,10 +95,11 @@ struct InterceptTypeVisitor : public clang::TypeVisitor<InterceptTypeVisitor, co
 	
 	InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const insieme::frontend::utils::Indexer& indexer, const boost::regex& rx);
 
-	core::TypePtr Visit(const clang::Type* type);
+	//core::TypePtr VisitTypedefType(const clang::TypedefType* typedefType);
 	core::TypePtr VisitTagType(const clang::TagType* tagType);
 	core::TypePtr VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy);
 	core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType);
+	core::TypePtr Visit(const clang::Type* type);
 };
 
 } // end utils namespace
