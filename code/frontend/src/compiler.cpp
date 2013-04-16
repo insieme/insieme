@@ -42,6 +42,7 @@
 #include "insieme/frontend/sema.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/compiler/compiler.h"
 
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
@@ -72,7 +73,9 @@
 
 #include "clang/Parse/Parser.h"
 
-//FIXME: debug
+//FIXME: debug 
+#include "llvm/Support/raw_os_ostream.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 using namespace clang;
 using namespace insieme::frontend;
@@ -182,6 +185,7 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 	// A compiler invocation object has to be created in order for the diagnostic object to work
 	CompilerInvocation* CI = new CompilerInvocation; // CompilerInvocation will be deleted by CompilerInstance
 	CompilerInvocation::CreateFromArgs(*CI, 0, 0, pimpl->clang.getDiagnostics());
+
 	pimpl->clang.setInvocation(CI);
 	
 
@@ -202,10 +206,12 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 
 	if(config.hasOption(ConversionJob::WinCrossCompile)) {
 		// fix the target architecture to be a 64 bit machine
-		pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Win32").getTriple();
+		// triplestrings have to be lower case
+		pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "win32").getTriple();
 	} else {
 		// TO.Triple = llvm::sys::getHostTriple();
-		pimpl->TO->Triple = llvm::Triple("x86_64", "PC", "Linux").getTriple();
+		// triplestrings have to be lower case
+		pimpl->TO->Triple = llvm::Triple("x86_64", "pc", "linux").getTriple();
 	}
 
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
@@ -229,21 +235,39 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 	LO.POSIXThreads = 1;
 	*/
 
-	if(config.getStandard() == "c99") LO.C99 = 1; 		// set c99
-	
+	if(config.getStandard() == "c99") {
+		//set default values for C -- default results in values for LangStandard::lang_gnu99
+		CompilerInvocation::setLangDefaults(LO, clang::IK_C /*, clang::LangStandard::Kind=unspecified*/);
+		// set by langDefaults
+		//LO.C99 = 1; 		// set c99
+	}
+
 	if(enableCpp ) {
 		pimpl->m_isCXX = true;
-		LO.CPlusPlus = 1; 	// set C++ 98 support
-		LO.WChar     = 1; 	// setup wchar support: C++ 3.9.1p5
+	
+		//set default values for CXX -- default results in values for LangStandard::lang_gnucxx98
+		CompilerInvocation::setLangDefaults(LO, clang::IK_CXX /*, clang::LangStandard::Kind=unspecified*/);
+
+		//should be set already by langdefaults
+		//LO.CPlusPlus = 1; 	// set C++ 98 support
+		//LO.WChar     = 1; 	// setup wchar support: C++ 3.9.1p5
 
 		// libcxx headers require to use cpp11 by default. otherwhise annoying warnings are
 		// prompted, no side efects detected
-		LO.CPlusPlus0x = 1; 
+		LO.CPlusPlus0x = 1;  //C++ 0x
 		
-		pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 1;
-		pimpl->clang.getHeaderSearchOpts().AddPath (CXX_INCLUDES,
-													clang::frontend::System, true, false, false);
+		// use the cxx header of the backend c++ compiler
+		pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0; 
+		pimpl->clang.getHeaderSearchOpts().UseStandardSystemIncludes = 0; 
 
+		this->pimpl->clang.getPreprocessorOpts().UsePredefines = true;
+
+		// FIXME check clang/lib/Driver/Toolchains.cpp for headersearch of clang for linux/gcc
+		// use the cxx header of the backend c++ compiler, uses "echo | gcc -v -x c++ -E -" to get search list of headers
+		for(std::string curr : insieme::utils::compiler::getDefaultCppIncludePaths()) {
+			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System, true, false, false);
+		}
+	
 		// FIXME: decide if we need this or not
 		//	LO.RTTI = 1;
 		//	LO.Exceptions = 1;
@@ -252,12 +276,14 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 	}
 	else{
 		LO.CPlusPlus = 0;
+
+		// FIXME check clang/lib/Driver/Toolchains.cpp for headersearch of clang for linux/gcc
+		// use the cxx header of the backend c++ compiler, uses "echo | gcc -v -x c++ -E -" to get search list of headers
+		for(std::string curr : insieme::utils::compiler::getDefaultCIncludePaths()) {
+			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System, true, false, false);
+		}
 	}
 	
-	// Add default header 
-	pimpl->clang.getHeaderSearchOpts().AddPath (LLVM_PREFIX "/lib/clang/" CLANG_VERSION_STRING "/include",
-			 									clang::frontend::System, true, false, false);
-
 	// add user provided headers
 	for (std::string curr : config.getIncludeDirectories()){
 		this->pimpl->clang.getHeaderSearchOpts().AddPath( curr, clang::frontend::System, true, false, false);
@@ -291,11 +317,11 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 	pimpl->clang.createPreprocessor();
 	pimpl->clang.createASTContext();
 
+	//FIXME why is this needed?
 	getPreprocessor().getBuiltinInfo().InitializeBuiltins(
 			getPreprocessor().getIdentifierTable(),
 			getPreprocessor().getLangOpts()
 	);
-
 
 	//pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
 	if (config.getFiles().size() == 1) {
@@ -305,9 +331,16 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 											pimpl->clang.getLangOpts(),
 											&pimpl->clang.getPreprocessor());
 	}
-
-	if (VLOG_IS_ON(2))
-			printHeader (getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts ());
+	
+	if (VLOG_IS_ON(2)) {
+		printHeader (getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts ());
+		/* print preprocessed stuff
+		pimpl->clang.getPreprocessorOutputOpts().ShowMacros = 1;
+		pimpl->clang.getPreprocessorOutputOpts().ShowCPP = 1;
+		llvm::raw_os_ostream out(std::cerr);
+		clang::DoPrintPreprocessedInput(getPreprocessor(), &out, pimpl->clang.getPreprocessorOutputOpts());
+		*/
+	}	
 }
 
 ASTContext& 		ClangCompiler::getASTContext()    const { return pimpl->clang.getASTContext(); }
