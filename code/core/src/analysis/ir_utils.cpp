@@ -478,6 +478,58 @@ vector<VariableAddress> getFreeVariableAddresses(const NodePtr& code) {
 	return res;
 }
 
+vector<StatementAddress> getExitPoints(const StatementPtr& stmt) {
+	// delegate request to address-based implementation
+	return getExitPoints(StatementAddress(stmt));
+}
+
+vector<StatementAddress> getExitPoints(const StatementAddress& stmt) {
+
+	// list of exit points
+	vector<StatementAddress> res;
+
+	// the statement must not contain a "free" return
+	visitDepthFirstOncePrunable(stmt, [&](const NodeAddress& cur) {
+		if (cur->getNodeType() == NT_LambdaExpr) {
+			return true; // do not decent here
+		}
+		if (cur->getNodeType() == NT_ReturnStmt) {
+			// free return identified
+			res.push_back(cur.as<StatementAddress>());
+			return true;
+		}
+		// skip non-full expression
+		if (StatementAddress stmt = cur.isa<StatementAddress>()) {
+			return !stmt.isRoot() && !stmt.isa<CompoundStmtAddress>() && !stmt.getParentAddress().isa<CompoundStmtAddress>();
+		}
+
+		return false;		// check the rest
+	});
+
+	// search for "bound" break or continue statements
+	visitDepthFirstOncePrunable(stmt, [&](const NodeAddress& cur) {
+		if (cur->getNodeType() == NT_ForStmt || cur->getNodeType() == NT_WhileStmt) {
+			return true; // do not decent here
+		}
+		if (cur->getNodeType() == NT_BreakStmt || cur->getNodeType() == NT_ContinueStmt) {
+			// free break / continue found
+			res.push_back(cur.as<StatementAddress>());
+			return true;
+		}
+
+		// skip non-full expression
+		if (StatementAddress stmt = cur.isa<StatementAddress>()) {
+			return !stmt.isRoot() && !stmt.isa<CompoundStmtAddress>() && !stmt.getParentAddress().isa<CompoundStmtAddress>();
+		}
+
+		return false;		// check the rest
+	});
+
+	// done
+	return res;
+}
+
+
 namespace {
 
 	struct VariableCollector : public IRVisitor<> {

@@ -587,7 +587,6 @@ irt_region* irt_inst_region_list_new_item(irt_worker* worker) {
 	} else {
 		retval = (irt_region*)malloc(sizeof(irt_region));
 	}
-	retval->cputime = 0;
 	return retval;
 }
 
@@ -619,14 +618,20 @@ void _irt_inst_region_aggregated_data_insert(irt_context* context, int64 id, uin
 
 void _irt_inst_region_start_aggregated(irt_context* context, irt_worker* worker, region_id id) {
 
+	uint64 startTime = irt_time_ticks();
+
+	// account time so far to parent region (if present)
+	if (worker->cur_wi->region) {
+		worker->cur_wi->region->cputime += startTime - worker->cur_wi->last_timestamp;
+	}
+	worker->cur_wi->last_timestamp = startTime;
+
+	// add parent region
 	irt_region* region = irt_inst_region_list_new_item(worker);
 	region->cputime = 0;
-	region->start_time = irt_time_ticks();
+	region->start_time = startTime;
 	region->next = worker->cur_wi->region;
-
-	_irt_inst_region_add_time(worker->cur_wi);
 	worker->cur_wi->region = region;
-	_irt_inst_region_set_timestamp(worker->cur_wi);
 }
 
 void _irt_inst_region_end_aggregated_internal(irt_worker* worker) {
@@ -635,24 +640,25 @@ void _irt_inst_region_end_aggregated_internal(irt_worker* worker) {
 	worker->cur_wi->region = ending_region->next;
 
 	// update cpu time counter of surrounding region if present
-	if(worker->cur_wi->region) // if the ended region was a nested one, add execution time to outer region
-		irt_atomic_fetch_and_add(&(worker->cur_wi->region->cputime), ending_region->cputime);		// @Philipp: this should not be required to be atomic!
+	if(worker->cur_wi->region) {
+		// if the ended region was a nested one, add execution time to outer region
+		worker->cur_wi->region->cputime += ending_region->cputime;
+	}
 
 	// recycle region
 	irt_inst_region_list_recycle_item(worker, ending_region);
 }
 
 void _irt_inst_region_end_aggregated(irt_context* context, irt_worker* worker, region_id id) {
-	uint64 timestamp = irt_time_ticks();
 
-	// TODO: request worker as argument!
-	// TODO: improve the following calls ... (timestamp is already available)
-	_irt_inst_region_add_time(worker->cur_wi);
-	_irt_inst_region_set_timestamp(worker->cur_wi);
+	uint64 endTime = irt_time_ticks();
+
+	// account cpu time
+	worker->cur_wi->region->cputime += endTime - worker->cur_wi->last_timestamp;
+	worker->cur_wi->last_timestamp = endTime;		// update last-timestamp field
 
 	// record data
-	uint64 ending_region_cputime = worker->cur_wi->region->cputime;
-	_irt_inst_region_aggregated_data_insert(context, id, timestamp - worker->cur_wi->region->start_time, ending_region_cputime);
+	_irt_inst_region_aggregated_data_insert(context, id, endTime - worker->cur_wi->region->start_time, worker->cur_wi->region->cputime);
 
 	// pop nested region stack
 	_irt_inst_region_end_aggregated_internal(worker);

@@ -46,6 +46,7 @@
 #include "insieme/driver/driver_config.h"
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/attributes.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
@@ -595,6 +596,14 @@ namespace measure {
 		return utils::compiler::Compiler::getDefaultC99CompilerO3();
 	}
 
+	Quantity measure(const core::StatementPtr& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
+		return measure(core::StatementAddress(stmt), metric, executor, compiler, env);
+	}
+
+	vector<Quantity> measure(const core::StatementPtr& stmt, const MetricPtr& metric, unsigned numRuns, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
+		return measure(core::StatementAddress(stmt), metric, numRuns, executor, compiler, env);
+	}
+
 	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
 		return measure(stmt, toVector(metric), executor, compiler, env)[metric];
 	}
@@ -633,6 +642,44 @@ namespace measure {
 			res.push_back(cur.find(0)->second);
 		});
 		return res;
+	}
+
+	std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> measure(
+			const vector<core::StatementAddress>& regions,
+			const vector<MetricPtr>& metrices, const ExecutorPtr& executor,
+			const utils::compiler::Compiler& compiler,
+			const std::map<string, string>& env) {
+
+		// use implementation accepting number of runs
+		return measure(regions, metrices, 1, executor, compiler, env)[0];
+	}
+
+	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measure(
+			const vector<core::StatementAddress>& regions,
+			const vector<MetricPtr>& metrices,
+			unsigned numRuns, const ExecutorPtr& executor,
+			const utils::compiler::Compiler& compiler,
+			const std::map<string, string>& env) {
+
+
+		// create a stmt-address <-> region_id map
+		std::map<core::StatementAddress, region_id> mappedRegions;
+		region_id id = 0;
+		for(const auto& cur : regions) {
+			mappedRegions[cur] = id++;
+		}
+
+		// run measurements
+		auto data = measure(mappedRegions, metrices, numRuns, executor, compiler, env);
+
+		// un-pack results
+		return ::transform(data, [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& data)->std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> {
+			std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> res;
+			for(const auto& cur : data) {
+				res[regions[cur.first]] = cur.second;
+			}
+			return res;
+		});
 	}
 
 
@@ -745,7 +792,46 @@ namespace measure {
 			// build instrumented code section using begin/end markers
 			auto region_inst_start_call = build.callExpr(unit, rtExt.instrumentationRegionStart, regionID);
 			auto region_inst_end_call = build.callExpr(unit, rtExt.instrumentationRegionEnd, regionID);
-			return build.compoundStmt(region_inst_start_call, stmt, region_inst_end_call);
+
+			// instrument exit points
+			core::StatementPtr instrumented = stmt;
+			auto exitPoints = core::analysis::getExitPoints(stmt);
+			std::sort(exitPoints.rbegin(), exitPoints.rend());
+			for(const core::StatementAddress& point : exitPoints) {
+
+				// break and continue
+				if (point->getNodeType() == core::NT_BreakStmt || point->getNodeType() == core::NT_ContinueStmt) {
+					// insert region_end call before statement
+					instrumented = core::transform::insert(manager, point.switchRoot(instrumented).getParentAddress().as<core::CompoundStmtAddress>(), region_inst_end_call, point.getIndex()).as<core::StatementPtr>();
+					continue;
+				}
+
+				// handle return statement - TODO: add support for exceptions
+				assert(point->getNodeType() == core::NT_ReturnStmt && "Only break, continue and return should constitute a exit point!");
+
+				core::ReturnStmtPtr ret = point.as<core::ReturnStmtPtr>();
+				core::ExpressionPtr retVal = ret->getReturnExpr();
+
+				core::StatementList stmts;
+				if (retVal->getNodeType() == core::NT_Variable || retVal->getNodeType() == core::NT_Literal) {
+					// no modification necessary
+					stmts.push_back(region_inst_end_call);
+					stmts.push_back(ret);
+				} else {
+
+					// separate result computation from return
+					core::VariablePtr var = build.variable(retVal->getType());
+					stmts.push_back(build.declarationStmt(var, retVal));
+					stmts.push_back(region_inst_end_call);
+					stmts.push_back(build.returnStmt(var));
+				}
+
+				// build replacement
+				instrumented = core::transform::replaceNode(manager, point, build.compoundStmt(stmts)).as<core::StatementPtr>();
+			}
+
+			// assemble substitution
+			return build.compoundStmt(region_inst_start_call, instrumented, region_inst_end_call);
 		}
 
 		/**

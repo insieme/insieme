@@ -246,6 +246,65 @@ namespace analysis {
 		EXPECT_EQ(toVector(A,D), getElementTypes(structType));
 	}
 
+	TEST(ExitPoints, Basic) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		vector<StatementAddress> res;
+
+		// -----------  some stuff without exit points -----------------------
+		res = getExitPoints(builder.parseStmt(" { } "));
+		EXPECT_TRUE(res.empty());
+
+		res = getExitPoints(builder.parseStmt(" { int<4> x = 4; } "));
+		EXPECT_TRUE(res.empty());
+
+		res = getExitPoints(builder.parseStmt(" { for(int<4> i = 1 .. 10 ) { continue; } } "));
+		EXPECT_TRUE(res.empty());
+
+		res = getExitPoints(builder.parseStmt(" { for(int<4> i = 1 .. 10 ) { break; } } "));
+		EXPECT_TRUE(res.empty());
+
+		res = getExitPoints(builder.parseStmt(" { while(true) { continue; } } "));
+		EXPECT_TRUE(res.empty());
+
+		res = getExitPoints(builder.parseStmt(" { while(true) { break; } } "));
+		EXPECT_TRUE(res.empty());
+
+		res = getExitPoints(builder.parseStmt(" { let f = ()->int<4> { return 0; }; f(); } "));
+		EXPECT_TRUE(res.empty());
+
+		// ----------- return exit points -----------------------
+
+		res = getExitPoints(builder.parseStmt(" { return 0; } "));
+		EXPECT_EQ("[0-0]", toString(res));
+
+		res = getExitPoints(builder.parseStmt(" { for(int<4> i = 1 .. 10 ) { return 0; } } "));
+		EXPECT_EQ("[0-0-3-0]", toString(res));
+
+		res = getExitPoints(builder.parseStmt(" { while(true) { return 0; } } "));
+		EXPECT_EQ("[0-0-1-0]", toString(res));
+
+		res = getExitPoints(builder.parseStmt(" { while(true) { if (false) { return 0; } else { return 1; } } } "));
+		EXPECT_EQ("[0-0-1-0-1-0,0-0-1-0-2-0]", toString(res));
+
+		res = getExitPoints(builder.parseStmt(" { let f = ()->int<4> { return 0; }; f(); return 0; } "));
+		EXPECT_EQ("[0-1]", toString(res));
+
+		// ------------ break and continue ------------------------
+
+		res = getExitPoints(builder.parseStmt(" { break; } "));
+		EXPECT_EQ("[0-0]", toString(res));
+
+		res = getExitPoints(builder.parseStmt(" { continue; } "));
+		EXPECT_EQ("[0-0]", toString(res));
+
+		res = getExitPoints(builder.parseStmt(" { if(true) { break; } else { continue; } } "));
+		EXPECT_EQ("[0-0-1-0,0-0-2-0]", toString(res));
+
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme
