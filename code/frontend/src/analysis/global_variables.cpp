@@ -419,7 +419,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 			assert (type->getNodeType() == core::NT_RefType);
 			// core::TypePtr derefTy = core::static_pointer_cast<const core::RefType>( type )->getElementType();
 			// build a literal which points to the name of the external variable 
-			initExpr = builder.literal((*it)->getNameAsString(), type);
+			initExpr = builder.literal((*it)->getQualifiedNameAsString(), type);
 		} else {
 			// this means the variable is not declared static inside a function so we have to initialize its value
 			initExpr = (*it)->getInit() ? 
