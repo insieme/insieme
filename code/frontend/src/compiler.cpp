@@ -189,6 +189,9 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 	pimpl->clang.setInvocation(CI);
 	
 
+	//******************** TAKE CARE OF ORDER OF INCLUDE PATHS *************//
+	//first user-provided, than our openmp replacement, then default-path
+	
 	//setup headers 
 	pimpl->clang.getHeaderSearchOpts().UseBuiltinIncludes = 0;
 	pimpl->clang.getHeaderSearchOpts().UseStandardSystemIncludes = 1;  // Includes system includes, usually  /usr/include
@@ -228,6 +231,34 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 
 	LangOptions& LO = pimpl->clang.getLangOpts();
 
+	// add user provided headers
+	for (std::string curr : config.getIncludeDirectories()){
+		this->pimpl->clang.getHeaderSearchOpts().AddPath( curr, clang::frontend::System, true, false, false);
+	}
+
+	// set -D macros
+	for (std::string curr : config.getDefinitions()){
+		this->pimpl->clang.getPreprocessorOpts().addMacroDef(curr);
+	}
+
+	// Enable OpenCL
+	// LO.OpenCL = 1;
+	LO.AltiVec = 1;
+	LO.LaxVectorConversions = 1;
+
+	// Set OMP define if compiling with OpenMP
+	if(config.hasOption(ConversionJob::OpenMP)) {
+		this->pimpl->clang.getPreprocessorOpts().addMacroDef("_OPENMP");
+		this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/omp/input/", 
+			clang::frontend::System, true, false, false);
+	}
+
+	// add Cilk definitions if required
+	if(config.hasOption(ConversionJob::Cilk)) {
+		this->pimpl->clang.getPreprocessorOpts().addMacroDef("cilk=");
+		this->pimpl->clang.getPreprocessorOpts().addMacroDef("spawn=_Pragma(\"cilk spawn\")");
+		this->pimpl->clang.getPreprocessorOpts().addMacroDef("sync=_Pragma(\"cilk sync\")");
+	}
 	/*
 	 FIXME: decide if we need this or not
 	LO.GNUMode = 1;
@@ -284,35 +315,6 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 		}
 	}
 	
-	// add user provided headers
-	for (std::string curr : config.getIncludeDirectories()){
-		this->pimpl->clang.getHeaderSearchOpts().AddPath( curr, clang::frontend::System, true, false, false);
-	}
-
-	// Enable OpenCL
-	// LO.OpenCL = 1;
-	LO.AltiVec = 1;
-	LO.LaxVectorConversions = 1;
-	
-	// set -D macros
-	for (std::string curr : config.getDefinitions()){
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef(curr);
-	}
-
-	// Set OMP define if compiling with OpenMP
-	if(config.hasOption(ConversionJob::OpenMP)) {
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef("_OPENMP");
-		this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/omp/input/", 
-			clang::frontend::System, true, false, false);
-	}
-
-	// add Cilk definitions if required
-	if(config.hasOption(ConversionJob::Cilk)) {
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef("cilk=");
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef("spawn=_Pragma(\"cilk spawn\")");
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef("sync=_Pragma(\"cilk sync\")");
-	}
-
 	// Do this AFTER setting preprocessor options
 	pimpl->clang.createPreprocessor();
 	pimpl->clang.createASTContext();
