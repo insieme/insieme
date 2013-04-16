@@ -946,39 +946,16 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     vector<ExpressionPtr> callArgs;
 
     utils::map::PointerMap<VariablePtr, VariablePtr> replVariableMap;
-
-	for (const core::ExpressionPtr& curr : args){
+	for(const core::ExpressionPtr& curr : args){
 		assert(curr->getNodeType() == core::NT_Variable);
 
 		const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
-		core::TypePtr       varType = bodyVar->getType();
-		core::VariablePtr   parmVar = this->variable( varType );
-		core::ExpressionPtr argExpr = curr;
-		
-	// if the variables are accessed only as right sides, then we'll deref the variable in the 
-	// parameters and it will be a const value inside of the function
-		if (analysis::isRefType(varType)){
-
-			varType = analysis::getReferencedType(bodyVar->getType());
-			parmVar = this->variable( varType);
-			auto stmtCheck = core::transform::replaceAllGen(getNodeManager(), body, deref(curr), parmVar, false);
-			if (!core::analysis::contains(stmtCheck, curr)){
-				//if no deref uses, this is a read only var, and well pass it as value
-				//the deref is done in the function call
-				body = stmtCheck;
-				argExpr = deref(curr);
-			}
-			else{
-				varType = bodyVar->getType();
-				parmVar = this->variable( varType );
-			}
-		}
-
+		const core::TypePtr& varType = bodyVar->getType();
 		// we create a new variable to replace the captured variable
+		core::VariablePtr&& parmVar = this->variable( varType );
 		argsType.push_back( varType );
-		callArgs.push_back(argExpr);
+		callArgs.push_back(curr);
 		params.push_back( parmVar );
-
 		replVariableMap.insert( std::make_pair(bodyVar, parmVar) );
 	}
 

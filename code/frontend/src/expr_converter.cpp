@@ -1204,7 +1204,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			if ( isa<ArrayType>(declRefExpr->getDecl()->getType().getTypePtr()) )
 				assert(false && "Pointer arithmetic not yet supported");
 		}*/
-		if(isLogical) { exprTy = gen.getBool(); }
+		if(isLogical) { 
+			exprTy = gen.getBool(); 
+			opFunc = gen.getOperator(lhs->getType(), op);
+		}
 
 	} else {
 		// check if there is a kernelFile annotation

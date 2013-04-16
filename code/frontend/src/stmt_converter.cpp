@@ -213,63 +213,65 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 	try {
 		// Analyze loop for induction variable
 		analysis::LoopAnalyzer loopAnalysis(forStmt, convFact);
-
 		const clang::VarDecl* iv = loopAnalysis.getInductionVar();
-		core::VariablePtr fakeInductionVar = convFact.lookUpVariable(iv).as<core::VariablePtr>();
-
-		// we reconsider the induction var,
-		// it might be a parameter wrapper, first used in the loop
-		if(llvm::isa<clang::ParmVarDecl> (iv)){
-			auto fit = convFact.ctx.wrapRefMap.find(fakeInductionVar);
-			if (fit == convFact.ctx.wrapRefMap.end()) {
-				fit = convFact.ctx.wrapRefMap.insert(std::make_pair(fakeInductionVar,
-														   builder.variable(builder.refType(fakeInductionVar->getType())))).first;
-			}
-			fakeInductionVar = fit->second;
-		}
 
 		// before the body is visited we have to make sure to register the loop induction variable
-		// with the correct type
-		core::VariablePtr inductionVar = builder.variable(convFact.convertType(GET_TYPE_PTR(iv)));
+		// with the correct type:
+		//
+		// we need 3 IR variables:
+		// 	- the conversion of the original loop: ( might localy declared, or in an outer scope)
+		// 	- the new iterator: will be a constant scalar (not ref<type...>)
+		// 	- the use of the iterator: any use of the iterator will be wrapped in a new variable
+		// 		assigned with the right iteration value at the begining of the loop body
+		//
+		core::ExpressionPtr fakeInductionVar= convFact.lookUpVariable(iv);
+		core::VariablePtr 	inductionVar 	= builder.variable(convFact.convertType(GET_TYPE_PTR(iv)));
+		core::VariablePtr	 itUseVar     	= builder.variable(builder.refType(inductionVar->getType()));
+
+		// polute wrapped vars cache to avoid inner replacements
+		if(llvm::isa<clang::ParmVarDecl> (iv)){
+			convFact.ctx.wrapRefMap.insert(std::make_pair(itUseVar,itUseVar));
+		}
+
+		// polute vars cache to make sure that the right value is used
+		auto cachedPair = convFact.ctx.varDeclMap.find(iv);
+		if (cachedPair != convFact.ctx.varDeclMap.end()) {
+			cachedPair->second = itUseVar;
+		} else {
+			cachedPair = convFact.ctx.varDeclMap.insert(std::make_pair(loopAnalysis.getInductionVar(), itUseVar)).first;
+		}
 
 		// Visit Body
-		// substitute all usage of the induction variable (original) by the corrected induction var
-		// and build the body compound
 		StatementList stmtsOld = Visit(forStmt->getBody());
 
-		assert(*inductionVar->getType() == *builder.deref(fakeInductionVar)->getType() && "different induction var... something wrong");
-		// first statent in the for loop is to declare
-		// a var named as the old iterator and asign
-		// the value of the current (append on begining, notice reverse order)
-/*
-		core::StatementPtr itAssign = (builder.callExpr(gen.getRefAssign(), fakeInductionVar, inductionVar)).as<core::StatementPtr>();
-		stmtsOld.insert (stmtsOld.begin(), itAssign);
-			
-		core::DeclarationStmtPtr itDecl =  builder.declarationStmt (fakeInductionVar, 
-																	builder.refVar(
-																    	builder.callExpr(mgr.getLangBasic().getUndefined(), 
-																						 builder.getTypeLiteral(inductionVar->getType()))));
+		// restore original variable in cache
+		if (fakeInductionVar->getNodeType() == core::NT_Variable)
+			cachedPair->second = core::static_pointer_cast<const core::VariablePtr>(fakeInductionVar);
+		else
+			convFact.ctx.varDeclMap.erase(cachedPair);
+
+		if(llvm::isa<clang::ParmVarDecl> (iv)){
+			convFact.ctx.wrapRefMap.erase(itUseVar);
+		}
+
+		assert(*inductionVar->getType() == *builder.deref(itUseVar)->getType() && "different induction var types");
+
+		// first statent in the for loop is to declare a var to wrap the old iterator and asign
+		// the value of the current 
+		core::DeclarationStmtPtr itDecl =  builder.declarationStmt (itUseVar, builder.refVar(inductionVar));
 		stmtsOld.insert (stmtsOld.begin(), itDecl);
 		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsOld);
-		*/
+		
+
+
 
 		/*
-		 * this was a beautiful idea, which didht work because of the caotic omp pragma handling
-		 */
-		StatementList stmtsNew;
-		for (auto stmt : stmtsOld){
-			auto tmpStmt = core::transform::replaceAllGen(mgr, stmt, builder.deref(fakeInductionVar) , inductionVar, true);
-			stmtsNew.push_back(tmpStmt);
-
-			//if after substitutions, there is still any usage of the old induction variable
-			//is because it hasn't been derefed  (left-sided) so is being modified inside of the
-			//loop therefore we need to avoid for form and convert to while
-			if (core::analysis::contains(tmpStmt, fakeInductionVar)){
-				throw analysis::InductionVariableNotReadOnly();
-			}
+		 * TODO: this is the place to check if the induction variable is being written
+		 * and therefore we are not able to build a for loop
+		if (not read only iterator){
+			throw analysis::InductionVariableNotReadOnly();
 		}
-		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsNew);
-		
+		*/
 
 		core::ExpressionPtr incExpr  = loopAnalysis.getIncrExpr();
 		incExpr = utils::castScalar(inductionVar->getType(), incExpr);
@@ -482,10 +484,21 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 					)
 			);
 
+			// even though, might be the fist use of a value parameter variable.
+			// needs to be wrapped
+			if(llvm::isa<clang::ParmVarDecl> (iv)){
+				auto fit = convFact.ctx.wrapRefMap.find(fakeInductionVar.as<core::VariablePtr>());
+				if (fit == convFact.ctx.wrapRefMap.end()) {
+					fit = convFact.ctx.wrapRefMap.insert(std::make_pair(fakeInductionVar.as<core::VariablePtr>(),
+												  					   builder.variable(builder.refType(fakeInductionVar->getType())))).first;
+				}
+				core::ExpressionPtr wrap = fit->second;
+				fakeInductionVar = wrap.as<core::ExpressionPtr>();
+			}
+
 			retStmt.push_back(
 					builder.callExpr(gen.getUnit(),
 							gen.getRefAssign(), fakeInductionVar, finalVal));
-
 		}
 
 	} catch (const analysis::LoopNormalizationError& e) {
