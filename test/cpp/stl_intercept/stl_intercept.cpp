@@ -1,7 +1,9 @@
-
-#include <stdio.h>
 #include <vector>
 #include <set>
+#include <list>
+#include <iostream>
+#include <cstdio>
+//#include <stdio.h>
 
 using namespace std;
 
@@ -9,29 +11,42 @@ using namespace std;
 //int globalInt;
 
 int main() {
+	//wprintf("%lc",L'c');
 
+	std::cout << "asd";
 	//globalInt = 0;
 	//globalList.push_back(10);
+	int a;
 
-	vector<int> list;
-	list.push_back(12);
-	list.push_back(14);
+	vector<int> v;
+	v.push_back(12);
+	v.push_back(14);
 
-	vector<int>::value_type x = list.at(0);
+	a= 1;
 
-	//printf("[%d,%d]\n", list[0], list[1]);
+	vector<int>::value_type x = v.at(0);
 
-	vector<char> list1;
-	//list1.push_back(L'c');
-	list1.push_back('c');
+	printf("[%d,%d]\n", v[0], v[1]);
 
-//	printf("[%d,%d]\n", list1[0], list1[1]);
+	vector<char> v1;
+	//v1.push_back(L'c');
+	v1.push_back('c');
 
-//	set<bool> universe;
-//	universe.insert(true); 
+	printf("[%d,%d]\n", v1[0], v1[1]);
 
-//	set<int> universe1;
-//	universe1.insert(1); 
+	set<bool> universe;
+	universe.insert(true); 
+
+	set<int> universe1;
+	universe1.insert(1); 
+
+	list<int> l;
+	l.push_back(12);
+	l.push_back(14);
+
+	list<int>::iterator it = l.begin();
+	list<int>::iterator e = l.end();
+	for(; it!=e; it++ ) { }
 
 	return 0; 
 }

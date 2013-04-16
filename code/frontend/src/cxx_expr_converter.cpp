@@ -410,6 +410,68 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExpr(const clang::CXXOperatorCallExpr* callExpr) {
 	START_LOG_EXPR_CONVERSION(callExpr);
 	core::ExpressionPtr retIr;
+	core::ExpressionPtr func;
+	core::ExpressionPtr convertedOp;
+	ExpressionList args;
+	core::FunctionTypePtr funcTy;
+
+	if( const clang::CXXMethodDecl* mDecl = llvm::dyn_cast<clang::CXXMethodDecl>(callExpr->getCalleeDecl()) ) {
+		//operator defined as member function
+		VLOG(2) << "Operator defined as member function " 
+				<< mDecl->getParent()->getNameAsString() << "::" 
+				<< mDecl->getNameAsString();
+	
+		convertedOp =  convFact.convertFunctionDecl(mDecl).as<core::ExpressionPtr>();
+		VLOG(2) << convertedOp;
+		VLOG(2) << convertedOp->getType();
+				
+		// possible member operators: +,-,*,/,%,^,&,|,~,!,<,>,+=,-=,*=,/=,%=,^=,&=,|=,<<,>>,>>=,<<=,==,!=,<=,>=,&&,||,++,--,','
+		// overloaded only as member function: '=', '->', '()', '[]', '->*', 'new', 'new[]', 'delete', 'delete[]'
+		//unary:	X::operator@();	left == CallExpr->arg(0) == "this"
+		//binary:	X::operator@( right==arg(1) ); left == CallExpr->arg(0) == "this"
+		//else functioncall: ():		X::operator@( right==arg(1), args ); left == CallExpr->arg(0) == "this"
+
+		// get "this"
+		core::ExpressionPtr ownerObj = Visit(callExpr->getArg(0));
+		core::TypePtr&& irClassType = ownerObj->getType();
+		VLOG(2) << irClassType;
+		
+		if(convertedOp.isa<core::LambdaExprPtr>()) {
+			convertedOp = convFact.memberize(llvm::cast<FunctionDecl>(mDecl), 
+														convertedOp,
+														irClassType, 
+														core::FK_MEMBER_FUNCTION);
+			funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
+		}
+		else{
+			funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
+		}
+		VLOG(2) << funcTy;
+		VLOG(2) << funcTy->isMemberFunction();
+		
+		// get arguments
+		args = getFunctionArguments(builder, callExpr, funcTy);
+		VLOG(2) << args;
+		//add this?
+		args.insert (args.begin(), ownerObj);
+
+		VLOG(2) << args;
+	}
+	else if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(callExpr->getCalleeDecl()) ) {
+		// operator defined as non-member function
+		VLOG(2) << "Operator defined as non-member function " << funcDecl->getNameAsString();
+
+		// possible non-member operators:
+		// unary:	operator@( left==arg(0) )
+		// binary:	operator@( left==arg(0), right==arg(1) )
+		
+		convertedOp =  convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
+		VLOG(2) << convertedOp;
+		VLOG(2) << convertedOp->getType();
+		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
+		args = getFunctionArguments(builder, callExpr, funcTy);
+		VLOG(2) << args;
+	}
 
 	/*if (callExpr->getCalleeDecl()) {
 		if (llvm::isa<clang::FunctionDecl>(callExpr->getCalleeDecl()) ) {
@@ -424,8 +486,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 	else{
 		assert(false && "no callee");
 	}*/
-
-	core::ExpressionPtr func;
 
 	switch (callExpr->getOperator()){
 
@@ -475,7 +535,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		case OO_Arrow               :
 		case OO_Call           :
 		case OO_Subscript      :
-			assert(false && "CXXOperator not implemented yet");
+			func = convertedOp;
+			//assert(false && "CXXOperator not implemented yet");
+			break;
 		case OO_Equal                :
 			func = gen.getRefAssign();
 			break;
@@ -485,8 +547,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 
 	}
 
-	ExpressionList args;
-
+	/*
 	const clang::CallExpr* call = llvm::cast<clang::CallExpr> (callExpr);
 	for(unsigned argId= 0; argId < call->getNumArgs (); ++argId){
 
@@ -509,8 +570,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 
 		args.push_back( arg );
 	}
+	*/
 
-	retIr = builder.callExpr(mgr.getLangBasic().getUnit(), func, args);
+	retIr = builder.callExpr(funcTy->getReturnType(), func, args);
 
 	return retIr;
 
