@@ -483,13 +483,13 @@ protected:
 		});
 		// implement copyin for threadprivate vars
 		if(parallelP && parallelP->hasCopyin()) {
-			for_each(parallelP->getCopyin(), [&](const ExpressionPtr& varExp) {
+			for(const ExpressionPtr& varExp : parallelP->getCopyin()) {
 				// assign master copy to private copy
 				StatementPtr assignment = build.assign(
 					static_pointer_cast<const Expression>(handleThreadprivate(varExp)), 
 					build.deref(static_pointer_cast<const Expression>(handleThreadprivate(varExp, true))) );
 				replacements.push_back(assignment);
-			});
+			}
 		}
 		StatementPtr subStmt = transform::replaceAllGen(nodeMan, stmtNode, publicToPrivateMap);
 		// specific handling if clause is a omp for

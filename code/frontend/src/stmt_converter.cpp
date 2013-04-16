@@ -215,8 +215,19 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		analysis::LoopAnalyzer loopAnalysis(forStmt, convFact);
 
 		const clang::VarDecl* iv = loopAnalysis.getInductionVar();
-		core::ExpressionPtr fakeInductionVar = convFact.lookUpVariable(iv);
-	
+		core::VariablePtr fakeInductionVar = convFact.lookUpVariable(iv).as<core::VariablePtr>();
+
+		// we reconsider the induction var,
+		// it might be a parameter wrapper, first used in the loop
+		if(llvm::isa<clang::ParmVarDecl> (iv)){
+			auto fit = convFact.ctx.wrapRefMap.find(fakeInductionVar);
+			if (fit == convFact.ctx.wrapRefMap.end()) {
+				fit = convFact.ctx.wrapRefMap.insert(std::make_pair(fakeInductionVar,
+														   builder.variable(builder.refType(fakeInductionVar->getType())))).first;
+			}
+			fakeInductionVar = fit->second;
+		}
+
 		// before the body is visited we have to make sure to register the loop induction variable
 		// with the correct type
 		core::VariablePtr inductionVar = builder.variable(convFact.convertType(GET_TYPE_PTR(iv)));
@@ -225,17 +236,26 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		// substitute all usage of the induction variable (original) by the corrected induction var
 		// and build the body compound
 		StatementList stmtsOld = Visit(forStmt->getBody());
-	
-		// after evaluating loop body, we reconsider the induction var,
-		// it might be a parameter wrapper, first used in the loop
-		if (llvm::isa<clang::ParmVarDecl>(iv)) {
-			auto fit = convFact.ctx.wrapRefMap.find(fakeInductionVar.as<core::VariablePtr>());
-			if (fit != convFact.ctx.wrapRefMap.end()) {
-				fakeInductionVar = fit->second;	
-			}
-		}
 
 		assert(*inductionVar->getType() == *builder.deref(fakeInductionVar)->getType() && "different induction var... something wrong");
+		// first statent in the for loop is to declare
+		// a var named as the old iterator and asign
+		// the value of the current (append on begining, notice reverse order)
+/*
+		core::StatementPtr itAssign = (builder.callExpr(gen.getRefAssign(), fakeInductionVar, inductionVar)).as<core::StatementPtr>();
+		stmtsOld.insert (stmtsOld.begin(), itAssign);
+			
+		core::DeclarationStmtPtr itDecl =  builder.declarationStmt (fakeInductionVar, 
+																	builder.refVar(
+																    	builder.callExpr(mgr.getLangBasic().getUndefined(), 
+																						 builder.getTypeLiteral(inductionVar->getType()))));
+		stmtsOld.insert (stmtsOld.begin(), itDecl);
+		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsOld);
+		*/
+
+		/*
+		 * this was a beautiful idea, which didht work because of the caotic omp pragma handling
+		 */
 		StatementList stmtsNew;
 		for (auto stmt : stmtsOld){
 			auto tmpStmt = core::transform::replaceAllGen(mgr, stmt, builder.deref(fakeInductionVar) , inductionVar, true);
@@ -249,6 +269,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 			}
 		}
 		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsNew);
+		
 
 		core::ExpressionPtr incExpr  = loopAnalysis.getIncrExpr();
 		incExpr = utils::castScalar(inductionVar->getType(), incExpr);
@@ -415,8 +436,8 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		attatchDatarangeAnnotation(forIr, forStmt, convFact);
 		attatchLoopAnnotation(forIr, forStmt, convFact);
 
-		retStmt.push_back(omp::attachOmpAnnotation(forIr, forStmt, convFact));assert(
-				retStmt.back() && "Created for statement is not valid");
+		retStmt.push_back(omp::attachOmpAnnotation(forIr, forStmt, convFact));
+		assert( retStmt.back() && "Created for statement is not valid");
 
 		if (iteratorChanged) {
 			/*

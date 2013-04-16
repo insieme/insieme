@@ -1237,7 +1237,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(const c
 	(core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
 
 		/*
-		 * FIXME: sure ok?
+		 * FIXME: REMOVE
+		 * sure we dont need this?
 		if ((subExpr->getNodeType() == core::NT_Variable && 
 			 subExpr->getType()->getNodeType() != core::NT_RefType) 
 			|| 
