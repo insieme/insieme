@@ -38,14 +38,14 @@
 
 #include <vector>
 
-#include "insieme/driver/region/region_selector.h"
+#include "insieme/analysis/region/region_selector.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
 
 namespace insieme {
-namespace driver {
+namespace analysis {
 namespace region {
 
 

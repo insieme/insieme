@@ -36,29 +36,57 @@
 
 #pragma once
 
-#include "insieme/driver/region/region_selector.h"
+#include <vector>
+
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme {
-namespace driver {
+namespace analysis {
 namespace region {
 
+	using std::vector;
+
+
 	/**
-	 * This region selector is picking outermost parallel for loop bodies. This
-	 * selector is only focusing on the work-sharing pfor construct, not potentially
-	 * parallel for loops.
+	 * At the moment, no more information regarding a region is required
+	 * than an address pointing to it. Hence, regions are typedefed to be
+	 * equivalent to NodeAddresses.
 	 */
-	class PForBodySelector : public RegionSelector {
+	typedef core::CompoundStmtAddress Region;
+	typedef vector<Region> RegionList;
+
+	/**
+	 * An abstract base class defining the interface for any kind of region selection
+	 * mechanism to be supported.
+	 */
+	class RegionSelector {
 
 	public:
 
 		/**
-		 * Selects all regions within the given code fragment.
+		 * A virtual destructor for this abstract, virtual base class.
 		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const;
+		virtual ~RegionSelector() {};
+
+		/**
+		 * This method is determining a list of regions within the given code fragment.
+		 * The method represents the sole functionality of a region extractor. Implementations
+		 * of this abstract base class have to provide corresponding implementations for
+		 * this method.
+		 *
+		 * @param code the code fragment within which regions should be determined
+		 * @return a list of addresses to the nodes forming the selected regions. The root
+		 * 		of all obtained addresses has to be equivalent to the given code region.
+		 */
+		virtual RegionList getRegions(const core::NodePtr& code) const =0;
 
 	};
 
 
 } // end namespace region
-} // end namespace driver
+} // end namespace analysis
 } // end namespace insieme

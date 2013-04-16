@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/region/size_based_selector.h"
+#include "insieme/analysis/region/size_based_selector.h"
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -44,7 +44,7 @@
 
 
 namespace insieme {
-namespace driver {
+namespace analysis {
 namespace region {
 
 	namespace {
@@ -105,6 +105,6 @@ namespace region {
 	}
 
 } // end namespace region
-} // end namespace driver
+} // end namespace analysis
 } // end namespace insieme
 
