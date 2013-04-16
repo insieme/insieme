@@ -355,52 +355,90 @@ namespace {
 	 * Will certainly determine the declaration status of variables inside a block.
 	 */
 	template<template<class Target> class Ptr>
-	struct FreeVariableCollector : public IRVisitor<bool, Ptr> {
+	struct FreeVariableCollector : private IRVisitor<void, Ptr, VariableSet&, std::set<Ptr<const Variable>>&> {
 
 		typedef std::set<Ptr<const Variable>> ResultSet;
 		typedef vector<Ptr<const Variable>> ResultList;
 
-		VariableSet bound;
-		ResultSet free;
-
 		// do not visit types
-		FreeVariableCollector() : IRVisitor<bool,Ptr>(false) {}
+		FreeVariableCollector() : IRVisitor<void,Ptr, VariableSet&, std::set<Ptr<const Variable>>&>(false) {}
 
-		bool visitNode(const Ptr<const Node>& node) {
-			return node->getNodeCategory() == NC_Type;
-		} // default behavior: continue visiting
+		ResultSet run(const Ptr<const Node>& root) {
 
-		bool visitDeclarationStmt(const Ptr<const DeclarationStmt>& decl) {
-			bound.insert(decl->getVariable());
-			return false;
+			// run visitor
+			VariableSet bound;
+			ResultSet free;
+
+			// run visit
+			visit(root, bound, free);
+
+			// return result set
+			return free;
 		}
 
-		bool visitVariable(const Ptr<const Variable>& var) {
+	private:
+
+		void visitNode(const Ptr<const Node>& node, VariableSet& bound, ResultSet& free) {
+			// ignore types
+			if (node->getNodeCategory() == NC_Type) return;
+
+			// visit all sub-nodes
+			visitAll(node->getChildList(), bound, free);
+		}
+
+		void visitDeclarationStmt(const Ptr<const DeclarationStmt>& decl, VariableSet& bound, ResultSet& free) {
+			// first add variable to set of bound variables
+			bound.insert(decl->getVariable());
+
+			// then visit the defining expression
+			visit(decl->getInitialization(), bound, free);
+		}
+
+		void visitCompoundStmt(const Ptr<const CompoundStmt>& compound, VariableSet& bound, ResultSet& free) {
+
+			// a compound statement creates a new scope
+			VariableSet innerBound = bound;
+
+			// continue visiting with the limited scope
+			visitNode(compound, innerBound, free);
+		}
+
+		void visitVariable(const Ptr<const Variable>& var, VariableSet& bound, ResultSet& free) {
 			if(bound.find(var) == bound.end()) {
 				free.insert(var);
 			}
-			return false;
 		}
 
-		bool visitLambda(const Ptr<const Lambda>& lambda) {
-			// register lambda parameters to be bound
+		void visitLambda(const Ptr<const Lambda>& lambda, VariableSet& bound, ResultSet& free) {
+
+			// a lambda creates a new scope
+			VariableSet innerBound = bound;
+
+			// all parameters are bound within this scope
 			const auto& params = lambda->getParameters();
-			bound.insert(params.begin(), params.end());
-			return false;
+			innerBound.insert(params.begin(), params.end());
+
+			// continue visiting with the limited scope
+			visitNode(lambda, innerBound, free);
 		}
 
-		bool visitLambdaDefinition(const Ptr<const LambdaDefinition>& definition) {
+		void visitLambdaDefinition(const Ptr<const LambdaDefinition>& definition, VariableSet& bound, ResultSet& free) {
+			// a lambda creates a new scope
+			VariableSet innerBound = bound;
+
 			// register recursive lambda variables
 			for(const LambdaBindingPtr& bind : definition) {
-				bound.insert(bind->getVariable());
+				innerBound.insert(bind->getVariable());
 			}
-			return false;
+
+			// process child nodes
+			visitNode(definition, innerBound, free);
 		}
 
 
 		// due to the structure of the IR, nested lambdas can never reuse outer variables
 		//  - also prevents variables in LamdaDefinition from being inadvertently captured
-		bool visitLambdaExpr(const Ptr<const LambdaExpr>& lambda) {
+		void visitLambdaExpr(const Ptr<const LambdaExpr>& lambda, VariableSet& bound, ResultSet& free) {
 			static const rec_free_var_collector<Ptr> collectRecursive;
 
 
@@ -438,42 +476,39 @@ namespace {
 					free.insert(collectRecursive.extend(definition, cur));
 				}
 			}
-
-			return true;
 		}
 
-		bool visitBindExpr(const Ptr<const BindExpr>& bindExpr) {
+		void visitBindExpr(const Ptr<const BindExpr>& bindExpr, VariableSet& bound, ResultSet& free) {
 
 			// first search for free variables within bound expressions
 			auto expressions = bindExpr->getBoundExpressions();
 			for_each(expressions, [&](const Ptr<const Expression>& e) {
-				visitDepthFirstPrunable(e, *this);
+				this->visit(e, bound, free);
 			} );
 
 			// add free variables encountered within call target
-			visitDepthFirstPrunable(bindExpr->getCall()->getFunctionExpr(), *this);
-
-			// that's all within this branch
-			return true;
+			visit(bindExpr->getCall()->getFunctionExpr(), bound, free);
 		}
 	};
 
 }
 
 VariableList getFreeVariables(const NodePtr& code) {
-	FreeVariableCollector<Pointer> collector;
-	visitDepthFirstOncePrunable(code, collector);
+
+	// collect free variables
+	auto set = FreeVariableCollector<Pointer>().run(code);
 
 	// convert result into list
-	return VariableList(collector.free.begin(), collector.free.end());
+	return VariableList(set.begin(), set.end());
 }
 
 vector<VariableAddress> getFreeVariableAddresses(const NodePtr& code) {
-	FreeVariableCollector<Address> collector;
-	visitDepthFirstPrunable(NodeAddress(code), collector);
+
+	// collect free variables
+	auto set = FreeVariableCollector<Address>().run(NodeAddress(code));
 
 	// convert result into list
-	auto res = vector<VariableAddress>(collector.free.begin(), collector.free.end());
+	auto res = vector<VariableAddress>(set.begin(), set.end());
 	std::sort(res.begin(), res.end());
 	return res;
 }
