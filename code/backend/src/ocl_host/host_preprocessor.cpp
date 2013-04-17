@@ -582,7 +582,7 @@ using insieme::transform::pattern::anyList;
 								irp::callExpr(irp::literal("array.ref.elem.1D"), var("2var") << *any) <<
 								irp::callExpr(irp::literal("ref.deref"), single(irp::callExpr(irp::literal("array.ref.elem.1D"), var("3var") << *any))))))),
 								irp::callExpr(irp::literal("ref.deref"), single(var("bufVar", irp::variable(any, any)))) <<
-								*any);
+								irp::exprOfType(atom(builder.getLangBasic().getUInt4())) << *any);
 
 		TreePatternPtr delTree = irp::callExpr(any, irp::literal("ref.delete"), single(var("bufVar", irp::variable(any, any))));
 

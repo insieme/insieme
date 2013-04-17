@@ -138,7 +138,7 @@ namespace utils {
 		
 		if (VLOG_IS_ON(2))
 			purified->dump();
-		VLOG(DEBUG) << purified->getTypeClassName();
+		VLOG(2) << purified->getTypeClassName();
 
 		if( const TagType* tagTy = llvm::dyn_cast<TagType>(purified) ) {
 			// LOG(DEBUG) << "Adding " << tagTy->getDecl()->getNameAsString();

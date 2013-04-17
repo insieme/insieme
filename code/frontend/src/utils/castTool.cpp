@@ -351,6 +351,16 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 									innerExpr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 		}
 
+		case clang::CK_VectorSplat 	:
+		/*case clang::CK_VectorSplat - A conversion from an arithmetic type to a vector of that element type. Fills all elements 
+		* ("splats") with the source value. __attribute__((ext_vector_type(4))) int v = 5;
+		* */
+			//return expr;
+			return builder.callExpr(gen.getVectorInitUniform(), 
+					expr,
+					builder.getIntTypeParamLiteral(targetTy.as<core::VectorTypePtr>()->getSize())
+				);
+
 		///////////////////////////////////////
 		//  PARTIALY IMPLEMENTED
 		///////////////////////////////////////
@@ -469,10 +479,6 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		 * and block pointers.
 		* */
 
-		case clang::CK_VectorSplat 	:
-		/*case clang::CK_VectorSplat - A conversion from an arithmetic type to a vector of that element type. Fills all elements 
-		* ("splats") with the source value. __attribute__((ext_vector_type(4))) int v = 5;
-		* */
 
 		case clang::CK_CPointerToObjCPointerCast 	:
 		/*case clang::CK_CPointerToObjCPointerCast - Casting a C pointer kind to an Objective-C pointer.
