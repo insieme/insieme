@@ -116,6 +116,11 @@ namespace compiler {
 		cmd << " " << join(" ", after);
 		cmd << " -o " << outputFile;
 
+		// redirect streams if compilation should be 'silent'
+		if (silent) {
+			cmd << " > /dev/null 2>&1";
+		}
+
 		return cmd.str();
 	}
 
