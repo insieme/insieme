@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/pragma_transformer.h"
+#include "insieme/driver/pragma/pragma_transformer.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -68,6 +68,7 @@ utils::SourceLocation getStartLocation(const core::NodePtr& node) {
 } // end anonymous namespace
 namespace insieme {
 namespace driver {
+namespace pragma {
 
 core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 	using namespace insieme::transform;
@@ -231,6 +232,7 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 
 }
 
+} // end pragma namespace
 } // end driver namespace
 } // end insieme namespace
 

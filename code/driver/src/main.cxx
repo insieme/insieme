@@ -86,8 +86,8 @@
 #include "insieme/driver/predictor/dynamic_predictor/region_performance_parser.h"
 #include "insieme/driver/predictor/measuring_predictor.h"
 #include "insieme/analysis/region/size_based_selector.h"
-#include "insieme/driver/pragma_transformer.h"
-#include "insieme/driver/pragma_info.h"
+#include "insieme/driver/pragma/pragma_transformer.h"
+#include "insieme/driver/pragma/pragma_info.h"
 #include "insieme/driver/cmd/main_options.h"
 
 #ifdef USE_XML
@@ -583,11 +583,11 @@ int main(int argc, char** argv) {
 
 			// Check for annotations on IR nodes relative to transformations which should be applied, and applies them.
 			program = measureTimeFor<ProgramPtr>("Pragma.Transformer", 
-					[&]() { return insieme::driver::applyTransfomrations(program); } );
+					[&]() { return insieme::driver::pragma::applyTransfomrations(program); } );
 
 			// Handling of pragma info
 			program = measureTimeFor<ProgramPtr>("Pragma.Info",  
-					[&]() { return insieme::driver::handlePragmaInfo(program, options); } );
+					[&]() { return insieme::driver::pragma::handlePragmaInfo(program, options); } );
 
 			printIR(program, stmtMap, options);
 
