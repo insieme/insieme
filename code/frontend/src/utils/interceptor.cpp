@@ -59,11 +59,12 @@ namespace {
 
 namespace fs = boost::filesystem;
 
-boost::optional<fs::path> toStdLibHeader(const fs::path& path) {
-	static const fs::path stdLibRoot = fs::canonical(CXX_INCLUDES);
+boost::optional<fs::path> toStdLibHeader(const fs::path& path, const vector<fs::path>& libDirs) {
 	static const boost::optional<fs::path> fail;
 
-	if (path == stdLibRoot) {
+	if (libDirs.empty()) return fail;
+
+	if (contains(libDirs, path)) {
 		return fs::path();
 	}
 
@@ -72,12 +73,12 @@ boost::optional<fs::path> toStdLibHeader(const fs::path& path) {
 	}
 
 	// if it is within the std-lib directory, build relative path
-	auto res = toStdLibHeader(path.parent_path());
+	auto res = toStdLibHeader(path.parent_path(), libDirs);
 	return (res)? (*res/path.filename()) : fail;
 	
 }
 
-void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const Indexer& indexer) {
+void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const vector<fs::path>& stdLibDirs) {
 
 	// check whether there is a declaration at all
 	if (!decl) return;
@@ -97,8 +98,8 @@ void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const 
 	// get absolute path of header file
 	fs::path header = fs::canonical(fileName);
 
-	// check whether it is within the clang STL header library
-	if (auto stdLibHeader = toStdLibHeader(header)) {
+	// check whether it is within the STL library
+	if (auto stdLibHeader = toStdLibHeader(header, stdLibDirs)) {
 		header = *stdLibHeader;
 	}
 
@@ -150,7 +151,7 @@ void Interceptor::loadConfigSet(std::set<std::string> tI) {
 
 insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::frontend::conversion::ConversionFactory& convFact) {
 
-	InterceptTypeVisitor iTV(convFact, indexer, rx);
+	InterceptTypeVisitor iTV(convFact, *this);
 	// resolve type and save in cache
 	core::TypePtr irType = iTV.Visit(type);
 	
@@ -169,9 +170,13 @@ insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::
 	assert(irType && "irType");
 
 	// add header file
-	addHeaderForDecl(irType, typeDecl, indexer);
+	addHeaderForDecl(irType, typeDecl, stdLibDirs);
 	VLOG(1) << "build interceptedType " << type << " ## " << irType;
 	return irType;
+}
+
+bool Interceptor::isIntercepted(const string& name) const {
+	return regex_match(name, rx);
 }
 
 bool Interceptor::isIntercepted(const clang::Type* type) const { 
@@ -194,7 +199,7 @@ bool Interceptor::isIntercepted(const clang::Type* type) const {
 	*/
 
 	if(typeDecl) {
-		return regex_match(typeDecl->getQualifiedNameAsString(), rx);
+		return isIntercepted(typeDecl->getQualifiedNameAsString());
 	}
 	
 	return false;
@@ -284,7 +289,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 
 	core::ExpressionPtr interceptExpr = builder.literal( literalName, type);
 
-	addHeaderForDecl(interceptExpr, decl, indexer);
+	addHeaderForDecl(interceptExpr, decl, stdLibDirs);
 
 	VLOG(2) << interceptExpr << " " << type;
 	if(insieme::annotations::c::hasIncludeAttached(interceptExpr)) {
@@ -293,8 +298,9 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 	return interceptExpr;
 }
 
-InterceptTypeVisitor::InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const insieme::frontend::utils::Indexer& indexer, const boost::regex& rx)
-		: convFact(convFact), builder(convFact.getIRBuilder()), indexer(indexer), rx(rx) {}
+
+InterceptTypeVisitor::InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const Interceptor& interceptor)
+	: convFact(convFact), builder(convFact.getIRBuilder()), interceptor(interceptor) {}
 
 /*
 core::TypePtr InterceptTypeVisitor::VisitTypedefType(const clang::TypedefType* typedefType) {
@@ -334,7 +340,7 @@ core::TypePtr InterceptTypeVisitor::VisitTagType(const clang::TagType* tagType) 
 	std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
 
 	core::TypePtr retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
-	addHeaderForDecl(retTy, tagDecl, indexer);
+	addHeaderForDecl(retTy, tagDecl, interceptor.getStdLibDirectories());
 	return retTy;
 }
 
@@ -375,7 +381,7 @@ core::TypePtr InterceptTypeVisitor::VisitTemplateSpecializationType(const clang:
 
 	// build resulting type
 	core::TypePtr retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
-	addHeaderForDecl(retTy, templDecl, indexer);
+	addHeaderForDecl(retTy, templDecl, interceptor.getStdLibDirectories());
 	return retTy;
 }
 
@@ -384,7 +390,7 @@ core::TypePtr InterceptTypeVisitor::VisitTemplateTypeParmType(const clang::Templ
 		string typeName = fixQualifiedName(tD->getNameAsString());
 		VLOG(2) << typeName;
 		core::TypePtr retTy = builder.genericType(typeName, insieme::core::TypeList(), insieme::core::IntParamList());
-		addHeaderForDecl(retTy, tD, indexer);
+		addHeaderForDecl(retTy, tD, interceptor.getStdLibDirectories());
 		return retTy;
 	} 
 	assert(false && "TemplateTypeParmType intercepted");
@@ -398,8 +404,8 @@ core::TypePtr InterceptTypeVisitor::Visit(const clang::Type* type) {
 	// ensure include files are annotated
 	if (res && res->getNodeType() == core::NT_GenericType) {
 		const string& name = res.as<core::GenericTypePtr>()->getFamilyName();
-		if (boost::regex_match(name, rx)) {
-			addHeaderForDecl(res, type->getAsCXXRecordDecl(), indexer);
+		if (interceptor.isIntercepted(name)) {
+			addHeaderForDecl(res, type->getAsCXXRecordDecl(), interceptor.getStdLibDirectories());
 		}
 	}
 

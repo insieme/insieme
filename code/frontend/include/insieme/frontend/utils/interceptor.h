@@ -44,6 +44,8 @@
 #include <clang/AST/DeclTemplate.h>
 #pragma GCC diagnostic pop
 
+#include <boost/filesystem.hpp>
+
 #include "insieme/core/ir_builder.h"
 #include "insieme/utils/map_utils.h"
 
@@ -65,22 +67,34 @@ class Interceptor {
 public:
 	Interceptor(
 			insieme::core::NodeManager& mgr,
-			insieme::frontend::utils::Indexer& indexer)
-		: indexer(indexer), builder(mgr)
+			insieme::frontend::utils::Indexer& indexer,
+			const vector<string>& stdLibDirs)
+		: indexer(indexer), builder(mgr), stdLibDirs(::transform(stdLibDirs, [](const string& path) { return boost::filesystem::canonical(path); }))
 	{}
 
 	void loadConfigFile(std::string fileName);	
 	void loadConfigSet(std::set<std::string> toIntercept);	
 	
+	bool isIntercepted(const string& name) const;
 	bool isIntercepted(const clang::Type* type) const;
 	bool isIntercepted(const clang::FunctionDecl* decl) const;
 
 	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::ConversionFactory& convFact);
 	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::ConversionFactory& convFact);
 
+	insieme::frontend::utils::Indexer& getIndexer() const {
+		return indexer;
+	}
+
+	const vector<boost::filesystem::path>& getStdLibDirectories() const {
+		return stdLibDirs;
+	}
+
 private:
 	insieme::frontend::utils::Indexer& indexer;
 	insieme::core::IRBuilder builder;
+
+	vector<boost::filesystem::path> stdLibDirs;
 
 	std::set<std::string> toIntercept;
 	boost::regex rx;
@@ -90,10 +104,9 @@ struct InterceptTypeVisitor : public clang::TypeVisitor<InterceptTypeVisitor, co
 
 	insieme::frontend::conversion::ConversionFactory& convFact;
 	const insieme::core::IRBuilder& builder;
-	const insieme::frontend::utils::Indexer& indexer;
-	const boost::regex& rx;
+	const Interceptor& interceptor;
 	
-	InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const insieme::frontend::utils::Indexer& indexer, const boost::regex& rx);
+	InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const Interceptor& interceptor);
 
 	//core::TypePtr VisitTypedefType(const clang::TypedefType* typedefType);
 	core::TypePtr VisitTagType(const clang::TagType* tagType);

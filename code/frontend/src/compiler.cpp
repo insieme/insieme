@@ -300,7 +300,7 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 
 		// FIXME check clang/lib/Driver/Toolchains.cpp for headersearch of clang for linux/gcc
 		// use the cxx header of the backend c++ compiler, uses "echo | gcc -v -x c++ -E -" to get search list of headers
-		for(std::string curr : insieme::utils::compiler::getDefaultCppIncludePaths()) {
+		for(std::string curr : config.getStdLibIncludeDirectories()) {
 			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System, true, false, false);
 		}
 	
