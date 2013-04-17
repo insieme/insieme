@@ -34,14 +34,17 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/dot_printer.h"
+#include "insieme/driver/printer/dot_printer.h"
 
 #include "insieme/utils/logging.h"
 
-using namespace insieme;
-using namespace driver;
-
 using namespace insieme::core::checks;
+
+namespace insieme {
+namespace driver {
+namespace printer {
+
+namespace {
 
 std::string attributeIdToString(const NodeProperty& prop) {
 	switch(prop) {
@@ -126,8 +129,7 @@ struct LiteralNode: public DotNode {
 
 #define NODE_ID(node)	this->builder->getNodeId(node)
 
-namespace insieme {
-namespace driver {
+} // end anonymous namespace
 
 void DOTGraphBuilder::addNode(const DOTGraphBuilder::Node& node) {
 	out << node.getId()  << "\t";
@@ -504,6 +506,11 @@ void printDotGraph(const insieme::core::NodePtr& root, const MessageList& errors
 	insieme::core::visitDepthFirstOnce(root, makeDotPrinter(out, errors));
 	out << "}" << std::endl;
 }
-}
-}
+
+} // end namespace utils
+} // end namespace driver
+} // end namespace insieme
+
+
+
 

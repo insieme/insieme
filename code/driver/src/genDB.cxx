@@ -57,7 +57,7 @@
 #include "insieme/frontend/frontend.h"
 #include "insieme/machine_learning/database_utils.h"
 
-#include "insieme/driver/handle_fetures.h"
+#include "insieme/driver/handle_features.h"
 
 
 #include "insieme/annotations/loop_annotations.h"

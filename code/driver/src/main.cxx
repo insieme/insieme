@@ -82,13 +82,12 @@
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/driver/driver_config.h"
-#include "insieme/driver/dot_printer.h"
+#include "insieme/driver/printer/dot_printer.h"
 #include "insieme/driver/predictor/dynamic_predictor/region_performance_parser.h"
 #include "insieme/driver/predictor/measuring_predictor.h"
 #include "insieme/analysis/region/size_based_selector.h"
 #include "insieme/driver/pragma_transformer.h"
 #include "insieme/driver/pragma_info.h"
-#include "insieme/driver/task_optimizer.h"
 #include "insieme/driver/cmd/main_options.h"
 
 #ifdef USE_XML
@@ -473,7 +472,7 @@ void showIR(const core::ProgramPtr& program, MessageList& errors, const CommandL
 	measureTimeFor<void>("Show.graph", 
 		[&]() {
 			std::fstream dotOut(options.ShowIR.c_str(), std::fstream::out | std::fstream::trunc);
-			insieme::driver::printDotGraph(program, errors, dotOut);
+			insieme::driver::printer::printDotGraph(program, errors, dotOut);
 		} 
 	);
 }
@@ -613,13 +612,6 @@ int main(int argc, char** argv) {
 				// check again if the OMP flag is on
 				printIR(program, stmtMap, options);
 				if(options.CheckSema) { checkSema(program, errors, stmtMap, options); }
-			}
-
-			if(options.TaskOpt) {
-				program = measureTimeFor<core::ProgramPtr>("Task Optimization ", [&]() {
-					return insieme::applyTaskOptimization(program);
-				});
-				printIR(program, stmtMap, options);
 			}
 
 
