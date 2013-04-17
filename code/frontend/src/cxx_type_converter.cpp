@@ -89,8 +89,8 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 	}
 
 	auto classType = TypeConverter::VisitTagType(tagType);
-
 	convFact.ctx.typeCache[tagType] = classType;
+
 	// if is a c++ class, we need to annotate some stuff
 	if (llvm::isa<clang::RecordType>(tagType)){
 		if (!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl()))
@@ -99,7 +99,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		core::ClassMetaInfo classInfo;
 		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl());
 
-		// base clases if any:
+		//~~~~~ base clases if any ~~~~~
 		if (classDecl->getNumBases() > 0){
 			std::vector<core::ParentPtr> parents;
 
@@ -120,7 +120,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		convFact.ctx.typeCache.erase(tagType);
 		convFact.ctx.typeCache[tagType] = classType;
 
-		// copy ctor, move ctor, default ctor
+		//~~~~~ copy ctor, move ctor, default ctor ~~~~~
 		clang::CXXRecordDecl::ctor_iterator ctorIt = classDecl->ctor_begin();
 		clang::CXXRecordDecl::ctor_iterator ctorEnd= classDecl->ctor_end();
 		for (; ctorIt != ctorEnd; ctorIt ++){
@@ -131,14 +131,6 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				ctorDecl->isMoveConstructor() ){
 				
 				if (ctorDecl->isUserProvided ()){
-					/*
-					core::ExpressionPtr&& ctorLambda = convFact.convertCtor(ctorDecl, classType).as<core::ExpressionPtr>();
-					if (ctorLambda && ctorLambda.isa<core::LambdaExprPtr>()){
-						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
-						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
-					}
-					*/
-
 					core::LambdaExprPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::LambdaExprPtr>();
 					if (ctorLambda ){
 						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
@@ -148,7 +140,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			}
 		} 
 
-		// convert destructor
+		//~~~~~ convert destructor ~~~~~
 		if(classDecl->hasUserDeclaredDestructor()){
 			const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
 			core::LambdaExprPtr&& dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::LambdaExprPtr>();
@@ -158,7 +150,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				classInfo.setDestructorVirtual();
 		}
 
-		// member functions
+		//~~~~~ member functions ~~~~~
 		clang::CXXRecordDecl::method_iterator methodIt = classDecl->method_begin();
 		clang::CXXRecordDecl::method_iterator methodEnd= classDecl->method_end();
 		for (; methodIt != methodEnd; methodIt ++){
@@ -176,13 +168,6 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			
 			core::LambdaExprPtr&& methodLambda = convFact.convertFunctionDecl(method).as<core::LambdaExprPtr>();
 			methodLambda = convFact.memberize  (method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION);
-			/*
-			core::ExpressionPtr&& methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
-
-			if(methodLambda.isa<core::LambdaExprPtr>()) {
-				methodLambda = convFact.memberize  (method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION);
-			}
-			*/
 
 			if (VLOG_IS_ON(2)){
 				VLOG(2) << " ############ member! #############";
@@ -199,19 +184,11 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 										methodLambda,
 										(*methodIt)->isVirtual(), 
 										(*methodIt)->isConst());
-			/*
-			if(methodLambda.isa<core::LambdaExprPtr>()) {
-				classInfo.addMemberFunction(llvm::cast<clang::NamedDecl>(method)->getNameAsString(), 
-										methodLambda.as<core::LambdaExprPtr>(),
-										(*methodIt)->isVirtual(), 
-										(*methodIt)->isConst());
-			}
-			*/
 		}
 		
-			// append metha information to the class definition
-			core::setMetaInfo(classType, classInfo);
-		}
+		// append metha information to the class definition
+		core::setMetaInfo(classType, classInfo);
+	}
 	
 	// cache the new implementation
 	convFact.ctx.typeCache.erase(tagType);
@@ -275,6 +252,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitReferenceType(const Refe
 
 // this is a cpp reference not pointer 
 	core::TypePtr inTy = convFact.convertType( refTy->getPointeeType().getTypePtr());
+//	return inTy;
+
+	//FIXME: what happens with this>??????
 
 // we need to check where is a const ref or not	
 	QualType  qual;

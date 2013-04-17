@@ -576,6 +576,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitGNUNullExpr(const cla
 	return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(type));
 }
 
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
+	return VisitCastExpr(castExpr);
+}
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr) {
+	return VisitCastExpr(castExpr);
+}
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						  CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

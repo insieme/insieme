@@ -98,7 +98,7 @@ using namespace insieme;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 namespace {
 
-// Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
+/// Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
 annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocation& loc) {
 	FileID&& fileId = sm.getMainFileID();
 	assert(!fileId.isInvalid() && "File is not valid!");
@@ -106,6 +106,9 @@ annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const Sourc
 	assert(fileEntry);
 	return annotations::c::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
 };
+
+
+
 
 } // End empty namespace
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -182,6 +185,19 @@ void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector& globColl
 	VLOG(2) << ctx.globalStruct.first;
 	VLOG(2) << ctx.globalStruct.second;
 	VLOG(2) << ctx.globalVar;
+}
+
+//////////////////////////////////////////////////////////////////
+///
+vector<core::StatementPtr> ConversionFactory::materializeReadOnlyParams(const vector<core::VariablePtr>& params){
+	vector<core::StatementPtr> decls;
+	for (auto currParam : params){
+		auto fit = this->ctx.wrapRefMap.find(currParam);
+		if ( fit != this->ctx.wrapRefMap.end() ) {
+			decls.push_back( this->builder.declarationStmt(fit->second, this->builder.refVar( fit->first ) ));
+		}
+	}
+	return decls;
 }
 
 //////////////////////////////////////////////////////////////////
@@ -811,6 +827,7 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// this is a C++ reference ( int& ref = x)
 	if (clangType && clangType->isReferenceType()){
 
+		assert(false && "here am I");
 		//FIXME this looks fishy!!! ask luis
 		// if is a CPP ref, convert to IR
 		if (core::analysis::isCppRef(retIr->getType())) {
@@ -981,16 +998,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	}
 
-	/* moved to begining of convertfunctiondecl
-	 * FIXME remove
-	 * */
-	/*
-	ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(funcDecl);
-	if (fit != ctx.lambdaExprCache.end()) {
-		RESTORE_TU();
-		return fit->second;
-	}
-	*/
 
 	if (!components.empty()) {
 		// we are dealing with a recursive type
@@ -1086,35 +1093,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
 	ctx.curParameter = oldList;
 
-	// if any of the parameters of this function has been marked as needRef, we need to add a declaration just before
-	// the body of this function
-	vector<core::StatementPtr> decls;
-	for (auto currParam : params){
-		auto fit = this->ctx.wrapRefMap.find(currParam);
-
-		if ( fit != this->ctx.wrapRefMap.end() ) {
-			// LOG(INFO) << "Replace";
-			decls.push_back( this->builder.declarationStmt(fit->second, this->builder.refVar( fit->first ) ));
-			/*
-			 * replace this parameter in the body, example:
-			 *
-			 * int f(int a) {
-			 *  for (...) {
-			 *   x = a; <- if all the occurencies of a will not be replaced the semantics of
-			 *   		   the code will not be preserved
-			 *   a = i;
-			 *  }
-			 * }
-			 *
-			 *  as the variable can olny appear in the RHS of expression, we have to sobstitute it with its
-			 *  dereference
-			 */
-			body = core::static_pointer_cast<const core::Statement>(
-					core::transform::replaceAll( this->builder.getNodeManager(), body, fit->first,
-							this->tryDeref(fit->second))
-			);
-		}
-	}
+	// some cases value parameters have to be materialized in the 
+	// body of the function, to be able to writte on them.
+	// by default well materialize all paramenters
+	vector<core::StatementPtr> decls = materializeReadOnlyParams(params);
 
 	// if we introduce new decls we have to introduce them just before the body of the function
 	if (!decls.empty()) {
@@ -1417,6 +1399,32 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 		}
 		else{
 			//otherwise is a regular assigment intialization
+			
+			// it might be that the expression is a value parameter, and it might be wrapped.
+			// we can materialize the wrapp for it, or we avoid the wrap. (avoid the wrap is done)
+			const clang::DeclRefExpr* rhs= utils::skipSugar<DeclRefExpr> ((*it)->getInit());
+
+			// might be the reference to a parameter
+			if(rhs && llvm::isa<clang::ParmVarDecl>(rhs->getDecl())){
+				expr = lookUpVariable(rhs->getDecl());
+			}
+			else{
+				// or might be the usage of a member of a parameter
+				const clang::MemberExpr* member= utils::skipSugar<MemberExpr> ((*it)->getInit());
+				if(member && llvm::isa<clang::DeclRefExpr>(member->getBase())){
+					// we replace the usage of the wrapped var by the original parameter
+				
+					clang::ParmVarDecl* param= llvm::dyn_cast<clang::ParmVarDecl>(llvm::cast<clang::DeclRefExpr>(member->getBase())->getDecl());
+					if (param) {
+						core::ExpressionPtr&& newOwner= lookUpVariable(param);
+						core::CallExprAddress addr(expr.as<core::CallExprPtr>());
+						expr = core::transform::replaceNode (mgr, 
+															  addr[0].as<core::CallExprAddress>()[0],
+															  newOwner ).as<core::CallExprPtr>();
+					}
+				}
+			}
+
 			initStmt = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, tryDeref(expr));
 		}
 

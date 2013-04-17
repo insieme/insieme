@@ -230,15 +230,16 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	core::TypePtr&& exprTy = expr->getType();
 
-//	std::cout << "####### Expr: #######" << std::endl;
-//	dumpDetail(expr);
-//	std::cout << "####### Expr Type: #######" << std::endl;
-//	dumpDetail(exprTy);
-//	std::cout << "####### cast Type: #######" << std::endl;
-//	dumpDetail(targetTy);
-//	std::cout << "####### clang: #######" << std::endl;
-//	castExpr->dump();
-//	std::cout << std::endl;
+	if (VLOG_IS_ON(2)){
+		VLOG(2) << "####### Expr: #######" << std::endl;
+		dumpDetail(expr);
+		VLOG(2) << "####### Expr Type: #######" << std::endl;
+		dumpDetail(exprTy);
+		VLOG(2)<< "####### cast Type: #######" << std::endl;
+		dumpDetail(targetTy);
+		VLOG(2)  << "####### clang: #######" << std::endl;
+		castExpr->dump();
+	}
 
 	// it might be that the types are already fixed:
 	// like LtoR in arrays, they will allways be a ref<...>
@@ -288,7 +289,10 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 			// this as the same type. but we might intepret it in a diff way. (ex, char literals are
 			// int for clang, we build a char type
 			
-			return castScalar( targetTy, expr);
+			if (gen.isPrimitive(expr->getType()) )
+				return castScalar( targetTy, expr);
+			else 
+				return expr;
 
 
 		case clang::CK_ArrayToPointerDecay 	:

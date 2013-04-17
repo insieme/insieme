@@ -473,11 +473,21 @@ public:
 	core::ExpressionPtr convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl);
 
 	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
+
+
+	/**
+	 * some cases value parameters have to be materialized in the 
+	 * body of the function, to be able to writte on them.
+	 * by default well materialize all paramenters
+	 * @param params: list of parameters in the function
+	 * @return a list of statements of the materialized variables
+	 */
+	vector<core::StatementPtr> materializeReadOnlyParams(const vector<core::VariablePtr>& params);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {
 	GlobalVariableDeclarationException() :
-			std::runtime_error("") {
+			std::runtime_error("global variable declaration exception") {
 	}
 };
 
