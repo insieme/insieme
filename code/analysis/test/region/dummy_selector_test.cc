@@ -34,49 +34,33 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/driver/region/region_selector.h"
+#include "insieme/analysis/region/dummy_selector.h"
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
-namespace driver {
+namespace analysis {
 namespace region {
 
-	/**
-	 * This region selector is picking regions based on a estimated computation
-	 * cost model.
-	 */
-	class SizeBasedRegionSelector : public RegionSelector {
+	TEST(DummyRegionSelector, Basic) {
 
-		/**
-		 * The lower limit for the cost of a code fragment to be classified
-		 * as a region.
-		 */
-		unsigned minSize;
+		// the test is mainly focusing on the interface, not the actual selector
 
-		/**
-		 * The upper bound for the estimated costs a code fragment can have
-		 * to be classified as a region.
-		 */
-		unsigned maxSize;
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
-	public:
+		// create some IR structure
+		const core::CompoundStmtPtr stmt = builder.compoundStmt(builder.breakStmt());
 
-		/**
-		 * Creates a new selector identifying regions having a estimated execution
-		 * cost within the given boundaries.
-		 */
-		SizeBasedRegionSelector(unsigned minSize, unsigned maxSize)
-			: minSize(minSize), maxSize(maxSize) {}
+		DummyRegionSelector selector;
+		vector<Region> regions = selector.getRegions(stmt);
 
-		/**
-		 * Selects all regions within the given code fragment.
-		 */
-		virtual RegionList getRegions(const core::NodePtr& code) const;
+		EXPECT_EQ(toVector(Region(stmt)), regions);
+	}
 
-	};
-
-
-} // end namespace region
-} // end namespace driver
+} // end namespace features
+} // end namespace analysis
 } // end namespace insieme

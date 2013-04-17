@@ -36,20 +36,38 @@
 
 #pragma once
 
-#include "insieme/driver/region/region_selector.h"
+#include "insieme/analysis/region/region_selector.h"
 
 namespace insieme {
-namespace driver {
+namespace analysis {
 namespace region {
 
 	/**
-	 * This region selector is picking outermost parallel for loop bodies. This
-	 * selector is only focusing on the work-sharing pfor construct, not potentially
-	 * parallel for loops.
+	 * This region selector is picking regions based on a estimated computation
+	 * cost model.
 	 */
-	class PForBodySelector : public RegionSelector {
+	class SizeBasedRegionSelector : public RegionSelector {
+
+		/**
+		 * The lower limit for the cost of a code fragment to be classified
+		 * as a region.
+		 */
+		unsigned minSize;
+
+		/**
+		 * The upper bound for the estimated costs a code fragment can have
+		 * to be classified as a region.
+		 */
+		unsigned maxSize;
 
 	public:
+
+		/**
+		 * Creates a new selector identifying regions having a estimated execution
+		 * cost within the given boundaries.
+		 */
+		SizeBasedRegionSelector(unsigned minSize, unsigned maxSize)
+			: minSize(minSize), maxSize(maxSize) {}
 
 		/**
 		 * Selects all regions within the given code fragment.
@@ -60,5 +78,5 @@ namespace region {
 
 
 } // end namespace region
-} // end namespace driver
+} // end namespace analysis
 } // end namespace insieme

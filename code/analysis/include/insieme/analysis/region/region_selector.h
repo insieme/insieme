@@ -36,53 +36,57 @@
 
 #pragma once
 
-#include "insieme/core/lang/extension.h"
+#include <vector>
+
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_expressions.h"
 
-
 namespace insieme {
-namespace driver {
-namespace isolator {
+namespace analysis {
+namespace region {
+
+	using std::vector;
 
 
-	struct Extension : public core::lang::Extension {
+	/**
+	 * At the moment, no more information regarding a region is required
+	 * than an address pointing to it. Hence, regions are typedefed to be
+	 * equivalent to NodeAddresses.
+	 */
+	typedef core::CompoundStmtAddress Region;
+	typedef vector<Region> RegionList;
+
+	/**
+	 * An abstract base class defining the interface for any kind of region selection
+	 * mechanism to be supported.
+	 */
+	class RegionSelector {
+
+	public:
 
 		/**
-		 * Creates a new instance based on the given node manager.
+		 * A virtual destructor for this abstract, virtual base class.
 		 */
-		Extension(core::NodeManager& manager)
-				: core::lang::Extension(manager) {}
+		virtual ~RegionSelector() {};
 
-
-		// -- recording literals --
-
-		// literals managing the capturing module
-		LANG_EXT_LITERAL(Init,   "capture.init", "()->unit");
-		LANG_EXT_LITERAL(Finish, "capture.finish", "()->unit");
-
-		// literals marking the begin and end of regions
-		LANG_EXT_LITERAL(Start, "capture.start", "(intTypeParam<#n>)->unit");
-		LANG_EXT_LITERAL(Stop,  "capture.stop",  "(intTypeParam<#n>)->unit");
-
-		// literals recording accesses to data values
-		LANG_EXT_LITERAL(Read,     "capture.read",      "(ref<'a>)->'a");
-		LANG_EXT_LITERAL(Write,    "capture.write",     "(ref<'a>,'a)->unit");
-		LANG_EXT_LITERAL(ReadPtr,  "capture.read_ptr",  "(ref<ref<'a>>)->ref<'a>");
-		LANG_EXT_LITERAL(WritePtr, "capture.write_ptr", "(ref<ref<'a>>,ref<'a>)->unit");
-
-		// literals used for registering blocks
-		LANG_EXT_LITERAL(RegisterBlock, "capture.reg.block", "(ref<'a>, uint<8>)->ref<'a>");
-		LANG_EXT_LITERAL(TagBlock,      "capture.tag.block", "(ref<'a>, intTypeParam<#n>)->unit");
-
-
-		// -- restoring literals --
-
-		LANG_EXT_LITERAL(Load,         "capture.load",     "(ref<'a>, intTypeParam<#n>, intTypeParam<#m>)->unit");
-		LANG_EXT_LITERAL(Finalize,     "capture.finalize", "()->unit");
-		LANG_EXT_LITERAL(CheckLifeOut, "capture.check",    "(intTypeParam<#n>)->unit");
+		/**
+		 * This method is determining a list of regions within the given code fragment.
+		 * The method represents the sole functionality of a region extractor. Implementations
+		 * of this abstract base class have to provide corresponding implementations for
+		 * this method.
+		 *
+		 * @param code the code fragment within which regions should be determined
+		 * @return a list of addresses to the nodes forming the selected regions. The root
+		 * 		of all obtained addresses has to be equivalent to the given code region.
+		 */
+		virtual RegionList getRegions(const core::NodePtr& code) const =0;
 
 	};
 
-} // end namespace isolator
-} // end namespace driver
+
+} // end namespace region
+} // end namespace analysis
 } // end namespace insieme

@@ -34,26 +34,38 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/region/pfor_selector.h"
 
-#include "insieme/core/ir_program.h"
-
-#include "insieme/backend/addon.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
-namespace driver {
-namespace isolator {
+namespace analysis {
+namespace region {
 
+	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
 
-	vector<core::StatementAddress> isolate(const core::ProgramPtr& program, const vector<core::StatementAddress>& regions, const string& captureFile);
+		RegionList res;
+		auto pfor = node->getNodeManager().getLangBasic().getPFor();
+		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
+			if (*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
+				return false;
+			}
+			core::ExpressionAddress body = cur->getArgument(4);
+			if (body->getNodeType() == core::NT_BindExpr) {
+				body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
+			}
+			if (body->getNodeType() == core::NT_LambdaExpr) {
+				res.push_back(body.as<core::LambdaExprAddress>()->getBody());
+			}
+			return true;
+		}, false);
 
-	/**
-	 * The backend Add-On to be utilized for the isolation instrumentation.
-	 */
-	struct IsolatorAddOn : public backend::AddOn {
-		virtual void installOn(backend::Converter& converter) const;
-	};
+		return res;
+	}
 
-} // end namespace isolator
-} // end namespace driver
+} // end namespace region
+} // end namespace analysis
 } // end namespace insieme
+
