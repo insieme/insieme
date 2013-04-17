@@ -215,6 +215,13 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 	if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(workDim)) {
 		workDim = cast->getSubExpression();
 	}
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	if(const CallExprPtr call = dynamic_pointer_cast<const CallExprPtr>(workDim)) {
+		if (gen.isScalarCast(call->getFunctionExpr()))
+			workDim = call[0];
+	}
+
+	dumpDetail(workDim);
 
 	// check work dimension
 	const LiteralPtr dim = dynamic_pointer_cast<const Literal>(workDim);

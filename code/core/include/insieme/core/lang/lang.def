@@ -292,7 +292,7 @@ OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
 GROUP(ScalarCast, ToInt, ToUint, ToReal, ToChar, ToBool)
 
       // TO INT
-GROUP( ToInt, UnsignedToInt, RealToInt, CharToInt, BoolToInt)
+GROUP( ToInt, UnsignedToInt, RealToInt, CharToInt, BoolToInt, IntPrecisionFix)
 LITERAL (UnsignedToInt,	"uint.to.int",    "(uint<#a>,intTypeParam<#b>) -> int<#b>")
 LITERAL (RealToInt,		"real.to.int",    "(real<#a>,intTypeParam<#b>) -> int<#b>")
 LITERAL (CharToInt,		"char.to.int",    "(char,intTypeParam<#b>) -> int<#b>")
@@ -300,7 +300,7 @@ LITERAL (BoolToInt,		"bool.to.int",    "(bool,intTypeParam<#b>) -> int<#b>")
 LITERAL (IntPrecisionFix,"int.precision",    "(int<#a>,intTypeParam<#b>) -> int<#b>")
 
       // TO UINT
-GROUP( ToUint, SignedToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned)
+GROUP( ToUint, SignedToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned, UintPrecisionFix)
 LITERAL (SignedToUnsigned,	"int.to.uint" ,	"(int<#a>,intTypeParam<#b>) -> uint<#b>")
 LITERAL (RealToUnsigned,	"real.to.uint",	"(real<#a>,intTypeParam<#b>) -> uint<#b>")
 LITERAL (CharToUnsigned,	"char.to.uint",	"(char,intTypeParam<#b>) -> uint<#b>")
@@ -308,7 +308,7 @@ LITERAL (BoolToUnsigned,	"bool.to.uint",	"(bool,intTypeParam<#b>) -> uint<#b>")
 LITERAL (UintPrecisionFix,"uint.precision",    "(uint<#a>,intTypeParam<#b>) -> uint<#b>")
 
       // TO REAL
-GROUP( ToReal, SignedToReal, UnsignedToReal, CharToReal, BoolToReal)
+GROUP( ToReal, SignedToReal, UnsignedToReal, CharToReal, BoolToReal, RealPrecisionFix)
 LITERAL (SignedToReal,		"int.to.Real",	"(int<#a>,intTypeParam<#b>) -> real<#b>")
 LITERAL (UnsignedToReal,	"uint.to.Real",	"(uint<#a>,intTypeParam<#b>) -> real<#b>")
 LITERAL (CharToReal,		"char.to.Real",	"(char,intTypeParam<#b>) -> real<#b>")
