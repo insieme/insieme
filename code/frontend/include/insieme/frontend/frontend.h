@@ -74,13 +74,15 @@ namespace frontend {
 		 * A list of options to adjust the conversion job.
 		 */
 		enum Option {
-			OpenMP			= 1<<0,
-			OpenCL			= 1<<1,
-			Cilk			= 1<<2,
+			PrintDiag		= 1<<0,
 
-			WinCrossCompile	= 1<<3,
-			DumpCFG			= 1<<4,
-			TAG_MPI			= 1<<5
+			OpenMP			= 1<<1,
+			OpenCL			= 1<<2,
+			Cilk			= 1<<3,
+
+			WinCrossCompile	= 1<<4,
+			DumpCFG			= 1<<5,
+			TAG_MPI			= 1<<6
 		};
 
 		/**

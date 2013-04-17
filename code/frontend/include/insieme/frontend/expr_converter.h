@@ -153,7 +153,19 @@ ExpressionList getFunctionArguments(const core::IRBuilder& builder, ClangExprTy*
 		off =1;
 	}
 
-	for (size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
+	//FIXME find a cleaner solution
+	size_t argIdOffSet = 0;
+	// for CXXOperatorCallExpr we need to take care of the "this" arg separately
+	// is a memberfunctioncall -- arg(0) == this
+	if( const clang::CXXOperatorCallExpr* oc = llvm::dyn_cast<clang::CXXOperatorCallExpr>(callExpr) ) { 
+		if( llvm::isa<clang::CXXMethodDecl>(oc->getCalleeDecl()) ) {
+			argIdOffSet = 1;
+			off=0;
+			VLOG(2) << "opcall";
+		}
+	}
+
+	for (size_t argId = argIdOffSet, end = callExpr->getNumArgs(); argId < end; ++argId) {
 		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
 		core::TypePtr&& argTy = arg->getType();
 		if ( argId < funcTy->getParameterTypes().size() ) {

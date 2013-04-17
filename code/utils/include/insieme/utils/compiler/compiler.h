@@ -59,6 +59,8 @@ namespace compiler {
 
 		vector<string> flags;
 
+		bool silent;
+
 	public:
 
 		Compiler(const string& executable) : executable(executable) {};
@@ -68,6 +70,7 @@ namespace compiler {
 
 		static Compiler getDefaultCppCompiler();
 		static Compiler getDefaultCppCompilerO3();
+
 
 		static Compiler getRuntimeCompiler(const Compiler& baseCompiler = getDefaultC99Compiler());
 
@@ -79,6 +82,14 @@ namespace compiler {
 			return flags;
 		}
 
+		bool isSilent() const {
+			return silent;
+		}
+
+		void setSilent(bool silent = true) {
+			this->silent = silent;
+		}
+
 		void addFlag(const string& flag) {
 			flags.push_back(flag);
 		}
@@ -86,6 +97,9 @@ namespace compiler {
 		string getCommand(const vector<string>& inputFiles, const string& outputFile) const;
 
 	};
+		
+	const vector<string> getDefaultCIncludePaths();
+	const vector<string> getDefaultCppIncludePaths();
 
 
 	/**

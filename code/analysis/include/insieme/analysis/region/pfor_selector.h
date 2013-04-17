@@ -34,38 +34,31 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/region/pfor_selector.h"
+#pragma once
 
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/lang/basic.h"
+#include "insieme/analysis/region/region_selector.h"
 
 namespace insieme {
-namespace driver {
+namespace analysis {
 namespace region {
 
-	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
+	/**
+	 * This region selector is picking outermost parallel for loop bodies. This
+	 * selector is only focusing on the work-sharing pfor construct, not potentially
+	 * parallel for loops.
+	 */
+	class PForBodySelector : public RegionSelector {
 
-		RegionList res;
-		auto pfor = node->getNodeManager().getLangBasic().getPFor();
-		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
-			if (*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
-				return false;
-			}
-			core::ExpressionAddress body = cur->getArgument(4);
-			if (body->getNodeType() == core::NT_BindExpr) {
-				body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
-			}
-			if (body->getNodeType() == core::NT_LambdaExpr) {
-				res.push_back(body.as<core::LambdaExprAddress>()->getBody());
-			}
-			return true;
-		}, false);
+	public:
 
-		return res;
-	}
+		/**
+		 * Selects all regions within the given code fragment.
+		 */
+		virtual RegionList getRegions(const core::NodePtr& code) const;
+
+	};
+
 
 } // end namespace region
-} // end namespace driver
+} // end namespace analysis
 } // end namespace insieme
-

@@ -79,6 +79,7 @@ namespace compiler {
 		return res;
 	}
 
+
 	Compiler Compiler::getDefaultCppCompilerO3() {
 		Compiler res = getDefaultCppCompiler();
 		res.addFlag("-O3");
@@ -115,10 +116,63 @@ namespace compiler {
 		cmd << " " << join(" ", after);
 		cmd << " -o " << outputFile;
 
+		// redirect streams if compilation should be 'silent'
+		if (silent) {
+			cmd << " > /dev/null 2>&1";
+		}
+
 		return cmd.str();
 	}
 
+	const vector<string> getDefaultIncludePaths(string cmd) {
+		vector<string> paths;
+		char line[256];
+		FILE* file = popen(cmd.c_str(), "r");
+		bool capture = false;
+		string input;
+		string startPrefix("#include <...> search starts here:");
+		string stopPrefix("End of search list.");
+		while(fgets(line, 256, file) ) {
+			input = string(line);	
+			//#include <...> search starts here:
+			if(input.substr(0, startPrefix.length()) == startPrefix) {
+				capture = true;
+				//leave this line out
+				continue;
+			}
+			//End of Search list.
+			if(input.substr(0, stopPrefix.length()) == stopPrefix) {
+				capture = false;
+				//stop after this line
+				break;
+			}
+			
+			if(capture) {
+				input.replace(input.begin(),input.begin()+1,"");
+				input.replace(input.end()-1,input.end(),"/");
+				paths.push_back(input);
+			}
+		}
+		return paths;
+	}
 
+	/**
+	 * Calls the backend compiler for C (gcc) to determine the include paths
+	 * @ return vector with the include paths
+	 */
+	const vector<string> getDefaultCIncludePaths() {
+		string cmd = "echo | gcc -v -xc -E - 2>&1";
+		return getDefaultIncludePaths(cmd);
+	}
+
+	/**
+	 * Calls the backend compiler for C++ (g++) to determine the include paths
+	 * @ return vector with the include paths
+	 */
+	const vector<string> getDefaultCppIncludePaths() {
+		string cmd = "echo | g++ -v -xc++ -E - 2>&1";
+		return getDefaultIncludePaths(cmd);
+	}
 
 	bool compile(const vector<string>& sourcefile, const string& targetfile, const Compiler& compiler) {
 

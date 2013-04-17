@@ -116,7 +116,7 @@ void unary_op_test() {
 	#pragma test "fun(ref<'a> v1) -> 'a { (v1 := gen.sub(( *v1), 1)); return ( *v1);}(v1)"
 	--a;
 
-	#pragma test "int.lshift(( *v1), 2)"
+	#pragma test "(( *v1)<<2)"
 	a << 2;
 
 	#pragma test "uint.lshift(int.to.uint(( *v1), 4), 2)"

@@ -85,7 +85,7 @@
 #include "insieme/driver/dot_printer.h"
 #include "insieme/driver/predictor/dynamic_predictor/region_performance_parser.h"
 #include "insieme/driver/predictor/measuring_predictor.h"
-#include "insieme/driver/region/size_based_selector.h"
+#include "insieme/analysis/region/size_based_selector.h"
 #include "insieme/driver/pragma_transformer.h"
 #include "insieme/driver/pragma_info.h"
 #include "insieme/driver/task_optimizer.h"
@@ -699,7 +699,7 @@ int main(int argc, char** argv) {
 
 		if(options.DoRegionInstrumentation) {
 			LOG(INFO) << "============================ Generating region instrumentation =========================";
-			insieme::driver::region::RegionList regions = insieme::driver::region::SizeBasedRegionSelector(
+			insieme::analysis::region::RegionList regions = insieme::analysis::region::SizeBasedRegionSelector(
 					options.MinRegionSize, options.MaxRegionSize
 				).getRegions(program);
 

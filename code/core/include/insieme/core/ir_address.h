@@ -665,7 +665,7 @@ public:
 	template<typename S>
 	bool operator<(const Address<S>& other) const {
 		// use the path comparison operation
-		return path < other.path;
+		return path < other.getPath();
 	}
 
 	/**

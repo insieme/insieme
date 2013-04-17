@@ -152,6 +152,74 @@ namespace analysis {
 
 	}
 
+	TEST(FreeVariables, NestedScopeBug) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+		auto& basic = manager.getLangBasic();
+
+		// BUG: - scopes are not respected when identifying free variables
+		//				e.g. { { decl v1 = ..; } v1; }
+		//      - v1 is free, but not identified as such
+
+		{
+			VariablePtr v1 = builder.variable(basic.getInt4(), 1);
+
+			auto decl = builder.declarationStmt(v1, builder.intLit(14));
+			auto inner = builder.compoundStmt(decl);
+			auto outer = builder.compoundStmt(inner, v1);
+
+//			dump(outer);
+
+			// get free variables
+			EXPECT_EQ("[AP(v1)]", toString(getFreeVariables(outer)));
+		}
+
+		// more complex stuff
+		{
+			VariablePtr v1 = builder.variable(basic.getInt4(), 1);
+			VariablePtr v2 = builder.variable(basic.getInt4(), 2);
+
+			auto decl = builder.declarationStmt(v1, builder.intLit(14));
+			auto inner = builder.compoundStmt(decl, v1, v2);
+			auto outer = builder.compoundStmt(inner);
+
+//			dump(outer);
+
+			// get free variables
+			EXPECT_EQ("[AP(v2)]", toString(getFreeVariables(outer)));
+		}
+
+		{
+			VariablePtr v1 = builder.variable(basic.getInt4(), 1);
+			VariablePtr v2 = builder.variable(basic.getInt4(), 2);
+			VariablePtr v3 = builder.variable(basic.getInt4(), 3);
+
+			auto decl = builder.declarationStmt(v1, builder.intLit(14));
+			auto inner = builder.compoundStmt(decl, v1, v2);
+			auto outer = builder.compoundStmt(inner, v3);
+
+//			dump(outer);
+
+			// get free variables
+			EXPECT_EQ("[AP(v2),AP(v3)]", toString(getFreeVariables(outer)));
+		}
+
+		{
+			VariablePtr v1 = builder.variable(basic.getInt4(), 1);
+			VariablePtr v2 = builder.variable(basic.getInt4(), 2);
+
+			auto decl = builder.declarationStmt(v1, builder.intLit(14));
+			auto outer = builder.compoundStmt(v1, decl, v1);
+
+//			dump(outer);
+
+			// get free variables
+			EXPECT_EQ("[AP(v1)]", toString(getFreeVariables(outer)));
+			EXPECT_EQ("[0-0]", toString(getFreeVariableAddresses(outer)));
+		}
+	}
+
 
 
 	TEST(AllVariables, BindTest) {

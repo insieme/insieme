@@ -1075,6 +1075,20 @@ namespace {
 		ADD_FORMATTER(basic.getSignedIntDiv(), { PRINT_ARG(0); OUT("/"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntMod(), { PRINT_ARG(0); OUT("%"); PRINT_ARG(1); });
 
+		ADD_FORMATTER(basic.getUnsignedIntNot(), { OUT("~"); PRINT_ARG(0); });
+		ADD_FORMATTER(basic.getUnsignedIntAnd(), { PRINT_ARG(0); OUT("&"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntOr(), { PRINT_ARG(0); OUT("|"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntXor(), { PRINT_ARG(0); OUT("^"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntLShift(), { PRINT_ARG(0); OUT("<<"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntRShift(), { PRINT_ARG(0); OUT(">>"); PRINT_ARG(1); });
+
+		ADD_FORMATTER(basic.getSignedIntNot(), { OUT("~"); PRINT_ARG(0); });
+		ADD_FORMATTER(basic.getSignedIntAnd(), { PRINT_ARG(0); OUT("&"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntOr(), { PRINT_ARG(0); OUT("|"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntXor(), { PRINT_ARG(0); OUT("^"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntLShift(), { PRINT_ARG(0); OUT("<<"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntRShift(), { PRINT_ARG(0); OUT(">>"); PRINT_ARG(1); });
+
 		// nicer inlined versions of the && and || operators
 //		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(1); else PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
@@ -1122,6 +1136,8 @@ namespace {
 		});
 
 		ADD_FORMATTER(basic.getBarrier(), { OUT("barrier()"); });
+
+		ADD_FORMATTER(basic.getAtomic(), { OUT("atomic("); PRINT_ARG(0); OUT(", "); PRINT_ARG(1); OUT(", "); PRINT_ARG(2); OUT(")"); });
 
 		if (!config.hasOption(PrettyPrinter::NO_LIST_SUGAR)) {
 			// add semantic sugar for list handling

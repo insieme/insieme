@@ -34,33 +34,42 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/driver/region/dummy_selector.h"
+#include <vector>
 
-#include "insieme/core/ir_builder.h"
-#include "insieme/utils/container_utils.h"
+#include "insieme/analysis/region/region_selector.h"
+
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
-namespace driver {
+namespace analysis {
 namespace region {
 
-	TEST(DummyRegionSelector, Basic) {
 
-		// the test is mainly focusing on the interface, not the actual selector
+	/**
+	 * A simple region selection implementation picking all top-level compound statements
+	 * to represent regions.
+	 */
+	class DummyRegionSelector : public RegionSelector {
+	public:
 
-		core::NodeManager manager;
-		core::IRBuilder builder(manager);
+		/**
+		 * Simply obtains all top-level compound statements.
+		 */
+		virtual RegionList getRegions(const core::NodePtr& node) const {
+			RegionList regions;
+			visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CompoundStmtAddress &comp) {
+				regions.push_back(comp);
+				return true;
+			});
+			return regions;
+		}
+	};
 
-		// create some IR structure
-		const core::CompoundStmtPtr stmt = builder.compoundStmt(builder.breakStmt());
 
-		DummyRegionSelector selector;
-		vector<Region> regions = selector.getRegions(stmt);
-
-		EXPECT_EQ(toVector(Region(stmt)), regions);
-	}
-
-} // end namespace features
+} // end namespace region
 } // end namespace analysis
 } // end namespace insieme

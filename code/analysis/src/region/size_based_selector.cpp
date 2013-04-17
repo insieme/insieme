@@ -34,42 +34,77 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/region/size_based_selector.h"
 
-#include <vector>
-
-#include "insieme/driver/region/region_selector.h"
-
-#include "insieme/core/ir_node.h"
-#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/lang/basic.h"
+
+#include "insieme/utils/cache_utils.h"
+
 
 namespace insieme {
-namespace driver {
+namespace analysis {
 namespace region {
 
-
-	/**
-	 * A simple region selection implementation picking all top-level compound statements
-	 * to represent regions.
-	 */
-	class DummyRegionSelector : public RegionSelector {
-	public:
+	namespace {
 
 		/**
-		 * Simply obtains all top-level compound statements.
+		 * The actual calculator computing the size of regions.
 		 */
-		virtual RegionList getRegions(const core::NodePtr& node) const {
-			RegionList regions;
-			visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CompoundStmtAddress &comp) {
+		class SizeCalculator {
+
+			utils::cache::PointerCache<core::NodePtr, unsigned> cache;
+
+		public:
+
+			SizeCalculator() : cache(fun(*this, &SizeCalculator::calcRegionSize)) {}
+
+			unsigned estimateSize(const core::NodePtr& node) {
+				if(node->getNodeCategory() == core::NC_Type) return 0;
+				return cache.get(node);
+			}
+
+		private:
+
+			unsigned calcRegionSize(const core::NodePtr& node) {
+				if(node->getNodeCategory() == core::NC_Type) return 0;
+
+				// estimate size
+				unsigned size = 1;
+				for_each(node->getChildList(), [&](const core::NodePtr& child) {
+					size += estimateSize(child);
+				});
+
+				// multiply with number of iterations (loops count twice)
+				unsigned mul = 1;
+				auto t = node->getNodeType();
+				auto& b = node->getNodeManager().getLangBasic();
+				if (t == core::NT_ForStmt || t == core::NT_WhileStmt) mul = 2;
+				if (core::analysis::isCallOf(node, b.getPFor())) mul = 2;
+
+				return size * mul;
+			}
+		};
+
+	}
+
+	RegionList SizeBasedRegionSelector::getRegions(const core::NodePtr& node) const {
+		RegionList regions;
+
+		SizeCalculator calculator;
+		visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CompoundStmtAddress &comp) {
+			unsigned size = calculator.estimateSize(comp.getAddressedNode());
+			if(minSize < size && size < maxSize) {
 				regions.push_back(comp);
 				return true;
-			});
-			return regions;
-		}
-	};
-
+			}
+			return false;
+		});
+		return regions;
+	}
 
 } // end namespace region
 } // end namespace analysis
 } // end namespace insieme
+
