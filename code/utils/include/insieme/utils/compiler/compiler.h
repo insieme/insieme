@@ -63,7 +63,7 @@ namespace compiler {
 
 	public:
 
-		Compiler(const string& executable) : executable(executable) {};
+		Compiler(const string& executable) : executable(executable), silent(false) {};
 
 		static Compiler getDefaultC99Compiler();
 		static Compiler getDefaultC99CompilerO3();

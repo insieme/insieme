@@ -76,6 +76,9 @@ namespace irp {
 		return genericType(value(name), typeParams, intParams);
 	}
 
+	inline TreePatternPtr exprOfType(const TreePatternPtr& type) {
+		return node(single(type) << *any);
+	}
 
 	inline TreePatternPtr literal(const TreePatternPtr& type, const TreePatternPtr& value) {
 		return node(core::NT_Literal, single(type) << single(value));
