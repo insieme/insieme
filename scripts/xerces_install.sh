@@ -8,7 +8,13 @@ VERSION=3.1.1
 ########################################################################
 rm -Rf $PREFIX/xerces-$VERSION
 echo "#### Downloading Xerces library ####"
-wget http://mirror.sti2.at/apache//xerces/c/3/sources/xerces-c-$VERSION.tar.gz
+wget http://tweedo.com/mirror/apache//xerces/c/3/sources/xerces-c-$VERSION.tar.gz
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xzf xerces-c-$VERSION.tar.gz
 cd xerces-c-$VERSION
 
