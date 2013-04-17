@@ -36,7 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/utils/test/integration_tests.h"
+#include "insieme/driver/integration/tests.h"
+
 #include "insieme/utils/compiler/compiler.h"
 
 #include "insieme/frontend/frontend.h"
@@ -54,7 +55,7 @@ TEST(FullBackend, HelloWorld) {
 	core::NodeManager manager;
 
 	// load hello world test case
-	auto testCase = utils::test::getCase("hello_world");
+	auto testCase = driver::integration::getCase("hello_world");
 	ASSERT_TRUE(testCase) << "Could not load hello world test case!";
 
 	// convert test case into IR using the frontend

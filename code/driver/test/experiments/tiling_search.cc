@@ -43,7 +43,6 @@
 #include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/filter/filter.h"
 
-#include "insieme/utils/test/integration_tests.h"
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/printer/pretty_printer.h"
@@ -52,7 +51,6 @@
 namespace insieme {
 
 using namespace analysis::features;
-using namespace utils::test;
 using namespace transform;
 using namespace transform::pattern;
 using namespace transform::polyhedral;

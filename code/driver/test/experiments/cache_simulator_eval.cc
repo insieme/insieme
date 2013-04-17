@@ -51,7 +51,6 @@
 #include "insieme/transform/filter/filter.h"
 #include "insieme/transform/filter/standard_filter.h"
 
-#include "insieme/utils/test/integration_tests.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
 
@@ -62,11 +61,11 @@
 #include "insieme/backend/sequential/sequential_backend.h"
 
 #include "insieme/driver/measure/measure.h"
+#include "insieme/driver/integration/tests.h"
 
 namespace insieme {
 
 using namespace analysis::features;
-using namespace utils::test;
 using namespace transform;
 using namespace transform::pattern;
 using namespace transform::polyhedral;
@@ -74,6 +73,7 @@ using namespace transform::rulebased;
 using namespace core;
 using namespace core::printer;
 using namespace driver::measure;
+using namespace driver::integration;
 
 
 	TEST(CacheSimulator, Dummy) {

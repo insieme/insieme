@@ -51,7 +51,6 @@
 #include "insieme/transform/pattern/ir_pattern.h"
 
 #include "insieme/utils/container_utils.h"
-#include "insieme/utils/test/integration_tests.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {

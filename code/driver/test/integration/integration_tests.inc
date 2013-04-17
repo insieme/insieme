@@ -40,10 +40,10 @@
 
 namespace insieme {
 
+/*	
 	using namespace utils::test;
 	using namespace core;
 
-	
 	// --------------- Some global utilities for this test program --------------------
 	
 	namespace {
@@ -90,5 +90,6 @@ namespace insieme {
 		::transform(expressions, std::back_inserter(res), [](const ExpressionPtr& cur) { return cur->getType(); });
 		return res;
 	}
+*/
 
 }

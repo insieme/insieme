@@ -44,9 +44,11 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/printable.h"
 
+#include "insieme/core/ir_program.h"
+
 namespace insieme {
-namespace utils {
-namespace test {
+namespace driver {
+namespace integration {
 
 	using std::map;
 	using std::string;
@@ -55,7 +57,7 @@ namespace test {
 	/**
 	 * Instances of this class represent integration test cases within
 	 */
-	class IntegrationTestCase : public Printable {
+	class IntegrationTestCase : public utils::Printable {
 
 		/**
 		 * The name of this test case.
@@ -170,6 +172,11 @@ namespace test {
 			return name < other.name;
 		}
 
+		/**
+		 * Loads this test case.
+		 */
+		core::ProgramPtr load(core::NodeManager& manager) const;
+
 	};
 
 	// an optional type wrapping a test case
@@ -188,6 +195,18 @@ namespace test {
 	 */
 	const IntegrationTestCaseOpt getCase(const string& name);
 
-} // end namespace test
-} // end namespace utils
+	/**
+	 * This function is loading the integration test with the given name.
+	 *
+	 * @param manager the manager to be used to load the specified test program
+	 * @param name the integration test to be loaded
+	 * @param enableOpenMP a flag allowing to enable / disable the OpenMP conversion
+	 * @param definitions the list of definitions to be passed to the pre-processor
+	 * @return the loaded program
+	 */
+	core::ProgramPtr loadIntegrationTest(core::NodeManager& manager, const std::string& name,
+			bool enableOpenMP = true, const std::map<string,string>& definitions = std::map<string,string>());
+
+} // end namespace integration
+} // end namespace driver
 } // end namespace insieme
