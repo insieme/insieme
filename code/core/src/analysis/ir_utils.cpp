@@ -736,7 +736,7 @@ bool isReadOnly(const StatementPtr& context, const VariablePtr& var) {
 	auto deref = var->getNodeManager().getLangBasic().getRefDeref();
 
 	bool isReadOnly = true;
-	visitDepthFirstOncePrunable(NodeAddress(context), [&](const NodeAddress& cur) {
+	visitDepthFirstPrunable(NodeAddress(context), [&](const NodeAddress& cur) {
 		// already violated => abort
 		if (!isReadOnly) return true;
 
