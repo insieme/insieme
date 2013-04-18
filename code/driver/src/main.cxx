@@ -422,15 +422,6 @@ namespace {
 			selection += 'a' - 'A';
 		}
 
-		// ###################################################
-		// TODO: remove this
-		// enforces the usage of the full backend for testing
-		selection = 'r'; // runtime backend
-		selection = 's'; // sequential backend 
-		selection = 'o'; // opencl backend
-		// ###################################################
-
-
 		switch(selection) {
 			case 'o': {
 				// check if the host is in the entrypoints, otherwise use the kernel backend
