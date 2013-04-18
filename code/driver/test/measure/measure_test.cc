@@ -394,107 +394,107 @@ namespace measure {
 
 	}
 
-	TEST(Measuring, MeasureRemote) {
-		Logger::setLevel(WARNING);
+// 	TEST(Measuring, MeasureRemote) {
+// 		Logger::setLevel(WARNING);
+// 
+// 		// test whether a remote session to the local host can be created
+// 		if (system("ssh localhost pwd > /dev/null")) {
+// 			std::cout << "Skipped remote test!\n";
+// 			return;		// skip this test
+// 		}
+// 
+// 		// create a small example code fragment
+// 		NodeManager manager;
+// 		IRBuilder builder(manager);
+// 		StatementPtr stmt = builder.parseStmt(
+// 				"{"
+// 				"	ref<int<4>> sum = var(0);"
+// 				"	for(uint<4> i = 10 .. 50 : 1) {"
+// 				"		sum = sum + 1;"
+// 				"	}"
+// 				"}"
+// 		);
+// 
+// 		EXPECT_TRUE(stmt);
+// 
+// 		StatementAddress addr(stmt);
+// 		auto executor = makeRemoteExecutor("localhost");
+// 
+// 		// measure execution time of this fragment
+// 		auto time = measure(addr, Metric::TOTAL_EXEC_TIME, executor);
+// 
+// 		EXPECT_TRUE(time.isValid());
+// 		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
+// 
+// 
+// 		// measure cache misses of this fragment
+// 		auto misses = measure(addr, toVector(Metric::TOTAL_L1_DATA_CACHE_MISS, Metric::TOTAL_L2_CACHE_MISS), executor);
+// 
+// 		EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].isValid());
+// 		EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].getValue() > 0);
+// 
+// 		EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].isValid());
+// 		EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].getValue() > 0);
+// 
+// 	}
 
-		// test whether a remote session to the local host can be created
-		if (system("ssh localhost pwd > /dev/null")) {
-			std::cout << "Skipped remote test!\n";
-			return;		// skip this test
-		}
-
-		// create a small example code fragment
-		NodeManager manager;
-		IRBuilder builder(manager);
-		StatementPtr stmt = builder.parseStmt(
-				"{"
-				"	ref<int<4>> sum = var(0);"
-				"	for(uint<4> i = 10 .. 50 : 1) {"
-				"		sum = sum + 1;"
-				"	}"
-				"}"
-		);
-
-		EXPECT_TRUE(stmt);
-
-		StatementAddress addr(stmt);
-		auto executor = makeRemoteExecutor("localhost");
-
-		// measure execution time of this fragment
-		auto time = measure(addr, Metric::TOTAL_EXEC_TIME, executor);
-
-		EXPECT_TRUE(time.isValid());
-		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
-
-
-		// measure cache misses of this fragment
-		auto misses = measure(addr, toVector(Metric::TOTAL_L1_DATA_CACHE_MISS, Metric::TOTAL_L2_CACHE_MISS), executor);
-
-		EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].isValid());
-		EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].getValue() > 0);
-
-		EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].isValid());
-		EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].getValue() > 0);
-
-	}
-
-	TEST(Measuring, MeasureParallel) {
-		Logger::setLevel(WARNING);
-
-		// create a small example code fragment
-		NodeManager manager;
-		IRBuilder builder(manager);
-		StatementPtr stmt = builder.parseStmt(
-				"{"
-				"	ref<int<4>> sum = var(0);"
-				"	for(uint<4> i = 10 .. 50 : 1) {"
-				"		sum = sum + 1;"
-				"	}"
-				"}"
-		);
-
-		EXPECT_TRUE(stmt);
-
-		StatementAddress addr(stmt);
-
-		vector<ExecutorPtr> executors;
-		executors.push_back(makeLocalExecutor());
-		executors.push_back(makeLocalExecutor());
-
-		// test whether a remote session to the local host can be created
-		if (!system("ssh localhost pwd > /dev/null")) {
-			executors.push_back(makeRemoteExecutor("localhost"));
-		}
-
-		// build binary
-		auto binary = buildBinary(addr);
-
-		vector<std::future<void>> futures;
-		for_each(executors, [&](const ExecutorPtr& executor) {
-			// run executors in parallel
-			for(int i=0; i<5; i++) {
-				futures.push_back(std::async(std::launch::async, [&](){
-
-					// measure cache misses of this fragment
-					auto data = measure(binary, toVector(Metric::TOTAL_L1_DATA_CACHE_MISS, Metric::TOTAL_L2_CACHE_MISS), 1, executor);
-
-					auto misses = data[0][0];
-					EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].isValid());
-					EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].getValue() > 0);
-
-					EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].isValid());
-					EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].getValue() > 0);
-				}));
-			}
-		});
-
-		// join futures
-		for_each(futures, [](const std::future<void>& cur) {
-			cur.wait();
-		});
-
-		boost::filesystem::remove(binary);
-	}
+//	TEST(Measuring, MeasureParallel) {
+//		Logger::setLevel(WARNING);
+//
+//		// create a small example code fragment
+//		NodeManager manager;
+//		IRBuilder builder(manager);
+//		StatementPtr stmt = builder.parseStmt(
+//				"{"
+//				"	ref<int<4>> sum = var(0);"
+//				"	for(uint<4> i = 10 .. 50 : 1) {"
+//				"		sum = sum + 1;"
+//				"	}"
+//				"}"
+//		);
+//
+//		EXPECT_TRUE(stmt);
+//
+//		StatementAddress addr(stmt);
+//
+//		vector<ExecutorPtr> executors;
+//		executors.push_back(makeLocalExecutor());
+//		executors.push_back(makeLocalExecutor());
+//
+//		// test whether a remote session to the local host can be created
+//		if (!system("ssh localhost pwd > /dev/null")) {
+//			executors.push_back(makeRemoteExecutor("localhost"));
+//		}
+//
+//		// build binary
+//		auto binary = buildBinary(addr);
+//
+//		vector<std::future<void>> futures;
+//		for_each(executors, [&](const ExecutorPtr& executor) {
+//			// run executors in parallel
+//			for(int i=0; i<5; i++) {
+//				futures.push_back(std::async(std::launch::async, [&](){
+//
+//					// measure cache misses of this fragment
+//					auto data = measure(binary, toVector(Metric::TOTAL_L1_DATA_CACHE_MISS, Metric::TOTAL_L2_CACHE_MISS), 1, executor);
+//
+//					auto misses = data[0][0];
+//					EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].isValid());
+//					EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].getValue() > 0);
+//
+//					EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].isValid());
+//					EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].getValue() > 0);
+//				}));
+//			}
+//		});
+//
+//		// join futures
+//		for_each(futures, [](const std::future<void>& cur) {
+//			cur.wait();
+//		});
+//
+//		boost::filesystem::remove(binary);
+//	}
 
 	TEST(Measuring, MeasureMultipleRegionsMultipleMetrics) {
 		Logger::setLevel(WARNING);

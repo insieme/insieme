@@ -958,16 +958,18 @@ namespace {
 		// Range -> IR nodes map
 		SourceLocationMap& srcMap;
 
-		InspireMapPrinter(boost::iostreams::stream<OutputStreamWrapper>& out, SourceLocationMap& srcMap, const PrettyPrinter& printer)
-				: InspirePrinter(out, printer), out(out), wout(*out), srcMap(srcMap) { }
+		InspireMapPrinter(boost::iostreams::stream<OutputStreamWrapper>& out, 
+				SourceLocationMap& srcMap, 
+				const PrettyPrinter& printer)
+			: InspirePrinter(out, printer), out(out), wout(*out), srcMap(srcMap) { }
 
 		void visit(const NodePtr& node) {
 
 			out.flush();
-			SourceLocation&& start = wout.getSrcLoc();
+			SourceLocation start = wout.getSrcLoc();
 			InspirePrinter::visit(node);
 			out.flush();
-			SourceLocation&& end = wout.getSrcLoc();
+			SourceLocation end = wout.getSrcLoc();
 
 			srcMap.insert( std::make_pair(SourceRange(start,end), node) );
 		}
@@ -1181,7 +1183,7 @@ SourceLocationMap printAndMap( std::ostream& out, const insieme::core::printer::
 	SourceLocationMap srcMap;
 	
 	InspireMapPrinter printer(wrappedOutStream, srcMap, print);
-	printer.visit(print.root);
+	printer.print(print.root);
 	wrappedOutStream.flush();
 
 	return srcMap;
@@ -1259,8 +1261,8 @@ std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::Sourc
 		std::string&& stmt = toString(*it->second);
 		size_t length = stmt.length();
 		
-		std::cout << "@ RANGE: " << it->first << std::endl 
-			      << "\t-> IR node [addr: " << &*it->second << "] ";
+		out << "@ RANGE: " << it->first << std::endl 
+		    << "\t-> IR node [addr: " << &*it->second << "] ";
 	   
 		if(length < 10)
 			out << stmt;

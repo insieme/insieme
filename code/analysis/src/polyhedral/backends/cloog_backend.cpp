@@ -634,34 +634,7 @@ public:
 
 			assert((ranges.size() == 1 && *ranges.front() == *inductionVar));
 
-			// Nasty handling for MPI functions (to be replaced)
-			assert(irStmt->getNodeType() == core::NT_CallExpr);
-
-			core::CallExprPtr callExpr = irStmt.as<core::CallExprPtr>();
-			core::LiteralPtr  funcLit = callExpr->getFunctionExpr().as<core::LiteralPtr>();
-
-			const std::string& name = funcLit->getStringValue();
-			assert(name.compare(0,4,"MPI_") == 0 && "Not an MPI statement");
-			if (name == "MPI_Send" || name == "MPI_Isend" || name == "MPI_Recv" || name == "MPI_Irecv") {
-				// replace the starting address of the array with the lower bound of the array
-				// and the size with the difference between starting address and ending address
-				utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
-				//
-				replacements.insert( 
-						std::make_pair(callExpr->getArgument(0),
-							insieme::analysis::setDisplacement(callExpr->getArgument(0),
-								insieme::core::arithmetic::toFormula(lowerBound))
-						) 
-					);
-				
-				replacements.insert( 
-						std::make_pair(callExpr->getArgument(1), builder.sub(upperBound, lowerBound))
-					);
-
-				irStmt = core::static_pointer_cast<const core::Statement>( 
-						core::transform::replaceAll(mgr, irStmt, replacements) 
-					);	
-			}
+			assert(false && "you should not have come here!");
 		}
 
 		stmtStack.pop();
