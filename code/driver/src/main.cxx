@@ -452,12 +452,13 @@ namespace {
 						"OpenCL.Host.Backend", 
 						be::ocl_host::OCLHostBackend::getDefault(kernelDumpPath)
 					};
-				} else {
-					return { 
+				}
+
+				return { 
 						"OpenCL.Kernel.Backend", 
 						be::ocl_kernel::OCLKernelBackend::getDefault(kernelDumpPath) 
 					};
-				}
+				
 			}
 
 			case 's': 
