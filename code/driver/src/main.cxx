@@ -100,8 +100,6 @@ namespace be = insieme::backend;
 namespace utils = insieme::utils;
 namespace anal = insieme::analysis;
 
-bool checkForHashCollisions(const ProgramPtr& program);
-
 #define TEXT_WIDTH 80
 
 namespace {
@@ -617,42 +615,3 @@ int main(int argc, char** argv) {
 	}
 }
 
-// ------------------------------------------------------------------------------------------------------------------
-//                                     Hash code evaluation
-// ------------------------------------------------------------------------------------------------------------------
-
-
-bool checkForHashCollisions(const ProgramPtr& program) {
-
-	// create a set of all nodes
-	insieme::utils::set::PointerSet<NodePtr> allNodes;
-	insieme::core::visitDepthFirstOnce(program, insieme::core::makeLambdaVisitor([&allNodes](const NodePtr& cur) {
-		allNodes.insert(cur);
-	}, true));
-
-	// evaluate hash codes
-	LOG(INFO) << "Number of nodes: " << allNodes.size();
-	std::map<std::size_t, NodePtr> hashIndex;
-	int collisionCount = 0;
-	for_each(allNodes, [&](const NodePtr& cur) {
-		// try inserting node
-		std::size_t hash = (*cur).hash();
-		//std::size_t hash = boost::hash_value(cur->toString());
-		//std::size_t hash = ::computeHash(cur);
-
-		auto res = hashIndex.insert(std::make_pair(hash, cur));
-		if (!res.second) {
-			LOG(INFO) << "Hash Collision detected: \n"
-					  << "   Hash code:     " << hash << "\n"
-					  << "   First Element: " << *res.first->second << "\n"
-					  << "   New Element:   " << *cur << "\n"
-					  << "   Equal:         " << ((*cur==*res.first->second)?"true":"false") << "\n";
-			collisionCount++;
-		}
-	});
-	LOG(INFO) << "Number of Collisions: " << collisionCount;
-
-	// terminate main program
-	return false;
-
-}

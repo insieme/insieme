@@ -53,6 +53,51 @@ namespace insieme {
 using namespace driver::integration;
 using namespace core;
 
+namespace {
+
+	// ------------------------------------------------------------------------------------------------------------------
+	//                                     Hash code evaluation
+	// ------------------------------------------------------------------------------------------------------------------
+
+
+	bool checkForHashCollisions(const ProgramPtr& program) {
+
+		std::cout << "==== Check Hans Collitions =====================================" << std::endl;
+
+		// create a set of all nodes
+		insieme::utils::set::PointerSet<NodePtr> allNodes;
+		insieme::core::visitDepthFirstOnce(program, insieme::core::makeLambdaVisitor([&allNodes](const NodePtr& cur) {
+			allNodes.insert(cur);
+		}, true));
+
+		// evaluate hash codes
+		std::cout << "Number of nodes: " << allNodes.size() << std::endl;
+		std::map<std::size_t, NodePtr> hashIndex;
+		int collisionCount = 0;
+		for_each(allNodes, [&](const NodePtr& cur) {
+			// try inserting node
+			std::size_t hash = (*cur).hash();
+			//std::size_t hash = boost::hash_value(cur->toString());
+			//std::size_t hash = ::computeHash(cur);
+
+			auto res = hashIndex.insert(std::make_pair(hash, cur));
+			if (!res.second) {
+			std::cout << "Hash Collision detected: \n"
+						  << "   Hash code:     " << hash << "\n"
+						  << "   First Element: " << *res.first->second << "\n"
+						  << "   New Element:   " << *cur << "\n"
+						  << "   Equal:         " << ((*cur==*res.first->second)?"true":"false") << "\n";
+				collisionCount++;
+			}
+		});
+		std::cout << "Number of Collisions: " << collisionCount << std::endl;
+
+		// terminate main program
+		return false;
+
+	}
+}; 
+
 
 TEST(SpeedTest, GetStatus) {
 	Logger::setLevel(ERROR);
@@ -74,6 +119,8 @@ TEST(SpeedTest, GetStatus) {
 	std::cout << "EqualityID:                     " << sizeof(uint64_t) << "\n";
 	std::cout << "Hash Code:                      " << sizeof(std::size_t) << "\n";
 	std::cout << "Node Annotation Container Size: " << sizeof(core::Node::annotation_container) << "\n";
+
+	checkForHashCollisions(root);
 
 }
 
