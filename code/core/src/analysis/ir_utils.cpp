@@ -727,6 +727,43 @@ bool contains(const NodePtr& code, const NodePtr& element) {
 }
 
 
+bool isReadOnly(const StatementPtr& context, const VariablePtr& var) {
+
+	// non-ref values are always read-only
+	if (var->getType()->getNodeType() != NT_RefType) return true;
+
+	// get deref token
+	auto deref = var->getNodeManager().getLangBasic().getRefDeref();
+
+	bool isReadOnly = true;
+	visitDepthFirstOncePrunable(NodeAddress(context), [&](const NodeAddress& cur) {
+		// already violated => abort
+		if (!isReadOnly) return true;
+
+		// prune inner scopes
+		if (cur->getNodeType() == NT_LambdaExpr) return true;
+
+		// only interested in the given variable
+		if (*cur != *var) { return false; }
+
+		// check whether value is used
+		if (cur.getParentNode()->getNodeType() == NT_CompoundStmt) return true;
+
+		// check whether variable is dereferenced at this location
+		if (!isCallOf(cur.getParentNode(), deref)) {
+			// => it is not, so it is used by reference
+			isReadOnly = false;		// it is no longer read-only
+			return true;			// we can stop the visiting process here
+		}
+
+		// continue search
+		return false;
+	});
+
+	// done
+	return isReadOnly;
+}
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

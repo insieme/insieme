@@ -387,6 +387,9 @@ CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const Expre
  */
 bool contains(const NodePtr& code, const NodePtr& element);
 
+
+bool isReadOnly(const StatementPtr& context, const VariablePtr& var);
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme
