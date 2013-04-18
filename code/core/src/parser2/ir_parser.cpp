@@ -903,6 +903,43 @@ namespace parser {
 				}
 			));
 
+			// TODO: those extend parsing time too much - figure out why and fix it!
+//			// post-increment
+//			g.addRule("E", rule(
+//				seq(E,"++"),
+//				[](Context& cur)->NodePtr {
+//					return cur.postInc(cur.getTerm(0).as<ExpressionPtr>());
+//				},
+//				-15
+//			));
+//
+//			// post-decrement
+//			g.addRule("E", rule(
+//				seq(E,"--"),
+//				[](Context& cur)->NodePtr {
+//					return cur.postDec(cur.getTerm(0).as<ExpressionPtr>());
+//				},
+//				-15
+//			));
+//
+//			// post-increment
+//			g.addRule("E", rule(
+//				seq("++", E),
+//				[](Context& cur)->NodePtr {
+//					return cur.preInc(cur.getTerm(0).as<ExpressionPtr>());
+//				},
+//				-14
+//			));
+//
+//			// post-decrement
+//			g.addRule("E", rule(
+//				seq("--", E),
+//				[](Context& cur)->NodePtr {
+//					return cur.preDec(cur.getTerm(0).as<ExpressionPtr>());
+//				},
+//				-14
+//			));
+
 			// -- arithmetic expressions --
 
 			g.addRule("E", rule(

@@ -384,10 +384,8 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 		return; 	// nothing to do any more
 	}
 
-	LOG(DEBUG) << "Loading semantic info" << std::endl;
+	// LOG(DEBUG) << "Loading semantic info" << std::endl;
 
-	insieme::utils::Timer t("Loading function.sema");
-	
 	core::IRBuilder builder(mgr);
 	
 	// declare a variable used to refer to the processor rank
@@ -405,9 +403,6 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 	}
 	#include "function_db.def"
 	#undef FUNC
-
-	t.stop();
-	LOG(DEBUG) << t;
 
 	// mark as being resolved
 	flagNode->attachValue<SemanticLoaded>();

@@ -39,32 +39,53 @@
 #include <string>
 #include <boost/timer.hpp>
 
+#include "insieme/utils/logging.h"
+
 namespace insieme {
 namespace utils {
 
-/**
- * Simple timer used to measured time.
- */
-class Timer: public boost::timer {
-	double mElapsed;
-	std::string mName;
-	bool isStopped;
-
-	friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
-public:
-	Timer(const std::string& name = "Time"): boost::timer(), mName(name), isStopped(false) { }
 	/**
-	 * Stops the timer returning the elapsed amount of seconds
+	 * Simple timer used to measured time.
 	 */
-	double stop();
+	class Timer: public boost::timer {
+		double mElapsed;
+		std::string mName;
+		bool isStopped;
 
-	/**
-	 * Return the elapsed amount of seconds
-	 */
-	double getTime() const;
-};
+		friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
+	public:
+		Timer(const std::string& name = "Time"): 
+			boost::timer(), mName(name), isStopped(false) { }
+		/**
+		 * Stops the timer returning the elapsed amount of seconds
+		 */
+		double stop();
 
-std::ostream& operator<<(std::ostream& out, const Timer& timer);
+		/**
+		 * Return the elapsed amount of seconds
+		 */
+		double getTime() const;
+	};
+
+	std::ostream& operator<<(std::ostream& out, const Timer& timer);
+
+	template <class Ret, log::Level L=DEBUG>
+	Ret measureTimeFor(const std::string& timerName, const std::function<Ret ()>& task) {
+		Timer timer(timerName);
+		Ret ret = task(); // execute the job
+		timer.stop();
+		LOG(L) << timer;
+		return ret;
+	}
+
+	// Specialization for void returning functions 
+	template <log::Level L=DEBUG>
+	void measureTimeFor(const std::string& timerName, const std::function<void ()>& task) {
+		Timer timer(timerName);
+		task(); // execute the job
+		timer.stop();
+		LOG(L) << timer;
+	}
 
 } // end utils namespace
 } // end insieme namespace
