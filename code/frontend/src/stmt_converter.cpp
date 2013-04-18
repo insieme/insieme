@@ -258,12 +258,10 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		// first statent in the for loop is to declare a var to wrap the old iterator and asign
 		// the value of the current 
+		// FIXME: use isReadOnly to avoid not necesary wrapping
 		core::DeclarationStmtPtr itDecl =  builder.declarationStmt (itUseVar, builder.refVar(inductionVar));
 		stmtsOld.insert (stmtsOld.begin(), itDecl);
 		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsOld);
-		
-
-
 
 		/*
 		 * TODO: this is the place to check if the induction variable is being written

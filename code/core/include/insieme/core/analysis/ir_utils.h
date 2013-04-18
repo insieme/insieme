@@ -387,7 +387,14 @@ CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const Expre
  */
 bool contains(const NodePtr& code, const NodePtr& element);
 
-
+/**
+ * Tests if the variable is ever asigned or used by reference, if so, is not considered a read only
+ * variable
+ * is not desdendign into lambdas, only evaluates closest scope
+ * @param context the IR structure inspected
+ * @param var the variable we are testing
+ * @return true if the variable is never assigned or used by reference
+ */
 bool isReadOnly(const StatementPtr& context, const VariablePtr& var);
 
 } // end namespace utils

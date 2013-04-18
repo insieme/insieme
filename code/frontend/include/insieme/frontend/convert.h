@@ -446,10 +446,18 @@ public:
 	virtual core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
 			const core::TypePtr& type, const bool zeroInit) const;
 
+	
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  some helper tools   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
+	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
+
+	// TODO: coment this
+	core::StatementPtr materializeReadOnlyParams(const core::StatementPtr& body, const vector<core::VariablePtr>& params);
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  CPP STUFF   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
-	 * turns an ir converted function into a member funtion of an object of specified class
+	 * turns an ir converted function into a member function of an object of specified class
 	 * @param callExpr the clang Decl of the function to be converted, it might be a Ctor, member
 	 * or dtor
 	 * @param func the Insieme IR converted function, might come from the cache or just converted
@@ -472,17 +480,6 @@ public:
 	 */
 	core::ExpressionPtr convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl);
 
-	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
-
-
-	/**
-	 * some cases value parameters have to be materialized in the 
-	 * body of the function, to be able to writte on them.
-	 * by default well materialize all paramenters
-	 * @param params: list of parameters in the function
-	 * @return a list of statements of the materialized variables
-	 */
-	vector<core::StatementPtr> materializeReadOnlyParams(const vector<core::VariablePtr>& params);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {

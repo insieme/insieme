@@ -110,6 +110,7 @@ annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const Sourc
 
 
 
+
 } // End empty namespace
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
@@ -189,15 +190,41 @@ void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector& globColl
 
 //////////////////////////////////////////////////////////////////
 ///
-vector<core::StatementPtr> ConversionFactory::materializeReadOnlyParams(const vector<core::VariablePtr>& params){
+core::StatementPtr ConversionFactory::materializeReadOnlyParams(const core::StatementPtr& body, const vector<core::VariablePtr>& params){
+	
 	vector<core::StatementPtr> decls;
+	core::StatementPtr newBody = body;
+
 	for (auto currParam : params){
 		auto fit = this->ctx.wrapRefMap.find(currParam);
 		if ( fit != this->ctx.wrapRefMap.end() ) {
-			decls.push_back( this->builder.declarationStmt(fit->second, this->builder.refVar( fit->first ) ));
+
+			// if the variable is never written in the function body, avoid materialization
+			const core::VariablePtr& wrap = fit->second;
+			if (core::analysis::isReadOnly(body, wrap)){
+				// replace read uses
+				newBody = core::transform::replaceAllGen (mgr, newBody, builder.deref(wrap), currParam, true);
+			}
+			else{
+
+				// FIXME:  structs pased as value will be wrapped ANYWAY...
+				//   if i have a READ operation on a struct:   v= x->a;
+				//   it wont be recognized as read only as the base is pased by reference
+				//	this turns into an extra copy at the begining of every function 
+
+				// other case materialize a var, declare it before body
+				decls.push_back( this->builder.declarationStmt(fit->second, this->builder.refVar( fit->first ) ));
+			}
 		}
 	}
-	return decls;
+
+	// if we introduce new decls we have to introduce them just before the body of the function
+	if (!decls.empty()) {
+		// push the old body
+		decls.push_back(newBody);
+		newBody = builder.compoundStmt(decls);
+	}
+	return newBody;
 }
 
 //////////////////////////////////////////////////////////////////
@@ -1096,14 +1123,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// some cases value parameters have to be materialized in the 
 	// body of the function, to be able to writte on them.
 	// by default well materialize all paramenters
-	vector<core::StatementPtr> decls = materializeReadOnlyParams(params);
+	body =  materializeReadOnlyParams(body,params);
 
-	// if we introduce new decls we have to introduce them just before the body of the function
-	if (!decls.empty()) {
-		// push the old body
-		decls.push_back(body);
-		body = builder.compoundStmt(decls);
-	}
 
 	if (!components.empty()) {
 		ctx.isResolvingRecFuncBody = false;
