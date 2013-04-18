@@ -577,8 +577,7 @@ int main(int argc, char** argv) {
 		if(!options.LoadXML.empty()) {
 			
 			openBoxTitle("XML Load");
-			insieme::utils::Timer timer("Xml.load");
-			program = utils::measureTimeFor<ProgramPtr, INFO>([&]() {
+			program = utils::measureTimeFor<ProgramPtr, INFO>("XML Load", [&]() {
 				NodePtr xmlNode= xml::XmlUtil::read(manager, options.LoadXML);
 				return xmlNode.as<ProgramPtr>();
 			});
