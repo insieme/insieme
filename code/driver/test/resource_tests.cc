@@ -60,13 +60,13 @@ namespace {
 	// ------------------------------------------------------------------------------------------------------------------
 
 
-	bool checkForHashCollisions(const ProgramPtr& program) {
+	bool countHashCollisions(const NodePtr& code) {
 
-		std::cout << "==== Check Hans Collitions =====================================" << std::endl;
+		std::cout << "==== Check Hash Collitions =====================================" << std::endl;
 
 		// create a set of all nodes
 		insieme::utils::set::PointerSet<NodePtr> allNodes;
-		insieme::core::visitDepthFirstOnce(program, insieme::core::makeLambdaVisitor([&allNodes](const NodePtr& cur) {
+		insieme::core::visitDepthFirstOnce(code, insieme::core::makeLambdaVisitor([&allNodes](const NodePtr& cur) {
 			allNodes.insert(cur);
 		}, true));
 
@@ -82,19 +82,17 @@ namespace {
 
 			auto res = hashIndex.insert(std::make_pair(hash, cur));
 			if (!res.second) {
-			std::cout << "Hash Collision detected: \n"
-						  << "   Hash code:     " << hash << "\n"
-						  << "   First Element: " << *res.first->second << "\n"
-						  << "   New Element:   " << *cur << "\n"
-						  << "   Equal:         " << ((*cur==*res.first->second)?"true":"false") << "\n";
+				std::cout << "Hash Collision detected: \n"
+							  << "   Hash code:     " << hash << "\n"
+							  << "   First Element: " << *res.first->second << "\n"
+							  << "   New Element:   " << *cur << "\n"
+							  << "   Equal:         " << ((*cur==*res.first->second)?"true":"false") << "\n";
 				collisionCount++;
 			}
 		});
 		std::cout << "Number of Collisions: " << collisionCount << std::endl;
 
-		// terminate main program
-		return false;
-
+		return collisionCount;
 	}
 }; 
 
@@ -119,8 +117,6 @@ TEST(SpeedTest, GetStatus) {
 	std::cout << "EqualityID:                     " << sizeof(uint64_t) << "\n";
 	std::cout << "Hash Code:                      " << sizeof(std::size_t) << "\n";
 	std::cout << "Node Annotation Container Size: " << sizeof(core::Node::annotation_container) << "\n";
-
-	checkForHashCollisions(root);
 
 }
 
@@ -191,6 +187,20 @@ TEST(SpeedTest, VisitOncePtr) {
 	std::cout << "Count-Address: " << counterAdr << " in " << timeAdr << " - avg: " << (timeAdr / counterAdr)*1000000000 << "ns\n";
 
 	EXPECT_EQ(counterPtr, counterAdr);
+}
+
+// define the test case pattern
+TEST(IRQualityTest, HashCollisions) {
+	Logger::setLevel(ERROR);
+	core::NodeManager manager;
+
+	// load test case
+	auto root = loadIntegrationTest(manager, "nas/bt/w");
+	ASSERT_TRUE(root);
+
+	// check for hash collisions
+	int count = countHashCollisions(root);
+	EXPECT_LT(count, 5);
 }
 
 
