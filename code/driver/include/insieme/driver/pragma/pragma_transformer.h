@@ -34,16 +34,16 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma once 
 
 #include "insieme/core/forward_decls.h"
 
 namespace insieme {
+namespace driver {
+namespace pragma {
 
-/**
- * Takes all (mutually) recursive parallel tasks in the given program, 
- * and multiversions them to feature unrolled and fully sequentialized variants.
- */
-core::ProgramPtr applyTaskOptimization(const core::ProgramPtr& program);
+core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program);
 
-}
+} // end pragma namespace
+} // end driver namespace
+} // end insieme namespace

@@ -82,13 +82,10 @@
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/driver/driver_config.h"
-#include "insieme/driver/dot_printer.h"
-#include "insieme/driver/predictor/dynamic_predictor/region_performance_parser.h"
-#include "insieme/driver/predictor/measuring_predictor.h"
+#include "insieme/driver/printer/dot_printer.h"
 #include "insieme/analysis/region/size_based_selector.h"
-#include "insieme/driver/pragma_transformer.h"
-#include "insieme/driver/pragma_info.h"
-#include "insieme/driver/task_optimizer.h"
+#include "insieme/driver/pragma/pragma_transformer.h"
+#include "insieme/driver/pragma/pragma_info.h"
 #include "insieme/driver/cmd/main_options.h"
 
 #ifdef USE_XML
@@ -473,7 +470,7 @@ void showIR(const core::ProgramPtr& program, MessageList& errors, const CommandL
 	measureTimeFor<void>("Show.graph", 
 		[&]() {
 			std::fstream dotOut(options.ShowIR.c_str(), std::fstream::out | std::fstream::trunc);
-			insieme::driver::printDotGraph(program, errors, dotOut);
+			insieme::driver::printer::printDotGraph(program, errors, dotOut);
 		} 
 	);
 }
@@ -584,11 +581,11 @@ int main(int argc, char** argv) {
 
 			// Check for annotations on IR nodes relative to transformations which should be applied, and applies them.
 			program = measureTimeFor<ProgramPtr>("Pragma.Transformer", 
-					[&]() { return insieme::driver::applyTransfomrations(program); } );
+					[&]() { return insieme::driver::pragma::applyTransfomrations(program); } );
 
 			// Handling of pragma info
 			program = measureTimeFor<ProgramPtr>("Pragma.Info",  
-					[&]() { return insieme::driver::handlePragmaInfo(program, options); } );
+					[&]() { return insieme::driver::pragma::handlePragmaInfo(program, options); } );
 
 			printIR(program, stmtMap, options);
 
@@ -613,13 +610,6 @@ int main(int argc, char** argv) {
 				// check again if the OMP flag is on
 				printIR(program, stmtMap, options);
 				if(options.CheckSema) { checkSema(program, errors, stmtMap, options); }
-			}
-
-			if(options.TaskOpt) {
-				program = measureTimeFor<core::ProgramPtr>("Task Optimization ", [&]() {
-					return insieme::applyTaskOptimization(program);
-				});
-				printIR(program, stmtMap, options);
 			}
 
 
@@ -697,36 +687,6 @@ int main(int argc, char** argv) {
 //			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 //		}
 
-		if(options.DoRegionInstrumentation) {
-			LOG(INFO) << "============================ Generating region instrumentation =========================";
-			insieme::analysis::region::RegionList regions = insieme::analysis::region::SizeBasedRegionSelector(
-					options.MinRegionSize, options.MaxRegionSize
-				).getRegions(program);
-
-			if (regions.empty()) {
-				LOG(INFO) << " No regions selected!";
-			} else {
-
-				IRBuilder build(manager);
-				auto& basic = manager.getLangBasic();
-				auto& rtExt = manager.getLangExtension<insieme::backend::runtime::Extensions>();
-				unsigned long regionId = 0;
-
-				std::map<NodeAddress, NodePtr> replacementMap;
-
-				for_each(regions, [&](const CompoundStmtAddress& region) {
-					auto region_inst_start_call = build.callExpr(basic.getUnit(), rtExt.instrumentationRegionStart, build.intLit(regionId));
-					auto region_inst_end_call = build.callExpr(basic.getUnit(), rtExt.instrumentationRegionEnd, build.intLit(regionId));
-					StatementPtr replacementNode = region.getAddressedNode();
-					replacementNode = build.compoundStmt(region_inst_start_call, replacementNode, region_inst_end_call);
-					replacementMap.insert(std::make_pair(region, replacementNode));
-					LOG(INFO) << "# Region " << regionId << ":\nAdress: " << region << "\n Replacement:" << replacementNode << "\n";
-					regionId++;
-				});
-
-				program = static_pointer_cast<ProgramPtr>(transform::replaceAll(manager, replacementMap));
-			}
-		}
 
 		{
 			string backendName = "";
@@ -805,42 +765,6 @@ int main(int argc, char** argv) {
 				// convert code
 				be::TargetCodePtr targetCode = backend->convert(program);
 				
-				// If instrumenting, generate and read back per-region performance data
-				if(options.DoRegionInstrumentation) {
-					// compile code
-					utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-					compiler.addFlag("-I " SRC_DIR "../../runtime/include -g -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm -lpapi -L" PAPI_HOME "/lib");
-					string binFile = utils::compiler::compileToBinary(*targetCode, compiler);
-					if(binFile.empty()) {
-						cerr << "Error compiling generated executable for region measurement" << endl;
-						exit(1);
-					}
-
-					// run code
-					int ret = system(binFile.c_str());
-					if(ret != 0) {
-						cerr << "Error running generated executable for region measurement" << endl;
-						exit(1);
-					}
-					// delete binary
-					if (boost::filesystem::exists(binFile)) {
-						boost::filesystem::remove(binFile);
-					}
-				
-					// read performance data pack and output
-					if(options.DoRegionInstrumentation) {
-						RegionPerformanceParser parser = RegionPerformanceParser();
-						PerformanceMap map = PerformanceMap();
-						if(parser.parseAll("worker_event_log", &map) != 0) {
-							cerr << "ERROR while reading performance logfiles" << endl;
-							exit(1);
-						}
-						for(PerformanceMap::iterator it = map.begin(); it != map.end(); ++it) {
-							cout << "RG: " << it->first << ", total time: " << it->second.getTimespan() << ", avg time: " << it->second.getAvgTimespan() << endl;
-						}
-					}
-				}
-
 				// select output target
 				if(!options.Output.empty()) {
 					// write result to file ...

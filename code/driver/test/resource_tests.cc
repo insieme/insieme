@@ -39,17 +39,18 @@
 
 #include "insieme/utils/timer.h"
 #include "insieme/utils/logging.h"
-#include "insieme/utils/test/integration_tests.h"
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_statistic.h"
 
-#include "insieme/driver/loader/integration_test_loader.h"
+#include "insieme/frontend/frontend.h"
+
+#include "insieme/driver/integration/tests.h"
 
 namespace insieme {
 
-using namespace utils::test;
+using namespace driver::integration;
 using namespace core;
 
 
@@ -58,7 +59,7 @@ TEST(SpeedTest, GetStatus) {
 	core::NodeManager manager;
 
 	// load test case
-	auto root = driver::loader::loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "nas/bt/w");
 	ASSERT_TRUE(root);
 
 	std::cout << IRStatistic::evaluate(root) << "\n";
@@ -82,7 +83,7 @@ TEST(SpeedTest, IRCopy) {
 	core::NodeManager manager;
 
 	// load test case
-	auto root = driver::loader::loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "nas/bt/w");
 	ASSERT_TRUE(root);
 
 	core::NodePtr root2;
@@ -105,7 +106,7 @@ TEST(SpeedTest, VisitAllPtr) {
 	core::NodeManager manager;
 	
 	// load test case
-	auto root = driver::loader::loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "nas/bt/w");
 	ASSERT_TRUE(root);
 
 	// visit all pointer
@@ -128,7 +129,7 @@ TEST(SpeedTest, VisitOncePtr) {
 	core::NodeManager manager;
 
 	// load test case
-	auto root = driver::loader::loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "nas/bt/w");
 	ASSERT_TRUE(root);
 
 	// visit all pointer

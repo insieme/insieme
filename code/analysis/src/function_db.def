@@ -40,10 +40,6 @@
 // insieme can deal with them properly. 
 //=================================================
 
-// Add Semantic info for MPI functions 
-#include "mpi/mpi_func_sema.def"
-
-
 // Other definitions here...
 
 // math

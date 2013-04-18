@@ -50,6 +50,7 @@ using namespace insieme::core::checks;
 
 namespace insieme {
 namespace driver {
+namespace printer {
 
 template <class NodeTy, class NodeIdTy, class ProperyIdTy, class PropertyValueTy>
 struct GraphBuilder {
@@ -144,5 +145,6 @@ ASTPrinter makeDotPrinter(std::ostream& out, const MessageList& errors);
 
 void printDotGraph(const insieme::core::NodePtr& root, const MessageList& errors, std::ostream& out);
 
+} // end namespace utils
 } // end namespace driver
 } // end namespace insieme

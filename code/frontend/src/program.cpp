@@ -190,11 +190,11 @@ struct Program::ProgramImpl {
 	utils::Interceptor interceptor;
 	utils::FunctionDependencyGraph funcDepGraph;
 		
-	ProgramImpl(core::NodeManager& mgr) : mIdx(), interceptor(mgr, mIdx),  funcDepGraph(mIdx,interceptor) {}
+	ProgramImpl(core::NodeManager& mgr, const vector<string>& stdLibDirs) : mIdx(), interceptor(mgr, mIdx, stdLibDirs),  funcDepGraph(mIdx,interceptor) {}
 };
 
 Program::Program(core::NodeManager& mgr, const ConversionJob& job):
-	pimpl( new ProgramImpl(mgr) ), mMgr(mgr), mProgram( core::Program::get(mgr) ), config(job) { }
+	pimpl( new ProgramImpl(mgr, job.getStdLibIncludeDirectories()) ), mMgr(mgr), mProgram( core::Program::get(mgr) ), config(job) { }
 
 Program::~Program() { delete pimpl; }
 

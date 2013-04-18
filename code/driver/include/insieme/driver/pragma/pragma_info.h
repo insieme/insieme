@@ -34,24 +34,17 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/features/code_feature_catalog.h"
-#include "insieme/analysis/features/cache_feature_catalog.h"
+#pragma once 
+
+#include "insieme/core/forward_decls.h"
+#include "insieme/driver/cmd/main_options.h"
 
 namespace insieme {
 namespace driver {
+namespace pragma {
 
-/**
- *
- */
-core::NodeAddress loadCode(core::NodeManager& manager, const vector<string>& inputs, const vector<string>& includes, const vector<string>& definitions);
+core::ProgramPtr handlePragmaInfo(const core::ProgramPtr& program, const cmd::CommandLineOptions& options);
 
-
-vector<analysis::features::FeaturePtr> getFeatureList();
-
-vector<analysis::features::Value> extractFeatures(const core::NodePtr& node, const vector<analysis::features::FeaturePtr>& features) {
-	// use 'all-at-once' extractor
-	return analysis::features::extractFrom(node, features);
-}
-
-} // end namespace driver
-} // end namespace iniseme
+} // end pragma namespace
+} // end driver namespace
+} // end insieme namespace

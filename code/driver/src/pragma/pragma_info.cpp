@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/pragma_info.h"
+#include "insieme/driver/pragma/pragma_info.h"
 
 #include <fstream>
 
@@ -57,7 +57,7 @@ using namespace insieme;
 using namespace insieme::analysis;
 using namespace insieme::analysis::polyhedral;
 
-namespace insieme { namespace driver {
+namespace insieme { namespace driver { namespace pragma {
 
 namespace {
 
@@ -173,5 +173,6 @@ core::ProgramPtr handlePragmaInfo(const core::ProgramPtr& program, const cmd::Co
 	return program;
 }
 
+} // end pragma namespace
 } // end driver namespace
 } // end insieme namespace

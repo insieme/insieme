@@ -103,6 +103,11 @@ namespace frontend {
 		vector<string> includeDirs;
 
 		/**
+		 * A list of include directories containing std library headers.
+		 */
+		vector<string> stdLibIncludeDirs;
+
+		/**
 		 * The C standard to be followed.
 		 */
 		string standard;
@@ -243,6 +248,27 @@ namespace frontend {
 		 */
 		void addIncludeDirectory(const string& directory) {
 			this->includeDirs.push_back(directory);
+		}
+
+		/**
+		 * Obtains a reference to the covered set of std-library include directories.
+		 */
+		const vector<string>& getStdLibIncludeDirectories() const {
+			return stdLibIncludeDirs;
+		}
+
+		/**
+		 * Updates the set of considered std-library include directories.
+		 */
+		void setStdLibIncludeDirectories(const vector<string>& includeDirectories) {
+			this->stdLibIncludeDirs = includeDirectories;
+		}
+
+		/**
+		 * Adds an additional std-library include directory.
+		 */
+		void addStdLibIncludeDirectory(const string& directory) {
+			this->stdLibIncludeDirs.push_back(directory);
 		}
 
 		/**

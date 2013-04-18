@@ -34,28 +34,57 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <string>
-#include <map>
-#include "insieme/core/ir_program.h"
+#include "insieme/driver/integration/tests.h"
+
+#include <iostream>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+
+
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/logging.h"
+
+using namespace insieme::utils;
 
 namespace insieme {
 namespace driver {
-namespace loader {
+namespace integration {
 
-	/**
-	 * This function is loading the integration test with the given name.
-	 *
-	 * @param manager the manager to be used to load the specified test program
-	 * @param name the integration test to be loaded
-	 * @param enableOpenMP a flag allowing to enable / disable the OpenMP conversion
-	 * @param definitions the list of definitions to be passed to the pre-processor
-	 * @return the loaded program
-	 */
-	core::ProgramPtr loadIntegrationTest(core::NodeManager& manager, const std::string& name,
-			bool enableOpenMP = true, const std::map<string,string>& definitions = std::map<string,string>());
 
-} // end namespace loader
+TEST(TestUtilsTest, getList) {
+
+	namespace fs = boost::filesystem;
+
+	auto res = getAllCases();
+
+	LOG(log::INFO) << join("\n", res);
+
+//	// check the existens of the referenced files
+//	for_each(res, [](const IntegrationTestCase& cur) {
+//		SCOPED_TRACE(cur.getName());
+//
+//		EXPECT_GE(cur.getFiles().size(), static_cast<std::size_t>(1));
+//		for_each(cur.getFiles(), [](const string& cur){
+//			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of file " << cur;
+//			EXPECT_FALSE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
+//		});
+//
+//		for_each(cur.getIncludeDirs(), [](const string& cur){
+//			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of directory " << cur;
+//			EXPECT_TRUE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
+//		});
+//	});
+//
+//	// should also work a second time
+//	auto numTests = res.size();
+//	res = getAllCases();
+//	EXPECT_EQ(numTests, res.size());
+}
+
+
+
+} // end namespace integration
 } // end namespace driver
 } // end namespace insieme
