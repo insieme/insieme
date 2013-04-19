@@ -44,7 +44,7 @@ void basic_type_test() {
 	#pragma test "ref<int<8>> v1 = ref.var(0)"
 	long b;
 
-	#pragma test "ref<int<2>> v1 = ref.var(cast<int<2>>(65535))"
+	#pragma test "ref<int<2>> v1 = ref.var(int.precision(65535, 2))"
 	short c = 0xFFFF;
 
 	#pragma test "ref<char> v1 = ref.var('a')"
@@ -65,10 +65,10 @@ void basic_type_test() {
     #pragma test "ref<vector<vector<int<4>,2>,3>> v1 = ref.var(undefined(vector<vector<int<4>,2>,3>))"
 	int vv[3][2];
 
-	#pragma test "ref<vector<real<4>,3>> v1 = ref.var({cast<real<4>>(0),cast<real<4>>(0),cast<real<4>>(0)})"
+	#pragma test "ref<vector<real<4>,3>> v1 = ref.var({int.to.Real(0, 4),int.to.Real(0, 4),int.to.Real(0, 4)})"
 	float vvv[3] = { 0, 0, 0 };
 
-	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({{cast<real<4>>(0)},{cast<real<4>>(0)}})"
+	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({{int.to.Real(0, 4)},{int.to.Real(0, 4)}})"
 	float vvvv[][1] = { {0}, {0} };
 
 	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(get.null(array<int<4>,1>))"
@@ -180,7 +180,7 @@ void* malloc(int);
 
 void mem_alloc() {
 
-	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(ref.new(array.create.1D(int<4>, uint.div(4, sizeof(int<4>)))))"
+	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(ref.reinterpret(malloc(4), array<int<4>,1>))"
 	int* a = malloc(4);
 	free(a); // make the static checks happy
 }
