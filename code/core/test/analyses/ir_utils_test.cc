@@ -202,7 +202,10 @@ namespace analysis {
 //			dump(outer);
 
 			// get free variables
-			EXPECT_EQ("[AP(v2),AP(v3)]", toString(getFreeVariables(outer)));
+			auto freeVars = getFreeVariables(outer);
+			EXPECT_EQ(2u, freeVars.size());
+			EXPECT_TRUE(contains(freeVars, v2)) << freeVars;
+			EXPECT_TRUE(contains(freeVars, v3)) << freeVars;
 		}
 
 		{
@@ -400,8 +403,6 @@ namespace analysis {
 
 		NodeManager mgr;
 		IRBuilder builder(mgr);
-		const auto& basic = mgr.getLangBasic();
-
 
 		VariablePtr x = builder.variable(builder.parseType("ref<struct { int<4> a; }>"), 1);
 		std::map<string, NodePtr> symbols;
