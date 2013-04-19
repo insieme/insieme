@@ -163,7 +163,8 @@ def expand(tests):
 		return ret
 
 	# Handle the cases where we need to recur and resolve
-	assert os.path.isdir( tests )
+	if not os.path.isdir( tests ):
+		return [ ]
 
 	# If the directoy has a test.cfg file it means we have to run all the
 	# contained tests
