@@ -377,6 +377,10 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 			if ((targetTy->getNodeType() == core::NT_RefType) && (*expr == *builder.literal(expr->getType(), "0"))) {
 				return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 			}
+			else{
+				//FIXME:: might be a cast to function type
+				return expr;
+			}
 		}
 
 		case clang::CK_ToVoid 	:
