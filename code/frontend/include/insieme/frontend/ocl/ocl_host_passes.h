@@ -70,6 +70,11 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 	 * is considered
 	 */
 	std::size_t operator()(const core::ExpressionPtr expr) const {
+
+		// FIXME: klaus: fix this, please
+		// performance SUCKS
+		return 0;
+
 		if(!expr)
 			return 0;
 
@@ -88,6 +93,9 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 
 //		while(const core::CallExprPtr& tmp = dynamic_pointer_cast<const core::CallExpr>(call->getArgument(0)))
 //			call = tmp;
+
+		if(builder.getNodeManager().getLangBasic().isRefVectorToRefArray(call->getFunctionExpr()))
+			return this->operator()(call->getArgument(0));
 
 		if(builder.getNodeManager().getLangBasic().isSubscriptOperator(call->getFunctionExpr()))
 			return this->operator()(call->getArgument(0));
@@ -119,11 +127,17 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 	 * @param y the pointer to the second element to be compared
 	 */
 	bool operator()(const core::ExpressionPtr& x, const core::ExpressionPtr& y) const {
+
 		if(x == y || *x == *y)
 			return true;
 
 		core::CallExprPtr xCall = dynamic_pointer_cast<const core::CallExpr>(x);
 		core::CallExprPtr yCall = dynamic_pointer_cast<const core::CallExpr>(y);
+
+
+//std::cout << "EXPRESSIONS " << x << " vs "  << " " << y << std::endl;
+//std::cout << "types " << x->getType() << " vs "  << " " << y->getType() << std::endl;
+
 
 		// remove deref operation
 		// TODO of questionable use, maybe remove?
@@ -135,14 +149,23 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 		}
 */
 
+		if(!!xCall && builder.getNodeManager().getLangBasic().isRefVectorToRefArray(xCall->getFunctionExpr()))
+			return this->operator ()(xCall->getArgument(0), y);
+
+		if(!!yCall && builder.getNodeManager().getLangBasic().isRefVectorToRefArray(yCall->getFunctionExpr()))
+			return this->operator ()(x, yCall->getArgument(0));
+
+//FIXME: check if still needed
 		if(!!xCall && builder.getNodeManager().getLangBasic().isScalarToArray(xCall->getFunctionExpr()))
 			return this->operator ()(xCall->getArgument(0), y);
 
+//FIXME: check if still needed
 		if(!!yCall && builder.getNodeManager().getLangBasic().isScalarToArray(yCall->getFunctionExpr()))
 			return this->operator ()(x, yCall->getArgument(0));
 
-		if(!!xCall && builder.getNodeManager().getLangBasic().isSubscriptOperator(xCall->getFunctionExpr()))
+		if(!!xCall && builder.getNodeManager().getLangBasic().isSubscriptOperator(xCall->getFunctionExpr())){
 			return this->operator ()(xCall->getArgument(0), y);
+		}
 
 		if(!!yCall && builder.getNodeManager().getLangBasic().isSubscriptOperator(yCall->getFunctionExpr()))
 			return this->operator ()(x, yCall->getArgument(0));

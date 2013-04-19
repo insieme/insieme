@@ -312,15 +312,18 @@ const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr
     // check if argument is a call to ref.deref
     k = tryRemove(BASIC.getRefDeref(), k, builder);
     // get corresponding lambda expression
-/*equal_variables cmp(builder, program);
-for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
-std::cout << "\nArguments: " << ka.first << "\n";
-//for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
-});
-std::cout << "\nk " << k << "\ny " << kernelLambdas.begin()->first << "\n compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl; //*/
-/*std::cout << "\nREACHED " << *k << std::endl;
-std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
-//    equal_variables shit(builder, program);
+//equal_variables cmp(builder, program);
+//for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
+//std::cout << "\nArguments: " << ka.first << "\n";
+////for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
+//});
+//std::cout << "\nk " << k << "\ny " << kernelLambdas.begin()->first << "\n compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl; //*/
+//std::cout << "\nREACHED " << *k << std::endl;
+//std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//
+////    equal_variables shit(builder, program);
+////
+
+//	std::cout << "size: " << kernelLambdas.size() << std::endl;
 
     assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
 

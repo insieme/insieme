@@ -210,7 +210,7 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 			if(BASIC.isRefVectorToRefArray(stringAsChar)) {
 				if(const LiteralPtr path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
 					// check if file has already been added
-std::cout << "\n using path string " << path->getStringValue() << " \n\n";
+//std::cout << "\n using path string " << path->getStringValue() << " \n\n";
 					if(kernelFileCache.find(path->getStringValue()) == kernelFileCache.end()) {
 						kernelFileCache.insert(path->getStringValue());
 						kernels = loadKernelsFromFile(path->getStringValue(), builder, job);
@@ -272,7 +272,15 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	// TODO deal with out of order arguments non-scalar
 	const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(index);
 	const ExpressionPtr idxExpr = cast ? cast->getSubExpression() : index;
-	const LiteralPtr idx = dynamic_pointer_cast<const Literal>(idxExpr);
+	LiteralPtr idx = dynamic_pointer_cast<const Literal>(idxExpr);
+
+	// idx has to be a literal!
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	// remove cast to uint<8>
+	if (idxExpr.isa<core::CallExprPtr>() && gen.isScalarCast(idxExpr.as<core::CallExprPtr>()->getFunctionExpr())){
+		idx = idxExpr.as<core::CallExprPtr>()->getArgument(0).isa<core::LiteralPtr>();
+	}
+	assert(idx && "idx MUST be a literal");
 
 	VariablePtr tuple = builder.variable(kernel->getType());
 	// set the new tuple equivalent with the kernel to be able to replace it by a tuple with correct type in 3rd pass
@@ -296,7 +304,7 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 		refreshVariables(size, varMapping, builder);
 
 		body.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), tuple,
-				(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
+				(BASIC.isUInt8(idxExpr->getType()) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idxExpr)),
 				builder.getTypeLiteral(type)), builder.refVar(builder.callExpr(type, BASIC.getArrayCreate1D(), builder.getTypeLiteral(type), size))));
 		body.push_back(builder.returnStmt(builder.intLit(0)));
 
@@ -340,8 +348,9 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	FunctionTypePtr fTy = builder.functionType(toVector(kernel->getType(), tryDeref(arg, builder)->getType()), BASIC.getInt4());
 	params.push_back(src);
 
-	body.push_back(builder.assign( builder.callExpr(BASIC.getTupleRefElem(), tuple,	(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
-			builder.getTypeLiteral(src->getType())), src));
+	body.push_back(builder.assign( builder.callExpr(BASIC.getTupleRefElem(), tuple,	
+								   (BASIC.isUInt8(idxExpr->getType()) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idxExpr)),
+									builder.getTypeLiteral(src->getType())), src));
 	body.push_back(builder.returnStmt(builder.intLit(0)));
 	LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 
@@ -767,6 +776,8 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 #endif
 	);
 
+
+
 	ADD_Handler(builder, o2i, "clSetKernelArg",
 			return collectArgument("clSetKernelArg", node->getArgument(0), node->getArgument(1), node->getArgument(2), node->getArgument(3));
 	);
@@ -1028,8 +1039,14 @@ void HostMapper::recursiveFlagCheck(const ExpressionPtr& flagExpr, std::set<Enum
 
 template<typename Enum>
 std::set<Enum> HostMapper::getFlags(const ExpressionPtr& flagExpr) {
+
+
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	std::set<Enum> flags;
 	// remove cast to uint<8>
+	if (flagExpr.isa<core::CallExprPtr>() && gen.isScalarCast(flagExpr.as<core::CallExprPtr>()->getFunctionExpr())){
+		recursiveFlagCheck(flagExpr.as<core::CallExprPtr>()->getArgument(0), flags);
+	}else
 	if (const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(flagExpr)) {
 		recursiveFlagCheck(cast->getSubExpression(), flags);
 	} else
