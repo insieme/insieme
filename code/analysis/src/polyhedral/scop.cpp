@@ -1316,6 +1316,10 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 
 	const CallExprPtr& callExpr = cond.as<CallExprPtr>();
 
+	// skip scalar casts
+	if (mgr.getLangBasic().isScalarCast(callExpr->getFunctionExpr()))
+		return extractFromCondition(iv, callExpr[0]);
+
 	if ( mgr.getLangBasic().isLogicOp(callExpr->getFunctionExpr()) )
 	{
 		// First of all we check whether this condition is a composed by multiple conditions

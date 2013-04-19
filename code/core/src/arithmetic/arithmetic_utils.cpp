@@ -99,6 +99,11 @@ namespace {
 				return Value(call);
 			}
 
+			// handle casts
+			if (lang.isScalarCast(call->getFunctionExpr())) {
+				return visit(call[0]);		// ignore casts
+			}
+
 			// handle selects
 			if (lang.isSelect(call->getFunctionExpr())) {
 				// try resolving it as a piecewise formula
