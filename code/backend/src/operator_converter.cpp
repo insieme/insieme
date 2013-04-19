@@ -751,7 +751,7 @@ namespace backend {
 				}
 			}
 
-			return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");
+			return c_ast::cast(infoRes.rValueType, CONVERT_ARG(0));
 		});
 
 		res[basic.getVectorReduction()] = OP_CONVERTER({

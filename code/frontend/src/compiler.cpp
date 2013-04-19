@@ -252,10 +252,10 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 	LO.LaxVectorConversions = 1;
 
 	// Set OMP define if compiling with OpenMP
+	this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/omp/input/",
+		clang::frontend::System, true, false, false);
 	if(config.hasOption(ConversionJob::OpenMP)) {
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef("_OPENMP");
-		this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/omp/input/", 
-			clang::frontend::System, true, false, false);
 	}
 
 	// add Cilk definitions if required

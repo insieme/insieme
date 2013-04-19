@@ -74,7 +74,7 @@ namespace utils {
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FIXME: we can do this in a smarter way
-inline std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen){
+std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen){
 
 	if (gen.isReal(type)){
 		if 		(gen.isReal4(type)) return 4;
