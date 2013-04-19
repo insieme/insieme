@@ -587,24 +587,24 @@ TEST(ReturnTypeCheck, Basic) {
 
 	// create a function where everything is correct
 	StatementPtr body = builder.returnStmt(builder.literal(resultType, "1"));
-	LambdaPtr ok = builder.lambda(funType, VariableList(), body);
-
-	// create a function where return type is wrong
-	body = builder.returnStmt(builder.literal(basic.getInt2(), "1"));
-	LambdaPtr err = builder.lambda(funType, VariableList(), body);
+	LambdaPtr ok1 = builder.lambda(funType, VariableList(), body);
 
 	// create a function where return type is wrong - and nested
 	body = builder.returnStmt(builder.literal(basic.getInt2(), "1"));
 	body = builder.compoundStmt(body);
-	LambdaPtr err2 = builder.lambda(funType, VariableList(), body);
+	LambdaPtr ok2 = builder.lambda(funType, VariableList(), body);
 
+	body = builder.returnStmt(builder.literal(basic.getInt8(), "1"));
+	body = builder.compoundStmt(body);
+	LambdaPtr err1 = builder.lambda(funType, VariableList(), body);
 
 	CheckPtr returnTypeCheck = make_check<ReturnTypeCheck>();
-	EXPECT_TRUE(check(ok, returnTypeCheck).empty());
-	ASSERT_FALSE(check(err, returnTypeCheck).empty());
-	ASSERT_FALSE(check(err2, returnTypeCheck).empty());
+	EXPECT_TRUE(check(ok1, returnTypeCheck).empty());
+	EXPECT_TRUE(check(ok2, returnTypeCheck).empty());
 
-	EXPECT_PRED2(containsMSG, check(err,returnTypeCheck), Message(NodeAddress(err).getAddressOfChild(2,0), EC_TYPE_INVALID_RETURN_VALUE_TYPE, "", Message::ERROR));
+	EXPECT_FALSE(check(err1, returnTypeCheck).empty()) ;
+
+	EXPECT_PRED2(containsMSG, check(err1,returnTypeCheck), Message(NodeAddress(err1).getAddressOfChild(2,0), EC_TYPE_INVALID_RETURN_VALUE_TYPE, "", Message::ERROR));
 }
 
 TEST(DeclarationStmtTypeCheck, Basic) {
