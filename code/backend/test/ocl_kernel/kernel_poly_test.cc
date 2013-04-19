@@ -102,14 +102,14 @@ TEST(KernelPoly, RangeTest) {
 
 	size_t annotCnt = 0;
 	auto searchRangeAnnot = makeLambdaVisitor([&](const NodePtr& node) {
-		if(node->getNodeType() == insieme::core::NT_LambdaExpr)
+		if(node->getNodeType() == insieme::core::NT_LambdaExpr) {
 			if(node->hasAnnotation(insieme::annotations::DataRangeAnnotation::KEY)){
 				++annotCnt;
 				insieme::annotations::DataRangeAnnotationPtr dra = node->getAnnotation(insieme::annotations::DataRangeAnnotation::KEY);
 				EXPECT_EQ(3u, dra->getRanges().size());
 
 				for_each(dra->getRanges(), [&](insieme::annotations::Range range) {
-					EXPECT_TRUE(toString(range).find("get_global_id") != string::npos);
+					EXPECT_TRUE(toString(range).find("get_global_id") != string::npos) << range;
 					int readCnt = 0, writeCnt = 0;
 					switch(range.getAccessType()) {
 						case insieme::ACCESS_TYPE::read: ++readCnt; break;
@@ -121,6 +121,7 @@ TEST(KernelPoly, RangeTest) {
 				EXPECT_TRUE(toString(*dra).find("get_global_id") != string::npos);
 //				std::cout << *dra << std::endl;
 			}
+		}
 	});
 
 	visitDepthFirstOnce(newProg, searchRangeAnnot);

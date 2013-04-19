@@ -310,7 +310,8 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(node)){
 			ExpressionPtr fun = call->getFunctionExpr();
 
-			if(basic.isLinearIntOp(fun) || basic.isRefOp(fun) || fun->toString().find("get_global_id") != string::npos)
+			// skip casts and other operators
+			if(basic.isScalarCast(fun) || basic.isLinearIntOp(fun) || basic.isRefOp(fun) || fun->toString().find("get_global_id") != string::npos)
 				return false;
 
 			// modulo can only be handled when reading from it
@@ -409,7 +410,7 @@ void KernelPoly::genWiDiRelation() {
 				std::pair<ExpressionPtr, ACCESS_TYPE> access = *I;
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel, access.second);
 
-                if( dirtyLimiter <= 5) { // check if buffer is splittable if not already marked as unsplittable
+				if( dirtyLimiter <= 5) { // check if buffer is splittable if not already marked as unsplittable
 					ExpressionPtr lower = *boundaries.first->getType() == *int4 ? boundaries.first : builder.castExpr(int4, boundaries.first);
 					ExpressionPtr upper = *boundaries.second->getType() == *int4 ? boundaries.second : builder.castExpr(int4, boundaries.second);
 
