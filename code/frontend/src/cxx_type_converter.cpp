@@ -250,11 +250,14 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitReferenceType(const Refe
 	START_LOG_TYPE_CONVERSION(refTy);
 	core::TypePtr retTy;
 
+
+
 // this is a cpp reference not pointer 
 	core::TypePtr inTy = convFact.convertType( refTy->getPointeeType().getTypePtr());
-//	return inTy;
+	//FIXME: this is temporal.. make this work
+	return inTy;
 
-	//FIXME: what happens with this>??????
+
 
 // we need to check where is a const ref or not	
 	QualType  qual;
