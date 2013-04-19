@@ -44,6 +44,7 @@
 
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/mpi/mpi_pragma.h"
 
 #include "insieme/utils/container_utils.h"
@@ -259,17 +260,27 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		// first statent in the for loop is to declare a var to wrap the old iterator and asign
 		// the value of the current 
 		// FIXME: use isReadOnly to avoid not necesary wrapping
-		core::DeclarationStmtPtr itDecl =  builder.declarationStmt (itUseVar, builder.refVar(inductionVar));
-		stmtsOld.insert (stmtsOld.begin(), itDecl);
-		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsOld);
+		//core::DeclarationStmtPtr itDecl =  builder.declarationStmt (itUseVar, builder.refVar(inductionVar));
+		//stmtsOld.insert (stmtsOld.begin(), itDecl);
 
-		/*
-		 * TODO: this is the place to check if the induction variable is being written
-		 * and therefore we are not able to build a for loop
-		if (not read only iterator){
-			throw analysis::InductionVariableNotReadOnly();
+		for (core::StatementPtr& curr : stmtsOld){
+			if (core::analysis::isReadOnly(curr, itUseVar)){
+				auto deref = builder.deref(itUseVar);
+				// replace read uses
+				curr = core::transform::replaceAllGen (mgr, curr, deref, inductionVar, true);
+				// this variables might apear in annotations inside:
+				core::visitDepthFirstOnce (curr, [&] (const core::StatementPtr& node){
+					//if we have a OMP annotation
+					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
+						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
+						anno->replaceUsage (deref, inductionVar);
+					}
+				});
+			}
+			else
+				throw analysis::InductionVariableNotReadOnly();
 		}
-		*/
+		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsOld);
 
 		core::ExpressionPtr incExpr  = loopAnalysis.getIncrExpr();
 		incExpr = utils::castScalar(inductionVar->getType(), incExpr);
