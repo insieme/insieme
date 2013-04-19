@@ -87,8 +87,8 @@ struct marker_type_trait<core::Expression> {
 };
 
 /**
- * take care of filtering OmpPragmas from the list of pragmas attached to the clang node and attaches the resulting annotation
- * to the IR node
+ * take care of filtering OmpPragmas from the list of pragmas attached to the clang node and attaches 
+ * the resulting annotation to the IR node
  */
 template <class NodeTy>
 core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy>& 	irNode,

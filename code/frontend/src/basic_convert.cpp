@@ -42,6 +42,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/global_variables.h"
 #include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/castTool.h"
@@ -79,7 +80,6 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include <clang/AST/CXXInheritance.h>
 #include <clang/AST/StmtVisitor.h>
-
 
 using namespace clang;
 using namespace insieme;
@@ -204,6 +204,16 @@ core::StatementPtr ConversionFactory::materializeReadOnlyParams(const core::Stat
 			if (core::analysis::isReadOnly(body, wrap)){
 				// replace read uses
 				newBody = core::transform::replaceAllGen (mgr, newBody, builder.deref(wrap), currParam, true);
+				// this variables might apear in annotations inside:
+				core::visitDepthFirstOnce (newBody, [&] (const core::StatementPtr& node){
+					//if we have a OMP annotation
+					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
+						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
+						anno->replaceUsage (wrap, currParam);
+					}
+				});
+				//cleanup the wrap cache to avoid future uses, this var does not exist anymore
+				ctx.wrapRefMap.erase(currParam);
 			}
 			else{
 
