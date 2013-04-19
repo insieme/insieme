@@ -210,7 +210,7 @@ void for_stmt_test() {
 	for(; it<100; it+=1) { ; }
 
 	#pragma test \
-	"{ decl ref<int<4>> v85 = ( var(1)); decl ref<int<4>> v86 = ( var(2)); for(decl int<4> v2 = 0 .. 100 : 1) { (v4 := v2); };}"
+	"{ decl ref<int<4>> v5 = ( var(1)); decl ref<int<4>> v6 = ( var(2)); for(decl int<4> v2 = 0 .. 100 : 1) { (v4 := v2); };}"
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
