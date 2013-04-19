@@ -104,7 +104,7 @@ namespace integration {
 			string testCase ;
 			while ( getline(configFile, testCase) ) {  
 				std::remove(testCase.begin(), testCase.end(), ' ');
-				if (!testCase.empty() && testCase[0] != '#') {
+				if (!testCase.empty() && testCase[0] != '#' && fs::is_directory(testDir / testCase)) {
 
 					testCases.push_back(testCase);
 				}
