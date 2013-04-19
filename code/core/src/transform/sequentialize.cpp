@@ -275,8 +275,16 @@ namespace transform {
 
 				// try conversion into a pfor
 				if (stmt->getNodeType() == NT_JobExpr) {
-					if (ExpressionPtr pfor = tryToPFor(stmt.as<JobExprPtr>())) {
-						return map(pfor);
+
+					// check whether job could be converted into a pfor
+					auto job = stmt.as<JobExprPtr>();
+
+					// should not be converted into a pfor if its lower range is 1 (it is a simple task)
+					auto lowerBound = analysis::getArgument(job->getThreadNumRange(), 0);
+					if (!lowerBound.isa<LiteralPtr>() || lowerBound.as<LiteralPtr>()->getStringValue() != "1") {
+						if (ExpressionPtr pfor = tryToPFor(job)) {
+							return map(pfor);
+						}
 					}
 				}
 

@@ -37,7 +37,6 @@
 #include <gtest/gtest.h>
 
 #include "insieme/frontend/frontend.h"
-#include "insieme/utils/test/integration_tests.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
 
@@ -50,12 +49,13 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/driver/integration/tests.h"
 
 namespace insieme {
 
-using namespace utils::test;
 using namespace transform::pattern;
 using namespace core;
+using namespace driver::integration;
 
 
 	// --------------- Some global utilities for this test program --------------------
@@ -65,7 +65,7 @@ using namespace core;
 		// a node manager bound to the life cycle of the entire program
 		NodeManager testGlobalManager;
 
-		// a cache for already loaded Integreation tests
+		// a cache for already loaded Integration tests
 		std::map<IntegrationTestCase, ProgramPtr> loadedCodes;
 
 		// a helper method for loading program code
@@ -85,7 +85,7 @@ using namespace core;
 		}
 
 		ProgramPtr load(NodeManager& manager, const string& name) {
-			return load(manager, *utils::test::getCase(name));
+			return load(manager, *getCase(name));
 		}
 
 		vector<Match<ptr_target>> findAllMatches(const TreePatternPtr& pattern, const NodePtr& tree) {

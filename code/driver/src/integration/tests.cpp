@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/utils/test/integration_tests.h"
+#include "insieme/driver/integration/tests.h"
 
 #include <iostream>
 #include <boost/filesystem.hpp>
@@ -46,9 +46,28 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
 
+#include "insieme/frontend/frontend.h"
+
 namespace insieme {
-namespace utils {
-namespace test {
+namespace driver {
+namespace integration {
+
+
+	core::ProgramPtr IntegrationTestCase::load(core::NodeManager& manager) const {
+
+		// load code using frontend
+		auto job = frontend::ConversionJob(files, includeDirs);
+		job.setOption(frontend::ConversionJob::OpenMP, enableOpenMP);
+		job.setOption(frontend::ConversionJob::OpenCL, enableOpenCL);
+
+		// add pre-processor definitions
+		for_each(definitions, [&](const std::pair<string,string>& def) {
+			job.addDefinition(def.first, def.second);
+		});
+
+		return job.execute(manager);
+
+	}
 
 	namespace fs = boost::filesystem;
 
@@ -63,21 +82,21 @@ namespace test {
 
 			// check whether the directory is correct
 			if (!fs::exists(testDir)) {
-				LOG(log::WARNING) << "Test-Directory path not properly set!";
+				LOG(WARNING) << "Test-Directory path not properly set!";
 				return res;
 			}
 
 			// read the test.cfg file
 			const fs::path testConfig = testDir / "test.cfg";
 			if (!fs::exists(testConfig)) {
-				LOG(log::WARNING) << "Not test-configuration file found!";
+				LOG(WARNING) << "Not test-configuration file found!";
 				return res;
 			}
 
 			fs::ifstream configFile;
 			configFile.open(testConfig);
 			if (!configFile.is_open()) {
-				LOG(log::WARNING) << "Unable to open test-configuration file!";
+				LOG(WARNING) << "Unable to open test-configuration file!";
 				return res;
 			}
 			vector<string> testCases;
@@ -100,13 +119,13 @@ namespace test {
 				// check test case directory
 				const fs::path testCaseDir = testDir / cur;
 				if (!fs::exists(testCaseDir)) {
-					LOG(log::WARNING) << "Directory for test case " + cur + " not found!";
+					LOG(WARNING) << "Directory for test case " + cur + " not found!";
 					continue;
 				}
 
 				const fs::path subTestConfig = testCaseDir / "test.cfg";
 				if (fs::exists(subTestConfig)) {
-					LOG(log::INFO) << "Descending into sub-test-directory " << (testCaseDir).string();
+					LOG(INFO) << "Descending into sub-test-directory " << (testCaseDir).string();
 					vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string(), prefix + cur + "/");
 					std::copy(subCases.begin(), subCases.end(), std::back_inserter(res));	
 					continue;
@@ -122,7 +141,7 @@ namespace test {
 					fs::ifstream inputs;
 					inputs.open(inputFile);
 					if (!inputs.is_open()) {
-						LOG(log::WARNING) << "Unable to open input file " << inputFile.string();
+						LOG(WARNING) << "Unable to open input file " << inputFile.string();
 						continue;
 					}
 
@@ -165,7 +184,7 @@ namespace test {
 					fs::ifstream inputs;
 					inputs.open(flagsFile);
 					if (!inputs.is_open()) {
-						LOG(log::WARNING) << "Unable to open flag file " << flagsFile.string();
+						LOG(WARNING) << "Unable to open flag file " << flagsFile.string();
 						continue;
 					}
 
@@ -208,7 +227,7 @@ namespace test {
 					fs::ifstream inputs;
 					inputs.open(compilerFlagsFile);
 					if (!inputs.is_open()) {
-						LOG(log::WARNING) << "Unable to open flag file " << compilerFlagsFile.string();
+						LOG(WARNING) << "Unable to open flag file " << compilerFlagsFile.string();
 						continue;
 					}
 
@@ -268,7 +287,28 @@ namespace test {
 	}
 
 
+	core::ProgramPtr loadIntegrationTest(core::NodeManager& manager, const std::string& name, bool enableOpenMP, const std::map<string,string>& definitions) {
 
-} // end namespace test
-} // end namespace utils
+		// load case information
+		auto curCase = getCase(name);
+		if (!curCase) {
+			return core::ProgramPtr();
+		}
+
+		// load code using frontend - using given options
+		auto job = frontend::ConversionJob(curCase->getFiles(), curCase->getIncludeDirs());
+		job.setOption(frontend::ConversionJob::OpenMP, enableOpenMP);
+
+		// add pre-processor definitions
+		for_each(definitions, [&](const std::pair<string,string>& def) {
+			job.addDefinition(def.first, def.second);
+		});
+
+		return job.execute(manager);
+
+	}
+
+
+} // end namespace integration
+} // end namespace driver
 } // end namespace insieme

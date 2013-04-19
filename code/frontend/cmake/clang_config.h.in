@@ -36,5 +36,4 @@
 
 #pragma once
 #define SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/"
-#define CXX_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../../include"
 

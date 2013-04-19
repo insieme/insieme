@@ -50,17 +50,17 @@
 #include "insieme/backend/runtime/runtime_backend.h"
 
 #include "insieme/utils/compiler/compiler.h"
-#include "insieme/utils/test/integration_tests.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/timer.h"
 
 #include "insieme/driver/driver_config.h"
-
-#include "integration_tests.inc"
+#include "insieme/driver/integration/tests.h"
 
 namespace insieme {
+
+	using namespace driver::integration;
 
 	// ---------------------------------- Check the binary dump -------------------------------------
 
@@ -72,13 +72,13 @@ namespace insieme {
 		core::NodeManager managerA;
 
 		// obtain test case
-		utils::test::IntegrationTestCase testCase = GetParam();
+		IntegrationTestCase testCase = GetParam();
 
 		SCOPED_TRACE("Testing Case: " + testCase.getName());
 		LOG(INFO) << "Testing Case: " + testCase.getName();
 	
 		// load the code using the frontend
-		core::ProgramPtr code = load(managerA, testCase);
+		core::ProgramPtr code = testCase.load(managerA);
 
 		// create a in-memory stream
 		std::stringstream buffer(std::ios_base::out | std::ios_base::in | std::ios_base::binary);

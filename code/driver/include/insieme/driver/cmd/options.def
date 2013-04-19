@@ -64,11 +64,6 @@ FLAG("check-sema,S",		"check-sema", 			CheckSema, 		false, 	"run semantics check
 FLAG("show-stats",			"show-stats", 			ShowStats, 		false, 	"computes statistics regarding the composition of the IR")
 FLAG("cleanup,C",			"cleanup", 				Cleanup, 		false,	"applies some cleanup operations to the IR produced by the frontend")
 
-// region options
-FLAG("region-instrumentation,R", "region-instrumentation", DoRegionInstrumentation, false, "Enables automatic region deteation and instrumentation")
-INT_OPTION("max-region-size", "max-region-size", MaxRegionSize, 5000, "Set the maximum size of autoamtically identified code regions")
-INT_OPTION("min-region-size", "min-region-size", MinRegionSize, 100, "Set the minimum size of autoamtically identified code regions")
-
 //OPTION(opt_name, opt_id, var_name, var_type, var_help)
 
 // backend selection

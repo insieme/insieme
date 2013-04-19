@@ -45,18 +45,19 @@
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/compiler/compiler.h"
 
 
 namespace insieme {
 namespace frontend {
 
-const unsigned ConversionJob::DEFAULT_FLAGS = 0;
+const unsigned ConversionJob::DEFAULT_FLAGS = PrintDiag;
 
 ConversionJob::ConversionJob(const string& file)
-	: files(toVector(file)), standard("c99"), flags(DEFAULT_FLAGS) {};
+	: files(toVector(file)), stdLibIncludeDirs(insieme::utils::compiler::getDefaultCppIncludePaths()), standard("c99"), flags(DEFAULT_FLAGS) {};
 
 ConversionJob::ConversionJob(const vector<string>& files, const vector<string>& includeDirs)
-	: files(files), includeDirs(includeDirs), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};
+	: files(files), includeDirs(includeDirs), stdLibIncludeDirs(insieme::utils::compiler::getDefaultCppIncludePaths()), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};
 
 void ConversionJob::addDefinition(const string& name, const string& value) {
 	std::stringstream def;

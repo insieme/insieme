@@ -958,16 +958,18 @@ namespace {
 		// Range -> IR nodes map
 		SourceLocationMap& srcMap;
 
-		InspireMapPrinter(boost::iostreams::stream<OutputStreamWrapper>& out, SourceLocationMap& srcMap, const PrettyPrinter& printer)
-				: InspirePrinter(out, printer), out(out), wout(*out), srcMap(srcMap) { }
+		InspireMapPrinter(boost::iostreams::stream<OutputStreamWrapper>& out, 
+				SourceLocationMap& srcMap, 
+				const PrettyPrinter& printer)
+			: InspirePrinter(out, printer), out(out), wout(*out), srcMap(srcMap) { }
 
 		void visit(const NodePtr& node) {
 
 			out.flush();
-			SourceLocation&& start = wout.getSrcLoc();
+			SourceLocation start = wout.getSrcLoc();
 			InspirePrinter::visit(node);
 			out.flush();
-			SourceLocation&& end = wout.getSrcLoc();
+			SourceLocation end = wout.getSrcLoc();
 
 			srcMap.insert( std::make_pair(SourceRange(start,end), node) );
 		}
@@ -1075,6 +1077,20 @@ namespace {
 		ADD_FORMATTER(basic.getSignedIntDiv(), { PRINT_ARG(0); OUT("/"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntMod(), { PRINT_ARG(0); OUT("%"); PRINT_ARG(1); });
 
+		ADD_FORMATTER(basic.getUnsignedIntNot(), { OUT("~"); PRINT_ARG(0); });
+		ADD_FORMATTER(basic.getUnsignedIntAnd(), { PRINT_ARG(0); OUT("&"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntOr(), { PRINT_ARG(0); OUT("|"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntXor(), { PRINT_ARG(0); OUT("^"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntLShift(), { PRINT_ARG(0); OUT("<<"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntRShift(), { PRINT_ARG(0); OUT(">>"); PRINT_ARG(1); });
+
+		ADD_FORMATTER(basic.getSignedIntNot(), { OUT("~"); PRINT_ARG(0); });
+		ADD_FORMATTER(basic.getSignedIntAnd(), { PRINT_ARG(0); OUT("&"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntOr(), { PRINT_ARG(0); OUT("|"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntXor(), { PRINT_ARG(0); OUT("^"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntLShift(), { PRINT_ARG(0); OUT("<<"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntRShift(), { PRINT_ARG(0); OUT(">>"); PRINT_ARG(1); });
+
 		// nicer inlined versions of the && and || operators
 //		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(1); else PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
@@ -1123,6 +1139,8 @@ namespace {
 
 		ADD_FORMATTER(basic.getBarrier(), { OUT("barrier()"); });
 
+		ADD_FORMATTER(basic.getAtomic(), { OUT("atomic("); PRINT_ARG(0); OUT(", "); PRINT_ARG(1); OUT(", "); PRINT_ARG(2); OUT(")"); });
+
 		if (!config.hasOption(PrettyPrinter::NO_LIST_SUGAR)) {
 			// add semantic sugar for list handling
 			const encoder::ListExtension& ext = config.root->getNodeManager().getLangExtension<encoder::ListExtension>();
@@ -1165,7 +1183,7 @@ SourceLocationMap printAndMap( std::ostream& out, const insieme::core::printer::
 	SourceLocationMap srcMap;
 	
 	InspireMapPrinter printer(wrappedOutStream, srcMap, print);
-	printer.visit(print.root);
+	printer.print(print.root);
 	wrappedOutStream.flush();
 
 	return srcMap;
@@ -1243,8 +1261,8 @@ std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::Sourc
 		std::string&& stmt = toString(*it->second);
 		size_t length = stmt.length();
 		
-		std::cout << "@ RANGE: " << it->first << std::endl 
-			      << "\t-> IR node [addr: " << &*it->second << "] ";
+		out << "@ RANGE: " << it->first << std::endl 
+		    << "\t-> IR node [addr: " << &*it->second << "] ";
 	   
 		if(length < 10)
 			out << stmt;

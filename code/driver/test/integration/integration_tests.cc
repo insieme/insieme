@@ -34,24 +34,57 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/features/code_feature_catalog.h"
-#include "insieme/analysis/features/cache_feature_catalog.h"
+#include <gtest/gtest.h>
+
+#include "insieme/driver/integration/tests.h"
+
+#include <iostream>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+
+
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/logging.h"
+
+using namespace insieme::utils;
 
 namespace insieme {
 namespace driver {
-
-/**
- *
- */
-core::NodeAddress loadCode(core::NodeManager& manager, const vector<string>& inputs, const vector<string>& includes, const vector<string>& definitions);
+namespace integration {
 
 
-vector<analysis::features::FeaturePtr> getFeatureList();
+TEST(TestUtilsTest, getList) {
 
-vector<analysis::features::Value> extractFeatures(const core::NodePtr& node, const vector<analysis::features::FeaturePtr>& features) {
-	// use 'all-at-once' extractor
-	return analysis::features::extractFrom(node, features);
+	namespace fs = boost::filesystem;
+
+	auto res = getAllCases();
+
+	LOG(log::INFO) << join("\n", res);
+
+//	// check the existens of the referenced files
+//	for_each(res, [](const IntegrationTestCase& cur) {
+//		SCOPED_TRACE(cur.getName());
+//
+//		EXPECT_GE(cur.getFiles().size(), static_cast<std::size_t>(1));
+//		for_each(cur.getFiles(), [](const string& cur){
+//			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of file " << cur;
+//			EXPECT_FALSE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
+//		});
+//
+//		for_each(cur.getIncludeDirs(), [](const string& cur){
+//			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of directory " << cur;
+//			EXPECT_TRUE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
+//		});
+//	});
+//
+//	// should also work a second time
+//	auto numTests = res.size();
+//	res = getAllCases();
+//	EXPECT_EQ(numTests, res.size());
 }
 
+
+
+} // end namespace integration
 } // end namespace driver
-} // end namespace iniseme
+} // end namespace insieme

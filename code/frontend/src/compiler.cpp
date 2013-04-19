@@ -138,7 +138,7 @@ namespace {
 	}
 
 
-void setDiagnosticClient(clang::CompilerInstance& clang) {
+void setDiagnosticClient(clang::CompilerInstance& clang, bool printDiagToConsole) {
 
 	// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the printer object!
 	clang::DiagnosticOptions* options = new clang::DiagnosticOptions();
@@ -149,7 +149,12 @@ void setDiagnosticClient(clang::CompilerInstance& clang) {
 	options->ShowColors = 1; // REMOVE FOR BETTER ERROR REPORT IN ECLIPSE
 	options->TabStop = 4;
 
-	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), options);
+	DiagnosticConsumer* diagClient;
+	if (printDiagToConsole) {
+		diagClient = new TextDiagnosticPrinter(llvm::errs(), options);
+	} else {
+		diagClient = new IgnoringDiagConsumer();
+	}
 	// cppcheck-suppress exceptNew
 	
 	// check why, it might be a double insert in list, or a isolated delete somewhere
@@ -176,7 +181,7 @@ struct ClangCompiler::ClangCompilerImpl {
 
 ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompilerImpl), config(config) {
 	// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the diagOpts object!
-	setDiagnosticClient(pimpl->clang);
+	setDiagnosticClient(pimpl->clang, config.hasOption(ConversionJob::PrintDiag));
 
 	pimpl->clang.createFileManager();
 	pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
@@ -295,7 +300,7 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 
 		// FIXME check clang/lib/Driver/Toolchains.cpp for headersearch of clang for linux/gcc
 		// use the cxx header of the backend c++ compiler, uses "echo | gcc -v -x c++ -E -" to get search list of headers
-		for(std::string curr : insieme::utils::compiler::getDefaultCppIncludePaths()) {
+		for(std::string curr : config.getStdLibIncludeDirectories()) {
 			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System, true, false, false);
 		}
 	

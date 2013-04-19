@@ -108,6 +108,10 @@ namespace backend {
 				return includeTable;
 			}
 
+			void addTypeHandler(const TypeHandler& handler) {
+				typeHandlers.push_back(handler);
+			}
+
 			void addTypeHandler(const TypeHandlerList& handler) {
 				typeHandlers.insert(typeHandlers.end(), handler.begin(), handler.end());
 			}

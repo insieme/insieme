@@ -34,16 +34,28 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/forward_decls.h"
-
-namespace insieme {
-
 /**
- * Takes all (mutually) recursive parallel tasks in the given program, 
- * and multiversions them to feature unrolled and fully sequentialized variants.
+ * A utility to be included by the runtime in case garbage collection is required.
+ *
+ * NOTE: the current implementation only works for C++
  */
-core::ProgramPtr applyTaskOptimization(const core::ProgramPtr& program);
 
+#include <vector>
+
+static inline void* ir_gc_register(std::vector<void*>* list, void* ptr) {
+	list->push_back(ptr);
+	return ptr;
+}
+
+static inline void* ir_gc_filter(std::vector<void*>* list, void* ptr) {
+	for(int i=0; i<list->size(); i++) {
+		if (list->at(i) == ptr) return 0;
+	}
+	return ptr;
+}
+
+static inline void ir_gc_free(std::vector<void*>* list) {
+	for(int i=0; i<list->size(); i++) {
+		free(list->at(i));
+	}
 }

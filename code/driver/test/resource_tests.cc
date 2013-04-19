@@ -39,18 +39,62 @@
 
 #include "insieme/utils/timer.h"
 #include "insieme/utils/logging.h"
-#include "insieme/utils/test/integration_tests.h"
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_statistic.h"
 
-#include "insieme/driver/loader/integration_test_loader.h"
+#include "insieme/frontend/frontend.h"
+
+#include "insieme/driver/integration/tests.h"
 
 namespace insieme {
 
-using namespace utils::test;
+using namespace driver::integration;
 using namespace core;
+
+namespace {
+
+	// ------------------------------------------------------------------------------------------------------------------
+	//                                     Hash code evaluation
+	// ------------------------------------------------------------------------------------------------------------------
+
+
+	bool countHashCollisions(const NodePtr& code) {
+
+		std::cout << "==== Check Hash Collitions =====================================" << std::endl;
+
+		// create a set of all nodes
+		insieme::utils::set::PointerSet<NodePtr> allNodes;
+		insieme::core::visitDepthFirstOnce(code, insieme::core::makeLambdaVisitor([&allNodes](const NodePtr& cur) {
+			allNodes.insert(cur);
+		}, true));
+
+		// evaluate hash codes
+		std::cout << "Number of nodes: " << allNodes.size() << std::endl;
+		std::map<std::size_t, NodePtr> hashIndex;
+		int collisionCount = 0;
+		for_each(allNodes, [&](const NodePtr& cur) {
+			// try inserting node
+			std::size_t hash = (*cur).hash();
+			//std::size_t hash = boost::hash_value(cur->toString());
+			//std::size_t hash = ::computeHash(cur);
+
+			auto res = hashIndex.insert(std::make_pair(hash, cur));
+			if (!res.second) {
+				std::cout << "Hash Collision detected: \n"
+							  << "   Hash code:     " << hash << "\n"
+							  << "   First Element: " << *res.first->second << "\n"
+							  << "   New Element:   " << *cur << "\n"
+							  << "   Equal:         " << ((*cur==*res.first->second)?"true":"false") << "\n";
+				collisionCount++;
+			}
+		});
+		std::cout << "Number of Collisions: " << collisionCount << std::endl;
+
+		return collisionCount;
+	}
+}; 
 
 
 TEST(SpeedTest, GetStatus) {
@@ -58,7 +102,7 @@ TEST(SpeedTest, GetStatus) {
 	core::NodeManager manager;
 
 	// load test case
-	auto root = driver::loader::loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "nas/bt/w");
 	ASSERT_TRUE(root);
 
 	std::cout << IRStatistic::evaluate(root) << "\n";
@@ -82,7 +126,7 @@ TEST(SpeedTest, IRCopy) {
 	core::NodeManager manager;
 
 	// load test case
-	auto root = driver::loader::loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "nas/bt/w");
 	ASSERT_TRUE(root);
 
 	core::NodePtr root2;
@@ -105,7 +149,7 @@ TEST(SpeedTest, VisitAllPtr) {
 	core::NodeManager manager;
 	
 	// load test case
-	auto root = driver::loader::loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "nas/bt/w");
 	ASSERT_TRUE(root);
 
 	// visit all pointer
@@ -128,7 +172,7 @@ TEST(SpeedTest, VisitOncePtr) {
 	core::NodeManager manager;
 
 	// load test case
-	auto root = driver::loader::loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "nas/bt/w");
 	ASSERT_TRUE(root);
 
 	// visit all pointer
@@ -143,6 +187,20 @@ TEST(SpeedTest, VisitOncePtr) {
 	std::cout << "Count-Address: " << counterAdr << " in " << timeAdr << " - avg: " << (timeAdr / counterAdr)*1000000000 << "ns\n";
 
 	EXPECT_EQ(counterPtr, counterAdr);
+}
+
+// define the test case pattern
+TEST(IRQualityTest, HashCollisions) {
+	Logger::setLevel(ERROR);
+	core::NodeManager manager;
+
+	// load test case
+	auto root = loadIntegrationTest(manager, "nas/bt/w");
+	ASSERT_TRUE(root);
+
+	// check for hash collisions
+	int count = countHashCollisions(root);
+	EXPECT_LT(count, 5);
 }
 
 

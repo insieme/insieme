@@ -957,6 +957,9 @@ namespace core {
 				type_list<First, Rest ...>
 		>::type ElementType;
 
+		// to be utilized as a container
+		typedef Ptr<const ElementType> value_type;
+
 		// the number of static values before the first list element
 		static const unsigned offset = type_list<First, Rest ...>::length - 1;
 
@@ -1107,6 +1110,13 @@ namespace core {
 			typedef ListNodeHelper<Derived, ## __VA_ARGS__> node_helper; \
 			\
 			const NodeRange<Ptr<const typename ListNodeAccessor<Derived,Ptr,BASE ## Accessor, ## __VA_ARGS__>::ElementType>> get ## LIST_NAME () const { \
+				return ListNodeAccessor<Derived,Ptr,BASE ## Accessor, ## __VA_ARGS__>::getElements(); \
+			} \
+			\
+			operator NodeRange<Ptr<const typename ListNodeAccessor<Derived,Ptr,BASE ## Accessor, ## __VA_ARGS__>::ElementType>>() const { \
+				return ListNodeAccessor<Derived,Ptr,BASE ## Accessor, ## __VA_ARGS__>::getElements(); \
+			} \
+			operator vector<Ptr<const typename ListNodeAccessor<Derived,Ptr,BASE ## Accessor, ## __VA_ARGS__>::ElementType>>() const { \
 				return ListNodeAccessor<Derived,Ptr,BASE ## Accessor, ## __VA_ARGS__>::getElements(); \
 			} \
 

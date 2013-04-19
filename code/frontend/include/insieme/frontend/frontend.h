@@ -74,13 +74,15 @@ namespace frontend {
 		 * A list of options to adjust the conversion job.
 		 */
 		enum Option {
-			OpenMP			= 1<<0,
-			OpenCL			= 1<<1,
-			Cilk			= 1<<2,
+			PrintDiag		= 1<<0,
 
-			WinCrossCompile	= 1<<3,
-			DumpCFG			= 1<<4,
-			TAG_MPI			= 1<<5
+			OpenMP			= 1<<1,
+			OpenCL			= 1<<2,
+			Cilk			= 1<<3,
+
+			WinCrossCompile	= 1<<4,
+			DumpCFG			= 1<<5,
+			TAG_MPI			= 1<<6
 		};
 
 		/**
@@ -99,6 +101,11 @@ namespace frontend {
 		 * A list of include directories to be considered.
 		 */
 		vector<string> includeDirs;
+
+		/**
+		 * A list of include directories containing std library headers.
+		 */
+		vector<string> stdLibIncludeDirs;
 
 		/**
 		 * The C standard to be followed.
@@ -241,6 +248,27 @@ namespace frontend {
 		 */
 		void addIncludeDirectory(const string& directory) {
 			this->includeDirs.push_back(directory);
+		}
+
+		/**
+		 * Obtains a reference to the covered set of std-library include directories.
+		 */
+		const vector<string>& getStdLibIncludeDirectories() const {
+			return stdLibIncludeDirs;
+		}
+
+		/**
+		 * Updates the set of considered std-library include directories.
+		 */
+		void setStdLibIncludeDirectories(const vector<string>& includeDirectories) {
+			this->stdLibIncludeDirs = includeDirectories;
+		}
+
+		/**
+		 * Adds an additional std-library include directory.
+		 */
+		void addStdLibIncludeDirectory(const string& directory) {
+			this->stdLibIncludeDirs.push_back(directory);
 		}
 
 		/**

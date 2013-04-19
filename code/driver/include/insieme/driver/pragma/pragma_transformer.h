@@ -34,28 +34,16 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma once 
 
-#include <string>
-#include <map>
-#include "insieme/core/ir_program.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace driver {
-namespace loader {
+namespace pragma {
 
-	/**
-	 * This function is loading the integration test with the given name.
-	 *
-	 * @param manager the manager to be used to load the specified test program
-	 * @param name the integration test to be loaded
-	 * @param enableOpenMP a flag allowing to enable / disable the OpenMP conversion
-	 * @param definitions the list of definitions to be passed to the pre-processor
-	 * @return the loaded program
-	 */
-	core::ProgramPtr loadIntegrationTest(core::NodeManager& manager, const std::string& name,
-			bool enableOpenMP = true, const std::map<string,string>& definitions = std::map<string,string>());
+core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program);
 
-} // end namespace loader
-} // end namespace driver
-} // end namespace insieme
+} // end pragma namespace
+} // end driver namespace
+} // end insieme namespace

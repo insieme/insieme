@@ -38,7 +38,7 @@ end
 newsigs = signatures.to_s.strip
 
 if sigcache == newsigs
-	puts "Builderbuilder.rb : no change in signatures detected, skipping file generation."
+	# puts "Builderbuilder.rb : no change in signatures detected, skipping file generation."
 else 
 	File.open("signatures.cache", "w+") { |sigfile| sigfile.puts(newsigs) }
 

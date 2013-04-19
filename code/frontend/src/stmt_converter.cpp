@@ -79,8 +79,8 @@ ExpressionPtr makeOperation(const IRBuilder& builder,
 					  		const lang::BasicGenerator::Operator& op) 
 {
 	return builder.callExpr(lhs->getType(), // return type
-			builder.getLangBasic().getOperator(lhs->getType(), op), // get the oprtator
-			{ lhs, rhs } // LHS and RHS of the operation
+			builder.getLangBasic().getOperator(lhs->getType(), op), // get the operator
+			lhs, rhs	 // LHS and RHS of the operation
 		);
 }
 

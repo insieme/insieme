@@ -172,6 +172,10 @@ if (NOT MEMORY_CHECK_SETUP)
 
 endif (NOT MEMORY_CHECK_SETUP)
 
+# mark as defined
+set(MEMORY_CHECK_SETUP OFF CACHE INTERNAL "Flag to avoid multiple setup" PARENT_SCOPE)
+
+
 # handle gtest unit tests
 set ( ut_prefix  ut_rt_ )
 file(GLOB_RECURSE test_cases test/*.cc)

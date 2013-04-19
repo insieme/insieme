@@ -59,9 +59,11 @@ namespace compiler {
 
 		vector<string> flags;
 
+		bool silent;
+
 	public:
 
-		Compiler(const string& executable) : executable(executable) {};
+		Compiler(const string& executable) : executable(executable), silent(false) {};
 
 		static Compiler getDefaultC99Compiler();
 		static Compiler getDefaultC99CompilerO3();
@@ -78,6 +80,14 @@ namespace compiler {
 
 		const vector<string>& getFlags() const {
 			return flags;
+		}
+
+		bool isSilent() const {
+			return silent;
+		}
+
+		void setSilent(bool silent = true) {
+			this->silent = silent;
 		}
 
 		void addFlag(const string& flag) {

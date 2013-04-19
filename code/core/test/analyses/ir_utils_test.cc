@@ -373,6 +373,46 @@ namespace analysis {
 
 	}
 
+	TEST(IsReadOnly, Basic) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		const auto& basic = mgr.getLangBasic();
+
+
+		VariablePtr x = builder.variable(builder.refType(basic.getInt4()), 1);
+		std::map<string, NodePtr> symbols;
+		symbols["x"] = x;
+
+		auto notIsReadOnly = [](const StatementPtr& stmt, const VariablePtr& var) { return !isReadOnly(stmt, var); };
+
+		EXPECT_PRED2( isReadOnly, 	 builder.parseStmt("{ x; }",symbols), x);
+		EXPECT_PRED2( isReadOnly,    builder.parseStmt("{ *x; }",symbols), x);
+
+		EXPECT_PRED2( notIsReadOnly,    builder.parseStmt("{ x = 4; }",symbols), x);
+		EXPECT_PRED2( notIsReadOnly,    builder.parseStmt("{ let f = (ref<int<4>> x)->unit {}; f(x); }",symbols), x);
+
+		EXPECT_PRED2( isReadOnly,       builder.parseStmt("{ let f = (int<4> x)->unit {}; f(*x); }",symbols), x);
+
+	}
+
+	TEST(IsReadOnly, Bug) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		const auto& basic = mgr.getLangBasic();
+
+
+		VariablePtr x = builder.variable(builder.parseType("ref<struct { int<4> a; }>"), 1);
+		std::map<string, NodePtr> symbols;
+		symbols["x"] = x;
+
+		auto notIsReadOnly = [](const StatementPtr& stmt, const VariablePtr& var) { return !isReadOnly(stmt, var); };
+
+		EXPECT_PRED2( notIsReadOnly,    builder.parseStmt("{ x->a; }", symbols), x);
+
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme
