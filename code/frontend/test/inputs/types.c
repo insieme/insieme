@@ -44,7 +44,7 @@ void basic_type_test() {
 	#pragma test "ref<int<8>> v1 = ref.var(0)"
 	long b;
 
-	#pragma test "ref<int<2>> v1 = ref.var(int.precision(65535, 2))"
+	#pragma test "ref<int<2>> v1 = ref.var(65535)"
 	short c = 0xFFFF;
 
 	#pragma test "ref<char> v1 = ref.var('a')"
@@ -65,10 +65,10 @@ void basic_type_test() {
     #pragma test "ref<vector<vector<int<4>,2>,3>> v1 = ref.var(undefined(vector<vector<int<4>,2>,3>))"
 	int vv[3][2];
 
-	#pragma test "ref<vector<real<4>,3>> v1 = ref.var({int.to.Real(0, 4),int.to.Real(0, 4),int.to.Real(0, 4)})"
+	#pragma test "ref<vector<real<4>,3>> v1 = ref.var({0,0,0})"
 	float vvv[3] = { 0, 0, 0 };
 
-	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({{int.to.Real(0, 4)},{int.to.Real(0, 4)}})"
+	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({{0},{0}})"
 	float vvvv[][1] = { {0}, {0} };
 
 	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(get.null(array<int<4>,1>))"

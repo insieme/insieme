@@ -117,6 +117,12 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	//dumpDetail(exprTy);
 	//std::cout << "####### cast Type: #######" << std::endl;
 	//dumpDetail(targetTy);
+	
+	// is this the cast of a literal: to simplify code we'll return
+	// a literal of the spected type
+	if (expr->getNodeType() == core::NT_Literal){
+		return builder.literal (targetTy, expr.as<core::LiteralPtr>()->getStringValue());
+	}
 
    	unsigned char code;
 	// identify source type, to write right cast
