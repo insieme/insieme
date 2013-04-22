@@ -924,6 +924,10 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toR
 
 
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const VariableMap& replacements) {
+
+	if (!root)
+		return root;
+
 	// special handling for empty replacement map
 	if (replacements.empty()) {
 		return mgr.get(root);
@@ -935,6 +939,10 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const VariableMap& re
 }
 
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const VarExprMap& replacements) {
+
+	if (!root)
+		return root;
+
 	// special handling for empty replacement map
 	if (replacements.empty()) {
 		return mgr.get(root);

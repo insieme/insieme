@@ -156,8 +156,14 @@ public:
 typedef std::vector<core::ExpressionPtr> VarList;
 typedef std::shared_ptr<VarList> VarListPtr;
 
+/** 
+ * function to help with the variable replacement inside of stored expressions
+ */
 void replaceVars (core::ExpressionPtr& expr, core::NodeMap map);
 
+/** 
+ * function to help with the variable replacement inside of variable lists
+ */
 void replaceVars (VarListPtr& list, core::NodeMap map);
 
 
@@ -359,6 +365,7 @@ public:
 	virtual void replaceUsage (const core::NodeMap& map){
 		replaceVars (copyinClause, map);
 		replaceVars (numThreadClause, map);
+		SharedParallelAndTaskClause::replaceUsage(map);
 	}
 };
 
@@ -395,6 +402,10 @@ public:
 
 	virtual bool hasReduction() const = 0;
 	virtual const Reduction& getReduction() const = 0;
+	
+	virtual void replaceUsage (const core::NodeMap& map){
+		CommonClause::replaceUsage(map);
+	}
 };
 
 /**
@@ -418,6 +429,13 @@ public:
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
 	std::ostream& dump(std::ostream& out) const;
+	
+	virtual void replaceUsage (const core::NodeMap& map){
+		DatasharingClause::replaceUsage(map);
+		Annotation::replaceUsage(map);
+		ParallelClause::replaceUsage(map);
+		if (hasReduction()) reductionClause->replaceUsage(map);
+	}
 };
 
 /**
@@ -442,6 +460,9 @@ public:
 	std::ostream& dump(std::ostream& out) const;
 
 	virtual void replaceUsage (const core::NodeMap& map){
+		DatasharingClause::replaceUsage(map);
+		Annotation::replaceUsage(map);
+		ForClause::replaceUsage(map);
 		if (hasReduction()) reductionClause->replaceUsage (map);
 	}
 };
@@ -484,6 +505,10 @@ public:
 	std::ostream& dump(std::ostream& out) const;
 
 	virtual void replaceUsage (const core::NodeMap& map){
+		Annotation::replaceUsage(map);
+		CommonClause::replaceUsage(map);
+		ParallelClause::replaceUsage(map);
+		ForClause::replaceUsage(map);
 		if (hasReduction()) reductionClause->replaceUsage (map);
 	}
 };
@@ -529,6 +554,11 @@ public:
 			SectionClause(lastPrivateClause, reductionClause, noWait) { }
 
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		CommonClause::replaceUsage(map);
+		SectionClause::replaceUsage(map);
+	}
 };
 
 /**
@@ -553,10 +583,11 @@ public:
 	std::ostream& dump(std::ostream& out) const;
 
 	virtual void replaceUsage (const core::NodeMap& map){
+		Annotation::replaceUsage ( map);
+		CommonClause::replaceUsage ( map);
 		ParallelClause::replaceUsage ( map);
 		SectionClause::replaceUsage ( map);
 	}
-
 };
 
 /**
@@ -565,6 +596,10 @@ public:
 class Section: public Annotation {
 public:
 	std::ostream& dump(std::ostream& out) const { return out << "section"; }
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		Annotation::replaceUsage ( map);
+	}
 };
 
 /**
@@ -589,6 +624,7 @@ public:
 	std::ostream& dump(std::ostream& out) const;
 	
 	virtual void replaceUsage (const core::NodeMap& map){
+		Annotation::replaceUsage ( map);
 		replaceVars (copyPrivateClause, map);
 		CommonClause::replaceUsage(map);
 	}
@@ -619,7 +655,9 @@ public:
 
 	virtual void replaceUsage (const core::NodeMap& map){
 		DatasharingClause::replaceUsage(map);
+		Annotation::replaceUsage ( map);
 		SharedParallelAndTaskClause::replaceUsage(map);
+		if(hasReduction()) dummy.replaceUsage(map);
 	}
 };
 
@@ -629,6 +667,10 @@ public:
 class TaskWait: public Annotation {
 public:
 	std::ostream& dump(std::ostream& out) const { return out << "task wait"; }
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		Annotation::replaceUsage ( map);
+	}
 };
 
 /**
@@ -637,6 +679,10 @@ public:
 class Atomic: public Annotation {
 public:
 	std::ostream& dump(std::ostream& out) const { return out << "atomic"; }
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		Annotation::replaceUsage ( map);
+	}
 };
 
 /**
@@ -652,6 +698,10 @@ public:
 	const std::string& getName() const { assert(hasName()); return name; }
 
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		Annotation::replaceUsage ( map);
+	}
 };
 
 /**
@@ -660,6 +710,10 @@ public:
 class Ordered: public Annotation {
 public:
 	std::ostream& dump(std::ostream& out) const { return out << "ordered"; }
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		Annotation::replaceUsage ( map);
+	}
 };
 
 /**
@@ -676,6 +730,7 @@ public:
 	std::ostream& dump(std::ostream& out) const;
 	
 	virtual void replaceUsage (const core::NodeMap& map){
+		Annotation::replaceUsage ( map);
 		replaceVars (varList, map);
 	}
 };
@@ -685,6 +740,10 @@ public:
  */
 struct ThreadPrivate: public Annotation {
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		Annotation::replaceUsage ( map);
+	}
 };
 
 } // End omp namespace
