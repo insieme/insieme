@@ -37,6 +37,7 @@
 #pragma once
 
 #include <set>
+#include <boost/filesystem.hpp>
 
 #include "insieme/core/ir_program.h"
 #include "insieme/frontend/frontend.h"
@@ -125,7 +126,8 @@ public:
 	utils::Indexer& getIndexer() const;
 	
 	utils::FunctionDependencyGraph& getCallGraph() const;
-	void intercept(std::string fileName);
+	const vector<boost::filesystem::path>& getStdLibDirs() const;
+	void setupInterceptor();
 	void analyzeFuncDependencies();
 	void dumpCallGraph() const;
 
