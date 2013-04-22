@@ -1,3 +1,8 @@
+/*
+That code is a modified version of the Flow Map Calculation code from the Visualization Research Center, Stuttgart as used in
+Panagiotidis, A., Kauker, D., Sadlo, F., and Ertl, T. Distributed computation and large-scale visualization in heterogeneous compute environments. In Proceedings of the 11th International Symposium on Parallel and Distributed Computing (2012)
+*/
+
 #ifdef INSIEME
 #include "ocl_device.h"
 #endif
