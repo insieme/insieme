@@ -59,6 +59,7 @@ namespace {
 		virtual string getName(const core::NodePtr& ptr, const string& fragment) {
 			return "name";
 		}
+		virtual void setName(const core::NodePtr& ptr, const string& name) { /* ignore */ }
 	};
 }
 
@@ -70,16 +71,12 @@ TEST(TypeManager, Basic) {
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
-	TestNameManager nameManager;
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	TypeManager& typeManager = converter.getTypeManager();
+
+	c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
 	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
-
-	Converter converter;
-	converter.setNameManager(&nameManager);
-	converter.setNodeManager(&nodeManager);
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
 
 	TypeInfo info;
 	auto lit = cManager->create<c_ast::Literal>("X");
@@ -158,16 +155,13 @@ TEST(TypeManager, StructTypes) {
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
-	TestNameManager nameManager;
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	TypeManager& typeManager = converter.getTypeManager();
+
+	c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
 	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
 
-	Converter converter;
-	converter.setNameManager(&nameManager);
-	converter.setNodeManager(&nodeManager);
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
 
 	TypeInfo info;
 	auto lit = cManager->create<c_ast::Literal>("X");
@@ -215,17 +209,12 @@ TEST(TypeManager, RefTypes) {
 	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	TypeManager& typeManager = converter.getTypeManager();
 
-	TestNameManager nameManager;
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
 	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
-
-	Converter converter;
-	converter.setNameManager(&nameManager);
-	converter.setNodeManager(&nodeManager);
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
 
 	RefTypeInfo info;
 	auto lit = cManager->create<c_ast::Literal>("X");
@@ -379,17 +368,12 @@ TEST(TypeManager, ArrayTypes) {
 	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	TypeManager& typeManager = converter.getTypeManager();
 
-	TestNameManager nameManager;
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
 	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
-
-	Converter converter;
-	converter.setNameManager(&nameManager);
-	converter.setNodeManager(&nodeManager);
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
 
 	ArrayTypeInfo info;
 	auto lit = cManager->create("X");
@@ -435,17 +419,12 @@ TEST(TypeManager, VectorTypes) {
 	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	TypeManager& typeManager = converter.getTypeManager();
 
-	TestNameManager nameManager;
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
 	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
-
-	Converter converter;
-	converter.setNameManager(&nameManager);
-	converter.setNodeManager(&nodeManager);
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
 
 	VectorTypeInfo info;
 	auto lit = cManager->create("X");
@@ -519,16 +498,12 @@ TEST(TypeManager, FunctionTypes) {
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
-	TestNameManager nameManager;
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	TypeManager& typeManager = converter.getTypeManager();
+
+	c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
 	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
-
-	Converter converter;
-	converter.setNameManager(&nameManager);
-	converter.setNodeManager(&nodeManager);
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
 
 	FunctionTypeInfo info;
 	auto lit = cManager->create<c_ast::Literal>("X");
@@ -627,16 +602,12 @@ TEST(TypeManager, RecursiveTypes) {
 	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
-	TestNameManager nameManager;
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	TypeManager& typeManager = converter.getTypeManager();
+
+	c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
 	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
-
-	Converter converter;
-	converter.setNameManager(&nameManager);
-	converter.setNodeManager(&nodeManager);
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
 
 	auto lit = cManager->create("X");
 
@@ -678,16 +649,12 @@ TEST(TypeManager, MutalRecursiveTypes) {
 	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
-	TestNameManager nameManager;
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	TypeManager& typeManager = converter.getTypeManager();
+
+	c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
 	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
-
-	Converter converter;
-	converter.setNameManager(&nameManager);
-	converter.setNodeManager(&nodeManager);
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
 
 	auto lit = cManager->create("X");
 
@@ -748,16 +715,12 @@ TEST(TypeManager, TupleType) {
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
-	TestNameManager nameManager;
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	TypeManager& typeManager = converter.getTypeManager();
+
+	c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
 	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
-
-	Converter converter;
-	converter.setNameManager(&nameManager);
-	converter.setNodeManager(&nodeManager);
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
 
 	TypeInfo info;
 	auto lit = cManager->create<c_ast::Literal>("X");
@@ -802,16 +765,12 @@ TEST(TypeManager, VolatileType) {
 	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
-	TestNameManager nameManager;
-	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	Converter converter(nodeManager);
+	converter.setNameManager(std::make_shared<TestNameManager>());
+	TypeManager& typeManager = converter.getTypeManager();
+
+	c_ast::SharedCodeFragmentManager fragmentManager = converter.getFragmentManager();
 	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
-
-	Converter converter;
-	converter.setNameManager(&nameManager);
-	converter.setNodeManager(&nodeManager);
-	converter.setFragmentManager(fragmentManager);
-
-	TypeManager typeManager(converter);
 
 	TypeInfo info;
 	auto lit = cManager->create<c_ast::Literal>("X");

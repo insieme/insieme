@@ -251,8 +251,11 @@ namespace parser {
 			TokenIter resEnd = findNext(info, begin, range.end(), '{');
 			if (resEnd == range.end()) {
 				resEnd = findNext(info, begin, range.end(), Token::createIdentifier("return"));
+			} else if (resEnd->getLexeme() == "{" && (begin->getLexeme() == "struct" || begin->getLexeme() == "union")) {
+				resEnd = findNext(info, resEnd+1, range.end(), '}') + 1;
 			}
 			TypePtr resType = cur.grammar.match(cur, begin, resEnd, "T").as<TypePtr>();
+			assert(resType && "Unable to parse result type!");
 
 			// build resulting type
 			return cur.functionType(params, resType);
@@ -640,7 +643,7 @@ namespace parser {
 			static const auto member = std::make_shared<Action<process_named_type>>(seq(T, cap(id)));
 
 			g.addRule("T", rule(
-					seq("struct", opt(seq(":", non_empty_list(parent, ","))), "{", loop(seq(member, ";")), "}"),
+					seq("struct", opt(seq(":", non_empty_list(parent, ","))), "{", list(member,";"), opt(";"), "}"),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 						ParentList parents;
@@ -899,6 +902,43 @@ namespace parser {
 					return cur.minus(a);
 				}
 			));
+
+			// TODO: those extend parsing time too much - figure out why and fix it!
+//			// post-increment
+//			g.addRule("E", rule(
+//				seq(E,"++"),
+//				[](Context& cur)->NodePtr {
+//					return cur.postInc(cur.getTerm(0).as<ExpressionPtr>());
+//				},
+//				-15
+//			));
+//
+//			// post-decrement
+//			g.addRule("E", rule(
+//				seq(E,"--"),
+//				[](Context& cur)->NodePtr {
+//					return cur.postDec(cur.getTerm(0).as<ExpressionPtr>());
+//				},
+//				-15
+//			));
+//
+//			// post-increment
+//			g.addRule("E", rule(
+//				seq("++", E),
+//				[](Context& cur)->NodePtr {
+//					return cur.preInc(cur.getTerm(0).as<ExpressionPtr>());
+//				},
+//				-14
+//			));
+//
+//			// post-decrement
+//			g.addRule("E", rule(
+//				seq("--", E),
+//				[](Context& cur)->NodePtr {
+//					return cur.preDec(cur.getTerm(0).as<ExpressionPtr>());
+//				},
+//				-14
+//			));
 
 			// -- arithmetic expressions --
 

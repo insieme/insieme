@@ -370,6 +370,18 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 VariableAddress pushInto(NodeManager& manager, const ExpressionAddress& target, const VariablePtr& var);
 
 /**
+ * Replaces the given expressions by the given variable of the root-node context. The variable will be
+ * passed as an argument through all functions between the root node and the targeted expressions. If the
+ * variable is already passed along, it will not be added again.
+ *
+ * @param manager the manager used to create new nodes
+ * @param targets the expressions to be replaced by the variable
+ * @param var the variable to be implanted
+ * @return the addresses to the implanted variable
+ */
+vector<VariableAddress> pushInto(NodeManager& manager, const vector<ExpressionAddress>& targets, const VariablePtr& var);
+
+/**
  * Removes superfluous lambda arguments.
  *
  * @param manager the manager used to create new nodes

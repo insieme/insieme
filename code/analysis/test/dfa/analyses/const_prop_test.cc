@@ -71,6 +71,7 @@ typename AnalysisData::value_type find_constant_value(const AccessClassSet& clas
 	}
 	
 	assert(false && "Big problem");
+	return AnalysisData::value_type();
 }
 
 

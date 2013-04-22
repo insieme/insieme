@@ -275,8 +275,9 @@ using insieme::transform::pattern::any;
 			// create lists of considered operations
 			std::map<string, transform::pattern::TreePatternPtr> patterns;
 			patterns["function"] = itpi::callExpr(any, *any);
-			patterns["globalMemoryAccess"] = itpi::callExpr( any, itpi::callExpr( itpi::literal("_ocl_unwrap_global"), *any) << any);
-			patterns["localMemoryAccess"] = itpi::callExpr( any, itpi::callExpr( itpi::literal("_ocl_unwrap_local"), *any) << any);
+			// TODO: @Klaus: I had to change this pattern due to added casts - hope this is still OK ...
+			patterns["globalMemoryAccess"] = itpi::callExpr( itpi::literal("_ocl_unwrap_global"), *any);
+			patterns["localMemoryAccess"] = itpi::callExpr( itpi::literal("_ocl_unwrap_local"), *any);
 
 			// not sure if all makes sense in this case...
 //			ops["all"] = vector<core::ExpressionPtr>();

@@ -86,7 +86,7 @@ namespace analysis {
 		// test a function
 		manager.setNextFreshID(5);
 		NodePtr node = builder.parse("{ int<4> a = 0; let f = (int<4> a, int<4> b)->int<4> { return a; } in f(a,a); }");
-		EXPECT_EQ("AP({int<4> v5 = 0; rec v9.{v9=fun(int<4> v7, int<4> v8) {return v7;}}(v5, v5);})", toString(node));
+		EXPECT_EQ("AP({int<4> v6 = 0; rec v0.{v0=fun(int<4> v8, int<4> v9) {return v8;}}(v6, v6);})", toString(node));
 		EXPECT_EQ("AP({int<4> v0 = 0; rec v0.{v0=fun(int<4> v1, int<4> v2) {return v1;}}(v0, v0);})", toString(normalize(node)));
 
 

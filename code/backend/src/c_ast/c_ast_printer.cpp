@@ -152,12 +152,20 @@ namespace c_ast {
 			}
 
 			PRINT(NamedType) {
-				return out << print(node->name);
+				out << print(node->name);
+				if (!node->parameters.empty()) {
+					out << "<" << join(", ", node->parameters, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << ">";
+				}
+				return out;
 			}
 
 			PRINT(PointerType) {
 				return out << ParameterPrinter(node, node->getManager()->create(""));
-				//return out << print(node->elementType) << "*";
+			}
+
+			PRINT(ReferenceType) {
+				if (node->isConst) out << "const ";
+				return out << print(node->elementType) << "&";
 			}
 
 			PRINT(VectorType) {

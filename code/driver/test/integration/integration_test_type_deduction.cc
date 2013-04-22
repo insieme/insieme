@@ -48,18 +48,18 @@
 #include "insieme/backend/runtime/runtime_backend.h"
 
 #include "insieme/utils/compiler/compiler.h"
-#include "insieme/utils/test/integration_tests.h"
-#include "insieme/utils/cmd_line_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/timer.h"
 
 #include "insieme/driver/driver_config.h"
-
-#include "integration_tests.inc"
+#include "insieme/driver/integration/tests.h"
 
 namespace insieme {
+
+	using namespace core;
+	using namespace driver::integration;
 
 	// ---------------------------------- Check the type checker -------------------------------------
 
@@ -71,19 +71,19 @@ namespace insieme {
 		core::NodeManager manager;
 
 		// obtain test case
-		utils::test::IntegrationTestCase testCase = GetParam();
+		driver::integration::IntegrationTestCase testCase = GetParam();
 		SCOPED_TRACE("Testing Case: " + testCase.getName());
 		LOG(INFO) << "Testing Case: " + testCase.getName();
 	
 		// load the code using the frontend
-		core::ProgramPtr code = load(manager, testCase);
+		core::ProgramPtr code = testCase.load(manager);
 
 		// and now, apply the check and see whether a solution could be found
 		core::visitDepthFirstOnce(code, [&](const core::CallExprPtr& call){
 			EXPECT_TRUE(types::getTypeVariableInstantiation(manager, call))
 	//					<< "Processing:     " << core::printer::PrettyPrinter(call) << "\n"
 					<< "FunctionType:   " << *(call->getFunctionExpr()->getType()) << "\n"
-					<< "Argument Types: " << getTypes(call->getArguments());
+					<< "Argument Types: " << extractTypes(call->getArguments());
 		});
 	}
 

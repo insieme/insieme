@@ -46,6 +46,7 @@
 #include "insieme/driver/driver_config.h"
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/attributes.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
@@ -321,6 +322,131 @@ namespace measure {
 		template<typename T> first_impl<T> first(const T& list) { return first_impl<T>(list); }
 
 		/**
+		 *  Computes the standard deviation of quantities extracted as a list.
+		 *
+		 *  @param T the functor used to extract the list.
+		 */
+		template<typename T>
+		struct var_impl {
+			T list_extractor;
+			var_impl(T list_extractor) : list_extractor(list_extractor) {}
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				// check whether there is something
+				vector<Quantity> list = list_extractor(data, metric, region);
+				if (list.empty()) {
+					return Quantity::invalid(metric->getUnit());
+				}
+
+				// get sum
+				Quantity res(0, list[0].getUnit());
+				for_each(list, [&](const Quantity& cur) {
+					res += cur;
+				});
+
+				// compute average
+				Quantity average = res/Quantity(list.size());
+
+				auto ns2 = makeUnitPtr((nano * s)^2);
+
+				// compute variance
+				Quantity varianceTemp(0, ns2);
+				for_each(list, [&](const Quantity& cur) {
+					varianceTemp += Quantity(cur - average) * Quantity(cur - average);
+				});
+
+				return varianceTemp/average;
+			}
+			std::set<MetricPtr> getDependencies() const { return list_extractor.getDependencies(); };
+		};
+
+		// a specialization for metric pointer
+		template<> struct var_impl<MetricPtr> : public var_impl<list> {
+			var_impl(MetricPtr m) : var_impl<list>(list(m)) {}
+		};
+
+		/**
+		 * Since template-structs cannot be constructed nicely without specifying the template
+		 * parameters, this function is introducing the necessary automated type deduction.
+		 */
+		template<typename T> var_impl<T> var(const T& list) { return var_impl<T>(list); }
+
+		/**
+		 * Computes the min of quantities extracted as a list.
+		 *
+		 * @param T the functor used to extract the list.
+		 */
+		template<typename T>
+		struct min_impl {
+			T list_extractor;
+			min_impl(T list_extractor) : list_extractor(list_extractor) {}
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				// check whether there is something
+				vector<Quantity> list = list_extractor(data, metric, region);
+				if (list.empty()) {
+					return Quantity::invalid(metric->getUnit());
+				}
+
+				// compute min
+				Quantity res = list[0];
+				for_each(list, [&](const Quantity& cur) {
+					if(cur < res)
+						res = cur;
+				});
+				return res;
+			}
+			std::set<MetricPtr> getDependencies() const { return list_extractor.getDependencies(); };
+		};
+
+		// a specialization for metric pointer
+		template<> struct min_impl<MetricPtr> : public min_impl<list> {
+			min_impl(MetricPtr m) : min_impl<list>(list(m)) {}
+		};
+
+		/**
+		 * Since template-structs cannot be constructed nicely without specifying the template
+		 * parameters, this function is introducing the necessary automated type deduction.
+		 */
+		template<typename T> min_impl<T> min(const T& list) { return min_impl<T>(list); }
+
+		/**
+		 * Computes the max of quantities extracted as a list.
+		 *
+		 * @param T the functor used to extract the list.
+		 */
+		template<typename T>
+		struct max_impl {
+			T list_extractor;
+			max_impl(T list_extractor) : list_extractor(list_extractor) {}
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				// check whether there is something
+				vector<Quantity> list = list_extractor(data, metric, region);
+				if (list.empty()) {
+					return Quantity::invalid(metric->getUnit());
+				}
+
+				// compute max
+				Quantity res = list[0];
+				for_each(list, [&](const Quantity& cur) {
+					if(cur > res)
+						res = cur;
+				});
+				return res;
+			}
+			std::set<MetricPtr> getDependencies() const { return list_extractor.getDependencies(); };
+		};
+
+		// a specialization for metric pointer
+		template<> struct max_impl<MetricPtr> : public max_impl<list> {
+			max_impl(MetricPtr m) : max_impl<list>(list(m)) {}
+		};
+
+		/**
+		 * Since template-structs cannot be constructed nicely without specifying the template
+		 * parameters, this function is introducing the necessary automated type deduction.
+		 */
+		template<typename T> max_impl<T> max(const T& list) { return max_impl<T>(list); }
+
+		/**
 		 * Computes the sum of quantities extracted as a list.
 		 *
 		 * @param T the functor used to extract the list.
@@ -470,6 +596,14 @@ namespace measure {
 		return utils::compiler::Compiler::getDefaultC99CompilerO3();
 	}
 
+	Quantity measure(const core::StatementPtr& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
+		return measure(core::StatementAddress(stmt), metric, executor, compiler, env);
+	}
+
+	vector<Quantity> measure(const core::StatementPtr& stmt, const MetricPtr& metric, unsigned numRuns, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
+		return measure(core::StatementAddress(stmt), metric, numRuns, executor, compiler, env);
+	}
+
 	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
 		return measure(stmt, toVector(metric), executor, compiler, env)[metric];
 	}
@@ -508,6 +642,44 @@ namespace measure {
 			res.push_back(cur.find(0)->second);
 		});
 		return res;
+	}
+
+	std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> measure(
+			const vector<core::StatementAddress>& regions,
+			const vector<MetricPtr>& metrices, const ExecutorPtr& executor,
+			const utils::compiler::Compiler& compiler,
+			const std::map<string, string>& env) {
+
+		// use implementation accepting number of runs
+		return measure(regions, metrices, 1, executor, compiler, env)[0];
+	}
+
+	vector<std::map<core::StatementAddress, std::map<MetricPtr, Quantity>>> measure(
+			const vector<core::StatementAddress>& regions,
+			const vector<MetricPtr>& metrices,
+			unsigned numRuns, const ExecutorPtr& executor,
+			const utils::compiler::Compiler& compiler,
+			const std::map<string, string>& env) {
+
+
+		// create a stmt-address <-> region_id map
+		std::map<core::StatementAddress, region_id> mappedRegions;
+		region_id id = 0;
+		for(const auto& cur : regions) {
+			mappedRegions[cur] = id++;
+		}
+
+		// run measurements
+		auto data = measure(mappedRegions, metrices, numRuns, executor, compiler, env);
+
+		// un-pack results
+		return ::transform(data, [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& data)->std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> {
+			std::map<core::StatementAddress, std::map<MetricPtr, Quantity>> res;
+			for(const auto& cur : data) {
+				res[regions[cur.first]] = cur.second;
+			}
+			return res;
+		});
 	}
 
 
@@ -620,7 +792,46 @@ namespace measure {
 			// build instrumented code section using begin/end markers
 			auto region_inst_start_call = build.callExpr(unit, rtExt.instrumentationRegionStart, regionID);
 			auto region_inst_end_call = build.callExpr(unit, rtExt.instrumentationRegionEnd, regionID);
-			return build.compoundStmt(region_inst_start_call, stmt, region_inst_end_call);
+
+			// instrument exit points
+			core::StatementPtr instrumented = stmt;
+			auto exitPoints = core::analysis::getExitPoints(stmt);
+			std::sort(exitPoints.rbegin(), exitPoints.rend());
+			for(const core::StatementAddress& point : exitPoints) {
+
+				// break and continue
+				if (point->getNodeType() == core::NT_BreakStmt || point->getNodeType() == core::NT_ContinueStmt) {
+					// insert region_end call before statement
+					instrumented = core::transform::insert(manager, point.switchRoot(instrumented).getParentAddress().as<core::CompoundStmtAddress>(), region_inst_end_call, point.getIndex()).as<core::StatementPtr>();
+					continue;
+				}
+
+				// handle return statement - TODO: add support for exceptions
+				assert(point->getNodeType() == core::NT_ReturnStmt && "Only break, continue and return should constitute a exit point!");
+
+				core::ReturnStmtPtr ret = point.as<core::ReturnStmtPtr>();
+				core::ExpressionPtr retVal = ret->getReturnExpr();
+
+				core::StatementList stmts;
+				if (retVal->getNodeType() == core::NT_Variable || retVal->getNodeType() == core::NT_Literal) {
+					// no modification necessary
+					stmts.push_back(region_inst_end_call);
+					stmts.push_back(ret);
+				} else {
+
+					// separate result computation from return
+					core::VariablePtr var = build.variable(retVal->getType());
+					stmts.push_back(build.declarationStmt(var, retVal));
+					stmts.push_back(region_inst_end_call);
+					stmts.push_back(build.returnStmt(var));
+				}
+
+				// build replacement
+				instrumented = core::transform::replaceNode(manager, point, build.compoundStmt(stmts)).as<core::StatementPtr>();
+			}
+
+			// assemble substitution
+			return build.compoundStmt(region_inst_start_call, instrumented, region_inst_end_call);
 		}
 
 		/**
@@ -697,8 +908,15 @@ namespace measure {
 			return vector<std::map<region_id, std::map<MetricPtr, Quantity>>>(numRuns);
 		}
 
-		// create the instrumented binary
-		auto binFile = buildBinary(regions, compiler);
+		// fix static scheduling
+		auto modifiedCompiler = compiler;
+		modifiedCompiler.addFlag("-DIRT_SCHED_POLICY=IRT_SCHED_POLICY_STATIC");
+
+		// build target code
+		auto binFile = buildBinary(regions, modifiedCompiler);
+
+//		// create the instrumented binary
+//		auto binFile = buildBinary(regions, compiler);
 		if (binFile.empty()) {
 			throw MeasureException("Unable to compiling executable for measurement!");
 		}
@@ -726,8 +944,42 @@ namespace measure {
 		// extract name of executable
 		std::string executable = bfs::path(binary).filename().string();
 
+		// see whether aggregated log can be utilized
+		bool aggregatedOnly = all(metrics, [](const MetricPtr& cur) {
+			return cur == Metric::TOTAL_WALL_TIME || cur == Metric::TOTAL_CPU_TIME;
+		});
+
 		// partition the papi parameters
 		auto papiPartition = partitionPapiCounter(metrics);
+		/*auto papiPartition = vector<vector<MetricPtr> >(3);
+
+		namespace idm = insieme::driver::measure;
+
+		papiPartition[0] = vector<MetricPtr>{
+			  idm::Metric::TOTAL_L1_DCM,
+			  idm::Metric::TOTAL_L2_DCM,
+			  idm::Metric::TOTAL_L3_TCM,
+			  idm::Metric::TOTAL_BR_MSP,
+			  idm::Metric::TOTAL_BR_PRC,
+			  idm::Metric::TOTAL_TOT_INS,
+			  idm::Metric::TOTAL_FDV_INS,
+			  idm::Metric::TOTAL_LD_INS,
+		};
+
+		papiPartition[1] = vector<MetricPtr>{
+			  idm::Metric::TOTAL_FP_INS,
+			  idm::Metric::TOTAL_SR_INS,
+			  idm::Metric::TOTAL_L2_DCH,
+			  idm::Metric::TOTAL_FP_OPS,
+			  idm::Metric::TOTAL_VEC_SP,
+		};
+
+		papiPartition[2] = vector<MetricPtr>{
+			  idm::Metric::TOTAL_VEC_DP,
+			  idm::Metric::TOTAL_STL_ICY,
+			  idm::Metric::TOTAL_TLB_DM,
+			  idm::Metric::TOTAL_TLB_IM,
+		};*/
 
 		// run experiments and collect results
 		vector<std::map<region_id, std::map<MetricPtr, Quantity>>> res;
@@ -752,6 +1004,10 @@ namespace measure {
 				std::map<string,string> mod_env = env;
 				if (!paramList.empty()) {		// only set if there are any parameters (otherwise collection is disabled)
 					mod_env["IRT_INST_PAPI_EVENTS"] = getPapiCounterSelector(paramList);
+					mod_env["IRT_INST_REGION_MODE"] = "detail";
+				} else {
+					// fix region instrumentation mode
+					mod_env["IRT_INST_REGION_MODE"] = aggregatedOnly?"aggregated":"detail";
 				}
 
 				// run code
@@ -769,7 +1025,6 @@ namespace measure {
 				}
 
 			});
-
 
 			// extract results
 			res.push_back(std::map<region_id, std::map<MetricPtr, Quantity>>());
@@ -828,7 +1083,7 @@ namespace measure {
 		compiler.addFlag("-I " PAPI_HOME "/include");
 		compiler.addFlag("-L " PAPI_HOME "/lib/");
 		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
-		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
+		compiler.addFlag("-DIRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION");
 		compiler.addFlag("-DIRT_RUNTIME_TUNING");
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
 		compiler.addFlag("-Wl,-Bstatic -lpapi -Wl,-Bdynamic");
@@ -878,15 +1133,14 @@ namespace measure {
 
 		// a lambda merging region data
 		auto collectRegionData = [&](const RegionDataStore& src) {
-			for_each(src, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
-				if (cur.first == region) {
-					auto pos = cur.second.find(metric);
-					if (pos != cur.second.end()) {
-						const vector<Quantity>& list = pos->second;
-						res.insert(res.end(), list.begin(), list.end());
-					}
+			auto outer_pos = src.find(region);
+			if (outer_pos != src.end()) {
+				auto pos = outer_pos->second.find(metric);
+				if (pos != outer_pos->second.end()) {
+					const vector<Quantity>& list = pos->second;
+					res.insert(res.end(), list.begin(), list.end());
 				}
-			});
+			}
 		};
 
 		// collect data from region store

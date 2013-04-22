@@ -49,6 +49,7 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
+#include "insieme/utils/unused.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -142,7 +143,7 @@ struct ClastVisitor {
 		default:
 			assert(false && "Clast Expression not valid!");
 		}
-
+		return RetTy();
 	}
 
 	virtual RetTy visit(const clast_stmt* clast_node) {
@@ -167,6 +168,7 @@ struct ClastVisitor {
 			return visitClastGuard( reinterpret_cast<const clast_guard*>(clast_node) );
 
 		assert(false && "Clast node not supported");
+		return RetTy();
 	}
 
 	virtual RetTy visit(const CloogStatement* cloogStmt) {
@@ -592,8 +594,7 @@ public:
 		// In those case we need to perform special handling as the semantic information 
 		// could have introduced new domain which the cloog library wrongly interpret as for loops 
 		
-		auto&& fit = varMap.find(forStmt->iterator);
-		assert(fit == varMap.end() && "Induction variable being utilizied!");
+		assert(varMap.find(forStmt->iterator) == varMap.end() && "Induction variable being utilizied!");
 		core::VariablePtr&& inductionVar = builder.variable( mgr.getLangBasic().getInt4() );
 
 		auto&& indPtr = varMap.insert( std::make_pair(std::string(forStmt->iterator), inductionVar) );
@@ -628,42 +629,12 @@ public:
 							body );
 
 		}catch(RangedFunction&& ex) {
-			const RangedFunction::VarVect& ranges = ex.getRangedVariables();
+			__unused const RangedFunction::VarVect& ranges = ex.getRangedVariables();
 			irStmt = stmtStack.top().front();
 
 			assert((ranges.size() == 1 && *ranges.front() == *inductionVar));
 
-			// Nasty handling for MPI functions (to be replaced)
-			assert(irStmt->getNodeType() == core::NT_CallExpr);
-
-			core::CallExprPtr callExpr = irStmt.as<core::CallExprPtr>();
-			core::LiteralPtr  funcLit = callExpr->getFunctionExpr().as<core::LiteralPtr>();
-
-			const std::string& name = funcLit->getStringValue();
-			assert(name.compare(0,4,"MPI_") == 0 && "Not an MPI statement");
-			if (name == "MPI_Send" || name == "MPI_Isend" || name == "MPI_Recv" || name == "MPI_Irecv") {
-				// replace the starting address of the array with the lower bound of the array
-				// and the size with the difference between starting address and ending address
-				utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
-				//
-				replacements.insert( 
-						std::make_pair(callExpr->getArgument(0),
-							builder.callExpr(
-								builder.getLangBasic().getRefToAnyRef(),
-								insieme::analysis::setDisplacement(callExpr->getArgument(0), 
-									insieme::core::arithmetic::toFormula(lowerBound))
-							)
-						) 
-					);
-				
-				replacements.insert( 
-						std::make_pair(callExpr->getArgument(1), builder.sub(upperBound, lowerBound))
-					);
-
-				irStmt = core::static_pointer_cast<const core::Statement>( 
-						core::transform::replaceAll(mgr, irStmt, replacements) 
-					);	
-			}
+			assert(false && "you should not have come here!");
 		}
 
 		stmtStack.pop();

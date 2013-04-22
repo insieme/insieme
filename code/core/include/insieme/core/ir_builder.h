@@ -290,15 +290,20 @@ namespace core {
 
 		// Call Expressions
 		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const;
-		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
-		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
-		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const;
+
+		template<typename First, typename ... Rest>
+		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const First& arg1, const Rest& ... rest) const {
+			return callExpr(resultType, functionExpr, toVector<ExpressionPtr>(arg1, rest...));
+		}
 
 		// For the methods below, the return type is deduced from the functionExpr's function type
 		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments = vector<ExpressionPtr>()) const;
-		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
-		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
-		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const;
+		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const NodeRange<ExpressionPtr>& range) const { return callExpr(functionExpr, (ExpressionList)range); }
+
+		template<typename First, typename ... Rest>
+		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const First& arg1, const Rest& ... rest) const {
+			return callExpr(functionExpr, toVector<ExpressionPtr>(arg1, rest...));
+		}
 
 		// create a call to a virtual member function of an object type
 		CallExprPtr virtualCall(const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args = vector<ExpressionPtr>()) const;
@@ -651,6 +656,22 @@ namespace core {
 		 * @return an expression representing a pure virtual function of the given type
 		 */
 		ExpressionPtr getPureVirtual(const FunctionTypePtr& memberFunctionType) const;
+
+
+		/**
+		 * Converts a given IR reference into a C++ reference.
+		 */
+		ExpressionPtr toCppRef(const ExpressionPtr& ref) const;
+
+		/**
+		 * Converts a given IR reference into a const C++ reference.
+		 */
+		ExpressionPtr toConstCppRef(const ExpressionPtr& ref) const;
+
+		/**
+		 * Converts a (const) C++ reference in an IR reference.
+		 */
+		ExpressionPtr toIRRef(const ExpressionPtr& ref) const;
 
 	private:
 

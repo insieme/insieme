@@ -79,7 +79,7 @@ namespace {
 
 // Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
 ///
-void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL) {
+void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL, bool dumpCFG) {
 
 	InsiemeSema S(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
 
@@ -87,8 +87,8 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 	Parser P(comp.getPreprocessor(), S, false);  // do not skip function bodies
 	comp.getPreprocessor().EnterMainSourceFile();  
 
-	P.Initialize();	  //FIXME
 	ParserProxy::init(&P);
+	P.Initialize();	  //FIXME
 	Consumer->Initialize(comp.getASTContext());
 	if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
 		SC->InitializeSema(S);
@@ -109,7 +109,7 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 	S.dump();
 
 	// PRINT THE CFG from CLANG just for debugging purposes for the C++ frontend
-	if(CommandLineOptions::ClangCFGDump) {
+	if(dumpCFG) {
 		clang::DeclContext* dc = comp.getASTContext().getTranslationUnitDecl();
 		std::for_each(dc->decls_begin(), dc->decls_end(), [&] (const clang::Decl* d) {
 			if (const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {	
@@ -139,8 +139,8 @@ class TranslationUnitImpl: public insieme::frontend::TranslationUnit{
 	//std::shared_ptr<clang::idx::SelectorMap>		   	mSelMap;
 
 public:
-	TranslationUnitImpl(const std::string& file_name):
-		insieme::frontend::TranslationUnit(file_name) {
+	TranslationUnitImpl(const ConversionJob& job):
+		insieme::frontend::TranslationUnit(job) {
 		// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
 
@@ -161,11 +161,11 @@ public:
 		clang::ASTConsumer emptyCons;
 		//insieme::frontend::utils::indexerASTConsumer consumer(indexer, 
 	//									dynamic_cast<insieme::frontend::TranslationUnit*>(this));
-		parseClangAST(mClang, &emptyCons, true, mPragmaList);
+		parseClangAST(mClang, &emptyCons, true, mPragmaList, job.hasOption(ConversionJob::DumpCFG));
 
 		if( mClang.getDiagnostics().hasErrorOccurred() ) {
 			// errors are always fatal!
-			throw ClangParsingError(file_name);
+			throw ClangParsingError(mFileName);
 		}
 	}
 
@@ -187,24 +187,34 @@ namespace frontend {
 struct Program::ProgramImpl {
 	utils::Indexer mIdx;
 	TranslationUnitSet tranUnits;
+	const vector<boost::filesystem::path> stdLibDirs;
 	utils::Interceptor interceptor;
 	utils::FunctionDependencyGraph funcDepGraph;
 		
-	ProgramImpl(core::NodeManager& mgr) : mIdx(), interceptor(mgr, mIdx),  funcDepGraph(mIdx,interceptor) {}
+	ProgramImpl(core::NodeManager& mgr, const vector<string>& stdLibDirs) : 
+		mIdx(), 
+		stdLibDirs(::transform(stdLibDirs, [](const string& path) { return boost::filesystem::canonical(path); } )),
+		interceptor(mgr, mIdx, this->stdLibDirs),  funcDepGraph(mIdx,interceptor) {}
 };
 
-Program::Program(core::NodeManager& mgr):
-	pimpl( new ProgramImpl(mgr) ), mMgr(mgr), mProgram( core::Program::get(mgr) ) { }
+Program::Program(core::NodeManager& mgr, const ConversionJob& job):
+	pimpl( new ProgramImpl(mgr, job.getStdLibIncludeDirectories()) ), mMgr(mgr), mProgram( core::Program::get(mgr) ), config(job) { }
 
 Program::~Program() { delete pimpl; }
 
 utils::Interceptor& Program::getInterceptor() const { return pimpl->interceptor; }
 utils::Indexer& Program::getIndexer() const { return pimpl->mIdx; }
 utils::FunctionDependencyGraph& Program::getCallGraph() const {return pimpl->funcDepGraph; }
+const vector<boost::filesystem::path>& Program::getStdLibDirs() const { return pimpl->stdLibDirs; }
 
-void Program::intercept(std::string fileName) {
-	pimpl->interceptor.loadConfigFile(fileName);
-	pimpl->interceptor.intercept();
+void Program::setupInterceptor() {
+	if(config.getIntercepterConfigFile().empty()) {
+		//by default we intercept "std::.*"
+		pimpl->interceptor.loadConfigSet( { "std::.*" } );
+	} else {
+		//if we have a interceptor config file we use this to setup the interceptor
+		pimpl->interceptor.loadConfigFile(config.getIntercepterConfigFile());
+	}
 }
 
 void Program::analyzeFuncDependencies() {
@@ -230,17 +240,13 @@ void Program::dumpCallGraph() const {
 	pimpl->funcDepGraph.print(std::cout);
 }
 
-TranslationUnit& Program::addTranslationUnit(const std::string& file_name) {
-	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(file_name);
+TranslationUnit& Program::addTranslationUnit(const ConversionJob& job) {
+	assert(job.getFiles().size() == 1 && "Can only cover a single file!");
+
+	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(job);
 
 	pimpl->mIdx.indexTU(tuImpl);
 
-	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
-	return *tuImpl;
-}
-
-TranslationUnit& Program::createEmptyTranslationUnit() {
-	TranslationUnit* tuImpl = new TranslationUnit;
 	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	return *tuImpl;
 }
@@ -292,14 +298,14 @@ namespace {
  * Loops through an IR AST which contains OpenCL, OpenMP and MPI annotations.
  * Those annotations will be translated to parallel constructs
  */
-core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr) {
+core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr, bool tagMPI) {
 
 	// OpenCL frontend 
 	ocl::Compiler oclCompiler(prog, mgr);
 	prog = oclCompiler.lookForOclAnnotations();
 
 	// MPI frontend
-	prog = mpi::handleMPICalls(prog);
+	prog = mpi::handleMPICalls(prog, tagMPI);
 
 	//ocl::Compiler oclCompiler(prog, mgr);
 	//prog= oclCompiler.lookForOclAnnotations();
@@ -316,9 +322,7 @@ const core::ProgramPtr& Program::convert() {
 	bool insiemePragmaFound = false;
 	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
 
-	if(!CommandLineOptions::Intercept.empty()) {
-		intercept(CommandLineOptions::Intercept);
-	}
+	setupInterceptor();
 
 	analyzeFuncDependencies();
 
@@ -359,7 +363,7 @@ const core::ProgramPtr& Program::convert() {
 
 	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";
 	insieme::utils::Timer convertTimer("Frontend.AddParallelism ");
-	mProgram = addParallelism(mProgram, mMgr);
+	mProgram = addParallelism(mProgram, mMgr, config.hasOption(ConversionJob::TAG_MPI));
 	convertTimer.stop();
 	LOG(INFO) << convertTimer;
 

@@ -63,7 +63,7 @@ namespace transform {
 		);
 
 		NodePtr ret = doConstProp(mgr,code);
-		
+
 		EXPECT_EQ(
 			"{"
 				"ref<int<4>> v1 = 10; "
@@ -112,10 +112,10 @@ namespace transform {
 		);
 
 		NodePtr ret = doConstProp(mgr,code);
-		
+
 		EXPECT_EQ(
 			"{"
-				"ref<int<4>> v1 = 10; " 
+				"ref<int<4>> v1 = 10; "
 				"ref<int<4>> v2 = 20; "
 				"if(int.lt(10, 20)) {"
 					"int<4> v3 = int.add(10, 2); "
@@ -132,7 +132,7 @@ namespace transform {
 				"ref<int<4>> v1 = 10; "
 				"ref<int<4>> v2 = 20; "
 				"{"
-					"int<4> v3 = int.add(10, 2); "
+					"int<4> v3 = 12; "
 					"ref.assign(v1, 22);"
 				"}; "
 				"ref.assign(v2, v1); "
@@ -171,7 +171,7 @@ namespace transform {
 //
 //		NodeManager mgr;
 //		IRBuilder builder(mgr);
-//		
+//
 //		std::map<std::string, core::NodePtr> symbols;
 //		symbols["v"] = builder.variable(
 //			builder.parseType("ref<vector<int<4>,10>>")

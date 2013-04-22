@@ -48,8 +48,9 @@
 #include "insieme/frontend/convert.h"
 
 #include "insieme/utils/string_utils.h"
-#include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/logging.h"
+#include "insieme/utils/unused.h"
 
 #include "insieme/annotations/c/naming.h"
 
@@ -128,14 +129,16 @@ GlobalVarCollector::buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, co
 /////////////////////////////////////////////////////////////////////////////////
 ///
 void GlobalVarCollector::operator()(const clang::Decl* decl) {
-	if( interceptor.isIntercepted(decl) ) {
-		// or funcDecl is intercepted
-		VLOG(2) << "isIntercepted " << decl;
-		return; 
-	}
-
+	
 	bool isFuncDecl = false;
 	if(const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(decl)) {
+		
+		if( interceptor.isIntercepted(funcDecl) ) {
+			// funcDecl is intercepted
+			VLOG(2) << "isIntercepted " << decl;
+			return; 
+		}
+
 		if( visited.find(funcDecl) != visited.end() ) {
 			// function declaration already visited
 			return; 
@@ -247,8 +250,7 @@ bool GlobalVarCollector::VisitVarDecl(clang::VarDecl* varDecl) {
 		assert(enclosingFunc);
 		usingGlobals.insert(enclosingFunc); // the enclosing function uses globals
 
-		auto&& fit = varIdentMap.find(varDecl);
-		assert(fit == varIdentMap.end() && "Variable already declared");
+		assert(varIdentMap.find(varDecl) == varIdentMap.end() && "Variable already declared");
 
 		auto ident = buildIdentifierFromVarDecl(varDecl, enclosingFunc);
 		assert(varDecl && "no dec");
@@ -282,8 +284,8 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 
 		// add the variable to the list of global vars (if not already there)
 		if(fit == globals.end()) {
-			auto ret = globals.insert( varDecl );
-			assert(ret.second && "Variable name already exists within the list of global variables.");
+			__unused auto res = globals.insert( varDecl );
+			assert(res.second && "Variable name already exists within the list of global variables.");
 			
 			assert(varDecl && "no dec");
 			assert(ident && "no identifier");
@@ -417,7 +419,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 			assert (type->getNodeType() == core::NT_RefType);
 			// core::TypePtr derefTy = core::static_pointer_cast<const core::RefType>( type )->getElementType();
 			// build a literal which points to the name of the external variable 
-			initExpr = builder.literal((*it)->getNameAsString(), type);
+			initExpr = builder.literal((*it)->getQualifiedNameAsString(), type);
 		} else {
 			// this means the variable is not declared static inside a function so we have to initialize its value
 			initExpr = (*it)->getInit() ? 

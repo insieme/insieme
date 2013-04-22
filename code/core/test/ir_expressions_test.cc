@@ -526,8 +526,8 @@ TEST(ExpressionsTest, LambdaPeeling) {
 	ASSERT_TRUE(lambda);
 
 	EXPECT_TRUE(lambda->isRecursive());
-	EXPECT_EQ(                     "rec v0.{v0=fun() {5; v0();}}",      toString(*lambda));
-	EXPECT_EQ("rec v4.{v4=fun() {5; rec v0.{v0=fun() {5; v0();}}();}}", toString(*lambda->peel()));
+	EXPECT_EQ(                     "rec v2.{v2=fun() {5; v2();}}",      toString(*lambda));
+	EXPECT_EQ("rec v0.{v0=fun() {5; rec v2.{v2=fun() {5; v2();}}();}}", toString(*lambda->peel()));
 
 
 	// check mutual recursive lambdas
@@ -541,8 +541,8 @@ TEST(ExpressionsTest, LambdaPeeling) {
 	ASSERT_TRUE(lambda);
 
 	EXPECT_TRUE(lambda->isRecursive());
-	EXPECT_EQ(                     "rec v5.{v5=fun() {1; v6();}, v6=fun() {2; v5();}}",      toString(*lambda));
-	EXPECT_EQ("rec v9.{v9=fun() {1; rec v6.{v5=fun() {1; v6();}, v6=fun() {2; v5();}}();}}", toString(*lambda->peel()));
+	EXPECT_EQ(                     "rec v3.{v3=fun() {1; v4();}, v4=fun() {2; v3();}}",      toString(*lambda));
+	EXPECT_EQ("rec v0.{v0=fun() {1; rec v4.{v3=fun() {1; v4();}, v4=fun() {2; v3();}}();}}", toString(*lambda->peel()));
 
 
 	// check nested recursive lambda
@@ -556,8 +556,8 @@ TEST(ExpressionsTest, LambdaPeeling) {
 	ASSERT_TRUE(lambda);
 
 	EXPECT_TRUE(lambda->isRecursive());
-	EXPECT_EQ(                                           "rec v10.{v10=fun() {5; rec v11.{v11=fun() {v10();}}();}}",           toString(*lambda));
-	EXPECT_EQ("rec v13.{v13=fun() {5; rec v11.{v11=fun() {rec v10.{v10=fun() {5; rec v11.{v11=fun() {v10();}}();}}();}}();}}", toString(*lambda->peel()));
+	EXPECT_EQ(                                       "rec v5.{v5=fun() {5; rec v0.{v0=fun() {v5();}}();}}",           toString(*lambda));
+	EXPECT_EQ("rec v0.{v0=fun() {5; rec v0.{v0=fun() {rec v5.{v5=fun() {5; rec v0.{v0=fun() {v5();}}();}}();}}();}}", toString(*lambda->peel()));
 	EXPECT_PRED2(containsSubString, toString(*lambda->peel()), toString(*lambda));
 
 	// check nested mutual recursive lambdas
@@ -577,8 +577,8 @@ TEST(ExpressionsTest, LambdaPeeling) {
 	ASSERT_TRUE(lambda);
 
 	EXPECT_TRUE(lambda->isRecursive());
-	EXPECT_EQ(                                           "rec v15.{v15=fun() {1; rec v17.{v17=fun() {v16();}}();}, v16=fun() {2; rec v19.{v19=fun() {v15();}}();}}",           toString(*lambda));
-	EXPECT_EQ("rec v21.{v21=fun() {1; rec v17.{v17=fun() {rec v16.{v15=fun() {1; rec v17.{v17=fun() {v16();}}();}, v16=fun() {2; rec v19.{v19=fun() {v15();}}();}}();}}();}}", toString(*lambda->peel()));
+	EXPECT_EQ(                                       "rec v6.{v6=fun() {1; rec v0.{v0=fun() {v7();}}();}, v7=fun() {2; rec v0.{v0=fun() {v6();}}();}}",           toString(*lambda));
+	EXPECT_EQ("rec v0.{v0=fun() {1; rec v0.{v0=fun() {rec v7.{v6=fun() {1; rec v0.{v0=fun() {v7();}}();}, v7=fun() {2; rec v0.{v0=fun() {v6();}}();}}();}}();}}", toString(*lambda->peel()));
 
 }
 
@@ -671,7 +671,7 @@ TEST(ExpressionsTest, LambdaUnrollingEvenOdd) {
 //std::cout << "Unroll 5:\n" << core::printer::PrettyPrinter(even->unroll(5)) << "\n\n";
 
 	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v3==0)?true:(v3-1==0)?false:v1(v3-1-1);");
-	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v11==0)?false:(v11-1==0)?true:v2(v11-1-1);");
+	EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(even->unroll(2))), "return (v7==0)?false:(v7-1==0)?true:v2(v7-1-1);");
 
 	res = check(even->unroll(manager, 2), core::checks::getFullCheck());
 	EXPECT_TRUE(res.empty()) << even->unroll(manager, 2) << res;

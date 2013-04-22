@@ -596,7 +596,6 @@ void Trainer::valsToFuzzyTrainVector(Kompex::SQLiteStatement* stmt, size_t index
 		}
 	}
 
-	double range = POS - NEG;
 	// upper limit for a non-NEG value
 	double limit = min * 1.1;
 

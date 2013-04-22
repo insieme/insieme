@@ -197,7 +197,75 @@ namespace types {
 		EXPECT_TRUE(res.empty());
 	}
 
+	TEST(ReturnTypeDeduction, RefAny) {
 
+		// To support: calling a function accepting an any-reference
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+		const auto& basic = manager.getLangBasic();
+
+		FunctionTypePtr funType = builder.parseType("(ref<'a>, ref<any>)->'a").as<FunctionTypePtr>();
+
+		TypePtr refInt4 = builder.refType(basic.getInt4());
+		TypePtr refInt8 = builder.refType(basic.getInt8());
+
+		EXPECT_EQ(basic.getInt4(), deduceReturnType(funType, toVector(refInt4, refInt8)));
+		EXPECT_EQ(basic.getInt8(), deduceReturnType(funType, toVector(refInt8, refInt4)));
+
+	}
+
+	TEST(ReturnTypeDeduction, TypeVariableCapture) {
+
+
+		// Problem: A function of type
+		//			(ref<'a>, type<'b>)->ref<'b>
+		// called using arguments of type
+		//			ref<any>, type<array<'a,1>>
+		// results in a value
+		//			ref<array<any,1>>
+		// instead of a value of type
+		//			ref<array<'a,1>>
+
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		FunctionTypePtr funType = builder.parseType("(ref<'a>, type<'b>)->ref<'b>").as<FunctionTypePtr>();
+
+		auto argTypes = toVector(
+				builder.parseType("ref<any>"),
+				builder.parseType("type<array<'a,1>>")
+		);
+
+		TypePtr resType = deduceReturnType(funType, argTypes);
+
+		EXPECT_EQ("ref<array<'a,1>>", toString(*resType));
+	}
+
+
+	TEST(ReturnTypeDeduction, NestedAlphaBug) {
+
+		// Problem: the return type of a function of type
+		//			(ref<list<'a>>, uint<4>)->ref<'a>
+		// is called using arguments
+		//			ref<list<X>>, uint<4>
+		// and the result type is not properly deduced.
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		FunctionTypePtr funType = builder.parseType("(ref<list<'a>>,uint<4>)->ref<'a>").as<FunctionTypePtr>();
+
+		auto argTypes = toVector(
+				builder.parseType("ref<list<X>>"),
+				builder.parseType("uint<4>")
+		);
+
+		TypePtr resType = deduceReturnType(funType, argTypes);
+
+		EXPECT_EQ("ref<X>", toString(*resType));
+	}
 
 } // end namespace types
 } // end namespace core

@@ -119,9 +119,11 @@ protected:
 	// set to store paths of loaded kernel files
 	std::set<string>& kernelFileCache;
 
+	const ConversionJob& job;
+
 public:
-	Handler(const core::IRBuilder& build, Ocl2Inspire& ocl2inspire, std::set<string>& kernelFileCache)
-		: builder(build), o2i(ocl2inspire), argCnt(0), kernelFileCache(kernelFileCache) {
+	Handler(const core::IRBuilder& build, Ocl2Inspire& ocl2inspire, std::set<string>& kernelFileCache, const ConversionJob& job)
+		: builder(build), o2i(ocl2inspire), argCnt(0), kernelFileCache(kernelFileCache), job(job) {
 		kernels = core::Program::get(build.getNodeManager());
 	}
 
@@ -156,8 +158,8 @@ class LambdaHandler: public Handler {
 	const char* fct;
 	Lambda body;
 public:
-	LambdaHandler(core::IRBuilder& build, Ocl2Inspire& ocl2inspire, const char* fun, std::set<string>& kernelFileCache, Lambda lambda) :
-		Handler(build, ocl2inspire, kernelFileCache), fct(fun), body(lambda) {
+	LambdaHandler(core::IRBuilder& build, Ocl2Inspire& ocl2inspire, const char* fun, std::set<string>& kernelFileCache, const ConversionJob& job, Lambda lambda) :
+		Handler(build, ocl2inspire, kernelFileCache, job), fct(fun), body(lambda) {
 	}
 
 	// creating a shared pointer to a LambdaHandler
@@ -175,13 +177,13 @@ typedef std::shared_ptr<Handler> HandlerPtr;
 typedef boost::unordered_map<string, HandlerPtr, boost::hash<string> > HandlerTable;
 
 template<typename Lambda>
-HandlerPtr make_handler(core::IRBuilder& builder, Ocl2Inspire& o2i, const char* fct, std::set<string> kernelFileCache,
+HandlerPtr make_handler(core::IRBuilder& builder, Ocl2Inspire& o2i, const char* fct, std::set<string> kernelFileCache, const ConversionJob& job,
 		Lambda lambda) {
-	return std::make_shared<LambdaHandler<Lambda> >(builder, o2i, fct, kernelFileCache, lambda);
+	return std::make_shared<LambdaHandler<Lambda> >(builder, o2i, fct, kernelFileCache, job, lambda);
 }
 
 #define ADD_Handler(builder, o2i, fct, BODY) \
-    handles.insert(std::make_pair(fct, make_handler(builder, o2i, fct, kernelFileCache, [&](core::CallExprPtr node, core::ProgramPtr& kernels){ BODY }))).second;
+    handles.insert(std::make_pair(fct, make_handler(builder, o2i, fct, kernelFileCache, job, [&](core::CallExprPtr node, core::ProgramPtr& kernels){ BODY }))).second;
 
 /*
  * First pass when translating a program OpenCL to IR
@@ -197,6 +199,7 @@ HandlerPtr make_handler(core::IRBuilder& builder, Ocl2Inspire& o2i, const char* 
  */
 class HostMapper: public core::transform::CachedNodeMapping {
 	core::IRBuilder& builder;
+	const ConversionJob& job;
 
 	HandlerTable handles;
 	ClmemTable cl_mems;
@@ -247,7 +250,7 @@ class HostMapper: public core::transform::CachedNodeMapping {
 		return handles[handleName]->collectArgument(kernel, index, sizeArg, arg, kernelArgs, localMemDecls, cl_mems, eqMap);
 	}
 public:
-	HostMapper(core::IRBuilder& build, core::ProgramPtr& program);
+	HostMapper(core::IRBuilder& build, core::ProgramPtr& program, const ConversionJob& job);
 
 	const core::NodePtr resolveElement(const core::NodePtr& element);
 

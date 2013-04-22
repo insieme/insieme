@@ -136,8 +136,9 @@ namespace utils {
 		while( (purified = purifyType(type)) != type )
 			type = purified;
 		
-		purified->dump();
-		LOG(DEBUG) << purified->getTypeClassName();
+		if (VLOG_IS_ON(2))
+			purified->dump();
+		VLOG(2) << purified->getTypeClassName();
 
 		if( const TagType* tagTy = llvm::dyn_cast<TagType>(purified) ) {
 			// LOG(DEBUG) << "Adding " << tagTy->getDecl()->getNameAsString();
@@ -224,7 +225,8 @@ core::TypePtr ConversionFactory::TypeConverter::VisitBuiltinType(const BuiltinTy
 	case BuiltinType::Char32:		return gen.getInt4();
 	case BuiltinType::Char_S:
 	case BuiltinType::SChar:		return gen.getChar();
-	// case BuiltinType::WChar:		return gen.getWChar();
+	case BuiltinType::WChar_S:		return gen.getWChar();	
+	case BuiltinType::WChar_U:		return gen.getWChar();
 
 	// integer types
 	case BuiltinType::UShort:		return gen.getUInt2();
@@ -244,7 +246,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitBuiltinType(const BuiltinTy
 	case BuiltinType::LongDouble:	return gen.getDouble(); // unsopported FIXME
 
 	// not supported types
-	case BuiltinType::NullPtr:
+	case BuiltinType::NullPtr:		return builder.typeVariable("nullptr_t"); //gen.getAnyRef(); //FIXME how do we handle the std::nullptr_t??
 	case BuiltinType::Overload:
 	case BuiltinType::Dependent:
 	default:
@@ -259,6 +261,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitBuiltinType(const BuiltinTy
 core::TypePtr ConversionFactory::TypeConverter::VisitComplexType(const ComplexType* bulinTy) {
 	// FIXME
 	assert(false && "ComplexType not yet handled!");
+	return core::TypePtr();
 }
 
 // ------------------------   ARRAYS  -------------------------------------
@@ -758,10 +761,10 @@ core::TypePtr ConversionFactory::TypeConverter::handleTagType(const TagDecl* tag
 		return builder.unionType( structElements );
 	}
 	assert(false && "TagType not supported");
+	return core::TypePtr();
 }
 
 core::TypePtr ConversionFactory::CTypeConverter::Visit(const clang::Type* type) {
-	VLOG(2) << "C";
 	return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type);
 }
 
@@ -772,6 +775,7 @@ core::TypePtr ConversionFactory::CTypeConverter::handleTagType(const TagDecl* ta
 		return builder.unionType( structElements );
 	}
 	assert(false && "TagType not supported");
+	return core::TypePtr();
 }
 
 } // End conversion namespace

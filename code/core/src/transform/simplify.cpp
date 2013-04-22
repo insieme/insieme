@@ -244,7 +244,27 @@ namespace transform {
 			}
 
 			NodePtr simplifyExpr(const NodePtr& ptr) {
+
+				// only supported for expressions
+				if (!ptr.isa<core::ExpressionPtr>()) return ptr;
+
+				// convert to expression
+				auto expr = ptr.as<core::ExpressionPtr>();
+
 				// TODO: remove general identities
+
+				try {
+
+					// e.g. 1+1 => 2
+					ExpressionPtr reduced = core::arithmetic::toIR(ptr->getNodeManager(), core::arithmetic::toFormula(expr));
+					if (*reduced->getType() == *expr->getType()) {
+						return reduced;		// make sure type isn't changed
+					}
+
+				} catch (const core::arithmetic::NotAFormulaException& nafe) {
+					// ignore
+				}
+
 				//	e.g. 1+1 => 2, ref.deref(ref.var(x)) => x
 				return ptr;
 			}

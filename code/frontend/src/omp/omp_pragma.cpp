@@ -87,8 +87,8 @@ struct marker_type_trait<core::Expression> {
 };
 
 /**
- * take care of filtering OmpPragmas from the list of pragmas attached to the clang node and attaches the resulting annotation
- * to the IR node
+ * take care of filtering OmpPragmas from the list of pragmas attached to the clang node and attaches 
+ * the resulting annotation to the IR node
  */
 template <class NodeTy>
 core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy>& 	irNode,
@@ -446,10 +446,10 @@ ReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionF
 	std::string* opStr = opVar.front()->get<std::string*>();
 	assert(opStr && "Reduction clause with no operator");
 
-	Reduction::Operator op;
+	Reduction::Operator op = Reduction::PLUS;
 	if(*opStr == "+")		op = Reduction::PLUS;
 	else if(*opStr == "-")	op = Reduction::MINUS;
-	else if(*opStr == "*")	op = Reduction::STAR;
+	else if(*opStr == "*")	op = Reduction::MUL;
 	else if(*opStr == "&")	op = Reduction::AND;
 	else if(*opStr == "|")	op = Reduction::OR;
 	else if(*opStr == "^")	op = Reduction::XOR;
@@ -487,7 +487,7 @@ SchedulePtr handleScheduleClause(const MatchMap& mmap, conversion::ConversionFac
 	assert(kind.size() == 1);
 	std::string& kindStr = *kind.front()->get<std::string*>();
 
-	Schedule::Kind k;
+	Schedule::Kind k = Schedule::STATIC;
 	if(kindStr == "static")
 		k = Schedule::STATIC;
 	else if (kindStr == "dynamic")
@@ -522,7 +522,7 @@ DefaultPtr handleDefaultClause(const MatchMap& mmap, conversion::ConversionFacto
 	assert(kind.size() == 1);
 	std::string& kindStr = *kind.front()->get<std::string*>();
 
-	Default::Kind k;
+	Default::Kind k = Default::SHARED;
 	if(kindStr == "shared")
 		k = Default::SHARED;
 	else if(kindStr == "none")

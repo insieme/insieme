@@ -201,6 +201,22 @@ std::ostream& ThreadPrivate::dump(std::ostream& out) const {
 	return out << "threadprivate";
 }
 
+
+void replaceVars (core::ExpressionPtr& expr, core::NodeMap map){
+	if (!expr) return;
+	core::NodeManager& mgr =  expr->getNodeManager();
+	expr=  core::transform::replaceAll(mgr, expr, map, false).as<core::ExpressionPtr>();
+}
+
+void replaceVars (VarListPtr& list, core::NodeMap map){
+	if (!list) return;
+	for(core::ExpressionPtr& cur : *list){
+		core::NodeManager& mgr =  cur->getNodeManager();
+		cur=  core::transform::replaceAll(mgr, cur, map, false).as<core::ExpressionPtr>();
+	}
+}
+
+
 } // End omp namespace
 } // End frontend namespace
 } // End insieme namespace

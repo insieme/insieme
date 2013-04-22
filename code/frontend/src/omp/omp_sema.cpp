@@ -358,6 +358,7 @@ protected:
 			 
 		}
 		assert(false && "OMP threadprivate annotation on non-member / non-call");
+		return NodePtr();
 	}
 
 	// implements omp flush by generating INSPIRE flush() calls
@@ -386,6 +387,28 @@ protected:
 			case Reduction::PLUS:
 				operation = build.assign(varExp, build.add(build.deref(varExp), build.deref(static_pointer_cast<const Expression>(publicToPrivateMap[varExp]))));
 				break;
+			case Reduction::MINUS:
+				operation = build.assign(varExp, build.add(build.deref(varExp), build.deref(static_pointer_cast<const Expression>(publicToPrivateMap[varExp]))));
+				break;
+			case Reduction::MUL:
+				operation = build.assign(varExp, build.mul(build.deref(varExp), build.deref(static_pointer_cast<const Expression>(publicToPrivateMap[varExp]))));
+				break;
+			case Reduction::AND:
+				operation = build.assign(varExp, build.bitwiseAnd(build.deref(varExp), build.deref(static_pointer_cast<const Expression>(publicToPrivateMap[varExp]))));
+				break;
+			case Reduction::OR:
+				operation = build.assign(varExp, build.bitwiseOr(build.deref(varExp), build.deref(static_pointer_cast<const Expression>(publicToPrivateMap[varExp]))));
+				break;
+			case Reduction::XOR:
+				operation = build.assign(varExp, build.bitwiseXor(build.deref(varExp), build.deref(static_pointer_cast<const Expression>(publicToPrivateMap[varExp]))));
+				break;
+			// TODO: re-enable when new conversion from int to bool is available
+//			case Reduction::LAND:
+//				operation = build.assign(varExp, build.logicAnd(build.deref(varExp), build.deref(static_pointer_cast<const Expression>(publicToPrivateMap[varExp]))));
+//				break;
+//			case Reduction::LOR:
+//				operation = build.assign(varExp, build.logicOr(build.deref(varExp), build.deref(static_pointer_cast<const Expression>(publicToPrivateMap[varExp]))));
+//				break;
 			default:
 				LOG(ERROR) << "OMP reduction operator: " << Reduction::opToStr(clause->getReduction().getOperator());
 				assert(false && "Unsupported reduction operator");
@@ -402,7 +425,20 @@ protected:
 		assert(rType && "OMP reduction on non-reference type");
 		switch(op) {
 		case Reduction::PLUS:
+		case Reduction::MINUS:
+		case Reduction::OR:
+		case Reduction::XOR:
 			ret = build.refVar(build.literal("0", rType->getElementType()));
+			break;
+		case Reduction::MUL:
+		case Reduction::AND:
+			ret = build.refVar(build.literal("1", rType->getElementType()));
+			break;
+		case Reduction::LAND:
+			ret = build.refVar(build.boolLit(true));
+			break;
+		case Reduction::LOR:
+			ret = build.refVar(build.boolLit(false));
 			break;
 		default:
 			LOG(ERROR) << "OMP reduction operator: " << Reduction::opToStr(op);
@@ -447,13 +483,13 @@ protected:
 		});
 		// implement copyin for threadprivate vars
 		if(parallelP && parallelP->hasCopyin()) {
-			for_each(parallelP->getCopyin(), [&](const ExpressionPtr& varExp) {
+			for(const ExpressionPtr& varExp : parallelP->getCopyin()) {
 				// assign master copy to private copy
 				StatementPtr assignment = build.assign(
 					static_pointer_cast<const Expression>(handleThreadprivate(varExp)), 
 					build.deref(static_pointer_cast<const Expression>(handleThreadprivate(varExp, true))) );
 				replacements.push_back(assignment);
-			});
+			}
 		}
 		StatementPtr subStmt = transform::replaceAllGen(nodeMan, stmtNode, publicToPrivateMap);
 		// specific handling if clause is a omp for

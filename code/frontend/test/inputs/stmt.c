@@ -60,27 +60,27 @@ void binary_op_test() {
 	unsigned c;
 
 	#pragma test \
-	"(( *v2)+( *v1))"
+	"(( *v1)+( *v2))"
 	a + b;
 
 	#pragma test \
-	"(v2 := (( *v2)+( *v1)))"
+	"(v1 := (( *v1)+( *v2)))"
 	a += b;
 
 	#pragma test \
-	"(( *v2)-( *v1))"
+	"(( *v1)-( *v2))"
 	a - b;
 
 	#pragma test \
-	"(( *v1)-CAST<uint<4>>(1))"
+	"(( *v1)-1)"
 	c - 1;
 
 	#pragma test \
-	"(v2 := (( *v2)-( *v1)))"
+	"(v1 := (( *v1)-( *v2)))"
 	a -= b;
 
 	#pragma test \
-	"fun(ref<int<4>> v3, ref<int<4>> v4) -> int<4> { (( *v4)+1); return (( *v3)-1);}(v1, v2)"
+	"fun(ref<int<4>> v3, ref<int<4>> v4) -> int<4> { (( *v3)+1); return (( *v4)-1);}(v1, v2)"
 	(a+1, b-1);
 }
 
@@ -89,7 +89,7 @@ void unary_op_test() {
 	#pragma test "decl ref<int<4>> v1 = ( var(0))"
 	int a = 0;
 
-	#pragma test "(!(( *v1)!=0))"
+	#pragma test "(!int.to.Bool(( *v1)))"
 	!a;
 
 	#pragma test "( *v1)"
@@ -116,10 +116,10 @@ void unary_op_test() {
 	#pragma test "fun(ref<'a> v1) -> 'a { (v1 := gen.sub(( *v1), 1)); return ( *v1);}(v1)"
 	--a;
 
-	#pragma test "int.lshift(( *v1), 2)"
+	#pragma test "(( *v1)<<2)"
 	a << 2;
 
-	#pragma test "uint.lshift(CAST<uint<4>>(( *v1)), 2)"
+	#pragma test "(int.to.uint(( *v1), 4)<<2)"
 	(unsigned int)a << 2;
 }
 
@@ -128,7 +128,7 @@ void array_test() {
 	#pragma test "decl ref<ref<array<int<4>,1>>> v1 = ( var(undefined(type<ref<array<int<4>,1>>>)))"
 	int* a;
 
-	#pragma test "( *(( *v1)&[CAST<uint<4>>(0)]))"
+	#pragma test "( *(( *v1)&[0]))"
 	a[0];
 
 }
@@ -159,7 +159,7 @@ void if_stmt_test() {
 	int cond = 0;
 
 	#pragma test \
-	"if((( *v1)!=0)) { (v1 := (( *v1)+1));} else { (v1 := (( *v1)-1));}"
+	"if(int.to.Bool(( *v1))) { (v1 := (( *v1)+1));} else { (v1 := (( *v1)-1));}"
 	if(cond) {
 		cond += 1;
 	} else {
@@ -174,11 +174,11 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"(((( *v1)!=0))?bind(){fun(ref<int<4>> v4) -> int<4> { return (( *v4)+1);}(v1)}:bind(){fun(ref<int<4>> v2) -> int<4> { return (( *v2)-1);}(v1)})"
+	"((int.to.Bool(( *v1)))?bind(){fun(ref<int<4>> v3) -> int<4> { return (( *v3)+1);}(v1)}:bind(){fun(ref<int<4>> v2) -> int<4> { return (( *v2)-1);}(v1)})"
 	a ? a+1 : a-1;
 
 	#pragma test \
-	"(((( *v1)==0))?bind(){fun(ref<int<4>> v4) -> int<4> { return (( *v4)+1);}(v1)}:bind(){fun(ref<int<4>> v2) -> int<4> { return (( *v2)-1);}(v1)})"
+	"(((( *v1)==0))?bind(){fun(ref<int<4>> v3) -> int<4> { return (( *v3)+1);}(v1)}:bind(){fun(ref<int<4>> v2) -> int<4> { return (( *v2)-1);}(v1)})"
 	a == 0 ? a+1 : a-1;
 
 	#pragma test \
@@ -198,11 +198,11 @@ void for_stmt_test() {
 
 	// for loop using a variable declared outside
 	#pragma test \
-	"{ for(decl int<4> v2 = 0 .. 100 : 1) { (v3 := v2); }; (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*CAST<int<4>>(1))));}"
+	"{ for(decl int<4> v2 = 0 .. 100 : 1) { (v4 := v2); }; (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*CAST<int<4>>(1))));}"
 	for(it=0; it<100; ++it) { a=it; }
 
 	#pragma test \
-	"{ for(decl int<4> v2 = ( *v3) .. 100 : 6) { (v3 := v2); }; (v1 := (( *v3)+(CAST<int<4>>(ceil((CAST<real<8>>((100-( *v3)))/CAST<real<8>>(6))))*CAST<int<4>>(6))));}"
+	"{ for(decl int<4> v2 = ( *v4) .. 100 : 6) { (v4 := v2); }; (v1 := (( *v4)+(CAST<int<4>>(ceil((CAST<real<8>>((100-( *v4)))/CAST<real<8>>(6))))*CAST<int<4>>(6))));}"
 	for(it=a; it<100; it+=6) { a=it; }
 
 	#pragma test \
@@ -210,12 +210,11 @@ void for_stmt_test() {
 	for(; it<100; it+=1) { ; }
 
 	#pragma test \
-	"{ decl ref<int<4>> v4 = ( var(1)); decl ref<int<4>> v5 = ( var(2)); for(decl int<4> v2 = 0 .. 100 : 1) { (v3 := v2); };}"
+	"{ decl ref<int<4>> v5 = ( var(1)); decl ref<int<4>> v6 = ( var(2)); for(decl int<4> v2 = 0 .. 100 : 1) { (v4 := v2); };}"
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
-	#pragma test \
-	"{ (v1 := 0); while((( *v2)>1)) { { }; fun(ref<int<4>> v6, ref<int<4>> v7) -> ref<int<4>> { fun(ref<'a> v1) -> 'a { decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v6); (v7 := (( *v7)/2)); return v7; }(v1, v2); };}"
+	#pragma test "{ (v1 := 0); while((( *v4)>1)) { { }; fun(ref<int<4>> v5, ref<int<4>> v6) -> ref<int<4>> { fun(ref<'a> v1) -> 'a { decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v5); (v6 := (( *v6)/2)); return v6; }(v1, v4); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 
 	//(v1 := 0);
@@ -346,13 +345,13 @@ void while_stmt_test() {
 }
 
 #pragma test \
-	"recFun v16 { v16 = fun(int<4> v18) -> int<4> { return v17((v18-1)); }; v17 = fun(int<4> v19) -> int<4> { return v16((v19+1)); };}"
+	"recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13-1)); }; v12 = fun(int<4> v15) -> int<4> { return v11((v15+1)); };}"
 int f(int x) {
 	return g(x-1);
 }
 
 #pragma test \
-	"recFun v16 { v16 = fun(int<4> v18) -> int<4> { return v17((v18+1)); }; v17 = fun(int<4> v19) -> int<4> { return v16((v19-1)); };}"
+	"recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13+1)); }; v12 = fun(int<4> v15) -> int<4> { return v11((v15-1)); };}"
 int g(int x) {
 	return f(x+1);
 }
@@ -367,7 +366,7 @@ int g(int x) {
 
 void rec_function_call_test() {
 	#pragma test \
-	"recFun v16 { v16 = fun(int<4> v18) -> int<4> { return v17((v18-1)); }; v17 = fun(int<4> v19) -> int<4> { return v16((v19+1)); };}(10)"
+	"recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13-1)); }; v12 = fun(int<4> v15) -> int<4> { return v11((v15+1)); };}(10)"
 	f(10);
 }
 
@@ -379,11 +378,11 @@ void vector_stmt_test() {
 	int a[5];
 
 	#pragma test \
-	"( *(v1&[CAST<uint<4>>(0)]))"
+	"( *(ref.vector.to.ref.array(v1)&[0]))"
 	a[0];
 
 	#pragma test \
-	"((v1&[CAST<uint<4>>(0)]) := 1)"
+	"((ref.vector.to.ref.array(v1)&[0]) := 1)"
 	a[0] = 1;
 
 	#pragma test \
@@ -391,11 +390,11 @@ void vector_stmt_test() {
 	int b[2][3];
 
 	#pragma test \
-	"( *((v1&[CAST<uint<4>>(0)])&[CAST<uint<4>>(0)]))"
+	"( *(ref.vector.to.ref.array((ref.vector.to.ref.array(v1)&[0]))&[0]))"
 	b[0][0];
 
 	#pragma test \
-	"(((v1&[CAST<uint<4>>(1)])&[CAST<uint<4>>(1)]) := 0)"
+	"((ref.vector.to.ref.array((ref.vector.to.ref.array(v1)&[1]))&[1]) := 0)"
 	b[1][1] = 0;
 
 	#pragma test \
@@ -419,7 +418,7 @@ void init_expr() {
 	int* a = 0;
 
 	#pragma test \
-	"( *(ref.vector.to.ref.array(( var([1, 2, 3])))&[CAST<uint<4>>(1)]))"
+	"( *(ref.vector.to.ref.array(( var([1, 2, 3])))&[1]))"
 	((int[3]) {1,2,3})[1];
 
 	struct Person p;

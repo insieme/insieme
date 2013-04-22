@@ -169,14 +169,21 @@ namespace c_ast {
 		return mods == other.mods && *type == *other.type;
 	}
 
-	bool NamedType::equals(const Node& other) const {
-		assert(dynamic_cast<const NamedType*>(&other));
-		return *name == *static_cast<const NamedType&>(other).name;
+	bool NamedType::equals(const Node& node) const {
+		assert(dynamic_cast<const NamedType*>(&node));
+		auto other = static_cast<const NamedType&>(node);
+		return *name == *other.name && ::equals(parameters, other.parameters, equal_target<NodePtr>());
 	}
 
 	bool PointerType::equals(const Node& other) const {
 		assert(dynamic_cast<const PointerType*>(&other));
 		return *elementType == *static_cast<const PointerType&>(other).elementType;
+	}
+
+	bool ReferenceType::equals(const Node& node) const {
+		assert(dynamic_cast<const ReferenceType*>(&node));
+		auto other = static_cast<const ReferenceType&>(node);
+		return isConst == other.isConst && *elementType == *other.elementType;
 	}
 
 	bool VectorType::equals(const Node& node) const {

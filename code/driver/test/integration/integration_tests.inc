@@ -40,10 +40,10 @@
 
 namespace insieme {
 
+/*	
 	using namespace utils::test;
 	using namespace core;
 
-	
 	// --------------- Some global utilities for this test program --------------------
 	
 	namespace {
@@ -64,7 +64,7 @@ namespace insieme {
 			//}
 		
 			// not loaded yet => load and cache code
-			frontend::ConversionJob job(manager, testCase.getFiles(), testCase.getIncludeDirs());
+			frontend::ConversionJob job(testCase.getFiles(), testCase.getIncludeDirs());
 			job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
 			job.setOption(frontend::ConversionJob::OpenCL, testCase.isEnableOpenCL());
 			
@@ -74,7 +74,7 @@ namespace insieme {
 			}
 			
 			// execute job
-			core::ProgramPtr code = job.execute();
+			core::ProgramPtr code = job.execute(manager);
 
 			// store the code in the global node manager 
 			//loadedCodes.insert(std::make_pair(testCase, testGlobalManager.get(code)));
@@ -90,5 +90,6 @@ namespace insieme {
 		::transform(expressions, std::back_inserter(res), [](const ExpressionPtr& cur) { return cur->getType(); });
 		return res;
 	}
+*/
 
 }

@@ -152,6 +152,77 @@ namespace analysis {
 
 	}
 
+	TEST(FreeVariables, NestedScopeBug) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+		auto& basic = manager.getLangBasic();
+
+		// BUG: - scopes are not respected when identifying free variables
+		//				e.g. { { decl v1 = ..; } v1; }
+		//      - v1 is free, but not identified as such
+
+		{
+			VariablePtr v1 = builder.variable(basic.getInt4(), 1);
+
+			auto decl = builder.declarationStmt(v1, builder.intLit(14));
+			auto inner = builder.compoundStmt(decl);
+			auto outer = builder.compoundStmt(inner, v1);
+
+//			dump(outer);
+
+			// get free variables
+			EXPECT_EQ("[AP(v1)]", toString(getFreeVariables(outer)));
+		}
+
+		// more complex stuff
+		{
+			VariablePtr v1 = builder.variable(basic.getInt4(), 1);
+			VariablePtr v2 = builder.variable(basic.getInt4(), 2);
+
+			auto decl = builder.declarationStmt(v1, builder.intLit(14));
+			auto inner = builder.compoundStmt(decl, v1, v2);
+			auto outer = builder.compoundStmt(inner);
+
+//			dump(outer);
+
+			// get free variables
+			EXPECT_EQ("[AP(v2)]", toString(getFreeVariables(outer)));
+		}
+
+		{
+			VariablePtr v1 = builder.variable(basic.getInt4(), 1);
+			VariablePtr v2 = builder.variable(basic.getInt4(), 2);
+			VariablePtr v3 = builder.variable(basic.getInt4(), 3);
+
+			auto decl = builder.declarationStmt(v1, builder.intLit(14));
+			auto inner = builder.compoundStmt(decl, v1, v2);
+			auto outer = builder.compoundStmt(inner, v3);
+
+//			dump(outer);
+
+			// get free variables
+			auto freeVars = getFreeVariables(outer);
+			EXPECT_EQ(2u, freeVars.size());
+			EXPECT_TRUE(contains(freeVars, v2)) << freeVars;
+			EXPECT_TRUE(contains(freeVars, v3)) << freeVars;
+		}
+
+		{
+			VariablePtr v1 = builder.variable(basic.getInt4(), 1);
+			VariablePtr v2 = builder.variable(basic.getInt4(), 2);
+
+			auto decl = builder.declarationStmt(v1, builder.intLit(14));
+			auto outer = builder.compoundStmt(v1, decl, v1);
+
+//			dump(outer);
+
+			// get free variables
+			EXPECT_EQ("[AP(v1)]", toString(getFreeVariables(outer)));
+			EXPECT_EQ("[0-0]", toString(getFreeVariableAddresses(outer)));
+		}
+	}
+
 
 
 	TEST(AllVariables, BindTest) {
@@ -244,6 +315,103 @@ namespace analysis {
 
 		TypePtr structType = builder.structType(toVector(builder.namedType("a", A), builder.namedType("d",D)));
 		EXPECT_EQ(toVector(A,D), getElementTypes(structType));
+	}
+
+	TEST(ExitPoints, Basic) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		vector<StatementAddress> res;
+
+		// -----------  some stuff without exit points -----------------------
+		res = getExitPoints(builder.parseStmt(" { } "));
+		EXPECT_TRUE(res.empty());
+
+		res = getExitPoints(builder.parseStmt(" { int<4> x = 4; } "));
+		EXPECT_TRUE(res.empty());
+
+		res = getExitPoints(builder.parseStmt(" { for(int<4> i = 1 .. 10 ) { continue; } } "));
+		EXPECT_TRUE(res.empty());
+
+		res = getExitPoints(builder.parseStmt(" { for(int<4> i = 1 .. 10 ) { break; } } "));
+		EXPECT_TRUE(res.empty());
+
+		res = getExitPoints(builder.parseStmt(" { while(true) { continue; } } "));
+		EXPECT_TRUE(res.empty());
+
+		res = getExitPoints(builder.parseStmt(" { while(true) { break; } } "));
+		EXPECT_TRUE(res.empty());
+
+		res = getExitPoints(builder.parseStmt(" { let f = ()->int<4> { return 0; }; f(); } "));
+		EXPECT_TRUE(res.empty());
+
+		// ----------- return exit points -----------------------
+
+		res = getExitPoints(builder.parseStmt(" { return 0; } "));
+		EXPECT_EQ("[0-0]", toString(res));
+
+		res = getExitPoints(builder.parseStmt(" { for(int<4> i = 1 .. 10 ) { return 0; } } "));
+		EXPECT_EQ("[0-0-3-0]", toString(res));
+
+		res = getExitPoints(builder.parseStmt(" { while(true) { return 0; } } "));
+		EXPECT_EQ("[0-0-1-0]", toString(res));
+
+		res = getExitPoints(builder.parseStmt(" { while(true) { if (false) { return 0; } else { return 1; } } } "));
+		EXPECT_EQ("[0-0-1-0-1-0,0-0-1-0-2-0]", toString(res));
+
+		res = getExitPoints(builder.parseStmt(" { let f = ()->int<4> { return 0; }; f(); return 0; } "));
+		EXPECT_EQ("[0-1]", toString(res));
+
+		// ------------ break and continue ------------------------
+
+		res = getExitPoints(builder.parseStmt(" { break; } "));
+		EXPECT_EQ("[0-0]", toString(res));
+
+		res = getExitPoints(builder.parseStmt(" { continue; } "));
+		EXPECT_EQ("[0-0]", toString(res));
+
+		res = getExitPoints(builder.parseStmt(" { if(true) { break; } else { continue; } } "));
+		EXPECT_EQ("[0-0-1-0,0-0-2-0]", toString(res));
+
+	}
+
+	TEST(IsReadOnly, Basic) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		const auto& basic = mgr.getLangBasic();
+
+
+		VariablePtr x = builder.variable(builder.refType(basic.getInt4()), 1);
+		std::map<string, NodePtr> symbols;
+		symbols["x"] = x;
+
+		auto notIsReadOnly = [](const StatementPtr& stmt, const VariablePtr& var) { return !isReadOnly(stmt, var); };
+
+		EXPECT_PRED2( isReadOnly, 	 builder.parseStmt("{ x; }",symbols), x);
+		EXPECT_PRED2( isReadOnly,    builder.parseStmt("{ *x; }",symbols), x);
+
+		EXPECT_PRED2( notIsReadOnly,    builder.parseStmt("{ x = 4; }",symbols), x);
+		EXPECT_PRED2( notIsReadOnly,    builder.parseStmt("{ let f = (ref<int<4>> x)->unit {}; f(x); }",symbols), x);
+
+		EXPECT_PRED2( isReadOnly,       builder.parseStmt("{ let f = (int<4> x)->unit {}; f(*x); }",symbols), x);
+
+	}
+
+	TEST(IsReadOnly, Bug) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		VariablePtr x = builder.variable(builder.parseType("ref<struct { int<4> a; }>"), 1);
+		std::map<string, NodePtr> symbols;
+		symbols["x"] = x;
+
+		auto notIsReadOnly = [](const StatementPtr& stmt, const VariablePtr& var) { return !isReadOnly(stmt, var); };
+
+		EXPECT_PRED2( notIsReadOnly,    builder.parseStmt("{ x->a; }", symbols), x);
+
 	}
 
 } // end namespace analysis

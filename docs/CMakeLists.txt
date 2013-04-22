@@ -4,17 +4,12 @@ cmake_minimum_required(VERSION 2.6)
 
 include(UseLATEX.cmake)
 
-add_subdirectory(insieme_dev_doc)
-
-add_subdirectory(coding_standards)
-add_subdirectory(ir_language_specification)
-add_subdirectory(ir++_language_specification)
-add_subdirectory(ir_translation)
-
-add_subdirectory(insieme_runtime)
-add_subdirectory(dataflow_framework)
-add_subdirectory(polyhedral)
-add_subdirectory(transformation_framework)
-
-add_subdirectory(optimization)
+# add all sub-directories containing a CMakeLists.txt file
+get_filename_component( curdir ${CMAKE_CURRENT_LIST_FILE} PATH )
+file(GLOB children RELATIVE ${curdir} ${curdir}/*)
+foreach( child ${children} )
+	if ( EXISTS ${curdir}/${child}/CMakeLists.txt )
+		add_subdirectory( ${child} )
+	endif()
+endforeach()
 

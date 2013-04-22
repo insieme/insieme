@@ -265,7 +265,8 @@ namespace backend {
 		res[basic.getBoolEq()]   = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getBoolNe()]   = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		res[basic.getBoolToInt()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+		//moved whit the new cast operations
+		//res[basic.getBoolToInt()] = OP_CONVERTER({ return CONVERT_ARG(0); });
 
 
 		// -- unsigned integers --
@@ -325,6 +326,37 @@ namespace backend {
 		res[basic.getSignedIntLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getSignedIntLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
+		// -- CASTS --
+		auto cast = OP_CONVERTER({ return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0)); });
+
+		res[basic.getUnsignedToInt()] = cast; 
+		res[basic.getRealToInt()] 	  = cast; 
+		res[basic.getCharToInt()] 	  = cast; 
+		res[basic.getBoolToInt()] 	  = OP_CONVERTER({ return CONVERT_ARG(0); });
+
+		res[basic.getSignedToUnsigned()]= cast; 
+		res[basic.getRealToUnsigned()] 	= cast; 
+		res[basic.getCharToUnsigned()] 	= cast; 
+		res[basic.getBoolToUnsigned()] 	= OP_CONVERTER({ return CONVERT_ARG(0); });
+
+		res[basic.getSignedToReal()]  = cast; 
+		res[basic.getUnsignedToReal()]= cast; 
+		res[basic.getCharToReal()] 	  = cast; 
+		res[basic.getBoolToReal()] 	  = cast; 
+
+		res[basic.getSignedToChar()]  = cast;
+		res[basic.getUnsignedToChar()]= cast;
+		res[basic.getRealToChar()] 	  = cast;
+		res[basic.getBoolToChar()] 	  = cast;
+
+		res[basic.getSignedToBool()]  = cast;
+		res[basic.getUnsignedToBool()]= cast;
+		res[basic.getRealToBool()] 	  = cast;
+		res[basic.getCharToBool()] 	  = cast;
+
+		res[basic.getIntPrecisionFix()]   = cast;
+		res[basic.getUintPrecisionFix()]  = cast;
+		res[basic.getRealPrecisionFix()] = cast;
 
 		// -- reals --
 
@@ -528,14 +560,6 @@ namespace backend {
 			return c_ast::call(C_NODE_MANAGER->create("free"), arg);
 		});
 
-		res[basic.getRefToAnyRef()] = OP_CONVERTER({
-			// operator signature: (ref<'a>) -> anyRef
-			// cast result to void* and externalize value
-			c_ast::TypePtr type = c_ast::ptr(C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void));
-			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
-			return c_ast::cast(type, value);
-		});
-
 		res[basic.getRefReinterpret()] = OP_CONVERTER({
 			c_ast::TypePtr type = CONVERT_TYPE(call->getType());
 			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
@@ -727,7 +751,7 @@ namespace backend {
 				}
 			}
 
-			return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");
+			return c_ast::cast(infoRes.rValueType, CONVERT_ARG(0));
 		});
 
 		res[basic.getVectorReduction()] = OP_CONVERTER({
@@ -870,20 +894,6 @@ namespace backend {
 			// generated code: X == 0
 			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int32);
 			return c_ast::eq(CONVERT_ARG(0), c_ast::lit(intType,"0"));
-		});
-
-		res[basic.getAnyRefToRef()] = OP_CONVERTER({
-			return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0));
-		});
-
-		res[basic.getAnyRefDelete()] = OP_CONVERTER({
-			// ensure correct type
-			assert(LANG_BASIC.isAnyRef(ARG(0)->getType()) && "Cannot anyref delete anything other than anyref!");
-
-			// add dependency to stdlib.h (contains the free)
-			ADD_HEADER_FOR("free");
-			
-			return c_ast::call(C_NODE_MANAGER->create("free"), CONVERT_ARG(0));
 		});
 
 
@@ -1033,6 +1043,28 @@ namespace backend {
 			const auto& irppExt = manager.getLangExtension<core::lang::IRppExtensions>();
 
 			res[irppExt.getArrayCtor()] = OP_CONVERTER({
+
+				// init array using a vector expression
+				auto type = CONVERT_TYPE(ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType());
+				auto size = CONVERT_ARG(2);
+				c_ast::ExpressionPtr res = c_ast::initArray(type, size);
+
+				// convert default constructor
+				auto ctor = CONVERT_ARG(1);
+
+				// add new if required
+				const auto& basic = LANG_BASIC;
+				if (basic.isRefVar(ARG(0))) {
+					// nothing to do
+				} else if (basic.isRefNew(ARG(0))) {
+					res = c_ast::newCall(res);
+				} else {
+					assert(false && "Creating Arrays of objects neither on heap nor stack isn't supported!");
+				}
+				return res;
+			});
+
+			res[irppExt.getVectorCtor()] = OP_CONVERTER({
 
 				// init array using a vector expression
 				auto type = CONVERT_TYPE(ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType());

@@ -73,6 +73,7 @@ namespace ocl_kernel {
 				return "";
 			}
 
+			if (basic.isBool(type))		return "bool";
 			if (basic.isChar(type))		return "char";
 			if (basic.isUInt1(type))	return "uchar";
 			if (basic.isInt2(type))		return "short";

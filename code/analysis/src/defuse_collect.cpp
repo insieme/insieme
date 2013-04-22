@@ -39,10 +39,13 @@
 #include "insieme/core/ir_address.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/unused.h"
 
 #include <stack>
 
@@ -60,6 +63,7 @@ std::string Ref::useTypeToStr(const UseType& usage) {
 	case Ref::UNKNOWN:	return "UNKNOWN"; 
 	default:			assert(false);
 	}
+	return "-unknown-";
 }
 
 std::string Ref::refTypeToStr(const RefType& type) {
@@ -70,6 +74,7 @@ std::string Ref::refTypeToStr(const RefType& type) {
 	case Ref::CALL: 	return "CALL"; 
 	default:  			assert(false);
 	}
+	return "-unknown-";
 }
 
 //===== Ref =========================================================================================
@@ -118,7 +123,7 @@ MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& us
 { 
 	assert (memberAcc->getNodeType() == core::NT_CallExpr);
 
-	core::NodeManager& mgr = memberAcc->getNodeManager();
+	__unused core::NodeManager& mgr = memberAcc->getNodeManager();
 	assert (core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.getLangBasic().getCompositeMemberAccess()) || 
 		core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.getLangBasic().getCompositeRefElem() ) );
 
@@ -254,6 +259,20 @@ public:
 
 		// save the usage before the entering of this callexpression
 		Ref::UseType saveUsage = usage;
+		
+		// take care of Cpp reference representatoin in ir
+		const auto& extension = callExpr->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), extension.getRefCppToIR()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), extension.getRefIRToCpp()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), extension.getRefConstCppToIR()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), extension.getRefIRToConstCpp()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), extension.getRefCppToConstCpp())	)
+		{
+			//FIXME correct for DEFUSE?
+			visit( callExpr->getArgument(0) ); // arg(0)
+			//assert(false && "cppRef in defUse");
+			return;
+		}
 
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
 			assert( usage != Ref::DEF && "Nested assignment operations" );
@@ -315,12 +334,12 @@ public:
 		// to convert a ref into another ref 
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefVectorToRefArray()) ||
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getStringToCharPointer()) ||
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefToAnyRef()) )
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefReinterpret()) ) 
 		{
 			visit( callExpr->getArgument(0) ); // arg(0)
 			return;
 		}
-
+	
 		// This call expression could return a reference to a variable which can be either used or
 		// defined. Therefore we have to add this usage to the list of usages 
 		addVariable(callExpr, Ref::CALL);

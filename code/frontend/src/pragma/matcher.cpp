@@ -38,6 +38,8 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/utils/string_utils.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Parse/Parser.h>
 #include "clang/Sema/Sema.h"
@@ -46,6 +48,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include <clang/AST/Expr.h>
 #include <clang/AST/ASTContext.h>
+#pragma GCC diagnostic pop
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -144,6 +147,7 @@ size_t ParserStack::getFirstValidRecord() {
 	for ( size_t i=0; i<mRecords.size(); ++i )
 		if ( !mRecords[i].empty() ) return i;
 	assert(false);
+	return 0;
 }
 
 void ParserStack::discardPrevRecords(size_t recordId) {

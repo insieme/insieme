@@ -204,6 +204,14 @@ protected:
 		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
 		ClassDeclMap classDeclMap;
 
+
+		/*
+		 * Keeps the CXXTemporaries together with their IR declaration stmt
+		 */
+		typedef std::map<const clang::CXXTemporary*, core::DeclarationStmtPtr> TemporaryInitMap;
+		TemporaryInitMap tempInitMap;
+
+
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						context structure Constructor
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -258,7 +266,7 @@ protected:
 	 * Every time a function belonging to a different translation unit is called this pointer
 	 * is set to translation unit containing the function definition.
 	 */
-	 std::stack<const TranslationUnit*> currTU;
+	 const TranslationUnit* currTU;
 
 	/**
 	 * Returns a reference to the IR data structure used to represent a variable of the input C program.
@@ -285,8 +293,6 @@ protected:
 													const core::FunctionTypePtr& funcType);
 
 
-	friend class ASTConverter;
-	friend class CXXASTConverter;
 public:
 	ConversionFactory(core::NodeManager& mgr, Program& program, bool isCxx = false);
 
@@ -301,19 +307,24 @@ public:
 		return program;
 	}
 
+	clang::Preprocessor& getCurrentPreprocessor() const {
+		assert(currTU && "FATAL: Translation unit not correctly set");
+		return currTU->getCompiler().getPreprocessor();
+	}
+
 	clang::SourceManager& getCurrentSourceManager() const {
-		assert(!currTU.empty() && "FATAL: Translation unit not correctly set");
-		return currTU.top()->getCompiler().getSourceManager();
+		assert(currTU && "FATAL: Translation unit not correctly set");
+		return currTU->getCompiler().getSourceManager();
 	}
 
 	const ClangCompiler& getCurrentCompiler() const {
-		assert(!currTU.empty() && "FATAL: Translation unit not correctly set");
-		return currTU.top()->getCompiler();
+		assert(currTU && "FATAL: Translation unit not correctly set");
+		return currTU->getCompiler();
 	}
 
 	/** DEPRECATED */
-	void setTranslationUnit(const TranslationUnit& tu){
-		currTU.push(&tu);
+	void setTranslationUnit(const TranslationUnit* tu){
+		currTU = tu;
 	}
 
 	/**
@@ -435,10 +446,18 @@ public:
 	virtual core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
 			const core::TypePtr& type, const bool zeroInit) const;
 
+	
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  some helper tools   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
+	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
+
+	// TODO: coment this
+	core::StatementPtr materializeReadOnlyParams(const core::StatementPtr& body, const vector<core::VariablePtr>& params);
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  CPP STUFF   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
-	 * turns an ir converted function into a member funtion of an object of specified class
+	 * turns an ir converted function into a member function of an object of specified class
 	 * @param callExpr the clang Decl of the function to be converted, it might be a Ctor, member
 	 * or dtor
 	 * @param func the Insieme IR converted function, might come from the cache or just converted
@@ -459,16 +478,13 @@ public:
 	 * @param irClassType the class to be build
 	 * @return the lambda expression of the constructor, NOT memberized
 	 */
-	core::LambdaExprPtr convertCtor (const clang::CXXConstructorDecl* ctorDecl, core::TypePtr irClassType);
+	core::ExpressionPtr convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl);
 
-	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
-
-	void buildInterceptedExprCache(utils::Interceptor& interceptor);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {
 	GlobalVariableDeclarationException() :
-			std::runtime_error("") {
+			std::runtime_error("global variable declaration exception") {
 	}
 };
 

@@ -83,12 +83,10 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visit(const core::NodePtr& node, ConversionContext& context) {
 		// first ask the handlers
-		if (!stmtHandler.empty()) {
-			for(auto it = stmtHandler.begin(); it != stmtHandler.end(); ++it) {
-				c_ast::NodePtr res = (*it)(context, node);
-				if (res) {
-					return res;
-				}
+		for(auto cur : stmtHandler) {
+			c_ast::NodePtr res = cur(context, node);
+			if (res) {
+				return res;
 			}
 		}
 
@@ -186,6 +184,13 @@ namespace backend {
 				converter.getCNodeManager()->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void),
 				converter.getCNodeManager()->create<c_ast::Literal>("0")
 			);
+		}
+
+		// special handling for int-type-parameter literal
+		if (core::analysis::isIntTypeParamLiteral(ptr)) {
+			core::IntTypeParamPtr value = core::analysis::getRepresentedTypeParam(ptr);
+			assert(value.isa<core::ConcreteIntTypeParamPtr>() && "Uninstantiated int-type-parameter literal encountered!");
+			return converter.getCNodeManager()->create<c_ast::Literal>(toString(*value) + "u");
 		}
 
 		// convert literal
@@ -457,7 +462,7 @@ namespace backend {
 			const auto& ext = initValue->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
 
 			// check whether it is a array ctor call
-			if (!core::analysis::isCallOf(initValue, ext.getArrayCtor())) {
+			if (!core::analysis::isCallOf(initValue, ext.getArrayCtor()) && !core::analysis::isCallOf(initValue, ext.getVectorCtor())) {
 				return false;
 			}
 
@@ -477,7 +482,7 @@ namespace backend {
 
 			// resolve type (needs to be explicitly handled here)
 			auto size = converter.getStmtConverter().convertExpression(context, sizeExpr);
-			auto elementType = var->getType().as<core::RefTypePtr>()->getElementType().as<core::ArrayTypePtr>()->getElementType();
+			auto elementType = var->getType().as<core::RefTypePtr>()->getElementType().as<core::SingleElementTypePtr>()->getElementType();
 			const TypeInfo& typeInfo = converter.getTypeManager().getCVectorTypeInfo(elementType, size);
 
 			// although it is on the stack, it is to be treated as it would be indirect (implicit pointer!)
@@ -557,10 +562,23 @@ namespace backend {
 		// test whether initialization is required ...
 		if (core::analysis::isCallOf(init, basic.getRefVar())) {
 			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(init);
-			if (core::analysis::isCallOf(call->getArgument(0), basic.getUndefined())) {
+			core::ExpressionPtr init = call->getArgument(0);
+			if (core::analysis::isCallOf(init, basic.getUndefined())) {
 				// => undefined initialization, hence no initialization!
 				return c_ast::ExpressionPtr();
 			}
+
+			if (init->getNodeType() == core::NT_StructExpr) {
+				auto isUndefined = [&](const core::NamedValuePtr& cur) { return core::analysis::isCallOf(cur->getValue(), basic.getUndefined()); };
+				if (all(init.as<core::StructExprPtr>()->getMembers(), isUndefined)) {
+					// no init required
+					return c_ast::ExpressionPtr();
+				}
+
+				// this is not supported yet - TODO: update struct expression to use names and initialize members individually
+				assert(!any(init.as<core::StructExprPtr>()->getMembers(), isUndefined) && "Unsupported combination of defined and undefined values!");
+			}
+
 		}
 
 		// TODO: handle initUndefine and init struct cases

@@ -75,7 +75,7 @@ RefList filterUnwanted(core::NodeManager& mgr, const RefList& refs) {
 	core::ExpressionList unwanted = {
 		mgr.getLangBasic().getScalarToArray(),
 		mgr.getLangBasic().getRefVar(),
-		mgr.getLangBasic().getRefToAnyRef()
+		mgr.getLangBasic().getRefReinterpret()
 	};
 
 	RefList filteredRefs;
@@ -152,6 +152,7 @@ Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 
 	default:
 		assert(false);
+		return Piecewise();
 	}
 	//}
 	//std::ostringstream ss;
@@ -217,6 +218,7 @@ core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piece
 		}
 		default:
 			assert(false);
+			return core::ExpressionPtr();
 	}
 }
 
@@ -382,10 +384,8 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 		return; 	// nothing to do any more
 	}
 
-	LOG(DEBUG) << "Loading semantic info" << std::endl;
+	// LOG(DEBUG) << "Loading semantic info" << std::endl;
 
-	insieme::utils::Timer t("Loading function.sema");
-	
 	core::IRBuilder builder(mgr);
 	
 	// declare a variable used to refer to the processor rank
@@ -403,9 +403,6 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 	}
 	#include "function_db.def"
 	#undef FUNC
-
-	t.stop();
-	LOG(DEBUG) << t;
 
 	// mark as being resolved
 	flagNode->attachValue<SemanticLoaded>();

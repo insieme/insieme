@@ -60,7 +60,8 @@
 // Types --------------------------------------------------------------------------------------------------------------
 TYPE(Unit,   "unit")
 
-TYPE(AnyRef, "anyRef")
+TYPE(Any, "any")
+TYPE(AnyRef, "ref<any>")
 
 TYPE(Char,   "char")
 TYPE(WChar,  "wchar")
@@ -70,6 +71,8 @@ TYPE(Identifier, "identifier")
 GROUP(UnsignedInt, UInt1, UInt2, UInt4, UInt8, UInt16, UIntInf, UIntGen)
 GROUP(SignedInt, Int1, Int2, Int4, Int8, Int16, IntInf, IntGen)
 GROUP(Int, UnsignedInt, SignedInt)
+
+GROUP(Primitive, Any, Bool, Char, WChar, Int, Real) 
 
 TYPE(IntGen, "int<#a>")
 TYPE(UIntGen,"uint<#a>")
@@ -284,6 +287,47 @@ OPERATION(Real, Gt, "real.gt", "(real<#a>,real<#a>) -> bool")
 OPERATION(Real, Le, "real.le", "(real<#a>,real<#a>) -> bool")
 OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
 
+// Type conversion Operations -----------------------------------------------------------------------------------------
+
+GROUP(ScalarCast, ToInt, ToUint, ToReal, ToChar, ToBool)
+
+      // TO INT
+GROUP( ToInt, UnsignedToInt, RealToInt, CharToInt, BoolToInt, IntPrecisionFix)
+LITERAL (UnsignedToInt,	"uint.to.int",    "(uint<#a>,intTypeParam<#b>) -> int<#b>")
+LITERAL (RealToInt,		"real.to.int",    "(real<#a>,intTypeParam<#b>) -> int<#b>")
+LITERAL (CharToInt,		"char.to.int",    "(char,intTypeParam<#b>) -> int<#b>")
+LITERAL (BoolToInt,		"bool.to.int",    "(bool,intTypeParam<#b>) -> int<#b>")
+LITERAL (IntPrecisionFix,"int.precision",    "(int<#a>,intTypeParam<#b>) -> int<#b>")
+
+      // TO UINT
+GROUP( ToUint, SignedToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned, UintPrecisionFix)
+LITERAL (SignedToUnsigned,	"int.to.uint" ,	"(int<#a>,intTypeParam<#b>) -> uint<#b>")
+LITERAL (RealToUnsigned,	"real.to.uint",	"(real<#a>,intTypeParam<#b>) -> uint<#b>")
+LITERAL (CharToUnsigned,	"char.to.uint",	"(char,intTypeParam<#b>) -> uint<#b>")
+LITERAL (BoolToUnsigned,	"bool.to.uint",	"(bool,intTypeParam<#b>) -> uint<#b>")
+LITERAL (UintPrecisionFix,"uint.precision",    "(uint<#a>,intTypeParam<#b>) -> uint<#b>")
+
+      // TO REAL
+GROUP( ToReal, SignedToReal, UnsignedToReal, CharToReal, BoolToReal, RealPrecisionFix)
+LITERAL (SignedToReal,		"int.to.Real",	"(int<#a>,intTypeParam<#b>) -> real<#b>")
+LITERAL (UnsignedToReal,	"uint.to.Real",	"(uint<#a>,intTypeParam<#b>) -> real<#b>")
+LITERAL (CharToReal,		"char.to.Real",	"(char,intTypeParam<#b>) -> real<#b>")
+LITERAL (BoolToReal,		"bool.to.Real",	"(bool,intTypeParam<#b>) -> real<#b>")
+LITERAL (RealPrecisionFix,"real.precision",    "(real<#a>,intTypeParam<#b>) -> real<#b>")
+
+      // TO CHAR
+GROUP( ToChar, SignedToChar, UnsignedToChar, RealToChar, BoolToChar)
+LITERAL (SignedToChar,    	"int.to.Char" ,	"(int<#a>) -> char")
+LITERAL (UnsignedToChar,	"uint.to.Char",	"(uint<#a>) -> char")
+LITERAL (RealToChar,		"real.to.Char",	"(real<#a>) -> char")
+LITERAL (BoolToChar,		"bool.to.Char",	"(bool) -> char")
+
+      // TO Bool
+GROUP( ToBool, SignedToBool, UnsignedToBool, RealToBool, CharToBool)
+LITERAL (SignedToBool,		"int.to.Bool" ,	"(int<#a>) -> bool")
+LITERAL (UnsignedToBool,	"uint.to.Bool",	"(uint<#a>) -> bool")
+LITERAL (RealToBool,		"real.to.Bool",	"(real<#a>) -> bool")
+LITERAL (CharToBool,		"char.to.bool",	"(char) -> bool")
 
 // Bitwise Operations -------------------------------------------------------------------------------------------------
 
@@ -309,8 +353,8 @@ GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
 // References ---------------------------------------------------------------------------------------------------------
 
-GROUP(RefOp, RefVar, RefNew, RefDelete, RefEqual, RefAssign, RefDeref, ScalarToArray, RefToAnyRef, AnyRefToRef, AnyRefDelete)
-GROUP(Delete, RefDelete, AnyRefDelete)
+GROUP(RefOp, RefVar, RefNew, RefDelete, RefEqual, RefAssign, RefDeref, ScalarToArray)
+GROUP(Delete, RefDelete)
 
 LITERAL(RefVar,    		"ref.var",    			"('a) -> ref<'a>")
 LITERAL(RefNew,    		"ref.new",    			"('a) -> ref<'a>")
@@ -395,11 +439,7 @@ GROUP(DataPathPrimitive, DataPathRoot, DataPathMember, DataPathElement, DataPath
 
 // Any References -----------------------------------------------------------------------------------------------------
 
-LITERAL(Null,           "null",                 "anyRef")
-LITERAL(RefToAnyRef,    "ref.to.anyref",    	"(ref<'a>) -> anyRef")
-LITERAL(AnyRefToRef,    "anyref.to.ref",    	"(anyRef, type<'a>) -> ref<'a>")
-LITERAL(AnyRefDelete,	"anyref.delete", 		"(anyRef) -> unit")
-
+LITERAL(Null,           "null",                 "ref<any>")
 
 // Volatile -----------------------------------------------------------------------------------------------------------
 // Volatile types mark memory locations that may be changed by some outside agency
@@ -415,17 +455,14 @@ LITERAL(Flush, "flush", "(ref<'a>) -> unit")
 
 // General ------------------------------------------------------------------------------------------------------------
 
-GROUP(GeneralOp, BoolToInt, RealToInt, Undefined, InitZero, Sizeof, IntTypeParamToInt)
+GROUP(GeneralOp, Undefined, InitZero, Sizeof, IntTypeParamToInt)
 
 DERIVED(Id, 				"id", "('a x)->'a { return x; }")		
-
-LITERAL(BoolToInt, 			"bool.to.int", 				"(bool) -> int<4>")
-LITERAL(RealToInt,			"real.to.int",				"(real<#a>, intTypeParam<#b>) -> int<#b>")
 
 LITERAL(Undefined, 			"undefined", 				"(type<'a>) -> 'a")
 LITERAL(InitZero,			"initZero",	 				"(type<'a>) -> 'a")
 LITERAL(Sizeof, 			"sizeof", 					"(type<'a>) -> uint<8>")
-LITERAL(IntTypeParamToInt, 	"int.type.param.to.int", 	"(intTypeParam<#n>)->int<8>")
+LITERAL(IntTypeParamToInt, 	"to.uint", 					"(intTypeParam<#n>)->uint<8>")
 
 // Arrays -------------------------------------------------------------------------------------------------------------
 
@@ -479,7 +516,7 @@ GROUP(Pointwise, VectorPointwise, VectorPointwiseUnary)
 // deprecated
 LITERAL(VectorSubscript,      	"vector.subscript",      	"(vector<'elem,#l>, uint<#a>) -> 'elem")
 LITERAL(VectorInitUniform,    	"vector.init.uniform",    	"('elem, intTypeParam<#a>) -> vector<'elem,#a>")
-LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(intTypeParam<#a>) -> vector<'elem,#a>")
+LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(type<'elem>, intTypeParam<#a>) -> vector<'elem,#a>")
 LITERAL(VectorInitPartial, 		"vector.init.partial",		"(list<'elem>, intTypeParam<#n>) -> vector<'elem,#n>")
 
 LITERAL(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>")

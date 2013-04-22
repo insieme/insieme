@@ -154,6 +154,7 @@ namespace c_ast {
 
 	struct NamedType : public Type {
 		IdentifierPtr name;
+		vector<NodePtr> parameters;
 		NamedType(IdentifierPtr name) : Type(NT_NamedType), name(name) {}
 		virtual bool equals(const Node& other) const;
 	};
@@ -161,6 +162,13 @@ namespace c_ast {
 	struct PointerType : public Type {
 		TypePtr elementType;
 		PointerType(TypePtr elementType) : Type(NT_PointerType), elementType(elementType) {}
+		virtual bool equals(const Node& other) const;
+	};
+
+	struct ReferenceType : public Type {
+		bool isConst;
+		TypePtr elementType;
+		ReferenceType(bool isConst, TypePtr elementType) : Type(NT_ReferenceType), isConst(isConst), elementType(elementType) {}
 		virtual bool equals(const Node& other) const;
 	};
 

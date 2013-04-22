@@ -43,8 +43,11 @@
 
 #include "insieme/backend/preprocessor.h"
 #include "insieme/backend/postprocessor.h"
-#include "insieme/backend/statement_converter.h"
+#include "insieme/backend/name_manager.h"
+#include "insieme/backend/type_manager.h"
 #include "insieme/backend/variable_manager.h"
+#include "insieme/backend/statement_converter.h"
+#include "insieme/backend/function_manager.h"
 
 #include "insieme/core/checks/full_check.h"
 
@@ -52,6 +55,17 @@
 
 namespace insieme {
 namespace backend {
+
+	Converter::Converter(core::NodeManager& nodeManager, std::string name)
+		: nodeManager(nodeManager),
+		  fragmentManager(c_ast::CodeFragmentManager::createShared()),
+		  converterName(name),
+		  preProcessor(makePreProcessor<NoPreProcessing>()),
+		  postProcessor(makePostProcessor<NoPostProcessing>()),
+		  nameManager(std::make_shared<SimpleNameManager>()),
+		  typeManager(std::make_shared<TypeManager>(*this)),
+		  stmtConverter(std::make_shared<StmtConverter>(*this)),
+		  functionManager(std::make_shared<FunctionManager>(*this)) {}
 
 
 	backend::TargetCodePtr Converter::convert(const core::NodePtr& source) {

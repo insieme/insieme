@@ -55,28 +55,28 @@ using namespace insieme::core;
 
 #define POINTER(type) builder.refType(builder.refType(builder.arrayType(type)))
 
-const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder) {
+const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, const ConversionJob& job) {
 	// delete quotation marks form path
 	if (path[0] == '"')
 		path = path.substr(1, path.length() - 2);
 
 	std::ifstream check;
 			string root = path;
-	size_t nIncludes = CommandLineOptions::IncludePaths.size();
+	size_t nIncludes = job.getIncludeDirectories().size();
 	// try relative path first
 	check.open(path);
 	// if not found now, check the include directories
 	for (size_t i = 0; i < nIncludes && check.fail(); ++i) {
 		check.close();
 		// try with include paths
-		path = CommandLineOptions::IncludePaths.at(i) + "/" + root;
+		path = job.getIncludeDirectories().at(i) + "/" + root;
 		check.open(path);
 	}
 	// if there is still no match, try the paths of the input files
-	size_t nInputFiles = CommandLineOptions::InputFiles.size();
+	size_t nInputFiles = job.getFiles().size();
 	for (size_t i = 0; i < nInputFiles && check.fail(); ++i) {
 		// try the paths of the input files
-		string ifp = CommandLineOptions::InputFiles.at(i);
+		string ifp = job.getFiles().at(i);
 		size_t slash = ifp.find_last_of("/");
 		path = ifp.substr(0u, slash + 1) + root;
 		check.open(path);
@@ -91,8 +91,11 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder) {
 
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
 
-	frontend::Program fkernels(builder.getNodeManager());
-	fkernels.addTranslationUnit(path);
+
+	ConversionJob kernelJob = job;
+	kernelJob.setFile(path);
+	frontend::Program fkernels(builder.getNodeManager(), kernelJob);
+	fkernels.addTranslationUnit(kernelJob);
 
 	return fkernels.convert();
 }
@@ -207,10 +210,10 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 			if(BASIC.isRefVectorToRefArray(stringAsChar)) {
 				if(const LiteralPtr path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
 					// check if file has already been added
-std::cout << "\n using path string " << path->getStringValue() << " \n\n";
+//std::cout << "\n using path string " << path->getStringValue() << " \n\n";
 					if(kernelFileCache.find(path->getStringValue()) == kernelFileCache.end()) {
 						kernelFileCache.insert(path->getStringValue());
-						kernels = loadKernelsFromFile(path->getStringValue(), builder);
+						kernels = loadKernelsFromFile(path->getStringValue(), builder, job);
 					}
 					//return;
 // set source string to an empty char array
@@ -238,7 +241,7 @@ std::cout << "\n using path string " << path->getStringValue() << " \n\n";
 		// check if file has already been added
 		if(kernelFileCache.find(kernelFilePath) == kernelFileCache.end()) {
 			kernelFileCache.insert(kernelFilePath);
-			kernels = loadKernelsFromFile(kernelFilePath, builder);
+			kernels = loadKernelsFromFile(kernelFilePath, builder, job);
 		}
 	}
 }
@@ -269,7 +272,15 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	// TODO deal with out of order arguments non-scalar
 	const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(index);
 	const ExpressionPtr idxExpr = cast ? cast->getSubExpression() : index;
-	const LiteralPtr idx = dynamic_pointer_cast<const Literal>(idxExpr);
+	LiteralPtr idx = dynamic_pointer_cast<const Literal>(idxExpr);
+
+	// idx has to be a literal!
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	// remove cast to uint<8>
+	if (idxExpr.isa<core::CallExprPtr>() && gen.isScalarCast(idxExpr.as<core::CallExprPtr>()->getFunctionExpr())){
+		idx = idxExpr.as<core::CallExprPtr>()->getArgument(0).isa<core::LiteralPtr>();
+	}
+	assert(idx && "idx MUST be a literal");
 
 	VariablePtr tuple = builder.variable(kernel->getType());
 	// set the new tuple equivalent with the kernel to be able to replace it by a tuple with correct type in 3rd pass
@@ -293,7 +304,7 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 		refreshVariables(size, varMapping, builder);
 
 		body.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), tuple,
-				(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
+				(BASIC.isUInt8(idxExpr->getType()) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idxExpr)),
 				builder.getTypeLiteral(type)), builder.refVar(builder.callExpr(type, BASIC.getArrayCreate1D(), builder.getTypeLiteral(type), size))));
 		body.push_back(builder.returnStmt(builder.intLit(0)));
 
@@ -337,8 +348,9 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	FunctionTypePtr fTy = builder.functionType(toVector(kernel->getType(), tryDeref(arg, builder)->getType()), BASIC.getInt4());
 	params.push_back(src);
 
-	body.push_back(builder.assign( builder.callExpr(BASIC.getTupleRefElem(), tuple,	(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
-			builder.getTypeLiteral(src->getType())), src));
+	body.push_back(builder.assign( builder.callExpr(BASIC.getTupleRefElem(), tuple,	
+								   (BASIC.isUInt8(idxExpr->getType()) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idxExpr)),
+									builder.getTypeLiteral(src->getType())), src));
 	body.push_back(builder.returnStmt(builder.intLit(0)));
 	LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 
@@ -401,11 +413,11 @@ ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr, bool setErrcodeRe
 		"	type<'a> 				elemType, "
 		"	uint<8> 				flags, "
 		"	uint<8> 				size, "
-		"	anyRef 					hostPtr, "
+		"	ref<any> 				hostPtr, "
 		"	ref<array<int<4>,1> > 	errorcode_ret"
 		") -> ref<array<'a, 1> >  { "
 		"		ref<array<'a,1>> devicePtr = new( array.create.1D( elemType, size ) ); "
-		"		ref<array<'a,1>> 		hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
+		"		ref<array<'a,1>> 		hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
 		"		for(uint<8> i = 0u .. size) { "
 		"			devicePtr[i] = *hp[i]; "
 		"		} "
@@ -476,9 +488,9 @@ ExpressionPtr Ocl2Inspire::getClWriteBuffer() {
 		"	uint<4>				blocking_write, "
 		"	uint<8>				offset, "
 		"	uint<8>				cb, "
-		"	anyRef				hostPtr"
+		"	ref<any>			hostPtr"
 		") -> int<4> { "
-		"	ref<array<'a,1>> hp = anyref.to.ref(hostPtr, lit(array<'a, 1>)); "
+		"	ref<array<'a,1>> hp = ref.reinterpret(hostPtr, lit(array<'a, 1>)); "
 		"	uint<8> 	  	  o = offset / sizeof( lit('a) ); "
 		"	for(uint<8> i = 0u .. cb) { "
 		"		devicePtr[i + o] = *hp[i]; "
@@ -497,9 +509,9 @@ ExpressionPtr Ocl2Inspire::getClWriteBufferFallback() {
 		"	uint<4> 			blocking_write, "
 		"	uint<8>				offset, "
 		"	uint<8>				cb, "
-		"	anyRef				hostPtr"
+		"	ref<any>			hostPtr"
 		") -> int<4> { "
-		"	ref<array<'a,1>> hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
+		"	ref<array<'a,1>> hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
 		"	uint<8> 		  o = offset / sizeof( lit('a) ); "
         "	uint<8> 	   size = cb / sizeof( lit('a) ); "
         "	for(uint<8> i = 0u .. size) { "
@@ -519,9 +531,9 @@ ExpressionPtr Ocl2Inspire::getClReadBuffer() {
 		"	uint<4> 			blocking_read, "
 		"	uint<8>				offset, "
 		"	uint<8>				cb, "
-		"	anyRef 				hostPtr"
+		"	ref<any> 			hostPtr"
 		") -> int<4> { "
-		"	ref<array<'a,1>> hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
+		"	ref<array<'a,1>> hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
 		"	uint<8>			  o = offset / sizeof( lit('a) ); "
 		"	for(uint<8> i = 0u .. cb) { "
 		"		hp[i] = *devicePtr[i + o]; "
@@ -540,9 +552,9 @@ ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
 		"	uint<4> 			blocking_read, "
 		"	uint<8> 			offset, "
 		"	uint<8> 			cb, "
-		"	anyRef 				hostPtr"
+		"	ref<any> 			hostPtr"
 		") -> int<4> { "
-        "	ref<array<'a, 1> > hp = anyref.to.ref(hostPtr, lit(array<'a,1>)); "
+        "	ref<array<'a, 1> > hp = ref.reinterpret(hostPtr, lit(array<'a,1>)); "
 		"	uint<8> 		 size = cb / sizeof( lit('a) ); "
 		"	uint<8> 			o = offset / sizeof( lit('a) ); "
 		"	for(uint<8> i = 0u .. size) { "
@@ -571,8 +583,8 @@ ExpressionPtr Ocl2Inspire::getClSetKernelArg() {
   		"}");
 }
 
-HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
-	builder(build), o2i(build), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
+HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJob& job) :
+	builder(build), job(job), o2i(build), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
 		hash_target_specialized(build, eqMap), equal_variables(build, program)), localMemDecls(
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
@@ -620,7 +632,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 			if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(node->getArgument(3))) {
 				assert(!copyPtr && "When CL_MEM_COPY_HOST_PTR is set, host_ptr parameter must be a valid pointer");
 				if(c->getSubExpression()->getType() != BASIC.getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
-					hostPtr = builder.callExpr(BASIC.getRefToAnyRef(), builder.callExpr(BASIC.getRefVar(), c->getSubExpression()));
+					hostPtr = builder.callExpr(BASIC.getRefVar(), c->getSubExpression());
 				}
 			}
 
@@ -763,6 +775,8 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 			return builder.callExpr(size ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
 #endif
 	);
+
+
 
 	ADD_Handler(builder, o2i, "clSetKernelArg",
 			return collectArgument("clSetKernelArg", node->getArgument(0), node->getArgument(1), node->getArgument(2), node->getArgument(3));
@@ -1025,8 +1039,14 @@ void HostMapper::recursiveFlagCheck(const ExpressionPtr& flagExpr, std::set<Enum
 
 template<typename Enum>
 std::set<Enum> HostMapper::getFlags(const ExpressionPtr& flagExpr) {
+
+
+	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 	std::set<Enum> flags;
 	// remove cast to uint<8>
+	if (flagExpr.isa<core::CallExprPtr>() && gen.isScalarCast(flagExpr.as<core::CallExprPtr>()->getFunctionExpr())){
+		recursiveFlagCheck(flagExpr.as<core::CallExprPtr>()->getArgument(0), flags);
+	}else
 	if (const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(flagExpr)) {
 		recursiveFlagCheck(cast->getSubExpression(), flags);
 	} else
@@ -1122,7 +1142,7 @@ bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::
 						// check if file has already been added
 						if(kernelFileCache.find(path) == kernelFileCache.end()) {
 							kernelFileCache.insert(path);
-							const ProgramPtr kernels = loadKernelsFromFile(path, builder);
+							const ProgramPtr kernels = loadKernelsFromFile(path, builder, job);
 							for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
 									kernelEntries.push_back(kernel);
 							});

@@ -93,6 +93,7 @@ FUN("alloca.h", alloca)
 FUN("malloc.h", memalign)
 
 FUN("string.h", memcpy)
+FUN("string.h", memset)
 FUN("string.h", strcmp)
 FUN("string.h", strtok)
 FUN("string.h", strtol)
@@ -124,6 +125,11 @@ FUN("math.h", __isnanl)
 FUN("math.h", __isnanf)
 FUN("math.h", __isinfl)
 FUN("math.h", __isinff)
+
+TYPE("sys/utsname.h", "struct utsname")
+FUN("sys/utsname.h", uname)
+
+FUN("libgen.h", __xpg_basename)
 
 //==== MPI =====================================
 FUN("mpi.h", MPI_Init)

@@ -45,59 +45,48 @@
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/utils/container_utils.h"
-#include "insieme/utils/cmd_line_utils.h"
+#include "insieme/utils/compiler/compiler.h"
 
 
 namespace insieme {
 namespace frontend {
 
-const unsigned ConversionJob::DEFAULT_FLAGS = 0;
+const unsigned ConversionJob::DEFAULT_FLAGS = PrintDiag;
 
-ConversionJob::ConversionJob(core::NodeManager& manager, const string& file)
-	: manager(manager), files(toVector(file)), standard("c99"), flags(DEFAULT_FLAGS) {};
+ConversionJob::ConversionJob(const string& file)
+	: files(toVector(file)), stdLibIncludeDirs(insieme::utils::compiler::getDefaultCppIncludePaths()), standard("c99"), flags(DEFAULT_FLAGS) {};
 
-ConversionJob::ConversionJob(core::NodeManager& manager, const vector<string>& files, const vector<string>& includeDirs)
-	: manager(manager), files(files), includeDirs(includeDirs), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};
+ConversionJob::ConversionJob(const vector<string>& files, const vector<string>& includeDirs)
+	: files(files), includeDirs(includeDirs), stdLibIncludeDirs(insieme::utils::compiler::getDefaultCppIncludePaths()), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};
 
 void ConversionJob::addDefinition(const string& name, const string& value) {
 	std::stringstream def;
-	def << name << "=" << value;
+	def << name;
+	if (!value.empty()) def << "=" << value;
 	definitions.push_back(def.str());
 }
 
-core::ProgramPtr ConversionJob::execute() {
+core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) {
 
-	// setup the include directories
-	CommandLineOptions::IncludePaths = includeDirs;
-
-	// setup the standard
-	CommandLineOptions::STD = standard;
-
-	// setup definition
-	CommandLineOptions::Defs = definitions;
-
-	// setup additional flags
-	CommandLineOptions::OpenMP = hasOption(OpenMP);
-	CommandLineOptions::OpenCL = hasOption(OpenCL);
-	CommandLineOptions::Cilk = hasOption(Cilk);
 
 	// add definitions needed by the OpenCL frontend
+	ConversionJob job = *this;
 	if(hasOption(OpenCL)) {
-		CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
-		CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
-		CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
+		job.addIncludeDirectory(SRC_DIR);
+		job.addIncludeDirectory(SRC_DIR "inputs");
+		job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
 
-		CommandLineOptions::Defs.push_back("INSIEME");
+		job.addDefinition("INSIEME");
 	}
 
 	// create a temporary manager
 	core::NodeManager tmpMgr(manager);
 
 	// create the program parser
-	frontend::Program program(tmpMgr);
+	frontend::Program program(manager, job);
 
 	// set up the translation units
-	program.addTranslationUnits(files);
+	program.addTranslationUnits(job);
 
 	// convert the program
 	auto res = program.convert();
@@ -109,7 +98,7 @@ core::ProgramPtr ConversionJob::execute() {
 
 	// apply OpenCL conversion
 	if(hasOption(OpenCL)) {
-		frontend::ocl::HostCompiler oclHostCompiler(res);
+		frontend::ocl::HostCompiler oclHostCompiler(res, job);
 		res = oclHostCompiler.compile();
 	}
 

@@ -39,8 +39,6 @@
 #include <cassert>
 #include <memory>
 
-#include <boost/noncopyable.hpp>
-
 #include "insieme/core/forward_decls.h"
 #include "insieme/backend/c_ast/forward_decls.h"
 
@@ -58,10 +56,19 @@ namespace backend {
 
 	// forward declaration of involved managers
 	class NameManager;
+	typedef std::shared_ptr<NameManager> NameManagerPtr;
+
 	class TypeManager;
+	typedef std::shared_ptr<TypeManager> TypeManagerPtr;
+
 	class VariableManager;
+	typedef std::shared_ptr<VariableManager> VariableManagerPtr;
+
 	class StmtConverter;
+	typedef std::shared_ptr<StmtConverter> StmtConverterPtr;
+
 	class FunctionManager;
+	typedef std::shared_ptr<FunctionManager> FunctionManagerPtr;
 
 	class TargetCode;
 	typedef std::shared_ptr<TargetCode> TargetCodePtr;
@@ -73,7 +80,16 @@ namespace backend {
 	 * (interface) is defined. Individual implementations of backends may exchange the
 	 * particular implementations to customize the code generation.
 	 */
-	class Converter : private boost::noncopyable {
+	class Converter {
+
+		// -------- Node Managers for Source and Target Code ------------
+
+		core::NodeManager& nodeManager;
+
+		// NOTE: shared pointer, since it has to survive the conversion process
+		c_ast::SharedCodeFragmentManager fragmentManager;
+
+		std::string converterName;
 
 		// ------- The Pre- and Post- Processors applied before the conversion -----------
 
@@ -103,14 +119,14 @@ namespace backend {
 		 * The name manager is used to obtain identifiers for types, variables and functions
 		 * within the generated code. This manager serves mainly cosmetic purposes.
 		 */
-		NameManager* nameManager;
+		NameManagerPtr nameManager;
 
 		/**
 		 * The type manager is responsible for resolving IR types and converting them into
 		 * equivalent C code. Also, it is responsible for ensuring that type declarations
 		 * and definitions are properly arranged within the resulting C code.
 		 */
-		TypeManager* typeManager;
+		TypeManagerPtr typeManager;
 
 		/**
 		 * The statement (and expression) converter is responsible for converting
@@ -122,7 +138,7 @@ namespace backend {
 		 * The statement converter is the main entry point when triggering a IR to C
 		 * conversion.
 		 */
-		StmtConverter* stmtConverter;
+		StmtConverterPtr stmtConverter;
 
 		/**
 		 * The function manager is responsible for creating function declarations and
@@ -132,16 +148,7 @@ namespace backend {
 		 * conversion process, the handling of those is being passed on to the function
 		 * manager (by the statement converter).
 		 */
-		FunctionManager* functionManager;
-
-		// -------- Node Managers for Source and Target Code ------------
-
-		core::NodeManager* nodeManager;
-
-		// NOTE: shared pointer, since it has to survive the conversion process
-		c_ast::SharedCodeFragmentManager fragmentManager;
-
-		const std::string converterName;
+		FunctionManagerPtr functionManager;
 
 	public:
 
@@ -149,9 +156,7 @@ namespace backend {
 		 * Creates a new uninitialized converter. Before using the resulting
 		 * converter, the required managers need to be initialized.
 		 */
-		Converter(std::string name = "Backend") :
-			preProcessor(), postProcessor(), nameManager(0), typeManager(0), stmtConverter(0),
-			functionManager(0), converterName(name) {}
+		Converter(core::NodeManager& manager, std::string name = "Backend");
 
 		/**
 		 * A call to this member function triggers the actual conversion process.
@@ -188,7 +193,7 @@ namespace backend {
 			return *nameManager;
 		}
 
-		void setNameManager(NameManager* manager) {
+		void setNameManager(NameManagerPtr manager) {
 			nameManager = manager;
 		}
 
@@ -197,7 +202,7 @@ namespace backend {
 			return *typeManager;
 		}
 
-		void setTypeManager(TypeManager* manager) {
+		void setTypeManager(TypeManagerPtr manager) {
 			typeManager = manager;
 		}
 
@@ -206,7 +211,7 @@ namespace backend {
 			return *stmtConverter;
 		}
 
-		void setStmtConverter(StmtConverter* converter) {
+		void setStmtConverter(StmtConverterPtr converter) {
 			stmtConverter = converter;
 		}
 
@@ -215,17 +220,12 @@ namespace backend {
 			return *functionManager;
 		}
 
-		void setFunctionManager(FunctionManager* manager) {
+		void setFunctionManager(FunctionManagerPtr manager) {
 			functionManager = manager;
 		}
 
 		core::NodeManager& getNodeManager() const {
-			assert(nodeManager);
-			return *nodeManager;
-		}
-
-		void setNodeManager(core::NodeManager* manager) {
-			nodeManager = manager;
+			return nodeManager;
 		}
 
 		const c_ast::SharedCodeFragmentManager& getFragmentManager() const {
@@ -240,6 +240,8 @@ namespace backend {
 		const c_ast::SharedCNodeManager& getCNodeManager() const;
 
 		const std::string& getConverterName() const { return converterName; }
+
+		void setConverterName(const string& name) { converterName = name; }
 
 	};
 

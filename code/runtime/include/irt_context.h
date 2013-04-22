@@ -55,6 +55,10 @@ struct _irt_context {
 	uint32 impl_table_size;
 	irt_wi_implementation* impl_table;
 
+	// instrumentation
+	uint32 num_regions;													// initialized by compiler
+	irt_inst_region_data* inst_region_data;								// initialized by runtime
+
 #ifdef USE_OPENCL
 	irt_ocl_kernel_code* kernel_code_table;
 	irt_ocl_kernel** kernel_binary_table;

@@ -1191,6 +1191,40 @@ VariableAddress pushInto(NodeManager& manager, const ExpressionAddress& target, 
 	return replaceAddress(manager, inserted, inner).as<VariableAddress>();
 }
 
+vector<VariableAddress> pushInto(NodeManager& manager, const vector<ExpressionAddress>& targets, const VariablePtr& var) {
+
+	// check whether there is something to do
+	if (targets.empty()) {
+		return vector<VariableAddress>();
+	}
+
+	// special handling for a single step
+	if (targets.size() == 1u) {
+		return toVector(pushInto(manager, targets[0], var));
+	}
+
+	// implant variables in reverse order of addresses (avoid invalid addresses in case targets are nested)
+	vector<ExpressionAddress> sorted = targets;
+	std::sort(sorted.rbegin(), sorted.rend());
+
+	// implant variables - one by one
+	NodePtr curRoot = targets[0].getRootNode();
+	vector<VariableAddress> res;
+	for(const auto& cur : targets) {
+		res.push_back(pushInto(manager, cur.switchRoot(curRoot), var));
+		curRoot = res.back().getRootNode();
+	}
+
+	// update all root nodes
+	for(auto& cur : res) {
+		cur = cur.switchRoot(curRoot);
+	}
+
+	// done
+	return res;
+}
+
+
 
 
 LambdaExprPtr correctRecursiveLambdaVariableUsage(NodeManager& manager, const LambdaExprPtr& lambda) {

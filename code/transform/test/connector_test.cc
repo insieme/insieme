@@ -61,7 +61,7 @@ namespace transform {
 		core::NodePtr lit = builder.intLit(42);
 
 		// build a transformation
-		TransformationPtr replacer = lambdaTransformation([&](const core::NodePtr& cur) {
+		TransformationPtr replacer = makeLambdaTransformation([&](const core::NodePtr& cur) {
 			return lit;
 		});
 //		filter::TargetFilter filter = filter::pattern(p::var("x", irp::forStmt()), "x");
@@ -99,7 +99,7 @@ namespace transform {
 		core::NodePtr lit = builder.intLit(42);
 
 		// build a transformation
-		TransformationPtr replacer = lambdaTransformation([&](const core::NodePtr& cur) {
+		TransformationPtr replacer = makeLambdaTransformation([&](const core::NodePtr& cur) {
 			return lit;
 		});
 //		filter::TargetFilter filter = filter::pattern(p::var("x", irp::forStmt()), "x");
@@ -126,7 +126,7 @@ namespace transform {
 		core::NodePtr lit = builder.intLit(42);
 
 		// build a transformation
-		TransformationPtr replacer = lambdaTransformation([&](const core::NodePtr& cur) {
+		TransformationPtr replacer = makeLambdaTransformation([&](const core::NodePtr& cur) {
 			return lit;
 		});
 //		filter::TargetFilter filter = filter::pattern(p::var("x", irp::forStmt()), "x");

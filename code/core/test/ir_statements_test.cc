@@ -50,10 +50,10 @@ TEST(StatementsTest, Management) {
 	NodeManager manager2;
 
 	BreakStmtPtr bS = BreakStmt::get(manager);
-	CompoundStmtPtr nS = CompoundStmt::get(manager);
+	StatementPtr nS = CompoundStmt::get(manager);
 
-	CompoundStmtPtr bSC = CompoundStmt::get(manager, bS);
-	CompoundStmtPtr nSC = CompoundStmt::get(manager, nS);
+	StatementPtr bSC = CompoundStmt::get(manager, bS);
+	StatementPtr nSC = CompoundStmt::get(manager, nS);
 
 	vector<StatementPtr> stmtVec;
 	stmtVec.push_back(bS);

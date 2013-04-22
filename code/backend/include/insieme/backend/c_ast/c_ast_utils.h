@@ -153,6 +153,10 @@ namespace c_ast {
 		return type->getManager()->create<c_ast::PointerType>(type);
 	}
 
+	inline ReferenceTypePtr ref(const TypePtr& type, bool isConst = false) {
+		return type->getManager()->create<c_ast::ReferenceType>(isConst, type);
+	}
+
 	inline VectorTypePtr vec(const TypePtr& element, unsigned size) {
 		return element->getManager()->create<c_ast::VectorType>(
 				element,
@@ -236,12 +240,12 @@ namespace c_ast {
 		return fun->getManager()->create<c_ast::Call>(fun, args);
 	}
 
-	inline MemberCallPtr memberCall(NodePtr obj, NodePtr fun, const vector<NodePtr>& args) {
+	inline MemberCallPtr memberCall(NodePtr obj, NodePtr fun, const vector<NodePtr>& args = vector<NodePtr>()) {
 		if (getPriority(obj) < 15) obj = parenthese(obj);
 		return fun->getManager()->create<c_ast::MemberCall>(fun, obj, args);
 	}
 
-	inline ConstructorCallPtr ctorCall(TypePtr classType, const vector<NodePtr>& args, ExpressionPtr location = ExpressionPtr()) {
+	inline ConstructorCallPtr ctorCall(TypePtr classType, const vector<NodePtr>& args = vector<NodePtr>(), ExpressionPtr location = ExpressionPtr()) {
 		return classType->getManager()->create<c_ast::ConstructorCall>(classType, args, location);
 	}
 

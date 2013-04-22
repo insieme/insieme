@@ -37,8 +37,12 @@
 #pragma once
 
 #include "declarations.h"
+#include "instrumentation.h"
 #include "utils/timing.h"
 #include "utils/impl/timing.impl.h"
+
+#include "irt_context.h"
+#include "worker.h"
 
 typedef struct _irt_parallel_job {
 	uint32 min;
@@ -82,4 +86,14 @@ void irt_merge(irt_joinable* joinable);
 
 static inline double irt_get_wtime() {
 	return irt_time_ns()/1000000000.0;
+}
+
+// a wrapper for a call marking the start of a region
+static inline void ir_inst_region_start(region_id id) {
+	irt_inst_region_start(irt_context_get_current(), irt_worker_get_current(), id);
+}
+
+// a wrapper for a call marking the end of a region
+static inline void ir_inst_region_end(region_id id) {
+	irt_inst_region_end(irt_context_get_current(), irt_worker_get_current(), id);
 }

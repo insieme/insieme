@@ -49,6 +49,7 @@
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/data_annotations.h"
 
+#include "insieme/frontend/frontend.h"
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -68,25 +69,23 @@ TEST(KernelPoly, RangeTest) {
 	Logger::get(std::cerr, DEBUG);
 
 	// Frontend PATH
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs"); // this is for CL/cl.h in host.c
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR)); // this is for ocl_device.h in kernel.cl
-	
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
+	insieme::frontend::ConversionJob job(OCL_KERNEL_TEST_DIR "vec_add.c");
+	job.addIncludeDirectory(SRC_DIR); // this is for ocl_device.h in kernel.cl
+	job.addIncludeDirectory(SRC_DIR "inputs"); // this is for CL/cl.h in host.c
+	job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/"); // lib_icl
 	
 	// Backend PATH
-	CommandLineOptions::IncludePaths.push_back(std::string(OCL_KERNEL_TEST_DIR));
-	CommandLineOptions::Defs.push_back("INSIEME");
+	job.addIncludeDirectory(OCL_KERNEL_TEST_DIR);
+	job.setOption(insieme::frontend::ConversionJob::OpenCL);
 
 	LOG(INFO) << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "vec_add.c" << "' to IR...\n";
-	insieme::frontend::Program prog(manager);
 
-	prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "vec_add.c");
 	// 	prog.addTranslationUnit(std::string(SRC_DIR) + "/inputs/hello_host.c"); // Other Input test :)
 	//prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "kernel.cl");
-	ProgramPtr program = prog.convert();
+	ProgramPtr program = job.execute(manager);
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
-	insieme::frontend::ocl::HostCompiler hc(program);
+	insieme::frontend::ocl::HostCompiler hc(program, job);
 	hc.compile();
 
 
@@ -103,14 +102,14 @@ TEST(KernelPoly, RangeTest) {
 
 	size_t annotCnt = 0;
 	auto searchRangeAnnot = makeLambdaVisitor([&](const NodePtr& node) {
-		if(node->getNodeType() == insieme::core::NT_LambdaExpr)
+		if(node->getNodeType() == insieme::core::NT_LambdaExpr) {
 			if(node->hasAnnotation(insieme::annotations::DataRangeAnnotation::KEY)){
 				++annotCnt;
 				insieme::annotations::DataRangeAnnotationPtr dra = node->getAnnotation(insieme::annotations::DataRangeAnnotation::KEY);
 				EXPECT_EQ(3u, dra->getRanges().size());
 
 				for_each(dra->getRanges(), [&](insieme::annotations::Range range) {
-					EXPECT_TRUE(toString(range).find("get_global_id") != string::npos);
+					EXPECT_TRUE(toString(range).find("get_global_id") != string::npos) << range;
 					int readCnt = 0, writeCnt = 0;
 					switch(range.getAccessType()) {
 						case insieme::ACCESS_TYPE::read: ++readCnt; break;
@@ -122,6 +121,7 @@ TEST(KernelPoly, RangeTest) {
 				EXPECT_TRUE(toString(*dra).find("get_global_id") != string::npos);
 //				std::cout << *dra << std::endl;
 			}
+		}
 	});
 
 	visitDepthFirstOnce(newProg, searchRangeAnnot);

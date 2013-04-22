@@ -1,12 +1,10 @@
-
+#include <stdio.h>
 
 //typedef int bool;
 #define bool int
 
 #define true 1
 #define false 0
-
-extern int printf(char *, ...);
 
 // example - simple recursive function
 unsigned fac(unsigned x) {

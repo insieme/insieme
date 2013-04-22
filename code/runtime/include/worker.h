@@ -44,10 +44,6 @@
 #include "instrumentation.h"
 #include "utils/affinity.h"
 
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-#include "papi.h"
-#endif
-
 #ifdef USE_OPENCL
 #include "irt_ocl.h"
 #endif
@@ -88,7 +84,7 @@ struct _irt_worker {
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_instrumentation_event_data_table* instrumentation_event_data;
 #endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#ifdef IRT_ENABLE_INDIVIDUAL_REGION_INSTRUMENTATION
 	irt_instrumentation_region_data_table* instrumentation_region_data;
 	int32 irt_papi_event_set;
 	int32 irt_papi_number_of_events;
@@ -102,7 +98,9 @@ struct _irt_worker {
 	irt_wg_event_register *wg_ev_register_list;
 	irt_work_item *wi_reuse_stack;
 	intptr_t *stack_reuse_stack;
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_region_list* region_reuse_list;
+#endif
 };
 
 typedef struct _irt_worker_init_signal {

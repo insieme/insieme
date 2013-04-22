@@ -75,10 +75,13 @@ namespace analysis {
 
 	bool isObjectType(const TypePtr& type) {
 
+
 		// decide whether something is an object type based on the node type
 		switch(type->getNodeType()) {
-		case NT_StructType:
 		case NT_GenericType:
+			// no built-in type is an object type
+			return !type->getNodeManager().getLangBasic().isPrimitive(type);
+		case NT_StructType:
 		case NT_TypeVariable:
 			return true;			// all this types are always object types
 		case NT_RecType:
@@ -110,6 +113,64 @@ namespace analysis {
 	bool isPureVirtual(const NodePtr& node) {
 		return isPureVirtual(node.isa<CallExprPtr>());
 	}
+
+
+	// ---------------------------- References --------------------------------------
+
+	namespace {
+
+		bool isRef(const TypePtr& type, const string& memberName) {
+
+			// filter out null-pointer
+			if (!type) return false;
+
+			// must be a struct type
+			StructTypePtr structType = type.isa<StructTypePtr>();
+			if (!structType) return false;
+
+			// only one member
+			if (structType.size() != 1u) return false;
+
+			// check the one member element
+			NamedTypePtr element = structType[0];
+			return element->getType()->getNodeType() == NT_RefType
+					&& element->getType().as<RefTypePtr>()->getElementType()->getNodeType() != NT_RefType
+					&& !isCppRef(element->getType()) && !isConstCppRef(element->getType())
+					&& element->getName().getValue() == memberName;
+		}
+
+		TypePtr getRef(const TypePtr& elementType, const string& memberName) {
+			IRBuilder builder(elementType->getNodeManager());
+			return builder.structType(toVector(
+					builder.namedType(memberName, builder.refType(elementType))
+			));
+		}
+
+		const string CppRefStringMember = "_cpp_ref";
+		const string CppConstRefStringMember = "_const_cpp_ref";
+	}
+
+	bool isCppRef(const TypePtr& type) {
+		return isRef(type, CppRefStringMember);
+	}
+
+	TypePtr getCppRef(const TypePtr& elementType) {
+		return getRef(elementType, CppRefStringMember);
+	}
+
+	bool isConstCppRef(const TypePtr& type) {
+		return isRef(type, CppConstRefStringMember);
+	}
+
+	TypePtr getConstCppRef(const TypePtr& elementType) {
+		return getRef(elementType, CppConstRefStringMember);
+	}
+
+	TypePtr getCppRefElementType(const TypePtr& cppRefType) {
+		assert(isCppRef(cppRefType) || isConstCppRef(cppRefType));
+		return cppRefType.as<StructTypePtr>()[0]->getType().as<RefTypePtr>()->getElementType();
+	}
+
 
 } // end namespace analysis
 } // end namespace core

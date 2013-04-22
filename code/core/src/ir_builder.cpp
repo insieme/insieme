@@ -57,6 +57,7 @@
 #include "insieme/core/types/return_type_deduction.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/core/encoder/lists.h"
 
@@ -136,10 +137,11 @@ namespace {
 		};
 		std::set<VariablePtr, decltype(cmp)> nonDecls(cmp);
 
-		std::set_difference( 
+		std::set_difference(
 				visitor.usedVars.begin(), visitor.usedVars.end(),
-				visitor.declaredVars.begin(), visitor.declaredVars.end(), 
-				std::inserter(nonDecls, nonDecls.begin())
+				visitor.declaredVars.begin(), visitor.declaredVars.end(),
+				std::inserter(nonDecls, nonDecls.begin()),
+				cmp
 			);
 
 		return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
@@ -508,14 +510,18 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// if it is a ref type ...
 	if (type->getNodeType() == core::NT_RefType) {
-		// return the corresponding flavor of NULL
-		core::TypePtr elementType = core::analysis::getReferencedType(type);
-		return callExpr(type, manager.getLangBasic().getAnyRefToRef(), manager.getLangBasic().getNull(), getTypeLiteral(elementType));
+		// return NULL
+		return manager.getLangBasic().getNull();
 	}
 
 	// if it is a bool type
 	if(manager.getLangBasic().isBool(type)) {
 		return boolLit(false);
+	}
+
+	// add support for unit
+	if(manager.getLangBasic().isUnit(type)) {
+		return manager.getLangBasic().getUnitConstant();
 	}
 
 	// TODO: extend for more types
@@ -548,9 +554,6 @@ CallExprPtr IRBuilder::refNew(const ExpressionPtr& subExpr) const {
 
 CallExprPtr IRBuilder::refDelete(const ExpressionPtr& subExpr) const {
 	auto& basic = manager.getLangBasic();
-	if (basic.isAnyRef(subExpr->getType())) {
-		return callExpr(basic.getUnit(), basic.getAnyRefDelete(), subExpr);
-	}
 	return callExpr(basic.getUnit(), basic.getRefDelete(), subExpr);
 }
 
@@ -736,26 +739,8 @@ CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<
 	// use deduced return type to construct call
 	return callExpr(deduceReturnTypeForCall(functionExpr, arguments), functionExpr, arguments);
 }
-CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
-	return callExpr(functionExpr, toVector(arg1));
-}
-CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
-	return callExpr(functionExpr, toVector(arg1, arg2));
-}
-CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
-	return callExpr(functionExpr, toVector(arg1, arg2, arg3));
-}
 CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const {
 	return createCall(*this, resultType, functionExpr, toVector<ExpressionPtr>());
-}
-CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
-	return createCall(*this, resultType, functionExpr, toVector(arg1));
-}
-CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
-	return createCall(*this, resultType, functionExpr, toVector(arg1, arg2));
-}
-CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
-	return createCall(*this, resultType, functionExpr, toVector(arg1, arg2, arg3));
 }
 
 CallExprPtr IRBuilder::virtualCall(const LiteralPtr& virtualFun, const ExpressionPtr& obj, const vector<ExpressionPtr>& args) const {
@@ -948,22 +933,18 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     vector<ExpressionPtr> callArgs;
 
     utils::map::PointerMap<VariablePtr, VariablePtr> replVariableMap;
+	for(const core::ExpressionPtr& curr : args){
+		assert(curr->getNodeType() == core::NT_Variable);
 
-    std::for_each(args.begin(), args.end(), [ & ] (const core::ExpressionPtr& curr) {
-            assert(curr->getNodeType() == core::NT_Variable);
-
-            const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
-            const core::TypePtr& varType = bodyVar->getType();
-
-            // we create a new variable to replace the captured variable
-            core::VariablePtr&& parmVar = this->variable( varType );
-            argsType.push_back( varType );
-            callArgs.push_back(curr);
-            params.push_back( parmVar );
-
-            replVariableMap.insert( std::make_pair(bodyVar, parmVar) );
-        }
-    );
+		const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
+		const core::TypePtr& varType = bodyVar->getType();
+		// we create a new variable to replace the captured variable
+		core::VariablePtr&& parmVar = this->variable( varType );
+		argsType.push_back( varType );
+		callArgs.push_back(curr);
+		params.push_back( parmVar );
+		replVariableMap.insert( std::make_pair(bodyVar, parmVar) );
+	}
 
     // Replace the variables in the body with the input parameters which have been created
     if ( !replVariableMap.empty() ) {
@@ -1396,6 +1377,49 @@ ExpressionPtr IRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
 	assert(type->isMemberFunction());
 	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
 	return callExpr(type, ext.getPureVirtual(), getTypeLiteral(type));
+}
+
+ExpressionPtr IRBuilder::toCppRef(const ExpressionPtr& ref) const {
+	assert(ref && ref->getType()->getNodeType() == NT_RefType);
+	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
+
+	// avoid multiple nesting of wrapping / unwrapping
+	if (core::analysis::isCallOf(ref, ext.getRefCppToIR())) {
+		return ref.as<CallExprPtr>()[0];	// strip of previous call
+	}
+
+	// use converter function all
+	return callExpr(core::analysis::getCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToCpp(), ref);
+}
+
+ExpressionPtr IRBuilder::toConstCppRef(const ExpressionPtr& ref) const {
+	assert(ref && ref->getType()->getNodeType() == NT_RefType);
+	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
+
+	// avoid multiple nesting of wrapping / unwrapping
+	if (core::analysis::isCallOf(ref, ext.getRefConstCppToIR())) {
+		return ref.as<CallExprPtr>()[0];	// strip of previous call
+	}
+
+	return callExpr(core::analysis::getConstCppRef(ref->getType().as<RefTypePtr>()->getElementType()), ext.getRefIRToConstCpp(), ref);
+}
+
+ExpressionPtr IRBuilder::toIRRef(const ExpressionPtr& ref) const {
+	const auto& ext = manager.getLangExtension<lang::IRppExtensions>();
+	assert(ref && (analysis::isCppRef(ref->getType()) || analysis::isConstCppRef(ref->getType())));
+
+	// see whether this is a value which has just been wrapped
+	if (analysis::isCallOf(ref, ext.getRefIRToCpp()) || analysis::isCallOf(ref, ext.getRefIRToConstCpp())) {
+		return ref.as<CallExprPtr>()[0];		// strip of nested wrapper
+	}
+
+	// check whether it is a non-const reference
+	if (analysis::isCppRef(ref->getType())) {
+		return callExpr(refType(analysis::getCppRefElementType(ref->getType())), ext.getRefCppToIR(), ref);
+	}
+
+	// handle a const reference
+	return callExpr(refType(analysis::getCppRefElementType(ref->getType())), ext.getRefConstCppToIR(), ref);
 }
 
 } // namespace core

@@ -45,8 +45,6 @@
 #include "insieme/annotations/mpi/mpi_annotations.h"
 #include "insieme/annotations/c/location.h"
 
-#include "insieme/utils/cmd_line_utils.h"
-
 #include "insieme/utils/logging.h"
 #include "insieme/utils/file_rewriter.h"
 
@@ -84,9 +82,9 @@ MPICalls extractMPICalls( const core::NodeAddress& program ) {
  *
  * 	-   It make sure that all the MPI calls present in this program are correctly annotated.
  */
-core::ProgramPtr handleMPICalls( const core::ProgramPtr& program ) {
+core::ProgramPtr handleMPICalls( const core::ProgramPtr& program, bool tag) {
 	
-	if (CommandLineOptions::MPITag) {
+	if (tag) {
 		LOG(INFO) << "Tagging MPI statements in the input program";
 		MPICalls&& calls = extractMPICalls( core::NodeAddress(program) );
 

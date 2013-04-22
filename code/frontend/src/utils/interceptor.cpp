@@ -38,22 +38,85 @@
 #define __STDC_CONSTANT_MACROS
 #include "insieme/frontend/utils/interceptor.h"
 
-#include "insieme/frontend/convert.h"
 #include <iostream>
+
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/optional.hpp>
+#include <boost/regex.hpp>
+#include <boost/algorithm/string/replace.hpp>
+
+#include "insieme/annotations/c/include.h"
+
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/clang_config.h"
 		
 namespace insieme {
 namespace frontend { 
 namespace utils {
 
-//void InterceptVisitor::VisitCallExpr(const clang::CallExpr* callExpr) {};
+namespace {
 
-//void InterceptVisitor::VisitDeclRefExpr(const clang::DeclRefExpr* declRefExpr) {};
+namespace fs = boost::filesystem;
+
+boost::optional<fs::path> toStdLibHeader(const fs::path& path, const vector<fs::path>& libDirs) {
+	static const boost::optional<fs::path> fail;
+
+	if (libDirs.empty()) return fail;
+
+	if (contains(libDirs, path)) {
+		return fs::path();
+	}
+
+	if (!path.has_parent_path()) {
+		return fail;
+	}
+
+	// if it is within the std-lib directory, build relative path
+	auto res = toStdLibHeader(path.parent_path(), libDirs);
+	return (res)? (*res/path.filename()) : fail;
+	
+}
+
+void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const vector<fs::path>& stdLibDirs) {
+
+	// check whether there is a declaration at all
+	if (!decl) return;
+
+	VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType() << "\n";
+	clang::SourceManager& sm = decl->getASTContext().getSourceManager();
+	clang::SourceLocation includeLoc = sm.getIncludeLoc(sm.getFileID(decl->getLocation()));
+	std::string fileName;
+	if(includeLoc.isValid()) {
+		// decl comes from included header
+		fileName = sm.getPresumedLoc(includeLoc).getFilename();
+	} else {
+		assert(false && "no includeLoc found");
+		return;
+	}
+
+	// get absolute path of header file
+	fs::path header = fs::canonical(fileName);
+
+	// check whether it is within the STL library
+	if (auto stdLibHeader = toStdLibHeader(header, stdLibDirs)) {
+		header = *stdLibHeader;
+	}
+
+	// use resulting header
+	insieme::annotations::c::attachInclude(node, header.string());
+}
+
+std::string fixQualifiedName(std::string name) {
+	// get rid of inline namespace utilized by the clang headers
+	boost::replace_all(name, "std::__1::", "std::");
+	return name;
+}
+
+} //end anonymous namespace
 
 void Interceptor::loadConfigFile(std::string fileName) {
 	namespace fs = boost::filesystem;
-	//FIXME toIntercept should use regex -> convert strings into regex before storing them
 	const fs::path configPath = fileName;
 	if(	fs::exists(configPath) ) {
 		fs::ifstream configFile(configPath);
@@ -62,11 +125,15 @@ void Interceptor::loadConfigFile(std::string fileName) {
 			return;
 		}
 
+		std::set<std::string> set;
 		std::string nameToIntercept;
 		while( getline(configFile, nameToIntercept) ) {
-			toIntercept.insert(nameToIntercept);
+			set.insert(nameToIntercept);
 		}
 		configFile.close();
+
+		// adapt configuration
+		loadConfigSet(set);
 	} else {
 		LOG(WARNING) << "Interceptor didn't find config file " << fileName;	
 		return;
@@ -74,120 +141,276 @@ void Interceptor::loadConfigFile(std::string fileName) {
 }
 
 void Interceptor::loadConfigSet(std::set<std::string> tI) {
-	//FIXME use regex, turn strings in tI into regex
 	toIntercept.insert(tI.begin(), tI.end());
+
+	// update regular expression:
+
+	//use one big regex for all strings to intercept
+	rx = boost::regex("("+toString(join(")|(", toIntercept))+")");
 }
 
-/// takes a pair of strings and looks for functionsi (funcDecl) with the same name as the first string, 
-/// adds the second string associated with the funcDecl to the interceptedFuncCache
-void Interceptor::intercept() {
-	if(toIntercept.empty()) {
-		VLOG(2) << "nothing to intercept";
-		return;
+insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::frontend::conversion::ConversionFactory& convFact) {
+
+	InterceptTypeVisitor iTV(convFact, *this);
+	// resolve type and save in cache
+	core::TypePtr irType = iTV.Visit(type);
+	
+	clang::TypeDecl* typeDecl = NULL;
+	if( const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type) ) {
+		typeDecl = tagType->getDecl();
+	} else if( const clang::TemplateTypeParmType* tempType = llvm::dyn_cast<clang::TemplateTypeParmType>(type) ){
+		typeDecl = tempType->getDecl();
+	} else if( const clang::TypedefType* typeDefType = llvm::dyn_cast<clang::TypedefType>(type) ) {
+		typeDecl = typeDefType->getDecl();
+		// typedef is sugar
+		assert(false && "not used");
 	}
+	//we should only call intercept if type has a typeDecl
+	assert(typeDecl && "Type has no TypeDecl");
+	assert(irType && "irType");
 
-	InterceptVisitor vis(interceptedDecls, interceptedTypes, toIntercept);
-
-	auto elem = indexer.begin();
-	auto end = indexer.end();
-	for(;elem != end; elem++) {
-		if(llvm::isa<clang::FunctionDecl>(*elem)) {
-			const clang::FunctionDecl* decl = llvm::cast<clang::FunctionDecl>(*elem);
-
-			//FIXME unique name? -- use buildNameTypeChain from indexer?
-			if( toIntercept.find(decl->getQualifiedNameAsString()) != toIntercept.end() && (decl)->hasBody()) {
-				VLOG(2) << "intercept funcDecl " << decl->getQualifiedNameAsString();
-				interceptedDecls.insert(decl);
-				interceptedFuncMap.insert( {decl,decl->getQualifiedNameAsString()} );
-				interceptedTypes.insert( decl->getType().getTypePtr());
-			} else {
-				// check if an intercepted VariableType is used
-				vis.intercept(decl);
-			}
-		}
-
-		if(llvm::isa<clang::CXXRecordDecl>(*elem)) {
-			const clang::CXXRecordDecl* decl = llvm::cast<clang::CXXRecordDecl>(*elem);
-
-			if( toIntercept.find(decl->getQualifiedNameAsString()) != toIntercept.end()) {
-				VLOG(2) << "intercept CXXRecordDecl " << decl->getQualifiedNameAsString();
-				interceptedTypes.insert( decl->getTypeForDecl() );
-			}
-
-			for(auto it=decl->method_end(), end=decl->method_end(); it!=end;it++) {
-
-				if( toIntercept.find((*it)->getQualifiedNameAsString()) != toIntercept.end()) {
-					VLOG(2) << "intercept memberFunc " << (*it)->getQualifiedNameAsString();
-					interceptedDecls.insert(*it);
-					interceptedFuncMap.insert( {(*it), (*it)->getQualifiedNameAsString() } ); 
-					interceptedTypes.insert( (*it)->getType().getTypePtr());
-				}
-			}
-		}
-	}
-
-	VLOG(2) << interceptedDecls;
-	VLOG(2) << interceptedFuncMap;
-	VLOG(2) << interceptedTypes;
+	// add header file
+	addHeaderForDecl(irType, typeDecl, stdLibDirs);
+	VLOG(1) << "build interceptedType " << type << " ## " << irType;
+	return irType;
 }
 
-Interceptor::InterceptedExprCache Interceptor::buildInterceptedExprCache(insieme::frontend::conversion::ConversionFactory& convFact) {
-	InterceptedExprCache cache;
+bool Interceptor::isIntercepted(const string& name) const {
+	return regex_match(name, rx);
+}
 
-	for ( auto it = interceptedFuncMap.begin(), end = interceptedFuncMap.end(); it != end; ++it ) {
-		VLOG(2) << it->first->getNameAsString();
-		core::TypePtr&& type = convFact.convertType((it->first)->getType().getTypePtr());
+bool Interceptor::isIntercepted(const clang::Type* type) const { 
+	if(toIntercept.empty()) { return false; }
 
-		core::ExpressionPtr interceptExpr = builder.literal( it->second, type);
-		VLOG(2) << interceptExpr;
-		
-		//FIXME annotate literal - headerfile?
-		cache.insert( {it->first, interceptExpr} );
+	//not every clang type has a Decl
+	//cast Type and get decl
+	clang::TypeDecl* typeDecl = NULL;
+	if( const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type) ) {
+		typeDecl = tagType->getDecl();
+	} else if( const clang::TemplateTypeParmType* tempType = llvm::dyn_cast<clang::TemplateTypeParmType>(type) ){
+		typeDecl = tempType->getDecl();
+	} else if( llvm::isa<clang::TypedefType>(type) ) {
+		//we don't intercept typedef -> only sugar, we can use underlying type
+		return false;
 	}
-	VLOG(2) << cache;
-
-	/*
-	for( auto it = interceptedTypes.begin(), end=interceptedTypes.end(); it != end; it++) {
-		core::TypePtr&& type = convFact.convertType(*it);
-		//FIXME annotate type - headerFile?
-		//
-		//genericType("namespace::type" : listofparents<T>)
+	/*} else if( const clang::TypedefType* typeDefType = llvm::dyn_cast<clang::TypedefType>(type) ) {
+		//typeDecl = typeDefType->getDecl();
 	}
-
-	VLOG(2) << cache;
 	*/
 
-	return cache;
+	if(typeDecl) {
+		return isIntercepted(typeDecl->getQualifiedNameAsString());
+	}
+	
+	return false;
 }
 
-void InterceptVisitor::intercept(const clang::FunctionDecl* d) {
-	Visit(d->getBody());
+bool Interceptor::isIntercepted(const clang::FunctionDecl* decl) const {
+	if(toIntercept.empty()) { return false; }
+
+	return regex_match(decl->getQualifiedNameAsString(), rx);
 }
 
-void InterceptVisitor::VisitStmt(clang::Stmt* stmt) {
-	std::for_each(stmt->child_begin(), stmt->child_end(),
-		[ this ](clang::Stmt* curr) {if(curr) this->Visit(curr);});
-}
+insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::ConversionFactory& convFact) {
+	//FIXME create generic type for templates
+	/* get template decl and convert its type -> add to converttype template handling...
+		* if not specialized -> use typeVariable
+		* */
+	switch( decl->getTemplatedKind() ) {
+		case clang::FunctionDecl::TemplatedKind::TK_NonTemplate:
+			VLOG(2) << "TK_NonTemplate";
+			break;
+		case clang::FunctionDecl::TemplatedKind::TK_FunctionTemplate:
+			VLOG(2) << "TK_FunctionTemplate";
+			break;
+		case clang::FunctionDecl::TemplatedKind::TK_MemberSpecialization:
+			VLOG(2) << "TK_MemberSpecialization";
+			break;
+		case clang::FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
+			VLOG(2) << "TK_FunctionTemplateSpecialization";
+			break;
+		case clang::FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:
+			VLOG(2) << "TK_DependentFunctionTemplateSpecialization";
+			break;
+	}
 
-void InterceptVisitor::VisitDeclStmt(const clang::DeclStmt* declStmt) {
-
-	//FIXME currently only for SingleDecls
-	if( llvm::isa<clang::VarDecl>(declStmt->getSingleDecl()) ) {
-		const clang::VarDecl* varDecl = llvm::cast<clang::VarDecl>(declStmt->getSingleDecl());
+	core::FunctionTypePtr type = convFact.convertType( decl->getType().getTypePtr() ).as<core::FunctionTypePtr>();
+	
+	//fix types for ctor, mfunc, ...
+	std::string literalName = decl->getQualifiedNameAsString();
+	/*
+	if( const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
+		core::TypePtr thisTy = convFact.convertType(ctorDecl->getParent()->getTypeForDecl());
+		core::TypeList paramTys = type->getParameterTypeList();
+		paramTys.insert(paramTys.begin(), builder.refType(thisTy));
 		
-		if(const clang::CXXRecordDecl* cxxRecDecl = varDecl->getType().getTypePtr()->getAsCXXRecordDecl()) {
-			if( toIntercept.find(cxxRecDecl->getQualifiedNameAsString()) != toIntercept.end()) {
-				//if we have a varDecl with an intercepted Type
-				VLOG(2) << "intercept VarDecl (class type) " << cxxRecDecl->getQualifiedNameAsString() << " name " << varDecl->getQualifiedNameAsString();
-				interceptedDecls.insert(varDecl);
-				interceptedTypes.insert(varDecl->getType().getTypePtr());
+		//FIXME can we use memberize()?
+		type = builder.functionType( paramTys, builder.refType(thisTy), core::FK_CONSTRUCTOR);
+		
+		// update literal name (only class name type)
+		literalName = ctorDecl->getParent()->getQualifiedNameAsString();
+
+	} else if(const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl) ) {
+		core::TypePtr thisTy = convFact.convertType(methodDecl->getParent()->getTypeForDecl());
+		core::TypeList paramTys = type->getParameterTypeList();
+		paramTys.insert(paramTys.begin(), builder.refType(thisTy));
+
+		//FIXME can we use memberize()?
+		type = builder.functionType( paramTys, type.getReturnType(), core::FK_MEMBER_FUNCTION);
+
+		// just use name of method as the resulting literal name
+		literalName = methodDecl->getNameAsString();
+	}
+	*/
+
+	if(const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl) ) {
+		core::TypePtr thisTy = convFact.convertType(methodDecl->getParent()->getTypeForDecl());
+		core::TypeList paramTys = type->getParameterTypeList();
+		paramTys.insert(paramTys.begin(), builder.refType(thisTy));
+
+		if( const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
+			//FIXME can we use memberize()?
+			type = builder.functionType( paramTys, builder.refType(thisTy), core::FK_CONSTRUCTOR);
+			
+			// update literal name (only class name type)
+			literalName = ctorDecl->getParent()->getQualifiedNameAsString();
+		} else {
+			//FIXME can we use memberize()?
+			type = builder.functionType( paramTys, type.getReturnType(), core::FK_MEMBER_FUNCTION);
+
+			// just use name of method as the resulting literal name
+			literalName = methodDecl->getNameAsString();
+		}
+	}
+	VLOG(2) << decl << " functionType " << type;
+
+	// remove Clang inline namespace from header literal name (if present)
+	literalName = fixQualifiedName(literalName);
+
+	core::ExpressionPtr interceptExpr = builder.literal( literalName, type);
+
+	addHeaderForDecl(interceptExpr, decl, stdLibDirs);
+
+	VLOG(2) << interceptExpr << " " << type;
+	if(insieme::annotations::c::hasIncludeAttached(interceptExpr)) {
+		VLOG(2) << "\t attached header: " << insieme::annotations::c::getAttachedInclude(interceptExpr);
+	}
+	return interceptExpr;
+}
+
+
+InterceptTypeVisitor::InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const Interceptor& interceptor)
+	: convFact(convFact), builder(convFact.getIRBuilder()), interceptor(interceptor) {}
+
+/*
+core::TypePtr InterceptTypeVisitor::VisitTypedefType(const clang::TypedefType* typedefType) {
+	std::string typeName = fixQualifiedName(typedefType->getDecl()->getQualifiedNameAsString());
+	VLOG(2) << typeName;
+	return builder.genericType(typeName, insieme::core::TypeList(), insieme::core::IntParamList());
+}
+*/
+core::TypePtr InterceptTypeVisitor::VisitTagType(const clang::TagType* tagType) {
+	const clang::TagDecl* tagDecl = tagType->getDecl();
+	VLOG(2) << tagDecl;
+
+	insieme::core::TypeList typeList; //empty typelist  = insieme::core::TypeList();
+	if(llvm::isa<clang::ClassTemplateSpecializationDecl>(tagDecl)) {
+		const clang::TemplateArgumentList& args= llvm::cast<clang::ClassTemplateSpecializationDecl>(tagDecl)->getTemplateArgs();
+		for(size_t i = 0; i<args.size();i++) {
+			switch(args[i].getKind()) {
+				case clang::TemplateArgument::ArgKind::Null: VLOG(2) << "ArgKind::Null not supported"; break;
+				case clang::TemplateArgument::ArgKind::Type:
+					{
+						const clang::Type* argType = args[i].getAsType().getTypePtr();
+						typeList.insert( typeList.end(), convFact.convertType(argType) );
+					}
+					break;
+				case clang::TemplateArgument::ArgKind::Declaration: VLOG(2) << "ArgKind::Declaration not supported"; break;
+				case clang::TemplateArgument::ArgKind::NullPtr: VLOG(2) << "ArgKind::NullPtr not supported"; break;
+				case clang::TemplateArgument::ArgKind::Integral: VLOG(2) << "ArgKind::Integral not supported"; break;
+				case clang::TemplateArgument::ArgKind::Template: VLOG(2) << "ArgKind::Template not supported"; break;
+				case clang::TemplateArgument::ArgKind::TemplateExpansion: VLOG(2) << "ArgKind::TemplateExpansion not supported"; break;
+				case clang::TemplateArgument::ArgKind::Expression: VLOG(2) << "ArgKind::Expression not supported"; break;
+				case clang::TemplateArgument::ArgKind::Pack: VLOG(2) << "ArgKind::Pack not supported"; break;
 			}
 		}
-	} else {
-		assert(false && "only single decls are intercepted currently");
 	}
+
+	// obtain type name
+	std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
+
+	core::TypePtr retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
+	addHeaderForDecl(retTy, tagDecl, interceptor.getStdLibDirectories());
+	return retTy;
 }
 
+core::TypePtr InterceptTypeVisitor::VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy) {
+	insieme::core::TypeList typeList; 
+	for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
+		const clang::TemplateArgument arg = templTy->getArg(argId);
+
+		switch(arg.getKind()) {
+			case clang::TemplateArgument::ArgKind::Null: VLOG(2) << "ArgKind::Null not supported"; break;
+			case clang::TemplateArgument::ArgKind::Type:
+				{
+					const clang::Type* argType = arg.getAsType().getTypePtr();
+					core::TypePtr irArgType = convFact.convertType(argType);
+					if(irArgType) {
+						typeList.insert( typeList.end(), irArgType );
+					} else {
+						VLOG(2) << argType->getTypeClassName() << " type not supported";
+						assert(false && "TemplateSpecializationType intercepted");
+						typeList.insert( typeList.end(), 
+								builder.genericType("asdf", insieme::core::TypeList(), insieme::core::IntParamList()));
+					}
+				}
+				break;
+			case clang::TemplateArgument::ArgKind::Declaration: VLOG(2) << "ArgKind::Declaration not supported"; break;
+			case clang::TemplateArgument::ArgKind::NullPtr:  VLOG(2) << "ArgKind::NullPtr not supported"; break;
+			case clang::TemplateArgument::ArgKind::Integral: VLOG(2) << "ArgKind::Integral not supported"; break;
+			case clang::TemplateArgument::ArgKind::Template: VLOG(2) << "ArgKind::Template not supported"; break;
+			case clang::TemplateArgument::ArgKind::TemplateExpansion: VLOG(2) << "ArgKind::TemplateExpansion not supported"; break;
+			case clang::TemplateArgument::ArgKind::Expression: VLOG(2) << "ArgKind::Expression not supported"; break;
+			case clang::TemplateArgument::ArgKind::Pack: VLOG(2) << "ArgKind::Pack not supported"; break;
+		}
+	}
+
+	const clang::TemplateDecl* templDecl = templTy->getTemplateName().getAsTemplateDecl();
+	// compute resulting type name
+	string typeName = fixQualifiedName(templDecl->getQualifiedNameAsString());
+
+	// build resulting type
+	core::TypePtr retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
+	addHeaderForDecl(retTy, templDecl, interceptor.getStdLibDirectories());
+	return retTy;
+}
+
+core::TypePtr InterceptTypeVisitor::VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType) {
+	if( const clang::TemplateTypeParmDecl* tD = templParmType->getDecl() ) {
+		string typeName = fixQualifiedName(tD->getNameAsString());
+		VLOG(2) << typeName;
+		core::TypePtr retTy = builder.genericType(typeName, insieme::core::TypeList(), insieme::core::IntParamList());
+		addHeaderForDecl(retTy, tD, interceptor.getStdLibDirectories());
+		return retTy;
+	} 
+	assert(false && "TemplateTypeParmType intercepted");
+	return builder.genericType("asdf", insieme::core::TypeList(), insieme::core::IntParamList());
+}
+
+core::TypePtr InterceptTypeVisitor::Visit(const clang::Type* type) {
+//	return TypeVisitor<InterceptTypeVisitor, core::TypePtr>::Visit(type);
+	auto res = TypeVisitor<InterceptTypeVisitor, core::TypePtr>::Visit(type);
+
+	// ensure include files are annotated
+	if (res && res->getNodeType() == core::NT_GenericType) {
+		const string& name = res.as<core::GenericTypePtr>()->getFamilyName();
+		if (interceptor.isIntercepted(name)) {
+			addHeaderForDecl(res, type->getAsCXXRecordDecl(), interceptor.getStdLibDirectories());
+		}
+	}
+
+	return res;
+}	
 
 } // end utils namespace
 } // end frontend namespace

@@ -287,7 +287,7 @@ using insieme::transform::pattern::anyList;
 								getVariableArg(call->getArgument(4), builder)), builder.castExpr(basic.getUInt4(), subScriptValue));
                         if(hostPtr->getType()->getNodeType() != NT_RefType) // to do a scalarToAnyRef we need an Expression with ref type
                         	hostPtr = builder.refVar(hostPtr);
-						ExpressionPtr pos = builder.callExpr(basic.getRefToAnyRef(), builder.callExpr(basic.getScalarToArray(), hostPtr));
+						ExpressionPtr pos = builder.callExpr(basic.getScalarToArray(), hostPtr);
 						ExpressionList args;
 						args.push_back(call->getArgument(0));
 						args.push_back(call->getArgument(1));
@@ -582,7 +582,7 @@ using insieme::transform::pattern::anyList;
 								irp::callExpr(irp::literal("array.ref.elem.1D"), var("2var") << *any) <<
 								irp::callExpr(irp::literal("ref.deref"), single(irp::callExpr(irp::literal("array.ref.elem.1D"), var("3var") << *any))))))),
 								irp::callExpr(irp::literal("ref.deref"), single(var("bufVar", irp::variable(any, any)))) <<
-								irp::castExpr(any, irp::literal(any, any)) << *any);
+								irp::exprOfType(atom(builder.getLangBasic().getUInt4())) << *any);
 
 		TreePatternPtr delTree = irp::callExpr(any, irp::literal("ref.delete"), single(var("bufVar", irp::variable(any, any))));
 

@@ -37,7 +37,11 @@
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include "clang/AST/Decl.h"
+#pragma GCC diagnostic pop
 // DON'T MOVE THIS!
 
 #include <gtest/gtest.h>
@@ -99,18 +103,20 @@ TEST(CppConversion, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/cpp.cpp" );
+	fe::ConversionJob job;
+
+	fe::Program prog(manager, job);
+	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/cpp.cpp") );
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+//		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
 		fe::conversion::ConversionFactory convFact( mgr, prog, true/*=isCXX*/ );
-		convFact.setTranslationUnit(tu);
+		convFact.setTranslationUnit(&tu);
 /*
 		if(tp.isStatement()){
 			const clang::Stmt* td = tp.getStatement();

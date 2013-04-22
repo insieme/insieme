@@ -7,22 +7,18 @@ cmake_minimum_required(VERSION 2.6)
 enable_testing()
 
 # include modules
-add_subdirectory( utils )
-add_subdirectory( core )
-add_subdirectory( annotations )
-add_subdirectory( frontend )
-add_subdirectory( backend )
-add_subdirectory( analysis )
-add_subdirectory( transform )
-add_subdirectory( xml )
-add_subdirectory( driver )
-add_subdirectory( runtime )
-add_subdirectory( machine_learning )
-add_subdirectory( playground )
+get_filename_component( curdir ${CMAKE_CURRENT_LIST_FILE} PATH )
+file(GLOB children RELATIVE ${curdir} ${curdir}/*)
+foreach( child ${children} )
+	if ( EXISTS ${curdir}/${child}/CMakeLists.txt )
+		add_subdirectory( ${child} )
+	endif()
+endforeach()
+
 
 #-- Add an Option to toggle the generation of the API documentation
-option(BUILD_DOCUMENTATION "Use Doxygen to create the HTML based API documentation" OFF)
-if(BUILD_DOCUMENTATION)
+option(BUILD_DOXYGEN "Use Doxygen to create the HTML based API documentation" OFF)
+if(BUILD_DOXYGEN)
 	FIND_PACKAGE(Doxygen)
 	if (NOT DOXYGEN_FOUND)
 		message(FATAL_ERROR "Doxygen is needed to build the documentation. Please install it correctly")
@@ -31,7 +27,7 @@ if(BUILD_DOCUMENTATION)
 	configure_file(Doxyfile.in ${PROJECT_BINARY_DIR}/Doxyfile  @ONLY IMMEDIATE)
 	
 	#-- Add a custom target to run Doxygen when ever the project is built
-	add_custom_target (Docs ALL 
+	add_custom_target (doxygen ALL 
   		COMMAND ${DOXYGEN_EXECUTABLE} ${PROJECT_BINARY_DIR}/Doxyfile
   		SOURCES ${PROJECT_BINARY_DIR}/Doxyfile)
 
@@ -39,7 +35,3 @@ if(BUILD_DOCUMENTATION)
 	# then leave out the 'ALL' keyword from the above command.
 endif()
 
-#-- Install the examples for using insieme
-install (FILES ../extra/insieme_lib/insieme_test.cpp DESTINATION examples/)
-install (FILES ../extra/insieme_lib/infile.c DESTINATION examples/)
-install (FILES ../extra/insieme_lib/Makefile DESTINATION examples/)

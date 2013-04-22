@@ -251,7 +251,7 @@ namespace core {
 } // end namespace insieme
 
 void dump(const insieme::core::NodePtr& node, std::ostream& out) {
-	out << insieme::core::printer::PrettyPrinter(node) << std::endl;
+	dumpPretty(node, out);
 }
 
 void dumpText(const insieme::core::NodePtr& node, std::ostream& out) {
@@ -259,12 +259,14 @@ void dumpText(const insieme::core::NodePtr& node, std::ostream& out) {
 }
 
 void dumpPretty(const insieme::core::NodePtr& node, std::ostream& out) {
-	out << insieme::core::printer::PrettyPrinter(node) << std::endl;
+	insieme::core::printer::PrettyPrinter print(node);
+	print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
+	out << print << std::endl;
 }
 
 void dumpDetail(const insieme::core::NodePtr& node, std::ostream& out) {
-	out << insieme::core::printer::PrettyPrinter(node,
-				insieme::core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL
-			) << std::endl;
+	insieme::core::printer::PrettyPrinter print(node, insieme::core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL);
+	print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
+	out << print << std::endl;
 }
 

@@ -227,21 +227,35 @@ namespace types {
 						addEqualityConstraints(constraints, paramA, paramB);
 					}
 
-					// ... and fall-through to check the child types
-				}
-				case NT_FunctionType:
+					// check parameter types
+					for (auto it = make_paired_iterator(genParamType->getTypeParameter().begin(), genArgType->getTypeParameter().begin());
+							it != make_paired_iterator(genParamType->getTypeParameter().end(), genArgType->getTypeParameter().end()); ++it) {
 
-					if (nodeTypeA == NT_FunctionType) {
-						FunctionTypePtr funA = static_pointer_cast<const FunctionType>(typeA);
-						FunctionTypePtr funB = static_pointer_cast<const FunctionType>(typeB);
-
-						if (funA->isPlain() != funB->isPlain()) {
-							// unable to satisfy equality constraint
-							constraints.makeUnsatisfiable();
-							return;
+						// filter int-type parameter
+						if (it->first->getNodeCategory() == NC_Type) {
+							// add equality constraints recursively
+							addEqualityConstraints(constraints,
+									static_pointer_cast<const Type>(it->first),
+									static_pointer_cast<const Type>(it->second)
+							);
 						}
 					}
 
+					break;
+				}
+				case NT_FunctionType: {
+
+					FunctionTypePtr funA = static_pointer_cast<const FunctionType>(typeA);
+					FunctionTypePtr funB = static_pointer_cast<const FunctionType>(typeB);
+
+					if (funA->getKind() != funB->getKind()) {
+						// unable to satisfy equality constraint
+						constraints.makeUnsatisfiable();
+						return;
+					}
+
+					// ... fall-through to next check (all child-type check)
+				}
 				case NT_TupleType:
 				{
 					// the number of sub-types must match

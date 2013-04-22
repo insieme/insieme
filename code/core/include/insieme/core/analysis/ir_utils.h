@@ -165,6 +165,8 @@ static inline TypePtr getReferencedType(const TypePtr& type) {
     return getReferencedType(dynamic_pointer_cast<const RefType>(type));
 }
 
+// ----------------------------------- Type-Literals ----------------------------
+
 /**
  * Tests whether the given type is a type used for type literals. Hence, whether
  * the type is of the from type<'a> where 'a may be a variable or concrete type.
@@ -204,14 +206,6 @@ static inline bool isTypeLiteral(const NodePtr& node) {
 }
 
 /**
- * Tests whether the given node is a constructor expression.
- *
- * @param node the node to be tested
- * @return true if the given node is a constructor, false otherwise
- */
-bool isConstructorExpr(const NodePtr& node);
-
-/**
  * Extracts the represented type from the given type literal type.
  *
  * @param type the type literal type
@@ -231,6 +225,66 @@ static inline TypePtr getRepresentedType(const TypePtr& type) {
 static inline TypePtr getRepresentedType(const ExpressionPtr& expr) {
 	return getRepresentedType(expr->getType());
 }
+
+// ----------------------------------- Type-Parameter ----------------------------
+
+/**
+ * Checks whether the given type is a int-type-param literal type.
+ *
+ * @param type the type to be checked
+ * @return true if it is a int-type-param literal type, false otherwise
+ */
+bool isIntTypeParamType(const TypePtr& type);
+
+/**
+ * Checks whether the given literal is an int-type-param literal.
+ *
+ * @param literal the literal to be tested
+ * @return true if so, false otherwise
+ */
+static inline bool isIntTypeParamLiteral(const LiteralPtr& literal) {
+	return literal && isIntTypeParamType(literal->getType());
+}
+
+/**
+ * Checks whether the given node is an int-type-param literal.
+ *
+ * @param node the node to be tested
+ * @return true if so, false otherwise
+ */
+static inline bool isIntTypeParamLiteral(const NodePtr& node) {
+	return node && isIntTypeParamLiteral(node.isa<LiteralPtr>());
+}
+
+/**
+ * Extracts the int-type parameter represented by the given int-type-parameter type.
+ *
+ * @param type the int-type-param type to be processed
+ * @return the extracted int-type parameter
+ */
+static inline IntTypeParamPtr getRepresentedTypeParam(const TypePtr& type) {
+	assert(isIntTypeParamType(type));
+	return type.as<GenericTypePtr>()->getIntTypeParameter()[0];
+}
+
+/**
+ * Extract the int-type parameters represented by the given int-type-parameter literal.
+ *
+ * @param expr the literal / expression to be processed.
+ * @return the extracted int-type parameter
+ */
+static inline IntTypeParamPtr getRepresentedTypeParam(const ExpressionPtr& expr) {
+	return getRepresentedTypeParam(expr->getType());
+}
+
+
+/**
+ * Tests whether the given node is a constructor expression.
+ *
+ * @param node the node to be tested
+ * @return true if the given node is a constructor, false otherwise
+ */
+bool isConstructorExpr(const NodePtr& node);
 
 /**
  * Collects a set of all variables encountered within the given code fragment (and
@@ -269,6 +323,24 @@ VariableList getFreeVariables(const NodePtr& code);
  * @return the list of addresses referencing those addresses
  */
 vector<VariableAddress> getFreeVariableAddresses(const NodePtr& code);
+
+/**
+ * Extracts a list of exit point addresses within the given statement. All
+ * exit points are either break, continue or return statements.
+ *
+ * @param stmt the statement for which the exit points should be computed
+ * @return the list of exit point addresses rooted by the stmt
+ */
+vector<StatementAddress> getExitPoints(const StatementPtr& stmt);
+
+/**
+ * Extracts a list of exit point addresses within the given statement. All
+ * exit points are either break, continue or return statements.
+ *
+ * @param stmt the statement for which the exit points should be computed
+ * @return the list of exit point addresses extending the given stmt address
+ */
+vector<StatementAddress> getExitPoints(const StatementAddress& stmt);
 
 /**
  * Retrieves the name of variable in the outer scope where it has been declared.
@@ -314,6 +386,16 @@ CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const Expre
  * @return true if found, false otherwise
  */
 bool contains(const NodePtr& code, const NodePtr& element);
+
+/**
+ * Tests if the variable is ever asigned or used by reference, if so, is not considered a read only
+ * variable
+ * is not desdendign into lambdas, only evaluates closest scope
+ * @param context the IR structure inspected
+ * @param var the variable we are testing
+ * @return true if the variable is never assigned or used by reference
+ */
+bool isReadOnly(const StatementPtr& context, const VariablePtr& var);
 
 } // end namespace utils
 } // end namespace core

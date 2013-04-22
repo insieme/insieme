@@ -40,6 +40,7 @@
 #include "insieme/utils/string_utils.h"
 
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/transform/node_replacer.h"
 
 // #include "boost/optional.hpp"
 
@@ -55,11 +56,27 @@ namespace xml {
 class XmlElement;
 }
 
+
+
 namespace frontend {
 namespace omp {
 
+
+
+/**
+ * This is the root class for OpenMP annotations, be aware that this is not an IR Annotation (see OmpBaseAnnotation).
+ */
+class Annotation {
+public:
+	virtual std::ostream& dump(std::ostream& out) const { return out; }
+	virtual void replaceUsage (const core::NodeMap& map){
+		// default annotation references no IR nodes
+	}
+};
+typedef std::shared_ptr<Annotation> AnnotationPtr;
+
 DEFINE_TYPE(BaseAnnotation);
-DEFINE_TYPE(Annotation);
+//DEFINE_TYPE(Annotation);
 DEFINE_TYPE(Reduction);
 DEFINE_TYPE(Schedule);
 DEFINE_TYPE(Collapse);
@@ -88,15 +105,15 @@ DEFINE_TYPE(Atomic);
  *
  * The omp::BaseAnnotation node will contains a list of omp pragmas which are associated to the IR node.
  */
-class BaseAnnotation : public utils::CompoundAnnotation<omp::Annotation ,core::NodeAnnotation> {
+class BaseAnnotation : public insieme::utils::CompoundAnnotation<omp::Annotation ,core::NodeAnnotation> {
 public:
 	static const string NAME;
-    static const utils::StringKey<BaseAnnotation> KEY;
+    static const insieme::utils::StringKey<BaseAnnotation> KEY;
 
-    BaseAnnotation(const utils::CompoundAnnotation< omp::Annotation >::AnnotationList& annotationList):
-    	utils::CompoundAnnotation< omp::Annotation , core::NodeAnnotation >(annotationList) { }
+    BaseAnnotation(const insieme::utils::CompoundAnnotation< omp::Annotation >::AnnotationList& annotationList):
+    	insieme::utils::CompoundAnnotation< omp::Annotation , core::NodeAnnotation >(annotationList) { }
 
-    const utils::AnnotationKeyPtr getKey() const { return &KEY; }
+    const insieme::utils::AnnotationKeyPtr getKey() const { return &KEY; }
 	const std::string& getAnnotationName() const { return NAME; }
 
 	const std::string toString() const;
@@ -110,17 +127,22 @@ public:
 		return true;
 	}
 
-private:
-	AnnotationList annotationList;
+
+	void replaceUsage (const core::ExpressionPtr& old, const core::ExpressionPtr& replacement){
+		core::NodeMap map;
+		map [old] = replacement;
+		replaceUsage(map);
+	}
+
+	void replaceUsage (const core::NodeMap& map){
+		// for each annotation in the list
+		for (auto cur : getAnnotationList()){
+			cur->replaceUsage (map);
+		}
+	}
 };
 
-/**
- * This is the root class for OpenMP annotations, be aware that this is not an IR Annotation (see OmpBaseAnnotation).
- */
-class Annotation {
-public:
-	virtual std::ostream& dump(std::ostream& out) const { return out; }
-};
+
 
 class Barrier: public Annotation {
 public:
@@ -134,10 +156,15 @@ public:
 typedef std::vector<core::ExpressionPtr> VarList;
 typedef std::shared_ptr<VarList> VarListPtr;
 
+void replaceVars (core::ExpressionPtr& expr, core::NodeMap map);
+
+void replaceVars (VarListPtr& list, core::NodeMap map);
+
+
 class Reduction {
 public:
 	// operator = + or - or * or & or | or ^ or && or ||
-	enum Operator { PLUS, MINUS, STAR, AND, OR, XOR, LAND, LOR };
+	enum Operator { PLUS, MINUS, MUL, AND, OR, XOR, LAND, LOR };
 
 	Reduction(const Operator& op, const VarListPtr& vars): op(op), vars(vars) { }
 	const Operator& getOperator() const { return op; }
@@ -151,7 +178,7 @@ public:
 		switch(op) {
 		case PLUS: 	return "+";
 		case MINUS: return "-";
-		case STAR: 	return "*";
+		case MUL: 	return "*";
 		case AND: 	return "&";
 		case OR:	return "|";
 		case XOR:	return "^";
@@ -159,6 +186,11 @@ public:
 		case LOR:	return "||";
 		}
 		assert(false && "Operator doesn't exist");
+		return "?";
+	}
+
+	void replaceUsage (const core::NodeMap& map){
+		replaceVars (vars, map);
 	}
 
 private:
@@ -196,7 +228,13 @@ public:
 		case RUNTIME: 	return "runtime";
 		}
 		assert(false && "Scheduling kind doesn't exist");
+		return "?";
 	}
+
+	void replaceUsage (const core::NodeMap& map){
+		replaceVars (chunkExpr, map);
+	}
+
 private:
 	Kind kind;
 	core::ExpressionPtr chunkExpr;
@@ -223,6 +261,7 @@ public:
 		case NONE: 		return "none";
 		}
 		assert(false && "Mode doesn't exist");
+		return "?";
 	}
 
 private:
@@ -262,6 +301,12 @@ public:
 	bool hasNoWait() const { return noWait; }
 
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		replaceVars (lastPrivateClause, map);
+		replaceVars (collapseExpr, map);
+		scheduleClause->replaceUsage(map);
+	}
 };
 
 class SharedParallelAndTaskClause {
@@ -283,6 +328,11 @@ public:
 	const VarList& getShared() const { assert(hasShared()); return *sharedClause; }
 
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		replaceVars (ifClause, map);
+		replaceVars (sharedClause, map);
+	}
 };
 
 class ParallelClause: public SharedParallelAndTaskClause {
@@ -305,6 +355,11 @@ public:
 	const VarList& getCopyin() const { assert(hasCopyin()); return *copyinClause; }
 
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		replaceVars (copyinClause, map);
+		replaceVars (numThreadClause, map);
+	}
 };
 
 class CommonClause {
@@ -322,6 +377,11 @@ public:
 	const VarList& getFirstPrivate() const { assert(hasFirstPrivate()); return *firstPrivateClause; }
 
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		if(privateClause)  		replaceVars (privateClause, map);
+		if(firstPrivateClause) 	replaceVars (firstPrivateClause, map);
+	}
 };
 
 
@@ -380,6 +440,10 @@ public:
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		if (hasReduction()) reductionClause->replaceUsage (map);
+	}
 };
 
 /**
@@ -418,6 +482,10 @@ public:
 	}
 
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		if (hasReduction()) reductionClause->replaceUsage (map);
+	}
 };
 
 class SectionClause {
@@ -439,6 +507,11 @@ public:
 	bool hasNoWait() const { return noWait; }
 
 	std::ostream& dump(std::ostream& out) const;
+	
+	virtual void replaceUsage (const core::NodeMap& map){
+		replaceVars (lastPrivateClause, map);
+		if (hasReduction()) reductionClause->replaceUsage (map);
+	}
 };
 
 /**
@@ -478,6 +551,12 @@ public:
 			SectionClause(lastPrivateClause, reductionClause, noWait) { }
 
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		ParallelClause::replaceUsage ( map);
+		SectionClause::replaceUsage ( map);
+	}
+
 };
 
 /**
@@ -508,6 +587,11 @@ public:
 	bool hasNoWait() const { return noWait; }
 
 	std::ostream& dump(std::ostream& out) const;
+	
+	virtual void replaceUsage (const core::NodeMap& map){
+		replaceVars (copyPrivateClause, map);
+		CommonClause::replaceUsage(map);
+	}
 };
 
 /**
@@ -532,6 +616,11 @@ public:
 	const Reduction& getReduction() const { assert(false); return dummy; }
 
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		DatasharingClause::replaceUsage(map);
+		SharedParallelAndTaskClause::replaceUsage(map);
+	}
 };
 
 /**
@@ -585,6 +674,10 @@ public:
 	const VarList& getVarList() const { assert(hasVarList()); return *varList; }
 
 	std::ostream& dump(std::ostream& out) const;
+	
+	virtual void replaceUsage (const core::NodeMap& map){
+		replaceVars (varList, map);
+	}
 };
 
 /**

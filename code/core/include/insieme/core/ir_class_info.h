@@ -42,6 +42,7 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/analysis/ir++_utils.h"
+#include "insieme/core/analysis/normalize.h"
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/lazy.h"
@@ -91,7 +92,7 @@ namespace core {
 		 * @param _const marks the resulting member function to be const
 		 */
 		MemberFunction(const string& name, const ExpressionPtr& impl, bool _virtual = false, bool _const = false)
-			: name(name), impl(impl), m_virtual(_virtual), m_const(_const) {
+			: name(name), impl(core::analysis::normalize(impl)), m_virtual(_virtual), m_const(_const) {
 			assert(impl->getNodeType() == NT_LambdaExpr || analysis::isPureVirtual(impl));
 		}
 
@@ -378,7 +379,7 @@ namespace core {
 		bool operator==(const ClassMetaInfo& other) const {
 			return  this == &other || (
 						virtualDestructor == other.virtualDestructor &&
-						equals(constructors, constructors, equal_target<LambdaExprPtr>()) &&
+						equals(constructors, other.constructors, equal_target<LambdaExprPtr>()) &&
 						equalTarget(destructor, other.destructor) &&
 						memberFunctions == other.memberFunctions
 					);

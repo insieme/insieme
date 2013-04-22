@@ -262,6 +262,11 @@ template<typename B, typename T, typename E = typename B::element_type>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 static_address_cast(const Address<T>& src);
 
+// forward declaration for dynamic cast
+template<typename B, typename T, typename E = typename B::element_type>
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
+dynamic_address_cast(const Address<T>& src);
+
 /**
  * This immutable value class can be used to address nodes within the AST. Since nodes within the AST are shared,
  * the same node may be reused at multiple locations within the AST. Hence, a simple pointer would be insufficient for
@@ -363,6 +368,14 @@ public:
 	template<typename R>
 	typename boost::enable_if<is_ir_address<R>, R>::type as() const {
 		return static_address_cast<R>(*this);
+	}
+
+	/**
+	 * Returns if a class is an instance of R
+	 */
+	template<typename R>
+	typename boost::enable_if<is_ir_address<R>, R>::type isa() const {
+		return dynamic_address_cast<R>(*this);
 	}
 
 	/**
@@ -652,7 +665,7 @@ public:
 	template<typename S>
 	bool operator<(const Address<S>& other) const {
 		// use the path comparison operation
-		return path < other.path;
+		return path < other.getPath();
 	}
 
 	/**

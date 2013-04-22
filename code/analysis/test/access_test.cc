@@ -1212,13 +1212,13 @@ TEST(Access, StridedSubset) {
 	auto rAccess1 = cast<Subscript>(access1);
 	EXPECT_TRUE(rAccess1->getContext());
 	EXPECT_EQ(rAccess1->getContext(), rootNode);
-	EXPECT_EQ("((((-v2 + 4 >= 0) ^ (v2 + -2*v7 + -1 == 0)) ^ (v2 + -1 >= 0)) ^ (-v2 + v4294967295 == 0))", 
+	EXPECT_EQ("((((-v2 + 4 >= 0) ^ (v2 + -2*v12 + -1 == 0)) ^ (v2 + -1 >= 0)) ^ (-v2 + v4294967295 == 0))", 
 			toString(*rAccess1->getRange()));
 
 	auto rAccess2 = cast<Subscript>(access2);
 	EXPECT_TRUE(rAccess2->getContext());
 	EXPECT_EQ(rAccess2->getContext(), rootNode);
-	EXPECT_EQ("((((-v4 + 8 >= 0) ^ (v4 + -2*v8 + -1 == 0)) ^ (v4 + -1 >= 0)) ^ (-v4 + v4294967295 + -1 == 0))", 
+	EXPECT_EQ("((((-v4 + 8 >= 0) ^ (v4 + -2*v13 + -1 == 0)) ^ (v4 + -1 >= 0)) ^ (-v4 + v4294967295 + -1 == 0))", 
 			toString(*rAccess2->getRange()));
 
 	auto ctx = polyhedral::makeCtx();

@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/backend/backend.h"
-#include "insieme/backend/function_manager.h"
+#include "insieme/backend/runtime/runtime_backend.h"
 
 namespace insieme {
 namespace backend {
@@ -50,28 +50,18 @@ namespace ocl_host {
 	/**
 	 * The OpenCL Host backend aims on generating pure sequential code without
 	 * any dependencies to any runtime implementation.
+	 *
+	 * This backend converts the given IR representation into pure C99-target code.
 	 */
-	class OCLHostBackend : public Backend {
+	class OCLHostBackend : public runtime::RuntimeBackend {
 		// optional path to dump the binary of the kernel after preprocessing
 		const std::string kernelDumpPath;
 	public:
 		/**
-		 * default constructor
+		 * A (default) constructor allowing to set up the kernel dump-path.
 		 */
-		OCLHostBackend(){}
-
-		/**
-		 * constructor setting the kernelDumpPath
-		 */
-		OCLHostBackend(const std::string& kernelDumpPath) : kernelDumpPath(kernelDumpPath) {}
-
-		/**
-		 * A factory method obtaining a smart pointer referencing a
-		 * fresh instance of the OpenCL Host backend using the default configuration.
-		 *
-		 * @return a smart pointer to a fresh instance of the sequential backend
-		 */
-		static OCLHostBackendPtr getDefault();
+		OCLHostBackend(bool includeEffortEstimation, const string& kernelDumpPath)
+			: runtime::RuntimeBackend(includeEffortEstimation), kernelDumpPath(kernelDumpPath) {}
 
 		/**
 		 * A factory method obtaining a smart pointer referencing a
@@ -80,20 +70,19 @@ namespace ocl_host {
 		 * @param kernelDumpPath a path to dump the binary of the kernel after preprocessing
 		 * @return a smart pointer to a fresh instance of the sequential backend
 		 */
-		static OCLHostBackendPtr getDefault(const std::string& kernelDumpPath);
+		static OCLHostBackendPtr getDefault(const std::string& kernelDumpPath = "", bool includeEffortEstimations = false);
+
+	protected:
 
 		/**
-		 * The main facade function of the OpenCL Host backend. This function converts the given
-		 * IR representation into pure C99-target code.
+		 * Creates the converter instance realizing the OpenCL Host backend conversion job.
 		 *
-		 * @param source the program to be converted
-		 * @return a pointer to the converted target code
+		 * @param manager the manager to be utilized for the conversion
+		 * @return a converter instance conducting the code conversion
 		 */
-		backend::TargetCodePtr convert(const core::NodePtr& source) const;
+		virtual Converter buildConverter(core::NodeManager& manager) const;
 
 	};
-
-	FunctionIncludeTable& addOpenclHostFunctionIncludes(FunctionIncludeTable& table);
 
 } // end namespace ocl_host
 } // end namespace backend

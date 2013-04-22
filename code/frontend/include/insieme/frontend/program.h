@@ -37,8 +37,10 @@
 #pragma once
 
 #include <set>
+#include <boost/filesystem.hpp>
 
 #include "insieme/core/ir_program.h"
+#include "insieme/frontend/frontend.h"
 #include "insieme/frontend/compiler.h"
 
 #include "insieme/utils/logging.h"
@@ -70,8 +72,10 @@ protected:
 	ClangCompiler			mClang;
 	insieme::frontend::pragma::PragmaList 		mPragmaList;
 public:
-	TranslationUnit() { }
-	TranslationUnit(const std::string& fileName): mFileName(fileName), mClang(fileName) { }
+	TranslationUnit(const ConversionJob& job) : mFileName(job.getFile()), mClang(job) {
+		assert(job.getFiles().size() == 1u && "Only a single file per translation unit allowed!");
+	}
+
 	/**
 	 * Returns a list of pragmas defined in the translation unit
 	 */
@@ -108,12 +112,13 @@ class Program: public boost::noncopyable {
 	// The IR program node containing the converted IR
 	insieme::core::ProgramPtr mProgram;
 	
+	const ConversionJob config;
 
 	friend class ::TypeConversion_FileTest_Test;
 	friend class ::StmtConversion_FileTest_Test;
 public:
 	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
-	Program(insieme::core::NodeManager& mgr);
+	Program(core::NodeManager& mgr, const ConversionJob& job = ConversionJob());
 
 	~Program();
 	
@@ -121,28 +126,27 @@ public:
 	utils::Indexer& getIndexer() const;
 	
 	utils::FunctionDependencyGraph& getCallGraph() const;
-	void intercept(std::string fileName);
+	const vector<boost::filesystem::path>& getStdLibDirs() const;
+	void setupInterceptor();
 	void analyzeFuncDependencies();
 	void dumpCallGraph() const;
 
 	/**
-	 * Add a single file to the program
+	 * Add a single file to the program.
+	 *
+	 * @param job a job covering a single translation unit (one input file only!)
 	 */
-	TranslationUnit& addTranslationUnit(const std::string& fileName);
+	TranslationUnit& addTranslationUnit(const ConversionJob& job);
 	
-	/**
-	 * Add a single file to the program
-	 */
-	TranslationUnit& createEmptyTranslationUnit();
-
 	/**
 	 * Add multiple files to the program
 	 */
-	void addTranslationUnits(const std::vector<std::string>& fileNames) {
-		std::for_each(fileNames.begin(), fileNames.end(), 
-				[ this ](const std::string& fileName) { 
-				this->addTranslationUnit(fileName); 
-			});
+	void addTranslationUnits(const ConversionJob& job) {
+		for(const auto& cur : job.getFiles()) {
+			ConversionJob single = job;
+			single.setFiles(toVector(cur));
+			addTranslationUnit(single);
+		}
 	}
 
 	// convert the program into the IR representation

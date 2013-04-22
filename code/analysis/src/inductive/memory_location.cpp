@@ -39,6 +39,7 @@
 #include "insieme/core/lang/basic.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/utils/unused.h"
 
 namespace insieme {
 namespace analysis {
@@ -49,7 +50,7 @@ namespace inductive {
 
 	MemoryLocation::MemoryLocation(const core::ExpressionAddress& constructor)
 		: constructor(constructor), dataPath(constructor.getNodeManager()) {
-		auto& basic = constructor.getNodeManager().getLangBasic();
+		__unused auto& basic = constructor.getNodeManager().getLangBasic();
 		assert(
 				(isCallOf(constructor.getAddressedNode(), basic.getRefVar()) ||
 			     isCallOf(constructor.getAddressedNode(), basic.getRefNew()))

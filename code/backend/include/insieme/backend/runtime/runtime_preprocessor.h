@@ -62,7 +62,17 @@ namespace runtime {
 	 * Yes, the name is a working title ...
 	 */
 	class WorkItemizer : public PreProcessor {
+		bool includeEffortEstimation;
 	public:
+		WorkItemizer(bool includeEffortEstimation = false) : includeEffortEstimation(includeEffortEstimation) {}
+		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
+	};
+
+	/**
+	 * A pre-processor counting the number of regions marked within the application and adding a call to an
+	 * instrumentation init-function forwarding this information to the init_context method.
+	 */
+	struct InstrumentationSupport : public PreProcessor {
 		virtual core::NodePtr process(const backend::Converter& converter, const core::NodePtr& code);
 	};
 

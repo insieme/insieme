@@ -64,6 +64,7 @@
 #define GET_HEADER_FOR(Fun) ( \
 		assert(context.getConverter().getFunctionManager().getHeaderFor(Fun) && "Requested unknown header file!"), \
 		*(context.getConverter().getFunctionManager().getHeaderFor(Fun)))
+#define ADD_HEADER(Header) context.getIncludes().insert(Header);
 #define ADD_HEADER_FOR(Fun) context.getIncludes().insert(GET_HEADER_FOR(Fun));
 
 /**

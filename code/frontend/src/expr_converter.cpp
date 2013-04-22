@@ -44,6 +44,8 @@
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/indexer.h"
+#include "insieme/frontend/utils/castTool.h"
+
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -56,8 +58,12 @@
 #include "insieme/utils/functional_utils.h"
 
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/lang/ir++_extension.h"
+
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
+
+#include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 
@@ -230,8 +236,8 @@ core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::T
 			auto declStmt = builder.declarationStmt(var, memAlloc);
 
 			auto memSet = builder.callExpr(
-					builder.literal(builder.parseType("(anyRef, int<4>, uint<8>) -> anyRef"), "memset"),
-					builder.callExpr(gen.getRefToAnyRef(), var), 
+					builder.literal(builder.parseType("(ref<any>, int<4>, uint<8>) -> ref<any>"), "memset"),
+					var,
 					builder.intLit(0), 
 					size);
 
@@ -304,6 +310,16 @@ core::ExpressionPtr ConversionFactory::ExprConverter::wrapVariable(const clang::
 
 core::ExpressionPtr ConversionFactory::ExprConverter::asLValue(const core::ExpressionPtr& value) {
 
+	// CPP references are Left side exprs but need to be IRized
+	core::TypePtr irType = value->getType();
+	if (core::analysis::isCppRef(irType)) {
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), value);
+	}
+	
+	if (core::analysis::isConstCppRef(irType)) {
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), value);
+	}
+
 	// this only works for call-expressions
 	if (value->getNodeType() != core::NT_CallExpr || value->getType()->getNodeType() == core::NT_RefType) {
 		return value;
@@ -353,6 +369,18 @@ core::ExpressionPtr ConversionFactory::ExprConverter::asLValue(const core::Expre
 
 core::ExpressionPtr ConversionFactory::ExprConverter::asRValue(const core::ExpressionPtr& value) {
 
+	// CPP ref are not Right values, return a ref
+	core::TypePtr irType = value->getType();
+	if (core::analysis::isCppRef(irType)) {
+		assert(false && "check if ever used!");
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), value);
+	}
+	
+	if (core::analysis::isConstCppRef(irType)) {
+		assert(false && "check if ever used!");
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), value);
+	}
+
 	// check whether value is parameter to the current function
 	if (value->getNodeType() == core::NT_Variable) {
 		auto var = value.as<core::VariablePtr>();
@@ -361,7 +389,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::asRValue(const core::Expre
 			return var;
 		}
 	}
-
+	
 	auto type = value->getType();
 	// adds a deref to expression in case expression is of a ref type, only if the target type is
 	// not a vector, nor an array, and not a ref ref
@@ -372,48 +400,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::asRValue(const core::Expre
 	return value;
 }
 
-template<class ClangExprTy>
-ExpressionList ConversionFactory::ExprConverter::getFunctionArguments(const core::IRBuilder& builder, ClangExprTy* callExpr,
-		const core::FunctionTypePtr& funcTy) {
-	ExpressionList args;
-	for (size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId) {
-		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
-		// core::TypePtr&& argTy = arg->getType();
-		if ( argId < funcTy->getParameterTypes().size() ) {
-			const core::TypePtr& funcArgTy = funcTy->getParameterTypes()[argId];
-			arg = utils::cast(arg, funcArgTy);
-		} else {
-			arg = utils::cast(arg, builder.getNodeManager().getLangBasic().getVarList());
-		}
-		args.push_back( arg );
-	}
-
-	return args;
-}
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								INTEGER LITERAL
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitIntegerLiteral(const clang::IntegerLiteral* intLit) {
 	START_LOG_EXPR_CONVERSION(intLit);
-
 	core::ExpressionPtr retExpr;
-
-	/**********************************************
-	 *  DEPRECATED CODE: do not read raw code
-	 *  1)  translation unit use is deprecated
-	 *  2)	templating may fail with this aproach
-	 *
-	std::string&& strVal =
-	GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), intLit->getExprLoc() );
-
-	core::GenericTypePtr intTy = core::static_pointer_cast<const core::GenericType>(
-			convFact.convertType(GET_TYPE_PTR(intLit)));
-
-	return (retExpr = builder.literal(
-	// retrieve the string representation from the source code
-			strVal, intTy));
-	*************************************************/
 
 	std::string value;
 	if (!intLit->getValue().isNegative()) {
@@ -450,17 +442,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitIntegerLiteral(const 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitFloatingLiteral(const clang::FloatingLiteral* floatLit) {
 	START_LOG_EXPR_CONVERSION(floatLit);
-
 	core::ExpressionPtr retExpr;
-
-	/* ****************************************************
-	 * DEPRECATED CODE
-	return (retExpr =
-	// retrieve the string representation from the source code
-			builder.literal(
-					GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), floatLit->getExprLoc()),
-					convFact.convertType(GET_TYPE_PTR(floatLit))));
-	**************************************************/
 
 	const llvm::fltSemantics& sema = floatLit->getValue().getSemantics();
 
@@ -481,17 +463,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitFloatingLiteral(const
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitCharacterLiteral(const clang::CharacterLiteral* charLit) {
 	START_LOG_EXPR_CONVERSION(charLit);
-
 	core::ExpressionPtr retExpr;
-
-	/* ****************************************************
-	 * DEPRECATED CODE
-	return (retExpr = builder.literal(
-			// retrieve the string representation from the source code
-			GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), charLit->getExprLoc()),
-			(charLit->getKind() == CharacterLiteral::Wide ?
-					mgr.getLangBasic().getWChar() : mgr.getLangBasic().getChar())));
-	********************************************************/
 	
 	string value;
 	unsigned int v = charLit->getValue();
@@ -604,115 +576,24 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitGNUNullExpr(const cla
 	return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(type));
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//						  IMPLICIT CAST EXPRESSION
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
-	START_LOG_EXPR_CONVERSION(castExpr);
-
-	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
-	auto type = convFact.convertType(GET_TYPE_PTR(castExpr));
-
-	LOG_EXPR_CONVERSION(retIr);
-
-	// capture the case of cast to arrays. because arrays cannot exists without a ref we need 
-	// to make sure to add a refVar to the element 
-	if (utils::isRefArray(type) && utils::isVector(retIr->getType()))
-	{
-		return retIr = utils::cast(builder.refVar(retIr), type);
-	}
-
-	// handle implicit casts according to their kind
-	switch (castExpr->getCastKind()) {
-	case CK_LValueToRValue:
-		return (retIr = asRValue(retIr));
-
-	case CK_ArrayToPointerDecay:
-		return retIr;
-
-	case CK_NoOp:
-		//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
-		return retIr;
-
-	default:
-		// use default cast expr handling (fallback)
-		return (retIr = VisitCastExpr(castExpr));
-	}
-	assert(false);
+	return VisitCastExpr(castExpr);
 }
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//						EXPLICIT CAST EXPRESSION
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr) {
-	START_LOG_EXPR_CONVERSION(castExpr);
-
-	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
-	LOG_EXPR_CONVERSION(retIr);
-
-	VLOG(2) << retIr << " " << retIr->getType();
-	switch (castExpr->getCastKind()) {
-
-	case CK_NoOp:
-		//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
-		return retIr;
-
-	default:
-		// use default cast expr handling (fallback)
-		return (retIr = VisitCastExpr(castExpr));
-	}
-
-	assert(false);
+	return VisitCastExpr(castExpr);
 }
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//								CAST EXPRESSION
+//						  CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(const clang::CastExpr* castExpr) {
 	START_LOG_EXPR_CONVERSION(castExpr);
 
-	core::ExpressionPtr retIr;
-	LOG_EXPR_CONVERSION(retIr);
+	core::ExpressionPtr inIr = Visit(castExpr->getSubExpr());
+	core::TypePtr  type = convFact.convertType(GET_TYPE_PTR(castExpr));
 
-	retIr = Visit(castExpr->getSubExpr());
-	auto nonRefExpr = convFact.tryDeref(retIr);
-
-	auto type = convFact.convertType(GET_TYPE_PTR(castExpr));
-
-	if (gen.isUnit(type)) { return gen.getUnitConstant(); }
-
-	// if the cast is to a 'void*' type then we simply skip it
-	if (gen.isAnyRef(type)) { return retIr; }
-
-	if ((type->getNodeType() == core::NT_RefType) && (*retIr == *builder.literal(retIr->getType(), "0"))) {
-		return (retIr = builder.callExpr(gen.getGetNull(),
-				builder.getTypeLiteral(GET_REF_ELEM_TYPE(type))));
-	}
-
-	// Mallocs/Allocs are replaced with ref.new expression
-	if (core::ExpressionPtr&& retExpr = handleMemAlloc(builder, type, retIr))
-		return (retIr = retExpr);
-
-	// If the subexpression is a string, remove the implicit casts
-	if (gen.isString(retIr->getType())) {
-		return retIr;
-	}
-
-	// handle truncation of floating point numbers
-	const core::TypePtr& subExprType = retIr->getType();
-	if (subExprType->getNodeType() == core::NT_RefType) {
-		// check whether it is a truncation
-		if (gen.isReal(GET_REF_ELEM_TYPE(subExprType)) && gen.isSignedInt(type)) {
-			const core::GenericTypePtr& intType = static_pointer_cast<const core::GenericType>(type);
-			return (retIr = builder.callExpr(type, gen.getRealToInt(), nonRefExpr,
-					builder.getIntTypeParamLiteral(intType->getIntTypeParameter()[0])));
-		}
-	}
-
-	VLOG(2) << retIr << retIr->getType();
-	// LOG(DEBUG) << *subExpr << " -> " << *type;
-	// Convert casts form scalars to vectors to vector init exrpessions
-	return (retIr = utils::cast(retIr, type));
+	core::ExpressionPtr&& retIr = utils::performClangCastOnIR (builder, castExpr, type, inIr);
+	END_LOG_EXPR_CONVERSION(retIr);
+	return retIr;
 }
 
 
@@ -724,7 +605,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 
 	// return converted node
 	core::ExpressionPtr irNode;
-	LOG_EXPR_CONVERSION(irNode);
 
 	if (callExpr->getDirectCallee()) {
 
@@ -733,8 +613,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 
 		// collects the type of each argument of the expression
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
-
-		assert(!convFact.currTU.empty() && "Translation unit not set.");
 
 		const FunctionDecl* definition = NULL;
 		const TranslationUnit* rightTU = NULL;
@@ -749,47 +627,47 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			if (rightTU && fd->hasBody()) { definition = fd; }
 		}
 
-		// point to the right TU
-		if (rightTU)
-			convFact.currTU.push (rightTU);
-		else
-			convFact.currTU.push (convFact.currTU.top());
-
-
-		if (!definition) {
-			//-----------------------------------------------------------------------------------------------------
-			//     						Handle of 'special' built-in functions
-			//-----------------------------------------------------------------------------------------------------
-			// free(): check whether this is a call to the free() function
-			if (funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
-				// in the case the free uses an input parameter
-				if (args.front()->getType()->getNodeType() == core::NT_RefType) {
-					return (irNode = builder.callExpr(builder.getLangBasic().getUnit(),
-							builder.getLangBasic().getRefDelete(), args.front()));
-				}
-
-				// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
-				core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
-				core::ExpressionPtr delOp =
-						*arg->getType() == *builder.getLangBasic().getAnyRef() ?
-								builder.getLangBasic().getAnyRefDelete() : builder.getLangBasic().getRefDelete();
-
-				// otherwise this is not a L-Value so it needs to be wrapped into a variable
-				return (irNode = builder.callExpr(builder.getLangBasic().getUnit(), delOp, arg));
-			}
-		}
+			
 
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
 		// No definition has been found in any translation unit, 
 		// we mark this function as extern. and return
 		if (!definition) {
-			std::string callName = funcDecl->getNameAsString();
-			irNode = builder.callExpr(funcTy->getReturnType(), builder.literal(callName, funcTy),
-					packedArgs);
+
+			//-----------------------------------------------------------------------------------------------------
+			//     						Handle of 'special' built-in functions
+			//-----------------------------------------------------------------------------------------------------
+			// free(): check whether this is a call to the free() function
+			if (funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1) {
+				//FIXME remove -- deprecated  -- use normal agrument handling code
+				/*
+				// in the case the free uses an input parameter
+				if (args.front()->getType()->getNodeType() == core::NT_RefType) {
+					
+					irNode = builder.callExpr(builder.getLangBasic().getUnit(),
+							builder.getLangBasic().getRefDelete(), args.front());
+				}
+				*/
+				if (args.front()->getType()->getNodeType() != core::NT_RefType) {
+					assert(false && "free should not use byValue");
+					// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
+					core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
+					core::ExpressionPtr delOp = builder.getLangBasic().getRefDelete();
+
+					// otherwise this is not a L-Value so it needs to be wrapped into a variable
+					return (irNode = builder.callExpr(builder.getLangBasic().getUnit(), delOp, arg));
+				}
+			}
+
+			irNode = convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
+
+			//build callExpr
+			irNode = builder.callExpr(funcTy->getReturnType(), irNode, packedArgs);
 
 			// In the case this is a call to MPI, attach the loc annotation, handlling of those
 			// statements will be then applied by mpi_sema
+			std::string callName = funcDecl->getNameAsString();
 			if (callName.compare(0, 4, "MPI_") == 0) {
 
 				auto loc = std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
@@ -803,6 +681,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 				);
 			}
 
+			END_LOG_EXPR_CONVERSION(irNode);
 			return irNode;
 		}
 
@@ -817,23 +696,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 		}
 
-		// function definition might be already processed and cached, 
-		// otherwise create the call expression node,
-		ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
-		if (fit != ctx.lambdaExprCache.end()) {
-			irNode = builder.callExpr(funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second),
-					 packedArgs);
-
-			convFact.currTU.pop();
-			return irNode;
-		}
-
 		assert(definition && "No definition found for function");
 
-		auto lambdaExpr = core::static_pointer_cast<const core::Expression>(
-				convFact.convertFunctionDecl(definition));
+		auto lambdaExpr = convFact.convertFunctionDecl(definition).as<core::ExpressionPtr>();
 
-		convFact.currTU.pop();
 		return (irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs));
 	} 
 
@@ -856,7 +722,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 		auto funcTy = subTy.as<core::FunctionTypePtr>();
 
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
-		return irNode = builder.callExpr(funcPtr, args);
+		irNode = builder.callExpr(funcPtr, args);
+		END_LOG_EXPR_CONVERSION(irNode);
+		return irNode;
 	} 
 	
 	assert( false && "Call expression not referring a function");
@@ -945,12 +813,18 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitMemberExpr(const clan
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
 
 	if(membExpr->isArrow()) {
-		/*
-		 * we have to check whether we currently have a ref or probably an array (which is used to represent
-		 * C pointers)
-		 */
-		//VLOG(2) << "is arrow " << base->getType();
+		// we have to check whether we currently have a ref or probably an array (which is used to represent C pointers)
 		base = getCArrayElemRef(builder, base);
+	}
+	else{
+		// if is not a pointer member, it might be that is a CPP ref
+		core::TypePtr irType = base->getType();
+		if (core::analysis::isCppRef(irType)) {
+			base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), base);
+		}
+		else if (core::analysis::isConstCppRef(irType)) {
+			base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), base);
+		}
 	}
 
 	core::TypePtr structTy = base->getType();
@@ -997,15 +871,14 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitMemberExpr(const clan
 
 	assert(ident);
 
-	auto memberTy = structTy.as<core::NamedCompositeTypePtr>()->getTypeOfMember(ident);
-	auto resType = memberTy;
-
-	assert(resType);
+	core::TypePtr resType = structTy.as<core::NamedCompositeTypePtr>()->getTypeOfMember(ident);
+	core::TypePtr membTy = resType;
+	assert(membTy);
 	if (base->getType()->getNodeType() == core::NT_RefType) {
-		resType = builder.refType(resType);
+		membTy = builder.refType(membTy);
 	}
 
-	retIr = builder.callExpr(resType, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
+	retIr = builder.callExpr(membTy, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(resType));
 
 	END_LOG_EXPR_CONVERSION(retIr);
 	VLOG(2) << "End of expression MemberExpr\n";
@@ -1019,8 +892,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 	START_LOG_EXPR_CONVERSION(binOp);
 	core::ExpressionPtr retIr;
 
-	core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
 	core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
+	core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
+
+	core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
 
 	// handle of volatile variables
 	if (binOp->getOpcode() != BO_Assign && core::analysis::isVolatileType(lhs->getType()) ) {
@@ -1038,7 +913,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		// the return type of this lambda is the type of the last expression (according to the C
 		// standard) 
 		std::vector<core::StatementPtr> stmts { lhs };
-		// LOG(INFO) << core::analysis::isCallOf(rhs, gen.getRefAssign());
 		if (core::analysis::isCallOf(rhs, gen.getRefAssign())) {
 			stmts.push_back(rhs);
 			auto retExpr = rhs.as<core::CallExprPtr>()->getArgument(0);
@@ -1049,14 +923,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			stmts.push_back(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs));
 			retType = rhs->getType();
 		}
-		// LOG(INFO) << stmts;
 		return (retIr = builder.createCallExprFromBody(builder.compoundStmt(stmts), retType));
 	}
-
-	// the type of this expression is the type of the LHS expression
-	core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
-	//	lhs->getType()->getNodeType() == core::NT_RefType ?
-	//		GET_REF_ELEM_TYPE(lhs->getType()) : lhs->getType();
 
 	// get basic element type
 	core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
@@ -1099,12 +967,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		// LHS must be a ref<array<'a>>
 		core::TypePtr subRefTy = GET_REF_ELEM_TYPE(lhs->getType());
 
-		// In the case we have ref<ref<array<>>> then we deref again the argument 
-		if (core::analysis::isRefType(subRefTy)) {
-			lhs = builder.deref(lhs);
-			subRefTy = lhs->getType();
-		}
-
 		assert( core::analysis::isRefType(lhs->getType()) );
 		if(subRefTy->getNodeType() == core::NT_VectorType)
 			lhs = builder.callExpr(gen.getRefVectorToRefArray(), lhs);
@@ -1114,21 +976,25 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		assert( (baseOp == BO_Add || baseOp == BO_Sub) &&
 				"Operators allowed in pointer arithmetic are + and - only");
 
-		assert(GET_REF_ELEM_TYPE(lhs->getType())->getNodeType() == core::NT_ArrayType &&
-				"LHS operator must be of type ref<array<'a,#l>>");
-
 		// LOG(INFO) << rhs->getType();
 		assert(gen.isInt(rhs->getType()) && "Array view displacement must be a signed int");
 		if (gen.isUnsignedInt(rhs->getType()))
 			rhs = builder.castExpr(gen.getInt8(), rhs);
 
+
+		// compound operator do not deref the target var (no implicit LtoR cast)
+		// we need a right side in the operation call
+		core::ExpressionPtr arg = lhs;
+		if (isCompound)
+			arg = builder.deref(lhs);
+
 		// check whether the RHS is of integer type
-		rhs = builder.callExpr(gen.getArrayView(), lhs, baseOp == BO_Add ? rhs : builder.invertSign(rhs));
+		rhs = builder.callExpr(gen.getArrayView(), arg, baseOp == BO_Add ? rhs : builder.invertSign(rhs));
 	};
 
 	if ( isCompound ) {
 		// we check if the RHS is a ref, in that case we use the deref operator
-		rhs = convFact.tryDeref(rhs);
+		//rhs = convFact.tryDeref(rhs);
 
 		// We have a compound operation applied to a ref<array<'a>> type which is probably one of
 		// the function parameters, We have to wrap this variable in a way it becomes a
@@ -1136,6 +1002,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		if (core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType()) &&
 			core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType) 
 		{
+			assert(false && "who uses this?");
 			lhs = wrapVariable(binOp->getLHS());
 		}
 
@@ -1213,15 +1080,15 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			 * non REF type. What we need to do is introduce a declaration for these variables and use the created
 			 * variable on the stack instead of the input parameters
 			 */
-			lhs = wrapVariable(binOp->getLHS());
-
+			
 			// make sure the lhs is a L-Value
 			lhs = asLValue(lhs);
 
-			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
-			assert( lhs->getType()->getNodeType() == core::NT_RefType && "LHS operand must be of type ref<'a>.");
+			// why to cast? 
+			// some casts are not pressent in IR
+			if (gen.isPrimitive(rhs->getType()))
+				rhs = utils::castScalar(GET_REF_ELEM_TYPE(lhs->getType()), rhs);
 
-			rhs = utils::cast(rhs, GET_REF_ELEM_TYPE(lhs->getType()));
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
 			exprTy = gen.getUnit();
@@ -1233,11 +1100,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 
 	// Operators && and || introduce short circuit operations, this has to be directly supported in the IR.
 	if ( baseOp == BO_LAnd || baseOp == BO_LOr ) {
-		lhs = utils::cast(lhs, gen.getBool());
-		rhs = utils::cast(rhs, gen.getBool());
-		// lazy evaluation of RHS
-		exprTy = gen.getBool();
+		lhs = utils::castToBool(lhs);
+		rhs = utils::castToBool(rhs);
 
+		// lazy evaluation of RHS
+		// generate a bind call
+		exprTy = gen.getBool();
 		rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 	}
 
@@ -1251,8 +1119,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 		" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 
-		if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
-				binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
+		if (binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
+			binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
 			
 			lhs = utils::cast(lhs, exprTy);
 			// check if lhs is not an ocl-vector, in this case create a vector form the scalar
@@ -1287,54 +1155,46 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			assert(false && "Never reach this point");
 		}
 
+		// FIXME: need some coments in here....
 		if (!core::analysis::isRefType(rhs->getType()) && 
-			(utils::isRefArray(lhs->getType()) || utils::isRefVector(lhs->getType()))
-		) {
+			(utils::isRefArray(lhs->getType()) || utils::isRefVector(lhs->getType()))) {
 			doPointerArithmetic();	
 			return (retIr = rhs);
 		}
 
+		// FIXME: need some coments in here....
 		if (!core::analysis::isRefType(lhs->getType()) && 
-			(utils::isRefArray(rhs->getType()) || utils::isRefVector(rhs->getType()))
-		) {
+			(utils::isRefArray(rhs->getType()) || utils::isRefVector(rhs->getType()))) {
 			std::swap(rhs, lhs);
 			doPointerArithmetic();	
 			return (retIr = rhs);
 		}
 	
 		if (utils::isRefArray(lhs->getType()) &&  utils::isRefArray(rhs->getType()) &&
-			baseOp == BO_Sub)
-		{
+			baseOp == BO_Sub) {
 			return retIr = builder.callExpr( gen.getArrayRefDistance(), lhs, rhs);
 		}
 
-		if ( lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType)
-		{
-			// ----------------------------- Hack begin --------------------------------
-			// TODO: this is a quick solution => maybe clang allows you to determine the actual type
-			// => otherwise the sub-type checks within the core may be used
-			//
-			// Bug fixed by this:
-			//		when multiplying an integer with a double, the double is casted to an integer and the
-			//		results is an integer.
-			//
-
-			// check whether result type needs to be adjusted
-			// if (*lhsTy != *rhsTy) {
-			//	// if second argument is a real
-			//	if (!gen.isReal(lhsTy) && gen.isReal(rhsTy)) {
-			//		exprTy = rhsTy;
-			//	}
-			//}
-			// ----------------------------- Hack end --------------------------------
+		if (lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
 			// all binary operators have the same input and result types
 			if (baseOp != BO_LAnd && baseOp != BO_LOr) {
+
 				lhs = utils::cast(lhs, convFact.convertType( GET_TYPE_PTR(binOp->getLHS())) );
 				rhs = utils::cast(rhs, convFact.convertType( GET_TYPE_PTR(binOp->getRHS())) );
 				
 				// LOG(INFO) << lhs->getType() << " " << rhs->getType(); 
 				if (*lhs->getType()==*rhs->getType()) {
 					exprTy = lhs->getType();
+				}
+				else{
+					// both expressions have same type but different precission
+					// one of the two expressions has widder precission this is the return value we want
+					if ( utils::getPrecission(lhs->getType(),gen) < utils::getPrecission(rhs->getType(),gen)){
+						exprTy = rhs->getType();
+					}
+					else{
+						exprTy = lhs->getType();
+					}
 				}
 				// LOG(INFO) << exprTy;
 			}
@@ -1346,41 +1206,26 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			assert(*lhsTy == *rhsTy && "Comparing incompatible types");
 			opFunc = gen.getOperator(lhsTy, op);
 		}
-		if ( const DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS()) ) {
+		/*if ( const DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS()) ) {
 			if ( isa<ArrayType>(declRefExpr->getDecl()->getType().getTypePtr()) )
 				assert(false && "Pointer arithmetic not yet supported");
+		}*/
+		if(isLogical) { 
+			exprTy = gen.getBool(); 
+			opFunc = gen.getOperator(lhs->getType(), op);
 		}
-		if(isLogical) { exprTy = gen.getBool(); }
 
 	} else {
 		// check if there is a kernelFile annotation
 		ocl::attatchOclAnnotation(rhs, binOp, convFact);
 	}
-
 	assert(opFunc);
-
-	/*if ( !isAssignment ) {*/
-	//// We know thie operator now we have to make sure that all the arguments are of the correct type
-	//core::FunctionTypePtr funcTy = core::static_pointer_cast<const core::FunctionType>( opFunc->getType() );
-	//assert(funcTy->getParameterTypes().size() == 2);
-	//core::TypePtr lhsFuncTy = funcTy->getParameterTypes()[0];
-	//if (!gen.isUIntGen(lhsFuncTy) && !gen.isRealGen(lhsFuncTy) && !gen.isIntGen(lhsFuncTy)) {
-	//lhs = cast(lhsFuncTy, lhs);
-	//}
-	//core::TypePtr rhsFuncTy = funcTy->getParameterTypes()[1];
-	//if (!gen.isUIntGen(rhsFuncTy) && !gen.isRealGen(rhsFuncTy) && !gen.isIntGen(rhsFuncTy)) {
-	//rhs = cast(rhsFuncTy, rhs);
-	//}
-	//if (*lhsFuncTy == *rhsFuncType && *lhs->getType() != *rhs->getType()) {
-	//// we still need to adjust
-	//}
-	/*}*/
-	// add source code annotation to the rhs if present
 	
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 				" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 
 	retIr = builder.callExpr( exprTy, opFunc, lhs, rhs );
+	END_LOG_EXPR_CONVERSION(retIr);
 	return retIr;
 }
 
@@ -1400,6 +1245,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(const c
 	[ this, &builder, &gen ]
 	(core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
 
+		/*
+		 * FIXME: REMOVE
+		 * sure we dont need this?
 		if ((subExpr->getNodeType() == core::NT_Variable && 
 			 subExpr->getType()->getNodeType() != core::NT_RefType) 
 			|| 
@@ -1419,7 +1267,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(const c
 			}
 
 			subExpr = fit->second;
-		}
+		}*/
 
 		core::TypePtr type = subExpr->getType();
 		assert( type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type" );
@@ -1469,12 +1317,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitUnaryOperator(const c
 	// &a
 	case UO_AddrOf:
 		{
-			/*
-			 * We need to be careful paramvars are not dereferenced and the address passed around. If this happens
-			 * we have to declare a variable holding the memory location for that value and replace every use of
-			 * the paramvar with the newly generated variable: the structure needRef in the ctx is used for this
-			 */
-			retIr = wrapVariable(unOp->getSubExpr());
+			retIr = subExpr;
 
 			// in the case we are getting the address of a function the & operator
 			// has no effects, therefore we return
@@ -1549,11 +1392,11 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 	core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr());
 	core::ExpressionPtr condExpr  = Visit( condOp->getCond() );
 
-	condExpr = utils::cast(condExpr, gen.getBool());
+	condExpr = utils::castToBool(condExpr);
 
 	// Dereference eventual references
-	if ( retTy->getNodeType() == core::NT_RefType && !utils::isRefArray(retTy) ) 
-	{
+	if ( retTy->getNodeType() == core::NT_RefType && !utils::isRefArray(retTy) ) {
+
 		retTy = GET_REF_ELEM_TYPE(retTy);
 	}
 
@@ -1602,7 +1445,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitArraySubscriptExpr(co
 	// IDX
 	core::ExpressionPtr idx = convFact.tryDeref( Visit( arraySubExpr->getIdx() ) );
 	if (!gen.isUInt4(idx->getType())) {
-		idx = builder.castExpr(gen.getUInt4(), idx);
+		idx =  utils::castScalar(gen.getUInt4(), idx);
 	}
 
 	// BASE
@@ -1730,7 +1573,14 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitDeclRefExpr(const cla
 	core::ExpressionPtr retExpr;
 	if (const ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())) {
 		VLOG(2) << "Parameter type: " << convFact.convertType(parmDecl->getOriginalType().getTypePtr() );
-		return ( retIr = convFact.lookUpVariable( parmDecl ) );
+		
+		retIr = convFact.lookUpVariable( parmDecl );
+		auto fit = ctx.wrapRefMap.find(retIr.as<core::VariablePtr>());
+		if (fit == ctx.wrapRefMap.end()) {
+			fit = ctx.wrapRefMap.insert(std::make_pair(retIr.as<core::VariablePtr>(),
+													   builder.variable(builder.refType(retIr->getType())))).first;
+		}
+		return fit->second;
 	}
 	if ( const VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
 

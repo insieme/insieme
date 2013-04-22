@@ -54,7 +54,9 @@
 #include "insieme/core/analysis/attributes.h"
 
 #include <boost/iostreams/stream.hpp>
-#include <boost/iostreams/concepts.hpp> 
+#include <boost/iostreams/concepts.hpp>
+
+#include "insieme/core/parser2/detail/lexer.h"
 
 namespace insieme {
 namespace core {
@@ -956,16 +958,18 @@ namespace {
 		// Range -> IR nodes map
 		SourceLocationMap& srcMap;
 
-		InspireMapPrinter(boost::iostreams::stream<OutputStreamWrapper>& out, SourceLocationMap& srcMap, const PrettyPrinter& printer)
-				: InspirePrinter(out, printer), out(out), wout(*out), srcMap(srcMap) { }
+		InspireMapPrinter(boost::iostreams::stream<OutputStreamWrapper>& out, 
+				SourceLocationMap& srcMap, 
+				const PrettyPrinter& printer)
+			: InspirePrinter(out, printer), out(out), wout(*out), srcMap(srcMap) { }
 
 		void visit(const NodePtr& node) {
 
 			out.flush();
-			SourceLocation&& start = wout.getSrcLoc();
+			SourceLocation start = wout.getSrcLoc();
 			InspirePrinter::visit(node);
 			out.flush();
-			SourceLocation&& end = wout.getSrcLoc();
+			SourceLocation end = wout.getSrcLoc();
 
 			srcMap.insert( std::make_pair(SourceRange(start,end), node) );
 		}
@@ -1073,6 +1077,20 @@ namespace {
 		ADD_FORMATTER(basic.getSignedIntDiv(), { PRINT_ARG(0); OUT("/"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntMod(), { PRINT_ARG(0); OUT("%"); PRINT_ARG(1); });
 
+		ADD_FORMATTER(basic.getUnsignedIntNot(), { OUT("~"); PRINT_ARG(0); });
+		ADD_FORMATTER(basic.getUnsignedIntAnd(), { PRINT_ARG(0); OUT("&"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntOr(), { PRINT_ARG(0); OUT("|"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntXor(), { PRINT_ARG(0); OUT("^"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntLShift(), { PRINT_ARG(0); OUT("<<"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntRShift(), { PRINT_ARG(0); OUT(">>"); PRINT_ARG(1); });
+
+		ADD_FORMATTER(basic.getSignedIntNot(), { OUT("~"); PRINT_ARG(0); });
+		ADD_FORMATTER(basic.getSignedIntAnd(), { PRINT_ARG(0); OUT("&"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntOr(), { PRINT_ARG(0); OUT("|"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntXor(), { PRINT_ARG(0); OUT("^"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntLShift(), { PRINT_ARG(0); OUT("<<"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntRShift(), { PRINT_ARG(0); OUT(">>"); PRINT_ARG(1); });
+
 		// nicer inlined versions of the && and || operators
 //		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); if (HAS_OPTION(NO_EVAL_LAZY)) PRINT_ARG(1); else PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
@@ -1121,6 +1139,8 @@ namespace {
 
 		ADD_FORMATTER(basic.getBarrier(), { OUT("barrier()"); });
 
+		ADD_FORMATTER(basic.getAtomic(), { OUT("atomic("); PRINT_ARG(0); OUT(", "); PRINT_ARG(1); OUT(", "); PRINT_ARG(2); OUT(")"); });
+
 		if (!config.hasOption(PrettyPrinter::NO_LIST_SUGAR)) {
 			// add semantic sugar for list handling
 			const encoder::ListExtension& ext = config.root->getNodeManager().getLangExtension<encoder::ListExtension>();
@@ -1163,7 +1183,7 @@ SourceLocationMap printAndMap( std::ostream& out, const insieme::core::printer::
 	SourceLocationMap srcMap;
 	
 	InspireMapPrinter printer(wrappedOutStream, srcMap, print);
-	printer.visit(print.root);
+	printer.print(print.root);
 	wrappedOutStream.flush();
 
 	return srcMap;
@@ -1183,9 +1203,53 @@ namespace std {
  * @return a reference to the output stream
  */
 std::ostream& operator<<(std::ostream& out, const insieme::core::printer::PrettyPrinter& print) {
-	// use inspire printer to print the code ...
-	insieme::core::printer::InspirePrinter printer(out, print);
-	printer.print(print.root);
+
+	// print code into string buffer
+	std::stringstream buffer;
+	insieme::core::printer::InspirePrinter(buffer, print).print(print.root);
+
+	// use buffer content if there is no color highlighting required
+	if (!print.hasOption(insieme::core::printer::PrettyPrinter::USE_COLOR)) {
+		return out << buffer.str();
+	}
+
+
+	// add syntax highlighting to output code by using the lexer from the parser
+	using namespace insieme::core::parser::detail;
+	auto tokens = lex(buffer.str(), false);
+
+	// print tokens one-by-one
+	for (auto cur : tokens) {
+
+		// select formating of current token
+		// color codes - see: http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
+		switch(cur.getType()) {
+		case Token::Type::Symbol: 			out << "\033[0m"; break;
+		case Token::Type::Keyword: 			out << "\033[1m"; break;
+		case Token::Type::Comment: 			out << "\033[2m"; break;
+		case Token::Type::Identifier: 		out << "\033[0m"; break;
+		case Token::Type::Bool_Literal:		out << "\033[1m"; break;
+		case Token::Type::Char_Literal:		out << "\033[2m"; break;
+		case Token::Type::Int_Literal:		out << "\033[1m"; break;
+		case Token::Type::Float_Literal:	out << "\033[1m"; break;
+		case Token::Type::Double_Literal:	out << "\033[1m"; break;
+		case Token::Type::String_Literal:	out << "\033[2m"; break;
+		case Token::Type::WhiteSpace:		out << "\033[0m"; break;
+		}
+
+		// special cases (differences between parser and printer)
+		if (cur.getLexeme() == "fun") out << "\033[1m";
+		if (cur.getLexeme() == "job") out << "\033[1m";
+		if (cur.getLexeme() == "bind") out << "\033[1m";
+
+		// print token
+		out << cur.getLexeme();
+
+		// clear formating
+		out << "\033[0m";
+	}
+
+	// done
 	return out;
 }
 
@@ -1197,8 +1261,8 @@ std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::Sourc
 		std::string&& stmt = toString(*it->second);
 		size_t length = stmt.length();
 		
-		std::cout << "@ RANGE: " << it->first << std::endl 
-			      << "\t-> IR node [addr: " << &*it->second << "] ";
+		out << "@ RANGE: " << it->first << std::endl 
+		    << "\t-> IR node [addr: " << &*it->second << "] ";
 	   
 		if(length < 10)
 			out << stmt;

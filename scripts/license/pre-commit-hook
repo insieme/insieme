@@ -1,0 +1,30 @@
+#!/bin/sh
+#
+# In this pre-commit hook we are verifying that all files have
+# the proper license header before commiting them.
+#
+
+
+for f in `git diff --cached --name-only | grep -i "code/.*\.\(h\|hpp\|c\|cpp\|cxx\|cl\|cc\|inc\|def\|in\)$"` ; do
+
+	# check whether disk version is the same as the version to be commited
+	git diff --quiet $f
+	upToDate=$?
+	
+	# adding license to file (if not present)
+	ruby ./scripts/license/licensor.rb ./scripts/license/license_header.txt $f
+	licened=$?
+
+	# check whether modification can / needs to be commited
+	if [ $licened -eq 0 ] ; then 
+		if [ $upToDate -eq 0 ] ; then
+			# newly licented file can be commited
+			git add $f
+		else
+			# license had to be added, but there are uncommited changes
+			echo "ERROR: file $f required licening but contained uncommited changes!\n"
+			exit 1		# abort commit
+		fi
+	fi
+
+done

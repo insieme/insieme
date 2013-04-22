@@ -37,11 +37,12 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
-
-#include "clang/AST/StmtVisitor.h"
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#include <clang/AST/StmtVisitor.h>
 #include <clang/AST/ExprCXX.h>
 #include <clang/AST/Expr.h>
+#pragma GCC diagnostic pop
 
 #include <iostream>
 #include <vector>
@@ -63,9 +64,11 @@ class temporariesVisitor : public clang::ConstStmtVisitor<temporariesVisitor, bo
 
 
 		bool 	Visit (const clang::Stmt *S){
-			std::cout << " ************************* " << std::endl;
 			if (llvm::isa<clang::CXXBindTemporaryExpr>(S))
 				tempList.push_back(llvm::cast<clang::CXXBindTemporaryExpr>(S)->getTemporary ());
+
+			for( clang::Stmt::const_child_iterator child_it = S->child_begin(); child_it!= S->child_end(); child_it++)
+				Visit(*child_it);
 
 			return false;
 		}

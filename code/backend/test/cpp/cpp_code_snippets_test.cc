@@ -586,6 +586,84 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}
 
+	TEST(CppSnippet, VectorConstruction) {
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		std::map<string, core::NodePtr> symbols;
+		symbols["createVector"] = mgr.getLangExtension<core::lang::IRppExtensions>().getVectorCtor();
+
+		auto res = builder.parseProgram(
+				R"(
+					let int = int<4>;
+					
+					let A = struct { int x; };
+					
+					let ctorA = A::() { 
+						this->x = 4; 
+					};
+					
+					int main() {
+						
+						let size = lit("not important" : intTypeParam<5>);
+
+						// create an array of objects of type A on the stack
+						ref<array<A,1>> a = createVector(ref.var, ctorA, size);
+						
+						// create an array of objects of type A on the heap
+						ref<array<A,1>> b = createVector(ref.new, ctorA, size);
+						
+//						// create an array of objects of type A on the stack
+//						ref<vector<A,5>> c = createVector(ref.var, ctorA, size);
+//						
+//						// create an array of objects of type A on the heap
+//						ref<vector<A,5>> d = createVector(ref.new, ctorA, size);
+
+						// update an element
+						a[3]->x = 12;
+						b[3]->x = 12;
+//						c[3]->x = 12;
+//						d[3]->x = 12;
+						
+						return 0;
+					}
+				)",
+				symbols
+		);
+
+		// TODO: also support ref<vector<X,y>> as the value type
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "A a[5u];");
+		EXPECT_PRED2(containsSubString, code, "A* b = new A[5u];");
+//		EXPECT_PRED2(containsSubString, code, "A c[5u];");
+//		EXPECT_PRED2(containsSubString, code, "A* d = new A[5u];");
+
+		EXPECT_PRED2(containsSubString, code, "a[3].x = 12;");
+		EXPECT_PRED2(containsSubString, code, "b[3].x = 12;");
+//		EXPECT_PRED2(containsSubString, code, "c[3].x = 12;");
+//		EXPECT_PRED2(containsSubString, code, "d[3].x = 12;");
+
+
+		// check whether ctor is present!
+		EXPECT_PRED2(containsSubString, code, "A();");
+		EXPECT_PRED2(containsSubString, code, "A::A() : x(4) {");
+
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
 	TEST(CppSnippet, InitializerList) {
 
 		core::NodeManager mgr;

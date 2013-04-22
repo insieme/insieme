@@ -79,6 +79,7 @@ int omp_get_ancestor_thread_num(int level);
 
 int omp_get_num_procs();
 
+double omp_get_wtime();
 
 // locks
 

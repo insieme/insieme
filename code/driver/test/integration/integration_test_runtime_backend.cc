@@ -46,18 +46,17 @@
 #include "insieme/backend/runtime/runtime_backend.h"
 
 #include "insieme/utils/compiler/compiler.h"
-#include "insieme/utils/test/integration_tests.h"
-#include "insieme/utils/cmd_line_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/timer.h"
 
 #include "insieme/driver/driver_config.h"
-
-#include "integration_tests.inc"
+#include "insieme/driver/integration/tests.h"
 
 namespace insieme {
+
+	using namespace driver::integration;
 
 	// ---------------------------------- Check the runtime backend -------------------------------------
 
@@ -69,7 +68,7 @@ namespace insieme {
 		core::NodeManager manager;
 
 		// obtain test case
-		utils::test::IntegrationTestCase testCase = GetParam();
+		driver::integration::IntegrationTestCase testCase = GetParam();
 
 		SCOPED_TRACE("Testing Case: " + testCase.getName());
 		LOG(INFO) << "Testing Case: " + testCase.getName();
@@ -81,7 +80,7 @@ namespace insieme {
 		}
 	
 		// load the code using the frontend
-		core::ProgramPtr code = load(manager, testCase);
+		core::ProgramPtr code = testCase.load(manager);
 
 
 		// create target code using the runtime backend

@@ -276,9 +276,14 @@ inline static void irt_schedule_loop(
 		irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 
+	irt_context* context = NULL;
+	int32 implicit_region_id = -1;
 	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_wi_implementation_variant_features* features = &(irt_context_get_current()->impl_table[impl_id].variants[0].features);
-	if(features->implicit_region_id >= 0) _irt_inst_pfor_start(features->implicit_region_id);
+		context = irt_context_get_current();
+		implicit_region_id = context->impl_table[impl_id].variants[0].features.implicit_region_id;
+		if(implicit_region_id >= 0) {
+			irt_inst_region_start_pfor(context, implicit_region_id);
+		}
 	#endif // ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
@@ -349,6 +354,8 @@ inline static void irt_schedule_loop(
 	default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
 	}
 
+	bool isLast = false;
+
 	// gather performance data if required & cleanup
 	#ifdef IRT_RUNTIME_TUNING
 	#ifdef IRT_RUNTIME_TUNING_EXTENDED
@@ -370,6 +377,7 @@ inline static void irt_schedule_loop(
 	#endif // ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 
 	if(part_inc == sched_data->policy.participants) {
+		isLast = true;
 		// sched_data no longer volatile, loop completed
 		#ifdef IRT_RUNTIME_TUNING_EXTENDED
 		irt_optimizer_completed_pfor(impl_id, base_range, irt_time_ticks() - sched_data->start_time, (irt_loop_sched_data*) sched_data);
@@ -379,11 +387,17 @@ inline static void irt_schedule_loop(
 		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time, (irt_loop_sched_data*) sched_data);
 		#endif // ifdef IRT_RUNTIME_TUNING_EXTENDED
 	}
-	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	if(features->implicit_region_id >= 0)
-		_irt_inst_pfor_end(features->implicit_region_id);
-	#endif
 	#endif // ifdef IRT_RUNTIME_TUNING
+
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		if(implicit_region_id >= 0) {
+			// end pfor-region
+			irt_inst_region_end_pfor(context, implicit_region_id,
+					(isLast) ? (irt_time_ticks() - sched_data->start_time) : 0,				// only the last is computing the wall time
+					(isLast) ? sched_data->cputime : 0										// only the last is adding cpu time
+			);
+		}
+	#endif  // ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 }
 
 void irt_wg_set_loop_scheduling_policy(irt_work_group* group, const irt_loop_sched_policy* policy) {
@@ -406,6 +420,7 @@ void irt_loop_sched_policy_init() {
 					irt_g_loop_sched_policy_default.type = IRT_STATIC_CHUNKED;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 					irt_g_loop_sched_policy_default.param.chunk_size = atoi(chunksize_str);
+					IRT_ASSERT(irt_g_loop_sched_policy_default.param.chunk_size > 0, IRT_ERR_INTERNAL, "Chunk size must not be 0");
 				} else {
 					irt_g_loop_sched_policy_default.type = IRT_STATIC;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
@@ -416,6 +431,7 @@ void irt_loop_sched_policy_init() {
 					irt_g_loop_sched_policy_default.type = IRT_DYNAMIC_CHUNKED;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 					irt_g_loop_sched_policy_default.param.chunk_size = atoi(chunksize_str);
+					IRT_ASSERT(irt_g_loop_sched_policy_default.param.chunk_size > 0, IRT_ERR_INTERNAL, "Chunk size must not be 0");
 				} else {
 					irt_g_loop_sched_policy_default.type = IRT_DYNAMIC;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
@@ -426,6 +442,7 @@ void irt_loop_sched_policy_init() {
 					irt_g_loop_sched_policy_default.type = IRT_GUIDED_CHUNKED;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;
 					irt_g_loop_sched_policy_default.param.chunk_size = atoi(chunksize_str);
+					IRT_ASSERT(irt_g_loop_sched_policy_default.param.chunk_size > 0, IRT_ERR_INTERNAL, "Chunk size must not be 0");
 				} else {
 					irt_g_loop_sched_policy_default.type = IRT_GUIDED;
 					irt_g_loop_sched_policy_default.participants = IRT_SANE_PARALLEL_MAX;

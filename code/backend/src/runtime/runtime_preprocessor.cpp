@@ -57,8 +57,6 @@
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
-#include "insieme/utils/cmd_line_utils.h"
-
 namespace insieme {
 namespace backend {
 namespace runtime {
@@ -404,12 +402,14 @@ using namespace insieme::transform::pattern;
 			const core::lang::BasicGenerator& basic;
 			const Extensions& ext;
 			core::IRBuilder builder;
+			bool includeEffortEstimation;
 
 		public:
 
-			WorkItemIntroducer(core::NodeManager& manager)
+			WorkItemIntroducer(core::NodeManager& manager, bool includeEffortEstimation)
 				: manager(manager), basic(manager.getLangBasic()),
-				  ext(manager.getLangExtension<Extensions>()), builder(manager) {}
+				  ext(manager.getLangExtension<Extensions>()), builder(manager),
+				  includeEffortEstimation(includeEffortEstimation) {}
 
 			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
@@ -688,7 +688,7 @@ using namespace insieme::transform::pattern;
 				// ------------- try build up function estimating loop range effort -------------
 
 				core::LambdaExprPtr effort;
-				if(CommandLineOptions::EstimateEffort) effort = getLoopEffortEstimationFunction(body);
+				if(includeEffortEstimation) effort = getLoopEffortEstimationFunction(body);
 				WorkItemVariantFeatures features = getFeatures(builder.callExpr(basic.getUnit(), body, builder.intLit(1), builder.intLit(2), builder.intLit(1)));
 
 				// ------------- finish process -------------
@@ -851,7 +851,47 @@ using namespace insieme::transform::pattern;
 
 
 	core::NodePtr WorkItemizer::process(const backend::Converter& converter, const core::NodePtr& node) {
-		return WorkItemIntroducer(converter.getNodeManager()).resolveElement(node);
+		return WorkItemIntroducer(converter.getNodeManager(), includeEffortEstimation).resolveElement(node);
+	}
+
+
+	core::NodePtr InstrumentationSupport::process(const backend::Converter& converter, const core::NodePtr& node) {
+		// get language extension
+		auto& mgr = converter.getNodeManager();
+		auto& rtExt = mgr.getLangExtension<insieme::backend::runtime::Extensions>();
+
+		// get max region id
+		unsigned max = 0;
+		core::visitDepthFirstOnce(node, [&](const core::CallExprPtr& call) {
+
+			// check whether this call is specifying some region ID
+			if (!(core::analysis::isCallOf(call, rtExt.instrumentationRegionStart) || core::analysis::isCallOf(call, rtExt.regionAttribute))) {
+				return;
+			}
+
+			// take first argument
+			assert(call[0]->getNodeType() == core::NT_Literal && "Region ID is expected to be a literal!");
+			unsigned regionId = call[0].as<core::LiteralPtr>()->getValueAs<unsigned>();
+			if (max < regionId) max = regionId;
+		});
+
+		// add information to application
+		core::NodeAddress root(node);
+		assert(node->getNodeType() == core::NT_Program);
+
+		core::ProgramAddress program = root.as<core::ProgramAddress>();
+		assert(program->size() == 1u);
+
+		// get body of lambda expression
+		core::LambdaExprAddress main = program[0].as<core::LambdaExprAddress>();
+		core::CompoundStmtAddress body = main->getBody();
+
+		// build init call
+		core::IRBuilder builder(mgr);
+		auto initStmt = builder.callExpr(mgr.getLangBasic().getUnit(), rtExt.instrumentationInitRegions, builder.uintLit(max + 1));
+
+		// insert into body
+		return core::transform::insert(mgr, body, initStmt, 0);
 	}
 
 

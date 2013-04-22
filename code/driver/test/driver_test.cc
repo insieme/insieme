@@ -38,7 +38,7 @@
 
 #include "insieme/core/ir_program.h"
 
-#include "insieme/frontend/program.h"
+#include "insieme/frontend/frontend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/driver/driver_config.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -61,12 +61,10 @@ TEST(DriverTest, HelloWorldTest) {
 	Logger::get(std::cerr, INFO);
 
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::get(manager);
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "/hello_world.c" << "' to IR...";
-	fe::Program prog(manager);
-	prog.addTranslationUnit(std::string(SRC_DIR) + "/hello_world.c");
-	program = prog.convert();
+	fe::ConversionJob job(SRC_DIR "/hello_world.c");
+	core::ProgramPtr program = job.execute(manager);
 	LOG(INFO) << "Done.";
 
     LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);

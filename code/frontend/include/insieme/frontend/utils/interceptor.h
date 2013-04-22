@@ -36,14 +36,22 @@
 
 #pragma once 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#include <clang/AST/Decl.h>
+#include <clang/AST/StmtVisitor.h>
+#include <clang/AST/TypeVisitor.h>
+#include <clang/AST/DeclTemplate.h>
+#pragma GCC diagnostic pop
+
+#include <boost/filesystem.hpp>
+
 #include "insieme/core/ir_builder.h"
 #include "insieme/utils/map_utils.h"
 
 #include "insieme/frontend/utils/indexer.h"
 
-#include "clang/AST/Decl.h"
-#include "clang/AST/StmtVisitor.h"
-
+#include <boost/regex.hpp>
 #include <map>
 
 namespace insieme {
@@ -59,64 +67,54 @@ class Interceptor {
 public:
 	Interceptor(
 			insieme::core::NodeManager& mgr,
-			insieme::frontend::utils::Indexer& indexer)
-		: indexer(indexer), builder(mgr)
+			insieme::frontend::utils::Indexer& indexer,
+			const vector<boost::filesystem::path>& stdLibDirs)
+		: indexer(indexer), builder(mgr), stdLibDirs(stdLibDirs)
 	{}
-
-	typedef std::set<const clang::Decl*> InterceptedDeclSet;
-	typedef std::set<const clang::Type*> InterceptedTypeSet;
-
-	typedef std::map<const clang::FunctionDecl*, std::string> InterceptedFuncMap;
-	typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> InterceptedExprCache;
-
-	InterceptedDeclSet& getInterceptedDecls() { return interceptedDecls; }
-	InterceptedFuncMap& getInterceptedFuncMap() { return interceptedFuncMap; }
 
 	void loadConfigFile(std::string fileName);	
 	void loadConfigSet(std::set<std::string> toIntercept);	
-	void intercept();
 	
-	bool isIntercepted(const clang::Decl* decl) const { return interceptedDecls.find(decl) != interceptedDecls.end(); }
+	bool isIntercepted(const string& name) const;
+	bool isIntercepted(const clang::Type* type) const;
+	bool isIntercepted(const clang::FunctionDecl* decl) const;
 
-	InterceptedExprCache buildInterceptedExprCache(insieme::frontend::conversion::ConversionFactory& convFact);
+	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::ConversionFactory& convFact);
+	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::ConversionFactory& convFact);
+
+	insieme::frontend::utils::Indexer& getIndexer() const {
+		return indexer;
+	}
+
+	const vector<boost::filesystem::path>& getStdLibDirectories() const {
+		return stdLibDirs;
+	}
 
 private:
 	insieme::frontend::utils::Indexer& indexer;
 	insieme::core::IRBuilder builder;
-	InterceptedDeclSet interceptedDecls;
-	InterceptedFuncMap interceptedFuncMap;
-	InterceptedTypeSet interceptedTypes;
 
-	//FIXME use regex instead of strings
+	const vector<boost::filesystem::path>& stdLibDirs;
+
 	std::set<std::string> toIntercept;
+	boost::regex rx;
 };
 
-struct InterceptVisitor : public clang::StmtVisitor<InterceptVisitor> {
+struct InterceptTypeVisitor : public clang::TypeVisitor<InterceptTypeVisitor, core::TypePtr> {
 
-	insieme::frontend::utils::Interceptor::InterceptedDeclSet& interceptedDecls;
-	insieme::frontend::utils::Interceptor::InterceptedTypeSet& interceptedTypes;
-	std::set<std::string>& toIntercept;
-
-	InterceptVisitor(
-			insieme::frontend::utils::Interceptor::InterceptedDeclSet& interceptedDecls, 
-			insieme::frontend::utils::Interceptor::InterceptedTypeSet& interceptedTypes,
-			std::set<std::string>& toIntercept) 
-		: interceptedDecls(interceptedDecls), 
-		interceptedTypes(interceptedTypes),
-		toIntercept(toIntercept)
-	{}
-
-	void intercept(const clang::FunctionDecl* d);
+	insieme::frontend::conversion::ConversionFactory& convFact;
+	const insieme::core::IRBuilder& builder;
+	const Interceptor& interceptor;
 	
-	void VisitStmt(clang::Stmt* stmt);
+	InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const Interceptor& interceptor);
 
-	void VisitDeclStmt(const clang::DeclStmt* declStmt);
+	//core::TypePtr VisitTypedefType(const clang::TypedefType* typedefType);
+	core::TypePtr VisitTagType(const clang::TagType* tagType);
+	core::TypePtr VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy);
+	core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType);
+	core::TypePtr Visit(const clang::Type* type);
+};
 
-	//void VisitCallExpr(const clang::CallExpr* callExpr) {};
-
-	//void VisitDeclRefExpr(const clang::DeclRefExpr* declRefExpr) {};
-}
-
-;} // end utils namespace
+} // end utils namespace
 } // end frontend namespace
 } // end insieme namespace

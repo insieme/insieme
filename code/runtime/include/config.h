@@ -44,9 +44,12 @@
 #define IRT_EVENT_LT_BUCKETS /*65536*/ /*64567*/ 97 /*7207301*/
 
 // scheduling policy
-//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
-//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
-#define IRT_SCHED_POLICY IRT_SCHED_POLICY_UBER
+#ifndef IRT_SCHED_POLICY
+	//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STATIC
+	//#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING_CIRCULAR
+	#define IRT_SCHED_POLICY IRT_SCHED_POLICY_UBER
+#endif
+
 #define IRT_LOOP_SCHED_POLICY_ENV "IRT_LOOP_SCHED_POLICY"
 
 // determines if workers should ever go to sleep
@@ -65,6 +68,10 @@
 #endif
 #define IRT_AFFINITY_POLICY_ENV "IRT_AFFINITY_POLICY"
 
+// minimal "hardware model", used for some hardware interaction like DVFS
+#define IRT_HW_CORES_PER_SOCKET 8
+#define IRT_HW_NUM_SOCKETS 4
+
 // maximum number of frequencies that can be stored
 #define IRT_INST_MAX_CPU_FREQUENCIES 32
 
@@ -82,6 +89,7 @@
 #define IRT_INST_WORKER_EVENT_TYPES_ENV "IRT_INST_WORKER_EVENT_TYPES"
 #define IRT_INST_WORKER_PD_BLOCKSIZE	512
 #define IRT_INST_REGION_LIST_SIZE 1024
+#define IRT_INST_REGION_MODE_ENV "IRT_INST_REGION_MODE"
 
 // performance counters
 // environment variable holding the papi events, separated by colons
