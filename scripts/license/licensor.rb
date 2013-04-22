@@ -25,7 +25,7 @@ match = LICENSE_REGEXP.match(file)
 # check if any existing license
 if(match)
 	# if up-to-date, exit
-	exit(0) if(match[0].strip == license.strip)
+	exit(1) if(match[0].strip == license.strip)
 	# else, delete existing license
 	file.sub!(match[0], "");
 end
@@ -39,3 +39,5 @@ outfn = ARGV[ARGV.length-1]
 File.open(outfn, "w+") do |f|
 	f.print(output)
 end
+
+exit(0)
