@@ -31,7 +31,7 @@ if(match)
 end
 
 # prepend new license
-output = license + file
+output = license + file.lstrip
 
 # write ouptput to code file, or output file if specified 
 outfn = ARGV[ARGV.length-1]
