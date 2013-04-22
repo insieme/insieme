@@ -102,7 +102,7 @@ TEST(SpeedTest, GetStatus) {
 	core::NodeManager manager;
 
 	// load test case
-	auto root = loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "pendulum");
 	ASSERT_TRUE(root);
 
 	std::cout << IRStatistic::evaluate(root) << "\n";
@@ -126,7 +126,7 @@ TEST(SpeedTest, IRCopy) {
 	core::NodeManager manager;
 
 	// load test case
-	auto root = loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "pendulum");
 	ASSERT_TRUE(root);
 
 	core::NodePtr root2;
@@ -149,7 +149,7 @@ TEST(SpeedTest, VisitAllPtr) {
 	core::NodeManager manager;
 	
 	// load test case
-	auto root = loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "pendulum");
 	ASSERT_TRUE(root);
 
 	// visit all pointer
@@ -172,7 +172,7 @@ TEST(SpeedTest, VisitOncePtr) {
 	core::NodeManager manager;
 
 	// load test case
-	auto root = loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "pendulum");
 	ASSERT_TRUE(root);
 
 	// visit all pointer
@@ -195,7 +195,7 @@ TEST(IRQualityTest, HashCollisions) {
 	core::NodeManager manager;
 
 	// load test case
-	auto root = loadIntegrationTest(manager, "nas/bt/w");
+	auto root = loadIntegrationTest(manager, "pendulum");
 	ASSERT_TRUE(root);
 
 	// check for hash collisions
