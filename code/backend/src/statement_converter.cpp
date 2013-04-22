@@ -196,6 +196,12 @@ namespace backend {
 		// convert literal
 		c_ast::ExpressionPtr res = converter.getCNodeManager()->create<c_ast::Literal>(ptr->getStringValue());
 
+		auto& basic = ptr->getNodeManager().getLangBasic();
+		if (basic.isPrimitive( ptr->getType() )){
+			auto type = converter.getTypeManager().getTypeInfo(ptr->getType());
+			return c_ast::cast(type.rValueType ,res);
+		}
+
 
 		// special handling for the global struct
 		if (!ptr->getStringValue().compare(0, IRExtensions::GLOBAL_ID.size(), IRExtensions::GLOBAL_ID)) {
