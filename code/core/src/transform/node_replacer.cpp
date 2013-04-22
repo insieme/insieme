@@ -925,32 +925,36 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toR
 
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const VariableMap& replacements) {
 
-	if (!root)
-		return root;
+	if (root){
 
-	// special handling for empty replacement map
-	if (replacements.empty()) {
-		return mgr.get(root);
+		// special handling for empty replacement map
+		if (replacements.empty()) {
+			return mgr.get(root);
+		}
+
+		// conduct actual substitutions
+		auto mapper = ::VariableMapReplacer<VariablePtr>(mgr, replacements);
+		return applyReplacer(mgr, root, mapper);
 	}
-
-	// conduct actual substitutions
-	auto mapper = ::VariableMapReplacer<VariablePtr>(mgr, replacements);
-	return applyReplacer(mgr, root, mapper);
+	else
+		return root;
 }
 
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const VarExprMap& replacements) {
 
-	if (!root)
-		return root;
+	if (root){
 
-	// special handling for empty replacement map
-	if (replacements.empty()) {
-		return mgr.get(root);
+		// special handling for empty replacement map
+		if (replacements.empty()) {
+			return mgr.get(root);
+		}
+
+		// conduct actual substitutions
+		auto mapper = ::VariableMapReplacer<ExpressionPtr>(mgr, replacements);
+		return applyReplacer(mgr, root, mapper);
 	}
-
-	// conduct actual substitutions
-	auto mapper = ::VariableMapReplacer<ExpressionPtr>(mgr, replacements);
-	return applyReplacer(mgr, root, mapper);
+	else
+		return root;
 }
 
 namespace {

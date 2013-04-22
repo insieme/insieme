@@ -196,7 +196,7 @@ public:
 	}
 
 	void replaceUsage (const core::NodeMap& map){
-		replaceVars (vars, map);
+		if(vars)replaceVars (vars, map);
 	}
 
 private:
@@ -238,7 +238,7 @@ public:
 	}
 
 	void replaceUsage (const core::NodeMap& map){
-		replaceVars (chunkExpr, map);
+		if(chunkExpr)replaceVars (chunkExpr, map);
 	}
 
 private:
@@ -309,9 +309,9 @@ public:
 	std::ostream& dump(std::ostream& out) const;
 
 	virtual void replaceUsage (const core::NodeMap& map){
-		replaceVars (lastPrivateClause, map);
-		replaceVars (collapseExpr, map);
-		scheduleClause->replaceUsage(map);
+		if(lastPrivateClause) replaceVars (lastPrivateClause, map);
+		if(collapseExpr)	 replaceVars (collapseExpr, map);
+		if(scheduleClause) 	scheduleClause->replaceUsage(map);
 	}
 };
 
