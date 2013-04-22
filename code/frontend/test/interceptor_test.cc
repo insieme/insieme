@@ -109,7 +109,8 @@ TEST(Interception, FileTest) {
 	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob( SRC_DIR "/inputs/interceptor/interceptor_test.cpp" ) );
 	//prog.addTranslationUnit( fe::ConversionJob( SRC_DIR "/inputs/interceptor/interceptor_header.cpp" ) );
 	
-	prog.intercept(std::string(SRC_DIR) + "/inputs/interceptor/interceptor_test.cfg");
+	//setting interceptor to use config file
+	prog.getInterceptor().loadConfigFile(std::string(SRC_DIR) + "/inputs/interceptor/interceptor_test.cfg");
 	
 	prog.analyzeFuncDependencies();
 

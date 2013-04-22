@@ -187,10 +187,14 @@ namespace frontend {
 struct Program::ProgramImpl {
 	utils::Indexer mIdx;
 	TranslationUnitSet tranUnits;
+	const vector<boost::filesystem::path> stdLibDirs;
 	utils::Interceptor interceptor;
 	utils::FunctionDependencyGraph funcDepGraph;
 		
-	ProgramImpl(core::NodeManager& mgr, const vector<string>& stdLibDirs) : mIdx(), interceptor(mgr, mIdx, stdLibDirs),  funcDepGraph(mIdx,interceptor) {}
+	ProgramImpl(core::NodeManager& mgr, const vector<string>& stdLibDirs) : 
+		mIdx(), 
+		stdLibDirs(::transform(stdLibDirs, [](const string& path) { return boost::filesystem::canonical(path); } )),
+		interceptor(mgr, mIdx, this->stdLibDirs),  funcDepGraph(mIdx,interceptor) {}
 };
 
 Program::Program(core::NodeManager& mgr, const ConversionJob& job):
@@ -201,10 +205,16 @@ Program::~Program() { delete pimpl; }
 utils::Interceptor& Program::getInterceptor() const { return pimpl->interceptor; }
 utils::Indexer& Program::getIndexer() const { return pimpl->mIdx; }
 utils::FunctionDependencyGraph& Program::getCallGraph() const {return pimpl->funcDepGraph; }
+const vector<boost::filesystem::path>& Program::getStdLibDirs() const { return pimpl->stdLibDirs; }
 
-void Program::intercept(std::string fileName) {
-	pimpl->interceptor.loadConfigFile(fileName);
-	//pimpl->interceptor.collectDeclsToIntercept();
+void Program::setupInterceptor() {
+	if(config.getIntercepterConfigFile().empty()) {
+		//by default we intercept "std::.*"
+		pimpl->interceptor.loadConfigSet( { "std::.*" } );
+	} else {
+		//if we have a interceptor config file we use this to setup the interceptor
+		pimpl->interceptor.loadConfigFile(config.getIntercepterConfigFile());
+	}
 }
 
 void Program::analyzeFuncDependencies() {
@@ -312,13 +322,7 @@ const core::ProgramPtr& Program::convert() {
 	bool insiemePragmaFound = false;
 	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
 
-	if(!config.getIntercepterConfigFile().empty()) {
-		LOG(INFO) << "=== Intercepting functions ===";
-		intercept(config.getIntercepterConfigFile());
-		insieme::utils::Timer interceptTimer("Frontend.Intercept");
-		interceptTimer.stop();
-		LOG(INFO) << interceptTimer; 
-	}
+	setupInterceptor();
 
 	analyzeFuncDependencies();
 

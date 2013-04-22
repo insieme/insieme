@@ -68,8 +68,8 @@ public:
 	Interceptor(
 			insieme::core::NodeManager& mgr,
 			insieme::frontend::utils::Indexer& indexer,
-			const vector<string>& stdLibDirs)
-		: indexer(indexer), builder(mgr), stdLibDirs(::transform(stdLibDirs, [](const string& path) { return boost::filesystem::canonical(path); }))
+			const vector<boost::filesystem::path>& stdLibDirs)
+		: indexer(indexer), builder(mgr), stdLibDirs(stdLibDirs)
 	{}
 
 	void loadConfigFile(std::string fileName);	
@@ -94,7 +94,7 @@ private:
 	insieme::frontend::utils::Indexer& indexer;
 	insieme::core::IRBuilder builder;
 
-	vector<boost::filesystem::path> stdLibDirs;
+	const vector<boost::filesystem::path>& stdLibDirs;
 
 	std::set<std::string> toIntercept;
 	boost::regex rx;

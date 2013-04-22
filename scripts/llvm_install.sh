@@ -47,22 +47,22 @@ mv clang-$VERSION.src clang
 rm -f clang-$VERSION.src.tar.gz
 cd $CURRENT
 
-echo "******************************************"
-echo "* Downloading compiler RUNTIME support   *"
-echo "******************************************"
-
-cd llvm-$VERSION.src/projects
-wget -nc http://llvm.org/releases/$VERSION/compiler-rt-$VERSION.src.tar.gz
-
-RET=$?
-if [ $RET -ne 0 ]; then
-	exit $RET
-fi
-
-tar -xf compiler-rt-$VERSION.src.tar.gz
-mv compiler-rt-$VERSION.src compiler-rt
-rm -f compiler-rt-$VERSION.src.tar.gz
-cd $CURRENT
+#echo "******************************************"
+#echo "* Downloading compiler RUNTIME support   *"
+#echo "******************************************"
+#
+#cd llvm-$VERSION.src/projects
+#wget -nc http://llvm.org/releases/$VERSION/compiler-rt-$VERSION.src.tar.gz
+#
+#RET=$?
+#if [ $RET -ne 0 ]; then
+#	exit $RET
+#fi
+#
+#tar -xf compiler-rt-$VERSION.src.tar.gz
+#mv compiler-rt-$VERSION.src compiler-rt
+#rm -f compiler-rt-$VERSION.src.tar.gz
+#cd $CURRENT
 
 echo "***********************************"
 echo "* Applying insieme patch to CLANG *"
