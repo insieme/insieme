@@ -209,6 +209,7 @@ core::StatementPtr ConversionFactory::materializeReadOnlyParams(const core::Stat
 					//if we have a OMP annotation
 					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
 						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
+						assert(anno);
 						anno->replaceUsage (wrap, currParam);
 					}
 				});

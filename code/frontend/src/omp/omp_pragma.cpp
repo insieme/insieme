@@ -120,6 +120,7 @@ core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy
 		MarkerTy::get(fact.getNodeManager(), irNode);
 	// attach the annotation to the marker node
 	marker->addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
+
 	return marker;
 }
 
