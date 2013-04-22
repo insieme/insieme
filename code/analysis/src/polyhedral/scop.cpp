@@ -1305,6 +1305,13 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 	if (cond->getNodeType() == NT_CastExpr) 
 		return extractFromCondition(iv, cond.as<CastExprPtr>()->getSubExpression());
 
+	if ((cond->getNodeType() == NT_Variable) || (cond->getNodeType() == NT_Literal)){
+		THROW_EXCEPTION(NotASCoP, 
+			"Condition expression is a variable or literal not supported by formulas", 
+			cond
+		);
+	}
+
 	if (cond->getNodeType() == NT_Variable && mgr.getLangBasic().isBool(cond->getType())) {
 		THROW_EXCEPTION(NotASCoP, 
 			"Condition expression is a boolean variable not supported by formulas", 
@@ -1313,7 +1320,6 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 	}
 
 	assert (cond->getNodeType() == NT_CallExpr);
-
 	const CallExprPtr& callExpr = cond.as<CallExprPtr>();
 
 	// skip scalar casts
