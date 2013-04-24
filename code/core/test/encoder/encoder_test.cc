@@ -66,8 +66,15 @@ TEST(PrimitiveTypes, Base) {
 
 	expr = toIR(manager, false);
 	EXPECT_EQ(basic.getBool(), expr->getType());
-	EXPECT_EQ("0", toString(*expr));
+	EXPECT_TRUE(basic.isFalse(expr));
+	EXPECT_EQ("false", toString(*expr));
 	EXPECT_FALSE(toValue<bool>(expr));
+
+	expr = toIR(manager, true);
+	EXPECT_EQ(basic.getBool(), expr->getType());
+	EXPECT_TRUE(basic.isTrue(expr));
+	EXPECT_EQ("true", toString(*expr));
+	EXPECT_TRUE(toValue<bool>(expr));
 
 	EXPECT_TRUE(isEncodingOf<bool>(expr));
 	EXPECT_FALSE(isEncodingOf<int>(expr));
