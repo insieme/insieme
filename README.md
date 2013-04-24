@@ -4,7 +4,7 @@ The Insieme compiler is a source-to-source compiler for C/C++ that supports port
 ## Installation 
 Insieme is written in C++11 and relies on several third-party libraries, an updated list is available [here](http://insieme-compiler.org/license.html). 
 
-### Prepare the Environment
+### List of Required Libraries and Software
 
 Name 		| version 
 ------------|--------|
@@ -22,14 +22,19 @@ Name 		| version
 [Kompex](http://sqlitewrapper.kompex-online.com/)             	  	| >= 1.7.9 |
 [cmake](http://www.cmake.org/)                                      | >= 2.8.x |
 
-You can either install those packages manually (or via a package manager) or the provided utility which takes care of build all dependencies from scratch and apply patches. 
+### Prepare the Environment
+
+You can either install those packages manually (or via a package manager) or use the provided utility which takes care of building all dependencies from scratch and apply patches. 
 
 ```
 cd scripts
-make PREFIX=/where/to/install
+make PREFIX=/where/to/install 
 ```
 
-All libraries will be installed in $PREFIX and a symbolic link is created with postfix '-latest' pointing to the newest installed version of a library (which simplifies the following cmake configuration steps)
+All libraries will be installed in $PREFIX and a symbolic link is created with postfix '-latest' pointing to the newest installed version of a library (which simplifies the following cmake configuration steps). By default PREFIX=~/lib; additionally the script performs a parallel build (make -j$SLOTS) using all availabe cores in the host architecture. You can change this behaviour by passing to the make a different value for SLOTS.
+
+
+
 
 
 
