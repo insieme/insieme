@@ -194,12 +194,28 @@ namespace backend {
 		}
 
 		// convert literal
-		c_ast::ExpressionPtr res = converter.getCNodeManager()->create<c_ast::Literal>(ptr->getStringValue());
+		auto toLiteral = [&](const string& value) { return converter.getCNodeManager()->create<c_ast::Literal>(value); };
+		c_ast::ExpressionPtr res = toLiteral(ptr->getStringValue());
 
+		// handle primitive types
 		auto& basic = ptr->getNodeManager().getLangBasic();
-		if (basic.isPrimitive( ptr->getType() )){
+		if (basic.isPrimitive(ptr->getType())) {
+
+			// a special case for some frequent literals
+			const string& value = ptr->getStringValue();
+			if (basic.isInt4(ptr->getType())) {
+				return toLiteral(toString(utils::numeric_cast<int32_t>(value)));
+			}
+			if (basic.isUInt4(ptr->getType())) {
+				return toLiteral(toString(utils::numeric_cast<uint32_t>(value)) + "u");
+			}
+			if (basic.isReal4(ptr->getType())) {
+				return toLiteral(core::IRBuilder(ptr->getNodeManager()).floatLit(utils::numeric_cast<float>(value))->getStringValue());
+			}
+
+			// fall-back solution: use an explicit cast
 			auto info = converter.getTypeManager().getTypeInfo(ptr->getType());
-			context.addDependency(info.declaration);
+			context.addDependency(info.definition);
 			return c_ast::cast(info.rValueType ,res);
 		}
 
