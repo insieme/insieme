@@ -2,7 +2,7 @@
 The Insieme compiler is a source-to-source compiler for C/C++ that supports portable parallel abstractions (OpenMP, MPI and OpenCL) for heterogeneous multi-core architectures. More deatails are available [here](http://insieme-compiler.org/mission.html).
 
 ## Installation 
-Insieme is written in C++11 and relyies on several third-party libraries, an updated list is available [here](http://insieme-compiler.org/license.html). 
+Insieme is written in C++11 and relies on several third-party libraries, an updated list is available [here](http://insieme-compiler.org/license.html). 
 
 ### Required software and libraries 
 
