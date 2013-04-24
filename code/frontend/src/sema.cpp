@@ -214,8 +214,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 	// this fix the problem with bonduaries jumping to the begining of the file in 
 	// the macro expanisons:
 	//
-	//	#define F(x)\
-	//		{ }
+	//	#define F(x) { }
 	//
 	//		...
 	//
@@ -233,8 +232,9 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		unsigned int pragmaEnd	 = utils::Line(P->getEndLocation(),   SourceMgr);
 		unsigned int pragmaSize  = pragmaEnd-pragmaStart +1; // lines pragma uses
 
-		bool found =false;
+//		std::cout << "Match Pragma: " << pragmaStart  << " , " << pragmaEnd << std::endl;
 
+		bool found =false;
 		// problem with first pragma, compound start is delayed until fist usable line (first stmt)
 		if (CS->size()>0){
 			unsigned int lastEnd = (Line((*(CS->body_begin()))->getLocStart(), SourceMgr));
@@ -242,18 +242,26 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 
 				unsigned int stmtStart = (Line((*it)->getLocStart(), SourceMgr));
 				unsigned int stmtEnd   = (Line((*it)->getLocEnd(), SourceMgr));
-				//(*it)->dump();
+//				(*it)->dump();
 //				std::cout << "lastEnd: " << lastEnd << std::endl;
 //				std::cout << "   vs stmt: " << stmtStart  << " -> " << stmtEnd << std::endl;
 
-				if ((pragmaStart >= lastEnd-pragmaSize) && (pragmaEnd < stmtStart)){
-					// this pragma is attached to the current stmt
-					P->setStatement(*it);
-					matched.push_back(P);
-					
-//					std::cout << " ## attached\n" << std::endl;
-					found =true;
-					break;
+				if ( (pragmaEnd < stmtStart)){
+					// ACHTUNG: if the node is a nullStmt, and is not at the end of the compound (in
+					// wich case is most problably ours) we can not trust it. semantics wont change,
+					// we move one more. (BUG: nulstmt followed by pragmas, the souce begin is
+					// postponed until next stmt) this makes pragmas to be attached to a previous
+					// stmt
+					if (!llvm::isa<clang::NullStmt>(*it)){
+						
+						// this pragma is attached to the current stmt
+						P->setStatement(*it);
+						matched.push_back(P);
+						
+//						std::cout << " ## attached\n" << std::endl;
+						found =true;
+						break;
+					}
 				}
 
 				lastEnd = stmtEnd;
@@ -285,7 +293,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 			Context.Deallocate(oldStmt);
 			delete[] stmts;
 			
-		//	std::cout << "### de-attached pragma " << utils::Line(P->getEndLocation(), SourceMgr) << std::endl <<std::endl;
+//			std::cout << "### de-attached pragma " << utils::Line(P->getEndLocation(), SourceMgr) << std::endl <<std::endl;
 		}
 	}
 //	std::cout << matched.size()<< " pragmas withing locations" << std::endl << std::endl;

@@ -367,6 +367,25 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 					builder.getIntTypeParamLiteral(targetTy.as<core::VectorTypePtr>()->getSize())
 				);
 
+		case clang::CK_IntegralToPointer 	:
+		/*case clang::CK_IntegralToPointer - Integral to pointer. A special kind of reinterpreting conversion. Applies to normal,
+		* ObjC, and block pointers. (char*) 0x1001aab0 reinterpret_cast<int*>(0)
+		* */
+	
+			// is a cast of Null to another pointer type: 
+			// we rebuild null
+			if (*expr == *builder.literal(expr->getType(), "0")) {
+				return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
+			}
+			else{
+				std::cout << std::endl;
+				dumpDetail(expr);
+				dumpDetail(targetTy);
+				assert(false && "Non NULL casts to pointer not supported");
+			}
+
+
+
 		///////////////////////////////////////
 		//  PARTIALY IMPLEMENTED
 		///////////////////////////////////////
@@ -474,10 +493,6 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		/*case clang::CK_ConstructorConversion - Conversion by constructor. struct A { A(int); }; A a = A(10);
 		* */
 
-		case clang::CK_IntegralToPointer 	:
-		/*case clang::CK_IntegralToPointer - Integral to pointer. A special kind of reinterpreting conversion. Applies to normal,
-		* ObjC, and block pointers. (char*) 0x1001aab0 reinterpret_cast<int*>(0)
-		* */
 
 		case clang::CK_PointerToIntegral 	:
 		/*case clang::CK_PointerToIntegral - Pointer to integral. A special kind of reinterpreting conversion. Applies to normal, 

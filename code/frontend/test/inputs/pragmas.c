@@ -62,8 +62,19 @@ void g(){
 
 	int a;
 	int n;
-  #pragma omp for firstprivate(a) \
-       nowait
+  #pragma test \
+       "two lines"
   for(a=0;a<n;a++) {
   }
+}
+
+
+void h(int x){
+	FAKE(x);
+#pragma test "one"
+#pragma test "two"
+#pragma test "three"
+	for (x =0; x < 10; x ++){
+	}
+
 }
