@@ -34,62 +34,36 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#define FAKE(x) \
+	{ x++; }
 
-#include <string>
-#include <boost/timer.hpp>
 
-#include "insieme/utils/logging.h"
+int main (){
 
-namespace insieme {
-namespace utils {
+	#pragma test "first"
+	int x;
 
-	/**
-	 * Simple timer used to measured time.
-	 */
-	class Timer: public boost::timer {
-		double mElapsed;
-		std::string mName;
-		bool isStopped;
+#pragma test "macro"
+	FAKE(x)
 
-		friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
-	public:
-		Timer(const std::string& name = "Time"): 
-			boost::timer(), mName(name), isStopped(false) { }
-		/**
-		 * Stops the timer returning the elapsed amount of seconds
-		 */
-		double stop();
+#pragma test "solo"
+	
 
-		/**
-		 * Return the elapsed amount of seconds
-		 */
-		double getTime() const;
-	};
+}
 
-	std::ostream& operator<<(std::ostream& out, const Timer& timer);
 
-	template <class Ret, log::Level L=DEBUG>
-	Ret measureTimeFor(const std::string& timerName, const std::function<Ret ()>& task) {
-		Timer timer(timerName);
-		Ret ret = task(); // execute the job
-		timer.stop();
-		LOG(L) << timer;
-		return ret;
-	}
+#pragma test "function"
+int f(){
 
-	// Specialization for void returning functions 
-	template <log::Level L=DEBUG>
-	void measureTimeFor(const std::string& timerName, const std::function<void ()>& task) {
-		Timer timer(timerName);
-		task(); // execute the job
-		timer.stop();
-		LOG(L) << timer;
-	}
+	return 0;
+}
 
-} // end utils namespace
-} // end insieme namespace
+void g(){
 
-// a macro capturing the time of the given command
-#define TIME(CMD) ([&]()->double { insieme::utils::Timer timer; CMD; timer.stop(); return timer.getTime(); })()
-
+	int a;
+	int n;
+  #pragma omp for firstprivate(a) \
+       nowait
+  for(a=0;a<n;a++) {
+  }
+}

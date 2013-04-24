@@ -35,7 +35,7 @@
  */
 
 // ignore warnings
-#pragma GCC diagnostic ignored "-Wall"
+//#pragma GCC diagnostic ignored "-Wall"
 
 void decl_stmt_test() {
 	#pragma test \
@@ -343,6 +343,8 @@ void while_stmt_test() {
 	"{ (v1 := (( *v1)+1)); while((( *v1)<10)) { (v1 := (( *v1)+1)); };}"
 	do{ it+=1; }while(it < 10);
 }
+
+int g(int x) ;
 
 #pragma test \
 	"recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13-1)); }; v12 = fun(int<4> v15) -> int<4> { return v11((v15+1)); };}"

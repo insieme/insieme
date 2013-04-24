@@ -198,10 +198,10 @@ namespace backend {
 
 		auto& basic = ptr->getNodeManager().getLangBasic();
 		if (basic.isPrimitive( ptr->getType() )){
-			auto type = converter.getTypeManager().getTypeInfo(ptr->getType());
-			return c_ast::cast(type.rValueType ,res);
+			auto info = converter.getTypeManager().getTypeInfo(ptr->getType());
+			context.addDependency(info.declaration);
+			return c_ast::cast(info.rValueType ,res);
 		}
-
 
 		// special handling for the global struct
 		if (!ptr->getStringValue().compare(0, IRExtensions::GLOBAL_ID.size(), IRExtensions::GLOBAL_ID)) {

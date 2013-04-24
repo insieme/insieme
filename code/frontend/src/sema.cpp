@@ -48,6 +48,9 @@
 
 #include "insieme/utils/logging.h"
 
+//FIXME debug
+#include "insieme/frontend/pragma/insieme.h"
+
 using namespace clang;
 using namespace insieme::frontend;
 using namespace insieme::frontend::pragma;
@@ -155,9 +158,13 @@ const char* strbchr(const char* stream, char c) {
 clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 												 clang::MultiStmtArg Elts, bool isStmtExpr) {
 
-//	VLOG(1) << "{InsiemeSema}: ActOnCompoundStmt()";
-//	VLOG(2) << "LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr);
-//	VLOG(2) << "RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr);
+	// we parse the original code segment, within the original locations
+	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
+	clang::CompoundStmt* CS = cast<CompoundStmt>(ret.get());
+
+//	std::cout << "{InsiemeSema}: ActOnCompoundStmt()\n";
+//	std::cout << "LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr) << std::endl;
+//	std::cout << "RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr) << std::endl;
 
 
 	// FIXME: check if this is actualy needed anymore
@@ -170,7 +177,9 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 	///
 	/// We solve the problem by searching for the bracket in the input stream and overwrite
 	/// the value of L (which contains the wrong location) with the correct value.
-/*	enum {MacroIDBit = 1U << 31}; // from clang/Basic/SourceLocation.h for use with cpp classes
+	
+	
+	enum {MacroIDBit = 1U << 31}; // from clang/Basic/SourceLocation.h for use with cpp classes
 	{
 		SourceLocation&& leftBracketLoc = SourceMgr.getImmediateSpellingLoc(L);
 		std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(leftBracketLoc);
@@ -196,70 +205,90 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		if((((rightBracketLoc.getRawEncoding() & ~MacroIDBit)+(rBracePos - strData)) & MacroIDBit)==0){
 			R = rightBracketLoc.getLocWithOffset(rBracePos - strData);
 		}
-	}*/
+	}
 
-//	VLOG(2) << "corrected LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr);
-//	VLOG(2) << "corrected RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr);
+//	std::cout << "corrected LEFT  { line: " << utils::Line(L, SourceMgr) << " col: " << utils::Line(L,SourceMgr) << std::endl;
+//	std::cout << "corrected RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr) << std::endl;
 
-	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, std::move(Elts), isStmtExpr);
-	clang::CompoundStmt* CS = cast<CompoundStmt>(ret.get());
-
+	// the source range we inspect is defined by the new source locations,
+	// this fix the problem with bonduaries jumping to the begining of the file in 
+	// the macro expanisons:
+	//
+	//	#define F(x)\
+	//		{ }
+	//
+	//		...
+	//
+	//		F(r)    // <-this statement will jum to the macro location
+	//
 	PragmaList matched;
-	SourceRange SR(CS->getLBracLoc(), CS->getRBracLoc());
-
+	SourceRange SR(L,R);
 
 	// for each of the pragmas in the range between brackets
 	for ( PragmaFilter&& filter = PragmaFilter(SR, SourceMgr, pimpl->pending_pragma); *filter; ++filter ) {
 		PragmaPtr P = *filter;
 		// iterate throug statements of the compound in reverse order 
-		
-		Stmt* Prev = NULL;
-		for ( CompoundStmt::reverse_body_iterator I = CS->body_rbegin(), E = CS->body_rend(); I != E; ) {
-			Prev = *I;
-			++I;
 
-			if ( I != E && Line((*I)->getLocStart(), SourceMgr) < Line(P->getEndLocation(), SourceMgr) ) {
-				if ( Line(Prev->getLocStart(), SourceMgr) >= Line(P->getEndLocation(), SourceMgr) ) {
-					// set the statement for the current pragma
-					P->setStatement(Prev);
-					// add pragma to the list of matched pragmas
+		unsigned int pragmaStart = utils::Line(P->getStartLocation(), SourceMgr);
+		unsigned int pragmaEnd	 = utils::Line(P->getEndLocation(),   SourceMgr);
+		unsigned int pragmaSize  = pragmaEnd-pragmaStart +1; // lines pragma uses
+
+		bool found =false;
+
+		// problem with first pragma, compound start is delayed until fist usable line (first stmt)
+		if (CS->size()>0){
+			unsigned int lastEnd = (Line((*(CS->body_begin()))->getLocStart(), SourceMgr));
+			for (CompoundStmt::body_iterator it = CS->body_begin(); it != CS->body_end(); ++it){
+
+				unsigned int stmtStart = (Line((*it)->getLocStart(), SourceMgr));
+				unsigned int stmtEnd   = (Line((*it)->getLocEnd(), SourceMgr));
+				//(*it)->dump();
+//				std::cout << "lastEnd: " << lastEnd << std::endl;
+//				std::cout << "   vs stmt: " << stmtStart  << " -> " << stmtEnd << std::endl;
+
+				if ((pragmaStart >= lastEnd-pragmaSize) && (pragmaEnd < stmtStart)){
+					// this pragma is attached to the current stmt
+					P->setStatement(*it);
 					matched.push_back(P);
+					
+//					std::cout << " ## attached\n" << std::endl;
+					found =true;
 					break;
 				}
 
-				// add a ';' (NullStmt) before the end of the block in order to associate the pragma
-				Stmt** stmts = new Stmt*[CS->size() + 1];
+				lastEnd = stmtEnd;
+			} 
+		}
+		if(!found && pragmaStart <= utils::Line(R, SourceMgr)){
+			// this is a de-attached pragma (barrier i.e.) at the end of the compound 
+			// we need to create a fake NullStmt ( ; ) to attach this
+			Stmt** stmts = new Stmt*[CS->size() + 1];
 
-				CompoundStmt* newCS =
-						new (Context) CompoundStmt(Context, stmts, CS->size()+1, CS->getSourceRange().getBegin(),
-								CS->getSourceRange().getEnd()
-							);
+			CompoundStmt* newCS =
+					new (Context) CompoundStmt(Context, stmts, CS->size()+1, CS->getSourceRange().getBegin(),
+							CS->getSourceRange().getEnd()
+						);
 
-				std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
-				std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
-				newCS->setLastStmt( new (Context) NullStmt(SourceLocation()) );
-				P->setStatement( *newCS->body_rbegin() );
-				matched.push_back(P);
+			std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
+			std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
+			newCS->setLastStmt( new (Context) NullStmt(SourceLocation()) );
+			P->setStatement( *newCS->body_rbegin() );
+			matched.push_back(P);
 
-				// transfer the ownership of the statement
-				CompoundStmt* oldStmt = ret.takeAs<CompoundStmt>();
-				oldStmt->setStmts(Context, NULL, 0);
-				ret = newCS;
-				CS = newCS;
+			// transfer the ownership of the statement
+			CompoundStmt* oldStmt = ret.takeAs<CompoundStmt>();
+			oldStmt->setStmts(Context, NULL, 0);
+			ret = newCS;
+			CS = newCS;
 
-				// destroy the old compound stmt
-				Context.Deallocate(oldStmt);
-				delete[] stmts;
-				break;
-			}
-			if ( I == E && Line(Prev->getLocStart(), SourceMgr) > Line(P->getEndLocation(), SourceMgr) ) {
-				P->setStatement(Prev);
-				matched.push_back(P);
-				break;
-			}
+			// destroy the old compound stmt
+			Context.Deallocate(oldStmt);
+			delete[] stmts;
+			
+		//	std::cout << "### de-attached pragma " << utils::Line(P->getEndLocation(), SourceMgr) << std::endl <<std::endl;
 		}
 	}
-//	VLOG(2) << matched.size()<< " pragmas withing locations";
+//	std::cout << matched.size()<< " pragmas withing locations" << std::endl << std::endl;
 
 	// remove matched pragmas
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
@@ -341,6 +370,10 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 
 	FunctionDecl* FD = dyn_cast<FunctionDecl>(ret);
 
+//	std::cout << "\nfunc in: " ;
+//	FD->getSourceRange().getBegin().dump(SourceMgr);
+//	std::cout << std::endl;
+
 	if (!FD) { return ret; }
 
 	PragmaList matched;
@@ -351,12 +384,21 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 	}
 
 	while ( I != E ) {
-		(*I)->setDecl(FD);
-		matched.push_back(*I);
+		unsigned int pragmaEnd	 = utils::Line((*I)->getEndLocation(),   SourceMgr);
+		unsigned int declBegin	 = utils::Line(ret->getSourceRange().getBegin(),   SourceMgr);
+
+//		std::cout << "pragma ends: " <<pragmaEnd << std::endl;
+//		std::cout << "Decl begins: " <<declBegin << std::endl;
+
+		if(pragmaEnd <=declBegin) {
+			(*I)->setDecl(FD);
+			matched.push_back(*I);
+		}
 		++I;
 	}
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);
 	isInsideFunctionDef = false;
+
 	return ret;
 }
 
@@ -397,7 +439,7 @@ clang::Decl* InsiemeSema::ActOnDeclarator(clang::Scope *S, clang::Declarator &D)
 		return ret;
 	}
 
-//	DLOG(INFO) << utils::Line(ret->getSourceRange().getBegin(), SourceMgr) << ":" <<
+//	std::cout << utils::Line(ret->getSourceRange().getBegin(), SourceMgr) << ":" <<
 //				  utils::Column(ret->getSourceRange().getBegin(), SourceMgr) << ", " <<
 //	  			  utils::Line(ret->getSourceRange().getEnd(), SourceMgr) << ":" <<
 //				  utils::Column(ret->getSourceRange().getEnd(), SourceMgr) << std::endl;

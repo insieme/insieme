@@ -34,62 +34,27 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+int g(int x) ;
+int f(int x) ;
 
-#include <string>
-#include <boost/timer.hpp>
+#pragma test \
+	"recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13-1)); }; v12 = fun(int<4> v15) -> int<4> { return v11((v15+1)); };}"
+int f(int x) {
+	return g(x-1);
+}
 
-#include "insieme/utils/logging.h"
+#pragma test \
+	"recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13+1)); }; v12 = fun(int<4> v15) -> int<4> { return v11((v15-1)); };}"
+int g(int x) {
+	return f(x+1);
+}
 
-namespace insieme {
-namespace utils {
-
-	/**
-	 * Simple timer used to measured time.
-	 */
-	class Timer: public boost::timer {
-		double mElapsed;
-		std::string mName;
-		bool isStopped;
-
-		friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
-	public:
-		Timer(const std::string& name = "Time"): 
-			boost::timer(), mName(name), isStopped(false) { }
-		/**
-		 * Stops the timer returning the elapsed amount of seconds
-		 */
-		double stop();
-
-		/**
-		 * Return the elapsed amount of seconds
-		 */
-		double getTime() const;
-	};
-
-	std::ostream& operator<<(std::ostream& out, const Timer& timer);
-
-	template <class Ret, log::Level L=DEBUG>
-	Ret measureTimeFor(const std::string& timerName, const std::function<Ret ()>& task) {
-		Timer timer(timerName);
-		Ret ret = task(); // execute the job
-		timer.stop();
-		LOG(L) << timer;
-		return ret;
-	}
-
-	// Specialization for void returning functions 
-	template <log::Level L=DEBUG>
-	void measureTimeFor(const std::string& timerName, const std::function<void ()>& task) {
-		Timer timer(timerName);
-		task(); // execute the job
-		timer.stop();
-		LOG(L) << timer;
-	}
-
-} // end utils namespace
-} // end insieme namespace
-
-// a macro capturing the time of the given command
-#define TIME(CMD) ([&]()->double { insieme::utils::Timer timer; CMD; timer.stop(); return timer.getTime(); })()
+//recFun v1 {
+//    v2 = fun(int<4> v4) {
+//        return v1((v4+1));
+//    };
+//    v1 = fun(int<4> v3) {
+//        return v2((v3-1));
+//    };
+//}
 
