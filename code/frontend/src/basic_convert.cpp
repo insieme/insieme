@@ -445,11 +445,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type) const {
-	//if ( mgr.getLangBasic().isAnyRef(type) ) {
-	//return mgr.getLangBasic().getNull();
-	//}
-	// handle integers initialization
-	
+
 	// Primitive types 
 	if (mgr.getLangBasic().isInt(type)) {
 		// initialize integer value
@@ -462,18 +458,29 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 	// handle reals initialization
 	if (mgr.getLangBasic().isReal(type)) {
 		// in case of floating types we initialize with a zero value
-		return builder.literal("0.0", type);
+		if(mgr.getLangBasic().isReal4(type))
+			return builder.literal("0.0f", type);
+		if(mgr.getLangBasic().isReal8(type))
+			return builder.literal("0.0", type);
 	}
-	// handle strings initializationvalDec
-	if (mgr.getLangBasic().isString(type)) {
-		return builder.literal("", type);
-	}
-
 	// handle booleans initialization
 	if (mgr.getLangBasic().isBool(type)) {
 		// boolean values are initialized to false
 		return builder.literal("false", mgr.getLangBasic().getBool());
 	}
+
+
+	// FIXME: All types should have a default initialitation to undefined value
+//	if (mgr.getLangBasic().isPrimitive(type)){
+//		return builder.callExpr(mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(type));
+//	}
+
+	// handle strings initializationvalDec
+	if (mgr.getLangBasic().isString(type)) {
+		return builder.literal("", type);
+	}
+
+
 
 	// Initialization for volatile types
 	if (core::analysis::isVolatileType(type)) {
