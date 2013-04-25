@@ -91,7 +91,7 @@ $PREFIX/python-latest/bin/python ./integration_test.py
 Integration tests can be executed in parallel (``-w SLOTS``), and multiple times (``-r N``). For a full list of options use the ``-h`` argument or refer to the insieme developer documentation. 
 
 
-If everyting is successful... **congratulation!**
+If everything was successful... **congratulation!**
 **You may start enjoying Insieme now!**
 
 ## Using Insieme 
