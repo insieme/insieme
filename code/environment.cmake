@@ -150,10 +150,10 @@ if (USE_XML)
 endif (USE_XML)
 
 # lookup pthread library
-find_library(pthread_LIB pthread)
+# find_library(pthread_LIB pthread)
 # http://fedetft.wordpress.com/2010/03/07/cmake-part-3-finding-libraries/
-#find_package(Threads REQUIRED)
-#target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
+find_package(Threads REQUIRED)
+target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
 
 
 #profiling
