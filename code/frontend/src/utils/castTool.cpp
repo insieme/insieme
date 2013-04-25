@@ -584,6 +584,8 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 	
 	assert(false && "control reached an invalid point!");
 
+	return expr;
+
 }
 
 } // end utils namespace
