@@ -352,7 +352,7 @@ TEST(FunctionManager, NestedBind) {
 	core::CallExprPtr call2 = builder.callExpr(boolean, innerBind, p5, p4);
 	core::BindExprPtr bind = builder.bindExpr(toVector(p4), call2);
 
-	EXPECT_EQ("bind(v4){bind(v2,v1){fun(v2, v3, v1)}(0.8, v4)}", toString(*bind));
+	EXPECT_EQ("bind(v4){bind(v2,v1){fun(v2, v3, v1)}(0.8f, v4)}", toString(*bind));
 
 	// ----------------- Convert using function manager -----------
 
