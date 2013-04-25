@@ -596,6 +596,10 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		default:
 			assert(false && "not all options listed, is this clang 3.2? maybe should upgrade Clang support");
 	}
+	
+	assert(false && "control reached an invalid point!");
+
+	return expr;
 
 }
 
