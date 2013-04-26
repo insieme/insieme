@@ -131,10 +131,10 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				ctorDecl->isMoveConstructor() ){
 				
 				if (ctorDecl->isUserProvided ()){
-					core::LambdaExprPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::LambdaExprPtr>();
+					core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
 					if (ctorLambda ){
 						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
-						classInfo.addConstructor(ctorLambda);
+						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 					}
 				}
 			}
@@ -143,9 +143,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		//~~~~~ convert destructor ~~~~~
 		if(classDecl->hasUserDeclaredDestructor()){
 			const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
-			core::LambdaExprPtr&& dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::LambdaExprPtr>();
+			core::ExpressionPtr&& dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
 			dtorLambda = convFact.memberize  (dtorDecl, dtorLambda, builder.refType(classType), core::FK_DESTRUCTOR);
-			classInfo.setDestructor(dtorLambda);
+			classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
 			if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
 				classInfo.setDestructorVirtual();
 		}
@@ -159,19 +159,42 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				//FIXME: here might be a problem
 				continue;
 			}
+		
+			if( ((*methodIt)->isMoveAssignmentOperator() || (*methodIt)->isCopyAssignmentOperator()) 
+				&& !(*methodIt)->isUserProvided() ) {
+				//FIXME for non-userProvided move/copy assign ops find solution,
+				//maybe leave them to be handled by the backendCompiler or something else
+				//currently are left over for be-compiler
+				
+				VLOG(2) << "isMoveAssignOp " << (*methodIt)->isMoveAssignmentOperator();
+				//FIXME CXX11 feature 
+				VLOG(2) << "isCopyAssignOp " << (*methodIt)->isCopyAssignmentOperator();
+				//FIXME CXX11 feature, copyAssign is implicitly defined if not userprovided
+
+				continue;
+			}
 
 			const clang::FunctionDecl* method = llvm::cast<clang::FunctionDecl>(*methodIt);
 
 			// FIXME: we should not have to look for the F$%ing TU everyplace, this should be
 			// responsability of the convert func function
 			convFact.getTranslationUnitForDefinition(method);  // FIXME:: remove this crap
+		
+			auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
+			methodLambda = convFact.memberize(method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION);
 			
-			core::LambdaExprPtr&& methodLambda = convFact.convertFunctionDecl(method).as<core::LambdaExprPtr>();
-			methodLambda = convFact.memberize  (method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION);
+			if( method->isPure() ) {
+				//pure virtual functions are handled bit different in metainfo
+				VLOG(2) << "pure virtual function " << method;
+				auto funcTy = methodLambda->getType().as<core::FunctionTypePtr>();
+				VLOG(2) << funcTy;
+				methodLambda = builder.getPureVirtual(funcTy);
+			}
 
 			if (VLOG_IS_ON(2)){
 				VLOG(2) << " ############ member! #############";
-				VLOG(2)<< llvm::cast<clang::NamedDecl>(method)->getNameAsString();
+				VLOG(2) << method->getNameAsString();
+				VLOG(2) << methodLambda->getType();
 				dumpDetail(methodLambda);
 				VLOG(2) << "###";
 				method->dump();
@@ -180,7 +203,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				VLOG(2) << "           ############";
 			}
 
-			classInfo.addMemberFunction(llvm::cast<clang::NamedDecl>(method)->getNameAsString(), 
+			classInfo.addMemberFunction(method->getNameAsString(), 
 										methodLambda,
 										(*methodIt)->isVirtual(), 
 										(*methodIt)->isConst());
