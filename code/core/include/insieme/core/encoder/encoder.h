@@ -293,8 +293,6 @@ namespace encoder {
 
 		// -- define converter for primitive types --------------
 
-		ADD_CONVERTER(bool, Bool);
-
 		ADD_CONVERTER(int8_t,  Int1);
 		ADD_CONVERTER(int16_t, Int2);
 		ADD_CONVERTER(int32_t, Int4);
@@ -312,6 +310,36 @@ namespace encoder {
 
 	#undef ADD_CONVERTER
 
+	// --------------------------------------------------------------------
+	//   Add support for encoding boolean values
+	// --------------------------------------------------------------------
+
+	template<> struct type_factory<bool> {
+		core::TypePtr operator()(core::NodeManager& manager) const {
+			return manager.getLangBasic().getBool();
+		}
+	};
+
+	template<> struct is_encoding_of<bool> {
+		bool operator()(const core::ExpressionPtr& expr) const {
+			auto& basic = expr->getNodeManager().getLangBasic();
+			return basic.isTrue(expr) || basic.isFalse(expr);
+		}
+	};
+
+	template<> struct value_to_ir_converter<bool> {
+		core::ExpressionPtr operator()(core::NodeManager& manager, bool value) const {
+			return IRBuilder(manager).boolLit(value);
+		}
+	};
+
+	template<> struct ir_to_value_converter<bool> {
+		bool operator()(const core::ExpressionPtr& expr) const {
+			auto& basic = expr->getNodeManager().getLangBasic();
+			assert(is_encoding_of<bool>()(expr));
+			return basic.isTrue(expr);
+		}
+	};
 
 	// --------------------------------------------------------------------
 	//   Add support for encoding expressions directly into expressions

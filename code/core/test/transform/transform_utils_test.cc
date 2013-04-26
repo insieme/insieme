@@ -100,7 +100,7 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 		const VariablePtr& tupleVar = builder.variable(builder.refType(tupleTy));
 		std::vector<ExpressionPtr> init;
 		init.push_back(builder.intLit(1));
-		init.push_back(builder.literal(basic.getChar(), "a"));
+		init.push_back(builder.literal(basic.getChar(), "'a'"));
 		saStmts.push_back(builder.declarationStmt(tupleVar, builder.callExpr(tupleVar->getType(), basic.getRefVar(), builder.tupleExpr(init))));
 		// TupleMemberAcces
 		saStmts.push_back(builder.callExpr(basic.getUInt2(), basic.getTupleMemberAccess(), builder.callExpr(tupleTy, basic.getRefDeref(), tupleVar),

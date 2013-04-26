@@ -54,6 +54,8 @@
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/timer.h"
 
+#include "insieme/frontend/utils/castTool.h"
+
 #define MAX_THREADPRIVATE 80
 
 namespace insieme {
@@ -62,11 +64,11 @@ namespace omp {
 	
 using namespace std;
 using namespace core;
-using namespace utils::log;
+using namespace insieme::utils::log;
 
 namespace cl = lang;
-namespace us = utils::set;
-namespace um = utils::map;
+namespace us = insieme::utils::set;
+namespace um = insieme::utils::map;
 
 class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 	NodeManager& nodeMan;
@@ -428,11 +430,11 @@ protected:
 		case Reduction::MINUS:
 		case Reduction::OR:
 		case Reduction::XOR:
-			ret = build.refVar(build.literal("0", rType->getElementType()));
+			ret = build.refVar(utils::castScalar (rType->getElementType(), build.literal("0", rType->getElementType())));
 			break;
 		case Reduction::MUL:
 		case Reduction::AND:
-			ret = build.refVar(build.literal("1", rType->getElementType()));
+			ret = build.refVar(utils::castScalar (rType->getElementType(), build.literal("1", rType->getElementType())));
 			break;
 		case Reduction::LAND:
 			ret = build.refVar(build.boolLit(true));
@@ -629,7 +631,7 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 	{	
 		OMPSemaMapper semaMapper(resultStorage);
 		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-		utils::Timer timer("Omp sema");
+		insieme::utils::Timer timer("Omp sema");
 		result = semaMapper.map(result);
 		timer.stop();
 		LOG(INFO) << timer;
@@ -644,7 +646,7 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 
 	// fix globals
 	{	
-		utils::Timer timer("Omp global handling");
+		insieme::utils::Timer timer("Omp global handling");
 		auto collectedGlobals = markGlobalUsers(result);
 		if(collectedGlobals.size() > 0) {
 			auto globalDecl = transform::createGlobalStruct(resultStorage, result, collectedGlobals);
@@ -664,7 +666,7 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 
 	// omp postprocessing optimization
 	//{
-	//	utils::Timer timer("Omp postprocessing optimization");
+	//	insieme::utils::Timer timer("Omp postprocessing optimization");
 
 	//	p::TreePattern tpAccesses
 

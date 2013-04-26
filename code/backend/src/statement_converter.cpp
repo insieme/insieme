@@ -201,16 +201,20 @@ namespace backend {
 		auto& basic = ptr->getNodeManager().getLangBasic();
 		if (basic.isPrimitive(ptr->getType())) {
 
-			// a special case for some frequent literals
+			// handle special cases
 			const string& value = ptr->getStringValue();
-			if (basic.isInt4(ptr->getType())) {
-				return toLiteral(toString(utils::numeric_cast<int32_t>(value)));
+
+			// things that need not be extra-casted (default values)
+			if (basic.isInt4(ptr->getType()) || basic.isReal4(ptr->getType()) || basic.isReal8(ptr->getType())) {
+				return res;
 			}
+
+			// add a u in case it is a signed literal and it is missing
 			if (basic.isUInt4(ptr->getType())) {
-				return toLiteral(toString(utils::numeric_cast<uint32_t>(value)) + "u");
-			}
-			if (basic.isReal4(ptr->getType())) {
-				return toLiteral(core::IRBuilder(ptr->getNodeManager()).floatLit(utils::numeric_cast<float>(value))->getStringValue());
+				if (*value.rbegin() != 'u') {
+					res = toLiteral(value + "u");
+				}
+				return res;
 			}
 
 			// fall-back solution: use an explicit cast
