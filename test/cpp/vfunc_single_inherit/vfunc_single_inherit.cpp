@@ -27,10 +27,10 @@ class C : public B {
 	virtual ~C() { printf("~C()\n"); }
 	
 	virtual void c() { printf("C::c\n"); }
-	int g(int x) { printf("C::g\n"); this->cC; return x;}
+	int g(int x) { printf("C::g\n"); this->cC = x; return x;}
 };
 
-int call_vfunc_ptr() {
+void call_vfunc_ptr() {
 	C c;	
 	B b;
 	A* paB = &b;
@@ -48,9 +48,9 @@ int call_vfunc_ptr() {
 	pbC->b();	//virtual call: B::b
 	pcC->b();	//virtual call: B::b
 	
-};
+}
 
-int call_vfunc_ref() {
+void call_vfunc_ref() {
 	C c;	
 	B b;
 	A& raB = b;
@@ -67,18 +67,16 @@ int call_vfunc_ref() {
 
 	rbC.b();	//virtual call: B::b
 	rcC.b();	//virtual call: B::b
-};
+}
 
 int main() {
 	call_vfunc_ptr();
-	call_vfunc_ref();
+	//call_vfunc_ref();
 
 	C c;		
 
 	c.c();		//non-virtual call: C::c
-	
 	c.f();		//non-virtual call: B::f
-	
 	c.g(1);		//non-virtual call: C::g
 	
 	c.b();
@@ -86,14 +84,15 @@ int main() {
 	B* pbC = &c;
 	pbC->b();
 	
+	/*
 	B& rbC = c;
 	rbC.b();
 
 	A& raC = c;
 	
 	raC.f();		//virtual call: B::f
-
 	raC.g(1);		//virtual call: C::g
+	*/
 	
 	return 0;
 	

@@ -30,7 +30,8 @@ int main() {
 
 	vector<char> v1;
 	//v1.push_back(L'c');
-	v1.push_back('c');
+	v1.push_back('a');
+	v1.push_back('b');
 
 	printf("[%d,%d]\n", v1[0], v1[1]);
 
