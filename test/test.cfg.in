@@ -29,7 +29,7 @@ back.gcc.flags: Conf([
 					Flag("-I.")
 				])
 back.gcc: 		%(back.gcc.flags)s + Conf(Flag("-std=gnu99"))
-back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++0x -fpermissive")) 
+back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++98 -fpermissive")) 
 
 back.c.opt: 	Conf(Flag('-O3'))
 back.seq: 		Conf(Flag("-lm"), "SEQ")
