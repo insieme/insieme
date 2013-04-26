@@ -1318,6 +1318,19 @@ core::ExpressionPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 		return func;
 	}
 
+	// return type depends on type of function
+	core::TypePtr retTy; 
+	switch (funcKind){
+		case core::FK_MEMBER_FUNCTION:
+			retTy = funcTy.getReturnType();
+			break;
+		case core::FK_CONSTRUCTOR:
+		case core::FK_DESTRUCTOR:  //FIXME: what type returns a destructor???
+			retTy = ownerClassType;
+			break;
+		default:
+			assert(false && "not implemented");
+	}
 	//FIXME NEEDS FURTHER REFACTORING
 	
 	if(func.isa<core::LambdaExprPtr>()) {
@@ -1332,22 +1345,8 @@ core::ExpressionPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 		auto thisVar = builder.variable(ownerClassType);
 		core::VariableList paramList = params.getElements();
 		paramList.insert(paramList.begin(), thisVar);
-		VLOG(2) << thisVar << " " << thisVar->getType() << " " << ownerClassType;
 
-		// build the new function, 
-		// return type depends on type of function
-		core::TypePtr retTy; 
-		switch (funcKind){
-			case core::FK_MEMBER_FUNCTION:
-				retTy = funcTy.getReturnType();
-				break;
-			case core::FK_CONSTRUCTOR:
-			case core::FK_DESTRUCTOR:  //FIXME: what type returns a destructor???
-				retTy = ownerClassType;
-				break;
-			default:
-				assert(false && "not implemented");
-		}
+		// build the new functiontype 
 		auto newFunctionType = builder.functionType(extractTypes(paramList), retTy, funcKind);
 
 		// every usage of this has being defined as a literal "this" typed alike the class
@@ -1364,34 +1363,27 @@ core::ExpressionPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 
 		RESTORE_TU();
 		return memberized;
-	} else {
+	} else if(func.isa<core::LiteralPtr>()) {
 		SET_TU(funcDecl);
 	
 		//only literals -- used for intercepted/pureVirtual functions
-		assert(func.isa<core::LiteralPtr>());	
+		core::LiteralPtr funcLiteral = func.as<core::LiteralPtr>();
+
+		// update parameter list with a class-typed parameter in the first possition
 		core::TypeList paramTys = funcTy->getParameterTypeList();
 		paramTys.insert(paramTys.begin(), ownerClassType);
 		
-		// return type depends on type of function
-		core::TypePtr retTy; 
-		switch (funcKind){
-			case core::FK_MEMBER_FUNCTION:
-				retTy = funcTy.getReturnType();
-				break;
-			case core::FK_CONSTRUCTOR:
-			case core::FK_DESTRUCTOR:  //FIXME: what type returns a destructor???
-				retTy = ownerClassType;
-				break;
-			default:
-				assert(false && "not implemented");
-		}
-		funcTy = builder.functionType( paramTys, retTy, funcKind);
+		// build the new functiontype 
+		auto newFunctionType = builder.functionType(paramTys, retTy, funcKind);
 
-		core::ExpressionPtr retExpr = builder.literal(func.as<core::LiteralPtr>().getStringValue(), funcTy);
+		core::ExpressionPtr retExpr = builder.literal(funcLiteral.getStringValue(), newFunctionType);
 	
 		//assert(false && "not properly implement currently");
 		RESTORE_TU();
 		return retExpr;
+	} else {
+		assert(false && "something went wrong");
+		return core::ExpressionPtr();
 	}
 }
 
