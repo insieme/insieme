@@ -239,7 +239,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 			for (CompoundStmt::body_iterator it = CS->body_begin(); it != CS->body_end(); ++it){
 
 				unsigned int stmtStart = (Line((*it)->getLocStart(), SourceMgr));
-				unsigned int stmtEnd   = (Line((*it)->getLocEnd(), SourceMgr));
+
 //				(*it)->dump();
 //				std::cout << "lastEnd: " << lastEnd << std::endl;
 //				std::cout << "   vs stmt: " << stmtStart  << " -> " << stmtEnd << std::endl;
