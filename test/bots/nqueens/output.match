@@ -1,1 +1,1 @@
-awk '/^Verification\s+=\s\w+$/{ print $3 }'
+awk '/^Verification/{ print $3 }'
