@@ -99,10 +99,10 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::checks::Message& cur) {
 		LOG(INFO) << cur << std::endl;
-//		core::NodeAddress address = cur.getAddress();
-//		core::NodePtr context = address.getAddressedNode();
-//		std::cout << "\t Context: " <<
-//		insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << std::endl;
+		core::NodeAddress address = cur.getAddress();
+		core::NodePtr context = address.getParentNode(address.getDepth()-1);
+		std::cout << "\t Context: " <<
+		insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE) << std::endl;
 	});
 
 	// check for the kernel's datarange pragma
@@ -149,13 +149,18 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	auto errors = core::checks::check(program, insieme::core::checks::getFullCheck()).getErrors();
 	EXPECT_EQ(0u, errors.size());
 	std::sort(errors.begin(), errors.end());
-	for_each(errors, [](const core::checks::Message& cur) {
-		LOG(INFO) << cur << std::endl;
-		/*        core::NodeAddress address = cur.getAddress();
-		 core::NodePtr context = address.getParentNode(address.getDepth()-1);
-		 std::cout << "\t Context: " <<
-		 insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
-		 */
-	});
+
+	for (const core::checks::Message& cur : errors){
+			
+		std::cout << cur << std::endl;
+		core::NodeAddress address = cur.getAddress();
+		core::NodePtr context = address.getParentNode(address.getDepth()-1);
+		std::cout << "\t Context: " <<
+			insieme::core::printer::PrettyPrinter(context, 
+												insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
+
+		std::cout << "=============================" << std::endl;
+		dumpPretty(context);
+	}
 
 }
