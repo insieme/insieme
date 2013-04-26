@@ -366,48 +366,40 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
 	// to begin with we translate the constructor as a regular function
-	auto f = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (methodDecl), false).as<core::ExpressionPtr>();
+	auto newFunc = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (methodDecl), false).as<core::ExpressionPtr>();
 
-	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
-	core::TypePtr&& irClassType = ownerObj->getType();
-	core::TypePtr funcTy;
-	
-	core::LambdaExprPtr newFunc;
-	if(f.isa<core::LambdaExprPtr>()) {
-		newFunc = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl), 
-													 f.as<core::ExpressionPtr>(),
-													 irClassType, 
-													 core::FK_MEMBER_FUNCTION);
-		funcTy = newFunc.as<core::LambdaExprPtr>().getType();
-	}
-	else{
-		funcTy = f.getType();
-	}
+	// get type of this
+	const clang::Type* classType= methodDecl->getParent()->getTypeForDecl();
+	core::TypePtr&& irClassType = builder.refType( convFact.convertType(classType) );
+
+	newFunc = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl), 
+									newFunc.as<core::ExpressionPtr>(),
+									irClassType, 
+									core::FK_MEMBER_FUNCTION);
+
+	core::FunctionTypePtr funcTy = newFunc.getType().as<core::FunctionTypePtr>();
  
+	// get the this-Object
+	core::ExpressionPtr ownerObj = Visit(callExpr->getImplicitObjectArgument());
 	// correct the owner object reference, in case of pointer (ref<array<struct<...>,1>>) we need to
 	// index the first element
 	ownerObj = getCArrayElemRef(builder, ownerObj);
 
 	// reconstruct Arguments list, fist one is a scope location for the object
-	ExpressionList&& args = ExprConverter::getFunctionArguments(builder, callExpr, funcTy.as<core::FunctionTypePtr>());
+	ExpressionList&& args = ExprConverter::getFunctionArguments(builder, callExpr, funcTy);
 	args.insert (args.begin(), ownerObj);
 
 	// append globalVar to arguments if needed
-	if ( ctx.globalFuncSet.find(methodDecl) != ctx.globalFuncSet.end() ) {
+	if( ctx.globalFuncSet.find(methodDecl) != ctx.globalFuncSet.end() ) {
 		args.push_back(ctx.globalVar);
 	}
 
+	core::TypePtr retTy = funcTy.getReturnType();
+
 	// build expression and we are done!!!
-	core::TypePtr retTy;
-	core::CallExprPtr ret;
-	if(f.isa<core::LambdaExprPtr>()) {
-		retTy = newFunc.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
-		ret  = builder.callExpr   (retTy, newFunc, args);
-	} else {
-		retTy = f.as<core::ExpressionPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
-		ret  = builder.callExpr (retTy, f, args);
-	}
-	if (VLOG_IS_ON(2)){
+	core::CallExprPtr ret = builder.callExpr(retTy, newFunc, args);
+	
+	if(VLOG_IS_ON(2)){
 		dumpPretty(&(*ret));
 	}
 	END_LOG_EXPR_CONVERSION(ret);
@@ -427,15 +419,13 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 	ExpressionList args;
 	core::FunctionTypePtr funcTy;
 
-	if( const clang::CXXMethodDecl* mDecl = llvm::dyn_cast<clang::CXXMethodDecl>(callExpr->getCalleeDecl()) ) {
+	if( const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(callExpr->getCalleeDecl()) ) {
 		//operator defined as member function
 		VLOG(2) << "Operator defined as member function " 
-				<< mDecl->getParent()->getNameAsString() << "::" 
-				<< mDecl->getNameAsString();
+				<< methodDecl->getParent()->getNameAsString() << "::" 
+				<< methodDecl->getNameAsString();
 	
-		convertedOp =  convFact.convertFunctionDecl(mDecl).as<core::ExpressionPtr>();
-		VLOG(2) << convertedOp;
-		VLOG(2) << convertedOp->getType();
+		convertedOp =  convFact.convertFunctionDecl(methodDecl).as<core::ExpressionPtr>();
 				
 		// possible member operators: +,-,*,/,%,^,&,|,~,!,<,>,+=,-=,*=,/=,%=,^=,&=,|=,<<,>>,>>=,<<=,==,!=,<=,>=,&&,||,++,--,','
 		// overloaded only as member function: '=', '->', '()', '[]', '->*', 'new', 'new[]', 'delete', 'delete[]'
@@ -443,31 +433,25 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		//binary:	X::operator@( right==arg(1) ); left == CallExpr->arg(0) == "this"
 		//else functioncall: ():		X::operator@( right==arg(1), args ); left == CallExpr->arg(0) == "this"
 
-		// get "this"
+		// get "this-object"
 		core::ExpressionPtr ownerObj = Visit(callExpr->getArg(0));
-		core::TypePtr&& irClassType = ownerObj->getType();
-		VLOG(2) << irClassType;
-		
-		if(convertedOp.isa<core::LambdaExprPtr>()) {
-			convertedOp = convFact.memberize(llvm::cast<FunctionDecl>(mDecl), 
-														convertedOp,
-														irClassType, 
-														core::FK_MEMBER_FUNCTION);
-			funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
-		}
-		else{
-			funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
-		}
-		VLOG(2) << funcTy;
-		VLOG(2) << funcTy->isMemberFunction();
+	
+		// get type of this
+		const clang::Type* classType= methodDecl->getParent()->getTypeForDecl();
+		core::TypePtr&& irClassType = builder.refType( convFact.convertType(classType) );
+
+		convertedOp = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl), 
+											convertedOp,
+											irClassType, 
+											core::FK_MEMBER_FUNCTION);
+
+		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		
 		// get arguments
 		args = getFunctionArguments(builder, callExpr, funcTy);
-		VLOG(2) << args;
-		//add this?
+		
+		//add this
 		args.insert (args.begin(), ownerObj);
-
-		VLOG(2) << args;
 	}
 	else if(const clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(callExpr->getCalleeDecl()) ) {
 		// operator defined as non-member function
@@ -478,11 +462,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		// binary:	operator@( left==arg(0), right==arg(1) )
 		
 		convertedOp =  convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
-		VLOG(2) << convertedOp;
-		VLOG(2) << convertedOp->getType();
+
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		args = getFunctionArguments(builder, callExpr, funcTy);
-		VLOG(2) << args;
 	}
 
 	/*if (callExpr->getCalleeDecl()) {
@@ -856,32 +838,26 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	}
 
 	// to begin with we translate the constructor as a regular function but with initialization list
-	auto f = convFact.convertFunctionDecl(ctorDecl);
+	core::ExpressionPtr ctorFunc = convFact.convertFunctionDecl(ctorDecl);
 
 	// update parameter list with a class-typed parameter in the first possition
 	core::TypePtr&&  refToClassTy = builder.refType(irClassType);
-	core::ExpressionPtr ctorFunc;
-	core::TypePtr funcTy;
-	if(!f.isa<core::LambdaExprPtr>()) { 
-		//intercepted if !lambdaexpr
-		ctorFunc = f; 
-		funcTy = f.getType();
-	} else {
-		ctorFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
-													 f.as<core::ExpressionPtr>(),
-													 refToClassTy, 
-													 core::FK_CONSTRUCTOR);
-		funcTy = ctorFunc.as<core::LambdaExprPtr>().getType();
-	}
+
+	ctorFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
+									ctorFunc,
+									refToClassTy, 
+									core::FK_CONSTRUCTOR);
+	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
 	
 	// reconstruct Arguments list, fist one is a scope location for the object
-	ExpressionList&& args = ExprConverter::getFunctionArguments(builder, callExpr, funcTy.as<core::FunctionTypePtr>());
+	ExpressionList&& args = ExprConverter::getFunctionArguments(builder, callExpr, funcTy);
 	args.insert (args.begin(), builder.undefinedVar(refToClassTy));
 
 	//  if needed: append globalVar to arguments as last argument
 	if ( ctx.globalFuncSet.find(ctorDecl) != ctx.globalFuncSet.end() ) {
 		args.push_back(ctx.globalVar);
 	}
+		
 
 	// build expression and we are done!!!
 	core::ExpressionPtr ret;
@@ -891,7 +867,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	}
 	else{
 		//single object constructor
-		ret = builder.callExpr (refToClassTy, ctorFunc, args);
+		ret = builder.callExpr (funcTy.getReturnType(), ctorFunc, args);
 	}
 
 	if (VLOG_IS_ON(2)){

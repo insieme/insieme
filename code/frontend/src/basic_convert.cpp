@@ -972,6 +972,23 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	
 	//TODO check/get definitionAndTU for declareation here (bernhard)
 
+	if( funcDecl->isPure() && llvm::isa<clang::CXXMethodDecl>(funcDecl)){
+		VLOG(2) << "pure virtual function " << funcDecl;
+		
+		auto funcTy = convertType(GET_TYPE_PTR(funcDecl)).as<core::FunctionTypePtr>();
+		std::string callName = funcDecl->getNameAsString();
+		core::ExpressionPtr retExpr = builder.literal(callName, funcTy);
+
+		//const clang::CXXMethodDecl* methodDecl = llvm::cast<clang::CXXMethodDecl>(funcDecl);
+		//const clang::Type* recordType = methodDecl->getParent()->getTypeForDecl();
+		//auto classType =  convertType (recordType);
+		//retExpr = memberize(funcDecl, retExpr, builder.refType(classType), core::FK_MEMBER_FUNCTION);
+		VLOG(2) << retExpr << " " << retExpr.getType();
+
+		RESTORE_TU();
+		return retExpr;
+	}
+
 	if(!funcDecl->hasBody()) {
 		core::ExpressionPtr retExpr;
 		if (funcDecl->getNameAsString() == "free") {
@@ -1287,60 +1304,95 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl,
+core::ExpressionPtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl,
 												   core::ExpressionPtr func, 
 												   core::TypePtr ownerClassType, 
 											   	   core::FunctionKind funcKind){
 
-	SET_TU(funcDecl);
-
-	core::FunctionTypePtr ty = func.getType().as<core::FunctionTypePtr>();
-	// NOTE: has being already memberized???
-	if (ty.isMemberFunction() ||
-		ty.isConstructor() ||
-		ty.isDestructor() ){
-		return func.as<core::LambdaExprPtr>();
-	}
-
-	// with the transformed lambda, we can extract the body and re-type it into the right type
-	core::StatementPtr body = func.as<core::LambdaExprPtr>()->getBody();
-	auto params = func.as<core::LambdaExprPtr>()->getParameterList();
-
-	// update parameter list with a class-typed parameter in the first possition
-	auto thisVar = builder.variable(ownerClassType);
-	core::VariableList paramList = params.getElements();
-	paramList.insert(paramList.begin(), thisVar);
-
-	// build the new function, 
-	// return type depends on type of function
-	core::TypePtr retTy; 
-	switch (funcKind){
-		case core::FK_MEMBER_FUNCTION:
-			retTy = func.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
-			break;
-		case core::FK_CONSTRUCTOR:
-		case core::FK_DESTRUCTOR:  //FIXME: what type returns a destructor???
-			retTy = ownerClassType;
-			break;
-		default:
-			assert(false && "not implemented");
-	}
-	auto newFunctionType = builder.functionType(extractTypes(paramList), retTy, funcKind);
-
-	// every usage of this has being defined as a literal "this" typed alike the class
-	// substute every usage of this with the right variable
-	core::LiteralPtr thisLit =  builder.literal("this", ownerClassType);
-	core::StatementPtr newBody = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
-
-	// build the member function
-	core::LambdaExprPtr memberized =  builder.lambdaExpr (newFunctionType, paramList, newBody);
+	core::FunctionTypePtr funcTy = func.getType().as<core::FunctionTypePtr>();
 	
-	// cache it
-	ctx.lambdaExprCache.erase(funcDecl);
-	ctx.lambdaExprCache[funcDecl] = memberized;
+	// NOTE: has being already memberized???
+	if (funcTy.isMemberFunction() ||
+		funcTy.isConstructor() ||
+		funcTy.isDestructor() ){
+		return func;
+	}
 
-	RESTORE_TU();
-	return memberized;
+	//FIXME NEEDS FURTHER REFACTORING
+	
+	if(func.isa<core::LambdaExprPtr>()) {
+		SET_TU(funcDecl);
+		core::LambdaExprPtr lambdaExpr = func.as<core::LambdaExprPtr>();
+
+		// with the transformed lambda, we can extract the body and re-type it into the right type
+		core::StatementPtr body = lambdaExpr->getBody();
+		auto params = lambdaExpr->getParameterList();
+
+		// update parameter list with a class-typed parameter in the first possition
+		auto thisVar = builder.variable(ownerClassType);
+		core::VariableList paramList = params.getElements();
+		paramList.insert(paramList.begin(), thisVar);
+		VLOG(2) << thisVar << " " << thisVar->getType() << " " << ownerClassType;
+
+		// build the new function, 
+		// return type depends on type of function
+		core::TypePtr retTy; 
+		switch (funcKind){
+			case core::FK_MEMBER_FUNCTION:
+				retTy = funcTy.getReturnType();
+				break;
+			case core::FK_CONSTRUCTOR:
+			case core::FK_DESTRUCTOR:  //FIXME: what type returns a destructor???
+				retTy = ownerClassType;
+				break;
+			default:
+				assert(false && "not implemented");
+		}
+		auto newFunctionType = builder.functionType(extractTypes(paramList), retTy, funcKind);
+
+		// every usage of this has being defined as a literal "this" typed alike the class
+		// substute every usage of this with the right variable
+		core::LiteralPtr thisLit =  builder.literal("this", ownerClassType);
+		core::StatementPtr newBody = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
+
+		// build the member function
+		core::LambdaExprPtr memberized =  builder.lambdaExpr (newFunctionType, paramList, newBody);
+		
+		// cache it
+		ctx.lambdaExprCache.erase(funcDecl);
+		ctx.lambdaExprCache[funcDecl] = memberized;
+
+		RESTORE_TU();
+		return memberized;
+	} else {
+		SET_TU(funcDecl);
+	
+		//only literals -- used for intercepted/pureVirtual functions
+		assert(func.isa<core::LiteralPtr>());	
+		core::TypeList paramTys = funcTy->getParameterTypeList();
+		paramTys.insert(paramTys.begin(), ownerClassType);
+		
+		// return type depends on type of function
+		core::TypePtr retTy; 
+		switch (funcKind){
+			case core::FK_MEMBER_FUNCTION:
+				retTy = funcTy.getReturnType();
+				break;
+			case core::FK_CONSTRUCTOR:
+			case core::FK_DESTRUCTOR:  //FIXME: what type returns a destructor???
+				retTy = ownerClassType;
+				break;
+			default:
+				assert(false && "not implemented");
+		}
+		funcTy = builder.functionType( paramTys, retTy, funcKind);
+
+		core::ExpressionPtr retExpr = builder.literal(func.as<core::LiteralPtr>().getStringValue(), funcTy);
+	
+		//assert(false && "not properly implement currently");
+		RESTORE_TU();
+		return retExpr;
+	}
 }
 
 //////////////////////////////////////////////////////////////////
