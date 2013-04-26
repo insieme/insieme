@@ -230,14 +230,12 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 
 		unsigned int pragmaStart = utils::Line(P->getStartLocation(), SourceMgr);
 		unsigned int pragmaEnd	 = utils::Line(P->getEndLocation(),   SourceMgr);
-		unsigned int pragmaSize  = pragmaEnd-pragmaStart +1; // lines pragma uses
 
 //		std::cout << "Match Pragma: " << pragmaStart  << " , " << pragmaEnd << std::endl;
 
 		bool found =false;
 		// problem with first pragma, compound start is delayed until fist usable line (first stmt)
 		if (CS->size()>0){
-			unsigned int lastEnd = (Line((*(CS->body_begin()))->getLocStart(), SourceMgr));
 			for (CompoundStmt::body_iterator it = CS->body_begin(); it != CS->body_end(); ++it){
 
 				unsigned int stmtStart = (Line((*it)->getLocStart(), SourceMgr));
@@ -264,7 +262,6 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 					}
 				}
 
-				lastEnd = stmtEnd;
 			} 
 		}
 		if(!found && pragmaStart <= utils::Line(R, SourceMgr)){
