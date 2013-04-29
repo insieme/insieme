@@ -115,6 +115,7 @@ std::string fixQualifiedName(std::string name) {
 
 } //end anonymous namespace
 
+/// reads the given file and loads the regEx into the toIntercept-set
 void Interceptor::loadConfigFile(std::string fileName) {
 	namespace fs = boost::filesystem;
 	const fs::path configPath = fileName;
@@ -140,7 +141,11 @@ void Interceptor::loadConfigFile(std::string fileName) {
 	}
 }
 
+/// Empties the toIntercept-set and fills it with the given set tI
 void Interceptor::loadConfigSet(std::set<std::string> tI) {
+	// clear the toIntercept-set of its default values
+	toIntercept.clear();
+	
 	toIntercept.insert(tI.begin(), tI.end());
 
 	// update regular expression:

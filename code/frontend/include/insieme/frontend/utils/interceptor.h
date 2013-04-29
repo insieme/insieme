@@ -69,7 +69,11 @@ public:
 			insieme::core::NodeManager& mgr,
 			insieme::frontend::utils::Indexer& indexer,
 			const vector<boost::filesystem::path>& stdLibDirs)
-		: indexer(indexer), builder(mgr), stdLibDirs(stdLibDirs)
+		: indexer(indexer), builder(mgr), stdLibDirs(stdLibDirs), 
+		
+		// by default intercept std:: and __gnu_cxx:: namespaces
+		// __gnu_cxx is needed for the iterator of std::vector for example
+		toIntercept( { "std::.*", "__gnu_cxx::.*" } ), rx("("+toString(join(")|(", toIntercept))+")")
 	{}
 
 	void loadConfigFile(std::string fileName);	
