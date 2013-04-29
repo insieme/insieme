@@ -21,4 +21,20 @@ int main() {
 			std::cout << *it;
 		}
 	}
+	
+	{
+		std::vector<int>::iterator it = v.begin();
+		for(size_t i = 0; i < std::distance(v.begin(), v.end()); i++) {
+			int curr = it[i];
+		}
+	}
+	
+	/*
+	 * not working
+	{
+		for(size_t i = 0; i < std::distance(v.begin(), v.end()); i++) {
+			int curr = (v.begin())[i];
+		}
+	}
+	*/
 }
