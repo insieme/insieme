@@ -281,8 +281,17 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 	if(enableCpp ) {
 		pimpl->m_isCXX = true;
 	
+		//langStandard is defined in include/clang/Frontend/LangStandards.def
 		//set default values for CXX -- default results in values for LangStandard::lang_gnucxx98
-		CompilerInvocation::setLangDefaults(LO, clang::IK_CXX /*, clang::LangStandard::Kind=unspecified*/);
+		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX /*, clang::LangStandard::Kind=unspecified*/);
+		// set cxx standard to c++98 (+GNUMode)
+		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_gnucxx98);
+		
+		// set cxx standard to c++98 
+		//--> DOES _NOT_ sets LanguageOption::GNUMode
+		CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx98);
+		// set cxx standard to c++11 (+GNUMode)
+		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_gnucxx11);
 
 		//should be set already by langdefaults
 		//LO.CPlusPlus = 1; 	// set C++ 98 support
@@ -290,7 +299,7 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 
 		// libcxx headers require to use cpp11 by default. otherwhise annoying warnings are
 		// prompted, no side efects detected
-		LO.CPlusPlus0x = 1;  //C++ 0x
+		//LO.CPlusPlus0x = 1;  //C++ 0x
 		
 		// use the cxx header of the backend c++ compiler
 		pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0; 
