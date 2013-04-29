@@ -378,6 +378,14 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitSubstTemplateTypeParmTy
 	return retTy;
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//					DECLTYPE TYPE (TODO) -- a CXX0x feature
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::TypePtr ConversionFactory::CXXTypeConverter::VisitDecltypeType(const clang::DecltypeType* declTy) {
+	assert(false && "DeclType not supported");
+	return core::TypePtr();
+}
+
 core::TypePtr ConversionFactory::CXXTypeConverter::Visit(const clang::Type* type) {
 	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
 	//check cache for type
@@ -391,7 +399,6 @@ core::TypePtr ConversionFactory::CXXTypeConverter::Visit(const clang::Type* type
 		VLOG(2) << type << " isIntercepted";
 		return convFact.program.getInterceptor().intercept(type, convFact); 
 	}
-	
 	
 	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
 }
