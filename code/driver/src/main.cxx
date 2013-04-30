@@ -221,7 +221,7 @@ namespace {
 				// write into the file
 				std::fstream fout(options.DumpIR,  std::fstream::out | std::fstream::trunc);
 				fout << "// -------------- Pretty Print Inspire --------------" << std::endl;
-				fout << PrettyPrinter(program);
+				fout << PrettyPrinter(program, PrettyPrinter::PRINT_DEREFS);
 				fout << std::endl << std::endl << std::endl;
 				fout << "// --------- Pretty Print Inspire - Detail ----------" << std::endl;
 				fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_MAX_DETAIL);
