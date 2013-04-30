@@ -35,7 +35,7 @@
  */
 
 // ignore warnings
-#pragma GCC diagnostic ignored "-Wall"
+//#pragma GCC diagnostic ignored "-Wall"
 
 void decl_stmt_test() {
 	#pragma test \
@@ -47,7 +47,7 @@ void decl_stmt_test() {
 	unsigned int c;
 
 	#pragma test \
-	"decl ref<real<4>> v1 = ( var(0.0))"
+	"decl ref<real<4>> v1 = ( var(0.0f))"
 	float d;
 
 	// ...
@@ -72,7 +72,7 @@ void binary_op_test() {
 	a - b;
 
 	#pragma test \
-	"(( *v1)-1)"
+	"(( *v1)-1u)"
 	c - 1;
 
 	#pragma test \
@@ -89,7 +89,7 @@ void unary_op_test() {
 	#pragma test "decl ref<int<4>> v1 = ( var(0))"
 	int a = 0;
 
-	#pragma test "(!int.to.Bool(( *v1)))"
+	#pragma test "(!int.to.bool(( *v1)))"
 	!a;
 
 	#pragma test "( *v1)"
@@ -128,7 +128,7 @@ void array_test() {
 	#pragma test "decl ref<ref<array<int<4>,1>>> v1 = ( var(undefined(type<ref<array<int<4>,1>>>)))"
 	int* a;
 
-	#pragma test "( *(( *v1)&[0]))"
+	#pragma test "( *(( *v1)&[0u]))"
 	a[0];
 
 }
@@ -159,7 +159,7 @@ void if_stmt_test() {
 	int cond = 0;
 
 	#pragma test \
-	"if(int.to.Bool(( *v1))) { (v1 := (( *v1)+1));} else { (v1 := (( *v1)-1));}"
+	"if(int.to.bool(( *v1))) { (v1 := (( *v1)+1));} else { (v1 := (( *v1)-1));}"
 	if(cond) {
 		cond += 1;
 	} else {
@@ -174,7 +174,7 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"((int.to.Bool(( *v1)))?bind(){fun(ref<int<4>> v3) -> int<4> { return (( *v3)+1);}(v1)}:bind(){fun(ref<int<4>> v2) -> int<4> { return (( *v2)-1);}(v1)})"
+	"((int.to.bool(( *v1)))?bind(){fun(ref<int<4>> v3) -> int<4> { return (( *v3)+1);}(v1)}:bind(){fun(ref<int<4>> v2) -> int<4> { return (( *v2)-1);}(v1)})"
 	a ? a+1 : a-1;
 
 	#pragma test \
@@ -344,6 +344,8 @@ void while_stmt_test() {
 	do{ it+=1; }while(it < 10);
 }
 
+int g(int x) ;
+
 #pragma test \
 	"recFun v11 { v11 = fun(int<4> v13) -> int<4> { return v12((v13-1)); }; v12 = fun(int<4> v15) -> int<4> { return v11((v15+1)); };}"
 int f(int x) {
@@ -378,11 +380,11 @@ void vector_stmt_test() {
 	int a[5];
 
 	#pragma test \
-	"( *(ref.vector.to.ref.array(v1)&[0]))"
+	"( *(ref.vector.to.ref.array(v1)&[0u]))"
 	a[0];
 
 	#pragma test \
-	"((ref.vector.to.ref.array(v1)&[0]) := 1)"
+	"((ref.vector.to.ref.array(v1)&[0u]) := 1)"
 	a[0] = 1;
 
 	#pragma test \
@@ -390,11 +392,11 @@ void vector_stmt_test() {
 	int b[2][3];
 
 	#pragma test \
-	"( *(ref.vector.to.ref.array((ref.vector.to.ref.array(v1)&[0]))&[0]))"
+	"( *(ref.vector.to.ref.array((ref.vector.to.ref.array(v1)&[0u]))&[0u]))"
 	b[0][0];
 
 	#pragma test \
-	"((ref.vector.to.ref.array((ref.vector.to.ref.array(v1)&[1]))&[1]) := 0)"
+	"((ref.vector.to.ref.array((ref.vector.to.ref.array(v1)&[1u]))&[1u]) := 0)"
 	b[1][1] = 0;
 
 	#pragma test \
@@ -418,7 +420,7 @@ void init_expr() {
 	int* a = 0;
 
 	#pragma test \
-	"( *(ref.vector.to.ref.array(( var([1, 2, 3])))&[1]))"
+	"( *(ref.vector.to.ref.array(( var([1, 2, 3])))&[1u]))"
 	((int[3]) {1,2,3})[1];
 
 	struct Person p;

@@ -48,6 +48,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include <boost/regex.hpp>
 
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
@@ -63,6 +64,108 @@
 
 using namespace insieme;
 using namespace insieme::frontend::utils;
+
+
+namespace {
+
+	static const boost::regex numberFilter  ("([0-9]+)(\\.[0-9]+)?([ufl]*)");
+	static const boost::regex precissionFilter  ("([0-9]|([0-9]*\\.[0-9]+))([ufl]*)");
+	static const boost::regex zerosFilter  ("\\.[0]+");
+	static const boost::regex zeroValueFilter  ("([0]+)(\\.[0]+)?([ufl]*)");
+
+	core::ExpressionPtr castLiteral(const core::LiteralPtr lit, const core::TypePtr targetTy){
+
+		std::string old = lit->getStringValue();
+
+		core::IRBuilder builder( targetTy->getNodeManager() );
+		const core::lang::BasicGenerator& gen = builder.getLangBasic();
+		std::string res;
+		boost::cmatch what;
+
+		////////////////////////////////////////
+		// CAST TO BOOLEAN
+		if (gen.isBool(targetTy) ){
+			if (gen.isChar(lit->getType())) throw std::exception();
+			if (boost::regex_match(old, zeroValueFilter)) res.assign("false");
+			else res.assign("true");
+		}
+			
+		////////////////////////////////////////
+		// CAST TO CHAR
+		if (gen.isChar(targetTy) ){
+			// do not rebuild the literal, might be a nightmare, just build a cast
+			throw std::exception();
+		}
+
+		// behind this point  is needed to be a number
+		if (!boost::regex_match(old, numberFilter)){
+			throw std::exception();
+		}
+
+		// cleanup precission
+		if(boost::regex_match(old.c_str(), what, precissionFilter)){
+			// what[1] contains the number 
+			// what[2] contains the precission markers
+			old.assign(what[1].first, what[1].second);
+		}
+
+		////////////////////////////////////////
+		// CAST TO INT and UINT
+		if (gen.isInt(targetTy) || gen.isUnsignedInt(targetTy)){
+			// remove any decimal
+			if(boost::regex_match(old.c_str(), what, numberFilter)){
+				// what[0] contains the whole string
+				// what[1] contains the integer part
+				// what[2] contains the decimals
+				res.assign(what[1].first, what[1].second);
+			}
+			else {
+					assert(false && "something wrong modifying literals");
+			}
+			if (gen.isUnsignedInt(targetTy)){
+				// append u
+				res.append("u");
+			}
+			if (gen.isInt8(targetTy) || gen.isUInt8(targetTy)){
+				res.append("l");
+			}
+			if (gen.isInt16(targetTy) || gen.isUInt16(targetTy)){
+				res.append("ll");
+			}
+		}
+
+		////////////////////////////////////////
+		// CAST TO REAL
+		if (gen.isReal(targetTy)){
+			// make sure has decimal point
+			
+			if(boost::regex_match(old.c_str(), what, numberFilter)){
+				res.assign(what[1].first, what[1].second);
+				if (what[2].first == what[0].second){
+					//no point
+					res.append(".0");
+				}
+				else{
+					// if only zeros, clean them
+					std::string zeros (what[2].first, what[2].second);
+					if (boost::regex_match(zeros, zerosFilter))
+						res.append(".0");
+					else
+						res.append(zeros);
+				}
+			}
+			else {
+					assert(false && "something wrong modifying literals");
+			}
+
+			if (gen.isReal4(targetTy)){
+				//append f
+				res.append("f");
+			}
+		}
+		return builder.literal (targetTy, res);
+	}
+}
 
 namespace insieme {
 namespace frontend {
@@ -121,7 +224,11 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	// is this the cast of a literal: to simplify code we'll return
 	// a literal of the spected type
 	if (expr->getNodeType() == core::NT_Literal){
-		return builder.literal (targetTy, expr.as<core::LiteralPtr>()->getStringValue());
+		try{
+		return castLiteral ( expr.as<core::LiteralPtr>(), targetTy);
+		}catch (std::exception& e){
+			// literal upgrade not supported, create cast
+		}
 	}
 
    	unsigned char code;
@@ -367,6 +474,25 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 					builder.getIntTypeParamLiteral(targetTy.as<core::VectorTypePtr>()->getSize())
 				);
 
+		case clang::CK_IntegralToPointer 	:
+		/*case clang::CK_IntegralToPointer - Integral to pointer. A special kind of reinterpreting conversion. Applies to normal,
+		* ObjC, and block pointers. (char*) 0x1001aab0 reinterpret_cast<int*>(0)
+		* */
+	
+			// is a cast of Null to another pointer type: 
+			// we rebuild null
+			if (*expr == *builder.literal(expr->getType(), "0")) {
+				return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
+			}
+			else{
+				std::cout << std::endl;
+				dumpDetail(expr);
+				dumpDetail(targetTy);
+				assert(false && "Non NULL casts to pointer not supported");
+			}
+
+
+
 		///////////////////////////////////////
 		//  PARTIALY IMPLEMENTED
 		///////////////////////////////////////
@@ -474,10 +600,6 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		/*case clang::CK_ConstructorConversion - Conversion by constructor. struct A { A(int); }; A a = A(10);
 		* */
 
-		case clang::CK_IntegralToPointer 	:
-		/*case clang::CK_IntegralToPointer - Integral to pointer. A special kind of reinterpreting conversion. Applies to normal,
-		* ObjC, and block pointers. (char*) 0x1001aab0 reinterpret_cast<int*>(0)
-		* */
 
 		case clang::CK_PointerToIntegral 	:
 		/*case clang::CK_PointerToIntegral - Pointer to integral. A special kind of reinterpreting conversion. Applies to normal, 
@@ -581,6 +703,10 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		default:
 			assert(false && "not all options listed, is this clang 3.2? maybe should upgrade Clang support");
 	}
+	
+	assert(false && "control reached an invalid point!");
+
+	return expr;
 
 }
 

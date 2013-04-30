@@ -194,14 +194,34 @@ namespace backend {
 		}
 
 		// convert literal
-		c_ast::ExpressionPtr res = converter.getCNodeManager()->create<c_ast::Literal>(ptr->getStringValue());
+		auto toLiteral = [&](const string& value) { return converter.getCNodeManager()->create<c_ast::Literal>(value); };
+		c_ast::ExpressionPtr res = toLiteral(ptr->getStringValue());
 
+		// handle primitive types
 		auto& basic = ptr->getNodeManager().getLangBasic();
-		if (basic.isPrimitive( ptr->getType() )){
-			auto type = converter.getTypeManager().getTypeInfo(ptr->getType());
-			return c_ast::cast(type.rValueType ,res);
-		}
+		if (basic.isPrimitive(ptr->getType())) {
 
+			// handle special cases
+			const string& value = ptr->getStringValue();
+
+			// things that need not be extra-casted (default values)
+			if (basic.isInt4(ptr->getType()) || basic.isReal4(ptr->getType()) || basic.isReal8(ptr->getType())) {
+				return res;
+			}
+
+			// add a u in case it is a signed literal and it is missing
+			if (basic.isUInt4(ptr->getType())) {
+				if (*value.rbegin() != 'u') {
+					res = toLiteral(value + "u");
+				}
+				return res;
+			}
+
+			// fall-back solution: use an explicit cast
+			auto info = converter.getTypeManager().getTypeInfo(ptr->getType());
+			context.addDependency(info.definition);
+			return c_ast::cast(info.rValueType ,res);
+		}
 
 		// special handling for the global struct
 		if (!ptr->getStringValue().compare(0, IRExtensions::GLOBAL_ID.size(), IRExtensions::GLOBAL_ID)) {

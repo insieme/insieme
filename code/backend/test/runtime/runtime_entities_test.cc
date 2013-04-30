@@ -83,7 +83,7 @@ TEST(RuntimeExtensions, WorkItemVariant) {
 	// test encoding
 	WorkItemVariant variant(getDummyImpl(manager));
 	core::ExpressionPtr encoded = enc::toIR(manager, variant);
-	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1) -> unit { }, unknownEffort, WorkItemVariantFeatures(0, 0, -1, -1))",
+	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1) -> unit { }, unknownEffort, WorkItemVariantFeatures(0, false, -1, -1))",
 			toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
 
 	// test decoding
@@ -109,7 +109,7 @@ TEST(RuntimeExtensions, WorkItemVariant) {
 
 	// test encoding
 	encoded = enc::toIR(manager, variant);
-	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1) -> unit { }, fun(int<8> v1, int<8> v2) -> uint<8> {return CAST<uint<8>>((v2-v1));}, WorkItemVariantFeatures(15, 0, -1, 8))",
+	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1) -> unit { }, fun(int<8> v1, int<8> v2) -> uint<8> {return CAST<uint<8>>((v2-v1));}, WorkItemVariantFeatures(15, false, -1, 8))",
 			toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
 
 	// test decoding
@@ -140,7 +140,7 @@ TEST(RuntimeExtensions, WorkItemImpl) {
 	WorkItemImpl impl(toVector(WorkItemVariant(getDummyImpl(manager))));
 	core::ExpressionPtr encoded = enc::toIR(manager, impl);
 	EXPECT_TRUE(encoded);
-	EXPECT_EQ("WorkItemImpl([WorkItemVariant(fun(ref<irt_wi> v1) -> unit { }, unknownEffort, WorkItemVariantFeatures(0, 0, -1, -1))])", toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::NO_LET_BINDINGS)));
+	EXPECT_EQ("WorkItemImpl([WorkItemVariant(fun(ref<irt_wi> v1) -> unit { }, unknownEffort, WorkItemVariantFeatures(0, false, -1, -1))])", toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::NO_LET_BINDINGS)));
 
 	// test decoding
 	WorkItemImpl decoded = enc::toValue<WorkItemImpl>(encoded);

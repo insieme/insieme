@@ -154,7 +154,7 @@ namespace c_ast {
 			PRINT(NamedType) {
 				out << print(node->name);
 				if (!node->parameters.empty()) {
-					out << "<" << join(", ", node->parameters, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << ">";
+					out << "<" << join(", ", node->parameters, [&](std::ostream& out, const NodePtr& cur) { out << print(cur); }) << " >";
 				}
 				return out;
 			}

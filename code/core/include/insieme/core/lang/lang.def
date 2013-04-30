@@ -309,24 +309,24 @@ LITERAL (UintPrecisionFix,"uint.precision",    "(uint<#a>,intTypeParam<#b>) -> u
 
       // TO REAL
 GROUP( ToReal, SignedToReal, UnsignedToReal, CharToReal, BoolToReal, RealPrecisionFix)
-LITERAL (SignedToReal,		"int.to.Real",	"(int<#a>,intTypeParam<#b>) -> real<#b>")
-LITERAL (UnsignedToReal,	"uint.to.Real",	"(uint<#a>,intTypeParam<#b>) -> real<#b>")
-LITERAL (CharToReal,		"char.to.Real",	"(char,intTypeParam<#b>) -> real<#b>")
-LITERAL (BoolToReal,		"bool.to.Real",	"(bool,intTypeParam<#b>) -> real<#b>")
+LITERAL (SignedToReal,		"int.to.real",	"(int<#a>,intTypeParam<#b>) -> real<#b>")
+LITERAL (UnsignedToReal,	"uint.to.real",	"(uint<#a>,intTypeParam<#b>) -> real<#b>")
+LITERAL (CharToReal,		"char.to.real",	"(char,intTypeParam<#b>) -> real<#b>")
+LITERAL (BoolToReal,		"bool.to.real",	"(bool,intTypeParam<#b>) -> real<#b>")
 LITERAL (RealPrecisionFix,"real.precision",    "(real<#a>,intTypeParam<#b>) -> real<#b>")
 
       // TO CHAR
 GROUP( ToChar, SignedToChar, UnsignedToChar, RealToChar, BoolToChar)
-LITERAL (SignedToChar,    	"int.to.Char" ,	"(int<#a>) -> char")
-LITERAL (UnsignedToChar,	"uint.to.Char",	"(uint<#a>) -> char")
-LITERAL (RealToChar,		"real.to.Char",	"(real<#a>) -> char")
-LITERAL (BoolToChar,		"bool.to.Char",	"(bool) -> char")
+LITERAL (SignedToChar,    	"int.to.char" ,	"(int<#a>) -> char")
+LITERAL (UnsignedToChar,	"uint.to.char",	"(uint<#a>) -> char")
+LITERAL (RealToChar,		"real.to.char",	"(real<#a>) -> char")
+LITERAL (BoolToChar,		"bool.to.char",	"(bool) -> char")
 
       // TO Bool
 GROUP( ToBool, SignedToBool, UnsignedToBool, RealToBool, CharToBool)
-LITERAL (SignedToBool,		"int.to.Bool" ,	"(int<#a>) -> bool")
-LITERAL (UnsignedToBool,	"uint.to.Bool",	"(uint<#a>) -> bool")
-LITERAL (RealToBool,		"real.to.Bool",	"(real<#a>) -> bool")
+LITERAL (SignedToBool,		"int.to.bool" ,	"(int<#a>) -> bool")
+LITERAL (UnsignedToBool,	"uint.to.bool",	"(uint<#a>) -> bool")
+LITERAL (RealToBool,		"real.to.bool",	"(real<#a>) -> bool")
 LITERAL (CharToBool,		"char.to.bool",	"(char) -> bool")
 
 // Bitwise Operations -------------------------------------------------------------------------------------------------

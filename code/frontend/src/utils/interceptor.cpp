@@ -115,6 +115,7 @@ std::string fixQualifiedName(std::string name) {
 
 } //end anonymous namespace
 
+/// reads the given file and loads the regEx into the toIntercept-set
 void Interceptor::loadConfigFile(std::string fileName) {
 	namespace fs = boost::filesystem;
 	const fs::path configPath = fileName;
@@ -140,7 +141,11 @@ void Interceptor::loadConfigFile(std::string fileName) {
 	}
 }
 
+/// Empties the toIntercept-set and fills it with the given set tI
 void Interceptor::loadConfigSet(std::set<std::string> tI) {
+	// clear the toIntercept-set of its default values
+	toIntercept.clear();
+	
 	toIntercept.insert(tI.begin(), tI.end());
 
 	// update regular expression:
@@ -238,31 +243,8 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 	
 	//fix types for ctor, mfunc, ...
 	std::string literalName = decl->getQualifiedNameAsString();
+
 	/*
-	if( const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
-		core::TypePtr thisTy = convFact.convertType(ctorDecl->getParent()->getTypeForDecl());
-		core::TypeList paramTys = type->getParameterTypeList();
-		paramTys.insert(paramTys.begin(), builder.refType(thisTy));
-		
-		//FIXME can we use memberize()?
-		type = builder.functionType( paramTys, builder.refType(thisTy), core::FK_CONSTRUCTOR);
-		
-		// update literal name (only class name type)
-		literalName = ctorDecl->getParent()->getQualifiedNameAsString();
-
-	} else if(const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl) ) {
-		core::TypePtr thisTy = convFact.convertType(methodDecl->getParent()->getTypeForDecl());
-		core::TypeList paramTys = type->getParameterTypeList();
-		paramTys.insert(paramTys.begin(), builder.refType(thisTy));
-
-		//FIXME can we use memberize()?
-		type = builder.functionType( paramTys, type.getReturnType(), core::FK_MEMBER_FUNCTION);
-
-		// just use name of method as the resulting literal name
-		literalName = methodDecl->getNameAsString();
-	}
-	*/
-
 	if(const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl) ) {
 		core::TypePtr thisTy = convFact.convertType(methodDecl->getParent()->getTypeForDecl());
 		core::TypeList paramTys = type->getParameterTypeList();
@@ -282,16 +264,36 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 			literalName = methodDecl->getNameAsString();
 		}
 	}
-	VLOG(2) << decl << " functionType " << type;
+	*/
 
-	// remove Clang inline namespace from header literal name (if present)
-	literalName = fixQualifiedName(literalName);
+	core::ExpressionPtr interceptExpr;
+	if(const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl) ) {
+		core::TypePtr thisTy = builder.refType(convFact.convertType(methodDecl->getParent()->getTypeForDecl()));
+		core::FunctionKind funcKind;
 
-	core::ExpressionPtr interceptExpr = builder.literal( literalName, type);
+		if( const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
+			literalName = ctorDecl->getParent()->getQualifiedNameAsString();
+			funcKind = core::FK_CONSTRUCTOR;
+		} else {
+			literalName = methodDecl->getNameAsString();
+			funcKind = core::FK_MEMBER_FUNCTION;
+		}
+		// remove Clang inline namespace from header literal name (if present)
+		literalName = fixQualifiedName(literalName);
+
+		VLOG(2) << type;
+		interceptExpr = builder.literal(literalName, type);
+		interceptExpr = convFact.memberize(decl, interceptExpr, thisTy, funcKind);
+	} else {
+		// remove Clang inline namespace from header literal name (if present)
+		literalName = fixQualifiedName(literalName);
+		interceptExpr = builder.literal(literalName, type);
+	}
 
 	addHeaderForDecl(interceptExpr, decl, stdLibDirs);
 
-	VLOG(2) << interceptExpr << " " << type;
+	VLOG(2) << interceptExpr << " " << interceptExpr->getType();
+
 	if(insieme::annotations::c::hasIncludeAttached(interceptExpr)) {
 		VLOG(2) << "\t attached header: " << insieme::annotations::c::getAttachedInclude(interceptExpr);
 	}

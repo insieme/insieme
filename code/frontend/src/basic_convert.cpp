@@ -445,11 +445,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type) const {
-	//if ( mgr.getLangBasic().isAnyRef(type) ) {
-	//return mgr.getLangBasic().getNull();
-	//}
-	// handle integers initialization
-	
+
 	// Primitive types 
 	if (mgr.getLangBasic().isInt(type)) {
 		// initialize integer value
@@ -462,18 +458,29 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 	// handle reals initialization
 	if (mgr.getLangBasic().isReal(type)) {
 		// in case of floating types we initialize with a zero value
-		return builder.literal("0.0", type);
+		if(mgr.getLangBasic().isReal4(type))
+			return builder.literal("0.0f", type);
+		if(mgr.getLangBasic().isReal8(type))
+			return builder.literal("0.0", type);
 	}
-	// handle strings initializationvalDec
-	if (mgr.getLangBasic().isString(type)) {
-		return builder.literal("", type);
-	}
-
 	// handle booleans initialization
 	if (mgr.getLangBasic().isBool(type)) {
 		// boolean values are initialized to false
 		return builder.literal("false", mgr.getLangBasic().getBool());
 	}
+
+
+	// FIXME: All types should have a default initialitation to undefined value
+//	if (mgr.getLangBasic().isPrimitive(type)){
+//		return builder.callExpr(mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(type));
+//	}
+
+	// handle strings initializationvalDec
+	if (mgr.getLangBasic().isString(type)) {
+		return builder.literal("", type);
+	}
+
+
 
 	// Initialization for volatile types
 	if (core::analysis::isVolatileType(type)) {
@@ -965,6 +972,23 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	
 	//TODO check/get definitionAndTU for declareation here (bernhard)
 
+	if( funcDecl->isPure() && llvm::isa<clang::CXXMethodDecl>(funcDecl)){
+		VLOG(2) << "pure virtual function " << funcDecl;
+		
+		auto funcTy = convertType(GET_TYPE_PTR(funcDecl)).as<core::FunctionTypePtr>();
+		std::string callName = funcDecl->getNameAsString();
+		core::ExpressionPtr retExpr = builder.literal(callName, funcTy);
+
+		//const clang::CXXMethodDecl* methodDecl = llvm::cast<clang::CXXMethodDecl>(funcDecl);
+		//const clang::Type* recordType = methodDecl->getParent()->getTypeForDecl();
+		//auto classType =  convertType (recordType);
+		//retExpr = memberize(funcDecl, retExpr, builder.refType(classType), core::FK_MEMBER_FUNCTION);
+		VLOG(2) << retExpr << " " << retExpr.getType();
+
+		RESTORE_TU();
+		return retExpr;
+	}
+
 	if(!funcDecl->hasBody()) {
 		core::ExpressionPtr retExpr;
 		if (funcDecl->getNameAsString() == "free") {
@@ -1280,36 +1304,25 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl,
+core::ExpressionPtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl,
 												   core::ExpressionPtr func, 
 												   core::TypePtr ownerClassType, 
 											   	   core::FunctionKind funcKind){
 
-	SET_TU(funcDecl);
-
-	core::FunctionTypePtr ty = func.getType().as<core::FunctionTypePtr>();
+	core::FunctionTypePtr funcTy = func.getType().as<core::FunctionTypePtr>();
+	
 	// NOTE: has being already memberized???
-	if (ty.isMemberFunction() ||
-		ty.isConstructor() ||
-		ty.isDestructor() ){
-		return func.as<core::LambdaExprPtr>();
+	if (funcTy.isMemberFunction() ||
+		funcTy.isConstructor() ||
+		funcTy.isDestructor() ){
+		return func;
 	}
 
-	// with the transformed lambda, we can extract the body and re-type it into the right type
-	core::StatementPtr body = func.as<core::LambdaExprPtr>()->getBody();
-	auto params = func.as<core::LambdaExprPtr>()->getParameterList();
-
-	// update parameter list with a class-typed parameter in the first possition
-	auto thisVar = builder.variable(ownerClassType);
-	core::VariableList paramList = params.getElements();
-	paramList.insert(paramList.begin(), thisVar);
-
-	// build the new function, 
 	// return type depends on type of function
 	core::TypePtr retTy; 
 	switch (funcKind){
 		case core::FK_MEMBER_FUNCTION:
-			retTy = func.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().getReturnType();
+			retTy = funcTy.getReturnType();
 			break;
 		case core::FK_CONSTRUCTOR:
 		case core::FK_DESTRUCTOR:  //FIXME: what type returns a destructor???
@@ -1318,22 +1331,60 @@ core::LambdaExprPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 		default:
 			assert(false && "not implemented");
 	}
-	auto newFunctionType = builder.functionType(extractTypes(paramList), retTy, funcKind);
-
-	// every usage of this has being defined as a literal "this" typed alike the class
-	// substute every usage of this with the right variable
-	core::LiteralPtr thisLit =  builder.literal("this", ownerClassType);
-	core::StatementPtr newBody = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
-
-	// build the member function
-	core::LambdaExprPtr memberized =  builder.lambdaExpr (newFunctionType, paramList, newBody);
+	//FIXME NEEDS FURTHER REFACTORING
 	
-	// cache it
-	ctx.lambdaExprCache.erase(funcDecl);
-	ctx.lambdaExprCache[funcDecl] = memberized;
+	if(func.isa<core::LambdaExprPtr>()) {
+		SET_TU(funcDecl);
+		core::LambdaExprPtr lambdaExpr = func.as<core::LambdaExprPtr>();
 
-	RESTORE_TU();
-	return memberized;
+		// with the transformed lambda, we can extract the body and re-type it into the right type
+		core::StatementPtr body = lambdaExpr->getBody();
+		auto params = lambdaExpr->getParameterList();
+
+		// update parameter list with a class-typed parameter in the first possition
+		auto thisVar = builder.variable(ownerClassType);
+		core::VariableList paramList = params.getElements();
+		paramList.insert(paramList.begin(), thisVar);
+
+		// build the new functiontype 
+		auto newFunctionType = builder.functionType(extractTypes(paramList), retTy, funcKind);
+
+		// every usage of this has being defined as a literal "this" typed alike the class
+		// substute every usage of this with the right variable
+		core::LiteralPtr thisLit =  builder.literal("this", ownerClassType);
+		core::StatementPtr newBody = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
+
+		// build the member function
+		core::LambdaExprPtr memberized =  builder.lambdaExpr (newFunctionType, paramList, newBody);
+		
+		// cache it
+		ctx.lambdaExprCache.erase(funcDecl);
+		ctx.lambdaExprCache[funcDecl] = memberized;
+
+		RESTORE_TU();
+		return memberized;
+	} else if(func.isa<core::LiteralPtr>()) {
+		SET_TU(funcDecl);
+	
+		//only literals -- used for intercepted/pureVirtual functions
+		core::LiteralPtr funcLiteral = func.as<core::LiteralPtr>();
+
+		// update parameter list with a class-typed parameter in the first possition
+		core::TypeList paramTys = funcTy->getParameterTypeList();
+		paramTys.insert(paramTys.begin(), ownerClassType);
+		
+		// build the new functiontype 
+		auto newFunctionType = builder.functionType(paramTys, retTy, funcKind);
+
+		core::ExpressionPtr retExpr = builder.literal(funcLiteral.getStringValue(), newFunctionType);
+	
+		//assert(false && "not properly implement currently");
+		RESTORE_TU();
+		return retExpr;
+	} else {
+		assert(false && "something went wrong");
+		return core::ExpressionPtr();
+	}
 }
 
 //////////////////////////////////////////////////////////////////

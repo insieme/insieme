@@ -135,6 +135,7 @@ TEST(StmtConversion, FileTest) {
 				LambdaExprPtr&& expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(convFactory.convertFunctionDecl(fd));
 				assert(expr);
 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(expr) + '\"' );
+				
 				// do semantics checking
 				checkSemanticErrors(expr);
 			}

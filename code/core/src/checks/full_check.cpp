@@ -39,6 +39,7 @@
 #include "insieme/core/checks/imperative_checks.h"
 #include "insieme/core/checks/type_checks.h"
 #include "insieme/core/checks/semantic_checks.h"
+#include "insieme/core/checks/literal_checks.h"
 
 
 namespace insieme {
@@ -80,6 +81,8 @@ namespace checks {
 
 			checks.push_back(make_check<NarrowCheck>());
 			checks.push_back(make_check<ExpandCheck>());
+
+			checks.push_back(make_check<LiteralFormatCheck>());
 
 			// assemble the IR check list
 			CheckPtr recursive = makeVisitOnce(combine(checks));

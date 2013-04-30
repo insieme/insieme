@@ -11,6 +11,9 @@
 
 # -------------------------------------------------------------- define some code locations
 
+ENABLE_LANGUAGE(C)
+ENABLE_LANGUAGE(CXX)
+
 # setup std-include directories (to support some IDEs)
 if (GCC_INCLUDE_DIR) 
 	include_directories( ${GCC_INCLUDE_DIR} )
@@ -153,8 +156,7 @@ endif (USE_XML)
 find_library(pthread_LIB pthread)
 # http://fedetft.wordpress.com/2010/03/07/cmake-part-3-finding-libraries/
 #find_package(Threads REQUIRED)
-#target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
-
+# target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
 
 #profiling
 IF (DO_GOOGLE_PROFILING)

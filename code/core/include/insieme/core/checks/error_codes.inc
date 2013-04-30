@@ -116,5 +116,10 @@ CODE(SEMANTIC, ARRAY_INDEX_OUT_OF_RANGE)
 CODE(SEMANTIC, INCORRECT_UNDEFINED)
 
 
+// ------------------------------ Formating ERRORS ---------------------------
+
+CODE(FORMAT, INVALID_LITERAL)
+
+
 // automatically undefine CODE macro after usage
 #undef CODE

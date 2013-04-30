@@ -208,13 +208,12 @@ utils::FunctionDependencyGraph& Program::getCallGraph() const {return pimpl->fun
 const vector<boost::filesystem::path>& Program::getStdLibDirs() const { return pimpl->stdLibDirs; }
 
 void Program::setupInterceptor() {
-	if(config.getIntercepterConfigFile().empty()) {
-		//by default we intercept "std::.*"
-		pimpl->interceptor.loadConfigSet( { "std::.*" } );
-	} else {
+	if(!config.getIntercepterConfigFile().empty()) {
 		//if we have a interceptor config file we use this to setup the interceptor
 		pimpl->interceptor.loadConfigFile(config.getIntercepterConfigFile());
 	}
+	
+	//by default we intercept "std::.*" and "__gnu_cxx::.*" -- set in the ctor
 }
 
 void Program::analyzeFuncDependencies() {

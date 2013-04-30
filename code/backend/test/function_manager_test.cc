@@ -348,11 +348,11 @@ TEST(FunctionManager, NestedBind) {
 	// ----------------- Create another bind -----------
 
 	core::VariablePtr p4 = builder.variable(int4, 4);
-	core::LiteralPtr  p5 = builder.literal(real4, "v5");
+	core::LiteralPtr  p5 = builder.literal(real4, "0.8f");
 	core::CallExprPtr call2 = builder.callExpr(boolean, innerBind, p5, p4);
 	core::BindExprPtr bind = builder.bindExpr(toVector(p4), call2);
 
-	EXPECT_EQ("bind(v4){bind(v2,v1){fun(v2, v3, v1)}(v5, v4)}", toString(*bind));
+	EXPECT_EQ("bind(v4){bind(v2,v1){fun(v2, v3, v1)}(0.8f, v4)}", toString(*bind));
 
 	// ----------------- Convert using function manager -----------
 
@@ -399,7 +399,7 @@ TEST(FunctionManager, NestedBind) {
 	ConversionContext context(converter);
 
 	EXPECT_EQ(
-			"name_ctr((name_closure*)alloca(sizeof(name_closure)), name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, &v3), v5)",
+			"name_ctr((name_closure*)alloca(sizeof(name_closure)), name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, &v3), 0.8f)",
 			toC(funManager.getValue(bind, context))
 	);
 	EXPECT_TRUE(context.getDependencies().find(info.definitions) != context.getDependencies().end());
