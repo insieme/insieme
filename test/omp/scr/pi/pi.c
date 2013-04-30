@@ -81,7 +81,6 @@ int main(int argc, char *argv[]) {
   //printf("\t %d \t%10ld \t%14.6lf \t%1.20f\t%g\n", NUMTHREADS, N, total_time, pi, PI25DT-pi);
   //printf("\n \t# THREADS INTERVAL \tPI \t\t\tERROR\n");
   printf("N=%10ld \tPI=%1.20f\tERROR=%g\n", N, pi, PI25DT-pi);
-  //printf("i: %ld\n", count);
   return 0;
 }
 
