@@ -772,7 +772,6 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 ///
 core::ExpressionPtr 
 ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const {
-
 	core::ExpressionPtr retIr;
 	// ATTACH_OMP_ANNOTATIONS(retIr, initList);
 	LOG_EXPR_CONVERSION(retIr);
@@ -872,21 +871,19 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// this is a C++ reference ( int& ref = x)
 	if (clangType && clangType->isReferenceType()){
 
-		assert(false && "here am I");
 		//FIXME this looks fishy!!! ask luis
 		// if is a CPP ref, convert to IR
 		if (core::analysis::isCppRef(retIr->getType())) {
-			if (!core::analysis::isCppRef(retIr->getType())) {
-				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retIr);
-			}
+			assert(false && "initialize with ref");
 		}
-//		else{
-//			if (!core::analysis::isConstCppRef(retIr->getType())) {
-//				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retIr);
-//			}
-//		}
+		else if (core::analysis::isConstCppRef(retIr->getType())) {
+			assert(false && "initialize with const ref");
+		}
+		else{
+			//this reference is initialized with a variable
+			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retIr);
+		}
 	}
-	
 
 	// ============================== End Special Handlings =======================================
 

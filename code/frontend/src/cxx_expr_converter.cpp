@@ -137,15 +137,17 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(c
 			}
 		case CK_LValueToRValue:
 			{
+
 				// this is CppRef -> ref
 				core::ExpressionPtr expr = Visit(castExpr->getSubExpr ());
-				core::TypePtr type = expr->getType();
-				if (core::analysis::isCppRef(type)){
-					return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
+				if (core::analysis::isCppRef(expr->getType())){
+					// unwrap and deref the variable
+						return builder.deref( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr));
 				}
-				else if (core::analysis::isConstCppRef(type)){
-					return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
+				else if (core::analysis::isConstCppRef(expr->getType())){
+					return builder.deref( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr));
 				}
+
 				// this is Ref -> CppRef
 				// handled wherever is used
 			}
@@ -297,46 +299,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMemberExpr(const c
 //							VAR DECLARATION REFERENCE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitDeclRefExpr(const clang::DeclRefExpr* declRef) {
-	return ConversionFactory::ExprConverter::VisitDeclRefExpr (declRef);
-
-	/*START_LOG_EXPR_CONVERSION(declRef);
-
-	core::ExpressionPtr retIr;
-	LOG_EXPR_CONVERSION(retIr);
-
-	// check whether this is a reference to a variable
-	core::ExpressionPtr retExpr;
-	if (ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())) {
-		VLOG(2) << "Parameter type: " << convFact.convertType(parmDecl->getOriginalType().getTypePtr() );
-		return ( retIr = convFact.lookUpVariable( parmDecl ) );
-	}
-	if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
-
-		retIr = convFact.lookUpVariable( varDecl );
-
-		if(GET_TYPE_PTR(varDecl)->isReferenceType()) {
-			retIr = convFact.tryDeref(retIr);
+	// if is a prameter and is a cpp ref, avoid going further to avoid wrapping issues
+	if (const ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())) {
+		core::ExpressionPtr retIr = convFact.lookUpVariable( parmDecl );
+		if (core::analysis::isCppRef(retIr->getType())){
+			return retIr;
 		}
+	}
 
-		return retIr;
-	}
-	if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
-		return (retIr =
-				core::static_pointer_cast<const core::Expression>(
-						convFact.convertFunctionDecl(funcDecl)
-				)
-		);
-	}
-	if (EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) {
-		return (retIr =
-				convFact.builder.literal(
-						enumDecl->getInitVal().toString(10),
-						convFact.builder.getLangBasic().getInt4()
-				)
-		);
-	}
-	// todo: C++ check whether this is a reference to a class field, or method (function).
-	assert(false && "DeclRefExpr not supported!");*/
+	return ConversionFactory::ExprConverter::VisitDeclRefExpr (declRef);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

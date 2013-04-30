@@ -443,8 +443,17 @@ public:
 	 */
 	virtual core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
 
+	
+	/**
+	 * converts the initilaization of a variable
+	 * @param clangType the clang type of the whole expression, used to retrieve array sizes
+	 * @param expr the clang expression to convert
+	 * @param type the inspire type exprected for the structure
+	 * @param zeroInit should the values be initialized to 0?
+	 * @return the IR expression ready to be coupled with the decl
+	 */
 	virtual core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
-			const core::TypePtr& type, const bool zeroInit) const;
+												const core::TypePtr& type, const bool zeroInit) const;
 
 	
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  some helper tools   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

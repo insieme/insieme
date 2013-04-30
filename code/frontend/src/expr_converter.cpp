@@ -627,8 +627,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			if (rightTU && fd->hasBody()) { definition = fd; }
 		}
 
-			
-
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
 		// No definition has been found in any translation unit, 
@@ -926,8 +924,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		return (retIr = builder.createCallExprFromBody(builder.compoundStmt(stmts), retType));
 	}
 
-	// get basic element type
-	core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
 
 	/*
 	 * we take care of compound operators first, we rewrite the RHS expression in a normal form, i.e.:
@@ -963,7 +959,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 	}
 
 	// perform any pointer arithmetic needed
-	auto doPointerArithmetic = [&] () {
+	auto doPointerArithmetic =  [&] () -> core::ExpressionPtr {
 		// LHS must be a ref<array<'a>>
 		core::TypePtr subRefTy = GET_REF_ELEM_TYPE(lhs->getType());
 
@@ -988,10 +984,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		if (isCompound)
 			arg = builder.deref(lhs);
 
-		// check whether the RHS is of integer type
-		rhs = builder.callExpr(gen.getArrayView(), arg, baseOp == BO_Add ? rhs : builder.invertSign(rhs));
+		// we build the pointer arithmetic expression,
+		// if is not addition, must be substration, therefore is a negative increment
+		return builder.callExpr(gen.getArrayView(), arg, baseOp == BO_Add ? rhs : builder.invertSign(rhs));
 	};
 
+	// compound operators are op + assignation. we need to express this in IR in a different way.
 	if ( isCompound ) {
 		// we check if the RHS is a ref, in that case we use the deref operator
 		//rhs = convFact.tryDeref(rhs);
@@ -1012,8 +1010,10 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			core::analysis::getReferencedType( core::analysis::getReferencedType(lhs->getType()))->getNodeType() == core::NT_ArrayType)
 		{
 			// do pointer arithmetic 
-			doPointerArithmetic(); 
+			rhs = doPointerArithmetic(); 
 		} else {
+			// get basic element type
+			core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
 			rhs = builder.callExpr(exprTy, gen.getOperator(exprTy, op), subExprLHS, rhs);
 		}
 			
@@ -1123,20 +1123,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
 			
 			lhs = utils::cast(lhs, exprTy);
-			// check if lhs is not an ocl-vector, in this case create a vector form the scalar
-//			if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) { 
-//			// the rhs is a scalar, implicitly casted to a vector
-//				// lhs is a scalar
-//				lhs = scalarToVector(lhs, rhsTy, builder, convFact);
-//			} else
-//				lhs = convFact.tryDeref(lhs); // lhs is an ocl-vector
-//
-//			if(binOp->getRHS()->getStmtClass() == Stmt::ImplicitCastExprClass ) { 
-//			// the rhs is a scalar, implicitly casted to a vector
-//				// rhs is a scalar
-//				rhs = scalarToVector(rhs, lhsTy, builder, convFact);
-//			} else
-			rhs = utils::cast(rhs, exprTy); // rhs is an ocl-vector
+			rhs = utils::cast(rhs, exprTy); 
 
 			// generate a ocl_vector - scalar operation
 			opFunc = gen.getOperator(lhs->getType(), op);
@@ -1155,61 +1142,37 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			assert(false && "Never reach this point");
 		}
 
-		// FIXME: need some coments in here....
-		if (!core::analysis::isRefType(rhs->getType()) && 
-			(utils::isRefArray(lhs->getType()) || utils::isRefVector(lhs->getType()))) {
-			doPointerArithmetic();	
+		// This is the required pointer arithmetic in the case we deal with pointers
+		if (!core::analysis::isRefType(rhs->getType()) && (utils::isRefArray(lhs->getType()) || utils::isRefVector(lhs->getType()))) {
+			rhs = doPointerArithmetic();	
 			return (retIr = rhs);
 		}
 
-		// FIXME: need some coments in here....
-		if (!core::analysis::isRefType(lhs->getType()) && 
-			(utils::isRefArray(rhs->getType()) || utils::isRefVector(rhs->getType()))) {
-			std::swap(rhs, lhs);
-			doPointerArithmetic();	
-			return (retIr = rhs);
-		}
-	
-		if (utils::isRefArray(lhs->getType()) &&  utils::isRefArray(rhs->getType()) &&
+		// espetial case to deal with the pointer distance operation
+		//  x = ptr1 - ptr2
+		if (utils::isRefArray(lhs->getType()) &&  
+			utils::isRefArray(rhs->getType()) &&
 			baseOp == BO_Sub) {
 			return retIr = builder.callExpr( gen.getArrayRefDistance(), lhs, rhs);
 		}
 
 		if (lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
-			// all binary operators have the same input and result types
+			// TODO: would love to remove this, but some weirdos still need this cast
+			// somehow related with char type. is treated as integer everywhere, not in ir
 			if (baseOp != BO_LAnd && baseOp != BO_LOr) {
-
 				lhs = utils::cast(lhs, convFact.convertType( GET_TYPE_PTR(binOp->getLHS())) );
 				rhs = utils::cast(rhs, convFact.convertType( GET_TYPE_PTR(binOp->getRHS())) );
-				
-				// LOG(INFO) << lhs->getType() << " " << rhs->getType(); 
-				if (*lhs->getType()==*rhs->getType()) {
-					exprTy = lhs->getType();
-				}
-				else{
-					// both expressions have same type but different precission
-					// one of the two expressions has widder precission this is the return value we want
-					if ( utils::getPrecission(lhs->getType(),gen) < utils::getPrecission(rhs->getType(),gen)){
-						exprTy = rhs->getType();
-					}
-					else{
-						exprTy = lhs->getType();
-					}
-				}
-				// LOG(INFO) << exprTy;
-			}
-			// Handle pointers arithmetic
+			}	
 			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 			opFunc = gen.getOperator(exprTy, op);
 		}
+		
+
 		if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType) {
 			assert(*lhsTy == *rhsTy && "Comparing incompatible types");
 			opFunc = gen.getOperator(lhsTy, op);
 		}
-		/*if ( const DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS()) ) {
-			if ( isa<ArrayType>(declRefExpr->getDecl()->getType().getTypePtr()) )
-				assert(false && "Pointer arithmetic not yet supported");
-		}*/
+
 		if(isLogical) { 
 			exprTy = gen.getBool(); 
 			opFunc = gen.getOperator(lhs->getType(), op);
@@ -1219,7 +1182,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		// check if there is a kernelFile annotation
 		ocl::attatchOclAnnotation(rhs, binOp, convFact);
 	}
-	assert(opFunc);
+	assert(opFunc && "no operation code set");
 	
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 				" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
