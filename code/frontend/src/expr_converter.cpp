@@ -90,7 +90,8 @@ std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl)
 } // end std namespace
 
 namespace exprutils {
-// FIXME
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
 annotations::c::SourceLocation convertClangSrcLoc(const clang::SourceManager& sm, const clang::SourceLocation& loc) {
 
@@ -108,6 +109,7 @@ annotations::c::SourceLocation convertClangSrcLoc(const clang::SourceManager& sm
 			sm.getExpansionColumnNumber(cloc));
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Returns a string of the text within the source range of the input stream
 std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocation& start) {
 	/*
@@ -123,10 +125,9 @@ std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocatio
 	);
 }
 
-/*
- * In case the the last argument of the function is a var_arg, we try pack the exceeding arguments
- * with the pack operation provided by the IR.
- */
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  In case the the last argument of the function is a var_arg, we try pack the exceeding arguments
+// with the pack operation provided by the IR.
 vector<core::ExpressionPtr> tryPack(const core::IRBuilder& builder, core::FunctionTypePtr funcTy,
 		const ExpressionList& args) {
 
@@ -160,6 +161,8 @@ vector<core::ExpressionPtr> tryPack(const core::IRBuilder& builder, core::Functi
 	return args;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type) {
 	core::LiteralPtr size;
 
@@ -176,9 +179,8 @@ core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::Type
 	return builder.callExpr(gen.getSizeof(), builder.getTypeLiteral(type));
 }
 
-/**
- * Special method which handle malloc and calloc which need to be treated in a special way in the IR.
- */
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Special method which handle malloc and calloc which need to be treated in a special way in the IR.
 core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::TypePtr& type,
 		const core::ExpressionPtr& subExpr) {
 
@@ -250,6 +252,8 @@ core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::T
 	return core::ExpressionPtr();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 core::ExpressionPtr getCArrayElemRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr) {
 	const core::TypePtr& exprTy = expr->getType();
 	if (exprTy->getNodeType() == core::NT_RefType) {
@@ -268,6 +272,8 @@ core::ExpressionPtr getCArrayElemRef(const core::IRBuilder& builder, const core:
 	return expr;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr refVecTy,
 		const core::IRBuilder& builder, const frontend::conversion::ConversionFactory& convFact) {
 	const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
@@ -281,7 +287,68 @@ core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr
 	return builder.callExpr(gen.getVectorInitUniform(), secondArg, builder.getIntTypeParamLiteral(vecTy->getSize()));
 }
 
-} // end anonymous namespace
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+core::ExpressionPtr getMemberAccessExpr (const core::IRBuilder& builder, core::ExpressionPtr base, const clang::MemberExpr* membExpr){
+	const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
+
+	if(membExpr->isArrow()) {
+		// we have to check whether we currently have a ref or probably an array (which is used to represent C pointers)
+		base = getCArrayElemRef(builder, base);
+	}
+
+	core::TypePtr structTy = base->getType();
+	core::ExpressionPtr op = gen.getCompositeMemberAccess();
+
+	if (structTy->getNodeType() == core::NT_RefType) {
+		// skip over reference wrapper
+		structTy = core::analysis::getReferencedType( structTy );
+		op = gen.getCompositeRefElem();
+	}
+
+	// There are 2 basic cases which need to be handled: Struct/Unions and Recursive Types
+	assert((structTy->getNodeType() == core::NT_StructType || 
+			structTy->getNodeType() == core::NT_UnionType ||
+			structTy->getNodeType() == core::NT_RecType) &&
+			"Using a member access operation on a non struct/union type"
+	);
+
+	// if the inner type is a RecType then we need to unroll it to get the contained composite type
+	if ( structTy->getNodeType() == core::NT_RecType ) {
+		structTy = core::static_pointer_cast<const core::RecType>(structTy)->unroll(builder.getNodeManager());
+	}
+	assert(structTy && "Struct Type not being initialized");
+
+	//identifier of the member
+	core::StringValuePtr ident;
+	core::NamedCompositeTypePtr compType = core::static_pointer_cast<const core::NamedCompositeType>(structTy);
+
+	if (!membExpr->getMemberDecl()->getIdentifier()) {
+
+		FieldDecl* field = dyn_cast<FieldDecl>(membExpr->getMemberDecl());
+		assert(field && field->isAnonymousStructOrUnion());
+
+		// Union may have anonymous member which have been tagged with a '__m' name by the type
+		// convert
+		ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(field->getFieldIndex()));
+	} else {
+		ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());
+	}
+
+	assert(ident);
+
+	core::TypePtr resType = structTy.as<core::NamedCompositeTypePtr>()->getTypeOfMember(ident);
+	core::TypePtr membTy = resType;
+	assert(membTy);
+	if (base->getType()->getNodeType() == core::NT_RefType) {
+		membTy = builder.refType(membTy);
+	}
+
+	return builder.callExpr(membTy, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(resType));
+
+}
+
+} // end exprUtils namespace
 
 namespace insieme {
 namespace frontend {
@@ -809,77 +876,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitMemberExpr(const clan
 	START_LOG_EXPR_CONVERSION(membExpr);
 
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
-
-	if(membExpr->isArrow()) {
-		// we have to check whether we currently have a ref or probably an array (which is used to represent C pointers)
-		base = getCArrayElemRef(builder, base);
-	}
-	else{
-		// if is not a pointer member, it might be that is a CPP ref
-		core::TypePtr irType = base->getType();
-		if (core::analysis::isCppRef(irType)) {
-			base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), base);
-		}
-		else if (core::analysis::isConstCppRef(irType)) {
-			base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), base);
-		}
-	}
-
-	core::TypePtr structTy = base->getType();
-
-	// Start to build the return Expression from here
-	core::ExpressionPtr retIr;
-	LOG_EXPR_CONVERSION(retIr);
-
-	core::ExpressionPtr op = gen.getCompositeMemberAccess();
-
-	if (structTy->getNodeType() == core::NT_RefType) {
-		// skip over reference wrapper
-		structTy = core::analysis::getReferencedType( structTy );
-		op = gen.getCompositeRefElem();
-	}
-
-	// There are 2 basic cases which need to be handled: Struct/Unions and Recursive Types
-	assert((structTy->getNodeType() == core::NT_StructType || structTy->getNodeType() == core::NT_UnionType ||
-					structTy->getNodeType() == core::NT_RecType) &&
-			"Using a member access operation on a non struct/union type"
-	);
-
-	// if the inner type is a RecType then we need to unroll it to get the contained composite type
-	if ( structTy->getNodeType() == core::NT_RecType ) {
-		structTy = core::static_pointer_cast<const core::RecType>(structTy)->unroll(mgr);
-	}
-	assert(structTy && "Struct Type not being initialized");
-
-	//identifier of the member
-	core::StringValuePtr ident;
-	core::NamedCompositeTypePtr compType = core::static_pointer_cast<const core::NamedCompositeType>(structTy);
-
-	if (!membExpr->getMemberDecl()->getIdentifier()) {
-
-		FieldDecl* field = dyn_cast<FieldDecl>(membExpr->getMemberDecl());
-		assert(field && field->isAnonymousStructOrUnion());
-
-		// Union may have anonymous member which have been tagged with a '__m' name by the type
-		// convert
-		ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(field->getFieldIndex()));
-	} else {
-		ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());
-	}
-
-	assert(ident);
-
-	core::TypePtr resType = structTy.as<core::NamedCompositeTypePtr>()->getTypeOfMember(ident);
-	core::TypePtr membTy = resType;
-	assert(membTy);
-	if (base->getType()->getNodeType() == core::NT_RefType) {
-		membTy = builder.refType(membTy);
-	}
-
-	retIr = builder.callExpr(membTy, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(resType));
+	core::ExpressionPtr retIr = exprutils::getMemberAccessExpr(builder, base, membExpr);
 
 	END_LOG_EXPR_CONVERSION(retIr);
-	VLOG(2) << "End of expression MemberExpr\n";
 	return retIr;
 }
 

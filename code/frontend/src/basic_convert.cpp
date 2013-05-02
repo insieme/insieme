@@ -92,6 +92,9 @@ using namespace insieme;
 #define RESTORE_TU(X) \
 		currTU = old_translation_unit; 
 
+#define IS_CPP_REF(expr) \
+	(core::analysis::isCppRef(expr->getType()) || \
+	core::analysis::isConstCppRef(expr->getType() ))
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //   ANONYMOUS NAMESPACE
@@ -1489,23 +1492,26 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 				expr = lookUpVariable(rhs->getDecl());
 			}
 			else{
+
 				// or might be the usage of a member of a parameter
 				const clang::MemberExpr* member= utils::skipSugar<MemberExpr> ((*it)->getInit());
-				if(member && llvm::isa<clang::DeclRefExpr>(member->getBase())){
+				if(member && llvm::isa<clang::DeclRefExpr>(member->getBase()) ){
+
 					// we replace the usage of the wrapped var by the original parameter
-				
 					clang::ParmVarDecl* param= llvm::dyn_cast<clang::ParmVarDecl>(llvm::cast<clang::DeclRefExpr>(member->getBase())->getDecl());
 					if (param) {
 						core::ExpressionPtr&& newOwner= lookUpVariable(param);
-						core::CallExprAddress addr(expr.as<core::CallExprPtr>());
-						expr = core::transform::replaceNode (mgr, 
-															  addr[0].as<core::CallExprAddress>()[0],
-															  newOwner ).as<core::CallExprPtr>();
+						if (!IS_CPP_REF(newOwner)){
+							core::CallExprAddress addr(expr.as<core::CallExprPtr>());
+							expr = core::transform::replaceNode (mgr, 
+																  addr[0].as<core::CallExprAddress>()[0],
+																  newOwner ).as<core::CallExprPtr>();
+						}
 					}
 				}
 			}
 
-			initStmt = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, tryDeref(expr));
+			initStmt = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, expr);
 		}
 
 		// append statement to initialization list

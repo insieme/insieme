@@ -284,15 +284,30 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const cla
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						  MEMBER EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMemberExpr(const clang::MemberExpr* memExpr){
-//	START_LOG_EXPR_CONVERSION(memExpr);
-//	core::ExpressionPtr retIr;
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr){
+	START_LOG_EXPR_CONVERSION(membExpr);
 
-	// we have the situation here in which we might want to access a field of a superclass
+	// get the base we want to access to
+	core::ExpressionPtr&& base = Visit(membExpr->getBase());
+
+	// if is not a pointer member, it might be that is a CPP ref
+	core::TypePtr irType = base->getType();
+	if (core::analysis::isCppRef(irType)) {
+		base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), base);
+	}
+	else if (core::analysis::isConstCppRef(irType)) {
+		base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), base);
+	}
+
+	// TODO: we have the situation here in which we might want to access a field of a superclass
 	// this will not be resolved by the C frontend. and we need to build the right datapath to
 	// reach the definition
-	
-	return ConversionFactory::ExprConverter::VisitMemberExpr(memExpr);
+
+	//dumpDetail (base);
+	core::ExpressionPtr retIr = exprutils::getMemberAccessExpr(builder, base, membExpr);
+
+	END_LOG_EXPR_CONVERSION(retIr);
+	return retIr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

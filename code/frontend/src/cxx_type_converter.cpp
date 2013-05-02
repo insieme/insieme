@@ -125,7 +125,6 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		clang::CXXRecordDecl::ctor_iterator ctorEnd= classDecl->ctor_end();
 		for (; ctorIt != ctorEnd; ctorIt ++){
 			const CXXConstructorDecl* ctorDecl = *ctorIt;
-
 			if (ctorDecl->isDefaultConstructor() ||
 				ctorDecl->isCopyConstructor() ||
 				ctorDecl->isMoveConstructor() ){
