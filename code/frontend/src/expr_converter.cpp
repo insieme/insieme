@@ -1117,10 +1117,11 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		core::TypePtr&& rhsTy = rhs->getType();
 		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 		" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
-
+		
+		// handling for ocl-vector operations
 		if (binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
-			binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
-			
+			binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { 			
+
 			lhs = utils::cast(lhs, exprTy);
 			rhs = utils::cast(rhs, exprTy); 
 
@@ -1129,7 +1130,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 
 			// TODO to be tested
 			if (const core::FunctionTypePtr funTy = core::dynamic_pointer_cast<const core::FunctionType>(opFunc->getType()))
-				if(funTy->getReturnType() == funTy->getParameterTypeList().at(0)) { // check if we can use the type of the first argument as retun type
+				// check if we can use the type of the first argument as retun type
+				if(funTy->getReturnType() == funTy->getParameterTypeList().at(0)) {
 					return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, utils::cast(rhs, lhs->getType())));
 				} else { // let deduce it otherwise
 					return (retIr = builder.callExpr(opFunc, lhs, utils::cast(rhs, lhs->getType())));
@@ -1138,11 +1140,19 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 				assert(false && "old stuff needed, tell Klaus");
 				return (retIr = builder.callExpr(lhsTy, opFunc, lhs, rhs));
 			}
-			assert(false && "Never reach this point");
 		}
 
 		// This is the required pointer arithmetic in the case we deal with pointers
-		if (!core::analysis::isRefType(rhs->getType()) && (utils::isRefArray(lhs->getType()) || utils::isRefVector(lhs->getType()))) {
+		if (!core::analysis::isRefType(rhs->getType()) && 
+			(utils::isRefArray(lhs->getType()) || utils::isRefVector(lhs->getType()))) {
+			rhs = doPointerArithmetic();	
+			return (retIr = rhs);
+		}
+
+		// it might be all the way round, left side is the one to do pointer arithmetics on, is not very usual, but it happens
+		if (!core::analysis::isRefType(lhs->getType()) && 
+			(utils::isRefArray(rhs->getType()) || utils::isRefVector(rhs->getType()))) {
+			std::swap(rhs, lhs);
 			rhs = doPointerArithmetic();	
 			return (retIr = rhs);
 		}
@@ -1176,13 +1186,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			exprTy = gen.getBool(); 
 			opFunc = gen.getOperator(lhs->getType(), op);
 		}
-
 	} else {
 		// check if there is a kernelFile annotation
 		ocl::attatchOclAnnotation(rhs, binOp, convFact);
 	}
+
 	assert(opFunc && "no operation code set");
-	
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 				" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 
