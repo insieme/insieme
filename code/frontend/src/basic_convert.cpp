@@ -92,9 +92,6 @@ using namespace insieme;
 #define RESTORE_TU(X) \
 		currTU = old_translation_unit; 
 
-#define IS_CPP_REF(expr) \
-	(core::analysis::isCppRef(expr->getType()) || \
-	core::analysis::isConstCppRef(expr->getType() ))
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //   ANONYMOUS NAMESPACE
@@ -1501,7 +1498,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 					clang::ParmVarDecl* param= llvm::dyn_cast<clang::ParmVarDecl>(llvm::cast<clang::DeclRefExpr>(member->getBase())->getDecl());
 					if (param) {
 						core::ExpressionPtr&& newOwner= lookUpVariable(param);
-						if (!IS_CPP_REF(newOwner)){
+						if (!IS_CPP_REF_EXPR(newOwner)){
 							core::CallExprAddress addr(expr.as<core::CallExprPtr>());
 							expr = core::transform::replaceNode (mgr, 
 																  addr[0].as<core::CallExprAddress>()[0],

@@ -155,22 +155,18 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		for (; methodIt != methodEnd; methodIt ++){
 			if (llvm::isa<clang::CXXConstructorDecl>(*methodIt) ||
 				llvm::isa<clang::CXXDestructorDecl>(*methodIt)){
-				//FIXME: here might be a problem
+				// ctor are handled in a previous loop
 				continue;
 			}
 		
-			if( ((*methodIt)->isMoveAssignmentOperator() || (*methodIt)->isCopyAssignmentOperator()) 
+
+			if( ((*methodIt)->isMoveAssignmentOperator() || 
+				 (*methodIt)->isCopyAssignmentOperator()) 
 				&& !(*methodIt)->isUserProvided() ) {
 				//FIXME for non-userProvided move/copy assign ops find solution,
 				//maybe leave them to be handled by the backendCompiler or something else
 				//currently are left over for be-compiler
-				
-				VLOG(2) << "isMoveAssignOp " << (*methodIt)->isMoveAssignmentOperator();
-				//FIXME CXX11 feature 
-				VLOG(2) << "isCopyAssignOp " << (*methodIt)->isCopyAssignmentOperator();
-				//FIXME CXX11 feature, copyAssign is implicitly defined if not userprovided
-
-				continue;
+				assert(!(*methodIt)->isMoveAssignmentOperator() && " move assigment operator is a CXX11 feature, not supported");
 			}
 
 			const clang::FunctionDecl* method = llvm::cast<clang::FunctionDecl>(*methodIt);

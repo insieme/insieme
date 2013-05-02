@@ -29,17 +29,17 @@ int  main (){
 		Obj& ref = a;
 
 		printf("1=%d\n", ref.val);
-
 	}
 	// assign
 	{
 		Obj a (2);
 		Obj b (3);
+		Obj c (4);
 		Obj& ref = a;
 		ref = b;
-		printf("2=%d\n", ref.val);
-		a = ref;
-		printf("3=%d\n", a.val);
+		printf("3=%d\n", ref.val);
+		c = ref;
+		printf("3=%d\n", c.val);
 	}
 	// func call
 	{
