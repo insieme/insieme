@@ -282,7 +282,7 @@ protected:
 	core::ExpressionPtr lookUpVariable(const clang::ValueDecl* valDecl);
 	core::ExpressionPtr convertInitializerList(
 			const clang::InitListExpr* initList,
-			const core::TypePtr& type) const;
+			const core::TypePtr& type) ;
 
 	/**
 	 * Attach annotations to a C function of the input program.
@@ -457,7 +457,7 @@ public:
 	 * @return the IR expression ready to be coupled with the decl
 	 */
 	virtual core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
-												const core::TypePtr& type, const bool zeroInit) const;
+												const core::TypePtr& type, const bool zeroInit) ;
 
 	
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  some helper tools   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

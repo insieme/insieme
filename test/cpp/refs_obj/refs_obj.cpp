@@ -7,13 +7,17 @@ class Obj{
 		Obj(int a)
 		:val(a) {}
 
-		Obj(Obj& o)
+/*		Obj(Obj& o)
 		:val(o.val) 
 		{}
+		*/
 
 };
 
 
+void constRefParam(const Obj& a){
+	printf("4=%d\n", a.val);
+}
 void refParam(Obj& a){
 	printf("4=%d\n", a.val);
 }
@@ -27,8 +31,12 @@ int  main (){
 	{
 		Obj a (1);
 		Obj& ref = a;
+		const Obj& cref = a;
+		const Obj& cref2 = ref;
 
 		printf("1=%d\n", ref.val);
+		printf("1=%d\n", cref.val);
+		printf("1=%d\n", cref2.val);
 	}
 	// assign
 	{
@@ -45,12 +53,18 @@ int  main (){
 	{
 		Obj a (4);
 		Obj& ref = a;
+		const Obj& cref = a;
+
+		valParam(a);
+		valParam(ref);
+		valParam(cref);
 
 		refParam(a);
-		valParam(a);
-
 		refParam(ref);
-		valParam(ref);
+
+		constRefParam(a);
+		constRefParam(ref);
+		constRefParam(cref);
 	}
 	return 0;
 }
