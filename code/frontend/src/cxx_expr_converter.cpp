@@ -894,7 +894,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTempora
 //		return expr;
 //	}
 //	else 
-		return builder.refVar( expr);
+
+	return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), expr);
+
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
