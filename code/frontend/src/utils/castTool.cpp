@@ -492,6 +492,12 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 			}
 
 
+		case clang::CK_ConstructorConversion 	:
+		/*case clang::CK_ConstructorConversion - Conversion by constructor. struct A { A(int); }; A a = A(10);
+		* */
+	// this should be handled by backend compiler
+	// http://stackoverflow.com/questions/1384007/conversion-constructor-vs-conversion-operator-precedence
+		return expr;
 
 		///////////////////////////////////////
 		//  PARTIALY IMPLEMENTED
@@ -595,11 +601,6 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		/*case clang::CK_UserDefinedConversion - Conversion using a user defined type conversion function.i
 		* struct A { operator int(); }; int i = int(A());
 		* */
-
-		case clang::CK_ConstructorConversion 	:
-		/*case clang::CK_ConstructorConversion - Conversion by constructor. struct A { A(int); }; A a = A(10);
-		* */
-
 
 		case clang::CK_PointerToIntegral 	:
 		/*case clang::CK_PointerToIntegral - Pointer to integral. A special kind of reinterpreting conversion. Applies to normal, 
