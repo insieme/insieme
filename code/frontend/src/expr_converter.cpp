@@ -1176,12 +1176,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 				lhs = utils::cast(lhs, convFact.convertType( GET_TYPE_PTR(binOp->getLHS())) );
 				rhs = utils::cast(rhs, convFact.convertType( GET_TYPE_PTR(binOp->getRHS())) );
 			}	
-			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 
-			if (lhs->getType() == rhs->getType()  && *(lhs->getType()) == *(lhs->getType()) )
-			  	opFunc = gen.getOperator(lhs->getType(), op);
-			else
-				assert(false && " expression should be casted to the same type, not different typed expressions allowed");
+			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
+			opFunc = gen.getOperator(lhs->getType(), op);
 		}
 		else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType) {
 			assert(*lhsTy == *rhsTy && "Comparing incompatible types");
