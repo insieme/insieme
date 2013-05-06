@@ -153,6 +153,7 @@ namespace compiler {
 				paths.push_back(input);
 			}
 		}
+		pclose(file);
 		return paths;
 	}
 
