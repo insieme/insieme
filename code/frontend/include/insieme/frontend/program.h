@@ -29,25 +29,23 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
 #pragma once
 
-#include <boost/algorithm/string/predicate.hpp>
 #include <set>
+
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 
 #include "insieme/core/ir_program.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/compiler.h"
-#include "insieme/frontend/sema.h"
 
 #include "insieme/utils/logging.h"
-
-#include "llvm/Support/FileSystem.h"
 
 namespace insieme {
 namespace frontend {
