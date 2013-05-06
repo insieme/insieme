@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -82,7 +82,9 @@ namespace frontend {
 
 			WinCrossCompile	= 1<<4,
 			DumpCFG			= 1<<5,
-			TAG_MPI			= 1<<6
+			TAG_MPI			= 1<<6,
+
+			CompilationOnly = 1<<7
 		};
 
 		/**
@@ -293,6 +295,16 @@ namespace frontend {
 		 * @throws an exception if the conversion fails.
 		 */
 		core::ProgramPtr execute(core::NodeManager& manager);
+
+
+		/**
+		 * Triggers the actual AST to object file creation.
+		 *
+		 * @param manager the node manager to be used for building the IR
+		 * @return the resulting, converted AST
+		 * @throws an exception if the conversion fails.
+		 */
+		void storeAST(core::NodeManager& manager, const string& output_file);
 	};
 
 
