@@ -36,6 +36,10 @@
 
 #include "insieme/frontend/program.h"
 
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+#include <clang/Serialization/ASTWriter.h>
+
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/convert.h"
@@ -188,6 +192,37 @@ public:
 
 namespace insieme {
 namespace frontend {
+
+
+void TranslationUnit::storeUnit(const std::string& output_file) {
+        //if no output_file is specified the current file_name is taken and modified to .o extension
+        std::string raw_name = output_file;
+        if(output_file.size()==0) {
+            size_t lastslash = getFileName().find_last_of("/")+1;
+            size_t lastdot = getFileName().find_last_of(".");
+            if (lastdot == std::string::npos)
+                raw_name = getFileName();
+            raw_name = getFileName().substr(lastslash, lastdot-lastslash);
+            raw_name += ".o";
+        }
+        llvm::SmallString<128> TempPath;
+        TempPath = raw_name;
+        TempPath += "-%%%%%%%%";
+        int fd;
+        llvm::sys::fs::unique_file(TempPath.str(), fd, TempPath,
+                                            false);
+        llvm::raw_fd_ostream Out(fd, true);
+        llvm::SmallString<128> Buffer;
+        llvm::BitstreamWriter Stream(Buffer);
+        clang::ASTWriter Writer(Stream);
+        Writer.WriteAST(*(mClang.getSema()), std::string(), 0, "", false);
+        if (!Buffer.empty())
+            Out.write(Buffer.data(), Buffer.size());
+        Out.close();
+        llvm::sys::fs::rename(TempPath.str(), raw_name);
+        //destroy Sema
+        //mClang.destroySema();
+}
 
 struct Program::ProgramImpl {
 	utils::Indexer mIdx;
