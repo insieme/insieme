@@ -61,11 +61,19 @@ namespace lang {
 
 	public:
 
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// virtuals handling
+	
 		/**
 		 * A literal to be used to represent pure virtual functions.
 		 */
 		LANG_EXT_LITERAL(PureVirtual, "<pure virtual>", "(type<'a>)->'a");
 
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// constructor behaviour
+	
 		/**
 		 * A construct supporting the construction and initialization of an array
 		 * of objects.
@@ -138,6 +146,9 @@ namespace lang {
 		);
 
 
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// cpp references
+
 		/**
 		 * An operator converting a C++ reference into an IR reference.
 		 */
@@ -177,6 +188,16 @@ namespace lang {
 				"(cppRef x)->constCppRef { return (constCppRef) { x._cpp_ref }; }"
 		);
 
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// temporaries
+	
+		/**
+		 * materialize a value, this operation provides a memory address to a pure right value
+		 * it might be used whenever a const ref extends a value livetime.
+		 * most probably, is ignored by the backend
+		 */
+		LANG_EXT_LITERAL(Materialize, "materialize", "('a)->ref<'a>");
 
 	};
 

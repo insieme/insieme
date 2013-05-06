@@ -56,6 +56,7 @@
 #define CONVERT_STMT(Node) context.getConverter().getStmtConverter().convertStatement(context, Node)
 
 #define LANG_BASIC context.getConverter().getNodeManager().getLangBasic()
+#define LANG_EXT_CPP context.getConverter().getNodeManager().getLangExtension<core::lang::IRppExtensions>()
 
 #define GET_TYPE_INFO(Type) context.getConverter().getTypeManager().getTypeInfo(Type)
 #define GET_VAR_INFO(Var) context.getVariableManager().getInfo(Var)

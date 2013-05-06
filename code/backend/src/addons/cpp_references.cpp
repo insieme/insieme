@@ -45,6 +45,7 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/statement_converter.h"
 
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/lang/ir++_extension.h"
 
@@ -97,7 +98,21 @@ namespace addons {
 			res[ext.getRefConstCppToIR()] = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
 
 			res[ext.getRefIRToCpp()] 	  = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
-			res[ext.getRefIRToConstCpp()] = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
+			res[ext.getRefIRToConstCpp()] = OP_CONVERTER({
+					core::ExpressionPtr arg = ARG(0);
+					// if inner node is a materialize we should not deref
+					if (core::analysis::isCallOf(arg, LANG_EXT_CPP.getMaterialize())){
+						return CONVERT_ARG(0);
+					}
+					// is if anything else, we must deref
+					return c_ast::deref(CONVERT_ARG(0)); 
+			});
+
+			res[ext.getRefCppToConstCpp()]= OP_CONVERTER({ return CONVERT_ARG(0); });
+
+			// FIXME: find the right place for this
+			res[ext.getMaterialize()]	  = OP_CONVERTER({ return CONVERT_ARG(0);});
+
 
 			#include "insieme/backend/operator_converter_end.inc"
 			return res;

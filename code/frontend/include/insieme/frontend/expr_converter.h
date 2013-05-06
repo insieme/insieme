@@ -63,12 +63,18 @@ namespace exprutils {
 
 using namespace insieme;
 
-// FIXME 
-// Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
+//FIXME cleanup this namespace, document and find out if there is real usage 
+
+/**
+ * Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
+ */
 annotations::c::SourceLocation convertClangSrcLoc(const clang::SourceManager& sm, const clang::SourceLocation& loc);
 
-// Returns a string of the text within the source range of the input stream
+/**
+ * Returns a string of the text within the source range of the input stream
+ */
 std::string GetStringFromStream(const clang::SourceManager& srcMgr, const SourceLocation& start);
+
 /*
  * In case the the last argument of the function is a var_arg, we try pack the exceeding arguments
  * with the pack operation provided by the IR.
@@ -76,6 +82,7 @@ std::string GetStringFromStream(const clang::SourceManager& srcMgr, const Source
 vector<core::ExpressionPtr> tryPack(const core::IRBuilder& builder, core::FunctionTypePtr funcTy, const ExpressionList& args);
 
 core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type);
+
 /**
  * Special method which handle malloc and calloc which need to be treated in a special way in the IR. 
  */
@@ -85,6 +92,13 @@ core::ExpressionPtr getCArrayElemRef(const core::IRBuilder& builder, const core:
 
 core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr refVecTy,
 		const core::IRBuilder& builder, const frontend::conversion::ConversionFactory& convFact);
+
+/**
+ * builds a member access expresion, does conversion needed on base regarding pointer usage, and in
+ * the indentifier regarding annonimous members.
+ */
+core::ExpressionPtr getMemberAccessExpr (const core::IRBuilder& builder, core::ExpressionPtr base, const clang::MemberExpr* membExpr);
+
 
 } // end anonymous namespace
 
@@ -199,6 +213,8 @@ ExpressionList getFunctionArguments(const core::IRBuilder& builder, ClangExprTy*
 
 	return args;
 }
+
+
 
 public:
 	// CallGraph for functions, used to resolved eventual recursive functions

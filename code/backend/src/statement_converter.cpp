@@ -455,9 +455,15 @@ namespace backend {
 
 		bool toBeAllocatedOnStack(const core::ExpressionPtr& initValue) {
 			auto& basic = initValue->getNodeManager().getLangBasic();
+			auto& ext = initValue->getNodeManager().getLangExtension<core::lang::IRppExtensions>();
 
 			// if it is a call to a ref.var => put it on the stack
 			if (core::analysis::isCallOf(initValue, basic.getRefVar())) {
+				return true;
+			}
+
+			// if is materialize is stack
+			if (core::analysis::isCallOf(initValue, ext.getMaterialize())) {
 				return true;
 			}
 
@@ -557,6 +563,7 @@ namespace backend {
 		// decide storage location of variable
 		VariableInfo::MemoryLocation location = VariableInfo::NONE;
 		if (core::analysis::hasRefType(var)) {
+
 			if (toBeAllocatedOnStack(init)) {
 				location = VariableInfo::DIRECT;
 			} else {

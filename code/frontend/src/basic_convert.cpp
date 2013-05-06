@@ -688,7 +688,7 @@ core::ExpressionPtr ConversionFactory::attachFuncAnnotations(const core::Express
 /// In insieme this statement has to tranformed into a StructExpr, or VectorExpr depending on the
 /// type of the LHS expression.
 core::ExpressionPtr
-ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, const core::TypePtr& type) const {
+ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, const core::TypePtr& type)  {
 	const ConversionFactory& convFact = *this;
 	START_LOG_EXPR_CONVERSION(initList);
 
@@ -771,7 +771,7 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr 
-ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const {
+ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit)  {
 	core::ExpressionPtr retIr;
 	// ATTACH_OMP_ANNOTATIONS(retIr, initList);
 	LOG_EXPR_CONVERSION(retIr);
@@ -870,18 +870,34 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 
 	// this is a C++ reference ( int& ref = x)
 	if (clangType && clangType->isReferenceType()){
+		core::TypePtr targetType = this->convertType(clangType);
+		core::TypePtr srcType = retIr->getType();
 
-		//FIXME this looks fishy!!! ask luis
 		// if is a CPP ref, convert to IR
-		if (core::analysis::isCppRef(retIr->getType())) {
-			assert(false && "initialize with ref");
+		if (core::analysis::isCppRef(srcType)) {
+			// same type, just assign
+			if (srcType == targetType && *srcType == *targetType){
+				return retIr;
+			}
+			else {
+				// we can not assign a a const ref to a ref
+				assert(false && "we can not assign this, what is this?");
+			}
+
 		}
-		else if (core::analysis::isConstCppRef(retIr->getType())) {
-			assert(false && "initialize with const ref");
+		else if (core::analysis::isConstCppRef(srcType)) {
+
+			// if we are here, we are initializing a const ref from a const ref or from a ref
+			if (core::analysis::isCppRef(targetType)) {
+				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp());
+			}
+			else
+				return retIr;
 		}
 		else{
 			//this reference is initialized with a variable
-			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retIr);
+			if (core::analysis::isCppRef(targetType)) return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retIr);
+			else return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retIr);
 		}
 	}
 
@@ -1489,23 +1505,26 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 				expr = lookUpVariable(rhs->getDecl());
 			}
 			else{
+
 				// or might be the usage of a member of a parameter
 				const clang::MemberExpr* member= utils::skipSugar<MemberExpr> ((*it)->getInit());
-				if(member && llvm::isa<clang::DeclRefExpr>(member->getBase())){
+				if(member && llvm::isa<clang::DeclRefExpr>(member->getBase()) ){
+
 					// we replace the usage of the wrapped var by the original parameter
-				
 					clang::ParmVarDecl* param= llvm::dyn_cast<clang::ParmVarDecl>(llvm::cast<clang::DeclRefExpr>(member->getBase())->getDecl());
 					if (param) {
 						core::ExpressionPtr&& newOwner= lookUpVariable(param);
-						core::CallExprAddress addr(expr.as<core::CallExprPtr>());
-						expr = core::transform::replaceNode (mgr, 
-															  addr[0].as<core::CallExprAddress>()[0],
-															  newOwner ).as<core::CallExprPtr>();
+						if (!IS_CPP_REF_EXPR(newOwner)){
+							core::CallExprAddress addr(expr.as<core::CallExprPtr>());
+							expr = core::transform::replaceNode (mgr, 
+																  addr[0].as<core::CallExprAddress>()[0],
+																  newOwner ).as<core::CallExprPtr>();
+						}
 					}
 				}
 			}
 
-			initStmt = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, tryDeref(expr));
+			initStmt = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, expr);
 		}
 
 		// append statement to initialization list
