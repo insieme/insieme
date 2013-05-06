@@ -207,6 +207,12 @@ namespace integration {
 	core::ProgramPtr loadIntegrationTest(core::NodeManager& manager, const std::string& name,
 			bool enableOpenMP = true, const std::map<string,string>& definitions = std::map<string,string>());
 
+	/**
+	 * Allow Integration Tests to be properly printed within gtest.
+	 */
+	::std::ostream& operator<<(::std::ostream& out, const IntegrationTestCase& test) {
+		return test.printTo(out);
+	}
 } // end namespace integration
 } // end namespace driver
 } // end namespace insieme
