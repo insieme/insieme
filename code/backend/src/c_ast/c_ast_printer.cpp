@@ -203,6 +203,10 @@ namespace c_ast {
 
 					// add constructor call if necessary
 					if (ConstructorCallPtr call = node->varInit[0].second.isa<ConstructorCallPtr>()) {
+
+						// do nothing if it is default constructed
+						if (call->arguments.empty()) return out;
+
 						// just add list of parameters
 						return out << "("
 								<< join(", ", call->arguments, [&](std::ostream& out, const NodePtr& cur) {
