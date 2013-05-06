@@ -29,21 +29,29 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
 
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+#include "clang/Serialization/ASTWriter.h"
+
+#include <boost/algorithm/string/predicate.hpp>
 #include <set>
 #include <boost/filesystem.hpp>
 
 #include "insieme/core/ir_program.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/compiler.h"
+#include "insieme/frontend/sema.h"
 
 #include "insieme/utils/logging.h"
+
+#include "llvm/Support/FileSystem.h"
 
 namespace insieme {
 namespace frontend {
@@ -71,25 +79,57 @@ protected:
 	std::string 			mFileName;
 	ClangCompiler			mClang;
 	insieme::frontend::pragma::PragmaList 		mPragmaList;
+
 public:
-	TranslationUnit(const ConversionJob& job) : mFileName(job.getFile()), mClang(job) {
+	TranslationUnit(const ConversionJob& job) : mFileName(job.getFile()), mClang(job,boost::algorithm::ends_with(job.getFile(),".o")) {
 		assert(job.getFiles().size() == 1u && "Only a single file per translation unit allowed!");
 	}
 
 	/**
 	 * Returns a list of pragmas defined in the translation unit
 	 */
-	const pragma::PragmaList& getPragmaList() const { 
-		return mPragmaList; 
+	const pragma::PragmaList& getPragmaList() const {
+		return mPragmaList;
 	}
-	
-	const ClangCompiler& getCompiler() const { 
-		return mClang; 
+
+	const ClangCompiler& getCompiler() const {
+		return mClang;
 	}
-	
-	const std::string& getFileName() const { 
-		return mFileName; 
+
+	const std::string& getFileName() const {
+		return mFileName;
 	}
+
+	void storeUnit(const std::string& output_file) {
+        //if no output_file is specified the current file_name is taken and modified to .o extension
+        std::string raw_name = output_file;
+        if(output_file.size()==0) {
+            size_t lastslash = getFileName().find_last_of("/")+1;
+            size_t lastdot = getFileName().find_last_of(".");
+            if (lastdot == std::string::npos)
+                raw_name = getFileName();
+            raw_name = getFileName().substr(lastslash, lastdot-lastslash);
+            raw_name += ".o";
+        }
+        llvm::SmallString<128> TempPath;
+        TempPath = raw_name;
+        TempPath += "-%%%%%%%%";
+        int fd;
+        llvm::sys::fs::unique_file(TempPath.str(), fd, TempPath,
+                                            false);
+        llvm::raw_fd_ostream Out(fd, true);
+        llvm::SmallString<128> Buffer;
+        llvm::BitstreamWriter Stream(Buffer);
+        clang::ASTWriter Writer(Stream);
+        Writer.WriteAST(*(mClang.getSema()), std::string(), 0, "", false);
+        if (!Buffer.empty())
+            Out.write(Buffer.data(), Buffer.size());
+        Out.close();
+        llvm::sys::fs::rename(TempPath.str(), raw_name);
+        //destroy Sema
+        //mClang.destroySema();
+	}
+
 };
 
 typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
@@ -105,13 +145,13 @@ class Program: public boost::noncopyable {
 	class ProgramImpl;
 	typedef ProgramImpl* ProgramImplPtr;
 	ProgramImplPtr pimpl;
-	
+
 	// Reference to the NodeManager used to convert the translation units into IR code
 	insieme::core::NodeManager& mMgr;
 
 	// The IR program node containing the converted IR
 	insieme::core::ProgramPtr mProgram;
-	
+
 	const ConversionJob config;
 
 	friend class ::TypeConversion_FileTest_Test;
@@ -121,15 +161,22 @@ public:
 	Program(core::NodeManager& mgr, const ConversionJob& job = ConversionJob());
 
 	~Program();
-	
+
 	utils::Interceptor& getInterceptor() const;
 	utils::Indexer& getIndexer() const;
-	
+
 	utils::FunctionDependencyGraph& getCallGraph() const;
 	const vector<boost::filesystem::path>& getStdLibDirs() const;
 	void setupInterceptor();
 	void analyzeFuncDependencies();
 	void dumpCallGraph() const;
+
+    /**
+     * Store ASTContext(s) of translation unit(s) to output file(s)
+     *
+     * @param output file name
+     */
+     void storeTranslationUnits(const string& output_file);
 
 	/**
 	 * Add a single file to the program.
@@ -137,7 +184,7 @@ public:
 	 * @param job a job covering a single translation unit (one input file only!)
 	 */
 	TranslationUnit& addTranslationUnit(const ConversionJob& job);
-	
+
 	/**
 	 * Add multiple files to the program
 	 */
@@ -159,11 +206,11 @@ public:
 	 */
 	const TranslationUnitSet& getTranslationUnits() const;
 
-	class PragmaIterator: public 
+	class PragmaIterator: public
 				std::iterator<
-						std::input_iterator_tag, 
+						std::input_iterator_tag,
 						std::pair<insieme::frontend::pragma::PragmaPtr, TranslationUnitPtr>
-				> 
+				>
 	{
 	public:
 		typedef std::function<bool (const pragma::Pragma&)> FilteringFunc;

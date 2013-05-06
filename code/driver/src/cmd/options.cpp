@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -62,7 +62,8 @@ namespace cmd {
 					("std,s", bpo::value<string>()->default_value("c99"), "determines the language standard")
 					("no-omp", "disables OpenMP support")
 					("no-cilk", "disables cilk support")
-					("output-file,o", bpo::value<string>()->default_value("a.out"), "the output file")
+					("compile,c", "compilation only")
+					("output-file,o", bpo::value<string>(), "the output file")
 			;
 
 		}
@@ -104,6 +105,14 @@ namespace cmd {
 				res.valid = false;
 				return res;
 			}
+            // compilation only
+            if (map.count("compile")) {
+                res.job.setOption(fe::ConversionJob::CompilationOnly, map.count("compile"));
+                if((res.job.getFiles().size()>1) && map.count("output-file")) {
+                    cout << "cannot specify -o with -c and multiple files" << endl;
+                    res.valid=false;
+                }
+            }
 			// include path
 			if (map.count("include-path")) {
 				res.job.setIncludeDirectories(map["include-path"].as<vector<string>>());
@@ -123,7 +132,11 @@ namespace cmd {
 			res.job.setOption(fe::ConversionJob::Cilk, !map.count("no-cilk"));
 
 			// output file (optional)
-			res.outFile = "a.out";
+            if (map.count("compile")) {
+                    res.outFile = "";
+            } else {
+                res.outFile = "a.out";
+            }
 			if (map.count("output-file")) {
 				res.outFile = map["output-file"].as<string>();
 			}

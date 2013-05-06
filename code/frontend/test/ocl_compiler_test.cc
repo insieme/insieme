@@ -29,13 +29,14 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include <gtest/gtest.h>
 
+#include "insieme/frontend/program.h"
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/checks/full_check.h"
@@ -43,7 +44,6 @@
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
-#include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/core/printer/pretty_printer.h"
 

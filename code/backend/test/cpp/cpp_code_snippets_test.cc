@@ -457,7 +457,7 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "A a1();");
+		EXPECT_PRED2(containsSubString, code, "A a1;");
 		EXPECT_PRED2(containsSubString, code, "A a2(1);");
 		EXPECT_PRED2(containsSubString, code, "A* a3 = new A();");
 		EXPECT_PRED2(containsSubString, code, "A* a4 = new A(1);");

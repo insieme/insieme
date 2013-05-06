@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -109,6 +109,30 @@ core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) {
 
 	// return instance within global manager
 	return manager.get(res);
+}
+
+void ConversionJob::storeAST(core::NodeManager& manager, const string& output_file) {
+	// add definitions needed by the OpenCL frontend
+	ConversionJob job = *this;
+	if(hasOption(OpenCL)) {
+		job.addIncludeDirectory(SRC_DIR);
+		job.addIncludeDirectory(SRC_DIR "inputs");
+		job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
+
+		job.addDefinition("INSIEME");
+	}
+
+	// create a temporary manager
+	core::NodeManager tmpMgr(manager);
+
+	// create the program parser
+	frontend::Program program(manager, job);
+
+	// set up the translation units
+	program.addTranslationUnits(job);
+
+    // store translation units
+    program.storeTranslationUnits(output_file);
 }
 
 } // end namespace frontend
