@@ -1108,15 +1108,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 	}
 
+	core::TypePtr&& lhsTy = lhs->getType();
+	core::TypePtr&& rhsTy = rhs->getType();
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-	" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;;
+	" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 
 	if( !isAssignment ) {
-
-		core::TypePtr&& lhsTy = lhs->getType();
-		core::TypePtr&& rhsTy = rhs->getType();
-		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-		" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 		
 		// handling for ocl-vector operations
 		if (binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
@@ -1184,12 +1181,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			// somehow related with char type. is treated as integer everywhere, not in ir
 				lhs = utils::cast(lhs, convFact.convertType( GET_TYPE_PTR(binOp->getLHS())) );
 				rhs = utils::cast(rhs, convFact.convertType( GET_TYPE_PTR(binOp->getRHS())) );
-			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 
-			if (lhs->getType() == rhs->getType()  && *(lhs->getType()) == *(lhs->getType()) )
-			  	opFunc = gen.getOperator(lhs->getType(), op);
-			else
-				assert(false && " expression should be casted to the same type, not different typed expressions allowed");
+			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
+			opFunc = gen.getOperator(lhs->getType(), op);
 		}
 		else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType) {
 			assert(*lhsTy == *rhsTy && "Comparing incompatible types");
