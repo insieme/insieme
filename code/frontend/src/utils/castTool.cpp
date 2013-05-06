@@ -53,7 +53,11 @@
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include <clang/AST/Expr.h>
+#pragma GCC diagnostic pop
 
 #define IS_IR_REF(type) \
 	(type->getNodeType() == core::NT_RefType)
