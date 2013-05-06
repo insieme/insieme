@@ -201,6 +201,15 @@ namespace c_ast {
 					// print a variable declaration
 					out << printParam(node->varInit[0].first);
 
+					// add constructor call if necessary
+					if (ConstructorCallPtr call = node->varInit[0].second.isa<ConstructorCallPtr>()) {
+						// just add list of parameters
+						return out << "("
+								<< join(", ", call->arguments, [&](std::ostream& out, const NodePtr& cur) {
+									out << print(cur);
+						}) << ")";
+					}
+
 					// add init value
 					if (node->varInit[0].second) {
 						out << " = " << print(node->varInit[0].second);
