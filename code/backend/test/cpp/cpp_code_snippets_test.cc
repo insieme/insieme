@@ -457,8 +457,8 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "A a1 = A();");
-		EXPECT_PRED2(containsSubString, code, "A a2 = A(1);");
+		EXPECT_PRED2(containsSubString, code, "A a1();");
+		EXPECT_PRED2(containsSubString, code, "A a2(1);");
 		EXPECT_PRED2(containsSubString, code, "A* a3 = new A();");
 		EXPECT_PRED2(containsSubString, code, "A* a4 = new A(1);");
 		EXPECT_PRED2(containsSubString, code, "new (&a5) A();");
@@ -706,7 +706,7 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "A var_1 = A(10);");
+		EXPECT_PRED2(containsSubString, code, "A var_1(10);");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2) : x(4), y(var_2) {");
 		EXPECT_PRED2(containsSubString, code, "(*this).z = 2;");
 
@@ -763,7 +763,7 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "B var_1 = B(1, 2);");
+		EXPECT_PRED2(containsSubString, code, "B var_1(1, 2);");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2) : x(var_2) {");
 		EXPECT_PRED2(containsSubString, code, "B::B(int32_t var_2, int32_t var_3) : A(var_2), y(var_3) {");
 
@@ -818,7 +818,7 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "B var_1 = B(1, 2, 3);");
+		EXPECT_PRED2(containsSubString, code, "B var_1(1, 2, 3);");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2, int32_t var_3) : x(var_2), y(var_3) {");
 		EXPECT_PRED2(containsSubString, code, "B::B(int32_t var_2, int32_t var_3, int32_t var_4) : A(var_2, var_3+var_4), z(var_4) {");
 
@@ -866,7 +866,7 @@ namespace backend {
 
 		// check generated code
 		auto code = toString(*targetCode);
-		EXPECT_PRED2(containsSubString, code, "A var_1 = A(1, 2);");
+		EXPECT_PRED2(containsSubString, code, "A var_1(1, 2);");
 		EXPECT_PRED2(containsSubString, code, "A::A(int32_t var_2, int32_t var_3) : x(var_2) {");
 
 		// check whether code is compiling
