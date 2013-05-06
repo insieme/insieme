@@ -1164,8 +1164,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			baseOp == BO_Sub) {
 			return retIr = builder.callExpr( gen.getArrayRefDistance(), lhs, rhs);
 		}
-
-		if (lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
+		
+		if(isLogical) { 
+			exprTy = gen.getBool(); 
+			opFunc = gen.getOperator(lhs->getType(), op);
+		}
+		else if (lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
 			// TODO: would love to remove this, but some weirdos still need this cast
 			// somehow related with char type. is treated as integer everywhere, not in ir
 			if (baseOp != BO_LAnd && baseOp != BO_LOr) {
@@ -1173,19 +1177,17 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 				rhs = utils::cast(rhs, convFact.convertType( GET_TYPE_PTR(binOp->getRHS())) );
 			}	
 			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
-			opFunc = gen.getOperator(exprTy, op);
-		}
-		
 
-		if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType) {
+			if (lhs->getType() == rhs->getType()  && *(lhs->getType()) == *(lhs->getType()) )
+			  	opFunc = gen.getOperator(lhs->getType(), op);
+			else
+				assert(false && " expression should be casted to the same type, not different typed expressions allowed");
+		}
+		else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType) {
 			assert(*lhsTy == *rhsTy && "Comparing incompatible types");
 			opFunc = gen.getOperator(lhsTy, op);
 		}
 
-		if(isLogical) { 
-			exprTy = gen.getBool(); 
-			opFunc = gen.getOperator(lhs->getType(), op);
-		}
 	} else {
 		// check if there is a kernelFile annotation
 		ocl::attatchOclAnnotation(rhs, binOp, convFact);
