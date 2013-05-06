@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -61,6 +61,7 @@ class Token;
 class Scope;
 class Expr;
 class TargetInfo;
+class Sema;
 
 namespace idx {
 class Program;
@@ -128,6 +129,16 @@ public:
 namespace insieme {
 namespace frontend {
 
+class InsiemeSema;
+
+namespace pragma {
+// forward declarations for pragma
+class Pragma;
+typedef std::shared_ptr<Pragma> PragmaPtr;
+typedef std::vector<PragmaPtr> 	PragmaList;
+
+class MatchMap;
+} // end pragma namespace
 
 // ------------------------------------ ClangCompiler ---------------------------
 /**
@@ -145,7 +156,7 @@ public:
 	/**
 	 * Creates a compiler instance from the given conversion job.
 	 */
-	ClangCompiler(const ConversionJob& config);
+	ClangCompiler(const ConversionJob& config, const bool is_obj=false);
 
 	/**
 	 * Returns clang's ASTContext
@@ -177,6 +188,21 @@ public:
 	 */
 	clang::TargetInfo& getTargetInfo() const;
 
+	/**
+	 * Returns clang's Sema
+	 * @return
+	 */
+    InsiemeSema* getSema();
+
+	/**
+	 * Set clang's Sema
+	 */
+    void setSema(InsiemeSema *S);
+
+	/**
+	 * Destroy clang's Sema
+	 */
+    void destroySema();
 
 	bool isCXX() const;
 

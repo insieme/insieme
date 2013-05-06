@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,6 +40,9 @@
 #include <fstream>
 
 #include <boost/filesystem.hpp>
+
+//movement of this line will lead to compile errors
+#include "insieme/frontend/program.h"
 
 // Minimum size of the context string reported by the error checker
 // (context will be extended when smaller)
@@ -67,7 +70,6 @@
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/utils/version.h"
 
-#include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/frontend/cilk/cilk_sema.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -105,12 +107,12 @@ namespace anal = insieme::analysis;
 namespace {
 
 	void openBoxTitle(const std::string title) {
-		LOG(INFO) << 
-			// Opening ascii row 
-			"\n//" << std::setfill('*') << std::setw(TEXT_WIDTH) << std::right << "//" << 
+		LOG(INFO) <<
+			// Opening ascii row
+			"\n//" << std::setfill('*') << std::setw(TEXT_WIDTH) << std::right << "//" <<
 			// Section title left aligned
-			"\n//" << std::setfill(' ') << std::setw(TEXT_WIDTH-2) << std::left << 
-				" " + title + " " << std::right << "//" << 
+			"\n//" << std::setfill(' ') << std::setw(TEXT_WIDTH-2) << std::left <<
+				" " + title + " " << std::right << "//" <<
 			// Closing ascii row
 			"\n//" << std::setfill('*') << std::setw(TEXT_WIDTH) << "//";
 	}
@@ -128,11 +130,11 @@ namespace {
 
 		int count = 0;
 		// Benchmark pointer-based visitor
-		utils::measureTimeFor<INFO>("Benchmark.IterateAll.Pointer ", 
-			[&]() { 
+		utils::measureTimeFor<INFO>("Benchmark.IterateAll.Pointer ",
+			[&]() {
 				core::visitDepthFirst(program,
 					core::makeLambdaVisitor([&](const NodePtr& cur) { count++; }, true)
-				); 
+				);
 			}
 		);
 		LOG(INFO) << "Number of nodes: " << count;
@@ -140,8 +142,8 @@ namespace {
 		// Benchmark address based visitor
 		utils::Timer visitAddrTime("");
 		count = 0;
-		utils::measureTimeFor<INFO>("Benchmark.IterateAll.Address  ", 
-			[&]() { 
+		utils::measureTimeFor<INFO>("Benchmark.IterateAll.Address  ",
+			[&]() {
 				core::visitDepthFirst(core::ProgramAddress(program),
 					core::makeLambdaVisitor([&](const NodeAddress& cur) { count++; }, true)
 				);
@@ -151,7 +153,7 @@ namespace {
 
 		// Benchmark empty-substitution operation
 		count = 0;
-		utils::measureTimeFor<INFO>("Benchmark.IterateAll.Address  ", 
+		utils::measureTimeFor<INFO>("Benchmark.IterateAll.Address  ",
 			[&]() {
 				NodeMapping* h;
 				auto mapper = makeLambdaMapper([&](unsigned, const NodePtr& cur)->NodePtr {
@@ -166,7 +168,7 @@ namespace {
 
 		// Benchmark empty-substitution operation (non-types only)
 		count = 0;
-		utils::measureTimeFor<INFO>("Benchmark.NodeSubstitution.Non-Types ", 
+		utils::measureTimeFor<INFO>("Benchmark.NodeSubstitution.Non-Types ",
 			[&]() {
 				NodeMapping* h2;
 				auto mapper2 = makeLambdaMapper([&](unsigned, const NodePtr& cur)->NodePtr {
@@ -196,16 +198,16 @@ namespace {
 			return anal::CFG::buildCFG<anal::OneStmtPerBasicBlock>(program);
 		});
 
-		utils::measureTimeFor<INFO>( "Visit.CFG", [&]() { 
+		utils::measureTimeFor<INFO>( "Visit.CFG", [&]() {
 				std::fstream dotFile(outFile.c_str(), std::fstream::out | std::fstream::trunc);
-				dotFile << *graph; 
+				dotFile << *graph;
 			}
 		);
 	}
 
 
 	//***************************************************************************************
-	// 				IR Pretty Print: Prints out the IR in textual form 
+	// 				IR Pretty Print: Prints out the IR in textual form
 	//***************************************************************************************
 
 	void printIR(const NodePtr& program, const CommandLineOptions& options) {
@@ -226,7 +228,7 @@ namespace {
 				fout << "// --------- Pretty Print Inspire - Detail ----------" << std::endl;
 				fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_MAX_DETAIL);
 				return;
-			} 
+			}
 			std::cout << PrettyPrinter( program, PrettyPrinter::OPTIONS_DEFAULT );
 		});
 
@@ -235,7 +237,7 @@ namespace {
 
 
 	//***************************************************************************************
-	// 					SEMA: Performs semantic checks on the IR  
+	// 					SEMA: Performs semantic checks on the IR
 	//***************************************************************************************
 	void checkSema(const core::NodePtr& program, MessageList& list, const CommandLineOptions& options) {
 
@@ -246,7 +248,7 @@ namespace {
 
 		openBoxTitle("IR Semantic Checks");
 
-		utils::measureTimeFor<INFO>("Semantic Checks ", 
+		utils::measureTimeFor<INFO>("Semantic Checks ",
 			[&]() { list = check( program ); }
 		);
 
@@ -283,21 +285,21 @@ namespace {
 	}
 
 	//***************************************************************************************
-	// 		Polyhedral Model Extraction: analysis for SCoPs and prints out stats 
+	// 		Polyhedral Model Extraction: analysis for SCoPs and prints out stats
 	//***************************************************************************************
 	void markSCoPs(ProgramPtr& program, MessageList& errors, const CommandLineOptions& options) {
 		if (!options.MarkScop) { return; }
 		using namespace anal::polyhedral::scop;
 
-		AddressList sl = utils::measureTimeFor<AddressList, INFO>("IR.SCoP.Analysis ", 
+		AddressList sl = utils::measureTimeFor<AddressList, INFO>("IR.SCoP.Analysis ",
 			[&]() -> AddressList { return mark(program); });
 
 		openBoxTitle("SCoP Analysis");
 		size_t numStmtsInScops = 0, loopNests = 0, maxLoopNest=0;
 
-		std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
+		std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){
 			ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
-			
+
 			// Avoid to print scops with no stmts
 			if (reg.getScop().size() == 0) { return; }
 
@@ -305,27 +307,27 @@ namespace {
 
 			numStmtsInScops += reg.getScop().size();
 			size_t loopNest = reg.getScop().nestingLevel();
-			
+
 			if( loopNest > maxLoopNest) { maxLoopNest = loopNest; }
 			loopNests += loopNest;
-		});	
+		});
 
 		LOG(INFO) << std::setfill(' ') << std::endl
 			  << "=========================================" << std::endl
 			  << "=             SCoP COVERAGE             =" << std::endl
 			  << "=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=" << std::endl
-			  << "= Tot # of SCoPs                :" << std::setw(6) 
+			  << "= Tot # of SCoPs                :" << std::setw(6)
 					<< std::right << sl.size() << " =" << std::endl
-			  << "= Tot # of stms covered by SCoPs:" << std::setw(6) 
+			  << "= Tot # of stms covered by SCoPs:" << std::setw(6)
 					<< std::right << numStmtsInScops << " =" << std::endl
-			  << "= Avg stmt per SCoP             :" << std::setw(6) 
-					<< std::setprecision(4) << std::right 
+			  << "= Avg stmt per SCoP             :" << std::setw(6)
+					<< std::setprecision(4) << std::right
 					<< (double)numStmtsInScops/sl.size() << " =" << std::endl
-			  << "= Avg loop nests per SCoP       :" << std::setw(6) 
-					<< std::setprecision(4) << std::right 
+			  << "= Avg loop nests per SCoP       :" << std::setw(6)
+					<< std::setprecision(4) << std::right
 					<< (double)loopNests/sl.size() << " =" << std::endl
-			  << "= Max loop nests per SCoP       :" << std::setw(6) 
-					<< std::setprecision(4) << std::right 
+			  << "= Max loop nests per SCoP       :" << std::setw(6)
+					<< std::setprecision(4) << std::right
 					<< maxLoopNest << " =" << std::endl
 			  << "=========================================";
 
@@ -340,17 +342,17 @@ namespace {
 		if(options.ShowIR.empty()) { return; }
 
 		openBoxTitle("Dump IR Graph");
-		utils::measureTimeFor<INFO>("Show.graph", 
+		utils::measureTimeFor<INFO>("Show.graph",
 			[&]() {
 				std::fstream dotOut(options.ShowIR.c_str(), std::fstream::out | std::fstream::trunc);
 				insieme::driver::printer::printDotGraph(program, errors, dotOut);
-			} 
+			}
 		);
 		closeBox();
 	}
 
 	//***************************************************************************************
-	// 				OMP: Apply the OpenMP semantics to the IR 
+	// 				OMP: Apply the OpenMP semantics to the IR
 	//***************************************************************************************
 	void applyOpenMPFrontend(core::ProgramPtr& program, const CommandLineOptions& options) {
 		if (!options.OpenMP) { return; }
@@ -377,7 +379,7 @@ namespace {
 	}
 
 	//***************************************************************************************
-	// 					CILK: Apply the Cilk semantics to the IR	
+	// 					CILK: Apply the Cilk semantics to the IR
 	//***************************************************************************************
 	void applyCilkFrontend(core::ProgramPtr& program, const CommandLineOptions& options) {
 		if (!options.Cilk) { return; }
@@ -390,7 +392,7 @@ namespace {
 	}
 
 	//***************************************************************************************
-	// 				 STATS: show statistics about the IR 
+	// 				 STATS: show statistics about the IR
 	//***************************************************************************************
 	void showStatistics(const core::ProgramPtr& program, const CommandLineOptions& options) {
 		if (!options.ShowStats) { return; }
@@ -403,7 +405,7 @@ namespace {
 	}
 
 	void doCleanup(core::ProgramPtr& program, const CommandLineOptions& options) {
-	
+
 		openBoxTitle("IR Cleanup");
 		program = utils::measureTimeFor<core::ProgramPtr,INFO>("ir.cleanup", [&]() {
 			 return insieme::transform::cleanup(program, options.ConstantPropagation).as<ProgramPtr>();
@@ -428,8 +430,8 @@ namespace {
 					for (auto& e : ep) {
 						if(e->hasAnnotation(BaseAnnotation::KEY)) {
 							auto annotations = e->getAnnotation(BaseAnnotation::KEY);
-							for(const auto& ann : annotations->getAnnotationList()) 
-								if(!dynamic_pointer_cast<KernelFctAnnotation>(ann)) 
+							for(const auto& ann : annotations->getAnnotationList())
+								if(!dynamic_pointer_cast<KernelFctAnnotation>(ann))
 									return true;
 						} else
 							return true;
@@ -446,33 +448,33 @@ namespace {
 				}
 
 				if (host) {
-					return { 
-						"OpenCL.Host.Backend", 
+					return {
+						"OpenCL.Host.Backend",
 						be::ocl_host::OCLHostBackend::getDefault(kernelDumpPath)
 					};
 				}
 
-				return { 
-						"OpenCL.Kernel.Backend", 
-						be::ocl_kernel::OCLKernelBackend::getDefault(kernelDumpPath) 
+				return {
+						"OpenCL.Kernel.Backend",
+						be::ocl_kernel::OCLKernelBackend::getDefault(kernelDumpPath)
 					};
-				
+
 			}
 
-			case 's': 
+			case 's':
 				return { "Sequential.Backend", be::sequential::SequentialBackend::getDefault() };
-			
+
 			case 'r':
-			default: 
+			default:
 				return { "Runtime.Backend", be::runtime::RuntimeBackend::getDefault(options.EstimateEffort) };
 		}
 	}
 
-} // end anonymous namespace 
+} // end anonymous namespace
 
 
-/** 
- * Insieme compiler entry point 
+/**
+ * Insieme compiler entry point
  */
 int main(int argc, char** argv) {
 
@@ -489,17 +491,17 @@ int main(int argc, char** argv) {
 
 			auto inputFiles = options.InputFiles;
 			fe::Program p(manager, options);
-			
-			utils::measureTimeFor<INFO>("Frontend.load [clang]", 
-					[&]() { p.addTranslationUnits(options); } 
+
+			utils::measureTimeFor<INFO>("Frontend.load [clang]",
+					[&]() { p.addTranslationUnits(options); }
 				);
 
 			// do the actual clang to IR conversion
-			program = utils::measureTimeFor<core::ProgramPtr,INFO>("Frontend.convert ", 
-					[&]() { return p.convert(); } 
+			program = utils::measureTimeFor<core::ProgramPtr,INFO>("Frontend.convert ",
+					[&]() { return p.convert(); }
 				);
 
-			// cleanup 
+			// cleanup
 			doCleanup(program, options);
 
 			// run OpenCL frontend
@@ -510,7 +512,7 @@ int main(int argc, char** argv) {
 
 			// Check for annotations on IR nodes relative to transformations which should be applied,
 			// and applies them.
-			program = utils::measureTimeFor<ProgramPtr,INFO>("Pragma.Transformer", 
+			program = utils::measureTimeFor<ProgramPtr,INFO>("Pragma.Transformer",
 					[&]() { return insieme::driver::pragma::applyTransfomrations(program); } );
 
 			printIR(program, options);
@@ -535,15 +537,15 @@ int main(int argc, char** argv) {
 				checkSema(program, errors, options);
 			}
 
-			// Performs some benchmarks 
+			// Performs some benchmarks
 			doBenchmarkCore(manager, program, options);
-		
+
 			// Dump the Inter procedural Control Flow Graph associated to this program
 			dumpCFG(program, options.CFG);
 
-			// Perform SCoP region analysis 
+			// Perform SCoP region analysis
 			markSCoPs(program, errors, options);
-			
+
 			// IR statistics
 			showStatistics(program, options);
 
@@ -554,7 +556,7 @@ int main(int argc, char** argv) {
 			// XML dump
 			if(!options.DumpXML.empty()) {
 				openBoxTitle("XML Dump");
-				utils::measureTimeFor<INFO>("Xml.dump ", 
+				utils::measureTimeFor<INFO>("Xml.dump ",
 						[&]() { xml::XmlUtil::write(program, options.DumpXML); }
 					);
 				closeBox();
@@ -565,7 +567,7 @@ int main(int argc, char** argv) {
 		#ifdef USE_XML
 		// Load IR from XML file (previous dump)
 		if(!options.LoadXML.empty()) {
-			
+
 			openBoxTitle("XML Load");
 			program = utils::measureTimeFor<ProgramPtr, INFO>("XML Load", [&]() {
 				NodePtr xmlNode= xml::XmlUtil::read(manager, options.LoadXML);
@@ -589,7 +591,7 @@ int main(int argc, char** argv) {
 				utils::measureTimeFor<INFO>( backendName, [&](){
 					// convert code
 					be::TargetCodePtr targetCode = backend->convert(program);
-				
+
 					// select output target
 					if(!options.Output.empty()) {
 						// write result to file ...
@@ -600,7 +602,7 @@ int main(int argc, char** argv) {
 						// TODO: reinstate rewriter when fractions of programs are supported as entry points
 	//					insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), options.Output);
 						return;
-					} 
+					}
 					// just write result to logger
 					LOG(INFO) << "\n" << *targetCode;
 				});

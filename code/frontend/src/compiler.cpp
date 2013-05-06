@@ -29,13 +29,18 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include <iostream>
 
+// don't move the ASTUnit.h include otherwise compile will fail because of __unused
+// defines which are needed by LLVM
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+#include "clang/Frontend/ASTUnit.h"
 
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/clang_config.h"
@@ -43,10 +48,6 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
-
-// defines which are needed by LLVM
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -69,11 +70,12 @@
 
 #include "clang/Lex/Preprocessor.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/DeclGroup.h"
 
 #include "clang/Parse/Parser.h"
 
-//FIXME: debug 
+//FIXME: debug
 #include "llvm/Support/raw_os_ostream.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -156,9 +158,9 @@ void setDiagnosticClient(clang::CompilerInstance& clang, bool printDiagToConsole
 		diagClient = new IgnoringDiagConsumer();
 	}
 	// cppcheck-suppress exceptNew
-	
+
 	// check why, it might be a double insert in list, or a isolated delete somewhere
-	DiagnosticsEngine* diags = new DiagnosticsEngine(llvm::IntrusiveRefCntPtr<DiagnosticIDs>( new DiagnosticIDs() ), 
+	DiagnosticsEngine* diags = new DiagnosticsEngine(llvm::IntrusiveRefCntPtr<DiagnosticIDs>( new DiagnosticIDs() ),
 													options, diagClient, true);
 	clang.setDiagnostics(diags);
 }
@@ -176,15 +178,31 @@ struct ClangCompiler::ClangCompilerImpl {
 	CompilerInstance clang;
 	llvm::IntrusiveRefCntPtr<TargetOptions> TO;
 	bool m_isCXX;
+	InsiemeSema* sema;
 	ClangCompilerImpl() : clang(), TO(new TargetOptions), m_isCXX(false) {}
 };
 
-ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompilerImpl), config(config) {
+ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : pimpl(new ClangCompilerImpl), config(config) {
+    //assert(!is_obj);
 	// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the diagOpts object!
 	setDiagnosticClient(pimpl->clang, config.hasOption(ConversionJob::PrintDiag));
 
+    clang::ASTUnit * ast_unit;
+    if(is_obj) {
+        ast_unit = clang::ASTUnit::LoadFromASTFile(
+                        config.getFile(),
+                        pimpl->clang.createDiagnostics(new clang::DiagnosticOptions(), 0, nullptr),
+                        pimpl->clang.getFileSystemOpts()
+                    );
+    }
+
 	pimpl->clang.createFileManager();
-	pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
+	if(is_obj) {
+        pimpl->clang.setFileManager(&ast_unit->getFileManager());
+        pimpl->clang.setSourceManager(&ast_unit->getSourceManager());
+	} else {
+        pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
+	}
 
 
 	// A compiler invocation object has to be created in order for the diagnostic object to work
@@ -192,12 +210,12 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 	CompilerInvocation::CreateFromArgs(*CI, 0, 0, pimpl->clang.getDiagnostics());
 
 	pimpl->clang.setInvocation(CI);
-	
+
 
 	//******************** TAKE CARE OF ORDER OF INCLUDE PATHS *************//
 	//first user-provided, than our openmp replacement, then default-path
-	
-	//setup headers 
+
+	//setup headers
 	pimpl->clang.getHeaderSearchOpts().UseBuiltinIncludes = 0;
 	pimpl->clang.getHeaderSearchOpts().UseStandardSystemIncludes = 1;  // Includes system includes, usually  /usr/include
 	pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0;
@@ -205,11 +223,11 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 	// Add default header, for non-Windows target
 	if(!config.hasOption(ConversionJob::WinCrossCompile)) {
 		//FIXME: check if this is still valid
-		//	pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER, 
+		//	pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER,
 		//												clang::frontend::CSystem, true, false, false);
-		//pimpl->clang.getHeaderSearchOpts().AddPath( "/usr/include/x86_64-linux-gnu", 
+		//pimpl->clang.getHeaderSearchOpts().AddPath( "/usr/include/x86_64-linux-gnu",
 		//												clang::frontend::System, true, false, false);
-	}		
+	}
 
 
 	if(config.hasOption(ConversionJob::WinCrossCompile)) {
@@ -223,7 +241,7 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 	}
 
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
-	
+
 	bool enableCpp = false;
 	if (config.getFiles().size() == 1) {
 		std::string extension(config.getFile().substr(config.getFile().rfind('.')+1, std::string::npos));
@@ -280,14 +298,13 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 
 	if(enableCpp ) {
 		pimpl->m_isCXX = true;
-	
 		//langStandard is defined in include/clang/Frontend/LangStandards.def
 		//set default values for CXX -- default results in values for LangStandard::lang_gnucxx98
 		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX /*, clang::LangStandard::Kind=unspecified*/);
 		// set cxx standard to c++98 (+GNUMode)
 		//CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_gnucxx98);
-		
-		// set cxx standard to c++98 
+
+		// set cxx standard to c++98
 		//--> DOES _NOT_ sets LanguageOption::GNUMode
 		CompilerInvocation::setLangDefaults(LO, clang::IK_CXX, clang::LangStandard::lang_cxx98);
 		// set cxx standard to c++11 (+GNUMode)
@@ -300,10 +317,9 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 		// libcxx headers require to use cpp11 by default. otherwhise annoying warnings are
 		// prompted, no side efects detected
 		//LO.CPlusPlus0x = 1;  //C++ 0x
-		
 		// use the cxx header of the backend c++ compiler
-		pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0; 
-		pimpl->clang.getHeaderSearchOpts().UseStandardSystemIncludes = 0; 
+		pimpl->clang.getHeaderSearchOpts().UseStandardCXXIncludes = 0;
+		pimpl->clang.getHeaderSearchOpts().UseStandardSystemIncludes = 0;
 
 		this->pimpl->clang.getPreprocessorOpts().UsePredefines = true;
 
@@ -312,7 +328,7 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 		for(std::string curr : config.getStdLibIncludeDirectories()) {
 			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System, true, false, false);
 		}
-	
+
 		// FIXME: decide if we need this or not
 		//	LO.RTTI = 1;
 		//	LO.Exceptions = 1;
@@ -328,10 +344,15 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System, true, false, false);
 		}
 	}
-	
+
 	// Do this AFTER setting preprocessor options
-	pimpl->clang.createPreprocessor();
-	pimpl->clang.createASTContext();
+    if(is_obj) {
+        pimpl->clang.setPreprocessor(&ast_unit->getPreprocessor());
+        pimpl->clang.setASTContext(&ast_unit->getASTContext());
+	} else {
+        pimpl->clang.createPreprocessor();
+        pimpl->clang.createASTContext();
+	}
 
 	//FIXME why is this needed?
 	getPreprocessor().getBuiltinInfo().InitializeBuiltins(
@@ -340,14 +361,14 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 	);
 
 	//pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
-	if (config.getFiles().size() == 1) {
+	if (config.getFiles().size() == 1 && !is_obj) {
 		const FileEntry *FileIn = pimpl->clang.getFileManager().getFile(config.getFile());
 		pimpl->clang.getSourceManager().createMainFileID(FileIn);
 		pimpl->clang.getDiagnosticClient().BeginSourceFile(
 											pimpl->clang.getLangOpts(),
 											&pimpl->clang.getPreprocessor());
 	}
-	
+
 	if (VLOG_IS_ON(2)) {
 		printHeader (getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts ());
 		/* print preprocessed stuff
@@ -356,7 +377,7 @@ ClangCompiler::ClangCompiler(const ConversionJob& config) : pimpl(new ClangCompi
 		llvm::raw_os_ostream out(std::cerr);
 		clang::DoPrintPreprocessedInput(getPreprocessor(), &out, pimpl->clang.getPreprocessorOutputOpts());
 		*/
-	}	
+	}
 }
 
 ASTContext& 		ClangCompiler::getASTContext()    const { return pimpl->clang.getASTContext(); }
@@ -364,12 +385,17 @@ Preprocessor& 		ClangCompiler::getPreprocessor()  const { return pimpl->clang.ge
 DiagnosticsEngine& 	ClangCompiler::getDiagnostics()   const { return pimpl->clang.getDiagnostics(); }
 SourceManager& 		ClangCompiler::getSourceManager() const { return pimpl->clang.getSourceManager(); }
 TargetInfo& 		ClangCompiler::getTargetInfo()    const { return pimpl->clang.getTarget(); }
-
+InsiemeSema*        ClangCompiler::getSema()          { return pimpl->sema; }
+void                ClangCompiler::setSema(InsiemeSema *S) {
+                        pimpl->sema = S;
+                    }
 bool				ClangCompiler::isCXX()				const { return pimpl->m_isCXX; }
+void                ClangCompiler::destroySema()      { delete pimpl->sema; }
 
 ClangCompiler::~ClangCompiler() {
 	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();
 	delete pimpl;
+	//sema object of pimpl will be deleted by the InsiemeSema pimpl
 }
 
 } // End fronend namespace
