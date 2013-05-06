@@ -210,9 +210,10 @@ namespace integration {
 	/**
 	 * Allow Integration Tests to be properly printed within gtest.
 	 */
-	::std::ostream& operator<<(::std::ostream& out, const IntegrationTestCase& test) {
+	std::ostream& operator<<(std::ostream& out, const IntegrationTestCase& test) {
 		return test.printTo(out);
 	}
+
 } // end namespace integration
 } // end namespace driver
 } // end namespace insieme
