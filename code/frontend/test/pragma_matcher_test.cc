@@ -37,6 +37,8 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_program.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/compiler.h"
@@ -679,4 +681,48 @@ TEST(PragmaMatcherTest, RecursiveFunctions) {
 		// check stmt end location
 		CHECK_LOCATION(decl->getLocEnd(), comp.getSourceManager(), 50, 1);
 	}
+}
+
+TEST(PragmaMatcherTest, Cilk) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	ConversionJob job;
+	job.setOption(ConversionJob::Cilk);
+	insieme::frontend::Program prog(manager, job);
+
+	ConversionJob file = job;
+	file.setFile(SRC_DIR "/inputs/pragmas.cilk");
+	prog.addTranslationUnit( file );
+
+	const auto& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
+
+	// check number of annotations
+	EXPECT_EQ((size_t) 4, pl.size());
+
+	// check version before cilk-sema is applied
+	auto raw = prog.convert();
+	dump(raw);
+//	dumpDetail(raw);
+
+	// check proper encoding of cilk primitives
+	auto code = builder.normalize(file.execute(manager));
+	dump(code);
+
+	auto str = toString(printer::PrettyPrinter(code));
+
+
+	EXPECT_PRED2(containsSubString, str, "v3 := v1(v2-1);");
+	EXPECT_PRED2(containsSubString, str, "v3 := v1(v2-2);");
+	EXPECT_PRED2(containsSubString, str, "v1(v2-3);");
+
+	EXPECT_PRED2(containsSubString, str, "decl ref<int<4>> v2 =  var(undefined(type<int<4>>));");
+
+	EXPECT_PRED2(containsSubString, str, "default: bind(){fun000(v0, v1, v2)}");
+	EXPECT_PRED2(containsSubString, str, "default: bind(){fun001(v0, v1, v3)}");
+	EXPECT_PRED2(containsSubString, str, "default: bind(){fun002(v0, v1)}");
+
+	EXPECT_PRED2(containsSubString, str, "mergeAll()");
+	EXPECT_PRED2(containsSubString, str, "return v2+v3");
 }

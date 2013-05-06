@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -243,10 +243,10 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 //				std::cout << "lastEnd: " << lastEnd << std::endl;
 //				std::cout << "   vs stmt: " << stmtStart  << " -> " << stmtEnd << std::endl;
 
-				if ( (pragmaEnd < stmtStart)){
+				if ( (pragmaEnd <= stmtStart)){
 					// ACHTUNG: if the node is a nullStmt, and is not at the end of the compound (in
-					// wich case is most problably ours) we can not trust it. semantics wont change,
-					// we move one more. (BUG: nulstmt followed by pragmas, the souce begin is
+					// which case is most probably ours) we can not trust it. semantics wont change,
+					// we move one more. (BUG: nullStmt followed by pragmas, the source begin is
 					// postponed until next stmt) this makes pragmas to be attached to a previous
 					// stmt
 					if (!llvm::isa<clang::NullStmt>(*it)){
