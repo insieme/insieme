@@ -40,6 +40,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_types.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 #include "ir_dummy_annotations.inc"
 
@@ -258,6 +259,81 @@ TEST(Annotation, CopyOnCloneTest) {
 
 	EXPECT_EQ(12, nodeC->getAttachedValue<AnnotationDefault>().x);
 	EXPECT_EQ(33, nodeC->getAttachedValue<AnnotationMigrate>().x);
+
+}
+
+TEST(Annotation, CopyOnMigrationTest) {
+
+	struct AnnotationDefault {
+		int x; AnnotationDefault(int x = 0) : x(x) {};
+		bool operator==(const AnnotationDefault& other) const { return x == other.x; }
+	};
+
+	struct AnnotationClone : public value_annotation::copy_on_migration {
+		int x; AnnotationClone(int x = 0) : x(x) {};
+		bool operator==(const AnnotationClone& other) const { return x == other.x; }
+	};
+
+	struct AnnotationMigrate : public value_annotation::migratable {
+		int x; AnnotationMigrate(int x = 0) : x(x) {};
+		bool operator==(const AnnotationMigrate& other) const { return x == other.x; }
+		bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+			after->attachValue(AnnotationMigrate(x+1)); return true;
+		}
+	};
+
+
+	// create two managers
+	NodeManager mgr;
+
+	// get a node
+	NodePtr nodeA = GenericType::get(mgr, "A");
+	NodePtr nodeB = GenericType::get(mgr, "B");
+
+	EXPECT_TRUE(nodeA);
+	EXPECT_FALSE(nodeA->hasAttachedValue<AnnotationDefault>());
+	EXPECT_FALSE(nodeA->hasAttachedValue<AnnotationClone>());
+	EXPECT_FALSE(nodeA->hasAttachedValue<AnnotationMigrate>());
+
+	EXPECT_TRUE(nodeB);
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationDefault>());
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationClone>());
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationMigrate>());
+
+	// attach values to node
+	nodeA->attachValue(AnnotationDefault(12));
+	nodeA->attachValue(AnnotationClone(22));
+	nodeA->attachValue(AnnotationMigrate(32));
+
+	EXPECT_TRUE(nodeA->hasAttachedValue<AnnotationDefault>());
+	EXPECT_TRUE(nodeA->hasAttachedValue<AnnotationClone>());
+	EXPECT_TRUE(nodeA->hasAttachedValue<AnnotationMigrate>());
+
+	EXPECT_EQ(12, nodeA->getAttachedValue<AnnotationDefault>().x);
+	EXPECT_EQ(22, nodeA->getAttachedValue<AnnotationClone>().x);
+	EXPECT_EQ(32, nodeA->getAttachedValue<AnnotationMigrate>().x);
+
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationDefault>());
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationClone>());
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationMigrate>());
+
+	// migrate annotations (as done by transformation utilities)
+	transform::utils::migrateAnnotations(nodeA, nodeB);
+
+	EXPECT_TRUE(nodeA->hasAttachedValue<AnnotationDefault>());
+	EXPECT_TRUE(nodeA->hasAttachedValue<AnnotationClone>());
+	EXPECT_TRUE(nodeA->hasAttachedValue<AnnotationMigrate>());
+
+	EXPECT_EQ(12, nodeA->getAttachedValue<AnnotationDefault>().x);
+	EXPECT_EQ(22, nodeA->getAttachedValue<AnnotationClone>().x);
+	EXPECT_EQ(32, nodeA->getAttachedValue<AnnotationMigrate>().x);
+
+	EXPECT_FALSE(nodeB->hasAttachedValue<AnnotationDefault>());
+	EXPECT_TRUE(nodeB->hasAttachedValue<AnnotationClone>());
+	EXPECT_TRUE(nodeB->hasAttachedValue<AnnotationMigrate>());
+
+	EXPECT_EQ(22, nodeB->getAttachedValue<AnnotationClone>().x);
+	EXPECT_EQ(33, nodeB->getAttachedValue<AnnotationMigrate>().x);
 
 }
 

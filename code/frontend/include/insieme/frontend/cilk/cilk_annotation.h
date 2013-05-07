@@ -36,13 +36,15 @@
 
 #pragma once
 
+#include "insieme/core/ir_node_annotation.h"
+
 namespace insieme {
 namespace frontend {
 namespace cilk {
 
-	class CilkSpawnMarker {};
+	class CilkSpawnMarker : public core::value_annotation::copy_on_migration {};
 
-	class CilkSyncMarker {};
+	class CilkSyncMarker : public core::value_annotation::copy_on_migration {};
 
 } // end namespace cilk
 } // end namespace frontend

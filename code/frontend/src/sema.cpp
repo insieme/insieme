@@ -81,7 +81,7 @@ void EraseMatchedPragmas(PendingPragmaList& pending, PragmaList& matched) {
 		assert(it != pending.end() && "Current matched pragma is not in the list of pending pragmas");
 		pending.erase(it);
 	}
-} // end anonymous namespace 
+} // end anonymous namespace
 
 /**
  * Given a range, the PragmaFilter returns the pragmas with are defined between that range.
@@ -130,12 +130,12 @@ struct InsiemeSema::InsiemeSemaImpl {
 };
 
 InsiemeSema::InsiemeSema(
-		PragmaList& 					pragma_list, 
-		clang::Preprocessor& 			pp, 
+		PragmaList& 					pragma_list,
+		clang::Preprocessor& 			pp,
 		clang::ASTContext& 				ctx,
-		clang::ASTConsumer& 			consumer, 
+		clang::ASTConsumer& 			consumer,
 		bool 							CompleteTranslationUnit,
-		clang::CodeCompleteConsumer* 	CompletionConsumer) 
+		clang::CodeCompleteConsumer* 	CompletionConsumer)
 :
 	clang::Sema(pp, ctx, consumer, clang::TU_Complete, CompletionConsumer),
 	pimpl(new InsiemeSemaImpl(pragma_list)),
@@ -177,8 +177,8 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 	///
 	/// We solve the problem by searching for the bracket in the input stream and overwrite
 	/// the value of L (which contains the wrong location) with the correct value.
-	
-	
+
+
 	enum {MacroIDBit = 1U << 31}; // from clang/Basic/SourceLocation.h for use with cpp classes
 	{
 		SourceLocation&& leftBracketLoc = SourceMgr.getImmediateSpellingLoc(L);
@@ -211,7 +211,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 //	std::cout << "corrected RIGHT } line: " << utils::Line(R, SourceMgr) << " col: " << utils::Line(R,SourceMgr) << std::endl;
 
 	// the source range we inspect is defined by the new source locations,
-	// this fix the problem with bonduaries jumping to the begining of the file in 
+	// this fix the problem with bonduaries jumping to the begining of the file in
 	// the macro expanisons:
 	//
 	//	#define F(x) { }
@@ -226,7 +226,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 	// for each of the pragmas in the range between brackets
 	for ( PragmaFilter&& filter = PragmaFilter(SR, SourceMgr, pimpl->pending_pragma); *filter; ++filter ) {
 		PragmaPtr P = *filter;
-		// iterate throug statements of the compound in reverse order 
+		// iterate throug statements of the compound in reverse order
 
 		unsigned int pragmaStart = utils::Line(P->getStartLocation(), SourceMgr);
 		unsigned int pragmaEnd	 = utils::Line(P->getEndLocation(),   SourceMgr);
@@ -239,33 +239,32 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 			for (CompoundStmt::body_iterator it = CS->body_begin(); it != CS->body_end(); ++it){
 
 				unsigned int stmtStart = (Line((*it)->getLocStart(), SourceMgr));
-
 //				(*it)->dump();
 //				std::cout << "lastEnd: " << lastEnd << std::endl;
 //				std::cout << "   vs stmt: " << stmtStart  << " -> " << stmtEnd << std::endl;
 
-				if ( (pragmaEnd < stmtStart)){
+				if ( (pragmaEnd <= stmtStart)){
 					// ACHTUNG: if the node is a nullStmt, and is not at the end of the compound (in
-					// wich case is most problably ours) we can not trust it. semantics wont change,
-					// we move one more. (BUG: nulstmt followed by pragmas, the souce begin is
+					// which case is most probably ours) we can not trust it. semantics wont change,
+					// we move one more. (BUG: nullStmt followed by pragmas, the source begin is
 					// postponed until next stmt) this makes pragmas to be attached to a previous
 					// stmt
 					if (!llvm::isa<clang::NullStmt>(*it)){
-						
+
 						// this pragma is attached to the current stmt
 						P->setStatement(*it);
 						matched.push_back(P);
-						
+
 //						std::cout << " ## attached\n" << std::endl;
 						found =true;
 						break;
 					}
 				}
 
-			} 
+			}
 		}
 		if(!found && pragmaStart <= utils::Line(R, SourceMgr)){
-			// this is a de-attached pragma (barrier i.e.) at the end of the compound 
+			// this is a de-attached pragma (barrier i.e.) at the end of the compound
 			// we need to create a fake NullStmt ( ; ) to attach this
 			Stmt** stmts = new Stmt*[CS->size() + 1];
 
@@ -276,7 +275,13 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 
 			std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
 			std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
-			newCS->setLastStmt( new (Context) NullStmt(SourceLocation()) );
+/*
+            clang::AnnotateAttr annotation(SourceLocation(), Context, P->getType());
+			clang::AttributedStmt * stmt = clang::AttributedStmt::Create(Context, P->getEndLocation(), annotation.clone(Context), new (Context) NullStmt(SourceLocation()));
+
+			newCS->setLastStmt( stmt );
+*/
+			newCS->setLastStmt(new (Context) NullStmt(SourceLocation()));
 			P->setStatement( *newCS->body_rbegin() );
 			matched.push_back(P);
 
@@ -289,7 +294,6 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 			// destroy the old compound stmt
 			Context.Deallocate(oldStmt);
 			delete[] stmts;
-			
 //			std::cout << "### de-attached pragma " << utils::Line(P->getEndLocation(), SourceMgr) << std::endl <<std::endl;
 		}
 	}
@@ -305,7 +309,7 @@ void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, co
 							PragmaList& matched) {
 	for ( PragmaFilter filter(bounds, sm,  pimpl->pending_pragma); *filter; ++filter ) {
 		PragmaPtr&& P = *filter;
-		
+
 		P->setStatement(S);
 		matched.push_back(P);
 	}
@@ -324,7 +328,7 @@ InsiemeSema::ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg C
 	matchStmt(ifStmt->getThen(), SourceRange(IfLoc, IfLoc), SourceMgr, matched);
 	// is there any pragmas to be associated with the 'then' statement of this if?
 	if ( !isa<CompoundStmt> (ifStmt->getThen()) ) {
-		// if there is no compound stmt, check the then part 
+		// if there is no compound stmt, check the then part
 		matchStmt(ifStmt->getThen(), SourceRange(IfLoc, ThenVal->getLocEnd()), SourceMgr, matched);
 	}
 	EraseMatchedPragmas(pimpl->pending_pragma, matched);

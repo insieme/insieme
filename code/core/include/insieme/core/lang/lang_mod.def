@@ -1,0 +1,757 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+#ifndef TYPE
+#define TYPE(_id, _spec)
+#endif
+#ifndef LITERAL
+#define LITERAL(_id, _name, _spec)
+#endif
+#ifndef DERIVED
+#define DERIVED(_id, _name, _code) LITERAL(_id, _name, fail)
+#endif
+#ifndef GROUP
+#define GROUP(_id, ...)
+#endif
+#ifndef OPERATOR
+#define OPERATOR(_id, _str)
+#endif
+#ifndef OPERATION
+#define OPERATION(_type, _op, _name, _spec)
+#endif
+#ifndef SUB_TYPE
+#define SUB_TYPE(_subtype, _supertype)
+#endif
+
+
+// Types --------------------------------------------------------------------------------------------------------------
+TYPE(Unit,   "unit")
+
+TYPE(Any, "any")
+TYPE(AnyRef, "ref<any>")
+
+TYPE(Char,   "char")
+TYPE(WChar,  "wchar")
+TYPE(String, "string")
+TYPE(Identifier, "identifier")
+
+GROUP(UnsignedInt, UInt1, UInt2, UInt4, UInt8, UInt16, UIntInf, UIntGen)
+GROUP(SignedInt, Int1, Int2, Int4, Int8, Int16, IntInf, IntGen)
+GROUP(Int, UnsignedInt, SignedInt)
+
+GROUP(Primitive, Any, Bool, Char, WChar, Int, Real) 
+
+TYPE(IntGen, "int<#a>")
+TYPE(UIntGen,"uint<#a>")
+
+TYPE(Int1,    "int<1>")
+TYPE(UInt1,   "uint<1>")
+TYPE(Int2,    "int<2>")
+TYPE(UInt2,   "uint<2>")
+TYPE(Int4,    "int<4>")
+TYPE(UInt4,   "uint<4>")
+TYPE(Int8,    "int<8>")
+TYPE(UInt8,   "uint<8>")
+TYPE(Int16,   "int<16>")
+TYPE(UInt16,  "uint<16>")
+TYPE(IntInf,  "int<#inf>")
+TYPE(UIntInf, "uint<#inf>")
+
+SUB_TYPE(Int1, Int2)
+SUB_TYPE(Int2, Int4)
+SUB_TYPE(Int4, Int8)
+SUB_TYPE(Int8, IntInf)
+
+SUB_TYPE(UInt1, UInt2)
+SUB_TYPE(UInt2, UInt4)
+SUB_TYPE(UInt4, UInt8)
+SUB_TYPE(UInt8, UIntInf)
+
+SUB_TYPE(UInt1, Int2)
+SUB_TYPE(UInt2, Int4)
+SUB_TYPE(UInt4, Int8)
+
+SUB_TYPE(UIntInf, IntInf)
+
+GROUP(Real, RealGen, RealInf, Float, Double)
+
+TYPE(RealGen, "real<#a>")
+TYPE(RealInf, "real<#inf>")
+TYPE(Real4,   "real<4>")
+TYPE(Real8,   "real<8>")
+
+// aliases:
+TYPE(Float,   "real<4>")
+TYPE(Double,  "real<8>")
+
+SUB_TYPE(Float, Double)
+SUB_TYPE(Double, RealInf)
+
+GROUP(ScalarType, Int, Real)
+
+GROUP(BoolLiteral, True, False)
+
+TYPE(Bool, "bool")
+LITERAL(True,  "true",  "bool")
+LITERAL(False, "false", "bool")
+
+TYPE(Alpha, "'a")
+TYPE(TypeLiteralTypeGen, "type<'a>")
+TYPE(RefAlpha, "ref<'a>")
+
+TYPE(VarList, "var_list")
+
+// Parallel Types -----------------------------------------------------------------------------------------------------
+
+TYPE(Job, "job")
+TYPE(ThreadGroup, "threadgroup")
+
+// The Unit Type Constant ---------------------------------------------------------------------------------------------
+
+LITERAL(UnitConstant, "unit", "unit")
+
+// No Argument -> Unit Type -------------------------------------------------------------------------------------------
+
+TYPE(NoArgsOpType, "() -> unit")
+
+// Operators ----------------------------------------------------------------------------------------------------------
+
+// binary
+OPERATOR(Add, 	 "+")  //  0
+OPERATOR(Sub,	 "-")  //  1
+OPERATOR(Mul, 	 "*")  //  2
+OPERATOR(Div, 	 "/")  //  3
+OPERATOR(Mod, 	 "%")  //  4
+OPERATOR(And, 	 "&")  //  5
+OPERATOR(Or, 	 "|")  //  6
+OPERATOR(Xor, 	 "^")  //  7
+OPERATOR(LShift, "<<") //  8
+OPERATOR(RShift, ">>") //  9
+
+// unary
+OPERATOR(Not,	"~")   // 10
+OPERATOR(Plus,	"+")   // 11
+OPERATOR(Minus,	"-")   // 12
+
+OPERATOR(PreInc,  "++")// 13
+OPERATOR(PostInc, "++")// 14
+OPERATOR(PreDec,  "--")// 15
+OPERATOR(PostDec, "--")// 16
+
+// logical
+OPERATOR(LAnd, 	"&&")  // 17
+OPERATOR(LOr, 	"||")  // 18
+OPERATOR(LNot, 	"!")   // 19
+OPERATOR(Eq, 	"==")  // 20
+OPERATOR(Ne,	"!=")  // 21
+OPERATOR(Lt, 	"<")   // 22
+OPERATOR(Le,	"<=")  // 23
+OPERATOR(Gt, 	">")   // 24
+OPERATOR(Ge,	">=")  // 25
+
+// Logical Operations -------------------------------------------------------------------------------------------------
+
+GROUP(LogicOp, BoolLAnd, BoolLOr, BoolEq, BoolNe, BoolLNot)
+
+OPERATION(Bool, LAnd, "bool.and", "(bool,() => bool) -> bool")
+OPERATION(Bool, LOr,  "bool.or",  "(bool,() => bool) -> bool")
+OPERATION(Bool, Eq,   "bool.eq",  "(bool,bool) -> bool")
+OPERATION(Bool, Ne,   "bool.ne",  "(bool,bool) -> bool")
+OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
+OPERATION(Bool, And,  "bool.band", "(bool,bool) -> bool")
+OPERATION(Bool, Or,   "bool.bor", "(bool,bool) -> bool")
+OPERATION(Bool, Xor,  "bool.bxor", "(bool,bool) -> bool")
+OPERATION(Bool, Not,  "bool.bnot", "(bool) -> bool")
+
+// Arithmetic operations ----------------------------------------------------------------------------------------------
+
+GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod,
+IncrementOp)
+//      SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec)
+
+OPERATION(SignedInt, Add,  "int.add", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Sub,  "int.sub", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Mul,  "int.mul", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Div,  "int.div", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Mod,  "int.mod", "(int<#a>,int<#a>) -> int<#a>")
+
+// OPERATION(SignedInt, PreInc,  "int.preInc",  "(ref<int<#a>>) -> int<#a>")
+// OPERATION(SignedInt, PostInc, "int.postInc", "(ref<int<#a>>) -> int<#a>")
+OPERATION(SignedInt, PreDec,  "int.preDec",  "(ref<int<#a>>) -> int<#a>")
+OPERATION(SignedInt, PostDec, "int.postDec", "(ref<int<#a>>) -> int<#a>")
+
+GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod,
+IncrementOp)
+//        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
+
+OPERATION(UnsignedInt, Add,  "uint.add", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Sub,  "uint.sub", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Mul,  "uint.mul", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Div,  "uint.div", "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Mod,  "uint.mod", "(uint<#a>,uint<#a>) -> uint<#a>")
+
+// OPERATION(UnsignedInt, PreInc,  "uint.preInc",  "(ref<uint<#a>>) -> uint<#a>")
+// OPERATION(UnsignedInt, PostInc, "uint.postInc", "(ref<uint<#a>>) -> uint<#a>")
+OPERATION(UnsignedInt, PreDec,  "uint.preDec",  "(ref<uint<#a>>) -> uint<#a>")
+OPERATION(UnsignedInt, PostDec, "uint.postDec", "(ref<uint<#a>>) -> uint<#a>")
+
+
+GROUP(RealArithOp, RealAdd, RealSub, RealMul, RealDiv)
+
+OPERATION(Real, Add,  "real.add", "(real<#a>,real<#a>) -> real<#a>")
+OPERATION(Real, Sub,  "real.sub", "(real<#a>,real<#a>) -> real<#a>")
+OPERATION(Real, Mul,  "real.mul", "(real<#a>,real<#a>) -> real<#a>")
+OPERATION(Real, Div,  "real.div", "(real<#a>,real<#a>) -> real<#a>")
+
+GROUP(ArithOp, IntArithOp, UIntArithOp, RealArithOp)
+
+DERIVED(GenPreInc, 		"gen.pre.inc",		"(ref<'a> v)->'a { v=*v+lit(\"1\":'a); return *v; }")
+DERIVED(GenPostInc, 	"gen.post.inc",		"(ref<'a> v)->'a { auto tmp=*v; v=*v+lit(\"1\":'a); return tmp; }")
+DERIVED(GenPreDec, 		"gen.pre.dec",		"(ref<'a> v)->'a { v=*v-lit(\"1\":'a); return *v; }")
+DERIVED(GenPostDec, 	"gen.post.dec",		"(ref<'a> v)->'a { auto tmp=*v; v=*v-lit(\"1\":'a); return tmp; }")
+
+GROUP(IncrementOp, GenPreInc, GenPostInc, GenPreDec, GenPostDec)
+// SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec,
+//        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
+
+GROUP(LinearIntOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, IncrementOp)
+
+// Comparison Operations ----------------------------------------------------------------------------------------------
+
+GROUP(CharCompOp, CharEq, CharNe, CharLt, CharGt, CharLe, CharGe)
+
+OPERATION(Char, Eq, "char.eq", "(char,char) -> bool")
+OPERATION(Char, Ne, "char.ne", "(char,char) -> bool")
+OPERATION(Char, Lt, "char.lt", "(char,char) -> bool")
+OPERATION(Char, Gt, "char.gt", "(char,char) -> bool")
+OPERATION(Char, Le, "char.le", "(char,char) -> bool")
+OPERATION(Char, Ge, "char.ge", "(char,char) -> bool")
+
+GROUP(IntCompOp, SignedIntEq, SignedIntNe, SignedIntLt, SignedIntGt, SignedIntLe, SignedIntGe)
+
+OPERATION(SignedInt, Eq, "int.eq", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Ne, "int.ne", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Lt, "int.lt", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Gt, "int.gt", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Le, "int.le", "(int<#a>,int<#a>) -> bool")
+OPERATION(SignedInt, Ge, "int.ge", "(int<#a>,int<#a>) -> bool")
+
+GROUP(UIntCompOp, UnsignedIntEq, UnsignedIntNe, UnsignedIntLt, UnsignedIntGt, UnsignedIntLe, UnsignedIntGe)
+
+OPERATION(UnsignedInt, Eq, "uint.eq", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Ne, "uint.ne", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Lt, "uint.lt", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Gt, "uint.gt", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Le, "uint.le", "(uint<#a>,uint<#a>) -> bool")
+OPERATION(UnsignedInt, Ge, "uint.ge", "(uint<#a>,uint<#a>) -> bool")
+
+GROUP(RealCompOp, RealEq, RealNe, RealLt, RealGt, RealLe, RealGe)
+
+OPERATION(Real, Eq, "real.eq", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Ne, "real.ne", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Lt, "real.lt", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Gt, "real.gt", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Le, "real.le", "(real<#a>,real<#a>) -> bool")
+OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
+
+// Type conversion Operations -----------------------------------------------------------------------------------------
+
+GROUP(ScalarCast, ToInt, ToUint, ToReal, ToChar, ToBool)
+
+      // TO INT
+GROUP( ToInt, UnsignedToInt, RealToInt, CharToInt, BoolToInt, IntPrecisionFix)
+LITERAL (UnsignedToInt,	"uint.to.int",    "(uint<#a>,intTypeParam<#b>) -> int<#b>")
+LITERAL (RealToInt,		"real.to.int",    "(real<#a>,intTypeParam<#b>) -> int<#b>")
+LITERAL (CharToInt,		"char.to.int",    "(char,intTypeParam<#b>) -> int<#b>")
+LITERAL (BoolToInt,		"bool.to.int",    "(bool,intTypeParam<#b>) -> int<#b>")
+LITERAL (IntPrecisionFix,"int.precision",    "(int<#a>,intTypeParam<#b>) -> int<#b>")
+
+      // TO UINT
+GROUP( ToUint, SignedToUnsigned, RealToUnsigned, CharToUnsigned, BoolToUnsigned, UintPrecisionFix)
+LITERAL (SignedToUnsigned,	"int.to.uint" ,	"(int<#a>,intTypeParam<#b>) -> uint<#b>")
+LITERAL (RealToUnsigned,	"real.to.uint",	"(real<#a>,intTypeParam<#b>) -> uint<#b>")
+LITERAL (CharToUnsigned,	"char.to.uint",	"(char,intTypeParam<#b>) -> uint<#b>")
+LITERAL (BoolToUnsigned,	"bool.to.uint",	"(bool,intTypeParam<#b>) -> uint<#b>")
+LITERAL (UintPrecisionFix,"uint.precision",    "(uint<#a>,intTypeParam<#b>) -> uint<#b>")
+
+      // TO REAL
+GROUP( ToReal, SignedToReal, UnsignedToReal, CharToReal, BoolToReal, RealPrecisionFix)
+LITERAL (SignedToReal,		"int.to.Real",	"(int<#a>,intTypeParam<#b>) -> real<#b>")
+LITERAL (UnsignedToReal,	"uint.to.Real",	"(uint<#a>,intTypeParam<#b>) -> real<#b>")
+LITERAL (CharToReal,		"char.to.Real",	"(char,intTypeParam<#b>) -> real<#b>")
+LITERAL (BoolToReal,		"bool.to.Real",	"(bool,intTypeParam<#b>) -> real<#b>")
+LITERAL (RealPrecisionFix,"real.precision",    "(real<#a>,intTypeParam<#b>) -> real<#b>")
+
+      // TO CHAR
+GROUP( ToChar, SignedToChar, UnsignedToChar, RealToChar, BoolToChar)
+LITERAL (SignedToChar,    	"int.to.Char" ,	"(int<#a>) -> char")
+LITERAL (UnsignedToChar,	"uint.to.Char",	"(uint<#a>) -> char")
+LITERAL (RealToChar,		"real.to.Char",	"(real<#a>) -> char")
+LITERAL (BoolToChar,		"bool.to.Char",	"(bool) -> char")
+
+      // TO Bool
+GROUP( ToBool, SignedToBool, UnsignedToBool, RealToBool, CharToBool)
+LITERAL (SignedToBool,		"int.to.Bool" ,	"(int<#a>) -> bool")
+LITERAL (UnsignedToBool,	"uint.to.Bool",	"(uint<#a>) -> bool")
+LITERAL (RealToBool,		"real.to.Bool",	"(real<#a>) -> bool")
+LITERAL (CharToBool,		"char.to.bool",	"(char) -> bool")
+
+// Bitwise Operations -------------------------------------------------------------------------------------------------
+
+GROUP(BitwiseIntOp, SignedIntNot, SignedIntAnd, SignedIntOr, SignedIntXor, SignedIntLShift, SignedIntRShift)
+
+OPERATION(SignedInt, Not,    "int.not",    "(int<#a>) -> int<#a>")
+OPERATION(SignedInt, And,    "int.and",    "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Or,     "int.or",     "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Xor,    "int.xor",    "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, LShift, "int.lshift", "(int<#a>,int<4>) -> int<#a>")
+OPERATION(SignedInt, RShift, "int.rshift", "(int<#a>,int<4>) -> int<#a>")
+
+GROUP(BitwiseUIntOp, UnsignedIntNot, UnsignedIntAnd, UnsignedIntOr, UnsignedIntXor, UnsignedIntLShift, UnsignedIntRShift)
+
+OPERATION(UnsignedInt, Not,    "uint.not",    "(uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, And,    "uint.and",    "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Or,     "uint.or",     "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Xor,    "uint.xor",    "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, LShift, "uint.lshift", "(uint<#a>,int<4>) -> uint<#a>")
+OPERATION(UnsignedInt, RShift, "uint.rshift", "(uint<#a>,int<4>) -> uint<#a>")
+
+GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
+
+// References ---------------------------------------------------------------------------------------------------------
+
+GROUP(RefOp, RefAlloc, RefNull, RefDelete, RefAssign, RefDeref, RefVar, RefNew, 
+	  RefLocal, RefVarInit, RefNewInit, RefLocalInit, RefIsNull, RefReinterpret, RefNarrow, RefExpand)
+GROUP(Delete, RefDelete)
+
+TYPE(MemLoc, "memloc")
+LITERAL(MemLocStack, "memloc.stack", "memloc")
+LITERAL(MemLocHeap, "memloc.heap", "memloc")
+LITERAL(MemLocLocal, "memloc.local", "memloc")
+
+LITERAL(RefAlloc,    	"ref.alloc",    		"(type<'a>, memloc) -> ref<'a>")
+LITERAL(RefNull,        "ref.null",             "ref<any>")
+LITERAL(RefDelete, 		"ref.delete", 			"(ref<'a>) -> unit")
+LITERAL(RefAssign, 		"ref.assign", 			"(ref<'a>,'a) -> unit")
+LITERAL(RefDeref,  		"ref.deref",  			"(ref<'a>) -> 'a")
+
+DERIVED(RefVar,    		"ref.var",    			"(type<'a> t) -> ref<'a> { return ref.alloc(t, memloc.stack); }")
+DERIVED(RefNew,    		"ref.new",    			"(type<'a> t) -> ref<'a> { return ref.alloc(t, memloc.heap); }")
+DERIVED(RefLocal,    	"ref.local",    		"(type<'a> t) -> ref<'a> { return ref.alloc(t, memloc.local); }")
+DERIVED(RefVarInit,  	"ref.var",    			"('a v) -> ref<'a> { auto r = ref.var(  type.of('a)); r = v; return r; }")
+DERIVED(RefNewInit,  	"ref.new",    			"('a v) -> ref<'a> { auto r = ref.new(  type.of('a)); r = v; return r; }")
+DERIVED(RefLocalInit,  	"ref.local",    		"('a v) -> ref<'a> { auto r = ref.local(type.of('a)); r = v; return r; }")
+DERIVED(RefIsNull,   	"ref.is.null",			"(ref<'a> r) -> bool { return r == null;}")
+
+LITERAL(RefReinterpret, "ref.reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>")
+LITERAL(RefNarrow, 		"ref.narrow",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
+LITERAL(RefExpand,		"ref.expand",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
+
+// Operators for references
+OPERATION(Ref, Eq, "ref.eq", "(ref<'a>,ref<'a>) -> bool")
+OPERATION(Ref, Ne, "ref.ne", "(ref<'a>,ref<'a>) -> bool")
+OPERATION(Ref, Lt, "ref.lt", "(ref<'a>,ref<'a>) -> bool")
+OPERATION(Ref, Gt, "ref.gt", "(ref<'a>,ref<'a>) -> bool")
+OPERATION(Ref, Le, "ref.le", "(ref<'a>,ref<'a>) -> bool")
+OPERATION(Ref, Ge, "ref.ge", "(ref<'a>,ref<'a>) -> bool")
+
+GROUP(RefCompOp, RefEq, RefNe, RefLt, RefGt, RefLe, RefGe)
+
+
+// Type Operations ----------------------------------------------------------------------------------------------------
+
+DERIVED(TypeOf,			"type.of",				"('a x)->type<'a> { return lit('a); }")
+DERIVED(TypeCast,		"type.cast",			"('a x,type<'b> t)->'b { return ('b)x; }")
+LITERAL(TypeIsSubtype,	"type.is.subtype",		"(type<'a>, type<'b>)->bool")
+
+OPERATION(Type, Eq, 	"type.eq", "(type<'a>,type<'a>) -> bool")
+
+GROUP(TypeCompOp, TypeEq)
+
+
+// Generic Operations -------------------------------------------------------------------------------------------------
+
+// binary generic operators
+OPERATION(Gen, Add, 	 "gen.add", "('a,'a)->'a")
+OPERATION(Gen, Sub, 	 "gen.sub", "('a,'a)->'a") 
+OPERATION(Gen, Mul, 	 "gen.mul", "('a,'a)->'a") 
+OPERATION(Gen, Div, 	 "gen.div", "('a,'a)->'a")
+OPERATION(Gen, Mod, 	 "gen.mod", "('a,'a)->'a")
+
+OPERATION(Gen, And, 	 "gen.and", "('a,'a)->'a") 
+OPERATION(Gen, Or, 	 	 "gen.or",  "('a,'a)->'a") 
+OPERATION(Gen, Xor, 	 "gen.xor", "('a,'a)->'a") 
+
+OPERATION(Gen, LShift, 	 "gen.lshift", "('a,'a)->'a") 
+OPERATION(Gen, RShift, 	 "gen.rshift", "('a,'a)->'a") 
+
+OPERATION(Gen, Eq, "gen.eq", "('a,'a) -> bool")
+OPERATION(Gen, Ne, "gen.ne", "('a,'a) -> bool")
+OPERATION(Gen, Lt, "gen.lt", "('a,'a) -> bool")
+OPERATION(Gen, Gt, "gen.gt", "('a,'a) -> bool")
+OPERATION(Gen, Le, "gen.le", "('a,'a) -> bool")
+OPERATION(Gen, Ge, "gen.ge", "('a,'a) -> bool")
+
+GROUP(GenArithmeticOp, GenAdd, GenSub, GenMul, GenDiv, GenMod)
+GROUP(GenBitwiseOp, GenAnd, GenOr, GenXor, GenLShift, GenRShift)
+GROUP(GenCompOp, GenEq, GenNe, GenLt, GenGt, GenLe, GenGe)
+GROUP(GenOp, GenArithmeticOp, GenBitwiseOp, GenCompOp, IncrementOp )
+
+GROUP(AddOp, GenAdd, SignedIntAdd, UnsignedIntAdd, RealAdd) 
+GROUP(SubOp, GenSub, SignedIntSub, UnsignedIntSub, RealSub) 
+
+GROUP(BitwiseAndOp, GenAnd, SignedIntAnd, UnsignedIntAnd) 
+GROUP(BitwiseOrOp, GenOr, SignedIntOr, UnsignedIntOr) 
+GROUP(BitwiseXorOp, GenXor, SignedIntXor, UnsignedIntXor)
+
+
+// Data Paths ---------------------------------------------------------------------------------------------------------
+
+TYPE(DataPath, "datapath")
+LITERAL(DataPathRoot,		"dp.root", 				"datapath")
+LITERAL(DataPathMember,		"dp.member", 			"(datapath, identifier) -> datapath")
+LITERAL(DataPathElement,	"dp.element", 			"(datapath, uint<8>) -> datapath")
+LITERAL(DataPathComponent,	"dp.component", 		"(datapath, uint<8>) -> datapath")
+LITERAL(DataPathParent,     "dp.parent",            "(datapath, type<'a>) -> datapath")
+
+GROUP(DataPathPrimitive, DataPathRoot, DataPathMember, DataPathElement, DataPathComponent, DataPathParent)
+
+// Volatile -----------------------------------------------------------------------------------------------------------
+// Volatile types mark memory locations that may be changed by some outside agency
+
+GROUP(VolatileOp, VolatileMake, VolatileRead)
+
+TYPE(VolatileGen,		"volatile<'a>")
+LITERAL(VolatileMake,	"volatile.make",		"('a) -> volatile<'a>")
+LITERAL(VolatileRead,	"volatile.read",		"(volatile<'a>) -> 'a")
+
+// TEMP FIX
+LITERAL(Flush, "flush", "(ref<'a>) -> unit")
+
+// General ------------------------------------------------------------------------------------------------------------
+
+GROUP(GeneralOp, InitZero, Sizeof, IntTypeParamToInt)
+
+DERIVED(Id, 				"id", "('a x)->'a { return x; }")		
+
+LITERAL(InitZero,			"initZero",	 				"(type<'a>) -> 'a")
+LITERAL(Sizeof, 			"sizeof", 					"(type<'a>) -> uint<8>")
+LITERAL(IntTypeParamToInt, 	"to.uint", 					"(intTypeParam<#n>)->uint<8>")
+
+// Arrays -------------------------------------------------------------------------------------------------------------
+
+GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArraySubscript1D, ArraySubscriptND, ArrayRefElem1D, ArrayRefElemND, ArrayRefProjection1D, ArrayRefProjectionND)
+
+LITERAL(ArrayCreate1D, 		"array.create.1D", 		"(type<'elem>, uint<8>) -> array<'elem,1>")
+LITERAL(ArrayCreateND, 		"array.create.ND", 		"(type<'elem>, vector<uint<8>,#n>) -> array<'elem,#n>")
+
+LITERAL(ArraySubscript1D,      "array.subscript.1D",   "(array<'elem,1>, uint<8>) -> 'elem")
+LITERAL(ArraySubscriptND,      "array.subscript.ND",   "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
+
+LITERAL(ArrayRefElem1D, 	"array.ref.elem.1D", 	"(ref<array<'elem,1>>, uint<8>) -> ref<'elem>")
+LITERAL(ArrayRefElemND, 	"array.ref.elem.ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
+
+LITERAL(ArrayRefProjection1D, "array.ref.projection.1D",
+							  "(ref<array<'elem,1>>,uint<8>,uint<8>) -> ref<array<'elem,1>>")
+LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
+							  "(ref<array<'elem,#n>>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
+
+LITERAL(ArrayRefDistance, 		"array.ref.distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>) -> uint<8>")
+LITERAL(ScalarToArray,			"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
+
+// computation of an array-offset and some derivades
+LITERAL(ArrayView, 				"array.view",					"(ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")
+DERIVED(ArrayViewPreInc, 		"array.view.pre.inc",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array.view(*a,1); return *a; }")
+DERIVED(ArrayViewPostInc, 		"array.view.post.inc",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { auto res = *a; a = array.view(*a,1); return res; }")
+DERIVED(ArrayViewPreDec, 		"array.view.pre.dec",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { a = array.view(*a,-1); return *a; }")
+DERIVED(ArrayViewPostDec, 		"array.view.post.dec",			"(ref<ref<array<'elem,1>>> a)->ref<array<'elem,1>> { auto res = *a; a = array.view(*a,-1); return res; }")
+
+DERIVED(ArrayReduce, "array.reduce", 
+		"(ref<array<'a,1>> data, uint<8> size, ('b,'a)->'b op, 'b init)->'b {"
+		"	ref<'b> res = var(init);"
+		"	for(uint<8> i = 0ul .. size) {"
+		"		res = op(*res, *(data[i]));"
+		"	}"
+		"	return *res;"
+		"}"
+)
+
+// Vectors ------------------------------------------------------------------------------------------------------------
+
+GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorRefElem, VectorPointwise, VectorPointwiseUnary, VectorReduction, VectorPermute,
+		VectorProjection, VectorRefProjection, RefVectorToRefArray)
+GROUP(Pointwise, VectorPointwise, VectorPointwiseUnary)
+
+// deprecated
+LITERAL(VectorSubscript,      	"vector.subscript",      	"(vector<'elem,#l>, uint<#a>) -> 'elem")
+LITERAL(VectorInitUniform,    	"vector.init.uniform",    	"('elem, intTypeParam<#a>) -> vector<'elem,#a>")
+LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(type<'elem>, intTypeParam<#a>) -> vector<'elem,#a>")
+LITERAL(VectorInitPartial, 		"vector.init.partial",		"(list<'elem>, intTypeParam<#n>) -> vector<'elem,#n>")
+
+LITERAL(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>")
+
+LITERAL(VectorPointwise,      	"vector.pointwise",
+								"(('elem1, 'elem2) -> 'res) -> (vector<'elem1,#l>, vector<'elem2,#l>) -> vector<'res, #l>")
+
+LITERAL(VectorPointwiseUnary, 	"vector.pointwise.unary", 	"(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
+LITERAL(VectorReduction,      	"vector.reduction",       	"(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
+LITERAL(VectorPermute,        	"vector.permute",         	"(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
+
+LITERAL(VectorProjection, 		"vector.projection",
+						  		"(vector<'elem,#n>,intTypeParam<#s>,intTypeParam<#m>) -> vector<'elem,#m>")
+
+LITERAL(VectorRefProjection, 	"vector.ref.projection",
+							 	"(ref<vector<'elem,#n>>,intTypeParam<#s>,intTypeParam<#m>) -> ref<vector<'elem,#m>>")
+
+LITERAL(RefVectorToRefArray, 	"ref.vector.to.ref.array",		"(ref<vector<'elem,#l>>) -> ref<array<'elem,1>>")
+
+
+// Arrays and Vectors -------------------------------------------------------------------------------------------------
+
+GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, ArrayRefElem1D, ArrayRefElemND, VectorRefElem)
+
+// Struct and Unions --------------------------------------------------------------------------------------------------
+// first argument has to be a struct or a union, 'b has to be the type of the requested member
+LITERAL(CompositeRefElem,      "composite.ref.elem",      "(ref<'a>, identifier, type<'b>) -> ref<'b>")
+LITERAL(CompositeMemberAccess, "composite.member.access", "('a, identifier, type<'b>) -> 'b")
+
+// Tuple --------------------------------------------------------------------------------------------------------------
+// first argument has to be a tuple or a union, 'b has to be the type of the requested member
+LITERAL(TupleRefElem,      "tuple.ref.elem",      "(ref<'a>, uint<8>, type<'b>) -> ref<'b>")
+LITERAL(TupleMemberAccess, "tuple.member.access", "('a, uint<8>, type<'b>) -> 'b")
+
+GROUP(MemberAccess, CompositeRefElem, CompositeMemberAccess, TupleRefElem, TupleMemberAccess)
+
+
+// Strings ------------------------------------------------------------------------------------------------------------
+
+LITERAL(StringToCharPointer, "string.as.char.pointer", "(string) -> ref<array<char,1>>")
+
+
+// Accuracy defining functions
+GROUP(Accuracy, AccuracyHighBinary, AccuracyBestEffortBinary, AccuracyFastBinary, AccuracyHighUnary, AccuracyBestEffortUnary, AccuracyFastUnary)
+
+LITERAL(AccuracyHighBinary,       "accuracy.high", "(('a, 'a)->'b) -> ('a, 'a)->'b")
+LITERAL(AccuracyBestEffortBinary, "accuracy.besteffort", "(('a, 'a)->'b) -> ('a, 'a)->'b")
+LITERAL(AccuracyFastBinary,       "accuracy.fast", "(('a, 'a)->'b) -> ('a, 'a)->'b")
+LITERAL(AccuracyHighUnary,       "accuracy.high.unary", "(('a)->'b) -> ('a)->'b")
+LITERAL(AccuracyBestEffortUnary, "accuracy.besteffort.unary", "(('a)->'b) -> ('a)->'b")
+LITERAL(AccuracyFastUnary,       "accuracy.fast.unary", "(('a)->'b) -> ('a)->'b")
+
+// IO -----------------------------------------------------------------------------------------------------------------
+
+LITERAL(Print, "print", "(string,var_list)->unit")
+
+// Misc. --------------------------------------------------------------------------------------------------------------
+
+LITERAL(VarlistPack, "varlist.pack", "('alpha) -> var_list")
+DERIVED(IfThenElse, "ite", "(bool c, () => 'b a, () => 'b b) -> 'b { if (c) { return a(); } else { return b(); } }")
+
+
+// Tunable Options ----------------------------------------------------------------------------------------------------
+
+LITERAL(Pick, "pick", "(list<'a>)->'a")
+
+// Parallel Constructs ------------------------------------------------------------------------------------------------
+
+GROUP(ParallelOp, Parallel, ParallelDetached)
+
+LITERAL(Parallel, "parallel", "(job) -> threadgroup")
+LITERAL(ParallelDetached, "parallel&", "(job) -> unit")
+
+GROUP(MergeOp, Merge, MergeAll)
+
+LITERAL(Merge, "merge", "(threadgroup) -> unit")
+LITERAL(MergeAll, "mergeAll", "() -> unit")
+
+
+GROUP(ThreadOp, GetThreadGroup, GetThreadId)
+
+LITERAL(GetThreadGroup, "getThreadGroup", "(uint<#a>) -> threadgroup")
+LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> int<4>")
+LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> int<4>")
+
+// the work-sharing construct
+LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>, int<#a>, int<#a>)=>'a)->unit")
+
+
+// the data-sharing construct
+LITERAL(Redistribute, "redistribute", "(threadgroup, 'a, (ref<array<'a,1>>, uint<8>, uint<8>)=>'b )->'b")
+
+// some derivades
+DERIVED(Barrier, "barrier", "(threadgroup g)->unit { redistribute(g, 0, (ref<array<int<4>,1>> _, uint<8> _, uint<8> _)->unit { return; }); }")
+DERIVED(PReduce, "preduce", "(threadgroup g, 'a v, ('b,'a)->'b op, 'b init)->'b { return redistribute(g, v, (ref<array<'a,1>> data, uint<8> size, uint<8> pid)=> array.reduce(data, size, op, init) ); }")
+		
+
+// Atomics -----------------------------------------------------------------------------------------------------
+
+DERIVED(Atomic, "atomic", 
+		"(ref<'a> v, ('a)=>bool p, ('a)=>'a f)->'a { "
+		"	auto res = *v; "
+		"	if (p(*v)) { "
+		"		v = f(*v); "
+		"	} "
+		"	return res; "
+		"} ")
+
+// arithmetic
+
+DERIVED(AtomicFetchAndAdd, "atomic.fetch.and.add",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	let test = ('a _)=>true; "
+		"	let apply = ('a x)=>x+exp; "
+		"	return atomic(v, test, apply); "
+		"}  ")
+		
+DERIVED(AtomicAddAndFetch, "atomic.add.and.fetch",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic.fetch.and.add(v, exp) + exp; "
+		"}  ")
+		
+DERIVED(AtomicFetchAndSub, "atomic.fetch.and.sub",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	let test = ('a _)=>true; "
+		"	let apply = ('a x)=>x-exp; "
+		"	return atomic(v, test, apply); "
+		"}  ")
+		
+DERIVED(AtomicSubAndFetch, "atomic.sub.and.fetch",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic.fetch.and.sub(v, exp) - exp; "
+		"}  ")
+		
+// bitwise
+
+DERIVED(AtomicFetchAndAnd, "atomic.fetch.and.and",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	let test = ('a _) => true; "
+		"	let apply = ('a x) => x & exp; "
+		"	return atomic(v, test, apply); "
+		"}  ")
+		
+DERIVED(AtomicAndAndFetch, "atomic.and.and.fetch",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic.fetch.and.and(v, exp) & exp; "
+		"}  ")
+		
+DERIVED(AtomicFetchAndOr, "atomic.fetch.and.or",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	let test = ('a _) => true; "
+		"	let apply = ('a x) => x | exp; "
+		"	return atomic(v, test, apply); "
+		"}  ")
+		
+DERIVED(AtomicOrAndFetch, "atomic.or.and.fetch",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic.fetch.and.or(v, exp) | exp; "
+		"}  ")
+		
+DERIVED(AtomicFetchAndXor, "atomic.fetch.and.xor",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	let test = ('a _) => true; "
+		"	let apply = ('a x) => x ^ exp; "
+		"	return atomic(v, test, apply); "
+		"}  ")
+		
+DERIVED(AtomicXorAndFetch, "atomic.xor.and.fetch",
+		"(ref<'a> v, 'a exp) -> 'a { "
+		"	return atomic.fetch.and.xor(v, exp) ^ exp; "
+		"}  ")
+
+// test and set
+		
+DERIVED(AtomicValCompareAndSwap, "atomic.val.compare.and.swap",
+		"(ref<'a> v, 'a _old, 'a _new) -> 'a { "
+		"	let test = ('a x) => x == _old; "
+		"	let apply = ('a _) => _new; "
+		"	return atomic(v, test, apply); "
+		"}  ")
+
+DERIVED(AtomicBoolCompareAndSwap, "atomic.bool.compare.and.swap",
+		"(ref<'a> v, 'a _old, 'a _new) -> bool { "
+		"	let test = ('a x) => x == _old; "
+		"	let apply = ('a _) => _new; "
+		"	return atomic(v, test, apply) == _new; "
+		"}  ")
+
+		
+
+// Range Handling -----------------------------------------------------------------------------------------------------
+
+TYPE(JobRange, "JobRange")
+
+LITERAL(CreateMinRange,     "MinRange",    		"(uint<8>)->JobRange")							// lower boundery only
+LITERAL(CreateBoundRange,   "BoundRange",    	"(uint<8>, uint<8>)->JobRange")				// lower and upper bound
+LITERAL(CreateBoundRangeMod,"BoundRangeMod",    "(uint<8>, uint<8>, uint<8>)->JobRange")		// lower, upper and modula bound
+
+
+// Locks -----------------------------------------------------------
+
+TYPE(Lock, "lock")
+
+LITERAL(LockAcquire,  "lock.acquire", "(ref<lock>)->unit")
+LITERAL(LockRelease, "lock.release", "(ref<lock>)->unit")
+LITERAL(LockInit,  "lock.init", "(ref<lock>)->unit")
+
+// --------------------------------------------------------------------------------------------------------------------
+
+
+// Special Functions --------------------------------------------------------------------------------
+
+GROUP(CloogMath, CloogFloor, CloogCeil, CloogMod)
+
+LITERAL(Select, "select", "('a, 'a, ('a, 'a) -> bool) -> 'a")
+LITERAL(CloogFloor, "cloog.floor", "( int<4>, int<4> ) -> int<4>" )
+LITERAL(CloogCeil,  "cloog.ceil",  "( int<4>, int<4> ) -> int<4>" )
+LITERAL(CloogMod, 	"cloog.mod",   "( int<4>, int<4> ) -> int<4>" )
+
+LITERAL(Exit, "exit", "(int<4>)->unit" )
+
+// Semantic Grouping --------------------------------------------------------------------------------
+
+GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp, RefCompOp, TypeCompOp, GenCompOp)
+
+GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator, 
+	VectorOp, ArrayOp, CompOp, RefEqual, RefDeref, BitwiseOp, CompOp, ArithOp, GeneralOp)
+
+
+#undef TYPE
+#undef LITERAL
+#undef DERIVED
+#undef GROUP
+#undef OPERATOR
+#undef OPERATION
+#undef SUB_TYPE

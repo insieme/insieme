@@ -129,7 +129,7 @@ namespace core {
 
 		/**
 		 * A marker type to be used for marking value annotations which should be simply
-		 * copied in the node it is attached to is transformed.
+		 * copied if the node it is attached to is transformed.
 		 */
 		struct copy_on_migration {};
 
@@ -141,13 +141,13 @@ namespace core {
 		}
 
 		// support copy-on-migrate option
-		inline bool migrate_annotation(const NodeAnnotationPtr& ptr, const NodePtr& target, const copy_on_migration& value) {
-			add_annotation(ptr, target); return true;
+		inline bool migrate_annotation(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after, const copy_on_migration& value) {
+			add_annotation(ptr, after); return true;
 		}
 
 		// the default case - no migration
 		template<typename V>
-		typename std::enable_if<!std::is_base_of<migratable,V>::value, bool>::type
+		typename std::enable_if<!std::is_base_of<migratable,V>::value && !std::is_base_of<copy_on_migration,V>::value, bool>::type
 		migrate_annotation(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after, const V& value) {
 			return false;	// default case => no migration
 		}

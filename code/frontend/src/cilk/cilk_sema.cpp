@@ -108,10 +108,10 @@ namespace cilk {
 						cur = core::IRBuilder(manager).parallel(stripMarker(cur), 1);
 					}
 
-					// sync => merge all
+					// sync => sneak in an extra merge all
 					if (cur->hasAttachedValue<CilkSyncMarker>()) {
 						changed = true;
-						cur = core::IRBuilder(manager).mergeAll();
+						newStmts.push_back(core::IRBuilder(manager).mergeAll());
 					}
 
 					// take statement as it is

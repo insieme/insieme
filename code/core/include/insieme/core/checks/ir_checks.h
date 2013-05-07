@@ -41,6 +41,7 @@
 #include <boost/optional/optional.hpp>
 
 #include "insieme/utils/enum.h"
+#include "insieme/utils/printable.h"
 
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
@@ -109,7 +110,7 @@ namespace checks {
 	/**
 	 * The class used to represent Warnings and Errors encountered while running IR checks.
 	 */
-	class Message {
+	class Message : public utils::Printable {
 
 	public:
 
@@ -282,6 +283,11 @@ namespace checks {
 		 * @return true if this one is considered smaller, false otherwise
 		 */
 		bool operator<(const Message& other) const;
+
+		/**
+		 * Allows this message to be printed to an output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
 	};
 
 
@@ -399,11 +405,6 @@ namespace checks {
 } // end namspace checks
 } // end namespace core
 } // end namespace insieme
-
-/**
- * Allows messages to be printed to an output stream.
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::checks::Message& message);
 
 /**
  * Allows message lists to be printed to an output stream.

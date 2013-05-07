@@ -53,7 +53,11 @@
 // defines which are needed by LLVM
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include <clang/AST/Expr.h>
+#pragma GCC diagnostic pop
 
 #define IS_IR_REF(type) \
 	(type->getNodeType() == core::NT_RefType)
@@ -249,17 +253,16 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	core::ExpressionPtr op;
 	bool precision = true;
 	std::size_t bytes    = getPrecission(targetTy, gen);
-	std::size_t bytesSrc = getPrecission(exprTy, gen);
 	switch(code){
 		case 11: 
 			// only if target precission is smaller, we may have a precission loosse. 
-			if (bytes != bytesSrc) return builder.callExpr(gen.getIntPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
+			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getIntPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
 		case 22: 
-			if (bytes != bytesSrc) return builder.callExpr(gen.getUintPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
+			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getUintPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
 		case 33:
-			if (bytes != bytesSrc) return builder.callExpr(gen.getRealPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
+			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getRealPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
 		case 44: 
 		case 55: // no cast;

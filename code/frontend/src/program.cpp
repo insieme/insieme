@@ -36,6 +36,15 @@
 
 #include "insieme/frontend/program.h"
 
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#include <llvm/Support/FileSystem.h>
+#include <clang/Serialization/ASTWriter.h>
+#pragma GCC diagnostic pop
+
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/convert.h"
@@ -69,6 +78,7 @@
 #include "insieme/utils/timer.h"
 #include "insieme/utils/container_utils.h"
 
+
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::frontend;
@@ -79,23 +89,23 @@ namespace {
 
 // Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
 ///
-void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL, bool dumpCFG) {
+void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL, bool compilationOnly, bool dumpCFG) {
 
-	InsiemeSema S(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
-
-	//Parser P(comp.getPreprocessor(), S); // clang [3.0]
-	Parser P(comp.getPreprocessor(), S, false);  // do not skip function bodies
-	comp.getPreprocessor().EnterMainSourceFile();  
+	InsiemeSema *S = new InsiemeSema(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
+    comp.setSema(S);
+    //Parser P(comp.getPreprocessor(), S); // clang [3.0]
+	Parser P(comp.getPreprocessor(), /**comp.getSema()*/*S, false);  // do not skip function bodies
+	comp.getPreprocessor().EnterMainSourceFile();
 
 	ParserProxy::init(&P);
 	P.Initialize();	  //FIXME
 	Consumer->Initialize(comp.getASTContext());
 	if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
-		SC->InitializeSema(S);
+		SC->InitializeSema(*S/**comp.getSema()*/);
 
 	if (ExternalASTSource *External = comp.getASTContext().getExternalSource()) {
 		if(ExternalSemaSource *ExternalSema = dyn_cast<ExternalSemaSource>(External))
-			ExternalSema->InitializeSema(S);
+			ExternalSema->InitializeSema(*S/**comp.getSema()*/);
 		External->StartTranslationUnit(Consumer);
 	}
 
@@ -105,14 +115,15 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 
 	Consumer->HandleTranslationUnit(comp.getASTContext());
 	ParserProxy::discard();  // FIXME
-
-	S.dump();
-
+	//delete S;
+    if(!compilationOnly)
+        comp.destroySema();
+    //comp.setSema(&S);
 	// PRINT THE CFG from CLANG just for debugging purposes for the C++ frontend
 	if(dumpCFG) {
 		clang::DeclContext* dc = comp.getASTContext().getTranslationUnitDecl();
 		std::for_each(dc->decls_begin(), dc->decls_end(), [&] (const clang::Decl* d) {
-			if (const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {	
+			if (const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {
 				if( func_decl->hasBody() ) {
 					clang::CFG::BuildOptions bo;
 					bo.AddInitializers = true;
@@ -159,14 +170,17 @@ public:
 		//  FIXME: preprocess here or in indexer?
 		//clang::ASTConsumer emptyCons;
 		clang::ASTConsumer emptyCons;
-		//insieme::frontend::utils::indexerASTConsumer consumer(indexer, 
+		//insieme::frontend::utils::indexerASTConsumer consumer(indexer,
 	//									dynamic_cast<insieme::frontend::TranslationUnit*>(this));
-		parseClangAST(mClang, &emptyCons, true, mPragmaList, job.hasOption(ConversionJob::DumpCFG));
+        if(!boost::algorithm::ends_with(job.getFile(),".o")) {
+            parseClangAST(mClang, &emptyCons, true, mPragmaList, job.hasOption(ConversionJob::CompilationOnly), job.hasOption(ConversionJob::DumpCFG));
 
-		if( mClang.getDiagnostics().hasErrorOccurred() ) {
-			// errors are always fatal!
-			throw ClangParsingError(mFileName);
-		}
+            if( mClang.getDiagnostics().hasErrorOccurred() ) {
+                // errors are always fatal!
+                throw ClangParsingError(mFileName);
+            }
+        }
+
 	}
 
 	// getters
@@ -184,15 +198,46 @@ public:
 namespace insieme {
 namespace frontend {
 
+
+void TranslationUnit::storeUnit(const std::string& output_file) {
+        //if no output_file is specified the current file_name is taken and modified to .o extension
+        std::string raw_name = output_file;
+        if(output_file.size()==0) {
+            size_t lastslash = getFileName().find_last_of("/")+1;
+            size_t lastdot = getFileName().find_last_of(".");
+            if (lastdot == std::string::npos)
+                raw_name = getFileName();
+            raw_name = getFileName().substr(lastslash, lastdot-lastslash);
+            raw_name += ".o";
+        }
+        llvm::SmallString<128> TempPath;
+        TempPath = raw_name;
+        TempPath += "-%%%%%%%%";
+        int fd;
+        llvm::sys::fs::unique_file(TempPath.str(), fd, TempPath,
+                                            false);
+        llvm::raw_fd_ostream Out(fd, true);
+        llvm::SmallString<128> Buffer;
+        llvm::BitstreamWriter Stream(Buffer);
+        clang::ASTWriter Writer(Stream);
+        Writer.WriteAST(*(mClang.getSema()), std::string(), 0, "", false);
+        if (!Buffer.empty())
+            Out.write(Buffer.data(), Buffer.size());
+        Out.close();
+        llvm::sys::fs::rename(TempPath.str(), raw_name);
+        //destroy Sema
+        //mClang.destroySema();
+}
+
 struct Program::ProgramImpl {
 	utils::Indexer mIdx;
 	TranslationUnitSet tranUnits;
 	const vector<boost::filesystem::path> stdLibDirs;
 	utils::Interceptor interceptor;
 	utils::FunctionDependencyGraph funcDepGraph;
-		
-	ProgramImpl(core::NodeManager& mgr, const vector<string>& stdLibDirs) : 
-		mIdx(), 
+
+	ProgramImpl(core::NodeManager& mgr, const vector<string>& stdLibDirs) :
+		mIdx(),
 		stdLibDirs(::transform(stdLibDirs, [](const string& path) { return boost::filesystem::canonical(path); } )),
 		interceptor(mgr, mIdx, this->stdLibDirs),  funcDepGraph(mIdx,interceptor) {}
 };
@@ -212,7 +257,7 @@ void Program::setupInterceptor() {
 		//if we have a interceptor config file we use this to setup the interceptor
 		pimpl->interceptor.loadConfigFile(config.getIntercepterConfigFile());
 	}
-	
+
 	//by default we intercept "std::.*" and "__gnu_cxx::.*" -- set in the ctor
 }
 
@@ -226,7 +271,7 @@ void Program::analyzeFuncDependencies() {
 			if( !(getInterceptor().isIntercepted(funcDecl)) ) {
 				//if the funcDecl was intercepted we ignore it for the funcDepAnalysis
 				pimpl->funcDepGraph.addNode(funcDecl);
-			} 
+			}
 		}
 	}
 	VLOG(1) << " ************* Analyze function dependencies DONE***************";
@@ -235,8 +280,15 @@ void Program::analyzeFuncDependencies() {
 	}
 }
 
-void Program::dumpCallGraph() const { 
+void Program::dumpCallGraph() const {
 	pimpl->funcDepGraph.print(std::cout);
+}
+
+void Program::storeTranslationUnits(const string& output_file) {
+    for(TranslationUnitPtr tu : pimpl->tranUnits) {
+        //store unit without a specified name
+        tu->storeUnit(output_file);
+    }
 }
 
 TranslationUnit& Program::addTranslationUnit(const ConversionJob& job) {
@@ -299,7 +351,7 @@ namespace {
  */
 core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr, bool tagMPI) {
 
-	// OpenCL frontend 
+	// OpenCL frontend
 	ocl::Compiler oclCompiler(prog, mgr);
 	prog = oclCompiler.lookForOclAnnotations();
 

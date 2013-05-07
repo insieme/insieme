@@ -108,6 +108,11 @@ TEST(TargetCodeCompilerTest, DirectHelloWorldTest) {
 
 }
 
+TEST(TargetCodeCompiler, GetIncludePaths) {
+	EXPECT_FALSE(getDefaultCIncludePaths().empty());
+	EXPECT_FALSE(getDefaultCIncludePaths().empty());
+}
+
 
 } // end namespace test
 } // end namespace utils

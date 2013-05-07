@@ -75,6 +75,40 @@ bool Message::operator<(const Message& other) const {
 	return annotationPath < other.annotationPath;
 }
 
+std::ostream& Message::printTo(std::ostream& out) const {
+
+	// start with type ...
+	switch(getType()) {
+	case insieme::core::checks::Message::Type::WARNING:
+		out << "WARNING: "; break;
+	case insieme::core::checks::Message::Type::ERROR:
+		out << "ERROR:   "; break;
+	}
+
+	// add error code
+	out << getErrorCode();
+
+	// .. continue with location ..
+	out << " @ (";
+	const insieme::core::NodeAddress& address = getAddress();
+	if (address.isValid()) {
+		out << address;
+	} else {
+		out << "<unknown>";
+	}
+
+	const auto& annotationPath = getAnnotationPath();
+	if (!annotationPath.empty()) {
+		out << " / " << join(" / ", annotationPath, [](std::ostream& out, const std::pair<insieme::utils::AnnotationKeyPtr, insieme::core::NodeAddress>& cur) {
+			out << *cur.first << ":" << cur.second;
+		});
+	}
+
+	// .. and conclude with the message.
+	out << ") - MSG: " << getMessage();
+	return out;
+}
+
 namespace {
 
 	/**
@@ -345,40 +379,6 @@ CheckPtr combine(const CheckList& list) {
 } // end namespace core
 } // end namespace insieme
 
-
-std::ostream& operator<<(std::ostream& out, const insieme::core::checks::Message& message) {
-
-	// start with type ...
-	switch(message.getType()) {
-	case insieme::core::checks::Message::Type::WARNING:
-		out << "WARNING: "; break;
-	case insieme::core::checks::Message::Type::ERROR:
-		out << "ERROR:   "; break;
-	}
-
-	// add error code
-	out << message.getErrorCode();
-
-	// .. continue with location ..
-	out << " @ (";
-	const insieme::core::NodeAddress& address = message.getAddress();
-	if (address.isValid()) {
-		out << address;
-	} else {
-		out << "<unknown>";
-	}
-
-	const auto& annotationPath = message.getAnnotationPath();
-	if (!annotationPath.empty()) {
-		out << " / " << join(" / ", annotationPath, [](std::ostream& out, const std::pair<insieme::utils::AnnotationKeyPtr, insieme::core::NodeAddress>& cur) {
-			out << *cur.first << ":" << cur.second;
-		});
-	}
-
-	// .. and conclude with the message.
-	out << ") - MSG: " << message.getMessage();
-	return out;
-}
 
 std::ostream& operator<<(std::ostream& out, const insieme::core::checks::MessageList& messageList) {
 	if (messageList.empty()) return out << "[]";

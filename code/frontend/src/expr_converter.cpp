@@ -1108,15 +1108,12 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 	}
 
+	core::TypePtr&& lhsTy = lhs->getType();
+	core::TypePtr&& rhsTy = rhs->getType();
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-	" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;;
+	" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 
 	if( !isAssignment ) {
-
-		core::TypePtr&& lhsTy = lhs->getType();
-		core::TypePtr&& rhsTy = rhs->getType();
-		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-		" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 		
 		// handling for ocl-vector operations
 		if (binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
@@ -1157,7 +1154,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			return (retIr = rhs);
 		}
 
-		// espetial case to deal with the pointer distance operation
+		// especial case to deal with the pointer distance operation
 		//  x = ptr1 - ptr2
 		if (utils::isRefArray(lhs->getType()) &&  
 			utils::isRefArray(rhs->getType()) &&
@@ -1165,27 +1162,34 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 			return retIr = builder.callExpr( gen.getArrayRefDistance(), lhs, rhs);
 		}
 
-		if (lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
-			// TODO: would love to remove this, but some weirdos still need this cast
-			// somehow related with char type. is treated as integer everywhere, not in ir
+		if(isLogical) { 
+
+			// this is like some lines ahead, char and bool types are treated as integers by clang,
+			// while they are converted into char or bool int IR. we need to recover the original
+			// CLANG typing 
 			if (baseOp != BO_LAnd && baseOp != BO_LOr) {
 				lhs = utils::cast(lhs, convFact.convertType( GET_TYPE_PTR(binOp->getLHS())) );
 				rhs = utils::cast(rhs, convFact.convertType( GET_TYPE_PTR(binOp->getRHS())) );
 			}	
-			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
-			opFunc = gen.getOperator(exprTy, op);
-		}
-		
 
-		if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType) {
+			exprTy = gen.getBool(); 
+			opFunc = gen.getOperator(lhs->getType(), op);
+		}
+		else if (lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
+
+			// TODO: would love to remove this, but some weirdos still need this cast
+			// somehow related with char type. is treated as integer everywhere, not in ir
+				lhs = utils::cast(lhs, convFact.convertType( GET_TYPE_PTR(binOp->getLHS())) );
+				rhs = utils::cast(rhs, convFact.convertType( GET_TYPE_PTR(binOp->getRHS())) );
+
+			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
+			opFunc = gen.getOperator(lhs->getType(), op);
+		}
+		else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() == core::NT_RefType) {
 			assert(*lhsTy == *rhsTy && "Comparing incompatible types");
 			opFunc = gen.getOperator(lhsTy, op);
 		}
 
-		if(isLogical) { 
-			exprTy = gen.getBool(); 
-			opFunc = gen.getOperator(lhs->getType(), op);
-		}
 	} else {
 		// check if there is a kernelFile annotation
 		ocl::attatchOclAnnotation(rhs, binOp, convFact);
@@ -1196,6 +1200,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 				" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
 
 	retIr = builder.callExpr( exprTy, opFunc, lhs, rhs );
+
 	END_LOG_EXPR_CONVERSION(retIr);
 	return retIr;
 }

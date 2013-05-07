@@ -37,6 +37,8 @@
 #pragma once
 
 #include <set>
+
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 
 #include "insieme/core/ir_program.h"
@@ -71,25 +73,29 @@ protected:
 	std::string 			mFileName;
 	ClangCompiler			mClang;
 	insieme::frontend::pragma::PragmaList 		mPragmaList;
+
 public:
-	TranslationUnit(const ConversionJob& job) : mFileName(job.getFile()), mClang(job) {
+	TranslationUnit(const ConversionJob& job) : mFileName(job.getFile()), mClang(job,boost::algorithm::ends_with(job.getFile(),".o")) {
 		assert(job.getFiles().size() == 1u && "Only a single file per translation unit allowed!");
 	}
 
 	/**
 	 * Returns a list of pragmas defined in the translation unit
 	 */
-	const pragma::PragmaList& getPragmaList() const { 
-		return mPragmaList; 
+	const pragma::PragmaList& getPragmaList() const {
+		return mPragmaList;
 	}
-	
-	const ClangCompiler& getCompiler() const { 
-		return mClang; 
+
+	const ClangCompiler& getCompiler() const {
+		return mClang;
 	}
-	
-	const std::string& getFileName() const { 
-		return mFileName; 
+
+	const std::string& getFileName() const {
+		return mFileName;
 	}
+
+	void storeUnit(const std::string& output_file);
+
 };
 
 typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
@@ -105,13 +111,13 @@ class Program: public boost::noncopyable {
 	class ProgramImpl;
 	typedef ProgramImpl* ProgramImplPtr;
 	ProgramImplPtr pimpl;
-	
+
 	// Reference to the NodeManager used to convert the translation units into IR code
 	insieme::core::NodeManager& mMgr;
 
 	// The IR program node containing the converted IR
 	insieme::core::ProgramPtr mProgram;
-	
+
 	const ConversionJob config;
 
 	friend class ::TypeConversion_FileTest_Test;
@@ -121,15 +127,22 @@ public:
 	Program(core::NodeManager& mgr, const ConversionJob& job = ConversionJob());
 
 	~Program();
-	
+
 	utils::Interceptor& getInterceptor() const;
 	utils::Indexer& getIndexer() const;
-	
+
 	utils::FunctionDependencyGraph& getCallGraph() const;
 	const vector<boost::filesystem::path>& getStdLibDirs() const;
 	void setupInterceptor();
 	void analyzeFuncDependencies();
 	void dumpCallGraph() const;
+
+    /**
+     * Store ASTContext(s) of translation unit(s) to output file(s)
+     *
+     * @param output file name
+     */
+     void storeTranslationUnits(const string& output_file);
 
 	/**
 	 * Add a single file to the program.
@@ -137,7 +150,7 @@ public:
 	 * @param job a job covering a single translation unit (one input file only!)
 	 */
 	TranslationUnit& addTranslationUnit(const ConversionJob& job);
-	
+
 	/**
 	 * Add multiple files to the program
 	 */
@@ -159,11 +172,11 @@ public:
 	 */
 	const TranslationUnitSet& getTranslationUnits() const;
 
-	class PragmaIterator: public 
+	class PragmaIterator: public
 				std::iterator<
-						std::input_iterator_tag, 
+						std::input_iterator_tag,
 						std::pair<insieme::frontend::pragma::PragmaPtr, TranslationUnitPtr>
-				> 
+				>
 	{
 	public:
 		typedef std::function<bool (const pragma::Pragma&)> FilteringFunc;

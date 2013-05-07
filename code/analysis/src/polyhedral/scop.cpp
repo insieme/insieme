@@ -1381,9 +1381,20 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 					assert(false && "Operation not supported!");
 			}
 
+			core::ExpressionPtr&& leftExpr = callExpr->getArgument(0);
+			core::ExpressionPtr&& rightExpr= callExpr->getArgument(1);
+
+
+			//NOTE: no char substraction, if expr are char, need to cast to int.
+			if (builder.getLangBasic().isChar(leftExpr->getType()) ||
+				builder.getLangBasic().isChar(rightExpr->getType() )){
+				THROW_EXCEPTION(NotASCoP, "char comparison can not be handled by polyedral model", cond);
+				
+			}
+
 			return IterationDomain( 
 					::extractFrom(iv, 
-						builder.sub(callExpr->getArgument(1), callExpr->getArgument(0)), 
+						builder.sub(rightExpr, leftExpr), 
 						builder.intLit(0), 
 						type
 					) );
