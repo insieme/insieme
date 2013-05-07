@@ -1,0 +1,21 @@
+
+#include <stdio.h>
+
+int f(int n) {
+	if (n<2) return n;
+
+	int x = spawn f(n-1);
+	int y;
+	y = spawn f(n-2);
+
+	spawn f(n-3);
+
+	sync;
+	return (x+y);
+}
+
+int main() {
+	int N = 25;
+	printf("f(%d) = %d\n", N, f(N));
+	return 0;
+}
