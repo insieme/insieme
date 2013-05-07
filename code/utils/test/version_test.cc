@@ -50,7 +50,6 @@ namespace utils {
 
 		// just check that it is not undefined
 		EXPECT_NE("unknown", getVersion());
-		EXPECT_PRED2(notContainsSubString, getVersion(), "git");
 
 	}
 
