@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -38,9 +38,42 @@
 
 // don't move the ASTUnit.h include otherwise compile will fail because of __unused
 // defines which are needed by LLVM
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
-#include "clang/Frontend/ASTUnit.h"
+#include <clang/Frontend/ASTUnit.h>
+
+#include <clang/Frontend/CompilerInstance.h>
+#include <clang/Frontend/CompilerInvocation.h>
+#include <clang/Frontend/TextDiagnosticPrinter.h>
+
+#include <clang/Basic/Version.h>
+#include <clang/Basic/Diagnostic.h>
+#include <clang/Basic/FileManager.h>
+#include <clang/Basic/SourceManager.h>
+#include <clang/Basic/TargetInfo.h>
+
+#include <llvm/LLVMContext.h>
+#include <llvm/ADT/IntrusiveRefCntPtr.h>
+
+#include <llvm/Support/Host.h>
+
+#include <llvm/Config/config.h>
+
+#include <clang/Lex/Preprocessor.h>
+#include <clang/AST/ASTContext.h>
+#include <clang/AST/ASTConsumer.h>
+#include <clang/AST/DeclGroup.h>
+
+#include <clang/Parse/Parser.h>
+
+//FIXME: debug
+#include <llvm/Support/raw_os_ostream.h>
+#include <clang/Frontend/Utils.h>
+#include <clang/Lex/HeaderSearch.h>
+#pragma GCC diagnostic pop
 
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/clang_config.h"
@@ -49,36 +82,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
 
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
 
-#include "clang/Basic/Version.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetInfo.h"
-
-#include "llvm/LLVMContext.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
-
-#include "llvm/Support/Host.h"
-// #include "llvm/System/Host.h"
-// #include "llvm/System/Path.h"
-
-#include "llvm/Config/config.h"
-
-#include "clang/Lex/Preprocessor.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/DeclGroup.h"
-
-#include "clang/Parse/Parser.h"
-
-//FIXME: debug
-#include "llvm/Support/raw_os_ostream.h"
-#include "clang/Frontend/Utils.h"
-#include "clang/Lex/HeaderSearch.h"
 using namespace clang;
 using namespace insieme::frontend;
 
