@@ -145,6 +145,8 @@ protected:
 				newNode = flattenCompounds(newNode);
 				if(auto parAnn = std::dynamic_pointer_cast<Parallel>(subAnn)) {
 					newNode = handleParallel(static_pointer_cast<const Statement>(newNode), parAnn);
+				} else if(auto taskAnn = std::dynamic_pointer_cast<Region>(subAnn)) {
+					newNode = handleRegion(static_pointer_cast<const Statement>(newNode), taskAnn);
 				} else if(auto taskAnn = std::dynamic_pointer_cast<Task>(subAnn)) {
 					newNode = handleTask(static_pointer_cast<const Statement>(newNode), taskAnn);
 				} else if(auto forAnn = std::dynamic_pointer_cast<For>(subAnn)) {
@@ -694,6 +696,128 @@ protected:
 		auto printfNodePtr = build.literal("printf", build.parseType("(ref<array<char,1> >, var_list) -> int<4>"));
 		return transform::replaceAll(nodeMan, node, printfNodePtr, core::analysis::addAttribute(printfNodePtr, attr.getUnordered()));
 	}
+	
+	StatementPtr implementParamClause(const StatementPtr& stmtNode, const RegionPtr& reg)
+	{
+		if(!reg->hasParam())
+			return stmtNode;
+
+		StatementList resultStmts;
+		CallExprPtr assign;
+		vector<ExpressionPtr> variants;
+
+		Param param = reg->getParam();
+
+		if(param.hasRange())
+		{
+			auto max 	= build.div( build.sub(param.getRangeUBound(), param.getRangeLBound()), param.getRangeStep());
+			auto pick 	= build.pickInRange(max);
+
+			auto exp = build.add( build.mul(pick, param.getRangeStep()), param.getRangeLBound() );
+
+			assign = build.assign(param.getVar(), exp);
+		}
+		else if(param.hasEnum())
+		{
+			auto pick = build.pickInRange( param.getEnumSize() );
+
+			auto arrVal = build.arrayAccess( param.getEnumList(), pick );
+
+			assign = build.assign( param.getVar(), build.deref( arrVal ) );
+		}
+		else
+		{
+			/* Boolean */
+
+			auto pick = build.pickInRange( build.intLit(1) );
+
+			assign = build.assign( param.getVar(), pick );
+		}
+
+		resultStmts.push_back(assign);
+		resultStmts.push_back(stmtNode);
+
+		return build.compoundStmt(resultStmts);
+	}
+
+	StatementPtr implementLocalClauses(const StatementPtr& stmtNode, const SharedRegionParallelAndTaskClause* clause, StatementList& outsideDecls, StatementList postFix = StatementList() ) {
+			//const Parallel* parallelP = dynamic_cast<const Parallel*>(clause);
+			StatementList replacements;
+			VarList allp;
+
+			if(clause->hasFirstLocal()) allp.insert(allp.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
+			if(clause->hasLocal()) allp.insert(allp.end(), clause->getLocal().begin(), clause->getLocal().end());
+
+			NodeMap generalToLocalMap;
+			NodeMap localToGeneralMap;
+			// implement local copies where required
+			for_each(allp, [&](const ExpressionPtr& varExp) {
+				const auto& expType = varExp->getType();
+				VariablePtr pVar = build.variable(expType);
+				generalToLocalMap[varExp] = pVar;
+				localToGeneralMap[pVar] = varExp;
+				DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(expType));
+				if(clause->hasFirstLocal() && contains(clause->getFirstLocal(), varExp)) {
+					// make sure to actually get *copies* for firstlocal initialization, not copies of references
+					if(core::analysis::isRefType(expType)) {
+						VariablePtr fpPassVar = build.variable(core::analysis::getReferencedType(expType));
+						DeclarationStmtPtr fpPassDecl = build.declarationStmt(fpPassVar, build.deref(varExp));
+						outsideDecls.push_back(fpPassDecl);
+						//decl = build.declarationStmt(pVar, build.refLocal(fpPassVar));
+					}
+					else {
+						decl = build.declarationStmt(pVar, varExp);
+					}
+				}
+				replacements.push_back(decl);
+			});
+/*
+			// implement copyin for threadlocal vars
+			if(parallelP && parallelP->hasCopyin()) {
+				for(const ExpressionPtr& varExp : parallelP->getCopyin()) {
+					// assign master copy to local copy
+					StatementPtr assignment = build.assign(
+						static_pointer_cast<const Expression>(handleThreadlocal(varExp)),
+						build.deref(static_pointer_cast<const Expression>(handleThreadlocal(varExp, true))) );
+					replacements.push_back(assignment);
+				}
+			}
+*/
+			StatementPtr subStmt = transform::replaceAllGen(nodeMan, stmtNode, generalToLocalMap);
+			replacements.push_back(subStmt);
+			// append postfix
+			copy(postFix.cbegin(), postFix.cend(), back_inserter(replacements));
+
+			// handle threadlocals before it is too late!
+			auto res = handleTPVarsInternal(build.compoundStmt(replacements), true);
+
+			return res;
+	}
+
+	NodePtr handleRegion(const StatementPtr& stmtNode, const RegionPtr& reg) {
+
+		/* if there isn't any clause nothing to do */
+
+		if( !reg->hasParam() && !reg->hasLocal() && !reg->hasFirstLocal() && !reg->hasLastLocal() && !reg->hasTarget() && !reg->hasObjective() )
+			return stmtNode;
+
+		/* else, region as parallel with one thread */
+
+		//StatementList resultStmts;
+
+		auto paramNode = implementParamClause(stmtNode, reg);
+		//auto newStmtNode = implementLocalClauses(paramNode, &*reg, resultStmts);
+		auto parLambda = transform::extractLambda(nodeMan, build.compoundStmt(paramNode));
+		auto range = build.getThreadNumRange(1, 1);
+		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
+		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
+		//resultStmts.push_back(mergeCall);
+
+		CompoundStmtPtr res = build.compoundStmt(mergeCall);
+
+		return res;
+	}
 
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 		StatementList resultStmts;
@@ -710,6 +834,13 @@ protected:
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 		resultStmts.push_back(mergeCall);
+		// if clause handling
+		assert(par->hasIf() == false && "OMP parallel if clause not supported");
+		assert(par->hasLocal() == false && "OMP parallel local clause not supported");
+		assert(par->hasFirstLocal() == false && "OMP parallel firstlocal clause not supported");
+		assert(par->hasLastLocal() == false && "OMP parallel lastlocal clause not supported");
+		assert(par->hasTarget() == false && "OMP parallel target clause not supported");
+
 		StatementPtr ret = build.compoundStmt(resultStmts);
 		// add code for "ordered" pfors in this parallel, if any
 		ret = processOrderedParallel(ret);
@@ -724,6 +855,12 @@ protected:
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		resultStmts.push_back(parallelCall);
+
+		assert(par->hasLocal() == false && "OMP task local clause not supported");
+		assert(par->hasFirstLocal() == false && "OMP task firstlocal clause not supported");
+		assert(par->hasLastLocal() == false && "OMP task lastlocal clause not supported");
+		assert(par->hasTarget() == false && "OMP task target clause not supported");
+
 		return build.compoundStmt(resultStmts);
 	}
 

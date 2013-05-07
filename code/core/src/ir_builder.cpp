@@ -866,6 +866,11 @@ CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
 	return callExpr(variants[0]->getType(), manager.getLangBasic().getPick(), encoder::toIR<ExpressionList, encoder::DirectExprListConverter>(manager, variants));
 }
 
+CallExprPtr IRBuilder::pickInRange(const ExpressionPtr& max) const {
+	TypePtr type = manager.getLangBasic().getUInt8();
+	return callExpr(max->getType(), manager.getLangBasic().getPickInRange(), castExpr(type, max));
+}
+
 
 namespace {
 

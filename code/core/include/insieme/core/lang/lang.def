@@ -629,6 +629,8 @@ DERIVED(IfThenElse, "ite", "(bool c, () => 'b a, () => 'b b) -> 'b { if (c) { re
 // Tunable Options ----------------------------------------------------------------------------------------------------
 
 LITERAL(Pick, "pick", "(list<'a>)->'a")
+LITERAL(PickInRange, "pickInRange", "(uint<8>)->uint<8>")
+
 
 // Parallel Constructs ------------------------------------------------------------------------------------------------
 
