@@ -91,52 +91,58 @@ namespace {
 ///
 void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL, bool compilationOnly, bool dumpCFG) {
 
-	InsiemeSema sema(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
-    comp.setSema(&sema);
+	InsiemeSema *S = new InsiemeSema(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
+    comp.setSema(S);
 
-    Parser P(comp.getPreprocessor(), sema, false);  // do not skip function bodies
-	comp.getPreprocessor().EnterMainSourceFile();
+    {
+		//Parser P(comp.getPreprocessor(), S); // clang [3.0]
+		Parser P(comp.getPreprocessor(), /**comp.getSema()*/*S, false);  // do not skip function bodies
+		comp.getPreprocessor().EnterMainSourceFile();
 
-	ParserProxy::init(&P);
-	P.Initialize();	  //FIXME
-	Consumer->Initialize(comp.getASTContext());
-	if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
-		SC->InitializeSema(sema);
+		ParserProxy::init(&P);
+		P.Initialize();	  //FIXME
+		Consumer->Initialize(comp.getASTContext());
+		if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
+			SC->InitializeSema(*S/**comp.getSema()*/);
 
-	if (ExternalASTSource *External = comp.getASTContext().getExternalSource()) {
-		if(ExternalSemaSource *ExternalSema = dyn_cast<ExternalSemaSource>(External))
-			ExternalSema->InitializeSema(sema);
-		External->StartTranslationUnit(Consumer);
-	}
+		if (ExternalASTSource *External = comp.getASTContext().getExternalSource()) {
+			if(ExternalSemaSource *ExternalSema = dyn_cast<ExternalSemaSource>(External))
+				ExternalSema->InitializeSema(*S/**comp.getSema()*/);
+			External->StartTranslationUnit(Consumer);
+		}
 
-	Parser::DeclGroupPtrTy ADecl;
-	while(!P.ParseTopLevelDecl(ADecl))
-		if(ADecl) Consumer->HandleTopLevelDecl(ADecl.getAsVal<DeclGroupRef>());
+		Parser::DeclGroupPtrTy ADecl;
+		while(!P.ParseTopLevelDecl(ADecl))
+			if(ADecl) Consumer->HandleTopLevelDecl(ADecl.getAsVal<DeclGroupRef>());
 
-	Consumer->HandleTranslationUnit(comp.getASTContext());
-	ParserProxy::discard();  // FIXME
-	//delete S;
-    if(!compilationOnly)
-        comp.setSema(0);
-    //comp.setSema(&S);
-	// PRINT THE CFG from CLANG just for debugging purposes for the C++ frontend
-	if(dumpCFG) {
-		clang::DeclContext* dc = comp.getASTContext().getTranslationUnitDecl();
-		std::for_each(dc->decls_begin(), dc->decls_end(), [&] (const clang::Decl* d) {
-			if (const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {
-				if( func_decl->hasBody() ) {
-					clang::CFG::BuildOptions bo;
-					bo.AddInitializers = true;
-					bo.AddImplicitDtors = true;
-					clang::CFG* cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
-					assert(cfg);
-					std::cerr << "~~~ Function: "  << func_decl->getNameAsString() << " ~~~~~" << std::endl;
-					// clang [3.0 ]cfg->dump(comp.getPreprocessor().getLangOptions());
-					cfg->dump(comp.getPreprocessor().getLangOpts(), true);
+		Consumer->HandleTranslationUnit(comp.getASTContext());
+		ParserProxy::discard();  // FIXME
+
+		// PRINT THE CFG from CLANG just for debugging purposes for the C++ frontend
+		if(dumpCFG) {
+			clang::DeclContext* dc = comp.getASTContext().getTranslationUnitDecl();
+			std::for_each(dc->decls_begin(), dc->decls_end(), [&] (const clang::Decl* d) {
+				if (const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {
+					if( func_decl->hasBody() ) {
+						clang::CFG::BuildOptions bo;
+						bo.AddInitializers = true;
+						bo.AddImplicitDtors = true;
+						clang::CFG* cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
+						assert(cfg);
+						std::cerr << "~~~ Function: "  << func_decl->getNameAsString() << " ~~~~~" << std::endl;
+						// clang [3.0 ]cfg->dump(comp.getPreprocessor().getLangOptions());
+						cfg->dump(comp.getPreprocessor().getLangOpts(), true);
+					}
 				}
-			}
-		});
-	}
+			});
+		}
+    }
+
+    // clear sema in case it is not needed any more (might be needed by the AST dumper)
+	if(!compilationOnly)
+		comp.destroySema();
+
+
 	//////////////////////////////////////////////////////////////////////////////
 }
 

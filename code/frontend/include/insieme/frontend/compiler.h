@@ -199,6 +199,11 @@ public:
 	 */
     void setSema(InsiemeSema *S);
 
+	/**
+	 * Destroy clang's Sema
+	 */
+    void destroySema();
+
 	bool isCXX() const;
 
 	~ClangCompiler();

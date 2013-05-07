@@ -393,6 +393,7 @@ void                ClangCompiler::setSema(InsiemeSema *S) {
                         pimpl->sema = S;
                     }
 bool				ClangCompiler::isCXX()				const { return pimpl->m_isCXX; }
+void                ClangCompiler::destroySema()      { delete pimpl->sema; }
 
 ClangCompiler::~ClangCompiler() {
 	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();
