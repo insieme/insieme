@@ -275,8 +275,38 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(c
 //							FUNCTION CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const clang::CallExpr* callExpr) {
+	core::ExpressionPtr retIr = ExprConverter::VisitCallExpr(callExpr);
 
-	return ExprConverter::VisitCallExpr(callExpr);
+	// if any of the parameters is an object, and is pass by value
+	// Clang likes to implement a copy constructor, ignore it, it will be handled by the be compiler
+	
+	for (unsigned i=0; i<callExpr->getNumArgs(); i++){
+		if (const clang::CXXConstructExpr* ctor = llvm::dyn_cast<clang::CXXConstructExpr>(callExpr->getArg(i))){
+			// is a constructor, if is a copy ctor, we ignore it and return the origina object
+			if(ctor->getConstructor()->isCopyConstructor()){
+				core::ExpressionPtr tmp;
+				const clang::DeclRefExpr* param= utils::skipSugar<DeclRefExpr> (ctor->getArg(i));
+				if (param){
+
+					tmp = convFact.lookUpVariable( param->getDecl() );
+					if (!IS_CPP_REF_EXPR(tmp)){
+						tmp = convFact.tryDeref(tmp);
+					}
+					else{
+						if (core::analysis::isCppRef(tmp->getType())) {
+							tmp = builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), tmp));
+						}
+						else if (core::analysis::isConstCppRef(tmp->getType())) {
+							tmp = builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), tmp));
+						}
+					}
+					core::CallExprAddress addr(retIr.as<core::CallExprPtr>());
+					retIr = core::transform::replaceNode (mgr, addr->getArgument(i), tmp).as<core::ExpressionPtr>();
+				}
+			}
+		}
+	}
+	return retIr;
 }
 
 
