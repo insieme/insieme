@@ -40,7 +40,7 @@
 // defines which are needed by LLVM
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Werror=uninitialized"
+#pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 #include <clang/Frontend/ASTUnit.h>
