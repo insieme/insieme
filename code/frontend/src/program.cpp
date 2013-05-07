@@ -91,21 +91,21 @@ namespace {
 ///
 void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL, bool compilationOnly, bool dumpCFG) {
 
-	InsiemeSema *S = new InsiemeSema(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
-    comp.setSema(S);
-    //Parser P(comp.getPreprocessor(), S); // clang [3.0]
-	Parser P(comp.getPreprocessor(), /**comp.getSema()*/*S, false);  // do not skip function bodies
+	InsiemeSema sema(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
+    comp.setSema(&sema);
+
+    Parser P(comp.getPreprocessor(), sema, false);  // do not skip function bodies
 	comp.getPreprocessor().EnterMainSourceFile();
 
 	ParserProxy::init(&P);
 	P.Initialize();	  //FIXME
 	Consumer->Initialize(comp.getASTContext());
 	if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
-		SC->InitializeSema(*S/**comp.getSema()*/);
+		SC->InitializeSema(sema);
 
 	if (ExternalASTSource *External = comp.getASTContext().getExternalSource()) {
 		if(ExternalSemaSource *ExternalSema = dyn_cast<ExternalSemaSource>(External))
-			ExternalSema->InitializeSema(*S/**comp.getSema()*/);
+			ExternalSema->InitializeSema(sema);
 		External->StartTranslationUnit(Consumer);
 	}
 
@@ -117,7 +117,7 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 	ParserProxy::discard();  // FIXME
 	//delete S;
     if(!compilationOnly)
-        comp.destroySema();
+        comp.setSema(0);
     //comp.setSema(&S);
 	// PRINT THE CFG from CLANG just for debugging purposes for the C++ frontend
 	if(dumpCFG) {

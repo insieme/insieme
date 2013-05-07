@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -198,11 +198,6 @@ public:
 	 * Set clang's Sema
 	 */
     void setSema(InsiemeSema *S);
-
-	/**
-	 * Destroy clang's Sema
-	 */
-    void destroySema();
 
 	bool isCXX() const;
 
