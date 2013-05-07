@@ -1490,6 +1490,19 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 		if (expr.isa<core::CallExprPtr>() &&
 			(ptr = expr.as<core::CallExprPtr>().getFunctionExpr()).isa<core::LambdaExprPtr>() && 
 			 ptr.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
+
+				// for each of the argumets, if uses a parameter in the paramenter list, avoid the
+				// wrap of the variable
+				const clang::CXXConstructExpr* ctor= llvm::cast<clang::CXXConstructExpr>((*it)->getInit());
+				for (unsigned i=0; i <ctor->getNumArgs ();i++){
+					const clang::DeclRefExpr* param= utils::skipSugar<DeclRefExpr> (ctor->getArg(i));
+					if (param){
+						core::ExpressionPtr tmp = lookUpVariable(param->getDecl());
+						core::CallExprAddress addr(expr.as<core::CallExprPtr>());
+						expr = core::transform::replaceNode (mgr, addr->getArgument(1+i), tmp).as<core::CallExprPtr>();
+					}
+				}
+				// to end with, replace the "this" placeholder with the right position
 				core::CallExprAddress addr(expr.as<core::CallExprPtr>());
 				initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
 		}
