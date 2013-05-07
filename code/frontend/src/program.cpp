@@ -137,7 +137,6 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 			}
 		});
 	}
-	//////////////////////////////////////////////////////////////////////////////
 }
 
 ///  A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
