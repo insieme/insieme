@@ -46,6 +46,7 @@
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/temporariesLookup.h"
 #include "insieme/frontend/utils/ir++_utils.h"
+#include "insieme/frontend/utils/castTool.h"
 
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -635,7 +636,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 	START_LOG_EXPR_CONVERSION(callExpr);
 
 	//TODO:  - inplace allocation - non default ctor array?
-	core::ExpressionPtr retExp;
+	core::ExpressionPtr retExpr;
 
 	if (callExpr->getAllocatedType().getTypePtr()->isBuiltinType()){
 
@@ -651,7 +652,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 		}
 
 		// FIXME, array size
-		retExp = builder.refNew(builder.refVar(placeHolder));
+		retExpr = builder.refVar(builder.refNew(placeHolder));
 	}
 	else{
 		// is a class, handle construction
@@ -663,17 +664,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 		
 		if (callExpr->isArray()){
 			core::ExpressionPtr arrSizeExpr = convFact.convertExpr( callExpr->getArraySize() );
- 			arrSizeExpr =  builder.callExpr(mgr.getLangBasic().getTypeCast(), 
-											arrSizeExpr,
-											builder.getTypeLiteral(mgr.getLangBasic().getUInt8()) );
+			arrSizeExpr = utils::castScalar(mgr.getLangBasic().getUInt8(), arrSizeExpr);
 
 			// extract only the ctor function from the converted ctor call
 			core::ExpressionPtr ctorFunc = ctorCall.as<core::CallExprPtr>().getFunctionExpr();
 
 			assert( ctorFunc.as<core::LambdaExprPtr>()->getParameterList().size() > 0 && "not default ctor used in array construction");
 
-			retExp = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
-			 						   mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr);
+			retExpr = builder.refVar( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
+			 						   				   mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr));
 		}
 		else{
 
@@ -681,14 +680,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 			// in order to turn this into a diynamic memory allocation, we only need to substitute 
 			// the first argument for a heap location
 			core::CallExprAddress addr(ctorCall.as<core::CallExprPtr>());
-			retExp = core::transform::replaceNode (convFact.mgr, 
+			retExpr = core::transform::replaceNode (convFact.mgr, 
 												  addr->getArgument(0), 
 												  newCall ).as<core::CallExprPtr>();
+			retExpr = builder.refVar(retExpr);
 		}
 	}
 
-	END_LOG_EXPR_CONVERSION(retExp);
-	return retExp;
+	END_LOG_EXPR_CONVERSION(retExpr);
+	return retExpr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

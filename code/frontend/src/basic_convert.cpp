@@ -839,13 +839,10 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// ============================================================================================
 	
 	// if is a constructor call, we are done
-	if (llvm::isa<clang::CXXConstructExpr>(expr)){
-		return retIr;
-	}
-
 	// if is a new operator, we need another ref in the type
-	if (llvm::isa<clang::CXXNewExpr>(expr)){
-		return builder.refVar(retIr);
+	if (llvm::isa<clang::CXXConstructExpr>(expr) ||
+		llvm::isa<clang::CXXNewExpr>(expr)){
+		return retIr;
 	}
 	
 	// If this is an initialization of an array using array.create (meaning it was originally a
@@ -1394,6 +1391,10 @@ core::ExpressionPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 		//assert(false && "not properly implement currently");
 		RESTORE_TU();
 		return retExpr;
+	} else if (func.isa<core::VariablePtr>()){
+		// we deal with a recursive member function... we have a problem
+		
+	
 	} else {
 		assert(false && "something went wrong");
 		return core::ExpressionPtr();
