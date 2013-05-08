@@ -1076,9 +1076,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		//VLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
 				//<< "Number of components in the cycle: " << components.size();
 
-		std::for_each(components.begin(), components.end(), [ ] (std::set<const FunctionDecl*>::value_type c) {
+		//std::for_each(components.begin(), components.end(), [ ] (std::set<const FunctionDecl*>::value_type c) {
 			//VLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
-		});
+		//});
 
 		/** 
 		 * Creates the variable which should be used as a placeholder for invoking the given
@@ -1395,6 +1395,8 @@ core::ExpressionPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 		// we deal with a recursive member function... we have a problem
 		
 	
+		assert(false && "recursive member not implemented");
+		return core::ExpressionPtr();
 	} else {
 		assert(false && "something went wrong");
 		return core::ExpressionPtr();
