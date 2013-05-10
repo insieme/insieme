@@ -280,7 +280,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const cla
 
 	// if any of the parameters is an object, and is pass by value
 	// Clang likes to implement a copy constructor, ignore it, it will be handled by the be compiler
-	
 	for (unsigned i=0; i<callExpr->getNumArgs(); i++){
 		if (const clang::CXXConstructExpr* ctor = llvm::dyn_cast<clang::CXXConstructExpr>(callExpr->getArg(i))){
 			// is a constructor, if is a copy ctor, we ignore it and return the origina object
@@ -390,7 +389,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	newFunc = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl), 
 									newFunc.as<core::ExpressionPtr>(),
 									irClassType, 
-									core::FK_MEMBER_FUNCTION);
+									core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
 
 	core::FunctionTypePtr funcTy = newFunc.getType().as<core::FunctionTypePtr>();
  
@@ -458,7 +457,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		convertedOp = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl), 
 											convertedOp,
 											irClassType, 
-											core::FK_MEMBER_FUNCTION);
+											core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
 
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		
@@ -597,7 +596,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	ctorFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl), 
 									ctorFunc,
 									refToClassTy, 
-									core::FK_CONSTRUCTOR);
+									core::FK_CONSTRUCTOR).as<core::ExpressionPtr>();
 	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
 	
 	// reconstruct Arguments list, fist one is a scope location for the object

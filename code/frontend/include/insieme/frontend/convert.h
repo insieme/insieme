@@ -483,10 +483,10 @@ public:
 	 * @param funcKind is it a Ctor, Member or dtor?
 	 * @return the lambda expression corresponding a Member function 
 	 */
-	core::ExpressionPtr  memberize (const clang::FunctionDecl* callDecl,
-									core::ExpressionPtr func, 
-									core::TypePtr ownerClassType, 
-									core::FunctionKind funcKind);
+	core::NodePtr memberize (const clang::FunctionDecl* callDecl,
+						 	 core::ExpressionPtr func, 
+						 	 core::TypePtr ownerClassType, 
+						 	 core::FunctionKind funcKind);
 
 	/**
 	 * handles implicit behaviour of a constructor call,

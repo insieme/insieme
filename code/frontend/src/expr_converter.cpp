@@ -793,7 +793,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 	} 
 	
 	assert( false && "Call expression not referring a function");
-
 	return core::ExpressionPtr();
 }
 
