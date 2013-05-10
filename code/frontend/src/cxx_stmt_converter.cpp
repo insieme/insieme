@@ -147,6 +147,11 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 
 	core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
 
+	// check if the return must be converted or not to a reference, 
+	// is easy to check if the value has being derefed or not
+	if (gen.isPrimitive(retExpr->getType()))
+			return stmt;
+
 	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
 	// this is produced by the AST, but we should delegate this matters to the backend compiler
 	
