@@ -285,7 +285,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const cla
 			// is a constructor, if is a copy ctor, we ignore it and return the origina object
 			if(ctor->getConstructor()->isCopyConstructor()){
 				core::ExpressionPtr tmp;
-				const clang::DeclRefExpr* param= utils::skipSugar<DeclRefExpr> (ctor->getArg(i));
+				// copy constructor has one argumnet (the object to be copied) -> index is 0
+				const clang::DeclRefExpr* param= utils::skipSugar<DeclRefExpr> (ctor->getArg(0));
 				if (param){
 
 					tmp = convFact.lookUpVariable( param->getDecl() );
