@@ -461,9 +461,16 @@ protected:
 			auto&& freeVarsAndFuns = core::analysis::getFreeVariables(stmtNode);
 			VariableList freeVars;
 			// free function variables should not be captured
-			std::copy_if(freeVarsAndFuns.begin(), freeVarsAndFuns.end(), back_inserter(freeVars), [](const VariablePtr& v) {
+			std::copy_if(freeVarsAndFuns.begin(), freeVarsAndFuns.end(), back_inserter(freeVars), [&](const VariablePtr& v) {
 				auto t = v.getType();
-				return !t.isa<FunctionTypePtr>() && !(core::analysis::isRefType(t) && core::analysis::getReferencedType(t).isa<ArrayTypePtr>());
+				// free function variables should not be captured
+				bool ret = !t.isa<FunctionTypePtr>() && !(core::analysis::isRefType(t) && core::analysis::getReferencedType(t).isa<ArrayTypePtr>());
+				// explicitly declared variables should not be auto-privatized
+				if(taskP->hasShared()) ret = ret && !contains(taskP->getShared(), v);
+				if(taskP->hasFirstPrivate()) ret = ret && !contains(taskP->getFirstPrivate(), v);
+				if(taskP->hasPrivate()) ret = ret && !contains(taskP->getPrivate(), v);
+				if(taskP->hasReduction()) ret = ret && !contains(taskP->getReduction().getVars(), v);
+				return ret;
 			});
 			firstPrivates.insert(firstPrivates.end(), freeVars.begin(), freeVars.end());
 			allp.insert(allp.end(), freeVars.begin(), freeVars.end());
