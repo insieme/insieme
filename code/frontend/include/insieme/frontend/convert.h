@@ -217,12 +217,22 @@ protected:
 
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// 						Diagnossis system
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		
+		/**
+		 * list of warnings up to this point
+		 */
+		std::set<std::string> warnings;
+
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						context structure Constructor
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		ConversionContext() :
 				isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), 
 				isRecSubType(false), isResolvingFunctionType(false) {
 		}
+
 	};
 
 	ConversionContext ctx;
@@ -470,6 +480,15 @@ public:
         * which are valid during the conversion of the given recursive function cycle
         */
 	core::StatementPtr materializeReadOnlyParams(const core::StatementPtr& body, const vector<core::VariablePtr>& params);
+
+
+	/**
+	 * print diagnosis errors, warnings stored during translation
+	 * sometimes we can not retrieve a location to attach the error to, we'll store it
+	 * and it will be printed as soon as a location can be used
+	 * @param loc: the location this warning will be attached to
+	 */
+	void printDiagnosis(const clang::SourceLocation& loc);
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  CPP STUFF   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

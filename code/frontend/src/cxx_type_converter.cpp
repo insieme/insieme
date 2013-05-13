@@ -355,7 +355,6 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitSubstTemplateTypeParmTy
 //		);
 
 //		VLOG(2) << "CLANG Type Classname: " << substTy->getReplacedParameter()->getTypeClassName();
-	//TODO SHOULD WORK IN NEWER CLANG VERSION???
 	//VLOG(2) << "Replaced Template Name: " << substTy->getReplacedParameter()->getDecl()->getNameAsString();
 	//VLOG(2) << "Replacement Type: " << substTy->getReplacementType().getTypePtr();
 
@@ -377,6 +376,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitDecltypeType(const clang
 
 core::TypePtr ConversionFactory::CXXTypeConverter::Visit(const clang::Type* type) {
 	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
+
 	//check cache for type
 	auto fit = convFact.ctx.typeCache.find(type);
 	if(fit != convFact.ctx.typeCache.end()) {

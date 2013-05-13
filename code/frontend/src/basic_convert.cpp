@@ -238,6 +238,20 @@ core::StatementPtr ConversionFactory::materializeReadOnlyParams(const core::Stat
 	return newBody;
 }
 
+
+//////////////////////////////////////////////////////////////////
+///
+void ConversionFactory::printDiagnosis(const clang::SourceLocation& loc){
+
+	clang::Preprocessor& pp = getCurrentPreprocessor();
+	// print warnings and errors:
+	while (!ctx.warnings.empty()){
+		pp.Diag(loc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning, *ctx.warnings.begin()) );
+		ctx.warnings.erase(ctx.warnings.begin());
+	}
+
+}
+
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {

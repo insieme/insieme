@@ -1632,6 +1632,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCompoundLiteralExpr(c
 core::ExpressionPtr ConversionFactory::CExprConverter::Visit(const clang::Expr* expr) {
 	core::ExpressionPtr retIr = ConstStmtVisitor<CExprConverter, core::ExpressionPtr>::Visit(expr);
 
+	// print diagnosis messages
+	convFact.printDiagnosis(expr->getLocStart());
+
 	// check for OpenMP annotations
 	return omp::attachOmpAnnotation(retIr, expr, convFact);
 }

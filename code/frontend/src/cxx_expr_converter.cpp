@@ -935,6 +935,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTempora
 core::ExpressionPtr ConversionFactory::CXXExprConverter::Visit(const clang::Expr* expr) {
 	core::ExpressionPtr&& retIr = ConstStmtVisitor<ConversionFactory::CXXExprConverter, core::ExpressionPtr>::Visit(expr);
 
+	// print diagnosis messages
+	convFact.printDiagnosis(expr->getLocStart());
+
 	// check for OpenMP annotations
 	return omp::attachOmpAnnotation(retIr, expr, convFact);
 }
