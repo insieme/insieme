@@ -1109,9 +1109,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 			// In the case the function is receiving the global variables the signature needs to be
 			// modified by allowing the global struct to be passed as an argument
-			if ( ctx.globalFuncSet.find(funDecl) != ctx.globalFuncSet.end() ) {
-				funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
-			}
+		//	if ( ctx.globalFuncSet.find(funDecl) != ctx.globalFuncSet.end() ) {
+		//		funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
+		//	}
 			core::VariablePtr&& var = builder.variable( funcType );
 			ctx.recVarExprMap.insert( { funDecl, var } );
 		};

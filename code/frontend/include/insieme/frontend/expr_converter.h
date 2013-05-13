@@ -161,6 +161,8 @@ ExpressionList getFunctionArguments(const core::IRBuilder& builder,
 									bool usesGlobals =false) {
 	ExpressionList args;
 
+	callExpr->dump();
+
 	// if member function, need to skip one arg (the local scope arg)
 	int off =0;
 	if (funcTy->isMemberFunction() ||
@@ -183,14 +185,19 @@ ExpressionList getFunctionArguments(const core::IRBuilder& builder,
 
 	// if needed, globals are the leftmost argument (after the memory storage of the struct)
 	if ( usesGlobals ) {
+		std::cout << "USES GLOBALS!! " << std::endl;
 		args.push_back(convFact.ctx.globalVar);
 		off ++;
 	}
+
+	std::cout << " start: " << argIdOffSet << " off: " << off  << " num: " << callExpr->getNumArgs()<< std::endl;
+	std::cout << funcTy->getParameterTypes();
 
 	for (size_t argId = argIdOffSet, end = callExpr->getNumArgs(); argId < end; ++argId) {
 		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
 		core::TypePtr&& argTy = arg->getType();
 		if ( argId < funcTy->getParameterTypes().size() ) {
+			std::cout << " elem: " << argId << std::endl;
 			const core::TypePtr& funcParamTy = funcTy->getParameterTypes()[argId+off];
 
 			if (*funcParamTy != *argTy){
