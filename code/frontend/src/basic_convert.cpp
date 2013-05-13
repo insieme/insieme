@@ -607,7 +607,6 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 			var = builder.variable(initExpr->getType());
 			ctx.varDeclMap[definition] = var;
 		}
-
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 		retStmt = builder.declarationStmt(var, initExpr);
@@ -933,7 +932,8 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 //////////////////////////////////////////////////////////////////
 /// the globalVar parameter is added at the FIRST position of the function parameters
 core::FunctionTypePtr ConversionFactory::addGlobalsToFunctionType(const core::IRBuilder& builder,
-		const core::TypePtr& globals, const core::FunctionTypePtr& funcType) {
+														  		  const core::TypePtr& globals, 
+																  const core::FunctionTypePtr& funcType) {
 
 	const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes()->getElements();
 
@@ -943,7 +943,6 @@ core::FunctionTypePtr ConversionFactory::addGlobalsToFunctionType(const core::IR
 	// function is receiving a reference to the global struct as the first argument
 	argTypes[0] = builder.refType(globals);
 	return builder.functionType(argTypes, funcType->getReturnType());
-
 }
 
 
@@ -1078,7 +1077,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					convertFunctionDecl(decl, false);
 					ctx.recVarExprMap.clear();
 				}
-
 			}
 			// reset the translation unit
 			RESTORE_TU();

@@ -678,8 +678,15 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 		const FunctionDecl* funcDecl = llvm::cast<FunctionDecl>(callExpr->getDirectCallee());
 		auto funcTy = convFact.convertType(GET_TYPE_PTR(funcDecl)).as<core::FunctionTypePtr>() ;
 
-		// collects the type of each argument of the expression
-		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+//		// need tolookup if this fuction needs to access the globals, in that case the capture
+//		// list needs to be initialized with the value of global variable in the current scope
+//		if (ctx.globalFuncSet.find(definition) != ctx.globalFuncSet.end()) {
+//			// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
+//			// current context
+//			assert( ctx.globalVar && "No global definitions forwarded to this point");
+//			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
+//		}
+
 
 		const FunctionDecl* definition = NULL;
 		const TranslationUnit* rightTU = NULL;
@@ -694,6 +701,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			if (rightTU && fd->hasBody()) { definition = fd; }
 		}
 
+		// collects the type of each argument of the expression
+		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy, ctx.globalFuncSet.count(definition));
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
 		// No definition has been found in any translation unit, 
@@ -752,15 +761,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 
 		// =====  We found a definition for funcion, need to be translated ======
 		
-		// need tolookup if this fuction needs to access the globals, in that case the capture
-		// list needs to be initialized with the value of global variable in the current scope
-		if (ctx.globalFuncSet.find(definition) != ctx.globalFuncSet.end()) {
-			// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
-			// current context
-			assert( ctx.globalVar && "No global definitions forwarded to this point");
-			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
-		}
-
 		assert(definition && "No definition found for function");
 
 		auto lambdaExpr = convFact.convertFunctionDecl(definition).as<core::ExpressionPtr>();

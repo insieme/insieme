@@ -2,6 +2,15 @@
 
 int globalVar;
 
+class A{
+	public:
+		A(int a){ globalVar=a; }
+		void m(int a){
+			globalVar =a;
+		}
+};
+
+
 class C {
 	int mA;
 	int mB;
@@ -38,6 +47,12 @@ public:
 
 int main() {
 
+	{
+		A b(1);
+	b.m(1);
+	}
+
+	{
 	// ctor + init
 	printf("Ctor+init\n");
 	C ci1;
@@ -45,6 +60,7 @@ int main() {
 	ci1.memberFunc(1);
 	
 	C ci2(1);
+	}
 
 	return 0;
 }

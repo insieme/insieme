@@ -400,13 +400,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	ownerObj = getCArrayElemRef(builder, ownerObj);
 
 	// reconstruct Arguments list, fist one is a scope location for the object
-	ExpressionList&& args = ExprConverter::getFunctionArguments(builder, callExpr, funcTy);
+	ExpressionList&& args = ExprConverter::getFunctionArguments(builder, callExpr, funcTy, ctx.globalFuncSet.count(methodDecl));
 	args.insert (args.begin(), ownerObj);
-
-	// append globalVar to arguments if needed
-	if( ctx.globalFuncSet.find(methodDecl) != ctx.globalFuncSet.end() ) {
-		args.push_back(ctx.globalVar);
-	}
 
 	core::TypePtr retTy = funcTy.getReturnType();
 
@@ -462,7 +457,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		
 		// get arguments
-		args = getFunctionArguments(builder, callExpr, funcTy);
+		args = getFunctionArguments(builder, callExpr, funcTy, ctx.globalFuncSet.count(methodDecl));
 		
 		//unwrap if is a cpp reference, we dont use cpp references for this
 		if (core::analysis::isCppRef(ownerObj->getType())){
@@ -487,7 +482,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		convertedOp =  convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
 
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
-		args = getFunctionArguments(builder, callExpr, funcTy);
+		args = getFunctionArguments(builder, callExpr, funcTy, ctx.globalFuncSet.count(funcDecl));
 	}
 ///
 //	FIXME: this was ment to be used with the non implemented asign operator, now is being
@@ -600,14 +595,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
 	
 	// reconstruct Arguments list, fist one is a scope location for the object
-	ExpressionList&& args = ExprConverter::getFunctionArguments(builder, callExpr, funcTy);
+	ExpressionList&& args = ExprConverter::getFunctionArguments(builder, callExpr, funcTy, ctx.globalFuncSet.count(ctorDecl));
+	
+	// first paramenter is the memory storage, the this location
 	args.insert (args.begin(), builder.undefinedVar(refToClassTy));
-
-	//  if needed: append globalVar to arguments as last argument
-	if ( ctx.globalFuncSet.find(ctorDecl) != ctx.globalFuncSet.end() ) {
-		args.push_back(ctx.globalVar);
-	}
-		
 
 	// build expression and we are done!!!
 	core::ExpressionPtr ret;
