@@ -452,9 +452,27 @@ protected:
 	StatementPtr implementDataClauses(const StatementPtr& stmtNode, const DatasharingClause* clause, StatementList& outsideDecls, StatementList postFix = StatementList() ) {
 		const For* forP = dynamic_cast<const For*>(clause);
 		const Parallel* parallelP = dynamic_cast<const Parallel*>(clause);
+		const Task* taskP = dynamic_cast<const Task*>(clause);
 		StatementList replacements;
 		VarList allp;
-		if(clause->hasFirstPrivate()) allp.insert(allp.end(), clause->getFirstPrivate().begin(), clause->getFirstPrivate().end());
+		VarList firstPrivates;
+		// for OMP tasks, default free variable binding is threadprivate
+		if(taskP) {
+			auto&& freeVarsAndFuns = core::analysis::getFreeVariables(stmtNode);
+			VariableList freeVars;
+			// free function variables should not be captured
+			std::copy_if(freeVarsAndFuns.begin(), freeVarsAndFuns.end(), back_inserter(freeVars), [](const VariablePtr& v) {
+				auto t = v.getType();
+				return !t.isa<FunctionTypePtr>() && !(core::analysis::isRefType(t) && core::analysis::getReferencedType(t).isa<ArrayTypePtr>());
+			});
+			firstPrivates.insert(firstPrivates.end(), freeVars.begin(), freeVars.end());
+			allp.insert(allp.end(), freeVars.begin(), freeVars.end());
+			LOG(DEBUG) << "==========================================\n" << freeVars << "\n======================\n";
+		}
+		if(clause->hasFirstPrivate()) {
+			firstPrivates.insert(firstPrivates.end(), clause->getFirstPrivate().begin(), clause->getFirstPrivate().end());
+			allp.insert(allp.end(), clause->getFirstPrivate().begin(), clause->getFirstPrivate().end());
+		}
 		if(clause->hasPrivate()) allp.insert(allp.end(), clause->getPrivate().begin(), clause->getPrivate().end());
 		if(clause->hasReduction()) allp.insert(allp.end(), clause->getReduction().getVars().begin(), clause->getReduction().getVars().end());
 		NodeMap publicToPrivateMap;
@@ -466,7 +484,7 @@ protected:
 			publicToPrivateMap[varExp] = pVar;
 			privateToPublicMap[pVar] = varExp;
 			DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(expType));
-			if(clause->hasFirstPrivate() && contains(clause->getFirstPrivate(), varExp)) {
+			if(contains(firstPrivates, varExp)) {
 				// make sure to actually get *copies* for firstprivate initialization, not copies of references
 				if(core::analysis::isRefType(expType)) {
 					VariablePtr fpPassVar = build.variable(core::analysis::getReferencedType(expType));
