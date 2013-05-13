@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -69,15 +69,17 @@ int main(int argc, char** argv) {
 	// filter logging messages
 	Logger::setLevel(ERROR);
 
+//	// for debugging
+//	std::cout << "Arguments: \n";
+//	for(int i=0; i<argc; i++) {
+//		std::cout << "\t" << argv[i] << "\n";
+//	}
+//	std::cout << "\n";
 
 	// Step 1: parse input parameters
 	//		This part is application specific and need to be customized. Within this
 	//		example a few standard options are considered.
-	unsigned unrollingFactor = 1;
-	cmd::Options options = cmd::Options::parse(argc, argv)
-		// one extra parameter - unrolling factor, default should be 5
-		("unrolling,u", &unrollingFactor, 5u, "The factor by which the innermost loops should be unrolled.")
-	;
+	cmd::Options options = cmd::Options::parse(argc, argv);
 
 	if (!options.valid) return (options.help)?0:1;
 
@@ -92,29 +94,14 @@ int main(int argc, char** argv) {
         cout << "COMPILATION ONLY" << endl;
         options.job.storeAST(manager, options.outFile);
         return 0;
-    } else {
-        auto program = options.job.execute(manager);
+    }
 
 
-	// Step 3: process code
-	//		This is the part where the actual operations on the processed input code
-	//		are conducted. You may utilize whatever functionality provided by the
-	//		compiler framework to analyze and manipulate the processed application.
-	//		In this example we are simply unrolling all innermost loops by a factor
-	//		of 5 which is always a safe transformation.
-
-	cout << "Before Transformation:\n";
-	dumpPretty(program);
-
-	// for all nodes x | if x is "innermostLoop" => unroll(x)
-	auto transform = tr::makeForAll(tr::filter::innermostLoops(), tr::rulebased::makeLoopUnrolling(unrollingFactor));
-	program = transform->apply(program);
-
-	cout << "After Transformation:\n";
-	dumpPretty(program);
+    auto program = options.job.execute(manager);
 
 
-	// Step 4: produce output code
+
+	// Step 2: produce output code
 	//		This part converts the processed code into C-99 target code using the
 	//		backend producing parallel code to be executed using the Insieme runtime
 	//		system. Backends targeting alternative platforms may be present in the
@@ -123,15 +110,14 @@ int main(int argc, char** argv) {
 	auto targetCode = be::runtime::RuntimeBackend::getDefault()->convert(program);
 
 
-	// Step 5: build output code
+	// Step 3: build output code
 	//		A final, optional step is using a third-party C compiler to build an actual
 	//		executable.
 	cout << "Building binaries ...\n";
-	cp::Compiler compiler = cp::Compiler::getDefaultC99CompilerO3();
+	cp::Compiler compiler = cp::Compiler::getDefaultCppCompiler();
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
 	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
 
 	// done
 	return (success)?0:1;
-	}
 }

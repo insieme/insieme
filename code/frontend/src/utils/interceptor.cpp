@@ -283,7 +283,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 
 		VLOG(2) << type;
 		interceptExpr = builder.literal(literalName, type);
-		interceptExpr = convFact.memberize(decl, interceptExpr, thisTy, funcKind);
+		interceptExpr = convFact.memberize(decl, interceptExpr, thisTy, funcKind).as<core::ExpressionPtr>();
 	} else {
 		// remove Clang inline namespace from header literal name (if present)
 		literalName = fixQualifiedName(literalName);

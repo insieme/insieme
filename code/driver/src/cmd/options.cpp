@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -78,7 +78,14 @@ namespace cmd {
 
 			// parse parameters
 			bpo::variables_map map;
-			bpo::store(bpo::command_line_parser(argc, argv).options(desc).positional(pos).run(), map);
+			bpo::store(bpo::basic_command_line_parser<char>(argc, argv)
+				.options(desc)
+				.style(bpo::command_line_style::default_style | bpo::command_line_style::allow_long_disguise)
+				.positional(pos)
+				.allow_unregistered()
+				.run(), map);
+
+
 			bpo::notify(map);
 
 			// -- processing -----------------------------------------

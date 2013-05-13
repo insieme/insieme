@@ -132,7 +132,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				if (ctorDecl->isUserProvided ()){
 					core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
 					if (ctorLambda ){
-						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR);
+						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR).as<core::ExpressionPtr>();
 						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 					}
 				}
@@ -143,7 +143,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		if(classDecl->hasUserDeclaredDestructor()){
 			const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
 			core::ExpressionPtr&& dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
-			dtorLambda = convFact.memberize  (dtorDecl, dtorLambda, builder.refType(classType), core::FK_DESTRUCTOR);
+			dtorLambda = convFact.memberize  (dtorDecl, dtorLambda, builder.refType(classType), core::FK_DESTRUCTOR).as<core::ExpressionPtr>();
 			classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
 			if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
 				classInfo.setDestructorVirtual();
@@ -176,7 +176,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			convFact.getTranslationUnitForDefinition(method);  // FIXME:: remove this crap
 		
 			auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
-			methodLambda = convFact.memberize(method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION);
+			methodLambda = convFact.memberize(method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
 			
 			if( method->isPure() ) {
 				//pure virtual functions are handled bit different in metainfo

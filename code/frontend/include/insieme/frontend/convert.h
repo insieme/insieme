@@ -464,7 +464,11 @@ public:
 	
 	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
 
-	// TODO: coment this
+	   /** 
+        * Creates the variable which should be used as a placeholder for invoking the iven
+        * function call and isert it in the map (recVarExprMap) used to store such ariables
+        * which are valid during the conversion of the given recursive function cycle
+        */
 	core::StatementPtr materializeReadOnlyParams(const core::StatementPtr& body, const vector<core::VariablePtr>& params);
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  CPP STUFF   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -479,10 +483,10 @@ public:
 	 * @param funcKind is it a Ctor, Member or dtor?
 	 * @return the lambda expression corresponding a Member function 
 	 */
-	core::ExpressionPtr  memberize (const clang::FunctionDecl* callDecl,
-									core::ExpressionPtr func, 
-									core::TypePtr ownerClassType, 
-									core::FunctionKind funcKind);
+	core::NodePtr memberize (const clang::FunctionDecl* callDecl,
+						 	 core::ExpressionPtr func, 
+						 	 core::TypePtr ownerClassType, 
+						 	 core::FunctionKind funcKind);
 
 	/**
 	 * handles implicit behaviour of a constructor call,

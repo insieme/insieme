@@ -128,6 +128,9 @@ namespace compiler {
 		vector<string> paths;
 		char line[256];
 		FILE* file = popen(cmd.c_str(), "r");
+		if (file == NULL){
+			return paths;
+		}
 		bool capture = false;
 		string input;
 		string startPrefix("#include <...> search starts here:");
@@ -153,7 +156,7 @@ namespace compiler {
 				paths.push_back(input);
 			}
 		}
-		pclose(file);
+		pclose(file); 
 		return paths;
 	}
 

@@ -839,13 +839,10 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// ============================================================================================
 	
 	// if is a constructor call, we are done
-	if (llvm::isa<clang::CXXConstructExpr>(expr)){
-		return retIr;
-	}
-
 	// if is a new operator, we need another ref in the type
-	if (llvm::isa<clang::CXXNewExpr>(expr)){
-		return builder.refVar(retIr);
+	if (llvm::isa<clang::CXXConstructExpr>(expr) ||
+		llvm::isa<clang::CXXNewExpr>(expr)){
+		return retIr;
 	}
 	
 	// If this is an initialization of an array using array.create (meaning it was originally a
@@ -966,7 +963,6 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint) {
 
 	SET_TU(funcDecl);
-
 	// check if the funcDecl was already converted into an lambdaExpr, before asserting that
 	// funcDecl has a body -> intercepted functions may have no body
 	ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(funcDecl);
@@ -1021,14 +1017,13 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	assert(currTU && funcDecl->hasBody() && "Function has no body!");
 
 	VLOG(1) << "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
-
 	VLOG(1) << "#----------------------------------------------------------------------------------#";
 	VLOG(1)
 		<< "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl << "-> at location: ("
 				<< utils::location(funcDecl->getSourceRange().getBegin(), getCurrentSourceManager())
 				<< "): " << std::endl << "\tIsRecSubType: " << ctx.isRecSubFunc << std::endl
-				<< "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl << "\tEmpty map: "
-				<< ctx.recVarExprMap.size();
+				<< "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl 
+				<< "\tRec var map: " << ctx.recVarExprMap.size() << " :" << ctx.recVarExprMap;
 
 
 	if (ctx.isResolvingRecFuncBody) { 
@@ -1043,12 +1038,12 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
   		}
 	}
 
-	// retrieve the strongly connected components for this type
+	// retrieve the strongly connected components for this function
+	// It is strongly connected or strong if it contains a directed path from u to v and a directed
+	// path from v to u for every pair of vertices u, v.
 	std::set<const FunctionDecl*>&& components = program.getCallGraph().getStronglyConnectedComponents( funcDecl );
-
 	if (!components.empty()) {
 		std::set<const FunctionDecl*>&& subComponents = program.getCallGraph().getSubComponents( funcDecl );
-
 		for (auto cur: subComponents){
 
 			const FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
@@ -1071,29 +1066,32 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			// reset the translation unit
 			RESTORE_TU();
 		}
-	}
 
-
-	if (!components.empty()) {
 		// we are dealing with a recursive type
-		//VLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
-				//<< "Number of components in the cycle: " << components.size();
+		VLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
+				<< "Number of components in the cycle: " << components.size();
 
-		std::for_each(components.begin(), components.end(), [ ] (std::set<const FunctionDecl*>::value_type c) {
-			//VLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
-		});
+		for (std::set<const FunctionDecl*>::value_type c : components){
+			VLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
+		}
 
-		/** 
-		 * Creates the variable which should be used as a placeholder for invoking the given
-		 * function call and isert it in the map (recVarExprMap) used to store such variables
-		 * which are valid during the conversion of the given recursive function cycle
-		 */
+		// Creates the variable which should be used as a placeholder for invoking the given
+		// function call and isert it in the map (recVarExprMap) used to store such variables
+		// which are valid during the conversion of the given recursive function cycle
 		auto createRecVar = [&] (const clang::FunctionDecl* funDecl) { 
 			if (ctx.recVarExprMap.find(funDecl) != ctx.recVarExprMap.end()) { return; }
 
 			// we create a TypeVar for each type in the mutual dependence
 			core::FunctionTypePtr funcType = convertType(GET_TYPE_PTR(funDecl)).as<core::FunctionTypePtr>();
-			
+
+			// it might be a member function, fix the type
+			if (const clang::CXXMethodDecl* mem = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)){
+				const clang::Type* ownerTy = (llvm::cast<clang::TypeDecl> (mem->getParent()))->getTypeForDecl();
+				auto l = funcType->getParameterTypeList();
+				l.insert(l.begin(), builder.refType(convertType(ownerTy)));
+				funcType = builder.functionType(l, funcType->getReturnType(), core::FK_MEMBER_FUNCTION);
+			}
+
 			// In the case the function is receiving the global variables the signature needs to be
 			// modified by allowing the global struct to be passed as an argument
 			if ( ctx.globalFuncSet.find(funDecl) != ctx.globalFuncSet.end() ) {
@@ -1115,17 +1113,16 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		if (!ctx.isRecSubFunc) {
 
 			for( const auto& fd : components) { createRecVar(fd); }
-
 		}
 		if (VLOG_IS_ON(2)) {
 			VLOG(2) << "MAP: ";
-			std::for_each(ctx.recVarExprMap.begin(), ctx.recVarExprMap.end(),
-				[] (ConversionContext::RecVarExprMap::value_type c) {
-					VLOG(2) << "\t" << c.first->getNameAsString() << "[" << c.first << "] " << c.second << " " << c.second->getType();
-				});
+			for(auto c : ctx.recVarExprMap){
+				VLOG(2) << "\t" << c.first->getNameAsString() << "[" << c.first << "] " << c.second << " " << c.second->getType();
+			}
 
 		}
 	} // endif function call components
+
 
 	// init parameter set
 	vector<core::VariablePtr> params;
@@ -1222,9 +1219,27 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		return attachFuncAnnotations(retLambdaExpr, funcDecl);
 	}
 
-	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, params, body );
 
-	// this is a recurive function call
+
+	core::LambdaPtr retLambdaNode;
+
+	// member functions must use the first parameter as THIS
+	if (const clang::CXXMethodDecl* metDcl = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)){
+
+		const clang::Type* ownerClangTy = (llvm::cast<clang::TypeDecl> (metDcl->getParent()))->getTypeForDecl();
+		auto ownerTy = builder.refType(convertType(ownerClangTy));
+		auto thisVar = builder.variable(ownerTy);
+		params.insert(params.begin(), thisVar);
+		core::FunctionTypePtr newFunctionType = builder.functionType(extractTypes(params), funcType->getReturnType(), core::FK_MEMBER_FUNCTION);
+		core::LiteralPtr thisLit =  builder.literal("this", ownerTy);
+		body = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
+		retLambdaNode = builder.lambda( newFunctionType, params, body );
+	}
+	else{
+		retLambdaNode = builder.lambda( funcType, params, body );
+	}
+
+	// this is a recursive function call
 	// if we are visiting a nested recursive type it means someone else will take care of building the rectype
 	// node, we just return an intermediate type
 	if (ctx.isRecSubFunc) {
@@ -1251,7 +1266,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		ctx.currVar = tit->second;
 
 		// test whether function has already been resolved
-		if (*tit->second == *recVarRef) { continue; }
+		if (*tit->second == *recVarRef) { 
+			continue; 
+		}
 
 		// we remove the variable from the list in order to fool the solver, in this way it will create a descriptor
 		// for this type (and he will not return the TypeVar associated with this recursive type). This behaviour
@@ -1261,15 +1278,30 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		const core::LambdaPtr& lambda = convertFunctionDecl(fd).as<core::LambdaPtr>();
 		assert(lambda && "Resolution of sub recursive lambda yields a wrong result");
 
-		definitions.push_back( builder.lambdaBinding(ctx.currVar, lambda) );
+		/// === CXX === 
+		// it might be that is a member and needs to be memberized
+		if (llvm::isa<clang::CXXMethodDecl>(fd)){
+			//FIXME: ask the master how to make this easyer
 
+			vector<core::LambdaBindingPtr> tmpDef;
+			tmpDef.push_back( builder.lambdaBinding(ctx.currVar, lambda) );
+			core::LambdaExprPtr&& tmpExpr = builder.lambdaExpr(lambda);
+			const clang::Type* ownerTy = (llvm::cast<clang::TypeDecl> (llvm::cast<clang::CXXMethodDecl>(fd)->getParent()))->getTypeForDecl();
+			core::ExpressionPtr funcExpr = memberize (fd, tmpExpr.as<core::ExpressionPtr>(), 
+													  builder.refType(convertType( ownerTy)), core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
+
+			ConversionContext::RecVarExprMap::const_iterator tit = ctx.recVarExprMap.find(fd);
+			definitions.push_back( builder.lambdaBinding(tit->second, funcExpr.as<core::LambdaExprPtr>()->getLambda() ));
+		}
+		else{ //any other case
+			definitions.push_back( builder.lambdaBinding(ctx.currVar, lambda) );
+		}
 		// reinsert the TypeVar in the map in order to solve the other recursive types
 		ctx.recVarExprMap.insert( {fd, ctx.currVar} );
 	} 
 
-	ctx.currVar = NULL;
-
 	// we reset the behavior of the solver
+	ctx.currVar = NULL;
 	ctx.isRecSubFunc = false;
 
 	core::LambdaDefinitionPtr&& lambdaDef = builder.lambdaDefinition(definitions);
@@ -1278,6 +1310,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// Adding the lambda function to the list of converted functions
 	assert( (funcDecl == program.getIndexer().getDefinitionFor(funcDecl)) && "wrong function declaration in lambdaExprCache");
 	ctx.lambdaExprCache.insert( {funcDecl, retLambdaExpr} );
+
 	// we also need to cache all the other recursive definition, so when we will resolve
 	// another function in the recursion we will not repeat the process again
 	for(const auto& fd : components) {
@@ -1291,6 +1324,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		SET_TU(decl);
 
 		core::ExpressionPtr&& func = builder.lambdaExpr(fit->second, lambdaDef);
+
 		assert( (decl== program.getIndexer().getDefinitionFor(decl)) && "wrong function declaration in lambdaExprCache");
 		ctx.lambdaExprCache.insert( {decl, func} );
 
@@ -1300,7 +1334,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		RESTORE_TU();
 	}
 
-	// Clear the variables so that when we resolve the recursive function the actuall recursive
+	// Clear the variables so that when we resolve the recursive function the actual recursive
 	// lambda is utilized 
 	ctx.recVarExprMap.clear();
 
@@ -1317,10 +1351,13 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-core::ExpressionPtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl,
+core::NodePtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl,
 												   core::ExpressionPtr func, 
 												   core::TypePtr ownerClassType, 
 											   	   core::FunctionKind funcKind){
+
+	// is a lambda?  for rec member functions
+	// is a lambdaExpr?
 
 	core::FunctionTypePtr funcTy = func.getType().as<core::FunctionTypePtr>();
 	
@@ -1345,38 +1382,36 @@ core::ExpressionPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 			assert(false && "not implemented");
 	}
 	//FIXME NEEDS FURTHER REFACTORING
-	
+
 	if(func.isa<core::LambdaExprPtr>()) {
 		SET_TU(funcDecl);
-		core::LambdaExprPtr lambdaExpr = func.as<core::LambdaExprPtr>();
-
-		// with the transformed lambda, we can extract the body and re-type it into the right type
-		core::StatementPtr body = lambdaExpr->getBody();
-		auto params = lambdaExpr->getParameterList();
 
 		// update parameter list with a class-typed parameter in the first possition
+		core::LambdaExprPtr lambdaExpr = func.as<core::LambdaExprPtr>();
+		auto params = lambdaExpr->getParameterList();
 		auto thisVar = builder.variable(ownerClassType);
 		core::VariableList paramList = params.getElements();
 		paramList.insert(paramList.begin(), thisVar);
 
 		// build the new functiontype 
-		auto newFunctionType = builder.functionType(extractTypes(paramList), retTy, funcKind);
+		core::FunctionTypePtr newFunctionType = builder.functionType(extractTypes(paramList), retTy, funcKind);
 
 		// every usage of this has being defined as a literal "this" typed alike the class
 		// substute every usage of this with the right variable
+		core::StatementPtr body = lambdaExpr->getBody();
 		core::LiteralPtr thisLit =  builder.literal("this", ownerClassType);
 		core::StatementPtr newBody = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
 
 		// build the member function
 		core::LambdaExprPtr memberized =  builder.lambdaExpr (newFunctionType, paramList, newBody);
-		
+
 		// cache it
 		ctx.lambdaExprCache.erase(funcDecl);
 		ctx.lambdaExprCache[funcDecl] = memberized;
 
 		RESTORE_TU();
 		return memberized;
-	} else if(func.isa<core::LiteralPtr>()) {
+	} else if(func.isa<core::LiteralPtr>()) {  // literals, for intercepted funcs
 		SET_TU(funcDecl);
 	
 		//only literals -- used for intercepted/pureVirtual functions
@@ -1394,6 +1429,9 @@ core::ExpressionPtr  ConversionFactory::memberize (const clang::FunctionDecl* fu
 		//assert(false && "not properly implement currently");
 		RESTORE_TU();
 		return retExpr;
+	} else if (core::VariablePtr var = func.isa<core::VariablePtr>()){ // we deal with a recursive member function.
+		// recursive types should be already converted somewhere else
+		return var; //core::ExpressionPtr();
 	} else {
 		assert(false && "something went wrong");
 		return core::ExpressionPtr();
@@ -1490,6 +1528,19 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 		if (expr.isa<core::CallExprPtr>() &&
 			(ptr = expr.as<core::CallExprPtr>().getFunctionExpr()).isa<core::LambdaExprPtr>() && 
 			 ptr.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
+
+				// for each of the argumets, if uses a parameter in the paramenter list, avoid the
+				// wrap of the variable
+				const clang::CXXConstructExpr* ctor= llvm::cast<clang::CXXConstructExpr>((*it)->getInit());
+				for (unsigned i=0; i <ctor->getNumArgs ();i++){
+					const clang::DeclRefExpr* param= utils::skipSugar<DeclRefExpr> (ctor->getArg(i));
+					if (param){
+						core::ExpressionPtr tmp = lookUpVariable(param->getDecl());
+						core::CallExprAddress addr(expr.as<core::CallExprPtr>());
+						expr = core::transform::replaceNode (mgr, addr->getArgument(1+i), tmp).as<core::CallExprPtr>();
+					}
+				}
+				// to end with, replace the "this" placeholder with the right position
 				core::CallExprAddress addr(expr.as<core::CallExprPtr>());
 				initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
 		}
