@@ -71,8 +71,14 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								BUILTIN TYPES
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter::VisitBuiltinType(const BuiltinType* buldInTy) {
-	return TypeConverter::VisitBuiltinType(buldInTy);
+core::TypePtr ConversionFactory::CXXTypeConverter::VisitPointerType(const PointerType* ptrTy) {
+
+	// writte warnning on const pointers
+	if (ptrTy->getPointeeType().isConstQualified() &&
+		llvm::isa<clang::RecordType>(ptrTy->getPointeeType().getTypePtr())){
+		convFact.ctx.warnings.insert("Constancy is lost in INSPIRE, pointers to a const object wont make use of const methods and operators");
+	}
+	return TypeConverter::VisitPointerType(ptrTy);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

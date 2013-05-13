@@ -586,6 +586,9 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		// lookup for the variable in the map
 		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
 
+		// print diagnosis messages
+		printDiagnosis(definition->getLocStart());
+
 		assert(var);
 
 		// initialization value
