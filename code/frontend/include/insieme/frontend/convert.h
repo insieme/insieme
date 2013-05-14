@@ -217,12 +217,22 @@ protected:
 
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// 						Diagnossis system
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		
+		/**
+		 * list of warnings up to this point
+		 */
+		std::set<std::string> warnings;
+
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						context structure Constructor
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		ConversionContext() :
 				isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), 
 				isRecSubType(false), isResolvingFunctionType(false) {
 		}
+
 	};
 
 	ConversionContext ctx;
@@ -292,9 +302,7 @@ protected:
 	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node,
 			const clang::FunctionDecl* funcDecl);
 
-	core::FunctionTypePtr addGlobalsToFunctionType(	const core::IRBuilder& builder,
-													const core::TypePtr& globals,
-													const core::FunctionTypePtr& funcType);
+	core::FunctionTypePtr addGlobalsToFunctionType(	const core::FunctionTypePtr& funcType);
 
 
 public:
@@ -348,6 +356,15 @@ public:
 	const pragma::PragmaStmtMap& getPragmaMap() const {
 		return pragmaMap;
 	}
+
+	/**
+	 * Entry point for converting function to the right type, it also 
+	 * does the inclusion of the globals if needed
+	 * @param dcl declaration of the function
+	 * @param ignoreGlobals, this function will have no globals
+	 * @return the corresponding IR type
+	 */
+	core::FunctionTypePtr convertFunctionType(const clang::FunctionDecl* dcl, bool ignoreGlobals = false);
 
 	/**
 	 * Entry point for converting clang types into an IR types
@@ -470,6 +487,15 @@ public:
         * which are valid during the conversion of the given recursive function cycle
         */
 	core::StatementPtr materializeReadOnlyParams(const core::StatementPtr& body, const vector<core::VariablePtr>& params);
+
+
+	/**
+	 * print diagnosis errors, warnings stored during translation
+	 * sometimes we can not retrieve a location to attach the error to, we'll store it
+	 * and it will be printed as soon as a location can be used
+	 * @param loc: the location this warning will be attached to
+	 */
+	void printDiagnosis(const clang::SourceLocation& loc);
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  CPP STUFF   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
