@@ -29,14 +29,15 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "insieme/frontend/sema.h"
 
 #include "insieme/frontend/pragma/handler.h"
+#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/utils/source_locations.h"
 
 #include "clang/Lex/Preprocessor.h"
@@ -45,6 +46,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTConsumer.h"
 
 #include "insieme/utils/logging.h"
 
@@ -133,15 +135,19 @@ InsiemeSema::InsiemeSema(
 		PragmaList& 					pragma_list,
 		clang::Preprocessor& 			pp,
 		clang::ASTContext& 				ctx,
-		clang::ASTConsumer& 			consumer,
 		bool 							CompleteTranslationUnit,
 		clang::CodeCompleteConsumer* 	CompletionConsumer)
 :
-	clang::Sema(pp, ctx, consumer, clang::TU_Complete, CompletionConsumer),
+    //NOTE: The Consumer is an emptyConsumer by default. To avoid memory leaks we keep the ownership inside of
+    //the InsiemeSema class.
+	clang::Sema(pp, ctx, *(new clang::ASTConsumer()), clang::TU_Complete, CompletionConsumer),
 	pimpl(new InsiemeSemaImpl(pragma_list)),
 	isInsideFunctionDef(false) { }
 
-InsiemeSema::~InsiemeSema() { delete pimpl; }
+InsiemeSema::~InsiemeSema() {
+    delete (&this->Consumer);
+    delete pimpl;
+}
 
 /*
  * The function search for the character c in the input stream backwards. The assumption is the
@@ -251,6 +257,50 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 					// stmt
 					if (!llvm::isa<clang::NullStmt>(*it)){
 
+
+                        Stmt** stmts = new Stmt*[CS->size()];
+
+                        CompoundStmt* newCS =
+                                new (Context) CompoundStmt(Context, stmts, CS->size(), CS->getSourceRange().getBegin(),
+                                        CS->getSourceRange().getEnd()
+                                    );
+
+                        //create Attributed Stmt, attach AnnotateAttr and set it as new statement of the CS
+                        std::vector<const clang::Attr *> annotationListVec;
+                        //if statement is an attributed statement add the prev list of annotations
+                        if(llvm::isa<clang::AttributedStmt>(*it)) {
+                            llvm::ArrayRef<const clang::Attr *> annotationList = ((clang::AttributedStmt *)(*it))->getAttrs();
+                            for(llvm::ArrayRef<const clang::Attr *>::iterator ia=annotationList.begin(); ia != annotationList.end(); ++ia) {
+                                annotationListVec.push_back(*ia);
+                            }
+                        }
+                        //check what kind of pragma is handled
+                        if(auto ompPragma = std::dynamic_pointer_cast<insieme::frontend::omp::OmpPragma>(P)) {
+
+                            //omp pragma has to be handled
+                            //pragma type and matchmap has to be stored
+                            //annotationListVec.push_back(clang::AnnotateAttr(SourceLocation(), Context, P->getType()).clone(Context));
+                            std::ostringstream str;
+                            str << "[" << P->getType();
+                            for (const MatchMap::value_type& curr : ompPragma->getMap()){
+                                str << "[" << curr.first;
+                                str << "[" << join(",", curr.second,
+                                    [](std::ostream& str, const ValueUnionPtr& cur){ str << *cur; } ) << "]";
+                                str << "]";
+                            }
+                            str << "]";
+                            annotationListVec.push_back(clang::AnnotateAttr(SourceLocation(), Context, str.str()).clone(Context));
+                            //set new stmt. if stmt is already an AttributedStmt take the subStmt
+                            if(llvm::isa<clang::AttributedStmt>(*it)) {
+                                *it = clang::AttributedStmt::Create(Context, P->getEndLocation(), llvm::ArrayRef<const clang::Attr *>(annotationListVec), ((clang::AttributedStmt *) *it)->getSubStmt());
+                            } else {
+                                *it = clang::AttributedStmt::Create(Context, P->getEndLocation(), llvm::ArrayRef<const clang::Attr *>(annotationListVec), *it);
+                            }
+                        }
+                        CompoundStmt::body_iterator next = std::copy(CS->body_begin(), it, newCS->body_begin());
+                        std::copy(it, CS->body_end(), next);
+                        //std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
+
 						// this pragma is attached to the current stmt
 						P->setStatement(*it);
 						matched.push_back(P);
@@ -275,13 +325,27 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 
 			std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
 			std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
-/*
-            clang::AnnotateAttr annotation(SourceLocation(), Context, P->getType());
-			clang::AttributedStmt * stmt = clang::AttributedStmt::Create(Context, P->getEndLocation(), annotation.clone(Context), new (Context) NullStmt(SourceLocation()));
+            //create annotation
+            std::ostringstream str;
 
+            if(auto ompPragma = std::dynamic_pointer_cast<insieme::frontend::omp::OmpPragma>(P)) {
+                str << "[" << P->getType();
+                for (const MatchMap::value_type& curr : ompPragma->getMap()){
+                    str << "[" << curr.first;
+                    str << "[" << join(",", curr.second,
+                        [](std::ostream& str, const ValueUnionPtr& cur){ str << *cur; } ) << "]";
+                    str << "]";
+                }
+                str << "]";
+            }
+            clang::AnnotateAttr annotation(SourceLocation(), Context, str.str());
+			clang::AttributedStmt * stmt = clang::AttributedStmt::Create(Context, P->getEndLocation(), annotation.clone(Context), new (Context) NullStmt(SourceLocation()));
 			newCS->setLastStmt( stmt );
-*/
+/*
 			newCS->setLastStmt(new (Context) NullStmt(SourceLocation()));
+*/
+            //TODO: This is the oldschool pragma matcher. Each pragma contains a pointer to the attached stmt.
+            //In the new mechanism pragmas are stored inside of the attributed statement.
 			P->setStatement( *newCS->body_rbegin() );
 			matched.push_back(P);
 

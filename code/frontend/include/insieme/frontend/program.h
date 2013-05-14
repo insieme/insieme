@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,6 +41,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 
+#include "insieme/frontend/sema.h"
 #include "insieme/core/ir_program.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/compiler.h"
@@ -73,9 +74,11 @@ protected:
 	std::string 			mFileName;
 	ClangCompiler			mClang;
 	insieme::frontend::pragma::PragmaList 		mPragmaList;
+	insieme::frontend::InsiemeSema              mSema;
 
 public:
-	TranslationUnit(const ConversionJob& job) : mFileName(job.getFile()), mClang(job,boost::algorithm::ends_with(job.getFile(),".o")) {
+	TranslationUnit(const ConversionJob& job) : mFileName(job.getFile()), mClang(job,boost::algorithm::ends_with(job.getFile(),".o")),
+	mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), true) {
 		assert(job.getFiles().size() == 1u && "Only a single file per translation unit allowed!");
 	}
 

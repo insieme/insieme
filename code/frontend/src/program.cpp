@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -89,68 +89,52 @@ namespace {
 
 // Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
 ///
-void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL, bool compilationOnly, bool dumpCFG) {
+void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL, InsiemeSema& sema, bool dumpCFG) {
 
-	InsiemeSema *S = new InsiemeSema(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
-    comp.setSema(S);
+	Parser P(comp.getPreprocessor(), sema, false);  // do not skip function bodies
+	comp.getPreprocessor().EnterMainSourceFile();
 
-    {
-		//Parser P(comp.getPreprocessor(), S); // clang [3.0]
-		Parser P(comp.getPreprocessor(), /**comp.getSema()*/*S, false);  // do not skip function bodies
-		comp.getPreprocessor().EnterMainSourceFile();
+	ParserProxy::init(&P);
+	P.Initialize();	  //FIXME
+	Consumer->Initialize(comp.getASTContext());
+	if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
+		SC->InitializeSema(sema);
 
-		ParserProxy::init(&P);
-		P.Initialize();	  //FIXME
-		Consumer->Initialize(comp.getASTContext());
-		if (SemaConsumer *SC = dyn_cast<SemaConsumer>(Consumer))
-			SC->InitializeSema(*S/**comp.getSema()*/);
+	if (ExternalASTSource *External = comp.getASTContext().getExternalSource()) {
+		if(ExternalSemaSource *ExternalSema = dyn_cast<ExternalSemaSource>(External))
+			ExternalSema->InitializeSema(sema);
+		External->StartTranslationUnit(Consumer);
+	}
 
-		if (ExternalASTSource *External = comp.getASTContext().getExternalSource()) {
-			if(ExternalSemaSource *ExternalSema = dyn_cast<ExternalSemaSource>(External))
-				ExternalSema->InitializeSema(*S/**comp.getSema()*/);
-			External->StartTranslationUnit(Consumer);
-		}
+	Parser::DeclGroupPtrTy ADecl;
+	while(!P.ParseTopLevelDecl(ADecl))
+		if(ADecl) Consumer->HandleTopLevelDecl(ADecl.getAsVal<DeclGroupRef>());
 
-		Parser::DeclGroupPtrTy ADecl;
-		while(!P.ParseTopLevelDecl(ADecl))
-			if(ADecl) Consumer->HandleTopLevelDecl(ADecl.getAsVal<DeclGroupRef>());
+	Consumer->HandleTranslationUnit(comp.getASTContext());
+	ParserProxy::discard();  // FIXME
 
-		Consumer->HandleTranslationUnit(comp.getASTContext());
-		ParserProxy::discard();  // FIXME
-
-		// PRINT THE CFG from CLANG just for debugging purposes for the C++ frontend
-		if(dumpCFG) {
-			clang::DeclContext* dc = comp.getASTContext().getTranslationUnitDecl();
-			std::for_each(dc->decls_begin(), dc->decls_end(), [&] (const clang::Decl* d) {
-				if (const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {
-					if( func_decl->hasBody() ) {
-						clang::CFG::BuildOptions bo;
-						bo.AddInitializers = true;
-						bo.AddImplicitDtors = true;
-						clang::CFG* cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
-						assert(cfg);
-						std::cerr << "~~~ Function: "  << func_decl->getNameAsString() << " ~~~~~" << std::endl;
-						// clang [3.0 ]cfg->dump(comp.getPreprocessor().getLangOptions());
-						cfg->dump(comp.getPreprocessor().getLangOpts(), true);
-					}
+	// PRINT THE CFG from CLANG just for debugging purposes for the C++ frontend
+	if(dumpCFG) {
+		clang::DeclContext* dc = comp.getASTContext().getTranslationUnitDecl();
+		std::for_each(dc->decls_begin(), dc->decls_end(), [&] (const clang::Decl* d) {
+			if (const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {
+				if( func_decl->hasBody() ) {
+					clang::CFG::BuildOptions bo;
+					bo.AddInitializers = true;
+					bo.AddImplicitDtors = true;
+					clang::CFG* cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
+					assert(cfg);
+					std::cerr << "~~~ Function: "  << func_decl->getNameAsString() << " ~~~~~" << std::endl;
+					cfg->dump(comp.getPreprocessor().getLangOpts(), true);
 				}
-			});
-		}
-    }
-
-    // clear sema in case it is not needed any more (might be needed by the AST dumper)
-	if(!compilationOnly)
-		comp.destroySema();
+			}
+		});
+	}
 }
 
 ///  A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
 ///  and the insieme IR which has been generated from the source file.
-// clang [3.0]class TranslationUnitImpl: public insieme::frontend::TranslationUnit, public clang::idx::TranslationUnit {
 class TranslationUnitImpl: public insieme::frontend::TranslationUnit{
-
-	// clang [3.0]
-	//std::shared_ptr<clang::idx::DeclReferenceMap>   	mDeclRefMap;
-	//std::shared_ptr<clang::idx::SelectorMap>		   	mSelMap;
 
 public:
 	TranslationUnitImpl(const ConversionJob& job):
@@ -176,7 +160,7 @@ public:
 		//insieme::frontend::utils::indexerASTConsumer consumer(indexer,
 	//									dynamic_cast<insieme::frontend::TranslationUnit*>(this));
         if(!boost::algorithm::ends_with(job.getFile(),".o")) {
-            parseClangAST(mClang, &emptyCons, true, mPragmaList, job.hasOption(ConversionJob::CompilationOnly), job.hasOption(ConversionJob::DumpCFG));
+            parseClangAST(mClang, &emptyCons, true, mPragmaList, mSema, job.hasOption(ConversionJob::DumpCFG));
 
             if( mClang.getDiagnostics().hasErrorOccurred() ) {
                 // errors are always fatal!
@@ -223,13 +207,11 @@ void TranslationUnit::storeUnit(const std::string& output_file) {
         llvm::SmallString<128> Buffer;
         llvm::BitstreamWriter Stream(Buffer);
         clang::ASTWriter Writer(Stream);
-        Writer.WriteAST(*(mClang.getSema()), std::string(), 0, "", false);
+        Writer.WriteAST(mSema, std::string(), 0, "", false);
         if (!Buffer.empty())
             Out.write(Buffer.data(), Buffer.size());
         Out.close();
         llvm::sys::fs::rename(TempPath.str(), raw_name);
-        //destroy Sema
-        //mClang.destroySema();
 }
 
 struct Program::ProgramImpl {
