@@ -946,7 +946,7 @@ namespace measure {
 
 		// see whether aggregated log can be utilized
 		bool aggregatedOnly = all(metrics, [](const MetricPtr& cur) {
-			return cur == Metric::TOTAL_WALL_TIME || cur == Metric::TOTAL_CPU_TIME;
+			return cur == Metric::TOTAL_WALL_TIME || cur == Metric::TOTAL_CPU_TIME || cur == Metric::TOTAL_NUM_EXEC;
 		});
 
 		// partition the papi parameters
@@ -1212,7 +1212,6 @@ namespace measure {
 				}
 				metrics.push_back(metric);
 			}
-
 
 			// ---- Data ----
 

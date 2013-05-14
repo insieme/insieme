@@ -529,6 +529,7 @@ typedef struct __irt_inst_region_setup {
 typedef struct __irt_inst_aggregated_data {
 	uint64 cputime;
 	uint64 walltime;
+	uint64 num_exec;
 } _irt_inst_aggregated_data;
 
 typedef struct _irt_inst_region_data {
@@ -613,6 +614,7 @@ void _irt_inst_region_aggregated_data_insert(irt_context* context, int64 id, uin
 	// update values (atomic operations to synchronize access)
 	irt_atomic_fetch_and_add(&apd->walltime, walltime);
 	irt_atomic_fetch_and_add(&apd->cputime, cputime);
+	irt_atomic_inc(&apd->num_exec);
 }
 
 
@@ -672,9 +674,7 @@ void _irt_inst_region_start_pfor_aggregated(irt_context* context, region_id id) 
 void _irt_inst_region_end_pfor_aggregated(irt_context* context, region_id id, uint64 walltime, uint64 cputime) {
 
 	// accumulated data
-	if (walltime > 0 || cputime > 0) {
-		_irt_inst_region_aggregated_data_insert(context, id, walltime, cputime);
-	}
+	_irt_inst_region_aggregated_data_insert(context, id, walltime, cputime);
 
 	// pop nested region stack
 	_irt_inst_region_end_aggregated_internal(irt_worker_get_current());
@@ -703,13 +703,14 @@ void _irt_inst_region_aggregated_data_output(uint32 num_regions, irt_inst_region
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for efficiency log writing: %s", strerror(errno));
 
 
-	fprintf(outputfile, "#subject,id,wall_time(ns),cpu_time(ns)\n");
+	fprintf(outputfile, "#subject,id,wall_time(ns),cpu_time(ns),num_executions\n");
 
 	for(int i = 0; i < num_regions; ++i) {
-		fprintf(outputfile, "RG,%d,%lu,%lu\n",
+		fprintf(outputfile, "RG,%d,%lu,%lu,%lu\n",
 			i,
 			irt_time_convert_ticks_to_ns(table[i].data.walltime),
-			irt_time_convert_ticks_to_ns(table[i].data.cputime));
+			irt_time_convert_ticks_to_ns(table[i].data.cputime),
+			table[i].data.num_exec);
 	}
 	fclose(outputfile);
 }
@@ -1104,6 +1105,7 @@ void irt_inst_region_init(irt_context* context) {
 	for(uint32 i=0; i < context->num_regions; i++) {
 		context->inst_region_data[i].data.cputime = 0;
 		context->inst_region_data[i].data.walltime = 0;
+		context->inst_region_data[i].data.num_exec = 0;
 	}
 
 	// init mode
