@@ -54,7 +54,7 @@ else() #only look for pthread lib on linux
 endif()
 	
 # set compiler flags for gcc
-if (CMAKE_COMPILER_IS_GNUCC)
+if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
 
 	# add flags for debug mode
