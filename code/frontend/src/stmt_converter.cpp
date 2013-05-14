@@ -1102,6 +1102,10 @@ stmtutils::StmtWrapper ConversionFactory::CStmtConverter::Visit(clang::Stmt* stm
 
 	stmtutils::StmtWrapper retStmt = StmtVisitor<CStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 
+	// print diagnosis messages
+	convFact.printDiagnosis(stmt->getLocStart());
+
+	// build the wrapper for single statements
 	if ( retStmt.isSingleStmt() ) {
 		core::StatementPtr irStmt = retStmt.getSingleStmt();
 

@@ -189,6 +189,7 @@ public:
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  COMMON TYPES
+	CALL_BASE_TYPE_VISIT(TypeConverter, BuiltinType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ComplexType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ConstantArrayType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, IncompleteArrayType)
@@ -201,11 +202,10 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, TypeOfExprType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ElaboratedType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
-	CALL_BASE_TYPE_VISIT(TypeConverter, PointerType)
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  C++ specific types
-	core::TypePtr VisitBuiltinType(const clang::BuiltinType* buldInTy);
+	core::TypePtr VisitPointerType(const clang::PointerType* ptrTy);
 	core::TypePtr VisitTagType(const clang::TagType* tagType);
 	core::TypePtr VisitDependentSizedArrayType(const clang::DependentSizedArrayType* arrTy);
 	core::TypePtr VisitReferenceType(const clang::ReferenceType* refTy);

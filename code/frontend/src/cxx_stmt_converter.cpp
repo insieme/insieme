@@ -297,6 +297,10 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::Visit(clang::Stmt* s
 	VLOG(2) << "CXX";
 	stmtutils::StmtWrapper&& retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 
+	// print diagnosis messages
+	convFact.printDiagnosis(stmt->getLocStart());
+
+	// build the wrapper for single statements
 	if ( retStmt.isSingleStmt() ) {
 		core::StatementPtr&& irStmt = retStmt.getSingleStmt();
 

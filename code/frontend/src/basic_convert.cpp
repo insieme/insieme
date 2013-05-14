@@ -238,6 +238,20 @@ core::StatementPtr ConversionFactory::materializeReadOnlyParams(const core::Stat
 	return newBody;
 }
 
+
+//////////////////////////////////////////////////////////////////
+///
+void ConversionFactory::printDiagnosis(const clang::SourceLocation& loc){
+
+	clang::Preprocessor& pp = getCurrentPreprocessor();
+	// print warnings and errors:
+	while (!ctx.warnings.empty()){
+		pp.Diag(loc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning, *ctx.warnings.begin()) );
+		ctx.warnings.erase(ctx.warnings.begin());
+	}
+
+}
+
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
@@ -572,6 +586,9 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		// lookup for the variable in the map
 		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
 
+		// print diagnosis messages
+		printDiagnosis(definition->getLocStart());
+
 		assert(var);
 
 		// initialization value
@@ -590,7 +607,6 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 			var = builder.variable(initExpr->getType());
 			ctx.varDeclMap[definition] = var;
 		}
-
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 		retStmt = builder.declarationStmt(var, initExpr);
@@ -913,40 +929,49 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	return retIr;
 }
 
+
 //////////////////////////////////////////////////////////////////
 /// the globalVar parameter is added at the FIRST position of the function parameters
-core::FunctionTypePtr ConversionFactory::addGlobalsToFunctionType(const core::IRBuilder& builder,
-		const core::TypePtr& globals, const core::FunctionTypePtr& funcType) {
-
-	const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes()->getElements();
-
-	std::vector<core::TypePtr> argTypes(oldArgs.size() + 1);
-
-	std::copy(oldArgs.begin(), oldArgs.end(), argTypes.begin() + 1);
-	// function is receiving a reference to the global struct as the first argument
-	argTypes[0] = builder.refType(globals);
-	return builder.functionType(argTypes, funcType->getReturnType());
-
+core::FunctionTypePtr ConversionFactory::addGlobalsToFunctionType( const core::FunctionTypePtr& funcType) {
+       const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes()->getElements();
+       std::vector<core::TypePtr> argTypes(oldArgs.size() + 1);
+       std::copy(oldArgs.begin(), oldArgs.end(), argTypes.begin() + 1);
+       // function is receiving a reference to the global struct as the first argument
+       argTypes[0] = builder.refType(ctx.globalStruct.first);
+       return builder.functionType(argTypes, funcType->getReturnType());
 }
 
 
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) const {
-	assert(expr && "Calling convertExpr with a NULL pointer");
-	return exprConvPtr->Visit(const_cast<Expr*>(expr));
+       assert(expr && "Calling convertExpr with a NULL pointer");
+       return exprConvPtr->Visit(const_cast<Expr*>(expr));
 }
 
 //////////////////////////////////////////////////////////////////
 ///
 core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const {
-	assert(currTU && "translation unit is null");
-	assert(stmt && "Calling convertStmt with a NULL pointer");
-	return stmtutils::tryAggregateStmts(builder, stmtConvPtr->Visit(const_cast<Stmt*>(stmt)));
+       assert(currTU && "translation unit is null");
+       assert(stmt && "Calling convertStmt with a NULL pointer");
+       return stmtutils::tryAggregateStmts(builder, stmtConvPtr->Visit(const_cast<Stmt*>(stmt)));
+
+}
+/////////////////////////////////////////////////////////////////
+//
+core::FunctionTypePtr ConversionFactory::convertFunctionType(const clang::FunctionDecl* funcDecl, bool ignoreGlobals){
+	SET_TU(funcDecl);
+	const clang::Type* type= GET_TYPE_PTR(funcDecl);
+	core::FunctionTypePtr funcType = convertType(type).as<core::FunctionTypePtr>();
+	if (!ignoreGlobals && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end() ) {
+		funcType = addGlobalsToFunctionType(funcType);
+	}
+	RESTORE_TU();
+	return funcType;
 }
 
 //////////////////////////////////////////////////////////////////
-///
+//
 core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 	assert(type && "Calling convertType with a NULL pointer");
 	auto fit = ctx.typeCache.find(type);
@@ -984,7 +1009,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	if( funcDecl->isPure() && llvm::isa<clang::CXXMethodDecl>(funcDecl)){
 		VLOG(2) << "pure virtual function " << funcDecl;
 		
-		auto funcTy = convertType(GET_TYPE_PTR(funcDecl)).as<core::FunctionTypePtr>();
+		auto funcTy = convertFunctionType(funcDecl, isEntryPoint);
 		std::string callName = funcDecl->getNameAsString();
 		core::ExpressionPtr retExpr = builder.literal(callName, funcTy);
 
@@ -1006,7 +1031,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		} 
 		else {
 			//handle extern functions  -- here instead of in CallExr
-			auto funcTy = convertType(GET_TYPE_PTR(funcDecl)).as<core::FunctionTypePtr>();
+			auto funcTy = convertFunctionType(funcDecl,true).as<core::FunctionTypePtr>();
 			std::string callName = funcDecl->getNameAsString();
 			retExpr = builder.literal(callName, funcTy);
 		} 
@@ -1061,7 +1086,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					convertFunctionDecl(decl, false);
 					ctx.recVarExprMap.clear();
 				}
-
 			}
 			// reset the translation unit
 			RESTORE_TU();
@@ -1082,7 +1106,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			if (ctx.recVarExprMap.find(funDecl) != ctx.recVarExprMap.end()) { return; }
 
 			// we create a TypeVar for each type in the mutual dependence
-			core::FunctionTypePtr funcType = convertType(GET_TYPE_PTR(funDecl)).as<core::FunctionTypePtr>();
+			core::FunctionTypePtr funcType = convertFunctionType(funDecl);
 
 			// it might be a member function, fix the type
 			if (const clang::CXXMethodDecl* mem = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)){
@@ -1090,12 +1114,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				auto l = funcType->getParameterTypeList();
 				l.insert(l.begin(), builder.refType(convertType(ownerTy)));
 				funcType = builder.functionType(l, funcType->getReturnType(), core::FK_MEMBER_FUNCTION);
-			}
-
-			// In the case the function is receiving the global variables the signature needs to be
-			// modified by allowing the global struct to be passed as an argument
-			if ( ctx.globalFuncSet.find(funDecl) != ctx.globalFuncSet.end() ) {
-				funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
 			}
 			core::VariablePtr&& var = builder.variable( funcType );
 			ctx.recVarExprMap.insert( { funDecl, var } );
@@ -1123,7 +1141,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	} // endif function call components
 
-
 	// init parameter set
 	vector<core::VariablePtr> params;
 
@@ -1134,8 +1151,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	if (!isEntryPoint && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end()) {
 		// declare a new variable that will be used to hold a reference to the global data stucture
 		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStruct.first) );
-		params.push_back( var );
 		ctx.globalVar = var;
+		params.push_back(var);
 	}
 
 	std::for_each(funcDecl->param_begin(), funcDecl->param_end(), [ &params, this ] (ParmVarDecl* currParam) {
@@ -1191,20 +1208,12 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		body = builder.compoundStmt(stmts);
 	}
 
-	core::TypePtr convertedType = convertType(GET_TYPE_PTR(funcDecl));
-	assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
-	core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
+	core::FunctionTypePtr funcType = convertFunctionType(funcDecl,isEntryPoint).as<core::FunctionTypePtr>();
 
-	// if this function gets the globals in the capture list we have to create a different type
-	if (!isEntryPoint && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end()) {
-		// declare a new variable that will be used to hold a reference to the global data stucture
-		funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
-	}
-
-	// reset old global var, thisVar, and offsetTable
+	// reset old global var
 	ctx.globalVar = parentGlobalVar;
 
-	VLOG(2)	<< funcType << "\n" << params << "\n" << body;
+	VLOG(2)	<< "function type: " << funcType << "\nparams: " << params << "\n" << body;
 
 	if (components.empty()) {
 
@@ -1219,7 +1228,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		return attachFuncAnnotations(retLambdaExpr, funcDecl);
 	}
 
-
+	//////////////////////////////////////////////////////////////
+	// ahead this point a recursive lambda expression is generated
+	// out of the lambdas enclosed. those have being bounded to 
+	// variables, but now need to be converted
 
 	core::LambdaPtr retLambdaNode;
 
@@ -1276,6 +1288,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		ctx.recVarExprMap.erase(fd);
 
 		const core::LambdaPtr& lambda = convertFunctionDecl(fd).as<core::LambdaPtr>();
+
 		assert(lambda && "Resolution of sub recursive lambda yields a wrong result");
 
 		/// === CXX === 
@@ -1653,9 +1666,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 					"Conversion of function returned a marker expression which does not contain a lambda expression");
 		}
 	}
-
 	assert( lambdaExpr && "Conversion of function did not return a lambda expression");
-
 	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
 	return mProgram;
 }

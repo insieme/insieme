@@ -53,6 +53,7 @@
 
 #include "clang/AST/StmtVisitor.h"
 
+
 // [3.0]
 //#include "clang/Index/Entity.h"
 //#include "clang/Index/Indexer.h"
@@ -153,10 +154,17 @@ protected:
 	core::ExpressionPtr asLValue(const core::ExpressionPtr& value);
 	core::ExpressionPtr asRValue(const core::ExpressionPtr& value);
 
-	// FIXME: do the globals here as well
 template<class ClangExprTy>
-ExpressionList getFunctionArguments(const core::IRBuilder& builder, ClangExprTy* callExpr,
-		const core::FunctionTypePtr& funcTy) {
+ExpressionList getFunctionArguments(ClangExprTy* callExpr, 
+									const clang::FunctionDecl* declaration){
+	const core::FunctionTypePtr& funcTy = convFact.convertFunctionType(declaration).as<core::FunctionTypePtr>();
+	return getFunctionArguments(callExpr, funcTy, declaration);
+}
+
+template<class ClangExprTy>
+ExpressionList getFunctionArguments(ClangExprTy* callExpr, 
+									const core::FunctionTypePtr& funcTy,
+									const clang::FunctionDecl* declaration = NULL){
 	ExpressionList args;
 
 	// if member function, need to skip one arg (the local scope arg)
@@ -179,6 +187,16 @@ ExpressionList getFunctionArguments(const core::IRBuilder& builder, ClangExprTy*
 		}
 	}
 
+	// if needed, globals are the leftmost argument (after the memory storage in ctors)
+	// NOTE: functions being captured with a pointer CAN NOT USE globals
+	if (declaration){
+		convFact.getTranslationUnitForDefinition(declaration);
+		if( ctx.globalFuncSet.find(declaration) != ctx.globalFuncSet.end()){
+			args.push_back(convFact.ctx.globalVar);
+			off ++;
+		}
+	}
+
 	for (size_t argId = argIdOffSet, end = callExpr->getNumArgs(); argId < end; ++argId) {
 		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
 		core::TypePtr&& argTy = arg->getType();
@@ -186,7 +204,6 @@ ExpressionList getFunctionArguments(const core::IRBuilder& builder, ClangExprTy*
 			const core::TypePtr& funcParamTy = funcTy->getParameterTypes()[argId+off];
 
 			if (*funcParamTy != *argTy){
-
 				// if is a CPP ref, do not cast, do a transformation
 				if (core::analysis::isCppRef(funcParamTy)) {
 					arg =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), arg);
@@ -367,19 +384,6 @@ public:
 //										C EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
 class ConversionFactory::CExprConverter: public ExprConverter, public clang::ConstStmtVisitor<CExprConverter, core::ExpressionPtr> {
-protected:
-//	ConversionFactory& convFact;
-//	ConversionContext& ctx;
-//
-//	core::ExpressionPtr wrapVariable(const clang::Expr* expr);
-//
-//	core::ExpressionPtr asLValue(const core::ExpressionPtr& value);
-//	core::ExpressionPtr asRValue(const core::ExpressionPtr& value);
-//
-//	template<class ClangExprTy>
-//	ExpressionList getFunctionArguments(const core::IRBuilder& builder, ClangExprTy* callExpr,
-//			const core::FunctionTypePtr& funcTy);
-
 public:
 
 	CExprConverter(ConversionFactory& convFact, Program& program) :
