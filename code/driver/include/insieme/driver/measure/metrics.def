@@ -213,7 +213,10 @@ METRIC(AVG_EXEC_TIME, 				"avg_exec_time", 			ns,			avg(l_sub(Metric::TIMESTAMP_
 
 METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(Metric::WALL_TIME));
 METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
-METRIC(TOTAL_NUM_EXEC,				"total_num_exec",			ns,			sum(Metric::NUM_EXEC));	
+METRIC(TOTAL_NUM_EXEC,				"total_num_exec",			unit,		sum(Metric::NUM_EXEC));	
+
+METRIC(AVG_WALL_TIME,				"avg_wall_time",			ns,			div(Metric::TOTAL_WALL_TIME, Metric::TOTAL_NUM_EXEC));
+METRIC(AVG_CPU_TIME,				"avg_cpu_time",				ns,			div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_NUM_EXEC));
 
 METRIC(PARALLELISM, 				"parallelism",				unit,		div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_WALL_TIME));
 //METRIC(AVG_EFFICIENCY,				"avg_efficiency",			unit,		avg(l_div(l_div(Metric::CPU_TIME, Metric::WALL_TIME), Metric::NUM_WORKERS)));
