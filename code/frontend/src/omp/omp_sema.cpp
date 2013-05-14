@@ -56,6 +56,8 @@
 
 #include "insieme/frontend/utils/castTool.h"
 
+#include <stack>
+
 #define MAX_THREADPRIVATE 80
 
 namespace insieme {
@@ -76,16 +78,20 @@ class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 	const lang::BasicGenerator& basic;
 	us::PointerSet<CompoundStmtPtr> toFlatten; // set of compound statements to flatten one step further up
 	
+	RefTypePtr globalStructType;
+
 	// the following vars handle global struct type adjustment due to threadprivate
 	bool fixStructType; // when set, implies that the struct was just modified and needs to be adjusted 
 	StructTypePtr adjustStruct; // marks a struct that was modified and needs to be adjusted when encountered
 	StructTypePtr adjustedStruct; // type that should replace the above
-	// threadprivate optimization map
-	ExprVarMap thisLambdaTPAccesses; 
+	ExprVarMap thisLambdaTPAccesses; // threadprivate optimization map
+
+	// this stack is used to keep track of which variables are shared in enclosing constructs, to correctly parallelize 
+	std::stack<VariableList> sharedVarStack;
 	
 public:
-	OMPSemaMapper(NodeManager& nodeMan) 
-			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(), 
+	OMPSemaMapper(NodeManager& nodeMan, RefTypePtr globalStructType) 
+			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(), globalStructType(globalStructType),
 			  fixStructType(false), adjustStruct(), adjustedStruct(), thisLambdaTPAccesses() {
 	}
 
@@ -97,6 +103,7 @@ protected:
 	// except for threadprivate, all omp annotations are on statement or expression marker nodes
 	virtual const NodePtr resolveElement(const NodePtr& node) {
 		NodePtr newNode;
+		sharedVarStackEnter(node);
 		if(node->getNodeCategory() == NC_Type) { // go top-down for types!
 			newNode = handleTypes(node);
 			if(newNode==node) newNode = node->substitute(nodeMan, *this);
@@ -158,7 +165,66 @@ protected:
 		if(LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(newNode)) newNode = transform::correctRecursiveLambdaVariableUsage(nodeMan, lambda);
 		// migrate annotations if applicable
 		if(newNode != node) transform::utils::migrateAnnotations(node, newNode);
+		sharedVarStackLeave(node);
 		return newNode;
+	}
+
+	// called upon entering a new node, to update the shared var stack
+	void sharedVarStackEnter(const NodePtr& node) {
+		// push empty on entering new function
+		if(node.isa<LambdaDefinitionPtr>()) {
+			sharedVarStack.push(VariableList());
+		}
+		// handle omp annotations
+		if(BaseAnnotationPtr anno = node->getAnnotation(BaseAnnotation::KEY)) {
+			std::for_each(anno->getAnnotationListRBegin(), anno->getAnnotationListREnd(), [&](AnnotationPtr subAnn) {
+				// if parallel, push new var list with its explicitly and implicitly shared variables
+				if(auto parAnn = std::dynamic_pointer_cast<Parallel>(subAnn)) {
+					VariableList free = core::analysis::getFreeVariables(node);
+					VariableList autoShared;
+					std::copy_if(free.begin(), free.end(), back_inserter(autoShared), [&](const VariablePtr& var) {
+						return !(parAnn->hasPrivate() && contains(parAnn->getPrivate(), var)) &&
+							   !(parAnn->hasFirstPrivate() && contains(parAnn->getFirstPrivate(), var));
+					} );
+					sharedVarStack.push(autoShared);
+				} 
+				// if other (non-parallel) data sharing clause, remove explicitly privatized vars from stack	
+				else if(auto dataAnn = std::dynamic_pointer_cast<DatasharingClause>(subAnn)) {
+					VariableList curShared = sharedVarStack.top();
+					VariableList newShared;
+					sharedVarStack.pop();
+					std::copy_if(curShared.begin(), curShared.end(), back_inserter(newShared), [&](const VariablePtr& var) {
+						return !(dataAnn->hasPrivate() && contains(dataAnn->getPrivate(), var)) &&
+							   !(dataAnn->hasFirstPrivate() && contains(dataAnn->getFirstPrivate(), var));
+					} );
+					sharedVarStack.push(newShared);
+				}
+			} );
+		}
+	}
+	
+	// called upon leaving a node *with the original node*, to update the shared var stack
+	void sharedVarStackLeave(const NodePtr& node) {
+		// pop empty on leaving new function
+		if(node.isa<LambdaDefinitionPtr>()) {
+			assert(sharedVarStack.size() > 0 && sharedVarStack.top() == VariableList() 
+				&& "leaving lambda def: shared var stack corrupted");
+			sharedVarStack.pop();
+		}
+		// handle omp annotations
+		if(BaseAnnotationPtr anno = node->getAnnotation(BaseAnnotation::KEY)) {
+			std::for_each(anno->getAnnotationListRBegin(), anno->getAnnotationListREnd(), [&](AnnotationPtr subAnn) {
+				// if parallel, pop a var list
+				if(auto parAnn = std::dynamic_pointer_cast<Parallel>(subAnn)) {
+					assert(sharedVarStack.size() > 0 && "leaving omp parallel: shared var stack corrupted");
+					sharedVarStack.pop();
+				}
+			} );
+		}
+		// check stack integrity when leaving program
+		if(node.isa<ProgramPtr>()) {
+			assert(sharedVarStack.size() == 0 && "ending omp translation: shared var stack corrupted");
+		}
 	}
 
 	// fixes a struct type to correctly resemble its members
@@ -464,12 +530,20 @@ protected:
 			std::copy_if(freeVarsAndFuns.begin(), freeVarsAndFuns.end(), back_inserter(freeVars), [&](const VariablePtr& v) {
 				auto t = v.getType();
 				// free function variables should not be captured
-				bool ret = !t.isa<FunctionTypePtr>() && !(core::analysis::isRefType(t) && core::analysis::getReferencedType(t).isa<ArrayTypePtr>());
+				bool ret = !t.isa<FunctionTypePtr>();
+				// neither should pointers be depointerized
+				ret = ret && !(core::analysis::isRefType(t) && 
+					(core::analysis::getReferencedType(t).isa<ArrayTypePtr>() || core::analysis::getReferencedType(t).isa<VectorTypePtr>()));
 				// explicitly declared variables should not be auto-privatized
 				if(taskP->hasShared()) ret = ret && !contains(taskP->getShared(), v);
 				if(taskP->hasFirstPrivate()) ret = ret && !contains(taskP->getFirstPrivate(), v);
 				if(taskP->hasPrivate()) ret = ret && !contains(taskP->getPrivate(), v);
 				if(taskP->hasReduction()) ret = ret && !contains(taskP->getReduction().getVars(), v);
+				// variables declared shared in all enclosing constructs, up to and including 
+				// the innermost parallel construct, should not be privatized
+				ret = ret && !contains(sharedVarStack.top(), v);
+				// finally, the global struct should not be auto-privatized
+				if(t == globalStructType) ret = false;
 				return ret;
 			});
 			firstPrivates.insert(firstPrivates.end(), freeVars.begin(), freeVars.end());
@@ -647,14 +721,104 @@ protected:
 	}
 };
 
+// TODO refactor: move this to somewhere where it can be used by front- and backend
+namespace {
+	struct GlobalDeclarationCollector : public core::IRVisitor<bool, core::Address> {
+		vector<core::DeclarationStmtAddress> decls;
+
+		// do not visit types
+		GlobalDeclarationCollector() : IRVisitor<bool, core::Address>(false) {}
+
+		bool visitNode(const core::NodeAddress& node) { return true; }	// does not need to decent deeper
+
+		bool visitDeclarationStmt(const core::DeclarationStmtAddress& cur) {
+			core::DeclarationStmtPtr decl = cur.getAddressedNode();
+
+			// check the type
+			core::TypePtr type = decl->getVariable()->getType();
+
+			// check for references
+			if (type->getNodeType() != core::NT_RefType) {
+				return true;   // not a global struct
+			}
+
+			type = static_pointer_cast<core::RefTypePtr>(type)->getElementType();
+
+			// the element type has to be a struct type
+			if (type->getNodeType() != core::NT_StructType) {
+				return true;    // also, not a global
+			}
+
+			// check initalization
+			auto& basic = decl->getNodeManager().getLangBasic();
+			core::ExpressionPtr init = decl->getInitialization();
+			if (!(core::analysis::isCallOf(init, basic.getRefNew()) || core::analysis::isCallOf(init, basic.getRefVar()))) {
+				return true; 	// again, not a global
+			}
+
+			init = core::analysis::getArgument(init, 0);
+
+			// check whether the initialization is based on a struct expression
+			if (init->getNodeType() != core::NT_StructExpr) {
+				return true; 	// guess what, not a global!
+			}
+
+			// well, this is a global
+			decls.push_back(cur);
+			return true;
+		}
+
+		bool visitCompoundStmt(const core::CompoundStmtAddress& cmp) {
+			return false; // keep descending into those!
+		}
+
+	};
+
+	vector<core::DeclarationStmtAddress> getGlobalDeclarations(const core::CompoundStmtPtr& mainBody) {
+		GlobalDeclarationCollector collector;
+		core::visitDepthFirstPrunable(core::NodeAddress(mainBody), collector);
+		return collector.decls;
+	}
+
+	// find global struct type of prog, if any
+	RefTypePtr findGlobalStruct(const core::ProgramPtr& prog) {
+		// check whether it is a main program ...
+		core::ProgramAddress program(prog);
+		if(!(program->getEntryPoints().size() == static_cast<std::size_t>(1))) {
+			return RefTypePtr();
+		}
+
+		// extract body of main
+		const core::ExpressionAddress& mainExpr = program->getEntryPoints()[0];
+		if(mainExpr->getNodeType() != core::NT_LambdaExpr) {
+			return RefTypePtr();
+		}
+		const core::LambdaExprAddress& main = core::static_address_cast<const core::LambdaExpr>(mainExpr);
+		const core::StatementAddress& bodyStmt = main->getBody();
+		if(bodyStmt->getNodeType() != core::NT_CompoundStmt) {
+			return RefTypePtr();
+		}
+		core::CompoundStmtAddress body = core::static_address_cast<const core::CompoundStmt>(bodyStmt);
+
+		// search for global structs
+		vector<core::DeclarationStmtAddress> globals = getGlobalDeclarations(body.getAddressedNode());
+		if(globals.empty()) {
+			return RefTypePtr();
+		}
+
+		return globals.front().getVariable().getType().as<RefTypePtr>();
+	}
+}
 
 const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
 	IRBuilder build(resultStorage);
 	ProgramPtr result = prog;
 
+	RefTypePtr globalStructType = findGlobalStruct(prog);
+
 	// new sema
-	{	
-		OMPSemaMapper semaMapper(resultStorage);
+	{
+		OMPSemaMapper semaMapper(resultStorage, globalStructType);
 		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 		insieme::utils::Timer timer("Omp sema");
 		result = semaMapper.map(result);
