@@ -190,7 +190,7 @@ ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : p
 	// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the diagOpts object!
 	setDiagnosticClient(pimpl->clang, config.hasOption(ConversionJob::PrintDiag));
 
-    clang::ASTUnit * ast_unit;
+    clang::ASTUnit* ast_unit = 0;
     if(is_obj) {
         ast_unit = clang::ASTUnit::LoadFromASTFile(
                         config.getFile(),

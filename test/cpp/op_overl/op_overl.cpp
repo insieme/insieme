@@ -38,51 +38,69 @@ void f() {
 	c1(1,2,3);
 }
 
+
+// NOTE: pointers to const values loose qualification in IR, so they wont call const methods in
+// rebuilt code. this trait is ignored but aknoledged to the programmer as a warnning
+
 int main() {
 
 	C c1;
 	C c2;
-	C const * pcc = &c1;
+//	C const * pcc = &c1;
 	C* pc = &c1;
 	C& rc = c1;
 	C* pc2 = new C();
 
+	{
 	+c1;
 	c1 == c2;
 	c1 != c2;
 	c1 <= &c2;
 	c1(1,2,3);
+	}
 
+	{
 	+(*pc);
 	*pc == c2;
 	*pc != c2;
 	*pc <= &c2;
 	(*pc)(1,2,3);
+	}
 	
+	{
 	c2 == *pc;
 	c2 != *pc;
 	c2 <= pc;
+	}
 
-	+(*pcc);
-	*pcc == c2;
-	*pcc != c2;
-	*pcc <= &c2;
-	(*pcc)(1,2,3);
+//	{
+//	+(*pcc);
+//	*pcc == c2;
+//	*pcc != c2;
+//	*pcc <= &c2;
+//	(*pcc)(1,2,3);
+//	}
+  
+//	{
+//	c2 == *pcc;
+//	c2 != *pcc;
+//	c2 <= pcc;
+//	c2(1,2,3);
+//	}
 	
-	c2 == *pcc;
-	c2 != *pcc;
-	c2 <= pcc;
-	c2(1,2,3);
-	
+	{
 	+rc;
 	rc == c2;
 	rc != c2;
 	rc <= &c2;
 	rc(1,2,3);
+	}
 
+	{
 	c2 == rc;
 	c2 != rc;
 	c2 <= &rc;
+	}
 
 	f();
 	return 0;
