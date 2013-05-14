@@ -37,7 +37,7 @@ int main() {
 	A<double> aDouble;
 	A<B> aB;
 
-	f1<A<int>> (aInt);
+	f1<A<int> > (aInt);
 	f1(aDouble);
 
 	//only A<templateType> objects for f2
@@ -55,7 +55,7 @@ int main() {
 	f4<double>(aDouble);	//returns double
 
 	TemplatedClass<B> tCB;
-	TemplatedClass<A<B>> tCAB;
+	TemplatedClass<A<B> > tCAB;
 
 	return 0;
 }
