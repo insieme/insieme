@@ -675,17 +675,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 	if (callExpr->getDirectCallee()) {
 
 		const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(callExpr->getDirectCallee());
-		auto funcTy = convFact.convertType(GET_TYPE_PTR(funcDecl)).as<core::FunctionTypePtr>() ;
-
-//		// need tolookup if this fuction needs to access the globals, in that case the capture
-//		// list needs to be initialized with the value of global variable in the current scope
-//		if (ctx.globalFuncSet.find(definition) != ctx.globalFuncSet.end()) {
-//			// we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
-//			// current context
-//			assert( ctx.globalVar && "No global definitions forwarded to this point");
-//			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
-//		}
-
+		const core::FunctionTypePtr funcTy = convFact.convertFunctionType(funcDecl).as<core::FunctionTypePtr>() ;
 
 		const clang::FunctionDecl* definition = NULL;
 		const TranslationUnit* rightTU = NULL;
@@ -700,15 +690,8 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 			if (rightTU && fd->hasBody()) { definition = fd; }
 		}
 
-		std::cout << std::endl;
-		std::cout << ctx.globalFuncSet.count(funcDecl) << std::endl;
-		std::cout << ctx.globalFuncSet << std::endl;
-		std::cout << funcDecl << std::endl;
-
-
-
 		// collects the type of each argument of the expression
-		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy, ctx.globalFuncSet.count(funcDecl));
+		ExpressionList&& args = getFunctionArguments( callExpr, funcDecl);
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
 		// No definition has been found in any translation unit, 
@@ -776,7 +759,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 
 
 	// if there callee is not a fuctionDecl we need to use other method.
-	// it might be a pointer to function. or another artifact
+	// it might be a pointer to function. 
 	if ( callExpr->getCallee() ) {
 		core::ExpressionPtr funcPtr = convFact.tryDeref(Visit(callExpr->getCallee()));
 		core::TypePtr subTy = funcPtr->getType();
@@ -792,7 +775,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCallExpr(const clang:
 
 		auto funcTy = subTy.as<core::FunctionTypePtr>();
 
-		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+		ExpressionList&& args = getFunctionArguments(callExpr, funcTy);
 		irNode = builder.callExpr(funcPtr, args);
 		END_LOG_EXPR_CONVERSION(irNode);
 		return irNode;

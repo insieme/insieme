@@ -53,6 +53,7 @@
 
 #include "clang/AST/StmtVisitor.h"
 
+
 // [3.0]
 //#include "clang/Index/Entity.h"
 //#include "clang/Index/Indexer.h"
@@ -153,15 +154,18 @@ protected:
 	core::ExpressionPtr asLValue(const core::ExpressionPtr& value);
 	core::ExpressionPtr asRValue(const core::ExpressionPtr& value);
 
-	// FIXME: do the globals here as well
 template<class ClangExprTy>
-ExpressionList getFunctionArguments(const core::IRBuilder& builder, 
-									ClangExprTy* callExpr, 
-									const core::FunctionTypePtr& funcTy,
-									bool usesGlobals =false) {
-	ExpressionList args;
+ExpressionList getFunctionArguments(ClangExprTy* callExpr, 
+									const clang::FunctionDecl* declaration){
+	const core::FunctionTypePtr& funcTy = convFact.convertFunctionType(declaration).as<core::FunctionTypePtr>();
+	return getFunctionArguments(callExpr, funcTy, declaration);
+}
 
-	callExpr->dump();
+template<class ClangExprTy>
+ExpressionList getFunctionArguments(ClangExprTy* callExpr, 
+									const core::FunctionTypePtr& funcTy,
+									const clang::FunctionDecl* declaration = NULL){
+	ExpressionList args;
 
 	// if member function, need to skip one arg (the local scope arg)
 	int off =0;
@@ -183,21 +187,20 @@ ExpressionList getFunctionArguments(const core::IRBuilder& builder,
 		}
 	}
 
-	// if needed, globals are the leftmost argument (after the memory storage of the struct)
-	if ( usesGlobals ) {
-		std::cout << "USES GLOBALS!! " << std::endl;
-		args.push_back(convFact.ctx.globalVar);
-		off ++;
+	// if needed, globals are the leftmost argument (after the memory storage in ctors)
+	// NOTE: functions being captured with a pointer CAN NOT USE globals
+	if (declaration){
+		convFact.getTranslationUnitForDefinition(declaration);
+		if( ctx.globalFuncSet.find(declaration) != ctx.globalFuncSet.end()){
+			args.push_back(convFact.ctx.globalVar);
+			off ++;
+		}
 	}
-
-	std::cout << " start: " << argIdOffSet << " off: " << off  << " num: " << callExpr->getNumArgs()<< std::endl;
-	std::cout << funcTy->getParameterTypes();
 
 	for (size_t argId = argIdOffSet, end = callExpr->getNumArgs(); argId < end; ++argId) {
 		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
 		core::TypePtr&& argTy = arg->getType();
 		if ( argId < funcTy->getParameterTypes().size() ) {
-			std::cout << " elem: " << argId << std::endl;
 			const core::TypePtr& funcParamTy = funcTy->getParameterTypes()[argId+off];
 
 			if (*funcParamTy != *argTy){
@@ -381,19 +384,6 @@ public:
 //										C EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
 class ConversionFactory::CExprConverter: public ExprConverter, public clang::ConstStmtVisitor<CExprConverter, core::ExpressionPtr> {
-protected:
-//	ConversionFactory& convFact;
-//	ConversionContext& ctx;
-//
-//	core::ExpressionPtr wrapVariable(const clang::Expr* expr);
-//
-//	core::ExpressionPtr asLValue(const core::ExpressionPtr& value);
-//	core::ExpressionPtr asRValue(const core::ExpressionPtr& value);
-//
-//	template<class ClangExprTy>
-//	ExpressionList getFunctionArguments(const core::IRBuilder& builder, ClangExprTy* callExpr,
-//			const core::FunctionTypePtr& funcTy);
-
 public:
 
 	CExprConverter(ConversionFactory& convFact, Program& program) :

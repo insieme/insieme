@@ -302,9 +302,7 @@ protected:
 	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node,
 			const clang::FunctionDecl* funcDecl);
 
-	core::FunctionTypePtr addGlobalsToFunctionType(	const core::IRBuilder& builder,
-													const core::TypePtr& globals,
-													const core::FunctionTypePtr& funcType);
+	core::FunctionTypePtr addGlobalsToFunctionType(	const core::FunctionTypePtr& funcType);
 
 
 public:
@@ -358,6 +356,15 @@ public:
 	const pragma::PragmaStmtMap& getPragmaMap() const {
 		return pragmaMap;
 	}
+
+	/**
+	 * Entry point for converting function to the right type, it also 
+	 * does the inclusion of the globals if needed
+	 * @param dcl declaration of the function
+	 * @param ignoreGlobals, this function will have no globals
+	 * @return the corresponding IR type
+	 */
+	core::FunctionTypePtr convertFunctionType(const clang::FunctionDecl* dcl, bool ignoreGlobals = false);
 
 	/**
 	 * Entry point for converting clang types into an IR types
