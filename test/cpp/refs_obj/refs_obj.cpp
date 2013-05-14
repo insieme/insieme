@@ -52,11 +52,11 @@ int  main (){
 	// func call
 	{
 		Obj a (4);
-  	Obj& ref = a;
+  		Obj& ref = a;
 		const Obj& cref = a;
 
   		valParam(a);
-  	valParam(ref);
+	  	valParam(ref);
 		valParam(cref);
 
 		refParam(a);

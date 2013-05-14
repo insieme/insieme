@@ -454,10 +454,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 											irClassType, 
 											core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
 
-		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
-
 		// get arguments
-		args = getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(methodDecl));
+		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
+		args = getFunctionArguments(callExpr, funcTy, llvm::cast<clang::FunctionDecl>(methodDecl));
 		
 		//unwrap if is a cpp reference, we dont use cpp references for this
 		if (core::analysis::isCppRef(ownerObj->getType())){
