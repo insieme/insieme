@@ -74,7 +74,7 @@ namespace frontend {
 		 * The constructor creates a temporary file containing the given example code. The
 		 * file will exist as long as the object is alive.
 		 */
-		SrcFile(const string& code, SrcType type = C) {
+		Source(const string& code, SrcType type = C) {
 			
 			// create a temporary file containing the code
 			switch(type) {
@@ -89,7 +89,7 @@ namespace frontend {
 			srcFile.close();
 		}
 		
-		~SrcFile() {
+		~Source() {
 			// remove temporary file
 			if (fs::exists(file)) {
 				fs::remove(file);
