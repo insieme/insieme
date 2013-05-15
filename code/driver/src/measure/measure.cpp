@@ -945,8 +945,8 @@ namespace measure {
 		std::string executable = bfs::path(binary).filename().string();
 
 		// see whether aggregated log can be utilized
-		bool aggregatedOnly = all(metrics, [](const MetricPtr& cur) {
-			return cur == Metric::TOTAL_WALL_TIME || cur == Metric::TOTAL_CPU_TIME;
+		bool aggregatedOnly = all(getDependencyClosureLeafs(metrics), [](const MetricPtr& cur) {
+			return cur == Metric::WALL_TIME || cur == Metric::CPU_TIME || cur == Metric::NUM_EXEC;
 		});
 
 		// partition the papi parameters
@@ -1212,7 +1212,6 @@ namespace measure {
 				}
 				metrics.push_back(metric);
 			}
-
 
 			// ---- Data ----
 
