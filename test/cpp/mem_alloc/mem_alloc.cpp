@@ -8,13 +8,6 @@ public:
 	~C() { printf("~C()"); mA = 0; }
 };
 
-class GC {
-	int mA;
-public:
-	GC() : mA(10) { printf("GC()"); }
-	~GC() { printf("~GC()"); mA = 0; }
-};
-
 int main() {
 
 	{
@@ -30,15 +23,6 @@ int main() {
 		delete[] pi;
 
 		C* pC = new C[5];
-		delete[] pC;
-	}
-
-	{
-		GC* pC = new GC();
-		delete pC;
-	}
-	{
-		GC* pC = new GC[5];
 		delete[] pC;
 	}
 
