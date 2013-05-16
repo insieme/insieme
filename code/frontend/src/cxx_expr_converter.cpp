@@ -886,6 +886,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 	if (innerIR->getType() != lambdaType && !gen.isRef(lambdaType))  
 		innerIR = convFact.tryDeref(innerIR);
 
+	// if the expression does not return anything, do not add return stmt
 	if (gen.isUnit(innerIR->getType())){
 		stmtList.push_back(innerIR);
 	}
@@ -904,13 +905,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 		 packedArgs.push_back(varPtr);
 	});
 	core::ExpressionPtr irNode = convFact.builder.callExpr(lambdaType, lambda, packedArgs);
-
-
-	std::cout << "=========================   CLEANUPS =====================\n";
-	dumpPretty(lambdaBody);
-	cleanupExpr->dump();
-	dumpPretty(irNode);
-	std::cout << "=========================   CLEANUPS =====================\n";
 	return irNode;
 }
 

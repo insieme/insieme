@@ -75,69 +75,7 @@ namespace conversion {
 // 			In clang a declstmt is represented as a list of VarDecl
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
-
-// TODO: we might initialize a variable with the coppy constructor, in this case, it will pressent a
-// different shape
-
-	std::cout << " ***** INIT ****** " << std::endl;
-	declStmt->dump();
-
 	return StmtConverter::VisitDeclStmt(declStmt);
-
-	/*
-	// if there is only one declaration in the DeclStmt we return it
-
-	if (declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl())) {
-		stmtutils::StmtWrapper retList;
-		clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
-
-		try {
-			core::DeclarationStmtPtr&& retStmt = cxxConvFact.convertVarDecl(varDecl);
-
-			// check if there is a kernelFile annotation
-			ocl::attatchOclAnnotation(retStmt->getInitialization(), declStmt, cxxConvFact);
-			// handle eventual OpenMP pragmas attached to the Clang node
-			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, cxxConvFact) );
-
-			// convert the constructor of a class
-			if ( varDecl->getDefinition()->getInit() ) {
-				if(const clang::CXXConstructExpr* ctor =
-						dyn_cast<const clang::CXXConstructExpr>(varDecl->getDefinition()->getInit())
-				) {
-					if(!ctor->getType().getTypePtr()->isArrayType())
-						retList.push_back( cxxConvFact.convertExpr(ctor));
-				}
-				if(const clang::ExprWithCleanups* exprWithCleanups =
-						dyn_cast<const clang::ExprWithCleanups>(varDecl->getDefinition()->getInit()))
-				{
-					if(!GET_TYPE_PTR(varDecl)->isReferenceType())
-					{
-						retList.push_back( cxxConvFact.builder.compoundStmt(cxxConvFact.convertExpr(exprWithCleanups)));
-					}
-				}
-			}
-		} catch ( const GlobalVariableDeclarationException& err ) {
-			return stmtutils::StmtWrapper();
-		}
-
-		return retList;
-	}
-
-	// otherwise we create an an expression list which contains the multiple declaration inside the statement
-	stmtutils::StmtWrapper retList;
-	for (auto&& it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
-	if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
-		try {
-			assert(cxxConvFact.currTU&& "translation unit is null");
-			core::DeclarationStmtPtr&& retStmt = cxxConvFact.convertVarDecl(varDecl);
-			// handle eventual OpenMP pragmas attached to the Clang node
-			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, cxxConvFact) );
-
-		} catch ( const GlobalVariableDeclarationException& err ) {}
-	}
-
-	return retList;
-	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -160,32 +98,18 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 	if (gen.isPrimitive(retExpr->getType()))
 			return stmt;
 
-	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
-	// this is produced by the AST, but we should delegate this matters to the backend compiler
-	
-
 	// if the function returns references, we wont realize, there is no cast, and the inner
 	// expresion might have  no reference type
 	// if there is no copy constructor on return... it seems that this is the case in which a
 	// ref is returned
 	// if is a ref: no cast, if is a const ref, there is a Nop cast to qualify
-
 	core::TypePtr funcRetTy = convFact.convertType(retStmt->getRetValue()->getType().getTypePtr());
-
-
-	std::cout << " return stmt " << std::endl;
-	retStmt->dump();
-	std::cout << " ret: " << retExpr << std::endl;
-	std::cout << " type:     " << retExpr->getType() << std::endl;
-	std::cout << " expected: " << funcRetTy << std::endl;
 
 	// we only operate this on classes
 	clang::CastExpr* cast;
 	clang::CXXConstructExpr* ctorExpr;
 	clang::ExprWithCleanups*  cleanups;
 	if ((cast = llvm::dyn_cast<clang::CastExpr>(retStmt->getRetValue())) != NULL){
-		std::cout << "========= with cast ========================" << std::endl;
-
 		switch(cast->getCastKind () ){
 			case CK_NoOp : // make constant
 	
@@ -201,25 +125,20 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 			default:
 				break;
 		}
-	std::cout << " ret: " << retExpr << std::endl;
-		std::cout << "========= with cast ========================" << std::endl;
 	}
 	else if ((ctorExpr = llvm::dyn_cast<clang::CXXConstructExpr>(retStmt->getRetValue())) != NULL){
-		std::cout << "========= with constructor =====================" << std::endl;
-
+	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
+	// this is produced by the AST, but we should delegate this matters to the backend compiler
+	
 		// of the first node after a return is a constructor, copy constructor
 		// we are returning a value.
 		retStmt->dump();
 		
-		std::cout << retExpr<< std::endl;
-		std::cout << retExpr->getType()<< std::endl;
-
 		// behind a return we might find a constructor, it might be elidable or not, but we DO NOT
 		// call a constructor on return in any case
 		if (retExpr->getNodeType() == core::NT_CallExpr){
 			if (const core::FunctionTypePtr& ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>()){
 				if(ty.isConstructor()){
-					std::cout << "** removing ctor" << std::endl;
 					retExpr = retExpr.as<core::CallExprPtr>()->getArgument(1); // second argument is the copyed obj
 				}
 			}
@@ -227,12 +146,8 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 
 		// fist of all, have a look of what is behind the deRef
 		if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
-			std::cout << "** derefing" << std::endl;
 			retExpr = retExpr.as<core::CallExprPtr>()[0];
 		}
-
-		std::cout << retExpr<< std::endl;
-		std::cout << retExpr->getType()<< std::endl;
 
 		if(IS_CPP_REF_EXPR(retExpr)){
 			// we are returning a value, peel out the reference, or deref it
@@ -250,63 +165,21 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 		}
 		// this case is by value
 		retExpr = builder.deref(retExpr);
-
-		std::cout << retExpr<< std::endl;
-		std::cout << retExpr->getType()<< std::endl;
-
-		std::cout << "========= with constructor =====================" << std::endl;
 	}
 	else if ((cleanups= llvm::dyn_cast<clang::ExprWithCleanups>(retStmt->getRetValue())) != NULL){
-		std::cout << "========= cleanups ========================" << std::endl;
+		// do nothing, should be already OK
 	}
 	else{
-
-		std::cout << "========= ref ========================" << std::endl;
-			
-		std::cout << retExpr << std::endl;
-
 		// not a cast, it is a ref then... only if not array
 		if (!core::analysis::isCallOf(retExpr,mgr.getLangBasic().getScalarToArray()) &&
 			!IS_CPP_REF_EXPR(retExpr)){
 				retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retExpr);
 		}
-
-		std::cout << retExpr << std::endl;
-		
-
-		std::cout << "========= ref ========================" << std::endl;
-//	// FIXME: solve the issue with the deref of this (return *this;)
-//	core::ExpressionPtr myThis  = builder.literal("this", builder.refType(funcRetTy));
-//	core::ExpressionPtr retThis = builder.callExpr(gen.getScalarToArray(), myThis);
-//	std::cout << "#####################################" << std::endl;
-//	retStmt->dump();
-//	std::cout << myThis  << std::endl;
-//	std::cout << myThis->getType()  << std::endl;
-//	std::cout << retThis << std::endl;
-//	std::cout << retExpr << std::endl;
-//	core::ExpressionPtr refed = builder.callExpr( builder.refType(myThis->getType()), builder.getLangBasic().getArrayRefElem1D(), retThis, builder.uintLit(0));
-//	std::cout << refed << std::endl;
-//	if(*refed == *retExpr){
-//	std::cout << "#####################################" << std::endl;
-//	retExpr = myThis;
-//	}
-
-//		else if(gen.isRef(retExpr->getType()) && !gen.isRef(funcRetTy)){
-//			retExpr = builder.deref(retExpr);
-//		}
 	}
-
 
 	stmtList.push_back(builder.returnStmt(retExpr));
 	core::StatementPtr retStatement = builder.compoundStmt(stmtList);
 	stmt = stmtutils::tryAggregateStmts(builder,stmtList );
-
-	std::cout << "=====================================" << std::endl;
-	dumpPretty(funcRetTy);
-	retStmt->dump();
-	dumpPretty(retExpr);
-	std::cout << "=====================================" << std::endl;
-
 	return stmt;
 }
 
