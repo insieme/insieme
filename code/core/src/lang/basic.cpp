@@ -41,6 +41,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/normalize.h"
+#include "insieme/core/lang/lang.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/map_utils.h"
@@ -208,7 +209,10 @@ bool BasicGenerator::is##_id(const NodePtr& p) const { \
 
 #define DERIVED(_id, _name, _spec) \
 ExpressionPtr BasicGenerator::get##_id() const { \
-	if(!pimpl->ptr##_id) pimpl->ptr##_id = analysis::normalize(pimpl->build.parseExpr(_spec)); \
+	if(!pimpl->ptr##_id) { \
+		pimpl->ptr##_id = analysis::normalize(pimpl->build.parseExpr(_spec)); \
+		markAsDerived(pimpl->ptr##_id, _name); \
+	} \
 	return pimpl->ptr##_id; }; \
 bool BasicGenerator::is##_id(const NodePtr& p) const { \
 	return *p == *get##_id(); };

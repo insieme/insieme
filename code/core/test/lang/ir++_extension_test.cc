@@ -66,6 +66,7 @@ namespace lang {
 
 		// just check whether the code is not exhibiting errors
 		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+		EXPECT_TRUE(isDerived(element));
 	}
 
 	TEST(IRppExtensions, ArrayDtor) {
@@ -77,6 +78,7 @@ namespace lang {
 
 		// just check whether the code is not exhibiting errors
 		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+		EXPECT_TRUE(isDerived(element));
 	}
 
 	TEST(IRppExtensions, References) {

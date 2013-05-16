@@ -1271,7 +1271,7 @@ inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, IRVisitor<bool, P
 
 template<template<class Target> class Ptr, typename Node, typename Lambda,
 	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
-inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
+inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, Lambda lambda, bool visitTypes = false) {
 	return visitDepthFirstOncePrunable(root, makeLambdaVisitor(lambda, visitTypes));
 }
 

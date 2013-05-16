@@ -42,6 +42,7 @@
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/lang/lang.h"
 
 namespace insieme {
 namespace core {
