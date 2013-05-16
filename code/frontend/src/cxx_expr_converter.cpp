@@ -48,6 +48,8 @@
 #include "insieme/frontend/utils/ir++_utils.h"
 #include "insieme/frontend/utils/castTool.h"
 
+#include "insieme/frontend/utils/debug.h"
+
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -68,13 +70,13 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/ir_class_info.h"
 
-
 #include "clang/AST/StmtVisitor.h"
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
 #include <clang/AST/CXXInheritance.h>
 
-#include "clang/Basic/FileManager.h"
+#include <clang/Basic/FileManager.h>
+
 
 using namespace clang;
 using namespace insieme;
@@ -571,7 +573,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 
 	// we do NOT instantiate elidable ctors, this will be generated and ignored if needed by the
 	// back end compiler
-	if (callExpr->isElidable () ){
+	if (callExpr->isElidable () ){ 
+		// if is an elidable constructor, we should return a refvar, not what the parameters say
+		
+
 		return (Visit(callExpr->getArg (0)));
 	}
 
@@ -877,16 +882,17 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 		       // variable found in the map
 		       stmtList.push_back(fit->second);
 		}
-	 }
+	}
 
 	core::TypePtr lambdaType = convFact.convertType(cleanupExpr->getType().getTypePtr());
+	if (innerIR->getType() != lambdaType && !gen.isRef(lambdaType))  
+		innerIR = convFact.tryDeref(innerIR);
 	stmtList.push_back(convFact.builder.returnStmt(innerIR));
 
 	//build the lambda and its parameters
 	core::StatementPtr&& lambdaBody = convFact.builder.compoundStmt(stmtList);
 	vector<core::VariablePtr> params = core::analysis::getFreeVariables(lambdaBody);
 	core::LambdaExprPtr lambda = convFact.builder.lambdaExpr(lambdaType, lambdaBody, params);
-
 
 	//build the lambda call and its arguments
 	vector<core::ExpressionPtr> packedArgs;
@@ -895,6 +901,13 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 	});
 	core::ExpressionPtr irNode = convFact.builder.callExpr(lambdaType, lambda, packedArgs);
 
+
+//	std::cout << "=========================\n";
+//	std::cout << "*******************\n";
+//	cleanupExpr->dump();
+//	std::cout << "*******************\n";
+//	dumpPretty(irNode);
+//	std::cout << "=========================\n";
 	return irNode;
 }
 
@@ -904,8 +917,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTemporaryExpr(
 																const clang::MaterializeTemporaryExpr* materTempExpr) {
 
-
-	core::ExpressionPtr expr =  Visit(materTempExpr->GetTemporaryExpr());
+	core::ExpressionPtr inner =  Visit(materTempExpr->GetTemporaryExpr());
 //	core::ExpressionPtr ptr;
 //	if (expr.isa<core::CallExprPtr>() &&
 //		(ptr = expr.as<core::CallExprPtr>().getFunctionExpr()).isa<core::LambdaExprPtr>() && 
@@ -915,8 +927,11 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTempora
 //	}
 //	else 
 
-	return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), expr);
-
+	// is a left side value, no need to materialize. has being handled by a temporary expression
+	if(IS_CPP_REF_EXPR(inner) || gen.isRef(inner->getType()))
+		return inner;
+	else
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), inner);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

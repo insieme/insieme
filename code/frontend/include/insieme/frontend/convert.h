@@ -68,6 +68,10 @@ typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
 #define GET_TYPE_PTR(type) (type)->getType().getTypePtr()
 
+#define IS_CPP_REF_TYPE(ty) \
+	(core::analysis::isCppRef(ty) || \
+	core::analysis::isConstCppRef(ty))
+
 #define IS_CPP_REF_EXPR(expr) \
 	(core::analysis::isCppRef(expr->getType()) || \
 	core::analysis::isConstCppRef(expr->getType() ))

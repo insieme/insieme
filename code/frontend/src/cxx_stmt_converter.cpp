@@ -40,6 +40,7 @@
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/frontend/utils/debug.h"
 
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -163,14 +164,28 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 	// if is a ref: no cast, if is a const ref, there is a Nop cast to qualify
 
 	core::TypePtr funcRetTy = convFact.convertType(retStmt->getRetValue()->getType().getTypePtr());
+
+
+	std::cout << " return stmt " << std::endl;
+	retStmt->dump();
+	std::cout << " ret: " << retExpr << std::endl;
+	std::cout << " type:     " << retExpr->getType() << std::endl;
+	std::cout << " expected: " << funcRetTy << std::endl;
+
 	// we only operate this on classes
 	clang::CastExpr* cast;
 	clang::CXXConstructExpr* ctorExpr;
 	if ((cast = llvm::dyn_cast<clang::CastExpr>(retStmt->getRetValue())) != NULL){
 		switch(cast->getCastKind () ){
-			case CK_NoOp : // make constant?
+			case CK_NoOp : // make constant
 	
-				retExpr =  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retExpr);
+				if (core::analysis::isCppRef(retExpr->getType())){
+					retExpr =  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), retExpr);
+				}
+				else if (!core::analysis::isConstCppRef(retExpr->getType())){
+					retExpr =  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retExpr);
+				}
+
 				break;
 			case CK_LValueToRValue: //deref, not a ref
 			default:
@@ -178,39 +193,119 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 		}
 	}
 	else if ((ctorExpr = llvm::dyn_cast<clang::CXXConstructExpr>(retStmt->getRetValue())) != NULL){
+		// of the first node after a return is a constructor, copy constructor
+		// we are returning a value.
+		retStmt->dump();
+		
+		std::cout << retExpr<< std::endl;
+		std::cout << retExpr->getType()<< std::endl;
+
+		// behind a return we might find a constructor, it might be elidable or not, but we DO NOT
+		// call a constructor on return in any case
+		if (retExpr->getNodeType() == core::NT_CallExpr){
+			if (const core::FunctionTypePtr& ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>()){
+				if(ty.isConstructor()){
+					std::cout << "** removing ctor" << std::endl;
+					retExpr = retExpr.as<core::CallExprPtr>()->getArgument(1); // second argument is the copyed obj
+				}
+			}
+		}
 
 		// fist of all, have a look of what is behind the deRef
 		if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
+			std::cout << "** derefing" << std::endl;
 			retExpr = retExpr.as<core::CallExprPtr>()[0];
 		}
 
-		auto ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>();
-		if (ty.isConstructor()){
+		std::cout << retExpr<< std::endl;
+		std::cout << retExpr->getType()<< std::endl;
 
-			// copy ctor, what we actualy want to return is the second param (first is placeholder)
-			// if it turns to be a cpp ref, we do not need to do so
-			// but it might be that the variable is a ref, so is safer to deref it.
-			retExpr = retExpr.as<core::CallExprPtr>()[1];
-			if (core::analysis::isCppRef(retExpr->getType())) {
-				retExpr =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), retExpr));
-			}
-			else if (core::analysis::isConstCppRef(retExpr->getType())) {
-				retExpr =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), 
-															retExpr));
+		if(IS_CPP_REF_EXPR(retExpr)){
+			// we are returning a value, peel out the reference, or deref it
+			if (core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp()) || 
+				core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp()))
+				retExpr = retExpr.as<core::CallExprPtr>()->getArgument(0);
+			else{
+				if (core::analysis::isCppRef(retExpr->getType())){
+					retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), retExpr);
+				}
+				else if (core::analysis::isConstCppRef(retExpr->getType())){
+					retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), retExpr);
+				}
 			}
 		}
+		// this case is by value
+		retExpr = builder.deref(retExpr);
+
+		std::cout << retExpr<< std::endl;
+		std::cout << retExpr->getType()<< std::endl;
+
+		//if (retExpr->getNodeType() == core::NT_CallExpr){
+		//	assert(false && "this code is not longed suposed to be used");
+		//	const core::FunctionTypePtr& ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>();
+		//	if (ty.isConstructor()){
+
+		//		// copy ctor, what we actualy want to return is the second param (first is placeholder)
+		//		// if it turns to be a cpp ref, we do not need to do so
+		//		// but it might be that the variable is a ref, so is safer to deref it.
+		//		retExpr = retExpr.as<core::CallExprPtr>()[1];
+		//		if (core::analysis::isCppRef(retExpr->getType())) {
+		//			retExpr =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), retExpr));
+		//		}
+		//		else if (core::analysis::isConstCppRef(retExpr->getType())) {
+		//			retExpr =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), 
+		//														retExpr));
+		//		}
+		//	}
+		//}
 	}
 	else{
+
+		std::cout << "========= LAST ========================" << std::endl;
+			
+		std::cout << retExpr << std::endl;
+
 		// not a cast, it is a ref then... only if not array
 		if (!core::analysis::isCallOf(retExpr,mgr.getLangBasic().getScalarToArray()) &&
-			!core::analysis::isCppRef(retExpr->getType())) {
+			!IS_CPP_REF_EXPR(retExpr)){
 				retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retExpr);
 		}
+
+		std::cout << retExpr << std::endl;
+		
+
+		std::cout << "========= LAST ========================" << std::endl;
+//	// FIXME: solve the issue with the deref of this (return *this;)
+//	core::ExpressionPtr myThis  = builder.literal("this", builder.refType(funcRetTy));
+//	core::ExpressionPtr retThis = builder.callExpr(gen.getScalarToArray(), myThis);
+//	std::cout << "#####################################" << std::endl;
+//	retStmt->dump();
+//	std::cout << myThis  << std::endl;
+//	std::cout << myThis->getType()  << std::endl;
+//	std::cout << retThis << std::endl;
+//	std::cout << retExpr << std::endl;
+//	core::ExpressionPtr refed = builder.callExpr( builder.refType(myThis->getType()), builder.getLangBasic().getArrayRefElem1D(), retThis, builder.uintLit(0));
+//	std::cout << refed << std::endl;
+//	if(*refed == *retExpr){
+//	std::cout << "#####################################" << std::endl;
+//	retExpr = myThis;
+//	}
+
+//		else if(gen.isRef(retExpr->getType()) && !gen.isRef(funcRetTy)){
+//			retExpr = builder.deref(retExpr);
+//		}
 	}
+
 
 	stmtList.push_back(builder.returnStmt(retExpr));
 	core::StatementPtr retStatement = builder.compoundStmt(stmtList);
 	stmt = stmtutils::tryAggregateStmts(builder,stmtList );
+
+	std::cout << "=====================================" << std::endl;
+	dumpPretty(funcRetTy);
+	retStmt->dump();
+	dumpPretty(retExpr);
+	std::cout << "=====================================" << std::endl;
 
 	return stmt;
 }
