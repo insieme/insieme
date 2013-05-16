@@ -943,13 +943,19 @@ namespace core {
 	 * a type. Named types are the components named composite types (structs and unions)
 	 * are build form.
 	 */
-	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, Entries, Parents, NamedType)
+	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, Entries, StringValue, Parents, NamedType)
+
+		/**
+		 * Obtains the name of this type - might be empty. Names can be used to distinguish
+		 * structurally identical types.
+		 */
+		IR_NODE_PROPERTY(StringValue, Name, 0);
 
 		/**
 		 * Obtains the list of parent classes associated to this named composite type (for unions
 		 * this list shell always be empty).
 		 */
-		IR_NODE_PROPERTY(Parents, Parents, 0);
+		IR_NODE_PROPERTY(Parents, Parents, 1);
 
 		/**
 		 * Retrieves the named type entry referencing the given member name within this
@@ -1057,18 +1063,32 @@ namespace core {
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
-			out << "struct";
-			if (!getParents()->empty()) {
-				out << " : [" << join(", ", getParents(), print<deref<ParentPtr>>()) << "] ";
-			}
-			return out << "<" << join(",",getEntries(), print<deref<NodePtr>>()) << ">";
-		}
+		virtual std::ostream& printTo(std::ostream& out) const;
 
 	public:
 
 		/**
 		 * A factory method allowing to obtain a pointer to a struct type representing
+		 * an instance managed by the given manager.
+		 *
+		 * @param manager the manager which should be responsible for maintaining the new
+		 * 				  type instance and all its referenced elements.
+		 * @param name the name of the resulting struct type
+		 * @param parents the list of parent types to be referenced by the resulting struct
+		 * @param entries the list of entries the new type should consist of
+		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
+		static StructTypePtr get(NodeManager& manager, const StringValuePtr& name, const ParentsPtr& parents, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
+			NodeList children;
+			children.push_back(name);
+			children.push_back(parents);
+			children.insert(children.end(), entries.begin(), entries.end());
+			return manager.get(StructType(children));
+		}
+
+		/**
+		 * A factory method allowing to obtain a pointer to an unnamed struct type representing
 		 * an instance managed by the given manager.
 		 *
 		 * @param manager the manager which should be responsible for maintaining the new
@@ -1079,14 +1099,26 @@ namespace core {
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
 		static StructTypePtr get(NodeManager& manager, const ParentsPtr& parents, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
-			NodeList children;
-			children.push_back(parents);
-			children.insert(children.end(), entries.begin(), entries.end());
-			return manager.get(StructType(children));
+			return get(manager, StringValue::get(manager, ""), parents, entries);
 		}
 
 		/**
-		 * A factory method allowing to obtain a pointer to a struct type representing
+		 * A factory method allowing to obtain a pointer to a named struct type representing
+		 * an instance managed by the given manager.
+		 *
+		 * @param manager the manager which should be responsible for maintaining the new
+		 * 				  type instance and all its referenced elements.
+		 * @param name the name of the resulting struct type
+		 * @param entries the list of entries the new type should consist of
+		 * @return a pointer to a instance of the requested type. Multiple requests using
+		 * 		   the same parameters will lead to pointers addressing the same instance.
+		 */
+		static StructTypePtr get(NodeManager& manager, const StringValuePtr& name, const vector<NamedTypePtr>& entries = vector<NamedTypePtr>()) {
+			return get(manager, name, Parents::get(manager), entries);
+		}
+
+		/**
+		 * A factory method allowing to obtain a pointer to an unnamed struct type representing
 		 * an instance managed by the given manager.
 		 *
 		 * @param manager the manager which should be responsible for maintaining the new
@@ -1139,6 +1171,7 @@ namespace core {
 		 */
 		static UnionTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries) {
 			NodeList children;
+			children.push_back(StringValue::get(manager, ""));
 			children.push_back(Parents::get(manager));
 			children.insert(children.end(), entries.begin(), entries.end());
 			return manager.get(UnionType(children));

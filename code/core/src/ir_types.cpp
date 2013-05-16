@@ -109,6 +109,18 @@ namespace core {
 	}
 
 
+	std::ostream& StructType::printTo(std::ostream& out) const {
+		out << "struct";
+		if (!getName()->getValue().empty()) {
+			out << " " << *getName();
+			if (getParents()->empty()) out << " ";
+		}
+		if (!getParents()->empty()) {
+			out << " : [" << join(", ", getParents(), print<deref<ParentPtr>>()) << "] ";
+		}
+		return out << "<" << join(",",getEntries(), print<deref<NodePtr>>()) << ">";
+	}
+
 
 	namespace {
 
@@ -164,7 +176,7 @@ namespace core {
 		void checkForNameCollisions(const vector<NamedTypePtr>& elements) {
 
 			// get projection to the name
-			auto start = boost::make_transform_iterator(elements.begin(), name_extractor()) + 1;
+			auto start = boost::make_transform_iterator(elements.begin(), name_extractor()) + 2;
 			auto end = boost::make_transform_iterator(elements.end(), name_extractor());
 
 			if (hasDuplicates(start, end)) { // nice way using projections => but crashes in GCC
