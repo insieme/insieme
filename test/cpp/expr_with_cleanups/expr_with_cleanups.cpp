@@ -1,6 +1,5 @@
 #include <stdio.h>
 
-//int globalVar;
 
 class C {
 public:
@@ -10,8 +9,6 @@ public:
 	C() : mA(0) {
 		printf("C()");
 		printf("mA 0 == %d\n", mA);
-//		globalVar=1;
-		//printf("globalVar 1 == %d\n", globalVar);
 	}
 
 	// copy ctor
@@ -21,9 +18,9 @@ public:
 		printf("mA==c.mA -- %d == %d\n", mA, c.mA);
 	}
 
-	~C() { printf("~C()"); }
+	~C() { printf("~C()\n"); }
 
-	void mF() { printf("mF()"); }
+	void mF() { printf("mF()\n"); }
 };
 
 C f(void) {
@@ -34,9 +31,9 @@ C f(void) {
 int main() {
 
 	C c = f();
-/*	
+
 	f().mF();
-	printf("f().mC 2 == %d\n", f().mC);
-*/	
+	printf("f().mA 2 == %d\n", f().mA);
+	
 	return 0;
 }

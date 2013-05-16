@@ -257,7 +257,6 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		assert(*inductionVar->getType() == *builder.deref(itUseVar)->getType() && "different induction var types");
 
-		stmtutils::StmtWrapper body;
 		if (core::analysis::isReadOnly(builder.compoundStmt(stmtsOld), itUseVar)) {
 			// convert iterator variable into read-only value
 			auto deref = builder.deref(itUseVar);
@@ -276,33 +275,15 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 				});
 			}
 		} else {
-			// TODO: in this case, you might even think about convering this loop into a while loop
-			// materialize iterator variable and process body using mutable variable
-			core::DeclarationStmtPtr itDecl =  builder.declarationStmt (itUseVar, builder.refVar(inductionVar));
-			stmtsOld.insert (stmtsOld.begin(), itDecl);
+			//if the inductionVar is materialized into the itUseVar, the changes are not on the inductionVar 
+			//example: for(int i;...;i++) { i++; } the increment in the loop body is lost
+			
+			//if the inductionvar is not readonly convert into while 
+			throw analysis::InductionVariableNotReadOnly();
 		}
 
 		// build body
-		body = stmtutils::tryAggregateStmts(builder, stmtsOld);
-
-//		for (core::StatementPtr& curr : stmtsOld){
-//			if (core::analysis::isReadOnly(curr, itUseVar)){
-//				auto deref = builder.deref(itUseVar);
-//				// replace read uses
-//				curr = core::transform::replaceAllGen (mgr, curr, deref, inductionVar, true);
-//				// this variables might apear in annotations inside:
-//				core::visitDepthFirstOnce (curr, [&] (const core::StatementPtr& node){
-//					//if we have a OMP annotation
-//					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
-//						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
-//						anno->replaceUsage (deref, inductionVar);
-//					}
-//				});
-//			}
-////			else
-////				throw analysis::InductionVariableNotReadOnly();
-//		}
-//		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsOld);
+		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsOld);
 
 		core::ExpressionPtr incExpr  = loopAnalysis.getIncrExpr();
 		incExpr = utils::castScalar(inductionVar->getType(), incExpr);

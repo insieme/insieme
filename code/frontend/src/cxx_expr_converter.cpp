@@ -48,6 +48,8 @@
 #include "insieme/frontend/utils/ir++_utils.h"
 #include "insieme/frontend/utils/castTool.h"
 
+#include "insieme/frontend/utils/debug.h"
+
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -68,13 +70,13 @@
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/ir_class_info.h"
 
-
 #include "clang/AST/StmtVisitor.h"
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
 #include <clang/AST/CXXInheritance.h>
 
-#include "clang/Basic/FileManager.h"
+#include <clang/Basic/FileManager.h>
+
 
 using namespace clang;
 using namespace insieme;
@@ -571,7 +573,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 
 	// we do NOT instantiate elidable ctors, this will be generated and ignored if needed by the
 	// back end compiler
-	if (callExpr->isElidable () ){
+	if (callExpr->isElidable () ){ 
+		// if is an elidable constructor, we should return a refvar, not what the parameters say
+		
+
 		return (Visit(callExpr->getArg (0)));
 	}
 
@@ -820,38 +825,36 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDefaultArgExpr(
 //					CXX Bind Temporary expr
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryExpr(const clang::CXXBindTemporaryExpr* bindTempExpr) {
+	const clang::CXXTemporary* temp = bindTempExpr->getTemporary();
 
+	// we may visit the BindTemporaryExpr twice. Once in the temporary lookup and
+	// then when we visit the subexpr of the expression with cleanups. If this is the second time that we
+	// visit the expr do not create a new declaration statement and just return the previous one.
+	ConversionFactory::ConversionContext::TemporaryInitMap::const_iterator fit = convFact.ctx.tempInitMap.find(temp);
+	if (fit != convFact.ctx.tempInitMap.end()) {
+	// variable found in the map
+	return(fit->second.getVariable());
+	}
 
-	 const clang::CXXTemporary* temp = bindTempExpr->getTemporary();
+	const clang::CXXDestructorDecl* dtorDecl = temp->getDestructor();
+	const clang::CXXRecordDecl* classDecl = dtorDecl->getParent();
 
-	 // we may visit the BindTemporaryExpr twice. Once in the temporary lookup and
-	 // then when we visit the subexpr of the expression with cleanups. If this is the second time that we
-	 // visit the expr do not create a new declaration statement and just return the previous one.
-	 ConversionFactory::ConversionContext::TemporaryInitMap::const_iterator fit = convFact.ctx.tempInitMap.find(temp);
-	 if (fit != convFact.ctx.tempInitMap.end()) {
-		// variable found in the map
-		return(fit->second.getVariable());
-	 }
+	core::TypePtr&& irType = convFact.convertType(classDecl->getTypeForDecl());
 
-	 const clang::CXXDestructorDecl* dtorDecl = temp->getDestructor();
-	 const clang::CXXRecordDecl* classDecl = dtorDecl->getParent();
+	// create a new var for the temporary and initialize it with the inner expr IR
+	const clang::Expr * inner = bindTempExpr->getSubExpr();
+	core::ExpressionPtr body = convFact.convertExpr(inner);
+	if (!gen.isRef(body->getType()))
+		body = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), body);
 
-	 core::TypePtr&& irType = convFact.convertType(classDecl->getTypeForDecl());
+	core::DeclarationStmtPtr declStmt;
 
+	declStmt = convFact.builder.declarationStmt(convFact.builder.refType(irType),(body));
 
-	 // create a new var for the temporary and initialize it with the inner expr IR
-	 const clang::Expr * inner = bindTempExpr->getSubExpr();
-	 core::ExpressionPtr body = convFact.convertExpr(inner);
+	// store temporary and declaration stmt in Map
+	convFact.ctx.tempInitMap.insert(std::make_pair(temp,declStmt));
 
-	 core::DeclarationStmtPtr declStmt;
-
-	  declStmt = convFact.builder.declarationStmt(convFact.builder.refType(irType),(body));
-
-	 // store temporary and declaration stmt in Map
-	 convFact.ctx.tempInitMap.insert(std::make_pair(temp,declStmt));
-
-	 return declStmt.getVariable();
-
+	return declStmt.getVariable();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -877,16 +880,24 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 		       // variable found in the map
 		       stmtList.push_back(fit->second);
 		}
-	 }
+	}
 
 	core::TypePtr lambdaType = convFact.convertType(cleanupExpr->getType().getTypePtr());
-	stmtList.push_back(convFact.builder.returnStmt(innerIR));
+	if (innerIR->getType() != lambdaType && !gen.isRef(lambdaType))  
+		innerIR = convFact.tryDeref(innerIR);
+
+	// if the expression does not return anything, do not add return stmt
+	if (gen.isUnit(innerIR->getType())){
+		stmtList.push_back(innerIR);
+	}
+	else{
+		stmtList.push_back(convFact.builder.returnStmt(innerIR));
+	}
 
 	//build the lambda and its parameters
 	core::StatementPtr&& lambdaBody = convFact.builder.compoundStmt(stmtList);
 	vector<core::VariablePtr> params = core::analysis::getFreeVariables(lambdaBody);
 	core::LambdaExprPtr lambda = convFact.builder.lambdaExpr(lambdaType, lambdaBody, params);
-
 
 	//build the lambda call and its arguments
 	vector<core::ExpressionPtr> packedArgs;
@@ -894,7 +905,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 		 packedArgs.push_back(varPtr);
 	});
 	core::ExpressionPtr irNode = convFact.builder.callExpr(lambdaType, lambda, packedArgs);
-
 	return irNode;
 }
 
@@ -904,8 +914,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTemporaryExpr(
 																const clang::MaterializeTemporaryExpr* materTempExpr) {
 
-
-	core::ExpressionPtr expr =  Visit(materTempExpr->GetTemporaryExpr());
+	core::ExpressionPtr inner =  Visit(materTempExpr->GetTemporaryExpr());
 //	core::ExpressionPtr ptr;
 //	if (expr.isa<core::CallExprPtr>() &&
 //		(ptr = expr.as<core::CallExprPtr>().getFunctionExpr()).isa<core::LambdaExprPtr>() && 
@@ -915,8 +924,11 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTempora
 //	}
 //	else 
 
-	return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), expr);
-
+	// is a left side value, no need to materialize. has being handled by a temporary expression
+	if(IS_CPP_REF_EXPR(inner) || gen.isRef(inner->getType()))
+		return inner;
+	else
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), inner);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
