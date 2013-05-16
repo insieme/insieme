@@ -825,38 +825,36 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDefaultArgExpr(
 //					CXX Bind Temporary expr
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryExpr(const clang::CXXBindTemporaryExpr* bindTempExpr) {
+	const clang::CXXTemporary* temp = bindTempExpr->getTemporary();
 
+	// we may visit the BindTemporaryExpr twice. Once in the temporary lookup and
+	// then when we visit the subexpr of the expression with cleanups. If this is the second time that we
+	// visit the expr do not create a new declaration statement and just return the previous one.
+	ConversionFactory::ConversionContext::TemporaryInitMap::const_iterator fit = convFact.ctx.tempInitMap.find(temp);
+	if (fit != convFact.ctx.tempInitMap.end()) {
+	// variable found in the map
+	return(fit->second.getVariable());
+	}
 
-	 const clang::CXXTemporary* temp = bindTempExpr->getTemporary();
+	const clang::CXXDestructorDecl* dtorDecl = temp->getDestructor();
+	const clang::CXXRecordDecl* classDecl = dtorDecl->getParent();
 
-	 // we may visit the BindTemporaryExpr twice. Once in the temporary lookup and
-	 // then when we visit the subexpr of the expression with cleanups. If this is the second time that we
-	 // visit the expr do not create a new declaration statement and just return the previous one.
-	 ConversionFactory::ConversionContext::TemporaryInitMap::const_iterator fit = convFact.ctx.tempInitMap.find(temp);
-	 if (fit != convFact.ctx.tempInitMap.end()) {
-		// variable found in the map
-		return(fit->second.getVariable());
-	 }
+	core::TypePtr&& irType = convFact.convertType(classDecl->getTypeForDecl());
 
-	 const clang::CXXDestructorDecl* dtorDecl = temp->getDestructor();
-	 const clang::CXXRecordDecl* classDecl = dtorDecl->getParent();
+	// create a new var for the temporary and initialize it with the inner expr IR
+	const clang::Expr * inner = bindTempExpr->getSubExpr();
+	core::ExpressionPtr body = convFact.convertExpr(inner);
+	if (!gen.isRef(body->getType()))
+		body = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), body);
 
-	 core::TypePtr&& irType = convFact.convertType(classDecl->getTypeForDecl());
+	core::DeclarationStmtPtr declStmt;
 
+	declStmt = convFact.builder.declarationStmt(convFact.builder.refType(irType),(body));
 
-	 // create a new var for the temporary and initialize it with the inner expr IR
-	 const clang::Expr * inner = bindTempExpr->getSubExpr();
-	 core::ExpressionPtr body = convFact.convertExpr(inner);
+	// store temporary and declaration stmt in Map
+	convFact.ctx.tempInitMap.insert(std::make_pair(temp,declStmt));
 
-	 core::DeclarationStmtPtr declStmt;
-
-	  declStmt = convFact.builder.declarationStmt(convFact.builder.refType(irType),(body));
-
-	 // store temporary and declaration stmt in Map
-	 convFact.ctx.tempInitMap.insert(std::make_pair(temp,declStmt));
-
-	 return declStmt.getVariable();
-
+	return declStmt.getVariable();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -887,7 +885,13 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 	core::TypePtr lambdaType = convFact.convertType(cleanupExpr->getType().getTypePtr());
 	if (innerIR->getType() != lambdaType && !gen.isRef(lambdaType))  
 		innerIR = convFact.tryDeref(innerIR);
-	stmtList.push_back(convFact.builder.returnStmt(innerIR));
+
+	if (gen.isUnit(innerIR->getType())){
+		stmtList.push_back(innerIR);
+	}
+	else{
+		stmtList.push_back(convFact.builder.returnStmt(innerIR));
+	}
 
 	//build the lambda and its parameters
 	core::StatementPtr&& lambdaBody = convFact.builder.compoundStmt(stmtList);
@@ -902,12 +906,11 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 	core::ExpressionPtr irNode = convFact.builder.callExpr(lambdaType, lambda, packedArgs);
 
 
-//	std::cout << "=========================\n";
-//	std::cout << "*******************\n";
-//	cleanupExpr->dump();
-//	std::cout << "*******************\n";
-//	dumpPretty(irNode);
-//	std::cout << "=========================\n";
+	std::cout << "=========================   CLEANUPS =====================\n";
+	dumpPretty(lambdaBody);
+	cleanupExpr->dump();
+	dumpPretty(irNode);
+	std::cout << "=========================   CLEANUPS =====================\n";
 	return irNode;
 }
 

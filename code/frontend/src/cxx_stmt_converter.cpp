@@ -75,6 +75,13 @@ namespace conversion {
 // 			In clang a declstmt is represented as a list of VarDecl
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
+
+// TODO: we might initialize a variable with the coppy constructor, in this case, it will pressent a
+// different shape
+
+	std::cout << " ***** INIT ****** " << std::endl;
+	declStmt->dump();
+
 	return StmtConverter::VisitDeclStmt(declStmt);
 
 	/*
@@ -175,7 +182,10 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 	// we only operate this on classes
 	clang::CastExpr* cast;
 	clang::CXXConstructExpr* ctorExpr;
+	clang::ExprWithCleanups*  cleanups;
 	if ((cast = llvm::dyn_cast<clang::CastExpr>(retStmt->getRetValue())) != NULL){
+		std::cout << "========= with cast ========================" << std::endl;
+
 		switch(cast->getCastKind () ){
 			case CK_NoOp : // make constant
 	
@@ -191,8 +201,12 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 			default:
 				break;
 		}
+	std::cout << " ret: " << retExpr << std::endl;
+		std::cout << "========= with cast ========================" << std::endl;
 	}
 	else if ((ctorExpr = llvm::dyn_cast<clang::CXXConstructExpr>(retStmt->getRetValue())) != NULL){
+		std::cout << "========= with constructor =====================" << std::endl;
+
 		// of the first node after a return is a constructor, copy constructor
 		// we are returning a value.
 		retStmt->dump();
@@ -240,28 +254,14 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 		std::cout << retExpr<< std::endl;
 		std::cout << retExpr->getType()<< std::endl;
 
-		//if (retExpr->getNodeType() == core::NT_CallExpr){
-		//	assert(false && "this code is not longed suposed to be used");
-		//	const core::FunctionTypePtr& ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>();
-		//	if (ty.isConstructor()){
-
-		//		// copy ctor, what we actualy want to return is the second param (first is placeholder)
-		//		// if it turns to be a cpp ref, we do not need to do so
-		//		// but it might be that the variable is a ref, so is safer to deref it.
-		//		retExpr = retExpr.as<core::CallExprPtr>()[1];
-		//		if (core::analysis::isCppRef(retExpr->getType())) {
-		//			retExpr =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), retExpr));
-		//		}
-		//		else if (core::analysis::isConstCppRef(retExpr->getType())) {
-		//			retExpr =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), 
-		//														retExpr));
-		//		}
-		//	}
-		//}
+		std::cout << "========= with constructor =====================" << std::endl;
+	}
+	else if ((cleanups= llvm::dyn_cast<clang::ExprWithCleanups>(retStmt->getRetValue())) != NULL){
+		std::cout << "========= cleanups ========================" << std::endl;
 	}
 	else{
 
-		std::cout << "========= LAST ========================" << std::endl;
+		std::cout << "========= ref ========================" << std::endl;
 			
 		std::cout << retExpr << std::endl;
 
@@ -274,7 +274,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 		std::cout << retExpr << std::endl;
 		
 
-		std::cout << "========= LAST ========================" << std::endl;
+		std::cout << "========= ref ========================" << std::endl;
 //	// FIXME: solve the issue with the deref of this (return *this;)
 //	core::ExpressionPtr myThis  = builder.literal("this", builder.refType(funcRetTy));
 //	core::ExpressionPtr retThis = builder.callExpr(gen.getScalarToArray(), myThis);
