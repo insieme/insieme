@@ -694,49 +694,40 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(cons
 
 	core::ExpressionPtr retExpr;
 	core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
+	core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr());
+
+	core::ExpressionPtr dtor;
+	if( core::hasMetaInfo(desTy)){
+		const core::ClassMetaInfo& info = core::getMetaInfo (desTy);
+		if (!info.hasDestructor())
+			assert(false && "empty dtor should be synthetized by cxx_type_convert");
+		dtor = info.getDestructor();
+	}
 
 	if (deleteExpr->isArrayForm () ){
 
 		// we need to call arratDtor, with the object, refdelete and the dtorFunc
-		core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr());
-		if( core::hasMetaInfo(desTy)){
-			const core::ClassMetaInfo& info = core::getMetaInfo (desTy);
-			assert(!info.isDestructorVirtual() && "no virtual dtor allowed for array dtor");
-
-			core::ExpressionPtr dtor;
-			if (info.hasDestructor())
-				dtor = info.getDestructor();
-			else{
-				// build a fake default dtor
-				// FIXME: this is just a work around, it might not be correct with base clases
-				auto thisVar = builder.variable(builder.refType(desTy));
-				core::VariableList paramList;
-				paramList.push_back( thisVar);
-
-				auto newFunctionType = builder.functionType(core::extractTypes(paramList), 
-															builder.refType(desTy),
-															core::FK_DESTRUCTOR);
-
-				vector<core::StatementPtr> stmtList;
-				dtor =  builder.lambdaExpr (newFunctionType, paramList, builder.compoundStmt(stmtList));
-			}
+		if(dtor){
+			assert(!core::getMetaInfo(desTy).isDestructorVirtual() && "no virtual dtor allowed for array dtor");
 		
 			std::vector<core::ExpressionPtr> args;
 			args.push_back(exprToDelete);
 			args.push_back( builder.getLangBasic().getRefDelete());
 			args.push_back( dtor);
-
 			retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayDtor(), args);
 		}
 		else{
 			// this is a built in type, we need to build a empty dtor with the right type
-			// FIXME: is backend does not reproduce the right operator we might have memory leaks
-			// maybe is better to call arraydtor with a fake dtor
 			retExpr = builder.callExpr ( builder.getLangBasic().getRefDelete(), exprToDelete);
 		}
 	}
 	else{
-		retExpr = builder.callExpr ( builder.getLangBasic().getRefDelete(), exprToDelete);
+		if(dtor){
+			retExpr = builder.callExpr ( builder.getLangBasic().getRefDelete(), builder.callExpr(dtor, toVector(exprToDelete)));
+		}
+		else{
+			retExpr = builder.callExpr ( builder.getLangBasic().getRefDelete(), exprToDelete);
+		}
 	}
 		
 	END_LOG_EXPR_CONVERSION(retExpr);

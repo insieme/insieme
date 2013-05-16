@@ -154,6 +154,17 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
 				classInfo.setDestructorVirtual();
 		}
+		else {
+			//no dtor, build an empty one
+			core::VariableList params;
+			core::TypePtr     retType = builder.refType(classType);
+			core::VariablePtr thisVar = builder.variable(retType);
+			params.push_back(thisVar);
+			core::FunctionTypePtr newFunctionType = builder.functionType(toVector(retType), retType, core::FK_DESTRUCTOR);
+			core::ExpressionPtr&& dtorLambda = builder.lambdaExpr (newFunctionType, params, builder.compoundStmt());
+			classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
+		}
+
 
 		//~~~~~ member functions ~~~~~
 		clang::CXXRecordDecl::method_iterator methodIt = classDecl->method_begin();
