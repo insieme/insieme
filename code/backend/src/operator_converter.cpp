@@ -547,6 +547,13 @@ namespace backend {
 			// ensure correct type
 			assert(core::analysis::hasRefType(ARG(0)) && "Cannot free a non-ref type!");
 
+			// handle destructor call
+			if (core::CallExprPtr dtorCall = ARG(0).isa<core::CallExprPtr>()) {
+				if (dtorCall->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isDestructor()) {
+					return c_ast::deleteCall(CONVERT_EXPR(dtorCall[0]));
+				}
+			}
+
 			// add dependency to stdlib.h (contains the free)
 			ADD_HEADER_FOR("free");
 
