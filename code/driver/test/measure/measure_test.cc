@@ -258,12 +258,12 @@ namespace measure {
 				"	};"
 				"	"
 				"	ref<int<4>> res = var(0);"
-				"	$for(int<4> i = 1 .. 5000) {"
-				"		$for(int<4> j = 1 .. 5000) {"
+				"	$for(int<4> i = 0 .. 5000) {"
+				"		$for(int<4> j = 0 .. 5000) {"
 				"			res = res + load(100000);"
 				"		}$"
-				"		$for(int<4> k = 1 .. 50) {"
-				"			$for(int<4> l = 1 .. 100) {"
+				"		$for(int<4> k = 0 .. 50) {"
+				"			$for(int<4> l = 0 .. 100) {"
 				"				res = res + load(100000);"
 				"			}$"
 				"		}$"
@@ -286,7 +286,7 @@ namespace measure {
 //		std::cout << "\n------------------------ Root: \n"; dump(root);
 
 		// measure execution times
-		auto res = measure(toVector<StatementAddress>(root, forI, forJ, forK, forL), toVector(Metric::TOTAL_WALL_TIME, Metric::TOTAL_CPU_TIME));
+		auto res = measure(toVector<StatementAddress>(root, forI, forJ, forK, forL), toVector(Metric::TOTAL_WALL_TIME, Metric::TOTAL_CPU_TIME, Metric::TOTAL_NUM_EXEC));
 
 		// check whether data is valid
 		EXPECT_TRUE(res[root][Metric::TOTAL_WALL_TIME].isValid());
@@ -300,6 +300,12 @@ namespace measure {
 		EXPECT_TRUE(res[forJ][Metric::TOTAL_CPU_TIME].isValid());
 		EXPECT_TRUE(res[forK][Metric::TOTAL_CPU_TIME].isValid());
 		EXPECT_TRUE(res[forL][Metric::TOTAL_CPU_TIME].isValid());
+
+		EXPECT_TRUE(res[root][Metric::TOTAL_NUM_EXEC].isValid());
+		EXPECT_TRUE(res[forI][Metric::TOTAL_NUM_EXEC].isValid());
+		EXPECT_TRUE(res[forJ][Metric::TOTAL_NUM_EXEC].isValid());
+		EXPECT_TRUE(res[forK][Metric::TOTAL_NUM_EXEC].isValid());
+		EXPECT_TRUE(res[forL][Metric::TOTAL_NUM_EXEC].isValid());
 
 		// check whether data is not 0
 		EXPECT_LT(0.0, res[root][Metric::TOTAL_WALL_TIME].getValue());
@@ -315,6 +321,12 @@ namespace measure {
 		EXPECT_LT(0.0, res[forK][Metric::TOTAL_CPU_TIME].getValue());
 		EXPECT_LT(0.0, res[forL][Metric::TOTAL_CPU_TIME].getValue());
 
+		EXPECT_LT(0.0, res[root][Metric::TOTAL_NUM_EXEC].getValue());
+		EXPECT_LT(0.0, res[forI][Metric::TOTAL_NUM_EXEC].getValue());
+		EXPECT_LT(0.0, res[forJ][Metric::TOTAL_NUM_EXEC].getValue());
+		EXPECT_LT(0.0, res[forK][Metric::TOTAL_NUM_EXEC].getValue());
+		EXPECT_LT(0.0, res[forL][Metric::TOTAL_NUM_EXEC].getValue());
+
 		// root has to be the sum of the loops
 		EXPECT_GT(res[root][Metric::TOTAL_WALL_TIME], res[forI][Metric::TOTAL_WALL_TIME]);
 		EXPECT_GT(res[root][Metric::TOTAL_CPU_TIME], res[forI][Metric::TOTAL_CPU_TIME]);
@@ -326,6 +338,14 @@ namespace measure {
 		// loop K is bigger than L
 		EXPECT_GT(res[forK][Metric::TOTAL_WALL_TIME], res[forL][Metric::TOTAL_WALL_TIME]);
 		EXPECT_GT(res[forK][Metric::TOTAL_CPU_TIME], res[forL][Metric::TOTAL_CPU_TIME]);
+
+
+		// check number of executions
+		EXPECT_EQ(1, (int)res[root][Metric::TOTAL_NUM_EXEC].getValue());
+		EXPECT_EQ(1, (int)res[forI][Metric::TOTAL_NUM_EXEC].getValue());
+		EXPECT_EQ(5000, (int)res[forJ][Metric::TOTAL_NUM_EXEC].getValue());
+		EXPECT_EQ(5000, (int)res[forK][Metric::TOTAL_NUM_EXEC].getValue());
+		EXPECT_EQ(5000*50, (int)res[forL][Metric::TOTAL_NUM_EXEC].getValue());
 
 	}
 
