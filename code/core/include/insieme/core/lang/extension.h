@@ -43,6 +43,8 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/lang/lang.h"
+
 namespace insieme {
 namespace core {
 namespace lang {
@@ -178,6 +180,7 @@ namespace lang {
 				if (!expr_##NAME) { \
 					insieme::core::IRBuilder builder(getNodeManager()); \
 					expr_ ## NAME = builder.normalize(builder.parseExpr(SPEC)).as<insieme::core::ExpressionPtr>(); \
+					insieme::core::lang::markAsDerived(expr_ ## NAME, #NAME); \
 				} \
 				return expr_##NAME; \
 			} \

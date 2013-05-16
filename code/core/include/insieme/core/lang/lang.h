@@ -34,75 +34,50 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/core/lang/basic.h"
+/**
+ * A header for general definitions of language extensions.
+ */
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/checks/full_check.h"
+#include <string>
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
 
-	TEST(IRppExtensions, ArrayCtor) {
-		NodeManager nm;
+	using std::string;
 
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getArrayCtor();
-		dump(element);
+	/**
+	 * Checks whether the given construct is a derived construct within
+	 * any language extension. Derived constructs are annotated by a
+	 * corresponding annotation.
+	 *
+	 * @param node the node to be tested
+	 * @return true if the given node is marked as a derived construct, false otherwise
+	 */
+	bool isDerived(const NodePtr& node);
 
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-	}
+	/**
+	 * Extracts the name of the derived construct. If the given node
+	 * is not a derived node, the result is undefined (an assertion
+	 * in debug mode).
+	 *
+	 * @param node the node being a derived definition which needs to be named
+	 * @return the name attached to the given construct
+	 */
+	const string& getConstructName(const NodePtr& node);
 
-	TEST(IRppExtensions, VectorCtor) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getVectorCtor();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-		EXPECT_TRUE(isDerived(element));
-	}
-
-	TEST(IRppExtensions, ArrayDtor) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getArrayDtor();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-		EXPECT_TRUE(isDerived(element));
-	}
-
-	TEST(IRppExtensions, References) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-
-		// check all reference constructs
-		for(auto cur : {
-			ext.getRefCppToIR(),
-			ext.getRefIRToCpp(),
-			ext.getRefConstCppToIR(),
-			ext.getRefIRToConstCpp()
-		}) {
-			dump(cur);
-
-			// just check whether the code is not exhibiting errors
-			EXPECT_TRUE(checks::check(cur).empty()) << checks::check(cur);
-		}
-
-	}
-
+	/**
+	 * Marks the given construct as being a derived construct being named
+	 * accordingly.
+	 *
+	 * @param node the node to be marked as being derived
+	 * @param name the name of the the derived construct
+	 */
+	void markAsDerived(const NodePtr& node, const string& name);
 
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
-

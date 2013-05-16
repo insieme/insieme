@@ -122,11 +122,13 @@ TEST(LangBasic, DefinitionTest) {
 	EXPECT_TRUE(gen.is##id(gen.get##id())); \
 	EXPECT_TRUE(checks::check(gen.get##id()).empty()) << checks::check(gen.get##id());
 
-#define TYPE(_id, _spec) CHECK(_id)
-#define LITERAL(_id, _name, _spec) CHECK(_id)
+#define TYPE(_id, _spec) CHECK(_id); EXPECT_FALSE(isDerived(gen.get##_id()));
+#define LITERAL(_id, _name, _spec) CHECK(_id); EXPECT_FALSE(isDerived(gen.get##_id()));
+#define DERIVED(_id, _name, _code) CHECK(_id); EXPECT_TRUE(isDerived(gen.get##_id()));
 
 #include "insieme/core/lang/lang.def"
 
+#undef DERIVED
 #undef LITERAL
 #undef TYPE
 #undef CHECK
