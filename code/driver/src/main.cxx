@@ -229,7 +229,7 @@ namespace {
 				fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_MAX_DETAIL);
 				return;
 			}
-			std::cout << PrettyPrinter( program, PrettyPrinter::OPTIONS_DEFAULT );
+			std::cout << PrettyPrinter( program, PrettyPrinter::PRINT_DEREFS );
 		});
 
 		closeBox();

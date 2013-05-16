@@ -40,6 +40,7 @@
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/frontend/utils/debug.h"
 
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -75,61 +76,6 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
 	return StmtConverter::VisitDeclStmt(declStmt);
-
-	/*
-	// if there is only one declaration in the DeclStmt we return it
-
-	if (declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl())) {
-		stmtutils::StmtWrapper retList;
-		clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
-
-		try {
-			core::DeclarationStmtPtr&& retStmt = cxxConvFact.convertVarDecl(varDecl);
-
-			// check if there is a kernelFile annotation
-			ocl::attatchOclAnnotation(retStmt->getInitialization(), declStmt, cxxConvFact);
-			// handle eventual OpenMP pragmas attached to the Clang node
-			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, cxxConvFact) );
-
-			// convert the constructor of a class
-			if ( varDecl->getDefinition()->getInit() ) {
-				if(const clang::CXXConstructExpr* ctor =
-						dyn_cast<const clang::CXXConstructExpr>(varDecl->getDefinition()->getInit())
-				) {
-					if(!ctor->getType().getTypePtr()->isArrayType())
-						retList.push_back( cxxConvFact.convertExpr(ctor));
-				}
-				if(const clang::ExprWithCleanups* exprWithCleanups =
-						dyn_cast<const clang::ExprWithCleanups>(varDecl->getDefinition()->getInit()))
-				{
-					if(!GET_TYPE_PTR(varDecl)->isReferenceType())
-					{
-						retList.push_back( cxxConvFact.builder.compoundStmt(cxxConvFact.convertExpr(exprWithCleanups)));
-					}
-				}
-			}
-		} catch ( const GlobalVariableDeclarationException& err ) {
-			return stmtutils::StmtWrapper();
-		}
-
-		return retList;
-	}
-
-	// otherwise we create an an expression list which contains the multiple declaration inside the statement
-	stmtutils::StmtWrapper retList;
-	for (auto&& it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
-	if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
-		try {
-			assert(cxxConvFact.currTU&& "translation unit is null");
-			core::DeclarationStmtPtr&& retStmt = cxxConvFact.convertVarDecl(varDecl);
-			// handle eventual OpenMP pragmas attached to the Clang node
-			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, cxxConvFact) );
-
-		} catch ( const GlobalVariableDeclarationException& err ) {}
-	}
-
-	return retList;
-	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -152,25 +98,28 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 	if (gen.isPrimitive(retExpr->getType()))
 			return stmt;
 
-	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
-	// this is produced by the AST, but we should delegate this matters to the backend compiler
-	
-
 	// if the function returns references, we wont realize, there is no cast, and the inner
 	// expresion might have  no reference type
 	// if there is no copy constructor on return... it seems that this is the case in which a
 	// ref is returned
 	// if is a ref: no cast, if is a const ref, there is a Nop cast to qualify
-
 	core::TypePtr funcRetTy = convFact.convertType(retStmt->getRetValue()->getType().getTypePtr());
+
 	// we only operate this on classes
 	clang::CastExpr* cast;
 	clang::CXXConstructExpr* ctorExpr;
+	clang::ExprWithCleanups*  cleanups;
 	if ((cast = llvm::dyn_cast<clang::CastExpr>(retStmt->getRetValue())) != NULL){
 		switch(cast->getCastKind () ){
-			case CK_NoOp : // make constant?
+			case CK_NoOp : // make constant
 	
-				retExpr =  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retExpr);
+				if (core::analysis::isCppRef(retExpr->getType())){
+					retExpr =  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), retExpr);
+				}
+				else if (!core::analysis::isConstCppRef(retExpr->getType())){
+					retExpr =  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retExpr);
+				}
+
 				break;
 			case CK_LValueToRValue: //deref, not a ref
 			default:
@@ -178,32 +127,52 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 		}
 	}
 	else if ((ctorExpr = llvm::dyn_cast<clang::CXXConstructExpr>(retStmt->getRetValue())) != NULL){
+	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
+	// this is produced by the AST, but we should delegate this matters to the backend compiler
+	
+		// of the first node after a return is a constructor, copy constructor
+		// we are returning a value.
+		retStmt->dump();
+		
+		// behind a return we might find a constructor, it might be elidable or not, but we DO NOT
+		// call a constructor on return in any case
+		if (retExpr->getNodeType() == core::NT_CallExpr){
+			if (const core::FunctionTypePtr& ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>()){
+				if(ty.isConstructor()){
+					retExpr = retExpr.as<core::CallExprPtr>()->getArgument(1); // second argument is the copyed obj
+				}
+			}
+		}
 
 		// fist of all, have a look of what is behind the deRef
 		if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
 			retExpr = retExpr.as<core::CallExprPtr>()[0];
 		}
 
-		auto ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>();
-		if (ty.isConstructor()){
-
-			// copy ctor, what we actualy want to return is the second param (first is placeholder)
-			// if it turns to be a cpp ref, we do not need to do so
-			// but it might be that the variable is a ref, so is safer to deref it.
-			retExpr = retExpr.as<core::CallExprPtr>()[1];
-			if (core::analysis::isCppRef(retExpr->getType())) {
-				retExpr =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), retExpr));
-			}
-			else if (core::analysis::isConstCppRef(retExpr->getType())) {
-				retExpr =  builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), 
-															retExpr));
+		if(IS_CPP_REF_EXPR(retExpr)){
+			// we are returning a value, peel out the reference, or deref it
+			if (core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp()) || 
+				core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp()))
+				retExpr = retExpr.as<core::CallExprPtr>()->getArgument(0);
+			else{
+				if (core::analysis::isCppRef(retExpr->getType())){
+					retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), retExpr);
+				}
+				else if (core::analysis::isConstCppRef(retExpr->getType())){
+					retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), retExpr);
+				}
 			}
 		}
+		// this case is by value
+		retExpr = builder.deref(retExpr);
+	}
+	else if ((cleanups= llvm::dyn_cast<clang::ExprWithCleanups>(retStmt->getRetValue())) != NULL){
+		// do nothing, should be already OK
 	}
 	else{
 		// not a cast, it is a ref then... only if not array
 		if (!core::analysis::isCallOf(retExpr,mgr.getLangBasic().getScalarToArray()) &&
-			!core::analysis::isCppRef(retExpr->getType())) {
+			!IS_CPP_REF_EXPR(retExpr)){
 				retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retExpr);
 		}
 	}
@@ -211,7 +180,6 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 	stmtList.push_back(builder.returnStmt(retExpr));
 	core::StatementPtr retStatement = builder.compoundStmt(stmtList);
 	stmt = stmtutils::tryAggregateStmts(builder,stmtList );
-
 	return stmt;
 }
 

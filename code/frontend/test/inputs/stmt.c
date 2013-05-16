@@ -104,16 +104,16 @@ void unary_op_test() {
 	#pragma test "( *(( *v1)&[0]))"
 	*b;
 
-	#pragma test "fun(ref<'a> v1) -> 'a { decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2;}(v1)"
+	#pragma test "gen.post.inc(v1)"
 	a++;
 
-	#pragma test "fun(ref<'a> v1) -> 'a { decl 'a v2 = ( *v1); (v1 := gen.sub(( *v1), 1)); return v2;}(v1)"
+	#pragma test "gen.post.dec(v1)"
 	a--;
 
-	#pragma test "fun(ref<'a> v1) -> 'a { (v1 := gen.add(( *v1), 1)); return ( *v1);}(v1)"
+	#pragma test "gen.pre.inc(v1)"
 	++a;
 
-	#pragma test "fun(ref<'a> v1) -> 'a { (v1 := gen.sub(( *v1), 1)); return ( *v1);}(v1)"
+	#pragma test "gen.pre.dec(v1)"
 	--a;
 
 	#pragma test "(( *v1)<<2)"
@@ -214,7 +214,7 @@ void for_stmt_test() {
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
-	#pragma test "{ (v1 := 0); while((( *v4)>1)) { { }; fun(ref<int<4>> v5, ref<int<4>> v6) -> ref<int<4>> { fun(ref<'a> v1) -> 'a { decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v5); (v6 := (( *v6)/2)); return v6; }(v1, v4); };}"
+	#pragma test "{ (v1 := 0); while((( *v4)>1)) { { }; fun(ref<int<4>> v5, ref<int<4>> v6) -> ref<int<4>> { gen.post.inc(v5); (v6 := (( *v6)/2)); return v6; }(v1, v4); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 
 	//(v1 := 0);
@@ -265,7 +265,7 @@ void switch_stmt_test() {
 
 
 	#pragma test \
-	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 0: { } default: { fun(ref<'a> v1) -> 'a { decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v1); } };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 0: { } default: { gen.post.inc(v1); } };}"
 	switch(a) {
 	case 0:
 		break;
@@ -313,7 +313,7 @@ void switch_stmt_test() {
 
 	for(;;) {
 	#pragma test \
-	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 10: { } case 8: { (v1 := (( *v1)+10)); } case 2: { (v1 := 1); continue; } case 3: { fun(ref<'a> v1) -> 'a { decl 'a v2 = ( *v1); (v1 := gen.add(( *v1), 1)); return v2; }(v1); return unit; } default: { } };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 10: { } case 8: { (v1 := (( *v1)+10)); } case 2: { (v1 := 1); continue; } case 3: { gen.post.inc(v1); return unit; } default: { } };}"
 	switch(a) {
 		case 10:
 			break;
