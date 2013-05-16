@@ -1087,8 +1087,8 @@ namespace backend {
 			});
 
 			res[irppExt.getArrayDtor()] = OP_CONVERTER({
-				assert(false && "Not implemented Operation!");
-				return CONVERT_ARG(0);
+				// create a node representing a delete operation
+				return c_ast::deleteArrayCall(CONVERT_ARG(0));
 			});
 
 		}

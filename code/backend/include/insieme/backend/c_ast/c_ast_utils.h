@@ -67,6 +67,8 @@ namespace c_ast {
 		case UnaryOperation::Reference: 	return 14;
 		case UnaryOperation::SizeOf: 		return 14;
 		case UnaryOperation::New:			return  1;
+		case UnaryOperation::Delete:		return  1;
+		case UnaryOperation::DeleteArray:	return  1;
 		}
 		assert(false && "Uncovered operator encountered!");
 		return 0;
@@ -333,6 +335,14 @@ namespace c_ast {
 
 	inline ExpressionPtr newCall(ExpressionPtr expr) {
 		return unaryOp(UnaryOperation::New, expr);
+	}
+
+	inline ExpressionPtr deleteCall(ExpressionPtr expr) {
+		return unaryOp(UnaryOperation::Delete, expr);
+	}
+
+	inline ExpressionPtr deleteArrayCall(ExpressionPtr expr) {
+		return unaryOp(UnaryOperation::DeleteArray, expr);
 	}
 
 	// -- Binary Operations -------------------------------------

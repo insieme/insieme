@@ -403,6 +403,8 @@ namespace c_ast {
 					case UnaryOperation::Reference: 	return out << "&" << print(node->operand);
 					case UnaryOperation::SizeOf: 		return out << "sizeof(" << print(node->operand) << ")";
 					case UnaryOperation::New:			return out << "new " << print(node->operand);
+					case UnaryOperation::Delete:		return out << "delete " << print(node->operand);
+					case UnaryOperation::DeleteArray:	return out << "delete[] " << print(node->operand);
 				}
 
 				assert(false && "Invalid unary operation encountered!");
