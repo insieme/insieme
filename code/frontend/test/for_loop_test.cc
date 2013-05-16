@@ -52,7 +52,7 @@ namespace frontend {
 		Source src(
 				R"(
 
-					void main() {
+					int main() {
 
 						float sum = 0;
 						for(int i=0; i<10; i++) {
@@ -77,6 +77,66 @@ namespace frontend {
 
 	}
 
+	TEST(StmtConversion, ForToWhileLoop1) {
+
+		Source src(
+				R"(
+
+					int main() {
+
+						for(int i=0; i<10; i++) {
+							i++;
+						}
+
+					}
+
+				)"
+		);
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(ConversionJob(src).execute(mgr));
+
+		//dump(res);
+
+		// check that there is no materialization
+		auto code = toString(core::printer::PrettyPrinter(res));
+		EXPECT_PRED2(containsSubString, code, "while");
+	}
+	
+	TEST(StmtConversion, ForToWhileLoop2) {
+
+		Source src(
+				R"(
+
+					void f(int* x) { *x++; };
+
+					int main() {
+
+						for(int i=0; i<10; i++) {
+							f(&i);
+						}
+
+					}
+
+				)"
+		);
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(ConversionJob(src).execute(mgr));
+
+		//dump(res);
+
+		// check that there is no materialization
+		auto code = toString(core::printer::PrettyPrinter(res));
+		EXPECT_PRED2(containsSubString, code, "while");
+	}
+	
+	
+
 	TEST(StmtConversion, Materialization) {
 
 		Source src(
@@ -84,7 +144,7 @@ namespace frontend {
 
 					void f(int* x) { };
 
-					void main() {
+					int main() {
 
 						for(int i=0; i<10; i++) {
 							f(&i);
@@ -118,7 +178,7 @@ namespace frontend {
 
 					#pragma omp threadprivate (x)
 
-					void main() {
+					int main() {
 
 						float sum = 0;
 
@@ -138,12 +198,11 @@ namespace frontend {
 		job.setOption(ConversionJob::OpenMP);
 		auto res = builder.normalize(job.execute(mgr));
 
-//		dump(res);
+		//dump(res);
 
 		// check that there is no materialization
 		auto code = toString(core::printer::PrettyPrinter(res));
 		EXPECT_PRED2(notContainsSubString, code, "decl ref<int<4>>");
-
 	}
 
 } // end namespace frontend
