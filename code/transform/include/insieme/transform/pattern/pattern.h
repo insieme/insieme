@@ -828,19 +828,15 @@ namespace pattern {
 			namespace {
 
 				bool contains_variable_free(MatchContext<ptr_target>& context, const core::NodePtr& tree, const TreePatternPtr& pattern) {
-					bool res = false;
-					core::visitDepthFirstOncePrunable(tree, [&](const core::NodePtr& cur)->bool {
-						return res = res || match(pattern, context, cur);
-					}, true, pattern->mayBeType);
-					return res;
+					return core::visitDepthFirstOnceInterruptible(tree, [&](const core::NodePtr& cur)->bool {
+						return match(pattern, context, cur);
+					}, pattern->mayBeType);
 				}
 
 				bool contains_variable_free(MatchContext<address_target>& context, const core::NodeAddress& tree, const TreePatternPtr& pattern) {
-					bool res = false;
-					core::visitDepthFirstOncePrunable(tree.as<core::NodePtr>(), [&](const core::NodePtr& cur)->bool {
-						return res = res || match(pattern, context, core::NodeAddress(cur));
-					}, true, pattern->mayBeType);
-					return res;
+					return core::visitDepthFirstOnceInterruptible(tree.as<core::NodePtr>(), [&](const core::NodePtr& cur)->bool {
+						return match(pattern, context, core::NodeAddress(cur));
+					}, pattern->mayBeType);
 				}
 
 				bool contains_variable_free(MatchContext<tree_target>& context, const TreePtr& tree, const TreePatternPtr& pattern) {
