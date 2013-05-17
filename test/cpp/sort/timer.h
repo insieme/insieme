@@ -1,18 +1,33 @@
 #include <sys/time.h>
 
-namespace ayuso{
+using namespace std;
 
-class timer{
-	  struct timeval begin;
-	  struct timeval end;
-public:
+namespace ayuso {
 
-	timer();
-			
-	void start();
-	double stop();
-	double elapsed();
-	void reset();
-};
+	class Timer {
+
+		typedef long long unsigned time_t;
+
+		time_t _start;
+
+	public:
+
+		void start() { 
+			_start = getTime();
+		};
+
+		double stop() { 
+			return (getTime() - _start) / (1000.0 * 1000.0 * 1000.0);
+		};
+
+	private:
+
+		time_t getTime() const {
+			struct timeval time;
+			gettimeofday(&time, NULL); 
+			return time.tv_sec * (time_t)(1000*1000*1000) + time.tv_usec;
+		}
+
+	};
 
 }// namespace ayuso

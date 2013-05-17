@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <float.h>
+#include <iostream>
 
 #include "timer.h"
 
@@ -15,17 +16,25 @@ using namespace std;
 ////////////////////////////////////////////////////////////////////////////
 //
 template <class T>
-void print(vector<T>& v){
-	for (size_t i =0; i< v.size(); i++){
-		//cout << v[i] << ", ";
+void print(vector<T>& v, ostream& out = std::cout){
+	
+	if (v.empty()) {
+		out << "[]";
+		return;
 	}
-	//cout  << endl;
+
+	out << "[";
+	for (size_t i =0; i < v.size() - 1; i++){
+		out << v[i] << ", ";
+	}
+	out << *v.rbegin();
+	out << "]";
 }
 
 ////////////////////////////////////////////////////////////////////////////
 //
 template <class T>
-bool checkResout(vector<T>& v){
+bool checkResult(vector<T>& v){
 	float last = *v.begin();
 	vector<int>::iterator it;
 	for (it = v.begin()+1; it != v.end(); it ++){
@@ -125,53 +134,37 @@ void insertionSort(vector<T>&v){
 ////////////////////////////////////////////////////////////////////////////
 //
 
-vector<double> bubleTimes;
-vector<double> bucketTimes;
-vector<double> radixTimes;
-vector<double> insertionTimes;
-
 template <class T>
-bool testAlgorithms (vector<T>& buffer){
+void testAlgorithms (vector<T>& buffer){
 
-	// 4 different copys to have 4 unsorted sets
-	vector<T> a(buffer.begin(), buffer.end());
-	vector<T> b(buffer.begin(), buffer.end());
-	vector<T> c(buffer.begin(), buffer.end());
+	{
+		ayuso::Timer time;
 
-	ayuso::timer time;
-
-	time.start();
-	bubleSort(a);
-	bubleTimes.push_back(time.stop());
-
-	time.start();
-	bucketSort(b);
-	bucketTimes.push_back(time.stop());
-
-	time.start();
-	radixSort(c);
-	radixTimes.push_back(time.stop());
-
-	time.start();
-	insertionSort(c);
-	insertionTimes.push_back(time.stop());
-
-	// check validity
-	if(!checkResout(a)){
-		//std::cout << "buble fails with " << buffer.size() << " elements\n";
-		return false;
-	}
-	if(!checkResout(b)){
-		//std::cout << "bucket fails with " << buffer.size() << " elements\n";
-		return false;
-	}
-	if(!checkResout(c)){
-		//std::cout << "radix fails with " << buffer.size() << " elements\n";
-		return false;
+		vector<T> data(buffer);
+		time.start();
+		bubleSort(data);
+		double t = time.stop();
+	
+		bool ok = checkResult(data);
+		cout << "BubbleSort took " << t << "sec - result: " << (ok?"OK":"WRONG") << "\n";
 	}
 
-	//std::cout << "iteration complete: " << buffer.size() << " elems\n";
-	return true;
+	{
+		ayuso::Timer time;
+
+		vector<T> data(buffer);
+		time.start();
+		bucketSort(data);
+		double t = time.stop();
+	
+		bool ok = checkResult(data);
+		cout << "BucketSort took " << t << "sec - result: " << (ok?"OK":"WRONG") << "\n";
+	}
+
+//	runTest(bubleSort<T>, "BubbleSort", buffer);
+//	runTest(bucketSort<T>, "BucketSort", buffer);
+//	runTest(radixSort, "RadixSort", buffer);
+
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -183,33 +176,25 @@ int main (int argc, char **argv){
 	sizes.push_back(20);
 	sizes.push_back(512);
 	sizes.push_back(1024);
+	sizes.push_back(1024*16);
+/*
 	sizes.push_back(1024*128);
 	sizes.push_back(1024*1024);
 	sizes.push_back(1024*1024*16);
-
+*/
 	for (size_t i = 0; i < sizes.size(); i++){
-		vector<int> vData(sizes[i]);
 
-		//cout << "generating " << sizes[i] << " elements\n";
+		cout << "Running Test for size " << sizes[i] << "\n";
 
 		// generate speudo random (same data every run)
 		srand(1234);
-		for (size_t i=0; i< sizes[i]; i++)
-			vData.insert(vData.end(), rand()%1000);
+		vector<int> vData(sizes[i]);
+		for (size_t j=0; j < sizes[i]; j++) {
+			vData[j] = rand()%1000;
+			//vData.insert(vData.end(), rand()%1000);
+		}
 
-		if (!testAlgorithms(vData))
-			break;
-	}
-
-
-	// print sumary:
-	//cout << "Num\t\tbuble\t\tinsert\t\tbucket\t\tradix\n";
-	for (size_t i=0; i< sizes.size(); i++){
-		////cout << sizes[i] <<"\t\t";
-		//cout << bubleTimes[i] << "\t\t";
-		//cout << insertionTimes[i] << "\t\t";
-		//cout << bucketTimes[i] << "\t\t";
-		//cout << radixTimes[i] << "\n";
+		testAlgorithms(vData);
 	}
 
 	return 0;
