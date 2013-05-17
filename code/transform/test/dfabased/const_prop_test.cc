@@ -40,6 +40,7 @@
 #include "insieme/transform/dfabased/const_prop.h"
 #include "insieme/transform/dfabased/dead_variables.h"
 #include "insieme/utils/logging.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/core/transform/simplify.h"
 
@@ -74,22 +75,13 @@ namespace transform {
 
 		ret = removeDeadVariables(mgr, ret);
 
-		EXPECT_EQ(
-			"{"
-				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
-				"int<4> v2 = undefined(int<4>); "
-				"{}; "
-				"22;"
-			"}", toString(*ret));
+		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));decl int<4> v2 = undefined(type<int<4>>);{ };22;}",
+				toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 
 		ret = insieme::core::transform::simplify(mgr, ret);
 
-		EXPECT_EQ(
-			"{"
-				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
-				"int<4> v2 = undefined(int<4>); "
-				"22;"
-			"}",toString(*ret));
+		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));decl int<4> v2 = undefined(type<int<4>>);22;}",
+			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 	}
 
 
@@ -141,29 +133,13 @@ namespace transform {
 
 		ret = removeDeadVariables(mgr, ret);
 
-		EXPECT_EQ(
-			"{"
-				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
-				"ref<int<4>> v2 = ref.var(undefined(int<4>)); "
-				"{"
-					"int<4> v3 = undefined(int<4>); "
-					"{};"
-				"}; "
-				"{}; "
-				"22;"
-			"}", toString(*ret));
+		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));decl ref<int<4>> v2 =  var(undefined(type<int<4>>));{decl int<4> v3 = undefined(type<int<4>>);{ };};{ };22;}",
+			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 
 		ret = insieme::core::transform::simplify(mgr, ret);
 
-		EXPECT_EQ(
-			"{"
-				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
-				"ref<int<4>> v2 = ref.var(undefined(int<4>)); "
-				"{"
-					"int<4> v3 = undefined(int<4>);"
-				"}; "
-				"22;"
-			"}",toString(*ret));
+		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));decl ref<int<4>> v2 =  var(undefined(type<int<4>>));{decl int<4> v3 = undefined(type<int<4>>);};22;}",
+			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 	}
 
 

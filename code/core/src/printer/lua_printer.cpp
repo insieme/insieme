@@ -153,7 +153,7 @@ namespace printer {
 //			}
 
 			void visitReturnStmt(const ReturnStmtPtr& stmt) {
-				out << "return";
+				out << "return ";
 				const auto& res = stmt.getReturnExpr();
 				if (stmt->getNodeManager().getLangBasic().isUnitConstant(res)) {
 					return;
@@ -330,8 +330,7 @@ namespace printer {
 
 			// ref operators
 
-			res[basic.getRefVar()]   = OP_CONVERTER({ PRINT_ARG(0); });
-			res[basic.getRefNew()]   = OP_CONVERTER({ PRINT_ARG(0); });
+			res[basic.getRefAlloc()] = OP_CONVERTER({ converter.visit( static_pointer_cast<const core::CallExpr>(call->getArgument(0))->getArgument(0) ); });
 			res[basic.getRefDeref()] = OP_CONVERTER({ PRINT_ARG(0); });
 			res[basic.getRefDelete()] = OP_CONVERTER({ });
 			res[basic.getRefAssign()] = OP_CONVERTER({

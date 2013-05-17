@@ -353,28 +353,37 @@ GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
 // References ---------------------------------------------------------------------------------------------------------
 
-GROUP(RefOp, RefVar, RefNew, RefDelete, RefEqual, RefAssign, RefDeref, ScalarToArray)
+GROUP(RefOp, RefAlloc, RefNull, RefDelete, RefAssign, RefDeref, RefVar, RefNew, 
+	  RefIsNull, RefReinterpret, RefNarrow, RefExpand)
 GROUP(Delete, RefDelete)
 
-LITERAL(RefVar,    		"ref.var",    			"('a) -> ref<'a>")
-LITERAL(RefNew,    		"ref.new",    			"('a) -> ref<'a>")
+TYPE(MemLoc, "memloc")
+LITERAL(MemLocStack, "memloc.stack", "memloc")
+LITERAL(MemLocHeap, "memloc.heap", "memloc")
+LITERAL(MemLocLocal, "memloc.local", "memloc")
+
+LITERAL(RefAlloc,    	"ref.alloc",    		"(type<'a>, memloc) -> ref<'a>")
+LITERAL(RefNull,        "ref.null",             "ref<any>")
 LITERAL(RefDelete, 		"ref.delete", 			"(ref<'a>) -> unit")
-LITERAL(RefEqual,  		"ref.eq",				"(ref<'a>, ref<'a>) -> bool")
 LITERAL(RefAssign, 		"ref.assign", 			"(ref<'a>,'a) -> unit")
 LITERAL(RefDeref,  		"ref.deref",  			"(ref<'a>) -> 'a")
-LITERAL(ScalarToArray, 	"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
-LITERAL(RefReinterpret, "ref.reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>")
 
+DERIVED(RefVar,  			"ref.var",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.stack); r = v; return r; }")
+DERIVED(RefNew,  			"ref.new",    			"('a v) -> ref<'a> { auto r = ref.alloc(  type.of(v), memloc.heap); r = v; return r; }")
+DERIVED(RefIsNull,   		"ref.is.null",			"(ref<'a> r) -> bool { return ref.eq(r, ref.null); }")
+
+
+LITERAL(RefReinterpret, "ref.reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>")
 LITERAL(RefNarrow, 		"ref.narrow",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
 LITERAL(RefExpand,		"ref.expand",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
 
 // Operators for references
-OPERATION(Ref, Eq, "ref.eq", "(ref<'a>,ref<'a>) -> bool")
-OPERATION(Ref, Ne, "ref.ne", "(ref<'a>,ref<'a>) -> bool")
-OPERATION(Ref, Lt, "ref.lt", "(ref<'a>,ref<'a>) -> bool")
-OPERATION(Ref, Gt, "ref.gt", "(ref<'a>,ref<'a>) -> bool")
-OPERATION(Ref, Le, "ref.le", "(ref<'a>,ref<'a>) -> bool")
-OPERATION(Ref, Ge, "ref.ge", "(ref<'a>,ref<'a>) -> bool")
+OPERATION(Ref, Eq, "ref.eq", "(ref<'a>,ref<'b>) -> bool")
+OPERATION(Ref, Ne, "ref.ne", "(ref<'a>,ref<'b>) -> bool")
+OPERATION(Ref, Lt, "ref.lt", "(ref<'a>,ref<'b>) -> bool")
+OPERATION(Ref, Gt, "ref.gt", "(ref<'a>,ref<'b>) -> bool")
+OPERATION(Ref, Le, "ref.le", "(ref<'a>,ref<'b>) -> bool")
+OPERATION(Ref, Ge, "ref.ge", "(ref<'a>,ref<'b>) -> bool")
 
 GROUP(RefCompOp, RefEq, RefNe, RefLt, RefGt, RefLe, RefGe)
 
@@ -437,10 +446,6 @@ LITERAL(DataPathParent,     "dp.parent",            "(datapath, type<'a>) -> dat
 
 GROUP(DataPathPrimitive, DataPathRoot, DataPathMember, DataPathElement, DataPathComponent, DataPathParent)
 
-// Any References -----------------------------------------------------------------------------------------------------
-
-LITERAL(Null,           "null",                 "ref<any>")
-
 // Volatile -----------------------------------------------------------------------------------------------------------
 // Volatile types mark memory locations that may be changed by some outside agency
 
@@ -483,6 +488,7 @@ LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
 							  "(ref<array<'elem,#n>>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
 
 LITERAL(ArrayRefDistance, 		"array.ref.distance", 	"(ref<array<'elem,1>>, ref<array<'elem,1>>) -> uint<8>")
+LITERAL(ScalarToArray, 	"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
 
 // computation of an array-offset and some derivades
 LITERAL(ArrayView, 				"array.view",					"(ref<array<'elem,1>>, int<8>) -> ref<array<'elem,1>>")
@@ -503,9 +509,7 @@ DERIVED(ArrayReduce, "array.reduce",
 
 // -- special operations to support encoding of C ntnters as arrays ----------------------------------------------------
 
-LITERAL(IsNull,   		"is.null",				"(ref<'a>) -> bool")
 LITERAL(GetNull,   		"get.null",				"(type<'a>) -> ref<'a>")
-LITERAL(PtrEq,			"ptr.eq",				"(ref<'a>, ref<'a>) -> bool")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 
@@ -743,7 +747,7 @@ LITERAL(Exit, "exit", "(int<4>)->unit" )
 GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp, RefCompOp, TypeCompOp, GenCompOp)
 
 GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator, 
-	VectorOp, ArrayOp, CompOp, RefEqual, RefDeref, BitwiseOp, CompOp, ArithOp, GeneralOp)
+	VectorOp, ArrayOp, CompOp, RefDeref, BitwiseOp, CompOp, ArithOp, GeneralOp)
 
 
 #undef TYPE

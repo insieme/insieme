@@ -125,7 +125,7 @@ TEST(Interception, FileTest) {
 		convFactory.setTranslationUnit(&tu);
 
 		if(tp.isStatement()) {
-			StatementPtr&& stmt = convFactory.convertStmt( tp.getStatement() );
+			StatementPtr&& stmt = analysis::normalize(convFactory.convertStmt( tp.getStatement() ));
 			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
 			// do semantics checking
 			checkSemanticErrors(stmt);

@@ -44,6 +44,7 @@
 #include "insieme/core/parser2/grammar.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/analysis/normalize.h"
 
 namespace insieme {
 namespace core {
@@ -1054,7 +1055,7 @@ TEST(NarrowExpression, Basic) {
 	IRBuilder builder(manager);
 	CheckPtr typeCheck = getFullCheck();
 
-	NodePtr res = builder.parse(
+	NodePtr res = analysis::normalize(builder.parse(
 		"{"
 		" let inner = struct{ int<4> a;};"
 		" let two   = struct{ inner a; int<4> b;};"
@@ -1062,13 +1063,13 @@ TEST(NarrowExpression, Basic) {
 		" ref<int<4>> inside = ref.narrow( obj, dp.member(dp.root, lit(\"b\")), lit(int<4>));"
 		" ref<int<4>> morein = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"a\")), lit(int<4>));"
 		"}"
-	);
+	));
 	ASSERT_TRUE (res);
 	auto errors = check(res, typeCheck);
 	EXPECT_TRUE(errors.empty()) << "Correct Narrow Test\n" << errors;
-	EXPECT_EQ("AP({ref<struct<a:struct<a:int<4>>,b:int<4>>> v1 = ref.var(undefined(struct<a:struct<a:int<4>>,b:int<4>>)); ref<int<4>> v2 = ref.narrow(v1, dp.member(dp.root, b), int<4>); ref<int<4>> v3 = ref.narrow(v1, dp.member(dp.member(dp.root, a), a), int<4>);})",
-			  toString(res));
-	
+	EXPECT_EQ("{decl ref<struct<a:struct<a:int<4>>,b:int<4>>> v0 =  var(undefined(type<struct<a:struct<a:int<4>>,b:int<4>>>));decl ref<int<4>> v1 = ref.narrow(v0, dp.root.b, type<int<4>>);decl ref<int<4>> v2 = ref.narrow(v0, dp.root.a.a, type<int<4>>);}",
+			  toString(printer::PrettyPrinter(res, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
+
 	res = builder.parse(
 		"{"
 		" let inner = struct{ int<4> a;};"

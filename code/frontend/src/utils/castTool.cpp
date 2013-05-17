@@ -323,7 +323,7 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 	if (gen.isBool(expr->getType())) return expr;
 
 	if (isRefArray(expr->getType())) {
-		return builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getIsNull(), expr));
+		return builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), gen.getRefIsNull(), expr));
 	}
 	if (!gen.isInt(expr->getType())  && !gen.isReal(expr->getType()) && !gen.isChar(expr->getType())){
 

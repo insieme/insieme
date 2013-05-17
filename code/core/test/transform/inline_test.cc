@@ -73,10 +73,10 @@ namespace transform {
 		CompoundStmtPtr inlined = inlineMultiReturnAssignment(mgr, code.getAddressedNode());
 
 		//std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
-		
+
 		EXPECT_EQ(
-				"{{ref<bool> v0 = ref.var(false); {if(int.lt(3, 4)) {{ref.assign(v4, int.add(3, int.mul(2, 6))); ref.assign(v0, true);};} else {}; if(bool.not(ref.deref(v0))) {{ref.assign(v4, int.sub(3, 6)); ref.assign(v0, true);};} else {};};};}",
-				toString(*core::analysis::normalize(inlined))
+				"{{decl ref<bool> v0 =  var(false);{if(3<4) {{v7 := 3+2*6;v0 := true;};};if(!v0) {{v7 := 3-6;v0 := true;};};};};}",
+				toString(printer::PrettyPrinter(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE))
 			);
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}
@@ -109,8 +109,8 @@ namespace transform {
 		//std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 		
 		EXPECT_EQ(
-				"{{ref<bool> v0 = ref.var(false); {if(int.lt(3, 4)) {{ref.assign(v5, int.add(3, int.mul(2, 6))); ref.assign(v0, true);};} else {}; if(bool.not(ref.deref(v0))) {ref<int<4>> v1 = ref.var(3); while(bool.and(true, bind(){rec v0.{v0=fun(ref<bool> v1) {return bool.not(ref.deref(v1));}}(v0)})) {ref.assign(v1, int.add(ref.deref(v1), 1)); if(int.gt(ref.deref(v1), 6)) {{ref.assign(v5, int.sub(ref.deref(v1), 6)); ref.assign(v0, true);};} else {};};} else {};};};}",
-				toString(*core::analysis::normalize(inlined))
+				"{{decl ref<bool> v0 =  var(false);{if(3<4) {{v8 := 3+2*6;v0 := true;};};if(!v0) {decl ref<int<4>> v1 =  var(3);while(true && !v0) {v1 := v1+1;if(v1>6) {{v8 := v1-6;v0 := true;};};};};};};}",
+				toString(printer::PrettyPrinter(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE))
 			);
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}
@@ -144,8 +144,8 @@ namespace transform {
 		//std::cout << printer::PrettyPrinter(code.getRootNode()) << "\n\ninlined:\n" << printer::PrettyPrinter(inlined) << "\n****\n";
 		
 		EXPECT_EQ(
-				"{{ref<bool> v0 = ref.var(false); {if(int.lt(3, 4)) {{ref.assign(v0, true);};} else {}; if(bool.not(ref.deref(v0))) {ref<int<4>> v1 = ref.var(3); while(bool.and(true, bind(){rec v0.{v0=fun(ref<bool> v1) {return bool.not(ref.deref(v1));}}(v0)})) {ref.assign(v1, int.add(ref.deref(v1), 1)); if(int.gt(ref.deref(v1), 6)) {{ref.assign(v0, true);};} else {};};} else {};};};}",
-				toString(*core::analysis::normalize(inlined))
+				"{{decl ref<bool> v0 =  var(false);{if(3<4) {{v0 := true;};};if(!v0) {decl ref<int<4>> v1 =  var(3);while(true && !v0) {v1 := v1+1;if(v1>6) {{v0 := true;};};};};};};}",
+				toString(printer::PrettyPrinter(core::analysis::normalize(inlined), printer::PrettyPrinter::PRINT_SINGLE_LINE))
 			);
 		EXPECT_TRUE(check(inlined, checks::getFullCheck()).empty()) << check(inlined, checks::getFullCheck());
 	}

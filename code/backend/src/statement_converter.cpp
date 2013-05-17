@@ -249,7 +249,7 @@ namespace backend {
 		}
 
 		// handle null pointer
-		if (converter.getNodeManager().getLangBasic().isNull(ptr)) {
+		if (converter.getNodeManager().getLangBasic().isRefNull(ptr)) {
 			return converter.getCNodeManager()->create<c_ast::Literal>("0");
 		}
 

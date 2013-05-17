@@ -50,6 +50,8 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::utils::log;
@@ -85,7 +87,7 @@ TEST(TypeCast, FileTest) {
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
 
 		if(tp.isStatement())
-			EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertStmt( tp.getStatement() )->toString() + '\"' );
+			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt( tp.getStatement() )), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
 		else {
 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
 				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );

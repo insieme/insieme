@@ -511,7 +511,7 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 	// if it is a ref type ...
 	if (type->getNodeType() == core::NT_RefType) {
 		// return NULL
-		return manager.getLangBasic().getNull();
+		return manager.getLangBasic().getRefNull();
 	}
 
 	// if it is a bool type
