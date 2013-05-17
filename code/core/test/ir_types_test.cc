@@ -385,14 +385,30 @@ TEST(TypeTest, RecType) {
 
 namespace {
 
-	NodeList merge(const NodePtr& node, const NodeList& list) {
+	NodeList merge() { return NodeList(); }
+
+	template<typename ... Rest>
+	NodeList merge(const NodeList& list, const Rest& ... rest);
+
+	template<typename ... Rest>
+	NodeList merge(const NodePtr& node, const Rest& ... rest) {
 		NodeList res;
 		res.push_back(node);
-		for(NodePtr cur : list) {
+		for(const NodePtr& cur : merge(rest...)) {
 			res.push_back(cur);
 		}
 		return res;
 	}
+
+	template<typename ... Rest>
+	NodeList merge(const NodeList& list, const Rest& ... rest) {
+		NodeList res = list;
+		for(const NodePtr& cur : merge(rest...)) {
+			res.push_back(cur);
+		}
+		return res;
+	}
+
 }
 
 TEST(TypeTest, StructType) {
@@ -431,9 +447,10 @@ TEST(TypeTest, StructType) {
 	EXPECT_NO_THROW ( StructType::get(manager, entriesD) );
 
 	// perform basic type tests
-	basicTypeTests(structA, true, merge(Parents::get(manager), convertList(entriesA)));
-	basicTypeTests(structB, true, merge(Parents::get(manager), convertList(entriesB)));
-	basicTypeTests(structC, false, merge(Parents::get(manager), convertList(entriesC)));
+	StringValuePtr name = StringValue::get(manager, "");
+	basicTypeTests(structA, true, merge(name, Parents::get(manager), convertList(entriesA)));
+	basicTypeTests(structB, true, merge(name, Parents::get(manager), convertList(entriesB)));
+	basicTypeTests(structC, false, merge(name, Parents::get(manager), convertList(entriesC)));
 }
 
 TEST(TypeTest, StructTypeParents) {
@@ -466,9 +483,47 @@ TEST(TypeTest, StructTypeParents) {
 	EXPECT_EQ ( "struct : [struct<a:A>, virtual struct : [struct<a:A>] <b:B>] <c:C>", toString(*structC) );
 
 	// perform basic type tests
-	basicTypeTests(structA, true, merge(Parents::get(manager), convertList(entriesA)));
-	basicTypeTests(structB, true, merge(parentsB, convertList(entriesB)));
-	basicTypeTests(structC, true, merge(parentsC, convertList(entriesC)));
+	StringValuePtr name = StringValue::get(manager, "");
+	basicTypeTests(structA, true, merge(name, Parents::get(manager), convertList(entriesA)));
+	basicTypeTests(structB, true, merge(name, parentsB, convertList(entriesB)));
+	basicTypeTests(structC, true, merge(name, parentsC, convertList(entriesC)));
+}
+
+TEST(TypeTest, StructTypeNames) {
+
+	NodeManager manager;
+
+	StringValuePtr identA = StringValue::get(manager, "a");
+	StringValuePtr identB = StringValue::get(manager, "b");
+	StringValuePtr identC = StringValue::get(manager, "c");
+
+	StringValuePtr name = StringValue::get(manager, "xy");
+
+	// create base type A
+	vector<NamedTypePtr> entriesA;
+	entriesA.push_back(NamedType::get(manager, identA, GenericType::get(manager, "A")));
+	StructTypePtr structA = StructType::get(manager, name, entriesA);
+	EXPECT_EQ ( "struct xy <a:A>", toString(*structA) );
+
+	// create derived type B : A
+	vector<NamedTypePtr> entriesB;
+	entriesB.push_back(NamedType::get(manager, identB, GenericType::get(manager, "B")));
+	ParentsPtr parentsB = Parents::get(manager, toVector(Parent::get(manager, structA)));
+	StructTypePtr structB = StructType::get(manager, name, parentsB, entriesB);
+	EXPECT_EQ ( "struct xy : [struct xy <a:A>] <b:B>", toString(*structB) );
+
+
+	// create derived type C : A, B
+	vector<NamedTypePtr> entriesC;
+	entriesC.push_back(NamedType::get(manager, identC, GenericType::get(manager, "C")));
+	ParentsPtr parentsC = Parents::get(manager, toVector(Parent::get(manager, structA), Parent::get(manager, true, structB)));
+	StructTypePtr structC = StructType::get(manager, name, parentsC, entriesC);
+	EXPECT_EQ ( "struct xy : [struct xy <a:A>, virtual struct xy : [struct xy <a:A>] <b:B>] <c:C>", toString(*structC) );
+
+	// perform basic type tests
+	basicTypeTests(structA, true, merge(name, Parents::get(manager), convertList(entriesA)));
+	basicTypeTests(structB, true, merge(name, parentsB, convertList(entriesB)));
+	basicTypeTests(structC, true, merge(name, parentsC, convertList(entriesC)));
 }
 
 TEST(TypeTest, RecStructType) {
@@ -529,9 +584,10 @@ TEST(TypeTest, UnionType) {
 
 
 	// perform basic type tests
-	basicTypeTests(unionA, true, merge(Parents::get(manager), convertList(entriesA)));
-	basicTypeTests(unionB, true, merge(Parents::get(manager), convertList(entriesB)));
-	basicTypeTests(unionC, false, merge(Parents::get(manager), convertList(entriesC)));
+	StringValuePtr name = StringValue::get(manager, "");
+	basicTypeTests(unionA, true, merge(name, Parents::get(manager), convertList(entriesA)));
+	basicTypeTests(unionB, true, merge(name, Parents::get(manager), convertList(entriesB)));
+	basicTypeTests(unionC, false, merge(name, Parents::get(manager), convertList(entriesC)));
 }
 
 TEST(TypeTest, ArrayType) {

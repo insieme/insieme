@@ -403,6 +403,11 @@ namespace {
 
 			out << ((node->getNodeType() == NT_UnionType)?"union":"struct");
 
+			if (!node->getName()->getValue().empty()) {
+				out << " " << node->getName()->getValue();
+				if (node->getParents().empty()) out << " ";
+			}
+
 			if (!node->getParents().empty()) {
 				out << " : " << join(", ", node->getParents(), [&](std::ostream& out, const ParentPtr& parent) {
 					if (parent->isVirtual()) out << "virtual ";

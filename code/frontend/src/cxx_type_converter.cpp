@@ -119,8 +119,13 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			// if we have base classes, we need to create again the IR type, with the 
 			// parent list this time
 			//FIXME: typename
-			classType = builder.structType(parents, classType.as<core::StructTypePtr>()->getElements());
+			classType = builder.structType(builder.parents(parents), classType.as<core::StructTypePtr>()->getElements());
 		}
+
+		// name class type
+		auto name = builder.stringValue(classDecl->getNameAsString());
+		classType = builder.structType(name, classType.as<core::StructTypePtr>()->getParents(), classType.as<core::StructTypePtr>()->getElements());
+		annotations::c::attachCName(classType, classDecl->getNameAsString());
 
 		// update cache with base classes, for upcomming uses
 		convFact.ctx.typeCache.erase(tagType);
