@@ -265,16 +265,19 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 				// TODO: make this more efficient
 				// also update potential omp annotations
-				core::visitDepthFirstOnce (cur, [&] (const core::StatementPtr& node){
+				core::visitDepthFirstOnce(cur, [&] (const core::StatementPtr& node){
 					//if we have a OMP annotation
 					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
 						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
-						anno->replaceUsage (deref, inductionVar);
+						anno->replaceUsage(deref, inductionVar);
 						anno->replaceUsage(itUseVar, inductionVar);
 					}
 				});
 			}
 		} else {
+			//TODO: check for free return/break/continue  
+			// -- see core/transform/manipulation/isOulineAble() for "free return/break/continue" check
+		
 			//if the inductionVar is materialized into the itUseVar, the changes are not on the inductionVar 
 			//example: for(int i;...;i++) { i++; } the increment in the loop body is lost
 			
