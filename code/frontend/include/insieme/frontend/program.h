@@ -41,12 +41,12 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 
-#include "insieme/frontend/sema.h"
 #include "insieme/core/ir_program.h"
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/compiler.h"
 
 #include "insieme/utils/logging.h"
+
 
 namespace insieme {
 namespace frontend {
@@ -74,13 +74,12 @@ protected:
 	std::string 			mFileName;
 	ClangCompiler			mClang;
 	insieme::frontend::pragma::PragmaList 		mPragmaList;
-	insieme::frontend::InsiemeSema              mSema;
 
 public:
-	TranslationUnit(const ConversionJob& job) : mFileName(job.getFile()), mClang(job,boost::algorithm::ends_with(job.getFile(),".o")),
-	mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), true) {
+	TranslationUnit(const ConversionJob& job)
+    : mFileName(job.getFile()), mClang(job,boost::algorithm::ends_with(job.getFile(),".o")) {
 		assert(job.getFiles().size() == 1u && "Only a single file per translation unit allowed!");
-	}
+    }
 
 	/**
 	 * Returns a list of pragmas defined in the translation unit
@@ -96,8 +95,6 @@ public:
 	const std::string& getFileName() const {
 		return mFileName;
 	}
-
-	void storeUnit(const std::string& output_file);
 
 };
 

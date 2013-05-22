@@ -135,11 +135,13 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 ///  A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
 ///  and the insieme IR which has been generated from the source file.
 class TranslationUnitImpl: public insieme::frontend::TranslationUnit{
-
+    insieme::frontend::InsiemeSema mSema;
 public:
 	TranslationUnitImpl(const ConversionJob& job):
-		insieme::frontend::TranslationUnit(job) {
-		// register 'omp' pragmas
+		insieme::frontend::TranslationUnit(job),
+		mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), true) {
+
+    	// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
 
 		//register 'cilk' pragmas
@@ -179,14 +181,8 @@ public:
 
 	clang::DiagnosticsEngine& getDiagnostic() { return getCompiler().getDiagnostics(); }
 	const clang::DiagnosticsEngine& getDiagnostic() const { return getCompiler().getDiagnostics(); }
-};
-} // end anonymous namespace
 
-namespace insieme {
-namespace frontend {
-
-
-void TranslationUnit::storeUnit(const std::string& output_file) {
+	void storeUnit(const std::string& output_file) {
         //if no output_file is specified the current file_name is taken and modified to .o extension
         std::string raw_name = output_file;
         if(output_file.size()==0) {
@@ -212,7 +208,13 @@ void TranslationUnit::storeUnit(const std::string& output_file) {
             Out.write(Buffer.data(), Buffer.size());
         Out.close();
         llvm::sys::fs::rename(TempPath.str(), raw_name);
-}
+    }
+
+};
+} // end anonymous namespace
+
+namespace insieme {
+namespace frontend {
 
 struct Program::ProgramImpl {
 	utils::Indexer mIdx;
@@ -271,8 +273,7 @@ void Program::dumpCallGraph() const {
 
 void Program::storeTranslationUnits(const string& output_file) {
     for(TranslationUnitPtr tu : pimpl->tranUnits) {
-        //store unit without a specified name
-        tu->storeUnit(output_file);
+        static_cast<TranslationUnitImpl *>(tu.get())->storeUnit(output_file);
     }
 }
 
