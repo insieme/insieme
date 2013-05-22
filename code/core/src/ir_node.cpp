@@ -261,6 +261,7 @@ void dumpText(const insieme::core::NodePtr& node, std::ostream& out) {
 void dumpPretty(const insieme::core::NodePtr& node, std::ostream& out) {
 	insieme::core::printer::PrettyPrinter print(node);
 	print.setOption(insieme::core::printer::PrettyPrinter::USE_COLOR);
+	print.setOption(insieme::core::printer::PrettyPrinter::PRINT_DEREFS);
 	out << print << std::endl;
 }
 

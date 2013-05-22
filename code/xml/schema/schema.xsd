@@ -495,6 +495,7 @@
 		<xs:element name="entries" type="T_entries" minOccurs="1" maxOccurs="1"/>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
 	</xs:sequence>
+	<xs:attribute name="name" type="xs:string" use="required"/>
 	<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 

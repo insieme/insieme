@@ -220,7 +220,12 @@ public:
 	}
 
 	void visitNamedCompositeType_(XmlElement& el, const NamedCompositeTypePtr& cur) {
-		rootElem << (el << XmlElement::Attribute("id", GET_ID(cur)));
+		el << XmlElement::Attribute("id", GET_ID(cur));
+		if (cur->getNodeType() == NT_StructType) {
+			el << XmlElement::Attribute("name", cur.as<StructTypePtr>()->getName()->getValue());
+		}
+		rootElem << el;
+
 
 		// start with parents
 		if (!cur->getParents().empty()) {

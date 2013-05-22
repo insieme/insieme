@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -39,6 +39,8 @@
 #include <string>
 #include <vector>
 #include <map>
+
+#include <boost/filesystem/path.hpp>
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_program.h"
@@ -134,7 +136,7 @@ namespace frontend {
 		/**
 		 * Creates a new conversion job covering a single file.
 		 */
-		ConversionJob(const string& file);
+		ConversionJob(const boost::filesystem::path& path);
 
 		/**
 		 * Creates a new conversion job based on the given options.

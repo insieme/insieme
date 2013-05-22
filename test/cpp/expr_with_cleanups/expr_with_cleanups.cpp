@@ -1,17 +1,14 @@
 #include <stdio.h>
 
-//int globalVar;
 
 class C {
 public:
 	int mA;
 
 	// ctor + init
-	C() : mA(0) {
+	C(int a=0) : mA(a) {
 		printf("C()");
 		printf("mA 0 == %d\n", mA);
-//		globalVar=1;
-		//printf("globalVar 1 == %d\n", globalVar);
 	}
 
 	// copy ctor
@@ -21,9 +18,9 @@ public:
 		printf("mA==c.mA -- %d == %d\n", mA, c.mA);
 	}
 
-	~C() { printf("~C()"); }
+	~C() { printf("~C()\n"); }
 
-	void mF() { printf("mF()"); }
+	void mF() { printf("mF() v: %d \n",mA); }
 };
 
 C f(void) {
@@ -31,12 +28,37 @@ C f(void) {
 	return C();
 }
 
+C g(C& o){
+	C a = o;
+	printf("g()\n");
+	return a;
+}
+
+/////////////////////////////////////////////////////////////////////
+//
 int main() {
 
-	C c = f();
-/*	
-	f().mF();
-	printf("f().mC 2 == %d\n", f().mC);
-*/	
+	// tmp obj
+	{
+		C(4);
+	}
+
+	// cpy ctor with temporary
+	{
+		C c = f();
+	}
+
+	// envolving functionm
+	{
+		f().mF();
+		printf("f().mA 2 == %d\n", f().mA);
+	}
+
+	// return value of inner copy
+	{
+		C c(2);
+		g(c).mF();
+	}
+	
 	return 0;
 }

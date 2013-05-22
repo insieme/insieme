@@ -384,6 +384,8 @@ namespace c_ast {
 			Reference,
 			SizeOf,
 			New,
+			Delete,
+			DeleteArray,
 		};
 
 		UnaryOp operation;

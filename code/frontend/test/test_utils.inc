@@ -34,49 +34,77 @@
  * regarding third party software licenses.
  */
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/Expr.h>
-#pragma GCC diagnostic pop
+/**
+ * This utility header provides some tools to simplify the unit testing 
+ * of the frontend. This file is to be included within unit tests to simplify
+ * the handling of example codes.
+ */
 
-#pragma once 
+#include <string>
+#include <fstream>
+
+#include <boost/filesystem.hpp>
 
 namespace insieme {
 namespace frontend {
 
-
-//FORWARD DECLARATION
-namespace conversion {
-	class ConversionFactory;
-}
-
-namespace utils {
-
-	std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
+	namespace fs = boost::filesystem;
 
 	/**
-	 * casts to bool an expression
+	 * An enumeration of supported source language types.
 	 */
-	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr);
-
+	enum SrcType {
+		C, CPP
+	};
+	
 	/**
-	 * cast between 2 scalar types an IR expression
+	 * A class managing the life-cycle of temporary source files which will only be 
+	 * created for the sake of unit tests.
 	 */
-	core::ExpressionPtr castScalar(const core::TypePtr& targetTy, 
-								   const core::ExpressionPtr& expr);
+	class Source {
+	
+		/**
+		 * The path to the temporary file.
+		 */
+		fs::path file;
+		
+	public:
+		
+		/**
+		 * The constructor creates a temporary file containing the given example code. The
+		 * file will exist as long as the object is alive.
+		 */
+		Source(const string& code, SrcType type = C) {
+			
+			// create a temporary file containing the code
+			switch(type) {
+				case C:   file = fs::unique_path(fs::temp_directory_path() / "src%%%%%%%%.c"); break;
+				case CPP: file = fs::unique_path(fs::temp_directory_path() / "src%%%%%%%%.cpp"); break;
+				default: assert(false && "Invalid type selected!");
+			}
+			
+			// write source to file
+			std::fstream srcFile(file.string(), std::fstream::out);
+			srcFile << code << "\n";
+			srcFile.close();
+		}
+		
+		~Source() {
+			// remove temporary file
+			if (fs::exists(file)) {
+				fs::remove(file);
+			}
+		}
+		
+		const fs::path& getPath() const { 
+			return file;
+		} 
+		
+		operator fs::path() const { return getPath(); }
+		
+	};
+	
+	
+} // end namespace frontend
+} // end namespace insieme
 
-	/**
-	 * Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
-	 *
-	 * @param convFact, conversionFactor holding all converters and helpers
-	 * @param castExpr the clang cast expression
-	 * return right typed expression
-	 */
-	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::ConversionFactory& convFact,
-											  const clang::CastExpr* castExpr);
-
-} // end utils namespace 
-} // end frontend namespace
-} // end insisme namespace

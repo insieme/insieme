@@ -34,75 +34,57 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/core/annotations/naming.h"
 
-#include "insieme/core/lang/basic.h"
-
-#include "insieme/core/ir_node.h"
-#include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/checks/full_check.h"
+#include "insieme/core/ir_node_annotation.h"
+#include "insieme/core/dump/annotations.h"
+#include "insieme/core/encoder/encoder.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
 
-	TEST(IRppExtensions, ArrayCtor) {
-		NodeManager nm;
+	/**
+	 * The value annotation type to be attached to all derived constructs.
+	 */
+	struct DerivedTag {
+		string name;
+		DerivedTag(const string& name) : name(name) {}
+		bool operator==(const DerivedTag& other) const { return name == other.name; }
+	};
 
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getArrayCtor();
-		dump(element);
+	// ---------------- Support Dump ----------------------
 
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-	}
+	VALUE_ANNOTATION_CONVERTER(DerivedTag)
 
-	TEST(IRppExtensions, VectorCtor) {
-		NodeManager nm;
+		typedef core::value_node_annotation<DerivedTag>::type annotation_type;
 
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getVectorCtor();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-		EXPECT_TRUE(isDerived(element));
-	}
-
-	TEST(IRppExtensions, ArrayDtor) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-		auto element = ext.getArrayDtor();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
-		EXPECT_TRUE(isDerived(element));
-	}
-
-	TEST(IRppExtensions, References) {
-		NodeManager nm;
-
-		const IRppExtensions& ext = nm.getLangExtension<IRppExtensions>();
-
-		// check all reference constructs
-		for(auto cur : {
-			ext.getRefCppToIR(),
-			ext.getRefIRToCpp(),
-			ext.getRefConstCppToIR(),
-			ext.getRefIRToConstCpp()
-		}) {
-			dump(cur);
-
-			// just check whether the code is not exhibiting errors
-			EXPECT_TRUE(checks::check(cur).empty()) << checks::check(cur);
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only derived-tag annotations supported!");
+			return encoder::toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue().name);
 		}
 
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert(encoder::isEncodingOf<string>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
+			return std::make_shared<annotation_type>(DerivedTag(encoder::toValue<string>(node)));
+		}
+	};
+
+	// ----------------------------------------------------
+
+	bool isDerived(const NodePtr& node) {
+		return node->hasAttachedValue<DerivedTag>();
 	}
 
+	const string& getConstructName(const NodePtr& node) {
+		assert(isDerived(node) && "Node not marked as being a derived construct!");
+		return node->getAttachedValue<DerivedTag>().name;
+	}
+
+	void markAsDerived(const NodePtr& node, const string& name) {
+		node->attachValue(DerivedTag(name));
+	}
 
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
-

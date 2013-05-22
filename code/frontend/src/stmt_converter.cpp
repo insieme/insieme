@@ -257,67 +257,36 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		assert(*inductionVar->getType() == *builder.deref(itUseVar)->getType() && "different induction var types");
 
-		// first statent in the for loop is to declare a var to wrap the old iterator and asign
-		// the value of the current 
-		// FIXME: use isReadOnly to avoid not necesary wrapping
-		//core::DeclarationStmtPtr itDecl =  builder.declarationStmt (itUseVar, builder.refVar(inductionVar));
-		//stmtsOld.insert (stmtsOld.begin(), itDecl);
-
-		// TODO: extend this check to actually check whether the iterator variable is referenced in an OMP annotation
-		auto noOmp = [](const StatementList& list)->bool {
-			return !any(list, [](const core::StatementPtr& stmt)->bool {
-				return core::visitDepthFirstOnceInterruptible(stmt, [](const core::NodePtr& cur)->bool {
-					// TODO: actually check whether itUseVar is accessed within the annotation!
-					return cur->hasAnnotation(omp::BaseAnnotation::KEY);
-				});
-			});
-		};
-
-		stmtutils::StmtWrapper body;
-		if (core::analysis::isReadOnly(builder.compoundStmt(stmtsOld), itUseVar) && noOmp(stmtsOld)) {
+		if (core::analysis::isReadOnly(builder.compoundStmt(stmtsOld), itUseVar)) {
 			// convert iterator variable into read-only value
 			auto deref = builder.deref(itUseVar);
 			for(auto& cur : stmtsOld) {
-				cur = core::transform::replaceAllGen (mgr, cur, deref, inductionVar, true);
+				cur = core::transform::replaceAllGen(mgr, cur, deref, inductionVar, true);
 
 				// TODO: make this more efficient
 				// also update potential omp annotations
-				core::visitDepthFirstOnce (cur, [&] (const core::StatementPtr& node){
+				core::visitDepthFirstOnce(cur, [&] (const core::StatementPtr& node){
 					//if we have a OMP annotation
 					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
 						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
-						anno->replaceUsage (deref, inductionVar);
+						anno->replaceUsage(deref, inductionVar);
+						anno->replaceUsage(itUseVar, inductionVar);
 					}
 				});
 			}
 		} else {
-			// TODO: in this case, you might even think about convering this loop into a while loop
-			// materialize iterator variable and process body using mutable variable
-			core::DeclarationStmtPtr itDecl =  builder.declarationStmt (itUseVar, builder.refVar(inductionVar));
-			stmtsOld.insert (stmtsOld.begin(), itDecl);
+			//TODO: check for free return/break/continue  
+			// -- see core/transform/manipulation/isOulineAble() for "free return/break/continue" check
+		
+			//if the inductionVar is materialized into the itUseVar, the changes are not on the inductionVar 
+			//example: for(int i;...;i++) { i++; } the increment in the loop body is lost
+			
+			//if the inductionvar is not readonly convert into while 
+			throw analysis::InductionVariableNotReadOnly();
 		}
 
 		// build body
-		body = stmtutils::tryAggregateStmts(builder, stmtsOld);
-
-//		for (core::StatementPtr& curr : stmtsOld){
-//			if (core::analysis::isReadOnly(curr, itUseVar)){
-//				auto deref = builder.deref(itUseVar);
-//				// replace read uses
-//				curr = core::transform::replaceAllGen (mgr, curr, deref, inductionVar, true);
-//				// this variables might apear in annotations inside:
-//				core::visitDepthFirstOnce (curr, [&] (const core::StatementPtr& node){
-//					//if we have a OMP annotation
-//					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
-//						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
-//						anno->replaceUsage (deref, inductionVar);
-//					}
-//				});
-//			}
-////			else
-////				throw analysis::InductionVariableNotReadOnly();
-//		}
-//		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsOld);
+		stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder, stmtsOld);
 
 		core::ExpressionPtr incExpr  = loopAnalysis.getIncrExpr();
 		incExpr = utils::castScalar(inductionVar->getType(), incExpr);

@@ -119,8 +119,13 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			// if we have base classes, we need to create again the IR type, with the 
 			// parent list this time
 			//FIXME: typename
-			classType = builder.structType(parents, classType.as<core::StructTypePtr>()->getElements());
+			classType = builder.structType(builder.parents(parents), classType.as<core::StructTypePtr>()->getElements());
 		}
+
+		// name class type
+		auto name = builder.stringValue(classDecl->getNameAsString());
+		classType = builder.structType(name, classType.as<core::StructTypePtr>()->getParents(), classType.as<core::StructTypePtr>()->getElements());
+		annotations::c::attachCName(classType, classDecl->getNameAsString());
 
 		// update cache with base classes, for upcomming uses
 		convFact.ctx.typeCache.erase(tagType);
@@ -154,6 +159,17 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
 				classInfo.setDestructorVirtual();
 		}
+		else {
+			//no dtor, build an empty one
+			core::VariableList params;
+			core::TypePtr     retType = builder.refType(classType);
+			core::VariablePtr thisVar = builder.variable(retType);
+			params.push_back(thisVar);
+			core::FunctionTypePtr newFunctionType = builder.functionType(toVector(retType), retType, core::FK_DESTRUCTOR);
+			core::ExpressionPtr&& dtorLambda = builder.lambdaExpr (newFunctionType, params, builder.compoundStmt());
+			classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
+		}
+
 
 		//~~~~~ member functions ~~~~~
 		clang::CXXRecordDecl::method_iterator methodIt = classDecl->method_begin();
@@ -165,11 +181,15 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				continue;
 			}
 		
+			
+			if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
+				//FIXME: for now ignore CopyAssignmentOperator 
+				// -- backendCompiler should take care of it
+				continue;
+			}
 
-			if( ((*methodIt)->isMoveAssignmentOperator() || 
-				 (*methodIt)->isCopyAssignmentOperator()) 
-				&& !(*methodIt)->isUserProvided() ) {
-				//FIXME for non-userProvided move/copy assign ops find solution,
+			if( (*methodIt)->isMoveAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
+				//FIXME for non-userProvided moveAssign ops find solution,
 				//maybe leave them to be handled by the backendCompiler or something else
 				//currently are left over for be-compiler
 				assert(!(*methodIt)->isMoveAssignmentOperator() && " move assigment operator is a CXX11 feature, not supported");

@@ -227,7 +227,7 @@ public:
 				parents.push_back(createNode<Parent>(cur));
 			}
 		}
-		return createIrNode<StructType>(elem, builder.parents(parents), visit_namedCompositeType(elem));
+		return createIrNode<StructType>(elem, builder.stringValue(elem.getAttr("name")), builder.parents(parents), visit_namedCompositeType(elem));
 	}
 
 	NodePtr handle_tupleType(const XmlElement& elem) {

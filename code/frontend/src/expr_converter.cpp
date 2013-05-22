@@ -653,11 +653,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitExplicitCastExpr(cons
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(const clang::CastExpr* castExpr) {
 	START_LOG_EXPR_CONVERSION(castExpr);
-
-	core::ExpressionPtr inIr = Visit(castExpr->getSubExpr());
-	core::TypePtr  type = convFact.convertType(GET_TYPE_PTR(castExpr));
-
-	core::ExpressionPtr&& retIr = utils::performClangCastOnIR (builder, castExpr, type, inIr);
+	core::ExpressionPtr&& retIr = utils::performClangCastOnIR (convFact, castExpr);
 	END_LOG_EXPR_CONVERSION(retIr);
 	return retIr;
 }

@@ -69,7 +69,7 @@ const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | P
 	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY;
 const unsigned PrettyPrinter::OPTIONS_MAX_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
 	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ANNOTATIONS | PrettyPrinter::NO_LIST_SUGAR
-	| PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY | PrettyPrinter::PRINT_LITERAL_TYPES;
+	| PrettyPrinter::PRINT_ATTRIBUTES | PrettyPrinter::NO_EVAL_LAZY | PrettyPrinter::PRINT_LITERAL_TYPES | PrettyPrinter::PRINT_DERIVED_IMPL;
 const unsigned PrettyPrinter::OPTIONS_SINGLE_LINE = PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE;
 
 /**
@@ -263,6 +263,11 @@ namespace {
 					return;
 				}
 
+				// do not decent into derived implementations if not printed
+				if (!printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL) && lang::isDerived(cur)) {
+					return;
+				}
+
 				NodeType type = cur->getNodeType();
 
 				if(type == NT_RecType || type == NT_StructType || type == NT_UnionType || (!printer.hasOption(PrettyPrinter::NO_LET_BOUND_FUNCTIONS) && type == NT_LambdaExpr)) {
@@ -397,6 +402,11 @@ namespace {
 			}
 
 			out << ((node->getNodeType() == NT_UnionType)?"union":"struct");
+
+			if (!node->getName()->getValue().empty()) {
+				out << " " << node->getName()->getValue();
+				if (node->getParents().empty()) out << " ";
+			}
 
 			if (!node->getParents().empty()) {
 				out << " : " << join(", ", node->getParents(), [&](std::ostream& out, const ParentPtr& parent) {
@@ -688,8 +698,15 @@ namespace {
 					return;
 				}
 
-				// default formating
-				this->visit(node->getFunctionExpr());
+				// test whether function is a derived literal
+				if (!printer.hasOption(PrettyPrinter::PRINT_DERIVED_IMPL) && lang::isDerived(function)) {
+					out << lang::getConstructName(function);
+				} else {
+					// default formating
+					this->visit(node->getFunctionExpr());
+				}
+
+				// print argument list
 				auto arguments = node->getArguments();
 				if (arguments.empty()) {
 					out << "()";

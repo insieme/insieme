@@ -259,3 +259,29 @@ TEST(PrettyPrinter, LambdaTypes) {
 
 }
 
+TEST(PrettyPrinter, DerivedLiterals) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	// create a function
+	auto type = builder.structType();
+	auto var = builder.variable(type);
+	auto val = builder.literal("x", type);
+
+	auto fun = builder.lambdaExpr(builder.compoundStmt(), toVector(var));
+	auto call = builder.callExpr(fun, val);
+
+	EXPECT_FALSE(lang::isDerived(fun));
+
+	EXPECT_EQ("let type000 = struct<\n\t\n>;\n\nlet fun000 = fun(type000 v1) -> unit { };\n\nfun000(x)", toString(PrettyPrinter(call)));
+
+	// mark it derived
+	lang::markAsDerived(fun, "id");
+	EXPECT_TRUE(lang::isDerived(fun));
+
+	EXPECT_EQ("let type000 = struct<\n\t\n>;\n\nid(x)", toString(PrettyPrinter(call)));
+
+	// without derived interception
+	EXPECT_EQ("let type000 = struct<\n\t\n>;\n\nlet fun000 = fun(type000 v1) -> unit { };\n\nfun000(x)", toString(PrettyPrinter(call, PrettyPrinter::PRINT_DERIVED_IMPL)));
+}

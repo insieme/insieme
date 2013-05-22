@@ -34,49 +34,50 @@
  * regarding third party software licenses.
  */
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/Expr.h>
-#pragma GCC diagnostic pop
+#pragma once
 
-#pragma once 
+/**
+ * A header for general definitions of language extensions.
+ */
+
+#include <string>
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
-namespace frontend {
+namespace core {
+namespace lang {
 
-
-//FORWARD DECLARATION
-namespace conversion {
-	class ConversionFactory;
-}
-
-namespace utils {
-
-	std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
+	using std::string;
 
 	/**
-	 * casts to bool an expression
-	 */
-	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr);
-
-	/**
-	 * cast between 2 scalar types an IR expression
-	 */
-	core::ExpressionPtr castScalar(const core::TypePtr& targetTy, 
-								   const core::ExpressionPtr& expr);
-
-	/**
-	 * Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
+	 * Checks whether the given construct is a derived construct within
+	 * any language extension. Derived constructs are annotated by a
+	 * corresponding annotation.
 	 *
-	 * @param convFact, conversionFactor holding all converters and helpers
-	 * @param castExpr the clang cast expression
-	 * return right typed expression
+	 * @param node the node to be tested
+	 * @return true if the given node is marked as a derived construct, false otherwise
 	 */
-	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::ConversionFactory& convFact,
-											  const clang::CastExpr* castExpr);
+	bool isDerived(const NodePtr& node);
 
-} // end utils namespace 
-} // end frontend namespace
-} // end insisme namespace
+	/**
+	 * Extracts the name of the derived construct. If the given node
+	 * is not a derived node, the result is undefined (an assertion
+	 * in debug mode).
+	 *
+	 * @param node the node being a derived definition which needs to be named
+	 * @return the name attached to the given construct
+	 */
+	const string& getConstructName(const NodePtr& node);
+
+	/**
+	 * Marks the given construct as being a derived construct being named
+	 * accordingly.
+	 *
+	 * @param node the node to be marked as being derived
+	 * @param name the name of the the derived construct
+	 */
+	void markAsDerived(const NodePtr& node, const string& name);
+
+} // end namespace lang
+} // end namespace core
+} // end namespace insieme

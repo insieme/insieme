@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -53,8 +53,8 @@ namespace frontend {
 
 const unsigned ConversionJob::DEFAULT_FLAGS = PrintDiag;
 
-ConversionJob::ConversionJob(const string& file)
-	: files(toVector(file)), stdLibIncludeDirs(insieme::utils::compiler::getDefaultCppIncludePaths()), standard("c99"), flags(DEFAULT_FLAGS) {};
+ConversionJob::ConversionJob(const boost::filesystem::path& path)
+	: files(toVector(path.string())), stdLibIncludeDirs(insieme::utils::compiler::getDefaultCppIncludePaths()), standard("c99"), flags(DEFAULT_FLAGS) {};
 
 ConversionJob::ConversionJob(const vector<string>& files, const vector<string>& includeDirs)
 	: files(files), includeDirs(includeDirs), stdLibIncludeDirs(insieme::utils::compiler::getDefaultCppIncludePaths()), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};

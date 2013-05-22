@@ -34,49 +34,48 @@
  * regarding third party software licenses.
  */
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/Expr.h>
-#pragma GCC diagnostic pop
+#include <gtest/gtest.h>
 
-#pragma once 
+#include "insieme/frontend/frontend.h"
+
+#include "test_utils.inc"
 
 namespace insieme {
 namespace frontend {
 
+	TEST(SrcFileTest, HelloWorldTest) {
 
-//FORWARD DECLARATION
-namespace conversion {
-	class ConversionFactory;
-}
+		fs::path tmpFile;
+		{
+			// create a temporary source file
+			Source file(
+					R"(
 
-namespace utils {
+					#include <stdio.h>
+					
+					int main() {
+						printf("Hello World\n"); 
+						return 0; 
+					}
+	
+					)"
+			);
 
-	std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
+			// check whether there is a temporary file
+			tmpFile = file.getPath();
+			EXPECT_TRUE(fs::exists(tmpFile));
 
-	/**
-	 * casts to bool an expression
-	 */
-	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr);
+			// parse temporary file
+			core::NodeManager manager;
+			ConversionJob job(file);
+			auto code = job.execute(manager);
+			EXPECT_TRUE(code);
 
-	/**
-	 * cast between 2 scalar types an IR expression
-	 */
-	core::ExpressionPtr castScalar(const core::TypePtr& targetTy, 
-								   const core::ExpressionPtr& expr);
+		}
 
-	/**
-	 * Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
-	 *
-	 * @param convFact, conversionFactor holding all converters and helpers
-	 * @param castExpr the clang cast expression
-	 * return right typed expression
-	 */
-	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::ConversionFactory& convFact,
-											  const clang::CastExpr* castExpr);
+		// check whether temporary file has been properly removed
+		EXPECT_FALSE(fs::exists(tmpFile));
+	}
 
-} // end utils namespace 
-} // end frontend namespace
-} // end insisme namespace
+} // end namespace frontend
+} // end namespace insieme
