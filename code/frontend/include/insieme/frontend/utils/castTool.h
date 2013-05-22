@@ -45,6 +45,13 @@
 
 namespace insieme {
 namespace frontend {
+
+
+//FORWARD DECLARATION
+namespace conversion {
+	class ConversionFactory;
+}
+
 namespace utils {
 
 	std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
@@ -61,17 +68,14 @@ namespace utils {
 								   const core::ExpressionPtr& expr);
 
 	/**
-	 * Creates a cast expression arround an IR expression driven by the corresponding clang::CastExpr
+	 * Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
 	 *
-	 * @param builder, builder tool to create new IR
-	 * @param cast the clang cast expression
-	 * @param expr the IR expression to be casted
+	 * @param convFact, conversionFactor holding all converters and helpers
+	 * @param castExpr the clang cast expression
 	 * return right typed expression
 	 */
-	core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builder, 
-											  const clang::CastExpr* cast, 
-										  	  const core::TypePtr&    targetTy,
-											  const core::ExpressionPtr& expr);
+	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::ConversionFactory& convFact,
+											  const clang::CastExpr* castExpr);
 
 } // end utils namespace 
 } // end frontend namespace

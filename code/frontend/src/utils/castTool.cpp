@@ -36,6 +36,7 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/frontend/utils/ir++_utils.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/unused.h"
@@ -43,9 +44,13 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"
+
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/ir++_extension.h"
+
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include <boost/regex.hpp>
@@ -68,7 +73,6 @@
 
 using namespace insieme;
 using namespace insieme::frontend::utils;
-
 
 namespace {
 
@@ -169,6 +173,26 @@ namespace {
 		}
 		return builder.literal (targetTy, res);
 	}
+
+	//FIXME: getting-shit-done-solution -- code duplication with getCArrayElemRef in
+	//expr_converter.cpp
+	core::ExpressionPtr getCArrayElemRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr) {
+		const core::TypePtr& exprTy = expr->getType();
+		if (exprTy->getNodeType() == core::NT_RefType) {
+			const core::TypePtr& subTy = GET_REF_ELEM_TYPE(exprTy);
+
+			if (subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType) {
+				core::TypePtr elemTy = core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
+
+				return builder.callExpr(
+						builder.refType(elemTy),
+						(subTy->getNodeType() == core::NT_VectorType ?
+								builder.getLangBasic().getVectorRefElem() : builder.getLangBasic().getArrayRefElem1D()),
+						expr, builder.uintLit(0));
+			}
+		}
+		return expr;
+	}	
 }
 
 namespace insieme {
@@ -337,13 +361,18 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
+// Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builder, 
-										  const clang::CastExpr* castExpr, 
-										  const core::TypePtr&    targetTy,
-										  const core::ExpressionPtr& expr){
+core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::ConversionFactory& convFact,
+										  const clang::CastExpr* castExpr){
+
+	const core::IRBuilder& builder = convFact.getIRBuilder();
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
+	core::NodeManager& mgr = convFact.getNodeManager();	
+
+	core::ExpressionPtr expr = convFact.convertExpr(castExpr->getSubExpr());
+	core::TypePtr  targetTy = convFact.convertType(GET_TYPE_PTR(castExpr));
+
 	core::TypePtr&& exprTy = expr->getType();
 
 	if (VLOG_IS_ON(2)){
@@ -366,11 +395,21 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 	switch (castExpr->getCastKind()) {
 
 		case clang::CK_LValueToRValue 	:
-		//CLANG: case clang::CK_LValueToRValue - A conversion which causes the extraction of an r-value from the operand gl-value. 
+		// A conversion which causes the extraction of an r-value from the operand gl-value. 
 		// The result of an r-value conversion is always unqualified.
 		//
 		// IR: this is the same as out ref deref ref<a'> -> a'
 		{
+			
+			// this is CppRef -> ref
+			if (core::analysis::isCppRef(exprTy)){
+			// unwrap and deref the variable
+				return builder.deref( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr));
+			}
+			else if (core::analysis::isConstCppRef(exprTy)){
+				return builder.deref( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr));
+			}
+
 			if(IS_IR_REF(exprTy))
 				return builder.deref(expr);
 			else{
@@ -381,39 +420,42 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		}
 
 		case clang::CK_IntegralCast 	:
-		//CLANG: - A cast between integral types (other than to boolean). Variously a bitcast, a truncation,
-		//a sign-extension, or a zero-extension. long l = 5; (unsigned) i
+		// A cast between integral types (other than to boolean). Variously a bitcast, a truncation,
+		// a sign-extension, or a zero-extension. long l = 5; (unsigned) i
 		//IR: convert to int or uint
 		case clang::CK_IntegralToBoolean 	:
-		// - Integral to boolean. A check against zero. (bool) i
+		// Integral to boolean. A check against zero. (bool) i
 		case clang::CK_IntegralToFloating 	:
-		// - Integral to floating point. float f = i;
+		// Integral to floating point. float f = i;
 		case clang::CK_FloatingToIntegral 	:
-		//case clang::CK_FloatingToIntegral - Floating point to integral. Rounds towards zero, discarding any fractional component.
+		// Floating point to integral. Rounds towards zero, discarding any fractional component.
 		// (int) f
 		case clang::CK_FloatingToBoolean 	:
-		//case clang::CK_FloatingToBoolean - Floating point to boolean. (bool) f
+		// Floating point to boolean. (bool) f
 		case clang::CK_FloatingCast 	:
-		//case clang::CK_FloatingCast - Casting between floating types of different size. (double) f (float) ld
+		// Casting between floating types of different size. (double) f (float) ld
 			return castScalar( targetTy, expr);
 		
-		case clang::CK_NoOp 	:
-		/*case clang::CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. i
-		* int -> int char** -> const char * const *
-		* */
+		case clang::CK_NoOp:
+		// A conversion which does not affect the type other than (possibly) adding qualifiers. i
+		// int -> int char** -> const char * const *
+		{
+			if (core::analysis::isCppRef(exprTy)){
+				dumpDetail (exprTy);
+				return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), expr);
+			}
+
 			// types equality has been already checked, if is is a NoOp is because clang identifies
 			// this as the same type. but we might intepret it in a diff way. (ex, char literals are
 			// int for clang, we build a char type
-			
-			if (gen.isPrimitive(expr->getType()) )
-				return castScalar( targetTy, expr);
+			if (gen.isPrimitive(exprTy) )
+				return castScalar(targetTy, expr);
 			else 
 				return expr;
-
+		}
 
 		case clang::CK_ArrayToPointerDecay 	:
-		/*case clang::CK_ArrayToPointerDecay - Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
-		* */
+		// Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
 		{
 			// if inner expression is not ref.... it might be a compound initializer
 			core::ExpressionPtr retIr = expr;
@@ -425,14 +467,13 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		}
 
 		case clang::CK_BitCast 	:
-		/*case clang::CK_BitCast - A conversion which causes a bit pattern of one type to be reinterpreted as a bit pattern 
-		* of another type. 
-		* Generally the operands must have equivalent size and unrelated types.  The pointer conversion 
-		* char* -> int* is a bitcast. A conversion from any pointer type to a C pointer type is a bitcast unless 
-		* it's actually BaseToDerived or DerivedToBase. A conversion to a block pointer or ObjC pointer type is a 
-		* bitcast only if the operand has the same type kind; otherwise, it's one of the specialized casts below.  
-		* Vector coercions are bitcasts.
-		* */
+		// A conversion which causes a bit pattern of one type to be reinterpreted as a bit pattern 
+		//of another type. 
+		//Generally the operands must have equivalent size and unrelated types.  The pointer conversion 
+		//char* -> int* is a bitcast. A conversion from any pointer type to a C pointer type is a bitcast unless 
+		//it's actually BaseToDerived or DerivedToBase. A conversion to a block pointer or ObjC pointer type is a 
+		//bitcast only if the operand has the same type kind; otherwise, it's one of the specialized casts below.  
+		//Vector coercions are bitcasts.
 		{
 			// char* -> const char* is a bitcast in clang, and not a Noop, but we drop qualifiers
 			if (*targetTy == *exprTy) return expr;
@@ -468,20 +509,19 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		}
 
 		case clang::CK_VectorSplat 	:
-		/*case clang::CK_VectorSplat - A conversion from an arithmetic type to a vector of that element type. Fills all elements 
-		* ("splats") with the source value. __attribute__((ext_vector_type(4))) int v = 5;
-		* */
-			//return expr;
+		// A conversion from an arithmetic type to a vector of that element type. Fills all elements 
+		//("splats") with the source value. __attribute__((ext_vector_type(4))) int v = 5;
+		{
 			return builder.callExpr(gen.getVectorInitUniform(), 
 					expr,
 					builder.getIntTypeParamLiteral(targetTy.as<core::VectorTypePtr>()->getSize())
 				);
+		}
 
 		case clang::CK_IntegralToPointer 	:
-		/*case clang::CK_IntegralToPointer - Integral to pointer. A special kind of reinterpreting conversion. Applies to normal,
-		* ObjC, and block pointers. (char*) 0x1001aab0 reinterpret_cast<int*>(0)
-		* */
-	
+		//Integral to pointer. A special kind of reinterpreting conversion. Applies to normal,
+		//ObjC, and block pointers. (char*) 0x1001aab0 reinterpret_cast<int*>(0)
+		{	
 			// is a cast of Null to another pointer type: 
 			// we rebuild null
 			if (*expr == *builder.literal(expr->getType(), "0")) {
@@ -493,23 +533,22 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 				dumpDetail(targetTy);
 				assert(false && "Non NULL casts to pointer not supported");
 			}
-
+		}
 
 		case clang::CK_ConstructorConversion 	:
-		/*case clang::CK_ConstructorConversion - Conversion by constructor. struct A { A(int); }; A a = A(10);
-		* */
-	// this should be handled by backend compiler
-	// http://stackoverflow.com/questions/1384007/conversion-constructor-vs-conversion-operator-precedence
-		return expr;
+		//Conversion by constructor. struct A { A(int); }; A a = A(10);
+		{
+			// this should be handled by backend compiler
+			// http://stackoverflow.com/questions/1384007/conversion-constructor-vs-conversion-operator-precedence
+			return expr;
+		}
 
 		///////////////////////////////////////
 		//  PARTIALY IMPLEMENTED
 		///////////////////////////////////////
 		
 		case clang::CK_NullToPointer 	:
-		/*case clang::CK_NullToPointer - Null pointer constant to pointer, ObjC pointer, or block pointer.
-		 * (void*) 0;
-	 	 */
+		// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
 		{
 		
 			if (gen.isAnyRef(targetTy)) { return expr; } 
@@ -525,12 +564,61 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		}
 
 		case clang::CK_ToVoid 	:
-		/*case clang::CK_ToVoid - Cast to void, discarding the computed value. (void) malloc(2048)
-		* */
+		//Cast to void, discarding the computed value. (void) malloc(2048)
+		{
+			// this cast ignores inner expression, is not very usual, but might show off when dealing
+			// with null pointer.  
+			if (gen.isUnit(targetTy)) { return gen.getUnitConstant(); }
+		}
 
-		// this cast ignores inner expression, is not very usual, but might show off when dealing
-		// with null pointer.  
-		if (gen.isUnit(targetTy)) { return gen.getUnitConstant(); }
+		
+		case clang::CK_UncheckedDerivedToBase:
+		//A conversion from a C++ class pointer/reference to a base class that can assume that
+		//the derived pointer is not null. const A &a = B(); b->method_from_a(); 
+		{
+			// if is a derived class, we will return a narrow expression with the datapath
+			// to access the right superclass
+			
+			// TODO: do we need to check if is pointerType?
+			// in case of pointer, the inner expression is modeled as ref< array < C, 1> >
+			// it is needed to deref the first element
+			expr = getCArrayElemRef(builder, expr);
+
+			core::TypePtr targetTy;
+			clang::CastExpr::path_const_iterator it;
+			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
+				targetTy = convFact.convertType((*it)->getType().getTypePtr());
+				expr = builder.refParent(expr, targetTy);
+			}
+			return expr;
+		}
+		
+		case clang::CK_DerivedToBase:
+		//A conversion from a C++ class pointer to a base class pointer. A *a = new B();
+		{
+			// TODO: do we need to check if is pointerType?
+			// in case of pointer, the inner expression is modeled as ref< array < C, 1> >
+			// it is needed to deref the first element
+			expr = getCArrayElemRef(builder, expr);
+
+			core::TypePtr targetTy;
+			clang::CastExpr::path_const_iterator it;
+			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
+				targetTy = convFact.convertType((*it)->getType().getTypePtr());
+				expr = builder.refParent(expr, targetTy);
+			}
+
+			return expr;
+			//assert(false && "derived to base cast  not implementd");
+			break;
+		}
+
+		case clang::CK_BaseToDerived:
+		//A conversion from a C++ class pointer/reference to a derived class pointer/reference. B *b = static_cast<B*>(a); 
+		{
+			assert(false && "base to derived cast  not implementd B* b = static_cast<B*>(A)");
+			break;
+		}
 
 		///////////////////////////////////////
 		//  NOT IMPLEMENTED
@@ -545,20 +633,6 @@ core::ExpressionPtr performClangCastOnIR (const insieme::core::IRBuilder& builde
 		case clang::CK_LValueBitCast 	:
 		/* case clang::CK_LValueBitCast - A conversion which reinterprets the address of an l-value as an l-value of a different 
 		* kind. Used for reinterpret_casts of l-value expressions to reference types. bool b; reinterpret_cast<char&>(b) = 'a';
-		* */
-
-		case clang::CK_BaseToDerived 	:
-		/*case clang::CK_BaseToDerived - A conversion from a C++ class pointer/reference to a derived class
-		* pointer/reference. B *b = static_cast<B*>(a);
-		* */
-
-		case clang::CK_DerivedToBase 	:
-		/*case clang::CK_DerivedToBase - A conversion from a C++ class pointer to a base class pointer. A *a = new B();
-		* */
-
-		case clang::CK_UncheckedDerivedToBase 	:
-		/*case clang::CK_UncheckedDerivedToBase - A conversion from a C++ class pointer/reference to a base class 
-		* that can assume that the derived pointer is not null. const A &a = B(); b->method_from_a();
 		* */
 
 		case clang::CK_Dynamic 	:

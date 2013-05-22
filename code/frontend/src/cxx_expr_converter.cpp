@@ -102,77 +102,7 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
 	START_LOG_EXPR_CONVERSION(castExpr);
-	core::ExpressionPtr retIr;
-
-	switch (castExpr->getCastKind()) {
-		case CK_UncheckedDerivedToBase:
-			//A conversion from a C++ class pointer/reference to a base class that can assume that
-			//the derived pointer is not null. const A &a = B(); b->method_from_a(); 
-			{
-				// if is a derived class, we will return a narrow expression with the datapath
-				// to access the right superclass
-				core::TypePtr targetTy;
-				retIr = Visit(castExpr->getSubExpr());
-			
-				// in case of pointer, the inner expression is modeled as ref< array < C, 1> >
-				// it is needed to deref the first element
-				retIr = getCArrayElemRef(builder, retIr);
-
-				clang::CastExpr::path_const_iterator it;
-				for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
-					targetTy = convFact.convertType((*it)->getType().getTypePtr());
-					retIr = convFact.builder.refParent(retIr, targetTy);
-				}
-				break;
-			}
-		case CK_DerivedToBase:  
-			//A conversion from a C++ class pointer to a base class pointer. A *a = new B();
-			{
-				retIr = Visit(castExpr->getSubExpr());
-				break;
-		//		assert(false && "derived to base cast  not implementd");
-			}
-		
-		case CK_BaseToDerived: 
-			//A conversion from a C++ class pointer/reference to a derived class pointer/reference. B *b = static_cast<B*>(a); 
-			{
-				assert(false && "base to derived cast  not implementd B* b = static_cast<B*>(A)");
-				break;
-			}
-		case CK_LValueToRValue:
-			{
-				// this is CppRef -> ref
-				core::ExpressionPtr expr = Visit(castExpr->getSubExpr ());
-				if (core::analysis::isCppRef(expr->getType())){
-				// unwrap and deref the variable
-					return builder.deref( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr));
-				}
-				else if (core::analysis::isConstCppRef(expr->getType())){
-					return builder.deref( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr));
-				}
-
-				// if not, fallthrow default case
-			}
-		case CK_NoOp:
-			{
-				core::ExpressionPtr expr = Visit(castExpr->getSubExpr ());
-				core::TypePtr type = expr->getType();
-				if (core::analysis::isCppRef(type)){
-					dumpDetail (type);
-					return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), expr);
-				}
-				// FIXME: it might be the cast from any left side to a cpp const reference,
-
-				// do no break, otherwhise continue to default
-			}
-
-		default:
-			// cast which should look like C 
-			{
-				retIr = ExprConverter::VisitImplicitCastExpr(castExpr);
-				break;
-			}
-	}
+	core::ExpressionPtr retIr = ExprConverter::VisitImplicitCastExpr(castExpr);
 	END_LOG_EXPR_CONVERSION(retIr);
 	return retIr;
 }
@@ -181,15 +111,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitImplicitCastExpr(c
 //						EXPLICIT CAST EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr) {
-// FIXME: all CPP casts
-
-	if (castExpr->getCastKind() == CK_NoOp) {
-		core::ExpressionPtr&& exp = Visit(castExpr->getSubExpr ());
-		return exp;
-	}
-
-
-	return (ExprConverter::VisitExplicitCastExpr(castExpr));
+	START_LOG_EXPR_CONVERSION(castExpr);
+	core::ExpressionPtr retIr = ExprConverter::VisitExplicitCastExpr(castExpr);
+	END_LOG_EXPR_CONVERSION(retIr);
+	return retIr;
 /*
 	START_LOG_EXPR_CONVERSION(castExpr);
 
