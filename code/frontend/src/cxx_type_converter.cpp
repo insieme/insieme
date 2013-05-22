@@ -181,11 +181,15 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				continue;
 			}
 		
+			
+			if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
+				//FIXME: for now ignore CopyAssignmentOperator 
+				// -- backendCompiler should take care of it
+				continue;
+			}
 
-			if( ((*methodIt)->isMoveAssignmentOperator() || 
-				 (*methodIt)->isCopyAssignmentOperator()) 
-				&& !(*methodIt)->isUserProvided() ) {
-				//FIXME for non-userProvided move/copy assign ops find solution,
+			if( (*methodIt)->isMoveAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
+				//FIXME for non-userProvided moveAssign ops find solution,
 				//maybe leave them to be handled by the backendCompiler or something else
 				//currently are left over for be-compiler
 				assert(!(*methodIt)->isMoveAssignmentOperator() && " move assigment operator is a CXX11 feature, not supported");
