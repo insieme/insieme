@@ -402,6 +402,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	// index the first element
 	ownerObj = getCArrayElemRef(builder, ownerObj);
 
+	//unwrap if is a cpp reference, we dont use cpp references for this
+	if (core::analysis::isCppRef(ownerObj->getType())){
+	// unwrap and deref the variable
+		ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), ownerObj);
+	}
+	else if (core::analysis::isConstCppRef(ownerObj->getType())){
+		ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), ownerObj);
+	}
+
 	// reconstruct Arguments list, fist one is a scope location for the object
 	ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(methodDecl) );
 	args.insert (args.begin(), ownerObj);
