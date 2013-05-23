@@ -29,12 +29,12 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#pragma once 
+#pragma once
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"
@@ -64,7 +64,7 @@ namespace exprutils {
 
 using namespace insieme;
 
-//FIXME cleanup this namespace, document and find out if there is real usage 
+//FIXME cleanup this namespace, document and find out if there is real usage
 
 /**
  * Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
@@ -85,7 +85,7 @@ vector<core::ExpressionPtr> tryPack(const core::IRBuilder& builder, core::Functi
 core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::TypePtr& type);
 
 /**
- * Special method which handle malloc and calloc which need to be treated in a special way in the IR. 
+ * Special method which handle malloc and calloc which need to be treated in a special way in the IR.
  */
 core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::TypePtr& type, const core::ExpressionPtr& subExpr);
 
@@ -120,23 +120,22 @@ namespace conversion {
 #define GET_ARRAY_ELEM_TYPE(type) \
 	(core::static_pointer_cast<const core::ArrayType>(type)->getElementType())
 
-#define LOG_EXPR_CONVERSION(retIr) \
-	FinalActions attachLog( [&] () { END_LOG_EXPR_CONVERSION(retIr); } )
-
-#define START_LOG_EXPR_CONVERSION(expr) \
-	VLOG(1) <<  "\n****************************************************************************************\n" \
-			 << "Converting expression [class: '" << expr->getStmtClassName() << "']\n" \
-			 << "-> at location: (" <<	\
-				utils::location(expr->getLocStart(), convFact.getCurrentSourceManager()) << "): "; \
-	if( VLOG_IS_ON(2) ) { \
-		VLOG(2) << "Dump of clang expression: \n" \
-				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
-		expr->dump(); \
-	}
-
-#define END_LOG_EXPR_CONVERSION(expr) \
-	VLOG(1) << "Converted into IR expression: "; \
-	VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )";
+#define LOG_EXPR_CONVERSION(parentExpr, expr) \
+	FinalActions attachLog( [&] () { \
+        VLOG(1) << "\n**********************EXPR*[class:'"<< parentExpr->getStmtClassName() <<"']**********************\n"; \
+        if( VLOG_IS_ON(2) ) { \
+            VLOG(2) << "Dump of clang expression: \n" \
+                     << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+            parentExpr->dump(); \
+        } \
+        VLOG(1) << "-> at location: (" <<	\
+                    utils::location(parentExpr->getLocStart(), convFact.getCurrentSourceManager()) << "); \n "; \
+        VLOG(1) << "Converted into IR expression: "; \
+        if(expr) { \
+            VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )"; \
+        } \
+        VLOG(1) << "\n****************************************************************************************\n"; \
+    } )
 
 //---------------------------------------------------------------------------------------------------------------------
 //										BASE EXPRESSION CONVERTER
@@ -156,14 +155,14 @@ protected:
 	core::ExpressionPtr asRValue(const core::ExpressionPtr& value);
 
 template<class ClangExprTy>
-ExpressionList getFunctionArguments(ClangExprTy* callExpr, 
+ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 									const clang::FunctionDecl* declaration){
 	const core::FunctionTypePtr& funcTy = convFact.convertFunctionType(declaration).as<core::FunctionTypePtr>();
 	return getFunctionArguments(callExpr, funcTy, declaration);
 }
 
 template<class ClangExprTy>
-ExpressionList getFunctionArguments(ClangExprTy* callExpr, 
+ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 									const core::FunctionTypePtr& funcTy,
 									const clang::FunctionDecl* declaration = NULL){
 	ExpressionList args;
@@ -180,7 +179,7 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 	size_t argIdOffSet = 0;
 	// for CXXOperatorCallExpr we need to take care of the "this" arg separately
 	// is a memberfunctioncall -- arg(0) == this
-	if( const clang::CXXOperatorCallExpr* oc = llvm::dyn_cast<clang::CXXOperatorCallExpr>(callExpr) ) { 
+	if( const clang::CXXOperatorCallExpr* oc = llvm::dyn_cast<clang::CXXOperatorCallExpr>(callExpr) ) {
 		if( llvm::isa<clang::CXXMethodDecl>(oc->getCalleeDecl()) ) {
 			argIdOffSet = 1;
 			off=0;
@@ -419,9 +418,9 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //										CXX EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::CXXExprConverter : 
-	public ExprConverter, 
-	public clang::ConstStmtVisitor<CXXExprConverter, core::ExpressionPtr> 
+class ConversionFactory::CXXExprConverter :
+	public ExprConverter,
+	public clang::ConstStmtVisitor<CXXExprConverter, core::ExpressionPtr>
 {
 
 public:
@@ -446,7 +445,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, ExtVectorElementExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
-	
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						  IMPLICIT CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -460,7 +459,7 @@ public:
 	//							FUNCTION CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCallExpr(const clang::CallExpr* callExpr);
-	
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						  MEMBER EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

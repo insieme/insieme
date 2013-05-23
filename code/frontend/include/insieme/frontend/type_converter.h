@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -59,22 +59,29 @@ namespace conversion {
 #define MAKE_SIZE(n)	toVector(core::IntTypeParam::getConcreteIntParam(n))
 #define EMPTY_TYPE_LIST	vector<core::TypePtr>()
 
-#define START_LOG_TYPE_CONVERSION(type) \
-	VLOG(1) << "\n****************************************************************************************\n" \
-			 << "Converting type [class: '" << (type)->getTypeClassName() << "']"; \
-	if( VLOG_IS_ON(2) ) { \
-		VLOG(2) << "Dump of clang type: \n" \
-				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
-		type->dump(); \
-	}
+#define LOG_BUILTIN_TYPE_CONVERSION(parentType) \
+    VLOG(1) << "\n**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************\n"; \
+    if( VLOG_IS_ON(2) ) { \
+        VLOG(2) << "Dump of clang type: \n" \
+                << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+        parentType->dump(); \
+    } \
+    VLOG(1) << "\n****************************************************************************************\n";
 
-#define END_LOG_TYPE_CONVERSION(type) \
-	VLOG(1) << "Converted 'type' into IR type: "; \
-	VLOG(1) << "\t" << *type;
-
-
-
-
+#define LOG_TYPE_CONVERSION(parentType, retType) \
+	FinalActions attachLog( [&] () { \
+        VLOG(1) << "\n**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************\n"; \
+        if( VLOG_IS_ON(2) ) { \
+            VLOG(2) << "Dump of clang type: \n" \
+                     << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+            parentType->dump(); \
+        } \
+        if(retType) { \
+            VLOG(1) << "Converted 'type' into IR type: "; \
+            VLOG(1) << "\t" << *retType; \
+        } \
+        VLOG(1) << "\n****************************************************************************************\n"; \
+    } )
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							Type converter: Common Interface
@@ -113,7 +120,7 @@ public:
 	virtual core::TypePtr Visit(const clang::Type* type) = 0;
 protected:
 
-	virtual core::TypePtr handleTagType(const clang::TagDecl* tagDecl, 
+	virtual core::TypePtr handleTagType(const clang::TagDecl* tagDecl,
 			const core::NamedCompositeType::Entries& structElements);
 };
 
@@ -123,8 +130,8 @@ protected:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							Type converter: C types
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-class ConversionFactory::CTypeConverter: 
-	public ConversionFactory::TypeConverter, 
+class ConversionFactory::CTypeConverter:
+	public ConversionFactory::TypeConverter,
 	public clang::TypeVisitor<ConversionFactory::CTypeConverter, core::TypePtr>
 {
 
@@ -169,7 +176,7 @@ protected:
 // 							Type converter: C++ types
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class ConversionFactory::CXXTypeConverter :
-	public ConversionFactory::TypeConverter, 
+	public ConversionFactory::TypeConverter,
 	public clang::TypeVisitor<ConversionFactory::CXXTypeConverter, core::TypePtr>{
 
 	ConversionFactory& convFact;
