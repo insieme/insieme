@@ -103,7 +103,7 @@ TEST(PrimitiveTypes, Base) {
 	// check strings
 	string test = "Hello";
 	expr = toIR(manager, test);
-	EXPECT_EQ("string", toString(*expr->getType()));
+	EXPECT_EQ("ref<array<char,1>>", toString(*expr->getType()));
 	EXPECT_EQ("Hello", toString(*expr));
 	EXPECT_EQ(test, toValue<string>(expr));
 

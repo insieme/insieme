@@ -609,12 +609,6 @@ namespace features {
 					}
 				}
 
-				// handle string-to-char pointer stuff
-				if (basic.isStringToCharPointer(fun)) {
-					// strings are at a fixed position => 0
-					return 0;
-				}
-
 				// add code for pointer chasing
 				if (basic.isRefDeref(fun)) {
 					// the read operation referencing the pointer value is handled independently

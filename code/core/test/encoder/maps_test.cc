@@ -61,7 +61,7 @@ TEST(Maps, MapsConversion) {
 	auto back = toValue<map<string,int>>(ir);
 
 	EXPECT_EQ("{}", toString(value));
-	EXPECT_EQ("empty(pair<string,int<4>>)", toString(*ir));
+	EXPECT_EQ("empty(pair<ref<array<char,1>>,int<4>>)", toString(*ir));
 
 
 	EXPECT_TRUE((isEncodingOf<map<string,int>>(ir)));
@@ -80,7 +80,7 @@ TEST(Maps, MapsConversion) {
 	back = toValue<map<string,int>>(ir);
 
 	EXPECT_EQ("{hello=12, world=14}", toString(value));
-	EXPECT_EQ("cons(pair(hello, 12), cons(pair(world, 14), empty(pair<string,int<4>>)))", toString(*ir));
+	EXPECT_EQ("cons(pair(hello, 12), cons(pair(world, 14), empty(pair<ref<array<char,1>>,int<4>>)))", toString(*ir));
 
 	EXPECT_TRUE((isEncodingOf<map<string,int>>(ir)));
 	EXPECT_EQ(value, back);

@@ -600,14 +600,6 @@ namespace backend {
 		});
 
 
-		// -- strings --
-
-		res[basic.getStringToCharPointer()] = OP_CONVERTER({
-			// no special treatment required
-			return CONVERT_ARG(0);
-		});
-
-
 		// -- arrays --
 
 		res[basic.getArraySubscript1D()] = OP_CONVERTER({

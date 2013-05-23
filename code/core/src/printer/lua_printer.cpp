@@ -372,7 +372,6 @@ namespace printer {
 				OUT(")");
 			});
 			res[basic.getScalarToArray()] 			= OP_CONVERTER({ PRINT_ARG(0); });
-			res[basic.getStringToCharPointer()] 	= OP_CONVERTER({ PRINT_ARG(0); });
 
 			res[basic.getSelect()]	= OP_CONVERTER({
 

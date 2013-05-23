@@ -333,7 +333,6 @@ public:
 		// List the IR literals which do not alterate the usage of a variable and therefore are used
 		// to convert a ref into another ref 
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefVectorToRefArray()) ||
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getStringToCharPointer()) ||
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefReinterpret()) ) 
 		{
 			visit( callExpr->getArgument(0) ); // arg(0)
