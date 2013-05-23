@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#pragma once 
+#pragma once
 
 #include "insieme/frontend/convert.h"
 
@@ -86,24 +86,20 @@ namespace conversion {
 #define CALL_BASE_STMT_VISIT(Base, StmtTy) \
 	stmtutils::StmtWrapper Visit##StmtTy( clang::StmtTy* stmt ) { return Base::Visit##StmtTy( stmt ); }
 
-#define LOG_STMT_CONVERSION(retIr) \
-	FinalActions attachLog( [&] () { END_LOG_STMT_CONVERSION(retIr); } )
-
-#define START_LOG_STMT_CONVERSION(stmt) \
-	VLOG(1) << "\n****************************************************************************************\n" \
-			 << "Converting statement [class: '" << stmt->getStmtClassName() << "'] \n" \
-			 << "-> at location: (" \
-			 << utils::location(stmt->getLocStart(), convFact.getCurrentSourceManager()) << "): "; \
-	if( VLOG_IS_ON(2) ) { \
-		VLOG(2) << "Dump of clang statement:\n" \
-				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
-		stmt->dump(convFact.getCurrentSourceManager()); \
-	}
-
-#define END_LOG_STMT_CONVERSION(stmt) \
-	VLOG(1) << "Converted 'statement' into IR stmt: "; \
-	VLOG(1) << "\t" << *stmt;
-
+#define LOG_STMT_CONVERSION(parentStmt, stmt) \
+	FinalActions attachLog( [&] () { \
+        VLOG(1) << "\n**********************STMT*[class:'"<< parentStmt->getStmtClassName() <<"']**********************\n"; \
+        if( VLOG_IS_ON(2) ) { \
+            VLOG(2) << "Dump of clang statement:\n" \
+                    << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+            parentStmt->dump(convFact.getCurrentSourceManager()); \
+        } \
+        VLOG(1) << "-> at location: (" \
+                << utils::location(parentStmt->getLocStart(), convFact.getCurrentSourceManager()) << "); \n"; \
+        VLOG(1) << "Converted 'statement' into IR stmt: "; \
+        VLOG(1) << "\t" << stmt << ""; \
+        VLOG(1) << "\n****************************************************************************************\n"; \
+    } )
 
 //---------------------------------------------------------------------------------------------------------------------
 //							BASE STMT CONVERTER
@@ -118,7 +114,7 @@ protected:
 
 public:
 	StmtConverter(ConversionFactory& convFact) :
-		convFact(convFact), mgr(convFact.mgr), 
+		convFact(convFact), mgr(convFact.mgr),
 		builder(convFact.builder), gen(convFact.mgr.getLangBasic()) { }
 
 	virtual ~StmtConverter() {}
@@ -192,9 +188,9 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //							C STMT CONVERTER -- takes care of C nodes
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::CStmtConverter : 
-	public ConversionFactory::StmtConverter, 
-	public clang::StmtVisitor<ConversionFactory::CStmtConverter, stmtutils::StmtWrapper> 
+class ConversionFactory::CStmtConverter :
+	public ConversionFactory::StmtConverter,
+	public clang::StmtVisitor<ConversionFactory::CStmtConverter, stmtutils::StmtWrapper>
 {
 
 protected:
@@ -249,9 +245,9 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //							CXX STMT CONVERTER  -- takes care of CXX nodes and C nodes with CXX code mixed in
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::CXXStmtConverter: 
-	public ConversionFactory::StmtConverter, 
-	public clang::StmtVisitor<ConversionFactory::CXXStmtConverter, stmtutils::StmtWrapper> 
+class ConversionFactory::CXXStmtConverter:
+	public ConversionFactory::StmtConverter,
+	public clang::StmtVisitor<ConversionFactory::CXXStmtConverter, stmtutils::StmtWrapper>
 {
 
 	ConversionFactory& ConvFact;

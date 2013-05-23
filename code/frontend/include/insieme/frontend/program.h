@@ -47,6 +47,7 @@
 
 #include "insieme/utils/logging.h"
 
+
 namespace insieme {
 namespace frontend {
 
@@ -75,9 +76,10 @@ protected:
 	insieme::frontend::pragma::PragmaList 		mPragmaList;
 
 public:
-	TranslationUnit(const ConversionJob& job) : mFileName(job.getFile()), mClang(job,boost::algorithm::ends_with(job.getFile(),".o")) {
+	TranslationUnit(const ConversionJob& job)
+    : mFileName(job.getFile()), mClang(job,boost::algorithm::ends_with(job.getFile(),".o")) {
 		assert(job.getFiles().size() == 1u && "Only a single file per translation unit allowed!");
-	}
+    }
 
 	/**
 	 * Returns a list of pragmas defined in the translation unit
@@ -93,8 +95,6 @@ public:
 	const std::string& getFileName() const {
 		return mFileName;
 	}
-
-	void storeUnit(const std::string& output_file);
 
 };
 

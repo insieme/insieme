@@ -182,7 +182,6 @@ struct ClangCompiler::ClangCompilerImpl {
 	CompilerInstance clang;
 	llvm::IntrusiveRefCntPtr<TargetOptions> TO;
 	bool m_isCXX;
-	InsiemeSema* sema;
 	ClangCompilerImpl() : clang(), TO(new TargetOptions), m_isCXX(false) {}
 };
 
@@ -389,12 +388,7 @@ Preprocessor& 		ClangCompiler::getPreprocessor()  const { return pimpl->clang.ge
 DiagnosticsEngine& 	ClangCompiler::getDiagnostics()   const { return pimpl->clang.getDiagnostics(); }
 SourceManager& 		ClangCompiler::getSourceManager() const { return pimpl->clang.getSourceManager(); }
 TargetInfo& 		ClangCompiler::getTargetInfo()    const { return pimpl->clang.getTarget(); }
-InsiemeSema*        ClangCompiler::getSema()          { return pimpl->sema; }
-void                ClangCompiler::setSema(InsiemeSema *S) {
-                        pimpl->sema = S;
-                    }
 bool				ClangCompiler::isCXX()				const { return pimpl->m_isCXX; }
-void                ClangCompiler::destroySema()      { delete pimpl->sema; }
 
 ClangCompiler::~ClangCompiler() {
 	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();

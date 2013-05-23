@@ -188,22 +188,6 @@ public:
 	 */
 	clang::TargetInfo& getTargetInfo() const;
 
-	/**
-	 * Returns clang's Sema
-	 * @return
-	 */
-    InsiemeSema* getSema();
-
-	/**
-	 * Set clang's Sema
-	 */
-    void setSema(InsiemeSema *S);
-
-	/**
-	 * Destroy clang's Sema
-	 */
-    void destroySema();
-
 	bool isCXX() const;
 
 	~ClangCompiler();

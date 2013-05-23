@@ -78,10 +78,10 @@ const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
 	TagDecl::redecl_iterator i,e = decl->redecls_end();
 	for(i = decl->redecls_begin(); i != e && !i->isCompleteDefinition(); ++i) ;
 
-	if (i!=e) { 
+	if (i!=e) {
 		const clang::TagDecl* def = (*i)->getDefinition();
 	//	clang::SourceLocation loc = def->getLocation();
-		
+
 	//	auto fit = locMap.find({ def->getNameAsString(), loc.getRawEncoding() });
 	//	if (fit != locMap.end()) {
 	//		return fit->second;
@@ -94,7 +94,7 @@ const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
 	return NULL;
 }
 
-} // end anonymous namespace 
+} // end anonymous namespace
 
 namespace insieme {
 namespace frontend {
@@ -131,11 +131,11 @@ namespace utils {
 			return type;
 		};
 
-		// purify the type until a fixpoint is reached 
+		// purify the type until a fixpoint is reached
 		const Type* purified = type;
 		while( (purified = purifyType(type)) != type )
 			type = purified;
-		
+
 		if (VLOG_IS_ON(2))
 			purified->dump();
 		VLOG(2) << purified->getTypeClassName();
@@ -156,19 +156,19 @@ namespace utils {
 		// if the filed is a function pointer then we need to examine both the return type and the
 		// argument list
 		if (const FunctionType* funcType = llvm::dyn_cast<FunctionType>(type)) {
-			
+
 			addType(obj, funcType->getResultType().getTypePtr(), v);
 
 			// If this is a function proto then look for the arguments type
 			if (const FunctionProtoType* funcProtType = llvm::dyn_cast<FunctionProtoType>(funcType)) {
-							
+
 				std::for_each(funcProtType->arg_type_begin(), funcProtType->arg_type_end(),
 					[ & ] (const QualType& currArgType) {
 						addType(obj, currArgType.getTypePtr(), v);
 					}
 				);
 			}
-		} 
+		}
 
 	};
 
@@ -176,7 +176,7 @@ namespace utils {
 template <>
 void DependencyGraph<const clang::TagDecl*>::Handle(
 		const clang::TagDecl* tagDecl,
-		const DependencyGraph<const clang::TagDecl*>::VertexTy& v) 
+		const DependencyGraph<const clang::TagDecl*>::VertexTy& v)
 {
 	using namespace clang;
 
@@ -184,13 +184,13 @@ void DependencyGraph<const clang::TagDecl*>::Handle(
 
 	const RecordDecl* tag = llvm::dyn_cast<const RecordDecl>(tagDecl);
 
-	// if the tag type is not a struct but otherwise an enum, there will be no declaration 
-	// therefore we can safely return as there is no risk of recursion 
+	// if the tag type is not a struct but otherwise an enum, there will be no declaration
+	// therefore we can safely return as there is no risk of recursion
 	if (!tag) { return; }
 
 
-	
-	
+
+
 	for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
 		addType(*this, (*it)->getType().getTypePtr(), v);
 	}
@@ -205,14 +205,14 @@ namespace conversion {
 //											CLANG TYPE CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
 
-ConversionFactory::TypeConverter::TypeConverter(ConversionFactory& fact, Program& program): 
+ConversionFactory::TypeConverter::TypeConverter(ConversionFactory& fact, Program& program):
 	convFact( fact ), mgr(fact.mgr), builder(fact.builder), gen(fact.mgr.getLangBasic()) { }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								BUILTIN TYPES
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitBuiltinType(const BuiltinType* buldInTy) {
-	START_LOG_TYPE_CONVERSION( buldInTy );
+    LOG_BUILTIN_TYPE_CONVERSION(buldInTy);
 
 	switch(buldInTy->getKind()) {
 	case BuiltinType::Void:			return gen.getUnit();
@@ -225,7 +225,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitBuiltinType(const BuiltinTy
 	case BuiltinType::Char32:		return gen.getInt4();
 	case BuiltinType::Char_S:
 	case BuiltinType::SChar:		return gen.getChar();
-	case BuiltinType::WChar_S:		return gen.getWChar();	
+	case BuiltinType::WChar_S:		return gen.getWChar();
 	case BuiltinType::WChar_U:		return gen.getWChar();
 
 	// integer types
@@ -275,7 +275,6 @@ core::TypePtr ConversionFactory::TypeConverter::VisitComplexType(const ComplexTy
 // The IR representation for such array will be: vector<int<4>,404>
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitConstantArrayType(const ConstantArrayType* arrTy) {
-	START_LOG_TYPE_CONVERSION( arrTy );
 	if(arrTy->isSugared())
 		// if the type is sugared, we Visit the desugared type
 		return convFact.convertType( arrTy->desugar().getTypePtr() );
@@ -287,7 +286,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitConstantArrayType(const Con
 	core::TypePtr&& retTy = builder.vectorType(
 			elemTy, core::ConcreteIntTypeParam::get(mgr, arrSize)
 		);
-	END_LOG_TYPE_CONVERSION( retTy );
+	LOG_TYPE_CONVERSION( arrTy, retTy );
 	return retTy;
 }
 
@@ -300,7 +299,6 @@ core::TypePtr ConversionFactory::TypeConverter::VisitConstantArrayType(const Con
 // The representation for such array will be: ref<array<int<4>,1>>
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitIncompleteArrayType(const IncompleteArrayType* arrTy) {
-	START_LOG_TYPE_CONVERSION( arrTy );
 	if(arrTy->isSugared())
 		// if the type is sugared, we Visit the desugared type
 		return Visit( arrTy->desugar().getTypePtr() );
@@ -309,7 +307,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitIncompleteArrayType(const I
 	assert(elemTy && "Conversion of array element type failed.");
 
 	auto retTy = builder.arrayType( elemTy );
-	END_LOG_TYPE_CONVERSION( retTy );
+	LOG_TYPE_CONVERSION( arrTy, retTy );
 	return retTy;
 }
 
@@ -327,7 +325,6 @@ core::TypePtr ConversionFactory::TypeConverter::VisitIncompleteArrayType(const I
 // he representation for such array will be: array<int<4>,1>( expr() )
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitVariableArrayType(const VariableArrayType* arrTy) {
-	START_LOG_TYPE_CONVERSION( arrTy );
 	if(arrTy->isSugared())
 		// if the type is sugared, we Visit the desugared type
 		return Visit( arrTy->desugar().getTypePtr() );
@@ -336,7 +333,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitVariableArrayType(const Var
 	assert(elemTy && "Conversion of array element type failed.");
 
 	core::TypePtr retTy = builder.arrayType( elemTy );
-	END_LOG_TYPE_CONVERSION( retTy );
+	LOG_TYPE_CONVERSION( arrTy, retTy );
 	return retTy;
 }
 
@@ -349,9 +346,9 @@ core::TypePtr ConversionFactory::TypeConverter::VisitVariableArrayType(const Var
 // specification, but this specification is not part of the canonical type.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitFunctionProtoType(const FunctionProtoType* funcTy) {
-	START_LOG_TYPE_CONVERSION(funcTy);
 
 	core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
+	LOG_TYPE_CONVERSION( funcTy, retTy );
 
 	assert(retTy && "Function has no return type!");
 
@@ -392,7 +389,6 @@ core::TypePtr ConversionFactory::TypeConverter::VisitFunctionProtoType(const Fun
 		argTypes.push_back( gen.getVarList() );
 
 	retTy = builder.functionType( argTypes, retTy);
-	END_LOG_TYPE_CONVERSION( retTy );
 	return retTy;
 }
 
@@ -402,8 +398,8 @@ core::TypePtr ConversionFactory::TypeConverter::VisitFunctionProtoType(const Fun
 // available about its arguments.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
-	START_LOG_TYPE_CONVERSION( funcTy );
 	core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
+	LOG_TYPE_CONVERSION( funcTy, retTy );
 
 	// If the return type is of type vector or array we need to add a reference
 	// so that the semantics of C argument passing is mantained
@@ -413,7 +409,6 @@ core::TypePtr ConversionFactory::TypeConverter::VisitFunctionNoProtoType(const F
 	assert(retTy && "Function has no return type!");
 
 	retTy = builder.functionType( core::TypeList(), retTy);
-	END_LOG_TYPE_CONVERSION( retTy );
 	return retTy;
 }
 
@@ -441,9 +436,9 @@ core::TypePtr ConversionFactory::TypeConverter::VisitExtVectorType(const ExtVect
 // 								TYPEDEF TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitTypedefType(const TypedefType* typedefType) {
-	START_LOG_TYPE_CONVERSION( typedefType );
 
 	core::TypePtr subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
+	LOG_TYPE_CONVERSION( typedefType, subType );
 	assert(subType);
 
 	// Adding the name of the typedef as annotation
@@ -451,17 +446,15 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypedefType(const TypedefTy
 		std::make_shared<annotations::c::CNameAnnotation>(typedefType->getDecl()->getNameAsString())
 	);
 
-	END_LOG_TYPE_CONVERSION( subType );
-	return  subType;
+    return  subType;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 								TYPE OF TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfType(const TypeOfType* typeOfType) {
-	START_LOG_TYPE_CONVERSION(typeOfType);
 	core::TypePtr retTy = gen.getUnit();
-	END_LOG_TYPE_CONVERSION( retTy );
+	LOG_TYPE_CONVERSION( typeOfType, retTy );
 	return retTy;
 }
 
@@ -469,9 +462,8 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfType(const TypeOfType
 // 							TYPE OF EXPRESSION TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOfExprType* typeOfType) {
-	START_LOG_TYPE_CONVERSION( typeOfType );
 	core::TypePtr&& retTy = Visit( GET_TYPE_PTR(typeOfType->getUnderlyingExpr()) );
-	END_LOG_TYPE_CONVERSION( retTy );
+	LOG_TYPE_CONVERSION( typeOfType, retTy );
 	return retTy;
 }
 
@@ -479,9 +471,8 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 //					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  core::TypePtr ConversionFactory::TypeConverter::VisitTagType(const TagType* tagType) {
-	START_LOG_TYPE_CONVERSION( tagType );
-
 	auto tagDecl = findDefinition(tagType);
+
 	if (tagDecl) {
 		VLOG(2) << "VisitTagType " << tagDecl->getNameAsString() <<  std::endl;
 	}
@@ -506,6 +497,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 	// will store the converted type
 	core::TypePtr retTy;
 	VLOG(1) << "~ Converting TagType: " << tagType->getDecl()->getName().str();
+    LOG_TYPE_CONVERSION( tagType, retTy );
 
 	if( tagDecl ) {
 
@@ -529,7 +521,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 			std::set<const TagDecl*>&& components = typeGraph.getStronglyConnectedComponents(tagDecl);
 
 			if( !components.empty() ) {
-	
+
 			//	std::set<const clang::TagDecl*>&& subComponents = typeGraph.getSubComponents( tagDecl );
 			//	for(const auto& cur : subComponents) {
 			//		TagDecl* decl = const_cast<TagDecl*>(cur);
@@ -555,13 +547,13 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 					);
 					typeGraph.print(std::cerr);
 				}
-				
-				// get the name of the struct which are converting into IR 
+
+				// get the name of the struct which are converting into IR
 				auto decl_name = recDecl->getName();
 				static int cnt = 0;
 
 				if (decl_name.empty()) {
-					// this is an anonymous struct, we need to generate a name 
+					// this is an anonymous struct, we need to generate a name
 					decl_name = "__insieme_struct_" + std::to_string(cnt++);
 				}
 
@@ -577,7 +569,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 							auto decl_name = cur->getName();
 
 							if (decl_name.empty()) {
-								// this is an anonymous struct, we need to generate a name 
+								// this is an anonymous struct, we need to generate a name
 								decl_name = "__insieme_struct_" + std::to_string(cnt++);
 							}
 
@@ -658,10 +650,10 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 					}
 				);
 
-				// sort definitions - this will produce the same list of definitions for each of the 
+				// sort definitions - this will produce the same list of definitions for each of the
 				// related types => shared structure
 				if (definitions.size() > 1) {
-					std::sort(definitions.begin(), definitions.end(), [](const core::RecTypeBindingPtr& a, 
+					std::sort(definitions.begin(), definitions.end(), [](const core::RecTypeBindingPtr& a,
 																		 const core::RecTypeBindingPtr& b){
 						return a->getVariable()->getVarName()->getValue() < b->getVariable()->getVarName()->getValue();
 					});
@@ -688,7 +680,6 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
 		retTy = builder.genericType( tagType->getDecl()->getNameAsString() );
 	}
-	END_LOG_TYPE_CONVERSION( retTy );
 	return retTy;
 }
 
@@ -714,9 +705,8 @@ core::TypePtr ConversionFactory::TypeConverter::VisitElaboratedType(const Elabor
 //							   PAREN TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitParenType(const ParenType* parenTy) {
-	START_LOG_TYPE_CONVERSION(parenTy);
 	core::TypePtr&& retTy = Visit( parenTy->getInnerType().getTypePtr() );
-	END_LOG_TYPE_CONVERSION( retTy );
+	LOG_TYPE_CONVERSION( parenTy, retTy );
 	return retTy;
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -735,8 +725,6 @@ core::TypePtr ConversionFactory::TypeConverter::VisitParenType(const ParenType* 
 // more general case (the array case) has to be conservatively considered.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitPointerType(const PointerType* pointerTy) {
-	START_LOG_TYPE_CONVERSION(pointerTy);
-
 	core::TypePtr&& subTy = Visit( pointerTy->getPointeeType().getTypePtr() );
 	// ~~~~~ Handling of special cases ~~~~~~~
 	// void* -> array<'a>
@@ -749,7 +737,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitPointerType(const PointerTy
 		? subTy
 		: builder.refType(builder.arrayType( subTy ));
 
-	END_LOG_TYPE_CONVERSION( retTy );
+	LOG_TYPE_CONVERSION( pointerTy, retTy );
 	return retTy;
 }
 
