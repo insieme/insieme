@@ -629,7 +629,7 @@ namespace core {
 	 */
 	IR_NODE_ACCESSOR(SwitchCase, Support, Literal, CompoundStmt)
 		/**
-		 * Obtains the variable being bound by this binding.
+		 * Obtains the literal forming the guard of this switch-case.
 		 */
 		IR_NODE_PROPERTY(Literal, Guard, 0);
 
@@ -816,6 +816,135 @@ namespace core {
 		 */
 		static MarkerStmtPtr get(NodeManager& manager, const StatementPtr& subStmt) {
 			return get(manager, UIntValue::get(manager, manager.getFreshID()), subStmt);
+		}
+
+	};
+
+
+	// ---------------------------------------- Throw Statement ------------------------------
+
+	/**
+	 * The accessor associated to the throw statement.
+	 */
+	IR_NODE_ACCESSOR(ThrowStmt, Statement, Expression)
+		/**
+		 * Obtains a reference to the throw-expression associated to this return statement.
+		 */
+		IR_NODE_PROPERTY(Expression, ThrowExpr, 0);
+	};
+
+	/**
+	 * The entity used to represent throw statements within the IR.
+	 */
+	IR_NODE(ThrowStmt, Statement)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "throw " << *getThrowExpr();
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to obtain a throw statement instance
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param expression the expression to be thrown by the resulting statement
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ThrowStmtPtr get(NodeManager& manager, const ExpressionPtr& expression) {
+			return manager.get(ThrowStmt(expression));
+		}
+
+	};
+
+
+	// ---------------------------------------- Try-Catch Statement ------------------------------
+
+	/**
+	 * The accessor associated to a try-catch clause.
+	 */
+	IR_NODE_ACCESSOR(CatchClause, Support, Variable, CompoundStmt)
+		/**
+		 * Obtains the variable capturing a potential exception.
+		 */
+		IR_NODE_PROPERTY(Variable, Variable, 0);
+
+		/**
+		 * Obtains a reference to the body of this catch clause.
+		 */
+		IR_NODE_PROPERTY(CompoundStmt, Body, 1);
+	};
+
+	/**
+	 * A node type used to represent cases within a switch expression.
+	 */
+	IR_NODE(CatchClause, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
+
+	public:
+
+		/**
+		 * This static factory method allows to construct a new catch clause.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param var the variable to be utilized for catching an exception
+		 * @param body the body of the resulting catch clause
+		 * @return the requested type instance managed by the given manager
+		 */
+		static CatchClausePtr get(NodeManager& manager, const VariablePtr& var, const CompoundStmtPtr& body) {
+			return manager.get(CatchClause(var, body));
+		}
+
+	};
+
+	/**
+	 * The accessor associated to a try-catch statement.
+	 */
+	IR_LIST_NODE_ACCESSOR(TryCatchStmt, Statement, Clauses, CompoundStmt, CatchClause)
+		/**
+		 * Obtains a reference the compound statement forming the body of this statement.
+		 */
+		IR_NODE_PROPERTY(CompoundStmt, Body, 0);
+	};
+
+	/**
+	 * The entity used to represent switch statements within the IR.
+	 */
+	IR_NODE(TryCatchStmt, Statement)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
+
+	public:
+
+		/**
+		 * This static factory method allows to obtain a try-catch statement instance
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param body the body to be covered by the try-catch block
+		 * @param catchClauses the list of clauses to be present for handling exceptions
+		 * @return the requested statement instance managed by the given manager
+		 */
+		static TryCatchStmtPtr get(NodeManager& manager, const CompoundStmtPtr& body, const vector<CatchClausePtr>& catchClauses) {
+			assert(!catchClauses.empty());
+			NodeList children;
+			children.push_back(body);
+			children.insert(children.end(), catchClauses.begin(), catchClauses.end());
+			return manager.get(TryCatchStmt(children));
 		}
 
 	};

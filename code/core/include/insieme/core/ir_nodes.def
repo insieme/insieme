@@ -210,6 +210,9 @@ AST_TERMINAL(ForStmt, Statement)
 AST_TERMINAL(IfStmt, Statement)
 AST_TERMINAL(SwitchStmt, Statement)
 
+// + exception handling for C++
+AST_TERMINAL(ThrowStmt, Statement)
+AST_TERMINAL(TryCatchStmt, Statement)
 
 //
 // --- Expressions ---
@@ -264,6 +267,8 @@ AST_TERMINAL(Parents, Support)
 
 AST_TERMINAL(SwitchCase, Support)
 AST_TERMINAL(SwitchCases, Support)
+
+AST_TERMINAL(CatchClause, Support)
 
 AST_TERMINAL(Expressions, Support)
 AST_TERMINAL(Parameters, Support)

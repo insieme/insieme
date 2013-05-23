@@ -202,6 +202,18 @@ TEST(StatementsTest, Return) {
 	basicNodeTests(stmt, toVector<NodePtr>(literal));
 }
 
+TEST(StatementsTest, Throw) {
+	NodeManager manager;
+
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
+	ThrowStmtPtr stmt = ThrowStmt::get(manager, literal);
+
+	EXPECT_EQ ("throw 12", toString(*stmt));
+
+	// check hash codes, children and cloning
+	basicNodeTests(stmt, toVector<NodePtr>(literal));
+}
+
 TEST(StatementsTest, Declaration) {
 	NodeManager manager;
 
@@ -321,6 +333,27 @@ TEST(StatementsTest, Switch) {
 
 	// check hash codes, children and cloning
 	basicNodeTests(stmt, toVector<NodePtr>(var, switchCases, other));
+}
+
+TEST(StatementsTest, TryCatch) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	VariablePtr varA = builder.variable(builder.genericType("A"),1);
+	VariablePtr varB = builder.variable(builder.genericType("B"),2);
+
+	CompoundStmtPtr body = builder.compoundStmt();
+	CatchClausePtr clauseA = builder.catchClause(varA, builder.compoundStmt(varA));
+	CatchClausePtr clauseB = builder.catchClause(varB, builder.compoundStmt(varB));
+
+	TryCatchStmtPtr stmt = builder.tryCatchStmt(
+			body, toVector(clauseA, clauseB)
+	);
+
+	EXPECT_EQ ("try {} catch (A v1) {v1;} catch (B v2) {v2;}", toString(*stmt));
+
+	// check hash codes, children and cloning
+	basicNodeTests(stmt, toVector<NodePtr>(body, clauseA, clauseB));
 }
 
 TEST(StatementsTest, MarkerStmt) {

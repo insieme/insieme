@@ -58,5 +58,13 @@ namespace core {
 		return out << "switch(" << *getSwitchExpr() << ") [ " << *getCases() << ((getCases()->empty())?" ":" | ") << "default: " << *getDefaultCase() << " ]";
 	}
 
+	std::ostream& CatchClause::printTo(std::ostream& out) const {
+		return out << "catch (" << *getVariable()->getType() << " " << *getVariable() << ") " << *getBody();
+	}
+
+	std::ostream& TryCatchStmt::printTo(std::ostream& out) const {
+		return out << "try " << *getBody() << " " << join(" ", getClauses(), print<deref<CatchClausePtr>>());
+	}
+
 } // end namespace core
 } // end namespace insieme
