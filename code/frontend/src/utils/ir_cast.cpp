@@ -115,7 +115,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	{
 		// convert NULL (of type AnyRef) to the same ref type as the LHS expression
 		return builder.callExpr(gen.getBoolLNot(), 
-								builder.callExpr( gen.getBool(), gen.getIsNull(), expr ) 
+								builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr )
 							);
 	}
 
@@ -137,7 +137,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	//
 	if ( gen.isBool(trgTy) && gen.isAnyRef(argTy) ) {
 		return builder.callExpr(gen.getBoolLNot(), 
-				builder.callExpr(gen.getBool(), gen.getIsNull(), 
+				builder.callExpr(gen.getBool(), gen.getRefIsNull(),
 						CAST(expr, builder.refType(gen.getUnit())) 
 					)
 				);

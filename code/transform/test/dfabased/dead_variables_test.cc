@@ -105,18 +105,8 @@ namespace transform {
 
 		NodePtr ret = removeDeadVariables(mgr,code);
 		
-		EXPECT_EQ(
-			"{"
-				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
-				"ref<int<4>> v2 = ref.var(undefined(int<4>)); "
-				"ref<int<4>> v3 = 20; "
-				"ref.assign(v1, v3); "
-				"{}; "
-				"{}; "
-				"v1;"
-			"}"
-			, toString(*ret));
-
+		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));decl ref<int<4>> v2 =  var(undefined(type<int<4>>));decl ref<int<4>> v3 = 20;v1 := v3;{ };{ };v1;}",
+			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 	}
 
 	TEST(DeadAssignments, ScalarsWhileControl) {
@@ -140,18 +130,8 @@ namespace transform {
 
 		NodePtr ret = removeDeadVariables(mgr,code);
 		
-		EXPECT_EQ(
-			"{"
-				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
-				"ref<int<4>> v2 = 0; "
-				"while(int.lt(ref.deref(v2), 2)) {"
-					"{}; "
-					"ref.assign(v2, int.add(ref.deref(v2), 1));"
-				"}; "
-				"ref<int<4>> v3 = 20; "
-				"ref.assign(v1, v3); v1;"
-			"}"
-			, toString(*ret));
+		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));decl ref<int<4>> v2 = 0;while(v2<2) {{ };v2 := v2+1;};decl ref<int<4>> v3 = 20;v1 := v3;v1;}",
+			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 	}
 
 	TEST(DeadAssignments, ScalarsForControl) {
@@ -173,17 +153,8 @@ namespace transform {
 
 		NodePtr ret = removeDeadVariables(mgr,code);
 		
-		EXPECT_EQ(
-			"{"
-				"ref<int<4>> v1 = ref.var(undefined(int<4>)); "
-				"for(int<4> v2 = 0 .. 10 : 2) {"
-					"{};"
-				"}; "
-				"ref<int<4>> v3 = 20; "
-				"ref.assign(v1, v3); "
-				"v1;"
-			"}"
-			, toString(*ret));
+		EXPECT_EQ("{decl ref<int<4>> v1 =  var(undefined(type<int<4>>));for(decl int<4> v2 = 0 .. 10 : 2) {{ };};decl ref<int<4>> v3 = 20;v1 := v3;v1;}",
+			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 	}
 
 
@@ -210,16 +181,8 @@ namespace transform {
 
 		NodePtr ret = removeDeadVariables(mgr,code);
 		
-		EXPECT_EQ(
-			"{"
-				"ref<int<4>> v2 = 10; "
-				"ref<int<4>> v3 = ref.var(undefined(int<4>)); "
-				"{}; "
-				"ref.assign(v3, v2); "
-				"ref.assign(composite.ref.elem(v1, a, int<4>), v3); "
-				"composite.ref.elem(v1, a, int<4>);"
-			"}"
-			, toString(*ret));
+		EXPECT_EQ("{decl ref<int<4>> v2 = 10;decl ref<int<4>> v3 =  var(undefined(type<int<4>>));{ };v3 := v2;v1->a := v3;v1->a;}",
+			toString(printer::PrettyPrinter(ret, printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 
 	}
 
