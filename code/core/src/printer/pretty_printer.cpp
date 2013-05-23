@@ -473,6 +473,11 @@ namespace {
 				this->visit(node->getReturnExpr());
 		});
 
+		PRINT(ThrowStmt, {
+				out << "throw ";
+				this->visit(node->getThrowExpr());
+		});
+
 		PRINT(DeclarationStmt, {
 				// print type
 				const VariablePtr& var = node->getVariable();
@@ -561,6 +566,20 @@ namespace {
 				out << "default: ";
 				this->visit(node->getDefaultCase());
 				decreaseIndent(); this->newLine(); out << "}";
+		});
+
+		PRINT(TryCatchStmt, {
+				// variables can be directly printed
+				out << "try ";
+				this->visit(node->getBody());
+				for(auto clause : node->getClauses()) {
+					out << " catch(";
+					this->visit(clause->getVariable()->getType());
+					out << " ";
+					this->visit(clause->getVariable());
+					out << ") ";
+					this->visit(clause->getBody());
+				}
 		});
 
 		PRINT(Variable, {
