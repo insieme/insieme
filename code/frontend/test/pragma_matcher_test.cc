@@ -84,7 +84,7 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 8);
-	
+
 	PragmaPtr p = pl[0];
 	{
 		// check pragma start location
@@ -142,8 +142,11 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		// pragma associated to a statement
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
-	
-		EXPECT_TRUE ( llvm::isa<clang::NullStmt>(stmt));
+
+        // test was changed due to changes in the pragma handling (see InsiemeSema::ActOnCompoundStmt)
+        // we have to check if the sub statement of the AttributedStmt is a NullStmt
+		EXPECT_TRUE ( llvm::isa<clang::AttributedStmt>(stmt) &&
+                      llvm::isa<clang::NullStmt>( ((clang::AttributedStmt *)stmt)->getSubStmt() ) );
 		// we dont check injected stmt possition, might be wrong
 //		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 12, 2);
 //		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 14, 14);
@@ -167,8 +170,8 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 
 		CHECK_LOCATION(decl->getLocStart(), comp.getSourceManager(), 56, 1);
 		CHECK_LOCATION(decl->getLocEnd(), comp.getSourceManager(), 59, 1);
-	}	
-	
+	}
+
 	p = pl[4];
 	{
 		// check pragma start location
@@ -272,7 +275,7 @@ TEST(PragmaMatcherTest, PragmaPossitions2) {
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 3);
-	
+
 	PragmaPtr p = pl[0];
 	{
 		// check pragma start location
@@ -312,7 +315,7 @@ TEST(PragmaMatcherTest, PragmaPossitions2) {
 		// check stmt end location
 		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 48, 16);
 	}
-	
+
 	p = pl[2];
 	{
 		// check pragma start location
@@ -362,9 +365,10 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 		EXPECT_EQ(p->getType(), "omp::parallel");
 
-		// pragma associated to a statement
+		// pragma associated to a subStmt of an AttributedStmt
+		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = p->getStatement();
+		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
 
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 41, 2);
@@ -386,9 +390,10 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 		EXPECT_EQ(p->getType(), "omp::parallel");
 
-		// pragma associated to a statement
+		// pragma associated to a subStmt of an AttributedStmt
+		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = p->getStatement();
+		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
 
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 49, 2);
@@ -435,9 +440,10 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 		EXPECT_EQ(p->getType(), "omp::master");
 
-		// pragma associated to a statement
+		// pragma associated to a subStmt of an AttributedStmt
+		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = p->getStatement();
+		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
 
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 52, 2);
@@ -472,7 +478,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		EXPECT_TRUE(omp->getMap().empty());
 	}
 
-} 
+}
 
 
 TEST(PragmaMatcherTest, HandleOmpFor) {
@@ -503,9 +509,10 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 
 		EXPECT_EQ(p->getType(), "omp::parallel");
 
-		// pragma associated to a statement
+		// pragma associated to a subStmt of an AttributedStmt
+		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = p->getStatement();
+		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
 
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 41, 2);
@@ -545,9 +552,10 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 
 		EXPECT_EQ(p->getType(), "omp::parallel");
 
-		// pragma associated to a statement
+		// pragma associated to a subStmt of an AttributedStmt
+		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = p->getStatement();
+		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
 
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 48, 14);
@@ -571,9 +579,10 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 
 		EXPECT_EQ(p->getType(), "omp::for");
 
-		// pragma associated to a statement
+		// pragma associated to a subStmt of an AttributedStmt
+		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = p->getStatement();
+		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
 
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 49, 3);
@@ -612,9 +621,10 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 
 		EXPECT_EQ(p->getType(), "omp::barrier");
 
-		// pragma associated to a statement
+		// pragma associated to a subStmt of an AttributedStmt
+		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = p->getStatement();
+		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
 
 		EXPECT_TRUE( llvm::dyn_cast<clang::NullStmt>(stmt) != NULL );
 		EXPECT_TRUE( stmt->getLocStart().isInvalid() );
@@ -659,7 +669,7 @@ TEST(PragmaMatcherTest, RecursiveFunctions) {
 		// check stmt end location
 		CHECK_LOCATION(decl->getLocEnd(), comp.getSourceManager(), 47, 2);
 	}
-	
+
 	// first pragma is at location [(6:2) - (6:37)]
 	p = pl[1];
 	{

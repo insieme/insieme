@@ -72,53 +72,52 @@ class InsiemeSema: public clang::Sema {
 
 	bool isInsideFunctionDef;
 
-	void matchStmt(clang::Stmt* 				S, 
-				   const clang::SourceRange& 	bounds, 
-				   const clang::SourceManager& 	sm, 
+	void matchStmt(clang::Stmt* 				S,
+				   const clang::SourceRange& 	bounds,
+				   const clang::SourceManager& 	sm,
 				   pragma::PragmaList& 			matched);
 
 	InsiemeSema(const InsiemeSema& other);
 
 public:
 	InsiemeSema (pragma::PragmaList&   			pragma_list,
-				 clang::Preprocessor& 			pp, 
-				 clang::ASTContext& 			ctx, 
-				 clang::ASTConsumer& 			consumer, 
+				 clang::Preprocessor& 			pp,
+				 clang::ASTContext& 			ctx,
 				 bool 							CompleteTranslationUnit = true,
 				 clang::CodeCompleteConsumer* 	CompletionConsumer = 0) ;
-	
+
 	~InsiemeSema();
 
 	void addPragma(pragma::PragmaPtr P);
 
-	clang::StmtResult ActOnCompoundStmt(clang::SourceLocation 	L, 
-										clang::SourceLocation 	R, 
-										clang::MultiStmtArg 	Elts, 
+	clang::StmtResult ActOnCompoundStmt(clang::SourceLocation 	L,
+										clang::SourceLocation 	R,
+										clang::MultiStmtArg 	Elts,
 										bool			 		isStmtExpr );
-								   
-	clang::StmtResult ActOnIfStmt(  clang::SourceLocation 		IfLoc, 
-									clang::Sema::FullExprArg 	CondVal, 
-									clang::Decl* 				CondVar, 
-									clang::Stmt* 				ThenVal,
-									clang::SourceLocation 		ElseLoc, 
-									clang::Stmt* 				ElseVal );	
 
-	clang::StmtResult ActOnForStmt( clang::SourceLocation 		ForLoc, 
-									clang::SourceLocation		LParenLoc, 
+	clang::StmtResult ActOnIfStmt(  clang::SourceLocation 		IfLoc,
+									clang::Sema::FullExprArg 	CondVal,
+									clang::Decl* 				CondVar,
+									clang::Stmt* 				ThenVal,
+									clang::SourceLocation 		ElseLoc,
+									clang::Stmt* 				ElseVal );
+
+	clang::StmtResult ActOnForStmt( clang::SourceLocation 		ForLoc,
+									clang::SourceLocation		LParenLoc,
 									clang::Stmt* 				First,
-									clang::Sema::FullExprArg 	Second, 
-									clang::Decl* 				SecondVar, 
-									clang::Sema::FullExprArg 	Third, 
-									clang::SourceLocation 		RParenLoc, 
+									clang::Sema::FullExprArg 	Second,
+									clang::Decl* 				SecondVar,
+									clang::Sema::FullExprArg 	Third,
+									clang::SourceLocation 		RParenLoc,
 									clang::Stmt* 				Body );
-								  
-	clang::Decl* ActOnStartOfFunctionDef(clang::Scope*		FnBodyScope, 
+
+	clang::Decl* ActOnStartOfFunctionDef(clang::Scope*		FnBodyScope,
 										 clang::Declarator&	D );
-	
+
 	clang::Decl* ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, clang::Decl* D);
 
 	clang::Decl* ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt* Body);
-	
+
 	clang::Decl* ActOnDeclarator(clang::Scope *S, clang::Declarator &D);
 
 //	clang::StmtResult ActOnDeclStmt(clang::Sema::DeclGroupPtrTy Decl, SourceLocation StartLoc, SourceLocation EndLoc);
@@ -129,14 +128,14 @@ public:
 	 * Register the parsed pragma.
 	 */
 	template <class T>
-	void ActOnPragma(const std::string& 		name, 
-					 const pragma::MatchMap& 	mmap, 
-					 clang::SourceLocation 		startLoc, 
-					 clang::SourceLocation 		endLoc) 
+	void ActOnPragma(const std::string& 		name,
+					 const pragma::MatchMap& 	mmap,
+					 clang::SourceLocation 		startLoc,
+					 clang::SourceLocation 		endLoc)
 	{
 		addPragma( pragma::PragmaPtr(new T(startLoc, endLoc, name, mmap)) );
 	}
-	
+
 	/**
 	 * Write into the logger information about the pragmas and their associatioation to AST nodes.
 	 */

@@ -95,6 +95,8 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 	}
 
 	auto classType = TypeConverter::VisitTagType(tagType);
+	LOG_TYPE_CONVERSION(tagType, classType) ;
+
 	convFact.ctx.typeCache[tagType] = classType;
 
 	// if is a c++ class, we need to annotate some stuff
@@ -116,7 +118,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				parents.push_back(builder.parent(it->isVirtual(), parentIrType));
 			}
 
-			// if we have base classes, we need to create again the IR type, with the 
+			// if we have base classes, we need to create again the IR type, with the
 			// parent list this time
 			//FIXME: typename
 			classType = builder.structType(builder.parents(parents), classType.as<core::StructTypePtr>()->getElements());
@@ -139,7 +141,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			if (ctorDecl->isDefaultConstructor() ||
 				ctorDecl->isCopyConstructor() ||
 				ctorDecl->isMoveConstructor() ){
-				
+
 				if (ctorDecl->isUserProvided ()){
 					core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
 					if (ctorLambda ){
@@ -148,7 +150,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 					}
 				}
 			}
-		} 
+		}
 
 		//~~~~~ convert destructor ~~~~~
 		if(classDecl->hasUserDeclaredDestructor()){
@@ -180,10 +182,10 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				// ctor are handled in a previous loop
 				continue;
 			}
-		
-			
+
+
 			if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
-				//FIXME: for now ignore CopyAssignmentOperator 
+				//FIXME: for now ignore CopyAssignmentOperator
 				// -- backendCompiler should take care of it
 				continue;
 			}
@@ -200,10 +202,10 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			// FIXME: we should not have to look for the F$%ing TU everyplace, this should be
 			// responsability of the convert func function
 			convFact.getTranslationUnitForDefinition(method);  // FIXME:: remove this crap
-		
+
 			auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
 			methodLambda = convFact.memberize(method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
-			
+
 			if( method->isPure() ) {
 				//pure virtual functions are handled bit different in metainfo
 				VLOG(2) << "pure virtual function " << method;
@@ -224,21 +226,20 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				VLOG(2) << "           ############";
 			}
 
-			classInfo.addMemberFunction(method->getNameAsString(), 
+			classInfo.addMemberFunction(method->getNameAsString(),
 										methodLambda,
-										(*methodIt)->isVirtual(), 
+										(*methodIt)->isVirtual(),
 										(*methodIt)->isConst());
 		}
-		
+
 		// append metha information to the class definition
 		core::setMetaInfo(classType, classInfo);
 	}
-	
+
 	// cache the new implementation
 	convFact.ctx.typeCache.erase(tagType);
 	convFact.ctx.typeCache[tagType] = classType;
 
-	END_LOG_TYPE_CONVERSION(classType) ;
 	return classType;
 }
 
@@ -288,11 +289,11 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitDependentSizedArrayType
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//						REFERENCE TYPE 
+//						REFERENCE TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::CXXTypeConverter::VisitReferenceType(const ReferenceType* refTy) {
-	START_LOG_TYPE_CONVERSION(refTy);
 	core::TypePtr retTy;
+	LOG_TYPE_CONVERSION(refTy, retTy);
 
 	// get inner type
 	core::TypePtr inTy = convFact.convertType( refTy->getPointeeType().getTypePtr());
@@ -310,8 +311,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitReferenceType(const Refe
 		retTy =  core::analysis::getConstCppRef(inTy);
 	else
 		retTy =  core::analysis::getCppRef(inTy);
-	
-	END_LOG_TYPE_CONVERSION( retTy );
+
 	return retTy;
 }
 
@@ -327,8 +327,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitTemplateSpecializationT
 	}
 	VLOG(2) << "isSugared: " << templTy->isSugared();
 
-	START_LOG_TYPE_CONVERSION(templTy);
+	//START_LOG_TYPE_CONVERSION(templTy);
 	core::TypePtr retTy;
+	LOG_TYPE_CONVERSION( templTy, retTy );
 	if(templTy->isSugared()) {
 		//convert Template arguments (template < ActualClass >) -> ActualClass has to be converted
 		for(TemplateSpecializationType::iterator ait=templTy->begin(), ait_end=templTy->end(); ait!=ait_end; ait++) {
@@ -339,7 +340,6 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitTemplateSpecializationT
 		retTy = convFact.convertType(templTy->desugar().getTypePtr());
 	}
 	//assert(false && "TemplateSpecializationType not yet handled!");
-	END_LOG_TYPE_CONVERSION( retTy );
 	return retTy;
 }
 
@@ -348,10 +348,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitTemplateSpecializationT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::CXXTypeConverter ::VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
 	core::TypePtr retTy;
+    LOG_TYPE_CONVERSION( tempTy, retTy );
 
-	START_LOG_TYPE_CONVERSION(tempTy);
 	assert(false && "DependentTemplateSpecializationType not yet handled!");
-	END_LOG_TYPE_CONVERSION( retTy );
 	return retTy;
 }
 
@@ -360,10 +359,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitDependentTemplateSpecia
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::CXXTypeConverter ::VisitInjectedClassNameType(const InjectedClassNameType* tempTy) {
 	core::TypePtr retTy;
+    LOG_TYPE_CONVERSION( tempTy, retTy );
 
-	START_LOG_TYPE_CONVERSION(tempTy);
 	assert(false && "InjectedClassNameType not yet handled!");
-	END_LOG_TYPE_CONVERSION( retTy );
 	return retTy;
 }
 
@@ -372,6 +370,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitInjectedClassNameType(c
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::CXXTypeConverter ::VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* substTy) {
 	core::TypePtr retTy;
+	LOG_TYPE_CONVERSION( substTy, retTy );
 
 //		VLOG(2) << "resultType: " << funcTy->getResultType().getTypePtr()->getTypeClassName();
 //		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
@@ -384,11 +383,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitSubstTemplateTypeParmTy
 	//VLOG(2) << "Replaced Template Name: " << substTy->getReplacedParameter()->getDecl()->getNameAsString();
 	//VLOG(2) << "Replacement Type: " << substTy->getReplacementType().getTypePtr();
 
-	START_LOG_TYPE_CONVERSION(substTy);
+	//START_LOG_TYPE_CONVERSION(substTy);
 	//assert(false && "SubstTemplateTypeParmType not yet handled!");
 	retTy = convFact.convertType( substTy->getReplacementType().getTypePtr() );
-
-	END_LOG_TYPE_CONVERSION( retTy );
 	return retTy;
 }
 
@@ -412,9 +409,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter::Visit(const clang::Type* type
 	//check if type is intercepted
 	if(convFact.program.getInterceptor().isIntercepted(type)) {
 		VLOG(2) << type << " isIntercepted";
-		return convFact.program.getInterceptor().intercept(type, convFact); 
+		return convFact.program.getInterceptor().intercept(type, convFact);
 	}
-	
+
 	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
 }
 
