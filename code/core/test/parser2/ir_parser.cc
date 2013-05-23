@@ -330,6 +330,35 @@ namespace parser {
 
 	}
 
+	TEST(IR_Parser2, TryCatchStatement) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		NodePtr node;
+
+		// test variable scope
+		node = builder.normalize(builder.parse(
+				"try { } catch (int<4> x) { x; }"
+		));
+		ASSERT_TRUE(node);
+		EXPECT_EQ("try {} catch (int<4> v1) {v1;}", toString(*node));
+
+		// test multiple catch clauses
+		node = builder.normalize(builder.parse(
+				"try { } catch (int<4> x) { x; } catch (int<4> y) { y; }"
+		));
+		ASSERT_TRUE(node);
+		EXPECT_EQ("try {} catch (int<4> v2) {v2;} catch (int<4> v3) {v3;}", toString(*node));
+
+		// test multiple catch clauses
+		node = builder.normalize(builder.parse(
+				"try { throw 4; } catch (int<4> x) { x; } catch (int<4> y) { y; }"
+		));
+		ASSERT_TRUE(node);
+		EXPECT_EQ("try {throw 4;} catch (int<4> v4) {v4;} catch (int<4> v5) {v5;}", toString(*node));
+	}
+
+
 	TEST(IR_Parser2, WhileStatement) {
 		NodeManager manager;
 		IRBuilder builder(manager);

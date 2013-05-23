@@ -1691,6 +1691,49 @@ namespace parser {
 					}
 			));
 
+			// --- a utility to handle local variable declarations ---
+			struct register_var : public detail::actions {
+				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+					TypePtr type = cur.getTerms().rbegin()->as<TypePtr>();
+					auto iterName = *cur.getSubRanges().rbegin();
+					VariablePtr iter = cur.variable(type);
+					cur.getVarScopeManager().add(iterName, iter);
+					cur.push(iter);
+				}
+			};
+
+			static const auto varDecl = std::make_shared<Action<register_var>>(seq(T, cap(id)));
+
+			// try-catch
+			g.addRule("S", rule(
+					seq("try", S, loop(varScop(seq("catch(", varDecl, ")", S)))),
+					[](Context& cur)->NodePtr {
+						const auto& terms = cur.getTerms();
+
+						StatementPtr body = terms[0].as<StatementPtr>();
+						if (!body.isa<CompoundStmtPtr>()) return fail(cur, "Body of try-catch needs to be a compound statement.");
+
+						vector<CatchClausePtr> clauses;
+						for(unsigned i = 1; i+2<terms.size(); i+=3) {
+							ExpressionPtr var = terms[i+1].as<ExpressionPtr>();
+							StatementPtr body = terms[i+2].as<StatementPtr>();
+
+							// check that value is a literal
+							if (!var.isa<VariablePtr>()) return fail(cur, "Invalid variable declaration in catch clause.");
+							if (!body.isa<CompoundStmtPtr>()) return fail(cur, "Invald body of catch clause.");
+
+							// add case
+							clauses.push_back(cur.catchClause(var.as<VariablePtr>(), body.as<CompoundStmtPtr>()));
+						}
+
+						// check presence of clauses
+						if (clauses.empty()) return fail(cur, "No catch-clause present.");
+
+						// build try-catch stmt
+						return cur.tryCatchStmt(body.as<CompoundStmtPtr>(), clauses);
+					}
+			));
+
 
 			// while statement
 			g.addRule("S", rule(
@@ -1706,21 +1749,9 @@ namespace parser {
 					}
 			));
 
-			struct register_var : public detail::actions {
-				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
-					TypePtr type = cur.getTerm(0).as<TypePtr>();
-					auto iterName = cur.getSubRange(0);
-					VariablePtr iter = cur.variable(type);
-					cur.getVarScopeManager().add(iterName, iter);
-					cur.push(iter);
-				}
-			};
-
-			static const auto iter = std::make_shared<Action<register_var>>(seq(T, cap(id)));
-
 			// for loop without step size
 			g.addRule("S", rule(
-					varScop(seq("for(", iter, "=", E, "..", E, opt(seq(":",E)), ")", S)),
+					varScop(seq("for(", varDecl, "=", E, "..", E, opt(seq(":",E)), ")", S)),
 					[](Context& cur)->NodePtr {
 						const auto& terms = cur.getTerms();
 						TypePtr type = terms[0].as<TypePtr>();
@@ -1770,6 +1801,14 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						return cur.continueStmt();
 					}
+			));
+
+			g.addRule("S", rule(
+					seq("throw", E, ";"),
+					[](Context& cur)->NodePtr {
+						return cur.throwStmt(cur.getTerm(0).as<ExpressionPtr>());
+					},
+					1		// higher priority than variable declaration (of type throw)
 			));
 
 			// add print statement
