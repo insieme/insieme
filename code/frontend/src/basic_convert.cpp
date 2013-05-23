@@ -594,21 +594,6 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		// initialization value
 		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), var->getType(), false);
 		assert(initExpr && "not correct initialization of the variable");
-
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ HANDLE SPETIAL CASES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-		// allocation of a single Object
-		// if is is a new operator, and is not an array, we can be sure that it will be a pointer to
-		// a single element, so drop the array[1]  thing
-		if (definition->getInit() &&
-			llvm::isa<clang::CXXNewExpr>(definition->getInit()) && 
-			!llvm::cast<clang::CXXNewExpr>(definition->getInit())->isArray() ){
-			
-			var = builder.variable(initExpr->getType());
-			ctx.varDeclMap[definition] = var;
-		}
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 		retStmt = builder.declarationStmt(var, initExpr);
 	} else {
 		// this variable is extern
@@ -855,9 +840,7 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// ============================================================================================
 	
 	// if is a constructor call, we are done
-	// if is a new operator, we need another ref in the type
-	if (llvm::isa<clang::CXXConstructExpr>(expr) ||
-		llvm::isa<clang::CXXNewExpr>(expr)){
+	if (llvm::isa<clang::CXXConstructExpr>(expr)){
 		return retIr;
 	}
 	

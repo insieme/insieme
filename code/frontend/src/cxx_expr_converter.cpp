@@ -509,8 +509,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	// back end compiler
 	if (callExpr->isElidable () ){ 
 		// if is an elidable constructor, we should return a refvar, not what the parameters say
-		
-
 		return (Visit(callExpr->getArg (0)));
 	}
 
@@ -578,10 +576,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 											builder.getLangBasic().getArrayCreate1D(),
 											builder.getTypeLiteral(type),
 											utils::cast(arrSizeExpr, gen.getUInt4()));
+			retExpr = builder.refNew(placeHolder);
+		} else {
+			retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), builder.refNew(placeHolder));
 		}
-
-		// FIXME, array size
-		retExpr = builder.refVar(builder.refNew(placeHolder));
 	}
 	else{
 		// is a class, handle construction
@@ -600,7 +598,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 
 			assert( ctorFunc.as<core::LambdaExprPtr>()->getParameterList().size() > 0 && "not default ctor used in array construction");
 
-			retExpr = builder.refVar( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
+			retExpr = ( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayCtor(),
 			 						   				   mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr));
 		}
 		else{
@@ -612,7 +610,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 			retExpr = core::transform::replaceNode (convFact.mgr, 
 												  addr->getArgument(0), 
 												  newCall ).as<core::CallExprPtr>();
-			retExpr = builder.refVar(retExpr);
+
+			retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), retExpr);
 		}
 	}
 
@@ -629,6 +628,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(cons
 	core::ExpressionPtr retExpr;
 	core::ExpressionPtr exprToDelete = Visit(deleteExpr->getArgument());
 	core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr());
+
+	VLOG(2) << exprToDelete->getType();
+	
 
 	core::ExpressionPtr dtor;
 	if( core::hasMetaInfo(desTy)){
@@ -651,11 +653,17 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(cons
 			retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getArrayDtor(), args);
 		}
 		else{
+			exprToDelete = getCArrayElemRef(builder, exprToDelete);
+			VLOG(2) << exprToDelete->getType();
+
 			// this is a built in type, we need to build a empty dtor with the right type
 			retExpr = builder.callExpr ( builder.getLangBasic().getRefDelete(), exprToDelete);
 		}
 	}
 	else{
+		exprToDelete = getCArrayElemRef(builder, exprToDelete);
+		VLOG(2) << exprToDelete->getType();
+
 		if(dtor){
 			retExpr = builder.callExpr ( builder.getLangBasic().getRefDelete(), builder.callExpr(dtor, toVector(exprToDelete)));
 		}
