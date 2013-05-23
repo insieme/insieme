@@ -143,11 +143,8 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
 
-        // test was changed due to changes in the pragma handling (see InsiemeSema::ActOnCompoundStmt)
-        // we have to check if the sub statement of the AttributedStmt is a NullStmt
-		EXPECT_TRUE ( llvm::isa<clang::AttributedStmt>(stmt) &&
-                      llvm::isa<clang::NullStmt>( ((clang::AttributedStmt *)stmt)->getSubStmt() ) );
-		// we dont check injected stmt possition, might be wrong
+        EXPECT_TRUE ( llvm::isa<clang::NullStmt>(stmt));
+//      we dont check injected stmt possition, might be wrong
 //		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 12, 2);
 //		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 14, 14);
 	}
@@ -368,7 +365,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
+		const clang::Stmt* stmt = p->getStatement();
 
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 41, 2);
@@ -393,7 +390,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
+		const clang::Stmt* stmt = (p->getStatement());
 
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 49, 2);
@@ -443,7 +440,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
+		const clang::Stmt* stmt = (p->getStatement());
 
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 52, 2);
@@ -512,7 +509,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
+		const clang::Stmt* stmt = (p->getStatement());
 
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 41, 2);
@@ -555,7 +552,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
+		const clang::Stmt* stmt = (p->getStatement());
 
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 48, 14);
@@ -582,7 +579,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
+		const clang::Stmt* stmt = (p->getStatement());
 
 		// check stmt start location
 		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 49, 3);
@@ -624,7 +621,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		// pragma associated to a subStmt of an AttributedStmt
 		// test was changed due to a change in the InsiemeSema (see InsiemeSema::ActOnCompoundStmt)
 		EXPECT_TRUE(p->isStatement());
-		const clang::Stmt* stmt = ((clang::AttributedStmt *) (p->getStatement()))->getSubStmt();
+		const clang::Stmt* stmt = (p->getStatement());
 
 		EXPECT_TRUE( llvm::dyn_cast<clang::NullStmt>(stmt) != NULL );
 		EXPECT_TRUE( stmt->getLocStart().isInvalid() );

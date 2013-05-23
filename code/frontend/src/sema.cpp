@@ -257,7 +257,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 					// stmt
 					if (!llvm::isa<clang::NullStmt>(*it)){
 
-
+/*
                         Stmt** stmts = new Stmt*[CS->size()];
 
                         CompoundStmt* newCS =
@@ -300,7 +300,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
                         CompoundStmt::body_iterator next = std::copy(CS->body_begin(), it, newCS->body_begin());
                         std::copy(it, CS->body_end(), next);
                         //std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
-
+*/
 						// this pragma is attached to the current stmt
 						P->setStatement(*it);
 						matched.push_back(P);
@@ -325,6 +325,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 
 			std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
 			std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
+/*
             //create annotation
             std::ostringstream str;
 
@@ -341,9 +342,9 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
             clang::AnnotateAttr annotation(SourceLocation(), Context, str.str());
 			clang::AttributedStmt * stmt = clang::AttributedStmt::Create(Context, P->getEndLocation(), annotation.clone(Context), new (Context) NullStmt(SourceLocation()));
 			newCS->setLastStmt( stmt );
-/*
-			newCS->setLastStmt(new (Context) NullStmt(SourceLocation()));
 */
+			newCS->setLastStmt(new (Context) NullStmt(SourceLocation()));
+
             //TODO: This is the oldschool pragma matcher. Each pragma contains a pointer to the attached stmt.
             //In the new mechanism pragmas are stored inside of the attributed statement.
 			P->setStatement( *newCS->body_rbegin() );
