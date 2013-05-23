@@ -130,6 +130,7 @@ TEST(CFGBuilder, IfThen) {
     );
 
     EXPECT_TRUE(code);
+
 	CFGPtr cfg = CFG::buildCFG<MultiStmtPerBasicBlock>(code);
 
 	EXPECT_EQ(3u+2u, cfg->size());

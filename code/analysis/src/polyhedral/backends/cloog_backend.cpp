@@ -952,7 +952,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 						core::StatementAddress(
 							builder.callExpr( mgr.getLangBasic().getRefAssign(), 
 								decl->getVariable(), 
-								builder.deref( decl->getInitialization() )
+								builder.deref(decl->getInitialization())
 							)
 						),
 						IterationDomain(iterVec, true),
