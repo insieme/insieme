@@ -33,7 +33,7 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
-
+/*
 #include <gtest/gtest.h>
 
 #define __STDC_LIMIT_MACROS
@@ -106,7 +106,7 @@ TEST(AttributedStmtTest, FileTest) {
             //EXPECT_TRUE(std::find(expected_pragmas.begin(), expected_pragmas.end(), ((AnnotateAttr *) attribute)->getAnnotation().str()) != expected_pragmas.end());
         }
     }
-/*
+
 	const fe::pragma::PragmaList& pl = tu.getPragmaList();
 	std::cout << "Checking parsed pragmas (" << pl.size() << ") in file " << SRC_DIR "inputs/omp_for.c" << ": " << std::endl;
 	int k=0;
@@ -122,6 +122,7 @@ TEST(AttributedStmtTest, FileTest) {
                 k++;
             }
         }
-	}*/
+	}
 
 }
+*/
