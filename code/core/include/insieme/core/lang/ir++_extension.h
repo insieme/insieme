@@ -199,6 +199,23 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(Materialize, "materialize", "('a)->ref<'a>");
 
+	
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//	explicit C++ casts
+
+		/**
+		 * The literal to be used for encoding a static cast operation within
+		 * a pre-processing step of the backend.
+		 */
+		LANG_EXT_LITERAL(StaticCast, "static_cast", "(ref<'a>, type<'b>)->ref<'b>")
+
+		/**
+		 * The literal to be used for encoding a static cast operation within
+		 * a pre-processing step of the backend.
+		 */
+		LANG_EXT_LITERAL(DynamicCast, "dynamic_cast", "(ref<'a>, type<'b>)->ref<'b>")
+
+
 	};
 
 } // end namespace lang
