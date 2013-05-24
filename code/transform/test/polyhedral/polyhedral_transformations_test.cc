@@ -322,7 +322,7 @@ TEST(Transform, TilingAuto) {
 	LoopTiling li({7,7});
 	NodePtr newIR = analysis::normalize(li.apply(forStmt));
 
-	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 5 .. int.add(24, 1) : 7) {for(int<4> v3 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v4 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int.lt), 1) : 1) {vector.ref.elem(v1, uint.add(v3, v4));};};};}", toString(*newIR) );
+	EXPECT_EQ( "for(int<4> v0 = 10 .. int.add(49, 1) : 7) {for(int<4> v2 = 5 .. int.add(24, 1) : 7) {for(int<4> v3 = v0 .. int.add(select(int.add(cast<int<4>>(v0), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v0 = v2 .. int.add(select(int.add(cast<int<4>>(v2), cast<int<4>>(6)), 24, int.lt), 1) : 1) {vector.ref.elem(v1, uint.add(v3, v0));};};};}", toString(*newIR) );
 
 	checkSCoPCorrectness(newIR);
 }
@@ -446,7 +446,7 @@ TEST(Transform, LoopStamping) {
 	LoopStamping ls( 7, { 0,0 } );
 	NodePtr newIR = analysis::normalize(ls.apply(forStmt));
 
-	EXPECT_EQ( "{for(int<4> v0 = 0 .. int.add(29, 1) : 1) {for(int<4> v2 = 0 .. int.add(27, 1) : 1) {vector.ref.elem(v1, uint.add(v0, v2));};}; for(int<4> v3 = 0 .. int.add(29, 1) : 1) {for(int<4> v4 = 28 .. int.add(29, 1) : 1) {vector.ref.elem(v1, uint.add(v3, v4));};};}", toString(*newIR) );
+	EXPECT_EQ( "{for(int<4> v0 = 0 .. int.add(29, 1) : 1) {for(int<4> v2 = 0 .. int.add(27, 1) : 1) {vector.ref.elem(v1, uint.add(v0, v2));};}; for(int<4> v3 = 0 .. int.add(29, 1) : 1) {for(int<4> v0 = 28 .. int.add(29, 1) : 1) {vector.ref.elem(v1, uint.add(v3, v0));};};}", toString(*newIR) );
 
 	checkSCoPCorrectness(newIR);
 
@@ -478,7 +478,7 @@ TEST(Transform, LoopStamping2) {
 	LoopStamping ls( 7 , { 0 } );
 	NodePtr newIR = analysis::normalize(ls.apply(forStmt));
 
-	EXPECT_EQ( "{for(int<4> v0 = 3 .. int.add(23, 1) : 1) {for(int<4> v2 = 3 .. int.add(29, 1) : 1) {vector.ref.elem(v1, uint.add(v0, v2));};}; for(int<4> v3 = 24 .. int.add(29, 1) : 1) {for(int<4> v4 = 3 .. int.add(29, 1) : 1) {vector.ref.elem(v1, uint.add(v3, v4));};};}", toString(*newIR) );
+	EXPECT_EQ( "{for(int<4> v0 = 3 .. int.add(23, 1) : 1) {for(int<4> v2 = 3 .. int.add(29, 1) : 1) {vector.ref.elem(v1, uint.add(v0, v2));};}; for(int<4> v3 = 24 .. int.add(29, 1) : 1) {for(int<4> v0 = 3 .. int.add(29, 1) : 1) {vector.ref.elem(v1, uint.add(v3, v0));};};}", toString(*newIR) );
 
 	checkSCoPCorrectness(newIR);
 

@@ -799,7 +799,7 @@ TEST(ScopRegion, ForStmtToIR4) {
 	NodePtr res = scop->toIR(mgr);
 	// normalize varnames
 	res = analysis::normalize(res);
-	EXPECT_EQ("{ref<int<4>> v0 = ref.var(0); ref<int<4>> v2 = ref.var(0); {ref.assign(v0, ref.deref(ref.var(0))); for(int<4> v4 = 10 .. int.add(49, 1) : 1) {ref.assign(v2, ref.deref(ref.var(0))); vector.ref.elem(v1, cast<uint<8>>(int.add(v4, v3)));};};}", toString(*res));
+	EXPECT_EQ("{ref<int<4>> v0 = ref.var(0); ref<int<4>> v0 = ref.var(0); {ref.assign(v0, ref.deref(ref.var(0))); for(int<4> v2 = 10 .. int.add(49, 1) : 1) {ref.assign(v0, ref.deref(ref.var(0))); vector.ref.elem(v1, cast<uint<8>>(int.add(v2, v3)));};};}", toString(*res));
 
 }
 
