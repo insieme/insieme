@@ -43,7 +43,6 @@
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/ir_extensions.h"
-#include "insieme/backend/ir++_extensions.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
@@ -120,7 +119,7 @@ namespace backend {
 				return builder.refComponent(res, call->getArgument(1));
 			} else if (basic.isDataPathParent(fun)) {
 				// cast to parent type using a static cast
-				const auto& ext = mgr.getLangExtension<IRppExtensions>();
+				const auto& ext = mgr.getLangExtension<core::lang::IRppExtensions>();
 				return builder.callExpr(ext.getStaticCast(), res, call->getArgument(1));
 			}
 
@@ -1094,7 +1093,7 @@ namespace backend {
 
 		{	// backend C++ extensions
 
-			const auto& irppExt = manager.getLangExtension<IRppExtensions>();
+			const auto& irppExt = manager.getLangExtension<core::lang::IRppExtensions>();
 
 			res[irppExt.getStaticCast()] = OP_CONVERTER({
 				// build up a static cast operator

@@ -50,7 +50,6 @@
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/indexer.h"
-#include "insieme/frontend/utils/ir++_utils.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"

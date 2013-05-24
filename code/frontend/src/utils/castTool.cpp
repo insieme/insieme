@@ -36,7 +36,6 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/ir++_utils.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/unused.h"
