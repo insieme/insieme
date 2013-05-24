@@ -33,9 +33,9 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
-/*
-#include <gtest/gtest.h>
 
+#include <gtest/gtest.h>
+/*
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
@@ -68,8 +68,9 @@ void check(clang::Stmt * s, vector<clang::AttributedStmt *> * attributedStmts) {
                 check((*it), attributedStmts);
         }
 }
-
+*/
 TEST(AttributedStmtTest, FileTest) {
+/*
     vector<clang::AttributedStmt *> statements;
     vector<string> expected_pragmas;
 
@@ -124,5 +125,6 @@ TEST(AttributedStmtTest, FileTest) {
         }
 	}
 
-}
 */
+}
+
