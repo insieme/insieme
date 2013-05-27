@@ -454,10 +454,12 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			// types equality has been already checked, if is is a NoOp is because clang identifies
 			// this as the same type. but we might intepret it in a diff way. (ex, char literals are
 			// int for clang, we build a char type
-			if (gen.isPrimitive(exprTy) )
+			if (gen.isPrimitive(exprTy) ) {
 				return castScalar(targetTy, expr);
-			else 
+			}
+			else {
 				return expr;
+			}
 		}
 
 		case clang::CK_ArrayToPointerDecay 	:
@@ -618,13 +620,17 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
 			}
 
-			core::TypePtr targetTy;
 			clang::CastExpr::path_const_iterator it;
 			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
-				targetTy = convFact.convertType((*it)->getType().getTypePtr());
+				core::TypePtr targetTy= convFact.convertType((*it)->getType().getTypePtr());
 				expr = builder.refParent(expr, targetTy);
 			}
 
+			if(GET_TYPE_PTR(castExpr)->isPointerType()){ 
+				// is a pointer type -> return pointer
+				expr = builder.callExpr(gen.getScalarToArray(), expr);
+			}
+			
 			return expr;
 			//assert(false && "derived to base cast  not implementd");
 			break;
@@ -633,8 +639,18 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		case clang::CK_BaseToDerived:
 		//A conversion from a C++ class pointer/reference to a derived class pointer/reference. B *b = static_cast<B*>(a); 
 		{
-			// use staticCast operator to represent static_cast 
-			return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy))) );
+			
+			VLOG(2) << expr->getType();
+			VLOG(2) << targetTy;
+
+			if(GET_TYPE_PTR(castExpr)->isPointerType()){ 
+				// if we have a pointer --> target type is ref<arry<...>>, for staticCast we need
+				// only array<...> in the type literal hence the GET_REF_ELEM_TYPE
+				// use staticCast operator to represent static_cast 
+				return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy))) );
+			}
+
+			return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral((targetTy))) );
 
 			//explicitly cast from base to derived
 			//return builder.callExpr(gen.getTypeCast(), expr, builder.getTypeLiteral(targetTy));
