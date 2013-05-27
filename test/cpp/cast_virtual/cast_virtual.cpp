@@ -1,8 +1,9 @@
-#include <stdio.h>
+#include <cstdio>
+#include <iostream>
 
 class Base {
-	virtual void dummy() {}
 public:
+	virtual void dummy() { }
 	Base() {  }
 	~Base() {  }
 };
@@ -43,33 +44,46 @@ int main() {
 
 	//pointers cast
 	{
-		Base* pba;
-		Base* pbb = new Base();
+		{
+			Derived* pdd = new Derived();
 
-		Base* pbc = new Derived();			//implicit
-		//Base* pbd = (Base* ) new Derived();	//explicit c-style
+			//derived to base cast
+			Base* pbd = (Base*) new Derived();	//explicit c-style
+			Base* pbd1 = new Derived();			//implicit
+			Base* pbd2;
+			pbd2 = pdd;							//implicit
+			
+			delete pdd;
+			delete pbd;
+			delete pbd1;
+		}
+		
+		//base to derived
+		{
+			Derived* pda;
+			Base* pbb = new Base();
+			pda = (Derived*) pbb;	//explicit
+			Derived* pda1 = (Derived*) pbb;	//explicit
 
-		Derived* pda;
-		Derived* pdb = new Derived();
-
-		//derived to base cast
-		//pba = pdb;				//implicit
-		//pba = (Derived*) pdb;	//explicit
+			delete pbb;
+		}
 	}
-
 	{
-		Base b;
-		Base& rb = b;
-
-		Derived d;
-		Derived& rd = d;
-
 		//derived to base cast
-		Base& rba = d;			//implicit
-		//Base& rbb = (Base&) d;	//explicit
+		{
+			Derived d;
+			Derived& rd = d;
+
+			Base& rba = d;			//implicit
+			Base& rbb = (Base&) d;	//explicit
+		}
 
 		//base to derived cast
-		//Derived& r1 = (Derived&) b;	//explicit
+		{
+			Base b;
+			Base& rb = b;
+			Derived& r1 = (Derived&) b;	//explicit
+		}
 	}
 
 	//dynamic_cast <new_type> (expression)
@@ -78,15 +92,45 @@ int main() {
 		Base* pbb = new Base();
 		Derived* pd;
 
-		Derived* pd1 = dynamic_cast<Derived*>(pba);
 		pd = dynamic_cast<Derived*>(pba);
 		if (pd==0) printf("Null pointer on first type-cast\n");
 
-		Derived* pd2 = dynamic_cast<Derived*>(pbb);
 		pd = dynamic_cast<Derived*>(pbb);
 		if (pd==0) printf("Null pointer on second type-cast\n");
-	}
 
+		{
+			Derived* pd = dynamic_cast<Derived*>(pba);
+			if (pd==0) printf("Null pointer on first type-cast\n");
+		}
+
+		{
+			Derived* pd = dynamic_cast<Derived*>(pbb);
+			if (pd==0) printf("Null pointer on second type-cast\n");
+		}
+	}
+	{
+		Derived d;
+		Derived& rd = d;
+		Base b;
+		Base& rb = b;
+
+		Base& rb1 = dynamic_cast<Derived&>(rd);
+
+		/* need exceptions for following code
+		try{ 
+			Base& rb1 = dynamic_cast<Derived&>(rd);
+		} catch(std::exception& e) {
+			std::cout << e.what() << std::endl;
+		}
+		
+		try{ 
+			Derived& rd1 = dynamic_cast<Derived&>(rb);
+		} catch(std::exception& e) {
+			std::cout << e.what() << std::endl;
+		}
+		*/
+	}
+	
 	//reinterpret_cast <new_type> (expression)
 	{
 		A * a = new A;

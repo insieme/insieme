@@ -63,53 +63,62 @@ int main() {
 
 	//pointers cast
 	{
-		Base* pba;
-		Base* pbb = new Base();
-		pbb->g();
+		{
+			Derived* pdd = new Derived();
 
-		Base* pbc = new Derived();			//implicit
-		pbc->g();
-		Base* pbd ;
-		//pbd = (Base* ) new Derived();	//explicit c-style
+			//derived to base cast
+			Base* pbd = (Base*) new Derived();	//explicit c-style
+			Base* pbd1 = new Derived();			//implicit
+			Base* pbd2;
+			pbd2 = pdd;							//implicit
+			
+			delete pdd;
+			delete pbd;
+			delete pbd1;
+		}
+		
+		//base to derived
+		{
+			Derived* pda;
+			Base* pbb = new Base();
+			pda = (Derived*) pbb;	//explicit
+			Derived* pda1 = (Derived*) pbb;	//explicit
 
-		Derived* pda;
-		Derived* pdb = new Derived();
-
-		//derived to base cast
-		//pba = pdb;				//implicit
-		//pba = (Derived*) pdb;	//explicit
+			delete pbb;
+		}
 	}
 
 	{
-		Base b;
-		Base& rb = b;
-
-		Derived d;
-		Derived& rd = d;
-
 		//derived to base cast
-		Base& rba = d;			//implicit
-		//Base& rbb = (Base&) d;	//explicit
+		{
+			Derived d;
+			Derived& rd = d;
+
+			Base& rba = d;			//implicit
+			Base& rbb = (Base&) d;	//explicit
+		}
 
 		//base to derived cast
-		//Derived& r1 = (Derived&) b;	//explicit
+		{
+			Base b;
+			Base& rb = b;
+			Derived& r1 = (Derived&) b;	//explicit
+		}
 	}
 
-	/*
 	// INVALID -- needs polymorphic classes -- see cast_virtual
 	//dynamic_cast <new_type> (expression)
-	{
-		Base* pba = new Derived();
-		Base* pbb = new Base();
-		Derived* pd;
-
-		pd = dynamic_cast<Derived*>(pba);
-		if (pd==0) printf("Null pointer on first type-cast\n");
-
-		pd = dynamic_cast<Derived*>(pbb);
-		if (pd==0) printf("Null pointer on second type-cast\n");
-	}
-	*/
+	//{
+//		Base* pba = new Derived();
+//		Base* pbb = new Base();
+//		Derived* pd;
+//
+//		pd = dynamic_cast<Derived*>(pba);
+//		if (pd==0) printf("Null pointer on first type-cast\n");
+//
+//		pd = dynamic_cast<Derived*>(pbb);
+//		if (pd==0) printf("Null pointer on second type-cast\n");
+//	}
 
 	//reinterpret_cast <new_type> (expression)
 	{
