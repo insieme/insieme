@@ -86,6 +86,20 @@ namespace frontend {
 
 namespace {
 
+// unwraps cppRef/constCppRef
+core::ExpressionPtr unwrapCppRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr) {
+	
+	core::NodeManager& mgr = builder.getNodeManager();	
+	core::TypePtr irType = expr->getType();
+	if (core::analysis::isCppRef(irType)) {
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
+	}
+	else if (core::analysis::isConstCppRef(irType)) {
+		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
+	}
+
+	return expr;
+}
 
 } // end anonymous namespace
 
@@ -219,13 +233,18 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const cla
 						tmp = convFact.tryDeref(tmp);
 					}
 					else{
+						/*
 						if (core::analysis::isCppRef(tmp->getType())) {
 							tmp = builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), tmp));
 						}
 						else if (core::analysis::isConstCppRef(tmp->getType())) {
 							tmp = builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), tmp));
 						}
+						*/
+						tmp = unwrapCppRef(builder, tmp);
+						tmp = convFact.tryDeref(tmp);
 					}
+
 					core::CallExprAddress addr(retIr.as<core::CallExprPtr>());
 					retIr = core::transform::replaceNode (mgr, addr->getArgument(i), tmp).as<core::ExpressionPtr>();
 				}
@@ -244,6 +263,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMemberExpr(const c
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
 
 	// if is not a pointer member, it might be that is a CPP ref
+	/*
 	core::TypePtr irType = base->getType();
 	if (core::analysis::isCppRef(irType)) {
 		base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), base);
@@ -251,12 +271,14 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMemberExpr(const c
 	else if (core::analysis::isConstCppRef(irType)) {
 		base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), base);
 	}
+	*/
+	base = unwrapCppRef(builder, base);
 
 	// TODO: we have the situation here in which we might want to access a field of a superclass
 	// this will not be resolved by the C frontend. and we need to build the right datapath to
 	// reach the definition
 
-	core::ExpressionPtr retIr = exprutils::getMemberAccessExpr(builder, base, membExpr);
+	core::ExpressionPtr retIr = getMemberAccessExpr(builder, base, membExpr);
     LOG_EXPR_CONVERSION(membExpr, retIr);
 
 	return retIr;
@@ -321,13 +343,16 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	ownerObj = getCArrayElemRef(builder, ownerObj);
 
 	//unwrap if is a cpp reference, we dont use cpp references for this
+	/*
 	if (core::analysis::isCppRef(ownerObj->getType())){
 	// unwrap and deref the variable
 		ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), ownerObj);
 	}
 	else if (core::analysis::isConstCppRef(ownerObj->getType())){
 		ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), ownerObj);
-	}
+	} 
+	*/
+	ownerObj = unwrapCppRef(builder, ownerObj);
 
 	// reconstruct Arguments list, fist one is a scope location for the object
 	ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(methodDecl) );
@@ -389,6 +414,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		args = getFunctionArguments(callExpr, funcTy, llvm::cast<clang::FunctionDecl>(methodDecl));
 
 		//unwrap if is a cpp reference, we dont use cpp references for this
+		/*
 		if (core::analysis::isCppRef(ownerObj->getType())){
 		// unwrap and deref the variable
 			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), ownerObj);
@@ -396,6 +422,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		else if (core::analysis::isConstCppRef(ownerObj->getType())){
 			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), ownerObj);
 		}
+		*/ 
+		ownerObj = unwrapCppRef(builder, ownerObj);
+
 
 		// incorporate this to the begining of the args list
 		args.insert (args.begin(), ownerObj);

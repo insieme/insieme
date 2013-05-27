@@ -885,13 +885,18 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 			if (core::analysis::isCppRef(targetType)) {
 				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp());
 			}
-			else
+			else {
 				return retIr;
+			}
 		}
 		else{
 			//this reference is initialized with a variable
-			if (core::analysis::isCppRef(targetType)) return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retIr);
-			else return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retIr);
+			if (core::analysis::isCppRef(targetType)) {
+				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retIr);
+			}
+			else {
+				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retIr);
+			}
 		}
 	}
 
