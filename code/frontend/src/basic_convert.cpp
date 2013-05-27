@@ -1210,8 +1210,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		ctx.lambdaExprCache.insert( { funcDecl, retLambdaExpr} );
 
 		VLOG(2) << retLambdaExpr << " + function declaration: " << funcDecl;
+		auto func =  attachFuncAnnotations(retLambdaExpr, funcDecl);
 		RESTORE_TU();
-		return attachFuncAnnotations(retLambdaExpr, funcDecl);
+		return func;
 	}
 
 	//////////////////////////////////////////////////////////////
