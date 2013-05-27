@@ -71,7 +71,7 @@ void call_vfunc_ref() {
 
 int main() {
 	call_vfunc_ptr();
-	//call_vfunc_ref();
+	call_vfunc_ref();
 
 	C c;		
 
@@ -84,7 +84,6 @@ int main() {
 	B* pbC = &c;
 	pbC->b();
 	
-	/*
 	B& rbC = c;
 	rbC.b();
 
@@ -92,7 +91,6 @@ int main() {
 	
 	raC.f();		//virtual call: B::f
 	raC.g(1);		//virtual call: C::g
-	*/
 	
 	return 0;
 	

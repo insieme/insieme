@@ -97,7 +97,7 @@ void call_vfunc_ref() {
 
 int main() {
 	call_vfunc_ptr();
-//	call_vfunc_ref();
+	call_vfunc_ref();
 
 	C c;		
 	
@@ -108,7 +108,6 @@ int main() {
 	c.y();	//non-virtual call: C::y
 	c.x(1);	//non-virtual call: C::x
 
-	/*
 	A& raC = c;
 	
 	raC.f();		//virtual call: B::f
@@ -119,7 +118,6 @@ int main() {
 
 	X& rxC = c;
 	rxC.x(1);	//virtual call: C::x
-	*/
 	
 	return 0;
 }
