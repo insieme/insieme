@@ -40,11 +40,11 @@ int main() {
 		printf("%d\n", aInt);
 
 		aLong = bInt;			// implicit
-		printf("%d\n", aLong);
+		printf("%ld\n", aLong);
 		aLong = (long) bInt;	// c style
-		printf("%d\n", aLong);
+		printf("%ld\n", aLong);
 		aLong = long(bInt);		// functional
-		printf("%d\n", aLong);
+		printf("%ld\n", aLong);
 
 		aInt = bDouble;			// implicit
 		printf("%d\n", aInt);
@@ -70,14 +70,14 @@ int main() {
 		Base* pbc = new Derived();			//implicit
 		pbc->g();
 		Base* pbd ;
-		 pbd = (Base* ) new Derived();	//explicit c-style
+		//pbd = (Base* ) new Derived();	//explicit c-style
 
 		Derived* pda;
 		Derived* pdb = new Derived();
 
 		//derived to base cast
-		pba = pdb;				//implicit
-		pba = (Derived*) pdb;	//explicit
+		//pba = pdb;				//implicit
+		//pba = (Derived*) pdb;	//explicit
 	}
 
 	{
@@ -89,11 +89,27 @@ int main() {
 
 		//derived to base cast
 		Base& rba = d;			//implicit
-		Base& rbb = (Base&) d;	//explicit
+		//Base& rbb = (Base&) d;	//explicit
 
 		//base to derived cast
-		Derived& r1 = (Derived&) b;	//explicit
+		//Derived& r1 = (Derived&) b;	//explicit
 	}
+
+	/*
+	// INVALID -- needs polymorphic classes -- see cast_virtual
+	//dynamic_cast <new_type> (expression)
+	{
+		Base* pba = new Derived();
+		Base* pbb = new Base();
+		Derived* pd;
+
+		pd = dynamic_cast<Derived*>(pba);
+		if (pd==0) printf("Null pointer on first type-cast\n");
+
+		pd = dynamic_cast<Derived*>(pbb);
+		if (pd==0) printf("Null pointer on second type-cast\n");
+	}
+	*/
 
 	//reinterpret_cast <new_type> (expression)
 	{

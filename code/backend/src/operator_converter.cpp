@@ -1097,12 +1097,28 @@ namespace backend {
 
 			res[irppExt.getStaticCast()] = OP_CONVERTER({
 				// build up a static cast operator
-				return c_ast::staticCast(c_ast::ptr(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(1)))), CONVERT_ARG(0));
+				
+				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+				auto targetCType = CONVERT_TYPE(targetTy);
+				
+				if(!targetTy.isa<core::ArrayTypePtr>()) {
+					targetCType = c_ast::ptr(targetCType);	
+				}
+
+				return c_ast::staticCast( targetCType, CONVERT_ARG(0));
 			});
 
 			res[irppExt.getDynamicCast()] = OP_CONVERTER({
-				// build up a static cast operator
-				return c_ast::dynamicCast(c_ast::ptr(CONVERT_TYPE(core::analysis::getRepresentedType(ARG(1)))), CONVERT_ARG(0));
+				// build up a dynamic cast operator
+				
+				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+				auto targetCType = CONVERT_TYPE(targetTy);
+				
+				if(!targetTy.isa<core::ArrayTypePtr>()) {
+					targetCType = c_ast::ptr(targetCType);	
+				}
+
+				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});
 
 		}

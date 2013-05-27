@@ -18,7 +18,6 @@ class A {};
 class B {};
 
 int main() {
-
 	//builtin types
 	{
 		int aInt, bInt;
@@ -48,14 +47,14 @@ int main() {
 		Base* pbb = new Base();
 
 		Base* pbc = new Derived();			//implicit
-		Base* pbd = (Base* ) new Derived();	//explicit c-style
+		//Base* pbd = (Base* ) new Derived();	//explicit c-style
 
 		Derived* pda;
 		Derived* pdb = new Derived();
 
 		//derived to base cast
-		pba = pdb;				//implicit
-		pba = (Derived*) pdb;	//explicit
+		//pba = pdb;				//implicit
+		//pba = (Derived*) pdb;	//explicit
 	}
 
 	{
@@ -67,10 +66,10 @@ int main() {
 
 		//derived to base cast
 		Base& rba = d;			//implicit
-		Base& rbb = (Base&) d;	//explicit
+		//Base& rbb = (Base&) d;	//explicit
 
 		//base to derived cast
-		Derived& r1 = (Derived&) b;	//explicit
+		//Derived& r1 = (Derived&) b;	//explicit
 	}
 
 	//dynamic_cast <new_type> (expression)
@@ -79,9 +78,11 @@ int main() {
 		Base* pbb = new Base();
 		Derived* pd;
 
+		Derived* pd1 = dynamic_cast<Derived*>(pba);
 		pd = dynamic_cast<Derived*>(pba);
 		if (pd==0) printf("Null pointer on first type-cast\n");
 
+		Derived* pd2 = dynamic_cast<Derived*>(pbb);
 		pd = dynamic_cast<Derived*>(pbb);
 		if (pd==0) printf("Null pointer on second type-cast\n");
 	}
