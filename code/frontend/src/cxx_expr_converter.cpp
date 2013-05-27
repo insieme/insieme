@@ -259,6 +259,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const cla
 //						  MEMBER EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr){
+	core::ExpressionPtr retIr;
+    LOG_EXPR_CONVERSION(membExpr, retIr);
 	// get the base we want to access to
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
 
@@ -277,10 +279,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMemberExpr(const c
 	// TODO: we have the situation here in which we might want to access a field of a superclass
 	// this will not be resolved by the C frontend. and we need to build the right datapath to
 	// reach the definition
-
-	core::ExpressionPtr retIr = getMemberAccessExpr(builder, base, membExpr);
-    LOG_EXPR_CONVERSION(membExpr, retIr);
-
+	retIr = getMemberAccessExpr(builder, base, membExpr);
 	return retIr;
 }
 
@@ -288,15 +287,17 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMemberExpr(const c
 //							VAR DECLARATION REFERENCE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitDeclRefExpr(const clang::DeclRefExpr* declRef) {
+	core::ExpressionPtr retIr;
+    LOG_EXPR_CONVERSION(declRef, retIr);
 	// if is a prameter and is a cpp ref, avoid going further to avoid wrapping issues
 	if (const ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())) {
-		core::ExpressionPtr retIr = convFact.lookUpVariable( parmDecl );
+		retIr = convFact.lookUpVariable( parmDecl );
 		if (IS_CPP_REF_EXPR(retIr)){
 			return retIr;
 		}
 	}
 
-	return ConversionFactory::ExprConverter::VisitDeclRefExpr (declRef);
+	return retIr = ConversionFactory::ExprConverter::VisitDeclRefExpr (declRef);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -316,6 +317,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBoolLiteralExpr
 //						CXX MEMBER CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(const clang::CXXMemberCallExpr* callExpr) {
+	core::CallExprPtr ret;
+	LOG_EXPR_CONVERSION(callExpr, ret);
+
 	const core::IRBuilder& builder = convFact.builder;
 
 	// TODO: static methods
@@ -361,8 +365,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	core::TypePtr retTy = funcTy.getReturnType();
 
 	// build expression and we are done!!!
-	core::CallExprPtr ret = builder.callExpr(retTy, newFunc, args);
-	LOG_EXPR_CONVERSION(callExpr, ret);
+	ret = builder.callExpr(retTy, newFunc, args);
 
 	if(VLOG_IS_ON(2)){
 		dumpPretty(&(*ret));
@@ -776,6 +779,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDefaultArgExpr(
 //					CXX Bind Temporary expr
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryExpr(const clang::CXXBindTemporaryExpr* bindTempExpr) {
+	core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(bindTempExpr, retIr);
+
 	const clang::CXXTemporary* temp = bindTempExpr->getTemporary();
 
 	// we may visit the BindTemporaryExpr twice. Once in the temporary lookup and
@@ -783,8 +789,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryEx
 	// visit the expr do not create a new declaration statement and just return the previous one.
 	ConversionFactory::ConversionContext::TemporaryInitMap::const_iterator fit = convFact.ctx.tempInitMap.find(temp);
 	if (fit != convFact.ctx.tempInitMap.end()) {
-	// variable found in the map
-	return(fit->second.getVariable());
+		// variable found in the map
+		return(fit->second.getVariable());
 	}
 
 	const clang::CXXDestructorDecl* dtorDecl = temp->getDestructor();
@@ -805,13 +811,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXBindTemporaryEx
 	// store temporary and declaration stmt in Map
 	convFact.ctx.tempInitMap.insert(std::make_pair(temp,declStmt));
 
-	return declStmt.getVariable();
+	return retIr = declStmt.getVariable();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					CXX Expression with cleanups
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(const clang::ExprWithCleanups* cleanupExpr) {
+	core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(cleanupExpr, retIr);
 
 	// perform subtree traversal and get the temporaries that the cleanup expression creates
 	std::vector<const clang::CXXTemporary*>&& tmps = utils::lookupTemporaries (cleanupExpr->getSubExpr ());
@@ -855,31 +863,40 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 	std::for_each(params.begin(), params.end(), [&packedArgs] (core::VariablePtr varPtr) {
 		 packedArgs.push_back(varPtr);
 	});
-	core::ExpressionPtr irNode = convFact.builder.callExpr(lambdaType, lambda, packedArgs);
-	return irNode;
+	return retIr = convFact.builder.callExpr(lambdaType, lambda, packedArgs);
 }
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//					ScalarValueInitExpr
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXScalarValueInitExpr(const clang::CXXScalarValueInitExpr* scalarValueInit){
+	core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(scalarValueInit, retIr);
+
+	core::TypePtr elemType =convFact.convertType ( scalarValueInit->getTypeSourceInfo()->getType().getTypePtr());
+	retIr = convFact.defaultInitVal(elemType);
+	return retIr;
+}
+
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					Materialize temporary expr
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTemporaryExpr(
-																const clang::MaterializeTemporaryExpr* materTempExpr) {
+core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTemporaryExpr( const clang::MaterializeTemporaryExpr* materTempExpr) {
+	core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(materTempExpr, retIr);
+	
 
-	core::ExpressionPtr inner =  Visit(materTempExpr->GetTemporaryExpr());
-//	core::ExpressionPtr ptr;
-//	if (expr.isa<core::CallExprPtr>() &&
-//		(ptr = expr.as<core::CallExprPtr>().getFunctionExpr()).isa<core::LambdaExprPtr>() &&
-//		 ptr.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
-//		dumpPretty(expr);
-//		return expr;
-//	}
-//	else
+	retIr =  Visit(materTempExpr->GetTemporaryExpr());
+
+	materTempExpr->dump();
+	assert(retIr);
 
 	// is a left side value, no need to materialize. has being handled by a temporary expression
-	if(IS_CPP_REF_EXPR(inner) || gen.isRef(inner->getType()))
-		return inner;
+	if(IS_CPP_REF_EXPR(retIr) || gen.isRef(retIr->getType()))
+		return retIr;
 	else
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), inner);
+		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
