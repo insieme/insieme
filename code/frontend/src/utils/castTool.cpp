@@ -608,16 +608,20 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			// TODO: do we need to check if is pointerType?
 			// in case of pointer, the inner expression is modeled as ref< array < C, 1> >
 			// it is needed to deref the first element
-			VLOG(2) << "exprTy " << expr->getType();
 			expr = getCArrayElemRef(builder, expr);
-			VLOG(2) << expr;
+
+			// unwrap CppRef if CppRef
+			if (core::analysis::isCppRef(exprTy)){
+				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
+			}
+			else if (core::analysis::isConstCppRef(exprTy)){
+				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
+			}
 
 			core::TypePtr targetTy;
 			clang::CastExpr::path_const_iterator it;
 			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
 				targetTy = convFact.convertType((*it)->getType().getTypePtr());
-				VLOG(2) << expr;
-				VLOG(2) << "exprTy " << expr->getType() << " targetTy " << targetTy;
 				expr = builder.refParent(expr, targetTy);
 			}
 

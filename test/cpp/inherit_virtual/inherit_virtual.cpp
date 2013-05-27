@@ -38,7 +38,7 @@ int main() {
 			Mammal m;
 			WingedAnimal wA;
 			Bat b;
-
+			
 			Mammal& mammal = b;
 			Mammal* pMammal = new Bat();
 
