@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -83,6 +83,7 @@ public:
 	InsiemeSema (pragma::PragmaList&   			pragma_list,
 				 clang::Preprocessor& 			pp,
 				 clang::ASTContext& 			ctx,
+				 clang::ASTConsumer&            ast_consumer,
 				 bool 							CompleteTranslationUnit = true,
 				 clang::CodeCompleteConsumer* 	CompletionConsumer = 0) ;
 

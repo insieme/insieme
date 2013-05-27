@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -135,17 +135,15 @@ InsiemeSema::InsiemeSema(
 		PragmaList& 					pragma_list,
 		clang::Preprocessor& 			pp,
 		clang::ASTContext& 				ctx,
+		clang::ASTConsumer&             ast_consumer,
 		bool 							CompleteTranslationUnit,
 		clang::CodeCompleteConsumer* 	CompletionConsumer)
 :
-    //NOTE: The Consumer is an emptyConsumer by default. To avoid memory leaks we keep the ownership inside of
-    //the InsiemeSema class.
-	clang::Sema(pp, ctx, *(new clang::ASTConsumer()), clang::TU_Complete, CompletionConsumer),
+	clang::Sema(pp, ctx, ast_consumer, clang::TU_Complete, CompletionConsumer),
 	pimpl(new InsiemeSemaImpl(pragma_list)),
 	isInsideFunctionDef(false) { }
 
 InsiemeSema::~InsiemeSema() {
-    delete (&this->Consumer);
     delete pimpl;
 }
 
