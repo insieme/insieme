@@ -402,7 +402,6 @@ namespace backend {
 
 		// -- references --
 
-		res[basic.getRefEqual()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getRefDeref()] = OP_CONVERTER({
 
 			// special handling of derefing result of ref.new or ref.var => bogus
@@ -886,14 +885,14 @@ namespace backend {
 			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int32);
 			return c_ast::lit(intType,"0");
 		});
-
-		res[basic.getIsNull()] = OP_CONVERTER({
+/*
+		res[basic.getRefIsNull()] = OP_CONVERTER({
 			// Operator Type:  (array<'a,1>) -> bool
 			// generated code: X == 0
 			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int32);
 			return c_ast::eq(CONVERT_ARG(0), c_ast::lit(intType,"0"));
 		});
-
+*/
 
 		// -- others --
 

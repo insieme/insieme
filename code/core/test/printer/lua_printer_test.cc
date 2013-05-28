@@ -41,6 +41,7 @@
 
 #include "insieme/utils/lua/lua.h"
 #include "insieme/utils/test/test_utils.h"
+#include "insieme/core/analysis/normalize.h"
 
 namespace insieme {
 namespace core {
@@ -78,7 +79,7 @@ namespace printer {
 		symbols["v"] = builder.variable(builder.parseType("ref<vector<uint<4>,10>>"));
 		symbols["x"] = builder.variable(builder.parseType("ref<int<4>>"));
 
-		auto forStmt = builder.parseStmt(
+		auto forStmt = analysis::normalize(builder.parseStmt(
 			"for(int<4> k = 0 .. 10) {"
 			"	for(int<4> i = 0 .. 20) {"
 			"		ref<int<4>> m = var(10);"
@@ -87,12 +88,12 @@ namespace printer {
 			"           x = x + 1;"
 			"		}"
 			"	}"
-			"}", symbols).as<ForStmtPtr>();
+			"}", symbols).as<ForStmtPtr>());
 
 
 		string script = toLuaScript(forStmt);
 		EXPECT_PRED2(containsSubString, script, "(10 - 1)");
-		EXPECT_PRED2(containsSubString, script, "v1[v4] = v5");
+		EXPECT_PRED2(containsSubString, script, "v1[v3] = v4");
 		EXPECT_PRED2(containsSubString, script, "v2 = (v2) + 1");
 
 		// test whether script is syntactically correct

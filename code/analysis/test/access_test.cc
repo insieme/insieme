@@ -46,6 +46,7 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
+#include "insieme/core/analysis/normalize.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/analysis/normalize.h"
@@ -640,15 +641,15 @@ TEST(Access, ArrayAccess) {
 
 		EXPECT_EQ(3u, address.size());
 
-		auto rootNode = address[0];
-		auto accessNode = address[1].as<ExpressionAddress>();
+		auto rootNode = core::analysis::normalize(address[0]);
+		auto accessNode = address[1].switchRoot(rootNode).as<ExpressionAddress>();
 
 		// perform the polyhedral analysis 
 		polyhedral::scop::mark(rootNode.getAddressedNode());
 
 		auto access = getImmediateAccess( mgr, accessNode );
 		EXPECT_EQ(AccessType::AT_SUBSCRIPT, access->getType());
-		EXPECT_EQ(address[2].getAddressedNode(), getRoot(access)->getVariable());
+		EXPECT_EQ(address[2].switchRoot(rootNode).getAddressedNode(), getRoot(access)->getVariable());
 
 		EXPECT_TRUE(access->isReference());
 		EXPECT_TRUE(access->isContextDependent());
@@ -656,12 +657,12 @@ TEST(Access, ArrayAccess) {
 		auto subscript = cast<Subscript>(access);
 		EXPECT_TRUE(subscript->getContext());
 
-		EXPECT_EQ("(((-v11 + 19 >= 0) ^ (v10 + -1 >= 0)) ^ (v4294967295 + -v10 + -v11 == 0))", 
+		EXPECT_EQ("(((-v16 + 19 >= 0) ^ (v15 + -1 >= 0)) ^ (v4294967295 + -v15 + -v16 == 0))", 
 				  toString(*subscript->getRange()));
 
 		auto ctx = polyhedral::makeCtx();
 		auto set = polyhedral::makeSet(ctx, polyhedral::IterationDomain(subscript->getRange()));
-		EXPECT_EQ("[v10, v11] -> { [v10 + v11] : v11 <= 19 and v10 >= 1 }", toString(*set));
+		EXPECT_EQ("[v15, v16] -> { [v15 + v16] : v16 <= 19 and v15 >= 1 }", toString(*set));
 	}
 }
 
