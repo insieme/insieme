@@ -70,7 +70,7 @@ TEST(Problem, Variable) {
 
     auto code = builder.parseStmt(
 		"{"
-		"	ref<int<4>> a = var(0);"
+		"	ref<int<4>> a = 0;"
 		"	for(int<4> i = 10 .. 50) { "
 		"		v[i+b]; "
 		"	}"

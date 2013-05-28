@@ -170,7 +170,7 @@ namespace features {
 		auto& basic = mgr.getLangBasic();
 
 		auto op1 = basic.getRefDeref();
-		auto op2 = basic.getRefNew();
+		auto op2 = basic.getRefAlloc();
 
 		OperatorStatistic stat1;
 
@@ -238,7 +238,7 @@ namespace features {
 		auto op1 = basic.getArrayRefElem1D();
 		auto op2 = basic.getUnsignedIntAdd();
 		auto op3 = basic.getUnsignedIntSub();
-		auto op4 = basic.getIsNull();
+		auto op4 = basic.getRefNull();
 
 		auto res = getOpStats(forStmt, FA_Static);
 

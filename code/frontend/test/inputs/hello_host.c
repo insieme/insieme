@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
 	clReleaseCommandQueue(gqueue);
 	clReleaseContext(context);
 	clReleaseEvent(event);
-	if(kernel[0]) clReleaseKernel(kernel[0]);
+	if(&kernel[0]) clReleaseKernel(kernel[0]);
 	free(host_ptr);
 //	free(device);
 
