@@ -70,7 +70,7 @@ void bubleSort(vector<T>& v){
 //
 template <class T>
 void bucketSort (vector<T>& v, unsigned classes = 1000){
-	vector<T> buckets[classes];
+	vector<vector<T> > buckets(classes);
 	
 	for (size_t i=0; i< v.size(); i++){
 		unsigned index = v[i];

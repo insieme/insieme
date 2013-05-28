@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -135,11 +135,12 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 ///  A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
 ///  and the insieme IR which has been generated from the source file.
 class TranslationUnitImpl: public insieme::frontend::TranslationUnit{
+    clang::ASTConsumer emptyCons;
     insieme::frontend::InsiemeSema mSema;
 public:
 	TranslationUnitImpl(const ConversionJob& job):
 		insieme::frontend::TranslationUnit(job),
-		mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), true) {
+		mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), emptyCons, true) {
 
     	// register 'omp' pragmas
 		omp::registerPragmaHandlers( mClang.getPreprocessor() );
@@ -158,7 +159,6 @@ public:
 
 		//  FIXME: preprocess here or in indexer?
 		//clang::ASTConsumer emptyCons;
-		clang::ASTConsumer emptyCons;
 		//insieme::frontend::utils::indexerASTConsumer consumer(indexer,
 	//									dynamic_cast<insieme::frontend::TranslationUnit*>(this));
         if(!boost::algorithm::ends_with(job.getFile(),".o")) {

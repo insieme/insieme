@@ -885,13 +885,18 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 			if (core::analysis::isCppRef(targetType)) {
 				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp());
 			}
-			else
+			else {
 				return retIr;
+			}
 		}
 		else{
 			//this reference is initialized with a variable
-			if (core::analysis::isCppRef(targetType)) return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retIr);
-			else return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retIr);
+			if (core::analysis::isCppRef(targetType)) {
+				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retIr);
+			}
+			else {
+				return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), retIr);
+			}
 		}
 	}
 
@@ -1205,8 +1210,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		ctx.lambdaExprCache.insert( { funcDecl, retLambdaExpr} );
 
 		VLOG(2) << retLambdaExpr << " + function declaration: " << funcDecl;
+		auto func =  attachFuncAnnotations(retLambdaExpr, funcDecl);
 		RESTORE_TU();
-		return attachFuncAnnotations(retLambdaExpr, funcDecl);
+		return func;
 	}
 
 	//////////////////////////////////////////////////////////////

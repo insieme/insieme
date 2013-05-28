@@ -122,10 +122,9 @@ namespace conversion {
 
 #define LOG_EXPR_CONVERSION(parentExpr, expr) \
 	FinalActions attachLog( [&] () { \
-        VLOG(1) << "\n**********************EXPR*[class:'"<< parentExpr->getStmtClassName() <<"']**********************\n"; \
+        VLOG(1) << "*************     EXPR  [class:'"<< parentExpr->getStmtClassName() <<"']         **********\n"; \
         if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang expression: \n" \
-                     << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+            VLOG(2) << "Dump of clang expression: "; \
             parentExpr->dump(); \
         } \
         VLOG(1) << "-> at location: (" <<	\
@@ -134,7 +133,7 @@ namespace conversion {
         if(expr) { \
             VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )"; \
         } \
-        VLOG(1) << "\n****************************************************************************************\n"; \
+        VLOG(1) << "****************************************************************************************\n"; \
     } )
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -446,74 +445,33 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						  IMPLICIT CAST EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr);
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						EXPLICIT CAST EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitExplicitCastExpr(const clang::ExplicitCastExpr* castExpr);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							FUNCTION CALL EXPRESSION
+	//  next methods require a specific implementation on C++
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCallExpr(const clang::CallExpr* callExpr);
+
+	core::ExpressionPtr VisitImplicitCastExpr			(const clang::ImplicitCastExpr* castExpr);
+	core::ExpressionPtr VisitExplicitCastExpr			(const clang::ExplicitCastExpr* castExpr);
+	core::ExpressionPtr VisitCallExpr					(const clang::CallExpr* callExpr);
+	core::ExpressionPtr VisitMemberExpr					(const clang::MemberExpr* memExpr);
+	core::ExpressionPtr VisitDeclRefExpr				(const clang::DeclRefExpr* declRef);
+	core::ExpressionPtr VisitCXXBoolLiteralExpr			(const clang::CXXBoolLiteralExpr* boolLit);
+	core::ExpressionPtr VisitCXXMemberCallExpr			(const clang::CXXMemberCallExpr* callExpr);
+	core::ExpressionPtr VisitCXXOperatorCallExpr		(const clang::CXXOperatorCallExpr* callExpr);
+	core::ExpressionPtr VisitCXXConstructExpr			(const clang::CXXConstructExpr* callExpr);
+	core::ExpressionPtr VisitCXXNewExpr					(const clang::CXXNewExpr* callExpr);
+	core::ExpressionPtr VisitCXXDeleteExpr				(const clang::CXXDeleteExpr* deleteExpr);
+	core::ExpressionPtr VisitCXXThisExpr				(const clang::CXXThisExpr* callExpr);
+	core::ExpressionPtr VisitCXXThrowExpr				(const clang::CXXThrowExpr* throwExpr);
+	core::ExpressionPtr VisitCXXDefaultArgExpr			(const clang::CXXDefaultArgExpr* defaultArgExpr);
+	core::ExpressionPtr VisitCXXBindTemporaryExpr		(const clang::CXXBindTemporaryExpr* bindTempExpr);
+	core::ExpressionPtr VisitCXXScalarValueInitExpr		(const clang::CXXScalarValueInitExpr* scalarValueInit);
+	core::ExpressionPtr VisitExprWithCleanups			(const clang::ExprWithCleanups* cleanupExpr);
+	core::ExpressionPtr VisitMaterializeTemporaryExpr	(const clang::MaterializeTemporaryExpr* materTempExpr);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						  MEMBER EXPRESSION
+	//  default visitor call
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitMemberExpr(const clang::MemberExpr* memExpr);
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							VAR DECLARATION REFERENCE
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitDeclRefExpr(const clang::DeclRefExpr* declRef);
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//								CXX BOOLEAN LITERAL
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXBoolLiteralExpr(const clang::CXXBoolLiteralExpr* boolLit);
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						CXX MEMBER CALL EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXMemberCallExpr(const clang::CXXMemberCallExpr* callExpr);
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						CXX OPERATOR CALL EXPRESSION
-	//
-	//  A call to an overloaded operator written using operator syntax.
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXOperatorCallExpr(const clang::CXXOperatorCallExpr* callExpr);
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						CXX CONSTRUCTOR CALL EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXConstructExpr(const clang::CXXConstructExpr* callExpr);
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						CXX NEW CALL EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXNewExpr(const clang::CXXNewExpr* callExpr);
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						CXX DELETE CALL EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXDeleteExpr(const clang::CXXDeleteExpr* deleteExpr);
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						CXX THIS CALL EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXThisExpr(const clang::CXXThisExpr* callExpr);
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//					EXCEPTION CXX THROW EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXThrowExpr(const clang::CXXThrowExpr* throwExpr);
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//					CXX DEFAULT ARG EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXDefaultArgExpr(const clang::CXXDefaultArgExpr* defaultArgExpr);
-
-	core::ExpressionPtr VisitCXXBindTemporaryExpr(const clang::CXXBindTemporaryExpr* bindTempExpr);
-
-	core::ExpressionPtr VisitExprWithCleanups(const clang::ExprWithCleanups* cleanupExpr);
-
-	core::ExpressionPtr VisitMaterializeTemporaryExpr(const clang::MaterializeTemporaryExpr* materTempExpr);
 
 	virtual core::ExpressionPtr Visit(const clang::Expr* expr);
 };

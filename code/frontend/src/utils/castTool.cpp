@@ -36,6 +36,7 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/frontend/utils/debug.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/unused.h"
@@ -374,16 +375,16 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 
 	core::TypePtr&& exprTy = expr->getType();
 
-	if (VLOG_IS_ON(2)){
-		VLOG(2) << "####### Expr: #######" << std::endl;
-		dumpDetail(expr);
-		VLOG(2) << "####### Expr Type: #######" << std::endl;
-		dumpDetail(exprTy);
-		VLOG(2)<< "####### cast Type: #######" << std::endl;
-		dumpDetail(targetTy);
-		VLOG(2)  << "####### clang: #######" << std::endl;
-		castExpr->dump();
-	}
+//	if (VLOG_IS_ON(2)){
+//		VLOG(2) << "####### Expr: #######" << std::endl;
+//		dumpDetail(expr);
+//		VLOG(2) << "####### Expr Type: #######" << std::endl;
+//		dumpDetail(exprTy);
+//		VLOG(2)<< "####### cast Type: #######" << std::endl;
+//		dumpDetail(targetTy);
+//		VLOG(2)  << "####### clang: #######" << std::endl;
+//		castExpr->dump();
+//	}
 
 	// it might be that the types are already fixed:
 	// like LtoR in arrays, they will allways be a ref<...>
@@ -402,15 +403,21 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			
 			// this is CppRef -> ref
 			if (core::analysis::isCppRef(exprTy)){
-			// unwrap and deref the variable
+				// unwrap and deref the variable
 				return builder.deref( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr));
 			}
 			else if (core::analysis::isConstCppRef(exprTy)){
 				return builder.deref( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr));
 			}
+			/*
+			if (IS_CPP_REF_EXPR(expr)){
+				expr = unwrapCppRef(builder, expr);
+			}
+			*/
 
-			if(IS_IR_REF(exprTy))
+			if(IS_IR_REF(exprTy)) {
 				return builder.deref(expr);
+			}
 			else{
 				// arguments by value are not refs... but in C they are lefsides
 				return expr;
@@ -447,10 +454,12 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			// types equality has been already checked, if is is a NoOp is because clang identifies
 			// this as the same type. but we might intepret it in a diff way. (ex, char literals are
 			// int for clang, we build a char type
-			if (gen.isPrimitive(exprTy) )
+			if (gen.isPrimitive(exprTy) ) {
 				return castScalar(targetTy, expr);
-			else 
+			}
+			else {
 				return expr;
+			}
 		}
 
 		case clang::CK_ArrayToPointerDecay 	:
@@ -571,6 +580,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		}
 
 		
+		/*
 		case clang::CK_UncheckedDerivedToBase:
 		//A conversion from a C++ class pointer/reference to a base class that can assume that
 		//the derived pointer is not null. const A &a = B(); b->method_from_a(); 
@@ -591,7 +601,9 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			}
 			return expr;
 		}
+		*/
 		
+		case clang::CK_UncheckedDerivedToBase:
 		case clang::CK_DerivedToBase:
 		//A conversion from a C++ class pointer to a base class pointer. A *a = new B();
 		{
@@ -600,13 +612,25 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			// it is needed to deref the first element
 			expr = getCArrayElemRef(builder, expr);
 
-			core::TypePtr targetTy;
+			// unwrap CppRef if CppRef
+			if (core::analysis::isCppRef(exprTy)){
+				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
+			}
+			else if (core::analysis::isConstCppRef(exprTy)){
+				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
+			}
+
 			clang::CastExpr::path_const_iterator it;
 			for (it = castExpr->path_begin(); it!= castExpr->path_end(); ++it){
-				targetTy = convFact.convertType((*it)->getType().getTypePtr());
+				core::TypePtr targetTy= convFact.convertType((*it)->getType().getTypePtr());
 				expr = builder.refParent(expr, targetTy);
 			}
 
+			if(GET_TYPE_PTR(castExpr)->isPointerType()){ 
+				// is a pointer type -> return pointer
+				expr = builder.callExpr(gen.getScalarToArray(), expr);
+			}
+			
 			return expr;
 			//assert(false && "derived to base cast  not implementd");
 			break;
@@ -615,8 +639,30 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		case clang::CK_BaseToDerived:
 		//A conversion from a C++ class pointer/reference to a derived class pointer/reference. B *b = static_cast<B*>(a); 
 		{
-			assert(false && "base to derived cast  not implementd B* b = static_cast<B*>(A)");
+			
+			VLOG(2) << expr->getType();
+			VLOG(2) << targetTy;
+
+			if(GET_TYPE_PTR(castExpr)->isPointerType()){ 
+				// if we have a pointer --> target type is ref<arry<...>>, for staticCast we need
+				// only array<...> in the type literal hence the GET_REF_ELEM_TYPE
+				// use staticCast operator to represent static_cast 
+				return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy))) );
+			}
+
+			return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral((targetTy))) );
+
+			//explicitly cast from base to derived
+			//return builder.callExpr(gen.getTypeCast(), expr, builder.getTypeLiteral(targetTy));
+			//assert(false && "base to derived cast  not implementd B* b = static_cast<B*>(A)");
 			break;
+		}
+
+		case clang::CK_Dynamic:
+		// A C++ dynamic_cast.
+		{	
+			// use dynamicCast operator to represent dynamic_cast
+			return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy))) );
 		}
 
 		///////////////////////////////////////
@@ -632,10 +678,6 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		case clang::CK_LValueBitCast 	:
 		/* case clang::CK_LValueBitCast - A conversion which reinterprets the address of an l-value as an l-value of a different 
 		* kind. Used for reinterpret_casts of l-value expressions to reference types. bool b; reinterpret_cast<char&>(b) = 'a';
-		* */
-
-		case clang::CK_Dynamic 	:
-		/*case clang::CK_Dynamic - A C++ dynamic_cast.
 		* */
 
 		case clang::CK_ToUnion 	:
