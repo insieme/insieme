@@ -207,17 +207,8 @@ namespace analysis {
 					return normalize(cur);	// entering new scope
 				}
 
-				// invoke this normalize on the rest
-				NodePtr res = cur->substitute(cur.getNodeManager(), *this);
-
-				// invoke normalizer recursively on compound statements
-				if (type == NT_CompoundStmt || type == NT_CatchClause) {
-					// normalize the sub-structure
-					return normalize(res);
-				}
-
-				// done
-				return res;
+				// invoke this normalizer on anything else
+				return cur->substitute(cur.getNodeManager(), *this);
 			}
 
 		};
@@ -279,10 +270,9 @@ namespace analysis {
 				return false;
 			});
 
-			// special handling for node types introducing a scope (to break recursive loop)
+			// special handling for LambdaExpression (to break recursive loop)
 			Normalizer normalizer(varMap);
-			auto type = node->getNodeType();
-			if (type == NT_LambdaExpr || type == NT_CompoundStmt || type == NT_CatchClause) {
+			if (node->getNodeType() == NT_LambdaExpr) {
 				return node->substitute(manager, normalizer);
 			}
 

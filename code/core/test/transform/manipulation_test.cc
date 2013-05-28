@@ -818,7 +818,7 @@ TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
 	// normalize representation (since parser is not deterministic)
 	in = analysis::normalize(in);
 
-	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {rec v1.{v1=fun() {v0(5);}}();}}",
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {rec v2.{v2=fun() {v0(5);}}();}}",
 		toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in)))
 	);
 
@@ -850,8 +850,8 @@ TEST(Manipulation, CorrectRecursiveLambdaVariableUsage) {
 	in = analysis::normalize(in);
 
 	EXPECT_EQ("rec v0.{"
-			"v1=fun(int<4> v2) {1; rec v2.{v2=fun() {return v1(5);}}(); v1(4); v0(v1(4)); rec v2.{v2=fun() {return v0(5);}}();}, "
-			"v0=fun(int<4> v4) {2; rec v2.{v2=fun() {return v1(5);}}(); v1(v0(4)); v0(4); rec v2.{v2=fun() {return v0(5);}}();}"
+			"v1=fun(int<4> v2) {1; rec v3.{v3=fun() {return v1(5);}}(); v1(4); v0(v1(4)); rec v3.{v3=fun() {return v0(5);}}();}, "
+			"v0=fun(int<4> v4) {2; rec v3.{v3=fun() {return v1(5);}}(); v1(v0(4)); v0(4); rec v3.{v3=fun() {return v0(5);}}();}"
 			"}",
 		toString(*analysis::normalize(transform::correctRecursiveLambdaVariableUsage(manager, in)))
 	);
@@ -881,7 +881,7 @@ TEST(Manipulation, pushBindIntoLambdaTest) {
 	// push bind inside
 	CallExprPtr res = analysis::normalize(transform::pushBindIntoLambda(manager, call, 0));
 
-	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return bind(v0){int.add(v1, v0)}(2);}}(int.add(2, v77))", toString(*res));
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return bind(v2){int.add(v1, v2)}(2);}}(int.add(2, v77))", toString(*res));
 	EXPECT_EQ("int.add(v77, 4)", toString(*transform::simplify(manager, res)));
 
 	EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());
@@ -903,7 +903,7 @@ TEST(Manipulation, pushBindIntoLambdaTest) {
 	// push bind inside
 	res = analysis::normalize(transform::pushBindIntoLambda(manager, call, 0));
 
-	EXPECT_EQ("rec v0.{v0=fun() {return bind(v0){int.add(int.add(2, 3), v0)}(2);}}()", toString(*res));
+	EXPECT_EQ("rec v0.{v0=fun() {return bind(v1){int.add(int.add(2, 3), v1)}(2);}}()", toString(*res));
 	EXPECT_EQ("7", toString(*transform::simplify(manager, res.as<NodePtr>())));
 
 	EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());

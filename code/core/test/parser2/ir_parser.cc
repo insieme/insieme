@@ -345,17 +345,17 @@ namespace parser {
 
 		// test multiple catch clauses
 		node = builder.normalize(builder.parse(
-				"try { } catch (int<4> x) { x; } catch (int<8> y) { y; }"
+				"try { } catch (int<4> x) { x; } catch (int<4> y) { y; }"
 		));
 		ASSERT_TRUE(node);
-		EXPECT_EQ("try {} catch (int<4> v0) {v0;} catch (int<8> v0) {v0;}", toString(*node));
+		EXPECT_EQ("try {} catch (int<4> v0) {v0;} catch (int<4> v1) {v1;}", toString(*node));
 
 		// test multiple catch clauses
 		node = builder.normalize(builder.parse(
-				"try { throw 4; } catch (int<4> x) { x; } catch (int<8> y) { y; }"
+				"try { throw 4; } catch (int<4> x) { x; } catch (int<4> y) { y; }"
 		));
 		ASSERT_TRUE(node);
-		EXPECT_EQ("try {throw 4;} catch (int<4> v0) {v0;} catch (int<8> v0) {v0;}", toString(*node));
+		EXPECT_EQ("try {throw 4;} catch (int<4> v0) {v0;} catch (int<4> v1) {v1;}", toString(*node));
 	}
 
 

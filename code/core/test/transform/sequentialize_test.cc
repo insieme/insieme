@@ -67,7 +67,7 @@ namespace transform {
 		ASSERT_TRUE(code);
 
 		EXPECT_EQ(
-				"{ref<int<4>> v0 = ref.var(2); rec v0.{v0=fun(ref<'a> v1, 'a v2) {return rec v0.{v0=fun(ref<'a> v1, (('a)=>bool) v2, (('a)=>'a) v3) {'a v0 = ref.deref(v1); if(v2(ref.deref(v1))) {ref.assign(v1, v3(ref.deref(v1)));} else {}; return v0;}}(v1, bind(v0){rec v0.{v0=fun('a v1) {return v1;}}(true)}, bind(v3){gen.add(v3, v2)});}}(v0, 10);}",
+				"{ref<int<4>> v0 = ref.var(2); rec v0.{v0=fun(ref<'a> v1, 'a v2) {return rec v0.{v0=fun(ref<'a> v1, (('a)=>bool) v2, (('a)=>'a) v3) {'a v4 = ref.deref(v1); if(v2(ref.deref(v1))) {ref.assign(v1, v3(ref.deref(v1)));} else {}; return v4;}}(v1, bind(v3){rec v0.{v0=fun('a v1) {return v1;}}(true)}, bind(v4){gen.add(v4, v2)});}}(v0, 10);}",
 				toString(*code)
 			);
 		EXPECT_TRUE(check(code, checks::getFullCheck()).empty()) << check(code, checks::getFullCheck());
@@ -76,7 +76,7 @@ namespace transform {
 		auto res = analysis::normalize(transform::trySequentialize(mgr, code));
 //		std::cout << core::printer::PrettyPrinter(res) << "\n";
 		EXPECT_EQ(
-				"{ref<int<4>> v0 = ref.var(2); rec v0.{v0=fun(ref<'a> v1, 'a v2) {return rec v0.{v0=fun(ref<'a> v1, 'a v2) {'a v0 = ref.deref(v1); ref.assign(v1, gen.add(ref.deref(v1), v2)); return v0;}}(v1, v2);}}(v0, 10);}",
+				"{ref<int<4>> v0 = ref.var(2); rec v0.{v0=fun(ref<'a> v1, 'a v2) {return rec v0.{v0=fun(ref<'a> v1, 'a v2) {'a v3 = ref.deref(v1); ref.assign(v1, gen.add(ref.deref(v1), v2)); return v3;}}(v1, v2);}}(v0, 10);}",
 				toString(*res)
 		);
 		EXPECT_TRUE(check(res, checks::getFullCheck()).empty()) << check(res, checks::getFullCheck());

@@ -106,12 +106,12 @@ namespace analysis {
 
 		// test a sibling-compound
 		EXPECT_EQ(
-				"{int<4> v0 = 1; {int<4> v0 = 2;}; {int<4> v0 = 3;};}",
+				"{int<4> v0 = 1; {int<4> v1 = 2;}; {int<4> v2 = 3;};}",
 				toString(*normalize(builder.parse("{ int<4> a = 1; { int<4> b = 2; } { int<4> c = 3; } }")))
 		);
 
 		EXPECT_EQ(
-				"{int<4> v0 = 1; {v0; int<4> v1 = 2;}; {int<4> v1 = 3; v0;};}",
+				"{int<4> v0 = 1; {v0; int<4> v1 = 2;}; {int<4> v2 = 3; v0;};}",
 				toString(*normalize(builder.parse("{ int<4> a = 1; { a; int<4> b = 2; } { int<4> c = 3; a; } }")))
 		);
 
@@ -158,7 +158,7 @@ namespace analysis {
 		tryCatch = builder.tryCatchStmt(body, toVector(clause1, clause2));
 
 		EXPECT_EQ("try {} catch (A v1) {v1;} catch (A v2) {v2;}", toString(*tryCatch));
-		EXPECT_EQ("try {} catch (A v0) {v0;} catch (A v0) {v0;}", toString(*normalize(tryCatch)));
+		EXPECT_EQ("try {} catch (A v0) {v0;} catch (A v1) {v1;}", toString(*normalize(tryCatch)));
 
 	}
 
