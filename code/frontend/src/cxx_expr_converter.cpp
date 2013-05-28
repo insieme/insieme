@@ -755,24 +755,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDefaultArgExpr(
 	//START_LOG_EXPR_CONVERSION(defaultArgExpr);
 	auto ret = Visit(defaultArgExpr->getExpr());
 	LOG_EXPR_CONVERSION(defaultArgExpr, ret);
-	return ret;
-	/*
-	assert(convFact.currTU && "Translation unit not correctly set");
-	VLOG(1) << "\n****************************************************************************************\n"
-	<< "Converting expression [class: '" << defaultArgExpr->getStmtClassName() << "']\n"
-	<< "-> at location: (" <<
-	utils::location(defaultArgExpr->getUsedLocation(), convFact.currTU->getCompiler().getSourceManager()) << "): ";
-	if( VLOG_IS_ON(2) ) {
-		VLOG(2) << "Dump of clang expression: \n"
-		<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-		defaultArgExpr->dump();
-	}
-	assert(defaultArgExpr->getExpr() && "no default value");
-	VLOG(2) << "Default value: " << Visit(defaultArgExpr->getExpr());
-	VLOG(2) << "End of expression CXXDefaultArgExpr\n";
 
-	return Visit(defaultArgExpr->getExpr());
-	*/
+
+	return ret;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -863,6 +848,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 	std::for_each(params.begin(), params.end(), [&packedArgs] (core::VariablePtr varPtr) {
 		 packedArgs.push_back(varPtr);
 	});
+
 	return retIr = convFact.builder.callExpr(lambdaType, lambda, packedArgs);
 }
 

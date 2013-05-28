@@ -122,10 +122,9 @@ namespace conversion {
 
 #define LOG_EXPR_CONVERSION(parentExpr, expr) \
 	FinalActions attachLog( [&] () { \
-        VLOG(1) << "\n**********************EXPR*[class:'"<< parentExpr->getStmtClassName() <<"']**********************\n"; \
+        VLOG(1) << "*************     EXPR  [class:'"<< parentExpr->getStmtClassName() <<"']         **********\n"; \
         if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang expression: \n" \
-                     << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+            VLOG(2) << "Dump of clang expression: "; \
             parentExpr->dump(); \
         } \
         VLOG(1) << "-> at location: (" <<	\
@@ -134,7 +133,7 @@ namespace conversion {
         if(expr) { \
             VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )"; \
         } \
-        VLOG(1) << "\n****************************************************************************************\n"; \
+        VLOG(1) << "****************************************************************************************\n"; \
     } )
 
 //---------------------------------------------------------------------------------------------------------------------
