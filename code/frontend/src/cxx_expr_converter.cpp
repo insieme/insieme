@@ -415,19 +415,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		// get arguments
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		args = getFunctionArguments(callExpr, funcTy, llvm::cast<clang::FunctionDecl>(methodDecl));
-
-		//unwrap if is a cpp reference, we dont use cpp references for this
-		/*
-		if (core::analysis::isCppRef(ownerObj->getType())){
-		// unwrap and deref the variable
-			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), ownerObj);
-		}
-		else if (core::analysis::isConstCppRef(ownerObj->getType())){
-			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), ownerObj);
-		}
-		*/ 
 		ownerObj = unwrapCppRef(builder, ownerObj);
 
+		//we might need here a ref or something... 
+		// some constructions might return an instance, incorporate a materialize
+		if (ownerObj->getType() !=  funcTy->getParameterTypeList()[0]){
+			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
+		}
+
+		ASSERT_EQ_TYPES(ownerObj->getType(), funcTy->getParameterTypeList()[0]);
 
 		// incorporate this to the begining of the args list
 		args.insert (args.begin(), ownerObj);
@@ -445,72 +441,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		args = getFunctionArguments(callExpr, funcDecl);
 	}
-///
-//	FIXME: this was ment to be used with the non implemented asign operator, now is being
-//	implemented, terefore the asigment has to be handled as a function call
-//
-//	once tested, cleanup the code
-//
-///	switch (callExpr->getOperator()){
-///
-///		case OO_None:
-///			assert(false && "no operator!!");
-///
-///		case OO_New:
-///		case OO_Delete         :
-///		case OO_Array_New      :
-///		case OO_Array_Delete   :
-///			assert(false && " new and delete overload not implemented");
-///
-///		case OO_Plus                 :
-///		case OO_Minus                :
-///		case OO_Star                 :
-///		case OO_Slash                :
-///		case OO_Percent              :
-///		case OO_Caret                :
-///		case OO_Amp                  :
-///		case OO_Pipe                 :
-///		case OO_Tilde                :
-///		case OO_Exclaim              :
-///		case OO_Less                 :
-///		case OO_Greater              :
-///		case OO_PlusEqual            :
-///		case OO_MinusEqual           :
-///		case OO_StarEqual            :
-///		case OO_SlashEqual           :
-///		case OO_PercentEqual         :
-///		case OO_CaretEqual           :
-///		case OO_AmpEqual             :
-///		case OO_PipeEqual            :
-///		case OO_LessLess             :
-///		case OO_GreaterGreater       :
-///		case OO_LessLessEqual        :
-///		case OO_GreaterGreaterEqual  :
-///		case OO_EqualEqual           :
-///		case OO_ExclaimEqual         :
-///		case OO_LessEqual            :
-///		case OO_GreaterEqual         :
-///		case OO_AmpAmp               :
-///		case OO_PipePipe             :
-///		case OO_PlusPlus             :
-///		case OO_MinusMinus           :
-///		case OO_Comma                :
-///		case OO_ArrowStar            :
-///		case OO_Arrow               :
-///		case OO_Call           :
-///		case OO_Subscript      :
-///		case OO_Equal                :
-///			func = convertedOp;
-///			//assert(false && "CXXOperator not implemented yet");
-///			break;
-///		case OO_Equal                :
-///			func = gen.getRefAssign();
-///			break;
-///
-///		default:
-///			assert(false && " no specified operator, did u upgraded clang from 3.2? ");
-///
-///	}
+	else {
+		assert(false && "you should not be here, cxx operator call which is neither a method nor function");
+	}
 
 	retIr = builder.callExpr(funcTy->getReturnType(), convertedOp, args);
 	return retIr;
