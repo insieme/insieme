@@ -587,7 +587,6 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 		// print diagnosis messages
 		printDiagnosis(definition->getLocStart());
-
 		assert(var);
 
 		// initialization value
@@ -836,6 +835,10 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// ============================================================================================
 	// =============================== Handling of special cases  =================================
 	// ============================================================================================
+	
+	if( core::analysis::isConstructorCall(retIr)){
+		return retIr;
+	}
 
 	// if is a constructor call, we are done
 	if (llvm::isa<clang::CXXConstructExpr>(expr)){

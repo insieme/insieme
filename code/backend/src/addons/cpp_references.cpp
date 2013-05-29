@@ -104,6 +104,11 @@ namespace addons {
 					if (core::analysis::isCallOf(arg, LANG_EXT_CPP.getMaterialize())){
 						return CONVERT_ARG(0);
 					}
+					//if inner node is a constructor, we dont deref neither
+					if (core::analysis::isConstructorCall(arg)){
+						return CONVERT_ARG(0);
+					}
+
 					// is if anything else, we must deref
 					return c_ast::deref(CONVERT_ARG(0)); 
 			});

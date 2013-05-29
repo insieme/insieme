@@ -810,24 +810,39 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 	std::vector<const clang::CXXTemporary*>&& tmps = utils::lookupTemporaries (cleanupExpr->getSubExpr ());
 
 	// convert the subexpr to IR
-	const Expr* inner = cleanupExpr->getSubExpr();
+	const clang::Expr* inner = cleanupExpr->getSubExpr();
 	core::ExpressionPtr innerIR = convFact.convertExpr(inner);
-
-	vector<core::StatementPtr> stmtList;
 
 	// for each of the temporaries(reverse) create an IR var decl and push it at the beginning of the
 	// lambda body
+	vector<core::StatementPtr> stmtList;
 	for (std::vector<const clang::CXXTemporary*>::reverse_iterator it = tmps.rbegin() ; it != tmps.rend(); ++it) {
 
 		ConversionFactory::ConversionContext::TemporaryInitMap::const_iterator fit = convFact.ctx.tempInitMap.find(*it);
 	    if (fit != convFact.ctx.tempInitMap.end()) {
-		       // variable found in the map
-		       stmtList.push_back(fit->second);
+			// if the cleanup obj is a const_ref, we dont need the cleanup expr
+			core::DeclarationStmtPtr decl = fit->second.as<core::DeclarationStmtPtr>();
+			core::VariablePtr        var  = decl->getVariable();
+			core::ExpressionPtr      init = decl->getInitialization();
+
+			core::ExpressionPtr trg = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), var);
+			core::ExpressionPtr subst = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init);
+			core::ExpressionPtr newIr = core::transform::replaceAllGen (mgr, innerIR, trg, subst, false);
+
+			if (newIr == innerIR)
+				stmtList.push_back(fit->second);
+			else
+				innerIR = newIr;
 		}
 	}
 
-	core::TypePtr lambdaType = convFact.convertType(cleanupExpr->getType().getTypePtr());
-	if (innerIR->getType() != lambdaType && !gen.isRef(lambdaType))
+	if (stmtList.empty()){
+		// we avoided all expressions to be cleanup, no extra lambda needed
+		return innerIR;
+	}
+
+	core::TypePtr lambdaRetType = convFact.convertType(cleanupExpr->getType().getTypePtr());
+	if (innerIR->getType() != lambdaRetType && !gen.isRef(lambdaRetType))
 		innerIR = convFact.tryDeref(innerIR);
 
 	// if the expression does not return anything, do not add return stmt
@@ -841,7 +856,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 	//build the lambda and its parameters
 	core::StatementPtr&& lambdaBody = convFact.builder.compoundStmt(stmtList);
 	vector<core::VariablePtr> params = core::analysis::getFreeVariables(lambdaBody);
-	core::LambdaExprPtr lambda = convFact.builder.lambdaExpr(lambdaType, lambdaBody, params);
+	core::LambdaExprPtr lambda = convFact.builder.lambdaExpr(lambdaRetType, lambdaBody, params);
 
 	//build the lambda call and its arguments
 	vector<core::ExpressionPtr> packedArgs;
@@ -849,7 +864,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 		 packedArgs.push_back(varPtr);
 	});
 
-	return retIr = convFact.builder.callExpr(lambdaType, lambda, packedArgs);
+	return retIr = builder.callExpr(lambdaRetType, lambda, packedArgs);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -871,12 +886,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXScalarValueInit
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMaterializeTemporaryExpr( const clang::MaterializeTemporaryExpr* materTempExpr) {
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(materTempExpr, retIr);
-	
-
 	retIr =  Visit(materTempExpr->GetTemporaryExpr());
-
-	materTempExpr->dump();
-	assert(retIr);
 
 	// is a left side value, no need to materialize. has being handled by a temporary expression
 	if(IS_CPP_REF_EXPR(retIr) || gen.isRef(retIr->getType()))
