@@ -184,9 +184,11 @@ AST_TERMINAL(If, Statement)
 AST_TERMINAL(Switch, Statement)
 AST_TERMINAL(For, Statement)
 AST_TERMINAL(While, Statement)
+AST_TERMINAL(TryCatch, Statement)
 AST_TERMINAL(Continue, Statement)
 AST_TERMINAL(Break, Statement)
 AST_TERMINAL(Return, Statement)
+AST_TERMINAL(Throw, Statement)
 
 //
 // --- Expressions ---

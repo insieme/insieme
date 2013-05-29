@@ -294,6 +294,22 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct TryCatch : public Statement {
+		// a catch clause - if the variable is null it will create a catch-all
+		struct Clause {
+			VariablePtr var;
+			StatementPtr body;
+			Clause(VariablePtr var, StatementPtr body) : var(var), body(body) {}
+			Clause(StatementPtr body) : body(body) {} 			// the variant for the capture-all clause
+			bool operator==(const Clause& other) const;
+		};
+		StatementPtr body;
+		vector<Clause> clauses;
+		TryCatch(StatementPtr body, const vector<Clause>& clauses)
+			: Statement(NT_TryCatch), body(body), clauses(clauses) {};
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct Continue : public Statement {
 		Continue() : Statement(NT_Continue) {}
 		virtual bool equals(const Node& node) const { return true; }
@@ -307,6 +323,12 @@ namespace c_ast {
 	struct Return : public Statement {
 		ExpressionPtr value;
 		Return(ExpressionPtr value = ExpressionPtr()) : Statement(NT_Return), value(value) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct Throw : public Statement {
+		ExpressionPtr value;
+		Throw(ExpressionPtr value) : Statement(NT_Throw), value(value) {}
 		virtual bool equals(const Node& node) const;
 	};
 
