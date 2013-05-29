@@ -132,6 +132,9 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 		return ptr;
 	}
 
+	if(BASIC.isRefVar(ptr) || BASIC.isRefNew(ptr))
+			return ptr;
+
 	// replace variable with loop induction variable if semantically correct
 	if(const VariablePtr var = dynamic_pointer_cast<const Variable>(ptr)) {
 		if(replacements.find(var) != replacements.end() && replacements[var]){

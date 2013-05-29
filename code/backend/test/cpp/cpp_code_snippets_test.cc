@@ -875,5 +875,60 @@ namespace backend {
 		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
 	}
 
+	TEST(CppSnippet, Exceptions) {
+
+		// something including a non-parameter!
+
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
+
+		auto res = builder.normalize(builder.parseProgram(
+				R"(
+					let short = int<2>;
+					let int = int<4>;
+
+					int main() {
+						
+						try {
+
+							throw 4;
+
+						} catch (int x) {
+							print("Catched integer %d\n", x);
+						} catch (short y) {
+							print("Catched short %d\n", y);
+						} catch (ref<short> y) {
+							print("Catched short %d\n", *y);
+						} catch (any a) {
+							print("Catched something!\n");
+						}
+
+						return 0;
+					}
+				)"
+		));
+
+		ASSERT_TRUE(res);
+		EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+
+		auto targetCode = sequential::SequentialBackend::getDefault()->convert(res);
+		ASSERT_TRUE((bool)targetCode);
+
+		std::cout << *targetCode;
+
+		// check generated code
+		auto code = toString(*targetCode);
+		EXPECT_PRED2(containsSubString, code, "throw 4;");
+		EXPECT_PRED2(containsSubString, code, "} catch(int32_t var_1) {");
+		EXPECT_PRED2(containsSubString, code, "} catch(int16_t var_2) {");
+		EXPECT_PRED2(containsSubString, code, "} catch(int16_t* var_3) {");
+		EXPECT_PRED2(containsSubString, code, "} catch(...) {");
+
+		// check whether code is compiling
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultCppCompiler();
+		compiler.addFlag("-c"); // do not run the linker
+		EXPECT_TRUE(utils::compiler::compile(*targetCode, compiler));
+	}
+
 } // namespace backend
 } // namespace insieme

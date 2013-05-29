@@ -38,16 +38,16 @@
 // builtin types
 void basic_type_test() {
 
-	#pragma test "ref<int<4>> v1 = ref.var(1)"
+	#pragma test "decl ref<int<4>> v0 =  var(1)"
 	int i = 1;
 
-	#pragma test "ref<uint<4>> v1 = ref.var(1u)"
+	#pragma test "decl ref<uint<4>> v0 =  var(1u)"
 	unsigned int ui = 1;
 
-	#pragma test "ref<real<4>> v1 = ref.var(1.0f)"
+	#pragma test "decl ref<real<4>> v0 =  var(1.0f)"
 	float f = 1;
 
-	#pragma test "{ref<real<4>> v1 = ref.var(0.0f); ref<int<4>> v2 = ref.var(int.sub(cast<int<4>>(0), 1)); ref.assign(v1, int.to.real(ref.deref(v2), 4)); rec v0.{v0=fun(ref<'a> v1) {ref.assign(v1, gen.add(ref.deref(v1), 1)); return ref.deref(v1);}}(v1); ref.assign(v2, real.to.int(ref.deref(v1), 4));}"
+	#pragma test "{decl ref<real<4>> v0 =  var(0.0f);decl ref<int<4>> v1 =  var(0-1);v0 := int.to.real(v1, 4);gen.pre.inc(v0);v1 := real.to.int(v0, 4);}"
 	{
 		float x;
 		int y = -1;

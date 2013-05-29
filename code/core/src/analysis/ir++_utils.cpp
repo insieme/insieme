@@ -68,7 +68,12 @@ namespace analysis {
 				return funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction();
 			}
 
-			// no C++ content found
+			// if there are exceptions, it is IR++
+			if (cur->getNodeType() == NT_ThrowStmt || cur->getNodeType() == NT_TryCatchStmt) {
+				return true;
+			}
+
+			// no IR++ content found
 			return false;
 		}, true);
 	}

@@ -38,49 +38,49 @@
 
 // builtin types
 void basic_type_test() {
-	#pragma test "ref<int<4>> v1 = ref.var(1)"
+	#pragma test "decl ref<int<4>> v0 =  var(1)"
 	int a = 1;
 
-	#pragma test "ref<int<8>> v1 = ref.var(0)"
+	#pragma test "decl ref<int<8>> v0 =  var(0)"
 	long b;
 
-	#pragma test "ref<int<2>> v1 = ref.var(65535)"
+	#pragma test "decl ref<int<2>> v0 =  var(65535)"
 	short c = 0xFFFF;
 
-	#pragma test "ref<char> v1 = ref.var('a')"
+	#pragma test "decl ref<char> v0 =  var('a')"
 	char d = 'a';
 
-	#pragma test "ref<ref<any>> v1 = ref.var(undefined(ref<any>))"
+	#pragma test "decl ref<ref<any>> v0 =  var(undefined(type<ref<any>>))"
 	void* e;
 
-	#pragma test "ref<real<4>> v1 = ref.var(0.0000000f)"
+	#pragma test "decl ref<real<4>> v0 =  var(0.0000000f)"
 	float f = 0.00f;
 
-	#pragma test "ref<real<8>> v1 = ref.var(0.0)"
+	#pragma test "decl ref<real<8>> v0 =  var(0.0)"
 	double g;
 
-	#pragma test "ref<vector<real<4>,3>> v1 = ref.var(undefined(vector<real<4>,3>))"
+	#pragma test "decl ref<vector<real<4>,3>> v0 =  var(undefined(type<vector<real<4>,3>>))"
 	float v[3];
 
-    #pragma test "ref<vector<vector<int<4>,2>,3>> v1 = ref.var(undefined(vector<vector<int<4>,2>,3>))"
+    #pragma test "decl ref<vector<vector<int<4>,2>,3>> v0 =  var(undefined(type<vector<vector<int<4>,2>,3>>))"
 	int vv[3][2];
 
-	#pragma test "ref<vector<real<4>,3>> v1 = ref.var({0.0f,0.0f,0.0f})"
+	#pragma test "decl ref<vector<real<4>,3>> v0 =  var([0.0f, 0.0f, 0.0f])"
 	float vvv[3] = { 0, 0, 0 };
 
-	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({{0.0f},{0.0f}})"
+	#pragma test "decl ref<vector<vector<real<4>,1>,2>> v0 =  var([[0.0f], [0.0f]])"
 	float vvvv[][1] = { {0}, {0} };
 
-	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(get.null(array<int<4>,1>))"
+	#pragma test "decl ref<ref<array<int<4>,1>>> v0 =  var(get.null(type<array<int<4>,1>>))"
 	int* b1 = 0;
 
-	#pragma test "ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v1 = ref.var(get.null(array<ref<array<ref<array<int<4>,1>>,1>>,1>))"
+	#pragma test "decl ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v0 =  var(get.null(type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>))"
 	int*** c1 = 0;
 
-	#pragma test "ref.assign(v1, get.null(array<ref<array<ref<array<int<4>,1>>,1>>,1>))"
+	#pragma test "v1 := get.null(type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)"
 	c1 = 0;
 
-	#pragma test "ref<real<8>> v1 = ref.var(3.1415926535897931)"
+	#pragma test "decl ref<real<8>> v0 =  var(3.1415926535897931)"
 	double pi = 3.14159265358979323846;
 
 	//#pragma test "ref<vector<char,10>> v1 = ref.var(\"Hello Mum\")"
@@ -98,11 +98,11 @@ struct Person {
 
 void test_func() {
 	#pragma test \
-	"ref<struct<height:int<4>,age:int<4>>> v1 = ref.var(undefined(struct<height:int<4>,age:int<4>>))"
+	"decl ref<struct<height:int<4>,age:int<4>>> v0 =  var(undefined(type<struct<height:int<4>,age:int<4>>>))"
 	struct Person p;
 
 	#pragma test \
-	"ref<struct<height:int<4>,age:int<4>>> v1 = ref.var(struct{height=178, age=28})"
+	"decl ref<struct<height:int<4>,age:int<4>>> v0 =  var(struct{height:=178, age:=28})"
 	struct Person p2 = {178, 28};
 }
 
@@ -180,7 +180,7 @@ void* malloc(int);
 
 void mem_alloc() {
 
-	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(ref.reinterpret(malloc(4), array<int<4>,1>))"
+	#pragma test "decl ref<ref<array<int<4>,1>>> v0 =  var(ref.reinterpret(malloc(4), type<array<int<4>,1>>))"
 	int* a = malloc(4);
 	free(a); // make the static checks happy
 }
@@ -188,9 +188,9 @@ void mem_alloc() {
 enum E{ ON, OFF=10 };
 
 void test_enum() {
-	#pragma test "ref<int<4>> v1 = ref.var(0)"
+	#pragma test "decl ref<int<4>> v0 =  var(0)"
 	enum E a = ON;
-	#pragma test "ref<int<4>> v1 = ref.var(10)"
+	#pragma test "decl ref<int<4>> v0 =  var(10)"
 	enum E b = OFF;
 }
 
@@ -202,13 +202,13 @@ void fun_ptr() {
 
 	// test declaration, assignment and call of function pointers
 
-	#pragma test "ref<((int<4>,int<4>)->int<4>)> v1 = ref.var(rec v0.{v0=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}})"
+	#pragma test "decl ref<(int<4>, int<4>) -> int<4>> v0 =  var(fun(int<4> v1, int<4> v2) -> int<4> {return v1+v2;})"
 	int(* f)(int,int) = &add;
 
-	#pragma test "ref.assign(v1, rec v0.{v0=fun(int<4> v2, int<4> v3) {return int.sub(v2, v3);}})"
+	#pragma test "v1 := fun(int<4> v1, int<4> v2) -> int<4> {return v1-v2;}"
 	f = &sub;
 
-	#pragma test "ref.deref(v1)(3, 4)"
+	#pragma test "v1(3, 4)"
 	f(3,4);
 
 }

@@ -531,7 +531,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 
 	// handle any-ref initialization
 	if (mgr.getLangBasic().isAnyRef(type)) {
-		return mgr.getLangBasic().getNull();
+		return mgr.getLangBasic().getRefNull();
 	}
 
 	assert(core::analysis::isRefType(curType) && "We cannot initialize any different type of non-ref");

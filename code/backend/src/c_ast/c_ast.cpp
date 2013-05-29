@@ -275,10 +275,26 @@ namespace c_ast {
 		return *condition==*other.condition && *body == *other.body;
 	}
 
+	bool TryCatch::Clause::operator==(const TryCatch::Clause& other) const {
+		return equalTarget(var, other.var) && equalTarget(body, other.body);
+	}
+
+	bool TryCatch::equals(const Node& node) const {
+		assert(dynamic_cast<const TryCatch*>(&node));
+		auto other = static_cast<const TryCatch&>(node);
+		return *body == *other.body && ::equals(clauses, other.clauses);
+	}
+
 	bool Return::equals(const Node& node) const {
 		assert(dynamic_cast<const Return*>(&node));
 		auto other = static_cast<const Return&>(node);
-		return *value==*other.value;
+		return equalTarget(value, other.value);
+	}
+
+	bool Throw::equals(const Node& node) const {
+		assert(dynamic_cast<const Throw*>(&node));
+		auto other = static_cast<const Throw&>(node);
+		return equalTarget(value, other.value);
 	}
 
 	bool Literal::equals(const Node& node) const {

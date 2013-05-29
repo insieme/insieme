@@ -44,6 +44,7 @@
 #include "insieme/frontend/pragma/insieme.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 // clang [3.2]
 #include "clang/AST/ASTContext.h"
@@ -417,7 +418,7 @@ TEST(TypeConversion, FileTest) {
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
 
 		if(tp.isStatement())
-			EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertStmt( tp.getStatement() )->toString() + '\"' );
+			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt( tp.getStatement() )), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
 		else {
 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
 				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );

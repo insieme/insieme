@@ -403,6 +403,18 @@ namespace {
 			visitNode(compound, innerBound, free);
 		}
 
+		void visitCatchClause(const Ptr<const CatchClause>& clause, VariableSet& bound, ResultSet& free) {
+
+			// a catch clause creates a new scope
+			VariableSet innerBound = bound;
+
+			// the catch-variable is a bound one
+			innerBound.insert(clause->getVariable());
+
+			// continue visiting with the limited scope
+			visitNode(clause, innerBound, free);
+		}
+
 		void visitVariable(const Ptr<const Variable>& var, VariableSet& bound, ResultSet& free) {
 			if(bound.find(var) == bound.end()) {
 				free.insert(var);

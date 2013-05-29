@@ -334,6 +334,20 @@ namespace c_ast {
 				return out << "while (" << print(node->condition) << ") " << print(node->body);
 			}
 
+			PRINT(TryCatch) {
+				out << "try " << print(node->body);
+				for(auto cur : node->clauses) {
+					out << " catch(";
+					if (cur.var) {
+						out << printParam(cur.var);
+					} else {
+						out << "...";
+					}
+					out << ") " << print(cur.body);
+				}
+				return out;
+			}
+
 			PRINT(Continue) {
 				return out << "continue";
 			}
@@ -348,6 +362,10 @@ namespace c_ast {
 					out << " " << print(node->value);
 				}
 				return out;
+			}
+
+			PRINT(Throw) {
+				return out << "throw " << print(node->value);
 			}
 
 			PRINT(Literal) {

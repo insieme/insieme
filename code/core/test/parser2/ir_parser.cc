@@ -341,21 +341,21 @@ namespace parser {
 				"try { } catch (int<4> x) { x; }"
 		));
 		ASSERT_TRUE(node);
-		EXPECT_EQ("try {} catch (int<4> v1) {v1;}", toString(*node));
+		EXPECT_EQ("try {} catch (int<4> v0) {v0;}", toString(*node));
 
 		// test multiple catch clauses
 		node = builder.normalize(builder.parse(
 				"try { } catch (int<4> x) { x; } catch (int<4> y) { y; }"
 		));
 		ASSERT_TRUE(node);
-		EXPECT_EQ("try {} catch (int<4> v2) {v2;} catch (int<4> v3) {v3;}", toString(*node));
+		EXPECT_EQ("try {} catch (int<4> v0) {v0;} catch (int<4> v1) {v1;}", toString(*node));
 
 		// test multiple catch clauses
 		node = builder.normalize(builder.parse(
 				"try { throw 4; } catch (int<4> x) { x; } catch (int<4> y) { y; }"
 		));
 		ASSERT_TRUE(node);
-		EXPECT_EQ("try {throw 4;} catch (int<4> v4) {v4;} catch (int<4> v5) {v5;}", toString(*node));
+		EXPECT_EQ("try {throw 4;} catch (int<4> v0) {v0;} catch (int<4> v1) {v1;}", toString(*node));
 	}
 
 
@@ -754,7 +754,8 @@ namespace parser {
 
 		EXPECT_EQ(fun, call->getFunctionExpr());
 		EXPECT_EQ(manager.getLangBasic().getInt4(), call->getType());
-		EXPECT_EQ("[AP(ref.var(undefined(O))),AP(3)]", toString(call->getArguments()));
+		EXPECT_EQ(" var(undefined(type<O>))", toString(printer::PrettyPrinter(call->getArgument(0), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
+		EXPECT_EQ("3", toString(printer::PrettyPrinter(call->getArgument(1), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 
 		// create construct using -> instead of .
 		auto call2 = builder.normalize(builder.parseExpr(
@@ -975,8 +976,8 @@ namespace parser {
 		))));
 
 		// test a statement
-		EXPECT_EQ("AP({ref<int<4>> v0 = ref.var(0); bind(v1){rec v0.{v0=fun(ref<int<4>> v1, int<4> v2) {ref.assign(v1, int.add(ref.deref(v1), v2));}}(v0, v1)}(5);})",
-			toString(builder.normalize(builder.parse(
+		EXPECT_EQ("{decl ref<int<4>> v0 =  var(0);bind(v1){fun(ref<int<4>> v1, int<4> v2) -> unit {v1 := v1+v2;}(v0, v1)}(5);}",
+			toString(printer::PrettyPrinter(builder.normalize(builder.parse(
 				"{"
 				" 	ref<int<4>> x = var(0);"
 				"	let p = (int<4> a)=>{"
@@ -984,7 +985,7 @@ namespace parser {
 				"	};"
 				"	p(5);"
 				"}"
-		))));
+		)), printer::PrettyPrinter::PRINT_SINGLE_LINE)));
 
 	}
 

@@ -129,6 +129,22 @@ namespace {
 		}
 
 		/**
+		 * A special handling for catch clauses which are introducing a variable capturing the exception.
+		 */
+		void visitCatchClause(const CatchClauseAddress& cur) {
+
+			// add exception varialbe to list of declared variables
+			VariablePtr var = cur->getVariable();
+			declaredVariables.insert(var);
+
+			// check body
+			visit(cur->getBody());
+
+			// remove iterator again
+			declaredVariables.erase(var);
+		}
+
+		/**
 		 * A special handling of scopes ... Variables defined within the given scope
 		 * are removed from the defined set after the block.
 		 */

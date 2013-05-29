@@ -40,6 +40,23 @@
 #include "insieme/core/ir_pointer.h"
 #include "insieme/core/ir_address.h"
 
+/**
+ * This header provides an interface for a utility computing normalized versions of IR fragments.
+ *
+ * Within the IR structurally identical codes may be considered different due to diverging variable
+ * names. The normal form of a code fragment computed by the operations offered within this header
+ * is eliminating this problem by enforcing a fixed naming schema for variables.
+ *
+ * A code fragment is in normal form if all bound variables have an increasing ID in the order of
+ * their declaration. The scop of the normalization is based on lambdas - hence, nested compound
+ * statements do not create a new normalization scope, the IDs are still growing. The IDs of free
+ * variables shell thereby be skipped.
+ *
+ * Justification: the chosen normalization format results in a unique normal form for otherwise
+ * structurally identical lambda definitions since those do not contain free variables. Furthermore,
+ * it is supporting data flow analysis within lambdas since names are unique.
+ */
+
 namespace insieme {
 namespace core {
 namespace analysis {

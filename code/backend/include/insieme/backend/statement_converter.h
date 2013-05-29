@@ -124,7 +124,11 @@ namespace backend {
 
 		c_ast::NodePtr visitWhileStmt(const core::WhileStmtPtr& ptr, ConversionContext& context);
 
+		c_ast::NodePtr visitTryCatchStmt(const core::TryCatchStmtPtr& ptr, ConversionContext& context);
+
 		c_ast::NodePtr visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitThrowStmt(const core::ThrowStmtPtr& ptr, ConversionContext& context);
 
 		c_ast::NodePtr visitSwitchStmt(const core::SwitchStmtPtr& ptr, ConversionContext& context);
 

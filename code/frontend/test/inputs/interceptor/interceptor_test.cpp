@@ -41,7 +41,7 @@
 
 void intercept_simpleFunc() {
 
-#pragma test "{ decl ref<int<4>> v1 = ( var(0)); ns::simpleFunc(1); ns::simpleFunc(( *v1));}"
+#pragma test "{ decl ref<int<4>> v0 = ( var(0)); ns::simpleFunc(1); ns::simpleFunc(( *v0));}"
 	{
 		int a = 0;
 		ns::simpleFunc(1);
@@ -50,13 +50,13 @@ void intercept_simpleFunc() {
 }
 
 void intercept_memFunc() {
-#pragma test "{ decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v2, ( *v1));}"
+#pragma test "{ decl ref<int<4>> v0 = ( var(0)); decl ref<ns::S> v1 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v1, ( *v0));}"
 	{
 		int a = 0;
 		ns::S s;
 		s.memberFunc(a);
 	}
-#pragma test "{ decl ref<int<4>> v1 = ( var(0)); decl ref<ns::S> v2 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v2, ( *v1));}"
+#pragma test "{ decl ref<int<4>> v0 = ( var(0)); decl ref<ns::S> v1 = ns::S(( var(undefined(type<ns::S>)))); memberFunc(v1, ( *v0));}"
 	{
 		using namespace ns;
 		int a = 0;

@@ -103,6 +103,22 @@ namespace analysis {
 
 		EXPECT_EQ("AP(rec v1.{v1=fun() {v0;}})", toString(normalize(expr)));
 
+
+		// test a sibling-compound
+		EXPECT_EQ(
+				"{int<4> v0 = 1; {int<4> v1 = 2;}; {int<4> v2 = 3;};}",
+				toString(*normalize(builder.parse("{ int<4> a = 1; { int<4> b = 2; } { int<4> c = 3; } }")))
+		);
+
+		EXPECT_EQ(
+				"{int<4> v0 = 1; {v0; int<4> v1 = 2;}; {int<4> v2 = 3; v0;};}",
+				toString(*normalize(builder.parse("{ int<4> a = 1; { a; int<4> b = 2; } { int<4> c = 3; a; } }")))
+		);
+
+		EXPECT_EQ(
+				"{int<4> v0 = 1; int<4> v1 = 2;}",
+				toString(*normalize(builder.parse("{ int<4> a = 1; int<4> b = 2; }")))
+		);
 	}
 
 	TEST(Normalizing, MutualRecursion) {
@@ -119,6 +135,30 @@ namespace analysis {
 		);
 
 		EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return rec v2.{v2=fun(int<4> v3) {return v0(v3);}}(v1);}}(3)", toString(*normalize(code)));
+
+	}
+
+	TEST(Normalizing, TryCatch) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		VariablePtr var1 = builder.variable(builder.genericType("A"), 1);
+		VariablePtr var2 = builder.variable(builder.genericType("A"), 2);
+
+		CompoundStmtPtr body = builder.compoundStmt();
+		CatchClausePtr clause1 = builder.catchClause(var1, builder.compoundStmt(var1));
+		CatchClausePtr clause2 = builder.catchClause(var2, builder.compoundStmt(var2));
+
+		NodePtr tryCatch = builder.tryCatchStmt(body, toVector(clause1));
+
+		EXPECT_EQ("try {} catch (A v1) {v1;}", toString(*tryCatch));
+		EXPECT_EQ("try {} catch (A v0) {v0;}", toString(*normalize(tryCatch)));
+
+		tryCatch = builder.tryCatchStmt(body, toVector(clause1, clause2));
+
+		EXPECT_EQ("try {} catch (A v1) {v1;} catch (A v2) {v2;}", toString(*tryCatch));
+		EXPECT_EQ("try {} catch (A v0) {v0;} catch (A v1) {v1;}", toString(*normalize(tryCatch)));
 
 	}
 

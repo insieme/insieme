@@ -93,6 +93,32 @@ namespace analysis {
 		EXPECT_EQ("[0-2-2-2-3]", toString(getFreeVariableAddresses(call)));
 	}
 
+	TEST(FreeVariables, TryCatchTest) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr type = builder.genericType("A");
+		VariablePtr v1 = builder.variable(type, 1);
+		VariablePtr v2 = builder.variable(type, 2);
+		VariablePtr v3 = builder.variable(type, 3);
+
+		CompoundStmtPtr body = builder.compoundStmt();
+
+		EXPECT_EQ(VariableList(), getFreeVariables(builder.tryCatchStmt(body, toVector(builder.catchClause(v1, builder.compoundStmt(v1))))));
+		EXPECT_EQ(toVector(v2), getFreeVariables(builder.tryCatchStmt(builder.compoundStmt(v2), toVector(builder.catchClause(v1, builder.compoundStmt(v1))))));
+		EXPECT_EQ(toVector(v2,v3), getFreeVariables(builder.tryCatchStmt(builder.compoundStmt(v2), toVector(builder.catchClause(v1, builder.compoundStmt(v1,v3))))));
+
+		EXPECT_EQ(toVector(v1,v2), getFreeVariables(builder.tryCatchStmt(body, toVector(
+				builder.catchClause(v1, builder.compoundStmt(v2)),
+				builder.catchClause(v2, builder.compoundStmt(v1))
+		))));
+
+		EXPECT_EQ(VariableList(), getFreeVariables(builder.tryCatchStmt(body, toVector(
+				builder.catchClause(v1, builder.compoundStmt(v1)),
+				builder.catchClause(v2, builder.compoundStmt(v2))
+		))));
+	}
+
 	TEST(FreeVariables, RecursiveVariableBug_1) {
 		NodeManager manager;
 		IRBuilder builder(manager);

@@ -249,7 +249,7 @@ namespace backend {
 		}
 
 		// handle null pointer
-		if (converter.getNodeManager().getLangBasic().isNull(ptr)) {
+		if (converter.getNodeManager().getLangBasic().isRefNull(ptr)) {
 			return converter.getCNodeManager()->create<c_ast::Literal>("0");
 		}
 
@@ -724,6 +724,36 @@ namespace backend {
 		return manager->create<c_ast::While>(condition, body);
 	}
 
+	c_ast::NodePtr StmtConverter::visitTryCatchStmt(const core::TryCatchStmtPtr& ptr, ConversionContext& context) {
+		const auto& basic = converter.getNodeManager().getLangBasic();
+
+		// convert body
+		c_ast::StatementPtr body = convertStmt(context, ptr->getBody());
+
+		// convert clauses
+		vector<c_ast::TryCatch::Clause> clauses;
+		for(const core::CatchClausePtr& clause : ptr->getClauses()) {
+
+			// handle catch-all case
+			if (basic.isAny(clause->getVariable()->getType())) {
+				clauses.push_back(c_ast::TryCatch::Clause(convertStmt(context, clause->getBody())));
+				break;
+			}
+
+			// register variable information
+			const VariableInfo& info = context.getVariableManager().addInfo(converter, clause->getVariable(), VariableInfo::MemoryLocation::NONE);
+
+			// convert body of catch clause with registered variable
+			auto body = convertStmt(context, clause->getBody());
+
+			// add clause
+			clauses.push_back(c_ast::TryCatch::Clause(info.var, body));
+		}
+
+		// finally create a try-catch node and be done
+		return converter.getCNodeManager()->create<c_ast::TryCatch>(body, clauses);
+	}
+
 	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context) {
 		// wrap sub-expression into return expression
 		if (context.getConverter().getNodeManager().getLangBasic().isUnit(ptr->getReturnExpr()->getType())) {
@@ -731,6 +761,11 @@ namespace backend {
 			return converter.getCNodeManager()->create<c_ast::Return>();
 		}
 		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, ptr->getReturnExpr()));
+	}
+
+	c_ast::NodePtr StmtConverter::visitThrowStmt(const core::ThrowStmtPtr& ptr, ConversionContext& context) {
+		// just create a throw stmt within the c_ast
+		return converter.getCNodeManager()->create<c_ast::Throw>(convertExpression(context, ptr->getThrowExpr()));
 	}
 
 	c_ast::NodePtr StmtConverter::visitSwitchStmt(const core::SwitchStmtPtr& ptr, ConversionContext& context) {
