@@ -156,6 +156,12 @@ namespace analysis {
 	TypePtr getCppRefElementType(const TypePtr& cppRefType);
 
 
+	/**
+	 * checks if a expression is a constructor call
+	 * @param expr, the expression to be checked
+	 * @return if is a call to constructor, even intercepted ones
+	 */
+	bool isConstructorCall(const core::ExpressionPtr& expr);
 
 } // end namespace analysis
 } // end namespace core

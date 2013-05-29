@@ -171,6 +171,22 @@ namespace analysis {
 		return cppRefType.as<StructTypePtr>()[0]->getType().as<RefTypePtr>()->getElementType();
 	}
 
+	// --------------------------- C++ calls ---------------------------------------------
+
+	bool isConstructorCall(const core::ExpressionPtr& expr){
+		if (core::CallExprPtr call = expr.isa<core::CallExprPtr>()){
+			if(core::LiteralPtr lit = call->getFunctionExpr().isa<core::LiteralPtr>()){
+				if (lit->getType().as<core::FunctionTypePtr>()->isConstructor())
+					return true;
+			}
+			else if(core::LambdaExprPtr func = call->getFunctionExpr().isa<core::LambdaExprPtr>()){
+				// is it a constructor call?
+				if (func->getFunctionType()->isConstructor())
+					return true;
+			}
+		}
+		return false;
+	}
 
 } // end namespace analysis
 } // end namespace core
