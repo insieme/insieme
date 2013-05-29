@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -151,12 +151,11 @@ InsiemeSema::~InsiemeSema() {
  * The function search for the character c in the input stream backwards. The assumption is the
  * character will be in the input stream so no termination condition is needed.
  */
-const char* strbchr(const char* stream, char c) {
-	// soon or later we are going to find the char we are looking for, no need for further termination condition
-	while ( *stream != c ) {
-		stream--;
+const char* strbchr(const char* pos, const char* begin, char c) {
+	while ( pos != begin && *pos != c ) {
+		pos--;
 	}
-	return stream;
+	return pos;
 }
 
 clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
@@ -189,7 +188,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(leftBracketLoc);
 		llvm::StringRef&& buffer = SourceMgr.getBufferData(locInfo.first);
 		const char *strData = buffer.begin() + locInfo.second;
-		char const* lBracePos = strbchr(strData, '{');
+		char const* lBracePos = strbchr(strData, buffer.begin(), '{');
 
 		// We know the location of the left bracket, we overwrite the value of L with the correct location
 		// but only if the location is valid as in getFileLocWithOffset() in SourceLocation
@@ -203,7 +202,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(rightBracketLoc);
 		llvm::StringRef&& buffer = SourceMgr.getBufferData(locInfo.first);
 		const char *strData = buffer.begin() + locInfo.second;
-		char const* rBracePos = strbchr(strData, '}');
+		char const* rBracePos = strbchr(strData, buffer.begin(), '}');
 
 		// We know the location of the right bracket, we overwrite the value of R with the correct location
 		if((((rightBracketLoc.getRawEncoding() & ~MacroIDBit)+(rBracePos - strData)) & MacroIDBit)==0){
