@@ -226,6 +226,30 @@ TEST(UndeclaredVariableCheck, JobExpr) {
 
 }
 
+TEST(UndeclaredVariableCheck, Exceptions) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto code = builder.normalize(builder.parseStmt(
+			R"(
+			
+			try {
+
+			} catch(int<4> x) {
+				x;
+			}
+			
+			)"));
+
+	ASSERT_TRUE(code);
+
+	CheckPtr scopeChecker = makeRecursive(make_check<UndeclaredVariableCheck>());
+
+	EXPECT_TRUE(check(wrap(code), scopeChecker).empty()) << check(wrap(code), scopeChecker);
+
+}
+
 } // end namespace checks
 } // end namespace core
 } // end namespace insieme
