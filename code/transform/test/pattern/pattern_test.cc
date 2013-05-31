@@ -44,7 +44,7 @@ namespace transform {
 namespace pattern {
 
 	bool isMatch(const TreePatternPtr& pattern, const TreePtr& tree) {
-		return details::match(pattern, tree);
+		return pattern->matchTree(tree);
 	}
 
 	bool noMatch(const TreePatternPtr& pattern, const TreePtr& tree) {
@@ -52,7 +52,7 @@ namespace pattern {
 	}
 
 	bool isMatchList(const ListPatternPtr& pattern, const vector<TreePtr>& list) {
-		return details::match(pattern, list);
+		return pattern->match(list);
 	}
 
 	bool noMatchList(const ListPatternPtr& pattern, const vector<TreePtr>& list) {
@@ -583,11 +583,11 @@ namespace pattern {
 		// something easy ...
 		pattern = var("x");
 
-		res = details::match(pattern, a);
+		res = pattern->matchTree(a);
 		EXPECT_TRUE(res);
 		EXPECT_EQ("Match({x=a})", toString(*res));
 
-		res = details::match(pattern, b);
+		res = pattern->matchTree(b);
 		EXPECT_TRUE(res);
 		EXPECT_EQ("Match({x=b})", toString(*res));
 
@@ -595,17 +595,17 @@ namespace pattern {
 		// something more challenging
 		pattern = node(*var("x"));
 
-		res = details::match(pattern, makeTree(a,b,a));
+		res = pattern->matchTree(makeTree(a,b,a));
 		EXPECT_TRUE(res);
 		EXPECT_EQ("Match({x=[a,b,a]})", toString(*res));
 
 		// even more challenging
 		pattern = node(var("x") << *var("x"));
 
-		res = details::match(pattern, makeTree(a,b,a));
+		res = pattern->matchTree(makeTree(a,b,a));
 		EXPECT_FALSE(res);
 
-		res = details::match(pattern, makeTree(a,a,a));
+		res = pattern->matchTree(makeTree(a,a,a));
 		EXPECT_TRUE(res);
 		EXPECT_EQ("Match({x=a})", toString(*res));
 
@@ -613,7 +613,7 @@ namespace pattern {
 		// and one more
 		pattern = node(*pattern);
 
-		res = details::match(pattern, makeTree(makeTree(a,a,a), makeTree(b,b,b,b)));
+		res = pattern->matchTree(makeTree(makeTree(a,a,a), makeTree(b,b,b,b)));
 		EXPECT_TRUE(res);
 		EXPECT_EQ("Match({x=[a,b]})", toString(*res));
 
@@ -621,7 +621,7 @@ namespace pattern {
 		// and one more
 		pattern = node(*node(*var("x")));
 
-		res = details::match(pattern, makeTree(makeTree(a,b,a), makeTree(b,a,a,b)));
+		res = pattern->matchTree(makeTree(makeTree(a,b,a), makeTree(b,a,a,b)));
 		EXPECT_TRUE(res);
 		EXPECT_EQ("Match({x=[[a,b,a],[b,a,a,b]]})", toString(*res));
 	}
@@ -637,11 +637,11 @@ namespace pattern {
 		// something easy ...
 		pattern = node(listVar("x"));
 
-		res = details::match(pattern, a);
+		res = pattern->matchTree(a);
 		EXPECT_TRUE(res);
 		EXPECT_EQ("Match({x=[]})", toString(*res));
 
-		res = details::match(pattern, makeTree(a,a,b));
+		res = pattern->matchTree(makeTree(a,a,b));
 		EXPECT_TRUE(res);
 		EXPECT_EQ("Match({x=[a,a,b]})", toString(*res));
 
@@ -649,7 +649,7 @@ namespace pattern {
 		// something more challenging
 		pattern = node(*node(listVar("x")));
 
-		res = details::match(pattern, makeTree(makeTree(a,b),makeTree(b,a,b),a));
+		res = pattern->matchTree(makeTree(makeTree(a,b),makeTree(b,a,b),a));
 		EXPECT_TRUE(res);
 		EXPECT_EQ("Match({x=[[a,b],[b,a,b],[]]})", toString(*res));
 
@@ -673,15 +673,15 @@ namespace pattern {
 		EXPECT_PRED2(isMatch, pattern, makeTree(b, makeTree(b, a)));
 		EXPECT_PRED2(noMatch, pattern, b);
 
-		auto res = details::match(pattern, a);
+		auto res = pattern->matchTree(a);
 		EXPECT_TRUE(res);
 		if (res) EXPECT_EQ("Match({})", toString(*res));
 
-		res = details::match(pattern, makeTree(b, a));
+		res = pattern->matchTree(makeTree(b, a));
 		EXPECT_TRUE(res);
 		//if (res) EXPECT_EQ("Match({x=[b], y=[(b,a)]})", toString(*res)); // FIXME
 
-		res = details::match(pattern, makeTree(b, makeTree(c, makeTree(b, a))));
+		res = pattern->matchTree(makeTree(b, makeTree(c, makeTree(b, a))));
 		EXPECT_TRUE(res);
 		// if (res) EXPECT_EQ("Match({x=[b,c,b], y=[(b,(c,(b,a))),(c,(b,a)),(b,a)]})", toString(*res)); //FIXME
 	}
@@ -708,28 +708,28 @@ namespace pattern {
 		EXPECT_PRED2(isMatch, pattern, makeTree('c', c, c));
 
 		// and it should obtain access to all outermost a-nodes
-		auto res = details::match(pattern, a);
+		auto res = pattern->matchTree(a);
 		if (res) EXPECT_EQ("Match({x=[a]})", toString(*res));
 
-		res = details::match(pattern, b);
+		res = pattern->matchTree(b);
 		if (res) EXPECT_EQ("Match({})", toString(*res));
 
-		res = details::match(pattern, makeTree('a', b, c));
+		res = pattern->matchTree(makeTree('a', b, c));
 		if (res) EXPECT_EQ("Match({x=[a(b,c)]})", toString(*res));
 
-		res = details::match(pattern, makeTree('b', a, c));
+		res = pattern->matchTree(makeTree('b', a, c));
 		if (res) EXPECT_EQ("Match({x=[null,a]})", toString(*res));
 
-		res = details::match(pattern, makeTree('b', makeTree('b',a,makeTree('a',b)), c));
+		res = pattern->matchTree(makeTree('b', makeTree('b',a,makeTree('a',b)), c));
 		if (res) EXPECT_EQ("Match({x=[null,null,a,a(b)]})", toString(*res));
 
-		res = details::match(pattern, makeTree('a', a, a));
+		res = pattern->matchTree(makeTree('a', a, a));
 		if (res) EXPECT_EQ("Match({x=[a(a,a)]})", toString(*res));
 
-		res = details::match(pattern, makeTree('b', makeTree('a', a, a)));
+		res = pattern->matchTree(makeTree('b', makeTree('a', a, a)));
 		if (res) EXPECT_EQ("Match({x=[null,a(a,a)]})", toString(*res));
 
-		res = details::match(pattern, makeTree('b', makeTree('b', makeTree('b', a), a), a));
+		res = pattern->matchTree(makeTree('b', makeTree('b', makeTree('b', a), a), a));
 		if (res) EXPECT_EQ("Match({x=[null,null,null,a,a,a]})", toString(*res));
 	}
 

@@ -57,7 +57,7 @@ namespace transform {
 namespace pattern {
 
 bool isMatch(const TreePatternPtr& pattern, const NodePtr& node) {
-	return details::match(pattern, node);
+	return pattern->match(node);
 }
 
 bool noMatch(const TreePatternPtr& pattern, const NodePtr& node) {
