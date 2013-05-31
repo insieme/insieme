@@ -528,10 +528,19 @@ ExpressionPtr IRBuilder::undefinedVar(const TypePtr& typ) const {
 	}
 	return callExpr(typ, getLangBasic().getUndefined(), getTypeLiteral(typ));
 }
+
 ExpressionPtr IRBuilder::undefinedNew(const TypePtr& typ) const {
 	if(typ->getNodeType() == core::NT_RefType) {
 		core::TypePtr elementType = core::analysis::getReferencedType(typ);
 		return refNew(undefinedNew(elementType));
+	}
+	return callExpr(typ, getLangBasic().getUndefined(), getTypeLiteral(typ));
+}
+
+ExpressionPtr IRBuilder::undefinedLoc(const TypePtr& typ) const {
+	if(typ->getNodeType() == core::NT_RefType) {
+		core::TypePtr elementType = core::analysis::getReferencedType(typ);
+		return refLoc(undefinedLoc(elementType));
 	}
 	return callExpr(typ, getLangBasic().getUndefined(), getTypeLiteral(typ));
 }
@@ -659,6 +668,10 @@ CallExprPtr IRBuilder::refVar(const ExpressionPtr& subExpr) const {
 
 CallExprPtr IRBuilder::refNew(const ExpressionPtr& subExpr) const {
 	return callExpr(refType(subExpr->getType()), manager.getLangBasic().getRefNew(), subExpr);
+}
+
+CallExprPtr IRBuilder::refLoc(const ExpressionPtr& subExpr) const {
+	return callExpr(refType(subExpr->getType()), manager.getLangBasic().getRefLoc(), subExpr);
 }
 
 CallExprPtr IRBuilder::refDelete(const ExpressionPtr& subExpr) const {

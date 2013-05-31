@@ -579,6 +579,7 @@ protected:
 		StatementList replacements;
 		VarList allp;
 		VarList firstPrivates;
+		VarList alll;
 		// for OMP tasks, default free variable binding is threadprivate
 		if(taskP) {
 			auto&& freeVarsAndFuns = core::analysis::getFreeVariables(stmtNode);
@@ -595,6 +596,8 @@ protected:
 				if(taskP->hasShared()) ret = ret && !contains(taskP->getShared(), v);
 				if(taskP->hasFirstPrivate()) ret = ret && !contains(taskP->getFirstPrivate(), v);
 				if(taskP->hasPrivate()) ret = ret && !contains(taskP->getPrivate(), v);
+				if(taskP->hasFirstLocal()) ret = ret && !contains(taskP->getFirstLocal(), v);
+				if(taskP->hasLocal()) ret = ret && !contains(taskP->getLocal(), v);
 				if(taskP->hasReduction()) ret = ret && !contains(taskP->getReduction().getVars(), v);
 				// variables declared shared in all enclosing constructs, up to and including
 				// the innermost parallel construct, should not be privatized
@@ -610,6 +613,15 @@ protected:
 			allp.insert(allp.end(), clause->getFirstPrivate().begin(), clause->getFirstPrivate().end());
 		}
 		if(clause->hasPrivate()) allp.insert(allp.end(), clause->getPrivate().begin(), clause->getPrivate().end());
+		if(clause->hasFirstLocal()) {
+			firstPrivates.insert(firstPrivates.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
+			allp.insert(allp.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
+			alll.insert(alll.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
+		}
+		if(clause->hasLocal()) {
+			allp.insert(allp.end(), clause->getLocal().begin(), clause->getLocal().end());
+			alll.insert(alll.end(), clause->getLocal().begin(), clause->getLocal().end());
+		}
 		if(clause->hasReduction()) allp.insert(allp.end(), clause->getReduction().getVars().begin(), clause->getReduction().getVars().end());
 		NodeMap publicToPrivateMap;
 		NodeMap privateToPublicMap;
@@ -620,13 +632,17 @@ protected:
 			publicToPrivateMap[varExp] = pVar;
 			privateToPublicMap[pVar] = varExp;
 			DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(expType));
+			if(contains(alll, varExp)) decl = build.declarationStmt(pVar, build.undefinedLoc(expType));
 			if(contains(firstPrivates, varExp)) {
 				// make sure to actually get *copies* for firstprivate initialization, not copies of references
 				if(core::analysis::isRefType(expType)) {
 					VariablePtr fpPassVar = build.variable(core::analysis::getReferencedType(expType));
 					DeclarationStmtPtr fpPassDecl = build.declarationStmt(fpPassVar, build.deref(varExp));
 					outsideDecls.push_back(fpPassDecl);
-					decl = build.declarationStmt(pVar, build.refVar(fpPassVar));
+					if(contains(alll, varExp))
+						decl = build.declarationStmt(pVar, build.refLoc(fpPassVar));
+					else
+						decl = build.declarationStmt(pVar, build.refVar(fpPassVar));
 				}
 				else {
 					decl = build.declarationStmt(pVar, varExp);
@@ -708,29 +724,20 @@ protected:
 
 		Param param = reg->getParam();
 
-		if(param.hasRange())
-		{
+		if(param.hasRange()) {
 			auto max 	= build.div( build.sub(param.getRangeUBound(), param.getRangeLBound()), param.getRangeStep());
 			auto pick 	= build.pickInRange(max);
-
 			auto exp = build.add( build.mul(pick, param.getRangeStep()), param.getRangeLBound() );
-
 			assign = build.assign(param.getVar(), exp);
 		}
-		else if(param.hasEnum())
-		{
+		else if(param.hasEnum()) {
 			auto pick = build.pickInRange( param.getEnumSize() );
-
 			auto arrVal = build.arrayAccess( param.getEnumList(), pick );
-
 			assign = build.assign( param.getVar(), build.deref( arrVal ) );
 		}
-		else
-		{
+		else {
 			/* Boolean */
-
 			auto pick = build.pickInRange( build.intLit(1) );
-
 			assign = build.assign( param.getVar(), pick );
 		}
 
@@ -738,60 +745,6 @@ protected:
 		resultStmts.push_back(stmtNode);
 
 		return build.compoundStmt(resultStmts);
-	}
-
-	StatementPtr implementLocalClauses(const StatementPtr& stmtNode, const SharedRegionParallelAndTaskClause* clause, StatementList& outsideDecls, StatementList postFix = StatementList() ) {
-			//const Parallel* parallelP = dynamic_cast<const Parallel*>(clause);
-			StatementList replacements;
-			VarList allp;
-
-			if(clause->hasFirstLocal()) allp.insert(allp.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
-			if(clause->hasLocal()) allp.insert(allp.end(), clause->getLocal().begin(), clause->getLocal().end());
-
-			NodeMap generalToLocalMap;
-			NodeMap localToGeneralMap;
-			// implement local copies where required
-			for_each(allp, [&](const ExpressionPtr& varExp) {
-				const auto& expType = varExp->getType();
-				VariablePtr pVar = build.variable(expType);
-				generalToLocalMap[varExp] = pVar;
-				localToGeneralMap[pVar] = varExp;
-				DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(expType));
-				if(clause->hasFirstLocal() && contains(clause->getFirstLocal(), varExp)) {
-					// make sure to actually get *copies* for firstlocal initialization, not copies of references
-					if(core::analysis::isRefType(expType)) {
-						VariablePtr fpPassVar = build.variable(core::analysis::getReferencedType(expType));
-						DeclarationStmtPtr fpPassDecl = build.declarationStmt(fpPassVar, build.deref(varExp));
-						outsideDecls.push_back(fpPassDecl);
-						//decl = build.declarationStmt(pVar, build.refLocal(fpPassVar));
-					}
-					else {
-						decl = build.declarationStmt(pVar, varExp);
-					}
-				}
-				replacements.push_back(decl);
-			});
-/*
-			// implement copyin for threadlocal vars
-			if(parallelP && parallelP->hasCopyin()) {
-				for(const ExpressionPtr& varExp : parallelP->getCopyin()) {
-					// assign master copy to local copy
-					StatementPtr assignment = build.assign(
-						static_pointer_cast<const Expression>(handleThreadlocal(varExp)),
-						build.deref(static_pointer_cast<const Expression>(handleThreadlocal(varExp, true))) );
-					replacements.push_back(assignment);
-				}
-			}
-*/
-			StatementPtr subStmt = transform::replaceAllGen(nodeMan, stmtNode, generalToLocalMap);
-			replacements.push_back(subStmt);
-			// append postfix
-			copy(postFix.cbegin(), postFix.cend(), back_inserter(replacements));
-
-			// handle threadlocals before it is too late!
-			auto res = handleTPVarsInternal(build.compoundStmt(replacements), true);
-
-			return res;
 	}
 
 	NodePtr handleRegion(const StatementPtr& stmtNode, const RegionPtr& reg) {
@@ -802,19 +755,17 @@ protected:
 			return stmtNode;
 
 		/* else, region as parallel with one thread */
-
-		//StatementList resultStmts;
-
-		auto paramNode = implementParamClause(stmtNode, reg);
-		//auto newStmtNode = implementLocalClauses(paramNode, &*reg, resultStmts);
+		StatementList resultStmts;
+		auto newStmtNode = implementDataClauses(stmtNode, &*reg, resultStmts);
+		auto paramNode = implementParamClause(newStmtNode, reg);
 		auto parLambda = transform::extractLambda(nodeMan, build.compoundStmt(paramNode));
 		auto range = build.getThreadNumRange(1, 1);
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
-		//resultStmts.push_back(mergeCall);
+		resultStmts.push_back(mergeCall);
 
-		CompoundStmtPtr res = build.compoundStmt(mergeCall);
+		CompoundStmtPtr res = build.compoundStmt(resultStmts);
 
 		return res;
 	}
@@ -836,10 +787,6 @@ protected:
 		resultStmts.push_back(mergeCall);
 		// if clause handling
 		assert(par->hasIf() == false && "OMP parallel if clause not supported");
-		assert(par->hasLocal() == false && "OMP parallel local clause not supported");
-		assert(par->hasFirstLocal() == false && "OMP parallel firstlocal clause not supported");
-		assert(par->hasLastLocal() == false && "OMP parallel lastlocal clause not supported");
-		assert(par->hasTarget() == false && "OMP parallel target clause not supported");
 
 		StatementPtr ret = build.compoundStmt(resultStmts);
 		// add code for "ordered" pfors in this parallel, if any
@@ -855,11 +802,6 @@ protected:
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		resultStmts.push_back(parallelCall);
-
-		assert(par->hasLocal() == false && "OMP task local clause not supported");
-		assert(par->hasFirstLocal() == false && "OMP task firstlocal clause not supported");
-		assert(par->hasLastLocal() == false && "OMP task lastlocal clause not supported");
-		assert(par->hasTarget() == false && "OMP task target clause not supported");
 
 		return build.compoundStmt(resultStmts);
 	}

@@ -71,12 +71,6 @@ std::ostream& ForClause::dump(std::ostream& out) const {
 
 ///----- SharedRegionParallelAndTaskClause -----
 std::ostream& SharedRegionParallelAndTaskClause::dump(std::ostream& out) const {
-	if(hasLocal())
-		out << "local(" << join(",", *localClause) << "), ";
-	if(hasFirstLocal())
-		out << "firstlocal(" << join(",", *firstLocalClause) << "), ";
-	if(hasLastLocal())
-		out << "lastlocal(" << join(",", *lastLocalClause) << "), ";
 	if(hasTarget())
 			targetClause->dump(out) << ", ";
 	if(hasObjective())
@@ -111,6 +105,12 @@ std::ostream& CommonClause::dump(std::ostream& out) const {
 		out << "private(" << join(",", *privateClause) << "), ";
 	if(hasFirstPrivate())
 		out << "firstprivate(" << join(",", *firstPrivateClause) << "), ";
+	if(hasLocal())
+		out << "local(" << join(",", *localClause) << "), ";
+	if(hasFirstLocal())
+		out << "firstlocal(" << join(",", *firstLocalClause) << "), ";
+	if(hasLastLocal())
+		out << "lastlocal(" << join(",", *lastLocalClause) << "), ";
 	return out;
 }
 

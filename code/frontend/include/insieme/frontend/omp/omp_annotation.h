@@ -526,25 +526,11 @@ public:
 
 class SharedRegionParallelAndTaskClause {
 protected:
-	VarListPtr		localClause;
-	VarListPtr		firstLocalClause;
-	VarListPtr		lastLocalClause;
 	TargetPtr		targetClause;
 	ObjectivePtr	objectiveClause;
 
 public:
-	SharedRegionParallelAndTaskClause(const VarListPtr& localClause, const VarListPtr& firstLocalClause, const VarListPtr& lastLocalClause,
-			const TargetPtr& targetClause, const ObjectivePtr& objectiveClause):
-		localClause(localClause), firstLocalClause(firstLocalClause), lastLocalClause(lastLocalClause), targetClause(targetClause), objectiveClause(objectiveClause) { }
-
-	bool hasLocal() const { return static_cast<bool>(localClause); }
-	const VarList& getLocal() const { assert(hasLocal()); return *localClause; }
-
-	bool hasFirstLocal() const { return static_cast<bool>(firstLocalClause); }
-	const VarList& getFirstLocal() const { assert(hasFirstLocal()); return *firstLocalClause; }
-
-	bool hasLastLocal() const { return static_cast<bool>(lastLocalClause); }
-	const VarList& getLastLocal() const { assert(hasLastLocal()); return *lastLocalClause; }
+	SharedRegionParallelAndTaskClause(const TargetPtr& targetClause, const ObjectivePtr& objectiveClause): targetClause(targetClause), objectiveClause(objectiveClause) { }
 
 	bool hasTarget() const { return static_cast<bool>(targetClause); }
 	const Target& getTarget() const { assert(hasTarget()); return *targetClause; }
@@ -562,8 +548,8 @@ protected:
 	VarListPtr			sharedClause;
 public:
 	SharedParallelAndTaskClause(const core::ExpressionPtr& ifClause, const DefaultPtr& defaultClause, const VarListPtr& sharedClause,
-			const VarListPtr& localClause, const VarListPtr& firstLocalClause, const VarListPtr& lastLocalClause, const TargetPtr& targetClause, const ObjectivePtr& objectiveClause) :
-		SharedRegionParallelAndTaskClause(localClause, firstLocalClause, lastLocalClause, targetClause, objectiveClause),
+			const TargetPtr& targetClause, const ObjectivePtr& objectiveClause) :
+		SharedRegionParallelAndTaskClause(targetClause, objectiveClause),
 		ifClause(ifClause), defaultClause(defaultClause), sharedClause(sharedClause) { }
 
 	bool hasIf() const { return static_cast<bool>(ifClause); }
@@ -593,12 +579,9 @@ public:
 		const DefaultPtr& defaultClause,
 		const VarListPtr& sharedClause,
 		const VarListPtr& copyinClause,
-		const VarListPtr& localClause,
-		const VarListPtr& firstLocalClause,
-		const VarListPtr& lastLocalClause,
 		const TargetPtr& targetClause,
 		const ObjectivePtr& objectiveClause):
-			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause, localClause, firstLocalClause, lastLocalClause, targetClause, objectiveClause),
+			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause, targetClause, objectiveClause),
 			numThreadClause(numThreadClause), copyinClause(copyinClause) { }
 
 	bool hasNumThreads() const { return static_cast<bool>(numThreadClause); }
@@ -620,9 +603,14 @@ class CommonClause {
 protected:
 	VarListPtr	privateClause;
 	VarListPtr	firstPrivateClause;
+	VarListPtr	localClause;
+	VarListPtr	firstLocalClause;
+	VarListPtr	lastLocalClause;
 public:
-	CommonClause(const VarListPtr& privateClause, const VarListPtr& firstPrivateClause):
-			privateClause(privateClause), firstPrivateClause(firstPrivateClause) { }
+	CommonClause(const VarListPtr& privateClause, const VarListPtr& firstPrivateClause,
+			const VarListPtr& localClause = VarListPtr(), const VarListPtr& firstLocalClause = VarListPtr(), const VarListPtr& lastLocalClause = VarListPtr()):
+			privateClause(privateClause), firstPrivateClause(firstPrivateClause),
+			localClause(localClause), firstLocalClause(firstLocalClause), lastLocalClause(lastLocalClause) { }
 
 	bool hasPrivate() const { return static_cast<bool>(privateClause); }
 	const VarList& getPrivate() const { assert(hasPrivate()); return *privateClause; }
@@ -630,11 +618,23 @@ public:
 	bool hasFirstPrivate() const { return static_cast<bool>(firstPrivateClause); }
 	const VarList& getFirstPrivate() const { assert(hasFirstPrivate()); return *firstPrivateClause; }
 
+	bool hasLocal() const { return static_cast<bool>(localClause); }
+	const VarList& getLocal() const { assert(hasLocal()); return *localClause; }
+
+	bool hasFirstLocal() const { return static_cast<bool>(firstLocalClause); }
+	const VarList& getFirstLocal() const { assert(hasFirstLocal()); return *firstLocalClause; }
+
+	bool hasLastLocal() const { return static_cast<bool>(lastLocalClause); }
+	const VarList& getLastLocal() const { assert(hasLastLocal()); return *lastLocalClause; }
+
 	std::ostream& dump(std::ostream& out) const;
 
 	virtual void replaceUsage (const core::NodeMap& map){
 		if(privateClause)  		replaceVars (privateClause, map);
 		if(firstPrivateClause) 	replaceVars (firstPrivateClause, map);
+		if(localClause) 		replaceVars (localClause, map);
+		if(firstLocalClause) 	replaceVars (firstLocalClause, map);
+		if(lastLocalClause) 	replaceVars (lastLocalClause, map);
 	}
 };
 
@@ -644,8 +644,9 @@ public:
  */
 class DatasharingClause : public CommonClause {
 public:
-	DatasharingClause(const VarListPtr& privateClause, const VarListPtr& firstPrivateClause):
-			CommonClause(privateClause, firstPrivateClause) { }
+	DatasharingClause(const VarListPtr& privateClause, const VarListPtr& firstPrivateClause,
+			const VarListPtr& localClause = VarListPtr(), const VarListPtr& firstLocalClause = VarListPtr(), const VarListPtr& lastLocalClause = VarListPtr()):
+			CommonClause(privateClause, firstPrivateClause, localClause, firstLocalClause, lastLocalClause) { }
 
 	virtual bool hasReduction() const = 0;
 	virtual const Reduction& getReduction() const = 0;
@@ -658,9 +659,10 @@ public:
 /**
  * OpenMP+ 'region' clause
  */
-class Region: public Annotation, public SharedRegionParallelAndTaskClause {
+class Region: public DatasharingClause, public Annotation, public SharedRegionParallelAndTaskClause {
 protected:
 	ParamPtr paramClause;
+	Reduction dummy;
 public:
 	Region(const ParamPtr& paramClause,
 			const VarListPtr& localClause,
@@ -668,11 +670,15 @@ public:
 			const VarListPtr& lastLocalClause,
 			const TargetPtr& targetClause,
 			const ObjectivePtr& objectiveClause) :
-				SharedRegionParallelAndTaskClause(localClause, firstLocalClause, lastLocalClause, targetClause, objectiveClause),
-				paramClause(paramClause) {}
+				DatasharingClause(VarListPtr(), VarListPtr(), localClause, firstLocalClause, lastLocalClause),
+				SharedRegionParallelAndTaskClause(targetClause, objectiveClause),
+				paramClause(paramClause), dummy(Reduction::PLUS, VarListPtr()) {}
 
 	bool hasParam() const { return static_cast<bool>(paramClause); }
 	const Param& getParam() const { assert(hasParam()); return *paramClause; }
+
+	virtual bool hasReduction() const { return false; }
+	virtual const Reduction& getReduction() const { assert(false); return dummy; }
 
 	std::ostream& dump(std::ostream& out) const;
 };
@@ -696,8 +702,8 @@ public:
 		const VarListPtr& lastLocalClause,
 		const TargetPtr& targetClause,
 		const ObjectivePtr& objectiveClause) :
-			DatasharingClause(privateClause, firstPrivateClause),
-			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause, localClause, firstLocalClause, lastLocalClause, targetClause, objectiveClause),
+			DatasharingClause(privateClause, firstPrivateClause, localClause, firstLocalClause, lastLocalClause),
+			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause, targetClause, objectiveClause),
 			reductionClause(reductionClause) { }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
@@ -745,7 +751,7 @@ public:
 /**
  * OpenMP 'parallel for' clause
  */
-class ParallelFor: public Annotation, public CommonClause, public ParallelClause, public ForClause {
+class ParallelFor: public Annotation, public DatasharingClause, public ParallelClause, public ForClause {
 protected:
 	ReductionPtr reductionClause;
 public:
@@ -765,8 +771,8 @@ public:
 		const VarListPtr& lastLocalClause,
 		const TargetPtr& targetClause,
 		const ObjectivePtr& objectiveClause, bool noWait, bool ordered) :
-			CommonClause(privateClause, firstPrivateClause),
-			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause, localClause, firstLocalClause, lastLocalClause, targetClause, objectiveClause),
+			CommonClause(privateClause, firstPrivateClause, localClause, firstLocalClause, lastLocalClause),
+			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause, targetClause, objectiveClause),
 			ForClause(lastPrivateClause, scheduleClause, collapseExpr, noWait, ordered), reductionClause(reductionClause) { }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
@@ -786,7 +792,7 @@ public:
 
 	virtual void replaceUsage (const core::NodeMap& map){
 		Annotation::replaceUsage(map);
-		CommonClause::replaceUsage(map);
+		DatasharingClause::replaceUsage(map);
 		ParallelClause::replaceUsage(map);
 		ForClause::replaceUsage(map);
 		if (hasReduction()) reductionClause->replaceUsage (map);
@@ -861,8 +867,8 @@ public:
 		const TargetPtr& targetClause,
 		const ObjectivePtr& objectiveClause,
 		bool noWait) :
-			CommonClause(privateClause, firstPrivateClause),
-			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause, localClause, firstLocalClause, lastLocalClause,
+			CommonClause(privateClause, firstPrivateClause, localClause, firstLocalClause, lastLocalClause),
+			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause,
 					targetClause, objectiveClause),
 			SectionClause(lastPrivateClause, reductionClause, noWait) { }
 
@@ -934,8 +940,8 @@ public:
 		const VarListPtr& lastLocalClause,
 		const TargetPtr& targetClause,
 		const ObjectivePtr& objectiveClause) :
-			DatasharingClause(privateClause, firstPrivateClause),
-			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause, localClause, firstLocalClause, lastLocalClause, targetClause, objectiveClause),
+			DatasharingClause(privateClause, firstPrivateClause, localClause, firstLocalClause, lastLocalClause),
+			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause, targetClause, objectiveClause),
 			untied(untied), dummy(Reduction::PLUS, VarListPtr()) { }
 
 	bool hasUntied() const { return untied; }

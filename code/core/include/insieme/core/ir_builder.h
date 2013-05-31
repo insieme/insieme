@@ -239,6 +239,7 @@ namespace core {
 		ExpressionPtr undefined(const TypePtr& type) const;
 		ExpressionPtr undefinedVar(const TypePtr& type) const;
 		ExpressionPtr undefinedNew(const TypePtr& type) const;
+		ExpressionPtr undefinedLoc(const TypePtr& type) const;
 
 		/**
 		 * A factory method for intTypeParam literals.
@@ -275,6 +276,7 @@ namespace core {
 		CallExprPtr deref(const ExpressionPtr& subExpr) const;
 		CallExprPtr refVar(const ExpressionPtr& subExpr) const;
 		CallExprPtr refNew(const ExpressionPtr& subExpr) const;
+		CallExprPtr refLoc(const ExpressionPtr& subExpr) const;
 		CallExprPtr refDelete(const ExpressionPtr& subExpr) const;
 		CallExprPtr assign(const ExpressionPtr& target, const ExpressionPtr& value) const;
 		ExpressionPtr tryDeref(const ExpressionPtr& subExpr) const;
