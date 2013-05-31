@@ -694,9 +694,9 @@ namespace pattern {
 		TreePtr c = makeTree('c');
 
 		TreePatternPtr pattern;
-		pattern = outermost(var("x", node('a', anyList)));	// find outermost nodes labeled 'a'
+		pattern = outermost(var("x", node('a', anyList)));			// find outermost nodes labeled 'a'
 
-		EXPECT_EQ("rT.x($x:(97|[_]*) | !(aT($x:(97|[_]*))) | ([rec.x]*))", toString(pattern));
+		EXPECT_EQ("rT.x($x:(97|[_]*) | !($x:(97|[_]*)) & ([rec.x]*))", toString(pattern));
 
 		// this pattern should match everything ...
 		EXPECT_PRED2(isMatch, pattern, a);

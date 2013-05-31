@@ -491,7 +491,12 @@ namespace pattern {
 			}
 
 			MATCH(Negation) {
-				return !match(pattern.pattern, context, tree, delayedCheck);
+				// negation operates on copy of context (what shouldn't shouldn't leaf traces)
+				MatchContext<T> copy(context);
+
+				// ignore delayed checks while matching inner block and conduct those checks if inner one fails
+				std::function<bool(MatchContext<T>&)> accept = [](MatchContext<T>& context) { return true; };
+				return !match(pattern.pattern, copy, tree, accept) && delayedCheck(context);
 			}
 
 			MATCH(Conjunction) {
@@ -607,7 +612,7 @@ namespace pattern {
 
 				// empty is accepted (terminal case)
 				if (begin == end) {
-					return repetitions >= rep.minRep;
+					return repetitions >= rep.minRep && delayedCheck(context);
 				}
 
 				// test special case of a single iteration
@@ -686,6 +691,9 @@ namespace pattern {
 
 			if (DEBUG) std::cout << "Matching " << pattern << " against " << tree << " with context " << context << " ... \n";
 
+			// quick check for wildcards (should not even be cached)
+			if (pattern.type == TreePattern::Wildcard) return delayedCheck(context);
+
 			// skip searching within types if not searching for a type
 			if (!pattern.mayBeType && isTypeOrValueOrParam(tree)) return false;
 
@@ -693,7 +701,7 @@ namespace pattern {
 			if (pattern.isVariableFree) {
 				CachedMatchResult cachRes = context.cachedMatch(pattern, tree);
 				if (cachRes != Unknown) {
-					bool res = cachRes == Yes && delayedCheck(context);
+					bool res = (cachRes == Yes) && delayedCheck(context);
 					if (DEBUG) std::cout << "Matching " << pattern << " against " << tree << " with context " << context << " ... - from cache: " << res << "\n";
 					return res;
 				}
@@ -718,8 +726,14 @@ namespace pattern {
 
 		template<typename T, typename iterator = typename T::value_iterator>
 		bool match(const ListPattern& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end, const std::function<bool(MatchContext<T>&)>& delayedCheck) {
+
+			const bool DEBUG = false;
+
+			if (DEBUG) std::cout << "Matching " << pattern << " against " << join(", ", begin, end, print<deref<typename T::value_type>>()) << " with context " << context << " ... \n";
+
+			bool res = false;
 			switch(pattern.type) {
-				#define CASE(NAME) case ListPattern::NAME : return list::match ## NAME (static_cast<const pattern::list::NAME&>(pattern), context, begin, end, delayedCheck)
+				#define CASE(NAME) case ListPattern::NAME : res = list::match ## NAME (static_cast<const pattern::list::NAME&>(pattern), context, begin, end, delayedCheck); break
 					CASE(Empty);
 					CASE(Single);
 					CASE(Variable);
@@ -728,8 +742,11 @@ namespace pattern {
 					CASE(Repetition);
 				#undef CASE
 			}
-			assert(false && "Missed a pattern type!");
-			return false;
+
+			if (DEBUG) std::cout << "Matching " << pattern << " against " << join(", ", begin, end, print<deref<typename T::value_type>>()) << " with context " << context << " ...  match: " << res << "\n";
+			return res;
+//			assert(false && "Missed a pattern type!");
+//			return false;
 		}
 
 	} // end namespace details
