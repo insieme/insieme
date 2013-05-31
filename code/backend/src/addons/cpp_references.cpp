@@ -100,10 +100,10 @@ namespace addons {
 			res[ext.getRefIRToCpp()] 	  = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
 			res[ext.getRefIRToConstCpp()] = OP_CONVERTER({
 					core::ExpressionPtr arg = ARG(0);
-					// if inner node is a materialize we should not deref
-					if (core::analysis::isCallOf(arg, LANG_EXT_CPP.getMaterialize())){
-						return CONVERT_ARG(0);
-					}
+			//		// if inner node is a materialize we should not deref
+			//		if (core::analysis::isCallOf(arg, LANG_EXT_CPP.getMaterialize())){
+			//			return CONVERT_ARG(0);
+			//		}
 					//if inner node is a constructor, we dont deref neither
 					if (core::analysis::isConstructorCall(arg)){
 						return CONVERT_ARG(0);
@@ -116,7 +116,7 @@ namespace addons {
 			res[ext.getRefCppToConstCpp()]= OP_CONVERTER({ return CONVERT_ARG(0); });
 
 			// FIXME: find the right place for this
-			res[ext.getMaterialize()]	  = OP_CONVERTER({ return CONVERT_ARG(0);});
+			res[ext.getMaterialize()]	  = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0));});
 
 
 			#include "insieme/backend/operator_converter_end.inc"
