@@ -939,10 +939,10 @@ namespace pattern {
 
 			MATCH(Conjunction) {
 				// create context copy for rollback
-				MatchContext<T> copy(context);
+//				MatchContext<T> copy(context);
 				if (!match(pattern.pattern1, context, tree)) return false;
 				// restore context
-				context = copy;
+//				context = copy;
 				return match(pattern.pattern2, context, tree);
 			}
 
