@@ -315,6 +315,13 @@ public:
 		return out << ")";
 	}
 
+	void replaceUsage (const core::NodeMap& map){
+		if(var)replaceVars (var, map);
+		if(range)replaceVars (range, map);
+		if(enumList)replaceVars (enumList, map);
+		if(enumSize)replaceVars (enumSize, map);
+	}
+
 private:
 	core::ExpressionPtr var;
 	std::shared_ptr<core::ExpressionList> range;
@@ -369,6 +376,13 @@ public:
 		if(hasCoreIdsRange())
 			out << " ... " << *coreIdsRangeUpper;
 		return out << ")";
+	}
+
+	void replaceUsage (const core::NodeMap& map){
+		if(groupIds)replaceVars (groupIds, map);
+		if(groupIdsRangeUpper)replaceVars (groupIdsRangeUpper, map);
+		if(coreIds)replaceVars (coreIds, map);
+		if(coreIdsRangeUpper)replaceVars (coreIdsRangeUpper, map);
 	}
 
 private:
@@ -470,6 +484,13 @@ public:
 		return out << ")";
 	}
 
+	void replaceUsage (const core::NodeMap& map){
+		if(timeWeight)replaceVars (timeWeight, map);
+		if(energyWeight)replaceVars (energyWeight, map);
+		if(powerWeight)replaceVars (powerWeight, map);
+		if(constraintsExprs)replaceVars (constraintsExprs, map);
+	}
+
 private:
 	core::ExpressionPtr timeWeight;
 	core::ExpressionPtr energyWeight;
@@ -539,6 +560,11 @@ public:
 	const Objective& getObjective() const { assert(hasObjective()); return *objectiveClause; }
 
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		if(targetClause) targetClause->replaceUsage(map);
+		if(objectiveClause) objectiveClause->replaceUsage(map);
+	}
 };
 
 class SharedParallelAndTaskClause : public SharedRegionParallelAndTaskClause {
@@ -566,6 +592,7 @@ public:
 	virtual void replaceUsage (const core::NodeMap& map){
 		replaceVars (ifClause, map);
 		replaceVars (sharedClause, map);
+		SharedRegionParallelAndTaskClause::replaceUsage(map);
 	}
 };
 
@@ -681,6 +708,13 @@ public:
 	virtual const Reduction& getReduction() const { assert(false); return dummy; }
 
 	std::ostream& dump(std::ostream& out) const;
+
+	virtual void replaceUsage (const core::NodeMap& map){
+		DatasharingClause::replaceUsage(map);
+		Annotation::replaceUsage(map);
+		SharedRegionParallelAndTaskClause::replaceUsage(map);
+		paramClause->replaceUsage(map);
+	}
 };
 
 /**
