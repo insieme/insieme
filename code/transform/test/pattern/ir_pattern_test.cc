@@ -270,7 +270,10 @@ TEST(IRPattern, Addresses) {
 	// addresses always point to first encounter
 	auto match = pattern1->matchAddress(stmt1);
 	EXPECT_TRUE(match);
+	ASSERT_TRUE(match->isVarBound("x"));
+	ASSERT_TRUE(match->isVarBound("y"));
 	EXPECT_EQ(stmt1.getAddressOfChild(0,0), match->getVarBinding("x").getValue());
+	EXPECT_EQ(stmt1.getAddressOfChild(3,0,0), match->getVarBinding("y").getValue());
 
 	match = pattern2->matchAddress(stmt2);
 	EXPECT_TRUE(match);
@@ -319,6 +322,7 @@ TEST(IRPattern, AbitrarilyNestedLoop) {
 
 	// create a pattern for an arbitrarily nested loop
 	auto pattern = rT(var("loops", irp::forStmt(var("iter",any), any, any, any, aT(recurse) | aT(!irp::forStmt()))));
+//	auto pattern = rT(var("loops", irp::forStmt(var("iter",any), any, any, any, step(recurse) | !aT(irp::forStmt()))));
 
 	//EXPECT_EQ("", toString(pattern));
 

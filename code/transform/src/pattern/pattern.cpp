@@ -556,7 +556,7 @@ namespace pattern {
 				// range has to be exactly one ...
 				if (std::distance(begin, end) != 1) return false;
 				// ... and the pattern has to match
-				return match(pattern.element, context, *begin, delayedCheck) && delayedCheck(context);
+				return match(pattern.element, context, *begin, delayedCheck);
 			}
 
 			MATCH(Variable) {
@@ -584,7 +584,7 @@ namespace pattern {
 				for(auto i = begin; i<=end; ++i) {
 					MatchContext<T> caseContext = context;
 					// check left side and delay right side
-					std::function<bool(MatchContext<T>&)> delayed = [&](MatchContext<T>& context) { return match(pattern.right, caseContext, i, end, delayedCheck); };
+					std::function<bool(MatchContext<T>&)> delayed = [&](MatchContext<T>& context) { return match(pattern.right, context, i, end, delayedCheck); };
 					if (match(pattern.left, caseContext, begin, i, delayed)) {
 						context = caseContext; // make temporal context permanent
 						return true;
