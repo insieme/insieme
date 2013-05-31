@@ -392,6 +392,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 				<< methodDecl->getParent()->getNameAsString() << "::"
 				<< methodDecl->getNameAsString();
 
+	
+
 		convertedOp =  convFact.convertFunctionDecl(methodDecl).as<core::ExpressionPtr>();
 
 		// possible member operators: +,-,*,/,%,^,&,|,~,!,<,>,+=,-=,*=,/=,%=,^=,&=,|=,<<,>>,>>=,<<=,==,!=,<=,>=,&&,||,++,--,','
@@ -402,11 +404,11 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 
 		// get "this-object"
 		core::ExpressionPtr ownerObj = Visit(callExpr->getArg(0));
+		ownerObj = unwrapCppRef(builder, ownerObj);
 
 		// get type of this
 		const clang::Type* classType= methodDecl->getParent()->getTypeForDecl();
 		core::TypePtr&& irClassType = builder.refType( convFact.convertType(classType) );
-
 		convertedOp = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl),
 											convertedOp,
 											irClassType,
@@ -416,18 +418,18 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		args = getFunctionArguments(callExpr, funcTy, llvm::cast<clang::FunctionDecl>(methodDecl));
 
-		//unwrap if is a cpp reference, we dont use cpp references for this
-		/*
-		if (core::analysis::isCppRef(ownerObj->getType())){
-		// unwrap and deref the variable
-			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), ownerObj);
+		//  the problem is, we call a memeber function over a value, the owner MUST be always a ref, 
+		//  is not a expression with cleanups because this object has not need to to be destucted,
+		//  no used defined dtor. 
+		//  if we materialize it, there is a weird deref later on.
+		//
+		//we might need here a ref or something... 
+		// some constructions might return an instance, incorporate a materialize
+		if (ownerObj->getType() !=  funcTy->getParameterTypeList()[0]){
+			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
 		}
-		else if (core::analysis::isConstCppRef(ownerObj->getType())){
-			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), ownerObj);
-		}
-		*/ 
-		ownerObj = unwrapCppRef(builder, ownerObj);
 
+		ASSERT_EQ_TYPES(ownerObj->getType(), funcTy->getParameterTypeList()[0]);
 
 		// incorporate this to the begining of the args list
 		args.insert (args.begin(), ownerObj);
@@ -445,72 +447,9 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		args = getFunctionArguments(callExpr, funcDecl);
 	}
-///
-//	FIXME: this was ment to be used with the non implemented asign operator, now is being
-//	implemented, terefore the asigment has to be handled as a function call
-//
-//	once tested, cleanup the code
-//
-///	switch (callExpr->getOperator()){
-///
-///		case OO_None:
-///			assert(false && "no operator!!");
-///
-///		case OO_New:
-///		case OO_Delete         :
-///		case OO_Array_New      :
-///		case OO_Array_Delete   :
-///			assert(false && " new and delete overload not implemented");
-///
-///		case OO_Plus                 :
-///		case OO_Minus                :
-///		case OO_Star                 :
-///		case OO_Slash                :
-///		case OO_Percent              :
-///		case OO_Caret                :
-///		case OO_Amp                  :
-///		case OO_Pipe                 :
-///		case OO_Tilde                :
-///		case OO_Exclaim              :
-///		case OO_Less                 :
-///		case OO_Greater              :
-///		case OO_PlusEqual            :
-///		case OO_MinusEqual           :
-///		case OO_StarEqual            :
-///		case OO_SlashEqual           :
-///		case OO_PercentEqual         :
-///		case OO_CaretEqual           :
-///		case OO_AmpEqual             :
-///		case OO_PipeEqual            :
-///		case OO_LessLess             :
-///		case OO_GreaterGreater       :
-///		case OO_LessLessEqual        :
-///		case OO_GreaterGreaterEqual  :
-///		case OO_EqualEqual           :
-///		case OO_ExclaimEqual         :
-///		case OO_LessEqual            :
-///		case OO_GreaterEqual         :
-///		case OO_AmpAmp               :
-///		case OO_PipePipe             :
-///		case OO_PlusPlus             :
-///		case OO_MinusMinus           :
-///		case OO_Comma                :
-///		case OO_ArrowStar            :
-///		case OO_Arrow               :
-///		case OO_Call           :
-///		case OO_Subscript      :
-///		case OO_Equal                :
-///			func = convertedOp;
-///			//assert(false && "CXXOperator not implemented yet");
-///			break;
-///		case OO_Equal                :
-///			func = gen.getRefAssign();
-///			break;
-///
-///		default:
-///			assert(false && " no specified operator, did u upgraded clang from 3.2? ");
-///
-///	}
+	else {
+		assert(false && "you should not be here, cxx operator call which is neither a method nor function");
+	}
 
 	retIr = builder.callExpr(funcTy->getReturnType(), convertedOp, args);
 	return retIr;
@@ -533,7 +472,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	// back end compiler
 	if (callExpr->isElidable () ){
 		// if is an elidable constructor, we should return a refvar, not what the parameters say
-		return (Visit(callExpr->getArg (0)));
+		core::ExpressionPtr retIr = (Visit(callExpr->getArg (0)));
+		if (core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
+			retIr = builder.refVar(retIr.as<core::CallExprPtr>()->getArgument(0));
+		return retIr;
 	}
 
 	// it might be an array construction
@@ -811,7 +753,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 
 	// convert the subexpr to IR
 	const clang::Expr* inner = cleanupExpr->getSubExpr();
-	core::ExpressionPtr innerIR = convFact.convertExpr(inner);
+	core::ExpressionPtr innerIr = convFact.convertExpr(inner);
 
 	// for each of the temporaries(reverse) create an IR var decl and push it at the beginning of the
 	// lambda body
@@ -825,32 +767,48 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExprWithCleanups(c
 			core::VariablePtr        var  = decl->getVariable();
 			core::ExpressionPtr      init = decl->getInitialization();
 
-			core::ExpressionPtr trg = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), var);
-			core::ExpressionPtr subst = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init);
-			core::ExpressionPtr newIr = core::transform::replaceAllGen (mgr, innerIR, trg, subst, false);
+			core::ExpressionPtr newIr;
+			if (core::analysis::isCallOf(init, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize())){
+				// it might happen that we try to materialize an object just to use it by value
+				newIr = core::transform::replaceAllGen (mgr, innerIr, var, init, false);
+			}
+			else{
+				core::ExpressionPtr trg = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), var);
+				core::ExpressionPtr subst = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init);
+				newIr = core::transform::replaceAllGen (mgr, innerIr, trg, subst, false);
+			}
 
-			if (newIr == innerIR)
+			if (newIr == innerIr){
 				stmtList.push_back(fit->second);
-			else
-				innerIR = newIr;
+			}
+			else{
+				innerIr = newIr;
+			}
 		}
+	}
+
+	core::TypePtr lambdaRetType = convFact.convertType(cleanupExpr->getType().getTypePtr());
+	if (innerIr->getType() != lambdaRetType && !gen.isRef(lambdaRetType)){
+		if (core::analysis::isCallOf(innerIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
+			innerIr = innerIr.as<core::CallExprPtr>().getArgument(0);
+		else if (!core::analysis::isConstructorCall(innerIr))
+			// if is a constructor, it might be used in a declaration, we need to return a ref, no
+			// matters what clang says. othewhise, any ctor is not allowed anywhere. obj must be
+			// materialized into a variable
+			innerIr = convFact.tryDeref(innerIr);
 	}
 
 	if (stmtList.empty()){
 		// we avoided all expressions to be cleanup, no extra lambda needed
-		return innerIR;
+		return innerIr;
 	}
-
-	core::TypePtr lambdaRetType = convFact.convertType(cleanupExpr->getType().getTypePtr());
-	if (innerIR->getType() != lambdaRetType && !gen.isRef(lambdaRetType))
-		innerIR = convFact.tryDeref(innerIR);
 
 	// if the expression does not return anything, do not add return stmt
-	if (gen.isUnit(innerIR->getType())){
-		stmtList.push_back(innerIR);
+	if (gen.isUnit(innerIr->getType())){
+		stmtList.push_back(innerIr);
 	}
 	else{
-		stmtList.push_back(convFact.builder.returnStmt(innerIR));
+		stmtList.push_back(convFact.builder.returnStmt(innerIr));
 	}
 
 	//build the lambda and its parameters
