@@ -50,7 +50,7 @@ namespace pattern {
 	}
 
 	TreePtr Rule::applyTo(const TreePtr& tree) const {
-		auto match = details::match(*pattern.get(), tree);
+		auto match = pattern->matchTree(tree);
 		if (!match) return TreePtr();
 		return generator->generate(*match);
 	}
