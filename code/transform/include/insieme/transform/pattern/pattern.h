@@ -422,6 +422,13 @@ namespace pattern {
 		return std::make_shared<tree::Constant>(tree);
 	}
 
+	inline ListPatternPtr single(const TreePatternPtr& pattern) {
+		return std::make_shared<list::Single>(pattern);
+	}
+	inline ListPatternPtr single(const TreePtr& tree) {
+		return single(atom(tree));
+	}
+
 	inline TreePatternPtr operator!(const TreePatternPtr& a) {
 		return std::make_shared<tree::Negation>(a);
 	}
@@ -440,8 +447,14 @@ namespace pattern {
 	inline TreePatternPtr node(const char id, const ListPatternPtr& pattern = empty) {
 		return std::make_shared<tree::Node>(id, pattern);
 	}
+	inline TreePatternPtr node(const char id, const TreePatternPtr& pattern) {
+		return node(id, single(pattern));
+	}
 	inline TreePatternPtr node(const core::NodeType type, const ListPatternPtr& pattern = empty) {
 		return std::make_shared<tree::Node>(type, pattern);
+	}
+	inline TreePatternPtr node(const core::NodeType type, const TreePatternPtr& pattern) {
+		return node(type, single(pattern));
 	}
 
 	inline TreePatternPtr var(const std::string& name, const TreePatternPtr& pattern = any) {
@@ -469,13 +482,6 @@ namespace pattern {
 	}
 	inline TreePatternPtr rec(const string& varName = "x") {
 		return std::make_shared<tree::Recursion>(varName);
-	}
-	
-	inline ListPatternPtr single(const TreePatternPtr& pattern) {
-		return std::make_shared<list::Single>(pattern);
-	}
-	inline ListPatternPtr single(const TreePtr& tree) {
-		return single(atom(tree));
 	}
 
 	inline ListPatternPtr operator|(const ListPatternPtr& a, const ListPatternPtr& b) {
@@ -528,18 +534,13 @@ namespace pattern {
 	// more complex stuff ...
 
 	inline TreePatternPtr outermost(const TreePatternPtr& a) {
-		// should be:
-		// 	return rT(a | !aT(a) | (!a & node(*recurse)));
-		// but & operator is not implemented.
-
-		// also works (since | is evaluated left-to-right)
-		return rT(a | !aT(a) | node(*recurse));
+		// it is the outer most or not, then the next is nested
+		return rT(a | (!a & node(*rec("_outermost"))), "_outermost");
 	}
 
 	inline TreePatternPtr step(const TreePatternPtr& a) {
 		return node(anyList << a << anyList);
 	}
-
 
 } // end namespace pattern
 } // end namespace transform

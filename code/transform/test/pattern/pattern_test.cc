@@ -107,7 +107,7 @@ namespace pattern {
 		
 		EXPECT_EQ("($var,$var)", toString(pattern1));
 		EXPECT_EQ("($var,!($var))", toString(pattern2));
-		
+
 		EXPECT_PRED2(isMatch, pattern1, treeAs);
 		EXPECT_PRED2(noMatch, pattern1, treeAB);
 		EXPECT_PRED2(isMatch, pattern1, treeBs);
@@ -131,7 +131,7 @@ namespace pattern {
 		TreePtr treeAsBs = makeTree(treeAs, treeBs);
 		TreePtr treeAsAs = makeTree(treeAs, treeAs);
 		TreePtr treeAsAB = makeTree(treeAs, treeAB);
-		
+
 		EXPECT_EQ("((a,a),(b,b))", toString(treeAsBs));
 		EXPECT_EQ("((a,a),(a,a))", toString(treeAsAs));
 		EXPECT_EQ("((a,a),(a,b))", toString(treeAsAB));
@@ -247,6 +247,56 @@ namespace pattern {
 		EXPECT_PRED2(noMatch, node(pattern), treeA);
 		EXPECT_PRED2(noMatch, node(pattern), treeB);
 		EXPECT_PRED2(isMatch, node(pattern), treeC);
+
+	}
+
+	TEST(ListPattern, Variable) {
+
+		TreePtr treeA = makeTree('a');
+		TreePtr treeB = makeTree('b');
+		TreePtr treeX = makeTree('x');
+
+		ListPatternPtr a = listVar("a");
+		ListPatternPtr b = listVar("b");
+		TreePatternPtr x = atom(makeTree('x'));
+
+		TreePatternPtr p = node(a << x << b);
+
+		// test general matching
+		EXPECT_PRED2(isMatch, p, makeTree(treeX));
+		EXPECT_PRED2(isMatch, p, makeTree(treeA, treeX));
+		EXPECT_PRED2(isMatch, p, makeTree(treeX, treeB));
+		EXPECT_PRED2(isMatch, p, makeTree(treeA, treeB, treeX, treeB));
+		EXPECT_PRED2(isMatch, p, makeTree(treeA, treeB, treeX, treeB, treeA));
+
+		EXPECT_PRED2(isMatch, p, makeTree(treeX, treeX));
+		EXPECT_PRED2(isMatch, p, makeTree(treeX, treeA, treeX));
+		EXPECT_PRED2(isMatch, p, makeTree(treeA, treeX, treeA, treeX));
+
+		EXPECT_PRED2(noMatch, p, makeTree());
+		EXPECT_PRED2(noMatch, p, makeTree(treeA));
+		EXPECT_PRED2(noMatch, p, makeTree(treeA, treeB));
+
+		// test match result
+		auto match = p->matchTree(makeTree('n', treeA, treeB, treeB, treeX, treeA));
+		ASSERT_TRUE(match);
+		EXPECT_EQ(toVector(treeA, treeB, treeB), match->getVarBinding("a").getList());
+		EXPECT_EQ(toVector(treeA), match->getVarBinding("b").getList());
+
+		match = p->matchTree(makeTree('n', treeA, treeB, treeB, treeX, treeA, treeB));
+		ASSERT_TRUE(match);
+		EXPECT_EQ(toVector(treeA, treeB, treeB), match->getVarBinding("a").getList());
+		EXPECT_EQ(toVector(treeA, treeB), match->getVarBinding("b").getList());
+
+		match = p->matchTree(makeTree('n', treeX, treeA, treeB));
+		ASSERT_TRUE(match);
+		EXPECT_EQ(toVector<TreePtr>(), match->getVarBinding("a").getList());
+		EXPECT_EQ(toVector(treeA, treeB), match->getVarBinding("b").getList());
+
+		match = p->matchTree(makeTree('n', treeX));
+		ASSERT_TRUE(match);
+		EXPECT_EQ(toVector<TreePtr>(), match->getVarBinding("a").getList());
+		EXPECT_EQ(toVector<TreePtr>(), match->getVarBinding("b").getList());
 
 	}
 
@@ -694,9 +744,9 @@ namespace pattern {
 		TreePtr c = makeTree('c');
 
 		TreePatternPtr pattern;
-		pattern = outermost(var("x", node('a', anyList)));	// find outermost nodes labeled 'a'
+		pattern = outermost(var("x", node('a', anyList)));			// find outermost nodes labeled 'a'
 
-		EXPECT_EQ("rT.x($x:(97|[_]*) | !(aT($x:(97|[_]*))) | ([rec.x]*))", toString(pattern));
+		EXPECT_EQ("rT._outermost($x:(97|[_]*) | !($x:(97|[_]*)) & ([rec._outermost]*))", toString(pattern));
 
 		// this pattern should match everything ...
 		EXPECT_PRED2(isMatch, pattern, a);
@@ -731,6 +781,52 @@ namespace pattern {
 
 		res = pattern->matchTree(makeTree('b', makeTree('b', makeTree('b', a), a), a));
 		if (res) EXPECT_EQ("Match({x=[null,null,null,a,a,a]})", toString(*res));
+	}
+
+	TEST(Match, SeperatedConjunction) {
+
+		// a pattern of the form
+		//					aT(a(x)) & aT(b(x))
+		// needs a consistent assignment for x
+
+		auto x = var("x");
+		auto p = aT(node('a', x)) & aT(node('b', x));
+
+		TreePtr i = makeTree('i');
+		TreePtr j = makeTree('j');
+
+		// this should work
+		auto res = p->matchTree(makeTree('c', makeTree('a', i), makeTree('b', i)));
+		EXPECT_TRUE(res); if (res) EXPECT_EQ("Match({x=i})", toString(*res));
+
+		// this should fail (wasn't due to a bug)
+		res = p->matchTree(makeTree('c', makeTree('a', i), makeTree('b', j)));
+		EXPECT_FALSE(res);
+
+	}
+
+	TEST(Match, AnyTreeRecover) {
+
+		// what should work:
+		//   a pattern like aT(a($x)) & aT(b($x)) should match (a(n),a(m),b(m))
+
+		auto x = var("x");
+		auto p = aT(node('a', x)) & aT(node('b', x));
+
+		EXPECT_EQ("aT((97|$x)) & aT((98|$x))", toString(p));
+
+		TreePtr n = makeTree('n');
+		TreePtr m = makeTree('m');
+
+		TreeMatchOpt res;
+
+		// simple case
+		res = p->matchTree(makeTree('c', makeTree('a', n), makeTree('a', m), makeTree('b', n)));
+		EXPECT_TRUE(res); if (res) EXPECT_EQ("Match({x=n})", toString(*res));
+
+		// case depending on back-tracking
+		res = p->matchTree(makeTree('c', makeTree('a', n), makeTree('a', m), makeTree('b', m)));
+		EXPECT_TRUE(res); if (res) EXPECT_EQ("Match({x=m})", toString(*res));
 	}
 
 } // end namespace pattern

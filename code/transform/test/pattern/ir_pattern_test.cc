@@ -270,7 +270,10 @@ TEST(IRPattern, Addresses) {
 	// addresses always point to first encounter
 	auto match = pattern1->matchAddress(stmt1);
 	EXPECT_TRUE(match);
+	ASSERT_TRUE(match->isVarBound("x"));
+	ASSERT_TRUE(match->isVarBound("y"));
 	EXPECT_EQ(stmt1.getAddressOfChild(0,0), match->getVarBinding("x").getValue());
+	EXPECT_EQ(stmt1.getAddressOfChild(3,0,0), match->getVarBinding("y").getValue());
 
 	match = pattern2->matchAddress(stmt2);
 	EXPECT_TRUE(match);
@@ -319,6 +322,7 @@ TEST(IRPattern, AbitrarilyNestedLoop) {
 
 	// create a pattern for an arbitrarily nested loop
 	auto pattern = rT(var("loops", irp::forStmt(var("iter",any), any, any, any, aT(recurse) | aT(!irp::forStmt()))));
+//	auto pattern = rT(var("loops", irp::forStmt(var("iter",any), any, any, any, step(recurse) | !aT(irp::forStmt()))));
 
 	//EXPECT_EQ("", toString(pattern));
 
@@ -507,6 +511,86 @@ TEST(TargetFilter, InnerMostForLoop2) {
 	pattern = irp::innerMostForLoopNest(4);
 	EXPECT_EQ(toVector(for1), irp::collectAll(pattern, root));
 
+}
+
+TEST(PatternTests, AllVarDecls) {
+
+	core::NodeManager manager;
+	IRBuilder builder(manager);
+
+	core::NodePtr node = builder.normalize(builder.parseStmt(
+			R"(
+				{
+					int<4> a = 1;
+					int<4> b = 2;
+					a;
+					int<4> c = a + b;
+				}
+			)"
+	));
+
+	ASSERT_TRUE(node);
+
+
+	auto decl = irp::declarationStmt(var("x"), any);
+	auto notDecl = !irp::declarationStmt(any, any);
+
+	auto pattern = irp::compoundStmt(*(decl | notDecl));
+
+	// match the pattern
+	auto res = pattern->matchPointer(node);
+
+	ASSERT_TRUE(res);
+	EXPECT_EQ("Match({x=[AP(v0),AP(v1),null,AP(v2)]})", toString(*res));
+
+}
+
+TEST(PatternTests, UnusedVariable) {
+
+	core::NodeManager manager;
+	IRBuilder builder(manager);
+
+	core::NodePtr code = builder.normalize(builder.parseStmt(
+			R"(
+				{
+					int<4> a = 1;
+					int<4> b = 2;
+					//a;
+					int<4> c = a + b;
+
+					int<4> d = 3;
+					int<4> e = d;
+				}
+			)"
+	));
+
+	ASSERT_TRUE(code);
+
+	auto x = var("x");
+	auto decl = irp::declarationStmt(x, any);
+	auto use = !irp::declarationStmt(any, any) & node(+(anyList << x << anyList));
+
+//	auto pattern = aT(decl) & !aT(use);
+	auto used = aT(decl); // & aT(var("y", use));
+	auto unused = aT(decl) & !aT(use);
+
+//	std::cout << used << "\n";
+//	std::cout << unused << "\n";
+
+	auto res1 = used->matchPointer(code);
+	ASSERT_TRUE(res1);
+//	std::cout << "Match: " << *res1 << "\n";
+	EXPECT_EQ("AP(v0)", toString(res1->getVarBinding("x")));
+//	EXPECT_EQ("AP(int.add(v0, v1))", toString(res1->getVarBinding("y")));
+
+//	auto res2 = unused->matchPointer(code);
+//	ASSERT_TRUE(res2);
+//	std::cout << "Match: " << *res2 << "\n";
+
+
+//	std::cout << "x=" << res->getVarBinding("x") << "\n";
+//	std::cout << "y=" << res->getVarBinding("y") << "\n";
+//	std::cout << "z=" << res->getVarBinding("z") << "\n";
 }
 
 } // end namespace pattern

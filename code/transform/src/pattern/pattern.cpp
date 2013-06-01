@@ -270,6 +270,10 @@ namespace pattern {
 				(*treePatternCache)[std::make_pair(&pattern, node)] = match;
 			}
 
+			void clearCache() {
+				treePatternCache->clear();
+			}
+
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				out << "Match(";
@@ -284,28 +288,28 @@ namespace pattern {
 		};
 
 
-
 		template<typename T>
-		bool match(const TreePattern& pattern, MatchContext<T>& context, const typename T::value_type& tree);
+		bool match(const TreePattern& pattern, MatchContext<T>& context, const typename T::value_type& tree, const std::function<bool(MatchContext<T>&)>& delayedCheck);
 
 		template<typename T, typename iterator = typename T::value_iterator>
-		bool match(const ListPattern& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end);
+		bool match(const ListPattern& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end, const std::function<bool(MatchContext<T>&)>& delayedCheck);
 
 		template<typename T>
-		inline bool match(const TreePatternPtr& pattern, MatchContext<T>& context, const typename T::value_type& tree) {
-			return match(*pattern.get(), context, tree);
+		inline bool match(const TreePatternPtr& pattern, MatchContext<T>& context, const typename T::value_type& tree, const std::function<bool(MatchContext<T>&)>& delayedCheck) {
+			return match(*pattern.get(), context, tree, delayedCheck);
 		}
 
 		template<typename T, typename iterator = typename T::value_iterator>
-		inline bool match(const ListPatternPtr& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end) {
-			return match(*pattern.get(), context, begin, end);
+		inline bool match(const ListPatternPtr& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end, const std::function<bool(MatchContext<T>&)>& delayedCheck) {
+			return match(*pattern.get(), context, begin, end, delayedCheck);
 		}
 
 
 		template<typename T, typename target = typename match_target_info<T>::target_type>
 		boost::optional<Match<target>> match(const TreePattern& pattern, const T& tree) {
 			MatchContext<target> context;
-			if (match(pattern, context, tree)) {
+			std::function<bool(MatchContext<target>&)> accept = [](MatchContext<target>& context)->bool { return true; };
+			if (match(pattern, context, tree, accept)) {
 				// complete match result
 				context.getMatch().setRoot(tree);
 				return context.getMatch();
@@ -316,7 +320,8 @@ namespace pattern {
 		template<typename T, typename target = typename match_target_info<T>::target_type>
 		boost::optional<Match<target>> match(const ListPattern& pattern, const std::vector<T>& trees) {
 			MatchContext<target> context;
-			if (match(pattern, context, trees.begin(), trees.end())) {
+			std::function<bool(MatchContext<target>&)> accept = [](MatchContext<target>& context)->bool { return true; };
+			if (match(pattern, context, trees.begin(), trees.end(), accept)) {
 				// => it is a match (but leaf root empty)
 				return context.getMatch();
 			}
@@ -342,31 +347,31 @@ namespace pattern {
 
 		#define MATCH(NAME) \
 			template<typename T> \
-			bool match ## NAME (const pattern::tree::NAME& pattern, MatchContext<T>& context, const typename T::value_type& tree)
+			bool match ## NAME (const pattern::tree::NAME& pattern, MatchContext<T>& context, const typename T::value_type& tree, const std::function<bool(MatchContext<T>&)>& delayedCheck)
 
 			MATCH(Value) {
-				return tree->isValue() && tree->getNodeValue() == pattern.value;
+				return tree->isValue() && tree->getNodeValue() == pattern.value && delayedCheck(context);
 			}
 
 			MATCH(Constant) {
 				assert(pattern.nodeAtom && "Wrong type of constant value stored within atom node!");
-				return *pattern.nodeAtom == *tree;
+				return *pattern.nodeAtom == *tree && delayedCheck(context);
 			}
 
 			MATCH(Wildcard) {
-				return true;
+				return delayedCheck(context);	// just finish delayed checks
 			}
 
 			MATCH(Variable) {
 
 				// check whether the variable is already bound
 				if(context.isTreeVarBound(pattern.name)) {
-					return *context.getTreeVarBinding(pattern.name) == *tree;
+					return *context.getTreeVarBinding(pattern.name) == *tree && delayedCheck(context);
 				}
 
 				// check filter-pattern of this variable
-				if (match(pattern.pattern, context, tree)) {
-					context.bindTreeVar(pattern.name, tree);
+				context.bindTreeVar(pattern.name, tree);		// speculate => bind variable
+				if (match(pattern.pattern, context, tree, delayedCheck)) {
 					return true;
 				}
 
@@ -376,45 +381,48 @@ namespace pattern {
 
 			namespace {
 
-				bool contains_variable_free(MatchContext<ptr_target>& context, const core::NodePtr& tree, const TreePatternPtr& pattern) {
+				bool contains_variable_free(MatchContext<ptr_target>& context, const core::NodePtr& tree, const TreePatternPtr& pattern, const std::function<bool(MatchContext<ptr_target>&)>& delayedCheck) {
 					return core::visitDepthFirstOnceInterruptible(tree, [&](const core::NodePtr& cur)->bool {
-						return match(pattern, context, cur);
+						return match(pattern, context, cur, delayedCheck);
 					}, pattern->mayBeType);
 				}
 
-				bool contains_variable_free(MatchContext<address_target>& context, const core::NodeAddress& tree, const TreePatternPtr& pattern) {
+				bool contains_variable_free(MatchContext<address_target>& context, const core::NodeAddress& tree, const TreePatternPtr& pattern, const std::function<bool(MatchContext<address_target>&)>& delayedCheck) {
 					return core::visitDepthFirstOnceInterruptible(tree.as<core::NodePtr>(), [&](const core::NodePtr& cur)->bool {
-						return match(pattern, context, core::NodeAddress(cur));
+						return match(pattern, context, core::NodeAddress(cur), delayedCheck);
 					}, pattern->mayBeType);
 				}
 
-				bool contains_variable_free(MatchContext<tree_target>& context, const TreePtr& tree, const TreePatternPtr& pattern) {
+				bool contains_variable_free(MatchContext<tree_target>& context, const TreePtr& tree, const TreePatternPtr& pattern, const std::function<bool(MatchContext<tree_target>&)>& delayedCheck) {
 					bool res = false;
-					res = res || match(pattern, context, tree);
+					res = res || match(pattern, context, tree, delayedCheck);
 					for_each(tree->getChildList(), [&](const TreePtr& cur) { // generalize this
-						res = res || contains_variable_free(context, cur, pattern);
+						res = res || contains_variable_free(context, cur, pattern, delayedCheck);
 					});
 					return res;
 				}
 			}
 
 			template<typename T>
-			bool contains(MatchContext<T>& context, const typename T::value_type& tree, const TreePatternPtr& pattern) {
+			bool contains(MatchContext<T>& context, const typename T::value_type& tree, const TreePatternPtr& pattern, const std::function<bool(MatchContext<T>&)>& delayedCheck) {
 
 				// prune types
 				if (!pattern->mayBeType && isTypeOrValueOrParam(tree)) return false;
 
 				// if variable free, only non-shared nodes need to be checked
 				if (pattern->isVariableFree) {
-					return contains_variable_free(context, tree, pattern);
+					return contains_variable_free(context, tree, pattern, delayedCheck);
 				}
 
 				// if there are variables, all nodes need to be checked
 				bool res = false;
+
 				// isolate context for each try
-				res = res || match(pattern, context, tree);
+				MatchContext<T> backup = context;
+				res = res || match(pattern, context, tree, delayedCheck);
 				for_each(tree->getChildList(), [&](const typename T::value_type& cur) { // generalize this
-					res = res || contains(context, cur, pattern);
+					if (!res) context = backup;		// restore context
+					res = res || contains(context, cur, pattern, delayedCheck);
 				});
 				return res;
 			}
@@ -422,7 +430,7 @@ namespace pattern {
 			MATCH(Descendant) {
 				// search for all patterns occurring in the sub-trees
 				return all(pattern.subPatterns, [&](const TreePatternPtr& cur) {
-					return contains(context, tree, cur);
+					return contains(context, tree, cur, delayedCheck);
 				});
 			}
 
@@ -445,7 +453,7 @@ namespace pattern {
 					context.set(context.incRecVarCounter(pattern.name));
 
 					// run match again
-					bool res = match(context.getRecVarBinding(pattern.name), context, tree);
+					bool res = match(context.getRecVarBinding(pattern.name), context, tree, delayedCheck);
 
 					// restore current context path
 					context.setCurrentPath(path);
@@ -464,7 +472,7 @@ namespace pattern {
 
 				// match using new rec-var binding
 				context.bindRecVar(pattern.name, pattern.pattern);
-				bool res = match(pattern.pattern, context, tree);
+				bool res = match(pattern.pattern, context, tree, delayedCheck);
 				context.unbindRecVar(pattern.name);
 
 				// restore old recursive variable
@@ -479,49 +487,51 @@ namespace pattern {
 			MATCH(Node) {
 				if (pattern.type != -1 && pattern.type != tree->getNodeType()) return false;
 				const auto& children = tree->getChildList();
-				return match(pattern.pattern, context, children.begin(), children.end());
+				return match(pattern.pattern, context, children.begin(), children.end(), delayedCheck);
 			}
 
 			MATCH(Negation) {
-				return !match(pattern.pattern, context, tree);
+				// negation operates on copy of context (what shouldn't shouldn't leaf traces)
+				MatchContext<T> copy(context);
+
+				// ignore delayed checks while matching inner block and conduct those checks if inner one fails
+				std::function<bool(MatchContext<T>&)> accept = [](MatchContext<T>& context) { return true; };
+				return !match(pattern.pattern, copy, tree, accept) && delayedCheck(context);
 			}
 
 			MATCH(Conjunction) {
-				// create context copy for rollback
-				MatchContext<T> copy(context);
-				if (!match(pattern.pattern1, context, tree)) return false;
-				// restore context
-				context = copy;
-				return match(pattern.pattern2, context, tree);
+				// match first and delay matching of second half
+				std::function<bool(MatchContext<T>&)> delayed = [&](MatchContext<T>& context) { return match(pattern.pattern2, context, tree, delayedCheck); };
+				return match(pattern.pattern1, context, tree, delayed);
 			}
 
 			MATCH(Disjunction) {
 				// create context copy for rollback
 				MatchContext<T> copy(context);
-				if (match(pattern.pattern1, context, tree)) return true;
+				if (match(pattern.pattern1, context, tree, delayedCheck)) return true;
 				// restore context
 				context = copy;
-				return match(pattern.pattern2, context, tree);
+				return match(pattern.pattern2, context, tree, delayedCheck);
 			}
 
 			// -- for test structure only --
 
 			// a specialization for tree pointers
-			inline bool matchValue(const pattern::tree::Value& pattern, MatchContext<tree_target>& context, const TreePtr& tree) {
+			inline bool matchValue(const pattern::tree::Value& pattern, MatchContext<tree_target>& context, const TreePtr& tree, const std::function<bool(MatchContext<tree_target>&)>& delayedCheck) {
 				return false;
 			}
 
 			// a specialization for tree pointers
-			inline bool matchConstant(const pattern::tree::Constant& pattern, MatchContext<tree_target>& context, const TreePtr& tree) {
+			inline bool matchConstant(const pattern::tree::Constant& pattern, MatchContext<tree_target>& context, const TreePtr& tree, const std::function<bool(MatchContext<tree_target>&)>& delayedCheck) {
 				assert(pattern.treeAtom && "Wrong type of constant value stored within atom node!");
-				return *pattern.treeAtom == *tree;
+				return *pattern.treeAtom == *tree && delayedCheck(context);
 			}
 
 			// a specialization for tree pointers
-			inline bool matchNode(const pattern::tree::Node& pattern, MatchContext<tree_target>& context, const TreePtr& tree) {
+			inline bool matchNode(const pattern::tree::Node& pattern, MatchContext<tree_target>& context, const TreePtr& tree, const std::function<bool(MatchContext<tree_target>&)>& delayedCheck) {
 				if (pattern.id != -1 && pattern.id != tree->getId()) return false;
 				auto& children = tree->getSubTrees();
-				return match(pattern.pattern, context, children.begin(), children.end());
+				return match(pattern.pattern, context, children.begin(), children.end(), delayedCheck) && delayedCheck(context);
 			}
 
 
@@ -535,18 +545,18 @@ namespace pattern {
 
 		#define MATCH(NAME) \
 			template<typename T, typename iterator = typename T::value_iterator> \
-			bool match ## NAME (const pattern::list::NAME& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end)
+			bool match ## NAME (const pattern::list::NAME& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end, const std::function<bool(MatchContext<T>&)>& delayedCheck)
 
 			MATCH(Empty) {
 				// only accepts empty list
-				return begin == end;
+				return begin == end && delayedCheck(context);
 			}
 
 			MATCH(Single) {
 				// range has to be exactly one ...
 				if (std::distance(begin, end) != 1) return false;
 				// ... and the pattern has to match
-				return match(pattern.element, context, *begin);
+				return match(pattern.element, context, *begin, delayedCheck);
 			}
 
 			MATCH(Variable) {
@@ -555,12 +565,13 @@ namespace pattern {
 				if(context.isNodeVarBound(pattern.name)) {
 					const auto& value = context.getNodeVarBinding(pattern.name);
 					return std::distance(begin, end) == std::distance(value.begin(), value.end()) &&
-						   std::equal(begin, end, value.begin(), equal_target<typename T::value_type>());
+						   std::equal(begin, end, value.begin(), equal_target<typename T::value_type>()) &&
+						   delayedCheck(context);
 				}
 
 				// check filter-pattern of this variable
-				if (match(pattern.pattern, context, begin, end)) {
-					context.bindNodeVar(pattern.name, begin, end);
+				context.bindNodeVar(pattern.name, begin, end);	// speculate => bind variable
+				if (match(pattern.pattern, context, begin, end, delayedCheck)) {
 					return true;
 				}
 
@@ -572,7 +583,9 @@ namespace pattern {
 				// search for the split-point ...
 				for(auto i = begin; i<=end; ++i) {
 					MatchContext<T> caseContext = context;
-					if (match(pattern.left, caseContext, begin,i) && match(pattern.right, caseContext, i,end)) {
+					// check left side and delay right side
+					std::function<bool(MatchContext<T>&)> delayed = [&](MatchContext<T>& context) { return match(pattern.right, context, i, end, delayedCheck); };
+					if (match(pattern.left, caseContext, begin, i, delayed)) {
 						context = caseContext; // make temporal context permanent
 						return true;
 					}
@@ -583,27 +596,28 @@ namespace pattern {
 			MATCH(Alternative) {
 				// try both alternatives using a private context
 				MatchContext<T> copy(context);
-				if (match(pattern.alternative1, copy, begin, end)) {
+				if (match(pattern.alternative1, copy, begin, end, delayedCheck)) {
 					// make temporal context permanent ..
 					context = copy;
 					return true;
 				}
-				return match(pattern.alternative2, context, begin, end);
+				return match(pattern.alternative2, context, begin, end, delayedCheck);
 			}
 
 			template<typename T, typename iterator = typename T::value_iterator>
 			bool matchRepetitionInternal(
 					const pattern::list::Repetition& rep, MatchContext<T>& context,
-					const iterator& begin, const iterator& end, unsigned repetitions) {
+					const iterator& begin, const iterator& end, unsigned repetitions,
+					const std::function<bool(MatchContext<T>&)>& delayedCheck) {
 
 				// empty is accepted (terminal case)
 				if (begin == end) {
-					return repetitions >= rep.minRep;
+					return repetitions >= rep.minRep && delayedCheck(context);
 				}
 
 				// test special case of a single iteration
 				MatchContext<T> copy = context;
-				if (rep.minRep <= 1 && match(rep.pattern, copy, begin, end)) {
+				if (rep.minRep <= 1 && match(rep.pattern, copy, begin, end, delayedCheck)) {
 					context = copy;
 					return true;
 				}
@@ -614,7 +628,7 @@ namespace pattern {
 					// private copy for this try
 					MatchContext<T> copy = context;
 
-					if (!match(rep.pattern, copy, begin, i)) {
+					if (!match(rep.pattern, copy, begin, i, delayedCheck)) {
 						// does not match ... try next!
 						continue;
 					}
@@ -622,7 +636,7 @@ namespace pattern {
 					// increment repetition counter
 					copy.inc();
 
-					if (!matchRepetitionInternal(rep, copy, i, end, repetitions + 1)) {
+					if (!matchRepetitionInternal(rep, copy, i, end, repetitions + 1, delayedCheck)) {
 						// does not fit any more ... try next!
 						continue;
 					}
@@ -637,10 +651,18 @@ namespace pattern {
 			}
 
 			MATCH(Repetition) {
+				// increase nesting level of variables by one
 				context.push();
-				bool res = matchRepetitionInternal(pattern, context, begin, end, 0);
+
+				// accept everything until repetition is complete
+				std::function<bool(MatchContext<T>&)> accept = [](MatchContext<T>& context) { return true; };
+				bool res = matchRepetitionInternal(pattern, context, begin, end, 0, accept);
+
+				// drop extra level
 				context.pop();
-				return res;
+
+				// conduct delayed checks
+				return res && delayedCheck(context);
 			}
 
 		#undef MATCH
@@ -650,9 +672,9 @@ namespace pattern {
 		namespace {
 
 			template<typename T>
-			bool match_internal(const TreePattern& pattern, MatchContext<T>& context, const typename T::value_type& tree) {
+			bool match_internal(const TreePattern& pattern, MatchContext<T>& context, const typename T::value_type& tree, const std::function<bool(MatchContext<T>&)>& delayedCheck) {
 				switch(pattern.type) {
-					#define CASE(NAME) case TreePattern::NAME : return tree::match ## NAME (static_cast<const pattern::tree::NAME&>(pattern), context, tree)
+					#define CASE(NAME) case TreePattern::NAME : return tree::match ## NAME (static_cast<const pattern::tree::NAME&>(pattern), context, tree, delayedCheck)
 						CASE(Value);
 						CASE(Constant);
 						CASE(Variable);
@@ -671,7 +693,15 @@ namespace pattern {
 		}
 
 		template<typename T>
-		bool match(const TreePattern& pattern, MatchContext<T>& context, const typename T::value_type& tree) {
+		bool match(const TreePattern& pattern, MatchContext<T>& context, const typename T::value_type& tree, const std::function<bool(MatchContext<T>&)>& delayedCheck) {
+
+			const bool DEBUG = false;
+
+			if (DEBUG) std::cout << "Matching " << pattern << " against " << tree << " with context " << context << " ... \n";
+
+			// quick check for wildcards (should not even be cached)
+			if (pattern.type == TreePattern::Wildcard) return delayedCheck(context);
+
 			// skip searching within types if not searching for a type
 			if (!pattern.mayBeType && isTypeOrValueOrParam(tree)) return false;
 
@@ -679,25 +709,39 @@ namespace pattern {
 			if (pattern.isVariableFree) {
 				CachedMatchResult cachRes = context.cachedMatch(pattern, tree);
 				if (cachRes != Unknown) {
-					return cachRes == Yes;
+					bool res = (cachRes == Yes) && delayedCheck(context);
+					if (DEBUG) std::cout << "Matching " << pattern << " against " << tree << " with context " << context << " ... - from cache: " << res << "\n";
+					return res;
 				}
 
-				// resolve and save result
-				bool res = match_internal(pattern, context, tree);
+				// resolve without delayed checks and save result
+				std::function<bool(MatchContext<T>&)> accept = [](MatchContext<T>& context) { return true; };
+				bool res = match_internal(pattern, context, tree, accept);
 				context.addToCache(pattern, tree, res);
+
+				// return result + delayed checks
+				res = res && delayedCheck(context);
+				if (DEBUG) std::cout << "Matching " << pattern << " against " << tree << " with context " << context << " ... - added to cache: " << res << "\n";
 				return res;
 			}
 
 			// for all the rest, use non-cached inner implementation
-			return match_internal(pattern, context, tree);
-
+			bool res = match_internal(pattern, context, tree, delayedCheck);
+			if (DEBUG) std::cout << "Matching " << pattern << " against " << tree << " with context " << context << " ... - matched: " << res << "\n";
+			return res;
 		}
 
 
 		template<typename T, typename iterator = typename T::value_iterator>
-		bool match(const ListPattern& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end) {
+		bool match(const ListPattern& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end, const std::function<bool(MatchContext<T>&)>& delayedCheck) {
+
+			const bool DEBUG = false;
+
+			if (DEBUG) std::cout << "Matching " << pattern << " against " << join(", ", begin, end, print<deref<typename T::value_type>>()) << " with context " << context << " ... \n";
+
+			bool res = false;
 			switch(pattern.type) {
-				#define CASE(NAME) case ListPattern::NAME : return list::match ## NAME (static_cast<const pattern::list::NAME&>(pattern), context, begin, end)
+				#define CASE(NAME) case ListPattern::NAME : res = list::match ## NAME (static_cast<const pattern::list::NAME&>(pattern), context, begin, end, delayedCheck); break
 					CASE(Empty);
 					CASE(Single);
 					CASE(Variable);
@@ -706,8 +750,11 @@ namespace pattern {
 					CASE(Repetition);
 				#undef CASE
 			}
-			assert(false && "Missed a pattern type!");
-			return false;
+
+			if (DEBUG) std::cout << "Matching " << pattern << " against " << join(", ", begin, end, print<deref<typename T::value_type>>()) << " with context " << context << " ...  match: " << res << "\n";
+			return res;
+//			assert(false && "Missed a pattern type!");
+//			return false;
 		}
 
 	} // end namespace details
