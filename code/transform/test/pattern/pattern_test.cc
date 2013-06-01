@@ -250,6 +250,56 @@ namespace pattern {
 
 	}
 
+	TEST(ListPattern, Variable) {
+
+		TreePtr treeA = makeTree('a');
+		TreePtr treeB = makeTree('b');
+		TreePtr treeX = makeTree('x');
+
+		ListPatternPtr a = listVar("a");
+		ListPatternPtr b = listVar("b");
+		TreePatternPtr x = atom(makeTree('x'));
+
+		TreePatternPtr p = node(a << x << b);
+
+		// test general matching
+		EXPECT_PRED2(isMatch, p, makeTree(treeX));
+		EXPECT_PRED2(isMatch, p, makeTree(treeA, treeX));
+		EXPECT_PRED2(isMatch, p, makeTree(treeX, treeB));
+		EXPECT_PRED2(isMatch, p, makeTree(treeA, treeB, treeX, treeB));
+		EXPECT_PRED2(isMatch, p, makeTree(treeA, treeB, treeX, treeB, treeA));
+
+		EXPECT_PRED2(isMatch, p, makeTree(treeX, treeX));
+		EXPECT_PRED2(isMatch, p, makeTree(treeX, treeA, treeX));
+		EXPECT_PRED2(isMatch, p, makeTree(treeA, treeX, treeA, treeX));
+
+		EXPECT_PRED2(noMatch, p, makeTree());
+		EXPECT_PRED2(noMatch, p, makeTree(treeA));
+		EXPECT_PRED2(noMatch, p, makeTree(treeA, treeB));
+
+		// test match result
+		auto match = p->matchTree(makeTree('n', treeA, treeB, treeB, treeX, treeA));
+		ASSERT_TRUE(match);
+		EXPECT_EQ(toVector(treeA, treeB, treeB), match->getVarBinding("a").getList());
+		EXPECT_EQ(toVector(treeA), match->getVarBinding("b").getList());
+
+		match = p->matchTree(makeTree('n', treeA, treeB, treeB, treeX, treeA, treeB));
+		ASSERT_TRUE(match);
+		EXPECT_EQ(toVector(treeA, treeB, treeB), match->getVarBinding("a").getList());
+		EXPECT_EQ(toVector(treeA, treeB), match->getVarBinding("b").getList());
+
+		match = p->matchTree(makeTree('n', treeX, treeA, treeB));
+		ASSERT_TRUE(match);
+		EXPECT_EQ(toVector<TreePtr>(), match->getVarBinding("a").getList());
+		EXPECT_EQ(toVector(treeA, treeB), match->getVarBinding("b").getList());
+
+		match = p->matchTree(makeTree('n', treeX));
+		ASSERT_TRUE(match);
+		EXPECT_EQ(toVector<TreePtr>(), match->getVarBinding("a").getList());
+		EXPECT_EQ(toVector<TreePtr>(), match->getVarBinding("b").getList());
+
+	}
+
 	TEST(Wildcard, Basic) {
 
 		TreePtr treeA = makeTree('a');

@@ -651,10 +651,18 @@ namespace pattern {
 			}
 
 			MATCH(Repetition) {
+				// increase nesting level of variables by one
 				context.push();
-				bool res = matchRepetitionInternal(pattern, context, begin, end, 0, delayedCheck);
+
+				// accept everything until repetition is complete
+				std::function<bool(MatchContext<T>&)> accept = [](MatchContext<T>& context) { return true; };
+				bool res = matchRepetitionInternal(pattern, context, begin, end, 0, accept);
+
+				// drop extra level
 				context.pop();
-				return res;
+
+				// conduct delayed checks
+				return res && delayedCheck(context);
 			}
 
 		#undef MATCH
