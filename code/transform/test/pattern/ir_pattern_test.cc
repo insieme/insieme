@@ -64,6 +64,15 @@ bool noMatch(const TreePatternPtr& pattern, const NodePtr& node) {
 	return !isMatch(pattern, node);
 }
 
+template<typename T>
+vector<T> filterNull(const vector<T>& list) {
+	vector<T> res;
+	for (auto cur : list) {
+		if (cur) res.push_back(cur);
+	}
+	return res;
+}
+
 TEST(IRConvert, Basic) {
 	NodeManager manager;
 	auto t = [&manager](const string& typespec) { 
@@ -545,7 +554,7 @@ TEST(PatternTests, AllVarDecls) {
 
 }
 
-TEST(PatternTests, UnusedVariable) {
+TEST(PatternTests, VarUsage) {
 
 	core::NodeManager manager;
 	IRBuilder builder(manager);
@@ -559,7 +568,7 @@ TEST(PatternTests, UnusedVariable) {
 					int<4> c = a + b;
 
 					int<4> d = 3;
-					int<4> e = d;
+					int<4> e = d + a;
 				}
 			)"
 	));
@@ -571,11 +580,13 @@ TEST(PatternTests, UnusedVariable) {
 	auto use = !irp::declarationStmt(any, any) & node(+(anyList << x << anyList));
 
 //	auto pattern = aT(decl) & !aT(use);
-	auto used = aT(decl); // & aT(var("y", use));
+	auto used = aT(decl) & aT(var("y", use));
 	auto unused = aT(decl) & !aT(use);
+	auto allUses = aT(decl) & aT(use) & outermost(var("y", use));
 
 //	std::cout << used << "\n";
 //	std::cout << unused << "\n";
+//	std::cout << allUses << "\n";
 
 	auto res1 = used->matchPointer(code);
 	ASSERT_TRUE(res1);
@@ -583,10 +594,15 @@ TEST(PatternTests, UnusedVariable) {
 	EXPECT_EQ("AP(v0)", toString(res1->getVarBinding("x")));
 //	EXPECT_EQ("AP(int.add(v0, v1))", toString(res1->getVarBinding("y")));
 
-//	auto res2 = unused->matchPointer(code);
-//	ASSERT_TRUE(res2);
+	auto res2 = unused->matchPointer(code);
+	ASSERT_TRUE(res2);
 //	std::cout << "Match: " << *res2 << "\n";
 
+	auto res3 = allUses->matchPointer(code);
+	ASSERT_TRUE(res3);
+//	std::cout << "Match: " << *res3 << "\n";
+	EXPECT_EQ("AP(v0)", toString(res3->getVarBinding("x").getValue()));
+	EXPECT_EQ("[AP(int.add(v0, v1)),AP(int.add(v3, v0))]", toString(res3->getVarBinding("y").getList()));
 
 //	std::cout << "x=" << res->getVarBinding("x") << "\n";
 //	std::cout << "y=" << res->getVarBinding("y") << "\n";

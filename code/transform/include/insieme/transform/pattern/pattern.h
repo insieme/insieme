@@ -533,6 +533,11 @@ namespace pattern {
 
 	// more complex stuff ...
 
+	inline TreePatternPtr all(const TreePatternPtr& a) {
+		// collect all occurs of pattern a
+		return rT((a & node(*recurse)) | (!a & node(*recurse)));
+	}
+
 	inline TreePatternPtr outermost(const TreePatternPtr& a) {
 		// it is the outer most or not, then the next is nested
 		return rT(a | (!a & node(*rec("_outermost"))), "_outermost");

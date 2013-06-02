@@ -429,7 +429,7 @@ namespace pattern {
 
 			MATCH(Descendant) {
 				// search for all patterns occurring in the sub-trees
-				return all(pattern.subPatterns, [&](const TreePatternPtr& cur) {
+				return ::all(pattern.subPatterns, [&](const TreePatternPtr& cur) {
 					return contains(context, tree, cur, delayedCheck);
 				});
 			}
