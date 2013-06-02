@@ -540,7 +540,7 @@ namespace pattern {
 
 	inline TreePatternPtr outermost(const TreePatternPtr& a) {
 		// it is the outer most or not, then the next is nested
-		return rT(a | (!a & node(*rec("_outermost"))), "_outermost");
+		return rT(a | (!a & node(*recurse)));
 	}
 
 	inline TreePatternPtr step(const TreePatternPtr& a) {

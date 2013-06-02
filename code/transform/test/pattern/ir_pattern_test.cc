@@ -522,6 +522,56 @@ TEST(TargetFilter, InnerMostForLoop2) {
 
 }
 
+TEST(TargetFilter, AllForLoops) {
+
+	core::NodeManager manager;
+	IRBuilder builder(manager);
+
+	std::map<std::string, core::NodePtr> symbols;
+	symbols["v"] = builder.variable(builder.parseType("ref<array<int<4>,1>>"));
+
+	core::NodePtr node = builder.parseStmt(
+		"for(uint<4> l = 8u .. 70u : 3u) {"
+		"	l; "
+		"	for(uint<4> i = 10u .. 50u) {"
+		"		for(uint<4> j = 3u .. 25u) {"
+		"			j; "
+		"			for(uint<4> k = 2u .. 100u) { "
+		"				v[i+j]; "
+		"			}; "
+		"           ref<uint<4>> a = var(3u); "
+		"			a = i; "
+		"		}"
+		"	}"
+		"	for(uint<4> k = 2u .. 100u) {"
+		"		v[l+k];"
+		"	}"
+		"}", symbols);
+
+	EXPECT_TRUE(node);
+
+	core::NodeAddress root(node);
+
+	core::NodeAddress for1(node);
+	core::NodeAddress for2 = for1.getAddressOfChild(3,1);
+	core::NodeAddress for3 = for2.getAddressOfChild(3,0);
+	core::NodeAddress for4 = for3.getAddressOfChild(3,1);
+	core::NodeAddress for5 = for1.getAddressOfChild(3,2);
+
+	EXPECT_EQ(core::NT_ForStmt, for1->getNodeType());
+	EXPECT_EQ(core::NT_ForStmt, for2->getNodeType());
+	EXPECT_EQ(core::NT_ForStmt, for3->getNodeType());
+	EXPECT_EQ(core::NT_ForStmt, for4->getNodeType());
+	EXPECT_EQ(core::NT_ForStmt, for5->getNodeType());
+
+	// try getting innermost loop
+	TreePatternPtr pattern = all(var("x", irp::forStmt()));
+	auto match = pattern->matchAddress(root);
+	ASSERT_TRUE(match);
+	EXPECT_EQ(toVector(for1, for2, for3, for4, for5), match->getVarBinding("x").getList());
+
+}
+
 TEST(PatternTests, AllVarDecls) {
 
 	core::NodeManager manager;
@@ -582,7 +632,7 @@ TEST(PatternTests, VarUsage) {
 //	auto pattern = aT(decl) & !aT(use);
 	auto used = aT(decl) & aT(var("y", use));
 	auto unused = aT(decl) & !aT(use);
-	auto allUses = aT(decl) & aT(use) & outermost(var("y", use));
+	auto allUses = aT(decl) & aT(use) & all(var("y", use));
 
 //	std::cout << used << "\n";
 //	std::cout << unused << "\n";

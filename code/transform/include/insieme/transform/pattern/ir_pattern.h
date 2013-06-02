@@ -241,8 +241,7 @@ namespace irp {
 	 */
 	inline TreePatternPtr innerMostForLoop(unsigned level = 1) {
 		if (level <= 1) { return forStmt(!aT(forStmt())); }
-		string recVar = format("_inner_most_for_%d", level);
-		return irp::forStmt(rT( innerMostForLoop(level-1) | (!irp::forStmt() & step(rec(recVar))), recVar));
+		return irp::forStmt(rT( innerMostForLoop(level-1) | (!irp::forStmt() & step(recurse))));
 	}
 
 	/**
@@ -250,9 +249,7 @@ namespace irp {
 	 */
 	inline TreePatternPtr innerMostForLoopNest(unsigned level = 1) {
 		if (level <= 1) { return forStmt(!aT(forStmt())); }
-		string recVarA = format("_inner_most_nest_%d_a", level);
-		string recVarB = format("_inner_most_nest_%d_b", level);
-		return rT(irp::forStmt(rT( innerMostForLoopNest(level-1) | (!irp::forStmt() & step(rec(recVarA))), recVarA) & !step(aT(rec(recVarB)))), recVarB);
+		return rT(irp::forStmt(rT( innerMostForLoopNest(level-1) | (!irp::forStmt() & step(rec("x"))), "x") & !step(aT(rec("y")))), "y");
 	}
 
 	// two utilities allowing to collect all matches of a given pattern within a tree
