@@ -681,13 +681,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThisExpr(const 
 //					EXCEPTION CXX THROW EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThrowExpr(const clang::CXXThrowExpr* throwExpr) {
-	assert (false && "throw expr");
-	return core::ExpressionPtr();
-	/*
-	START_LOG_EXPR_CONVERSION(throwExpr);
-	assert(false && "VisitCXXThrowExpr not yet handled");
-	VLOG(2) << "End of expression\n";
-	*/
+	core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(throwExpr, retIr);
+	retIr = Visit(throwExpr->getSubExpr());
+	VLOG(2) << builder.throwStmt(retIr);
+
+	assert(false && "Throw -- Currently not supported!");
+
+
+	return retIr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

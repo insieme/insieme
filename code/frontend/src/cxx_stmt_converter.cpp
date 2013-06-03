@@ -242,12 +242,30 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(cl
 	*/
 }
 
+
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
+
+	VLOG(2) << convFact.convertType(catchStmt->getCaughtType()->getTypePtr());
+	core::VariablePtr var = convFact.convertVarDecl(catchStmt->getExceptionDecl());
+
+	core::CompoundStmtPtr body = Visit(catchStmt->getHandlerBlock());
+	VLOG(2) << builder.catchClause(var, body);
 	assert(false && "Catch -- Currently not supported!");
 	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
+
+	core::CompoundStmtPtr body = Visit(tryStmt->getTryBlock());
+
+	vector<core::CatchClausePtr> catchClauses;
+	unsigned numCatch = tryStmt->getNumHandlers();
+	for(unsigned i=0;i<numCatch;i++) {
+		catchClauses.push_back(Visit(tryStmt->getHandler(i)));
+	}
+
+	VLOG(2) << builder.tryCatchStmt(body, catchClauses);
+
 	assert(false && "Try -- Currently not supported!");
 	return stmtutils::StmtWrapper();
 }
