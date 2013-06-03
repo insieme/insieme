@@ -69,7 +69,19 @@ namespace {
 	std::string buildNameTypeChain(const  clang::Decl* decl){
 		assert(llvm::isa<clang::NamedDecl>(decl) && "only named decl can be converted to name + type");
 		std::string res  = llvm::cast<clang::NamedDecl>(decl)->getQualifiedNameAsString();
-		
+			
+		// remove type spetialitation
+		std::string tmp;
+		unsigned cnt = 0;
+		for (unsigned i= 0; i < res.size(); i++){
+			char cur = res.c_str()[i];
+			if (cur == '<') cnt++;
+			else if (cur == '>') cnt--;
+			else if (cnt == 0) tmp.insert(tmp.end(), 1, cur);
+		}
+		if (cnt == 0)
+			res = tmp;
+
 		if (llvm::isa<clang::FunctionDecl>(decl)){
 			res.append(" {");
 			res.append(llvm::cast<clang::ValueDecl>(decl)->getType().getAsString());
@@ -78,7 +90,6 @@ namespace {
 		else if (llvm::isa<clang::CXXRecordDecl>(decl)){
 			res.append(" {class}");
 		}
-
 		return res;
 	}
 }
@@ -197,6 +208,8 @@ void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 //
 Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const std::string& symbol) const{
 
+
+
 	tIndex::const_iterator match = this->mIndex.find(symbol);
 	if (match != this->mIndex.end()){
 		assert(match->second.first && match->second.second && " found a wrong definition");
@@ -231,9 +244,11 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Dec
 			case clang::FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
 				VLOG(2) << "TK_FunctionTemplateSpecialization";
 				if(const clang::FunctionTemplateSpecializationInfo* ti = fd->getTemplateSpecializationInfo() ) {
+
 					VLOG(2) << ti->getTemplate()->getTemplatedDecl();
 					VLOG(2) << "fd: " << buildNameTypeChain(fd);
-					VLOG(2) << "templateDecl: " << buildNameTypeChain(ti->getTemplate()->getTemplatedDecl());
+				//	VLOG(2) << "templateDecl: " << buildNameTypeChain(ti->getTemplate()->getTemplatedDecl());
+					VLOG(2) << "is explicit: " << ti->isExplicitSpecialization();
 					return TranslationUnitPair( { const_cast<clang::FunctionDecl*>(fd), getDefAndTUforDefinition(buildNameTypeChain(ti->getTemplate()->getTemplatedDecl())).second});
 				}
 				break;
