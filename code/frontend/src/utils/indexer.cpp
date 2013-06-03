@@ -193,7 +193,6 @@ void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 }
 
 
-
 ////////////////////////////////////////////////
 //
 Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const std::string& symbol) const{
@@ -205,20 +204,6 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const std::strin
 	}
 
 	return  voidPair;
-}
-
-////////////////////////////////////////////////
-//
-clang::Decl* Indexer::getDefinitionFor (const std::string& symbol) const{
-
-	tIndex::const_iterator match = this->mIndex.find(symbol);
-	if (match != this->mIndex.end()){
-		assert(match->second.first && " found a wrong definition");
-		return match->second.first;
-	}
-	else {
-		return  NULL;
-	}
 }
 
 ////////////////////////////////////////////////
@@ -264,14 +249,14 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Dec
 ////////////////////////////////////////////////
 //
 clang::Decl* Indexer::getDefinitionFor (const clang::Decl* decl) const{
-	return getDefinitionFor(buildNameTypeChain(decl));
+	return getDefAndTUforDefinition(decl).first;
 }
 
 
 ////////////////////////////////////////////////
 //
 clang::Decl* Indexer::getMainFunctionDefinition () const{
-	return getDefinitionFor("main");
+	return getDefAndTUforDefinition("main").first;
 }
 
 ////////////////////////////////////////////////

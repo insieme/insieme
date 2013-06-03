@@ -125,11 +125,6 @@ private:
 
 	////////////////////////////////////////////////
 	//
-	clang::Decl* getDefinitionFor (const std::string &symbol) const;
-
-
-	////////////////////////////////////////////////
-	//
 	void indexDeclaration(clang::Decl* decl, insieme::frontend::TranslationUnit* tu);
 	
 
