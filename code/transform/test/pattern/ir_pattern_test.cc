@@ -627,7 +627,7 @@ TEST(PatternTests, VarUsage) {
 
 	auto x = var("x");
 	auto decl = irp::declarationStmt(x, any);
-	auto use = !irp::declarationStmt(any, any) & node(+(anyList << x << anyList));
+	auto use = !irp::declarationStmt(any, any) & step(x);
 
 //	auto pattern = aT(decl) & !aT(use);
 	auto used = aT(decl) & aT(var("y", use));

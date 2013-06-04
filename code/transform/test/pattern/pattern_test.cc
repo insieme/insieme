@@ -736,6 +736,57 @@ namespace pattern {
 		// if (res) EXPECT_EQ("Match({x=[b,c,b], y=[(b,(c,(b,a))),(c,(b,a)),(b,a)]})", toString(*res)); //FIXME
 	}
 
+	TEST(Match, All) {
+
+		TreePtr a = makeTree('a');
+		TreePtr b = makeTree('b');
+		TreePtr c = makeTree('c');
+
+		TreePatternPtr pattern;
+		pattern = all(var("x", node('a', anyList)));			// find all nodes labeled 'a'
+
+		// this pattern should match everything ...
+		EXPECT_PRED2(isMatch, pattern, a);
+		EXPECT_PRED2(isMatch, pattern, b);
+		EXPECT_PRED2(isMatch, pattern, c);
+
+		EXPECT_PRED2(isMatch, pattern, makeTree('a', b, c));
+		EXPECT_PRED2(isMatch, pattern, makeTree('b', a, c));
+		EXPECT_PRED2(isMatch, pattern, makeTree('c', c, c));
+
+		// and it should obtain access to all outermost a-nodes
+		auto res = pattern->matchTree(a);
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[a]})", toString(*res));
+
+		res = pattern->matchTree(b);
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({})", toString(*res));
+
+		res = pattern->matchTree(makeTree('a', b, c));
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[a(b,c)]})", toString(*res));
+
+		res = pattern->matchTree(makeTree('b', a, c));
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[null,a]})", toString(*res));
+
+		res = pattern->matchTree(makeTree('b', makeTree('b',a,makeTree('a',b)), c));
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[null,null,a,a(b)]})", toString(*res));
+
+		res = pattern->matchTree(makeTree('a', a, a));
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[a(a,a),a,a]})", toString(*res));
+
+		res = pattern->matchTree(makeTree('b', makeTree('a', a, a)));
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[null,a(a,a),a,a]})", toString(*res));
+
+		res = pattern->matchTree(makeTree('b', makeTree('b', makeTree('b', a), a), a));
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[null,null,null,a,a,a]})", toString(*res));
+	}
 
 	TEST(Match, Outermost) {
 
@@ -759,27 +810,92 @@ namespace pattern {
 
 		// and it should obtain access to all outermost a-nodes
 		auto res = pattern->matchTree(a);
+		EXPECT_TRUE(res);
 		if (res) EXPECT_EQ("Match({x=[a]})", toString(*res));
 
 		res = pattern->matchTree(b);
+		EXPECT_TRUE(res);
 		if (res) EXPECT_EQ("Match({})", toString(*res));
 
 		res = pattern->matchTree(makeTree('a', b, c));
+		EXPECT_TRUE(res);
 		if (res) EXPECT_EQ("Match({x=[a(b,c)]})", toString(*res));
 
 		res = pattern->matchTree(makeTree('b', a, c));
+		EXPECT_TRUE(res);
 		if (res) EXPECT_EQ("Match({x=[null,a]})", toString(*res));
 
 		res = pattern->matchTree(makeTree('b', makeTree('b',a,makeTree('a',b)), c));
+		EXPECT_TRUE(res);
 		if (res) EXPECT_EQ("Match({x=[null,null,a,a(b)]})", toString(*res));
 
 		res = pattern->matchTree(makeTree('a', a, a));
+		EXPECT_TRUE(res);
 		if (res) EXPECT_EQ("Match({x=[a(a,a)]})", toString(*res));
 
 		res = pattern->matchTree(makeTree('b', makeTree('a', a, a)));
+		EXPECT_TRUE(res);
 		if (res) EXPECT_EQ("Match({x=[null,a(a,a)]})", toString(*res));
 
 		res = pattern->matchTree(makeTree('b', makeTree('b', makeTree('b', a), a), a));
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[null,null,null,a,a,a]})", toString(*res));
+	}
+
+	TEST(Match, Innermost) {
+
+		TreePtr a = makeTree('a');
+		TreePtr b = makeTree('b');
+		TreePtr c = makeTree('c');
+
+		TreePatternPtr pattern;
+
+		auto pa = var("x", node('a', anyList));
+//		pattern = rT((pa & !node(+recurse)) | (!pa & node(*recurse)));
+//		pattern = rT(((!step(aT(pa))) & pa) | node(*recurse));
+
+		pattern = innermost(var("x", node('a', anyList)));			// find all innermost as
+
+		// this pattern should match everything ...
+		EXPECT_PRED2(isMatch, pattern, a);
+		EXPECT_PRED2(isMatch, pattern, b);
+		EXPECT_PRED2(isMatch, pattern, c);
+
+		EXPECT_PRED2(isMatch, pattern, makeTree('a', b, c));
+		EXPECT_PRED2(isMatch, pattern, makeTree('b', a, c));
+		EXPECT_PRED2(isMatch, pattern, makeTree('c', c, c));
+
+		// and it should obtain access to all outermost a-nodes
+		auto res = pattern->matchTree(a);
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[a]})", toString(*res));
+
+		res = pattern->matchTree(b);
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({})", toString(*res));
+
+		res = pattern->matchTree(makeTree('a', b, c));
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[a(b,c)]})", toString(*res));
+
+		res = pattern->matchTree(makeTree('b', a, c));
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[null,a]})", toString(*res));
+
+		res = pattern->matchTree(makeTree('b', makeTree('b',a,makeTree('a',b)), c));
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[null,null,a,a(b)]})", toString(*res));
+
+		res = pattern->matchTree(makeTree('a', a, a));
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[null,a,a]})", toString(*res));
+
+		res = pattern->matchTree(makeTree('b', makeTree('a', a, a)));
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("Match({x=[null,null,a,a]})", toString(*res));
+
+		res = pattern->matchTree(makeTree('b', makeTree('b', makeTree('b', a), a), a));
+		EXPECT_TRUE(res);
 		if (res) EXPECT_EQ("Match({x=[null,null,null,a,a,a]})", toString(*res));
 	}
 
