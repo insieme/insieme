@@ -579,7 +579,9 @@ protected:
 		StatementList replacements;
 		VarList allp;
 		VarList firstPrivates;
+		VarList lastPrivates;
 		VarList alll;
+		StatementList ifStmtBodyLast;
 		// for OMP tasks, default free variable binding is threadprivate
 		if(taskP) {
 			auto&& freeVarsAndFuns = core::analysis::getFreeVariables(stmtNode);
@@ -612,11 +614,20 @@ protected:
 			firstPrivates.insert(firstPrivates.end(), clause->getFirstPrivate().begin(), clause->getFirstPrivate().end());
 			allp.insert(allp.end(), clause->getFirstPrivate().begin(), clause->getFirstPrivate().end());
 		}
+		if(forP && forP->hasLastPrivate()) {
+			lastPrivates.insert(lastPrivates.end(), forP->getLastPrivate().begin(), forP->getLastPrivate().end());
+			allp.insert(allp.end(), forP->getLastPrivate().begin(), forP->getLastPrivate().end());
+		}
 		if(clause->hasPrivate()) allp.insert(allp.end(), clause->getPrivate().begin(), clause->getPrivate().end());
 		if(clause->hasFirstLocal()) {
 			firstPrivates.insert(firstPrivates.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
 			allp.insert(allp.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
 			alll.insert(alll.end(), clause->getFirstLocal().begin(), clause->getFirstLocal().end());
+		}
+		if(forP && forP->hasLastLocal()) {
+			lastPrivates.insert(lastPrivates.end(), forP->getLastLocal().begin(), forP->getLastLocal().end());
+			allp.insert(allp.end(), forP->getLastLocal().begin(), forP->getLastLocal().end());
+			alll.insert(alll.end(), forP->getLastLocal().begin(), forP->getLastLocal().end());
 		}
 		if(clause->hasLocal()) {
 			allp.insert(allp.end(), clause->getLocal().begin(), clause->getLocal().end());
@@ -650,6 +661,9 @@ protected:
 			}
 			if(clause->hasReduction() && contains(clause->getReduction().getVars(), varExp)) {
 				decl = build.declarationStmt(pVar, getReductionInitializer(clause->getReduction().getOperator(), expType));
+			}
+			if(contains(lastPrivates, varExp)) {
+				ifStmtBodyLast.push_back(build.assign(varExp, build.deref(pVar)));
 			}
 			replacements.push_back(decl);
 		});
@@ -690,9 +704,24 @@ protected:
 		if(!publicToPrivateAddressMap.empty()) subStmt = transform::pushInto(nodeMan, publicToPrivateAddressMap).as<StatementPtr>();
 
 		// specific handling if clause is a omp for
-		if(forP) {
+		if(forP){
 			if(forP->hasOrdered()) subStmt = processOrderedFor(subStmt);
-			subStmt = build.pfor(static_pointer_cast<const ForStmt>(subStmt));
+			// Handling lastlocal
+			if(lastPrivates.size())
+			{
+				auto outer = static_pointer_cast<const ForStmt>(subStmt);
+				StatementList newForBodyStmts;
+				for_each(outer->getBody()->getStatements(), [&](core::StatementPtr elem){
+					newForBodyStmts.push_back(elem);
+				});
+				auto condition = build.eq(build.forStmtFinalValue(outer), outer->getIterator());
+				auto ifStmt = build.ifStmt(condition, build.compoundStmt(ifStmtBodyLast));
+				newForBodyStmts.push_back(ifStmt);
+				auto newForStmt = build.forStmt(outer->getDeclaration(), outer->getEnd(), outer->getStep(), build.compoundStmt(newForBodyStmts));
+				subStmt = build.pfor(newForStmt);
+			}
+			else
+				subStmt = build.pfor(static_pointer_cast<const ForStmt>(subStmt));
 		}
 		replacements.push_back(subStmt);
 		// implement reductions
@@ -751,7 +780,7 @@ protected:
 
 		/* if there isn't any clause nothing to do */
 
-		if( !reg->hasParam() && !reg->hasLocal() && !reg->hasFirstLocal() && !reg->hasLastLocal() && !reg->hasTarget() && !reg->hasObjective() )
+		if( !reg->hasParam() && !reg->hasLocal() && !reg->hasFirstLocal() && !reg->hasTarget() && !reg->hasObjective() )
 			return stmtNode;
 
 		/* else, region as parallel with one thread */

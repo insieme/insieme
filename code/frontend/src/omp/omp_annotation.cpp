@@ -60,6 +60,8 @@ const std::string BaseAnnotation::toString() const {
 std::ostream& ForClause::dump(std::ostream& out) const {
 	if(hasLastPrivate())
 		out << "lastprivate(" << join(",", *lastPrivateClause) << "), ";
+	if(hasLastLocal())
+		out << "lastlocal("   << join(",", *lastLocalClause)   << "), ";
 	if(hasSchedule())
 		scheduleClause->dump(out) << ", ";
 	if(hasCollapse())
@@ -109,8 +111,6 @@ std::ostream& CommonClause::dump(std::ostream& out) const {
 		out << "local(" << join(",", *localClause) << "), ";
 	if(hasFirstLocal())
 		out << "firstlocal(" << join(",", *firstLocalClause) << "), ";
-	if(hasLastLocal())
-		out << "lastlocal(" << join(",", *lastLocalClause) << "), ";
 	return out;
 }
 

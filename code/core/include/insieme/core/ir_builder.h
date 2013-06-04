@@ -466,6 +466,8 @@ namespace core {
 		ForStmtPtr forStmt(const DeclarationStmtPtr& var, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const;
 		ForStmtPtr forStmt(const VariablePtr& var, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const;
 
+		ExpressionPtr forStmtFinalValue(const ForStmtPtr& loopStmt);
+
 		SwitchCasePtr switchCase(const LiteralPtr& lit, const StatementPtr& stmt) const { return switchCase(lit, wrapBody(stmt)); };
 
 		SwitchStmtPtr switchStmt(const ExpressionPtr& switchStmt, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase = StatementPtr()) const;
