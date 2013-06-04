@@ -47,12 +47,16 @@
 #include "insieme/utils/compiler/compiler.h"
 #include "insieme/frontend/frontend.h"
 
+#include <boost/filesystem.hpp>
+
 #include <fstream>
 #include <string>
 
 using namespace insieme::core;
-namespace fe = insieme::frontend;
 using namespace clang;
+
+namespace fe = insieme::frontend;
+namespace fs = boost::filesystem;
 
 TEST(ASTDumpTest, FileTest) {
 
@@ -93,3 +97,25 @@ TEST(ASTDumpTest, FileTest) {
 
 	EXPECT_EQ(ir_c_file.str(), ir_o_file.str());
 }
+
+//TEST(ASTDumpTest, Simple) {
+//
+//	// create some temporary file
+//	fs::path targetFile = fs::unique_path(fs::temp_directory_path() / "trg%%%%%%%%.o");
+//
+//	{
+//		// Part one: source to object file
+//		NodeManager mgr;
+//		fe::ConversionJob job(SRC_DIR "../../frontend/test/inputs/sniplets/vecCtor.cpp");
+//		job.setOption(fe::ConversionJob::CompilationOnly);
+//		job.storeAST(mgr, targetFile.string());
+//	}
+//
+//	{
+//		// Part two: reload object file
+//		NodeManager mgr;
+//		fe::ConversionJob job(targetFile);
+//		auto res = job.execute(mgr);
+//	}
+//}
+
