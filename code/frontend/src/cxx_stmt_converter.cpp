@@ -245,29 +245,38 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(cl
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
 
-	VLOG(2) << convFact.convertType(catchStmt->getCaughtType()->getTypePtr());
-	core::VariablePtr var = convFact.convertVarDecl(catchStmt->getExceptionDecl());
-
-	core::CompoundStmtPtr body = Visit(catchStmt->getHandlerBlock());
-	VLOG(2) << builder.catchClause(var, body);
 	assert(false && "Catch -- Currently not supported!");
-	return stmtutils::StmtWrapper();
+	VLOG(2) << convFact.convertType(catchStmt->getCaughtType().getTypePtr());
+	core::DeclarationStmtPtr declStmt = convFact.convertVarDecl(catchStmt->getExceptionDecl());
+	core::VariablePtr var = declStmt->getVariable();
+
+	return stmtutils::tryAggregateStmts( builder, Visit(catchStmt->getHandlerBlock()) );
 }
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
 
-	core::CompoundStmtPtr body = Visit(tryStmt->getTryBlock());
+	assert(false && "Try -- Currently not supported!");
+	core::CompoundStmtPtr body = builder.wrapBody( stmtutils::tryAggregateStmts( builder, Visit(tryStmt->getTryBlock()) ) );
 
 	vector<core::CatchClausePtr> catchClauses;
 	unsigned numCatch = tryStmt->getNumHandlers();
 	for(unsigned i=0;i<numCatch;i++) {
-		catchClauses.push_back(Visit(tryStmt->getHandler(i)));
+		clang::CXXCatchStmt* catchStmt = tryStmt->getHandler(i);
+
+		core::CompoundStmtPtr body = builder.wrapBody(stmtutils::tryAggregateStmts(builder, Visit(catchStmt)));
+
+		//get catchClause from stmtwrapper
+		
+		VLOG(2) << convFact.convertType(catchStmt->getCaughtType().getTypePtr());
+		core::DeclarationStmtPtr declStmt = convFact.convertVarDecl(catchStmt->getExceptionDecl());
+		core::VariablePtr var = declStmt->getVariable();
+
+		catchClauses.push_back(builder.catchClause(var, body));
 	}
 
 	VLOG(2) << builder.tryCatchStmt(body, catchClauses);
 
-	assert(false && "Try -- Currently not supported!");
-	return stmtutils::StmtWrapper();
+	return stmtutils::tryAggregateStmt(builder, builder.tryCatchStmt(body, catchClauses));
 }
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
