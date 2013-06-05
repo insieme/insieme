@@ -81,6 +81,9 @@ int main(int argc, char** argv) {
 	//		example a few standard options are considered.
 	cmd::Options options = cmd::Options::parse(argc, argv);
 
+	// disable cilk support for the insieme cc
+	options.job.setOption(fe::ConversionJob::Cilk, false);
+
 	if (!options.valid) return (options.help)?0:1;
 
 	// Step 2: load input code
@@ -95,7 +98,6 @@ int main(int argc, char** argv) {
         options.job.storeAST(manager, options.outFile);
         return 0;
     }
-
 
     auto program = options.job.execute(manager);
 

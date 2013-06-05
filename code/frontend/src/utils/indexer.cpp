@@ -69,7 +69,19 @@ namespace {
 	std::string buildNameTypeChain(const  clang::Decl* decl){
 		assert(llvm::isa<clang::NamedDecl>(decl) && "only named decl can be converted to name + type");
 		std::string res  = llvm::cast<clang::NamedDecl>(decl)->getQualifiedNameAsString();
-		
+			
+		// remove type spetialitation
+		std::string tmp;
+		unsigned cnt = 0;
+		for (unsigned i= 0; i < res.size(); i++){
+			char cur = res.c_str()[i];
+			if (cur == '<') cnt++;
+			else if (cur == '>') cnt--;
+			else if (cnt == 0) tmp.insert(tmp.end(), 1, cur);
+		}
+		if (cnt == 0)
+			res = tmp;
+
 		if (llvm::isa<clang::FunctionDecl>(decl)){
 			res.append(" {");
 			res.append(llvm::cast<clang::ValueDecl>(decl)->getType().getAsString());
@@ -78,7 +90,6 @@ namespace {
 		else if (llvm::isa<clang::CXXRecordDecl>(decl)){
 			res.append(" {class}");
 		}
-
 		return res;
 	}
 }
@@ -107,6 +118,7 @@ class IndexerVisitor{
 				indexDeclaration(f->getFriendDecl());	
 			} else {
 				//friendType --> getFriendType()
+				//assert(false && "indexer -- friendType not implemented");
 			}
 		} else if (const clang::NamedDecl *named = llvm::dyn_cast<clang::NamedDecl>(decl)) {
 			assert (named && "no name Decl, can not be indexed and we dont know what it is");
@@ -120,11 +132,11 @@ class IndexerVisitor{
 					// best way to find it, is to keep a simple record to address it
 					if(named->getNameAsString() == "main")
 						mIndex["main"] = elem; 
-				} 
+				}
 			}
-			else if (const clang::CXXRecordDecl *recDecl = llvm::dyn_cast<clang::CXXRecordDecl>(decl)){
-				if (recDecl->hasDefinition()){
-					Indexer::TranslationUnitPair elem =  std::make_pair(llvm::cast<clang::Decl>(recDecl->getDefinition()),mTu); 
+			else if (const clang::CXXRecordDecl *cxxRecDecl = llvm::dyn_cast<clang::CXXRecordDecl>(decl)) {
+				if (cxxRecDecl->hasDefinition()){
+					Indexer::TranslationUnitPair elem =  std::make_pair(llvm::cast<clang::Decl>(cxxRecDecl->getDefinition()),mTu); 
 					mIndex[buildNameTypeChain(decl)] = elem;
 				}
 
@@ -192,10 +204,11 @@ void Indexer::indexTU (insieme::frontend::TranslationUnit* tu){
 }
 
 
-
 ////////////////////////////////////////////////
 //
 Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const std::string& symbol) const{
+
+
 
 	tIndex::const_iterator match = this->mIndex.find(symbol);
 	if (match != this->mIndex.end()){
@@ -207,20 +220,6 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const std::strin
 }
 
 ////////////////////////////////////////////////
-//
-clang::Decl* Indexer::getDefinitionFor (const std::string& symbol) const{
-
-	tIndex::const_iterator match = this->mIndex.find(symbol);
-	if (match != this->mIndex.end()){
-		assert(match->second.first && " found a wrong definition");
-		return match->second.first;
-	}
-	else {
-		return  NULL;
-	}
-}
-
-////////////////////////////////////////////////
 ///
 Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Decl* decl) const{
 	assert(decl && "Cannot look up null pointer!");
@@ -228,6 +227,8 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Dec
 	if(const clang::FunctionDecl* fd = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
 		switch( fd->getTemplatedKind() ) {
 			case clang::FunctionDecl::TemplatedKind::TK_NonTemplate:
+				VLOG(2) << "TK_NonTemplate";
+				VLOG(2) << buildNameTypeChain(fd);
 				return getDefAndTUforDefinition(buildNameTypeChain(fd));
 				break;
 			case clang::FunctionDecl::TemplatedKind::TK_FunctionTemplate:
@@ -241,6 +242,15 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Dec
 				//return getDefAndTUforDefinition(buildNameTypeChain(fd->getMemberSpecializationInfo()->getInstantiatedFrom()));
 				break;
 			case clang::FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
+				VLOG(2) << "TK_FunctionTemplateSpecialization";
+				if(const clang::FunctionTemplateSpecializationInfo* ti = fd->getTemplateSpecializationInfo() ) {
+
+					VLOG(2) << ti->getTemplate()->getTemplatedDecl();
+					VLOG(2) << "fd: " << buildNameTypeChain(fd);
+				//	VLOG(2) << "templateDecl: " << buildNameTypeChain(ti->getTemplate()->getTemplatedDecl());
+					VLOG(2) << "is explicit: " << ti->isExplicitSpecialization();
+					return TranslationUnitPair( { const_cast<clang::FunctionDecl*>(fd), getDefAndTUforDefinition(buildNameTypeChain(ti->getTemplate()->getTemplatedDecl())).second});
+				}
 				break;
 			case clang::FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:
 				break;
@@ -254,14 +264,14 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const clang::Dec
 ////////////////////////////////////////////////
 //
 clang::Decl* Indexer::getDefinitionFor (const clang::Decl* decl) const{
-	return getDefinitionFor(buildNameTypeChain(decl));
+	return getDefAndTUforDefinition(decl).first;
 }
 
 
 ////////////////////////////////////////////////
 //
 clang::Decl* Indexer::getMainFunctionDefinition () const{
-	return getDefinitionFor("main");
+	return getDefAndTUforDefinition("main").first;
 }
 
 ////////////////////////////////////////////////

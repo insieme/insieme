@@ -533,6 +533,10 @@ namespace pattern {
 
 	// more complex stuff ...
 
+	inline TreePatternPtr step(const TreePatternPtr& a) {
+		return node(anyList << a << anyList);
+	}
+
 	inline TreePatternPtr all(const TreePatternPtr& a) {
 		// collect all occurs of pattern a
 		return rT((a & node(*recurse)) | (!a & node(*recurse)));
@@ -543,8 +547,9 @@ namespace pattern {
 		return rT(a | (!a & node(*recurse)));
 	}
 
-	inline TreePatternPtr step(const TreePatternPtr& a) {
-		return node(anyList << a << anyList);
+	inline TreePatternPtr innermost(const TreePatternPtr& a) {
+		// select all that do not contain another a
+		return rT((!step(aT(a)) & a) | node(*recurse));
 	}
 
 } // end namespace pattern

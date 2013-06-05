@@ -131,9 +131,11 @@ const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitF
 	utils::Indexer::TranslationUnitPair&& ret =
 			program.getIndexer().getDefAndTUforDefinition (funcDecl);
 
+
 	// function declaration not found. return the current translation unit
 	if ( !ret.first ) {return NULL;}
-	assert(ret.first && ret.second && "Translation unit for function not found");
+	assert(ret.first && "decl not valid");
+	assert(ret.second && "translation unit not found");
 
 	// update the funcDecl pointer to point to the correct function declaration
 	funcDecl = llvm::cast<FunctionDecl> ( ret.first);
@@ -1028,6 +1030,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		return retExpr;
 	}
 
+	std::cout << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl;
 	assert(currTU && funcDecl->hasBody() && "Function has no body!");
 
 	VLOG(1) << "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
