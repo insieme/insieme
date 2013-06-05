@@ -1031,7 +1031,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	}
 
 	std::cout << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl;
-	assert(currTU && funcDecl->hasBody() && "Function has no body!");
+	assert(currTU && "currTU not set");
+	assert(funcDecl->hasBody() && "Function has no body!");
 
 	VLOG(1) << "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
 	VLOG(1) << "#----------------------------------------------------------------------------------#";
@@ -1449,7 +1450,11 @@ core::NodePtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl
 core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl){
 
 	const clang::FunctionDecl* ctorAsFunct = llvm::cast<clang::FunctionDecl>(ctorDecl);
+	assert(ctorAsFunct);
 	SET_TU(ctorAsFunct);
+	
+	assert(currTU && "currTU not set");
+	assert(ctorAsFunct->hasBody() && "has no body");
 
 	if (!ctorAsFunct){
 		RESTORE_TU();
