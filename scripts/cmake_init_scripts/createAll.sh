@@ -7,4 +7,5 @@ export INSIEME_LIBS_HOME=~/libs
 #export CC=gcc
 
 # run cmake to create the project
-cmake -D CMAKE_BUILD_TYPE=Release ../ -DDOCS=off
+cmake -D CMAKE_BUILD_TYPE=Debug ../ -DDOCS=on -DBUILD_DOXYGEN=on
+

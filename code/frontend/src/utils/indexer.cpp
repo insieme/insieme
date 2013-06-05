@@ -134,7 +134,7 @@ class IndexerVisitor{
 						mIndex["main"] = elem; 
 				}
 			}
-			else if (const clang::CXXRecordDecl *cxxRecDecl = llvm::dyn_cast<clang::CXXRecordDecl>(decl)) {
+			else if (const clang::CXXRecordDecl* cxxRecDecl = llvm::dyn_cast<clang::CXXRecordDecl>(decl)) {
 				if (cxxRecDecl->hasDefinition()){
 					Indexer::TranslationUnitPair elem =  std::make_pair(llvm::cast<clang::Decl>(cxxRecDecl->getDefinition()),mTu); 
 					mIndex[buildNameTypeChain(decl)] = elem;
@@ -148,6 +148,15 @@ class IndexerVisitor{
 			} 
 			else if(const clang::TemplateDecl* templDecl = llvm::dyn_cast<clang::TemplateDecl>(decl)) {
 				indexDeclaration(templDecl->getTemplatedDecl());
+			}
+		} 
+		else if (llvm::isa<clang::LinkageSpecDecl>(decl)) {
+			indexDeclContext(llvm::cast<clang::DeclContext>(decl));
+		}
+		else {
+			//default case -- if DeclContext, try to index it
+			if(clang::DeclContext* declContext = llvm::dyn_cast<clang::DeclContext>(decl)) {
+				indexDeclContext(declContext);
 			}
 		}
 				
@@ -280,7 +289,7 @@ void Indexer::dump() const{
 	tIndex::const_iterator it = mIndex.begin();
 	tIndex::const_iterator end = mIndex.end();
 	for (;it != end; it++){
-		std::cout << "\t[" << it->first << " ," << it->second << "]" << std::endl;
+		std::cout << "\t[" << it->first << " (" << it->second.first->getDeclKindName() << ") ," << it->second << "]" << std::endl;
 	}
 }
 
