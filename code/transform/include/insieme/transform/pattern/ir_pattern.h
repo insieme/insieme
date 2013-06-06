@@ -167,7 +167,7 @@ namespace irp {
 		return compoundStmt(single(stmt));
 	}
 
-	inline TreePatternPtr declarationStmt(const TreePatternPtr& variable, const TreePatternPtr& initExpr) {
+	inline TreePatternPtr declarationStmt(const TreePatternPtr& variable = any, const TreePatternPtr& initExpr = any) {
 		return node(core::NT_DeclarationStmt, single(variable) << single(initExpr));
 	}
 

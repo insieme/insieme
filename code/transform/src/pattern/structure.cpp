@@ -105,6 +105,81 @@ namespace pattern {
 		return out << *tree;
 	}
 
+	namespace {
+
+		struct InvalidTreeException : public std::exception {
+			virtual const char* what() const throw() {
+				return "Unable to parse input tree!";
+			}
+		};
+
+		typedef string::iterator iter;
+
+		TreePtr parseTree(const iter begin, const iter end);
+
+		TreeList parseList(const iter begin, const iter end) {
+			TreeList res;
+
+			// shortcut
+			if (begin == end) return res;
+
+			// search commas and create trees
+			iter cur = begin;
+			while(true) {
+
+				// find next comma
+				int nesting = 0;
+				iter it = cur;
+				while (it != end && (nesting != 0 || *it != ',')) {
+					if (*it == '(') nesting++;
+					if (*it == ')') nesting--;
+					it++;
+				}
+
+				// nesting level has to 0!
+				if (nesting != 0) throw InvalidTreeException();
+
+				res.push_back(parseTree(cur, it));
+
+				if(it == end) break;
+				cur = it+1;
+			}
+
+
+			return res;
+		}
+
+		TreePtr parseTree(const iter begin, const iter end) {
+			auto length = end - begin;
+
+			// if there is only one character left => done
+			if (length == 1) {
+				return makeTree(*begin);
+			}
+
+			// it has to end with a parentheses
+			if (length < 3 || *(begin+1) != '(' || *(end-1) != ')' ) {
+				throw InvalidTreeException();
+			}
+
+			// create resulting tree
+			return makeTree(*begin, parseList(begin+2, end-1));
+		}
+
+	}
+
+	TreePtr parseTree(const string& tree) {
+
+		// replace all blanks
+		string normalized = tree;
+
+		auto a = normalized.begin();
+		auto b = std::remove(a, normalized.end(), ' ');
+
+		// parse tree
+		return parseTree(a,b);
+	}
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
