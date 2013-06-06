@@ -205,3 +205,23 @@ diff -crB llvm-src-org/tools/clang/include/clang/Sema/Sema.h llvm-src/tools/clan
                             SourceLocation LParenLoc,
                             Stmt *First, FullExprArg Second,
                             Decl *SecondVar,
+diff -crB llvm-src-org/tools/clang/include/clang/Basic/IdentifierTable.h llvm-src/tools/clang/include/clang/Basic/IdentifierTable.h 
+*** llvm-src-org/tools/clang/include/clang/Basic/IdentifierTable.h	2013-03-07 11:33:37.000000000 +0100
+--- llvm-src/tools/clang/include/clang/Basic/IdentifierTable.h	2013-06-06 10:21:24.822028890 +0200
+***************
+*** 165,171 ****
+    /// to tok::identifier for libstdc++ 4.2. Keep track of when this happens
+    /// using this method so we can inform serialization about it.
+    void RevertTokenIDToIdentifier() {
+!     assert(TokenID != tok::identifier && "Already at tok::identifier");
+      TokenID = tok::identifier;
+      RevertedTokenID = true;
+    }
+--- 165,171 ----
+    /// to tok::identifier for libstdc++ 4.2. Keep track of when this happens
+    /// using this method so we can inform serialization about it.
+    void RevertTokenIDToIdentifier() {
+!     //assert(TokenID != tok::identifier && "Already at tok::identifier"); // insieme patched
+      TokenID = tok::identifier;
+      RevertedTokenID = true;
+    }
