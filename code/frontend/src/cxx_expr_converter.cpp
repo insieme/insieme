@@ -63,6 +63,7 @@
 #include "insieme/core/lang/ir++_extension.h"
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
@@ -682,12 +683,14 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThisExpr(const 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThrowExpr(const clang::CXXThrowExpr* throwExpr) {
 	
-	assert(false && "Throw -- Currently not supported!");
+	//assert(false && "Throw -- Currently not supported!");
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(throwExpr, retIr);
-	retIr = Visit(throwExpr->getSubExpr());
-	VLOG(2) << builder.throwStmt(retIr);
+	
+	core::ExpressionPtr subExpr = Visit(throwExpr->getSubExpr());
 
+	VLOG(2) << core::transform::outline(mgr, builder.throwStmt(subExpr));
+	retIr = core::transform::outline(mgr, builder.throwStmt(subExpr));
 
 	return retIr;
 }

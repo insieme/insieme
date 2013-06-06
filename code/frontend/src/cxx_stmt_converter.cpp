@@ -244,18 +244,14 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(cl
 
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
-
-	assert(false && "Catch -- Currently not supported!");
-	VLOG(2) << convFact.convertType(catchStmt->getCaughtType().getTypePtr());
-	core::DeclarationStmtPtr declStmt = convFact.convertVarDecl(catchStmt->getExceptionDecl());
-	core::VariablePtr var = declStmt->getVariable();
-
-	return stmtutils::tryAggregateStmts( builder, Visit(catchStmt->getHandlerBlock()) );
+	assert(false && "Catch -- Taken care of inside of TryStmt!");
+	//return stmtutils::tryAggregateStmts( builder, Visit(catchStmt->getHandlerBlock()) );
+	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
 
-	assert(false && "Try -- Currently not supported!");
+	//assert(false && "Try -- Currently not supported!");
 	core::CompoundStmtPtr body = builder.wrapBody( stmtutils::tryAggregateStmts( builder, Visit(tryStmt->getTryBlock()) ) );
 
 	vector<core::CatchClausePtr> catchClauses;
@@ -263,18 +259,27 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clan
 	for(unsigned i=0;i<numCatch;i++) {
 		clang::CXXCatchStmt* catchStmt = tryStmt->getHandler(i);
 
-		core::CompoundStmtPtr body = builder.wrapBody(stmtutils::tryAggregateStmts(builder, Visit(catchStmt)));
+		core::VariablePtr var; 
+		//no exceptiondecl indicates a catch-all (...)
+		if(const clang::VarDecl* exceptionVarDecl = catchStmt->getExceptionDecl() ) {
+			core::TypePtr exceptionTy = convFact.convertType(catchStmt->getCaughtType().getTypePtr());
+			
+			var = builder.variable(exceptionTy);
 
-		//get catchClause from stmtwrapper
-		
-		VLOG(2) << convFact.convertType(catchStmt->getCaughtType().getTypePtr());
-		core::DeclarationStmtPtr declStmt = convFact.convertVarDecl(catchStmt->getExceptionDecl());
-		core::VariablePtr var = declStmt->getVariable();
+			//we assume that exceptionVarDecl is not in the varDeclMap
+			assert(convFact.ctx.varDeclMap.find(exceptionVarDecl) == convFact.ctx.varDeclMap.end() 
+					&& "excepionVarDecl already in vardeclmap");
+			//insert var to be used in conversion of handlerBlock
+			convFact.ctx.varDeclMap.insert( { exceptionVarDecl, var } );
+			VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
+		}
+		else {
+			var = builder.variable(gen.getAny());
+		}
 
+		core::CompoundStmtPtr body = builder.wrapBody(stmtutils::tryAggregateStmts(builder, Visit(catchStmt->getHandlerBlock())));
 		catchClauses.push_back(builder.catchClause(var, body));
 	}
-
-	VLOG(2) << builder.tryCatchStmt(body, catchClauses);
 
 	return stmtutils::tryAggregateStmt(builder, builder.tryCatchStmt(body, catchClauses));
 }
