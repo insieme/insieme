@@ -31,7 +31,6 @@ int main() {
 		x < 10 ? 1 : throw x;
 	} catch(int e) { std::cout << "exception caught " << e << std::endl; }
 
-
 	return 0;
 }
 
