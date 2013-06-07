@@ -688,8 +688,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThrowExpr(const
 	LOG_EXPR_CONVERSION(throwExpr, retIr);
 	
 	core::ExpressionPtr subExpr = Visit(throwExpr->getSubExpr());
-
-	VLOG(2) << core::transform::outline(mgr, builder.throwStmt(subExpr));
 	retIr = core::transform::outline(mgr, builder.throwStmt(subExpr));
 
 	return retIr;
