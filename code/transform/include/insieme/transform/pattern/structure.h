@@ -115,6 +115,8 @@ namespace pattern {
 		return std::make_shared<Tree>(Tree::Value(value));
 	}
 
+	TreePtr parseTree(const string& tree);
+
 	std::ostream& operator<<(std::ostream& out, const Tree& tree);
 
 	std::ostream& operator<<(std::ostream& out, const TreePtr& tree);

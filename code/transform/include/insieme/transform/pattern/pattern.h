@@ -531,6 +531,19 @@ namespace pattern {
 		return std::make_shared<list::Sequence>(single(a),single(b));
 	}
 
+	inline ListPatternPtr operator>>(const ListPatternPtr& a, const ListPatternPtr& b) {
+		return std::make_shared<list::Sequence>(a,b);
+	}
+	inline ListPatternPtr operator>>(const TreePatternPtr& a, const ListPatternPtr& b) {
+		return std::make_shared<list::Sequence>(single(a),b);
+	}
+	inline ListPatternPtr operator>>(const ListPatternPtr& a, const TreePatternPtr& b) {
+		return std::make_shared<list::Sequence>(a,single(b));
+	}
+	inline ListPatternPtr operator>>(const TreePatternPtr& a, const TreePatternPtr& b) {
+		return std::make_shared<list::Sequence>(single(a),single(b));
+	}
+
 	// more complex stuff ...
 
 	inline TreePatternPtr step(const TreePatternPtr& a) {

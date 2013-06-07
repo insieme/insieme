@@ -945,6 +945,51 @@ namespace pattern {
 		EXPECT_TRUE(res); if (res) EXPECT_EQ("Match({x=m})", toString(*res));
 	}
 
+	TEST(Examples, SyncElimination) {
+
+		// a pattern identifying dispensable merge statements
+
+		auto spawn = atom(makeTree('s'));
+		auto merge = atom(makeTree('m'));
+
+//		auto unsynced = spawn | rT(node(*any << (spawn | aT(recurse)) << *!aT(merge)));
+		auto unsynced = rT(spawn | node(*any << aT(recurse) << *!merge));
+		auto synced = !unsynced;
+
+		// ---------- test synced pattern ------------
+
+		EXPECT_PRED2(isMatch, synced, parseTree("a"));
+		EXPECT_PRED2(isMatch, synced, parseTree("m"));
+		EXPECT_PRED2(isMatch, synced, parseTree("c()"));
+		EXPECT_PRED2(isMatch, synced, parseTree("c(a)"));
+		EXPECT_PRED2(isMatch, synced, parseTree("c(a,b,c)"));
+
+		EXPECT_PRED2(isMatch, synced, parseTree("c(a,c(a,s),m,a)"));
+		EXPECT_PRED2(isMatch, synced, parseTree("c(a,c(a,s),a,a,m,a)"));
+		EXPECT_PRED2(isMatch, synced, parseTree("c(a,c(a,s),a,c(a,s),a,m,a)"));
+
+		EXPECT_PRED2(noMatch, synced, parseTree("s"));
+		EXPECT_PRED2(noMatch, synced, parseTree("c(s)"));
+		EXPECT_PRED2(noMatch, synced, parseTree("c(a,c(a,s,m),s,a)"));
+
+		// ---------- test full pattern --------------
+
+		auto p = node('c', opt(*any << merge) << *synced << var("x", merge) << *any);
+
+		EXPECT_PRED2(isMatch, p, parseTree("c(m)"));
+		EXPECT_PRED2(isMatch, p, parseTree("c(s,m,m)"));
+		EXPECT_PRED2(isMatch, p, parseTree("c(a,c(s,m),m)"));
+		EXPECT_PRED2(isMatch, p, parseTree("c(s,m,a,a,m)"));
+		EXPECT_PRED2(noMatch, p, parseTree("c(c(s),c(s,m),a,m)"));
+		EXPECT_PRED2(isMatch, p, parseTree("c(c(s),c(s),a,m,a,m)"));
+		EXPECT_PRED2(noMatch, p, parseTree("c(c(s),c(s),a,m,s,m)"));
+		EXPECT_PRED2(isMatch, p, parseTree("c(c(s),c(s),a,m,s,m,a,m)"));
+
+
+
+
+	}
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme

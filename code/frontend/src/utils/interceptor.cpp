@@ -144,6 +144,7 @@ void Interceptor::loadConfigFile(std::string fileName) {
 /// Empties the toIntercept-set and fills it with the given set tI
 void Interceptor::loadConfigSet(std::set<std::string> tI) {
 	// clear the toIntercept-set of its default values
+	// TODO: how to do it: we can use ONLY config file, or apend this to the base intercepted set (std, __gcc_cxx)
 	toIntercept.clear();
 	
 	toIntercept.insert(tI.begin(), tI.end());
