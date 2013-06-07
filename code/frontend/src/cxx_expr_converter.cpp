@@ -234,14 +234,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const cla
 						tmp = convFact.tryDeref(tmp);
 					}
 					else{
-						/*
-						if (core::analysis::isCppRef(tmp->getType())) {
-							tmp = builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), tmp));
-						}
-						else if (core::analysis::isConstCppRef(tmp->getType())) {
-							tmp = builder.deref(builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), tmp));
-						}
-						*/
 						tmp = unwrapCppRef(builder, tmp);
 						tmp = convFact.tryDeref(tmp);
 					}

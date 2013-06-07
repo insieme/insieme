@@ -1022,6 +1022,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 		else {
 			//handle extern functions  -- here instead of in CallExr
+			//TODO: extend interceptor with explicit intercept.
+			//      this will take care of the required header function
+			//      therefore is not needed to hard code them in the backend
 			auto funcTy = convertFunctionType(funcDecl,true).as<core::FunctionTypePtr>();
 			std::string callName = funcDecl->getNameAsString();
 			retExpr = builder.literal(callName, funcTy);
@@ -1452,9 +1455,11 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 	const clang::FunctionDecl* ctorAsFunct = llvm::cast<clang::FunctionDecl>(ctorDecl);
 	assert(ctorAsFunct);
 	SET_TU(ctorAsFunct);
-	
 	assert(currTU && "currTU not set");
-	assert(ctorAsFunct->hasBody() && "has no body");
+
+	// NOTE: even if we have a correct indexed declaration, this might not have a body (intercepted/extern objs) 
+	// don't pannic, the declaration must be handled by the upcoming convertFunctionDecl, and there will
+	// be nicely intercepted.
 
 	if (!ctorAsFunct){
 		RESTORE_TU();

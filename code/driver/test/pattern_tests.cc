@@ -164,5 +164,55 @@ using namespace driver::integration;
 		runCheck(pattern, "matrix_mul_static");
 	}
 
+	TEST(PatternTest, ContainsUsedVariable) {
+
+		// Example: find all for loops within code and get iterator / start / end / step / body
+
+		// create pattern
+		auto x = var("x");
+		auto use = !irp::declarationStmt() & step(x);
+		auto pattern = aT(irp::declarationStmt(x)) & aT(use) & all(var("y", use));
+
+
+		// load input code
+		NodeManager mgr;
+		core::ProgramPtr code = load(mgr, "matrix_mul_static");
+
+		// goal: make this run for pendulum - now it still takes forever
+//		core::ProgramPtr code = load(mgr, "pendulum");
+
+		std::cout << "Running match ... \n";
+		auto res = pattern->matchPointer(code);
+		std::cout << "Done!\n";
+
+		ASSERT_TRUE(res);
+		std::cout << "x = " << res->getVarBinding("x").getValue() << "\n";
+		std::cout << "y = " << res->getVarBinding("y").getList() << "\n";
+
+	}
+
+	TEST(PatternTest, ContainsUnusedVariable) {
+
+		// Example: find all for loops within code and get iterator / start / end / step / body
+
+		// create pattern
+		auto x = var("x");
+		auto use = !irp::declarationStmt() & step(x);
+		auto pattern = aT(irp::declarationStmt(x)) & !aT(!irp::declarationStmt(x) & step(x));
+
+
+		// load input code
+		NodeManager mgr;
+//		core::ProgramPtr code = load(mgr, "matrix_mul_static");
+		core::ProgramPtr code = load(mgr, "pendulum");
+
+		std::cout << "Running match ... \n";
+		auto res = pattern->matchPointer(code);
+		std::cout << "Done!\n";
+
+		// there should not be a unused variable
+		EXPECT_FALSE(res) << "x = " << res->getVarBinding("x").getValue();
+	}
+
 
 }
