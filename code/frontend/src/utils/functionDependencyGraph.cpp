@@ -72,7 +72,11 @@ CallExprVisitor::CallGraph CallExprVisitor::getCallGraph(const clang::FunctionDe
 		// we don't care about interanls of intercepted function 
 		VLOG(2) << "isIntercepted " << func << "("<<((void*)func)<<")";
 	} else  {
-		assert(func->hasBody() && "Function in the dependency graph has no body");
+		if (!func->hasBody()){
+			std::cerr << "Function in the dependency graph has no body: " << func->getQualifiedNameAsString() << std::endl
+					  << "   maybe you should update Insieme configuration file to intercept this namespace/function";
+			exit(-1);
+		}
 		Visit(func->getBody());
 	}
 	return callGraph;

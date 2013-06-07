@@ -224,7 +224,6 @@ Indexer::TranslationUnitPair Indexer::getDefAndTUforDefinition (const std::strin
 		assert(match->second.first && match->second.second && " found a wrong definition");
 		return match->second;
 	}
-
 	return  voidPair;
 }
 
