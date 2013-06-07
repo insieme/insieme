@@ -112,6 +112,16 @@ namespace pattern {
 
 	}
 
+	TEST(Tree, Parser) {
+
+		EXPECT_EQ("a", toString(parseTree("a")));
+		EXPECT_EQ("a", toString(parseTree("a()")));
+		EXPECT_EQ("a(b,c)", toString(parseTree("a(b,c)")));
+		EXPECT_EQ("a(b,c)", toString(parseTree("a( b , c )")));
+		EXPECT_EQ("a(b,c(b),a)", toString(parseTree("a(b,c(b),a)")));
+
+	}
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
