@@ -309,19 +309,31 @@ bool Program::PragmaIterator::operator!=(const PragmaIterator& iter) const {
 
 void Program::PragmaIterator::inc(bool init) {
 	while(tuIt != tuEnd) {
-		if(init)	pragmaIt = (*tuIt)->getPragmaList().begin();
+		if(init) {
+			pragmaIt = (*tuIt)->getPragmaList().begin();
+			if(pragmaIt != (*tuIt)->getPragmaList().end() && filteringFunc(**pragmaIt))
+				return;
+		}
+
 		// advance to the next pragma if there are still pragmas in the
 		// current translation unit
-		if(!init && pragmaIt != (*tuIt)->getPragmaList().end()) { ++pragmaIt; }
+		while(pragmaIt != (*tuIt)->getPragmaList().end())
+		{
+			++pragmaIt;
 
-		if(pragmaIt != (*tuIt)->getPragmaList().end() && filteringFunc(**pragmaIt)) {
-			return;
+			if(pragmaIt != (*tuIt)->getPragmaList().end() && filteringFunc(**pragmaIt)) {
+				return;
+			}
 		}
+
 		// advance to the next translation unit
 		++tuIt;
-		if(tuIt != tuEnd)
+		if(tuIt != tuEnd) {
 			pragmaIt = (*tuIt)->getPragmaList().begin();
-	}
+			if(pragmaIt != (*tuIt)->getPragmaList().end() && filteringFunc(**pragmaIt))
+				return;
+		}
+	}	
 }
 
 std::pair<PragmaPtr, TranslationUnitPtr> Program::PragmaIterator::operator*() const {
@@ -373,6 +385,8 @@ const core::ProgramPtr& Program::convert() {
 	// filters all the pragma across all the compilation units which are of type insieme::mark
 	auto pragmaMarkFilter = [](const pragma::Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };
 
+	ExpressionList entries;
+
 	for(Program::PragmaIterator pit = pragmas_begin(pragmaMarkFilter), pend = pragmas_end(); pit != pend; ++pit) {
 		insiemePragmaFound = true;
 
@@ -383,19 +397,25 @@ const core::ProgramPtr& Program::convert() {
 			const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
 			assert(funcDecl && "Pragma insieme only valid for function declarations.");
 
-			mProgram = astConvPtr->handleFunctionDecl(funcDecl);
+			//mProgram = astConvPtr->handleFunctionDecl(funcDecl);
+			auto p = astConvPtr->handleFunctionDecl(funcDecl);
+			std::copy(p.getEntryPoints().begin(), p.getEntryPoints().end(), std::back_inserter(entries)); 
 		} else {
 			// insieme pragma associated to a statement, in this case we convert the body
 			// and create an anonymous lambda expression to enclose it
 			const clang::Stmt* body = insiemePragma.getStatement();
 			assert(body && "Pragma matching failed!");
 			core::CallExprPtr callExpr = astConvPtr->handleBody(body, *(*pit).second);
-			mProgram = core::Program::addEntryPoint(mMgr, mProgram, callExpr);
+			//mProgram = core::Program::addEntryPoint(mMgr, mProgram, callExpr);
+			entries.push_back(callExpr);
 		}
 	}
 
 	if(!insiemePragmaFound) {
 		mProgram = astConvPtr->handleMainFunctionDecl();
+	}
+	else {
+		mProgram = insieme::core::Program::get(mMgr, entries);
 	}
 
 	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";

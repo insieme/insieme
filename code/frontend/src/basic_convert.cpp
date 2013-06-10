@@ -1670,8 +1670,9 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 		}
 	}
 	assert( lambdaExpr && "Conversion of function did not return a lambda expression");
-	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
-	return mProgram;
+	//mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
+	//return mProgram;
+	return core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
 }
 
 } // End conversion namespace
