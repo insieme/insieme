@@ -663,6 +663,22 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		case clang::CK_Dynamic:
 		// A C++ dynamic_cast.
 		{	
+			VLOG(2) << convFact.convertType(GET_TYPE_PTR(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getTypeInfoAsWritten()));
+			VLOG(2) << targetTy;
+			targetTy = convFact.convertType(GET_TYPE_PTR(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getTypeInfoAsWritten()));
+			VLOG(2) << targetTy;
+			
+			if (core::analysis::isCppRef(exprTy)){
+				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
+				//FIXME check if targetType needs Reference
+				return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy))) );
+			}
+			else if (core::analysis::isConstCppRef(exprTy)){
+				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
+				//FIXME check if targetType needs Reference
+				return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy))) );
+			}
+
 			// use dynamicCast operator to represent dynamic_cast
 			return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy))) );
 		}
