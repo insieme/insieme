@@ -1351,37 +1351,37 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 	//fixes the return type to retTy of the given expression toFix
 	auto fixingThrowExprType = [&mgr](core::ExpressionPtr toFix, const core::TypePtr& retTy){
 		//callExpr(lambdaExpr(throwExpr),(argument))
-		dumpText(toFix, std::cerr);
+		//dumpText(toFix, std::cerr);
 		core::CallExprPtr callExpr = toFix.as<core::CallExprPtr>();
 		core::CallExprAddress callExprAddr(callExpr);
 
 		//returnType of callExpr
 		core::NodeAddress addrTy0 = callExprAddr.getType();
 		VLOG(2) << "callExpr->functionType->returnType " << addrTy0;
-		dumpText(addrTy0, std::cerr);
+		//dumpText(addrTy0, std::cerr);
 
 		core::LambdaExprAddress throwExprAddr(callExprAddr->getFunctionExpr().as<core::LambdaExprAddress>());
-		dumpText(throwExprAddr, std::cerr);
+		//dumpText(throwExprAddr, std::cerr);
 
 		//returnType of throwExpr
 		core::NodeAddress addrTy1 = throwExprAddr.getFunctionType().getReturnType();
 		VLOG(2) << "LambdaExpr->functionType->returnType " << addrTy1;
-		dumpText(addrTy1, std::cerr);
+		//dumpText(addrTy1, std::cerr);
 
 		//returnType of the lambdaVariable
 		core::NodeAddress addrTy2 = throwExprAddr.getVariable().getType().as<core::FunctionTypeAddress>().getReturnType();
 		VLOG(2) << "LambdaExpr->variable->functionType->returnType " << addrTy2;
-		dumpText(addrTy2, std::cerr);
+		//dumpText(addrTy2, std::cerr);
 
 		//returnType of the lambda
 		core::NodeAddress addrTy3 = throwExprAddr.getLambda().getType().as<core::FunctionTypeAddress>().getReturnType();
 		VLOG(2) << "lambdaExpr->lambda->functionType->returnType " << addrTy3;
-		dumpText(addrTy3, std::cerr);
+		//dumpText(addrTy3, std::cerr);
 
 		//returnType of the lambdabinding
 		core::NodeAddress addrTy4 = throwExprAddr.getDefinition().getBindingOf(throwExprAddr.getVariable()).getVariable().getType().as<core::FunctionTypeAddress>().getReturnType();
 		VLOG(2) << "lambdaExpr->definition->lambdabinding->variable->returnType " << addrTy3;
-		dumpText(addrTy4, std::cerr);
+		//dumpText(addrTy4, std::cerr);
 
 		std::map<core::NodeAddress, core::NodePtr> nodeMap;
 		nodeMap.insert( {addrTy0, retTy} );
@@ -1394,7 +1394,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 		toFix = core::transform::replaceAll(mgr, nodeMap).as<core::ExpressionPtr>();
 		VLOG(2) << "after	typeFix: " << toFix << " (" <<  toFix->getType() << ")";
 		VLOG(2) << core::checks::check(toFix);
-		dumpText(toFix, std::cerr);
+		//dumpText(toFix, std::cerr);
 
 		return toFix;
 	};
