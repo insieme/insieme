@@ -23,6 +23,16 @@ int main() {
 
 	try {
 		int x = 10;
+		x < 10 ? throw 10 : 1;
+	} catch(...) { std::cout << "exception caught"; }
+
+	try {
+		int x = 10;
+		x < 10 ? 1 : throw 10;
+	} catch(...) { std::cout << "exception caught"; }
+
+	try {
+		int x = 10;
 		x < 10 ? throw x : 1;
 	} catch(int e) { std::cout << "exception caught " << e << std::endl; }
 
@@ -31,6 +41,18 @@ int main() {
 		x < 10 ? 1 : throw x;
 	} catch(int e) { std::cout << "exception caught " << e << std::endl; }
 
+	try {
+		int x = 10;
+		x < 10 ? throw x : 1;
+	} catch(...) { std::cout << "exception caught"; }
+	
+	try {
+		int x = 10;
+		x < 10 ? 1 : throw x;
+	} catch(...) { std::cout << "exception caught"; }
+
+
+    int x = 10;
     try { x < 10 ? throwFun1() : 1; } catch(int e) { std::cout << "exception caught " << e << std::endl; }
 	try { x < 10 ? 1 : throwFun1(); } catch(int e) { std::cout << "exception caught " << e << std::endl; }
 
