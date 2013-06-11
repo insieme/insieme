@@ -500,8 +500,14 @@ namespace backend {
 
 			// normalize member functions to avoid unintended duplication and resulting name collisions
 			core::ExpressionPtr expression = expr;
-			if (expr->getType().as<core::FunctionTypePtr>()->isMember()) {
+			core::FunctionTypePtr funType = expr->getType().as<core::FunctionTypePtr>();
+			if (funType->isMember()) {
+				// normalize member
 				expression = core::analysis::normalize(expression);
+
+				// make sure the object definition, ctors, dtors and member functions have already been resolved
+				// if this would not be the case, we could end up resolving e.g. a ctor while resolving the ctor itself
+				converter.getTypeManager().getTypeInfo(funType->getObjectType());	// ignore result
 			}
 
 			// lookup information within store

@@ -334,8 +334,8 @@ ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : p
 
 		// FIXME: decide if we need this or not
 		//	LO.RTTI = 1;
-		//	LO.Exceptions = 1;
-		//	LO.CXXExceptions = 1;
+			LO.Exceptions = 1;
+			LO.CXXExceptions = 1;
 		//	LO.CXXOperatorNames = 1;
 	}
 	else{

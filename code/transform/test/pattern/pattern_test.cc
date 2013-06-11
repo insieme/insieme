@@ -985,8 +985,43 @@ namespace pattern {
 		EXPECT_PRED2(noMatch, p, parseTree("c(c(s),c(s),a,m,s,m)"));
 		EXPECT_PRED2(isMatch, p, parseTree("c(c(s),c(s),a,m,s,m,a,m)"));
 
+	}
 
 
+	TEST(Examples, RecForStmt) {
+
+		// a pattern collecting all nested for loops
+
+		auto forStmt = node('f', anyList);
+
+		auto p = rT(var("l", node('f', !forStmt | recurse)));
+
+		// ---------- test pattern ------------
+
+		EXPECT_PRED2(isMatch, p, parseTree("f(a)"));
+		EXPECT_PRED2(isMatch, p, parseTree("f(f(a))"));
+		EXPECT_PRED2(isMatch, p, parseTree("f(f(f(c(a))))"));
+		EXPECT_PRED2(isMatch, p, parseTree("f(f(f(c(a,b))))"));
+
+		EXPECT_PRED2(noMatch, p, parseTree("a"));
+
+		// ---------- test match result --------------
+
+		auto res = p->matchTree(parseTree("f(a)"));
+		ASSERT_TRUE(res);
+		EXPECT_EQ("[f(a)]", toString(res->getVarBinding("l").getList()));
+
+		res = p->matchTree(parseTree("f(f(a))"));
+		ASSERT_TRUE(res);
+		EXPECT_EQ("[f(f(a)),f(a)]", toString(res->getVarBinding("l").getList()));
+
+		res = p->matchTree(parseTree("f(f(f(a)))"));
+		ASSERT_TRUE(res);
+		EXPECT_EQ("[f(f(f(a))),f(f(a)),f(a)]", toString(res->getVarBinding("l").getList()));
+
+		res = p->matchTree(parseTree("f(f(c(a)))"));
+		ASSERT_TRUE(res);
+		EXPECT_EQ("[f(f(c(a))),f(c(a))]", toString(res->getVarBinding("l").getList()));
 
 	}
 
