@@ -242,14 +242,46 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(cl
 	*/
 }
 
+
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
-	assert(false && "Catch -- Currently not supported!");
+	assert(false && "Catch -- Taken care of inside of TryStmt!");
+	//return stmtutils::tryAggregateStmts( builder, Visit(catchStmt->getHandlerBlock()) );
 	return stmtutils::StmtWrapper();
 }
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
-	assert(false && "Try -- Currently not supported!");
-	return stmtutils::StmtWrapper();
+
+	//assert(false && "Try -- Currently not supported!");
+	core::CompoundStmtPtr body = builder.wrapBody( stmtutils::tryAggregateStmts( builder, Visit(tryStmt->getTryBlock()) ) );
+
+	vector<core::CatchClausePtr> catchClauses;
+	unsigned numCatch = tryStmt->getNumHandlers();
+	for(unsigned i=0;i<numCatch;i++) {
+		clang::CXXCatchStmt* catchStmt = tryStmt->getHandler(i);
+
+		core::VariablePtr var; 
+		//no exceptiondecl indicates a catch-all (...)
+		if(const clang::VarDecl* exceptionVarDecl = catchStmt->getExceptionDecl() ) {
+			core::TypePtr exceptionTy = convFact.convertType(catchStmt->getCaughtType().getTypePtr());
+			
+			var = builder.variable(exceptionTy);
+
+			//we assume that exceptionVarDecl is not in the varDeclMap
+			assert(convFact.ctx.varDeclMap.find(exceptionVarDecl) == convFact.ctx.varDeclMap.end() 
+					&& "excepionVarDecl already in vardeclmap");
+			//insert var to be used in conversion of handlerBlock
+			convFact.ctx.varDeclMap.insert( { exceptionVarDecl, var } );
+			VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
+		}
+		else {
+			var = builder.variable(gen.getAny());
+		}
+
+		core::CompoundStmtPtr body = builder.wrapBody(stmtutils::tryAggregateStmts(builder, Visit(catchStmt->getHandlerBlock())));
+		catchClauses.push_back(builder.catchClause(var, body));
+	}
+
+	return stmtutils::tryAggregateStmt(builder, builder.tryCatchStmt(body, catchClauses));
 }
 
 stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {

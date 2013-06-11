@@ -64,6 +64,7 @@
 #include "insieme/core/analysis/ir++_utils.h"
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/checks/full_check.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 
@@ -1338,18 +1339,81 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 	core::TypePtr retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
 	core::ExpressionPtr trueExpr  = Visit(condOp->getTrueExpr());
 	core::ExpressionPtr falseExpr = Visit(condOp->getFalseExpr());
-	core::ExpressionPtr condExpr  = Visit( condOp->getCond() );
+	core::ExpressionPtr condExpr  = Visit(condOp->getCond());
 
 	condExpr = utils::castToBool(condExpr);
 
 	// Dereference eventual references
 	if ( retTy->getNodeType() == core::NT_RefType && !utils::isRefArray(retTy) ) {
-
 		retTy = GET_REF_ELEM_TYPE(retTy);
+	}
+
+	//fixes the return type to retTy of the given expression toFix
+	auto fixingThrowExprType = [&mgr](core::ExpressionPtr toFix, const core::TypePtr& retTy){
+		//callExpr(lambdaExpr(throwExpr),(argument))
+		//dumpText(toFix, std::cerr);
+		core::CallExprPtr callExpr = toFix.as<core::CallExprPtr>();
+		core::CallExprAddress callExprAddr(callExpr);
+
+		//returnType of callExpr
+		core::NodeAddress addrTy0 = callExprAddr.getType();
+		//VLOG(2) << "callExpr->functionType->returnType " << addrTy0;
+		//dumpText(addrTy0, std::cerr);
+
+		core::LambdaExprAddress throwExprAddr(callExprAddr->getFunctionExpr().as<core::LambdaExprAddress>());
+		//dumpText(throwExprAddr, std::cerr);
+
+		//returnType of throwExpr
+		core::NodeAddress addrTy1 = throwExprAddr.getFunctionType().getReturnType();
+		//VLOG(2) << "LambdaExpr->functionType->returnType " << addrTy1;
+		//dumpText(addrTy1, std::cerr);
+
+		//returnType of the lambdaVariable
+		core::NodeAddress addrTy2 = throwExprAddr.getVariable().getType().as<core::FunctionTypeAddress>().getReturnType();
+		//VLOG(2) << "LambdaExpr->variable->functionType->returnType " << addrTy2;
+		//dumpText(addrTy2, std::cerr);
+
+		//returnType of the lambda
+		core::NodeAddress addrTy3 = throwExprAddr.getLambda().getType().as<core::FunctionTypeAddress>().getReturnType();
+		//VLOG(2) << "lambdaExpr->lambda->functionType->returnType " << addrTy3;
+		//dumpText(addrTy3, std::cerr);
+
+		//returnType of the lambdabinding
+		core::NodeAddress addrTy4 = throwExprAddr.getDefinition().getBindingOf(throwExprAddr.getVariable()).getVariable().getType().as<core::FunctionTypeAddress>().getReturnType();
+		//VLOG(2) << "lambdaExpr->definition->lambdabinding->variable->returnType " << addrTy3;
+		//dumpText(addrTy4, std::cerr);
+
+		std::map<core::NodeAddress, core::NodePtr> nodeMap;
+		nodeMap.insert( {addrTy0, retTy} );
+		nodeMap.insert( {addrTy1, retTy} );
+		nodeMap.insert( {addrTy2, retTy} );
+		nodeMap.insert( {addrTy3, retTy} );
+		nodeMap.insert( {addrTy4, retTy} );
+		
+		//VLOG(2) << "before	typeFix: " << toFix << " (" <<  toFix->getType() << ")";
+		toFix = core::transform::replaceAll(mgr, nodeMap).as<core::ExpressionPtr>();
+		//VLOG(2) << "after	typeFix: " << toFix << " (" <<  toFix->getType() << ")";
+		//VLOG(2) << core::checks::check(toFix);
+		//dumpText(toFix, std::cerr);
+
+		return toFix;
+	};
+
+	// if trueExpr or falseExpr is a CXXThrowExpr we need to fix the type
+	// of the throwExpr (and the according calls) to the type of the other branch of the 
+	// conditional operator, as the c++ standard defines throwExpr always with void and the
+	// conditional operator expects on both branches the same returnType (except when used with
+	// throw then the type of the "nonthrowing" branch is used
+	if (llvm::isa<clang::CXXThrowExpr>(condOp->getTrueExpr())) { 
+		trueExpr = fixingThrowExprType(trueExpr, retTy);
+	} 
+	else if(llvm::isa<clang::CXXThrowExpr>(condOp->getFalseExpr())){
+		falseExpr = fixingThrowExprType(falseExpr, retTy);
 	}
 
 	// in C++, string literals with same size may produce an error, do not cast to avoid
 	// weird behaviour
+	// FIXME why do we check trueexpr twice?
 	if (!llvm::isa<clang::StringLiteral>(condOp->getTrueExpr()) ||
 		!llvm::isa<clang::StringLiteral>(condOp->getTrueExpr())){
 
@@ -1360,7 +1424,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 		retTy = trueExpr->getType();
 	}
 
-
+	//be carefull! createCallExpr turns given statements into lazy -- keep it that way
 	return (retIr =
 			builder.callExpr(retTy, gen.getIfThenElse(),
 					condExpr, // Condition
