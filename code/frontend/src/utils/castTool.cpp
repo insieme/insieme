@@ -394,6 +394,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 	// handle implicit casts according to their kind
 	switch (castExpr->getCastKind()) {
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_LValueToRValue 	:
 		// A conversion which causes the extraction of an r-value from the operand gl-value. 
 		// The result of an r-value conversion is always unqualified.
@@ -424,6 +425,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			}
 			break;
 		}
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		case clang::CK_IntegralCast 	:
 		// A cast between integral types (other than to boolean). Variously a bitcast, a truncation,
@@ -442,12 +444,12 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		// Casting between floating types of different size. (double) f (float) ld
 			return castScalar( targetTy, expr);
 		
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_NoOp:
 		// A conversion which does not affect the type other than (possibly) adding qualifiers. i
 		// int -> int char** -> const char * const *
 		{
 			if (core::analysis::isCppRef(exprTy)){
-				dumpDetail (exprTy);
 				return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), expr);
 			}
 
@@ -462,6 +464,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			}
 		}
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_ArrayToPointerDecay 	:
 		// Array to pointer decay. int[10] -> int* char[5][6] -> char(*)[6]
 		{
@@ -474,6 +477,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			return builder.callExpr(gen.getRefVectorToRefArray(), retIr);
 		}
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_BitCast 	:
 		// A conversion which causes a bit pattern of one type to be reinterpreted as a bit pattern 
 		//of another type. 
@@ -516,6 +520,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 									innerExpr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 		}
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_VectorSplat 	:
 		// A conversion from an arithmetic type to a vector of that element type. Fills all elements 
 		//("splats") with the source value. __attribute__((ext_vector_type(4))) int v = 5;
@@ -526,6 +531,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 				);
 		}
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_IntegralToPointer 	:
 		//Integral to pointer. A special kind of reinterpreting conversion. Applies to normal,
 		//ObjC, and block pointers. (char*) 0x1001aab0 reinterpret_cast<int*>(0)
@@ -543,6 +549,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			}
 		}
 
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_ConstructorConversion 	:
 		//Conversion by constructor. struct A { A(int); }; A a = A(10);
 		{
@@ -551,9 +558,9 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			return expr;
 		}
 
-		///////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//  PARTIALY IMPLEMENTED
-		///////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		
 		case clang::CK_NullToPointer 	:
 		// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
@@ -632,9 +639,8 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			}
 			
 			return expr;
-			//assert(false && "derived to base cast  not implementd");
-			break;
 		}
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		case clang::CK_BaseToDerived:
 		//A conversion from a C++ class pointer/reference to a derived class pointer/reference. B *b = static_cast<B*>(a); 
@@ -651,23 +657,35 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			}
 
 			return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral((targetTy))) );
-
-			//explicitly cast from base to derived
-			//return builder.callExpr(gen.getTypeCast(), expr, builder.getTypeLiteral(targetTy));
-			//assert(false && "base to derived cast  not implementd B* b = static_cast<B*>(A)");
-			break;
 		}
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		case clang::CK_Dynamic:
 		// A C++ dynamic_cast.
 		{	
+			VLOG(2) << convFact.convertType(GET_TYPE_PTR(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getTypeInfoAsWritten()));
+			VLOG(2) << targetTy;
+			targetTy = convFact.convertType(GET_TYPE_PTR(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getTypeInfoAsWritten()));
+			VLOG(2) << targetTy;
+			
+			if (core::analysis::isCppRef(exprTy)){
+				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
+				//FIXME check if targetType needs Reference
+				return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy))) );
+			}
+			else if (core::analysis::isConstCppRef(exprTy)){
+				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
+				//FIXME check if targetType needs Reference
+				return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy))) );
+			}
+
 			// use dynamicCast operator to represent dynamic_cast
 			return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy))) );
 		}
 
-		///////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//  NOT IMPLEMENTED
-		///////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		case clang::CK_Dependent 	:
 		/*case clang::CK_Dependent - A conversion which cannot yet be analyzed because either the expression 

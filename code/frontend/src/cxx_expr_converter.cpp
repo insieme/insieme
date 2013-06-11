@@ -128,6 +128,10 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitExplicitCastExpr(c
 	LOG_EXPR_CONVERSION(castExpr, retIr);
 	return retIr;
 /*
+ *
+ * TODO: is this code already covered??  marked to delete
+ *
+ *
 	START_LOG_EXPR_CONVERSION(castExpr);
 
 	const core::IRBuilder& builder = convFact.builder;
@@ -650,24 +654,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThisExpr(const 
 
 	LOG_EXPR_CONVERSION(thisExpr, ret);
 	return ret;
-
-	/*irType = bu
-	ilder.refType(irType);
-//		VLOG(2) << "thisStack2: " << cxxConvFact.ctx.thisStack2;
-//		VLOG(2) << "thisVar: " << cxxConvFact.ctx.thisVar;
-
-	//Need thisVar not Stack2 //assert(cxxConvFact.ctx.thisStack2 && "THIS is empty");
-	assert(convFact.cxxCtx.thisVar && "THIS is empty");
-
-	VLOG(2) << "CXXThisExpr: \n";
-	if( VLOG_IS_ON(2) ) {
-		callExpr->dump();
-	}
-
-	VLOG(2) << "End of expression CXXThisExpr \n";
-	//Need thisVar not Stack2 //return cxxConvFact.ctx.thisStack2;
-	return convFact.cxxCtx.thisVar;
-	*/
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -692,8 +678,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDefaultArgExpr(
 	//START_LOG_EXPR_CONVERSION(defaultArgExpr);
 	auto ret = Visit(defaultArgExpr->getExpr());
 	LOG_EXPR_CONVERSION(defaultArgExpr, ret);
-
-
 	return ret;
 }
 

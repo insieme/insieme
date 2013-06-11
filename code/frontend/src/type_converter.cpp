@@ -505,7 +505,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 		assert(tagDecl->isCompleteDefinition() && "TagType is not a definition");
 
 		if(tagDecl->getTagKind() == clang::TTK_Enum) {
-			// Enums are converted into integers
+			// Enums are converted into integer
 			return gen.getInt4();
 		} else {
 			// handle struct/union/class

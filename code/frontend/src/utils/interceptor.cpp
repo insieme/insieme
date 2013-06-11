@@ -329,20 +329,26 @@ core::TypePtr InterceptTypeVisitor::VisitTagType(const clang::TagType* tagType) 
 					}
 					break;
 				case clang::TemplateArgument::ArgKind::Declaration: VLOG(2) << "ArgKind::Declaration not supported"; break;
-				case clang::TemplateArgument::ArgKind::NullPtr: VLOG(2) << "ArgKind::NullPtr not supported"; break;
-				case clang::TemplateArgument::ArgKind::Integral: VLOG(2) << "ArgKind::Integral not supported"; break;
-				case clang::TemplateArgument::ArgKind::Template: VLOG(2) << "ArgKind::Template not supported"; break;
+				case clang::TemplateArgument::ArgKind::NullPtr: 	VLOG(2) << "ArgKind::NullPtr not supported"; break;
+				case clang::TemplateArgument::ArgKind::Integral: 	VLOG(2) << "ArgKind::Integral not supported"; break;
+				case clang::TemplateArgument::ArgKind::Template: 	VLOG(2) << "ArgKind::Template not supported"; break;
 				case clang::TemplateArgument::ArgKind::TemplateExpansion: VLOG(2) << "ArgKind::TemplateExpansion not supported"; break;
-				case clang::TemplateArgument::ArgKind::Expression: VLOG(2) << "ArgKind::Expression not supported"; break;
-				case clang::TemplateArgument::ArgKind::Pack: VLOG(2) << "ArgKind::Pack not supported"; break;
+				case clang::TemplateArgument::ArgKind::Expression: 	VLOG(2) << "ArgKind::Expression not supported"; break;
+				case clang::TemplateArgument::ArgKind::Pack: 		VLOG(2) << "ArgKind::Pack not supported"; break;
 			}
 		}
 	}
-
 	// obtain type name
 	std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
+	core::TypePtr retTy;
+	if(tagDecl->getTagKind() == clang::TTK_Enum) {
+			// Enums are converted into integer
+		retTy = builder.getLangBasic().getInt4();
+	}
+	else{
+		retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
+	}
 
-	core::TypePtr retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
 	addHeaderForDecl(retTy, tagDecl, interceptor.getStdLibDirectories());
 	return retTy;
 }
@@ -369,12 +375,12 @@ core::TypePtr InterceptTypeVisitor::VisitTemplateSpecializationType(const clang:
 				}
 				break;
 			case clang::TemplateArgument::ArgKind::Declaration: VLOG(2) << "ArgKind::Declaration not supported"; break;
-			case clang::TemplateArgument::ArgKind::NullPtr:  VLOG(2) << "ArgKind::NullPtr not supported"; break;
-			case clang::TemplateArgument::ArgKind::Integral: VLOG(2) << "ArgKind::Integral not supported"; break;
-			case clang::TemplateArgument::ArgKind::Template: VLOG(2) << "ArgKind::Template not supported"; break;
+			case clang::TemplateArgument::ArgKind::NullPtr:  	VLOG(2) << "ArgKind::NullPtr not supported"; break;
+			case clang::TemplateArgument::ArgKind::Integral: 	VLOG(2) << "ArgKind::Integral not supported"; break;
+			case clang::TemplateArgument::ArgKind::Template: 	VLOG(2) << "ArgKind::Template not supported"; break;
 			case clang::TemplateArgument::ArgKind::TemplateExpansion: VLOG(2) << "ArgKind::TemplateExpansion not supported"; break;
-			case clang::TemplateArgument::ArgKind::Expression: VLOG(2) << "ArgKind::Expression not supported"; break;
-			case clang::TemplateArgument::ArgKind::Pack: VLOG(2) << "ArgKind::Pack not supported"; break;
+			case clang::TemplateArgument::ArgKind::Expression: 	VLOG(2) << "ArgKind::Expression not supported"; break;
+			case clang::TemplateArgument::ArgKind::Pack: 		VLOG(2) << "ArgKind::Pack not supported"; break;
 		}
 	}
 
