@@ -524,6 +524,11 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 		return manager.getLangBasic().getUnitConstant();
 	}
 
+	// FIXME:: this might not be enough, ferdinando fix it!
+	if (type->getNodeType() == core::NT_RecType) {
+		return getZero (type.as<core::RecTypePtr>()->unroll());
+	}
+
 	// TODO: extend for more types
 	LOG(FATAL) << "Encountered unsupported type: " << *type;
 	assert(false && "Given type not supported yet!");

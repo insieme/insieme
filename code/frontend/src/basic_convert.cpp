@@ -50,6 +50,7 @@
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/indexer.h"
+#include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -460,7 +461,6 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type) const {
-
 	// Primitive types
 	if (mgr.getLangBasic().isInt(type)) {
 		// initialize integer value
@@ -508,17 +508,14 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 		curType = type.as<core::RecTypePtr>()->unroll();
 	}
 
-	// FIXME: this 2 should not be unrolled:  Ferdinando's weird recursion issue
 	// Handle structs initialization
-	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(curType)) {
-		//return builder.callExpr(type, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(type));
-		return builder.callExpr(structTy, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(structTy));
+	if ( curType.isa<core::StructTypePtr>()) {
+		return builder.callExpr(type, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(type));
 	}
 
 	// Handle unions initialization
-	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(curType)) {
-		//return builder.callExpr(type, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(type));
-		return builder.callExpr(unionTy, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(unionTy));
+	if ( curType.isa<core::UnionTypePtr>()) {
+		return builder.callExpr(type, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(type));
 	}
 
 	// handle vectors initialization
@@ -593,6 +590,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 		// initialization value
 		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), var->getType(), false);
+		ASSERT_EQ_TYPES (var->getType(), initExpr->getType());
 		assert(initExpr && "not correct initialization of the variable");
 		retStmt = builder.declarationStmt(var, initExpr);
 	} else {
