@@ -740,7 +740,7 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 						convertInitExpr(NULL, initList->getInit(i), curr->getType(), false))
 				);
 		}
-		retIr = builder.structExpr(members);
+		retIr = builder.structExpr(structTy, members);
 	}
 
 	// in the case the initexpr is used to initialize a union
