@@ -787,7 +787,7 @@ protected:
 		StatementList resultStmts;
 		auto newStmtNode = implementDataClauses(stmtNode, &*reg, resultStmts);
 		auto paramNode = implementParamClause(newStmtNode, reg);
-		auto parLambda = transform::extractLambda(nodeMan, build.compoundStmt(paramNode));
+		auto parLambda = transform::extractLambda(nodeMan, paramNode);
 		auto range = build.getThreadNumRange(1, 1);
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);

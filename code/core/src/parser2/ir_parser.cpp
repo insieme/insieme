@@ -1210,6 +1210,22 @@ namespace parser {
 			));
 
 			g.addRule("E", rule(
+					seq("loc(",E,")"),
+					[](Context& cur)->NodePtr {
+						return cur.refLoc(cur.getTerm(0).as<ExpressionPtr>());
+					},
+					0
+			));
+
+			g.addRule("E", rule(
+					seq("loc(",T,")"),
+					[](Context& cur)->NodePtr {
+						return cur.refLoc(cur.undefined(cur.getTerm(0).as<TypePtr>()));
+					},
+					-1		// less priority than the expression based variant
+			));
+
+			g.addRule("E", rule(
 					seq("delete(",E,")"),
 					[](Context& cur)->NodePtr {
 						return cur.refDelete(cur.getTerm(0).as<ExpressionPtr>());
@@ -1502,6 +1518,26 @@ namespace parser {
 					}
 			));
 
+			// job
+			g.addRule("E", rule(
+					seq("job([", E, "-", E, "], ", E,")"),
+					[](Context& cur)->NodePtr {
+						NodeList terms = cur.getTerms();
+						ExpressionPtr rangeLowerBound = terms[0].as<ExpressionPtr>();
+						ExpressionPtr rangeUpperBound = terms[1].as<ExpressionPtr>();
+						CallExprPtr call = terms[2].as<CallExprPtr>();
+
+						if (!call) {
+							return fail(cur, "Not a call expression!");
+						}
+
+						BindExprPtr bind 	= cur.bindExpr(VariableList(), call);
+						JobExprPtr job		= cur.jobExpr(cur.getThreadNumRange(rangeLowerBound, rangeUpperBound),
+								vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), bind);
+
+						return job;
+					}
+			));
 
 			// -- job expressions --
 			g.addRule("E", rule(
