@@ -510,12 +510,12 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 
 	// Handle structs initialization
 	if ( curType.isa<core::StructTypePtr>()) {
-		return builder.callExpr(type, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(type));
+		return builder.getZero(type);
 	}
 
 	// Handle unions initialization
 	if ( curType.isa<core::UnionTypePtr>()) {
-		return builder.callExpr(type, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(type));
+		return builder.getZero(type);
 	}
 
 	// handle vectors initialization
@@ -806,14 +806,11 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 			if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
 				const core::TypePtr& res = refTy->getElementType();
 
-				return retIr = builder.refVar(
-						builder.callExpr(res,
-								(zeroInit ? mgr.getLangBasic().getInitZero() : mgr.getLangBasic().getUndefined()),
-								builder.getTypeLiteral(res)));
+				return retIr = builder.refVar((zeroInit?builder.getZero(res):builder.undefined(res)));
 			}
-			return retIr = builder.callExpr(type,
-					(zeroInit ? mgr.getLangBasic().getInitZero() : mgr.getLangBasic().getUndefined()),
-					builder.getTypeLiteral(type));
+
+			return retIr = zeroInit ? builder.getZero(type) : builder.undefined(type);
+
 		} else {
 			return retIr = defaultInitVal(type);
 		}

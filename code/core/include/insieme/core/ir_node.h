@@ -706,6 +706,20 @@ namespace core {
 		return (const vector<Ptr<const B>>&)list;
 	}
 
+	namespace detail {
+
+		/**
+		 * A small utility to print the types of the nodes within a child list.
+		 * This utility is intended for debugging only.
+		 *
+		 * @return it always returns false
+		 */
+		static inline bool printChildListTypes(const NodeList& list) {
+			std::cout << "\nFaulty Child Node List: " << ::transform(list, [](const NodePtr& cur) { return cur->getNodeType(); }) << "\n";
+			return false;
+		}
+	}
+
 	/**
 	 * A node utility supporting the implementation of nodes having a fixed number
 	 * of child nodes. This utility is extended by the actual node (via multiple
@@ -728,7 +742,7 @@ namespace core {
 		 */
 		FixedSizeNodeHelper(const NodeList& children) {
 			// verify the proper composition of the child node list
-			assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!");
+			assert((checkChildList(children) || printChildListTypes(children)) && "Invalid composition of Child-Nodes discovered!");
 		}
 
 		/**
@@ -839,7 +853,7 @@ namespace core {
 			) {
 
 			// verify the proper composition of the child node list
-			assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!");
+			assert((checkChildList(children) || printChildListTypes(children)) && "Invalid composition of Child-Nodes discovered!");
 		}
 
 		/**

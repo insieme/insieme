@@ -60,11 +60,11 @@ TEST(Preprocessor, GlobalElimination) {
 	std::map<string, core::NodePtr> symbols;
 	symbols["A"] = builder.structExpr(toVector<core::NamedValuePtr>(
 			builder.namedValue("a", builder.undefined(builder.parseType("vector<int<4>,20>"))),
-			builder.namedValue("f", builder.undefined(builder.parseType("()->unit")))
+			builder.namedValue("f", builder.undefined(builder.parseType("real<8>")))
 	));
 
 	core::ProgramPtr program = builder.parseProgram(
-			"let gstruct = struct { vector<int<4>,20> a; ()->unit f; };"
+			"let gstruct = struct { vector<int<4>,20> a; real<8> f; };"
 			""
 			"int<4> main() {"
 			"	ref<gstruct> v1 = new(A);"
@@ -76,7 +76,6 @@ TEST(Preprocessor, GlobalElimination) {
 			"	} (v1);"
 			"	{"
 			"		v1.a = lit(\"X\":vector<int<4>,20>);"
-			"		v1.f();"
 			"	}"
 			"	return 0;"
 			"}",

@@ -155,8 +155,15 @@ protected:
 			});
 			//LOG(DEBUG) << "replaced with: \n" << printer::PrettyPrinter(newNode);
 		} else {
-			// no changes required at this level, recurse
-			newNode = node->substitute(nodeMan, *this);
+
+			// check whether it is a struct-init expression of a lock
+			if (node->getNodeType() == NT_StructExpr && isLockStructType(node.as<ExpressionPtr>()->getType())) {
+				// replace with uninitialized lock
+				newNode = build.undefined(basic.getLock());
+			} else {
+				// no changes required at this level, recurse
+				newNode = node->substitute(nodeMan, *this);
+			}
 		}
 		newNode = handleTPVars(newNode);
 		newNode = fixStruct(newNode);
@@ -316,6 +323,11 @@ protected:
 		return newNode;
 	}
 
+	bool isLockStructType(const TypePtr& type) {
+		// true if it is a struct with a special member
+		return type->getNodeType() == NT_StructType && type.as<StructTypePtr>()->getNamedTypeEntryOf("insieme_omp_lock_struct_marker");
+	}
+
 	// implements OpenMP built-in types by replacing them with the correct IR constructs
 	NodePtr handleTypes(const NodePtr& newNode) {
 		if(TypePtr type = dynamic_pointer_cast<TypePtr>(newNode)) {
@@ -323,12 +335,7 @@ protected:
 			//if(analysis::isRefType(type)) {
 			//	TypePtr sub = analysis::getReferencedType(type);
 				if(ArrayTypePtr arr = dynamic_pointer_cast<ArrayTypePtr>(type)) type = arr->getElementType();
-				if(StructTypePtr st = dynamic_pointer_cast<StructTypePtr>(type)) {
-					if(st->getNamedTypeEntryOf("insieme_omp_lock_struct_marker")) {
-						//std::cout << "!! Found!\n"; 
-						return basic.getLock();
-					}
-				}
+				if (isLockStructType(type)) return basic.getLock();
 			//}
 		}
 		return newNode;

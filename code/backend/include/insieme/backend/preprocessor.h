@@ -161,14 +161,6 @@ namespace backend {
 	};
 
 	/**
-	 * A pre-processor replacing all initZero calls with actual instantiated, equivalent zero values.
-	 */
-	class InitZeroSubstitution : public PreProcessor {
-	public:
-		virtual core::NodePtr process(const Converter& converter, const core::NodePtr& code);
-	};
-
-	/**
 	 * This pre-processor is restoring global variables by identifying the global struct and replacing it
 	 * with a literal substitution.
 	 */
