@@ -645,6 +645,28 @@ TEST(DeclarationStmtTypeCheck, SubTypes) {
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
 }
 
+TEST(DeclarationStmtTypeCheck, RecursiveTypes) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+
+	// OK ... create a function literal
+	RecTypePtr typeA = builder.parseType("let t = struct { A a; ref<t> next; } in t").as<RecTypePtr>();
+	TypePtr typeB = typeA->unroll();
+
+	// all of the following should be supported
+	DeclarationStmtPtr ok0 = builder.declarationStmt(builder.variable(typeA), builder.literal(typeA, "X"));
+	DeclarationStmtPtr ok1 = builder.declarationStmt(builder.variable(typeA), builder.literal(typeB, "X"));
+	DeclarationStmtPtr ok2 = builder.declarationStmt(builder.variable(typeB), builder.literal(typeA, "X"));
+	DeclarationStmtPtr ok3 = builder.declarationStmt(builder.variable(typeB), builder.literal(typeB, "X"));
+
+	CheckPtr typeCheck = make_check<DeclarationStmtTypeCheck>();
+ 	EXPECT_TRUE(check(ok0, typeCheck).empty()) << check(ok0, typeCheck);
+ 	EXPECT_TRUE(check(ok1, typeCheck).empty()) << check(ok1, typeCheck);
+ 	EXPECT_TRUE(check(ok2, typeCheck).empty()) << check(ok2, typeCheck);
+ 	EXPECT_TRUE(check(ok3, typeCheck).empty()) << check(ok3, typeCheck);
+}
+
 TEST(IfCondition, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);
