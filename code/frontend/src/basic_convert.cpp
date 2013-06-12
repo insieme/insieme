@@ -51,6 +51,7 @@
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/utils/debug.h"
+#include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -1017,12 +1018,12 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 		else {
 			//handle extern functions  -- here instead of in CallExr
-			//TODO: extend interceptor with explicit intercept.
-			//      this will take care of the required header function
-			//      therefore is not needed to hard code them in the backend
 			auto funcTy = convertFunctionType(funcDecl,true).as<core::FunctionTypePtr>();
 			std::string callName = funcDecl->getNameAsString();
 			retExpr = builder.literal(callName, funcTy);
+
+			// attach header file info
+			utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs());
 		}
 		RESTORE_TU();
 		return retExpr;
