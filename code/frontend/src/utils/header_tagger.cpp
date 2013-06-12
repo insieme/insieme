@@ -126,6 +126,11 @@ namespace utils {
 		// check whether there is a declaration at all
 		if (!decl) return;
 
+		// do not add headers for external declarations
+		if (const clang::FunctionDecl* funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
+			if (funDecl->isExternC()) return;
+		}
+
 		VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType() << "\n";
 
 		clang::SourceManager& sm = decl->getASTContext().getSourceManager();
