@@ -8,15 +8,6 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-long ticktock()
-{
-  static long prevtime = 0;
-  struct timeval tv;
-  gettimeofday(&tv, 0);
-  long time = tv.tv_sec * 1000 + tv.tv_usec/1000;
-  long retval = time - prevtime;
-  prevtime = time;
-  return retval;
-}
+long ticktock();
 
 #endif // TICKTOCK_H
