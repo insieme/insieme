@@ -648,7 +648,6 @@ TEST(DeclarationStmtTypeCheck, SubTypes) {
 TEST(DeclarationStmtTypeCheck, RecursiveTypes) {
 	NodeManager manager;
 	IRBuilder builder(manager);
-	auto& basic = manager.getLangBasic();
 
 	// OK ... create a function literal
 	RecTypePtr typeA = builder.parseType("let t = struct { A a; ref<t> next; } in t").as<RecTypePtr>();
