@@ -207,6 +207,7 @@ core::StatementPtr ConversionFactory::materializeReadOnlyParams(const core::Stat
 			if (core::analysis::isReadOnly(body, wrap)){
 				// replace read uses
 				newBody = core::transform::replaceAllGen (mgr, newBody, builder.deref(wrap), currParam, true);
+				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, builder.refVar(currParam), true);
 				// this variables might apear in annotations inside:
 				core::visitDepthFirstOnce (newBody, [&] (const core::StatementPtr& node){
 					//if we have a OMP annotation

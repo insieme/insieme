@@ -254,12 +254,13 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		}
 
 		assert(*inductionVar->getType() == *builder.deref(itUseVar)->getType() && "different induction var types");
-
 		if (core::analysis::isReadOnly(builder.compoundStmt(stmtsOld), itUseVar)) {
 			// convert iterator variable into read-only value
 			auto deref = builder.deref(itUseVar);
+			auto mat = builder.refVar(inductionVar);
 			for(auto& cur : stmtsOld) {
 				cur = core::transform::replaceAllGen(mgr, cur, deref, inductionVar, true);
+				cur = core::transform::replaceAllGen(mgr, cur, itUseVar, mat, true);
 
 				// TODO: make this more efficient
 				// also update potential omp annotations
