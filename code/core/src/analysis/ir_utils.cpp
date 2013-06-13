@@ -37,6 +37,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 
 #include <set>
+#include <map>
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
@@ -55,6 +56,7 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
+using std::map;
 
 bool isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
 
@@ -739,41 +741,157 @@ bool contains(const NodePtr& code, const NodePtr& element) {
 }
 
 
-bool isReadOnly(const StatementPtr& context, const VariablePtr& var) {
+namespace {
 
-	// non-ref values are always read-only
-	if (var->getType()->getNodeType() != NT_RefType) return true;
 
-	// get deref token
-	auto deref = var->getNodeManager().getLangBasic().getRefDeref();
+	/**
+	 * A container storing results and assumptions for read-only parameters
+	 * in a recursive context.
+	 */
+	struct ReadOnlyCheck {
 
-	bool isReadOnly = true;
-	visitDepthFirstPrunable(NodeAddress(context), [&](const NodeAddress& cur) {
-		// already violated => abort
-		if (!isReadOnly) return true;
+		/**
+		 * A map mapping recursive variables and parameter positions to a flag
+		 * indicating whether the corresponding parameter is a read-only parameter.
+		 */
+		map<pair<VariablePtr, int>, bool> cache;
 
-		// prune inner scopes
-		if (cur->getNodeType() == NT_LambdaExpr) return true;
+		map<VariablePtr, LambdaPtr> bodyMap;
 
-		// only interested in the given variable
-		if (*cur != *var) { return false; }
+		bool isReadOnly(const VariablePtr& var, int paramPos) {
 
-		// check whether value is used
-		if (cur.getParentNode()->getNodeType() == NT_CompoundStmt) return true;
+			// check whether this is a known variable
+			auto bodyPair = bodyMap.find(var);
+			if (bodyPair == bodyMap.end()) return false;
 
-		// check whether variable is dereferenced at this location
-		if (!isCallOf(cur.getParentNode(), deref)) {
-			// => it is not, so it is used by reference
-			isReadOnly = false;		// it is no longer read-only
-			return true;			// we can stop the visiting process here
+			// check cache
+			auto pos = cache.find(std::make_pair(var, paramPos));
+			if (pos != cache.end()) {
+				return pos->second;
+			}
+
+			// evaluation is necessary
+			LambdaPtr lambda = bodyPair->second;
+			VariablePtr param = lambda->getParameters()[paramPos];
+			bool res = isReadOnly(lambda, param);
+
+			// safe result in cache
+			cache.insert({{var, paramPos}, res});
+
+			return res;
 		}
 
-		// continue search
-		return false;
-	});
 
-	// done
-	return isReadOnly;
+		bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param) {
+
+			// check the parameter
+			assert(::contains(lambda->getParameterList(), param) && "Asking for non-existing parameter.");
+
+			// simple case for non-recursive lambdas
+			if (!lambda->isRecursive()) {
+				// just check body
+				return isReadOnly(lambda->getLambda(), param);
+			}
+
+			// ---- recursive lambdas ----
+
+			// remember bodies
+			for(const LambdaBindingPtr& cur : lambda->getDefinition()) {
+
+				// add body
+				bodyMap[cur->getVariable()] = cur->getLambda();
+
+			}
+
+			// assume parameter is save (co-induction)
+			int pos = 0;
+			ParametersPtr params = lambda->getParameterList();
+			while (*params[pos] != *param) pos++;
+			cache[std::make_pair(lambda->getVariable(), pos)] = true;
+
+			// compute result
+			bool res = isReadOnly(lambda->getLambda(), param);
+
+			// update cache
+			cache[std::make_pair(lambda->getVariable(), pos)] = res;
+
+			// done
+			return res;
+		}
+
+		bool isReadOnly(const LambdaPtr& lambda, const VariablePtr& param) {
+			return isReadOnly(lambda->getBody(), param);
+		}
+
+		bool isReadOnly(const StatementPtr& stmt, const VariablePtr& var) {
+
+			// non-ref values are always read-only
+			if (var->getType()->getNodeType() != NT_RefType) return true;
+
+			// get deref token
+			auto deref = var->getNodeManager().getLangBasic().getRefDeref();
+
+			bool readOnly = true;
+			visitDepthFirstPrunable(NodeAddress(stmt), [&](const NodeAddress& cur) {
+				// already violated => abort
+				if (!readOnly) return true;
+
+				// prune inner scopes
+				if (cur->getNodeType() == NT_LambdaExpr) return true;
+
+				// only interested in the given variable
+				if (*cur != *var) { return false; }
+
+				// check whether value is used
+				if (cur.getParentNode()->getNodeType() == NT_CompoundStmt) return true;
+
+				// if it is a call to a lambda, check the lambda
+				if (CallExprPtr call = cur.getParentNode().isa<CallExprPtr>()) {
+
+					// check calls to nested functions
+					if (LambdaExprPtr fun = call->getFunctionExpr().isa<LambdaExprPtr>()) {
+						if (!isReadOnly(fun, fun->getParameterList()[cur.getIndex()-2])) {		// -1 for type, -1 for function expr
+							readOnly = false;		// it is no longer read-only
+						}
+						// we can stop the decent here
+						return true;
+					}
+
+					// check calls to recursive functions
+					if (VariablePtr var = call->getFunctionExpr().isa<VariablePtr>()) {
+						if (!isReadOnly(var, cur.getIndex()-2)) {		// -1 for type, -1 for function expr
+							readOnly = false;		// it is no longer read-only
+						}
+						// we can stop the decent here
+						return true;
+					}
+				}
+
+				// check whether variable is dereferenced at this location
+				if (!isCallOf(cur.getParentNode(), deref)) {
+					// => it is not, so it is used by reference
+					readOnly = false;		// it is no longer read-only
+					return true;			// we can stop the decent here
+				}
+
+				// continue search
+				return false;
+			});
+
+			// done
+			return readOnly;
+		}
+	};
+
+}
+
+
+bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param) {
+	return ReadOnlyCheck().isReadOnly(lambda, param);
+}
+
+bool isReadOnly(const StatementPtr& stmt, const VariablePtr& var) {
+	return ReadOnlyCheck().isReadOnly(stmt, var);
 }
 
 } // end namespace utils

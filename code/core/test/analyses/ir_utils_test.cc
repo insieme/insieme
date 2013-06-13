@@ -402,6 +402,18 @@ namespace analysis {
 
 	}
 
+	namespace {
+
+		bool readOnly(const StatementPtr& stmt, const VariablePtr& var) {
+			return insieme::core::analysis::isReadOnly(stmt, var);
+		}
+
+		bool notReadOnly(const StatementPtr& stmt, const VariablePtr& var) {
+			return !isReadOnly(stmt, var);
+		};
+
+	}
+
 	TEST(IsReadOnly, Basic) {
 
 		NodeManager mgr;
@@ -413,15 +425,13 @@ namespace analysis {
 		std::map<string, NodePtr> symbols;
 		symbols["x"] = x;
 
-		auto notIsReadOnly = [](const StatementPtr& stmt, const VariablePtr& var) { return !isReadOnly(stmt, var); };
+		EXPECT_PRED2( readOnly, 	 builder.parseStmt("{ x; }",symbols), x);
+		EXPECT_PRED2( readOnly,    builder.parseStmt("{ *x; }",symbols), x);
 
-		EXPECT_PRED2( isReadOnly, 	 builder.parseStmt("{ x; }",symbols), x);
-		EXPECT_PRED2( isReadOnly,    builder.parseStmt("{ *x; }",symbols), x);
+		EXPECT_PRED2( notReadOnly,    builder.parseStmt("{ x = 4; }",symbols), x);
+		EXPECT_PRED2( notReadOnly,    builder.parseStmt("{ let f = (ref<int<4>> x)->unit { x = 3; }; f(x); }",symbols), x);
 
-		EXPECT_PRED2( notIsReadOnly,    builder.parseStmt("{ x = 4; }",symbols), x);
-		EXPECT_PRED2( notIsReadOnly,    builder.parseStmt("{ let f = (ref<int<4>> x)->unit {}; f(x); }",symbols), x);
-
-		EXPECT_PRED2( isReadOnly,       builder.parseStmt("{ let f = (int<4> x)->unit {}; f(*x); }",symbols), x);
+		EXPECT_PRED2( readOnly,       builder.parseStmt("{ let f = (int<4> x)->unit {}; f(*x); }",symbols), x);
 
 	}
 
@@ -434,9 +444,128 @@ namespace analysis {
 		std::map<string, NodePtr> symbols;
 		symbols["x"] = x;
 
-		auto notIsReadOnly = [](const StatementPtr& stmt, const VariablePtr& var) { return !isReadOnly(stmt, var); };
+		EXPECT_PRED2( notReadOnly,    builder.parseStmt("{ x->a; }", symbols), x);
 
-		EXPECT_PRED2( notIsReadOnly,    builder.parseStmt("{ x->a; }", symbols), x);
+	}
+
+	TEST(IsReadOnly, NestedFunctions) {
+
+		// check whether usage in nested functions is discovered
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		ExpressionPtr none = builder.parseExpr("(ref<int<4>> x)->unit { *x; }");
+		ExpressionPtr used = builder.parseExpr("(ref<int<4>> x)->unit { x = 4; }");
+
+		VariablePtr var = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 5);
+
+		ExpressionPtr call1 = builder.callExpr(none, var);
+		ExpressionPtr call2 = builder.callExpr(used, var);
+
+		EXPECT_PRED2(readOnly, call1, var);
+		EXPECT_PRED2(notReadOnly, call2, var);
+
+		// check two parameters
+		ExpressionPtr fun = builder.parseExpr("(ref<int<4>> a, ref<int<4>> b)->unit { a = *b; }");
+
+		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
+		VariablePtr varB = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 7);
+
+		ExpressionPtr call = builder.callExpr(fun, varA, varB);
+
+		EXPECT_PRED2(notReadOnly, call, varA);
+		EXPECT_PRED2(readOnly, call, varB);
+
+
+		// check recursive functions
+		// 	a ... just read
+		//  b ... written in f, not in g
+		//  c ... written in g, not in f
+		//  d ... written in both
+		ExpressionPtr recFun = builder.parseExpr(
+				"let f,g = "
+				"	(ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { b = *a; d = *b; g(a,b,c,d); },"
+				"	(ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { c = *a; d = *c; f(a,b,c,d); }"
+				"in f"
+		);
+
+		VariablePtr varC = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 8);
+		VariablePtr varD = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 9);
+
+		call = builder.callExpr(recFun, varA, varB, varC, varD);
+
+		EXPECT_PRED2(readOnly, call, varA);
+		EXPECT_PRED2(notReadOnly, call, varB);
+		EXPECT_PRED2(notReadOnly, call, varC);
+		EXPECT_PRED2(notReadOnly, call, varD);
+
+	}
+
+	TEST(IsReadOnly, Forwarding) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		ExpressionPtr funA = builder.parseExpr(
+				"let f = "
+				"	(ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { ref<int<4>> x = var(*d); f(x,a,b,c); }"
+				"in f"
+		);
+
+		ExpressionPtr funB = builder.parseExpr(
+				"let f = "
+				"	(ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { ref<int<4>> x = var(*d); d = 2; f(x,a,b,c); }"
+				"in f"
+		);
+
+		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
+		VariablePtr varB = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 7);
+		VariablePtr varC = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 8);
+		VariablePtr varD = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 9);
+
+		auto callA = builder.callExpr(funA, varA, varB, varC, varD);
+		auto callB = builder.callExpr(funB, varA, varB, varC, varD);
+
+		EXPECT_PRED2(readOnly, callA, varA);
+		EXPECT_PRED2(notReadOnly, callB, varA);
+
+	}
+
+	TEST(IsReadOnly, ForwardingMutualRecursive) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		ExpressionPtr funA = builder.parseExpr(
+				"let f,g = "
+				"	(ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { ref<int<4>> x = var(*d); g(x,a,b,c); },"
+				"	(ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { ref<int<4>> x = var(*d); f(x,a,b,c); }"
+				"in f"
+		);
+
+		ExpressionPtr funB = builder.parseExpr(
+				"let f,g = "
+				"	(ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { ref<int<4>> x = var(*d); d = 2; g(x,a,b,c); },"
+				"	(ref<int<4>> a, ref<int<4>> b, ref<int<4>> c, ref<int<4>> d)->unit { ref<int<4>> x = var(*d); d = 2; f(x,a,b,c); }"
+				"in f"
+		);
+
+		VariablePtr varA = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 6);
+		VariablePtr varB = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 7);
+		VariablePtr varC = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 8);
+		VariablePtr varD = builder.variable(builder.refType(mgr.getLangBasic().getInt4()), 9);
+
+		auto callA = builder.callExpr(funA, varA, varB, varC, varD);
+		auto callB = builder.callExpr(funB, varA, varB, varC, varD);
+
+		EXPECT_PRED2(readOnly, callA, varA);
+		EXPECT_PRED2(readOnly, callA, varB);
+		EXPECT_PRED2(readOnly, callA, varC);
+		EXPECT_PRED2(readOnly, callA, varD);
+		EXPECT_PRED2(notReadOnly, callB, varA);
+		EXPECT_PRED2(notReadOnly, callB, varB);
+		EXPECT_PRED2(notReadOnly, callB, varC);
+		EXPECT_PRED2(notReadOnly, callB, varD);
 
 	}
 
