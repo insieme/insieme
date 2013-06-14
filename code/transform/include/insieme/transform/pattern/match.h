@@ -117,10 +117,18 @@ namespace pattern {
 		}
 
 		/**
+		 * Obtain the current index this path is pointing to (inner most).
+		 */
+		std::size_t get() const {
+			return path.back();
+		}
+
+		/**
 		 * Updates the current index this path is pointing to.
 		 */
 		void set(std::size_t index) {
 			assert(path.size() > 0);
+			assert(path.back() < index);
 			path.back() = index;
 		}
 
@@ -343,7 +351,8 @@ namespace pattern {
 
 			if (begin+1 == end) {
 				assert(depth == 1 && "Path length not correct!");
-				children[index] = MatchValue(value);
+				assert(!children[index].tree && "Value must not be set!");
+				children[index].tree = value;
 			} else {
 				children[index].addValue(begin+1, end, value);
 			}

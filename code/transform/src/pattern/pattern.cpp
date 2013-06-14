@@ -179,8 +179,16 @@ namespace pattern {
 				path.pop();
 			}
 
+			std::size_t get() const {
+				return path.get();
+			}
+
 			void set(std::size_t index) {
 				path.set(index);
+			}
+
+			std::size_t getDepth() const {
+				return path.getDepth();
 			}
 
 			const MatchPath& getCurrentPath() const {
@@ -285,6 +293,7 @@ namespace pattern {
 				}) << "}";
 				return out << ")";
 			}
+
 		};
 
 
@@ -463,29 +472,32 @@ namespace pattern {
 				// start of recursion => bind recursive variable and handle context
 				context.push();
 
-				auto delayed = delayedCheck;
-
 				// safe current value of the recursive variable
 				TreePatternPtr oldValue;
 				if (context.isRecVarBound(pattern.name)) {
+					assert(context.getDepth() > context.getRecVarDepth(pattern.name) && "Nested recursive variables must not be on same level!");
 					oldValue = context.getRecVarBinding(pattern.name);
 					context.unbindRecVar(pattern.name);
 
-					// add old-rec-var restoration to delayed operations
-					delayed = [&](MatchContext<T> context)->bool {
-						// restore old recursive variable
-						context.unbindRecVar(pattern.name);
-						context.bindRecVar(pattern.name, oldValue);
-						return delayedCheck(context);
-					};
 				}
+
+				// add old-rec-var restoration to delayed operations
+				decltype(delayedCheck) delayed = [&](MatchContext<T> context)->bool {
+
+					// remove binding
+					context.unbindRecVar(pattern.name);
+					context.pop();
+
+					// restore old recursive variable if necessary
+					if (oldValue) context.bindRecVar(pattern.name, oldValue);
+
+					// run remaining delayed checks
+					return delayedCheck(context);
+				};
 
 				// match using new rec-var binding
 				context.bindRecVar(pattern.name, pattern.pattern);
-				bool res = match(pattern.pattern, context, tree, delayed);
-
-				context.pop();
-				return res;
+				return match(pattern.pattern, context, tree, delayed);
 			}
 
 			MATCH(Node) {
