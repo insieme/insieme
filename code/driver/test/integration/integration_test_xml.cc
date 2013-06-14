@@ -81,6 +81,13 @@ namespace insieme {
 		// load the code using the frontend
 		core::ProgramPtr code = testCase.load(manager);
 
+		// skip tests containing try/catch constructs (not supported by XML yet)
+		bool containsTryCachThrow = visitDepthFirstOnceInterruptible(code, [](const NodePtr& cur) {
+			return cur->getNodeType() == NT_ThrowStmt || cur->getNodeType() == NT_TryCatchStmt;
+		});
+		// skip unsupported inputs
+		if (containsTryCachThrow) return;
+
 		// conduct XML conversion
 		xml::XmlUtil xml;
 		xml.convertIrToDom(code);

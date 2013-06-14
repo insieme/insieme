@@ -419,6 +419,29 @@ namespace types {
 
 	}
 
+	TEST(TypeUtils, RecursiveTypes) {
+
+		// To be tested: a recursive type should be equivalent to its unrolled version
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// create a recursive type
+		auto type = builder.parseType("let t = struct { A a; ref<t> next; } in t").as<RecTypePtr>();
+		EXPECT_TRUE(type);
+
+		EXPECT_PRED2(isSubTypeOf, type, type);
+		EXPECT_PRED2(isSubTypeOf, type, type->unroll());
+		EXPECT_PRED2(isSubTypeOf, type->unroll(), type);
+
+
+		// also a mutual recursive type
+		type = builder.parseType("let t,s = struct { A a; ref<s> next; }, struct { B b; ref<t> next; } in t").as<RecTypePtr>();
+		EXPECT_TRUE(type);
+
+		EXPECT_PRED2(isSubTypeOf, type, type);
+		EXPECT_PRED2(isSubTypeOf, type, type->unroll());
+		EXPECT_PRED2(isSubTypeOf, type->unroll(), type);
+	}
 
 } // end namespace types
 } // end namespace core

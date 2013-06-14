@@ -51,6 +51,7 @@
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/utils/debug.h"
+#include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -206,6 +207,7 @@ core::StatementPtr ConversionFactory::materializeReadOnlyParams(const core::Stat
 			if (core::analysis::isReadOnly(body, wrap)){
 				// replace read uses
 				newBody = core::transform::replaceAllGen (mgr, newBody, builder.deref(wrap), currParam, true);
+				newBody = core::transform::replaceAllGen (mgr, newBody, wrap, builder.refVar(currParam), true);
 				// this variables might apear in annotations inside:
 				core::visitDepthFirstOnce (newBody, [&] (const core::StatementPtr& node){
 					//if we have a OMP annotation
@@ -510,12 +512,12 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 
 	// Handle structs initialization
 	if ( curType.isa<core::StructTypePtr>()) {
-		return builder.callExpr(type, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(type));
+		return builder.getZero(type);
 	}
 
 	// Handle unions initialization
 	if ( curType.isa<core::UnionTypePtr>()) {
-		return builder.callExpr(type, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(type));
+		return builder.getZero(type);
 	}
 
 	// handle vectors initialization
@@ -806,14 +808,11 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 			if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
 				const core::TypePtr& res = refTy->getElementType();
 
-				return retIr = builder.refVar(
-						builder.callExpr(res,
-								(zeroInit ? mgr.getLangBasic().getInitZero() : mgr.getLangBasic().getUndefined()),
-								builder.getTypeLiteral(res)));
+				return retIr = builder.refVar((zeroInit?builder.getZero(res):builder.undefined(res)));
 			}
-			return retIr = builder.callExpr(type,
-					(zeroInit ? mgr.getLangBasic().getInitZero() : mgr.getLangBasic().getUndefined()),
-					builder.getTypeLiteral(type));
+
+			return retIr = zeroInit ? builder.getZero(type) : builder.undefined(type);
+
 		} else {
 			return retIr = defaultInitVal(type);
 		}
@@ -1020,12 +1019,12 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 		else {
 			//handle extern functions  -- here instead of in CallExr
-			//TODO: extend interceptor with explicit intercept.
-			//      this will take care of the required header function
-			//      therefore is not needed to hard code them in the backend
 			auto funcTy = convertFunctionType(funcDecl,true).as<core::FunctionTypePtr>();
 			std::string callName = funcDecl->getNameAsString();
 			retExpr = builder.literal(callName, funcTy);
+
+			// attach header file info
+			utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs());
 		}
 		RESTORE_TU();
 		return retExpr;

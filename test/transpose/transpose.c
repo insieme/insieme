@@ -13,6 +13,16 @@
 
 #include "ticktock.h"
 
+long ticktock() {
+  static long prevtime = 0;
+  struct timeval tv;
+  gettimeofday(&tv, 0);
+  long time = tv.tv_sec * 1000 + tv.tv_usec/1000;
+  long retval = time - prevtime;
+  prevtime = time;
+  return retval;
+}
+
 #define MAX_VAL 100
 
 #define IDX(M,R,C) (M[(R)*N+(C)])

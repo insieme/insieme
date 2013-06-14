@@ -148,6 +148,28 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 		return true;
 	}
 
+	// check for recursive types
+	if (subType->getNodeType() == NT_RecType || superType->getNodeType() == NT_RecType) {
+
+		// if both are they have to be equivalent
+		if (subType->getNodeType() == NT_RecType && superType->getNodeType() == NT_RecType) {
+			return subType == superType;
+		}
+
+		// if only one is, it needs to be unrolled
+		if (subType->getNodeType() == NT_RecType) {
+			assert(superType->getNodeType() != NT_RecType);
+			return isSubTypeOf(subType.as<RecTypePtr>()->unroll(), superType);
+		}
+
+		if (superType->getNodeType() == NT_RecType) {
+			assert(subType->getNodeType() != NT_RecType);
+			return isSubTypeOf(subType, superType.as<RecTypePtr>()->unroll());
+		}
+
+		assert(false && "How could you get here?");
+	}
+
 	// check whether the sub-type is generic
 	if (subType->getNodeType() == NT_GenericType || subType->getNodeType() == NT_StructType) {
 		// use the delta algorithm for computing all the super-types of the given sub-type

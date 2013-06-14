@@ -50,6 +50,8 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/clang_config.h"
+
+#include "insieme/frontend/utils/header_tagger.h"
 		
 namespace insieme {
 namespace frontend { 
@@ -59,53 +61,6 @@ namespace {
 
 namespace fs = boost::filesystem;
 
-boost::optional<fs::path> toStdLibHeader(const fs::path& path, const vector<fs::path>& libDirs) {
-	static const boost::optional<fs::path> fail;
-
-	if (libDirs.empty()) return fail;
-
-	if (contains(libDirs, path)) {
-		return fs::path();
-	}
-
-	if (!path.has_parent_path()) {
-		return fail;
-	}
-
-	// if it is within the std-lib directory, build relative path
-	auto res = toStdLibHeader(path.parent_path(), libDirs);
-	return (res)? (*res/path.filename()) : fail;
-	
-}
-
-void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const vector<fs::path>& stdLibDirs) {
-
-	// check whether there is a declaration at all
-	if (!decl) return;
-
-	VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType() << "\n";
-	clang::SourceManager& sm = decl->getASTContext().getSourceManager();
-	clang::SourceLocation includeLoc = sm.getIncludeLoc(sm.getFileID(decl->getLocation()));
-	std::string fileName;
-	if(includeLoc.isValid()) {
-		// decl comes from included header
-		fileName = sm.getPresumedLoc(includeLoc).getFilename();
-	} else {
-		assert(false && "no includeLoc found");
-		return;
-	}
-
-	// get absolute path of header file
-	fs::path header = fs::canonical(fileName);
-
-	// check whether it is within the STL library
-	if (auto stdLibHeader = toStdLibHeader(header, stdLibDirs)) {
-		header = *stdLibHeader;
-	}
-
-	// use resulting header
-	insieme::annotations::c::attachInclude(node, header.string());
-}
 
 std::string fixQualifiedName(std::string name) {
 	// get rid of inline namespace utilized by the clang headers

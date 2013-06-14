@@ -54,6 +54,8 @@
 #include "insieme/transform/filter/standard_filter.h"
 #include "insieme/transform/rulebased/transformations.h"
 
+#include <boost/algorithm/string.hpp>
+
 using namespace std;
 
 namespace fe = insieme::frontend;
@@ -86,7 +88,21 @@ int main(int argc, char** argv) {
 
 	if (!options.valid) return (options.help)?0:1;
 
-	// Step 2: load input code
+	// Step 2: filter input files
+	vector<string> inputs;
+	vector<string> libs;
+	for(auto cur : options.job.getFiles()) {
+		// filter out so-files
+		if (boost::ends_with(cur, "so")) {
+			libs.push_back(cur);
+		} else {
+			inputs.push_back(cur);
+		}
+	}
+	options.job.setFiles(inputs);
+
+
+	// Step 3: load input code
 	//		The frontend is converting input code into the internal representation (IR).
 	//		The memory management of IR nodes is realized using node manager instances.
 	//		The life cycle of IR nodes is bound to the manager the have been created by.
@@ -102,8 +118,7 @@ int main(int argc, char** argv) {
     auto program = options.job.execute(manager);
 
 
-
-	// Step 2: produce output code
+	// Step 3: produce output code
 	//		This part converts the processed code into C-99 target code using the
 	//		backend producing parallel code to be executed using the Insieme runtime
 	//		system. Backends targeting alternative platforms may be present in the
@@ -112,7 +127,7 @@ int main(int argc, char** argv) {
 	auto targetCode = be::runtime::RuntimeBackend::getDefault()->convert(program);
 
 
-	// Step 3: build output code
+	// Step 4: build output code
 	//		A final, optional step is using a third-party C compiler to build an actual
 	//		executable.
 	cout << "Building binaries ...\n";

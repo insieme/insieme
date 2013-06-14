@@ -252,7 +252,8 @@ ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : p
 						 extension == "cpp" ||
 						 extension == "cxx" ||
 						 extension == "hpp" ||
-						 extension == "hxx";
+						 extension == "hxx" ||
+						 extension == "o";
 	}
 
 	LangOptions& LO = pimpl->clang.getLangOpts();

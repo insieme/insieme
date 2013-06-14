@@ -67,7 +67,6 @@ namespace backend {
 		if (!(options & SKIP_RESTORE_GLOBALS)) {
 			steps.push_back(makePreProcessor<RestoreGlobals>());
 		}
-		steps.push_back(makePreProcessor<InitZeroSubstitution>());
 		steps.push_back(makePreProcessor<MakeVectorArrayCastsExplicit>());
 		steps.push_back(makePreProcessor<RedundancyElimination>());
 		steps.push_back(makePreProcessor<CorrectRecVariableUsage>());
@@ -98,54 +97,6 @@ namespace backend {
 		return converter.getNodeManager().get(code);
 	}
 
-
-
-	// --------------------------------------------------------------------------------------------------------------
-	//      PreProcessor InitZero convert => replaces call by actual value
-	// --------------------------------------------------------------------------------------------------------------
-
-	class InitZeroReplacer : public core::transform::CachedNodeMapping {
-
-		const core::LiteralPtr initZero;
-		core::NodeManager& manager;
-		core::IRBuilder builder;
-		const core::lang::BasicGenerator& basic;
-
-	public:
-
-		InitZeroReplacer(core::NodeManager& manager) :
-			initZero(manager.getLangBasic().getInitZero()), manager(manager), builder(manager), basic(manager.getLangBasic()) {};
-
-		/**
-		 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
-		 * the resulting call.
-		 */
-		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
-			// do not touch types ...
-			if (ptr->getNodeCategory() == core::NC_Type) {
-				return ptr;
-			}
-
-			// apply recursively - bottom up
-			core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this);
-
-			// check current node
-			if (core::analysis::isCallOf(res, initZero)) {
-				// replace with equivalent zero value
-				res = builder.getZero(static_pointer_cast<const core::Expression>(res)->getType());
-			}
-
-			// no change required
-			return res;
-		}
-
-	};
-
-
-	core::NodePtr InitZeroSubstitution::process(const Converter& converter, const core::NodePtr& code) {
-		// the converter does the magic
-		return InitZeroReplacer(converter.getNodeManager()).map(code);
-	}
 
 
 
@@ -247,9 +198,10 @@ namespace backend {
 	bool isZero(const core::ExpressionPtr& value) {
 
 		const core::lang::BasicGenerator& basic = value->getNodeManager().getLangBasic();
+		core::IRBuilder builder(value->getNodeManager());
 
 		// if initialization is zero ...
-		if (core::analysis::isCallOf(value, basic.getInitZero())) {
+		if (value == builder.getZero(value->getType())) {
 			// no initialization required
 			return true;
 		}
@@ -490,7 +442,6 @@ namespace backend {
 
 		// get some functions used for the initialization
 		core::ExpressionPtr initUniform = basic.getVectorInitUniform();
-		core::ExpressionPtr initZero = basic.getInitZero();
 
 		// a property used to determine whether an initial value is undefined
 		auto isUndefined = [&](const core::NodePtr& cur) {

@@ -486,19 +486,37 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// if it is an integer ...
 	if (manager.getLangBasic().isInt(type)) {
-		return core::Literal::get(manager, type, "0");
+		return literal(type, "0");
 	}
 
 	// if it is a real ..
 	if (manager.getLangBasic().isReal(type)) {
-		return core::Literal::get(manager, type, "0.0");
+		if (manager.getLangBasic().isFloat(type)) {
+			return literal(type, "0.0f");
+		}
+		return literal(type, "0.0");
+	}
+
+	// if it is the bool type
+	if(manager.getLangBasic().isBool(type)) {
+		return boolLit(false);
+	}
+
+	// if it is the char type
+	if(manager.getLangBasic().isChar(type)) {
+		return literal(type, "\0");
+	}
+
+	// if it is a lock, keep it undefined
+	if (manager.getLangBasic().isLock(type)) {
+		return undefined(type);
 	}
 
 	// if it is a struct ...
 	if (type->getNodeType() == core::NT_StructType) {
 
 		// extract type and resolve members recursively
-		core::StructTypePtr structType = static_pointer_cast<const core::StructType>(type);
+		StructTypePtr structType = static_pointer_cast<const StructType>(type);
 
 		vector<NamedValuePtr> members;
 		for_each(structType->getEntries(), [&](const NamedTypePtr& cur) {
@@ -508,15 +526,29 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 		return core::StructExpr::get(manager, structType, namedValues(members));
 	}
 
+	// if it is a union type ...
+	if (type->getNodeType() == core::NT_UnionType) {
+		UnionTypePtr unionType = type.as<UnionTypePtr>();
+
+		// in case it is a an empty union
+		if (unionType.empty() == 0) {
+			return undefined(unionType);
+		}
+
+		// init the first member
+		return unionExpr(unionType, unionType[0]->getName(), getZero(unionType[0]->getType()));
+	}
+
 	// if it is a ref type ...
 	if (type->getNodeType() == core::NT_RefType) {
 		// return NULL
 		return manager.getLangBasic().getRefNull();
 	}
 
-	// if it is a bool type
-	if(manager.getLangBasic().isBool(type)) {
-		return boolLit(false);
+	// if it is a vector type use init uniform
+	if (type->getNodeType() == core::NT_VectorType) {
+		VectorTypePtr vectorType = type.as<VectorTypePtr>();
+		return vectorInit(getZero(vectorType->getElementType()), vectorType->getSize());
 	}
 
 	// add support for unit
@@ -533,8 +565,8 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 	LOG(FATAL) << "Encountered unsupported type: " << *type;
 	assert(false && "Given type not supported yet!");
 
-	// fall-back => no default initialization possible
-	return callExpr(type, manager.getLangBasic().getInitZero(), getTypeLiteral(type));
+	// fall-back => return a literal 0 of the corresponding type
+	return literal(type, "0");
 }
 
 

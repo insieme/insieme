@@ -397,6 +397,15 @@ bool contains(const NodePtr& code, const NodePtr& element);
  */
 bool isReadOnly(const StatementPtr& context, const VariablePtr& var);
 
+/**
+ * Tests if the given parameters is a read-only parameter within the given lambda.
+ *
+ * @param lambda the lambda expression to be tested
+ * @param param the parameter to be tested, must be a parameter of the given lambda
+ * @return true if the parameter is only read, false if it might be written
+ */
+bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param);
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme
