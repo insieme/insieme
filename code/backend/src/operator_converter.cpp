@@ -445,6 +445,10 @@ namespace backend {
 			core::TypePtr type = initValue->getType();
 			const TypeInfo& valueTypeInfo = GET_TYPE_INFO(type);
 
+			// fix dependency
+			context.getDependencies().insert(valueTypeInfo.definition);
+
+
 			// special handling for arrays
 			if (type->getNodeType() == core::NT_ArrayType) {
 				// no out allocation required!
@@ -475,6 +479,14 @@ namespace backend {
 			// get result type information
 			core::RefTypePtr resType = static_pointer_cast<const core::RefType>(call->getType());
 			const RefTypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(resType);
+
+			// extract type
+			core::ExpressionPtr initValue = call->getArgument(0);
+			core::TypePtr type = initValue->getType();
+			const TypeInfo& valueTypeInfo = GET_TYPE_INFO(type);
+
+			// fix dependency
+			context.getDependencies().insert(valueTypeInfo.definition);
 
 			// special handling for requesting a un-initialized memory cell
 			if (core::analysis::isCallOf(ARG(0), LANG_BASIC.getUndefined())) {
