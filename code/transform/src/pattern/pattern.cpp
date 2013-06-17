@@ -40,6 +40,9 @@
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"
+#include "insieme/utils/unused.h"
+
+#include "insieme/utils/assert.h"
 
 namespace insieme {
 namespace transform {
@@ -129,15 +132,16 @@ namespace pattern {
 			// a cache for tree patterns not including variables
 			typedef std::map<std::pair<const TreePattern*, typename T::atom_type>, bool> tree_pattern_cache;
 
-		private:
 			struct RecVarInfo {
 				TreePatternPtr pattern;
 				unsigned level;
 				unsigned counter;
 
-				RecVarInfo(TreePatternPtr pattern, unsigned level)
+				RecVarInfo(TreePatternPtr pattern = TreePatternPtr(), unsigned level = 0)
 					: pattern(pattern), level(level), counter(0) {}
 			};
+
+		private:
 
 			typedef std::unordered_map<string, RecVarInfo> RecVarMap;
 
@@ -195,6 +199,10 @@ namespace pattern {
 				return path;
 			}
 
+			MatchPath& getCurrentPath() {
+				return path;
+			}
+
 			void setCurrentPath(const MatchPath& newPath) {
 				path = newPath;
 			}
@@ -209,21 +217,29 @@ namespace pattern {
 				match.bindTreeVar(path, var, value);
 			}
 
+			void unbindTreeVar(const std::string& var) {
+				match.unbindTreeVar(path, var);
+			}
+
 			const value_type& getTreeVarBinding(const std::string& var) const {
 				return match.getTreeVarBinding(path, var);
 			}
 
-			// -- Node Variables --------------------------
+			// -- List Variables --------------------------
 
-			bool isNodeVarBound(const std::string& var) const {
+			bool isListVarBound(const std::string& var) const {
 				return match.isListVarBound(path, var);
 			}
 
-			void bindNodeVar(const std::string& var, const iterator& begin, const iterator& end) {
+			void bindListVar(const std::string& var, const iterator& begin, const iterator& end) {
 				match.bindListVar(path, var, begin, end);
 			}
 
-			list_type getNodeVarBinding(const std::string& var) const {
+			void unbindListVar(const std::string& var) {
+				match.unbindListVar(path, var);
+			}
+
+			list_type getListVarBinding(const std::string& var) const {
 				return match.getListVarBinding(path, var);
 			}
 
@@ -238,9 +254,19 @@ namespace pattern {
 				boundRecursiveVariables.insert(std::make_pair(var, RecVarInfo(pattern, path.getDepth())));
 			}
 
+			void bindRecVar(const std::string& var, const RecVarInfo& info) {
+				assert(!isRecVarBound(var) && "Variable bound twice");
+				boundRecursiveVariables.insert(std::make_pair(var, info));
+			}
+
 			TreePatternPtr getRecVarBinding(const std::string& var) const {
 				assert(isRecVarBound(var) && "Requesting bound value for unbound tree variable");
 				return boundRecursiveVariables.find(var)->second.pattern;
+			}
+
+			const RecVarInfo& getRecVarInfo(const std::string& var) const {
+				assert(isRecVarBound(var) && "Requesting bound value for unbound tree variable");
+				return boundRecursiveVariables.find(var)->second;
 			}
 
 			unsigned getRecVarDepth(const std::string& var) const {
@@ -294,6 +320,42 @@ namespace pattern {
 				return out << ")";
 			}
 
+			// -- Backup and Restore --------------------------------------
+
+			struct MatchContextBackup {
+
+				/**
+				 * A reference to the context this backup is based on.
+				 * Backups may only be restored for the same context.
+				 */
+				const MatchContext& context;
+
+				const Match<T> match;
+
+				explicit MatchContextBackup(const MatchContext& data)
+					: context(data),
+					  match(data.match) {}
+
+				void restore(MatchContext& target) {
+					assert(&target == &context && "Unable to restore different context!");
+
+					// restore match context content
+					//	- path can be ignored since it is continuously maintained
+					//  - recursive variables are also not required to be checked (handled automatically)
+
+					// the variable bindings need to be re-set
+					// TODO: get rid of this one too
+					target.match = match;
+				}
+			};
+
+			MatchContextBackup backup() const {
+				return MatchContextBackup(*this);
+			}
+
+			void restore(const MatchContextBackup& backup) {
+				backup.restore(*this);
+			}
 		};
 
 
@@ -380,12 +442,7 @@ namespace pattern {
 
 				// check filter-pattern of this variable
 				context.bindTreeVar(pattern.name, tree);		// speculate => bind variable
-				if (match(pattern.pattern, context, tree, delayedCheck)) {
-					return true;
-				}
-
-				// tree is not a valid substitution for this variable
-				return false;
+				return match(pattern.pattern, context, tree, delayedCheck);
 			}
 
 			namespace {
@@ -427,10 +484,10 @@ namespace pattern {
 				bool res = false;
 
 				// isolate context for each try
-				MatchContext<T> backup = context;
+				auto backup = context.backup();
 				res = res || match(pattern, context, tree, delayedCheck);
 				for_each(tree->getChildList(), [&](const typename T::value_type& cur) { // generalize this
-					if (!res) context = backup;		// restore context
+					if (!res) backup.restore(context);		// restore context
 					res = res || contains(context, cur, pattern, delayedCheck);
 				});
 				return res;
@@ -452,11 +509,9 @@ namespace pattern {
 					// save current context path
 					MatchPath path = context.getCurrentPath();
 
-					// restore recursion level
+					// restore recursion level of outer recursive scope
 					unsigned recLevel = context.getRecVarDepth(pattern.name);
-					while(context.getCurrentPath().getDepth() > recLevel) {
-						context.pop();
-					}
+					context.getCurrentPath().prune(recLevel);
 
 					// update number of recursion applications
 					context.set(context.incRecVarCounter(pattern.name));
@@ -473,31 +528,30 @@ namespace pattern {
 				context.push();
 
 				// safe current value of the recursive variable
-				TreePatternPtr oldValue;
-				if (context.isRecVarBound(pattern.name)) {
+				bool preBound = context.isRecVarBound(pattern.name);
+				typename MatchContext<T>::RecVarInfo oldInfo;
+				if (preBound) {
 					assert(context.getDepth() > context.getRecVarDepth(pattern.name) && "Nested recursive variables must not be on same level!");
-					oldValue = context.getRecVarBinding(pattern.name);
+					oldInfo = context.getRecVarInfo(pattern.name);
 					context.unbindRecVar(pattern.name);
-
 				}
 
-				// add old-rec-var restoration to delayed operations
-				decltype(delayedCheck) delayed = [&](MatchContext<T> context)->bool {
-
-					// remove binding
-					context.unbindRecVar(pattern.name);
-					context.pop();
-
-					// restore old recursive variable if necessary
-					if (oldValue) context.bindRecVar(pattern.name, oldValue);
-
-					// run remaining delayed checks
-					return delayedCheck(context);
-				};
+				// start by ignoring delayed checks
+				std::function<bool(MatchContext<T>&)> accept = [](MatchContext<T>& context) { return true; };
 
 				// match using new rec-var binding
 				context.bindRecVar(pattern.name, pattern.pattern);
-				return match(pattern.pattern, context, tree, delayed);
+				bool res = match(pattern.pattern, context, tree, accept);
+
+				// remove binding
+				context.unbindRecVar(pattern.name);
+				context.pop();
+
+				// restore old recursive variable if necessary
+				if (preBound) context.bindRecVar(pattern.name, oldInfo);
+
+				// run remaining delayed checks
+				return res && delayedCheck(context);
 			}
 
 			MATCH(Node) {
@@ -507,12 +561,21 @@ namespace pattern {
 			}
 
 			MATCH(Negation) {
-				// negation operates on copy of context (what shouldn't shouldn't leaf traces)
-				MatchContext<T> copy(context);
+				// backup current state - negation operates on isolated context (what shouldn't be shouldn't leaf traces)
+				auto backup = context.backup();
 
 				// ignore delayed checks while matching inner block and conduct those checks if inner one fails
 				std::function<bool(MatchContext<T>&)> accept = [](MatchContext<T>& context) { return true; };
-				return !match(pattern.pattern, copy, tree, accept) && delayedCheck(context);
+				bool fits = !match(pattern.pattern, context, tree, accept);
+
+				// save us the effort of restoring the old context
+				if (!fits) return false;
+
+				// restore context
+				backup.restore(context);
+
+				// finish by processing delayed checks on the original context
+				return delayedCheck(context);
 			}
 
 			MATCH(Conjunction) {
@@ -522,11 +585,11 @@ namespace pattern {
 			}
 
 			MATCH(Disjunction) {
-				// create context copy for rollback
-				MatchContext<T> copy(context);
+				// create context backup for rollback
+				auto backup = context.backup();
 				if (match(pattern.pattern1, context, tree, delayedCheck)) return true;
 				// restore context
-				context = copy;
+				backup.restore(context);
 				return match(pattern.pattern2, context, tree, delayedCheck);
 			}
 
@@ -578,21 +641,18 @@ namespace pattern {
 			MATCH(Variable) {
 
 				// check whether the variable is already bound
-				if(context.isNodeVarBound(pattern.name)) {
-					const auto& value = context.getNodeVarBinding(pattern.name);
+				if(context.isListVarBound(pattern.name)) {
+					const auto& value = context.getListVarBinding(pattern.name);
 					return std::distance(begin, end) == std::distance(value.begin(), value.end()) &&
 						   std::equal(begin, end, value.begin(), equal_target<typename T::value_type>()) &&
 						   delayedCheck(context);
 				}
 
 				// check filter-pattern of this variable
-				context.bindNodeVar(pattern.name, begin, end);	// speculate => bind variable
-				if (match(pattern.pattern, context, begin, end, delayedCheck)) {
-					return true;
-				}
+				context.bindListVar(pattern.name, begin, end);	// speculate => bind variable
 
-				// tree is not a valid substitution for this variable
-				return false;
+				// check whether the tree is a valid substitution for this variable
+				return match(pattern.pattern, context, begin, end, delayedCheck);
 			}
 
 			MATCH(Sequence) {
@@ -611,12 +671,13 @@ namespace pattern {
 
 			MATCH(Alternative) {
 				// try both alternatives using a private context
-				MatchContext<T> copy(context);
-				if (match(pattern.alternative1, copy, begin, end, delayedCheck)) {
-					// make temporal context permanent ..
-					context = copy;
+				auto backup = context.backup();
+				if (match(pattern.alternative1, context, begin, end, delayedCheck)) {
 					return true;
 				}
+
+				// try alternative after reseting context
+				backup.restore(context);
 				return match(pattern.alternative2, context, begin, end, delayedCheck);
 			}
 
@@ -632,33 +693,35 @@ namespace pattern {
 				}
 
 				// test special case of a single iteration
-				MatchContext<T> copy = context;
-				if (rep.minRep <= 1 && match(rep.pattern, copy, begin, end, delayedCheck)) {
-					context = copy;
-					return true;
+				auto backup = context.backup();
+				if (rep.minRep <= 1) {
+					// try whether a single repetition is sufficient
+					if (match(rep.pattern, context, begin, end, delayedCheck)) {
+						return true;
+					}
+					// undo changes
+					backup.restore(context);
 				}
 
 				// try one pattern + a recursive repetition
 				for (auto i=begin; i<end; ++i) {
 
-					// private copy for this try
-					MatchContext<T> copy = context;
+					// restore context for this attempt
+					backup.restore(context);
 
-					if (!match(rep.pattern, copy, begin, i, delayedCheck)) {
+					if (!match(rep.pattern, context, begin, i, delayedCheck)) {
 						// does not match ... try next!
 						continue;
 					}
 
 					// increment repetition counter
-					copy.inc();
+					context.inc();
 
-					if (!matchRepetitionInternal(rep, copy, i, end, repetitions + 1, delayedCheck)) {
+					if (!matchRepetitionInternal(rep, context, i, end, repetitions + 1, delayedCheck)) {
 						// does not fit any more ... try next!
 						continue;
 					}
 
-					// found a match!
-					context = copy;
 					return true;
 				}
 
@@ -677,8 +740,8 @@ namespace pattern {
 				// drop extra level
 				context.pop();
 
-				// conduct delayed checks
-				return res && delayedCheck(context);
+				// conduct delayed checks if necessary
+				return res & delayedCheck(context);
 			}
 
 		#undef MATCH
@@ -714,6 +777,7 @@ namespace pattern {
 			const bool DEBUG = false;
 
 			if (DEBUG) std::cout << "Matching " << pattern << " against " << tree << " with context " << context << " ... \n";
+			assert_decl(auto path = context.getCurrentPath());
 
 			// quick check for wildcards (should not even be cached)
 			if (pattern.type == TreePattern::Wildcard) return delayedCheck(context);
@@ -744,6 +808,10 @@ namespace pattern {
 			// for all the rest, use non-cached inner implementation
 			bool res = match_internal(pattern, context, tree, delayedCheck);
 			if (DEBUG) std::cout << "Matching " << pattern << " against " << tree << " with context " << context << " ... - matched: " << res << "\n";
+
+			// check correct handling of paths
+			assert_eq(path, context.getCurrentPath());
+
 			return res;
 		}
 
@@ -754,6 +822,7 @@ namespace pattern {
 			const bool DEBUG = false;
 
 			if (DEBUG) std::cout << "Matching " << pattern << " against " << join(", ", begin, end, print<deref<typename T::value_type>>()) << " with context " << context << " ... \n";
+			assert_decl(auto path = context.getCurrentPath());
 
 			bool res = false;
 			switch(pattern.type) {
@@ -768,9 +837,11 @@ namespace pattern {
 			}
 
 			if (DEBUG) std::cout << "Matching " << pattern << " against " << join(", ", begin, end, print<deref<typename T::value_type>>()) << " with context " << context << " ...  match: " << res << "\n";
+
+			// check correct handling of paths
+			assert_eq(path, context.getCurrentPath());
+
 			return res;
-//			assert(false && "Missed a pattern type!");
-//			return false;
 		}
 
 	} // end namespace details

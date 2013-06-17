@@ -736,6 +736,39 @@ namespace pattern {
 		// if (res) EXPECT_EQ("Match({x=[b,c,b], y=[(b,(c,(b,a))),(c,(b,a)),(b,a)]})", toString(*res)); //FIXME
 	}
 
+	TEST(Match, NestedRecursvieVars) {
+
+		TreePtr a = makeTree('a');
+		TreePtr b = makeTree('b');
+
+		auto patternA = rT(atom(a) | node('a', *recurse));
+		auto patternB = rT(atom(b) | node('b', *recurse));
+
+		auto pattern = rT(patternA | patternB | node('a', *recurse) | node('b', *recurse));
+
+		EXPECT_PRED2(isMatch, patternA, parseTree("a"));
+		EXPECT_PRED2(isMatch, patternA, parseTree("a(a)"));
+		EXPECT_PRED2(isMatch, patternA, parseTree("a(a,a)"));
+		EXPECT_PRED2(isMatch, patternA, parseTree("a(a,a(a))"));
+
+		EXPECT_PRED2(isMatch, patternB, parseTree("b"));
+		EXPECT_PRED2(isMatch, patternB, parseTree("b(b)"));
+		EXPECT_PRED2(isMatch, patternB, parseTree("b(b,b)"));
+		EXPECT_PRED2(isMatch, patternB, parseTree("b(b,b(b))"));
+
+		EXPECT_PRED2(isMatch, pattern, parseTree("a"));
+		EXPECT_PRED2(isMatch, pattern, parseTree("a(a)"));
+		EXPECT_PRED2(isMatch, pattern, parseTree("a(a,a)"));
+		EXPECT_PRED2(isMatch, pattern, parseTree("a(a,a(a))"));
+
+		EXPECT_PRED2(isMatch, pattern, parseTree("b"));
+		EXPECT_PRED2(isMatch, pattern, parseTree("b(b)"));
+		EXPECT_PRED2(isMatch, pattern, parseTree("b(b,b)"));
+		EXPECT_PRED2(isMatch, pattern, parseTree("b(b,b(b))"));
+
+		EXPECT_PRED2(isMatch, pattern, parseTree("a(b)"));
+	}
+
 	TEST(Match, All) {
 
 		TreePtr a = makeTree('a');
@@ -882,7 +915,7 @@ namespace pattern {
 		EXPECT_TRUE(res);
 		if (res) EXPECT_EQ("Match({x=[null,a]})", toString(*res));
 
-		res = pattern->matchTree(makeTree('b', makeTree('b',a,makeTree('a',b)), c));
+		res = pattern->matchTree(parseTree("b(b(a,a(b),c))"));
 		EXPECT_TRUE(res);
 		if (res) EXPECT_EQ("Match({x=[null,null,a,a(b)]})", toString(*res));
 

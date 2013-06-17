@@ -156,10 +156,29 @@ namespace pattern {
 		}
 
 		/**
+		 * Updates the depth of the path to the given size. The new size must be
+		 * less or equal the current size of the path.
+		 */
+		void prune(std::size_t reducedSize) {
+			assert(reducedSize <= path.size());
+			path.resize(reducedSize);
+		}
+
+		/**
 		 * Prints a string-representation of this path to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << path;
+		}
+
+		// operators
+
+		bool operator==(const MatchPath& other) const {
+			return path == other.path;
+		}
+
+		bool operator!=(const MatchPath& other) const {
+			return path != other.path;
 		}
 	};
 
@@ -260,6 +279,14 @@ namespace pattern {
 			}
 		}
 
+		void remValue(const MatchPath& path) {
+			assert(path.getDepth() == depth && "Path not matching value type!");
+			if (depth == 0) {
+				tree = value_type();
+			} else {
+				remValue(path.begin(), path.end());
+			}
+		}
 
 		bool hasListValue(const MatchPath& path) const {
 			return path.getDepth()+1 >= depth && hasListValue(path.begin(), path.end());
@@ -270,7 +297,9 @@ namespace pattern {
 			return getListValue(path.begin(), path.end());
 		}
 
-		void addListValue(const MatchPath& path, const list_type& list) { addListValue(path, list.begin(), list.end()); }
+		void addListValue(const MatchPath& path, const list_type& list) {
+			addListValue(path, list.begin(), list.end());
+		}
 
 		void addListValue(const MatchPath& path, const list_iterator& begin, const list_iterator& end) {
 			assert(path.getDepth()+1 == depth && "Path not matching value type!");
@@ -282,6 +311,10 @@ namespace pattern {
 			} else {
 				addListValue(path.begin(), path.end(), begin, end);
 			}
+		}
+
+		void remListValue(const MatchPath& path) {
+			remListValue(path.begin(), path.end());
 		}
 
 		virtual std::ostream& printTo(std::ostream& out) const {
@@ -358,6 +391,22 @@ namespace pattern {
 			}
 		}
 
+		void remValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) {
+
+			// check whether there is such a node
+			auto index = *begin;
+			if (index >= children.size()) {
+				return;		// nothing to remove
+			}
+
+			if (begin+1 == end) {
+				assert(depth == 1 && "Path length not correct!");
+				children[index].tree = value_type();		// remove element
+			} else {
+				children[index].remValue(begin+1, end);
+			}
+		}
+
 		void addListValue(const MatchPath::iterator& begin, const MatchPath::iterator& end, const list_iterator& left, const list_iterator& right) {
 			static const auto constructor = [](const value_type& cur){ return MatchValue<T>(cur); };
 
@@ -377,6 +426,22 @@ namespace pattern {
 			children[index].addListValue(begin+1, end, left, right);
 		}
 
+		void remListValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) {
+
+			// check for terminal condition
+			if (begin == end) {
+				assert(depth == 1 && "Path length not correct!");
+				children.clear();
+				return;
+			}
+
+			// pick or create inner node
+			auto index = *begin;
+			if (index >= children.size()) {
+				return;
+			}
+			children[index].remListValue(begin+1, end);
+		}
 
 	};
 
@@ -455,6 +520,12 @@ namespace pattern {
 			pos->second.addValue(path, match);
 		}
 
+		void unbindTreeVar(const MatchPath& path, const std::string& var) {
+			auto pos = map.find(var);
+			if (pos == map.end()) return;
+			pos->second.remValue(path);
+		}
+
 		void bindListVar(const MatchPath& path, const std::string& var, const list_iterator& begin, const list_iterator& end) {
 			assert(!isListVarBound(path, var) && "Variable bound twice");
 			auto pos = map.find(var);
@@ -462,6 +533,12 @@ namespace pattern {
 				pos = map.insert(std::make_pair(var, MatchValue<T>(path.getDepth()+1))).first;
 			}
 			pos->second.addListValue(path, begin, end);
+		}
+
+		void unbindListVar(const MatchPath& path, const std::string& var) {
+			auto pos = map.find(var);
+			if (pos == map.end()) return;
+			pos->second.remListValue(path);
 		}
 
 		const value_type& getTreeVarBinding(const MatchPath& path, const std::string& var) const {
