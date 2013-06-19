@@ -682,8 +682,8 @@ namespace generator {
 
 			// create one entry per element within the list
 			typename T::list_type res;
-			Match<T> extended = match;
 			::transform(all.getValues(), std::back_inserter(res), [&](const MatchValue<T>& cur){
+				Match<T> extended = match;
 				extended.bindVar(generator.varName, cur);
 				return generate(generator.tree, extended);
 			});

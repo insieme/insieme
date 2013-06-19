@@ -105,15 +105,15 @@ using namespace driver::integration;
 				std::cout << "    Structure: \n" << printer::PrettyPrinter(match.getRoot()) << "\n\n";
 			}
 			std::cout <<     "    Variables:\n";
-			for_each(match.getValueMap(), [](const std::pair<string, MatchValue<ptr_target>>& cur){
+			for(auto cur : match.getValueMap()) {
 				std::cout << "          " << cur.first << " = ";
-				if (cur.second.getDepth() == 0 && cur.second.getValue()) {
-					std::cout << printer::PrettyPrinter(cur.second.getValue());
+				if (cur.second.value.getDepth() == 0 && cur.second.value.getValue()) {
+					std::cout << printer::PrettyPrinter(cur.second.value.getValue());
 				} else {
-					std::cout << cur.second;
+					std::cout << cur.second.value;
 				}
 				std::cout << "\n\n";
-			});
+			}
 		}
 
 		void runCheck(const TreePatternPtr& pattern, const string& testCase) {

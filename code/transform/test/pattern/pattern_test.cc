@@ -798,15 +798,15 @@ namespace pattern {
 
 		res = pattern->matchTree(makeTree('a', b, c));
 		EXPECT_TRUE(res);
-		if (res) EXPECT_EQ("Match({x=[a(b,c)]})", toString(*res));
+		if (res) EXPECT_EQ("Match({x=[a(b,c),null,null]})", toString(*res));
 
 		res = pattern->matchTree(makeTree('b', a, c));
 		EXPECT_TRUE(res);
-		if (res) EXPECT_EQ("Match({x=[null,a]})", toString(*res));
+		if (res) EXPECT_EQ("Match({x=[null,a,null]})", toString(*res));
 
 		res = pattern->matchTree(makeTree('b', makeTree('b',a,makeTree('a',b)), c));
 		EXPECT_TRUE(res);
-		if (res) EXPECT_EQ("Match({x=[null,null,a,a(b)]})", toString(*res));
+		if (res) EXPECT_EQ("Match({x=[null,null,a,a(b),null,null]})", toString(*res));
 
 		res = pattern->matchTree(makeTree('a', a, a));
 		EXPECT_TRUE(res);
@@ -856,11 +856,11 @@ namespace pattern {
 
 		res = pattern->matchTree(makeTree('b', a, c));
 		EXPECT_TRUE(res);
-		if (res) EXPECT_EQ("Match({x=[null,a]})", toString(*res));
+		if (res) EXPECT_EQ("Match({x=[null,a,null]})", toString(*res));
 
 		res = pattern->matchTree(makeTree('b', makeTree('b',a,makeTree('a',b)), c));
 		EXPECT_TRUE(res);
-		if (res) EXPECT_EQ("Match({x=[null,null,a,a(b)]})", toString(*res));
+		if (res) EXPECT_EQ("Match({x=[null,null,a,a(b),null]})", toString(*res));
 
 		res = pattern->matchTree(makeTree('a', a, a));
 		EXPECT_TRUE(res);
@@ -913,11 +913,11 @@ namespace pattern {
 
 		res = pattern->matchTree(makeTree('b', a, c));
 		EXPECT_TRUE(res);
-		if (res) EXPECT_EQ("Match({x=[null,a]})", toString(*res));
+		if (res) EXPECT_EQ("Match({x=[null,a,null]})", toString(*res));
 
 		res = pattern->matchTree(parseTree("b(b(a,a(b),c))"));
 		EXPECT_TRUE(res);
-		if (res) EXPECT_EQ("Match({x=[null,null,a,a(b)]})", toString(*res));
+		if (res) EXPECT_EQ("Match({x=[null,null,a,a(b),null]})", toString(*res));
 
 		res = pattern->matchTree(makeTree('a', a, a));
 		EXPECT_TRUE(res);

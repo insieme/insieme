@@ -155,7 +155,7 @@ namespace pattern {
 
 		public:
 
-			MatchContext() : treePatternCache(std::make_shared<tree_pattern_cache>()) { }
+			MatchContext(const value_type& root = value_type()) : match(root), treePatternCache(std::make_shared<tree_pattern_cache>()) { }
 
 			Match<T>& getMatch() {
 				return match;
@@ -304,11 +304,6 @@ namespace pattern {
 				(*treePatternCache)[std::make_pair(&pattern, node)] = match;
 			}
 
-			void clearCache() {
-				treePatternCache->clear();
-			}
-
-
 			virtual std::ostream& printTo(std::ostream& out) const {
 				out << "Match(";
 				out << path << ", ";
@@ -330,11 +325,12 @@ namespace pattern {
 				 */
 				const MatchContext& context;
 
-				const Match<T> match;
+				const IncrementID backup;
 
 				explicit MatchContextBackup(const MatchContext& data)
 					: context(data),
-					  match(data.match) {}
+					  backup(data.match.backup())
+					  {}
 
 				void restore(MatchContext& target) {
 					assert(&target == &context && "Unable to restore different context!");
@@ -344,8 +340,7 @@ namespace pattern {
 					//  - recursive variables are also not required to be checked (handled automatically)
 
 					// the variable bindings need to be re-set
-					// TODO: get rid of this one too
-					target.match = match;
+					target.match.restore(backup);
 				}
 			};
 
@@ -378,11 +373,10 @@ namespace pattern {
 
 		template<typename T, typename target = typename match_target_info<T>::target_type>
 		boost::optional<Match<target>> match(const TreePattern& pattern, const T& tree) {
-			MatchContext<target> context;
+			MatchContext<target> context(tree);
 			std::function<bool(MatchContext<target>&)> accept = [](MatchContext<target>& context)->bool { return true; };
 			if (match(pattern, context, tree, accept)) {
-				// complete match result
-				context.getMatch().setRoot(tree);
+				// it worked => return match result
 				return context.getMatch();
 			}
 			return 0;

@@ -33,6 +33,7 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
+#pragma once
 
 /**
  * This header file defines a set of macros to define more readable and flexible assertions within
@@ -49,6 +50,7 @@
 	#define assert_true(_COND) _assert_ignore
 	#define assert_eq(_a,_b) _assert_ignore
 	#define assert_ne(_a,_b) _assert_ignore
+	#define assert_lt(_a,_b) _assert_ignore
 
 #else
 
@@ -82,5 +84,7 @@
 	#define assert_eq(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) == (_B))) std::cerr << "\nAssertion " #_A " == " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
 	#define assert_ne(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) != (_B))) std::cerr << "\nAssertion " #_A " != " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
+
+	#define assert_lt(_A,_B) if (__unused auto x = insieme::utils::detail::LazyAssertion((_A) < (_B))) std::cerr << "\nAssertion " #_A " < " #_B " of " __FILE__ ":" __xstr(__LINE__) " failed!\n\t" #_A " = " << (_A) << "\n\t" #_B " = " << (_B) << "\n"
 
 #endif

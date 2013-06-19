@@ -50,9 +50,7 @@ namespace generator {
 		core::NodeManager manager;
 
 		// create some dummy match
-		Match<ptr_target> match;
-		match.setRoot(core::IntValue::get(manager, 1));
-
+		Match<ptr_target> match(core::IntValue::get(manager, 1));
 
 		TreeGeneratorPtr gen = irg::stringValue("Hello");
 		core::NodePtr res = gen->generate(match);
@@ -66,9 +64,7 @@ namespace generator {
 		core::NodeManager manager;
 
 		// create some dummy match
-		Match<ptr_target> match;
-		match.setRoot(core::IntValue::get(manager, 1));
-
+		Match<ptr_target> match(core::IntValue::get(manager, 1));
 
 		TreeGeneratorPtr gen = irg::int4();
 		core::NodePtr res = gen->generate(match);
