@@ -598,8 +598,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(cons
 	core::ExpressionPtr dtor;
 	if( core::hasMetaInfo(desTy)){
 		const core::ClassMetaInfo& info = core::getMetaInfo (desTy);
-		if (!info.hasDestructor())
-			assert(false && "empty dtor should be synthetized by cxx_type_convert");
 		dtor = info.getDestructor();
 	}
 
