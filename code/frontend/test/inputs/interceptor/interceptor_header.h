@@ -39,6 +39,7 @@ namespace ns {
 	int simpleFunc(int x);
 
 	struct S {
+		S() {}
 		int memberFunc(int x);
 	};
 }

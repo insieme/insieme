@@ -475,6 +475,20 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 		return retIr;
 	}
 
+	if( !ctorDecl->isUserProvided() ) {
+		if(	ctorDecl->isDefaultConstructor()) {
+			//if not userprovided we don't need to add a constructor just create the object to work
+			//with -- for the rest the BE-compiler takes care of 
+			core::TypePtr&&  refToClassTy = builder.refType(irClassType);
+			return builder.undefinedVar(refToClassTy);
+		}
+		else if( ctorDecl->isCopyConstructor()) {
+			//if not userprovided we don't need to add a constructor just create the object to work
+			//with -- for the rest the BE-compiler takes care of 
+			return (Visit(callExpr->getArg(0)));
+		}
+	}
+
 	// it might be an array construction
 	size_t numElements =0;
 	if (irClassType->getNodeType() == core::NT_VectorType) {
@@ -565,16 +579,28 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 			 						   				   mgr.getLangBasic().getRefNew(), ctorFunc, arrSizeExpr));
 		}
 		else{
-
 			// the basic constructor translation defines a stack variable as argument for the call
 			// in order to turn this into a diynamic memory allocation, we only need to substitute
 			// the first argument for a heap location
 			core::CallExprAddress addr(ctorCall.as<core::CallExprPtr>());
-			retExpr = core::transform::replaceNode (convFact.mgr,
-												  addr->getArgument(0),
-												  newCall ).as<core::CallExprPtr>();
+			if(ctorCall.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>().getKind() == core::FK_CONSTRUCTOR) {
+				VLOG(2) << addr->getArgument(0).as<core::CallExprPtr>();
+				retExpr = core::transform::replaceNode (convFact.mgr,
+													addr->getArgument(0),
+													newCall ).as<core::CallExprPtr>();
 
-			retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), retExpr);
+				retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), retExpr);
+			}
+			else {
+				//if constructor of is NOT userprovided we get back the "plain" object, no wrapping
+				//ctor to take care of for the exchange of "refVar" with "newCall"
+				VLOG(2) << addr.as<core::CallExprPtr>();
+				retExpr = core::transform::replaceNode (convFact.mgr,
+													addr,
+													newCall ).as<core::CallExprPtr>();
+
+				retExpr = builder.callExpr(builder.getLangBasic().getScalarToArray(), retExpr);
+			}
 		}
 	}
 
@@ -662,7 +688,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThrowExpr(const
 	//assert(false && "Throw -- Currently not supported!");
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(throwExpr, retIr);
-	
+
+	//TODO: check if we need to deref subExpr (for pointerProblem)
 	core::ExpressionPtr subExpr = Visit(throwExpr->getSubExpr());
 	retIr = core::transform::outline(mgr, builder.throwStmt(subExpr));
 
