@@ -39,6 +39,7 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/assert.h"
 
 #include "insieme/transform/pattern/match_target.h"
 
@@ -117,10 +118,18 @@ namespace pattern {
 		}
 
 		/**
+		 * Obtain the current index this path is pointing to (inner most).
+		 */
+		std::size_t get() const {
+			return path.back();
+		}
+
+		/**
 		 * Updates the current index this path is pointing to.
 		 */
 		void set(std::size_t index) {
 			assert(path.size() > 0);
+			assert(path.back() < index);
 			path.back() = index;
 		}
 
@@ -148,12 +157,36 @@ namespace pattern {
 		}
 
 		/**
+		 * Updates the depth of the path to the given size. The new size must be
+		 * less or equal the current size of the path.
+		 */
+		void prune(std::size_t reducedSize) {
+			assert(reducedSize <= path.size());
+			path.resize(reducedSize);
+		}
+
+		/**
 		 * Prints a string-representation of this path to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << path;
 		}
+
+		// operators
+
+		bool operator==(const MatchPath& other) const {
+			return path == other.path;
+		}
+
+		bool operator!=(const MatchPath& other) const {
+			return path != other.path;
+		}
 	};
+
+	/**
+	 * The type of value utilized for identifying backup increments.
+	 */
+	typedef std::size_t IncrementID;
 
 	template<typename T>
 	class MatchValue : public utils::Printable {
@@ -177,16 +210,24 @@ namespace pattern {
 		 */
 		unsigned depth;
 
+		/**
+		 * The ID of the increment this value is part of.
+		 */
+		IncrementID increment;
+
 	public:
 
-		MatchValue(unsigned depth) : depth(depth) { }
+		MatchValue(unsigned depth, IncrementID increment = 0)
+			: tree(), depth(depth), increment(increment) { }
 
-		MatchValue(const value_type& tree) : tree(tree), depth(0) {}
+		MatchValue(const value_type& tree, IncrementID increment = 0)
+			: tree(tree), depth(0), increment(increment) {}
 
-		MatchValue(const list_type& list)
-			: children(::transform(list, [](const value_type& cur) { return MatchValue<T>(cur); })), depth(1) {}
+		MatchValue(const list_type& list, IncrementID increment = 0)
+			: tree(), children(::transform(list, [](const value_type& cur) { return MatchValue<T>(cur); })), depth(1), increment(increment) {}
 
-		MatchValue(const vector<MatchValue<T>>& children) : children(children), depth(children[0].getDepth()+1) {
+		MatchValue(const vector<MatchValue<T>>& children, IncrementID increment = 0)
+			: tree(), children(children), depth(children[0].getDepth()+1), increment(increment) {
 			assert(all(children, [this](const MatchValue<T>& cur)->bool { return cur.getDepth() == this->depth-1; })
 					&& "All children have to be of the same level!");
 		}
@@ -243,15 +284,15 @@ namespace pattern {
 			return getValue(path.begin(), path.end());
 		}
 
-		void addValue(const MatchPath& path, const value_type& value) {
+		void addValue(const MatchPath& path, const value_type& value, IncrementID version = 0) {
 			assert(path.getDepth() == depth && "Path not matching value type!");
 			if (depth == 0) {
 				tree = value;
+				increment = version;
 			} else {
-				addValue(path.begin(), path.end(), value);
+				addValue(path.begin(), path.end(), value, version);
 			}
 		}
-
 
 		bool hasListValue(const MatchPath& path) const {
 			return path.getDepth()+1 >= depth && hasListValue(path.begin(), path.end());
@@ -262,17 +303,19 @@ namespace pattern {
 			return getListValue(path.begin(), path.end());
 		}
 
-		void addListValue(const MatchPath& path, const list_type& list) { addListValue(path, list.begin(), list.end()); }
+		void addListValue(const MatchPath& path, const list_type& list, IncrementID version = 0) {
+			addListValue(path, list.begin(), list.end(), version);
+		}
 
-		void addListValue(const MatchPath& path, const list_iterator& begin, const list_iterator& end) {
+		void addListValue(const MatchPath& path, const list_iterator& begin, const list_iterator& end, IncrementID version = 0) {
 			assert(path.getDepth()+1 == depth && "Path not matching value type!");
-			static const auto constructor = [](const value_type& cur){ return MatchValue<T>(cur); };
+			static const auto constructor = [&](const value_type& cur){ return MatchValue<T>(cur, version); };
 
 			if (depth == 1) {
 				assert(children.empty() && "Not allowed to override existing data!");
 				std::transform(begin, end, std::back_inserter(children), constructor);
 			} else {
-				addListValue(path.begin(), path.end(), begin, end);
+				addListValue(path.begin(), path.end(), begin, end, version);
 			}
 		}
 
@@ -286,6 +329,24 @@ namespace pattern {
 			}
 			// print rest recursively
 			return out << children;
+		}
+
+		bool operator==(const MatchValue& other) const {
+			return depth == other.depth && tree == other.tree && children == other.children;
+		}
+
+		// --- backup and rollback support ---
+
+		void restore(IncrementID backup) {
+			// scan through child nodes
+			for(auto& cur : children) {
+				// remove nodes being younger than the backup id
+				if (cur.increment > backup) {
+					cur = MatchValue(depth-1, backup);		// delete entire sub-tree
+				} else {
+					cur.restore(backup);					// progress recursively
+				}
+			}
 		}
 
 	private:
@@ -333,24 +394,26 @@ namespace pattern {
 		}
 
 
-		void addValue(const MatchPath::iterator& begin, const MatchPath::iterator& end, const value_type& value) {
+		void addValue(const MatchPath::iterator& begin, const MatchPath::iterator& end, const value_type& value, IncrementID version) {
 
 			// pick or create inner node
 			auto index = *begin;
 			if (index >= children.size()) {
-				children.resize(index+1, MatchValue(depth-1));
+				children.resize(index+1, MatchValue(depth-1, version));
 			}
 
 			if (begin+1 == end) {
 				assert(depth == 1 && "Path length not correct!");
-				children[index] = MatchValue(value);
+				assert(!children[index].tree && "Value must not be set!");
+				children[index].tree = value;
 			} else {
-				children[index].addValue(begin+1, end, value);
+				children[index].addValue(begin+1, end, value, version);
 			}
+			children[index].increment = version;
 		}
 
-		void addListValue(const MatchPath::iterator& begin, const MatchPath::iterator& end, const list_iterator& left, const list_iterator& right) {
-			static const auto constructor = [](const value_type& cur){ return MatchValue<T>(cur); };
+		void addListValue(const MatchPath::iterator& begin, const MatchPath::iterator& end, const list_iterator& left, const list_iterator& right, IncrementID version) {
+			static const auto constructor = [=](const value_type& cur){ return MatchValue<T>(cur, version); };
 
 			// check for terminal condition
 			if (begin == end) {
@@ -365,9 +428,9 @@ namespace pattern {
 			if (index >= children.size()) {
 				children.resize(index+1, MatchValue(depth-1));
 			}
-			children[index].addListValue(begin+1, end, left, right);
+			children[index].addListValue(begin+1, end, left, right, version);
+			children[index].increment = version;
 		}
-
 
 	};
 
@@ -385,7 +448,30 @@ namespace pattern {
 
 	public:
 
-		typedef std::unordered_map<string, MatchValue<T>> ValueMap;
+		struct MapValue {
+			MatchValue<T> value;
+			IncrementID creationIncrement;
+			IncrementID lastUpdate;
+
+			MapValue(const MatchValue<T>& value, IncrementID increment)
+				: value(value), creationIncrement(increment), lastUpdate(increment) {}
+
+			MapValue& operator=(const MapValue& other) {
+				if (this == &other) return *this;
+				value = other.value;
+				creationIncrement = other.creationIncrement;
+				lastUpdate = other.lastUpdate;
+				return *this;
+			}
+
+			bool operator==(const MapValue& other) const {
+				return value == other.value &&
+						creationIncrement == other.creationIncrement &&
+						lastUpdate == other.lastUpdate;
+			}
+		};
+
+		typedef std::unordered_map<string, MapValue> ValueMap;
 
 	private:
 
@@ -393,83 +479,121 @@ namespace pattern {
 
 		ValueMap map;
 
+		mutable IncrementID increment;
+
 	public:
+
+		Match(const value_type& root = value_type())
+			: root(root), increment(1) {};
 
 		const value_type& getRoot() const {
 			return root;
 		}
 
-		void setRoot(const value_type& tree) {
-			root = tree;
-		}
-
 		const ValueMap& getValueMap() const {
 			return map;
 		}
-
+		
 		bool isVarBound(const std::string& var) const {
 			return map.find(var) != map.end();
 		}
 
 		const MatchValue<T>& getVarBinding(const std::string& var) const {
 			assert(isVarBound(var) && "Requesting unbound variable!");
-			return map.find(var)->second;
+			return map.find(var)->second.value;
 		}
 
 		void bindVar(const std::string& var, const MatchValue<T>& value) {
-			auto pos = map.find(var);
-			if (pos != map.end()) {
-				// update existing value
-				pos->second = value;
-				return;
-			}
+			assert(!isVarBound(var) && "Requested to bind bound variable!");
 			// add new value
-			map.insert(std::make_pair(var, value));
+			map.insert(std::make_pair(var, MapValue(value, increment)));
 		}
 
 		bool isTreeVarBound(const MatchPath& path, const std::string& var) const {
 			auto pos = map.find(var);
-			return pos != map.end() && pos->second.hasValue(path);
+			return pos != map.end() && pos->second.value.hasValue(path);
 		}
 
 		bool isListVarBound(const MatchPath& path, const std::string& var) const {
 			auto pos = map.find(var);
-			return pos != map.end() && pos->second.hasListValue(path);
+			return pos != map.end() && pos->second.value.hasListValue(path);
 		}
 
 		void bindTreeVar(const MatchPath& path, const std::string& var, const value_type& match) {
 			assert(!isTreeVarBound(path, var) && "Variable bound twice");
 			auto pos = map.find(var);
 			if (pos == map.end()) {
-				pos = map.insert(std::make_pair(var, MatchValue<T>(path.getDepth()))).first;
+				pos = map.insert(std::make_pair(var, MapValue(MatchValue<T>(path.getDepth()), increment))).first;
 			}
-			pos->second.addValue(path, match);
+			pos->second.value.addValue(path, match, increment);
+			pos->second.lastUpdate = increment;
 		}
 
 		void bindListVar(const MatchPath& path, const std::string& var, const list_iterator& begin, const list_iterator& end) {
 			assert(!isListVarBound(path, var) && "Variable bound twice");
 			auto pos = map.find(var);
 			if (pos == map.end()) {
-				pos = map.insert(std::make_pair(var, MatchValue<T>(path.getDepth()+1))).first;
+				pos = map.insert(std::make_pair(var, MapValue(MatchValue<T>(path.getDepth()+1), increment))).first;
 			}
-			pos->second.addListValue(path, begin, end);
+			pos->second.value.addListValue(path, begin, end, increment);
+			pos->second.lastUpdate = increment;
 		}
 
 		const value_type& getTreeVarBinding(const MatchPath& path, const std::string& var) const {
 			assert(isTreeVarBound(path, var) && "Requesting bound value for unbound tree variable");
 			// auto pos = map.find(var);
-			return map.find(var)->second.getValue(path);
+			return map.find(var)->second.value.getValue(path);
 		}
 
 		list_type getListVarBinding(const MatchPath& path, const std::string& var) const {
 			assert(isListVarBound(path, var) && "Requesting bound value for unbound list variable");
 			// auto pos = map.find(var);
-			return map.find(var)->second.getListValue(path);
+			return map.find(var)->second.value.getListValue(path);
+		}
+
+		bool operator==(const Match<T>& other) const {
+			return equalTarget(root, other.root) && map == other.map;
 		}
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "Match(" << map << ")";
+			return out << "Match({" <<  join(", ", map, [](std::ostream& out, const typename ValueMap::value_type& cur) {
+				out << cur.first << "=" << cur.second.value;
+			}) << "})";
 		}
+
+		// --- backup / rollback ---
+
+		IncrementID backup() const {
+			return increment++; // just increment the counter by 1
+		}
+
+		IncrementID getCurrentRevision() const {
+			return increment;
+		}
+
+		void restore(IncrementID backup) {
+			assert(backup < increment && "Unable to revert back to future state!");
+
+			// remove newer top-level entries
+			vector<decltype(map.begin())> newerEntries;
+			for(auto it = map.begin(); it!= map.end(); ++it) {
+				if (it->second.creationIncrement > backup) newerEntries.push_back(it);
+			}
+			for(auto cur : newerEntries) {
+				map.erase(cur);
+			}
+
+			// remove everything that is newer than the given increment
+			for(auto it = map.begin(); it != map.end(); ++it) {
+				// if it has been updated since backup => restore value
+				if (it->second.lastUpdate > backup) it->second.value.restore(backup);
+			}
+
+			// update increment ID
+			increment = backup+1;
+		}
+
+
 	};
 
 } // end namespace pattern

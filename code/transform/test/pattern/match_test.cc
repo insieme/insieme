@@ -160,6 +160,51 @@ namespace pattern {
 
 	}
 
+	TEST(Match, Restore) {
+
+		TreePtr a = makeTree('a');
+		TreePtr b = makeTree('b');
+
+		MatchPath path;
+		Match<tree_target> match;
+
+		auto original = match.backup();
+
+		EXPECT_EQ("Match({})", toString(match));
+
+		// add an element
+		match.bindTreeVar(path, "x", a);
+		EXPECT_EQ("Match({x=a})", toString(match));
+
+		// restore old state
+		match.restore(original);
+		EXPECT_EQ("Match({})", toString(match));
+
+		// once more
+		match.bindTreeVar(path, "y", b);
+		EXPECT_EQ("Match({y=b})", toString(match));
+		match.restore(original);
+		EXPECT_EQ("Match({})", toString(match));
+
+
+		// no with lists
+		path.push(0);
+		match.bindTreeVar(path, "x", a);
+		EXPECT_EQ("Match({x=[a]})", toString(match));
+
+		auto backup = match.backup();
+
+		path.set(1);
+		match.bindTreeVar(path, "x", b);
+		EXPECT_EQ("Match({x=[a,b]})", toString(match));
+
+		match.restore(backup);
+		EXPECT_EQ("Match({x=[a,null]})", toString(match));
+
+		match.restore(original);
+		EXPECT_EQ("Match({})", toString(match));
+	}
+
 
 } // end namespace pattern
 } // end namespace transform
