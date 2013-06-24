@@ -228,7 +228,61 @@ std::size_t computeHash(const Map& map) {
 } // end namespace: utils
 } // end namespace: insieme
 
+/**
+ * Integrate standard map hashing into the boost.
+ */
+template<typename K, typename T, typename C, typename A>
+size_t hash_value(const std::map<K,T,C,A>& map) {
+	return insieme::utils::map::computeHash(map);
+}
+
+/**
+ * Integrate unordered map hashing into the boost.
+ */
+template<typename K, typename T, typename Hash, typename KeyEqual, typename Allocator>
+size_t hash_value(const std::unordered_map<K,T,Hash,KeyEqual,Allocator>& map) {
+	return insieme::utils::map::computeHash(map);
+}
+
+/**
+ * Integrate unordered map hashing into the boost.
+ */
+template<typename K, typename T, typename Hash, typename KeyEqual, typename Allocator>
+size_t hash_value(const boost::unordered_map<K,T,Hash,KeyEqual>& map) {
+	return insieme::utils::map::computeHash(map);
+}
+
 namespace std {
+
+/**
+ * Add hash support for unordered maps.
+ */
+template<typename K, typename T, typename C, typename A>
+struct hash<std::map<K,T,C,A>> {
+	size_t operator()(const std::map<K,T,C,A>& instance) const {
+		return hash_value(instance); // bridge to boost solution
+	}
+};
+
+/**
+ * Add hash support for unordered maps.
+ */
+template<typename K, typename T, typename H, typename KE, typename A>
+struct hash<std::unordered_map<K,T,H,KE,A>> {
+	size_t operator()(const std::unordered_map<K,T,H,KE,A>& instance) const {
+		return hash_value(instance); // bridge to boost solution
+	}
+};
+
+/**
+ * Add hash support for unordered maps.
+ */
+template<typename K, typename T, typename H, typename KE, typename A>
+struct hash<boost::unordered_map<K,T,H,KE,A>> {
+	size_t operator()(const boost::unordered_map<K,T,H,KE,A>& instance) const {
+		return hash_value(instance); // bridge to boost solution
+	}
+};
 
 /**
  * Allows to print unordered maps including printable elements.

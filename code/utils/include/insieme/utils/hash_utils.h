@@ -313,6 +313,16 @@ namespace std
 	};
 
 	/**
+	 * Add hash support for tuples.
+	 */
+	template<typename ... R>
+	struct hash<tuple<R...>> {
+		size_t operator()(const tuple<R...>& instance) const {
+			return boost::hash_value(instance);
+		}
+	};
+
+	/**
 	 * Add hash support for vectors.
 	 */
 	template<typename T, typename A>
@@ -332,6 +342,18 @@ namespace std
 			return boost::hash_value(instance); // bridge to boost solution
 		}
 	};
+
+
+	// --------- support for shared pointer in boost -------------
+
+	template<typename T> class shared_ptr;
+
+	template<typename T>
+	size_t hash_value(const shared_ptr<T>& ptr) {
+		// forward call to std-shared ptr
+		return hash<shared_ptr<T>>()(ptr);
+	}
+
 }
 
 
