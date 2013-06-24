@@ -45,6 +45,21 @@
 #include "insieme/utils/assert.h"
 
 namespace insieme {
+
+// a translation-unit specific handling of the hashing of node pointers and addresses
+namespace core {
+
+	size_t hash_value(const NodePtr& node) {
+		return (size_t)(node.ptr);
+	}
+
+	size_t hash_value(const NodeAddress& address) {
+		return address.hash();
+	}
+
+} // end namespace core
+
+
 namespace transform {
 namespace pattern {
 
@@ -110,6 +125,10 @@ namespace pattern {
 	// -------------------------------------------------------------------------------------
 
 
+	size_t hash_value(const TreePtr& tree) {
+		return (size_t)(tree.get());
+	}
+
 	// -- Implementation detail -------------------------------------------
 
 	namespace details {
@@ -121,7 +140,7 @@ namespace pattern {
 
 
 		template<typename T>
-		class MatchContext : public utils::Printable {
+		class MatchContext : public utils::Printable, private boost::noncopyable {
 
 		public:
 			typedef typename T::value_type value_type;
@@ -151,15 +170,12 @@ namespace pattern {
 
 			RecVarMap boundRecursiveVariables;
 
-			std::shared_ptr<tree_pattern_cache> treePatternCache;
+			tree_pattern_cache treePatternCache;
 
 		public:
 
-			MatchContext(const value_type& root = value_type()) : match(root), treePatternCache(std::make_shared<tree_pattern_cache>()) { }
+			MatchContext(const value_type& root = value_type()) : match(root), treePatternCache() { }
 
-			Match<T>& getMatch() {
-				return match;
-			}
 
 			const Match<T>& getMatch() const {
 				return match;
@@ -293,15 +309,15 @@ namespace pattern {
 			CachedMatchResult cachedMatch(const TreePattern& pattern, const atom_type& node) const {
 				assert(pattern.isVariableFree && "Can only cache variable-free pattern fragments!");
 
-				auto pos = treePatternCache->find(std::make_pair(&pattern, node));
-				if (pos == treePatternCache->end()) {
+				auto pos = treePatternCache.find(std::make_pair(&pattern, node));
+				if (pos == treePatternCache.end()) {
 					return Unknown;
 				}
 				return (pos->second)?Yes:No;
 			}
 
 			void addToCache(const TreePattern& pattern, const value_type& node, bool match) {
-				(*treePatternCache)[std::make_pair(&pattern, node)] = match;
+				treePatternCache[std::make_pair(&pattern, node)] = match;
 			}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
@@ -651,12 +667,12 @@ namespace pattern {
 
 			MATCH(Sequence) {
 				// search for the split-point ...
+				auto backup = context.backup();
 				for(auto i = begin; i<=end; ++i) {
-					MatchContext<T> caseContext = context;
+					backup.restore(context);
 					// check left side and delay right side
 					std::function<bool(MatchContext<T>&)> delayed = [&](MatchContext<T>& context) { return match(pattern.right, context, i, end, delayedCheck); };
-					if (match(pattern.left, caseContext, begin, i, delayed)) {
-						context = caseContext; // make temporal context permanent
+					if (match(pattern.left, context, begin, i, delayed)) {
 						return true;
 					}
 				}

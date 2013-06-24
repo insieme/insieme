@@ -309,7 +309,7 @@ namespace pattern {
 
 		void addListValue(const MatchPath& path, const list_iterator& begin, const list_iterator& end, IncrementID version = 0) {
 			assert(path.getDepth()+1 == depth && "Path not matching value type!");
-			static const auto constructor = [&](const value_type& cur){ return MatchValue<T>(cur, version); };
+			const auto constructor = [&](const value_type& cur){ return MatchValue<T>(cur, version); };
 
 			if (depth == 1) {
 				assert(children.empty() && "Not allowed to override existing data!");
@@ -440,6 +440,30 @@ namespace pattern {
 	}
 
 	template<typename T>
+	struct MatchMapValue {
+		MatchValue<T> value;
+		IncrementID creationIncrement;
+		IncrementID lastUpdate;
+
+		MatchMapValue(const MatchValue<T>& value, IncrementID increment)
+			: value(value), creationIncrement(increment), lastUpdate(increment) {}
+
+		MatchMapValue<T>& operator=(const MatchMapValue<T>& other) {
+			if (this == &other) return *this;
+			value = other.value;
+			creationIncrement = other.creationIncrement;
+			lastUpdate = other.lastUpdate;
+			return *this;
+		}
+
+		bool operator==(const MatchMapValue<T>& other) const {
+			return value == other.value &&
+					creationIncrement == other.creationIncrement &&
+					lastUpdate == other.lastUpdate;
+		}
+	};
+
+	template<typename T>
 	class Match : public utils::Printable {
 
 		typedef typename T::value_type value_type;
@@ -448,30 +472,7 @@ namespace pattern {
 
 	public:
 
-		struct MapValue {
-			MatchValue<T> value;
-			IncrementID creationIncrement;
-			IncrementID lastUpdate;
-
-			MapValue(const MatchValue<T>& value, IncrementID increment)
-				: value(value), creationIncrement(increment), lastUpdate(increment) {}
-
-			MapValue& operator=(const MapValue& other) {
-				if (this == &other) return *this;
-				value = other.value;
-				creationIncrement = other.creationIncrement;
-				lastUpdate = other.lastUpdate;
-				return *this;
-			}
-
-			bool operator==(const MapValue& other) const {
-				return value == other.value &&
-						creationIncrement == other.creationIncrement &&
-						lastUpdate == other.lastUpdate;
-			}
-		};
-
-		typedef std::unordered_map<string, MapValue> ValueMap;
+		typedef std::unordered_map<string, MatchMapValue<T>> ValueMap;
 
 	private:
 
@@ -506,7 +507,7 @@ namespace pattern {
 		void bindVar(const std::string& var, const MatchValue<T>& value) {
 			assert(!isVarBound(var) && "Requested to bind bound variable!");
 			// add new value
-			map.insert(std::make_pair(var, MapValue(value, increment)));
+			map.insert(std::make_pair(var, MatchMapValue<T>(value, increment)));
 		}
 
 		bool isTreeVarBound(const MatchPath& path, const std::string& var) const {
@@ -523,7 +524,7 @@ namespace pattern {
 			assert(!isTreeVarBound(path, var) && "Variable bound twice");
 			auto pos = map.find(var);
 			if (pos == map.end()) {
-				pos = map.insert(std::make_pair(var, MapValue(MatchValue<T>(path.getDepth()), increment))).first;
+				pos = map.insert(std::make_pair(var, MatchMapValue<T>(MatchValue<T>(path.getDepth()), increment))).first;
 			}
 			pos->second.value.addValue(path, match, increment);
 			pos->second.lastUpdate = increment;
@@ -533,7 +534,7 @@ namespace pattern {
 			assert(!isListVarBound(path, var) && "Variable bound twice");
 			auto pos = map.find(var);
 			if (pos == map.end()) {
-				pos = map.insert(std::make_pair(var, MapValue(MatchValue<T>(path.getDepth()+1), increment))).first;
+				pos = map.insert(std::make_pair(var, MatchMapValue<T>(MatchValue<T>(path.getDepth()+1), increment))).first;
 			}
 			pos->second.value.addListValue(path, begin, end, increment);
 			pos->second.lastUpdate = increment;
@@ -586,7 +587,10 @@ namespace pattern {
 			// remove everything that is newer than the given increment
 			for(auto it = map.begin(); it != map.end(); ++it) {
 				// if it has been updated since backup => restore value
-				if (it->second.lastUpdate > backup) it->second.value.restore(backup);
+				if (it->second.lastUpdate > backup) {
+					it->second.value.restore(backup);
+					it->second.lastUpdate = backup;
+				}
 			}
 
 			// update increment ID
@@ -595,6 +599,26 @@ namespace pattern {
 
 
 	};
+
+
+	// -------- Hash Support --------------
+
+	template<typename T>
+	size_t hash_value(const MatchMapValue<T>& value) {
+		return hash_value(value.value);
+	}
+
+	template<typename T>
+	size_t hash_value(const MatchValue<T>& value) {
+		return (value.getDepth() == 0)
+				? hash_value(value.getValue())
+				: boost::hash_value(value.getValues());
+	}
+
+	template<typename T>
+	size_t hash_value(const Match<T>& match) {
+		return ::hash_value(match.getValueMap());
+	}
 
 } // end namespace pattern
 } // end namespace transform
