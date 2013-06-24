@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <algorithm>
+
 #include "insieme/transform/pattern/pattern.h"
 
 #include "insieme/core/ir.h"
@@ -477,6 +479,40 @@ namespace pattern {
 					});
 					return res;
 				}
+
+				bool contains_with_variables(MatchContext<ptr_target>& context, const core::NodePtr& tree, const TreePatternPtr& pattern, const std::function<bool(MatchContext<ptr_target>&)>& delayedCheck) {
+					// if there are variables, the context needs to be reset
+					auto backup = context.backup();
+					return core::visitDepthFirstOnceInterruptible(tree, [&](const core::NodePtr& cur)->bool {
+						backup.restore(context);		// restore context
+						return match(pattern, context, cur, delayedCheck);
+					}, true, pattern->mayBeType);
+				}
+
+				bool contains_with_variables(MatchContext<address_target>& context, const core::NodeAddress& tree, const TreePatternPtr& pattern, const std::function<bool(MatchContext<address_target>&)>& delayedCheck) {
+					// if there are variables, the context needs to be reset
+					auto backup = context.backup();
+					// for addresses everything has to be visited (no visit once)
+					return core::visitDepthFirstInterruptible(tree, [&](const core::NodeAddress& cur)->bool {
+						backup.restore(context);		// restore context
+						return match(pattern, context, cur, delayedCheck);
+					}, true, pattern->mayBeType);
+				}
+
+				bool contains_with_variables(MatchContext<tree_target>& context, const TreePtr& tree, const TreePatternPtr& pattern, const std::function<bool(MatchContext<tree_target>&)>& delayedCheck) {
+					// if there are variables, all nodes need to be checked
+					bool res = false;
+
+					// isolate context for each try
+					auto backup = context.backup();
+					res = res || match(pattern, context, tree, delayedCheck);
+					for_each(tree->getChildList(), [&](const TreePtr& cur) { // generalize this
+						if (!res) backup.restore(context);		// restore context
+						res = res || contains_with_variables(context, cur, pattern, delayedCheck);
+					});
+					return res;
+				}
+
 			}
 
 			template<typename T>
@@ -490,17 +526,8 @@ namespace pattern {
 					return contains_variable_free(context, tree, pattern, delayedCheck);
 				}
 
-				// if there are variables, all nodes need to be checked
-				bool res = false;
-
-				// isolate context for each try
-				auto backup = context.backup();
-				res = res || match(pattern, context, tree, delayedCheck);
-				for_each(tree->getChildList(), [&](const typename T::value_type& cur) { // generalize this
-					if (!res) backup.restore(context);		// restore context
-					res = res || contains(context, cur, pattern, delayedCheck);
-				});
-				return res;
+				// use version considering variables
+				return contains_with_variables(context, tree, pattern, delayedCheck);
 			}
 
 			MATCH(Descendant) {
@@ -666,9 +693,33 @@ namespace pattern {
 			}
 
 			MATCH(Sequence) {
+
+				unsigned length = std::distance(begin, end);
+				assert(length >= pattern.minLength && length <= pattern.maxLength);
+
+				// compute sub-range to be searched
+				auto min = pattern.left->minLength;
+				auto max = length - pattern.right->minLength;
+
+				// constrain min based on max length of right side
+				if (length > pattern.right->maxLength) {
+					min = std::max(min, length - pattern.right->maxLength);
+				}
+
+				// constrain max based on max length of left side
+				if (length > pattern.left->maxLength) {
+					max = std::min(max, pattern.left->maxLength);
+				}
+
+				// special case: only one split point => safe a backup
+				if (min == max) {
+					std::function<bool(MatchContext<T>&)> delayed = [&](MatchContext<T>& context) { return match(pattern.right, context, begin+min, end, delayedCheck); };
+					return match(pattern.left, context, begin, begin+min, delayed);
+				}
+
 				// search for the split-point ...
 				auto backup = context.backup();
-				for(auto i = begin; i<=end; ++i) {
+				for(auto i = begin+min; i<=begin+max; ++i) {
 					backup.restore(context);
 					// check left side and delay right side
 					std::function<bool(MatchContext<T>&)> delayed = [&](MatchContext<T>& context) { return match(pattern.right, context, i, end, delayedCheck); };
@@ -713,8 +764,15 @@ namespace pattern {
 					backup.restore(context);
 				}
 
+				// compute sub-range to be searched
+				unsigned length = std::distance(begin, end);
+				assert(length >= rep.pattern->minLength);
+
+				auto min = rep.pattern->minLength;
+				auto max = std::min(rep.pattern->maxLength, length - min * (rep.minRep - repetitions));		// max length or length - min space required for remaining repetitions
+
 				// try one pattern + a recursive repetition
-				for (auto i=begin; i<end; ++i) {
+				for (auto i=begin+min; i<=begin+max; ++i) {
 
 					// restore context for this attempt
 					backup.restore(context);
@@ -740,6 +798,14 @@ namespace pattern {
 			}
 
 			MATCH(Repetition) {
+
+				// special case: repetition of a wildcard
+				if (pattern.pattern->type == ListPattern::Single &&
+						static_pointer_cast<insieme::transform::pattern::list::Single>(pattern.pattern)->element->type == TreePattern::Wildcard) {
+					assert(std::distance(begin, end) >= pattern.minRep);
+					return delayedCheck(context);
+				}
+
 				// increase nesting level of variables by one
 				context.push();
 
@@ -833,6 +899,13 @@ namespace pattern {
 
 			if (DEBUG) std::cout << "Matching " << pattern << " against " << join(", ", begin, end, print<deref<typename T::value_type>>()) << " with context " << context << " ... \n";
 			assert_decl(auto path = context.getCurrentPath());
+
+			// quick check length
+			auto length = std::distance(begin, end);
+			if (pattern.minLength > length || length > pattern.maxLength) {
+				if (DEBUG) std::cout << "Matching " << pattern << " against " << join(", ", begin, end, print<deref<typename T::value_type>>()) << " with context " << context << " ... skipped due to length limit. \n";
+				return false;		// will not match
+			}
 
 			bool res = false;
 			switch(pattern.type) {

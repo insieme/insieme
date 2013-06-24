@@ -82,7 +82,6 @@ namespace transform {
 				"		j+1u;"
 				"	}"
 				"}");
-
 		EXPECT_TRUE(in);
 
 		core::NodePtr out = transform->apply(in);

@@ -51,6 +51,7 @@
 #include "insieme/transform/pattern/match_target.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/math.h"
 
 namespace insieme {
 namespace transform {
@@ -140,7 +141,11 @@ namespace pattern {
 
 		const Type type;
 
-		ListPattern(const Type type, bool isVariableFree) : Pattern(isVariableFree), type(type) {};
+		unsigned minLength;
+		unsigned maxLength;
+
+		ListPattern(const Type type, bool isVariableFree, unsigned min, unsigned max = std::numeric_limits<unsigned>::max())
+			: Pattern(isVariableFree), type(type), minLength(min), maxLength(max) {};
 
 		TreeMatchOpt match(const vector<TreePtr>& trees) const;
 	};
@@ -317,7 +322,7 @@ namespace pattern {
 	namespace list {
 
 		struct Empty : public ListPattern {
-			Empty() : ListPattern(ListPattern::Empty, true) {}
+			Empty() : ListPattern(ListPattern::Empty, true, 0, 0) {}
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << "[]";
 			}
@@ -328,7 +333,7 @@ namespace pattern {
 			const TreePatternPtr element;
 
 			Single(const TreePatternPtr& element)
-			: ListPattern(ListPattern::Single, element->isVariableFree), element(element) {}
+			: ListPattern(ListPattern::Single, element->isVariableFree, 1, 1), element(element) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << *element;
@@ -342,7 +347,12 @@ namespace pattern {
 			const ListPatternPtr right;
 
 			Sequence(const ListPatternPtr& left, const ListPatternPtr& right)
-				: ListPattern(ListPattern::Sequence, left->isVariableFree && right->isVariableFree), left(left), right(right) {}
+				: ListPattern(ListPattern::Sequence,
+						left->isVariableFree && right->isVariableFree,
+						left->minLength + right->minLength, 								// sum up lower boundaries
+						utils::saturating_add(left->maxLength, right->maxLength)			// sum up upper boundaries (saturation add)
+				  ),
+				  left(left), right(right) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << *left << "," << *right;
@@ -356,7 +366,13 @@ namespace pattern {
 			const ListPatternPtr alternative2;
 
 			Alternative(const ListPatternPtr& A, const ListPatternPtr& B)
-				: ListPattern(ListPattern::Alternative, A->isVariableFree && B->isVariableFree), alternative1(A), alternative2(B) {}
+				: ListPattern(ListPattern::Alternative,
+						A->isVariableFree && B->isVariableFree,
+						std::min(A->minLength, B->minLength),
+						std::max(A->maxLength, B->maxLength)
+				  ),
+				  alternative1(A),
+				  alternative2(B) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return out << *alternative1 << "|" << *alternative2;
@@ -370,7 +386,12 @@ namespace pattern {
 			const unsigned minRep;			// minimum number of repetitions
 
 			Repetition(const ListPatternPtr& pattern, unsigned minRep = 0)
-				: ListPattern(ListPattern::Repetition, pattern->isVariableFree), pattern(pattern), minRep(minRep) {}
+				: ListPattern(ListPattern::Repetition,
+						pattern->isVariableFree,
+						pattern->minLength * minRep
+				  ),
+				  pattern(pattern),
+				  minRep(minRep) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				if (minRep == 0) {
@@ -391,7 +412,13 @@ namespace pattern {
 			const ListPatternPtr pattern;
 
 			Variable(const std::string& name, const ListPatternPtr& pattern = any)
-				: ListPattern(ListPattern::Variable, false), name(name), pattern(pattern) {}
+				: ListPattern(ListPattern::Variable,
+						false,
+						pattern->minLength,
+						pattern->maxLength
+				  ),
+				  name(name),
+				  pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				out << "$" << name;
