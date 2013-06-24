@@ -153,6 +153,9 @@ namespace pattern {
 			// a cache for tree patterns not including variables
 			typedef std::map<std::pair<const TreePattern*, typename T::atom_type>, bool> tree_pattern_cache;
 
+			// a cache for tree patterns not including variables
+			typedef std::map<std::tuple<const ListPattern*, iterator, iterator>, bool> list_pattern_cache;
+
 			struct RecVarInfo {
 				TreePatternPtr pattern;
 				unsigned level;
@@ -173,6 +176,8 @@ namespace pattern {
 			RecVarMap boundRecursiveVariables;
 
 			tree_pattern_cache treePatternCache;
+
+			list_pattern_cache listPatternCache;
 
 		public:
 
@@ -321,6 +326,22 @@ namespace pattern {
 			void addToCache(const TreePattern& pattern, const value_type& node, bool match) {
 				treePatternCache[std::make_pair(&pattern, node)] = match;
 			}
+
+			CachedMatchResult cachedMatch(const ListPattern& pattern, const iterator& begin, const iterator& end) const {
+				assert(pattern.isVariableFree && "Can only cache variable-free pattern fragments!");
+
+				auto pos = listPatternCache.find(std::make_tuple(&pattern, begin, end));
+				if (pos == listPatternCache.end()) {
+					return Unknown;
+				}
+				return (pos->second)?Yes:No;
+			}
+
+			void addToCache(const ListPattern& pattern, const iterator& begin, const iterator& end, bool match) {
+				listPatternCache[std::make_tuple(&pattern, begin, end)] = match;
+			}
+
+			// -- debug print --
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				out << "Match(";
@@ -891,6 +912,24 @@ namespace pattern {
 			return res;
 		}
 
+		namespace {
+
+			template<typename T, typename iterator = typename T::value_iterator>
+			bool match_internal(const ListPattern& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end, const std::function<bool(MatchContext<T>&)>& delayedCheck) {
+				switch(pattern.type) {
+					#define CASE(NAME) case ListPattern::NAME : return list::match ## NAME (static_cast<const pattern::list::NAME&>(pattern), context, begin, end, delayedCheck); break
+						CASE(Empty);
+						CASE(Single);
+						CASE(Variable);
+						CASE(Alternative);
+						CASE(Sequence);
+						CASE(Repetition);
+					#undef CASE
+				}
+				assert(false && "Missed a pattern type!");
+				return false;
+			}
+		}
 
 		template<typename T, typename iterator = typename T::value_iterator>
 		bool match(const ListPattern& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end, const std::function<bool(MatchContext<T>&)>& delayedCheck) {
@@ -907,18 +946,27 @@ namespace pattern {
 				return false;		// will not match
 			}
 
-			bool res = false;
-			switch(pattern.type) {
-				#define CASE(NAME) case ListPattern::NAME : res = list::match ## NAME (static_cast<const pattern::list::NAME&>(pattern), context, begin, end, delayedCheck); break
-					CASE(Empty);
-					CASE(Single);
-					CASE(Variable);
-					CASE(Alternative);
-					CASE(Sequence);
-					CASE(Repetition);
-				#undef CASE
-			}
+//			// use cache if possible
+//			if (pattern.isVariableFree) {
+//				CachedMatchResult cachRes = context.cachedMatch(pattern, begin, end);
+//				if (cachRes != Unknown) {
+//					bool res = (cachRes == Yes) && delayedCheck(context);
+//					if (DEBUG) std::cout << "Matching " << pattern << " against " << join(", ", begin, end, print<deref<typename T::value_type>>()) << " with context " << context << " ... - from cache: " << res << "\n";
+//					return res;
+//				}
+//
+//				// resolve without delayed checks and save result
+//				std::function<bool(MatchContext<T>&)> accept = [](MatchContext<T>& context) { return true; };
+//				bool res = match_internal(pattern, context, begin, end, accept);
+//				context.addToCache(pattern, begin, end, res);
+//
+//				// return result + delayed checks
+//				res = res && delayedCheck(context);
+//				if (DEBUG) std::cout << "Matching " << pattern << " against " << join(", ", begin, end, print<deref<typename T::value_type>>()) << " with context " << context << " ... - added to cache: " << res << "\n";
+//				return res;
+//			}
 
+			bool res = match_internal(pattern, context, begin, end, delayedCheck);
 			if (DEBUG) std::cout << "Matching " << pattern << " against " << join(", ", begin, end, print<deref<typename T::value_type>>()) << " with context " << context << " ...  match: " << res << "\n";
 
 			// check correct handling of paths
