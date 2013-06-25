@@ -485,12 +485,17 @@ namespace backend {
 	}
 
 	const boost::optional<string> FunctionManager::getHeaderFor(const core::LiteralPtr& function) const {
+		// include table has priority
+		auto res = getHeaderFor(function->getStringValue());
+		if (res) return res;
+
 		// check whether there is a annotated header
 		if (annotations::c::hasIncludeAttached(function)) {
 			return annotations::c::getAttachedInclude(function);
 		}
-		// check header table
-		return getHeaderFor(function->getStringValue());
+
+		// otherwise there is no header ..
+		return res;
 	}
 
 	namespace detail {
