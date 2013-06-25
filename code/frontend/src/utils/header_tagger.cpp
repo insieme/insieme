@@ -83,6 +83,10 @@ namespace utils {
 
 		}
 
+		bool isStdLibHeader(const fs::path& path, const vector<fs::path>& libDirs) {
+			return toStdLibHeader(path, libDirs);
+		}
+
 		bool isHeaderFile(const string& name) {
 			// everything ending wiht .h or .hpp or nothing (e.g. vector) => so check for not being c,cpp,...
 			return !name.empty() &&
@@ -126,11 +130,6 @@ namespace utils {
 		// check whether there is a declaration at all
 		if (!decl) return;
 
-		// do not add headers for external declarations
-		if (const clang::FunctionDecl* funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
-			if (funDecl->isExternC()) return;
-		}
-
 		VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType() << "\n";
 
 		clang::SourceManager& sm = decl->getASTContext().getSourceManager();
@@ -141,6 +140,12 @@ namespace utils {
 		// file must be a header file
 		if (!isHeaderFile(fileName)) {
 			return;			// not to be attached
+		}
+
+		// do not add headers for external declarations unless those are within the std-library
+		if (const clang::FunctionDecl* funDecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
+			// TODO: this is just based on integration tests - to make them work, no real foundation :(
+			if (funDecl->isExternC() && !isStdLibHeader(fileName, stdLibDirs)) return;
 		}
 
 		// get absolute path of header file
