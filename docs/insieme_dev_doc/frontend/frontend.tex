@@ -117,3 +117,84 @@ semantics is then handled in the OpenCL compiler~\ref{sec:Insieme.OpenCL}.
 
 \input{frontend/11_omp}
 
+\subsection{Known Issues}
+
+There are several known bugs/missing feature within the compiler frontend which
+either can be fixed (by someone willing to spend time on them) or cannot be dealt 
+with because of the IR. 
+
+\subsubsection{Chain of Assignments}
+
+In C, assignments can be chained in the following way:
+\begin{srcCode}
+a=b=c=10;
+\end{srcCode}
+This is currently not supported in the frontend since the code will be
+erroneously converted into a composition of {\tt ref.assign} calls. Since the
+return type of those functions is \type{unit}, instead of \type{a'} like in C,
+this will result in a semantic error. 
+
+The error can be easily solved by splitting the assignment into multiple
+initialization statements. 
+
+\subsubsection{Assignments within Expressions}
+
+There is an overall problem with assignments within expressions. While the C
+grammar allows assignment operations to be used as normal expressions where
+their return value is the same type of the assigned variable, in IR this is not
+possible since the return value of an assignment is {\tt unit}. 
+
+\begin{srcCode}
+int c = a=10 + (b=3);
+\end{srcCode}
+
+As for the previous issue with chained assignments, conversion will produce a
+semantically incorrect program; fortunately the semantic checks are able to
+capture such cases. 
+
+This is a bug of the frontend which can be easily fixed by splitting the
+expression into many statements. However, in order to do so we must be careful
+of eventual short-circuiting within the expressions (especially for boolean
+expressions) which may result in a lazy update of a variable which therefore
+cannot be assigned a priori. 
+
+A workaround is to change the input code manually so that assignments are
+eliminated from expressions.
+
+\subsubsection{Call though function pointer to function using global variables}
+
+This is an issue which is preventing many codes from being converted into
+INSPIRE. A minimal test case is the following:
+
+\begin{srcCode}
+int f() {
+	static int a=0;
+	return ++a;
+}
+
+int main( ) {
+	int (*fptr)() = f;
+	f();
+}
+\end{srcCode}
+
+The function \srcCodeInl{f} is invoked through a function pointer. Since the
+global variable collection done by the frontend follows the static call graph of the
+input program, and the binding of \srcCodeInl{f} here is dynamic; the function will not
+be visited and variable {\tt a} will not be inserted in the global struct.
+Consequently the signature of the function \srcCodeInl{f} is not changed (no additional
+argument is introduced to pass the global struct), and at the call site no
+parameter is provided. 
+
+In order to solve this problem a more elaborated analysis is required for global
+variable collection which is not limited to the static call graph of the
+program. This requires extensive analysis and changes throughout the input code
+since the signature of the relative function pointer needs to be changed and
+also any other function which is invoked through that pointer needs to have the
+signature updated (even though no global variable is accessed within the
+function body). This kind of support solves the problem when functions pointer
+are used within functions for which we have a definition. If the function
+accepting the function pointer is an external function then the program cannot
+be converted into INSPIRE. 
+
+\ldots
