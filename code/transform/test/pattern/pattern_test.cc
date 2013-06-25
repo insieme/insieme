@@ -1058,6 +1058,36 @@ namespace pattern {
 
 	}
 
+	TEST(Examples, UsedVariable) {
+
+		// create pattern
+		auto x = var("x");
+		auto use = !node('d',anyList) & step(x);
+		auto p = aT(node('d', x)) & aT(var("y",use));
+
+
+		auto res = p->matchTree(parseTree("c(d(a),u(a))"));
+		ASSERT_TRUE(res);
+		EXPECT_EQ("a", toString(res->getVarBinding("x")));
+		EXPECT_EQ("u(a)", toString(res->getVarBinding("y")));
+
+		res = p->matchTree(parseTree("c(d(a),d(b),u(b))"));
+		ASSERT_TRUE(res);
+		EXPECT_EQ("b", toString(res->getVarBinding("x")));
+		EXPECT_EQ("u(b)", toString(res->getVarBinding("y")));
+
+		res = p->matchTree(parseTree("c(d(a),d(b),c(u(b)))"));
+		ASSERT_TRUE(res);
+		EXPECT_EQ("b", toString(res->getVarBinding("x")));
+		EXPECT_EQ("u(b)", toString(res->getVarBinding("y")));
+
+		res = p->matchTree(parseTree("c(d(a),d(b),c(f(u(b))))"));
+		ASSERT_TRUE(res);
+		EXPECT_EQ("b", toString(res->getVarBinding("x")));
+		EXPECT_EQ("u(b)", toString(res->getVarBinding("y")));
+
+	}
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
