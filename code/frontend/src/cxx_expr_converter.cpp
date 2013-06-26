@@ -583,7 +583,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 			// in order to turn this into a diynamic memory allocation, we only need to substitute
 			// the first argument for a heap location
 			core::CallExprAddress addr(ctorCall.as<core::CallExprPtr>());
-			if(ctorCall.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>().getKind() == core::FK_CONSTRUCTOR) {
+			if(insieme::core::analysis::isConstructorCall(ctorCall)) {
 				VLOG(2) << addr->getArgument(0).as<core::CallExprPtr>();
 				retExpr = core::transform::replaceNode (convFact.mgr,
 													addr->getArgument(0),
