@@ -61,7 +61,12 @@ described here (case sensitive).
 		within the test case folder. This file must contain a space separated list of
 		input source files ({\tt .c} or {\tt .cpp}). When this file is present, the
 		integration test script will not look for a file having the same name of the
-		current folder but instead it will only consider the ones provided in this file. 
+		current folder but instead it will only consider the ones provided in this
+		file. This file is also useful when the test case is using source codes
+		which are already store in a different test case folder. For example every
+		OpenMP test case is both tested for the sequential version and the
+		parallel one as two distinct test cases. Source codes are shared, see
+		\file{test/omp/jacobi} as an example. 
 
 	\item[\file{insieme.flags}:] For a test case we may want to enable a specific
 		set of flags of the insieme compiler or provide a pre-processor directive
@@ -92,6 +97,21 @@ described here (case sensitive).
 		file is the following: 
 		\begin{verbatim} 
 		mpirun -n 2 {PATH}/{EXEC} arguments
+		\end{verbatim} 
+
+	\item[\file{output.match}:] Sometimes we do not want to compare the entire
+		application output since timer might be used and the output files may be
+		not byte-to-byte identical. This would make the test fail even if the
+		execution was successful. In order to avoid this we can extract a set of
+		meaningful information from the generated output of the test case and
+		perform the comparison only on that. This is done by the
+		\file{output.match} file. Inside we can specify an instruction which will
+		perform the extraction, the output will be saved on a temporary file which
+		will be then used for the diff. An example of a matcher which extract the
+		value of the verification step (performed by one of the test cases) can be
+		defined as follows: 
+		\begin{verbatim} 
+		awk '/^Verification\s+=\s\w+$/{ print $3 }'
 		\end{verbatim} 
 
 \end{description}
@@ -152,6 +172,10 @@ with:
 \begin{verbatim}
 $> ./integration_tests.py 
 \end{verbatim}
+
+Since the majority of the passes tested by the integration test script requires
+the Insieme compiler executable, make sure to run a {\tt make main} before
+launching the integration tests.
 
 This script is written in Python 3.x, therefore makes sure you have a version of
 the Python interpreter which is at least 3.0.  The available options are
@@ -239,9 +263,137 @@ Adding a new test is easy.
 \end{itemize}
 
 
-\subsection{Architecture of the Integration test script}
-\todo{26/06}
+\subsection{Architecture Overview}
+
+The integration test script is divided into two parts, the code and a
+configuration file used to extend the behaviour and capabilities of the script.
+The source code of the script itself is in \file{test/integration\_tests.py.in}
+while the configuration file is \file{test/config.cfg.in}. Please notice that
+these files contains wildcards which are replaced by the {\tt cmake} during the
+configuration process and replaced accordingly to point to the build folder
+(where the Insieme compiler executable and integration test suite will be
+available). The file produced by the {\tt cmake} is then placed in the root
+folder of the project. Be aware that any change to the file
+\file{./integration\_tests.py} or \file{./test.cfg} in the root directory will
+be overwritten every time the cmake is executed.  Any permanent change to the
+test script should be applied to the files within the test folder. 
+
+\subsubsection{The Script}
+
+The test script is made up two principal components: the {\em runner} and the
+{\rm reporter} which follow a producer/consumer scheme. The {\em runner} takes
+care of executing commands while the main responsibility of the {\em reporter}
+is to display the outcome of a particular test case. Since test cases can be
+executed in parallel, many {\em runners} may coexists; however one and only one
+{\em reporter} is instantiated at any time. This allows us to display results of
+test cases in order without messing up the output of the console. Exchange of
+data between the two entities is done using a global queue called {\tt
+completed} to which producers enqueue content while the only consumer dequeues
+it. 
+
+The structure of the script follows a {\em command} design pattern. At the
+beginning of the script we scan the input argument looking for folders provided
+by the user he wants to be tested. After that we recursively visit the top
+folders looking for leaf elements which are the single tests cases which needs
+to be executed. Successively a descriptor for each test cases is generated, this
+class is called \type{TestJob}. 
+
+The constructor of the \type{TestJob} class examine the test case by looking at
+the files within the folder and gather all required information necessary to
+execute it (for example it also scan parent folders collecting the passes
+defined to be executed, or not, for this test case). An array containing the
+passes which are enabled for this test case is generated, \type{cur\_passes}.
+
+
+{\tt\bf NOTE:} this algorithm needs some rethinking since as already stated, the
+passes provided by input arguments should always overwrite the one provided
+within the passes files in the filesystem. 
+
+
+For each of the selected passes we then generate the commands which implement
+that pass. Commands can be a compilation process {\tt Commands.COMPILE}, a diff
+between two files {\tt Commands.DIFF}, a copy of a file from one location to
+another {\tt Commands.COPY}, the extraction of a pattern from a file {\tt
+Commands.EXT} and at last, the execution of a command {\tt Command.RUN}. For
+each test case two streams of commands are generated. The first one contains the
+{\em hard} commands, the second {\em finalization} command. The semantics is
+that finalization commands (which usually require clearing temporary files, or
+generation of reference files) are not executed if one or more of the {\em hard}
+commands fails. Finalization commands are always executed after.
+
+\subsubsection{The Configuration file}
+
+The script is written in a way that new capabilities can be integrated using the
+configuration file \file{test/test.cfg.in}. This file is automatically parsed by
+the Python config parser module (available in the standard library). A keyword,
+or variable is defined as follows:
+
+\begin{srcCode}
+NAME:	DEFINITION
+\end{srcCode}
+
+Whenever {\tt NAME} needs to be used within another definition, the {\tt
+\%(NAME)s} expression must be used. 
+
+The bottom of the file contains the list of defined passes. All passes must
+start with the keyword {\tt pass}. The second component, a number, is utilized
+to give an order to the phase (or priority) so that a specific pass always
+precedes another one. For example since there is no point to generate IR code
+from an input program which is not correct; the {\tt gcc} pass have the highest
+priority; if it fails successive steps will not be executed. The last component
+is the name of the pass which can be referred to in the {\tt passes} files
+explained in the previous section. The three components are separated by dots. 
+
+A pass is represented by the \type{Pass} object. It is composed by 4 main
+components. 
+
+\begin{description}
+
+	\item[Pre-processing phase]: The first parameter of the \type{Pass}
+		constructor is the command executed as preprocessing of the source code.
+		In many cases this is the source-to-source compilation step executed by
+		the Insieme compiler. The second argument of the constructor is also
+		relative to this phase and it contains the {\em extension} of the file
+		which is generated by this first step. 
+
+	\item[Backend compiler phase]: With the third argument we enter the second
+		phase, i.e. execution of the backend compiler. This phase uses the file
+		generated in the previous step and as in a pipeline processes it. This is
+		the step when machine code is actually generated. The forth argument is
+		again connected to this phase and allows us to specify the name of the
+		extension of the executable being generated as result of this step. 
+
+	\item[Execution phase]: It is represented by the fifth and last argument and
+		it is used to specify how the produced executable should be executed. This
+		was added just to account for execution of MPI test cases but this has
+		been then resolved using a different mechanism, therefore this argument is
+		redundant, it can be removed (however it could be useful also for future
+		extensions).
+
+\end{description}
+
+During the design there was no need to provide longer pipelines, however the
+design of the \type{Pass} class can be easily generalized with a variable number
+of steps. Invocations to compilers (both Insieme or GCC) are done by building a
+sequence of flags to be used. This is done using the \type{Conf} class which has
+the responsibility to put compilation flag together and produce a string which
+can be invoked by the command line. Also a flag as its own wrapping class
+\type{Flag} which provides utilities for handling flags referring to actual
+files, e.g. {\tt -o file}.
+
 \subsubsection{Defining a new Pass}
-\todo{26/06}
+
+Definition of a new phase is also easy. Just define a new entry at the end of the
+\file{test/test.cfg.in} file. Follow the pattern specified above, use {\tt
+pass.ID.NAME}. Then provide information for the three steps making sure that
+you choose a different pattern for the intermediate file (the script will not
+perform any checks on this). 
+
+A new phase is enabled by default since the \file{test/passes} file contains the
+{\tt all} keyword which loads all available passes for each test cases. However
+make sure to disable the test, i.e. {\tt \char`\^NAME}, for the sub-folders for
+which you don't want the test case to be executed. Alternatively you can disable
+it from the root folder and selectively enabled it again in a test case-specific
+way. 
 
 \section{Machines}
