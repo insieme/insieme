@@ -774,6 +774,9 @@ class TestJob:
 
 def main(argv=None):
 
+	# setput enviroment variables for spetial libraries lookup
+	os.environ['BOOST_ROOT'] = '@BOOST_ROOT@'
+
 	config = configparser.ConfigParser()
 	config.readfp(open('@CMAKE_BINARY_DIR@/test.cfg'))
 
