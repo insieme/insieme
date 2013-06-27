@@ -1062,7 +1062,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	std::set<const FunctionDecl*>&& components = program.getCallGraph().getStronglyConnectedComponents( funcDecl );
 	if (!components.empty()) {
 		std::set<const FunctionDecl*>&& subComponents = program.getCallGraph().getSubComponents( funcDecl );
-		for (auto cur: subComponents){
+		for (const auto& cur: subComponents){
 
 			const FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
 			VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
