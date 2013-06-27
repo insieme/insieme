@@ -51,8 +51,8 @@ namespace checks {
 		#define FLAGS (boost::regex::flag_type)(boost::regex::optimize | boost::regex::ECMAScript)
 
 		// some static regex expressions to be utilized by literal format checks
-		boost::regex floatRegex		(R"((0)|((([1-9][0-9]*)|0)\.[0-9]+[fF]))", FLAGS);
-		boost::regex doubleRegex	(R"((0)|((([1-9][0-9]*)|0)\.[0-9]+))", FLAGS);
+		boost::regex floatRegex		(R"((0)|((([1-9][0-9]*)|0)\.[0-9]+[fF])|(0x0\.[0-9]*p-[0-9]+))", FLAGS);
+		boost::regex doubleRegex	(R"((0)|((([1-9][0-9]*)|0)\.[0-9]+)|(0x0\.[0-9]*p-[0-9]+))", FLAGS);
 
 		boost::regex charRegex		(R"('\\?.')", FLAGS);
 		boost::regex stringRegex	(R"("(\\.|[^\\"])*")", FLAGS);
