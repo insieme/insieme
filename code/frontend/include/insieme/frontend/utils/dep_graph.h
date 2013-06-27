@@ -69,9 +69,18 @@ class DependencyGraph {
 	public:
 		label_writer(NodeTy& node) : node(node) { }
 
+		template<class L>
+		const L& getLabel(const L& l) const { 
+			return  l; 
+		}
+		
+		const std::string getLabel(const clang::FunctionDecl* f) const{
+			return f->getQualifiedNameAsString(); 
+		}
+
 		template <class VertexOrEdge>
 		void operator()(std::ostream& out, const VertexOrEdge& v) const {
-			out << "[label=\"" << node[v] << "\"]";
+			out << "[label=\"" << getLabel(node[v]) << "\"]";
 		}
 	private:
 		NodeTy& node;
@@ -125,7 +134,16 @@ public:
 
 	std::set<T> getStronglyConnectedComponents(const T& t) {
 		auto&& fit = find(t);
-		assert(fit.first && "Type node is not in the graph");
+
+		if(!fit.first){
+			std::fstream fs;
+			fs.open ("graph.gr", std::fstream::out);
+			print(fs);
+			fs.close();
+
+			std::cout << "graph dumped!!! " << std::endl;
+			assert(fit.first && "Type node is not in the graph");
+		}
 
 		VertexTy v = fit.second;
 
