@@ -834,13 +834,13 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// ============================================================================================
 	// =============================== Handling of special cases  =================================
 	// ============================================================================================
-	
+
 	if( core::analysis::isConstructorCall(retIr)){
 		return retIr;
 	}
 
 	// if is a constructor call, we are done
-	if (llvm::isa<clang::CXXConstructExpr>(expr)){
+	if (llvm::isa<clang::CXXConstructExpr>(expr) && retIr.isa<core::CallExprPtr>()){		// here you might even check whether it is a constructor call in the IR
 		return retIr;
 	}
 
