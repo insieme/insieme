@@ -313,11 +313,6 @@ namespace backend {
 		res[basic.getSignedIntLShift()] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getSignedIntRShift()] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		//res[basic.getSignedIntPreInc()]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
-		//res[basic.getSignedIntPostInc()] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
-		//res[basic.getSignedIntPreDec()]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
-		//res[basic.getSignedIntPostDec()] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
-
 		res[basic.getSignedIntEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getSignedIntNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getSignedIntGe()] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
@@ -392,7 +387,24 @@ namespace backend {
 		res[basic.getRefLt()] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getRefLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-//		res[basic.getRefSub()] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+		// -- undefined --
+
+		res[basic.getUndefined()] = OP_CONVERTER({
+
+			// one special case: an empty struct
+			auto type = call->getType();
+			if (const core::StructTypePtr& structType = type.isa<core::StructTypePtr>()) {
+				if (structType.empty() && structType->getParents().empty()) {
+					auto cType = CONVERT_TYPE(type);
+					auto zero = C_NODE_MANAGER->create("0");
+					return c_ast::deref(c_ast::cast(c_ast::ptr(cType), zero));
+				}
+			}
+
+			// the rest is handled like a *var(undefined(..))
+			return c_ast::deref(CONVERT_EXPR(core::IRBuilder(call->getNodeManager()).refVar(call)));
+		});
 
 		// -- volatile --
 
