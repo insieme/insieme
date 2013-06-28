@@ -136,7 +136,7 @@ public:
 		auto&& fit = find(t);
 
 		if(!fit.first){
-			std::fstream fs;
+			std::ofstream fs;
 			fs.open ("graph.gr", std::fstream::out);
 			print(fs);
 			fs.close();

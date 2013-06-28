@@ -135,7 +135,7 @@ const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitF
 
 
 	// function declaration not found. return the current translation unit
-	if ( !ret.first ) {return NULL;}
+	if ( !ret.first ) {return currTU;}
 	assert(ret.first && "decl not valid");
 	assert(ret.second && "translation unit not found");
 
@@ -1059,6 +1059,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// retrieve the strongly connected components for this function
 	// It is strongly connected or strong if it contains a directed path from u to v and a directed
 	// path from v to u for every pair of vertices u, v.
+	// FIXME:: we have a problem here with BOOST
 	std::set<const FunctionDecl*>&& components = program.getCallGraph().getStronglyConnectedComponents( funcDecl );
 	if (!components.empty()) {
 		std::set<const FunctionDecl*>&& subComponents = program.getCallGraph().getSubComponents( funcDecl );
@@ -1448,7 +1449,6 @@ core::NodePtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl){
-
 	const clang::FunctionDecl* ctorAsFunct = llvm::cast<clang::FunctionDecl>(ctorDecl);
 	assert(ctorAsFunct);
 	SET_TU(ctorAsFunct);
