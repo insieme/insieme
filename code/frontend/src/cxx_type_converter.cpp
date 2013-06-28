@@ -62,7 +62,6 @@ using namespace insieme;
 
 namespace insieme {
 namespace frontend {
-
 namespace conversion {
 //---------------------------------------------------------------------------------------------------------------------
 //										CXX CLANG TYPE CONVERTER
@@ -145,8 +144,14 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				if (ctorDecl->isUserProvided ()){
 					core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
 					if (ctorLambda ){
-						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, builder.refType(classType), core::FK_CONSTRUCTOR).as<core::ExpressionPtr>();
-						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
+						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, 
+														  builder.refType(classType), 
+														  core::FK_CONSTRUCTOR).as<core::ExpressionPtr>();
+
+						// FIXME: this comes from the interceptor, intercepted constructors are
+						// literals. but we should not be here if is intercepted
+						if (ctorLambda.isa<core::LambdaExprPtr>())
+								classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 					}
 				}
 			}
@@ -208,9 +213,10 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				VLOG(2) << method->getNameAsString();
 				VLOG(2) << methodLambda->getType();
 				dumpDetail(methodLambda);
-				VLOG(2) << "###";
+				VLOG(2) << " ###";
 				method->dump();
-				VLOG(2) << ( (*methodIt)->isVirtual()? "virtual!":" ");
+				std::cout << std::endl;
+				VLOG(2) << ((*methodIt)->isVirtual()? "virtual!":" ");
 				VLOG(2) << ((*methodIt)->isConst()? "const!":" ");
 				VLOG(2) << "           ############";
 			}
