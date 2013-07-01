@@ -32,6 +32,7 @@ struct userS {
   int nmbRB;
   //mod_type mod;
   int mod;
+  mod_type mod;
   userS *next;
   input_data *data;
   int subframe;

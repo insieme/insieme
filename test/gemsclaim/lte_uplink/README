@@ -1,0 +1,27 @@
+The LTE Uplink Receiver PHY benchmark is a realistic implementation of
+the baseband processing for an LTE mobile base station. The benchmark
+implements the processing required by the base station in an uplink.
+
+To execute the benchmark try one of the following make targets:
+  make [run_pci/run_sim/run_x86/run_cilk/run_cilk/run_cilk_pci]
+
+For more information about these and other targets do "make help".
+
+For the run_pci and run_sim make targets to work you first need to set
+the TILERA_ROOT variable in the Makefile to the location of Tilera's
+Multicore Development Environment (MDE). The benchmark has been tested
+with version 2.1.0.98943.
+
+The first time "run_pci" or "run_sim" is execute the Linux kernel for
+the Tilera architecture will be compiled and the first time "run_cilk"
+or "run_cilk_pci" is executed the Cilk runtime will be downloaded and
+compiled (might take a lot of time).
+
+More information about the benchmark can be found in doc/uplink.pdf.
+
+The benchmark has been tested on the following architectures and OSes: 
+o Tilera TILEPro64, Linux 2.6
+o Intel Pentium 4 3.0 GHz, Fedora 14 Linux 2.6.35.6 x86_64
+o Intel Dual Xeon E5620 2.4 GHz, Ubuntu 10.04 LTS Linux 2.6.35 x86_64
+o Intel Core 2 Duo 2.53 GHz, Mac OS X 10.6.8, MacPorts 2.0.3
+
