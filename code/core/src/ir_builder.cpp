@@ -39,6 +39,7 @@
 #include <tuple>
 #include <limits>
 #include <set>
+#include <cmath>
 
 #include "insieme/core/ir_node.h"
 
@@ -441,6 +442,12 @@ LiteralPtr IRBuilder::floatLit(const string& value) const {
 }
 
 LiteralPtr IRBuilder::floatLit(float value) const {
+
+	// special handling for de-normalized values
+	if (std::fpclassify(value) == FP_SUBNORMAL) {
+		return floatLit(format("%a", value));
+	}
+
 	std::stringstream out;
 	out << std::scientific
 		<< std::fixed
@@ -454,6 +461,12 @@ LiteralPtr IRBuilder::doubleLit(const string& value) const {
 }
 
 LiteralPtr IRBuilder::doubleLit(double value) const {
+
+	// special handling for de-normalized values
+	if (std::fpclassify(value) == FP_SUBNORMAL) {
+		return doubleLit(format("%a", value));
+	}
+
 	std::stringstream out;
 	out << std::scientific
 		<< std::fixed

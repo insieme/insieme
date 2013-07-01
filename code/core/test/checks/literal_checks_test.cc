@@ -119,6 +119,9 @@ namespace checks {
 		EXPECT_EQ(1u, check(err3).size());
 		EXPECT_EQ(1u, check(err4).size());
 
+		// test de-normalized values
+		ok1 = builder.doubleLit(5e-324);
+		EXPECT_TRUE(check(ok1).empty()) << check(ok1);
 	}
 
 	TEST(LiteralFormat, IntLiterals) {

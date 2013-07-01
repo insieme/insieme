@@ -834,13 +834,13 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	// ============================================================================================
 	// =============================== Handling of special cases  =================================
 	// ============================================================================================
-	
+
 	if( core::analysis::isConstructorCall(retIr)){
 		return retIr;
 	}
 
 	// if is a constructor call, we are done
-	if (llvm::isa<clang::CXXConstructExpr>(expr)){
+	if (llvm::isa<clang::CXXConstructExpr>(expr) && retIr.isa<core::CallExprPtr>()){		// here you might even check whether it is a constructor call in the IR
 		return retIr;
 	}
 
@@ -1062,7 +1062,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	std::set<const FunctionDecl*>&& components = program.getCallGraph().getStronglyConnectedComponents( funcDecl );
 	if (!components.empty()) {
 		std::set<const FunctionDecl*>&& subComponents = program.getCallGraph().getSubComponents( funcDecl );
-		for (auto cur: subComponents){
+		for (const auto& cur: subComponents){
 
 			const FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
 			VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
