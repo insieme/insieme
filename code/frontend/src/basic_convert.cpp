@@ -1030,7 +1030,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		return retExpr;
 	}
 
-	std::cout << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl;
 	assert(currTU && "currTU not set");
 	assert(funcDecl->hasBody() && "Function has no body!");
 

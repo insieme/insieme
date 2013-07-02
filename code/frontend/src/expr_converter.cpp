@@ -1072,16 +1072,9 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		case clang::BO_Assign:
 		{
 			baseOp = clang::BO_Assign;
-			dumpDetail (lhs);
-			std::cout << "++++++++++++++++++++++++++++" << std::endl;
 
 			// make sure the lhs is a L-Value
 			lhs = asLValue(lhs);
-
-			dumpDetail (lhs);
-			dumpDetail (lhs->getType());
-			std::cout << "++++++++++++++++++++++++++++" << std::endl;
-
 
 			//OK!! here there is a problem, 
 			//	let fun000 = fun(ref<array<int<4>,1>> v5) -> unit {

@@ -242,12 +242,12 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	core::IRBuilder builder( exprTy->getNodeManager() );
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 
-	std::cout << "####### Expr: #######" << std::endl;
-	dumpDetail(expr);
-	std::cout << "####### Expr Type: #######" << std::endl;
-	dumpDetail(exprTy);
-	std::cout << "####### target Type: #######" << std::endl;
-	dumpDetail(targetTy);
+//	std::cout << "####### Expr: #######" << std::endl;
+//	dumpDetail(expr);
+//	std::cout << "####### Expr Type: #######" << std::endl;
+//	dumpDetail(exprTy);
+//	std::cout << "####### target Type: #######" << std::endl;
+//	dumpDetail(targetTy);
 
 	// check if casting to cpp ref, rightside values are assigned to refs in clang without any
 	// conversion, because a right side is a ref and viceversa. this is invisible to us, we need to
