@@ -56,23 +56,18 @@ static void getpicturehdr _ANSI_ARGS_((void));
 int getheader()
 {
   unsigned int code, gob;
-printf("gethdr 1\n");
+
   /* look for startcode */
   startcode();
-printf("gethdr 2a\n");
   code = getbits(PSC_LENGTH);
-printf("gethdr 2b\n");
   gob = getbits(5);
-printf("gethdr 2c\n");
   if (gob == SE_CODE) 
     return 0;
   if (gob == 0) {
-printf("gethdr 3\n");
     getpicturehdr();
     if (syntax_arith_coding)        /* reset decoder after receiving */
       decoder_reset();	        /* fixed length PSC string */
   }
-printf("gethdr 4\n");
   return gob + 1;
 }
 
@@ -81,16 +76,11 @@ printf("gethdr 4\n");
 
 void startcode()
 {
-  unsigned int tmp = showbits(PSC_LENGTH);
-  int cnt = 0;
   /* search for new picture start code */
-  while (tmp!=1l )// && cnt++ < 8) 
-	{
+  while (showbits(PSC_LENGTH)!=1l) 
          flushbits(1);
-        tmp = showbits(PSC_LENGTH);
-	printf("gethdr 4 %d\n", tmp);
-	}
 }
+
 /* decode picture header */
 
 static void getpicturehdr()

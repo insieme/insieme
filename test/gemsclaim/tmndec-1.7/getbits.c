@@ -121,17 +121,11 @@ int n;
   int c;
 
   if (ld->incnt<n)
-  {
-	printf("showbits \n");
     fillbfr();
-  }
 
   v = ld->inbfr + ((96 - ld->incnt)>>3);
-  printf("showbits %d %d %d %d %d %d\n", v[0], v[1], v[2], v[3], ld->incnt, msk[n]);
   b = (v[0]<<24) | (v[1]<<16) | (v[2]<<8) | v[3];
   c = ((ld->incnt-1) & 7) + 25;
-
-  printf("showbits v = %p b = %d c = %d\n", v, b, c);
   return (b>>(c-n)) & msk[n];
 }
 

@@ -97,7 +97,7 @@ char *argv[];
 #endif
 
   options(&argc,&argv);
-printf("1\n");
+
   /* pointer to name of output files */
 #if (defined DISPLAY || defined WINDOWS)
   if (outtype==T_X11 || outtype == T_WIN)
@@ -106,7 +106,6 @@ printf("1\n");
 #endif
     outputname = argv[argc-1];
 
-printf("2\n");
   ld = &base; 
 
   /* open MPEG input file(s) */
@@ -115,24 +114,17 @@ printf("2\n");
     error(errortext);
   }
 
-printf("3\n");
   first = 1;
 
   do {
-printf("4\n");
     if (base.infile!=0)
-    {
-printf("4a\n");
       lseek(base.infile,0l,0);
-printf("4b\n");
-    }
     initbits();
     framenum = 0;
     temp_ref = 0;
     prev_temp_ref -1; 
 
     while (getheader()) {
-printf("5\n");
       if (first) {
         initdecoder();
 #ifdef USE_TIME
@@ -155,7 +147,6 @@ printf("5\n");
 
   } while (loopflag);
 
-printf("6\n");
   close(base.infile);
 
 #ifdef USE_TIME
@@ -173,7 +164,6 @@ printf("6\n");
            framenum, ((10000*framenum+runtime/2)/runtime)/100,
            ((10000*framenum+runtime/2)/runtime)%100);
 #endif
-printf("7\n");
 
 #ifdef DISPLAY
   if (outtype==T_X11)
