@@ -522,19 +522,19 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 
 			if( !components.empty() ) {
 
-			//	std::set<const clang::TagDecl*>&& subComponents = typeGraph.getSubComponents( tagDecl );
-			//	for(const auto& cur : subComponents) {
-			//		TagDecl* decl = const_cast<TagDecl*>(cur);
+				std::set<const clang::TagDecl*>&& subComponents = typeGraph.getSubComponents( tagDecl );
+				for(const auto& cur : subComponents) {
+					TagDecl* decl = const_cast<TagDecl*>(cur);
 
-			//		VLOG(2) << "Analyzing TagDecl as sub component: " << decl->getNameAsString();
+					VLOG(2) << "Analyzing TagDecl as sub component: " << decl->getNameAsString();
 
-			//		auto fit = convFact.ctx.recTypeCache.find(decl);
-			//		if ( fit == convFact.ctx.recTypeCache.end() ) {
-			//			// perform the conversion only if this is the first time this
-			//			// function is encountred
-			//			VisitTagType(cast<clang::TagType>(decl->getTypeForDecl()));
-			//		}
-			//	}
+					auto fit = convFact.ctx.recTypeCache.find(decl);
+					if ( fit == convFact.ctx.recTypeCache.end() ) {
+						// perform the conversion only if this is the first time this
+						// function is encountred
+						VisitTagType(cast<clang::TagType>(decl->getTypeForDecl()));
+					}
+				}
 
 				if(VLOG_IS_ON(2)) {
 					// we are dealing with a recursive type
@@ -556,7 +556,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 					// this is an anonymous struct, we need to generate a name
 					decl_name = "__insieme_struct_" + std::to_string(cnt++);
 				}
-
+				
 				// we create a TypeVar for each type in the mutual dependence
 				convFact.ctx.recVarMap.insert(
 						std::make_pair(tagDecl, builder.typeVariable(decl_name))
@@ -579,6 +579,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 						}
 					);
 				}
+				
 			}
 
 			// Visit the type of the fields recursively
