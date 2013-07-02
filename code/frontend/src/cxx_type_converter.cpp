@@ -150,8 +150,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 
 						// FIXME: this comes from the interceptor, intercepted constructors are
 						// literals. but we should not be here if is intercepted
-						if (ctorLambda.isa<core::LambdaExprPtr>())
-								classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
+						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 					}
 				}
 			}
