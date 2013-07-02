@@ -1,0 +1,183 @@
+\chapter{The Analysis Module}
+
+\section{The Polyhedral Model [Simone]}
+\label{insieme:analysis:polyhedral}
+
+\subsection{Overview of the Polyhedral Model}
+
+\begin{figure}[t]
+\small
+\begin{lstlisting}[caption=Running example]
+for(unsigned i=0; i<n; ++i) {
+	A[i][i] = 0;												S0
+	for(unsigned j=i; j<n; ++j) { 
+		A[i][j+1] = i+j;				 					    S1
+		(i+j)%2 && (A[n-j][n-i] = j-i);	         		        S2
+	}
+}
+\end{lstlisting}
+\label{list:1}
+\end{figure}
+
+The polyhedral model represents, in an algebraic way, the execution of a
+program.  It captures both the control-flow and data-flow of a program using
+three compact linear algebraic structures, described in the following
+subsections. The main idea is to define, for a statement $S$, a \emph{space} in
+$Z^n$ where each point correspond to an execution, or \emph{instance}, of $S$.
+The value of the coordinates of a point within this space represents the value of
+the $N$ loop iterators spawning statement $S$.  In order to keep the
+representation compact, such space, called \emph{polyhedron}, is defined by a
+set of bounding \emph{affine hyperplanes}.
+%end not by enumerating the single points.
+
+\begin{definition}
+\label{def:1}
+(Affine Hyperplane). The set X of all vectors $x \in \mathbb{Z}^n$ such that $h.\vec{x} =
+k$, for $k \in \mathbb{Z}$.
+\end{definition}
+
+\begin{definition}
+\label{def:2}
+(Polyhedron). The set of all vectors $\vec{v} \in \mathbb{Z}^n$ such that $A \vec{v} +
+\vec{b} \ge 0$, where $A$ is an integer matrix.
+\end{definition}
+
+\subsubsection{Iteration Domain}
+Because the space is bounded by a set of all affine inequalities the
+corresponding integer polyhedron is convex. A bounded polyhedron is also called
+\emph{polytope}. The space on which a statement is define is also referred to as
+its \emph{Iteration Domain}, $\mathcal{D}_S$. For example lets consider the code in
+Listing~\ref{list:1}. This loop nest contains 3 statements which are referred to
+as $S0$, $S1$ and $S2$. Each statement is defined within an iteration domain
+which is bound by the surrounding control flow statements. For example the
+iteration domain for $S0$, $S1$ and $S2$ is defined as follows:
+\begin{align*}
+	\mathcal{D}_{S_0} = & \{~i~|~0 \le i < n \} \\
+	\mathcal{D}_{S_1} = & \{~i,j~|~ 0 \le i < n \wedge i \le j < n \} \\
+	\mathcal{D}_{S_2} = & \{~i,j~|~ 0 \le i < n \wedge i \le j < n ~\wedge  
+						\exists~e \in \mathbb{Z}~|~ i+j-2e=1 \}
+\end{align*}
+
+As described in \ref{def:2}, iteration domains are represented by the integer
+matrix $A$ multiplied by a so called \emph{iteration vector} $\vec{x}$. The
+iteration vector determine the dimensionality of the space on which a statement
+is defined therefore composed by the loop iterators enclosing a statement. For
+example iteration domain for statement $S1$ in listing~\ref{list:1}~is defined
+by the vector $\vec{x_{S_1}} = \begin{pmatrix} i \\ j \\ n\end{pmatrix}$.
+$i$ and $j$ are said iterators (since they vary within the defining loop
+boundaries) while $n$ is a parameter. 
+Conventionally the matrix $A$ is represented using a so-called
+\emph{homogeneous} coordinates so that vector $\vec{b}$ is added as its last
+column. Iteration domain for statement $S_1$ is therefore represented as
+follows:
+
+\begin{align*}
+\mathcal{D}_{S_1} = & \begin{Bmatrix} 
+	\begin{pmatrix} i \\ j \end{pmatrix} \big|
+	\begin{pmatrix} i \\ j \end{pmatrix} \in \mathbb{Z}^2,
+	\begin{bmatrix*}[r] 1 & 0 & 0 & 0\\ -1 & 0 & 1 & -1 \\ 
+			-1 & 1 & 0 & 0 \\  0 & -1 & 1 & -1 
+	\end{bmatrix*} \cdot
+	\begin{pmatrix} i \\ j \\ n \\ 1 \end{pmatrix}
+	\ge \vec{0}
+\end{Bmatrix}
+\end{align*}
+
+\subsubsection{Scheduling Function}
+The second piece of information which is required to describe the semantics of a
+program are the so-called \emph{scheduling} (or \emph{scattering})
+\emph{functions}. Intuitively, statements belonging to a loop body, and subject
+to the same control flow, will share identical iteration domains. The
+information of the order on which statement instances are executed is not
+represented. A \emph{schedule}, $\theta(\vec{x})$, is a function which
+associates a logical \emph{execution date} to each instance of a statement. This
+allows the ordering of the instances defined by the iteration domain and
+furthermore it defines an execution order for instances of different statements.
+A schedule $\theta(\vec{x})$ has the following shape:
+\[
+\theta_S (\vec{x}) = T_S\vec{x} + \vec{t_S}
+\]
+where $\vec{x}$ is the iteration vector, $T_S$ is an integer constant
+transformation matrix and $\vec{t_S}$ is a constant vector. $T_S$ and
+$\vec{t_S}$ can be merged together into a matrix $\mathcal{S}$ if the system is
+represented based on homogeneous coordinates. 
+
+A standard and simple way of assigning scheduling functions to statements of
+program is done on the basis of the AST as explained in the Cloog user
+guide~\cite{cloog}.
+For example scheduling functions
+for statements $S0$, $S1$ and $S2$ of code in listing~\ref{list:1}~are defined
+as follows:
+\begin{align*}
+\mathcal{S}_{S_{0}} = \begin{bmatrix*}[r] 1 & 0 \\ 0 & 0 \end{bmatrix*} 
+					\begin{pmatrix} i \\ 1 \end{pmatrix} ~~~ &
+\mathcal{S}_{S_{1}} = \begin{bmatrix*}[r] 1 & 0 & 0 \\ 0 & 0 & 1 \\ 
+										0 & 1 & 0 \\ 0 & 0 & 0
+					\end{bmatrix*} 
+					\begin{pmatrix} i \\ j \\ 1 \end{pmatrix} &
+\mathcal{S}_{S_{2}} = \begin{bmatrix*}[r] 1 & 0 & 0 \\ 0 & 0 & 1 \\ 
+										0 & 1 & 0 \\  0 & 0 & 1 
+					\end{bmatrix*} 
+					\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}
+\end{align*}
+Intersection of the scheduling function by the corresponding iteration domain of
+the statement produces a sequence of tuples, or logic dates, representing
+the execution order of each statement instance. Lexicographically 
+ordering the set will give the exact sequence of statements instances executed
+by the program. % oh god this is ugly
+\begin{align*}
+	S_0:(0,0) & \prec S_1:(0,1,0,0) \prec S_2:(0,1,0,1) \prec \\ 
+			  & S_1:(0,1,1,0) \prec S_2:(0,1,1,1) \prec \ldots \prec \\
+	S_0:(1,0) & \prec S_1:(1,1,0,0) \prec S_2:(1,1,0,1) \prec ...
+\end{align*}
+
+
+\subsubsection{Access Function}
+One last function is also required to capture the data locations on which a
+statement operates. The \emph{access} (or \emph{subscript}) \emph{function} 
+describes the index expression utilized to access arrays, and therefore memory
+locations, within a statement. Representation of access functions is similar to
+what already described for scattering functions. For example array 
+access in statement $S1$, \texttt{A[i][j+1]}, can be represented in matrix form
+with one row for each dimension being accessed:
+\[
+\mathcal{A}_{USE(A)} =  \begin{bmatrix*}[r] 1 & 0 & 0 \\ 0 & 1 & 1 \\ 
+						\end{bmatrix*} 
+						\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}
+\]
+Access functions also store the information whether a particular memory location
+is being read (\texttt{USE}) or written (\texttt{DEF}). This kind of
+information is utilized by the polyhedral model to compute exact dataflow and
+dependency analysis for a given code region. 
+
+\subsubsection{Static Control Part (SCoP)}
+
+The three functions described above can completely describe (both semantically
+and syntactically) a code region (also called SCoP) which respects the
+constraints of the Polyhedral Model. A SCoP is defined to be the maximal set of
+consecutive instructions such that: loop bounds, conditionals and subscript
+expression are all affine functions of the surrounding loop iterators and global
+variables; loop iterators and global variables cannot be modified. 
+
+By definition, a subset of a SCoP is still a SCoP. A program usually may contain
+several non-overlapping SCoPs. 
+
+\subsection{Polyhedral Model Data Structures in Insieme}
+
+\subsubsection{The \type{IterationVector}}
+\subsubsection{The \type{AffineFunction}}
+\subsubsection{The \type{Constraint} and \type{AffineConstraint}} 
+\subsubsection{The \type{AffineSystem}}
+\subsubsection{The \type{Scop}}
+
+\subsection{SCoP Analysis}
+
+
+
+\section{The Control Flow Graph [Simone]}
+\label{insieme:analysis:cfg}
+
+
+
+\section{Dataflow Analaysis [Simone]}
+\label{insieme:analysis:dtaflow}
