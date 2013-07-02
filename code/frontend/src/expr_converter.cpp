@@ -376,22 +376,34 @@ core::ExpressionPtr ConversionFactory::ExprConverter::wrapVariable(const clang::
 }
 
 core::ExpressionPtr ConversionFactory::ExprConverter::asLValue(const core::ExpressionPtr& value) {
-	// CPP references are Left side exprs but need to be IRized
 	core::TypePtr irType = value->getType();
-	if (core::analysis::isCppRef(irType)) {
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), value);
-	}
 
+	// CPP references are Left side exprs but need to be IRized
+	if (core::analysis::isCppRef(irType)) {
+		return builder.toIRRef(value);
+	}
 
 	if (core::analysis::isConstCppRef(irType)) {
 		assert(false && " a const cpp might be a left side, but it is constant, can not be assigned");
 	}
 
+	// check whether it is a struct element access (by ref)
+	if (const core::RefTypePtr& refTy = irType.isa<core::RefTypePtr>()){
+		// usualy this is already a ref. but we might be accessing a cpp ref inside of the
+		// structure. we need to unwrap it
+		if(core::analysis::isCppRef(refTy->getElementType())){
+			return builder.toIRRef(builder.deref(value));
+		}
+		if (core::analysis::isConstCppRef(refTy->getElementType())) {
+			assert(false && " a const cpp might be a left side, but it is constant, can not be assigned");
+		}
+	}
+
 	// the magic line, this line avoids some trouble with pointers (paramerer references)
 	// but it totaly fuck it up with cpp references
-       if (value->getNodeType() != core::NT_CallExpr || value->getType()->getNodeType() == core::NT_RefType) {
-               return value;
-       }
+    if (value->getNodeType() != core::NT_CallExpr || value->getType()->getNodeType() == core::NT_RefType) {
+    	return value;
+    }
 
 	// this only works for call-expressions
 	if (const core::CallExprPtr& call = value.isa<core::CallExprPtr>()){
@@ -428,19 +440,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::asLValue(const core::Expre
 			if (*inner != *arg) {
 				return builder.callExpr(builder.refType(value->getType()), gen.getCompositeRefElem(), inner,
 						call->getArgument(1), call->getArgument(2));
-			}
-		}
-
-		// check whether it is a struct element access (by ref)
-		if (core::analysis::isCallOf(call, gen.getCompositeRefElem())) {
-			// usualy this is already a ref. but we might be accessing a cpp ref inside of the
-			// structure. we need to unwrap it
-			
-			if (core::analysis::isCppRef(core::analysis::getReferencedType(call->getType()))){
-				const core::ExpressionPtr owner  = call->getArgument(0);
-				const core::ExpressionPtr member = call->getArgument(1);
-				return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), 
-										 builder.callExpr (gen.getRefDeref(), call));
 			}
 		}
 	}
