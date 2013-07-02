@@ -391,6 +391,13 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitDecltypeType(const clang
 	return core::TypePtr();
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                 AUTO TYPE -- a CXX0x feature
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::TypePtr ConversionFactory::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
+    return Visit(autoTy->getDeducedType().getTypePtr());
+}
+
 core::TypePtr ConversionFactory::CXXTypeConverter::Visit(const clang::Type* type) {
 	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
 
