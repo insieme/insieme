@@ -111,6 +111,10 @@ class IndexerVisitor{
 
 	void indexDeclaration(clang::Decl* decl){
 
+		// if already index, done
+
+
+		// === FRIEND DECL ====
 		if( const clang::FriendDecl* f = llvm::dyn_cast<clang::FriendDecl>(decl) ) {
 			//friendDecl is not a nameDecl
 			if(f->getFriendDecl()) {	
@@ -120,9 +124,12 @@ class IndexerVisitor{
 				//friendType --> getFriendType()
 				//assert(false && "indexer -- friendType not implemented");
 			}
+		// === named DECL ====
+		// this might be anything with a name
 		} else if (const clang::NamedDecl *named = llvm::dyn_cast<clang::NamedDecl>(decl)) {
 			assert (named && "no name Decl, can not be indexed and we dont know what it is");
 
+			// === Function Decl ===
 			if (llvm::isa<clang::FunctionDecl>(decl)) {
 				Indexer::TranslationUnitPair elem =  std::make_pair(decl,mTu); 
 				if (decl->hasBody()){
@@ -134,25 +141,54 @@ class IndexerVisitor{
 						mIndex["main"] = elem; 
 				}
 			}
-			else if (const clang::CXXRecordDecl* cxxRecDecl = llvm::dyn_cast<clang::CXXRecordDecl>(decl)) {
-				if (cxxRecDecl->hasDefinition()){
-					Indexer::TranslationUnitPair elem =  std::make_pair(llvm::cast<clang::Decl>(cxxRecDecl->getDefinition()),mTu); 
-					mIndex[buildNameTypeChain(decl)] = elem;
-				}
+			// === tag Decl ===
+			else if (const clang::TagDecl* tag = llvm::dyn_cast<clang::TagDecl>(decl)) {
 
-				// index inner functions as well
-				indexDeclContext(llvm::cast<clang::DeclContext>(decl));
+				switch (tag->getTagKind ()){
+					case clang::TagDecl::TagKind::TTK_Struct :
+					case clang::TagDecl::TagKind::TTK_Union 	:
+					case clang::TagDecl::TagKind::TTK_Class 	:
+						{
+						Indexer::TranslationUnitPair elem =  std::make_pair(decl,mTu); 
+						mIndex[buildNameTypeChain(decl)] = elem;
+						indexDeclContext(llvm::cast<clang::DeclContext>(decl));
+						}
+						break;
+					case clang::TagDecl::TagKind::TTK_Enum 	:
+
+						// index enums?? 
+						break;
+
+					case clang::TagDecl::TagKind::TTK_Interface :
+						// FIXME: do we need this??
+						break;
+				}
 			}
+			// === Namespace Decl ===
 			else if (llvm::isa<clang::NamespaceDecl>(decl)){
 				indexDeclContext(llvm::cast<clang::DeclContext>(decl));
 			} 
+			// === templDecl Decl ===
 			else if(const clang::TemplateDecl* templDecl = llvm::dyn_cast<clang::TemplateDecl>(decl)) {
 				indexDeclaration(templDecl->getTemplatedDecl());
 			}
+			// === variable Decl ===
+			else if (const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl)){
+				// if is a variable, we migh not need to index itself, but 
+				// template spetialitation might have member functions with a new signature
+				// those member functions need to be indexed, to enable dependence analysis 
+				
+				const clang::Type* type = varDecl->getType().getTypePtr();
+				if (const clang::RecordType* rec = llvm::dyn_cast<clang::RecordType>(type)){
+					indexDeclContext(llvm::cast<clang::DeclContext>(rec->getDecl()));
+				}
+			}
 		} 
+		// === linkage spec DECL ====
 		else if (llvm::isa<clang::LinkageSpecDecl>(decl)) {
 			indexDeclContext(llvm::cast<clang::DeclContext>(decl));
 		}
+		// === default ====
 		else {
 			//default case -- if DeclContext, try to index it
 			if(clang::DeclContext* declContext = llvm::dyn_cast<clang::DeclContext>(decl)) {

@@ -93,7 +93,7 @@ namespace core {
 		 */
 		MemberFunction(const string& name, const ExpressionPtr& impl, bool _virtual = false, bool _const = false)
 			: name(name), impl(core::analysis::normalize(impl)), m_virtual(_virtual), m_const(_const) {
-			assert(impl->getNodeType() == NT_LambdaExpr || analysis::isPureVirtual(impl));
+			assert(impl->getNodeType() == NT_Literal || impl->getNodeType() == NT_LambdaExpr || analysis::isPureVirtual(impl));
 		}
 
 		/**
@@ -118,7 +118,7 @@ namespace core {
 		void setImplementation(const ExpressionPtr& newImpl) {
 			assert(newImpl->getType()->getNodeType() == NT_FunctionType);
 			assert(newImpl->getType().as<FunctionTypePtr>()->isMemberFunction());
-			assert(newImpl->getNodeType() == NT_LambdaExpr || analysis::isPureVirtual(newImpl));
+			assert(newImpl->getNodeType() == NT_Literal || newImpl->getNodeType() == NT_LambdaExpr || analysis::isPureVirtual(newImpl));
 			impl = newImpl;
 		}
 

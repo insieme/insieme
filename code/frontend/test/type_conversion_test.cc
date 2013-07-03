@@ -36,6 +36,13 @@
 
 #include <gtest/gtest.h>
 
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+#include <clang/AST/ASTContext.h>
+#include <clang/AST/Stmt.h>
+#include <clang/AST/Type.h>
+#include <clang/AST/Decl.h>
+
 #include "insieme/core/ir_program.h"
 
 #include "insieme/frontend/program.h"
@@ -46,16 +53,6 @@
 #include "insieme/utils/logging.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-// clang [3.2]
-#include "clang/AST/ASTContext.h"
-// /clang [3.2]
-
-#include "clang/AST/Stmt.h"
-#include "clang/AST/Type.h"
-
-// clang [3.0]
-//#include "clang/Index/Indexer.h"
-//#include "clang/Index/Program.h"
 
 using namespace insieme;
 using namespace insieme::core;

@@ -84,27 +84,6 @@ using namespace exprutils;
 
 namespace insieme {
 namespace frontend {
-
-namespace {
-
-// unwraps cppRef/constCppRef
-core::ExpressionPtr unwrapCppRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr) {
-	
-	core::NodeManager& mgr = builder.getNodeManager();	
-	core::TypePtr irType = expr->getType();
-	if (core::analysis::isCppRef(irType)) {
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
-	}
-	else if (core::analysis::isConstCppRef(irType)) {
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
-	}
-
-	return expr;
-}
-
-} // end anonymous namespace
-
-
 namespace conversion {
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -238,7 +217,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCallExpr(const cla
 						tmp = convFact.tryDeref(tmp);
 					}
 					else{
-						tmp = unwrapCppRef(builder, tmp);
+						tmp = utils::unwrapCppRef(builder, tmp);
 						tmp = convFact.tryDeref(tmp);
 					}
 
@@ -271,7 +250,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitMemberExpr(const c
 		base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), base);
 	}
 	*/
-	base = unwrapCppRef(builder, base);
+	base = utils::unwrapCppRef(builder, base);
 
 	// TODO: we have the situation here in which we might want to access a field of a superclass
 	// this will not be resolved by the C frontend. and we need to build the right datapath to
@@ -342,18 +321,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	// correct the owner object reference, in case of pointer (ref<array<struct<...>,1>>) we need to
 	// index the first element
 	ownerObj = getCArrayElemRef(builder, ownerObj);
-
-	//unwrap if is a cpp reference, we dont use cpp references for this
-	/*
-	if (core::analysis::isCppRef(ownerObj->getType())){
-	// unwrap and deref the variable
-		ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), ownerObj);
-	}
-	else if (core::analysis::isConstCppRef(ownerObj->getType())){
-		ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), ownerObj);
-	} 
-	*/
-	ownerObj = unwrapCppRef(builder, ownerObj);
+	ownerObj = utils::unwrapCppRef(builder, ownerObj);
 
 	// reconstruct Arguments list, fist one is a scope location for the object
 	ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(methodDecl) );
@@ -401,7 +369,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 
 		// get "this-object"
 		core::ExpressionPtr ownerObj = Visit(callExpr->getArg(0));
-		ownerObj = unwrapCppRef(builder, ownerObj);
+		ownerObj = utils::unwrapCppRef(builder, ownerObj);
 
 		// get type of this
 		const clang::Type* classType= methodDecl->getParent()->getTypeForDecl();
@@ -631,6 +599,8 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(cons
 
 		// we need to call arratDtor, with the object, refdelete and the dtorFunc
 		if(dtor){
+
+			//FIXME: why mem_alloc dtor has being marked as virtual????
 			assert(!core::getMetaInfo(desTy).isDestructorVirtual() && "no virtual dtor allowed for array dtor");
 
 			std::vector<core::ExpressionPtr> args;
