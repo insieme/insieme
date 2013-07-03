@@ -35,7 +35,9 @@
  */
 
 #include <gtest/gtest.h>
-
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+#include <clang/AST/Decl.h>
 #include "insieme/frontend/utils/dep_graph.h"
 #include <vector>
 #include <set>

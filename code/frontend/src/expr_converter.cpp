@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -376,60 +376,74 @@ core::ExpressionPtr ConversionFactory::ExprConverter::wrapVariable(const clang::
 }
 
 core::ExpressionPtr ConversionFactory::ExprConverter::asLValue(const core::ExpressionPtr& value) {
+	core::TypePtr irType = value->getType();
 
 	// CPP references are Left side exprs but need to be IRized
-	core::TypePtr irType = value->getType();
 	if (core::analysis::isCppRef(irType)) {
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), value);
+		return builder.toIRRef(value);
 	}
 
 	if (core::analysis::isConstCppRef(irType)) {
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), value);
+		assert(false && " a const cpp might be a left side, but it is constant, can not be assigned");
 	}
+
+	// check whether it is a struct element access (by ref)
+	if (const core::RefTypePtr& refTy = irType.isa<core::RefTypePtr>()){
+		// usualy this is already a ref. but we might be accessing a cpp ref inside of the
+		// structure. we need to unwrap it
+		if(core::analysis::isCppRef(refTy->getElementType())){
+			return builder.toIRRef(builder.deref(value));
+		}
+		if (core::analysis::isConstCppRef(refTy->getElementType())) {
+			assert(false && " a const cpp might be a left side, but it is constant, can not be assigned");
+		}
+	}
+
+	// the magic line, this line avoids some trouble with pointers (paramerer references)
+	// but it totaly fuck it up with cpp references
+    if (value->getNodeType() != core::NT_CallExpr || value->getType()->getNodeType() == core::NT_RefType) {
+    	return value;
+    }
 
 	// this only works for call-expressions
-	if (value->getNodeType() != core::NT_CallExpr || value->getType()->getNodeType() == core::NT_RefType) {
-		return value;
-	}
+	if (const core::CallExprPtr& call = value.isa<core::CallExprPtr>()){
 
-	// extract the call
-	const core::CallExprPtr& call = static_pointer_cast<const core::CallExpr>(value);
+		// check final state - deref has been encountered => drop
+		if (core::analysis::isCallOf(call, gen.getRefDeref())) {
+			return call->getArgument(0);
+		}
 
-	// check final state - deref has been encountered => drop
-	if (core::analysis::isCallOf(call, gen.getRefDeref())) {
-		return call->getArgument(0);
-	}
+		// check whether it is a array-subscript instruction and argument has been de-refernced
+		if (core::analysis::isCallOf(call, gen.getArraySubscript1D())) {
+			const core::ExpressionPtr arg = call->getArgument(0);
+			const core::ExpressionPtr inner = asLValue(arg);
+			if (*inner != *arg) {
+				return builder.callExpr(builder.refType(value->getType()), gen.getArrayRefElem1D(), inner,
+						call->getArgument(1));
+			}
+		}
 
-	// check whether it is a array-subscript instruction and argument has been de-refernced
-	if (core::analysis::isCallOf(value, gen.getArraySubscript1D())) {
-		const core::ExpressionPtr arg = call->getArgument(0);
-		const core::ExpressionPtr inner = asLValue(arg);
-		if (*inner != *arg) {
-			return builder.callExpr(builder.refType(value->getType()), gen.getArrayRefElem1D(), inner,
-					call->getArgument(1));
+		// check whether it is a vector-subscript instruction and argument has been de-refernced
+		if (core::analysis::isCallOf(call, gen.getVectorSubscript())) {
+			const core::ExpressionPtr arg = call->getArgument(0);
+			const core::ExpressionPtr inner = asLValue(arg);
+			if (*inner != *arg) {
+				return builder.callExpr(builder.refType(value->getType()), gen.getVectorRefElem(), inner,
+						call->getArgument(1));
+			}
+		}
+
+		// check whether it is a struct element access
+		if (core::analysis::isCallOf(call, gen.getCompositeMemberAccess())) {
+			const core::ExpressionPtr arg = call->getArgument(0);
+			const core::ExpressionPtr inner = asLValue(arg);
+			if (*inner != *arg) {
+				return builder.callExpr(builder.refType(value->getType()), gen.getCompositeRefElem(), inner,
+						call->getArgument(1), call->getArgument(2));
+			}
 		}
 	}
-
-	// check whether it is a vector-subscript instruction and argument has been de-refernced
-	if (core::analysis::isCallOf(value, gen.getVectorSubscript())) {
-		const core::ExpressionPtr arg = call->getArgument(0);
-		const core::ExpressionPtr inner = asLValue(arg);
-		if (*inner != *arg) {
-			return builder.callExpr(builder.refType(value->getType()), gen.getVectorRefElem(), inner,
-					call->getArgument(1));
-		}
-	}
-
-	// check whether it is a struct element access
-	if (core::analysis::isCallOf(value, gen.getCompositeMemberAccess())) {
-		const core::ExpressionPtr arg = call->getArgument(0);
-		const core::ExpressionPtr inner = asLValue(arg);
-		if (*inner != *arg) {
-			return builder.callExpr(builder.refType(value->getType()), gen.getCompositeRefElem(), inner,
-					call->getArgument(1), call->getArgument(2));
-		}
-	}
-
+	assert(value->getType()->getNodeType() == core::NT_RefType && " it is not a ref, what is this?");
 	// there is nothing to do
 	return value;
 }
@@ -975,6 +989,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		if (core::analysis::isRefType(lhs->getType()) && !core::analysis::isRefType(rhs->getType()) &&
 			core::analysis::getReferencedType(lhs->getType())->getNodeType() == core::NT_ArrayType)
 		{
+			// FIXME: if this does not create errors..  delete it
 			assert(false && "who uses this?");
 			lhs = wrapVariable(binOp->getLHS());
 		}
@@ -989,6 +1004,13 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		} else {
 			// get basic element type
 			core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
+			// beware of cpp refs, to operate, we need to deref the value in the left side
+			if(IS_CPP_REF_EXPR(subExprLHS) ){
+				subExprLHS = utils::unwrapCppRef(builder, subExprLHS);
+				subExprLHS = convFact.tryDeref(subExprLHS);
+			}
+			// rightside will become the current operation
+			//  a += 1   =>    a = a + 1
 			rhs = builder.callExpr(exprTy, gen.getOperator(exprTy, op), subExprLHS, rhs);
 		}
 
@@ -1050,14 +1072,15 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 		case clang::BO_Assign:
 		{
 			baseOp = clang::BO_Assign;
-			/*
-			 * poor C codes assign value to function parameters, this is not allowed here as input parameters are of
-			 * non REF type. What we need to do is introduce a declaration for these variables and use the created
-			 * variable on the stack instead of the input parameters
-			 */
 
 			// make sure the lhs is a L-Value
 			lhs = asLValue(lhs);
+
+			//OK!! here there is a problem, 
+			//	let fun000 = fun(ref<array<int<4>,1>> v5) -> unit {
+			//		    decl ref<ref<array<int<4>,1>>> v6 =  var(v5);
+			//	};
+			//check ~/myTest/ptr.cpp
 
 			// why to cast?
 			// some casts are not pressent in IR
@@ -1344,7 +1367,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 	condExpr = utils::castToBool(condExpr);
 
 	// Dereference eventual references
-	if ( retTy->getNodeType() == core::NT_RefType && !utils::isRefArray(retTy) ) {
+	if ( retTy->getNodeType() == core::NT_RefType && !utils::isRefArray(retTy) && !builder.getLangBasic().isAnyRef(retTy)) {
 		retTy = GET_REF_ELEM_TYPE(retTy);
 	}
 
@@ -1389,7 +1412,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 		nodeMap.insert( {addrTy2, retTy} );
 		nodeMap.insert( {addrTy3, retTy} );
 		nodeMap.insert( {addrTy4, retTy} );
-		
+
 		//VLOG(2) << "before	typeFix: " << toFix << " (" <<  toFix->getType() << ")";
 		toFix = core::transform::replaceAll(mgr, nodeMap).as<core::ExpressionPtr>();
 		//VLOG(2) << "after	typeFix: " << toFix << " (" <<  toFix->getType() << ")";
@@ -1400,23 +1423,20 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 	};
 
 	// if trueExpr or falseExpr is a CXXThrowExpr we need to fix the type
-	// of the throwExpr (and the according calls) to the type of the other branch of the 
+	// of the throwExpr (and the according calls) to the type of the other branch of the
 	// conditional operator, as the c++ standard defines throwExpr always with void and the
 	// conditional operator expects on both branches the same returnType (except when used with
 	// throw then the type of the "nonthrowing" branch is used
-	if (llvm::isa<clang::CXXThrowExpr>(condOp->getTrueExpr())) { 
+	if (llvm::isa<clang::CXXThrowExpr>(condOp->getTrueExpr())) {
 		trueExpr = fixingThrowExprType(trueExpr, retTy);
-	} 
+	}
 	else if(llvm::isa<clang::CXXThrowExpr>(condOp->getFalseExpr())){
 		falseExpr = fixingThrowExprType(falseExpr, retTy);
 	}
 
 	// in C++, string literals with same size may produce an error, do not cast to avoid
 	// weird behaviour
-	// FIXME why do we check trueexpr twice?
-	if (!llvm::isa<clang::StringLiteral>(condOp->getTrueExpr()) ||
-		!llvm::isa<clang::StringLiteral>(condOp->getTrueExpr())){
-
+	if (!llvm::isa<clang::StringLiteral>(condOp->getTrueExpr())){
 		trueExpr  = utils::cast(trueExpr, retTy);
 		falseExpr = utils::cast(falseExpr, retTy);
 	}
@@ -1652,6 +1672,40 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCompoundLiteralExpr(c
 	return (retIr = Visit(compLitExpr->getInitializer()));
 }
 
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                  StmtExpr EXPRESSION
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitStmtExpr(const clang::StmtExpr* stmtExpr) {
+    core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(stmtExpr, retIr);
+
+	// get compound stmt and convert to ir
+	const clang::CompoundStmt* inner = stmtExpr->getSubStmt();
+	core::CompoundStmtPtr innerIr = convFact.convertStmt(inner).as<core::CompoundStmtPtr>();
+
+	// create new body with <returnStmt <expr>> instead of <expr> as last stmt
+	core::StatementList newBody;
+	for(auto it=innerIr->getStatements().begin(); it!=innerIr->getStatements().end()-1; ++it) {
+        newBody.push_back(*it);
+	}
+	core::StatementPtr retExpr = convFact.builder.returnStmt((innerIr->getStatements().end()-1)->as<core::ExpressionPtr>());
+    newBody.push_back(retExpr);
+	core::TypePtr lambdaRetType = convFact.convertType(stmtExpr->getType().getTypePtr());
+
+	//build the lambda and its parameters
+	core::StatementPtr&& lambdaBody = convFact.builder.compoundStmt(newBody);
+	vector<core::VariablePtr> params = core::analysis::getFreeVariables(lambdaBody);
+	core::LambdaExprPtr lambda = convFact.builder.lambdaExpr(lambdaRetType, lambdaBody, params);
+
+	//build the lambda call and its arguments
+	vector<core::ExpressionPtr> packedArgs;
+	std::for_each(params.begin(), params.end(), [&packedArgs] (core::VariablePtr varPtr) {
+		 packedArgs.push_back(varPtr);
+	});
+
+	return retIr = builder.callExpr(lambdaRetType, lambda, packedArgs);
+}
 
 //---------------------------------------------------------------------------------------------------------------------
 //										C EXPRESSION CONVERTER

@@ -242,12 +242,19 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	core::IRBuilder builder( exprTy->getNodeManager() );
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
 
-	//std::cout << "####### Expr: #######" << std::endl;
-	//dumpDetail(expr);
-	//std::cout << "####### Expr Type: #######" << std::endl;
-	//dumpDetail(exprTy);
-	//std::cout << "####### cast Type: #######" << std::endl;
-	//dumpDetail(targetTy);
+//	std::cout << "####### Expr: #######" << std::endl;
+//	dumpDetail(expr);
+//	std::cout << "####### Expr Type: #######" << std::endl;
+//	dumpDetail(exprTy);
+//	std::cout << "####### target Type: #######" << std::endl;
+//	dumpDetail(targetTy);
+
+	// check if casting to cpp ref, rightside values are assigned to refs in clang without any
+	// conversion, because a right side is a ref and viceversa. this is invisible to us, we need to
+	// handle it carefully
+	if (core::analysis::isCppRef(targetTy) || core::analysis::isConstCppRef(targetTy)) {
+		return expr;
+	}
 	
 	// is this the cast of a literal: to simplify code we'll return
 	// a literal of the spected type
@@ -255,7 +262,7 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 		try{
 		return castLiteral ( expr.as<core::LiteralPtr>(), targetTy);
 		}catch (std::exception& e){
-			// literal upgrade not supported, create cast
+			// literal upgrade not supported, continue with regular cast
 		}
 	}
 
@@ -416,6 +423,16 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			}
 			*/
 
+			// we use by value a member accessor. we have a better operation for this
+			// instead of derefing the memberRef
+			// FIXME:: not working, to make this nice stuff, some work is needed here
+			//if(core::CallExprPtr call = expr.isa<core::CallExprPtr>()){
+			//	if (core::analysis::isCallOf(call, gen.getCompositeRefElem())) {
+			//		return builder.callExpr(gen.getCompositeMemberAccess(), 
+			//								builder.callExpr (gen.getRefDeref(call.getArgument(0)), call.getArgument(1));
+			//	}
+			//}
+
 			if(IS_IR_REF(exprTy)) {
 				return builder.deref(expr);
 			}
@@ -557,6 +574,13 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 			// http://stackoverflow.com/questions/1384007/conversion-constructor-vs-conversion-operator-precedence
 			return expr;
 		}
+
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		case clang::CK_PointerToBoolean 	:
+		//case clang::CK_PointerToBoolean - Pointer to boolean conversion. A check against null. Applies to normal, ObjC, 
+		// and block pointers.
+
+			return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr ));
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//  PARTIALY IMPLEMENTED
@@ -741,11 +765,6 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		case clang::CK_PointerToIntegral 	:
 		/*case clang::CK_PointerToIntegral - Pointer to integral. A special kind of reinterpreting conversion. Applies to normal, 
 		* ObjC, and block pointers. (intptr_t) "help!"
-		* */
-
-		case clang::CK_PointerToBoolean 	:
-		/*case clang::CK_PointerToBoolean - Pointer to boolean conversion. A check against null. Applies to normal, ObjC, 
-		 * and block pointers.
 		* */
 
 

@@ -48,6 +48,8 @@ typedef Pointer<const Expression> ExpressionPtr;
 
 class Type;
 typedef Pointer<const Type> TypePtr;
+
+class IRBuilder;
 } // end core namespace 
 
 namespace frontend {
@@ -75,6 +77,10 @@ namespace utils {
 
 	core::TypePtr getVectorElement(const core::TypePtr& type);
 
+	/**
+	 * retrieves the expression corresponding to the usage of a cpp reference
+	 */
+	core::ExpressionPtr unwrapCppRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr);
 } // end utils namespace 
 } // end frontend namespace
 } // end insisme namespace

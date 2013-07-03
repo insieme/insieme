@@ -38,6 +38,7 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 #include "insieme/frontend/utils/functionDependencyGraph.h"
+#include "insieme/frontend/utils/source_locations.h"
 
 #include "insieme/frontend/convert.h"
 
@@ -52,7 +53,7 @@ namespace utils {
 
 template<>
 void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDecl* func,
-		const DependencyGraph<const clang::FunctionDecl*>::VertexTy& v) {
+													     const DependencyGraph<const clang::FunctionDecl*>::VertexTy& v) {
 	// This is potentially dangerous
 	FunctionDependencyGraph& funcDepGraph = static_cast<FunctionDependencyGraph&>(*this);
 
@@ -68,16 +69,31 @@ void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDe
  *************************************************************************************************/
 CallExprVisitor::CallGraph CallExprVisitor::getCallGraph(const clang::FunctionDecl* func) {
 	
+		// FUNCTION might be intercepted
 	if( interceptor.isIntercepted(func)) {
 		// we don't care about interanls of intercepted function 
 		VLOG(2) << "isIntercepted " << func << "("<<((void*)func)<<")";
-	} else  {
-		if (!func->hasBody()){
-			std::cerr << "Function in the dependency graph has no body: " << func->getQualifiedNameAsString() << std::endl
-					  << "   maybe you should update Insieme configuration file to intercept this namespace/function";
-			exit(-1);
-		}
+	
+		// OR a function with vistable body
+	} else if (func->getBody()) {
 		Visit(func->getBody());
+
+		// OR any other case, most probably an Spetialitation 
+	} else {
+
+		std::cout << func->getQualifiedNameAsString() << std::endl;
+		std::cout << "at location: " 
+				  << utils::location(func->getLocStart(),
+						  			 func->getTranslationUnitDecl()->getASTContext().getSourceManager()) 
+				  << std::endl;
+
+		if (func->isFunctionTemplateSpecialization ()){
+			clang::FunctionDecl* f = func->getInstantiatedFromMemberFunction ();
+			if(!f) f = func->getTemplateInstantiationPattern () ;
+			if(!f) f = func->getClassScopeSpecializationPattern () ;
+			assert(f);
+			assert(f->hasBody());
+		}
 	}
 	return callGraph;
 }
@@ -89,9 +105,20 @@ void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
 	// if the function has no body, we need to find the right declaration with
 	// the definition in another translation unit
 	if (!funcDecl->hasBody(def)) {
-		clang::Decl* raw = indexer.getDefinitionFor (funcDecl);
-		if (raw){
-			def = llvm::cast<clang::FunctionDecl>(raw);
+		// it might be a template spetialitation:
+
+		if (funcDecl->isFunctionTemplateSpecialization ()){
+			std::cout << " is a template: " << std::endl;
+				def = funcDecl->getInstantiatedFromMemberFunction ();
+				if(!def) def = funcDecl->getTemplateInstantiationPattern () ;
+				if(!def) def = funcDecl->getClassScopeSpecializationPattern () ;
+				assert(def);
+				assert(def->hasBody());
+		} else {
+			clang::Decl* raw = indexer.getDefinitionFor (funcDecl);
+			if (raw){
+				def = llvm::cast<clang::FunctionDecl>(raw);
+			}
 		}
 	}
 
@@ -101,6 +128,9 @@ void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
 	} else if( interceptor.isIntercepted(funcDecl)) {
 		// call to an intercepted function (without body) 
 		callGraph.insert(funcDecl);
+	}
+	else {
+		std::cout << "    no body, not intercepted: " << funcDecl->getQualifiedNameAsString() << std::endl;
 	}
 }
 

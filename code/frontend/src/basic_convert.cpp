@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -135,7 +135,7 @@ const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitF
 
 
 	// function declaration not found. return the current translation unit
-	if ( !ret.first ) {return NULL;}
+	if ( !ret.first ) {return currTU;}
 	assert(ret.first && "decl not valid");
 	assert(ret.second && "translation unit not found");
 
@@ -1030,7 +1030,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		return retExpr;
 	}
 
-	std::cout << "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl;
 	assert(currTU && "currTU not set");
 	assert(funcDecl->hasBody() && "Function has no body!");
 
@@ -1059,6 +1058,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// retrieve the strongly connected components for this function
 	// It is strongly connected or strong if it contains a directed path from u to v and a directed
 	// path from v to u for every pair of vertices u, v.
+	// FIXME:: we have a problem here with BOOST
 	std::set<const FunctionDecl*>&& components = program.getCallGraph().getStronglyConnectedComponents( funcDecl );
 	if (!components.empty()) {
 		std::set<const FunctionDecl*>&& subComponents = program.getCallGraph().getSubComponents( funcDecl );
@@ -1448,13 +1448,12 @@ core::NodePtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl){
-
 	const clang::FunctionDecl* ctorAsFunct = llvm::cast<clang::FunctionDecl>(ctorDecl);
 	assert(ctorAsFunct);
 	SET_TU(ctorAsFunct);
 	assert(currTU && "currTU not set");
 
-	// NOTE: even if we have a correct indexed declaration, this might not have a body (intercepted/extern objs) 
+	// NOTE: even if we have a correct indexed declaration, this might not have a body (intercepted/extern objs)
 	// don't pannic, the declaration must be handled by the upcoming convertFunctionDecl, and there will
 	// be nicely intercepted.
 
@@ -1594,7 +1593,14 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 		// append statement to initialization list
 		newBody.push_back(initStmt);
 	}
-
+	//ATTENTION: this will produce an extra compound for the initializer list
+	// let fun ... {
+	//   { intializer stuff };
+	//   { original body };
+	// }
+	core::StatementPtr newb = builder.compoundStmt(newBody);
+    newBody.clear();
+    newBody.push_back(materializeReadOnlyParams (newb, oldCtor.as<core::LambdaExprPtr>().getLambda().getParameterList()));
 	// push original body
 	core::StatementPtr body = oldCtor.as<core::LambdaExprPtr>().getBody();
 	newBody.push_back(body);
