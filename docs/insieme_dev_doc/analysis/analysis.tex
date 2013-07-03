@@ -164,8 +164,106 @@ several non-overlapping SCoPs.
 
 \subsection{Polyhedral Model Data Structures in Insieme}
 
+The support for the PM is included in the \file{analysis/polyhedral} and
+\file{transform/polyhedral}. In this Section only the analysis part is covered. 
+
 \subsubsection{The \type{IterationVector}}
+
+The \file{analysis/polyhedral/iter\_vec.h} abstracts the concept of iteration
+vector covered above. An iteration vector is composed by a list of
+\type{Iterators}s, a list of \type{Parameter}s and a \type{Constant} part.
+Implementation is quite straightforward. 
+
+Important to notice that while iterators must be an IR \type{Variable}, a
+parameter can be any \type{Expression} (this is needed to be able to represent
+struct members as parameter of a SCoP). An iteration vector can be either build
+with a predefined layout or manipulated by adding components. An empty iteration
+vector always have at least a constant part. 
+
+\begin{srcCode}
+IterationVector iterVec(vector<Iterator>{v1,v2}, vector<Parameter>{v3});
+out << iterVec; // (v1,v2|v3|1)
+
+// or 
+
+IterationVector iterVec;
+iterVec.add(Iterator(v1));
+iterVec.add(Iterator(v2));
+iterVec.add(Parameter(v3));
+out << iterVec; // (v1,v2|v3|1)
+\end{srcCode}
+
+Printing an iteration vector to an output stream produces a representation which
+lists iterators followed by parameters and the constant part 1. Each part is
+separated by a {\tt |}. 
+
+Methods are included which iterates through the elements of an iteration vector,
+or a subset of them (iterators and parameters). The number of iterators is given
+by the {\tt getIteratorNum()} function while the number of parameters is given
+by {\tt getParameterNum()}. The index of an element is given by the {\tt
+getIdx()} function which returns -1 if the variable being searched is not in the
+iteration vector. 
+
+For additional information on how to manipulate an iteration vector refer to the
+unit test file \file{analysis/test/polyhedral/polyhedral\_test.cc}. 
+
+In the \file{analysis/polyhedral/iter\_vec.h} file several utility functions are
+provided to work with iteration vectors. The {\tt IterationVector merge(const
+IterationVector\& iv1, const IterationVector\& iv2)} function in particular is
+useful when an iteration vector needs to be generated from two distinct vectors.
+The operation simply creates a new iteration vector containing the iterators of
+vector {\tt v1} before the ones of vector {\tt v2} and the same pattern for
+parameters. A second function is the {\tt transform} utility. This function is
+used to create a map which transforms a functions which are expressed in terms
+of one iteration vector into another. The operation is valid only if the source
+vector is smaller than the target and if all the elements present in the source
+appear as well in the target vector. Use of this transformation map
+(\type{IndexTransMap}) will be explained in the next section.
+
 \subsubsection{The \type{AffineFunction}}
+
+An affine function is an expression which of the form $c_1 \cdot a_1 + c_2 \cdot
+a_2 + \ldots + c_n \cdot a_n + c_0 \cdot 1$ where $c_i \in \mathbb{Z}$ and $a_i
+\in \mathbb{V}ar$. The concept of an affine function is represented in the file
+\file{analysis/polyhedral/affine\_func.h} by the
+\type{analysis::polyhedral::AffineFunction} class. 
+
+The representation uses a compact representation (in order to limit the space
+used by the PM representation), it stores a reference to an iteration vector
+which contains the variables (i.e. $a_i$) of the affine function, a vector of
+integer coefficients ({\tt coeffs}) $c_i$, and an integer value ({\tt sep})
+which dictates the index of the first coefficient (in {\tt coeffs}) which refers
+to parameters. For the iterators or parameters for which no coefficient is
+provided, a 0 value is assumed.
+
+For example given the iteration vector $(v_1,v_2|v_3|1)$ and the coefficient
+vector $\{1,3\}$ and $sep = 1$; this corresponds to the affine function: $v_1 +
+3 \cdot v_3$ since coefficient for $v_2$ and the constant part are not provided
+and therefore automatically set to 0. Instead, if the coefficient vector is
+$\{2,3,4,5\}$ then $sep = 2$, the relative affine function is $2 \cdot v_1 + 3
+\cdot v_2 + 4 \cdot v_3 + 5$. 
+
+An affine function object can be build from an expression or a \type{Formula}
+object.  In this case the iteration vector being passed to the constructor is
+updated with the iterators and parameters found within the expression. New
+elements of an iteration vector are always added in append (iterators are
+appended to the list of iterators and parameters append to the list of
+parameters). In this way affine functions referring to the same iteration vector
+remain valid. Once built, the iteration vector associated to an affine function
+cannot be modified. {\bf NOTE:} It is responsibility of the programmer to make
+sure that the iteration vector does not out-live the affine function instance.
+
+A member function is also available to ``move'' an affine function to another base
+(or iteration vector) {\tt toBase(const IterationVector\&)}. This operation may
+fail if the new base is not compatible with the old. In order to speedup the
+process of converting many affine function to a new base the {\tt transform}
+method defined in \file{analysis/polyhedral/iter\_vec.h} allows the creation of
+a transformation map which can be applied to an affine function to change it
+into a new base. 
+
+For further details related to the use and manipulation of affine functions
+refer to the test units in \file{analysis/test/polyhedral/polyhedral\_test.cc}. 
+
 \subsubsection{The \type{Constraint} and \type{AffineConstraint}} 
 \subsubsection{The \type{AffineSystem}}
 \subsubsection{The \type{Scop}}
