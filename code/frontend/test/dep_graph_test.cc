@@ -37,7 +37,10 @@
 #include <gtest/gtest.h>
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include <clang/AST/Decl.h>
+#pragma GCC diagnostic pop
 #include "insieme/frontend/utils/dep_graph.h"
 #include <vector>
 #include <set>

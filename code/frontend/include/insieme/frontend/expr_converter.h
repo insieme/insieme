@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -371,6 +371,10 @@ public:
 	//		((int [3]){1,2,3})[2]  -> 2
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCompoundLiteralExpr(const clang::CompoundLiteralExpr* compLitExpr);
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    //                  StmtExpr EXPRESSION
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    core::ExpressionPtr VisitStmtExpr(const clang::StmtExpr* stmtExpr);
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Overwrite the basic visit method for expression in order to automatically
 	// and transparently attach annotations to node which are annotated
@@ -410,6 +414,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, DeclRefExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)
 
 	virtual core::ExpressionPtr Visit(const clang::Expr* expr);
 };
@@ -444,7 +449,7 @@ public:
 	CALL_BASE_EXPR_VISIT(ExprConverter, ExtVectorElementExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
 	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
-
+	CALL_BASE_EXPR_VISIT(ExprConverter, StmtExpr)
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  next methods require a specific implementation on C++

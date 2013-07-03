@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -1453,7 +1453,7 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 	SET_TU(ctorAsFunct);
 	assert(currTU && "currTU not set");
 
-	// NOTE: even if we have a correct indexed declaration, this might not have a body (intercepted/extern objs) 
+	// NOTE: even if we have a correct indexed declaration, this might not have a body (intercepted/extern objs)
 	// don't pannic, the declaration must be handled by the upcoming convertFunctionDecl, and there will
 	// be nicely intercepted.
 
@@ -1593,7 +1593,14 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 		// append statement to initialization list
 		newBody.push_back(initStmt);
 	}
-
+	//ATTENTION: this will produce an extra compound for the initializer list
+	// let fun ... {
+	//   { intializer stuff };
+	//   { original body };
+	// }
+	core::StatementPtr newb = builder.compoundStmt(newBody);
+    newBody.clear();
+    newBody.push_back(materializeReadOnlyParams (newb, oldCtor.as<core::LambdaExprPtr>().getLambda().getParameterList()));
 	// push original body
 	core::StatementPtr body = oldCtor.as<core::LambdaExprPtr>().getBody();
 	newBody.push_back(body);
