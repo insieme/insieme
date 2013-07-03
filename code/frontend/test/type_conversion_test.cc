@@ -38,10 +38,13 @@
 
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Stmt.h>
 #include <clang/AST/Type.h>
 #include <clang/AST/Decl.h>
+#pragma GCC diagnostic pop
 
 #include "insieme/core/ir_program.h"
 
