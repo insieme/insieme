@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -64,6 +64,7 @@ namespace cmd {
 					("no-cilk", "disables cilk support")
 					("compile,c", "compilation only")
 					("output-file,o", bpo::value<string>(), "the output file")
+					("intercept-file", bpo::value<string>(), "interceptor config file")
 			;
 
 		}
@@ -137,7 +138,10 @@ namespace cmd {
 			// enable support for OpenMP and Cilk
 			res.job.setOption(fe::ConversionJob::OpenMP, !map.count("no-omp"));
 			res.job.setOption(fe::ConversionJob::Cilk, !map.count("no-cilk"));
-
+            // interceptor file
+            if (map.count("intercept-file")) {
+                res.job.setIntercepterConfigFile(map["intercept-file"].as<string>());
+            }
 			// output file (optional)
             if (map.count("compile")) {
                     res.outFile = "";

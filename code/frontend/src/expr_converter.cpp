@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -1412,7 +1412,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 		nodeMap.insert( {addrTy2, retTy} );
 		nodeMap.insert( {addrTy3, retTy} );
 		nodeMap.insert( {addrTy4, retTy} );
-		
+
 		//VLOG(2) << "before	typeFix: " << toFix << " (" <<  toFix->getType() << ")";
 		toFix = core::transform::replaceAll(mgr, nodeMap).as<core::ExpressionPtr>();
 		//VLOG(2) << "after	typeFix: " << toFix << " (" <<  toFix->getType() << ")";
@@ -1423,13 +1423,13 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitConditionalOperator(c
 	};
 
 	// if trueExpr or falseExpr is a CXXThrowExpr we need to fix the type
-	// of the throwExpr (and the according calls) to the type of the other branch of the 
+	// of the throwExpr (and the according calls) to the type of the other branch of the
 	// conditional operator, as the c++ standard defines throwExpr always with void and the
 	// conditional operator expects on both branches the same returnType (except when used with
 	// throw then the type of the "nonthrowing" branch is used
-	if (llvm::isa<clang::CXXThrowExpr>(condOp->getTrueExpr())) { 
+	if (llvm::isa<clang::CXXThrowExpr>(condOp->getTrueExpr())) {
 		trueExpr = fixingThrowExprType(trueExpr, retTy);
-	} 
+	}
 	else if(llvm::isa<clang::CXXThrowExpr>(condOp->getFalseExpr())){
 		falseExpr = fixingThrowExprType(falseExpr, retTy);
 	}
@@ -1672,6 +1672,40 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCompoundLiteralExpr(c
 	return (retIr = Visit(compLitExpr->getInitializer()));
 }
 
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                  StmtExpr EXPRESSION
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr ConversionFactory::ExprConverter::VisitStmtExpr(const clang::StmtExpr* stmtExpr) {
+    core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(stmtExpr, retIr);
+
+	// get compound stmt and convert to ir
+	const clang::CompoundStmt* inner = stmtExpr->getSubStmt();
+	core::CompoundStmtPtr innerIr = convFact.convertStmt(inner).as<core::CompoundStmtPtr>();
+
+	// create new body with <returnStmt <expr>> instead of <expr> as last stmt
+	core::StatementList newBody;
+	for(auto it=innerIr->getStatements().begin(); it!=innerIr->getStatements().end()-1; ++it) {
+        newBody.push_back(*it);
+	}
+	core::StatementPtr retExpr = convFact.builder.returnStmt((innerIr->getStatements().end()-1)->as<core::ExpressionPtr>());
+    newBody.push_back(retExpr);
+	core::TypePtr lambdaRetType = convFact.convertType(stmtExpr->getType().getTypePtr());
+
+	//build the lambda and its parameters
+	core::StatementPtr&& lambdaBody = convFact.builder.compoundStmt(newBody);
+	vector<core::VariablePtr> params = core::analysis::getFreeVariables(lambdaBody);
+	core::LambdaExprPtr lambda = convFact.builder.lambdaExpr(lambdaRetType, lambdaBody, params);
+
+	//build the lambda call and its arguments
+	vector<core::ExpressionPtr> packedArgs;
+	std::for_each(params.begin(), params.end(), [&packedArgs] (core::VariablePtr varPtr) {
+		 packedArgs.push_back(varPtr);
+	});
+
+	return retIr = builder.callExpr(lambdaRetType, lambda, packedArgs);
+}
 
 //---------------------------------------------------------------------------------------------------------------------
 //										C EXPRESSION CONVERTER

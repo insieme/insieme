@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -357,7 +357,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 				<< methodDecl->getParent()->getNameAsString() << "::"
 				<< methodDecl->getNameAsString();
 
-	
+
 
 		convertedOp =  convFact.convertFunctionDecl(methodDecl).as<core::ExpressionPtr>();
 
@@ -383,12 +383,12 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		args = getFunctionArguments(callExpr, funcTy, llvm::cast<clang::FunctionDecl>(methodDecl));
 
-		//  the problem is, we call a memeber function over a value, the owner MUST be always a ref, 
+		//  the problem is, we call a memeber function over a value, the owner MUST be always a ref,
 		//  is not a expression with cleanups because this object has not need to to be destucted,
-		//  no used defined dtor. 
+		//  no used defined dtor.
 		//  if we materialize it, there is a weird deref later on.
 		//
-		//we might need here a ref or something... 
+		//we might need here a ref or something...
 		// some constructions might return an instance, incorporate a materialize
 		if (ownerObj->getType() !=  funcTy->getParameterTypeList()[0]){
 			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
@@ -446,13 +446,13 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	if( !ctorDecl->isUserProvided() ) {
 		if(	ctorDecl->isDefaultConstructor()) {
 			//if not userprovided we don't need to add a constructor just create the object to work
-			//with -- for the rest the BE-compiler takes care of 
+			//with -- for the rest the BE-compiler takes care of
 			core::TypePtr&&  refToClassTy = builder.refType(irClassType);
 			return builder.undefinedVar(refToClassTy);
 		}
 		else if( ctorDecl->isCopyConstructor()) {
 			//if not userprovided we don't need to add a constructor just create the object to work
-			//with -- for the rest the BE-compiler takes care of 
+			//with -- for the rest the BE-compiler takes care of
 			return (Visit(callExpr->getArg(0)));
 		}
 	}
@@ -513,7 +513,15 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXNewExpr(const c
 	if (callExpr->getAllocatedType().getTypePtr()->isBuiltinType()){
 
 		core::TypePtr type = convFact.convertType(callExpr->getAllocatedType().getTypePtr());
-		core::ExpressionPtr placeHolder = builder.undefinedNew(type);
+		core::ExpressionPtr placeHolder;
+		if(callExpr->hasInitializer()) {
+            const clang::Expr * initializer = callExpr->getInitializer();
+		    core::ExpressionPtr initializerExpr = convFact.convertExpr(initializer);
+            placeHolder = initializerExpr;
+		}
+        else {
+            placeHolder  = builder.undefinedNew(type);
+        }
 
 		if (callExpr->isArray()){
 			core::ExpressionPtr&& arrSizeExpr = convFact.convertExpr( callExpr->getArraySize() );
@@ -587,7 +595,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXDeleteExpr(cons
 	core::TypePtr desTy = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr());
 
 	VLOG(2) << exprToDelete->getType();
-	
+
 
 	core::ExpressionPtr dtor;
 	if( core::hasMetaInfo(desTy)){
@@ -654,7 +662,7 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThisExpr(const 
 //					EXCEPTION CXX THROW EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThrowExpr(const clang::CXXThrowExpr* throwExpr) {
-	
+
 	//assert(false && "Throw -- Currently not supported!");
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(throwExpr, retIr);
