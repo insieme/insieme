@@ -265,6 +265,75 @@ For further details related to the use and manipulation of affine functions
 refer to the test units in \file{analysis/test/polyhedral/polyhedral\_test.cc}. 
 
 \subsubsection{The \type{Constraint} and \type{AffineConstraint}} 
+
+The \type{insieme::utils::Constraint} is a generic class used to represent
+constraints of the type $f(x) == | != | < | <= | > | >= 0$. Where $f(x)$ can be
+any object which represent a function. Since it is generic with respect of the
+functor being used (e.g. \type{Constraint<Formula>} or
+\type{Constraint<Expression>} can be easily instantiated and used) its
+definition is within the utilities of Insieme,
+\file{insieme/utils/constraint.h}. In the case of the polyhedral model the
+template class is instantiated as \type{Constraint<AffineFunction>}.  Therefore
+it encodes constraints of affine functions.  The typename \type{AffineFunction}
+is introduced as an alias for such instantiation. 
+
+Constraints can be combined to create more complex predicates. This is obtained
+through the \type{Combiner<T>} class. The Combiner is an {\em abstract} class
+which is then realized through three concrete classes:
+
+\begin{description}
+
+	\item[\type{RawConstraint<T>}:] This is a wrapper for a plain constraint
+		object. 
+
+	\item[\type{NegConstraint<T>}:] It represent the negation of a sub-constraint
+		which can be either a plain constraint or a composition of two or more
+		other constraints. 
+
+	\item[\type{BinConstraint<T>}:] This combiner is used to represent either
+		conjunction, i.e. $C_i \wedge C_j$, or disjunction, i.e. $C_i \vee C_j$,
+		of two constraints. 
+
+\end{description}
+
+The representation is based on the {\em composite} design pattern, therefore
+this allows complex structures to be represented as a tree. One of the key
+features of this representation is that beside storing the semantics of a
+constraint it also keeps its syntax (or aspect) unvaried. 
+
+Combining constraints is simplified by a set of operations which have been
+overloaded to simplify the construction of complex expressions. 
+
+\begin{description}
+
+	\item[{\tt \&\&}:] The {\em logic and} operator is used to build a conjunction
+		between two constraints. 
+
+	\item[{\tt ||}:] The {\em logic or} operator is used to build a disjunction
+		between two constraints. 
+
+	\item[{\tt \textasciitilde{}}:] The not operator is used to negate a constraint. 
+
+\end{description}
+
+For actual examples of how Constraints objects are created and manipulated
+please refer to unit test cases in
+\file{analysis/test/polyhedral/polyhedral\_test.cc}. 
+
+
+In order to explore the content of a constraint (since it is an expression tree) the visitor
+pattern is utilized. The class \type{ConstraintVisitor<T>} is responsible for
+that providing an easy way to scan a constraint for particular properties. A
+derived class offers a basic visitor with recurring semantics, the
+\type{RecConstraintVisitor<T>}. An example of how the recursive visitor can be
+used is represented by the \type{ConstraintPrinter<T>} class which can be used
+to print to standard output any constraint. 
+
+Several utilities are also included for constraints. For example the {\tt toDNF}
+function is responsible to transform a generic constraint into a disjunctive
+normal form (DNF). This part needs some refactoring!
+
+
 \subsubsection{The \type{AffineSystem}}
 \subsubsection{The \type{Scop}}
 
