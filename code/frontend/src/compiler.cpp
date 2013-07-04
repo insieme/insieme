@@ -248,7 +248,8 @@ ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : p
 	bool enableCpp = false;
 	if (config.getFiles().size() == 1) {
 		std::string extension(config.getFile().substr(config.getFile().rfind('.')+1, std::string::npos));
-		enableCpp = extension == "C" ||
+		enableCpp = 	 extension == "C" ||
+						 extension == "cc" ||
 						 extension == "cpp" ||
 						 extension == "cxx" ||
 						 extension == "hpp" ||

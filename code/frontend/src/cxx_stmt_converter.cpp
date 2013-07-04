@@ -260,7 +260,6 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clan
 		clang::CXXCatchStmt* catchStmt = tryStmt->getHandler(i);
 
 		core::VariablePtr var; 
-		//no exceptiondecl indicates a catch-all (...)
 		if(const clang::VarDecl* exceptionVarDecl = catchStmt->getExceptionDecl() ) {
 			core::TypePtr exceptionTy = convFact.convertType(catchStmt->getCaughtType().getTypePtr());
 			
@@ -274,6 +273,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clan
 			VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
 		}
 		else {
+			//no exceptiondecl indicates a catch-all (...)
 			var = builder.variable(gen.getAny());
 		}
 

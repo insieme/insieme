@@ -49,9 +49,13 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/types/variable_sized_struct_utils.h"
 #include "insieme/core/lang/ir++_extension.h"
+
+#include "insieme/annotations/c/extern.h"
+#include "insieme/annotations/c/include.h"
 
 #include "insieme/utils/logging.h"
 
@@ -264,6 +268,15 @@ namespace backend {
 			return res;		// just print it and be done
 		}
 
+		// handle literals declared within other header files
+		if (annotations::c::hasIncludeAttached(ptr)) {
+			// add header file
+			context.getIncludes().insert(annotations::c::getAttachedInclude(ptr));
+
+			// and use it (as a pointer if it is a reference type)
+			return (ptr->getType().isa<core::RefTypePtr>())?c_ast::ref(res):res;
+		}
+
 		// handle literals referencing external data elements
 		if (core::analysis::isRefType(ptr->getType())) {
 			// look up external variable declaration
@@ -282,8 +295,8 @@ namespace backend {
 
 				// add external declaration
 				auto& cManager = converter.getCNodeManager();
-				declaration->getCode().push_back(cManager->create<c_ast::Comment>("------- External Variable Declaration ----------"));
-				declaration->getCode().push_back(cManager->create<c_ast::ExtVarDecl>(info.lValueType, ptr->getStringValue()));
+				declaration->getCode().push_back(cManager->create<c_ast::Comment>("------- Variable Declaration ----------"));
+				declaration->getCode().push_back(cManager->create<c_ast::GlobalVarDecl>(info.lValueType, ptr->getStringValue(), annotations::c::isExtern(ptr)));
 
 				// add dependency to type declaration
 				declaration->addDependency(info.declaration);
@@ -585,6 +598,12 @@ namespace backend {
 
 		// create declaration statement
 		c_ast::ExpressionPtr initValue = convertInitExpression(context, init);
+
+		// get rid of & operator in front of stack-based constructor calls
+		if( core::analysis::isConstructorCall(init) && location == VariableInfo::DIRECT ) {
+			initValue = c_ast::deref(initValue);
+		}
+
 		return manager->create<c_ast::VarDecl>(info.var, initValue);
 	}
 
@@ -621,7 +640,7 @@ namespace backend {
 		if (core::analysis::isCallOf(initValue, basic.getRefVar())) {
 			initValue = core::analysis::getArgument(initValue, 0);
 		}
-
+		
 		return convertExpression(context, initValue);
 	}
 

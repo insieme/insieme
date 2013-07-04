@@ -52,6 +52,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/unused.h"
 
+#include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/c/naming.h"
 
 #include "clang/Basic/FileManager.h"
@@ -418,8 +419,10 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		if( (*it)->hasExternalStorage() ) {
 			assert (type->getNodeType() == core::NT_RefType);
 			// core::TypePtr derefTy = core::static_pointer_cast<const core::RefType>( type )->getElementType();
-			// build a literal which points to the name of the external variable 
-			initExpr = builder.literal((*it)->getQualifiedNameAsString(), type);
+			// build a literal which points to the name of the external variable
+			auto lit = builder.literal((*it)->getQualifiedNameAsString(), type);
+			annotations::c::markExtern(lit);
+			initExpr = lit;
 		} else {
 			// this means the variable is not declared static inside a function so we have to initialize its value
 			initExpr = (*it)->getInit() ? 

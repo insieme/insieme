@@ -262,5 +262,4 @@ if ( USE_MPI_OPENCL )
 	add_subdirectory( src/mpi_ocl/ )
 endif ( USE_MPI_OPENCL )
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../../test/test.cfg.in ${CMAKE_BINARY_DIR}/test.cfg)
 

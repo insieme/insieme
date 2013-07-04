@@ -34,15 +34,58 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/annotations/c/include_file.h"
+#include "insieme/annotations/c/include.h"
+
+#include "insieme/core/ir_node_annotation.h"
+#include "insieme/core/dump/annotations.h"
+#include "insieme/core/encoder/encoder.h"
 
 namespace insieme {
 namespace annotations {
 namespace c {
 
-const string IncludeFileAnnotation::NAME = "IncludeFileAnnotation";
-const utils::StringKey<IncludeFileAnnotation> IncludeFileAnnotation::KEY("IncludeFileAnnotationKey");
+	using namespace insieme::core;
 
-}
-}
-}
+	/**
+	 * The value annotation type to be attached to nodes to store
+	 * the actual name.
+	 */
+	struct ExternTag : public core::value_annotation::copy_on_migration {
+		bool operator==(const ExternTag& other) const { return true; }
+	};
+
+	// ---------------- Support Dump ----------------------
+
+	VALUE_ANNOTATION_CONVERTER(ExternTag)
+
+		typedef core::value_node_annotation<ExternTag>::type annotation_type;
+
+		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
+			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only include annotations supported!");
+			return encoder::toIR(manager, string("extern"));
+		}
+
+		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			assert(encoder::isEncodingOf<string>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
+			return std::make_shared<annotation_type>(ExternTag());
+		}
+	};
+
+	// ----------------------------------------------------
+
+
+	bool isExtern(const insieme::core::LiteralPtr& literal) {
+		return literal->hasAttachedValue<ExternTag>();
+	}
+
+	void markExtern(const insieme::core::LiteralPtr& literal, bool value) {
+		if (value) {
+			literal->attachValue(ExternTag());
+		} else {
+			literal->detachValue<ExternTag>();
+		}
+	}
+
+} // end namespace c
+} // end namespace annotations
+} // end namespace insieme

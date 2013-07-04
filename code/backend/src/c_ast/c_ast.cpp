@@ -401,10 +401,10 @@ namespace c_ast {
 		return *function==*other.function;
 	}
 
-	bool ExtVarDecl::equals(const Node& node) const {
-		assert(dynamic_cast<const ExtVarDecl*>(&node));
-		auto other = static_cast<const ExtVarDecl&>(node);
-		return *type==*other.type && name==other.name;
+	bool GlobalVarDecl::equals(const Node& node) const {
+		assert(dynamic_cast<const GlobalVarDecl*>(&node));
+		auto other = static_cast<const GlobalVarDecl&>(node);
+		return *type==*other.type && name==other.name && external == other.external;
 	}
 
 	bool ConstructorPrototype::equals(const Node& node) const {

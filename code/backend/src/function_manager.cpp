@@ -262,7 +262,12 @@ namespace backend {
 				res = c_ast::ctorCall(classType, args, loc);
 
 				// add new call if required
-				if (isOnHeap) res = c_ast::newCall(res);
+				if (isOnHeap) {
+					res = c_ast::newCall(res); 
+				} else if (!loc) {
+					// if it is not an in-place construction => add a & operation
+					res = c_ast::ref(res); 
+				}
 			}
 
 			// ---------------- destructor call -----------------
@@ -1170,8 +1175,16 @@ namespace backend {
 								// otherwise it needs to be a constructor
 								assert(call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor());
 
+								c_ast::ExpressionPtr initCall = converter.getStmtConverter().convertExpression(context, call);
+
+								if( initCall->getNodeType() != c_ast::NT_ConstructorCall) {
+									assert(initCall->getNodeType() == c_ast::NT_UnaryOperation);
+									initCall = initCall.as<c_ast::UnaryOperationPtr>()->operand.as<decltype(initCall)>();
+								}
+
 								// convert constructor call as if it would be an in-place constructor (resolves dependencies!)
-								auto ctorCall = converter.getStmtConverter().convertExpression(context, call).as<c_ast::ConstructorCallPtr>();
+								assert(initCall->getNodeType() == c_ast::NT_ConstructorCall);
+								auto ctorCall = initCall.as<c_ast::ConstructorCallPtr>();
 
 								// add constructor call to initializer list
 								initializer.push_back(c_ast::Constructor::InitializerListEntry(cur, ctorCall->arguments));

@@ -44,7 +44,6 @@ int main() {
 		try { throw new Obj(); } catch(Obj* e) { std::cout << "exception caught " << e->a << std::endl; delete e; }
 	}	
 
-	/*
 	{
 		Obj a;
 		try { throw a; } catch(Obj e) { std::cout << "exception caught " << e.a << std::endl; }
@@ -55,10 +54,8 @@ int main() {
 		Obj a;
 		try { throw a; } catch(Obj& e) { std::cout << "exception caught " << e.a << std::endl; }
 	}
-	*/
 	try { throw Obj(); } catch(Obj& e) { std::cout << "exception caught " << e.a << std::endl; }
 
-	/*
 	{
 		Obj2 a;
 		try { throw a; } catch(Obj2 e) { std::cout << "exception caught " << e.a << std::endl; }
@@ -69,17 +66,14 @@ int main() {
 		Obj2 a;
 		try { throw a; } catch(...) { std::cout << "exception caught" << std::endl; }
 	}
-	*/
 	try { throw Obj2(); } catch(...) { std::cout << "exception caught" << std::endl; }
 
-	/*
 	{
 		Obj2 a;
 		try { throw a; } 
 		catch(Obj2 e) { std::cout << "exception caught " << e.a << std::endl; }
 		catch(...) { std::cout << "exception caught" << std::endl; }
 	}
-	*/
 	{
 		try { throw Obj2(); }
 		catch(Obj2 e) { std::cout << "exception caught " << e.a << std::endl; }
@@ -92,12 +86,13 @@ int main() {
 
 	/*
 	try { throw POD(); } catch(POD e) { std::cout << "exception caught " << e.a << std::endl; }
-	try { POD o; throw o; } catch(POD e) { std::cout << "exception caught " << e.a << std::endl; }
+	*/
+
+	try { POD o = {1}; throw o; } catch(POD e) { std::cout << "exception caught " << e.a << std::endl; }
 	{
-		POD o;
+		POD o = {1};
 		try { throw o; } catch(POD e) { std::cout << "exception caught " << e.a << std::endl; }
 	}
-	*/
 
 	return 0;
 }
