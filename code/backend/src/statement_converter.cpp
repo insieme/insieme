@@ -598,6 +598,12 @@ namespace backend {
 
 		// create declaration statement
 		c_ast::ExpressionPtr initValue = convertInitExpression(context, init);
+
+		// get rid of & operator in front of stack-based constructor calls
+		if( core::analysis::isConstructorCall(init) && location == VariableInfo::DIRECT ) {
+			initValue = c_ast::deref(initValue);
+		}
+
 		return manager->create<c_ast::VarDecl>(info.var, initValue);
 	}
 
@@ -635,14 +641,7 @@ namespace backend {
 			initValue = core::analysis::getArgument(initValue, 0);
 		}
 		
-		auto res = convertExpression(context, initValue);
-
-		//if( init.isa<core::CallExprPtr>() && init.as<core::CallExprPtr>()->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor()) {
-		if( core::analysis::isConstructorCall(init)) {
-			res = c_ast::deref(res);
-		}
-
-		return res;
+		return convertExpression(context, initValue);
 	}
 
 	namespace {

@@ -264,7 +264,8 @@ namespace backend {
 				// add new call if required
 				if (isOnHeap) {
 					res = c_ast::newCall(res); 
-				} else { 
+				} else if (!loc) {
+					// if it is not an in-place construction => add a & operation
 					res = c_ast::ref(res); 
 				}
 			}
