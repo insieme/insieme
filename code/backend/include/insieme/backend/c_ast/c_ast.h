@@ -558,10 +558,12 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
-	struct ExtVarDecl : public Declaration {
+	struct GlobalVarDecl : public Declaration {
 		TypePtr type;
 		string name;
-		ExtVarDecl(TypePtr type, const string& name) : Declaration(NT_ExtVarDecl), type(type), name(name) {}
+		bool external;
+		GlobalVarDecl(TypePtr type, const string& name, bool external)
+			: Declaration(NT_GlobalVarDecl), type(type), name(name), external(external) {}
 		virtual bool equals(const Node& node) const;
 	};
 

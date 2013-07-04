@@ -591,8 +591,8 @@ namespace c_ast {
 						<< (node->pureVirtual?" =0":"");
 			}
 
-			PRINT(ExtVarDecl) {
-				return out << "extern " << print(node->type) << " " << node->name << ";\n";
+			PRINT(GlobalVarDecl) {
+				return out << (node->external?"extern ":"") << print(node->type) << " " << node->name << ";\n";
 			}
 
 			PRINT(Parent) {
