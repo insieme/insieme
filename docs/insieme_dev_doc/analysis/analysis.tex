@@ -333,8 +333,27 @@ Several utilities are also included for constraints. For example the {\tt toDNF}
 function is responsible to transform a generic constraint into a disjunctive
 normal form (DNF). This part needs some refactoring!
 
-
 \subsubsection{The \type{AffineSystem}}
+
+The abstraction of an affine system is used to represent a set of constraints.
+Since in the PM it is common to assume the constraints are in the form $ F \ge
+0$ or $F == 0$ (depending on where the system is being used), an affine system
+can be represented by only storing the set of affine functions.  The
+\type{AffineSystem} defined in the file \file{analysis/aff\_sys.h} has this
+goal. It is important that all functions within a system are based on the same
+iteration vector, and this is enforced during the construction of an instance of
+the \type{AffineSystem} class. 
+
+Given an iteration vector, an affine system can also be built by providing a
+coefficient matrix. Additionally a new constraint can be add by providing a
+coefficient vectors which refers to the new constraint. Given an
+\type{AffineSystem}, the coefficient matrix can be extracted with the {\tt
+extractFrom} function. 
+
+An \type{AffineSystem} is utilized to represent the matrices associated with the
+polyhedral model representation. In particular scheduling and access functions
+are represented in term of an affine system. 
+
 \subsubsection{The \type{Scop}}
 
 \subsection{SCoP Analysis}
