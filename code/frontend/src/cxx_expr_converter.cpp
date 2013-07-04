@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -669,7 +669,28 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXThrowExpr(const
 
 	//TODO: check if we need to deref subExpr (for pointerProblem)
 	core::ExpressionPtr subExpr = Visit(throwExpr->getSubExpr());
+	
+	VLOG(2) << throwExpr->getSubExpr()->getType().getTypePtr()->getTypeClassName();
+	throwExpr->getSubExpr()->getType().getTypePtr()->dump();
+	core::TypePtr targetTy = convFact.convertType(throwExpr->getSubExpr()->getType().getTypePtr());
+	core::TypePtr srcTy = subExpr->getType();
+	VLOG(2) << (subExpr) << " " << subExpr->getType() << " " << targetTy;
+	if( targetTy != srcTy && *targetTy != *srcTy ) {
+		subExpr = convFact.tryDeref(subExpr);
+	}
+	VLOG(2) << (subExpr) << " " << subExpr->getType() << " " << targetTy;
+
+	assert(subExpr->getType() == targetTy);
+	/*
+	//if(literal || variable) {
+	if( core::analysis::isRefType(subExpr->getType()) 
+	&& (subExpr->getNodeType() == core::NT_Variable || subExpr->getNodeType() == core::NT_Literal) ) {
+		subExpr = builder.deref(subExpr);
+	}
+	*/
+
 	retIr = core::transform::outline(mgr, builder.throwStmt(subExpr));
+	VLOG(2) << retIr << " " << retIr->getType();
 
 	return retIr;
 }

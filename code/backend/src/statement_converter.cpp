@@ -49,6 +49,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/types/variable_sized_struct_utils.h"
 #include "insieme/core/lang/ir++_extension.h"
@@ -621,8 +622,15 @@ namespace backend {
 		if (core::analysis::isCallOf(initValue, basic.getRefVar())) {
 			initValue = core::analysis::getArgument(initValue, 0);
 		}
+		
+		auto res = convertExpression(context, initValue);
 
-		return convertExpression(context, initValue);
+		//if( init.isa<core::CallExprPtr>() && init.as<core::CallExprPtr>()->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor()) {
+		if( core::analysis::isConstructorCall(init)) {
+			res = c_ast::deref(res);
+		}
+
+		return res;
 	}
 
 	namespace {
