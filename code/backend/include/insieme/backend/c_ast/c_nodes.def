@@ -224,7 +224,7 @@ ABSTRACT(Declaration)
 
 AST_TERMINAL(TypeDeclaration, Declaration)
 AST_TERMINAL(FunctionPrototype, Declaration)
-AST_TERMINAL(ExtVarDecl, Declaration)
+AST_TERMINAL(GlobalVarDecl, Declaration)
 
 //
 // --- Definitions ---
