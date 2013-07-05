@@ -3,6 +3,7 @@
 class A {
 	int aA;
 	public:
+	A() { printf("A()\n"); }
 	virtual ~A() { printf("~A()\n"); }
 
 	virtual void const f() = 0;
