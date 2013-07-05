@@ -49,12 +49,11 @@ namespace set_constraint {
 		Set b = 2;
 		Set c = 3;
 
-		std::cout << a << "\n";
+		EXPECT_EQ("s1", toString(a));
 
-		std::cout << subset(a,b) << "\n";
+		EXPECT_EQ("s1 sub s2", toString(subset(a,b)));
 
-		std::cout << subsetIf(5, a, b, c) << "\n";
-
+		EXPECT_EQ("5 in s1 => s2 sub s3", toString(subsetIf(5,a,b,c)));
 
 		// constraint test
 		Constraints problem = {
@@ -63,14 +62,14 @@ namespace set_constraint {
 				subsetIf(5,a,b,c)
 		};
 
-		std::cout << problem << "\n";
+		EXPECT_EQ("{3 in s1,s1 sub s2,5 in s1 => s2 sub s3}", toString(problem));
 
 		// assignment test
 		Assignment as;
 		as[1] = { 1, 2, 3 };
 		as[2] = { 1, 3 };
 
-		std::cout << as << "\n";
+		EXPECT_EQ("{s1={1,2,3}, s2={1,3}}", toString(as));
 	}
 
 	TEST(Constraint, Check) {
@@ -120,12 +119,12 @@ namespace set_constraint {
 		};
 
 		auto res = solve(problem);
-		std::cout << res << "\n";
+		EXPECT_EQ("{s1={5,6}, s2={5,6}, s3={5,6,7}, s5={7}}", toString(res));
 
 		EXPECT_EQ("{5,6}", toString(res[1])) << res;
 		EXPECT_EQ("{5,6}", toString(res[2])) << res;
 		EXPECT_EQ("{5,6,7}", toString(res[3])) << res;
-		EXPECT_TRUE(res[4].empty()) << res;
+		EXPECT_EQ("{}", toString(res[4])) << res;
 		EXPECT_EQ("{7}", toString(res[5])) << res;
 
 		// check the individual constraints
