@@ -34,52 +34,45 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-
-#include "insieme/core/lang/basic.h"
-
-#include "insieme/core/ir_node.h"
 #include "insieme/core/lang/static_vars.h"
-#include "insieme/core/checks/full_check.h"
+
+#include "insieme/core/ir_types.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
 
-	TEST(StaticVarExtensionTest, CreateStatic) {
-		NodeManager nm;
 
-		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
-		auto element = ext.getCreateStatic();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+	bool StaticVariableExtension::isStaticType(const TypePtr& type) const {
+		if (!type || type->getNodeType() != NT_StructType) return false;
+		StructTypePtr structType = type.as<StructTypePtr>();
+		if (structType->getName()->getValue() != "__static_var") return false;
+		if (structType.size() != 2) return false;
+		if (structType[0]->getName()->getValue() != "initialized") return false;
+		if (structType[1]->getName()->getValue() != "value") return false;
+		if (!type.getNodeManager().getLangBasic().isBool(structType[0]->getType())) return false;
+		return true;
 	}
 
-	TEST(StaticVarExtensionTest, InitStatic) {
-		NodeManager nm;
-
-		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
-		auto element = ext.getInitStatic();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+	TypePtr StaticVariableExtension::wrapStaticType(const TypePtr& type) const {
+		IRBuilder builder(type.getNodeManager());
+		return builder.structType(
+				builder.stringValue("__static_var"),
+				builder.parents(),
+				toVector(
+						builder.namedType("initialized", builder.getLangBasic().getBool()),
+						builder.namedType("value", type)
+				)
+		);
 	}
 
-	TEST(StaticVarExtensionTest, AccessStatic) {
-		NodeManager nm;
-
-		const StaticVariableExtension& ext = nm.getLangExtension<StaticVariableExtension>();
-		auto element = ext.getAccessStatic();
-		dump(element);
-
-		// just check whether the code is not exhibiting errors
-		EXPECT_TRUE(checks::check(element).empty()) << checks::check(element);
+	TypePtr StaticVariableExtension::unwrapStaticType(const TypePtr& type) const {
+		assert(isStaticType(type) && "Unable to unwrap non-static type.");
+		return type.as<StructTypePtr>()[1]->getType();
 	}
+
 
 } // end namespace lang
 } // end namespace core
 } // end namespace insieme
-

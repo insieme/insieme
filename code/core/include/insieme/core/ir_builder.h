@@ -647,6 +647,16 @@ namespace core {
 		CallExprPtr vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const;
 
 
+		// --------------------- static variables ----------------------
+
+
+		StatementPtr initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue) const;
+
+		StatementPtr createStaticVariable(const LiteralPtr& staticVariable) const;
+
+		ExpressionPtr accessStatic(const LiteralPtr& staticVariable) const;
+
+
 
 		// --------------------------- C++ -----------------------------
 

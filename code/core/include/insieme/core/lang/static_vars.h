@@ -57,6 +57,12 @@ namespace lang {
 
 	public:
 
+		bool isStaticType(const TypePtr& type) const;
+
+		TypePtr wrapStaticType(const TypePtr& type) const;
+
+		TypePtr unwrapStaticType(const TypePtr& type) const;
+
 		/**
 		 * A function ..
 		 */
@@ -86,11 +92,11 @@ namespace lang {
 		/**
 		 * A function ..
 		 */
-		LANG_EXT_DERIVED(ReadStatic,
+		LANG_EXT_DERIVED(AccessStatic,
 				"let type = struct __static_var { bool initialized; 'a value; }  in "
 				""
-				"(ref<type> var)->'a { "
-				"	return *var->value;"
+				"(ref<type> var)->ref<'a> { "
+				"	return var->value;"
 				"}"
 		);
 
