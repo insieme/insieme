@@ -183,6 +183,7 @@ namespace core {
 		StructTypePtr structType(const vector<TypePtr>& parents, const vector<NamedTypePtr>& entries) const;
 		StructTypePtr structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const;
 		StructTypePtr structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const;
+		StructTypePtr structType(const StringValuePtr& name, const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const;
 
 		NamedTypePtr namedType(const string& name, const TypePtr& type) const;
 		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;

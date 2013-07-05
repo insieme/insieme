@@ -285,6 +285,10 @@ StructTypePtr IRBuilder::structType(const vector<TypePtr>& parents, const vector
 	return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
 }
 
+StructTypePtr IRBuilder::structType(const StringValuePtr& name, const vector<ParentPtr>& parentsList, const vector<NamedTypePtr>& entries) const {
+	return StructType::get(manager, name, parents(parentsList), entries);
+}
+
 
 
 NamedTypePtr IRBuilder::namedType(const string& name, const TypePtr& type) const {
