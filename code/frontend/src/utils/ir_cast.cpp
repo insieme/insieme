@@ -113,13 +113,14 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	// the case is invalid and we hare to replace it with a comparison with the NULL reference.
 	// therefore:
 	//		if( ref )  ->  if( ref != Null )
-	if ( gen.isBool(trgTy) && isRefArray(argTy)) 
-	{
+	if (gen.isBool(trgTy) && isRefArray(argTy)){
 		// convert NULL (of type AnyRef) to the same ref type as the LHS expression
 		return builder.callExpr(gen.getBoolLNot(), 
 								builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr )
 							);
 	}
+
+
 
 
 	///////////////////////////////////////////////////////////////////////////////////////
@@ -138,11 +139,8 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	//		if( ref )  ->  if( ref != Null )
 	//
 	if ( gen.isBool(trgTy) && gen.isAnyRef(argTy) ) {
-		return builder.callExpr(gen.getBoolLNot(), 
-				builder.callExpr(gen.getBool(), gen.getRefIsNull(),
-						CAST(expr, builder.refType(gen.getUnit())) 
-					)
-				);
+		return builder.callExpr(gen.getBoolLNot(), builder.callExpr(gen.getBool(), 
+								gen.getRefIsNull(), expr ));
 	}
 
 	

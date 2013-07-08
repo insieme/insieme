@@ -186,15 +186,15 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 		}
 	}
 
-	// if needed, globals are the leftmost argument (after the memory storage in ctors)
-	// NOTE: functions being captured with a pointer CAN NOT USE globals
-	if (declaration){
-		convFact.getTranslationUnitForDefinition(declaration);
-		if( ctx.globalFuncSet.find(declaration) != ctx.globalFuncSet.end()){
-			args.push_back(convFact.ctx.globalVar);
-			off ++;
-		}
-	}
+//	// if needed, globals are the leftmost argument (after the memory storage in ctors)
+//	// NOTE: functions being captured with a pointer CAN NOT USE globals
+//	if (declaration){
+//		convFact.getTranslationUnitForDefinition(declaration);
+//		if( ctx.globalFuncSet.find(declaration) != ctx.globalFuncSet.end()){
+//			args.push_back(convFact.ctx.globalVar);
+//			off ++;
+//		}
+//	}
 
 	for (size_t argId = argIdOffSet, end = callExpr->getNumArgs(); argId < end; ++argId) {
 		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );

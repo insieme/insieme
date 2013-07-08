@@ -40,7 +40,8 @@
 #include "insieme/frontend/type_converter.h"
 
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/analysis/global_variables.h"
+//
+//#include "insieme/frontend/analysis/global_variables.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 
@@ -70,6 +71,7 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/static_vars.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
@@ -78,6 +80,7 @@
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
+#include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include <clang/AST/CXXInheritance.h>
 #include <clang/AST/StmtVisitor.h>
@@ -109,9 +112,6 @@ annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const Sourc
 };
 
 
-
-
-
 } // End empty namespace
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
@@ -127,20 +127,19 @@ namespace conversion {
 //////////////////////////////////////////////////////////////////
 ///
 const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(const FunctionDecl*& funcDecl) {
-
+	
 	// if the function is not defined in this translation unit, maybe it is defined in another we already
 	// loaded use the clang indexer to lookup the definition for this function declarations
 	utils::Indexer::TranslationUnitPair&& ret =
 			program.getIndexer().getDefAndTUforDefinition (funcDecl);
 
-
 	// function declaration not found. return the current translation unit
 	if ( !ret.first ) {return currTU;}
-	assert(ret.first && "decl not valid");
 	assert(ret.second && "translation unit not found");
 
 	// update the funcDecl pointer to point to the correct function declaration
 	funcDecl = llvm::cast<FunctionDecl> ( ret.first);
+
 	return ret.second;
 }
 
@@ -166,30 +165,30 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool
 
 //////////////////////////////////////////////////////////////////
 ///
-void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector& globColl){
+//void ConversionFactory::buildGlobalStruct(analysis::GlobalVarCollector& globColl){
 
-	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// Thread private requires to collect all the variables which are marked to be threadprivate
-	omp::collectThreadPrivate(getPragmaMap(), ctx.thread_private);
+	////~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//// Thread private requires to collect all the variables which are marked to be threadprivate
+	//omp::collectThreadPrivate(getPragmaMap(), ctx.thread_private);
 
-	//~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//Omp flush clause forces the flushed variable to be volatile
-	//omp::collectVolatile(getPragmaMap(), ctx.volatiles);
-	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	////~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	////Omp flush clause forces the flushed variable to be volatile
+	////omp::collectVolatile(getPragmaMap(), ctx.volatiles);
+	////~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	ctx.globalStruct = globColl.createGlobalStruct();
-	if (ctx.globalStruct.first) {
-		ctx.globalVar = builder.variable(builder.refType(ctx.globalStruct.first));
-	}
+	//ctx.globalStruct = globColl.createGlobalStruct();
+	//if (ctx.globalStruct.first) {
+	//	ctx.globalVar = builder.variable(builder.refType(ctx.globalStruct.first));
+	//}
 
-	ctx.globalIdentMap = globColl.getIdentifierMap();
-	ctx.globalFuncSet = globColl.getUsingGlobals();
+	//ctx.globalIdentMap = globColl.getIdentifierMap();
+	//ctx.globalFuncSet = globColl.getUsingGlobals();
 
-	VLOG(1) << "globals collected";
-	VLOG(2) << ctx.globalStruct.first;
-	VLOG(2) << ctx.globalStruct.second;
-	VLOG(2) << ctx.globalVar;
-}
+	//VLOG(1) << "globals collected";
+	//VLOG(2) << ctx.globalStruct.first;
+	//VLOG(2) << ctx.globalStruct.second;
+	//VLOG(2) << ctx.globalVar;
+//}
 
 //////////////////////////////////////////////////////////////////
 ///
@@ -363,7 +362,7 @@ core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang::ValueDe
 //////////////////////////////////////////////////////////////////
 ///
 core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* valDecl) {
-	VLOG(1) << "LOOKUP Variable: ";
+	VLOG(1) << "LOOKUP Variable: " << valDecl->getNameAsString();
 	if (VLOG_IS_ON(1)) valDecl->dump();
 
 	// Lookup the map of declared variable to see if the current varDecl is already associated with an IR entity
@@ -399,43 +398,28 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		irType = builder.refType(irType);
 	}
 
-	// Check whether this is variable is defined as global or static. If static, it means the variable has been already
-	// defined in the global data structure so we don't have to create an IR variable but access (via the memberAccess
-	// operation) the relative member of the global data structure.
+	// if is a global variable, a literal will be generated, with the qualified name 
+	// (two qualified names can not coexist within the same TU)
 	const clang::VarDecl* varDecl = cast<clang::VarDecl>(valDecl);
 	if (varDecl && varDecl->hasGlobalStorage()) {
-		assert( ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
-		// access the global data structure
-		const core::lang::BasicGenerator& gen = builder.getLangBasic();
+		VLOG(2)	<< "with global storage";
+		// we could look for it in the cache, but is fast to create a new one, and we can not get
+		// rid if the qualified name function
+		std::string name = program.getGlobalCollector().getName(varDecl);
 
-		auto&& fit = ctx.globalIdentMap.find(varDecl);
-
-
-		VLOG(2) << "  " << llvm::cast<clang::NamedDecl>(varDecl)->getNameAsString() << " "<< ctx.globalIdentMap.size();
-		VLOG(2) << "  " << varDecl;
-		VLOG(2) << "  " << ctx.globalIdentMap;
-		assert( fit != ctx.globalIdentMap.end() && "Variable not within global identifiers");
-
-		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(fit->second);
-		assert( memberTy && "Member not found within global struct");
-		assert( ctx.globalVar->getType()->getNodeType() == core::NT_RefType &&
-			    "Global data structure passed as a non-ref");
-
-		core::ExpressionPtr&& retExpr = builder.callExpr(
-				builder.refType( memberTy ),
-				gen.getCompositeRefElem(),
-				toVector<core::ExpressionPtr>(
-						ctx.globalVar, builder.getIdentifierLiteral(fit->second), builder.getTypeLiteral(memberTy)
-				)
-		);
-
-		// check if is thread private
-		auto&& vit = std::find(ctx.thread_private.begin(), ctx.thread_private.end(), varDecl);
-		if (vit != ctx.thread_private.end()) {
-			omp::addThreadPrivateAnnotation(retExpr);
+		if (program.getGlobalCollector().isStatic(varDecl)){
+			irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(irType.as<core::RefTypePtr>().getElementType()));
 		}
 
-		return utils::cast(retExpr, irType);
+		core::ExpressionPtr globVar =  builder.literal(name, irType);
+		if (program.getGlobalCollector().isExtern(varDecl))
+		 	annotations::c::markExtern(globVar.as<core::LiteralPtr>());
+
+		if (program.getGlobalCollector().isStatic(varDecl)){
+			globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
+		}
+		ctx.varDeclMap.insert( { valDecl, globVar } );
+		return globVar;
 	}
 
 	// The variable is not in the map and not defined as global (or static) therefore we proceed with the creation of
@@ -564,7 +548,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 
 //////////////////////////////////////////////////////////////////
 ///
-core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
+core::StatementPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
 	// logging
 	VLOG(1)	<< "\n****************************************************************************************\n"
 			<< "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n" << "-> at location: ("
@@ -575,26 +559,35 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		varDecl->dump();
 	}
 
-	core::DeclarationStmtPtr retStmt;
+	core::StatementPtr retStmt;
 	if ( const VarDecl* definition = varDecl->getDefinition()) {
+		// lookup for the variable in the map
+		core::ExpressionPtr&& var = lookUpVariable(definition);
+		printDiagnosis(definition->getLocStart());
 
 		if (definition->hasGlobalStorage()) {
-			// once we encounter static variables we do remove the declaration
-			throw GlobalVariableDeclarationException();
+			// is the declaration of a variable with global storage, this means that is an static 
+			// static needs to be initialized during first execution of function.
+			// but the var remains in the global storage (is an assigment instead of decl)
+
+			// the variable is being unwrapped by default in lookupiVariable
+			// we want the inner static object
+			auto lit = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
+
+			retStmt = builder.initStaticVariable(lit, convertInitExpr(definition->getType().getTypePtr(), 
+																	  definition->getInit(), var->getType().as<core::RefTypePtr>().getElementType(), false));
 		}
+		else{
 
-		// lookup for the variable in the map
-		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
+			// print diagnosis messages
+			assert(var.isa<core::VariablePtr>());
 
-		// print diagnosis messages
-		printDiagnosis(definition->getLocStart());
-		assert(var);
-
-		// initialization value
-		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), var->getType(), false);
-		ASSERT_EQ_TYPES (var->getType(), initExpr->getType());
-		assert(initExpr && "not correct initialization of the variable");
-		retStmt = builder.declarationStmt(var, initExpr);
+			// initialization value
+			core::ExpressionPtr&& initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), var->getType(), false);
+			ASSERT_EQ_TYPES (var->getType(), initExpr->getType());
+			assert(initExpr && "not correct initialization of the variable");
+			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initExpr);
+		}
 	} else {
 		// this variable is extern
 		assert(varDecl->isExternC() && "Variable declaration is not extern");
@@ -917,17 +910,17 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	return retIr;
 }
 
-
-//////////////////////////////////////////////////////////////////
-/// the globalVar parameter is added at the FIRST position of the function parameters
-core::FunctionTypePtr ConversionFactory::addGlobalsToFunctionType( const core::FunctionTypePtr& funcType) {
-       const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes()->getElements();
-       std::vector<core::TypePtr> argTypes(oldArgs.size() + 1);
-       std::copy(oldArgs.begin(), oldArgs.end(), argTypes.begin() + 1);
-       // function is receiving a reference to the global struct as the first argument
-       argTypes[0] = builder.refType(ctx.globalStruct.first);
-       return builder.functionType(argTypes, funcType->getReturnType());
-}
+//
+////////////////////////////////////////////////////////////////////
+///// the globalVar parameter is added at the FIRST position of the function parameters
+//core::FunctionTypePtr ConversionFactory::addGlobalsToFunctionType( const core::FunctionTypePtr& funcType) {
+//       const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes()->getElements();
+//       std::vector<core::TypePtr> argTypes(oldArgs.size() + 1);
+//       std::copy(oldArgs.begin(), oldArgs.end(), argTypes.begin() + 1);
+//       // function is receiving a reference to the global struct as the first argument
+//       argTypes[0] = builder.refType(ctx.globalStruct.first);
+//       return builder.functionType(argTypes, funcType->getReturnType());
+//}
 
 
 //////////////////////////////////////////////////////////////////
@@ -947,13 +940,13 @@ core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const
 }
 /////////////////////////////////////////////////////////////////
 //
-core::FunctionTypePtr ConversionFactory::convertFunctionType(const clang::FunctionDecl* funcDecl, bool ignoreGlobals){
+core::FunctionTypePtr ConversionFactory::convertFunctionType(const clang::FunctionDecl* funcDecl){
 	SET_TU(funcDecl);
 	const clang::Type* type= GET_TYPE_PTR(funcDecl);
 	core::FunctionTypePtr funcType = convertType(type).as<core::FunctionTypePtr>();
-	if (!ignoreGlobals && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end() ) {
-		funcType = addGlobalsToFunctionType(funcType);
-	}
+//	if (!ignoreGlobals && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end() ) {
+		//funcType = addGlobalsToFunctionType(funcType);
+	//}
 	RESTORE_TU();
 	return funcType;
 }
@@ -997,7 +990,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	if( funcDecl->isPure() && llvm::isa<clang::CXXMethodDecl>(funcDecl)){
 		VLOG(2) << "pure virtual function " << funcDecl;
 
-		auto funcTy = convertFunctionType(funcDecl, isEntryPoint);
+		auto funcTy = convertFunctionType(funcDecl);
 		std::string callName = funcDecl->getNameAsString();
 		core::ExpressionPtr retExpr = builder.literal(callName, funcTy);
 
@@ -1019,7 +1012,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 		else {
 			//handle extern functions  -- here instead of in CallExr
-			auto funcTy = convertFunctionType(funcDecl,true).as<core::FunctionTypePtr>();
+			auto funcTy = convertFunctionType(funcDecl).as<core::FunctionTypePtr>();
 			std::string callName = funcDecl->getNameAsString();
 			retExpr = builder.literal(callName, funcTy);
 
@@ -1141,13 +1134,13 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// global struct or not
 	core::VariablePtr parentGlobalVar = ctx.globalVar;
 
-	if (!isEntryPoint && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end()) {
-		// declare a new variable that will be used to hold a reference to the global data stucture
-		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStruct.first) );
-		ctx.globalVar = var;
-		params.push_back(var);
-	}
-
+//	if (!isEntryPoint && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end()) {
+//		// declare a new variable that will be used to hold a reference to the global data stucture
+//		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStruct.first) );
+//		ctx.globalVar = var;
+//		params.push_back(var);
+//	}
+//
 	std::for_each(funcDecl->param_begin(), funcDecl->param_end(), [ &params, this ] (ParmVarDecl* currParam) {
 		params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(currParam) ) );
 	});
@@ -1185,23 +1178,23 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		ctx.isResolvingRecFuncBody = false;
 	}
 
-	// ADD THE GLOBALS
-	if (isEntryPoint && ctx.globalVar) {
-		const core::CompoundStmtPtr& compStmt = builder.compoundStmt(body);
-		assert(ctx.globalVar && ctx.globalStruct.second);
+//	// ADD THE GLOBALS
+//	if (isEntryPoint && ctx.globalVar) {
+//		const core::CompoundStmtPtr& compStmt = builder.compoundStmt(body);
+//		assert(ctx.globalVar && ctx.globalStruct.second);
+//
+//		const StatementList& oldStmts = compStmt->getStatements();
+//
+//		std::vector<core::StatementPtr> stmts;
+//
+//		stmts = std::vector<core::StatementPtr>(oldStmts.size() + 1);
+//		stmts[0] = builder.declarationStmt(ctx.globalVar, builder.refNew(ctx.globalStruct.second));
+//		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), stmts.begin() + 1);
+//
+//		body = builder.compoundStmt(stmts);
+//	}
 
-		const StatementList& oldStmts = compStmt->getStatements();
-
-		std::vector<core::StatementPtr> stmts;
-
-		stmts = std::vector<core::StatementPtr>(oldStmts.size() + 1);
-		stmts[0] = builder.declarationStmt(ctx.globalVar, builder.refNew(ctx.globalStruct.second));
-		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), stmts.begin() + 1);
-
-		body = builder.compoundStmt(stmts);
-	}
-
-	core::FunctionTypePtr funcType = convertFunctionType(funcDecl,isEntryPoint).as<core::FunctionTypePtr>();
+	core::FunctionTypePtr funcType = convertFunctionType(funcDecl).as<core::FunctionTypePtr>();
 
 	// reset old global var
 	ctx.globalVar = parentGlobalVar;
@@ -1653,11 +1646,6 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	assert(rightTU && "Translation unit for function not found.");
 	mFact.setTranslationUnit(rightTU);
 
-	// Collect global variables for the whole program and build globalStruct
-	insieme::utils::Timer t("Globals.collect");
-	collectGlobals(funcDecl);
-	t.stop();
-	LOG(INFO) << t;
 
 	const core::ExpressionPtr& expr = mFact.convertFunctionDecl(funcDecl, true).as<core::ExpressionPtr>();
 
@@ -1673,9 +1661,52 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 		}
 	}
 	assert( lambdaExpr && "Conversion of function did not return a lambda expression");
-	//mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
-	//return mProgram;
+	
+	// globals in the main function, globals might need to be initialized
+	if (isMain)
+		lambdaExpr = addGlobalsInitialization(lambdaExpr.as<core::LambdaExprPtr>());
+
 	return core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
+}
+
+core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExprPtr& mainFunc){
+
+		// 4 casses:
+		// extern, do nothing (already passed)
+		// static in some function, we need to initialize the constructor flag
+		// with init, assign value
+		// without init, assign zero value
+	core::IRBuilder builder(mainFunc->getNodeManager());
+	core::StatementList inits;
+	for (auto it = globalCollector.begin(); it != globalCollector.end(); ++it){
+		std::cout<< "build def value for: " << it.name() << std::endl;
+
+		if (globalCollector.isExtern(it.decl())){
+			continue;
+		}
+
+		auto var = mFact.lookUpVariable (it.decl());
+		if (globalCollector.isStatic(it.decl())){
+			inits.push_back(builder.createStaticVariable(var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>()));
+			continue;
+		}
+
+		core::ExpressionPtr initValue;
+		if(const clang::Expr* init = it.init()){
+			initValue = mFact.convertExpr(init);
+		}
+		else{
+			initValue = builder.getZero(var->getType().as<core::RefTypePtr>().getElementType());
+		}
+		core::StatementPtr assign = builder.assign (var, initValue);
+		dumpPretty(assign);
+		inits.push_back(assign);
+	}
+
+	if (inits.empty())
+		return mainFunc;
+
+	return (core::transform::insert ( mainFunc->getNodeManager(), core::LambdaExprAddress(mainFunc)->getBody(), inits, 0)).as<core::LambdaExprPtr>();
 }
 
 } // End conversion namespace
