@@ -91,6 +91,21 @@ namespace analysis {
 		EXPECT_FALSE(isConstCppRef(getCppRef(type)));
 	}
 
+	TEST(IRppUtils, DefaultCtorTest) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// create a struct type
+		StructTypePtr type = builder.parseType("struct { int x; int y; }").as<StructTypePtr>();
+		ASSERT_TRUE(type);
+
+		// create a default constructor for this type
+		auto ctor = createDefaultConstructor(type);
+		EXPECT_TRUE(checks::check(ctor).empty()) << ctor << checks::check(ctor);
+
+		EXPECT_PRED1(isDefaultConstructor, ctor);
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme
