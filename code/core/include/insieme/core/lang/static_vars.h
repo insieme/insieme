@@ -34,8 +34,9 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/lang/extension.h"
+#pragma once
 
+#include "insieme/core/lang/extension.h"
 
 namespace insieme {
 namespace core {
