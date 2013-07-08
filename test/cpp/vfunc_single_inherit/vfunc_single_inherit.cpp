@@ -3,7 +3,6 @@
 class A {
 	int aA;
 	public:
-	A() { printf("A()\n"); }
 	virtual ~A() { printf("~A()\n"); }
 
 	virtual void const f() = 0;
@@ -24,7 +23,6 @@ class B : public A {
 class C : public B {
 	int cC;
 	public:
-	C() {}
 	virtual ~C() { printf("~C()\n"); }
 	
 	virtual void c() { printf("C::c\n"); }
