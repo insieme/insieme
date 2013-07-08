@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -1505,6 +1505,11 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 
 			expr = convertExpr((*it)->getInit());
 			init = builder.literal("this", builder.refType(irClassType));
+
+			if(!insieme::core::analysis::isConstructorCall(expr)) {
+				// base init is a non-userdefined-default-ctor call, drop it
+				continue;
+			}
 		}
 		else if ((*it)->isMemberInitializer ()){
 			// create access to the member of the struct/class
