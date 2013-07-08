@@ -61,6 +61,7 @@
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
+#include "insieme/utils/set_utils.h"
 
 #include "insieme/utils/timer.h"
 #include "insieme/utils/functional_utils.h"
@@ -382,7 +383,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	VLOG(2)	<< "clang type: " << varTy.getAsString();
 	VLOG(2)	<< "ir type:    " << irType;
 
-	//// check wether the variable is marked to be volatile
+	//// check whenever the variable is marked to be volatile
 	if (varTy.isVolatileQualified()) {
 		irType = builder.volatileType(irType);
 	}
@@ -418,6 +419,12 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		if (program.getGlobalCollector().isStatic(varDecl)){
 			globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
 		}
+
+		// OMP threadPrivate
+ 		if (insieme::utils::set::contains (ctx.thread_private, varDecl)){
+			omp::addThreadPrivateAnnotation(globVar);
+		}
+
 		ctx.varDeclMap.insert( { valDecl, globVar } );
 		return globVar;
 	}
@@ -977,6 +984,11 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		return fit->second;
 	}
 
+	// FIXME: find a better place for this (where this fun is called)
+	if (isEntryPoint){
+		omp::collectThreadPrivate(getPragmaMap(), ctx.thread_private);
+	}
+
 	//intercept functionDecls here
 	if( getProgram().getInterceptor().isIntercepted(funcDecl) ) {
 		auto irExpr = getProgram().getInterceptor().intercept(funcDecl, *this);
@@ -1133,6 +1145,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// before resolving the body we have to set the currGlobalVar accordingly depending if this function will use the
 	// global struct or not
 	core::VariablePtr parentGlobalVar = ctx.globalVar;
+
+
 
 //	if (!isEntryPoint && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end()) {
 //		// declare a new variable that will be used to hold a reference to the global data stucture
@@ -1696,7 +1710,13 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 			initValue = mFact.convertExpr(init);
 		}
 		else{
-			initValue = builder.getZero(var->getType().as<core::RefTypePtr>().getElementType());
+			if (var->getType().isa<core::RefTypePtr>()){
+				initValue = builder.getZero(var->getType().as<core::RefTypePtr>().getElementType());
+			}
+			else{
+				VLOG(2) << "Variable [" << var << "] could not be zero initialzied";
+				continue;
+			}
 		}
 		core::StatementPtr assign = builder.assign (var, initValue);
 		dumpPretty(assign);

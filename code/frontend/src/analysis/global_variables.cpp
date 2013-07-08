@@ -184,18 +184,21 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var, bool local){
 		return;
 
 	std::string name = var->getQualifiedNameAsString();
+	if (!local) 	name = "global_"+name;
+	else		name = "static_"+name;
 
 	VarStorage st;
 	if (local){
 		assert(!var->hasExternalStorage());
 		st = VS_STATIC;
 
-		// compute var name:
 		auto fit = staticNames.find(var);
 		if (fit == staticNames.end()){
 			name.append( std::to_string (staticCount++));
 			staticNames[var] = name;
 		}
+		else
+			name = fit->second;
 	}
 	else if (var->hasExternalStorage()){
 		st = VS_EXTERN;
@@ -259,7 +262,7 @@ std::string GlobalVarCollector::getName (const clang::VarDecl* var){
 	if (fit != staticNames.end())
 		return fit->second;
 	else
-		return var->getQualifiedNameAsString();
+		return "global_"+var->getQualifiedNameAsString();
 }
 
 
