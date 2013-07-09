@@ -183,6 +183,7 @@ namespace core {
 		StructTypePtr structType(const vector<TypePtr>& parents, const vector<NamedTypePtr>& entries) const;
 		StructTypePtr structType(const vector<ParentPtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const;
 		StructTypePtr structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const;
+		StructTypePtr structType(const StringValuePtr& name, const vector<ParentPtr>& parents, const vector<NamedTypePtr>& entries) const;
 
 		NamedTypePtr namedType(const string& name, const TypePtr& type) const;
 		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
@@ -644,6 +645,16 @@ namespace core {
 
 		// helper for vector permute
 		CallExprPtr vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const;
+
+
+		// --------------------- static variables ----------------------
+
+
+		StatementPtr initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue) const;
+
+		StatementPtr createStaticVariable(const LiteralPtr& staticVariable) const;
+
+		ExpressionPtr accessStatic(const LiteralPtr& staticVariable) const;
 
 
 
