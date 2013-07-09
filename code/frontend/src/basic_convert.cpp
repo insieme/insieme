@@ -415,7 +415,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 
 		core::ExpressionPtr globVar =  builder.literal(name, irType);
 		if (program.getGlobalCollector().isExtern(varDecl)){
-			globVar =  builder.literal(varDecl->getNameAsString(), globVar->getType());
+			globVar =  builder.literal(varDecl->getQualifiedNameAsString(), globVar->getType());
 		 	annotations::c::markExtern(globVar.as<core::LiteralPtr>());
 		}
 
@@ -1688,6 +1688,14 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 
 	VLOG(1) << "";
 	VLOG(1) << "******************** Initialize Globals at program start ***************************";
+
+
+	// we only want to init what we use, so we check it
+	core::NodeSet usedLiterals;
+	core::visitDepthFirstOnce (mainFunc, [&] (const core::LiteralPtr& literal){
+				usedLiterals.insert(literal);
+			});
+
 		// 4 casses:
 		// extern, do nothing (already passed)
 		// static in some function, we need to initialize the constructor flag
@@ -1711,6 +1719,17 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 		// static variables need to be created to zero initialize the inner initialization flag.
 		// does not matter where is used
 		core::ExpressionPtr var = mFact.lookUpVariable (it.decl());
+		core::LiteralPtr litUse = var.isa<core::LiteralPtr>();
+		if (!litUse){
+			litUse = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
+		}
+		assert (litUse && " no literal? who handled this global?");
+
+			// if is never used,
+		if (!contains(usedLiterals, litUse)){
+			continue;
+		}
+
 		if (globalCollector.isStatic(it.decl())){
 			inits.push_back(builder.createStaticVariable(var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>()));
 			continue;
