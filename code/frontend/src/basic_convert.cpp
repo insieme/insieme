@@ -1710,11 +1710,13 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 		VLOG(2) << "build def value for: " << it.name() << std::endl;
 
 		// avoid intercepted stuff, it never existed
+		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    INTERCEPTED  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		if (mFact.getProgram().getInterceptor().isIntercepted(it.name()))
 			continue;
 
 		// globals which end up being extern must mantain name without alterations
 		// nor qualifications
+		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    EXTERN, do not declareD  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		if (globalCollector.isExtern(it.decl())){
 			continue;
 		}
@@ -1728,16 +1730,18 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 		}
 		assert (litUse && " no literal? who handled this global?");
 
-			// if is never used,
+		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    NEVER USED  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		if (!contains(usedLiterals, litUse)){
 			continue;
 		}
 
+		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    STATIC  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		if (globalCollector.isStatic(it.decl())){
 			inits.push_back(builder.createStaticVariable(var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>()));
 			continue;
 		}
 
+		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    GLOBALS  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		core::ExpressionPtr initValue;
 		if(const clang::Expr* init = it.init()){
 			//FIXME: why this is not done in the visitor???
@@ -1752,14 +1756,7 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 			}
 		}
 		else{
-			VLOG(2) << "\tzero init: Type: " << var->getType();
-			if (var->getType().isa<core::RefTypePtr>() && !utils::isRefArray(var->getType())){
-				initValue = builder.getZero(var->getType().as<core::RefTypePtr>().getElementType());
-			}
-			else{
-				VLOG(2) << "Variable [" << var << "] could not be zero initialzied, type: " << var->getType();
-				continue;
-			}
+			continue;
 		}
 		core::StatementPtr assign = builder.assign (var, initValue);
 		dumpPretty(assign);
