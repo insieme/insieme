@@ -444,11 +444,19 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	}
 
 	if( !ctorDecl->isUserProvided() ) {
-		if(	ctorDecl->isDefaultConstructor()) {
-			//if not userprovided we don't need to add a constructor just create the object to work
-			//with -- for the rest the BE-compiler takes care of
+		if(	ctorDecl->isDefaultConstructor() ) {
+			//TODO find better solution to sovle problems with standard-layout/trivial-copyable
+			//classes
 			core::TypePtr&&  refToClassTy = builder.refType(irClassType);
-			return builder.undefinedVar(refToClassTy);
+			if(ctorDecl->getParent()->isPOD()) {
+				return builder.undefinedVar(refToClassTy);
+			} else {
+				//use eiter createDefaultCtor or the ctorDecl
+				//if not userprovided we don't need to add a constructor just create the object to work
+				//with -- for the rest the BE-compiler takes care of
+				core::ExpressionPtr ctorCall = core::analysis::createDefaultConstructor(irClassType.as<core::StructTypePtr>());
+				return builder.callExpr(ctorCall, builder.undefinedVar(refToClassTy));
+			}
 		}
 		else if( ctorDecl->isCopyConstructor()) {
 			//if not userprovided we don't need to add a constructor just create the object to work
