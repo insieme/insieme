@@ -104,7 +104,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			return classType;
 
 		core::ClassMetaInfo classInfo;
-		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl());
+
+		//~~~~~ look in the indexer for the full decl ~~~~
+		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(tagType->getDecl());
 
 		//~~~~~ base clases if any ~~~~~
 		if (classDecl->getNumBases() > 0){

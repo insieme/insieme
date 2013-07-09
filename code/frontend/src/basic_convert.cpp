@@ -378,7 +378,13 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 
 	// Conversion of the variable type
 	QualType&& varTy = valDecl->getType();
+
+	valDecl->dump();
+	std::cout  << "\n-> at location: (" <<	
+            utils::location(valDecl->getLocStart(), getCurrentSourceManager()) << "); \n "; 
+
 	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
+	assert(irType && "type conversion for variable failed");
 
 	VLOG(2)	<< "clang type: " << varTy.getAsString();
 	VLOG(2)	<< "ir type:    " << irType;
@@ -390,9 +396,9 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 
 	bool isOclVector = !!dyn_cast<const ExtVectorType>(varTy->getUnqualifiedDesugaredType());
 	if (!(varTy.isConstQualified() ||    						// is a constant
-		  varTy.getTypePtr()->isReferenceType()  ||             // is a c++ reference
- 	 	  (isa<const clang::ParmVarDecl>(valDecl) && 			// is the declaration of a parameter
-		  ((irType->getNodeType() != core::NT_VectorType && irType->getNodeType() != core::NT_ArrayType) ||
+		 varTy.getTypePtr()->isReferenceType()  ||             // is a c++ reference
+ 	 	 (isa<const clang::ParmVarDecl>(valDecl) && 			// is the declaration of a parameter
+		 ((irType->getNodeType() != core::NT_VectorType && irType->getNodeType() != core::NT_ArrayType) ||
 		   isOclVector ) ))) {
 		// if the variable is not const, or a function parameter or an array type we enclose it in a ref type
 		// only exception are OpenCL vectors
@@ -413,8 +419,10 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		}
 
 		core::ExpressionPtr globVar =  builder.literal(name, irType);
-		if (program.getGlobalCollector().isExtern(varDecl))
+		if (program.getGlobalCollector().isExtern(varDecl)){
+			globVar =  builder.literal(varDecl->getNameAsString(), globVar->getType());
 		 	annotations::c::markExtern(globVar.as<core::LiteralPtr>());
+		}
 
 		if (program.getGlobalCollector().isStatic(varDecl)){
 			globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
@@ -736,7 +744,6 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 		for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
 
 			const core::NamedTypePtr& curr = structTy->getEntries()[i];
-
 			members.push_back(builder.namedValue(
 						curr->getName(),
 						convertInitExpr(NULL, initList->getInit(i), curr->getType(), false))
@@ -823,7 +830,6 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 	 * structs and unions
 	 */
 	if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr )) {
-		//return retIr =  convertInitializerList(listExpr, type);
 		retIr = utils::cast( convertInitializerList(listExpr, type), type);
 		return retIr;
 	}
@@ -1685,6 +1691,8 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 
 core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExprPtr& mainFunc){
 
+	VLOG(1) << "";
+	VLOG(1) << "******************** Initialize Globals at program start ***************************";
 		// 4 casses:
 		// extern, do nothing (already passed)
 		// static in some function, we need to initialize the constructor flag
@@ -1693,12 +1701,20 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 	core::IRBuilder builder(mainFunc->getNodeManager());
 	core::StatementList inits;
 	for (auto it = globalCollector.begin(); it != globalCollector.end(); ++it){
-		std::cout<< "build def value for: " << it.name() << std::endl;
+		VLOG(2) << "build def value for: " << it.name() << std::endl;
 
+		// avoid intercepted stuff, it never existed
+		if (mFact.getProgram().getInterceptor().isIntercepted(it.name()))
+			continue;
+
+		// globals which end up being extern must mantain name without alterations
+		// nor qualifications
 		if (globalCollector.isExtern(it.decl())){
 			continue;
 		}
 
+		// static variables need to be created to zero initialize the inner initialization flag.
+		// does not matter where is used
 		auto var = mFact.lookUpVariable (it.decl());
 		if (globalCollector.isStatic(it.decl())){
 			inits.push_back(builder.createStaticVariable(var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>()));
@@ -1707,14 +1723,20 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 
 		core::ExpressionPtr initValue;
 		if(const clang::Expr* init = it.init()){
-			initValue = mFact.convertExpr(init);
+			//FIXME: why this is not done in the visitor???
+			if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( init )) {
+				initValue = utils::cast( mFact.convertInitializerList(listExpr, var->getType()), var->getType());
+			}
+			else
+				initValue = mFact.convertExpr(init);
 		}
 		else{
-			if (var->getType().isa<core::RefTypePtr>()){
+			VLOG(2) << "\tzero init: Type: " << var->getType();
+			if (var->getType().isa<core::RefTypePtr>() && !utils::isRefArray(var->getType())){
 				initValue = builder.getZero(var->getType().as<core::RefTypePtr>().getElementType());
 			}
 			else{
-				VLOG(2) << "Variable [" << var << "] could not be zero initialzied";
+				VLOG(2) << "Variable [" << var << "] could not be zero initialzied, type: " << var->getType();
 				continue;
 			}
 		}

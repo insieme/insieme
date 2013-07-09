@@ -77,21 +77,17 @@ public:
 	//
 	void indexTU(insieme::frontend::TranslationUnit* tu);
 
-
 	////////////////////////////////////////////////
 	//
 	clang::Decl* getDefinitionFor (const clang::Decl* decl) const;
-
 
 	////////////////////////////////////////////////
 	///
 	TranslationUnitPair getDefAndTUforDefinition (const clang::Decl* decl) const;
 
-
 	////////////////////////////////////////////////
 	//
 	clang::Decl* getMainFunctionDefinition () const;
-
 
 	////////////////////////////////////////////////
 	//

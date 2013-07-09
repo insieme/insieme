@@ -287,9 +287,6 @@ protected:
 	 const TranslationUnit* currTU;
 
 
-	core::ExpressionPtr convertInitializerList(
-			const clang::InitListExpr* initList,
-			const core::TypePtr& type) ;
 
 	/**
 	 * Attach annotations to a C function of the input program.
@@ -526,6 +523,10 @@ public:
 	 */
 	core::ExpressionPtr convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl);
 
+	// FIXME: where here and not expr visitor????
+	core::ExpressionPtr convertInitializerList(
+			const clang::InitListExpr* initList,
+			const core::TypePtr& type) ;
 };
 
 // ------------------------------------ ASTConverter ---------------------------

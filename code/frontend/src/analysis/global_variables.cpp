@@ -92,7 +92,7 @@ class GlobalsVisitor{
 					case clang::TagDecl::TagKind::TTK_Union 	:
 					case clang::TagDecl::TagKind::TTK_Class 	:
 						{
-							analyzeDeclContext(llvm::cast<clang::DeclContext>(decl), true);
+							analyzeDeclContext(llvm::cast<clang::DeclContext>(decl), false);
 						}
 						break;
 					case clang::TagDecl::TagKind::TTK_Enum 	:
@@ -117,7 +117,8 @@ class GlobalsVisitor{
 
 				// this a variable, might be global, static or even extern.
 				// BUT it might be also a class declaration which makes use of globals inside
-				collector.addVar(varDecl, local);
+				if (varDecl->isThisDeclarationADefinition() == clang::VarDecl::Definition)
+					collector.addVar(varDecl, local);
 
 				const clang::Type* type = varDecl->getType().getTypePtr();
 				if (const clang::RecordType* rec = llvm::dyn_cast<clang::RecordType>(type)){
@@ -184,8 +185,10 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var, bool local){
 		return;
 
 	std::string name = var->getQualifiedNameAsString();
-	if (!local) 	name = "global_"+name;
-	else		name = "static_"+name;
+	// FIXME: how should this be??
+//	if (!local) 	name = "global_"+name;
+//	else			name = "static_"+name;
+	if (local) 	name = "static_"+name;
 
 	VarStorage st;
 	if (local){
@@ -262,7 +265,16 @@ std::string GlobalVarCollector::getName (const clang::VarDecl* var){
 	if (fit != staticNames.end())
 		return fit->second;
 	else
-		return "global_"+var->getQualifiedNameAsString();
+	{
+		// append global_ before the name, but after the qualification of 
+		// namespaces
+		std::string qualName = var->getQualifiedNameAsString();
+		std::string name     = var->getNameAsString();
+		std::string newName  = "global_"+name;
+
+		qualName.replace( qualName.end()-name.size(), qualName.end(), newName);
+		return qualName;
+	}
 }
 
 

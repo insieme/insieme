@@ -522,7 +522,7 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// if it is the char type
 	if(manager.getLangBasic().isChar(type)) {
-		return literal(type, "\0");
+		return literal(type, "' '");
 	}
 
 	// if it is a lock, keep it undefined
