@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -186,15 +186,15 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 		}
 	}
 
-	// if needed, globals are the leftmost argument (after the memory storage in ctors)
-	// NOTE: functions being captured with a pointer CAN NOT USE globals
-	if (declaration){
-		convFact.getTranslationUnitForDefinition(declaration);
-		if( ctx.globalFuncSet.find(declaration) != ctx.globalFuncSet.end()){
-			args.push_back(convFact.ctx.globalVar);
-			off ++;
-		}
-	}
+//	// if needed, globals are the leftmost argument (after the memory storage in ctors)
+//	// NOTE: functions being captured with a pointer CAN NOT USE globals
+//	if (declaration){
+//		convFact.getTranslationUnitForDefinition(declaration);
+//		if( ctx.globalFuncSet.find(declaration) != ctx.globalFuncSet.end()){
+//			args.push_back(convFact.ctx.globalVar);
+//			off ++;
+//		}
+//	}
 
 	for (size_t argId = argIdOffSet, end = callExpr->getNumArgs(); argId < end; ++argId) {
 		core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );

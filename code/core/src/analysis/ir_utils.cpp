@@ -894,6 +894,16 @@ bool isReadOnly(const StatementPtr& stmt, const VariablePtr& var) {
 	return ReadOnlyCheck().isReadOnly(stmt, var);
 }
 
+bool isStaticVar (const ExpressionPtr& var){
+	if (const LiteralPtr lit = var.as<LiteralPtr>()){
+		const lang::StaticVariableExtension& ext = var->getNodeManager().getLangExtension<lang::StaticVariableExtension>();
+		return(ext.isStaticType(lit->getType().as<core::RefTypePtr>().getElementType()));
+	}
+	else
+		return false;
+}
+
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

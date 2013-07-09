@@ -104,16 +104,16 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDeclStmt(clang::De
 		stmtutils::StmtWrapper retList;
 		clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
 
-		try {
-			auto retStmt = convFact.convertVarDecl(varDecl);
+		auto retStmt = convFact.convertVarDecl(varDecl);
+		if (core::DeclarationStmtPtr decl = retStmt.isa<core::DeclarationStmtPtr>()){
 
 			// check if there is a kernelFile annotation
-			ocl::attatchOclAnnotation(retStmt->getInitialization(), declStmt, convFact);
+			ocl::attatchOclAnnotation(decl->getInitialization(), declStmt, convFact);
 			// handle eventual OpenMP pragmas attached to the Clang node
-			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, convFact) );
-
-		} catch ( const GlobalVariableDeclarationException& err ) {
-			return stmtutils::StmtWrapper();
+			retList.push_back( omp::attachOmpAnnotation(decl, declStmt, convFact) );
+		}
+		else{
+			retList.push_back(retStmt);
 		}
 
 		return retList;
@@ -123,12 +123,13 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDeclStmt(clang::De
 	stmtutils::StmtWrapper retList;
 	for (auto it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
 	if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
-		try {
+//
+//try {
 			auto retStmt = convFact.convertVarDecl(varDecl);
 			// handle eventual OpenMP pragmas attached to the Clang node
 			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, convFact) );
 
-		} catch ( const GlobalVariableDeclarationException& err ) {}
+//		} catch ( const GlobalVariableDeclarationException& err ) {}
 	}
 
 	return retList;
@@ -538,7 +539,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 			 */
 			clang::Expr* expr = condVarDecl->getInit();
 			condVarDecl->setInit(NULL); // set the expression to null (temporarely)
-			core::DeclarationStmtPtr declStmt = convFact.convertVarDecl(condVarDecl);
+			core::StatementPtr declStmt = convFact.convertVarDecl(condVarDecl);
 			condVarDecl->setInit(expr);// restore the init value
 
 			assert(false && "ForStmt with a declaration of a condition variable not supported");
@@ -613,11 +614,13 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitIfStmt(clang::IfSt
 		 * 			if(cast<bool>(a)){ }
 		 * 		}
 		 */
-		core::DeclarationStmtPtr declStmt = convFact.convertVarDecl(condVarDecl);
+		core::StatementPtr declStmt = convFact.convertVarDecl(condVarDecl);
 		retStmt.push_back(declStmt);
 
+		assert(declStmt.isa<core::DeclarationStmtPtr>() && "declaring static variables within an if is not very polite");
+
 		// the expression will be a cast to bool of the declared variable
-		condExpr = builder.castExpr(gen.getBool(), declStmt->getVariable());
+		condExpr = builder.castExpr(gen.getBool(), declStmt.as<core::DeclarationStmtPtr>()->getVariable());
 
 	} else {
 
@@ -691,7 +694,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitWhileStmt(clang::W
 		 */
 		clang::Expr* expr = condVarDecl->getInit();
 		condVarDecl->setInit(NULL); // set the expression to null (temporarely)
-		core::DeclarationStmtPtr declStmt = convFact.convertVarDecl(condVarDecl);
+		core::StatementPtr declStmt = convFact.convertVarDecl(condVarDecl);
 		condVarDecl->setInit(expr); // set back the value of init value
 
 		retStmt.push_back(declStmt);
@@ -784,11 +787,14 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitSwitchStmt(clang::
 		assert(	!switchStmt->getCond() &&
 				"SwitchStmt condition cannot contains both a variable declaration and an expression");
 
-		core::DeclarationStmtPtr declStmt = convFact.convertVarDecl(condVarDecl);
+		core::StatementPtr declStmt = convFact.convertVarDecl(condVarDecl);
 		retStmt.push_back(declStmt);
 
+		assert(declStmt.isa<core::DeclarationStmtPtr>() && 
+				" declaring a static variable in a switch condition??? you must have a very good reason to do this!!!");
+
 		// the expression will be a reference to the declared variable
-		condExpr = declStmt->getVariable();
+		condExpr = declStmt.as<core::DeclarationStmtPtr>()->getVariable();
 	} else {
 		const clang::Expr* cond = switchStmt->getCond();
 		assert(cond && "SwitchStmt with no condition.");

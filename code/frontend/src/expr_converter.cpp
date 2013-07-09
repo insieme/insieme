@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -1639,7 +1639,15 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitDeclRefExpr(const cla
 //                  VECTOR/STRUCT INITALIZATION EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitInitListExpr(const clang::InitListExpr* initList) {
-	assert(false && "Visiting of initializer list is not allowed!"); return core::ExpressionPtr();
+        VLOG(1) << "*************     EXPR  [class:'"<< initList->getStmtClassName() <<"']         **********\n"; 
+        if( VLOG_IS_ON(2) ) { 
+            VLOG(2) << "Dump of clang expression: "; \
+            initList->dump(); 
+        } 
+        VLOG(1) << "-> at location: (" <<	
+                    utils::location(initList->getLocStart(), convFact.getCurrentSourceManager()) << "); \n "; 
+        VLOG(1) << "****************************************************************************************\n"; 
+assert(false && "Visiting of initializer list is not allowed!"); return core::ExpressionPtr();
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
