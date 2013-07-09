@@ -633,7 +633,7 @@ namespace parser {
 			struct process_named_type : public detail::actions {
 				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
 					TypePtr type = cur.getTerms().back().as<TypePtr>();
-					auto iterName = cur.getSubRange(0);
+					auto iterName = cur.getSubRanges().back();
 					NamedTypePtr member = cur.namedType(iterName[0], type);
 					cur.swap(member);
 					cur.popRange();
@@ -643,9 +643,16 @@ namespace parser {
 			static const auto member = std::make_shared<Action<process_named_type>>(seq(T, cap(id)));
 
 			g.addRule("T", rule(
-					seq("struct", opt(seq(":", non_empty_list(parent, ","))), "{", list(member,";"), opt(";"), "}"),
+					seq("struct", opt(cap(id)), opt(seq(":", non_empty_list(parent, ","))), "{", list(member,";"), opt(";"), "}"),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
+
+						// get name
+						StringValuePtr name = cur.stringValue("");
+						if (!cur.getSubRanges().empty()) {
+							name = cur.stringValue(cur.getSubRange(0)[0]);
+						}
+
 						ParentList parents;
 						NamedTypeList members;
 						for(auto curNode : terms) {
@@ -655,7 +662,7 @@ namespace parser {
 								members.push_back(curNode.as<NamedTypePtr>());
 							}
 						}
-						return cur.structType(parents, members);
+						return cur.structType(name, parents, members);
 					}
 			));
 

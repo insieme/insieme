@@ -23,7 +23,6 @@ class B : public A {
 class C : public B {
 	int cC;
 	public:
-	C() {}
 	virtual ~C() { printf("~C()\n"); }
 	
 	virtual void c() { printf("C::c\n"); }

@@ -687,32 +687,41 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		case clang::CK_Dynamic:
 		// A C++ dynamic_cast.
 		{	
-			VLOG(2) << targetTy;
+			//we want to know the TYPE of dynamic_cast<TYPE>()
 			targetTy = convFact.convertType(GET_TYPE_PTR(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getTypeInfoAsWritten()));
-			VLOG(2) << targetTy;
+			VLOG(2) << exprTy << " " << targetTy;
 			
-			if (core::analysis::isCppRef(exprTy)){
-				//assert(false && "dynamic_cast for reference not supported");
-				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
-				//FIXME check if targetType needs Reference
-				//VLOG(2) << builder.deref((builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy))) ));
-				VLOG(2) << ((builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy))) ));
-				//return builder.deref(builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy))) );
-				return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy))) );
+			core::ExpressionPtr retIr;
+			if (core::analysis::isCppRef(exprTy) && core::analysis::isCppRef(targetTy)) {
+				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCastRefCppToRefCpp(), expr, builder.getTypeLiteral((targetTy)));
 			}
-			else if (core::analysis::isConstCppRef(exprTy)){
-				//assert(false && "dynamic_cast for reference not supported");
-				expr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
-				//FIXME check if targetType needs Reference
-				//VLOG(2) << builder.deref(builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy))) );
-				VLOG(2) << (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy))) );
-				//return builder.deref(builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy))) );
-				return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral((targetTy))) );
+			else if (core::analysis::isConstCppRef(exprTy) && core::analysis::isConstCppRef(targetTy)) {
+				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCastConstCppToConstCpp(), expr, builder.getTypeLiteral((targetTy)));
+			}
+			else if (core::analysis::isCppRef(exprTy) && core::analysis::isConstCppRef(targetTy)) {
+				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCastRefCppToConstCpp(), expr, builder.getTypeLiteral((targetTy)));
+			} 
+			else if (	!(core::analysis::isCppRef(exprTy) || core::analysis::isConstCppRef(exprTy)) 
+					&&  (core::analysis::isCppRef(targetTy) || core::analysis::isConstCppRef(targetTy)) ) {
+				// dynamically casting an object to a reference
+				
+				// first wrap object in cpp_ref
+				expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
+
+				//depending on targetType
+				if(core::analysis::isCppRef(targetTy) ) {
+					retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCastRefCppToRefCpp(), expr, builder.getTypeLiteral(targetTy));
+				}
+				else if(core::analysis::isConstCppRef(targetTy)) {
+					retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCastRefCppToConstCpp(), expr, builder.getTypeLiteral(targetTy));
+				}
+			}
+			else {
+				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 			}
 
-			// use dynamicCast operator to represent dynamic_cast
-			VLOG(2) << (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy))) );
-			return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy))) );
+			VLOG(2) << retIr << " " << retIr->getType();
+			return retIr;
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////

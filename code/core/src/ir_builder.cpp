@@ -63,6 +63,7 @@
 #include "insieme/core/encoder/lists.h"
 
 #include "insieme/core/lang/ir++_extension.h"
+#include "insieme/core/lang/static_vars.h"
 
 #include "insieme/core/parser2/ir_parser.h"
 
@@ -283,6 +284,10 @@ StructTypePtr IRBuilder::structType(const vector<ParentPtr>& parents, const vect
 
 StructTypePtr IRBuilder::structType(const vector<TypePtr>& parents, const vector<std::pair<StringValuePtr, TypePtr>>& entries) const {
 	return structType(parents, ::transform(entries, [&](const pair<StringValuePtr, TypePtr>& cur) { return namedType(cur.first, cur.second); }));
+}
+
+StructTypePtr IRBuilder::structType(const StringValuePtr& name, const vector<ParentPtr>& parentsList, const vector<NamedTypePtr>& entries) const {
+	return StructType::get(manager, name, parents(parentsList), entries);
 }
 
 
@@ -1422,6 +1427,35 @@ CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const Express
 
 	return callExpr(retTy, basic.getVectorPermute(), dataVec, permutationVec);
 }
+
+
+
+StatementPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue) const {
+	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
+
+	assert(ext.isStaticType(staticVariable->getType()));
+	assert(ext.unwrapStaticType(staticVariable->getType()) == initValue->getType());
+
+	return callExpr(getLangBasic().getUnit(), ext.getInitStatic(), staticVariable, initValue);
+}
+
+StatementPtr IRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
+	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
+
+	assert(ext.isStaticType(staticVariable->getType()));
+
+	return callExpr(getLangBasic().getUnit(), ext.getCreateStatic(), staticVariable);
+}
+
+ExpressionPtr IRBuilder::accessStatic(const LiteralPtr& staticVariable) const {
+	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
+
+	assert(ext.isStaticType(staticVariable->getType()));
+
+	return callExpr(ext.unwrapStaticType(staticVariable->getType()), ext.getAccessStatic(), staticVariable);
+}
+
+
 
 ExpressionPtr IRBuilder::getPureVirtual(const FunctionTypePtr& type) const {
 	assert(type->isMemberFunction());

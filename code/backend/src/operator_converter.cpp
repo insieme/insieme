@@ -51,6 +51,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/ir++_utils.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/encoder/lists.h"
 #include "insieme/core/transform/manipulation.h"
@@ -1137,13 +1138,42 @@ namespace backend {
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
 				
-				if(!targetTy.isa<core::ArrayTypePtr>()) {
+				if(!targetTy.isa<core::ArrayTypePtr>()
+					&& !core::analysis::isCppRef(targetTy) ) {
 					targetCType = c_ast::ptr(targetCType);	
 				}
 
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});
+				
+			res[irppExt.getDynamicCastRefCppToRefCpp()] = OP_CONVERTER({
+				// build up a dynamic cast operator for cpp_ref to cpp_ref
+				
+				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+				auto targetCType = CONVERT_TYPE(targetTy);
+			
+				assert(core::analysis::isCppRef(targetTy) && "targetType not a reference type");
+				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
+			});
 
+			res[irppExt.getDynamicCastConstCppToConstCpp()] = OP_CONVERTER({
+				// build up a dynamic cast operator for const_cpp_ref to const_cpp_ref
+				
+				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+				auto targetCType = CONVERT_TYPE(targetTy);
+				
+				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
+				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
+			});
+			res[irppExt.getDynamicCastRefCppToConstCpp()] = OP_CONVERTER({
+				// build up a dynamic cast operator for cpp_ref to const_cpp_ref
+				
+				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+				auto targetCType = CONVERT_TYPE(targetTy);
+				
+				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
+				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
+			});
 		}
 
 		#include "insieme/backend/operator_converter_end.inc"
