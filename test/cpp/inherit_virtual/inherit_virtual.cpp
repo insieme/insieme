@@ -37,33 +37,64 @@ public:
 
 int main() {
 	{
-			//virtual inheritance
-			Animal a;
-			Mammal m;
-			WingedAnimal wA;
-			Bat b;
-			
-			Mammal& mammal = b;
-			Mammal* pMammal = new Bat();
+		//virtual inheritance
+		Animal a;
+		Mammal m;
+		WingedAnimal wA;
+		Bat b;
+		
+		Mammal& mammal = b;
+		Mammal* pMammal = new Bat();
 
-			mammal.eat();
-			pMammal->eat();
-			mammal.walk();
-			pMammal->walk();
+		mammal.eat();
+		pMammal->eat();
+		mammal.walk();
+		pMammal->walk();
 
-			WingedAnimal& wingedAnimal = b;
-			WingedAnimal* pWingedAnimal = new Bat();
+		WingedAnimal& wingedAnimal = b;
+		WingedAnimal* pWingedAnimal = new Bat();
 
-			wingedAnimal.eat();
-			pWingedAnimal->eat();
-			wingedAnimal.flap();
-			pWingedAnimal->flap();
+		wingedAnimal.eat();
+		pWingedAnimal->eat();
+		wingedAnimal.flap();
+		pWingedAnimal->flap();
 
-			b.eat();
-			b.walk();
-			b.flap();
+		b.eat();
+		b.walk();
+		b.flap();
 
-			delete pWingedAnimal;
-			delete pMammal;
-		}
+		delete pWingedAnimal;
+		delete pMammal;
+	}
+	
+	{
+		//virtual inheritance
+		Animal a;
+		Mammal m;
+		WingedAnimal wA;
+		Bat b;
+		
+		Mammal& mammal = b;
+		Mammal* pMammal = new Mammal();
+
+		mammal.eat();
+		pMammal->eat();
+		mammal.walk();
+		pMammal->walk();
+
+		WingedAnimal& wingedAnimal = b;
+		WingedAnimal* pWingedAnimal = new WingedAnimal();
+
+		wingedAnimal.eat();
+		pWingedAnimal->eat();
+		wingedAnimal.flap();
+		pWingedAnimal->flap();
+
+		b.eat();
+		b.walk();
+		b.flap();
+
+		delete pWingedAnimal;
+		delete pMammal;
+	}
 }
