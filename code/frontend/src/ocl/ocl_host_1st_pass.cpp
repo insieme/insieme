@@ -1290,6 +1290,11 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 		if(fun == BASIC.getRefAssign()) {
 			ExpressionPtr lhs = callExpr->getArgument(0);
 
+			// if this is loading a source file and assigning it to some target => (implicitly) register and drop it
+			if(lookForKernelFilePragma(lhs->getType(), callExpr->getArgument(1))) {
+				return builder.getNoOp();
+			}
+
 			// on the left hand side we'll either have a variable or a struct, probably holding a reference to the global array
 			// for the latter case we have to handle it differently
 			if(const CallExprPtr& lhsCall = dynamic_pointer_cast<const CallExpr>(lhs)) {
