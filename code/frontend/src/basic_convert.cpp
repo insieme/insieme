@@ -584,8 +584,11 @@ core::StatementPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDe
 			// we want the inner static object
 			auto lit = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
 
-			retStmt = builder.initStaticVariable(lit, convertInitExpr(definition->getType().getTypePtr(), 
-																	  definition->getInit(), var->getType().as<core::RefTypePtr>().getElementType(), false));
+			if (definition->getInit())
+				retStmt = builder.initStaticVariable(lit, convertInitExpr(definition->getType().getTypePtr(), 
+																		  definition->getInit(), var->getType().as<core::RefTypePtr>().getElementType(), false));
+			else
+				retStmt = builder.getNoOp();
 		}
 		else{
 
