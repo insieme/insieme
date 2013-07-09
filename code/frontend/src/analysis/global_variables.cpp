@@ -56,8 +56,21 @@
 using namespace insieme::frontend;
 
 
-
 namespace {
+
+/**~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * append global_ before the name, but after the qualification of 
+ * namespaces
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+std::string buildGlobalName(const clang::VarDecl* var, const std::string& storage){
+		std::string qualName = var->getQualifiedNameAsString();
+		std::string name     = var->getNameAsString();
+		std::string newName  = storage+name;
+
+		qualName.replace( qualName.end()-name.size(), qualName.end(), newName);
+		return qualName;
+}
+
 /**~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * traverses the translation unit to find all declarations, 
  * mark those which are globals, extern, or static
@@ -117,8 +130,7 @@ class GlobalsVisitor{
 
 				// this a variable, might be global, static or even extern.
 				// BUT it might be also a class declaration which makes use of globals inside
-				if (varDecl->isThisDeclarationADefinition() == clang::VarDecl::Definition)
-					collector.addVar(varDecl, local);
+				collector.addVar(varDecl, local);
 
 				const clang::Type* type = varDecl->getType().getTypePtr();
 				if (const clang::RecordType* rec = llvm::dyn_cast<clang::RecordType>(type)){
@@ -184,11 +196,9 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var, bool local){
 	if (!var->hasGlobalStorage())
 		return;
 
-	std::string name = var->getQualifiedNameAsString();
-	// FIXME: how should this be??
-//	if (!local) 	name = "global_"+name;
-//	else			name = "static_"+name;
-	if (local) 	name = "static_"+name;
+	std::string name;
+	if (!local) 	name = buildGlobalName(var, "global_");
+	else			name = buildGlobalName(var, "static_");
 
 	VarStorage st;
 	if (local){
@@ -207,6 +217,8 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var, bool local){
 		st = VS_EXTERN;
 	}
 	else {
+		if (var->isThisDeclarationADefinition() != clang::VarDecl::Definition)
+			return;
 		st = VS_GLOBAL;
 	}
 
@@ -265,16 +277,7 @@ std::string GlobalVarCollector::getName (const clang::VarDecl* var){
 	if (fit != staticNames.end())
 		return fit->second;
 	else
-	{
-		// append global_ before the name, but after the qualification of 
-		// namespaces
-		std::string qualName = var->getQualifiedNameAsString();
-		std::string name     = var->getNameAsString();
-		std::string newName  = "global_"+name;
-
-		qualName.replace( qualName.end()-name.size(), qualName.end(), newName);
-		return qualName;
-	}
+		return buildGlobalName(var, "global_");
 }
 
 
@@ -327,6 +330,20 @@ bool GlobalVarCollector::init_it::operator!=(const init_it& o) const {
 	return curr != o.curr;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+std::ostream& operator<< (std::ostream& out, const GlobalVarCollector::VarStorage storage){
+	switch (storage){
+		case GlobalVarCollector::VS_GLOBAL:
+			return out << "VS_GLOBAL";
+		case GlobalVarCollector::VS_STATIC: 
+			return out << "VS_STATIC";
+		case GlobalVarCollector::VS_EXTERN:
+			return out << "VS_EXTERN";
+	}
+	return out << "unkown type";
+}
 
 } // end analysis namespace
 } // end frontend namespace

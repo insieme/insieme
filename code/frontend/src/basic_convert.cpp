@@ -378,11 +378,6 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 
 	// Conversion of the variable type
 	QualType&& varTy = valDecl->getType();
-
-	valDecl->dump();
-	std::cout  << "\n-> at location: (" <<	
-            utils::location(valDecl->getLocStart(), getCurrentSourceManager()) << "); \n "; 
-
 	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
 	assert(irType && "type conversion for variable failed");
 
@@ -1715,7 +1710,7 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 
 		// static variables need to be created to zero initialize the inner initialization flag.
 		// does not matter where is used
-		auto var = mFact.lookUpVariable (it.decl());
+		core::ExpressionPtr var = mFact.lookUpVariable (it.decl());
 		if (globalCollector.isStatic(it.decl())){
 			inits.push_back(builder.createStaticVariable(var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>()));
 			continue;

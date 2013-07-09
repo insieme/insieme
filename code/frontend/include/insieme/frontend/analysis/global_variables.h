@@ -163,6 +163,8 @@ public:
 	init_it end(){
 		return init_it(globalsMap.end());
 	}
+
+	friend std::ostream& operator<< (std::ostream& out, const GlobalVarCollector::VarStorage storage);
 };
 
 } // end analysis namespace
