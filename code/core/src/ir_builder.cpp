@@ -559,8 +559,8 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// if it is a ref type ...
 	if (type->getNodeType() == core::NT_RefType) {
-		// return NULL
-		return manager.getLangBasic().getRefNull();
+		// return NULL for the specific type
+		return callExpr(type, manager.getLangBasic().getGetNull(), getTypeLiteral(type.as<RefTypePtr>()->getElementType()));
 	}
 
 	// if it is a vector type use init uniform
