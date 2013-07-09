@@ -1739,10 +1739,14 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 		if(const clang::Expr* init = it.init()){
 			//FIXME: why this is not done in the visitor???
 			if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( init )) {
-				initValue = utils::cast( mFact.convertInitializerList(listExpr, var->getType()), var->getType());
+				initValue =  mFact.convertInitializerList(listExpr, var->getType());
 			}
 			else
 				initValue = mFact.convertExpr(init);
+
+			if(initValue->getType().isa<core::RefTypePtr>()){
+				initValue = utils::cast( initValue, var->getType().as<core::RefTypePtr>().getElementType());
+			}
 		}
 		else{
 			VLOG(2) << "\tzero init: Type: " << var->getType();
