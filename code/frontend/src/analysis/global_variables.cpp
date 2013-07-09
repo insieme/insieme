@@ -58,6 +58,11 @@ using namespace insieme::frontend;
 
 namespace {
 
+bool isIncompleteTemplate(const clang::VarDecl* var){
+	const clang::Type* ty= var->getType().getTypePtr();
+	return llvm::isa<clang::TemplateTypeParmType>(ty);
+}
+
 /**~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * append global_ before the name, but after the qualification of 
  * namespaces
@@ -129,9 +134,9 @@ class GlobalsVisitor{
 			else if (const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl)){
 
 				// this a variable, might be global, static or even extern.
-				// BUT it might be also a class declaration which makes use of globals inside
 				collector.addVar(varDecl, local);
 
+				// BUT it might be also a class declaration which makes use of globals inside
 				const clang::Type* type = varDecl->getType().getTypePtr();
 				if (const clang::RecordType* rec = llvm::dyn_cast<clang::RecordType>(type)){
 					analyzeDeclContext(llvm::cast<clang::DeclContext>(rec->getDecl()), local);
@@ -196,6 +201,9 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var, bool local){
 	if (!var->hasGlobalStorage())
 		return;
 
+	if (isIncompleteTemplate(var))
+		return;
+
 	std::string name;
 	if (!local) 	name = buildGlobalName(var, "global_");
 	else			name = buildGlobalName(var, "static_");
@@ -239,7 +247,6 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var, bool local){
 	}
 	else{
 		// never existed? create new one
-
 		tGlobalDecl gd = {var,st};
 		globalsMap[name] = gd;
 	}
