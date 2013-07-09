@@ -406,6 +406,11 @@ protected:
 			fixStructType = true;
 			return build.namedValue(name, vInit);
 		}
+
+		// prepare index expression
+		ExpressionPtr indexExpr = build.castExpr(basic.getUInt8(), build.getThreadId());
+		if(masterCopy) indexExpr = build.literal(basic.getUInt8(), "0");
+
 		CallExprPtr call = dynamic_pointer_cast<const CallExpr>(node);
 		if(call) {
 			//cout << "%%%%%%%%%%%%%%%%%%\nCALL THREADPRIVATE:\n" << *call << "\n";
@@ -415,8 +420,6 @@ protected:
 			elemType = build.vectorType(elemType, build.concreteIntTypeParam(MAX_THREADPRIVATE));
 			CallExprPtr memAccess = 
 				build.callExpr(build.refType(elemType), basic.getCompositeRefElem(), args[0], args[1], build.getTypeLiteral(elemType));
-			ExpressionPtr indexExpr = build.castExpr(basic.getUInt8(), build.getThreadId());
-			if(masterCopy) indexExpr = build.literal(basic.getUInt8(), "0");
 			ExpressionPtr accessExpr = build.arrayRefElem(memAccess, indexExpr);
 			if(masterCopy) return accessExpr;
 			// if not a master copy, optimize access
@@ -431,6 +434,27 @@ protected:
 				return varP;
 			}
 			 
+		}
+		LiteralPtr literal = node.isa<LiteralPtr>();
+		if(literal) {
+			std::cout << "Encountered thread-private annotation at literal: " << *literal << " of type " << *literal->getType() << "\n";
+
+			// deal with a global variable marked to be thread-private
+			assert(literal->getType()->getNodeType() == NT_RefType);
+
+			// alter the type of the literal
+			TypePtr newType = build.refType(
+					build.vectorType(
+							core::analysis::getReferencedType(literal->getType()),
+							build.concreteIntTypeParam(MAX_THREADPRIVATE)
+					)
+			);
+
+			// create the new literal
+			LiteralPtr newLiteral = build.literal(literal->getValue(), newType);
+
+			// create an expression accessing the literal
+			return build.arrayRefElem(newLiteral, indexExpr);
 		}
 		assert(false && "OMP threadprivate annotation on non-member / non-call");
 		return NodePtr();
