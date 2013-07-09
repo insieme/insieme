@@ -217,12 +217,10 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var, bool local){
 		st = VS_EXTERN;
 	}
 	else {
-		if (var->isThisDeclarationADefinition() != clang::VarDecl::Definition)
-			return;
 		st = VS_GLOBAL;
 	}
 
-	VLOG(2) << " var: " << name << " in " << (local? "static" : "global");
+	VLOG(2) << " var: " << name << " \t\t\t storage:" << st;
 
 	// if already exists a previous version, and is marked as extern update with non extern if
 	// possible
