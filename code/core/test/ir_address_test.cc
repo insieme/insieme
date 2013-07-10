@@ -486,10 +486,12 @@ TEST(NodePointer, DynamicCast) {
 	NodeAddress a(builder.intLit(12));
 
 	// this should work
+	EXPECT_TRUE(a.isa<ExpressionPtr>());
 	EXPECT_TRUE(a.isa<ExpressionAddress>());
 	a.as<ExpressionAddress>();
 
 	// this should also work
+	EXPECT_TRUE(a.isa<LiteralPtr>());
 	EXPECT_TRUE(a.isa<LiteralAddress>());
 	a.as<LiteralAddress>();
 
