@@ -593,7 +593,7 @@ public:
 
 	bool visitNode(const NodeAddress& node) {
 		counter++;
-		return ! (node.getDepth() < (std::size_t)depthLimit);
+		return (node.getDepth() >= (std::size_t)depthLimit);
 	};
 
 	void reset() {

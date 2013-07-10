@@ -1171,7 +1171,7 @@ inline bool visitDepthFirstInterruptible(const Ptr<Node>& root, Lambda lambda, b
 
 /**
  * The given visitor is DepthFirstly applied to all nodes reachable starting from the
- * given root node. If the given visitor returns false, the corresponding sub-tree will be pruned.
+ * given root node. If the given visitor returns true, the corresponding sub-tree will be pruned.
  *
  * @param root the root not to start the visiting from
  * @param visitor the visitor to be visiting all the nodes
