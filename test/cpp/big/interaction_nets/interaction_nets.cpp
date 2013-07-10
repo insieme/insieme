@@ -7,6 +7,7 @@
 #include <string>
 #include <queue>
 #include <sstream>
+#include <atomic>
 
 #define MAX_PORTS 3
 
@@ -139,12 +140,13 @@ Cell* toNet(unsigned value) {
 
 int toValue(Cell* net) {
 	// compute value
-	if (net->getSymbol() == '0') return 0;
-	if (net->getSymbol() == 's') {
-		int res = toValue(net->getPort(1));
-		return (res == -1) ? -1 : res + 1;
+	int ret = 0;
+	while(net->getSymbol() != '0') {
+		if(net->getSymbol() != 's') return -1;
+		ret++;
+		net = net->getPort(1);
 	}
-	return -1;
+	return ret;
 }
 
 Port add(Port a, Port b) {
@@ -316,7 +318,7 @@ void compute(Cell* net) {
 		if (a->getSymbol() < b->getSymbol()) {
 			Cell* h = a; a = b; b = h;
 		}
-
+		
 /*
 		// debugging:
 		stringstream file;
