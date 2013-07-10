@@ -104,7 +104,9 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 			return classType;
 
 		core::ClassMetaInfo classInfo;
-		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl());
+
+		//~~~~~ look in the indexer for the full decl ~~~~
+		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(tagType->getDecl());
 
 		//~~~~~ base clases if any ~~~~~
 		if (classDecl->getNumBases() > 0){
@@ -277,7 +279,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::handleTagType(const TagDecl* 
 // template instantiation occurs, at which point this will become either
 // a ConstantArrayType or a VariableArrayType.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter ::VisitDependentSizedArrayType(const DependentSizedArrayType* arrTy) {
+core::TypePtr ConversionFactory::CXXTypeConverter::VisitDependentSizedArrayType(const DependentSizedArrayType* arrTy) {
 	assert(false && "DependentSizedArrayType not yet handled!");
 	return core::TypePtr();
 }
@@ -312,7 +314,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitReferenceType(const Refe
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					TEMPLATE SPECIALIZATION TYPE (TODO)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter ::VisitTemplateSpecializationType(const TemplateSpecializationType* templTy) {
+core::TypePtr ConversionFactory::CXXTypeConverter::VisitTemplateSpecializationType(const TemplateSpecializationType* templTy) {
 	VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
 	VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
 	for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
@@ -340,7 +342,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitTemplateSpecializationT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter ::VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
+core::TypePtr ConversionFactory::CXXTypeConverter::VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
@@ -351,7 +353,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitDependentTemplateSpecia
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter ::VisitInjectedClassNameType(const InjectedClassNameType* tempTy) {
+core::TypePtr ConversionFactory::CXXTypeConverter::VisitInjectedClassNameType(const InjectedClassNameType* tempTy) {
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
@@ -362,7 +364,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitInjectedClassNameType(c
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					SUBSTITUTE TEMPLATE TYPE PARAMETER TYPE (TODO)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter ::VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* substTy) {
+core::TypePtr ConversionFactory::CXXTypeConverter::VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* substTy) {
 	core::TypePtr retTy;
 	LOG_TYPE_CONVERSION( substTy, retTy );
 
@@ -380,6 +382,17 @@ core::TypePtr ConversionFactory::CXXTypeConverter ::VisitSubstTemplateTypeParmTy
 	//START_LOG_TYPE_CONVERSION(substTy);
 	//assert(false && "SubstTemplateTypeParmType not yet handled!");
 	retTy = convFact.convertType( substTy->getReplacementType().getTypePtr() );
+	return retTy;
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//					DEC
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::TypePtr ConversionFactory::CXXTypeConverter::VisitTemplateTypeParmType(const clang::TemplateTypeParmType* tempTy){
+	core::TypePtr retTy;
+    LOG_TYPE_CONVERSION( tempTy, retTy );
+
+	assert(false && "TemplateTypeParmType not yet handled!");
 	return retTy;
 }
 

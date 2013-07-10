@@ -109,7 +109,7 @@ protected:
 		/**
 		 * Maps Clang variable declarations (VarDecls and ParmVarDecls) to IR variables.
 		 */
-		typedef std::map<const clang::ValueDecl*, core::VariablePtr> VarDeclMap;
+		typedef std::map<const clang::ValueDecl*, core::ExpressionPtr> VarDeclMap;
 		VarDeclMap varDeclMap;
 
 		/**
@@ -174,11 +174,11 @@ protected:
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Global variables utility
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		/** 
-		 * Keeps the type and initialization of the global variables within the entry point
-		 */
-		typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
-		GlobalStructPair globalStruct;
+//		/** 
+//		 * Keeps the type and initialization of the global variables within the entry point
+//		 */
+//		typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;  // FIXME: to desapear
+//		GlobalStructPair globalStruct;
 
 		/**
 		 * Global and static variables
@@ -188,17 +188,17 @@ protected:
 		std::set<const clang::VarDecl*> thread_private;
 		std::set<const clang::VarDecl*> volatiles;
 
-		/*
-		 * Set of the function which need access to global variables, every time such a
-		 * function is converted the data structure containing global variables has to
-		 * be correctly forwarded by using the capture list
-		 */
-		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncSet;
-		UseGlobalFuncSet globalFuncSet;
-
-		typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
-		GlobalIdentMap globalIdentMap;
-
+//		/*
+//		 * Set of the function which need access to global variables, every time such a
+//		 * function is converted the data structure containing global variables has to
+//		 * be correctly forwarded by using the capture list
+//		 */
+//		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncSet;  //FIXME:: not used
+//		UseGlobalFuncSet globalFuncSet;
+//
+//		typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;  // FIXME:: used??
+//		GlobalIdentMap globalIdentMap;
+//
 		/*
 		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
 		 * a new variable is created in function body and the value of the input parameter assigned to it
@@ -286,17 +286,7 @@ protected:
 	 */
 	 const TranslationUnit* currTU;
 
-	/**
-	 * Returns a reference to the IR data structure used to represent a variable of the input C program.
-	 *
-	 * The function guarantees that the same variable in the input program is always represented in the
-	 * IR with the same generated Variable and in the case of access to global variables, a reference
-	 * to a member of the global data structure is returned.
-	 */
-	core::ExpressionPtr lookUpVariable(const clang::ValueDecl* valDecl);
-	core::ExpressionPtr convertInitializerList(
-			const clang::InitListExpr* initList,
-			const core::TypePtr& type) ;
+
 
 	/**
 	 * Attach annotations to a C function of the input program.
@@ -306,12 +296,11 @@ protected:
 	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node,
 			const clang::FunctionDecl* funcDecl);
 
-	core::FunctionTypePtr addGlobalsToFunctionType(	const core::FunctionTypePtr& funcType);
+	core::FunctionTypePtr addGlobalsToFunctionType(	const core::FunctionTypePtr& funcType);  // TO DESAPEAR
 
 
 public:
 	ConversionFactory(core::NodeManager& mgr, Program& program, bool isCxx = false);
-
 	// Getters & Setters
 	const core::IRBuilder& getIRBuilder() const {
 		return builder;
@@ -344,6 +333,15 @@ public:
 	}
 
 	/**
+	 * Returns a reference to the IR data structure used to represent a variable of the input C program.
+	 *
+	 * The function guarantees that the same variable in the input program is always represented in the
+	 * IR with the same generated Variable and in the case of access to global variables, a reference
+	 * to a member of the global data structure is returned.
+	 */
+	core::ExpressionPtr lookUpVariable(const clang::ValueDecl* valDecl);
+
+	/**
 	 * Because when literals are read from a function declaration we need to
 	 * set manually the translation unit which contains the definition of the
 	 * function, this method helps in setting the translation unit correctly.
@@ -362,13 +360,11 @@ public:
 	}
 
 	/**
-	 * Entry point for converting function to the right type, it also 
-	 * does the inclusion of the globals if needed
+	 * Entry point for converting function to the right type
 	 * @param dcl declaration of the function
-	 * @param ignoreGlobals, this function will have no globals
 	 * @return the corresponding IR type
 	 */
-	core::FunctionTypePtr convertFunctionType(const clang::FunctionDecl* dcl, bool ignoreGlobals = false);
+	core::FunctionTypePtr convertFunctionType(const clang::FunctionDecl* dcl);
 
 	/**
 	 * Entry point for converting clang types into an IR types
@@ -459,7 +455,7 @@ public:
 	 * @param varDecl a clang variable declaration
 	 * @return The IR translation of the variable declaration
 	 */
-	virtual core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* varDecl);
+	virtual core::StatementPtr convertVarDecl(const clang::VarDecl* varDecl);
 
 	/**
 	 * Returns the default initialization value of the IR type passed as input.
@@ -527,12 +523,10 @@ public:
 	 */
 	core::ExpressionPtr convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl);
 
-};
-
-struct GlobalVariableDeclarationException: public std::runtime_error {
-	GlobalVariableDeclarationException() :
-			std::runtime_error("global variable declaration exception") {
-	}
+	// FIXME: where here and not expr visitor????
+	core::ExpressionPtr convertInitializerList(
+			const clang::InitListExpr* initList,
+			const core::TypePtr& type) ;
 };
 
 // ------------------------------------ ASTConverter ---------------------------
@@ -545,15 +539,17 @@ protected:
 	ConversionFactory mFact;
 	core::ProgramPtr mProgram;
 	utils::Indexer& mIndexer;
+	analysis::GlobalVarCollector& globalCollector;
 
 public:
 	
-	ASTConverter(core::NodeManager& mgr, Program& prog, bool cpp=false):
+	ASTConverter(core::NodeManager& mgr, Program& prog, analysis::GlobalVarCollector& coll, bool cpp=false):
 			mgr(mgr),
 			mProg(prog),
 			mFact(mgr, prog, cpp),
 			mProgram(prog.getProgram()),
-			mIndexer(prog.getIndexer()) {
+			mIndexer(prog.getIndexer()),
+			globalCollector(coll){
 	}
 
 	core::ProgramPtr getProgram() const { return mProgram; }
@@ -566,19 +562,7 @@ public:
 
 	core::CallExprPtr handleBody(const clang::Stmt* body, const TranslationUnit& tu);
 
-	void collectGlobals(const clang::FunctionDecl* fDecl) {
-		std::shared_ptr<analysis::GlobalVarCollector> globColl = getFreshGlobalCollector();
-	
-		// Extract globals starting from this entry point
-		(*globColl)(fDecl);
-		(*globColl)(mProg.getTranslationUnits());
-
-		mFact.buildGlobalStruct(*globColl);
-	}
-
-	virtual std::shared_ptr<analysis::GlobalVarCollector> getFreshGlobalCollector() {
-		return std::make_shared<analysis::GlobalVarCollector>(mIndexer, mProg.getInterceptor(), mFact);
-	}
+	core::LambdaExprPtr addGlobalsInitialization(const core::LambdaExprPtr& mainFunc);
 };
 
 // ------------------------------------ ASTConverter ---------------------------
@@ -587,12 +571,8 @@ public:
 class CXXASTConverter : public ASTConverter {
 
 public:
-	CXXASTConverter(core::NodeManager& mgr, Program& prog) :
-		ASTConverter(mgr, prog, true) { }
-
-	virtual std::shared_ptr<analysis::GlobalVarCollector> getFreshGlobalCollector() {
-		return std::make_shared<analysis::CXXGlobalVarCollector>(mIndexer, mProg.getInterceptor(), mFact);
-	}
+	CXXASTConverter(core::NodeManager& mgr, Program& prog, analysis::GlobalVarCollector& coll) :
+		ASTConverter(mgr, prog, coll, true) { }
 };
 } // End conversion namespace
 } // End frontend namespace

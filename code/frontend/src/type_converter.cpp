@@ -733,10 +733,8 @@ core::TypePtr ConversionFactory::TypeConverter::VisitPointerType(const PointerTy
 		return gen.getAnyRef();
 	}
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr&& retTy =
-		(subTy->getNodeType() == core::NT_FunctionType)
-		? subTy
-		: builder.refType(builder.arrayType( subTy ));
+	core::TypePtr&& retTy = (subTy->getNodeType() == core::NT_FunctionType)? 
+		subTy : builder.refType(builder.arrayType( subTy ));
 
 	LOG_TYPE_CONVERSION( pointerTy, retTy );
 	return retTy;

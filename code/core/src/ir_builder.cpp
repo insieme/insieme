@@ -522,7 +522,7 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// if it is the char type
 	if(manager.getLangBasic().isChar(type)) {
-		return literal(type, "\0");
+		return literal(type, "' '");
 	}
 
 	// if it is a lock, keep it undefined
@@ -559,8 +559,8 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// if it is a ref type ...
 	if (type->getNodeType() == core::NT_RefType) {
-		// return NULL
-		return manager.getLangBasic().getRefNull();
+		// return NULL for the specific type
+		return callExpr(type, manager.getLangBasic().getGetNull(), getTypeLiteral(type.as<RefTypePtr>()->getElementType()));
 	}
 
 	// if it is a vector type use init uniform
@@ -1433,8 +1433,9 @@ CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const Express
 StatementPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, const ExpressionPtr& initValue) const {
 	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
 
-	assert(ext.isStaticType(staticVariable->getType()));
-	assert(ext.unwrapStaticType(staticVariable->getType()) == initValue->getType());
+	assert(staticVariable.getType().isa<RefTypePtr>());
+	assert(ext.isStaticType(staticVariable->getType().as<core::RefTypePtr>().getElementType()));
+	assert(ext.unwrapStaticType(staticVariable->getType().as<RefTypePtr>().getElementType()) == initValue->getType());
 
 	return callExpr(getLangBasic().getUnit(), ext.getInitStatic(), staticVariable, initValue);
 }
@@ -1442,17 +1443,16 @@ StatementPtr IRBuilder::initStaticVariable(const LiteralPtr& staticVariable, con
 StatementPtr IRBuilder::createStaticVariable(const LiteralPtr& staticVariable) const {
 	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
 
-	assert(ext.isStaticType(staticVariable->getType()));
-
-	return callExpr(getLangBasic().getUnit(), ext.getCreateStatic(), staticVariable);
+	TypePtr staticWrap = staticVariable.getType().as<RefTypePtr>().getElementType();
+	ExpressionPtr init =  callExpr(staticWrap, ext.getCreateStatic(), getTypeLiteral(ext.unwrapStaticType(staticWrap)));
+	return assign(staticVariable, init);
 }
 
 ExpressionPtr IRBuilder::accessStatic(const LiteralPtr& staticVariable) const {
 	const lang::StaticVariableExtension& ext = manager.getLangExtension<lang::StaticVariableExtension>();
-
-	assert(ext.isStaticType(staticVariable->getType()));
-
-	return callExpr(ext.unwrapStaticType(staticVariable->getType()), ext.getAccessStatic(), staticVariable);
+	assert(staticVariable->getType().isa<RefTypePtr>());
+	assert(ext.isStaticType(staticVariable->getType().as<RefTypePtr>().getElementType()));
+	return callExpr(refType(ext.unwrapStaticType(staticVariable->getType().as<RefTypePtr>().getElementType())), ext.getAccessStatic(), staticVariable);
 }
 
 

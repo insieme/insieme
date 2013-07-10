@@ -43,6 +43,7 @@
 #include <boost/type_traits/remove_const.hpp>
 #include <boost/utility/enable_if.hpp>
 
+#include "insieme/utils/assert.h"
 #include "insieme/utils/hash_utils.h"
 
 #include "insieme/core/forward_decls.h"
@@ -708,14 +709,22 @@ public:
 template<typename B, typename T>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, Address<B>>::type
 static_address_cast(Address<T>& src) {
-	assert(src && dynamic_cast<B*>(&(*src)) && "Invalid static cast!");
+	assert_true(src && dynamic_cast<B*>(&(*src)))
+				<< "Invalid static cast!\n"
+				<< "  source type: " << node_type<T>::getName() << "\n"
+				<< "  actual type: " << src->getNodeType() << "\n"
+				<< "  target type: " << node_type<B>::getName() << "\n";
 	return Address<B>(src.getPath());
 }
 
 template<typename B, typename T>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, const Address<B>>::type
 static_address_cast(const Address<T>& src) {
-	assert(src && dynamic_cast<B*>(&(*src)) && "Invalid static cast!");
+	assert_true(src && dynamic_cast<B*>(&(*src)))
+				<< "Invalid static cast!\n"
+				<< "  source type: " << node_type<T>::getName() << "\n"
+				<< "  actual type: " << src->getNodeType() << "\n"
+				<< "  target type: " << node_type<B>::getName() << "\n";
 	return Address<B>(src.getPath());
 }
 
@@ -726,7 +735,11 @@ static_address_cast(const Address<T>& src) {
 template<typename B, typename T, typename E = typename B::element_type>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 static_address_cast(const Address<T>& src) {
-	assert((!src || dynamic_cast<E*>(&(*src))) && "Invalid static cast!");
+	assert_true(!src || dynamic_cast<E*>(&(*src)))
+				<< "Invalid static cast!\n"
+				<< "  source type: " << node_type<T>::getName() << "\n"
+				<< "  actual type: " << src->getNodeType() << "\n"
+				<< "  target type: " << node_type<E>::getName() << "\n";
 	return B(src.getPath());
 }
 

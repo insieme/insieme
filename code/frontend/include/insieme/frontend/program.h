@@ -51,6 +51,10 @@
 namespace insieme {
 namespace frontend {
 
+namespace analysis {
+	class GlobalVarCollector;
+}
+
 namespace utils {
 	class Interceptor;
 	class Indexer;
@@ -130,6 +134,7 @@ public:
 
 	utils::Interceptor& getInterceptor() const;
 	utils::Indexer& getIndexer() const;
+	analysis::GlobalVarCollector& getGlobalCollector() const;
 
 	utils::FunctionDependencyGraph& getCallGraph() const;
 	const vector<boost::filesystem::path>& getStdLibDirs() const;
