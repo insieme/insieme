@@ -1,0 +1,371 @@
+\chapter{The Analysis Module}
+
+\section{The Polyhedral Model [Simone]}
+\label{insieme:analysis:polyhedral}
+
+\subsection{Overview of the Polyhedral Model}
+
+\begin{figure}[t]
+\small
+\begin{lstlisting}[caption=Running example]
+for(unsigned i=0; i<n; ++i) {
+	A[i][i] = 0;												S0
+	for(unsigned j=i; j<n; ++j) { 
+		A[i][j+1] = i+j;				 					    S1
+		(i+j)%2 && (A[n-j][n-i] = j-i);	         		        S2
+	}
+}
+\end{lstlisting}
+\label{list:1}
+\end{figure}
+
+The polyhedral model represents, in an algebraic way, the execution of a
+program.  It captures both the control-flow and data-flow of a program using
+three compact linear algebraic structures, described in the following
+subsections. The main idea is to define, for a statement $S$, a \emph{space} in
+$Z^n$ where each point correspond to an execution, or \emph{instance}, of $S$.
+The value of the coordinates of a point within this space represents the value of
+the $N$ loop iterators spawning statement $S$.  In order to keep the
+representation compact, such space, called \emph{polyhedron}, is defined by a
+set of bounding \emph{affine hyperplanes}.
+%end not by enumerating the single points.
+
+\begin{definition}
+\label{def:1}
+(Affine Hyperplane). The set X of all vectors $x \in \mathbb{Z}^n$ such that $h.\vec{x} =
+k$, for $k \in \mathbb{Z}$.
+\end{definition}
+
+\begin{definition}
+\label{def:2}
+(Polyhedron). The set of all vectors $\vec{v} \in \mathbb{Z}^n$ such that $A \vec{v} +
+\vec{b} \ge 0$, where $A$ is an integer matrix.
+\end{definition}
+
+\subsubsection{Iteration Domain}
+Because the space is bounded by a set of all affine inequalities the
+corresponding integer polyhedron is convex. A bounded polyhedron is also called
+\emph{polytope}. The space on which a statement is define is also referred to as
+its \emph{Iteration Domain}, $\mathcal{D}_S$. For example lets consider the code in
+Listing~\ref{list:1}. This loop nest contains 3 statements which are referred to
+as $S0$, $S1$ and $S2$. Each statement is defined within an iteration domain
+which is bound by the surrounding control flow statements. For example the
+iteration domain for $S0$, $S1$ and $S2$ is defined as follows:
+\begin{align*}
+	\mathcal{D}_{S_0} = & \{~i~|~0 \le i < n \} \\
+	\mathcal{D}_{S_1} = & \{~i,j~|~ 0 \le i < n \wedge i \le j < n \} \\
+	\mathcal{D}_{S_2} = & \{~i,j~|~ 0 \le i < n \wedge i \le j < n ~\wedge  
+						\exists~e \in \mathbb{Z}~|~ i+j-2e=1 \}
+\end{align*}
+
+As described in \ref{def:2}, iteration domains are represented by the integer
+matrix $A$ multiplied by a so called \emph{iteration vector} $\vec{x}$. The
+iteration vector determine the dimensionality of the space on which a statement
+is defined therefore composed by the loop iterators enclosing a statement. For
+example iteration domain for statement $S1$ in listing~\ref{list:1}~is defined
+by the vector $\vec{x_{S_1}} = \begin{pmatrix} i \\ j \\ n\end{pmatrix}$.
+$i$ and $j$ are said iterators (since they vary within the defining loop
+boundaries) while $n$ is a parameter. 
+Conventionally the matrix $A$ is represented using a so-called
+\emph{homogeneous} coordinates so that vector $\vec{b}$ is added as its last
+column. Iteration domain for statement $S_1$ is therefore represented as
+follows:
+
+\begin{align*}
+\mathcal{D}_{S_1} = & \begin{Bmatrix} 
+	\begin{pmatrix} i \\ j \end{pmatrix} \big|
+	\begin{pmatrix} i \\ j \end{pmatrix} \in \mathbb{Z}^2,
+	\begin{bmatrix} 1 & 0 & 0 & 0\\ -1 & 0 & 1 & -1 \\ 
+			-1 & 1 & 0 & 0 \\  0 & -1 & 1 & -1 
+	\end{bmatrix} \cdot
+	\begin{pmatrix} i \\ j \\ n \\ 1 \end{pmatrix}
+	\ge \vec{0}
+\end{Bmatrix}
+\end{align*}
+
+\subsubsection{Scheduling Function}
+The second piece of information which is required to describe the semantics of a
+program are the so-called \emph{scheduling} (or \emph{scattering})
+\emph{functions}. Intuitively, statements belonging to a loop body, and subject
+to the same control flow, will share identical iteration domains. The
+information of the order on which statement instances are executed is not
+represented. A \emph{schedule}, $\theta(\vec{x})$, is a function which
+associates a logical \emph{execution date} to each instance of a statement. This
+allows the ordering of the instances defined by the iteration domain and
+furthermore it defines an execution order for instances of different statements.
+A schedule $\theta(\vec{x})$ has the following shape:
+\[
+\theta_S (\vec{x}) = T_S\vec{x} + \vec{t_S}
+\]
+where $\vec{x}$ is the iteration vector, $T_S$ is an integer constant
+transformation matrix and $\vec{t_S}$ is a constant vector. $T_S$ and
+$\vec{t_S}$ can be merged together into a matrix $\mathcal{S}$ if the system is
+represented based on homogeneous coordinates. 
+
+A standard and simple way of assigning scheduling functions to statements of
+program is done on the basis of the AST as explained in the Cloog user
+guide~\cite{cloog}.
+For example scheduling functions
+for statements $S0$, $S1$ and $S2$ of code in listing~\ref{list:1}~are defined
+as follows:
+% \begin{align*}
+% \mathcal{S}_{S_{0}} = \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix} 
+% 					\begin{pmatrix} i \\ 1 \end{pmatrix}  \\
+% 
+% \mathcal{S}_{S_{1}} = \begin{bmatrix*}[r] 1 & 0 & 0 \\ 0 & 0 & 1 \\ 
+% 										0 & 1 & 0 \\ 0 & 0 & 0
+% 					\end{bmatrix} 
+% 					\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}  \\
+% 
+% \mathcal{S}_{S_{2}} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & 0 & 1 \\ 
+% 										0 & 1 & 0 \\  0 & 0 & 1 
+% 					\end{bmatrix} 
+% 					\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}
+% \end{align*}
+Intersection of the scheduling function by the corresponding iteration domain of
+the statement produces a sequence of tuples, or logic dates, representing
+the execution order of each statement instance. Lexicographically 
+ordering the set will give the exact sequence of statements instances executed
+by the program. % oh god this is ugly
+\begin{align*}
+	S_0:(0,0) & \prec S_1:(0,1,0,0) \prec S_2:(0,1,0,1) \prec \\ 
+			  & S_1:(0,1,1,0) \prec S_2:(0,1,1,1) \prec \ldots \prec \\
+	S_0:(1,0) & \prec S_1:(1,1,0,0) \prec S_2:(1,1,0,1) \prec ...
+\end{align*}
+
+
+\subsubsection{Access Function}
+One last function is also required to capture the data locations on which a
+statement operates. The \emph{access} (or \emph{subscript}) \emph{function} 
+describes the index expression utilized to access arrays, and therefore memory
+locations, within a statement. Representation of access functions is similar to
+what already described for scattering functions. For example array 
+access in statement $S1$, \texttt{A[i][j+1]}, can be represented in matrix form
+with one row for each dimension being accessed:
+% \[
+% \mathcal{A}_{USE(A)} =  \begin{bmatrix}[r] 1 & 0 & 0 \\ 0 & 1 & 1 \\ 
+% 						\end{bmatrix} 
+% 						\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}
+% \]
+Access functions also store the information whether a particular memory location
+is being read (\texttt{USE}) or written (\texttt{DEF}). This kind of
+information is utilized by the polyhedral model to compute exact dataflow and
+dependency analysis for a given code region. 
+
+\subsubsection{Static Control Part (SCoP)}
+
+The three functions described above can completely describe (both semantically
+and syntactically) a code region (also called SCoP) which respects the
+constraints of the Polyhedral Model. A SCoP is defined to be the maximal set of
+consecutive instructions such that: loop bounds, conditionals and subscript
+expression are all affine functions of the surrounding loop iterators and global
+variables; loop iterators and global variables cannot be modified. 
+
+By definition, a subset of a SCoP is still a SCoP. A program usually may contain
+several non-overlapping SCoPs. 
+
+\subsection{Polyhedral Model Data Structures in Insieme}
+
+The support for the PM is included in the \file{analysis/polyhedral} and
+\file{transform/polyhedral}. In this Section only the analysis part is covered. 
+
+\subsubsection{The \type{IterationVector}}
+
+The \file{analysis/polyhedral/iter\_vec.h} abstracts the concept of iteration
+vector covered above. An iteration vector is composed by a list of
+\type{Iterators}s, a list of \type{Parameter}s and a \type{Constant} part.
+Implementation is quite straightforward. 
+
+Important to notice that while iterators must be an IR \type{Variable}, a
+parameter can be any \type{Expression} (this is needed to be able to represent
+struct members as parameter of a SCoP). An iteration vector can be either build
+with a predefined layout or manipulated by adding components. An empty iteration
+vector always have at least a constant part. 
+
+\begin{srcCode}
+IterationVector iterVec(vector<Iterator>{v1,v2}, vector<Parameter>{v3});
+out << iterVec; // (v1,v2|v3|1)
+
+// or 
+
+IterationVector iterVec;
+iterVec.add(Iterator(v1));
+iterVec.add(Iterator(v2));
+iterVec.add(Parameter(v3));
+out << iterVec; // (v1,v2|v3|1)
+\end{srcCode}
+
+Printing an iteration vector to an output stream produces a representation which
+lists iterators followed by parameters and the constant part 1. Each part is
+separated by a {\tt |}. 
+
+Methods are included which iterates through the elements of an iteration vector,
+or a subset of them (iterators and parameters). The number of iterators is given
+by the {\tt getIteratorNum()} function while the number of parameters is given
+by {\tt getParameterNum()}. The index of an element is given by the {\tt
+getIdx()} function which returns -1 if the variable being searched is not in the
+iteration vector. 
+
+For additional information on how to manipulate an iteration vector refer to the
+unit test file \file{analysis/test/polyhedral/polyhedral\_test.cc}. 
+
+In the \file{analysis/polyhedral/iter\_vec.h} file several utility functions are
+provided to work with iteration vectors. The {\tt IterationVector merge(const
+IterationVector\& iv1, const IterationVector\& iv2)} function in particular is
+useful when an iteration vector needs to be generated from two distinct vectors.
+The operation simply creates a new iteration vector containing the iterators of
+vector {\tt v1} before the ones of vector {\tt v2} and the same pattern for
+parameters. A second function is the {\tt transform} utility. This function is
+used to create a map which transforms a functions which are expressed in terms
+of one iteration vector into another. The operation is valid only if the source
+vector is smaller than the target and if all the elements present in the source
+appear as well in the target vector. Use of this transformation map
+(\type{IndexTransMap}) will be explained in the next section.
+
+\subsubsection{The \type{AffineFunction}}
+
+An affine function is an expression which of the form $c_1 \cdot a_1 + c_2 \cdot
+a_2 + \ldots + c_n \cdot a_n + c_0 \cdot 1$ where $c_i \in \mathbb{Z}$ and $a_i
+\in \mathbb{V}ar$. The concept of an affine function is represented in the file
+\file{analysis/polyhedral/affine\_func.h} by the
+\type{analysis::polyhedral::AffineFunction} class. 
+
+The representation uses a compact representation (in order to limit the space
+used by the PM representation), it stores a reference to an iteration vector
+which contains the variables (i.e. $a_i$) of the affine function, a vector of
+integer coefficients ({\tt coeffs}) $c_i$, and an integer value ({\tt sep})
+which dictates the index of the first coefficient (in {\tt coeffs}) which refers
+to parameters. For the iterators or parameters for which no coefficient is
+provided, a 0 value is assumed.
+
+For example given the iteration vector $(v_1,v_2|v_3|1)$ and the coefficient
+vector $\{1,3\}$ and $sep = 1$; this corresponds to the affine function: $v_1 +
+3 \cdot v_3$ since coefficient for $v_2$ and the constant part are not provided
+and therefore automatically set to 0. Instead, if the coefficient vector is
+$\{2,3,4,5\}$ then $sep = 2$, the relative affine function is $2 \cdot v_1 + 3
+\cdot v_2 + 4 \cdot v_3 + 5$. 
+
+An affine function object can be build from an expression or a \type{Formula}
+object.  In this case the iteration vector being passed to the constructor is
+updated with the iterators and parameters found within the expression. New
+elements of an iteration vector are always added in append (iterators are
+appended to the list of iterators and parameters append to the list of
+parameters). In this way affine functions referring to the same iteration vector
+remain valid. Once built, the iteration vector associated to an affine function
+cannot be modified. {\bf NOTE:} It is responsibility of the programmer to make
+sure that the iteration vector does not out-live the affine function instance.
+
+A member function is also available to ``move'' an affine function to another base
+(or iteration vector) {\tt toBase(const IterationVector\&)}. This operation may
+fail if the new base is not compatible with the old. In order to speedup the
+process of converting many affine function to a new base the {\tt transform}
+method defined in \file{analysis/polyhedral/iter\_vec.h} allows the creation of
+a transformation map which can be applied to an affine function to change it
+into a new base. 
+
+For further details related to the use and manipulation of affine functions
+refer to the test units in \file{analysis/test/polyhedral/polyhedral\_test.cc}. 
+
+\subsubsection{The \type{Constraint} and \type{AffineConstraint}} 
+
+The \type{insieme::utils::Constraint} is a generic class used to represent
+constraints of the type $f(x) == | != | < | <= | > | >= 0$. Where $f(x)$ can be
+any object which represent a function. Since it is generic with respect of the
+functor being used (e.g. \type{Constraint<Formula>} or
+\type{Constraint<Expression>} can be easily instantiated and used) its
+definition is within the utilities of Insieme,
+\file{insieme/utils/constraint.h}. In the case of the polyhedral model the
+template class is instantiated as \type{Constraint<AffineFunction>}.  Therefore
+it encodes constraints of affine functions.  The typename \type{AffineFunction}
+is introduced as an alias for such instantiation. 
+
+Constraints can be combined to create more complex predicates. This is obtained
+through the \type{Combiner<T>} class. The Combiner is an {\em abstract} class
+which is then realized through three concrete classes:
+
+\begin{description}
+
+	\item[\type{RawConstraint<T>}:] This is a wrapper for a plain constraint
+		object. 
+
+	\item[\type{NegConstraint<T>}:] It represent the negation of a sub-constraint
+		which can be either a plain constraint or a composition of two or more
+		other constraints. 
+
+	\item[\type{BinConstraint<T>}:] This combiner is used to represent either
+		conjunction, i.e. $C_i \wedge C_j$, or disjunction, i.e. $C_i \vee C_j$,
+		of two constraints. 
+
+\end{description}
+
+The representation is based on the {\em composite} design pattern, therefore
+this allows complex structures to be represented as a tree. One of the key
+features of this representation is that beside storing the semantics of a
+constraint it also keeps its syntax (or aspect) unvaried. 
+
+Combining constraints is simplified by a set of operations which have been
+overloaded to simplify the construction of complex expressions. 
+
+\begin{description}
+
+	\item[{\tt \&\&}:] The {\em logic and} operator is used to build a conjunction
+		between two constraints. 
+
+	\item[{\tt ||}:] The {\em logic or} operator is used to build a disjunction
+		between two constraints. 
+
+	\item[{\tt \textasciitilde{}}:] The not operator is used to negate a constraint. 
+
+\end{description}
+
+For actual examples of how Constraints objects are created and manipulated
+please refer to unit test cases in
+\file{analysis/test/polyhedral/polyhedral\_test.cc}. 
+
+
+In order to explore the content of a constraint (since it is an expression tree) the visitor
+pattern is utilized. The class \type{ConstraintVisitor<T>} is responsible for
+that providing an easy way to scan a constraint for particular properties. A
+derived class offers a basic visitor with recurring semantics, the
+\type{RecConstraintVisitor<T>}. An example of how the recursive visitor can be
+used is represented by the \type{ConstraintPrinter<T>} class which can be used
+to print to standard output any constraint. 
+
+Several utilities are also included for constraints. For example the {\tt toDNF}
+function is responsible to transform a generic constraint into a disjunctive
+normal form (DNF). This part needs some refactoring!
+
+\subsubsection{The \type{AffineSystem}}
+
+The abstraction of an affine system is used to represent a set of constraints.
+Since in the PM it is common to assume the constraints are in the form $ F \ge
+0$ or $F == 0$ (depending on where the system is being used), an affine system
+can be represented by only storing the set of affine functions.  The
+\type{AffineSystem} defined in the file \file{analysis/aff\_sys.h} has this
+goal. It is important that all functions within a system are based on the same
+iteration vector, and this is enforced during the construction of an instance of
+the \type{AffineSystem} class. 
+
+Given an iteration vector, an affine system can also be built by providing a
+coefficient matrix. Additionally a new constraint can be add by providing a
+coefficient vectors which refers to the new constraint. Given an
+\type{AffineSystem}, the coefficient matrix can be extracted with the {\tt
+extractFrom} function. 
+
+An \type{AffineSystem} is utilized to represent the matrices associated with the
+polyhedral model representation. In particular scheduling and access functions
+are represented in term of an affine system. 
+
+\subsubsection{The \type{Scop}}
+
+\subsection{SCoP Analysis}
+
+
+
+\section{The Control Flow Graph [Simone]}
+\label{insieme:analysis:cfg}
+
+
+
+\section{Dataflow Analaysis [Simone]}
+\label{insieme:analysis:dtaflow}
