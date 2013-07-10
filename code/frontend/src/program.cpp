@@ -218,7 +218,7 @@ namespace frontend {
 
 struct Program::ProgramImpl {
 	utils::Indexer mIdx;
-	TranslationUnitSet tranUnits;
+	TranslationUnitList tranUnits;
 	const vector<boost::filesystem::path> stdLibDirs;
 	utils::Interceptor interceptor;
 	utils::FunctionDependencyGraph funcDepGraph;
@@ -286,11 +286,11 @@ TranslationUnit& Program::addTranslationUnit(const ConversionJob& job) {
 
 	pimpl->mIdx.indexTU(tuImpl);
 
-	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
+	pimpl->tranUnits.push_back( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	return *tuImpl;
 }
 
-const Program::TranslationUnitSet& Program::getTranslationUnits() const { return pimpl->tranUnits; }
+const Program::TranslationUnitList& Program::getTranslationUnits() const { return pimpl->tranUnits; }
 
 Program::PragmaIterator Program::pragmas_begin() const {
 	auto filtering = [](const Pragma&) -> bool { return true; };
@@ -381,7 +381,8 @@ const core::ProgramPtr& Program::convert() {
 	for (const TranslationUnitPtr& curr : pimpl->tranUnits){
 		pimpl->globalsCollector(curr);
 	}
-	pimpl->globalsCollector.dump();
+	if (VLOG_IS_ON(1))
+		pimpl->globalsCollector.dump();
 
 	std::shared_ptr<conversion::ASTConverter> astConvPtr;
 	if(isCXX) {

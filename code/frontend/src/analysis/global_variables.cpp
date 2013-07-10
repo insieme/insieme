@@ -43,6 +43,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include <clang/AST/Decl.h>
+#include "clang/AST/DeclTemplate.h"
 #pragma GCC diagnostic pop
 
 #include "insieme/frontend/analysis/global_variables.h"
@@ -289,10 +290,10 @@ std::string GlobalVarCollector::getName (const clang::VarDecl* var){
 //////////////////////////////////////////////////////////////////
 //
 void GlobalVarCollector::dump(){
-	VLOG(2) << " === Globals: === ";
-	VLOG(2) << join("\n" ,globalsMap);
-	VLOG(2) << " === Statics: === ";
-	VLOG(2) << join("\n" ,staticNames);
+	std::cout << " === Globals: === " << std::endl;
+	std::cout << join("\n" ,globalsMap) << std::endl;
+	std::cout << " === Statics: === " << std::endl;
+	std::cout << join("\n" ,staticNames) << std::endl;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -315,10 +316,9 @@ const clang::Expr*    GlobalVarCollector::init_it::init() const{
 }
 const clang::Type*    GlobalVarCollector::init_it::type() const{
 	return  curr->second.first->getType().getTypePtr();
-//	if (const clang::VarDecl* definition = curr->second.first->getDefinition()){
-//		return definition->getType().getTypePtr();
-//	}
-//	else return nullptr;
+}
+const GlobalVarCollector::VarStorage      GlobalVarCollector::init_it::storage() const{
+	return curr->second.second;
 }
 
 GlobalVarCollector::init_it GlobalVarCollector::init_it::operator++() {
