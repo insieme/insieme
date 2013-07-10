@@ -75,9 +75,9 @@ follows:
 \mathcal{D}_{S_1} = & \begin{Bmatrix} 
 	\begin{pmatrix} i \\ j \end{pmatrix} \big|
 	\begin{pmatrix} i \\ j \end{pmatrix} \in \mathbb{Z}^2,
-	\begin{bmatrix*}[r] 1 & 0 & 0 & 0\\ -1 & 0 & 1 & -1 \\ 
+	\begin{bmatrix} 1 & 0 & 0 & 0\\ -1 & 0 & 1 & -1 \\ 
 			-1 & 1 & 0 & 0 \\  0 & -1 & 1 & -1 
-	\end{bmatrix*} \cdot
+	\end{bmatrix} \cdot
 	\begin{pmatrix} i \\ j \\ n \\ 1 \end{pmatrix}
 	\ge \vec{0}
 \end{Bmatrix}
@@ -108,18 +108,20 @@ guide~\cite{cloog}.
 For example scheduling functions
 for statements $S0$, $S1$ and $S2$ of code in listing~\ref{list:1}~are defined
 as follows:
-\begin{align*}
-\mathcal{S}_{S_{0}} = \begin{bmatrix*}[r] 1 & 0 \\ 0 & 0 \end{bmatrix*} 
-					\begin{pmatrix} i \\ 1 \end{pmatrix} ~~~ &
-\mathcal{S}_{S_{1}} = \begin{bmatrix*}[r] 1 & 0 & 0 \\ 0 & 0 & 1 \\ 
-										0 & 1 & 0 \\ 0 & 0 & 0
-					\end{bmatrix*} 
-					\begin{pmatrix} i \\ j \\ 1 \end{pmatrix} &
-\mathcal{S}_{S_{2}} = \begin{bmatrix*}[r] 1 & 0 & 0 \\ 0 & 0 & 1 \\ 
-										0 & 1 & 0 \\  0 & 0 & 1 
-					\end{bmatrix*} 
-					\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}
-\end{align*}
+% \begin{align*}
+% \mathcal{S}_{S_{0}} = \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix} 
+% 					\begin{pmatrix} i \\ 1 \end{pmatrix}  \\
+% 
+% \mathcal{S}_{S_{1}} = \begin{bmatrix*}[r] 1 & 0 & 0 \\ 0 & 0 & 1 \\ 
+% 										0 & 1 & 0 \\ 0 & 0 & 0
+% 					\end{bmatrix} 
+% 					\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}  \\
+% 
+% \mathcal{S}_{S_{2}} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & 0 & 1 \\ 
+% 										0 & 1 & 0 \\  0 & 0 & 1 
+% 					\end{bmatrix} 
+% 					\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}
+% \end{align*}
 Intersection of the scheduling function by the corresponding iteration domain of
 the statement produces a sequence of tuples, or logic dates, representing
 the execution order of each statement instance. Lexicographically 
@@ -140,11 +142,11 @@ locations, within a statement. Representation of access functions is similar to
 what already described for scattering functions. For example array 
 access in statement $S1$, \texttt{A[i][j+1]}, can be represented in matrix form
 with one row for each dimension being accessed:
-\[
-\mathcal{A}_{USE(A)} =  \begin{bmatrix*}[r] 1 & 0 & 0 \\ 0 & 1 & 1 \\ 
-						\end{bmatrix*} 
-						\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}
-\]
+% \[
+% \mathcal{A}_{USE(A)} =  \begin{bmatrix}[r] 1 & 0 & 0 \\ 0 & 1 & 1 \\ 
+% 						\end{bmatrix} 
+% 						\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}
+% \]
 Access functions also store the information whether a particular memory location
 is being read (\texttt{USE}) or written (\texttt{DEF}). This kind of
 information is utilized by the polyhedral model to compute exact dataflow and
