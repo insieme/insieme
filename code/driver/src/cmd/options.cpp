@@ -36,6 +36,8 @@
 
 #include "insieme/driver/cmd/options.h"
 
+#include <boost/algorithm/string.hpp>
+
 namespace insieme {
 namespace driver {
 namespace cmd {
@@ -57,6 +59,8 @@ namespace cmd {
 			desc.add_options()
 					("help,h", "produce this help message")
 					("input-file,i", bpo::value<vector<string>>(), "input files - required!")
+					("library-file,l", bpo::value<vector<string>>(), "linker flags - optional")
+					("library-path,L", bpo::value<vector<string>>(), "library paths - optional")
 					("include-path,I", bpo::value<vector<string>>(), "include files - optional")
 					("definitions,D", bpo::value<vector<string>>(), "preprocessor definitions - optional")
 					("std,s", bpo::value<string>()->default_value("c99"), "determines the language standard")
@@ -113,17 +117,67 @@ namespace cmd {
 				res.valid = false;
 				return res;
 			}
-            // compilation only
+			// include path
+			if (map.count("include-path")) {
+				res.job.setIncludeDirectories(map["include-path"].as<vector<string>>());
+			}
+			// output file (optional)
             if (map.count("compile")) {
-                res.job.setOption(fe::ConversionJob::CompilationOnly, map.count("compile"));
+                    res.outFile = "";
+            } else {
+                res.outFile = "a.out";
+            }
+			if (map.count("output-file")) {
+				res.outFile = map["output-file"].as<string>();
+			}
+			// compilation only
+            if (map.count("compile")) {
+                res.job.setOption(fe::ConversionJob::CompilationOnly);
                 if((res.job.getFiles().size()>1) && map.count("output-file")) {
                     cout << "cannot specify -o with -c and multiple files" << endl;
                     res.valid=false;
                 }
             }
-			// include path
-			if (map.count("include-path")) {
-				res.job.setIncludeDirectories(map["include-path"].as<vector<string>>());
+            //indicates that a shared object files should be created
+            if (res.outFile.find(".so")!=std::string::npos) {
+                 res.job.setOption(fe::ConversionJob::CreateSharedObject);
+            }
+            /*
+			// library path
+			if (map.count("library-path")) {
+                for(std::string& s : map["library-path"].as<vector<string>>())
+                    res.job.addStdLibIncludeDirectory(s);
+			}*/
+			// check for libraries and add LD_LIBRARY_PATH entries to lib search path
+			std::vector<std::string> ldpath;
+			ldpath.push_back(boost::filesystem::current_path().string());
+			if(map.count("library-path")) {
+                ldpath = map["library-path"].as<vector<string>>();
+			}
+			std::string ldvar(getenv("LD_LIBRARY_PATH"));
+			boost::char_separator<char> sep(":");
+            boost::tokenizer<boost::char_separator<char>> tokens(ldvar, sep);
+            for (auto t : tokens) {
+                    ldpath.push_back(t);
+            }
+			if (map.count("library-file")) {
+                //we have to check for lib<name>.<so|a> in every library directory provided by library-path
+                for(std::string s : map["library-file"].as<vector<string>>()) {
+                    for(std::string d : ldpath) {
+                        std::string f1 = d+"/lib"+s+".so";
+                        std::string f2 = d+"/lib"+s+".a";
+                        if(boost::filesystem::is_regular_file(f1)) {
+                            //shared object file
+                            res.job.addFile(f1);
+                            break;
+                        }
+                        if(boost::filesystem::is_regular_file(f2)) {
+                            //static library
+                            res.job.addFile(f2);
+                            break;
+                        }
+                    }
+                }
 			}
 			// preprocessor directives
 			if (map.count("definitions")) {
@@ -142,15 +196,6 @@ namespace cmd {
             if (map.count("intercept-file")) {
                 res.job.setIntercepterConfigFile(map["intercept-file"].as<string>());
             }
-			// output file (optional)
-            if (map.count("compile")) {
-                    res.outFile = "";
-            } else {
-                res.outFile = "a.out";
-            }
-			if (map.count("output-file")) {
-				res.outFile = map["output-file"].as<string>();
-			}
 
 			// done
 			return res;

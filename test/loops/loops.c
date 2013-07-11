@@ -10,9 +10,10 @@ int func(int k) {
 		printf("k=%d\n", k);
 	}
 
-	for(k=10; k>=0; k--) {
+	for(k=10; k>=5; k--) {
 		printf("k=%d\n", k);
 	}
+	printf("%d\n", k);
 
 }
 
