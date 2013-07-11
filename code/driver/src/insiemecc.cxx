@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,6 +49,7 @@
 #include "insieme/frontend/frontend.h"
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/driver/cmd/options.h"
+#include "insieme/utils/library_utils.h"
 
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/filter/standard_filter.h"
@@ -65,7 +66,6 @@ namespace ut = insieme::utils;
 namespace cp = insieme::utils::compiler;
 namespace tr = insieme::transform;
 namespace cmd = insieme::driver::cmd;
-
 
 int main(int argc, char** argv) {
 	// filter logging messages
@@ -89,28 +89,28 @@ int main(int argc, char** argv) {
 	if (!options.valid) return (options.help)?0:1;
 
 	// Step 2: filter input files
+	ut::LibraryUtil libHelper;
 	vector<string> inputs;
 	vector<string> libs;
-	for(auto cur : options.job.getFiles()) {
-		// filter out so-files
-		if (boost::ends_with(cur, "so")) {
-			libs.push_back(cur);
-		} else {
-			inputs.push_back(cur);
-		}
-	}
+	libHelper.handleInputFiles(options.job.getFiles(),inputs,libs);
 	options.job.setFiles(inputs);
 
-
-	// Step 3: load input code
+    // Step 3: load input code
 	//		The frontend is converting input code into the internal representation (IR).
 	//		The memory management of IR nodes is realized using node manager instances.
 	//		The life cycle of IR nodes is bound to the manager the have been created by.
 	//      If the c flag is set only the compilation will be done and the output file
 	//      will be an object file.
 	co::NodeManager manager;
-    if(options.job.hasOption(fe::ConversionJob::CompilationOnly)) {
+	if(options.job.hasOption(fe::ConversionJob::CreateSharedObject)) {
+        cout << "CREATING SHARED OBJECT" << endl;
+        cout << "USING INTERCEPTOR: " << options.job.getIntercepterConfigFile() << "\n";
+        options.job.storeAST(manager, "");
+        libHelper.createLibrary(inputs,libs,options.outFile);
+        return 0;
+	} else if(options.job.hasOption(fe::ConversionJob::CompilationOnly)) {
         cout << "COMPILATION ONLY" << endl;
+        cout << "USING INTERCEPTOR: " << options.job.getIntercepterConfigFile() << "\n";
         options.job.storeAST(manager, options.outFile);
         return 0;
     }

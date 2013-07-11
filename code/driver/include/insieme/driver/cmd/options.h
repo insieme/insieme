@@ -37,8 +37,11 @@
 #pragma once
 
 #include <string>
+#include <cstdlib>
 
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
+#include<boost/tokenizer.hpp>
 
 #include "insieme/frontend/frontend.h"
 
