@@ -108,20 +108,25 @@ guide~\cite{cloog}.
 For example scheduling functions
 for statements $S0$, $S1$ and $S2$ of code in listing~\ref{list:1}~are defined
 as follows:
-% \begin{align*}
-% \mathcal{S}_{S_{0}} = \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix} 
-% 					\begin{pmatrix} i \\ 1 \end{pmatrix}  \\
-% 
-% \mathcal{S}_{S_{1}} = \begin{bmatrix*}[r] 1 & 0 & 0 \\ 0 & 0 & 1 \\ 
-% 										0 & 1 & 0 \\ 0 & 0 & 0
-% 					\end{bmatrix} 
-% 					\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}  \\
-% 
-% \mathcal{S}_{S_{2}} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & 0 & 1 \\ 
-% 										0 & 1 & 0 \\  0 & 0 & 1 
-% 					\end{bmatrix} 
-% 					\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}
-% \end{align*}
+\begin{align*}
+\mathcal{S}_{S_{0}} = \begin{bmatrix} 1 & 0 \\ 0 & 0 \end{bmatrix} 
+					\begin{pmatrix} i \\ 1 \end{pmatrix} 
+\end{align*}
+
+\begin{align*}
+\mathcal{S}_{S_{1}} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & 0 & 1 \\ 
+ 										0 & 1 & 0 \\ 0 & 0 & 0
+ 					\end{bmatrix} 
+ 					\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}  
+\end{align*}
+
+\begin{align*}
+ \mathcal{S}_{S_{2}} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & 0 & 1 \\ 
+ 										0 & 1 & 0 \\  0 & 0 & 1 
+ 					\end{bmatrix} 
+					\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}
+\end{align*}
+
 Intersection of the scheduling function by the corresponding iteration domain of
 the statement produces a sequence of tuples, or logic dates, representing
 the execution order of each statement instance. Lexicographically 
@@ -142,11 +147,11 @@ locations, within a statement. Representation of access functions is similar to
 what already described for scattering functions. For example array 
 access in statement $S1$, \texttt{A[i][j+1]}, can be represented in matrix form
 with one row for each dimension being accessed:
-% \[
-% \mathcal{A}_{USE(A)} =  \begin{bmatrix}[r] 1 & 0 & 0 \\ 0 & 1 & 1 \\ 
-% 						\end{bmatrix} 
-% 						\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}
-% \]
+\[
+\mathcal{A}_{USE(A)} =  \begin{bmatrix} 1 & 0 & 0 \\ 0 & 1 & 1 \\ 
+						\end{bmatrix} 
+						\begin{pmatrix} i \\ j \\ 1 \end{pmatrix}
+\]
 Access functions also store the information whether a particular memory location
 is being read (\texttt{USE}) or written (\texttt{DEF}). This kind of
 information is utilized by the polyhedral model to compute exact dataflow and
@@ -356,11 +361,94 @@ An \type{AffineSystem} is utilized to represent the matrices associated with the
 polyhedral model representation. In particular scheduling and access functions
 are represented in term of an affine system. 
 
-\subsubsection{The \type{Scop}}
 
 \subsection{SCoP Analysis}
 
+Given an IR node (which can be any of the IR structures) SCoP analysis can be
+invoked to determine whether the subtree (spawning from that statement) is a
+valid SCoP (i.e. a code region which can be represented in terms of the
+Polyhedral model constraints). The entry point of the SCoP analysis is in the
+file \file{analysis/polyhedral/scop.h}. The method \type{AddresSList mark(const
+NodePtr\& root)} takes any IR node and return a list of addresses (having {\tt
+root} as a root node) which are the top level entry points of SCoPs within {\tt
+root}. By definition SCoPs are never overlapping. 
 
+Given the entry-point statement of a SCoP the \type{ScopRegion} annotation can be
+checked. This will return an object of type \type{Scop} which contains (cached)
+all the information necessary to represent the code region in terms of the
+polyhedral model. 
+
+Given a statement it is also possible to retrieve the \type{Scop} object using
+the utility function \type{optional<Scop> toScop(const NodePtr\&)}.
+
+\subsubsection{SCoP Internal Representation}
+As said before, representing a code with the Polyhedral Model requires three
+data structures to be stored. In order to maintain the connection between the
+polytope and the code we use IR annotations to store iteration domains,
+scheduling and access functions. 
+
+The main issue to understand here is that usually SCoP analysis finds largest
+code regions which can be represented in term of the PM. This makes sense since
+the more code in the region, the better understanding of the code dependencies
+the analysis can gain and the more opportunities for optimizations. However the
+user may ask to apply a specific optimization starting from a sub portion of a
+SCoP. In Insieme this is supported thanks to the immutable nature of the IR
+nodes. 
+
+The SCoP analysis is done in a bottom-up fashion. Since the nodes are shared the
+polyhedral model representation of a node is stored in a context-insensitive
+way. This means that the polyhedral representation at a specific node only
+includes information within the child nodes. For example, the statement {\tt S0}
+{\tt A[i+n+1]=0} generates an iteration vector of the form $v_{S0} = (|i,n|1)$.
+It is worth noting that at this level we have no knowledge of whether variables
+$i$ and $n$ are loop iterators or parameters of the model. This iteration vector
+will be stored in the \type{ScopRegion} object which is associated to this
+statement.  Also the access function affine system is stored within the
+\type{ScopRegion} annotation.  Let now consider a possible parent statement node
+{\tt S1} of the form {\tt for(int i: 0..10) \{ A[i+n+1] = 0; \}}.  This
+statement will be characterized by the iteration vector $v_{S1} = (i|n|1)$ which
+states that $i$ is an iterator while $n$ is a parameter. Iteration vector
+$v_{S1}$ will be stored to the \type{ScopRegion} instance attached to {\tt S1}.
+Additionally, since {\tt S1} is a control statement the information of the
+domain it spawns are stored. The Scop annotation of {\tt S1} will therefore
+carry an iteration domain object of the form $i>=0 \wedge i<10$. 
+
+Whenever a statement is analyzed we first check whether the statement already
+has a \type{ScopRegion} annotation attached. If not the analysis is performed on
+the statement. Whenever the all the children of a statement have been analyzed,
+we merge the iteration vectors into a new iteration vector which is then
+utilized to describe accesses and domain functions within the parent node. This
+way of building up the SCoP representation allows to reduce the amount of
+computation needed if otherwise the nodes were not shared. 
+
+During this pass one things is checked, that every access function and loop
+bound and control-flow expression is an affine linear function. If not an
+exception is thrown and nodes are marked as not SCoPs. After SCoP regions are
+formed (so that we know which of the variables within the SCoP are iterators and
+which ones are parameters), an analysis based on the information stored on the
+SCoP annotations is performed to make sure that within a SCoP no parameter value
+is modified and that iterators are only modified within loop statements. 
+This task is performed by the \type{postProcessSCoP} function in the file
+\file{analysis/scop.cpp}.
+
+\subsubsection{Instantiation of a SCoP}
+As we said in the previous section, each statement within a SCoP carries
+information on the iteration vector, domain and access functions. Children of a
+statement however have their information stored based on different iteration
+vectors (since a parameter being used in the then section of a if statement will
+not appear between the parameters of the else part of the statement). In order to
+build the polyhedral representation of a region of code all access functions and
+domain expression have to be based on the same iteration vector. 
+
+The \type{polyhedral/Scop} class, defined in
+\file{analysis/polyhedral/polyhedral.h} has the goal to fully represent a SCoP.
+The process works as follows. The user addresses a statement {\tt S} which is either the
+entry of a SCoP or within the SCoP. From {\tt S} he can decide to
+generate the Polyhedral representation of the code region derived from this
+statement. This process build a \type{Scop} object where the affine expressions have
+been updated to the new base (which is the iteration vector, $vec_S$). This
+operation is implemented by the \type{resolveScop} function defined in
+\file{analysis/polyhedrl/scop.cpp}. 
 
 \section{The Control Flow Graph [Simone]}
 \label{insieme:analysis:cfg}
