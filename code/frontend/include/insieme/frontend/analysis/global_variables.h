@@ -87,8 +87,7 @@ public:
 
 private:
 
-	typedef std::pair<const clang::VarDecl*, VarStorage> tGlobalDecl;
-	typedef std::map<std::string, tGlobalDecl> tGlobalsMap;
+	typedef std::map<std::string, VarStorage> tGlobalsMap;
 	tGlobalsMap globalsMap;
 
 	std::map<const clang::VarDecl*, std::string> staticNames;
@@ -138,10 +137,8 @@ public:
 	/**
 	 * incorporates one var declaration to the set, it will be ignored if not global
 	 * otherwise declaration, kind of storage and initialization value will be stored
-	 * we need to specify if we are in a global scope or local, therefore we can diferenciate 
-	 * globals from statics
 	 */
-	void addVar(const clang::VarDecl* var, bool local);
+	void addVar(const clang::VarDecl* var);
 
 	/**
 	 * prints on standar output the contents of the global maps
@@ -160,9 +157,6 @@ public:
 			curr(c){}
 
 		const std::string&    name() const;
-		const clang::VarDecl* decl() const;
-		const clang::Expr*    init() const;
-		const clang::Type*    type() const;
 		const VarStorage      storage() const;
 
 		init_it operator++(); 

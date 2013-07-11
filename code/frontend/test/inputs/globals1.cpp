@@ -11,6 +11,10 @@ int*  pointer;
 // in class
 class Obj{
 	static int member;
+
+	Obj(){
+		static int ctorGlobal;
+	}
 };
 
 
