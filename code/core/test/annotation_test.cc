@@ -41,6 +41,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_types.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "ir_dummy_annotations.inc"
 
@@ -178,6 +179,37 @@ TEST(Annotation, ValueAnnotations2) {
 
 	EXPECT_FALSE(ptr->hasAttachedValue<TypePtr>());
 
+}
+
+template<typename T>
+class is_printable {
+		typedef char yes;
+		typedef long no;
+
+		static int consume(...);
+		template <typename C> static yes test( decltype(consume(*(std::ostream*)(0) << *(T*)(0))) );
+		template <typename C> static no  test( ... );
+
+public:
+
+		enum { value = sizeof(decltype(test<T>(0))) == sizeof(yes) };
+};
+
+TEST(Annotation, ValueAnnotationPrint) {
+
+	NodeManager manager;
+	TypePtr ptr = GenericType::get(manager, "A");
+
+	struct unprintable {} s;
+
+	ptr->attachValue(12);
+	ptr->attachValue(string("X"));
+	ptr->attachValue(s);
+
+	EXPECT_EQ("12", toString(ptr->getAttachedValue<decltype(12)>()));
+	EXPECT_EQ("X", toString(ptr->getAttachedValue<string>()));
+
+	EXPECT_EQ("$[Value(ZN7insieme4core36Annotation_ValueAnnotationPrint_Test8TestBodyEvE11unprintable), 12, X: A]$", toString(core::printer::PrettyPrinter(ptr, core::printer::PrettyPrinter::PRINT_ANNOTATIONS)));
 }
 
 

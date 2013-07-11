@@ -52,6 +52,7 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/is_printable.h"
 
 namespace insieme {
 namespace utils {
@@ -365,6 +366,29 @@ namespace detail {
 		 */
 		void setValue(const V& newValue) {
 			value = newValue;
+		}
+
+		/**
+		 * If this value annotation is printed, the contained value should be printed.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return print(out);
+		}
+
+	private:
+
+		// print - in case the value type V is printable
+		template<typename T>
+		typename std::enable_if<is_printable<V>::value, T&>::type
+		print(T& out) const {
+			return out << value;
+		}
+
+		// print - fallback in case V is not printable
+		template<typename T>
+		typename std::enable_if<!is_printable<V>::value, T&>::type
+		print(T& out) const {
+			return out << "Value(" << typeid(V).name() << ")";
 		}
 
 	};
