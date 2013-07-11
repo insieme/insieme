@@ -743,12 +743,12 @@ namespace core {
 		/**
 		 * Obtains a specific definition maintained within this node.
 		 */
-		TypePtr getDefinitionOf(const TypeVariablePtr& variable) const {
-			auto list = convertList<RecTypeBinding>(RecTypeDefinitionAccessor<Derived, Ptr>::getNode().getChildList());
+		Ptr<const Type> getDefinitionOf(const TypeVariablePtr& variable) const {
+			const auto& list = getDefinitions();
 			auto pos = std::find_if(list.begin(), list.end(), [&](const RecTypeBindingPtr& cur) {
 				return *cur->getVariable() == *variable;
 			});
-			return (pos==list.end())?TypePtr():(*pos)->getType();
+			return (pos==list.end())?Ptr<const Type>():(*pos)->getType();
 		}
 
 		/**
@@ -827,7 +827,7 @@ namespace core {
 		 * recursive type node.
 		 */
 		Ptr<const Type> getTypeDefinition() const {
-			return getDefinition()->getDefinitionOf(getTypeVariable());
+			return getDefinition()->getDefinitionOf(getTypeVariable().template as<TypeVariablePtr>());
 		}
 
 		/**
