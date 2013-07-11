@@ -81,11 +81,13 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		{"global_var", GlobalVarCollector::VS_GLOBAL},
 		{"static_diffName1", GlobalVarCollector::VS_STATIC},
 		{"static_var0", GlobalVarCollector::VS_STATIC},
-		{"Obj::global_member", GlobalVarCollector::VS_GLOBAL}
+		{"Obj::global_member", GlobalVarCollector::VS_GLOBAL},
+		{"global_instance", GlobalVarCollector::VS_GLOBAL},
+		{"Obj2::global_a", GlobalVarCollector::VS_GLOBAL}
 	};
 		
 	for (auto it = globalsCollector.begin(); it != globalsCollector.end(); ++it){
-		EXPECT_TRUE (solution.find (it.name()) != solution.end()) << "  not found: at var: "+it.decl()->getNameAsString();
+		EXPECT_TRUE (solution.find (it.name()) != solution.end()) << "  not found: at var: "+it.decl()->getNameAsString()+"["+it.name()+"]";
 		EXPECT_EQ (it.storage(), solution[it.name()]) << " at var: "+it.decl()->getNameAsString();
 	}
 
@@ -109,7 +111,9 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		{"static_a2", GlobalVarCollector::VS_STATIC},
 		{"static_diffName1", GlobalVarCollector::VS_STATIC},
 		{"static_var0", GlobalVarCollector::VS_STATIC},
-		{"Obj::global_member", GlobalVarCollector::VS_GLOBAL}
+		{"Obj::global_member", GlobalVarCollector::VS_GLOBAL},
+		{"global_instance", GlobalVarCollector::VS_GLOBAL},
+		{"Obj2::global_a", GlobalVarCollector::VS_GLOBAL}
 	};
 
 	for (auto it = globalsCollector.begin(); it != globalsCollector.end(); ++it){

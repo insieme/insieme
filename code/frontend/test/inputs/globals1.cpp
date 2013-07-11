@@ -13,10 +13,22 @@ class Obj{
 	static int member;
 };
 
+
+// class object with static inside
+static struct Obj2{
+	static int a;
+	int b;
+} instance;
+
+// initialize static
+int Obj2::a = 6;
+
 int f();
 
 int main(){
 	static int var;   // alias
 	static int diffName;
 	int local = f();
+
+	Obj2::a++;
 }
