@@ -178,7 +178,6 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				continue;
 			}
 
-
 			if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
 				//FIXME: for now ignore CopyAssignmentOperator
 				// -- backendCompiler should take care of it
@@ -194,9 +193,11 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 
 			const clang::FunctionDecl* method = llvm::cast<clang::FunctionDecl>(*methodIt);
 
-			// FIXME: we should not have to look for the F$%ing TU everyplace, this should be
-			// responsability of the convert func function
-			convFact.getTranslationUnitForDefinition(method);  // FIXME:: remove this crap
+			// the function is a template espetialization, but if it has no body, we wont
+			// convert it, it was never instanciated
+			if (method->getMemberSpecializationInfo () && !method->hasBody()){
+					continue;
+			}
 
 			auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
 			methodLambda = convFact.memberize(method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
@@ -227,7 +228,6 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 										(*methodIt)->isVirtual(),
 										(*methodIt)->isConst());
 		}
-
 		// append metha information to the class definition
 		core::setMetaInfo(classType, classInfo);
 	}
