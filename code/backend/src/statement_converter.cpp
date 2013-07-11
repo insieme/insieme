@@ -291,7 +291,7 @@ namespace backend {
 				c_ast::CCodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager);
 
 				// get type info
-				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(ptr->getType());
+				const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(ptr->getType().as<core::RefTypePtr>()->getElementType());
 
 				// add external declaration
 				auto& cManager = converter.getCNodeManager();
@@ -299,7 +299,7 @@ namespace backend {
 				declaration->getCode().push_back(cManager->create<c_ast::GlobalVarDecl>(info.lValueType, ptr->getStringValue(), annotations::c::isExtern(ptr)));
 
 				// add dependency to type declaration
-				declaration->addDependency(info.declaration);
+				declaration->addDependency(info.definition);
 
 				// register fragment
 				fragmentManager->bindFragment(fragmentName, declaration);

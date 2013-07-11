@@ -682,8 +682,6 @@ core::ExpressionPtr unwrapCppRef(const core::IRBuilder& builder, const core::Exp
 	else if (core::analysis::isConstCppRef(irType)) {
 		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
 	}
-
-	std::cout << "no changesss" << std::endl;
 	return expr;
 }
 

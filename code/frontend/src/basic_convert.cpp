@@ -1693,11 +1693,18 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	return core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
 }
 
+/////////////////////////////////////////////////////////
+//
 core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExprPtr& mainFunc){
 
 	VLOG(1) << "";
 	VLOG(1) << "******************** Initialize Globals at program start ***************************";
 
+	// 4 casses:
+	// extern, do nothing
+	// static in some function, we need to initialize the constructor flag
+	// with init, assign value
+	// without init, do not initialize
 
 	// we only want to init what we use, so we check it
 	core::NodeSet usedLiterals;
@@ -1705,51 +1712,22 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 				usedLiterals.insert(literal);
 			});
 
-		// 4 casses:
-		// extern, do nothing (already passed)
-		// static in some function, we need to initialize the constructor flag
-		// with init, assign value
-		// without init, assign zero value
 	core::IRBuilder builder(mainFunc->getNodeManager());
 	core::StatementList inits;
-	for (auto it = globalCollector.begin(); it != globalCollector.end(); ++it){
-		VLOG(2) << "build def value for: " << it.name() << std::endl;
 
-		// avoid intercepted stuff, it never existed
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    INTERCEPTED  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		if (mFact.getProgram().getInterceptor().isIntercepted(it.name()))
-			continue;
+	// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	for (auto git = globalCollector.globalsInitialization_begin(); git != globalCollector.globalsInitialization_end(); ++git){
 
-		// globals which end up being extern must mantain name without alterations
-		// nor qualifications
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    EXTERN, do not declareD  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		if (globalCollector.isExtern(it.decl())){
+		if (mFact.getProgram().getInterceptor().isIntercepted((*git)->getQualifiedNameAsString())){
 			continue;
 		}
 
-		// static variables need to be created to zero initialize the inner initialization flag.
-		// does not matter where is used
-		core::ExpressionPtr var = mFact.lookUpVariable (it.decl());
-		core::LiteralPtr litUse = var.isa<core::LiteralPtr>();
-		if (!litUse){
-			litUse = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
-		}
-		assert (litUse && " no literal? who handled this global?");
+		//VLOG(2) << "initializing global: " << (*git)->getQualifiedNameAsString();
+		std::cout << "initializing global: " << (*git)->getQualifiedNameAsString() << std::endl;
 
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    NEVER USED  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		if (!contains(usedLiterals, litUse)){
-			continue;
-		}
-
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    STATIC  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		if (globalCollector.isStatic(it.decl())){
-			inits.push_back(builder.createStaticVariable(var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>()));
-			continue;
-		}
-
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    GLOBALS  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		core::ExpressionPtr initValue;
-		if(const clang::Expr* init = it.init()){
+		if(const clang::Expr* init = (*git)->getDefinition()->getInit()){
+			core::ExpressionPtr var = mFact.lookUpVariable((*git));
+			core::ExpressionPtr initValue;
 			//FIXME: why this is not done in the visitor???
 			if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( init )) {
 				initValue =  mFact.convertInitializerList(listExpr, var->getType());
@@ -1760,13 +1738,25 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 			if(initValue->getType().isa<core::RefTypePtr>()){
 				initValue = utils::cast( initValue, var->getType().as<core::RefTypePtr>().getElementType());
 			}
+			core::StatementPtr assign = builder.assign (var, initValue);
+			inits.push_back(assign);
 		}
-		else{
-			continue;
+	}
+	
+	// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~A
+	for (auto sit = globalCollector.staticInitialization_begin(); sit != globalCollector.staticInitialization_end(); ++sit){
+		std::cout << "initializing static: " << (*sit)->getQualifiedNameAsString() << std::endl;
+		core::ExpressionPtr var = mFact.lookUpVariable((*sit));
+		core::LiteralPtr litUse = var.isa<core::LiteralPtr>();
+		if (!litUse){
+			litUse = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
 		}
-		core::StatementPtr assign = builder.assign (var, initValue);
-		dumpPretty(assign);
-		inits.push_back(assign);
+		assert (litUse && " no literal? who handled this global?");
+
+		// no need to touch it if never used
+		if (contains(usedLiterals, litUse)){
+			inits.push_back(builder.createStaticVariable(var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>()));
+		}
 	}
 
 	if (inits.empty())

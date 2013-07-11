@@ -38,6 +38,7 @@
 
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/debug.h"
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/container_utils.h"
@@ -436,6 +437,9 @@ core::TypePtr ConversionFactory::TypeConverter::VisitExtVectorType(const ExtVect
 // 								TYPEDEF TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitTypedefType(const TypedefType* typedefType) {
+
+	typedefType->dump();
+	PRINTLOCATION(typedefType->getDecl());
 
 	core::TypePtr subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
 	LOG_TYPE_CONVERSION( typedefType, subType );
