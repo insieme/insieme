@@ -222,6 +222,7 @@ struct Program::ProgramImpl {
 	const vector<boost::filesystem::path> stdLibDirs;
 	utils::Interceptor interceptor;
 	utils::FunctionDependencyGraph funcDepGraph;
+	analysis::GlobalVarCollector globalsCollector;
 
 	ProgramImpl(core::NodeManager& mgr, const vector<string>& stdLibDirs) :
 		mIdx(),
@@ -236,6 +237,7 @@ Program::~Program() { delete pimpl; }
 
 utils::Interceptor& Program::getInterceptor() const { return pimpl->interceptor; }
 utils::Indexer& Program::getIndexer() const { return pimpl->mIdx; }
+analysis::GlobalVarCollector& Program::getGlobalCollector() const { return pimpl->globalsCollector; }
 utils::FunctionDependencyGraph& Program::getCallGraph() const {return pimpl->funcDepGraph; }
 const vector<boost::filesystem::path>& Program::getStdLibDirs() const { return pimpl->stdLibDirs; }
 
@@ -375,11 +377,17 @@ const core::ProgramPtr& Program::convert() {
 
 	analyzeFuncDependencies();
 
+	//collect globals, analyze all translation units
+	for (const TranslationUnitPtr& curr : pimpl->tranUnits){
+		pimpl->globalsCollector(curr);
+	}
+	pimpl->globalsCollector.dump();
+
 	std::shared_ptr<conversion::ASTConverter> astConvPtr;
 	if(isCXX) {
-		astConvPtr = std::make_shared<conversion::CXXASTConverter>(mMgr, *this);
+		astConvPtr = std::make_shared<conversion::CXXASTConverter>(mMgr, *this,	pimpl->globalsCollector);
 	} else {
-		astConvPtr = std::make_shared<conversion::ASTConverter>(mMgr, *this);
+		astConvPtr = std::make_shared<conversion::ASTConverter>(mMgr, *this, pimpl->globalsCollector);
 	}
 
 	// filters all the pragma across all the compilation units which are of type insieme::mark

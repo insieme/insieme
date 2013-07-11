@@ -478,6 +478,29 @@ TEST(Pointer, As) {
 }
 
 
+TEST(NodePointer, DynamicCast) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	NodeAddress a(builder.intLit(12));
+
+	// this should work
+	EXPECT_TRUE(a.isa<ExpressionPtr>());
+	EXPECT_TRUE(a.isa<ExpressionAddress>());
+	a.as<ExpressionAddress>();
+
+	// this should also work
+	EXPECT_TRUE(a.isa<LiteralPtr>());
+	EXPECT_TRUE(a.isa<LiteralAddress>());
+	a.as<LiteralAddress>();
+
+	// this should not work
+	// a.as<CallExprAddress>();
+
+}
+
+
 } // end namespace core
 } // end namespace insieme
 

@@ -220,6 +220,7 @@ public:
 	core::TypePtr VisitDependentTemplateSpecializationType(const clang::DependentTemplateSpecializationType* tempTy);
 	core::TypePtr VisitInjectedClassNameType(const clang::InjectedClassNameType* tempTy);
 	core::TypePtr VisitSubstTemplateTypeParmType(const clang::SubstTemplateTypeParmType* substTy);
+	core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParamTy);
 	core::TypePtr VisitDecltypeType(const clang::DecltypeType* declTy);
     core::TypePtr VisitAutoType(const clang::AutoType* autoTy);
 	core::TypePtr Visit(const clang::Type* type);

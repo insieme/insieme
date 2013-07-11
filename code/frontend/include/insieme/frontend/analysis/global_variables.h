@@ -63,141 +63,111 @@ class ConversionFactory;
 namespace analysis {
 
 /**
- * Collects variables marked as global (i.e. global and static variables) within the input
- * program (which may consist of multiple translation units). The process is lazy as only
- * used variable belonging to the call graph will be gathered.
- *
- * It generates a the data structure and appropriate initializer which holds the entire set of
- * global variables used in the program.
+ * traverses the whole clang AST to find every global within code.
+ * this code is needed because of 2 reasons
+ * 	- we need to diferenciate the global variables declared in some translation unit (TU)
+ * 	and used as extern in other TU from the variables which are purelly extern and need to be
+ * 	resolved by the backend compiler in the link stage
+ *  - for each global, used in any translation unit, we need to identify if is initialized with 
+ *  any value, to guaranty that it will have the right initial values
  */
-class GlobalVarCollector : public clang::RecursiveASTVisitor<GlobalVarCollector> {
+class GlobalVarCollector {
+private:
+
+	enum VarStorage { VS_GLOBAL, VS_STATIC, VS_EXTERN};
+
+	typedef std::pair<const clang::VarDecl*, VarStorage> tGlobalDecl;
+	typedef std::map<std::string, tGlobalDecl> tGlobalsMap;
+	tGlobalsMap globalsMap;
+
+	std::map<const clang::VarDecl*, std::string> staticNames;
+	int staticCount;
+
+
 public:
-	/*
-	 * List of found global variables. The boolean value is used to decide whether the
-	 * variable has to be initialized or it was defined as external and a reference
-	 * to  the existing value has to be generated
-	 */
-	typedef std::set<const clang::VarDecl*> GlobalVarSet;
 
-	/*
-	 * Set of functions already visited, this avoid the solver to loop in the
-	 * case of recursive function calls
-	 */
-	typedef std::set<const clang::FunctionDecl*> VisitedFuncSet;
+	GlobalVarCollector():
+	staticCount(0)
+	{ }
 
-	// A call stack of functions created during the visit of the input code.
-	typedef std::stack<const clang::FunctionDecl*> FunctionStack;
-
-	/*
-	 * Set of functions which need access to global variables. This structure will
-	 * be used to decide whether the data structure containing the global variables
-	 * has to be forwarded through this function via the capture list
-	 */
-	typedef std::set<const clang::FunctionDecl*> UseGlobalFuncSet;
-
-	typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
-	typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
-
-	GlobalVarCollector(
-			insieme::frontend::utils::Indexer& indexer,
-			insieme::frontend::utils::Interceptor& 	interceptor, 
-			conversion::ConversionFactory& convFact);
-
-	virtual ~GlobalVarCollector() {};
-
-	bool VisitStmt(clang::Stmt* stmt);
-	bool VisitVarDecl(clang::VarDecl* decl);
-	void VisitExternVarDecl(clang::VarDecl* decl);
-	bool VisitDeclRefExpr(clang::DeclRefExpr* decl);
-	bool VisitCallExpr(clang::CallExpr* callExpr);
-
-	/* CXX specific methods -- not support in C version
-	 * implemented/used in CXXGlobalVarCollector*/
-	virtual bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) { 
-		assert(false && "not supported in GlobalVarCollector");
-		return false;
-	}
-	virtual bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) { 
-		assert(false && "not supported in GlobalVarCollector");
-		return false;
-	}
-	virtual bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) { 
-		assert(false && "not supported in GlobalVarCollector");
-		return false;
-	}
-	virtual bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr) { 
-		assert(false && "not supported in GlobalVarCollector");
-		return false;
-	}
-	virtual bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) { 
-		assert(false && "not supported in GlobalVarCollector");
-		return false;
-	}
-
-	void operator()(const clang::Decl* decl);
-	void operator()(const Program::TranslationUnitSet& tus);
 
 	/**
-	 * Returns the list of collected global variables. For each variable
-	 * a boolean flag indicating if the variable needs to be initialized
-	 * or not (in the case the global variable is marked as external)
+	 * the functor overload searches a translation unit for globals
+	 * it finds globals and updates global state
 	 */
-	inline const GlobalVarSet& getGlobals() const { return globals; }
+	void operator()(const TranslationUnitPtr& tu);
 
 	/**
-	 * Returns the list of functions which needs access (directly or
-	 * indirectly) to the global struct which will be passed accordingly
-	 * @return
+	 * given a variable, it finds out if is extern or has being globaly
+	 * declared in any translation unit.
+	 * @param name: varDecl of the variable, 
+	 * @return whenever this one remains extern (to be linked)
 	 */
-	const UseGlobalFuncSet& getUsingGlobals() const { return usingGlobals; }
-	
-	const GlobalIdentMap& getIdentifierMap() const { return varIdentMap; }
+	bool isExtern (const clang::VarDecl* name);
 
-	void dump(std::ostream& out) const ;
+	/**
+	 * given a variable, it finds out if is static to a function or has being globaly
+	 * declared in any translation unit.
+	 * @param name: varDecl of the variable, 
+	 * @return whenever this one remains extern (to be linked)
+	 */
+	bool isStatic (const clang::VarDecl* name);
 
-	virtual GlobalStructPair createGlobalStruct();
+	/**
+	 * usign qualified names should be enough most of the cases, but sometimes static
+	 * variables produce aliases, we can have two static variables with the same name 
+	 * in two different funtions
+	 * @param name: varDecl of the variable, 
+	 * @return a generated name for the variable
+	 */
+	std::string getName (const clang::VarDecl* name);
 
-protected:
+	/**
+	 * incorporates one var declaration to the set, it will be ignored if not global
+	 * otherwise declaration, kind of storage and initialization value will be stored
+	 * we need to specify if we are in a global scope or local, therefore we can diferenciate 
+	 * globals from statics
+	 */
+	void addVar(const clang::VarDecl* var, bool local);
 
-	core::StringValuePtr
-	buildIdentifierFromVarDecl(const clang::VarDecl* varDecl, const clang::FunctionDecl* func = NULL ) const;
-
-	conversion::ConversionFactory& 		convFact;
-	const insieme::frontend::utils::Indexer& 	indexer;
-	const insieme::frontend::utils::Interceptor& 	interceptor;
-	GlobalVarSet						globals;
-	GlobalIdentMap						varIdentMap;
-	VisitedFuncSet 						visited;
-	FunctionStack						funcStack;
-	UseGlobalFuncSet 					usingGlobals;
-};
+	/**
+	 * prints on standar output the contents of the global maps
+	 */
+	void dump();
 
 
-////////////////////////////////////////////////////////////////////////////////////
-///      CXX global var collector
-////////////////////////////////////////////////////////////////////////////////////
-class CXXGlobalVarCollector : public GlobalVarCollector {
+	/** 
+	 * iterator to access the initialization values
+	 */
+	class init_it{
+	private:
+		tGlobalsMap::iterator curr;
 	public:
+		init_it(const tGlobalsMap::iterator& c):
+			curr(c){}
 
-	CXXGlobalVarCollector(
-				insieme::frontend::utils::Indexer& 	indexer, 
-				insieme::frontend::utils::Interceptor& 	interceptor, 
-				conversion::ConversionFactory& 		convFact)
-	: GlobalVarCollector(indexer, interceptor, convFact) { }
+		const std::string&    name() const;
+		const clang::VarDecl* decl() const;
+		const clang::Expr*    init() const;
+		const clang::Type*    type() const;
 
-	virtual ~CXXGlobalVarCollector() {};
+		init_it operator++(); 
+		init_it operator++(int); 
 
-	virtual bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr);
-	virtual bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr);
-	virtual bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr);
-	virtual bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr);
-	virtual bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
+		bool operator!=(const init_it&) const; 
+	};
+
+	init_it begin(){
+		return init_it(globalsMap.begin());
+	}
+	init_it end(){
+		return init_it(globalsMap.end());
+	}
+
+	friend std::ostream& operator<< (std::ostream& out, const GlobalVarCollector::VarStorage storage);
 };
 
 } // end analysis namespace
 } // end frontend namespace
 } // end insieme namespace
 
-namespace std {
-std::ostream& operator<<(std::ostream& out, const insieme::frontend::analysis::GlobalVarCollector& globals);
-} // end std namespace

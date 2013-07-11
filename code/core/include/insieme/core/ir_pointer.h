@@ -40,6 +40,7 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
 
+#include "insieme/utils/assert.h"
 #include "insieme/utils/pointer.h"
 #include "insieme/utils/type_traits_utils.h"
 #include "insieme/core/ir_node_traits.h"
@@ -133,6 +134,11 @@ dynamic_pointer_cast(const Pointer<T>& src) {
 template<typename B, typename T>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, Pointer<B>>::type
 static_pointer_cast(Pointer<T>& src) {
+	assert_true((!src || dynamic_cast<B*>(&(*src))))
+			<< "Invalid static cast!\n"
+			<< "  source type: " << node_type<T>::getName() << "\n"
+			<< "  actual type: " << src->getNodeType() << "\n"
+			<< "  target type: " << node_type<B>::getName() << "\n";
 	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
 	return Pointer<B>(static_cast<B*>(src.ptr));
 }
@@ -140,14 +146,22 @@ static_pointer_cast(Pointer<T>& src) {
 template<typename B, typename T>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, const Pointer<B>>::type
 static_pointer_cast(const Pointer<T>& src) {
-	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
+	assert_true((!src || dynamic_cast<B*>(&(*src))))
+				<< "Invalid static cast!\n"
+				<< "  source type: " << node_type<T>::getName() << "\n"
+				<< "  actual type: " << src->getNodeType() << "\n"
+				<< "  target type: " << node_type<B>::getName() << "\n";
 	return Pointer<B>(static_cast<B*>(src.ptr));
 }
 
 template<typename B, typename T, typename E = typename B::element_type>
 inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 static_pointer_cast(const Pointer<T>& src) {
-	assert((!src || dynamic_cast<E*>(&(*src))) && "Invalid static cast!");
+	assert_true((!src || dynamic_cast<E*>(&(*src))))
+				<< "Invalid static cast!\n"
+				<< "  source type: " << node_type<T>::getName() << "\n"
+				<< "  actual type: " << src->getNodeType() << "\n"
+				<< "  target type: " << node_type<E>::getName() << "\n";
 	return B(static_cast<E*>(src.ptr));
 }
 

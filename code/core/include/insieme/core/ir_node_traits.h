@@ -99,7 +99,13 @@ namespace core {
 	#undef CONCRETE
 
 	#define NODE(NAME) \
-		template<> struct node_type<NAME> : public detail::node_type_helper<NAME, NAME ## Accessor> {};
+		template<> struct node_type<NAME> : public detail::node_type_helper<NAME, NAME ## Accessor> { \
+			static const std::string& getName() { \
+				static const std::string name = #NAME; \
+				return name; \
+			} \
+		}; \
+		template<> struct node_type<const NAME> : public node_type<NAME> { };
 	#include "insieme/core/ir_nodes.def"
 	#undef NODE
 
