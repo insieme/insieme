@@ -499,6 +499,11 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 					)
 			);
 
+			if (loopAnalysis.isInverted()) {
+				// we have to restore the sign
+				finalVal = builder.invertSign(finalVal);
+			}
+
 			// even though, might be the fist use of a value parameter variable.
 			// needs to be wrapped
 			if(llvm::isa<clang::ParmVarDecl> (iv)){

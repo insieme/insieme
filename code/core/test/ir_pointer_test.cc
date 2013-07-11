@@ -34,78 +34,38 @@
  * regarding third party software licenses.
  */
 
-#include <vector>
-
 #include <gtest/gtest.h>
 
-#include "insieme/core/analysis/ir++_utils.h"
-
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/checks/full_check.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace core {
-namespace analysis {
 
-	TEST(IRppUtils, PureVirtual) {
+	TEST(NodePointer, DynamicCast) {
+
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		// BUG: free variables within binds have not been recognized correctly
-		// reason: recursive call for bound parameters was wrong =>
+		NodePtr a = builder.intLit(12);
 
-		auto funType = builder.parseType("A::()->unit").as<FunctionTypePtr>();
+		// this should work
+		EXPECT_TRUE(a.isa<ExpressionPtr>());
+		a.as<ExpressionPtr>();
 
-		ASSERT_TRUE(funType);
-		EXPECT_TRUE(funType->isMemberFunction());
+		// this should also work
+		EXPECT_TRUE(a.isa<LiteralPtr>());
+		a.as<LiteralPtr>();
 
-		// create a pure virtual version
-		auto pureVirtual = builder.getPureVirtual(funType);
+		std::cout << node_type<Literal>::getName() << "\n";
 
-		// should be correct
-		EXPECT_TRUE(checks::check(pureVirtual).empty()) << checks::check(pureVirtual);
+		// this should not work
+		// a.as<CallExprPtr>();
 
-		EXPECT_TRUE(isPureVirtual(pureVirtual));
 	}
 
-	TEST(IRppUtils, References) {
-		NodeManager manager;
-		IRBuilder builder(manager);
 
-		auto type = builder.genericType("A");
-
-		// test references
-		EXPECT_FALSE(isCppRef(type));
-		EXPECT_PRED1(isCppRef, getCppRef(type));
-		EXPECT_EQ(type,getCppRefElementType(getCppRef(type)));
-
-
-		// test const references
-		EXPECT_FALSE(isConstCppRef(type));
-		EXPECT_PRED1(isConstCppRef, getConstCppRef(type));
-		EXPECT_EQ(type,getCppRefElementType(getConstCppRef(type)));
-
-
-		// test mixture
-		EXPECT_FALSE(isCppRef(getConstCppRef(type)));
-		EXPECT_FALSE(isConstCppRef(getCppRef(type)));
-	}
-
-	TEST(IRppUtils, DefaultCtorTest) {
-		NodeManager manager;
-		IRBuilder builder(manager);
-
-		// create a struct type
-		StructTypePtr type = builder.parseType("struct { int x; int y; }").as<StructTypePtr>();
-		ASSERT_TRUE(type);
-
-		// create a default constructor for this type
-		auto ctor = createDefaultConstructor(type);
-		EXPECT_TRUE(checks::check(ctor).empty()) << ctor << checks::check(ctor);
-
-		EXPECT_PRED1(isDefaultConstructor, ctor);
-	}
-
-} // end namespace analysis
 } // end namespace core
 } // end namespace insieme
+

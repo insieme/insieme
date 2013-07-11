@@ -102,6 +102,7 @@ class IndexerVisitor{
 	private:
 		insieme::frontend::TranslationUnit* mTu;
 		Indexer::tIndex& mIndex; 
+		std::set<const clang::Decl*> processed;
 
 	public:
 	IndexerVisitor	(insieme::frontend::TranslationUnit* tu,
@@ -112,7 +113,7 @@ class IndexerVisitor{
 	void indexDeclaration(clang::Decl* decl){
 
 		// if already index, done
-
+		if(!processed.insert(decl).second) return;
 
 		// === FRIEND DECL ====
 		if( const clang::FriendDecl* f = llvm::dyn_cast<clang::FriendDecl>(decl) ) {

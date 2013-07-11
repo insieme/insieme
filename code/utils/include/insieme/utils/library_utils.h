@@ -29,56 +29,39 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
-#ifndef NDEBUG
+#pragma once
 
-#include "insieme/core/checks/full_check.h"
-#include "insieme/core/types/subtyping.h"
+#include <string>
+#include <vector>
 
-#define DEBUG_CHECK(expr)\
-	core::checks::MessageList&& errors = core::checks::check(expr); \
-	if(!errors.empty()){\
-		std::cout << " ======================= " << std::endl; \
-		dumpPretty(expr); \
-		std::cout << errors << std::endl;\
-		std::cout << " ======================= " << std::endl; \
-		abort();\
-	}
+namespace insieme {
+namespace utils {
 
-#define ASSERT_EQ_TYPES(exprA, exprB)\
-	if( !(insieme::core::types::isSubTypeOf(exprA, exprB)) ){\
-		std::cout << " === TYPES MISSMATCH [" << __FILE__ << ":" << __LINE__ << "] ===" << std::endl; \
-		dumpPretty(exprA); \
-		std::cout << " vs " << std::endl; \
-		dumpPretty(exprB); \
-		std::cout << " ======================= " << std::endl; \
-		exit(-1);\
-	}
+class LibraryUtil {
+private:
+    std::vector<std::string> directories;
 
+public:
+    LibraryUtil();
+    ~LibraryUtil();
+    bool isDeserializable(const std::string& file_name);
+    void unpackStaticLibrary(const std::string& file_name,
+                             std::vector<std::string>& inputs,
+                             std::vector<std::string>& libs);
+    void handleInputFiles(const std::vector<std::string>& filelist,
+                          std::vector<std::string>& inputs,
+                          std::vector<std::string>& libs);
+    void createLibrary(const std::vector<std::string>& input_files,
+                       const std::vector<std::string>& lib_files,
+                       const std::string& outputFile);
 
-#define PRINTLOCATION(expr)\
-	std::cout << utils::location(expr->getLocStart(), expr->getASTContext().getSourceManager()) << std::endl;
+};
 
+}
 
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-//
-#else
-
-#define DEBUG_CHECK(expr)\
-	if(0){ }
-
-#define ASSERT_EQ_TYPES(exprA, exprB)\
-	if(0){ }
-
-#define PRINTLOCATION(expr)\
-	if(0){ }
-
-
-
-#endif
+}

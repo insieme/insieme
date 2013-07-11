@@ -3,7 +3,7 @@
 
 class Base {
 public:
-	virtual void dummy() { }
+	virtual void dummy() { std::cout << "Dummy" << std::endl; }
 	Base() {  }
 	//~Base() {  }
 };
@@ -12,6 +12,7 @@ class Derived: public Base {
 	int a;
 public:
 	Derived() {  }
+	//virtual void dummy() { std::cout << "Dervied" << std::endl; }
 	//~Derived() {  }
 };
 
@@ -32,7 +33,10 @@ int main() {
 		Derived* pd = &d;
 
 		Base* pb1 =  static_cast<Base*>(pd);
+		pb1->dummy();
+
 		Derived* pd1 =  static_cast<Derived*>(pb);
+		pd1->dummy();
 	}
 
 	{
@@ -41,7 +45,10 @@ int main() {
  		Derived d;
 		Derived& rd = d;
 		Base& rbd1 = static_cast<Base&>(rd);
+		rbd1.dummy();
+
 		Derived& rdb1 = static_cast<Derived&>(rb);
+		rdb1.dummy();
 	}
 
 	return 0;
