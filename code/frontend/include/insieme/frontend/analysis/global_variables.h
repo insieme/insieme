@@ -81,6 +81,10 @@ public:
 	 */
 	enum VarStorage { VS_GLOBAL, VS_STATIC, VS_EXTERN};
 
+	typedef std::list<const clang::VarDecl*> tInitialization;
+	typedef std::list<const clang::VarDecl*>::iterator tGlobalInit_Iter;
+	typedef std::list<const clang::VarDecl*>::iterator tStaticInit_Iter;
+
 private:
 
 	typedef std::pair<const clang::VarDecl*, VarStorage> tGlobalDecl;
@@ -90,7 +94,12 @@ private:
 	std::map<const clang::VarDecl*, std::string> staticNames;
 	int staticCount;
 
+	std::list<const clang::VarDecl*> globalInitializations;
+	std::list<const clang::VarDecl*> staticInitializations;
+
 public:
+
+	// functions
 
 	GlobalVarCollector():
 	staticCount(0)
@@ -168,7 +177,25 @@ public:
 	init_it end(){
 		return init_it(globalsMap.end());
 	}
+
+
+	tGlobalInit_Iter globalsInitialization_begin(){
+		return globalInitializations.begin();
+	}
+	tGlobalInit_Iter globalsInitialization_end(){
+		return globalInitializations.end();
+	}
+
+	tStaticInit_Iter staticInitialization_begin(){
+		return staticInitializations.begin();
+	}
+	tStaticInit_Iter staticInitialization_end(){
+		return staticInitializations.end();
+	}
+
 };
+
+std::ostream& operator<< (std::ostream& out, const GlobalVarCollector::VarStorage storage);
 
 } // end analysis namespace
 } // end frontend namespace

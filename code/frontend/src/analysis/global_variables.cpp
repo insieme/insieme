@@ -168,6 +168,18 @@ class GlobalsVisitor{
 	}
 };
 
+
+void insertIfNoExist(const clang::VarDecl* var, std::list<const clang::VarDecl*>& collection){
+	bool found = false;
+	for (auto elem : collection){
+		found = elem->getQualifiedNameAsString () == var->getQualifiedNameAsString();
+		if (found) break;
+	}
+
+	if (!found)
+		collection.push_back(var);
+}
+
 } // end anonymous namespace
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -230,6 +242,12 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var, bool local){
 	}
 
 	VLOG(2) << " var: " << name << " \t\t\t storage:" << st;
+
+	if (var->hasDefinition() && var->hasInit()){
+		if (local) 	staticInitializations.push_back(var);
+		else		insertIfNoExist( var, globalInitializations);
+	}
+
 
 	// if already exists a previous version, and is marked as extern update with non extern if
 	// possible
