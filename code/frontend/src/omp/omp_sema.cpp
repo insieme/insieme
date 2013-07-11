@@ -48,11 +48,13 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/analysis/attributes.h"
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/timer.h"
+#include "insieme/annotations/c/naming.h"
 
 #include "insieme/frontend/utils/castTool.h"
 
@@ -411,7 +413,7 @@ protected:
 		ExpressionPtr indexExpr = build.castExpr(basic.getUInt8(), build.getThreadId());
 		if(masterCopy) indexExpr = build.literal(basic.getUInt8(), "0");
 
-		CallExprPtr call = dynamic_pointer_cast<const CallExpr>(node);
+		CallExprPtr call = node.isa<CallExprPtr>();
 		if(call) {
 			//cout << "%%%%%%%%%%%%%%%%%%\nCALL THREADPRIVATE:\n" << *call << "\n";
 			assert(call->getFunctionExpr() == basic.getCompositeRefElem() && "Threadprivate not on composite ref elem access");
@@ -433,15 +435,11 @@ protected:
 				thisLambdaTPAccesses.insert(std::make_pair(accessExpr, varP));
 				return varP;
 			}
-			 
 		}
 		LiteralPtr literal = node.isa<LiteralPtr>();
 		if(literal) {
-			std::cout << "Encountered thread-private annotation at literal: " << *literal << " of type " << *literal->getType() << "\n";
-
-			// deal with a global variable marked to be thread-private
+			//std::cout << "Encountered thread-private annotation at literal: " << *literal << " of type " << *literal->getType() << "\n";
 			assert(literal->getType()->getNodeType() == NT_RefType);
-
 			// alter the type of the literal
 			TypePtr newType = build.refType(
 					build.vectorType(
@@ -449,14 +447,26 @@ protected:
 							build.concreteIntTypeParam(MAX_THREADPRIVATE)
 					)
 			);
-
 			// create the new literal
 			LiteralPtr newLiteral = build.literal(literal->getValue(), newType);
-
 			// create an expression accessing the literal
-			return build.arrayRefElem(newLiteral, indexExpr);
+			ExpressionPtr accessExpr = build.arrayRefElem(newLiteral, indexExpr);
+			return accessExpr;
+			// TODO fix this optimization:
+			//if(masterCopy) return accessExpr;
+			//// if not a master copy, optimize access
+			//if(thisLambdaTPAccesses.find(accessExpr) != thisLambdaTPAccesses.end()) {
+			//	// repeated access, just use existing variable
+			//	return thisLambdaTPAccesses[accessExpr];
+			//} else {
+			//	// new access, generate var and add to map
+			//	VariablePtr varP = build.variable(accessExpr->getType());
+			//	assert(varP->getType()->getNodeType() == NT_RefType && "Non-ref threadprivate!");
+			//	thisLambdaTPAccesses.insert(std::make_pair(accessExpr, varP));
+			//	return varP;
+			//}			
 		}
-		assert(false && "OMP threadprivate annotation on non-member / non-call");
+		assert(false && "OMP threadprivate annotation on non-member / non-call / non-literal");
 		return NodePtr();
 	}
 
@@ -623,7 +633,29 @@ protected:
 				replacements.push_back(assignment);
 			}
 		}
-		StatementPtr subStmt = transform::replaceAllGen(nodeMan, stmtNode, publicToPrivateMap);
+		// find var addresses to replace (only within same lambda in original program)
+		// make local copies of global vars available in sub-lambdas introduced by the insieme compiler
+		std::map<NodeAddress, NodePtr> publicToPrivateAddressMap;
+		visitDepthFirstPrunable(NodeAddress(stmtNode), [&](const ExpressionAddress& expA) -> bool {
+			// prune if new named lambda
+			auto lambda = expA.getAddressedNode().isa<LambdaExprPtr>();
+			if(lambda && (core::annotations::hasNameAttached(lambda) || lambda->hasAnnotation(insieme::annotations::c::CNameAnnotation::KEY))) {
+				return true; 
+			}
+			// check if privatized expression
+			for(auto mapping : publicToPrivateMap) {
+				if(mapping.first == expA.getAddressedNode()) {
+					publicToPrivateAddressMap[expA] = mapping.second;
+					// TODO here the variable should be made available if we are inside a lambda introduced by insieme
+					return true;
+				}
+			}
+			return false; // don't prune
+		});
+		StatementPtr subStmt = stmtNode;
+		if(!publicToPrivateAddressMap.empty()) subStmt = transform::replaceAll(nodeMan, publicToPrivateAddressMap).as<StatementPtr>();
+		
+		//StatementPtr subStmt = transform::replaceAllGen(nodeMan, stmtNode, publicToPrivateMap);
 		// specific handling if clause is a omp for
 		if(forP) subStmt = build.pfor(static_pointer_cast<const ForStmt>(subStmt));
 		replacements.push_back(subStmt);
@@ -846,7 +878,7 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 	ProgramPtr result = prog;
 
 	RefTypePtr globalStructType = findGlobalStruct(prog);
-
+	
 	// new sema
 	{
 		OMPSemaMapper semaMapper(resultStorage, globalStructType);
