@@ -209,6 +209,21 @@ namespace lang {
 		 */
 		LANG_EXT_LITERAL(StaticCast, "static_cast", "(ref<'a>, type<'b>)->ref<'b>");
 
+		LANG_EXT_LITERAL(StaticCastRefCppToRefCpp, "static_cast", 
+				"let cppRefA = struct { ref<'a> _cpp_ref } in "
+				"let cppRefB = struct { ref<'b> _cpp_ref } in "
+				"(cppRefA, type<cppRefB>)->cppRefB");
+		
+		LANG_EXT_LITERAL(StaticCastConstCppToConstCpp, "static_cast", 
+				"let constCppRefA = struct { ref<'a> _const_cpp_ref } in "
+				"let constCppRefB = struct { ref<'b> _const_cpp_ref } in "
+				"(constCppRefA, type<constCppRefB>)->constCppRefB");
+
+		LANG_EXT_LITERAL(StaticCastRefCppToConstCpp, "static_cast", 
+				"let cppRefA = struct { ref<'a> _cpp_ref } in "
+				"let constCppRefB = struct { ref<'b> _const_cpp_ref } in "
+				"(cppRefA, type<constCppRefB>)->constCppRefB");
+
 		/**
 		 * The literal to be used for encoding a dynamic cast operation within
 		 * a pre-processing step of the backend.
@@ -229,11 +244,6 @@ namespace lang {
 				"let cppRefA = struct { ref<'a> _cpp_ref } in "
 				"let constCppRefB = struct { ref<'b> _const_cpp_ref } in "
 				"(cppRefA, type<constCppRefB>)->constCppRefB");
-
-
-
-
-
 	};
 
 } // end namespace lang

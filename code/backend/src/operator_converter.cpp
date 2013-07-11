@@ -1125,11 +1125,41 @@ namespace backend {
 				auto targetTy = core::analysis::getRepresentedType(ARG(1));
 				auto targetCType = CONVERT_TYPE(targetTy);
 				
-				if(!targetTy.isa<core::ArrayTypePtr>()) {
+				if(!targetTy.isa<core::ArrayTypePtr>()
+					&& !core::analysis::isCppRef(targetTy) ) {
 					targetCType = c_ast::ptr(targetCType);	
 				}
 
 				return c_ast::staticCast( targetCType, CONVERT_ARG(0));
+			});
+
+			res[irppExt.getStaticCastRefCppToRefCpp()] = OP_CONVERTER({
+				// build up a static cast operator for cpp_ref to cpp_ref
+				
+				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+				auto targetCType = CONVERT_TYPE(targetTy);
+			
+				assert(core::analysis::isCppRef(targetTy) && "targetType not a reference type");
+				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
+			});
+
+			res[irppExt.getStaticCastConstCppToConstCpp()] = OP_CONVERTER({
+				// build up a static cast operator for const_cpp_ref to const_cpp_ref
+				
+				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+				auto targetCType = CONVERT_TYPE(targetTy);
+				
+				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
+				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
+			});
+			res[irppExt.getStaticCastRefCppToConstCpp()] = OP_CONVERTER({
+				// build up a static cast operator for cpp_ref to const_cpp_ref
+				
+				auto targetTy = core::analysis::getRepresentedType(ARG(1));
+				auto targetCType = CONVERT_TYPE(targetTy);
+				
+				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
+				return c_ast::staticCast(targetCType, CONVERT_ARG(0));
 			});
 
 			res[irppExt.getDynamicCast()] = OP_CONVERTER({
