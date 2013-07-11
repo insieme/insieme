@@ -566,6 +566,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 						std::make_pair(tagDecl, builder.typeVariable(decl_name))
 					);
 
+
 				// when a subtype is resolved we aspect to already have these variables in the map
 				if(!convFact.ctx.isRecSubType) {
 					std::for_each(components.begin(), components.end(),
@@ -612,8 +613,9 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 			if( !components.empty() ) {
 				// if we are visiting a nested recursive type it means someone else will take care
 				// of building the rectype node, we just return an intermediate type
-				if(convFact.ctx.isRecSubType)
+				if(convFact.ctx.isRecSubType) {
 					return retTy;
+				}
 
 				// we have to create a recursive type
 				ConversionContext::TypeRecVarMap::const_iterator tit = convFact.ctx.recVarMap.find(tagDecl);

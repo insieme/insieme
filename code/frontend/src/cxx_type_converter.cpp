@@ -45,6 +45,7 @@
 
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_class_info.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/naming.h"
 
@@ -91,15 +92,38 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 	auto match = convFact.ctx.typeCache.find(tagType);
 	if(match != convFact.ctx.typeCache.end()){
 		return match->second;
-	}
+	}	
 
+	auto tagDecl = tagType->getDecl();
+	if (tagDecl) {
+		VLOG(2) << "VisitTagType " << tagDecl->getNameAsString() <<  std::endl;
+
+		if(!convFact.ctx.recVarMap.empty() && tagDecl) {
+			// check if this type has a typevar already associated, in such case return it
+			ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagDecl);
+			if( fit != convFact.ctx.recVarMap.end() ) {
+				// we are resolving a parent recursive type, so we shouldn't
+				return fit->second;
+			}
+		}
+
+		// check if the type is in the cache of already solved recursive types
+		// this is done only if we are not resolving a recursive sub type
+		if(!convFact.ctx.isRecSubType && tagDecl) {
+			ConversionContext::RecTypeMap::const_iterator rit = convFact.ctx.recTypeCache.find(tagDecl);
+			if(rit != convFact.ctx.recTypeCache.end()) {
+				return rit->second;
+			}
+		}
+	}
+	
 	auto classType = TypeConverter::VisitTagType(tagType);
 	LOG_TYPE_CONVERSION(tagType, classType) ;
 
 	convFact.ctx.typeCache[tagType] = classType;
 
 	// if is a c++ class, we need to annotate some stuff
-	if (llvm::isa<clang::RecordType>(tagType)){
+	if (llvm::isa<clang::RecordType>(tagType)) {
 		if (!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl()))
 			return classType;
 
@@ -119,15 +143,26 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				parents.push_back(builder.parent(it->isVirtual(), parentIrType));
 			}
 
-			// if we have base classes, we need to create again the IR type, with the
-			// parent list this time
-			//FIXME: typename
-			classType = builder.structType(builder.parents(parents), classType.as<core::StructTypePtr>()->getElements());
+			// if we have base classes, update the classType
+			core::ParentsAddress target;
+			if(classType.isa<core::StructTypePtr>() ) {
+				target = core::StructTypeAddress(classType.as<core::StructTypePtr>())->getParents();
+			} else if(classType.isa<core::RecTypePtr>() ) {
+				target = core::RecTypeAddress(classType.as<core::RecTypePtr>())->getTypeDefinition().as<core::StructTypeAddress>()->getParents();
+			} else { assert(false && "not supported"); }
+			classType = core::transform::replaceNode(mgr, target, builder.parents(parents)).as<core::TypePtr>();
 		}
 
-		// name class type
+		//update name of class type
+		core::NodeAddress target;
+		if(classType.isa<core::StructTypePtr>() ) {
+			target = core::StructTypeAddress(classType.as<core::StructTypePtr>())->getName();
+		} else if(classType.isa<core::RecTypePtr>() ) {
+			target = core::RecTypeAddress(classType.as<core::RecTypePtr>())->getTypeDefinition().as<core::StructTypeAddress>()->getName();
+		} else { assert(false && "not supported"); }
 		auto name = builder.stringValue(classDecl->getNameAsString());
-		classType = builder.structType(name, classType.as<core::StructTypePtr>()->getParents(), classType.as<core::StructTypePtr>()->getElements());
+		classType = core::transform::replaceNode(mgr, target, name).as<core::TypePtr>();
+
 		annotations::c::attachCName(classType, classDecl->getNameAsString());
 
 		// update cache with base classes, for upcomming uses
