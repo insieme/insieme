@@ -1722,8 +1722,8 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 
 		// globals which end up being extern must mantain name without alterations
 		// nor qualifications
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    EXTERN, do not declareD  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		if (globalCollector.isExtern(it.decl())){
+		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    EXTERN, do not declared  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		if (it.storage() == analysis::GlobalVarCollector::VS_EXTERN){
 			continue;
 		}
 
@@ -1742,7 +1742,7 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 		}
 
 		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    STATIC  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		if (globalCollector.isStatic(it.decl())){
+		if (it.storage() == analysis::GlobalVarCollector::VS_STATIC){
 			inits.push_back(builder.createStaticVariable(var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>()));
 			continue;
 		}

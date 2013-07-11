@@ -41,13 +41,15 @@
 
 #include "insieme/frontend/program.h"
 
-#include "insieme/frontend/utils/indexer.h"
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include "clang/AST/Decl.h"
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#pragma GCC diagnostic pop
+
+#include "insieme/frontend/utils/indexer.h"
 
 #include <set>
 #include <map>
@@ -72,9 +74,14 @@ namespace analysis {
  *  any value, to guaranty that it will have the right initial values
  */
 class GlobalVarCollector {
-private:
 
+public:
+	/** 
+	 * this enum specifies the storage of the object
+	 */
 	enum VarStorage { VS_GLOBAL, VS_STATIC, VS_EXTERN};
+
+private:
 
 	typedef std::pair<const clang::VarDecl*, VarStorage> tGlobalDecl;
 	typedef std::map<std::string, tGlobalDecl> tGlobalsMap;
@@ -83,14 +90,11 @@ private:
 	std::map<const clang::VarDecl*, std::string> staticNames;
 	int staticCount;
 
-
 public:
 
 	GlobalVarCollector():
 	staticCount(0)
 	{ }
-
-
 	/**
 	 * the functor overload searches a translation unit for globals
 	 * it finds globals and updates global state
@@ -103,7 +107,7 @@ public:
 	 * @param name: varDecl of the variable, 
 	 * @return whenever this one remains extern (to be linked)
 	 */
-	bool isExtern (const clang::VarDecl* name);
+	bool isExtern (const clang::VarDecl* var);
 
 	/**
 	 * given a variable, it finds out if is static to a function or has being globaly
@@ -111,7 +115,7 @@ public:
 	 * @param name: varDecl of the variable, 
 	 * @return whenever this one remains extern (to be linked)
 	 */
-	bool isStatic (const clang::VarDecl* name);
+	bool isStatic (const clang::VarDecl* var);
 
 	/**
 	 * usign qualified names should be enough most of the cases, but sometimes static
@@ -150,6 +154,7 @@ public:
 		const clang::VarDecl* decl() const;
 		const clang::Expr*    init() const;
 		const clang::Type*    type() const;
+		const VarStorage      storage() const;
 
 		init_it operator++(); 
 		init_it operator++(int); 
@@ -163,8 +168,6 @@ public:
 	init_it end(){
 		return init_it(globalsMap.end());
 	}
-
-	friend std::ostream& operator<< (std::ostream& out, const GlobalVarCollector::VarStorage storage);
 };
 
 } // end analysis namespace
