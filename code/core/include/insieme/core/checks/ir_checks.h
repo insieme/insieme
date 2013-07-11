@@ -312,7 +312,7 @@ namespace checks {
 		 * list of messages to be added to the resulting list.
 		 */
 		template<typename ... T>
-		MessageList(const T& ... mgs) {
+		explicit MessageList(const T& ... mgs) {
 			auto msgs = toVector<Message>(mgs...);
 			for_each(msgs, [&](const Message& cur) { this->add(cur); });
 		}

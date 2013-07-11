@@ -41,6 +41,7 @@
 
 #include "insieme/core/ir_types.h"
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/ir_builder.h"
 
 #include "ir_node_test.inc"
 
@@ -381,6 +382,26 @@ TEST(TypeTest, RecType) {
 
 	basicTypeTests(typeX, true, toList(toVector<NodePtr>(varX, definition)));
 	basicTypeTests(typeY, true, toList(toVector<NodePtr>(varY, definition)));
+}
+
+TEST(TypeTest, RecTypeTest) {
+	// test accessing the definition of a recursive type using addresses
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto type = builder.parseType("let f = struct { ref<f> next; } in f").as<RecTypePtr>();
+	EXPECT_TRUE(type);
+
+	// get pointer to definition
+	auto def = type->getTypeDefinition();
+
+	// get address of definition
+	core::RecTypeAddress address(type);
+	core::TypeAddress defAdr = address->getTypeDefinition();
+
+	EXPECT_EQ("0-1-0-1", toString(defAdr));
+	EXPECT_EQ(def, defAdr.getAddressedNode());
 }
 
 namespace {
