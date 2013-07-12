@@ -96,8 +96,11 @@ protected:
 
 	utils::DependencyGraph<const clang::TagDecl*> typeGraph;
 
+	// the internal cache to avoid evaluating the same type several times
+	std::map<const clang::Type*, core::TypePtr> cache;
+
 public:
-	TypeConverter(ConversionFactory& fact, Program& program);
+	TypeConverter(ConversionFactory& fact);
 
 	virtual ~TypeConverter() { }
 
@@ -117,8 +120,14 @@ public:
 	DECLARE_TYPE_VISIT(TypeConverter, ParenType)
 	DECLARE_TYPE_VISIT(TypeConverter, PointerType)
 
-	virtual core::TypePtr Visit(const clang::Type* type) = 0;
+	// main entry point
+	core::TypePtr convert(const clang::Type* type);
+
 protected:
+
+	virtual core::TypePtr convertInternal(const clang::Type* type) = 0;
+
+	virtual void postConvertionAction(const clang::Type* src, const core::TypePtr& res) { };
 
 	virtual core::TypePtr handleTagType(const clang::TagDecl* tagDecl,
 			const core::NamedCompositeType::Entries& structElements);
@@ -135,14 +144,10 @@ class ConversionFactory::CTypeConverter:
 	public clang::TypeVisitor<ConversionFactory::CTypeConverter, core::TypePtr>
 {
 
-protected:
-	//ConversionFactory& convFact;
-	//utils::DependencyGraph<const clang::Type*> typeGraph;
-
 public:
-	CTypeConverter(ConversionFactory& fact, Program& program) :
-		TypeConverter(fact, program) {
-	}
+	CTypeConverter(ConversionFactory& fact)
+		: TypeConverter(fact) { }
+
 	virtual ~CTypeConverter() {}
 
 	CALL_BASE_TYPE_VISIT(TypeConverter, BuiltinType)
@@ -161,9 +166,10 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, PointerType)
 
-	core::TypePtr Visit(const clang::Type* type);
-
 protected:
+
+	// main entry point
+	virtual core::TypePtr convertInternal(const clang::Type* type);
 
 	virtual core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
@@ -179,16 +185,12 @@ class ConversionFactory::CXXTypeConverter :
 	public ConversionFactory::TypeConverter,
 	public clang::TypeVisitor<ConversionFactory::CXXTypeConverter, core::TypePtr>{
 
-	ConversionFactory& convFact;
-
 protected:
 	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
 public:
-	CXXTypeConverter(ConversionFactory& fact, Program& program) :
-		TypeConverter(fact, program),
-		convFact(fact)
-	{}
+	CXXTypeConverter(ConversionFactory& fact)
+		: TypeConverter(fact) {}
 
 	virtual ~CXXTypeConverter() {};
 
@@ -223,7 +225,13 @@ public:
 	core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParamTy);
 	core::TypePtr VisitDecltypeType(const clang::DecltypeType* declTy);
     core::TypePtr VisitAutoType(const clang::AutoType* autoTy);
-	core::TypePtr Visit(const clang::Type* type);
+
+protected:
+
+	// main entry point
+	virtual core::TypePtr convertInternal(const clang::Type* type);
+
+	virtual void postConvertionAction(const clang::Type* src, const core::TypePtr& res);
 };
 
 }

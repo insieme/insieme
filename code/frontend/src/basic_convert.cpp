@@ -153,13 +153,13 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool
 		{
 
 		if (isCpp){
-			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
-			typeConvPtr = std::make_shared<CXXTypeConverter>(*this, prog);
+			typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
 			exprConvPtr = std::make_shared<CXXExprConverter>(*this, prog);
+			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
 		} else{
-			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
-			typeConvPtr = std::make_shared<CTypeConverter>(*this, prog);
+			typeConvPtr = std::make_shared<CTypeConverter>(*this);
 			exprConvPtr = std::make_shared<CExprConverter>(*this, prog);
+			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
 		}
 
 }
@@ -969,7 +969,7 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 	assert(type && "Calling convertType with a NULL pointer");
 	auto fit = ctx.typeCache.find(type);
 	if(fit == ctx.typeCache.end()) {
-		core::TypePtr&& retTy = typeConvPtr->Visit( const_cast<Type*>(type) );
+		core::TypePtr&& retTy = typeConvPtr->convert( type );
 		ctx.typeCache.insert( {type, retTy} );
 		return retTy;
 	}

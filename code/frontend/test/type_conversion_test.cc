@@ -368,7 +368,7 @@ TEST(TypeConversion, HandleArrayType) {
 	fe::ConversionJob config;
 	fe::Program prog(manager, config);
 	const fe::ClangCompiler& clang = fe::ClangCompiler(config);
-	ConversionFactory convFactory( manager, prog );
+
 
 	ASTContext& ctx = clang.getASTContext();
 
@@ -376,6 +376,7 @@ TEST(TypeConversion, HandleArrayType) {
 	BuiltinType* intTy = new BuiltinType(BuiltinType::Int);
 	{
 		QualType arrayTy = ctx.getConstantArrayType(QualType(intTy, 0), llvm::APInt(16,8,false), clang::ArrayType::Normal, 0);
+		ConversionFactory convFactory( manager, prog );
 		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
 		EXPECT_EQ("vector<int<4>,8>", insiemeTy->toString());
@@ -386,6 +387,7 @@ TEST(TypeConversion, HandleArrayType) {
 	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
 	{
 		QualType arrayTy = ctx.getIncompleteArrayType(ctx.getPointerType(QualType(charTy, 0)), clang::ArrayType::Normal, 0);
+		ConversionFactory convFactory( manager, prog );
 		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
 		EXPECT_EQ("array<ref<array<char,1>>,1>", insiemeTy->toString());

@@ -45,6 +45,8 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/ir_types.h"
+#include "insieme/core/ir_cached_visitor.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/naming.h"
 
@@ -206,7 +208,7 @@ namespace conversion {
 //											CLANG TYPE CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
 
-ConversionFactory::TypeConverter::TypeConverter(ConversionFactory& fact, Program& program):
+ConversionFactory::TypeConverter::TypeConverter(ConversionFactory& fact):
 	convFact( fact ), mgr(fact.mgr), builder(fact.builder), gen(fact.mgr.getLangBasic()) { }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -281,7 +283,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitConstantArrayType(const Con
 		return convFact.convertType( arrTy->desugar().getTypePtr() );
 
 	size_t arrSize = *arrTy->getSize().getRawData();
-	core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
+	core::TypePtr&& elemTy = convert( arrTy->getElementType().getTypePtr() );
 	assert(elemTy && "Conversion of array element type failed.");
 
 	core::TypePtr&& retTy = builder.vectorType(
@@ -302,9 +304,9 @@ core::TypePtr ConversionFactory::TypeConverter::VisitConstantArrayType(const Con
 core::TypePtr ConversionFactory::TypeConverter::VisitIncompleteArrayType(const IncompleteArrayType* arrTy) {
 	if(arrTy->isSugared())
 		// if the type is sugared, we Visit the desugared type
-		return Visit( arrTy->desugar().getTypePtr() );
+		return convert( arrTy->desugar().getTypePtr() );
 
-	auto elemTy = Visit( arrTy->getElementType().getTypePtr() );
+	auto elemTy = convert( arrTy->getElementType().getTypePtr() );
 	assert(elemTy && "Conversion of array element type failed.");
 
 	auto retTy = builder.arrayType( elemTy );
@@ -328,9 +330,9 @@ core::TypePtr ConversionFactory::TypeConverter::VisitIncompleteArrayType(const I
 core::TypePtr ConversionFactory::TypeConverter::VisitVariableArrayType(const VariableArrayType* arrTy) {
 	if(arrTy->isSugared())
 		// if the type is sugared, we Visit the desugared type
-		return Visit( arrTy->desugar().getTypePtr() );
+		return convert( arrTy->desugar().getTypePtr() );
 
-	core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
+	core::TypePtr&& elemTy = convert( arrTy->getElementType().getTypePtr() );
 	assert(elemTy && "Conversion of array element type failed.");
 
 	core::TypePtr retTy = builder.arrayType( elemTy );
@@ -348,7 +350,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitVariableArrayType(const Var
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitFunctionProtoType(const FunctionProtoType* funcTy) {
 
-	core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
+	core::TypePtr&& retTy = convert( funcTy->getResultType().getTypePtr() );
 	LOG_TYPE_CONVERSION( funcTy, retTy );
 
 	assert(retTy && "Function has no return type!");
@@ -367,7 +369,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitFunctionProtoType(const Fun
 	std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 		[ &argTypes, this ] (const QualType& currArgType) {
 			this->convFact.ctx.isResolvingFunctionType = true;
-			core::TypePtr&& argTy = this->Visit( currArgType.getTypePtr() );
+			core::TypePtr&& argTy = this->convert( currArgType.getTypePtr() );
 
 			// If the argument is of type vector or array we need to add a reference
 			if(argTy->getNodeType() == core::NT_VectorType || argTy->getNodeType() == core::NT_ArrayType) {
@@ -399,7 +401,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitFunctionProtoType(const Fun
 // available about its arguments.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
-	core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
+	core::TypePtr&& retTy = convert( funcTy->getResultType().getTypePtr() );
 	LOG_TYPE_CONVERSION( funcTy, retTy );
 
 	// If the return type is of type vector or array we need to add a reference
@@ -423,7 +425,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitExtVectorType(const ExtVect
    // get vector datatype
 	const QualType qt = vecTy->getElementType();
 	const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
-	core::TypePtr&& subType = Visit(const_cast<BuiltinType*>(buildInTy));
+	core::TypePtr&& subType = convert(const_cast<BuiltinType*>(buildInTy));
 
 	// get the number of elements
 	size_t num = vecTy->getNumElements();
@@ -441,7 +443,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypedefType(const TypedefTy
 	typedefType->dump();
 	PRINTLOCATION(typedefType->getDecl());
 
-	core::TypePtr subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
+	core::TypePtr subType = convert( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
 	LOG_TYPE_CONVERSION( typedefType, subType );
 	assert(subType);
 
@@ -466,7 +468,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfType(const TypeOfType
 // 							TYPE OF EXPRESSION TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOfExprType* typeOfType) {
-	core::TypePtr&& retTy = Visit( GET_TYPE_PTR(typeOfType->getUnderlyingExpr()) );
+	core::TypePtr&& retTy = convert( GET_TYPE_PTR(typeOfType->getUnderlyingExpr()) );
 	LOG_TYPE_CONVERSION( typeOfType, retTy );
 	return retTy;
 }
@@ -475,218 +477,49 @@ core::TypePtr ConversionFactory::TypeConverter::VisitTypeOfExprType(const TypeOf
 //					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  core::TypePtr ConversionFactory::TypeConverter::VisitTagType(const TagType* tagType) {
-	auto tagDecl = findDefinition(tagType);
 
-	if (tagDecl) {
-		VLOG(2) << "VisitTagType " << tagDecl->getNameAsString() <<  std::endl;
-	}
+	// test whether we can get a definiton
+	auto def = findDefinition(tagType);
 
-	if(!convFact.ctx.recVarMap.empty() && tagDecl) {
-		// check if this type has a typevar already associated, in such case return it
-		ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagDecl);
-		if( fit != convFact.ctx.recVarMap.end() ) {
-			// we are resolving a parent recursive type, so we shouldn't
-			return fit->second;
-		}
-	}
-
-	// check if the type is in the cache of already solved recursive types
-	// this is done only if we are not resolving a recursive sub type
-	if(!convFact.ctx.isRecSubType && tagDecl) {
-		ConversionContext::RecTypeMap::const_iterator rit = convFact.ctx.recTypeCache.find(tagDecl);
-		if(rit != convFact.ctx.recTypeCache.end())
-			return rit->second;
-	}
-
-	// will store the converted type
-	core::TypePtr retTy;
-	VLOG(1) << "~ Converting TagType: " << tagType->getDecl()->getName().str();
-    LOG_TYPE_CONVERSION( tagType, retTy );
-
-	if( tagDecl ) {
-
-		// we found a definition for this declaration, use it
-		assert(tagDecl->isCompleteDefinition() && "TagType is not a definition");
-
-		if(tagDecl->getTagKind() == clang::TTK_Enum) {
-			// Enums are converted into integer
-			return gen.getInt4();
-		} else {
-			// handle struct/union/class
-			const RecordDecl* recDecl = dyn_cast<const RecordDecl>(tagDecl);
-			assert(recDecl && "TagType decl is not of a RecordDecl type!");
-
-			if(!convFact.ctx.isRecSubType) {
-				// add this type to the type graph (if not present)
-				typeGraph.addNode( tagDecl );
-			}
-
-			// retrieve the strongly connected componenets for this type
-			std::set<const TagDecl*>&& components = typeGraph.getStronglyConnectedComponents(tagDecl);
-
-			if( !components.empty() ) {
-
-				std::set<const clang::TagDecl*>&& subComponents = typeGraph.getSubComponents( tagDecl );
-				for(const auto& cur : subComponents) {
-					TagDecl* decl = const_cast<TagDecl*>(cur);
-
-					VLOG(2) << "Analyzing TagDecl as sub component: " << decl->getNameAsString();
-
-					auto fit = convFact.ctx.recTypeCache.find(decl);
-					if ( fit == convFact.ctx.recTypeCache.end() ) {
-						// perform the conversion only if this is the first time this
-						// function is encountred
-						VisitTagType(cast<clang::TagType>(decl->getTypeForDecl()));
-					}
-				}
-
-				if(VLOG_IS_ON(2)) {
-					// we are dealing with a recursive type
-					VLOG(2) << "Analyzing RecordDecl: " << recDecl->getNameAsString() << std::endl
-							<< "Number of components in the cycle: " << components.size();
-					std::for_each(components.begin(), components.end(),
-						[] (std::set<const TagDecl*>::value_type c) {
-							VLOG(2) << "\t" << c->getNameAsString();
-						}
-					);
-					typeGraph.print(std::cerr);
-				}
-
-				// get the name of the struct which are converting into IR
-				auto decl_name = recDecl->getName();
-				static int cnt = 0;
-
-				if (decl_name.empty()) {
-					// this is an anonymous struct, we need to generate a name
-					decl_name = "__insieme_struct_" + std::to_string(cnt++);
-				}
-				
-				// we create a TypeVar for each type in the mutual dependence
-				convFact.ctx.recVarMap.insert(
-						std::make_pair(tagDecl, builder.typeVariable(decl_name))
-					);
-
-
-				// when a subtype is resolved we aspect to already have these variables in the map
-				if(!convFact.ctx.isRecSubType) {
-					std::for_each(components.begin(), components.end(),
-						[ this ] (std::set<const TagDecl*>::value_type cur) {
-							auto decl_name = cur->getName();
-
-							if (decl_name.empty()) {
-								// this is an anonymous struct, we need to generate a name
-								decl_name = "__insieme_struct_" + std::to_string(cnt++);
-							}
-
-							this->convFact.ctx.recVarMap.insert(
-									std::make_pair(cur, builder.typeVariable(decl_name))
-								);
-						}
-					);
-				}
-				
-			}
-
-			// Visit the type of the fields recursively
-			// Note: if a field is referring one of the type in the cyclic dependency, a reference
-			//       to the TypeVar will be returned.
-			core::NamedCompositeType::Entries structElements;
-
-			unsigned mid = 0;
-			for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
-				RecordDecl::field_iterator::value_type curr = *it;
-				core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
-				// if the type is not const we have to add a ref because the value could be accessed and changed
-				//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
-				//	fieldType = convFact.builder.refType(fieldType);
-
-				core::StringValuePtr id = builder.stringValue(
-						curr->getIdentifier() ? curr->getNameAsString() : "__m"+insieme::utils::numeric_cast<std::string>(mid));
-
-				structElements.push_back(builder.namedType(id, fieldType));
-				mid++;
-			}
-
-			// build a struct or union IR type
-			retTy = handleTagType(tagDecl, structElements);
-
-			if( !components.empty() ) {
-				// if we are visiting a nested recursive type it means someone else will take care
-				// of building the rectype node, we just return an intermediate type
-				if(convFact.ctx.isRecSubType) {
-					return retTy;
-				}
-
-				// we have to create a recursive type
-				ConversionContext::TypeRecVarMap::const_iterator tit = convFact.ctx.recVarMap.find(tagDecl);
-				assert(tit != convFact.ctx.recVarMap.end() &&
-						"Recursive type has not TypeVar associated to himself");
-				core::TypeVariablePtr recTypeVar = tit->second;
-
-				vector<core::RecTypeBindingPtr> definitions;
-				definitions.push_back( builder.recTypeBinding(recTypeVar, handleTagType(tagDecl, structElements) ) );
-
-				// We start building the recursive type. In order to avoid loop the visitor
-				// we have to change its behaviour and let him returns temporarely types
-				// when a sub recursive type is visited.
-				convFact.ctx.isRecSubType = true;
-
-				std::for_each(components.begin(), components.end(),
-					[ this, &definitions, &recTypeVar ] (std::set<const TagDecl*>::value_type decl) {
-
-						//Visual Studio 2010 fix: full namespace
-						auto tit = this->convFact.ctx.recVarMap.find(decl);
-
-						assert(tit != this->convFact.ctx.recVarMap.end() && "Recursive type has no TypeVar associated");
-						core::TypeVariablePtr var = tit->second;
-
-						// test whether this variable has already been handled
-						if (*var == *recTypeVar) { return; }
-
-						// we remove the variable from the list in order to fool the solver,
-						// in this way it will create a descriptor for this type (and he will not return the TypeVar
-						// associated with this recursive type). This behaviour is enabled only when the isRecSubType
-						// flag is true
-						this->convFact.ctx.recVarMap.erase(decl);
-
-						definitions.push_back( this->builder.recTypeBinding(var, this->Visit(const_cast<Type*>(decl->getTypeForDecl()))) );
-						var->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(var->getVarName()->getValue()) );
-
-						// reinsert the TypeVar in the map in order to solve the other recursive types
-						this->convFact.ctx.recVarMap.insert( std::make_pair(decl, var) );
-					}
-				);
-
-				// sort definitions - this will produce the same list of definitions for each of the
-				// related types => shared structure
-				if (definitions.size() > 1) {
-					std::sort(definitions.begin(), definitions.end(), [](const core::RecTypeBindingPtr& a,
-																		 const core::RecTypeBindingPtr& b){
-						return a->getVariable()->getVarName()->getValue() < b->getVariable()->getVarName()->getValue();
-					});
-				}
-
-				// we reset the behavior of the solver
-				convFact.ctx.isRecSubType = false;
-				// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
-				convFact.ctx.recVarMap.clear();
-
-				core::RecTypeDefinitionPtr&& definition = builder.recTypeDefinition(definitions);
-				retTy = builder.recType(recTypeVar, definition);
-
-				// Once we solved this recursive type, we add to a cache of recursive types
-				// so next time we encounter it, we don't need to compute the graph
-				convFact.ctx.recTypeCache.insert( {tagDecl, retTy} );
-			}
-
-			// Adding the name of the C struct as annotation
-			if (!recDecl->getName().empty())
-				retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
-		}
-	} else {
+	if (!def) {
 		// We didn't find any definition for this type, so we use a name and define it as a generic type
-		retTy = builder.genericType( tagType->getDecl()->getNameAsString() );
+		return builder.genericType( tagType->getDecl()->getNameAsString() );
 	}
+
+	// handle enums => always just integers
+	if(def->getTagKind() == clang::TTK_Enum) {
+		return gen.getInt4();
+	}
+
+	// handle struct/union/class
+	const RecordDecl* recDecl = dyn_cast<const RecordDecl>(def);
+	assert(recDecl && "TagType decl is not of a RecordDecl type!");
+
+
+	// Visit the type of the fields recursively
+	// Note: if a field is referring one of the type in the cyclic dependency, a reference
+	//       to the TypeVar will be returned.
+	core::NamedCompositeType::Entries structElements;
+
+	unsigned mid = 0;
+	for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
+		RecordDecl::field_iterator::value_type curr = *it;
+		core::TypePtr&& fieldType = convert( GET_TYPE_PTR(curr) );
+
+		core::StringValuePtr id = builder.stringValue(
+				curr->getIdentifier() ? curr->getNameAsString() : "__m"+insieme::utils::numeric_cast<std::string>(mid));
+
+		structElements.push_back(builder.namedType(id, fieldType));
+		mid++;
+	}
+
+	// build a struct or union IR type
+	core::TypePtr retTy = handleTagType(def, structElements);
+
+	// Adding the name of the C struct as annotation
+	if (!recDecl->getName().empty())
+		retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
+
 	return retTy;
 }
 
@@ -703,7 +536,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitElaboratedType(const Elabor
 	//std::cerr << elabType->getBaseElementTypeUnsafe() << std::endl <<"ElaboratedType not yet handled!!!!\n";
 
 	VLOG(2) << "elabtype " << elabType << "\n";
-	return Visit( elabType->getNamedType().getTypePtr() );
+	return convert( elabType->getNamedType().getTypePtr() );
 //		assert(false && "ElaboratedType not yet handled!");
 }
 
@@ -712,7 +545,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitElaboratedType(const Elabor
 //							   PAREN TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitParenType(const ParenType* parenTy) {
-	core::TypePtr&& retTy = Visit( parenTy->getInnerType().getTypePtr() );
+	core::TypePtr&& retTy = convert( parenTy->getInnerType().getTypePtr() );
 	LOG_TYPE_CONVERSION( parenTy, retTy );
 	return retTy;
 }
@@ -732,7 +565,7 @@ core::TypePtr ConversionFactory::TypeConverter::VisitParenType(const ParenType* 
 // more general case (the array case) has to be conservatively considered.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitPointerType(const PointerType* pointerTy) {
-	core::TypePtr&& subTy = Visit( pointerTy->getPointeeType().getTypePtr() );
+	core::TypePtr&& subTy = convert( pointerTy->getPointeeType().getTypePtr() );
 	// ~~~~~ Handling of special cases ~~~~~~~
 	// void* -> array<'a>
 	if( gen.isUnit(subTy) ) {
@@ -757,8 +590,212 @@ core::TypePtr ConversionFactory::TypeConverter::handleTagType(const TagDecl* tag
 	return core::TypePtr();
 }
 
-core::TypePtr ConversionFactory::CTypeConverter::Visit(const clang::Type* type) {
+core::TypePtr ConversionFactory::CTypeConverter::convertInternal(const clang::Type* type) {
 	return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type);
+}
+
+
+namespace {
+
+	const RecordDecl* toRecordDecl(const clang::Type* type) {
+		if (auto tagType = dyn_cast<const clang::TagType>(type)) {
+			if (auto def = findDefinition(tagType)) {
+				return dyn_cast<const RecordDecl>(def);
+			}
+		}
+		return nullptr;
+	}
+
+	// TODO: implement a more efficient variant of this one and move it to the utils!
+	bool hasFreeTypeVariables(const core::NodePtr& node) {
+
+		struct HasFreeTypeVariableVisitor : public core::IRVisitor<bool, core::Pointer, core::NodeSet&> {
+
+			HasFreeTypeVariableVisitor() : core::IRVisitor<bool, core::Pointer, core::NodeSet&>(true) {}
+
+			bool visitTypeVariable(const core::TypeVariablePtr& cur, core::NodeSet& knownVariables) {
+				return !contains(knownVariables, cur);
+			}
+
+			bool visitRecTypeDefinition(const core::RecTypeDefinitionPtr& def, core::NodeSet& knownVariables) {
+				core::NodeSet local = knownVariables;
+				for(const core::RecTypeBindingPtr& binding : def) {
+					local.insert(binding->getVariable());
+				}
+				return visitNode(def, local);
+			}
+
+			bool visitRecType(const core::RecTypePtr& cur, core::NodeSet& knownVariables) {
+				return visit(cur->getDefinition(), knownVariables);
+			}
+
+			bool visitNode(const core::NodePtr& cur, core::NodeSet& knownVariables) {
+				return any(cur.getChildList(), [&](const core::NodePtr& cur)->bool { return this->visit(cur, knownVariables); });
+			}
+
+		};
+
+		core::NodeSet tmp;
+		return HasFreeTypeVariableVisitor().visit(node, tmp);
+
+	}
+
+	core::TypePtr closeRecursiveType(const core::TypePtr type, const core::TypeVariablePtr var) {
+		// if it is a direct recursion, be done
+		core::NodeManager& mgr = type.getNodeManager();
+		core::IRBuilder builder(mgr);
+
+		// make sure it is handling a struct or union type
+		assert(type.isa<core::StructTypePtr>() || type.isa<core::UnionTypePtr>());
+
+		// see whether there is any free type variable
+		if (!hasFreeTypeVariables(type)) return type;
+
+		// 1) check nested recursive types - those include this type
+
+		// check whether there is nested recursive type specification that equals the current type
+		std::vector<core::RecTypePtr> recTypes;
+		core::visitDepthFirstOnce(type, [&](const core::RecTypePtr& cur) {
+			if (cur->getDefinition()->getDefinitionOf(var)) recTypes.push_back(cur);
+		}, true, true);
+
+		// see whether one of these is matching
+		for(auto cur : recTypes) {
+			// TODO: here it should actually be checked whether the inner one is structurally identical
+			//		 at the moment we relay on the fact that it has the same name
+			return builder.recType(var, cur->getDefinition());
+		}
+
+
+		// 2) normalize recursive type
+
+		// collect all struct types within the given type
+		core::TypeList structs;
+		core::visitDepthFirstOncePrunable(type, [&](const core::TypePtr& cur) {
+			//if (containsVarFree(cur)) ;
+			if (cur.isa<core::RecTypePtr>()) return !hasFreeTypeVariables(cur);
+			if (cur.isa<core::NamedCompositeTypePtr>() && hasFreeTypeVariables(cur)) {
+				structs.push_back(cur.as<core::TypePtr>());
+			}
+			return false;
+		}, true);
+
+		// check whether there is a recursion at all
+		if (structs.empty()) return type;
+
+		// create de-normalized recursive bindings
+		vector<core::RecTypeBindingPtr> bindings;
+		for(auto cur : structs) {
+			bindings.push_back(builder.recTypeBinding(builder.typeVariable(annotations::c::getCName(cur)), cur));
+		}
+
+		// sort according to variable names
+		std::sort(bindings.begin(), bindings.end(), [](const core::RecTypeBindingPtr& a, const core::RecTypeBindingPtr& b) {
+			return a->getVariable()->getVarName()->getValue() < b->getVariable()->getVarName()->getValue();
+		});
+
+		// create definitions
+		core::RecTypeDefinitionPtr def = builder.recTypeDefinition(bindings);
+
+		// test whether this is actually a closed type ..
+		if(hasFreeTypeVariables(def)) return type;
+
+		// normalize recursive representation
+		core::RecTypeDefinitionPtr old;
+		while(old != def) {
+			old = def;
+
+			// set up current variable -> struct definition replacement map
+			core::NodeMap replacements;
+			for (auto cur : def) {
+				replacements[cur->getType()] = cur->getVariable();
+			}
+
+			// wrap into node mapper
+			auto mapper = core::makeLambdaMapper([&](int, const core::NodePtr& cur) {
+				return core::transform::replaceAllGen(mgr, cur, replacements);
+			});
+
+			// apply mapper to defintions
+			for (core::RecTypeBindingPtr& cur : bindings) {
+				cur = builder.recTypeBinding(cur->getVariable(), cur->getType()->substitute(mgr, mapper));
+			}
+
+			// update definitions
+			def = builder.recTypeDefinition(bindings);
+		}
+
+		// convert structs into list of definitions
+
+		// build up new recursive type (only if it is closed)
+		auto res = builder.recType(var, def);
+		return hasFreeTypeVariables(res)?type:res;
+	}
+
+}
+
+
+core::TypePtr ConversionFactory::TypeConverter::convert(const clang::Type* type) {
+	assert(type && "Calling TypeConverter::Visit with a NULL pointer");
+
+	// look up type within cache
+	auto pos = cache.find(type);
+	if (pos != cache.end()) {
+		return pos->second;
+	}
+
+	// create result location
+	core::TypePtr res;
+
+	//check if type is intercepted
+	if(convFact.program.getInterceptor().isIntercepted(type)) {
+		VLOG(2) << type << " isIntercepted";
+		res = convFact.program.getInterceptor().intercept(type, convFact);
+		cache[type] = res;
+		return res;
+	}
+
+	// assume a recursive construct for record declarations
+	if (auto recDecl = toRecordDecl(type)) {
+
+		// create a (temporary) type variable for this type
+		core::TypeVariablePtr var = builder.typeVariable(recDecl->getName());
+
+		// bind recursive variable within the cache
+		cache[type] = var;
+
+		// resolve the type recursively
+		res = convertInternal(type);
+
+		// fix recursive type if necessary
+		res = closeRecursiveType(res, var);
+
+		// update type cache
+		assert(cache[type] == var); // should not change in the meantime
+
+		// update cache
+		if (!hasFreeTypeVariables(res)) {
+			// update cache
+			cache[type] = res;
+		} else {
+			// remove temporary from cache
+			cache.erase(type);
+		}
+
+	} else {
+
+		// for all others no recursive definitions need to be considered
+		res = convertInternal(type);
+
+		// update cache
+		if (!hasFreeTypeVariables(res)) cache[type] = res;
+	}
+
+	// run post-conversion actions
+	postConvertionAction(type, res);
+
+	// be done
+	return res;
 }
 
 core::TypePtr ConversionFactory::CTypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
