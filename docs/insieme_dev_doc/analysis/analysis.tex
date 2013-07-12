@@ -368,18 +368,15 @@ Given an IR node (which can be any of the IR structures) SCoP analysis can be
 invoked to determine whether the subtree (spawning from that statement) is a
 valid SCoP (i.e. a code region which can be represented in terms of the
 Polyhedral model constraints). The entry point of the SCoP analysis is in the
-file \file{analysis/polyhedral/scop.h}. The method \type{AddresSList mark(const
+file \file{analysis/polyhedral/scop.h}. The method \type{AddressList mark(const
 NodePtr\& root)} takes any IR node and return a list of addresses (having {\tt
 root} as a root node) which are the top level entry points of SCoPs within {\tt
 root}. By definition SCoPs are never overlapping. 
 
-Given the entry-point statement of a SCoP the \type{ScopRegion} annotation can be
-checked. This will return an object of type \type{Scop} which contains (cached)
-all the information necessary to represent the code region in terms of the
-polyhedral model. 
-
-Given a statement it is also possible to retrieve the \type{Scop} object using
-the utility function \type{optional<Scop> toScop(const NodePtr\&)}.
+Given the entry-point statement of a SCoP the \type{ScopRegion} annotation can
+be checked. This will return an object of type \type{ScopRegion} which contains
+(cached) all the information necessary to represent the code region in terms of
+the polyhedral model. 
 
 \subsubsection{SCoP Internal Representation}
 As said before, representing a code with the Polyhedral Model requires three
@@ -415,7 +412,7 @@ carry an iteration domain object of the form $i>=0 \wedge i<10$.
 
 Whenever a statement is analyzed we first check whether the statement already
 has a \type{ScopRegion} annotation attached. If not the analysis is performed on
-the statement. Whenever the all the children of a statement have been analyzed,
+the statement. Whenever all the children of a statement have been analyzed,
 we merge the iteration vectors into a new iteration vector which is then
 utilized to describe accesses and domain functions within the parent node. This
 way of building up the SCoP representation allows to reduce the amount of
@@ -440,15 +437,70 @@ not appear between the parameters of the else part of the statement). In order t
 build the polyhedral representation of a region of code all access functions and
 domain expression have to be based on the same iteration vector. 
 
-The \type{polyhedral/Scop} class, defined in
+The \type{polyhedral::Scop} class, defined in
 \file{analysis/polyhedral/polyhedral.h} has the goal to fully represent a SCoP.
-The process works as follows. The user addresses a statement {\tt S} which is either the
-entry of a SCoP or within the SCoP. From {\tt S} he can decide to
+The process works as follows. The user addresses a statement {\tt S} which is
+either the entry of a SCoP or within the SCoP. From {\tt S} he can decide to
 generate the Polyhedral representation of the code region derived from this
-statement. This process build a \type{Scop} object where the affine expressions have
-been updated to the new base (which is the iteration vector, $vec_S$). This
+statement. This process build a \type{Scop} object where the affine expressions
+have been updated to the new base (which is the iteration vector, $vec_S$). This
 operation is implemented by the \type{resolveScop} function defined in
-\file{analysis/polyhedrl/scop.cpp}. 
+\file{analysis/polyhedral/scop.cpp}. For performance reasons, SCoPs are cached
+for successive use. This function also takes care of computing the iteration
+domains associated to each statement within the SCoP and their scheduling
+functions. Details will be provided in the next section when the structure of
+the \type{Scop} object is described.  Whenever a SCoP is formed from an entry
+point {\tt S}, then the \type{ScopRegion} annotation will cache the generated
+\type{Scop} object in the {\tt scopInfo} member variable. 
+
+An automatic way for instantiating this process is using the {\tt toScop} method
+provided in the \file{analysis/polyhedral/scop.h} file.  Given a statement it is
+also possible to retrieve the \type{Scop} object using the utility function
+\type{optional<Scop> toScop(const NodePtr\&)}. 
+
+\subsubsection{The {\tt Scop} Object}
+
+As previously stated, the \type{Scop} object, defined in the file
+\file{analysis/polyhedral/polyhedral.h}  holds the full representation of a
+polyhedral region given an entry point statement. It stores the iteration vector
+{\tt iterVec} to which all affine expressions within the SCoP point to. Then for
+each statement within that SCoP, variable {\tt stmts}, information are stored in
+the \type{Stmt} class. This class contains 4 important informations associated
+to a statement: 
+\begin{enumerate}
+	\item the address of the statement in the IR, i.e. {\tt addr} (the
+			root of the address is the entry point of the SCoP). 
+
+	\item The \type{IterationDomain} which encloses the statement, i.e. {\tt dom} 
+	
+	\item The schedule, i.e. {\tt schedule}, of that statement within the region
+		computed during the resolution of a SCoP. 
+
+	\item A list of access functions of arrays accesses within the statement. For
+		each access the detailed informations are stored by means of another class
+		which is called \type{AccessInfo}. 
+
+\end{enumerate}
+
+The \type{AccessInfo} class gives the information associated to a single access
+to a reference. We store the reference address (so we can refer it in the IR
+code directly), the type of usage which can be either an USE (read operation),
+DEF (a write operation) or UNKNOWN (which means the analysis couldn't decide
+based on the information available at compile time if the value is going to be
+read or written; this is often the case for references passed to a function for
+which the internal semantics is not known). The last information stored within
+this class is the actual access expression which is already stored in matrix
+form through the \type{AccessSystem} class.
+
+All these classes are defined in the \file{analysis/polyhedral/polyhedral.h} file
+and usage examples of them can be found in the file
+\file{analysis/test/polyhedral/polyhedraal\_test.cc}
+
+
+\subsection{The Polyhedral Model backend infrastructure}
+
+
+
 
 \section{The Control Flow Graph [Simone]}
 \label{insieme:analysis:cfg}
