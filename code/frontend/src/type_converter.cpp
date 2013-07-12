@@ -717,9 +717,12 @@ namespace {
 			});
 
 			// apply mapper to defintions
+			vector<core::RecTypeBindingPtr> newBindings;
 			for (core::RecTypeBindingPtr& cur : bindings) {
-				cur = builder.recTypeBinding(cur->getVariable(), cur->getType()->substitute(mgr, mapper));
+				auto newBinding = builder.recTypeBinding(cur->getVariable(), cur->getType()->substitute(mgr, mapper));
+				if (!contains(newBindings, newBinding)) newBindings.push_back(newBinding);
 			}
+			bindings = newBindings;
 
 			// update definitions
 			def = builder.recTypeDefinition(bindings);
