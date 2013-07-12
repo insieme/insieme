@@ -494,10 +494,114 @@ form through the \type{AccessSystem} class.
 
 All these classes are defined in the \file{analysis/polyhedral/polyhedral.h} file
 and usage examples of them can be found in the file
-\file{analysis/test/polyhedral/polyhedraal\_test.cc}
+\file{analysis/test/polyhedral/polyhedral\_test.cc}
+
+\subsection{Polyhedral Tools Overview}
+
+The Polyhedral Compiler Collection (PoCC) is a collection of polyhedral tools
+which is the state of the art in this field
+[\url{http://www.cse.ohio-state.edu/~pouchet/software/pocc}]. PoCC comprises
+tools for extracting the polyhedral model from input C programs (i.e. clang),
+compute dependency analysis (i.e. candl), apply polyhedral transformations
+(i.e. pluto) and generate back C code (i.e. cloog). Several libraries are
+used internally to support operations on the polyhedron (i.e. ISL,
+PolyLIB, PPL, etc...).  The trend however seems to be to use ISL
+as main library as it has been shown to be able to solve large integer
+linear problems with incredible speed. 
+
+This document should explain design decision taken during the integration of the
+polyhedral model into the Insieme Compiler. Because there is lot of ferment in
+the research community related to polyhedral model, one of the design principle
+of this integration is to make exchange of supporting libraries easy. The most
+interesting subprojects for Insieme are Candl, Pluto and Cloog and ISL. One thing in
+common among those projects is the intermediate format used to represent the
+polyhedral information and pass it around the toolchain. ScopLib is a format
+which allows the representation of \emph{iteration domains}, access and
+\emph{scheduling}. The plan is to move to a more widely accepted shared
+representation called OpenScop which is supposed to be a format which makes
+exchange of polyhedral tool easier. 
+
+However at the moment OpenScop is not completed yet and it is under development. 
+
+\subsubsection{Candl}
+Candl performs dependencies analysis on a polyhedron. It requires the polyhedron
+to be specified using the ScopLib format. I exchange several emails from Cedric
+(which is the creator of this library) asking for a comparison with ISL:
+
+\begin{quotation}
+ISL is more powerful (it can compute dependences on more complex
+representations), but indeed it may be complex to use it to start.
+Candl is a good choice too, it lacks more basic representations like distances
+or directions but they should come at some point.  I urge you to read at this
+excellent course I was supposed to send you right after my visit. You will learn
+inside how to compute a distance/direction from a polyhedral representation. 
+\end{quotation}
+
+However Candl has nice programming interface to actually get informations about
+the dependencies. Other library like ISL gives the dependencies as a set or
+relation which has to be manipulated to get summary informations about the
+distance/direction of the dependencies. 
+
+\subsubsection{ISL: Integer Set Library}
+ISL [\url{http://repo.or.cz/w/isl.git}] seems to be the library everyone is
+switching to. It allows the representation of polyhedrons do dependence analysis
+and apply transformations.  Almost everything we need to support analysis and
+transformations in Insieme.  Unfortunately ISL uses its own format to represent
+sets and relationships in the polyhedron and no tools exists to transform this
+representation into an OpenScop representation. Therefore we should design a
+layer of abstraction on top of it in order to make the switch to other libraries
+less painful for us. Documentation is available at
+[\url{http://www.kotnet.org/~skimo/isl/user.html}]. 
+
+\subsubsection{Pluto} 
+PLUTO [\url{http://pluto-compiler.sourceforge.net/}] is an automatic parallelization tool based on the
+polyhedral model. The polyhedral model for compiler optimization is a
+representation for programs that makes it convenient to perform high-level
+transformations such as loop nest optimizations and loop parallelization. 
+The core transformation framework mainly works by
+finding affine transformations for efficient tiling and fusion, but not limited
+to those. OpenMP parallel code for multicores can be automatically generated
+from sequential C program sections. Outer, inner, or pipelined parallelization
+is achieved (purely with OpenMP pragrams), besides register tiling and making
+code amenable to auto-vectorization. Though the tool is fully automatic (C to
+OpenMP C), a number of options are provided (both command-line and
+through meta files) to tune aspects like tile sizes, unroll factors,
+and outer loop fusion structure. Cloog-ISL is used for code generation.
+A beta release can be downloaded below. A version with support for
+generating CUDA code is also available.
+
+\subsubsection{Cloog}
+Cloog [\url{http://repo.or.cz/w/cloog.git}] is utilized for scanning a
+polyhedron and produce the source code representing it. Since the latest version
+Cloog embeds the ISL library to perform operations on the polyhedron. The output
+of Cloog is either C source code or an AST (called CLAST) which has to be
+converted back to IR representation. 
 
 
-\subsection{The Polyhedral Model backend infrastructure}
+\subsubsection{AlphaZ}
+Another tool supporting the polyhedral framework is called AlphaZ. This is more
+a tool used to practise with the polyhedral model but not designed to be
+integrated into a real compiler. AlphaZ is an open source tool-set for program,
+analysis, transformation and parallelization in the Polyhedral
+Equational Model [\url{https://www.cs.colostate.edu/AlphaZ/wiki/doku.php}].
+AlphaZ defines a language to represent polyhedrons and apply transformations to
+them. The tool is integrated into Eclipse which allow users to express and
+manipulate a polyhedron and generate code out of it. 
+
+
+
+
+\subsection{The Polyhedral Backend infrastructure}
+
+The representation of polyhedral regions within Insieme is used only for the
+purpose to represent SCoPs. This is not so useful, since one of the main use of
+the polyhedral representation is to perform analysis and transformations of the
+code. The algorithms for such operations may be implemented on top of our data
+structures, however since several libraries exist for this purpose, we can
+convert our representation into a form which is suitable for external libraries. 
+
+
+
 
 
 
