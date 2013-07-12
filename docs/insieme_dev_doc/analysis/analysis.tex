@@ -589,18 +589,83 @@ them. The tool is integrated into Eclipse which allow users to express and
 manipulate a polyhedron and generate code out of it. 
 
 
-
-
 \subsection{The Polyhedral Backend infrastructure}
 
 The representation of polyhedral regions within Insieme is used only for the
 purpose to represent SCoPs. This is not so useful, since one of the main use of
 the polyhedral representation is to perform analysis and transformations of the
 code. The algorithms for such operations may be implemented on top of our data
-structures, however since several libraries exist for this purpose, we can
-convert our representation into a form which is suitable for external libraries. 
+structures, however many libraries exist around the polyhedral model with
+different scopes, from data dependency analysis, to transformations and code
+generation. 
+
+In Insieme we have built a layer which allows different libraries to be
+interfaced. Currently we use two libraries: ISL (for analysis and
+transformations purposes) and ClooG (for code generation from the polyhedral
+representation).
+
+The file \file{analysis/polyhedral/backend.h} abstracts the operations provided
+by libraries implementing the polyhedral model and express them at a generic
+level. The file defines several templated class which will be concretely
+instantiated when a concrete backend is utilized. For now only one backend is
+implemented, i.e. {\tt ISL}, but the system should allow multiple backends to be
+implemented. 
+
+The interface provide 4 entities (or basic concepts) plus operations which can
+be peformed on those entitirs. 
+
+\begin{description}
+\item[Ctx:] Many library requires a context object to store internal
+	information, this class provides the means to implement such abstraction. 
+
+\item[Set:] A set is another name for an \type{IterationDomain}, there is a 1 to
+	1 correspondence between the 2. However this class is here as a wrapper to
+	the set implementation provided by the targeted library. 
+
+	The {\tt makeSet(\ldots)} function performs the conversion from an Insieme
+	\type{IterationDomain} object to a \type{Set} object within an underlying
+	library. 
+
+\item[Map:] A map is a concept of relationship in the polyhedral model. We use
+	maps to represents affine systems and more precisely to store scheduling and
+	access functions of the polyhedral representation. The class \type{Map} is
+	here as a wrapper for the data structure used within the targeted backend
+	library. 
+
+	The {\tt makeMap(\ldots)} function takes care of converting an
+	\type{AffineSystem} into a \type{Map} object. 
+
+\item[Piecewise:] Many polyhedral libraries work with piecewise functions (for
+	example when dealing with the cardinality of iteration domains). Therefore
+	the \type{Piecewise} represents a wrapper to the type used within the
+	library. 
+
+	The {\tt makePiecewise(\ldots)} function takes care of converting a
+	\type{Piecewise} object of Insieme into an piecewise representation in the
+	underlying backend library. 
 
 
+\end{description}
+
+
+\subsubsection{ISL Backend}
+
+ISL is a library which beside representing a SCoP can also analyze for
+dependencies and apply transformations to the model. The goal of the ISL backend
+is to perform a conversion of the Insieme polyhedral data structures into ISL
+data structures and vice-versa. The implementation of this operations is in the
+file \file{analysis/polyhedral/backend/isl\_backend.h}.
+
+In ISL, a context object has to built. This is represented by the
+\type{IslCtx} class. Every other operation in ISL gets the context object as
+input, so it is very important that the context is kept alive during the time
+polyhedral objects are utilized. 
+
+An \type{IterationDomain} is represented in ISL using the \type{isl\_set} type.
+Since in ISL there are many types of sets (e.g. basic sets, union sets), we
+define a wrapper class \type{IslSet} which takes care of hiding the complexity
+of the library. An \type{IslSet} can be either built with the constructor by
+providing an iteration domain 
 
 
 
