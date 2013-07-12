@@ -176,6 +176,7 @@ struct D1 {
 	int val;
 };
 
+
 void* malloc(int);
 
 void mem_alloc() {
