@@ -45,6 +45,7 @@
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/ir_utils.h"
 
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -71,11 +72,6 @@
 #include "insieme/annotations/c/naming.h"
 
 #include "clang/AST/StmtVisitor.h"
-
-// clang [3.0]
-// #include "clang/Index/Entity.h"
-// #include "clang/Index/Indexer.h"
-
 #include "clang/Basic/FileManager.h"
 
 using namespace insieme;
@@ -96,7 +92,6 @@ namespace exprutils {
 annotations::c::SourceLocation convertClangSrcLoc(const clang::SourceManager& sm, const clang::SourceLocation& loc) {
 
 	clang::SourceLocation cloc = loc;
-
 	if (sm.isMacroArgExpansion(cloc)) {
 		cloc = sm.getExpansionLoc(cloc);
 	}

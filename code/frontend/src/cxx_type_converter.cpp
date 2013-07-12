@@ -179,14 +179,21 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 				ctorDecl->isMoveConstructor() ){
 
 				if (ctorDecl->isUserProvided ()){
+					
+					// the function is a template espetialization, but if it has no body, we wont
+					// convert it, it was never instanciated
+					if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
+							continue;
+					}
+
 					core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
 					if (ctorLambda ){
 						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, 
 														  builder.refType(classType), 
 														  core::FK_CONSTRUCTOR).as<core::ExpressionPtr>();
+						assert(ctorLambda);
+						assert(!ctorLambda.isa<core::LiteralPtr>());
 
-						// FIXME: this comes from the interceptor, intercepted constructors are
-						// literals. but we should not be here if is intercepted
 						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 					}
 				}

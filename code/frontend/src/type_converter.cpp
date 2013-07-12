@@ -437,10 +437,6 @@ core::TypePtr ConversionFactory::TypeConverter::VisitExtVectorType(const ExtVect
 // 								TYPEDEF TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::TypeConverter::VisitTypedefType(const TypedefType* typedefType) {
-
-	typedefType->dump();
-	PRINTLOCATION(typedefType->getDecl());
-
 	core::TypePtr subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
 	LOG_TYPE_CONVERSION( typedefType, subType );
 	assert(subType);

@@ -130,7 +130,7 @@ void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
 		callGraph.insert(funcDecl);
 	}
 	else {
-		std::cout << "    no body, not intercepted: " << funcDecl->getQualifiedNameAsString() << std::endl;
+		//std::cout << "    no body, not intercepted: " << funcDecl->getQualifiedNameAsString() << std::endl;
 	}
 }
 

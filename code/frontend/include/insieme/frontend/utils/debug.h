@@ -49,12 +49,12 @@
 		abort();\
 	}
 
-#define ASSERT_EQ_TYPES(exprA, exprB)\
-	if( !(insieme::core::types::isSubTypeOf(exprA, exprB)) ){\
+#define ASSERT_EQ_TYPES(typeA, typeB)\
+	if( !(insieme::core::types::isSubTypeOf(typeA, typeB)) ){\
 		std::cout << " === TYPES MISSMATCH [" << __FILE__ << ":" << __LINE__ << "] ===" << std::endl; \
-		dumpPretty(exprA); \
+		dumpPretty(typeA); \
 		std::cout << " vs " << std::endl; \
-		dumpPretty(exprB); \
+		dumpPretty(typeB); \
 		std::cout << " ======================= " << std::endl; \
 		exit(-1);\
 	}
