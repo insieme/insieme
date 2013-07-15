@@ -635,7 +635,7 @@ protected:
 		}
 		// find var addresses to replace (only within same lambda in original program)
 		// make local copies of global vars available in sub-lambdas introduced by the insieme compiler
-		std::map<NodeAddress, NodePtr> publicToPrivateAddressMap;
+		std::map<ExpressionAddress, VariablePtr> publicToPrivateAddressMap;
 		visitDepthFirstPrunable(NodeAddress(stmtNode), [&](const ExpressionAddress& expA) -> bool {
 			// prune if new named lambda
 			auto lambda = expA.getAddressedNode().isa<LambdaExprPtr>();
@@ -645,15 +645,15 @@ protected:
 			// check if privatized expression
 			for(auto mapping : publicToPrivateMap) {
 				if(mapping.first == expA.getAddressedNode()) {
-					publicToPrivateAddressMap[expA] = mapping.second;
-					// TODO here the variable should be made available if we are inside a lambda introduced by insieme
+					publicToPrivateAddressMap[expA] = mapping.second.as<VariablePtr>();
 					return true;
 				}
 			}
 			return false; // don't prune
 		});
 		StatementPtr subStmt = stmtNode;
-		if(!publicToPrivateAddressMap.empty()) subStmt = transform::replaceAll(nodeMan, publicToPrivateAddressMap).as<StatementPtr>();
+		// the variable will be made available by pushInto if we are inside a lambda introduced by insieme
+		if(!publicToPrivateAddressMap.empty()) subStmt = transform::pushInto(nodeMan, publicToPrivateAddressMap).as<StatementPtr>();
 		
 		//StatementPtr subStmt = transform::replaceAllGen(nodeMan, stmtNode, publicToPrivateMap);
 		// specific handling if clause is a omp for
