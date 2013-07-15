@@ -372,6 +372,15 @@ public:
 	}
 
 	/**
+	 * A short-cut for dynamic address casts followed by an extraction of
+	 * the targeted node.
+	 */
+	template<typename R>
+	typename boost::enable_if<is_ir_pointer<R>, R>::type isa() const {
+		return getAddressedNode().isa<R>();
+	}
+
+	/**
 	 * Returns if a class is an instance of R
 	 */
 	template<typename R>

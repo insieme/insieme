@@ -105,7 +105,7 @@ if ( NOT DEFINED BOOST_ROOT )
 	endif()
 endif()
 set(Boost_USE_MULTITHREADED Off)
-find_package( Boost 1.48 COMPONENTS program_options system filesystem regex )
+find_package( Boost 1.48 COMPONENTS program_options system filesystem regex serialization )
 include_directories( SYSTEM ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 

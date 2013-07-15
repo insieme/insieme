@@ -171,6 +171,7 @@ void testAlgorithms (vector<T>& buffer){
 //
 #define BUFFSIZE 1024*512
 int main (int argc, char **argv){
+
 	vector<size_t> sizes;
 	sizes.push_back(5);
 	sizes.push_back(20);

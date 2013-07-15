@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,11 +46,15 @@
 #include <cassert>
 
 #include <boost/utility.hpp>
+#include <fstream>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 
 #include "insieme/frontend/frontend.h"
 
 // forward declarations
 namespace clang {
+class ASTUnit;
 class ASTContext;
 class ASTConsumer;
 class Preprocessor;
@@ -62,6 +66,7 @@ class Scope;
 class Expr;
 class TargetInfo;
 class Sema;
+class FileSystemOptions;
 
 namespace idx {
 class Program;
@@ -140,6 +145,52 @@ typedef std::vector<PragmaPtr> 	PragmaList;
 class MatchMap;
 } // end pragma namespace
 
+// ------------------------------------ ExtASTUnit ---------------------------
+/**
+ *  ExtASTUnit is an extended version of clang ASTUnit. It is possible to add additional
+ *  information like command line args, filename, ...
+ */
+class ExtASTUnit {
+private:
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version)
+    {
+        ar & ast;
+        ar & info;
+    }
+    std::string ast;
+    std::string info;
+    clang::ASTUnit * ast_unit;
+
+public:
+    ExtASTUnit() : ast(), info(), ast_unit(nullptr) {};
+    ExtASTUnit(std::string ast_str) : ast(ast_str), info(), ast_unit(nullptr) {};
+    ~ExtASTUnit();
+
+    std::string getAST() const {
+        return ast;
+    };
+
+    void setAST(const std::string& ast_str) {
+        ast=ast_str;
+    }
+
+    std::string getInfo() const {
+        return info;
+    };
+
+    void setInfo(const std::string& i) {
+        info = i;
+    };
+
+    void createASTUnit(clang::DiagnosticsEngine* diag, const clang::FileSystemOptions& opts);
+    clang::ASTUnit * getASTUnit() const;
+    void save(const std::string& filename) const;
+    void load(const std::string& filename);
+};
+
+
 // ------------------------------------ ClangCompiler ---------------------------
 /**
  * ClangCompiler is a wrapper class for the Clang compiler main interfaces. The main goal is to hide implementation
@@ -187,6 +238,12 @@ public:
 	 * @return
 	 */
 	clang::TargetInfo& getTargetInfo() const;
+
+    /**
+     *  Return ExtASTUnit pointer
+     *  @return
+     */
+    ExtASTUnit* getASTUnit() const;
 
 	bool isCXX() const;
 

@@ -943,6 +943,42 @@ TEST(Manipulation, pushInto) {
 	EXPECT_TRUE(core::checks::check(resB.getRootNode()).empty()) << core::checks::check(resB.getRootNode());
 }
 
+TEST(Manipulation, pushIntoMultiple) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	auto addresses = builder.parseAddresses(
+		"let int = int<4> in "
+		"let f = (int a)->int { return a + $1$; } in "
+		"let g = (int a)->int { return a - f(a) + $2$; } in "
+		"g(10)"
+	);
+
+	ASSERT_EQ(2u, addresses.size());
+	NodePtr code = analysis::normalize(addresses[0].getRootNode());
+	ExpressionAddress exprA = addresses[0].switchRoot(code).as<ExpressionAddress>();
+	ExpressionAddress exprB = addresses[1].switchRoot(code).as<ExpressionAddress>();
+
+	EXPECT_TRUE(core::checks::check(code).empty()) << core::checks::check(code);
+
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v1) {return int.add(int.sub(v1, rec v0.{v0=fun(int<4> v1) {return int.add(v1, 1);}}(v1)), 2);}}(10)", toString(*code));
+
+	// variables to be implanted
+	VariablePtr varA = builder.variable(manager.getLangBasic().getInt4(), 1);
+	VariablePtr varB = builder.variable(manager.getLangBasic().getInt4(), 2);
+	EXPECT_EQ("v1", toString(*varA));
+	EXPECT_EQ("v2", toString(*varB));
+
+	std::map<ExpressionAddress, VariablePtr> elements;
+	elements[exprA] = varA;
+	elements[exprB] = varB;
+
+	auto res = analysis::normalize(transform::pushInto(manager, elements));
+	EXPECT_EQ("rec v0.{v0=fun(int<4> v1, int<4> v2, int<4> v3) {return int.add(int.sub(v1, rec v0.{v0=fun(int<4> v1, int<4> v2) {return int.add(v1, v2);}}(v1, v3)), v2);}}(10, v2, v1)", toString(*res));
+	EXPECT_TRUE(core::checks::check(res).empty()) << core::checks::check(res);
+}
+
+
 
 } // end namespace core
 } // end namespace insieme

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -193,21 +193,19 @@ public:
             raw_name = getFileName().substr(lastslash, lastdot-lastslash);
             raw_name += ".o";
         }
-        llvm::SmallString<128> TempPath;
-        TempPath = raw_name;
-        TempPath += "-%%%%%%%%";
-        int fd;
-        llvm::sys::fs::unique_file(TempPath.str(), fd, TempPath,
-                                            false);
-        llvm::raw_fd_ostream Out(fd, true);
-        llvm::SmallString<128> Buffer;
-        llvm::BitstreamWriter Stream(Buffer);
-        clang::ASTWriter Writer(Stream);
-        Writer.WriteAST(mSema, std::string(), 0, "", false);
-        if (!Buffer.empty())
-            Out.write(Buffer.data(), Buffer.size());
-        Out.close();
-        llvm::sys::fs::rename(TempPath.str(), raw_name);
+        //if the original file was an insieme object file we don't need
+        //to recreate the ast_unit. We can call save to store the
+        //data in the given file name
+        if(!boost::algorithm::ends_with(getFileName(),".o")) {
+            llvm::SmallString<128> Buffer;
+            llvm::BitstreamWriter Stream(Buffer);
+            clang::ASTWriter Writer(Stream);
+            Writer.WriteAST(mSema, std::string(), 0, "", false);
+            if (!Buffer.empty()) {
+                getCompiler().getASTUnit()->setAST(Buffer.str());
+            }
+        }
+        getCompiler().getASTUnit()->save(raw_name);
     }
 
 };
@@ -218,7 +216,7 @@ namespace frontend {
 
 struct Program::ProgramImpl {
 	utils::Indexer mIdx;
-	TranslationUnitSet tranUnits;
+	TranslationUnitList tranUnits;
 	const vector<boost::filesystem::path> stdLibDirs;
 	utils::Interceptor interceptor;
 	utils::FunctionDependencyGraph funcDepGraph;
@@ -286,11 +284,11 @@ TranslationUnit& Program::addTranslationUnit(const ConversionJob& job) {
 
 	pimpl->mIdx.indexTU(tuImpl);
 
-	pimpl->tranUnits.insert( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
+	pimpl->tranUnits.push_back( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
 	return *tuImpl;
 }
 
-const Program::TranslationUnitSet& Program::getTranslationUnits() const { return pimpl->tranUnits; }
+const Program::TranslationUnitList& Program::getTranslationUnits() const { return pimpl->tranUnits; }
 
 Program::PragmaIterator Program::pragmas_begin() const {
 	auto filtering = [](const Pragma&) -> bool { return true; };
@@ -335,7 +333,7 @@ void Program::PragmaIterator::inc(bool init) {
 			if(pragmaIt != (*tuIt)->getPragmaList().end() && filteringFunc(**pragmaIt))
 				return;
 		}
-	}	
+	}
 }
 
 std::pair<PragmaPtr, TranslationUnitPtr> Program::PragmaIterator::operator*() const {
@@ -381,7 +379,8 @@ const core::ProgramPtr& Program::convert() {
 	for (const TranslationUnitPtr& curr : pimpl->tranUnits){
 		pimpl->globalsCollector(curr);
 	}
-	pimpl->globalsCollector.dump();
+	if (VLOG_IS_ON(1))
+		pimpl->globalsCollector.dump();
 
 	std::shared_ptr<conversion::ASTConverter> astConvPtr;
 	if(isCXX) {
@@ -407,7 +406,7 @@ const core::ProgramPtr& Program::convert() {
 
 			//mProgram = astConvPtr->handleFunctionDecl(funcDecl);
 			auto p = astConvPtr->handleFunctionDecl(funcDecl);
-			std::copy(p.getEntryPoints().begin(), p.getEntryPoints().end(), std::back_inserter(entries)); 
+			std::copy(p.getEntryPoints().begin(), p.getEntryPoints().end(), std::back_inserter(entries));
 		} else {
 			// insieme pragma associated to a statement, in this case we convert the body
 			// and create an anonymous lambda expression to enclose it

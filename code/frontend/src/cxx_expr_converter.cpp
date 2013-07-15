@@ -46,6 +46,7 @@
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/temporariesLookup.h"
 #include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/ir_utils.h"
 
 #include "insieme/frontend/utils/debug.h"
 

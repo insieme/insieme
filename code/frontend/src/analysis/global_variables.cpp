@@ -43,11 +43,13 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include <clang/AST/Decl.h>
+#include "clang/AST/DeclTemplate.h"
 #pragma GCC diagnostic pop
 
 #include "insieme/frontend/analysis/global_variables.h"
 #include "insieme/frontend/utils/indexer.h"
 
+#include <boost/algorithm/string/replace.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -71,7 +73,7 @@ std::string buildGlobalName(const clang::VarDecl* var, const std::string& storag
 		std::string qualName = var->getQualifiedNameAsString();
 		std::string name     = var->getNameAsString();
 		std::string newName  = storage+name;
-
+		boost::replace_all(qualName, "::", "__");
 		qualName.replace( qualName.end()-name.size(), qualName.end(), newName);
 		return qualName;
 }
@@ -91,7 +93,7 @@ class GlobalsVisitor{
 												 
 	{ }
 
-	void analizeDecl(clang::Decl* decl, bool local){
+	void analizeDecl(clang::Decl* decl){
 
 		// === named DECL ====
 		// this might be anything with a name
@@ -99,7 +101,7 @@ class GlobalsVisitor{
 			// === Function Decl ===
 			if (clang::FunctionDecl* fdecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
 				if (fdecl->hasBody()){
-					analyzeDeclContext(llvm::cast<clang::DeclContext>(fdecl), true);
+					analyzeDeclContext(llvm::cast<clang::DeclContext>(fdecl));
 				}
 			}
 			// === tag Decl ===
@@ -110,7 +112,7 @@ class GlobalsVisitor{
 					case clang::TagDecl::TagKind::TTK_Union 	:
 					case clang::TagDecl::TagKind::TTK_Class 	:
 						{
-							analyzeDeclContext(llvm::cast<clang::DeclContext>(decl), false);
+							analyzeDeclContext(llvm::cast<clang::DeclContext>(decl));
 						}
 						break;
 					case clang::TagDecl::TagKind::TTK_Enum 	:
@@ -124,48 +126,60 @@ class GlobalsVisitor{
 			}
 			// === Namespace Decl ===
 			else if (llvm::isa<clang::NamespaceDecl>(decl)){
-				analyzeDeclContext(llvm::cast<clang::DeclContext>(decl), local);
+				analyzeDeclContext(llvm::cast<clang::DeclContext>(decl));
 			} 
 			// === templDecl Decl ===
 			else if(const clang::TemplateDecl* templDecl = llvm::dyn_cast<clang::TemplateDecl>(decl)) {
-				analizeDecl(templDecl->getTemplatedDecl(), local);
+				analizeDecl(templDecl->getTemplatedDecl());
 			}
 			// === variable Decl ===
 			else if (const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl)){
 
 				// this a variable, might be global, static or even extern.
-				collector.addVar(varDecl, local);
+				collector.addVar(varDecl);
 
 				// BUT it might be also a class declaration which makes use of globals inside
 				const clang::Type* type = varDecl->getType().getTypePtr();
 				if (const clang::RecordType* rec = llvm::dyn_cast<clang::RecordType>(type)){
-					analyzeDeclContext(llvm::cast<clang::DeclContext>(rec->getDecl()), local);
+					analyzeDeclContext(llvm::cast<clang::DeclContext>(rec->getDecl()));
 				}
 			}
 		} 
 		// === linkage spec DECL ====
 		else if (llvm::isa<clang::LinkageSpecDecl>(decl)) {
-			analyzeDeclContext(llvm::cast<clang::DeclContext>(decl), local);
+			analyzeDeclContext(llvm::cast<clang::DeclContext>(decl));
 		}
 		// === default ====
 		else {
 			//default case -- if DeclContext, try to analyze it
 			if(clang::DeclContext* declContext = llvm::dyn_cast<clang::DeclContext>(decl)) {
-				analyzeDeclContext(declContext, local);
+				analyzeDeclContext(declContext);
 			}
 		}
 				
 		// if it does not have a name, it is another artifact
 	}
 
-	void analyzeDeclContext(clang::DeclContext* ctx, bool local){
+	void analyzeDeclContext(clang::DeclContext* ctx){
 		clang::DeclContext::decl_iterator it = ctx->decls_begin();
 		clang::DeclContext::decl_iterator end = ctx->decls_end();
 		for (; it != end; it++){
-			analizeDecl(llvm::cast<clang::Decl>(*it), local);
+			analizeDecl(llvm::cast<clang::Decl>(*it));
 		}
 	}
 };
+
+
+void insertIfNoExist(const clang::VarDecl* var, std::list<const clang::VarDecl*>& collection){
+	bool found = false;
+	for (auto elem : collection){
+		found = elem->getQualifiedNameAsString () == var->getQualifiedNameAsString();
+		if (found) break;
+	}
+
+	if (!found)
+		collection.push_back(var);
+}
 
 } // end anonymous namespace
 
@@ -191,25 +205,37 @@ void GlobalVarCollector::operator()(const TranslationUnitPtr& tu){
 	assert(ctx && "AST has no decl context");
 
 	GlobalsVisitor vis( *this);
-	vis.analyzeDeclContext(ctx, false);
+	vis.analyzeDeclContext(ctx);
 }
 
 //////////////////////////////////////////////////////////////////
 //
-void GlobalVarCollector::addVar(const clang::VarDecl* var, bool local){
+void GlobalVarCollector::addVar(const clang::VarDecl* var){
 
+		//FIXME:: idenfify scope and visibility with clang
+		//
+//	std::cout << "***************************************************************" << std::endl;
+//	std::cout << "collectiong: " << var->getQualifiedNameAsString() << std::endl;
+//	std::cout << "******************" << std::endl;
+//	std::cout << "   isStaticLocal () " << var->isStaticLocal() << std::endl;
+//	std::cout << "   hasExternalStorage () " 		<< var->hasExternalStorage () << std::endl;
+//	std::cout << "   hasGlobalStorage () " 		<< var->hasGlobalStorage () << std::endl;
+//	std::cout << "   isExternC () " 				<< var->isExternC () << std::endl;
+//	std::cout << "   isLocalVarDecl () " 			<< var->isLocalVarDecl () << std::endl		;
+//	std::cout << "   isFunctionOrMethodVarDecl () "<< var->isFunctionOrMethodVarDecl () << std::endl;
+//	std::cout << "   isStaticDataMember () " 		<< var->isStaticDataMember () << std::endl ; 
+//
 	if (!var->hasGlobalStorage())
 		return;
 
 	if (isIncompleteTemplate(var))
 		return;
 
-	std::string name;
-	if (!local) 	name = buildGlobalName(var, "global_");
-	else			name = buildGlobalName(var, "static_");
 
+	std::string name;
 	VarStorage st;
-	if (local){
+	if (var->isStaticLocal()){
+		name = buildGlobalName(var, "static_");
 		assert(!var->hasExternalStorage());
 		st = VS_STATIC;
 
@@ -221,14 +247,22 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var, bool local){
 		else
 			name = fit->second;
 	}
-	else if (var->hasExternalStorage()){
-		st = VS_EXTERN;
-	}
 	else {
-		st = VS_GLOBAL;
+		if (var->isStaticDataMember())	name = buildGlobalName(var, "staticMem_");
+		else  						  	name = buildGlobalName(var, "global_");
+
+		if (var->hasExternalStorage()) st = VS_EXTERN;
+		else st = VS_GLOBAL;
 	}
 
+
 	VLOG(2) << " var: " << name << " \t\t\t storage:" << st;
+
+	if (var->hasDefinition() && var->hasInit()){
+		if (var->isStaticLocal()) 	staticInitializations.push_back(var);
+		else						insertIfNoExist( var, globalInitializations);
+	}
+
 
 	// if already exists a previous version, and is marked as extern update with non extern if
 	// possible
@@ -238,17 +272,12 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var, bool local){
 		// is a global storage or just another extern ref?
 		if (!var->hasExternalStorage()){
 			VLOG(2) << "update variable storage which was previously external";
-			fit->second.second = st;
-		}
-		// if is the decl which contains the definition, we update the record
-		if (var->getDefinition()){
-			fit->second.first = var;
+			fit->second = st;
 		}
 	}
 	else{
 		// never existed? create new one
-		tGlobalDecl gd = {var,st};
-		globalsMap[name] = gd;
+		globalsMap[name] = st;
 	}
 }
 
@@ -258,7 +287,7 @@ bool GlobalVarCollector::isExtern (const clang::VarDecl* var){
 	std::string&& name = getName(var);
 	auto fit = globalsMap.find(name);
 	if (fit != globalsMap.end()){
-		return fit->second.second == VS_EXTERN;
+		return fit->second == VS_EXTERN;
 	}
 	return false;
 }
@@ -269,7 +298,7 @@ bool GlobalVarCollector::isStatic (const clang::VarDecl* var){
 	std::string&& name = getName(var);
 	auto fit = globalsMap.find(name);
 	if (fit != globalsMap.end()){
-		return fit->second.second == VS_STATIC;
+		return fit->second == VS_STATIC;
 	}
 	return false;
 }
@@ -289,10 +318,10 @@ std::string GlobalVarCollector::getName (const clang::VarDecl* var){
 //////////////////////////////////////////////////////////////////
 //
 void GlobalVarCollector::dump(){
-	VLOG(2) << " === Globals: === ";
-	VLOG(2) << join("\n" ,globalsMap);
-	VLOG(2) << " === Statics: === ";
-	VLOG(2) << join("\n" ,staticNames);
+	std::cout << " === Globals: === " << std::endl;
+	std::cout << join("\n" ,globalsMap) << std::endl;
+	std::cout << " === Statics: === " << std::endl;
+	std::cout << join("\n" ,staticNames) << std::endl;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -304,21 +333,9 @@ void GlobalVarCollector::dump(){
 const std::string&    GlobalVarCollector::init_it::name() const{
 	return curr->first;
 }
-const clang::VarDecl* GlobalVarCollector::init_it::decl() const{
-	return curr->second.first;
-}
-const clang::Expr*    GlobalVarCollector::init_it::init() const{
-	if (const clang::VarDecl* definition = curr->second.first->getDefinition()){
-		return definition->getInit();
-	}
-	else return nullptr;
-}
-const clang::Type*    GlobalVarCollector::init_it::type() const{
-	return  curr->second.first->getType().getTypePtr();
-//	if (const clang::VarDecl* definition = curr->second.first->getDefinition()){
-//		return definition->getType().getTypePtr();
-//	}
-//	else return nullptr;
+
+const GlobalVarCollector::VarStorage      GlobalVarCollector::init_it::storage() const{
+	return curr->second;
 }
 
 GlobalVarCollector::init_it GlobalVarCollector::init_it::operator++() {

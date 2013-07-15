@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -86,7 +86,8 @@ namespace frontend {
 			DumpCFG			= 1<<5,
 			TAG_MPI			= 1<<6,
 
-			CompilationOnly = 1<<7
+			CompilationOnly = 1<<7,
+			CreateSharedObject = 1<<8
 		};
 
 		/**

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -127,7 +127,7 @@ class Program: public boost::noncopyable {
 	friend class ::TypeConversion_FileTest_Test;
 	friend class ::StmtConversion_FileTest_Test;
 public:
-	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
+	typedef std::vector<TranslationUnitPtr> TranslationUnitList;
 	Program(core::NodeManager& mgr, const ConversionJob& job = ConversionJob());
 
 	~Program();
@@ -175,7 +175,7 @@ public:
 	/**
 	 * Returns a list of parsed translation units
 	 */
-	const TranslationUnitSet& getTranslationUnits() const;
+	const TranslationUnitList& getTranslationUnits() const;
 
 	class PragmaIterator: public
 				std::iterator<
@@ -187,13 +187,13 @@ public:
 		typedef std::function<bool (const pragma::Pragma&)> FilteringFunc;
 
 	private:
-		TranslationUnitSet::const_iterator tuIt, tuEnd;
+		TranslationUnitList::const_iterator tuIt, tuEnd;
 		insieme::frontend::pragma::PragmaList::const_iterator pragmaIt;
 		FilteringFunc filteringFunc;
 
 		// creates end iter
-		PragmaIterator(const TranslationUnitSet::const_iterator& tend) : tuIt(tend), tuEnd(tend) { }
-		PragmaIterator(const TranslationUnitSet& tu, const FilteringFunc& filteringFunc):
+		PragmaIterator(const TranslationUnitList::const_iterator& tend) : tuIt(tend), tuEnd(tend) { }
+		PragmaIterator(const TranslationUnitList& tu, const FilteringFunc& filteringFunc):
 			tuIt(tu.begin()), tuEnd(tu.end()), filteringFunc(filteringFunc) { inc(true); }
 
 		void inc(bool init);
