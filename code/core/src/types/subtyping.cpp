@@ -219,9 +219,14 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 		auto srcElement = subType.as<RefTypePtr>()->getElementType();
 		auto trgElement = superType.as<RefTypePtr>()->getElementType();
 
-		// only if sub-type is ref<any>
+		// if sub-type is ref<any> it is ok
 		if (basic.isAny(trgElement)) {
 			return true;
+		}
+
+		// support nested references
+		if (srcElement.isa<RefTypePtr>() && trgElement.isa<RefTypePtr>()) {
+			return isSubTypeOf(srcElement, trgElement);
 		}
 
 		// a ref<vector<X,Y>> is a sub-type of a ref<array<X,1>>
