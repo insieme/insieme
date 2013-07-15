@@ -248,13 +248,24 @@ core::StatementPtr ConversionFactory::materializeReadOnlyParams(const core::Stat
 ///
 void ConversionFactory::printDiagnosis(const clang::SourceLocation& loc){
 
-	clang::Preprocessor& pp = getCurrentPreprocessor();
+	// TODO: warnings intoduced by INSIEME are not print because some 
+	// source location issues, debug and fix this.
+	//    --  loop iterator thing
+	//    -- constancy of member functions (which one to call when two)
+/*	clang::Preprocessor& pp = getCurrentPreprocessor();
 	// print warnings and errors:
 	while (!ctx.warnings.empty()){
-		pp.Diag(loc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning, *ctx.warnings.begin()) );
+
+		if (getCurrentSourceManager().isLoadedSourceLocation (loc)){
+			std::cerr << "loaded location:\n";
+			std::cerr << "\t" << *ctx.warnings.begin() << std::endl;
+		}
+		else{
+			pp.Diag(loc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning, *ctx.warnings.begin()) );
+		}
 		ctx.warnings.erase(ctx.warnings.begin());
 	}
-
+	*/
 }
 
 //////////////////////////////////////////////////////////////////

@@ -1224,6 +1224,27 @@ vector<VariableAddress> pushInto(NodeManager& manager, const vector<ExpressionAd
 	return res;
 }
 
+NodePtr pushInto(NodeManager& manager, const map<ExpressionAddress, VariablePtr>& elements) {
+
+	// some pre-conditions
+	assert(!elements.empty() && "Elements must not be empty!");
+	assert(all(elements, [&](const pair<ExpressionAddress, VariablePtr>& cur)->bool {
+		return cur.first.getRootNode() == elements.begin()->first.getRootNode();
+	}));
+
+
+	// apply push-in operation iteratively
+	NodePtr root = elements.begin()->first.getRootNode();
+	for(auto it = elements.rbegin(); it != elements.rend(); ++it) {
+		const pair<ExpressionAddress, VariablePtr>& cur = *it;
+
+		ExpressionAddress addr = cur.first.switchRoot(root);
+		root = pushInto(manager, addr, cur.second).getRootNode();
+	}
+
+	// done
+	return root;
+}
 
 
 
