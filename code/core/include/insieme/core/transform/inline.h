@@ -60,6 +60,8 @@ CompoundStmtPtr inlineMultiReturnPlainCall(NodeManager& nodeMan, const CallExprP
  */
 CompoundStmtPtr inlineMultiReturn(NodeManager& nodeMan, const CallExprPtr& call);
 
+NodePtr inlineCode(NodeManager& nodeMan, const NodePtr& code);
+
 }
 }
 }

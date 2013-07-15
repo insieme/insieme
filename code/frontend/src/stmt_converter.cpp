@@ -566,8 +566,17 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		// 			}
 		// 		}
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		core::ExpressionPtr condition;
+		if (forStmt->getCond()){
+			condition = utils::cast( convFact.convertExpr(forStmt->getCond()), builder.getLangBasic().getBool());
+		}else {
+			// we might not have condition, this is an infinite loop
+			//    for (;;)
+			condition =	convFact.builder.literal(std::string("true"), builder.getLangBasic().getBool());
+		}
+
 		core::StatementPtr whileStmt = builder.whileStmt(
-				utils::cast(convFact.convertExpr( forStmt->getCond() ), builder.getLangBasic().getBool()),
+				condition,
 				forStmt->getInc() ?
 				builder.compoundStmt( toVector<core::StatementPtr>(
 						stmtutils::tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) )
@@ -577,12 +586,16 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		// handle eventual pragmas attached to the Clang node
 		retStmt.push_back( omp::attachOmpAnnotation(whileStmt, forStmt, convFact) );
-
+		std::cerr << "foor loop converted in while" << std::endl;
+		/*
+		 * TODO: using insiemeCC we loose the preprocessor. 
+		 *       find a solution for this
 		clang::Preprocessor& pp = convFact.getCurrentPreprocessor();
 		pp.Diag(forStmt->getLocStart(),
 				pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
 						std::string("For loop converted into while loop, cause: ") + e.what() )
 		);
+		*/
 	}
 
 	if (addDeclStmt) {

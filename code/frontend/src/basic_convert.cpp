@@ -248,13 +248,24 @@ core::StatementPtr ConversionFactory::materializeReadOnlyParams(const core::Stat
 ///
 void ConversionFactory::printDiagnosis(const clang::SourceLocation& loc){
 
-	clang::Preprocessor& pp = getCurrentPreprocessor();
+	// TODO: warnings intoduced by INSIEME are not print because some 
+	// source location issues, debug and fix this.
+	//    --  loop iterator thing
+	//    -- constancy of member functions (which one to call when two)
+/*	clang::Preprocessor& pp = getCurrentPreprocessor();
 	// print warnings and errors:
 	while (!ctx.warnings.empty()){
-		pp.Diag(loc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning, *ctx.warnings.begin()) );
+
+		if (getCurrentSourceManager().isLoadedSourceLocation (loc)){
+			std::cerr << "loaded location:\n";
+			std::cerr << "\t" << *ctx.warnings.begin() << std::endl;
+		}
+		else{
+			pp.Diag(loc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning, *ctx.warnings.begin()) );
+		}
 		ctx.warnings.erase(ctx.warnings.begin());
 	}
-
+	*/
 }
 
 //////////////////////////////////////////////////////////////////
@@ -912,6 +923,13 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 			}
 		}
 	}
+
+	// FIXME: if this is needed, maybe need to add a var to create a ref
+//	// inner expression is null<int<X>> and outer is array, then rebuild something like
+//	//  ref.null(type<array<...>>)
+//	if (core::analysis::isCallOf( retIr, mgr.getLangBasic().getGetNull())){
+//		return builder.deref(builder.callExpr(mgr.getLangBasic().getGetNull(), builder.getTypeLiteral(type)));
+//	}
 
 	// ============================== End Special Handlings =======================================
 
@@ -1727,8 +1745,8 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 			continue;
 		}
 
-		//VLOG(2) << "initializing global: " << (*git)->getQualifiedNameAsString();
-		std::cout << "initializing global: " << (*git)->getQualifiedNameAsString() << std::endl;
+		VLOG(2) << "initializing global: " << (*git)->getQualifiedNameAsString();
+	//	std::cout << "initializing global: " << (*git)->getQualifiedNameAsString() << std::endl;
 
 		if(const clang::Expr* init = (*git)->getDefinition()->getInit()){
 			core::ExpressionPtr var = mFact.lookUpVariable((*git));
@@ -1750,7 +1768,8 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 	
 	// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~A
 	for (auto sit = globalCollector.staticInitialization_begin(); sit != globalCollector.staticInitialization_end(); ++sit){
-		std::cout << "initializing static: " << (*sit)->getQualifiedNameAsString() << std::endl;
+		//std::cout << "initializing static: " << (*sit)->getQualifiedNameAsString() << std::endl;
+		VLOG(2) << "initializing static: " << (*sit)->getQualifiedNameAsString();
 		core::ExpressionPtr var = mFact.lookUpVariable((*sit));
 		core::LiteralPtr litUse = var.isa<core::LiteralPtr>();
 		if (!litUse){
