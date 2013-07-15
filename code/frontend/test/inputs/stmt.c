@@ -214,7 +214,7 @@ void for_stmt_test() {
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
-	#pragma test "{ (v1 := 0); while((( *v4)>1)) { { }; fun(ref<int<4>> v5, ref<int<4>> v6) -> ref<int<4>> { gen.post.inc(v5); (v6 := (( *v6)/2)); return v6; }(v1, v4); };}"
+	#pragma test "{ (v1 := 0); while((( *v2)>1)) { { }; fun(ref<int<4>> v5, ref<int<4>> v6) -> ref<int<4>> { gen.post.inc(v5); (v6 := (( *v6)/2)); return v6; }(v1, v2); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 
 	//(v1 := 0);

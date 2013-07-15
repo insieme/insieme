@@ -1,5 +1,7 @@
 
 
+#include <iostream>
+
 // this test checks for recursion inside of 
 // templated members and relations between templates
 
@@ -33,6 +35,13 @@ class Obj{
 		Obj createCopy(B b){
 			return assignValue<Obj<A>, B> (b);
 		}
+
+		A getValue(){
+			return value;
+		}
+		A getRefValue(){
+			return ref;
+		}
 };
 
 ///////////////////////////////////////////////////////////
@@ -44,16 +53,22 @@ int main (){
 		int value =4;
 		Obj<int> a(value);
 		Obj<int> b(a);
+		value++;
+		std::cout << value << ":" << b.getRefValue() << ":" << b.getValue() << std::endl;
 	}
 	{
 		float value =4;
 		Obj<float> a(value);
 		Obj<float> b(a);
+		value++;
+		std::cout << value << ":" << b.getRefValue() << ":" << b.getValue() << std::endl;
 	}
 	{
 		int  value = 4;
 		int* ptr = &value;
 		Obj<int *> a(ptr);
 		Obj<int *> b(a);
+		value++;
+		std::cout << value << ":" << b.getRefValue() << ":" << b.getValue() << std::endl;
 	}
 }

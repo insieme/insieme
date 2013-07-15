@@ -37,6 +37,7 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/debug.h"
+#include "insieme/frontend/utils/ir_utils.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/unused.h"
@@ -410,18 +411,15 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		{
 			
 			// this is CppRef -> ref
-			if (core::analysis::isCppRef(exprTy)){
-				// unwrap and deref the variable
-				return builder.deref( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr));
-			}
-			else if (core::analysis::isConstCppRef(exprTy)){
-				return builder.deref( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr));
-			}
-			/*
 			if (IS_CPP_REF_EXPR(expr)){
-				expr = unwrapCppRef(builder, expr);
+				return builder.deref(unwrapCppRef(builder, expr));
 			}
-			*/
+
+			// accessing a member returns a reference, this ref might be a cpp ref, therefore we
+			// need to unwrap a little more
+			if (expr->getType().isa<core::RefTypePtr>() && IS_CPP_REF_TYPE(expr->getType().as<core::RefTypePtr>()->getElementType())){
+				return builder.deref(unwrapCppRef(builder, builder.deref(expr)));
+			}
 
 			// we use by value a member accessor. we have a better operation for this
 			// instead of derefing the memberRef
