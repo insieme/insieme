@@ -516,9 +516,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 				fakeInductionVar = wrap.as<core::ExpressionPtr>();
 			}
 
-			retStmt.push_back(
-					builder.callExpr(gen.getUnit(),
-							gen.getRefAssign(), fakeInductionVar, finalVal));
+			retStmt.push_back(builder.assign(fakeInductionVar, finalVal));
 		}
 
 	} catch (const analysis::LoopNormalizationError& e) {

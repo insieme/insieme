@@ -579,12 +579,6 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 		return getZero (type.as<core::RecTypePtr>()->unroll());
 	}
 
-	// if it is a function type
-	if(type->getNodeType() == core::NT_FunctionType)
-	{
-		return manager.getLangBasic().getRefNull();
-	}
-
 	// TODO: extend for more types
 	LOG(FATAL) << "Encountered unsupported type: " << *type;
 	assert(false && "Given type not supported yet!");
@@ -632,12 +626,12 @@ CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& 
 			});
 
 			assert(pos != list.end() && "UnionType of assignemnt's value does not contain a subtype of the target's type");
-			return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target,
+			return callExpr(target.getType(), manager.getLangBasic().getRefAssign(), target,
 					accessMember(value, pos->getName()));
 		}
 	}
 
-	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getRefAssign(), target, value);
+	return callExpr(target.getType(), manager.getLangBasic().getRefAssign(), target, value);
 }
 
 ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
