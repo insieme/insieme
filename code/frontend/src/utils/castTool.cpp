@@ -590,10 +590,10 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
 		{
 		
-			if (gen.isAnyRef(targetTy)) { return expr; } 
+			if (gen.isAnyRef(targetTy)) { return gen.getRefNull(); } 
 
 			// cast NULL to anything else
-			if ((targetTy->getNodeType() == core::NT_RefType) && (*expr == *builder.literal(expr->getType(), "0"))) {
+			if ((targetTy->getNodeType() == core::NT_RefType) && (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr))) {
 				return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 			}
 			else{
