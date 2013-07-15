@@ -92,6 +92,11 @@ const T& attachCName(const T& node, const string& name) {
 	return node;
 }
 
+inline const std::string& getCName(const core::NodePtr& node) {
+	assert(node->hasAnnotation(annotations::c::CNameAnnotation::KEY));
+	return node->getAnnotation(annotations::c::CNameAnnotation::KEY)->getName();
+}
+
 template<typename T>
 T& copyCName(T& target, const core::NodePtr& src) {
 	if (src->hasAnnotation(annotations::c::CNameAnnotation::KEY)) {

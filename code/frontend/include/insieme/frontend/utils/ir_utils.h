@@ -1,3 +1,4 @@
+
 /**
  * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
@@ -52,30 +53,27 @@ typedef Pointer<const Type> TypePtr;
 class IRBuilder;
 } // end core namespace 
 
+#define IS_CPP_REF_TYPE(ty) \
+	(core::analysis::isCppRef(ty) || \
+	core::analysis::isConstCppRef(ty))
+
+#define IS_CPP_REF_EXPR(expr) \
+	(core::analysis::isCppRef(expr->getType()) || \
+	core::analysis::isConstCppRef(expr->getType() ))
+
 namespace frontend {
 namespace utils {
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// C++
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	/**
-	 * This function tries to restructure the given expression of a reference to a scalar
-	 * into a reference to an array - if possible without using the scalar.to.ref.array literal.
-	 *
-	 * @param expr the expression to be converted
-	 * @return the rewritten, equivalent expression exposing a reference to an array
+	 * retrieves the expression corresponding to the usage of a cpp reference
 	 */
-	core::ExpressionPtr refScalarToRefArray(const core::ExpressionPtr& expr);
+	core::ExpressionPtr unwrapCppRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr);
 
-	core::ExpressionPtr cast(const core::ExpressionPtr& expr, const core::TypePtr& trgTy);
-
-	bool isArray(const core::TypePtr& type);
-	bool isRefArray(const core::TypePtr& type);
-
-	core::TypePtr getArrayElement(const core::TypePtr& type);
-
-	bool isVector(const core::TypePtr& type);
-	bool isRefVector(const core::TypePtr& type);
-	bool isRefRef(const core::TypePtr& type);
-
-	core::TypePtr getVectorElement(const core::TypePtr& type);
+	core::ExpressionPtr createSafeAssigment(core::ExpressionPtr& left, core::ExpressionPtr& right);
 
 } // end utils namespace 
 } // end frontend namespace

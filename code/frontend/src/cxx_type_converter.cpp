@@ -117,159 +117,41 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		}
 	}
 	
-	auto classType = TypeConverter::VisitTagType(tagType);
+	core::StructTypePtr classType = TypeConverter::VisitTagType(tagType).as<core::StructTypePtr>();
 	LOG_TYPE_CONVERSION(tagType, classType) ;
-
-	convFact.ctx.typeCache[tagType] = classType;
 
 	// if is a c++ class, we need to annotate some stuff
 	if (llvm::isa<clang::RecordType>(tagType)) {
 		if (!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl()))
 			return classType;
 
-		core::ClassMetaInfo classInfo;
 
 		//~~~~~ look in the indexer for the full decl ~~~~
 		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(tagType->getDecl());
 
-		//~~~~~ base clases if any ~~~~~
+		//~~~~~ base classes if any ~~~~~
 		if (classDecl->getNumBases() > 0){
 			std::vector<core::ParentPtr> parents;
 
 			clang::CXXRecordDecl::base_class_const_iterator it = classDecl->bases_begin();
 			for (; it != classDecl->bases_end(); it++){
 				// visit the parent to build its type
-				auto parentIrType = Visit((it)->getType().getTypePtr());
+				auto parentIrType = convert((it)->getType().getTypePtr());
 				parents.push_back(builder.parent(it->isVirtual(), parentIrType));
 			}
 
 			// if we have base classes, update the classType
-			core::ParentsAddress target;
-			if(classType.isa<core::StructTypePtr>() ) {
-				target = core::StructTypeAddress(classType.as<core::StructTypePtr>())->getParents();
-			} else if(classType.isa<core::RecTypePtr>() ) {
-				target = core::RecTypeAddress(classType.as<core::RecTypePtr>())->getTypeDefinition().as<core::StructTypeAddress>()->getParents();
-			} else { assert(false && "not supported"); }
-			classType = core::transform::replaceNode(mgr, target, builder.parents(parents)).as<core::TypePtr>();
+			assert(classType.isa<core::StructTypePtr>());
+
+			// implant new parents list
+			classType = core::transform::replaceNode(mgr, core::StructTypeAddress(classType)->getParents(), builder.parents(parents)).as<core::StructTypePtr>();
 		}
 
 		//update name of class type
-		core::NodeAddress target;
-		if(classType.isa<core::StructTypePtr>() ) {
-			target = core::StructTypeAddress(classType.as<core::StructTypePtr>())->getName();
-		} else if(classType.isa<core::RecTypePtr>() ) {
-			target = core::RecTypeAddress(classType.as<core::RecTypePtr>())->getTypeDefinition().as<core::StructTypeAddress>()->getName();
-		} else { assert(false && "not supported"); }
-		auto name = builder.stringValue(classDecl->getNameAsString());
-		classType = core::transform::replaceNode(mgr, target, name).as<core::TypePtr>();
+		classType = core::transform::replaceNode(mgr, core::StructTypeAddress(classType)->getName(), builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
 
 		annotations::c::attachCName(classType, classDecl->getNameAsString());
-
-		// update cache with base classes, for upcomming uses
-		convFact.ctx.typeCache.erase(tagType);
-		convFact.ctx.typeCache[tagType] = classType;
-
-		//~~~~~ copy ctor, move ctor, default ctor ~~~~~
-		clang::CXXRecordDecl::ctor_iterator ctorIt = classDecl->ctor_begin();
-		clang::CXXRecordDecl::ctor_iterator ctorEnd= classDecl->ctor_end();
-		for (; ctorIt != ctorEnd; ctorIt ++){
-			const CXXConstructorDecl* ctorDecl = *ctorIt;
-			if (ctorDecl->isDefaultConstructor() ||
-				ctorDecl->isCopyConstructor() ||
-				ctorDecl->isMoveConstructor() ){
-
-				if (ctorDecl->isUserProvided ()){
-					core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
-					if (ctorLambda ){
-						ctorLambda = convFact.memberize  (ctorDecl, ctorLambda, 
-														  builder.refType(classType), 
-														  core::FK_CONSTRUCTOR).as<core::ExpressionPtr>();
-
-						// FIXME: this comes from the interceptor, intercepted constructors are
-						// literals. but we should not be here if is intercepted
-						classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
-					}
-				}
-			}
-		}
-
-		//~~~~~ convert destructor ~~~~~
-		if(classDecl->hasUserDeclaredDestructor()){
-			const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
-			core::ExpressionPtr&& dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
-			dtorLambda = convFact.memberize  (dtorDecl, dtorLambda, builder.refType(classType), core::FK_DESTRUCTOR).as<core::ExpressionPtr>();
-			classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
-			if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
-				classInfo.setDestructorVirtual();
-		}
-
-		//~~~~~ member functions ~~~~~
-		clang::CXXRecordDecl::method_iterator methodIt = classDecl->method_begin();
-		clang::CXXRecordDecl::method_iterator methodEnd= classDecl->method_end();
-		for (; methodIt != methodEnd; methodIt ++){
-			if (llvm::isa<clang::CXXConstructorDecl>(*methodIt) ||
-				llvm::isa<clang::CXXDestructorDecl>(*methodIt)){
-				// ctor are handled in a previous loop
-				continue;
-			}
-
-			if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
-				//FIXME: for now ignore CopyAssignmentOperator
-				// -- backendCompiler should take care of it
-				continue;
-			}
-
-			if( (*methodIt)->isMoveAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
-				//FIXME for non-userProvided moveAssign ops find solution,
-				//maybe leave them to be handled by the backendCompiler or something else
-				//currently are left over for be-compiler
-				assert(!(*methodIt)->isMoveAssignmentOperator() && " move assigment operator is a CXX11 feature, not supported");
-			}
-
-			const clang::FunctionDecl* method = llvm::cast<clang::FunctionDecl>(*methodIt);
-
-			// the function is a template espetialization, but if it has no body, we wont
-			// convert it, it was never instanciated
-			if (method->getMemberSpecializationInfo () && !method->hasBody()){
-					continue;
-			}
-
-			auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
-			methodLambda = convFact.memberize(method, methodLambda, builder.refType(classType), core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
-
-			if( method->isPure() ) {
-				//pure virtual functions are handled bit different in metainfo
-				VLOG(2) << "pure virtual function " << method;
-				auto funcTy = methodLambda->getType().as<core::FunctionTypePtr>();
-				VLOG(2) << funcTy;
-				methodLambda = builder.getPureVirtual(funcTy);
-			}
-
-			if (VLOG_IS_ON(2)){
-				VLOG(2) << " ############ member! #############";
-				VLOG(2) << method->getNameAsString();
-				VLOG(2) << methodLambda->getType();
-				dumpDetail(methodLambda);
-				VLOG(2) << " ###";
-				method->dump();
-				std::cout << std::endl;
-				VLOG(2) << ((*methodIt)->isVirtual()? "virtual!":" ");
-				VLOG(2) << ((*methodIt)->isConst()? "const!":" ");
-				VLOG(2) << "           ############";
-			}
-
-			classInfo.addMemberFunction(method->getNameAsString(),
-										methodLambda,
-										(*methodIt)->isVirtual(),
-										(*methodIt)->isConst());
-		}
-		// append metha information to the class definition
-		core::setMetaInfo(classType, classInfo);
 	}
-
-	// cache the new implementation
-	convFact.ctx.typeCache.erase(tagType);
-	convFact.ctx.typeCache[tagType] = classType;
 
 	return classType;
 }
@@ -443,10 +325,133 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitDecltypeType(const clang
 //                 AUTO TYPE -- a CXX0x feature
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::TypePtr ConversionFactory::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
-    return Visit(autoTy->getDeducedType().getTypePtr());
+    return convert(autoTy->getDeducedType().getTypePtr());
 }
 
-core::TypePtr ConversionFactory::CXXTypeConverter::Visit(const clang::Type* type) {
+void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type* type, const core::TypePtr& res) {
+
+	// now attach meta-info (only for record type definitios)
+	const clang::RecordType* recType = dyn_cast<const clang::RecordType>(type);
+	if (!recType) return;	// nothing to do
+
+	// skip if there is not declaration available
+	if (!llvm::isa<clang::CXXRecordDecl>(recType->getDecl())) return;
+
+	// assemble class info
+	core::ClassMetaInfo classInfo;
+
+	//~~~~~ look in the indexer for the full decl ~~~~
+	const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(recType->getDecl());
+
+	//~~~~~ copy ctor, move ctor, default ctor ~~~~~
+	clang::CXXRecordDecl::ctor_iterator ctorIt = classDecl->ctor_begin();
+	clang::CXXRecordDecl::ctor_iterator ctorEnd= classDecl->ctor_end();
+	for (; ctorIt != ctorEnd; ctorIt ++){
+		const CXXConstructorDecl* ctorDecl = *ctorIt;
+		if (ctorDecl->isDefaultConstructor() ||
+			ctorDecl->isCopyConstructor() ||
+			ctorDecl->isMoveConstructor() ){
+
+			if (ctorDecl->isUserProvided ()){
+
+				// the function is a template espetialization, but if it has no body, we wont
+                                // convert it, it was never instanciated
+                                if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
+                                        continue;
+                                }
+
+
+				core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
+				if (ctorLambda ){
+					ctorLambda = convFact.memberize  (ctorDecl, ctorLambda,
+													  builder.refType(res),
+													  core::FK_CONSTRUCTOR).as<core::ExpressionPtr>();
+
+					assert(ctorLambda);
+                                        assert(!ctorLambda.isa<core::LiteralPtr>());
+
+					classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
+				}
+			}
+		}
+	}
+
+	//~~~~~ convert destructor ~~~~~
+	if(classDecl->hasUserDeclaredDestructor()){
+		const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
+		core::ExpressionPtr&& dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
+		dtorLambda = convFact.memberize  (dtorDecl, dtorLambda, builder.refType(res), core::FK_DESTRUCTOR).as<core::ExpressionPtr>();
+		classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
+		if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
+			classInfo.setDestructorVirtual();
+	}
+
+	//~~~~~ member functions ~~~~~
+	clang::CXXRecordDecl::method_iterator methodIt = classDecl->method_begin();
+	clang::CXXRecordDecl::method_iterator methodEnd= classDecl->method_end();
+	for (; methodIt != methodEnd; methodIt ++){
+		if (llvm::isa<clang::CXXConstructorDecl>(*methodIt) ||
+			llvm::isa<clang::CXXDestructorDecl>(*methodIt)){
+			// ctor are handled in a previous loop
+			continue;
+		}
+
+		if( (*methodIt)->isCopyAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
+			//FIXME: for now ignore CopyAssignmentOperator
+			// -- backendCompiler should take care of it
+			continue;
+		}
+
+		if( (*methodIt)->isMoveAssignmentOperator() && !(*methodIt)->isUserProvided() ) {
+			//FIXME for non-userProvided moveAssign ops find solution,
+			//maybe leave them to be handled by the backendCompiler or something else
+			//currently are left over for be-compiler
+			assert(!(*methodIt)->isMoveAssignmentOperator() && " move assigment operator is a CXX11 feature, not supported");
+		}
+
+		const clang::FunctionDecl* method = llvm::cast<clang::FunctionDecl>(*methodIt);
+
+		// the function is a template espetialization, but if it has no body, we wont
+		// convert it, it was never instanciated
+		if (method->getMemberSpecializationInfo () && !method->hasBody()){
+				continue;
+		}
+
+		auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
+		methodLambda = convFact.memberize(method, methodLambda, builder.refType(res), core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
+
+		if( method->isPure() ) {
+			//pure virtual functions are handled bit different in metainfo
+			VLOG(2) << "pure virtual function " << method;
+			auto funcTy = methodLambda->getType().as<core::FunctionTypePtr>();
+			VLOG(2) << funcTy;
+			methodLambda = builder.getPureVirtual(funcTy);
+		}
+
+		if (VLOG_IS_ON(2)){
+			VLOG(2) << " ############ member! #############";
+			VLOG(2) << method->getNameAsString();
+			VLOG(2) << methodLambda->getType();
+			dumpDetail(methodLambda);
+			VLOG(2) << " ###";
+			method->dump();
+			std::cout << std::endl;
+			VLOG(2) << ((*methodIt)->isVirtual()? "virtual!":" ");
+			VLOG(2) << ((*methodIt)->isConst()? "const!":" ");
+			VLOG(2) << "           ############";
+		}
+
+		classInfo.addMemberFunction(method->getNameAsString(),
+									methodLambda,
+									(*methodIt)->isVirtual(),
+									(*methodIt)->isConst());
+	}
+
+	// append meta information to the class definition
+	core::setMetaInfo(res, classInfo);
+}
+
+core::TypePtr ConversionFactory::CXXTypeConverter::convertInternal(const clang::Type* type) {
 	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
 
 	//check cache for type

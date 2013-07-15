@@ -53,6 +53,7 @@
 #include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/header_tagger.h"
+#include "insieme/frontend/utils/ir_utils.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -153,13 +154,13 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool
 		{
 
 		if (isCpp){
-			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
-			typeConvPtr = std::make_shared<CXXTypeConverter>(*this, prog);
+			typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
 			exprConvPtr = std::make_shared<CXXExprConverter>(*this, prog);
+			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
 		} else{
-			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
-			typeConvPtr = std::make_shared<CTypeConverter>(*this, prog);
+			typeConvPtr = std::make_shared<CTypeConverter>(*this);
 			exprConvPtr = std::make_shared<CExprConverter>(*this, prog);
+			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
 		}
 
 }
@@ -969,7 +970,7 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 	assert(type && "Calling convertType with a NULL pointer");
 	auto fit = ctx.typeCache.find(type);
 	if(fit == ctx.typeCache.end()) {
-		core::TypePtr&& retTy = typeConvPtr->Visit( const_cast<Type*>(type) );
+		core::TypePtr&& retTy = typeConvPtr->convert( type );
 		ctx.typeCache.insert( {type, retTy} );
 		return retTy;
 	}
@@ -1574,8 +1575,10 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 				initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
 		}
 		else{
-			//otherwise is a regular assigment intialization
-
+			//otherwise is a regular assigment like intialization
+			//
+			core::ExpressionPtr expr = convertExpr((*it)->getInit());
+/*
 			// it might be that the expression is a value parameter, and it might be wrapped.
 			// we can materialize the wrapp for it, or we avoid the wrap. (avoid the wrap is done)
 			const clang::DeclRefExpr* rhs= utils::skipSugar<DeclRefExpr> ((*it)->getInit());
@@ -1585,11 +1588,9 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 				expr = lookUpVariable(rhs->getDecl());
 			}
 			else{
-
 				// or might be the usage of a member of a parameter
 				const clang::MemberExpr* member= utils::skipSugar<MemberExpr> ((*it)->getInit());
 				if(member && llvm::isa<clang::DeclRefExpr>(member->getBase()) ){
-
 					// we replace the usage of the wrapped var by the original parameter
 					clang::ParmVarDecl* param= llvm::dyn_cast<clang::ParmVarDecl>(llvm::cast<clang::DeclRefExpr>(member->getBase())->getDecl());
 					if (param) {
@@ -1602,9 +1603,8 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 						}
 					}
 				}
-			}
-
-			initStmt = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, expr);
+			}*/
+			initStmt = utils::createSafeAssigment(init,expr);
 		}
 
 		// append statement to initialization list
