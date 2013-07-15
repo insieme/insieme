@@ -40,6 +40,7 @@
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/frontend/utils/ir_utils.h"
 #include "insieme/frontend/utils/debug.h"
 
 #include "insieme/frontend/pragma/insieme.h"
@@ -86,10 +87,16 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 	vector<core::StatementPtr> stmtList;
 	stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
 
-	if (llvm::isa<clang::IntegerLiteral>(retStmt->getRetValue()) ||
-		llvm::isa<clang::BinaryOperator>(retStmt->getRetValue()) || 
-		llvm::isa<clang::CXXMemberCallExpr>(retStmt->getRetValue()))
+	if(!retStmt->getRetValue() ) {
+		//if there is no return value its an empty return "return;"
 		return stmt;
+	}
+
+	if(llvm::isa<clang::IntegerLiteral>(retStmt->getRetValue()) ||
+		llvm::isa<clang::BinaryOperator>(retStmt->getRetValue()) || 
+		llvm::isa<clang::CXXMemberCallExpr>(retStmt->getRetValue())) {
+		return stmt;
+	}
 
 	core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
 
@@ -103,7 +110,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 	// if there is no copy constructor on return... it seems that this is the case in which a
 	// ref is returned
 	// if is a ref: no cast, if is a const ref, there is a Nop cast to qualify
-	core::TypePtr funcRetTy = convFact.convertType(retStmt->getRetValue()->getType().getTypePtr());
+//	core::TypePtr funcRetTy = convFact.convertType(retStmt->getRetValue()->getType().getTypePtr());
 
 	// we only operate this on classes
 	clang::CastExpr* cast;

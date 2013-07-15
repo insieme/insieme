@@ -53,6 +53,7 @@
 #include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/header_tagger.h"
+#include "insieme/frontend/utils/ir_utils.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -153,13 +154,13 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog, bool
 		{
 
 		if (isCpp){
-			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
-			typeConvPtr = std::make_shared<CXXTypeConverter>(*this, prog);
+			typeConvPtr = std::make_shared<CXXTypeConverter>(*this);
 			exprConvPtr = std::make_shared<CXXExprConverter>(*this, prog);
+			stmtConvPtr = std::make_shared<CXXStmtConverter>(*this);
 		} else{
-			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
-			typeConvPtr = std::make_shared<CTypeConverter>(*this, prog);
+			typeConvPtr = std::make_shared<CTypeConverter>(*this);
 			exprConvPtr = std::make_shared<CExprConverter>(*this, prog);
+			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
 		}
 
 }
@@ -247,13 +248,24 @@ core::StatementPtr ConversionFactory::materializeReadOnlyParams(const core::Stat
 ///
 void ConversionFactory::printDiagnosis(const clang::SourceLocation& loc){
 
-	clang::Preprocessor& pp = getCurrentPreprocessor();
+	// TODO: warnings intoduced by INSIEME are not print because some 
+	// source location issues, debug and fix this.
+	//    --  loop iterator thing
+	//    -- constancy of member functions (which one to call when two)
+/*	clang::Preprocessor& pp = getCurrentPreprocessor();
 	// print warnings and errors:
 	while (!ctx.warnings.empty()){
-		pp.Diag(loc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning, *ctx.warnings.begin()) );
+
+		if (getCurrentSourceManager().isLoadedSourceLocation (loc)){
+			std::cerr << "loaded location:\n";
+			std::cerr << "\t" << *ctx.warnings.begin() << std::endl;
+		}
+		else{
+			pp.Diag(loc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning, *ctx.warnings.begin()) );
+		}
 		ctx.warnings.erase(ctx.warnings.begin());
 	}
-
+	*/
 }
 
 //////////////////////////////////////////////////////////////////
@@ -969,7 +981,7 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 	assert(type && "Calling convertType with a NULL pointer");
 	auto fit = ctx.typeCache.find(type);
 	if(fit == ctx.typeCache.end()) {
-		core::TypePtr&& retTy = typeConvPtr->Visit( const_cast<Type*>(type) );
+		core::TypePtr&& retTy = typeConvPtr->convert( type );
 		ctx.typeCache.insert( {type, retTy} );
 		return retTy;
 	}
@@ -1574,8 +1586,10 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 				initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
 		}
 		else{
-			//otherwise is a regular assigment intialization
-
+			//otherwise is a regular assigment like intialization
+			//
+			core::ExpressionPtr expr = convertExpr((*it)->getInit());
+/*
 			// it might be that the expression is a value parameter, and it might be wrapped.
 			// we can materialize the wrapp for it, or we avoid the wrap. (avoid the wrap is done)
 			const clang::DeclRefExpr* rhs= utils::skipSugar<DeclRefExpr> ((*it)->getInit());
@@ -1585,11 +1599,9 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 				expr = lookUpVariable(rhs->getDecl());
 			}
 			else{
-
 				// or might be the usage of a member of a parameter
 				const clang::MemberExpr* member= utils::skipSugar<MemberExpr> ((*it)->getInit());
 				if(member && llvm::isa<clang::DeclRefExpr>(member->getBase()) ){
-
 					// we replace the usage of the wrapped var by the original parameter
 					clang::ParmVarDecl* param= llvm::dyn_cast<clang::ParmVarDecl>(llvm::cast<clang::DeclRefExpr>(member->getBase())->getDecl());
 					if (param) {
@@ -1602,9 +1614,8 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 						}
 					}
 				}
-			}
-
-			initStmt = builder.callExpr(gen.getUnit(), gen.getRefAssign(), init, expr);
+			}*/
+			initStmt = utils::createSafeAssigment(init,expr);
 		}
 
 		// append statement to initialization list
@@ -1693,11 +1704,18 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	return core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
 }
 
+/////////////////////////////////////////////////////////
+//
 core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExprPtr& mainFunc){
 
 	VLOG(1) << "";
 	VLOG(1) << "******************** Initialize Globals at program start ***************************";
 
+	// 4 casses:
+	// extern, do nothing
+	// static in some function, we need to initialize the constructor flag
+	// with init, assign value
+	// without init, do not initialize
 
 	// we only want to init what we use, so we check it
 	core::NodeSet usedLiterals;
@@ -1705,51 +1723,22 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 				usedLiterals.insert(literal);
 			});
 
-		// 4 casses:
-		// extern, do nothing (already passed)
-		// static in some function, we need to initialize the constructor flag
-		// with init, assign value
-		// without init, assign zero value
 	core::IRBuilder builder(mainFunc->getNodeManager());
 	core::StatementList inits;
-	for (auto it = globalCollector.begin(); it != globalCollector.end(); ++it){
-		VLOG(2) << "build def value for: " << it.name() << std::endl;
 
-		// avoid intercepted stuff, it never existed
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    INTERCEPTED  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		if (mFact.getProgram().getInterceptor().isIntercepted(it.name()))
-			continue;
+	// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	for (auto git = globalCollector.globalsInitialization_begin(); git != globalCollector.globalsInitialization_end(); ++git){
 
-		// globals which end up being extern must mantain name without alterations
-		// nor qualifications
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    EXTERN, do not declared  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		if (it.storage() == analysis::GlobalVarCollector::VS_EXTERN){
+		if (mFact.getProgram().getInterceptor().isIntercepted((*git)->getQualifiedNameAsString())){
 			continue;
 		}
 
-		// static variables need to be created to zero initialize the inner initialization flag.
-		// does not matter where is used
-		core::ExpressionPtr var = mFact.lookUpVariable (it.decl());
-		core::LiteralPtr litUse = var.isa<core::LiteralPtr>();
-		if (!litUse){
-			litUse = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
-		}
-		assert (litUse && " no literal? who handled this global?");
+		//VLOG(2) << "initializing global: " << (*git)->getQualifiedNameAsString();
+		std::cout << "initializing global: " << (*git)->getQualifiedNameAsString() << std::endl;
 
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    NEVER USED  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		if (!contains(usedLiterals, litUse)){
-			continue;
-		}
-
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    STATIC  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		if (it.storage() == analysis::GlobalVarCollector::VS_STATIC){
-			inits.push_back(builder.createStaticVariable(var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>()));
-			continue;
-		}
-
-		// ~~~~~~~~~~~~~~~~~~~~~~~~~~    GLOBALS  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		core::ExpressionPtr initValue;
-		if(const clang::Expr* init = it.init()){
+		if(const clang::Expr* init = (*git)->getDefinition()->getInit()){
+			core::ExpressionPtr var = mFact.lookUpVariable((*git));
+			core::ExpressionPtr initValue;
 			//FIXME: why this is not done in the visitor???
 			if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( init )) {
 				initValue =  mFact.convertInitializerList(listExpr, var->getType());
@@ -1760,13 +1749,25 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 			if(initValue->getType().isa<core::RefTypePtr>()){
 				initValue = utils::cast( initValue, var->getType().as<core::RefTypePtr>().getElementType());
 			}
+			core::StatementPtr assign = builder.assign (var, initValue);
+			inits.push_back(assign);
 		}
-		else{
-			continue;
+	}
+	
+	// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~A
+	for (auto sit = globalCollector.staticInitialization_begin(); sit != globalCollector.staticInitialization_end(); ++sit){
+		std::cout << "initializing static: " << (*sit)->getQualifiedNameAsString() << std::endl;
+		core::ExpressionPtr var = mFact.lookUpVariable((*sit));
+		core::LiteralPtr litUse = var.isa<core::LiteralPtr>();
+		if (!litUse){
+			litUse = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
 		}
-		core::StatementPtr assign = builder.assign (var, initValue);
-		dumpPretty(assign);
-		inits.push_back(assign);
+		assert (litUse && " no literal? who handled this global?");
+
+		// no need to touch it if never used
+		if (contains(usedLiterals, litUse)){
+			inits.push_back(builder.createStaticVariable(var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>()));
+		}
 	}
 
 	if (inits.empty())

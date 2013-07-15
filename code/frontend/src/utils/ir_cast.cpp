@@ -667,26 +667,6 @@ bool isRefVector(const core::TypePtr& type) {
 		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_VectorType;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// C++
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// unwraps cppRef/constCppRef
-core::ExpressionPtr unwrapCppRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr) {
-	
-	core::NodeManager& mgr = builder.getNodeManager();	
-	core::TypePtr irType = expr->getType();
-	if (core::analysis::isCppRef(irType)) {
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
-	}
-	else if (core::analysis::isConstCppRef(irType)) {
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
-	}
-
-	std::cout << "no changesss" << std::endl;
-	return expr;
-}
-
 } // end utils namespace
 } // end frontend namespace 
 } // end insieme namespace 

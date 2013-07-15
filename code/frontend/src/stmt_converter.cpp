@@ -499,6 +499,11 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 					)
 			);
 
+			if (loopAnalysis.isInverted()) {
+				// we have to restore the sign
+				finalVal = builder.invertSign(finalVal);
+			}
+
 			// even though, might be the fist use of a value parameter variable.
 			// needs to be wrapped
 			if(llvm::isa<clang::ParmVarDecl> (iv)){
@@ -572,12 +577,16 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		// handle eventual pragmas attached to the Clang node
 		retStmt.push_back( omp::attachOmpAnnotation(whileStmt, forStmt, convFact) );
-
+		std::cerr << "foor loop converted in while" << std::endl;
+		/*
+		 * TODO: using insiemeCC we loose the preprocessor. 
+		 *       find a solution for this
 		clang::Preprocessor& pp = convFact.getCurrentPreprocessor();
 		pp.Diag(forStmt->getLocStart(),
 				pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
 						std::string("For loop converted into while loop, cause: ") + e.what() )
 		);
+		*/
 	}
 
 	if (addDeclStmt) {

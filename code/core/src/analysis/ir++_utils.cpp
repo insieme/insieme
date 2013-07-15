@@ -139,7 +139,6 @@ namespace analysis {
 			// check the one member element
 			NamedTypePtr element = structType[0];
 			return element->getType()->getNodeType() == NT_RefType
-					&& element->getType().as<RefTypePtr>()->getElementType()->getNodeType() != NT_RefType
 					&& !isCppRef(element->getType()) && !isConstCppRef(element->getType())
 					&& element->getName().getValue() == memberName;
 		}

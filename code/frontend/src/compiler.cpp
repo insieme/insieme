@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -175,6 +175,42 @@ namespace insieme {
 namespace frontend {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
+//     Extended AST Unit
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+ExtASTUnit::~ExtASTUnit() {
+    if(ast_unit)
+        delete ast_unit;
+}
+
+void ExtASTUnit::createASTUnit(clang::DiagnosticsEngine* diag, const clang::FileSystemOptions& opts) {
+    char filename[] = "/tmp/ast.XXXXXX";
+    int fd = mkstemp(filename);
+    write(fd, ast.c_str(), ast.size());
+    close(fd);
+    //create astunit
+    ast_unit = clang::ASTUnit::LoadFromASTFile(filename, diag, opts);
+    unlink(filename);
+};
+
+clang::ASTUnit * ExtASTUnit::getASTUnit() const {
+    return ast_unit;
+}
+
+void ExtASTUnit::save(const std::string& filename) const {
+    std::ofstream ofs(filename);
+    boost::archive::text_oarchive oa(ofs);
+    oa << ast;
+    oa << info;
+};
+
+void ExtASTUnit::load(const std::string& filename) {
+    std::ifstream file(filename);
+    boost::archive::text_iarchive ia(file);
+    ia >> ast;
+    ia >> info;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 //     COMPILER
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -182,6 +218,7 @@ struct ClangCompiler::ClangCompilerImpl {
 	CompilerInstance clang;
 	llvm::IntrusiveRefCntPtr<TargetOptions> TO;
 	bool m_isCXX;
+    ExtASTUnit ast_unit;
 	ClangCompilerImpl() : clang(), TO(new TargetOptions), m_isCXX(false) {}
 };
 
@@ -190,19 +227,15 @@ ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : p
 	// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the diagOpts object!
 	setDiagnosticClient(pimpl->clang, config.hasOption(ConversionJob::PrintDiag));
 
-    clang::ASTUnit* ast_unit = 0;
     if(is_obj) {
-        ast_unit = clang::ASTUnit::LoadFromASTFile(
-                        config.getFile(),
-                        pimpl->clang.createDiagnostics(new clang::DiagnosticOptions(), 0, nullptr),
-                        pimpl->clang.getFileSystemOpts()
-                    );
+        pimpl->ast_unit.load(config.getFile());
+        pimpl->ast_unit.createASTUnit(&pimpl->clang.getDiagnostics(), pimpl->clang.getFileSystemOpts());
     }
 
 	pimpl->clang.createFileManager();
 	if(is_obj) {
-        pimpl->clang.setFileManager(&ast_unit->getFileManager());
-        pimpl->clang.setSourceManager(&ast_unit->getSourceManager());
+        pimpl->clang.setFileManager(&pimpl->ast_unit.getASTUnit()->getFileManager());
+        pimpl->clang.setSourceManager(&pimpl->ast_unit.getASTUnit()->getSourceManager());
 	} else {
         pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
 	}
@@ -352,8 +385,8 @@ ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : p
 
 	// Do this AFTER setting preprocessor options
     if(is_obj) {
-        pimpl->clang.setPreprocessor(&ast_unit->getPreprocessor());
-        pimpl->clang.setASTContext(&ast_unit->getASTContext());
+        pimpl->clang.createPreprocessor();
+        pimpl->clang.setASTContext(&pimpl->ast_unit.getASTUnit()->getASTContext());
 	} else {
         pimpl->clang.createPreprocessor();
         pimpl->clang.createASTContext();
@@ -390,10 +423,15 @@ Preprocessor& 		ClangCompiler::getPreprocessor()  const { return pimpl->clang.ge
 DiagnosticsEngine& 	ClangCompiler::getDiagnostics()   const { return pimpl->clang.getDiagnostics(); }
 SourceManager& 		ClangCompiler::getSourceManager() const { return pimpl->clang.getSourceManager(); }
 TargetInfo& 		ClangCompiler::getTargetInfo()    const { return pimpl->clang.getTarget(); }
-bool				ClangCompiler::isCXX()				const { return pimpl->m_isCXX; }
+ExtASTUnit*         ClangCompiler::getASTUnit()       const { return &(pimpl->ast_unit); }
+bool				ClangCompiler::isCXX()			  const { return pimpl->m_isCXX; }
 
 ClangCompiler::~ClangCompiler() {
-	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();
+    //Source file has to be ended only if no clang::ASTUnit was created. In the
+    //case of an available clang::ASTUnit the destructor of clang::ASTUnit will
+    //end the source file and free the memory.
+    if(!pimpl->ast_unit.getASTUnit())
+        pimpl->clang.getDiagnostics().getClient()->EndSourceFile();
 	delete pimpl;
 	//sema object of pimpl will be deleted by the InsiemeSema pimpl
 }

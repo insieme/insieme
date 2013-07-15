@@ -55,7 +55,7 @@ namespace fe = insieme::frontend;
 
 using namespace insieme::frontend::analysis;
 
-TEST(PragmaMatcherTest, PragmaPossitions) {
+TEST(GlobalCollectorTest, GlobalStorage) {
 
 	NodeManager manager;
 	ConversionJob job;
@@ -79,14 +79,17 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		{"global_pointer", GlobalVarCollector::VS_GLOBAL},
 		{"global_pureExtern", GlobalVarCollector::VS_EXTERN},
 		{"global_var", GlobalVarCollector::VS_GLOBAL},
-		{"static_diffName1", GlobalVarCollector::VS_STATIC},
-		{"static_var0", GlobalVarCollector::VS_STATIC},
-		{"Obj::global_member", GlobalVarCollector::VS_GLOBAL}
+		{"static_diffName2", GlobalVarCollector::VS_STATIC},
+		{"static_var1", GlobalVarCollector::VS_STATIC},
+		{"Obj__staticMem_member", GlobalVarCollector::VS_GLOBAL},
+		{"global_instance", GlobalVarCollector::VS_GLOBAL},
+		{"Obj2__staticMem_a", GlobalVarCollector::VS_GLOBAL},
+		{"static_ctorGlobal0",  GlobalVarCollector::VS_STATIC}
 	};
 		
 	for (auto it = globalsCollector.begin(); it != globalsCollector.end(); ++it){
-		EXPECT_TRUE (solution.find (it.name()) != solution.end()) << "  not found: at var: "+it.decl()->getNameAsString();
-		EXPECT_EQ (it.storage(), solution[it.name()]) << " at var: "+it.decl()->getNameAsString();
+		EXPECT_TRUE (solution.find (it.name()) != solution.end()) << "  not found: at var: "+it.name();
+		EXPECT_EQ (solution[it.name()], it.storage()) << " at var: "+it.name()+"\n";
 	}
 
 	//std::cout << "****************************************" << std::endl;
@@ -106,15 +109,18 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 		{"global_pointer", GlobalVarCollector::VS_GLOBAL},
 		{"global_pureExtern", GlobalVarCollector::VS_EXTERN},
 		{"global_var", GlobalVarCollector::VS_GLOBAL},
-		{"static_a2", GlobalVarCollector::VS_STATIC},
-		{"static_diffName1", GlobalVarCollector::VS_STATIC},
-		{"static_var0", GlobalVarCollector::VS_STATIC},
-		{"Obj::global_member", GlobalVarCollector::VS_GLOBAL}
+		{"static_a3", GlobalVarCollector::VS_STATIC},
+		{"static_diffName2", GlobalVarCollector::VS_STATIC},
+		{"static_var1", GlobalVarCollector::VS_STATIC},
+		{"Obj__staticMem_member", GlobalVarCollector::VS_GLOBAL},
+		{"global_instance", GlobalVarCollector::VS_GLOBAL},
+		{"Obj2__staticMem_a", GlobalVarCollector::VS_GLOBAL},
+		{"static_ctorGlobal0",  GlobalVarCollector::VS_STATIC}
 	};
 
 	for (auto it = globalsCollector.begin(); it != globalsCollector.end(); ++it){
-		EXPECT_TRUE (solution2.find (it.name()) != solution.end()) << "  not found: at var: "+it.decl()->getNameAsString();
-		EXPECT_EQ (it.storage(), solution2[it.name()]) << " at var: "+it.decl()->getNameAsString();
+		EXPECT_TRUE (solution2.find (it.name()) != solution.end()) << "  not found: at var: "+it.name();
+		EXPECT_EQ (solution2[it.name()], it.storage()) << " at var: "+it.name()+"\n";
 	}
 	//std::cout << "****************************************" << std::endl;
 	

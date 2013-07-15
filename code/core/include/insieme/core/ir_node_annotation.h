@@ -264,6 +264,7 @@ namespace detail {
 			virtual const core::NodeList& getChildNodes() const {
 				return core::value_annotation::get_child_list(ValueAnnotationBase<V,core::NodeAnnotation,KeyType,ValueAnnotation<V, core::NodeAnnotation, KeyType>>::getValue());
 			}
+
 	};
 
 } // end namespace detail
