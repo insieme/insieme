@@ -155,7 +155,10 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		//update name of class type
 		classType = core::transform::replaceNode(mgr, core::StructTypeAddress(classType)->getName(), builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
 
-		annotations::c::attachCName(classType, classDecl->getNameAsString());
+		//if classDecl has a name add it
+		if( !classDecl->getNameAsString().empty() ) {
+			annotations::c::attachCName(classType, classDecl->getNameAsString());
+		}
 	}
 
 	return classType;
