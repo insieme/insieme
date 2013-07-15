@@ -117,8 +117,13 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		}
 	}
 	
-	core::StructTypePtr classType = TypeConverter::VisitTagType(tagType).as<core::StructTypePtr>();
-	LOG_TYPE_CONVERSION(tagType, classType) ;
+	core::TypePtr ty = TypeConverter::VisitTagType(tagType);
+	LOG_TYPE_CONVERSION(tagType, ty) ;
+
+	//if not a struct type we don't need to do anything more
+	if( !ty.isa<core::StructTypePtr>() ) { return ty; }
+
+	core::StructTypePtr classType = ty.as<core::StructTypePtr>();
 
 	// if is a c++ class, we need to annotate some stuff
 	if (llvm::isa<clang::RecordType>(tagType)) {
@@ -150,7 +155,10 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		//update name of class type
 		classType = core::transform::replaceNode(mgr, core::StructTypeAddress(classType)->getName(), builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
 
-		annotations::c::attachCName(classType, classDecl->getNameAsString());
+		//if classDecl has a name add it
+		if( !classDecl->getNameAsString().empty() ) {
+			annotations::c::attachCName(classType, classDecl->getNameAsString());
+		}
 	}
 
 	return classType;
@@ -336,6 +344,8 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 
 	// skip if there is not declaration available
 	if (!llvm::isa<clang::CXXRecordDecl>(recType->getDecl())) return;
+
+	if( !res.isa<core::StructTypePtr>() ) { return; }
 
 	// assemble class info
 	core::ClassMetaInfo classInfo;

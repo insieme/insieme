@@ -38,30 +38,18 @@
 
 #include "insieme/core/forward_decls.h"
 
-
 namespace insieme {
 namespace core {
-namespace transform {
+namespace analysis {
 
-/** Inlines the given assignment of type "x = f(a,b,c,...);"
- *  returns a compound statement which implements the same semantics when executed at the given call site
- */
-CompoundStmtPtr inlineMultiReturnAssignment(NodeManager& nodeMan, const CallExprPtr& assignment);
+	/**
+	 * Checks whether there are unbound type variables present within the given type.
+	 *
+	 * @param type the type to be checked
+	 * @return true if there are free type variables, false otherwise
+	 */
+	bool hasFreeTypeVariables(const TypePtr& type);
 
-
-/** Inlines the given function call of type "f(a,b,c,...);"
- *  (the return type is either unit, or the return value is unused)
- *  returns a compound statement which implements the same semantics when executed at the given call site
- */
-CompoundStmtPtr inlineMultiReturnPlainCall(NodeManager& nodeMan, const CallExprPtr& call);
-
-/** Inlines the given function call of type "x = f(a,b,c,...);" or "f(a,b,c,...);"
- *  returns a compound statement which implements the same semantics when executed at the given call site
- */
-CompoundStmtPtr inlineMultiReturn(NodeManager& nodeMan, const CallExprPtr& call);
-
-NodePtr inlineCode(NodeManager& nodeMan, const NodePtr& code);
-
-}
-}
-}
+} // end namespace analysis
+} // end namespace core
+} // end namespace insieme

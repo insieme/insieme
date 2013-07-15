@@ -421,6 +421,11 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		// rid if the qualified name function
 		std::string name = program.getGlobalCollector().getName(varDecl);
 
+		// global/static variables are always leftsides (refType) -- solves problem with const
+		if(!irType.isa<core::RefTypePtr>() ) {
+			irType = builder.refType(irType);
+		}
+
 		if (program.getGlobalCollector().isStatic(varDecl)){
 			if (!irType.isa<core::RefTypePtr>()) irType = builder.refType(irType);		// this happens whenever a static variable is constant
 			irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(irType.as<core::RefTypePtr>().getElementType()));

@@ -46,6 +46,7 @@
 
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_cached_visitor.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/naming.h"
@@ -602,38 +603,12 @@ namespace {
 		return nullptr;
 	}
 
-	// TODO: implement a more efficient variant of this one and move it to the utils!
 	bool hasFreeTypeVariables(const core::NodePtr& node) {
+		return core::analysis::hasFreeTypeVariables(node.isa<core::TypePtr>());
+	}
 
-		struct HasFreeTypeVariableVisitor : public core::IRVisitor<bool, core::Pointer, core::NodeSet&> {
-
-			HasFreeTypeVariableVisitor() : core::IRVisitor<bool, core::Pointer, core::NodeSet&>(true) {}
-
-			bool visitTypeVariable(const core::TypeVariablePtr& cur, core::NodeSet& knownVariables) {
-				return !contains(knownVariables, cur);
-			}
-
-			bool visitRecTypeDefinition(const core::RecTypeDefinitionPtr& def, core::NodeSet& knownVariables) {
-				core::NodeSet local = knownVariables;
-				for(const core::RecTypeBindingPtr& binding : def) {
-					local.insert(binding->getVariable());
-				}
-				return visitNode(def, local);
-			}
-
-			bool visitRecType(const core::RecTypePtr& cur, core::NodeSet& knownVariables) {
-				return visit(cur->getDefinition(), knownVariables);
-			}
-
-			bool visitNode(const core::NodePtr& cur, core::NodeSet& knownVariables) {
-				return any(cur.getChildList(), [&](const core::NodePtr& cur)->bool { return this->visit(cur, knownVariables); });
-			}
-
-		};
-
-		core::NodeSet tmp;
-		return HasFreeTypeVariableVisitor().visit(node, tmp);
-
+	bool hasFreeTypeVariables(const core::TypePtr& type) {
+		return core::analysis::hasFreeTypeVariables(type);
 	}
 
 	core::TypePtr closeRecursiveType(const core::TypePtr type, const core::TypeVariablePtr var) {
@@ -694,7 +669,7 @@ namespace {
 		core::RecTypeDefinitionPtr def = builder.recTypeDefinition(bindings);
 
 		// test whether this is actually a closed type ..
-		if(hasFreeTypeVariables(def)) return type;
+		if(hasFreeTypeVariables(def.as<core::NodePtr>())) return type;
 
 		// normalize recursive representation
 		core::RecTypeDefinitionPtr old;
@@ -728,7 +703,7 @@ namespace {
 
 		// build up new recursive type (only if it is closed)
 		auto res = builder.recType(var, def);
-		return hasFreeTypeVariables(res)?type:res;
+		return hasFreeTypeVariables(res.as<core::TypePtr>())?type:res;
 	}
 
 }

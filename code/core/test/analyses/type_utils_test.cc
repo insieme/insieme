@@ -34,34 +34,42 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <vector>
 
-#include "insieme/core/forward_decls.h"
+#include <gtest/gtest.h>
 
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/analysis/type_utils.h"
 
 namespace insieme {
 namespace core {
-namespace transform {
+namespace analysis {
 
-/** Inlines the given assignment of type "x = f(a,b,c,...);"
- *  returns a compound statement which implements the same semantics when executed at the given call site
- */
-CompoundStmtPtr inlineMultiReturnAssignment(NodeManager& nodeMan, const CallExprPtr& assignment);
+	bool hasNoFreeTypeVariables(const core::TypePtr& type) {
+		return !hasFreeTypeVariables(type);
+	}
+
+	TEST(FreeTypeVariables, Basic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// test some cases with free variables
+		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("'a"));
+		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("set<'a>"));
+		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("array<'a,1>"));
+		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("struct { 'a data; }"));
+		EXPECT_PRED1(hasFreeTypeVariables, builder.parseType("struct { struct { 'a data; } x }"));
+
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("int<4>"));
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("set<int<4>>"));
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("array<int<4>,1>"));
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("struct { int<4> data; }"));
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("struct { struct { int<4> data; } x }"));
+		EXPECT_PRED1(hasNoFreeTypeVariables, builder.parseType("('a)->'a"));
+
+	}
 
 
-/** Inlines the given function call of type "f(a,b,c,...);"
- *  (the return type is either unit, or the return value is unused)
- *  returns a compound statement which implements the same semantics when executed at the given call site
- */
-CompoundStmtPtr inlineMultiReturnPlainCall(NodeManager& nodeMan, const CallExprPtr& call);
-
-/** Inlines the given function call of type "x = f(a,b,c,...);" or "f(a,b,c,...);"
- *  returns a compound statement which implements the same semantics when executed at the given call site
- */
-CompoundStmtPtr inlineMultiReturn(NodeManager& nodeMan, const CallExprPtr& call);
-
-NodePtr inlineCode(NodeManager& nodeMan, const NodePtr& code);
-
-}
-}
-}
+} // end namespace analysis
+} // end namespace core
+} // end namespace insieme

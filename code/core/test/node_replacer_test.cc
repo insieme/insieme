@@ -228,7 +228,7 @@ TEST(NodeReplacer, ReplaceVariable) {
 
 	StatementPtr stmt = builder.compoundStmt(toVector<StatementPtr>(
 			builder.declarationStmt(varA, builder.refVar(zero)),
-			builder.callExpr(basic.getRefAssign(), varA, builder.callExpr(uint4, lambda, builder.deref(varA)))
+			builder.assign(varA, builder.callExpr(uint4, lambda, builder.deref(varA)))
 	));
 	//EXPECT_EQ("", toString(printer::PrettyPrinter(stmt)));
 
@@ -271,7 +271,8 @@ TEST(NodeReplacer, RecVarsReplacement) {
 	VariablePtr src = builder.variable(clMemType);
 	VariableList params = toVector(tuple, src);
 	StatementList body;
-	body.push_back(builder.callExpr(basic.getUnit(), basic.getRefAssign(), builder.callExpr(basic.getTupleRefElem(), tuple,
+	body.push_back(
+			builder.assign(builder.callExpr(basic.getTupleRefElem(), tuple,
 			builder.literal(basic.getUInt8(), "0"),
 			builder.getTypeLiteral(src->getType())), src));
 	body.push_back(builder.returnStmt(builder.intLit(0)));
@@ -300,7 +301,7 @@ TEST(NodeReplacer, RecVarsReplacement) {
 
 	CheckPtr all = core::checks::getFullCheck();
 
-	EXPECT_EQ(1u, check(stmt,all).size()); // there is one error
+	EXPECT_EQ(1u, check(stmt,all).size()) << check(stmt,all); // there is one error
 
 	// Set up replacement map
 	utils::map::PointerMap<VariablePtr, VariablePtr> map;

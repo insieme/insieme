@@ -224,6 +224,36 @@ insieme::core::CompoundStmtPtr inlineMultiReturn(NodeManager& nodeMan, const Cal
 	else return inlineMultiReturnPlainCall(nodeMan, call);
 }
 
+class Inliner : public core::transform::CachedNodeMapping {
+	NodeManager& manager;
+public:
+
+	Inliner(NodeManager& manager) : manager(manager) {};
+
+	const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+
+		// skip types 
+		if (ptr->getNodeCategory() == core::NC_Type) return ptr;
+
+		// look for call expressions
+		if (ptr->getNodeType() == core::NT_CallExpr) {
+			// extract the call
+			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(ptr);
+			
+			if(call->getFunctionExpr()->getNodeType() != core::NT_Literal)
+				return inlineMultiReturn(manager, call); 
+		}
+
+		// descend recursively
+		return ptr->substitute(manager, *this);
+	}
+
+};
+
+insieme::core::NodePtr inlineCode(NodeManager& manager, const NodePtr& code) {
+	return Inliner(manager).map(code);
+}
 
 } // namespace transform
 } // namespace core
