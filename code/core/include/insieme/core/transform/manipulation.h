@@ -36,15 +36,18 @@
 
 #pragma once
 
+#include <map>
+
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/types/substitution.h"
 
 namespace insieme {
 namespace core {
-
 namespace transform {
 	
+using std::map;
+
 /**
  * A utility function to insert a statement within a compound statement block.
  *
@@ -380,6 +383,15 @@ VariableAddress pushInto(NodeManager& manager, const ExpressionAddress& target, 
  * @return the addresses to the implanted variable
  */
 vector<VariableAddress> pushInto(NodeManager& manager, const vector<ExpressionAddress>& targets, const VariablePtr& var);
+
+/**
+ * An extended version of the pushInto(..) method above processing a list of target/variable pairs at once.
+ *
+ * @param manager the manager used to create new nodes
+ * @param elements a map of addresses / variables pairs to be pushed into according to the pushInto function above.
+ * @return the resulting root node
+ */
+NodePtr pushInto(NodeManager& manager, const map<ExpressionAddress, VariablePtr>& elements);
 
 /**
  * Removes superfluous lambda arguments.

@@ -577,12 +577,16 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 
 		// handle eventual pragmas attached to the Clang node
 		retStmt.push_back( omp::attachOmpAnnotation(whileStmt, forStmt, convFact) );
-
+		std::cerr << "foor loop converted in while" << std::endl;
+		/*
+		 * TODO: using insiemeCC we loose the preprocessor. 
+		 *       find a solution for this
 		clang::Preprocessor& pp = convFact.getCurrentPreprocessor();
 		pp.Diag(forStmt->getLocStart(),
 				pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
 						std::string("For loop converted into while loop, cause: ") + e.what() )
 		);
+		*/
 	}
 
 	if (addDeclStmt) {
