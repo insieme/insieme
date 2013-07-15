@@ -35,6 +35,7 @@
  */
 
 #include "insieme/core/checks/imperative_checks.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>
@@ -168,6 +169,7 @@ namespace {
 			// backup current scope
 			VariableSet currentScope = declaredVariables;
 
+			visit(cur->getThreadNumRange());
 			// check scope of all local declarations
 			VariableSet localVars;
 			std::size_t numDecls = cur->getLocalDecls().size();
@@ -185,11 +187,14 @@ namespace {
 			declaredVariables.insert(localVars.begin(), localVars.end());
 
 			// .. and check job branches specifications
-			std::size_t numChildren = cur->getChildList().size();
-			for (std::size_t i=1+numDecls; i<numChildren; i++) {
-				// check scopes within current child
-				visit(cur->getThreadNumRange());
+			for(GuardedExprAddress jobExp : cur->getGuardedExprs()) {
+				// check both guards and expressions for each
+				visit(jobExp->getGuard());
+				visit(jobExp->getExpression());
 			}
+
+			// ... as well as default expr
+			visit(cur->getDefaultExpr());
 
 			// restore context scope
 			declaredVariables = currentScope;
