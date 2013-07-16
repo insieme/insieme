@@ -167,8 +167,7 @@ bool Interceptor::isIntercepted(const clang::Type* type) const {
 }
 
 bool Interceptor::isIntercepted(const clang::FunctionDecl* decl) const {
-	if(toIntercept.empty()) { return false; }
-
+	if(toIntercept.empty()) {return false; }
 	return regex_match(decl->getQualifiedNameAsString(), rx);
 }
 

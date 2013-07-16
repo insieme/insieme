@@ -1069,8 +1069,10 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitGotoStmt(clang::Go
 //							  STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitStmt(clang::Stmt* stmt) {
-	std::for_each(stmt->child_begin(), stmt->child_end(),
-			[ this ] (clang::Stmt* stmt) {this->Visit(stmt);});
+	assert(false && "this code looks malform and no used");
+	std::for_each(stmt->child_begin(), stmt->child_end(), [ this ] (clang::Stmt* stmt) {
+			this->Visit(stmt);
+	});
 	return stmtutils::StmtWrapper();
 }
 

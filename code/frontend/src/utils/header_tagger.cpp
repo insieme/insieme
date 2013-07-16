@@ -130,12 +130,12 @@ namespace utils {
 		// check whether there is a declaration at all
 		if (!decl) return;
 
-		VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType() << "\n";
+		VLOG(2) << "Searching header for: " << node << " of type " << node->getNodeType();
 
 		clang::SourceManager& sm = decl->getASTContext().getSourceManager();
 		string fileName = getTopLevelInclude(decl->getLocation(), sm);
 
-		VLOG(2) << "Header file obtained: " << fileName << "\n";
+		VLOG(2) << "Header file obtained: " << fileName;
 
 		// file must be a header file
 		if (!isHeaderFile(fileName)) {

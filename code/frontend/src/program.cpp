@@ -225,7 +225,9 @@ struct Program::ProgramImpl {
 	ProgramImpl(core::NodeManager& mgr, const vector<string>& stdLibDirs) :
 		mIdx(),
 		stdLibDirs(::transform(stdLibDirs, [](const string& path) { return boost::filesystem::canonical(path); } )),
-		interceptor(mgr, mIdx, this->stdLibDirs),  funcDepGraph(mIdx,interceptor) {}
+		interceptor(mgr, mIdx, this->stdLibDirs),  funcDepGraph(mIdx,interceptor),
+		globalsCollector(interceptor)
+		{}
 };
 
 Program::Program(core::NodeManager& mgr, const ConversionJob& job):
@@ -249,6 +251,8 @@ void Program::setupInterceptor() {
 }
 
 void Program::analyzeFuncDependencies() {
+	VLOG(1) << " ";
+	VLOG(1) << " ***************************************************************";
 	VLOG(1) << " ************* Analyze function dependencies (recursion)***************";
 	auto elem = getIndexer().begin();
 	auto end = getIndexer().end();
@@ -261,10 +265,13 @@ void Program::analyzeFuncDependencies() {
 			}
 		}
 	}
+	//pimpl->funcDepGraph.addNode(llvm::cast<clang::FunctionDecl>(getIndexer().getMainFunctionDefinition()));
 	VLOG(1) << " ************* Analyze function dependencies DONE***************";
 	if (VLOG_IS_ON(2)){
 		dumpCallGraph();
 	}
+	VLOG(1) << " ***************************************************************";
+	VLOG(1) << " ";
 }
 
 void Program::dumpCallGraph() const {

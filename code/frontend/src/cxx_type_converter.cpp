@@ -130,8 +130,6 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		if (!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl()))
 			return classType;
 
-
-		//~~~~~ look in the indexer for the full decl ~~~~
 		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(tagType->getDecl());
 
 		//~~~~~ base classes if any ~~~~~
@@ -364,22 +362,23 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 
 			if (ctorDecl->isUserProvided ()){
 
-				// the function is a template espetialization, but if it has no body, we wont
-                                // convert it, it was never instanciated
-                                if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
-                                        continue;
-                                }
+				// the function is a template spetialization, but if it has no body, we wont
+				// convert it, it was never instanciated
+				if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
+						continue;
+				}
 
+				// add the funtion to the dependency graph, it might be there already,
+				// or maybe not (because of an indirect call throw an intercepted function)
+				convFact.program.getCallGraph().addNode( ctorDecl );
 
 				core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
 				if (ctorLambda ){
 					ctorLambda = convFact.memberize  (ctorDecl, ctorLambda,
 													  builder.refType(res),
 													  core::FK_CONSTRUCTOR).as<core::ExpressionPtr>();
-
 					assert(ctorLambda);
-                                        assert(!ctorLambda.isa<core::LiteralPtr>());
-
+                    assert(!ctorLambda.isa<core::LiteralPtr>());
 					classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 				}
 			}
@@ -389,6 +388,7 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 	//~~~~~ convert destructor ~~~~~
 	if(classDecl->hasUserDeclaredDestructor()){
 		const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
+		convFact.program.getCallGraph().addNode( dtorDecl );
 		core::ExpressionPtr&& dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
 		dtorLambda = convFact.memberize  (dtorDecl, dtorLambda, builder.refType(res), core::FK_DESTRUCTOR).as<core::ExpressionPtr>();
 		classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
@@ -426,6 +426,7 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 		if (method->getMemberSpecializationInfo () && !method->hasBody()){
 				continue;
 		}
+		convFact.program.getCallGraph().addNode( method );
 
 		auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
 		methodLambda = convFact.memberize(method, methodLambda, builder.refType(res), core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();

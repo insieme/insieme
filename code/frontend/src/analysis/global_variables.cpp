@@ -74,6 +74,8 @@ std::string buildGlobalName(const clang::VarDecl* var, const std::string& storag
 		std::string name     = var->getNameAsString();
 		std::string newName  = storage+name;
 		boost::replace_all(qualName, "::", "__");
+		boost::replace_all(qualName, "<", "_");
+		boost::replace_all(qualName, ">", "_");
 		qualName.replace( qualName.end()-name.size(), qualName.end(), newName);
 		return qualName;
 }
@@ -100,7 +102,7 @@ class GlobalsVisitor{
 		if (llvm::isa<clang::NamedDecl>(decl)) {
 			// === Function Decl ===
 			if (clang::FunctionDecl* fdecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
-				if (fdecl->hasBody()){
+				if (fdecl->hasBody() && !collector.getInterceptor().isIntercepted(fdecl)){
 					analyzeDeclContext(llvm::cast<clang::DeclContext>(fdecl));
 				}
 			}
@@ -125,8 +127,10 @@ class GlobalsVisitor{
 				}
 			}
 			// === Namespace Decl ===
-			else if (llvm::isa<clang::NamespaceDecl>(decl)){
-				analyzeDeclContext(llvm::cast<clang::DeclContext>(decl));
+			else if (clang::NamespaceDecl* namespaceDecl = llvm::dyn_cast<clang::NamespaceDecl>(decl)){
+				if(!collector.getInterceptor().isIntercepted(namespaceDecl->getQualifiedNameAsString())){
+					analyzeDeclContext(llvm::cast<clang::DeclContext>(decl));
+				}
 			} 
 			// === templDecl Decl ===
 			else if(const clang::TemplateDecl* templDecl = llvm::dyn_cast<clang::TemplateDecl>(decl)) {
@@ -262,7 +266,6 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var){
 		if (var->isStaticLocal()) 	staticInitializations.push_back(var);
 		else						insertIfNoExist( var, globalInitializations);
 	}
-
 
 	// if already exists a previous version, and is marked as extern update with non extern if
 	// possible

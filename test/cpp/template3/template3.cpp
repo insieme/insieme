@@ -69,6 +69,6 @@ int main (){
 		Obj<int *> a(ptr);
 		Obj<int *> b(a);
 		value++;
-		std::cout << value << ":" << b.getRefValue() << ":" << b.getValue() << std::endl;
+		std::cout << value << ":" << *b.getRefValue() << ":" << *b.getValue() << std::endl;
 	}
 }
