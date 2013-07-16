@@ -374,10 +374,7 @@ public:
 	core::StatementPtr convertStmt(const clang::Stmt* stmt) const;
 
 	/**
-	 * Entry point for converting clang expressions to IR expres    Number of Shared Nodes: 200
-	 Number of Addressable Nodes: 1068
-	 Share Ratio: 5.34
-	 Height of tree: 30 sions
+	 * Entry point for converting clang expressions to IR expressions
 	 * @param expr is a clang expression of the AST
 	 * @return the corresponding IR expression
 	 */

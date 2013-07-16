@@ -65,6 +65,7 @@
 #include "insieme/utils/set_utils.h"
 
 #include "insieme/utils/timer.h"
+#include "insieme/utils/assert.h"
 #include "insieme/utils/functional_utils.h"
 
 #include "insieme/core/ir_program.h"
@@ -90,13 +91,25 @@
 using namespace clang;
 using namespace insieme;
 
+namespace {
+
+	template<typename T>
+	struct Resetter {
+		T& value;
+		T oldValue;
+		Resetter(T& value)
+			: value(value), oldValue(value) {}
+		// the destructor is reseting the state
+		~Resetter() { value = oldValue; }
+	};
+
+}
+
+
 // NOTE: no one can deal with the translation unit ANYWHERE out of the basic_converter.
 #define SET_TU(X) \
-		auto old_translation_unit = currTU; \
+		Resetter<decltype(currTU)> __auto_reset(currTU); \
 		currTU = getTranslationUnitForDefinition(X);
-
-#define RESTORE_TU(X) \
-		currTU = old_translation_unit;
 
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -976,7 +989,6 @@ core::FunctionTypePtr ConversionFactory::convertFunctionType(const clang::Functi
 //	if (!ignoreGlobals && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end() ) {
 		//funcType = addGlobalsToFunctionType(funcType);
 	//}
-	RESTORE_TU();
 	return funcType;
 }
 
@@ -993,392 +1005,605 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 	return fit->second;
 }
 
+namespace {
+
+	/**
+	 * The conversion of recursive function is conducted lazily - first recursive
+	 * functions are build in an unrolled way before they are closed (by combining
+	 * multiple recursive definitions into a single one) by this function.
+	 *
+	 * ATTENTION: this function has been specifically implemented to work in cooperation
+	 * with the following convertFunctionDecl(..) implementation. To understand their
+	 * operation, both have to be considered.
+	 *
+	 * @param lambda the unrolled recursive definition to be collapsed into a proper format
+	 * @return the proper format
+	 */
+	core::LambdaExprPtr fixRecursion(const core::LambdaExprPtr& lambda) {
+
+		// check whether this is the last free variable to be defined
+		core::VariablePtr recVar = lambda->getVariable();
+		auto freeVars = core::analysis::getFreeVariables(lambda->getLambda());
+		if (freeVars != toVector(recVar)) {
+			// it is not, delay closing recursion
+			return lambda;
+		}
+
+		// search all directly nested lambdas
+		vector<core::LambdaExprAddress> inner;
+		core::visitDepthFirstOncePrunable(core::NodeAddress(lambda), [&](const core::LambdaExprAddress& cur) {
+			if (cur.isRoot()) return false;
+			if (!core::analysis::hasFreeVariables(cur)) return true;
+			inner.push_back(cur);
+			return false;
+		});
+
+		// if there is no inner lambda with free variables it is a simple recursion
+		if (inner.empty()) return lambda;		// => done
+
+
+		// ---------- build new recursive function ------------
+
+		auto& mgr = lambda.getNodeManager();
+		core::IRBuilder builder(mgr);
+
+		// check whether any of the inner lambdas is already defining the current lambda
+		//    => in this case the recursive function has already been resolved starting from a different function
+		for(auto cur : inner) {
+			auto curFun = cur.as<core::LambdaExprPtr>();
+			auto def = curFun->getDefinition();
+			if (def.getDefinitionOf(recVar)) {
+				return builder.lambdaExpr(recVar, def);
+			}
+		}
+
+		// build up resulting lambda
+		vector<core::LambdaBindingPtr> bindings;
+		bindings.push_back(builder.lambdaBinding(recVar, lambda->getLambda()));
+		for(auto cur : inner) {
+			assert(cur->getDefinition().size() == 1u);
+			auto def = cur->getDefinition()[0];
+
+			// only add every variable once
+			if (!any(bindings, [&](const core::LambdaBindingPtr& binding)->bool { return binding->getVariable() == def.getAddressedNode()->getVariable(); })) {
+				bindings.push_back(def);
+			}
+		}
+
+		core::LambdaExprPtr res = builder.lambdaExpr(recVar, builder.lambdaDefinition(bindings));
+
+		// last step: collapse recursive definitions
+		while (true) {
+
+			// search for reductions (lambda => rec_variable)
+			std::map<core::NodeAddress, core::NodePtr> replacements;
+			core::visitDepthFirstOncePrunable(core::NodeAddress(res), [&](const core::LambdaExprAddress& cur) {
+				if (cur.isRoot()) return false;
+				if (!core::analysis::hasFreeVariables(cur)) return true;
+				replacements[cur] = cur.as<core::LambdaExprPtr>()->getVariable();
+				return false;
+			});
+
+			// check whether the job is done
+			if (replacements.empty()) break;
+
+			// apply reductions
+			res = core::transform::replaceAll(mgr, replacements).as<core::LambdaExprPtr>();
+		}
+
+		// that's it
+		return res;
+	}
+
+}
+
 //////////////////////////////////////////////////////////////////
 ///  CONVERT FUNCTION DECLARATION
 core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint) {
 
-	SET_TU(funcDecl);
-	// check if the funcDecl was already converted into an lambdaExpr, before asserting that
-	// funcDecl has a body -> intercepted functions may have no body
-	ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(funcDecl);
-	if (fit != ctx.lambdaExprCache.end()) {
-		RESTORE_TU();
-		return fit->second;
+	// move to the proper definition
+	auto funcDef = getProgram().getIndexer().getDefinitionFor(funcDecl);
+	if (funcDef) funcDecl = llvm::cast<clang::FunctionDecl>(funcDef); 		// just work with the defining one if present
+
+	// check whether function has already been converted
+	auto pos = ctx.lambdaExprCache.find(funcDecl);
+	if (pos != ctx.lambdaExprCache.end()) {
+		return pos->second;		// done
 	}
+
+	// -------------- check some base cases (never recursive) -----------
 
 	// FIXME: find a better place for this (where this fun is called)
 	if (isEntryPoint){
 		omp::collectThreadPrivate(getPragmaMap(), ctx.thread_private);
 	}
 
-	//intercept functionDecls here
+	// check whether function should be intersected
 	if( getProgram().getInterceptor().isIntercepted(funcDecl) ) {
 		auto irExpr = getProgram().getInterceptor().intercept(funcDecl, *this);
-		ctx.lambdaExprCache.insert( {funcDecl, irExpr} );
-		RESTORE_TU();
+		ctx.lambdaExprCache[funcDecl] = irExpr;
 		return irExpr;
 	}
 
-	//TODO check/get definitionAndTU for declareation here (bernhard)
+	// obtain function type
+	auto funcTy = convertFunctionType(funcDecl);
 
+	// handle pure virtual functions
 	if( funcDecl->isPure() && llvm::isa<clang::CXXMethodDecl>(funcDecl)){
 		VLOG(2) << "pure virtual function " << funcDecl;
 
-		auto funcTy = convertFunctionType(funcDecl);
 		std::string callName = funcDecl->getNameAsString();
 		core::ExpressionPtr retExpr = builder.literal(callName, funcTy);
 
-		//const clang::CXXMethodDecl* methodDecl = llvm::cast<clang::CXXMethodDecl>(funcDecl);
-		//const clang::Type* recordType = methodDecl->getParent()->getTypeForDecl();
-		//auto classType =  convertType (recordType);
-		//retExpr = memberize(funcDecl, retExpr, builder.refType(classType), core::FK_MEMBER_FUNCTION);
 		VLOG(2) << retExpr << " " << retExpr.getType();
-
-		RESTORE_TU();
+		ctx.lambdaExprCache[funcDecl] = retExpr;
 		return retExpr;
 	}
 
+	// handle external functions
 	if(!funcDecl->hasBody()) {
-		core::ExpressionPtr retExpr;
+
+		// TODO: move this to call expression handling
 		if (funcDecl->getNameAsString() == "free") {
 			//handle special function -- "free" -- here instead of in CallExr
-			retExpr = builder.getLangBasic().getRefDelete();
+			auto retExpr = builder.getLangBasic().getRefDelete();
+			ctx.lambdaExprCache[funcDecl] = retExpr;
+			return retExpr;
 		}
-		else {
-			//handle extern functions  -- here instead of in CallExr
-			auto funcTy = convertFunctionType(funcDecl).as<core::FunctionTypePtr>();
-			std::string callName = funcDecl->getNameAsString();
-			retExpr = builder.literal(callName, funcTy);
 
-			// attach header file info
-			utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs());
-		}
-		RESTORE_TU();
+		// handle extern functions
+		std::string callName = funcDecl->getNameAsString();
+		auto retExpr = builder.literal(callName, funcTy);
+
+		// attach header file info
+		utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs());
+		ctx.lambdaExprCache[funcDecl] = retExpr;
 		return retExpr;
 	}
 
-	assert(currTU && "currTU not set");
-	assert(funcDecl->hasBody() && "Function has no body!");
+	// --------------- convert potential recursive function -------------
 
-	VLOG(1) << "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
-	VLOG(1) << "#----------------------------------------------------------------------------------#";
-	VLOG(1)
-		<< "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl << "-> at location: ("
-				<< utils::location(funcDecl->getSourceRange().getBegin(), getCurrentSourceManager())
-				<< "): " << std::endl << "\tIsRecSubType: " << ctx.isRecSubFunc << std::endl
-				<< "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl
-				<< "\tRec var map: " << ctx.recVarExprMap.size() << " :" << ctx.recVarExprMap;
+	// -- assume function is recursive => add variable to lambda expr cache --
 
-
-	if (ctx.isResolvingRecFuncBody) {
-  		// check if this type has a typevar already associated, in such case return it
-  		ConversionContext::RecVarExprMap::const_iterator fit = ctx.recVarExprMap.find(funcDecl);
-
-  		if (fit != ctx.recVarExprMap.end()) {
-  			// we are resolving a parent recursive type, so when one of the recursive functions in the
-  			// connected components are called, the introduced mu variable has to be used instead.
-			RESTORE_TU();
-  			return fit->second;
-  		}
-	}
-
-	// retrieve the strongly connected components for this function
-	// It is strongly connected or strong if it contains a directed path from u to v and a directed
-	// path from v to u for every pair of vertices u, v.
-	// FIXME:: we have a problem here with BOOST
-	std::set<const FunctionDecl*>&& components = program.getCallGraph().getStronglyConnectedComponents( funcDecl );
-	if (!components.empty()) {
-		std::set<const FunctionDecl*>&& subComponents = program.getCallGraph().getSubComponents( funcDecl );
-		for (const auto& cur: subComponents){
-
-			const FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
-			VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
-			SET_TU(decl);
-
-			if ( currTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
-
-				// look up the lambda cache to see if this function has been
-				// already converted into an IR lambda expression.
-				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
-				if ( fit == ctx.lambdaExprCache.end() ) {
-					// perform the conversion only if this is the first time this
-					// function is encountred
-					convertFunctionDecl(decl, false);
-					ctx.recVarExprMap.clear();
-				}
-			}
-			// reset the translation unit
-			RESTORE_TU();
-		}
-
-		// we are dealing with a recursive type
-		VLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
-				<< "Number of components in the cycle: " << components.size();
-
-		for (std::set<const FunctionDecl*>::value_type c : components){
-			VLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
-		}
-
-		// Creates the variable which should be used as a placeholder for invoking the given
-		// function call and isert it in the map (recVarExprMap) used to store such variables
-		// which are valid during the conversion of the given recursive function cycle
-		auto createRecVar = [&] (const clang::FunctionDecl* funDecl) {
-			if (ctx.recVarExprMap.find(funDecl) != ctx.recVarExprMap.end()) { return; }
-
-			// we create a TypeVar for each type in the mutual dependence
-			core::FunctionTypePtr funcType = convertFunctionType(funDecl);
-
-			// it might be a member function, fix the type
-			if (const clang::CXXMethodDecl* mem = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)){
-				const clang::Type* ownerTy = (llvm::cast<clang::TypeDecl> (mem->getParent()))->getTypeForDecl();
-				auto l = funcType->getParameterTypeList();
-				l.insert(l.begin(), builder.refType(convertType(ownerTy)));
-				funcType = builder.functionType(l, funcType->getReturnType(), core::FK_MEMBER_FUNCTION);
-			}
-			core::VariablePtr&& var = builder.variable( funcType );
-			ctx.recVarExprMap.insert( { funDecl, var } );
-		};
-
-
-		if (!ctx.isRecSubFunc) {
-			createRecVar(funcDecl);
+	// obtain recursive variable to be used
+	core::VariablePtr recVar;
+	{
+		auto pos = ctx.recVarExprMap.find(funcDecl);
+		if (pos != ctx.recVarExprMap.end()) {
+			recVar = pos->second;
 		} else {
-			// we expect the var name to be in currVar
-			ctx.recVarExprMap.insert( {funcDecl, ctx.currVar} );
+			recVar = builder.variable(funcTy, ctx.recVarExprMap.size());
+			ctx.recVarExprMap[funcDecl] = recVar;
 		}
+	}
+	assert(recVar && "It should be present now!");
+	assert(ctx.lambdaExprCache.find(funcDecl) == ctx.lambdaExprCache.end());
 
-		// when a subtype is resolved we expect to already have these variables in the map
-		if (!ctx.isRecSubFunc) {
+	ctx.lambdaExprCache[funcDecl] = recVar;
 
-			for( const auto& fd : components) { createRecVar(fd); }
-		}
-		if (VLOG_IS_ON(2)) {
-			VLOG(2) << "MAP: ";
-			for(auto c : ctx.recVarExprMap){
-				VLOG(2) << "\t" << c.first->getNameAsString() << "[" << c.first << "] " << c.second << " " << c.second->getType();
-			}
+	// -- conduct the conversion of the lambda --
+	core::LambdaExprPtr lambda;
+	{
+		SET_TU(funcDecl);
 
-		}
-	} // endif function call components
+		assert(currTU && "currTU not set");
+		assert(funcDecl->hasBody() && "At this point function should have a body!");
 
-	// init parameter set
-	vector<core::VariablePtr> params;
+		// init parameter set
+		vector<core::VariablePtr> params;
+		std::for_each(funcDecl->param_begin(), funcDecl->param_end(), [&](ParmVarDecl* currParam) {
+			params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(currParam) ) );
+		});
 
-	// before resolving the body we have to set the currGlobalVar accordingly depending if this function will use the
-	// global struct or not
-	core::VariablePtr parentGlobalVar = ctx.globalVar;
+		// convert function body
+		//   - set up context to contain current list of parameters and convert body
+		ConversionContext::ParameterList oldList = ctx.curParameter;
+		ctx.curParameter = &params;
+
+		core::StatementPtr body = convertStmt( funcDecl->getBody() );
+		ctx.curParameter = oldList;
+
+		// some cases value parameters have to be materialized in the
+		// body of the function, to be able to written.
+		body =  materializeReadOnlyParams(body,params);
+
+		// build the resulting lambda
+		auto lan = builder.lambda(funcTy, params, (body.isa<core::CompoundStmtPtr>())?body.as<core::CompoundStmtPtr>():builder.compoundStmt(body));
+		auto def = builder.lambdaDefinition(toVector(builder.lambdaBinding(recVar, lan)));
+		lambda = builder.lambdaExpr(funcTy, recVar, def);
+
+		VLOG(2) << lambda << " + function declaration: " << funcDecl;
+	}
+
+	// check whether the result is a recursive function and fix it if necessary
+	lambda = fixRecursion(lambda);
+
+	// update cache
+	assert_eq(ctx.lambdaExprCache[funcDecl], recVar) << "Don't touch this!";
+	if (!core::analysis::hasFreeVariables(lambda)) {
+		// if the conversion is complete
+		ctx.lambdaExprCache[funcDecl] = lambda;
+	} else {
+		// remove temporary from the cache
+		ctx.lambdaExprCache.erase(funcDecl);
+	}
+
+	// annotate and return results
+	return attachFuncAnnotations(lambda, funcDecl);
 
 
 
-//	if (!isEntryPoint && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end()) {
-//		// declare a new variable that will be used to hold a reference to the global data stucture
-//		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStruct.first) );
-//		ctx.globalVar = var;
-//		params.push_back(var);
+//	// check if the funcDecl was already converted into an lambdaExpr, before asserting that
+//	// funcDecl has a body -> intercepted functions may have no body
+//	ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(funcDecl);
+//	if (fit != ctx.lambdaExprCache.end()) {
+//		return fit->second;
 //	}
 //
-	std::for_each(funcDecl->param_begin(), funcDecl->param_end(), [ &params, this ] (ParmVarDecl* currParam) {
-		params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(currParam) ) );
-	});
-
-	// this lambda is not yet in the map, we need to create it and add it to the cache
-	assert((components.empty() || (!components.empty() && !ctx.isResolvingRecFuncBody))
-			&& "~~~ Something odd happened, you are allowed by all means to blame Simone ~~~");
-
-	if (!components.empty()) {
-		ctx.isResolvingRecFuncBody = true;
-	}
-
-	VLOG(2) << "Visiting function body!";
-
-	// set up context to contain current list of parameters and convert body
-	ConversionContext::ParameterList oldList = ctx.curParameter;
-	ctx.curParameter = &params;
-
-	if (VLOG_IS_ON(2)) {
-		VLOG(2) << "Dump of stmt body: \n"
-				<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-		funcDecl->getBody()->dump();
-	}
-
-	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
-	ctx.curParameter = oldList;
-
-	// some cases value parameters have to be materialized in the
-	// body of the function, to be able to writte on them.
-	// by default well materialize all paramenters
-	body =  materializeReadOnlyParams(body,params);
-
-
-	if (!components.empty()) {
-		ctx.isResolvingRecFuncBody = false;
-	}
-
-//	// ADD THE GLOBALS
-//	if (isEntryPoint && ctx.globalVar) {
-//		const core::CompoundStmtPtr& compStmt = builder.compoundStmt(body);
-//		assert(ctx.globalVar && ctx.globalStruct.second);
-//
-//		const StatementList& oldStmts = compStmt->getStatements();
-//
-//		std::vector<core::StatementPtr> stmts;
-//
-//		stmts = std::vector<core::StatementPtr>(oldStmts.size() + 1);
-//		stmts[0] = builder.declarationStmt(ctx.globalVar, builder.refNew(ctx.globalStruct.second));
-//		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), stmts.begin() + 1);
-//
-//		body = builder.compoundStmt(stmts);
+//	// FIXME: find a better place for this (where this fun is called)
+//	if (isEntryPoint){
+//		omp::collectThreadPrivate(getPragmaMap(), ctx.thread_private);
 //	}
-
-	core::FunctionTypePtr funcType = convertFunctionType(funcDecl).as<core::FunctionTypePtr>();
-
-	// reset old global var
-	ctx.globalVar = parentGlobalVar;
-
-	VLOG(2)	<< "function type: " << funcType << "\nparams: " << params << "\n" << body;
-
-	if (components.empty()) {
-
-		core::LambdaExprPtr retLambdaExpr = builder.lambdaExpr(funcType, params, body);
-
-		// Adding the lambda function to the list of converted functions
-		assert( (funcDecl == program.getIndexer().getDefinitionFor(funcDecl)) && "wrong function declaration in lambdaExprCache");
-		ctx.lambdaExprCache.insert( { funcDecl, retLambdaExpr} );
-
-		VLOG(2) << retLambdaExpr << " + function declaration: " << funcDecl;
-		auto func =  attachFuncAnnotations(retLambdaExpr, funcDecl);
-		RESTORE_TU();
-		return func;
-	}
-
-	//////////////////////////////////////////////////////////////
-	// ahead this point a recursive lambda expression is generated
-	// out of the lambdas enclosed. those have being bounded to
-	// variables, but now need to be converted
-
-	core::LambdaPtr retLambdaNode;
-
-	// member functions must use the first parameter as THIS
-	if (const clang::CXXMethodDecl* metDcl = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)){
-
-		const clang::Type* ownerClangTy = (llvm::cast<clang::TypeDecl> (metDcl->getParent()))->getTypeForDecl();
-		auto ownerTy = builder.refType(convertType(ownerClangTy));
-		auto thisVar = builder.variable(ownerTy);
-		params.insert(params.begin(), thisVar);
-		core::FunctionTypePtr newFunctionType = builder.functionType(extractTypes(params), funcType->getReturnType(), core::FK_MEMBER_FUNCTION);
-		core::LiteralPtr thisLit =  builder.literal("this", ownerTy);
-		body = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
-		retLambdaNode = builder.lambda( newFunctionType, params, body );
-	}
-	else{
-		retLambdaNode = builder.lambda( funcType, params, body );
-	}
-
-	// this is a recursive function call
-	// if we are visiting a nested recursive type it means someone else will take care of building the rectype
-	// node, we just return an intermediate type
-	if (ctx.isRecSubFunc) {
-		RESTORE_TU();
-		return retLambdaNode;
-	}
-
-	// we have to create a recursive type
-	ConversionContext::RecVarExprMap::const_iterator tit = ctx.recVarExprMap.find(funcDecl);
-	assert(tit != ctx.recVarExprMap.end() && "Recursive function has not VarExpr associated to himself");
-	core::VariablePtr recVarRef = tit->second;
-
-	vector<core::LambdaBindingPtr> definitions;
-	definitions.push_back(builder.lambdaBinding(recVarRef, retLambdaNode));
-
-	// We start building the recursive type. In order to avoid loop the visitor
-	// we have to change its behaviour and let him returns temporarely types
-	// when a sub recursive type is visited.
-	ctx.isRecSubFunc = true;
-
- 	for(auto fd : components) {
-		ConversionContext::RecVarExprMap::const_iterator tit = ctx.recVarExprMap.find(fd);
-		assert(tit != ctx.recVarExprMap.end() && "Recursive function has no TypeVar associated");
-		ctx.currVar = tit->second;
-
-		// test whether function has already been resolved
-		if (*tit->second == *recVarRef) {
-			continue;
-		}
-
-		// we remove the variable from the list in order to fool the solver, in this way it will create a descriptor
-		// for this type (and he will not return the TypeVar associated with this recursive type). This behaviour
-		// is enabled only when the isRecSubType flag is true
-		ctx.recVarExprMap.erase(fd);
-
-		const core::LambdaPtr& lambda = convertFunctionDecl(fd).as<core::LambdaPtr>();
-
-		assert(lambda && "Resolution of sub recursive lambda yields a wrong result");
-
-		/// === CXX ===
-		// it might be that is a member and needs to be memberized
-		if (llvm::isa<clang::CXXMethodDecl>(fd)){
-			//FIXME: ask the master how to make this easyer
-
-			vector<core::LambdaBindingPtr> tmpDef;
-			tmpDef.push_back( builder.lambdaBinding(ctx.currVar, lambda) );
-			core::LambdaExprPtr&& tmpExpr = builder.lambdaExpr(lambda);
-			const clang::Type* ownerTy = (llvm::cast<clang::TypeDecl> (llvm::cast<clang::CXXMethodDecl>(fd)->getParent()))->getTypeForDecl();
-			core::ExpressionPtr funcExpr = memberize (fd, tmpExpr.as<core::ExpressionPtr>(),
-													  builder.refType(convertType( ownerTy)), core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
-
-			ConversionContext::RecVarExprMap::const_iterator tit = ctx.recVarExprMap.find(fd);
-			definitions.push_back( builder.lambdaBinding(tit->second, funcExpr.as<core::LambdaExprPtr>()->getLambda() ));
-		}
-		else{ //any other case
-			definitions.push_back( builder.lambdaBinding(ctx.currVar, lambda) );
-		}
-		// reinsert the TypeVar in the map in order to solve the other recursive types
-		ctx.recVarExprMap.insert( {fd, ctx.currVar} );
-	}
-
-	// we reset the behavior of the solver
-	ctx.currVar = NULL;
-	ctx.isRecSubFunc = false;
-
-	core::LambdaDefinitionPtr&& lambdaDef = builder.lambdaDefinition(definitions);
-	core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr(recVarRef, lambdaDef);
-
-	// Adding the lambda function to the list of converted functions
-	assert( (funcDecl == program.getIndexer().getDefinitionFor(funcDecl)) && "wrong function declaration in lambdaExprCache");
-	ctx.lambdaExprCache.insert( {funcDecl, retLambdaExpr} );
-
-	// we also need to cache all the other recursive definition, so when we will resolve
-	// another function in the recursion we will not repeat the process again
-	for(const auto& fd : components) {
-
-		auto fit = ctx.recVarExprMap.find(fd);
-		assert(fit != ctx.recVarExprMap.end());
-
-		const FunctionDecl* decl = const_cast<FunctionDecl*>(fd);
-
-		// update the translation unit
-		SET_TU(decl);
-
-		core::ExpressionPtr&& func = builder.lambdaExpr(fit->second, lambdaDef);
-
-		assert( (decl== program.getIndexer().getDefinitionFor(decl)) && "wrong function declaration in lambdaExprCache");
-		ctx.lambdaExprCache.insert( {decl, func} );
-
-		func = attachFuncAnnotations(func, decl);
-
-		// restore TU
-		RESTORE_TU();
-	}
-
-	// Clear the variables so that when we resolve the recursive function the actual recursive
-	// lambda is utilized
-	ctx.recVarExprMap.clear();
-
-	VLOG(2) << "Converted Into: " << *retLambdaExpr;
-	// attachFuncAnnotations(retLambdaExpr, funcDecl);
-
-	RESTORE_TU();
-	return retLambdaExpr;
+//
+//	//intercept functionDecls here
+//	if( getProgram().getInterceptor().isIntercepted(funcDecl) ) {
+//		auto irExpr = getProgram().getInterceptor().intercept(funcDecl, *this);
+//		ctx.lambdaExprCache.insert( {funcDecl, irExpr} );
+//		return irExpr;
+//	}
+//
+//	//TODO check/get definitionAndTU for declaration here (bernhard)
+//
+//	if( funcDecl->isPure() && llvm::isa<clang::CXXMethodDecl>(funcDecl)){
+//		VLOG(2) << "pure virtual function " << funcDecl;
+//
+//		auto funcTy = convertFunctionType(funcDecl);
+//		std::string callName = funcDecl->getNameAsString();
+//		core::ExpressionPtr retExpr = builder.literal(callName, funcTy);
+//
+//		//const clang::CXXMethodDecl* methodDecl = llvm::cast<clang::CXXMethodDecl>(funcDecl);
+//		//const clang::Type* recordType = methodDecl->getParent()->getTypeForDecl();
+//		//auto classType =  convertType (recordType);
+//		//retExpr = memberize(funcDecl, retExpr, builder.refType(classType), core::FK_MEMBER_FUNCTION);
+//		VLOG(2) << retExpr << " " << retExpr.getType();
+//
+//		return retExpr;
+//	}
+//
+//	if(!funcDecl->hasBody()) {
+//		core::ExpressionPtr retExpr;
+//		if (funcDecl->getNameAsString() == "free") {
+//			//handle special function -- "free" -- here instead of in CallExr
+//			retExpr = builder.getLangBasic().getRefDelete();
+//		}
+//		else {
+//			//handle extern functions  -- here instead of in CallExr
+//			auto funcTy = convertFunctionType(funcDecl).as<core::FunctionTypePtr>();
+//			std::string callName = funcDecl->getNameAsString();
+//			retExpr = builder.literal(callName, funcTy);
+//
+//			// attach header file info
+//			utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs());
+//		}
+//		return retExpr;
+//	}
+//
+//	assert(currTU && "currTU not set");
+//	assert(funcDecl->hasBody() && "Function has no body!");
+//
+//	VLOG(1) << "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
+//	VLOG(1) << "#----------------------------------------------------------------------------------#";
+//	VLOG(1)
+//		<< "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl << "-> at location: ("
+//				<< utils::location(funcDecl->getSourceRange().getBegin(), getCurrentSourceManager())
+//				<< "): " << std::endl << "\tIsRecSubType: " << ctx.isRecSubFunc << std::endl
+//				<< "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl
+//				<< "\tRec var map: " << ctx.recVarExprMap.size() << " :" << ctx.recVarExprMap;
+//
+//
+//	if (ctx.isResolvingRecFuncBody) {
+//  		// check if this type has a typevar already associated, in such case return it
+//  		ConversionContext::RecVarExprMap::const_iterator fit = ctx.recVarExprMap.find(funcDecl);
+//
+//  		if (fit != ctx.recVarExprMap.end()) {
+//  			// we are resolving a parent recursive type, so when one of the recursive functions in the
+//  			// connected components are called, the introduced mu variable has to be used instead.
+//  			return fit->second;
+//  		}
+//	}
+//
+//	// retrieve the strongly connected components for this function
+//	// It is strongly connected or strong if it contains a directed path from u to v and a directed
+//	// path from v to u for every pair of vertices u, v.
+//	// FIXME:: we have a problem here with BOOST
+//	std::set<const FunctionDecl*>&& components = program.getCallGraph().getStronglyConnectedComponents( funcDecl );
+//	if (!components.empty()) {
+//		std::set<const FunctionDecl*>&& subComponents = program.getCallGraph().getSubComponents( funcDecl );
+//		for (const auto& cur: subComponents){
+//
+//			const FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
+//			VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
+//			SET_TU(decl);
+//
+//			if ( currTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
+//
+//				// look up the lambda cache to see if this function has been
+//				// already converted into an IR lambda expression.
+//				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
+//				if ( fit == ctx.lambdaExprCache.end() ) {
+//					// perform the conversion only if this is the first time this
+//					// function is encountred
+//					convertFunctionDecl(decl, false);
+//					ctx.recVarExprMap.clear();
+//				}
+//			}
+//			// reset the translation unit
+//		}
+//
+//		// we are dealing with a recursive type
+//		VLOG(1) << "Analyzing FuncDecl: " << funcDecl->getNameAsString() << std::endl
+//				<< "Number of components in the cycle: " << components.size();
+//
+//		for (std::set<const FunctionDecl*>::value_type c : components){
+//			VLOG(2) << "\t" << c->getNameAsString( ) << "(" << c->param_size() << ")";
+//		}
+//
+//		// Creates the variable which should be used as a placeholder for invoking the given
+//		// function call and isert it in the map (recVarExprMap) used to store such variables
+//		// which are valid during the conversion of the given recursive function cycle
+//		auto createRecVar = [&] (const clang::FunctionDecl* funDecl) {
+//			if (ctx.recVarExprMap.find(funDecl) != ctx.recVarExprMap.end()) { return; }
+//
+//			// we create a TypeVar for each type in the mutual dependence
+//			core::FunctionTypePtr funcType = convertFunctionType(funDecl);
+//
+//			// it might be a member function, fix the type
+//			if (const clang::CXXMethodDecl* mem = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)){
+//				const clang::Type* ownerTy = (llvm::cast<clang::TypeDecl> (mem->getParent()))->getTypeForDecl();
+//				auto l = funcType->getParameterTypeList();
+//				l.insert(l.begin(), builder.refType(convertType(ownerTy)));
+//				funcType = builder.functionType(l, funcType->getReturnType(), core::FK_MEMBER_FUNCTION);
+//			}
+//			core::VariablePtr&& var = builder.variable( funcType );
+//			ctx.recVarExprMap.insert( { funDecl, var } );
+//		};
+//
+//
+//		if (!ctx.isRecSubFunc) {
+//			createRecVar(funcDecl);
+//		} else {
+//			// we expect the var name to be in currVar
+//			ctx.recVarExprMap.insert( {funcDecl, ctx.currVar} );
+//		}
+//
+//		// when a subtype is resolved we expect to already have these variables in the map
+//		if (!ctx.isRecSubFunc) {
+//
+//			for( const auto& fd : components) { createRecVar(fd); }
+//		}
+//		if (VLOG_IS_ON(2)) {
+//			VLOG(2) << "MAP: ";
+//			for(auto c : ctx.recVarExprMap){
+//				VLOG(2) << "\t" << c.first->getNameAsString() << "[" << c.first << "] " << c.second << " " << c.second->getType();
+//			}
+//
+//		}
+//	} // endif function call components
+//
+//	// init parameter set
+//	vector<core::VariablePtr> params;
+//
+//	// before resolving the body we have to set the currGlobalVar accordingly depending if this function will use the
+//	// global struct or not
+//	core::VariablePtr parentGlobalVar = ctx.globalVar;
+//
+//
+//
+////	if (!isEntryPoint && ctx.globalFuncSet.find(funcDecl) != ctx.globalFuncSet.end()) {
+////		// declare a new variable that will be used to hold a reference to the global data stucture
+////		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStruct.first) );
+////		ctx.globalVar = var;
+////		params.push_back(var);
+////	}
+////
+//	std::for_each(funcDecl->param_begin(), funcDecl->param_end(), [ &params, this ] (ParmVarDecl* currParam) {
+//		params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(currParam) ) );
+//	});
+//
+//	// this lambda is not yet in the map, we need to create it and add it to the cache
+//	assert((components.empty() || (!components.empty() && !ctx.isResolvingRecFuncBody))
+//			&& "~~~ Something odd happened, you are allowed by all means to blame Simone ~~~");
+//
+//	if (!components.empty()) {
+//		ctx.isResolvingRecFuncBody = true;
+//	}
+//
+//	VLOG(2) << "Visiting function body!";
+//
+//	// set up context to contain current list of parameters and convert body
+//	ConversionContext::ParameterList oldList = ctx.curParameter;
+//	ctx.curParameter = &params;
+//
+//	if (VLOG_IS_ON(2)) {
+//		VLOG(2) << "Dump of stmt body: \n"
+//				<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+//		funcDecl->getBody()->dump();
+//	}
+//
+//	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
+//	ctx.curParameter = oldList;
+//
+//	// some cases value parameters have to be materialized in the
+//	// body of the function, to be able to writte on them.
+//	// by default well materialize all paramenters
+//	body =  materializeReadOnlyParams(body,params);
+//
+//
+//	if (!components.empty()) {
+//		ctx.isResolvingRecFuncBody = false;
+//	}
+//
+////	// ADD THE GLOBALS
+////	if (isEntryPoint && ctx.globalVar) {
+////		const core::CompoundStmtPtr& compStmt = builder.compoundStmt(body);
+////		assert(ctx.globalVar && ctx.globalStruct.second);
+////
+////		const StatementList& oldStmts = compStmt->getStatements();
+////
+////		std::vector<core::StatementPtr> stmts;
+////
+////		stmts = std::vector<core::StatementPtr>(oldStmts.size() + 1);
+////		stmts[0] = builder.declarationStmt(ctx.globalVar, builder.refNew(ctx.globalStruct.second));
+////		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), stmts.begin() + 1);
+////
+////		body = builder.compoundStmt(stmts);
+////	}
+//
+//	core::FunctionTypePtr funcType = convertFunctionType(funcDecl).as<core::FunctionTypePtr>();
+//
+//	// reset old global var
+//	ctx.globalVar = parentGlobalVar;
+//
+//	VLOG(2)	<< "function type: " << funcType << "\nparams: " << params << "\n" << body;
+//
+//	if (components.empty()) {
+//
+//		core::LambdaExprPtr retLambdaExpr = builder.lambdaExpr(funcType, params, body);
+//
+//		// Adding the lambda function to the list of converted functions
+//		assert( (funcDecl == program.getIndexer().getDefinitionFor(funcDecl)) && "wrong function declaration in lambdaExprCache");
+//		ctx.lambdaExprCache.insert( { funcDecl, retLambdaExpr} );
+//
+//		VLOG(2) << retLambdaExpr << " + function declaration: " << funcDecl;
+//		auto func =  attachFuncAnnotations(retLambdaExpr, funcDecl);
+//		return func;
+//	}
+//
+//	//////////////////////////////////////////////////////////////
+//	// ahead this point a recursive lambda expression is generated
+//	// out of the lambdas enclosed. those have being bounded to
+//	// variables, but now need to be converted
+//
+//	core::LambdaPtr retLambdaNode;
+//
+//	// member functions must use the first parameter as THIS
+//	if (const clang::CXXMethodDecl* metDcl = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)){
+//
+//		const clang::Type* ownerClangTy = (llvm::cast<clang::TypeDecl> (metDcl->getParent()))->getTypeForDecl();
+//		auto ownerTy = builder.refType(convertType(ownerClangTy));
+//		auto thisVar = builder.variable(ownerTy);
+//		params.insert(params.begin(), thisVar);
+//		core::FunctionTypePtr newFunctionType = builder.functionType(extractTypes(params), funcType->getReturnType(), core::FK_MEMBER_FUNCTION);
+//		core::LiteralPtr thisLit =  builder.literal("this", ownerTy);
+//		body = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
+//		retLambdaNode = builder.lambda( newFunctionType, params, body );
+//	}
+//	else{
+//		retLambdaNode = builder.lambda( funcType, params, body );
+//	}
+//
+//	// this is a recursive function call
+//	// if we are visiting a nested recursive type it means someone else will take care of building the rectype
+//	// node, we just return an intermediate type
+//	if (ctx.isRecSubFunc) {
+//		return retLambdaNode;
+//	}
+//
+//	// we have to create a recursive type
+//	ConversionContext::RecVarExprMap::const_iterator tit = ctx.recVarExprMap.find(funcDecl);
+//	assert(tit != ctx.recVarExprMap.end() && "Recursive function has not VarExpr associated to himself");
+//	core::VariablePtr recVarRef = tit->second;
+//
+//	vector<core::LambdaBindingPtr> definitions;
+//	definitions.push_back(builder.lambdaBinding(recVarRef, retLambdaNode));
+//
+//	// We start building the recursive type. In order to avoid loop the visitor
+//	// we have to change its behaviour and let him returns temporarely types
+//	// when a sub recursive type is visited.
+//	ctx.isRecSubFunc = true;
+//
+// 	for(auto fd : components) {
+//		ConversionContext::RecVarExprMap::const_iterator tit = ctx.recVarExprMap.find(fd);
+//		assert(tit != ctx.recVarExprMap.end() && "Recursive function has no TypeVar associated");
+//		ctx.currVar = tit->second;
+//
+//		// test whether function has already been resolved
+//		if (*tit->second == *recVarRef) {
+//			continue;
+//		}
+//
+//		// we remove the variable from the list in order to fool the solver, in this way it will create a descriptor
+//		// for this type (and he will not return the TypeVar associated with this recursive type). This behaviour
+//		// is enabled only when the isRecSubType flag is true
+//		ctx.recVarExprMap.erase(fd);
+//
+//		const core::LambdaPtr& lambda = convertFunctionDecl(fd).as<core::LambdaPtr>();
+//
+//		assert(lambda && "Resolution of sub recursive lambda yields a wrong result");
+//
+//		/// === CXX ===
+//		// it might be that is a member and needs to be memberized
+//		if (llvm::isa<clang::CXXMethodDecl>(fd)){
+//			//FIXME: ask the master how to make this easyer
+//
+//			vector<core::LambdaBindingPtr> tmpDef;
+//			tmpDef.push_back( builder.lambdaBinding(ctx.currVar, lambda) );
+//			core::LambdaExprPtr&& tmpExpr = builder.lambdaExpr(lambda);
+//			const clang::Type* ownerTy = (llvm::cast<clang::TypeDecl> (llvm::cast<clang::CXXMethodDecl>(fd)->getParent()))->getTypeForDecl();
+//			core::ExpressionPtr funcExpr = memberize (fd, tmpExpr.as<core::ExpressionPtr>(),
+//													  builder.refType(convertType( ownerTy)), core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
+//
+//			ConversionContext::RecVarExprMap::const_iterator tit = ctx.recVarExprMap.find(fd);
+//			definitions.push_back( builder.lambdaBinding(tit->second, funcExpr.as<core::LambdaExprPtr>()->getLambda() ));
+//		}
+//		else{ //any other case
+//			definitions.push_back( builder.lambdaBinding(ctx.currVar, lambda) );
+//		}
+//		// reinsert the TypeVar in the map in order to solve the other recursive types
+//		ctx.recVarExprMap.insert( {fd, ctx.currVar} );
+//	}
+//
+//	// we reset the behavior of the solver
+//	ctx.currVar = NULL;
+//	ctx.isRecSubFunc = false;
+//
+//	core::LambdaDefinitionPtr&& lambdaDef = builder.lambdaDefinition(definitions);
+//	core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr(recVarRef, lambdaDef);
+//
+//	// Adding the lambda function to the list of converted functions
+//	assert( (funcDecl == program.getIndexer().getDefinitionFor(funcDecl)) && "wrong function declaration in lambdaExprCache");
+//	ctx.lambdaExprCache.insert( {funcDecl, retLambdaExpr} );
+//
+//	// we also need to cache all the other recursive definition, so when we will resolve
+//	// another function in the recursion we will not repeat the process again
+//	for(const auto& fd : components) {
+//
+//		auto fit = ctx.recVarExprMap.find(fd);
+//		assert(fit != ctx.recVarExprMap.end());
+//
+//		const FunctionDecl* decl = const_cast<FunctionDecl*>(fd);
+//
+//		// update the translation unit
+//		SET_TU(decl);
+//
+//		core::ExpressionPtr&& func = builder.lambdaExpr(fit->second, lambdaDef);
+//
+//		assert( (decl== program.getIndexer().getDefinitionFor(decl)) && "wrong function declaration in lambdaExprCache");
+//		ctx.lambdaExprCache.insert( {decl, func} );
+//
+//		func = attachFuncAnnotations(func, decl);
+//
+//		// restore TU
+//	}
+//
+//	// Clear the variables so that when we resolve the recursive function the actual recursive
+//	// lambda is utilized
+//	ctx.recVarExprMap.clear();
+//
+//	VLOG(2) << "Converted Into: " << *retLambdaExpr;
+//	// attachFuncAnnotations(retLambdaExpr, funcDecl);
+//
+//	return retLambdaExpr;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1441,11 +1666,10 @@ core::NodePtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl
 		// build the member function
 		core::LambdaExprPtr memberized =  builder.lambdaExpr (newFunctionType, paramList, newBody);
 
-		// cache it
-		ctx.lambdaExprCache.erase(funcDecl);
-		ctx.lambdaExprCache[funcDecl] = memberized;
+//		// cache it
+//		ctx.lambdaExprCache.erase(funcDecl);
+//		ctx.lambdaExprCache[funcDecl] = memberized;
 
-		RESTORE_TU();
 		return memberized;
 	} else if(func.isa<core::LiteralPtr>()) {  // literals, for intercepted funcs
 		SET_TU(funcDecl);
@@ -1463,7 +1687,6 @@ core::NodePtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl
 		core::ExpressionPtr retExpr = builder.literal(funcLiteral.getStringValue(), newFunctionType);
 
 		//assert(false && "not properly implement currently");
-		RESTORE_TU();
 		return retExpr;
 	} else if (core::VariablePtr var = func.isa<core::VariablePtr>()){ // we deal with a recursive member function.
 		// recursive types should be already converted somewhere else
@@ -1487,7 +1710,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 	// be nicely intercepted.
 
 	if (!ctorAsFunct){
-		RESTORE_TU();
 		return core::LambdaExprPtr();
 	}
 
@@ -1498,7 +1720,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 	core::ExpressionPtr oldCtor = convertFunctionDecl(ctorAsFunct).as<core::ExpressionPtr>();
 
 	if( !oldCtor.isa<core::LambdaExprPtr>() ) {
-		RESTORE_TU();
 		return oldCtor;
 	}
 
@@ -1507,7 +1728,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 	if (ty.isMemberFunction() ||
 		ty.isConstructor() ||
 		ty.isDestructor() ){
-		RESTORE_TU();
 		return oldCtor.as<core::LambdaExprPtr>();
 	}
 
@@ -1643,7 +1863,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 														oldCtor.as<core::LambdaExprPtr>().getLambda().getParameterList(),
 														builder.compoundStmt(newBody));
 
-	RESTORE_TU();
 	return newCtor;
 }
 
@@ -1686,6 +1905,9 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	assert(rightTU && "Translation unit for function not found.");
 	mFact.setTranslationUnit(rightTU);
 
+	// collect thread-private variables
+	// TODO: fix this here
+//	omp::collectThreadPrivate(getPragmaMap(), mFact.ctx.thread_private);
 
 	const core::ExpressionPtr& expr = mFact.convertFunctionDecl(funcDecl, true).as<core::ExpressionPtr>();
 

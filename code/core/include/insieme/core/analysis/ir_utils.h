@@ -311,6 +311,14 @@ VariableSet getAllVariables(const NodePtr& code);
 VariableSet getAllVariablesInScope(const NodePtr& code);
 
 /**
+ * Determines whether the given node is exhibiting free variables or not.
+ *
+ * @param code the code fragment to be analysed
+ * @return true if it is exhibiting free variables, false otherwise
+ */
+bool hasFreeVariables(const NodePtr& code);
+
+/**
  * Extracts the list of free variables from the given code fragment.
  *
  * @param code the code fragment to be analysed
