@@ -615,7 +615,7 @@ core::StatementPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDe
 
 			// initialization value
 			core::ExpressionPtr&& initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), var->getType(), false);
-			ASSERT_EQ_TYPES (var->getType(), initExpr->getType());
+			ASSERT_IS_SUBTYPE(initExpr->getType(), var->getType());
 			assert(initExpr && "not correct initialization of the variable");
 			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initExpr);
 		}

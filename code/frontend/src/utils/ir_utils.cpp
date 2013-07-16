@@ -92,7 +92,7 @@ core::ExpressionPtr createSafeAssigment(core::ExpressionPtr& left, core::Express
 	if(left->getType() == right->getType()) {
 		right = builder.deref(right);
 	}
-	ASSERT_EQ_TYPES (left.getType().as<core::RefTypePtr>()->getElementType(), right.getType());
+	ASSERT_IS_SUBTYPE (right.getType(), left.getType().as<core::RefTypePtr>()->getElementType());
 	return builder.assign( left, right);
 }
 
