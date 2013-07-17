@@ -304,16 +304,16 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXMemberCallExpr(
 	const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
 	// to begin with we translate the constructor as a regular function
-	auto newFunc = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (methodDecl), false).as<core::ExpressionPtr>();
+	auto newFunc = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (methodDecl)).as<core::ExpressionPtr>();
 
-	// get type of this
-	const clang::Type* classType= methodDecl->getParent()->getTypeForDecl();
-	core::TypePtr&& irClassType = builder.refType( convFact.convertType(classType) );
-
-	newFunc = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl),
-									newFunc.as<core::ExpressionPtr>(),
-									irClassType,
-									core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
+//	// get type of this
+//	const clang::Type* classType= methodDecl->getParent()->getTypeForDecl();
+//	core::TypePtr&& irClassType = builder.refType( convFact.convertType(classType) );
+//
+//	newFunc = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl),
+//									newFunc.as<core::ExpressionPtr>(),
+//									irClassType,
+//									core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
 
 	core::FunctionTypePtr funcTy = newFunc.getType().as<core::FunctionTypePtr>();
 
@@ -371,14 +371,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXOperatorCallExp
 		// get "this-object"
 		core::ExpressionPtr ownerObj = Visit(callExpr->getArg(0));
 		ownerObj = utils::unwrapCppRef(builder, ownerObj);
-
-		// get type of this
-		const clang::Type* classType= methodDecl->getParent()->getTypeForDecl();
-		core::TypePtr&& irClassType = builder.refType( convFact.convertType(classType) );
-		convertedOp = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl),
-											convertedOp,
-											irClassType,
-											core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
 
 		// get arguments
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
@@ -479,10 +471,6 @@ core::ExpressionPtr ConversionFactory::CXXExprConverter::VisitCXXConstructExpr(c
 	// update parameter list with a class-typed parameter in the first possition
 	core::TypePtr&&  refToClassTy = builder.refType(irClassType);
 
-	ctorFunc = convFact.memberize(llvm::cast<FunctionDecl>(ctorDecl),
-									ctorFunc,
-									refToClassTy,
-									core::FK_CONSTRUCTOR).as<core::ExpressionPtr>();
 	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
 
 	// reconstruct Arguments list, fist one is a scope location for the object

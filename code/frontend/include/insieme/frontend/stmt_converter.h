@@ -88,17 +88,16 @@ namespace conversion {
 
 #define LOG_STMT_CONVERSION(parentStmt, stmt) \
 	FinalActions attachLog( [&] () { \
-        VLOG(1) << "\n**********************STMT*[class:'"<< parentStmt->getStmtClassName() <<"']**********************\n"; \
+        VLOG(1) << "**********************STMT*[class:'"<< parentStmt->getStmtClassName() <<"']**********************"; \
         if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang statement:\n" \
-                    << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+            VLOG(2) << "Dump of clang statement:"; \
             parentStmt->dump(convFact.getCurrentSourceManager()); \
         } \
         VLOG(1) << "-> at location: (" \
-                << utils::location(parentStmt->getLocStart(), convFact.getCurrentSourceManager()) << "); \n"; \
+                << utils::location(parentStmt->getLocStart(), convFact.getCurrentSourceManager()) << "); "; \
         VLOG(1) << "Converted 'statement' into IR stmt: "; \
         VLOG(1) << "\t" << stmt << ""; \
-        VLOG(1) << "\n****************************************************************************************\n"; \
+        VLOG(1) << "****************************************************************************************"; \
     } )
 
 //---------------------------------------------------------------------------------------------------------------------

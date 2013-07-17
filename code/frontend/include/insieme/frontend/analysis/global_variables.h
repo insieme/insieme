@@ -50,6 +50,7 @@
 #pragma GCC diagnostic pop
 
 #include "insieme/frontend/utils/indexer.h"
+#include "insieme/frontend/utils/interceptor.h"
 
 #include <set>
 #include <map>
@@ -96,12 +97,14 @@ private:
 	std::list<const clang::VarDecl*> globalInitializations;
 	std::list<const clang::VarDecl*> staticInitializations;
 
+	const insieme::frontend::utils::Interceptor& interceptor;
+
 public:
 
 	// functions
 
-	GlobalVarCollector():
-	staticCount(0)
+	GlobalVarCollector(const insieme::frontend::utils::Interceptor & interceptor_):
+	staticCount(0), interceptor(interceptor_)
 	{ }
 	/**
 	 * the functor overload searches a translation unit for globals
@@ -187,6 +190,9 @@ public:
 		return staticInitializations.end();
 	}
 
+	const insieme::frontend::utils::Interceptor& getInterceptor() const{
+		return interceptor;
+	}
 };
 
 std::ostream& operator<< (std::ostream& out, const GlobalVarCollector::VarStorage storage);

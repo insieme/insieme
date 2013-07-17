@@ -214,7 +214,7 @@ void for_stmt_test() {
 	for(int i=0,j=1,z=2; i<100; i+=1) { a=i; }
 
 	int mq, nq;
-	#pragma test "{ (v1 := 0); while((( *v4)>1)) { { }; fun(ref<int<4>> v5, ref<int<4>> v6) -> ref<int<4>> { gen.post.inc(v5); (v6 := (( *v6)/2)); return v6; }(v1, v4); };}"
+	#pragma test "{ (v1 := 0); while((( *v2)>1)) { { }; fun(ref<int<4>> v5, ref<int<4>> v6) -> ref<int<4>> { gen.post.inc(v5); (v6 := (( *v6)/2)); return v6; }(v1, v2); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 
 	//(v1 := 0);
@@ -323,7 +323,7 @@ void switch_stmt_test() {
 		case 2:
 			a = 1;
 			continue;
-		case 3: 
+		case 3:
 			a++;
 			return;
 		default:
@@ -366,9 +366,33 @@ int g(int x) {
 //    };
 //}
 
+int a(int x) ;
+int b(int x) ;
+int c(int x) ;
+
+#pragma test \
+	"recFun v0 { v0 = fun(int<4> v1) -> int<4> { return v2((v1-1)); }; v2 = fun(int<4> v3) -> int<4> { return v4((v3+1)); }; v4 = fun(int<4> v5) -> int<4> { return v0((v5*2)); };}"
+int a(int x) {
+	return b(x-1);
+}
+
+#pragma test \
+	"recFun v0 { v0 = fun(int<4> v1) -> int<4> { return v2((v1+1)); }; v2 = fun(int<4> v3) -> int<4> { return v4((v3*2)); }; v4 = fun(int<4> v5) -> int<4> { return v0((v5-1)); };}"
+int b(int x) {
+	return c(x+1);
+}
+
+#pragma test \
+	"recFun v0 { v0 = fun(int<4> v1) -> int<4> { return v2((v1*2)); }; v2 = fun(int<4> v3) -> int<4> { return v4((v3-1)); }; v4 = fun(int<4> v5) -> int<4> { return v0((v5+1)); };}"
+int c(int x) {
+	return a(x*2);
+}
+
+
+
 void rec_function_call_test() {
 	#pragma test \
-	"recFun v14 { v14 = fun(int<4> v16) -> int<4> { return v15((v16-1)); }; v15 = fun(int<4> v18) -> int<4> { return v14((v18+1)); };}(10)"
+	"recFun v0 { v0 = fun(int<4> v1) -> int<4> { return v1((v1-1)); }; v1 = fun(int<4> v3) -> int<4> { return v0((v3+1)); };}(10)"
 	f(10);
 }
 

@@ -117,16 +117,19 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		}
 	}
 	
-	core::StructTypePtr classType = TypeConverter::VisitTagType(tagType).as<core::StructTypePtr>();
-	LOG_TYPE_CONVERSION(tagType, classType) ;
+	core::TypePtr ty = TypeConverter::VisitTagType(tagType);
+	LOG_TYPE_CONVERSION(tagType, ty) ;
+
+	//if not a struct type we don't need to do anything more
+	if( !ty.isa<core::StructTypePtr>() ) { return ty; }
+
+	core::StructTypePtr classType = ty.as<core::StructTypePtr>();
 
 	// if is a c++ class, we need to annotate some stuff
 	if (llvm::isa<clang::RecordType>(tagType)) {
 		if (!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl()))
 			return classType;
 
-
-		//~~~~~ look in the indexer for the full decl ~~~~
 		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(tagType->getDecl());
 
 		//~~~~~ base classes if any ~~~~~
@@ -150,7 +153,10 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		//update name of class type
 		classType = core::transform::replaceNode(mgr, core::StructTypeAddress(classType)->getName(), builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
 
-		annotations::c::attachCName(classType, classDecl->getNameAsString());
+		//if classDecl has a name add it
+		if( !classDecl->getNameAsString().empty() ) {
+			annotations::c::attachCName(classType, classDecl->getNameAsString());
+		}
 	}
 
 	return classType;
@@ -337,6 +343,8 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 	// skip if there is not declaration available
 	if (!llvm::isa<clang::CXXRecordDecl>(recType->getDecl())) return;
 
+	if( !res.isa<core::StructTypePtr>() ) { return; }
+
 	// assemble class info
 	core::ClassMetaInfo classInfo;
 
@@ -354,22 +362,20 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 
 			if (ctorDecl->isUserProvided ()){
 
-				// the function is a template espetialization, but if it has no body, we wont
-                                // convert it, it was never instanciated
-                                if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
-                                        continue;
-                                }
+				// the function is a template spetialization, but if it has no body, we wont
+				// convert it, it was never instanciated
+				if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
+						continue;
+				}
 
+				// add the funtion to the dependency graph, it might be there already,
+				// or maybe not (because of an indirect call throw an intercepted function)
+				convFact.program.getCallGraph().addNode( ctorDecl );
 
 				core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
 				if (ctorLambda ){
-					ctorLambda = convFact.memberize  (ctorDecl, ctorLambda,
-													  builder.refType(res),
-													  core::FK_CONSTRUCTOR).as<core::ExpressionPtr>();
-
 					assert(ctorLambda);
-                                        assert(!ctorLambda.isa<core::LiteralPtr>());
-
+                    assert(!ctorLambda.isa<core::LiteralPtr>());
 					classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 				}
 			}
@@ -379,8 +385,8 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 	//~~~~~ convert destructor ~~~~~
 	if(classDecl->hasUserDeclaredDestructor()){
 		const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
-		core::ExpressionPtr&& dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
-		dtorLambda = convFact.memberize  (dtorDecl, dtorLambda, builder.refType(res), core::FK_DESTRUCTOR).as<core::ExpressionPtr>();
+		convFact.program.getCallGraph().addNode( dtorDecl );
+		core::ExpressionPtr dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
 		classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
 		if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
 			classInfo.setDestructorVirtual();
@@ -416,9 +422,9 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 		if (method->getMemberSpecializationInfo () && !method->hasBody()){
 				continue;
 		}
+		convFact.program.getCallGraph().addNode( method );
 
 		auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
-		methodLambda = convFact.memberize(method, methodLambda, builder.refType(res), core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
 
 		if( method->isPure() ) {
 			//pure virtual functions are handled bit different in metainfo

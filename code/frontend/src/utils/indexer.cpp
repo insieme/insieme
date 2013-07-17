@@ -70,17 +70,17 @@ namespace {
 		assert(llvm::isa<clang::NamedDecl>(decl) && "only named decl can be converted to name + type");
 		std::string res  = llvm::cast<clang::NamedDecl>(decl)->getQualifiedNameAsString();
 			
-		// remove type spetialitation
-		std::string tmp;
-		unsigned cnt = 0;
-		for (unsigned i= 0; i < res.size(); i++){
-			char cur = res.c_str()[i];
-			if (cur == '<') cnt++;
-			else if (cur == '>') cnt--;
-			else if (cnt == 0) tmp.insert(tmp.end(), 1, cur);
-		}
-		if (cnt == 0)
-			res = tmp;
+//		// remove type spetialitation
+//		std::string tmp;
+//		unsigned cnt = 0;
+//		for (unsigned i= 0; i < res.size(); i++){
+//			char cur = res.c_str()[i];
+//			if (cur == '<') cnt++;
+//			else if (cur == '>') cnt--;
+//			else if (cnt == 0) tmp.insert(tmp.end(), 1, cur);
+//		}
+//		if (cnt == 0)
+//			res = tmp;
 
 		if (llvm::isa<clang::FunctionDecl>(decl)){
 			res.append(" {");
