@@ -86,6 +86,8 @@ class ConversionFactory;
  */
 class ConversionFactory: public boost::noncopyable {
 
+	friend class ASTConverter;
+
 protected:
 	///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	///							ConversionContext
@@ -435,8 +437,7 @@ public:
 	 * @param isEntryPoint determine if this function is an entry point of the generated IR
 	 * @return Converted lambda
 	 */
-	virtual core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl,
-			bool isEntryPoint = false);
+	virtual core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
 
 	/**
 	 * Converts variable declarations into IR an declaration statement. This method is also responsible
