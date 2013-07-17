@@ -198,6 +198,26 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 
 	return body;
 }
+	
+struct ContinueStmtCollector : public core::IRVisitor<bool, core::Address> {
+	vector<core::ContinueStmtAddress> conts;
+
+	// do not visit types
+	ContinueStmtCollector() : IRVisitor<bool, core::Address>(false) {}
+
+	bool visitWhileStmt(const core::WhileStmtAddress& cur) { return true; }
+
+	bool visitContinueStmt(const core::ContinueStmtAddress& cur) {
+		conts.push_back(cur);
+		return true;
+	}
+};
+
+vector<core::ContinueStmtAddress> getContinues(const core::StatementPtr& mainBody) {
+	ContinueStmtCollector collector;
+	core::visitDepthFirstPrunable(core::NodeAddress(mainBody), collector);
+	return collector.conts;
+}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								FOR STATEMENT
@@ -551,6 +571,22 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 			retStmt.push_back( declStmt );
 		}
 
+		core::StatementPtr irBody = stmtutils::tryAggregateStmts(builder, body);
+		vector<core::ContinueStmtAddress> conts = getContinues( irBody );
+
+		if( !conts.empty() )
+		{
+			core::StatementList stmtList;
+			stmtList.push_back(convFact.convertExpr(forStmt->getInc()));
+			stmtList.push_back(builder.continueStmt());
+			core::CompoundStmtPtr incr = builder.compoundStmt(stmtList);
+			std::map<core::NodeAddress, core::NodePtr> replacementsMap;
+			for_each(conts.begin(), conts.end(), [&](core::ContinueStmtAddress& cur) {
+					replacementsMap.insert({cur, incr});
+					});
+			irBody = core::transform::replaceAll(builder.getNodeManager(), replacementsMap).as<core::StatementPtr>();
+		}
+
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// analysis of loop structure failed, we have to build a while statement:
 		//
@@ -570,9 +606,9 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 				utils::cast(convFact.convertExpr( forStmt->getCond() ), builder.getLangBasic().getBool()),
 				forStmt->getInc() ?
 				builder.compoundStmt( toVector<core::StatementPtr>(
-						stmtutils::tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) )
+						irBody, convFact.convertExpr( forStmt->getInc() ) )
 				)
-				: stmtutils::tryAggregateStmts(builder, body)
+				: irBody
 		);
 
 		// handle eventual pragmas attached to the Clang node
@@ -765,7 +801,10 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDoStmt(clang::DoSt
 	condExpr = convFact.tryDeref(condExpr);
 
 	StatementList stmts;
-	std::copy(body->getStatements().begin(), body->getStatements().end(), std::back_inserter(stmts));
+	core::VariablePtr exitTest = builder.variable(builder.refType(gen.getBool()));
+	stmts.push_back(builder.declarationStmt(exitTest, gen.getFalse()));
+	condExpr = builder.logicOr( builder.logicNeg(builder.deref(exitTest)), condExpr );
+	body = builder.compoundStmt({builder.assign(exitTest, gen.getTrue()), body });
 	stmts.push_back(builder.whileStmt(condExpr, body));
 
 	core::StatementPtr irNode = builder.compoundStmt(stmts);
