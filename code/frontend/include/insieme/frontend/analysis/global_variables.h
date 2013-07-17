@@ -83,7 +83,7 @@ public:
 	enum VarStorage { VS_GLOBAL, VS_STATIC, VS_EXTERN};
 
 	typedef std::list<const clang::VarDecl*> tInitialization;
-	typedef std::list<const clang::VarDecl*>::iterator tGlobalInit_Iter;
+	typedef std::map<std::string, const clang::VarDecl*>::iterator tGlobalInit_Iter;
 	typedef std::list<const clang::VarDecl*>::iterator tStaticInit_Iter;
 
 private:
@@ -94,7 +94,7 @@ private:
 	std::map<const clang::VarDecl*, std::string> staticNames;
 	int staticCount;
 
-	std::list<const clang::VarDecl*> globalInitializations;
+	std::map<std::string, const clang::VarDecl*> globalInitializations;
 	std::list<const clang::VarDecl*> staticInitializations;
 
 	const insieme::frontend::utils::Interceptor& interceptor;
@@ -111,6 +111,13 @@ public:
 	 * it finds globals and updates global state
 	 */
 	void operator()(const TranslationUnitPtr& tu);
+
+	/**
+	 * the functor overload searches a translation unit for globals
+	 * it finds globals and updates global state
+	 * in this case for an specific declaration context
+	 */
+	void operator()(const clang::DeclContext* ctx);
 
 	/**
 	 * given a variable, it finds out if is extern or has being globaly
@@ -140,8 +147,10 @@ public:
 	/**
 	 * incorporates one var declaration to the set, it will be ignored if not global
 	 * otherwise declaration, kind of storage and initialization value will be stored
+	 * @param var: the variable to analyze
+	 * @param inFuntion: if the variable was found in a funtion/member body
 	 */
-	void addVar(const clang::VarDecl* var);
+	void addVar(const clang::VarDecl* var, bool inFunction);
 
 	/**
 	 * prints on standar output the contents of the global maps

@@ -348,8 +348,11 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 	// assemble class info
 	core::ClassMetaInfo classInfo;
 
-	//~~~~~ look in the indexer for the full decl ~~~~
+	//~~~~~ look for the full decl ~~~~
 	const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(recType->getDecl());
+
+	//~~~~~ hey, this might be an instantation of a templated object. lets look for globals (spetialized) inside ~~~~~~
+	convFact.getProgram().getGlobalCollector()(llvm::cast<clang::DeclContext>(classDecl));
 
 	//~~~~~ copy ctor, move ctor, default ctor ~~~~~
 	clang::CXXRecordDecl::ctor_iterator ctorIt = classDecl->ctor_begin();

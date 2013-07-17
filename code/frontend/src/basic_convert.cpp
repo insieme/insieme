@@ -1740,14 +1740,14 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 	// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	for (auto git = globalCollector.globalsInitialization_begin(); git != globalCollector.globalsInitialization_end(); ++git){
 
-		if (mFact.getProgram().getInterceptor().isIntercepted((*git)->getQualifiedNameAsString())){
+		if (mFact.getProgram().getInterceptor().isIntercepted(git->second->getQualifiedNameAsString())){
 			continue;
 		}
 
-		VLOG(2) << "initializing global: " << (*git)->getQualifiedNameAsString();
+		VLOG(2) << "initializing global: " << git->first;
 
-		if(const clang::Expr* init = (*git)->getDefinition()->getInit()){
-			core::ExpressionPtr var = mFact.lookUpVariable((*git));
+		if(const clang::Expr* init = git->second->getInit()){
+			core::LiteralPtr var = builder.literal(git->first, builder.refType(mFact.convertType(git->second->getType().getTypePtr())));
 			core::ExpressionPtr initValue;
 			//FIXME: why this is not done in the visitor???
 			if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( init )) {
