@@ -369,7 +369,6 @@ core::TypePtr ConversionFactory::TypeConverter::VisitFunctionProtoType(const Fun
 	core::TypeList argTypes;
 	std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
 		[ &argTypes, this ] (const QualType& currArgType) {
-			this->convFact.ctx.isResolvingFunctionType = true;
 			core::TypePtr&& argTy = this->convert( currArgType.getTypePtr() );
 
 			// If the argument is of type vector or array we need to add a reference
@@ -380,7 +379,6 @@ core::TypePtr ConversionFactory::TypeConverter::VisitFunctionProtoType(const Fun
 			}
 
 			argTypes.push_back( argTy );
-			this->convFact.ctx.isResolvingFunctionType = false;
 		}
 	);
 
@@ -711,6 +709,7 @@ namespace {
 
 core::TypePtr ConversionFactory::TypeConverter::convert(const clang::Type* type) {
 	assert(type && "Calling TypeConverter::Visit with a NULL pointer");
+	auto& cache = convFact.ctx.typeCache;
 
 	// look up type within cache
 	auto pos = cache.find(type);

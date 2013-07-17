@@ -92,11 +92,6 @@ protected:
 	const core::IRBuilder& 				builder;
 	const core::lang::BasicGenerator& 	gen;
 
-	utils::DependencyGraph<const clang::TagDecl*> typeGraph;
-
-	// the internal cache to avoid evaluating the same type several times
-	std::map<const clang::Type*, core::TypePtr> cache;
-
 public:
 	TypeConverter(ConversionFactory& fact);
 
