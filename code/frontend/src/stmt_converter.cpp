@@ -207,6 +207,10 @@ struct ContinueStmtCollector : public core::IRVisitor<bool, core::Address> {
 
 	bool visitWhileStmt(const core::WhileStmtAddress& cur) { return true; }
 
+	bool visitForStmt(const core::ForStmtAddress& cur) { return true; }
+
+	bool visitLambdaExpr(const core::LambdaExprAddress& cur) { return true; }
+
 	bool visitContinueStmt(const core::ContinueStmtAddress& cur) {
 		conts.push_back(cur);
 		return true;
@@ -809,7 +813,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDoStmt(clang::DoSt
 
 	StatementList stmts;
 	core::VariablePtr exitTest = builder.variable(builder.refType(gen.getBool()));
-	stmts.push_back(builder.declarationStmt(exitTest, gen.getFalse()));
+	stmts.push_back(builder.declarationStmt(exitTest, builder.refVar(gen.getFalse())));
 	condExpr = builder.logicOr( builder.logicNeg(builder.deref(exitTest)), condExpr );
 	body = builder.compoundStmt({builder.assign(exitTest, gen.getTrue()), body });
 	stmts.push_back(builder.whileStmt(condExpr, body));
