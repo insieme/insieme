@@ -86,6 +86,8 @@ class ConversionFactory;
  */
 class ConversionFactory: public boost::noncopyable {
 
+	friend class ASTConverter;
+
 protected:
 	///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	///							ConversionContext
@@ -374,10 +376,7 @@ public:
 	core::StatementPtr convertStmt(const clang::Stmt* stmt) const;
 
 	/**
-	 * Entry point for converting clang expressions to IR expres    Number of Shared Nodes: 200
-	 Number of Addressable Nodes: 1068
-	 Share Ratio: 5.34
-	 Height of tree: 30 sions
+	 * Entry point for converting clang expressions to IR expressions
 	 * @param expr is a clang expression of the AST
 	 * @return the corresponding IR expression
 	 */
@@ -438,8 +437,7 @@ public:
 	 * @param isEntryPoint determine if this function is an entry point of the generated IR
 	 * @return Converted lambda
 	 */
-	virtual core::NodePtr convertFunctionDecl(const clang::FunctionDecl* funcDecl,
-			bool isEntryPoint = false);
+	virtual core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
 
 	/**
 	 * Converts variable declarations into IR an declaration statement. This method is also responsible
@@ -491,30 +489,6 @@ public:
 	void printDiagnosis(const clang::SourceLocation& loc);
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  CPP STUFF   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	/**
-	 * turns an ir converted function into a member function of an object of specified class
-	 * @param callExpr the clang Decl of the function to be converted, it might be a Ctor, member
-	 * or dtor
-	 * @param func the Insieme IR converted function, might come from the cache or just converted
-	 * with convertFuncDecl
-	 * @param ownerClassType, the IR type of the owner class of the member function
-	 * @param funcKind is it a Ctor, Member or dtor?
-	 * @return the lambda expression corresponding a Member function 
-	 */
-	core::NodePtr memberize (const clang::FunctionDecl* callDecl,
-						 	 core::ExpressionPtr func, 
-						 	 core::TypePtr ownerClassType, 
-						 	 core::FunctionKind funcKind);
-
-	/**
-	 * handles implicit behaviour of a constructor call,
-	 * NOTE!! does not memberize, still need to call memberize afterwards
-	 * @param ctorDecl the constructor function declaration
-	 * @param irClassType the class to be build
-	 * @return the lambda expression of the constructor, NOT memberized
-	 */
-	core::ExpressionPtr convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl);
 
 	// FIXME: where here and not expr visitor????
 	core::ExpressionPtr convertInitializerList(
