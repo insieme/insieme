@@ -87,36 +87,6 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitPointerType(const Pointe
 core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* tagType) {
 	VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
 
-	// check if this type has being already translated.
-	// this boost conversion but also avoids infinite recursion while resolving class member function
-	auto match = convFact.ctx.typeCache.find(tagType);
-	if(match != convFact.ctx.typeCache.end()){
-		return match->second;
-	}	
-
-	auto tagDecl = tagType->getDecl();
-	if (tagDecl) {
-		VLOG(2) << "VisitTagType " << tagDecl->getNameAsString() <<  std::endl;
-
-		if(!convFact.ctx.recVarMap.empty() && tagDecl) {
-			// check if this type has a typevar already associated, in such case return it
-			ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagDecl);
-			if( fit != convFact.ctx.recVarMap.end() ) {
-				// we are resolving a parent recursive type, so we shouldn't
-				return fit->second;
-			}
-		}
-
-		// check if the type is in the cache of already solved recursive types
-		// this is done only if we are not resolving a recursive sub type
-		if(!convFact.ctx.isRecSubType && tagDecl) {
-			ConversionContext::RecTypeMap::const_iterator rit = convFact.ctx.recTypeCache.find(tagDecl);
-			if(rit != convFact.ctx.recTypeCache.end()) {
-				return rit->second;
-			}
-		}
-	}
-	
 	core::TypePtr ty = TypeConverter::VisitTagType(tagType);
 	LOG_TYPE_CONVERSION(tagType, ty) ;
 
@@ -462,19 +432,6 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 
 core::TypePtr ConversionFactory::CXXTypeConverter::convertInternal(const clang::Type* type) {
 	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
-
-	//check cache for type
-	auto fit = convFact.ctx.typeCache.find(type);
-	if(fit != convFact.ctx.typeCache.end()) {
-		return fit->second;
-	}
-
-	//check if type is intercepted
-	if(convFact.program.getInterceptor().isIntercepted(type)) {
-		VLOG(2) << type << " isIntercepted";
-		return convFact.program.getInterceptor().intercept(type, convFact);
-	}
-
 	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
 }
 

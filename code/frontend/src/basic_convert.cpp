@@ -1061,13 +1061,7 @@ core::FunctionTypePtr ConversionFactory::convertFunctionType(const clang::Functi
 //
 core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 	assert(type && "Calling convertType with a NULL pointer");
-	auto fit = ctx.typeCache.find(type);
-	if(fit == ctx.typeCache.end()) {
-		core::TypePtr&& retTy = typeConvPtr->convert( type );
-		ctx.typeCache.insert( {type, retTy} );
-		return retTy;
-	}
-	return fit->second;
+	return typeConvPtr->convert( type );
 }
 
 namespace {
@@ -1458,7 +1452,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	mFact.setTranslationUnit(rightTU);
 
 	// collect thread-private variables
-	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.ctx.thread_private);
+	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.getThreadprivates());
 
 	core::ExpressionPtr expr = mFact.convertFunctionDecl(funcDecl);
 
@@ -1479,7 +1473,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	if (isMain)
 		lambdaExpr = addGlobalsInitialization(lambdaExpr.as<core::LambdaExprPtr>());
 
-	return core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
+	return core::IRBuilder(mgr).program(toVector(lambdaExpr));
 }
 
 /////////////////////////////////////////////////////////
