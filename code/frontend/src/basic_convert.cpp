@@ -1264,15 +1264,14 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	// move to the proper definition
 	auto funcDef = getProgram().getIndexer().getDefinitionFor(funcDecl);
 	if (funcDef) funcDecl = llvm::cast<clang::FunctionDecl>(funcDef); 		// just work with the defining one if present
+	// obtain function type
+	auto funcTy = convertFunctionType(funcDecl);
 
 	// check whether function has already been converted
 	auto pos = ctx.lambdaExprCache.find(funcDecl);
 	if (pos != ctx.lambdaExprCache.end()) {
 		return pos->second;		// done
 	}
-
-	// -------------- check some base cases (never recursive) -----------
-
 
 	// check whether function should be intersected
 	if( getProgram().getInterceptor().isIntercepted(funcDecl) ) {
@@ -1281,9 +1280,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 		VLOG(2) << "\tintercepted: " << irExpr;
 		return irExpr;
 	}
-
-	// obtain function type
-	auto funcTy = convertFunctionType(funcDecl);
 
 	// handle pure virtual functions
 	if( funcDecl->isPure() && llvm::isa<clang::CXXMethodDecl>(funcDecl)){
@@ -1299,7 +1295,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 
 	// handle external functions
 	if(!funcDecl->hasBody()) {
-
 		// TODO: move this to call expression handling
 		if (funcDecl->getNameAsString() == "free") {
 			//handle special function -- "free" -- here instead of in CallExr
@@ -1335,7 +1330,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	}
 	assert(recVar && "It should be present now!");
 	assert(ctx.lambdaExprCache.find(funcDecl) == ctx.lambdaExprCache.end());
-
 	ctx.lambdaExprCache[funcDecl] = recVar;
 
 	// -- conduct the conversion of the lambda --
@@ -1406,12 +1400,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl(const clang::Function
 	// annotate and return results
 	return attachFuncAnnotations(lambda, funcDecl);
 }
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//							CXX STUFF
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							AST CONVERTER
@@ -1504,14 +1492,14 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 	// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	for (auto git = globalCollector.globalsInitialization_begin(); git != globalCollector.globalsInitialization_end(); ++git){
 
-		if (mFact.getProgram().getInterceptor().isIntercepted((*git)->getQualifiedNameAsString())){
+		if (mFact.getProgram().getInterceptor().isIntercepted(git->second->getQualifiedNameAsString())){
 			continue;
 		}
 
-		VLOG(2) << "initializing global: " << (*git)->getQualifiedNameAsString();
+		VLOG(2) << "initializing global: " << git->first;
 
-		if(const clang::Expr* init = (*git)->getDefinition()->getInit()){
-			core::ExpressionPtr var = mFact.lookUpVariable((*git));
+		if(const clang::Expr* init = git->second->getInit()){
+			core::LiteralPtr var = builder.literal(git->first, builder.refType(mFact.convertType(git->second->getType().getTypePtr())));
 			core::ExpressionPtr initValue;
 			//FIXME: why this is not done in the visitor???
 			if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( init )) {
