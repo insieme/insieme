@@ -377,9 +377,6 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 
 				core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
 				if (ctorLambda ){
-					ctorLambda = convFact.memberize  (ctorDecl, ctorLambda,
-													  builder.refType(res),
-													  core::FK_CONSTRUCTOR).as<core::ExpressionPtr>();
 					assert(ctorLambda);
                     assert(!ctorLambda.isa<core::LiteralPtr>());
 					classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
@@ -392,8 +389,7 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 	if(classDecl->hasUserDeclaredDestructor()){
 		const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
 		convFact.program.getCallGraph().addNode( dtorDecl );
-		core::ExpressionPtr&& dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
-		dtorLambda = convFact.memberize  (dtorDecl, dtorLambda, builder.refType(res), core::FK_DESTRUCTOR).as<core::ExpressionPtr>();
+		core::ExpressionPtr dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
 		classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
 		if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
 			classInfo.setDestructorVirtual();
@@ -432,7 +428,6 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 		convFact.program.getCallGraph().addNode( method );
 
 		auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
-		methodLambda = convFact.memberize(method, methodLambda, builder.refType(res), core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
 
 		if( method->isPure() ) {
 			//pure virtual functions are handled bit different in metainfo

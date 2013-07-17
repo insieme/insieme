@@ -507,6 +507,10 @@ namespace {
 
 }
 
+bool hasFreeVariables(const NodePtr& code) {
+	return !getFreeVariables(code).empty();
+}
+
 VariableList getFreeVariables(const NodePtr& code) {
 
 	// collect free variables
