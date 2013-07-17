@@ -340,7 +340,7 @@ void while_stmt_test() {
 	while(it != 0) { it-=1; }
 
 	#pragma test \
-	"{ (v1 := (( *v1)+1)); while((( *v1)<10)) { (v1 := (( *v1)+1)); };}"
+	"{ decl ref<bool> v2 = ( var(false)); while(((!( *v2)) || bind(){fun(ref<int<4>> v1) -> bool { return (( *v1)<10); }(v1)})) { (v2 := true); { (v1 := (( *v1)+1)); }; };}"
 	do{ it+=1; }while(it < 10);
 }
 
