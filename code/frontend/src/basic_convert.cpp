@@ -130,6 +130,21 @@ namespace conversion {
 ///
 const insieme::frontend::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(const FunctionDecl*& funcDecl) {
 	
+	
+	if(const clang::FunctionDecl* fd = llvm::dyn_cast<clang::FunctionDecl>(funcDecl)) {
+		switch( fd->getTemplatedKind() ) {
+			case clang::FunctionDecl::TemplatedKind::TK_NonTemplate:
+				break;
+			case clang::FunctionDecl::TemplatedKind::TK_FunctionTemplate:
+				break;
+			case clang::FunctionDecl::TemplatedKind::TK_MemberSpecialization:
+			case clang::FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
+				return currTU;
+			case clang::FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:
+				break;
+		}
+	}
+
 	// if the function is not defined in this translation unit, maybe it is defined in another we already
 	// loaded use the clang indexer to lookup the definition for this function declarations
 	utils::Indexer::TranslationUnitPair&& ret =
@@ -421,6 +436,11 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		// rid if the qualified name function
 		std::string name = program.getGlobalCollector().getName(varDecl);
 
+		// global/static variables are always leftsides (refType) -- solves problem with const
+		if(!irType.isa<core::RefTypePtr>() ) {
+			irType = builder.refType(irType);
+		}
+
 		if (program.getGlobalCollector().isStatic(varDecl)){
 			if (!irType.isa<core::RefTypePtr>()) irType = builder.refType(irType);		// this happens whenever a static variable is constant
 			irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(irType.as<core::RefTypePtr>().getElementType()));
@@ -592,25 +612,27 @@ core::StatementPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDe
 			// is the declaration of a variable with global storage, this means that is an static 
 			// static needs to be initialized during first execution of function.
 			// but the var remains in the global storage (is an assigment instead of decl)
-
-			// the variable is being unwrapped by default in lookupiVariable
+			//
+			assert(var);
+			assert(var.isa<core::CallExprPtr>());
+			// the variable is being unwrapped by default in lookupVariable
 			// we want the inner static object
 			auto lit = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
 
 			if (definition->getInit())
 				retStmt = builder.initStaticVariable(lit, convertInitExpr(definition->getType().getTypePtr(), 
-																		  definition->getInit(), var->getType().as<core::RefTypePtr>().getElementType(), false));
+																		  definition->getInit(), 
+																		  var->getType().as<core::RefTypePtr>().getElementType(), false));
 			else
 				retStmt = builder.getNoOp();
 		}
 		else{
-
 			// print diagnosis messages
 			assert(var.isa<core::VariablePtr>());
-
 			// initialization value
 			core::ExpressionPtr&& initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), var->getType(), false);
-			ASSERT_EQ_TYPES (var->getType(), initExpr->getType());
+			// this assertion is not valid for void& initialization
+			//	ASSERT_EQ_TYPES (var->getType(), initExpr->getType());
 			assert(initExpr && "not correct initialization of the variable");
 			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initExpr);
 		}
@@ -919,6 +941,13 @@ ConversionFactory::convertInitExpr(const clang::Type* clangType, const clang::Ex
 		}
 	}
 
+	// FIXME: if this is needed, maybe need to add a var to create a ref
+//	// inner expression is null<int<X>> and outer is array, then rebuild something like
+//	//  ref.null(type<array<...>>)
+//	if (core::analysis::isCallOf( retIr, mgr.getLangBasic().getGetNull())){
+//		return builder.deref(builder.callExpr(mgr.getLangBasic().getGetNull(), builder.getTypeLiteral(type)));
+//	}
+
 	// ============================== End Special Handlings =======================================
 
 	// Anytime we have to initialize a ref<'a> from another type of object we have to deref the
@@ -991,7 +1020,7 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 //////////////////////////////////////////////////////////////////
 ///  CONVERT FUNCTION DECLARATION
 core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint) {
-
+	VLOG(1) << "======================== FUNC: "<< funcDecl->getNameAsString() << " ==================================";
 	SET_TU(funcDecl);
 	// check if the funcDecl was already converted into an lambdaExpr, before asserting that
 	// funcDecl has a body -> intercepted functions may have no body
@@ -1011,13 +1040,14 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		auto irExpr = getProgram().getInterceptor().intercept(funcDecl, *this);
 		ctx.lambdaExprCache.insert( {funcDecl, irExpr} );
 		RESTORE_TU();
+		VLOG(2) << "\tintercepted: " << irExpr;
 		return irExpr;
 	}
 
 	//TODO check/get definitionAndTU for declareation here (bernhard)
 
 	if( funcDecl->isPure() && llvm::isa<clang::CXXMethodDecl>(funcDecl)){
-		VLOG(2) << "pure virtual function " << funcDecl;
+		VLOG(2) << "\tpure virtual function " << funcDecl;
 
 		auto funcTy = convertFunctionType(funcDecl);
 		std::string callName = funcDecl->getNameAsString();
@@ -1081,6 +1111,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// It is strongly connected or strong if it contains a directed path from u to v and a directed
 	// path from v to u for every pair of vertices u, v.
 	// FIXME:: we have a problem here with BOOST
+	std::cout << funcDecl->getQualifiedNameAsString() << std::endl;
 	std::set<const FunctionDecl*>&& components = program.getCallGraph().getStronglyConnectedComponents( funcDecl );
 	if (!components.empty()) {
 		std::set<const FunctionDecl*>&& subComponents = program.getCallGraph().getSubComponents( funcDecl );
@@ -1474,6 +1505,9 @@ core::NodePtr  ConversionFactory::memberize (const clang::FunctionDecl* funcDecl
 core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl){
 	const clang::FunctionDecl* ctorAsFunct = llvm::cast<clang::FunctionDecl>(ctorDecl);
 	assert(ctorAsFunct);
+
+	VLOG(1) << "======================== CTOR: "<< ctorDecl->getNameAsString() << " ==================================";
+
 	SET_TU(ctorAsFunct);
 	assert(currTU && "currTU not set");
 
@@ -1589,32 +1623,6 @@ core::ExpressionPtr ConversionFactory::convertFunctionDecl (const clang::CXXCons
 			//otherwise is a regular assigment like intialization
 			//
 			core::ExpressionPtr expr = convertExpr((*it)->getInit());
-/*
-			// it might be that the expression is a value parameter, and it might be wrapped.
-			// we can materialize the wrapp for it, or we avoid the wrap. (avoid the wrap is done)
-			const clang::DeclRefExpr* rhs= utils::skipSugar<DeclRefExpr> ((*it)->getInit());
-
-			// might be the reference to a parameter
-			if(rhs && llvm::isa<clang::ParmVarDecl>(rhs->getDecl())){
-				expr = lookUpVariable(rhs->getDecl());
-			}
-			else{
-				// or might be the usage of a member of a parameter
-				const clang::MemberExpr* member= utils::skipSugar<MemberExpr> ((*it)->getInit());
-				if(member && llvm::isa<clang::DeclRefExpr>(member->getBase()) ){
-					// we replace the usage of the wrapped var by the original parameter
-					clang::ParmVarDecl* param= llvm::dyn_cast<clang::ParmVarDecl>(llvm::cast<clang::DeclRefExpr>(member->getBase())->getDecl());
-					if (param) {
-						core::ExpressionPtr&& newOwner= lookUpVariable(param);
-						if (!IS_CPP_REF_EXPR(newOwner)){
-							core::CallExprAddress addr(expr.as<core::CallExprPtr>());
-							expr = core::transform::replaceNode (mgr,
-																  addr[0].as<core::CallExprAddress>()[0],
-																  newOwner ).as<core::CallExprPtr>();
-						}
-					}
-				}
-			}*/
 			initStmt = utils::createSafeAssigment(init,expr);
 		}
 
@@ -1709,7 +1717,10 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExprPtr& mainFunc){
 
 	VLOG(1) << "";
+	VLOG(1) << "************************************************************************************";
 	VLOG(1) << "******************** Initialize Globals at program start ***************************";
+	VLOG(1) << "************************************************************************************";
+	VLOG(1) << "";
 
 	// 4 casses:
 	// extern, do nothing
@@ -1733,8 +1744,7 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 			continue;
 		}
 
-		//VLOG(2) << "initializing global: " << (*git)->getQualifiedNameAsString();
-		std::cout << "initializing global: " << (*git)->getQualifiedNameAsString() << std::endl;
+		VLOG(2) << "initializing global: " << (*git)->getQualifiedNameAsString();
 
 		if(const clang::Expr* init = (*git)->getDefinition()->getInit()){
 			core::ExpressionPtr var = mFact.lookUpVariable((*git));
@@ -1756,7 +1766,7 @@ core::LambdaExprPtr ASTConverter::addGlobalsInitialization(const core::LambdaExp
 	
 	// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~A
 	for (auto sit = globalCollector.staticInitialization_begin(); sit != globalCollector.staticInitialization_end(); ++sit){
-		std::cout << "initializing static: " << (*sit)->getQualifiedNameAsString() << std::endl;
+		VLOG(2) << "initializing static: " << (*sit)->getQualifiedNameAsString();
 		core::ExpressionPtr var = mFact.lookUpVariable((*sit));
 		core::LiteralPtr litUse = var.isa<core::LiteralPtr>();
 		if (!litUse){

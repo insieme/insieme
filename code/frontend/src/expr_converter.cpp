@@ -1084,7 +1084,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitBinaryOperator(const 
 
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
-			exprTy = gen.getUnit();
+			exprTy = lhs.getType();
 			break;
 		}
 		default:

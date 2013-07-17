@@ -360,6 +360,24 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_TRUE((bool)info.newOperatorName);
 	EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
+	// test ref/any
+	type = builder.refType(basic.getAny());
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("ref<any>", toString(*type));
+	EXPECT_EQ("void*", toC(info.lValueType));
+	EXPECT_EQ("void*", toC(info.rValueType));
+	EXPECT_EQ("void*", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+
+	// test ref/ref/any
+	type = builder.refType(builder.refType(basic.getAny()));
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("ref<ref<any>>", toString(*type));
+	EXPECT_EQ("void*", toC(info.lValueType));
+	EXPECT_EQ("void**", toC(info.rValueType));
+	EXPECT_EQ("void**", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+
 }
 
 TEST(TypeManager, ArrayTypes) {

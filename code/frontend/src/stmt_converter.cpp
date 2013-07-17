@@ -536,9 +536,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 				fakeInductionVar = wrap.as<core::ExpressionPtr>();
 			}
 
-			retStmt.push_back(
-					builder.callExpr(gen.getUnit(),
-							gen.getRefAssign(), fakeInductionVar, finalVal));
+			retStmt.push_back(builder.assign(fakeInductionVar, finalVal));
 		}
 
 	} catch (const analysis::LoopNormalizationError& e) {
@@ -602,8 +600,17 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		// 			}
 		// 		}
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		core::ExpressionPtr condition;
+		if (forStmt->getCond()){
+			condition = utils::cast( convFact.convertExpr(forStmt->getCond()), builder.getLangBasic().getBool());
+		}else {
+			// we might not have condition, this is an infinite loop
+			//    for (;;)
+			condition =	convFact.builder.literal(std::string("true"), builder.getLangBasic().getBool());
+		}
+
 		core::StatementPtr whileStmt = builder.whileStmt(
-				utils::cast(convFact.convertExpr( forStmt->getCond() ), builder.getLangBasic().getBool()),
+				condition,
 				forStmt->getInc() ?
 				builder.compoundStmt( toVector<core::StatementPtr>(
 						irBody, convFact.convertExpr( forStmt->getInc() ) )
@@ -1101,8 +1108,10 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitGotoStmt(clang::Go
 //							  STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitStmt(clang::Stmt* stmt) {
-	std::for_each(stmt->child_begin(), stmt->child_end(),
-			[ this ] (clang::Stmt* stmt) {this->Visit(stmt);});
+	assert(false && "this code looks malform and no used");
+	std::for_each(stmt->child_begin(), stmt->child_end(), [ this ] (clang::Stmt* stmt) {
+			this->Visit(stmt);
+	});
 	return stmtutils::StmtWrapper();
 }
 

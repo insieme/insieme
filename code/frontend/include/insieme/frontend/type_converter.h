@@ -60,27 +60,25 @@ namespace conversion {
 #define EMPTY_TYPE_LIST	vector<core::TypePtr>()
 
 #define LOG_BUILTIN_TYPE_CONVERSION(parentType) \
-    VLOG(1) << "\n**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************\n"; \
+    VLOG(1) << "**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************"; \
     if( VLOG_IS_ON(2) ) { \
-        VLOG(2) << "Dump of clang type: \n" \
-                << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+        VLOG(2) << "Dump of clang type:"; \
         parentType->dump(); \
     } \
-    VLOG(1) << "\n****************************************************************************************\n";
+    VLOG(1) << "****************************************************************************************";
 
 #define LOG_TYPE_CONVERSION(parentType, retType) \
 	FinalActions attachLog( [&] () { \
-        VLOG(1) << "\n**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************\n"; \
+        VLOG(1) << "**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************"; \
         if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang type: \n" \
-                     << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+            VLOG(2) << "Dump of clang type:";\
             parentType->dump(); \
         } \
         if(retType) { \
             VLOG(1) << "Converted 'type' into IR type: "; \
             VLOG(1) << "\t" << *retType; \
         } \
-        VLOG(1) << "\n****************************************************************************************\n"; \
+        VLOG(1) << "****************************************************************************************"; \
     } )
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

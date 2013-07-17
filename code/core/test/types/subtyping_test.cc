@@ -443,6 +443,30 @@ namespace types {
 		EXPECT_PRED2(isSubTypeOf, type->unroll(), type);
 	}
 
+	TEST(TypeUtils, RefAny) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		// the simple ref any
+		auto refAny = builder.parseType("ref<any>");
+
+		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<A>"), refAny);
+		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<int<4>>"), refAny);
+		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<ref<int<4>>>"), refAny);
+
+		EXPECT_PRED2(isNotSubTypeOf, builder.parseType("A"), refAny);
+		EXPECT_PRED2(isNotSubTypeOf, builder.parseType("int<4>"), refAny);
+
+		// a more nested version
+		refAny = builder.parseType("ref<ref<any>>");
+
+		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<ref<A>>"), refAny);
+		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<ref<int<4>>>"), refAny);
+		EXPECT_PRED2(isSubTypeOf, builder.parseType("ref<ref<ref<int<4>>>>"), refAny);
+
+	}
+
 } // end namespace types
 } // end namespace core
 } // end namespace insieme
