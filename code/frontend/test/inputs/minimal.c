@@ -34,61 +34,6 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/tu/ir_translation_unit.h"
-
-#include "insieme/core/ir.h"
-#include "insieme/core/types/subtyping.h"
-
-namespace insieme {
-namespace frontend {
-namespace tu {
-
-	void IRTranslationUnit::addGlobal(const Global& global) {
-		assert(core::types::isSubTypeOf(global.second->getType(), global.first->getType()));
-		assert(!any(globals, [&](const Global& cur)->bool { return *global.first == *cur.first; }));
-		globals.push_back(global);
-	}
-
-	std::ostream& IRTranslationUnit::printTo(std::ostream& out) const {
-		return out << "TU(" << types << ", " << functions << ", " << globals << ")";
-	}
-
-	IRTranslationUnit merge(const IRTranslationUnit& a, const IRTranslationUnit& b) {
-		IRTranslationUnit res = a;
-
-		// copy types
-		for(auto cur : b.getTypes()) {
-			res.addType(cur.first, cur.second);
-		}
-
-		// copy functions
-		for(auto cur : b.getFunctions()) {
-			res.addFunction(cur.first, cur.second);
-		}
-
-		// copy globals
-		for(auto cur : b.getGlobals()) {
-			res.addGlobal(cur);
-		}
-
-		// done
-		return res;
-	}
-
-	IRTranslationUnit merge(const vector<IRTranslationUnit>& units) {
-		assert(!units.empty());
-		IRTranslationUnit res;
-		for(const auto& cur : units) {
-			res = merge(res, cur);
-		}
-		return res;
-	}
-
-	core::ProgramPtr toProgram(const IRTranslationUnit& a) {
-		assert(false && "Not Implemented!!");
-		return 0;
-	}
-
-} // end namespace tu
-} // end namespace frontend
-} // end namespace insieme
+int main() {
+	int a = 1 + 2;
+}

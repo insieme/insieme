@@ -55,8 +55,7 @@ namespace tu {
 	typedef std::tuple<IRTranslationUnit::TypeMap, IRTranslationUnit::FunctionMap, IRTranslationUnit::GlobalsList> WrapperType;
 
 	void dump(std::ostream& out, const IRTranslationUnit& unit) {
-		static core::NodeManager empty;
-
+		core::NodeManager empty;
 		core::NodeManager localMgr((unit.empty()?empty:unit.getNodeManager()));
 
 		// encode translation unit into an IR expression

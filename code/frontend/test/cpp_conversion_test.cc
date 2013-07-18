@@ -103,10 +103,8 @@ TEST(CppConversion, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-	fe::ConversionJob job;
 
-	fe::Program prog(manager, job);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/cpp.cpp") );
+	fe::Program prog(manager, SRC_DIR "/inputs/cpp.cpp");
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
@@ -115,8 +113,8 @@ TEST(CppConversion, FileTest) {
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
-		fe::conversion::ConversionFactory convFact( mgr, prog, true/*=isCXX*/ );
-		convFact.setTranslationUnit(&tu);
+//		fe::conversion::ConversionFactory convFact( mgr, prog, true/*=isCXX*/ );
+//		convFact.setTranslationUnit(&tu);
 /*
 		if(tp.isStatement()){
 			const clang::Stmt* td = tp.getStatement();

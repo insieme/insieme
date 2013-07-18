@@ -71,12 +71,12 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								BUILTIN TYPES
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter::VisitPointerType(const PointerType* ptrTy) {
+core::TypePtr Converter::CXXTypeConverter::VisitPointerType(const PointerType* ptrTy) {
 
 	// writte warnning on const pointers
 	if (ptrTy->getPointeeType().isConstQualified() &&
 		llvm::isa<clang::RecordType>(ptrTy->getPointeeType().getTypePtr())){
-		convFact.ctx.warnings.insert("Constancy is lost in INSPIRE, pointers to a const object wont make use of const methods and operators");
+		convFact.warnings.insert("Constancy is lost in INSPIRE, pointers to a const object wont make use of const methods and operators");
 	}
 	return TypeConverter::VisitPointerType(ptrTy);
 }
@@ -84,7 +84,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitPointerType(const Pointe
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* tagType) {
+core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) {
 	VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
 
 	core::TypePtr ty = TypeConverter::VisitTagType(tagType);
@@ -133,7 +133,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 }
 
 // Returns all bases of a c++ record declaration
-vector<RecordDecl*> ConversionFactory::CXXTypeConverter::getAllBases(const clang::CXXRecordDecl* recDeclCXX ){
+vector<RecordDecl*> Converter::CXXTypeConverter::getAllBases(const clang::CXXRecordDecl* recDeclCXX ){
 	vector<RecordDecl*> bases;
 
 	for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
@@ -148,7 +148,7 @@ vector<RecordDecl*> ConversionFactory::CXXTypeConverter::getAllBases(const clang
 }
 
 
-core::TypePtr ConversionFactory::CXXTypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
+core::TypePtr Converter::CXXTypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
 	if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
 		return convFact.builder.structType( structElements );
 	} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
@@ -172,7 +172,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::handleTagType(const TagDecl* 
 // template instantiation occurs, at which point this will become either
 // a ConstantArrayType or a VariableArrayType.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter::VisitDependentSizedArrayType(const DependentSizedArrayType* arrTy) {
+core::TypePtr Converter::CXXTypeConverter::VisitDependentSizedArrayType(const DependentSizedArrayType* arrTy) {
 	assert(false && "DependentSizedArrayType not yet handled!");
 	return core::TypePtr();
 }
@@ -180,7 +180,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitDependentSizedArrayType(
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						REFERENCE TYPE
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter::VisitReferenceType(const ReferenceType* refTy) {
+core::TypePtr Converter::CXXTypeConverter::VisitReferenceType(const ReferenceType* refTy) {
 	core::TypePtr retTy;
 	LOG_TYPE_CONVERSION(refTy, retTy);
 
@@ -207,7 +207,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitReferenceType(const Refe
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					TEMPLATE SPECIALIZATION TYPE (TODO)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter::VisitTemplateSpecializationType(const TemplateSpecializationType* templTy) {
+core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const TemplateSpecializationType* templTy) {
 	VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
 	VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
 	for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
@@ -235,7 +235,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTemplateSpecializationTy
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter::VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
+core::TypePtr Converter::CXXTypeConverter::VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
@@ -246,7 +246,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitDependentTemplateSpecial
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter::VisitInjectedClassNameType(const InjectedClassNameType* tempTy) {
+core::TypePtr Converter::CXXTypeConverter::VisitInjectedClassNameType(const InjectedClassNameType* tempTy) {
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
@@ -257,7 +257,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitInjectedClassNameType(co
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					SUBSTITUTE TEMPLATE TYPE PARAMETER TYPE (TODO)
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter::VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* substTy) {
+core::TypePtr Converter::CXXTypeConverter::VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* substTy) {
 	core::TypePtr retTy;
 	LOG_TYPE_CONVERSION( substTy, retTy );
 
@@ -281,7 +281,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitSubstTemplateTypeParmTyp
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					DEC
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter::VisitTemplateTypeParmType(const clang::TemplateTypeParmType* tempTy){
+core::TypePtr Converter::CXXTypeConverter::VisitTemplateTypeParmType(const clang::TemplateTypeParmType* tempTy){
 	core::TypePtr retTy;
     LOG_TYPE_CONVERSION( tempTy, retTy );
 
@@ -292,7 +292,7 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTemplateTypeParmType(con
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //					DECLTYPE TYPE (TODO) -- a CXX0x feature
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter::VisitDecltypeType(const clang::DecltypeType* declTy) {
+core::TypePtr Converter::CXXTypeConverter::VisitDecltypeType(const clang::DecltypeType* declTy) {
 	assert(false && "DeclType not supported");
 	return core::TypePtr();
 }
@@ -300,11 +300,11 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitDecltypeType(const clang
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //                 AUTO TYPE -- a CXX0x feature
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::TypePtr ConversionFactory::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
+core::TypePtr Converter::CXXTypeConverter::VisitAutoType(const clang::AutoType* autoTy) {
     return convert(autoTy->getDeducedType().getTypePtr());
 }
 
-void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type* type, const core::TypePtr& res) {
+void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* type, const core::TypePtr& res) {
 
 	// now attach meta-info (only for record type definitios)
 	const clang::RecordType* recType = dyn_cast<const clang::RecordType>(type);
@@ -338,10 +338,6 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 						continue;
 				}
 
-				// add the funtion to the dependency graph, it might be there already,
-				// or maybe not (because of an indirect call throw an intercepted function)
-				convFact.program.getCallGraph().addNode( ctorDecl );
-
 				core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
 				if (ctorLambda ){
 					assert(ctorLambda);
@@ -355,7 +351,6 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 	//~~~~~ convert destructor ~~~~~
 	if(classDecl->hasUserDeclaredDestructor()){
 		const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
-		convFact.program.getCallGraph().addNode( dtorDecl );
 		core::ExpressionPtr dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
 		classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
 		if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
@@ -392,7 +387,6 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 		if (method->getMemberSpecializationInfo () && !method->hasBody()){
 				continue;
 		}
-		convFact.program.getCallGraph().addNode( method );
 
 		auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
 
@@ -427,7 +421,7 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 	core::setMetaInfo(res, classInfo);
 }
 
-core::TypePtr ConversionFactory::CXXTypeConverter::convertInternal(const clang::Type* type) {
+core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::Type* type) {
 	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
 	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
 }

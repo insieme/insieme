@@ -58,7 +58,7 @@ namespace insieme {
 namespace frontend { 
 
 namespace conversion {
-class ConversionFactory;
+class Converter;
 }
 
 namespace utils {
@@ -83,8 +83,8 @@ public:
 	bool isIntercepted(const clang::Type* type) const;
 	bool isIntercepted(const clang::FunctionDecl* decl) const;
 
-	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::ConversionFactory& convFact);
-	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::ConversionFactory& convFact);
+	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
+	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact);
 
 	insieme::frontend::utils::Indexer& getIndexer() const {
 		return indexer;
@@ -106,11 +106,11 @@ private:
 
 struct InterceptTypeVisitor : public clang::TypeVisitor<InterceptTypeVisitor, core::TypePtr> {
 
-	insieme::frontend::conversion::ConversionFactory& convFact;
+	insieme::frontend::conversion::Converter& convFact;
 	const insieme::core::IRBuilder& builder;
 	const Interceptor& interceptor;
 	
-	InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const Interceptor& interceptor);
+	InterceptTypeVisitor(insieme::frontend::conversion::Converter& convFact, const Interceptor& interceptor);
 
 	//core::TypePtr VisitTypedefType(const clang::TypedefType* typedefType);
 	core::TypePtr VisitTagType(const clang::TagType* tagType);

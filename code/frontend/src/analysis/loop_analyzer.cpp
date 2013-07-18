@@ -97,7 +97,7 @@ namespace frontend {
 namespace analysis {
 
 	//TODO: Recheck: Visual Studio 2010 fix: loopHelper( { NULL, NULL, NULL } ) do not work
-	LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, const ConversionFactory& convFact): convFact(convFact), loopHelper(LoopHelper()) {
+	LoopAnalyzer::LoopAnalyzer(const clang::ForStmt* forStmt, const Converter& convFact): convFact(convFact), loopHelper(LoopHelper()) {
 	// we look for the induction variable
 	findInductionVariable(forStmt);
 	// we know the induction variable, we analyze the increment expression

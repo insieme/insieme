@@ -49,7 +49,7 @@ namespace frontend {
 
 //FORWARD DECLARATION
 namespace conversion {
-	class ConversionFactory;
+	class Converter;
 }
 
 namespace utils {
@@ -74,7 +74,7 @@ namespace utils {
 	 * @param castExpr the clang cast expression
 	 * return right typed expression
 	 */
-	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::ConversionFactory& convFact,
+	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
 											  const clang::CastExpr* castExpr);
 
 } // end utils namespace 

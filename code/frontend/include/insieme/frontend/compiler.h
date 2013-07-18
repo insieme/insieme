@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -51,6 +51,7 @@
 #include <boost/archive/text_iarchive.hpp>
 
 #include "insieme/frontend/frontend.h"
+#include "insieme/frontend/clang.h"
 
 // forward declarations
 namespace clang {
@@ -201,13 +202,13 @@ class ClangCompiler: boost::noncopyable {
 
 	ClangCompilerImpl* pimpl;
 
-	const ConversionJob& config;
+	const ConversionSetup& config;
 
 public:
 	/**
 	 * Creates a compiler instance from the given conversion job.
 	 */
-	ClangCompiler(const ConversionJob& config, const bool is_obj=false);
+	ClangCompiler(const ConversionSetup& config, const path& file);
 
 	/**
 	 * Returns clang's ASTContext

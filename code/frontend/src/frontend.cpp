@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -47,24 +47,11 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/compiler/compiler.h"
 
+#include "insieme/frontend/tu/ir_translation_unit.h"
 
 namespace insieme {
 namespace frontend {
 
-const unsigned ConversionJob::DEFAULT_FLAGS = PrintDiag;
-
-ConversionJob::ConversionJob(const boost::filesystem::path& path)
-	: files(toVector(path.string())), stdLibIncludeDirs(insieme::utils::compiler::getDefaultCppIncludePaths()), standard("c99"), flags(DEFAULT_FLAGS) {};
-
-ConversionJob::ConversionJob(const vector<string>& files, const vector<string>& includeDirs)
-	: files(files), includeDirs(includeDirs), stdLibIncludeDirs(insieme::utils::compiler::getDefaultCppIncludePaths()), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};
-
-void ConversionJob::addDefinition(const string& name, const string& value) {
-	std::stringstream def;
-	def << name;
-	if (!value.empty()) def << "=" << value;
-	definitions.push_back(def.str());
-}
 
 core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) {
 
@@ -76,64 +63,71 @@ core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) {
 		job.addIncludeDirectory(SRC_DIR "inputs");
 		job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
 
-		job.addDefinition("INSIEME");
+		job.setDefinition("INSIEME");
 	}
 
-	// create a temporary manager
-	core::NodeManager tmpMgr(manager);
+//	// load translation unit
+//	auto tu = convert(manager, file, *this);
 
-	// create the program parser
-	frontend::Program program(manager, job);
+	return tu::toProgram(convert(manager, file, *this));
 
-	// set up the translation units
-	program.addTranslationUnits(job);
-
-	// convert the program
-	auto res = program.convert();
-
-	// apply OpenMP sema conversion
-	if (hasOption(OpenMP)) {
-		res = frontend::omp::applySema(res, tmpMgr);
-	}
-
-	// apply OpenCL conversion
-	if(hasOption(OpenCL)) {
-		frontend::ocl::HostCompiler oclHostCompiler(res, job);
-		res = oclHostCompiler.compile();
-	}
-
-	// apply Cilk conversion
-	if(hasOption(Cilk)) {
-		res = frontend::cilk::applySema(res, tmpMgr);
-	}
-
-	// return instance within global manager
-	return manager.get(res);
+//
+//
+//	// create a temporary manager
+//	core::NodeManager tmpMgr(manager);
+//
+//	// create the program parser
+//	frontend::Program program(manager, job);
+//
+//	// set up the translation units
+//	program.addTranslationUnits(job);
+//
+//	// convert the program
+//	auto res = program.convert();
+//
+//	// apply OpenMP sema conversion
+//	if (hasOption(OpenMP)) {
+//		res = frontend::omp::applySema(res, tmpMgr);
+//	}
+//
+//	// apply OpenCL conversion
+//	if(hasOption(OpenCL)) {
+//		frontend::ocl::HostCompiler oclHostCompiler(res, job);
+//		res = oclHostCompiler.compile();
+//	}
+//
+//	// apply Cilk conversion
+//	if(hasOption(Cilk)) {
+//		res = frontend::cilk::applySema(res, tmpMgr);
+//	}
+//
+//	// return instance within global manager
+//	return manager.get(res);
 }
 
-void ConversionJob::storeAST(core::NodeManager& manager, const string& output_file) {
-	// add definitions needed by the OpenCL frontend
-	ConversionJob job = *this;
-	if(hasOption(OpenCL)) {
-		job.addIncludeDirectory(SRC_DIR);
-		job.addIncludeDirectory(SRC_DIR "inputs");
-		job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
-
-		job.addDefinition("INSIEME");
-	}
-
-	// create a temporary manager
-	core::NodeManager tmpMgr(manager);
-
-	// create the program parser
-	frontend::Program program(manager, job);
-
-	// set up the translation units
-	program.addTranslationUnits(job);
-
-    // store translation units
-    program.storeTranslationUnits(output_file);
-}
+//void ConversionJob::storeAST(core::NodeManager& manager, const string& output_file) {
+//	// add definitions needed by the OpenCL frontend
+//	ConversionJob job = *this;
+//	if(hasOption(OpenCL)) {
+//		job.addIncludeDirectory(SRC_DIR);
+//		job.addIncludeDirectory(SRC_DIR "inputs");
+//		job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
+//
+//		job.addDefinition("INSIEME");
+//	}
+//
+//	// create a temporary manager
+//	core::NodeManager tmpMgr(manager);
+//
+//	// create the program parser
+//	frontend::Program program(manager, job);
+//
+//	// set up the translation units
+//	program.addTranslationUnits(job);
+//
+//    // store translation units
+//    program.storeTranslationUnits(output_file);
+//}
 
 } // end namespace frontend
 } // end namespace insieme

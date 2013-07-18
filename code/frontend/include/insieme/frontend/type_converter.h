@@ -84,16 +84,16 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							Type converter: Common Interface
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-class ConversionFactory::TypeConverter {
+class Converter::TypeConverter {
 
 protected:
-	ConversionFactory& 					convFact;
+	Converter& 					convFact;
 	core::NodeManager& 					mgr;
 	const core::IRBuilder& 				builder;
 	const core::lang::BasicGenerator& 	gen;
 
 public:
-	TypeConverter(ConversionFactory& fact);
+	TypeConverter(Converter& fact);
 
 	virtual ~TypeConverter() { }
 
@@ -132,13 +132,13 @@ protected:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							Type converter: C types
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-class ConversionFactory::CTypeConverter:
-	public ConversionFactory::TypeConverter,
-	public clang::TypeVisitor<ConversionFactory::CTypeConverter, core::TypePtr>
+class Converter::CTypeConverter:
+	public Converter::TypeConverter,
+	public clang::TypeVisitor<Converter::CTypeConverter, core::TypePtr>
 {
 
 public:
-	CTypeConverter(ConversionFactory& fact)
+	CTypeConverter(Converter& fact)
 		: TypeConverter(fact) { }
 
 	virtual ~CTypeConverter() {}
@@ -174,15 +174,15 @@ protected:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							Type converter: C++ types
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-class ConversionFactory::CXXTypeConverter :
-	public ConversionFactory::TypeConverter,
-	public clang::TypeVisitor<ConversionFactory::CXXTypeConverter, core::TypePtr>{
+class Converter::CXXTypeConverter :
+	public Converter::TypeConverter,
+	public clang::TypeVisitor<Converter::CXXTypeConverter, core::TypePtr>{
 
 protected:
 	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
 public:
-	CXXTypeConverter(ConversionFactory& fact)
+	CXXTypeConverter(Converter& fact)
 		: TypeConverter(fact) {}
 
 	virtual ~CXXTypeConverter() {};

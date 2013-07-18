@@ -71,7 +71,7 @@ typedef Pointer<const Node> NodePtr;
 namespace frontend {
 
 namespace conversion {
-class ConversionFactory;
+class Converter;
 } // end convert namespace 
 
 namespace pragma {
@@ -83,7 +83,7 @@ namespace pragma {
  */
 struct AutomaticAttachable {
 
-	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::ConversionFactory& fact) const = 0;
+	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::Converter& fact) const = 0;
 
 	virtual ~AutomaticAttachable() { }
 };
@@ -192,10 +192,10 @@ public:
 	template <class IterT>
 	PragmaStmtMap(const IterT& begin, const IterT& end) {
 		std::for_each(begin, end, [ this ](const typename IterT::value_type& pragma){
-			if(pragma.first->isStatement())
-				this->stmtMap.insert( std::make_pair(pragma.first->getStatement(), pragma.first) );
+			if(pragma->isStatement())
+				this->stmtMap.insert( std::make_pair(pragma->getStatement(), pragma) );
 			else
-				this->declMap.insert( std::make_pair(pragma.first->getDecl(), pragma.first) );
+				this->declMap.insert( std::make_pair(pragma->getDecl(), pragma) );
 		});
 	}
 
@@ -282,11 +282,11 @@ struct PragmaHandlerFactory {
 // Handle the automatic attaching of annotations (coming from user pragmas) to generated IR nodes 
 core::NodePtr  attachPragma( const core::NodePtr& 			node, 
 		  				     const clang::Stmt* 				clangNode, 
-						     conversion::ConversionFactory& 	fact );
+						     conversion::Converter& 	fact );
 
 core::NodePtr  attachPragma( const core::NodePtr& 			node, 
 		  				     const clang::Decl* 				clangDecl, 
-						     conversion::ConversionFactory& 	fact );
+						     conversion::Converter& 	fact );
 } // end pragma namespace
 } // End frontend namespace
 } // End insieme namespace

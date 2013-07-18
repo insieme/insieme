@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -222,23 +222,13 @@ struct ClangCompiler::ClangCompilerImpl {
 	ClangCompilerImpl() : clang(), TO(new TargetOptions), m_isCXX(false) {}
 };
 
-ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : pimpl(new ClangCompilerImpl), config(config) {
+ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : pimpl(new ClangCompilerImpl), config(config) {
     //assert(!is_obj);
 	// NOTE: the TextDiagnosticPrinter within the set DiagnosticClient takes over ownership of the diagOpts object!
 	setDiagnosticClient(pimpl->clang, config.hasOption(ConversionJob::PrintDiag));
 
-    if(is_obj) {
-        pimpl->ast_unit.load(config.getFile());
-        pimpl->ast_unit.createASTUnit(&pimpl->clang.getDiagnostics(), pimpl->clang.getFileSystemOpts());
-    }
-
 	pimpl->clang.createFileManager();
-	if(is_obj) {
-        pimpl->clang.setFileManager(&pimpl->ast_unit.getASTUnit()->getFileManager());
-        pimpl->clang.setSourceManager(&pimpl->ast_unit.getASTUnit()->getSourceManager());
-	} else {
-        pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
-	}
+	pimpl->clang.createSourceManager( pimpl->clang.getFileManager() );
 
 
 	// A compiler invocation object has to be created in order for the diagnostic object to work
@@ -278,28 +268,20 @@ ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : p
 
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
 
-	bool enableCpp = false;
-	if (config.getFiles().size() == 1) {
-		std::string extension(config.getFile().substr(config.getFile().rfind('.')+1, std::string::npos));
-		enableCpp = 	 extension == "C" ||
-						 extension == "cc" ||
-						 extension == "cpp" ||
-						 extension == "cxx" ||
-						 extension == "hpp" ||
-						 extension == "hxx" ||
-						 extension == "o";
-	}
+	bool enableCpp = config.getStandard() == ConversionSetup::Cxx03;
 
 	LangOptions& LO = pimpl->clang.getLangOpts();
 
 	// add user provided headers
-	for (std::string curr : config.getIncludeDirectories()){
-		this->pimpl->clang.getHeaderSearchOpts().AddPath( curr, clang::frontend::System, true, false, false);
+	for (const path& cur : config.getIncludeDirectories()){
+		this->pimpl->clang.getHeaderSearchOpts().AddPath( cur.string(), clang::frontend::System, true, false, false);
 	}
 
 	// set -D macros
-	for (std::string curr : config.getDefinitions()){
-		this->pimpl->clang.getPreprocessorOpts().addMacroDef(curr);
+	for (const std::pair<string,string>& cur : config.getDefinitions()){
+		string def = cur.first;
+		if (!cur.second.empty()) def = def + "=" + cur.second;
+		this->pimpl->clang.getPreprocessorOpts().addMacroDef(def);
 	}
 
 	// Enable OpenCL
@@ -327,7 +309,7 @@ ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : p
 	LO.POSIXThreads = 1;
 	*/
 
-	if(config.getStandard() == "c99") {
+	if(config.getStandard() == ConversionSetup::C99) {
 		//set default values for C -- default results in values for LangStandard::lang_gnu99
 		CompilerInvocation::setLangDefaults(LO, clang::IK_C /*, clang::LangStandard::Kind=unspecified*/);
 		// set by langDefaults
@@ -363,8 +345,8 @@ ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : p
 
 		// FIXME check clang/lib/Driver/Toolchains.cpp for headersearch of clang for linux/gcc
 		// use the cxx header of the backend c++ compiler, uses "echo | gcc -v -x c++ -E -" to get search list of headers
-		for(std::string curr : config.getStdLibIncludeDirectories()) {
-			pimpl->clang.getHeaderSearchOpts().AddPath (curr, clang::frontend::System, true, false, false);
+		for(const path& cur : config.getStdLibIncludeDirectories()) {
+			pimpl->clang.getHeaderSearchOpts().AddPath (cur.string(), clang::frontend::System, true, false, false);
 		}
 
 		// FIXME: decide if we need this or not
@@ -384,13 +366,8 @@ ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : p
 	}
 
 	// Do this AFTER setting preprocessor options
-    if(is_obj) {
-        pimpl->clang.createPreprocessor();
-        pimpl->clang.setASTContext(&pimpl->ast_unit.getASTUnit()->getASTContext());
-	} else {
-        pimpl->clang.createPreprocessor();
-        pimpl->clang.createASTContext();
-	}
+	pimpl->clang.createPreprocessor();
+	pimpl->clang.createASTContext();
 
 	//FIXME why is this needed?
 	getPreprocessor().getBuiltinInfo().InitializeBuiltins(
@@ -399,13 +376,11 @@ ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : p
 	);
 
 	//pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
-	if (config.getFiles().size() == 1 && !is_obj) {
-		const FileEntry *FileIn = pimpl->clang.getFileManager().getFile(config.getFile());
-		pimpl->clang.getSourceManager().createMainFileID(FileIn);
-		pimpl->clang.getDiagnosticClient().BeginSourceFile(
-											pimpl->clang.getLangOpts(),
-											&pimpl->clang.getPreprocessor());
-	}
+	const FileEntry *FileIn = pimpl->clang.getFileManager().getFile(file.string());
+	pimpl->clang.getSourceManager().createMainFileID(FileIn);
+	pimpl->clang.getDiagnosticClient().BeginSourceFile(
+										pimpl->clang.getLangOpts(),
+										&pimpl->clang.getPreprocessor());
 
 	if (VLOG_IS_ON(2)) {
 		printHeader (getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts ());
