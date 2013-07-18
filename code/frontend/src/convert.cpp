@@ -176,53 +176,70 @@ tu::IRTranslationUnit Converter::convert() {
 		}
 	} typeVisitor(*this);
 
-	llvm::cast<clang::Decl>(declContext)->dump();
-
 	typeVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
-
-//std::cout << getIRTranslationUnit() << "\n";
-
-//	declContext->dump();
-
-//	typeVisitor.Visit(declContext);
-
-//	void IndexingContext::indexDeclContext(const DeclContext *DC) {
-//	  for (clang::DeclContext::Decl_iterator I = DC->decls_begin(), E = DC->decls_end(); I != E; ++I) {
-//	    indexDecl(*I);
-//	  }
-//	}
-//
-//
-//
-//
-//	void GlobalVarCollector:perator()(const TranslationUnitPtr& tu){
-//
-//		VLOG(1) << " ************* analyze: " << tu->getFileName() << " for globals  ***************";
-//		const ClangCompiler& compiler = tu->getCompiler();
-//
-//		clang::TranslationUnitDecl* tuDecl = compiler.getASTContext().getTranslationUnitDecl();
-//		assert(tuDecl && "AST has not being build");
-//
-//		clang:eclContext* ctx= clang::TranslationUnitDecl::castToDeclContext (tuDecl);
-//		assert(ctx && "AST has no decl context");
-//
-//		class typeVisitor : public clang:eclVisitor<typeVisitor> {
-//
-//				public:
-//
-//				void VisitTypedefName(clang::TypeDecl* type){
-//					std::cout << " TYPE! " << std::endl;
-//				}
-//				void Visit(clang:eclContext* ctx){
-//					clang:eclVisitor<typeVisitor>::Visit( llvm::cast<clang:ecl>(ctx));
-//				}
-//			};
 
 	// TODO: collect all type definitions
 
-	// TODO: collect all global declarations
+	// collect all global declarations
+	struct GlobalVisitor : public clang::RecursiveASTVisitor<GlobalVisitor> {
+
+		Converter& converter;
+		GlobalVisitor(Converter& converter) : converter(converter) {}
+
+		bool VisitVarDecl(clang::VarDecl* var) {
+			if (!var->hasGlobalStorage()) return true;
+			if (var->hasExternalStorage()) return true;
+
+			auto builder = converter.getIRBuilder();
+
+			auto type = converter.convertType(var->getType().getTypePtr());
+			if (var->isStaticLocal()) {
+				const auto& ext = converter.getNodeManager().getLangExtension<core::lang::StaticVariableExtension>();
+				type = ext.wrapStaticType(type);
+			}
+
+			// all globals are mutable ..
+			type = builder.refType(type);
+
+			auto literal = builder.literal(type, var->getQualifiedNameAsString());
+			if (insieme::utils::set::contains(converter.getThreadprivates(), var)) {
+				omp::addThreadPrivateAnnotation(literal);
+			}
+
+			// and get the initial value
+			core::ExpressionPtr initValue;
+			if (var->hasDefinition() && var->hasInit() && !var->isStaticLocal()) {
+				initValue = converter.convertInitExpr(var->getType().getTypePtr(), var->getInit(), type, true);
+			}
+
+			converter.getIRTranslationUnit().addGlobal(literal, initValue);
+			return true;
+		}
+	} varVisitor(*this);
+
+	varVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
 
 	// TODO: collect all function declarations
+
+	// collect all global declarations
+	struct FunctionVisitor : public clang::RecursiveASTVisitor<FunctionVisitor> {
+
+		Converter& converter;
+		FunctionVisitor(Converter& converter) : converter(converter) {}
+
+		bool VisitFunctionDecl(clang::FunctionDecl* decl) {
+			// if you see problems, try isThisDeclarationADefinition() - your welcome
+			if (!decl->doesThisDeclarationHaveABody()) return true;
+			std::cout << "Processing " << decl << "\n";
+			converter.convertFunctionDecl(decl);
+			return true;
+		}
+	} funVisitor(*this);
+
+	funVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
+
+
+	std::cout << "Result: " << getIRTranslationUnit() << "\n";
 
 	return irTranslationUnit;
 }
@@ -1095,7 +1112,13 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 //
 core::TypePtr Converter::convertType(const clang::Type* type) {
 	assert(type && "Calling convertType with a NULL pointer");
-	return typeConvPtr->convert( type );
+	auto res = typeConvPtr->convert( type );
+	if (core::GenericTypePtr genType = res.isa<core::GenericTypePtr>()) {
+		auto substitution = getIRTranslationUnit()[genType];
+		if (substitution) return substitution;
+	}
+	return res;
+//	return typeConvPtr->convert( type );
 }
 
 namespace {
@@ -1297,9 +1320,10 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 	// obtain function type
 	auto funcTy = convertFunctionType(funcDecl);
+	auto name = funcDecl->getQualifiedNameAsString();
 
 	// check whether function has already been converted
-	auto pos = lambdaExprCache.find(funcDecl);
+	auto pos = lambdaExprCache.find(name);
 	if (pos != lambdaExprCache.end()) {
 		return pos->second;		// done
 	}
@@ -1307,7 +1331,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 	// check whether function should be intersected
 	if( getProgram().getInterceptor().isIntercepted(funcDecl) ) {
 		auto irExpr = getProgram().getInterceptor().intercept(funcDecl, *this);
-		lambdaExprCache[funcDecl] = irExpr;
+		lambdaExprCache[name] = irExpr;
 		VLOG(2) << "\tintercepted: " << irExpr;
 		return irExpr;
 	}
@@ -1320,7 +1344,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		core::ExpressionPtr retExpr = builder.literal(callName, funcTy);
 
 		VLOG(2) << retExpr << " " << retExpr.getType();
-		lambdaExprCache[funcDecl] = retExpr;
+		lambdaExprCache[name] = retExpr;
 		return retExpr;
 	}
 
@@ -1330,7 +1354,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		if (funcDecl->getNameAsString() == "free") {
 			//handle special function -- "free" -- here instead of in CallExr
 			auto retExpr = builder.getLangBasic().getRefDelete();
-			lambdaExprCache[funcDecl] = retExpr;
+			lambdaExprCache[name] = retExpr;
 			return retExpr;
 		}
 
@@ -1340,7 +1364,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 		// attach header file info
 		utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs());
-		lambdaExprCache[funcDecl] = retExpr;
+		lambdaExprCache[name] = retExpr;
 		return retExpr;
 	}
 
@@ -1349,19 +1373,9 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 	// -- assume function is recursive => add variable to lambda expr cache --
 
 	// obtain recursive variable to be used
-	core::VariablePtr recVar;
-	{
-		auto pos = recVarExprMap.find(funcDecl);
-		if (pos != recVarExprMap.end()) {
-			recVar = pos->second;
-		} else {
-			recVar = builder.variable(funcTy, recVarExprMap.size());
-			recVarExprMap[funcDecl] = recVar;
-		}
-	}
-	assert(recVar && "It should be present now!");
-	assert(lambdaExprCache.find(funcDecl) == lambdaExprCache.end());
-	lambdaExprCache[funcDecl] = recVar;
+	core::LiteralPtr symbol = builder.literal(funcTy, funcDecl->getQualifiedNameAsString());
+	assert(lambdaExprCache.find(name) == lambdaExprCache.end());
+	lambdaExprCache[name] = symbol;
 
 	// -- conduct the conversion of the lambda --
 	core::LambdaExprPtr lambda;
@@ -1405,28 +1419,24 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		}
 
 		// build the resulting lambda
-		auto lan = builder.lambda(funcTy, params, (body.isa<core::CompoundStmtPtr>())?body.as<core::CompoundStmtPtr>():builder.compoundStmt(body));
-		auto def = builder.lambdaDefinition(toVector(builder.lambdaBinding(recVar, lan)));
-		lambda = builder.lambdaExpr(funcTy, recVar, def);
-
+		lambda = builder.lambdaExpr(funcTy, params, body);
 		VLOG(2) << lambda << " + function declaration: " << funcDecl;
 	}
 
-	// check whether the result is a recursive function and fix it if necessary
-	lambda = fixRecursion(lambda);
-
 	// update cache
-	assert_eq(lambdaExprCache[funcDecl], recVar) << "Don't touch this!";
-	if (!core::analysis::hasFreeVariables(lambda)) {
-		// if the conversion is complete
-		lambdaExprCache[funcDecl] = lambda;
-	} else {
-		// remove temporary from the cache
-		lambdaExprCache.erase(funcDecl);
-	}
+	assert_eq(lambdaExprCache[name], symbol) << "Don't touch this!";
+
+	// finally, add some sugar
+	attachFuncAnnotations(lambda, funcDecl);
+
+	// if the conversion is complete
+	lambdaExprCache[name] = symbol;
+
+	// register function within resulting translation unit
+	getIRTranslationUnit().addFunction(symbol, lambda);
 
 	// annotate and return results
-	return attachFuncAnnotations(lambda, funcDecl);
+	return symbol;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

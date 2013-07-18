@@ -39,22 +39,27 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/types/subtyping.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+
 namespace insieme {
 namespace frontend {
 namespace tu {
 
 	void IRTranslationUnit::addGlobal(const Global& global) {
-		assert(core::types::isSubTypeOf(global.second->getType(), global.first->getType()));
+		assert(!global.second || core::types::isSubTypeOf(global.second->getType(), global.first->getType()));
 		assert(!any(globals, [&](const Global& cur)->bool { return *global.first == *cur.first; }));
 		globals.push_back(global);
 	}
 
 	std::ostream& IRTranslationUnit::printTo(std::ostream& out) const {
-		return out << "TU(\n\t"
-				<< join("\n\t", types, [](std::ostream& out, const std::pair<core::GenericTypePtr, core::TypePtr>& cur) { out << *cur.first << " => " << *cur.second; })
-				<< ",\n "
-				<< join("\n\t", functions, [](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << " => " << *cur.second; })
-				<< ",\n " << globals << ")";
+		static auto print = [](const core::NodePtr& node) { return core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::NO_LET_BINDINGS | core::printer::PrettyPrinter::PRINT_SINGLE_LINE); };
+		return out << "TU(\n\tTypes:\n\t\t"
+				<< join("\n\t\t", types, [&](std::ostream& out, const std::pair<core::GenericTypePtr, core::TypePtr>& cur) { out << *cur.first << " => " << *cur.second; })
+				<< ",\n\tGlobals:\n\t\t"
+				<< join("\n\t\t", globals, [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << ":" << *cur.first->getType() << " => "; if (cur.second) out << print(cur.second); else out << "<uninitalized>"; })
+				<< ",\n\tFunctions:\n\t\t"
+				<< join("\n\t\t", functions, [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << " => " << print(cur.second); })
+				<< ")";
 	}
 
 	IRTranslationUnit merge(const IRTranslationUnit& a, const IRTranslationUnit& b) {

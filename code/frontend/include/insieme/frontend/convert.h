@@ -93,8 +93,7 @@ class Converter :  boost::noncopyable {
 	/**
 	 * Stores the generated IR for function declarations
 	 */
-	typedef std::map<const clang::FunctionDecl*,
-			insieme::core::ExpressionPtr> LambdaExprMap;
+	typedef std::map<const string, insieme::core::ExpressionPtr> LambdaExprMap;
 	LambdaExprMap lambdaExprCache;
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

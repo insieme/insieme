@@ -39,7 +39,7 @@ struct c {
 	int b;
 };
 
-int x;
+int counter;
 
 typedef struct {
 	int a;
@@ -64,9 +64,46 @@ class List {
 
 List fullList;
 
+
+class Even;
+class Odd;
+
+class Even { Odd* next; };
+class Odd { Even* next; };
+
+
+int sum(int* l, int s);
+
+int sum(int* l, int s) {
+	int res = 0;
+	for (int i=0; i<s; i++) {
+		res += l[i];
+	}
+	return res;
+}
+
+int fib(int x) {
+	if (x <= 0) return 1;
+	return x * fib(x-1);
+}
+
+int even(int);
+int odd(int);
+
+int even(int x) {
+	if (x == 0) return true;
+	return odd(x-1);
+}
+
+int odd(int x) {
+	if (x == 0) return false;
+	return even(x-1);
+}
+
+
 int main() {
 
-	static double PI = 3;
+//	static double PI = 3;
 
 	struct C {
 

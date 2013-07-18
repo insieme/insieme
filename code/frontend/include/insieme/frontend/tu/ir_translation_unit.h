@@ -103,7 +103,7 @@ namespace tu {
 			functions.insert( { symbol, definition } );
 		}
 
-		void addGlobal(const core::LiteralPtr& symbol, const core::ExpressionPtr& definition) {
+		void addGlobal(const core::LiteralPtr& symbol, const core::ExpressionPtr& definition = core::ExpressionPtr()) {
 			addGlobal(Global(symbol, definition));
 		}
 
