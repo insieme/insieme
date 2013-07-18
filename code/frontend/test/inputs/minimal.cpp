@@ -39,6 +39,8 @@ struct c {
 	int b;
 };
 
+int x;
+
 typedef struct {
 	int a;
 } X;
@@ -60,7 +62,11 @@ class List {
 	List* next;
 };
 
+List fullList;
+
 int main() {
+
+	static double PI = 3;
 
 	struct C {
 
