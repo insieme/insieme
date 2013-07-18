@@ -1228,9 +1228,6 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 	VLOG(1) << "======================== FUNC: "<< funcDecl->getNameAsString() << " ==================================";
 
-	// move to the proper definition
-	auto funcDef = getProgram().getIndexer().getDefinitionFor(funcDecl);
-	if (funcDef) funcDecl = llvm::cast<clang::FunctionDecl>(funcDef); 		// just work with the defining one if present
 	// obtain function type
 	auto funcTy = convertFunctionType(funcDecl);
 
@@ -1296,8 +1293,8 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		}
 	}
 	assert(recVar && "It should be present now!");
-	assert(ctx.lambdaExprCache.find(funcDecl) == ctx.lambdaExprCache.end());
-	ctx.lambdaExprCache[funcDecl] = recVar;
+	assert(lambdaExprCache.find(funcDecl) == lambdaExprCache.end());
+	lambdaExprCache[funcDecl] = recVar;
 
 	// -- conduct the conversion of the lambda --
 	core::LambdaExprPtr lambda;
@@ -1507,7 +1504,6 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 //
 //	return (core::transform::insert ( mainFunc->getNodeManager(), core::LambdaExprAddress(mainFunc)->getBody(), inits, 0)).as<core::LambdaExprPtr>();
 //}
->>>>>>> b0333993bd47833f78999c53e3b9f3f2af250536:code/frontend/src/convert.cpp
 
 } // End conversion namespace
 } // End frontend namespace

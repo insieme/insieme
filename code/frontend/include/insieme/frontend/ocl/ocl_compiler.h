@@ -41,6 +41,8 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_program.h"
 
+#include "insieme/frontend/convert.h"
+
 namespace insieme {
 namespace frontend {
 namespace ocl {
