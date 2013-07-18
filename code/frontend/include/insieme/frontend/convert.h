@@ -55,8 +55,6 @@
 // FIXME: cleanup includes and stuff, find tradeof between compilation time and code complexity
 // Forward declarations
 namespace clang {
-class ASTContext;
-class DeclGroupRef;
 class FunctionDecl;
 class InitListExpr;
 } // End clang namespace
@@ -118,12 +116,6 @@ class Converter :  boost::noncopyable {
 	typedef const vector<core::VariablePtr>* ParameterList;
 	ParameterList curParameter;
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// 						Recursive Type resolution
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	typedef std::map<const clang::Type*, insieme::core::TypePtr> TypeCache;
-	TypeCache typeCache;
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 						Specifically marked Objects

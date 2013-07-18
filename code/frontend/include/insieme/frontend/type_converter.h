@@ -86,8 +86,11 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Converter::TypeConverter {
 
+	typedef std::map<const clang::Type*, insieme::core::TypePtr> TypeCache;
+	TypeCache typeCache;
+
 protected:
-	Converter& 					convFact;
+	Converter& 							convFact;
 	core::NodeManager& 					mgr;
 	const core::IRBuilder& 				builder;
 	const core::lang::BasicGenerator& 	gen;
