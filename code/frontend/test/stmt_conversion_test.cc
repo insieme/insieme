@@ -103,20 +103,16 @@ TEST(StmtConversion, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/stmt.c") );
+	fe::Program prog(manager, SRC_DIR "/inputs/stmt.c");
 	
-	prog.analyzeFuncDependencies();
-
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
-		fe::conversion::ConversionFactory convFactory( mgr, prog );
-		convFactory.setTranslationUnit(&tu);
+		fe::conversion::Converter convFactory( mgr, prog );
 
 		if(tp.isStatement()) {
 			StatementPtr&& stmt = convFactory.convertStmt( tp.getStatement() );

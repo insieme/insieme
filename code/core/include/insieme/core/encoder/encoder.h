@@ -436,62 +436,80 @@ namespace encoder {
 
 	ADD_EXPRESSION_CONVERTER(ExpressionPtr);
 	ADD_EXPRESSION_CONVERTER(LambdaExprPtr);
+	ADD_EXPRESSION_CONVERTER(LiteralPtr);
 
 	// --------------------------------------------------------------------
 	//       Add support for encoding of types within expressions
 	// --------------------------------------------------------------------
 
-	template<>
-	struct type_factory<core::TypePtr> {
-		core::TypePtr operator()(core::NodeManager& manager) const {
-			assert(false && "Not applicable in the general case!");
-			throw InvalidExpression("Cannot define generic type for all types!");
+	#define ADD_TYPE_CONVERTER(_TYPE) \
+		template<> \
+		struct type_factory<_TYPE> { \
+			core::TypePtr operator()(core::NodeManager& manager) const { \
+				return GenericType::get(manager, "encoded_" #_TYPE); \
+			} \
+		}; \
+		\
+		template<> \
+		struct is_encoding_of<_TYPE> { \
+			bool operator()(const core::ExpressionPtr& expr) const { \
+				IRBuilder builder(expr->getNodeManager()); \
+				auto resType = builder.genericType("encoded_" #_TYPE); \
+				auto alpha = builder.typeVariable("a"); \
+				auto wrapFun = builder.literal("wrap_" #_TYPE, builder.functionType(alpha, resType)); \
+				auto nullFun = builder.literal("null_" # _TYPE, builder.functionType(TypeList(), resType)); \
+				if (core::analysis::isCallOf(expr, nullFun)) return true; \
+				if (!core::analysis::isCallOf(expr, wrapFun)) return false; \
+				\
+				auto arg = expr.as<CallExprPtr>()[0]; \
+				if (arg->getNodeType() != core::NT_Literal) { \
+					return false; \
+				} \
+				 \
+				const core::TypePtr& type = arg->getType(); \
+				if (type->getNodeType() != core::NT_GenericType) { \
+					return false; \
+				} \
+				 \
+				const core::GenericTypePtr& genType = type.as<GenericTypePtr>(); \
+				return genType->getName()->getValue() == "type" && \
+						genType->getTypeParameter().size() == static_cast<std::size_t>(1) && \
+						genType->getTypeParameter()[0].isa<_TYPE>() && \
+						genType->getIntTypeParameter().empty(); \
+			} \
+		}; \
+		\
+		template<> \
+		struct value_to_ir_converter<_TYPE> { \
+			core::ExpressionPtr operator()(core::NodeManager& manager, const _TYPE& value) const { \
+				IRBuilder builder(manager); \
+				auto resType = builder.genericType("encoded_" #_TYPE); \
+				if (!value) { \
+					auto nullFun = builder.literal("null_" # _TYPE, builder.functionType(TypeList(), resType)); \
+					return builder.callExpr(resType, nullFun); \
+				} \
+				auto alpha = builder.typeVariable("a"); \
+				auto wrapFun = builder.literal("wrap_" #_TYPE, builder.functionType(alpha, resType)); \
+				return builder.callExpr(resType, wrapFun, builder.getTypeLiteral(value)); \
+			} \
+		}; \
+		\
+		template<> \
+		struct ir_to_value_converter<_TYPE> { \
+			_TYPE operator()(const core::ExpressionPtr& expr) const { \
+				assert(is_encoding_of<_TYPE>()(expr) && "Invalid encoding!"); \
+				IRBuilder builder(expr->getNodeManager()); \
+				auto resType = builder.genericType("encoded_" #_TYPE); \
+				auto nullFun = builder.literal("null_" # _TYPE, builder.functionType(TypeList(), resType)); \
+				if (core::analysis::isCallOf(expr, nullFun)) { \
+					return _TYPE(); \
+				} \
+				return analysis::getRepresentedType(expr.as<CallExprPtr>().getArgument(0)).as<_TYPE>(); \
+			} \
 		}
-	};
 
-	template<>
-	struct value_to_ir_converter<core::TypePtr> {
-		core::ExpressionPtr operator()(core::NodeManager& manager, const core::TypePtr& value) const {
-			core::TypePtr resType = core::GenericType::get(manager, "type", toVector(value));
-			return core::Literal::get(manager, resType, toString(*value));
-		}
-	};
-
-	template<>
-	struct ir_to_value_converter<core::TypePtr> {
-		core::TypePtr operator()(const core::ExpressionPtr& expr) const {
-			// encoding has to be a literal
-			if (!isEncodingOf<core::TypePtr>(expr)) {
-				throw InvalidExpression(expr);
-			}
-
-			// check type of literal
-			const core::GenericTypePtr& genType = static_pointer_cast<const GenericType>(expr->getType());
-			return genType->getTypeParameter()[0];
-		}
-	};
-
-	template<>
-	struct is_encoding_of<core::TypePtr> {
-		bool operator()(const core::ExpressionPtr& expr) const {
-			// encoding has to be a literal
-			if (expr->getNodeType() != core::NT_Literal) {
-				return false;
-			}
-
-			// the literal has to have the right type
-			const core::TypePtr& type = expr->getType();
-			if (type->getNodeType() != core::NT_GenericType) {
-				return false;
-			}
-
-			// check type of literal
-			const core::GenericTypePtr& genType = static_pointer_cast<const GenericType>(type);
-			return genType->getName()->getValue() == "type" &&
-					genType->getTypeParameter().size() == static_cast<std::size_t>(1) &&
-					genType->getIntTypeParameter().empty();
-		}
-	};
+	ADD_TYPE_CONVERTER(TypePtr);
+	ADD_TYPE_CONVERTER(GenericTypePtr);
 
 } // end namespace lists
 } // end namespace core

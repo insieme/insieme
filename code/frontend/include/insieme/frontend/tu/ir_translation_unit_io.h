@@ -36,79 +36,29 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-#include <map>
-
-#include <boost/filesystem/path.hpp>
-
-#include "insieme/frontend/clang.h"
-
-#include "insieme/core/forward_decls.h"
-#include "insieme/core/ir_program.h"
+#include "insieme/frontend/tu/ir_translation_unit.h"
 
 namespace insieme {
-
-namespace core {
-	// some forward declarations
-	class NodeManager;
-	class Program;
-	template<typename T> class Pointer;
-	typedef Pointer<const Program> ProgramPtr;
-}
-
 namespace frontend {
+namespace tu {
 
 	/**
-	 * Used to report a parsing error occurred during the parsing of the input file
+	 * Dumps the given translation unit to the given output stream.
+	 *
+	 * @param out the target stream
+	 * @param unit the translation unit to be dumped
 	 */
-	struct ClangParsingError: public std::logic_error {
-		ClangParsingError(const path& file_name): std::logic_error(file_name.string()) { }
-	};
+	void dump(std::ostream& out, const IRTranslationUnit& unit);
 
+	/**
+	 * Load a translation unit from the given input stream.
+	 *
+	 * @param in the stream to read from
+	 * @param manager the node manager to be utilized for creating resulting nodes
+	 * @return the restored translation unit
+	 */
+	IRTranslationUnit load(std::istream& in, core::NodeManager& manager);
 
-	using std::vector;
-	using std::string;
-
-	class ConversionJob : public ConversionSetup {
-
-		/**
-		 * The translation units to be converted.
-		 */
-		path file;
-
-	public:
-
-		/**
-		 * Creates a new conversion job covering a single file.
-		 */
-		ConversionJob(const path& path) : file(path) {}
-
-		/**
-		 * Obtains the one input file covered by this conversion job if there is only one file.
-		 */
-		const path& getFile() const {
-			return file;
-		}
-
-		/**
-		 * Exchanges the files covered by this conversion job by the given file.
-		 */
-		void setFile(const path& file) {
-			this->file = file;
-		}
-
-		/**
-		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
-		 *
-		 * @param manager the node manager to be used for building the IR
-		 * @return the resulting, converted program
-		 * @throws an exception if the conversion fails.
-		 */
-		core::ProgramPtr execute(core::NodeManager& manager);
-
-	};
-
-
+} // end namespace tu
 } // end namespace frontend
 } // end namespace insieme

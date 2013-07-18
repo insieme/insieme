@@ -50,7 +50,7 @@ namespace insieme {
 namespace frontend {
 
 namespace conversion {
-class ConversionFactory;
+class Converter;
 }
 
 namespace mpi {
@@ -90,7 +90,7 @@ void registerPragmaHandler(clang::Preprocessor& pp);
 void attachMPIStmtPragma( 
 		const core::NodePtr& node, 
 		const clang::Stmt* clangNode, 
-		conversion::ConversionFactory& fact 
+		conversion::Converter& fact 
 	);
 
 } // end mpi namespace

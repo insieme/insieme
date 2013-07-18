@@ -110,7 +110,7 @@ void Interceptor::loadConfigSet(std::set<std::string> tI) {
 	rx = boost::regex("("+toString(join(")|(", toIntercept))+")");
 }
 
-insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::frontend::conversion::ConversionFactory& convFact) {
+insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
 
 	InterceptTypeVisitor iTV(convFact, *this);
 	// resolve type and save in cache
@@ -171,7 +171,7 @@ bool Interceptor::isIntercepted(const clang::FunctionDecl* decl) const {
 	return regex_match(decl->getQualifiedNameAsString(), rx);
 }
 
-insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::ConversionFactory& convFact) {
+insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact) {
 	//FIXME create generic type for templates
 	/* get template decl and convert its type -> add to converttype template handling...
 		* if not specialized -> use typeVariable
@@ -223,7 +223,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 }
 
 
-InterceptTypeVisitor::InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const Interceptor& interceptor)
+InterceptTypeVisitor::InterceptTypeVisitor(insieme::frontend::conversion::Converter& convFact, const Interceptor& interceptor)
 	: convFact(convFact), builder(convFact.getIRBuilder()), interceptor(interceptor) {}
 
 /*

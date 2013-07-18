@@ -217,7 +217,7 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 }
 
 
-void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::ConversionFactory& convFact) {
+void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
 
     insieme::core::NodeAnnotationPtr annot;
 
@@ -262,7 +262,7 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
 }
 
 
-void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::ConversionFactory& convFact) {
+void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::Converter& convFact) {
     insieme::core::NodeAnnotationPtr annot;
 
     // check if there is a datarange annotation
@@ -315,7 +315,7 @@ void attach(const clang::SourceLocation& 	startLoc,
 			const TransformationType& 		trans, 
 			const ValueVect& 				values,
 			const core::NodePtr& 			node, 
-			conversion::ConversionFactory& 	fact) 
+			conversion::Converter& 	fact) 
 {
 	
 	annotations::TransformationHint::Type type = annotations::TransformationHint::LOOP_FUSE;
@@ -363,8 +363,8 @@ void attach(const clang::SourceLocation& 	startLoc,
 	std::pair<clang::SourceLocation, clang::SourceLocation>&& loc = std::make_pair(startLoc, endLoc);
 
 	node->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
-			convertClangSrcLoc(fact.getCurrentSourceManager(), loc.first),
-			convertClangSrcLoc(fact.getCurrentSourceManager(), loc.second))
+			convertClangSrcLoc(fact.getSourceManager(), loc.first),
+			convertClangSrcLoc(fact.getSourceManager(), loc.second))
 	);
 
 }
@@ -374,7 +374,7 @@ void attach(const clang::SourceLocation& startLoc,
 			unsigned id,
 		    const StrValueVect& values,
 			const core::NodePtr& node, 
-			conversion::ConversionFactory& fact) 
+			conversion::Converter& fact) 
 {
 	node->addAnnotation( std::make_shared<annotations::Info>(id, values) );
 }

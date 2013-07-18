@@ -92,7 +92,7 @@ core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::T
 core::ExpressionPtr getCArrayElemRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr);
 
 core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr refVecTy,
-		const core::IRBuilder& builder, const frontend::conversion::ConversionFactory& convFact);
+		const core::IRBuilder& builder, const frontend::conversion::Converter& convFact);
 
 /**
  * builds a member access expresion, does conversion needed on base regarding pointer usage, and in
@@ -128,7 +128,7 @@ namespace conversion {
             parentExpr->dump(); \
         } \
         VLOG(1) << "-> at location: (" <<	\
-                    utils::location(parentExpr->getLocStart(), convFact.getCurrentSourceManager()) << "); "; \
+                    utils::location(parentExpr->getLocStart(), convFact.getSourceManager()) << "); "; \
         VLOG(1) << "Converted into IR expression: "; \
         if(expr) { \
             VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )"; \
@@ -139,10 +139,9 @@ namespace conversion {
 //---------------------------------------------------------------------------------------------------------------------
 //										BASE EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::ExprConverter {
+class Converter::ExprConverter {
 protected:
-	ConversionFactory& convFact;
-	ConversionContext& ctx;
+	Converter& convFact;
 
 	core::NodeManager& 					mgr;
 	const core::IRBuilder& 				builder;
@@ -235,9 +234,8 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 public:
 	// CallGraph for functions, used to resolved eventual recursive functions
 
-	ExprConverter(ConversionFactory& convFact, Program& program) :
+	ExprConverter(Converter& convFact) :
 		convFact(convFact),
-		ctx(convFact.ctx),
 		mgr(convFact.mgr),
 		builder(convFact.builder),
 		gen(convFact.builder.getLangBasic())
@@ -386,11 +384,11 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //										C EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::CExprConverter: public ExprConverter, public clang::ConstStmtVisitor<CExprConverter, core::ExpressionPtr> {
+class Converter::CExprConverter: public ExprConverter, public clang::ConstStmtVisitor<CExprConverter, core::ExpressionPtr> {
 public:
 
-	CExprConverter(ConversionFactory& convFact, Program& program) :
-		ExprConverter(convFact, program) {}
+	CExprConverter(Converter& convFact) :
+		ExprConverter(convFact) {}
 	virtual ~CExprConverter() {};
 
 	CALL_BASE_EXPR_VISIT(ExprConverter, IntegerLiteral)
@@ -422,15 +420,15 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //										CXX EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::CXXExprConverter :
+class Converter::CXXExprConverter :
 	public ExprConverter,
 	public clang::ConstStmtVisitor<CXXExprConverter, core::ExpressionPtr>
 {
 
 public:
 
-	CXXExprConverter(ConversionFactory& ConvFact, Program& program) :
-		ExprConverter(ConvFact, program){}
+	CXXExprConverter(Converter& ConvFact) :
+		ExprConverter(ConvFact){}
 	virtual ~CXXExprConverter() {}
 
 	CALL_BASE_EXPR_VISIT(ExprConverter, IntegerLiteral)

@@ -50,7 +50,7 @@ namespace insieme {
 namespace frontend {
 
 namespace conversion {
-class ConversionFactory;
+class Converter;
 }
 
 namespace omp {
@@ -73,7 +73,7 @@ public:
 	/**
 	 * Converts the pragma into an annotation which will be attached to the IR.
 	 */
-	virtual omp::AnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const = 0;
+	virtual omp::AnnotationPtr toAnnotation(conversion::Converter& fact) const = 0;
 
 	const pragma::MatchMap& getMap() const { return mMap; }
 };
@@ -85,15 +85,15 @@ void registerPragmaHandlers(clang::Preprocessor& pp);
 
 core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& 		irNode, 
 									    const clang::Stmt* 				clangNode, 
-										conversion::ConversionFactory& 	fact);
+										conversion::Converter& 	fact);
 
 core::StatementPtr attachOmpAnnotation(const core::StatementPtr& 		irNode, 
 									   const clang::Stmt* 				clangNode, 
-									   conversion::ConversionFactory&	fact);
+									   conversion::Converter&	fact);
 
 core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& 		irNode, 
 									    const clang::Decl* 				clangDecl, 
-									    conversion::ConversionFactory&	fact);
+									    conversion::Converter&	fact);
 
 void collectThreadPrivate(const pragma::PragmaStmtMap& map, std::set<const clang::VarDecl*>& vars);
 

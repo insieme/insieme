@@ -34,49 +34,6 @@
  * regarding third party software licenses.
  */
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/Expr.h>
-#pragma GCC diagnostic pop
-
-#pragma once 
-
-namespace insieme {
-namespace frontend {
-
-
-//FORWARD DECLARATION
-namespace conversion {
-	class Converter;
+int main() {
+	int a = 1 + 2;
 }
-
-namespace utils {
-
-	std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGenerator& gen);
-
-	/**
-	 * casts to bool an expression
-	 */
-	core::ExpressionPtr castToBool (const core::ExpressionPtr& expr);
-
-	/**
-	 * cast between 2 scalar types an IR expression
-	 */
-	core::ExpressionPtr castScalar(const core::TypePtr& targetTy, 
-								   const core::ExpressionPtr& expr);
-
-	/**
-	 * Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
-	 *
-	 * @param convFact, conversionFactor holding all converters and helpers
-	 * @param castExpr the clang cast expression
-	 * return right typed expression
-	 */
-	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
-											  const clang::CastExpr* castExpr);
-
-} // end utils namespace 
-} // end frontend namespace
-} // end insisme namespace

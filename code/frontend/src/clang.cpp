@@ -34,80 +34,39 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <boost/filesystem/path.hpp>
-
 #include "insieme/frontend/clang.h"
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/core/ir_program.h"
+#include "insieme/utils/compiler/compiler.h"
+
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/compiler.h"
 
 namespace insieme {
-
-namespace core {
-	// some forward declarations
-	class NodeManager;
-	class Program;
-	template<typename T> class Pointer;
-	typedef Pointer<const Program> ProgramPtr;
-}
-
 namespace frontend {
 
-	/**
-	 * Used to report a parsing error occurred during the parsing of the input file
-	 */
-	struct ClangParsingError: public std::logic_error {
-		ClangParsingError(const path& file_name): std::logic_error(file_name.string()) { }
-	};
+	const unsigned ConversionSetup::DEFAULT_FLAGS = PrintDiag;
+
+	ConversionSetup::ConversionSetup(const vector<path>& includeDirs)
+		: includeDirs(includeDirs),
+		  stdLibIncludeDirs(::transform(insieme::utils::compiler::getDefaultCppIncludePaths(), [](const string& cur) { return path(cur); })),
+		  standard(C99),
+		  definitions(),
+		  flags(DEFAULT_FLAGS) {};
 
 
-	using std::vector;
-	using std::string;
+	// ----------- conversion ------------
 
-	class ConversionJob : public ConversionSetup {
+	vector<tu::IRTranslationUnit> convert(core::NodeManager& manager, const vector<path>& units, const ConversionSetup& setup) {
+		return ::transform(units, [&](const path& cur) { return convert(manager, cur, setup); });
+	}
 
-		/**
-		 * The translation units to be converted.
-		 */
-		path file;
 
-	public:
-
-		/**
-		 * Creates a new conversion job covering a single file.
-		 */
-		ConversionJob(const path& path) : file(path) {}
-
-		/**
-		 * Obtains the one input file covered by this conversion job if there is only one file.
-		 */
-		const path& getFile() const {
-			return file;
-		}
-
-		/**
-		 * Exchanges the files covered by this conversion job by the given file.
-		 */
-		void setFile(const path& file) {
-			this->file = file;
-		}
-
-		/**
-		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
-		 *
-		 * @param manager the node manager to be used for building the IR
-		 * @return the resulting, converted program
-		 * @throws an exception if the conversion fails.
-		 */
-		core::ProgramPtr execute(core::NodeManager& manager);
-
-	};
+	// TODO: collapse this with the program class ...
+	tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup) {
+		// just delegate operation to converter
+		Program program(manager, unit, setup);
+		return conversion::Converter(manager, program).convert();
+	}
 
 
 } // end namespace frontend

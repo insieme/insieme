@@ -34,81 +34,50 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/frontend/tu/ir_translation_unit_io.h"
 
-#include <string>
-#include <vector>
-#include <map>
+#include <tuple>
 
-#include <boost/filesystem/path.hpp>
+#include "insieme/core/ir.h"
 
-#include "insieme/frontend/clang.h"
+#include "insieme/core/dump/binary_dump.h"
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/core/ir_program.h"
+#include "insieme/core/encoder/encoder.h"
+#include "insieme/core/encoder/pointer_maps.h"
+#include "insieme/core/encoder/tuples.h"
+
 
 namespace insieme {
-
-namespace core {
-	// some forward declarations
-	class NodeManager;
-	class Program;
-	template<typename T> class Pointer;
-	typedef Pointer<const Program> ProgramPtr;
-}
-
 namespace frontend {
+namespace tu {
 
-	/**
-	 * Used to report a parsing error occurred during the parsing of the input file
-	 */
-	struct ClangParsingError: public std::logic_error {
-		ClangParsingError(const path& file_name): std::logic_error(file_name.string()) { }
-	};
+	// the type used for encoding a translation unit
+	typedef std::tuple<IRTranslationUnit::TypeMap, IRTranslationUnit::FunctionMap, IRTranslationUnit::GlobalsList> WrapperType;
 
+	void dump(std::ostream& out, const IRTranslationUnit& unit) {
+		core::NodeManager empty;
+		core::NodeManager localMgr((unit.empty()?empty:unit.getNodeManager()));
 
-	using std::vector;
-	using std::string;
+		// encode translation unit into an IR expression
+		auto encoded = core::encoder::toIR(localMgr, std::make_tuple(unit.getTypes(), unit.getFunctions(), unit.getGlobals()));
 
-	class ConversionJob : public ConversionSetup {
+		// dump IR expression
+		core::dump::binary::dumpIR(out, encoded);
+	}
 
-		/**
-		 * The translation units to be converted.
-		 */
-		path file;
+	IRTranslationUnit load(std::istream& in, core::NodeManager& manager) {
 
-	public:
+		// load encoded IR expression from stream
+		auto encoded = core::dump::binary::loadIR(in, manager).as<core::ExpressionPtr>();
 
-		/**
-		 * Creates a new conversion job covering a single file.
-		 */
-		ConversionJob(const path& path) : file(path) {}
+		// decode encoded IR
+		auto values = core::encoder::toValue<WrapperType>(encoded);
 
-		/**
-		 * Obtains the one input file covered by this conversion job if there is only one file.
-		 */
-		const path& getFile() const {
-			return file;
-		}
-
-		/**
-		 * Exchanges the files covered by this conversion job by the given file.
-		 */
-		void setFile(const path& file) {
-			this->file = file;
-		}
-
-		/**
-		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
-		 *
-		 * @param manager the node manager to be used for building the IR
-		 * @return the resulting, converted program
-		 * @throws an exception if the conversion fails.
-		 */
-		core::ProgramPtr execute(core::NodeManager& manager);
-
-	};
+		// build resulting translation unit
+		return IRTranslationUnit(std::get<0>(values), std::get<1>(values), std::get<2>(values));
+	}
 
 
+} // end namespace tu
 } // end namespace frontend
 } // end namespace insieme

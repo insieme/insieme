@@ -34,17 +34,22 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
+
+#include "insieme/frontend/clang.h"
+#include "insieme/frontend/clang_config.h"
 
 namespace insieme {
 namespace frontend {
 
-	class FrontendModule {
+	TEST(Clang, Minimal) {
+		core::NodeManager mgr;
 
+		auto tu = convert(mgr, path(SRC_DIR) / "minimal.c");
 
+		std::cout << tu << "\n";
+		EXPECT_FALSE(tu.getFunctions().empty());
+	}
 
-	};
-
-
-} // end namespace frontend
-} // end namespace insieme
+} // end frontend
+} // end insieme

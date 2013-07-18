@@ -91,10 +91,10 @@ namespace conversion {
         VLOG(1) << "**********************STMT*[class:'"<< parentStmt->getStmtClassName() <<"']**********************"; \
         if( VLOG_IS_ON(2) ) { \
             VLOG(2) << "Dump of clang statement:"; \
-            parentStmt->dump(convFact.getCurrentSourceManager()); \
+            parentStmt->dump(convFact.getSourceManager()); \
         } \
         VLOG(1) << "-> at location: (" \
-                << utils::location(parentStmt->getLocStart(), convFact.getCurrentSourceManager()) << "); "; \
+                << utils::location(parentStmt->getLocStart(), convFact.getSourceManager()) << "); "; \
         VLOG(1) << "Converted 'statement' into IR stmt: "; \
         VLOG(1) << "\t" << stmt << ""; \
         VLOG(1) << "****************************************************************************************"; \
@@ -103,16 +103,16 @@ namespace conversion {
 //---------------------------------------------------------------------------------------------------------------------
 //							BASE STMT CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::StmtConverter {
+class Converter::StmtConverter {
 
 protected:
-	ConversionFactory& 					convFact;
+	Converter& 					convFact;
 	core::NodeManager& 					mgr;
 	const core::IRBuilder& 				builder;
 	const core::lang::BasicGenerator& 	gen;
 
 public:
-	StmtConverter(ConversionFactory& convFact) :
+	StmtConverter(Converter& convFact) :
 		convFact(convFact), mgr(convFact.mgr),
 		builder(convFact.builder), gen(convFact.mgr.getLangBasic()) { }
 
@@ -187,16 +187,16 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //							C STMT CONVERTER -- takes care of C nodes
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::CStmtConverter :
-	public ConversionFactory::StmtConverter,
-	public clang::StmtVisitor<ConversionFactory::CStmtConverter, stmtutils::StmtWrapper>
+class Converter::CStmtConverter :
+	public Converter::StmtConverter,
+	public clang::StmtVisitor<Converter::CStmtConverter, stmtutils::StmtWrapper>
 {
 
 protected:
-	//ConversionFactory& convFact;
+	//Converter& convFact;
 
 public:
-	CStmtConverter(ConversionFactory& convFact) : StmtConverter(convFact) /*, convFact(convFact)*/ {
+	CStmtConverter(Converter& convFact) : StmtConverter(convFact) /*, convFact(convFact)*/ {
 	}
 	virtual ~CStmtConverter() {}
 
@@ -244,15 +244,15 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //							CXX STMT CONVERTER  -- takes care of CXX nodes and C nodes with CXX code mixed in
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::CXXStmtConverter:
-	public ConversionFactory::StmtConverter,
-	public clang::StmtVisitor<ConversionFactory::CXXStmtConverter, stmtutils::StmtWrapper>
+class Converter::CXXStmtConverter:
+	public Converter::StmtConverter,
+	public clang::StmtVisitor<Converter::CXXStmtConverter, stmtutils::StmtWrapper>
 {
 
-	ConversionFactory& ConvFact;
+	Converter& ConvFact;
 
 public:
-	CXXStmtConverter(ConversionFactory& ConvFact) :
+	CXXStmtConverter(Converter& ConvFact) :
 		StmtConverter(ConvFact), ConvFact(ConvFact) {
 	}
 	virtual ~CXXStmtConverter() {}

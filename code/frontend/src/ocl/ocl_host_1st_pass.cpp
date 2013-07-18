@@ -69,18 +69,14 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	for (size_t i = 0; i < nIncludes && check.fail(); ++i) {
 		check.close();
 		// try with include paths
-		path = job.getIncludeDirectories().at(i) + "/" + root;
+		path = (job.getIncludeDirectories().at(i) / root).string();
 		check.open(path);
 	}
 	// if there is still no match, try the paths of the input files
-	size_t nInputFiles = job.getFiles().size();
-	for (size_t i = 0; i < nInputFiles && check.fail(); ++i) {
-		// try the paths of the input files
-		string ifp = job.getFiles().at(i);
-		size_t slash = ifp.find_last_of("/");
-		path = ifp.substr(0u, slash + 1) + root;
-		check.open(path);
-	}
+	string ifp = job.getFile().string();
+	size_t slash = ifp.find_last_of("/");
+	path = ifp.substr(0u, slash + 1) + root;
+	check.open(path);
 
 	check.close();
 
@@ -90,14 +86,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	}
 
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
-
-
-	ConversionJob kernelJob = job;
-	kernelJob.setFile(path);
-	frontend::Program fkernels(builder.getNodeManager(), kernelJob);
-	fkernels.addTranslationUnit(kernelJob);
-
-	return fkernels.convert();
+	return toProgram(convert(builder.getNodeManager(), job.getFile(), job));
 }
 
 void tryStructExtract(ExpressionPtr& expr, IRBuilder& builder) {

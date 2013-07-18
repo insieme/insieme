@@ -62,16 +62,12 @@ TEST(Cilk, Pragmas) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	ConversionJob job;
-	job.setOption(ConversionJob::Cilk);
-	insieme::frontend::Program prog(manager, job);
+	ConversionSetup setup;
+	setup.setOption(ConversionSetup::Cilk);
+	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/hello.cilk", setup);
 
-	ConversionJob file = job;
-	file.setFile(SRC_DIR "/inputs/hello.cilk");
-	TranslationUnit& tu = prog.addTranslationUnit( file );
-
-	const auto& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
-	const ClangCompiler& comp = tu.getCompiler();
+	const auto& pl = prog.getPragmaList();
+	const ClangCompiler& comp = prog.getCompiler();
 
 
 	// check number of annotations
@@ -155,9 +151,8 @@ TEST(Cilk, Sema) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	ConversionJob job;
+	ConversionJob job(SRC_DIR "/inputs/hello.cilk");
 	job.setOption(ConversionJob::Cilk);
-	job.setFile(SRC_DIR "/inputs/hello.cilk");
 
 
 	// check proper encoding of cilk primitives

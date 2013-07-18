@@ -60,7 +60,7 @@ namespace insieme {
 namespace frontend {
 
 namespace conversion {
-class ConversionFactory;
+class Converter;
 }
 
 namespace analysis {

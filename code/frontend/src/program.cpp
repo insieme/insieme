@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -139,7 +139,7 @@ class TranslationUnitImpl: public insieme::frontend::TranslationUnit{
     insieme::frontend::InsiemeSema mSema;
 public:
 	TranslationUnitImpl(const ConversionJob& job):
-		insieme::frontend::TranslationUnit(job),
+		insieme::frontend::TranslationUnit(job, job.getFile()),
 		mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), emptyCons, true) {
 
     	// register 'omp' pragmas
@@ -161,14 +161,6 @@ public:
 		//clang::ASTConsumer emptyCons;
 		//insieme::frontend::utils::indexerASTConsumer consumer(indexer,
 	//									dynamic_cast<insieme::frontend::TranslationUnit*>(this));
-        if(!boost::algorithm::ends_with(job.getFile(),".o")) {
-            parseClangAST(mClang, &emptyCons, true, mPragmaList, mSema, job.hasOption(ConversionJob::DumpCFG));
-
-            if( mClang.getDiagnostics().hasErrorOccurred() ) {
-                // errors are always fatal!
-                throw ClangParsingError(mFileName);
-            }
-        }
 
 	}
 
@@ -182,32 +174,6 @@ public:
 	clang::DiagnosticsEngine& getDiagnostic() { return getCompiler().getDiagnostics(); }
 	const clang::DiagnosticsEngine& getDiagnostic() const { return getCompiler().getDiagnostics(); }
 
-	void storeUnit(const std::string& output_file) {
-        //if no output_file is specified the current file_name is taken and modified to .o extension
-        std::string raw_name = output_file;
-        if(output_file.size()==0) {
-            size_t lastslash = getFileName().find_last_of("/")+1;
-            size_t lastdot = getFileName().find_last_of(".");
-            if (lastdot == std::string::npos)
-                raw_name = getFileName();
-            raw_name = getFileName().substr(lastslash, lastdot-lastslash);
-            raw_name += ".o";
-        }
-        //if the original file was an insieme object file we don't need
-        //to recreate the ast_unit. We can call save to store the
-        //data in the given file name
-        if(!boost::algorithm::ends_with(getFileName(),".o")) {
-            llvm::SmallString<128> Buffer;
-            llvm::BitstreamWriter Stream(Buffer);
-            clang::ASTWriter Writer(Stream);
-            Writer.WriteAST(mSema, std::string(), 0, "", false);
-            if (!Buffer.empty()) {
-                getCompiler().getASTUnit()->setAST(Buffer.str());
-            }
-        }
-        getCompiler().getASTUnit()->save(raw_name);
-    }
-
 };
 } // end anonymous namespace
 
@@ -216,29 +182,27 @@ namespace frontend {
 
 struct Program::ProgramImpl {
 	utils::Indexer mIdx;
-	TranslationUnitList tranUnits;
-	const vector<boost::filesystem::path> stdLibDirs;
+	TranslationUnit tranUnit;
+	const vector<path> stdLibDirs;
 	utils::Interceptor interceptor;
-	utils::FunctionDependencyGraph funcDepGraph;
-	analysis::GlobalVarCollector globalsCollector;
 
-	ProgramImpl(core::NodeManager& mgr, const vector<string>& stdLibDirs) :
-		mIdx(),
-		stdLibDirs(::transform(stdLibDirs, [](const string& path) { return boost::filesystem::canonical(path); } )),
-		interceptor(mgr, mIdx, this->stdLibDirs),  funcDepGraph(mIdx,interceptor),
-		globalsCollector(interceptor)
+	ProgramImpl(core::NodeManager& mgr, const path& file, const ConversionSetup& setup) :
+		mIdx(), tranUnit(setup, file),
+		stdLibDirs(::transform(stdLibDirs, [](const path& cur) { return boost::filesystem::canonical(cur); } )),
+		interceptor(mgr, mIdx, setup.getStdLibIncludeDirectories())
 		{}
 };
 
-Program::Program(core::NodeManager& mgr, const ConversionJob& job):
-	pimpl( new ProgramImpl(mgr, job.getStdLibIncludeDirectories()) ), mMgr(mgr), mProgram( core::Program::get(mgr) ), config(job) { }
+Program::Program(core::NodeManager& mgr, const path& file, const ConversionSetup& setup):
+	pimpl( new ProgramImpl(mgr, file, setup) ), mMgr(mgr), config(setup) { }
 
 Program::~Program() { delete pimpl; }
 
+const ClangCompiler& Program::getCompiler() const {
+	return pimpl->tranUnit.getCompiler();
+}
+
 utils::Interceptor& Program::getInterceptor() const { return pimpl->interceptor; }
-utils::Indexer& Program::getIndexer() const { return pimpl->mIdx; }
-analysis::GlobalVarCollector& Program::getGlobalCollector() const { return pimpl->globalsCollector; }
-utils::FunctionDependencyGraph& Program::getCallGraph() const {return pimpl->funcDepGraph; }
 const vector<boost::filesystem::path>& Program::getStdLibDirs() const { return pimpl->stdLibDirs; }
 
 void Program::setupInterceptor() {
@@ -250,102 +214,42 @@ void Program::setupInterceptor() {
 	//by default we intercept "std::.*" and "__gnu_cxx::.*" -- set in the ctor
 }
 
-void Program::analyzeFuncDependencies() {
-	VLOG(1) << " ";
-	VLOG(1) << " ***************************************************************";
-	VLOG(1) << " ************* Analyze function dependencies (recursion)***************";
-	auto elem = getIndexer().begin();
-	auto end = getIndexer().end();
-	for (; elem != end; ++elem){
-		if (llvm::isa<clang::FunctionDecl>(*elem)){
-			const clang::FunctionDecl* funcDecl = llvm::cast<clang::FunctionDecl>(*elem);
-			if( !(getInterceptor().isIntercepted(funcDecl)) ) {
-				//if the funcDecl was intercepted we ignore it for the funcDepAnalysis
-				pimpl->funcDepGraph.addNode(funcDecl);
-			}
-		}
-	}
-	//pimpl->funcDepGraph.addNode(llvm::cast<clang::FunctionDecl>(getIndexer().getMainFunctionDefinition()));
-	VLOG(1) << " ************* Analyze function dependencies DONE***************";
-	if (VLOG_IS_ON(2)){
-		dumpCallGraph();
-	}
-	VLOG(1) << " ***************************************************************";
-	VLOG(1) << " ";
+const pragma::PragmaList& Program::getPragmaList() const {
+	return pimpl->tranUnit.getPragmaList();
 }
-
-void Program::dumpCallGraph() const {
-	pimpl->funcDepGraph.print(std::cout);
-}
-
-void Program::storeTranslationUnits(const string& output_file) {
-    for(TranslationUnitPtr tu : pimpl->tranUnits) {
-        static_cast<TranslationUnitImpl *>(tu.get())->storeUnit(output_file);
-    }
-}
-
-TranslationUnit& Program::addTranslationUnit(const ConversionJob& job) {
-	assert(job.getFiles().size() == 1 && "Can only cover a single file!");
-
-	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(job);
-
-	pimpl->mIdx.indexTU(tuImpl);
-
-	pimpl->tranUnits.push_back( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
-	return *tuImpl;
-}
-
-const Program::TranslationUnitList& Program::getTranslationUnits() const { return pimpl->tranUnits; }
 
 Program::PragmaIterator Program::pragmas_begin() const {
 	auto filtering = [](const Pragma&) -> bool { return true; };
-	return Program::PragmaIterator(pimpl->tranUnits, filtering);
+	return Program::PragmaIterator(pimpl->tranUnit.getPragmaList(), filtering);
 }
 
 Program::PragmaIterator Program::pragmas_begin(const Program::PragmaIterator::FilteringFunc& func) const {
-	return Program::PragmaIterator(pimpl->tranUnits, func);
+	return Program::PragmaIterator(pimpl->tranUnit.getPragmaList(), func);
 }
 
 Program::PragmaIterator Program::pragmas_end() const {
-	return Program::PragmaIterator(pimpl->tranUnits.end());
+	return Program::PragmaIterator(pimpl->tranUnit.getPragmaList().end());
 }
 
 bool Program::PragmaIterator::operator!=(const PragmaIterator& iter) const {
-	return (tuIt != iter.tuIt); // FIXME also compare the pragmaIt value
+	return (pragmaIt != iter.pragmaIt);
 }
 
-void Program::PragmaIterator::inc(bool init) {
-	while(tuIt != tuEnd) {
-		if(init) {
-			pragmaIt = (*tuIt)->getPragmaList().begin();
-			if(pragmaIt != (*tuIt)->getPragmaList().end() && filteringFunc(**pragmaIt))
-				return;
-		}
+void Program::PragmaIterator::inc() {
 
-		// advance to the next pragma if there are still pragmas in the
-		// current translation unit
-		while(pragmaIt != (*tuIt)->getPragmaList().end())
-		{
-			++pragmaIt;
+	while(pragmaIt != pragmaItEnd) {
+		++pragmaIt;
 
-			if(pragmaIt != (*tuIt)->getPragmaList().end() && filteringFunc(**pragmaIt)) {
-				return;
-			}
-		}
-
-		// advance to the next translation unit
-		++tuIt;
-		if(tuIt != tuEnd) {
-			pragmaIt = (*tuIt)->getPragmaList().begin();
-			if(pragmaIt != (*tuIt)->getPragmaList().end() && filteringFunc(**pragmaIt))
-				return;
+		if(pragmaIt != pragmaItEnd && filteringFunc(**pragmaIt)) {
+			return;
 		}
 	}
+
 }
 
-std::pair<PragmaPtr, TranslationUnitPtr> Program::PragmaIterator::operator*() const {
-	assert(tuIt != tuEnd && pragmaIt != (*tuIt)->getPragmaList().end());
-	return std::pair<PragmaPtr, TranslationUnitPtr>(*pragmaIt, *tuIt);
+PragmaPtr Program::PragmaIterator::operator*() const {
+	assert(pragmaIt != pragmaItEnd);
+	return *pragmaIt;
 }
 
 namespace {
@@ -373,73 +277,73 @@ core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr, 
 
 } // end anonymous namespace
 
-const core::ProgramPtr& Program::convert() {
-	// We check for insieme pragmas in each translation unit
-	bool insiemePragmaFound = false;
-	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
-
-	setupInterceptor();
-
-	analyzeFuncDependencies();
-
-	//collect globals, analyze all translation units
-	for (const TranslationUnitPtr& curr : pimpl->tranUnits){
-		pimpl->globalsCollector(curr);
-	}
-	if (VLOG_IS_ON(1))
-		pimpl->globalsCollector.dump();
-
-	std::shared_ptr<conversion::ASTConverter> astConvPtr;
-	if(isCXX) {
-		astConvPtr = std::make_shared<conversion::CXXASTConverter>(mMgr, *this,	pimpl->globalsCollector);
-	} else {
-		astConvPtr = std::make_shared<conversion::ASTConverter>(mMgr, *this, pimpl->globalsCollector);
-	}
-
-	// filters all the pragma across all the compilation units which are of type insieme::mark
-	auto pragmaMarkFilter = [](const pragma::Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };
-
-	ExpressionList entries;
-
-	for(Program::PragmaIterator pit = pragmas_begin(pragmaMarkFilter), pend = pragmas_end(); pit != pend; ++pit) {
-		insiemePragmaFound = true;
-
-		const pragma::Pragma& insiemePragma = *(*pit).first;
-
-		if(insiemePragma.isDecl()) {
-			// this is a declaration, if it's a function add it to the entry points of the program
-			const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
-			assert(funcDecl && "Pragma insieme only valid for function declarations.");
-
-			//mProgram = astConvPtr->handleFunctionDecl(funcDecl);
-			auto p = astConvPtr->handleFunctionDecl(funcDecl);
-			std::copy(p.getEntryPoints().begin(), p.getEntryPoints().end(), std::back_inserter(entries));
-		} else {
-			// insieme pragma associated to a statement, in this case we convert the body
-			// and create an anonymous lambda expression to enclose it
-			const clang::Stmt* body = insiemePragma.getStatement();
-			assert(body && "Pragma matching failed!");
-			core::CallExprPtr callExpr = astConvPtr->handleBody(body, *(*pit).second);
-			//mProgram = core::Program::addEntryPoint(mMgr, mProgram, callExpr);
-			entries.push_back(callExpr);
-		}
-	}
-
-	if(!insiemePragmaFound) {
-		mProgram = astConvPtr->handleMainFunctionDecl();
-	}
-	else {
-		mProgram = insieme::core::Program::get(mMgr, entries);
-	}
-
-	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";
-	insieme::utils::Timer convertTimer("Frontend.AddParallelism ");
-	mProgram = addParallelism(mProgram, mMgr, config.hasOption(ConversionJob::TAG_MPI));
-	convertTimer.stop();
-	LOG(INFO) << convertTimer;
-
-	return mProgram;
-}
+//const core::ProgramPtr& Program::convert() {
+//	// We check for insieme pragmas in each translation unit
+//	bool insiemePragmaFound = false;
+//	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
+//
+//	setupInterceptor();
+//
+//	analyzeFuncDependencies();
+//
+//	//collect globals, analyze all translation units
+//	for (const TranslationUnitPtr& curr : pimpl->tranUnits){
+//		pimpl->globalsCollector(curr);
+//	}
+//	if (VLOG_IS_ON(1))
+//		pimpl->globalsCollector.dump();
+//
+//	std::shared_ptr<conversion::ASTConverter> astConvPtr;
+//	if(isCXX) {
+//		astConvPtr = std::make_shared<conversion::CXXASTConverter>(mMgr, *this,	pimpl->globalsCollector);
+//	} else {
+//		astConvPtr = std::make_shared<conversion::ASTConverter>(mMgr, *this, pimpl->globalsCollector);
+//	}
+//
+//	// filters all the pragma across all the compilation units which are of type insieme::mark
+//	auto pragmaMarkFilter = [](const pragma::Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };
+//
+//	ExpressionList entries;
+//
+//	for(Program::PragmaIterator pit = pragmas_begin(pragmaMarkFilter), pend = pragmas_end(); pit != pend; ++pit) {
+//		insiemePragmaFound = true;
+//
+//		const pragma::Pragma& insiemePragma = *(*pit).first;
+//
+//		if(insiemePragma.isDecl()) {
+//			// this is a declaration, if it's a function add it to the entry points of the program
+//			const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
+//			assert(funcDecl && "Pragma insieme only valid for function declarations.");
+//
+//			//mProgram = astConvPtr->handleFunctionDecl(funcDecl);
+//			auto p = astConvPtr->handleFunctionDecl(funcDecl);
+//			std::copy(p.getEntryPoints().begin(), p.getEntryPoints().end(), std::back_inserter(entries));
+//		} else {
+//			// insieme pragma associated to a statement, in this case we convert the body
+//			// and create an anonymous lambda expression to enclose it
+//			const clang::Stmt* body = insiemePragma.getStatement();
+//			assert(body && "Pragma matching failed!");
+//			core::CallExprPtr callExpr = astConvPtr->handleBody(body, *(*pit).second);
+//			//mProgram = core::Program::addEntryPoint(mMgr, mProgram, callExpr);
+//			entries.push_back(callExpr);
+//		}
+//	}
+//
+//	if(!insiemePragmaFound) {
+//		mProgram = astConvPtr->handleMainFunctionDecl();
+//	}
+//	else {
+//		mProgram = insieme::core::Program::get(mMgr, entries);
+//	}
+//
+//	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";
+//	insieme::utils::Timer convertTimer("Frontend.AddParallelism ");
+//	mProgram = addParallelism(mProgram, mMgr, config.hasOption(ConversionJob::TAG_MPI));
+//	convertTimer.stop();
+//	LOG(INFO) << convertTimer;
+//
+//	return mProgram;
+//}
 
 } // end frontend namespace
 } // end insieme namespace

@@ -371,7 +371,7 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::ConversionFactory& convFact,
+core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
 										  const clang::CastExpr* castExpr){
 
 	const core::IRBuilder& builder = convFact.getIRBuilder();
