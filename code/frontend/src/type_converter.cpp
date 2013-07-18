@@ -709,7 +709,7 @@ namespace {
 
 core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 	assert(type && "Calling TypeConverter::Visit with a NULL pointer");
-	auto& cache = convFact.typeCache;
+	auto& cache = typeCache;
 
 	// look up type within cache
 	auto pos = cache.find(type);
