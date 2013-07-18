@@ -189,6 +189,10 @@ class Converter :  boost::noncopyable {
 	 */
 	pragma::PragmaStmtMap pragmaMap;
 
+	tu::IRTranslationUnit irTranslationUnit;
+
+	bool used;
+
 	/**
 	 * Attach annotations to a C function of the input program.
 	 *
@@ -225,6 +229,10 @@ public:
 
 	clang::SourceManager& getSourceManager() const {
 		return getCompiler().getSourceManager();
+	}
+
+	tu::IRTranslationUnit& getIRTranslationUnit() {
+		return irTranslationUnit;
 	}
 
 	/**

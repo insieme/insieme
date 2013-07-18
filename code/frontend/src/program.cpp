@@ -134,12 +134,12 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 
 ///  A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
 ///  and the insieme IR which has been generated from the source file.
-class TranslationUnitImpl: public insieme::frontend::TranslationUnit{
+class TranslationUnitImpl : public insieme::frontend::TranslationUnit{
     clang::ASTConsumer emptyCons;
     insieme::frontend::InsiemeSema mSema;
 public:
-	TranslationUnitImpl(const ConversionJob& job):
-		insieme::frontend::TranslationUnit(job, job.getFile()),
+	TranslationUnitImpl(const ConversionSetup& setup, const path& file):
+		insieme::frontend::TranslationUnit(setup, file),
 		mSema(mPragmaList, mClang.getPreprocessor(), mClang.getASTContext(), emptyCons, true) {
 
     	// register 'omp' pragmas
@@ -162,6 +162,7 @@ public:
 		//insieme::frontend::utils::indexerASTConsumer consumer(indexer,
 	//									dynamic_cast<insieme::frontend::TranslationUnit*>(this));
 
+		parseClangAST(mClang, &emptyCons, true, mPragmaList, mSema, false);
 	}
 
 	// getters
@@ -182,7 +183,7 @@ namespace frontend {
 
 struct Program::ProgramImpl {
 	utils::Indexer mIdx;
-	TranslationUnit tranUnit;
+	TranslationUnitImpl tranUnit;
 	const vector<path> stdLibDirs;
 	utils::Interceptor interceptor;
 

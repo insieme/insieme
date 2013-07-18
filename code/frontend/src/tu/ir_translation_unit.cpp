@@ -50,7 +50,11 @@ namespace tu {
 	}
 
 	std::ostream& IRTranslationUnit::printTo(std::ostream& out) const {
-		return out << "TU(" << types << ", " << functions << ", " << globals << ")";
+		return out << "TU(\n\t"
+				<< join("\n\t", types, [](std::ostream& out, const std::pair<core::GenericTypePtr, core::TypePtr>& cur) { out << *cur.first << " => " << *cur.second; })
+				<< ",\n "
+				<< join("\n\t", functions, [](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << " => " << *cur.second; })
+				<< ",\n " << globals << ")";
 	}
 
 	IRTranslationUnit merge(const IRTranslationUnit& a, const IRTranslationUnit& b) {

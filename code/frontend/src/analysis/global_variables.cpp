@@ -181,10 +181,10 @@ namespace analysis {
 
 //////////////////////////////////////////////////////////////////
 //
-void GlobalVarCollector::operator()(const TranslationUnitPtr& tu){
+void GlobalVarCollector::operator()(const TranslationUnit& tu){
 	
-	VLOG(1) << " ************* analyze: " << tu->getFileName() << " for globals  ***************";
-	const ClangCompiler& compiler = tu->getCompiler();
+	VLOG(1) << " ************* analyze: " << tu.getFileName() << " for globals  ***************";
+	const ClangCompiler& compiler = tu.getCompiler();
 
 	clang::TranslationUnitDecl* tuDecl = compiler.getASTContext().getTranslationUnitDecl();
 	assert(tuDecl && "AST has not being build");

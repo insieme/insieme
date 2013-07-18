@@ -34,6 +34,17 @@
  * regarding third party software licenses.
  */
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+	#include <clang/AST/CXXInheritance.h>
+	#include <clang/AST/StmtVisitor.h>
+	#include <clang/AST/DeclVisitor.h>
+	#include <clang/AST/RecursiveASTVisitor.h>
+#pragma GCC diagnostic pop
+
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/stmt_converter.h"
 #include "insieme/frontend/expr_converter.h"
@@ -87,8 +98,6 @@
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
-#include <clang/AST/CXXInheritance.h>
-#include <clang/AST/StmtVisitor.h>
 
 using namespace clang;
 using namespace insieme;
@@ -126,7 +135,7 @@ namespace conversion {
 ///
 Converter::Converter(core::NodeManager& mgr, const Program& prog) :
 		mgr(mgr), builder(mgr),
-		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end())
+		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), used(false)
 		{
 
 		if (prog.isCxx()){
@@ -143,13 +152,71 @@ Converter::Converter(core::NodeManager& mgr, const Program& prog) :
 
 
 tu::IRTranslationUnit Converter::convert() {
+	assert(!used && "This one must only be used once!");
+	used = true;
 
-	tu::IRTranslationUnit res;
+	assert(getCompiler().getASTContext().getTranslationUnitDecl());
 
+	// collect all type definitions
+	auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
 
-	// load AST using clang
+	struct TypeVisitor : public clang::RecursiveASTVisitor<TypeVisitor> {
 
-	//
+		Converter& converter;
+		TypeVisitor(Converter& converter) : converter(converter) {}
+
+		bool VisitRecordDecl(clang::RecordDecl* type) {
+			converter.convertType(type->getTypeForDecl());
+			return true;
+		}
+		bool VisitTypedefDecl(clang::TypedefDecl* type) {
+			auto res = converter.convertType(type->getUnderlyingType().getTypePtr());
+			converter.getIRTranslationUnit().addType(converter.getIRBuilder().genericType(type->getQualifiedNameAsString()), res);
+			return true;
+		}
+	} typeVisitor(*this);
+
+	llvm::cast<clang::Decl>(declContext)->dump();
+
+	typeVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
+
+//std::cout << getIRTranslationUnit() << "\n";
+
+//	declContext->dump();
+
+//	typeVisitor.Visit(declContext);
+
+//	void IndexingContext::indexDeclContext(const DeclContext *DC) {
+//	  for (clang::DeclContext::Decl_iterator I = DC->decls_begin(), E = DC->decls_end(); I != E; ++I) {
+//	    indexDecl(*I);
+//	  }
+//	}
+//
+//
+//
+//
+//	void GlobalVarCollector:perator()(const TranslationUnitPtr& tu){
+//
+//		VLOG(1) << " ************* analyze: " << tu->getFileName() << " for globals  ***************";
+//		const ClangCompiler& compiler = tu->getCompiler();
+//
+//		clang::TranslationUnitDecl* tuDecl = compiler.getASTContext().getTranslationUnitDecl();
+//		assert(tuDecl && "AST has not being build");
+//
+//		clang:eclContext* ctx= clang::TranslationUnitDecl::castToDeclContext (tuDecl);
+//		assert(ctx && "AST has no decl context");
+//
+//		class typeVisitor : public clang:eclVisitor<typeVisitor> {
+//
+//				public:
+//
+//				void VisitTypedefName(clang::TypeDecl* type){
+//					std::cout << " TYPE! " << std::endl;
+//				}
+//				void Visit(clang:eclContext* ctx){
+//					clang:eclVisitor<typeVisitor>::Visit( llvm::cast<clang:ecl>(ctx));
+//				}
+//			};
 
 	// TODO: collect all type definitions
 
@@ -157,7 +224,7 @@ tu::IRTranslationUnit Converter::convert() {
 
 	// TODO: collect all function declarations
 
-	return res;
+	return irTranslationUnit;
 }
 
 

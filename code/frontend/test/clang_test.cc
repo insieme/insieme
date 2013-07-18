@@ -45,7 +45,9 @@ namespace frontend {
 	TEST(Clang, Minimal) {
 		core::NodeManager mgr;
 
-		auto tu = convert(mgr, path(SRC_DIR) / "inputs/minimal.c");
+		ConversionSetup setup;
+		setup.setStandard(ConversionSetup::Cxx03);
+		auto tu = convert(mgr, SRC_DIR "/inputs/minimal.cpp", setup);
 
 		std::cout << tu << "\n";
 		EXPECT_FALSE(tu.getFunctions().empty());

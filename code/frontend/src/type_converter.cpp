@@ -601,109 +601,6 @@ namespace {
 		return nullptr;
 	}
 
-	bool hasFreeTypeVariables(const core::NodePtr& node) {
-		return core::analysis::hasFreeTypeVariables(node.isa<core::TypePtr>());
-	}
-
-	bool hasFreeTypeVariables(const core::TypePtr& type) {
-		return core::analysis::hasFreeTypeVariables(type);
-	}
-
-	core::TypePtr closeRecursiveType(const core::TypePtr type, const core::TypeVariablePtr var) {
-		// if it is a direct recursion, be done
-		core::NodeManager& mgr = type.getNodeManager();
-		core::IRBuilder builder(mgr);
-
-		// make sure it is handling a struct or union type
-		assert(type.isa<core::StructTypePtr>() || type.isa<core::UnionTypePtr>());
-
-		// see whether there is any free type variable
-		if (!hasFreeTypeVariables(type)) return type;
-
-		// 1) check nested recursive types - those include this type
-
-		// check whether there is nested recursive type specification that equals the current type
-		std::vector<core::RecTypePtr> recTypes;
-		core::visitDepthFirstOnce(type, [&](const core::RecTypePtr& cur) {
-			if (cur->getDefinition()->getDefinitionOf(var)) recTypes.push_back(cur);
-		}, true, true);
-
-		// see whether one of these is matching
-		for(auto cur : recTypes) {
-			// TODO: here it should actually be checked whether the inner one is structurally identical
-			//		 at the moment we relay on the fact that it has the same name
-			return builder.recType(var, cur->getDefinition());
-		}
-
-
-		// 2) normalize recursive type
-
-		// collect all struct types within the given type
-		core::TypeList structs;
-		core::visitDepthFirstOncePrunable(type, [&](const core::TypePtr& cur) {
-			//if (containsVarFree(cur)) ;
-			if (cur.isa<core::RecTypePtr>()) return !hasFreeTypeVariables(cur);
-			if (cur.isa<core::NamedCompositeTypePtr>() && hasFreeTypeVariables(cur)) {
-				structs.push_back(cur.as<core::TypePtr>());
-			}
-			return false;
-		}, true);
-
-		// check whether there is a recursion at all
-		if (structs.empty()) return type;
-
-		// create de-normalized recursive bindings
-		vector<core::RecTypeBindingPtr> bindings;
-		for(auto cur : structs) {
-			bindings.push_back(builder.recTypeBinding(builder.typeVariable(annotations::c::getCName(cur)), cur));
-		}
-
-		// sort according to variable names
-		std::sort(bindings.begin(), bindings.end(), [](const core::RecTypeBindingPtr& a, const core::RecTypeBindingPtr& b) {
-			return a->getVariable()->getVarName()->getValue() < b->getVariable()->getVarName()->getValue();
-		});
-
-		// create definitions
-		core::RecTypeDefinitionPtr def = builder.recTypeDefinition(bindings);
-
-		// test whether this is actually a closed type ..
-		if(hasFreeTypeVariables(def.as<core::NodePtr>())) return type;
-
-		// normalize recursive representation
-		core::RecTypeDefinitionPtr old;
-		while(old != def) {
-			old = def;
-
-			// set up current variable -> struct definition replacement map
-			core::NodeMap replacements;
-			for (auto cur : def) {
-				replacements[cur->getType()] = cur->getVariable();
-			}
-
-			// wrap into node mapper
-			auto mapper = core::makeLambdaMapper([&](int, const core::NodePtr& cur) {
-				return core::transform::replaceAllGen(mgr, cur, replacements);
-			});
-
-			// apply mapper to defintions
-			vector<core::RecTypeBindingPtr> newBindings;
-			for (core::RecTypeBindingPtr& cur : bindings) {
-				auto newBinding = builder.recTypeBinding(cur->getVariable(), cur->getType()->substitute(mgr, mapper));
-				if (!contains(newBindings, newBinding)) newBindings.push_back(newBinding);
-			}
-			bindings = newBindings;
-
-			// update definitions
-			def = builder.recTypeDefinition(bindings);
-		}
-
-		// convert structs into list of definitions
-
-		// build up new recursive type (only if it is closed)
-		auto res = builder.recType(var, def);
-		return hasFreeTypeVariables(res.as<core::TypePtr>())?type:res;
-	}
-
 }
 
 
@@ -732,27 +629,22 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 	if (auto recDecl = toRecordDecl(type)) {
 
 		// create a (temporary) type variable for this type
-		core::TypeVariablePtr var = builder.typeVariable(recDecl->getName());
+		core::GenericTypePtr symbol = builder.genericType(recDecl->getQualifiedNameAsString());
 
 		// bind recursive variable within the cache
-		cache[type] = var;
+		cache[type] = symbol;
 
 		// resolve the type recursively
 		res = convertInternal(type);
 
-		// fix recursive type if necessary
-		res = closeRecursiveType(res, var);
+		// check cache consistency
+		assert(cache[type] == symbol); // should not change in the meantime
 
-		// update type cache
-		assert(cache[type] == var); // should not change in the meantime
-
-		// update cache
-		if (!hasFreeTypeVariables(res)) {
-			// update cache
-			cache[type] = res;
+		// register type within resulting translation unit
+		if (!recDecl->getName().empty()) {
+			convFact.getIRTranslationUnit().addType(symbol, res);
 		} else {
-			// remove temporary from cache
-			cache.erase(type);
+			cache[type] = res;
 		}
 
 	} else {
@@ -761,7 +653,7 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 		res = convertInternal(type);
 
 		// update cache
-		if (!hasFreeTypeVariables(res)) cache[type] = res;
+		cache[type] = res;
 	}
 
 	// run post-conversion actions

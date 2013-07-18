@@ -100,7 +100,6 @@ public:
 
 };
 
-typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
 
 // ------------------------------------ Program ---------------------------
 /**
@@ -122,7 +121,7 @@ class Program: public boost::noncopyable {
 	friend class ::TypeConversion_FileTest_Test;
 	friend class ::StmtConversion_FileTest_Test;
 public:
-	typedef std::vector<TranslationUnitPtr> TranslationUnitList;
+
 	Program(core::NodeManager& mgr, const path& file, const ConversionSetup& setup = ConversionSetup());
 
 	~Program();

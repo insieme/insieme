@@ -34,6 +34,41 @@
  * regarding third party software licenses.
  */
 
+
+struct c {
+	int b;
+};
+
+typedef struct {
+	int a;
+} X;
+
+typedef struct {
+	int j;
+} Y;
+
+namespace {
+	struct A {};
+}
+
+namespace x {
+	struct B {};
+}
+
+class List {
+	int value;
+	List* next;
+};
+
 int main() {
+
+	struct C {
+
+		X x;
+		A a;
+		x::B b;
+
+	};
+
 	int a = 1 + 2;
 }

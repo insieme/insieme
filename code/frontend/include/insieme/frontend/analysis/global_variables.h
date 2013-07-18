@@ -110,7 +110,7 @@ public:
 	 * the functor overload searches a translation unit for globals
 	 * it finds globals and updates global state
 	 */
-	void operator()(const TranslationUnitPtr& tu);
+	void operator()(const TranslationUnit& tu);
 
 	/**
 	 * the functor overload searches a translation unit for globals
