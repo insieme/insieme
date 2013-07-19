@@ -61,7 +61,7 @@ namespace frontend {
 		}
 	}
 
-	TEST(Clang, Minimal2) {
+	TEST(Clang, MinimalToProgram) {
 		core::NodeManager mgr;
 
 		ConversionSetup setup;
