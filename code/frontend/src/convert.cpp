@@ -496,39 +496,38 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	// (two qualified names can not coexist within the same TU)
 	const clang::VarDecl* varDecl = cast<clang::VarDecl>(valDecl);
 	if (varDecl && varDecl->hasGlobalStorage()) {
-		assert(false && "Not Implemented!");
-//		VLOG(2)	<< "with global storage";
-//		// we could look for it in the cache, but is fast to create a new one, and we can not get
-//		// rid if the qualified name function
-//		std::string name = program.getGlobalCollector().getName(varDecl);
-//
-//		// global/static variables are always leftsides (refType) -- solves problem with const
-//		if(!irType.isa<core::RefTypePtr>() ) {
-//			irType = builder.refType(irType);
-//		}
-//
-//		if (program.getGlobalCollector().isStatic(varDecl)){
-//			if (!irType.isa<core::RefTypePtr>()) irType = builder.refType(irType);		// this happens whenever a static variable is constant
-//			irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(irType.as<core::RefTypePtr>().getElementType()));
-//		}
-//
-//		core::ExpressionPtr globVar =  builder.literal(name, irType);
-//		if (program.getGlobalCollector().isExtern(varDecl)){
-//			globVar =  builder.literal(varDecl->getQualifiedNameAsString(), globVar->getType());
-//		 	annotations::c::markExtern(globVar.as<core::LiteralPtr>());
-//		}
-//
-//		if (program.getGlobalCollector().isStatic(varDecl)){
-//			globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
-//		}
-//
-//		// OMP threadPrivate
-// 		if (insieme::utils::set::contains (thread_private, varDecl)){
-//			omp::addThreadPrivateAnnotation(globVar);
-//		}
-//
-//		varDeclMap.insert( { valDecl, globVar } );
-//		return globVar;
+		VLOG(2)	<< "with global storage";
+		// we could look for it in the cache, but is fast to create a new one, and we can not get
+		// rid if the qualified name function
+		std::string name = varDecl->getQualifiedNameAsString();
+
+		// global/static variables are always leftsides (refType) -- solves problem with const
+		if(!irType.isa<core::RefTypePtr>() ) {
+			irType = builder.refType(irType);
+		}
+
+		if (varDecl->isStaticLocal()){
+			if (!irType.isa<core::RefTypePtr>()) irType = builder.refType(irType);		// this happens whenever a static variable is constant
+			irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(irType.as<core::RefTypePtr>().getElementType()));
+		}
+
+		core::ExpressionPtr globVar =  builder.literal(name, irType);
+		if (varDecl->hasExternalStorage()){
+			globVar =  builder.literal(varDecl->getQualifiedNameAsString(), globVar->getType());
+		 	annotations::c::markExtern(globVar.as<core::LiteralPtr>());
+		}
+
+		if (varDecl->isStaticLocal()){
+			globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
+		}
+
+		// OMP threadPrivate
+ 		if (insieme::utils::set::contains (thread_private, varDecl)){
+			omp::addThreadPrivateAnnotation(globVar);
+		}
+
+		varDeclMap.insert( { valDecl, globVar } );
+		return globVar;
 	}
 
 	// The variable is not in the map and not defined as global (or static) therefore we proceed with the creation of

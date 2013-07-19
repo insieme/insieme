@@ -1,3 +1,4 @@
+
 /**
  * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
@@ -34,42 +35,25 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/frontend/clang.h"
-#include "insieme/frontend/clang_config.h"
-
-#include "insieme/frontend/tu/ir_translation_unit_check.h"
-
+#include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/core/checks/full_check.h"
 
 namespace insieme {
 namespace frontend {
+namespace tu {
 
-	TEST(Clang, Minimal) {
-		core::NodeManager mgr;
+	/**
+	 * perform semantic checks in the structure, the IRtranslation unit will be merged into an IR
+	 * expression and checked for consistency.
+	 *
+	 * @param unit the translation unit to be checked
+	 * @return a list of error messages
+	 */
+	core::checks::MessageList checkTU(const IRTranslationUnit& unit);
 
-		ConversionSetup setup;
-		setup.setStandard(ConversionSetup::Cxx03);
-		auto tu = convert(mgr, SRC_DIR "/inputs/minimal.cpp", setup);
 
-		std::cout << tu << "\n";
-		EXPECT_FALSE(tu.getFunctions().empty());
-
-		auto messages = checkTU (tu);
-		for (const core::checks::Message& msg : messages.getAll()){
-			msg.printTo(std::cout) << std::endl;
-		}
-	}
-
-	TEST(Clang, Globals) {
-		core::NodeManager mgr;
-
-		auto tu = convert(mgr, SRC_DIR "/inputs/globals.c");
-
-		std::cout << tu << "\n";
-		EXPECT_FALSE(tu.getFunctions().empty());
-		EXPECT_FALSE(tu.getGlobals().empty());
-
-	}
-} // end frontend
-} // end insieme
+} // end namespace tu
+} // end namespace frontend
+} // end namespace insieme

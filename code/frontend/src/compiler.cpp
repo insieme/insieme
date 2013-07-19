@@ -377,7 +377,10 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 
 	//pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
 	const FileEntry* fileID = pimpl->clang.getFileManager().getFile(file.string());
-	assert(fileID && "TODO: do a nice thing here, file does not exist");
+	if(!fileID){ 
+		std::cerr << " file: " << file.string() << " does not exist" << std::endl; 
+		throw  ClangParsingError(file);
+	}
 	pimpl->clang.getSourceManager().createMainFileID(fileID);
 	pimpl->clang.getDiagnosticClient().BeginSourceFile(
 										pimpl->clang.getLangOpts(),

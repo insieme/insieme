@@ -1,3 +1,4 @@
+
 /**
  * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
@@ -34,42 +35,38 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/frontend/tu/ir_translation_unit_io.h"
 
-#include "insieme/frontend/clang.h"
-#include "insieme/frontend/clang_config.h"
+#include <tuple>
 
-#include "insieme/frontend/tu/ir_translation_unit_check.h"
+#include "insieme/core/ir.h"
+
+#include "insieme/core/encoder/encoder.h"
+#include "insieme/core/encoder/pointer_maps.h"
+#include "insieme/core/encoder/tuples.h"
+
+#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/full_check.h"
 
 
 namespace insieme {
 namespace frontend {
+namespace tu {
 
-	TEST(Clang, Minimal) {
-		core::NodeManager mgr;
+	// the type used for encoding a translation unit
+	typedef std::tuple<IRTranslationUnit::TypeMap, IRTranslationUnit::FunctionMap, IRTranslationUnit::GlobalsList> WrapperType;
 
-		ConversionSetup setup;
-		setup.setStandard(ConversionSetup::Cxx03);
-		auto tu = convert(mgr, SRC_DIR "/inputs/minimal.cpp", setup);
+	core::checks::MessageList checkTU(const IRTranslationUnit& unit){
+		core::NodeManager empty;
+		core::NodeManager localMgr((unit.empty()?empty:unit.getNodeManager()));
 
-		std::cout << tu << "\n";
-		EXPECT_FALSE(tu.getFunctions().empty());
+		// encode translation unit into an IR expression
+		auto encoded = core::encoder::toIR(localMgr, std::make_tuple(unit.getTypes(), unit.getFunctions(), unit.getGlobals()));
 
-		auto messages = checkTU (tu);
-		for (const core::checks::Message& msg : messages.getAll()){
-			msg.printTo(std::cout) << std::endl;
-		}
+		// check correctnes
+		return core::checks::check( encoded);
 	}
 
-	TEST(Clang, Globals) {
-		core::NodeManager mgr;
-
-		auto tu = convert(mgr, SRC_DIR "/inputs/globals.c");
-
-		std::cout << tu << "\n";
-		EXPECT_FALSE(tu.getFunctions().empty());
-		EXPECT_FALSE(tu.getGlobals().empty());
-
-	}
-} // end frontend
-} // end insieme
+} // end namespace tu
+} // end namespace frontend
+} // end namespace insieme
