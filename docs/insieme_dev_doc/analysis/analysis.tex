@@ -612,7 +612,7 @@ implemented, i.e. {\tt ISL}, but the system should allow multiple backends to be
 implemented. 
 
 The interface provide 4 entities (or basic concepts) plus operations which can
-be peformed on those entitirs. 
+be performed on those entities. 
 
 \begin{description}
 \item[Ctx:] Many library requires a context object to store internal
@@ -644,9 +644,24 @@ be peformed on those entitirs.
 	\type{Piecewise} object of Insieme into an piecewise representation in the
 	underlying backend library. 
 
-
 \end{description}
 
+By providing a concrete backend, the functions will be specialized to return the
+concrete implementation associated to that concept. For now only 1 backend has
+been implemented, the ISL backend. 
+
+Beside concepts, the \file{backend.h} file also provides a set of operations
+which should be available within underlying implementing libraries. For example
+it is possible to perform the intersection/union and difference of sets. Or
+given a map take its domain and the range. Also an operation is provided by the
+interface \type{buildDependencies} which given the iteration domain, schedule
+and access functions associated to a SCoP computes the data dependence
+information associated to it. 
+
+The \file{backend.h} interface also include a \type{toIR} function which is
+responsible of generating back IR code given a SCoP. Generation of IR code from
+polyhedral model can be customized by a set of parameters (meaningful to ClooG)
+which can be set and forwarded to ClooG by this interface.
 
 \subsubsection{ISL Backend}
 
@@ -664,12 +679,34 @@ polyhedral objects are utilized.
 An \type{IterationDomain} is represented in ISL using the \type{isl\_set} type.
 Since in ISL there are many types of sets (e.g. basic sets, union sets), we
 define a wrapper class \type{IslSet} which takes care of hiding the complexity
-of the library. An \type{IslSet} can be either built with the constructor by
-providing an iteration domain 
+of the library. 
 
+In order to understand the backend code implemented in Insieme, please refer to
+the ISL manual. 
 
+\subsubsection{ClooG interface}
 
+The file \file{analysis/polyhedral/backend/cloog\_backend.cpp} contains the
+implementation of the code which performs the conversion from the ClooG AST
+(also called CLAST) to IR code. ClooG is a code generator from the polyhedral
+model representation. The code it generates is represented by simple C data
+structures (a documentation of those is available in the ClooG developer manual
+which can be found in the official web site). 
 
+The task of the ClooG backend is to convert this representation back to IR code.
+For this a Visitor pattern is utilized (similar to the frontend). Since ClooG
+does not offer this utility we define interfaces for the visitors, i.e.
+\type{ClastVisitor} and \type{RecClastVisitor}. A \type{ClastDump} utility is
+defined to print the Clast to an output stream. Similarly the \type{ClastToIR}
+class perform the conversion to IR based on the recursive visitor. 
+
+The key concept behind the Clast and its conversion to IR is the fact that the
+Clast do not store statements of the original program but instead uses a label
+given by the scheduling functions. For that reason when a Map is created a map
+can be specified which maps a string label to an IR statement or expression. The
+same label will then be used by cloog in the generated code inside the type
+\type{CloogStatement}. In order to retrieve the actual statement we use the
+context object (which stores the mapping between label and IR entities). 
 
 \section{The Control Flow Graph [Simone]}
 \label{insieme:analysis:cfg}
