@@ -227,10 +227,9 @@ tu::IRTranslationUnit Converter::convert() {
 		Converter& converter;
 		FunctionVisitor(Converter& converter) : converter(converter) {}
 
-		bool VisitFunctionDecl(clang::FunctionDecl* decl) {
+		bool VisitFunctionDecl(const clang::FunctionDecl* decl) {
 			// if you see problems, try isThisDeclarationADefinition() - your welcome
 			if (!decl->doesThisDeclarationHaveABody()) return true;
-			std::cout << "Processing " << decl << "\n";
 			converter.convertFunctionDecl(decl);
 			return true;
 		}
@@ -1221,94 +1220,6 @@ namespace {
 		);
 	}
 
-	/**
-	 * The conversion of recursive function is conducted lazily - first recursive
-	 * functions are build in an unrolled way before they are closed (by combining
-	 * multiple recursive definitions into a single one) by this function.
-	 *
-	 * ATTENTION: this function has been specifically implemented to work in cooperation
-	 * with the following convertFunctionDecl(..) implementation. To understand their
-	 * operation, both have to be considered.
-	 *
-	 * @param lambda the unrolled recursive definition to be collapsed into a proper format
-	 * @return the proper format
-	 */
-	core::LambdaExprPtr fixRecursion(const core::LambdaExprPtr& lambda) {
-
-		// check whether this is the last free variable to be defined
-		core::VariablePtr recVar = lambda->getVariable();
-		auto freeVars = core::analysis::getFreeVariables(lambda->getLambda());
-		if (freeVars != toVector(recVar)) {
-			// it is not, delay closing recursion
-			return lambda;
-		}
-
-		// search all directly nested lambdas
-		vector<core::LambdaExprAddress> inner;
-		core::visitDepthFirstOncePrunable(core::NodeAddress(lambda), [&](const core::LambdaExprAddress& cur) {
-			if (cur.isRoot()) return false;
-			if (!core::analysis::hasFreeVariables(cur)) return true;
-			inner.push_back(cur);
-			return false;
-		});
-
-		// if there is no inner lambda with free variables it is a simple recursion
-		if (inner.empty()) return lambda;		// => done
-
-
-		// ---------- build new recursive function ------------
-
-		auto& mgr = lambda.getNodeManager();
-		core::IRBuilder builder(mgr);
-
-		// check whether any of the inner lambdas is already defining the current lambda
-		//    => in this case the recursive function has already been resolved starting from a different function
-		for(auto cur : inner) {
-			auto curFun = cur.as<core::LambdaExprPtr>();
-			auto def = curFun->getDefinition();
-			if (def.getDefinitionOf(recVar)) {
-				return builder.lambdaExpr(recVar, def);
-			}
-		}
-
-		// build up resulting lambda
-		vector<core::LambdaBindingPtr> bindings;
-		bindings.push_back(builder.lambdaBinding(recVar, lambda->getLambda()));
-		for(auto cur : inner) {
-			assert(cur->getDefinition().size() == 1u);
-			auto def = cur->getDefinition()[0];
-
-			// only add every variable once
-			if (!any(bindings, [&](const core::LambdaBindingPtr& binding)->bool { return binding->getVariable() == def.getAddressedNode()->getVariable(); })) {
-				bindings.push_back(def);
-			}
-		}
-
-		core::LambdaExprPtr res = builder.lambdaExpr(recVar, builder.lambdaDefinition(bindings));
-
-		// last step: collapse recursive definitions
-		while (true) {
-
-			// search for reductions (lambda => rec_variable)
-			std::map<core::NodeAddress, core::NodePtr> replacements;
-			core::visitDepthFirstOncePrunable(core::NodeAddress(res), [&](const core::LambdaExprAddress& cur) {
-				if (cur.isRoot()) return false;
-				if (!core::analysis::hasFreeVariables(cur)) return true;
-				replacements[cur] = cur.as<core::LambdaExprPtr>()->getVariable();
-				return false;
-			});
-
-			// check whether the job is done
-			if (replacements.empty()) break;
-
-			// apply reductions
-			res = core::transform::replaceAll(mgr, replacements).as<core::LambdaExprPtr>();
-		}
-
-		// that's it
-		return res;
-	}
-
 }
 
 //////////////////////////////////////////////////////////////////
@@ -1317,12 +1228,14 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 	VLOG(1) << "======================== FUNC: "<< funcDecl->getNameAsString() << " ==================================";
 
+	// switch to the declaration containing the body (if there is one)
+	funcDecl->hasBody(funcDecl); // yes, right, this one has the side effect of updating funcDecl!!
+
 	// obtain function type
 	auto funcTy = convertFunctionType(funcDecl);
-	auto name = funcDecl->getQualifiedNameAsString();
 
 	// check whether function has already been converted
-	auto pos = lambdaExprCache.find(name);
+	auto pos = lambdaExprCache.find(funcDecl);
 	if (pos != lambdaExprCache.end()) {
 		return pos->second;		// done
 	}
@@ -1330,7 +1243,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 	// check whether function should be intersected
 	if( getProgram().getInterceptor().isIntercepted(funcDecl) ) {
 		auto irExpr = getProgram().getInterceptor().intercept(funcDecl, *this);
-		lambdaExprCache[name] = irExpr;
+		lambdaExprCache[funcDecl] = irExpr;
 		VLOG(2) << "\tintercepted: " << irExpr;
 		return irExpr;
 	}
@@ -1343,7 +1256,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		core::ExpressionPtr retExpr = builder.literal(callName, funcTy);
 
 		VLOG(2) << retExpr << " " << retExpr.getType();
-		lambdaExprCache[name] = retExpr;
+		lambdaExprCache[funcDecl] = retExpr;
 		return retExpr;
 	}
 
@@ -1353,7 +1266,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		if (funcDecl->getNameAsString() == "free") {
 			//handle special function -- "free" -- here instead of in CallExr
 			auto retExpr = builder.getLangBasic().getRefDelete();
-			lambdaExprCache[name] = retExpr;
+			lambdaExprCache[funcDecl] = retExpr;
 			return retExpr;
 		}
 
@@ -1363,7 +1276,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 		// attach header file info
 		utils::addHeaderForDecl(retExpr, funcDecl, program.getStdLibDirs());
-		lambdaExprCache[name] = retExpr;
+		lambdaExprCache[funcDecl] = retExpr;
 		return retExpr;
 	}
 
@@ -1373,8 +1286,8 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 	// obtain recursive variable to be used
 	core::LiteralPtr symbol = builder.literal(funcTy, funcDecl->getQualifiedNameAsString());
-	assert(lambdaExprCache.find(name) == lambdaExprCache.end());
-	lambdaExprCache[name] = symbol;
+	assert(lambdaExprCache.find(funcDecl) == lambdaExprCache.end());
+	lambdaExprCache[funcDecl] = symbol;
 
 	// -- conduct the conversion of the lambda --
 	core::LambdaExprPtr lambda;
@@ -1423,13 +1336,13 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 	}
 
 	// update cache
-	assert_eq(lambdaExprCache[name], symbol) << "Don't touch this!";
+	assert_eq(lambdaExprCache[funcDecl], symbol) << "Don't touch this!";
 
 	// finally, add some sugar
 	attachFuncAnnotations(lambda, funcDecl);
 
 	// if the conversion is complete
-	lambdaExprCache[name] = symbol;
+	lambdaExprCache[funcDecl] = symbol;
 
 	// register function within resulting translation unit
 	getIRTranslationUnit().addFunction(symbol, lambda);

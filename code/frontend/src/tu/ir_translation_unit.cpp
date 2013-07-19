@@ -36,10 +36,19 @@
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
 
+#include "insieme/utils/assert.h"
+
 #include "insieme/core/ir.h"
 #include "insieme/core/types/subtyping.h"
 
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/transform/node_replacer.h"
+
+#include "insieme/annotations/c/naming.h"
 
 namespace insieme {
 namespace frontend {
@@ -59,7 +68,7 @@ namespace tu {
 				<< join("\n\t\t", globals, [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << ":" << *cur.first->getType() << " => "; if (cur.second) out << print(cur.second); else out << "<uninitalized>"; })
 				<< ",\n\tFunctions:\n\t\t"
 				<< join("\n\t\t", functions, [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << " => " << print(cur.second); })
-				<< ")";
+				<< "\n)";
 	}
 
 	IRTranslationUnit merge(const IRTranslationUnit& a, const IRTranslationUnit& b) {
@@ -93,9 +102,370 @@ namespace tu {
 		return res;
 	}
 
-	core::ProgramPtr toProgram(const IRTranslationUnit& a) {
-		assert(false && "Not Implemented!!");
-		return 0;
+
+	// ------------------------------- to-program conversion ----------------------------
+
+
+	namespace {
+
+		using namespace core;
+
+		/**
+		 * The class converting a IR-translation-unit into an actual IR program by
+		 * realizing recursive definitions.
+		 */
+		class ProgramCreator : public core::NodeMapping {
+
+			NodeManager& mgr;
+			IRBuilder builder;
+
+			NodeMap cache;
+			NodeMap symbolMap;
+			NodeMap recVarMap;
+			NodeMap recVarResolutions;
+
+		public:
+
+			ProgramCreator(NodeManager& mgr, const IRTranslationUnit& unit)
+				: mgr(mgr), builder(mgr) {
+
+				// copy type symbols into symbol table
+				for(auto cur : unit.getTypes()) {
+					symbolMap[cur.first] = cur.second;
+				}
+
+				// copy function symbols into symbol table
+				for(auto cur : unit.getFunctions()) {
+					symbolMap[cur.first] = cur.second;
+				}
+
+			}
+
+			virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+
+				// check whether value is already cached
+				{
+					auto pos = cache.find(ptr);
+					if (pos != cache.end()) {
+						return pos->second;
+					}
+				}
+
+				// init result
+				NodePtr res = ptr;
+
+				// check whether the current node is in the symbol table
+				NodePtr recVar;
+				auto pos = symbolMap.find(ptr);
+				if (pos != symbolMap.end()) {
+
+					// result will be the substitution
+					res = pos->second;
+
+					// enter a recursive substitute into the cache
+					recVar = recVarMap[ptr];
+					if (recVar) {
+
+						// check whether the recursive variable has already been completely resolved
+						auto pos = recVarResolutions.find(recVar);
+						if (pos != recVarResolutions.end()) {
+							return pos->second;
+						}
+
+					} else {
+
+						// create a fresh recursive variable
+						if (const GenericTypePtr& symbol = ptr.isa<GenericTypePtr>()) {
+							recVar = builder.typeVariable(symbol->getFamilyName());
+						} else if (const LiteralPtr& symbol = ptr.isa<LiteralPtr>()) {
+							recVar = builder.variable(symbol->getType());
+						} else {
+							assert(false && "Unsupported symbol encountered!");
+						}
+						recVarMap[ptr] = recVar;
+					}
+
+					// update cache for current element
+					cache[ptr] = recVar;
+				}
+
+				// resolve result recursively
+				res = res->substitute(mgr, *this);
+
+
+				// fix recursions
+				if (recVar) {
+
+					// check whether nobody has been messing with the cache!
+					assert_eq(cache[ptr], recVar) << "Don't touch this!";
+
+					// remove recursive variable from cache
+					cache.erase(ptr);
+
+					if (TypePtr type = res.isa<TypePtr>()) {
+						res = fixRecursion(type, recVar.as<core::TypeVariablePtr>());
+
+						if (!hasFreeTypeVariables(res)) {
+							cache[ptr] = res;
+
+							// also, register results in recursive variable resolution map
+							auto definition = res.as<RecTypePtr>()->getDefinition();
+							if (definition.size() > 1) {
+								for(auto cur : definition) {
+									recVarResolutions[cur->getVariable()] = builder.recType(cur->getVariable(), definition);
+								}
+							}
+						}
+
+					} else if (LambdaExprPtr lambda = res.isa<LambdaExprPtr>()) {
+
+						assert_eq(1u, lambda->getDefinition().size());
+						auto var = recVar.as<VariablePtr>();
+						auto binding = builder.lambdaBinding(var, lambda->getLambda());
+						lambda = builder.lambdaExpr(var, builder.lambdaDefinition(toVector(binding)));
+
+						res = fixRecursion(lambda);
+
+						// add final results to cache
+						if (!analysis::hasFreeVariables(res)) {
+							cache[ptr] = res;
+
+							// also, register results in recursive variable resolution map
+							auto definition = res.as<LambdaExprPtr>()->getDefinition();
+							if (definition.size() > 1) {
+								for(auto cur : definition) {
+									recVarResolutions[cur->getVariable()] = builder.lambdaExpr(cur->getVariable(), definition);
+								}
+							}
+						}
+
+					} else {
+						std::cout << res->getNodeType();
+						assert(false && "Unsupported recursive structure encountered!");
+					}
+
+				} else {
+
+					// TODO: migrate annotations and stuff ...
+
+					// add result to cache if it does not contain recursive parts
+					if (*ptr == *res) {
+						cache[ptr] = res;
+					}
+
+				}
+
+				return res;
+			}
+
+		private:
+
+			bool hasFreeTypeVariables(const NodePtr& node) {
+				return analysis::hasFreeTypeVariables(node.isa<TypePtr>());
+			}
+
+			bool hasFreeTypeVariables(const TypePtr& type) {
+				return analysis::hasFreeTypeVariables(type);
+			}
+
+			TypePtr fixRecursion(const TypePtr type, const TypeVariablePtr var) {
+				// if it is a direct recursion, be done
+				NodeManager& mgr = type.getNodeManager();
+				IRBuilder builder(mgr);
+
+				// make sure it is handling a struct or union type
+				assert(type.isa<StructTypePtr>() || type.isa<UnionTypePtr>());
+
+				// see whether there is any free type variable
+				if (!hasFreeTypeVariables(type)) return type;
+
+				// 1) check nested recursive types - those include this type
+
+				// check whether there is nested recursive type specification that equals the current type
+				std::vector<RecTypePtr> recTypes;
+				visitDepthFirstOnce(type, [&](const RecTypePtr& cur) {
+					if (cur->getDefinition()->getDefinitionOf(var)) recTypes.push_back(cur);
+				}, true, true);
+
+				// see whether one of these is matching
+				for(auto cur : recTypes) {
+					// TODO: here it should actually be checked whether the inner one is structurally identical
+					//		 at the moment we relay on the fact that it has the same name
+					return builder.recType(var, cur->getDefinition());
+				}
+
+
+				// 2) normalize recursive type
+
+				// collect all struct types within the given type
+				TypeList structs;
+				visitDepthFirstOncePrunable(type, [&](const TypePtr& cur) {
+					//if (containsVarFree(cur)) ;
+					if (cur.isa<RecTypePtr>()) return !hasFreeTypeVariables(cur);
+					if (cur.isa<NamedCompositeTypePtr>() && hasFreeTypeVariables(cur)) {
+						structs.push_back(cur.as<TypePtr>());
+					}
+					return false;
+				}, true);
+
+				// check whether there is a recursion at all
+				if (structs.empty()) return type;
+
+				// create de-normalized recursive bindings
+				vector<RecTypeBindingPtr> bindings;
+				for(auto cur : structs) {
+					bindings.push_back(builder.recTypeBinding(builder.typeVariable(annotations::c::getCName(cur)), cur));
+				}
+
+				// sort according to variable names
+				std::sort(bindings.begin(), bindings.end(), [](const RecTypeBindingPtr& a, const RecTypeBindingPtr& b) {
+					return a->getVariable()->getVarName()->getValue() < b->getVariable()->getVarName()->getValue();
+				});
+
+				// create definitions
+				RecTypeDefinitionPtr def = builder.recTypeDefinition(bindings);
+
+				// test whether this is actually a closed type ..
+				if(hasFreeTypeVariables(def.as<NodePtr>())) return type;
+
+				// normalize recursive representation
+				RecTypeDefinitionPtr old;
+				while(old != def) {
+					old = def;
+
+					// set up current variable -> struct definition replacement map
+					NodeMap replacements;
+					for (auto cur : def) {
+						replacements[cur->getType()] = cur->getVariable();
+					}
+
+					// wrap into node mapper
+					auto mapper = makeLambdaMapper([&](int, const NodePtr& cur) {
+						return transform::replaceAllGen(mgr, cur, replacements);
+					});
+
+					// apply mapper to defintions
+					vector<RecTypeBindingPtr> newBindings;
+					for (RecTypeBindingPtr& cur : bindings) {
+						auto newBinding = builder.recTypeBinding(cur->getVariable(), cur->getType()->substitute(mgr, mapper));
+						if (!contains(newBindings, newBinding)) newBindings.push_back(newBinding);
+					}
+					bindings = newBindings;
+
+					// update definitions
+					def = builder.recTypeDefinition(bindings);
+				}
+
+				// convert structs into list of definitions
+
+				// build up new recursive type (only if it is closed)
+				auto res = builder.recType(var, def);
+				return hasFreeTypeVariables(res.as<TypePtr>())?type:res;
+			}
+
+
+			/**
+			 * The conversion of recursive function is conducted lazily - first recursive
+			 * functions are build in an unrolled way before they are closed (by combining
+			 * multiple recursive definitions into a single one) by this function.
+			 *
+			 * ATTENTION: this function has been specifically implemented to work in cooperation
+			 * with the following convertFunctionDecl(..) implementation. To understand their
+			 * operation, both have to be considered.
+			 *
+			 * @param lambda the unrolled recursive definition to be collapsed into a proper format
+			 * @return the proper format
+			 */
+			LambdaExprPtr fixRecursion(const LambdaExprPtr& lambda) {
+
+				// check whether this is the last free variable to be defined
+				VariablePtr recVar = lambda->getVariable();
+				auto freeVars = analysis::getFreeVariables(lambda->getLambda());
+				if (freeVars != toVector(recVar)) {
+					// it is not, delay closing recursion
+					return lambda;
+				}
+
+				// search all directly nested lambdas
+				vector<LambdaExprAddress> inner;
+				visitDepthFirstOncePrunable(NodeAddress(lambda), [&](const LambdaExprAddress& cur) {
+					if (cur.isRoot()) return false;
+					if (!analysis::hasFreeVariables(cur)) return true;
+					inner.push_back(cur);
+					return false;
+				});
+
+				// if there is no inner lambda with free variables it is a simple recursion
+				if (inner.empty()) return lambda;		// => done
+
+				// ---------- build new recursive function ------------
+
+				auto& mgr = lambda.getNodeManager();
+				IRBuilder builder(mgr);
+
+				// build up resulting lambda
+				vector<LambdaBindingPtr> bindings;
+				bindings.push_back(builder.lambdaBinding(recVar, lambda->getLambda()));
+				for(auto cur : inner) {
+					assert(cur->getDefinition().size() == 1u);
+					auto def = cur->getDefinition()[0];
+
+					// only add every variable once
+					if (!any(bindings, [&](const LambdaBindingPtr& binding)->bool { return binding->getVariable() == def.getAddressedNode()->getVariable(); })) {
+						bindings.push_back(def);
+					}
+				}
+
+				LambdaExprPtr res = builder.lambdaExpr(recVar, builder.lambdaDefinition(bindings));
+
+				// last step: collapse recursive definitions
+				while (true) {
+
+					// search for reductions (lambda => rec_variable)
+					std::map<NodeAddress, NodePtr> replacements;
+					visitDepthFirstOncePrunable(NodeAddress(res), [&](const LambdaExprAddress& cur) {
+						if (cur.isRoot()) return false;
+						if (!analysis::hasFreeVariables(cur)) return true;
+						replacements[cur] = cur.as<LambdaExprPtr>()->getVariable();
+						return false;
+					});
+
+					// check whether the job is done
+					if (replacements.empty()) break;
+
+					// apply reductions
+					res = transform::replaceAll(mgr, replacements).as<LambdaExprPtr>();
+				}
+
+				// that's it
+				return res;
+			}
+
+		};
+
+	}
+
+	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
+
+		// search for entry point
+		for (auto cur : a.getFunctions()) {
+			if (cur.first->getStringValue() == entryPoint) {
+
+				// get the symbol
+				core::NodePtr symbol = cur.first;
+
+				// extract lambda expression
+				core::LambdaExprPtr lambda = ProgramCreator(mgr, a).map(symbol).as<core::LambdaExprPtr>();
+
+				// TODO: integrate globals
+
+				// wrap into program
+				return core::IRBuilder(mgr).program(toVector<core::ExpressionPtr>(lambda));
+			}
+		}
+
+		assert(false && "Entry point not found!");
+		return core::ProgramPtr();
 	}
 
 } // end namespace tu

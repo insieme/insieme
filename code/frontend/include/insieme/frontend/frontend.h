@@ -105,7 +105,7 @@ namespace frontend {
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */
-		core::ProgramPtr execute(core::NodeManager& manager);
+		core::ProgramPtr execute(core::NodeManager& manager) const;
 
 	};
 

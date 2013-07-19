@@ -53,9 +53,6 @@ namespace insieme {
 namespace frontend {
 namespace tu {
 
-	// the type used for encoding a translation unit
-	typedef std::tuple<IRTranslationUnit::TypeMap, IRTranslationUnit::FunctionMap, IRTranslationUnit::GlobalsList> WrapperType;
-
 	core::checks::MessageList checkTU(const IRTranslationUnit& unit){
 		core::NodeManager empty;
 		core::NodeManager localMgr((unit.empty()?empty:unit.getNodeManager()));
