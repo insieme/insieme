@@ -61,7 +61,7 @@
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/castTool.h"
 #include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/utils/dep_graph.h"
+//#include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/utils/debug.h"
@@ -170,8 +170,14 @@ tu::IRTranslationUnit Converter::convert() {
 			return true;
 		}
 		bool VisitTypedefDecl(clang::TypedefDecl* type) {
+			// extract new symbol name
+			auto symbol = converter.getIRBuilder().genericType(type->getQualifiedNameAsString());
+
+			// get contained type
 			auto res = converter.convertType(type->getUnderlyingType().getTypePtr());
-			converter.getIRTranslationUnit().addType(converter.getIRBuilder().genericType(type->getQualifiedNameAsString()), res);
+
+			// frequently structs and their type definitions have the same name => in this case symbol == res and should be ignored
+			if (res != symbol) converter.getIRTranslationUnit().addType(symbol, res);
 			return true;
 		}
 	} typeVisitor(*this);
@@ -247,6 +253,19 @@ tu::IRTranslationUnit Converter::convert() {
 	} funVisitor(*this);
 
 	funVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
+
+	// handle entry points (marked using insieme pragmas)
+	for(pragma::PragmaPtr pragma : program.getPragmaList()) {
+		// only interested in insieme-mark pragmas
+		if (pragma->getType() != "insieme::mark") continue;
+		const pragma::Pragma& insiemePragma = *pragma;
+		if(!insiemePragma.isDecl()) continue;
+
+		// this is a declaration, if it's a function add it to the entry points of the program
+		const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
+		assert(funcDecl && "Pragma insieme only valid for function declarations.");
+		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
+	}
 
 	// that's all
 	return irTranslationUnit;
@@ -562,7 +581,11 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 
 //////////////////////////////////////////////////////////////////
 ///
-core::ExpressionPtr Converter::defaultInitVal(const core::TypePtr& type) const {
+core::ExpressionPtr Converter::defaultInitVal(const core::TypePtr& valueType) const {
+
+	// get type details
+	core::TypePtr type = lookupTypeDetails(valueType);
+
 	// Primitive types
 	if (mgr.getLangBasic().isInt(type)) {
 		// initialize integer value
@@ -597,6 +620,7 @@ core::ExpressionPtr Converter::defaultInitVal(const core::TypePtr& type) const {
 		return builder.literal("", type);
 	}
 
+	// resolve symbol
 
 
 	// Initialization for volatile types
@@ -810,10 +834,11 @@ Converter::convertInitializerList(const clang::InitListExpr* initList, const cor
 //	ATTACH_OMP_ANNOTATIONS(retIr, initList);
 	LOG_EXPR_CONVERSION(initList, retIr);
 
-	core::TypePtr currType = type;
+	// resolve potential type symbol within current translation unit
+	core::TypePtr currType = lookupTypeDetails(type);
 
 	if ( core::RefTypePtr&& refType = core::dynamic_pointer_cast<const core::RefType>(type)) {
-		currType = refType->getElementType();
+		currType = lookupTypeDetails(refType->getElementType());
 	}
 
 	// Handles recursive types. Unroll once in order to reveal the actual type (hopefully it will be
@@ -1119,13 +1144,7 @@ core::FunctionTypePtr Converter::convertFunctionType(const clang::FunctionDecl* 
 //
 core::TypePtr Converter::convertType(const clang::Type* type) {
 	assert(type && "Calling convertType with a NULL pointer");
-	auto res = typeConvPtr->convert( type );
-	if (core::GenericTypePtr genType = res.isa<core::GenericTypePtr>()) {
-		auto substitution = getIRTranslationUnit()[genType];
-		if (substitution) return substitution;
-	}
-	return res;
-//	return typeConvPtr->convert( type );
+	return typeConvPtr->convert( type );
 }
 
 namespace {

@@ -73,10 +73,13 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 		check.open(path);
 	}
 	// if there is still no match, try the paths of the input files
-	string ifp = job.getFile().string();
-	size_t slash = ifp.find_last_of("/");
-	path = ifp.substr(0u, slash + 1) + root;
-	check.open(path);
+	if (check.fail()) {
+		assert(job.getFiles().size() == 1u);
+		string ifp = job.getFiles()[0].string();
+		size_t slash = ifp.find_last_of("/");
+		path = ifp.substr(0u, slash + 1) + root;
+		check.open(path);
+	}
 
 	check.close();
 
@@ -86,7 +89,9 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	}
 
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
-	return job.execute(builder.getNodeManager());
+	ConversionJob kernelJob = job;
+	kernelJob.setFiles(toVector<frontend::path>(path));
+	return kernelJob.execute(builder.getNodeManager());
 }
 
 void tryStructExtract(ExpressionPtr& expr, IRBuilder& builder) {

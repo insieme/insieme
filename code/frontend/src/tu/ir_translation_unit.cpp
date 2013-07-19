@@ -46,8 +46,9 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/annotations/c/naming.h"
 
@@ -70,7 +71,9 @@ namespace tu {
 				<< join("\n\t\t", globals, [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << ":" << *cur.first->getType() << " => "; if (cur.second) out << print(cur.second); else out << "<uninitalized>"; })
 				<< ",\n\tFunctions:\n\t\t"
 				<< join("\n\t\t", functions, [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << " => " << print(cur.second); })
-				<< "\n)";
+				<< ",\n\tEntry Points:\t{"
+				<< join(", ", entryPoints, [&](std::ostream& out, const core::LiteralPtr& cur) { out << *cur; })
+				<< "}\n)";
 	}
 
 	IRTranslationUnit merge(const IRTranslationUnit& a, const IRTranslationUnit& b) {
@@ -89,6 +92,11 @@ namespace tu {
 		// copy globals
 		for(auto cur : b.getGlobals()) {
 			res.addGlobal(cur);
+		}
+
+		// entry points
+		for(auto cur : b.getEntryPoints()) {
+			res.addEntryPoints(cur);
 		}
 
 		// done
@@ -209,14 +217,19 @@ namespace tu {
 						// fix type recursion
 						res = fixRecursion(type, recVar.as<core::TypeVariablePtr>());
 
+						// migrate annotations
+						core::transform::utils::migrateAnnotations(pos->second, res);
+
 						if (!hasFreeTypeVariables(res)) {
 							cache[ptr] = res;
 
 							// also, register results in recursive variable resolution map
-							auto definition = res.as<RecTypePtr>()->getDefinition();
-							if (definition.size() > 1) {
-								for(auto cur : definition) {
-									recVarResolutions[cur->getVariable()] = builder.recType(cur->getVariable(), definition);
+							if (const auto& recType = res.isa<RecTypePtr>()) {
+								auto definition = recType->getDefinition();
+								if (definition.size() > 1) {
+									for(auto cur : definition) {
+										recVarResolutions[cur->getVariable()] = builder.recType(cur->getVariable(), definition);
+									}
 								}
 							}
 						}
@@ -231,6 +244,9 @@ namespace tu {
 
 						// fix recursions
 						res = fixRecursion(lambda);
+
+						// migrate annotations
+						core::transform::utils::migrateAnnotations(pos->second, res);
 
 						// add final results to cache
 						if (!analysis::hasFreeVariables(res)) {
@@ -252,7 +268,10 @@ namespace tu {
 
 				}
 
-				// TODO: migrate annotations and stuff ...
+				// migrate annotations
+				if (ptr != res) {
+					core::transform::utils::migrateAnnotations(ptr, res);
+				}
 
 				// add result to cache if it does not contain recursive parts
 				if (*ptr == *res) {
@@ -487,6 +506,7 @@ namespace tu {
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
 
 		// search for entry point
+		core::IRBuilder builder(mgr);
 		for (auto cur : a.getFunctions()) {
 			if (cur.first->getStringValue() == entryPoint) {
 
@@ -500,13 +520,23 @@ namespace tu {
 				lambda = addGlobalsInitialization(a, lambda);
 
 				// wrap into program
-				return core::IRBuilder(mgr).program(toVector<core::ExpressionPtr>(lambda));
+				return builder.program(toVector<core::ExpressionPtr>(lambda));
 			}
 		}
 
-		assert(false && "Entry point not found!");
-		return core::ProgramPtr();
+		// if there is no such entry point => use those marked within the translation unit
+		core::ExpressionList entryPoints;
+		ProgramCreator creator(mgr, a);
+		for(auto cur : a.getEntryPoints()) {
+			entryPoints.push_back(creator.map(cur.as<core::ExpressionPtr>()));
+		}
+		return builder.program(entryPoints);
 	}
+
+	core::NodePtr IRTranslationUnit::resolve(const core::NodePtr& node) const {
+		return ProgramCreator(getNodeManager(), *this).map(node);
+	}
+
 
 } // end namespace tu
 } // end namespace frontend

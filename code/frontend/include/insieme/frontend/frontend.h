@@ -75,27 +75,41 @@ namespace frontend {
 		/**
 		 * The translation units to be converted.
 		 */
-		path file;
+		vector<path> files;
 
 	public:
 
 		/**
 		 * Creates a new conversion job covering a single file.
 		 */
-		ConversionJob(const path& path) : file(path) {}
+		ConversionJob(const path& file) : files(toVector(file)) {}
 
 		/**
-		 * Obtains the one input file covered by this conversion job if there is only one file.
+		 * Creates a new conversion job covering the given files.
 		 */
-		const path& getFile() const {
-			return file;
+		ConversionJob(const vector<path>& files) : files(files) {
+			assert(!files.empty());
 		}
 
 		/**
-		 * Exchanges the files covered by this conversion job by the given file.
+		 * Obtains the one input files covered by this conversion job.
 		 */
-		void setFile(const path& file) {
-			this->file = file;
+		const vector<path>& getFiles() const {
+			return files;
+		}
+
+		/**
+		 * Adds an additonal file to this conversion job.
+		 */
+		void addFile(const path& file) {
+			files.push_back(file);
+		}
+
+		/**
+		 * Exchanges the files covered by this conversion job by the given files.
+		 */
+		void setFiles(const vector<path>& files) {
+			this->files = files;
 		}
 
 		/**
@@ -106,6 +120,15 @@ namespace frontend {
 		 * @throws an exception if the conversion fails.
 		 */
 		core::ProgramPtr execute(core::NodeManager& manager) const;
+
+		/**
+		 * Triggers the conversion of the files covered by this job into a translation unit.
+		 *
+		 * @param manager the node manager to be used for building the IR
+		 * @return the resulting, converted program
+		 * @throws an exception if the conversion fails.
+		 */
+		tu::IRTranslationUnit toTranslationUnit(core::NodeManager& manager) const;
 
 	};
 

@@ -100,7 +100,7 @@ namespace frontend {
 		EXPECT_FALSE(tu.getFunctions().empty());
 		EXPECT_FALSE(tu.getGlobals().empty());
 
-		EXPECT_EQ( tu.getGlobals(), 5);  // 5 globals, no one cares for the poor extern one
+		EXPECT_EQ( tu.getGlobals().size(), 5);  // 5 globals, no one cares for the poor extern one
 
 
 	}

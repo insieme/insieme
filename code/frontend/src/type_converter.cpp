@@ -636,6 +636,7 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 
 		// resolve the type recursively
 		res = convertInternal(type);
+		assert(res.isa<core::StructTypePtr>() || res.isa<core::UnionTypePtr>());
 
 		// check cache consistency
 		assert(cache[type] == symbol); // should not change in the meantime
@@ -643,8 +644,9 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 		// register type within resulting translation unit
 		if (!recDecl->getName().empty()) {
 			convFact.getIRTranslationUnit().addType(symbol, res);
-		} else {
-			cache[type] = res;
+
+			// and add it to the cache
+			cache[type] = symbol;
 		}
 
 	} else {

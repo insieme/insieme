@@ -234,6 +234,29 @@ public:
 		return irTranslationUnit;
 	}
 
+	const tu::IRTranslationUnit& getIRTranslationUnit() const {
+		return irTranslationUnit;
+	}
+
+	/**
+	 * Determines the definition of the given generic type pointer within the
+	 * internally maintained IR Translation Unit. If non is present, the given
+	 * type will be returned.
+	 */
+	const core::TypePtr lookupTypeDetails(const core::GenericTypePtr& type) const {
+		core::TypePtr res = getIRTranslationUnit()[type];
+		return (res)?res:type;
+	}
+
+	/**
+	 * Determines the definition of the given generic type pointer within the
+	 * internally maintained IR Translation Unit. If non is present, the given
+	 * type will be returned.
+	 */
+	const core::TypePtr lookupTypeDetails(const core::TypePtr& type) const {
+		return (type.isa<core::GenericTypePtr>()) ? lookupTypeDetails(type.as<core::GenericTypePtr>()) : type;
+	}
+
 	/**
 	 * Returns a reference to the IR data structure used to represent a variable of the input C program.
 	 *

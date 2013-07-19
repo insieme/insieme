@@ -61,6 +61,8 @@ namespace tu {
 		typedef std::pair<core::LiteralPtr, core::ExpressionPtr> Global;
 		typedef std::vector<Global> GlobalsList;
 
+		typedef std::vector<core::LiteralPtr> EntryPointList;
+
 	private:
 
 		TypeMap types;
@@ -69,12 +71,14 @@ namespace tu {
 
 		GlobalsList globals;
 
+		EntryPointList entryPoints;
+
 	public:
 
 		IRTranslationUnit() {}
 
-		IRTranslationUnit(const TypeMap& types, const FunctionMap& functions, const GlobalsList& globals)
-			: types(types), functions(functions), globals(globals) {}
+		IRTranslationUnit(const TypeMap& types, const FunctionMap& functions, const GlobalsList& globals, const EntryPointList& entryPoints)
+			: types(types), functions(functions), globals(globals), entryPoints(entryPoints) {}
 
 		// getter:
 
@@ -88,6 +92,10 @@ namespace tu {
 
 		const GlobalsList& getGlobals() const {
 			return globals;
+		}
+
+		const EntryPointList& getEntryPoints() const {
+			return entryPoints;
 		}
 
 		// modifier:
@@ -109,10 +117,15 @@ namespace tu {
 
 		void addGlobal(const Global& global);
 
+		void addEntryPoints(const core::LiteralPtr& literal) {
+			assert(functions.find(literal) != functions.end());
+			entryPoints.push_back(literal);
+		}
+
 		// operators:
 
 		bool operator==(const IRTranslationUnit& other) const {
-			return types == other.types && functions == other.functions && globals == other.globals;
+			return types == other.types && functions == other.functions && globals == other.globals && entryPoints == other.entryPoints;
 		}
 
 		core::TypePtr operator[](const core::GenericTypePtr& type) const {
@@ -135,6 +148,9 @@ namespace tu {
 			if (!globals.empty()) return globals.begin()->first->getNodeManager();
 			assert(false && "Must not be called on empty unit.");
 		}
+
+		// TODO: connect this with the toProgram part ...
+		core::NodePtr resolve(const core::NodePtr& fragment) const;
 
 	protected:
 

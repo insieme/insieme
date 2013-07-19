@@ -52,82 +52,56 @@
 namespace insieme {
 namespace frontend {
 
+	tu::IRTranslationUnit ConversionJob::toTranslationUnit(core::NodeManager& manager) const {
 
-core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) const {
+		// add definitions needed by the OpenCL frontend
+		ConversionJob job = *this;
+		if(hasOption(OpenCL)) {
+			job.addIncludeDirectory(SRC_DIR);
+			job.addIncludeDirectory(SRC_DIR "inputs");
+			job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
 
+			job.setDefinition("INSIEME");
+		}
 
-	// add definitions needed by the OpenCL frontend
-	ConversionJob job = *this;
-	if(hasOption(OpenCL)) {
-		job.addIncludeDirectory(SRC_DIR);
-		job.addIncludeDirectory(SRC_DIR "inputs");
-		job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
+		// convert files to translation units
+		auto units = convert(manager, files, job);
 
-		job.setDefinition("INSIEME");
+		// merge the translation units
+		return tu::merge(units);
+
 	}
 
-//	// load translation unit
-//	auto tu = convert(manager, file, *this);
+	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) const {
 
-	return tu::toProgram(manager, convert(manager, file, *this));
+		// create a temporary manager
+		core::NodeManager tmpMgr(manager);
 
-//
-//
-//	// create a temporary manager
-//	core::NodeManager tmpMgr(manager);
-//
-//	// create the program parser
-//	frontend::Program program(manager, job);
-//
-//	// set up the translation units
-//	program.addTranslationUnits(job);
-//
-//	// convert the program
-//	auto res = program.convert();
-//
-//	// apply OpenMP sema conversion
-//	if (hasOption(OpenMP)) {
-//		res = frontend::omp::applySema(res, tmpMgr);
-//	}
-//
-//	// apply OpenCL conversion
-//	if(hasOption(OpenCL)) {
-//		frontend::ocl::HostCompiler oclHostCompiler(res, job);
-//		res = oclHostCompiler.compile();
-//	}
-//
-//	// apply Cilk conversion
-//	if(hasOption(Cilk)) {
-//		res = frontend::cilk::applySema(res, tmpMgr);
-//	}
-//
-//	// return instance within global manager
-//	return manager.get(res);
-}
+		// load and merge all files into a single translation unit
+		auto unit = toTranslationUnit(tmpMgr);
 
-//void ConversionJob::storeAST(core::NodeManager& manager, const string& output_file) {
-//	// add definitions needed by the OpenCL frontend
-//	ConversionJob job = *this;
-//	if(hasOption(OpenCL)) {
-//		job.addIncludeDirectory(SRC_DIR);
-//		job.addIncludeDirectory(SRC_DIR "inputs");
-//		job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
-//
-//		job.addDefinition("INSIEME");
-//	}
-//
-//	// create a temporary manager
-//	core::NodeManager tmpMgr(manager);
-//
-//	// create the program parser
-//	frontend::Program program(manager, job);
-//
-//	// set up the translation units
-//	program.addTranslationUnits(job);
-//
-//    // store translation units
-//    program.storeTranslationUnits(output_file);
-//}
+		// converte units to a single program
+		auto res = tu::toProgram(tmpMgr, unit);
+
+		// apply OpenMP sema conversion
+		if (hasOption(OpenMP)) {
+			res = frontend::omp::applySema(res, tmpMgr);
+		}
+
+		// apply OpenCL conversion
+		if(hasOption(OpenCL)) {
+			frontend::ocl::HostCompiler oclHostCompiler(res, *this);
+			res = oclHostCompiler.compile();
+		}
+
+		// apply Cilk conversion
+		if(hasOption(Cilk)) {
+			res = frontend::cilk::applySema(res, tmpMgr);
+		}
+
+		// return instance within global manager
+		return manager.get(res);
+	}
 
 } // end namespace frontend
 } // end namespace insieme

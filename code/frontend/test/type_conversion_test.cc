@@ -356,6 +356,12 @@ TEST(TypeConversion, FileTest) {
 		NodeManager mgr;
 
 		fe::conversion::Converter convFactory( mgr, prog );
+		convFactory.convert();
+
+		auto resolve = [&](const core::NodePtr& cur) {
+//			return cur;
+			return convFactory.getIRTranslationUnit().resolve(cur);
+		};
 
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 
@@ -363,9 +369,9 @@ TEST(TypeConversion, FileTest) {
 			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt( tp.getStatement() )), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
 		else {
 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertType( td->getTypeForDecl() ))->toString() + '\"' );
 			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
+				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertVarDecl( vd ))->toString() + '\"' );
 			}
 		}
 	}
