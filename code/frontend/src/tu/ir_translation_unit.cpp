@@ -46,6 +46,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/naming.h"
@@ -55,7 +56,8 @@ namespace frontend {
 namespace tu {
 
 	void IRTranslationUnit::addGlobal(const Global& global) {
-		assert(!global.second || core::types::isSubTypeOf(global.second->getType(), global.first->getType()));
+		assert(global.first && global.first->getType().isa<core::RefTypePtr>());
+		assert(!global.second || core::types::isSubTypeOf(global.second->getType(), global.first->getType().as<core::RefTypePtr>()->getElementType()));
 		assert(!any(globals, [&](const Global& cur)->bool { return *global.first == *cur.first; }));
 		globals.push_back(global);
 	}
@@ -203,6 +205,8 @@ namespace tu {
 					cache.erase(ptr);
 
 					if (TypePtr type = res.isa<TypePtr>()) {
+
+						// fix type recursion
 						res = fixRecursion(type, recVar.as<core::TypeVariablePtr>());
 
 						if (!hasFreeTypeVariables(res)) {
@@ -219,11 +223,13 @@ namespace tu {
 
 					} else if (LambdaExprPtr lambda = res.isa<LambdaExprPtr>()) {
 
+						// re-build current lambda with correct recursive variable
 						assert_eq(1u, lambda->getDefinition().size());
 						auto var = recVar.as<VariablePtr>();
 						auto binding = builder.lambdaBinding(var, lambda->getLambda());
 						lambda = builder.lambdaExpr(var, builder.lambdaDefinition(toVector(binding)));
 
+						// fix recursions
 						res = fixRecursion(lambda);
 
 						// add final results to cache
@@ -244,17 +250,16 @@ namespace tu {
 						assert(false && "Unsupported recursive structure encountered!");
 					}
 
-				} else {
-
-					// TODO: migrate annotations and stuff ...
-
-					// add result to cache if it does not contain recursive parts
-					if (*ptr == *res) {
-						cache[ptr] = res;
-					}
-
 				}
 
+				// TODO: migrate annotations and stuff ...
+
+				// add result to cache if it does not contain recursive parts
+				if (*ptr == *res) {
+					cache[ptr] = res;
+				}
+
+				// done
 				return res;
 			}
 
@@ -369,10 +374,6 @@ namespace tu {
 			 * functions are build in an unrolled way before they are closed (by combining
 			 * multiple recursive definitions into a single one) by this function.
 			 *
-			 * ATTENTION: this function has been specifically implemented to work in cooperation
-			 * with the following convertFunctionDecl(..) implementation. To understand their
-			 * operation, both have to be considered.
-			 *
 			 * @param lambda the unrolled recursive definition to be collapsed into a proper format
 			 * @return the proper format
 			 */
@@ -443,6 +444,44 @@ namespace tu {
 
 		};
 
+
+	core::LambdaExprPtr addGlobalsInitialization(const IRTranslationUnit& unit, const core::LambdaExprPtr& mainFunc){
+
+		// we only want to init what we use, so we check it
+		core::NodeSet usedLiterals;
+		core::visitDepthFirstOnce (mainFunc, [&] (const core::LiteralPtr& literal){
+			usedLiterals.insert(literal);
+		});
+
+		core::IRBuilder builder(mainFunc->getNodeManager());
+		core::StatementList inits;
+
+		// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		for (auto cur : unit.getGlobals()) {
+			// only consider having an initialization value
+			if (!cur.second) continue;
+			if (!contains(usedLiterals, cur.first)) continue;
+			inits.push_back(builder.assign(cur.first, cur.second));
+		}
+
+		// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		const lang::StaticVariableExtension& ext = mainFunc->getNodeManager().getLangExtension<lang::StaticVariableExtension>();
+		for (auto cur : unit.getGlobals()) {
+			// only consider static variables
+			auto type = cur.first->getType();
+			if (!type.isa<RefTypePtr>() || !ext.isStaticType(type.as<RefTypePtr>()->getElementType())) continue;
+			// skip unused variables
+			if (!contains(usedLiterals, cur.first)) continue;
+			// add creation statement
+			inits.push_back(builder.createStaticVariable(cur.first));
+		}
+
+		// build resulting lambda
+		if (inits.empty()) return mainFunc;
+
+		return (core::transform::insert ( mainFunc->getNodeManager(), core::LambdaExprAddress(mainFunc)->getBody(), inits, 0)).as<core::LambdaExprPtr>();
+	}
+
 	}
 
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
@@ -457,7 +496,8 @@ namespace tu {
 				// extract lambda expression
 				core::LambdaExprPtr lambda = ProgramCreator(mgr, a).map(symbol).as<core::LambdaExprPtr>();
 
-				// TODO: integrate globals
+				// add global initializers
+				lambda = addGlobalsInitialization(a, lambda);
 
 				// wrap into program
 				return core::IRBuilder(mgr).program(toVector<core::ExpressionPtr>(lambda));

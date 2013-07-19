@@ -39,7 +39,7 @@ struct c {
 	int b;
 };
 
-int counter;
+int counter = 10;
 
 typedef struct {
 	int a;
@@ -100,10 +100,19 @@ int odd(int x) {
 	return even(x-1);
 }
 
+int a(int);
+int b(int);
+int c(int);
+
+int a(int x) { return b(x); }
+int b(int x) { return c(x); }
+int c(int x) { return a(x); }
 
 int main() {
 
-//	static double PI = 3;
+	static double PI = 3;
+
+	counter++;
 
 	struct C {
 
@@ -114,4 +123,15 @@ int main() {
 	};
 
 	int a = 1 + 2;
+
+	List l;
+	Even e;
+	Odd o;
+
+	even(2);
+	odd(2);
+
+	b(12);
+	c(12);
 }
+

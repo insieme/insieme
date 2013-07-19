@@ -36,23 +36,25 @@
 
 #include <gtest/gtest.h>
 
+#include "insieme/core/checks/full_check.h"
+#include "insieme/core/printer/pretty_printer.h"
+
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/clang_config.h"
-
-#include "insieme/core/checks/full_check.h"
 #include "insieme/frontend/tu/ir_translation_unit_check.h"
+
 
 namespace insieme {
 namespace frontend {
 
-	TEST(Clang, Minimal) {
+	TEST(Clang, ConverToTranslationUnit) {
 		core::NodeManager mgr;
 
 		ConversionSetup setup;
 		setup.setStandard(ConversionSetup::Cxx03);
-		auto tu = convert(mgr, SRC_DIR "/inputs/minimal.cpp", setup);
+		auto tu = convert(mgr, SRC_DIR "/inputs/conversion_test.cpp", setup);
 
-		std::cout << tu << "\n";
+//		std::cout << tu << "\n";
 		EXPECT_FALSE(tu.getFunctions().empty());
 
 		auto messages = checkTU (tu);
@@ -61,21 +63,32 @@ namespace frontend {
 		}
 	}
 
-	TEST(Clang, MinimalToProgram) {
+	TEST(Clang, ConvertToProgram) {
 		core::NodeManager mgr;
 
 		ConversionSetup setup;
 		setup.setStandard(ConversionSetup::Cxx03);
-		auto tu = convert(mgr, SRC_DIR "/inputs/minimal.cpp", setup);
+		auto tu = convert(mgr, SRC_DIR "/inputs/conversion_test.cpp", setup);
 
-		std::cout << tu << "\n";
+//		std::cout << tu << "\n";
 		EXPECT_FALSE(tu.getFunctions().empty());
 
-		std::cout << "\n\n----------------------------------------------------------------------\n\n";
+//		std::cout << "\n\n----------------------------------------------------------------------\n\n";
 
 		auto program = tu::toProgram(mgr, tu);
-		dump(program);
 		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+
+		string res = toString(core::printer::PrettyPrinter(program));
+
+		EXPECT_PRED2(containsSubString, res, "let fun003 = recFun v34 {");		// even header
+		EXPECT_PRED2(containsSubString, res, "let fun004 = recFun v35 {");		// odd header
+
+		// check global variable setup
+		EXPECT_PRED2(containsSubString, res, "counter := 10;");
+		EXPECT_PRED2(containsSubString, res, "PI := CreateStatic(type<real<8>>);");
+		EXPECT_PRED2(containsSubString, res, "InitStatic(PI, 3.0);");
+
+
 	}
 
 	TEST(Clang, Globals) {
@@ -83,7 +96,7 @@ namespace frontend {
 
 		auto tu = convert(mgr, SRC_DIR "/inputs/globals.c");
 
-		std::cout << tu << "\n";
+//		std::cout << tu << "\n";
 		EXPECT_FALSE(tu.getFunctions().empty());
 		EXPECT_FALSE(tu.getGlobals().empty());
 

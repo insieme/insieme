@@ -178,7 +178,6 @@ tu::IRTranslationUnit Converter::convert() {
 
 	typeVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
 
-	// TODO: collect all type definitions
 
 	// collect all global declarations
 	struct GlobalVisitor : public clang::RecursiveASTVisitor<GlobalVisitor> {
@@ -199,6 +198,7 @@ tu::IRTranslationUnit Converter::convert() {
 			}
 
 			// all globals are mutable ..
+			auto elementType = type;
 			type = builder.refType(type);
 
 			auto literal = builder.literal(type, var->getQualifiedNameAsString());
@@ -209,7 +209,19 @@ tu::IRTranslationUnit Converter::convert() {
 			// and get the initial value
 			core::ExpressionPtr initValue;
 			if (var->hasDefinition() && var->hasInit() && !var->isStaticLocal()) {
-				initValue = converter.convertInitExpr(var->getType().getTypePtr(), var->getInit(), type, true);
+				initValue = converter.convertInitExpr(var->getType().getTypePtr(), var->getInit(), elementType, true);
+
+				// strip of potential ref.var call ...
+				if (core::analysis::isCallOf(initValue, builder.getNodeManager().getLangBasic().getRefVar())) {
+					initValue = initValue.as<core::CallExprPtr>()[0];
+				}
+
+				// de-ref init values (for constructor calls)
+				if (!core::types::isSubTypeOf(initValue->getType(), elementType)) {
+					initValue = builder.deref(initValue);
+				}
+
+				assert(core::types::isSubTypeOf(initValue->getType(), elementType));
 			}
 
 			converter.getIRTranslationUnit().addGlobal(literal, initValue);
@@ -219,7 +231,6 @@ tu::IRTranslationUnit Converter::convert() {
 
 	varVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
 
-	// TODO: collect all function declarations
 
 	// collect all global declarations
 	struct FunctionVisitor : public clang::RecursiveASTVisitor<FunctionVisitor> {
@@ -237,9 +248,7 @@ tu::IRTranslationUnit Converter::convert() {
 
 	funVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
 
-
-	std::cout << "Result: " << getIRTranslationUnit() << "\n";
-
+	// that's all
 	return irTranslationUnit;
 }
 

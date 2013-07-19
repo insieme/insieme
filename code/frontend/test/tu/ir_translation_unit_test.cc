@@ -63,7 +63,7 @@ namespace tu {
 		unit.addFunction(builder.parseExpr("lit(\"Y\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("()->unit { int<4> x; return; }").as<core::LambdaExprPtr>());
 
 		// check adding globals
-		unit.addGlobal(builder.parseExpr("lit(\"a\":int<4>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
+		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
 
 		// print it
 		EXPECT_FALSE(toString(unit).empty());
@@ -83,7 +83,7 @@ namespace tu {
 		unit.addFunction(builder.parseExpr("lit(\"X\":()->unit)").as<core::LiteralPtr>(), builder.parseExpr("()->unit { return; }").as<core::LambdaExprPtr>());
 
 		// check adding globals
-		unit.addGlobal(builder.parseExpr("lit(\"a\":int<4>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
+		unit.addGlobal(builder.parseExpr("lit(\"a\":ref<int<4>>)").as<core::LiteralPtr>(), builder.parseExpr("12"));
 
 		// -------------  dump it + restore it ------------
 
