@@ -15,12 +15,15 @@ int *f(){
 }
 
 void plus(int val){
+	static int count = 7;
 	withInit+= val;
 }
 
 
 int main(){
 	*f() += 4;
+	plus(myStatic);
+	plus(myStatic);
 	plus(myStatic);
 	return 0;
 }
