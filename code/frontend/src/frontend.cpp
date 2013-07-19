@@ -53,7 +53,7 @@ namespace insieme {
 namespace frontend {
 
 
-core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) {
+core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) const {
 
 
 	// add definitions needed by the OpenCL frontend
@@ -69,7 +69,7 @@ core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) {
 //	// load translation unit
 //	auto tu = convert(manager, file, *this);
 
-	return tu::toProgram(convert(manager, file, *this));
+	return tu::toProgram(manager, convert(manager, file, *this));
 
 //
 //

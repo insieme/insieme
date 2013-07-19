@@ -159,15 +159,10 @@ namespace tu {
 
 	// -------------- program conversion ----------------------
 
-	core::ProgramPtr toProgram(const IRTranslationUnit& a);
+	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint = "main");
 
-	inline core::ProgramPtr toProgram(const vector<IRTranslationUnit>& units) {
-		return toProgram(merge(units));
-	}
-
-	template<typename ... T>
-	core::ProgramPtr toProgram(const T& ... units) {
-		return toProgram(merge(units ...));
+	inline core::ProgramPtr toProgram(core::NodeManager& mgr, const vector<IRTranslationUnit>& units, const string& entryPoint = "main") {
+		return toProgram(mgr, merge(units));
 	}
 
 } // end namespace tu

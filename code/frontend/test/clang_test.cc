@@ -39,6 +39,8 @@
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/clang_config.h"
 
+#include "insieme/core/checks/full_check.h"
+
 namespace insieme {
 namespace frontend {
 
@@ -51,7 +53,27 @@ namespace frontend {
 
 		std::cout << tu << "\n";
 		EXPECT_FALSE(tu.getFunctions().empty());
+
+		std::cout << "\n\n----------------------------------------------------------------------\n\n";
 	}
+
+	TEST(Clang, Minimal2) {
+		core::NodeManager mgr;
+
+		ConversionSetup setup;
+		setup.setStandard(ConversionSetup::Cxx03);
+		auto tu = convert(mgr, SRC_DIR "/inputs/minimal.cpp", setup);
+
+		std::cout << tu << "\n";
+		EXPECT_FALSE(tu.getFunctions().empty());
+
+		std::cout << "\n\n----------------------------------------------------------------------\n\n";
+
+		auto program = tu::toProgram(mgr, tu);
+		dump(program);
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
+	}
+
 
 } // end frontend
 } // end insieme
