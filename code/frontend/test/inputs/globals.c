@@ -34,60 +34,29 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+extern int ext;
+int  glob;
 
-#include "insieme/frontend/clang.h"
-#include "insieme/frontend/clang_config.h"
 
-#include "insieme/core/checks/full_check.h"
-#include "insieme/frontend/tu/ir_translation_unit_check.h"
+typedef struct anon myStruct;
+myStruct* ptr;                     // non extern var, but with non defined type inside
 
-namespace insieme {
-namespace frontend {
+int withInit = 4;
+static int myStatic= 1;
 
-	TEST(Clang, Minimal) {
-		core::NodeManager mgr;
+int *f(){
+	return &ext;
+}
 
-		ConversionSetup setup;
-		setup.setStandard(ConversionSetup::Cxx03);
-		auto tu = convert(mgr, SRC_DIR "/inputs/minimal.cpp", setup);
+void plus(int val){
+	withInit+= val;
+}
 
-		std::cout << tu << "\n";
-		EXPECT_FALSE(tu.getFunctions().empty());
 
-		auto messages = checkTU (tu);
-		for (const core::checks::Message& msg : messages.getAll()){
-			msg.printTo(std::cout) << std::endl;
-		}
-	}
+int main(){
+	*f() += 4;
+	plus(myStatic);
+	return 0;
+}
 
-	TEST(Clang, Minimal2) {
-		core::NodeManager mgr;
 
-		ConversionSetup setup;
-		setup.setStandard(ConversionSetup::Cxx03);
-		auto tu = convert(mgr, SRC_DIR "/inputs/minimal.cpp", setup);
-
-		std::cout << tu << "\n";
-		EXPECT_FALSE(tu.getFunctions().empty());
-
-		std::cout << "\n\n----------------------------------------------------------------------\n\n";
-
-		auto program = tu::toProgram(mgr, tu);
-		dump(program);
-		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
-	}
-
-	TEST(Clang, Globals) {
-		core::NodeManager mgr;
-
-		auto tu = convert(mgr, SRC_DIR "/inputs/globals.c");
-
-		std::cout << tu << "\n";
-		EXPECT_FALSE(tu.getFunctions().empty());
-		EXPECT_FALSE(tu.getGlobals().empty());
-
-	}
-
-} // end frontend
-} // end insieme
