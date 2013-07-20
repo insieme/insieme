@@ -98,7 +98,7 @@ private:
 	insieme::frontend::utils::Indexer& indexer;
 	insieme::core::IRBuilder builder;
 
-	const vector<boost::filesystem::path>& stdLibDirs;
+	const vector<boost::filesystem::path> stdLibDirs;
 
 	std::set<std::string> toIntercept;
 	boost::regex rx;
