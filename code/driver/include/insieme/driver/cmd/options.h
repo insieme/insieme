@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -88,6 +88,17 @@ namespace cmd {
 		 * Parses the given command line options.
 		 */
 		static detail::OptionParser parse(int argc, char** argv);
+
+	private:
+
+		// allow the parser to construct instances
+		friend class detail::OptionParser;
+
+		/**
+		 * A constructor for this class.
+		 */
+		Options(const insieme::frontend::ConversionJob& job)
+			: valid(true), help(false), job(job) {}
 
 	};
 

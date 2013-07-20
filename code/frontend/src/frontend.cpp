@@ -68,7 +68,7 @@ namespace frontend {
 		auto units = convert(manager, files, job);
 
 		// merge the translation units
-		return tu::merge(units);
+		return tu::merge(tu::merge(libs), tu::merge(units));
 
 	}
 

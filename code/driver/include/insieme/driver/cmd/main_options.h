@@ -48,6 +48,9 @@ namespace insieme {
 namespace driver {
 namespace cmd {
 
+	// fix an alias for the path type
+	typedef frontend::path path;
+
 	/**
 	 * The CommandLineOptions is a container for input arguments to the main Insieme compiler executable.
 	 */

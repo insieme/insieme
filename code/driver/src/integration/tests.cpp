@@ -62,7 +62,7 @@ namespace integration {
 
 		// add pre-processor definitions
 		for_each(definitions, [&](const std::pair<string,string>& def) {
-			job.addDefinition(def.first, def.second);
+			job.setDefinition(def.first, def.second);
 		});
 
 		return job.execute(manager);
@@ -133,8 +133,8 @@ namespace integration {
 
 
 				// read inputs.data (if present)
-				vector<string> files;
-				vector<string> includeDirs;
+				vector<frontend::path> files;
+				vector<frontend::path> includeDirs;
 				auto inputFile = testCaseDir / "inputs.data";
 				if (fs::exists(inputFile)) {
 					// read file list from inputs.data
@@ -301,7 +301,7 @@ namespace integration {
 
 		// add pre-processor definitions
 		for_each(definitions, [&](const std::pair<string,string>& def) {
-			job.addDefinition(def.first, def.second);
+			job.setDefinition(def.first, def.second);
 		});
 
 		return job.execute(manager);

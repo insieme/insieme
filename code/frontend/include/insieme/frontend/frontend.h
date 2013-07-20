@@ -59,6 +59,8 @@ namespace core {
 
 namespace frontend {
 
+	typedef boost::filesystem::path path;
+
 	/**
 	 * Used to report a parsing error occurred during the parsing of the input file
 	 */
@@ -77,17 +79,24 @@ namespace frontend {
 		 */
 		vector<path> files;
 
+		/**
+		 * Extra libraries to be considered for the conversion.
+		 */
+		vector<tu::IRTranslationUnit> libs;
+
 	public:
 
 		/**
 		 * Creates a new conversion job covering a single file.
 		 */
-		ConversionJob(const path& file) : files(toVector(file)) {}
+		ConversionJob(const path& file, const vector<path>& includeDirs = vector<path>())
+			: ConversionSetup(includeDirs), files(toVector(file)) {}
 
 		/**
 		 * Creates a new conversion job covering the given files.
 		 */
-		ConversionJob(const vector<path>& files) : files(files) {
+		ConversionJob(const vector<path>& files, const vector<path>& includeDirs = vector<path>())
+			: ConversionSetup(includeDirs), files(files) {
 			assert(!files.empty());
 		}
 
@@ -110,6 +119,27 @@ namespace frontend {
 		 */
 		void setFiles(const vector<path>& files) {
 			this->files = files;
+		}
+
+		/**
+		 * Obtains a reference to the libs to be considered by this conversion job.
+		 */
+		const vector<tu::IRTranslationUnit>& getLibs() const {
+			return libs;
+		}
+
+		/**
+		 * Sets the libs to be considered by this conversion job.
+		 */
+		void setLibs(const vector<tu::IRTranslationUnit>& libs) {
+			this->libs = libs;
+		}
+
+		/**
+		 * Appends a library to the list of libraries considered by this conversion job.
+		 */
+		void addLib(const tu::IRTranslationUnit& unit) {
+			libs.push_back(unit);
 		}
 
 		/**
