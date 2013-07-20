@@ -147,6 +147,7 @@ namespace tu {
 			if (!functions.empty()) return functions.begin()->first->getNodeManager();
 			if (!globals.empty()) return globals.begin()->first->getNodeManager();
 			assert(false && "Must not be called on empty unit.");
+			return types.begin()->first->getNodeManager();		// to fix warning
 		}
 
 		// TODO: connect this with the toProgram part ...
