@@ -284,7 +284,7 @@ core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-core::ExpressionPtr getMemberAccessExpr (const core::IRBuilder& builder, core::ExpressionPtr base, const clang::MemberExpr* membExpr){
+core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& converter, const core::IRBuilder& builder, core::ExpressionPtr base, const clang::MemberExpr* membExpr){
 	const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
 
 	if(membExpr->isArrow()) {
@@ -292,12 +292,12 @@ core::ExpressionPtr getMemberAccessExpr (const core::IRBuilder& builder, core::E
 		base = getCArrayElemRef(builder, base);
 	}
 
-	core::TypePtr structTy = base->getType();
+	core::TypePtr structTy = converter.lookupTypeDetails(base->getType());
 	core::ExpressionPtr op = gen.getCompositeMemberAccess();
 
 	if (structTy->getNodeType() == core::NT_RefType) {
 		// skip over reference wrapper
-		structTy = core::analysis::getReferencedType( structTy );
+		structTy = converter.lookupTypeDetails(core::analysis::getReferencedType( structTy ));
 		op = gen.getCompositeRefElem();
 	}
 
@@ -851,7 +851,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryExprOrTypeTraitExpr(cons
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::ExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr) {
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
-	core::ExpressionPtr retIr = exprutils::getMemberAccessExpr(builder, base, membExpr);
+	core::ExpressionPtr retIr = exprutils::getMemberAccessExpr(convFact, builder, base, membExpr);
 
 	LOG_EXPR_CONVERSION(membExpr, retIr);
 	return retIr;

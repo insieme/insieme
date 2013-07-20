@@ -256,7 +256,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::Me
 	// TODO: we have the situation here in which we might want to access a field of a superclass
 	// this will not be resolved by the C frontend. and we need to build the right datapath to
 	// reach the definition
-	retIr = getMemberAccessExpr(builder, base, membExpr);
+	retIr = getMemberAccessExpr(convFact, builder, base, membExpr);
 	return retIr;
 }
 

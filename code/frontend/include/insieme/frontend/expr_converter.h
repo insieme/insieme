@@ -98,7 +98,7 @@ core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr
  * builds a member access expresion, does conversion needed on base regarding pointer usage, and in
  * the indentifier regarding annonimous members.
  */
-core::ExpressionPtr getMemberAccessExpr (const core::IRBuilder& builder, core::ExpressionPtr base, const clang::MemberExpr* membExpr);
+core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& converter, const core::IRBuilder& builder, core::ExpressionPtr base, const clang::MemberExpr* membExpr);
 
 
 } // end anonymous namespace

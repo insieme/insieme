@@ -268,6 +268,14 @@ namespace tu {
 
 				}
 
+				// special service: get rid of unnecessary casts (which might be introduced due to opaque generic types)
+				if (const CastExprPtr& cast = res.isa<CastExprPtr>()) {
+					// check whether cast can be skipped
+					if (types::isSubTypeOf(cast->getSubExpression()->getType(), cast->getType())) {
+						res = cast->getSubExpression();
+					}
+				}
+
 				// migrate annotations
 				if (ptr != res) {
 					core::transform::utils::migrateAnnotations(ptr, res);
