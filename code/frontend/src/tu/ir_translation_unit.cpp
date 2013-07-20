@@ -81,12 +81,12 @@ namespace tu {
 
 		// copy types
 		for(auto cur : b.getTypes()) {
-			res.addType(cur.first, cur.second);
+			if(!res[cur.first]) res.addType(cur.first, cur.second);
 		}
 
 		// copy functions
 		for(auto cur : b.getFunctions()) {
-			res.addFunction(cur.first, cur.second);
+			if(!res[cur.first]) res.addFunction(cur.first, cur.second);
 		}
 
 		// copy globals
@@ -104,7 +104,6 @@ namespace tu {
 	}
 
 	IRTranslationUnit merge(const vector<IRTranslationUnit>& units) {
-		assert(!units.empty());
 		IRTranslationUnit res;
 		for(const auto& cur : units) {
 			res = merge(res, cur);
