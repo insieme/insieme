@@ -246,6 +246,10 @@ public:
      */
     ExtASTUnit* getASTUnit() const;
 
+    /**
+     * Determines whether the represented translation unit
+     * is based on C or C++.
+     */
 	bool isCXX() const;
 
 	~ClangCompiler();

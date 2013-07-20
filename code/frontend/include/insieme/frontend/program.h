@@ -135,7 +135,7 @@ public:
 	// TODO: eliminate this => setup should be parsed in the driver and the result should be stored in the conversion setup
 	void setupInterceptor();
 
-	bool isCxx() const { return config.getStandard() == ConversionSetup::Cxx03; }
+	bool isCxx() const;
 
 	const pragma::PragmaList& getPragmaList() const;
 

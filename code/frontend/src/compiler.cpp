@@ -268,7 +268,6 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), *(pimpl->TO)) );
 
-	bool enableCpp = config.getStandard() == ConversionSetup::Cxx03;
 
 	LangOptions& LO = pimpl->clang.getLangOpts();
 
@@ -316,7 +315,7 @@ ClangCompiler::ClangCompiler(const ConversionSetup& config, const path& file) : 
 		//LO.C99 = 1; 		// set c99
 	}
 
-	if(enableCpp ) {
+	if(config.isCxx(file)) {
 		pimpl->m_isCXX = true;
 		//langStandard is defined in include/clang/Frontend/LangStandards.def
 		//set default values for CXX -- default results in values for LangStandard::lang_gnucxx98

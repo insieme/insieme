@@ -102,6 +102,52 @@ namespace frontend {
 
 		EXPECT_EQ( tu.getGlobals().size(), 5);  // 5 globals, no one cares for the poor extern one
 
+	}
+
+	TEST(Clang, ConversionSetup) {
+
+		ConversionSetup setup;
+
+		// check Auto
+		setup.setStandard(ConversionSetup::Auto);
+
+		EXPECT_TRUE(setup.isCxx("test.cpp"));
+		EXPECT_TRUE(setup.isCxx("test/test.cpp"));
+		EXPECT_TRUE(setup.isCxx("test.cc"));
+		EXPECT_TRUE(setup.isCxx("test.cxx"));
+		EXPECT_TRUE(setup.isCxx("test.C"));
+
+		EXPECT_FALSE(setup.isCxx("test"));
+		EXPECT_FALSE(setup.isCxx("test.c"));
+		EXPECT_FALSE(setup.isCxx("test/test.a"));
+
+
+		// check C99
+		setup.setStandard(ConversionSetup::C99);
+
+		EXPECT_FALSE(setup.isCxx("test.cpp"));
+		EXPECT_FALSE(setup.isCxx("test/test.cpp"));
+		EXPECT_FALSE(setup.isCxx("test.cc"));
+		EXPECT_FALSE(setup.isCxx("test.cxx"));
+		EXPECT_FALSE(setup.isCxx("test.C"));
+
+		EXPECT_FALSE(setup.isCxx("test"));
+		EXPECT_FALSE(setup.isCxx("test.c"));
+		EXPECT_FALSE(setup.isCxx("test/test.a"));
+
+		// check Cxx03
+		setup.setStandard(ConversionSetup::Cxx03);
+
+		EXPECT_TRUE(setup.isCxx("test.cpp"));
+		EXPECT_TRUE(setup.isCxx("test/test.cpp"));
+		EXPECT_TRUE(setup.isCxx("test.cc"));
+		EXPECT_TRUE(setup.isCxx("test.cxx"));
+		EXPECT_TRUE(setup.isCxx("test.C"));
+
+		EXPECT_TRUE(setup.isCxx("test"));
+		EXPECT_TRUE(setup.isCxx("test.c"));
+		EXPECT_TRUE(setup.isCxx("test/test.a"));
+
 
 	}
 

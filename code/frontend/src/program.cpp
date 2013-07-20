@@ -215,6 +215,10 @@ void Program::setupInterceptor() {
 	//by default we intercept "std::.*" and "__gnu_cxx::.*" -- set in the ctor
 }
 
+bool Program::isCxx() const {
+	return getCompiler().isCXX();
+}
+
 const pragma::PragmaList& Program::getPragmaList() const {
 	return pimpl->tranUnit.getPragmaList();
 }

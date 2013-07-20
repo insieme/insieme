@@ -447,8 +447,17 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 				//use eiter createDefaultCtor or the ctorDecl
 				//if not userprovided we don't need to add a constructor just create the object to work
 				//with -- for the rest the BE-compiler takes care of
-				core::ExpressionPtr ctorCall = core::analysis::createDefaultConstructor(irClassType.as<core::StructTypePtr>());
-				return builder.callExpr(ctorCall, builder.undefinedVar(refToClassTy));
+
+				core::ExpressionPtr ctor;
+				if (core::StructTypePtr structType = irClassType.isa<core::StructTypePtr>()) {
+					ctor = core::analysis::createDefaultConstructor(structType);
+				} else {
+					// this is a 'named' type
+					core::StructTypePtr structType = convFact.lookupTypeDetails(irClassType).as<core::StructTypePtr>();
+					ctor = core::analysis::createDefaultConstructor(structType);
+					ctor = core::transform::replaceAllGen(builder.getNodeManager(), ctor, structType, irClassType);
+				}
+				return builder.callExpr(refToClassTy, ctor, builder.undefinedVar(refToClassTy));
 			}
 		}
 		else if( ctorDecl->isCopyConstructor()) {

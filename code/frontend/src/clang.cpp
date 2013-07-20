@@ -49,9 +49,15 @@ namespace frontend {
 	ConversionSetup::ConversionSetup(const vector<path>& includeDirs)
 		: includeDirs(includeDirs),
 		  stdLibIncludeDirs(::transform(insieme::utils::compiler::getDefaultCppIncludePaths(), [](const string& cur) { return path(cur); })),
-		  standard(C99),
+		  standard(Auto),
 		  definitions(),
 		  flags(DEFAULT_FLAGS) {};
+
+
+	bool ConversionSetup::isCxx(const path& file) const {
+		static std::set<string> CxxExtensions({ ".cpp", ".cxx", ".cc", ".C" });
+		return standard == Cxx03 || (standard==Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
+	}
 
 
 	// ----------- conversion ------------

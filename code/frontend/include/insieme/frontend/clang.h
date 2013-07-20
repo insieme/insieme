@@ -73,7 +73,7 @@ namespace frontend {
 		 * A list of supported standards.
 		 */
 		enum Standard {
-			C99, Cxx03
+			Auto, C99, Cxx03
 		};
 
 		/**
@@ -233,6 +233,14 @@ namespace frontend {
 		void setIntercepterConfigFile(const string& configFile) {
 			this->intercepterConfigFile = configFile;
 		}
+
+		/**
+		 * A utility method to determine whether the given file should be
+		 * considered a C++ file or not. This decision will be influenced
+		 * by the standard set within this setup. Only if set to auto
+		 * (default) the extension will be evaluated.
+		 */
+		bool isCxx(const path& file) const;
 
 	};
 
