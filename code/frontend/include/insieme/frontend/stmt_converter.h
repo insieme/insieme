@@ -38,9 +38,10 @@
 
 #include "insieme/frontend/convert.h"
 
+#include <clang/AST/StmtVisitor.h>
+
 #include "insieme/core/forward_decls.h"
 
-#include "clang/AST/StmtVisitor.h"
 
 namespace stmtutils {
 

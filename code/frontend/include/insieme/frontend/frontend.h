@@ -36,41 +36,223 @@
 
 #pragma once
 
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 #include <boost/filesystem/path.hpp>
-
-#include "insieme/frontend/clang.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_program.h"
 
+#include "insieme/frontend/tu/ir_translation_unit.h"
+
 namespace insieme {
-
-namespace core {
-	// some forward declarations
-	class NodeManager;
-	class Program;
-	template<typename T> class Pointer;
-	typedef Pointer<const Program> ProgramPtr;
-}
-
 namespace frontend {
 
+	using std::map;
+	using std::vector;
+	using std::string;
+
+
+	// a definition for the kind of path to be utilized by the following translation unit
 	typedef boost::filesystem::path path;
 
 	/**
-	 * Used to report a parsing error occurred during the parsing of the input file
+	 * An entity describing a unit of work for the clang frontend conversion process.
 	 */
-	struct ClangParsingError: public std::logic_error {
-		ClangParsingError(const path& file_name): std::logic_error(file_name.string()) { }
+	class ConversionSetup {
+	public:
+
+		/**
+		 * A list of options to adjust the translation unit conversion.
+		 */
+		enum Option {
+			PrintDiag		= 1<<0,
+
+			OpenMP			= 1<<1,
+			OpenCL			= 1<<2,
+			Cilk			= 1<<3,
+
+			WinCrossCompile	= 1<<4,
+			TAG_MPI			= 1<<6,
+		};
+
+		/**
+		 * A list of supported standards.
+		 */
+		enum Standard {
+			Auto, C99, Cxx03
+		};
+
+		/**
+		 * The default frontend configuration.
+		 */
+		static const unsigned DEFAULT_FLAGS;
+
+	private:
+
+		/**
+		 * A list of include directories to be considered.
+		 */
+		vector<path> includeDirs;
+
+		/**
+		 * A list of include directories containing std library headers.
+		 */
+		vector<path> stdLibIncludeDirs;
+
+		/**
+		 * The C standard to be followed.
+		 */
+		Standard standard;
+
+		/**
+		 * A list of definitions to be passed to the preprocessor. Each
+		 * entry maps an identifier to a value.
+		 */
+		map<string,string> definitions;
+
+		/**
+		 * The name of the configuration file of the intercepter.
+		 */
+		// TODO: this should not be a string pointing to a file!!!
+		string intercepterConfigFile;
+
+		/**
+		 * Additional flags - a bitwise boolean combination of Options (see Option)
+		 */
+		unsigned flags;
+
+	public:
+
+		/**
+		 * Creates a new setup covering the given include directories.
+		 */
+		ConversionSetup(const vector<path>& includeDirs = vector<path>());
+
+		/**
+		 * Allows to check for an option.
+		 */
+		bool hasOption(const Option option) const {
+			return flags & option;
+		}
+
+		/**
+		 * Updates the state of an option.
+		 */
+		void setOption(const Option option, bool status = true) {
+			flags = (status)?(flags | option):( flags & ~option);
+		}
+
+		/**
+		 * Updates the options set for the conversion process.
+		 */
+		void setOptions(unsigned options) {
+			flags = options;
+		}
+
+		/**
+		 * Obtains the standard to be used for parsing input files.
+		 */
+		const Standard& getStandard() const {
+			return standard;
+		}
+
+		/**
+		 * Updates the standard to be used for parsing input files.
+		 */
+		void setStandard(const Standard& standard) {
+			this->standard = standard;
+		}
+
+		/**
+		 * Obtains a reference to the currently defined definitions.
+		 */
+		const map<string,string>& getDefinitions() const {
+			return definitions;
+		}
+
+		/**
+		 * Updates the definitions to be used by the conversion process.
+		 */
+		void setDefinitions(const map<string,string>& definitions) {
+			this->definitions = definitions;
+		}
+
+		/**
+		 * Adds a pre-processor definition to this conversion job.
+		 */
+		void setDefinition(const string& name, const string& value = "") {
+			this->definitions[name] = value;
+		}
+
+		/**
+		 * Obtains a reference to the covered set of include directories.
+		 */
+		const vector<path>& getIncludeDirectories() const {
+			return includeDirs;
+		}
+
+		/**
+		 * Updates the set of considered include directories.
+		 */
+		void setIncludeDirectories(const vector<path>& includeDirectories) {
+			this->includeDirs = includeDirectories;
+		}
+
+		/**
+		 * Adds an additional include directory.
+		 */
+		void addIncludeDirectory(const path& directory) {
+			this->includeDirs.push_back(directory);
+		}
+
+		/**
+		 * Obtains a reference to the covered set of std-library include directories.
+		 */
+		const vector<path>& getStdLibIncludeDirectories() const {
+			return stdLibIncludeDirs;
+		}
+
+		/**
+		 * Updates the set of considered std-library include directories.
+		 */
+		void setStdLibIncludeDirectories(const vector<path>& includeDirectories) {
+			this->stdLibIncludeDirs = includeDirectories;
+		}
+
+		/**
+		 * Adds an additional std-library include directory.
+		 */
+		void addStdLibIncludeDirectory(const path& directory) {
+			this->stdLibIncludeDirs.push_back(directory);
+		}
+
+		/**
+		 * Obtains the name of the intercepter configuration file.
+		 */
+		const string& getIntercepterConfigFile() const {
+			return intercepterConfigFile;
+		}
+
+		/**
+		 * Updates the name of the intercepter configuration file.
+		 */
+		void setIntercepterConfigFile(const string& configFile) {
+			this->intercepterConfigFile = configFile;
+		}
+
+		/**
+		 * A utility method to determine whether the given file should be
+		 * considered a C++ file or not. This decision will be influenced
+		 * by the standard set within this setup. Only if set to auto
+		 * (default) the extension will be evaluated.
+		 */
+		bool isCxx(const path& file) const;
+
 	};
 
-
-	using std::vector;
-	using std::string;
 
 	class ConversionJob : public ConversionSetup {
 
@@ -160,6 +342,14 @@ namespace frontend {
 		 */
 		tu::IRTranslationUnit toTranslationUnit(core::NodeManager& manager) const;
 
+	};
+
+
+	/**
+	 * Used to report a parsing error occurred during the parsing of the input file
+	 */
+	struct ClangParsingError: public std::logic_error {
+		ClangParsingError(const path& file_name): std::logic_error(file_name.string()) { }
 	};
 
 

@@ -38,19 +38,36 @@
 
 #include "insieme/frontend/frontend.h"
 
+#include "insieme/frontend/convert.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/frontend/cilk/cilk_sema.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
+#include "insieme/frontend/tu/ir_translation_unit.h"
+
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/compiler/compiler.h"
 
-#include "insieme/frontend/tu/ir_translation_unit.h"
-
 namespace insieme {
 namespace frontend {
+
+
+	const unsigned ConversionSetup::DEFAULT_FLAGS = PrintDiag;
+
+	ConversionSetup::ConversionSetup(const vector<path>& includeDirs)
+		: includeDirs(includeDirs),
+		  stdLibIncludeDirs(::transform(insieme::utils::compiler::getDefaultCppIncludePaths(), [](const string& cur) { return path(cur); })),
+		  standard(Auto),
+		  definitions(),
+		  flags(DEFAULT_FLAGS) {};
+
+
+	bool ConversionSetup::isCxx(const path& file) const {
+		static std::set<string> CxxExtensions({ ".cpp", ".cxx", ".cc", ".C" });
+		return standard == Cxx03 || (standard==Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
+	}
+
 
 	tu::IRTranslationUnit ConversionJob::toTranslationUnit(core::NodeManager& manager) const {
 

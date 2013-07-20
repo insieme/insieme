@@ -36,8 +36,8 @@
 
 #pragma once
 
-#include "clang/AST/Expr.h"
-#include "llvm/Support/Casting.h"
+#include <clang/AST/Expr.h>
+#include <llvm/Support/Casting.h>
 
 namespace insieme {
 namespace frontend {

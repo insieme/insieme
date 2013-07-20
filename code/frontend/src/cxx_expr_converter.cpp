@@ -36,12 +36,23 @@
 
 #include "insieme/frontend/expr_converter.h"
 
+// defines which are needed by LLVM
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+
+#include "clang/AST/StmtVisitor.h"
+#include <clang/AST/DeclCXX.h>
+#include <clang/AST/ExprCXX.h>
+#include <clang/AST/CXXInheritance.h>
+
+#include <clang/Basic/FileManager.h>
+
+
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/c/naming.h"
 
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/temporariesLookup.h"
@@ -70,13 +81,6 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
 #include "insieme/core/ir_class_info.h"
-
-#include "clang/AST/StmtVisitor.h"
-#include <clang/AST/DeclCXX.h>
-#include <clang/AST/ExprCXX.h>
-#include <clang/AST/CXXInheritance.h>
-
-#include <clang/Basic/FileManager.h>
 
 
 using namespace clang;

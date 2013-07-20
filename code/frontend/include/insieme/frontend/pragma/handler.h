@@ -40,13 +40,13 @@
 #include <sstream>
 #include <map>
 
-#include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/sema.h"
+#include "insieme/frontend/pragma/matcher.h"
 
 #include <clang/Basic/SourceLocation.h>
 #include <clang/Lex/Pragma.h>
 
-#include "clang/Parse/Parser.h"
+#include <clang/Parse/Parser.h>
 
 // forward declaration
 namespace clang {

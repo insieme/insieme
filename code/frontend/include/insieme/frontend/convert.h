@@ -36,21 +36,19 @@
 
 #pragma once
 
+#include <set>
+#include <memory>
+#include <functional>
+
+#include "insieme/frontend/frontend.h"
+#include "insieme/frontend/program.h"
+#include "insieme/frontend/utils/interceptor.h"
+#include "insieme/frontend/pragma/handler.h"
+
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/frontend/pragma/handler.h"
 #include "insieme/utils/map_utils.h"
-
-#include "insieme/frontend/analysis/global_variables.h"
-
-#include "insieme/frontend/utils/indexer.h"
-#include "insieme/frontend/utils/functionDependencyGraph.h"
-#include "insieme/frontend/utils/interceptor.h"
-
-#include <memory>
-#include <set>
-#include <functional>
 
 // FIXME: cleanup includes and stuff, find tradeof between compilation time and code complexity
 // Forward declarations
@@ -71,6 +69,27 @@ typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
 namespace insieme {
 namespace frontend {
+
+/**
+ * This function converts a clang translation unit into an IR translation unit.
+ *
+ * @param manager the manager to be used for managing the resulting IR nodes
+ * @param unit the translation unit to be processed
+ * @param setup the setup for the conversion process to be respected
+ * @return the resulting translation unit
+ */
+tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup = ConversionSetup());
+
+/**
+ * This function converts a list of translation units into a list of IR translation units.
+ *
+ * @param manager the manager to be used for managing the resulting IR nodes
+ * @param units the translation units to be processed
+ * @param setup the setup for the conversion process to be respected
+ * @return the resulting translation units
+ */
+vector<tu::IRTranslationUnit> convert(core::NodeManager& manager, const vector<path>& units, const ConversionSetup& setup = ConversionSetup());
+
 
 namespace conversion {
 
@@ -412,45 +431,6 @@ public:
 			const core::TypePtr& type) ;
 };
 
-//// ------------------------------------ ASTConverter ---------------------------
-/////
-/////  AST converter holds the functionality to transform a C program AST into IR
-//class ASTConverter {
-//protected:
-//	core::NodeManager& mgr;
-//	Program& mProg;
-//	Converter mFact;
-//	utils::Indexer& mIndexer;
-//
-//public:
-//
-//	ASTConverter(core::NodeManager& mgr, Program& prog, bool cpp=false):
-//			mgr(mgr),
-//			mProg(prog),
-//			mFact(mgr, prog, cpp),
-//			mIndexer(prog.getIndexer()) {
-//	}
-//
-//	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain = false);
-//
-//	core::ProgramPtr handleMainFunctionDecl() {
-//		return handleFunctionDecl(llvm::cast<const clang::FunctionDecl>(mIndexer.getMainFunctionDefinition()), /*isMain=*/true);
-//	}
-//
-//	core::CallExprPtr handleBody(const clang::Stmt* body, const TranslationUnit& tu);
-//
-//	core::LambdaExprPtr addGlobalsInitialization(const core::LambdaExprPtr& mainFunc);
-//};
-//
-//// ------------------------------------ ASTConverter ---------------------------
-/////
-/////  CXXAST converter extends ASTConverter for the functionality to transform a C++ program AST into IR
-//class CXXASTConverter : public ASTConverter {
-//
-//public:
-//	CXXASTConverter(core::NodeManager& mgr, Program& prog, analysis::GlobalVarCollector& coll) :
-//		ASTConverter(mgr, prog, coll, true) { }
-//};
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace

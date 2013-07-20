@@ -36,7 +36,19 @@
 
 #include "insieme/frontend/type_converter.h"
 
-#include "insieme/frontend/utils/dep_graph.h"
+
+// defines which are needed by LLVM
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+
+#include <clang/AST/Decl.h>
+#include <clang/AST/Expr.h>
+
+#include <clang/AST/DeclCXX.h>
+#include <clang/AST/ExprCXX.h>
+#include <clang/AST/DeclTemplate.h>
+
+
 #include "insieme/frontend/utils/source_locations.h"
 
 #include "insieme/utils/numeric_cast.h"
@@ -48,13 +60,6 @@
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/c/naming.h"
-
-#include <clang/AST/Decl.h>
-#include <clang/AST/Expr.h>
-
-#include <clang/AST/DeclCXX.h>
-#include <clang/AST/ExprCXX.h>
-#include <clang/AST/DeclTemplate.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 

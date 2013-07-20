@@ -36,7 +36,6 @@
 
 #include "insieme/frontend/type_converter.h"
 
-#include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/debug.h"
 
@@ -102,107 +101,6 @@ const clang::TagDecl* findDefinition(const clang::TagType* tagType) {
 
 namespace insieme {
 namespace frontend {
-
-
-namespace utils {
-
-	void addType ( DependencyGraph<const clang::TagDecl*>& obj, const clang::Type* type, const DependencyGraph<const clang::TagDecl*>::VertexTy& v) {
-
-		auto purifyType = [](const clang::Type* type) -> const clang::Type* {
-
-			if( const PointerType *ptrTy = dyn_cast<PointerType>(type) )
-				return ptrTy->getPointeeType().getTypePtr();
-
-			if( const ReferenceType *refTy = dyn_cast<ReferenceType>(type) )
-				return refTy->getPointeeType().getTypePtr();
-
-			if( const TypedefType* typeDefTy = llvm::dyn_cast<TypedefType>(type) ) {
-				 return typeDefTy->getDecl()->getUnderlyingType().getTypePtr();
-			}
-
-			if( const ParenType* parTy = llvm::dyn_cast<ParenType>(type) ) {
-				 return parTy->getInnerType().getTypePtr();
-			}
-
-			if( const ElaboratedType* elabTy = llvm::dyn_cast<ElaboratedType>(type) ) {
-				 return elabTy->getNamedType().getTypePtr();
-			}
-
-			if( const ArrayType* arrTy = llvm::dyn_cast<ArrayType>(type) ) {
-				 return arrTy->getElementType().getTypePtr();
-			}
-
-			return type;
-		};
-
-		// purify the type until a fixpoint is reached
-		const Type* purified = type;
-		while( (purified = purifyType(type)) != type )
-			type = purified;
-
-		if (VLOG_IS_ON(2))
-			purified->dump();
-		VLOG(2) << purified->getTypeClassName();
-
-		if( const TagType* tagTy = llvm::dyn_cast<TagType>(purified) ) {
-			// LOG(DEBUG) << "Adding " << tagTy->getDecl()->getNameAsString();
-			if ( llvm::isa<RecordDecl>(tagTy->getDecl()) ) {
-				// find the definition
-				auto def = findDefinition(tagTy);
-
-				// we may have no definition for the type
-				if (!def) { return; }
-
-				obj.addNode( def, &v );
-			}
-		}
-
-		// if the filed is a function pointer then we need to examine both the return type and the
-		// argument list
-		if (const FunctionType* funcType = llvm::dyn_cast<FunctionType>(type)) {
-
-			addType(obj, funcType->getResultType().getTypePtr(), v);
-
-			// If this is a function proto then look for the arguments type
-			if (const FunctionProtoType* funcProtType = llvm::dyn_cast<FunctionProtoType>(funcType)) {
-
-				std::for_each(funcProtType->arg_type_begin(), funcProtType->arg_type_end(),
-					[ & ] (const QualType& currArgType) {
-						addType(obj, currArgType.getTypePtr(), v);
-					}
-				);
-			}
-		}
-
-	};
-
-
-template <>
-void DependencyGraph<const clang::TagDecl*>::Handle(
-		const clang::TagDecl* tagDecl,
-		const DependencyGraph<const clang::TagDecl*>::VertexTy& v)
-{
-	using namespace clang;
-
-	assert(tagDecl && "Type not of TagType class");
-
-	const RecordDecl* tag = llvm::dyn_cast<const RecordDecl>(tagDecl);
-
-	// if the tag type is not a struct but otherwise an enum, there will be no declaration
-	// therefore we can safely return as there is no risk of recursion
-	if (!tag) { return; }
-
-
-
-
-	for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
-		addType(*this, (*it)->getType().getTypePtr(), v);
-	}
-
-}
-
-} // end utils namespace
-
 namespace conversion {
 
 //---------------------------------------------------------------------------------------------------------------------

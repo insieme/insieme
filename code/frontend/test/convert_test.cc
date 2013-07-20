@@ -36,12 +36,13 @@
 
 #include <gtest/gtest.h>
 
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/clang_config.h"
+#include "insieme/frontend/tu/ir_translation_unit_check.h"
+
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/frontend/clang.h"
-#include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/tu/ir_translation_unit_check.h"
 
 
 namespace insieme {

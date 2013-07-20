@@ -36,10 +36,13 @@
 
 #pragma once
 
+// defines which are needed by LLVM
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+#include <clang/AST/StmtVisitor.h>
+
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/dep_graph.h"
-#include "insieme/frontend/utils/functionDependencyGraph.h"
 #include "insieme/frontend/utils/ir_cast.h"
 
 #include "insieme/core/lang/basic.h"
@@ -51,12 +54,6 @@
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
 
-#include "clang/AST/StmtVisitor.h"
-
-
-// [3.0]
-//#include "clang/Index/Entity.h"
-//#include "clang/Index/Indexer.h"
 
 namespace fe = insieme::frontend;
 

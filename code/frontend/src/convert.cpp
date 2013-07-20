@@ -34,16 +34,7 @@
  * regarding third party software licenses.
  */
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Wuninitialized"
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-	#include <clang/AST/CXXInheritance.h>
-	#include <clang/AST/StmtVisitor.h>
-	#include <clang/AST/DeclVisitor.h>
-	#include <clang/AST/RecursiveASTVisitor.h>
-#pragma GCC diagnostic pop
+#include "insieme/frontend/clang.h"
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/stmt_converter.h"
@@ -51,7 +42,6 @@
 #include "insieme/frontend/type_converter.h"
 
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/clang.h"
 
 //
 //#include "insieme/frontend/analysis/global_variables.h"
@@ -63,7 +53,6 @@
 #include "insieme/frontend/utils/error_report.h"
 //#include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
-#include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/ir_utils.h"
@@ -126,6 +115,22 @@ annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const Sourc
 
 namespace insieme {
 namespace frontend {
+
+// ----------- conversion ------------
+
+vector<tu::IRTranslationUnit> convert(core::NodeManager& manager, const vector<path>& units, const ConversionSetup& setup) {
+	return ::transform(units, [&](const path& cur) { return convert(manager, cur, setup); });
+}
+
+
+// TODO: collapse this with the program class ...
+tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup) {
+	// just delegate operation to converter
+	Program program(manager, unit, setup);
+	return conversion::Converter(manager, program).convert();
+}
+
+
 namespace conversion {
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

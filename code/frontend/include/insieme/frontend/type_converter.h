@@ -38,9 +38,7 @@
 
 #include "insieme/frontend/convert.h"
 
-#include "clang/AST/TypeVisitor.h"
-
-#include "insieme/frontend/utils/dep_graph.h"
+#include <clang/AST/TypeVisitor.h>
 
 namespace insieme {
 namespace frontend {

@@ -36,14 +36,16 @@
 
 #include "insieme/frontend/expr_converter.h"
 
+#include <clang/AST/StmtVisitor.h>
+#include <clang/Basic/FileManager.h>
+
+
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/location.h"
 
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/indexer.h"
 #include "insieme/frontend/utils/castTool.h"
 #include "insieme/frontend/utils/ir_utils.h"
 
@@ -71,8 +73,6 @@
 
 #include "insieme/annotations/c/naming.h"
 
-#include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/FileManager.h"
 
 using namespace insieme;
 using namespace exprutils;

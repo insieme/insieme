@@ -47,9 +47,6 @@
 
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
-#include "insieme/frontend/convert.h"
-#include "insieme/frontend/utils/indexer.h"
-#include "insieme/frontend/utils/functionDependencyGraph.h"
 #include "insieme/frontend/utils/interceptor.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -182,15 +179,14 @@ namespace insieme {
 namespace frontend {
 
 struct Program::ProgramImpl {
-	utils::Indexer mIdx;
 	TranslationUnitImpl tranUnit;
 	const vector<path> stdLibDirs;
 	utils::Interceptor interceptor;
 
 	ProgramImpl(core::NodeManager& mgr, const path& file, const ConversionSetup& setup) :
-		mIdx(), tranUnit(setup, file),
+		tranUnit(setup, file),
 		stdLibDirs(::transform(stdLibDirs, [](const path& cur) { return boost::filesystem::canonical(cur); } )),
-		interceptor(mgr, mIdx, setup.getStdLibIncludeDirectories())
+		interceptor(mgr, setup.getStdLibIncludeDirectories())
 		{}
 };
 

@@ -50,13 +50,13 @@ namespace insieme {
 namespace frontend {
 namespace tu {
 
-	class IRTranslationUnit : public utils::Printable {
+	class IRTranslationUnit : public insieme::utils::Printable {
 
 	public:
 
-		typedef utils::map::PointerMap<core::GenericTypePtr, core::TypePtr> TypeMap;
+		typedef insieme::utils::map::PointerMap<core::GenericTypePtr, core::TypePtr> TypeMap;
 
-		typedef utils::map::PointerMap<core::LiteralPtr, core::LambdaExprPtr> FunctionMap;
+		typedef insieme::utils::map::PointerMap<core::LiteralPtr, core::LambdaExprPtr> FunctionMap;
 
 		typedef std::pair<core::LiteralPtr, core::ExpressionPtr> Global;
 		typedef std::vector<Global> GlobalsList;

@@ -51,7 +51,6 @@
 #include <boost/archive/text_iarchive.hpp>
 
 #include "insieme/frontend/frontend.h"
-#include "insieme/frontend/clang.h"
 
 // forward declarations
 namespace clang {

@@ -36,23 +36,19 @@
 
 #pragma once 
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/Decl.h>
-#include <clang/AST/StmtVisitor.h>
-#include <clang/AST/TypeVisitor.h>
-#include <clang/AST/DeclTemplate.h>
-#pragma GCC diagnostic pop
-
+#include <map>
+#include <boost/regex.hpp>
 #include <boost/filesystem.hpp>
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/utils/map_utils.h"
 
-#include "insieme/frontend/utils/indexer.h"
 
-#include <boost/regex.hpp>
-#include <map>
+// Forward declarations
+namespace clang {
+class Type;
+class FunctionDecl;
+} // End clang namespace
 
 namespace insieme {
 namespace frontend { 
@@ -67,9 +63,8 @@ class Interceptor {
 public:
 	Interceptor(
 			insieme::core::NodeManager& mgr,
-			insieme::frontend::utils::Indexer& indexer,
 			const vector<boost::filesystem::path>& stdLibDirs)
-		: indexer(indexer), builder(mgr), stdLibDirs(stdLibDirs), 
+		: builder(mgr), stdLibDirs(stdLibDirs),
 		
 		// by default intercept std:: and __gnu_cxx:: namespaces
 		// __gnu_cxx is needed for the iterator of std::vector for example
@@ -86,37 +81,17 @@ public:
 	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
 	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact);
 
-	insieme::frontend::utils::Indexer& getIndexer() const {
-		return indexer;
-	}
-
 	const vector<boost::filesystem::path>& getStdLibDirectories() const {
 		return stdLibDirs;
 	}
 
 private:
-	insieme::frontend::utils::Indexer& indexer;
 	insieme::core::IRBuilder builder;
 
 	const vector<boost::filesystem::path> stdLibDirs;
 
 	std::set<std::string> toIntercept;
 	boost::regex rx;
-};
-
-struct InterceptTypeVisitor : public clang::TypeVisitor<InterceptTypeVisitor, core::TypePtr> {
-
-	insieme::frontend::conversion::Converter& convFact;
-	const insieme::core::IRBuilder& builder;
-	const Interceptor& interceptor;
-	
-	InterceptTypeVisitor(insieme::frontend::conversion::Converter& convFact, const Interceptor& interceptor);
-
-	//core::TypePtr VisitTypedefType(const clang::TypedefType* typedefType);
-	core::TypePtr VisitTagType(const clang::TagType* tagType);
-	core::TypePtr VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy);
-	core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType);
-	core::TypePtr Visit(const clang::Type* type);
 };
 
 } // end utils namespace

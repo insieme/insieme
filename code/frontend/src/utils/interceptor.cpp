@@ -34,8 +34,6 @@
  * regarding third party software licenses.
  */
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
 #include "insieme/frontend/utils/interceptor.h"
 
 #include <iostream>
@@ -46,8 +44,10 @@
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
+
 #include "insieme/annotations/c/include.h"
 
+#include "insieme/frontend/clang.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/clang_config.h"
 
@@ -110,12 +110,150 @@ void Interceptor::loadConfigSet(std::set<std::string> tI) {
 	rx = boost::regex("("+toString(join(")|(", toIntercept))+")");
 }
 
+namespace {
+
+	struct InterceptTypeVisitor : public clang::TypeVisitor<InterceptTypeVisitor, core::TypePtr> {
+
+		insieme::frontend::conversion::Converter& convFact;
+		const insieme::core::IRBuilder& builder;
+		const Interceptor& interceptor;
+
+		InterceptTypeVisitor(insieme::frontend::conversion::Converter& convFact, const Interceptor& interceptor);
+
+		//core::TypePtr VisitTypedefType(const clang::TypedefType* typedefType);
+		core::TypePtr VisitTagType(const clang::TagType* tagType);
+		core::TypePtr VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy);
+		core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType);
+		core::TypePtr Visit(const clang::Type* type);
+	};
+
+	InterceptTypeVisitor::InterceptTypeVisitor(insieme::frontend::conversion::Converter& convFact, const Interceptor& interceptor)
+		: convFact(convFact), builder(convFact.getIRBuilder()), interceptor(interceptor) {}
+
+	/*
+	core::TypePtr InterceptTypeVisitor::VisitTypedefType(const clang::TypedefType* typedefType) {
+		std::string typeName = fixQualifiedName(typedefType->getDecl()->getQualifiedNameAsString());
+		VLOG(2) << typeName;
+		return builder.genericType(typeName, insieme::core::TypeList(), insieme::core::IntParamList());
+	}
+	*/
+	core::TypePtr InterceptTypeVisitor::VisitTagType(const clang::TagType* tagType) {
+		const clang::TagDecl* tagDecl = tagType->getDecl();
+		VLOG(2) << tagDecl;
+
+		insieme::core::TypeList typeList; //empty typelist  = insieme::core::TypeList();
+		if(llvm::isa<clang::ClassTemplateSpecializationDecl>(tagDecl)) {
+			const clang::TemplateArgumentList& args= llvm::cast<clang::ClassTemplateSpecializationDecl>(tagDecl)->getTemplateArgs();
+			for(size_t i = 0; i<args.size();i++) {
+				switch(args[i].getKind()) {
+					case clang::TemplateArgument::ArgKind::Null: VLOG(2) << "ArgKind::Null not supported"; break;
+					case clang::TemplateArgument::ArgKind::Type:
+						{
+							const clang::Type* argType = args[i].getAsType().getTypePtr();
+							typeList.insert( typeList.end(), convFact.convertType(argType) );
+						}
+						break;
+					case clang::TemplateArgument::ArgKind::Declaration: VLOG(2) << "ArgKind::Declaration not supported"; break;
+					case clang::TemplateArgument::ArgKind::NullPtr: 	VLOG(2) << "ArgKind::NullPtr not supported"; break;
+					case clang::TemplateArgument::ArgKind::Integral: 	VLOG(2) << "ArgKind::Integral not supported"; break;
+					case clang::TemplateArgument::ArgKind::Template: 	VLOG(2) << "ArgKind::Template not supported"; break;
+					case clang::TemplateArgument::ArgKind::TemplateExpansion: VLOG(2) << "ArgKind::TemplateExpansion not supported"; break;
+					case clang::TemplateArgument::ArgKind::Expression: 	VLOG(2) << "ArgKind::Expression not supported"; break;
+					case clang::TemplateArgument::ArgKind::Pack: 		VLOG(2) << "ArgKind::Pack not supported"; break;
+				}
+			}
+		}
+		// obtain type name
+		std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
+		core::TypePtr retTy;
+		if(tagDecl->getTagKind() == clang::TTK_Enum) {
+				// Enums are converted into integer
+			retTy = builder.getLangBasic().getInt4();
+		}
+		else{
+			retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
+		}
+
+		addHeaderForDecl(retTy, tagDecl, interceptor.getStdLibDirectories());
+		return retTy;
+	}
+
+	core::TypePtr InterceptTypeVisitor::VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy) {
+		insieme::core::TypeList typeList;
+		for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
+			const clang::TemplateArgument arg = templTy->getArg(argId);
+
+			switch(arg.getKind()) {
+				case clang::TemplateArgument::ArgKind::Null: VLOG(2) << "ArgKind::Null not supported"; break;
+				case clang::TemplateArgument::ArgKind::Type:
+					{
+						const clang::Type* argType = arg.getAsType().getTypePtr();
+						core::TypePtr irArgType = convFact.convertType(argType);
+						if(irArgType) {
+							typeList.insert( typeList.end(), irArgType );
+						} else {
+							VLOG(2) << argType->getTypeClassName() << " type not supported";
+							assert(false && "TemplateSpecializationType intercepted");
+							typeList.insert( typeList.end(),
+									builder.genericType("asdf", insieme::core::TypeList(), insieme::core::IntParamList()));
+						}
+					}
+					break;
+				case clang::TemplateArgument::ArgKind::Declaration: VLOG(2) << "ArgKind::Declaration not supported"; break;
+				case clang::TemplateArgument::ArgKind::NullPtr:  	VLOG(2) << "ArgKind::NullPtr not supported"; break;
+				case clang::TemplateArgument::ArgKind::Integral: 	VLOG(2) << "ArgKind::Integral not supported"; break;
+				case clang::TemplateArgument::ArgKind::Template: 	VLOG(2) << "ArgKind::Template not supported"; break;
+				case clang::TemplateArgument::ArgKind::TemplateExpansion: VLOG(2) << "ArgKind::TemplateExpansion not supported"; break;
+				case clang::TemplateArgument::ArgKind::Expression: 	VLOG(2) << "ArgKind::Expression not supported"; break;
+				case clang::TemplateArgument::ArgKind::Pack: 		VLOG(2) << "ArgKind::Pack not supported"; break;
+			}
+		}
+
+		const clang::TemplateDecl* templDecl = templTy->getTemplateName().getAsTemplateDecl();
+		// compute resulting type name
+		string typeName = fixQualifiedName(templDecl->getQualifiedNameAsString());
+
+		// build resulting type
+		core::TypePtr retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
+		addHeaderForDecl(retTy, templDecl, interceptor.getStdLibDirectories());
+		return retTy;
+	}
+
+	core::TypePtr InterceptTypeVisitor::VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType) {
+		if( const clang::TemplateTypeParmDecl* tD = templParmType->getDecl() ) {
+			string typeName = fixQualifiedName(tD->getNameAsString());
+			VLOG(2) << typeName;
+			core::TypePtr retTy = builder.genericType(typeName, insieme::core::TypeList(), insieme::core::IntParamList());
+			addHeaderForDecl(retTy, tD, interceptor.getStdLibDirectories());
+			return retTy;
+		}
+		assert(false && "TemplateTypeParmType intercepted");
+		return builder.genericType("asdf", insieme::core::TypeList(), insieme::core::IntParamList());
+	}
+
+	core::TypePtr InterceptTypeVisitor::Visit(const clang::Type* type) {
+	//	return TypeVisitor<InterceptTypeVisitor, core::TypePtr>::Visit(type);
+		auto res = TypeVisitor<InterceptTypeVisitor, core::TypePtr>::Visit(type);
+
+		// ensure include files are annotated
+		if (res && res->getNodeType() == core::NT_GenericType) {
+			const string& name = res.as<core::GenericTypePtr>()->getFamilyName();
+			if (interceptor.isIntercepted(name)) {
+				addHeaderForDecl(res, type->getAsCXXRecordDecl(), interceptor.getStdLibDirectories());
+			}
+		}
+
+		return res;
+	}
+}
+
+
 insieme::core::TypePtr Interceptor::intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact) {
 
 	InterceptTypeVisitor iTV(convFact, *this);
 	// resolve type and save in cache
 	core::TypePtr irType = iTV.Visit(type);
-	
+
 	clang::TypeDecl* typeDecl = NULL;
 	if( const clang::TagType* tagType = llvm::dyn_cast<clang::TagType>(type) ) {
 		typeDecl = tagType->getDecl();
@@ -140,7 +278,7 @@ bool Interceptor::isIntercepted(const string& name) const {
 	return regex_match(name, rx);
 }
 
-bool Interceptor::isIntercepted(const clang::Type* type) const { 
+bool Interceptor::isIntercepted(const clang::Type* type) const {
 	if(toIntercept.empty()) { return false; }
 
 	//not every clang type has a Decl
@@ -162,7 +300,7 @@ bool Interceptor::isIntercepted(const clang::Type* type) const {
 	if(typeDecl) {
 		return isIntercepted(typeDecl->getQualifiedNameAsString());
 	}
-	
+
 	return false;
 }
 
@@ -195,7 +333,7 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 	}
 
 	core::FunctionTypePtr type = convFact.convertType( decl->getType().getTypePtr() ).as<core::FunctionTypePtr>();
-	
+
 	//fix types for ctor, mfunc, ...
 	std::string literalName = decl->getQualifiedNameAsString();
 
@@ -223,124 +361,6 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 }
 
 
-InterceptTypeVisitor::InterceptTypeVisitor(insieme::frontend::conversion::Converter& convFact, const Interceptor& interceptor)
-	: convFact(convFact), builder(convFact.getIRBuilder()), interceptor(interceptor) {}
-
-/*
-core::TypePtr InterceptTypeVisitor::VisitTypedefType(const clang::TypedefType* typedefType) {
-	std::string typeName = fixQualifiedName(typedefType->getDecl()->getQualifiedNameAsString());
-	VLOG(2) << typeName;
-	return builder.genericType(typeName, insieme::core::TypeList(), insieme::core::IntParamList());
-}
-*/
-core::TypePtr InterceptTypeVisitor::VisitTagType(const clang::TagType* tagType) {
-	const clang::TagDecl* tagDecl = tagType->getDecl();
-	VLOG(2) << tagDecl;
-
-	insieme::core::TypeList typeList; //empty typelist  = insieme::core::TypeList();
-	if(llvm::isa<clang::ClassTemplateSpecializationDecl>(tagDecl)) {
-		const clang::TemplateArgumentList& args= llvm::cast<clang::ClassTemplateSpecializationDecl>(tagDecl)->getTemplateArgs();
-		for(size_t i = 0; i<args.size();i++) {
-			switch(args[i].getKind()) {
-				case clang::TemplateArgument::ArgKind::Null: VLOG(2) << "ArgKind::Null not supported"; break;
-				case clang::TemplateArgument::ArgKind::Type:
-					{
-						const clang::Type* argType = args[i].getAsType().getTypePtr();
-						typeList.insert( typeList.end(), convFact.convertType(argType) );
-					}
-					break;
-				case clang::TemplateArgument::ArgKind::Declaration: VLOG(2) << "ArgKind::Declaration not supported"; break;
-				case clang::TemplateArgument::ArgKind::NullPtr: 	VLOG(2) << "ArgKind::NullPtr not supported"; break;
-				case clang::TemplateArgument::ArgKind::Integral: 	VLOG(2) << "ArgKind::Integral not supported"; break;
-				case clang::TemplateArgument::ArgKind::Template: 	VLOG(2) << "ArgKind::Template not supported"; break;
-				case clang::TemplateArgument::ArgKind::TemplateExpansion: VLOG(2) << "ArgKind::TemplateExpansion not supported"; break;
-				case clang::TemplateArgument::ArgKind::Expression: 	VLOG(2) << "ArgKind::Expression not supported"; break;
-				case clang::TemplateArgument::ArgKind::Pack: 		VLOG(2) << "ArgKind::Pack not supported"; break;
-			}
-		}
-	}
-	// obtain type name
-	std::string typeName = fixQualifiedName(tagDecl->getQualifiedNameAsString());
-	core::TypePtr retTy;
-	if(tagDecl->getTagKind() == clang::TTK_Enum) {
-			// Enums are converted into integer
-		retTy = builder.getLangBasic().getInt4();
-	}
-	else{
-		retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
-	}
-
-	addHeaderForDecl(retTy, tagDecl, interceptor.getStdLibDirectories());
-	return retTy;
-}
-
-core::TypePtr InterceptTypeVisitor::VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy) {
-	insieme::core::TypeList typeList; 
-	for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
-		const clang::TemplateArgument arg = templTy->getArg(argId);
-
-		switch(arg.getKind()) {
-			case clang::TemplateArgument::ArgKind::Null: VLOG(2) << "ArgKind::Null not supported"; break;
-			case clang::TemplateArgument::ArgKind::Type:
-				{
-					const clang::Type* argType = arg.getAsType().getTypePtr();
-					core::TypePtr irArgType = convFact.convertType(argType);
-					if(irArgType) {
-						typeList.insert( typeList.end(), irArgType );
-					} else {
-						VLOG(2) << argType->getTypeClassName() << " type not supported";
-						assert(false && "TemplateSpecializationType intercepted");
-						typeList.insert( typeList.end(), 
-								builder.genericType("asdf", insieme::core::TypeList(), insieme::core::IntParamList()));
-					}
-				}
-				break;
-			case clang::TemplateArgument::ArgKind::Declaration: VLOG(2) << "ArgKind::Declaration not supported"; break;
-			case clang::TemplateArgument::ArgKind::NullPtr:  	VLOG(2) << "ArgKind::NullPtr not supported"; break;
-			case clang::TemplateArgument::ArgKind::Integral: 	VLOG(2) << "ArgKind::Integral not supported"; break;
-			case clang::TemplateArgument::ArgKind::Template: 	VLOG(2) << "ArgKind::Template not supported"; break;
-			case clang::TemplateArgument::ArgKind::TemplateExpansion: VLOG(2) << "ArgKind::TemplateExpansion not supported"; break;
-			case clang::TemplateArgument::ArgKind::Expression: 	VLOG(2) << "ArgKind::Expression not supported"; break;
-			case clang::TemplateArgument::ArgKind::Pack: 		VLOG(2) << "ArgKind::Pack not supported"; break;
-		}
-	}
-
-	const clang::TemplateDecl* templDecl = templTy->getTemplateName().getAsTemplateDecl();
-	// compute resulting type name
-	string typeName = fixQualifiedName(templDecl->getQualifiedNameAsString());
-
-	// build resulting type
-	core::TypePtr retTy = builder.genericType(typeName, typeList, insieme::core::IntParamList());
-	addHeaderForDecl(retTy, templDecl, interceptor.getStdLibDirectories());
-	return retTy;
-}
-
-core::TypePtr InterceptTypeVisitor::VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType) {
-	if( const clang::TemplateTypeParmDecl* tD = templParmType->getDecl() ) {
-		string typeName = fixQualifiedName(tD->getNameAsString());
-		VLOG(2) << typeName;
-		core::TypePtr retTy = builder.genericType(typeName, insieme::core::TypeList(), insieme::core::IntParamList());
-		addHeaderForDecl(retTy, tD, interceptor.getStdLibDirectories());
-		return retTy;
-	} 
-	assert(false && "TemplateTypeParmType intercepted");
-	return builder.genericType("asdf", insieme::core::TypeList(), insieme::core::IntParamList());
-}
-
-core::TypePtr InterceptTypeVisitor::Visit(const clang::Type* type) {
-//	return TypeVisitor<InterceptTypeVisitor, core::TypePtr>::Visit(type);
-	auto res = TypeVisitor<InterceptTypeVisitor, core::TypePtr>::Visit(type);
-
-	// ensure include files are annotated
-	if (res && res->getNodeType() == core::NT_GenericType) {
-		const string& name = res.as<core::GenericTypePtr>()->getFamilyName();
-		if (interceptor.isIntercepted(name)) {
-			addHeaderForDecl(res, type->getAsCXXRecordDecl(), interceptor.getStdLibDirectories());
-		}
-	}
-
-	return res;
-}	
 
 } // end utils namespace
 } // end frontend namespace

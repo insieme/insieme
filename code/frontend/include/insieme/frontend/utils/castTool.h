@@ -34,14 +34,10 @@
  * regarding third party software licenses.
  */
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/Expr.h>
-#pragma GCC diagnostic pop
+#pragma once
 
-#pragma once 
+// forwared declaration
+namespace clang { class CastExpr; }
 
 namespace insieme {
 namespace frontend {
