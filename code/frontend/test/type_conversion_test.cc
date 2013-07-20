@@ -351,22 +351,22 @@ TEST(TypeConversion, FileTest) {
 	
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
+	// we use an internal manager to have private counter for variables so we can write independent tests
+	NodeManager mgr;
+
+	fe::conversion::Converter convFactory( mgr, prog );
+	convFactory.convert();
+
+	auto resolve = [&](const core::NodePtr& cur) {
+		return convFactory.getIRTranslationUnit().resolve(cur);
+	};
+
 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-		// we use an internal manager to have private counter for variables so we can write independent tests
-		NodeManager mgr;
-
-		fe::conversion::Converter convFactory( mgr, prog );
-		convFactory.convert();
-
-		auto resolve = [&](const core::NodePtr& cur) {
-//			return cur;
-			return convFactory.getIRTranslationUnit().resolve(cur);
-		};
 
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 
 		if(tp.isStatement())
-			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt( tp.getStatement() )), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
+			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(resolve(convFactory.convertStmt( tp.getStatement() ))), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
 		else {
 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
 				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertType( td->getTypeForDecl() ))->toString() + '\"' );

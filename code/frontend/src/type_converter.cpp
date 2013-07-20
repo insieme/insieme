@@ -647,6 +647,12 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 
 			// and add it to the cache
 			cache[type] = symbol;
+
+			// run post-conversion actions
+			postConvertionAction(type, res);
+
+			// but the result is just the symbol
+			return symbol;
 		}
 
 	} else {

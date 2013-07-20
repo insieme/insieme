@@ -98,7 +98,6 @@ namespace conversion {
 //---------------------------------------------------------------------------------------------------------------------
 stmtutils::StmtWrapper Converter::StmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
 	// if there is only one declaration in the DeclStmt we return it
-
 	if (declStmt->isSingleDecl() && llvm::isa<clang::VarDecl>(declStmt->getSingleDecl())) {
 
 		stmtutils::StmtWrapper retList;
@@ -106,7 +105,6 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitDeclStmt(clang::DeclStmt* 
 
 		auto retStmt = convFact.convertVarDecl(varDecl);
 		if (core::DeclarationStmtPtr decl = retStmt.isa<core::DeclarationStmtPtr>()){
-
 			// check if there is a kernelFile annotation
 			ocl::attatchOclAnnotation(decl->getInitialization(), declStmt, convFact);
 			// handle eventual OpenMP pragmas attached to the Clang node

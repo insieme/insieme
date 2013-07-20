@@ -702,7 +702,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 	core::StatementPtr retStmt;
 	if ( const VarDecl* definition = varDecl->getDefinition()) {
 		// lookup for the variable in the map
-		core::ExpressionPtr&& var = lookUpVariable(definition);
+		core::ExpressionPtr var = lookUpVariable(definition);
 		printDiagnosis(definition->getLocStart());
 
 		if (definition->hasGlobalStorage()) {
@@ -727,7 +727,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			// print diagnosis messages
 			assert(var.isa<core::VariablePtr>());
 			// initialization value
-			core::ExpressionPtr&& initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), var->getType(), false);
+			core::ExpressionPtr initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), var->getType(), false);
 			// this assertion is not valid for void& initialization
 			//	ASSERT_EQ_TYPES (var->getType(), initExpr->getType());
 			assert(initExpr && "not correct initialization of the variable");
@@ -914,12 +914,24 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 	//FIXME: LOG isn't possible because of non existence of convFact
 	//LOG_EXPR_CONVERSION(retIr);
 
-	// get kind of initialized value
-	core::NodeType&& kind =
-		(type->getNodeType() != core::NT_RefType ? type->getNodeType() : GET_REF_ELEM_TYPE(type)->getNodeType() );
-
 	// if there is no initialization expression
 	if (!expr) {
+
+		// extract kind
+		core::NodeType kind = type->getNodeType();
+
+		if (kind == core::NT_RefType) {
+			core::TypePtr elementType = type.as<core::RefTypePtr>()->getElementType();
+
+			// special handling for nested references (pointers)
+			if (elementType.isa<core::RefTypePtr>()) {
+				return builder.refVar((zeroInit)?builder.getZero(elementType):builder.undefined(elementType));
+			}
+
+			// handle others using a recursive call
+			return builder.refVar(convertInitExpr(clangType, expr, elementType, zeroInit));
+		}
+
 
 		// If the type of this declaration is translated as a array type then it may also include
 		// C99 variable array declaration where the size of the array is encoded into the type. This
@@ -928,32 +940,19 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 		if (kind == core::NT_ArrayType && clangType && llvm::isa<clang::VariableArrayType>(clangType)) {
 			// get the size
 			auto size = convertExpr(llvm::dyn_cast<clang::VariableArrayType>(clangType)->getSizeExpr());
-			auto arrType = GET_REF_ELEM_TYPE(type).as<core::ArrayTypePtr>();
+			auto arrType = type.as<core::ArrayTypePtr>();
 
-			return retIr = builder.refVar(
-				builder.callExpr(GET_REF_ELEM_TYPE(type), mgr.getLangBasic().getArrayCreate1D(),
+			return retIr =
+				builder.callExpr(type, mgr.getLangBasic().getArrayCreate1D(),
 					builder.getTypeLiteral(arrType->getElementType()), builder.castExpr(mgr.getLangBasic().getUInt8(), size)
-				)
 			);
 		}
 
-		// if no init expression is provided => use undefined for given set of types
-		if (kind == core::NT_StructType ||
-			kind == core::NT_UnionType  ||
-			kind == core::NT_ArrayType  ||
-			kind == core::NT_VectorType)
-		{
-			if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
-				const core::TypePtr& res = refTy->getElementType();
+		// if no init expression is provided => use zero or undefined value
+		return retIr = zeroInit ? builder.getZero(type) : builder.undefined(type);
 
-				return retIr = builder.refVar((zeroInit?builder.getZero(res):builder.undefined(res)));
-			}
-
-			return retIr = zeroInit ? builder.getZero(type) : builder.undefined(type);
-
-		} else {
-			return retIr = defaultInitVal(type);
-		}
+//		// use default value ..
+//		return retIr = defaultInitVal(type);
 	}
 
 	/*
