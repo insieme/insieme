@@ -92,9 +92,16 @@ namespace cmd {
 	public:
 
 		/**
+		 * Converts this option class into a frontend conversion job.
+		 */
+		frontend::ConversionJob toConversionJob() const;
+
+		/**
 		 * Converts the command line options into a frontend conversion job.
 		 */
-		operator frontend::ConversionJob() const;
+		operator frontend::ConversionJob() const {
+			return toConversionJob();
+		}
 
 	};
 

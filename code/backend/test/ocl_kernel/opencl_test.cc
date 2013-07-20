@@ -69,8 +69,7 @@ TEST(ocl_hostKernel, baseTest) {
 
 	std::cout << "Test Directory: " << std::string(OCL_KERNEL_TEST_DIR) << std::endl;
 
-	insieme::frontend::ConversionJob job;
-	job.addFile(SRC_DIR "../../../test/ocl/mat_mul/mat_mul.c");
+	insieme::frontend::ConversionJob job(SRC_DIR "../../../test/ocl/mat_mul/mat_mul.c");
 
 	// Frontend PATH
 	job.addIncludeDirectory(SRC_DIR);								// this is for ocl_device.h in kernel.cl

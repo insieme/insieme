@@ -142,7 +142,7 @@ namespace cmd {
 
 	}
 
-	CommandLineOptions::operator frontend::ConversionJob() const {
+	frontend::ConversionJob CommandLineOptions::toConversionJob() const {
 
 		// forward options
 		frontend::ConversionJob job(InputFiles, IncludePaths);

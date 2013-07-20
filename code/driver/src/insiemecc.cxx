@@ -71,6 +71,8 @@ namespace cmd = insieme::driver::cmd;
 
 namespace {
 
+	// TODO: move to some utility header within the driver + add a unit test
+
 	// some magic number to identify our files
 	const long MAGIC_NUMBER = 42*42*42*42;
 

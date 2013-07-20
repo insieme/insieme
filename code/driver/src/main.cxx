@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -489,23 +489,28 @@ int main(int argc, char** argv) {
 	try {
 		if(!options.InputFiles.empty()) {
 
-			auto inputFiles = options.InputFiles;
-			fe::Program p(manager, options);
+//			auto inputFiles = options.InputFiles;
+//			fe::Program p(manager, options);
+//
+//			utils::measureTimeFor<INFO>("Frontend.load [clang]",
+//					[&]() { p.addTranslationUnits(options); }
+//				);
+//
+//			// do the actual clang to IR conversion
+//			program = utils::measureTimeFor<core::ProgramPtr,INFO>("Frontend.convert ",
+//					[&]() { return p.convert(); }
+//				);
+//
+//			// cleanup
+//			doCleanup(program, options);
+//
+//			// run OpenCL frontend
+//			applyOpenCLFrontend(program, options);
 
-			utils::measureTimeFor<INFO>("Frontend.load [clang]",
-					[&]() { p.addTranslationUnits(options); }
-				);
-
-			// do the actual clang to IR conversion
+			// run frontend conversion
 			program = utils::measureTimeFor<core::ProgramPtr,INFO>("Frontend.convert ",
-					[&]() { return p.convert(); }
+					[&]() { return options.toConversionJob().execute(manager); }
 				);
-
-			// cleanup
-			doCleanup(program, options);
-
-			// run OpenCL frontend
-			applyOpenCLFrontend(program, options);
 
 			// Load known function semantics from the function database
 			anal::loadFunctionSemantics(program->getNodeManager());
