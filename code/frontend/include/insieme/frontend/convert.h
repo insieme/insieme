@@ -335,7 +335,7 @@ public:
 	 * @param isEntryPoint determine if this function is an entry point of the generated IR
 	 * @return Converted lambda
 	 */
-	virtual core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
+	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
 
 	/**
 	 * Converts variable declarations into IR an declaration statement. This method is also responsible
@@ -344,7 +344,7 @@ public:
 	 * @param varDecl a clang variable declaration
 	 * @return The IR translation of the variable declaration
 	 */
-	virtual core::StatementPtr convertVarDecl(const clang::VarDecl* varDecl);
+	core::StatementPtr convertVarDecl(const clang::VarDecl* varDecl);
 
 	/**
 	 * Returns the default initialization value of the IR type passed as input.
@@ -352,7 +352,7 @@ public:
 	 * @return The default initialization value for the IR type
 	 */
 	// TODO: should most likely be subsituted / merged by with zero
-	virtual core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
+	core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
 
 	
 	/**
@@ -364,7 +364,7 @@ public:
 	 * @return the IR expression ready to be coupled with the decl
 	 */
 	// TODO: make it private where it is used
-	virtual core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
+	core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
 												const core::TypePtr& type, const bool zeroInit) ;
 
 
