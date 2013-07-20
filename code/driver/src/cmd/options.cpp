@@ -58,10 +58,10 @@ namespace cmd {
 			// define options
 			desc.add_options()
 					("help,h", "produce this help message")
-					("input-file,i", bpo::value<vector<string>>(), "input files - required!")
-					("library-file,l", bpo::value<vector<string>>(), "linker flags - optional")
-					("library-path,L", bpo::value<vector<string>>(), "library paths - optional")
-					("include-path,I", bpo::value<vector<string>>(), "include files - optional")
+					("input-file,i", bpo::value<vector<frontend::path>>(), "input files - required!")
+					("library-file,l", bpo::value<vector<frontend::path>>(), "linker flags - optional")
+					("library-path,L", bpo::value<vector<frontend::path>>(), "library paths - optional")
+					("include-path,I", bpo::value<vector<frontend::path>>(), "include files - optional")
 					("definitions,D", bpo::value<vector<string>>(), "preprocessor definitions - optional")
 					("std,s", bpo::value<string>()->default_value("auto"), "determines the language standard")
 					("no-omp", "disables OpenMP support")
@@ -137,10 +137,10 @@ namespace cmd {
                     res.job.addStdLibIncludeDirectory(s);
 			}*/
 			// check for libraries and add LD_LIBRARY_PATH entries to lib search path
-			std::vector<std::string> ldpath;
+			std::vector<frontend::path> ldpath;
 			ldpath.push_back(boost::filesystem::current_path().string());
 			if(map.count("library-path")) {
-                ldpath = map["library-path"].as<vector<string>>();
+                ldpath = map["library-path"].as<vector<frontend::path>>();
 			}
 			std::string ldvar(getenv("LD_LIBRARY_PATH"));
 			boost::char_separator<char> sep(":");
@@ -150,10 +150,10 @@ namespace cmd {
             }
 			if (map.count("library-file")) {
                 //we have to check for lib<name>.<so|a> in every library directory provided by library-path
-                for(std::string s : map["library-file"].as<vector<string>>()) {
-                    for(std::string d : ldpath) {
-                        std::string f1 = d+"/lib"+s+".so";
-                        std::string f2 = d+"/lib"+s+".a";
+                for(const frontend::path& s : map["library-file"].as<vector<frontend::path>>()) {
+                    for(const frontend::path& d : ldpath) {
+                        frontend::path f1 = d / ("/lib" + s.string() + ".so");
+                        frontend::path f2 = d / ("/lib" + s.string() + ".a");
                         if(boost::filesystem::is_regular_file(f1)) {
                             //shared object file
                             res.job.addFile(f1);
