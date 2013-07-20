@@ -161,15 +161,15 @@ TEST(Cilk, Sema) {
 
 	auto str = toString(printer::PrettyPrinter(code));
 
-	EXPECT_PRED2(containsSubString, str, "v3 := v1(v2-1);");
-	EXPECT_PRED2(containsSubString, str, "v3 := v1(v2-2);");
-	EXPECT_PRED2(containsSubString, str, "v1(v2-3);");
+	EXPECT_PRED2(containsSubString, str, "v2 := v3(v1-1);");
+	EXPECT_PRED2(containsSubString, str, "v2 := v3(v1-2);");
+	EXPECT_PRED2(containsSubString, str, "v2(v1-3);");
 
 	EXPECT_PRED2(containsSubString, str, "decl ref<int<4>> v2 =  var(undefined(type<int<4>>));");
 
-	EXPECT_PRED2(containsSubString, str, "default: bind(){fun000(v0, v1, v2)}");
-	EXPECT_PRED2(containsSubString, str, "default: bind(){fun001(v0, v1, v3)}");
-	EXPECT_PRED2(containsSubString, str, "default: bind(){fun002(v0, v1)}");
+	EXPECT_PRED2(containsSubString, str, "default: bind(){fun000(v1, v2, v0)}");
+	EXPECT_PRED2(containsSubString, str, "default: bind(){fun001(v1, v3, v0)}");
+	EXPECT_PRED2(containsSubString, str, "default: bind(){fun002(v1, v0)}");
 
 	EXPECT_PRED2(containsSubString, str, "mergeAll()");
 	EXPECT_PRED2(containsSubString, str, "return v2+v3");
