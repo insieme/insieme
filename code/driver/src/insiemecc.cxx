@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
 	bool compileOnly;
 	cmd::Options options = cmd::Options::parse(argc, argv)
 		// one extra parameter to limit the compiler to creating an .o file
-		("compile,c", &compileOnly, "compilation only")
+		("compile", 'c', compileOnly, "compilation only")
 	;
 
 	//indicates that a shared object files should be created

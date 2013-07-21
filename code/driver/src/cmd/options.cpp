@@ -72,6 +72,18 @@ namespace cmd {
 
 		}
 
+		OptionParser& OptionParser::operator()(const string& name, char symbol, bool& flag, const char* description) {
+
+			// add flag to description
+			desc.add_options()((name + "," + symbol).c_str(), description);
+
+			// add parser step
+			parser_steps.push_back([&](const bpo::variables_map& map) {
+				flag = map.count(name); return true;
+			});
+			return *this;
+		}
+
 		OptionParser::operator Options() {
 
 			// -- parsing -------------------------------------------
@@ -120,12 +132,9 @@ namespace cmd {
 			if (map.count("include-path")) {
 				res.job.setIncludeDirectories(map["include-path"].as<vector<frontend::path>>());
 			}
+
 			// output file (optional)
-            if (map.count("compile")) {
-                    res.outFile = "";
-            } else {
-                res.outFile = "a.out";
-            }
+			res.outFile = "a.out";
 			if (map.count("output-file")) {
 				res.outFile = map["output-file"].as<string>();
 			}
@@ -142,12 +151,15 @@ namespace cmd {
 			if(map.count("library-path")) {
                 ldpath = map["library-path"].as<vector<frontend::path>>();
 			}
-			std::string ldvar(getenv("LD_LIBRARY_PATH"));
-			boost::char_separator<char> sep(":");
-            boost::tokenizer<boost::char_separator<char>> tokens(ldvar, sep);
-            for (auto t : tokens) {
-                    ldpath.push_back(t);
-            }
+
+			if (auto ldPath = getenv("LD_LIBRARY_PATH")) {
+				std::string ldvar(ldPath);
+				boost::char_separator<char> sep(":");
+				boost::tokenizer<boost::char_separator<char>> tokens(ldvar, sep);
+				for (auto t : tokens) {
+				    ldpath.push_back(t);
+				}
+			}
 			if (map.count("library-file")) {
                 //we have to check for lib<name>.<so|a> in every library directory provided by library-path
                 for(const frontend::path& s : map["library-file"].as<vector<frontend::path>>()) {
@@ -197,6 +209,11 @@ namespace cmd {
             if (map.count("intercept-file")) {
                 res.job.setIntercepterConfigFile(map["intercept-file"].as<string>());
             }
+
+			// extra flags
+			for(auto cur : parser_steps) {
+				res.valid = cur(map) && res.valid;
+			}
 
 			// done
 			return res;

@@ -41,7 +41,7 @@
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
-#include<boost/tokenizer.hpp>
+#include <boost/tokenizer.hpp>
 
 #include "insieme/frontend/frontend.h"
 
@@ -107,6 +107,11 @@ namespace cmd {
 		class OptionParser {
 
 			/**
+			 * A function to be processed when parsing
+			 */
+			typedef std::function<bool(const boost::program_options::variables_map&)> parser_step;
+
+			/**
 			 * The number of arguments passed to the program.
 			 */
 			int argc;
@@ -122,6 +127,11 @@ namespace cmd {
 			 */
 			boost::program_options::options_description desc;
 
+			/**
+			 * A list of extra parser steps to be conducted when parsing program options.
+			 */
+			vector<parser_step> parser_steps;
+
 		public:
 
 			/**
@@ -129,6 +139,16 @@ namespace cmd {
 			 * This
 			 */
 			OptionParser(int argc, char** argv);
+
+			/**
+			 * Allows to add a flag to the program options using a convenient syntax.
+			 *
+			 * @param name the name of the flag to be added
+			 * @param symbol the one-letter shortcut of the flag
+			 * @param target the target to be used for storing whether the flag has been set or not
+			 * @param description the description of the parameter to be shown in the help message
+			 */
+			OptionParser& operator()(const string& name, char symbol, bool& flag, const char* description);
 
 			/**
 			 * Allows to add additional program options using a convenient syntax.
