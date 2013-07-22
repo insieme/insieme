@@ -352,19 +352,6 @@ namespace {
 	}
 
 	//***************************************************************************************
-	// 				OMP: Apply the OpenMP semantics to the IR
-	//***************************************************************************************
-	void applyOpenMPFrontend(core::ProgramPtr& program, const CommandLineOptions& options) {
-		if (!options.OpenMP) { return; }
-
-		openBoxTitle("OMP Conversion");
-		program = utils::measureTimeFor<core::ProgramPtr, INFO>("OpenMP ",
-				[&]() {return fe::omp::applySema(program, program->getNodeManager()); }
-			);
-		closeBox();
-	}
-
-	//***************************************************************************************
 	// 				OCL: Apply the OpenCL semantics to the IR
 	//***************************************************************************************
 	void applyOpenCLFrontend(core::ProgramPtr& program, const CommandLineOptions& options) {
@@ -374,19 +361,6 @@ namespace {
 		fe::ocl::HostCompiler oclHostCompiler(program, options);
 		program = utils::measureTimeFor<core::ProgramPtr, INFO>("OpenCL ",
 				[&]() {return oclHostCompiler.compile(); }
-			);
-		closeBox();
-	}
-
-	//***************************************************************************************
-	// 					CILK: Apply the Cilk semantics to the IR
-	//***************************************************************************************
-	void applyCilkFrontend(core::ProgramPtr& program, const CommandLineOptions& options) {
-		if (!options.Cilk) { return; }
-
-		openBoxTitle("Cilk Conversion");
-		program = utils::measureTimeFor<core::ProgramPtr, INFO>("Cilk ",
-				[&]() {return fe::cilk::applySema(program, program->getNodeManager()); }
 			);
 		closeBox();
 	}
@@ -525,22 +499,6 @@ int main(int argc, char** argv) {
 			// perform checks
 			MessageList errors;
 			checkSema(program, errors, options);
-
-			// run OMP frontend
-			if(options.OpenMP) {
-				applyOpenMPFrontend(program, options);
-				printIR(program, options);
-				// check again if the OMP flag is on
-				checkSema(program, errors, options);
-			}
-
-			// run Cilk frontend
-			if(options.Cilk) {
-				applyCilkFrontend(program, options);
-				// check again if the OMP flag is on
-				printIR(program, options);
-				checkSema(program, errors, options);
-			}
 
 			// Performs some benchmarks
 			doBenchmarkCore(manager, program, options);

@@ -121,7 +121,10 @@ protected:
 				if(std::dynamic_pointer_cast<ThreadPrivate>(anno->getAnnotationList().front())) {
 					newNode = node;
 				}
-				else assert(0 && "OMP annotation on non-marker node.");
+				else {
+					std::cout << "Annotated Node: " << *node << "\n";
+					assert(0 && "OMP annotation on non-marker node.");
+				}
 			}
 			//LOG(DEBUG) << "omp annotation(s) on: \n" << printer::PrettyPrinter(newNode);
 			std::for_each(anno->getAnnotationListRBegin(), anno->getAnnotationListREnd(), [&](AnnotationPtr subAnn) {
@@ -175,6 +178,8 @@ protected:
 		// migrate annotations if applicable
 		if(newNode != node) transform::utils::migrateAnnotations(node, newNode);
 		sharedVarStackLeave(node);
+		// strip of OMP annotation
+		newNode->remAnnotation(BaseAnnotation::KEY);
 		return newNode;
 	}
 
