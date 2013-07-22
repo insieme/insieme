@@ -366,7 +366,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	TypePtr retType = substitution->applyTo(returnType);
 	TypePtr resType = address->getType();
 
-	if (*retType != *resType) {
+	if (!core::types::isSubTypeOf(retType, resType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_RETURN_TYPE,
 						format("Invalid result type of call expression - expected: %s, actual: %s - function type: %s",
