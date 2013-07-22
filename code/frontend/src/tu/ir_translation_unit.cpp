@@ -438,12 +438,16 @@ namespace tu {
 				for(auto cur : inner) {
 					assert(cur->getDefinition().size() == 1u);
 					auto def = cur->getDefinition()[0];
-					bindings.push_back(def);
+
+					// only add every variable once
+					if (!any(bindings, [&](const LambdaBindingPtr& binding)->bool { return binding->getVariable() == def.getAddressedNode()->getVariable(); })) {
+						bindings.push_back(def);
+					}
 				}
 
 				LambdaExprPtr res = builder.lambdaExpr(recVar, builder.lambdaDefinition(bindings));
 
-				// last step: collapse recursive definitions
+				// collapse recursive definitions
 				while (true) {
 					// search for reductions (lambda => rec_variable)
 					std::map<NodeAddress, NodePtr> replacements;
