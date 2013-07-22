@@ -48,6 +48,8 @@
 namespace insieme {
 namespace core {
 
+	using std::map;
+
 	std::ostream& JobExpr::printTo(std::ostream& out) const {
 		out << "job [" << join(", ", getLocalDecls()->getElements(), print<deref<NodePtr>>()) << "] ("
 			<< join(", ", getGuardedExprs()->getElements(), print<deref<NodePtr>>())
@@ -75,27 +77,36 @@ namespace core {
 		 * An annotation used to store the addresses of recursive lambda calls.
 		 * This annotation is attached to the LambdaBinding it is describing.
 		 */
-		struct RecursiveCallLocations : public vector<VariableAddress> {
-			RecursiveCallLocations(const vector<VariableAddress>& locations = vector<VariableAddress>()) : vector<VariableAddress>(locations) {};
+		struct RecursiveCallLocations {
+
+			// the internal store for the recursive call locations
+			map<VariablePtr, vector<VariableAddress>> locations;
+
+			RecursiveCallLocations(const map<VariablePtr, vector<VariableAddress>>& locations = map<VariablePtr, vector<VariableAddress>>())
+				: locations(locations) {};
+
+			bool operator==(const RecursiveCallLocations& other) const {
+				return locations == other.locations;
+			}
 		};
 
 
-		class RecursiveCallCollector : private IRVisitor<void, Address, RecursiveCallLocations&, VariableSet&> {
+		class RecursiveCallCollector : private IRVisitor<void, Address, vector<VariableAddress>&, VariableSet&> {
 
-			typedef IRVisitor<void, Address, RecursiveCallLocations&, VariableSet&> super;
+			typedef IRVisitor<void, Address, vector<VariableAddress>&, VariableSet&> super;
 
 		public:
 
 			/**
 			 * The entry point for the resolution of recursive call sides. This function finds all
-			 * recursive calls within the lambda body associated to the given recursive variable.
+			 * recursive calls within the lambda bodies.
 			 *
 			 * @param definition the recursive definition to be processed
 			 * @param var the variable referencing the recursive function to be processed within the definition
 			 * @return a list of addresses relative to the defining lambda referencing all recursive calls within
 			 * 		the selected lambda.
 			 */
-			RecursiveCallLocations findLocations(const LambdaDefinitionPtr& definition, const VariablePtr& var) {
+			RecursiveCallLocations findLocations(const LambdaDefinitionPtr& definition) {
 
 				// set up set of recursive variables
 				VariableSet recVarSet;
@@ -103,18 +114,22 @@ namespace core {
 
 				// search locations
 				RecursiveCallLocations res;
-				visit(NodeAddress(definition->getDefinitionOf(var)), res, recVarSet);
+				for(auto cur : definition) {
+					auto var = cur->getVariable();
+					vector<VariableAddress>& curList = res.locations[var];
+					visit(NodeAddress(definition->getDefinitionOf(var)), curList, recVarSet);
+				}
 				return res;
 			}
 
 		private:
 
-			void visitVariable(const VariableAddress& var, RecursiveCallLocations& res, VariableSet& recVars) {
+			void visitVariable(const VariableAddress& var, vector<VariableAddress>& res, VariableSet& recVars) {
 				// if a recursive variable has been encountered => record the address
 				if (recVars.contains(var)) res.push_back(var);
 			}
 
-			void visitLambdaDefinition(const LambdaDefinitionAddress& def, RecursiveCallLocations& res, VariableSet& recVars) {
+			void visitLambdaDefinition(const LambdaDefinitionAddress& def, vector<VariableAddress>& res, VariableSet& recVars) {
 				// eliminate re-defined recursive variables from recVar set
 				VariableSet subSet;
 
@@ -132,7 +147,7 @@ namespace core {
 				visitAll(def->getChildList(), res, subSet);
 			}
 
-			void visitLambdaExpr(const LambdaExprAddress& lambda, RecursiveCallLocations& res, VariableSet& recVars) {
+			void visitLambdaExpr(const LambdaExprAddress& lambda, vector<VariableAddress>& res, VariableSet& recVars) {
 
 				// check whether there are free variables matching the recursive variables
 				VariableList freeVars = analysis::getFreeVariables(lambda);
@@ -145,7 +160,7 @@ namespace core {
 				visitLambdaDefinition(lambda->getDefinition(), res, recVars);
 			}
 
-			void visitNode(const NodeAddress& node, RecursiveCallLocations& res, VariableSet& recVars) {
+			void visitNode(const NodeAddress& node, vector<VariableAddress>& res, VariableSet& recVars) {
 				if (node->getNodeCategory() == NC_Type) return;
 				// a general forwarding to all child nodes
 				visitAll(node->getChildList(), res, recVars);
@@ -154,23 +169,23 @@ namespace core {
 		};
 
 
-		const RecursiveCallLocations& getRecursiveCallLocations(const LambdaDefinitionPtr& definition, const VariablePtr& var) {
+		const vector<VariableAddress>& getRecursiveCallLocations(const LambdaDefinitionPtr& definition, const VariablePtr& var) {
 			// get lambda binding
-			LambdaBindingPtr binding = definition->getBindingOf(var);
-			assert(binding && "Requesting recursive status of invalid rec-lambda variable!");
+			assert(definition->getBindingOf(var) && "Requesting recursive status of invalid rec-lambda variable!");
 
 			// compute recursive call locations if missing
-			if (!binding->hasAttachedValue<RecursiveCallLocations>()) {
-				binding->attachValue(RecursiveCallCollector().findLocations(definition, var));
+			if (!definition->hasAttachedValue<RecursiveCallLocations>()) {
+				definition->attachValue(RecursiveCallCollector().findLocations(definition));
 			}
 
 			// return a reference to the call location set
-			const auto& res = binding->getAttachedValue<RecursiveCallLocations>();
+			const auto& locs = definition->getAttachedValue<RecursiveCallLocations>().locations;
+			const auto& res = locs.find(var)->second;		// this location might be invalid if migrated => following if is checking for this
 
 			// check validity of annotation (not moved between node managers)
-			if (!res.empty() && res[0].getRootNode() != definition->getDefinitionOf(var)) {
-				binding->attachValue(RecursiveCallCollector().findLocations(definition, var));
-				return binding->getAttachedValue<RecursiveCallLocations>();
+			if (locs.find(var) == locs.end() || (!res.empty() && res[0].getRootNode() != definition->getDefinitionOf(var).as<core::NodePtr>())) {
+				definition->attachValue(RecursiveCallCollector().findLocations(definition));
+				return definition->getAttachedValue<RecursiveCallLocations>().locations.find(var)->second;
 			}
 
 			return res;

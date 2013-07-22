@@ -91,7 +91,7 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
 	ConversionJob kernelJob = job;
 	kernelJob.setFiles(toVector<frontend::path>(path));
-	return kernelJob.execute(builder.getNodeManager());
+	return kernelJob.execute(builder.getNodeManager(), false);
 }
 
 void tryStructExtract(ExpressionPtr& expr, IRBuilder& builder) {

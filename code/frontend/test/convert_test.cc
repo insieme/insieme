@@ -43,12 +43,12 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-
+#include "test_utils.inc"
 
 namespace insieme {
 namespace frontend {
 
-	TEST(Clang, ConverToTranslationUnit) {
+	TEST(Converter, ConverToTranslationUnit) {
 		core::NodeManager mgr;
 
 		ConversionSetup setup;
@@ -64,7 +64,7 @@ namespace frontend {
 		}
 	}
 
-	TEST(Clang, ConvertToProgram) {
+	TEST(Converter, ConvertToProgram) {
 		core::NodeManager mgr;
 
 		ConversionSetup setup;
@@ -92,7 +92,7 @@ namespace frontend {
 
 	}
 
-	TEST(Clang, Globals) {
+	TEST(Converter, Globals) {
 		core::NodeManager mgr;
 
 		auto tu = convert(mgr, SRC_DIR "/inputs/globals.c");
@@ -105,7 +105,7 @@ namespace frontend {
 
 	}
 
-	TEST(Clang, ConversionSetup) {
+	TEST(Converter, ConversionSetup) {
 
 		ConversionSetup setup;
 
@@ -149,7 +149,73 @@ namespace frontend {
 		EXPECT_TRUE(setup.isCxx("test.c"));
 		EXPECT_TRUE(setup.isCxx("test/test.a"));
 
+	}
 
+	TEST(Converter, EvenOdd) {
+
+		// create a temporary source file
+		Source file(
+				R"(
+					#define bool int
+					
+					#define true 1
+					#define false 0
+					
+					bool even(unsigned x);
+					bool odd(unsigned x);
+					
+					bool even(unsigned x) {
+						return (x==0)?true:odd(x-1);
+					}
+					
+					bool odd(unsigned x) {
+						return (x==0)?false:even(x-1);
+					}
+					
+					int main(int argc, char* argv[]) {
+						int x = 10;
+						even(x);
+						odd(x);
+						return 0;
+					}
+
+				)"
+		);
+
+		// check the resulting translation unit
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+		auto irtu = ConversionJob(file).toTranslationUnit(manager);
+//		std::cout << irtu << "\n";
+
+		// there should be 3 function symbols
+		EXPECT_EQ(3u, irtu.getFunctions().size());
+
+		auto print = [&](const core::NodePtr& node) {
+			return toString(core::printer::PrettyPrinter(builder.normalize(node), core::printer::PrettyPrinter::PRINT_SINGLE_LINE | core::printer::PrettyPrinter::NO_LET_BINDINGS));
+		};
+
+		// among them, even and odd
+		auto evenLit = builder.parseExpr("lit(\"even\":(uint<4>)->int<4>)").as<core::LiteralPtr>();
+		auto oddLit = builder.parseExpr("lit(\"odd\":(uint<4>)->int<4>)").as<core::LiteralPtr>();
+		ASSERT_TRUE(irtu[evenLit]);
+		ASSERT_TRUE(irtu[oddLit]);
+
+		// check their definition
+		EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (v1==0u)?1:odd( var(v1)-1u);}", print(irtu[evenLit]));
+		EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (v1==0u)?0:even( var(v1)-1u);}", print(irtu[oddLit]));
+
+		// check resolved version
+		auto even = irtu.resolve(evenLit);
+		EXPECT_EQ("recFun v0 {v0 = fun(uint<4> v1) -> int<4> {return (v1==0u)?1:v4( var(v1)-1u);};v4 = fun(uint<4> v5) -> int<4> {return (v5==0u)?0:v0( var(v5)-1u);};}", print(even));
+
+		auto odd = irtu.resolve(oddLit);
+		EXPECT_EQ("recFun v0 {v0 = fun(uint<4> v1) -> int<4> {return (v1==0u)?0:v4( var(v1)-1u);};v4 = fun(uint<4> v5) -> int<4> {return (v5==0u)?1:v0( var(v5)-1u);};}", print(odd));
+
+		auto program = tu::toProgram(manager, irtu);
+//		dump(program);
+
+		EXPECT_TRUE(core::checks::check(program).empty()) << core::checks::check(program);
 	}
 
 } // end frontend

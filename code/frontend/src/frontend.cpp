@@ -89,7 +89,7 @@ namespace frontend {
 
 	}
 
-	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) const {
+	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
 
 		// create a temporary manager
 		core::NodeManager tmpMgr(manager);
@@ -97,8 +97,8 @@ namespace frontend {
 		// load and merge all files into a single translation unit
 		auto unit = toTranslationUnit(tmpMgr);
 
-		// converte units to a single program
-		auto res = tu::toProgram(tmpMgr, unit);
+		// convert units to a single program
+		auto res = (fullApp) ? tu::toProgram(tmpMgr, unit) : tu::resolveEntryPoints(tmpMgr, unit);
 
 		// apply OpenMP sema conversion
 		if (hasOption(OpenMP)) {

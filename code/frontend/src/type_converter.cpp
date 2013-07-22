@@ -551,6 +551,11 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 
 			// but the result is just the symbol
 			return symbol;
+
+		} else {
+
+			// anonymous structs need to be added to the cache (not as symbol)
+			cache[type] = res;
 		}
 
 	} else {

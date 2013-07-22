@@ -106,7 +106,7 @@ namespace tu {
 		}
 
 		void addFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
-			assert_eq(symbol->getType(), definition->getType());
+			assert_eq(*symbol->getType(), *definition->getType());
 			assert(functions.find(symbol) == functions.end());
 			functions.insert( { symbol, definition } );
 		}
@@ -181,6 +181,8 @@ namespace tu {
 	inline core::ProgramPtr toProgram(core::NodeManager& mgr, const vector<IRTranslationUnit>& units, const string& entryPoint = "main") {
 		return toProgram(mgr, merge(units));
 	}
+
+	core::ProgramPtr resolveEntryPoints(core::NodeManager& mgr, const IRTranslationUnit& a);
 
 } // end namespace tu
 } // end namespace frontend
