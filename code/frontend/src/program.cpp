@@ -78,6 +78,7 @@
 #include "insieme/utils/timer.h"
 #include "insieme/utils/container_utils.h"
 
+//#include <sys/time.h>
 
 using namespace insieme;
 using namespace insieme::core;
@@ -182,7 +183,7 @@ public:
 	clang::DiagnosticsEngine& getDiagnostic() { return getCompiler().getDiagnostics(); }
 	const clang::DiagnosticsEngine& getDiagnostic() const { return getCompiler().getDiagnostics(); }
 
-	void storeUnit(const std::string& output_file) {
+	void storeUnit(const std::string& output_file, int i=0) {
         //if no output_file is specified the current file_name is taken and modified to .o extension
         std::string raw_name = output_file;
         if(output_file.size()==0) {
@@ -191,12 +192,14 @@ public:
             if (lastdot == std::string::npos)
                 raw_name = getFileName();
             raw_name = getFileName().substr(lastslash, lastdot-lastslash);
+            raw_name += "_";
+            raw_name += boost::lexical_cast<std::string>(i);
             raw_name += ".o";
         }
         //if the original file was an insieme object file we don't need
         //to recreate the ast_unit. We can call save to store the
         //data in the given file name
-        if(!boost::algorithm::ends_with(getFileName(),".o")) {
+        if(!getCompiler().getASTUnit()->getASTUnit()) {
             llvm::SmallString<128> Buffer;
             llvm::BitstreamWriter Stream(Buffer);
             clang::ASTWriter Writer(Stream);
@@ -204,6 +207,8 @@ public:
             if (!Buffer.empty()) {
                 getCompiler().getASTUnit()->setAST(Buffer.str());
             }
+        } else {
+            getCompiler().getASTUnit()->load(getFileName());
         }
         getCompiler().getASTUnit()->save(raw_name);
     }
@@ -216,6 +221,7 @@ namespace frontend {
 
 struct Program::ProgramImpl {
 	utils::Indexer mIdx;
+    //timeval start;
 	TranslationUnitList tranUnits;
 	const vector<boost::filesystem::path> stdLibDirs;
 	utils::Interceptor interceptor;
@@ -227,7 +233,7 @@ struct Program::ProgramImpl {
 		stdLibDirs(::transform(stdLibDirs, [](const string& path) { return boost::filesystem::canonical(path); } )),
 		interceptor(mgr, mIdx, this->stdLibDirs),  funcDepGraph(mIdx,interceptor),
 		globalsCollector(interceptor)
-		{}
+		{ /*gettimeofday(&start,0);*/ }
 };
 
 Program::Program(core::NodeManager& mgr, const ConversionJob& job):
@@ -279,19 +285,27 @@ void Program::dumpCallGraph() const {
 }
 
 void Program::storeTranslationUnits(const string& output_file) {
+    int i=0;
     for(TranslationUnitPtr tu : pimpl->tranUnits) {
-        static_cast<TranslationUnitImpl *>(tu.get())->storeUnit(output_file);
+        static_cast<TranslationUnitImpl *>(tu.get())->storeUnit(output_file, i++);
     }
 }
 
 TranslationUnit& Program::addTranslationUnit(const ConversionJob& job) {
 	assert(job.getFiles().size() == 1 && "Can only cover a single file!");
-
+    //timeval end;
+    //gettimeofday(&start,0);
 	TranslationUnitImpl* tuImpl = new TranslationUnitImpl(job);
-
 	pimpl->mIdx.indexTU(tuImpl);
-
 	pimpl->tranUnits.push_back( TranslationUnitPtr(tuImpl) /* the shared_ptr will take care of cleaning the memory */);
+    //gettimeofday(&end,0);
+    //long seconds = end.tv_sec - pimpl->start.tv_sec;
+    //long useconds = end.tv_usec - pimpl->start.tv_usec;
+    //if(useconds < 0) {
+    //    useconds += 1000000;
+    //    seconds--;
+    //}
+    //std::cout << "Time for measurements: "<< seconds << "." << useconds << "\n";
 	return *tuImpl;
 }
 
