@@ -576,7 +576,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitForStmt(clang::For
 		core::StatementPtr irBody = stmtutils::tryAggregateStmts(builder, body);
 		vector<core::ContinueStmtAddress> conts = getContinues( irBody );
 
-		if( !conts.empty() )
+		if( !conts.empty() && forStmt->getInc() )
 		{
 			core::StatementList stmtList;
 			stmtList.push_back(convFact.convertExpr(forStmt->getInc()));
