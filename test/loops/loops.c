@@ -17,7 +17,6 @@ int func(int k) {
 
 }
 
-int i;
 void func2() {
 	for(i=10; i>=0; i--) {
 		printf("k=%d\n", i);
