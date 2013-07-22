@@ -276,6 +276,22 @@ public:
 		return (type.isa<core::GenericTypePtr>()) ? lookupTypeDetails(type.as<core::GenericTypePtr>()) : type;
 	}
 
+
+	/** 
+	 * Returns the complete function definition to the aliased Literal
+	 */
+	const core::ExpressionPtr lookupFunctionImpl(const core::LiteralPtr& expr) const{
+		core::ExpressionPtr res = getIRTranslationUnit()[expr];
+		return (res)? res:expr.as<core::ExpressionPtr>();
+	}
+
+	/** 
+	 * Returns the complete function definition to the aliased Literal
+	 */
+	const core::ExpressionPtr lookupFunctionImpl(const core::ExpressionPtr& expr) const{
+		return (expr.isa<core::LiteralPtr>()) ? lookupFunctionImpl(expr.as<core::LiteralPtr>()) : expr;
+	}
+
 	/**
 	 * Returns a reference to the IR data structure used to represent a variable of the input C program.
 	 *
