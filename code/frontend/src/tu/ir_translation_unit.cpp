@@ -187,7 +187,7 @@ namespace tu {
 						if (const GenericTypePtr& symbol = ptr.isa<GenericTypePtr>()) {
 							recVar = builder.typeVariable(symbol->getFamilyName());
 						} else if (const LiteralPtr& symbol = ptr.isa<LiteralPtr>()) {
-							recVar = builder.variable(symbol->getType());
+							recVar = builder.variable(map(symbol->getType()));
 						} else {
 							assert(false && "Unsupported symbol encountered!");
 						}
