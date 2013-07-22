@@ -106,7 +106,7 @@ namespace tu {
 		}
 
 		void addFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
-			assert_eq(symbol->getType(), definition->getType());
+			assert_eq(*symbol->getType(), *definition->getType());
 			assert(functions.find(symbol) == functions.end());
 			functions.insert( { symbol, definition } );
 		}
