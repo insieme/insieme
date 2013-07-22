@@ -1198,8 +1198,9 @@ namespace {
 				// create access to the member of the struct/class
 				ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
 
-				core::TypePtr memberTy = classType.as<core::StructTypePtr>()->getTypeOfMember(ident);
-				init = builder.refMember(builder.literal("this", builder.refType(classType)), ident);
+				core::TypePtr completeClassIR = converter.lookupTypeDetails(classType);
+				core::TypePtr memberTy =  completeClassIR.as<core::StructTypePtr>()->getTypeOfMember(ident);
+				init = builder.refMember(builder.literal("this", builder.refType(completeClassIR)), ident);
 
 				expr = converter.convertExpr((*it)->getInit());
 			}
