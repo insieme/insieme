@@ -41,6 +41,7 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/omp/omp_sema.h"
+#include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/cilk/cilk_sema.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
@@ -115,6 +116,11 @@ namespace frontend {
 		if(hasOption(Cilk)) {
 			res = frontend::cilk::applySema(res, tmpMgr);
 		}
+
+		// strip of OMP annotation since those may contain references to local nodes
+		core::visitDepthFirstOnce(res, [](const core::NodePtr& cur) {
+			cur->remAnnotation(omp::BaseAnnotation::KEY);
+		});
 
 		// return instance within global manager
 		return manager.get(res);
