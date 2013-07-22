@@ -905,7 +905,14 @@ Converter::convertInitializerList(const clang::InitListExpr* initList, const cor
 	//	retIr = builder.structExpr(members);
 	}
 
-	assert(retIr && "Couldn't convert initialization expression");
+
+	// debugging info if it failed
+	if (!retIr) {
+		std::cout << "Input:  "; initList->dump(); std::cout << "\n";
+		std::cout << "Type:   " << *type << "\n";
+		std::cout << "Detail: " << *currType << "\n";
+		assert(false && "Couldn't convert initialization expression");
+	}
 
 	// create vector initializator
 	return retIr;
