@@ -77,9 +77,17 @@ namespace core {
 		 * An annotation used to store the addresses of recursive lambda calls.
 		 * This annotation is attached to the LambdaBinding it is describing.
 		 */
-		struct RecursiveCallLocations : public map<VariablePtr, vector<VariableAddress>> {
+		struct RecursiveCallLocations {
+
+			// the internal store for the recursive call locations
+			map<VariablePtr, vector<VariableAddress>> locations;
+
 			RecursiveCallLocations(const map<VariablePtr, vector<VariableAddress>>& locations = map<VariablePtr, vector<VariableAddress>>())
-				: map<VariablePtr, vector<VariableAddress>>(locations) {};
+				: locations(locations) {};
+
+			bool operator==(const RecursiveCallLocations& other) const {
+				return locations == other.locations;
+			}
 		};
 
 
@@ -108,7 +116,7 @@ namespace core {
 				RecursiveCallLocations res;
 				for(auto cur : definition) {
 					auto var = cur->getVariable();
-					vector<VariableAddress>& curList = res[var];
+					vector<VariableAddress>& curList = res.locations[var];
 					visit(NodeAddress(definition->getDefinitionOf(var)), curList, recVarSet);
 				}
 				return res;
@@ -171,18 +179,16 @@ namespace core {
 			}
 
 			// return a reference to the call location set
-			const auto& res = definition->getAttachedValue<RecursiveCallLocations>();
+			const auto& locs = definition->getAttachedValue<RecursiveCallLocations>().locations;
+			const auto& res = locs.find(var)->second;		// this location might be invalid if migrated => following if is checking for this
 
 			// check validity of annotation (not moved between node managers)
-			if (!res.empty()) {
-				auto pos = res.find(var);
-				if (pos != res.end() && !pos->second.empty() && pos->second[0].getRootNode() != definition->getDefinitionOf(var)) {
-					definition->attachValue(RecursiveCallCollector().findLocations(definition));
-					return definition->getAttachedValue<RecursiveCallLocations>().find(var)->second;
-				}
+			if (locs.find(var) == locs.end() || (!res.empty() && res[0].getRootNode() != definition->getDefinitionOf(var).as<core::NodePtr>())) {
+				definition->attachValue(RecursiveCallCollector().findLocations(definition));
+				return definition->getAttachedValue<RecursiveCallLocations>().locations.find(var)->second;
 			}
 
-			return res.find(var)->second;
+			return res;
 		}
 
 
