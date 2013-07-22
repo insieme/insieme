@@ -558,11 +558,6 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		}
 
 		core::ExpressionPtr globVar =  builder.literal(name, irType);
-		if (varDecl->hasExternalStorage()){
-			globVar =  builder.literal(varDecl->getQualifiedNameAsString(), globVar->getType());
-		 	annotations::c::markExtern(globVar.as<core::LiteralPtr>());
-		}
-
 		if (varDecl->isStaticLocal()){
 			globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
 		}
