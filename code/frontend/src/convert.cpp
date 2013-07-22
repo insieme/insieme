@@ -57,6 +57,7 @@
 #include "insieme/frontend/utils/header_tagger.h"
 #include "insieme/frontend/utils/ir_utils.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
+#include "insieme/frontend/analysis/prunable_decl_visitor.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"
 
@@ -166,43 +167,53 @@ tu::IRTranslationUnit Converter::convert() {
 	// Thread private requires to collect all the variables which are marked to be threadprivate
 	omp::collectThreadPrivate(getPragmaMap(), thread_private);
 
+	std::cout << "********** Convert Types *****************" << std::endl;
+
 	// collect all type definitions
 	auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
 
-	struct TypeVisitor : public clang::RecursiveASTVisitor<TypeVisitor> {
+	struct TypeVisitor : public analysis::PrunableDeclVisitor<TypeVisitor> {
 
 		Converter& converter;
 		TypeVisitor(Converter& converter) : converter(converter) {}
 
-		bool VisitRecordDecl(clang::RecordDecl* type) {
-			converter.convertType(type->getTypeForDecl());
-			return true;
+		void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
+			// we do not convert templates or partial spetialized classes/functions, the full
+			// type will be found and converted once the instantaion is found
+			std::cout << "convert class: " << typeDecl->getQualifiedNameAsString() << std::endl;
+        	std::cout  << "-> at location: (" << utils::location(typeDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
+			converter.convertType(typeDecl->getTypeForDecl());
 		}
-		bool VisitTypedefDecl(clang::TypedefDecl* type) {
+		void VisitTypedefDecl(const clang::TypedefDecl* typeDecl) {
+			std::cout << " typedef: " << typeDecl->getQualifiedNameAsString() << std::endl;
+        	std::cout  << "-> at location: (" << utils::location(typeDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
 			// extract new symbol name
-			auto symbol = converter.getIRBuilder().genericType(type->getQualifiedNameAsString());
+			auto symbol = converter.getIRBuilder().genericType(typeDecl->getQualifiedNameAsString());
 
 			// get contained type
-			auto res = converter.convertType(type->getUnderlyingType().getTypePtr());
+			auto res = converter.convertType(typeDecl->getUnderlyingType().getTypePtr());
 
 			// frequently structs and their type definitions have the same name => in this case symbol == res and should be ignored
 			if (res != symbol) converter.getIRTranslationUnit().addType(symbol, res);
-			return true;
 		}
 	} typeVisitor(*this);
 
-	typeVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
+	//typeVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
+	typeVisitor.traverseDeclCtx (declContext);
 
+	std::cout << "********** Collect Globals *****************" << std::endl;
 
 	// collect all global declarations
-	struct GlobalVisitor : public clang::RecursiveASTVisitor<GlobalVisitor> {
+	struct GlobalVisitor : public analysis::PrunableDeclVisitor<GlobalVisitor> {
 
 		Converter& converter;
 		GlobalVisitor(Converter& converter) : converter(converter) {}
 
-		bool VisitVarDecl(clang::VarDecl* var) {
-			if (!var->hasGlobalStorage()) return true;
-			if (var->hasExternalStorage()) return true;
+		void VisitVarDecl(const clang::VarDecl* var) {
+			if (!var->hasGlobalStorage()) return;
+			if (var->hasExternalStorage()) return;
+			std::cout << " Global Var: " << var->getQualifiedNameAsString() << std::endl;
+        	std::cout  << "-> at location: (" << utils::location(var->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
 
 			auto builder = converter.getIRBuilder();
 
@@ -240,28 +251,31 @@ tu::IRTranslationUnit Converter::convert() {
 			}
 
 			converter.getIRTranslationUnit().addGlobal(literal, initValue);
-			return true;
 		}
 	} varVisitor(*this);
 
-	varVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
+	varVisitor.traverseDeclCtx(declContext);
 
+	std::cout << "********** Convert Functions *****************" << std::endl;
 
 	// collect all global declarations
-	struct FunctionVisitor : public clang::RecursiveASTVisitor<FunctionVisitor> {
+	struct FunctionVisitor : public analysis::PrunableDeclVisitor<FunctionVisitor> {
 
 		Converter& converter;
 		FunctionVisitor(Converter& converter) : converter(converter) {}
 
-		bool VisitFunctionDecl(const clang::FunctionDecl* decl) {
+		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
+			if (funcDecl->isTemplateDecl()) return;
+			std::cout << " function: " << funcDecl->getQualifiedNameAsString() << std::endl;
+        	std::cout  << "-> at location: (" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
 			// if you see problems, try isThisDeclarationADefinition() - your welcome
-			if (!decl->doesThisDeclarationHaveABody()) return true;
-			converter.convertFunctionDecl(decl);
-			return true;
+			if (!funcDecl->doesThisDeclarationHaveABody()) return;
+			converter.convertFunctionDecl(funcDecl);
+			return;
 		}
 	} funVisitor(*this);
 
-	funVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
+	funVisitor.traverseDeclCtx(declContext);
 
 	// handle entry points (marked using insieme pragmas)
 	for(pragma::PragmaPtr pragma : program.getPragmaList()) {
@@ -548,11 +562,6 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		}
 
 		core::ExpressionPtr globVar =  builder.literal(name, irType);
-		if (varDecl->hasExternalStorage()){
-			globVar =  builder.literal(varDecl->getQualifiedNameAsString(), globVar->getType());
-		 	annotations::c::markExtern(globVar.as<core::LiteralPtr>());
-		}
-
 		if (varDecl->isStaticLocal()){
 			globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
 		}
