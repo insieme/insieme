@@ -164,6 +164,9 @@ tu::IRTranslationUnit Converter::convert() {
 
 	assert(getCompiler().getASTContext().getTranslationUnitDecl());
 
+	// Thread private requires to collect all the variables which are marked to be threadprivate
+	omp::collectThreadPrivate(getPragmaMap(), thread_private);
+
 	// collect all type definitions
 	auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
 

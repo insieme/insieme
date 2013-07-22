@@ -51,6 +51,7 @@
 #include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/annotations/c/naming.h"
+#include "insieme/annotations/c/extern.h"
 
 namespace insieme {
 namespace frontend {
@@ -505,6 +506,14 @@ namespace tu {
 				if (!contains(usedLiterals, cur.first)) continue;
 				// add creation statement
 				inits.push_back(builder.createStaticVariable(cur.first));
+			}
+
+			// fix the external markings
+			for(auto cur : usedLiterals) {
+				annotations::c::markExtern(cur.as<LiteralPtr>(),
+						!cur.as<LiteralPtr>()->getType().isa<core::FunctionTypePtr>() &&
+						!any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *global.first == *cur; })
+				);
 			}
 
 			// build resulting lambda
