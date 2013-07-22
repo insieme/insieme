@@ -64,7 +64,7 @@ namespace tu {
 	}
 
 	std::ostream& IRTranslationUnit::printTo(std::ostream& out) const {
-		static auto print = [](const core::NodePtr& node) { return core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::NO_LET_BINDINGS | core::printer::PrettyPrinter::PRINT_SINGLE_LINE); };
+		static auto print = [](const core::NodePtr& node) { return core::printer::printInOneLine(node); };
 		return out << "TU(\n\tTypes:\n\t\t"
 				<< join("\n\t\t", types, [&](std::ostream& out, const std::pair<core::GenericTypePtr, core::TypePtr>& cur) { out << *cur.first << " => " << *cur.second; })
 				<< ",\n\tGlobals:\n\t\t"
@@ -123,7 +123,7 @@ namespace tu {
 		 * The class converting a IR-translation-unit into an actual IR program by
 		 * realizing recursive definitions.
 		 */
-		class ProgramCreator : public core::NodeMapping {
+		class Resolver : public core::NodeMapping {
 
 			NodeManager& mgr;
 			IRBuilder builder;
@@ -132,10 +132,11 @@ namespace tu {
 			NodeMap symbolMap;
 			NodeMap recVarMap;
 			NodeMap recVarResolutions;
+			NodeSet recVars;
 
 		public:
 
-			ProgramCreator(NodeManager& mgr, const IRTranslationUnit& unit)
+			Resolver(NodeManager& mgr, const IRTranslationUnit& unit)
 				: mgr(mgr), builder(mgr) {
 
 				// copy type symbols into symbol table
@@ -174,7 +175,6 @@ namespace tu {
 					// enter a recursive substitute into the cache
 					recVar = recVarMap[ptr];
 					if (recVar) {
-
 						// check whether the recursive variable has already been completely resolved
 						auto pos = recVarResolutions.find(recVar);
 						if (pos != recVarResolutions.end()) {
@@ -192,6 +192,7 @@ namespace tu {
 							assert(false && "Unsupported symbol encountered!");
 						}
 						recVarMap[ptr] = recVar;
+						recVars.insert(recVar);
 					}
 
 					// update cache for current element
@@ -418,6 +419,7 @@ namespace tu {
 				visitDepthFirstOncePrunable(NodeAddress(lambda), [&](const LambdaExprAddress& cur) {
 					if (cur.isRoot()) return false;
 					if (!analysis::hasFreeVariables(cur)) return true;
+					if (!recVars.contains(cur.as<LambdaExprPtr>()->getVariable())) return false;
 					inner.push_back(cur);
 					return false;
 				});
@@ -436,24 +438,23 @@ namespace tu {
 				for(auto cur : inner) {
 					assert(cur->getDefinition().size() == 1u);
 					auto def = cur->getDefinition()[0];
-
-					// only add every variable once
-					if (!any(bindings, [&](const LambdaBindingPtr& binding)->bool { return binding->getVariable() == def.getAddressedNode()->getVariable(); })) {
-						bindings.push_back(def);
-					}
+					bindings.push_back(def);
 				}
 
 				LambdaExprPtr res = builder.lambdaExpr(recVar, builder.lambdaDefinition(bindings));
 
 				// last step: collapse recursive definitions
 				while (true) {
-
 					// search for reductions (lambda => rec_variable)
 					std::map<NodeAddress, NodePtr> replacements;
-					visitDepthFirstOncePrunable(NodeAddress(res), [&](const LambdaExprAddress& cur) {
+					visitDepthFirstPrunable(NodeAddress(res), [&](const LambdaExprAddress& cur) {
 						if (cur.isRoot()) return false;
 						if (!analysis::hasFreeVariables(cur)) return true;
-						replacements[cur] = cur.as<LambdaExprPtr>()->getVariable();
+
+						// only focus on inner lambdas referencing recursive variables
+						auto var = cur.as<LambdaExprPtr>()->getVariable();
+						if (!res->getDefinition()->getBindingOf(var)) return false;
+						replacements[cur] = var;
 						return false;
 					});
 
@@ -471,43 +472,48 @@ namespace tu {
 		};
 
 
-	core::LambdaExprPtr addGlobalsInitialization(const IRTranslationUnit& unit, const core::LambdaExprPtr& mainFunc){
+		core::LambdaExprPtr addGlobalsInitialization(const IRTranslationUnit& unit, const core::LambdaExprPtr& mainFunc){
 
-		// we only want to init what we use, so we check it
-		core::NodeSet usedLiterals;
-		core::visitDepthFirstOnce (mainFunc, [&] (const core::LiteralPtr& literal){
-			usedLiterals.insert(literal);
-		});
+			// we only want to init what we use, so we check it
+			core::NodeSet usedLiterals;
+			core::visitDepthFirstOnce (mainFunc, [&] (const core::LiteralPtr& literal){
+				usedLiterals.insert(literal);
+			});
 
-		core::IRBuilder builder(mainFunc->getNodeManager());
-		core::StatementList inits;
+			core::IRBuilder builder(mainFunc->getNodeManager());
+			core::StatementList inits;
 
-		// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		for (auto cur : unit.getGlobals()) {
-			// only consider having an initialization value
-			if (!cur.second) continue;
-			if (!contains(usedLiterals, cur.first)) continue;
-			inits.push_back(builder.assign(cur.first, cur.second));
+			// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			for (auto cur : unit.getGlobals()) {
+				// only consider having an initialization value
+				if (!cur.second) continue;
+				if (!contains(usedLiterals, cur.first)) continue;
+				inits.push_back(builder.assign(cur.first, cur.second));
+			}
+
+			// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			const lang::StaticVariableExtension& ext = mainFunc->getNodeManager().getLangExtension<lang::StaticVariableExtension>();
+			for (auto cur : unit.getGlobals()) {
+				// only consider static variables
+				auto type = cur.first->getType();
+				if (!type.isa<RefTypePtr>() || !ext.isStaticType(type.as<RefTypePtr>()->getElementType())) continue;
+				// skip unused variables
+				if (!contains(usedLiterals, cur.first)) continue;
+				// add creation statement
+				inits.push_back(builder.createStaticVariable(cur.first));
+			}
+
+			// build resulting lambda
+			if (inits.empty()) return mainFunc;
+
+			return (core::transform::insert ( mainFunc->getNodeManager(), core::LambdaExprAddress(mainFunc)->getBody(), inits, 0)).as<core::LambdaExprPtr>();
 		}
 
-		// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		const lang::StaticVariableExtension& ext = mainFunc->getNodeManager().getLangExtension<lang::StaticVariableExtension>();
-		for (auto cur : unit.getGlobals()) {
-			// only consider static variables
-			auto type = cur.first->getType();
-			if (!type.isa<RefTypePtr>() || !ext.isStaticType(type.as<RefTypePtr>()->getElementType())) continue;
-			// skip unused variables
-			if (!contains(usedLiterals, cur.first)) continue;
-			// add creation statement
-			inits.push_back(builder.createStaticVariable(cur.first));
-		}
+	} // end anonymous namespace
 
-		// build resulting lambda
-		if (inits.empty()) return mainFunc;
 
-		return (core::transform::insert ( mainFunc->getNodeManager(), core::LambdaExprAddress(mainFunc)->getBody(), inits, 0)).as<core::LambdaExprPtr>();
-	}
-
+	core::NodePtr IRTranslationUnit::resolve(const core::NodePtr& node) const {
+		return Resolver(getNodeManager(), *this).map(node);
 	}
 
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint) {
@@ -521,7 +527,7 @@ namespace tu {
 				core::NodePtr symbol = cur.first;
 
 				// extract lambda expression
-				core::LambdaExprPtr lambda = ProgramCreator(mgr, a).map(symbol).as<core::LambdaExprPtr>();
+				core::LambdaExprPtr lambda = Resolver(mgr, a).map(symbol).as<core::LambdaExprPtr>();
 
 				// add global initializers
 				lambda = addGlobalsInitialization(a, lambda);
@@ -531,17 +537,19 @@ namespace tu {
 			}
 		}
 
-		// if there is no such entry point => use those marked within the translation unit
+		assert(false && "No such entry point!");
+		return core::ProgramPtr();
+	}
+
+
+	core::ProgramPtr resolveEntryPoints(core::NodeManager& mgr, const IRTranslationUnit& a) {
+		// convert entry points stored within TU int a program
 		core::ExpressionList entryPoints;
-		ProgramCreator creator(mgr, a);
+		Resolver creator(mgr, a);
 		for(auto cur : a.getEntryPoints()) {
 			entryPoints.push_back(creator.map(cur.as<core::ExpressionPtr>()));
 		}
-		return builder.program(entryPoints);
-	}
-
-	core::NodePtr IRTranslationUnit::resolve(const core::NodePtr& node) const {
-		return ProgramCreator(getNodeManager(), *this).map(node);
+		return core::IRBuilder(mgr).program(entryPoints);
 	}
 
 

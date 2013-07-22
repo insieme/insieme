@@ -182,6 +182,8 @@ namespace tu {
 		return toProgram(mgr, merge(units));
 	}
 
+	core::ProgramPtr resolveEntryPoints(core::NodeManager& mgr, const IRTranslationUnit& a);
+
 } // end namespace tu
 } // end namespace frontend
 } // end namespace insieme

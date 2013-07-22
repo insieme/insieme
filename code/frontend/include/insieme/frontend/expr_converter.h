@@ -37,9 +37,13 @@
 #pragma once
 
 // defines which are needed by LLVM
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wuninitialized"
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
-#include <clang/AST/StmtVisitor.h>
+	#include <clang/AST/StmtVisitor.h>
+#pragma GCC diagnostic pop
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"

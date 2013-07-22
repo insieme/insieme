@@ -328,10 +328,12 @@ namespace frontend {
 		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
 		 *
 		 * @param manager the node manager to be used for building the IR
+		 * @param fullApp a flag determining whether the result is expected to be a full application (entered via
+		 * 				a main function) or a list of multiple entry points.
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */
-		core::ProgramPtr execute(core::NodeManager& manager) const;
+		core::ProgramPtr execute(core::NodeManager& manager, bool fullApp = true) const;
 
 		/**
 		 * Triggers the conversion of the files covered by this job into a translation unit.
