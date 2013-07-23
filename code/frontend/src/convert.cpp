@@ -119,12 +119,6 @@ namespace frontend {
 
 // ----------- conversion ------------
 
-vector<tu::IRTranslationUnit> convert(core::NodeManager& manager, const vector<path>& units, const ConversionSetup& setup) {
-	return ::transform(units, [&](const path& cur) { return convert(manager, cur, setup); });
-}
-
-
-// TODO: collapse this with the program class ...
 tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup) {
 	// just delegate operation to converter
 	Program program(manager, unit, setup);

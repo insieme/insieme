@@ -80,16 +80,6 @@ namespace frontend {
  */
 tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup = ConversionSetup());
 
-/**
- * This function converts a list of translation units into a list of IR translation units.
- *
- * @param manager the manager to be used for managing the resulting IR nodes
- * @param units the translation units to be processed
- * @param setup the setup for the conversion process to be respected
- * @return the resulting translation units
- */
-vector<tu::IRTranslationUnit> convert(core::NodeManager& manager, const vector<path>& units, const ConversionSetup& setup = ConversionSetup());
-
 
 namespace conversion {
 
