@@ -57,6 +57,7 @@
 #include "insieme/annotations/c/naming.h"
 
 #include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/tu/ir_translation_unit.h"
 
 #include <stack>
 
@@ -74,14 +75,21 @@ namespace cl = lang;
 namespace us = insieme::utils::set;
 namespace um = insieme::utils::map;
 
+
+namespace {
+
+	bool contains(const vector<ExpressionPtr>& list, const ExpressionPtr& element) {
+		return ::contains(list, element, equal_target<ExpressionPtr>());
+	}
+}
+
+
 class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 	NodeManager& nodeMan;
 	IRBuilder build;
 	const lang::BasicGenerator& basic;
 	us::PointerSet<CompoundStmtPtr> toFlatten; // set of compound statements to flatten one step further up
 	
-	RefTypePtr globalStructType;
-
 	// the following vars handle global struct type adjustment due to threadprivate
 	bool fixStructType; // when set, implies that the struct was just modified and needs to be adjusted 
 	StructTypePtr adjustStruct; // marks a struct that was modified and needs to be adjusted when encountered
@@ -92,8 +100,8 @@ class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 	std::stack<VariableList> sharedVarStack;
 	
 public:
-	OMPSemaMapper(NodeManager& nodeMan, RefTypePtr globalStructType) 
-			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(), globalStructType(globalStructType),
+	OMPSemaMapper(NodeManager& nodeMan)
+			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(),
 			  fixStructType(false), adjustStruct(), adjustedStruct(), thisLambdaTPAccesses() {
 	}
 
@@ -586,8 +594,6 @@ protected:
 				// variables declared shared in all enclosing constructs, up to and including 
 				// the innermost parallel construct, should not be privatized
 				ret = ret && !contains(sharedVarStack.top(), v);
-				// finally, the global struct should not be auto-privatized
-				if(t == globalStructType) ret = false;
 				return ret;
 			});
 			firstPrivates.insert(firstPrivates.end(), freeVars.begin(), freeVars.end());
@@ -880,11 +886,9 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 	IRBuilder build(resultStorage);
 	ProgramPtr result = prog;
 
-	RefTypePtr globalStructType = findGlobalStruct(prog);
-	
 	// new sema
 	{
-		OMPSemaMapper semaMapper(resultStorage, globalStructType);
+		OMPSemaMapper semaMapper(resultStorage);
 		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 		insieme::utils::Timer timer("Omp sema");
 		result = semaMapper.map(result);
@@ -931,6 +935,86 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 
 	return result;
 }
+
+namespace {
+
+	void collectAndRegisterLocks(core::NodeManager& mgr, tu::IRTranslationUnit& unit, const core::ExpressionPtr& fragment) {
+
+		// search locks
+		visitDepthFirstOnce(fragment, [&](const LiteralPtr& lit) {
+
+			const string& gname = lit->getStringValue();
+			if (gname.find("global_omp") != 0) return;
+
+			std::cout << "Found lock: " << gname << "\n";
+
+			assert(analysis::isRefOf(lit, mgr.getLangBasic().getLock()));
+
+			// add lock to global list
+			unit.addGlobal(lit);
+
+			// add lock initialization code
+			unit.addInitializer(IRBuilder(mgr).initLock(lit));
+		});
+
+	}
+
+}
+
+
+tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr) {
+
+	tu::IRTranslationUnit res;
+
+	// everything has to run through the OMP sema mapper
+	OMPSemaMapper semaMapper(mgr);
+
+	// process the contained types ...
+	for(auto& cur : unit.getTypes()) {
+		res.addType(cur.first, semaMapper.map(cur.second));
+	}
+
+	// ... the functions ...
+	for(auto& cur : unit.getFunctions()) {
+
+		// convert implementation
+		auto newImpl = semaMapper.map(cur.second);
+		collectAndRegisterLocks(mgr, res, newImpl);
+
+		// save result
+		res.addFunction(semaMapper.map(cur.first), newImpl);
+	}
+
+	// ... the globals ...
+	IRBuilder builder(mgr);
+	for(auto& cur : unit.getGlobals()) {
+
+		ExpressionPtr newGlobal = semaMapper.map(cur.first.as<ExpressionPtr>());
+
+		// if it is an access to a thread-private value
+		if (CallExprPtr call = newGlobal.isa<CallExprPtr>()) {
+			assert(core::analysis::isCallOf(call, mgr.getLangBasic().getVectorRefElem()));
+			newGlobal = call[0];		// take first argument
+		}
+
+		res.addGlobal(
+				newGlobal.as<LiteralPtr>(),
+				(cur.second) ? semaMapper.map(cur.second) : cur.second
+		);
+	}
+
+	// ... and the entry points
+	for (auto& cur : unit.getEntryPoints()) {
+		res.addEntryPoints(semaMapper.map(cur));
+	}
+
+	std::cout << res << "\n";
+
+	// done
+	return res;
+}
+
+
 
 } // namespace omp
 } // namespace frontend
