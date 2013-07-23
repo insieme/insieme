@@ -432,6 +432,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 
 	const clang::Type* classType= callExpr->getType().getTypePtr();
 	core::TypePtr&& irClassType = convFact.convertType(classType);
+	core::TypePtr&&  refToClassTy = builder.refType(irClassType);
 
 	// we do NOT instantiate elidable ctors, this will be generated and ignored if needed by the
 	// back end compiler
@@ -447,7 +448,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 		if(	ctorDecl->isDefaultConstructor() ) {
 			//TODO find better solution to sovle problems with standard-layout/trivial-copyable
 			//classes
-			core::TypePtr&&  refToClassTy = builder.refType(irClassType);
 			if(ctorDecl->getParent()->isPOD()) {
 				return builder.undefinedVar(refToClassTy);
 			} else {
@@ -485,8 +485,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	core::ExpressionPtr ctorFunc = convFact.convertFunctionDecl(ctorDecl);
 
 	// update parameter list with a class-typed parameter in the first possition
-	core::TypePtr&&  refToClassTy = builder.refType(irClassType);
-
 	core::FunctionTypePtr funcTy = ctorFunc.getType().as<core::FunctionTypePtr>();
 
 	// reconstruct Arguments list, fist one is a scope location for the object
@@ -659,8 +657,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThisExpr(const clang::CXXThisExpr* thisExpr) {
 	//figure out the type of the expression
 	core::TypePtr&& irType = convFact.convertType( llvm::cast<clang::TypeDecl>(thisExpr->getBestDynamicClassType())->getTypeForDecl() );
-	irType = convFact.lookupTypeDetails(irType);
+	assert(irType.isa<core::GenericTypePtr>() && "for convention, all this operators deal with generic types");
 	irType = builder.refType(irType);
+	
 
 	// build a literal as a placeholder (has to be substituted later by function call expression)
 	core::ExpressionPtr ret =  builder.literal("this", irType);

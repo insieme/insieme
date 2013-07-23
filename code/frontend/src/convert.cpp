@@ -371,14 +371,9 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 ///
 void Converter::printDiagnosis(const clang::SourceLocation& loc){
 
-	// TODO: warnings intoduced by INSIEME are not print because some 
-	// source location issues, debug and fix this.
-	//    --  loop iterator thing
-	//    -- constancy of member functions (which one to call when two)
-/*	clang::Preprocessor& pp = getPreprocessor();
+	clang::Preprocessor& pp = getPreprocessor();
 	// print warnings and errors:
 	while (!warnings.empty()){
-
 		if (getSourceManager().isLoadedSourceLocation (loc)){
 			std::cerr << "loaded location:\n";
 			std::cerr << "\t" << *warnings.begin() << std::endl;
@@ -388,7 +383,6 @@ void Converter::printDiagnosis(const clang::SourceLocation& loc){
 		}
 		warnings.erase(warnings.begin());
 	}
-	*/
 }
 
 //////////////////////////////////////////////////////////////////
@@ -1168,6 +1162,7 @@ namespace {
 	core::StatementPtr prepentInitializerList(const clang::CXXConstructorDecl* ctorDecl, const core::TypePtr& classType, const core::StatementPtr& body, Converter& converter) {
 		auto& mgr = body.getNodeManager();
 		core::IRBuilder builder(mgr);
+		assert(classType.isa<core::GenericTypePtr>() && "for convenion, this literal must keep the generic type");
 
 		core::StatementList initList;
 		for(auto it = ctorDecl->init_begin(); it != ctorDecl->init_end(); ++it) {
@@ -1192,12 +1187,14 @@ namespace {
 			}
 			else if ((*it)->isMemberInitializer ()){
 				// create access to the member of the struct/class
+				// we need to use the detailed version to build the reference member operation,
+				// but we substitute it with the generic type as soon as we are done
 				ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
-
-				core::TypePtr completeClassIR = converter.lookupTypeDetails(classType);
-				core::TypePtr memberTy =  completeClassIR.as<core::StructTypePtr>()->getTypeOfMember(ident);
-				init = builder.refMember(builder.literal("this", builder.refType(completeClassIR)), ident);
-
+				core::LiteralPtr genThis      = builder.literal("this", builder.refType(classType));
+				core::LiteralPtr completeThis = builder.literal("this", builder.refType (converter.lookupTypeDetails(classType)));	
+				init = builder.refMember( completeThis, ident);
+				core::CallExprAddress addr(init.as<core::CallExprPtr>());
+				init = core::transform::replaceNode(mgr, addr->getArgument(0), genThis).as<core::ExpressionPtr>();
 				expr = converter.convertExpr((*it)->getInit());
 			}
 			if ((*it)->isIndirectMemberInitializer ()){
@@ -1239,7 +1236,6 @@ namespace {
 			}
 			else{
 				//otherwise is a regular assigment like intialization
-				//
 				core::ExpressionPtr expr = converter.convertExpr((*it)->getInit());
 				initStmt = utils::createSafeAssigment(init,expr);
 			}
@@ -1252,9 +1248,9 @@ namespace {
 		if (initList.empty()) return body;
 
 
-		//ATTENTION: this will produce an extra compound for the initializer list
+		//ATTENTION: this will produce an extra compound around the  initializer list and old body
 		// let fun ... {
-		//   { intializer stuff };
+		//    intializer stuff ;
 		//   { original body };
 		// }
 
@@ -1264,7 +1260,6 @@ namespace {
 				body
 		);
 	}
-
 }
 
 //////////////////////////////////////////////////////////////////
@@ -1355,6 +1350,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 			
 		// add initializer list
 		if (funcTy->isConstructor()) {
+
 			body = prepentInitializerList(llvm::cast<clang::CXXConstructorDecl>(funcDecl), funcTy->getObjectType(), body, *this);
 		}
 
@@ -1365,8 +1361,6 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		// handle potential this pointer
 		if (funcTy->isMember()) {
 			auto thisType = funcTy->getParameterTypes()[0];
-			thisType = builder.refType ( lookupTypeDetails (thisType.as<core::RefTypePtr>()->getElementType()));
-
 
 			// add this as a parameter
 			auto thisVar = builder.variable(thisType);
