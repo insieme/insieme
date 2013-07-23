@@ -95,7 +95,6 @@ core::ExpressionPtr createSafeAssigment(core::ExpressionPtr& left, core::Express
 	ASSERT_IS_SUBTYPE (right.getType(), left.getType().as<core::RefTypePtr>()->getElementType());
 	return builder.assign( left, right);
 }
-
 } // end utils namespace
 } // end frontend namespace 
 } // end insieme namespace 
