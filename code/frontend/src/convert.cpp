@@ -194,7 +194,9 @@ tu::IRTranslationUnit Converter::convert() {
 			auto res = converter.convertType(typeDecl->getUnderlyingType().getTypePtr());
 
 			// frequently structs and their type definitions have the same name => in this case symbol == res and should be ignored
-			if (res != symbol) converter.getIRTranslationUnit().addType(symbol, res);
+			if (res != symbol && res.isa<core::NamedCompositeTypePtr>()) {	// also: skip simple type-defs
+				converter.getIRTranslationUnit().addType(symbol, res);
+			}
 		}
 	} typeVisitor(*this);
 
@@ -210,18 +212,19 @@ tu::IRTranslationUnit Converter::convert() {
 		GlobalVisitor(Converter& converter) : converter(converter) {}
 
 		void VisitVarDecl(const clang::VarDecl* var) {
+
+			// variables to be skipped
 			if (!var->hasGlobalStorage()) return;
 			if (var->hasExternalStorage()) return;
+			if (var->isStaticLocal()) return;
+
 			std::cout << " Global Var: " << var->getQualifiedNameAsString() << std::endl;
         	std::cout  << "-> at location: (" << utils::location(var->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
 
 			auto builder = converter.getIRBuilder();
 
+			// obtain type
 			auto type = converter.convertType(var->getType().getTypePtr());
-			if (var->isStaticLocal()) {
-				const auto& ext = converter.getNodeManager().getLangExtension<core::lang::StaticVariableExtension>();
-				type = ext.wrapStaticType(type);
-			}
 
 			// all globals are mutable ..
 			auto elementType = type;
@@ -289,6 +292,8 @@ tu::IRTranslationUnit Converter::convert() {
 		assert(funcDecl && "Pragma insieme only valid for function declarations.");
 		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
 	}
+
+	std::cout << "********** Convert Done *****************" << std::endl;
 
 	// that's all
 	return irTranslationUnit;
