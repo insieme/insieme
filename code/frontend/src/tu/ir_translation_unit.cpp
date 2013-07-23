@@ -78,6 +78,7 @@ namespace tu {
 	}
 
 	IRTranslationUnit merge(const IRTranslationUnit& a, const IRTranslationUnit& b) {
+
 		IRTranslationUnit res = a;
 
 		// copy types
@@ -510,8 +511,10 @@ namespace tu {
 
 			// fix the external markings
 			for(auto cur : usedLiterals) {
+				auto type = cur.as<LiteralPtr>()->getType();
 				annotations::c::markExtern(cur.as<LiteralPtr>(),
-						!cur.as<LiteralPtr>()->getType().isa<core::FunctionTypePtr>() &&
+						!type.isa<FunctionTypePtr>() &&
+						!(type.isa<RefTypePtr>() && ext.isStaticType(type.as<RefTypePtr>()->getElementType())) &&
 						!any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *global.first == *cur; })
 				);
 			}

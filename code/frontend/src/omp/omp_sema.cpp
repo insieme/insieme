@@ -178,8 +178,6 @@ protected:
 		// migrate annotations if applicable
 		if(newNode != node) transform::utils::migrateAnnotations(node, newNode);
 		sharedVarStackLeave(node);
-		// strip of OMP annotation
-		newNode->remAnnotation(BaseAnnotation::KEY);
 		return newNode;
 	}
 
