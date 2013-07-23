@@ -753,8 +753,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 
 //////////////////////////////////////////////////////////////////
 ///
-core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& node,
-		const clang::FunctionDecl* funcDecl) {
+core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
 // ----------------------------------- Add annotations to this function -------------------------------------------
 // check Attributes of the function definition
 	annotations::ocl::BaseAnnotation::AnnotationList kernelAnnotation;
@@ -1349,7 +1348,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 		core::StatementPtr body = convertStmt( funcDecl->getBody() );
 		curParameter = oldList;
-
+			
 		// add initializer list
 		if (funcTy->isConstructor()) {
 			body = prepentInitializerList(llvm::cast<clang::CXXConstructorDecl>(funcDecl), funcTy->getObjectType(), body, *this);
@@ -1362,20 +1361,22 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 		// handle potential this pointer
 		if (funcTy->isMember()) {
 			auto thisType = funcTy->getParameterTypes()[0];
+			thisType = builder.refType ( lookupTypeDetails (thisType.as<core::RefTypePtr>()->getElementType()));
+
 
 			// add this as a parameter
 			auto thisVar = builder.variable(thisType);
 			params.insert(params.begin(), thisVar);
 
-			// handle this references in body
-			core::LiteralPtr thisLit =  builder.literal("this", thisType);
-			body = core::transform::replaceAllGen (mgr, body, thisLit, thisVar, true);
+			// handle this references in body,
+			body = core::transform::replaceAllGen (mgr, body, builder.literal("this", thisType), thisVar, true);
 		}
 
 		// build the resulting lambda
 		lambda = builder.lambdaExpr(funcTy, params, body);
 		VLOG(2) << lambda << " + function declaration: " << funcDecl;
 	}
+
 
 	// update cache
 	assert_eq(lambdaExprCache[funcDecl], symbol) << "Don't touch this!";

@@ -659,6 +659,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXDeleteExpr(const clang:
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThisExpr(const clang::CXXThisExpr* thisExpr) {
 	//figure out the type of the expression
 	core::TypePtr&& irType = convFact.convertType( llvm::cast<clang::TypeDecl>(thisExpr->getBestDynamicClassType())->getTypeForDecl() );
+	irType = convFact.lookupTypeDetails(irType);
 	irType = builder.refType(irType);
 
 	// build a literal as a placeholder (has to be substituted later by function call expression)
