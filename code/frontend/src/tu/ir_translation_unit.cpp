@@ -532,14 +532,13 @@ namespace tu {
 
 			// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			const lang::StaticVariableExtension& ext = mainFunc->getNodeManager().getLangExtension<lang::StaticVariableExtension>();
-			for (auto cur : unit.getGlobals()) {
+			for (auto cur : usedLiterals) {
+				auto lit = cur.as<LiteralPtr>();
 				// only consider static variables
-				auto type = cur.first->getType();
+				auto type = lit->getType();
 				if (!type.isa<RefTypePtr>() || !ext.isStaticType(type.as<RefTypePtr>()->getElementType())) continue;
-				// skip unused variables
-				if (!contains(usedLiterals, cur.first)) continue;
 				// add creation statement
-				inits.push_back(builder.createStaticVariable(cur.first));
+				inits.push_back(builder.createStaticVariable(lit));
 			}
 
 			// fix the external markings
