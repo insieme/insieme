@@ -309,7 +309,7 @@ core::TypePtr Converter::CXXTypeConverter::VisitAutoType(const clang::AutoType* 
     return convert(autoTy->getDeducedType().getTypePtr());
 }
 
-void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangType, const core::TypePtr& irCompleteType) {
+void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangType, const core::TypePtr& irType) {
 
 	// now attach meta-info (only for record type definitios)
 	const clang::RecordType* recType = dyn_cast<const clang::RecordType>(clangType);
@@ -318,11 +318,14 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 	// skip if there is not declaration available
 	if (!llvm::isa<clang::CXXRecordDecl>(recType->getDecl())) return;
 
-	if( !irCompleteType.isa<core::StructTypePtr>() ) { return; }
+	if( !irType.isa<core::StructTypePtr>() ) { return; }
 
 	// get the generic type to substitute "this" parameter by the complete implementation
-	core::TypePtr irAliasType =	convFact.convertType(clangType);
-	assert (irAliasType.isa<core::GenericTypePtr>());
+	// and make sure that the type we want to complete is "closed"
+	// NOTE: irAlias might not exist for annonimous types
+	core::TypePtr irAliasType    =	convFact.convertType(clangType);
+	core::TypePtr irCompleteType =  convFact.lookupTypeDetails(irType);
+
 	assert (!irCompleteType.isa<core::GenericTypePtr>());
 
 	// assemble class info
@@ -352,7 +355,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 				if (ctorLambda ){
 					assert(ctorLambda);
                     assert(!ctorLambda.isa<core::LiteralPtr>());
-					ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irAliasType, irCompleteType, true);
+					if (irAliasType) ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irAliasType, irCompleteType, true);
 					classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 				}
 			}
@@ -363,7 +366,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 	if(classDecl->hasUserDeclaredDestructor()){
 		const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
 		core::ExpressionPtr dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
-		dtorLambda = core::transform::replaceAllGen(mgr, dtorLambda, irAliasType, irCompleteType, true);
+		if(irAliasType) dtorLambda = core::transform::replaceAllGen(mgr, dtorLambda, irAliasType, irCompleteType, true);
 		classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
 		if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
 			classInfo.setDestructorVirtual();
@@ -401,7 +404,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 		}
 
 		auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
-		methodLambda = core::transform::replaceAllGen(mgr, methodLambda, irAliasType, irCompleteType, true);
+		if (irAliasType) methodLambda = core::transform::replaceAllGen(mgr, methodLambda, irAliasType, irCompleteType, true);
 
 		if( method->isPure() ) {
 			//pure virtual functions are handled bit different in metainfo

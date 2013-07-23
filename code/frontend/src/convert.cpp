@@ -167,8 +167,6 @@ tu::IRTranslationUnit Converter::convert() {
 	// Thread private requires to collect all the variables which are marked to be threadprivate
 	omp::collectThreadPrivate(getPragmaMap(), thread_private);
 
-	std::cout << "********** Convert Types *****************" << std::endl;
-
 	// collect all type definitions
 	auto declContext = clang::TranslationUnitDecl::castToDeclContext(getCompiler().getASTContext().getTranslationUnitDecl());
 
@@ -180,13 +178,9 @@ tu::IRTranslationUnit Converter::convert() {
 		void VisitRecordDecl(const clang::RecordDecl* typeDecl) {
 			// we do not convert templates or partial spetialized classes/functions, the full
 			// type will be found and converted once the instantaion is found
-			std::cout << "convert class: " << typeDecl->getQualifiedNameAsString() << std::endl;
-        	std::cout  << "-> at location: (" << utils::location(typeDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
 			converter.convertType(typeDecl->getTypeForDecl());
 		}
 		void VisitTypedefDecl(const clang::TypedefDecl* typeDecl) {
-			std::cout << " typedef: " << typeDecl->getQualifiedNameAsString() << std::endl;
-        	std::cout  << "-> at location: (" << utils::location(typeDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
 			// extract new symbol name
 			auto symbol = converter.getIRBuilder().genericType(typeDecl->getQualifiedNameAsString());
 
@@ -203,8 +197,6 @@ tu::IRTranslationUnit Converter::convert() {
 	//typeVisitor.TraverseDecl(llvm::cast<clang::Decl>(declContext));
 	typeVisitor.traverseDeclCtx (declContext);
 
-	std::cout << "********** Collect Globals *****************" << std::endl;
-
 	// collect all global declarations
 	struct GlobalVisitor : public analysis::PrunableDeclVisitor<GlobalVisitor> {
 
@@ -217,9 +209,6 @@ tu::IRTranslationUnit Converter::convert() {
 			if (!var->hasGlobalStorage()) return;
 			if (var->hasExternalStorage()) return;
 			if (var->isStaticLocal()) return;
-
-			std::cout << " Global Var: " << var->getQualifiedNameAsString() << std::endl;
-        	std::cout  << "-> at location: (" << utils::location(var->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
 
 			auto builder = converter.getIRBuilder();
 
@@ -259,7 +248,6 @@ tu::IRTranslationUnit Converter::convert() {
 
 	varVisitor.traverseDeclCtx(declContext);
 
-	std::cout << "********** Convert Functions *****************" << std::endl;
 
 	// collect all global declarations
 	struct FunctionVisitor : public analysis::PrunableDeclVisitor<FunctionVisitor> {
@@ -269,8 +257,8 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl()) return;
-			std::cout << " function: " << funcDecl->getQualifiedNameAsString() << std::endl;
-        	std::cout  << "-> at location: (" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
+			//std::cout << " function: " << funcDecl->getQualifiedNameAsString() << std::endl;
+        	//std::cout  << "-> at location: (" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
 			// if you see problems, try isThisDeclarationADefinition() - your welcome
 			if (!funcDecl->doesThisDeclarationHaveABody()) return;
 			converter.convertFunctionDecl(funcDecl);
@@ -1207,8 +1195,9 @@ namespace {
 				// create access to the member of the struct/class
 				ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
 
-				core::TypePtr memberTy = classType.as<core::StructTypePtr>()->getTypeOfMember(ident);
-				init = builder.refMember(builder.literal("this", builder.refType(classType)), ident);
+				core::TypePtr completeClassIR = converter.lookupTypeDetails(classType);
+				core::TypePtr memberTy =  completeClassIR.as<core::StructTypePtr>()->getTypeOfMember(ident);
+				init = builder.refMember(builder.literal("this", builder.refType(completeClassIR)), ident);
 
 				expr = converter.convertExpr((*it)->getInit());
 			}
