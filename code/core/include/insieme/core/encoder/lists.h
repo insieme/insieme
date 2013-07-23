@@ -216,10 +216,8 @@ namespace encoder {
 
 			core::ExpressionPtr operator()(NodeManager& manager, const vector<ExpressionPtr>& list) const {
 
-				assert(!list.empty() && "Can not encode empty expression list!");
-
 				// obtain some useful values
-				core::TypePtr elementType = list[0].getType();
+				core::TypePtr elementType = (list.empty()) ? manager.getLangBasic().getUnit() : list[0].getType();
 				core::TypePtr listType = GenericType::get(manager, ListExtension::LIST_TYPE_NAME, toVector(elementType));
 
 				IRBuilder builder(manager);
