@@ -43,6 +43,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -187,6 +188,8 @@ namespace tu {
 						// check whether the recursive variable has already been completely resolved
 						auto pos = recVarResolutions.find(recVar);
 						if (pos != recVarResolutions.end()) {
+							// migrate annotations
+							core::transform::utils::migrateAnnotations(ptr, pos->second);
 							return pos->second;
 						}
 
@@ -294,6 +297,9 @@ namespace tu {
 				if (*ptr == *res) {
 					cache[ptr] = res;
 				}
+
+				// handle class-meta-information
+				resolveClassMetaInfo(res.isa<TypePtr>());
 
 				// done
 				return res;
@@ -481,6 +487,26 @@ namespace tu {
 				// that's it
 				return res;
 			}
+
+
+			void resolveClassMetaInfo(const TypePtr& type) {
+				// check whether it is a type
+				if (!type) return;
+
+				// check whether there is something to do
+				if (!core::hasMetaInfo(type)) return;
+
+				// resolve meta info
+				auto encoded = core::toIR(mgr, core::getMetaInfo(type));
+
+				// resolve meta info
+				auto resolved = map(encoded);
+
+				// restore resolved meta info
+				core::setMetaInfo(type, core::fromIR(resolved));
+			}
+
+
 
 		};
 

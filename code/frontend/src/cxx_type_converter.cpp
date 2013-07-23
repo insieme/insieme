@@ -356,7 +356,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 					assert(ctorLambda);
 					ctorLambda = convFact.lookupFunctionImpl(ctorLambda);
                     assert(!ctorLambda.isa<core::LiteralPtr>());
-					if (irAliasType) ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irAliasType, irCompleteType, true);
+					if (irAliasType) ctorLambda = core::transform::replaceAllGen(mgr, ctorLambda, irCompleteType, irAliasType, true);
 					classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 				}
 			}
@@ -368,7 +368,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 		const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
 		core::ExpressionPtr dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
 		dtorLambda = convFact.lookupFunctionImpl(dtorLambda);
-		if(irAliasType) dtorLambda = core::transform::replaceAllGen(mgr, dtorLambda, irAliasType, irCompleteType, true);
+		if(irAliasType) dtorLambda = core::transform::replaceAllGen(mgr, dtorLambda, irCompleteType, irAliasType, true);
 		classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
 		if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
 			classInfo.setDestructorVirtual();
@@ -407,7 +407,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 
 		auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
 		methodLambda = convFact.lookupFunctionImpl(methodLambda);
-		if (irAliasType) methodLambda = core::transform::replaceAllGen(mgr, methodLambda, irAliasType, irCompleteType, true);
+		if (irAliasType) methodLambda = core::transform::replaceAllGen(mgr, methodLambda, irCompleteType, irAliasType, true);
 
 		if( method->isPure() ) {
 			//pure virtual functions are handled bit different in metainfo
@@ -437,7 +437,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 	}
 
 	// append meta information to the class definition
-	core::setMetaInfo(irCompleteType, classInfo);
+	core::setMetaInfo(irAliasType, classInfo);
 }
 
 core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::Type* type) {

@@ -328,7 +328,10 @@ namespace core {
 
 		virtual ExpressionPtr toIR(NodeManager& manager, const NodeAnnotationPtr& annotation) const {
 			assert(dynamic_pointer_cast<annotation_type>(annotation) && "Only Class-Info annotations are supported!");
-			const ClassMetaInfo& info = static_pointer_cast<annotation_type>(annotation)->getValue();
+			return toIR(manager, static_pointer_cast<annotation_type>(annotation)->getValue());
+		}
+
+		ExpressionPtr toIR(NodeManager& manager, const ClassMetaInfo& info) const {
 
 			// convert member functions
 			auto encodedMemberFuns = ::transform(info.getMemberFunctions(), [](const MemberFunction& cur)->encoded_member_fun_type {
@@ -353,6 +356,11 @@ namespace core {
 		}
 
 		virtual NodeAnnotationPtr toAnnotation(const ExpressionPtr& node) const {
+			// wrap result into annotation pointer
+			return std::make_shared<annotation_type>(fromIR(node));
+		}
+
+		ClassMetaInfo fromIR(const ExpressionPtr& node) const {
 			assert(encoder::isEncodingOf<encoded_class_info_type>(node.as<ExpressionPtr>()) && "Invalid encoding encountered!");
 
 			// decode the class object
@@ -368,10 +376,20 @@ namespace core {
 				return MemberFunction(std::get<0>(cur), std::get<1>(cur), std::get<2>(cur), std::get<3>(cur));
 			}));
 
-			// convert
-			return std::make_shared<annotation_type>(res);
+			// done
+			return res;
 		}
 	};
+
+	ExpressionPtr toIR(NodeManager& manager, const ClassMetaInfo& info) {
+		ClassMetaInfoAnnotationConverter converter;
+		return converter.toIR(manager, info);
+	}
+
+	ClassMetaInfo fromIR(const ExpressionPtr& expr) {
+		ClassMetaInfoAnnotationConverter converter;
+		return converter.fromIR(expr);
+	}
 
 	// --------- Class Meta-Info Utilities --------------------
 
