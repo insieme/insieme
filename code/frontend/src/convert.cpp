@@ -255,8 +255,8 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl()) return;
-			//std::cout << " function: " << funcDecl->getQualifiedNameAsString() << std::endl;
-        	//std::cout  << "-> at location: (" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
+			std::cout << " function: " << funcDecl->getQualifiedNameAsString() << std::endl;
+        	std::cout  << "-> at location: (" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
 			// if you see problems, try isThisDeclarationADefinition() - your welcome
 			if (!funcDecl->doesThisDeclarationHaveABody()) return;
 			converter.convertFunctionDecl(funcDecl);

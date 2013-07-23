@@ -313,6 +313,10 @@ namespace core {
 		 * @param _const determines whether the function to be added should be marked const
 		 */
 		void addMemberFunction(const string& name, const ExpressionPtr& impl, bool _virtual = false, bool _const = false) {
+		
+			if (!_virtual) assert(impl.isa<core::LambdaExprPtr>());
+			if ( _virtual) assert(impl.isa<core::LiteralPtr>());
+
 			addMemberFunction(MemberFunction(name, impl, _virtual, _const));
 		}
 
