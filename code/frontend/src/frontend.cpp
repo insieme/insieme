@@ -73,17 +73,27 @@ namespace frontend {
 	tu::IRTranslationUnit ConversionJob::toTranslationUnit(core::NodeManager& manager) const {
 
 		// add definitions needed by the OpenCL frontend
-		ConversionJob job = *this;
+		ConversionSetup setup = *this;
 		if(hasOption(OpenCL)) {
-			job.addIncludeDirectory(SRC_DIR);
-			job.addIncludeDirectory(SRC_DIR "inputs");
-			job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
+			setup.addIncludeDirectory(SRC_DIR);
+			setup.addIncludeDirectory(SRC_DIR "inputs");
+			setup.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
 
-			job.setDefinition("INSIEME");
+			setup.setDefinition("INSIEME");
 		}
 
 		// convert files to translation units
-		auto units = convert(manager, files, job);
+		auto units = ::transform(files, [&](const path& file)->tu::IRTranslationUnit {
+			auto res = convert(manager, file, setup);
+
+			// apply OpenMP sema
+			if (setup.hasOption(ConversionSetup::OpenMP)) {
+				res = omp::applySema(res, manager);
+			}
+
+			// done
+			return res;
+		});
 
 		// merge the translation units
 		return tu::merge(tu::merge(libs), tu::merge(units));
@@ -101,17 +111,18 @@ namespace frontend {
 		// convert units to a single program
 		auto res = (fullApp) ? tu::toProgram(tmpMgr, unit) : tu::resolveEntryPoints(tmpMgr, unit);
 
-		// apply OpenMP sema conversion
-		if (hasOption(OpenMP)) {
-			res = frontend::omp::applySema(res, tmpMgr);
-		}
-
+//		// apply OpenMP sema conversion
+//		if (hasOption(OpenMP)) {
+//			res = frontend::omp::applySema(res, tmpMgr);
+//		}
+//dump(res);
 		// apply OpenCL conversion
 		if(hasOption(OpenCL)) {
 			frontend::ocl::HostCompiler oclHostCompiler(res, *this);
 			res = oclHostCompiler.compile();
 		}
 
+		// TODO: move to TU -> IR conversion step above
 		// apply Cilk conversion
 		if(hasOption(Cilk)) {
 			res = frontend::cilk::applySema(res, tmpMgr);
