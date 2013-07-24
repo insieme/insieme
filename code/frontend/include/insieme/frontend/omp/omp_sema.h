@@ -50,10 +50,6 @@ namespace tu { class IRTranslationUnit; }
 
 namespace omp {
 
-/** Applies OMP semantics to given code fragment.
- ** */
-const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage);
-
 /**
  * Applies OMP semantics to all the definitions within the given translation unit.
  *

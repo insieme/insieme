@@ -882,59 +882,59 @@ namespace {
 	}
 }
 
-const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
-	IRBuilder build(resultStorage);
-	ProgramPtr result = prog;
-
-	// new sema
-	{
-		OMPSemaMapper semaMapper(resultStorage);
-		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-		insieme::utils::Timer timer("Omp sema");
-		result = semaMapper.map(result);
-		timer.stop();
-		LOG(INFO) << timer;
-		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-		
-		// fix global struct type if modified by threadprivate
-		if(semaMapper.getAdjustStruct()) {
-			result = static_pointer_cast<const Program>(
-				transform::replaceAll(resultStorage, result, semaMapper.getAdjustStruct(), semaMapper.getAdjustedStruct(), false));
-		}
-	}
-
-	// fix globals
-	{	
-		insieme::utils::Timer timer("Omp global handling");
-		auto collectedGlobals = markGlobalUsers(result);
-		if(collectedGlobals.size() > 0) {
-			auto globalDecl = transform::createGlobalStruct(resultStorage, result, collectedGlobals);
-			GlobalMapper globalMapper(resultStorage, globalDecl->getVariable());
-			result = globalMapper.map(result);
-			// add initialization for collected global locks
-			for(NamedValuePtr& val : collectedGlobals) {
-				if(val->getValue()->getType() == resultStorage.getLangBasic().getLock()) {
-					auto initCall = build.initLock(build.refMember(globalDecl->getVariable(), val->getName()));
-					result = transform::insertAfter(resultStorage, DeclarationStmtAddress::find(globalDecl, result), initCall).as<ProgramPtr>();
-				}
-			}
-			timer.stop();
-			LOG(INFO) << timer;
-		}
-	}
-
-	// omp postprocessing optimization
-	//{
-	//	insieme::utils::Timer timer("Omp postprocessing optimization");
-
-	//	p::TreePattern tpAccesses
-
-	//	timer.stop();
-	//	LOG(INFO) << timer;
-	//}
-
-	return result;
-}
+//const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
+//	IRBuilder build(resultStorage);
+//	ProgramPtr result = prog;
+//
+//	// new sema
+//	{
+//		OMPSemaMapper semaMapper(resultStorage);
+//		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+//		insieme::utils::Timer timer("Omp sema");
+//		result = semaMapper.map(result);
+//		timer.stop();
+//		LOG(INFO) << timer;
+//		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+//
+//		// fix global struct type if modified by threadprivate
+//		if(semaMapper.getAdjustStruct()) {
+//			result = static_pointer_cast<const Program>(
+//				transform::replaceAll(resultStorage, result, semaMapper.getAdjustStruct(), semaMapper.getAdjustedStruct(), false));
+//		}
+//	}
+//
+//	// fix globals
+//	{
+//		insieme::utils::Timer timer("Omp global handling");
+//		auto collectedGlobals = markGlobalUsers(result);
+//		if(collectedGlobals.size() > 0) {
+//			auto globalDecl = transform::createGlobalStruct(resultStorage, result, collectedGlobals);
+//			GlobalMapper globalMapper(resultStorage, globalDecl->getVariable());
+//			result = globalMapper.map(result);
+//			// add initialization for collected global locks
+//			for(NamedValuePtr& val : collectedGlobals) {
+//				if(val->getValue()->getType() == resultStorage.getLangBasic().getLock()) {
+//					auto initCall = build.initLock(build.refMember(globalDecl->getVariable(), val->getName()));
+//					result = transform::insertAfter(resultStorage, DeclarationStmtAddress::find(globalDecl, result), initCall).as<ProgramPtr>();
+//				}
+//			}
+//			timer.stop();
+//			LOG(INFO) << timer;
+//		}
+//	}
+//
+//	// omp postprocessing optimization
+//	//{
+//	//	insieme::utils::Timer timer("Omp postprocessing optimization");
+//
+//	//	p::TreePattern tpAccesses
+//
+//	//	timer.stop();
+//	//	LOG(INFO) << timer;
+//	//}
+//
+//	return result;
+//}
 
 namespace {
 
@@ -1007,8 +1007,6 @@ tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeMan
 	for (auto& cur : unit.getEntryPoints()) {
 		res.addEntryPoints(semaMapper.map(cur));
 	}
-
-	std::cout << res << "\n";
 
 	// done
 	return res;
