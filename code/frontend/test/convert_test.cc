@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -86,8 +86,12 @@ namespace frontend {
 
 		// check global variable setup
 		EXPECT_PRED2(containsSubString, res, "counter := 10;");
-		EXPECT_PRED2(containsSubString, res, "PI := CreateStatic(type<real<8>>);");
-		EXPECT_PRED2(containsSubString, res, "InitStatic(PI, 3.0);");
+		// split up this assertions because the local static
+		// variables have some random suffix
+		EXPECT_PRED2(containsSubString, res, "PI");
+		EXPECT_PRED2(containsSubString, res, " := CreateStatic(type<real<8>>);");
+		EXPECT_PRED2(containsSubString, res, "InitStatic(PI");
+		EXPECT_PRED2(containsSubString, res, ", 3.0);");
 
 
 	}
@@ -157,21 +161,21 @@ namespace frontend {
 		Source file(
 				R"(
 					#define bool int
-					
+
 					#define true 1
 					#define false 0
-					
+
 					bool even(unsigned x);
 					bool odd(unsigned x);
-					
+
 					bool even(unsigned x) {
 						return (x==0)?true:odd(x-1);
 					}
-					
+
 					bool odd(unsigned x) {
 						return (x==0)?false:even(x-1);
 					}
-					
+
 					int main(int argc, char* argv[]) {
 						int x = 10;
 						even(x);

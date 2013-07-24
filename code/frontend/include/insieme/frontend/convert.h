@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -105,6 +105,12 @@ class Converter :  boost::noncopyable {
 	typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> LambdaExprMap;
 	LambdaExprMap lambdaExprCache;
 
+    /**
+     * Stores static variable names
+     **/
+    typedef std::map<const clang::VarDecl*, std::string> StaticVarDeclMap;
+    StaticVarDeclMap staticVarDeclMap;
+    int staticVarCount;
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 						Recursive Function resolution
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -267,7 +273,7 @@ public:
 	}
 
 
-	/** 
+	/**
 	 * Returns the complete function definition to the aliased Literal
 	 */
 	const core::ExpressionPtr lookupFunctionImpl(const core::LiteralPtr& expr) const{
@@ -275,7 +281,7 @@ public:
 		return (res)? res:expr.as<core::ExpressionPtr>();
 	}
 
-	/** 
+	/**
 	 * Returns the complete function definition to the aliased Literal
 	 */
 	const core::ExpressionPtr lookupFunctionImpl(const core::ExpressionPtr& expr) const{
@@ -360,7 +366,7 @@ public:
 	// TODO: should most likely be subsituted / merged by with zero
 	core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
 
-	
+
 	/**
 	 * converts the initilaization of a variable
 	 * @param clangType the clang type of the whole expression, used to retrieve array sizes
@@ -409,9 +415,9 @@ public:
 	}
 
 
-	
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  some helper tools   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	
+
    /**
 	* Creates the variable which should be used as a placeholder for invoking the iven
 	* function call and isert it in the map (recVarExprMap) used to store such ariables

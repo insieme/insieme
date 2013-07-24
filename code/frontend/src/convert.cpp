@@ -29,10 +29,12 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
+
+#include <functional>
 
 #include "insieme/frontend/clang.h"
 
@@ -135,7 +137,7 @@ namespace conversion {
 //////////////////////////////////////////////////////////////////
 ///
 Converter::Converter(core::NodeManager& mgr, const Program& prog) :
-		mgr(mgr), builder(mgr),
+		staticVarCount(0), mgr(mgr), builder(mgr),
 		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), used(false)
 		{
 
@@ -148,7 +150,6 @@ Converter::Converter(core::NodeManager& mgr, const Program& prog) :
 			exprConvPtr = std::make_shared<CExprConverter>(*this);
 			stmtConvPtr = std::make_shared<CStmtConverter>(*this);
 		}
-
 }
 
 
@@ -252,7 +253,7 @@ tu::IRTranslationUnit Converter::convert() {
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl()) return;
 			std::cout << " function: " << funcDecl->getQualifiedNameAsString() << std::endl;
-        	std::cout  << "-> at location: (" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl; 
+        	std::cout  << "-> at location: (" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl;
 			// if you see problems, try isThisDeclarationADefinition() - your welcome
 			if (!funcDecl->doesThisDeclarationHaveABody()) return;
 			converter.convertFunctionDecl(funcDecl);
@@ -523,7 +524,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		irType = builder.refType(irType);
 	}
 
-	// if is a global variable, a literal will be generated, with the qualified name 
+	// if is a global variable, a literal will be generated, with the qualified name
 	// (two qualified names can not coexist within the same TU)
 	const clang::VarDecl* varDecl = cast<clang::VarDecl>(valDecl);
 	if (varDecl && varDecl->hasGlobalStorage()) {
@@ -531,6 +532,20 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// we could look for it in the cache, but is fast to create a new one, and we can not get
 		// rid if the qualified name function
 		std::string name = varDecl->getQualifiedNameAsString();
+        if(varDecl->isStaticLocal()) {
+            if(staticVarDeclMap.find(varDecl) != staticVarDeclMap.end()) {
+                name = staticVarDeclMap.find(varDecl)->second;
+            } else {
+                std::stringstream ss;
+                //get source location and src file path
+                //hash this string to create unique variable names
+                clang::FullSourceLoc f(varDecl->getLocation(),getSourceManager());
+                std::hash<std::string> str_hash;
+                ss << name << str_hash(getSourceManager().getFileEntryForID(f.getFileID())->getName()) << staticVarCount++;
+                staticVarDeclMap.insert(std::pair<const clang::VarDecl*,std::string>(varDecl,ss.str()));
+                name = ss.str();
+            }
+        }
 
 		// global/static variables are always leftsides (refType) -- solves problem with const
 		if(!irType.isa<core::RefTypePtr>() ) {
@@ -705,7 +720,7 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 		printDiagnosis(definition->getLocStart());
 
 		if (definition->hasGlobalStorage()) {
-			// is the declaration of a variable with global storage, this means that is an static 
+			// is the declaration of a variable with global storage, this means that is an static
 			// static needs to be initialized during first execution of function.
 			// but the var remains in the global storage (is an assigment instead of decl)
 			//
@@ -716,8 +731,8 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			auto lit = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
 
 			if (definition->getInit())
-				retStmt = builder.initStaticVariable(lit, convertInitExpr(definition->getType().getTypePtr(), 
-																		  definition->getInit(), 
+				retStmt = builder.initStaticVariable(lit, convertInitExpr(definition->getType().getTypePtr(),
+																		  definition->getInit(),
 																		  var->getType().as<core::RefTypePtr>().getElementType(), false));
 			else
 				retStmt = builder.getNoOp();
@@ -1185,7 +1200,7 @@ namespace {
 				// but we substitute it with the generic type as soon as we are done
 				ident = builder.stringValue(((*it)->getMember()->getNameAsString()));
 				core::LiteralPtr genThis      = builder.literal("this", builder.refType(classType));
-				core::LiteralPtr completeThis = builder.literal("this", builder.refType (converter.lookupTypeDetails(classType)));	
+				core::LiteralPtr completeThis = builder.literal("this", builder.refType (converter.lookupTypeDetails(classType)));
 				init = builder.refMember( completeThis, ident);
 				core::CallExprAddress addr(init.as<core::CallExprPtr>());
 				init = core::transform::replaceNode(mgr, addr->getArgument(0), genThis).as<core::ExpressionPtr>();
@@ -1341,7 +1356,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 		core::StatementPtr body = convertStmt( funcDecl->getBody() );
 		curParameter = oldList;
-			
+
 		// add initializer list
 		if (funcTy->isConstructor()) {
 
