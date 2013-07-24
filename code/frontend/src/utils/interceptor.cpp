@@ -49,7 +49,6 @@
 
 #include "insieme/frontend/clang.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/clang_config.h"
 
 #include "insieme/frontend/utils/header_tagger.h"
 		
