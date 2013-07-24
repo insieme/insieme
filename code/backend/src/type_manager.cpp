@@ -1372,6 +1372,8 @@ namespace backend {
 
 			// create new type information
 			TypeInfo* res = type_info_utils::createInfo(cType);
+			res->declaration = elementInfo->declaration;
+			res->definition = elementInfo->definition;
 
 			// register it (for destruction)
 			allInfos.insert(res);

@@ -1067,9 +1067,13 @@ namespace backend {
 			res[irppExt.getArrayCtor()] = OP_CONVERTER({
 
 				// init array using a vector expression
-				auto type = CONVERT_TYPE(ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType());
+				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
+				auto type = CONVERT_TYPE(objType);
 				auto size = CONVERT_ARG(2);
 				c_ast::ExpressionPtr res = c_ast::initArray(type, size);
+
+				// add dependency to class declaration
+				context.addDependency(GET_TYPE_INFO(objType).declaration);
 
 				// convert default constructor
 				auto ctor = CONVERT_ARG(1);
@@ -1088,10 +1092,14 @@ namespace backend {
 
 			res[irppExt.getVectorCtor()] = OP_CONVERTER({
 
-				// init array using a vector expression
-				auto type = CONVERT_TYPE(ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType());
+				// init vector using a vector expression
+				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
+				auto type = CONVERT_TYPE(objType);
 				auto size = CONVERT_ARG(2);
 				c_ast::ExpressionPtr res = c_ast::initArray(type, size);
+
+				// add dependency to class declaration
+				context.addDependency(GET_TYPE_INFO(objType).declaration);
 
 				// convert default constructor
 				auto ctor = CONVERT_ARG(1);
