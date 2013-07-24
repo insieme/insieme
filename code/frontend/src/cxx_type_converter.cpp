@@ -317,7 +317,6 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 
 	// skip if there is not declaration available
 	if (!llvm::isa<clang::CXXRecordDecl>(recType->getDecl())) return;
-
 	if( !irType.isa<core::StructTypePtr>() ) { return; }
 
 	// get the generic type to substitute "this" parameter by the complete implementation

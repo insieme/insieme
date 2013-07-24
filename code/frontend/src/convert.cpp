@@ -1168,6 +1168,8 @@ namespace {
 			core::ExpressionPtr expr;
 			core::ExpressionPtr init;
 
+			core::StatementPtr  initStmt;
+
 			if((*it)->isBaseInitializer ()){
 
 				expr = converter.convertExpr((*it)->getInit());
@@ -1182,6 +1184,7 @@ namespace {
 				// we have to substitute first argument on constructor by the
 				core::CallExprAddress addr = core::CallExprAddress(expr.as<core::CallExprPtr>());
 				expr = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
+				initList.push_back (expr);
 			}
 			else if ((*it)->isMemberInitializer ()){
 				// create access to the member of the struct/class
@@ -1194,6 +1197,7 @@ namespace {
 				core::CallExprAddress addr(init.as<core::CallExprPtr>());
 				init = core::transform::replaceNode(mgr, addr->getArgument(0), genThis).as<core::ExpressionPtr>();
 				expr = converter.convertExpr((*it)->getInit());
+				initList.push_back(utils::createSafeAssigment(init,expr));
 			}
 			if ((*it)->isIndirectMemberInitializer ()){
 				assert(false && "indirect init not implemented");
@@ -1207,9 +1211,6 @@ namespace {
 			if ((*it)->isPackExpansion () ){
 				assert(false && "pack expansion not implemented");
 			}
-
-			// append statement to initialization list
-			initList.push_back(utils::createSafeAssigment(init,expr));
 		}
 
 		// check whether there is something to do
