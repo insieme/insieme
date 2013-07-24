@@ -653,7 +653,7 @@ protected:
 			}
 			// check if privatized expression
 			for(auto mapping : publicToPrivateMap) {
-				if(mapping.first == expA.getAddressedNode()) {
+				if(*mapping.first == *expA.getAddressedNode()) {
 					publicToPrivateAddressMap[expA] = mapping.second.as<VariablePtr>();
 					return true;
 				}
