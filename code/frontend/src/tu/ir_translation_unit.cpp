@@ -43,6 +43,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -70,6 +71,8 @@ namespace tu {
 				<< join("\n\t\t", types, [&](std::ostream& out, const std::pair<core::GenericTypePtr, core::TypePtr>& cur) { out << *cur.first << " => " << *cur.second; })
 				<< ",\n\tGlobals:\n\t\t"
 				<< join("\n\t\t", globals, [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << ":" << *cur.first->getType() << " => "; if (cur.second) out << print(cur.second); else out << "<uninitalized>"; })
+				<< ",\n\tInitializer:\n\t\t"
+				<< join("\n\t\t", initializer, [&](std::ostream& out, const core::StatementPtr& cur) { out << print(cur); })
 				<< ",\n\tFunctions:\n\t\t"
 				<< join("\n\t\t", functions, [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << " => " << print(cur.second); })
 				<< ",\n\tEntry Points:\t{"
@@ -94,6 +97,11 @@ namespace tu {
 		// copy globals
 		for(auto cur : b.getGlobals()) {
 			res.addGlobal(cur);
+		}
+
+		// copy initalizer
+		for(auto cur : b.getInitializer()) {
+			res.addInitializer(cur);
 		}
 
 		// entry points
@@ -180,6 +188,8 @@ namespace tu {
 						// check whether the recursive variable has already been completely resolved
 						auto pos = recVarResolutions.find(recVar);
 						if (pos != recVarResolutions.end()) {
+							// migrate annotations
+							core::transform::utils::migrateAnnotations(ptr, pos->second);
 							return pos->second;
 						}
 
@@ -287,6 +297,9 @@ namespace tu {
 				if (*ptr == *res) {
 					cache[ptr] = res;
 				}
+
+				// handle class-meta-information
+				resolveClassMetaInfo(res.isa<TypePtr>());
 
 				// done
 				return res;
@@ -475,6 +488,26 @@ namespace tu {
 				return res;
 			}
 
+
+			void resolveClassMetaInfo(const TypePtr& type) {
+				// check whether it is a type
+				if (!type) return;
+
+				// check whether there is something to do
+				if (!core::hasMetaInfo(type)) return;
+
+				// resolve meta info
+				auto encoded = core::toIR(mgr, core::getMetaInfo(type));
+
+				// resolve meta info
+				auto resolved = map(encoded);
+
+				// restore resolved meta info
+				core::setMetaInfo(type, core::fromIR(resolved));
+			}
+
+
+
 		};
 
 
@@ -499,22 +532,22 @@ namespace tu {
 
 			// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			const lang::StaticVariableExtension& ext = mainFunc->getNodeManager().getLangExtension<lang::StaticVariableExtension>();
-			for (auto cur : unit.getGlobals()) {
+			for (auto cur : usedLiterals) {
+				auto lit = cur.as<LiteralPtr>();
 				// only consider static variables
-				auto type = cur.first->getType();
+				auto type = lit->getType();
 				if (!type.isa<RefTypePtr>() || !ext.isStaticType(type.as<RefTypePtr>()->getElementType())) continue;
-				// skip unused variables
-				if (!contains(usedLiterals, cur.first)) continue;
 				// add creation statement
-				inits.push_back(builder.createStaticVariable(cur.first));
+				inits.push_back(builder.createStaticVariable(lit));
 			}
 
 			// fix the external markings
 			for(auto cur : usedLiterals) {
 				auto type = cur.as<LiteralPtr>()->getType();
 				annotations::c::markExtern(cur.as<LiteralPtr>(),
-						!type.isa<FunctionTypePtr>() &&
-						!(type.isa<RefTypePtr>() && ext.isStaticType(type.as<RefTypePtr>()->getElementType())) &&
+						type.isa<RefTypePtr>() &&
+						!cur.as<LiteralPtr>()->getStringValue()[0]=='\"' &&
+						!ext.isStaticType(type.as<RefTypePtr>()->getElementType()) &&
 						!any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *global.first == *cur; })
 				);
 			}
@@ -522,7 +555,17 @@ namespace tu {
 			// build resulting lambda
 			if (inits.empty()) return mainFunc;
 
-			return (core::transform::insert ( mainFunc->getNodeManager(), core::LambdaExprAddress(mainFunc)->getBody(), inits, 0)).as<core::LambdaExprPtr>();
+			return core::transform::insert ( mainFunc->getNodeManager(), core::LambdaExprAddress(mainFunc)->getBody(), inits, 0).as<core::LambdaExprPtr>();
+		}
+
+		core::LambdaExprPtr addInitializer(const IRTranslationUnit& unit, const core::LambdaExprPtr& mainFunc) {
+
+			// check whether there are any initializer expressions
+			if (unit.getInitializer().empty()) return mainFunc;
+
+			// insert init statements
+			auto initStmts = ::transform(unit.getInitializer(), [](const ExpressionPtr& cur)->StatementPtr { return cur; });
+			return core::transform::insert( mainFunc->getNodeManager(), core::LambdaExprAddress(mainFunc)->getBody(), initStmts, 0).as<core::LambdaExprPtr>();
 		}
 
 	} // end anonymous namespace
@@ -544,6 +587,9 @@ namespace tu {
 
 				// extract lambda expression
 				core::LambdaExprPtr lambda = Resolver(mgr, a).map(symbol).as<core::LambdaExprPtr>();
+
+				// add initializer
+				lambda = addInitializer(a, lambda);
 
 				// add global initializers
 				lambda = addGlobalsInitialization(a, lambda);

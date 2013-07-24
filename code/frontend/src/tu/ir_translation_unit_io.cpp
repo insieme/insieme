@@ -52,14 +52,14 @@ namespace frontend {
 namespace tu {
 
 	// the type used for encoding a translation unit
-	typedef std::tuple<IRTranslationUnit::TypeMap, IRTranslationUnit::FunctionMap, IRTranslationUnit::GlobalsList, IRTranslationUnit::EntryPointList> WrapperType;
+	typedef std::tuple<IRTranslationUnit::TypeMap, IRTranslationUnit::FunctionMap, IRTranslationUnit::GlobalsList, IRTranslationUnit::Initializer, IRTranslationUnit::EntryPointList> WrapperType;
 
 	void dump(std::ostream& out, const IRTranslationUnit& unit) {
 		core::NodeManager empty;
 		core::NodeManager localMgr((unit.empty()?empty:unit.getNodeManager()));
 
 		// encode translation unit into an IR expression
-		auto encoded = core::encoder::toIR(localMgr, std::make_tuple(unit.getTypes(), unit.getFunctions(), unit.getGlobals(), unit.getEntryPoints()));
+		auto encoded = core::encoder::toIR(localMgr, std::make_tuple(unit.getTypes(), unit.getFunctions(), unit.getGlobals(), unit.getInitializer(), unit.getEntryPoints()));
 
 		// dump IR expression
 		core::dump::binary::dumpIR(out, encoded);
@@ -74,7 +74,7 @@ namespace tu {
 		auto values = core::encoder::toValue<WrapperType>(encoded);
 
 		// build resulting translation unit
-		return IRTranslationUnit(std::get<0>(values), std::get<1>(values), std::get<2>(values), std::get<3>(values));
+		return IRTranslationUnit(std::get<0>(values), std::get<1>(values), std::get<2>(values), std::get<3>(values), std::get<4>(values));
 	}
 
 

@@ -45,11 +45,23 @@
 
 namespace insieme {
 namespace frontend {
+
+namespace tu { class IRTranslationUnit; }
+
 namespace omp {
 
 /** Applies OMP semantics to given code fragment.
  ** */
 const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage);
+
+/**
+ * Applies OMP semantics to all the definitions within the given translation unit.
+ *
+ * @param unit the translation unit to be processed
+ * @param mgr the node manager to be utilized for creating IR nodes
+ * @return the modified translation unit
+ */
+tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr);
 
 
 } // namespace omp

@@ -61,6 +61,8 @@ namespace tu {
 		typedef std::pair<core::LiteralPtr, core::ExpressionPtr> Global;
 		typedef std::vector<Global> GlobalsList;
 
+		typedef std::vector<core::ExpressionPtr> Initializer;
+
 		typedef std::vector<core::LiteralPtr> EntryPointList;
 
 	private:
@@ -71,14 +73,16 @@ namespace tu {
 
 		GlobalsList globals;
 
+		Initializer initializer;
+
 		EntryPointList entryPoints;
 
 	public:
 
 		IRTranslationUnit() {}
 
-		IRTranslationUnit(const TypeMap& types, const FunctionMap& functions, const GlobalsList& globals, const EntryPointList& entryPoints)
-			: types(types), functions(functions), globals(globals), entryPoints(entryPoints) {}
+		IRTranslationUnit(const TypeMap& types, const FunctionMap& functions, const GlobalsList& globals, const Initializer& initializer, const EntryPointList& entryPoints)
+			: types(types), functions(functions), globals(globals), initializer(initializer), entryPoints(entryPoints) {}
 
 		// getter:
 
@@ -92,6 +96,10 @@ namespace tu {
 
 		const GlobalsList& getGlobals() const {
 			return globals;
+		}
+
+		const Initializer& getInitializer() const {
+			return initializer;
 		}
 
 		const EntryPointList& getEntryPoints() const {
@@ -117,6 +125,10 @@ namespace tu {
 
 		void addGlobal(const Global& global);
 
+		void addInitializer(const core::ExpressionPtr& expr) {
+			initializer.push_back(expr);
+		}
+
 		void addEntryPoints(const core::LiteralPtr& literal) {
 			assert(functions.find(literal) != functions.end());
 			entryPoints.push_back(literal);
@@ -139,13 +151,14 @@ namespace tu {
 		}
 
 		bool empty() const {
-			return types.empty() && functions.empty() && globals.empty();
+			return types.empty() && functions.empty() && globals.empty() && initializer.empty();
 		}
 
 		core::NodeManager& getNodeManager() const {
 			if (!types.empty()) return types.begin()->first->getNodeManager();
 			if (!functions.empty()) return functions.begin()->first->getNodeManager();
 			if (!globals.empty()) return globals.begin()->first->getNodeManager();
+			if (!initializer.empty()) return initializer.begin()->getNodeManager();
 			assert(false && "Must not be called on empty unit.");
 			return types.begin()->first->getNodeManager();		// to fix warning
 		}
