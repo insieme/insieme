@@ -386,11 +386,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 		//  the problem is, we call a memeber function over a value, the owner MUST be always a ref,
 		//  is not a expression with cleanups because this object has not need to to be destucted,
 		//  no used defined dtor.
-		//  if we materialize it, there is a weird deref later on.
-		//
-		//we might need here a ref or something...
 		// some constructions might return an instance, incorporate a materialize
-		if (ownerObj->getType() !=  funcTy->getParameterTypeList()[0]){
+		if (!ownerObj->getType().isa<core::RefTypePtr>()){
 			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
 		}
 

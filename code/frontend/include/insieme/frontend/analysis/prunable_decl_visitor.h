@@ -124,6 +124,10 @@ class PrunableDeclVisitor{
 					static_cast<BASE*>(this)->VisitVarDecl(llvm::cast<clang::VarDecl>(decl));
 					break;
 				}
+			case clang::Decl::CXXMethod:
+				{
+				if (llvm::cast<clang::DeclContext>(decl)->isDependentContext()) break;
+				}
 			case clang::Decl::Function:
 				{
 					static_cast<BASE*>(this)->VisitFunctionDecl(llvm::cast<clang::FunctionDecl>(decl));
