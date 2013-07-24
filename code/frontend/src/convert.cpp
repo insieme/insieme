@@ -727,8 +727,6 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			assert(var.isa<core::VariablePtr>());
 			// initialization value
 			core::ExpressionPtr initExpr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(), var->getType(), false);
-			// this assertion is not valid for void& initialization
-			//	ASSERT_EQ_TYPES (var->getType(), initExpr->getType());
 			assert(initExpr && "not correct initialization of the variable");
 			retStmt = builder.declarationStmt(var.as<core::VariablePtr>(), initExpr);
 		}
@@ -1012,14 +1010,7 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 
 		// if is a CPP ref, convert to IR
 		if (core::analysis::isCppRef(srcType)) {
-			// same type, just assign
-			if (srcType == targetType && *srcType == *targetType){
-				return retIr;
-			}
-			else {
-				// we can not assign a a const ref to a ref
-				assert(false && "we can not assign this, what is this?");
-			}
+			return retIr;
 
 		}
 		else if (core::analysis::isConstCppRef(srcType)) {

@@ -75,6 +75,7 @@ namespace frontend {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 
+			std::cout << "testing: " <<  GetParam() << std::endl;
 		auto res = builder.normalize(ConversionJob(GetParam()).execute(mgr));
 
 		EXPECT_TRUE ( core::checks::check(res).empty()) << core::checks::check(res);

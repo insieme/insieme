@@ -394,8 +394,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 			ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
 		}
 
-		ASSERT_EQ_TYPES(ownerObj->getType(), funcTy->getParameterTypeList()[0]);
-
 		// incorporate this to the begining of the args list
 		args.insert (args.begin(), ownerObj);
 	}

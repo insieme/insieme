@@ -10,10 +10,11 @@ public:
 
 	int f(){
 		printf("f\n");
-
+		return 0;
 	}
 	int f2(int v){
 		printf("f2 %d\n", v);
+		return 1;
 	}
 
 	void g(){
