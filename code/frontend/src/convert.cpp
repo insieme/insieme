@@ -251,8 +251,8 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl()) return;
-			std::cout << " function: " << funcDecl->getQualifiedNameAsString() << std::endl;
-        	std::cout  << "-> at location: (" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl;
+			//std::cout << " function: " << funcDecl->getQualifiedNameAsString() << std::endl;
+        	//std::cout  << "-> at location: (" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl;
 			// if you see problems, try isThisDeclarationADefinition() - your welcome
 			if (!funcDecl->doesThisDeclarationHaveABody()) return;
 			converter.convertFunctionDecl(funcDecl);
@@ -274,8 +274,6 @@ tu::IRTranslationUnit Converter::convert() {
 		assert(funcDecl && "Pragma insieme only valid for function declarations.");
 		getIRTranslationUnit().addEntryPoints(convertFunctionDecl(funcDecl).as<core::LiteralPtr>());
 	}
-
-	std::cout << "********** Convert Done *****************" << std::endl;
 
 	// that's all
 	return irTranslationUnit;
@@ -1167,12 +1165,10 @@ namespace {
 		for(auto it = ctorDecl->init_begin(); it != ctorDecl->init_end(); ++it) {
 
 			core::StringValuePtr ident;
-			core::StatementPtr initStmt;
-
-			// the translated initialization expression
 			core::ExpressionPtr expr;
-			// the variable to be initialized
 			core::ExpressionPtr init;
+
+			core::StatementPtr  initStmt;
 
 			if((*it)->isBaseInitializer ()){
 
@@ -1183,6 +1179,12 @@ namespace {
 					// base init is a non-userdefined-default-ctor call, drop it
 					continue;
 				}
+
+				// if the expr is a constructor then we are initializing a member an object,
+				// we have to substitute first argument on constructor by the
+				core::CallExprAddress addr = core::CallExprAddress(expr.as<core::CallExprPtr>());
+				expr = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
+				initList.push_back (expr);
 			}
 			else if ((*it)->isMemberInitializer ()){
 				// create access to the member of the struct/class
@@ -1195,6 +1197,7 @@ namespace {
 				core::CallExprAddress addr(init.as<core::CallExprPtr>());
 				init = core::transform::replaceNode(mgr, addr->getArgument(0), genThis).as<core::ExpressionPtr>();
 				expr = converter.convertExpr((*it)->getInit());
+				initList.push_back(utils::createSafeAssigment(init,expr));
 			}
 			if ((*it)->isIndirectMemberInitializer ()){
 				assert(false && "indirect init not implemented");
@@ -1208,39 +1211,6 @@ namespace {
 			if ((*it)->isPackExpansion () ){
 				assert(false && "pack expansion not implemented");
 			}
-
-			// if the expr is a constructor then we are initializing a member an object,
-			// we have to substitute first argument on constructor by the
-			// right reference to the member object (addressed by init)
-			//  -> is a call expression of a constructor
-			core::ExpressionPtr ptr;
-			if (expr.isa<core::CallExprPtr>() &&
-				(ptr = expr.as<core::CallExprPtr>().getFunctionExpr()).isa<core::LambdaExprPtr>() &&
-				 ptr.as<core::LambdaExprPtr>().getType().as<core::FunctionTypePtr>().isConstructor()){
-
-					// for each of the argumets, if uses a parameter in the paramenter list, avoid the
-					// wrap of the variable
-					const clang::CXXConstructExpr* ctor= llvm::cast<clang::CXXConstructExpr>((*it)->getInit());
-					for (unsigned i=0; i <ctor->getNumArgs ();i++){
-						const clang::DeclRefExpr* param= utils::skipSugar<DeclRefExpr> (ctor->getArg(i));
-						if (param){
-							core::ExpressionPtr tmp = converter.lookUpVariable(param->getDecl());
-							core::CallExprAddress addr(expr.as<core::CallExprPtr>());
-							expr = core::transform::replaceNode (mgr, addr->getArgument(1+i), tmp).as<core::CallExprPtr>();
-						}
-					}
-					// to end with, replace the "this" placeholder with the right position
-					core::CallExprAddress addr(expr.as<core::CallExprPtr>());
-					initStmt = core::transform::replaceNode (mgr, addr->getArgument(0), init).as<core::CallExprPtr>();
-			}
-			else{
-				//otherwise is a regular assigment like intialization
-				core::ExpressionPtr expr = converter.convertExpr((*it)->getInit());
-				initStmt = utils::createSafeAssigment(init,expr);
-			}
-
-			// append statement to initialization list
-			initList.push_back(initStmt);
 		}
 
 		// check whether there is something to do
@@ -1249,7 +1219,7 @@ namespace {
 
 		//ATTENTION: this will produce an extra compound around the  initializer list and old body
 		// let fun ... {
-		//    intializer stuff ;
+		//   { intializer stuff };
 		//   { original body };
 		// }
 
