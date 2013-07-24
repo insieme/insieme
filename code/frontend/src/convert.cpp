@@ -204,9 +204,8 @@ tu::IRTranslationUnit Converter::convert() {
 			if (!var->hasGlobalStorage()) return;
 			if (var->hasExternalStorage()) return;
 			if (var->isStaticLocal()) return;
-
+		
 			auto builder = converter.getIRBuilder();
-
 			// obtain type
 			auto type = converter.convertType(var->getType().getTypePtr());
 

@@ -60,7 +60,7 @@ namespace analysis{
  *		- non named declarations will be completelly ignored
  *		- 
  */
-template <typename BASE>
+template <typename BASE, bool visitTemplates=false>
 class PrunableDeclVisitor{
 
 	/**
@@ -88,6 +88,7 @@ class PrunableDeclVisitor{
 	/**
 	 */
 	void dispatchDecl(const clang::Decl* decl){
+		//std::cout << "disp: " << decl->getDeclKindName() << std::endl;
 		switch (decl->getKind()){
 			case clang::Decl::Namespace:
 				{
@@ -96,15 +97,30 @@ class PrunableDeclVisitor{
 				}
 			case clang::Decl::Record:
 				{
-					if(llvm::isa<clang::InjectedClassNameType>(llvm::cast<clang::RecordDecl>(decl)->getTypeForDecl()) &&
-					   static_cast<BASE*>(this)->visitTemplates()){
-						static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
-						traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
-					}
+					static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
+					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
+
+					break;
+				}
+			case clang::Decl::CXXRecord:
+				{
+					if(llvm::cast<clang::TagDecl>(decl)->isDependentType() && !visitTemplates) break;
+					//if (decl->isTemplateDecl ()){ assert(false && " temmplate"); };
+					//if (llvm::cast<clang::CXXRecordDecl>(decl)->hasDefinition ()){ assert(false && " dependent base"); };
+					//if (llvm::cast<clang::CXXRecordDecl>(decl)->hasAnyDependentBases ()){ assert(false && " dependent base"); };
+					//if (llvm::isa<clang::ClassTemplateDecl>(decl)){ assert(false); };
+					//if (llvm::isa<clang::ClassTemplatePartialSpecializationDecl>(decl)) assert(false && "partial");
+					//if (llvm::isa<clang::RedeclarableTemplateDecl>(decl)) assert(false && "redecl templ");
+					//if (llvm::cast<clang::CXXRecordDecl>(decl)->getDescribedClassTemplate ()) assert(false && " describes template");
+					//if (llvm::cast<clang::CXXRecordDecl>(decl)->getInstantiatedFromMemberClass ()) assert(false && " instantiated");
+					static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
+					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
+
 					break;
 				}
 			case clang::Decl::Var:
 				{
+					if (llvm::cast<clang::VarDecl>(decl)->getType().getTypePtr()->isDependentType() && !visitTemplates) break;
 					static_cast<BASE*>(this)->VisitVarDecl(llvm::cast<clang::VarDecl>(decl));
 					break;
 				}
@@ -116,23 +132,13 @@ class PrunableDeclVisitor{
 				}
 			case clang::Decl::Typedef:
 				{
+					if(llvm::isa<clang::TemplateTypeParmType>(llvm::cast<clang::TypedefDecl>(decl)->getUnderlyingType().getTypePtr())) break;
 					static_cast<BASE*>(this)->VisitTypedefDecl(llvm::cast<clang::TypedefDecl>(decl));
 					break;
 				}
 			default:
 				return;
 		}
-	}
-
-
-	/**
-	 * overwritte this method to return true to force base class to
-	 * visit templates
-	 * @return: default returns false, avoids template visiting, only
-	 * visits fully spetialized ones
-	 */
-	bool visitTemplates() const{
-		return false;
 	}
 
 public:
@@ -144,8 +150,9 @@ public:
 		// iterate throw the declarations inside and dispattch 
 		clang::DeclContext::decl_iterator it = declCtx->decls_begin();
 		clang::DeclContext::decl_iterator end = declCtx->decls_end();
-		for (; it!=end; ++it)
+		for (; it!=end; ++it){
 			dispatchDecl(*it);
+		}
 	}
 };
 

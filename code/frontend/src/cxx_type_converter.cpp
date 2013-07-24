@@ -368,10 +368,12 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 		const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
 		core::ExpressionPtr dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
 		dtorLambda = convFact.lookupFunctionImpl(dtorLambda);
-		if(irAliasType) dtorLambda = core::transform::replaceAllGen(mgr, dtorLambda, irCompleteType, irAliasType, true);
-		classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
-		if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
-			classInfo.setDestructorVirtual();
+		if (dtorLambda.isa<core::LambdaExprPtr>()){
+			if(irAliasType) dtorLambda = core::transform::replaceAllGen(mgr, dtorLambda, irCompleteType, irAliasType, true);
+			classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
+			if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
+				classInfo.setDestructorVirtual();
+		}
 	}
 
 	//~~~~~ member functions ~~~~~
