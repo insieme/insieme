@@ -37,6 +37,8 @@
 #include "insieme/frontend/cilk/cilk_sema.h"
 
 #include "insieme/frontend/cilk/cilk_annotation.h"
+#include "insieme/frontend/tu/ir_translation_unit.h"
+
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -139,12 +141,19 @@ namespace cilk {
 
 	}
 
-	/**
-	 * Applies Cilk semantics to given code fragment.
-	 */
-	const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& manager) {
-		// use the cilkifyer ...
-		return Cilkifyer(manager).map(prog);
+	tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr) {
+
+		// copy translation unit
+		tu::IRTranslationUnit res = unit;
+
+		// and update functions - that's all
+		Cilkifyer cilkifyer(mgr);
+		for(auto& cur : res.getFunctions()) {
+			cur.second = cilkifyer.map(cur.second);
+		}
+
+		// done
+		return res;
 	}
 
 } // namespace cilk
