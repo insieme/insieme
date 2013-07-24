@@ -77,7 +77,7 @@ void basic_type_test() {
 	#pragma test "decl ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v0 =  var(get.null(type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>))"
 	int*** c1 = 0;
 
-	#pragma test "v16 := get.null(type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)"
+	#pragma test "v100 := get.null(type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)"
 	c1 = 0;
 
 	#pragma test "decl ref<real<8>> v0 =  var(3.1415926535897931)"
@@ -206,10 +206,10 @@ void fun_ptr() {
 	#pragma test "decl ref<(int<4>, int<4>) -> int<4>> v0 =  var(fun(int<4> v1, int<4> v2) -> int<4> {return v1+v2;})"
 	int(* f)(int,int) = &add;
 
-	#pragma test "v31 := fun(int<4> v1, int<4> v2) -> int<4> {return v1-v2;}"
+	#pragma test "v100 := fun(int<4> v1, int<4> v2) -> int<4> {return v1-v2;}"
 	f = &sub;
 
-	#pragma test "v31(3, 4)"
+	#pragma test "v100(3, 4)"
 	f(3,4);
 
 }
