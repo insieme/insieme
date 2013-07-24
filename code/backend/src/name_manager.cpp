@@ -39,6 +39,7 @@
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/core/annotations/naming.h"
 
@@ -74,6 +75,14 @@ namespace backend {
 
 	}
 
+	void SimpleNameManager::registerGlobalNames(const core::NodePtr& root) {
+
+		// just collect the names of all literals
+		core::visitDepthFirstOnce(root, [&](const core::LiteralPtr& literal) {
+			globalScope.usedNames.insert(literal->getStringValue());
+		});
+
+	}
 
 	string SimpleNameManager::getName(const core::VariablePtr& var) {
 

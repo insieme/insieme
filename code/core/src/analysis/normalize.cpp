@@ -151,7 +151,7 @@ namespace analysis {
 			 */
 			virtual void clone(const NodeAnnotationPtr& ptr, const NodePtr& copy) const {
 				// simply copy annotation
-				copy.addAnnotation(std::make_shared<NormalizeAnnotation>(copy));
+				copy.addAnnotation(std::make_shared<NormalizeAnnotation>(copy.getNodeManager().get(normalized)));
 			}
 		};
 
@@ -290,7 +290,6 @@ namespace analysis {
 		if (node->getNodeCategory() == NC_Type || node->getNodeType() == NT_Literal) {
 			return node;
 		}
-
 		// check whether it has already been normalized
 		if (auto annotation = node.getAnnotation(NormalizeAnnotation::KEY)) {
 			return annotation->getNormalized();

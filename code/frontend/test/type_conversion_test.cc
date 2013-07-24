@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,8 +46,6 @@
 #include <clang/AST/Decl.h>
 #pragma GCC diagnostic pop
 
-#include "insieme/core/ir_program.h"
-
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
@@ -55,7 +53,9 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/transform/node_replacer.h"
 
+#include "test_utils.inc"
 
 using namespace insieme;
 using namespace insieme::core;
@@ -342,13 +342,12 @@ TEST(TypeConversion, HandleFunctionType) {
 //	operator delete (floatTy);
 }
 
-
 TEST(TypeConversion, FileTest) {
 	Logger::get(std::cerr, INFO, 2);
 
 	NodeManager manager;
 	fe::Program prog(manager, SRC_DIR "/inputs/types.c");
-	
+
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	// we use an internal manager to have private counter for variables so we can write independent tests
@@ -365,9 +364,10 @@ TEST(TypeConversion, FileTest) {
 
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 
-		if(tp.isStatement())
-			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(resolve(convFactory.convertStmt( tp.getStatement() ))), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
-		else {
+		if(tp.isStatement()) {
+            StatementPtr stmt = fe::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
+			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
+		} else {
 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
 				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertType( td->getTypeForDecl() ))->toString() + '\"' );
 			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
