@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -62,6 +62,7 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
 
+#include "test_utils.inc"
 
 // clang [3.0]
 //#include "clang/Index/Indexer.h"
@@ -101,52 +102,13 @@ std::string getPrettyPrinted(const NodePtr& node) {
 }
 
 
-namespace {
-
-	// a utility to fix variable names
-	NodePtr fixVariableIDs(const NodePtr& code) {
-		NodeManager& mgr = code.getNodeManager();
-		IRBuilder builder(mgr);
-
-		// first, run simple normalizer
-		NodePtr res = analysis::normalize(code);
-
-		// now fix free variables
-		std::map<VariablePtr, VariablePtr> vars;
-		std::map<NodeAddress, NodePtr> replacements;
-		auto freeVars = analysis::getFreeVariableAddresses(res);
-
-		// if there are no free variables => done
-		if (freeVars.empty()) return res;
-
-		std::set<VariableAddress> freeVarSet(freeVars.begin(), freeVars.end());
-		for (auto cur : freeVarSet) {
-			VariablePtr var = cur.as<VariablePtr>();
-			VariablePtr replacement;
-
-			auto pos = vars.find(var);
-			if (pos != vars.end()) {
-				replacement = pos->second;
-			} else {
-				replacement = builder.variable(cur->getType().as<TypePtr>(), 100+vars.size());
-				vars[var] = replacement;
-			}
-			replacements[cur] = replacement;
-		}
-
-		return transform::replaceAll(mgr, replacements);
-	}
-
-}
-
-
 TEST(StmtConversion, FileTest) {
 
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
 	fe::Program prog(manager, SRC_DIR "/inputs/stmt.c");
-	
+
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	NodeManager mgr;
@@ -159,7 +121,7 @@ TEST(StmtConversion, FileTest) {
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 
 		if(tp.isStatement()) {
-			StatementPtr stmt = fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
+			StatementPtr stmt = fe::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
 			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
 
 			// do semantics checking
@@ -175,7 +137,7 @@ TEST(StmtConversion, FileTest) {
 				LambdaExprPtr expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(resolve(convFactory.convertFunctionDecl(fd)).as<LambdaExprPtr>());
 				assert(expr);
 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(analysis::normalize(expr)) + '\"' );
-				
+
 				// do semantics checking
 				checkSemanticErrors(expr);
 			}
