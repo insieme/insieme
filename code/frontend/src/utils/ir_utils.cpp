@@ -88,10 +88,10 @@ core::ExpressionPtr createSafeAssigment(core::ExpressionPtr& left, core::Express
 		IS_CPP_REF_EXPR(right)){
 		right = builder.deref( utils::unwrapCppRef(builder,right));
 	}
-
-	if(left->getType() == right->getType()) {
-		right = builder.deref(right);
+	else{
+		right = builder.tryDeref(right);
 	}
+
 	return builder.assign( left, right);
 }
 } // end utils namespace

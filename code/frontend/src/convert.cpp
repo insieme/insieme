@@ -1350,7 +1350,6 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 
 		// add initializer list
 		if (funcTy->isConstructor()) {
-
 			body = prepentInitializerList(llvm::cast<clang::CXXConstructorDecl>(funcDecl), funcTy->getObjectType(), body, *this);
 		}
 

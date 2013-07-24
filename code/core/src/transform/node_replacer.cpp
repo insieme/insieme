@@ -998,10 +998,13 @@ namespace {
 			const LiteralPtr& literal = call->getFunctionExpr().as<LiteralPtr>();
 
 			// deal with standard build-in literals
-			if (basic.isCompositeRefElem(literal)) {
+			if (basic.isCompositeRefElem(literal) && 
+				args[0]->getType().isa<RefTypePtr>() &&
+				args[0]->getType().as<RefTypePtr>()->getElementType().isa<NamedCompositeTypePtr>()) {
 				return builder.refMember(args[0], args[1].as<LiteralPtr>()->getValue());
 			}
-			if (basic.isCompositeMemberAccess(literal)) {
+			if (basic.isCompositeMemberAccess(literal) && 
+				args[0]->getType().isa<NamedCompositeTypePtr>()) {
 				return builder.accessMember(args[0], args[1].as<LiteralPtr>()->getValue());
 			}
 			if (basic.isTupleRefElem(literal)) {
