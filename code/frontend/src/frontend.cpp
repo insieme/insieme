@@ -91,6 +91,11 @@ namespace frontend {
 				res = omp::applySema(res, manager);
 			}
 
+			// apply Cilk sema
+			if (setup.hasOption(ConversionSetup::Cilk)) {
+				res = cilk::applySema(res, manager);
+			}
+
 			// done
 			return res;
 		});
@@ -111,21 +116,10 @@ namespace frontend {
 		// convert units to a single program
 		auto res = (fullApp) ? tu::toProgram(tmpMgr, unit) : tu::resolveEntryPoints(tmpMgr, unit);
 
-//		// apply OpenMP sema conversion
-//		if (hasOption(OpenMP)) {
-//			res = frontend::omp::applySema(res, tmpMgr);
-//		}
-//dump(res);
 		// apply OpenCL conversion
 		if(hasOption(OpenCL)) {
 			frontend::ocl::HostCompiler oclHostCompiler(res, *this);
 			res = oclHostCompiler.compile();
-		}
-
-		// TODO: move to TU -> IR conversion step above
-		// apply Cilk conversion
-		if(hasOption(Cilk)) {
-			res = frontend::cilk::applySema(res, tmpMgr);
 		}
 
 		// strip of OMP annotation since those may contain references to local nodes

@@ -106,6 +106,28 @@ namespace tu {
 			return entryPoints;
 		}
 
+		// mutable getter:
+
+		TypeMap& getTypes() {
+			return types;
+		}
+
+		FunctionMap& getFunctions() {
+			return functions;
+		}
+
+		GlobalsList& getGlobals() {
+			return globals;
+		}
+
+		Initializer& getInitializer() {
+			return initializer;
+		}
+
+		EntryPointList& getEntryPoints() {
+			return entryPoints;
+		}
+
 		// modifier:
 
 		void addType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
