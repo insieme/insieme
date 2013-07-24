@@ -726,7 +726,7 @@ private:
 			}
 
 			if(manager.getLangBasic().isRefAssign(literal)) {
-				return static_pointer_cast<const CallExpr>(builder.assign(args.at(0), args.at(1)));
+				return builder.assign(args.at(0), args.at(1));
 			}
 
 			CallExprPtr newCall = builder.callExpr(literal, args);
@@ -970,7 +970,7 @@ namespace {
 
 		FunctionTypePtr funType = fun->getType().as<FunctionTypePtr>();
 
-		TypePtr should = deduceReturnType(funType, extractTypes(call->getArguments()));
+		TypePtr should = deduceReturnType(funType, extractTypes(call->getArguments()), false);
 
 		// see whether a better type has been deduced
 		if (!should || *should == *call->getType()) {
