@@ -724,13 +724,14 @@ namespace types {
 
 			virtual void clone(const NodeAnnotationPtr& ptr, const NodePtr& clone) const {
 
-				assert(!clone->hasAnnotation(KEY) && "Clone should not have this annotation already!");
-
 				// copy the nodes reference by this annotation to the new manager
 				NodeManager& manager = clone->getNodeManager();
 
 				// attach annotation
-				std::shared_ptr<VariableInstantionInfo> copy = std::make_shared<VariableInstantionInfo>();
+				std::shared_ptr<VariableInstantionInfo> copy =
+						(clone->hasAnnotation(KEY))
+						? clone->getAnnotation(KEY)
+						: std::make_shared<VariableInstantionInfo>() ;
 				SubstitutionMap& map = copy->substitutions;
 
 				// insert copies of the current map
