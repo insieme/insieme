@@ -472,5 +472,10 @@ namespace core {
 	 */
 	ClassMetaInfo fromIR(const ExpressionPtr& expr);
 
+	/**
+	 * A utility merging together two meta infos for the same class.
+	 */
+	ClassMetaInfo merge(const ClassMetaInfo& a, const ClassMetaInfo& b);
+
 } // end namespace core
 } // end namespace insieme

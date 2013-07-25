@@ -61,6 +61,15 @@ inline void migrateAnnotations(const Ptr<Node>& before, const Ptr<Node>& after) 
 		return;
 	}
 
+	// check whether before and after are the same, just in a different manager
+	if (*before == *after) {
+		// annotations need to be cloned
+		for(auto& cur : before->getAnnotations()) {
+			cur.second->clone(cur.second, after);
+		}
+		return;
+	}
+
 	// migrate annotations individually
 	for_each(before->getAnnotations(), [&](const typename AnnotationMap::value_type& cur) {
 		cur.second->migrate(cur.second, before, after);

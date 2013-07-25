@@ -165,11 +165,14 @@ namespace core {
 		FunctionTypePtr funType = lambda->getType().as<FunctionTypePtr>();
 		assert(funType->isConstructor() || funType->isDestructor() || funType->isMemberFunction());
 
-		TypePtr classType = getClassType();
-		if (!classType) return true; // everything is allowed if object type is not fixed yet
+		TypePtr typeA = getClassType();
+		if (!typeA) return true; // everything is allowed if object type is not fixed yet
+
+		TypePtr typeB = funType->getObjectType();
 
 		// check object type
-		return *classType == *funType->getObjectType();
+		assert_eq(*typeA, *typeB);
+		return *typeA == *typeB;
 	}
 
 	std::ostream& ClassMetaInfo::printTo(std::ostream& out) const {
@@ -204,6 +207,7 @@ namespace core {
 	bool ClassMetaInfo::migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
 		assert(before != after);
 		assert(before.isa<TypePtr>());
+		assert(&getMetaInfo(before.as<TypePtr>()) == this);
 
 		// check whether new version is still an object type
 		if (after->getNodeCategory() != NC_Type || !analysis::isObjectType(after.as<TypePtr>())) {
@@ -212,6 +216,8 @@ namespace core {
 
 		TypePtr oldClassType = before.as<TypePtr>();
 		TypePtr newClassType = after.as<TypePtr>();
+
+		assert(*oldClassType != *newClassType);
 
 		NodeManager& mgr = after.getNodeManager();
 		IRBuilder builder(mgr);
@@ -229,20 +235,20 @@ namespace core {
 		};
 
 		// create a copy of this class meta info and replace parameters
-		ClassMetaInfo res;
+		ClassMetaInfo newInfo;
 
 		// move constructors
 		for(auto cur : constructors) {
-			res.addConstructor(alter(cur));
+			newInfo.addConstructor(alter(cur));
 		}
 
 		// move destructor
 		if (destructor) {
-			res.setDestructor(alter(destructor));
+			newInfo.setDestructor(alter(destructor));
 		}
 
 		// update virtual destructor field
-		res.setDestructorVirtual(isDestructorVirtual());
+		newInfo.setDestructorVirtual(isDestructorVirtual());
 
 		// update members
 		for(auto cur : memberFunctions) {
@@ -269,16 +275,18 @@ namespace core {
 				newMember.setImplementation(alter(impl.as<LambdaExprPtr>()));
 			}
 
-			res.addMemberFunction(newMember);
+			newInfo.addMemberFunction(newMember);
 		}
 
 		// attach result to modified node
-		setMetaInfo(newClassType, res);
+		setMetaInfo(newClassType, merge(newInfo, getMetaInfo(newClassType)));
 		return true;
 	}
 
 
 	void ClassMetaInfo::cloneTo(const NodePtr& target) const {
+
+		assert(target.isa<TypePtr>());
 
 		// create a copy of this class referencing instances managed by the new target node manager
 		NodeManager& newMgr = target->getNodeManager();
@@ -295,7 +303,7 @@ namespace core {
 		for (auto& cur : newInfo.memberFunctions) { cur.setImplementation(newMgr.get(cur.getImplementation())); }
 
 		// attach info value
-		target->attachValue(newInfo);
+		target->attachValue(merge(newInfo, getMetaInfo(target.as<TypePtr>())));
 
 	}
 
@@ -395,7 +403,7 @@ namespace core {
 
 	namespace {
 
-		static ClassMetaInfo defaultInfo;
+		static const ClassMetaInfo defaultInfo;
 
 	}
 
@@ -426,6 +434,63 @@ namespace core {
 		} else {
 			type->attachValue(info);
 		}
+	}
+
+	ClassMetaInfo merge(const ClassMetaInfo& a, const ClassMetaInfo& b) {
+
+		// see whether one of those is empty
+		if (a == defaultInfo) return b;
+		if (b == defaultInfo) return a;
+
+		// can only merge meta infos for the same types
+		assert_eq(*a.getClassType(), *b.getClassType())
+			<< "Cannot merge\n" << a << "and\n" << b;
+
+		// merge them
+		ClassMetaInfo res = a;
+
+		// a utility function to prevent multiple copies of constructors
+		auto containsCtor = [&](const LambdaExprPtr& cur) {
+			return contains(res.getConstructors(), cur, [](const LambdaExprPtr& a, const LambdaExprPtr& b)->bool {
+				// just check the type - no two constructors with the same type are supported
+				return *a->getType() == *b->getType();
+			});
+		};
+
+		// copy constructors
+		for(auto cur : b.getConstructors()) {
+			if (!containsCtor(cur)) {
+				res.addConstructor(cur);
+			}
+		}
+
+		// a utility function to prevent multiple copies of the same member function
+		auto containsMember = [&](const MemberFunction& cur) {
+			return contains(res.getMemberFunctions(), cur, [](const MemberFunction& a, const MemberFunction& b)->bool {
+				return a.isConst() == b.isConst() && a.getName() == b.getName() && *a.getImplementation()->getType() == *b.getImplementation()->getType();
+			});
+		};
+
+		// copy member functions
+		for(auto cur : b.getMemberFunctions()) {
+			if (!containsMember(cur)) {
+				res.addMemberFunction(cur);
+			}
+		}
+
+		// update destructor
+		if (res.hasDestructor() && b.hasDestructor()) {
+			assert_eq(*analysis::normalize(res.getDestructor()), *analysis::normalize(b.getDestructor()))
+					<< "Unable to merge distinct destructors!";
+		} else if (!res.hasDestructor()) {
+			res.setDestructor(b.getDestructor());
+		}
+
+		// update virtual flag
+		res.setDestructorVirtual(res.isDestructorVirtual() || b.isDestructorVirtual());
+
+		// done
+		return res;
 	}
 
 } // end namespace core
