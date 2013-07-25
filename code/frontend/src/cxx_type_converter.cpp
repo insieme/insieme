@@ -407,7 +407,6 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 		}
 
 		auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
-		methodLambda = convFact.lookupFunctionImpl(methodLambda);
 		if (irAliasType) methodLambda = core::transform::replaceAllGen(mgr, methodLambda, irCompleteType, irAliasType, true);
 
 		if( method->isPure() ) {

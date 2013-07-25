@@ -74,7 +74,7 @@ namespace tu {
 				<< ",\n\tInitializer:\n\t\t"
 				<< join("\n\t\t", initializer, [&](std::ostream& out, const core::StatementPtr& cur) { out << print(cur); })
 				<< ",\n\tFunctions:\n\t\t"
-				<< join("\n\t\t", functions, [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << " => " << print(cur.second); })
+				<< join("\n\t\t", functions, [&](std::ostream& out, const std::pair<core::LiteralPtr, core::ExpressionPtr>& cur) { out << *cur.first << " : " << *cur.first->getType() << " => " << print(cur.second); })
 				<< ",\n\tEntry Points:\t{"
 				<< join(", ", entryPoints, [&](std::ostream& out, const core::LiteralPtr& cur) { out << *cur; })
 				<< "}\n)";
@@ -325,16 +325,22 @@ namespace tu {
 					res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>()));
 				}
 
-				// migrate annotations
-				core::transform::utils::migrateAnnotations(ptr, res);
-
 				// add result to cache if it does not contain recursive parts
 				if (*ptr == *res) {
 					cache[ptr] = res;
 				}
 
-				// handle class-meta-information
-				resolveClassMetaInfo(res.isa<TypePtr>());
+				// simply migrate annotations
+				core::transform::utils::migrateAnnotations(ptr, res);
+
+				// special handling for meta-info
+				if (ptr != res && core::hasMetaInfo(ptr.isa<TypePtr>())) {
+					TypePtr srcType = ptr.as<TypePtr>();
+					TypePtr trgType = res.as<TypePtr>();
+
+					// migrate meta info
+					core::setMetaInfo(trgType, resolveClassMetaInfo(core::getMetaInfo(srcType)));
+				}
 
 				// done
 				return res;
@@ -524,21 +530,16 @@ namespace tu {
 			}
 
 
-			void resolveClassMetaInfo(const TypePtr& type) {
-				// check whether it is a type
-				if (!type) return;
-
-				// check whether there is something to do
-				if (!core::hasMetaInfo(type)) return;
+			core::ClassMetaInfo resolveClassMetaInfo(const core::ClassMetaInfo& info) {
 
 				// resolve meta info
-				auto encoded = core::toIR(mgr, core::getMetaInfo(type));
+				auto encoded = core::toIR(mgr, info);
 
 				// resolve meta info
 				auto resolved = map(encoded);
 
 				// restore resolved meta info
-				core::setMetaInfo(type, core::fromIR(resolved));
+				return core::fromIR(resolved);
 			}
 
 
