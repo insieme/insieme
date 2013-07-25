@@ -688,7 +688,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::
 	}
 	VLOG(2) << (subExpr) << " " << subExpr->getType() << " " << targetTy;
 
-	assert(subExpr->getType() == targetTy);
+	assert(*subExpr->getType() == *targetTy);
 	/*
 	//if(literal || variable) {
 	if( core::analysis::isRefType(subExpr->getType()) 
