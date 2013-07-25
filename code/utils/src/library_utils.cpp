@@ -44,6 +44,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/lexical_cast.hpp>
+
 
 namespace insieme {
 namespace utils {
@@ -58,7 +60,7 @@ namespace utils {
         }
     };
 
-    /*
+    /**
      * Checks if a given file is an insieme object file and returns
      * a boolean value.
      */
@@ -73,7 +75,7 @@ namespace utils {
         return true;
     };
 
-    /*
+    /**
      * Method extracts all files of a static library to a temporary
      * folder. Every file in the temporary folder is checked if it
      * is an insieme object file. If it is an object file it is
@@ -86,9 +88,11 @@ namespace utils {
         mkdtemp(tempdir);
         //unpack archive to tmp/XXXX
         std::stringstream command;
-        command << "cd " << tempdir << " && ar x " << file_name;
-        //std::cout << command.str() << "\n";
-        //std::cout << tempdir << "\n";
+        //make path absolute
+        boost::filesystem::path file(file_name);
+        command << "cd " << tempdir << " && ar x " << boost::filesystem::canonical(file).c_str();
+        std::cout << command.str() << "\n";
+        std::cout << tempdir << "\n";
         int ret = system(command.str().c_str());
         //if file format not recognized push to libs
         if(ret>0) {
@@ -119,6 +123,11 @@ namespace utils {
         directories.push_back(tempdir);
     };
 
+    /**
+     *  Method is used to check input file list. Input files can either be shared objects
+     *  that have to be extracted and analysed or object files that can be insieme objects
+     *  or any other object files. The last possibility is a normal source file.
+     */
     void LibraryUtil::handleInputFiles(const std::vector<std::string>& filelist,
                                        std::vector<std::string>& inputs,
                                        std::vector<std::string>& libs) {
@@ -144,12 +153,29 @@ namespace utils {
         }
     };
 
+    /**
+     *  Method is used to create insieme shared object files. All files that were
+     *  used to create the insieme object and all other libraries, shared objects, ...
+     *  are packed into an archive.
+     */
     void LibraryUtil::createLibrary(const std::vector<std::string>& input_files, const std::vector<std::string>& lib_files, const std::string& outputFile) {
+        //DEBUG
+        std::cout << "\n###########################################################\nINPUT FILES:\n";
+        for(auto s: input_files) {
+            std::cout << s << "\n";
+        }
+        std::cout << "LIB FILES:\n";
+        for(auto s: lib_files) {
+            std::cout << s << "\n";
+        }
+
+
         //modify file endings to .o and create so file
         //we need to store the linker flags for
         //later usage
         std::stringstream command;
         command << "ar cr " << outputFile;
+        int i=0;
         for(auto s : input_files) {
             std::string raw_name = s;
             size_t lastslash = s.find_last_of("/")+1;
@@ -157,6 +183,8 @@ namespace utils {
             if (lastdot == std::string::npos)
                 raw_name = s;
             raw_name = s.substr(lastslash, lastdot-lastslash);
+            raw_name += "_";
+            raw_name += boost::lexical_cast<std::string>(i++);
             raw_name += ".o";
             command << " " << raw_name;
         }
@@ -166,6 +194,7 @@ namespace utils {
         for(auto s : lib_files) {
             command << " " << s;
         }
+        std::cout << "COMMAND: " << command.str() << "\n###########################################################\n";
         system(command.str().c_str());
     };
 
