@@ -541,7 +541,7 @@ namespace tu {
 		};
 
 
-		core::LambdaExprPtr addGlobalsInitialization(const IRTranslationUnit& unit, const core::LambdaExprPtr& mainFunc){
+		core::LambdaExprPtr addGlobalsInitialization(const IRTranslationUnit& unit, const core::LambdaExprPtr& mainFunc, Resolver& resolver){
 
 			// we only want to init what we use, so we check it
 			core::NodeSet usedLiterals;
@@ -557,7 +557,7 @@ namespace tu {
 				// only consider having an initialization value
 				if (!cur.second) continue;
 				if (!contains(usedLiterals, cur.first)) continue;
-				inits.push_back(builder.assign(cur.first, cur.second));
+				inits.push_back(builder.assign(resolver.map(cur.first), resolver.map(cur.second)));
 			}
 
 			// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -576,12 +576,13 @@ namespace tu {
 				auto type = cur.as<LiteralPtr>()->getType();
 				annotations::c::markExtern(cur.as<LiteralPtr>(),
 						type.isa<RefTypePtr>() &&
-						!cur.as<LiteralPtr>()->getStringValue()[0]=='\"' &&
+						cur.as<LiteralPtr>()->getStringValue()[0]!='\"' &&
 						!ext.isStaticType(type.as<RefTypePtr>()->getElementType()) &&
-						!any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *global.first == *cur; })
+						!any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *resolver.map(global.first) == *cur; })
 				);
 			}
-
+			
+			
 			// build resulting lambda
 			if (inits.empty()) return mainFunc;
 
@@ -616,13 +617,14 @@ namespace tu {
 				core::NodePtr symbol = cur.first;
 
 				// extract lambda expression
-				core::LambdaExprPtr lambda = Resolver(mgr, a).map(symbol).as<core::LambdaExprPtr>();
+				Resolver resolver(mgr, a);
+				core::LambdaExprPtr lambda = resolver.map(symbol).as<core::LambdaExprPtr>();
 
 				// add initializer
 				lambda = addInitializer(a, lambda);
 
 				// add global initializers
-				lambda = addGlobalsInitialization(a, lambda);
+				lambda = addGlobalsInitialization(a, lambda, resolver);
 
 				// wrap into program
 				return builder.program(toVector<core::ExpressionPtr>(lambda));
