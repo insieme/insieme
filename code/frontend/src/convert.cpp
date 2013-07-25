@@ -1294,7 +1294,10 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 	// -- assume function is recursive => add variable to lambda expr cache --
 
 	// obtain recursive variable to be used
-	core::LiteralPtr symbol = builder.literal(funcTy, funcDecl->getQualifiedNameAsString());
+	std::string name = funcDecl->getQualifiedNameAsString();
+	if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())
+		name.append("_c");
+	core::LiteralPtr symbol = builder.literal(funcTy, name);
 	assert(lambdaExprCache.find(funcDecl) == lambdaExprCache.end());
 	lambdaExprCache[funcDecl] = symbol;
 
