@@ -198,6 +198,7 @@ int offset,incr,width,height,append;
   if (!quiet)
     fprintf(stderr,"saving %s\n",name);
 
+/* Original code
   optr=obfr;
 
   for (i=0; i<height; i++) {
@@ -208,6 +209,21 @@ int offset,incr,width,height,append;
 
   if (optr!=obfr)
     write(outfile,obfr,optr-obfr);
+*/
+
+  assert(incr == width && "incr is different from width!!");
+
+  i = 0;
+  p = src + offset;
+  while(i + OBFRSIZE < height * width)
+  {
+	write(outfile, p, OBFRSIZE);
+	p += OBFRSIZE;
+        i += OBFRSIZE;
+  }
+  
+  if(i < height * width)
+	write(outfile, p, (height * width) - i);
 
   close(outfile);
 }
