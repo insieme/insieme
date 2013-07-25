@@ -58,11 +58,20 @@ namespace insieme {
 namespace frontend {
 namespace tu {
 
-	void IRTranslationUnit::addGlobal(const Global& global) {
-		assert(global.first && global.first->getType().isa<core::RefTypePtr>());
-		assert(!global.second || core::types::isSubTypeOf(global.second->getType(), global.first->getType().as<core::RefTypePtr>()->getElementType()));
-		assert(!any(globals, [&](const Global& cur)->bool { return *global.first == *cur.first; }));
-		globals.push_back(Global(mgr->get(global.first), mgr->get(global.second)));
+	void IRTranslationUnit::addGlobal(const Global& newGlobal) {
+		assert(newGlobal.first && newGlobal.first->getType().isa<core::RefTypePtr>());
+		assert(!newGlobal.second || core::types::isSubTypeOf(newGlobal.second->getType(), newGlobal.first->getType().as<core::RefTypePtr>()->getElementType()));
+	
+		auto git = std::find_if(globals.begin(), globals.end(), [&](const Global& cur)->bool { return *newGlobal.first == *cur.first; });
+		if( git == globals.end() ) {
+			//global is new >> insert into globalsList
+			globals.push_back(Global(mgr->get(newGlobal.first), mgr->get(newGlobal.second)));
+		} else {
+			//global is already in globalsList, if the "new one" has a initValue update the init
+			if(newGlobal.second) {
+				git->second = newGlobal.second;	
+			}
+		}
 	}
 
 	std::ostream& IRTranslationUnit::printTo(std::ostream& out) const {
