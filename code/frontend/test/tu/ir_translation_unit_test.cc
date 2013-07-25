@@ -52,7 +52,7 @@ namespace tu {
 		core::NodeManager mgr;
 		core::IRBuilder builder(mgr);
 
-		IRTranslationUnit unit;
+		IRTranslationUnit unit(mgr);
 
 		// check adding types
 		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
@@ -74,7 +74,7 @@ namespace tu {
 		core::IRBuilder builder(mgr);
 
 		// create a dummy translation unit
-		IRTranslationUnit unit;
+		IRTranslationUnit unit(mgr);
 
 		// check adding types
 		unit.addType(builder.parseType("A").as<core::GenericTypePtr>(), builder.parseType("struct { int<4> x; }"));
