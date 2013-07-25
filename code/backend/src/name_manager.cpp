@@ -77,9 +77,11 @@ namespace backend {
 
 	void SimpleNameManager::registerGlobalNames(const core::NodePtr& root) {
 
-		// just collect the names of all literals
+		// just collect the names of global literals (which are all references)
 		core::visitDepthFirstOnce(root, [&](const core::LiteralPtr& literal) {
-			globalScope.usedNames.insert(literal->getStringValue());
+			if (literal->getType().isa<core::RefTypePtr>()) {
+				globalScope.usedNames.insert(literal->getStringValue());
+			}
 		});
 
 	}
