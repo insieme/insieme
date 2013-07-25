@@ -678,13 +678,11 @@ namespace backend {
 		// handle step
 		core::ExpressionPtr step = ptr->getStep();
 		c_ast::ExpressionPtr cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, convertExpression(context, step));
-		core::VariablePtr var_step;
 		if(!isSimple(step)) {
 			// create variable storing step
-			var_step = builder.variable(ptr->getIterator()->getType());
-			const VariableInfo& info_step = varManager.addInfo(converter, var_step, VariableInfo::NONE);
-			initVector.push_back(std::make_pair(info_step.var, convertExpression(context, step)));
-			cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, info_step.var);
+			c_ast::VariablePtr var_step = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_step"));
+			initVector.push_back(std::make_pair(var_step, convertExpression(context, step)));
+			cStep = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, var_step);
 		} 
 		else { // use pre(inc/dec) if abs(step) == 1
 			core::arithmetic::Formula form = core::arithmetic::toFormula(step);
@@ -697,13 +695,11 @@ namespace backend {
 		// handle end
 		core::ExpressionPtr end = ptr->getEnd();
 		c_ast::ExpressionPtr cCheck = c_ast::lt(info_iter.var, convertExpression(context, end));
-		core::VariablePtr var_end;
 		if(!isSimple(end)) {
 			// create variable storing end
-			var_end = builder.variable(ptr->getIterator()->getType());
-			const VariableInfo& info_end  = varManager.addInfo(converter, var_end, VariableInfo::NONE);
-			initVector.push_back(std::make_pair(info_end.var, convertExpression(context, end)));
-			cCheck = c_ast::lt(info_iter.var, info_end.var);
+			c_ast::VariablePtr var_end = manager->create<c_ast::Variable>(info_iter.var->type, manager->create("_end"));
+			initVector.push_back(std::make_pair(var_end, convertExpression(context, end)));
+			cCheck = c_ast::lt(info_iter.var, var_end);
 		}
 
 		// create init and body
@@ -712,8 +708,6 @@ namespace backend {
 
 		// remove variable info since no longer in scope
 		varManager.remInfo(var_iter);
-		if(var_step) varManager.remInfo(var_step);
-		if(var_end) varManager.remInfo(var_end);
 
 		// combine all into a for
 		return manager->create<c_ast::For>(cInit, cCheck, cStep, cBody);
