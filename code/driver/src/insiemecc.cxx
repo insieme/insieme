@@ -43,20 +43,19 @@
  */
 
 #include <string>
-#include <fstream>
+
+#include <boost/algorithm/string.hpp>
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
+
 #include "insieme/frontend/frontend.h"
-#include "insieme/frontend/tu/ir_translation_unit_io.h"
+
 #include "insieme/backend/runtime/runtime_backend.h"
+
 #include "insieme/driver/cmd/options.h"
+#include "insieme/driver/object_file_utils.h"
 
-#include "insieme/transform/connectors.h"
-#include "insieme/transform/filter/standard_filter.h"
-#include "insieme/transform/rulebased/transformations.h"
-
-#include <boost/algorithm/string.hpp>
 
 using namespace std;
 
@@ -65,48 +64,10 @@ namespace fs = boost::filesystem;
 namespace fe = insieme::frontend;
 namespace co = insieme::core;
 namespace be = insieme::backend;
+namespace dr = insieme::driver;
 namespace cp = insieme::utils::compiler;
-namespace tr = insieme::transform;
 namespace cmd = insieme::driver::cmd;
 
-namespace {
-
-	// TODO: move to some utility header within the driver + add a unit test
-
-	// some magic number to identify our files
-	const long MAGIC_NUMBER = 42*42*42*42;
-
-
-	bool isInsiemeLib(const fe::path& file) {
-		// open file
-		std::ifstream in(file.string(), std::ios::in | std::ios::binary);
-
-		// consume the magic number
-		long x; in >> x;
-
-		// check magic number
-		return x == MAGIC_NUMBER;
-	}
-
-	fe::tu::IRTranslationUnit loadLib(co::NodeManager& mgr, const fe::path& file) {
-		// open file
-		std::ifstream in(file.string(), std::ios::in | std::ios::binary);
-
-		// consume the magic number
-		long x; in >> x; assert(x == MAGIC_NUMBER);
-
-		// load content
-		return fe::tu::load(in, mgr);
-	}
-
-	void saveLib(const fe::tu::IRTranslationUnit& unit, const fe::path& file) {
-		std::ofstream out(file.string(), std::ios::out | std::ios::binary );
-		out << MAGIC_NUMBER;		// start with magic number
-		fe::tu::dump(out, unit);	// dump the rest
-	}
-
-
-}
 
 
 int main(int argc, char** argv) {
@@ -145,7 +106,7 @@ int main(int argc, char** argv) {
 	for(const fe::path& cur : options.job.getFiles()) {
 		auto ext = fs::extension(cur);
 		if (ext == ".o" || ext == ".so") {
-			if (isInsiemeLib(cur)) {
+			if (dr::isInsiemeLib(cur)) {
 				libs.push_back(cur);
 			} else {
 				extLibs.push_back(cur);
@@ -155,6 +116,14 @@ int main(int argc, char** argv) {
 		}
 	}
 
+//std::cout << "Libs:    " << libs << "\n";
+//std::cout << "Inputs:  " << inputs << "\n";
+//std::cout << "ExtLibs: " << extLibs << "\n";
+//std::cout << "OutFile: " << options.outFile << "\n";
+//std::cout << "Compile Only: " << compileOnly << "\n";
+//std::cout << "SharedObject: " << createSharedObject << "\n";
+//std::cout << "WorkingDir: " << boost::filesystem::current_path() << "\n";
+
 	// update input files
 	options.job.setFiles(inputs);
 
@@ -162,13 +131,16 @@ int main(int argc, char** argv) {
 	co::NodeManager mgr;
 
 	// load libraries
-	options.job.setLibs(::transform(libs, [&](const fe::path& cur) { return loadLib(mgr, cur); }));
+	options.job.setLibs(::transform(libs, [&](const fe::path& cur) {
+		std::cout << "Loading " << cur << " ...\n";
+		return dr::loadLib(mgr, cur);
+	}));
 
 	// if it is compile only or if it should become an object file => save it
 	if (compileOnly || createSharedObject) {
 		auto res = options.job.toTranslationUnit(mgr);
-		saveLib(res, options.outFile);
-		return 0;		// done
+		dr::saveLib(res, options.outFile);
+		return dr::isInsiemeLib(options.outFile) ? 0 : 1;
 	}
 
 	// convert src file to target code
@@ -189,7 +161,7 @@ int main(int argc, char** argv) {
 	cout << "Building binaries ...\n";
 	cp::Compiler compiler = cp::Compiler::getDefaultCppCompiler();
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
-	for(auto cur : extLibs) compiler.addFlag(cur.string());			// TODO: add extra setter for libraries, not just a flag
+//	for(auto cur : extLibs) compiler.addFlag(cur.string());			// TODO: add extra setter for libraries, not just a flag
 	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
 
 	// done
