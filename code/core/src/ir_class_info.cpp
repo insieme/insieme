@@ -58,6 +58,7 @@ namespace core {
 		if (isConst()) out << "const ";
 		out << name << " = ";
 		out << PrettyPrinter(impl, PrettyPrinter::NO_LET_BINDINGS);
+		if (impl.isa<LiteralPtr>()) out << " : " << *impl->getType();
 		return out;
 	}
 
@@ -270,8 +271,18 @@ namespace core {
 				// create new pure-virtual implementation
 				newMember.setImplementation(builder.getPureVirtual(newFunType));
 
+			} else if (auto lit = impl.isa<LiteralPtr>()) {
+
+				// update function type
+				newMember.setImplementation(core::transform::replaceNode(
+						mgr,
+						LiteralAddress(lit)->getType().as<FunctionTypeAddress>()->getParameterType(0),
+						builder.refType(newClassType)
+				).as<LiteralPtr>());
+
 			} else {
 				// handle as all other implementations
+				assert(impl.isa<LambdaExprPtr>());
 				newMember.setImplementation(alter(impl.as<LambdaExprPtr>()));
 			}
 
@@ -408,7 +419,7 @@ namespace core {
 	}
 
 	const bool hasMetaInfo(const TypePtr& type) {
-		return type->hasAttachedValue<ClassMetaInfo>();
+		return type && type->hasAttachedValue<ClassMetaInfo>();
 	}
 
 	const ClassMetaInfo& getMetaInfo(const TypePtr& type) {
@@ -434,6 +445,10 @@ namespace core {
 		} else {
 			type->attachValue(info);
 		}
+	}
+
+	void removeMetaInfo(const TypePtr& type) {
+		type->detachValue<ClassMetaInfo>();
 	}
 
 	ClassMetaInfo merge(const ClassMetaInfo& a, const ClassMetaInfo& b) {

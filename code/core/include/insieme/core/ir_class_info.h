@@ -463,6 +463,11 @@ namespace core {
 	void setMetaInfo(const TypePtr& type, const ClassMetaInfo& info);
 
 	/**
+	 * Removes any meta information potentially attached to the given type.
+	 */
+	void removeMetaInfo(const TypePtr& type);
+
+	/**
 	 * A utility function converting a class-meta-info object into an IR expression using the encoding framework.
 	 */
 	ExpressionPtr toIR(NodeManager& manager, const ClassMetaInfo& info);
