@@ -57,6 +57,8 @@
 #include <clang/AST/ExprCXX.h>
 #include <clang/AST/DeclTemplate.h>
 
+#include <boost/algorithm/string.hpp>
+
 using namespace clang;
 using namespace insieme;
 
@@ -499,6 +501,34 @@ namespace {
 		return nullptr;
 	}
 
+	/* we build a complete name for the class,
+	 * qualified name does not have the specific types of the spetialization
+	 */
+	std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* type){
+
+		std::string fullName =  decl->getQualifiedNameAsString();
+		if (llvm::isa<clang::ClassTemplateSpecializationDecl>(decl)) {
+
+			std::string name = decl->getNameAsString();
+			std::string typeName = type->getCanonicalTypeInternal ().getAsString();
+			boost::replace_all(typeName, "<", "_");
+			boost::replace_all(typeName, ">", "_");
+
+			//fullname has the namespaces and owners, just scope
+			//type name has the class name and typing
+			//
+			//     namespace::owner::myClass                 <= qualname
+			//                class  myClass<int>            <= typename
+			//                       myClass                 just the name, the key to happines
+			//      ---------------------------------
+			//     namespace::owner::myClass_int_            <= final name
+
+			unsigned pos = typeName.find(name);
+			boost::replace_last(fullName, name, std::string(typeName.begin()+pos, typeName.end()));
+		}
+		return fullName;
+	}
+
 }
 
 
@@ -527,7 +557,7 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 	if (auto recDecl = toRecordDecl(type)) {
 
 		// create a (temporary) type variable for this type
-		core::GenericTypePtr symbol = builder.genericType(recDecl->getQualifiedNameAsString());
+		core::GenericTypePtr symbol = builder.genericType(getNameForRecord(recDecl, type));
 
 		// bind recursive variable within the cache
 		cache[type] = symbol;

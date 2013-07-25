@@ -111,6 +111,13 @@ annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const Sourc
 };
 
 
+std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
+	std::string name = funcDecl->getQualifiedNameAsString();
+	if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())
+		name.append("_c");
+	return name;
+}
+
 } // End empty namespace
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
@@ -252,9 +259,6 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl()) return;
-			//std::cout << " function: " << funcDecl->getQualifiedNameAsString() << std::endl;
-        	//std::cout  << "-> at location: (" << utils::location(funcDecl->getLocStart(), converter.getSourceManager()) << ")" << std::endl;
-			// if you see problems, try isThisDeclarationADefinition() - your welcome
 			if (!funcDecl->doesThisDeclarationHaveABody()) return;
 			converter.convertFunctionDecl(funcDecl);
 			return;
@@ -1293,12 +1297,7 @@ core::ExpressionPtr Converter::convertFunctionDecl(const clang::FunctionDecl* fu
 	// --------------- convert potential recursive function -------------
 
 	// -- assume function is recursive => add variable to lambda expr cache --
-
-	// obtain recursive variable to be used
-	std::string name = funcDecl->getQualifiedNameAsString();
-	if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())
-		name.append("_c");
-	core::LiteralPtr symbol = builder.literal(funcTy, name);
+	core::LiteralPtr symbol = builder.literal(funcTy, buildNameForFunction(funcDecl));
 	assert(lambdaExprCache.find(funcDecl) == lambdaExprCache.end());
 	lambdaExprCache[funcDecl] = symbol;
 
