@@ -320,6 +320,11 @@ namespace tu {
 					}
 				}
 
+				// also fix type literals
+				if (core::analysis::isTypeLiteral(res)) {
+					res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>()));
+				}
+
 				// migrate annotations
 				core::transform::utils::migrateAnnotations(ptr, res);
 
