@@ -67,6 +67,8 @@ namespace tu {
 
 	private:
 
+		core::NodeManager* mgr;
+
 		TypeMap types;
 
 		FunctionMap functions;
@@ -79,10 +81,13 @@ namespace tu {
 
 	public:
 
-		IRTranslationUnit() {}
+		IRTranslationUnit(core::NodeManager& mgr) : mgr(&mgr) {}
 
-		IRTranslationUnit(const TypeMap& types, const FunctionMap& functions, const GlobalsList& globals, const Initializer& initializer, const EntryPointList& entryPoints)
-			: types(types), functions(functions), globals(globals), initializer(initializer), entryPoints(entryPoints) {}
+		IRTranslationUnit(core::NodeManager& mgr, const TypeMap& types, const FunctionMap& functions, const GlobalsList& globals, const Initializer& initializer, const EntryPointList& entryPoints)
+			: mgr(&mgr), types(types), functions(functions), globals(globals), initializer(initializer), entryPoints(entryPoints) {}
+
+		IRTranslationUnit(const IRTranslationUnit& other)
+			: mgr(other.mgr), types(other.types), functions(other.functions), globals(other.globals), initializer(other.initializer), entryPoints(other.entryPoints) {}
 
 		// getter:
 
@@ -132,13 +137,13 @@ namespace tu {
 
 		void addType(const core::GenericTypePtr& symbol, const core::TypePtr& definition) {
 			assert(types.find(symbol) == types.end());
-			types.insert( { symbol, definition } ).second;
+			types.insert( { mgr->get(symbol), mgr->get(definition) } ).second;
 		}
 
 		void addFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
 			assert_eq(*symbol->getType(), *definition->getType());
 			assert(functions.find(symbol) == functions.end());
-			functions.insert( { symbol, definition } );
+			functions.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}
 
 		void addGlobal(const core::LiteralPtr& symbol, const core::ExpressionPtr& definition = core::ExpressionPtr()) {
@@ -148,12 +153,12 @@ namespace tu {
 		void addGlobal(const Global& global);
 
 		void addInitializer(const core::ExpressionPtr& expr) {
-			initializer.push_back(expr);
+			initializer.push_back(mgr->get(expr));
 		}
 
 		void addEntryPoints(const core::LiteralPtr& literal) {
 			assert(functions.find(literal) != functions.end());
-			entryPoints.push_back(literal);
+			entryPoints.push_back(mgr->get(literal));
 		}
 
 		// operators:
@@ -177,15 +182,11 @@ namespace tu {
 		}
 
 		core::NodeManager& getNodeManager() const {
-			if (!types.empty()) return types.begin()->first->getNodeManager();
-			if (!functions.empty()) return functions.begin()->first->getNodeManager();
-			if (!globals.empty()) return globals.begin()->first->getNodeManager();
-			if (!initializer.empty()) return initializer.begin()->getNodeManager();
-			assert(false && "Must not be called on empty unit.");
-			return types.begin()->first->getNodeManager();		// to fix warning
+			return *mgr;
 		}
 
-		// TODO: connect this with the toProgram part ...
+		IRTranslationUnit toManager(core::NodeManager& manager) const;
+
 		core::NodePtr resolve(const core::NodePtr& fragment) const;
 
 	protected:
@@ -197,16 +198,14 @@ namespace tu {
 
 	// ---------------- merge utilities -----------------------
 
-	inline IRTranslationUnit merge(const IRTranslationUnit& a) { return a; }
-
-	IRTranslationUnit merge(const IRTranslationUnit& a, const IRTranslationUnit& b);
+	IRTranslationUnit merge(core::NodeManager& mgr, const IRTranslationUnit& a, const IRTranslationUnit& b);
 
 	template<typename ... T>
-	IRTranslationUnit merge(const IRTranslationUnit& a, const IRTranslationUnit& b, const IRTranslationUnit& c, const T& ... rest) {
-		return merge(merge(a,b),c, rest...);
+	IRTranslationUnit merge(core::NodeManager& mgr, const IRTranslationUnit& a, const IRTranslationUnit& b, const T& ... rest) {
+		return merge(mgr, merge(mgr, a,b), rest...);
 	}
 
-	IRTranslationUnit merge(const vector<IRTranslationUnit>& units);
+	IRTranslationUnit merge(core::NodeManager& mgr, const vector<IRTranslationUnit>& units);
 
 
 	// -------------- program conversion ----------------------
@@ -214,7 +213,7 @@ namespace tu {
 	core::ProgramPtr toProgram(core::NodeManager& mgr, const IRTranslationUnit& a, const string& entryPoint = "main");
 
 	inline core::ProgramPtr toProgram(core::NodeManager& mgr, const vector<IRTranslationUnit>& units, const string& entryPoint = "main") {
-		return toProgram(mgr, merge(units));
+		return toProgram(mgr, merge(mgr, units));
 	}
 
 	core::ProgramPtr resolveEntryPoints(core::NodeManager& mgr, const IRTranslationUnit& a);

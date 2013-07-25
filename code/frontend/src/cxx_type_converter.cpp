@@ -438,7 +438,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 	}
 
 	// append meta information to the class definition
-	core::setMetaInfo(irAliasType, classInfo);
+	core::setMetaInfo(irAliasType, core::merge(classInfo, core::getMetaInfo(irAliasType)));
 }
 
 core::TypePtr Converter::CXXTypeConverter::convertInternal(const clang::Type* type) {

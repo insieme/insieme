@@ -62,7 +62,7 @@ namespace tu {
 		assert(global.first && global.first->getType().isa<core::RefTypePtr>());
 		assert(!global.second || core::types::isSubTypeOf(global.second->getType(), global.first->getType().as<core::RefTypePtr>()->getElementType()));
 		assert(!any(globals, [&](const Global& cur)->bool { return *global.first == *cur.first; }));
-		globals.push_back(global);
+		globals.push_back(Global(mgr->get(global.first), mgr->get(global.second)));
 	}
 
 	std::ostream& IRTranslationUnit::printTo(std::ostream& out) const {
@@ -80,9 +80,42 @@ namespace tu {
 				<< "}\n)";
 	}
 
-	IRTranslationUnit merge(const IRTranslationUnit& a, const IRTranslationUnit& b) {
+	IRTranslationUnit IRTranslationUnit::toManager(core::NodeManager& manager) const {
 
-		IRTranslationUnit res = a;
+		IRTranslationUnit res(manager);
+
+		// copy types
+		for(auto cur : getTypes()) {
+			res.addType(cur.first, cur.second);
+		}
+
+		// copy functions
+		for(auto cur : getFunctions()) {
+			res.addFunction(cur.first, cur.second);
+		}
+
+		// copy globals
+		for(auto cur : getGlobals()) {
+			res.addGlobal(cur);
+		}
+
+		// copy initalizer
+		for(auto cur : getInitializer()) {
+			res.addInitializer(cur);
+		}
+
+		// entry points
+		for(auto cur : getEntryPoints()) {
+			res.addEntryPoints(cur);
+		}
+
+		// done
+		return res;
+	}
+
+	IRTranslationUnit merge(core::NodeManager& mgr, const IRTranslationUnit& a, const IRTranslationUnit& b) {
+
+		IRTranslationUnit res = a.toManager(mgr);
 
 		// copy types
 		for(auto cur : b.getTypes()) {
@@ -113,10 +146,10 @@ namespace tu {
 		return res;
 	}
 
-	IRTranslationUnit merge(const vector<IRTranslationUnit>& units) {
-		IRTranslationUnit res;
+	IRTranslationUnit merge(core::NodeManager& mgr, const vector<IRTranslationUnit>& units) {
+		IRTranslationUnit res(mgr);
 		for(const auto& cur : units) {
-			res = merge(res, cur);
+			res = merge(mgr, res, cur);
 		}
 		return res;
 	}
@@ -151,12 +184,12 @@ namespace tu {
 
 				// copy type symbols into symbol table
 				for(auto cur : unit.getTypes()) {
-					symbolMap[cur.first] = cur.second;
+					symbolMap[mgr.get(cur.first)] = mgr.get(cur.second);
 				}
 
 				// copy function symbols into symbol table
 				for(auto cur : unit.getFunctions()) {
-					symbolMap[cur.first] = cur.second;
+					symbolMap[mgr.get(cur.first)] = mgr.get(cur.second);
 				}
 
 			}
@@ -213,7 +246,6 @@ namespace tu {
 
 				// resolve result recursively
 				res = res->substitute(mgr, *this);
-
 
 				// fix recursions
 				if (recVar) {
@@ -289,9 +321,7 @@ namespace tu {
 				}
 
 				// migrate annotations
-				if (ptr != res) {
-					core::transform::utils::migrateAnnotations(ptr, res);
-				}
+				core::transform::utils::migrateAnnotations(ptr, res);
 
 				// add result to cache if it does not contain recursive parts
 				if (*ptr == *res) {

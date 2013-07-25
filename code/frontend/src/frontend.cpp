@@ -101,14 +101,14 @@ namespace frontend {
 		});
 
 		// merge the translation units
-		return tu::merge(tu::merge(libs), tu::merge(units));
+		return tu::merge(manager, tu::merge(manager, libs), tu::merge(manager, units));
 
 	}
 
 	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
 
 		// create a temporary manager
-		core::NodeManager tmpMgr(manager);
+		core::NodeManager tmpMgr;		// not: due to the relevance of class-info-annotations no chaining of managers is allowed here
 
 		// load and merge all files into a single translation unit
 		auto unit = toTranslationUnit(tmpMgr);

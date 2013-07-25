@@ -964,7 +964,7 @@ namespace {
 
 tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr) {
 
-	tu::IRTranslationUnit res;
+	tu::IRTranslationUnit res(mgr);
 
 	// everything has to run through the OMP sema mapper
 	OMPSemaMapper semaMapper(mgr);

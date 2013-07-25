@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -138,7 +138,8 @@ namespace conversion {
 ///
 Converter::Converter(core::NodeManager& mgr, const Program& prog) :
 		staticVarCount(0), mgr(mgr), builder(mgr),
-		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), used(false)
+		program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()),
+		irTranslationUnit(mgr), used(false)
 		{
 
 		if (prog.isCxx()){
