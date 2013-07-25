@@ -1,0 +1,11 @@
+For now, there is only a simple Makefile, and the whole thing was only
+tested on GNU/Linux. On a linux system, type "make" to compile the thing.
+On other systems, your mileage may wary -- I haven't tried it at all.
+Theoretically, the program should work on any Posix system with pthreads,
+but expect at least compilation problems if you try. If "make" complains,
+use the GNU make instead (gmake), etc. Patches are welcome.
+
+Currently, the hyperthreading is only attempted to be detected in Linux.
+Patches are welcome, again.
+
+Please also note that gcc-3.3 produces a 10% faster binary than gcc-4.0.

@@ -1,0 +1,53 @@
+This is a README file for the bzip2smp program, version 1.0, 2-Dec-2005.
+
+This program parallelizes the BZIP2 compression process to achieve near-linear
+performance increase on SMP machines. On a two-processor Xeon machine, the
+speedup is around 180%. The tool's main purpose is to aid performing heavy-duty
+server backups. It can also be used on modern desktop multicore processors
+(AMD Athlon64 X2, Intel Pentium D etc).
+
+There is NO speedup coming from hyperthreading on the hyperthreaded machines,
+since hyperthreads don't have dedicated caches, and the bzip2 is very
+cache-dependent. Expect degraded preformance if you try utilizing hyperthreads.
+
+The compression process requires more memory than the normal bzip2 -- some
+15Mb average for 2 CPUs, 30Mb for 4 CPUs, etc. This should not pose any problem
+on a typical memory-rich server/workstation hardware, though.
+
+The resulting archives are bit-by-bit identical to the ones produced by the
+normal bzip2, at least as of version 1.0.2.
+
+No decompression is supported. The compression is stdin-to-stdout only.
+
+If you need the missing features, you are welcome to implement them. Maybe
+someday the program will be fully compatible with bzip2, as a result. For now,
+it is not. Please also note that there is a similar program out there, pbzip2
+(http://compression.ca/pbzip2/). Unfortunately, it does not support compression
+from stdin (meaning no "tar | pbzip2"), it does not produce the archives equal
+to the original bzip2 (although compatible, they are larger), and it felt
+overall a bit too amateur for me to trust my production backup data to it. So
+I coded my own one.
+
+This program incorporates the modified libbzip2 sources (part of bzip2). The
+sources have to be modified because it was not feasible to split the rle
+compression, block sorting and bit-storing stages apart with the stock
+library design. This separation was merely hacked in -- to make it the clean
+way, the library has to be redesigned. This was not the goal, though.
+
+The program was only tested under Linux, kernel 2.6. It should work on any
+Posix system with pthreads support, but this was not tested, so expect
+compilation problems. See INSTALL file for details.
+
+The program is meant to be used in production environment. It should be
+sufficiently stable, but more testing is welcome. I use it myself, but I still
+don't guarantee you anything. You use it on your own risk, don't blame me
+if something goes wrong -- send bug reports and patches instead.
+
+Copyright (c) 2005 Konstantin Isakov. Based on the original libbzip2 sources,
+part of bzip2, version 1.0.2, Copyright (c) 1996-2002 Julian R Seward. The
+source was taken from the Debian source package, 1.0.2-10, so it contains
+some Debian patches, too. Distributed under the original BSDish license,
+see the LICENSE file please.
+
+The homepage is at http://bzip2smp.sourceforge.net
+Mail your suggestions, bugs, patches and other stuff to ikm@users.sf.net 
