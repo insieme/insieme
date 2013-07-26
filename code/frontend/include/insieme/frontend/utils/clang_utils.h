@@ -71,6 +71,24 @@ const ExpectedTy* skipSugar(const clang::Expr* expr) {
 	return dyn_cast<const ExpectedTy>(expr);
 }
 
+
+/**
+ * we build a complete name for the class,
+ * qualified name does not have the specific types of the spetialization
+ * the record provides que qualified name, the type the spetialization for the type
+ * we merge both strings in a safe string for the output
+ */
+std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* type);
+
+/**
+ * build a string to identify a function
+ * the produced string will be output-compatible, this means that we can use this name
+ * to name functions and they will not have qualification issues.
+ * @param funcDecl: the function decl to name
+ * @return unique string value
+ */
+std::string buildNameForFunction (const clang::FunctionDecl* funcDecl);
+
 } // End utils namespace
 } // End frontend namespace
 } // End insieme namespace

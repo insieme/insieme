@@ -36,20 +36,8 @@
 
 #include "insieme/frontend/type_converter.h"
 
-
-// defines which are needed by LLVM
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-
-#include <clang/AST/Decl.h>
-#include <clang/AST/Expr.h>
-
-#include <clang/AST/DeclCXX.h>
-#include <clang/AST/ExprCXX.h>
-#include <clang/AST/DeclTemplate.h>
-
-
 #include "insieme/frontend/utils/source_locations.h"
+#include "insieme/frontend/utils/clang_utils.h"
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/container_utils.h"
@@ -126,7 +114,9 @@ core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) 
 		}
 
 		//update name of class type
-		classType = core::transform::replaceNode(mgr, core::StructTypeAddress(classType)->getName(), builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
+		classType = core::transform::replaceNode(mgr, 
+												 core::StructTypeAddress(classType)->getName(), 
+												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
 
 		//if classDecl has a name add it
 		if( !classDecl->getNameAsString().empty() ) {
