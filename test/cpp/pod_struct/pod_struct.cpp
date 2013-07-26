@@ -4,6 +4,10 @@ struct POD {
 	int a;
 };
 
+struct P : public POD {
+	int b;
+};
+
 int main() {
 	{
 		POD t;
@@ -52,6 +56,10 @@ int main() {
 		std::cout << i << std::endl;
 		std::cout << ((POD){10}).a << std::endl;
 		std::cout << ((POD){10}).a << std::endl;
+	}
+
+	{
+		P p;
 	}
 	return 0;
 }

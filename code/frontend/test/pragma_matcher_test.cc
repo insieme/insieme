@@ -68,16 +68,11 @@ TEST(PragmaMatcherTest, PragmaPossitions) {
 	// we experienced some issues related to finding the possition of the pragma when using macros
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
-	ConversionJob job;
 
-	insieme::frontend::Program prog(manager, job);
+	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/pragmas.c");
 
-	ConversionJob file = job;
-	file.setFile( SRC_DIR "/inputs/pragmas.c" );
-	TranslationUnit& tu = prog.addTranslationUnit( file );
-
-	const PragmaList& pl = tu.getPragmaList();
-	const ClangCompiler& comp = tu.getCompiler();
+	const PragmaList& pl = prog.getPragmaList();
+	const ClangCompiler& comp = prog.getCompiler();
 
 	std::cout << "****************************************" << std::endl;
 	std::cout << "****************************************" << std::endl;
@@ -256,16 +251,10 @@ TEST(PragmaMatcherTest, PragmaPossitions2) {
 	// we experienced some issues related to finding the possition of the pragma when using macros
 	//clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R,
 	NodeManager manager;
-	ConversionJob job;
 
-	insieme::frontend::Program prog(manager, job);
-
-	ConversionJob file = job;
-	file.setFile( SRC_DIR "/inputs/pragma2.c" );
-	TranslationUnit& tu = prog.addTranslationUnit( file );
-
-	const PragmaList& pl = tu.getPragmaList();
-	const ClangCompiler& comp = tu.getCompiler();
+	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/pragma2.c");
+	const PragmaList& pl = prog.getPragmaList();
+	const ClangCompiler& comp = prog.getCompiler();
 
 	std::cout << "****************************************" << std::endl;
 	std::cout << "****************************************" << std::endl;
@@ -338,16 +327,10 @@ TEST(PragmaMatcherTest, PragmaPossitions2) {
 TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 	NodeManager manager;
-	ConversionJob job;
 
-	insieme::frontend::Program prog(manager, job);
-
-	ConversionJob file = job;
-	file.setFile( SRC_DIR "/inputs/omp_parallel.c" );
-	TranslationUnit& tu = prog.addTranslationUnit( file );
-
-	const PragmaList& pl = tu.getPragmaList();
-	const ClangCompiler& comp = tu.getCompiler();
+	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/omp_parallel.c" );
+	const PragmaList& pl = prog.getPragmaList();
+	const ClangCompiler& comp = prog.getCompiler();
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 4);
@@ -481,15 +464,9 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 TEST(PragmaMatcherTest, HandleOmpFor) {
 
 	NodeManager manager;
-	ConversionJob job;
-	insieme::frontend::Program prog(manager, job);
-
-	ConversionJob file = job;
-	file.setFile(SRC_DIR "/inputs/omp_for.c");
-	prog.addTranslationUnit( file );
-
-	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
-	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
+	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/omp_for.c");
+	const PragmaList& pl = prog.getPragmaList();
+	const ClangCompiler& comp = prog.getCompiler();
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 4);
@@ -632,15 +609,9 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 TEST(PragmaMatcherTest, RecursiveFunctions) {
 
 	NodeManager manager;
-	ConversionJob job;
-	insieme::frontend::Program prog(manager, job);
-
-	ConversionJob file = job;
-	file.setFile(SRC_DIR "/inputs/rec.c");
-	prog.addTranslationUnit( file );
-
-	const PragmaList& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
-	const ClangCompiler& comp = (*prog.getTranslationUnits().begin())->getCompiler();
+	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/rec.c");
+	const PragmaList& pl = prog.getPragmaList();
+	const ClangCompiler& comp = prog.getCompiler();
 
 	EXPECT_FALSE(pl.empty());
 	EXPECT_EQ(pl.size(), (size_t) 2);

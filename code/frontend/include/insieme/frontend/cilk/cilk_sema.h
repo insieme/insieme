@@ -40,12 +40,19 @@
 
 namespace insieme {
 namespace frontend {
+
+namespace tu { class IRTranslationUnit; }
+
 namespace cilk {
 
 	/**
-	 * Applies OMP semantics to given code fragment.
+	 * Applies cilk semantics to all the definitions within the given translation unit.
+	 *
+	 * @param unit the translation unit to be processed
+	 * @param mgr the node manager to be utilized for creating IR nodes
+	 * @return the modified translation unit
 	 */
-	const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& manager);
+	tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr);
 
 } // namespace cilk
 } // namespace frontend

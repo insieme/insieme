@@ -82,15 +82,10 @@ namespace core {
 		template<typename T>
 		inline Pointer<T> map(unsigned index, const Pointer<T>& ptr) {
 			// short-cut for null
-			if (!ptr) {
-				return static_pointer_cast<T> (ptr);
-			}
+			if (!ptr) return Pointer<T>();
 
 			// map and cast
-			const NodePtr res = mapElement(index, ptr);
-			// during development, make cast secure
-			assert(dynamic_pointer_cast<T> (res) && "Invalid conversion");
-			return static_pointer_cast<T> (res);
+			return mapElement(index, ptr).template as<Pointer<T>>();
 		}
 
 		/**

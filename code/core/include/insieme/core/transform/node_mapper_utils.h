@@ -105,6 +105,18 @@ public:
 		cache.clearEntry(ptr);
 	}
 
+protected:
+
+	/**
+	 * Updates the cache for the given key.
+	 *
+	 * @param key the node to be covered
+	 * @param value the node to which the given key should be translated to
+	 */
+	void setCacheEntry(const NodePtr& key, const NodePtr& value) {
+		cache.set(key, value);
+	}
+
 };
 
 

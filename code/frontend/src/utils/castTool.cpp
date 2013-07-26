@@ -37,6 +37,7 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/debug.h"
+#include "insieme/frontend/utils/ir_utils.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/unused.h"
@@ -370,7 +371,7 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::ConversionFactory& convFact,
+core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
 										  const clang::CastExpr* castExpr){
 
 	const core::IRBuilder& builder = convFact.getIRBuilder();
@@ -410,18 +411,15 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		{
 			
 			// this is CppRef -> ref
-			if (core::analysis::isCppRef(exprTy)){
-				// unwrap and deref the variable
-				return builder.deref( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr));
-			}
-			else if (core::analysis::isConstCppRef(exprTy)){
-				return builder.deref( builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr));
-			}
-			/*
 			if (IS_CPP_REF_EXPR(expr)){
-				expr = unwrapCppRef(builder, expr);
+				return builder.deref(unwrapCppRef(builder, expr));
 			}
-			*/
+
+			// accessing a member returns a reference, this ref might be a cpp ref, therefore we
+			// need to unwrap a little more
+			if (expr->getType().isa<core::RefTypePtr>() && IS_CPP_REF_TYPE(expr->getType().as<core::RefTypePtr>()->getElementType())){
+				return builder.deref(unwrapCppRef(builder, builder.deref(expr)));
+			}
 
 			// we use by value a member accessor. we have a better operation for this
 			// instead of derefing the memberRef
@@ -590,10 +588,10 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
 		{
 		
-			if (gen.isAnyRef(targetTy)) { return expr; } 
+			if (gen.isAnyRef(targetTy)) { return gen.getRefNull(); } 
 
 			// cast NULL to anything else
-			if ((targetTy->getNodeType() == core::NT_RefType) && (*expr == *builder.literal(expr->getType(), "0"))) {
+			if ((targetTy->getNodeType() == core::NT_RefType) && (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr))) {
 				return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 			}
 			else{
@@ -661,7 +659,8 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 				// is a pointer type -> return pointer
 				expr = builder.callExpr(gen.getScalarToArray(), expr);
 			}
-			
+		
+			VLOG(2) << expr;
 			return expr;
 		}
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -669,18 +668,40 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		case clang::CK_BaseToDerived:
 		//A conversion from a C++ class pointer/reference to a derived class pointer/reference. B *b = static_cast<B*>(a); 
 		{
-			
-			VLOG(2) << expr->getType();
-			VLOG(2) << targetTy;
+			//we want to know the TYPE of static_cast<TYPE>()
+			targetTy = convFact.convertType(GET_TYPE_PTR(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getTypeInfoAsWritten()));
+			VLOG(2) << exprTy << " " << targetTy;
+	
+			core::ExpressionPtr retIr;
+			if (core::analysis::isCppRef(exprTy) && core::analysis::isCppRef(targetTy)) {
+				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastRefCppToRefCpp(), expr, builder.getTypeLiteral((targetTy)));
+			}
+			else if (core::analysis::isConstCppRef(exprTy) && core::analysis::isConstCppRef(targetTy)) {
+				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastConstCppToConstCpp(), expr, builder.getTypeLiteral((targetTy)));
+			}
+			else if (core::analysis::isCppRef(exprTy) && core::analysis::isConstCppRef(targetTy)) {
+				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastRefCppToConstCpp(), expr, builder.getTypeLiteral((targetTy)));
+			} 
+			else if (	!(core::analysis::isCppRef(exprTy) || core::analysis::isConstCppRef(exprTy)) 
+					&&  (core::analysis::isCppRef(targetTy) || core::analysis::isConstCppRef(targetTy)) ) {
+				// statically casting an object to a reference
+				
+				// first wrap object in cpp_ref
+				expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
 
-			if(GET_TYPE_PTR(castExpr)->isPointerType()){ 
-				// if we have a pointer --> target type is ref<arry<...>>, for staticCast we need
-				// only array<...> in the type literal hence the GET_REF_ELEM_TYPE
-				// use staticCast operator to represent static_cast 
-				return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy))) );
+				//depending on targetType
+				if(core::analysis::isCppRef(targetTy) ) {
+					retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastRefCppToRefCpp(), expr, builder.getTypeLiteral(targetTy));
+				}
+				else if(core::analysis::isConstCppRef(targetTy)) {
+					retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastRefCppToConstCpp(), expr, builder.getTypeLiteral(targetTy));
+				}
+			} else {
+				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 			}
 
-			return (builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCast(), expr, builder.getTypeLiteral((targetTy))) );
+			VLOG(2) << retIr << " " << retIr->getType();
+			return retIr;
 		}
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 

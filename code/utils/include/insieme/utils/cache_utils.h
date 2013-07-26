@@ -130,6 +130,17 @@ namespace cache {
 		}
 
 		/**
+		 * Overrides the current (potentially non-existing) value assigned to the given
+		 * key within this cache.
+		 *
+		 * @param key the addressed key
+		 * @param value the new value to be assigned to the given key
+		 */
+		void set(const Key& key, const Value& value) {
+			cache[key] = value;
+		}
+
+		/**
 		 * Clears this cache. After an invocation, the cache will be empty again.
 		 */
 		void clear() {

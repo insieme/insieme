@@ -69,14 +69,13 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	for (size_t i = 0; i < nIncludes && check.fail(); ++i) {
 		check.close();
 		// try with include paths
-		path = job.getIncludeDirectories().at(i) + "/" + root;
+		path = (job.getIncludeDirectories().at(i) / root).string();
 		check.open(path);
 	}
 	// if there is still no match, try the paths of the input files
-	size_t nInputFiles = job.getFiles().size();
-	for (size_t i = 0; i < nInputFiles && check.fail(); ++i) {
-		// try the paths of the input files
-		string ifp = job.getFiles().at(i);
+	if (check.fail()) {
+		assert(job.getFiles().size() == 1u);
+		string ifp = job.getFiles()[0].string();
 		size_t slash = ifp.find_last_of("/");
 		path = ifp.substr(0u, slash + 1) + root;
 		check.open(path);
@@ -90,14 +89,9 @@ const ProgramPtr loadKernelsFromFile(string path, const IRBuilder& builder, cons
 	}
 
 	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
-
-
 	ConversionJob kernelJob = job;
-	kernelJob.setFile(path);
-	frontend::Program fkernels(builder.getNodeManager(), kernelJob);
-	fkernels.addTranslationUnit(kernelJob);
-
-	return fkernels.convert();
+	kernelJob.setFiles(toVector<frontend::path>(path));
+	return kernelJob.execute(builder.getNodeManager(), false);
 }
 
 void tryStructExtract(ExpressionPtr& expr, IRBuilder& builder) {
@@ -1289,6 +1283,11 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 
 		if(fun == BASIC.getRefAssign()) {
 			ExpressionPtr lhs = callExpr->getArgument(0);
+
+			// if this is loading a source file and assigning it to some target => (implicitly) register and drop it
+			if(lookForKernelFilePragma(lhs->getType(), callExpr->getArgument(1))) {
+				return builder.getNoOp();
+			}
 
 			// on the left hand side we'll either have a variable or a struct, probably holding a reference to the global array
 			// for the latter case we have to handle it differently

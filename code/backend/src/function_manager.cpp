@@ -573,6 +573,7 @@ namespace backend {
 
 			auto header = converter.getFunctionManager().getHeaderFor(literal);
 			if (header) {
+
 				// => use prototype of include file
 				res->prototype = c_ast::DummyFragment::createNew(converter.getFragmentManager());
 				res->prototype->addInclude(*header);

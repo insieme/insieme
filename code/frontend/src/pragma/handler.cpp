@@ -104,7 +104,7 @@ void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
 
 core::NodePtr attachPragma( const core::NodePtr& 			node, 
 						   const clang::Stmt* 				clangNode, 
-						   conversion::ConversionFactory& 	fact ) 
+						   conversion::Converter& 	fact ) 
 {
 	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
 
@@ -127,7 +127,7 @@ core::NodePtr attachPragma( const core::NodePtr& 			node,
 
 core::NodePtr attachPragma(const core::NodePtr& 			node, 
 						   const clang::Decl* 				clangDecl, 
-						   conversion::ConversionFactory& 	fact ) 
+						   conversion::Converter& 	fact ) 
 {
 	const PragmaStmtMap::DeclMap& pragmaDeclMap = fact.getPragmaMap().getDeclarationMap();
 

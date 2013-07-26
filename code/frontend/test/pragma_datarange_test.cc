@@ -43,6 +43,7 @@
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/compiler.h"
+#include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/pragma/handler.h"
@@ -58,30 +59,25 @@ using namespace insieme::frontend;
 using namespace insieme::frontend::pragma;
 using namespace insieme::core;
 using namespace insieme::annotations;
+using namespace insieme::frontend::conversion;
 
 TEST(PragmaDatarangeTest, HandleDatarange) {
 //	CommandLineOptions::Verbosity = 2;
 
 	NodeManager manager;
 
-	ConversionJob job;
+	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/insieme_datarange.c");
 
-	insieme::frontend::Program prog(manager, job);
-	TranslationUnit& tu = prog.addTranslationUnit( ConversionJob( SRC_DIR "/inputs/insieme_datarange.c" ) );
-
-	const PragmaList& pl = tu.getPragmaList();
-
-	EXPECT_FALSE(pl.empty());
+	EXPECT_NE(prog.pragmas_begin(), prog.pragmas_end());
 /*
 	std::cout << "PragmaList " << std::endl;
 	for(auto I = pl.begin(); I != pl.end(); ++I)
 		std::cout << "P: " << (*I)->toStr(comp.getSourceManager()) << std::endl;
 */
-	ProgramPtr program;
 
-	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "/inputs/insieme_datarange.c" << "' to IR...";
+	LOG(INFO) << "Converting input program '" SRC_DIR "/inputs/insieme_datarange.c' to IR...";
 
-	program = prog.convert();
+	ProgramPtr program = ConversionJob(SRC_DIR "/inputs/insieme_datarange.c").execute(manager);
 	size_t cnt = 0, cntLoopAnnot = 0;
 
 

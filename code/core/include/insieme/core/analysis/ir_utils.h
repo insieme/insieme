@@ -40,6 +40,9 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_types.h"
 
+// FIXME: move this somewhere
+#include "insieme/core/lang/static_vars.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -308,6 +311,14 @@ VariableSet getAllVariables(const NodePtr& code);
 VariableSet getAllVariablesInScope(const NodePtr& code);
 
 /**
+ * Determines whether the given node is exhibiting free variables or not.
+ *
+ * @param code the code fragment to be analysed
+ * @return true if it is exhibiting free variables, false otherwise
+ */
+bool hasFreeVariables(const NodePtr& code);
+
+/**
  * Extracts the list of free variables from the given code fragment.
  *
  * @param code the code fragment to be analysed
@@ -405,6 +416,16 @@ bool isReadOnly(const StatementPtr& context, const VariablePtr& var);
  * @return true if the parameter is only read, false if it might be written
  */
 bool isReadOnly(const LambdaExprPtr& lambda, const VariablePtr& param);
+
+
+/**
+ * test if the expression is the usage of an static variable ( local visibility, global storage)
+ *
+ * @param var, the expression to test
+ * @return whenever is a static
+ */
+bool isStaticVar (const ExpressionPtr& var);
+
 
 } // end namespace utils
 } // end namespace core

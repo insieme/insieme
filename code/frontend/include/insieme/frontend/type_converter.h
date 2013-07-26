@@ -38,9 +38,7 @@
 
 #include "insieme/frontend/convert.h"
 
-#include "clang/AST/TypeVisitor.h"
-
-#include "insieme/frontend/utils/dep_graph.h"
+#include <clang/AST/TypeVisitor.h>
 
 namespace insieme {
 namespace frontend {
@@ -60,44 +58,43 @@ namespace conversion {
 #define EMPTY_TYPE_LIST	vector<core::TypePtr>()
 
 #define LOG_BUILTIN_TYPE_CONVERSION(parentType) \
-    VLOG(1) << "\n**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************\n"; \
+    VLOG(1) << "**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************"; \
     if( VLOG_IS_ON(2) ) { \
-        VLOG(2) << "Dump of clang type: \n" \
-                << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+        VLOG(2) << "Dump of clang type:"; \
         parentType->dump(); \
     } \
-    VLOG(1) << "\n****************************************************************************************\n";
+    VLOG(1) << "****************************************************************************************";
 
 #define LOG_TYPE_CONVERSION(parentType, retType) \
 	FinalActions attachLog( [&] () { \
-        VLOG(1) << "\n**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************\n"; \
+        VLOG(1) << "**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************"; \
         if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang type: \n" \
-                     << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+            VLOG(2) << "Dump of clang type:";\
             parentType->dump(); \
         } \
         if(retType) { \
             VLOG(1) << "Converted 'type' into IR type: "; \
             VLOG(1) << "\t" << *retType; \
         } \
-        VLOG(1) << "\n****************************************************************************************\n"; \
+        VLOG(1) << "****************************************************************************************"; \
     } )
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							Type converter: Common Interface
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-class ConversionFactory::TypeConverter {
+class Converter::TypeConverter {
+
+	typedef std::map<const clang::Type*, insieme::core::TypePtr> TypeCache;
+	TypeCache typeCache;
 
 protected:
-	ConversionFactory& 					convFact;
+	Converter& 							convFact;
 	core::NodeManager& 					mgr;
 	const core::IRBuilder& 				builder;
 	const core::lang::BasicGenerator& 	gen;
 
-	utils::DependencyGraph<const clang::TagDecl*> typeGraph;
-
 public:
-	TypeConverter(ConversionFactory& fact, Program& program);
+	TypeConverter(Converter& fact);
 
 	virtual ~TypeConverter() { }
 
@@ -117,8 +114,14 @@ public:
 	DECLARE_TYPE_VISIT(TypeConverter, ParenType)
 	DECLARE_TYPE_VISIT(TypeConverter, PointerType)
 
-	virtual core::TypePtr Visit(const clang::Type* type) = 0;
+	// main entry point
+	core::TypePtr convert(const clang::Type* type);
+
 protected:
+
+	virtual core::TypePtr convertInternal(const clang::Type* type) = 0;
+
+	virtual void postConvertionAction(const clang::Type* src, const core::TypePtr& res) { };
 
 	virtual core::TypePtr handleTagType(const clang::TagDecl* tagDecl,
 			const core::NamedCompositeType::Entries& structElements);
@@ -130,19 +133,15 @@ protected:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							Type converter: C types
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-class ConversionFactory::CTypeConverter:
-	public ConversionFactory::TypeConverter,
-	public clang::TypeVisitor<ConversionFactory::CTypeConverter, core::TypePtr>
+class Converter::CTypeConverter:
+	public Converter::TypeConverter,
+	public clang::TypeVisitor<Converter::CTypeConverter, core::TypePtr>
 {
 
-protected:
-	//ConversionFactory& convFact;
-	//utils::DependencyGraph<const clang::Type*> typeGraph;
-
 public:
-	CTypeConverter(ConversionFactory& fact, Program& program) :
-		TypeConverter(fact, program) {
-	}
+	CTypeConverter(Converter& fact)
+		: TypeConverter(fact) { }
+
 	virtual ~CTypeConverter() {}
 
 	CALL_BASE_TYPE_VISIT(TypeConverter, BuiltinType)
@@ -161,9 +160,10 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, PointerType)
 
-	core::TypePtr Visit(const clang::Type* type);
-
 protected:
+
+	// main entry point
+	virtual core::TypePtr convertInternal(const clang::Type* type);
 
 	virtual core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
@@ -175,20 +175,16 @@ protected:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							Type converter: C++ types
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-class ConversionFactory::CXXTypeConverter :
-	public ConversionFactory::TypeConverter,
-	public clang::TypeVisitor<ConversionFactory::CXXTypeConverter, core::TypePtr>{
-
-	ConversionFactory& convFact;
+class Converter::CXXTypeConverter :
+	public Converter::TypeConverter,
+	public clang::TypeVisitor<Converter::CXXTypeConverter, core::TypePtr>{
 
 protected:
 	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
 public:
-	CXXTypeConverter(ConversionFactory& fact, Program& program) :
-		TypeConverter(fact, program),
-		convFact(fact)
-	{}
+	CXXTypeConverter(Converter& fact)
+		: TypeConverter(fact) {}
 
 	virtual ~CXXTypeConverter() {};
 
@@ -220,9 +216,16 @@ public:
 	core::TypePtr VisitDependentTemplateSpecializationType(const clang::DependentTemplateSpecializationType* tempTy);
 	core::TypePtr VisitInjectedClassNameType(const clang::InjectedClassNameType* tempTy);
 	core::TypePtr VisitSubstTemplateTypeParmType(const clang::SubstTemplateTypeParmType* substTy);
+	core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParamTy);
 	core::TypePtr VisitDecltypeType(const clang::DecltypeType* declTy);
     core::TypePtr VisitAutoType(const clang::AutoType* autoTy);
-	core::TypePtr Visit(const clang::Type* type);
+
+protected:
+
+	// main entry point
+	virtual core::TypePtr convertInternal(const clang::Type* type);
+
+	virtual void postConvertionAction(const clang::Type* src, const core::TypePtr& res);
 };
 
 }

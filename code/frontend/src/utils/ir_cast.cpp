@@ -113,14 +113,12 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	// the case is invalid and we hare to replace it with a comparison with the NULL reference.
 	// therefore:
 	//		if( ref )  ->  if( ref != Null )
-	if ( gen.isBool(trgTy) && isRefArray(argTy)) 
-	{
+	if (gen.isBool(trgTy) && isRefArray(argTy)){
 		// convert NULL (of type AnyRef) to the same ref type as the LHS expression
 		return builder.callExpr(gen.getBoolLNot(), 
 								builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr )
 							);
 	}
-
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	// 							ref<vector<'a,#n>> -> Boolean
@@ -138,11 +136,8 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	//		if( ref )  ->  if( ref != Null )
 	//
 	if ( gen.isBool(trgTy) && gen.isAnyRef(argTy) ) {
-		return builder.callExpr(gen.getBoolLNot(), 
-				builder.callExpr(gen.getBool(), gen.getRefIsNull(),
-						CAST(expr, builder.refType(gen.getUnit())) 
-					)
-				);
+		return builder.callExpr(gen.getBoolLNot(), builder.callExpr(gen.getBool(), 
+								gen.getRefIsNull(), expr ));
 	}
 
 	
@@ -667,26 +662,6 @@ bool isVector(const core::TypePtr& type) {
 bool isRefVector(const core::TypePtr& type) {
 	return type->getNodeType() == core::NT_RefType && 
 		   type.as<core::RefTypePtr>()->getElementType()->getNodeType() == core::NT_VectorType;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// C++
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// unwraps cppRef/constCppRef
-core::ExpressionPtr unwrapCppRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr) {
-	
-	core::NodeManager& mgr = builder.getNodeManager();	
-	core::TypePtr irType = expr->getType();
-	if (core::analysis::isCppRef(irType)) {
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
-	}
-	else if (core::analysis::isConstCppRef(irType)) {
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
-	}
-
-	std::cout << "no changesss" << std::endl;
-	return expr;
 }
 
 } // end utils namespace

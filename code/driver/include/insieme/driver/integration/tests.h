@@ -45,6 +45,7 @@
 #include "insieme/utils/printable.h"
 
 #include "insieme/core/ir_program.h"
+#include "insieme/frontend/frontend.h"
 
 namespace insieme {
 namespace driver {
@@ -67,12 +68,12 @@ namespace integration {
 		/**
 		 * The input files of this test case.
 		 */
-		vector<string> files;
+		vector<frontend::path> files;
 
 		/**
 		 * Extra include directories to be considered.
 		 */
-		vector<string> includeDirs;
+		vector<frontend::path> includeDirs;
 
 		/**
 		 * A flag indicating whether OpenMP should be enabled within the frontend or not.
@@ -99,7 +100,7 @@ namespace integration {
 		/**
 		 * Creates a new test case based on the given arguments.
 		 */
-		IntegrationTestCase(const string& name, const vector<string>& files, const vector<string>& includeDirs, bool enableOpenMP, bool enableOpenCL, const map<string,string>& definitions, const vector<string>& arguments)
+		IntegrationTestCase(const string& name, const vector<frontend::path>& files, const vector<frontend::path>& includeDirs, bool enableOpenMP, bool enableOpenCL, const map<string,string>& definitions, const vector<string>& arguments)
 			: name(name), files(files), includeDirs(includeDirs), enableOpenMP(enableOpenMP), enableOpenCL(enableOpenCL), definitions(definitions), compilerArguments(arguments) {}
 
 		/**
@@ -112,14 +113,14 @@ namespace integration {
 		/**
 		 * Obtains the files this test case is consisting of.
 		 */
-		const vector<string>& getFiles() const {
+		const vector<frontend::path>& getFiles() const {
 			return files;
 		}
 
 		/**
 		 * Obtains the list of include directories.
 		 */
-		const vector<string>& getIncludeDirs() const {
+		const vector<frontend::path>& getIncludeDirs() const {
 			return includeDirs;
 		}
 
@@ -176,6 +177,11 @@ namespace integration {
 		 * Loads this test case.
 		 */
 		core::ProgramPtr load(core::NodeManager& manager) const;
+
+		/**
+		 * Loads the translation unit for this test case.
+		 */
+		frontend::tu::IRTranslationUnit loadTU(core::NodeManager& manager) const;
 
 	};
 

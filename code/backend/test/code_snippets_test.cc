@@ -349,5 +349,45 @@ TEST(Arrays, Allocation) {
 	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 }
 
+TEST(References, RefAny) {
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+
+	// create a code fragment allocating an array on the stack and using it
+	core::ProgramPtr program = builder.parseProgram(
+			R"(
+			int<4> main() {
+				ref<any> x;
+				ref<ref<any>> y = var(x);
+				ref<ref<any>> z = new(x);
+
+				lit("w":ref<ref<any>>);
+			}
+			)"
+	);
+
+	ASSERT_TRUE(program);
+
+	std::cout << "Program: " << std::endl; dump(program); std::cout << std::endl;
+
+	auto converted = sequential::SequentialBackend::getDefault()->convert(program);
+
+	std::cout << "Converted: \n" << *converted << std::endl;
+
+	string code = toString(*converted);
+	EXPECT_PRED2(containsSubString, code, "void* x;");
+	EXPECT_PRED2(containsSubString, code, "void* y = &x;");
+	EXPECT_PRED2(containsSubString, code, "void** z = _ref_new___insieme_type_2(&x);");
+	EXPECT_PRED2(containsSubString, code, "void* w;");
+	EXPECT_PRED2(containsSubString, code, "&w;");
+
+	// try compiling the code fragment
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
+
 } // namespace backend
 } // namespace insieme
+

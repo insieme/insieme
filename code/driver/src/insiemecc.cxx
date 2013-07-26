@@ -44,27 +44,30 @@
 
 #include <string>
 
-#include "insieme/utils/logging.h"
-#include "insieme/utils/compiler/compiler.h"
-#include "insieme/frontend/frontend.h"
-#include "insieme/backend/runtime/runtime_backend.h"
-#include "insieme/driver/cmd/options.h"
-
-#include "insieme/transform/connectors.h"
-#include "insieme/transform/filter/standard_filter.h"
-#include "insieme/transform/rulebased/transformations.h"
-
 #include <boost/algorithm/string.hpp>
 
+#include "insieme/utils/logging.h"
+#include "insieme/utils/compiler/compiler.h"
+
+#include "insieme/frontend/frontend.h"
+
+#include "insieme/backend/runtime/runtime_backend.h"
+
+#include "insieme/driver/cmd/options.h"
+#include "insieme/driver/object_file_utils.h"
+
+
 using namespace std;
+
+namespace fs = boost::filesystem;
 
 namespace fe = insieme::frontend;
 namespace co = insieme::core;
 namespace be = insieme::backend;
-namespace ut = insieme::utils;
+namespace dr = insieme::driver;
 namespace cp = insieme::utils::compiler;
-namespace tr = insieme::transform;
 namespace cmd = insieme::driver::cmd;
+
 
 
 int main(int argc, char** argv) {
@@ -81,42 +84,67 @@ int main(int argc, char** argv) {
 	// Step 1: parse input parameters
 	//		This part is application specific and need to be customized. Within this
 	//		example a few standard options are considered.
-	cmd::Options options = cmd::Options::parse(argc, argv);
+	bool compileOnly;
+	cmd::Options options = cmd::Options::parse(argc, argv)
+		// one extra parameter to limit the compiler to creating an .o file
+		("compile", 'c', compileOnly, "compilation only")
+	;
 
-	// disable cilk support for the insieme cc
+	//indicates that a shared object files should be created
+	bool createSharedObject = options.outFile.find(".so")!=std::string::npos;
+
+	// disable cilk support for insiemecc
 	options.job.setOption(fe::ConversionJob::Cilk, false);
 
 	if (!options.valid) return (options.help)?0:1;
 
 	// Step 2: filter input files
-	vector<string> inputs;
-	vector<string> libs;
-	for(auto cur : options.job.getFiles()) {
-		// filter out so-files
-		if (boost::ends_with(cur, "so")) {
-			libs.push_back(cur);
+	vector<fe::path> inputs;
+	vector<fe::path> libs;
+	vector<fe::path> extLibs;
+
+	for(const fe::path& cur : options.job.getFiles()) {
+		auto ext = fs::extension(cur);
+		if (ext == ".o" || ext == ".so") {
+			if (dr::isInsiemeLib(cur)) {
+				libs.push_back(cur);
+			} else {
+				extLibs.push_back(cur);
+			}
 		} else {
 			inputs.push_back(cur);
 		}
 	}
+
+//std::cout << "Libs:    " << libs << "\n";
+//std::cout << "Inputs:  " << inputs << "\n";
+//std::cout << "ExtLibs: " << extLibs << "\n";
+//std::cout << "OutFile: " << options.outFile << "\n";
+//std::cout << "Compile Only: " << compileOnly << "\n";
+//std::cout << "SharedObject: " << createSharedObject << "\n";
+//std::cout << "WorkingDir: " << boost::filesystem::current_path() << "\n";
+
+	// update input files
 	options.job.setFiles(inputs);
 
+    // Step 3: load input code
+	co::NodeManager mgr;
 
-	// Step 3: load input code
-	//		The frontend is converting input code into the internal representation (IR).
-	//		The memory management of IR nodes is realized using node manager instances.
-	//		The life cycle of IR nodes is bound to the manager the have been created by.
-	//      If the c flag is set only the compilation will be done and the output file
-	//      will be an object file.
-	co::NodeManager manager;
-    if(options.job.hasOption(fe::ConversionJob::CompilationOnly)) {
-        cout << "COMPILATION ONLY" << endl;
-        options.job.storeAST(manager, options.outFile);
-        return 0;
-    }
+	// load libraries
+	options.job.setLibs(::transform(libs, [&](const fe::path& cur) {
+		std::cout << "Loading " << cur << " ...\n";
+		return dr::loadLib(mgr, cur);
+	}));
 
-    auto program = options.job.execute(manager);
+	// if it is compile only or if it should become an object file => save it
+	if (compileOnly || createSharedObject) {
+		auto res = options.job.toTranslationUnit(mgr);
+		dr::saveLib(res, options.outFile);
+		return dr::isInsiemeLib(options.outFile) ? 0 : 1;
+	}
 
+	// convert src file to target code
+    auto program = options.job.execute(mgr);
 
 	// Step 3: produce output code
 	//		This part converts the processed code into C-99 target code using the
@@ -133,6 +161,7 @@ int main(int argc, char** argv) {
 	cout << "Building binaries ...\n";
 	cp::Compiler compiler = cp::Compiler::getDefaultCppCompiler();
 	compiler = cp::Compiler::getRuntimeCompiler(compiler);
+//	for(auto cur : extLibs) compiler.addFlag(cur.string());			// TODO: add extra setter for libraries, not just a flag
 	bool success = cp::compileToBinary(*targetCode, options.outFile, compiler);
 
 	// done

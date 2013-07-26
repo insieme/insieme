@@ -40,12 +40,10 @@
 #include "insieme/frontend/type_converter.h"
 
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/analysis/global_variables.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/error_report.h"
-#include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"

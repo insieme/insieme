@@ -46,7 +46,7 @@
 #define PARALLEL_ITERATIONS 100
 #define TEST_ITERATIONS 10000
 
-#define NUM_THREADS 12
+#define NUM_THREADS 8
 
 #define NUM_MULTI_WIS 10
 
@@ -223,5 +223,25 @@ TEST(circular_work_buffers, token_passing_multi_multi_rand) {
 			nwi += irt_cwb_size(&cwb[i]);
 		}
 		EXPECT_EQ(NUM_MULTI_WIS, nwi);
+	}
+}
+
+TEST(circular_work_buffers, token_passing_bench) {
+	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
+		irt_circular_work_buffer cwb;
+		irt_cwb_init(&cwb);
+		
+		#pragma omp parallel num_threads(NUM_THREADS)
+		{
+			irt_work_item wi;
+			wi.id.index = omp_get_thread_num();
+			wi.id.thread = 1;
+			wi.id.node = 0;
+			irt_work_item *wp = &wi;
+			for(int i=0; i<TEST_ITERATIONS/omp_get_num_threads(); ++i) {
+				irt_cwb_push_back(&cwb, wp);
+				wp = irt_cwb_pop_back(&cwb);
+			}
+		}
 	}
 }

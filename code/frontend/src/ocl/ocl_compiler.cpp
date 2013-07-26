@@ -1204,7 +1204,7 @@ core::ProgramPtr Compiler::lookForOclAnnotations() {
 
 
 void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-        frontend::conversion::ConversionFactory& convFact){
+        frontend::conversion::Converter& convFact){
     insieme::core::NodeAnnotationPtr annot;
 
     // check if there is a kernelFile annotation

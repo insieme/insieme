@@ -148,11 +148,11 @@ namespace encoder {
 	 * Defines a pair converter functor allowing to customize the encoding of the element type.
 	 *
 	 * @tparam K the key type of the map to be encoded
-		 * @tparam V the value type of the map to be encoded
-		 * @tparam CK the converter used for encoding the key type
-		 * @tparam CV the converter used for encoding the value type
-		 */
-		template<typename K, typename V, typename CK = Converter<K>, typename CV = Converter<V>>
+	 * @tparam V the value type of the map to be encoded
+	 * @tparam CK the converter used for encoding the key type
+	 * @tparam CV the converter used for encoding the value type
+	 */
+	template<typename K, typename V, typename CK = Converter<K>, typename CV = Converter<V>>
 	struct MapConverter : public Converter<map<K,V>, detail::create_map_type<K,V,CK,CV>, detail::encode_map<K,V,CK,CV>, detail::decode_map<K,V,CK,CV>, detail::is_map<K,V,CK,CV>> {};
 
 	/**
@@ -182,8 +182,6 @@ namespace encoder {
 	 */
 	template<typename K, typename V>
 	struct is_encoding_of<map<K,V>> : public detail::is_map<K,V> { };
-
-
 
 
 } // end namespace encoder

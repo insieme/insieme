@@ -100,6 +100,9 @@ namespace backend {
 		// create a context
 		ConversionContext context(*this);
 
+		// register global names
+		getNameManager().registerGlobalNames(processed);
+
 		// convert IR node target code
 		auto code = getStmtConverter().convert(context, processed);
 

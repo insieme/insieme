@@ -48,7 +48,7 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-class ConversionFactory;
+class Converter;
 
 } // end convert namespace
 
@@ -142,7 +142,7 @@ private:
 };
 
 void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-        frontend::conversion::ConversionFactory& convFact);
+        frontend::conversion::Converter& convFact);
 
 
 
@@ -161,7 +161,7 @@ private:
 };
 
 void attatchLoopAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-        frontend::conversion::ConversionFactory& convFact);
+        frontend::conversion::Converter& convFact);
 
 
 
@@ -194,7 +194,7 @@ void attach(const clang::SourceLocation& startLoc,
 			const TransformationType& trans, 
 		    const ValueVect& values,
 			const core::NodePtr& node, 
-			conversion::ConversionFactory& fact);
+			conversion::Converter& fact);
 
 template <TransformationType TransTy>
 struct InsiemeTransform : public pragma::Pragma, public pragma::AutomaticAttachable {
@@ -214,7 +214,7 @@ struct InsiemeTransform : public pragma::Pragma, public pragma::AutomaticAttacha
 		});	
 	}
 	
-	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::ConversionFactory& fact) const {
+	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::Converter& fact) const {
 		attach(getStartLocation(), getEndLocation(), TransTy, values, node, fact);
 		return node;
 	};
@@ -236,7 +236,7 @@ void attach(const clang::SourceLocation& startLoc,
 			unsigned id,
 		    const StrValueVect& values,
 			const core::NodePtr& node, 
-			conversion::ConversionFactory& fact);
+			conversion::Converter& fact);
 
 struct InsiemeInfo : public pragma::Pragma, public pragma::AutomaticAttachable {
 	
@@ -261,7 +261,7 @@ struct InsiemeInfo : public pragma::Pragma, public pragma::AutomaticAttachable {
 		}
 	}
 	
-	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::ConversionFactory& fact) const {
+	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::Converter& fact) const {
 		attach(getStartLocation(), getEndLocation(), id, values, node, fact);
 		return node;
 	};

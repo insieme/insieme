@@ -62,16 +62,12 @@ TEST(Cilk, Pragmas) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	ConversionJob job;
-	job.setOption(ConversionJob::Cilk);
-	insieme::frontend::Program prog(manager, job);
+	ConversionSetup setup;
+	setup.setOption(ConversionSetup::Cilk);
+	insieme::frontend::Program prog(manager, SRC_DIR "/inputs/hello.cilk", setup);
 
-	ConversionJob file = job;
-	file.setFile(SRC_DIR "/inputs/hello.cilk");
-	TranslationUnit& tu = prog.addTranslationUnit( file );
-
-	const auto& pl = (*prog.getTranslationUnits().begin())->getPragmaList();
-	const ClangCompiler& comp = tu.getCompiler();
+	const auto& pl = prog.getPragmaList();
+	const ClangCompiler& comp = prog.getCompiler();
 
 
 	// check number of annotations
@@ -155,9 +151,8 @@ TEST(Cilk, Sema) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	ConversionJob job;
+	ConversionJob job(SRC_DIR "/inputs/hello.cilk");
 	job.setOption(ConversionJob::Cilk);
-	job.setFile(SRC_DIR "/inputs/hello.cilk");
 
 
 	// check proper encoding of cilk primitives
@@ -166,16 +161,16 @@ TEST(Cilk, Sema) {
 
 	auto str = toString(printer::PrettyPrinter(code));
 
-	EXPECT_PRED2(containsSubString, str, "v3 := v1(v2-1);");
-	EXPECT_PRED2(containsSubString, str, "v3 := v1(v2-2);");
-	EXPECT_PRED2(containsSubString, str, "v1(v2-3);");
+	EXPECT_PRED2(containsSubString, str, "v5 := v0(v4-1);");
+	EXPECT_PRED2(containsSubString, str, "v8 := v0(v7-2);");
+	EXPECT_PRED2(containsSubString, str, "v0(v10-3);");
 
 	EXPECT_PRED2(containsSubString, str, "decl ref<int<4>> v2 =  var(undefined(type<int<4>>));");
 
-	EXPECT_PRED2(containsSubString, str, "default: bind(){fun000(v0, v1, v2)}");
-	EXPECT_PRED2(containsSubString, str, "default: bind(){fun001(v0, v1, v3)}");
-	EXPECT_PRED2(containsSubString, str, "default: bind(){fun002(v0, v1)}");
+	EXPECT_PRED2(containsSubString, str, "default: bind(){fun000(v1, v2)}");
+	EXPECT_PRED2(containsSubString, str, "default: bind(){fun001(v1, v6)}");
+	EXPECT_PRED2(containsSubString, str, "default: bind(){fun002(v1)}");
 
 	EXPECT_PRED2(containsSubString, str, "mergeAll()");
-	EXPECT_PRED2(containsSubString, str, "return v2+v3");
+	EXPECT_PRED2(containsSubString, str, "return v2+v6");
 }

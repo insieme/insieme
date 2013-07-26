@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -53,6 +53,7 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/utils/logging.h"
 
@@ -60,6 +61,8 @@
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
+
+#include "test_utils.inc"
 
 // clang [3.0]
 //#include "clang/Index/Indexer.h"
@@ -98,28 +101,27 @@ std::string getPrettyPrinted(const NodePtr& node) {
 	return std::string(res.begin(), res.end());
 }
 
+
 TEST(StmtConversion, FileTest) {
 
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/stmt.c") );
-	
-	prog.analyzeFuncDependencies();
+	fe::Program prog(manager, SRC_DIR "/inputs/stmt.c");
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
-	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
-		// we use an internal manager to have private counter for variables so we can write independent tests
-		NodeManager mgr;
+	NodeManager mgr;
+	fe::conversion::Converter convFactory( mgr, prog );
+	convFactory.convert();
 
-		fe::conversion::ConversionFactory convFactory( mgr, prog );
-		convFactory.setTranslationUnit(&tu);
+	auto resolve = [&](const NodePtr& cur) { return convFactory.getIRTranslationUnit().resolve(cur); };
+
+	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
+		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 
 		if(tp.isStatement()) {
-			StatementPtr&& stmt = convFactory.convertStmt( tp.getStatement() );
+			StatementPtr stmt = fe::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
 			EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(stmt) + '\"' );
 
 			// do semantics checking
@@ -127,15 +129,15 @@ TEST(StmtConversion, FileTest) {
 
 		} else {
 			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>(tp.getDecl())) {
-				TypePtr&& type = convFactory.convertType( td->getTypeForDecl() );
+				TypePtr type = resolve(convFactory.convertType( td->getTypeForDecl() )).as<TypePtr>();
 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(type) + '\"' );
 				// do semantics checking
 				checkSemanticErrors(type);
 			}else if(const clang::FunctionDecl* fd = dyn_cast<const clang::FunctionDecl>(tp.getDecl())) {
-				LambdaExprPtr&& expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(convFactory.convertFunctionDecl(fd));
+				LambdaExprPtr expr = insieme::core::dynamic_pointer_cast<const insieme::core::LambdaExpr>(resolve(convFactory.convertFunctionDecl(fd)).as<LambdaExprPtr>());
 				assert(expr);
 				EXPECT_EQ(tp.getExpected(), '\"' + getPrettyPrinted(analysis::normalize(expr)) + '\"' );
-				
+
 				// do semantics checking
 				checkSemanticErrors(expr);
 			}

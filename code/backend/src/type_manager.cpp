@@ -710,13 +710,17 @@ namespace backend {
 
 			// add member functions
 			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
+				// fix name of all member functions before converting them
+				auto impl = cur.getImplementation();
+				if (!core::analysis::isPureVirtual(impl)) {
+					nameMgr.setName(impl, cur.getName());
+				}
+			}
+			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
 
 				// process function using function manager
 				auto impl = cur.getImplementation();
 				if (!core::analysis::isPureVirtual(impl)) {
-
-					// fix name
-					nameMgr.setName(impl, cur.getName());
 
 					// generate code for member function
 					funMgr.getInfo(cur.getImplementation().as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
@@ -951,10 +955,12 @@ namespace backend {
 		const RefTypeInfo* TypeInfoStore::resolveRefType(const core::RefTypePtr& ptr) {
 
 			auto manager = converter.getCNodeManager();
+			auto& basic = converter.getNodeManager().getLangBasic();
 
 			// obtain information covering sub-type
-			auto elementNodeType = ptr->getElementType()->getNodeType();
-			const TypeInfo* subType = resolveType(ptr->getElementType());
+			auto elementType = ptr->getElementType();
+			auto elementNodeType = elementType->getNodeType();
+			const TypeInfo* subType = resolveType(elementType);
 
 			// check whether this ref type has been resolved while resolving the sub-type (due to recursion)
 			auto pos = typeInfos.find(ptr);
@@ -970,7 +976,11 @@ namespace backend {
 			// generally, a level of indirection needs to be added
 			res->lValueType = c_ast::ptr(subType->lValueType);
 			res->rValueType = c_ast::ptr(subType->rValueType);
-			if (elementNodeType == core::NT_ArrayType) {
+			if (basic.isAny(elementType)) {
+				// nothing to fix
+			} else if (basic.isAnyRef(elementType)) {
+				res->lValueType = subType->lValueType;
+			} else if (elementNodeType == core::NT_ArrayType) {
 				// if target is an array, indirection can be skipped (array is always implicitly a reference)
 				res->lValueType = subType->rValueType;
 				res->rValueType = subType->lValueType;
@@ -1366,6 +1376,8 @@ namespace backend {
 
 			// create new type information
 			TypeInfo* res = type_info_utils::createInfo(cType);
+			res->declaration = elementInfo->declaration;
+			res->definition = elementInfo->definition;
 
 			// register it (for destruction)
 			allInfos.insert(res);

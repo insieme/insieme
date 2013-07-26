@@ -40,6 +40,7 @@
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/frontend/utils/ir_utils.h"
 #include "insieme/frontend/utils/debug.h"
 
 #include "insieme/frontend/pragma/insieme.h"
@@ -74,22 +75,28 @@ namespace conversion {
 //							DECLARATION STATEMENT
 // 			In clang a declstmt is represented as a list of VarDecl
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
 	return StmtConverter::VisitDeclStmt(declStmt);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							RETURN STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
 
 	vector<core::StatementPtr> stmtList;
 	stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
 
-	if (llvm::isa<clang::IntegerLiteral>(retStmt->getRetValue()) ||
-		llvm::isa<clang::BinaryOperator>(retStmt->getRetValue()) || 
-		llvm::isa<clang::CXXMemberCallExpr>(retStmt->getRetValue()))
+	if(!retStmt->getRetValue() ) {
+		//if there is no return value its an empty return "return;"
 		return stmt;
+	}
+
+	if(llvm::isa<clang::IntegerLiteral>(retStmt->getRetValue()) ||
+		llvm::isa<clang::BinaryOperator>(retStmt->getRetValue()) || 
+		llvm::isa<clang::CXXMemberCallExpr>(retStmt->getRetValue())) {
+		return stmt;
+	}
 
 	core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
 
@@ -103,7 +110,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 	// if there is no copy constructor on return... it seems that this is the case in which a
 	// ref is returned
 	// if is a ref: no cast, if is a const ref, there is a Nop cast to qualify
-	core::TypePtr funcRetTy = convFact.convertType(retStmt->getRetValue()->getType().getTypePtr());
+//	core::TypePtr funcRetTy = convFact.convertType(retStmt->getRetValue()->getType().getTypePtr());
 
 	// we only operate this on classes
 	clang::CastExpr* cast;
@@ -186,7 +193,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							COMPOUND STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
 
 	return StmtConverter::VisitCompoundStmt(compStmt);
 
@@ -195,7 +202,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(cl
 	core::StatementPtr retIr;
 	LOG_STMT_CONVERSION(retIr);
 
-	CXXConversionFactory::CXXConversionContext::ScopeObjects parentScopeObjects = cxxConvFact.cxxCtx.scopeObjects;
+	CXXConverter::CXXConversionContext::ScopeObjects parentScopeObjects = cxxConvFact.cxxCtx.scopeObjects;
 	while (!cxxConvFact.cxxCtx.scopeObjects.empty()) {
 		cxxConvFact.cxxCtx.scopeObjects.pop();
 	}
@@ -243,13 +250,13 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(cl
 }
 
 
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
 	assert(false && "Catch -- Taken care of inside of TryStmt!");
 	//return stmtutils::tryAggregateStmts( builder, Visit(catchStmt->getHandlerBlock()) );
 	return stmtutils::StmtWrapper();
 }
 
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
 
 	//assert(false && "Try -- Currently not supported!");
 	core::CompoundStmtPtr body = builder.wrapBody( stmtutils::tryAggregateStmts( builder, Visit(tryStmt->getTryBlock()) ) );
@@ -266,10 +273,10 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clan
 			var = builder.variable(exceptionTy);
 
 			//we assume that exceptionVarDecl is not in the varDeclMap
-			assert(convFact.ctx.varDeclMap.find(exceptionVarDecl) == convFact.ctx.varDeclMap.end() 
+			assert(convFact.varDeclMap.find(exceptionVarDecl) == convFact.varDeclMap.end()
 					&& "excepionVarDecl already in vardeclmap");
 			//insert var to be used in conversion of handlerBlock
-			convFact.ctx.varDeclMap.insert( { exceptionVarDecl, var } );
+			convFact.varDeclMap.insert( { exceptionVarDecl, var } );
 			VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
 		}
 		else {
@@ -284,7 +291,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clan
 	return stmtutils::tryAggregateStmt(builder, builder.tryCatchStmt(body, catchClauses));
 }
 
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
 	assert(false && "ForRange -- Currently not supported!");
 	return stmtutils::StmtWrapper();
 }
@@ -293,7 +300,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt
 // Overwrite the basic visit method for expression in order to automatically
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::Visit(clang::Stmt* stmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	VLOG(2) << "CXX";
 	stmtutils::StmtWrapper&& retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -70,8 +70,8 @@ FLAG("cleanup,C",			"cleanup", 				Cleanup, 		false,	"applies some cleanup opera
 OPTION("backend,b",			"backend",				Backend,		std::string,		"Backend Selection: sequential | runtime | ocl | pthread")
 
 OPTION("log-level,L",		"log-level",			LogLevel,		std::string,				"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
-OPTION("input-file", 		"input-file", 			InputFiles, 	std::vector<std::string>, 	"input file(s)")
-OPTION("include-path,I", 	"include-path", 		IncludePaths, 	std::vector<std::string>, 	"Add directory to include search path")
+OPTION("input-file", 		"input-file", 			InputFiles, 	std::vector<path>, 			"input file(s)")
+OPTION("include-path,I", 	"include-path", 		IncludePaths, 	std::vector<path>, 			"Add directory to include search path")
 OPTION("std,std", 			"std-compatibility",	STD, 			std::string, 				"Set compatibility mode")
 OPTION("definitions,D",	 	"definitions", 			Defs, 			std::vector<std::string>, 	"Add a preprocessor definition")
 OPTION("show-ir", 			"show-ir", 				ShowIR, 		std::string, 				"Print a dot representation of the IR")

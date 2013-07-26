@@ -48,12 +48,6 @@ class Stmt;
 }
 
 namespace insieme {
-namespace frontend {
-namespace conversion {
-class ConversionFactory;
-}
-}
-
 namespace annotations {
 namespace ocl {
 

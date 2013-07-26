@@ -759,7 +759,7 @@ namespace core {
 		 * @return a pointer to the associated lambda binding or null if there is no such binding
 		 */
 		Ptr<const LambdaBinding> getBindingOf(const VariablePtr& variable) const {
-			auto definitions = getDefinitions();
+			const auto& definitions = getDefinitions();
 			auto it = std::find_if(definitions.begin(), definitions.end(),
 					[&](const LambdaBindingPtr& cur) { return *cur->getVariable() == *variable; }
 			);

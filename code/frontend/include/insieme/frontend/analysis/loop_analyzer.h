@@ -53,7 +53,7 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-class ConversionFactory;
+class Converter;
 
 } // End conversion namespace
 } // End frontend namespace
@@ -82,7 +82,7 @@ public:
 	InductionVariableNotReadOnly(): LoopNormalizationError("it seems that the induction variable is written inside of the loop") { }
 };
 
-using insieme::frontend::conversion::ConversionFactory;
+using insieme::frontend::conversion::Converter;
 
 /**
  * Implements the checks to determine loop properties, such as induction variable, increment step and condition
@@ -99,7 +99,7 @@ class LoopAnalyzer {
 		LoopHelper(): inductionVar(NULL), invert(false) {	}
 	};
 
-	const ConversionFactory& 	convFact;
+	const Converter& 	convFact;
 	LoopHelper 					loopHelper;
 
 	void findInductionVariable(const clang::ForStmt* forStmt);
@@ -108,7 +108,7 @@ class LoopAnalyzer {
 public:
 	typedef std::set<const clang::VarDecl*> VarDeclSet;
 
-	LoopAnalyzer(const clang::ForStmt* forStmt, const ConversionFactory& convFact);
+	LoopAnalyzer(const clang::ForStmt* forStmt, const Converter& convFact);
 
 	/**
 	 * Analyze the for statement init/cond/incr expression to deduct the induction variable
