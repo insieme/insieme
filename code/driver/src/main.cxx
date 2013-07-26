@@ -272,6 +272,16 @@ namespace {
 	//		LOG(INFO) << "\t Source-Node-Type: " << address->getNodeType();
 			LOG(INFO) << "\t Source: " << PrettyPrinter(address, PrettyPrinter::OPTIONS_SINGLE_LINE);
 			LOG(INFO) << "\t Context: " << ss.str() << std::endl;
+
+//			// find enclosing function
+//			auto fun = address;
+//			while(!fun.isRoot() && fun->getNodeType() != core::NT_LambdaExpr) {
+//				fun = fun.getParentAddress();
+//			}
+//			if (fun->getNodeType() == core::NT_LambdaExpr) {
+//				LOG(INFO) << "\t Context:\n" << PrettyPrinter(fun) << std::endl;
+//			}
+
 	//		LOG(INFO) << "\t All: " << PrettyPrinter(address.getRootNode());
 		});
 

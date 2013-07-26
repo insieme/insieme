@@ -178,6 +178,11 @@ namespace integration {
 		 */
 		core::ProgramPtr load(core::NodeManager& manager) const;
 
+		/**
+		 * Loads the translation unit for this test case.
+		 */
+		frontend::tu::IRTranslationUnit loadTU(core::NodeManager& manager) const;
+
 	};
 
 	// an optional type wrapping a test case

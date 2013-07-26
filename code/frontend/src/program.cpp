@@ -104,9 +104,9 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 	}
 
 	Parser::DeclGroupPtrTy ADecl;
-	while(!P.ParseTopLevelDecl(ADecl))
+	while(!P.ParseTopLevelDecl(ADecl)) {
 		if(ADecl) Consumer->HandleTopLevelDecl(ADecl.getAsVal<DeclGroupRef>());
-
+	}
 	Consumer->HandleTranslationUnit(comp.getASTContext());
 	ParserProxy::discard();  // FIXME
 
@@ -160,6 +160,11 @@ public:
 	//									dynamic_cast<insieme::frontend::TranslationUnit*>(this));
 
 		parseClangAST(mClang, &emptyCons, true, mPragmaList, mSema, false);
+		
+		if(mClang.getDiagnostics().hasErrorOccurred()) {
+			// errors are always fatal
+			throw ClangParsingError(mFileName);
+		}
 	}
 
 	// getters
