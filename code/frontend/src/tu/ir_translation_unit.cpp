@@ -44,6 +44,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_class_info.h"
+#include "insieme/core/lang/ir++_extension.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -318,7 +319,6 @@ namespace tu {
 						std::cout << res->getNodeType();
 						assert(false && "Unsupported recursive structure encountered!");
 					}
-
 				}
 
 				// special service: get rid of unnecessary casts (which might be introduced due to opaque generic types)
@@ -326,6 +326,21 @@ namespace tu {
 					// check whether cast can be skipped
 					if (types::isSubTypeOf(cast->getSubExpression()->getType(), cast->getType())) {
 						res = cast->getSubExpression();
+					}
+				}
+
+				// if this is a call to ref member access we rebuild the whole expression
+				if (core::analysis::isCallOf(res, mgr.getLangBasic().getCompositeRefElem())){
+					auto call = res.as<CallExprPtr>();
+					if (call[0]->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>()){
+						auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
+							// type changed... do we have any cppRef to unwrap?
+						if (*(tmp->getType()) != *(call->getType())  && 
+							(analysis::isCppRef(tmp->getType().as<RefTypePtr>()->getElementType()) || 
+							 analysis::isConstCppRef(tmp->getType().as<RefTypePtr>()->getElementType())))
+							res = builder.toIRRef(builder.deref(tmp));
+						else
+							res = tmp;
 					}
 				}
 
