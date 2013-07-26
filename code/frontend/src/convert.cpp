@@ -525,9 +525,9 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		VLOG(2)	<< varDecl->getQualifiedNameAsString() << " with global storage";
 		// we could look for it in the cache, but is fast to create a new one, and we can not get
 		// rid if the qualified name function
-		std::string name = varDecl->getQualifiedNameAsString();
-        if(varDecl->isStaticLocal()) {
-			VLOG(2)	<< varDecl->getQualifiedNameAsString() << " isStaticLocal";
+		std::string name = utils::buildNameForVariable(varDecl);
+ 		if(varDecl->isStaticLocal()) {
+			VLOG(2)	<< "         isStaticLocal";
             if(staticVarDeclMap.find(varDecl) != staticVarDeclMap.end()) {
                 name = staticVarDeclMap.find(varDecl)->second;
             } else {
@@ -1197,17 +1197,15 @@ namespace {
 				core::CallExprAddress addr(init.as<core::CallExprPtr>());
 				init = core::transform::replaceNode(mgr, addr->getArgument(0), genThis).as<core::ExpressionPtr>();
 				expr = converter.convertExpr((*it)->getInit());
-
-	// parameter is some kind of cpp ref, but we want to use the value, unwrap it
-	if (!IS_CPP_REF_TYPE(init.getType().as<core::RefTypePtr>()->getElementType()) &&
-		IS_CPP_REF_EXPR(expr)){
-		expr = builder.deref( utils::unwrapCppRef(builder,expr));
-	}
-	else{
-		if (*converter.lookupTypeDetails(init->getType().as<core::RefTypePtr>()->getElementType()) != *converter.lookupTypeDetails(expr->getType()))
-			expr = builder.tryDeref(expr);
-	}
-
+				// parameter is some kind of cpp ref, but we want to use the value, unwrap it
+				if (!IS_CPP_REF_TYPE(init.getType().as<core::RefTypePtr>()->getElementType()) &&
+					IS_CPP_REF_EXPR(expr)){
+					expr = builder.deref( utils::unwrapCppRef(builder,expr));
+				}
+				else{
+					if (*converter.lookupTypeDetails(init->getType().as<core::RefTypePtr>()->getElementType()) != *converter.lookupTypeDetails(expr->getType()))
+						expr = builder.tryDeref(expr);
+				}
 				initList.push_back(builder.assign( init, expr));
 			}
 			if ((*it)->isIndirectMemberInitializer ()){

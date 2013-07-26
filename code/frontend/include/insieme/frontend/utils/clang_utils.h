@@ -89,6 +89,10 @@ std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* t
  */
 std::string buildNameForFunction (const clang::FunctionDecl* funcDecl);
 
+/**
+ * same story to build a suitable name for variables (spetial treatement )
+ */
+std::string buildNameForVariable (const clang::VarDecl* varDecl);
 } // End utils namespace
 } // End frontend namespace
 } // End insieme namespace
