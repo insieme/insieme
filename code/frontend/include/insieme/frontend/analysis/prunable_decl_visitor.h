@@ -124,6 +124,8 @@ class PrunableDeclVisitor{
 					static_cast<BASE*>(this)->VisitVarDecl(llvm::cast<clang::VarDecl>(decl));
 					break;
 				}
+			case clang::Decl::CXXDestructor:
+			case clang::Decl::CXXConstructor:
 			case clang::Decl::CXXMethod:
 				{
 				if (llvm::cast<clang::DeclContext>(decl)->isDependentContext()) break;
@@ -141,6 +143,7 @@ class PrunableDeclVisitor{
 					break;
 				}
 			default:
+				//std::cout << "disp: " << decl->getDeclKindName() << std::endl;
 				return;
 		}
 	}
