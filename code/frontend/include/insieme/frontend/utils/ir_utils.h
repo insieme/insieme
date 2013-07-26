@@ -73,8 +73,6 @@ namespace utils {
 	 */
 	core::ExpressionPtr unwrapCppRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr);
 
-	core::ExpressionPtr createSafeAssigment(core::ExpressionPtr& left, core::ExpressionPtr& right);
-
 } // end utils namespace 
 } // end frontend namespace
 } // end insisme namespace

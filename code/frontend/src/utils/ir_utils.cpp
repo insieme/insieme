@@ -77,23 +77,6 @@ core::ExpressionPtr unwrapCppRef(const core::IRBuilder& builder, const core::Exp
 	return expr;
 }
 
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-core::ExpressionPtr createSafeAssigment(core::ExpressionPtr& left, core::ExpressionPtr& right){	
-	core::IRBuilder builder( left->getNodeManager() );
-	assert(left.getType().isa<core::RefTypePtr>() && "we can not assign to a non ref type");
-	// parameter is some kind of cpp ref, but we want to use the value, unwrap it
-	if (!IS_CPP_REF_TYPE(left.getType().as<core::RefTypePtr>()->getElementType()) &&
-		IS_CPP_REF_EXPR(right)){
-		right = builder.deref( utils::unwrapCppRef(builder,right));
-	}
-	else{
-		right = builder.tryDeref(right);
-	}
-
-	return builder.assign( left, right);
-}
 } // end utils namespace
 } // end frontend namespace 
 } // end insieme namespace 

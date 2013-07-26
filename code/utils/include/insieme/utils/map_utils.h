@@ -284,6 +284,8 @@ struct hash<boost::unordered_map<K,T,H,KE,A>> {
 	}
 };
 
+} // end namespace std
+
 /**
  * Allows to print unordered maps including printable elements.
  *
@@ -332,5 +334,4 @@ std::ostream& operator<<(std::ostream& out, const std::map<Key, Mapped, Compare,
 	}) << "}";
 }
 
-}
 

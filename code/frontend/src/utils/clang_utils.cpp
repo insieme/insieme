@@ -60,7 +60,7 @@ using namespace llvm;
 { \
 		boost::replace_all(str, "<", "_"); \
 		boost::replace_all(str, ">", "_"); \
-		boost::replace_all(str, ":", "_"); \
+		boost::replace_all(str, "::", "_"); \
 }
 	
 
@@ -104,6 +104,14 @@ std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 		name.append("_c");
 	
 	REMOVE_SYMBOLS(name);
+	return name;
+}
+
+std::string buildNameForVariable (const clang::VarDecl* varDecl){
+	std::string name = varDecl->getQualifiedNameAsString();
+	if (varDecl->isStaticLocal()) REMOVE_SYMBOLS(name);
+	if (varDecl->isStaticDataMember()) REMOVE_SYMBOLS(name);
+
 	return name;
 }
 

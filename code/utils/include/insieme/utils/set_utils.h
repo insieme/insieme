@@ -124,6 +124,19 @@ inline bool contains(const Set& set, const Element& element) {
 }
 
 /**
+ * A template providing a simple utility to determine whether a set A is a subset of set B.
+ */
+template<typename SetA, typename SetB>
+inline bool isSubset(const SetA& setA, const SetB& setB) {
+	if (setA.size() > setB.size()) return false;
+	if (&setA == &setB) return true;
+	for (const auto& cur : setA) {
+		if (!contains(setB, cur)) return false;
+	}
+	return true;
+}
+
+/**
  * Computes the set-union (merge) of the given sets.
  *
  * NOTE: this function should not be used to add elements to an existing set.

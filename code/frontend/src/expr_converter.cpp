@@ -302,11 +302,10 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& conver
 	}
 
 	// There are 2 basic cases which need to be handled: Struct/Unions and Recursive Types
-	assert((structTy->getNodeType() == core::NT_StructType ||
+	assert_true((structTy->getNodeType() == core::NT_StructType ||
 			structTy->getNodeType() == core::NT_UnionType ||
-			structTy->getNodeType() == core::NT_RecType) &&
-			"Using a member access operation on a non struct/union type"
-	);
+			structTy->getNodeType() == core::NT_RecType))
+			<< "Using a member access operation on a non struct/union type: " << structTy << " of type " << structTy->getNodeType();
 
 	// if the inner type is a RecType then we need to unroll it to get the contained composite type
 	if ( structTy->getNodeType() == core::NT_RecType ) {
@@ -316,7 +315,6 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& conver
 
 	//identifier of the member
 	core::StringValuePtr ident;
-	core::NamedCompositeTypePtr compType = core::static_pointer_cast<const core::NamedCompositeType>(structTy);
 
 	if (!membExpr->getMemberDecl()->getIdentifier()) {
 
