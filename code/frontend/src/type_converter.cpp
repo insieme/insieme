@@ -38,6 +38,7 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/debug.h"
+#include "insieme/frontend/utils/clang_utils.h"
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/container_utils.h"
@@ -56,6 +57,7 @@
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
 #include <clang/AST/DeclTemplate.h>
+
 
 using namespace clang;
 using namespace insieme;
@@ -527,7 +529,7 @@ core::TypePtr Converter::TypeConverter::convert(const clang::Type* type) {
 	if (auto recDecl = toRecordDecl(type)) {
 
 		// create a (temporary) type variable for this type
-		core::GenericTypePtr symbol = builder.genericType(recDecl->getQualifiedNameAsString());
+		core::GenericTypePtr symbol = builder.genericType(utils::getNameForRecord(recDecl, type));
 
 		// bind recursive variable within the cache
 		cache[type] = symbol;
