@@ -84,11 +84,13 @@ class PrunableDeclVisitor{
 	void VisitVarDecl(const clang::VarDecl* var) {
 	}
 
+	void echocallback(const clang::Decl* decl){
+	}
 
 	/**
 	 */
 	void dispatchDecl(const clang::Decl* decl){
-		//std::cout << "disp: " << decl->getDeclKindName() << std::endl;
+		static_cast<BASE*>(this)->echocallback(decl);
 		switch (decl->getKind()){
 			case clang::Decl::Namespace:
 				{

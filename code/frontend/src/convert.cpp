@@ -110,6 +110,39 @@ annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const Sourc
 	return annotations::c::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
 };
 
+/// convert a initialization for a global
+core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Converter& converter, const clang::VarDecl* var, core::TypePtr elementType){
+
+	auto builder = converter.getIRBuilder();
+	// and get the initial value
+	core::ExpressionPtr initValue;
+	if (var->hasDefinition() && var->hasInit() && !var->isStaticLocal()) {
+		initValue = converter.convertInitExpr(var->getType().getTypePtr(), var->getInit(), elementType, true);
+	}
+	else if (clang::VarDecl* outDecl = const_cast<clang::VarDecl*>(var)->getOutOfLineDefinition ()){
+		// initialization be out of class or something else, beware of dependent types
+		if (!outDecl->getAnyInitializer()->getType().getTypePtr()->isDependentType() &&
+			!outDecl->getAnyInitializer()->isInstantiationDependent())
+			initValue = converter.convertInitExpr (var->getType().getTypePtr(), outDecl->getAnyInitializer(), elementType, false);
+	}
+
+	if (initValue){
+		// strip of potential ref.var call ...
+		if (core::analysis::isCallOf(initValue, builder.getNodeManager().getLangBasic().getRefVar())) {
+			initValue = initValue.as<core::CallExprPtr>()[0];
+		}
+
+		// de-ref init values (for constructor calls)
+		if (!core::types::isSubTypeOf(initValue->getType(), elementType)) {
+			initValue = builder.deref(initValue);
+		}
+
+		assert(core::types::isSubTypeOf(initValue->getType(), elementType));
+	}
+	return initValue;
+}
+
+
 } // End empty namespace
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
@@ -199,7 +232,6 @@ tu::IRTranslationUnit Converter::convert() {
 		GlobalVisitor(Converter& converter) : converter(converter) {}
 
 		void VisitVarDecl(const clang::VarDecl* var) {
-
 			// variables to be skipped
 			if (!var->hasGlobalStorage()) return;
 			if (var->hasExternalStorage()) return;
@@ -213,35 +245,16 @@ tu::IRTranslationUnit Converter::convert() {
 			auto elementType = type;
 			type = builder.refType(type);
 
-			auto literal = builder.literal(type, var->getQualifiedNameAsString());
+			auto literal = builder.literal(type, utils::buildNameForVariable(var));
 			if (insieme::utils::set::contains(converter.getThreadprivates(), var)) {
 				omp::addThreadPrivateAnnotation(literal);
 			}
-
-			// and get the initial value
-			core::ExpressionPtr initValue;
-			if (var->hasDefinition() && var->hasInit() && !var->isStaticLocal()) {
-				initValue = converter.convertInitExpr(var->getType().getTypePtr(), var->getInit(), elementType, true);
-
-				// strip of potential ref.var call ...
-				if (core::analysis::isCallOf(initValue, builder.getNodeManager().getLangBasic().getRefVar())) {
-					initValue = initValue.as<core::CallExprPtr>()[0];
-				}
-
-				// de-ref init values (for constructor calls)
-				if (!core::types::isSubTypeOf(initValue->getType(), elementType)) {
-					initValue = builder.deref(initValue);
-				}
-
-				assert(core::types::isSubTypeOf(initValue->getType(), elementType));
-			}
-
+			auto initValue = convertInitForGlobal(converter, var, elementType);
 			converter.getIRTranslationUnit().addGlobal(literal, initValue);
 		}
 	} varVisitor(*this);
 
 	varVisitor.traverseDeclCtx(declContext);
-
 
 	// collect all global declarations
 	struct FunctionVisitor : public analysis::PrunableDeclVisitor<FunctionVisitor> {
@@ -557,14 +570,14 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
 		}
 
-		// static members might not visited, maybe they belong to a templated class
-		if(varDecl->isStaticDataMember() ) {
-			VLOG(2)	<< varDecl->getQualifiedNameAsString() << " isStaticDataMember";
-			core::ExpressionPtr init = convertInitExpr   (varDecl->getType().getTypePtr(),
-														  varDecl->getAnyInitializer(),
-														  globVar->getType().as<core::RefTypePtr>().getElementType(), false);
-			getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), init);
-		}
+		// some member statics might be missing because of defined in a template which was ignored
+		// since this is the fist time we get access to the complete type, we can define the
+		// suitable initialization 
+//		if (varDecl->isStaticDataMember()){
+//			VLOG(2)	<< "         is member static";
+//			auto initValue = convertInitForGlobal(*this, varDecl, irType);
+//			getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), initValue);
+//		}
 
 		// OMP threadPrivate
  		if (insieme::utils::set::contains (thread_private, varDecl)){
