@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <functional>
 #include <unordered_set>
+#include <array>
 #include <vector>
 #include <list>
 #include <utility>
@@ -515,6 +516,19 @@ vector<typename PairContainer::value_type::second_type> projectToSecond(const Pa
 namespace std {
 
 /**
+ * Allows to print arrays including printable elements.
+ *
+ * @param out the stream to which the given vector should be printed to
+ * @param container the array to be printed
+ * @return the handed in ostream to chain operation invocations.
+ */
+template<typename Element, std::size_t size>
+std::ostream& operator<<(std::ostream& out, const std::array<Element,size>& container) {
+	// print the joined elements
+	return out << "[" << join(",", container) << "]";
+}
+
+/**
  * Allows to print vectors including printable elements.
  *
  * @param out the stream to which the given vector should be printed to
@@ -559,8 +573,7 @@ std::ostream& operator<<(std::ostream& out, const std::list<Element>& container)
  */
 template<typename First, typename Second>
 std::ostream& operator<<(std::ostream& out, const std::pair<First,Second>& pair) {
-	out << "(" << pair.first << "," << pair.second << ")";
-	return out;
+	return out << "(" << pair.first << "," << pair.second << ")";
 }
 
 /**
@@ -589,7 +602,7 @@ ostream& operator<<(ostream& out, const std::tuple<Args...>& t) {
 } // end std namespace 
 
 
-}
+} // end namespace std
 
 
 // Method to remove the head element from a std::tuple
