@@ -526,11 +526,12 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 	// (two qualified names can not coexist within the same TU)
 	const clang::VarDecl* varDecl = cast<clang::VarDecl>(valDecl);
 	if (varDecl && varDecl->hasGlobalStorage()) {
-		VLOG(2)	<< "with global storage";
+		VLOG(2)	<< varDecl->getQualifiedNameAsString() << " with global storage";
 		// we could look for it in the cache, but is fast to create a new one, and we can not get
 		// rid if the qualified name function
 		std::string name = varDecl->getQualifiedNameAsString();
         if(varDecl->isStaticLocal()) {
+			VLOG(2)	<< varDecl->getQualifiedNameAsString() << " isStaticLocal";
             if(staticVarDeclMap.find(varDecl) != staticVarDeclMap.end()) {
                 name = staticVarDeclMap.find(varDecl)->second;
             } else {
@@ -555,10 +556,20 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(irType.as<core::RefTypePtr>().getElementType()));
 		}
 
+		if(varDecl->isStaticDataMember() ) {
+			VLOG(2)	<< varDecl->getQualifiedNameAsString() << " isStaticDataMember";
+		}
+
 		core::ExpressionPtr globVar =  builder.literal(name, irType);
 		if (varDecl->isStaticLocal()){
 			globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
 		}
+
+		if(varDecl->hasExternalStorage() ) {
+			annotations::c::markExtern(globVar.as<core::LiteralPtr>());
+		}
+
+		
 
 		// OMP threadPrivate
  		if (insieme::utils::set::contains (thread_private, varDecl)){
