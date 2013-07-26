@@ -44,6 +44,7 @@
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
+#include "insieme/utils/string_utils.h"
 
 using std::pair;
 using std::string;
@@ -260,5 +261,27 @@ TEST(Tuple, RemoveHead) {
 
 	EXPECT_EQ(2u, std::tuple_size<decltype(tt)>::value);
 	EXPECT_EQ(tt, std::make_tuple(2,false));
+
+}
+
+TEST(Printer, Array) {
+
+	std::array<int, 3> a;
+	a[0] = 1;
+	a[1] = 2;
+	a[2] = 3;
+
+	EXPECT_EQ("[1,2,3]", toString(a));
+
+}
+
+TEST(Printer, Vector) {
+
+	std::vector<int> v;
+	v.push_back(1);
+	v.push_back(2);
+	v.push_back(3);
+
+	EXPECT_EQ("[1,2,3]", toString(v));
 
 }
