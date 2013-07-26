@@ -552,13 +552,18 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			irType = builder.refType (mgr.getLangExtension<core::lang::StaticVariableExtension>().wrapStaticType(irType.as<core::RefTypePtr>().getElementType()));
 		}
 
-		if(varDecl->isStaticDataMember() ) {
-			VLOG(2)	<< varDecl->getQualifiedNameAsString() << " isStaticDataMember";
-		}
-
 		core::ExpressionPtr globVar =  builder.literal(name, irType);
 		if (varDecl->isStaticLocal()){
 			globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
+		}
+
+		// static members might not visited, maybe they belong to a templated class
+		if(varDecl->isStaticDataMember() ) {
+			VLOG(2)	<< varDecl->getQualifiedNameAsString() << " isStaticDataMember";
+			core::ExpressionPtr init = convertInitExpr   (varDecl->getType().getTypePtr(),
+														  varDecl->getAnyInitializer(),
+														  globVar->getType().as<core::RefTypePtr>().getElementType(), false);
+			getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), init);
 		}
 
 		// OMP threadPrivate
