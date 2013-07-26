@@ -301,12 +301,6 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& conver
 		op = gen.getCompositeRefElem();
 	}
 
-	// There are 2 basic cases which need to be handled: Struct/Unions and Recursive Types
-	assert_true((structTy->getNodeType() == core::NT_StructType ||
-			structTy->getNodeType() == core::NT_UnionType ||
-			structTy->getNodeType() == core::NT_RecType))
-			<< "Using a member access operation on a non struct/union type: " << structTy << " of type " << structTy->getNodeType();
-
 	// if the inner type is a RecType then we need to unroll it to get the contained composite type
 	if ( structTy->getNodeType() == core::NT_RecType ) {
 		structTy = core::static_pointer_cast<const core::RecType>(structTy)->unroll(builder.getNodeManager());
@@ -330,15 +324,14 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& conver
 
 	assert(ident);
 
-	core::TypePtr resType = structTy.as<core::NamedCompositeTypePtr>()->getTypeOfMember(ident);
-	core::TypePtr membTy = resType;
-	assert(membTy);
+	//core::TypePtr membType = structTy.as<core::NamedCompositeTypePtr>()->getTypeOfMember(ident);
+	core::TypePtr membType = converter.convertType(membExpr->getType().getTypePtr());
+	core::TypePtr returnType =  membType;
+	assert(returnType);
 	if (base->getType()->getNodeType() == core::NT_RefType) {
-		membTy = builder.refType(membTy);
+		returnType = builder.refType(returnType);
 	}
-
-	return builder.callExpr(membTy, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(resType));
-
+	return builder.callExpr(returnType, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(membType));
 }
 
 } // end exprUtils namespace

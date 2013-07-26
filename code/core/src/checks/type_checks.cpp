@@ -802,6 +802,13 @@ namespace {
 			exprType = static_pointer_cast<const RecType>(exprType)->unroll();
 		}
 
+		// Accessing an element from a generic type (intercepted)
+		// we should allow it, and we have no way to check the consistency of
+		// the requested element. just return
+		if (dynamic_pointer_cast<const GenericType>(exprType)){
+			return res;
+		}
+
 		// check whether it is a composite type
 		const NamedCompositeTypePtr compositeType = dynamic_pointer_cast<const NamedCompositeType>(exprType);
 		if (!compositeType) {
