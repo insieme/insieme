@@ -565,12 +565,6 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 			globVar = builder.accessStatic(globVar.as<core::LiteralPtr>());
 		}
 
-		if(varDecl->hasExternalStorage() ) {
-			annotations::c::markExtern(globVar.as<core::LiteralPtr>());
-		}
-
-		
-
 		// OMP threadPrivate
  		if (insieme::utils::set::contains (thread_private, varDecl)){
 			omp::addThreadPrivateAnnotation(globVar);

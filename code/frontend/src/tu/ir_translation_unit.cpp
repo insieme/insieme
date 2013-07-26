@@ -564,6 +564,17 @@ namespace tu {
 				usedLiterals.insert(literal);
 			});
 
+			// check all types for dtors which use literals
+			for( auto cur : unit.getTypes()) {
+				TypePtr def = cur.second;
+				if (core::hasMetaInfo(def.isa<TypePtr>())) {
+					auto dtor = core::getMetaInfo(def).getDestructor();
+					core::visitDepthFirstOnce (dtor, [&] (const core::LiteralPtr& literal){
+						usedLiterals.insert(literal);
+					});
+				}
+			}
+
 			core::IRBuilder builder(mainFunc->getNodeManager());
 			core::StatementList inits;
 
