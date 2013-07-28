@@ -174,124 +174,184 @@ namespace cba {
 
 	}
 
-	TEST(CBA, ConstraintGeneration) {
+	TEST(CBA, BasicControlFlow) {
 
-			NodeManager mgr;
-			IRBuilder builder(mgr);
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
-			auto code = builder.parseStmt(
-					"{"
-					"	int<4> x = 12;"
-					"	auto y = (int z)->unit {};"
-					"	y(14);"
-					"	y(16);"
-					"}"
-			).as<CompoundStmtPtr>();
+		auto code = builder.parseStmt(
+				"{"
+				"	int<4> x = 12;"
+				"	auto y = (int z)->unit {};"
+				"	y(14);"
+				"	y(16);"
+				"}"
+		).as<CompoundStmtPtr>();
 
-			EXPECT_TRUE(code);
+		EXPECT_TRUE(code);
 
-			CBAContext context;
-			auto constraints = generateConstraints(context, code);
-			// std::cout << "Constraint: " << constraints << "\n";
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+		// std::cout << "Constraint: " << constraints << "\n";
 
-			auto solution = cba::solve(constraints);
-			// std::cout << "Solutions:  " << solution << "\n";
+		auto solution = cba::solve(constraints);
+		// std::cout << "Solutions:  " << solution << "\n";
 
-			auto declX = CompoundStmtAddress(code)[0].as<DeclarationStmtAddress>();
-			VariableAddress varX = declX->getVariable();
-			ExpressionAddress initX = declX->getInitialization();
+		auto declX = CompoundStmtAddress(code)[0].as<DeclarationStmtAddress>();
+		VariableAddress varX = declX->getVariable();
+		ExpressionAddress initX = declX->getInitialization();
 
-//			std::cout << *varX << " = " << cba::getValuesOf(context, solution, varX) << "\n";
-			EXPECT_EQ("{AP(12)}", toString(cba::getValuesOf(context, solution, varX)));
+//		std::cout << *varX << " = " << cba::getValuesOf(context, solution, varX) << "\n";
+		EXPECT_EQ("{AP(12)}", toString(cba::getValuesOf(context, solution, varX)));
 
-//			std::cout << *initX << " = " << cba::getValuesOf(context, solution, initX) << "\n";
-			EXPECT_EQ("{AP(12)}", toString(cba::getValuesOf(context, solution, initX)));
+//		std::cout << *initX << " = " << cba::getValuesOf(context, solution, initX) << "\n";
+		EXPECT_EQ("{AP(12)}", toString(cba::getValuesOf(context, solution, initX)));
 
-			auto declY = CompoundStmtAddress(code)[1].as<DeclarationStmtAddress>();
-			VariableAddress varY = declY->getVariable();
-			ExpressionAddress initY = declY->getInitialization();
+		auto declY = CompoundStmtAddress(code)[1].as<DeclarationStmtAddress>();
+		VariableAddress varY = declY->getVariable();
+		ExpressionAddress initY = declY->getInitialization();
 
-//			std::cout << *varY << " = " << cba::getValuesOf(context, solution, varY) << "\n";
-//			std::cout << *initY << " = " << cba::getValuesOf(context, solution, initY) << "\n";
-			EXPECT_EQ("{AP(rec v0.{v0=fun(int v2) {}})}", toString(cba::getValuesOf(context, solution, varY)));
-			EXPECT_EQ("{AP(rec v0.{v0=fun(int v2) {}})}", toString(cba::getValuesOf(context, solution, initY)));
+//		std::cout << *varY << " = " << cba::getValuesOf(context, solution, varY) << "\n";
+//		std::cout << *initY << " = " << cba::getValuesOf(context, solution, initY) << "\n";
+		EXPECT_EQ("{AP(rec v0.{v0=fun(int v2) {}})}", toString(cba::getValuesOf(context, solution, varY, c)));
+		EXPECT_EQ("{AP(rec v0.{v0=fun(int v2) {}})}", toString(cba::getValuesOf(context, solution, initY, C)));
 
 
-			auto varZ = initY.as<LambdaExprAddress>()->getParameterList()[0];
-//			std::cout << *varZ << " = " << cba::getValuesOf(context, solution, varZ) << "\n";
+		auto varZ = initY.as<LambdaExprAddress>()->getParameterList()[0];
+//		std::cout << *varZ << " = " << cba::getValuesOf(context, solution, varZ) << "\n";
 
-			ExpressionSet should;
-			should.insert(builder.intLit(14));
-			should.insert(builder.intLit(16));
-			auto valZ = cba::getValuesOf(context, solution, varZ);
-			EXPECT_EQ(should, valZ);
+		ExpressionSet should;
+		should.insert(builder.intLit(14));
+		should.insert(builder.intLit(16));
+		auto valZ = cba::getValuesOf(context, solution, varZ);
+		EXPECT_EQ(should, valZ);
 
 	}
 
 	TEST(CBA, ReturnValue) {
 
-			NodeManager mgr;
-			IRBuilder builder(mgr);
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
-			auto code = builder.parseStmt(
-					"{"
-					"	int<4> x = 12;"
-					"	auto y = (int z)->int<4> { return 10; };"
-					"	int<4> z = y(x);"
-					"}"
-			).as<CompoundStmtPtr>();
+		auto code = builder.parseStmt(
+				"{"
+				"	int<4> x = 12;"
+				"	auto y = (int z)->int<4> { return 10; };"
+				"	int<4> z = y(x);"
+				"}"
+		).as<CompoundStmtPtr>();
 
-			EXPECT_TRUE(code);
+		EXPECT_TRUE(code);
 
-			CBAContext context;
-			auto constraints = generateConstraints(context, code);
-			// std::cout << "Constraint: " << constraints << "\n";
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+		// std::cout << "Constraint: " << constraints << "\n";
 
-			auto solution = cba::solve(constraints);
-			// std::cout << "Solutions:  " << solution << "\n";
+		auto solution = cba::solve(constraints);
+		// std::cout << "Solutions:  " << solution << "\n";
 
-			auto declZ = CompoundStmtAddress(code)[2].as<DeclarationStmtAddress>();
-			VariableAddress varZ = declZ->getVariable();
+		auto declZ = CompoundStmtAddress(code)[2].as<DeclarationStmtAddress>();
+		VariableAddress varZ = declZ->getVariable();
 
-			// std::cout << *varZ << " = " << cba::getValuesOf(context, solution, varZ) << "\n";
-			EXPECT_EQ("{AP(10)}", toString(cba::getValuesOf(context, solution, varZ)));
+		// std::cout << *varZ << " = " << cba::getValuesOf(context, solution, varZ) << "\n";
+		EXPECT_EQ("{AP(10)}", toString(cba::getValuesOf(context, solution, varZ)));
 	}
 
 	TEST(CBA, ReturnValue2) {
 
-			NodeManager mgr;
-			IRBuilder builder(mgr);
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
-			auto code = builder.parseStmt(
-					"{"
-					"	let id = ('a x)->'a { return x; };"
-					"	auto x = 1;"
-					"	auto x = id(2);"
-					"	auto x = id(x);"
-					"	auto x = id(id(3));"
-					"	auto x = id(id(x));"
-					"	auto x = id(id(id(4)));"
-					"}"
-			).as<CompoundStmtPtr>();
+		auto code = builder.parseStmt(
+				"{"
+				"	let id = ('a x)->'a { return x; };"
+				"	auto x = 1;"
+				"	auto x = id(2);"
+				"	auto x = id(x);"
+				"	auto x = id(id(3));"
+				"	auto x = id(id(x));"
+				"	auto x = id(id(id(4)));"
+				"}"
+		).as<CompoundStmtPtr>();
 
-			EXPECT_TRUE(code);
+		EXPECT_TRUE(code);
 
-			CBAContext context;
-			auto constraints = generateConstraints(context, code);
-//			std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+//		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
 
-			auto solution = cba::solve(constraints);
-//			std::cout << "Solutions:  " << solution << "\n";
+		auto solution = cba::solve(constraints);
+//		std::cout << "Solutions:  " << solution << "\n";
 
-			vector<DeclarationStmtAddress> decls;
-			for(auto cur : CompoundStmtAddress(code)) { decls.push_back(cur.as<DeclarationStmtAddress>()); }
+		vector<DeclarationStmtAddress> decls;
+		for(auto cur : CompoundStmtAddress(code)) { decls.push_back(cur.as<DeclarationStmtAddress>()); }
 
-			EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, decls[0]->getVariable())));
-			EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, decls[1]->getVariable())));
-			EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, decls[2]->getVariable())));
-			EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, decls[3]->getVariable())));
-			EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, decls[4]->getVariable())));
-			EXPECT_EQ("{AP(4)}", toString(cba::getValuesOf(context, solution, decls[5]->getVariable())));
+		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, decls[0]->getVariable())));
+		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, decls[1]->getVariable())));
+		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, decls[2]->getVariable())));
+		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, decls[3]->getVariable())));
+		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, decls[4]->getVariable())));
+		EXPECT_EQ("{AP(4)}", toString(cba::getValuesOf(context, solution, decls[5]->getVariable())));
+
+	}
+
+	TEST(CBA, References1) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto code = builder.parseStmt(
+				"{"
+				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	*x;"							// should be 1
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(code);
+
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+
+		auto solution = cba::solve(constraints);
+		std::cout << "Solutions:  " << solution << "\n";
+
+		auto val = CompoundStmtAddress(code)[1].as<ExpressionAddress>();
+
+		// this would be the ideal case
+		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, val)));
+
+	}
+
+	TEST(CBA, References2) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto code = builder.parseStmt(
+				"{"
+				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	auto y = *x;"					// y should be 1
+				"	x = 2;"							// set x to 2
+				"	auto z = *x;"					// z should be 2
+				"}"
+		).as<CompoundStmtPtr>();
+
+		EXPECT_TRUE(code);
+
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+//		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+
+		auto solution = cba::solve(constraints);
+//		std::cout << "Solutions:  " << solution << "\n";
+
+		auto varY = CompoundStmtAddress(code)[1].as<DeclarationStmtAddress>()->getVariable();
+		auto varZ = CompoundStmtAddress(code)[3].as<DeclarationStmtAddress>()->getVariable();
+
+		// this would be the ideal case
+		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, varY)));
+		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, varZ)));
 
 	}
 

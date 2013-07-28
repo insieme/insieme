@@ -88,7 +88,10 @@ namespace cba {
 
 	// TODO: make this expandable
 	enum SetType {
-		C, r, D, d, Sin, Sout
+		C, c,		// label / variable => function  (and value at the moment)
+		D, d, 		// label / variable => value (not used yet, occupied by C and r)
+		Sin, Sout,	// state before and after every expression
+		R, r,		// label / variable => location pointing at
 	};
 
 	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
@@ -110,12 +113,14 @@ namespace cba {
 
 		typedef tuple<SetType, int, Context, Thread> SetKey;
 
+		int setCounter;
 		std::map<SetKey, Set> sets;
+		std::map<tuple<SetType, Label, Context, Thread, Location, Context, Thread>, Set> stateSets;
 
 		// two caches for resolving labels and variables
+		int varCounter;
 		std::map<core::StatementAddress, Label> labels;
 		std::map<core::VariableAddress, Variable> vars;
-		int varCounter;
 
 		// an index for expressions - in both directions
 		std::map<core::ExpressionAddress, Value> e2i;				// TODO: think about using pointer ...
@@ -127,7 +132,7 @@ namespace cba {
 
 	public:
 
-		CBAContext() : varCounter(0) {};
+		CBAContext() : setCounter(0), varCounter(0) {};
 
 		Set getSet(SetType type, int id, const Context& c = Context(), const Thread& t = Thread()) {
 			SetKey key(type, id, c, t);
@@ -135,8 +140,19 @@ namespace cba {
 			if (pos != sets.end()) {
 				return pos->second;
 			}
-			Set newSet = sets.size() + 1;		// reserve 0
+			Set newSet = ++setCounter;		// reserve 0
 			sets[key] = newSet;
+			return newSet;
+		}
+
+		Set getSet(SetType type, Label label, const Context& c, const Thread& t, Location loc, const Context& c_loc = Context(), const Thread& t_loc = Thread()) {
+			auto key = std::make_tuple(type, label, c, t, loc, c_loc, t_loc);
+			auto pos = stateSets.find(key);
+			if (pos != stateSets.end()) {
+				return pos->second;
+			}
+			Set newSet = ++setCounter;		// reserve 0
+			stateSets[key] = newSet;
 			return newSet;
 		}
 
@@ -224,9 +240,9 @@ namespace cba {
 
 	Solution solve(const Constraints& constraints);
 
-	core::ExpressionSet getValuesOf(CBAContext& context, const Solution& solution, const core::ExpressionAddress& expr);
+	core::ExpressionSet getValuesOf(CBAContext& context, const Solution& solution, const core::ExpressionAddress& expr, SetType set = D);
 
-	core::ExpressionSet getValuesOf(CBAContext& context, const Solution& solution, const core::VariableAddress& var);
+	core::ExpressionSet getValuesOf(CBAContext& context, const Solution& solution, const core::VariableAddress& var, SetType set = d);
 
 } // end namespace cba
 } // end namespace analysis
