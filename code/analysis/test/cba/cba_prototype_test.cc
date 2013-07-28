@@ -316,6 +316,11 @@ namespace cba {
 		auto solution = cba::solve(constraints);
 		std::cout << "Solutions:  " << solution << "\n";
 
+		auto decl = CompoundStmtAddress(code)[0].as<DeclarationStmtAddress>();
+		auto R_decl = context.getSet(R, context.getLabel(decl->getInitialization()));
+		std::cout << "R[decl] = s" << R_decl << " = " << solution[R_decl] << "\n";
+
+
 		auto val = CompoundStmtAddress(code)[1].as<ExpressionAddress>();
 
 		// this would be the ideal case

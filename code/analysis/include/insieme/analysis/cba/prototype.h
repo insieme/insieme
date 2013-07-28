@@ -115,7 +115,7 @@ namespace cba {
 
 		int setCounter;
 		std::map<SetKey, Set> sets;
-		std::map<tuple<SetType, Label, Context, Thread, Location, Context, Thread>, Set> stateSets;
+		std::map<tuple<SetType, Label, Context, Thread, Location, SetType, Context, Thread>, Set> stateSets;
 
 		// two caches for resolving labels and variables
 		int varCounter;
@@ -145,8 +145,8 @@ namespace cba {
 			return newSet;
 		}
 
-		Set getSet(SetType type, Label label, const Context& c, const Thread& t, Location loc, const Context& c_loc = Context(), const Thread& t_loc = Thread()) {
-			auto key = std::make_tuple(type, label, c, t, loc, c_loc, t_loc);
+		Set getSet(SetType type, Label label, const Context& c, const Thread& t, Location loc, SetType type_loc, const Context& c_loc = Context(), const Thread& t_loc = Thread()) {
+			auto key = std::make_tuple(type, label, c, t, loc, type_loc, c_loc, t_loc);
 			auto pos = stateSets.find(key);
 			if (pos != stateSets.end()) {
 				return pos->second;
@@ -227,6 +227,15 @@ namespace cba {
 			loc2i[key] = res;
 			i2loc[res] = key;
 			return res;
+		}
+
+		// only for debugging
+		core::ExpressionAddress getMemoryConstructor(Location loc) {
+			int label = std::get<0>(i2loc[loc]);
+			for(auto cur : labels) {
+				if (cur.second == label) return cur.first.as<core::ExpressionAddress>();
+			}
+			return core::ExpressionAddress();
 		}
 
 	};

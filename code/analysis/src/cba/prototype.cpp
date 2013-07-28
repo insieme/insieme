@@ -342,6 +342,9 @@ namespace cba {
 
 			void visitLiteral(const LiteralAddress& literal) {
 
+				// and default handling
+				super::visitLiteral(literal);
+
 				// only interrested in functions ...
 				if (!literal->getType().isa<FunctionTypePtr>()) return;
 
@@ -352,11 +355,12 @@ namespace cba {
 				auto C_lit = context.getSet(C, l_lit);
 				constraints.insert(elem(value, C_lit));
 
-				// and default handling
-				super::visitLiteral(literal);
 			}
 
 			void visitLambdaExpr(const LambdaExprAddress& lambda) {
+
+				// and default handling
+				super::visitLambdaExpr(lambda);
 
 				// add constraint lambda \in C(lambda)
 				auto label = context.getLabel(lambda);
@@ -366,8 +370,6 @@ namespace cba {
 
 				// TODO: handle recursions
 
-				// and default handling
-				super::visitLambdaExpr(lambda);
 			}
 
 		};
@@ -383,6 +385,9 @@ namespace cba {
 
 			void visitLiteral(const LiteralAddress& literal) {
 
+				// and default handling
+				super::visitLiteral(literal);
+
 				// not interested in functions
 				if (literal->getType().isa<FunctionTypePtr>()) return;
 
@@ -393,8 +398,52 @@ namespace cba {
 				auto D_lit = context.getSet(D, l_lit);
 				constraints.insert(elem(value, D_lit));
 
+			}
+
+		};
+
+		class ReferenceConstraintCollector : public BasicDataFlowConstraintCollector {
+
+			typedef BasicDataFlowConstraintCollector super;
+
+		public:
+
+			ReferenceConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root)
+				: BasicDataFlowConstraintCollector(context, constraints, root, R, r) { };
+
+			void visitLiteral(const LiteralAddress& literal) {
+
 				// and default handling
 				super::visitLiteral(literal);
+
+				// only interested in memory location constructors
+				if (!isMemoryConstructor(literal)) return;
+
+				// add constraint literal \in R(lit)
+				auto value = context.getLocation(literal);
+				auto l_lit = context.getLabel(literal);
+std::cout << "Introducing " << value << " = " << *literal << "\n";
+
+				auto R_lit = context.getSet(R, l_lit);
+				constraints.insert(elem(value, R_lit));
+
+			}
+
+			void visitCallExpr(const CallExprAddress& call) {
+
+				// and default handling
+				super::visitCallExpr(call);
+
+				// introduce memory location in some cases
+				if (!isMemoryConstructor(call)) return;
+
+				// add constraint location \in R(call)
+				auto value = context.getLocation(call);
+				auto l_lit = context.getLabel(call);
+std::cout << "Introducing " << value << " = " << *call << "\n";
+
+				auto R_lit = context.getSet(R, l_lit);
+				constraints.insert(elem(value, R_lit));
 			}
 
 		};
@@ -406,15 +455,15 @@ namespace cba {
 			CBAContext& context;
 			Constraints& constraints;
 
-			utils::set::PointerSet<NodeAddress> processed;
+			std::vector<SetType> dataSets;
 
 			// list of all memory location in the processed fragment
 			std::vector<Location> locations;
 
 		public:
 
-			ImperativeConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root)
-				: context(context), constraints(contraints) {
+			ImperativeConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root, const std::vector<SetType>& dataSets)
+				: context(context), constraints(contraints), dataSets(dataSets) {
 
 				// collect all memory location constructors
 				visitDepthFirst(root, [&](const ExpressionAddress& cur) {
@@ -426,99 +475,112 @@ namespace cba {
 
 			};
 
-			void visitLiteral(const LiteralAddress& cur) {
-				Context c;
-				Thread t;
-
-				if (!cur->getType().isa<RefTypePtr>()) return;
-
-				auto l = context.getLabel(cur);
-				auto loc = context.getLocation(cur, c, t);
-
-				constraints.insert(elem(loc, context.getSet(R, l, c, t)));
+			virtual void visit(const NodeAddress& cur) {
+				std::cout << "Processing: " << *cur << "\n";
+				super::visit(cur);
 			}
 
-			void visitCallExpr(const CallExprAddress& cur) {
-				const auto& base = cur->getNodeManager().getLangBasic();
-
-
-				// special cases:
-				//	- ref.assign
-				//	- ref.deref
-
-				if (core::analysis::isCallOf(cur.as<CallExprPtr>(), base.getRefAssign())) {
-
-					// update output set
-
-					return;
-				}
-
-				if (core::analysis::isCallOf(cur.as<CallExprPtr>(), base.getRefDeref())) {
-
-					// standard procedure
-
-					// update Context C
-					// TODO: also update D ... as soon as it is used
-
-
-					return;
-				}
+			void visitCallExpr(const CallExprAddress& call) {
+				const auto& base = call->getNodeManager().getLangBasic();
 
 				// otherwise default handling
 				//  - link in of call with in of arguments
 				//  - link out of arguments with in of function
 				//  - link out of function with out of call
 
-				auto l_call = context.getLabel(cur);
+				auto l_call = context.getLabel(call);
 
 				Context c;
 				Thread t;
 
 				// link in of call with in of arguments
-				for(auto arg : cur) {
+				for(auto arg : call) {
 					auto l_arg = context.getLabel(arg);
 					connectStateSets(Sin, l_call, c, t, Sin, l_arg, c, t);
 				}
 
 				// TODO: consider dynamic dispatching
 				// link out of arguments with in of function candidates
-				if (!cur->getFunctionExpr().isa<LambdaExprPtr>()) {
-					std::cout << "WARNING: unsupported call target of type: " << cur->getFunctionExpr()->getNodeType() << "\n";
+				if (!call->getFunctionExpr().isa<LambdaExprPtr>() && !call->getFunctionExpr().isa<LiteralPtr>()) {
+					std::cout << "WARNING: unsupported call target of type: " << call->getFunctionExpr()->getNodeType() << "\n";
 					return;
 				}
-				assert(cur->getFunctionExpr().isa<LambdaExprPtr>());		// for now
-				auto l_fun = context.getLabel(cur->getFunctionExpr().as<LambdaExprAddress>()->getBody());		// here we have to go through list of functions ...
-				for (auto arg : cur) {
-					auto l_arg = context.getLabel(arg);
-					connectStateSets(Sout, l_arg, c, t, Sin, l_fun, c, t);
-				}
 
-				// ---- S_out ----
 
-				// special case: assignments
-				if (core::analysis::isCallOf(cur.as<CallExprPtr>(), base.getRefAssign())) {
+				if (call->getFunctionExpr().isa<LambdaExprPtr>()){ 		// for now
 
-					// the output state is just the same as usual  - TODO: if target reference is unique, cancel previous assignment
+					// ---- Effect of arguments => in of function ----
+					auto lambda = call->getFunctionExpr().as<LambdaExprAddress>();
+
+					auto l_fun = context.getLabel(lambda->getBody());		// here we have to go through list of functions ...
+					for (auto arg : call) {
+						auto l_arg = context.getLabel(arg);
+						connectStateSets(Sout, l_arg, c, t, Sin, l_fun, c, t);
+					}
+
+					// ---- Effect of function => out of call ---
+
+					// link out of fun with call out
 					connectStateSets(Sout, l_fun, c, t, Sout, l_call, c, t);
 
-					// but the location targeted by the first argument will now contain
-
-					return;
 				}
 
+				// ---- side-effects ----
 
-				// link out of fun with call out
-				connectStateSets(Sout, l_fun, c, t, Sout, l_call, c, t);
+				// special case: assignments
+				if (core::analysis::isCallOf(call.as<CallExprPtr>(), base.getRefAssign())) {
+std::cout << "Processing Assignment: " << *call << " ... \n";
+					// but the location targeted by the first argument will now contain
+					auto l_rhs = context.getLabel(call[0]);
+					auto l_lhs = context.getLabel(call[1]);
+					auto R_rhs = context.getSet(R, l_rhs);
+					for(auto loc : locations) {
+
+						// TODO: add context
+
+						for (auto A : dataSets) {
+							// if loc is in R(target) then add D[rhs] to Sout[loc]
+							auto A_value = context.getSet(A, l_lhs);
+							auto S_out = context.getSet(Sout, l_call, c, t, loc, A, c, t);
+							constraints.insert(subsetIf(loc, R_rhs, A_value, S_out));
+						}
+					}
+
+				}
+
+				// special case: read
+				if (core::analysis::isCallOf(call.as<CallExprPtr>(), base.getRefDeref())) {
+std::cout << "Processing Read: " << *call << " ... \n";
+					// read value from memory location
+					auto l_trg = context.getLabel(call[0]);
+					auto R_trg = context.getSet(R, l_trg);
+					for(auto loc : locations) {
+
+						// TODO: add context
+
+						// if loc is in R(target) then add Sin[A,trg] to A[call]
+						for (auto A : dataSets) {
+							auto S_in = context.getSet(Sin, l_call, c, t, loc, A, c, t);
+							auto A_call = context.getSet(A, l_call);
+							constraints.insert(subsetIf(loc, R_trg, S_in, A_call));
+						}
+					}
+
+				}
+
+				// recursively process sub-expressions
+				visit(call->getFunctionExpr());
+				for(auto arg : call) visit(arg);
 			}
 
-			void visitExpression(const ExpressionAddress& cur) {
+			void visitLambdaExpr(const LambdaExprAddress& cur) {
+				// standard expression handling
+				visitExpression(cur);
 
-				// general handling - Sin \subset Sout
-				auto label = context.getLabel(cur);
-				Context c;
-				Thread t;
-				connectStateSets(Sin, label, c, t, Sout, label, c, t);
+				// TODO: deal with recursion
 
+				// + process body
+				visit(cur->getBody());
 			}
 
 			void visitCompoundStmt(const CompoundStmtAddress& compound) {
@@ -527,7 +589,10 @@ namespace cba {
 				Thread t;
 
 				// special handling for empty compound = NoOp
-				if (compound.empty()) visitStatement(compound);
+				if (compound.empty()) {
+					visitStatement(compound);
+					return;
+				}
 
 				// connect contained statements
 				for(std::size_t i = 0; i < compound.size()-1; i++) {
@@ -568,6 +633,15 @@ namespace cba {
 			}
 
 
+			void visitStatement(const StatementAddress& cur) {
+
+				// general handling for all statements and expressions - Sin \subset Sout
+				auto label = context.getLabel(cur);
+				Context c;
+				Thread t;
+				connectStateSets(Sin, label, c, t, Sout, label, c, t);
+
+			}
 
 			void visitNode(const NodeAddress& node) {
 				std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
@@ -581,12 +655,16 @@ namespace cba {
 				// general handling - Sin = Sout
 				for(auto loc : locations) {
 
-					// get Sin set		TODO: add context to locations
-					auto s_in = context.getSet(a, al, ac, at, loc);
-					auto s_out = context.getSet(b, bl, bc, bt, loc);
+					for (auto type : dataSets) {
 
-					// state information entering the set is also leaving it
-					constraints.insert(subset(s_in, s_out));
+						// get Sin set		TODO: add context to locations
+						auto s_in = context.getSet(a, al, ac, at, loc, type);
+						auto s_out = context.getSet(b, bl, bc, bt, loc, type);
+
+						// state information entering the set is also leaving it
+						constraints.insert(subset(s_in, s_out));
+
+					}
 				}
 			}
 
@@ -602,9 +680,12 @@ namespace cba {
 
 		// let constraint collector do the job
 		StatementAddress root(stmt);
+
+		// TODO: resolve dependencies between collectors automatically
 		ControlFlowConstraintCollector(context, res, root).visit(root);
 		ConstantConstraintCollector(context, res, root).visit(root);
-		ImperativeConstraintCollector(context, res, root).visit(root);
+		ReferenceConstraintCollector(context, res, root).visit(root);
+		ImperativeConstraintCollector(context, res, root, toVector(C,D,R)).visit(root);
 
 
 		// done
