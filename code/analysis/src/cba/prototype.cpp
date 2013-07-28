@@ -288,24 +288,23 @@ namespace cba {
 				for(auto arg : call) visit(arg);
 
 				// get values of function
-				auto c_fun = context.getSet(C, context.getLabel(call->getFunctionExpr()));
+				auto fun = call->getFunctionExpr();
+				auto c_fun = context.getSet(C, context.getLabel(fun));
 
 				// value set of call
 				auto c_call = context.getSet(C, context.getLabel(call));
 
-				// fix pass-by-value semantic - by considering all potential terms
-				for(auto cur : terms) {
 
-					auto t = cur.first;
-					auto expr = cur.second;
+				// a utility resolving constraints for the given expression
+				auto addConstraints = [&](Value t, const ExpressionAddress& expr) {
 
 					// only searching for actual code
-					if (!expr.isa<LambdaExprPtr>() && !expr.isa<BindExprPtr>()) continue;
+					if (!expr.isa<LambdaExprPtr>() && !expr.isa<BindExprPtr>()) return;
 
 					// check whether the term is a function with the right number of arguments
 					// TODO: also check type?
 					auto funType = expr.as<ExpressionPtr>()->getType().isa<FunctionTypePtr>();
-					if(funType->getParameterTypes().size() != call.size()) continue;		// this is not a potential function
+					if(funType->getParameterTypes().size() != call.size()) return;		// this is not a potential function
 
 					assert(expr.isa<LambdaExprPtr>() && "Binds not implemented yet!");
 
@@ -319,14 +318,30 @@ namespace cba {
 
 						auto c_arg = context.getSet(C, l_arg);
 						auto r_param = context.getSet(r, param);
-						constraints.insert(subsetIf(t, c_fun, c_arg, r_param));
-
+						constraints.insert((t==0) ? subset(c_arg, r_param) : subsetIf(t, c_fun, c_arg, r_param));
 					}
 
 					// add constraint for result value
 					auto l_ret = context.getLabel(lambda->getBody());
 					auto c_ret = context.getSet(C, l_ret);
-					constraints.insert(subsetIf(t, c_fun, c_ret, c_call));
+					constraints.insert((t==0)? subset(c_ret, c_call) : subsetIf(t, c_fun, c_ret, c_call));
+
+				};
+
+				// if function expression is a lambda or bind => do not iterate through all terms, term is fixed
+				if (fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>()) {
+					addConstraints(0, fun);
+					return;
+				}
+
+				// fix pass-by-value semantic - by considering all potential terms
+				for(auto cur : terms) {
+
+					auto t = cur.first;
+					auto expr = cur.second;
+
+					addConstraints(t, expr);
+
 				}
 			}
 
