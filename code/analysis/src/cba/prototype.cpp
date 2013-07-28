@@ -225,7 +225,6 @@ namespace cba {
 					std::cout << "Encountered free return!!\n";
 					return;		// return is not bound
 				}
-
 				// and add constraints for return value
 				visit(stmt->getReturnExpr());
 

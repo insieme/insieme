@@ -118,8 +118,8 @@ namespace cba {
 		int varCounter;
 
 		// an index for expressions - in both directions
-		utils::map::PointerMap<core::ExpressionPtr, Value> e2i;			// TODO: think about using pointer ...
-		std::unordered_map<Value, core::ExpressionPtr> i2e;
+		std::map<core::ExpressionAddress, Value> e2i;				// TODO: think about using pointer ...
+		std::unordered_map<Value, core::ExpressionAddress> i2e;
 
 		// an index for locations
 		std::map<tuple<Label, Context, Thread>,  Location> loc2i;
@@ -173,7 +173,7 @@ namespace cba {
 			return ++varCounter;
 		}
 
-		Value getValue(const core::ExpressionPtr& expr) {
+		Value getValue(const core::ExpressionAddress& expr) {
 			auto pos = e2i.find(expr);
 			if (pos != e2i.end()) {
 				return pos->second;
