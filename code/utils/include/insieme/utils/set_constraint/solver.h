@@ -73,6 +73,11 @@ namespace set_constraint {
 		virtual std::ostream& printTo(std::ostream& out) const { return out << "s" << id; }
 	};
 
+	// TODO: turn constraints into composable structure
+	//			- support checks on set sizes
+	//			- support conjunction / chains of checks
+	//			- support computation of intersections / differences / unions in checks
+
 	class Constraint : public Printable {
 
 	public:

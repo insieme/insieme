@@ -39,6 +39,8 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 
+#include "insieme/core/analysis/ir_utils.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -124,6 +126,32 @@ namespace cba {
 	}
 
 
+	bool isMemoryConstructor(const StatementAddress& address) {
+		StatementPtr stmt = address;
+
+		// literals of a reference type are memory locations
+		if (auto lit = stmt.isa<LiteralPtr>()) {
+			return lit->getType().isa<RefTypePtr>();
+		}
+
+		// memory allocation calls are
+		return core::analysis::isCallOf(stmt, stmt->getNodeManager().getLangBasic().getRefAlloc());
+	}
+
+	ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt) {
+		assert(isMemoryConstructor(stmt));
+
+		// globals are globals => always the same
+		if (auto lit = stmt.isa<LiteralPtr>()) {
+			return LiteralAddress(lit);
+		}
+
+		// locations created by ref.alloc calls are created at the call side
+		assert(stmt.isa<CallExprAddress>());
+		return stmt.as<CallExprAddress>();
+	}
+
+
 	namespace {
 
 		using namespace utils::set_constraint;
@@ -181,6 +209,37 @@ namespace cba {
 				visit(decl->getInitialization());
 			}
 
+			void visitReturnStmt(const ReturnStmtAddress& stmt) {
+
+				// link the value of the result set to lambda body
+
+				// find lambda body
+				NodeAddress cur = stmt;
+				while(!cur.isRoot() && !cur.isa<LambdaPtr>()) {
+					cur = cur.getParentAddress();
+				}
+
+				// check whether there is a lambda
+				auto lambda = cur.isa<LambdaAddress>();
+				if (!lambda) {
+					std::cout << "Encountered free return!!\n";
+					return;		// return is not bound
+				}
+
+				// and add constraints for return value
+				visit(stmt->getReturnExpr());
+
+				auto l_retVal = context.getLabel(stmt->getReturnExpr());
+				auto l_body = context.getLabel(lambda->getBody());
+
+				auto c_retVal = context.getSet(C, l_retVal);
+				auto c_body = context.getSet(C, l_body);
+
+				// add constraint
+				constraints.insert(subset(c_retVal, c_body));
+
+			}
+
 
 			void visitLiteral(const LiteralAddress& literal) {
 
@@ -232,6 +291,9 @@ namespace cba {
 				// get values of function
 				auto c_fun = context.getSet(C, context.getLabel(call->getFunctionExpr()));
 
+				// value set of call
+				auto c_call = context.getSet(C, context.getLabel(call));
+
 				// fix pass-by-value semantic - by considering all potential terms
 				for(auto cur : terms) {
 
@@ -260,8 +322,12 @@ namespace cba {
 						auto r_param = context.getSet(r, param);
 						constraints.insert(subsetIf(t, c_fun, c_arg, r_param));
 
-						// TODO: add constraint for result type!
 					}
+
+					// add constraint for result value
+					auto l_ret = context.getLabel(lambda->getBody());
+					auto c_ret = context.getSet(C, l_ret);
+					constraints.insert(subsetIf(t, c_fun, c_ret, c_call));
 				}
 			}
 

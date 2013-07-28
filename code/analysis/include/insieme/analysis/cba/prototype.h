@@ -86,12 +86,25 @@ namespace cba {
 		std::ostream& printTo(std::ostream& out) const { return out << context; };
 	};
 
+	// TODO: make this expandable
 	enum SetType {
-		C,r,D,d
+		C, r, D, d, Sin, Sout
 	};
 
 	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
 
+
+	// - references ------------
+
+	typedef int Location;
+
+	// a memory location is addressed by its creation point
+//	typedef tuple<Label, Context, Thread> MemoryLocation;
+
+	// allows to check whether a given statement is a memory location constructor (including globals)
+	bool isMemoryConstructor(const core::StatementAddress& stmt);
+
+	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
 
 	class CBAContext {
 
@@ -108,6 +121,9 @@ namespace cba {
 		utils::map::PointerMap<core::ExpressionPtr, Value> e2i;			// TODO: think about using pointer ...
 		std::unordered_map<Value, core::ExpressionPtr> i2e;
 
+		// an index for locations
+		std::map<tuple<Label, Context, Thread>,  Location> loc2i;
+		std::map<Location, tuple<Label, Context, Thread>> i2loc;
 
 	public:
 
@@ -173,6 +189,28 @@ namespace cba {
 			auto pos = i2e.find(value);
 			assert(pos != i2e.end());
 			return pos->second;
+		}
+
+		// TODO: remove default values
+		Location getLocation(const core::ExpressionAddress& ctor, const Context& c = Context(), const Thread& t = Thread()) {
+			assert(isMemoryConstructor(ctor));
+			auto key = std::make_tuple(getLocationDefinitionPoint(ctor), c, t);
+
+			if (ctor.isa<core::LiteralPtr>()) {
+				// for globals the context and thread ID is not relevant
+				key = std::make_tuple(std::get<0>(key), Context(), Thread());
+			}
+
+			auto pos = loc2i.find(key);
+			if (pos != loc2i.end()) {
+				return pos->second;
+			}
+
+			// create a new location index
+			Location res = loc2i.size() + 1; 	// reserve 0
+			loc2i[key] = res;
+			i2loc[res] = key;
+			return res;
 		}
 
 	};

@@ -153,6 +153,27 @@ namespace cba {
 
 	}
 
+	TEST(CBA, MemoryConstructor) {
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		TypePtr A = builder.genericType("A");
+		TypePtr refType = builder.refType(A);
+
+		auto litA = builder.literal("const", A);
+		auto litB = builder.literal("var", refType);
+
+		auto expr = builder.integerLit(12);
+		auto alloc = builder.parseExpr("ref.alloc(  lit(int<4>), memloc.stack)");
+
+		EXPECT_FALSE(isMemoryConstructor(StatementAddress(litA)));
+		EXPECT_TRUE(isMemoryConstructor(StatementAddress(litB)));
+
+		EXPECT_FALSE(isMemoryConstructor(StatementAddress(expr)));
+		EXPECT_TRUE(isMemoryConstructor(StatementAddress(alloc)));
+
+	}
+
 	TEST(CBA, ConstraintGeneration) {
 
 			NodeManager mgr;
@@ -195,6 +216,34 @@ namespace cba {
 			auto varZ = initY.as<LambdaExprAddress>()->getParameterList()[0];
 			std::cout << *varZ << " = " << cba::getValuesOf(context, solution, varZ) << "\n";
 
+	}
+
+	TEST(CBA, ReturnValue) {
+
+			NodeManager mgr;
+			IRBuilder builder(mgr);
+
+			auto code = builder.parseStmt(
+					"{"
+					"	int<4> x = 12;"
+					"	auto y = (int z)->int<4> { return 10; return 16; };"
+					"	int<4> z = y(x);"
+					"}"
+			).as<CompoundStmtPtr>();
+
+			EXPECT_TRUE(code);
+
+			CBAContext context;
+			auto constraints = generateConstraints(context, code);
+			std::cout << "Constraint: " << constraints << "\n";
+
+			auto solution = cba::solve(constraints);
+			std::cout << "Solutions:  " << solution << "\n";
+
+			auto declZ = CompoundStmtAddress(code)[2].as<DeclarationStmtAddress>();
+			VariableAddress varZ = declZ->getVariable();
+
+			std::cout << *varZ << " = " << cba::getValuesOf(context, solution, varZ) << "\n";
 	}
 
 
