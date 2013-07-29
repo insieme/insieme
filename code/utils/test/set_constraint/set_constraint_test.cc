@@ -55,14 +55,17 @@ namespace set_constraint {
 
 		EXPECT_EQ("5 in s1 => s2 sub s3", toString(subsetIf(5,a,b,c)));
 
+		EXPECT_EQ("|s1| > 5 => s2 sub s3", toString(subsetIfBigger(a,5,b,c)));
+
 		// constraint test
 		Constraints problem = {
 				elem(3, a),
 				subset(a,b),
-				subsetIf(5,a,b,c)
+				subsetIf(5,a,b,c),
+				subsetIfBigger(a,5,b,c)
 		};
 
-		EXPECT_EQ("{3 in s1,s1 sub s2,5 in s1 => s2 sub s3}", toString(problem));
+		EXPECT_EQ("{3 in s1,s1 sub s2,5 in s1 => s2 sub s3,|s1| > 5 => s2 sub s3}", toString(problem));
 
 		// assignment test
 		Assignment as;
@@ -102,6 +105,15 @@ namespace set_constraint {
 		c = subsetIf( 3, 1, 2, 1);
 		EXPECT_TRUE(c.check(a)) << c;
 
+		c = subsetIfBigger(1, 1, 1, 2);
+		EXPECT_TRUE(c.check(a)) << c;
+
+		c = subsetIfBigger(1, 5, 1, 2);
+		EXPECT_TRUE(c.check(a)) << c;
+
+		c = subsetIfBigger(1, 1, 2, 1);
+		EXPECT_FALSE(c.check(a)) << c;
+
 	}
 
 
@@ -115,17 +127,23 @@ namespace set_constraint {
 				subset(4,3),
 
 				elem(7,5),
-				subsetIf(6,3,5,3)
+				subsetIf(6,3,5,3),
+				subsetIfBigger(2,1,3,6),
+				subsetIfBigger(2,3,3,7),
+				subsetIfBigger(2,4,3,8)
 		};
 
 		auto res = solve(problem);
-		EXPECT_EQ("{s1={5,6}, s2={5,6}, s3={5,6,7}, s5={7}}", toString(res));
+		EXPECT_EQ("{s1={5,6}, s2={5,6}, s3={5,6,7}, s5={7}, s6={5,6,7}}", toString(res));
 
 		EXPECT_EQ("{5,6}", toString(res[1])) << res;
 		EXPECT_EQ("{5,6}", toString(res[2])) << res;
 		EXPECT_EQ("{5,6,7}", toString(res[3])) << res;
 		EXPECT_EQ("{}", toString(res[4])) << res;
 		EXPECT_EQ("{7}", toString(res[5])) << res;
+		EXPECT_EQ("{5,6,7}", toString(res[6])) << res;
+		EXPECT_EQ("{}", toString(res[7])) << res;
+		EXPECT_EQ("{}", toString(res[8])) << res;
 
 		// check the individual constraints
 		for (const auto& cur : problem) {

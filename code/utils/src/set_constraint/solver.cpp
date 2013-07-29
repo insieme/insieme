@@ -75,7 +75,8 @@ namespace set_constraint {
 				edges[cur.getB()].insert( &cur );
 				break;
 			}
-			case Constraint::SubsetIf: {
+			case Constraint::SubsetIfElem:
+			case Constraint::SubsetIfBigger: {
 				// if e \in A => B \subset C ... add two edges
 				edges[cur.getA()].insert( &cur );
 				edges[cur.getB()].insert( &cur );
@@ -117,11 +118,18 @@ namespace set_constraint {
 					// add all elements of set B to set C
 					addAll(cc.getB(), cc.getC());
 
-				} else {
-					assert(cc.getKind() == Constraint::SubsetIf);
+				} else if (cc.getKind() == Constraint::SubsetIfElem) {
 
 					// if e is in A add all B to C
 					if (contains(res[cc.getA()], cc.getValue())) {
+						addAll(cc.getB(), cc.getC());
+					}
+
+				} else {
+					assert(cc.getKind() == Constraint::SubsetIfBigger);
+
+					// if |A| > e add all B to C
+					if (res[cc.getA()].size() > (std::size_t)cc.getValue()) {
 						addAll(cc.getB(), cc.getC());
 					}
 				}

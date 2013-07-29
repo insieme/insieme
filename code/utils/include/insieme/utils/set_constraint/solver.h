@@ -83,7 +83,7 @@ namespace set_constraint {
 	public:
 
 		enum Kind {
-			Elem, Subset, SubsetIf
+			Elem, Subset, SubsetIfElem, SubsetIfBigger
 		};
 
 	private:
@@ -103,7 +103,10 @@ namespace set_constraint {
 			: kind(Subset), e(0), a(-1), b(a), c(b) {}
 
 		Constraint(const value& e, const Set& a, const Set& b, const Set& c)
-			: kind(SubsetIf), e(e), a(a), b(b), c(c) {}
+			: kind(SubsetIfElem), e(e), a(a), b(b), c(c) {}
+
+		Constraint(const Set& a, const value& e, const Set& b, const Set& c)
+			: kind(SubsetIfBigger), e(e), a(a), b(b), c(c) {}
 
 		Kind getKind() const { return kind; }
 		const value& getValue() const { return e; }
@@ -112,13 +115,16 @@ namespace set_constraint {
 		const Set& getC() const { return c; }
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			if (kind == Elem || kind == SubsetIf) {
+			if (kind == Elem || kind == SubsetIfElem) {
 				out << e << " in " << a;
 			}
-			if (kind == SubsetIf) {
+			if (kind == SubsetIfBigger) {
+				out << "|" << a << "| > " << e;
+			}
+			if (kind == SubsetIfElem || kind == SubsetIfBigger) {
 				out << " => ";
 			}
-			if (kind == Subset || kind == SubsetIf) {
+			if (kind != Elem) {
 				out << b << " sub " << c;
 			}
 			return out;
@@ -143,7 +149,8 @@ namespace set_constraint {
 
 			return  (kind == Elem && contains(get(a), e)) ||
 					(kind == Subset && set::isSubset(get(b), get(c))) ||
-					(kind == SubsetIf && (!contains(get(a),e) || set::isSubset(get(b), get(c))));
+					(kind == SubsetIfElem && (!contains(get(a),e) || set::isSubset(get(b), get(c)))) ||
+					(kind == SubsetIfBigger && (get(a).size() <= (std::size_t)e || set::isSubset(get(b), get(c))));
 		}
 
 	};
@@ -171,6 +178,12 @@ namespace set_constraint {
 		return Constraint(e,a,b,c);
 	}
 
+	/**
+	 * if a is bigger than size b is a subset of c
+	 */
+	inline Constraint subsetIfBigger(const Set& a, int size, const Set& b, const Set& c) {
+		return Constraint(a, size, b, c);
+	}
 
 	Assignment solve(const Constraints& constraints, const Assignment& initial = Assignment());
 
