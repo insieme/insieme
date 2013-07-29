@@ -154,6 +154,15 @@ namespace cba {
 
 	namespace {
 
+		LambdaAddress getEnclosingLambda(const NodeAddress& addr) {
+			// find lambda body
+			NodeAddress cur = addr;
+			while(!cur.isRoot() && !cur.isa<LambdaPtr>()) {
+				cur = cur.getParentAddress();
+			}
+			return cur.isa<LambdaAddress>();
+		}
+
 		using namespace utils::set_constraint;
 
 		class BasicDataFlowConstraintCollector : public IRVisitor<void, Address> {
@@ -211,17 +220,12 @@ namespace cba {
 				// link the value of the result set to lambda body
 
 				// find lambda body
-				NodeAddress cur = stmt;
-				while(!cur.isRoot() && !cur.isa<LambdaPtr>()) {
-					cur = cur.getParentAddress();
-				}
-
-				// check whether there is a lambda
-				auto lambda = cur.isa<LambdaAddress>();
+				LambdaAddress lambda = getEnclosingLambda(stmt);
 				if (!lambda) {
 					std::cout << "Encountered free return!!\n";
 					return;		// return is not bound
 				}
+
 				// and add constraints for return value
 				visit(stmt->getReturnExpr());
 
@@ -422,7 +426,6 @@ namespace cba {
 				// add constraint literal \in R(lit)
 				auto value = context.getLocation(literal);
 				auto l_lit = context.getLabel(literal);
-std::cout << "Introducing " << value << " = " << *literal << "\n";
 
 				auto R_lit = context.getSet(R, l_lit);
 				constraints.insert(elem(value, R_lit));
@@ -440,7 +443,6 @@ std::cout << "Introducing " << value << " = " << *literal << "\n";
 				// add constraint location \in R(call)
 				auto value = context.getLocation(call);
 				auto l_lit = context.getLabel(call);
-std::cout << "Introducing " << value << " = " << *call << "\n";
 
 				auto R_lit = context.getSet(R, l_lit);
 				constraints.insert(elem(value, R_lit));
@@ -475,13 +477,32 @@ std::cout << "Introducing " << value << " = " << *call << "\n";
 
 			};
 
-			virtual void visit(const NodeAddress& cur) {
-				std::cout << "Processing: " << *cur << "\n";
-				super::visit(cur);
+			void visitLiteral(const LiteralAddress& lit) {
+
+				// fix: Sin \subset Sout
+				auto label = context.getLabel(lit);
+				Context c;
+				Thread t;
+				connectStateSets(Sin, label, c, t, Sout, label, c, t);
+
+			}
+
+			void visitVariable(const VariableAddress& var) {
+
+				// fix: Sin \subset Sout
+				auto label = context.getLabel(var);
+				Context c;
+				Thread t;
+				connectStateSets(Sin, label, c, t, Sout, label, c, t);
+
 			}
 
 			void visitCallExpr(const CallExprAddress& call) {
 				const auto& base = call->getNodeManager().getLangBasic();
+
+				// recursively process sub-expressions
+				visit(call->getFunctionExpr());
+				for(auto arg : call) visit(arg);
 
 				// otherwise default handling
 				//  - link in of call with in of arguments
@@ -498,6 +519,11 @@ std::cout << "Introducing " << value << " = " << *call << "\n";
 					auto l_arg = context.getLabel(arg);
 					connectStateSets(Sin, l_call, c, t, Sin, l_arg, c, t);
 				}
+
+				// and the function
+				auto l_fun = context.getLabel(call->getFunctionExpr());
+				connectStateSets(Sin, l_call, c, t, Sin, l_fun, c, t);
+
 
 				// TODO: consider dynamic dispatching
 				// link out of arguments with in of function candidates
@@ -518,18 +544,36 @@ std::cout << "Introducing " << value << " = " << *call << "\n";
 						connectStateSets(Sout, l_arg, c, t, Sin, l_fun, c, t);
 					}
 
+					// also add effects of function-expression evaluation
+					connectStateSets(Sout, context.getLabel(lambda), c, t, Sin, l_fun, c, t);
+
 					// ---- Effect of function => out of call ---
 
 					// link out of fun with call out
 					connectStateSets(Sout, l_fun, c, t, Sout, l_call, c, t);
 
+					// process function body
+					visit(lambda->getBody());
+
+					return;
 				}
 
 				// ---- side-effects ----
 
 				// special case: assignments
 				if (core::analysis::isCallOf(call.as<CallExprPtr>(), base.getRefAssign())) {
-std::cout << "Processing Assignment: " << *call << " ... \n";
+
+					// ---- S_out of args => S_as of call
+
+					for (auto arg : call) {
+						auto l_arg = context.getLabel(arg);
+						connectStateSets(Sout, l_arg, c, t, Sas, l_call, c, t);
+					}
+					// and the function
+					connectStateSets(Sout, l_fun, c, t, Sas, l_call, c, t);
+
+					// ---- combine S_as to S_out ...
+
 					// but the location targeted by the first argument will now contain
 					auto l_rhs = context.getLabel(call[0]);
 					auto l_lhs = context.getLabel(call[1]);
@@ -546,11 +590,37 @@ std::cout << "Processing Assignment: " << *call << " ... \n";
 						}
 					}
 
+
+					// connect Sin to Sout for all non-assigned values
+					for(auto loc : locations) {
+
+						for (auto type : dataSets) {
+
+							// get Sin set		TODO: add context to locations
+							auto s_as = context.getSet(Sas, l_call, c, t, loc, type);
+							auto s_out = context.getSet(Sout, l_call, c, t, loc, type);
+
+							// if more than 1 reference may be assigned => everything that comes in goes out
+							constraints.insert(subsetIfBigger(R_rhs, 1, s_as, s_out));
+
+						}
+					}
+
+				} else {
+
+					// just connect out of arguments to call-out - assume no effects on state
+					for (auto arg : call) {
+						auto l_arg = context.getLabel(arg);
+						connectStateSets(Sout, l_arg, c, t, Sout, l_call, c, t);
+					}
+
+					// and the function
+					connectStateSets(Sout, l_fun, c, t, Sout, l_call, c, t);
 				}
 
 				// special case: read
 				if (core::analysis::isCallOf(call.as<CallExprPtr>(), base.getRefDeref())) {
-std::cout << "Processing Read: " << *call << " ... \n";
+
 					// read value from memory location
 					auto l_trg = context.getLabel(call[0]);
 					auto R_trg = context.getSet(R, l_trg);
@@ -568,19 +638,23 @@ std::cout << "Processing Read: " << *call << " ... \n";
 
 				}
 
-				// recursively process sub-expressions
-				visit(call->getFunctionExpr());
-				for(auto arg : call) visit(arg);
 			}
 
 			void visitLambdaExpr(const LambdaExprAddress& cur) {
-				// standard expression handling
-				visitExpression(cur);
+
+				// fix: Sin \subset Sout
+				auto label = context.getLabel(cur);
+				Context c;
+				Thread t;
+				connectStateSets(Sin, label, c, t, Sout, label, c, t);
+
 
 				// TODO: deal with recursion
 
 				// + process body
-				visit(cur->getBody());
+				for(auto def : cur->getDefinition()) {
+					visit(def->getLambda()->getBody());
+				}
 			}
 
 			void visitCompoundStmt(const CompoundStmtAddress& compound) {
@@ -590,7 +664,8 @@ std::cout << "Processing Read: " << *call << " ... \n";
 
 				// special handling for empty compound = NoOp
 				if (compound.empty()) {
-					visitStatement(compound);
+					auto l = context.getLabel(compound);
+					connectStateSets(Sin, l, c, t, Sout, l, c, t);
 					return;
 				}
 
@@ -632,15 +707,28 @@ std::cout << "Processing Read: " << *call << " ... \n";
 				visit(decl->getInitialization());
 			}
 
-
-			void visitStatement(const StatementAddress& cur) {
-
-				// general handling for all statements and expressions - Sin \subset Sout
-				auto label = context.getLabel(cur);
+			void visitReturnStmt(const ReturnStmtAddress& stmt) {
 				Context c;
 				Thread t;
-				connectStateSets(Sin, label, c, t, Sout, label, c, t);
 
+				// connect Sin with Sin of return expression
+				auto l_ret = context.getLabel(stmt);
+				auto l_val = context.getLabel(stmt->getReturnExpr());
+				connectStateSets(Sin, l_ret, c, t, Sin, l_val, c, t);
+
+				// find enclosing lambda
+				LambdaAddress lambda = getEnclosingLambda(stmt);
+				if (!lambda) {
+					std::cout << "WARNING: encountered free return!\n";
+					return;
+				}
+
+				// connect Sout of value with Sout of function
+				auto l_fun = context.getLabel(lambda->getBody());
+				connectStateSets(Sout, l_val, c, t, Sout, l_fun, c, t);
+
+				// fix constraints for return expr
+				visit(stmt->getReturnExpr());
 			}
 
 			void visitNode(const NodeAddress& node) {
@@ -736,6 +824,79 @@ std::cout << "Processing Read: " << *call << " ... \n";
 		return res;
 	}
 
+
+	namespace {
+
+
+		const char* getName(SetType type) {
+			switch(type) {
+			case C: return "C";
+			case c: return "c";
+			case D: return "D";
+			case d: return "d";
+			case R: return "R";
+			case r: return "r";
+			case Sin: return "Sin";
+			case Sout: return "Sout";
+			case Sas: return "Sas";
+			}
+			return "?";
+		}
+
+	}
+
+
+	void CBAContext::plot(const Constraints& constraints, std::ostream& out) {
+
+
+		auto getAddress = [&](const Label l)->StatementAddress {
+			for(auto cur : this->labels) {
+				if (cur.second == l) return cur.first;
+			}
+			for(auto cur : this->vars) {
+				if (cur.second == l) return cur.first;
+			}
+			return StatementAddress();
+		};
+
+
+		out << "digraph G {";
+
+		// name sets
+		for(auto cur : sets) {
+			string setName = getName(std::get<0>(cur.first));
+			auto pos = getAddress(std::get<1>(cur.first));
+			out << "\n\ts" << cur.second << " [label=\"s" << cur.second << " = " << setName << "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << "]\"];";
+		}
+
+		for(auto cur : stateSets) {
+			string setName = getName(std::get<0>(cur.first));
+			string dataName = getName(std::get<5>(cur.first));
+			auto pos = getAddress(std::get<1>(cur.first));
+			out << "\n\ts" << cur.second << " [label=\"s" << cur.second << " = " << setName << "-" << dataName << "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << "]\"];";
+		}
+
+		// link sets
+		for(auto cur : constraints) {
+			switch(cur.getKind()) {
+			case utils::set_constraint::Constraint::Elem:
+				out << "\n\te" << cur.getValue() << " -> " << cur.getA() << " [label=\"in\"];";
+				break;
+			case utils::set_constraint::Constraint::Subset:
+				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"sub\"];";
+				break;
+			case utils::set_constraint::Constraint::SubsetIfElem:
+				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if " << cur.getValue() << " in " << cur.getA() << "\"];";
+				break;
+			case utils::set_constraint::Constraint::SubsetIfBigger:
+				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if |" << cur.getA() << "| > " << cur.getValue() << "\"];";
+				break;
+			}
+		}
+
+		out << "\n}\n";
+
+	}
 
 } // end namespace cba
 } // end namespace analysis

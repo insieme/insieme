@@ -68,6 +68,7 @@ namespace cba {
 
 	struct Context : public utils::Printable {
 		array<Label, 2> context;		// TODO: make length a generic parameter
+		Context() : context() {}
 		bool operator<(const Context& other) const { return context < other.context; }
 		std::ostream& printTo(std::ostream& out) const { return out << context; };
 	};
@@ -88,11 +89,12 @@ namespace cba {
 
 	// TODO: make this expandable
 	enum SetType {
-		C, c,		// label / variable => function  (and value at the moment)
-		D, d, 		// label / variable => value (not used yet, occupied by C and r)
-		Sin, Sout,	// state before and after every expression
-		R, r,		// label / variable => location pointing at
+		C, c,				// label / variable => function  (and value at the moment)
+		D, d, 				// label / variable => value (not used yet, occupied by C and r)
+		Sin, Sas, Sout,		// state before, in and after every expression	(in is only used for assignments)
+		R, r,				// label / variable => location pointing at
 	};
+
 
 	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
 
@@ -109,13 +111,16 @@ namespace cba {
 
 	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
 
+	typedef utils::set_constraint::Constraints Constraints;
+
 	class CBAContext {
 
 		typedef tuple<SetType, int, Context, Thread> SetKey;
+		typedef tuple<SetType, Label, Context, Thread, Location, SetType, Context, Thread> StateSetKey;
 
 		int setCounter;
 		std::map<SetKey, Set> sets;
-		std::map<tuple<SetType, Label, Context, Thread, Location, SetType, Context, Thread>, Set> stateSets;
+		std::map<StateSetKey, Set> stateSets;
 
 		// two caches for resolving labels and variables
 		int varCounter;
@@ -146,13 +151,15 @@ namespace cba {
 		}
 
 		Set getSet(SetType type, Label label, const Context& c, const Thread& t, Location loc, SetType type_loc, const Context& c_loc = Context(), const Thread& t_loc = Thread()) {
-			auto key = std::make_tuple(type, label, c, t, loc, type_loc, c_loc, t_loc);
+			StateSetKey key(type, label, c, t, loc, type_loc, c_loc, t_loc);
 			auto pos = stateSets.find(key);
 			if (pos != stateSets.end()) {
 				return pos->second;
 			}
 			Set newSet = ++setCounter;		// reserve 0
 			stateSets[key] = newSet;
+//std::cout << "New key: (" << type << "," << label << "," << loc << "," << type_loc << ") => " << newSet << "\n";
+//std::cout << "New key: (" << type << "," << label << "," << c << "," << t << "," << loc << "," << type_loc << "," << c_loc << "," << t_loc << ") => " << newSet << "\n";
 			return newSet;
 		}
 
@@ -238,10 +245,10 @@ namespace cba {
 			return core::ExpressionAddress();
 		}
 
+		void plot(const Constraints& constraints, std::ostream& out = std::cout);
+
 	};
 
-
-	typedef utils::set_constraint::Constraints Constraints;
 
 	Constraints generateConstraints(CBAContext& context, const core::StatementPtr& root);
 

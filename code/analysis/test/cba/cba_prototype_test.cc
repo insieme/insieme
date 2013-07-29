@@ -36,6 +36,8 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
+
 #include "insieme/analysis/cba/prototype.h"
 
 #include "insieme/core/ir_builder.h"
@@ -311,20 +313,32 @@ namespace cba {
 
 		CBAContext context;
 		auto constraints = generateConstraints(context, code);
-		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+//		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
 
 		auto solution = cba::solve(constraints);
-		std::cout << "Solutions:  " << solution << "\n";
+//		std::cout << "Solutions:  " << solution << "\n";
 
 		auto decl = CompoundStmtAddress(code)[0].as<DeclarationStmtAddress>();
 		auto R_decl = context.getSet(R, context.getLabel(decl->getInitialization()));
-		std::cout << "R[decl] = s" << R_decl << " = " << solution[R_decl] << "\n";
+//		std::cout << "R[decl] = s" << R_decl << " = " << solution[R_decl] << "\n";
 
 
 		auto val = CompoundStmtAddress(code)[1].as<ExpressionAddress>();
 
 		// this would be the ideal case
 		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, val)));
+
+
+		{
+			// open file
+			std::ofstream out("constraints.dot", std::ios::out );
+
+			// write file
+			context.plot(constraints, out);
+		}
+
+		// create pdf
+		system("dot -Tpdf constraints.dot -o constraints.pdf");
 
 	}
 
@@ -339,6 +353,8 @@ namespace cba {
 				"	auto y = *x;"					// y should be 1
 				"	x = 2;"							// set x to 2
 				"	auto z = *x;"					// z should be 2
+				"	x = 3;"							// set x to 3
+				"	auto w = *x;"					// z should be 3
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -353,10 +369,23 @@ namespace cba {
 
 		auto varY = CompoundStmtAddress(code)[1].as<DeclarationStmtAddress>()->getVariable();
 		auto varZ = CompoundStmtAddress(code)[3].as<DeclarationStmtAddress>()->getVariable();
+		auto varW = CompoundStmtAddress(code)[5].as<DeclarationStmtAddress>()->getVariable();
 
 		// this would be the ideal case
 		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, varY)));
 		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, varZ)));
+		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, varW)));
+
+		{
+			// open file
+			std::ofstream out("constraints.dot", std::ios::out );
+
+			// write file
+			context.plot(constraints, out);
+		}
+
+		// create pdf
+		system("dot -Tpdf constraints.dot -o constraints.pdf");
 
 	}
 
