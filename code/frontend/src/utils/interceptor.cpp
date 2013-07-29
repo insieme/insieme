@@ -167,8 +167,7 @@ bool Interceptor::isIntercepted(const clang::Type* type) const {
 }
 
 bool Interceptor::isIntercepted(const clang::FunctionDecl* decl) const {
-	if(toIntercept.empty()) { return false; }
-
+	if(toIntercept.empty()) {return false; }
 	return regex_match(decl->getQualifiedNameAsString(), rx);
 }
 
@@ -200,51 +199,18 @@ insieme::core::ExpressionPtr Interceptor::intercept(const clang::FunctionDecl* d
 	//fix types for ctor, mfunc, ...
 	std::string literalName = decl->getQualifiedNameAsString();
 
-	/*
+	// fix the type and literal name for Cxx members / ctors / dtors
 	if(const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl) ) {
-		core::TypePtr thisTy = convFact.convertType(methodDecl->getParent()->getTypeForDecl());
-		core::TypeList paramTys = type->getParameterTypeList();
-		paramTys.insert(paramTys.begin(), builder.refType(thisTy));
-
-		if( const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
-			//FIXME can we use memberize()?
-			type = builder.functionType( paramTys, builder.refType(thisTy), core::FK_CONSTRUCTOR);
-			
-			// update literal name (only class name type)
-			literalName = ctorDecl->getParent()->getQualifiedNameAsString();
-		} else {
-			//FIXME can we use memberize()?
-			type = builder.functionType( paramTys, type.getReturnType(), core::FK_MEMBER_FUNCTION);
-
-			// just use name of method as the resulting literal name
-			literalName = methodDecl->getNameAsString();
-		}
-	}
-	*/
-
-	core::ExpressionPtr interceptExpr;
-	if(const clang::CXXMethodDecl* methodDecl = llvm::dyn_cast<clang::CXXMethodDecl>(decl) ) {
-		core::TypePtr thisTy = builder.refType(convFact.convertType(methodDecl->getParent()->getTypeForDecl()));
-		core::FunctionKind funcKind;
-
 		if( const clang::CXXConstructorDecl* ctorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(decl)) {
 			literalName = ctorDecl->getParent()->getQualifiedNameAsString();
-			funcKind = core::FK_CONSTRUCTOR;
 		} else {
 			literalName = methodDecl->getNameAsString();
-			funcKind = core::FK_MEMBER_FUNCTION;
 		}
-		// remove Clang inline namespace from header literal name (if present)
-		literalName = fixQualifiedName(literalName);
-
-		VLOG(2) << type;
-		interceptExpr = builder.literal(literalName, type);
-		interceptExpr = convFact.memberize(decl, interceptExpr, thisTy, funcKind).as<core::ExpressionPtr>();
-	} else {
-		// remove Clang inline namespace from header literal name (if present)
-		literalName = fixQualifiedName(literalName);
-		interceptExpr = builder.literal(literalName, type);
+		type = convFact.convertFunctionType(methodDecl);
 	}
+
+	literalName = fixQualifiedName(literalName);
+	core::ExpressionPtr interceptExpr = builder.literal(literalName, type);
 
 	addHeaderForDecl(interceptExpr, decl, stdLibDirs);
 

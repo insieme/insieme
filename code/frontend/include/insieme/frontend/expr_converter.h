@@ -122,18 +122,18 @@ namespace conversion {
 
 #define LOG_EXPR_CONVERSION(parentExpr, expr) \
 	FinalActions attachLog( [&] () { \
-        VLOG(1) << "*************     EXPR  [class:'"<< parentExpr->getStmtClassName() <<"']         **********\n"; \
+        VLOG(1) << "*************     EXPR  [class:'"<< parentExpr->getStmtClassName() <<"']         ***************************"; \
         if( VLOG_IS_ON(2) ) { \
             VLOG(2) << "Dump of clang expression: "; \
             parentExpr->dump(); \
         } \
         VLOG(1) << "-> at location: (" <<	\
-                    utils::location(parentExpr->getLocStart(), convFact.getCurrentSourceManager()) << "); \n "; \
+                    utils::location(parentExpr->getLocStart(), convFact.getCurrentSourceManager()) << "); "; \
         VLOG(1) << "Converted into IR expression: "; \
         if(expr) { \
             VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )"; \
         } \
-        VLOG(1) << "****************************************************************************************\n"; \
+        VLOG(1) << "****************************************************************************************"; \
     } )
 
 //---------------------------------------------------------------------------------------------------------------------

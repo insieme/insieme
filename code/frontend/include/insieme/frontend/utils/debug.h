@@ -56,7 +56,7 @@
 		std::cout << " vs " << std::endl; \
 		dumpPretty(typeB); \
 		std::cout << " ======================= " << std::endl; \
-		exit(-1);\
+		abort();\
 	}
 
 #define ASSERT_IS_SUBTYPE(typeA, typeB)\

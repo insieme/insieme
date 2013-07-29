@@ -124,25 +124,6 @@ protected:
 		RecVarExprMap recVarExprMap;
 
 		/**
-		 * When set this variable tells the frontend to resolve eventual recursive function call
-		 * using the mu variables which has been previously placed in the recVarExprMap
-		 */
-		bool isRecSubFunc;
-
-		/**
-		 * It tells the frontend the body of a recursive function is being resolved and
-		 * eventual functions which are already been resolved should be not converted again
-		 * but read from the map
-		 */
-		bool isResolvingRecFuncBody;
-
-		/**
-		 * This variable points to the current mu variable representing the start of the recursion
-		 * is used while resolving recursive functions 
-		 */
-		core::VariablePtr currVar;
-
-		/**
 		 * This variable stores the list of parameters passed as an argument to the currently processed
 		 * function.
 		 */
@@ -152,46 +133,17 @@ protected:
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Recursive Type resolution
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		typedef std::map<const clang::TagDecl*, insieme::core::TypeVariablePtr> TypeRecVarMap;
-		TypeRecVarMap recVarMap;
-		bool isRecSubType;
-
-		typedef std::map<const clang::TagDecl*, insieme::core::TypePtr> RecTypeMap;
-		RecTypeMap recTypeCache;
-
-		bool isResolvingFunctionType;
 
 		typedef std::map<const clang::Type*, insieme::core::TypePtr> TypeCache;
 		TypeCache typeCache;
-
+		
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// 						Global variables utility
+		// 						Specifically marked Objects
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//		/** 
-//		 * Keeps the type and initialization of the global variables within the entry point
-//		 */
-//		typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;  // FIXME: to desapear
-//		GlobalStructPair globalStruct;
-
-		/**
-		 * Global and static variables
-		 */
-		core::VariablePtr globalVar;
 
 		std::set<const clang::VarDecl*> thread_private;
 		std::set<const clang::VarDecl*> volatiles;
 
-//		/*
-//		 * Set of the function which need access to global variables, every time such a
-//		 * function is converted the data structure containing global variables has to
-//		 * be correctly forwarded by using the capture list
-//		 */
-//		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncSet;  //FIXME:: not used
-//		UseGlobalFuncSet globalFuncSet;
-//
-//		typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;  // FIXME:: used??
-//		GlobalIdentMap globalIdentMap;
-//
 		/*
 		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
 		 * a new variable is created in function body and the value of the input parameter assigned to it
@@ -214,7 +166,7 @@ protected:
 
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// 						Diagnossis system
+		// 						Diagnosis system
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		
 		/**
@@ -225,9 +177,7 @@ protected:
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						context structure Constructor
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		ConversionContext() :
-				isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), 
-				isRecSubType(false), isResolvingFunctionType(false) {
+		ConversionContext() : curParameter(0) {
 		}
 
 	};
@@ -374,10 +324,7 @@ public:
 	core::StatementPtr convertStmt(const clang::Stmt* stmt) const;
 
 	/**
-	 * Entry point for converting clang expressions to IR expres    Number of Shared Nodes: 200
-	 Number of Addressable Nodes: 1068
-	 Share Ratio: 5.34
-	 Height of tree: 30 sions
+	 * Entry point for converting clang expressions to IR expressions
 	 * @param expr is a clang expression of the AST
 	 * @return the corresponding IR expression
 	 */
@@ -409,10 +356,16 @@ public:
 	core::TypePtr tryDeref(const core::TypePtr& type) const;
 
 	/**
-	 * Allows access to the set of threadprivates stored in the context
-	 * @return IR annotation
+	 * Allows access to the set of threadprivates stored in the context.
 	 */
 	const std::set<const clang::VarDecl*>& getThreadprivates() const {
+		return ctx.thread_private;
+	}
+
+	/**
+	 * Provides access to the set of threadprivates stored in the context.
+	 */
+	std::set<const clang::VarDecl*>& getThreadprivates() {
 		return ctx.thread_private;
 	}
 
@@ -422,7 +375,7 @@ public:
 
 	// typedef std::function<core::ExpressionPtr (core::NodeManager&, const clang::CallExpr*)> CustomFunctionHandler;
 	/**
-	 * Registers a handler for call expressions. When a call expression to the provided function declaration 
+	 * Registers a handler for call expressions. When a call expression to the provided function declaration
 	 * is encountered by the frontend, the provided handler is invoked. The handler produces an IR expression
 	 * which will be used to replace the call expression in the generated IR program
 	 */
@@ -438,8 +391,7 @@ public:
 	 * @param isEntryPoint determine if this function is an entry point of the generated IR
 	 * @return Converted lambda
 	 */
-	virtual core::NodePtr convertFunctionDecl(const clang::FunctionDecl* funcDecl,
-			bool isEntryPoint = false);
+	virtual core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
 
 	/**
 	 * Converts variable declarations into IR an declaration statement. This method is also responsible
@@ -492,30 +444,6 @@ public:
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  CPP STUFF   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	/**
-	 * turns an ir converted function into a member function of an object of specified class
-	 * @param callExpr the clang Decl of the function to be converted, it might be a Ctor, member
-	 * or dtor
-	 * @param func the Insieme IR converted function, might come from the cache or just converted
-	 * with convertFuncDecl
-	 * @param ownerClassType, the IR type of the owner class of the member function
-	 * @param funcKind is it a Ctor, Member or dtor?
-	 * @return the lambda expression corresponding a Member function 
-	 */
-	core::NodePtr memberize (const clang::FunctionDecl* callDecl,
-						 	 core::ExpressionPtr func, 
-						 	 core::TypePtr ownerClassType, 
-						 	 core::FunctionKind funcKind);
-
-	/**
-	 * handles implicit behaviour of a constructor call,
-	 * NOTE!! does not memberize, still need to call memberize afterwards
-	 * @param ctorDecl the constructor function declaration
-	 * @param irClassType the class to be build
-	 * @return the lambda expression of the constructor, NOT memberized
-	 */
-	core::ExpressionPtr convertFunctionDecl (const clang::CXXConstructorDecl* ctorDecl);
-
 	// FIXME: where here and not expr visitor????
 	core::ExpressionPtr convertInitializerList(
 			const clang::InitListExpr* initList,
@@ -530,7 +458,6 @@ protected:
 	core::NodeManager& mgr;
 	Program& mProg;
 	ConversionFactory mFact;
-	core::ProgramPtr mProgram;
 	utils::Indexer& mIndexer;
 	analysis::GlobalVarCollector& globalCollector;
 
@@ -540,12 +467,9 @@ public:
 			mgr(mgr),
 			mProg(prog),
 			mFact(mgr, prog, cpp),
-			mProgram(prog.getProgram()),
 			mIndexer(prog.getIndexer()),
 			globalCollector(coll){
 	}
-
-	core::ProgramPtr getProgram() const { return mProgram; }
 
 	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain = false);
 

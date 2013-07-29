@@ -141,8 +141,8 @@ namespace core {
 					return;
 				}
 
-				// process as usual
-				super::visitLambdaExpr(lambda, res, recVars);
+				// continue by processing the definitions
+				visitLambdaDefinition(lambda->getDefinition(), res, recVars);
 			}
 
 			void visitNode(const NodeAddress& node, RecursiveCallLocations& res, VariableSet& recVars) {

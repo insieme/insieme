@@ -58,9 +58,9 @@ void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDe
 	FunctionDependencyGraph& funcDepGraph = static_cast<FunctionDependencyGraph&>(*this);
 
 	CallExprVisitor callExprVis(funcDepGraph.getIndexer(), funcDepGraph.getInterceptor());
-	CallExprVisitor::CallGraph&& graph = callExprVis.getCallGraph(func);
+	CallExprVisitor::CallGraph&& childFuncs = callExprVis.getCallGraph(func);
 
-	std::for_each(graph.begin(), graph.end(),
+	std::for_each(childFuncs.begin(), childFuncs.end(),
 			[ this, v ](const clang::FunctionDecl* currFunc) {assert(currFunc); this->addNode(currFunc, &v);});
 }
 
@@ -74,26 +74,9 @@ CallExprVisitor::CallGraph CallExprVisitor::getCallGraph(const clang::FunctionDe
 		// we don't care about interanls of intercepted function 
 		VLOG(2) << "isIntercepted " << func << "("<<((void*)func)<<")";
 	
-		// OR a function with vistable body
-	} else if (func->getBody()) {
+		// OR a function with visitable body
+	} else if (func->hasBody()) {
 		Visit(func->getBody());
-
-		// OR any other case, most probably an Spetialitation 
-	} else {
-
-		std::cout << func->getQualifiedNameAsString() << std::endl;
-		std::cout << "at location: " 
-				  << utils::location(func->getLocStart(),
-						  			 func->getTranslationUnitDecl()->getASTContext().getSourceManager()) 
-				  << std::endl;
-
-		if (func->isFunctionTemplateSpecialization ()){
-			clang::FunctionDecl* f = func->getInstantiatedFromMemberFunction ();
-			if(!f) f = func->getTemplateInstantiationPattern () ;
-			if(!f) f = func->getClassScopeSpecializationPattern () ;
-			assert(f);
-			assert(f->hasBody());
-		}
 	}
 	return callGraph;
 }
@@ -106,19 +89,9 @@ void CallExprVisitor::addFunctionDecl(clang::FunctionDecl* funcDecl) {
 	// the definition in another translation unit
 	if (!funcDecl->hasBody(def)) {
 		// it might be a template spetialitation:
-
-		if (funcDecl->isFunctionTemplateSpecialization ()){
-			std::cout << " is a template: " << std::endl;
-				def = funcDecl->getInstantiatedFromMemberFunction ();
-				if(!def) def = funcDecl->getTemplateInstantiationPattern () ;
-				if(!def) def = funcDecl->getClassScopeSpecializationPattern () ;
-				assert(def);
-				assert(def->hasBody());
-		} else {
-			clang::Decl* raw = indexer.getDefinitionFor (funcDecl);
-			if (raw){
-				def = llvm::cast<clang::FunctionDecl>(raw);
-			}
+		clang::Decl* raw = indexer.getDefinitionFor (funcDecl);
+		if (raw){
+			def = llvm::cast<clang::FunctionDecl>(raw);
 		}
 	}
 
@@ -144,7 +117,8 @@ void CallExprVisitor::VisitCallExpr(clang::CallExpr* callExpr) {
 }
 
 void CallExprVisitor::VisitDeclRefExpr(clang::DeclRefExpr* expr) {
-	//FIXME: why is this commented??
+	// does this make any sense? since is a pointer, we wont be able to identify the source of the
+	// function body, not without building a complex dependency analysis (aliases analysis)
 	// if this variable is used to invoke a function (therefore is a
 	// function pointer) and it has been defined here, we add a potentially
 	// dependency to the current definition
@@ -191,8 +165,8 @@ void CallExprVisitor::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
 }
 
 //void CallExprVisitor::VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
-	//if there is an member with an initializer in the ctor we add it to the function graph
-	//if (clang::CXXConstructorDecl * constructorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(llvm::cast<clang::FunctionDecl>(callExpr->getConstructor()))) {
+//	//if there is an member with an initializer in the ctor we add it to the function graph
+//	if (clang::CXXConstructorDecl * constructorDecl = llvm::dyn_cast<clang::CXXConstructorDecl>(llvm::cast<clang::FunctionDecl>(callExpr->getConstructor()))) {
 //		// connects the constructor expression to the function graph
 //		addFunctionDecl(constructorDecl);
 //		for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(), iend =
@@ -203,12 +177,8 @@ void CallExprVisitor::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
 //				Visit(initializer->getInit());
 //			}
 //		}
-
-	//VisitCXXConstructExpr(callExpr->getConstructorExp());
-
-	//}
-
 //	VisitStmt(callExpr);
+//	}
 //}
 
 //void CallExprVisitor::VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
@@ -234,7 +204,6 @@ void CallExprVisitor::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* mcExpr) {
 	if(clang::FunctionDecl* funcDecl = llvm::dyn_cast<clang::FunctionDecl>(mcExpr->getCalleeDecl())) {
 		addFunctionDecl(funcDecl);
 	}
-
 	VisitStmt(mcExpr);
 }
 

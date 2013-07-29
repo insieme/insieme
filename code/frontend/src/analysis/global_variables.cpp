@@ -74,6 +74,8 @@ std::string buildGlobalName(const clang::VarDecl* var, const std::string& storag
 		std::string name     = var->getNameAsString();
 		std::string newName  = storage+name;
 		boost::replace_all(qualName, "::", "__");
+		boost::replace_all(qualName, "<", "_");
+		boost::replace_all(qualName, ">", "_");
 		qualName.replace( qualName.end()-name.size(), qualName.end(), newName);
 		return qualName;
 }
@@ -93,14 +95,15 @@ class GlobalsVisitor{
 												 
 	{ }
 
-	void analizeDecl(clang::Decl* decl){
+	void analizeDecl(const clang::Decl* decl, bool inFunc){
 
 		// === named DECL ====
 		// this might be anything with a name
-		if (llvm::isa<clang::NamedDecl>(decl)) {
+		if (const clang::NamedDecl* nm = llvm::dyn_cast<clang::NamedDecl>(decl)) {
+			//std::cout << nm->getNameAsString() << std::endl;
 			// === Function Decl ===
-			if (clang::FunctionDecl* fdecl = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
-				if (fdecl->hasBody()){
+			if (const clang::FunctionDecl* fdecl = llvm::dyn_cast<clang::FunctionDecl>(nm)) {
+				if (fdecl->hasBody() && !collector.getInterceptor().isIntercepted(fdecl)){
 					analyzeDeclContext(llvm::cast<clang::DeclContext>(fdecl));
 				}
 			}
@@ -116,27 +119,24 @@ class GlobalsVisitor{
 						}
 						break;
 					case clang::TagDecl::TagKind::TTK_Enum 	:
-
-						break;
-
 					case clang::TagDecl::TagKind::TTK_Interface :
-						// FIXME: do we need this??
 						break;
 				}
 			}
 			// === Namespace Decl ===
-			else if (llvm::isa<clang::NamespaceDecl>(decl)){
-				analyzeDeclContext(llvm::cast<clang::DeclContext>(decl));
+			else if (const clang::NamespaceDecl* namespaceDecl = llvm::dyn_cast<clang::NamespaceDecl>(decl)){
+				if(!collector.getInterceptor().isIntercepted(namespaceDecl->getQualifiedNameAsString())){
+					analyzeDeclContext(llvm::cast<clang::DeclContext>(decl));
+				}
 			} 
-			// === templDecl Decl ===
-			else if(const clang::TemplateDecl* templDecl = llvm::dyn_cast<clang::TemplateDecl>(decl)) {
-				analizeDecl(templDecl->getTemplatedDecl());
-			}
+		//	// === templDecl Decl ===
+		//	else if(const clang::TemplateDecl* templDecl = llvm::dyn_cast<clang::TemplateDecl>(decl)) {
+		//		analizeDecl(templDecl->getTemplatedDecl(), false);
+		//	}
 			// === variable Decl ===
 			else if (const clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(decl)){
-
 				// this a variable, might be global, static or even extern.
-				collector.addVar(varDecl);
+				collector.addVar(varDecl, inFunc);
 
 				// BUT it might be also a class declaration which makes use of globals inside
 				const clang::Type* type = varDecl->getType().getTypePtr();
@@ -152,7 +152,7 @@ class GlobalsVisitor{
 		// === default ====
 		else {
 			//default case -- if DeclContext, try to analyze it
-			if(clang::DeclContext* declContext = llvm::dyn_cast<clang::DeclContext>(decl)) {
+			if(const clang::DeclContext* declContext = llvm::dyn_cast<clang::DeclContext>(decl)) {
 				analyzeDeclContext(declContext);
 			}
 		}
@@ -160,26 +160,14 @@ class GlobalsVisitor{
 		// if it does not have a name, it is another artifact
 	}
 
-	void analyzeDeclContext(clang::DeclContext* ctx){
+	void analyzeDeclContext(const clang::DeclContext* ctx){
 		clang::DeclContext::decl_iterator it = ctx->decls_begin();
 		clang::DeclContext::decl_iterator end = ctx->decls_end();
 		for (; it != end; it++){
-			analizeDecl(llvm::cast<clang::Decl>(*it));
+			analizeDecl(llvm::cast<clang::Decl>(*it), llvm::isa<clang::FunctionDecl>(ctx));
 		}
 	}
 };
-
-
-void insertIfNoExist(const clang::VarDecl* var, std::list<const clang::VarDecl*>& collection){
-	bool found = false;
-	for (auto elem : collection){
-		found = elem->getQualifiedNameAsString () == var->getQualifiedNameAsString();
-		if (found) break;
-	}
-
-	if (!found)
-		collection.push_back(var);
-}
 
 } // end anonymous namespace
 
@@ -204,16 +192,20 @@ void GlobalVarCollector::operator()(const TranslationUnitPtr& tu){
 	clang::DeclContext* ctx= clang::TranslationUnitDecl::castToDeclContext (tuDecl);
 	assert(ctx && "AST has no decl context");
 
+	(*this)(ctx);
+}
+
+void GlobalVarCollector::operator()(const clang::DeclContext* ctx){
 	GlobalsVisitor vis( *this);
 	vis.analyzeDeclContext(ctx);
 }
 
 //////////////////////////////////////////////////////////////////
 //
-void GlobalVarCollector::addVar(const clang::VarDecl* var){
+void GlobalVarCollector::addVar(const clang::VarDecl* var, bool inFunc){
 
 		//FIXME:: idenfify scope and visibility with clang
-		//
+		
 //	std::cout << "***************************************************************" << std::endl;
 //	std::cout << "collectiong: " << var->getQualifiedNameAsString() << std::endl;
 //	std::cout << "******************" << std::endl;
@@ -224,7 +216,7 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var){
 //	std::cout << "   isLocalVarDecl () " 			<< var->isLocalVarDecl () << std::endl		;
 //	std::cout << "   isFunctionOrMethodVarDecl () "<< var->isFunctionOrMethodVarDecl () << std::endl;
 //	std::cout << "   isStaticDataMember () " 		<< var->isStaticDataMember () << std::endl ; 
-//
+	
 	if (!var->hasGlobalStorage())
 		return;
 
@@ -234,7 +226,8 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var){
 
 	std::string name;
 	VarStorage st;
-	if (var->isStaticLocal()){
+	// not enough with var->isStaticLocal(), this will be true as well for class static members
+	if (inFunc){
 		name = buildGlobalName(var, "static_");
 		assert(!var->hasExternalStorage());
 		st = VS_STATIC;
@@ -255,14 +248,21 @@ void GlobalVarCollector::addVar(const clang::VarDecl* var){
 		else st = VS_GLOBAL;
 	}
 
-
 	VLOG(2) << " var: " << name << " \t\t\t storage:" << st;
 
-	if (var->hasDefinition() && var->hasInit()){
-		if (var->isStaticLocal()) 	staticInitializations.push_back(var);
-		else						insertIfNoExist( var, globalInitializations);
+	// it might be a spetialization, initialization will be in the original template
+	if (var->isStaticDataMember()){
+		const clang::VarDecl* spetialization = var->getInstantiatedFromStaticDataMember ();
+		if (spetialization  && spetialization->hasInit()){
+			globalInitializations[name] = spetialization;
+		}
 	}
 
+	// store in the ordered list for future initialization
+	if (var->hasDefinition() && var->hasInit()){
+		if (st == VS_STATIC) 	staticInitializations.push_back(var);
+		else globalInitializations[name] = var;
+	}
 
 	// if already exists a previous version, and is marked as extern update with non extern if
 	// possible
@@ -307,11 +307,15 @@ bool GlobalVarCollector::isStatic (const clang::VarDecl* var){
 //////////////////////////////////////////////////////////////////
 //
 std::string GlobalVarCollector::getName (const clang::VarDecl* var){
+	std::string name;
 	auto fit = staticNames.find(var);
 	if (fit != staticNames.end())
-		return fit->second;
-	else
-		return buildGlobalName(var, "global_");
+		name =  fit->second;
+	else{
+		if (var->isStaticDataMember())	name = buildGlobalName(var, "staticMem_");
+		else  						  	name = buildGlobalName(var, "global_");
+	}
+	return name;
 }
 
 

@@ -230,6 +230,7 @@ ClangCompiler::ClangCompiler(const ConversionJob& config, const bool is_obj) : p
     if(is_obj) {
         pimpl->ast_unit.load(config.getFile());
         pimpl->ast_unit.createASTUnit(&pimpl->clang.getDiagnostics(), pimpl->clang.getFileSystemOpts());
+        pimpl->ast_unit.setAST(std::string());
     }
 
 	pimpl->clang.createFileManager();

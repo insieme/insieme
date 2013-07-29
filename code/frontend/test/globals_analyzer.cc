@@ -67,7 +67,7 @@ TEST(GlobalCollectorTest, GlobalStorage) {
 	prog.addTranslationUnit( file );
 
 	//collect globals, analyze all translation units
-	fe::analysis::GlobalVarCollector globalsCollector;
+	fe::analysis::GlobalVarCollector globalsCollector(prog.getInterceptor());
 	globalsCollector(prog.getTranslationUnits()[0]);
 
 	//std::cout << "****************************************" << std::endl;

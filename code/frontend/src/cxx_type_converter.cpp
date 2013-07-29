@@ -87,36 +87,6 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitPointerType(const Pointe
 core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* tagType) {
 	VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
 
-	// check if this type has being already translated.
-	// this boost conversion but also avoids infinite recursion while resolving class member function
-	auto match = convFact.ctx.typeCache.find(tagType);
-	if(match != convFact.ctx.typeCache.end()){
-		return match->second;
-	}	
-
-	auto tagDecl = tagType->getDecl();
-	if (tagDecl) {
-		VLOG(2) << "VisitTagType " << tagDecl->getNameAsString() <<  std::endl;
-
-		if(!convFact.ctx.recVarMap.empty() && tagDecl) {
-			// check if this type has a typevar already associated, in such case return it
-			ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagDecl);
-			if( fit != convFact.ctx.recVarMap.end() ) {
-				// we are resolving a parent recursive type, so we shouldn't
-				return fit->second;
-			}
-		}
-
-		// check if the type is in the cache of already solved recursive types
-		// this is done only if we are not resolving a recursive sub type
-		if(!convFact.ctx.isRecSubType && tagDecl) {
-			ConversionContext::RecTypeMap::const_iterator rit = convFact.ctx.recTypeCache.find(tagDecl);
-			if(rit != convFact.ctx.recTypeCache.end()) {
-				return rit->second;
-			}
-		}
-	}
-	
 	core::TypePtr ty = TypeConverter::VisitTagType(tagType);
 	LOG_TYPE_CONVERSION(tagType, ty) ;
 
@@ -130,8 +100,6 @@ core::TypePtr ConversionFactory::CXXTypeConverter::VisitTagType(const TagType* t
 		if (!llvm::isa<clang::CXXRecordDecl>(llvm::cast<clang::RecordType>(tagType)->getDecl()))
 			return classType;
 
-
-		//~~~~~ look in the indexer for the full decl ~~~~
 		const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(tagType->getDecl());
 
 		//~~~~~ base classes if any ~~~~~
@@ -350,8 +318,11 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 	// assemble class info
 	core::ClassMetaInfo classInfo;
 
-	//~~~~~ look in the indexer for the full decl ~~~~
+	//~~~~~ look for the full decl ~~~~
 	const clang::CXXRecordDecl* classDecl = llvm::cast<clang::CXXRecordDecl>(recType->getDecl());
+
+	//~~~~~ hey, this might be an instantation of a templated object. lets look for globals (spetialized) inside ~~~~~~
+	convFact.getProgram().getGlobalCollector()(llvm::cast<clang::DeclContext>(classDecl));
 
 	//~~~~~ copy ctor, move ctor, default ctor ~~~~~
 	clang::CXXRecordDecl::ctor_iterator ctorIt = classDecl->ctor_begin();
@@ -364,22 +335,20 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 
 			if (ctorDecl->isUserProvided ()){
 
-				// the function is a template espetialization, but if it has no body, we wont
-                                // convert it, it was never instanciated
-                                if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
-                                        continue;
-                                }
+				// the function is a template spetialization, but if it has no body, we wont
+				// convert it, it was never instanciated
+				if (ctorDecl->getMemberSpecializationInfo () && !ctorDecl->hasBody()){
+						continue;
+				}
 
+				// add the funtion to the dependency graph, it might be there already,
+				// or maybe not (because of an indirect call throw an intercepted function)
+				convFact.program.getCallGraph().addNode( ctorDecl );
 
 				core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
 				if (ctorLambda ){
-					ctorLambda = convFact.memberize  (ctorDecl, ctorLambda,
-													  builder.refType(res),
-													  core::FK_CONSTRUCTOR).as<core::ExpressionPtr>();
-
 					assert(ctorLambda);
-                                        assert(!ctorLambda.isa<core::LiteralPtr>());
-
+                    assert(!ctorLambda.isa<core::LiteralPtr>());
 					classInfo.addConstructor(ctorLambda.as<core::LambdaExprPtr>());
 				}
 			}
@@ -389,8 +358,8 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 	//~~~~~ convert destructor ~~~~~
 	if(classDecl->hasUserDeclaredDestructor()){
 		const clang::FunctionDecl* dtorDecl = llvm::cast<clang::FunctionDecl>(classDecl->getDestructor () );
-		core::ExpressionPtr&& dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
-		dtorLambda = convFact.memberize  (dtorDecl, dtorLambda, builder.refType(res), core::FK_DESTRUCTOR).as<core::ExpressionPtr>();
+		convFact.program.getCallGraph().addNode( dtorDecl );
+		core::ExpressionPtr dtorLambda = convFact.convertFunctionDecl(dtorDecl).as<core::ExpressionPtr>();
 		classInfo.setDestructor(dtorLambda.as<core::LambdaExprPtr>());
 		if (llvm::cast<clang::CXXMethodDecl>(dtorDecl)->isVirtual())
 			classInfo.setDestructorVirtual();
@@ -426,9 +395,9 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 		if (method->getMemberSpecializationInfo () && !method->hasBody()){
 				continue;
 		}
+		convFact.program.getCallGraph().addNode( method );
 
 		auto methodLambda = convFact.convertFunctionDecl(method).as<core::ExpressionPtr>();
-		methodLambda = convFact.memberize(method, methodLambda, builder.refType(res), core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
 
 		if( method->isPure() ) {
 			//pure virtual functions are handled bit different in metainfo
@@ -463,19 +432,6 @@ void ConversionFactory::CXXTypeConverter::postConvertionAction(const clang::Type
 
 core::TypePtr ConversionFactory::CXXTypeConverter::convertInternal(const clang::Type* type) {
 	assert(type && "Calling CXXTypeConverter::Visit with a NULL pointer");
-
-	//check cache for type
-	auto fit = convFact.ctx.typeCache.find(type);
-	if(fit != convFact.ctx.typeCache.end()) {
-		return fit->second;
-	}
-
-	//check if type is intercepted
-	if(convFact.program.getInterceptor().isIntercepted(type)) {
-		VLOG(2) << type << " isIntercepted";
-		return convFact.program.getInterceptor().intercept(type, convFact);
-	}
-
 	return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
 }
 
