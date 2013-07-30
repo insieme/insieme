@@ -117,7 +117,7 @@ core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Convert
 	// and get the initial value
 	core::ExpressionPtr initValue;
 
-	if( (var->hasInit() && !var->isStaticLocal()) 
+	if (var->hasInit() && !var->isStaticLocal()) {
 		initValue = converter.convertInitExpr(var->getType().getTypePtr(), var->getInit(), elementType, true);
 	}
 	else if (clang::VarDecl* outDecl = const_cast<clang::VarDecl*>(var)->getOutOfLineDefinition ()){
