@@ -224,6 +224,13 @@ namespace cba {
 
 			}
 
+			void visitWhileStmt(const WhileStmtAddress& stmt) {
+
+				// decent into sub-expressions
+				visit(stmt->getCondition());
+				visit(stmt->getBody());
+			}
+
 			void visitReturnStmt(const ReturnStmtAddress& stmt) {
 
 				// link the value of the result set to lambda body
@@ -412,6 +419,23 @@ namespace cba {
 
 				auto D_lit = context.getSet(D, l_lit);
 				constraints.insert(elem(value, D_lit));
+
+			}
+
+			void visitCallExpr(const CallExprAddress& call) {
+				auto& base = call->getNodeManager().getLangBasic();
+
+				// conduct std-procedure
+				super::visitCallExpr(call);
+
+				// some special cases
+				if (base.isIntArithOp(call->getFunctionExpr())) {
+
+					// mark result as being unknown
+					auto D_call = context.getSet(D, context.getLabel(call));
+					constraints.insert(elem(context.getValue(ExpressionAddress()), D_call));
+
+				}
 
 			}
 
@@ -767,6 +791,26 @@ namespace cba {
 				visit(stmt->getCondition());
 				visit(stmt->getThenBody());
 				visit(stmt->getElseBody());
+			}
+
+			void visitWhileStmt(const WhileStmtAddress& stmt) {
+				Context c;
+				Thread t;
+
+				// get some labels
+				auto l_while = context.getLabel(stmt);
+				auto l_cond = context.getLabel(stmt->getCondition());
+				auto l_body = context.getLabel(stmt->getBody());
+
+				// do the wiring
+				connectStateSets(Sin, l_while, c, t, Sin, l_cond, c, t);
+				connectStateSets(Sout, l_cond, c, t, Sin, l_body, c, t);
+				connectStateSets(Sout, l_body, c, t, Sin, l_cond, c, t);
+				connectStateSets(Sout, l_cond, c, t, Sout, l_while, c, t);
+
+				// add constraints recursively
+				visit(stmt->getCondition());
+				visit(stmt->getBody());
 			}
 
 			void visitNode(const NodeAddress& node) {

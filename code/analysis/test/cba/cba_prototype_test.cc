@@ -42,6 +42,8 @@
 
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/utils/timer.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -439,10 +441,14 @@ namespace cba {
 		CompoundStmtAddress code(in);
 
 		CBAContext context;
-		auto constraints = generateConstraints(context, code);
+		Constraints constraints;
+		auto time = TIME(constraints = generateConstraints(context, code));
+		std::cout << "Constraint generation took: " << (time*1000) << "ms\n";
 //		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
 
-		auto solution = cba::solve(constraints);
+		Solution solution;
+		time = TIME(solution = cba::solve(constraints));
+		std::cout << "Solving constraints took: " << (time*1000) << "ms\n";
 //		std::cout << "Solutions:  " << solution << "\n";
 
 		// read first set of values
@@ -521,6 +527,50 @@ namespace cba {
 		EXPECT_EQ(should, cba::getValuesOf(context, solution, code.getAddressOfChild(3).as<ExpressionAddress>()));
 
 //		createDotDump(context, constraints);
+	}
+
+	TEST(CBA, WhileStmt) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+
+				// init variables
+				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	*x;"							// should be 1
+				"	while (x > 0) {"
+				"		*x;"						// should be 1 or unknown
+				"		x = x - 1;"
+				"		*x;"						// should be unknown
+				"	}"
+				"	*x;"							// what is x? - should be unknown
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+//		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+		createDotDump(context, constraints);
+
+		auto solution = cba::solve(constraints);
+//		std::cout << "Solutions:  " << solution << "\n";
+
+		// check value of *x
+		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(1).as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(2,1,0).as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(2,1,2).as<ExpressionAddress>())));
+
+		// the last one may be both
+		ExpressionSet should;
+		should.insert(builder.intLit(2));
+		should.insert(builder.intLit(3));
+		EXPECT_EQ(should, cba::getValuesOf(context, solution, code.getAddressOfChild(3).as<ExpressionAddress>()));
+
 	}
 
 } // end namespace cba
