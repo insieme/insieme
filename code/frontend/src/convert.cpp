@@ -1215,10 +1215,21 @@ namespace {
 				core::CallExprAddress addr(init.as<core::CallExprPtr>());
 				init = core::transform::replaceNode(mgr, addr->getArgument(0), genThis).as<core::ExpressionPtr>();
 				expr = converter.convertExpr((*it)->getInit());
+				
 				// parameter is some kind of cpp ref, but we want to use the value, unwrap it
 				if (!IS_CPP_REF_TYPE(init.getType().as<core::RefTypePtr>()->getElementType()) &&
 					IS_CPP_REF_EXPR(expr)){
 					expr = builder.deref( utils::unwrapCppRef(builder,expr));
+				}
+				// parameter is NOT cpp_ref but left hand side is -> wrap into cppref
+				else if(IS_CPP_REF_TYPE(init.getType().as<core::RefTypePtr>()->getElementType()) &&
+					!IS_CPP_REF_EXPR(expr)) {
+
+					if(core::analysis::isCppRef(init.getType().as<core::RefTypePtr>()->getElementType())) {
+						expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
+					} else if(core::analysis::isConstCppRef(init.getType().as<core::RefTypePtr>()->getElementType())){
+						expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), expr);
+					} else { assert(false); }
 				}
 				else{
 					if (*converter.lookupTypeDetails(init->getType().as<core::RefTypePtr>()->getElementType()) != *converter.lookupTypeDetails(expr->getType()))
