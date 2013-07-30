@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,8 +44,6 @@
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
-
-#include "insieme/annotations/c/naming.h"
 
 namespace insieme {
 namespace backend {
@@ -191,7 +189,7 @@ namespace runtime {
 			}
 			return unknown;
 		}
-		
+
 		const Entry& addType(const c_ast::PrimitiveTypePtr& type) {
 
 			char const * kind = "";
@@ -256,9 +254,9 @@ namespace runtime {
 			entry.components.push_back(resolve(type->elementType).index);
 			return addEntry(entry);
 		}
-		
+
 		const Entry& addType(const c_ast::VectorTypePtr& type) {
-			
+
 			char const* kind = "IRT_T_VAR_VECTOR";
 
 			Entry entry;

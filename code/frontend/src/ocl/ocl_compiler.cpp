@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,7 +40,6 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 
-#include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/data_annotations.h"
@@ -51,6 +50,8 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/pragma/handler.h"
+
+#include "insieme/core/annotations/naming.h"
 
 namespace ba = boost::algorithm;
 using namespace insieme::frontend::pragma;
@@ -892,7 +893,7 @@ public:
                 bool isKernelFunction = false;
                 bool workGroupSizeDefined = false;
 
-                auto cName = func->getAnnotation(annotations::c::CNameAnnotation::KEY);
+                auto cName = insieme::core::annotations::getAttachedName(func);
                 auto sourceLoc = func->getAnnotation(annotations::c::CLocAnnotation::KEY);
                 auto funcAnnotation = element->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
 
@@ -1150,8 +1151,8 @@ public:
                     // put opencl annotation to the new function for eventual future use
                     newFunc->addAnnotation(funcAnnotation);
                     // put cname annotation to the new function if it was there before
-                    if(cName)
-                        newFunc->getLambda()->addAnnotation(cName);
+                    if(!cName.empty())
+                        insieme::core::annotations::attachName(newFunc,cName);
                     // put source location annotation to it if existent
                     if(sourceLoc)
                         newFunc->addAnnotation(sourceLoc);

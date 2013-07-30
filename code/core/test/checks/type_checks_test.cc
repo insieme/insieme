@@ -439,12 +439,12 @@ TEST(MemberAccessElementTypeCheck, Basic) {
 	EXPECT_TRUE(check(ok, typeCheck).empty());
 	ASSERT_FALSE(check(err1, typeCheck).empty());
 	ASSERT_FALSE(check(err2, typeCheck).empty());
-	ASSERT_FALSE(check(err3, typeCheck).empty());
+	ASSERT_TRUE(check(err3, typeCheck).empty()); // having a member access in a generic type is no longer an error
 	ASSERT_FALSE(check(err4, typeCheck).empty());
 
 	EXPECT_PRED2(containsMSG, check(err1,typeCheck), Message(NodeAddress(err1), EC_TYPE_INVALID_TYPE_OF_MEMBER, "", Message::ERROR));
 	EXPECT_PRED2(containsMSG, check(err2,typeCheck), Message(NodeAddress(err2), EC_TYPE_NO_SUCH_MEMBER, "", Message::ERROR));
-	EXPECT_PRED2(containsMSG, check(err3,typeCheck), Message(NodeAddress(err3), EC_TYPE_ACCESSING_MEMBER_OF_NON_NAMED_COMPOSITE_TYPE, "", Message::ERROR));
+	//EXPECT_PRED2(containsMSG, check(err3,typeCheck), Message(NodeAddress(err3), EC_TYPE_ACCESSING_MEMBER_OF_NON_NAMED_COMPOSITE_TYPE, "", Message::ERROR));
 	EXPECT_PRED2(containsMSG, check(err4,typeCheck), Message(NodeAddress(err4), EC_TYPE_INVALID_IDENTIFIER, "", Message::ERROR));
 }
 
@@ -490,12 +490,12 @@ TEST(MemberAccessElementTypeCheck, References) {
 	EXPECT_TRUE(check(ok, typeCheck).empty());
 	ASSERT_FALSE(check(err1, typeCheck).empty());
 	ASSERT_FALSE(check(err2, typeCheck).empty());
-	ASSERT_FALSE(check(err3, typeCheck).empty());
+	ASSERT_TRUE(check(err3, typeCheck).empty());  //having a member access on a generic typed var is no longer an error
 	ASSERT_FALSE(check(err4, typeCheck).empty());
 
 	EXPECT_PRED2(containsMSG, check(err1,typeCheck), Message(NodeAddress(err1), EC_TYPE_INVALID_TYPE_OF_MEMBER, "", Message::ERROR));
 	EXPECT_PRED2(containsMSG, check(err2,typeCheck), Message(NodeAddress(err2), EC_TYPE_NO_SUCH_MEMBER, "", Message::ERROR));
-	EXPECT_PRED2(containsMSG, check(err3,typeCheck), Message(NodeAddress(err3), EC_TYPE_ACCESSING_MEMBER_OF_NON_NAMED_COMPOSITE_TYPE, "", Message::ERROR));
+	//EXPECT_PRED2(containsMSG, check(err3,typeCheck), Message(NodeAddress(err3), EC_TYPE_ACCESSING_MEMBER_OF_NON_NAMED_COMPOSITE_TYPE, "", Message::ERROR));
 	EXPECT_PRED2(containsMSG, check(err4,typeCheck), Message(NodeAddress(err4), EC_TYPE_INVALID_IDENTIFIER, "", Message::ERROR));
 }
 

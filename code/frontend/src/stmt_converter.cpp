@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -41,6 +41,7 @@
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -54,7 +55,6 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
@@ -193,10 +193,9 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitReturnStmt(clang::ReturnSt
 	stmtList.push_back(retIr);
 	core::StatementPtr retStatement = builder.compoundStmt(stmtList);
 	stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder,stmtList );
-
 	return body;
 }
-	
+
 struct ContinueStmtCollector : public core::IRVisitor<bool, core::Address> {
 	vector<core::ContinueStmtAddress> conts;
 
@@ -623,7 +622,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitForStmt(clang::ForStmt* fo
 
 		// handle eventual pragmas attached to the Clang node
 		retStmt.push_back( omp::attachOmpAnnotation(whileStmt, forStmt, convFact) );
-		
+
 		clang::Preprocessor& pp = convFact.getPreprocessor();
 		pp.Diag(forStmt->getLocStart(),
 				pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
@@ -844,7 +843,7 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitSwitchStmt(clang::SwitchSt
 		core::StatementPtr declStmt = convFact.convertVarDecl(condVarDecl);
 		retStmt.push_back(declStmt);
 
-		assert(declStmt.isa<core::DeclarationStmtPtr>() && 
+		assert(declStmt.isa<core::DeclarationStmtPtr>() &&
 				" declaring a static variable in a switch condition??? you must have a very good reason to do this!!!");
 
 		// the expression will be a reference to the declared variable

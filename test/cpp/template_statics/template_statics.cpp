@@ -79,8 +79,14 @@ class Obj{
 
 int Obj::value = 4;
 
-int main(){
+template <class T>
+T f(T value){
+	static T a =0;
+	std::cout << "call: " << a << std::endl;
+	return a;
+}
 
+int main(){
 	{
 		std::cout << Obj(4).getVal() << std::endl;
 		std::cout << Obj(3).getVal() << std::endl;

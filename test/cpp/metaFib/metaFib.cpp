@@ -34,50 +34,40 @@
  * regarding third party software licenses.
  */
 
+#include <iostream>
 
-#include "insieme/utils/logging.h"
-#include "insieme/utils/unused.h"
-
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_types.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/ir++_extension.h"
-#include "insieme/core/encoder/lists.h"
-#include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/analysis/ir++_utils.h"
-#include "insieme/core/arithmetic/arithmetic_utils.h"
-
-#include "insieme/core/types/subtyping.h"
-#include "insieme/frontend/utils/ir_utils.h"
-#include "insieme/frontend/utils/debug.h"
-
-using namespace insieme;
+using namespace std;
 
 
-namespace insieme{
-namespace frontend {
-namespace utils {
+// spetial thanks to Milot's brain dump  who wrotte the example
+// http://milotshala.wordpress.com/2012/03/01/fibonacci-sequence-and-c-template-meta-programming/
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// C++
-////////////////////////////////////////////////////////////////////////////////////////////////////
+// Calculate the value passed as T
+template <int T>
+struct Fibonacci {
+	enum { value = (Fibonacci<T - 1>::value + Fibonacci<T - 2>::value) };
+};
 
-// unwraps cppRef/constCppRef
-core::ExpressionPtr unwrapCppRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr) {
-	
-	core::NodeManager& mgr = builder.getNodeManager();	
-	core::TypePtr irType = expr->getType();
-	if (core::analysis::isCppRef(irType)) {
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), expr);
-	}
-	else if (core::analysis::isConstCppRef(irType)) {
-		return builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), expr);
-	}
-	return expr;
+// In the template meta-programming, we do not have conditionals, so instead
+// we use struct-overloading like mechanism to set constraints, we do this for
+// numbers 0, 1 and 2, just like our algorithm in the function above.
+template <>
+struct Fibonacci<0> {
+	enum { value = 1 };
+};
+
+template <>
+struct Fibonacci<1> {
+	enum { value = 1 };
+};
+
+template <>
+struct Fibonacci<2> {
+	enum { value = 1 };
+};
+
+// in the end, we get the value
+int main() {
+	int x = Fibonacci<45>::value;
+	cout << x << endl;
 }
-
-} // end utils namespace
-} // end frontend namespace 
-} // end insieme namespace 
-

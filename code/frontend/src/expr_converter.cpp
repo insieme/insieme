@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,7 +47,7 @@
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/castTool.h"
-#include "insieme/frontend/utils/ir_utils.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -70,8 +70,6 @@
 #include "insieme/core/checks/full_check.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/datapath/datapath.h"
-
-#include "insieme/annotations/c/naming.h"
 
 
 using namespace insieme;
@@ -981,8 +979,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			// get basic element type
 			core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
 			// beware of cpp refs, to operate, we need to deref the value in the left side
-			if(IS_CPP_REF_EXPR(subExprLHS) ){
-				subExprLHS = utils::unwrapCppRef(builder, subExprLHS);
+			if(IS_CPP_REF(subExprLHS->getType()) ){
+				subExprLHS = builder.toIRRef( subExprLHS);
 				subExprLHS = convFact.tryDeref(subExprLHS);
 			}
 			// rightside will become the current operation
@@ -1052,7 +1050,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			// make sure the lhs is a L-Value
 			lhs = asLValue(lhs);
 
-			//OK!! here there is a problem, 
+			//OK!! here there is a problem,
 			//	let fun000 = fun(ref<array<int<4>,1>> v5) -> unit {
 			//		    decl ref<ref<array<int<4>,1>>> v6 =  var(v5);
 			//	};
@@ -1615,14 +1613,14 @@ core::ExpressionPtr Converter::ExprConverter::VisitDeclRefExpr(const clang::Decl
 //                  VECTOR/STRUCT INITALIZATION EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::ExprConverter::VisitInitListExpr(const clang::InitListExpr* initList) {
-        VLOG(1) << "*************     EXPR  [class:'"<< initList->getStmtClassName() <<"']         **********\n"; 
-        if( VLOG_IS_ON(2) ) { 
+        VLOG(1) << "*************     EXPR  [class:'"<< initList->getStmtClassName() <<"']         **********\n";
+        if( VLOG_IS_ON(2) ) {
             VLOG(2) << "Dump of clang expression: "; \
-            initList->dump(); 
-        } 
-        VLOG(1) << "-> at location: (" <<	
+            initList->dump();
+        }
+        VLOG(1) << "-> at location: (" <<
                     utils::location(initList->getLocStart(), convFact.getSourceManager()) << "); \n ";
-        VLOG(1) << "****************************************************************************************\n"; 
+        VLOG(1) << "****************************************************************************************\n";
 assert(false && "Visiting of initializer list is not allowed!"); return core::ExpressionPtr();
 }
 

@@ -29,18 +29,20 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/assert.h"
 
 #include "insieme/core/ir.h"
 #include "insieme/core/types/subtyping.h"
 
+#include "insieme/core/annotations/naming.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_class_info.h"
@@ -52,7 +54,6 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 
-#include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/extern.h"
 
 namespace insieme {
@@ -62,7 +63,7 @@ namespace tu {
 	void IRTranslationUnit::addGlobal(const Global& newGlobal) {
 		assert(newGlobal.first && newGlobal.first->getType().isa<core::RefTypePtr>());
 		assert(!newGlobal.second || core::types::isSubTypeOf(newGlobal.second->getType(), newGlobal.first->getType().as<core::RefTypePtr>()->getElementType()));
-	
+
 		auto git = std::find_if(globals.begin(), globals.end(), [&](const Global& cur)->bool { return *newGlobal.first == *cur.first; });
 		if( git == globals.end() ) {
 			//global is new >> insert into globalsList
@@ -70,7 +71,7 @@ namespace tu {
 		} else {
 			//global is already in globalsList, if the "new one" has a initValue update the init
 			if(newGlobal.second) {
-				git->second = newGlobal.second;	
+				git->second = newGlobal.second;
 			}
 		}
 	}
@@ -329,21 +330,35 @@ namespace tu {
 					}
 				}
 
-				// if this is a call to ref member access we rebuild the whole expression
+				// if this is a call to ref member access we rebuild the whole expression to return
+				// right ref type
 				if (core::analysis::isCallOf(res, mgr.getLangBasic().getCompositeRefElem())){
 					auto call = res.as<CallExprPtr>();
 					if (call[0]->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>()){
 						auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
 							// type changed... do we have any cppRef to unwrap?
 						if (*(tmp->getType()) != *(call->getType())  && 
-							(analysis::isCppRef(tmp->getType().as<RefTypePtr>()->getElementType()) || 
-							 analysis::isConstCppRef(tmp->getType().as<RefTypePtr>()->getElementType())))
+							IS_CPP_REF(tmp->getType().as<RefTypePtr>()->getElementType()))
 							res = builder.toIRRef(builder.deref(tmp));
 						else
 							res = tmp;
 					}
 				}
 
+				// also if this is a call to member access we rebuild the whole expression to return
+				// NON ref type
+				if (core::analysis::isCallOf(res, mgr.getLangBasic().getCompositeMemberAccess())){
+					auto call = res.as<CallExprPtr>();
+					if (call[0]->getType().isa<StructTypePtr>()){
+						auto tmp = builder.accessMember(call[0], call[1].as<LiteralPtr>()->getValue());
+							// type changed... do we have any cppRef to unwrap?
+						if (IS_CPP_REF(tmp->getType()))
+							res = builder.deref(builder.toIRRef(tmp));
+						else
+							res = tmp;
+					}
+				}
+		
 				// also fix type literals
 				if (core::analysis::isTypeLiteral(res)) {
 					res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>()));
@@ -426,7 +441,7 @@ namespace tu {
 				// create de-normalized recursive bindings
 				vector<RecTypeBindingPtr> bindings;
 				for(auto cur : structs) {
-					bindings.push_back(builder.recTypeBinding(builder.typeVariable(annotations::c::getCName(cur)), cur));
+					bindings.push_back(builder.recTypeBinding(builder.typeVariable(insieme::core::annotations::getAttachedName(cur)), cur));
 				}
 
 				// sort according to variable names
@@ -615,15 +630,15 @@ namespace tu {
 			// fix the external markings
 			for(auto cur : usedLiterals) {
 				auto type = cur.as<LiteralPtr>()->getType();
-				annotations::c::markExtern(cur.as<LiteralPtr>(),
+				insieme::annotations::c::markExtern(cur.as<LiteralPtr>(),
 						type.isa<RefTypePtr>() &&
 						cur.as<LiteralPtr>()->getStringValue()[0]!='\"' &&
 						!ext.isStaticType(type.as<RefTypePtr>()->getElementType()) &&
 						!any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *resolver.map(global.first) == *cur; })
 				);
 			}
-			
-			
+
+
 			// build resulting lambda
 			if (inits.empty()) return mainFunc;
 

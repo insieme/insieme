@@ -41,6 +41,8 @@
 
 #include "abstraction/threads.h"
 
+#define IRT_BARRIER_HYBRID_TICKS 500000ul
+
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(work_group);
@@ -54,9 +56,7 @@ struct _irt_work_group {
 	volatile uint32 local_member_count;
 	volatile uint32 ended_member_count;
 	volatile uint32 cur_barrier_count;
-	volatile uint32 cur_busy_barrier_count;
 	volatile uint32 tot_barrier_count;
-	volatile uint64 barrier_start_ticks;
 	void** redistribute_data_array;
 	volatile uint32 pfor_count; // index of the most recently added pfor
 	volatile uint32 joined_pfor_count; // index of the latest joined pfor
