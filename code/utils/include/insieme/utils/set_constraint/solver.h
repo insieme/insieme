@@ -83,57 +83,58 @@ namespace set_constraint {
 	public:
 
 		enum Kind {
-			Elem, Subset, SubsetIfElem, SubsetIfBigger
+			Elem, Subset, SubsetIfElem, SubsetIfBigger, SubsetIfReducedBigger
 		};
 
 	private:
 
 		Kind kind;
 
-		value e;
+		value e, f;
 
 		Set a, b, c;
 
 	public:
 
 		Constraint(const value& e, const Set& a)
-			: kind(Elem), e(e), a(a), b(-1), c(-1) {}
+			: kind(Elem), e(e), f(-1), a(a), b(-1), c(-1) {}
 
 		Constraint(const Set& a, const Set& b)
-			: kind(Subset), e(0), a(-1), b(a), c(b) {}
+			: kind(Subset), e(0), f(-1), a(-1), b(a), c(b) {}
 
 		Constraint(const value& e, const Set& a, const Set& b, const Set& c)
-			: kind(SubsetIfElem), e(e), a(a), b(b), c(c) {}
+			: kind(SubsetIfElem), e(e), f(-1), a(a), b(b), c(c) {}
 
 		Constraint(const Set& a, const value& e, const Set& b, const Set& c)
-			: kind(SubsetIfBigger), e(e), a(a), b(b), c(c) {}
+			: kind(SubsetIfBigger), e(e), f(-1), a(a), b(b), c(c) {}
+
+		Constraint(const Set& a, const value& t, const value& e, const Set& b, const Set& c)
+			: kind(SubsetIfReducedBigger), e(e), f(t), a(a), b(b), c(c) {}
 
 		Kind getKind() const { return kind; }
-		const value& getValue() const { return e; }
+		const value& getE() const { return e; }
+		const value& getF() const { return f; }
 		const Set& getA() const { return a; }
 		const Set& getB() const { return b; }
 		const Set& getC() const { return c; }
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			if (kind == Elem || kind == SubsetIfElem) {
-				out << e << " in " << a;
+
+			switch(kind) {
+			case Elem: 					return out << e << " in " << a;
+			case Subset: 				return out << b << " sub " << c;
+			case SubsetIfElem: 			return out << e << " in " << a << " => " << b << " sub " << c;
+			case SubsetIfBigger: 		return out << "|" << a << "| > " << e << " => " << b << " sub " << c;
+			case SubsetIfReducedBigger: return out << "|" << a << " - {" << f << "}| > " << e << " => " << b << " sub " << c;
 			}
-			if (kind == SubsetIfBigger) {
-				out << "|" << a << "| > " << e;
-			}
-			if (kind == SubsetIfElem || kind == SubsetIfBigger) {
-				out << " => ";
-			}
-			if (kind != Elem) {
-				out << b << " sub " << c;
-			}
-			return out;
+			return out << "-invalid constraint-";
 		}
 
 		bool operator<(const Constraint& other) const {
 			// first criteria: type of constraint
 			if (kind != other.kind) return kind < other.kind;
 			if (e != other.e) return e < other.e;
+			if (f != other.f) return f < other.f;
 			if (a != other.a) return a < other.a;
 			if (b != other.b) return b < other.b;
 			return c < other.c;
@@ -150,7 +151,8 @@ namespace set_constraint {
 			return  (kind == Elem && contains(get(a), e)) ||
 					(kind == Subset && set::isSubset(get(b), get(c))) ||
 					(kind == SubsetIfElem && (!contains(get(a),e) || set::isSubset(get(b), get(c)))) ||
-					(kind == SubsetIfBigger && (get(a).size() <= (std::size_t)e || set::isSubset(get(b), get(c))));
+					(kind == SubsetIfBigger && (get(a).size() <= (std::size_t)e || set::isSubset(get(b), get(c)))) ||
+					(kind == SubsetIfReducedBigger && (get(a).size() - ((contains(get(a),f))?1:0) <= (std::size_t)e || set::isSubset(get(b), get(c))));
 		}
 
 	};
@@ -179,10 +181,17 @@ namespace set_constraint {
 	}
 
 	/**
-	 * if a is bigger than size b is a subset of c
+	 * if | a | > s  then b \subset c
 	 */
-	inline Constraint subsetIfBigger(const Set& a, int size, const Set& b, const Set& c) {
-		return Constraint(a, size, b, c);
+	inline Constraint subsetIfBigger(const Set& a, int s, const Set& b, const Set& c) {
+		return Constraint(a, s, b, c);
+	}
+
+	/**
+	 * if | a \ {t} | > s  then b \subset c
+	 */
+	inline Constraint subsetIfReducedBigger(const Set& a, const value& t, int s, const Set& b, const Set& c) {
+		return Constraint(a, t, s, b, c);
 	}
 
 	Assignment solve(const Constraints& constraints, const Assignment& initial = Assignment());

@@ -66,7 +66,7 @@ namespace set_constraint {
 			switch(cur.getKind()) {
 			case Constraint::Elem: {
 				// if e \in A  ... add value to result
-				res[cur.getA()].insert(cur.getValue());
+				res[cur.getA()].insert(cur.getE());
 				workList.push_back(cur.getA());
 				break;
 			}
@@ -76,8 +76,9 @@ namespace set_constraint {
 				break;
 			}
 			case Constraint::SubsetIfElem:
-			case Constraint::SubsetIfBigger: {
-				// if e \in A => B \subset C ... add two edges
+			case Constraint::SubsetIfBigger:
+			case Constraint::SubsetIfReducedBigger: {
+				// if property_of(A) => B \subset C ... add two edges
 				edges[cur.getA()].insert( &cur );
 				edges[cur.getB()].insert( &cur );
 				break;
@@ -121,17 +122,28 @@ namespace set_constraint {
 				} else if (cc.getKind() == Constraint::SubsetIfElem) {
 
 					// if e is in A add all B to C
-					if (contains(res[cc.getA()], cc.getValue())) {
+					if (contains(res[cc.getA()], cc.getE())) {
+						addAll(cc.getB(), cc.getC());
+					}
+
+				} else if (cc.getKind() == Constraint::SubsetIfBigger) {
+
+					// if |A| > e add all B to C
+					if (res[cc.getA()].size() > (std::size_t)cc.getE()) {
+						addAll(cc.getB(), cc.getC());
+					}
+
+				} else if (cc.getKind() == Constraint::SubsetIfReducedBigger) {
+
+					// if | A \ {f} | > e => add all B to C
+					auto& A = res[cc.getA()];
+					auto s = A.size() - (contains(A, cc.getF())? 1 : 0);
+					if (s > (std::size_t)cc.getE()) {
 						addAll(cc.getB(), cc.getC());
 					}
 
 				} else {
-					assert(cc.getKind() == Constraint::SubsetIfBigger);
-
-					// if |A| > e add all B to C
-					if (res[cc.getA()].size() > (std::size_t)cc.getValue()) {
-						addAll(cc.getB(), cc.getC());
-					}
+					assert(false && "Unknown constraint type encountered.");
 				}
 			}
 		}
