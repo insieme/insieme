@@ -483,12 +483,17 @@ namespace cba {
 
 				// init variables
 				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	*x;"							// should be 1
 				"	if (x > 0) {"
+				"		*x;"						// should be 1
 				"		x = 2;"
+				"		*x;"						// should be 2
 				"	} else {"
+				"		*x;"						// should be 1
 				"		x = 3;"
+				"		*x;"						// should be 3
 				"	}"
-				"	*x;"							// what is x?
+				"	*x;"							// what is x? - conservative: {2,3}
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -503,7 +508,17 @@ namespace cba {
 //		std::cout << "Solutions:  " << solution << "\n";
 
 		// check value of *x
-		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, code[2].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(1).as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(2,1,0).as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(2,1,2).as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(2,2,0).as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(2,2,2).as<ExpressionAddress>())));
+
+		// the last one may be both
+		ExpressionSet should;
+		should.insert(builder.intLit(2));
+		should.insert(builder.intLit(3));
+		EXPECT_EQ(should, cba::getValuesOf(context, solution, code.getAddressOfChild(3).as<ExpressionAddress>()));
 
 //		createDotDump(context, constraints);
 	}

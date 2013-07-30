@@ -215,6 +215,15 @@ namespace cba {
 				visit(decl->getInitialization());
 			}
 
+			void visitIfStmt(const IfStmtAddress& stmt) {
+
+				// decent into sub-expressions
+				visit(stmt->getCondition());
+				visit(stmt->getThenBody());
+				visit(stmt->getElseBody());
+
+			}
+
 			void visitReturnStmt(const ReturnStmtAddress& stmt) {
 
 				// link the value of the result set to lambda body
@@ -240,9 +249,11 @@ namespace cba {
 
 			}
 
-			void visitVariable(const VariableAddress& variable) {
+			void visitLiteral(const LiteralAddress& literal) {
+				// nothing to do by default => should be overloaded by sub-classes
+			}
 
-				// TODO: distinguish between control and data flow
+			void visitVariable(const VariableAddress& variable) {
 
 				// add constraint r(var) \subset C(var)
 				auto var = context.getVariable(variable);
@@ -327,10 +338,10 @@ namespace cba {
 				}
 			}
 
-//			void visitNode(const NodeAddress& node) {
-//				std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
-//				assert(false);
-//			}
+			void visitNode(const NodeAddress& node) {
+				std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
+				assert(false);
+			}
 
 		};
 
@@ -741,7 +752,15 @@ namespace cba {
 				auto l_else = context.getLabel(stmt->getElseBody());
 
 				// -- conditional has to be always evaluated --
-				connectStateSets(Sin, l_)
+				connectStateSets(Sin, l_if, c, t, Sin, l_cond, c, t);
+
+				// connect Sout of condition to then and else branch
+				connectStateSets(Sout, l_cond, c, t, Sin, l_then, c, t);
+				connectStateSets(Sout, l_cond, c, t, Sin, l_else, c, t);
+
+				// connect Sout of then and else branch with Sout of if
+				connectStateSets(Sout, l_then, c, t, Sout, l_if, c, t);
+				connectStateSets(Sout, l_else, c, t, Sout, l_if, c, t);
 
 
 				// add constraints recursively
@@ -911,7 +930,7 @@ namespace cba {
 				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if |" << cur.getA() << "| > " << cur.getE() << "\"];";
 				break;
 			case utils::set_constraint::Constraint::SubsetIfReducedBigger:
-				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if |" << cur.getA() << "\\{" << cur.getF() << "}| > " << cur.getE() << "\"];";
+				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if |" << cur.getA() << " - {" << cur.getF() << "}| > " << cur.getE() << "\"];";
 				break;
 			}
 		}
