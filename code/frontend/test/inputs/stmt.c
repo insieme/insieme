@@ -144,13 +144,13 @@ void member_access_test() {
 	#pragma test "decl ref<struct<weigth:int<4>,age:int<4>>> v0 = ( var(undefined(type<struct<weigth:int<4>,age:int<4>>>)))"
 	struct Person p;
 
-	#pragma test "( *(v100->weigth))"
+	#pragma test "(( *v100).weigth)"
 	p.weigth;
 
 	#pragma test "decl ref<ref<array<struct<weigth:int<4>,age:int<4>>,1>>> v0 = ( var(scalar.to.array(v100)))"
 	struct Person* ptr = &p;
 
-	#pragma test "( *((( *v100)&[0])->age))"
+	#pragma test "(( *(( *v100)&[0])).age)"
 	ptr->age;
 
 	#pragma test "(((( *v100)&[0])->age) := 100)"
