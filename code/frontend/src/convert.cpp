@@ -820,7 +820,7 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 	if (operatorKind != OO_None) {
 		string operatorAsString = boost::lexical_cast<string>(operatorKind);
 		node->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > ("operator" + operatorAsString));
-	} else{
+	} else if( !funcDecl->getNameAsString().empty() ) {
 		// annotate with the C name of the function
 		node->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > (funcDecl->getNameAsString()));
 	}
@@ -1186,7 +1186,11 @@ namespace {
 	core::StatementPtr prepentInitializerList(const clang::CXXConstructorDecl* ctorDecl, const core::TypePtr& classType, const core::StatementPtr& body, Converter& converter) {
 		auto& mgr = body.getNodeManager();
 		core::IRBuilder builder(mgr);
-		assert(classType.isa<core::GenericTypePtr>() && "for convenion, this literal must keep the generic type");
+	
+		// nameless/anonymous structs/unions result in non-generic classtype
+		// structs unions with name should be generic types
+		assert( ( ctorDecl->getParent()->getName().empty() || 
+				(!ctorDecl->getParent()->getName().empty() && classType.isa<core::GenericTypePtr>())) && "for convenion, this literal must keep the generic type");
 
 		core::StatementList initList;
 		for(auto it = ctorDecl->init_begin(); it != ctorDecl->init_end(); ++it) {
