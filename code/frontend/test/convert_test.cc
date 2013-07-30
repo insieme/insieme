@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -81,8 +81,8 @@ namespace frontend {
 
 		string res = toString(core::printer::PrettyPrinter(program));
 
-		EXPECT_PRED2(containsSubString, res, "let fun003 = recFun v34 {");		// even header
-		EXPECT_PRED2(containsSubString, res, "let fun004 = recFun v35 {");		// odd header
+		EXPECT_PRED2(containsSubString, res, "let fun003 = recFun v37 {");		// even header
+		EXPECT_PRED2(containsSubString, res, "let fun004 = recFun v38 {");		// odd header
 
 		// check global variable setup
 		EXPECT_PRED2(containsSubString, res, "counter := 10;");
