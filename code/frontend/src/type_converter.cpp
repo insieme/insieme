@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,6 +39,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/container_utils.h"
@@ -48,8 +49,7 @@
 #include "insieme/core/ir_cached_visitor.h"
 #include "insieme/core/analysis/type_utils.h"
 #include "insieme/core/transform/node_replacer.h"
-
-#include "insieme/annotations/c/naming.h"
+#include "insieme/core/annotations/naming.h"
 
 #include <clang/AST/Decl.h>
 #include <clang/AST/Expr.h>
@@ -343,9 +343,7 @@ core::TypePtr Converter::TypeConverter::VisitTypedefType(const TypedefType* type
 	assert(subType);
 
 	// Adding the name of the typedef as annotation
-	subType->addAnnotation(
-		std::make_shared<annotations::c::CNameAnnotation>(typedefType->getDecl()->getNameAsString())
-	);
+	core::annotations::attachName(subType,typedefType->getDecl()->getNameAsString());
 
     return  subType;
 }
@@ -413,7 +411,7 @@ core::TypePtr Converter::TypeConverter::VisitTypeOfExprType(const TypeOfExprType
 
 	// Adding the name of the C struct as annotation
 	if (!recDecl->getName().empty())
-		retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
+        core::annotations::attachName(retTy,recDecl->getName());
 
 	return retTy;
 }
@@ -467,7 +465,7 @@ core::TypePtr Converter::TypeConverter::VisitPointerType(const PointerType* poin
 		return gen.getAnyRef();
 	}
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr&& retTy = (subTy->getNodeType() == core::NT_FunctionType)? 
+	core::TypePtr&& retTy = (subTy->getNodeType() == core::NT_FunctionType)?
 		subTy : builder.refType(builder.arrayType( subTy ));
 
 	LOG_TYPE_CONVERSION( pointerTy, retTy );

@@ -52,34 +52,6 @@ namespace conversion {
 	core::TypePtr Visit##TypeTy(const clang::TypeTy* type ) { return Base::Visit##TypeTy( type ); }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// 											Printing macros for statements
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define MAKE_SIZE(n)	toVector(core::IntTypeParam::getConcreteIntParam(n))
-#define EMPTY_TYPE_LIST	vector<core::TypePtr>()
-
-#define LOG_BUILTIN_TYPE_CONVERSION(parentType) \
-    VLOG(1) << "**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************"; \
-    if( VLOG_IS_ON(2) ) { \
-        VLOG(2) << "Dump of clang type:"; \
-        parentType->dump(); \
-    } \
-    VLOG(1) << "****************************************************************************************";
-
-#define LOG_TYPE_CONVERSION(parentType, retType) \
-	FinalActions attachLog( [&] () { \
-        VLOG(1) << "**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************"; \
-        if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang type:";\
-            parentType->dump(); \
-        } \
-        if(retType) { \
-            VLOG(1) << "Converted 'type' into IR type: "; \
-            VLOG(1) << "\t" << *retType; \
-        } \
-        VLOG(1) << "****************************************************************************************"; \
-    } )
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							Type converter: Common Interface
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Converter::TypeConverter {

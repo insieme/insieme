@@ -59,9 +59,7 @@ irt_work_group* _irt_wg_create(irt_worker* self) {
 	wg->local_member_count = 0;
 	wg->ended_member_count = 0;
 	wg->cur_barrier_count = 0;
-	wg->cur_busy_barrier_count = 0;
 	wg->tot_barrier_count = 0;
-	wg->barrier_start_ticks = 1;
 	wg->pfor_count = 0;
 	wg->joined_pfor_count = 0;
 	wg->redistribute_data_array = NULL;
@@ -182,25 +180,50 @@ void irt_wg_barrier_busy(irt_work_group* wg) {
 		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, swi->id);
 	}
 }
-//void irt_wg_barrier_timed_busy(irt_work_group* wg) {
-//	if(wg->barrier_start_ticks == 0) irt_wg_barrier_scheduled(wg);
-//	irt_worker* self = irt_worker_get_current();
-// 	irt_work_item* swi = self->cur_wi;
-//	uint32 pre_barrier_count = wg->tot_barrier_count;
-//	wg->barrier_start_ticks = irt_time_ticks();
-//	// check if last
-//	if(irt_atomic_add_and_fetch(&wg->cur_busy_barrier_count, 1) == wg->local_member_count) {
-//		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_busy_barrier_count, wg->local_member_count, 0), IRT_ERR_INTERNAL, "Barrier count reset failed");
-//		irt_atomic_inc(&wg->tot_barrier_count);
-//	} else {
-//		while(wg->tot_barrier_count == pre_barrier_count) {
-//			if(wg->barrier_start_ticks == 0 || irt_time_ticks()-wg->barrier_start_ticks > 100000) {
-//				wg->barrier_start_ticks = 0;
-//				return;
-//			}
-//		}
-//	}
-//}
+void irt_wg_barrier_timed_busy(irt_work_group* wg) {
+	irt_worker* self = irt_worker_get_current();
+ 	irt_work_item* swi = self->cur_wi;
+	int64 barrier_start_ticks = irt_time_ticks();
+	// check if last
+	uint32 pre_barrier_count = wg->tot_barrier_count;
+	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1) == wg->local_member_count) {
+		IRT_ASSERT(irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0), IRT_ERR_INTERNAL, "Barrier count reset failed");
+		irt_inst_insert_wg_event(self, IRT_INST_WORK_GROUP_BARRIER_COMPLETE, wg->id);
+		irt_spin_lock(&wg->lock);
+		// trigger waiting busy wis
+		irt_atomic_inc(&wg->tot_barrier_count);
+		// trigger suspended wis
+		irt_wg_event_trigger_no_count(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
+		irt_spin_unlock(&wg->lock);
+	} else {
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_SUSPENDED_BARRIER, swi->id);
+		while(wg->tot_barrier_count == pre_barrier_count) {
+			irt_signal_worker(irt_g_workers[rand()%irt_g_worker_count]); 
+			irt_busy_ticksleep(1000);
+			// check if timeout up, if so suspend
+			if(irt_time_ticks() - barrier_start_ticks > IRT_BARRIER_HYBRID_TICKS) {
+				irt_spin_lock(&wg->lock);
+				if(wg->tot_barrier_count == pre_barrier_count) {
+					// register callback
+					//printf("TIMED OUT, going into callback, Talpha: %lu | T: %lu | diff: %lu\n", barrier_start_ticks, irt_time_ticks(), irt_time_ticks() - barrier_start_ticks);
+					_irt_wg_barrier_event_data barrier_ev_data = {swi, self};
+					irt_wg_event_lambda barrier_lambda = {_irt_wg_barrier_event_complete, &barrier_ev_data, NULL};
+					IRT_ASSERT(irt_wg_event_check_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda) == 0, IRT_ERR_INTERNAL, "Orphaned Barrier event occurance");
+					irt_spin_unlock(&wg->lock);
+					// suspend
+					irt_inst_region_suspend(swi);
+					lwt_continue(&self->basestack, &swi->stack_ptr);
+					irt_inst_region_continue(swi);
+					irt_inst_insert_wi_event(irt_worker_get_current(), IRT_INST_WORK_ITEM_RESUMED, swi->id); // self might no longer be self!
+					return;
+				} else {
+					irt_spin_unlock(&wg->lock);
+				}
+			}
+		}
+		irt_inst_insert_wi_event(self, IRT_INST_WORK_ITEM_RESUMED, swi->id);
+	}
+}
 void irt_wg_barrier_smart(irt_work_group* wg) {
 	if(wg->local_member_count <= irt_g_worker_count) {
 		irt_wg_barrier_busy(wg);

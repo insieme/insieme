@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,19 +45,16 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 
-//
-//#include "insieme/frontend/analysis/global_variables.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/castTool.h"
 #include "insieme/frontend/utils/error_report.h"
-//#include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/header_tagger.h"
-#include "insieme/frontend/utils/ir_utils.h"
+#include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/analysis/prunable_decl_visitor.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -87,7 +84,8 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/dump/text_dump.h"
 
-#include "insieme/annotations/c/naming.h"
+#include "insieme/core/annotations/naming.h"
+
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/c/extern.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
@@ -237,7 +235,7 @@ tu::IRTranslationUnit Converter::convert() {
 			if (!var->hasGlobalStorage()) return;
 			if (var->hasExternalStorage()) return;
 			if (var->isStaticLocal()) return;
-		
+
 			auto builder = converter.getIRBuilder();
 			// obtain type
 			auto type = converter.convertType(var->getType().getTypePtr());
@@ -250,10 +248,10 @@ tu::IRTranslationUnit Converter::convert() {
 			if (insieme::utils::set::contains(converter.getThreadprivates(), var)) {
 				omp::addThreadPrivateAnnotation(literal);
 			}
-				
+
 			// NOTE: not all staticDataMember are seen here, so we take care of the "unseen"
 			// ones in lookUpVariable
-			
+
 			auto initValue = convertInitForGlobal(converter, var, elementType);
 			converter.getIRTranslationUnit().addGlobal(literal, initValue);
 		}
@@ -577,7 +575,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 
 		// some member statics might be missing because of defined in a template which was ignored
 		// since this is the fist time we get access to the complete type, we can define the
-		// suitable initialization 
+		// suitable initialization
 		if (varDecl->isStaticDataMember()){
 			VLOG(2)	<< "         is static data member";
 			core::TypePtr&& elementType = convertType( varTy.getTypePtr() );
@@ -605,7 +603,7 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 
 	if ( !valDecl->getNameAsString().empty() ) {
 		// Add the C name of this variable as annotation
-		var->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > (valDecl->getNameAsString()));
+		core::annotations::attachName(var,varDecl->getNameAsString());
 	}
 
 	// Add OpenCL attributes
@@ -819,10 +817,10 @@ core::ExpressionPtr Converter::attachFuncAnnotations(const core::ExpressionPtr& 
 	clang::OverloadedOperatorKind operatorKind = funcDecl->getOverloadedOperator();
 	if (operatorKind != OO_None) {
 		string operatorAsString = boost::lexical_cast<string>(operatorKind);
-		node->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > ("operator" + operatorAsString));
-	} else{
+		core::annotations::attachName(node,("operator" + operatorAsString));
+	} else if( !funcDecl->getNameAsString().empty() ) {
 		// annotate with the C name of the function
-		node->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > (funcDecl->getNameAsString()));
+		core::annotations::attachName(node,(funcDecl->getNameAsString()));
 	}
 
 // ---------------------------------------- SourceLocation Annotation ---------------------------------------------
@@ -1186,7 +1184,11 @@ namespace {
 	core::StatementPtr prepentInitializerList(const clang::CXXConstructorDecl* ctorDecl, const core::TypePtr& classType, const core::StatementPtr& body, Converter& converter) {
 		auto& mgr = body.getNodeManager();
 		core::IRBuilder builder(mgr);
-		assert(classType.isa<core::GenericTypePtr>() && "for convenion, this literal must keep the generic type");
+
+		// nameless/anonymous structs/unions result in non-generic classtype
+		// structs unions with name should be generic types
+		assert( ( ctorDecl->getParent()->getName().empty() ||
+				(!ctorDecl->getParent()->getName().empty() && classType.isa<core::GenericTypePtr>())) && "for convenion, this literal must keep the generic type");
 
 		core::StatementList initList;
 		for(auto it = ctorDecl->init_begin(); it != ctorDecl->init_end(); ++it) {
@@ -1224,15 +1226,15 @@ namespace {
 				core::CallExprAddress addr(init.as<core::CallExprPtr>());
 				init = core::transform::replaceNode(mgr, addr->getArgument(0), genThis).as<core::ExpressionPtr>();
 				expr = converter.convertExpr((*it)->getInit());
-				
+
 				// parameter is some kind of cpp ref, but we want to use the value, unwrap it
-				if (!IS_CPP_REF_TYPE(init.getType().as<core::RefTypePtr>()->getElementType()) &&
-					IS_CPP_REF_EXPR(expr)){
-					expr = builder.deref( utils::unwrapCppRef(builder,expr));
+				if (!IS_CPP_REF(init.getType().as<core::RefTypePtr>()->getElementType()) &&
+					IS_CPP_REF(expr->getType())){
+					expr = builder.deref(builder.toIRRef(expr));
 				}
 				// parameter is NOT cpp_ref but left hand side is -> wrap into cppref
-				else if(IS_CPP_REF_TYPE(init.getType().as<core::RefTypePtr>()->getElementType()) &&
-					!IS_CPP_REF_EXPR(expr)) {
+				else if(IS_CPP_REF(init.getType().as<core::RefTypePtr>()->getElementType()) &&
+					!IS_CPP_REF(expr->getType())) {
 
 					if(core::analysis::isCppRef(init.getType().as<core::RefTypePtr>()->getElementType())) {
 						expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);

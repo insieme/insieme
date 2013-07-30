@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -42,8 +42,6 @@
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/core/annotations/naming.h"
-
-#include "insieme/annotations/c/naming.h"
 
 #include "insieme/utils/unused.h"
 
@@ -63,12 +61,13 @@ namespace backend {
 				return core::annotations::getAttachedName(ptr);
 			}
 
+/*
 			// test whether the node has an annotation
 			if(auto cnameAnn = ptr->getAnnotation(insieme::annotations::c::CNameAnnotation::KEY)) {
 				// => take original c name
 				return cnameAnn->getName();
 			}
-
+*/
 			// no name attached
 			return "";
 		}
