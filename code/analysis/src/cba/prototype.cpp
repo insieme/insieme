@@ -574,7 +574,7 @@ namespace cba {
 
 					// ---- combine S_as to S_out ...
 
-					// but the location targeted by the first argument will now contain
+					// add rule: loc \in R[rhs] => A[lhs] \sub Sout[call]
 					auto l_rhs = context.getLabel(call[0]);
 					auto l_lhs = context.getLabel(call[1]);
 					auto R_rhs = context.getSet(R, l_rhs);
@@ -591,7 +591,7 @@ namespace cba {
 					}
 
 
-					// connect Sin to Sout for all non-assigned values
+					// add rule: |R[rhs]\{loc}| > 0 => Sas[call] \sub Sout[call]
 					for(auto loc : locations) {
 
 						for (auto type : dataSets) {
@@ -601,8 +601,7 @@ namespace cba {
 							auto s_out = context.getSet(Sout, l_call, c, t, loc, type);
 
 							// if more than 1 reference may be assigned => everything that comes in goes out
-							constraints.insert(subsetIfBigger(R_rhs, 1, s_as, s_out));
-
+							constraints.insert(subsetIfReducedBigger(R_rhs, loc, 0, s_as, s_out));
 						}
 					}
 
@@ -846,7 +845,7 @@ namespace cba {
 	}
 
 
-	void CBAContext::plot(const Constraints& constraints, std::ostream& out) {
+	void CBAContext::plot(const Constraints& constraints, std::ostream& out) const {
 
 
 		auto getAddress = [&](const Label l)->StatementAddress {
@@ -880,16 +879,19 @@ namespace cba {
 		for(auto cur : constraints) {
 			switch(cur.getKind()) {
 			case utils::set_constraint::Constraint::Elem:
-				out << "\n\te" << cur.getValue() << " -> " << cur.getA() << " [label=\"in\"];";
+				out << "\n\te" << cur.getE() << " -> " << cur.getA() << " [label=\"in\"];";
 				break;
 			case utils::set_constraint::Constraint::Subset:
 				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"sub\"];";
 				break;
 			case utils::set_constraint::Constraint::SubsetIfElem:
-				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if " << cur.getValue() << " in " << cur.getA() << "\"];";
+				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if " << cur.getE() << " in " << cur.getA() << "\"];";
 				break;
 			case utils::set_constraint::Constraint::SubsetIfBigger:
-				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if |" << cur.getA() << "| > " << cur.getValue() << "\"];";
+				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if |" << cur.getA() << "| > " << cur.getE() << "\"];";
+				break;
+			case utils::set_constraint::Constraint::SubsetIfReducedBigger:
+				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if |" << cur.getA() << "\\{" << cur.getF() << "}| > " << cur.getE() << "\"];";
 				break;
 			}
 		}

@@ -297,6 +297,23 @@ namespace cba {
 
 	}
 
+	namespace {
+
+		void createDotDump(const CBAContext& context, const Constraints& constraints) {
+			{
+				// open file
+				std::ofstream out("constraints.dot", std::ios::out );
+
+				// write file
+				context.plot(constraints, out);
+			}
+
+			// create pdf
+			system("dot -Tpdf constraints.dot -o constraints.pdf");
+		}
+
+	}
+
 	TEST(CBA, References1) {
 
 		NodeManager mgr;
@@ -319,7 +336,7 @@ namespace cba {
 //		std::cout << "Solutions:  " << solution << "\n";
 
 		auto decl = CompoundStmtAddress(code)[0].as<DeclarationStmtAddress>();
-		auto R_decl = context.getSet(R, context.getLabel(decl->getInitialization()));
+//		auto R_decl = context.getSet(R, context.getLabel(decl->getInitialization()));
 //		std::cout << "R[decl] = s" << R_decl << " = " << solution[R_decl] << "\n";
 
 
@@ -328,17 +345,7 @@ namespace cba {
 		// this would be the ideal case
 		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, val)));
 
-
-		{
-			// open file
-			std::ofstream out("constraints.dot", std::ios::out );
-
-			// write file
-			context.plot(constraints, out);
-		}
-
-		// create pdf
-		system("dot -Tpdf constraints.dot -o constraints.pdf");
+//		createDotDump(context, constraints);;
 
 	}
 
@@ -376,17 +383,94 @@ namespace cba {
 		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, varZ)));
 		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, varW)));
 
-		{
-			// open file
-			std::ofstream out("constraints.dot", std::ios::out );
+//		createDotDump(context, constraints);
+	}
 
-			// write file
-			context.plot(constraints, out);
-		}
+	TEST(CBA, References3) {
 
-		// create pdf
-		system("dot -Tpdf constraints.dot -o constraints.pdf");
+		NodeManager mgr;
+		IRBuilder builder(mgr);
 
+		auto in = builder.parseStmt(
+				"{"
+
+				// init variables
+				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	ref<int<4>> y = var(2);"		// set y to 2
+				"	ref<int<4>> z = x;"				// z is an alias of x
+				"	ref<ref<int<4>>> p = var(y);"	// p is a pointer on y
+
+				// read values
+				"	*x;"
+				"	*y;"
+				"	*z;"
+				"	**p;"
+
+				// update values
+				"	x = 3;"							// x and z should be 3
+
+				// read values
+				"	*x;"
+				"	*y;"
+				"	*z;"
+				"	**p;"
+
+				// update pointer
+				"	p = z;"							// p should now reference z = x
+
+				// read values
+				"	*x;"
+				"	*y;"
+				"	*z;"
+				"	**p;"
+
+				// update pointer
+				"	*p = 4;"							// *x = *z = **p should now be 4
+
+				// read values
+				"	*x;"
+				"	*y;"
+				"	*z;"
+				"	**p;"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+//		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+
+		auto solution = cba::solve(constraints);
+//		std::cout << "Solutions:  " << solution << "\n";
+
+		// read first set of values
+		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, code[4].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, code[5].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, code[6].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, code[7].as<ExpressionAddress>())));
+
+		// read second set of values
+		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, code[ 9].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, code[10].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, code[11].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, code[12].as<ExpressionAddress>())));
+
+		// read third set of values
+		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, code[14].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, code[15].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, code[16].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, code[17].as<ExpressionAddress>())));
+
+		// read fourth set of values
+		EXPECT_EQ("{AP(4)}", toString(cba::getValuesOf(context, solution, code[19].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, code[20].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(4)}", toString(cba::getValuesOf(context, solution, code[21].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(4)}", toString(cba::getValuesOf(context, solution, code[22].as<ExpressionAddress>())));
+
+
+//		createDotDump(context, constraints);
 	}
 
 } // end namespace cba

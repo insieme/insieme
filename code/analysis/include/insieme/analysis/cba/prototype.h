@@ -117,6 +117,7 @@ namespace cba {
 
 		typedef tuple<SetType, int, Context, Thread> SetKey;
 		typedef tuple<SetType, Label, Context, Thread, Location, SetType, Context, Thread> StateSetKey;
+		typedef tuple<Label, Context, Thread> LocationKey;
 
 		int setCounter;
 		std::map<SetKey, Set> sets;
@@ -132,8 +133,8 @@ namespace cba {
 		std::unordered_map<Value, core::ExpressionAddress> i2e;
 
 		// an index for locations
-		std::map<tuple<Label, Context, Thread>,  Location> loc2i;
-		std::map<Location, tuple<Label, Context, Thread>> i2loc;
+		std::map<LocationKey,  Location> loc2i;
+		std::map<Location, LocationKey> i2loc;
 
 	public:
 
@@ -158,8 +159,6 @@ namespace cba {
 			}
 			Set newSet = ++setCounter;		// reserve 0
 			stateSets[key] = newSet;
-//std::cout << "New key: (" << type << "," << label << "," << loc << "," << type_loc << ") => " << newSet << "\n";
-//std::cout << "New key: (" << type << "," << label << "," << c << "," << t << "," << loc << "," << type_loc << "," << c_loc << "," << t_loc << ") => " << newSet << "\n";
 			return newSet;
 		}
 
@@ -217,11 +216,13 @@ namespace cba {
 		// TODO: remove default values
 		Location getLocation(const core::ExpressionAddress& ctor, const Context& c = Context(), const Thread& t = Thread()) {
 			assert(isMemoryConstructor(ctor));
-			auto key = std::make_tuple(getLocationDefinitionPoint(ctor), c, t);
+
+			auto loc = getLabel(getLocationDefinitionPoint(ctor));
+			LocationKey key(loc, c, t);
 
 			if (ctor.isa<core::LiteralPtr>()) {
 				// for globals the context and thread ID is not relevant
-				key = std::make_tuple(std::get<0>(key), Context(), Thread());
+				key = LocationKey(loc, Context(), Thread());
 			}
 
 			auto pos = loc2i.find(key);
@@ -245,7 +246,7 @@ namespace cba {
 			return core::ExpressionAddress();
 		}
 
-		void plot(const Constraints& constraints, std::ostream& out = std::cout);
+		void plot(const Constraints& constraints, std::ostream& out = std::cout) const;
 
 	};
 
