@@ -730,6 +730,26 @@ namespace cba {
 				visit(stmt->getReturnExpr());
 			}
 
+			void visitIfStmt(const IfStmtAddress& stmt) {
+				Context c;
+				Thread t;
+
+				// get some labels
+				auto l_if = context.getLabel(stmt);
+				auto l_cond = context.getLabel(stmt->getCondition());
+				auto l_then = context.getLabel(stmt->getThenBody());
+				auto l_else = context.getLabel(stmt->getElseBody());
+
+				// -- conditional has to be always evaluated --
+				connectStateSets(Sin, l_)
+
+
+				// add constraints recursively
+				visit(stmt->getCondition());
+				visit(stmt->getThenBody());
+				visit(stmt->getElseBody());
+			}
+
 			void visitNode(const NodeAddress& node) {
 				std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
 				assert(false);

@@ -473,6 +473,41 @@ namespace cba {
 //		createDotDump(context, constraints);
 	}
 
+	TEST(CBA, IfStmt) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+
+				// init variables
+				"	ref<int<4>> x = var(1);"		// set x to 1
+				"	if (x > 0) {"
+				"		x = 2;"
+				"	} else {"
+				"		x = 3;"
+				"	}"
+				"	*x;"							// what is x?
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+//		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+
+		auto solution = cba::solve(constraints);
+//		std::cout << "Solutions:  " << solution << "\n";
+
+		// check value of *x
+		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, code[2].as<ExpressionAddress>())));
+
+//		createDotDump(context, constraints);
+	}
+
 } // end namespace cba
 } // end namespace analysis
 } // end namespace insieme
