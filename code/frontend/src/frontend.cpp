@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -49,6 +49,9 @@
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/compiler/compiler.h"
+
+#include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/annotations/naming.h"
 
 namespace insieme {
 namespace frontend {
@@ -128,7 +131,7 @@ namespace frontend {
 		});
 
 		// return instance within global manager
-		return manager.get(res);
+		return core::transform::utils::migrate(res, manager);
 	}
 
 } // end namespace frontend

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -53,7 +53,6 @@
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/location.h"
-#include "insieme/annotations/c/naming.h"
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/clang_utils.h"
@@ -636,7 +635,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThisExpr(const clang::C
 	core::TypePtr&& irType = convFact.convertType( llvm::cast<clang::TypeDecl>(thisExpr->getBestDynamicClassType())->getTypeForDecl() );
 	assert(irType.isa<core::GenericTypePtr>() && "for convention, all this operators deal with generic types");
 	irType = builder.refType(irType);
-	
+
 
 	// build a literal as a placeholder (has to be substituted later by function call expression)
 	core::ExpressionPtr ret =  builder.literal("this", irType);
@@ -659,7 +658,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::
 
 	//TODO: check if we need to deref subExpr (for pointerProblem)
 	core::ExpressionPtr subExpr = Visit(throwExpr->getSubExpr());
-	
+
 	VLOG(2) << throwExpr->getSubExpr()->getType().getTypePtr()->getTypeClassName();
 	throwExpr->getSubExpr()->getType().getTypePtr()->dump();
 	core::TypePtr targetTy = convFact.convertType(throwExpr->getSubExpr()->getType().getTypePtr());
@@ -673,7 +672,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::
 	assert(*subExpr->getType() == *targetTy);
 	/*
 	//if(literal || variable) {
-	if( core::analysis::isRefType(subExpr->getType()) 
+	if( core::analysis::isRefType(subExpr->getType())
 	&& (subExpr->getNodeType() == core::NT_Variable || subExpr->getNodeType() == core::NT_Literal) ) {
 		subExpr = builder.deref(subExpr);
 	}

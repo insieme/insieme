@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -47,8 +47,7 @@
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_class_info.h"
 #include "insieme/core/transform/node_replacer.h"
-
-#include "insieme/annotations/c/naming.h"
+#include "insieme/core/annotations/naming.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -115,13 +114,13 @@ core::TypePtr Converter::CXXTypeConverter::VisitTagType(const TagType* tagType) 
 		}
 
 		//update name of class type
-		classType = core::transform::replaceNode(mgr, 
-												 core::StructTypeAddress(classType)->getName(), 
+		classType = core::transform::replaceNode(mgr,
+												 core::StructTypeAddress(classType)->getName(),
 												 builder.stringValue(classDecl->getNameAsString())).as<core::StructTypePtr>();
 
 		//if classDecl has a name add it
 		if( !classDecl->getNameAsString().empty() ) {
-			annotations::c::attachCName(classType, classDecl->getNameAsString());
+            core::annotations::attachName(classType, classDecl->getNameAsString());
 		}
 	}
 
