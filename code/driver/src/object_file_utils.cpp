@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -83,7 +83,7 @@ namespace driver {
 	void saveLib(const frontend::tu::IRTranslationUnit& unit, const boost::filesystem::path& file) {
 
 		// create all necessary directory
-		boost::filesystem::create_directories(file.parent_path());
+		boost::filesystem::create_directories(boost::filesystem::absolute(file).parent_path());
 
 		std::ofstream out(file.string(), std::ios::out | std::ios::binary );
 		out << MAGIC_NUMBER;		// start with magic number
