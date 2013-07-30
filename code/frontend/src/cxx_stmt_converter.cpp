@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -55,7 +55,6 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
-#include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
@@ -93,14 +92,14 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 	}
 
 	if(llvm::isa<clang::IntegerLiteral>(retStmt->getRetValue()) ||
-		llvm::isa<clang::BinaryOperator>(retStmt->getRetValue()) || 
+		llvm::isa<clang::BinaryOperator>(retStmt->getRetValue()) ||
 		llvm::isa<clang::CXXMemberCallExpr>(retStmt->getRetValue())) {
 		return stmt;
 	}
 
 	core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
 
-	// check if the return must be converted or not to a reference, 
+	// check if the return must be converted or not to a reference,
 	// is easy to check if the value has being derefed or not
 	if (gen.isPrimitive(retExpr->getType()))
 			return stmt;
@@ -119,7 +118,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 	if ((cast = llvm::dyn_cast<clang::CastExpr>(retStmt->getRetValue())) != NULL){
 		switch(cast->getCastKind () ){
 			case CK_NoOp : // make constant
-	
+
 				if (core::analysis::isCppRef(retExpr->getType())){
 					retExpr =  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), retExpr);
 				}
@@ -136,11 +135,11 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 	else if ((ctorExpr = llvm::dyn_cast<clang::CXXConstructExpr>(retStmt->getRetValue())) != NULL){
 	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
 	// this is produced by the AST, but we should delegate this matters to the backend compiler
-	
+
 		// of the first node after a return is a constructor, copy constructor
 		// we are returning a value.
 		retStmt->dump();
-		
+
 		// behind a return we might find a constructor, it might be elidable or not, but we DO NOT
 		// call a constructor on return in any case
 		if (retExpr->getNodeType() == core::NT_CallExpr){
@@ -158,7 +157,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 
 		if(IS_CPP_REF_EXPR(retExpr)){
 			// we are returning a value, peel out the reference, or deref it
-			if (core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp()) || 
+			if (core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp()) ||
 				core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp()))
 				retExpr = retExpr.as<core::CallExprPtr>()->getArgument(0);
 			else{
@@ -266,10 +265,10 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTr
 	for(unsigned i=0;i<numCatch;i++) {
 		clang::CXXCatchStmt* catchStmt = tryStmt->getHandler(i);
 
-		core::VariablePtr var; 
+		core::VariablePtr var;
 		if(const clang::VarDecl* exceptionVarDecl = catchStmt->getExceptionDecl() ) {
 			core::TypePtr exceptionTy = convFact.convertType(catchStmt->getCaughtType().getTypePtr());
-			
+
 			var = builder.variable(exceptionTy);
 
 			//we assume that exceptionVarDecl is not in the varDeclMap

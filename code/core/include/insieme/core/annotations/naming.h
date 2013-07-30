@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -78,6 +78,21 @@ namespace annotations {
 	 */
 	void attachName(const NodePtr& node, const string& name);
 
+
+	/**
+	 * Updates the name attached to the given node
+	 * and returns the given node.
+	 *
+	 * @param node the node to attach a name to
+	 * @param name the name to be attached to the node
+	 * @return the given node
+	 */
+	 template<typename T>
+     const T& attachNameWithReturn(const T& node, const string& name) {
+	    const core::NodePtr& cur = node;
+        attachName(cur, name);
+        return node;
+	 }
 
 } // end namespace annotations
 } // end namespace core

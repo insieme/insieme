@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -44,9 +44,9 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/annotations/naming.h"
 #include "insieme/utils/logging.h"
 
-#include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/data_annotations.h"
 
 #include "insieme/frontend/frontend.h"
@@ -60,7 +60,7 @@
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
-using namespace insieme::annotations::c;
+using namespace insieme::core::annotations;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 

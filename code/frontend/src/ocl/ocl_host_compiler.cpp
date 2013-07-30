@@ -29,14 +29,16 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "insieme/utils/map_utils.h"
 
 #include "insieme/core/ir_node.h"
+
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/utils/member_access_literal_updater.h"
@@ -52,7 +54,6 @@ namespace ba = boost::algorithm;
 
 //#include "insieme/core/ir_visitor.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
-#include "insieme/annotations/c/naming.h"
 
 namespace insieme {
 namespace frontend {
