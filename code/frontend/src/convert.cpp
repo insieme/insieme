@@ -116,7 +116,8 @@ core::ExpressionPtr convertInitForGlobal (insieme::frontend::conversion::Convert
 	auto builder = converter.getIRBuilder();
 	// and get the initial value
 	core::ExpressionPtr initValue;
-	if (var->hasDefinition() && var->hasInit() && !var->isStaticLocal()) {
+
+	if( (var->hasInit() && !var->isStaticLocal()) 
 		initValue = converter.convertInitExpr(var->getType().getTypePtr(), var->getInit(), elementType, true);
 	}
 	else if (clang::VarDecl* outDecl = const_cast<clang::VarDecl*>(var)->getOutOfLineDefinition ()){
@@ -249,6 +250,10 @@ tu::IRTranslationUnit Converter::convert() {
 			if (insieme::utils::set::contains(converter.getThreadprivates(), var)) {
 				omp::addThreadPrivateAnnotation(literal);
 			}
+				
+			// NOTE: not all staticDataMember are seen here, so we take care of the "unseen"
+			// ones in lookUpVariable
+			
 			auto initValue = convertInitForGlobal(converter, var, elementType);
 			converter.getIRTranslationUnit().addGlobal(literal, initValue);
 		}
@@ -573,11 +578,13 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// some member statics might be missing because of defined in a template which was ignored
 		// since this is the fist time we get access to the complete type, we can define the
 		// suitable initialization 
-//		if (varDecl->isStaticDataMember()){
-//			VLOG(2)	<< "         is member static";
-//			auto initValue = convertInitForGlobal(*this, varDecl, irType);
-//			getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), initValue);
-//		}
+		if (varDecl->isStaticDataMember()){
+			VLOG(2)	<< "         is static data member";
+			core::TypePtr&& elementType = convertType( varTy.getTypePtr() );
+			auto initValue = convertInitForGlobal(*this, varDecl, elementType);
+			// as we don't see them in the globalVisitor we have to take care of them here
+			getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), initValue);
+		}
 
 		// OMP threadPrivate
  		if (insieme::utils::set::contains (thread_private, varDecl)){
@@ -736,7 +743,9 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 		core::ExpressionPtr var = lookUpVariable(definition);
 		printDiagnosis(definition->getLocStart());
 
-		if (definition->hasGlobalStorage()) {
+		//TODO we should visit only staticlocal!!! change to isStaticLocal
+		//if (definition->hasGlobalStorage()) {
+		if (definition->isStaticLocal()) {
 			// is the declaration of a variable with global storage, this means that is an static
 			// static needs to be initialized during first execution of function.
 			// but the var remains in the global storage (is an assigment instead of decl)
