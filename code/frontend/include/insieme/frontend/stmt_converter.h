@@ -87,20 +87,6 @@ namespace conversion {
 #define CALL_BASE_STMT_VISIT(Base, StmtTy) \
 	stmtutils::StmtWrapper Visit##StmtTy( clang::StmtTy* stmt ) { return Base::Visit##StmtTy( stmt ); }
 
-#define LOG_STMT_CONVERSION(parentStmt, stmt) \
-	FinalActions attachLog( [&] () { \
-        VLOG(1) << "**********************STMT*[class:'"<< parentStmt->getStmtClassName() <<"']**********************"; \
-        if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang statement:"; \
-            parentStmt->dump(convFact.getSourceManager()); \
-        } \
-        VLOG(1) << "-> at location: (" \
-                << utils::location(parentStmt->getLocStart(), convFact.getSourceManager()) << "); "; \
-        VLOG(1) << "Converted 'statement' into IR stmt: "; \
-        VLOG(1) << "\t" << stmt << ""; \
-        VLOG(1) << "****************************************************************************************"; \
-    } )
-
 //---------------------------------------------------------------------------------------------------------------------
 //							BASE STMT CONVERTER
 //---------------------------------------------------------------------------------------------------------------------

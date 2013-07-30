@@ -62,9 +62,6 @@ namespace {
 typedef vector<insieme::core::StatementPtr> StatementList;
 typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
-#define GET_TYPE_PTR(type) (type)->getType().getTypePtr()
-
-
 } // end anonymous namespace
 
 namespace insieme {

@@ -45,19 +45,16 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 
-//
-//#include "insieme/frontend/analysis/global_variables.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/castTool.h"
 #include "insieme/frontend/utils/error_report.h"
-//#include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/header_tagger.h"
-#include "insieme/frontend/utils/ir_utils.h"
+#include "insieme/frontend/utils/macros.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/analysis/prunable_decl_visitor.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -1177,7 +1174,7 @@ namespace {
 	core::StatementPtr prepentInitializerList(const clang::CXXConstructorDecl* ctorDecl, const core::TypePtr& classType, const core::StatementPtr& body, Converter& converter) {
 		auto& mgr = body.getNodeManager();
 		core::IRBuilder builder(mgr);
-		assert(classType.isa<core::GenericTypePtr>() && "for convenion, this literal must keep the generic type");
+		assert(classType.isa<core::GenericTypePtr>() && "this literal must keep the generic type");
 
 		core::StatementList initList;
 		for(auto it = ctorDecl->init_begin(); it != ctorDecl->init_end(); ++it) {
@@ -1215,15 +1212,15 @@ namespace {
 				core::CallExprAddress addr(init.as<core::CallExprPtr>());
 				init = core::transform::replaceNode(mgr, addr->getArgument(0), genThis).as<core::ExpressionPtr>();
 				expr = converter.convertExpr((*it)->getInit());
-				
+				(*it)->getInit()->dump();
 				// parameter is some kind of cpp ref, but we want to use the value, unwrap it
-				if (!IS_CPP_REF_TYPE(init.getType().as<core::RefTypePtr>()->getElementType()) &&
-					IS_CPP_REF_EXPR(expr)){
-					expr = builder.deref( utils::unwrapCppRef(builder,expr));
+				if (!IS_CPP_REF(init.getType().as<core::RefTypePtr>()->getElementType()) &&
+					IS_CPP_REF(expr->getType())){
+					expr = builder.deref(builder.toIRRef(expr));
 				}
 				// parameter is NOT cpp_ref but left hand side is -> wrap into cppref
-				else if(IS_CPP_REF_TYPE(init.getType().as<core::RefTypePtr>()->getElementType()) &&
-					!IS_CPP_REF_EXPR(expr)) {
+				else if(IS_CPP_REF(init.getType().as<core::RefTypePtr>()->getElementType()) &&
+					!IS_CPP_REF(expr->getType())) {
 
 					if(core::analysis::isCppRef(init.getType().as<core::RefTypePtr>()->getElementType())) {
 						expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);

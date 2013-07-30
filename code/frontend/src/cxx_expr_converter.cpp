@@ -60,7 +60,7 @@
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/temporariesLookup.h"
 #include "insieme/frontend/utils/castTool.h"
-#include "insieme/frontend/utils/ir_utils.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/utils/debug.h"
 
@@ -206,8 +206,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExplicitCastExpr(const cla
 //							FUNCTION CALL EXPRESSION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitCallExpr(const clang::CallExpr* callExpr) {
-	core::ExpressionPtr retIr = ExprConverter::VisitCallExpr(callExpr);
-    LOG_EXPR_CONVERSION(callExpr, retIr);
+	core::CallExprPtr irCall = ExprConverter::VisitCallExpr(callExpr).as<core::CallExprPtr>();
+    LOG_EXPR_CONVERSION(callExpr, irCall);
 
 	// if any of the parameters is an object, and is pass by value
 	// Clang likes to implement a copy constructor, ignore it, it will be handled by the be compiler
@@ -221,21 +221,21 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCallExpr(const clang::Call
 				if (param){
 
 					tmp = convFact.lookUpVariable( param->getDecl() );
-					if (!IS_CPP_REF_EXPR(tmp)){
+					if (!IS_CPP_REF(tmp->getType())){
 						tmp = convFact.tryDeref(tmp);
 					}
 					else{
-						tmp = utils::unwrapCppRef(builder, tmp);
+						tmp = builder.toIRRef(tmp);
 						tmp = convFact.tryDeref(tmp);
 					}
 
-					core::CallExprAddress addr(retIr.as<core::CallExprPtr>());
-					retIr = core::transform::replaceNode (mgr, addr->getArgument(i), tmp).as<core::ExpressionPtr>();
+					core::CallExprAddress addr(irCall);
+					irCall = core::transform::replaceNode (mgr, addr->getArgument(i), tmp).as<core::CallExprPtr>();
 				}
 			}
 		}
 	}
-	return retIr;
+	return irCall;
 }
 
 
@@ -245,24 +245,13 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCallExpr(const clang::Call
 core::ExpressionPtr Converter::CXXExprConverter::VisitMemberExpr(const clang::MemberExpr* membExpr){
 	core::ExpressionPtr retIr;
     LOG_EXPR_CONVERSION(membExpr, retIr);
+
 	// get the base we want to access to
 	core::ExpressionPtr&& base = Visit(membExpr->getBase());
-
-	// if is not a pointer member, it might be that is a CPP ref
-	/*
-	core::TypePtr irType = base->getType();
-	if (core::analysis::isCppRef(irType)) {
-		base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR(), base);
+	if (IS_CPP_REF(convFact.lookupTypeDetails(base->getType()))){
+		base = builder.toIRRef(base);
 	}
-	else if (core::analysis::isConstCppRef(irType)) {
-		base = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR(), base);
-	}
-	*/
-	base = utils::unwrapCppRef(builder, base);
 
-	// TODO: we have the situation here in which we might want to access a field of a superclass
-	// this will not be resolved by the C frontend. and we need to build the right datapath to
-	// reach the definition
 	retIr = getMemberAccessExpr(convFact, builder, base, membExpr);
 	return retIr;
 }
@@ -276,7 +265,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitDeclRefExpr(const clang::D
 	// if is a prameter and is a cpp ref, avoid going further to avoid wrapping issues
 	if (const ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())) {
 		retIr = convFact.lookUpVariable( parmDecl );
-		if (IS_CPP_REF_EXPR(retIr)){
+		if (IS_CPP_REF(retIr->getType())){
 			return retIr;
 		}
 	}
@@ -312,16 +301,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 
 	// to begin with we translate the constructor as a regular function
 	auto newFunc = convFact.convertFunctionDecl(llvm::cast<clang::FunctionDecl> (methodDecl)).as<core::ExpressionPtr>();
-
-//	// get type of this
-//	const clang::Type* classType= methodDecl->getParent()->getTypeForDecl();
-//	core::TypePtr&& irClassType = builder.refType( convFact.convertType(classType) );
-//
-//	newFunc = convFact.memberize(llvm::cast<FunctionDecl>(methodDecl),
-//									newFunc.as<core::ExpressionPtr>(),
-//									irClassType,
-//									core::FK_MEMBER_FUNCTION).as<core::ExpressionPtr>();
-
 	core::FunctionTypePtr funcTy = newFunc.getType().as<core::FunctionTypePtr>();
 
 	// get the this-Object
@@ -329,7 +308,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 	// correct the owner object reference, in case of pointer (ref<array<struct<...>,1>>) we need to
 	// index the first element
 	ownerObj = getCArrayElemRef(builder, ownerObj);
-	ownerObj = utils::unwrapCppRef(builder, ownerObj);
+	if (IS_CPP_REF(convFact.lookupTypeDetails(ownerObj->getType())))
+		ownerObj = builder.toIRRef(ownerObj);
 
 	// reconstruct Arguments list, fist one is a scope location for the object
 	ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(methodDecl) );
@@ -339,6 +319,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 
 	// build expression and we are done!!!
 	ret = builder.callExpr(retTy, newFunc, args);
+
 
 	if(VLOG_IS_ON(2)){
 		dumpPretty(&(*ret));
@@ -377,7 +358,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 
 		// get "this-object"
 		core::ExpressionPtr ownerObj = Visit(callExpr->getArg(0));
-		ownerObj = utils::unwrapCppRef(builder, ownerObj);
+		if (core::analysis::isCppRef (ownerObj->getType()))
+			ownerObj = builder.toIRRef(ownerObj);
 
 		// get arguments
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
@@ -858,7 +840,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr( 
 	retIr =  Visit(materTempExpr->GetTemporaryExpr());
 
 	// is a left side value, no need to materialize. has being handled by a temporary expression
-	if(IS_CPP_REF_EXPR(retIr) || gen.isRef(retIr->getType()))
+	if(IS_CPP_REF(retIr->getType()) || gen.isRef(retIr->getType()))
 		return retIr;
 	else
 		return (retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), retIr));

@@ -41,6 +41,7 @@
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -193,7 +194,6 @@ stmtutils::StmtWrapper Converter::StmtConverter::VisitReturnStmt(clang::ReturnSt
 	stmtList.push_back(retIr);
 	core::StatementPtr retStatement = builder.compoundStmt(stmtList);
 	stmtutils::StmtWrapper body = stmtutils::tryAggregateStmts(builder,stmtList );
-
 	return body;
 }
 	

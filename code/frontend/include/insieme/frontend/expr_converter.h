@@ -103,40 +103,11 @@ core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& conver
 
 
 } // end anonymous namespace
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace insieme {
 namespace frontend {
 namespace conversion {
-
-
-#define CALL_BASE_EXPR_VISIT(Base, ExprTy) \
-	core::ExpressionPtr Visit##ExprTy( const clang::ExprTy* expr ) { return Base::Visit##ExprTy( expr ); }
-
-#define GET_REF_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::RefType>(type)->getElementType())
-
-#define GET_VEC_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::VectorType>(type)->getElementType())
-
-#define GET_ARRAY_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::ArrayType>(type)->getElementType())
-
-#define LOG_EXPR_CONVERSION(parentExpr, expr) \
-	FinalActions attachLog( [&] () { \
-        VLOG(1) << "*************     EXPR  [class:'"<< parentExpr->getStmtClassName() <<"']         ***************************"; \
-        if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang expression: "; \
-            parentExpr->dump(); \
-        } \
-        VLOG(1) << "-> at location: (" <<	\
-                    utils::location(parentExpr->getLocStart(), convFact.getSourceManager()) << "); "; \
-        VLOG(1) << "Converted into IR expression: "; \
-        if(expr) { \
-            VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )"; \
-        } \
-        VLOG(1) << "****************************************************************************************"; \
-    } )
-
 //---------------------------------------------------------------------------------------------------------------------
 //										BASE EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
@@ -381,6 +352,9 @@ public:
 	virtual core::ExpressionPtr Visit(const clang::Expr* expr) = 0;
 
 };
+
+#define CALL_BASE_EXPR_VISIT(Base, ExprTy) \
+	core::ExpressionPtr Visit##ExprTy( const clang::ExprTy* expr ) { return Base::Visit##ExprTy( expr ); }
 
 //---------------------------------------------------------------------------------------------------------------------
 //										C EXPRESSION CONVERTER

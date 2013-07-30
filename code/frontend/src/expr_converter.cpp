@@ -47,7 +47,7 @@
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/castTool.h"
-#include "insieme/frontend/utils/ir_utils.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -981,8 +981,8 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			// get basic element type
 			core::ExpressionPtr&& subExprLHS = convFact.tryDeref(lhs);
 			// beware of cpp refs, to operate, we need to deref the value in the left side
-			if(IS_CPP_REF_EXPR(subExprLHS) ){
-				subExprLHS = utils::unwrapCppRef(builder, subExprLHS);
+			if(IS_CPP_REF(subExprLHS->getType()) ){
+				subExprLHS = builder.toIRRef( subExprLHS);
 				subExprLHS = convFact.tryDeref(subExprLHS);
 			}
 			// rightside will become the current operation

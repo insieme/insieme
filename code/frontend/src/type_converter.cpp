@@ -39,6 +39,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/debug.h"
 #include "insieme/frontend/utils/clang_utils.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/container_utils.h"

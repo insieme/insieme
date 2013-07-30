@@ -35,6 +35,7 @@
  */
 
 #include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/utils/assert.h"
 
@@ -329,21 +330,35 @@ namespace tu {
 					}
 				}
 
-				// if this is a call to ref member access we rebuild the whole expression
+				// if this is a call to ref member access we rebuild the whole expression to return
+				// right ref type
 				if (core::analysis::isCallOf(res, mgr.getLangBasic().getCompositeRefElem())){
 					auto call = res.as<CallExprPtr>();
 					if (call[0]->getType().as<RefTypePtr>()->getElementType().isa<StructTypePtr>()){
 						auto tmp = builder.refMember(call[0], call[1].as<LiteralPtr>()->getValue());
 							// type changed... do we have any cppRef to unwrap?
 						if (*(tmp->getType()) != *(call->getType())  && 
-							(analysis::isCppRef(tmp->getType().as<RefTypePtr>()->getElementType()) || 
-							 analysis::isConstCppRef(tmp->getType().as<RefTypePtr>()->getElementType())))
+							IS_CPP_REF(tmp->getType().as<RefTypePtr>()->getElementType()))
 							res = builder.toIRRef(builder.deref(tmp));
 						else
 							res = tmp;
 					}
 				}
 
+				// also if this is a call to member access we rebuild the whole expression to return
+				// NON ref type
+				if (core::analysis::isCallOf(res, mgr.getLangBasic().getCompositeMemberAccess())){
+					auto call = res.as<CallExprPtr>();
+					if (call[0]->getType().isa<StructTypePtr>()){
+						auto tmp = builder.accessMember(call[0], call[1].as<LiteralPtr>()->getValue());
+							// type changed... do we have any cppRef to unwrap?
+						if (IS_CPP_REF(tmp->getType()))
+							res = builder.deref(builder.toIRRef(tmp));
+						else
+							res = tmp;
+					}
+				}
+		
 				// also fix type literals
 				if (core::analysis::isTypeLiteral(res)) {
 					res = builder.getTypeLiteral(core::analysis::getRepresentedType(res.as<ExpressionPtr>()));

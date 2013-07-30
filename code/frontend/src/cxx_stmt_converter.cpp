@@ -40,8 +40,8 @@
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/ir_utils.h"
 #include "insieme/frontend/utils/debug.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -156,7 +156,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 			retExpr = retExpr.as<core::CallExprPtr>()[0];
 		}
 
-		if(IS_CPP_REF_EXPR(retExpr)){
+		if(IS_CPP_REF(retExpr->getType())){
 			// we are returning a value, peel out the reference, or deref it
 			if (core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp()) || 
 				core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp()))
@@ -179,7 +179,7 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 	else{
 		// not a cast, it is a ref then... only if not array
 		if (!core::analysis::isCallOf(retExpr,mgr.getLangBasic().getScalarToArray()) &&
-			!IS_CPP_REF_EXPR(retExpr)){
+			!IS_CPP_REF(retExpr->getType())){
 				retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retExpr);
 		}
 	}
