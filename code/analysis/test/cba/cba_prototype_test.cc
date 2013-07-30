@@ -197,6 +197,7 @@ namespace cba {
 		CBAContext context;
 		auto constraints = generateConstraints(context, code);
 		// std::cout << "Constraint: " << constraints << "\n";
+//		createDotDump(context, constraints);
 
 		auto solution = cba::solve(constraints);
 		// std::cout << "Solutions:  " << solution << "\n";
@@ -250,6 +251,7 @@ namespace cba {
 		CBAContext context;
 		auto constraints = generateConstraints(context, code);
 		// std::cout << "Constraint: " << constraints << "\n";
+//		createDotDump(context, constraints);
 
 		auto solution = cba::solve(constraints);
 		// std::cout << "Solutions:  " << solution << "\n";
@@ -283,6 +285,7 @@ namespace cba {
 		CBAContext context;
 		auto constraints = generateConstraints(context, code);
 //		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+//		createDotDump(context, constraints);
 
 		auto solution = cba::solve(constraints);
 //		std::cout << "Solutions:  " << solution << "\n";
@@ -333,6 +336,7 @@ namespace cba {
 		CBAContext context;
 		auto constraints = generateConstraints(context, code);
 //		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+//		createDotDump(context, constraints);
 
 		auto solution = cba::solve(constraints);
 //		std::cout << "Solutions:  " << solution << "\n";
@@ -346,8 +350,6 @@ namespace cba {
 
 		// this would be the ideal case
 		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, val)));
-
-//		createDotDump(context, constraints);;
 
 	}
 
@@ -372,6 +374,7 @@ namespace cba {
 		CBAContext context;
 		auto constraints = generateConstraints(context, code);
 //		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+//		createDotDump(context, constraints);
 
 		auto solution = cba::solve(constraints);
 //		std::cout << "Solutions:  " << solution << "\n";
@@ -385,7 +388,6 @@ namespace cba {
 		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, varZ)));
 		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, varW)));
 
-//		createDotDump(context, constraints);
 	}
 
 	TEST(CBA, References3) {
@@ -445,6 +447,7 @@ namespace cba {
 		auto time = TIME(constraints = generateConstraints(context, code));
 		std::cout << "Constraint generation took: " << (time*1000) << "ms\n";
 //		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+//		createDotDump(context, constraints);
 
 		Solution solution;
 		time = TIME(solution = cba::solve(constraints));
@@ -475,8 +478,6 @@ namespace cba {
 		EXPECT_EQ("{AP(4)}", toString(cba::getValuesOf(context, solution, code[21].as<ExpressionAddress>())));
 		EXPECT_EQ("{AP(4)}", toString(cba::getValuesOf(context, solution, code[22].as<ExpressionAddress>())));
 
-
-//		createDotDump(context, constraints);
 	}
 
 	TEST(CBA, IfStmt) {
@@ -509,6 +510,7 @@ namespace cba {
 		CBAContext context;
 		auto constraints = generateConstraints(context, code);
 //		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+//		createDotDump(context, constraints);
 
 		auto solution = cba::solve(constraints);
 //		std::cout << "Solutions:  " << solution << "\n";
@@ -526,7 +528,6 @@ namespace cba {
 		should.insert(builder.intLit(3));
 		EXPECT_EQ(should, cba::getValuesOf(context, solution, code.getAddressOfChild(3).as<ExpressionAddress>()));
 
-//		createDotDump(context, constraints);
 	}
 
 	TEST(CBA, WhileStmt) {
@@ -536,8 +537,6 @@ namespace cba {
 
 		auto in = builder.parseStmt(
 				"{"
-
-				// init variables
 				"	ref<int<4>> x = var(1);"		// set x to 1
 				"	*x;"							// should be 1
 				"	while (x > 0) {"
@@ -555,23 +554,84 @@ namespace cba {
 		CBAContext context;
 		auto constraints = generateConstraints(context, code);
 //		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
-		createDotDump(context, constraints);
+//		createDotDump(context, constraints);
 
 		auto solution = cba::solve(constraints);
 //		std::cout << "Solutions:  " << solution << "\n";
 
 		// check value of *x
 		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(1).as<ExpressionAddress>())));
-		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(2,1,0).as<ExpressionAddress>())));
-		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(2,1,2).as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(NULL),AP(1)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(2,1,0).as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(NULL)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(2,1,2).as<ExpressionAddress>())));
 
 		// the last one may be both
 		ExpressionSet should;
-		should.insert(builder.intLit(2));
-		should.insert(builder.intLit(3));
+		should.insert(ExpressionPtr());
+		should.insert(builder.intLit(1));
 		EXPECT_EQ(should, cba::getValuesOf(context, solution, code.getAddressOfChild(3).as<ExpressionAddress>()));
 
 	}
+
+	TEST(CBA, Arithmetic_101) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		std::map<string, NodePtr> symbols;
+		symbols["e"] = builder.literal("e", builder.getLangBasic().getInt4());
+
+		auto in = builder.parseStmt(
+				"{"
+				// constants
+				"	0;"						// should be 0
+				"	1;"						// should be 1
+				"	e;"						// should be unknown
+
+				// constant expressions
+				"	1+1;"
+				"	1+1+1;"
+				"	1+2*3;"
+				"	17+4;"
+
+				// constant expressions with variables
+				"	auto x = 2;"
+				"	auto y = 3;"
+				"	x;"
+				"	2*x+1;"
+				"	2*x+4*y;"
+				"	2*x+4*y+e;"
+
+				// boolean constraints
+				"	2*x+1 < 2;"
+				"	2*x+1 > 2*x;"
+				"	2*x+1 == (2+1)*x;"
+				"	2*x < e;"
+
+				// ternary operator
+				"	(x<2)?1:2;"				// x is 2 => should be 2
+				"	(x<3)?1:2;"				// x is 2 => should be 1
+				"	(x<y)?1:2;"				// y is 3 => should be 1
+				"	(x<e)?1:2;"				// unknown => should be {1,2}
+
+				"}",
+				symbols
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+//		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
+//		createDotDump(context, constraints);
+
+		auto solution = cba::solve(constraints);
+//		std::cout << "Solutions:  " << solution << "\n";
+
+		// check values
+
+	}
+
 
 } // end namespace cba
 } // end namespace analysis
