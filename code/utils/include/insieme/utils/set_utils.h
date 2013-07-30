@@ -275,6 +275,8 @@ std::size_t computeHash(const Set& set) {
 } // end namespace: utils
 } // end namespace: insieme
 
+namespace std {
+
 /**
  * Allows to print sets containing printable elements.
  *
@@ -328,3 +330,5 @@ std::ostream& operator<<(std::ostream& out, const boost::unordered_set<Element, 
 	// print and done
 	return out << "{" << boost::join(list, ",") << "}";
 }
+
+} // end namespace std
