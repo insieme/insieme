@@ -156,7 +156,8 @@ namespace set_constraint_2 {
 		}
 
 		virtual std::ostream& writeDotEdge(std::ostream& out) const {
-			return out << "e" << e << " -> " << a << " [label=\"in\"];";
+			out << "e" << (int*)&e << " [label=\"" << e << "\"]\n";
+			return out << "e" << (int*)&e << " -> " << a << " [label=\"in\"];";
 		}
 	};
 
