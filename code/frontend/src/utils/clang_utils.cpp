@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -62,7 +62,7 @@ using namespace llvm;
 		boost::replace_all(str, ">", "_"); \
 		boost::replace_all(str, "::", "_"); \
 }
-	
+
 
 
 /* we build a complete name for the class,
@@ -95,15 +95,34 @@ std::string getNameForRecord(const clang::RecordDecl* decl, const clang::Type* t
 
 std::string buildNameForFunction (const clang::FunctionDecl* funcDecl){
 	std::string name = funcDecl->getQualifiedNameAsString();
-	
-	if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl)) 
+
+	if(const clang::CXXMethodDecl* method = llvm::dyn_cast<clang::CXXMethodDecl>(funcDecl))
 		if (method->isVirtual())
 			name = funcDecl->getNameAsString();
-	
+
+    //we need to replace right and left shift operators with a dummy
+    //to avoid wrong renaming and double occurence when both operators
+    //have been overloaded
+	boost::algorithm::replace_last(name, "operator<<","dummyss");
+	boost::algorithm::replace_last(name, "operator>>","dummygg");
+	//if no shift operators found lets check for less, greater
+	//and less equals, greater equals (handled in one case)
+	boost::algorithm::replace_last(name, "operator<","sdummy");
+	boost::algorithm::replace_last(name, "operator>","gdummy");
+
 	if (llvm::isa<clang::CXXMethodDecl>(funcDecl) && llvm::cast<clang::CXXMethodDecl>(funcDecl)->isConst())
 		name.append("_c");
-	
+
 	REMOVE_SYMBOLS(name);
+
+    //check for dummyss or dummygg and replace it with the original name
+	boost::algorithm::replace_last(name, "dummyss", "operator<<");
+	boost::algorithm::replace_last(name, "dummygg", "operator>>");
+	//if nothing was found check for the other ones
+	boost::algorithm::replace_last(name, "sdummy", "operator<");
+	boost::algorithm::replace_last(name, "gdummy", "operator>");
+
+
 	return name;
 }
 
