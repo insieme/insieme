@@ -180,6 +180,8 @@ namespace cba {
 
 			typedef IRVisitor<void,Address> super;
 
+			std::set<NodeAddress> processed;
+
 		protected:
 
 			CBAContext& context;
@@ -195,7 +197,7 @@ namespace cba {
 		public:
 
 			BasicDataFlowConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root, const TypedSetType<T>& A, const TypedSetType<T>& a)
-				: context(context), constraints(contraints), A(A), a(a) {
+				: processed(), context(context), constraints(contraints), A(A), a(a) {
 
 				// collect all terms in the code
 				visitDepthFirst(root, [&](const ExpressionAddress& cur) {
@@ -206,6 +208,11 @@ namespace cba {
 				});
 
 			};
+
+			virtual void visit(const NodeAddress& node) {
+				if (!processed.insert(node).second) return;
+				super::visit(node);
+			}
 
 			void visitCompoundStmt(const CompoundStmtAddress& compound) {
 				// just collect constraints from elements
@@ -506,10 +513,12 @@ namespace cba {
 			// list of all memory location in the processed fragment
 			std::vector<Location> locations;
 
+			std::set<NodeAddress> processed;
+
 		public:
 
 			ImperativeConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root, const TypedSetType<T>& dataSet)
-				: context(context), constraints(contraints), dataSet(dataSet) {
+				: context(context), constraints(contraints), dataSet(dataSet), processed() {
 
 				// collect all memory location constructors
 				visitDepthFirst(root, [&](const ExpressionAddress& cur) {
@@ -520,6 +529,11 @@ namespace cba {
 				});
 
 			};
+
+			virtual void visit(const NodeAddress& node) {
+				if (!processed.insert(node).second) return;
+				super::visit(node);
+			}
 
 			void visitLiteral(const LiteralAddress& lit) {
 
@@ -912,14 +926,14 @@ namespace cba {
 		for(auto cur : sets) {
 			string setName = std::get<0>(cur.first)->getName();
 			auto pos = getAddress(std::get<1>(cur.first));
-			out << "\n\ts" << cur.second << " [label=\"s" << cur.second << " = " << setName << "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << "]\"];";
+			out << "\n\t" << cur.second << " [label=\"s" << cur.second << " = " << setName << "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << "]\"];";
 		}
 
 		for(auto cur : stateSets) {
 			string setName = getName(std::get<0>(cur.first));
 			string dataName = std::get<5>(cur.first)->getName();
 			auto pos = getAddress(std::get<1>(cur.first));
-			out << "\n\ts" << cur.second << " [label=\"s" << cur.second << " = " << setName << "-" << dataName << "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << "]\"];";
+			out << "\n\t" << cur.second << " [label=\"s" << cur.second << " = " << setName << "-" << dataName << "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << "]\"];";
 		}
 
 		// link sets
