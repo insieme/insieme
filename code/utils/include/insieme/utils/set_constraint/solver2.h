@@ -113,13 +113,13 @@ namespace set_constraint_2 {
 
 		// a utility function merging sets
 		template<typename A>
-		bool addAll(Assignment& ass, const TypedSetID<A>& srcSet, const TypedSetID<A>& trgSet) const {
+		bool addAll(Assignment& ass, const std::set<A>& srcSet, const TypedSetID<A>& trgSet) const {
 			// get actual set
 			auto& trg = ass[trgSet];
 
 			// add values to target set
 			bool newData = false;
-			for(const auto& x : ass[srcSet]) {
+			for(const auto& x : srcSet) {
 				newData = trg.insert(x).second || newData;
 			}
 
@@ -127,6 +127,11 @@ namespace set_constraint_2 {
 			return newData;
 		};
 
+		// a utility function merging sets
+		template<typename A>
+		bool addAll(Assignment& ass, const TypedSetID<A>& srcSet, const TypedSetID<A>& trgSet) const {
+			return addAll(ass, ass[srcSet], trgSet);
+		};
 	};
 
 
@@ -295,6 +300,74 @@ namespace set_constraint_2 {
 	};
 
 
+	// f(A) \subset B
+	template<typename A, typename B>
+	class SubSetUnary : public Constraint {
+
+		typedef std::function<std::set<B>(const std::set<A>&)> fun_type;
+
+		TypedSetID<A> a;
+		TypedSetID<B> b;
+		fun_type f;
+
+	public:
+
+		SubSetUnary(const TypedSetID<A>& a, const TypedSetID<B>& b, const fun_type& f)
+			: Constraint(toVector<SetID>(a), toVector<SetID>(b)), a(a), b(b), f(f) {}
+
+		virtual bool update(Assignment& ass) const {
+			return Constraint::addAll(ass, f(ass[a]), b);
+		}
+
+		virtual bool check(const Assignment& ass) const {
+			return set::isSubset(f(ass[a]), ass[b]);
+		}
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "f(" << a << ") sub " << b;
+		}
+
+		virtual std::ostream& writeDotEdge(std::ostream& out) const {
+			return out << a << " -> " << b << " [label=\"f(in)\"];";
+		}
+	};
+
+
+	// f(A,B) \subset C
+	template<typename A, typename B, typename R>
+	class SubSetBinary : public Constraint {
+
+		typedef std::function<std::set<R>(const std::set<A>&, const std::set<B>&)> fun_type;
+
+		TypedSetID<A> a;
+		TypedSetID<B> b;
+		TypedSetID<R> r;
+		fun_type f;
+
+	public:
+
+		SubSetBinary(const TypedSetID<A>& a, const TypedSetID<B>& b, const TypedSetID<R>& r, const fun_type& f)
+			: Constraint(toVector<SetID>(a,b), toVector<SetID>(r)), a(a), b(b), r(r), f(f) {}
+
+		virtual bool update(Assignment& ass) const {
+			return Constraint::addAll(ass, f(ass[a],ass[b]), r);
+		}
+
+		virtual bool check(const Assignment& ass) const {
+			return set::isSubset(f(ass[a],ass[b]), ass[r]);
+		}
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "f(" << a << "," << b << ") sub " << r;
+		}
+
+		virtual std::ostream& writeDotEdge(std::ostream& out) const {
+			out << a << " -> " << r << " [label=\"f(a,..)\"];";
+			out << b << " -> " << r << " [label=\"f(..,b)\"];";
+			return out;
+		}
+	};
+
 	// ----------------------------- Constraint Factory Functions ------------------------------
 
 
@@ -323,7 +396,15 @@ namespace set_constraint_2 {
 		return std::make_shared<SubSetIfReducedBiggerConstraint<E,A>>(a,e,s,b,c);
 	}
 
+	template<typename A, typename B, typename F>
+	ConstraintPtr subsetUnary(const TypedSetID<A>& in, const TypedSetID<B>& out, const F& fun) {
+		return std::make_shared<SubSetUnary<A,B>>(in, out, fun);
+	}
 
+	template<typename A, typename B, typename R, typename F>
+	ConstraintPtr subsetBinary(const TypedSetID<A>& a, const TypedSetID<B>& b, const TypedSetID<R>& r, const F& fun) {
+		return std::make_shared<SubSetBinary<A,B,R>>(a, b, r, fun);
+	}
 
 	// ----------------------------- Constraint Container ------------------------------
 
