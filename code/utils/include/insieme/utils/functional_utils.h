@@ -352,6 +352,7 @@ struct type_list<H,R...> {
 	typedef type_list<R...> rest;
 };
 
+
 template <typename ... Ts>
 struct size_of;
 
@@ -359,6 +360,7 @@ template <typename ... Ts>
 struct size_of<type_list<Ts...>> {
 	enum { value = sizeof...(Ts) };
 };
+
 
 template<unsigned pos, typename L>
 struct type_at;
@@ -372,6 +374,20 @@ template<unsigned pos, typename H, typename ...R>
 struct type_at<pos, type_list<H,R...>> {
 	typedef typename type_at<pos-1, type_list<R...>>::type type;
 };
+
+
+template<typename E, typename ... T> struct index_of;
+
+template<typename E, typename ... T>
+struct index_of<E,E,T...> {
+	enum { value = 0 };
+};
+
+template<typename E, typename H, typename ... T>
+struct index_of<E,H,T...> {
+	enum { value = 1 + index_of<E, T...>::value };
+};
+
 
 template<typename L>
 struct cons;

@@ -54,6 +54,9 @@ TEST(TypeListTrait, DealingWithListTraits) {
 	EXPECT_FALSE(typeid(type_at<0,type_list<int,double>>::type) == typeid(double));
 	EXPECT_FALSE(typeid(type_at<1,type_list<int,double>>::type) == typeid(int));
 
+	EXPECT_EQ(0, (index_of<int, int, float>::value));
+	EXPECT_EQ(1, (index_of<float, int, float>::value));
+
 }
 
 
