@@ -1217,6 +1217,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 		}*/
 
 		core::TypePtr type = subExpr->getType();
+        //if we have a cpp ref we have to unwrap it
+        if(IS_CPP_REF(type)) {
+            subExpr = builder.toIRRef(subExpr);
+            type = subExpr->getType();
+        }
 		assert( type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type" );
 		core::TypePtr elementType = GET_REF_ELEM_TYPE(type);
 
