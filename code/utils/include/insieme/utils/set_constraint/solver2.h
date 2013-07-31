@@ -79,6 +79,8 @@ namespace set_constraint_2 {
 	template<typename T>
 	struct TypedSetID : public SetID {
 		TypedSetID(int id = -1) : SetID(id) { };
+		TypedSetID(const SetID& id) : SetID(id) { };
+		TypedSetID(const TypedSetID<T>& id) : SetID(id) { };
 	};
 
 
@@ -86,10 +88,12 @@ namespace set_constraint_2 {
 
 	// a common base type for all kind of constraints
 
-	struct Constraint : public Printable {
+	class Constraint : public Printable {
 
 		std::vector<SetID> inputs;
 		std::vector<SetID> outputs;
+
+	public:
 
 		Constraint(const std::vector<SetID>& in, const std::vector<SetID>& out)
 			: inputs(in), outputs(out) {}
@@ -99,6 +103,8 @@ namespace set_constraint_2 {
 		virtual void init(Assignment& ass, vector<SetID>& workList) const { };
 		virtual bool update(Assignment& ass) const { return false; };
 		virtual bool check(const Assignment& ass) const =0;
+
+		virtual std::ostream& writeDotEdge(std::ostream& out) const =0;
 
 		const std::vector<SetID>& getInputs() const { return inputs; };
 		const std::vector<SetID>& getOutputs() const { return outputs; };
@@ -148,6 +154,10 @@ namespace set_constraint_2 {
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << e << " in " << a;
 		}
+
+		virtual std::ostream& writeDotEdge(std::ostream& out) const {
+			return out << "e" << e << " -> " << a << " [label=\"in\"];";
+		}
 	};
 
 
@@ -174,6 +184,10 @@ namespace set_constraint_2 {
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << a << " sub " << b;
 		}
+
+		virtual std::ostream& writeDotEdge(std::ostream& out) const {
+			return out << a << " -> " << b << " [label=\"sub\"];";
+		}
 	};
 
 
@@ -192,17 +206,22 @@ namespace set_constraint_2 {
 			: Constraint(toVector<SetID>(a,b), toVector<SetID>(c)), e(e), a(a), b(b), c(c) {}
 
 		virtual bool update(Assignment& ass) const {
-			if (!contains(ass[a], e)) return false;
+			if (!set::contains(ass[a], e)) return false;
 			return Constraint::addAll(ass,b,c);
 		}
 
 		virtual bool check(const Assignment& ass) const {
-			return !contains(ass[a],e) || set::isSubset(ass[b], ass[c]);
+			return !set::contains(ass[a],e) || set::isSubset(ass[b], ass[c]);
 		}
 
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << e << " in " << a << " => " << b << " sub " << c;
 		}
+
+		virtual std::ostream& writeDotEdge(std::ostream& out) const {
+			return out << b << " -> " << c << " [label=\"if " << e << " in " << a << "\"];";
+		}
+
 	};
 
 
@@ -232,6 +251,10 @@ namespace set_constraint_2 {
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << "|" << a << "| > " << s << " => " << b << " sub " << c;
 		}
+
+		virtual std::ostream& writeDotEdge(std::ostream& out) const {
+			return out << b << " -> " << c << " [label=\"if |" << a << "| > " << s << "\"];";
+		}
 	};
 
 
@@ -252,17 +275,21 @@ namespace set_constraint_2 {
 
 		virtual bool update(Assignment& ass) const {
 			auto& set = ass[a];
-			auto n = set.size() - (contains(set, e) ? 1 : 0);
+			auto n = set.size() - (set::contains(set, e) ? 1 : 0);
 			if (n <= s) return false;
 			return Constraint::addAll(ass,b,c);
 		}
 
 		virtual bool check(const Assignment& ass) const {
-			return (ass[a].size() - ((contains(ass[a],e))?1:0)) <= s || set::isSubset(ass[a], ass[b]);
+			return (ass[a].size() - ((set::contains(ass[a],e))?1:0)) <= s || set::isSubset(ass[b], ass[c]);
 		}
 
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << "|" << a << " - {" << e << "}| > " << s << " => " << b << " sub " << c;
+		}
+
+		virtual std::ostream& writeDotEdge(std::ostream& out) const {
+			return out << b << " -> " << c << " [label=\"if |" << a << " - {" << e << "}| > " << s << "\"];";
 		}
 	};
 
@@ -389,6 +416,10 @@ namespace set_constraint_2 {
 		template<typename E>
 		const std::set<E>& operator[](const TypedSetID<E>& set) const {
 			return get(set);
+		}
+
+		bool operator==(const Assignment& other) const {
+			return data == other.data;
 		}
 
 		virtual std::ostream& printTo(std::ostream& out) const {
