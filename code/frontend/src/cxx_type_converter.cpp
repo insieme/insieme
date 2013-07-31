@@ -206,9 +206,16 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 	VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
 	VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
 	for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
-		assert(templTy->getArg(argId).getAsType().getTypePtr());
-		VLOG(2) << "TemplateArguments: " << templTy->getArg(argId).getAsType().getTypePtr()->getTypeClassName();
-	}
+        //we have to check if Template argument type is an expression or a type
+        clang::QualType qt;
+        if(templTy->getArg(argId).getKind() == clang::TemplateArgument::Expression) {
+            qt = templTy->getArg(argId).getAsExpr()->getType();
+        } else {
+            qt = templTy->getArg(argId).getAsType();
+        }
+        assert(qt.getTypePtr());
+        VLOG(2) << "TemplateArguments: " << qt.getTypePtr()->getTypeClassName();
+    }
 	VLOG(2) << "isSugared: " << templTy->isSugared();
 
 	//START_LOG_TYPE_CONVERSION(templTy);
@@ -218,12 +225,18 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 		//convert Template arguments (template < ActualClass >) -> ActualClass has to be converted
 		for(TemplateSpecializationType::iterator ait=templTy->begin(), ait_end=templTy->end(); ait!=ait_end; ait++) {
 			VLOG(2) << "Converting TemplateArg";
-			convFact.convertType(ait->getAsType().getTypePtr());
+            //we have to check if Template argument type is an expression or a type
+			clang::QualType qt;
+			if(ait->getKind() == clang::TemplateArgument::Expression) {
+                qt = ait->getAsExpr()->getType();
+			} else {
+                qt = ait->getAsType();
+			}
+			convFact.convertType(qt.getTypePtr());
 		}
 
 		retTy = convFact.convertType(templTy->desugar().getTypePtr());
 	}
-	//assert(false && "TemplateSpecializationType not yet handled!");
 	return retTy;
 }
 
