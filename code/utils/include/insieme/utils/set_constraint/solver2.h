@@ -50,7 +50,12 @@ namespace utils {
 namespace set_constraint_2 {
 
 	// forward declaration
-	template<typename ... T> class Assignment;
+	class SetID;
+
+	class Constraint;
+	typedef std::shared_ptr<Constraint> ConstraintPtr;
+
+	class Assignment;
 
 
 	// ----------------------------- Set IDs ------------------------------
@@ -81,7 +86,6 @@ namespace set_constraint_2 {
 
 	// a common base type for all kind of constraints
 
-	template<typename ... T>
 	struct Constraint : public Printable {
 
 		std::vector<SetID> inputs;
@@ -92,9 +96,9 @@ namespace set_constraint_2 {
 
 		virtual ~Constraint() {};
 
-		virtual void init(Assignment<T...>& ass, vector<SetID>& workList) const { };
-		virtual bool update(Assignment<T...>& ass) const { return false; };
-		virtual bool check(const Assignment<T...>& ass) const =0;
+		virtual void init(Assignment& ass, vector<SetID>& workList) const { };
+		virtual bool update(Assignment& ass) const { return false; };
+		virtual bool check(const Assignment& ass) const =0;
 
 		const std::vector<SetID>& getInputs() const { return inputs; };
 		const std::vector<SetID>& getOutputs() const { return outputs; };
@@ -103,7 +107,7 @@ namespace set_constraint_2 {
 
 		// a utility function merging sets
 		template<typename A>
-		bool addAll(Assignment<T...>& ass, const TypedSetID<A>& srcSet, const TypedSetID<A>& trgSet) const {
+		bool addAll(Assignment& ass, const TypedSetID<A>& srcSet, const TypedSetID<A>& trgSet) const {
 			// get actual set
 			auto& trg = ass[trgSet];
 
@@ -121,8 +125,8 @@ namespace set_constraint_2 {
 
 
 	// an element constraint:   e \in A
-	template<typename E, typename ... T>
-	class ElementOfConstraint : public Constraint<T...> {
+	template<typename E>
+	class ElementOfConstraint : public Constraint {
 
 		E e;
 		TypedSetID<E> a;
@@ -130,14 +134,14 @@ namespace set_constraint_2 {
 	public:
 
 		ElementOfConstraint(const E& e, const TypedSetID<E>& a)
-			: Constraint<T...>(toVector<SetID>(), toVector<SetID>(a)), e(e), a(a) {}
+			: Constraint(toVector<SetID>(), toVector<SetID>(a)), e(e), a(a) {}
 
-		virtual void init(Assignment<T...>& ass, vector<SetID>& workList) const {
+		virtual void init(Assignment& ass, vector<SetID>& workList) const {
 			ass[a].insert(e);
 			workList.push_back(a);
 		}
 
-		virtual bool check(const Assignment<T...>& ass) const {
+		virtual bool check(const Assignment& ass) const {
 			return contains(ass[a], e);
 		}
 
@@ -148,8 +152,8 @@ namespace set_constraint_2 {
 
 
 	// a simple sub-set constraint:   A \subset B
-	template<typename A, typename B, typename ... T>
-	class SubSetConstraint : public Constraint<T...> {
+	template<typename A, typename B>
+	class SubSetConstraint : public Constraint {
 
 		TypedSetID<A> a;
 		TypedSetID<B> b;
@@ -157,13 +161,13 @@ namespace set_constraint_2 {
 	public:
 
 		SubSetConstraint(const TypedSetID<A>& a, const TypedSetID<B>& b)
-			: Constraint<T...>(toVector<SetID>(a), toVector<SetID>(b)), a(a), b(b) {}
+			: Constraint(toVector<SetID>(a), toVector<SetID>(b)), a(a), b(b) {}
 
-		virtual bool update(Assignment<T...>& ass) const {
-			return Constraint<T...>::addAll(ass,a,b);
+		virtual bool update(Assignment& ass) const {
+			return Constraint::addAll(ass,a,b);
 		}
 
-		virtual bool check(const Assignment<T...>& ass) const {
+		virtual bool check(const Assignment& ass) const {
 			return set::isSubset(ass[a], ass[b]);
 		}
 
@@ -174,8 +178,8 @@ namespace set_constraint_2 {
 
 
 	// e \in A  =>   B \subset C
-	template<typename E, typename A, typename ... T>
-	class SubSetIfConstraint : public Constraint<T...> {
+	template<typename E, typename A>
+	class SubSetIfConstraint : public Constraint {
 
 		E e;
 		TypedSetID<E> a;
@@ -185,14 +189,14 @@ namespace set_constraint_2 {
 	public:
 
 		SubSetIfConstraint(const E& e, const TypedSetID<E>& a, const TypedSetID<A>& b, const TypedSetID<A>& c)
-			: Constraint<T...>(toVector<SetID>(a,b), toVector<SetID>(c)), e(e), a(a), b(b), c(c) {}
+			: Constraint(toVector<SetID>(a,b), toVector<SetID>(c)), e(e), a(a), b(b), c(c) {}
 
-		virtual bool update(Assignment<T...>& ass) const {
+		virtual bool update(Assignment& ass) const {
 			if (!contains(ass[a], e)) return false;
-			return Constraint<T...>::addAll(ass,b,c);
+			return Constraint::addAll(ass,b,c);
 		}
 
-		virtual bool check(const Assignment<T...>& ass) const {
+		virtual bool check(const Assignment& ass) const {
 			return !contains(ass[a],e) || set::isSubset(ass[b], ass[c]);
 		}
 
@@ -203,8 +207,8 @@ namespace set_constraint_2 {
 
 
 	// |A| > s  =>   B \subset C
-	template<typename A, typename B, typename ... T>
-	class SubSetIfBiggerConstraint : public Constraint<T...> {
+	template<typename A, typename B>
+	class SubSetIfBiggerConstraint : public Constraint {
 
 		std::size_t s;
 		TypedSetID<A> a;
@@ -214,14 +218,14 @@ namespace set_constraint_2 {
 	public:
 
 		SubSetIfBiggerConstraint(std::size_t s, const TypedSetID<A>& a, const TypedSetID<B>& b, const TypedSetID<B>& c)
-			: Constraint<T...>(toVector<SetID>(a,b), toVector<SetID>(c)), s(s), a(a), b(b), c(c) {}
+			: Constraint(toVector<SetID>(a,b), toVector<SetID>(c)), s(s), a(a), b(b), c(c) {}
 
-		virtual bool update(Assignment<T...>& ass) const {
+		virtual bool update(Assignment& ass) const {
 			if (ass[a].size() <= s) return false;
-			return Constraint<T...>::addAll(ass,b,c);
+			return Constraint::addAll(ass,b,c);
 		}
 
-		virtual bool check(const Assignment<T...>& ass) const {
+		virtual bool check(const Assignment& ass) const {
 			return ass[a].size() <= s || set::isSubset(ass[b], ass[c]);
 		}
 
@@ -232,8 +236,8 @@ namespace set_constraint_2 {
 
 
 	// |A \ {t} | > s  =>   B \subset C
-	template<typename E, typename B, typename ... T>
-	class SubSetIfReducedBiggerConstraint : public Constraint<T...> {
+	template<typename E, typename B>
+	class SubSetIfReducedBiggerConstraint : public Constraint {
 
 		std::size_t s;
 		E e;
@@ -244,17 +248,17 @@ namespace set_constraint_2 {
 	public:
 
 		SubSetIfReducedBiggerConstraint(const TypedSetID<E>& a, const E& e, std::size_t s, const TypedSetID<B>& b, const TypedSetID<B>& c)
-			: Constraint<T...>(toVector<SetID>(a,b), toVector<SetID>(c)), s(s), e(e), a(a), b(b), c(c) {}
+			: Constraint(toVector<SetID>(a,b), toVector<SetID>(c)), s(s), e(e), a(a), b(b), c(c) {}
 
-		virtual bool update(Assignment<T...>& ass) const {
+		virtual bool update(Assignment& ass) const {
 			auto& set = ass[a];
 			auto n = set.size() - (contains(set, e) ? 1 : 0);
 			if (n <= s) return false;
-			return Constraint<T...>::addAll(ass,b,c);
+			return Constraint::addAll(ass,b,c);
 		}
 
-		virtual bool check(const Assignment<T...>& ass) const {
-			return (ass[a].size() - ((contains(ass[a],e))?1:0)) <= e || set::isSubset(ass[a], ass[b]);
+		virtual bool check(const Assignment& ass) const {
+			return (ass[a].size() - ((contains(ass[a],e))?1:0)) <= s || set::isSubset(ass[a], ass[b]);
 		}
 
 		virtual std::ostream& printTo(std::ostream& out) const {
@@ -263,102 +267,115 @@ namespace set_constraint_2 {
 	};
 
 
+	// ----------------------------- Constraint Factory Functions ------------------------------
 
-	// ----------------------------- Constraint Set ------------------------------
+
+	template<typename E>
+	ConstraintPtr elem(const E& e, const TypedSetID<E>& a) {
+		return std::make_shared<ElementOfConstraint<E>>(e,a);
+	}
+
+	template<typename A, typename B>
+	ConstraintPtr subset(const TypedSetID<A>& a, const TypedSetID<B>& b) {
+		return std::make_shared<SubSetConstraint<A,B>>(a,b);
+	}
+
+	template<typename E, typename A>
+	ConstraintPtr subsetIf(const E& e, const TypedSetID<E>& a, const TypedSetID<A>& b, const TypedSetID<A>& c) {
+		return std::make_shared<SubSetIfConstraint<E,A>>(e,a,b,c);
+	}
+
+	template<typename A, typename B>
+	ConstraintPtr subsetIfBigger(const TypedSetID<A>& a, std::size_t s, const TypedSetID<B>& b, const TypedSetID<B>& c) {
+		return std::make_shared<SubSetIfBiggerConstraint<A,B>>(s,a,b,c);
+	}
+
+	template<typename E, typename A>
+	ConstraintPtr subsetIfReducedBigger(const TypedSetID<E>& a, const E& e, std::size_t s, const TypedSetID<A>& b, const TypedSetID<A>& c) {
+		return std::make_shared<SubSetIfReducedBiggerConstraint<E,A>>(a,e,s,b,c);
+	}
 
 
-	template<typename ... T>
+
+	// ----------------------------- Constraint Container ------------------------------
+
+
 	class Constraints : public Printable {
 
-		typedef std::shared_ptr<Constraint<T...>> element_type;
+	public:
 
-		std::vector<element_type> data;
+		typedef std::vector<ConstraintPtr> data_type;
+		typedef typename data_type::const_iterator const_iterator;
+
+	private:
+
+		// think about making this a set
+		data_type data;
 
 	public:
 
 		Constraints() : data() {}
 
-		Constraints(const std::initializer_list<element_type>& list) : data(list) {}
+		Constraints(const std::initializer_list<ConstraintPtr>& list) : data(list) {}
 
-		const std::vector<element_type>& getList() const { return data; }
+		void add(const ConstraintPtr& constraint) {
+			data.push_back(constraint);
+		}
+
+		const std::vector<ConstraintPtr>& getList() const {
+			return data;
+		}
+
+		const_iterator begin() const { return data.begin(); }
+		const_iterator end() const { return data.end(); }
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "{" << join(",", data, print<deref<element_type>>()) << "}";
+			return out << "{" << join(",", data, print<deref<ConstraintPtr>>()) << "}";
 		}
 	};
 
-
-	// ----------------------------- Constraint Factory ------------------------------
-
-	template<typename ... T>
-	struct ConstraintFactory {
-
-		typedef std::shared_ptr<Constraint<T...>> constraint_type;
-
-
-		template<typename E>
-		constraint_type elem(const E& e, const TypedSetID<E>& a) {
-			return std::make_shared<ElementOfConstraint<E,T...>>(e,a);
-		}
-
-		template<typename A, typename B>
-		constraint_type subset(const TypedSetID<A>& a, const TypedSetID<B>& b) {
-			return std::make_shared<SubSetConstraint<A,B,T...>>(a,b);
-		}
-
-		template<typename E, typename A>
-		constraint_type subsetIf(const E& e, const TypedSetID<E>& a, const TypedSetID<A>& b, const TypedSetID<A>& c) {
-			return std::make_shared<SubSetIfConstraint<E,A,T...>>(e,a,b,c);
-		}
-
-		template<typename A, typename B>
-		constraint_type subsetIfBigger(const TypedSetID<A>& a, std::size_t s, const TypedSetID<B>& b, const TypedSetID<B>& c) {
-			return std::make_shared<SubSetIfBiggerConstraint<A,B,T...>>(s,a,b,c);
-		}
-
-		template<typename E, typename A>
-		constraint_type subsetIfReducedBigger(const TypedSetID<E>& a, const E& e, std::size_t s, const TypedSetID<A>& b, const TypedSetID<A>& c) {
-			return std::make_shared<SubSetIfReducedBiggerConstraint<E,A,T...>>(a,e,s,b,c);
-		}
-
-	};
 
 
 	// ----------------------------- Assignment ------------------------------
 
-	namespace detail {
-
-		template<typename E, typename ... T> struct index_of;
-
-		template<typename E, typename ... T>
-		struct index_of<E,E,T...> {
-			enum { value = 0 };
-		};
-
-		template<typename E, typename H, typename ... T>
-		struct index_of<E,H,T...> {
-			enum { value = 1 + index_of<E, T...>::value };
-		};
-
-	} // end namespace: detail
-
-
-	template<typename ... T>
 	class Assignment : public Printable {
 
-		std::tuple<std::map<TypedSetID<T>,std::set<T>>...> data;
+		struct Container : public Printable {
+			virtual ~Container() {};
+		};
+
+		template<typename T>
+		class TypedContainer : public Container, public std::map<TypedSetID<T>, std::set<T>> {
+			typedef std::map<TypedSetID<T>, std::set<T>> map_type;
+			typedef typename map_type::value_type value_type;
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << join(",",*this, [](std::ostream& out, const value_type& cur) {
+					out << cur.first << "=" << cur.second;
+				});
+			}
+		};
+
+		typedef std::map<std::type_index, Container*> container_index_type;
+
+		container_index_type data;
 
 	public:
 
+		~Assignment() {
+			for(auto cur : data) {
+				delete cur.second;
+			}
+		}
+
 		template<typename E>
 		std::set<E>& get(const TypedSetID<E>& set) {
-			return std::get<detail::index_of<E,T...>::value>(data)[set];
+			return getContainer(set)[set];
 		}
 
 		template<typename E>
 		const std::set<E>& get(const TypedSetID<E>& set) const {
 			static const std::set<E> empty;
-			auto& map = std::get<detail::index_of<E,T...>::value>(data);
+			auto& map = getContainer(set);
 			auto pos = map.find(set);
 			if (pos != map.end()) { return pos->second; }
 			return empty;
@@ -375,70 +392,46 @@ namespace set_constraint_2 {
 		}
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << data;
+			return out << "{" << join(",", data, [](std::ostream& out, const container_index_type::value_type& cur) {
+				out << *cur.second;
+			}) << "}";
+		}
+
+	protected:
+
+		template<typename T>
+		TypedContainer<T>& getContainer(const TypedSetID<T>& type) {
+			auto& key = typeid(T);
+			auto pos = data.find(key);
+			if (pos != data.end()) {
+				return static_cast<TypedContainer<T>&>(*pos->second);
+			}
+
+			// create and request new instance
+			TypedContainer<T>* container = new TypedContainer<T>();
+			data[key] = container;
+			return *container;
+		}
+
+		template<typename T>
+		const TypedContainer<T>& getContainer(const TypedSetID<T>& type) const {
+			static const TypedContainer<T> empty;
+			auto& key = typeid(T);
+			auto pos = data.find(key);
+			if (pos != data.end()) {
+				return static_cast<const TypedContainer<T>&>(*pos->second);
+			}
+
+			// otherwise, return a pointer to an empty one
+			return empty;
 		}
 
 	};
-
-	template<typename ... T>
-	Assignment<T...> createAssignment() {
-		return Assignment<T...>();
-	}
 
 
 	// ----------------------------- Solver ------------------------------
 
-	template<typename ... T>
-	Assignment<T...> solve(const Constraints<T...>& constraints, Assignment<T...> initial = Assignment<T...>()) {
-
-		// the data structure representing the graph this algorithm is based on
-		typedef std::map<SetID, std::set<const Constraint<T...>*>> Edges;
-
-		// the work-list
-		std::vector<SetID> workList;
-
-		// build data structures for the graph
-		Assignment<T...> res = initial;
-		Edges edges;
-
-		// 1. create list of edges
-		for(auto& cur : constraints.getList()) {
-			// trigger init-routines
-			cur->init(res, workList);
-
-			// add edges
-			for (auto set : cur.getInputs()) {
-				edges[set].insert(&*cur);
-			}
-		}
-
-		// TODO: make work list unique (there are duplicates)
-
-		// 2. solve constraints
-		while(!workList.empty()) {
-			// retrieve first element
-			SetID head = workList.back();
-			workList.pop_back();
-
-			// process outgoing edges
-			for (const Constraint<T...>* cur : edges[head]) {
-				const Constraint<T...>& cc = *cur;
-
-				// trigger update
-				bool change = cc->update(res);
-
-				// register outputs in work-list
-				if (change) {
-					for (auto cur : cc.getOutputs()) {
-						workList.push_back(cur);
-					}
-				}
-			}
-		}
-
-		// done
-		return res;
-	};
+	Assignment solve(const Constraints& constraints, Assignment initial = Assignment());
 
 
 } // end namespace set_constraint_2
