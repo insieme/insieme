@@ -47,7 +47,7 @@
 #include "insieme/core/ir_address.h"
 
 #include "insieme/utils/map_utils.h"
-#include "insieme/utils/set_constraint/solver.h"
+#include "insieme/utils/set_constraint/solver2.h"
 
 namespace insieme {
 namespace analysis {
@@ -69,6 +69,7 @@ namespace cba {
 	struct Context : public utils::Printable {
 		array<Label, 2> context;		// TODO: make length a generic parameter
 		Context() : context() {}
+		bool operator==(const Context& other) const { return context == other.context; }
 		bool operator<(const Context& other) const { return context < other.context; }
 		std::ostream& printTo(std::ostream& out) const { return out << context; };
 	};
@@ -78,21 +79,46 @@ namespace cba {
 			Label spawn;
 			int id;
 			Entry() : spawn(0), id(0) {}
+			bool operator==(const Entry& other) const { return spawn == other.spawn && id == other.id; }
 			bool operator<(const Entry& other) const { return spawn < other.spawn || (spawn == other.spawn && id < other.id); }
 			std::ostream& printTo(std::ostream& out) const { return out << "<" << spawn << "," << id << ">"; };
 		};
 
 		array<Entry, 2> context;			// TODO: make length a generic parameter
+		bool operator==(const Thread& other) const { return context == other.context; }
 		bool operator<(const Thread& other) const { return context < other.context; }
 		std::ostream& printTo(std::ostream& out) const { return out << context; };
 	};
 
-	// TODO: make this expandable
-	enum SetType {
-		C, c,				// label / variable => function  (and value at the moment)
-		D, d, 				// label / variable => value (not used yet, occupied by C and r)
-		Sin, Sas, Sout,		// state before, in and after every expression	(in is only used for assignments)
-		R, r,				// label / variable => location pointing at
+
+	class SetType : public boost::noncopyable {
+		string name;
+	protected:
+		SetType(const string& name) : name(name) {}
+	public:
+		const string& getName() const { return name; }
+		bool operator==(const SetType& other) const { return this == &other; }
+	};
+
+	// TODO: restrict creation of this kind of objectes somehow ...
+	template<typename E>
+	class TypedSetType : public SetType {
+	public:
+		TypedSetType(const string& name) : SetType(name) {}
+	};
+
+	extern const TypedSetType<core::ExpressionAddress> C;
+	extern const TypedSetType<core::ExpressionAddress> c;
+
+	extern const TypedSetType<core::ExpressionPtr> D;
+	extern const TypedSetType<core::ExpressionPtr> d;
+
+	typedef std::tuple<core::ExpressionAddress, Context, Thread> Location;
+	extern const TypedSetType<Location> R;
+	extern const TypedSetType<Location> r;
+
+	enum StateSetType {
+		Sin, Stmp, Sout		// state sets before, within (only for assignments) and after statements
 	};
 
 
@@ -101,63 +127,72 @@ namespace cba {
 
 	// - references ------------
 
-	typedef int Location;
-
-	// a memory location is addressed by its creation point
-//	typedef tuple<Label, Context, Thread> MemoryLocation;
 
 	// allows to check whether a given statement is a memory location constructor (including globals)
 	bool isMemoryConstructor(const core::StatementAddress& stmt);
 
 	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
 
-	typedef utils::set_constraint::Constraints Constraints;
+	typedef utils::set_constraint_2::Constraints Constraints;
+
+	typedef utils::set_constraint_2::Assignment Solution;
+
 
 	class CBAContext {
 
-		typedef tuple<SetType, int, Context, Thread> SetKey;
-		typedef tuple<SetType, Label, Context, Thread, Location, SetType, Context, Thread> StateSetKey;
-		typedef tuple<Label, Context, Thread> LocationKey;
+		typedef utils::set_constraint_2::SetID SetID;
+
+		typedef tuple<const SetType*, int, Context, Thread> SetKey;
+		typedef tuple<StateSetType, Label, Context, Thread, Location, const SetType*, Context, Thread> StateSetKey;
 
 		int setCounter;
-		std::map<SetKey, Set> sets;
-		std::map<StateSetKey, Set> stateSets;
+		std::map<SetKey, SetID> sets;
+		std::map<StateSetKey, SetID> stateSets;
 
 		// two caches for resolving labels and variables
 		int varCounter;
 		std::map<core::StatementAddress, Label> labels;
 		std::map<core::VariableAddress, Variable> vars;
 
-		// an index for expressions - in both directions
-		std::map<core::ExpressionAddress, Value> e2i;				// TODO: think about using pointer ...
-		std::unordered_map<Value, core::ExpressionAddress> i2e;
-
-		// an index for locations
-		std::map<LocationKey,  Location> loc2i;
-		std::map<Location, LocationKey> i2loc;
-
 	public:
 
 		CBAContext() : setCounter(0), varCounter(0) {};
 
-		Set getSet(SetType type, int id, const Context& c = Context(), const Thread& t = Thread()) {
-			SetKey key(type, id, c, t);
+		template<typename T>
+		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const Context& c = Context(), const Thread& t = Thread()) {
+			SetKey key(&type, id, c, t);
 			auto pos = sets.find(key);
 			if (pos != sets.end()) {
 				return pos->second;
 			}
-			Set newSet = ++setCounter;		// reserve 0
+			utils::set_constraint_2::TypedSetID<T> newSet(++setCounter);		// reserve 0
 			sets[key] = newSet;
 			return newSet;
 		}
 
-		Set getSet(SetType type, Label label, const Context& c, const Thread& t, Location loc, SetType type_loc, const Context& c_loc = Context(), const Thread& t_loc = Thread()) {
-			StateSetKey key(type, label, c, t, loc, type_loc, c_loc, t_loc);
+		template<typename T>
+		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const Context& c = Context(), const Thread& t = Thread()) const {
+			static const utils::set_constraint_2::TypedSetID<T> empty(0);
+
+			SetKey key(&type, id, c, t);
+			auto pos = sets.find(key);
+			if (pos != sets.end()) {
+				return pos->second;
+			}
+
+			// use empty set as the default
+			return empty;
+		}
+
+
+		template<typename T>
+		utils::set_constraint_2::TypedSetID<T> getSet(StateSetType type, Label label, const Context& c, const Thread& t, Location loc, const TypedSetType<T>& type_loc, const Context& c_loc = Context(), const Thread& t_loc = Thread()) {
+			StateSetKey key(type, label, c, t, loc, &type_loc, c_loc, t_loc);
 			auto pos = stateSets.find(key);
 			if (pos != stateSets.end()) {
 				return pos->second;
 			}
-			Set newSet = ++setCounter;		// reserve 0
+			utils::set_constraint_2::TypedSetID<T> newSet(++setCounter);		// reserve 0
 			stateSets[key] = newSet;
 			return newSet;
 		}
@@ -167,9 +202,14 @@ namespace cba {
 			if (pos != labels.end()) {
 				return pos->second;
 			}
-			Label l = labels.size() + 1;		// reserve 0
+			Label l = labels.size() + 1;		// reserve 0 for the empty set
 			labels[expr] = l;
 			return l;
+		}
+
+		Label getLabel(const core::StatementAddress& expr) const {
+			auto pos = labels.find(expr);
+			return (pos != labels.end()) ? pos->second : 0;
 		}
 
 		Variable getVariable(const core::VariableAddress& var) {
@@ -183,7 +223,7 @@ namespace cba {
 
 			Variable res;
 			if (def == var) {
-				res = ++varCounter; 		// reserve 0
+				res = ++varCounter; 		// reserve 0 for the empty set
 			} else {
 				res = getVariable(def);
 			}
@@ -191,59 +231,31 @@ namespace cba {
 			return res;
 		}
 
-		Variable getFreshVar() {
-			return ++varCounter;
+		Variable getVariable(const core::VariableAddress& var) const {
+			auto pos = vars.find(var);
+			return (pos != vars.end()) ? pos->second : 0;
 		}
 
-		Value getValue(const core::ExpressionAddress& expr) {
-			auto pos = e2i.find(expr);
-			if (pos != e2i.end()) {
-				return pos->second;
-			}
-
-			Value res = e2i.size();
-			e2i[expr] = res;
-			i2e[res] = expr;
-			return res;
-		}
-
-		core::ExpressionPtr getExpr(const Value& value) {
-			auto pos = i2e.find(value);
-			assert(pos != i2e.end());
-			return pos->second;
-		}
 
 		// TODO: remove default values
 		Location getLocation(const core::ExpressionAddress& ctor, const Context& c = Context(), const Thread& t = Thread()) {
 			assert(isMemoryConstructor(ctor));
 
-			auto loc = getLabel(getLocationDefinitionPoint(ctor));
-			LocationKey key(loc, c, t);
+			// obtain address of definition point
+			auto def = getLocationDefinitionPoint(ctor);
 
+			// for globals the context and thread ID is not relevant
 			if (ctor.isa<core::LiteralPtr>()) {
-				// for globals the context and thread ID is not relevant
-				key = LocationKey(loc, Context(), Thread());
+				return Location(def, Context(), Thread());
 			}
 
-			auto pos = loc2i.find(key);
-			if (pos != loc2i.end()) {
-				return pos->second;
-			}
-
-			// create a new location index
-			Location res = loc2i.size() + 1; 	// reserve 0
-			loc2i[key] = res;
-			i2loc[res] = key;
-			return res;
+			// create the location instance
+			return Location(def, c, t);
 		}
 
 		// only for debugging
-		core::ExpressionAddress getMemoryConstructor(Location loc) {
-			int label = std::get<0>(i2loc[loc]);
-			for(auto cur : labels) {
-				if (cur.second == label) return cur.first.as<core::ExpressionAddress>();
-			}
-			return core::ExpressionAddress();
+		core::ExpressionAddress getMemoryConstructor(const Location& loc) {
+			return std::get<0>(loc);
 		}
 
 		void plot(const Constraints& constraints, std::ostream& out = std::cout) const;
@@ -253,13 +265,27 @@ namespace cba {
 
 	Constraints generateConstraints(CBAContext& context, const core::StatementPtr& root);
 
-	typedef utils::set_constraint::Assignment Solution;
-
 	Solution solve(const Constraints& constraints);
 
-	core::ExpressionSet getValuesOf(CBAContext& context, const Solution& solution, const core::ExpressionAddress& expr, SetType set = D);
+	template<typename T>
+	const std::set<T>& getValuesOf(const CBAContext& context, const Solution& solution, const core::ExpressionAddress& expr, const TypedSetType<T>& set) {
+		auto label = context.getLabel(expr);
+		return solution[context.getSet(set,label)];
+	}
 
-	core::ExpressionSet getValuesOf(CBAContext& context, const Solution& solution, const core::VariableAddress& var, SetType set = d);
+	template<typename T>
+	const std::set<T>& getValuesOf(const CBAContext& context, const Solution& solution, const core::VariableAddress& var, const TypedSetType<T>& set) {
+		auto id = context.getVariable(var);
+		return solution[context.getSet(set,id)];
+	}
+
+	const std::set<core::ExpressionPtr>& getValuesOf(const CBAContext& context, const Solution& solution, const core::ExpressionAddress& expr) {
+		return getValuesOf(context, solution, expr, D);
+	}
+
+	const std::set<core::ExpressionPtr>& getValuesOf(const CBAContext& context, const Solution& solution, const core::VariableAddress& var) {
+		return getValuesOf(context, solution, var, d);
+	}
 
 } // end namespace cba
 } // end namespace analysis

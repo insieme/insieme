@@ -218,14 +218,14 @@ namespace cba {
 
 //		std::cout << *varY << " = " << cba::getValuesOf(context, solution, varY) << "\n";
 //		std::cout << *initY << " = " << cba::getValuesOf(context, solution, initY) << "\n";
-		EXPECT_EQ("{AP(rec v0.{v0=fun(int v2) {}})}", toString(cba::getValuesOf(context, solution, varY, c)));
-		EXPECT_EQ("{AP(rec v0.{v0=fun(int v2) {}})}", toString(cba::getValuesOf(context, solution, initY, C)));
+		EXPECT_EQ("{0-1-1}", toString(cba::getValuesOf(context, solution, varY, c)));
+		EXPECT_EQ("{0-1-1}", toString(cba::getValuesOf(context, solution, initY, C)));
 
 
 		auto varZ = initY.as<LambdaExprAddress>()->getParameterList()[0];
 //		std::cout << *varZ << " = " << cba::getValuesOf(context, solution, varZ) << "\n";
 
-		ExpressionSet should;
+		std::set<ExpressionPtr> should;
 		should.insert(builder.intLit(14));
 		should.insert(builder.intLit(16));
 		auto valZ = cba::getValuesOf(context, solution, varZ);
@@ -523,7 +523,7 @@ namespace cba {
 		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(2,2,2).as<ExpressionAddress>())));
 
 		// the last one may be both
-		ExpressionSet should;
+		std::set<ExpressionPtr> should;
 		should.insert(builder.intLit(2));
 		should.insert(builder.intLit(3));
 		EXPECT_EQ(should, cba::getValuesOf(context, solution, code.getAddressOfChild(3).as<ExpressionAddress>()));
@@ -565,7 +565,7 @@ namespace cba {
 		EXPECT_EQ("{AP(NULL)}", toString(cba::getValuesOf(context, solution, code.getAddressOfChild(2,1,2).as<ExpressionAddress>())));
 
 		// the last one may be both
-		ExpressionSet should;
+		std::set<ExpressionPtr> should;
 		should.insert(ExpressionPtr());
 		should.insert(builder.intLit(1));
 		EXPECT_EQ(should, cba::getValuesOf(context, solution, code.getAddressOfChild(3).as<ExpressionAddress>()));

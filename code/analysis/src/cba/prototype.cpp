@@ -45,6 +45,16 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	const TypedSetType<core::ExpressionAddress> C("C");
+	const TypedSetType<core::ExpressionAddress> c("c");
+
+	const TypedSetType<core::ExpressionPtr> D("D");
+	const TypedSetType<core::ExpressionPtr> d("d");
+
+	typedef std::tuple<core::ExpressionAddress, Context, Thread> Location;
+	const TypedSetType<Location> R("R");
+	const TypedSetType<Location> r("r");
+
 	using namespace core;
 
 	VariableAddress getDefinitionPoint(const VariableAddress& varAddress) {
@@ -163,8 +173,9 @@ namespace cba {
 			return cur.isa<LambdaAddress>();
 		}
 
-		using namespace utils::set_constraint;
+		using namespace utils::set_constraint_2;
 
+		template<typename T>
 		class BasicDataFlowConstraintCollector : public IRVisitor<void, Address> {
 
 			typedef IRVisitor<void,Address> super;
@@ -175,21 +186,23 @@ namespace cba {
 			Constraints& constraints;
 
 			// the list of all terms in the targeted code
-			std::vector<pair<Value, ExpressionAddress>> terms;
+			std::vector<ExpressionAddress> terms;
 
 			// the two set types to deal with
-			SetType A;		// the value set (labels -> values)
-			SetType a;		// the variable set (variables -> values)
+			const TypedSetType<T>& A;		// the value set (labels -> values)
+			const TypedSetType<T>& a;		// the variable set (variables -> values)
 
 		public:
 
-			BasicDataFlowConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root, SetType A, SetType a)
+			BasicDataFlowConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root, const TypedSetType<T>& A, const TypedSetType<T>& a)
 				: context(context), constraints(contraints), A(A), a(a) {
 
 				// collect all terms in the code
 				visitDepthFirst(root, [&](const ExpressionAddress& cur) {
-					// TODO: also add all recursion variations
-					terms.push_back(std::make_pair(context.getValue(cur), cur));
+					if (cur.isa<LambdaExprPtr>() || cur.isa<BindExprPtr>()) {
+						// TODO: also add all recursion variations
+						terms.push_back(cur);
+					}
 				});
 
 			};
@@ -209,7 +222,7 @@ namespace cba {
 				// TODO: distinguish between control and data flow!
 				auto a_var = context.getSet(a, var);
 				auto A_init = context.getSet(A, l_init);
-				constraints.insert(subset(A_init, a_var));		// TODO: add context (passed by argument)
+				constraints.add(subset(A_init, a_var));		// TODO: add context (passed by argument)
 
 				// finally, add constraints for init expression
 				visit(decl->getInitialization());
@@ -252,7 +265,7 @@ namespace cba {
 				auto A_body = context.getSet(A, l_body);
 
 				// add constraint
-				constraints.insert(subset(A_retVal, A_body));
+				constraints.add(subset(A_retVal, A_body));
 
 			}
 
@@ -269,7 +282,7 @@ namespace cba {
 				auto a_var = context.getSet(a, var);
 				auto A_var = context.getSet(A, l_var);
 
-				constraints.insert(subset(a_var, A_var));
+				constraints.add(subset(a_var, A_var));
 			}
 
 			void visitLambdaExpr(const LambdaExprAddress& lambda) {
@@ -293,7 +306,7 @@ namespace cba {
 				auto A_call = context.getSet(A, context.getLabel(call));
 
 				// a utility resolving constraints for the given expression
-				auto addConstraints = [&](Value t, const ExpressionAddress& expr) {
+				auto addConstraints = [&](const ExpressionAddress& expr, bool fixed) {
 
 					// only searching for actual code
 					if (!expr.isa<LambdaExprPtr>() && !expr.isa<BindExprPtr>()) return;
@@ -315,13 +328,13 @@ namespace cba {
 
 						auto A_arg = context.getSet(A, l_arg);
 						auto a_param = context.getSet(a, param);
-						constraints.insert((t==0) ? subset(A_arg, a_param) : subsetIf(t, C_fun, A_arg, a_param));
+						constraints.add((fixed) ? subset(A_arg, a_param) : subsetIf(expr, C_fun, A_arg, a_param));
 					}
 
 					// add constraint for result value
 					auto l_ret = context.getLabel(lambda->getBody());
 					auto A_ret = context.getSet(A, l_ret);
-					constraints.insert((t==0)? subset(A_ret, A_call) : subsetIf(t, C_fun, A_ret, A_call));
+					constraints.add((fixed)? subset(A_ret, A_call) : subsetIf(expr, C_fun, A_ret, A_call));
 
 				};
 
@@ -330,18 +343,13 @@ namespace cba {
 
 				// if function expression is a lambda or bind => do not iterate through all terms, term is fixed
 				if (fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>()) {
-					addConstraints(0, fun);
+					addConstraints(fun, true);
 					return;
 				}
 
 				// fix pass-by-value semantic - by considering all potential terms
 				for(auto cur : terms) {
-
-					auto t = cur.first;
-					auto expr = cur.second;
-
-					addConstraints(t, expr);
-
+					addConstraints(cur, false);
 				}
 			}
 
@@ -353,14 +361,14 @@ namespace cba {
 		};
 
 
-		class ControlFlowConstraintCollector : public BasicDataFlowConstraintCollector {
+		class ControlFlowConstraintCollector : public BasicDataFlowConstraintCollector<core::ExpressionAddress> {
 
-			typedef BasicDataFlowConstraintCollector super;
+			typedef BasicDataFlowConstraintCollector<core::ExpressionAddress> super;
 
 		public:
 
 			ControlFlowConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root)
-				: BasicDataFlowConstraintCollector(context, constraints, root, C, c) { };
+				: BasicDataFlowConstraintCollector<core::ExpressionAddress>(context, constraints, root, C, c) { };
 
 			void visitLiteral(const LiteralAddress& literal) {
 
@@ -371,11 +379,11 @@ namespace cba {
 				if (!literal->getType().isa<FunctionTypePtr>()) return;
 
 				// add constraint literal \in C(lit)
-				auto value = context.getValue(literal);
+				auto value = literal.as<ExpressionAddress>();
 				auto l_lit = context.getLabel(literal);
 
 				auto C_lit = context.getSet(C, l_lit);
-				constraints.insert(elem(value, C_lit));
+				constraints.add(elem(value, C_lit));
 
 			}
 
@@ -385,10 +393,10 @@ namespace cba {
 				super::visitLambdaExpr(lambda);
 
 				// add constraint lambda \in C(lambda)
+				auto value = lambda.as<ExpressionAddress>();
 				auto label = context.getLabel(lambda);
-				auto value = context.getValue(lambda);
 
-				constraints.insert(elem(value, context.getSet(C, label)));
+				constraints.add(elem(value, context.getSet(C, label)));
 
 				// TODO: handle recursions
 
@@ -396,14 +404,14 @@ namespace cba {
 
 		};
 
-		class ConstantConstraintCollector : public BasicDataFlowConstraintCollector {
+		class ConstantConstraintCollector : public BasicDataFlowConstraintCollector<core::ExpressionPtr> {
 
-			typedef BasicDataFlowConstraintCollector super;
+			typedef BasicDataFlowConstraintCollector<core::ExpressionPtr> super;
 
 		public:
 
 			ConstantConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root)
-				: BasicDataFlowConstraintCollector(context, constraints, root, D, d) { };
+				: BasicDataFlowConstraintCollector<core::ExpressionPtr>(context, constraints, root, D, d) { };
 
 			void visitLiteral(const LiteralAddress& literal) {
 
@@ -414,11 +422,11 @@ namespace cba {
 				if (literal->getType().isa<FunctionTypePtr>()) return;
 
 				// add constraint literal \in C(lit)
-				auto value = context.getValue(literal);
+				auto value = literal.as<ExpressionPtr>();
 				auto l_lit = context.getLabel(literal);
 
 				auto D_lit = context.getSet(D, l_lit);
-				constraints.insert(elem(value, D_lit));
+				constraints.add(elem(value, D_lit));
 
 			}
 
@@ -433,7 +441,7 @@ namespace cba {
 
 					// mark result as being unknown
 					auto D_call = context.getSet(D, context.getLabel(call));
-					constraints.insert(elem(context.getValue(ExpressionAddress()), D_call));
+					constraints.add(elem(ExpressionPtr(), D_call));
 
 				}
 
@@ -441,14 +449,14 @@ namespace cba {
 
 		};
 
-		class ReferenceConstraintCollector : public BasicDataFlowConstraintCollector {
+		class ReferenceConstraintCollector : public BasicDataFlowConstraintCollector<Location> {
 
-			typedef BasicDataFlowConstraintCollector super;
+			typedef BasicDataFlowConstraintCollector<Location> super;
 
 		public:
 
 			ReferenceConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root)
-				: BasicDataFlowConstraintCollector(context, constraints, root, R, r) { };
+				: BasicDataFlowConstraintCollector<Location>(context, constraints, root, R, r) { };
 
 			void visitLiteral(const LiteralAddress& literal) {
 
@@ -463,7 +471,7 @@ namespace cba {
 				auto l_lit = context.getLabel(literal);
 
 				auto R_lit = context.getSet(R, l_lit);
-				constraints.insert(elem(value, R_lit));
+				constraints.add(elem(value, R_lit));
 
 			}
 
@@ -480,11 +488,12 @@ namespace cba {
 				auto l_lit = context.getLabel(call);
 
 				auto R_lit = context.getSet(R, l_lit);
-				constraints.insert(elem(value, R_lit));
+				constraints.add(elem(value, R_lit));
 			}
 
 		};
 
+		template<typename T>
 		class ImperativeConstraintCollector : public IRVisitor<void, Address> {
 
 			typedef IRVisitor<void,Address> super;
@@ -492,15 +501,15 @@ namespace cba {
 			CBAContext& context;
 			Constraints& constraints;
 
-			std::vector<SetType> dataSets;
+			const TypedSetType<T>& dataSet;
 
 			// list of all memory location in the processed fragment
 			std::vector<Location> locations;
 
 		public:
 
-			ImperativeConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root, const std::vector<SetType>& dataSets)
-				: context(context), constraints(contraints), dataSets(dataSets) {
+			ImperativeConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root, const TypedSetType<T>& dataSet)
+				: context(context), constraints(contraints), dataSet(dataSet) {
 
 				// collect all memory location constructors
 				visitDepthFirst(root, [&](const ExpressionAddress& cur) {
@@ -602,10 +611,10 @@ namespace cba {
 
 					for (auto arg : call) {
 						auto l_arg = context.getLabel(arg);
-						connectStateSets(Sout, l_arg, c, t, Sas, l_call, c, t);
+						connectStateSets(Sout, l_arg, c, t, Stmp, l_call, c, t);
 					}
 					// and the function
-					connectStateSets(Sout, l_fun, c, t, Sas, l_call, c, t);
+					connectStateSets(Sout, l_fun, c, t, Stmp, l_call, c, t);
 
 					// ---- combine S_as to S_out ...
 
@@ -617,27 +626,22 @@ namespace cba {
 
 						// TODO: add context
 
-						for (auto A : dataSets) {
-							// if loc is in R(target) then add D[rhs] to Sout[loc]
-							auto A_value = context.getSet(A, l_lhs);
-							auto S_out = context.getSet(Sout, l_call, c, t, loc, A, c, t);
-							constraints.insert(subsetIf(loc, R_rhs, A_value, S_out));
-						}
+						// if loc is in R(target) then add D[rhs] to Sout[loc]
+						auto A_value = context.getSet(dataSet, l_lhs);
+						auto S_out = context.getSet(Sout, l_call, c, t, loc, dataSet, c, t);
+						constraints.add(subsetIf(loc, R_rhs, A_value, S_out));
 					}
 
 
-					// add rule: |R[rhs]\{loc}| > 0 => Sas[call] \sub Sout[call]
+					// add rule: |R[rhs]\{loc}| > 0 => Stmp[call] \sub Sout[call]
 					for(auto loc : locations) {
 
-						for (auto type : dataSets) {
+						// get Sin set		TODO: add context to locations
+						auto s_as = context.getSet(Stmp, l_call, c, t, loc, dataSet);
+						auto s_out = context.getSet(Sout, l_call, c, t, loc, dataSet);
 
-							// get Sin set		TODO: add context to locations
-							auto s_as = context.getSet(Sas, l_call, c, t, loc, type);
-							auto s_out = context.getSet(Sout, l_call, c, t, loc, type);
-
-							// if more than 1 reference may be assigned => everything that comes in goes out
-							constraints.insert(subsetIfReducedBigger(R_rhs, loc, 0, s_as, s_out));
-						}
+						// if more than 1 reference may be assigned => everything that comes in goes out
+						constraints.add(subsetIfReducedBigger(R_rhs, loc, 0, s_as, s_out));
 					}
 
 				} else {
@@ -663,13 +667,10 @@ namespace cba {
 						// TODO: add context
 
 						// if loc is in R(target) then add Sin[A,trg] to A[call]
-						for (auto A : dataSets) {
-							auto S_in = context.getSet(Sin, l_call, c, t, loc, A, c, t);
-							auto A_call = context.getSet(A, l_call);
-							constraints.insert(subsetIf(loc, R_trg, S_in, A_call));
-						}
+						auto S_in = context.getSet(Sin, l_call, c, t, loc, dataSet, c, t);
+						auto A_call = context.getSet(dataSet, l_call);
+						constraints.add(subsetIf(loc, R_trg, S_in, A_call));
 					}
-
 				}
 
 			}
@@ -820,26 +821,27 @@ namespace cba {
 
 		private:
 
-			void connectStateSets(SetType a, Label al, const Context& ac, const Thread& at, SetType b, Label bl, const Context& bc, const Thread& bt) {
+			void connectStateSets(StateSetType a, Label al, const Context& ac, const Thread& at, StateSetType b, Label bl, const Context& bc, const Thread& bt) {
 
 				// general handling - Sin = Sout
 				for(auto loc : locations) {
 
-					for (auto type : dataSets) {
+					// get Sin set		TODO: add context to locations
+					auto s_in = context.getSet(a, al, ac, at, loc, dataSet);
+					auto s_out = context.getSet(b, bl, bc, bt, loc, dataSet);
 
-						// get Sin set		TODO: add context to locations
-						auto s_in = context.getSet(a, al, ac, at, loc, type);
-						auto s_out = context.getSet(b, bl, bc, bt, loc, type);
+					// state information entering the set is also leaving it
+					constraints.add(subset(s_in, s_out));
 
-						// state information entering the set is also leaving it
-						constraints.insert(subset(s_in, s_out));
-
-					}
 				}
 			}
 
 		};
 
+		template<typename T>
+		void addImperativeConstraints(CBAContext& context, Constraints& res, const StatementAddress& root, const TypedSetType<T>& A) {
+			ImperativeConstraintCollector<T>(context, res, root, A).visit(root);
+		}
 	}
 
 
@@ -855,7 +857,11 @@ namespace cba {
 		ControlFlowConstraintCollector(context, res, root).visit(root);
 		ConstantConstraintCollector(context, res, root).visit(root);
 		ReferenceConstraintCollector(context, res, root).visit(root);
-		ImperativeConstraintCollector(context, res, root, toVector(C,D,R)).visit(root);
+
+		// and the imperative constraints
+		addImperativeConstraints(context, res, root, C);
+		addImperativeConstraints(context, res, root, D);
+		addImperativeConstraints(context, res, root, R);
 
 
 		// done
@@ -867,66 +873,24 @@ namespace cba {
 
 	Solution solve(const Constraints& constraints) {
 		// just use the utils solver
-		return utils::set_constraint::solve(constraints);
+		return utils::set_constraint_2::solve(constraints);
 	}
-
-	core::ExpressionSet getValuesOf(CBAContext& context, const Solution& solution, const core::ExpressionAddress& expr, SetType set) {
-		core::ExpressionSet res;
-
-		auto label = context.getLabel(expr);
-		auto pos = solution.find(context.getSet(set, label));
-
-		// check whether there is a result
-		if (pos == solution.end()) return res;
-
-		// convert result set into expressions
-		for (auto i : pos->second) {
-			res.insert(context.getExpr(i));
-		}
-
-		// done
-		return res;
-	}
-
-	core::ExpressionSet getValuesOf(CBAContext& context, const Solution& solution, const core::VariableAddress& varAdr, SetType set) {
-		core::ExpressionSet res;
-
-		auto var = context.getVariable(varAdr);
-		auto pos = solution.find(context.getSet(set, var));
-
-		// check whether there is a result
-		if (pos == solution.end()) return res;
-
-		// convert result set into expressions
-		for (auto i : pos->second) {
-			res.insert(context.getExpr(i));
-		}
-
-		// done
-		return res;
-	}
-
 
 	namespace {
 
 
-		const char* getName(SetType type) {
+		const char* getName(StateSetType type) {
 			switch(type) {
-			case C: return "C";
-			case c: return "c";
-			case D: return "D";
-			case d: return "d";
-			case R: return "R";
-			case r: return "r";
 			case Sin: return "Sin";
+			case Stmp: return "Stmp";
 			case Sout: return "Sout";
-			case Sas: return "Sas";
 			}
 			return "?";
 		}
 
 	}
 
+	using namespace utils::set_constraint_2;
 
 	void CBAContext::plot(const Constraints& constraints, std::ostream& out) const {
 
@@ -946,37 +910,22 @@ namespace cba {
 
 		// name sets
 		for(auto cur : sets) {
-			string setName = getName(std::get<0>(cur.first));
+			string setName = std::get<0>(cur.first)->getName();
 			auto pos = getAddress(std::get<1>(cur.first));
 			out << "\n\ts" << cur.second << " [label=\"s" << cur.second << " = " << setName << "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << "]\"];";
 		}
 
 		for(auto cur : stateSets) {
 			string setName = getName(std::get<0>(cur.first));
-			string dataName = getName(std::get<5>(cur.first));
+			string dataName = std::get<5>(cur.first)->getName();
 			auto pos = getAddress(std::get<1>(cur.first));
 			out << "\n\ts" << cur.second << " [label=\"s" << cur.second << " = " << setName << "-" << dataName << "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << "]\"];";
 		}
 
 		// link sets
 		for(auto cur : constraints) {
-			switch(cur.getKind()) {
-			case utils::set_constraint::Constraint::Elem:
-				out << "\n\te" << cur.getE() << " -> " << cur.getA() << " [label=\"in\"];";
-				break;
-			case utils::set_constraint::Constraint::Subset:
-				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"sub\"];";
-				break;
-			case utils::set_constraint::Constraint::SubsetIfElem:
-				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if " << cur.getE() << " in " << cur.getA() << "\"];";
-				break;
-			case utils::set_constraint::Constraint::SubsetIfBigger:
-				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if |" << cur.getA() << "| > " << cur.getE() << "\"];";
-				break;
-			case utils::set_constraint::Constraint::SubsetIfReducedBigger:
-				out << "\n\t" << cur.getB() << " -> " << cur.getC() << " [label=\"if |" << cur.getA() << " - {" << cur.getF() << "}| > " << cur.getE() << "\"];";
-				break;
-			}
+			out << "\n\t";
+			cur->writeDotEdge(out);
 		}
 
 		out << "\n}\n";
