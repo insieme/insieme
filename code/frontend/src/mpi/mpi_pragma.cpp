@@ -108,7 +108,7 @@ void registerPragmaHandler(clang::Preprocessor& pp) {
 
 void attachMPIStmtPragma( const core::NodePtr& 				node,
 						  const clang::Stmt* 				clangNode,
-						  conversion::ConversionFactory& 	fact )
+						  conversion::Converter& 	fact )
 {
 
 	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
@@ -130,7 +130,7 @@ void attachMPIStmtPragma( const core::NodePtr& 				node,
 					utils::DiagnosticLevel::Error,
 					mpiPragma->getStartLocation(),
 					"Failed to identify associated MPI statement due to ambiguity",
-					fact.getCurrentCompiler()
+					fact.getCompiler()
 				);
 				throw MPIFrontendError();
 			}

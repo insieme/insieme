@@ -366,7 +366,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	TypePtr retType = substitution->applyTo(returnType);
 	TypePtr resType = address->getType();
 
-	if (*retType != *resType) {
+	if (!core::types::isSubTypeOf(retType, resType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_RETURN_TYPE,
 						format("Invalid result type of call expression - expected: %s, actual: %s - function type: %s",
@@ -800,6 +800,13 @@ namespace {
 		// unroll recursive types if necessary
 		if (exprType->getNodeType() == NT_RecType) {
 			exprType = static_pointer_cast<const RecType>(exprType)->unroll();
+		}
+
+		// Accessing an element from a generic type (intercepted)
+		// we should allow it, and we have no way to check the consistency of
+		// the requested element. just return
+		if (dynamic_pointer_cast<const GenericType>(exprType)){
+			return res;
 		}
 
 		// check whether it is a composite type

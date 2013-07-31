@@ -34,14 +34,10 @@
  * regarding third party software licenses.
  */
 
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/Expr.h>
-#pragma GCC diagnostic pop
+#pragma once
 
-#pragma once 
+// forwared declaration
+namespace clang { class CastExpr; }
 
 namespace insieme {
 namespace frontend {
@@ -49,7 +45,7 @@ namespace frontend {
 
 //FORWARD DECLARATION
 namespace conversion {
-	class ConversionFactory;
+	class Converter;
 }
 
 namespace utils {
@@ -74,7 +70,7 @@ namespace utils {
 	 * @param castExpr the clang cast expression
 	 * return right typed expression
 	 */
-	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::ConversionFactory& convFact,
+	core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
 											  const clang::CastExpr* castExpr);
 
 } // end utils namespace 

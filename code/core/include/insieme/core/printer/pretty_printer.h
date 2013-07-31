@@ -158,6 +158,13 @@ typedef std::map<SourceRange, NodePtr> SourceLocationMap;
 // in the generated stream to IR nodes 
 SourceLocationMap printAndMap( std::ostream& out, const insieme::core::printer::PrettyPrinter& print, bool showLineNo=true, int columnWrap=-1);
 
+/**
+ * A utility function printing the given node using the pretty printer in a one-line-format.
+ */
+inline core::printer::PrettyPrinter printInOneLine(const core::NodePtr& node) {
+	return core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::PRINT_SINGLE_LINE | core::printer::PrettyPrinter::NO_LET_BINDINGS);
+}
+
 } // end of namespace printer
 } // end of namespace core
 } // end of namespace insieme

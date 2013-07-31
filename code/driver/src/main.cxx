@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -272,6 +272,16 @@ namespace {
 	//		LOG(INFO) << "\t Source-Node-Type: " << address->getNodeType();
 			LOG(INFO) << "\t Source: " << PrettyPrinter(address, PrettyPrinter::OPTIONS_SINGLE_LINE);
 			LOG(INFO) << "\t Context: " << ss.str() << std::endl;
+
+			// find enclosing function
+			auto fun = address;
+			while(!fun.isRoot() && fun->getNodeType() != core::NT_LambdaExpr) {
+				fun = fun.getParentAddress();
+			}
+			if (fun->getNodeType() == core::NT_LambdaExpr) {
+				LOG(INFO) << "\t Context:\n" << PrettyPrinter(fun) << std::endl;
+			}
+
 	//		LOG(INFO) << "\t All: " << PrettyPrinter(address.getRootNode());
 		});
 
@@ -352,19 +362,6 @@ namespace {
 	}
 
 	//***************************************************************************************
-	// 				OMP: Apply the OpenMP semantics to the IR
-	//***************************************************************************************
-	void applyOpenMPFrontend(core::ProgramPtr& program, const CommandLineOptions& options) {
-		if (!options.OpenMP) { return; }
-
-		openBoxTitle("OMP Conversion");
-		program = utils::measureTimeFor<core::ProgramPtr, INFO>("OpenMP ",
-				[&]() {return fe::omp::applySema(program, program->getNodeManager()); }
-			);
-		closeBox();
-	}
-
-	//***************************************************************************************
 	// 				OCL: Apply the OpenCL semantics to the IR
 	//***************************************************************************************
 	void applyOpenCLFrontend(core::ProgramPtr& program, const CommandLineOptions& options) {
@@ -374,19 +371,6 @@ namespace {
 		fe::ocl::HostCompiler oclHostCompiler(program, options);
 		program = utils::measureTimeFor<core::ProgramPtr, INFO>("OpenCL ",
 				[&]() {return oclHostCompiler.compile(); }
-			);
-		closeBox();
-	}
-
-	//***************************************************************************************
-	// 					CILK: Apply the Cilk semantics to the IR
-	//***************************************************************************************
-	void applyCilkFrontend(core::ProgramPtr& program, const CommandLineOptions& options) {
-		if (!options.Cilk) { return; }
-
-		openBoxTitle("Cilk Conversion");
-		program = utils::measureTimeFor<core::ProgramPtr, INFO>("Cilk ",
-				[&]() {return fe::cilk::applySema(program, program->getNodeManager()); }
 			);
 		closeBox();
 	}
@@ -489,23 +473,28 @@ int main(int argc, char** argv) {
 	try {
 		if(!options.InputFiles.empty()) {
 
-			auto inputFiles = options.InputFiles;
-			fe::Program p(manager, options);
+//			auto inputFiles = options.InputFiles;
+//			fe::Program p(manager, options);
+//
+//			utils::measureTimeFor<INFO>("Frontend.load [clang]",
+//					[&]() { p.addTranslationUnits(options); }
+//				);
+//
+//			// do the actual clang to IR conversion
+//			program = utils::measureTimeFor<core::ProgramPtr,INFO>("Frontend.convert ",
+//					[&]() { return p.convert(); }
+//				);
+//
+//			// cleanup
+//			doCleanup(program, options);
+//
+//			// run OpenCL frontend
+//			applyOpenCLFrontend(program, options);
 
-			utils::measureTimeFor<INFO>("Frontend.load [clang]",
-					[&]() { p.addTranslationUnits(options); }
-				);
-
-			// do the actual clang to IR conversion
+			// run frontend conversion
 			program = utils::measureTimeFor<core::ProgramPtr,INFO>("Frontend.convert ",
-					[&]() { return p.convert(); }
+					[&]() { return options.toConversionJob().execute(manager); }
 				);
-
-			// cleanup
-			doCleanup(program, options);
-
-			// run OpenCL frontend
-			applyOpenCLFrontend(program, options);
 
 			// Load known function semantics from the function database
 			anal::loadFunctionSemantics(program->getNodeManager());
@@ -520,22 +509,6 @@ int main(int argc, char** argv) {
 			// perform checks
 			MessageList errors;
 			checkSema(program, errors, options);
-
-			// run OMP frontend
-			if(options.OpenMP) {
-				applyOpenMPFrontend(program, options);
-				printIR(program, options);
-				// check again if the OMP flag is on
-				checkSema(program, errors, options);
-			}
-
-			// run Cilk frontend
-			if(options.Cilk) {
-				applyCilkFrontend(program, options);
-				// check again if the OMP flag is on
-				printIR(program, options);
-				checkSema(program, errors, options);
-			}
 
 			// Performs some benchmarks
 			doBenchmarkCore(manager, program, options);

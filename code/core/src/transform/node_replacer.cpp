@@ -726,7 +726,7 @@ private:
 			}
 
 			if(manager.getLangBasic().isRefAssign(literal)) {
-				return static_pointer_cast<const CallExpr>(builder.assign(args.at(0), args.at(1)));
+				return builder.assign(args.at(0), args.at(1));
 			}
 
 			CallExprPtr newCall = builder.callExpr(literal, args);
@@ -970,7 +970,7 @@ namespace {
 
 		FunctionTypePtr funType = fun->getType().as<FunctionTypePtr>();
 
-		TypePtr should = deduceReturnType(funType, extractTypes(call->getArguments()));
+		TypePtr should = deduceReturnType(funType, extractTypes(call->getArguments()), false);
 
 		// see whether a better type has been deduced
 		if (!should || *should == *call->getType()) {
@@ -998,10 +998,13 @@ namespace {
 			const LiteralPtr& literal = call->getFunctionExpr().as<LiteralPtr>();
 
 			// deal with standard build-in literals
-			if (basic.isCompositeRefElem(literal)) {
+			if (basic.isCompositeRefElem(literal) && 
+				args[0]->getType().isa<RefTypePtr>() &&
+				args[0]->getType().as<RefTypePtr>()->getElementType().isa<NamedCompositeTypePtr>()) {
 				return builder.refMember(args[0], args[1].as<LiteralPtr>()->getValue());
 			}
-			if (basic.isCompositeMemberAccess(literal)) {
+			if (basic.isCompositeMemberAccess(literal) && 
+				args[0]->getType().isa<NamedCompositeTypePtr>()) {
 				return builder.accessMember(args[0], args[1].as<LiteralPtr>()->getValue());
 			}
 			if (basic.isTupleRefElem(literal)) {

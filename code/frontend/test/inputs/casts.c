@@ -47,7 +47,7 @@ void basic_type_test() {
 	#pragma test "decl ref<real<4>> v0 =  var(1.0f)"
 	float f = 1;
 
-	#pragma test "{decl ref<real<4>> v0 =  var(0.0f);decl ref<int<4>> v1 =  var(0-1);v0 := int.to.real(v1, 4);gen.pre.inc(v0);v1 := real.to.int(v0, 4);}"
+	#pragma test "{decl ref<real<4>> v0 =  var(undefined(type<real<4>>));decl ref<int<4>> v1 =  var(0-1);v0 := int.to.real(v1, 4);gen.pre.inc(v0);v1 := real.to.int(v0, 4);}"
 	{
 		float x;
 		int y = -1;

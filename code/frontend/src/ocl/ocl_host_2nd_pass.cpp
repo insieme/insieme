@@ -29,14 +29,14 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/annotations/naming.h"
 
-#include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_2nd_pass.h"
@@ -53,15 +53,17 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
 //	std::cout << "kernelNames:\n" << kernelNames << std::endl;
 	std::map<string, int> checkDuplicates;
 	for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
-			if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint))
-			if(auto cname = lambdaEx->getLambda()->getAnnotation(annotations::c::CNameAnnotation::KEY)) {
-//std::cout << "Cname: " << cname->getName() << std::endl;
-				assert(checkDuplicates[cname->getName()] == 0 && "Multiple kernels with the same name not supported");
-				checkDuplicates[cname->getName()] = 1;
-//std::cout << "found " << kernelNames;
-				if(ExpressionPtr clKernel = kernelNames[cname->getName()]) {
-					kernelLambdas[clKernel] = lambdaEx;
-				}
+			if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint)) {
+                std::string cname = insieme::core::annotations::getAttachedName(lambdaEx->getLambda());
+                if(!cname.empty()) {
+    //std::cout << "Cname: " << cname->getName() << std::endl;
+                    assert(checkDuplicates[cname] == 0 && "Multiple kernels with the same name not supported");
+                    checkDuplicates[cname] = 1;
+    //std::cout << "found " << kernelNames;
+                    if(ExpressionPtr clKernel = kernelNames[cname]) {
+                        kernelLambdas[clKernel] = lambdaEx;
+                    }
+                }
 			}
 		});
 }

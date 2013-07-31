@@ -1,4 +1,3 @@
-
 /**
  * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
@@ -35,46 +34,32 @@
  * regarding third party software licenses.
  */
 
-#pragma once 
+extern int ext;
+int  glob;
 
-namespace insieme {
 
-// forward declarations
-namespace core { 
-template <class T>
-class Pointer;
+typedef struct anon myStruct;
+myStruct* ptr;                     // non extern var, but with non defined type inside
 
-class Expression;
-typedef Pointer<const Expression> ExpressionPtr;
+int withInit = 4;
+static int myStatic= 1;
 
-class Type;
-typedef Pointer<const Type> TypePtr;
+int *f(){
+	return &ext;
+}
 
-class IRBuilder;
-} // end core namespace 
+void plus(int val){
+	static int count = 7;
+	withInit+= val;
+}
 
-#define IS_CPP_REF_TYPE(ty) \
-	(core::analysis::isCppRef(ty) || \
-	core::analysis::isConstCppRef(ty))
 
-#define IS_CPP_REF_EXPR(expr) \
-	(core::analysis::isCppRef(expr->getType()) || \
-	core::analysis::isConstCppRef(expr->getType() ))
+int main(){
+	*f() += 4;
+	plus(myStatic);
+	plus(myStatic);
+	plus(myStatic);
+	return 0;
+}
 
-namespace frontend {
-namespace utils {
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// C++
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	/**
-	 * retrieves the expression corresponding to the usage of a cpp reference
-	 */
-	core::ExpressionPtr unwrapCppRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr);
-
-	core::ExpressionPtr createSafeAssigment(core::ExpressionPtr& left, core::ExpressionPtr& right);
-
-} // end utils namespace 
-} // end frontend namespace
-} // end insisme namespace

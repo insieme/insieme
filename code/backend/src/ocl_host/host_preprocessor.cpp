@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -45,6 +45,8 @@
 
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
+
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/core/checks/ir_checks.h"
@@ -63,7 +65,6 @@
 
 #include "insieme/backend/runtime/runtime_extensions.h"
 
-#include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
 
@@ -881,9 +882,9 @@ using insieme::transform::pattern::anyList;
 				VariablePtr sizeVar;
 				for_each(renamedArgsMap, [&](std::pair<VariableAddress, VariableAddress> variablePair){
 						VariablePtr var = variablePair.second.as<VariablePtr>();
-						if(var->hasAnnotation(annotations::c::CNameAnnotation::KEY)){
-							 auto cName = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
-							 if ((cName->getName()).compare("size") == 0){
+						if(insieme::core::annotations::hasNameAttached(var)){
+							 auto cName = insieme::core::annotations::getAttachedName(var);
+							 if (cName.compare("size") == 0){
 								 sizeVar = variablePair.first.as<VariablePtr>();
 							}
 						}

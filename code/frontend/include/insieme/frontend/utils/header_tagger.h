@@ -34,14 +34,13 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include <boost/filesystem/path.hpp>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/Decl.h>
-#pragma GCC diagnostic pop
-
 #include "insieme/core/forward_decls.h"
+
+namespace clang { class Decl; }
 
 namespace insieme {
 namespace frontend {

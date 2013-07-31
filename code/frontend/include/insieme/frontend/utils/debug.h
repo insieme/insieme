@@ -49,26 +49,6 @@
 		abort();\
 	}
 
-#define ASSERT_EQ_TYPES(typeA, typeB)\
-	if( *typeA != *typeB ){\
-		std::cout << " === TYPES MISSMATCH [" << __FILE__ << ":" << __LINE__ << "] ===" << std::endl; \
-		dumpPretty(typeA); \
-		std::cout << " vs " << std::endl; \
-		dumpPretty(typeB); \
-		std::cout << " ======================= " << std::endl; \
-		abort();\
-	}
-
-#define ASSERT_IS_SUBTYPE(typeA, typeB)\
-	if( !(insieme::core::types::isSubTypeOf(typeA, typeB)) ){\
-		std::cout << " === SUB-TYPE MISSMATCH [" << __FILE__ << ":" << __LINE__ << "] ===" << std::endl; \
-		dumpPretty(typeA); \
-		std::cout << " vs " << std::endl; \
-		dumpPretty(typeB); \
-		std::cout << " ======================= " << std::endl; \
-		exit(-1);\
-	}
-
 #define PRINTLOCATION(expr)\
 	std::cout << utils::location(expr->getLocStart(), expr->getASTContext().getSourceManager()) << std::endl;
 
@@ -80,12 +60,6 @@
 #else
 
 #define DEBUG_CHECK(expr)\
-	{ }
-
-#define ASSERT_EQ_TYPES(typeA, typeB)\
-	{ }
-
-#define ASSERT_IS_SUBTYPE(typeA, typeB)\
 	{ }
 
 #define PRINTLOCATION(expr)\

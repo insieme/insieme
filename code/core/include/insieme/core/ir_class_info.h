@@ -462,5 +462,25 @@ namespace core {
 	 */
 	void setMetaInfo(const TypePtr& type, const ClassMetaInfo& info);
 
+	/**
+	 * Removes any meta information potentially attached to the given type.
+	 */
+	void removeMetaInfo(const TypePtr& type);
+
+	/**
+	 * A utility function converting a class-meta-info object into an IR expression using the encoding framework.
+	 */
+	ExpressionPtr toIR(NodeManager& manager, const ClassMetaInfo& info);
+
+	/**
+	 * A utility function converting an IR expression into a class-meta-info object using the encoding framework.
+	 */
+	ClassMetaInfo fromIR(const ExpressionPtr& expr);
+
+	/**
+	 * A utility merging together two meta infos for the same class.
+	 */
+	ClassMetaInfo merge(const ClassMetaInfo& a, const ClassMetaInfo& b);
+
 } // end namespace core
 } // end namespace insieme

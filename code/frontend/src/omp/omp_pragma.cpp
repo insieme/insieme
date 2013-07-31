@@ -64,7 +64,7 @@ struct OmpPragma ## TYPE: public OmpPragma { \
 					  const std::string& 			name, \
 					  const pragma::MatchMap& 		mmap):	\
 		OmpPragma(startLoc, endLoc, name, mmap) { }	\
-	virtual AnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const; 	\
+	virtual AnnotationPtr toAnnotation(conversion::Converter& fact) const; 	\
 }
 
 /**
@@ -93,7 +93,7 @@ struct marker_type_trait<core::Expression> {
 template <class NodeTy>
 core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy>& 	irNode,
 												const clang::Stmt* 					clangNode, 
-												conversion::ConversionFactory& 		fact) 
+												conversion::Converter& 		fact) 
 {
 	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
 
@@ -346,18 +346,18 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 }
 
 core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& irNode, const clang::Stmt* clangNode,
-										conversion::ConversionFactory& fact) {
+										conversion::Converter& fact) {
 	return ::attachOmpAnnotation(irNode, clangNode, fact);
 }
 
 core::StatementPtr attachOmpAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-									   conversion::ConversionFactory& fact) {
+									   conversion::Converter& fact) {
 	return ::attachOmpAnnotation(irNode, clangNode, fact);
 }
 
 core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& 	 	irNode,
 										const clang::Decl*				clangDecl, 
-										conversion::ConversionFactory& 	fact) 
+										conversion::Converter& 	fact) 
 {
 	const PragmaStmtMap::DeclMap& pragmaDeclMap = fact.getPragmaMap().getDeclarationMap();
 
@@ -407,7 +407,7 @@ using namespace insieme::frontend;
 /**
  * Create an annotation with the list of identifiers, used for clauses: private,firstprivate,lastprivate
  */
-VarListPtr handleIdentifierList(const MatchMap& mmap, const std::string& key, conversion::ConversionFactory& fact) {
+VarListPtr handleIdentifierList(const MatchMap& mmap, const std::string& key, conversion::Converter& fact) {
 
 	auto fit = mmap.find(key);
 	if(fit == mmap.end())
@@ -431,7 +431,7 @@ VarListPtr handleIdentifierList(const MatchMap& mmap, const std::string& key, co
 
 // reduction(operator: list)
 // operator = + or - or * or & or | or ^ or && or ||
-ReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
+ReductionPtr handleReductionClause(const MatchMap& mmap, conversion::Converter& fact) {
 
 	auto fit = mmap.find("reduction");
 	if(fit == mmap.end())
@@ -462,7 +462,7 @@ ReductionPtr handleReductionClause(const MatchMap& mmap, conversion::ConversionF
 }
 
 core::ExpressionPtr handleSingleExpression(const MatchMap& mmap, const std::string& key,
-										   conversion::ConversionFactory& fact) {
+										   conversion::Converter& fact) {
 
 	auto fit = mmap.find(key);
 	if(fit == mmap.end())
@@ -477,7 +477,7 @@ core::ExpressionPtr handleSingleExpression(const MatchMap& mmap, const std::stri
 }
 
 // schedule( (static | dynamic | guided | atuo | runtime) (, chunk_size) )
-SchedulePtr handleScheduleClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
+SchedulePtr handleScheduleClause(const MatchMap& mmap, conversion::Converter& fact) {
 
 	auto fit = mmap.find("schedule");
 	if(fit == mmap.end())
@@ -512,7 +512,7 @@ bool hasKeyword(const MatchMap& mmap, const std::string& key) {
 	return fit != mmap.end();
 }
 
-DefaultPtr handleDefaultClause(const MatchMap& mmap, conversion::ConversionFactory& fact) {
+DefaultPtr handleDefaultClause(const MatchMap& mmap, conversion::Converter& fact) {
 
 	auto fit = mmap.find("default");
 	if(fit == mmap.end())
@@ -543,7 +543,7 @@ DefaultPtr handleDefaultClause(const MatchMap& mmap, conversion::ConversionFacto
 // shared(list)
 // copyin(list)
 // reduction(operator: list)
-AnnotationPtr OmpPragmaParallel::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaParallel::toAnnotation(conversion::Converter& fact) const {
 	const MatchMap& map = getMap();
 	// check for if clause
 	core::ExpressionPtr	ifClause = handleSingleExpression(map, "if", fact);
@@ -598,7 +598,7 @@ AnnotationPtr OmpPragmaParallel::toAnnotation(conversion::ConversionFactory& fac
 
 }
 
-AnnotationPtr OmpPragmaFor::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaFor::toAnnotation(conversion::Converter& fact) const {
 	const MatchMap& map = getMap();
 	// check for private clause
 	VarListPtr privateClause = handleIdentifierList(map, "private", fact);
@@ -625,7 +625,7 @@ AnnotationPtr OmpPragmaFor::toAnnotation(conversion::ConversionFactory& fact) co
 // lastprivate(list)
 // reduction(operator: list)
 // nowait
-AnnotationPtr OmpPragmaSections::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaSections::toAnnotation(conversion::Converter& fact) const {
 	const MatchMap& map = getMap();
 	// check for private clause
 	VarListPtr privateClause = handleIdentifierList(map, "private", fact);
@@ -641,7 +641,7 @@ AnnotationPtr OmpPragmaSections::toAnnotation(conversion::ConversionFactory& fac
 	return std::make_shared<Sections>( privateClause, firstPrivateClause, lastPrivateClause, reductionClause, noWait );
 }
 
-AnnotationPtr OmpPragmaSection::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaSection::toAnnotation(conversion::Converter& fact) const {
 	return std::make_shared<Section>( );
 }
 
@@ -650,7 +650,7 @@ AnnotationPtr OmpPragmaSection::toAnnotation(conversion::ConversionFactory& fact
 // firstprivate(list)
 // copyprivate(list)
 // nowait
-AnnotationPtr OmpPragmaSingle::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaSingle::toAnnotation(conversion::Converter& fact) const {
 	const MatchMap& map = getMap();
 	// check for private clause
 	VarListPtr privateClause = handleIdentifierList(map, "private", fact);
@@ -670,7 +670,7 @@ AnnotationPtr OmpPragmaSingle::toAnnotation(conversion::ConversionFactory& fact)
 // private(list)
 // firstprivate(list)
 // shared(list)
-AnnotationPtr OmpPragmaTask::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaTask::toAnnotation(conversion::Converter& fact) const {
 	const MatchMap& map = getMap();
 	// check for if clause
 	core::ExpressionPtr	ifClause = handleSingleExpression(map, "if", fact);
@@ -688,11 +688,11 @@ AnnotationPtr OmpPragmaTask::toAnnotation(conversion::ConversionFactory& fact) c
 	return make_shared<Task>( ifClause, untied, defaultClause, privateClause, firstPrivateClause, sharedClause );
 }
 
-AnnotationPtr OmpPragmaMaster::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaMaster::toAnnotation(conversion::Converter& fact) const {
 	return std::make_shared<Master>( );
 }
 
-AnnotationPtr OmpPragmaCritical::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaCritical::toAnnotation(conversion::Converter& fact) const {
 	const MatchMap& map = getMap();
 
 	std::string name;
@@ -707,29 +707,29 @@ AnnotationPtr OmpPragmaCritical::toAnnotation(conversion::ConversionFactory& fac
 	return std::make_shared<Critical>( name );
 }
 
-AnnotationPtr OmpPragmaBarrier::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaBarrier::toAnnotation(conversion::Converter& fact) const {
 	return std::make_shared<Barrier>( );
 }
 
-AnnotationPtr OmpPragmaTaskWait::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaTaskWait::toAnnotation(conversion::Converter& fact) const {
 	return std::make_shared<TaskWait>( );
 }
 
-AnnotationPtr OmpPragmaAtomic::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaAtomic::toAnnotation(conversion::Converter& fact) const {
 	return std::make_shared<Atomic>( );
 }
 
-AnnotationPtr OmpPragmaFlush::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaFlush::toAnnotation(conversion::Converter& fact) const {
 	// check for flush identifier list
 	VarListPtr flushList = handleIdentifierList(getMap(), "flush", fact);
 	return std::make_shared<Flush>( flushList );
 }
 
-AnnotationPtr OmpPragmaOrdered::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaOrdered::toAnnotation(conversion::Converter& fact) const {
 	return std::make_shared<Ordered>( );
 }
 
-AnnotationPtr OmpPragmaThreadPrivate::toAnnotation(conversion::ConversionFactory& fact) const {
+AnnotationPtr OmpPragmaThreadPrivate::toAnnotation(conversion::Converter& fact) const {
 	return std::make_shared<ThreadPrivate>();
 }
 

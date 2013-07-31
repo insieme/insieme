@@ -34,34 +34,63 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <fstream>
 
-#include <string>
-#include <vector>
+#include <boost/filesystem.hpp>
+
+#include "insieme/driver/object_file_utils.h"
+
+#include "insieme/frontend/tu/ir_translation_unit_io.h"
 
 namespace insieme {
-namespace utils {
+namespace driver {
 
-class LibraryUtil {
-private:
-    std::vector<std::string> directories;
+	namespace {
 
-public:
-    LibraryUtil();
-    ~LibraryUtil();
-    bool isDeserializable(const std::string& file_name);
-    void unpackStaticLibrary(const std::string& file_name,
-                             std::vector<std::string>& inputs,
-                             std::vector<std::string>& libs);
-    void handleInputFiles(const std::vector<std::string>& filelist,
-                          std::vector<std::string>& inputs,
-                          std::vector<std::string>& libs);
-    void createLibrary(const std::vector<std::string>& input_files,
-                       const std::vector<std::string>& lib_files,
-                       const std::string& outputFile);
+		// some magic number to identify our files
+		const long MAGIC_NUMBER = 42*42*42*42;
 
-};
+	}
 
-}
+	bool isInsiemeLib(const boost::filesystem::path& file) {
 
-}
+		// check existence
+		if (!boost::filesystem::exists(file)) return false;
+
+		// open file
+		std::ifstream in(file.string(), std::ios::in | std::ios::binary);
+
+		// consume the magic number
+		long x; in >> x;
+
+		// check magic number
+		return x == MAGIC_NUMBER;
+	}
+
+	frontend::tu::IRTranslationUnit loadLib(core::NodeManager& mgr, const boost::filesystem::path& file) {
+		assert(isInsiemeLib(file));
+
+		// open file
+		std::ifstream in(file.string(), std::ios::in | std::ios::binary);
+
+		// consume the magic number
+		long x; in >> x; assert(x == MAGIC_NUMBER);
+
+		// load content
+		return frontend::tu::load(in, mgr);
+	}
+
+	void saveLib(const frontend::tu::IRTranslationUnit& unit, const boost::filesystem::path& file) {
+
+		// create all necessary directory
+		boost::filesystem::create_directories(boost::filesystem::absolute(file).parent_path());
+
+		std::ofstream out(file.string(), std::ios::out | std::ios::binary );
+		out << MAGIC_NUMBER;		// start with magic number
+		frontend::tu::dump(out, unit);	// dump the rest
+
+		assert(boost::filesystem::exists(file));
+	}
+
+} // end namespace driver
+} // end namespace insieme

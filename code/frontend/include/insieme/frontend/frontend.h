@@ -29,51 +29,43 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
 #pragma once
 
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 #include <boost/filesystem/path.hpp>
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_program.h"
 
+#include "insieme/frontend/tu/ir_translation_unit.h"
+
 namespace insieme {
-
-namespace core {
-	// some forward declarations
-	class NodeManager;
-	class Program;
-	template<typename T> class Pointer;
-	typedef Pointer<const Program> ProgramPtr;
-}
-
 namespace frontend {
 
-	/**
-	 * Used to report a parsing error occurred during the parsing of the input file
-	 */
-	struct ClangParsingError: public std::logic_error {
-		ClangParsingError(const std::string& file_name): std::logic_error(file_name) { }
-	};
-
-
+	using std::map;
 	using std::vector;
 	using std::string;
 
-	class ConversionJob {
 
+	// a definition for the kind of path to be utilized by the following translation unit
+	typedef boost::filesystem::path path;
+
+	/**
+	 * An entity describing a unit of work for the clang frontend conversion process.
+	 */
+	class ConversionSetup {
 	public:
 
 		/**
-		 * A list of options to adjust the conversion job.
+		 * A list of options to adjust the translation unit conversion.
 		 */
 		enum Option {
 			PrintDiag		= 1<<0,
@@ -83,11 +75,14 @@ namespace frontend {
 			Cilk			= 1<<3,
 
 			WinCrossCompile	= 1<<4,
-			DumpCFG			= 1<<5,
 			TAG_MPI			= 1<<6,
+		};
 
-			CompilationOnly = 1<<7,
-			CreateSharedObject = 1<<8
+		/**
+		 * A list of supported standards.
+		 */
+		enum Standard {
+			Auto, C99, Cxx03
 		};
 
 		/**
@@ -98,33 +93,30 @@ namespace frontend {
 	private:
 
 		/**
-		 * The translation units to be converted.
-		 */
-		vector<string> files;
-
-		/**
 		 * A list of include directories to be considered.
 		 */
-		vector<string> includeDirs;
+		vector<path> includeDirs;
 
 		/**
 		 * A list of include directories containing std library headers.
 		 */
-		vector<string> stdLibIncludeDirs;
+		vector<path> stdLibIncludeDirs;
 
 		/**
 		 * The C standard to be followed.
 		 */
-		string standard;
+		Standard standard;
 
 		/**
-		 * A list of definitions to be passed to the preprocessor.
+		 * A list of definitions to be passed to the preprocessor. Each
+		 * entry maps an identifier to a value.
 		 */
-		vector<string> definitions;
+		map<string,string> definitions;
 
 		/**
 		 * The name of the configuration file of the intercepter.
 		 */
+		// TODO: this should not be a string pointing to a file!!!
 		string intercepterConfigFile;
 
 		/**
@@ -135,50 +127,9 @@ namespace frontend {
 	public:
 
 		/**
-		 * Creates a new conversion job covering a single file.
+		 * Creates a new setup covering the given include directories.
 		 */
-		ConversionJob(const boost::filesystem::path& path);
-
-		/**
-		 * Creates a new conversion job based on the given options.
-		 */
-		ConversionJob(const vector<string>& files = vector<string>(), const vector<string>& includeDirs = vector<string>());
-
-		/**
-		 * Obtains a reference to the files covered by this conversion job.
-		 */
-		const vector<string>& getFiles() const {
-			return files;
-		}
-
-		/**
-		 * Obtains the one input file covered by this conversion job if there is only one file.
-		 */
-		const string& getFile() const {
-			assert(files.size() == 1u);
-			return files[0];
-		}
-
-		/**
-		 * Exchanges the files covered by this conversion job by the given file.
-		 */
-		void setFile(const string& file) {
-			this->files.clear(); this->files.push_back(file);
-		}
-
-		/**
-		 * Updates the files covered by this conversion job.
-		 */
-		void setFiles(const vector<string>& files) {
-			this->files = files;
-		}
-
-		/**
-		 * Adds a file to be covered by this conversion job.
-		 */
-		void addFile(const string& file) {
-			this->files.push_back(file);
-		}
+		ConversionSetup(const vector<path>& includeDirs = vector<path>());
 
 		/**
 		 * Allows to check for an option.
@@ -204,75 +155,77 @@ namespace frontend {
 		/**
 		 * Obtains the standard to be used for parsing input files.
 		 */
-		const string& getStandard() const {
+		const Standard& getStandard() const {
 			return standard;
 		}
 
 		/**
 		 * Updates the standard to be used for parsing input files.
 		 */
-		void setStandard(const string& standard) {
+		void setStandard(const Standard& standard) {
 			this->standard = standard;
 		}
 
 		/**
 		 * Obtains a reference to the currently defined definitions.
 		 */
-		const vector<string>& getDefinitions() const {
+		const map<string,string>& getDefinitions() const {
 			return definitions;
 		}
 
 		/**
 		 * Updates the definitions to be used by the conversion process.
 		 */
-		void setDefinitions(const vector<string>& definitions) {
+		void setDefinitions(const map<string,string>& definitions) {
 			this->definitions = definitions;
 		}
 
 		/**
 		 * Adds a pre-processor definition to this conversion job.
 		 */
-		void addDefinition(const string& name, const string& value = "");
+		void setDefinition(const string& name, const string& value = "") {
+			this->definitions[name] = value;
+		}
 
 		/**
 		 * Obtains a reference to the covered set of include directories.
 		 */
-		const vector<string>& getIncludeDirectories() const {
+		const vector<path>& getIncludeDirectories() const {
 			return includeDirs;
 		}
 
 		/**
 		 * Updates the set of considered include directories.
 		 */
-		void setIncludeDirectories(const vector<string>& includeDirectories) {
+		void setIncludeDirectories(const vector<path>& includeDirectories) {
 			this->includeDirs = includeDirectories;
 		}
 
 		/**
 		 * Adds an additional include directory.
 		 */
-		void addIncludeDirectory(const string& directory) {
+		void addIncludeDirectory(const path& directory) {
 			this->includeDirs.push_back(directory);
 		}
 
 		/**
 		 * Obtains a reference to the covered set of std-library include directories.
 		 */
-		const vector<string>& getStdLibIncludeDirectories() const {
+		const vector<path>& getStdLibIncludeDirectories() const {
 			return stdLibIncludeDirs;
 		}
 
 		/**
 		 * Updates the set of considered std-library include directories.
 		 */
-		void setStdLibIncludeDirectories(const vector<string>& includeDirectories) {
+		void setStdLibIncludeDirectories(const vector<path>& includeDirectories) {
 			this->stdLibIncludeDirs = includeDirectories;
 		}
 
 		/**
 		 * Adds an additional std-library include directory.
 		 */
-		void addStdLibIncludeDirectory(const string& directory) {
+		void addStdLibIncludeDirectory(const path& directory) {
 			this->stdLibIncludeDirs.push_back(directory);
 		}
 
@@ -291,23 +244,114 @@ namespace frontend {
 		}
 
 		/**
+		 * A utility method to determine whether the given file should be
+		 * considered a C++ file or not. This decision will be influenced
+		 * by the standard set within this setup. Only if set to auto
+		 * (default) the extension will be evaluated.
+		 */
+		bool isCxx(const path& file) const;
+
+	};
+
+
+	class ConversionJob : public ConversionSetup {
+
+		/**
+		 * The translation units to be converted.
+		 */
+		vector<path> files;
+
+		/**
+		 * Extra libraries to be considered for the conversion.
+		 */
+		vector<tu::IRTranslationUnit> libs;
+
+	public:
+
+		/**
+		 * Creates a new conversion job covering a single file.
+		 */
+		ConversionJob(const path& file, const vector<path>& includeDirs = vector<path>())
+			: ConversionSetup(includeDirs), files(toVector(file)) {}
+
+		/**
+		 * Creates a new conversion job covering the given files.
+		 */
+		ConversionJob(const vector<path>& files, const vector<path>& includeDirs = vector<path>())
+			: ConversionSetup(includeDirs), files(files) {
+			assert(!files.empty());
+		}
+
+		/**
+		 * Obtains the one input files covered by this conversion job.
+		 */
+		const vector<path>& getFiles() const {
+			return files;
+		}
+
+		/**
+		 * Adds an additonal file to this conversion job.
+		 */
+		void addFile(const path& file) {
+			files.push_back(file);
+		}
+
+		/**
+		 * Exchanges the files covered by this conversion job by the given files.
+		 */
+		void setFiles(const vector<path>& files) {
+			this->files = files;
+		}
+
+		/**
+		 * Obtains a reference to the libs to be considered by this conversion job.
+		 */
+		const vector<tu::IRTranslationUnit>& getLibs() const {
+			return libs;
+		}
+
+		/**
+		 * Sets the libs to be considered by this conversion job.
+		 */
+		void setLibs(const vector<tu::IRTranslationUnit>& libs) {
+			this->libs = libs;
+		}
+
+		/**
+		 * Appends a library to the list of libraries considered by this conversion job.
+		 */
+		void addLib(const tu::IRTranslationUnit& unit) {
+			libs.push_back(unit);
+		}
+
+		/**
 		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.
+		 *
+		 * @param manager the node manager to be used for building the IR
+		 * @param fullApp a flag determining whether the result is expected to be a full application (entered via
+		 * 				a main function) or a list of multiple entry points.
+		 * @return the resulting, converted program
+		 * @throws an exception if the conversion fails.
+		 */
+		core::ProgramPtr execute(core::NodeManager& manager, bool fullApp = true) const;
+
+		/**
+		 * Triggers the conversion of the files covered by this job into a translation unit.
 		 *
 		 * @param manager the node manager to be used for building the IR
 		 * @return the resulting, converted program
 		 * @throws an exception if the conversion fails.
 		 */
-		core::ProgramPtr execute(core::NodeManager& manager);
+		tu::IRTranslationUnit toTranslationUnit(core::NodeManager& manager) const;
+
+	};
 
 
-		/**
-		 * Triggers the actual AST to object file creation.
-		 *
-		 * @param manager the node manager to be used for building the IR
-		 * @return the resulting, converted AST
-		 * @throws an exception if the conversion fails.
-		 */
-		void storeAST(core::NodeManager& manager, const string& output_file);
+	/**
+	 * Used to report a parsing error occurred during the parsing of the input file
+	 */
+	struct ClangParsingError: public std::logic_error {
+		ClangParsingError(const path& file_name): std::logic_error(file_name.string()) { }
 	};
 
 
