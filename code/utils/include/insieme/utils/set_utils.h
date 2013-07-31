@@ -131,7 +131,7 @@ inline bool isSubset(const SetA& setA, const SetB& setB) {
 	if (setA.size() > setB.size()) return false;
 	if (&setA == &setB) return true;
 	for (const auto& cur : setA) {
-		if (!contains(setB, cur)) return false;
+		if (!insieme::utils::set::contains(setB, cur)) return false;
 	}
 	return true;
 }
