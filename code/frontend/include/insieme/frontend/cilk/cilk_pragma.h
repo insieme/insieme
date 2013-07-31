@@ -54,7 +54,7 @@ namespace cilk {
 					  const pragma::MatchMap& 		mmap):
 				Pragma(startLoc, endLoc, name, mmap) { }
 
-		virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::ConversionFactory& fact) const {
+		virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::Converter& fact) const {
 
 			core::IRBuilder builder(node->getNodeManager());
 			core::NodePtr res;

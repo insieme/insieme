@@ -90,7 +90,7 @@ namespace insieme {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getRuntimeCompiler();
 
 		// switch to C++ compiler if necessary
-		if (any(testCase.getFiles(), [](const string& cur) { return *cur.rbegin() == 'p'; })) {
+		if (any(testCase.getFiles(), [](const frontend::path& cur) { return *cur.string().rbegin() == 'p'; })) {
 			compiler = utils::compiler::Compiler::getRuntimeCompiler(utils::compiler::Compiler::getDefaultCppCompiler());
 		}
 

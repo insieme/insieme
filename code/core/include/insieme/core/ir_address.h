@@ -477,8 +477,7 @@ public:
 	 * @return a pointer to the addressed node.
 	 */
 	Pointer<const T> getAddressedNode() const {
-		assert(path && "Invalid node address!");
-		return static_pointer_cast<const T>(path.getParentNode(0));
+		return (!path)? Pointer<const T>() : static_pointer_cast<const T>(path.getParentNode(0));
 	}
 
 	/**
@@ -580,7 +579,7 @@ public:
 	 */
 	bool isValid() const {
 		// check whether path is not null
-		return path.isValid();
+		return path;
 	}
 	
 	/**

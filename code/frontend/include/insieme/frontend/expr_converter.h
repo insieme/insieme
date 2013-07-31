@@ -29,17 +29,24 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
 
+// defines which are needed by LLVM
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+	#include <clang/AST/StmtVisitor.h>
+#pragma GCC diagnostic pop
+
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/source_locations.h"
-#include "insieme/frontend/utils/dep_graph.h"
-#include "insieme/frontend/utils/functionDependencyGraph.h"
 #include "insieme/frontend/utils/ir_cast.h"
 
 #include "insieme/core/lang/basic.h"
@@ -48,15 +55,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
-#include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
 
-#include "clang/AST/StmtVisitor.h"
-
-
-// [3.0]
-//#include "clang/Index/Entity.h"
-//#include "clang/Index/Indexer.h"
 
 namespace fe = insieme::frontend;
 
@@ -92,57 +92,27 @@ core::ExpressionPtr handleMemAlloc(const core::IRBuilder& builder, const core::T
 core::ExpressionPtr getCArrayElemRef(const core::IRBuilder& builder, const core::ExpressionPtr& expr);
 
 core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr refVecTy,
-		const core::IRBuilder& builder, const frontend::conversion::ConversionFactory& convFact);
+		const core::IRBuilder& builder, const frontend::conversion::Converter& convFact);
 
 /**
  * builds a member access expresion, does conversion needed on base regarding pointer usage, and in
  * the indentifier regarding annonimous members.
  */
-core::ExpressionPtr getMemberAccessExpr (const core::IRBuilder& builder, core::ExpressionPtr base, const clang::MemberExpr* membExpr);
+core::ExpressionPtr getMemberAccessExpr (frontend::conversion::Converter& converter, const core::IRBuilder& builder, core::ExpressionPtr base, const clang::MemberExpr* membExpr);
 
 
 } // end anonymous namespace
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace insieme {
 namespace frontend {
 namespace conversion {
-
-
-#define CALL_BASE_EXPR_VISIT(Base, ExprTy) \
-	core::ExpressionPtr Visit##ExprTy( const clang::ExprTy* expr ) { return Base::Visit##ExprTy( expr ); }
-
-#define GET_REF_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::RefType>(type)->getElementType())
-
-#define GET_VEC_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::VectorType>(type)->getElementType())
-
-#define GET_ARRAY_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::ArrayType>(type)->getElementType())
-
-#define LOG_EXPR_CONVERSION(parentExpr, expr) \
-	FinalActions attachLog( [&] () { \
-        VLOG(1) << "*************     EXPR  [class:'"<< parentExpr->getStmtClassName() <<"']         ***************************"; \
-        if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang expression: "; \
-            parentExpr->dump(); \
-        } \
-        VLOG(1) << "-> at location: (" <<	\
-                    utils::location(parentExpr->getLocStart(), convFact.getCurrentSourceManager()) << "); "; \
-        VLOG(1) << "Converted into IR expression: "; \
-        if(expr) { \
-            VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )"; \
-        } \
-        VLOG(1) << "****************************************************************************************"; \
-    } )
-
 //---------------------------------------------------------------------------------------------------------------------
 //										BASE EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::ExprConverter {
+class Converter::ExprConverter {
 protected:
-	ConversionFactory& convFact;
-	ConversionContext& ctx;
+	Converter& convFact;
 
 	core::NodeManager& 					mgr;
 	const core::IRBuilder& 				builder;
@@ -235,9 +205,8 @@ ExpressionList getFunctionArguments(ClangExprTy* callExpr,
 public:
 	// CallGraph for functions, used to resolved eventual recursive functions
 
-	ExprConverter(ConversionFactory& convFact, Program& program) :
+	ExprConverter(Converter& convFact) :
 		convFact(convFact),
-		ctx(convFact.ctx),
 		mgr(convFact.mgr),
 		builder(convFact.builder),
 		gen(convFact.builder.getLangBasic())
@@ -383,14 +352,17 @@ public:
 
 };
 
+#define CALL_BASE_EXPR_VISIT(Base, ExprTy) \
+	core::ExpressionPtr Visit##ExprTy( const clang::ExprTy* expr ) { return Base::Visit##ExprTy( expr ); }
+
 //---------------------------------------------------------------------------------------------------------------------
 //										C EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::CExprConverter: public ExprConverter, public clang::ConstStmtVisitor<CExprConverter, core::ExpressionPtr> {
+class Converter::CExprConverter: public ExprConverter, public clang::ConstStmtVisitor<CExprConverter, core::ExpressionPtr> {
 public:
 
-	CExprConverter(ConversionFactory& convFact, Program& program) :
-		ExprConverter(convFact, program) {}
+	CExprConverter(Converter& convFact) :
+		ExprConverter(convFact) {}
 	virtual ~CExprConverter() {};
 
 	CALL_BASE_EXPR_VISIT(ExprConverter, IntegerLiteral)
@@ -422,15 +394,15 @@ public:
 //---------------------------------------------------------------------------------------------------------------------
 //										CXX EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::CXXExprConverter :
+class Converter::CXXExprConverter :
 	public ExprConverter,
 	public clang::ConstStmtVisitor<CXXExprConverter, core::ExpressionPtr>
 {
 
 public:
 
-	CXXExprConverter(ConversionFactory& ConvFact, Program& program) :
-		ExprConverter(ConvFact, program){}
+	CXXExprConverter(Converter& ConvFact) :
+		ExprConverter(ConvFact){}
 	virtual ~CXXExprConverter() {}
 
 	CALL_BASE_EXPR_VISIT(ExprConverter, IntegerLiteral)

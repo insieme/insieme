@@ -162,6 +162,32 @@ namespace analysis {
 
 	}
 
+	TEST(Normalizing, Clone) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		FunctionTypePtr funType = builder.parseType("(A)->unit").as<FunctionTypePtr>();;
+		VariablePtr var1 = builder.variable(builder.parseType("A"), 12);
+		VariablePtr var2 = builder.variable(funType, 17);
+
+		LambdaBindingPtr binding = builder.lambdaBinding(var2, builder.lambda(funType, toVector(var1), builder.compoundStmt()));
+		LambdaExprPtr lambda = builder.lambdaExpr(var2, builder.lambdaDefinition(toVector(binding)));
+
+		EXPECT_EQ("rec v17.{v17=fun(A v12) {}}", toString(*lambda));
+		EXPECT_EQ("rec v0.{v0=fun(A v1) {}}", toString(*normalize(lambda)));
+		EXPECT_EQ("rec v0.{v0=fun(A v1) {}}", toString(*normalize(normalize(lambda))));
+
+
+		// this was failing once - the normalized annotation was not properly transfered
+		NodeManager mgr2;
+		lambda = mgr2.get(lambda);
+		EXPECT_EQ("rec v17.{v17=fun(A v12) {}}", toString(*lambda));
+		EXPECT_EQ("rec v0.{v0=fun(A v1) {}}", toString(*normalize(lambda)));
+		EXPECT_EQ("rec v0.{v0=fun(A v1) {}}", toString(*normalize(normalize(lambda))));
+
+	}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

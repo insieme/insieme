@@ -40,7 +40,7 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
-#include "clang/Basic/Diagnostic.h"
+#include <clang/Basic/Diagnostic.h>
 
 namespace insieme {
 namespace frontend {

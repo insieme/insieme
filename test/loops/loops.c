@@ -17,13 +17,13 @@ int func(int k) {
 
 }
 
-int i;
 void func2() {
 	for(i=10; i>=0; i--) {
 		printf("k=%d\n", i);
 	}
 }
 
+/*
 void func3() {
 	int x;
 
@@ -58,6 +58,7 @@ void func4() {
 		} while(i<2);
 	}
 }
+*/
 
 int main(int argc, char* argv[]) {
 
@@ -106,7 +107,7 @@ int main(int argc, char* argv[]) {
 
 	func(a);
 	func2();
-	func3();
-	func4();
+//	func3();
+//	func4();
 
 }

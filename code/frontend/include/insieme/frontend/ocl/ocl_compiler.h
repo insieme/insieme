@@ -41,6 +41,8 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_program.h"
 
+#include "insieme/frontend/convert.h"
+
 namespace insieme {
 namespace frontend {
 namespace ocl {
@@ -153,7 +155,7 @@ public:
 
 // responsible for adding ocl KernelFile annotation
 void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-        frontend::conversion::ConversionFactory& fact);
+        frontend::conversion::Converter& fact);
 
 
 } //namespace ocl

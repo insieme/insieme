@@ -70,21 +70,17 @@ namespace fe = insieme::frontend;
 TEST(TypeCast, FileTest) {
 
 	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/casts.c") );
+	fe::Program prog(manager, SRC_DIR "/inputs/casts.c");
 	
-	prog.analyzeFuncDependencies();
-
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
-		ConversionFactory convFactory( mgr, prog );
-		convFactory.setTranslationUnit(&tu);
+		Converter convFactory( mgr, prog );
 
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 
 		if(tp.isStatement())
 			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt( tp.getStatement() )), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );

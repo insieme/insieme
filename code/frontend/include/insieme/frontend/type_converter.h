@@ -38,9 +38,7 @@
 
 #include "insieme/frontend/convert.h"
 
-#include "clang/AST/TypeVisitor.h"
-
-#include "insieme/frontend/utils/dep_graph.h"
+#include <clang/AST/TypeVisitor.h>
 
 namespace insieme {
 namespace frontend {
@@ -54,46 +52,21 @@ namespace conversion {
 	core::TypePtr Visit##TypeTy(const clang::TypeTy* type ) { return Base::Visit##TypeTy( type ); }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// 											Printing macros for statements
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define MAKE_SIZE(n)	toVector(core::IntTypeParam::getConcreteIntParam(n))
-#define EMPTY_TYPE_LIST	vector<core::TypePtr>()
-
-#define LOG_BUILTIN_TYPE_CONVERSION(parentType) \
-    VLOG(1) << "**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************"; \
-    if( VLOG_IS_ON(2) ) { \
-        VLOG(2) << "Dump of clang type:"; \
-        parentType->dump(); \
-    } \
-    VLOG(1) << "****************************************************************************************";
-
-#define LOG_TYPE_CONVERSION(parentType, retType) \
-	FinalActions attachLog( [&] () { \
-        VLOG(1) << "**********************TYPE*[class:'"<< parentType->getTypeClassName() <<"']**********************"; \
-        if( VLOG_IS_ON(2) ) { \
-            VLOG(2) << "Dump of clang type:";\
-            parentType->dump(); \
-        } \
-        if(retType) { \
-            VLOG(1) << "Converted 'type' into IR type: "; \
-            VLOG(1) << "\t" << *retType; \
-        } \
-        VLOG(1) << "****************************************************************************************"; \
-    } )
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							Type converter: Common Interface
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-class ConversionFactory::TypeConverter {
+class Converter::TypeConverter {
+
+	typedef std::map<const clang::Type*, insieme::core::TypePtr> TypeCache;
+	TypeCache typeCache;
 
 protected:
-	ConversionFactory& 					convFact;
+	Converter& 							convFact;
 	core::NodeManager& 					mgr;
 	const core::IRBuilder& 				builder;
 	const core::lang::BasicGenerator& 	gen;
 
 public:
-	TypeConverter(ConversionFactory& fact);
+	TypeConverter(Converter& fact);
 
 	virtual ~TypeConverter() { }
 
@@ -132,13 +105,13 @@ protected:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							Type converter: C types
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-class ConversionFactory::CTypeConverter:
-	public ConversionFactory::TypeConverter,
-	public clang::TypeVisitor<ConversionFactory::CTypeConverter, core::TypePtr>
+class Converter::CTypeConverter:
+	public Converter::TypeConverter,
+	public clang::TypeVisitor<Converter::CTypeConverter, core::TypePtr>
 {
 
 public:
-	CTypeConverter(ConversionFactory& fact)
+	CTypeConverter(Converter& fact)
 		: TypeConverter(fact) { }
 
 	virtual ~CTypeConverter() {}
@@ -174,15 +147,15 @@ protected:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 							Type converter: C++ types
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-class ConversionFactory::CXXTypeConverter :
-	public ConversionFactory::TypeConverter,
-	public clang::TypeVisitor<ConversionFactory::CXXTypeConverter, core::TypePtr>{
+class Converter::CXXTypeConverter :
+	public Converter::TypeConverter,
+	public clang::TypeVisitor<Converter::CXXTypeConverter, core::TypePtr>{
 
 protected:
 	core::TypePtr handleTagType(const clang::TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
 public:
-	CXXTypeConverter(ConversionFactory& fact)
+	CXXTypeConverter(Converter& fact)
 		: TypeConverter(fact) {}
 
 	virtual ~CXXTypeConverter() {};

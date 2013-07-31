@@ -1,3 +1,4 @@
+
 /**
  * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
  *                Institute of Computer Science,
@@ -34,16 +35,25 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/annotations/c/naming.h"
+#pragma once
 
+#include "insieme/frontend/tu/ir_translation_unit.h"
+#include "insieme/core/checks/full_check.h"
 
 namespace insieme {
-namespace annotations {
-namespace c {
+namespace frontend {
+namespace tu {
 
-const string CNameAnnotation::NAME = "CNameAnnotation";
-const utils::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
+	/**
+	 * perform semantic checks in the structure, the IRtranslation unit will be merged into an IR
+	 * expression and checked for consistency.
+	 *
+	 * @param unit the translation unit to be checked
+	 * @return a list of error messages
+	 */
+	core::checks::MessageList checkTU(const IRTranslationUnit& unit);
 
-}
-}
-}
+
+} // end namespace tu
+} // end namespace frontend
+} // end namespace insieme

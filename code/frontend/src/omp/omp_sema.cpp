@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -54,9 +54,9 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/timer.h"
-#include "insieme/annotations/c/naming.h"
 
 #include "insieme/frontend/utils/castTool.h"
+#include "insieme/frontend/tu/ir_translation_unit.h"
 
 #include <stack>
 
@@ -65,7 +65,7 @@
 namespace insieme {
 namespace frontend {
 namespace omp {
-	
+
 using namespace std;
 using namespace core;
 using namespace insieme::utils::log;
@@ -74,26 +74,33 @@ namespace cl = lang;
 namespace us = insieme::utils::set;
 namespace um = insieme::utils::map;
 
+
+namespace {
+
+	bool contains(const vector<ExpressionPtr>& list, const ExpressionPtr& element) {
+		return ::contains(list, element, equal_target<ExpressionPtr>());
+	}
+}
+
+
 class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 	NodeManager& nodeMan;
 	IRBuilder build;
 	const lang::BasicGenerator& basic;
 	us::PointerSet<CompoundStmtPtr> toFlatten; // set of compound statements to flatten one step further up
-	
-	RefTypePtr globalStructType;
 
 	// the following vars handle global struct type adjustment due to threadprivate
-	bool fixStructType; // when set, implies that the struct was just modified and needs to be adjusted 
+	bool fixStructType; // when set, implies that the struct was just modified and needs to be adjusted
 	StructTypePtr adjustStruct; // marks a struct that was modified and needs to be adjusted when encountered
 	StructTypePtr adjustedStruct; // type that should replace the above
 	ExprVarMap thisLambdaTPAccesses; // threadprivate optimization map
 
-	// this stack is used to keep track of which variables are shared in enclosing constructs, to correctly parallelize 
+	// this stack is used to keep track of which variables are shared in enclosing constructs, to correctly parallelize
 	std::stack<VariableList> sharedVarStack;
-	
+
 public:
-	OMPSemaMapper(NodeManager& nodeMan, RefTypePtr globalStructType) 
-			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(), globalStructType(globalStructType),
+	OMPSemaMapper(NodeManager& nodeMan)
+			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(),
 			  fixStructType(false), adjustStruct(), adjustedStruct(), thisLambdaTPAccesses() {
 	}
 
@@ -116,12 +123,15 @@ protected:
 				newNode = mExp->getSubExpression()->substitute(nodeMan, *this);
 			} else if(auto mStmt = dynamic_pointer_cast<const MarkerStmt>(node)) {
 				newNode = mStmt->getSubStatement()->substitute(nodeMan, *this);
-			} else { 
+			} else {
 				// mayhap it is threadprivate, my eternal nemesis!
 				if(std::dynamic_pointer_cast<ThreadPrivate>(anno->getAnnotationList().front())) {
 					newNode = node;
 				}
-				else assert(0 && "OMP annotation on non-marker node.");
+				else {
+					std::cout << "Annotated Node: " << *node << "\n";
+					assert(0 && "OMP annotation on non-marker node.");
+				}
 			}
 			//LOG(DEBUG) << "omp annotation(s) on: \n" << printer::PrettyPrinter(newNode);
 			std::for_each(anno->getAnnotationListRBegin(), anno->getAnnotationListREnd(), [&](AnnotationPtr subAnn) {
@@ -196,8 +206,8 @@ protected:
 							   !(parAnn->hasFirstPrivate() && contains(parAnn->getFirstPrivate(), var));
 					} );
 					sharedVarStack.push(autoShared);
-				} 
-				// if other (non-parallel) data sharing clause, remove explicitly privatized vars from stack	
+				}
+				// if other (non-parallel) data sharing clause, remove explicitly privatized vars from stack
 				else if(auto dataAnn = std::dynamic_pointer_cast<DatasharingClause>(subAnn)) {
 					VariableList curShared = sharedVarStack.top();
 					VariableList newShared;
@@ -211,12 +221,12 @@ protected:
 			} );
 		}
 	}
-	
+
 	// called upon leaving a node *with the original node*, to update the shared var stack
 	void sharedVarStackLeave(const NodePtr& node) {
 		// pop empty on leaving new function
 		if(node.isa<LambdaDefinitionPtr>()) {
-			assert(sharedVarStack.size() > 0 && sharedVarStack.top() == VariableList() 
+			assert(sharedVarStack.size() > 0 && sharedVarStack.top() == VariableList()
 				&& "leaving lambda def: shared var stack corrupted");
 			sharedVarStack.pop();
 		}
@@ -292,11 +302,11 @@ protected:
 				} else if(funName == "omp_get_num_threads") {
 					return build.getThreadGroupSize();
 				} else if(funName == "omp_get_max_threads") {
-					return build.intLit(65536); // The maximum number of threads shall be 65536. 
+					return build.intLit(65536); // The maximum number of threads shall be 65536.
 					// Thou shalt not count to 65537, and neither shalt thou count to 65535, unless swiftly proceeding to 65536.
 				} else if(funName == "omp_get_wtime") {
 					return build.callExpr(build.literal("irt_get_wtime", build.functionType(TypeList(), basic.getDouble())));
-				} 
+				}
 				// OMP Locks --------------------------------------------
 				else if(funName == "omp_init_lock") {
 					ExpressionPtr arg = callExp->getArgument(0);
@@ -314,7 +324,7 @@ protected:
 					ExpressionPtr arg = callExp->getArgument(0);
 					if(analysis::isRefOf(arg, basic.getLock())) return arg;
 					return newNode;
-				} 
+				}
 				// Unhandled OMP functions
 				else if(funName.substr(0, 4) == "omp_") {
 					LOG(ERROR) << "Function name: " << funName;
@@ -333,7 +343,7 @@ protected:
 	// implements OpenMP built-in types by replacing them with the correct IR constructs
 	NodePtr handleTypes(const NodePtr& newNode) {
 		if(TypePtr type = dynamic_pointer_cast<TypePtr>(newNode)) {
-			//std::cout << "-- Type: " << *type << "\n"; 
+			//std::cout << "-- Type: " << *type << "\n";
 			//if(analysis::isRefType(type)) {
 			//	TypePtr sub = analysis::getReferencedType(type);
 				if(ArrayTypePtr arr = dynamic_pointer_cast<ArrayTypePtr>(type)) type = arr->getElementType();
@@ -352,7 +362,7 @@ protected:
 		} );
 		return inside;
 	}
-	
+
 	// internal implementation of TP variable generation used by both
 	// handleTPVars and implementDataClauses
 	CompoundStmtPtr handleTPVarsInternal(const CompoundStmtPtr& body, bool generatedByOMP = false) {
@@ -420,7 +430,7 @@ protected:
 			ExpressionList args = call->getArguments();
 			TypePtr elemType = core::analysis::getReferencedType(call->getType());
 			elemType = build.vectorType(elemType, build.concreteIntTypeParam(MAX_THREADPRIVATE));
-			CallExprPtr memAccess = 
+			CallExprPtr memAccess =
 				build.callExpr(build.refType(elemType), basic.getCompositeRefElem(), args[0], args[1], build.getTypeLiteral(elemType));
 			ExpressionPtr accessExpr = build.arrayRefElem(memAccess, indexExpr);
 			if(masterCopy) return accessExpr;
@@ -464,7 +474,7 @@ protected:
 			//	assert(varP->getType()->getNodeType() == NT_RefType && "Non-ref threadprivate!");
 			//	thisLambdaTPAccesses.insert(std::make_pair(accessExpr, varP));
 			//	return varP;
-			//}			
+			//}
 		}
 		assert(false && "OMP threadprivate annotation on non-member / non-call / non-literal");
 		return NodePtr();
@@ -573,18 +583,16 @@ protected:
 				// free function variables should not be captured
 				bool ret = !t.isa<FunctionTypePtr>();
 				// neither should pointers be depointerized
-				ret = ret && !(core::analysis::isRefType(t) && 
+				ret = ret && !(core::analysis::isRefType(t) &&
 					(core::analysis::getReferencedType(t).isa<ArrayTypePtr>() || core::analysis::getReferencedType(t).isa<VectorTypePtr>()));
 				// explicitly declared variables should not be auto-privatized
 				if(taskP->hasShared()) ret = ret && !contains(taskP->getShared(), v);
 				if(taskP->hasFirstPrivate()) ret = ret && !contains(taskP->getFirstPrivate(), v);
 				if(taskP->hasPrivate()) ret = ret && !contains(taskP->getPrivate(), v);
 				if(taskP->hasReduction()) ret = ret && !contains(taskP->getReduction().getVars(), v);
-				// variables declared shared in all enclosing constructs, up to and including 
+				// variables declared shared in all enclosing constructs, up to and including
 				// the innermost parallel construct, should not be privatized
 				ret = ret && !contains(sharedVarStack.top(), v);
-				// finally, the global struct should not be auto-privatized
-				if(t == globalStructType) ret = false;
 				return ret;
 			});
 			firstPrivates.insert(firstPrivates.end(), freeVars.begin(), freeVars.end());
@@ -628,7 +636,7 @@ protected:
 			for(const ExpressionPtr& varExp : parallelP->getCopyin()) {
 				// assign master copy to private copy
 				StatementPtr assignment = build.assign(
-					static_pointer_cast<const Expression>(handleThreadprivate(varExp)), 
+					static_pointer_cast<const Expression>(handleThreadprivate(varExp)),
 					build.deref(static_pointer_cast<const Expression>(handleThreadprivate(varExp, true))) );
 				replacements.push_back(assignment);
 			}
@@ -639,12 +647,12 @@ protected:
 		visitDepthFirstPrunable(NodeAddress(stmtNode), [&](const ExpressionAddress& expA) -> bool {
 			// prune if new named lambda
 			auto lambda = expA.getAddressedNode().isa<LambdaExprPtr>();
-			if(lambda && (core::annotations::hasNameAttached(lambda) || lambda->hasAnnotation(insieme::annotations::c::CNameAnnotation::KEY))) {
-				return true; 
+			if(lambda && core::annotations::hasNameAttached(lambda)) {
+				return true;
 			}
 			// check if privatized expression
 			for(auto mapping : publicToPrivateMap) {
-				if(mapping.first == expA.getAddressedNode()) {
+				if(*mapping.first == *expA.getAddressedNode()) {
 					publicToPrivateAddressMap[expA] = mapping.second.as<VariablePtr>();
 					return true;
 				}
@@ -654,7 +662,7 @@ protected:
 		StatementPtr subStmt = stmtNode;
 		// the variable will be made available by pushInto if we are inside a lambda introduced by insieme
 		if(!publicToPrivateAddressMap.empty()) subStmt = transform::pushInto(nodeMan, publicToPrivateAddressMap).as<StatementPtr>();
-		
+
 		//StatementPtr subStmt = transform::replaceAllGen(nodeMan, stmtNode, publicToPrivateMap);
 		// specific handling if clause is a omp for
 		if(forP) subStmt = build.pfor(static_pointer_cast<const ForStmt>(subStmt));
@@ -676,10 +684,10 @@ protected:
 		auto printfNodePtr = build.literal("printf", build.parseType("(ref<array<char,1> >, var_list) -> int<4>"));
 		return transform::replaceAll(nodeMan, node, printfNodePtr, core::analysis::addAttribute(printfNodePtr, attr.getUnordered()));
 	}
-	
+
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 		StatementList resultStmts;
-		// handle implicit taskwait in postfix of task 
+		// handle implicit taskwait in postfix of task
 		StatementList postFix;
 		postFix.push_back(build.mergeAll());
 		auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts, postFix);
@@ -692,10 +700,10 @@ protected:
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 		resultStmts.push_back(mergeCall);
-		//resultStmts.push_back(build.mergeAll()); 
+		//resultStmts.push_back(build.mergeAll());
 		return build.compoundStmt(resultStmts);
 	}
-	
+
 	NodePtr handleTask(const StatementPtr& stmtNode, const TaskPtr& par) {
 		StatementList resultStmts;
 		auto newStmtNode = implementDataClauses(stmtNode, &*par, resultStmts);
@@ -722,7 +730,7 @@ protected:
 		resultStmts.push_back(newStmtNode);
 		return build.compoundStmt(resultStmts);
 	}
-	
+
 	NodePtr handleParallelFor(const StatementPtr& stmtNode, const ParallelForPtr& pforP) {
 		NodePtr newNode = stmtNode;
 		newNode = handleFor(static_pointer_cast<const Statement>(newNode), pforP->toFor());
@@ -873,61 +881,137 @@ namespace {
 	}
 }
 
-const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
-	IRBuilder build(resultStorage);
-	ProgramPtr result = prog;
+//const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
+//	IRBuilder build(resultStorage);
+//	ProgramPtr result = prog;
+//
+//	// new sema
+//	{
+//		OMPSemaMapper semaMapper(resultStorage);
+//		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+//		insieme::utils::Timer timer("Omp sema");
+//		result = semaMapper.map(result);
+//		timer.stop();
+//		LOG(INFO) << timer;
+//		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+//
+//		// fix global struct type if modified by threadprivate
+//		if(semaMapper.getAdjustStruct()) {
+//			result = static_pointer_cast<const Program>(
+//				transform::replaceAll(resultStorage, result, semaMapper.getAdjustStruct(), semaMapper.getAdjustedStruct(), false));
+//		}
+//	}
+//
+//	// fix globals
+//	{
+//		insieme::utils::Timer timer("Omp global handling");
+//		auto collectedGlobals = markGlobalUsers(result);
+//		if(collectedGlobals.size() > 0) {
+//			auto globalDecl = transform::createGlobalStruct(resultStorage, result, collectedGlobals);
+//			GlobalMapper globalMapper(resultStorage, globalDecl->getVariable());
+//			result = globalMapper.map(result);
+//			// add initialization for collected global locks
+//			for(NamedValuePtr& val : collectedGlobals) {
+//				if(val->getValue()->getType() == resultStorage.getLangBasic().getLock()) {
+//					auto initCall = build.initLock(build.refMember(globalDecl->getVariable(), val->getName()));
+//					result = transform::insertAfter(resultStorage, DeclarationStmtAddress::find(globalDecl, result), initCall).as<ProgramPtr>();
+//				}
+//			}
+//			timer.stop();
+//			LOG(INFO) << timer;
+//		}
+//	}
+//
+//	// omp postprocessing optimization
+//	//{
+//	//	insieme::utils::Timer timer("Omp postprocessing optimization");
+//
+//	//	p::TreePattern tpAccesses
+//
+//	//	timer.stop();
+//	//	LOG(INFO) << timer;
+//	//}
+//
+//	return result;
+//}
 
-	RefTypePtr globalStructType = findGlobalStruct(prog);
-	
-	// new sema
-	{
-		OMPSemaMapper semaMapper(resultStorage, globalStructType);
-		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-		insieme::utils::Timer timer("Omp sema");
-		result = semaMapper.map(result);
-		timer.stop();
-		LOG(INFO) << timer;
-		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-		
-		// fix global struct type if modified by threadprivate
-		if(semaMapper.getAdjustStruct()) {
-			result = static_pointer_cast<const Program>(
-				transform::replaceAll(resultStorage, result, semaMapper.getAdjustStruct(), semaMapper.getAdjustedStruct(), false));
-		}
+namespace {
+
+	void collectAndRegisterLocks(core::NodeManager& mgr, tu::IRTranslationUnit& unit, const core::ExpressionPtr& fragment) {
+
+		// search locks
+		visitDepthFirstOnce(fragment, [&](const LiteralPtr& lit) {
+
+			const string& gname = lit->getStringValue();
+			if (gname.find("global_omp") != 0) return;
+
+			std::cout << "Found lock: " << gname << "\n";
+
+			assert(analysis::isRefOf(lit, mgr.getLangBasic().getLock()));
+
+			// add lock to global list
+			unit.addGlobal(lit);
+
+			// add lock initialization code
+			unit.addInitializer(IRBuilder(mgr).initLock(lit));
+		});
+
 	}
 
-	// fix globals
-	{	
-		insieme::utils::Timer timer("Omp global handling");
-		auto collectedGlobals = markGlobalUsers(result);
-		if(collectedGlobals.size() > 0) {
-			auto globalDecl = transform::createGlobalStruct(resultStorage, result, collectedGlobals);
-			GlobalMapper globalMapper(resultStorage, globalDecl->getVariable());
-			result = globalMapper.map(result);
-			// add initialization for collected global locks
-			for(NamedValuePtr& val : collectedGlobals) {
-				if(val->getValue()->getType() == resultStorage.getLangBasic().getLock()) {
-					auto initCall = build.initLock(build.refMember(globalDecl->getVariable(), val->getName()));
-					result = transform::insertAfter(resultStorage, DeclarationStmtAddress::find(globalDecl, result), initCall).as<ProgramPtr>();
-				}
-			}
-			timer.stop();
-			LOG(INFO) << timer;
-		}
-	}
-
-	// omp postprocessing optimization
-	//{
-	//	insieme::utils::Timer timer("Omp postprocessing optimization");
-
-	//	p::TreePattern tpAccesses
-
-	//	timer.stop();
-	//	LOG(INFO) << timer;
-	//}
-
-	return result;
 }
+
+
+tu::IRTranslationUnit applySema(const tu::IRTranslationUnit& unit, core::NodeManager& mgr) {
+
+	tu::IRTranslationUnit res(mgr);
+
+	// everything has to run through the OMP sema mapper
+	OMPSemaMapper semaMapper(mgr);
+
+	// process the contained types ...
+	for(auto& cur : unit.getTypes()) {
+		res.addType(cur.first, semaMapper.map(cur.second));
+	}
+
+	// ... the functions ...
+	for(auto& cur : unit.getFunctions()) {
+
+		// convert implementation
+		auto newImpl = semaMapper.map(cur.second);
+		collectAndRegisterLocks(mgr, res, newImpl);
+
+		// save result
+		res.addFunction(semaMapper.map(cur.first), newImpl);
+	}
+
+	// ... the globals ...
+	IRBuilder builder(mgr);
+	for(auto& cur : unit.getGlobals()) {
+
+		ExpressionPtr newGlobal = semaMapper.map(cur.first.as<ExpressionPtr>());
+
+		// if it is an access to a thread-private value
+		if (CallExprPtr call = newGlobal.isa<CallExprPtr>()) {
+			assert(core::analysis::isCallOf(call, mgr.getLangBasic().getVectorRefElem()));
+			newGlobal = call[0];		// take first argument
+		}
+
+		res.addGlobal(
+				newGlobal.as<LiteralPtr>(),
+				(cur.second) ? semaMapper.map(cur.second) : cur.second
+		);
+	}
+
+	// ... and the entry points
+	for (auto& cur : unit.getEntryPoints()) {
+		res.addEntryPoints(semaMapper.map(cur));
+	}
+
+	// done
+	return res;
+}
+
+
 
 } // namespace omp
 } // namespace frontend

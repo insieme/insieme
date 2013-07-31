@@ -38,102 +38,101 @@
 
 #include "insieme/frontend/frontend.h"
 
+#include "insieme/frontend/convert.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
+#include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/cilk/cilk_sema.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
+
+#include "insieme/frontend/tu/ir_translation_unit.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/compiler/compiler.h"
 
+#include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/annotations/naming.h"
 
 namespace insieme {
 namespace frontend {
 
-const unsigned ConversionJob::DEFAULT_FLAGS = PrintDiag;
 
-ConversionJob::ConversionJob(const boost::filesystem::path& path)
-	: files(toVector(path.string())), stdLibIncludeDirs(insieme::utils::compiler::getDefaultCppIncludePaths()), standard("c99"), flags(DEFAULT_FLAGS) {};
+	const unsigned ConversionSetup::DEFAULT_FLAGS = PrintDiag;
 
-ConversionJob::ConversionJob(const vector<string>& files, const vector<string>& includeDirs)
-	: files(files), includeDirs(includeDirs), stdLibIncludeDirs(insieme::utils::compiler::getDefaultCppIncludePaths()), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};
-
-void ConversionJob::addDefinition(const string& name, const string& value) {
-	std::stringstream def;
-	def << name;
-	if (!value.empty()) def << "=" << value;
-	definitions.push_back(def.str());
-}
-
-core::ProgramPtr ConversionJob::execute(core::NodeManager& manager) {
+	ConversionSetup::ConversionSetup(const vector<path>& includeDirs)
+		: includeDirs(includeDirs),
+		  stdLibIncludeDirs(::transform(insieme::utils::compiler::getDefaultCppIncludePaths(), [](const string& cur) { return path(cur); })),
+		  standard(Auto),
+		  definitions(),
+		  flags(DEFAULT_FLAGS) {};
 
 
-	// add definitions needed by the OpenCL frontend
-	ConversionJob job = *this;
-	if(hasOption(OpenCL)) {
-		job.addIncludeDirectory(SRC_DIR);
-		job.addIncludeDirectory(SRC_DIR "inputs");
-		job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
-
-		job.addDefinition("INSIEME");
+	bool ConversionSetup::isCxx(const path& file) const {
+		static std::set<string> CxxExtensions({ ".cpp", ".cxx", ".cc", ".C" });
+		return standard == Cxx03 || (standard==Auto && ::contains(CxxExtensions, boost::filesystem::extension(file)));
 	}
 
-	// create a temporary manager
-	core::NodeManager tmpMgr(manager);
 
-	// create the program parser
-	frontend::Program program(manager, job);
+	tu::IRTranslationUnit ConversionJob::toTranslationUnit(core::NodeManager& manager) const {
 
-	// set up the translation units
-	program.addTranslationUnits(job);
+		// add definitions needed by the OpenCL frontend
+		ConversionSetup setup = *this;
+		if(hasOption(OpenCL)) {
+			setup.addIncludeDirectory(SRC_DIR);
+			setup.addIncludeDirectory(SRC_DIR "inputs");
+			setup.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
 
-	// convert the program
-	auto res = program.convert();
+			setup.setDefinition("INSIEME");
+		}
 
-	// apply OpenMP sema conversion
-	if (hasOption(OpenMP)) {
-		res = frontend::omp::applySema(res, tmpMgr);
+		// convert files to translation units
+		auto units = ::transform(files, [&](const path& file)->tu::IRTranslationUnit {
+			auto res = convert(manager, file, setup);
+
+			// apply OpenMP sema
+			if (setup.hasOption(ConversionSetup::OpenMP)) {
+				res = omp::applySema(res, manager);
+			}
+
+			// apply Cilk sema
+			if (setup.hasOption(ConversionSetup::Cilk)) {
+				res = cilk::applySema(res, manager);
+			}
+
+			// done
+			return res;
+		});
+
+		// merge the translation units
+		return tu::merge(manager, tu::merge(manager, libs), tu::merge(manager, units));
+
 	}
 
-	// apply OpenCL conversion
-	if(hasOption(OpenCL)) {
-		frontend::ocl::HostCompiler oclHostCompiler(res, job);
-		res = oclHostCompiler.compile();
+	core::ProgramPtr ConversionJob::execute(core::NodeManager& manager, bool fullApp) const {
+
+		// create a temporary manager
+		core::NodeManager tmpMgr;		// not: due to the relevance of class-info-annotations no chaining of managers is allowed here
+
+		// load and merge all files into a single translation unit
+		auto unit = toTranslationUnit(tmpMgr);
+
+		// convert units to a single program
+		auto res = (fullApp) ? tu::toProgram(tmpMgr, unit) : tu::resolveEntryPoints(tmpMgr, unit);
+
+		// apply OpenCL conversion
+		if(hasOption(OpenCL)) {
+			frontend::ocl::HostCompiler oclHostCompiler(res, *this);
+			res = oclHostCompiler.compile();
+		}
+
+		// strip of OMP annotation since those may contain references to local nodes
+		core::visitDepthFirstOnce(res, [](const core::NodePtr& cur) {
+			cur->remAnnotation(omp::BaseAnnotation::KEY);
+		});
+
+		// return instance within global manager
+		return core::transform::utils::migrate(res, manager);
 	}
-
-	// apply Cilk conversion
-	if(hasOption(Cilk)) {
-		res = frontend::cilk::applySema(res, tmpMgr);
-	}
-
-	// return instance within global manager
-	return manager.get(res);
-}
-
-void ConversionJob::storeAST(core::NodeManager& manager, const string& output_file) {
-	// add definitions needed by the OpenCL frontend
-	ConversionJob job = *this;
-	if(hasOption(OpenCL)) {
-		job.addIncludeDirectory(SRC_DIR);
-		job.addIncludeDirectory(SRC_DIR "inputs");
-		job.addIncludeDirectory(SRC_DIR "../../../test/ocl/common/");  // lib_icl
-
-		job.addDefinition("INSIEME");
-	}
-
-	// create a temporary manager
-	core::NodeManager tmpMgr(manager);
-
-	// create the program parser
-	frontend::Program program(manager, job);
-
-	// set up the translation units
-	program.addTranslationUnits(job);
-
-    // store translation units
-    program.storeTranslationUnits(output_file);
-}
 
 } // end namespace frontend
 } // end namespace insieme

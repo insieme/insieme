@@ -37,7 +37,6 @@
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/debug.h"
-#include "insieme/frontend/utils/ir_utils.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/unused.h"
@@ -65,11 +64,7 @@
 #include <clang/AST/Expr.h>
 #pragma GCC diagnostic pop
 
-#define IS_IR_REF(type) \
-	(type->getNodeType() == core::NT_RefType)
-
-#define GET_REF_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::RefType>(type)->getElementType())
+#include "insieme/frontend/utils/macros.h"
 
 
 using namespace insieme;
@@ -371,7 +366,7 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::ConversionFactory& convFact,
+core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
 										  const clang::CastExpr* castExpr){
 
 	const core::IRBuilder& builder = convFact.getIRBuilder();
@@ -409,35 +404,34 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convers
 		//
 		// IR: this is the same as out ref deref ref<a'> -> a'
 		{
-			
-			// this is CppRef -> ref
-			if (IS_CPP_REF_EXPR(expr)){
-				return builder.deref(unwrapCppRef(builder, expr));
-			}
-
-			// accessing a member returns a reference, this ref might be a cpp ref, therefore we
-			// need to unwrap a little more
-			if (expr->getType().isa<core::RefTypePtr>() && IS_CPP_REF_TYPE(expr->getType().as<core::RefTypePtr>()->getElementType())){
-				return builder.deref(unwrapCppRef(builder, builder.deref(expr)));
-			}
-
 			// we use by value a member accessor. we have a better operation for this
 			// instead of derefing the memberRef
-			// FIXME:: not working, to make this nice stuff, some work is needed here
-			//if(core::CallExprPtr call = expr.isa<core::CallExprPtr>()){
-			//	if (core::analysis::isCallOf(call, gen.getCompositeRefElem())) {
-			//		return builder.callExpr(gen.getCompositeMemberAccess(), 
-			//								builder.callExpr (gen.getRefDeref(call.getArgument(0)), call.getArgument(1));
-			//	}
-			//}
+			//  refElem   (ref<owner>, elemName) -> ref<member>   => this is composite ref
+			//  membAcces ( owner, elemName) -> member            => uses read-only, returns value 
+			if(core::CallExprPtr call = expr.isa<core::CallExprPtr>()){
+				if (core::analysis::isCallOf(call, gen.getCompositeRefElem()) &&
+						(!core::analysis::isCallOf(call, mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR()) &&
+						 !core::analysis::isCallOf(call, mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR()))){
 
-			if(IS_IR_REF(exprTy)) {
-				return builder.deref(expr);
+					expr= builder.callExpr (gen.getCompositeMemberAccess(), 
+											builder.deref (call[0]), call[1], builder.getTypeLiteral(targetTy));
+				}
+			// TODO: we can do something similar and turn vector ref elem into vectorSubscript
+			//else if (core::analysis::isCallOf(call, gen.getVectorRefElem())) {
+				else if (expr->getType().isa<core::RefTypePtr>()){
+					expr = builder.deref(expr);
+				}
 			}
-			else{
-				// arguments by value are not refs... but in C they are lefsides
-				return expr;
+			else if (expr->getType().isa<core::RefTypePtr>()){
+				expr = builder.deref(expr);
 			}
+
+			// this is CppRef -> ref
+			if (IS_CPP_REF(expr->getType())){
+				expr = builder.deref(builder.toIRRef(expr));
+			}
+
+			return expr;
 			break;
 		}
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -41,7 +41,7 @@ void basic_type_test() {
 	#pragma test "decl ref<int<4>> v0 =  var(1)"
 	int a = 1;
 
-	#pragma test "decl ref<int<8>> v0 =  var(0)"
+	#pragma test "decl ref<int<8>> v0 =  var(undefined(type<int<8>>))"
 	long b;
 
 	#pragma test "decl ref<int<2>> v0 =  var(65535)"
@@ -56,7 +56,7 @@ void basic_type_test() {
 	#pragma test "decl ref<real<4>> v0 =  var(0.0000000f)"
 	float f = 0.00f;
 
-	#pragma test "decl ref<real<8>> v0 =  var(0.0)"
+	#pragma test "decl ref<real<8>> v0 =  var(undefined(type<real<8>>))"
 	double g;
 
 	#pragma test "decl ref<vector<real<4>,3>> v0 =  var(undefined(type<vector<real<4>,3>>))"
@@ -77,7 +77,7 @@ void basic_type_test() {
 	#pragma test "decl ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v0 =  var(get.null(type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>))"
 	int*** c1 = 0;
 
-	#pragma test "v1 := get.null(type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)"
+	#pragma test "v100 := get.null(type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)"
 	c1 = 0;
 
 	#pragma test "decl ref<real<8>> v0 =  var(3.1415926535897931)"
@@ -206,10 +206,10 @@ void fun_ptr() {
 	#pragma test "decl ref<(int<4>, int<4>) -> int<4>> v0 =  var(fun(int<4> v1, int<4> v2) -> int<4> {return v1+v2;})"
 	int(* f)(int,int) = &add;
 
-	#pragma test "v1 := fun(int<4> v1, int<4> v2) -> int<4> {return v1-v2;}"
+	#pragma test "v100 := fun(int<4> v1, int<4> v2) -> int<4> {return v1-v2;}"
 	f = &sub;
 
-	#pragma test "v1(3, 4)"
+	#pragma test "v100(3, 4)"
 	f(3,4);
 
 }

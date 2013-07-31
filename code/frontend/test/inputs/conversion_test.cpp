@@ -34,17 +34,104 @@
  * regarding third party software licenses.
  */
 
-#pragma once
 
-namespace insieme {
-namespace frontend {
+struct c {
+	int b;
+};
 
-	class FrontendModule {
+int counter = 10;
+
+typedef struct {
+	int a;
+} X;
+
+typedef struct {
+	int j;
+} Y;
+
+namespace {
+	struct A {};
+}
+
+namespace x {
+	struct B {};
+}
+
+class List {
+	int value;
+	List* next;
+};
+
+List fullList;
 
 
+class Even;
+class Odd;
+
+class Even { Odd* next; };
+class Odd { Even* next; };
+
+
+int sum(int* l, int s);
+
+int sum(int* l, int s) {
+	int res = 0;
+	for (int i=0; i<s; i++) {
+		res += l[i];
+	}
+	return res;
+}
+
+int fib(int x) {
+	if (x <= 0) return 1;
+	return x * fib(x-1);
+}
+
+int even(int);
+int odd(int);
+
+int even(int x) {
+	if (x == 0) return true;
+	return odd(x-1);
+}
+
+int odd(int x) {
+	if (x == 0) return false;
+	return even(x-1);
+}
+
+int a(int);
+int b(int);
+int c(int);
+
+int a(int x) { return b(x); }
+int b(int x) { return c(x); }
+int c(int x) { return a(x); }
+
+int main() {
+
+	static double PI = 3;
+
+	counter++;
+
+	struct C {
+
+		X x;
+		A a;
+		x::B b;
 
 	};
 
+	int a = 1 + 2;
 
-} // end namespace frontend
-} // end namespace insieme
+	List l;
+	Even e;
+	Odd o;
+
+	even(2);
+	odd(2);
+
+	b(12);
+	c(12);
+}
+

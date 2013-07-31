@@ -48,6 +48,9 @@ namespace insieme {
 namespace driver {
 namespace cmd {
 
+	// fix an alias for the path type
+	typedef frontend::path path;
+
 	/**
 	 * The CommandLineOptions is a container for input arguments to the main Insieme compiler executable.
 	 */
@@ -89,9 +92,16 @@ namespace cmd {
 	public:
 
 		/**
+		 * Converts this option class into a frontend conversion job.
+		 */
+		frontend::ConversionJob toConversionJob() const;
+
+		/**
 		 * Converts the command line options into a frontend conversion job.
 		 */
-		operator frontend::ConversionJob() const;
+		operator frontend::ConversionJob() const {
+			return toConversionJob();
+		}
 
 	};
 

@@ -62,6 +62,13 @@ namespace backend {
 		virtual ~NameManager() {};
 
 		/**
+		 * This method will be invoked at the beginning of the conversion process and
+		 * should be utilized to collect a list of names which shell not be assigned
+		 * to any other object (e.g. the names of global variables).
+		 */
+		virtual void registerGlobalNames(const core::NodePtr& root) =0;
+
+		/**
 		 * Obtains a name for the construct represented by the given node pointer.
 		 *
 		 * @param ptr the construct to be named
@@ -163,6 +170,11 @@ namespace backend {
 		 * Obtains a reference to the common prefix used by this name manager.
 		 */
 		virtual const string& getNamePrefix() const { return prefix; };
+
+		/**
+		 * Initializes a list of used names which shell not be assigned to any construct.
+		 */
+		virtual void registerGlobalNames(const core::NodePtr& root);
 
 		/**
 		 * Obtains a name for the construct represented by the given node pointer.

@@ -29,34 +29,30 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #pragma once
 
+#include <set>
+#include <memory>
+#include <functional>
+
+#include "insieme/frontend/frontend.h"
+#include "insieme/frontend/program.h"
+#include "insieme/frontend/utils/interceptor.h"
+#include "insieme/frontend/pragma/handler.h"
+
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/frontend/pragma/handler.h"
 #include "insieme/utils/map_utils.h"
-
-#include "insieme/frontend/analysis/global_variables.h"
-
-#include "insieme/frontend/utils/indexer.h"
-#include "insieme/frontend/utils/functionDependencyGraph.h"
-#include "insieme/frontend/utils/interceptor.h"
-
-#include <memory>
-#include <set>
-#include <functional>
 
 // FIXME: cleanup includes and stuff, find tradeof between compilation time and code complexity
 // Forward declarations
 namespace clang {
-class ASTContext;
-class DeclGroupRef;
 class FunctionDecl;
 class InitListExpr;
 } // End clang namespace
@@ -66,123 +62,108 @@ namespace {
 typedef vector<insieme::core::StatementPtr> StatementList;
 typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
-#define GET_TYPE_PTR(type) (type)->getType().getTypePtr()
-
-
 } // end anonymous namespace
 
 namespace insieme {
 namespace frontend {
 
+/**
+ * This function converts a clang translation unit into an IR translation unit.
+ *
+ * @param manager the manager to be used for managing the resulting IR nodes
+ * @param unit the translation unit to be processed
+ * @param setup the setup for the conversion process to be respected
+ * @return the resulting translation unit
+ */
+tu::IRTranslationUnit convert(core::NodeManager& manager, const path& unit, const ConversionSetup& setup = ConversionSetup());
+
+
 namespace conversion {
 
-class ASTConverter;
-class CXXASTConverter;
-class ConversionFactory;
-
-// ------------------------------------ ConversionFactory ---------------------------
+// ------------------------------------ Converter ---------------------------
 /**
- * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
+ * The main unit orchestraiting the clang AST => IR Translation Unit conversion processes.
  */
-class ConversionFactory: public boost::noncopyable {
+class Converter :  boost::noncopyable {
 
-protected:
-	///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	///							ConversionContext
-	///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	/// Keeps all the information gathered during the conversion process.
-	/// Maps for variable names, cached resolved function definitions and so on...
-	///~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	struct ConversionContext: public boost::noncopyable {
-		
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// 					Cache of already converted elements
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// 					Cache of already converted elements
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		/**
-		 * Maps Clang variable declarations (VarDecls and ParmVarDecls) to IR variables.
-		 */
-		typedef std::map<const clang::ValueDecl*, core::ExpressionPtr> VarDeclMap;
-		VarDeclMap varDeclMap;
+	/**
+	 * Maps Clang variable declarations (VarDecls and ParmVarDecls) to IR variables.
+	 */
+	typedef std::map<const clang::ValueDecl*, core::ExpressionPtr> VarDeclMap;
+	VarDeclMap varDeclMap;
 
-		/**
-		 * Stores the generated IR for function declarations
-		 */
-		typedef std::map<const clang::FunctionDecl*,
-				insieme::core::ExpressionPtr> LambdaExprMap;
-		LambdaExprMap lambdaExprCache;
+	/**
+	 * Stores the generated IR for function declarations
+	 */
+	typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> LambdaExprMap;
+	LambdaExprMap lambdaExprCache;
 
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// 						Recursive Function resolution
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /**
+     * Stores static variable names
+     **/
+    typedef std::map<const clang::VarDecl*, std::string> StaticVarDeclMap;
+    StaticVarDeclMap staticVarDeclMap;
+    int staticVarCount;
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// 						Recursive Function resolution
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-		/**
-		 * Maps a function with the variable which has been introduced to represent
-		 * the function in the recursive definition
-		 */
-		typedef std::map<const clang::FunctionDecl*, insieme::core::VariablePtr> RecVarExprMap;
-		RecVarExprMap recVarExprMap;
+	/**
+	 * Maps a function with the variable which has been introduced to represent
+	 * the function in the recursive definition
+	 */
+	typedef std::map<const clang::FunctionDecl*, insieme::core::VariablePtr> RecVarExprMap;
+	RecVarExprMap recVarExprMap;
 
-		/**
-		 * This variable stores the list of parameters passed as an argument to the currently processed
-		 * function.
-		 */
-		typedef const vector<core::VariablePtr>* ParameterList;
-		ParameterList curParameter;
-
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// 						Recursive Type resolution
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-		typedef std::map<const clang::Type*, insieme::core::TypePtr> TypeCache;
-		TypeCache typeCache;
-		
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// 						Specifically marked Objects
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-		std::set<const clang::VarDecl*> thread_private;
-		std::set<const clang::VarDecl*> volatiles;
-
-		/*
-		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
-		 * a new variable is created in function body and the value of the input parameter assigned to it
-		 */
-		typedef insieme::utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
-		WrapRefMap wrapRefMap;
-		
-		/*	FIXME: rename --> takes care of TagDecl not ClassDecl!
-			TagDecl are for struct/union/class/enum --> used in C and CXX */
-		// maps the resulting type pointer to the declaration of a class
-		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
-		ClassDeclMap classDeclMap;
+	/**
+	 * This variable stores the list of parameters passed as an argument to the currently processed
+	 * function.
+	 */
+	// TODO: remove this - not required
+	typedef const vector<core::VariablePtr>* ParameterList;
+	ParameterList curParameter;
 
 
-		/*
-		 * Keeps the CXXTemporaries together with their IR declaration stmt
-		 */
-		typedef std::map<const clang::CXXTemporary*, core::DeclarationStmtPtr> TemporaryInitMap;
-		TemporaryInitMap tempInitMap;
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// 						Specifically marked Objects
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	std::set<const clang::VarDecl*> thread_private;
+
+	/*
+	 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
+	 * a new variable is created in function body and the value of the input parameter assigned to it
+	 */
+	typedef insieme::utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
+	WrapRefMap wrapRefMap;
+
+	/*	FIXME: rename --> takes care of TagDecl not ClassDecl!
+		TagDecl are for struct/union/class/enum --> used in C and CXX */
+	// maps the resulting type pointer to the declaration of a class
+	typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
+	ClassDeclMap classDeclMap;
 
 
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// 						Diagnosis system
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		
-		/**
-		 * list of warnings up to this point
-		 */
-		std::set<std::string> warnings;
+	/*
+	 * Keeps the CXXTemporaries together with their IR declaration stmt
+	 */
+	typedef std::map<const clang::CXXTemporary*, core::DeclarationStmtPtr> TemporaryInitMap;
+	TemporaryInitMap tempInitMap;
 
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// 						context structure Constructor
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		ConversionContext() : curParameter(0) {
-		}
 
-	};
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// 						Diagnosis system
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	ConversionContext ctx;
+	/**
+	 * list of warnings up to this point
+	 */
+	std::set<std::string> warnings;
+
 
 	//	GlobalIdentMap globalIdentMap;                                  ////////////////////////////////
 	core::NodeManager& mgr;
@@ -212,24 +193,16 @@ protected:
 	class CXXExprConverter;
 	std::shared_ptr<ExprConverter> exprConvPtr;
 
-	/**
-	 * the program itself
-	 */
-	Program& program;
+	const Program& program;
 
 	/**
 	 * Maps of statements to pragmas.
 	 */
 	pragma::PragmaStmtMap pragmaMap;
 
-	/**
-	 * A pointer to the translation unit which is currently used to resolve symbols, i.e. literals
-	 * Every time a function belonging to a different translation unit is called this pointer
-	 * is set to translation unit containing the function definition.
-	 */
-	 const TranslationUnit* currTU;
+	tu::IRTranslationUnit irTranslationUnit;
 
-
+	bool used;
 
 	/**
 	 * Attach annotations to a C function of the input program.
@@ -239,11 +212,13 @@ protected:
 	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node,
 			const clang::FunctionDecl* funcDecl);
 
-	core::FunctionTypePtr addGlobalsToFunctionType(	const core::FunctionTypePtr& funcType);  // TO DESAPEAR
-
-
 public:
-	ConversionFactory(core::NodeManager& mgr, Program& program, bool isCxx = false);
+
+	Converter(core::NodeManager& mgr, const Program& program);
+
+	// should only be run once
+	tu::IRTranslationUnit convert();
+
 	// Getters & Setters
 	const core::IRBuilder& getIRBuilder() const {
 		return builder;
@@ -255,24 +230,59 @@ public:
 		return program;
 	}
 
-	clang::Preprocessor& getCurrentPreprocessor() const {
-		assert(currTU && "FATAL: Translation unit not correctly set");
-		return currTU->getCompiler().getPreprocessor();
+	const ClangCompiler& getCompiler() const {
+		return program.getCompiler();
 	}
 
-	clang::SourceManager& getCurrentSourceManager() const {
-		assert(currTU && "FATAL: Translation unit not correctly set");
-		return currTU->getCompiler().getSourceManager();
+	clang::Preprocessor& getPreprocessor() const {
+		return getCompiler().getPreprocessor();
 	}
 
-	const ClangCompiler& getCurrentCompiler() const {
-		assert(currTU && "FATAL: Translation unit not correctly set");
-		return currTU->getCompiler();
+	clang::SourceManager& getSourceManager() const {
+		return getCompiler().getSourceManager();
 	}
 
-	/** DEPRECATED */
-	void setTranslationUnit(const TranslationUnit* tu){
-		currTU = tu;
+	tu::IRTranslationUnit& getIRTranslationUnit() {
+		return irTranslationUnit;
+	}
+
+	const tu::IRTranslationUnit& getIRTranslationUnit() const {
+		return irTranslationUnit;
+	}
+
+	/**
+	 * Determines the definition of the given generic type pointer within the
+	 * internally maintained IR Translation Unit. If non is present, the given
+	 * type will be returned.
+	 */
+	const core::TypePtr lookupTypeDetails(const core::GenericTypePtr& type) const {
+		core::TypePtr res = getIRTranslationUnit()[type];
+		return (res)?res:type;
+	}
+
+	/**
+	 * Determines the definition of the given generic type pointer within the
+	 * internally maintained IR Translation Unit. If non is present, the given
+	 * type will be returned.
+	 */
+	const core::TypePtr lookupTypeDetails(const core::TypePtr& type) const {
+		return (type.isa<core::GenericTypePtr>()) ? lookupTypeDetails(type.as<core::GenericTypePtr>()) : type;
+	}
+
+
+	/**
+	 * Returns the complete function definition to the aliased Literal
+	 */
+	const core::ExpressionPtr lookupFunctionImpl(const core::LiteralPtr& expr) const{
+		core::ExpressionPtr res = getIRTranslationUnit()[expr];
+		return (res)? res:expr.as<core::ExpressionPtr>();
+	}
+
+	/**
+	 * Returns the complete function definition to the aliased Literal
+	 */
+	const core::ExpressionPtr lookupFunctionImpl(const core::ExpressionPtr& expr) const{
+		return (expr.isa<core::LiteralPtr>()) ? lookupFunctionImpl(expr.as<core::LiteralPtr>()) : expr;
 	}
 
 	/**
@@ -283,16 +293,6 @@ public:
 	 * to a member of the global data structure is returned.
 	 */
 	core::ExpressionPtr lookUpVariable(const clang::ValueDecl* valDecl);
-
-	/**
-	 * Because when literals are read from a function declaration we need to
-	 * set manually the translation unit which contains the definition of the
-	 * function, this method helps in setting the translation unit correctly.
-	 *
-	 * Returns the previous translation unit in the case it has to be set back. 
-	 */
-	const insieme::frontend::TranslationUnit* getTranslationUnitForDefinition (const clang::FunctionDecl*& fd);
-
 
 	/**
 	 * Returns a map which associates a statement of the clang AST to a pragma (if any)
@@ -336,54 +336,7 @@ public:
 	 * @param varDecl clang Variable declaration AST node
 	 * @return IR annotation
 	 */
-	core::NodeAnnotationPtr convertAttribute(
-			const clang::ValueDecl* valDecl) const;
-
-	/**
-	 * Utility function which tries to apply the deref operation. If the input expression is not a of ref type
-	 * the same expression is returned.
-	 * @param expr IR expression which could be of ref or non-ref type
-	 * @return a non RefType IR expression
-	 */
-	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
-
-	/**
-	 * Utility function which tries to return the derefed type. If the input tyoe is not a of ref type
-	 * the same type is returned.
-	 * @param type IR type which could be of ref or non-ref type
-	 * @return a non RefType IR type
-	 */
-	core::TypePtr tryDeref(const core::TypePtr& type) const;
-
-	/**
-	 * Allows access to the set of threadprivates stored in the context.
-	 */
-	const std::set<const clang::VarDecl*>& getThreadprivates() const {
-		return ctx.thread_private;
-	}
-
-	/**
-	 * Provides access to the set of threadprivates stored in the context.
-	 */
-	std::set<const clang::VarDecl*>& getThreadprivates() {
-		return ctx.thread_private;
-	}
-
-	const std::set<const clang::VarDecl*>& getVolatiles() const {
-		return ctx.volatiles;
-	}
-
-	// typedef std::function<core::ExpressionPtr (core::NodeManager&, const clang::CallExpr*)> CustomFunctionHandler;
-	/**
-	 * Registers a handler for call expressions. When a call expression to the provided function declaration
-	 * is encountered by the frontend, the provided handler is invoked. The handler produces an IR expression
-	 * which will be used to replace the call expression in the generated IR program
-	 */
-	// void registerCallExprHandler(const clang::FunctionDecl* funcDecl, CustomFunctionHandler& handler);
-
-// private:
-//	typedef std::map<const clang::FunctionDecl*, CustomFunctionHandler> CallExprHandlerMap;
-//	CallExprHandlerMap callExprHanlders;
+	core::NodeAnnotationPtr convertAttribute(const clang::ValueDecl* valDecl) const;
 
 	/**
 	 * Converts a function declaration into an IR lambda.
@@ -391,7 +344,7 @@ public:
 	 * @param isEntryPoint determine if this function is an entry point of the generated IR
 	 * @return Converted lambda
 	 */
-	virtual core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
+	core::ExpressionPtr convertFunctionDecl(const clang::FunctionDecl* funcDecl);
 
 	/**
 	 * Converts variable declarations into IR an declaration statement. This method is also responsible
@@ -400,16 +353,17 @@ public:
 	 * @param varDecl a clang variable declaration
 	 * @return The IR translation of the variable declaration
 	 */
-	virtual core::StatementPtr convertVarDecl(const clang::VarDecl* varDecl);
+	core::StatementPtr convertVarDecl(const clang::VarDecl* varDecl);
 
 	/**
 	 * Returns the default initialization value of the IR type passed as input.
 	 * @param type is the IR type
 	 * @return The default initialization value for the IR type
 	 */
-	virtual core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
+	// TODO: should most likely be subsituted / merged by with zero
+	core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
 
-	
+
 	/**
 	 * converts the initilaization of a variable
 	 * @param clangType the clang type of the whole expression, used to retrieve array sizes
@@ -418,19 +372,55 @@ public:
 	 * @param zeroInit should the values be initialized to 0?
 	 * @return the IR expression ready to be coupled with the decl
 	 */
-	virtual core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
+	// TODO: make it private where it is used
+	core::ExpressionPtr convertInitExpr(const clang::Type* clangType, const clang::Expr* expr,
 												const core::TypePtr& type, const bool zeroInit) ;
 
-	
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  some helper tools   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	
-	void buildGlobalStruct(analysis::GlobalVarCollector& globColl);
 
-	   /** 
-        * Creates the variable which should be used as a placeholder for invoking the iven
-        * function call and isert it in the map (recVarExprMap) used to store such ariables
-        * which are valid during the conversion of the given recursive function cycle
-        */
+
+	/**
+	 * Utility function which tries to apply the deref operation. If the input expression is not a of ref type
+	 * the same expression is returned.
+	 * @param expr IR expression which could be of ref or non-ref type
+	 * @return a non RefType IR expression
+	 */
+	// TODO: use the builder equivalent
+	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
+
+	/**
+	 * Utility function which tries to return the derefed type. If the input tyoe is not a of ref type
+	 * the same type is returned.
+	 * @param type IR type which could be of ref or non-ref type
+	 * @return a non RefType IR type
+	 */
+	// TODO: use the builder equivalent
+	core::TypePtr tryDeref(const core::TypePtr& type) const;
+
+	/**
+	 * Allows access to the set of threadprivates stored in the context.
+	 */
+	// TODO: try remove - apparently not used anywhere
+	const std::set<const clang::VarDecl*>& getThreadprivates() const {
+		return thread_private;
+	}
+
+	/**
+	 * Provides access to the set of threadprivates stored in the context.
+	 */
+	std::set<const clang::VarDecl*>& getThreadprivates() {
+		return thread_private;
+	}
+
+
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  some helper tools   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   /**
+	* Creates the variable which should be used as a placeholder for invoking the iven
+	* function call and isert it in the map (recVarExprMap) used to store such ariables
+	* which are valid during the conversion of the given recursive function cycle
+	*/
+	// TODO: make private to the place where it is used
 	core::StatementPtr materializeReadOnlyParams(const core::StatementPtr& body, const vector<core::VariablePtr>& params);
 
 
@@ -450,47 +440,6 @@ public:
 			const core::TypePtr& type) ;
 };
 
-// ------------------------------------ ASTConverter ---------------------------
-///
-///  AST converter holds the functionality to transform a C program AST into IR
-class ASTConverter {
-protected:
-	core::NodeManager& mgr;
-	Program& mProg;
-	ConversionFactory mFact;
-	utils::Indexer& mIndexer;
-	analysis::GlobalVarCollector& globalCollector;
-
-public:
-	
-	ASTConverter(core::NodeManager& mgr, Program& prog, analysis::GlobalVarCollector& coll, bool cpp=false):
-			mgr(mgr),
-			mProg(prog),
-			mFact(mgr, prog, cpp),
-			mIndexer(prog.getIndexer()),
-			globalCollector(coll){
-	}
-
-	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain = false);
-
-	core::ProgramPtr handleMainFunctionDecl() {
-		return handleFunctionDecl(llvm::cast<const clang::FunctionDecl>(mIndexer.getMainFunctionDefinition()), /*isMain=*/true);
-	}
-
-	core::CallExprPtr handleBody(const clang::Stmt* body, const TranslationUnit& tu);
-
-	core::LambdaExprPtr addGlobalsInitialization(const core::LambdaExprPtr& mainFunc);
-};
-
-// ------------------------------------ ASTConverter ---------------------------
-///
-///  CXXAST converter extends ASTConverter for the functionality to transform a C++ program AST into IR
-class CXXASTConverter : public ASTConverter {
-
-public:
-	CXXASTConverter(core::NodeManager& mgr, Program& prog, analysis::GlobalVarCollector& coll) :
-		ASTConverter(mgr, prog, coll, true) { }
-};
 } // End conversion namespace
 } // End frontend namespace
 } // End insieme namespace
