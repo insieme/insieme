@@ -12,14 +12,14 @@ struct B {
 
 int main() {
 
-	// an intersected function
+	// an intercepted function
 	printf("%d\n", func(0));
 
-	// an intersected type
+	// an intercepted type
 	A a;
 	printf("%d\n", a.f(4));
 
-	// a non-intersected type
+	// a non-intercepted type
 	B b;
 	printf("%d\n", b.f());
 

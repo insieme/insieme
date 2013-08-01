@@ -1,1 +1,1 @@
---intercept-file ./interceptor.config
+--intercept std::.*
