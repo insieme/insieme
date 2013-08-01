@@ -356,29 +356,29 @@ core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
 	}
 	if (!gen.isInt(expr->getType())  && !gen.isReal(expr->getType()) && !gen.isChar(expr->getType())){
 
-		dumpDetail(expr);
-		std::cout << "****" << std::endl;
-		dumpDetail(expr->getType());
-		assert(false && "this type can not be converted now to bool. implement it! ");
-	}
+	dumpDetail(expr);
+	std::cout << "****" << std::endl;
+	dumpDetail(expr->getType());
+	assert(false && "this type can not be converted now to bool. implement it! ");
+}
 
-	return castScalar (gen.getBool(), expr);
+return castScalar (gen.getBool(), expr);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Takes a clang::CastExpr, converts its subExpr into IR and wraps it with the necessary IR casts
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Converter& convFact,
-										  const clang::CastExpr* castExpr){
+									  const clang::CastExpr* castExpr){
 
-	const core::IRBuilder& builder = convFact.getIRBuilder();
-	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-	core::NodeManager& mgr = convFact.getNodeManager();
+const core::IRBuilder& builder = convFact.getIRBuilder();
+const core::lang::BasicGenerator& gen = builder.getLangBasic();
+core::NodeManager& mgr = convFact.getNodeManager();
 
-	core::ExpressionPtr expr = convFact.convertExpr(castExpr->getSubExpr());
-	core::TypePtr  targetTy = convFact.convertType(GET_TYPE_PTR(castExpr));
+core::ExpressionPtr expr = convFact.convertExpr(castExpr->getSubExpr());
+core::TypePtr  targetTy = convFact.convertType(GET_TYPE_PTR(castExpr));
 
-	core::TypePtr&& exprTy = expr->getType();
+core::TypePtr&& exprTy = expr->getType();
 
 //	if (VLOG_IS_ON(2)){
 //		VLOG(2) << "####### Expr: #######" << std::endl;
@@ -391,32 +391,31 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 //		castExpr->dump();
 //	}
 
-	// it might be that the types are already fixed:
-	// like LtoR in arrays, they will allways be a ref<...>
-	if (*exprTy == *targetTy)
-		return expr;
+// it might be that the types are already fixed:
+// like LtoR in arrays, they will allways be a ref<...>
+if (*exprTy == *targetTy)
+	return expr;
 
-	// handle implicit casts according to their kind
-	switch (castExpr->getCastKind()) {
+// handle implicit casts according to their kind
+switch (castExpr->getCastKind()) {
 
-		//////////////////////////////////////////////////////////////////////////////////////////////////////////
-		case clang::CK_LValueToRValue 	:
-		// A conversion which causes the extraction of an r-value from the operand gl-value.
-		// The result of an r-value conversion is always unqualified.
-		//
-		// IR: this is the same as out ref deref ref<a'> -> a'
-		{
-			// we use by value a member accessor. we have a better operation for this
-			// instead of derefing the memberRef
-			//  refElem   (ref<owner>, elemName) -> ref<member>   => this is composite ref
-			//  membAcces ( owner, elemName) -> member            => uses read-only, returns value
-			if(core::CallExprPtr call = expr.isa<core::CallExprPtr>()){
-				if (core::analysis::isCallOf(call, gen.getCompositeRefElem()) &&
-						(!core::analysis::isCallOf(call, mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR()) &&
-						 !core::analysis::isCallOf(call, mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR()))){
-
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	case clang::CK_LValueToRValue 	:
+	// A conversion which causes the extraction of an r-value from the operand gl-value.
+	// The result of an r-value conversion is always unqualified.
+	//
+	// IR: this is the same as out ref deref ref<a'> -> a'
+	{
+		// we use by value a member accessor. we have a better operation for this
+		// instead of derefing the memberRef
+		//  refElem   (ref<owner>, elemName) -> ref<member>   => this is composite ref
+		//  membAcces ( owner, elemName) -> member            => uses read-only, returns value
+		if(core::CallExprPtr call = expr.isa<core::CallExprPtr>()){
+			if (core::analysis::isCallOf(call, gen.getCompositeRefElem()) &&
+					(!core::analysis::isCallOf(call, mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR()) &&
+					 !core::analysis::isCallOf(call, mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR()))){
 					expr= builder.callExpr (gen.getCompositeMemberAccess(),
-											builder.deref (call[0]), call[1], builder.getTypeLiteral(targetTy));
+					builder.deref (call[0]), call[1], builder.getTypeLiteral(targetTy));
 				}
 			// TODO: we can do something similar and turn vector ref elem into vectorSubscript
 			//else if (core::analysis::isCallOf(call, gen.getVectorRefElem())) {
@@ -553,7 +552,6 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 			}
 			else{
-				std::cout << std::endl;
 				dumpDetail(expr);
 				dumpDetail(targetTy);
 				assert(false && "Non NULL casts to pointer not supported");

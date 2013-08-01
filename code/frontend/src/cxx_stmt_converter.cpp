@@ -138,7 +138,6 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 
 		// of the first node after a return is a constructor, copy constructor
 		// we are returning a value.
-		retStmt->dump();
 
 		// behind a return we might find a constructor, it might be elidable or not, but we DO NOT
 		// call a constructor on return in any case

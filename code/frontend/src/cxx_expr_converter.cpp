@@ -113,92 +113,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExplicitCastExpr(const cla
 	core::ExpressionPtr retIr = ExprConverter::VisitExplicitCastExpr(castExpr);
 	LOG_EXPR_CONVERSION(castExpr, retIr);
 	return retIr;
-/*
- *
- * TODO: is this code already covered??  marked to delete
- *
- *
-	START_LOG_EXPR_CONVERSION(castExpr);
-
-	const core::IRBuilder& builder = convFact.builder;
-	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
-	LOG_EXPR_CONVERSION(retIr);
-
-	core::TypePtr classTypePtr; // used for CK_DerivedToBase
-	core::StringValuePtr ident;
-	VLOG(2) << retIr << " " << retIr->getType();
-	switch (castExpr->getCastKind()) {
-
-	case CK_BaseToDerived: {
-		// find the class type - if not converted yet, converts and adds it
-		classTypePtr = convFact.convertType(GET_TYPE_PTR(castExpr));
-		assert(classTypePtr && "no class declaration to type pointer mapping");
-
-		VLOG(2) << "BaseToDerived Cast" << classTypePtr;
-
-		// explicitly cast base to derived with CAST-operator in IR
-		if (GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
-			retIr = builder.castExpr(classTypePtr, retIr);
-		} else {
-			retIr = builder.castExpr(builder.refType(classTypePtr), retIr);
-		}
-		return retIr;
-	}
-
-	case CK_DerivedToBase: {
-		// pointer types (in IR) are ref<ref<array -> get deref first ref, and add CArray access
-		if (GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
-			//VLOG(2) << retIr;
-			retIr = builder.deref(retIr);
-			retIr = getCArrayElemRef(builder, retIr);
-		}
-
-		// for an inheritance like D -> C -> B -> A , and a cast of D to A
-		// there is only one ExplicitCastExpr from clang, so we walk trough the inheritance
-		// and create the member access. the iterator is in order so one gets C then B then A
-		for (CastExpr::path_iterator I = castExpr->path_begin(), E = castExpr->path_end(); I != E; ++I) {
-			const CXXBaseSpecifier* base = *I;
-			const CXXRecordDecl* recordDecl = cast<CXXRecordDecl>(base->getType()->getAs<RecordType>()->getDecl());
-
-			// find the class type - if not converted yet, converts and adds it
-			classTypePtr = convFact.convertType(GET_TYPE_PTR(base));
-			assert(classTypePtr && "no class declaration to type pointer mapping");
-
-			VLOG(2) << "member name " << recordDecl->getName().data();
-			ident = builder.stringValue(recordDecl->getName().data());
-
-			VLOG(2) << "DerivedToBase Cast on " << classTypePtr;
-
-			core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
-			core::TypePtr structTy = retIr->getType();
-
-			if (structTy->getNodeType() == core::NT_RefType) {
-				// skip over reference wrapper
-				structTy = core::analysis::getReferencedType(structTy);
-				op = builder.getLangBasic().getCompositeRefElem();
-			}
-			VLOG(2) << structTy;
-
-			const core::TypePtr& memberTy =
-					core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
-
-			core::TypePtr resType = builder.refType(classTypePtr);
-
-			retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident),
-					builder.getTypeLiteral(memberTy));
-			VLOG(2) << retIr;
-		}
-		return retIr;
-	}
-	case CK_ConstructorConversion: {
-		return retIr;
-	}
-	default:
-		// call base Visitor for ExplicitCastExpr
-		return (retIr = ExprConverter::VisitExplicitCastExpr(castExpr));
-	}
-*/
-	assert(false);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -291,11 +205,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXBoolLiteralExpr(const c
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const clang::CXXMemberCallExpr* callExpr) {
 	core::CallExprPtr ret;
 	LOG_EXPR_CONVERSION(callExpr, ret);
-
-	const core::IRBuilder& builder = convFact.builder;
-
 	// TODO: static methods
 
+	const core::IRBuilder& builder = convFact.builder;
 	const CXXMethodDecl* methodDecl = callExpr->getMethodDecl();
 
 	// to begin with we translate the constructor as a regular function
@@ -313,13 +225,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 	// reconstruct Arguments list, fist one is a scope location for the object
 	ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(methodDecl) );
 	args.insert (args.begin(), ownerObj);
-
 	core::TypePtr retTy = funcTy.getReturnType();
 
 	// build expression and we are done!!!
 	ret = builder.callExpr(retTy, newFunc, args);
-
-
 	if(VLOG_IS_ON(2)){
 		dumpPretty(&(*ret));
 	}
@@ -346,7 +255,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 				<< methodDecl->getNameAsString();
 
 
-
 		convertedOp =  convFact.convertFunctionDecl(methodDecl).as<core::ExpressionPtr>();
 
 		// possible member operators: +,-,*,/,%,^,&,|,~,!,<,>,+=,-=,*=,/=,%=,^=,&=,|=,<<,>>,>>=,<<=,==,!=,<=,>=,&&,||,++,--,','
@@ -356,8 +264,9 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 		//else functioncall: ():		X::operator@( right==arg(1), args ); left == CallExpr->arg(0) == "this"
 
 		// get "this-object"
-		core::ExpressionPtr ownerObj = Visit(callExpr->getArg(0));
-		if (core::analysis::isCppRef (ownerObj->getType()))
+		core::ExpressionPtr ownerObj = convFact.convertExpr(callExpr->getArg(0));
+
+		if (IS_CPP_REF(ownerObj->getType()))
 			ownerObj = builder.toIRRef(ownerObj);
 
 		// get arguments
@@ -384,12 +293,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXOperatorCallExpr(const 
 		// binary:	operator@( left==arg(0), right==arg(1) )
 
 		convertedOp =  convFact.convertFunctionDecl(funcDecl).as<core::ExpressionPtr>();
-
 		funcTy = convertedOp.getType().as<core::FunctionTypePtr>();
 		args = getFunctionArguments(callExpr, funcDecl);
-	}
-	else {
-		assert(false && "you should not be here, cxx operator call which is neither a method nor function");
 	}
 
 	retIr = builder.callExpr(funcTy->getReturnType(), convertedOp, args);
@@ -660,7 +565,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::
 	core::ExpressionPtr subExpr = Visit(throwExpr->getSubExpr());
 
 	VLOG(2) << throwExpr->getSubExpr()->getType().getTypePtr()->getTypeClassName();
-	throwExpr->getSubExpr()->getType().getTypePtr()->dump();
 	core::TypePtr targetTy = convFact.convertType(throwExpr->getSubExpr()->getType().getTypePtr());
 	core::TypePtr srcTy = subExpr->getType();
 	VLOG(2) << (subExpr) << " " << subExpr->getType() << " " << targetTy;

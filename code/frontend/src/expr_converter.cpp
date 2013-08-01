@@ -855,7 +855,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 	core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
 	core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
-
 	core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
 
 	// handle of volatile variables

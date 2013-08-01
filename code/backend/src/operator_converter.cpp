@@ -79,7 +79,6 @@ namespace backend {
 
 
 		core::ExpressionPtr inlineLazy(const core::NodePtr& lazy) {
-
 			core::NodeManager& manager = lazy->getNodeManager();
 
 			core::ExpressionPtr exprPtr = dynamic_pointer_cast<const core::Expression>(lazy);
@@ -136,7 +135,7 @@ namespace backend {
 		 */
 		c_ast::ExpressionPtr narrow(ConversionContext& context, const core::ExpressionPtr& root, const core::ExpressionPtr& dataPath) {
 			// convert data path to access operations and use standard conversion
-			return context.getConverter().getStmtConverter().convertExpression(context, wrapNarrow(root, dataPath));
+		 	return context.getConverter().getStmtConverter().convertExpression(context, wrapNarrow(root, dataPath));
 		}
 
 		/**

@@ -72,11 +72,6 @@ namespace backend {
 
 		// -------------------------- PRE-PROCESSING ---------------------
 
-		// only for debugging purposes ...
-//		LOG(INFO) << "\n\nBefore Preprocessed code: \n" << core::printer::PrettyPrinter(source, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS);
-//		LOG(INFO) << "Semantic Checks Before Preprocessing: " << core::checks::check(source);
-//		assert(core::checks::check(source).empty() && "Expected error free input program!");
-
 		utils::Timer timer = insieme::utils::Timer(getConverterName() + " Preprocessing");
 
 		// pre-process program
@@ -84,14 +79,6 @@ namespace backend {
 
 		timer.stop();
 		LOG(INFO) << timer;
-
-		// only for debugging purposes ...
-//		LOG(INFO) << "\nPreprocessed code: \n" << core::printer::PrettyPrinter(processed, core::printer::PrettyPrinter::NO_LET_BOUND_FUNCTIONS);
-//		LOG(INFO) << "Semantic Checks: " << core::checks::check(processed);
-//		for_each(core::checks::check(processed).getAll(), [](const core::Message& msg) {
-//			LOG(INFO) << msg << " @ " << *msg.getAddress();
-//		});
-//		assert(core::check(processed, core::checks::getFullCheck()).getErrors().empty() && "Errors encountered after pre-processing");
 
 		// -------------------------- CONVERSION -------------------------
 
@@ -126,7 +113,6 @@ namespace backend {
 
 		timer.stop();
 		LOG(INFO) << timer;
-
 
 		// --------------------------- Finalize --------------------------
 
