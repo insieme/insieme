@@ -412,7 +412,6 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				if (core::analysis::isCallOf(call, gen.getCompositeRefElem()) &&
 						(!core::analysis::isCallOf(call, mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR()) &&
 						 !core::analysis::isCallOf(call, mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR()))){
-
 					expr= builder.callExpr (gen.getCompositeMemberAccess(), 
 											builder.deref (call[0]), call[1], builder.getTypeLiteral(targetTy));
 				}
@@ -551,7 +550,6 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 			}
 			else{
-				std::cout << std::endl;
 				dumpDetail(expr);
 				dumpDetail(targetTy);
 				assert(false && "Non NULL casts to pointer not supported");
