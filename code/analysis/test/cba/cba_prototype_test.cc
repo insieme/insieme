@@ -314,7 +314,8 @@ namespace cba {
 			}
 
 			// create pdf
-			system("dot -Tpdf constraints.dot -o constraints.pdf");
+//			system("dot -Tpdf constraints.dot -o constraints.pdf");
+			system("dot -Tsvg constraints.dot -o constraints.svg");
 		}
 
 	}
@@ -601,17 +602,28 @@ namespace cba {
 				"	2*x+4*y;"
 				"	2*x+4*y+e;"
 
-				// boolean constraints
-				"	2*x+1 < 2;"
-				"	2*x+1 > 2*x;"
-				"	2*x+1 == (2+1)*x;"
-				"	2*x < e;"
+				"	ref<int<4>> z = var(10);"
+				"	ref<int<4>> w = var(5);"
+				"	ref<int<4>> a = z;"
+				"	ref<ref<int<4>>> p = var(z);"
 
-				// ternary operator
-				"	(x<2)?1:2;"				// x is 2 => should be 2
-				"	(x<3)?1:2;"				// x is 2 => should be 1
-				"	(x<y)?1:2;"				// y is 3 => should be 1
-				"	(x<e)?1:2;"				// unknown => should be {1,2}
+				"	*z;"
+				"	*p+2*z;"
+
+				"	p = w;"
+				"	*p+2*z+4*e*(*p)+a;"
+//
+//				// boolean constraints
+//				"	2*x+1 < 2;"
+//				"	2*x+1 > 2*x;"
+//				"	2*x+1 == (2+1)*x;"
+//				"	2*x < e;"
+//
+//				// ternary operator
+//				"	(x<2)?1:2;"				// x is 2 => should be 2
+//				"	(x<3)?1:2;"				// x is 2 => should be 1
+//				"	(x<y)?1:2;"				// y is 3 => should be 1
+//				"	(x<e)?1:2;"				// unknown => should be {1,2}
 
 				"}",
 				symbols
@@ -621,14 +633,36 @@ namespace cba {
 		CompoundStmtAddress code(in);
 
 		CBAContext context;
-		auto constraints = generateConstraints(context, code);
+		Constraints constraints;
+		auto time = TIME(constraints = generateConstraints(context, code));
+		std::cout << "Constraint generation took: " << (time*1000) << "ms\n";
 //		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
 //		createDotDump(context, constraints);
 
-		auto solution = cba::solve(constraints);
+		Solution solution;
+		time = TIME(solution = cba::solve(constraints));
+		std::cout << "Solving constraints took: " << (time*1000) << "ms\n";
 //		std::cout << "Solutions:  " << solution << "\n";
 
 		// check values
+		EXPECT_EQ("{0}", toString(cba::getValuesOf(context, solution, code[0].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[1].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{e}", toString(cba::getValuesOf(context, solution, code[2].as<ExpressionAddress>(), A)));
+
+		EXPECT_EQ("{2}", toString(cba::getValuesOf(context, solution, code[3].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(cba::getValuesOf(context, solution, code[4].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{7}", toString(cba::getValuesOf(context, solution, code[5].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{21}", toString(cba::getValuesOf(context, solution, code[6].as<ExpressionAddress>(), A)));
+
+		EXPECT_EQ("{2}", toString(cba::getValuesOf(context, solution, code[9].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(cba::getValuesOf(context, solution, code[10].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{16}", toString(cba::getValuesOf(context, solution, code[11].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{e+16}", toString(cba::getValuesOf(context, solution, code[12].as<ExpressionAddress>(), A)));
+
+		EXPECT_EQ("{10}", toString(cba::getValuesOf(context, solution, code[17].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{30}", toString(cba::getValuesOf(context, solution, code[18].as<ExpressionAddress>(), A)));
+
+		EXPECT_EQ("{20*e+35}", toString(cba::getValuesOf(context, solution, code[20].as<ExpressionAddress>(), A)));
 
 	}
 

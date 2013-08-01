@@ -49,6 +49,9 @@
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/set_constraint/solver2.h"
 
+#include <boost/optional.hpp>
+#include "insieme/core/arithmetic/arithmetic.h"
+
 namespace insieme {
 namespace analysis {
 namespace cba {
@@ -116,6 +119,32 @@ namespace cba {
 	typedef std::tuple<core::ExpressionAddress, Context, Thread> Location;
 	extern const TypedSetType<Location> R;
 	extern const TypedSetType<Location> r;
+
+	struct Formula : public utils::Printable {
+		typedef boost::optional<core::arithmetic::Formula> formula_type;
+		formula_type formula;
+
+		Formula() : formula() {};
+		Formula(const core::arithmetic::Formula& formula) : formula(formula) {};
+
+		bool operator<(const Formula& other) const {
+			return (!formula && other.formula) || (other.formula && formula->lessThan(*other.formula));
+		}
+
+		operator bool() const {
+			return formula;
+		}
+
+	protected:
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			if (formula) return out << *formula;
+			return out << "-unknown-";
+		}
+	};
+
+	extern const TypedSetType<Formula> A;
+	extern const TypedSetType<Formula> a;
 
 	enum StateSetType {
 		Sin, Stmp, Sout		// state sets before, within (only for assignments) and after statements

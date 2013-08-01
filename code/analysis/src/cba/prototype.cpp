@@ -40,6 +40,7 @@
 #include "insieme/core/ir_address.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 namespace insieme {
 namespace analysis {
@@ -54,6 +55,9 @@ namespace cba {
 	typedef std::tuple<core::ExpressionAddress, Context, Thread> Location;
 	const TypedSetType<Location> R("R");
 	const TypedSetType<Location> r("r");
+
+	const TypedSetType<Formula> A("A");
+	const TypedSetType<Formula> a("a");
 
 	using namespace core;
 
@@ -456,6 +460,181 @@ namespace cba {
 
 		};
 
+
+		namespace {
+
+			template<typename A, typename B, typename R>
+			class total_binary_op {
+				typedef std::function<R(const A&, const B&)> fun_type;
+				fun_type fun;
+			public:
+				total_binary_op(const fun_type& fun) : fun(fun) {}
+
+				R operator()(const A& a, const B& b) const {
+					static const R fail;
+					if (!a) return fail;
+					if (!b) return fail;
+					return fun(a,b);
+				}
+			};
+
+			template<
+				typename F,
+				typename A = typename std::remove_cv<typename std::remove_reference<typename lambda_traits<F>::arg1_type>::type>::type,
+				typename B = typename std::remove_cv<typename std::remove_reference<typename lambda_traits<F>::arg2_type>::type>::type,
+				typename R = typename lambda_traits<F>::result_type
+			>
+			total_binary_op<A,B,R> total(const F& fun) {
+				return total_binary_op<A,B,R>(fun);
+			}
+
+			template<typename A, typename B, typename R>
+			class cartesion_product_binary_op {
+
+				typedef std::function<R(const A&, const B&)> fun_type;
+				fun_type fun;
+
+			public:
+
+				cartesion_product_binary_op(const fun_type& fun) : fun(fun) {}
+
+				std::set<R> operator()(const std::set<A>& a, const std::set<B>& b) const {
+					std::set<R> res;
+
+					// if there is any undefined included => it is undefined
+					if (any(a, [](const A& a)->bool { return !a; }) || any(b, [](const B& b)->bool { return !b; })) {
+						res.insert(R());
+						return res;
+					}
+
+					// compute teh cross-product
+					for(auto& x : a) {
+						for (auto& y : b) {
+							res.insert(fun(x,y));
+						}
+					}
+
+					if (res.size() > 10) {
+						// build a set only containing the unknown value
+						std::set<R> res;
+						res.insert(R());
+						return res;
+					}
+
+					return res;
+				}
+
+			};
+
+			template<
+				typename F,
+				typename A = typename std::remove_cv<typename std::remove_reference<typename lambda_traits<F>::arg1_type>::type>::type,
+				typename B = typename std::remove_cv<typename std::remove_reference<typename lambda_traits<F>::arg2_type>::type>::type,
+				typename R = typename lambda_traits<F>::result_type
+			>
+			cartesion_product_binary_op<A,B,R> cartesion_product(const F& fun) {
+				return cartesion_product_binary_op<A,B,R>(fun);
+			}
+
+
+		}
+
+
+		class ArithmeticConstraintCollector : public BasicDataFlowConstraintCollector<Formula> {
+
+			typedef BasicDataFlowConstraintCollector<Formula> super;
+
+			const core::lang::BasicGenerator& base;
+
+		public:
+
+			ArithmeticConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root)
+				: BasicDataFlowConstraintCollector<Formula>(context, constraints, root, cba::A, cba::a), base(root->getNodeManager().getLangBasic()) { };
+
+			void visitLiteral(const LiteralAddress& literal) {
+
+				// and default handling
+				super::visitLiteral(literal);
+
+				// only interested in integer literals
+				if (!base.isInt(literal->getType())) return;
+
+				// add constraint literal \in A(lit)
+				Formula value = core::arithmetic::toFormula(literal);
+				auto l_lit = context.getLabel(literal);
+
+				auto A_lit = context.getSet(A, l_lit);
+				constraints.add(elem(value, A_lit));
+
+			}
+
+
+			void visitCallExpr(const CallExprAddress& call) {
+				static const Formula unknown;
+
+				// conduct std-procedure
+				super::visitCallExpr(call);
+
+				// only care for integer expressions calling literals
+				if (!base.isInt(call->getType())) return;
+
+				// check whether it is a literal => otherwise basic data flow is handling it
+				auto fun = call->getFunctionExpr();
+				if (!fun.isa<LiteralPtr>()) return;
+
+				// get some labels / ids
+				auto A_res = context.getSet(A, context.getLabel(call));
+
+				// handle unary literals
+				if (call.size() == 1u) {
+					if (base.isRefDeref(fun)) {
+						return;		// has been handled by super!
+					}
+				}
+
+				// and binary operators
+				if (call.size() != 2u) {
+					// this value is unknown
+					constraints.add(elem(unknown, A_res));
+					return;
+				}
+
+				// get sets for operators
+				auto A_lhs = context.getSet(A, context.getLabel(call[0]));
+				auto A_rhs = context.getSet(A, context.getLabel(call[1]));
+
+				// special handling for functions
+				if (base.isSignedIntAdd(fun) || base.isUnsignedIntAdd(fun)) {
+
+					constraints.add(subsetBinary(A_lhs, A_rhs, A_res, cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
+						return *a.formula + *b.formula;
+					}))));
+
+					return;
+
+				} else if (base.isSignedIntSub(fun) || base.isUnsignedIntSub(fun)) {
+
+					constraints.add(subsetBinary(A_lhs, A_rhs, A_res, cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
+						return *a.formula - *b.formula;
+					}))));
+
+					return;
+
+				} else if (base.isSignedIntMul(fun) || base.isUnsignedIntMul(fun)) {
+
+					constraints.add(subsetBinary(A_lhs, A_rhs, A_res, cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
+						return *a.formula * *b.formula;
+					}))));
+
+					return;
+				}
+
+				// otherwise it is unknown
+				constraints.add(elem(unknown, A_res));
+			}
+
+		};
+
 		class ReferenceConstraintCollector : public BasicDataFlowConstraintCollector<Location> {
 
 			typedef BasicDataFlowConstraintCollector<Location> super;
@@ -853,8 +1032,8 @@ namespace cba {
 		};
 
 		template<typename T>
-		void addImperativeConstraints(CBAContext& context, Constraints& res, const StatementAddress& root, const TypedSetType<T>& A) {
-			ImperativeConstraintCollector<T>(context, res, root, A).visit(root);
+		void addImperativeConstraints(CBAContext& context, Constraints& res, const StatementAddress& root, const TypedSetType<T>& type) {
+			ImperativeConstraintCollector<T>(context, res, root, type).visit(root);
 		}
 	}
 
@@ -871,11 +1050,13 @@ namespace cba {
 		ControlFlowConstraintCollector(context, res, root).visit(root);
 		ConstantConstraintCollector(context, res, root).visit(root);
 		ReferenceConstraintCollector(context, res, root).visit(root);
+		ArithmeticConstraintCollector(context, res, root).visit(root);
 
 		// and the imperative constraints
 		addImperativeConstraints(context, res, root, C);
 		addImperativeConstraints(context, res, root, D);
 		addImperativeConstraints(context, res, root, R);
+		addImperativeConstraints(context, res, root, A);
 
 
 		// done
@@ -933,7 +1114,7 @@ namespace cba {
 			string setName = getName(std::get<0>(cur.first));
 			string dataName = std::get<5>(cur.first)->getName();
 			auto pos = getAddress(std::get<1>(cur.first));
-			out << "\n\t" << cur.second << " [label=\"s" << cur.second << " = " << setName << "-" << dataName << "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << "]\"];";
+			out << "\n\t" << cur.second << " [label=\"s" << cur.second << " = " << setName << "-" << dataName << "@" << std::get<4>(cur.first) << "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << "]\"];";
 		}
 
 		// link sets
