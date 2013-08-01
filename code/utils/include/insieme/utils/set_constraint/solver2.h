@@ -134,276 +134,345 @@ namespace set_constraint_2 {
 		};
 	};
 
+	namespace detail {
 
-	// an element constraint:   e \in A
-	template<typename E>
-	class ElementOfConstraint : public Constraint {
+		typedef std::vector<SetID> SetIDs;
 
-		E e;
-		TypedSetID<E> a;
-
-	public:
-
-		ElementOfConstraint(const E& e, const TypedSetID<E>& a)
-			: Constraint(toVector<SetID>(), toVector<SetID>(a)), e(e), a(a) {}
-
-		virtual void init(Assignment& ass, vector<SetID>& workList) const {
-			ass[a].insert(e);
-			workList.push_back(a);
+		SetIDs combine(const SetIDs& a, const SetIDs& b) {
+			SetIDs res = a;
+			for(auto x : b) {
+				if (!contains(a, x)) {
+					res.push_back(x);
+				}
+			}
+			return res;
 		}
 
-		virtual bool check(const Assignment& ass) const {
-			return contains(ass[a], e);
-		}
-
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << e << " in " << a;
-		}
-
-		virtual std::ostream& writeDotEdge(std::ostream& out) const {
-			out << "e" << (int*)&e << " [label=\"" << e << "\"]\n";
-			return out << "e" << (int*)&e << " -> " << a << " [label=\"in\"];";
-		}
-	};
 
 
-	// a simple sub-set constraint:   A \subset B
-	template<typename A, typename B>
-	class SubSetConstraint : public Constraint {
+		template<typename Filter, typename Executor>
+		class ComposedConstraint : public Constraint {
 
-		TypedSetID<A> a;
-		TypedSetID<B> b;
+			Filter filter;
+			Executor executor;
 
-	public:
+		public:
 
-		SubSetConstraint(const TypedSetID<A>& a, const TypedSetID<B>& b)
-			: Constraint(toVector<SetID>(a), toVector<SetID>(b)), a(a), b(b) {}
+			ComposedConstraint(const Filter& filter, const Executor& executor)
+				: Constraint(combine(filter.getInputs(), executor.getInputs()), executor.getOutputs()), filter(filter), executor(executor) {}
 
-		virtual bool update(Assignment& ass) const {
-			return Constraint::addAll(ass,a,b);
-		}
+			virtual void init(Assignment& ass, vector<SetID>& workList) const {
+				if (update(ass)) {
+					for(auto cur : getOutputs()) {
+						workList.push_back(cur);
+					}
+				}
+			}
 
-		virtual bool check(const Assignment& ass) const {
-			return set::isSubset(ass[a], ass[b]);
-		}
+			virtual bool update(Assignment& ass) const {
+				return filter(ass) && executor.update(ass);
+			}
 
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << a << " sub " << b;
-		}
+			virtual bool check(const Assignment& ass) const {
+				return !filter(ass) || executor.check(ass);
+			}
 
-		virtual std::ostream& writeDotEdge(std::ostream& out) const {
-			return out << a << " -> " << b << " [label=\"sub\"];";
-		}
-	};
+			virtual std::ostream& printTo(std::ostream& out) const {
+				if (!Filter::is_true) {
+					filter.print(out);
+					out << " => ";
+				}
+				executor.print(out);
+				return out;
+			}
 
+			virtual std::ostream& writeDotEdge(std::ostream& out) const {
+				executor.writeDotEdge(out);
+				return out << "  [label=\"" << *this << "\"]\n";
+			}
 
-	// e \in A  =>   B \subset C
-	template<typename E, typename A>
-	class SubSetIfConstraint : public Constraint {
+		};
 
-		E e;
-		TypedSetID<E> a;
-		TypedSetID<A> b;
-		TypedSetID<A> c;
+		// -------------------- Filter --------------------------------
 
-	public:
+		template<bool isTrue = false>
+		struct Filter {
+			enum { is_true = isTrue };
+		};
 
-		SubSetIfConstraint(const E& e, const TypedSetID<E>& a, const TypedSetID<A>& b, const TypedSetID<A>& c)
-			: Constraint(toVector<SetID>(a,b), toVector<SetID>(c)), e(e), a(a), b(b), c(c) {}
+		struct TrueFilter : public Filter<true> {
+			bool operator()(const Assignment& ass) const {
+				return true;
+			}
+			void print(std::ostream& out) const {
+				out << "true";
+			}
+			const SetIDs& getInputs() const {
+				static const SetIDs empty;
+				return empty;
+			}
+		};
 
-		virtual bool update(Assignment& ass) const {
-			if (!set::contains(ass[a], e)) return false;
-			return Constraint::addAll(ass,b,c);
-		}
+		template<typename A, typename B>
+		struct AndFilter : public Filter<> {
+			A a; B b;
+			bool operator()(const Assignment& ass) const {
+				return a(ass) && b(ass);
+			}
+			void print(std::ostream& out) const {
+				a.print(out); out << " and "; b.print(out);
+			}
+			SetIDs getInputs() const {
+				return combine(a.getInputs(), b.getInputs());
+			}
+		};
 
-		virtual bool check(const Assignment& ass) const {
-			return !set::contains(ass[a],e) || set::isSubset(ass[b], ass[c]);
-		}
+		template<typename T>
+		struct ElementOfFilter : public Filter<>{
+			T e;
+			TypedSetID<T> a;
+			ElementOfFilter(const T& e, const TypedSetID<T>& a)
+				: e(e), a(a) {}
+			bool operator()(const Assignment& ass) const {
+				return contains(ass[a], e);
+			}
+			void print(std::ostream& out) const {
+				out << e << " in " << a;
+			}
+			SetIDs getInputs() const {
+				return toVector<SetID>(a);
+			}
+		};
 
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << e << " in " << a << " => " << b << " sub " << c;
-		}
+		template<typename T>
+		struct BiggerThanFilter : public Filter<>{
+			TypedSetID<T> a;
+			std::size_t s;
+			BiggerThanFilter(const TypedSetID<T>& a, std::size_t s)
+				: a(a), s(s) {}
+			bool operator()(const Assignment& ass) const {
+				return ass[a].size() > s;
+			}
+			void print(std::ostream& out) const {
+				out << "|" << a << "| > " << s;
+			}
+			SetIDs getInputs() const {
+				return toVector<SetID>(a);
+			}
+		};
 
-		virtual std::ostream& writeDotEdge(std::ostream& out) const {
-			return out << b << " -> " << c << " [label=\"if " << e << " in " << a << "\"];";
-		}
-
-	};
-
-
-	// |A| > s  =>   B \subset C
-	template<typename A, typename B>
-	class SubSetIfBiggerConstraint : public Constraint {
-
-		std::size_t s;
-		TypedSetID<A> a;
-		TypedSetID<B> b;
-		TypedSetID<B> c;
-
-	public:
-
-		SubSetIfBiggerConstraint(std::size_t s, const TypedSetID<A>& a, const TypedSetID<B>& b, const TypedSetID<B>& c)
-			: Constraint(toVector<SetID>(a,b), toVector<SetID>(c)), s(s), a(a), b(b), c(c) {}
-
-		virtual bool update(Assignment& ass) const {
-			if (ass[a].size() <= s) return false;
-			return Constraint::addAll(ass,b,c);
-		}
-
-		virtual bool check(const Assignment& ass) const {
-			return ass[a].size() <= s || set::isSubset(ass[b], ass[c]);
-		}
-
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "|" << a << "| > " << s << " => " << b << " sub " << c;
-		}
-
-		virtual std::ostream& writeDotEdge(std::ostream& out) const {
-			return out << b << " -> " << c << " [label=\"if |" << a << "| > " << s << "\"];";
-		}
-	};
-
-
-	// |A \ {t} | > s  =>   B \subset C
-	template<typename E, typename B>
-	class SubSetIfReducedBiggerConstraint : public Constraint {
-
-		std::size_t s;
-		E e;
-		TypedSetID<E> a;
-		TypedSetID<B> b;
-		TypedSetID<B> c;
-
-	public:
-
-		SubSetIfReducedBiggerConstraint(const TypedSetID<E>& a, const E& e, std::size_t s, const TypedSetID<B>& b, const TypedSetID<B>& c)
-			: Constraint(toVector<SetID>(a,b), toVector<SetID>(c)), s(s), e(e), a(a), b(b), c(c) {}
-
-		virtual bool update(Assignment& ass) const {
-			auto& set = ass[a];
-			auto n = set.size() - (set::contains(set, e) ? 1 : 0);
-			if (n <= s) return false;
-			return Constraint::addAll(ass,b,c);
-		}
-
-		virtual bool check(const Assignment& ass) const {
-			return (ass[a].size() - ((set::contains(ass[a],e))?1:0)) <= s || set::isSubset(ass[b], ass[c]);
-		}
-
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "|" << a << " - {" << e << "}| > " << s << " => " << b << " sub " << c;
-		}
-
-		virtual std::ostream& writeDotEdge(std::ostream& out) const {
-			return out << b << " -> " << c << " [label=\"if |" << a << " - {" << e << "}| > " << s << "\"];";
-		}
-	};
+		template<typename T>
+		struct BiggerThanReducedFilter : public Filter<>{
+			TypedSetID<T> a;
+			T e;
+			std::size_t s;
+			BiggerThanReducedFilter(const TypedSetID<T>& a, const T& e, std::size_t s)
+				: a(a), e(e), s(s) {}
+			bool operator()(const Assignment& ass) const {
+				auto& set = ass[a];
+				return (set.size() - (contains(set, e)?1:0)) > s;
+			}
+			void print(std::ostream& out) const {
+				out << "|" << a << " - {" << e << "}| > " << s;
+			}
+			SetIDs getInputs() const {
+				return toVector<SetID>(a);
+			}
+		};
 
 
-	// f(A) \subset B
-	template<typename A, typename B>
-	class SubSetUnary : public Constraint {
+		// -------------------- Executor --------------------------------
 
-		typedef std::function<std::set<B>(const std::set<A>&)> fun_type;
+		struct Executor {
+		protected:
 
-		TypedSetID<A> a;
-		TypedSetID<B> b;
-		fun_type f;
+			// a utility function merging sets
+			template<typename A>
+			bool addAll(Assignment& ass, const std::set<A>& srcSet, const TypedSetID<A>& trgSet) const {
+				// get actual set
+				auto& trg = ass[trgSet];
 
-	public:
+				// add values to target set
+				bool newData = false;
+				for(const auto& x : srcSet) {
+					newData = trg.insert(x).second || newData;
+				}
 
-		SubSetUnary(const TypedSetID<A>& a, const TypedSetID<B>& b, const fun_type& f)
-			: Constraint(toVector<SetID>(a), toVector<SetID>(b)), a(a), b(b), f(f) {}
+				// if target set has changed
+				return newData;
+			};
 
-		virtual bool update(Assignment& ass) const {
-			return Constraint::addAll(ass, f(ass[a]), b);
-		}
+			// a utility function merging sets
+			template<typename A>
+			bool addAll(Assignment& ass, const TypedSetID<A>& srcSet, const TypedSetID<A>& trgSet) const {
+				const Assignment& cass = ass;
+				return addAll(ass, cass[srcSet], trgSet);
+			};
+		};
 
-		virtual bool check(const Assignment& ass) const {
-			return set::isSubset(f(ass[a]), ass[b]);
-		}
+		template<typename T>
+		class ElementOf : public Executor {
+			T e;
+			TypedSetID<T> a;
+		public:
+			ElementOf(const T& e, const TypedSetID<T>& a)
+				: e(e), a(a) {}
+			const SetIDs& getInputs() const {
+				static const SetIDs empty;
+				return empty;
+			}
+			SetIDs getOutputs() const {
+				return toVector<SetID>(a);
+			}
+			void print(std::ostream& out) const {
+				out << e << " in " << a;
+			}
+			bool update(Assignment& ass) const {
+				return ass[a].insert(e).second;
+			}
+			bool check(const Assignment& ass) const {
+				return set::contains(ass[a], e);
+			}
+			void writeDotEdge(std::ostream& out) const {
+				out << "e" << (int*)&e << " [label=\"" << e << "\"]\n";
+				out << "e" << (int*)&e << " -> " << a;
+			}
+		};
 
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "f(" << a << ") sub " << b;
-		}
+		template<typename T>
+		class Subset : public Executor {
+			TypedSetID<T> a;
+			TypedSetID<T> b;
+		public:
+			Subset(const TypedSetID<T>& a, const TypedSetID<T>& b)
+				: a(a), b(b) {}
+			SetIDs getInputs() const {
+				return toVector<SetID>(a);
+			}
+			SetIDs getOutputs() const {
+				return toVector<SetID>(b);
+			}
+			void print(std::ostream& out) const {
+				out << a << " sub " << b;
+			}
+			bool update(Assignment& ass) const {
+				return addAll(ass, a, b);
+			}
+			bool check(const Assignment& ass) const {
+				return set::isSubset(ass[a], ass[b]);
+			}
+			void writeDotEdge(std::ostream& out) const {
+				out << a << " -> " << b;
+			}
+		};
 
-		virtual std::ostream& writeDotEdge(std::ostream& out) const {
-			return out << a << " -> " << b << " [label=\"f(in)\"];";
-		}
-	};
+		template<typename A, typename R>
+		class SubsetUnary : public Executor {
+
+			typedef std::function<std::set<R>(const std::set<A>&)> fun_type;
+
+			TypedSetID<A> a;
+			TypedSetID<R> r;
+			fun_type f;
+
+		public:
+			SubsetUnary(const TypedSetID<A>& a, const TypedSetID<R>& r, const fun_type& f)
+				: a(a), r(r), f(f) {}
+			SetIDs getInputs() const {
+				return toVector<SetID>(a);
+			}
+			SetIDs getOutputs() const {
+				return toVector<SetID>(r);
+			}
+			void print(std::ostream& out) const {
+				out << "f(" << a << ") sub " << r;
+			}
+			bool update(Assignment& ass) const {
+				return addAll(ass, f(ass[a]), r);
+			}
+			bool check(const Assignment& ass) const {
+				return set::isSubset(f(ass[a]), ass[r]);
+			}
+			void writeDotEdge(std::ostream& out) const {
+				out << a << " -> " << r;
+			}
+		};
 
 
-	// f(A,B) \subset C
-	template<typename A, typename B, typename R>
-	class SubSetBinary : public Constraint {
+		template<typename A, typename B, typename R>
+		class SubsetBinary : public Executor {
 
-		typedef std::function<std::set<R>(const std::set<A>&, const std::set<B>&)> fun_type;
+			typedef std::function<std::set<R>(const std::set<A>&, const std::set<B>&)> fun_type;
 
-		TypedSetID<A> a;
-		TypedSetID<B> b;
-		TypedSetID<R> r;
-		fun_type f;
+			TypedSetID<A> a;
+			TypedSetID<B> b;
+			TypedSetID<R> r;
+			fun_type f;
 
-	public:
+		public:
+			SubsetBinary(const TypedSetID<A>& a, const TypedSetID<B>& b, const TypedSetID<R>& r, const fun_type& f)
+				: a(a), b(b), r(r), f(f) {}
+			SetIDs getInputs() const {
+				return toVector<SetID>(a,b);
+			}
+			SetIDs getOutputs() const {
+				return toVector<SetID>(r);
+			}
+			void print(std::ostream& out) const {
+				out << "f(" << a << "," << b << ") sub " << r;
+			}
+			bool update(Assignment& ass) const {
+				return addAll(ass, f(ass[a],ass[b]), r);
+			}
+			bool check(const Assignment& ass) const {
+				return set::isSubset(f(ass[a],ass[b]), ass[r]);
+			}
+			void writeDotEdge(std::ostream& out) const {
+				out << a << " -> " << r;
+				out << b << " -> " << r;
+			}
+		};
 
-		SubSetBinary(const TypedSetID<A>& a, const TypedSetID<B>& b, const TypedSetID<R>& r, const fun_type& f)
-			: Constraint(toVector<SetID>(a,b), toVector<SetID>(r)), a(a), b(b), r(r), f(f) {}
+	}	// end of details namespace
 
-		virtual bool update(Assignment& ass) const {
-			return Constraint::addAll(ass, f(ass[a],ass[b]), r);
-		}
 
-		virtual bool check(const Assignment& ass) const {
-			return set::isSubset(f(ass[a],ass[b]), ass[r]);
-		}
-
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "f(" << a << "," << b << ") sub " << r;
-		}
-
-		virtual std::ostream& writeDotEdge(std::ostream& out) const {
-			out << a << " -> " << r << " [label=\"f(a,..)\"];";
-			out << b << " -> " << r << " [label=\"f(..,b)\"];";
-			return out;
-		}
-	};
 
 	// ----------------------------- Constraint Factory Functions ------------------------------
 
 
 	template<typename E>
 	ConstraintPtr elem(const E& e, const TypedSetID<E>& a) {
-		return std::make_shared<ElementOfConstraint<E>>(e,a);
+		return std::make_shared<detail::ComposedConstraint<detail::TrueFilter, detail::ElementOf<E>>>(detail::TrueFilter(), detail::ElementOf<E>(e,a));
 	}
 
-	template<typename A, typename B>
-	ConstraintPtr subset(const TypedSetID<A>& a, const TypedSetID<B>& b) {
-		return std::make_shared<SubSetConstraint<A,B>>(a,b);
+	template<typename A>
+	ConstraintPtr subset(const TypedSetID<A>& a, const TypedSetID<A>& b) {
+		return std::make_shared<detail::ComposedConstraint<detail::TrueFilter, detail::Subset<A>>>(detail::TrueFilter(), detail::Subset<A>(a,b));
 	}
 
 	template<typename E, typename A>
 	ConstraintPtr subsetIf(const E& e, const TypedSetID<E>& a, const TypedSetID<A>& b, const TypedSetID<A>& c) {
-		return std::make_shared<SubSetIfConstraint<E,A>>(e,a,b,c);
+		return std::make_shared<detail::ComposedConstraint<detail::ElementOfFilter<E>, detail::Subset<A>>>(detail::ElementOfFilter<E>(e,a), detail::Subset<A>(b,c));
 	}
 
 	template<typename A, typename B>
 	ConstraintPtr subsetIfBigger(const TypedSetID<A>& a, std::size_t s, const TypedSetID<B>& b, const TypedSetID<B>& c) {
-		return std::make_shared<SubSetIfBiggerConstraint<A,B>>(s,a,b,c);
+		return std::make_shared<detail::ComposedConstraint<detail::BiggerThanFilter<A>, detail::Subset<A>>>(detail::BiggerThanFilter<A>(a,s), detail::Subset<B>(b,c));
 	}
 
 	template<typename E, typename A>
 	ConstraintPtr subsetIfReducedBigger(const TypedSetID<E>& a, const E& e, std::size_t s, const TypedSetID<A>& b, const TypedSetID<A>& c) {
-		return std::make_shared<SubSetIfReducedBiggerConstraint<E,A>>(a,e,s,b,c);
+		return std::make_shared<detail::ComposedConstraint<detail::BiggerThanReducedFilter<E>, detail::Subset<A>>>(detail::BiggerThanReducedFilter<E>(a,e,s), detail::Subset<A>(b,c));
 	}
 
 	template<typename A, typename B, typename F>
 	ConstraintPtr subsetUnary(const TypedSetID<A>& in, const TypedSetID<B>& out, const F& fun) {
-		return std::make_shared<SubSetUnary<A,B>>(in, out, fun);
+		return std::make_shared<detail::ComposedConstraint<detail::TrueFilter, detail::SubsetUnary<A,B>>>(detail::TrueFilter(), detail::SubsetUnary<A,B>(in, out, fun));
 	}
 
 	template<typename A, typename B, typename R, typename F>
 	ConstraintPtr subsetBinary(const TypedSetID<A>& a, const TypedSetID<B>& b, const TypedSetID<R>& r, const F& fun) {
-		return std::make_shared<SubSetBinary<A,B,R>>(a, b, r, fun);
+		return std::make_shared<detail::ComposedConstraint<detail::TrueFilter, detail::SubsetBinary<A,B,R>>>(detail::TrueFilter(), detail::SubsetBinary<A,B,R>(a, b, r, fun));
 	}
 
 	// ----------------------------- Constraint Container ------------------------------
