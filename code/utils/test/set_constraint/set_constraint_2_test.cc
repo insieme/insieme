@@ -183,6 +183,49 @@ namespace set_constraint_2 {
 
 	}
 
+	TEST(Solver, Functions) {
+
+		auto s = [](int id) { return TypedSetID<int>(id); };
+
+		auto inc = [](const std::set<int>& a)->std::set<int> {
+			std::set<int> res;
+			for(auto x : a) { res.insert(x+1); }
+			return res;
+		};
+
+		auto add = [](const std::set<int>& a, const std::set<int>& b)->std::set<int> {
+			std::set<int> res;
+			for(auto x : a) {
+				for (auto y : b) {
+					res.insert(x+y);
+				}
+			}
+			return res;
+		};
+
+		Constraints problem = {
+
+				elem(5, s(1)),
+				elem(6, s(2)),
+				elem(7, s(2)),
+
+				subsetUnary(s(1), s(3), inc),
+				subsetUnary(s(2), s(4), inc),
+
+				subsetBinary(s(1), s(2), s(5), add),
+		};
+
+		auto res = solve(problem);
+		EXPECT_EQ("{s1={5},s2={6,7},s3={6},s4={7,8},s5={11,12}}", toString(res));
+
+		EXPECT_EQ("{5}", toString(res[s(1)])) << res;
+		EXPECT_EQ("{6,7}", toString(res[s(2)])) << res;
+		EXPECT_EQ("{6}", toString(res[s(3)])) << res;
+		EXPECT_EQ("{7,8}", toString(res[s(4)])) << res;
+		EXPECT_EQ("{11,12}", toString(res[s(5)])) << res;
+
+	}
+
 } // end namespace set_constraint
 } // end namespace utils
 } // end namespace insieme
