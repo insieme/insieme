@@ -77,6 +77,13 @@ namespace {
 
 		Formula visitLiteral(const LiteralPtr& cur) {
 			checkType(cur);
+
+			// if it is a value => use it as a value
+			if (Value::isValue(cur)) {
+				return Value(cur);
+			}
+
+			// check whether it is a integer constant
 			try {
 				return utils::numeric_cast<int64_t>(cur->getValue()->getValue());
 			}catch(boost::bad_lexical_cast) {

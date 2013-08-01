@@ -279,6 +279,17 @@ namespace arithmetic {
 				return true;
 			}
 
+			// all literals that aren't integers are values
+			if (expr->getNodeType() == core::NT_Literal) {
+				auto lit = expr.as<LiteralPtr>();
+
+				// check first character to determine whether it is constant
+				char first = lit->getStringValue()[0];
+				if ('0' <= first && first <= '9') return false;
+				if (first == '+' || first == '-') return false;
+				return true;
+			}
+
 			// all literals are values
 			if (!topLevel && expr->getNodeType() == core::NT_Literal) {
 				return true;
