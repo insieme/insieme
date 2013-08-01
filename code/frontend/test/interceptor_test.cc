@@ -105,8 +105,8 @@ TEST(Interception, FileTest) {
 	NodeManager manager;
 	fe::Program prog( manager, SRC_DIR "/inputs/interceptor/interceptor_test.cpp" );
 
-	//setting interceptor to use config file
-	prog.getInterceptor().loadConfigFile(std::string(SRC_DIR) + "/inputs/interceptor/interceptor_test.cfg");
+	//setup interceptor 
+	prog.getInterceptor().loadConfigSet( {"ns::simpleFunc.*", "ns::S.*", "nsInc::.*"} );
 	
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 

@@ -351,7 +351,7 @@ namespace tu {
 					auto call = res.as<CallExprPtr>();
 					if (call[0]->getType().isa<StructTypePtr>()){
 						auto tmp = builder.accessMember(call[0], call[1].as<LiteralPtr>()->getValue());
-							// type changed... do we have any cppRef to unwrap?
+							// type might changed, we have to unwrap it
 						if (IS_CPP_REF(tmp->getType()))
 							res = builder.deref(builder.toIRRef(tmp));
 						else

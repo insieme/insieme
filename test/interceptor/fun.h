@@ -1,9 +1,5 @@
 namespace ns {
 
-	// a function to be intersected
-	int func(int i) {
-		int x = i;
-		return x;
-	}
-
+	// a function to be intersepted
+	int func(int i);
 }

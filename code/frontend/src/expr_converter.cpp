@@ -855,7 +855,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 	core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
 	core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
-
 	core::TypePtr exprTy = convFact.convertType( GET_TYPE_PTR(binOp) );
 
 	// handle of volatile variables
@@ -1217,6 +1216,11 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 		}*/
 
 		core::TypePtr type = subExpr->getType();
+        //if we have a cpp ref we have to unwrap it
+        if(IS_CPP_REF(type)) {
+            subExpr = builder.toIRRef(subExpr);
+            type = subExpr->getType();
+        }
 		assert( type->getNodeType() == core::NT_RefType && "Illegal increment/decrement operand - not a ref type" );
 		core::TypePtr elementType = GET_REF_ELEM_TYPE(type);
 

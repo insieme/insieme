@@ -51,6 +51,7 @@ namespace insieme {
 namespace frontend {
 
 	using std::map;
+	using std::set;
 	using std::vector;
 	using std::string;
 
@@ -114,10 +115,10 @@ namespace frontend {
 		map<string,string> definitions;
 
 		/**
-		 * The name of the configuration file of the intercepter.
+		 * A list of string representing the regular expression to be intercepted
+		 * by default "std::.*" and "__gnu_cxx::.*" are intercepted 
 		 */
-		// TODO: this should not be a string pointing to a file!!!
-		string intercepterConfigFile;
+		set<string> interceptions;
 
 		/**
 		 * Additional flags - a bitwise boolean combination of Options (see Option)
@@ -230,17 +231,24 @@ namespace frontend {
 		}
 
 		/**
-		 * Obtains the name of the intercepter configuration file.
+		 * Updates the list of strings to be intercepted
 		 */
-		const string& getIntercepterConfigFile() const {
-			return intercepterConfigFile;
+		void setInterceptions(const vector<string>& toIntercept) {
+			this->interceptions.insert(toIntercept.begin(), toIntercept.end());
 		}
 
 		/**
-		 * Updates the name of the intercepter configuration file.
+		 * Adds a single regular expression string to the intercetion set
 		 */
-		void setIntercepterConfigFile(const string& configFile) {
-			this->intercepterConfigFile = configFile;
+		void setInterception(const string& toIntercept) {
+			this->interceptions.insert(toIntercept);
+		}	
+
+		/**
+		 * Obtains a reference to the currently defined interceptions.
+		 */
+		const set<string>& getInterceptions() const {
+			return interceptions;
 		}
 
 		/**

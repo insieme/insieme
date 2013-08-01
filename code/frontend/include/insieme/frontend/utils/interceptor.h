@@ -63,15 +63,18 @@ class Interceptor {
 public:
 	Interceptor(
 			insieme::core::NodeManager& mgr,
-			const vector<boost::filesystem::path>& stdLibDirs)
+			const vector<boost::filesystem::path>& stdLibDirs,
+			const std::set<std::string>& interceptSet)
 		: builder(mgr), stdLibDirs(stdLibDirs),
 		
 		// by default intercept std:: and __gnu_cxx:: namespaces
 		// __gnu_cxx is needed for the iterator of std::vector for example
-		toIntercept( { "std::.*", "__gnu_cxx::.*" } ), rx("("+toString(join(")|(", toIntercept))+")")
+		toIntercept(interceptSet), 
+	
+		//joins all the strings in the toIntercept-set to one big regEx
+		rx("("+toString(join(")|(", toIntercept))+")")
 	{}
 
-	void loadConfigFile(std::string fileName);	
 	void loadConfigSet(std::set<std::string> toIntercept);	
 	
 	bool isIntercepted(const string& name) const;
@@ -90,7 +93,10 @@ private:
 
 	const vector<boost::filesystem::path> stdLibDirs;
 
+	// set of strings representing the regEx to be intercepted
 	std::set<std::string> toIntercept;
+
+	// the combined regex from the toIntercept-set
 	boost::regex rx;
 };
 

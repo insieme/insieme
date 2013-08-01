@@ -62,6 +62,9 @@ namespace {
 		TypePtr fail;
 		const auto& basic = source.getNodeManager().getLangBasic();
 
+		if (source.isa<GenericTypePtr>())
+			return source;
+
 		// if data path is ROOT, the target type is equal to the source type
 		if (basic.isDataPathRoot(datapath)){
 			return source;		// no step to be taken
@@ -1237,6 +1240,10 @@ OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 						Message::ERROR));
 		return res;
 	}
+
+	// generic types can not be checked, we must trust 
+	if (narrowType.isa<GenericTypePtr>())
+		return res;
 
 	// check whether specified target type is correct
 	if (*narrowType != *analysis::getRepresentedType(trgArg)){

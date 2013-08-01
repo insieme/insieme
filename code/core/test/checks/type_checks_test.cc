@@ -1098,12 +1098,12 @@ TEST(NarrowExpression, Basic) {
 		" ref<two> obj; "
 		" ref<int<4>> x = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"b\")),lit(\"a\")), lit(int<4>));"
 		" ref<int<4>> y = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"b\")), lit(int<4>));"
-		" ref<int<8>> z = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"a\")), lit(int<8>));"
+		" ref<int<8>> z = ref.narrow( obj, dp.member(dp.member(dp.root, lit(\"a\")),lit(\"a\")), lit(int<8>));"  // this test is no longer wrong since generic types can be narrowed
 		"}"
 	);
 	ASSERT_TRUE (res);
 	errors = check(res, typeCheck);
-	EXPECT_EQ(3u, errors.size());
+	EXPECT_EQ(2u, errors.size());
 }
 
 TEST(NarrowExpression, Parents) {
@@ -1190,7 +1190,7 @@ TEST(ExpandExpression, Basic) {
 		);
 	ASSERT_TRUE (res);
 	errors = check(res, typeCheck);
-	EXPECT_EQ(3u, errors.size());
+	EXPECT_EQ(2u, errors.size());
 }
 
 TEST(ExpandExpression, Parents) {

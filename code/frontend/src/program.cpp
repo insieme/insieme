@@ -191,7 +191,7 @@ struct Program::ProgramImpl {
 	ProgramImpl(core::NodeManager& mgr, const path& file, const ConversionSetup& setup) :
 		tranUnit(setup, file),
 		stdLibDirs(::transform(setup.getStdLibIncludeDirectories(), [](const path& cur) { return boost::filesystem::canonical(cur); } )),
-		interceptor(mgr, setup.getStdLibIncludeDirectories())
+		interceptor(mgr, setup.getStdLibIncludeDirectories(), setup.getInterceptions())
 		{}
 };
 
@@ -206,15 +206,6 @@ const ClangCompiler& Program::getCompiler() const {
 
 utils::Interceptor& Program::getInterceptor() const { return pimpl->interceptor; }
 const vector<boost::filesystem::path>& Program::getStdLibDirs() const { return pimpl->stdLibDirs; }
-
-void Program::setupInterceptor() {
-	if(!config.getIntercepterConfigFile().empty()) {
-		//if we have a interceptor config file we use this to setup the interceptor
-		pimpl->interceptor.loadConfigFile(config.getIntercepterConfigFile());
-	}
-
-	//by default we intercept "std::.*" and "__gnu_cxx::.*" -- set in the ctor
-}
 
 bool Program::isCxx() const {
 	return getCompiler().isCXX();
