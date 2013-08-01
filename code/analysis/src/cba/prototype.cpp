@@ -684,13 +684,14 @@ namespace cba {
 								return res;
 							}
 
-							auto constraint = fun(*x.formula, *y.formula);
-							if (!containsTrue && !constraint.isUnsatisfiable()) {
+							// pair< valid, unsatisfiable >
+							pair<bool,bool> validity = fun(*x.formula, *y.formula);
+							if (!containsTrue && !validity.second) {
 								res.insert(true);
 								containsTrue = true;
 							}
 
-							if (!containsFalse && !constraint.isValid()) {
+							if (!containsFalse && !validity.first) {
 								res.insert(false);
 								containsFalse = true;
 							}
@@ -815,34 +816,59 @@ namespace cba {
 					auto A_rhs = context.getSet(cba::A, context.getLabel(call[1]));
 
 					typedef core::arithmetic::Formula F;
+					typedef core::arithmetic::Inequality Inequality;		// shape: formula <= 0
 
 					if(base.isSignedIntLt(fun) || base.isUnsignedIntLt(fun)) {
-						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) { return a < b; })));
+						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) {
+							// a < b  ... if !(a >= b) = !(b <= a) = !(b-a <= 0)
+							Inequality i(b-a);
+							return std::make_pair(i.isUnsatisfiable(), i.isValid());
+						})));
 						return;
 					}
 
 					if(base.isSignedIntLe(fun) || base.isUnsignedIntLe(fun)) {
-						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) { return a <= b; })));
+						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) {
+							// a <= b ... if (a-b <= 0)
+							Inequality i(a-b);
+							return std::make_pair(i.isValid(), i.isUnsatisfiable());
+						})));
 						return;
 					}
 
 					if(base.isSignedIntGe(fun) || base.isUnsignedIntGe(fun)) {
-						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) { return a >= b; })));
+						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b){
+							// a >= b ... if (b <= a) = (b-a <= 0)
+							Inequality i(b-a);
+							return std::make_pair(i.isValid(), i.isUnsatisfiable());
+						})));
 						return;
 					}
 
 					if(base.isSignedIntGt(fun) || base.isUnsignedIntGt(fun)) {
-						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) { return a > b; })));
+						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b){
+							// a > b ... if !(a <= b) = !(a-b <= 0)
+							Inequality i(a-b);
+							return std::make_pair(i.isUnsatisfiable(), i.isValid());
+						})));
 						return;
 					}
 
 					if(base.isSignedIntEq(fun) || base.isUnsignedIntEq(fun)) {
-						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) { return core::arithmetic::eq(a, b); })));
+						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) {
+							// just compare formulas (in normal form)
+							bool equal = (a==b);
+							return std::make_pair(equal, !equal && a.isConstant() && b.isConstant());
+						})));
 						return;
 					}
 
 					if(base.isSignedIntNe(fun) || base.isUnsignedIntNe(fun)) {
-						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) { return core::arithmetic::ne(a, b); })));
+						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) {
+							// just compare formulas (in normal form)
+							bool equal = (a==b);
+							return std::make_pair(!equal && a.isConstant() && b.isConstant(), equal);
+						})));
 						return;
 					}
 				}

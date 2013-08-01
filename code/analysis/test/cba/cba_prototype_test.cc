@@ -787,10 +787,12 @@ namespace cba {
 				"	1==2;"
 				"	2==2;"
 				"	1==e;"
+				"	e==e;"
 
 				"	1!=2;"
 				"	2!=2;"
 				"	1!=e;"
+				"	e!=e;"
 
 				"}",
 				symbols
@@ -859,10 +861,12 @@ namespace cba {
 		EXPECT_EQ("{0}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
 		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
 		EXPECT_EQ("{0,1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
 
 		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
 		EXPECT_EQ("{0}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
 		EXPECT_EQ("{0,1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{0}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
 
 	}
 
