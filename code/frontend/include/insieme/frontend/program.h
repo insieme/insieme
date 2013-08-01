@@ -132,9 +132,6 @@ public:
 
 	const vector<boost::filesystem::path>& getStdLibDirs() const;
 
-	// TODO: eliminate this => setup should be parsed in the driver and the result should be stored in the conversion setup
-	void setupInterceptor();
-
 	bool isCxx() const;
 
 	const pragma::PragmaList& getPragmaList() const;

@@ -69,32 +69,6 @@ std::string fixQualifiedName(std::string name) {
 
 } //end anonymous namespace
 
-/// reads the given file and loads the regEx into the toIntercept-set
-void Interceptor::loadConfigFile(std::string fileName) {
-	namespace fs = boost::filesystem;
-	const fs::path configPath = fileName;
-	if(	fs::exists(configPath) ) {
-		fs::ifstream configFile(configPath);
-		if(!configFile.is_open()) {
-			LOG(WARNING) << "Interceptor couldn't open config file " << fileName;	
-			return;
-		}
-
-		std::set<std::string> set;
-		std::string nameToIntercept;
-		while( getline(configFile, nameToIntercept) ) {
-			set.insert(nameToIntercept);
-		}
-		configFile.close();
-
-		// adapt configuration
-		loadConfigSet(set);
-	} else {
-		LOG(WARNING) << "Interceptor didn't find config file " << fileName;	
-		return;
-	}
-}
-
 /// Empties the toIntercept-set and fills it with the given set tI
 void Interceptor::loadConfigSet(std::set<std::string> tI) {
 	// clear the toIntercept-set of its default values
@@ -104,7 +78,6 @@ void Interceptor::loadConfigSet(std::set<std::string> tI) {
 	toIntercept.insert(tI.begin(), tI.end());
 
 	// update regular expression:
-
 	//use one big regex for all strings to intercept
 	rx = boost::regex("("+toString(join(")|(", toIntercept))+")");
 }

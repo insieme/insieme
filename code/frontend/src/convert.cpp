@@ -638,6 +638,8 @@ core::ExpressionPtr Converter::defaultInitVal(const core::TypePtr& valueType) co
 			return builder.literal("0.0f", type);
 		if(mgr.getLangBasic().isReal8(type))
 			return builder.literal("0.0", type);
+		if(mgr.getLangBasic().isReal16(type))
+			return builder.literal("0.0", type);
 	}
 	// handle booleans initialization
 	if (mgr.getLangBasic().isBool(type)) {

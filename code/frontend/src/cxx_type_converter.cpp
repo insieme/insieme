@@ -345,7 +345,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 			ctorDecl->isCopyConstructor() ||
 			ctorDecl->isMoveConstructor() ){
 
-			if (ctorDecl->isUserProvided ()){
+			if (ctorDecl->isUserProvided () && (ctorDecl->getAccess()!=clang::AccessSpecifier::AS_private)){
 
 				// the function is a template spetialization, but if it has no body, we wont
 				// convert it, it was never instanciated
@@ -354,7 +354,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 				}
 
 				core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
-				if (ctorLambda ){
+				if (ctorLambda){
 					assert(ctorLambda);
 					ctorLambda = convFact.lookupFunctionImpl(ctorLambda);
                     assert(!ctorLambda.isa<core::LiteralPtr>());

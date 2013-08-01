@@ -146,7 +146,9 @@ namespace cmd {
 
 		// forward options
 		frontend::ConversionJob job(InputFiles, IncludePaths);
-		job.setIntercepterConfigFile(Intercept);
+
+		// add intercepts
+		for (auto i : Interceptions) job.setInterception(i);
 
 		// add macro definitions
 		for (auto def : Defs) job.setDefinition(def);

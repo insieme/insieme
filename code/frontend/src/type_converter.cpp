@@ -147,7 +147,7 @@ core::TypePtr Converter::TypeConverter::VisitBuiltinType(const BuiltinType* buld
 	// real types
 	case BuiltinType::Float:		return gen.getFloat();
 	case BuiltinType::Double:		return gen.getDouble();
-	case BuiltinType::LongDouble:	return gen.getDouble(); // unsopported FIXME
+	case BuiltinType::LongDouble:	return gen.getLongDouble();
 
 	// not supported types
 	case BuiltinType::NullPtr:		return builder.typeVariable("nullptr_t"); //gen.getAnyRef(); //FIXME how do we handle the std::nullptr_t??
