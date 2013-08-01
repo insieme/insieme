@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -93,7 +93,7 @@ namespace {
 			if (boost::regex_match(old, zeroValueFilter)) res.assign("false");
 			else res.assign("true");
 		}
-			
+
 		////////////////////////////////////////
 		// CAST TO CHAR
 		if (gen.isChar(targetTy) ){
@@ -108,7 +108,7 @@ namespace {
 
 		// cleanup precission
 		if(boost::regex_match(old.c_str(), what, precissionFilter)){
-			// what[1] contains the number 
+			// what[1] contains the number
 			// what[2] contains the precission markers
 			old.assign(what[1].first, what[1].second);
 		}
@@ -142,7 +142,7 @@ namespace {
 		// CAST TO REAL
 		if (gen.isReal(targetTy)){
 			// make sure has decimal point
-			
+
 			if(boost::regex_match(old.c_str(), what, numberFilter)){
 				res.assign(what[1].first, what[1].second);
 				if (what[2].first == what[0].second){
@@ -188,7 +188,7 @@ namespace {
 			}
 		}
 		return expr;
-	}	
+	}
 }
 
 namespace insieme {
@@ -206,8 +206,10 @@ std::size_t getPrecission(const core::TypePtr& type, const core::lang::BasicGene
 	if (gen.isReal(type)){
 		if 		(gen.isReal4(type)) return 4;
 		else if (gen.isReal8(type)) return 8;
+		else if (gen.isReal16(type)) return 16;
 		else if (gen.isFloat(type)) return 4;
 		else if (gen.isDouble(type)) return 8;
+		else if (gen.isLongDouble(type)) return 16;
 	}
 	else if (gen.isSignedInt(type)){
 		if 		(gen.isInt1(type)) return 1;
@@ -251,7 +253,7 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	if (core::analysis::isCppRef(targetTy) || core::analysis::isConstCppRef(targetTy)) {
 		return expr;
 	}
-	
+
 	// is this the cast of a literal: to simplify code we'll return
 	// a literal of the spected type
 	if (expr->getNodeType() == core::NT_Literal){
@@ -281,23 +283,23 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 	bool precision = true;
 	std::size_t bytes    = getPrecission(targetTy, gen);
 	switch(code){
-		case 11: 
-			// only if target precission is smaller, we may have a precission loosse. 
+		case 11:
+			// only if target precission is smaller, we may have a precission loosse.
 			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getIntPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
-		case 22: 
+		case 22:
 			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getUintPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
 		case 33:
 			if (bytes != getPrecission(exprTy, gen)) return builder.callExpr(gen.getRealPrecisionFix(), expr, builder.getIntParamLiteral(bytes));
 			else return expr;
-		case 44: 
+		case 44:
 		case 55: // no cast;
 			// this is a cast withing the same type.
 			// is a preccision adjust, if is on the same type,
 			// no need to adjust anything
 			return expr;
-			
+
 			break;
 		case 12: op = gen.getUnsignedToInt(); break;
 		case 13: op = gen.getRealToInt(); break;
@@ -324,7 +326,7 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 		case 53: op = gen.getRealToBool();    precision=false; break;
 		case 54: op = gen.getCharToBool();    precision=false; break;
 
-		default: 
+		default:
 				 std::cerr << "code: " << (int) code << std::endl;
 				 assert(false && "cast not defined");
 	}
@@ -334,7 +336,7 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 		args.push_back(builder.getIntParamLiteral(bytes));
 		return builder.callExpr(targetTy, op, args);
 	}
-	else 
+	else
 		return builder.callExpr(targetTy, op, expr);
 }
 
@@ -342,7 +344,7 @@ core::ExpressionPtr castScalar(const core::TypePtr& targetTy, const core::Expres
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 core::ExpressionPtr castToBool (const core::ExpressionPtr& expr){
-	
+
 	const core::TypePtr& exprTy = expr->getType();
 	core::IRBuilder builder( exprTy->getNodeManager() );
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
@@ -371,7 +373,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 	const core::IRBuilder& builder = convFact.getIRBuilder();
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-	core::NodeManager& mgr = convFact.getNodeManager();	
+	core::NodeManager& mgr = convFact.getNodeManager();
 
 	core::ExpressionPtr expr = convFact.convertExpr(castExpr->getSubExpr());
 	core::TypePtr  targetTy = convFact.convertType(GET_TYPE_PTR(castExpr));
@@ -399,7 +401,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_LValueToRValue 	:
-		// A conversion which causes the extraction of an r-value from the operand gl-value. 
+		// A conversion which causes the extraction of an r-value from the operand gl-value.
 		// The result of an r-value conversion is always unqualified.
 		//
 		// IR: this is the same as out ref deref ref<a'> -> a'
@@ -407,13 +409,13 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			// we use by value a member accessor. we have a better operation for this
 			// instead of derefing the memberRef
 			//  refElem   (ref<owner>, elemName) -> ref<member>   => this is composite ref
-			//  membAcces ( owner, elemName) -> member            => uses read-only, returns value 
+			//  membAcces ( owner, elemName) -> member            => uses read-only, returns value
 			if(core::CallExprPtr call = expr.isa<core::CallExprPtr>()){
 				if (core::analysis::isCallOf(call, gen.getCompositeRefElem()) &&
 						(!core::analysis::isCallOf(call, mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToIR()) &&
 						 !core::analysis::isCallOf(call, mgr.getLangExtension<core::lang::IRppExtensions>().getRefConstCppToIR()))){
 
-					expr= builder.callExpr (gen.getCompositeMemberAccess(), 
+					expr= builder.callExpr (gen.getCompositeMemberAccess(),
 											builder.deref (call[0]), call[1], builder.getTypeLiteral(targetTy));
 				}
 			// TODO: we can do something similar and turn vector ref elem into vectorSubscript
@@ -452,7 +454,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		case clang::CK_FloatingCast 	:
 		// Casting between floating types of different size. (double) f (float) ld
 			return castScalar( targetTy, expr);
-		
+
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_NoOp:
 		// A conversion which does not affect the type other than (possibly) adding qualifiers. i
@@ -482,18 +484,18 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			if (!IS_IR_REF(exprTy)){
 				retIr = builder.callExpr(gen.getRefVar(),expr);
 			}
-		
+
 			return builder.callExpr(gen.getRefVectorToRefArray(), retIr);
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_BitCast 	:
-		// A conversion which causes a bit pattern of one type to be reinterpreted as a bit pattern 
-		//of another type. 
-		//Generally the operands must have equivalent size and unrelated types.  The pointer conversion 
-		//char* -> int* is a bitcast. A conversion from any pointer type to a C pointer type is a bitcast unless 
-		//it's actually BaseToDerived or DerivedToBase. A conversion to a block pointer or ObjC pointer type is a 
-		//bitcast only if the operand has the same type kind; otherwise, it's one of the specialized casts below.  
+		// A conversion which causes a bit pattern of one type to be reinterpreted as a bit pattern
+		//of another type.
+		//Generally the operands must have equivalent size and unrelated types.  The pointer conversion
+		//char* -> int* is a bitcast. A conversion from any pointer type to a C pointer type is a bitcast unless
+		//it's actually BaseToDerived or DerivedToBase. A conversion to a block pointer or ObjC pointer type is a
+		//bitcast only if the operand has the same type kind; otherwise, it's one of the specialized casts below.
 		//Vector coercions are bitcasts.
 		{
 			// char* -> const char* is a bitcast in clang, and not a Noop, but we drop qualifiers
@@ -505,16 +507,16 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				return expr;
 			}
 
-			// is a cast of Null to another pointer type: 
+			// is a cast of Null to another pointer type:
 			// we rebuild null
 			if (*expr == *builder.literal(expr->getType(), "0")) {
 				return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 			}
 
 			// cast from void*
-			if (gen.isAnyRef(exprTy)) { 
+			if (gen.isAnyRef(exprTy)) {
 				core::TypePtr elementType = core::analysis::getReferencedType(targetTy);
-				return builder.callExpr(targetTy, gen.getNodeManager().getLangBasic().getRefReinterpret(), 
+				return builder.callExpr(targetTy, gen.getNodeManager().getLangBasic().getRefReinterpret(),
 										expr, builder.getTypeLiteral(elementType));
 			}
 
@@ -525,16 +527,16 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				//expression remove it
 				innerExpr = expr.as<core::LambdaExprPtr>()->getParameterList()[0];
 			}
-			return builder.callExpr(targetTy, builder.getNodeManager().getLangBasic().getRefReinterpret(), 
+			return builder.callExpr(targetTy, builder.getNodeManager().getLangBasic().getRefReinterpret(),
 									innerExpr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_VectorSplat 	:
-		// A conversion from an arithmetic type to a vector of that element type. Fills all elements 
+		// A conversion from an arithmetic type to a vector of that element type. Fills all elements
 		//("splats") with the source value. __attribute__((ext_vector_type(4))) int v = 5;
 		{
-			return builder.callExpr(gen.getVectorInitUniform(), 
+			return builder.callExpr(gen.getVectorInitUniform(),
 					expr,
 					builder.getIntTypeParamLiteral(targetTy.as<core::VectorTypePtr>()->getSize())
 				);
@@ -544,8 +546,8 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		case clang::CK_IntegralToPointer 	:
 		//Integral to pointer. A special kind of reinterpreting conversion. Applies to normal,
 		//ObjC, and block pointers. (char*) 0x1001aab0 reinterpret_cast<int*>(0)
-		{	
-			// is a cast of Null to another pointer type: 
+		{
+			// is a cast of Null to another pointer type:
 			// we rebuild null
 			if (*expr == *builder.literal(expr->getType(), "0")) {
 				return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
@@ -569,7 +571,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_PointerToBoolean 	:
-		//case clang::CK_PointerToBoolean - Pointer to boolean conversion. A check against null. Applies to normal, ObjC, 
+		//case clang::CK_PointerToBoolean - Pointer to boolean conversion. A check against null. Applies to normal, ObjC,
 		// and block pointers.
 
 			return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getRefIsNull(), expr ));
@@ -577,12 +579,12 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		//  PARTIALY IMPLEMENTED
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
-		
+
 		case clang::CK_NullToPointer 	:
 		// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
 		{
-		
-			if (gen.isAnyRef(targetTy)) { return gen.getRefNull(); } 
+
+			if (gen.isAnyRef(targetTy)) { return gen.getRefNull(); }
 
 			// cast NULL to anything else
 			if ((targetTy->getNodeType() == core::NT_RefType) && (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr))) {
@@ -598,19 +600,19 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		//Cast to void, discarding the computed value. (void) malloc(2048)
 		{
 			// this cast ignores inner expression, is not very usual, but might show off when dealing
-			// with null pointer.  
+			// with null pointer.
 			if (gen.isUnit(targetTy)) { return gen.getUnitConstant(); }
 		}
 
-		
+
 		/*
 		case clang::CK_UncheckedDerivedToBase:
 		//A conversion from a C++ class pointer/reference to a base class that can assume that
-		//the derived pointer is not null. const A &a = B(); b->method_from_a(); 
+		//the derived pointer is not null. const A &a = B(); b->method_from_a();
 		{
 			// if is a derived class, we will return a narrow expression with the datapath
 			// to access the right superclass
-			
+
 			// TODO: do we need to check if is pointerType?
 			// in case of pointer, the inner expression is modeled as ref< array < C, 1> >
 			// it is needed to deref the first element
@@ -625,7 +627,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			return expr;
 		}
 		*/
-		
+
 		case clang::CK_UncheckedDerivedToBase:
 		case clang::CK_DerivedToBase:
 		//A conversion from a C++ class pointer to a base class pointer. A *a = new B();
@@ -649,23 +651,23 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 				expr = builder.refParent(expr, targetTy);
 			}
 
-			if(GET_TYPE_PTR(castExpr)->isPointerType()){ 
+			if(GET_TYPE_PTR(castExpr)->isPointerType()){
 				// is a pointer type -> return pointer
 				expr = builder.callExpr(gen.getScalarToArray(), expr);
 			}
-		
+
 			VLOG(2) << expr;
 			return expr;
 		}
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		case clang::CK_BaseToDerived:
-		//A conversion from a C++ class pointer/reference to a derived class pointer/reference. B *b = static_cast<B*>(a); 
+		//A conversion from a C++ class pointer/reference to a derived class pointer/reference. B *b = static_cast<B*>(a);
 		{
 			//we want to know the TYPE of static_cast<TYPE>()
 			targetTy = convFact.convertType(GET_TYPE_PTR(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getTypeInfoAsWritten()));
 			VLOG(2) << exprTy << " " << targetTy;
-	
+
 			core::ExpressionPtr retIr;
 			if (core::analysis::isCppRef(exprTy) && core::analysis::isCppRef(targetTy)) {
 				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastRefCppToRefCpp(), expr, builder.getTypeLiteral((targetTy)));
@@ -675,11 +677,11 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			}
 			else if (core::analysis::isCppRef(exprTy) && core::analysis::isConstCppRef(targetTy)) {
 				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getStaticCastRefCppToConstCpp(), expr, builder.getTypeLiteral((targetTy)));
-			} 
-			else if (	!(core::analysis::isCppRef(exprTy) || core::analysis::isConstCppRef(exprTy)) 
+			}
+			else if (	!(core::analysis::isCppRef(exprTy) || core::analysis::isConstCppRef(exprTy))
 					&&  (core::analysis::isCppRef(targetTy) || core::analysis::isConstCppRef(targetTy)) ) {
 				// statically casting an object to a reference
-				
+
 				// first wrap object in cpp_ref
 				expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
 
@@ -701,11 +703,11 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 		case clang::CK_Dynamic:
 		// A C++ dynamic_cast.
-		{	
+		{
 			//we want to know the TYPE of dynamic_cast<TYPE>()
 			targetTy = convFact.convertType(GET_TYPE_PTR(llvm::dyn_cast<clang::ExplicitCastExpr>(castExpr)->getTypeInfoAsWritten()));
 			VLOG(2) << exprTy << " " << targetTy;
-			
+
 			core::ExpressionPtr retIr;
 			if (core::analysis::isCppRef(exprTy) && core::analysis::isCppRef(targetTy)) {
 				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCastRefCppToRefCpp(), expr, builder.getTypeLiteral((targetTy)));
@@ -715,11 +717,11 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 			}
 			else if (core::analysis::isCppRef(exprTy) && core::analysis::isConstCppRef(targetTy)) {
 				retIr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getDynamicCastRefCppToConstCpp(), expr, builder.getTypeLiteral((targetTy)));
-			} 
-			else if (	!(core::analysis::isCppRef(exprTy) || core::analysis::isConstCppRef(exprTy)) 
+			}
+			else if (	!(core::analysis::isCppRef(exprTy) || core::analysis::isConstCppRef(exprTy))
 					&&  (core::analysis::isCppRef(targetTy) || core::analysis::isConstCppRef(targetTy)) ) {
 				// dynamically casting an object to a reference
-				
+
 				// first wrap object in cpp_ref
 				expr = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), expr);
 
@@ -744,13 +746,13 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		case clang::CK_Dependent 	:
-		/*case clang::CK_Dependent - A conversion which cannot yet be analyzed because either the expression 
-		* or target type is dependent. These are created only for explicit casts; dependent ASTs aren't 
+		/*case clang::CK_Dependent - A conversion which cannot yet be analyzed because either the expression
+		* or target type is dependent. These are created only for explicit casts; dependent ASTs aren't
 		* required to even approximately type-check. (T*) malloc(sizeof(T)) reinterpret_cast<intptr_t>(A<T>::alloc());
 		* */
 
 		case clang::CK_LValueBitCast 	:
-		/* case clang::CK_LValueBitCast - A conversion which reinterprets the address of an l-value as an l-value of a different 
+		/* case clang::CK_LValueBitCast - A conversion which reinterprets the address of an l-value as an l-value of a different
 		* kind. Used for reinterpret_casts of l-value expressions to reference types. bool b; reinterpret_cast<char&>(b) = 'a';
 		* */
 
@@ -784,7 +786,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 
 		case clang::CK_ReinterpretMemberPointer 	:
 		/*case clang::CK_ReinterpretMemberPointer - Reinterpret a member pointer as a different kind of member pointer.
-		* C++ forbids this from crossing between function and object types, but otherwise does not restrict it. 
+		* C++ forbids this from crossing between function and object types, but otherwise does not restrict it.
 		* However, the only operation that is permitted on a "punned" member pointer is casting it back to the original type,
 		* which is required to be a lossless operation (although many ABIs do not guarantee this on all possible intermediate types).
 		* */
@@ -795,7 +797,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		* */
 
 		case clang::CK_PointerToIntegral 	:
-		/*case clang::CK_PointerToIntegral - Pointer to integral. A special kind of reinterpreting conversion. Applies to normal, 
+		/*case clang::CK_PointerToIntegral - Pointer to integral. A special kind of reinterpreting conversion. Applies to normal,
 		* ObjC, and block pointers. (intptr_t) "help!"
 		* */
 
@@ -822,7 +824,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		* */
 
 		case clang::CK_FloatingComplexToReal 	:
-		/*Converts a floating point complex to floating point real of the source's element type. Just discards the imaginary 
+		/*Converts a floating point complex to floating point real of the source's element type. Just discards the imaginary
 		* component. _Complex long double -> long double.
 		* */
 
@@ -839,12 +841,12 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		* */
 
 		case clang::CK_IntegralRealToComplex 	:
-		/*Converts from an integral real to an integral complex whose element type matches the source. Injects the value as the 
+		/*Converts from an integral real to an integral complex whose element type matches the source. Injects the value as the
 		* real component with a zero imaginary component. long -> _Complex long.
 		* */
 
 		case clang::CK_IntegralComplexToReal 	:
-		/*Converts an integral complex to an integral real of the source's element type by discarding the imaginary component. 
+		/*Converts an integral complex to an integral real of the source's element type by discarding the imaginary component.
 		* _Complex short -> short.
 		* */
 
@@ -853,7 +855,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		* */
 
 		case clang::CK_IntegralComplexCast 	:
-		/*Converts between different integral complex types. _Complex char -> _Complex long long _Complex unsigned int -> 
+		/*Converts between different integral complex types. _Complex char -> _Complex long long _Complex unsigned int ->
 		* _Complex signed int.
 		* */
 
@@ -867,18 +869,18 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		* */
 
 		case clang::CK_ARCConsumeObject 	:
-		/*[ARC] Consumes a retainable object pointer that has just been produced, e.g. as the return value of a retaining call. 
+		/*[ARC] Consumes a retainable object pointer that has just been produced, e.g. as the return value of a retaining call.
 		* Enters a cleanup to call objc_release at some indefinite time.
 		* */
 
 		case clang::CK_ARCReclaimReturnedObject 	:
-		/*[ARC] Reclaim a retainable object pointer object that may have been produced and autoreleased as part of a function 
+		/*[ARC] Reclaim a retainable object pointer object that may have been produced and autoreleased as part of a function
 		* return sequence.
 		* */
 
 		case clang::CK_ARCExtendBlockObject 	:
 		/*[ARC] Causes a value of block type to be copied to the heap, if it is not already there. A number of other operations in
-		* ARC cause blocks to be copied; this is for cases where that would not otherwise be guaranteed, such as when casting to a 
+		* ARC cause blocks to be copied; this is for cases where that would not otherwise be guaranteed, such as when casting to a
 		* non-block pointer type.
 		* */
 
@@ -891,7 +893,7 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 		default:
 			assert(false && "not all options listed, is this clang 3.2? maybe should upgrade Clang support");
 	}
-	
+
 	assert(false && "control reached an invalid point!");
 
 	return expr;
@@ -899,6 +901,6 @@ core::ExpressionPtr performClangCastOnIR (insieme::frontend::conversion::Convert
 }
 
 } // end utils namespace
-} // end frontend namespace 
-} // end insieme namespace 
+} // end frontend namespace
+} // end insieme namespace
 

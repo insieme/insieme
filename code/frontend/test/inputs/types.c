@@ -59,6 +59,9 @@ void basic_type_test() {
 	#pragma test "decl ref<real<8>> v0 =  var(undefined(type<real<8>>))"
 	double g;
 
+	#pragma test "decl ref<real<16>> v0 =  var(undefined(type<real<16>>))"
+	long double h;
+
 	#pragma test "decl ref<vector<real<4>,3>> v0 =  var(undefined(type<vector<real<4>,3>>))"
 	float v[3];
 
