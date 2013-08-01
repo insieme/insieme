@@ -46,6 +46,9 @@ namespace insieme {
 namespace analysis {
 namespace cba {
 
+	using std::set;
+	using std::vector;
+
 	const TypedSetType<core::ExpressionAddress> C("C");
 	const TypedSetType<core::ExpressionAddress> c("c");
 
@@ -58,6 +61,9 @@ namespace cba {
 
 	const TypedSetType<Formula> A("A");
 	const TypedSetType<Formula> a("a");
+
+	const TypedSetType<bool> B("B");
+	const TypedSetType<bool> b("b");
 
 	using namespace core;
 
@@ -184,7 +190,7 @@ namespace cba {
 
 			typedef IRVisitor<void,Address> super;
 
-			std::set<NodeAddress> processed;
+			set<NodeAddress> processed;
 
 		protected:
 
@@ -192,7 +198,7 @@ namespace cba {
 			Constraints& constraints;
 
 			// the list of all terms in the targeted code
-			std::vector<ExpressionAddress> terms;
+			vector<ExpressionAddress> terms;
 
 			// the two set types to deal with
 			const TypedSetType<T>& A;		// the value set (labels -> values)
@@ -498,8 +504,8 @@ namespace cba {
 
 				cartesion_product_binary_op(const fun_type& fun) : fun(fun) {}
 
-				std::set<R> operator()(const std::set<A>& a, const std::set<B>& b) const {
-					std::set<R> res;
+				set<R> operator()(const set<A>& a, const set<B>& b) const {
+					set<R> res;
 
 					// if there is any undefined included => it is undefined
 					if (any(a, [](const A& a)->bool { return !a; }) || any(b, [](const B& b)->bool { return !b; })) {
@@ -516,7 +522,7 @@ namespace cba {
 
 					if (res.size() > 10) {
 						// build a set only containing the unknown value
-						std::set<R> res;
+						set<R> res;
 						res.insert(R());
 						return res;
 					}
@@ -605,32 +611,245 @@ namespace cba {
 
 				// special handling for functions
 				if (base.isSignedIntAdd(fun) || base.isUnsignedIntAdd(fun)) {
-
 					constraints.add(subsetBinary(A_lhs, A_rhs, A_res, cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
 						return *a.formula + *b.formula;
 					}))));
-
 					return;
+				}
 
-				} else if (base.isSignedIntSub(fun) || base.isUnsignedIntSub(fun)) {
-
+				if (base.isSignedIntSub(fun) || base.isUnsignedIntSub(fun)) {
 					constraints.add(subsetBinary(A_lhs, A_rhs, A_res, cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
 						return *a.formula - *b.formula;
 					}))));
-
 					return;
+				}
 
-				} else if (base.isSignedIntMul(fun) || base.isUnsignedIntMul(fun)) {
-
+				if (base.isSignedIntMul(fun) || base.isUnsignedIntMul(fun)) {
 					constraints.add(subsetBinary(A_lhs, A_rhs, A_res, cartesion_product(total([](const Formula& a, const Formula& b)->Formula {
 						return *a.formula * *b.formula;
 					}))));
-
 					return;
 				}
 
 				// otherwise it is unknown
 				constraints.add(elem(unknown, A_res));
+			}
+
+		};
+
+		namespace {
+
+			template<
+				typename F,
+				typename A = typename std::remove_cv<typename std::remove_reference<typename lambda_traits<F>::arg1_type>::type>::type,
+				typename B = typename std::remove_cv<typename std::remove_reference<typename lambda_traits<F>::arg2_type>::type>::type,
+				typename R = typename lambda_traits<F>::result_type
+			>
+			struct pair_wise {
+				F f;
+				pair_wise(const F& f) : f(f) {}
+				set<R> operator()(const set<A>& a, const set<B>& b) const {
+					set<R> res;
+					for(auto& x : a) {
+						for(auto& y : b) {
+							res.insert(f(x,y));
+						}
+					}
+					return res;
+				}
+			};
+
+			template<typename F>
+			pair_wise<F> pairwise(const F& f) {
+				return pair_wise<F>(f);
+			}
+
+			template<typename Comparator>
+			std::function<set<bool>(const set<Formula>&,const set<Formula>&)> compareFormula(const Comparator& fun) {
+				return [=](const set<Formula>& a, const set<Formula>& b)->set<bool> {
+					static const set<bool> unknown({true, false});
+
+					set<bool> res;
+
+					// quick check
+					for(auto& x : a) if (!x) return unknown;
+					for(auto& x : b) if (!x) return unknown;
+
+					// check out pairs
+					bool containsTrue = false;
+					bool containsFalse = false;
+					for(auto& x : a) {
+						for(auto& y : b) {
+							if (containsTrue && containsFalse) {
+								return res;
+							}
+
+							auto constraint = fun(*x.formula, *y.formula);
+							if (!containsTrue && !constraint.isUnsatisfiable()) {
+								res.insert(true);
+								containsTrue = true;
+							}
+
+							if (!containsFalse && !constraint.isValid()) {
+								res.insert(false);
+								containsFalse = true;
+							}
+						}
+					}
+					return res;
+				};
+			}
+
+			bool isBooleanSymbol(const ExpressionPtr& expr) {
+				auto& gen = expr->getNodeManager().getLangBasic();
+				return expr.isa<LiteralPtr>() && !gen.isTrue(expr) && !gen.isFalse(expr);
+			}
+
+		}
+
+		class BooleanConstraintCollector : public BasicDataFlowConstraintCollector<bool> {
+
+			typedef BasicDataFlowConstraintCollector<bool> super;
+
+			const core::lang::BasicGenerator& base;
+
+		public:
+
+			BooleanConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root)
+				: BasicDataFlowConstraintCollector<bool>(context, constraints, root, cba::B, cba::b), base(root->getNodeManager().getLangBasic()) { };
+
+			void visitLiteral(const LiteralAddress& literal) {
+
+				// and default handling
+				super::visitLiteral(literal);
+
+				// only interested in boolean literals
+				if (!base.isBool(literal->getType())) return;
+
+				// add constraint literal \in A(lit)
+				bool isTrue = base.isTrue(literal);
+				bool isFalse = base.isFalse(literal);
+
+				auto l_lit = context.getLabel(literal);
+
+				if (isTrue  || (!isTrue && !isFalse)) constraints.add(elem(true, context.getSet(B, l_lit)));
+				if (isFalse || (!isTrue && !isFalse)) constraints.add(elem(false, context.getSet(B, l_lit)));
+
+			}
+
+
+			void visitCallExpr(const CallExprAddress& call) {
+
+				// conduct std-procedure
+				super::visitCallExpr(call);
+
+				// only care for integer expressions calling literals
+				if (!base.isBool(call->getType())) return;
+
+				// check whether it is a literal => otherwise basic data flow is handling it
+				auto fun = call->getFunctionExpr();
+				if (!fun.isa<LiteralPtr>()) return;
+
+				// get some labels / ids
+				auto B_res = context.getSet(B, context.getLabel(call));
+
+				// handle unary literals
+				if (call.size() == 1u) {
+
+					// check whether it is a de-ref
+					if (base.isRefDeref(fun)) {
+						return;		// has been handled by super!
+					}
+
+					// support negation
+					if (base.isBoolLNot(fun)) {
+						auto B_arg = context.getSet(B, context.getLabel(call[0]));
+						constraints.add(subsetUnary(B_arg, B_res, [](const set<bool>& in)->set<bool> {
+							set<bool> out;
+							for(bool cur : in) out.insert(!cur);
+							return out;
+						}));
+						return;
+					}
+				}
+
+				// and binary operators
+				if (call.size() != 2u) {
+					// this value is unknown => might be both
+					constraints.add(elem(true, B_res));
+					constraints.add(elem(false, B_res));
+					return;
+				}
+
+
+				// boolean relations
+				{
+					// get sets for operators
+					auto B_lhs = context.getSet(B, context.getLabel(call[0]));
+					auto B_rhs = context.getSet(B, context.getLabel(call[1]));
+
+					if (base.isBoolEq(fun)) {
+						// equality is guaranteed if symbols are identical - no matter what the value is
+						if (isBooleanSymbol(call[0]) && isBooleanSymbol(call[1])) {
+							constraints.add(elem(call[0].as<ExpressionPtr>() == call[1].as<ExpressionPtr>(), B_res));
+						} else {
+							constraints.add(subsetBinary(B_lhs, B_rhs, B_res, pairwise([](bool a, bool b) { return a == b; })));
+						}
+						return;
+					}
+
+					if (base.isBoolNe(fun)) {
+						// equality is guaranteed if symbols are identical - no matter what the value is
+						if (isBooleanSymbol(call[0]) && isBooleanSymbol(call[1])) {
+							constraints.add(elem(call[0].as<ExpressionPtr>() != call[1].as<ExpressionPtr>(), B_res));
+						} else {
+							constraints.add(subsetBinary(B_lhs, B_rhs, B_res, pairwise([](bool a, bool b) { return a != b; })));
+						}
+						return;
+					}
+				}
+
+				// arithmetic relations
+				{
+					auto A_lhs = context.getSet(cba::A, context.getLabel(call[0]));
+					auto A_rhs = context.getSet(cba::A, context.getLabel(call[1]));
+
+					typedef core::arithmetic::Formula F;
+
+					if(base.isSignedIntLt(fun) || base.isUnsignedIntLt(fun)) {
+						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) { return a < b; })));
+						return;
+					}
+
+					if(base.isSignedIntLe(fun) || base.isUnsignedIntLe(fun)) {
+						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) { return a <= b; })));
+						return;
+					}
+
+					if(base.isSignedIntGe(fun) || base.isUnsignedIntGe(fun)) {
+						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) { return a >= b; })));
+						return;
+					}
+
+					if(base.isSignedIntGt(fun) || base.isUnsignedIntGt(fun)) {
+						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) { return a > b; })));
+						return;
+					}
+
+					if(base.isSignedIntEq(fun) || base.isUnsignedIntEq(fun)) {
+						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) { return core::arithmetic::eq(a, b); })));
+						return;
+					}
+
+					if(base.isSignedIntNe(fun) || base.isUnsignedIntNe(fun)) {
+						constraints.add(subsetBinary(A_lhs, A_rhs, B_res, compareFormula([](const F& a, const F& b) { return core::arithmetic::ne(a, b); })));
+						return;
+					}
+				}
+
+				// otherwise it is unknown, hence both may be possible
+				constraints.add(elem(true, B_res));
+				constraints.add(elem(false, B_res));
 			}
 
 		};
@@ -690,9 +909,9 @@ namespace cba {
 			const TypedSetType<T>& dataSet;
 
 			// list of all memory location in the processed fragment
-			std::vector<Location> locations;
+			vector<Location> locations;
 
-			std::set<NodeAddress> processed;
+			set<NodeAddress> processed;
 
 		public:
 
@@ -969,17 +1188,18 @@ namespace cba {
 				auto l_then = context.getLabel(stmt->getThenBody());
 				auto l_else = context.getLabel(stmt->getElseBody());
 
+				auto B_cond = context.getSet(B, l_cond);
+
 				// -- conditional has to be always evaluated --
 				connectStateSets(Sin, l_if, c, t, Sin, l_cond, c, t);
 
 				// connect Sout of condition to then and else branch
-				connectStateSets(Sout, l_cond, c, t, Sin, l_then, c, t);
-				connectStateSets(Sout, l_cond, c, t, Sin, l_else, c, t);
+				connectStateSetsIf(true,  B_cond, Sout, l_cond, c, t, Sin, l_then, c, t);
+				connectStateSetsIf(false, B_cond, Sout, l_cond, c, t, Sin, l_else, c, t);
 
 				// connect Sout of then and else branch with Sout of if
-				connectStateSets(Sout, l_then, c, t, Sout, l_if, c, t);
-				connectStateSets(Sout, l_else, c, t, Sout, l_if, c, t);
-
+				connectStateSetsIf(true,  B_cond, Sout, l_then, c, t, Sout, l_if, c, t);
+				connectStateSetsIf(false, B_cond, Sout, l_else, c, t, Sout, l_if, c, t);
 
 				// add constraints recursively
 				visit(stmt->getCondition());
@@ -1029,6 +1249,22 @@ namespace cba {
 				}
 			}
 
+			template<typename E>
+			void connectStateSetsIf(const E& value, const TypedSetID<E>& set, StateSetType a, Label al, const Context& ac, const Thread& at, StateSetType b, Label bl, const Context& bc, const Thread& bt) {
+
+				// general handling - Sin = Sout
+				for(auto loc : locations) {
+
+					// get Sin set		TODO: add context to locations
+					auto s_in = context.getSet(a, al, ac, at, loc, dataSet);
+					auto s_out = context.getSet(b, bl, bc, bt, loc, dataSet);
+
+					// state information entering the set is also leaving it
+					constraints.add(subsetIf(value, set, s_in, s_out));
+
+				}
+			}
+
 		};
 
 		template<typename T>
@@ -1051,12 +1287,14 @@ namespace cba {
 		ConstantConstraintCollector(context, res, root).visit(root);
 		ReferenceConstraintCollector(context, res, root).visit(root);
 		ArithmeticConstraintCollector(context, res, root).visit(root);
+		BooleanConstraintCollector(context, res, root).visit(root);
 
 		// and the imperative constraints
 		addImperativeConstraints(context, res, root, C);
 		addImperativeConstraints(context, res, root, D);
 		addImperativeConstraints(context, res, root, R);
 		addImperativeConstraints(context, res, root, A);
+		addImperativeConstraints(context, res, root, B);
 
 
 		// done

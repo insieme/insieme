@@ -120,6 +120,9 @@ namespace cba {
 	extern const TypedSetType<Location> R;
 	extern const TypedSetType<Location> r;
 
+
+	// ----------------- arithmetic analysis ---------------
+
 	struct Formula : public utils::Printable {
 		typedef boost::optional<core::arithmetic::Formula> formula_type;
 		formula_type formula;
@@ -145,6 +148,16 @@ namespace cba {
 
 	extern const TypedSetType<Formula> A;
 	extern const TypedSetType<Formula> a;
+
+
+	// ----------------- booleans analysis ---------------
+
+	extern const TypedSetType<bool> B;
+	extern const TypedSetType<bool> b;
+
+
+
+	// ----------------- state set analysis ---------------
 
 	enum StateSetType {
 		Sin, Stmp, Sout		// state sets before, within (only for assignments) and after statements
