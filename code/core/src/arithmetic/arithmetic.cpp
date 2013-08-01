@@ -834,7 +834,18 @@ namespace arithmetic {
 			BDDManagerPtr manager;
 
 			/**
-			 * The BDD wrapped by this instance.
+			 * This flag is set (and no manager is created) if this BDD is representing true.
+			 */
+			bool isTrue;
+
+			/**
+			 * This flag is set (and no manager is created) if this BDD is representing false.
+			 */
+			bool isFalse;
+
+			/**
+			 * The BDD wrapped by this instance. The pointer might be null if true or false
+			 * is represented
 			 */
 			CuddBDD bdd;
 
@@ -845,8 +856,14 @@ namespace arithmetic {
 
 		public:
 
+			BDD(bool value)
+				: manager(), isTrue(value), isFalse(!value), bdd() {};
+
+			BDD(const BDDManagerPtr& manager, bool value)
+				: manager(manager), isTrue(value), isFalse(!value), bdd() {};
+
 			BDD(const BDDManagerPtr& manager, const CuddBDD& bdd)
-				: manager(manager), bdd(bdd) {
+				: manager(manager), isTrue(bdd == manager->getTrue()), isFalse(bdd == manager->getFalse()), bdd(bdd) {
 				assert(manager->contains(bdd) && "Given BDD not managed by given manager!");
 			};
 
@@ -857,19 +874,19 @@ namespace arithmetic {
 			// -- some factory methods --
 
 			static BDDPtr getFalseBDD(const BDDManagerPtr& manager) {
-				return std::make_shared<BDD>(manager, manager->getFalse());
+				return std::make_shared<BDD>(manager, false);
 			}
 
 			static BDDPtr getFalseBDD() {
-				return getFalseBDD(createBDDManager());
+				return std::make_shared<BDD>(false);
 			}
 
 			static BDDPtr getTrueBDD(const BDDManagerPtr& manager) {
-				return std::make_shared<BDD>(manager, manager->getTrue());
+				return std::make_shared<BDD>(manager, true);
 			}
 
 			static BDDPtr getTrueBDD() {
-				return getTrueBDD(createBDDManager());
+				return std::make_shared<BDD>(true);
 			}
 
 			static BDDPtr getLiteralBDD(const BDDManagerPtr& manager, const Inequality& atom) {
@@ -883,37 +900,63 @@ namespace arithmetic {
 			}
 
 			static BDDPtr getLiteralBDD(const Inequality& atom) {
+				if (atom.isValid()) {
+					return getTrueBDD();
+				}
+				if (atom.isUnsatisfiable()) {
+					return getFalseBDD();
+				}
 				return getLiteralBDD(createBDDManager(), atom);
 			}
 
 			bool isValid() const {
-				return bdd == manager->getTrue();
+				return isTrue;
 			}
 
 			bool isUnsatisfiable() const {
-				return bdd == manager->getFalse();
+				return isFalse;
 			}
 
 			// -- support for boolean operations --
 
 			BDD operator!() const {
+				// shortcuts
+				if (isTrue) return BDD(manager, false);
+				if (isFalse) return BDD(manager, true);
+
 				// this is simple - use the same manager + negated BDD
 				return BDD(manager, !bdd);
 			}
 
 			BDD operator&&(const BDD& other) const {
+				// shortcuts
+				if (isFalse) return *this;
+				if (isTrue) return other;
+				if (other.isFalse) return other;
+				if (other.isTrue) return *this;
+
 				// move both to the same manager
 				CuddBDD otherBDD = getWithinLocalManager(other);
 				return BDD(manager, bdd * otherBDD);
 			}
 
 			BDD operator||(const BDD& other) const {
+				// shortcuts
+				if (isFalse) return other;
+				if (isTrue) return *this;
+				if (other.isFalse) return *this;
+				if (other.isTrue) return other;
+
 				// move both to the same manager
 				CuddBDD otherBDD = getWithinLocalManager(other);
 				return BDD(manager, bdd + otherBDD);
 			}
 
 			bool operator==(const BDD& other) const {
+				// shortcuts
+				if (isTrue) return other.isTrue;
+				if (isFalse) return other.isFalse;
+
 				// move both to the same manager
 				CuddBDD otherBDD = getWithinLocalManager(other);
 				return bdd == otherBDD;
@@ -924,6 +967,13 @@ namespace arithmetic {
 			}
 
 			bool operator<(const BDD& other) const {
+				// order: false < bdd < true
+				if (isFalse && !other.isFalse) return true;
+				if (isTrue && !other.isTrue) return false;
+				if (isFalse && other.isFalse) return false;
+				if (isTrue && other.isTrue) return false;
+
+				// compare bdds
 				return bdd < getWithinLocalManager(other);
 			}
 
