@@ -49,6 +49,9 @@
 #define GET_VEC_ELEM_TYPE(type) \
 	(core::static_pointer_cast<const core::VectorType>(type)->getElementType())
 
+#define IS_ARRAY_TYPE(type)\
+	(type.isa<core::RefTypePtr>() && type.as<core::RefTypePtr>()->getElementType().isa<core::ArrayTypePtr>())
+
 #define GET_ARRAY_ELEM_TYPE(type) \
 	(core::static_pointer_cast<const core::ArrayType>(type)->getElementType())
 
