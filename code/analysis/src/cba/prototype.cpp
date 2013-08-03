@@ -185,6 +185,18 @@ namespace cba {
 
 		using namespace utils::set_constraint_2;
 
+		vector<ExpressionAddress> getAllFunctionTerms(const StatementAddress& root) {
+			vector<ExpressionAddress> res;
+			// collect all terms in the code
+			visitDepthFirst(root, [&](const ExpressionAddress& cur) {
+				if (cur.isa<LambdaExprPtr>() || cur.isa<BindExprPtr>()) {
+					// TODO: also add all recursion variations
+					res.push_back(cur);
+				}
+			});
+			return res;
+		}
+
 		template<typename T>
 		class BasicDataFlowConstraintCollector : public IRVisitor<void, Address> {
 
@@ -198,7 +210,7 @@ namespace cba {
 			Constraints& constraints;
 
 			// the list of all terms in the targeted code
-			vector<ExpressionAddress> terms;
+			const vector<ExpressionAddress>& terms;
 
 			// the two set types to deal with
 			const TypedSetType<T>& A;		// the value set (labels -> values)
@@ -206,18 +218,8 @@ namespace cba {
 
 		public:
 
-			BasicDataFlowConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root, const TypedSetType<T>& A, const TypedSetType<T>& a)
-				: processed(), context(context), constraints(contraints), A(A), a(a) {
-
-				// collect all terms in the code
-				visitDepthFirst(root, [&](const ExpressionAddress& cur) {
-					if (cur.isa<LambdaExprPtr>() || cur.isa<BindExprPtr>()) {
-						// TODO: also add all recursion variations
-						terms.push_back(cur);
-					}
-				});
-
-			};
+			BasicDataFlowConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root, const TypedSetType<T>& A, const TypedSetType<T>& a, const vector<ExpressionAddress>& terms)
+				: processed(), context(context), constraints(contraints), terms(terms), A(A), a(a) { };
 
 			virtual void visit(const NodeAddress& node) {
 				if (!processed.insert(node).second) return;
@@ -384,8 +386,8 @@ namespace cba {
 
 		public:
 
-			ControlFlowConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root)
-				: BasicDataFlowConstraintCollector<core::ExpressionAddress>(context, constraints, root, C, c) { };
+			ControlFlowConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root, const vector<ExpressionAddress>& terms)
+				: BasicDataFlowConstraintCollector<core::ExpressionAddress>(context, constraints, root, C, c, terms) { };
 
 			void visitLiteral(const LiteralAddress& literal) {
 
@@ -427,8 +429,8 @@ namespace cba {
 
 		public:
 
-			ConstantConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root)
-				: BasicDataFlowConstraintCollector<core::ExpressionPtr>(context, constraints, root, D, d) { };
+			ConstantConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root, const vector<ExpressionAddress>& terms)
+				: BasicDataFlowConstraintCollector<core::ExpressionPtr>(context, constraints, root, D, d, terms) { };
 
 			void visitLiteral(const LiteralAddress& literal) {
 
@@ -513,7 +515,7 @@ namespace cba {
 						return res;
 					}
 
-					// compute teh cross-product
+					// compute the cross-product
 					for(auto& x : a) {
 						for (auto& y : b) {
 							res.insert(fun(x,y));
@@ -554,8 +556,8 @@ namespace cba {
 
 		public:
 
-			ArithmeticConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root)
-				: BasicDataFlowConstraintCollector<Formula>(context, constraints, root, cba::A, cba::a), base(root->getNodeManager().getLangBasic()) { };
+			ArithmeticConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root, const vector<ExpressionAddress>& terms)
+				: BasicDataFlowConstraintCollector<Formula>(context, constraints, root, cba::A, cba::a, terms), base(root->getNodeManager().getLangBasic()) { };
 
 			void visitLiteral(const LiteralAddress& literal) {
 
@@ -716,8 +718,8 @@ namespace cba {
 
 		public:
 
-			BooleanConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root)
-				: BasicDataFlowConstraintCollector<bool>(context, constraints, root, cba::B, cba::b), base(root->getNodeManager().getLangBasic()) { };
+			BooleanConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root, const vector<ExpressionAddress>& terms)
+				: BasicDataFlowConstraintCollector<bool>(context, constraints, root, cba::B, cba::b, terms), base(root->getNodeManager().getLangBasic()) { };
 
 			void visitLiteral(const LiteralAddress& literal) {
 
@@ -886,8 +888,8 @@ namespace cba {
 
 		public:
 
-			ReferenceConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root)
-				: BasicDataFlowConstraintCollector<Location>(context, constraints, root, R, r) { };
+			ReferenceConstraintCollector(CBAContext& context, Constraints& constraints, const StatementAddress& root, const vector<ExpressionAddress>& terms)
+				: BasicDataFlowConstraintCollector<Location>(context, constraints, root, R, r, terms) { };
 
 			void visitLiteral(const LiteralAddress& literal) {
 
@@ -924,6 +926,19 @@ namespace cba {
 
 		};
 
+		// a utility function extracting a list of memory location constructors from the given code fragment
+		vector<Location> getAllLocations(CBAContext& context, const StatementAddress& root) {
+			vector<Location> res;
+			// collect all memory location constructors
+			visitDepthFirst(root, [&](const ExpressionAddress& cur) {
+				// TODO: add context info to locations
+				if (isMemoryConstructor(cur)) {
+					res.push_back(context.getLocation(cur));
+				}
+			});
+			return res;
+		}
+
 		template<typename T>
 		class ImperativeConstraintCollector : public IRVisitor<void, Address> {
 
@@ -935,24 +950,14 @@ namespace cba {
 			const TypedSetType<T>& dataSet;
 
 			// list of all memory location in the processed fragment
-			vector<Location> locations;
+			const vector<Location>& locations;
 
 			set<NodeAddress> processed;
 
 		public:
 
-			ImperativeConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root, const TypedSetType<T>& dataSet)
-				: context(context), constraints(contraints), dataSet(dataSet), processed() {
-
-				// collect all memory location constructors
-				visitDepthFirst(root, [&](const ExpressionAddress& cur) {
-					// TODO: add context info to locations
-					if (isMemoryConstructor(cur)) {
-						locations.push_back(context.getLocation(cur));
-					}
-				});
-
-			};
+			ImperativeConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root, const TypedSetType<T>& dataSet, const vector<Location>& locations)
+				: context(context), constraints(contraints), dataSet(dataSet), locations(locations), processed() {};
 
 			virtual void visit(const NodeAddress& node) {
 				if (!processed.insert(node).second) return;
@@ -1294,8 +1299,8 @@ namespace cba {
 		};
 
 		template<typename T>
-		void addImperativeConstraints(CBAContext& context, Constraints& res, const StatementAddress& root, const TypedSetType<T>& type) {
-			ImperativeConstraintCollector<T>(context, res, root, type).visit(root);
+		void addImperativeConstraints(CBAContext& context, Constraints& res, const StatementAddress& root, const TypedSetType<T>& type, const vector<Location>& locations) {
+			ImperativeConstraintCollector<T>(context, res, root, type, locations).visit(root);
 		}
 	}
 
@@ -1309,18 +1314,20 @@ namespace cba {
 		StatementAddress root(stmt);
 
 		// TODO: resolve dependencies between collectors automatically
-		ControlFlowConstraintCollector(context, res, root).visit(root);
-		ConstantConstraintCollector(context, res, root).visit(root);
-		ReferenceConstraintCollector(context, res, root).visit(root);
-		ArithmeticConstraintCollector(context, res, root).visit(root);
-		BooleanConstraintCollector(context, res, root).visit(root);
+		vector<ExpressionAddress> funs = getAllFunctionTerms(root);
+		ControlFlowConstraintCollector(context, res, root, funs).visit(root);
+		ConstantConstraintCollector(context, res, root, funs).visit(root);
+		ReferenceConstraintCollector(context, res, root, funs).visit(root);
+		ArithmeticConstraintCollector(context, res, root, funs).visit(root);
+		BooleanConstraintCollector(context, res, root, funs).visit(root);
 
 		// and the imperative constraints
-		addImperativeConstraints(context, res, root, C);
-		addImperativeConstraints(context, res, root, D);
-		addImperativeConstraints(context, res, root, R);
-		addImperativeConstraints(context, res, root, A);
-		addImperativeConstraints(context, res, root, B);
+		auto locations = getAllLocations(context, root);
+		addImperativeConstraints(context, res, root, C, locations);
+		addImperativeConstraints(context, res, root, D, locations);
+		addImperativeConstraints(context, res, root, R, locations);
+		addImperativeConstraints(context, res, root, A, locations);
+		addImperativeConstraints(context, res, root, B, locations);
 
 
 		// done
