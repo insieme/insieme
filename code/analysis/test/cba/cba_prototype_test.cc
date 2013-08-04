@@ -929,16 +929,23 @@ namespace cba {
 				"{"
 
 				// prepare some functions
-				"	auto inc = (ref<int<4>> x)->unit { x = x+1; };"
+				"	let inc = (ref<int<4>> x)->unit { x = x+1; };"
+				"	auto f = inc;"
 				"	auto apply = (ref<'a> loc, (ref<'a>)->unit op)->unit { op(loc); };"
 
 				// apply them
 				"	ref<int<4>> x = var(1);"
 				"	*x;"							// should be 1
-				"	inc(x);"
+				"	x = x+1;"
 				"	*x;"							// should be 2
-				"	apply(x, inc);"
+				"	inc(x);"
 				"	*x;"							// should be 3
+				"	f(x);"
+				"	*x;"							// should be 4
+				"	apply(x, inc);"
+				"	*x;"							// should be 5
+				"	apply(x, f);"
+				"	*x;"							// should be 6
 				"}"
 		).as<CompoundStmtPtr>();
 
@@ -953,9 +960,20 @@ namespace cba {
 		auto solution = cba::solve(constraints);
 		// std::cout << "Solutions:  " << solution << "\n";
 
+		// check functions
+		EXPECT_EQ("{0-6-1}", toString(cba::getValuesOf(context, solution, code[6].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{0-0-1}", toString(cba::getValuesOf(context, solution, code[8].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{0-1-1}", toString(cba::getValuesOf(context, solution, code[10].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{0-10-3}", toString(cba::getValuesOf(context, solution, code[10].as<CallExprAddress>()[1], C)));
+		EXPECT_EQ("{0-1-1}", toString(cba::getValuesOf(context, solution, code[12].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{0-0-1}", toString(cba::getValuesOf(context, solution, code[12].as<CallExprAddress>()[1], C)));
+
 		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[3].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{2}", toString(cba::getValuesOf(context, solution, code[5].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{3}", toString(cba::getValuesOf(context, solution, code[7].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{4}", toString(cba::getValuesOf(context, solution, code[9].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(cba::getValuesOf(context, solution, code[11].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{6}", toString(cba::getValuesOf(context, solution, code[13].as<ExpressionAddress>(), A)));
 
 	}
 

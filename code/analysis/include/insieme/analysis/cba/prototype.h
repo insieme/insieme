@@ -292,7 +292,9 @@ namespace cba {
 
 
 		// TODO: remove default values
-		Location getLocation(const core::ExpressionAddress& ctor, const CallContext& c = CallContext(), const ThreadContext& t = ThreadContext()) {
+		Location getLocation(const core::ExpressionAddress& ctor) { // TODO: add support: , const CallContext& c = CallContext(), const ThreadContext& t = ThreadContext()) {
+			CallContext c; ThreadContext t;
+
 			assert(isMemoryConstructor(ctor));
 
 			// obtain address of definition point

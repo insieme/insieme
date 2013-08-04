@@ -189,10 +189,22 @@ namespace cba {
 			vector<ExpressionAddress> res;
 			// collect all terms in the code
 			visitDepthFirst(root, [&](const ExpressionAddress& cur) {
-				if (cur.isa<LambdaExprPtr>() || cur.isa<BindExprPtr>()) {
-					// TODO: also add all recursion variations
-					res.push_back(cur);
+				// only interrested in lambdas and binds
+				if (!(cur.isa<LambdaExprPtr>() || cur.isa<BindExprPtr>())) return;
+
+				// must not be root
+				if (cur.isRoot()) return;
+
+				// it must not be the target of a call expression
+				auto parent = cur.getParentAddress();
+				if (auto call = parent.isa<CallExprAddress>()) {
+					if (call->getFunctionExpr() == cur) {
+						return;
+					}
 				}
+
+				// TODO: also add all recursion variations
+				res.push_back(cur);
 			});
 			return res;
 		}
@@ -960,13 +972,17 @@ namespace cba {
 			// list of all memory location in the processed fragment
 			const vector<Location>& locations;
 
+			// the list of all function terms in the processed fragment
+			const vector<ExpressionAddress>& functions;
+
 			typedef tuple<NodeAddress,CallContext,ThreadContext> Item;
 			set<Item> processed;
 
 		public:
 
-			ImperativeConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root, const TypedSetType<T>& dataSet, const vector<Location>& locations)
-				: context(context), constraints(contraints), dataSet(dataSet), locations(locations), processed() {};
+			ImperativeConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root,
+					const TypedSetType<T>& dataSet, const vector<Location>& locations, const vector<ExpressionAddress>& functions)
+				: context(context), constraints(contraints), dataSet(dataSet), locations(locations), functions(functions), processed() {};
 
 			virtual void visit(const NodeAddress& node, const CallContext& callContext, const ThreadContext& threadContext) {
 				if (!processed.insert(Item(node,callContext,threadContext)).second) return;
@@ -1014,40 +1030,82 @@ namespace cba {
 				connectStateSets(Sin, l_call, callContext, threadContext, Sin, l_fun, callContext, threadContext);
 
 
-				// TODO: consider dynamic dispatching
-				// link out of arguments with in of function candidates
-				if (!call->getFunctionExpr().isa<LambdaExprPtr>() && !call->getFunctionExpr().isa<LiteralPtr>()) {
-					std::cout << "WARNING: unsupported call target of type: " << call->getFunctionExpr()->getNodeType() << "\n";
-					return;
-				}
-
 				// create inner call context
 				CallContext innerCallContext = callContext << l_call;
 
-				if (call->getFunctionExpr().isa<LambdaExprPtr>()){ 		// for now
+				// get set of potential target functions
+				auto C_fun = context.getSet(C, l_fun, callContext, threadContext);
+
+				// a utility resolving constraints for the called function
+				auto addConstraints = [&](const ExpressionAddress& target, bool fixed) {
+
+					// only interrested in lambdas (for now)
+					if (!target.isa<LambdaExprPtr>()) {
+						std::cout << "WARNING: unsupported potential call target of type: " << target->getNodeType() << "\n";
+						return;
+					}
+
+					// check correct number of arguments
+					if (call.size() != target.getType().as<FunctionTypePtr>()->getParameterTypes().size()) {
+						// this is not a valid target
+						return;
+					}
 
 					// ---- Effect of arguments => in of function ----
-					auto lambda = call->getFunctionExpr().as<LambdaExprAddress>();
+					auto lambda = target.as<LambdaExprAddress>();
 
 					auto l_fun = context.getLabel(lambda->getBody());		// here we have to go through list of functions ...
 					for (auto arg : call) {
 						auto l_arg = context.getLabel(arg);
-						connectStateSets(Sout, l_arg, callContext, threadContext, Sin, l_fun, innerCallContext, threadContext);
+						if (fixed) {
+							this->connectStateSets(Sout, l_arg, callContext, threadContext, Sin, l_fun, innerCallContext, threadContext);
+						} else {
+							this->connectStateSetsIf(target, C_fun, Sout, l_arg, callContext, threadContext, Sin, l_fun, innerCallContext, threadContext);
+						}
 					}
 
 					// also add effects of function-expression evaluation
-					connectStateSets(Sout, context.getLabel(lambda), callContext, threadContext, Sin, l_fun, innerCallContext, threadContext);
+					auto l_call_fun = context.getLabel(call->getFunctionExpr());
+					if (fixed) {
+						this->connectStateSets(Sout, l_call_fun, callContext, threadContext, Sin, l_fun, innerCallContext, threadContext);
+					} else {
+						this->connectStateSetsIf(target, C_fun, Sout, l_call_fun, callContext, threadContext, Sin, l_fun, innerCallContext, threadContext);
+					}
 
 					// ---- Effect of function => out of call ---
 
 					// link out of fun with call out
-					connectStateSets(Sout, l_fun, innerCallContext, threadContext, Sout, l_call, callContext, threadContext);
+					if (fixed) {
+						this->connectStateSets(Sout, l_fun, innerCallContext, threadContext, Sout, l_call, callContext, threadContext);
+					} else {
+						this->connectStateSetsIf(target, C_fun, Sout, l_fun, innerCallContext, threadContext, Sout, l_call, callContext, threadContext);
+					}
 
 					// process function body
-					visit(lambda->getBody(), innerCallContext, threadContext);
+					this->visit(lambda->getBody(), innerCallContext, threadContext);
 
+				};
+
+
+				// handle direct call
+				auto fun = call->getFunctionExpr();
+
+				if (fun.isa<LiteralPtr>()) {
+					// nothign to do
+				} else if (fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>()) {
+					// direct call => handle directly
+					addConstraints(fun, true);
+					return;
+				} else {
+					// indirect call => dynamic dispatching required
+					for(auto cur : functions) {
+						addConstraints(cur,false);
+					}
 					return;
 				}
+
+				// TODO: handle direct function call / other option ...
+				assert(fun.isa<LiteralPtr>());
 
 				// ---- side-effects ----
 
@@ -1291,9 +1349,9 @@ namespace cba {
 
 		template<typename T>
 		void addImperativeConstraints(CBAContext& context, Constraints& res, const StatementAddress& root,
-				const TypedSetType<T>& type, const vector<Location>& locations,
+				const TypedSetType<T>& type, const vector<Location>& locations, const vector<ExpressionAddress>& funs,
 				const CallContext& callContext, const ThreadContext& threadContext) {
-			ImperativeConstraintCollector<T>(context, res, root, type, locations).visit(root, callContext, threadContext);
+			ImperativeConstraintCollector<T>(context, res, root, type, locations, funs).visit(root, callContext, threadContext);
 		}
 	}
 
@@ -1319,11 +1377,11 @@ namespace cba {
 
 		// and the imperative constraints
 		auto locations = getAllLocations(context, root);
-		addImperativeConstraints(context, res, root, C, locations, initCallContext, initThreadContext);
-		addImperativeConstraints(context, res, root, D, locations, initCallContext, initThreadContext);
-		addImperativeConstraints(context, res, root, R, locations, initCallContext, initThreadContext);
-		addImperativeConstraints(context, res, root, A, locations, initCallContext, initThreadContext);
-		addImperativeConstraints(context, res, root, B, locations, initCallContext, initThreadContext);
+		addImperativeConstraints(context, res, root, C, locations, funs, initCallContext, initThreadContext);
+		addImperativeConstraints(context, res, root, D, locations, funs, initCallContext, initThreadContext);
+		addImperativeConstraints(context, res, root, R, locations, funs, initCallContext, initThreadContext);
+		addImperativeConstraints(context, res, root, A, locations, funs, initCallContext, initThreadContext);
+		addImperativeConstraints(context, res, root, B, locations, funs, initCallContext, initThreadContext);
 
 
 		// done
