@@ -977,6 +977,60 @@ namespace cba {
 
 	}
 
+	TEST(CBA, SideEffectHigherOrder2) {
+
+		// call a higher-order function causing some effect
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+
+				// prepare some functions
+				"	auto a = (ref<int<4>> x)->unit { x = x+1; };"
+				"	auto b = (ref<int<4>> x)->unit { x = x*2; };"
+				"	auto f = (ref<int<4>> x, (ref<int<4>>)->unit a, (ref<int<4>>)->unit b)->unit {"
+				"		if (x < 3) {"
+				"			a(x);"
+				"		} else {"
+				"			b(x);"
+				"		};"
+				"	};"
+
+				// apply them
+				"	ref<int<4>> x = var(1);"
+				"	*x;"							// should be 1
+				"	f(x,a,b);"
+				"	*x;"							// should be 2
+				"	f(x,a,b);"
+				"	*x;"							// should be 3
+				"	f(x,a,b);"
+				"	*x;"							// should be 6
+				"	f(x,a,b);"
+				"	*x;"							// should be 12
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+		// std::cout << "Constraint: " << constraints << "\n";
+//		createDotDump(context, constraints);
+
+		auto solution = cba::solve(constraints);
+		// std::cout << "Solutions:  " << solution << "\n";
+
+
+		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[4].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(cba::getValuesOf(context, solution, code[6].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(cba::getValuesOf(context, solution, code[8].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{6}", toString(cba::getValuesOf(context, solution, code[10].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{12}", toString(cba::getValuesOf(context, solution, code[12].as<ExpressionAddress>(), A)));
+
+	}
+
 
 	// Known Issues:
 	//  - bind expressions
