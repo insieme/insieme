@@ -1037,7 +1037,6 @@ namespace cba {
 	//  - for loops
 	//  - job support
 	//  - thread context
-	//  - no context for variables!
 	//	- context on memory locations
 
 	TEST(CBA, ThreadContext) {
