@@ -1097,7 +1097,7 @@ namespace cba {
 
 		auto solution = cba::solve(constraints);
 		// std::cout << "Solutions:  " << solution << "\n";
-		createDotDump(context, constraints, solution);
+//		createDotDump(context, constraints, solution);
 
 		int i = 2;
 		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));

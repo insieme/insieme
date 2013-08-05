@@ -68,6 +68,9 @@ namespace cba {
 	const TypedSetType<Reachable> Rin("Rin");		// the associated term is reached
 	const TypedSetType<Reachable> Rout("Rout");		// the associated term is left
 
+	const StateSetType Sin("Sin");			// in-state of statements
+	const StateSetType Sout("Sout");		// out-state of statements
+	const StateSetType Stmp("Stmp");		// temporary states of statements (assignment only)
 
 	using namespace core;
 
@@ -1092,25 +1095,31 @@ namespace cba {
 				auto fun = call->getFunctionExpr();
 
 				if (fun.isa<LiteralPtr>()) {
-					// nothing to do
+
+					// - here we are assuming side-effect free literals -
+
+					// just connect out of arguments to call-out
+					for (auto arg : call) {
+						auto l_arg = context.getLabel(arg);
+						connectStateSets(Aout, l_arg, callContext, threadContext, Aout, l_call, callContext, threadContext);
+					}
+
+					// and the function
+					connectStateSets(Aout, l_fun, callContext, threadContext, Aout, l_call, callContext, threadContext);
+
 				} else if (fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>()) {
+
 					// direct call => handle directly
 					addConstraints(fun, true);
+
 				} else {
+
 					// indirect call => dynamic dispatching required
 					for(auto cur : functions) {
 						addConstraints(cur,false);
 					}
-				}
 
-				// just connect out of arguments to call-out
-				for (auto arg : call) {
-					auto l_arg = context.getLabel(arg);
-					connectStateSets(Aout, l_arg, callContext, threadContext, Aout, l_call, callContext, threadContext);
 				}
-
-				// and the function
-				connectStateSets(Aout, l_fun, callContext, threadContext, Aout, l_call, callContext, threadContext);
 
 			}
 
@@ -1313,181 +1322,55 @@ namespace cba {
 
 
 		template<typename T>
-		class ImperativeConstraintCollector : public IRVisitor<void, Address, const CallContext&, const ThreadContext&> {
+		class ImperativeStateConstraintCollector : public BaseImperativeConstraintCollector<StateSetType, ImperativeStateConstraintCollector<T>> {
 
-			typedef IRVisitor<void,Address, const CallContext&, const ThreadContext&> super;
-
-			CBAContext& context;
-			Constraints& constraints;
+			typedef BaseImperativeConstraintCollector<StateSetType, ImperativeStateConstraintCollector<T>> super;
 
 			const TypedSetType<T>& dataSet;
 
 			// list of all memory location in the processed fragment
 			const vector<Location>& locations;
 
-			// the list of all function terms in the processed fragment
-			const vector<ExpressionAddress>& functions;
-
-			typedef tuple<NodeAddress,CallContext,ThreadContext> Item;
-			set<Item> processed;
-
 		public:
 
-			ImperativeConstraintCollector(CBAContext& context, Constraints& contraints, const StatementAddress& root,
-					const TypedSetType<T>& dataSet, const vector<Location>& locations, const vector<ExpressionAddress>& functions)
-				: context(context), constraints(contraints), dataSet(dataSet), locations(locations), functions(functions), processed() {};
+			ImperativeStateConstraintCollector(CBAContext& context, Constraints& constraints, const TypedSetType<T>& dataSet,
+					const vector<Location>& locations, const vector<ExpressionAddress>& functions)
+				: super(context, constraints, functions, Sin, Sout), dataSet(dataSet), locations(locations) {};
 
-			virtual void visit(const NodeAddress& node, const CallContext& callContext, const ThreadContext& threadContext) {
-				if (!processed.insert(Item(node,callContext,threadContext)).second) return;
-				super::visit(node, callContext, threadContext);
-			}
-
-			void visitLiteral(const LiteralAddress& lit, const CallContext& callContext, const ThreadContext& threadContext) {
-
-				// fix: Sin \subset Sout
-				auto label = context.getLabel(lit);
-				connectStateSets(Sin, label, callContext, threadContext, Sout, label, callContext, threadContext);
-
-			}
-
-			void visitVariable(const VariableAddress& var, const CallContext& callContext, const ThreadContext& threadContext) {
-
-				// fix: Sin \subset Sout
-				auto label = context.getLabel(var);
-				connectStateSets(Sin, label, callContext, threadContext, Sout, label, callContext, threadContext);
-
-			}
 
 			void visitCallExpr(const CallExprAddress& call, const CallContext& callContext, const ThreadContext& threadContext) {
 				const auto& base = call->getNodeManager().getLangBasic();
 
-				// recursively process sub-expressions
-				visit(call->getFunctionExpr(), callContext, threadContext);
-				for(auto arg : call) visit(arg, callContext, threadContext);
+				// two special cases:
+				auto fun = call.as<CallExprPtr>()->getFunctionExpr();
 
-				// otherwise default handling
-				//  - link in of call with in of arguments
-				//  - link out of arguments with in of function
-				//  - link out of function with out of call
+				//  A) - assignment operations (ref.assign)
+				if (base.isRefAssign(fun)) {
 
-				auto l_call = context.getLabel(call);
-
-				// link in of call with in of arguments
-				for(auto arg : call) {
-					auto l_arg = context.getLabel(arg);
-					connectStateSets(Sin, l_call, callContext, threadContext, Sin, l_arg, callContext, threadContext);
-				}
-
-				// and the function
-				auto l_fun = context.getLabel(call->getFunctionExpr());
-				connectStateSets(Sin, l_call, callContext, threadContext, Sin, l_fun, callContext, threadContext);
+					// ---- link S_in to S_in of arguments
+					auto l_call = this->context.getLabel(call);
+					auto l_rhs = this->context.getLabel(call[0]);
+					auto l_lhs = this->context.getLabel(call[1]);
+					connectStateSets(Sin, l_call, callContext, threadContext, Sin, l_rhs, callContext, threadContext);
+					connectStateSets(Sin, l_call, callContext, threadContext, Sin, l_lhs, callContext, threadContext);
 
 
-				// create inner call context
-				CallContext innerCallContext = callContext << l_call;
+					// ---- S_out of args => S_tmp of call
+					connectStateSets(Sout, l_rhs, callContext, threadContext, Stmp, l_call, callContext, threadContext);
+					connectStateSets(Sout, l_lhs, callContext, threadContext, Stmp, l_call, callContext, threadContext);
 
-				// get set of potential target functions
-				auto C_fun = context.getSet(C, l_fun, callContext, threadContext);
-
-				// a utility resolving constraints for the called function
-				auto addConstraints = [&](const ExpressionAddress& target, bool fixed) {
-
-					// only interrested in lambdas (for now)
-					if (!target.isa<LambdaExprPtr>()) {
-						std::cout << "WARNING: unsupported potential call target of type: " << target->getNodeType() << "\n";
-						return;
-					}
-
-					// check correct number of arguments
-					if (call.size() != target.getType().as<FunctionTypePtr>()->getParameterTypes().size()) {
-						// this is not a valid target
-						return;
-					}
-
-					// ---- Effect of arguments => in of function ----
-					auto lambda = target.as<LambdaExprAddress>();
-
-					auto l_fun = context.getLabel(lambda->getBody());		// here we have to go through list of functions ...
-					for (auto arg : call) {
-						auto l_arg = context.getLabel(arg);
-						if (fixed) {
-							this->connectStateSets(Sout, l_arg, callContext, threadContext, Sin, l_fun, innerCallContext, threadContext);
-						} else {
-							this->connectStateSetsIf(target, C_fun, Sout, l_arg, callContext, threadContext, Sin, l_fun, innerCallContext, threadContext);
-						}
-					}
-
-					// also add effects of function-expression evaluation
-					auto l_call_fun = context.getLabel(call->getFunctionExpr());
-					if (fixed) {
-						this->connectStateSets(Sout, l_call_fun, callContext, threadContext, Sin, l_fun, innerCallContext, threadContext);
-					} else {
-						this->connectStateSetsIf(target, C_fun, Sout, l_call_fun, callContext, threadContext, Sin, l_fun, innerCallContext, threadContext);
-					}
-
-					// ---- Effect of function => out of call ---
-
-					// link out of fun with call out
-					if (fixed) {
-						this->connectStateSets(Sout, l_fun, innerCallContext, threadContext, Sout, l_call, callContext, threadContext);
-					} else {
-						this->connectStateSetsIf(target, C_fun, Sout, l_fun, innerCallContext, threadContext, Sout, l_call, callContext, threadContext);
-					}
-
-					// process function body
-					this->visit(lambda->getBody(), innerCallContext, threadContext);
-
-				};
-
-
-				// handle direct call
-				auto fun = call->getFunctionExpr();
-
-				if (fun.isa<LiteralPtr>()) {
-					// nothign to do
-				} else if (fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>()) {
-					// direct call => handle directly
-					addConstraints(fun, true);
-					return;
-				} else {
-					// indirect call => dynamic dispatching required
-					for(auto cur : functions) {
-						addConstraints(cur,false);
-					}
-					return;
-				}
-
-				// TODO: handle direct function call / other option ...
-				assert(fun.isa<LiteralPtr>());
-
-				// ---- side-effects ----
-
-				// special case: assignments
-				if (core::analysis::isCallOf(call.as<CallExprPtr>(), base.getRefAssign())) {
-
-					// ---- S_out of args => S_as of call
-
-					for (auto arg : call) {
-						auto l_arg = context.getLabel(arg);
-						connectStateSets(Sout, l_arg, callContext, threadContext, Stmp, l_call, callContext, threadContext);
-					}
-					// and the function
-					connectStateSets(Sout, l_fun, callContext, threadContext, Stmp, l_call, callContext, threadContext);
-
-					// ---- combine S_as to S_out ...
+					// ---- combine S_tmp to S_out ...
 
 					// add rule: loc \in R[rhs] => A[lhs] \sub Sout[call]
-					auto l_rhs = context.getLabel(call[0]);
-					auto l_lhs = context.getLabel(call[1]);
-					auto R_rhs = context.getSet(R, l_rhs, callContext, threadContext);
+					auto R_rhs = this->context.getSet(R, l_rhs, callContext, threadContext);
 					for(auto loc : locations) {
 
 						// TODO: add context
 
 						// if loc is in R(target) then add D[rhs] to Sout[loc]
-						auto A_value = context.getSet(dataSet, l_lhs, callContext, threadContext);
-						auto S_out = context.getSet(Sout, l_call, callContext, threadContext, loc, dataSet);
-						constraints.add(subsetIf(loc, R_rhs, A_value, S_out));
+						auto A_value = this->context.getSet(dataSet, l_lhs, callContext, threadContext);
+						auto S_out = this->context.getSet(Sout, l_call, callContext, threadContext, loc, dataSet);
+						this->constraints.add(subsetIf(loc, R_rhs, A_value, S_out));
 					}
 
 
@@ -1495,212 +1378,72 @@ namespace cba {
 					for(auto loc : locations) {
 
 						// get Sin set		TODO: add context to locations
-						auto s_as = context.getSet(Stmp, l_call, callContext, threadContext, loc, dataSet);
-						auto s_out = context.getSet(Sout, l_call, callContext, threadContext, loc, dataSet);
+						auto s_tmp = this->context.getSet(Stmp, l_call, callContext, threadContext, loc, dataSet);
+						auto s_out = this->context.getSet(Sout, l_call, callContext, threadContext, loc, dataSet);
 
 						// if more than 1 reference may be assigned => everything that comes in goes out
-						constraints.add(subsetIfReducedBigger(R_rhs, loc, 0, s_as, s_out));
+						this->constraints.add(subsetIfReducedBigger(R_rhs, loc, 0, s_tmp, s_out));
 					}
 
-				} else {
+					// process arguments
+					this->visit(call[0], callContext, threadContext);
+					this->visit(call[1], callContext, threadContext);
 
-					// just connect out of arguments to call-out - assume no effects on state
-					for (auto arg : call) {
-						auto l_arg = context.getLabel(arg);
-						connectStateSets(Sout, l_arg, callContext, threadContext, Sout, l_call, callContext, threadContext);
-					}
-
-					// and the function
-					connectStateSets(Sout, l_fun, callContext, threadContext, Sout, l_call, callContext, threadContext);
+					// done
+					return;
 				}
 
-				// special case: read
-				if (core::analysis::isCallOf(call.as<CallExprPtr>(), base.getRefDeref())) {
+				//  B) - read operation (ref.deref)
+				if (base.isRefDeref(fun)) {
 
 					// read value from memory location
-					auto l_trg = context.getLabel(call[0]);
-					auto R_trg = context.getSet(R, l_trg, callContext, threadContext);
+					auto l_call = this->context.getLabel(call);
+					auto l_trg = this->context.getLabel(call[0]);
+					auto R_trg = this->context.getSet(R, l_trg, callContext, threadContext);
 					for(auto loc : locations) {
 
 						// TODO: add context
 
 						// if loc is in R(target) then add Sin[A,trg] to A[call]
-						auto S_in = context.getSet(Sin, l_call, callContext, threadContext, loc, dataSet);
-						auto A_call = context.getSet(dataSet, l_call, callContext, threadContext);
-						constraints.add(subsetIf(loc, R_trg, S_in, A_call));
-					}
-				}
-
-			}
-
-			void visitLambdaExpr(const LambdaExprAddress& cur, const CallContext& callContext, const ThreadContext& threadContext) {
-
-				// fix: Sin \subset Sout
-				auto label = context.getLabel(cur);
-				connectStateSets(Sin, label, callContext, threadContext, Sout, label, callContext, threadContext);
-
-
-				// TODO: deal with recursion
-
-				// + process body
-				// this part is handled by the call site
-//				for(auto def : cur->getDefinition()) {
-//					visit(def->getLambda()->getBody(), callContext, threadContext);
-//				}
-			}
-
-			void visitCompoundStmt(const CompoundStmtAddress& compound, const CallContext& callContext, const ThreadContext& threadContext) {
-
-				// special handling for empty compound = NoOp
-				if (compound.empty()) {
-					auto l = context.getLabel(compound);
-					connectStateSets(Sin, l, callContext, threadContext, Sout, l, callContext, threadContext);
-					return;
-				}
-
-				// connect contained statements
-				for(std::size_t i = 0; i < compound.size()-1; i++) {
-					// skip connection if current stmt is a return / break / continue statement
-					switch(compound[i]->getNodeType()) {
-					case NT_ReturnStmt: case NT_BreakStmt: case NT_ContinueStmt: continue;
-					default: break;
+						auto S_in = this->context.getSet(Sin, l_call, callContext, threadContext, loc, dataSet);
+						auto A_call = this->context.getSet(dataSet, l_call, callContext, threadContext);
+						this->constraints.add(subsetIf(loc, R_trg, S_in, A_call));
 					}
 
-					// connect those
-					auto la = context.getLabel(compound[i]);
-					auto lb = context.getLabel(compound[i+1]);
-					connectStateSets(Sout, la, callContext, threadContext, Sin, lb, callContext, threadContext);
+					// and process default procedure (no return here)
 				}
 
-				// connect in-state with in of first statement
-				auto l = context.getLabel(compound);
-				auto la = context.getLabel(compound[0]);
-				connectStateSets(Sin, l, callContext, threadContext, Sin, la, callContext, threadContext);
-
-				// connect out-state of last statement with out-state
-				auto lb = context.getLabel(compound[compound.size()-1]);
-				connectStateSets(Sout, lb, callContext, threadContext, Sout, l, callContext, threadContext);
-
-				// and add constraints of all inner statements
-				for(auto cur : compound) {
-					visit(cur, callContext, threadContext);
-				}
+				// everything else is treated using the default procedure
+				super::visitCallExpr(call, callContext, threadContext);
 			}
 
-			void visitDeclarationStmt(const DeclarationStmtAddress& decl, const CallContext& callContext, const ThreadContext& threadContext) {
-
-				// just connect in with init value and out of innit value with out
-				auto l = context.getLabel(decl);
-				auto l_init = context.getLabel(decl->getInitialization());
-
-				connectStateSets(Sin, l, callContext, threadContext, Sin, l_init, callContext, threadContext);
-				connectStateSets(Sout, l_init, callContext, threadContext, Sout, l, callContext, threadContext);
-
-				// and create constraints for initialization value
-				visit(decl->getInitialization(), callContext, threadContext);
-			}
-
-			void visitReturnStmt(const ReturnStmtAddress& stmt, const CallContext& callContext, const ThreadContext& threadContext) {
-
-				// connect Sin with Sin of return expression
-				auto l_ret = context.getLabel(stmt);
-				auto l_val = context.getLabel(stmt->getReturnExpr());
-				connectStateSets(Sin, l_ret, callContext, threadContext, Sin, l_val, callContext, threadContext);
-
-				// find enclosing lambda
-				LambdaAddress lambda = getEnclosingLambda(stmt);
-				if (!lambda) {
-					std::cout << "WARNING: encountered free return!\n";
-					return;
-				}
-
-				// connect Sout of value with Sout of function
-				auto l_fun = context.getLabel(lambda->getBody());
-				connectStateSets(Sout, l_val, callContext, threadContext, Sout, l_fun, callContext, threadContext);
-
-				// fix constraints for return expr
-				visit(stmt->getReturnExpr(), callContext, threadContext);
-			}
-
-			void visitIfStmt(const IfStmtAddress& stmt, const CallContext& callContext, const ThreadContext& threadContext) {
-
-				// get some labels
-				auto l_if = context.getLabel(stmt);
-				auto l_cond = context.getLabel(stmt->getCondition());
-				auto l_then = context.getLabel(stmt->getThenBody());
-				auto l_else = context.getLabel(stmt->getElseBody());
-
-				auto B_cond = context.getSet(B, l_cond, callContext, threadContext);
-
-				// -- conditional has to be always evaluated --
-				connectStateSets(Sin, l_if, callContext, threadContext, Sin, l_cond, callContext, threadContext);
-
-				// connect Sout of condition to then and else branch
-				connectStateSetsIf(true,  B_cond, Sout, l_cond, callContext, threadContext, Sin, l_then, callContext, threadContext);
-				connectStateSetsIf(false, B_cond, Sout, l_cond, callContext, threadContext, Sin, l_else, callContext, threadContext);
-
-				// connect Sout of then and else branch with Sout of if
-				connectStateSetsIf(true,  B_cond, Sout, l_then, callContext, threadContext, Sout, l_if, callContext, threadContext);
-				connectStateSetsIf(false, B_cond, Sout, l_else, callContext, threadContext, Sout, l_if, callContext, threadContext);
-
-				// add constraints recursively
-				visit(stmt->getCondition(), callContext, threadContext);
-				visit(stmt->getThenBody(), callContext, threadContext);
-				visit(stmt->getElseBody(), callContext, threadContext);
-			}
-
-			void visitWhileStmt(const WhileStmtAddress& stmt, const CallContext& callContext, const ThreadContext& threadContext) {
-
-				// get some labels
-				auto l_while = context.getLabel(stmt);
-				auto l_cond = context.getLabel(stmt->getCondition());
-				auto l_body = context.getLabel(stmt->getBody());
-
-				// do the wiring
-				connectStateSets(Sin, l_while, callContext, threadContext, Sin, l_cond, callContext, threadContext);
-				connectStateSets(Sout, l_cond, callContext, threadContext, Sin, l_body, callContext, threadContext);
-				connectStateSets(Sout, l_body, callContext, threadContext, Sin, l_cond, callContext, threadContext);
-				connectStateSets(Sout, l_cond, callContext, threadContext, Sout, l_while, callContext, threadContext);
-
-				// add constraints recursively
-				visit(stmt->getCondition(), callContext, threadContext);
-				visit(stmt->getBody(), callContext, threadContext);
-			}
-
-			void visitNode(const NodeAddress& node, const CallContext& callContext, const ThreadContext& threadContext) {
-				std::cout << "Reached unsupported Node Type: " << node->getNodeType() << "\n";
-				assert(false);
-			}
-
-		private:
-
-			void connectStateSets(StateSetType a, Label al, const CallContext& ac, const ThreadContext& at, StateSetType b, Label bl, const CallContext& bc, const ThreadContext& bt) {
+			void connectStateSets(const StateSetType& a, Label al, const CallContext& ac, const ThreadContext& at, const StateSetType& b, Label bl, const CallContext& bc, const ThreadContext& bt) {
 
 				// general handling - Sin = Sout
 				for(auto loc : locations) {
 
 					// get Sin set		TODO: add context to locations
-					auto s_in = context.getSet(a, al, ac, at, loc, dataSet);
-					auto s_out = context.getSet(b, bl, bc, bt, loc, dataSet);
+					auto s_in = this->context.getSet(a, al, ac, at, loc, dataSet);
+					auto s_out = this->context.getSet(b, bl, bc, bt, loc, dataSet);
 
 					// state information entering the set is also leaving it
-					constraints.add(subset(s_in, s_out));
+					this->constraints.add(subset(s_in, s_out));
 
 				}
 			}
 
 			template<typename E>
-			void connectStateSetsIf(const E& value, const TypedSetID<E>& set, StateSetType a, Label al, const CallContext& ac, const ThreadContext& at, StateSetType b, Label bl, const CallContext& bc, const ThreadContext& bt) {
+			void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const StateSetType& a, Label al, const CallContext& ac, const ThreadContext& at, const StateSetType& b, Label bl, const CallContext& bc, const ThreadContext& bt) {
 
 				// general handling - Sin = Sout
 				for(auto loc : locations) {
 
 					// get Sin set		TODO: add context to locations
-					auto s_in = context.getSet(a, al, ac, at, loc, dataSet);
-					auto s_out = context.getSet(b, bl, bc, bt, loc, dataSet);
+					auto s_in = this->context.getSet(a, al, ac, at, loc, dataSet);
+					auto s_out = this->context.getSet(b, bl, bc, bt, loc, dataSet);
 
 					// state information entering the set is also leaving it
-					constraints.add(subsetIf(value, set, s_in, s_out));
+					this->constraints.add(subsetIf(value, set, s_in, s_out));
 
 				}
 			}
@@ -1711,7 +1454,7 @@ namespace cba {
 		void addImperativeConstraints(CBAContext& context, Constraints& res, const StatementAddress& root,
 				const TypedSetType<T>& type, const vector<Location>& locations, const vector<ExpressionAddress>& funs,
 				const CallContext& callContext, const ThreadContext& threadContext) {
-			ImperativeConstraintCollector<T>(context, res, root, type, locations, funs).visit(root, callContext, threadContext);
+			ImperativeStateConstraintCollector<T>(context, res, type, locations, funs).visit(root, callContext, threadContext);
 		}
 	}
 
@@ -1762,20 +1505,6 @@ namespace cba {
 		return utils::set_constraint_2::solve(constraints);
 	}
 
-	namespace {
-
-
-		const char* getName(StateSetType type) {
-			switch(type) {
-			case Sin: return "Sin";
-			case Stmp: return "Stmp";
-			case Sout: return "Sout";
-			}
-			return "?";
-		}
-
-	}
-
 	using namespace utils::set_constraint_2;
 
 	void CBAContext::plot(const Constraints& constraints, std::ostream& out) const {
@@ -1805,7 +1534,7 @@ namespace cba {
 		}
 
 		for(auto cur : stateSets) {
-			string setName = getName(std::get<0>(cur.first));
+			string setName = std::get<0>(cur.first)->getName();
 			string dataName = std::get<5>(cur.first)->getName();
 			auto pos = getAddress(std::get<1>(cur.first));
 			out << "\n\t" << cur.second
@@ -1852,7 +1581,7 @@ namespace cba {
 		}
 
 		for(auto cur : stateSets) {
-			string setName = getName(std::get<0>(cur.first));
+			string setName = std::get<0>(cur.first)->getName();
 			string dataName = std::get<5>(cur.first)->getName();
 			auto pos = getAddress(std::get<1>(cur.first));
 			out << "\n\t" << cur.second

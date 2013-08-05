@@ -181,9 +181,14 @@ namespace cba {
 
 	// ----------------- state set analysis ---------------
 
-	enum StateSetType {
-		Sin, Stmp, Sout		// state sets before, within (only for assignments) and after statements
+	// the set-type tokens to be utilized for the state sets
+	struct StateSetType : public TypedSetType<void> {
+		StateSetType(const string& name) : TypedSetType<void>(name) {}
 	};
+
+	extern const StateSetType Sin;		// in-state of statements
+	extern const StateSetType Sout;		// out-state of statements
+	extern const StateSetType Stmp;		// temporary states of statements (assignment only)
 
 
 	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
@@ -207,7 +212,7 @@ namespace cba {
 		typedef utils::set_constraint_2::SetID SetID;
 
 		typedef tuple<const SetType*, int, CallContext, ThreadContext> SetKey;
-		typedef tuple<StateSetType, Label, CallContext, ThreadContext, Location, const SetType*, CallContext, ThreadContext> StateSetKey;
+		typedef tuple<const StateSetType*, Label, CallContext, ThreadContext, Location, const SetType*, CallContext, ThreadContext> StateSetKey;
 
 		int setCounter;
 		std::map<SetKey, SetID> sets;
@@ -250,9 +255,9 @@ namespace cba {
 
 
 		template<typename T>
-		utils::set_constraint_2::TypedSetID<T> getSet(StateSetType type, Label label, const CallContext& c, const ThreadContext& t, Location loc, const TypedSetType<T>& type_loc) { // TODO: add support: , const CallContext& c_loc = CallContext(), const ThreadContext& t_loc = ThreadContext()) {
+		utils::set_constraint_2::TypedSetID<T> getSet(const StateSetType& type, Label label, const CallContext& c, const ThreadContext& t, Location loc, const TypedSetType<T>& type_loc) { // TODO: add support: , const CallContext& c_loc = CallContext(), const ThreadContext& t_loc = ThreadContext()) {
 //			StateSetKey key(type, label, c, t, loc, &type_loc, c_loc, t_loc);
-			StateSetKey key(type, label, c, t, loc, &type_loc, CallContext(), ThreadContext());
+			StateSetKey key(&type, label, c, t, loc, &type_loc, CallContext(), ThreadContext());
 			auto pos = stateSets.find(key);
 			if (pos != stateSets.end()) {
 				return pos->second;
