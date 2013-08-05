@@ -132,6 +132,17 @@ namespace cba {
 	extern const TypedSetType<Location> r;
 
 
+	// ------------------- reachable code ------------------
+
+	struct Reachable : public utils::Printable {
+		bool operator<(const Reachable& other) const { return false; }
+		bool operator==(const Reachable& other) const { return true; }
+		std::ostream& printTo(std::ostream& out) const { return out << "reachable"; };
+	};
+
+	extern const TypedSetType<Reachable> Rin;		// the associated term is reached
+	extern const TypedSetType<Reachable> Rout;		// the associated term is left
+
 	// ----------------- arithmetic analysis ---------------
 
 	struct Formula : public utils::Printable {
@@ -315,6 +326,7 @@ namespace cba {
 		}
 
 		void plot(const Constraints& constraints, std::ostream& out = std::cout) const;
+		void plot(const Constraints& constraints, const Solution& ass, std::ostream& out = std::cout) const;
 
 	};
 

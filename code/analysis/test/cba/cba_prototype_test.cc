@@ -63,7 +63,21 @@ namespace cba {
 
 			// create pdf
 			system("dot -Tpdf constraints.dot -o constraints.pdf");
-			system("dot -Tsvg constraints.dot -o constraints.svg");
+//			system("dot -Tsvg constraints.dot -o constraints.svg");
+		}
+
+		void createDotDump(const CBAContext& context, const Constraints& constraints, const Solution& solution) {
+			{
+				// open file
+				std::ofstream out("solution.dot", std::ios::out );
+
+				// write file
+				context.plot(constraints, solution, out);
+			}
+
+			// create pdf
+			system("dot -Tpdf solution.dot -o solution.pdf");
+//			system("dot -Tsvg solution.dot -o solution.svg");
 		}
 
 	}
@@ -1031,6 +1045,81 @@ namespace cba {
 
 	}
 
+
+	TEST(CBA, BooleanConnectors) {
+
+		// call a higher-order function causing some effect
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+
+				// prepare some functions
+				"	auto a = true;"
+				"	auto b = false;"
+
+				// apply them
+				"	true;"
+				"	false;"
+				"	!true;"
+				"	!false;"
+
+				"	1<2;"
+				"	!(1<2);"
+
+				"	true && false;"
+				"	true && true;"
+
+				"	false || true;"
+				"	false || false;"
+
+//				// some combined stuff
+//				"	ref<int<4>> x = var(1);"
+//				"	ref<int<4>> y = var(2);"
+//
+//				"	(0 < x) && (x < 2);"
+//				"	((0 < x) && (x < 2)) || ( y < x );"
+//				"	((0 < x) && (x < 2)) && ( y < x );"
+//				"	( y < x ) || ((0 < x) && (x < 2));"
+
+				// TODO: check side-effects
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+		// std::cout << "Constraint: " << constraints << "\n";
+//		createDotDump(context, constraints);
+
+		auto solution = cba::solve(constraints);
+		// std::cout << "Solutions:  " << solution << "\n";
+		createDotDump(context, constraints, solution);
+
+		int i = 2;
+		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{0}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{0}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+
+		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{0}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+
+		EXPECT_EQ("{0}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+
+		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+		EXPECT_EQ("{0}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+
+//		i++;
+//		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{0}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+//		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[i++].as<ExpressionAddress>(), B)));
+	}
 
 	// Known Issues:
 	//  - bind expressions
