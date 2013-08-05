@@ -427,6 +427,7 @@ core::ExpressionPtr Converter::ExprConverter::asLValue(const core::ExpressionPtr
 			}
 		}
 	}
+
 	assert(value->getType()->getNodeType() == core::NT_RefType && " it is not a ref, what is this?");
 	// there is nothing to do
 	return value;
@@ -1083,7 +1084,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 	core::TypePtr&& lhsTy = lhs->getType();
 	core::TypePtr&& rhsTy = rhs->getType();
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-	" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
+	" RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
 	if( !isAssignment ) {
 
@@ -1169,7 +1170,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 
 	assert(opFunc && "no operation code set");
 	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
-				" RHS(" << *rhs << "[" << *rhs->getType() << "])" << std::endl;
+				" RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
 	retIr = builder.callExpr( exprTy, opFunc, lhs, rhs );
 
@@ -1190,30 +1191,6 @@ core::ExpressionPtr Converter::ExprConverter::VisitUnaryOperator(const clang::Un
 	auto encloseIncrementOperator =
 	[ this, &builder, &gen ]
 	(core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
-
-		/*
-		 * FIXME: REMOVE
-		 * sure we dont need this?
-		if ((subExpr->getNodeType() == core::NT_Variable &&
-			 subExpr->getType()->getNodeType() != core::NT_RefType)
-			||
-			(subExpr->getNodeType() == core::NT_Variable &&
-			 subExpr->getType()->getNodeType() == core::NT_RefType &&
-			 GET_REF_ELEM_TYPE(subExpr->getType())->getNodeType() == core::NT_ArrayType))
-		{
-			// It can happen we are incrementing a variable which is coming from an input
-			// argument of a function
-			core::VariablePtr var = subExpr.as<core::VariablePtr>();
-
-			auto&& fit = convFact.convFact.wrapRefMap.find(var);
-			if ( fit == convFact.convFact.wrapRefMap.end() ) {
-				fit = convFact.convFact.wrapRefMap.insert(
-						std::make_pair( var, builder.variable( builder.refType(var->getType()) ) )
-				).first;
-			}
-
-			subExpr = fit->second;
-		}*/
 
 		core::TypePtr type = subExpr->getType();
         //if we have a cpp ref we have to unwrap it

@@ -65,8 +65,10 @@
 
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/omp/omp_annotation.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/pragma/insieme.h"
+
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -557,7 +559,6 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThisExpr(const clang::C
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::CXXThrowExpr* throwExpr) {
 
-	//assert(false && "Throw -- Currently not supported!");
 	core::ExpressionPtr retIr;
 	LOG_EXPR_CONVERSION(throwExpr, retIr);
 
@@ -709,14 +710,51 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 
 	//build the lambda and its parameters
 	core::StatementPtr&& lambdaBody = convFact.builder.compoundStmt(stmtList);
-	vector<core::VariablePtr> params = core::analysis::getFreeVariables(lambdaBody);
+	vector<core::VariablePtr> usedVars = core::analysis::getFreeVariables(lambdaBody);
+
+	// check for readonly variables and perform same transformation on parameters as with regular funtions
+	// TODO: refactorize this with the code in convertFunction Decl, and create single signature
+	vector<core::VariablePtr> params;
+	for (core::VariablePtr var : usedVars){
+		if (var->getType().isa<core::RefTypePtr>()){
+			core::VariablePtr newParam = builder.variable(var->getType().as<core::RefTypePtr>()->getElementType());
+			// we might need to do some fix on array variables 
+			if (core::analysis::isReadOnly(lambdaBody, var)){
+
+				// replace read uses
+				lambdaBody = core::transform::replaceAllGen (mgr, lambdaBody, builder.deref(var), newParam, true);
+				lambdaBody = core::transform::replaceAllGen (mgr, lambdaBody, var, builder.refVar(newParam), true);
+				// this variables might apear in annotations inside:
+				core::visitDepthFirstOnce (lambdaBody, [&] (const core::StatementPtr& node){
+					//if we have a OMP annotation
+					if (node->hasAnnotation(omp::BaseAnnotation::KEY)){
+						auto anno = node->getAnnotation(omp::BaseAnnotation::KEY);
+						assert(anno);
+						anno->replaceUsage (var, newParam);
+					}
+				});
+
+				params.push_back(newParam);
+			}
+			else
+				params.push_back(var);
+		}
+		else
+			params.push_back(var);
+	}
+
 	core::LambdaExprPtr lambda = convFact.builder.lambdaExpr(lambdaRetType, lambdaBody, params);
 
 	//build the lambda call and its arguments
+	// NOTE: if the parameter has being marked read only and, therefore, substituted, we need to
+	// deref the variable so the types do not collide
 	vector<core::ExpressionPtr> packedArgs;
-	std::for_each(params.begin(), params.end(), [&packedArgs] (core::VariablePtr varPtr) {
-		 packedArgs.push_back(varPtr);
-	});
+	for (core::VariablePtr varPtr : usedVars){
+		if (std::find(params.begin(), params.end(), varPtr) != params.end())
+			packedArgs.push_back(varPtr);
+		else
+			packedArgs.push_back(builder.deref(varPtr));
+	}
 
 	return retIr = builder.callExpr(lambdaRetType, lambda, packedArgs);
 }

@@ -117,11 +117,12 @@ class SingleNodeReplacer : public CachedNodeMapping {
 	const NodePtr& target;
 	const NodePtr& replacement;
 	const bool visitTypes;
+	const bool limitScope;
 
 public:
 
-	SingleNodeReplacer(NodeManager& manager, const NodePtr& target, const NodePtr& replacement)
-		: manager(manager), target(target), replacement(replacement), visitTypes(target->getNodeCategory() == NC_Type || target->getNodeCategory() == NC_IntTypeParam) { }
+	SingleNodeReplacer(NodeManager& manager, const NodePtr& target, const NodePtr& replacement, bool limit)
+		: manager(manager), target(target), replacement(replacement), visitTypes(target->getNodeCategory() == NC_Type || target->getNodeCategory() == NC_IntTypeParam), limitScope(limit){ }
 
 private:
 
@@ -140,6 +141,12 @@ private:
 			return ptr;
 		}
 
+		// handle scope limiting elements
+		if (limitScope && ptr->getNodeType() == NT_LambdaExpr) {
+			// enters a new scope => variable will no longer occur
+			return ptr;
+		}
+
 		// recursive replacement has to be continued
 		NodePtr res = ptr->substitute(manager, *this);
 
@@ -151,7 +158,6 @@ private:
 
 		// preserve annotations
 		utils::migrateAnnotations(ptr, res);
-
 
 		// done
 		return res;
@@ -908,7 +914,7 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toRepla
 		return replaceAll(mgr, root, static_pointer_cast<const Variable>(toReplace), replacement);
 	}
 
-	auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement);
+	auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement, limitScope);
 	return applyReplacer(mgr, root, mapper);
 }
 
@@ -917,7 +923,7 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toR
 		auto mapper = ::VariableReplacer(mgr, toReplace, replacement);
 		return applyReplacer(mgr, root, mapper);
 	} else {
-		auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement);
+		auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement, limitScope);
 		return applyReplacer(mgr, root, mapper);
 	}
 }

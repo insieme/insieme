@@ -350,8 +350,6 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 				wrapRefMap.erase(currParam);
 			}
 			else{
-
-				// FIXME:  structs pased as value will be wrapped ANYWAY...
 				//   if i have a READ operation on a struct:   v= x->a;
 				//   it wont be recognized as read only as the base is pased by reference
 				//	this turns into an extra copy at the begining of every function
