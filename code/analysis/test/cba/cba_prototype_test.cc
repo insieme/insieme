@@ -50,12 +50,34 @@ namespace cba {
 
 	using namespace core;
 
-	TEST(CBA, Development) {
+	namespace {
 
-		CBAContext context;
+		void createDotDump(const CBAContext& context, const Constraints& constraints) {
+			{
+				// open file
+				std::ofstream out("constraints.dot", std::ios::out );
 
+				// write file
+				context.plot(constraints, out);
+			}
 
+			// create pdf
+			system("dot -Tpdf constraints.dot -o constraints.pdf");
+			system("dot -Tsvg constraints.dot -o constraints.svg");
+		}
 
+	}
+
+	TEST(CBA, Context) {
+
+		CallContext c;
+		EXPECT_EQ("[0,0]", toString(c));
+
+		c <<= 1;
+		EXPECT_EQ("[0,1]", toString(c));
+
+		c = c << 2;
+		EXPECT_EQ("[1,2]", toString(c));
 	}
 
 
@@ -183,7 +205,7 @@ namespace cba {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto code = builder.parseStmt(
+		auto in = builder.parseStmt(
 				"{"
 				"	int<4> x = 12;"
 				"	auto y = (int z)->unit {};"
@@ -192,7 +214,8 @@ namespace cba {
 				"}"
 		).as<CompoundStmtPtr>();
 
-		EXPECT_TRUE(code);
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
 
 		CBAContext context;
 		auto constraints = generateConstraints(context, code);
@@ -202,7 +225,7 @@ namespace cba {
 		auto solution = cba::solve(constraints);
 		// std::cout << "Solutions:  " << solution << "\n";
 
-		auto declX = CompoundStmtAddress(code)[0].as<DeclarationStmtAddress>();
+		auto declX = code[0].as<DeclarationStmtAddress>();
 		VariableAddress varX = declX->getVariable();
 		ExpressionAddress initX = declX->getInitialization();
 
@@ -212,7 +235,7 @@ namespace cba {
 //		std::cout << *initX << " = " << cba::getValuesOf(context, solution, initX) << "\n";
 		EXPECT_EQ("{AP(12)}", toString(cba::getValuesOf(context, solution, initX)));
 
-		auto declY = CompoundStmtAddress(code)[1].as<DeclarationStmtAddress>();
+		auto declY = code[1].as<DeclarationStmtAddress>();
 		VariableAddress varY = declY->getVariable();
 		ExpressionAddress initY = declY->getInitialization();
 
@@ -225,11 +248,12 @@ namespace cba {
 		auto varZ = initY.as<LambdaExprAddress>()->getParameterList()[0];
 //		std::cout << *varZ << " = " << cba::getValuesOf(context, solution, varZ) << "\n";
 
-		std::set<ExpressionPtr> should;
-		should.insert(builder.intLit(14));
-		should.insert(builder.intLit(16));
-		auto valZ = cba::getValuesOf(context, solution, varZ);
-		EXPECT_EQ(should, valZ);
+		// check out the context specific control flow handling
+		auto l1 = context.getLabel(code[2]);
+		auto l2 = context.getLabel(code[3]);
+
+		EXPECT_EQ("{AP(14)}", toString(cba::getValuesOf(context, solution, varZ, CallContext(0,l1))));
+		EXPECT_EQ("{AP(16)}", toString(cba::getValuesOf(context, solution, varZ, CallContext(0,l2))));
 
 	}
 
@@ -238,7 +262,7 @@ namespace cba {
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
-		auto code = builder.parseStmt(
+		auto in = builder.parseStmt(
 				"{"
 				"	int<4> x = 12;"
 				"	auto y = (int z)->int<4> { return 10; };"
@@ -246,7 +270,8 @@ namespace cba {
 				"}"
 		).as<CompoundStmtPtr>();
 
-		EXPECT_TRUE(code);
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
 
 		CBAContext context;
 		auto constraints = generateConstraints(context, code);
@@ -256,7 +281,7 @@ namespace cba {
 		auto solution = cba::solve(constraints);
 		// std::cout << "Solutions:  " << solution << "\n";
 
-		auto declZ = CompoundStmtAddress(code)[2].as<DeclarationStmtAddress>();
+		auto declZ = code[2].as<DeclarationStmtAddress>();
 		VariableAddress varZ = declZ->getVariable();
 
 		// std::cout << *varZ << " = " << cba::getValuesOf(context, solution, varZ) << "\n";
@@ -299,24 +324,6 @@ namespace cba {
 		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, decls[3]->getVariable())));
 		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, decls[4]->getVariable())));
 		EXPECT_EQ("{AP(4)}", toString(cba::getValuesOf(context, solution, decls[5]->getVariable())));
-
-	}
-
-	namespace {
-
-		void createDotDump(const CBAContext& context, const Constraints& constraints) {
-			{
-				// open file
-				std::ofstream out("constraints.dot", std::ios::out );
-
-				// write file
-				context.plot(constraints, out);
-			}
-
-			// create pdf
-//			system("dot -Tpdf constraints.dot -o constraints.pdf");
-			system("dot -Tsvg constraints.dot -o constraints.svg");
-		}
 
 	}
 
@@ -870,6 +877,171 @@ namespace cba {
 
 	}
 
+	TEST(CBA, CallContext) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+
+				// simple function
+				"	auto y = (int<4> z)->int<4> { return z; };"
+				"	y(1);"								// this one should be { 1 }
+				"	y(2);"								// this one should be { 2 }
+				"	y(3);"								// this one should be { 2 }
+
+				// higher order functions
+				"	auto z = ((int<4>)->int<4> x, int<4> i)->int<4> { return x(i); };"
+				"	z(y,4);"								// this one should be { 4 }
+				"	z(y,5);"								// this one should be { 5 }
+
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+		// std::cout << "Constraint: " << constraints << "\n";
+//		createDotDump(context, constraints);
+
+		auto solution = cba::solve(constraints);
+		// std::cout << "Solutions:  " << solution << "\n";
+
+		EXPECT_EQ("{AP(1)}", toString(cba::getValuesOf(context, solution, code[1].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(2)}", toString(cba::getValuesOf(context, solution, code[2].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(3)}", toString(cba::getValuesOf(context, solution, code[3].as<ExpressionAddress>())));
+
+		EXPECT_EQ("{AP(4)}", toString(cba::getValuesOf(context, solution, code[5].as<ExpressionAddress>())));
+		EXPECT_EQ("{AP(5)}", toString(cba::getValuesOf(context, solution, code[6].as<ExpressionAddress>())));
+
+	}
+
+	TEST(CBA, SideEffectHigherOrder) {
+
+		// call a higher-order function causing some effect
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+
+				// prepare some functions
+				"	let inc = (ref<int<4>> x)->unit { x = x+1; };"
+				"	auto f = inc;"
+				"	auto apply = (ref<'a> loc, (ref<'a>)->unit op)->unit { op(loc); };"
+
+				// apply them
+				"	ref<int<4>> x = var(1);"
+				"	*x;"							// should be 1
+				"	x = x+1;"
+				"	*x;"							// should be 2
+				"	inc(x);"
+				"	*x;"							// should be 3
+				"	f(x);"
+				"	*x;"							// should be 4
+				"	apply(x, inc);"
+				"	*x;"							// should be 5
+				"	apply(x, f);"
+				"	*x;"							// should be 6
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+		// std::cout << "Constraint: " << constraints << "\n";
+//		createDotDump(context, constraints);
+
+		auto solution = cba::solve(constraints);
+		// std::cout << "Solutions:  " << solution << "\n";
+
+		// check functions
+		EXPECT_EQ("{0-6-1}", toString(cba::getValuesOf(context, solution, code[6].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{0-0-1}", toString(cba::getValuesOf(context, solution, code[8].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{0-1-1}", toString(cba::getValuesOf(context, solution, code[10].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{0-10-3}", toString(cba::getValuesOf(context, solution, code[10].as<CallExprAddress>()[1], C)));
+		EXPECT_EQ("{0-1-1}", toString(cba::getValuesOf(context, solution, code[12].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{0-0-1}", toString(cba::getValuesOf(context, solution, code[12].as<CallExprAddress>()[1], C)));
+
+		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[3].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(cba::getValuesOf(context, solution, code[5].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(cba::getValuesOf(context, solution, code[7].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{4}", toString(cba::getValuesOf(context, solution, code[9].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{5}", toString(cba::getValuesOf(context, solution, code[11].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{6}", toString(cba::getValuesOf(context, solution, code[13].as<ExpressionAddress>(), A)));
+
+	}
+
+	TEST(CBA, SideEffectHigherOrder2) {
+
+		// call a higher-order function causing some effect
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+
+				// prepare some functions
+				"	auto a = (ref<int<4>> x)->unit { x = x+1; };"
+				"	auto b = (ref<int<4>> x)->unit { x = x*2; };"
+				"	auto f = (ref<int<4>> x, (ref<int<4>>)->unit a, (ref<int<4>>)->unit b)->unit {"
+				"		if (x < 3) {"
+				"			a(x);"
+				"		} else {"
+				"			b(x);"
+				"		};"
+				"	};"
+
+				// apply them
+				"	ref<int<4>> x = var(1);"
+				"	*x;"							// should be 1
+				"	f(x,a,b);"
+				"	*x;"							// should be 2
+				"	f(x,a,b);"
+				"	*x;"							// should be 3
+				"	f(x,a,b);"
+				"	*x;"							// should be 6
+				"	f(x,a,b);"
+				"	*x;"							// should be 12
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBAContext context;
+		auto constraints = generateConstraints(context, code);
+		// std::cout << "Constraint: " << constraints << "\n";
+//		createDotDump(context, constraints);
+
+		auto solution = cba::solve(constraints);
+		// std::cout << "Solutions:  " << solution << "\n";
+
+
+		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[4].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{2}", toString(cba::getValuesOf(context, solution, code[6].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{3}", toString(cba::getValuesOf(context, solution, code[8].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{6}", toString(cba::getValuesOf(context, solution, code[10].as<ExpressionAddress>(), A)));
+		EXPECT_EQ("{12}", toString(cba::getValuesOf(context, solution, code[12].as<ExpressionAddress>(), A)));
+
+	}
+
+
+	// Known Issues:
+	//  - bind expressions
+	//  - for loops
+	//  - job support
+	//  - thread context
+	//	- context on memory locations
+
+	TEST(CBA, ThreadContext) {
+		// TODO ...
+	}
 
 } // end namespace cba
 } // end namespace analysis

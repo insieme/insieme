@@ -64,35 +64,46 @@ namespace cba {
 	typedef int Label;		// the type used to label code locations
 	typedef int Variable;	// the type used to identify variables
 	typedef int Value;		// the type used for values within the CBA
-	struct Context;			// the class to model calling contexts
-	struct Thread;			// the class to model execution threads
 
 	typedef int Set;		// the type used to represent sets
 
+
+	// ---------- context information ----------------
+
+	template<typename T, unsigned s>
 	struct Context : public utils::Printable {
-		array<Label, 2> context;		// TODO: make length a generic parameter
+		array<T, s> context;		// TODO: make length a generic parameter
 		Context() : context() {}
+		Context(const Context<T,s>& other) : context(other.context) {}
+		template<typename ... E>
+		Context(const E& ... e) : context((array<T,s>){{e...}}) {}
 		bool operator==(const Context& other) const { return context == other.context; }
 		bool operator<(const Context& other) const { return context < other.context; }
+		Context<T,s>& operator<<=(const Label& label) {
+			for(unsigned i=0; i<(s-1); ++i) {
+				context[i] = context[i+1];
+				context[s-1] = label;
+			}
+			return *this;
+		}
+		Context<T,s> operator<<(const Label& label) const { Context cpy(*this); return cpy <<= label; }
 		std::ostream& printTo(std::ostream& out) const { return out << context; };
 	};
 
-	struct Thread : public utils::Printable{
-		struct Entry : public utils::Printable {
-			Label spawn;
-			int id;
-			Entry() : spawn(0), id(0) {}
-			bool operator==(const Entry& other) const { return spawn == other.spawn && id == other.id; }
-			bool operator<(const Entry& other) const { return spawn < other.spawn || (spawn == other.spawn && id < other.id); }
-			std::ostream& printTo(std::ostream& out) const { return out << "<" << spawn << "," << id << ">"; };
-		};
+	typedef Context<Label,2> CallContext;
 
-		array<Entry, 2> context;			// TODO: make length a generic parameter
-		bool operator==(const Thread& other) const { return context == other.context; }
-		bool operator<(const Thread& other) const { return context < other.context; }
-		std::ostream& printTo(std::ostream& out) const { return out << context; };
+	struct ThreadID : public utils::Printable {
+		Label spawn;
+		int id;
+		ThreadID() : spawn(0), id(0) {}
+		bool operator==(const ThreadID& other) const { return spawn == other.spawn && id == other.id; }
+		bool operator<(const ThreadID& other) const { return spawn < other.spawn || (spawn == other.spawn && id < other.id); }
+		std::ostream& printTo(std::ostream& out) const { return out << "<" << spawn << "," << id << ">"; };
 	};
 
+	typedef Context<ThreadID,2> ThreadContext;
+
+	// ----------- set types ------------------
 
 	class SetType : public boost::noncopyable {
 		string name;
@@ -116,7 +127,7 @@ namespace cba {
 	extern const TypedSetType<core::ExpressionPtr> D;
 	extern const TypedSetType<core::ExpressionPtr> d;
 
-	typedef std::tuple<core::ExpressionAddress, Context, Thread> Location;
+	typedef std::tuple<core::ExpressionAddress, CallContext, ThreadContext> Location;
 	extern const TypedSetType<Location> R;
 	extern const TypedSetType<Location> r;
 
@@ -184,24 +195,24 @@ namespace cba {
 
 		typedef utils::set_constraint_2::SetID SetID;
 
-		typedef tuple<const SetType*, int, Context, Thread> SetKey;
-		typedef tuple<StateSetType, Label, Context, Thread, Location, const SetType*, Context, Thread> StateSetKey;
+		typedef tuple<const SetType*, int, CallContext, ThreadContext> SetKey;
+		typedef tuple<StateSetType, Label, CallContext, ThreadContext, Location, const SetType*, CallContext, ThreadContext> StateSetKey;
 
 		int setCounter;
 		std::map<SetKey, SetID> sets;
 		std::map<StateSetKey, SetID> stateSets;
 
 		// two caches for resolving labels and variables
-		int varCounter;
+		int idCounter;
 		std::map<core::StatementAddress, Label> labels;
 		std::map<core::VariableAddress, Variable> vars;
 
 	public:
 
-		CBAContext() : setCounter(0), varCounter(0) {};
+		CBAContext() : setCounter(0), idCounter(0) {};
 
 		template<typename T>
-		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const Context& c = Context(), const Thread& t = Thread()) {
+		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const CallContext& c, const ThreadContext& t) {
 			SetKey key(&type, id, c, t);
 			auto pos = sets.find(key);
 			if (pos != sets.end()) {
@@ -213,7 +224,7 @@ namespace cba {
 		}
 
 		template<typename T>
-		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const Context& c = Context(), const Thread& t = Thread()) const {
+		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const CallContext& c, const ThreadContext& t) const {
 			static const utils::set_constraint_2::TypedSetID<T> empty(0);
 
 			SetKey key(&type, id, c, t);
@@ -228,8 +239,9 @@ namespace cba {
 
 
 		template<typename T>
-		utils::set_constraint_2::TypedSetID<T> getSet(StateSetType type, Label label, const Context& c, const Thread& t, Location loc, const TypedSetType<T>& type_loc, const Context& c_loc = Context(), const Thread& t_loc = Thread()) {
-			StateSetKey key(type, label, c, t, loc, &type_loc, c_loc, t_loc);
+		utils::set_constraint_2::TypedSetID<T> getSet(StateSetType type, Label label, const CallContext& c, const ThreadContext& t, Location loc, const TypedSetType<T>& type_loc) { // TODO: add support: , const CallContext& c_loc = CallContext(), const ThreadContext& t_loc = ThreadContext()) {
+//			StateSetKey key(type, label, c, t, loc, &type_loc, c_loc, t_loc);
+			StateSetKey key(type, label, c, t, loc, &type_loc, CallContext(), ThreadContext());
 			auto pos = stateSets.find(key);
 			if (pos != stateSets.end()) {
 				return pos->second;
@@ -244,7 +256,7 @@ namespace cba {
 			if (pos != labels.end()) {
 				return pos->second;
 			}
-			Label l = labels.size() + 1;		// reserve 0 for the empty set
+			Label l = ++idCounter;		// reserve 0 for the empty set
 			labels[expr] = l;
 			return l;
 		}
@@ -265,7 +277,7 @@ namespace cba {
 
 			Variable res;
 			if (def == var) {
-				res = ++varCounter; 		// reserve 0 for the empty set
+				res = ++idCounter; 		// reserve 0 for the empty set
 			} else {
 				res = getVariable(def);
 			}
@@ -280,15 +292,17 @@ namespace cba {
 
 
 		// TODO: remove default values
-		Location getLocation(const core::ExpressionAddress& ctor, const Context& c = Context(), const Thread& t = Thread()) {
+		Location getLocation(const core::ExpressionAddress& ctor) { // TODO: add support: , const CallContext& c = CallContext(), const ThreadContext& t = ThreadContext()) {
+			CallContext c; ThreadContext t;
+
 			assert(isMemoryConstructor(ctor));
 
 			// obtain address of definition point
 			auto def = getLocationDefinitionPoint(ctor);
 
-			// for globals the context and thread ID is not relevant
+			// for globals the call context and thread context is not relevant
 			if (ctor.isa<core::LiteralPtr>()) {
-				return Location(def, Context(), Thread());
+				return Location(def, CallContext(), ThreadContext());
 			}
 
 			// create the location instance
@@ -310,23 +324,31 @@ namespace cba {
 	Solution solve(const Constraints& constraints);
 
 	template<typename T>
-	const std::set<T>& getValuesOf(const CBAContext& context, const Solution& solution, const core::ExpressionAddress& expr, const TypedSetType<T>& set) {
+	const std::set<T>& getValuesOf(const CBAContext& context, const Solution& solution,
+			const core::ExpressionAddress& expr, const TypedSetType<T>& set,
+			const CallContext& callContext = CallContext(), const ThreadContext& threadContext = ThreadContext()) {
+
 		auto label = context.getLabel(expr);
-		return solution[context.getSet(set,label)];
+		return solution[context.getSet(set, label, callContext, threadContext)];
 	}
 
 	template<typename T>
-	const std::set<T>& getValuesOf(const CBAContext& context, const Solution& solution, const core::VariableAddress& var, const TypedSetType<T>& set) {
+	const std::set<T>& getValuesOf(const CBAContext& context, const Solution& solution,
+			const core::VariableAddress& var, const TypedSetType<T>& set,
+			const CallContext& callContext = CallContext(), const ThreadContext& threadContext = ThreadContext()) {
+
 		auto id = context.getVariable(var);
-		return solution[context.getSet(set,id)];
+		return solution[context.getSet(set, id, callContext, threadContext)];
 	}
 
-	const std::set<core::ExpressionPtr>& getValuesOf(const CBAContext& context, const Solution& solution, const core::ExpressionAddress& expr) {
-		return getValuesOf(context, solution, expr, D);
+	const std::set<core::ExpressionPtr>& getValuesOf(const CBAContext& context, const Solution& solution, const core::ExpressionAddress& expr,
+			const CallContext& callContext = CallContext(), const ThreadContext& threadContext = ThreadContext()) {
+		return getValuesOf(context, solution, expr, D, callContext, threadContext);
 	}
 
-	const std::set<core::ExpressionPtr>& getValuesOf(const CBAContext& context, const Solution& solution, const core::VariableAddress& var) {
-		return getValuesOf(context, solution, var, d);
+	const std::set<core::ExpressionPtr>& getValuesOf(const CBAContext& context, const Solution& solution, const core::VariableAddress& var,
+			const CallContext& callContext = CallContext(), const ThreadContext& threadContext = ThreadContext()) {
+		return getValuesOf(context, solution, var, d, callContext, threadContext);
 	}
 
 } // end namespace cba
