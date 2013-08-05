@@ -1158,17 +1158,15 @@ namespace arithmetic {
 
 	void Constraint::appendValues(ValueSet& set) const {
 
-		// make sure every literal is only processed once
-		std::set<const Inequality*, compare_target<const Inequality*>> atoms;
+		// shortcuts
+		if (bdd->isValid()) return; // no values
+		if (bdd->isUnsatisfiable()) return; // no values
 
-		for_each(toDNF(), [&](const Constraint::Conjunction& conjunct) {
-			for_each(conjunct, [&](const Constraint::Literal& lit) {
-				// add values to result if literal has been encountered the first time
-				if (atoms.insert(&lit.first).second) {
-					lit.first.appendValues(set);
-				}
-			});
-		});
+		// collect values from atoms
+		for(const Inequality& cur : bdd->getBDDManager()->getAtomList()) {
+			cur.appendValues(set);
+		}
+
 	}
 
 	Constraint Constraint::replace(const ValueReplacementMap& replacements) const {
