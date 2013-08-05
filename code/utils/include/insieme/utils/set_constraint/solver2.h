@@ -105,6 +105,7 @@ namespace set_constraint_2 {
 		virtual bool check(const Assignment& ass) const =0;
 
 		virtual std::ostream& writeDotEdge(std::ostream& out) const =0;
+		virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const =0;
 
 		const std::vector<SetID>& getInputs() const { return inputs; };
 		const std::vector<SetID>& getOutputs() const { return outputs; };
@@ -191,6 +192,14 @@ namespace set_constraint_2 {
 				return out << "  [label=\"" << *this << "\"]\n";
 			}
 
+			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
+				executor.writeDotEdge(out);
+				out << "  [label=\"" << *this << "\"";
+				if (!filter(ass)) {
+					out << " style=dotted";
+				}
+				return out << "]\n";
+			}
 		};
 
 		// -------------------- Filter --------------------------------
@@ -520,6 +529,7 @@ namespace set_constraint_2 {
 
 		struct Container : public Printable {
 			virtual ~Container() {};
+			virtual void append(std::map<SetID,string>& res) const =0;
 		};
 
 		template<typename T>
@@ -530,6 +540,11 @@ namespace set_constraint_2 {
 				return out << join(",",*this, [](std::ostream& out, const value_type& cur) {
 					out << cur.first << "=" << cur.second;
 				});
+			}
+			virtual void append(std::map<SetID,string>& res) const {
+				for(auto& cur : *this) {
+					res.insert({cur.first, toString(cur.second)});
+				}
 			}
 		};
 
@@ -577,6 +592,14 @@ namespace set_constraint_2 {
 			return out << "{" << join(",", data, [](std::ostream& out, const container_index_type::value_type& cur) {
 				out << *cur.second;
 			}) << "}";
+		}
+
+		std::map<SetID,string> toStringMap() const {
+			std::map<SetID,string> res;
+			for(auto& cur : data) {
+				cur.second->append(res);
+			}
+			return res;
 		}
 
 	protected:
