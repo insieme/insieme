@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -51,6 +51,9 @@
 #endif
 #ifndef OPERATION
 #define OPERATION(_type, _op, _name, _spec)
+#endif
+#ifndef DERIVED_OP
+#define DERIVED_OP(_type, _op, _name, _spec)
 #endif
 #ifndef SUB_TYPE
 #define SUB_TYPE(_subtype, _supertype)
@@ -188,8 +191,6 @@ OPERATOR(Ge,	">=")  // 25
 
 GROUP(LogicOp, BoolLAnd, BoolLOr, BoolEq, BoolNe, BoolLNot)
 
-OPERATION(Bool, LAnd, "bool.and", "(bool,() => bool) -> bool")
-OPERATION(Bool, LOr,  "bool.or",  "(bool,() => bool) -> bool")
 OPERATION(Bool, Eq,   "bool.eq",  "(bool,bool) -> bool")
 OPERATION(Bool, Ne,   "bool.ne",  "(bool,bool) -> bool")
 OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
@@ -197,6 +198,9 @@ OPERATION(Bool, And,  "bool.band", "(bool,bool) -> bool")
 OPERATION(Bool, Or,   "bool.bor", "(bool,bool) -> bool")
 OPERATION(Bool, Xor,  "bool.bxor", "(bool,bool) -> bool")
 OPERATION(Bool, Not,  "bool.bnot", "(bool) -> bool")
+
+DERIVED_OP(Bool, LAnd, "bool.and", "(bool a, ()=>bool b)->bool { if (a) return b(); return false; }")
+DERIVED_OP(Bool, LOr,  "bool.or",  "(bool a, ()=>bool b)->bool { if (a) return true; return b(); }")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
@@ -752,4 +756,5 @@ GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator,
 #undef GROUP
 #undef OPERATOR
 #undef OPERATION
+#undef DERIVED_OP
 #undef SUB_TYPE

@@ -81,8 +81,9 @@ namespace lang {
 		return node->getAttachedValue<DerivedTag>().name;
 	}
 
-	void markAsDerived(const NodePtr& node, const string& name) {
+	NodePtr markAsDerived(const NodePtr& node, const string& name) {
 		node->attachValue(DerivedTag(name));
+		return node;
 	}
 
 } // end namespace lang

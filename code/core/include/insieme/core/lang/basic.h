@@ -100,6 +100,10 @@ public:
 	LiteralPtr get##_type##_op() const; \
 	bool is##_type##_op(const NodePtr& p) const;
 
+	#define DERIVED_OP(_type, _op, _name, _spec) \
+	ExpressionPtr get##_type##_op() const; \
+	bool is##_type##_op(const NodePtr& p) const;
+
 	#define GROUP(_id, ...) \
 	bool is##_id(const NodePtr& p) const; \
 	const vector<NodePtr>& get##_id##Group() const;
