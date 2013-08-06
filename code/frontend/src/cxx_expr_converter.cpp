@@ -664,9 +664,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 
 			core::ExpressionPtr newIr;
 			if (core::analysis::isCallOf(init, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize())){
-				// it might happen that we try to materialize an object just to use it by value
+				// it might happen that we try to materialize an object just to use it by reference,
+				// we can use inplace the materializarion
 				newIr = core::transform::replaceAllGen (mgr, innerIr, var, init, false);
-				// OR: the materialization in the declaration must be transform into a refvar
+				// OR: we dont, therefore the materialization in the declaration must be transform into a refvar
 				decl = builder.declarationStmt(var, builder.refVar(init.as<core::CallExprPtr>()[0]));
 			}
 			else{
@@ -675,7 +676,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 				newIr = core::transform::replaceAllGen (mgr, innerIr, trg, subst, false);
 			}
 
-			if (newIr == innerIr){
+			if (*newIr == *innerIr){
 				stmtList.push_back(decl);
 			}
 			else{
@@ -688,10 +689,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 	if (innerIr->getType() != lambdaRetType && !gen.isRef(lambdaRetType)){
 		if (core::analysis::isCallOf(innerIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
 			innerIr = innerIr.as<core::CallExprPtr>().getArgument(0);
-		else if (!core::analysis::isConstructorCall(innerIr))
-			// if is a constructor, it might be used in a declaration, we need to return a ref, no
-			// matters what clang says. othewhise, any ctor is not allowed anywhere. obj must be
-			// materialized into a variable
+		else
 			innerIr = convFact.tryDeref(innerIr);
 	}
 
