@@ -188,17 +188,19 @@ namespace set_constraint_2 {
 			}
 
 			virtual std::ostream& writeDotEdge(std::ostream& out) const {
-				executor.writeDotEdge(out);
-				return out << "  [label=\"" << *this << "\"]\n";
+				std::stringstream label;
+				label << "[label=\"" << *this << "\"]\n";
+				executor.writeDotEdge(out, label.str());
+				return out;
 			}
 
 			virtual std::ostream& writeDotEdge(std::ostream& out, const Assignment& ass) const {
-				executor.writeDotEdge(out);
-				out << "  [label=\"" << *this << "\"";
-				if (!filter(ass)) {
-					out << " style=dotted";
-				}
-				return out << "]\n";
+				std::stringstream label;
+				label << "[label=\"" << *this << "\"";
+				if (!filter(ass)) label << " style=dotted";
+				label << "]\n";
+				executor.writeDotEdge(out, label.str());
+				return out;
 			}
 		};
 
@@ -342,9 +344,9 @@ namespace set_constraint_2 {
 			bool check(const Assignment& ass) const {
 				return set::contains(ass[a], e);
 			}
-			void writeDotEdge(std::ostream& out) const {
+			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << "e" << (int*)&e << " [label=\"" << e << "\"]\n";
-				out << "e" << (int*)&e << " -> " << a;
+				out << "e" << (int*)&e << " -> " << a << " " << label;
 			}
 		};
 
@@ -370,8 +372,8 @@ namespace set_constraint_2 {
 			bool check(const Assignment& ass) const {
 				return set::isSubset(ass[a], ass[b]);
 			}
-			void writeDotEdge(std::ostream& out) const {
-				out << a << " -> " << b;
+			void writeDotEdge(std::ostream& out, const string& label) const {
+				out << a << " -> " << b << label;
 			}
 		};
 
@@ -402,8 +404,8 @@ namespace set_constraint_2 {
 			bool check(const Assignment& ass) const {
 				return set::isSubset(f(ass[a]), ass[r]);
 			}
-			void writeDotEdge(std::ostream& out) const {
-				out << a << " -> " << r;
+			void writeDotEdge(std::ostream& out, const string& label) const {
+				out << a << " -> " << r << label;
 			}
 		};
 
@@ -436,9 +438,9 @@ namespace set_constraint_2 {
 			bool check(const Assignment& ass) const {
 				return set::isSubset(f(ass[a],ass[b]), ass[r]);
 			}
-			void writeDotEdge(std::ostream& out) const {
-				out << a << " -> " << r;
-				out << b << " -> " << r;
+			void writeDotEdge(std::ostream& out, const string& label) const {
+				out << a << " -> " << r << label << "\n";
+				out << b << " -> " << r << label;
 			}
 		};
 
