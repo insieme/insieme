@@ -1,6 +1,11 @@
 #include <iostream>
-#include <stdlib.h>
+#include <string>
 
+#include <sstream>
+
+#include <stdlib.h>
+#include <getopt.h>
+#include <unistd.h>
 
 /* Error handler */
 #define ERROR_HANDLER(x, y) __check_error((x), (y), __FILE__, __LINE__)
@@ -26,13 +31,17 @@ inline void __check_error(bool condition, const std::string errorString, const c
 
 
 bool flag(){
-	return false;
+	return true;
 }
 
+char cad[] = "this is string";
 
+int main(int argc, char **argv){
 
-int main(){
+		ERROR_HANDLER(flag(), "Invalid argument '" + std::string(cad) + "'");
 
-	ERROR_HANDLER((!flag()), "string '" + std::string("param") + "'");
+		std::cout << "error right" << std::endl;
+
 	return 0;
 }
+
