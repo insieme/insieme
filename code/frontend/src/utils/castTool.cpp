@@ -578,6 +578,28 @@ switch (castExpr->getCastKind()) {
 		//  PARTIALY IMPLEMENTED
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		case clang::CK_LValueBitCast 	:
+		/* case clang::CK_LValueBitCast - A conversion which reinterprets the address of an l-value as an l-value of a different
+		* kind. Used for reinterpret_casts of l-value expressions to reference types. bool b; reinterpret_cast<char&>(b) = 'a';
+		* */
+		{
+		    //assert((targetTy.isa<core::RefTypePtr>()) && "reinterpret_cast is only supported for reference target type");
+		    if(IS_CPP_REF(expr->getType())) {
+                //unwrap
+                expr = builder.toIRRef(expr);
+            }
+		    //build expr
+		    targetTy = builder.refType(targetTy);
+            core::CallExprPtr newExpr = builder.callExpr(targetTy, builder.getNodeManager().getLangBasic().getRefReinterpret(),
+                                                         expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
+		    //wrap it as cpp ref
+			return builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), newExpr);
+
+		}
+
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
 		case clang::CK_NullToPointer 	:
 		// Null pointer constant to pointer, ObjC pointer, or block pointer. (void*) 0;
 		{
@@ -747,11 +769,6 @@ switch (castExpr->getCastKind()) {
 		/*case clang::CK_Dependent - A conversion which cannot yet be analyzed because either the expression
 		* or target type is dependent. These are created only for explicit casts; dependent ASTs aren't
 		* required to even approximately type-check. (T*) malloc(sizeof(T)) reinterpret_cast<intptr_t>(A<T>::alloc());
-		* */
-
-		case clang::CK_LValueBitCast 	:
-		/* case clang::CK_LValueBitCast - A conversion which reinterprets the address of an l-value as an l-value of a different
-		* kind. Used for reinterpret_casts of l-value expressions to reference types. bool b; reinterpret_cast<char&>(b) = 'a';
 		* */
 
 		case clang::CK_ToUnion 	:

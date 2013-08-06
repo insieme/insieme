@@ -49,8 +49,9 @@ namespace c {
 	/**
 	 * The value annotation type to be attached to nodes to store
 	 * the actual name.
+	 * this tag is not migratable, this means that it gets lost while translation units merge
 	 */
-	struct IncludeTag : public core::value_annotation::copy_on_migration {
+	struct IncludeTag { 
 		string include;
 		IncludeTag(const string& include) : include(include) {}
 		bool operator==(const IncludeTag& other) const { return include == other.include; }
