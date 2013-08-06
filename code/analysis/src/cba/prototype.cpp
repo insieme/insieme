@@ -49,15 +49,15 @@ namespace cba {
 	using std::set;
 	using std::vector;
 
-	const TypedSetType<core::ExpressionAddress> C("C");
-	const TypedSetType<core::ExpressionAddress> c("c");
-
-	const TypedSetType<core::ExpressionPtr> D("D");
-	const TypedSetType<core::ExpressionPtr> d("d");
+	const TypedSetType<Callable> C("C");
+	const TypedSetType<Callable> c("c");
 
 	typedef std::tuple<core::ExpressionAddress, CallContext, ThreadContext> Location;
 	const TypedSetType<Location> R("R");
 	const TypedSetType<Location> r("r");
+
+	const TypedSetType<core::ExpressionPtr> D("D");
+	const TypedSetType<core::ExpressionPtr> d("d");
 
 	const TypedSetType<Formula> A("A");
 	const TypedSetType<Formula> a("a");
@@ -190,13 +190,81 @@ namespace cba {
 			return cur.isa<LambdaAddress>();
 		}
 
+		int getParameterIndex(const ParametersPtr& params, const ExpressionPtr& expr) {
+			// must be a variable
+			if (!expr.isa<VariablePtr>()) return -1;
+
+			// search for it
+			for(int i = 0; i<(int)params.size(); i++) {
+				if (*(params[i]) == *expr) return i;
+			}
+
+			// not found
+			return -1;
+		}
+
 		using namespace utils::set_constraint_2;
 
-		vector<ExpressionAddress> getAllFunctionTerms(const StatementAddress& root) {
-			vector<ExpressionAddress> res;
+		template<int pos, int size>
+		struct gen_context {
+			void operator()(const vector<Label>& labels, vector<CallContext>& res, array<Label,size>& data) const {
+				static const gen_context<pos-1,size> inner;
+				for(auto cur : labels) {
+					data[pos-1] = cur;
+					inner(labels, res, data);
+				}
+			}
+		};
+
+		template<int size>
+		struct gen_context<0,size> {
+			void operator()(const vector<Label>& labels, vector<CallContext>& res, array<Label,size>& data) const {
+				res.push_back(data);
+			}
+		};
+
+
+		void generateContexts(const vector<Label>& labels, vector<CallContext>& res) {
+			array<Label,CallContext::size> tmp;
+			gen_context<CallContext::size, CallContext::size>()(labels, res, tmp);
+		}
+
+
+		vector<Callable> getAllCallableTerms(CBAContext& context, const StatementAddress& root) {
+
+			// compute list of all potential call-contexts
+			vector<Label> labels;
+			labels.push_back(0);		// default context
+			visitDepthFirst(root, [&](const CallExprAddress& cur) {
+				auto call = cur.getAddressedNode();
+				auto fun = call->getFunctionExpr();
+
+				// we can skip calls to literals
+				if (fun->getNodeType() == NT_Literal) return;
+
+				// we can also skip directly called stuff
+				if (fun->getNodeType() == NT_LambdaExpr) return;
+				if (fun->getNodeType() == NT_BindExpr) return;
+
+				// this is a potential call-site creating a new context
+				labels.push_back(context.getLabel(cur));
+			});
+
+			vector<CallContext> contexts;
+			generateContexts(labels, contexts);
+
+//			std::cout << "Sites:                " << labels << "\n";
+			std::cout << "Number of call sites: " << labels.size() << "\n";
+			std::cout << "Number of contexts:   " << labels.size()*labels.size() << " = " << contexts.size() << "\n";
+//			std::cout << "Contexts:\n" << join("\n", contexts) << "\n\n";
+
+			// compute resulting set
+			vector<Callable> res;
+
 			// collect all terms in the code
 			visitDepthFirst(root, [&](const ExpressionAddress& cur) {
-				// only interrested in lambdas and binds
+
+				// only interested in lambdas and binds
 				if (!(cur.isa<LambdaExprPtr>() || cur.isa<BindExprPtr>())) return;
 
 				// must not be root
@@ -211,7 +279,22 @@ namespace cba {
 				}
 
 				// TODO: also add all recursion variations
-				res.push_back(cur);
+				if (auto lambda = cur.isa<LambdaExprAddress>()) {
+
+					// lambdas do not need a context
+					res.push_back(Callable(lambda));
+
+				} else if (auto bind = cur.isa<BindExprAddress>()) {
+
+					// binds do
+					for(auto& context : contexts) {
+						// TODO: add thread contexts
+						res.push_back(Callable(bind, context, ThreadContext()));
+					}
+
+				} else {
+					assert(false && "How did you get here?");
+				}
 			});
 			return res;
 		}
@@ -230,7 +313,7 @@ namespace cba {
 			Constraints& constraints;
 
 			// the list of all terms in the targeted code
-			const vector<ExpressionAddress>& terms;
+			const vector<Callable>& callables;
 
 			// the two set types to deal with
 			const TypedSetType<T>& A;		// the value set (labels -> values)
@@ -238,8 +321,8 @@ namespace cba {
 
 		public:
 
-			BasicDataFlowConstraintCollector(CBAContext& context, Constraints& contraints, const TypedSetType<T>& A, const TypedSetType<T>& a, const vector<ExpressionAddress>& terms)
-				: processed(), context(context), constraints(contraints), terms(terms), A(A), a(a) { };
+			BasicDataFlowConstraintCollector(CBAContext& context, Constraints& contraints, const TypedSetType<T>& A, const TypedSetType<T>& a, const vector<Callable>& callables)
+				: processed(), context(context), constraints(contraints), callables(callables), A(A), a(a) { };
 
 			virtual void visit(const NodeAddress& node, const CallContext& callContext, const ThreadContext& threadContext) {
 				if (!processed.insert(Item(node,callContext,threadContext)).second) return;
@@ -326,11 +409,16 @@ namespace cba {
 			}
 
 			void visitLambdaExpr(const LambdaExprAddress& lambda, const CallContext& callContext, const ThreadContext& threadContext) {
-				// TODO: handle recursions
+				// nothing to do here => magic happens at call site
+			}
 
-				// and add constraints for the body
-				// the constraints for the body are handled by the call site
-//				visit(lambda->getBody(), callContext, threadContext);
+			void visitBindExpr(const BindExprAddress& bind, const CallContext& callContext, const ThreadContext& threadContext) {
+
+				// process bound arguments recursively
+				for (auto cur : bind->getBoundExpressions()) {
+					visit(cur, callContext, threadContext);
+				}
+
 			}
 
 			void visitCallExpr(const CallExprAddress& call, const CallContext& callContext, const ThreadContext& threadContext) {
@@ -348,54 +436,102 @@ namespace cba {
 				auto A_call = context.getSet(A, l_call, callContext, threadContext);
 
 				// prepare inner call context
-				CallContext innerCallContext = callContext << l_call;
+				CallContext innerCallContext = callContext;
 
 				// a utility resolving constraints for the given expression
-				auto addConstraints = [&](const ExpressionAddress& expr, bool fixed) {
+				auto addConstraints = [&](const Callable& target, bool fixed) {
 
 					// only searching for actual code
-					if (!expr.isa<LambdaExprPtr>() && !expr.isa<BindExprPtr>()) return;
+					const auto& expr = target.definition;
+					assert(expr.isa<LambdaExprPtr>() || expr.isa<BindExprPtr>());
 
 					// check whether the term is a function with the right number of arguments
-					// TODO: also check type?
-					auto funType = expr.as<ExpressionPtr>()->getType().isa<FunctionTypePtr>();
+					auto funType = expr->getType().isa<FunctionTypePtr>();
 					if(funType->getParameterTypes().size() != call.size()) return;		// this is not a potential function
 
-					assert(expr.isa<LambdaExprPtr>() && "Binds not implemented yet!");
+					// handle lambdas
+					if (auto lambda = expr.isa<LambdaExprAddress>()) {
 
-					// add constraints for arguments
-					auto lambda = expr.isa<LambdaExprAddress>();
-					for(std::size_t i=0; i<call.size(); i++) {
+						// add constraints for arguments
+						for(std::size_t i=0; i<call.size(); i++) {
 
-						// add constraint: t \in C(fun) => C(arg) \subset r(param)
-						auto l_arg = context.getLabel(call[i]);
-						auto param = context.getVariable(lambda->getParameterList()[i]);
+							// add constraint: t \in C(fun) => C(arg) \subset r(param)
+							auto l_arg = context.getLabel(call[i]);
+							auto param = context.getVariable(lambda->getParameterList()[i]);
 
-						auto A_arg = context.getSet(A, l_arg, callContext, threadContext);
-						auto a_param = context.getSet(a, param, innerCallContext, threadContext);
-						constraints.add((fixed) ? subset(A_arg, a_param) : subsetIf(expr, C_fun, A_arg, a_param));
+							auto A_arg = context.getSet(A, l_arg, callContext, threadContext);
+							auto a_param = context.getSet(a, param, innerCallContext, threadContext);
+							constraints.add((fixed) ? subset(A_arg, a_param) : subsetIf(target, C_fun, A_arg, a_param));
+						}
+
+						// add constraint for result value
+						auto l_ret = context.getLabel(lambda->getBody());
+						auto A_ret = context.getSet(A, l_ret, innerCallContext, threadContext);
+						constraints.add((fixed)? subset(A_ret, A_call) : subsetIf(target, C_fun, A_ret, A_call));
+
+						// add function body constraints for targeted call context
+						this->visit(lambda->getBody(), innerCallContext, threadContext);
+
+					// handle bind
+					} else if (auto bind = expr.isa<BindExprAddress>()) {
+						auto body = bind->getCall();
+						auto parameters = bind.as<BindExprPtr>()->getParameters();
+
+						// add constraints for arguments of covered call expression
+						for (auto cur : body) {
+
+							int index = getParameterIndex(parameters, cur);
+
+							// handle bind parameter
+							if (index >= 0) {		// it is a bind parameter
+
+								// link argument to parameter
+								auto l_out = context.getLabel(call[index]);
+								auto l_in  = context.getLabel(cur);
+
+								auto A_out = context.getSet(A, l_out, callContext, threadContext);
+								auto A_in  = context.getSet(A, l_in, innerCallContext, threadContext);
+								constraints.add((fixed) ? subset(A_out, A_in) : subsetIf(target, C_fun, A_out, A_in));
+
+							} else {
+
+								// handle captured parameter
+								// link value of creation context to body-argument
+								auto l_arg = context.getLabel(cur);
+
+								auto A_src = context.getSet(A, l_arg, target.callContext, target.threadContext);
+								auto A_trg = context.getSet(A, l_arg, innerCallContext, threadContext);
+								constraints.add((fixed) ? subset(A_src, A_trg) : subsetIf(target, C_fun, A_src, A_trg));
+							}
+						}
+
+						// add constraints for result value
+						auto l_body = context.getLabel(body);
+						auto A_ret = context.getSet(A, l_body, innerCallContext, threadContext);
+						constraints.add((fixed) ? subset(A_ret, A_call) : subsetIf(target, C_fun, A_ret, A_call));
+
+						// add function body constraints for targeted bind expression
+						this->visit(body, innerCallContext, threadContext);
 					}
-
-					// add constraint for result value
-					auto l_ret = context.getLabel(lambda->getBody());
-					auto A_ret = context.getSet(A, l_ret, innerCallContext, threadContext);
-					constraints.add((fixed)? subset(A_ret, A_call) : subsetIf(expr, C_fun, A_ret, A_call));
-
-					// add function body constraints for targed call context
-					this->visit(lambda->getBody(), innerCallContext, threadContext);
 				};
 
 				// no constraints for literals ...
 				if (fun.isa<LiteralPtr>()) return;
 
-				// if function expression is a lambda or bind => do not iterate through all terms, term is fixed
-				if (fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>()) {
-					addConstraints(fun, true);
+				// if function expression is a lambda or bind => do not iterate through all callables, callable is fixed
+				if (auto lambda = fun.isa<LambdaExprAddress>()) {
+					addConstraints(Callable(lambda), true);
+					return;
+				}
+
+				if (auto bind = fun.isa<BindExprAddress>()) {
+					addConstraints(Callable(bind, callContext, threadContext), true);
 					return;
 				}
 
 				// fix pass-by-value semantic - by considering all potential terms
-				for(auto cur : terms) {
+				innerCallContext <<= l_call;
+				for(auto cur : callables) {
 					addConstraints(cur, false);
 				}
 			}
@@ -408,14 +544,14 @@ namespace cba {
 		};
 
 
-		class ControlFlowConstraintCollector : public BasicDataFlowConstraintCollector<core::ExpressionAddress> {
+		class ControlFlowConstraintCollector : public BasicDataFlowConstraintCollector<Callable> {
 
-			typedef BasicDataFlowConstraintCollector<core::ExpressionAddress> super;
+			typedef BasicDataFlowConstraintCollector<Callable> super;
 
 		public:
 
-			ControlFlowConstraintCollector(CBAContext& context, Constraints& constraints, const vector<ExpressionAddress>& terms)
-				: BasicDataFlowConstraintCollector<core::ExpressionAddress>(context, constraints, C, c, terms) { };
+			ControlFlowConstraintCollector(CBAContext& context, Constraints& constraints, const vector<Callable>& callables)
+				: super(context, constraints, C, c, callables) { };
 
 			void visitLiteral(const LiteralAddress& literal, const CallContext& callContext, const ThreadContext& threadContext) {
 
@@ -426,7 +562,7 @@ namespace cba {
 				if (!literal->getType().isa<FunctionTypePtr>()) return;
 
 				// add constraint: literal \in C(lit)
-				auto value = literal.as<ExpressionAddress>();
+				auto value = Callable(literal);
 				auto l_lit = context.getLabel(literal);
 
 				auto C_lit = context.getSet(C, l_lit, callContext, threadContext);
@@ -440,12 +576,26 @@ namespace cba {
 				super::visitLambdaExpr(lambda, callContext, threadContext);
 
 				// add constraint: lambda \in C(lambda)
-				auto value = lambda.as<ExpressionAddress>();
+				auto value = Callable(lambda);
 				auto label = context.getLabel(lambda);
 
 				constraints.add(elem(value, context.getSet(C, label, callContext, threadContext)));
 
 				// TODO: handle recursions
+
+			}
+
+			void visitBindExpr(const BindExprAddress& bind, const CallContext& callContext, const ThreadContext& threadContext) {
+
+				// and default handling
+				super::visitBindExpr(bind, callContext, threadContext);
+
+				// add constraint: bind \in C(bind)
+				auto value = Callable(bind, callContext, threadContext);
+				auto label = context.getLabel(bind);
+
+				auto C_bind = context.getSet(C, label, callContext, threadContext);
+				constraints.add(elem(value, C_bind));
 
 			}
 
@@ -457,8 +607,8 @@ namespace cba {
 
 		public:
 
-			ConstantConstraintCollector(CBAContext& context, Constraints& constraints, const vector<ExpressionAddress>& terms)
-				: BasicDataFlowConstraintCollector<core::ExpressionPtr>(context, constraints, D, d, terms) { };
+			ConstantConstraintCollector(CBAContext& context, Constraints& constraints, const vector<Callable>& callables)
+				: super(context, constraints, D, d, callables) { };
 
 			void visitLiteral(const LiteralAddress& literal, const CallContext& callContext, const ThreadContext& threadContext) {
 
@@ -584,8 +734,8 @@ namespace cba {
 
 		public:
 
-			ArithmeticConstraintCollector(CBAContext& context, Constraints& constraints, const vector<ExpressionAddress>& terms, NodeManager& mgr)
-				: BasicDataFlowConstraintCollector<Formula>(context, constraints, cba::A, cba::a, terms), base(mgr.getLangBasic()) { };
+			ArithmeticConstraintCollector(CBAContext& context, Constraints& constraints, const vector<Callable>& callables, NodeManager& mgr)
+				: super(context, constraints, cba::A, cba::a, callables), base(mgr.getLangBasic()) { };
 
 			void visitLiteral(const LiteralAddress& literal, const CallContext& callContext, const ThreadContext& threadContext) {
 
@@ -746,8 +896,8 @@ namespace cba {
 
 		public:
 
-			BooleanConstraintCollector(CBAContext& context, Constraints& constraints, const vector<ExpressionAddress>& terms, NodeManager& mgr)
-				: BasicDataFlowConstraintCollector<bool>(context, constraints, cba::B, cba::b, terms), base(mgr.getLangBasic()) { };
+			BooleanConstraintCollector(CBAContext& context, Constraints& constraints, const vector<Callable>& callables, NodeManager& mgr)
+				: super(context, constraints, cba::B, cba::b, callables), base(mgr.getLangBasic()) { };
 
 			void visitLiteral(const LiteralAddress& literal, const CallContext& callContext, const ThreadContext& threadContext) {
 
@@ -916,8 +1066,8 @@ namespace cba {
 
 		public:
 
-			ReferenceConstraintCollector(CBAContext& context, Constraints& constraints, const vector<ExpressionAddress>& terms)
-				: BasicDataFlowConstraintCollector<Location>(context, constraints, R, r, terms) { };
+			ReferenceConstraintCollector(CBAContext& context, Constraints& constraints, const vector<Callable>& callables)
+				: BasicDataFlowConstraintCollector<Location>(context, constraints, R, r, callables) { };
 
 			void visitLiteral(const LiteralAddress& literal, const CallContext& callContext, const ThreadContext& threadContext) {
 
@@ -986,7 +1136,7 @@ namespace cba {
 			Constraints& constraints;
 
 			// the list of all function terms in the processed fragment
-			const vector<ExpressionAddress>& functions;
+			const vector<Callable>& callables;
 
 		private:
 
@@ -999,8 +1149,8 @@ namespace cba {
 
 		public:
 
-			BaseImperativeConstraintCollector(CBAContext& context, Constraints& contraints, const vector<ExpressionAddress>& functions, const SetIDType& Ain, const SetIDType& Aout)
-				: context(context), constraints(contraints), functions(functions), Ain(Ain), Aout(Aout), processed() {};
+			BaseImperativeConstraintCollector(CBAContext& context, Constraints& contraints, const vector<Callable>& callables, const SetIDType& Ain, const SetIDType& Aout)
+				: context(context), constraints(contraints), callables(callables), Ain(Ain), Aout(Aout), processed() {};
 
 			virtual void visit(const NodeAddress& node, const CallContext& callContext, const ThreadContext& threadContext) {
 				if (!processed.insert(Item(node,callContext,threadContext)).second) return;
@@ -1035,30 +1185,38 @@ namespace cba {
 
 
 				// create inner call context
-				CallContext innerCallContext = callContext << l_call;
+				CallContext innerCallContext = callContext;
 
 				// get set of potential target functions
 				auto C_fun = context.getSet(C, l_fun, callContext, threadContext);
 
 				// a utility resolving constraints for the called function
-				auto addConstraints = [&](const ExpressionAddress& target, bool fixed) {
-
-					// only interrested in lambdas (for now)
-					if (!target.isa<LambdaExprPtr>()) {
-						std::cout << "WARNING: unsupported potential call target of type: " << target->getNodeType() << "\n";
-						return;
-					}
+				auto addConstraints = [&](const Callable& target, bool fixed) {
+					auto expr = target.definition;
 
 					// check correct number of arguments
-					if (call.size() != target.getType().as<FunctionTypePtr>()->getParameterTypes().size()) {
+					if (call.size() != expr.getType().as<FunctionTypePtr>()->getParameterTypes().size()) {
 						// this is not a valid target
 						return;
 					}
 
 					// ---- Effect of arguments => in of function ----
-					auto lambda = target.as<LambdaExprAddress>();
 
-					auto l_fun = context.getLabel(lambda->getBody());		// here we have to go through list of functions ...
+					// get body
+					StatementAddress body;
+					if (auto lambda = expr.isa<LambdaExprAddress>()) {
+						body = lambda->getBody();
+					} else if (auto bind = expr.isa<BindExprAddress>()) {
+						body = bind->getCall();
+					} else {
+						std::cout << "Unsupported potential target of type " << expr->getNodeType() << " encountered.";
+						assert(false && "Unsupported potential call target.");
+					}
+
+					// get label for body
+					auto l_fun = context.getLabel(body);
+
+					// forward effects of argument evaluation
 					for (auto arg : call) {
 						auto l_arg = context.getLabel(arg);
 						if (fixed) {
@@ -1086,7 +1244,7 @@ namespace cba {
 					}
 
 					// process function body
-					this->visit(lambda->getBody(), innerCallContext, threadContext);
+					this->visit(body, innerCallContext, threadContext);
 
 				};
 
@@ -1107,20 +1265,56 @@ namespace cba {
 					// and the function
 					connectStateSets(Aout, l_fun, callContext, threadContext, Aout, l_call, callContext, threadContext);
 
-				} else if (fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>()) {
+				} else if (auto lambda = fun.isa<LambdaExprAddress>()) {
 
 					// direct call => handle directly
-					addConstraints(fun, true);
+					addConstraints(Callable(lambda), true);
+
+				} else if (auto bind = fun.isa<BindExprAddress>()) {
+
+					// direct call of bind => handle directly
+					addConstraints(Callable(bind, callContext, threadContext), true);
 
 				} else {
 
+					// create new call-context
+					innerCallContext <<= l_call;
+
 					// indirect call => dynamic dispatching required
-					for(auto cur : functions) {
+					for(auto cur : callables) {
 						addConstraints(cur,false);
 					}
 
 				}
 
+			}
+
+			void visitBindExpr(const BindExprAddress& bind, const CallContext& callContext, const ThreadContext& threadContext) {
+
+				auto boundExprs = bind->getBoundExpressions();
+
+				// special case: no bound expressions
+				if (boundExprs.empty()) {
+					// forward in to out and be done
+					visitExpression(bind, callContext, threadContext);
+					return;
+				}
+
+				auto l_bind = context.getLabel(bind);
+
+				// evaluate bound expressions
+				for(auto& cur : boundExprs) {
+					auto l_arg = context.getLabel(cur);
+
+					//   - forward in to expression in
+					connectStateSets(Ain, l_bind, callContext, threadContext, Ain, l_arg, callContext, threadContext);
+
+					//   - process bound expressions
+					visit(cur, callContext, threadContext);
+
+					//   - forward out of expression to out of bind
+					connectStateSets(Aout, l_arg, callContext, threadContext, Aout, l_bind, callContext, threadContext);
+				}
 			}
 
 			void visitExpression(const ExpressionAddress& expr, const CallContext& callContext, const ThreadContext& threadContext) {
@@ -1286,8 +1480,8 @@ namespace cba {
 
 		public:
 
-			ReachableConstraintCollector(CBAContext& context, Constraints& constraints, const vector<ExpressionAddress>& terms, const StatementAddress& root)
-				: super(context, constraints, terms, Rin, Rout) {
+			ReachableConstraintCollector(CBAContext& context, Constraints& constraints, const vector<Callable>& callables, const StatementAddress& root)
+				: super(context, constraints, callables, Rin, Rout) {
 
 				// make entry point reachable
 				auto l = context.getLabel(root);
@@ -1334,8 +1528,8 @@ namespace cba {
 		public:
 
 			ImperativeStateConstraintCollector(CBAContext& context, Constraints& constraints, const TypedSetType<T>& dataSet,
-					const vector<Location>& locations, const vector<ExpressionAddress>& functions)
-				: super(context, constraints, functions, Sin, Sout), dataSet(dataSet), locations(locations) {};
+					const vector<Location>& locations, const vector<Callable>& callables)
+				: super(context, constraints, callables, Sin, Sout), dataSet(dataSet), locations(locations) {};
 
 
 			void visitCallExpr(const CallExprAddress& call, const CallContext& callContext, const ThreadContext& threadContext) {
@@ -1452,7 +1646,7 @@ namespace cba {
 
 		template<typename T>
 		void addImperativeConstraints(CBAContext& context, Constraints& res, const StatementAddress& root,
-				const TypedSetType<T>& type, const vector<Location>& locations, const vector<ExpressionAddress>& funs,
+				const TypedSetType<T>& type, const vector<Location>& locations, const vector<Callable>& funs,
 				const CallContext& callContext, const ThreadContext& threadContext) {
 			ImperativeStateConstraintCollector<T>(context, res, type, locations, funs).visit(root, callContext, threadContext);
 		}
@@ -1472,7 +1666,7 @@ namespace cba {
 		ThreadContext initThreadContext;
 
 		// TODO: resolve dependencies between collectors automatically
-		vector<ExpressionAddress> funs = getAllFunctionTerms(root);
+		vector<Callable> funs = getAllCallableTerms(context, root);
 
 		// TODO: can also be used to collect all call and thread contexts
 		ReachableConstraintCollector(context, res, funs, root).visit(root, initCallContext, initThreadContext);

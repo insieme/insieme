@@ -70,14 +70,19 @@ namespace cba {
 
 	// ---------- context information ----------------
 
+	// TODO: combine call and thread context to a single object
+
 	template<typename T, unsigned s>
 	struct Context : public utils::Printable {
+		enum { size = s };
 		array<T, s> context;		// TODO: make length a generic parameter
 		Context() : context() {}
 		Context(const Context<T,s>& other) : context(other.context) {}
+		Context(const array<T,s>& context) : context(context) {}
 		template<typename ... E>
 		Context(const E& ... e) : context((array<T,s>){{e...}}) {}
 		bool operator==(const Context& other) const { return context == other.context; }
+		bool operator!=(const Context& other) const { return context != other.context; }
 		bool operator<(const Context& other) const { return context < other.context; }
 		Context<T,s>& operator<<=(const Label& label) {
 			for(unsigned i=0; i<(s-1); ++i) {
@@ -121,15 +126,7 @@ namespace cba {
 		TypedSetType(const string& name) : SetType(name) {}
 	};
 
-	extern const TypedSetType<core::ExpressionAddress> C;
-	extern const TypedSetType<core::ExpressionAddress> c;
 
-	extern const TypedSetType<core::ExpressionPtr> D;
-	extern const TypedSetType<core::ExpressionPtr> d;
-
-	typedef std::tuple<core::ExpressionAddress, CallContext, ThreadContext> Location;
-	extern const TypedSetType<Location> R;
-	extern const TypedSetType<Location> r;
 
 
 	// ------------------- reachable code ------------------
@@ -142,6 +139,61 @@ namespace cba {
 
 	extern const TypedSetType<Reachable> Rin;		// the associated term is reached
 	extern const TypedSetType<Reachable> Rout;		// the associated term is left
+
+
+	// ----------------- inter-procedural control flow ------------------
+
+	// the type used to represent functions / closures
+	struct Callable : public utils::Printable {
+		core::ExpressionAddress definition;
+		CallContext callContext;
+		ThreadContext threadContext;
+
+		Callable(const core::LiteralAddress& lit)
+			: definition(lit.getAddressedNode()), callContext(), threadContext() {}
+		Callable(const core::LambdaExprAddress& fun)
+			: definition(fun), callContext(), threadContext() {}
+		Callable(const core::BindExprAddress& bind, const CallContext& callContext, const ThreadContext& threadContext)
+			: definition(bind), callContext(callContext), threadContext(threadContext) {}
+		Callable(const Callable& other)
+			: definition(other.definition), callContext(other.callContext), threadContext(other.threadContext) {}
+
+		bool operator<(const Callable& other) const {
+			if (definition != other.definition) return definition < other.definition;
+			if (callContext != other.callContext) return callContext < other.callContext;
+			if (threadContext != other.threadContext) return threadContext < other.threadContext;
+			return false;
+		}
+		bool operator==(const Callable& other) const {
+			if (this == &other) return true;
+			return definition == other.definition && callContext == other.callContext && threadContext == other.threadContext;
+		}
+
+		bool operator!=(const Callable& other) const { return !(*this == other); }
+	protected:
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			if (auto lit = definition.isa<core::LiteralPtr>()) return out << *lit;
+			return out << "(" << definition->getNodeType() << "@" << definition << "," << callContext << "," << threadContext << ")";
+		}
+	};
+
+	extern const TypedSetType<Callable> C;
+	extern const TypedSetType<Callable> c;
+
+
+	// ----------------- references ---------------
+
+	typedef std::tuple<core::ExpressionAddress, CallContext, ThreadContext> Location;
+	extern const TypedSetType<Location> R;
+	extern const TypedSetType<Location> r;
+
+
+	// ----------------- simple constants ---------------
+
+	extern const TypedSetType<core::ExpressionPtr> D;
+	extern const TypedSetType<core::ExpressionPtr> d;
+
 
 	// ----------------- arithmetic analysis ---------------
 
