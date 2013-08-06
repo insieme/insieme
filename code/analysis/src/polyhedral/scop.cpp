@@ -1331,7 +1331,7 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 		// First of all we check whether this condition is a composed by multiple conditions
 		// connected through || or && statements 
 		BasicGenerator::Operator&& op = 
-			mgr.getLangBasic().getOperator( callExpr->getFunctionExpr().as<LiteralPtr>() ); 
+			mgr.getLangBasic().getOperator( callExpr->getFunctionExpr() );
 
 		switch (op) {
 		case BasicGenerator::LOr:

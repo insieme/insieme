@@ -353,7 +353,7 @@ ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenera
 	return 0;
 }
 
-BasicGenerator::Operator BasicGenerator::getOperator(const LiteralPtr& lit) const {
+BasicGenerator::Operator BasicGenerator::getOperator(const ExpressionPtr& lit) const {
 	// We have to scan the multimap operationMap and find the operation which
 	// has this literal as second argument.
 	{ // try literals

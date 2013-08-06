@@ -550,7 +550,7 @@ TEST(ScopRegion, IfStmtSelect) {
 	NodeManager mgr1;
 	NodePtr res = scop->toIR(mgr1);
 	EXPECT_EQ(
-		"{ref.assign(v4, 0); if(bool.and(int.eq(v2, 5), bind(){rec v0.{v0=fun(int<4> v1) {return int.ge(v1, 6);}}(v3)})) {vector.ref.elem(v1, cast<uint<8>>(int.add(v2, v3)));} else {}; if(bool.and(int.ge(v2, 5), bind(){rec v0.{v0=fun(int<4> v4) {return int.eq(v4, 5);}}(v3)})) {vector.ref.elem(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}", toString(*res));
+		"{ref.assign(v4, 0); if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.eq(v2, 5), bind(){rec v0.{v0=fun(int<4> v1) {return int.ge(v1, 6);}}(v3)})) {vector.ref.elem(v1, cast<uint<8>>(int.add(v2, v3)));} else {}; if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.ge(v2, 5), bind(){rec v0.{v0=fun(int<4> v4) {return int.eq(v4, 5);}}(v3)})) {vector.ref.elem(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}", toString(*res));
 
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
 	EXPECT_TRUE(scop2);
@@ -589,7 +589,7 @@ TEST(ScopRegion, IfStmtPiecewise) {
 	NodeManager mgr1;
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr1);
-	EXPECT_EQ("{ref.assign(v4, 0); if(bool.and(int.ge(v2, 9), bind(){rec v0.{v0=fun(int<4> v1) {return int.le(v1, 11);}}(v2)})) {vector.ref.elem(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}", toString(*res));
+	EXPECT_EQ("{ref.assign(v4, 0); if(rec v0.{v0=fun(bool v1, (()=>bool) v2) {if(v1) {return v2();} else {}; return false;}}(int.ge(v2, 9), bind(){rec v0.{v0=fun(int<4> v1) {return int.le(v1, 11);}}(v2)})) {vector.ref.elem(v1, cast<uint<8>>(int.add(v2, v3)));} else {};}", toString(*res));
 
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
 	EXPECT_TRUE(scop2);

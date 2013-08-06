@@ -140,7 +140,7 @@ public:
 	 * Obtains the operator (as defined in the lang.def file) from a literal
 	 * expression obtained through the previous method (inverse procedure)
 	 */
-	Operator getOperator(const LiteralPtr& lit) const;
+	Operator getOperator(const ExpressionPtr& lit) const;
 
 	// ----- type hierarchy utilities ---
 
