@@ -310,16 +310,14 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXConstructExpr(const cla
 	const core::IRBuilder& builder = convFact.builder;
 
 // TODO:  array constructor with no default initialization (CXX11)
-
-	const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
-
+    const CXXConstructorDecl* ctorDecl = callExpr->getConstructor();
 	const clang::Type* classType= callExpr->getType().getTypePtr();
 	core::TypePtr&& irClassType = convFact.convertType(classType);
 	core::TypePtr&&  refToClassTy = builder.refType(irClassType);
 
 	// we do NOT instantiate elidable ctors, this will be generated and ignored if needed by the
 	// back end compiler
-	if (callExpr->isElidable () ){
+	if (callExpr->isElidable () && ctorDecl->isCopyConstructor()){
 		// if is an elidable constructor, we should return a refvar, not what the parameters say
 		core::ExpressionPtr retIr = (Visit(callExpr->getArg (0)));
 		if (core::analysis::isCallOf(retIr, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize()))
@@ -720,7 +718,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 	for (core::VariablePtr var : usedVars){
 		if (var->getType().isa<core::RefTypePtr>()){
 			core::VariablePtr newParam = builder.variable(var->getType().as<core::RefTypePtr>()->getElementType());
-			// we might need to do some fix on array variables 
+			// we might need to do some fix on array variables
 			if (core::analysis::isReadOnly(lambdaBody, var)){
 
 				// replace read uses
