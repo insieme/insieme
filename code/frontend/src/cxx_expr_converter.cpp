@@ -668,6 +668,8 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 			if (core::analysis::isCallOf(init, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize())){
 				// it might happen that we try to materialize an object just to use it by value
 				newIr = core::transform::replaceAllGen (mgr, innerIr, var, init, false);
+				// OR: the materialization in the declaration must be transform into a refvar
+				decl = builder.declarationStmt(var, builder.refVar(init.as<core::CallExprPtr>()[0]));
 			}
 			else{
 				core::ExpressionPtr trg = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), var);
@@ -676,7 +678,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 			}
 
 			if (newIr == innerIr){
-				stmtList.push_back(fit->second);
+				stmtList.push_back(decl);
 			}
 			else{
 				innerIr = newIr;
