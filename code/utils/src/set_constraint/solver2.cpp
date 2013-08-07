@@ -37,6 +37,7 @@
 #include "insieme/utils/set_constraint/solver2.h"
 
 #include <utility>
+#include <unordered_set>
 #include <vector>
 
 namespace insieme {
@@ -103,43 +104,133 @@ namespace set_constraint_2 {
 
 	namespace {
 
-		struct SolverContext {
+		// TODO: make this externally visible for
+		class LazySolver {
 			const ConstraintResolver& resolver;
-			Assignment res;
 
-			std::set<SetID> resolved;
+			Constraints constraints;
+			Assignment ass;
+
+			// the set of sets for which constraints have already been resolved
+			std::unordered_set<SetID> resolved;
+
+			// the lazily constructed graph
 			typedef map<SetID, set<const Constraint*>> Edges;
+			Edges edges;
+
+		public:
+
+			LazySolver(const ConstraintResolver& resolver, const Assignment& initial)
+				: resolver(resolver), ass(initial) {}
+
+
+			const Assignment& solve(const std::set<SetID>& sets) {
+
+				// create the work-list for this resolution
+				vector<SetID> worklist;
+
+				// 1. start by resolving requested sets
+				resolveConstraints(sets, worklist);
+
+				// 2. solve constraints
+				while(!worklist.empty()) {
+					// retrieve first element
+					SetID head = worklist.back();
+					worklist.pop_back();
+
+					// process outgoing edges
+					for (const Constraint* cur : edges[head]) {
+						const Constraint& cc = *cur;
+
+						// add and resolve list of used filters
+						if (hasUnresolvedInput(cc)) {
+							resolveConstraints(cc.getUsedInputs(ass), worklist);
+						}
+
+						// trigger update
+						bool change = cc.update(ass);
+
+						// register outputs in work-list
+						if (change) {
+							for (auto cur : cc.getOutputs()) {
+								worklist.push_back(cur);
+							}
+						}
+					}
+				}
+
+
+				// return assignment - TODO: find way to project to requested values
+				return ass;
+			}
+
+		private:
+
+			bool hasUnresolvedInput(const Constraint& cur) const {
+				return any(cur.getInputs(), [&](const SetID& cur) { return resolved.find(cur) == resolved.end(); });
+			}
+
+			void resolveConstraints(const std::set<SetID>& sets, vector<SetID>& worklist) {
+
+				// filter out sets already resolved
+				std::set<SetID> missing;
+				for(auto cur : sets) {
+					if (!contains(resolved, cur)) missing.insert(cur);
+				}
+
+				// check whether there is anything to do
+				if (missing.empty()) return;
+
+				// add current to resolved set
+				for(auto cur : missing) {
+					resolved.insert(cur);
+				}
+
+				// obtain and integrate new constraints
+				std::set<SetID> nextGeneration;
+				for(auto cur : resolver(missing)) {
+
+					// copy constraint to internal list of constraints
+					constraints.add(cur);
+
+					// trigger init-routines
+					cur->init(ass, worklist);
+
+					// add edges to elements depending on
+					for (auto set : cur->getInputs()) {
+						edges[set].insert(&*cur);
+					}
+
+					// collect missing inputs
+					for (auto set : cur->getUsedInputs(ass)) {
+						if (!contains(resolved, set)) {
+							nextGeneration.insert(set);
+						}
+					}
+				}
+
+				// resolve next generation
+				if(!nextGeneration.empty()) {
+					resolveConstraints(nextGeneration, worklist);
+				}
+			}
+
 		};
 
-		void solveInternal(SolverContext& context, const SetID& set) {
-
-			// create a workList
-
-		}
 
 	}
 
 
 	Assignment solve(const SetID& set, const ConstraintResolver& resolver, Assignment initial) {
-		// solve a single set
-		SolverContext context = { resolver, initial };
-		solveInternal(context, set);
-		return context.res;
+		// use set-based interface
+		std::set<SetID> sets; sets.insert(set);
+		return solve(sets, resolver, initial);
 	}
 
 	// a lazy solver implementation
 	Assignment solve(const std::set<SetID>& sets, const ConstraintResolver& resolver, Assignment initial) {
-
 		//create resulting assignment
-		SolverContext context = { resolver, initial };
-
-		// just resolve set by set
-		for (auto cur : sets) {
-			solveInternal(context, cur);
-		}
-
-		// done
-		return context.res;
+		return LazySolver(resolver, initial).solve(sets);
 	}
 
 

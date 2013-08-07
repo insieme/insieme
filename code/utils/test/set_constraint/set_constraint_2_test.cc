@@ -104,36 +104,47 @@ namespace set_constraint_2 {
 
 		auto c = subset(s1, s2);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
+		EXPECT_EQ(1u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = subset(s2,s1);
 		EXPECT_FALSE(c->check(a)) << *c << " on " << a;
+		EXPECT_EQ(1u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = elem( 3, s1);
 		EXPECT_FALSE(c->check(a)) << *c << " on " << a;
+		EXPECT_EQ(0u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = elem( 3, s2);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
+		EXPECT_EQ(0u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = subsetIf( 3, s2, s1, s2);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
+		EXPECT_EQ(2u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = subsetIf( 3, s2, s2, s1);
 		EXPECT_FALSE(c->check(a)) << *c << " on " << a;
+		EXPECT_EQ(1u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = subsetIf( 3, s1, s1, s2);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
+		EXPECT_EQ(1u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = subsetIf( 3, s1, s2, s1);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
+		EXPECT_EQ(1u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = subsetIfBigger(s1, 1, s1, s2);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
+		EXPECT_EQ(1u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = subsetIfBigger(s1, 5, s1, s2);
 		EXPECT_TRUE(c->check(a)) << *c << " on " << a;
+		EXPECT_EQ(1u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 		c = subsetIfBigger(s1, 1, s2, s1);
 		EXPECT_FALSE(c->check(a)) << *c << " on " << a;
+		EXPECT_EQ(2u, c->getUsedInputs(a).size()) << c->getUsedInputs(a);
 
 	}
 
@@ -224,6 +235,42 @@ namespace set_constraint_2 {
 		EXPECT_EQ("{7,8}", toString(res[s(4)])) << res;
 		EXPECT_EQ("{11,12}", toString(res[s(5)])) << res;
 
+	}
+
+	TEST(Solver, Lazy) {
+
+		// lazy-evaluated faculty values
+		auto resolver = [](const std::set<SetID>& sets)->Constraints {
+			Constraints res;
+			for(auto cur : sets) {
+				int id = cur.getID();
+				if (id == 0) {
+					res.add(elem(0, TypedSetID<int>(id)));
+				} else if (id == 1 || id == 2) {
+					res.add(elem(1, TypedSetID<int>(id)));
+				} else {
+					TypedSetID<int> a(id-1);
+					TypedSetID<int> b(id-2);
+					TypedSetID<int> r(id);
+					res.add(subsetBinary(a, b, r, [](const std::set<int>& a, const std::set<int>& b)->std::set<int> {
+						std::set<int> res;
+						for( int x : a) for (int y : b) res.insert(x+y);
+						return res;
+					}));
+				}
+			}
+			return res;
+		};
+
+		// see whether we can compute something
+		auto res = solve(TypedSetID<int>(4), resolver);
+//		std::cout << res << "\n";
+		EXPECT_EQ("{3}", toString(res[TypedSetID<int>(4)]));
+
+		// see whether we can compute something
+		res = solve(TypedSetID<int>(46), resolver);
+//		std::cout << res << "\n";
+		EXPECT_EQ("{1836311903}", toString(res[TypedSetID<int>(46)]));
 	}
 
 } // end namespace set_constraint

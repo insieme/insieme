@@ -69,6 +69,8 @@ namespace set_constraint_2 {
 		SetID(int id = -1) : id(id) { };
 		SetID(const SetID& id) : id(id.id) { };
 
+		int getID() const { return id; }
+
 		bool operator==(const SetID& other) const { return id == other.id; }
 		bool operator!=(const SetID& other) const { return !(*this == other); }
 		bool operator<(const SetID& other) const { return id < other.id; }
@@ -109,6 +111,8 @@ namespace set_constraint_2 {
 
 		const std::vector<SetID>& getInputs() const { return inputs; };
 		const std::vector<SetID>& getOutputs() const { return outputs; };
+
+		virtual std::set<SetID> getUsedInputs(const Assignment& ass) const =0;
 
 	protected:
 
@@ -202,6 +206,13 @@ namespace set_constraint_2 {
 				executor.writeDotEdge(out, label.str());
 				return out;
 			}
+
+			virtual std::set<SetID> getUsedInputs(const Assignment& ass) const {
+				std::set<SetID> used;
+				filter.addUsedInputs(ass, used);
+				if (filter(ass)) executor.addUsedInputs(ass, used);
+				return used;
+			}
 		};
 
 		// -------------------- Filter --------------------------------
@@ -222,6 +233,7 @@ namespace set_constraint_2 {
 				static const SetIDs empty;
 				return empty;
 			}
+			void addUsedInputs(const Assignment& ass, std::set<SetID>& used) const {}
 		};
 
 		template<typename A, typename B>
@@ -235,6 +247,10 @@ namespace set_constraint_2 {
 			}
 			SetIDs getInputs() const {
 				return combine(a.getInputs(), b.getInputs());
+			}
+			void addUsedInputs(const Assignment& ass, std::set<SetID>& used) const {
+				a.addUsedInputs(ass, used);
+				if (a(ass)) b.addUsedInputs(ass, used);
 			}
 		};
 
@@ -253,6 +269,9 @@ namespace set_constraint_2 {
 			SetIDs getInputs() const {
 				return toVector<SetID>(a);
 			}
+			void addUsedInputs(const Assignment& ass, std::set<SetID>& used) const {
+				used.insert(a);
+			}
 		};
 
 		template<typename T>
@@ -269,6 +288,9 @@ namespace set_constraint_2 {
 			}
 			SetIDs getInputs() const {
 				return toVector<SetID>(a);
+			}
+			void addUsedInputs(const Assignment& ass, std::set<SetID>& used) const {
+				used.insert(a);
 			}
 		};
 
@@ -288,6 +310,9 @@ namespace set_constraint_2 {
 			}
 			SetIDs getInputs() const {
 				return toVector<SetID>(a);
+			}
+			void addUsedInputs(const Assignment& ass, std::set<SetID>& used) const {
+				used.insert(a);
 			}
 		};
 
@@ -348,6 +373,9 @@ namespace set_constraint_2 {
 				out << "e" << (int*)&e << " [label=\"" << e << "\"]\n";
 				out << "e" << (int*)&e << " -> " << a << " " << label;
 			}
+			void addUsedInputs(const Assignment& ass, std::set<SetID>& used) const {
+				// nothing
+			}
 		};
 
 		template<typename T>
@@ -374,6 +402,9 @@ namespace set_constraint_2 {
 			}
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << a << " -> " << b << label;
+			}
+			void addUsedInputs(const Assignment& ass, std::set<SetID>& used) const {
+				used.insert(a);
 			}
 		};
 
@@ -406,6 +437,9 @@ namespace set_constraint_2 {
 			}
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << a << " -> " << r << label;
+			}
+			void addUsedInputs(const Assignment& ass, std::set<SetID>& used) const {
+				used.insert(a);
 			}
 		};
 
@@ -441,6 +475,10 @@ namespace set_constraint_2 {
 			void writeDotEdge(std::ostream& out, const string& label) const {
 				out << a << " -> " << r << label << "\n";
 				out << b << " -> " << r << label;
+			}
+			void addUsedInputs(const Assignment& ass, std::set<SetID>& used) const {
+				used.insert(a);
+				used.insert(b);
 			}
 		};
 
@@ -534,6 +572,7 @@ namespace set_constraint_2 {
 		struct Container : public Printable {
 			virtual ~Container() {};
 			virtual void append(std::map<SetID,string>& res) const =0;
+			virtual Container* copy() const =0;
 		};
 
 		template<typename T>
@@ -550,6 +589,9 @@ namespace set_constraint_2 {
 					res.insert({cur.first, toString(cur.second)});
 				}
 			}
+			virtual Container* copy() const {
+				return new TypedContainer<T>(*this);
+			}
 		};
 
 		typedef std::map<std::type_index, Container*> container_index_type;
@@ -557,6 +599,14 @@ namespace set_constraint_2 {
 		container_index_type data;
 
 	public:
+
+		Assignment() {};
+
+		Assignment(const Assignment& other) {
+			for(auto cur : other.data) {
+				data[cur.first] = cur.second->copy();
+			}
+		}
 
 		~Assignment() {
 			for(auto cur : data) {
@@ -641,7 +691,7 @@ namespace set_constraint_2 {
 	// ----------------------------- Solver ------------------------------
 
 	// The type of entities capable of resolving constraints.
-	typedef std::function<Constraints(const SetID&)> ConstraintResolver;
+	typedef std::function<Constraints(const std::set<SetID>&)> ConstraintResolver;
 
 	// an eager solver implementation
 	Assignment solve(const Constraints& constraints, Assignment initial = Assignment());
@@ -655,3 +705,15 @@ namespace set_constraint_2 {
 } // end namespace set_constraint_2
 } // end namespace utils
 } // end namespace insieme
+
+namespace std {
+
+	template<>
+	struct hash<insieme::utils::set_constraint_2::SetID> {
+		size_t operator()(const insieme::utils::set_constraint_2::SetID& id) const {
+			return id.getID();
+		}
+	};
+
+
+} // end namespace std
