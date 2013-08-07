@@ -754,12 +754,18 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			// we want the inner static object
 			auto lit = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
 
-			if (definition->getInit())
-				retStmt = builder.initStaticVariable(lit, convertInitExpr(definition->getType().getTypePtr(),
-																		  definition->getInit(),
-																		  var->getType().as<core::RefTypePtr>().getElementType(), false));
-			else
+			if (definition->getInit()) {
+				auto initIr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(),
+							var->getType().as<core::RefTypePtr>().getElementType(), false);
+				auto call = initIr.isa<core::CallExprPtr>();
+				if(call && call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor()) {
+					//this can also be done by substituting the first param of ctor by the unwrapped static var
+					initIr = builder.deref(initIr);
+				}
+				retStmt = builder.initStaticVariable(lit, initIr);
+			} else {
 				retStmt = builder.getNoOp();
+			}
 		}
 		else{
 			// print diagnosis messages
