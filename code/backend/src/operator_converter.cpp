@@ -440,6 +440,11 @@ namespace backend {
 				}
 			}
 
+			// deref of an assigment, do not
+			if (core::analysis::isCallOf (ARG(0), LANG_BASIC.getRefAssign()) ){
+				return CONVERT_ARG(0);
+			}
+
 			return c_ast::deref(CONVERT_ARG(0));
 		});
 
