@@ -634,11 +634,11 @@ namespace tu {
 				insieme::annotations::c::markExtern(cur.as<LiteralPtr>(),
 						type.isa<RefTypePtr>() &&
 						cur.as<LiteralPtr>()->getStringValue()[0]!='\"' &&
+						!insieme::annotations::c::hasIncludeAttached(cur) &&
 						!ext.isStaticType(type.as<RefTypePtr>()->getElementType()) &&
 						!any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *resolver.map(global.first) == *cur; })
 				);
 			}
-
 
 			// build resulting lambda
 			if (inits.empty()) return mainFunc;

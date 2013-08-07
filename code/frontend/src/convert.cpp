@@ -235,6 +235,7 @@ tu::IRTranslationUnit Converter::convert() {
 			if (!var->hasGlobalStorage()) return;
 			if (var->hasExternalStorage()) return;
 			if (var->isStaticLocal()) return;
+			if (converter.getProgram().getInterceptor().isIntercepted(var->getQualifiedNameAsString())) return;
 
 			auto builder = converter.getIRBuilder();
 			// obtain type
@@ -251,7 +252,6 @@ tu::IRTranslationUnit Converter::convert() {
 
 			// NOTE: not all staticDataMember are seen here, so we take care of the "unseen"
 			// ones in lookUpVariable
-
 			auto initValue = convertInitForGlobal(converter, var, elementType);
 			converter.getIRTranslationUnit().addGlobal(literal, initValue);
 		}
@@ -540,6 +540,10 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// we could look for it in the cache, but is fast to create a new one, and we can not get
 		// rid if the qualified name function
 		std::string name = utils::buildNameForVariable(varDecl);
+		if (getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
+			name = varDecl->getQualifiedNameAsString();
+		}
+
  		if(varDecl->isStaticLocal()) {
 			VLOG(2)	<< "         isStaticLocal";
             if(staticVarDeclMap.find(varDecl) != staticVarDeclMap.end()) {
@@ -574,12 +578,17 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// some member statics might be missing because of defined in a template which was ignored
 		// since this is the fist time we get access to the complete type, we can define the
 		// suitable initialization
-		if (varDecl->isStaticDataMember()){
+		// if the variable is intercepted, we ignore the declaration, will be there once the header is attached
+		if (varDecl->isStaticDataMember() && !getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())){
 			VLOG(2)	<< "         is static data member";
 			core::TypePtr&& elementType = convertType( varTy.getTypePtr() );
 			auto initValue = convertInitForGlobal(*this, varDecl, elementType);
 			// as we don't see them in the globalVisitor we have to take care of them here
 			getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), initValue);
+		}
+
+		if (getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
+			utils::addHeaderForDecl(globVar, varDecl, program.getStdLibDirs());
 		}
 
 		// OMP threadPrivate
