@@ -650,10 +650,10 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 	const clang::Expr* inner = cleanupExpr->getSubExpr();
 	core::ExpressionPtr innerIr = convFact.convertExpr(inner);
 
-	// for each of the temporaries(reverse) create an IR var decl and push it at the beginning of the
+	// for each of the temporaries create an IR var decl and push it at the beginning of the
 	// lambda body
 	vector<core::StatementPtr> stmtList;
-	for (std::vector<const clang::CXXTemporary*>::reverse_iterator it = tmps.rbegin() ; it != tmps.rend(); ++it) {
+	for (std::vector<const clang::CXXTemporary*>::iterator it = tmps.begin() ; it != tmps.end(); ++it) {
 
 		Converter::TemporaryInitMap::const_iterator fit = convFact.tempInitMap.find(*it);
 	    if (fit != convFact.tempInitMap.end()) {
@@ -666,18 +666,23 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitExprWithCleanups(const cla
 			if (core::analysis::isCallOf(init, mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize())){
 				// it might happen that we try to materialize an object just to use it by reference,
 				// we can use inplace the materializarion
-				newIr = core::transform::replaceAllGen (mgr, innerIr, var, init, false);
+				newIr = core::transform::replaceAllGen (mgr, innerIr, var, init, true);
 				// OR: we dont, therefore the materialization in the declaration must be transform into a refvar
 				decl = builder.declarationStmt(var, builder.refVar(init.as<core::CallExprPtr>()[0]));
 			}
 			else{
+				// is is used as const reference, we can use the temporary in the place where used
+				//      decl ref<'a> vX = ctor( var(undef('a)))
+				//      return exprWithTemps ( RefIRToConstCpp(vX) )
+				//      --------------------------------------------
+				//      return exprWithTemps ( RefIRToConstCpp(ctor( var(undef('a))) ))
 				core::ExpressionPtr trg = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), var);
 				core::ExpressionPtr subst = builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp(), init);
-				newIr = core::transform::replaceAllGen (mgr, innerIr, trg, subst, false);
+				newIr = core::transform::replaceAllGen (mgr, innerIr, trg, subst, true);
 			}
 
 			if (*newIr == *innerIr){
-				stmtList.push_back(decl);
+				stmtList.insert(stmtList.begin(),decl);  // insert with reverse order 
 			}
 			else{
 				innerIr = newIr;
