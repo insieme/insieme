@@ -244,6 +244,13 @@ namespace lang {
 				"let cppRefA = struct { ref<'a> _cpp_ref } in "
 				"let constCppRefB = struct { ref<'b> _const_cpp_ref } in "
 				"(cppRefA, type<constCppRefB>)->constCppRefB");
+
+		/**
+		 * typeid implementation
+		 */
+		LANG_EXT_LITERAL(Typeid, "std::typeid",
+			"('a)->struct { ref<std::type_info>  _const_cpp_ref; }"
+		);
 	};
 
 } // end namespace lang

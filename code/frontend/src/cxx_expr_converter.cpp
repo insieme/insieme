@@ -791,6 +791,24 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitMaterializeTemporaryExpr( 
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//					Typeid expr
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::ExpressionPtr Converter::CXXExprConverter::VisitCXXTypeidExpr(const clang::CXXTypeidExpr* typeidExpr) {
+	core::ExpressionPtr retIr;
+	LOG_EXPR_CONVERSION(typeidExpr, retIr);
+	//auto retTy = builder.refType(convFact.convertType(typeidExpr->getType().getTypePtr()));
+	core::ExpressionPtr expr;
+	if(typeidExpr->isTypeOperand()) {
+		expr = builder.getTypeLiteral(convFact.convertType(typeidExpr->getTypeOperand().getTypePtr()));
+	} else {
+		expr = Visit(typeidExpr->getExprOperand());
+	}
+	retIr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getTypeid(), expr);
+	return retIr;
+}
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Overwrite the basic visit method for expression in order to automatically
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

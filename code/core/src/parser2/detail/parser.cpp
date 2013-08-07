@@ -259,7 +259,7 @@ namespace detail {
 
 			// the set of tokens ending the body
 			const auto& endSet = context.grammar.getEndSet(pattern[0]);
-			const auto& followSet = context.grammar.getStartSet(pattern[1]);
+			const auto& followSet = context.grammar.getFollowSet(pattern[0]);
 
 			// search set of candidate-split-points
 			vector<TokenIter> candidates = findSplitCandidates(
@@ -592,8 +592,8 @@ namespace detail {
 		} else {
 			// take all rules with matching start and end tokens
 			for(const TermPtr& cur : alternatives) {
-				const auto& sets = context.grammar.getStartEndSets(cur);
-				if (sets.first.contains(*begin) && sets.second.contains(*(end-1))) {
+				const auto& sets = context.grammar.getSets(cur);
+				if (sets.startSet.contains(*begin) && sets.endSet.contains(*(end-1))) {
 					candidates.push_back(cur);
 				}
 			}
@@ -630,9 +630,9 @@ namespace detail {
 		if (begin == end) return true;
 
 		// the set of tokens ending the body
-		const auto& sets = context.grammar.getStartEndSets(body);
-		const auto& startSet = sets.first;
-		const auto& endSet = sets.second;
+		const auto& sets = context.grammar.getSets(body);
+		const auto& startSet = sets.startSet;
+		const auto& endSet = sets.endSet;
 
 		// check head and tail element
 		if (!startSet.contains(*begin) || !endSet.contains(*(end-1))) {
@@ -726,6 +726,14 @@ namespace detail {
 		do {
 			res = end.add(g.getEndSet(*it)) || res;
 		} while ((*it)->getMinRange() == 0u && (++it) != terms.rend());
+		return res;
+	}
+
+	vector<TermPtr> Sequence::getTerms() const {
+		vector<TermPtr> res;
+		for (auto& cur : sequence) {
+			res.insert(res.end(), cur.terms.begin(), cur.terms.end());
+		}
 		return res;
 	}
 
@@ -948,12 +956,12 @@ namespace detail {
 	std::ostream& Grammar::TermInfo::printTo(std::ostream& out) const {
 		return out << "TermInfo: {\n\t" <<
 				join("\n\t", termInfos,
-					[](std::ostream& out, const pair<TermPtr,StartEndSets>& cur) {
-						out << *cur.first << ": \t" << cur.second.first << " ... " << cur.second.second;
+					[](std::ostream& out, const pair<TermPtr,Sets>& cur) {
+						out << *cur.first << ": \t" << cur.second.startSet << " ... " << cur.second.endSet << " : " << cur.second.followSet;
 				}) << "\n\t" <<
 				join("\n\t", nonTerminalInfos,
-					[](std::ostream& out, const pair<string,StartEndSets>& cur) {
-						out << cur.first << ": \t" << cur.second.first << " ... " << cur.second.second;
+					[](std::ostream& out, const pair<string,Sets>& cur) {
+						out << cur.first << ": \t" << cur.second.startSet << " ... " << cur.second.endSet << " : " << cur.second.followSet;
 				}) << "\n TerminalPairs: \n\t" <<
 				join("\n\t", parenthesePairs,
 					[](std::ostream& out, const pair<Token,Token>& cur) {
@@ -1040,8 +1048,8 @@ namespace detail {
 		} else {
 			// take all rules with matching start and end tokens
 			for(const RulePtr& rule : pos->second) {
-				const auto& sets = getStartEndSets(rule->getPattern());
-				if (sets.first.contains(*begin) && sets.second.contains(*(end-1))) {
+				const auto& sets = getSets(rule->getPattern());
+				if (sets.startSet.contains(*begin) && sets.endSet.contains(*(end-1))) {
 					candidates.push_back(rule);
 				}
 			}
@@ -1116,8 +1124,8 @@ namespace detail {
 				if (auto seq = dynamic_pointer_cast<const Sequence>(cur)) {
 					for(const Sequence::SubSequence& cur : seq->getSubSequences()) {
 						auto& sets = info.subSequenceInfo[&cur];
-						changed = cur.updateStartSet(*this,sets.first) || changed;
-						changed = cur.updateEndSet(*this, sets.second) || changed;
+						changed = cur.updateStartSet(*this,sets.startSet) || changed;
+						changed = cur.updateEndSet(*this, sets.endSet) || changed;
 					}
 				}
 			}
@@ -1125,7 +1133,7 @@ namespace detail {
 			// update terms
 			for(const TermPtr& cur : terms) {
 				auto& sets = info.termInfos[cur];
-				changed = cur->updateTokenSets(*this, sets.first, sets.second) || changed;
+				changed = cur->updateTokenSets(*this, sets.startSet, sets.endSet) || changed;
 			}
 
 			// updated non-terminals
@@ -1133,12 +1141,29 @@ namespace detail {
 				// update productions for current non-terminal
 				auto& sets = info.nonTerminalInfos[production.first];
 				for(const auto& rule : production.second) {
-					changed = sets.first.add(getStartSet(rule->getPattern())) || changed;
-					changed = sets.second.add(getEndSet(rule->getPattern())) || changed;
+					changed = sets.startSet.add(getStartSet(rule->getPattern())) || changed;
+					changed = sets.endSet.add(getEndSet(rule->getPattern())) || changed;
 				}
 			}
 		}
 
+		// update follow sets
+		for(const TermPtr& cur : terms) {
+			if (auto seq = dynamic_pointer_cast<const Sequence>(cur)) {
+
+				// get sequence of terms
+				vector<TermPtr> terms = seq->getTerms();
+
+				// set up follow sets
+				for(auto a = terms.begin(); a != terms.end(); ++a) {
+					TokenSet& followSet = info.termInfos[*a].followSet;
+					for(auto b= a+1; b != terms.end(); ++b) {
+						followSet.add(info.termInfos[*b].startSet);
+						if ((*b)->getLimit().getMin() > 0) break;
+					}
+				}
+			}
+		}
 
 		// ---- compute pairs -----
 

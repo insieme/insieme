@@ -184,15 +184,17 @@ core::TypePtr Converter::CXXTypeConverter::VisitReferenceType(const ReferenceTyp
 
 	// find out if is a const ref or not
 	QualType  qual;
-	if(llvm::isa<clang::RValueReferenceType>(refTy))
+	bool isConst;
+	if(llvm::isa<clang::RValueReferenceType>(refTy)) {
 		qual = llvm::cast<clang::RValueReferenceType>(refTy)->desugar();
-	else{
+		isConst = llvm::cast<clang::RValueReferenceType>(refTy)->getPointeeType().isConstQualified();
+	} else {
 		qual = llvm::cast<clang::LValueReferenceType>(refTy)->desugar();
+		isConst = llvm::cast<clang::LValueReferenceType>(refTy)->getPointeeType().isConstQualified();
 	}
 
-	// FIXME: find a better way... i got annoyed
-	if (boost::starts_with (qual.getAsString (), "const"))
-		retTy =  core::analysis::getConstCppRef(inTy);
+	if(isConst)
+    	retTy =  core::analysis::getConstCppRef(inTy);
 	else
 		retTy =  core::analysis::getCppRef(inTy);
 

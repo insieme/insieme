@@ -779,6 +779,41 @@ namespace detail {
 
 	}
 
+	TEST(Parser, FollowSets) {
+
+		auto T = rec("T");
+
+		{
+			// create a simple grammar
+			Grammar g("T");
+
+			TermPtr lA = loop(seq("a"));
+			TermPtr lB = loop(seq("b"));
+			TermPtr lC = loop(seq("c"));
+			g.addRule("T", rule(seq(lA, lB, lC), accept));
+
+			std::cout << g.getTermInfo() << "\n";
+			EXPECT_EQ("{(Ident:b),(Ident:c)}", toString(g.getFollowSet(lA)));
+			EXPECT_EQ("{(Ident:c)}", toString(g.getFollowSet(lB)));
+			EXPECT_EQ("{}", toString(g.getFollowSet(lC)));
+		}
+
+		{
+			// create a simple grammar
+			Grammar g("T");
+
+			TermPtr lA = loop(seq("a"));
+			TermPtr lB = loop(seq("b"));
+			TermPtr lC = loop(seq("c"));
+			g.addRule("T", rule(seq(lA, lB, "x", lC), accept));
+
+			std::cout << g.getTermInfo() << "\n";
+			EXPECT_EQ("{(Ident:b),(Ident:x)}", toString(g.getFollowSet(lA)));
+			EXPECT_EQ("{(Ident:x)}", toString(g.getFollowSet(lB)));
+			EXPECT_EQ("{}", toString(g.getFollowSet(lC)));
+		}
+	}
+
 	TEST(Parser, BeginEndSetOfSequenceIncludingOptionalEnd) {
 
 		Grammar g;
