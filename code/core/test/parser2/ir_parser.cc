@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -478,7 +478,7 @@ namespace parser {
 //				builder.mul(one,one),
 //				parse(manager, "2*0.5")
 //		);
-		
+
 		// bitwise
 		EXPECT_EQ(
 				builder.bitwiseAnd(one, two),
@@ -1217,6 +1217,21 @@ namespace parser {
 		ASSERT_TRUE(res);
 	}
 
+/*
+
+	TEST(IR_Parser2, TypeinfoType) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		NodePtr res;
+
+		// the following was reported to be not working
+		res = builder.parseType("('a)->struct { ref<type_info>  _const_cpp_ref; }");
+		ASSERT_TRUE(res);
+	}
+
+*/
 //	TEST(IR_Parser2, ClassMetaInfo) {
 //
 //		NodeManager mgr;
