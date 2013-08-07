@@ -445,6 +445,7 @@ public:
 	core::ExpressionPtr VisitCXXScalarValueInitExpr		(const clang::CXXScalarValueInitExpr* scalarValueInit);
 	core::ExpressionPtr VisitExprWithCleanups			(const clang::ExprWithCleanups* cleanupExpr);
 	core::ExpressionPtr VisitMaterializeTemporaryExpr	(const clang::MaterializeTemporaryExpr* materTempExpr);
+	core::ExpressionPtr VisitCXXTypeidExpr	            (const clang::CXXTypeidExpr* typeidExpr);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//  default visitor call
