@@ -754,12 +754,18 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			// we want the inner static object
 			auto lit = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
 
-			if (definition->getInit())
-				retStmt = builder.initStaticVariable(lit, convertInitExpr(definition->getType().getTypePtr(),
-																		  definition->getInit(),
-																		  var->getType().as<core::RefTypePtr>().getElementType(), false));
-			else
+			if (definition->getInit()) {
+				auto initIr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(),
+							var->getType().as<core::RefTypePtr>().getElementType(), false);
+				auto call = initIr.isa<core::CallExprPtr>();
+				if(call && call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor()) {
+					//this can also be done by substituting the first param of ctor by the unwrapped static var
+					initIr = builder.deref(initIr);
+				}
+				retStmt = builder.initStaticVariable(lit, initIr);
+			} else {
 				retStmt = builder.getNoOp();
+			}
 		}
 		else{
 			// print diagnosis messages
@@ -959,7 +965,6 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 
 		// extract kind
 		core::NodeType kind = type->getNodeType();
-
 		if (kind == core::NT_RefType) {
 			core::TypePtr elementType = type.as<core::RefTypePtr>()->getElementType();
 
@@ -971,7 +976,6 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 			// handle others using a recursive call
 			return builder.refVar(convertInitExpr(clangType, expr, elementType, zeroInit));
 		}
-
 
 		// If the type of this declaration is translated as a array type then it may also include
 		// C99 variable array declaration where the size of the array is encoded into the type. This
@@ -990,15 +994,10 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 
 		// if no init expression is provided => use zero or undefined value
 		return retIr = zeroInit ? builder.getZero(type) : builder.undefined(type);
-
-//		// use default value ..
-//		return retIr = defaultInitVal(type);
 	}
 
-	/*
-	 * if an expression is provided as initializer first check if this is an initializer list which is used for arrays,
-	 * structs and unions
-	 */
+	// if an expression is provided as initializer first check if this is an initializer list which is used for arrays,
+	// structs and unions
 	if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr )) {
 		retIr = utils::cast( convertInitializerList(listExpr, type), type);
 		return retIr;
@@ -1016,7 +1015,8 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 	}
 
 	// if is a constructor call, we are done
-	if (llvm::isa<clang::CXXConstructExpr>(expr) && retIr.isa<core::CallExprPtr>()){		// here you might even check whether it is a constructor call in the IR
+	// TODO: here you might even check whether it is a constructor call in the IR
+	if (llvm::isa<clang::CXXConstructExpr>(expr) && retIr.isa<core::CallExprPtr>()){	
 		return retIr;
 	}
 

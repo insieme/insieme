@@ -585,12 +585,12 @@ switch (castExpr->getCastKind()) {
 		* kind. Used for reinterpret_casts of l-value expressions to reference types. bool b; reinterpret_cast<char&>(b) = 'a';
 		* */
 		{
-		    //assert((targetTy.isa<core::RefTypePtr>()) && "reinterpret_cast is only supported for reference target type");
+		    //if we have a cpp ref we have to unwrap the expression
 		    if(IS_CPP_REF(expr->getType())) {
-                //unwrap
                 expr = builder.toIRRef(expr);
             }
-		    //build expr
+		    //the target type is a ref type because lvalue
+		    //bitcasts look like reinterpret_cast<type&>(x)
 		    targetTy = builder.refType(targetTy);
             core::CallExprPtr newExpr = builder.callExpr(targetTy, builder.getNodeManager().getLangBasic().getRefReinterpret(),
                                                          expr, builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
