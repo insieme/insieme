@@ -101,6 +101,48 @@ namespace set_constraint_2 {
 	};
 
 
+	namespace {
+
+		struct SolverContext {
+			const ConstraintResolver& resolver;
+			Assignment res;
+
+			std::set<SetID> resolved;
+			typedef map<SetID, set<const Constraint*>> Edges;
+		};
+
+		void solveInternal(SolverContext& context, const SetID& set) {
+
+			// create a workList
+
+		}
+
+	}
+
+
+	Assignment solve(const SetID& set, const ConstraintResolver& resolver, Assignment initial) {
+		// solve a single set
+		SolverContext context = { resolver, initial };
+		solveInternal(context, set);
+		return context.res;
+	}
+
+	// a lazy solver implementation
+	Assignment solve(const std::set<SetID>& sets, const ConstraintResolver& resolver, Assignment initial) {
+
+		//create resulting assignment
+		SolverContext context = { resolver, initial };
+
+		// just resolve set by set
+		for (auto cur : sets) {
+			solveInternal(context, cur);
+		}
+
+		// done
+		return context.res;
+	}
+
+
 } // end namespace set_constraint
 } // end namespace utils
 } // end namespace insieme

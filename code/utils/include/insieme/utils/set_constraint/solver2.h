@@ -518,6 +518,8 @@ namespace set_constraint_2 {
 		const_iterator begin() const { return data.begin(); }
 		const_iterator end() const { return data.end(); }
 
+		std::size_t size() const { return data.size(); }
+
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << "{" << join(",", data, print<deref<ConstraintPtr>>()) << "}";
 		}
@@ -638,8 +640,17 @@ namespace set_constraint_2 {
 
 	// ----------------------------- Solver ------------------------------
 
+	// The type of entities capable of resolving constraints.
+	typedef std::function<Constraints(const SetID&)> ConstraintResolver;
+
+	// an eager solver implementation
 	Assignment solve(const Constraints& constraints, Assignment initial = Assignment());
 
+	// a lazy solver for a single set
+	Assignment solve(const SetID& set, const ConstraintResolver& resolver, Assignment initial = Assignment());
+
+	// a lazy solver implementation
+	Assignment solve(const std::set<SetID>& sets, const ConstraintResolver& resolver, Assignment initial = Assignment());
 
 } // end namespace set_constraint_2
 } // end namespace utils

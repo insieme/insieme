@@ -1096,6 +1096,9 @@ namespace cba {
 		std::cout << "Constraint generation took: " << (time*1000) << "ms\n";
 //		std::cout << "Constraint: {\n\t" << join("\n\t",constraints) << "\n}\n";
 //		createDotDump(context, constraints);
+		std::cout << "Number of sets:        " << context.getNumSets() << "\n";
+		std::cout << "Number of constraints: " << constraints.size() << "\n";
+
 
 		Solution solution;
 		time = TIME(solution = cba::solve(constraints));

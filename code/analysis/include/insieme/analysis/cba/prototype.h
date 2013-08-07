@@ -384,6 +384,7 @@ namespace cba {
 
 		void plot(const Constraints& constraints, std::ostream& out = std::cout) const;
 		void plot(const Constraints& constraints, const Solution& ass, std::ostream& out = std::cout) const;
+		std::size_t getNumSets() const { return sets.size() + stateSets.size(); }
 
 	};
 
