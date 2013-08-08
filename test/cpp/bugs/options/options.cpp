@@ -1,11 +1,9 @@
+#include <stdlib.h>
+
 #include <iostream>
 #include <string>
-
 #include <sstream>
-
-#include <stdlib.h>
 #include <getopt.h>
-#include <unistd.h>
 
 /* Error handler */
 #define ERROR_HANDLER(x, y) __check_error((x), (y), __FILE__, __LINE__)
@@ -40,7 +38,7 @@ char cad[] = "this is string";
 /* Options long names */
 static struct option longopts[] = {
 	{ "rows",            required_argument,      NULL,              'r' },
-	{ "prep-time",       no_argument,            NULL,     true},
+	{ "prep-time",       no_argument,            NULL,     			true},
 	{ NULL,              0,                      NULL,               0  }
 };
 
@@ -55,7 +53,7 @@ static struct option longopts[] = {
 void option(int ac, char **av) {
 	if (ac == 1) std::cout << av[0] << ": Execute with default parameter(s)..\n(--help for program usage)\n\n";
 	int opt;
-	while ((opt = getopt_long(ac, av, "vhr:c:", longopts, NULL)) != -1) {
+	while ((opt = getopt_long(ac, av, "r:", longopts, NULL)) != -1) {
 		switch (opt) {
 		case '?' :
 			ERROR_HANDLER(0, "Invalid option '" + std::string(av[optind-1]) + "'");
