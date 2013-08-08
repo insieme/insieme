@@ -112,6 +112,7 @@ namespace set_constraint_2 {
 		const std::vector<SetID>& getInputs() const { return inputs; };
 		const std::vector<SetID>& getOutputs() const { return outputs; };
 
+		virtual bool hasAssignmentDependentDependencies() const =0;
 		virtual std::set<SetID> getUsedInputs(const Assignment& ass) const =0;
 
 	protected:
@@ -205,6 +206,10 @@ namespace set_constraint_2 {
 				label << "]\n";
 				executor.writeDotEdge(out, label.str());
 				return out;
+			}
+
+			virtual bool hasAssignmentDependentDependencies() const {
+				return !Filter::is_true;
 			}
 
 			virtual std::set<SetID> getUsedInputs(const Assignment& ass) const {
