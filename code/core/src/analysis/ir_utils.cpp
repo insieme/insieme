@@ -357,13 +357,13 @@ namespace {
 	 * Will certainly determine the declaration status of variables inside a block.
 	 */
 	template<template<class Target> class Ptr>
-	struct FreeVariableCollector : private IRVisitor<void, Ptr, VariableSet&, std::set<Ptr<const Variable>>&> {
+	struct FreeVariableCollector : private IRVisitor<void, Ptr, VariableSet&, std::set<Ptr<const Variable>, compare_target<Ptr<const Variable>>>&> {
 
-		typedef std::set<Ptr<const Variable>> ResultSet;
+		typedef std::set<Ptr<const Variable>, compare_target<Ptr<const Variable>>> ResultSet;
 		typedef vector<Ptr<const Variable>> ResultList;
 
 		// do not visit types
-		FreeVariableCollector() : IRVisitor<void,Ptr, VariableSet&, std::set<Ptr<const Variable>>&>(false) {}
+		FreeVariableCollector() : IRVisitor<void,Ptr, VariableSet&, std::set<Ptr<const Variable>, compare_target<Ptr<const Variable>>>&>(false) {}
 
 		ResultSet run(const Ptr<const Node>& root) {
 
