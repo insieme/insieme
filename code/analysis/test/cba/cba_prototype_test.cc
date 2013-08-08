@@ -84,14 +84,14 @@ namespace cba {
 
 	TEST(CBA, Context) {
 
-		CallContext c;
-		EXPECT_EQ("[0,0]", toString(c));
+		Context c;
+		EXPECT_EQ("[[0,0],[<0,0>,<0,0>]]", toString(c));
 
-		c <<= 1;
-		EXPECT_EQ("[0,1]", toString(c));
+		c.callContext <<= 1;
+		EXPECT_EQ("[[0,1],[<0,0>,<0,0>]]", toString(c));
 
-		c = c << 2;
-		EXPECT_EQ("[1,2]", toString(c));
+		c.callContext = c.callContext << 2;
+		EXPECT_EQ("[[1,2],[<0,0>,<0,0>]]", toString(c));
 	}
 
 
@@ -233,7 +233,7 @@ namespace cba {
 
 		CBAContext context;
 		auto constraints = generateConstraints(context, code);
-		// std::cout << "Constraint: " << constraints << "\n";
+//		 std::cout << "Constraint: " << constraints << "\n";
 //		createDotDump(context, constraints);
 
 		auto solution = cba::solve(constraints);
@@ -255,8 +255,8 @@ namespace cba {
 
 //		std::cout << *varY << " = " << cba::getValuesOf(context, solution, varY) << "\n";
 //		std::cout << *initY << " = " << cba::getValuesOf(context, solution, initY) << "\n";
-		EXPECT_EQ("{(LambdaExpr@0-1-1,[0,0],[<0,0>,<0,0>])}", toString(cba::getValuesOf(context, solution, varY, c)));
-		EXPECT_EQ("{(LambdaExpr@0-1-1,[0,0],[<0,0>,<0,0>])}", toString(cba::getValuesOf(context, solution, initY, C)));
+		EXPECT_EQ("{(LambdaExpr@0-1-1,[[0,0],[<0,0>,<0,0>]])}", toString(cba::getValuesOf(context, solution, varY, c)));
+		EXPECT_EQ("{(LambdaExpr@0-1-1,[[0,0],[<0,0>,<0,0>]])}", toString(cba::getValuesOf(context, solution, initY, C)));
 
 
 		auto varZ = initY.as<LambdaExprAddress>()->getParameterList()[0];
@@ -266,8 +266,8 @@ namespace cba {
 		auto l1 = context.getLabel(code[2]);
 		auto l2 = context.getLabel(code[3]);
 
-		EXPECT_EQ("{AP(14)}", toString(cba::getValuesOf(context, solution, varZ, CallContext(0,l1))));
-		EXPECT_EQ("{AP(16)}", toString(cba::getValuesOf(context, solution, varZ, CallContext(0,l2))));
+		EXPECT_EQ("{AP(14)}", toString(cba::getValuesOf(context, solution, varZ, Context::CallContext(0,l1))));
+		EXPECT_EQ("{AP(16)}", toString(cba::getValuesOf(context, solution, varZ, Context::CallContext(0,l2))));
 
 	}
 
@@ -294,6 +294,7 @@ namespace cba {
 
 		auto solution = cba::solve(constraints);
 		// std::cout << "Solutions:  " << solution << "\n";
+		createDotDump(context, constraints, solution);
 
 		auto declZ = code[2].as<DeclarationStmtAddress>();
 		VariableAddress varZ = declZ->getVariable();
@@ -975,12 +976,12 @@ namespace cba {
 		// std::cout << "Solutions:  " << solution << "\n";
 
 		// check functions
-		EXPECT_EQ("{(LambdaExpr@0-6-1,[0,0],[<0,0>,<0,0>])}", toString(cba::getValuesOf(context, solution, code[6].as<CallExprAddress>()->getFunctionExpr(), C)));
-		EXPECT_EQ("{(LambdaExpr@0-0-1,[0,0],[<0,0>,<0,0>])}", toString(cba::getValuesOf(context, solution, code[8].as<CallExprAddress>()->getFunctionExpr(), C)));
-		EXPECT_EQ("{(LambdaExpr@0-1-1,[0,0],[<0,0>,<0,0>])}", toString(cba::getValuesOf(context, solution, code[10].as<CallExprAddress>()->getFunctionExpr(), C)));
-		EXPECT_EQ("{(LambdaExpr@0-10-3,[0,0],[<0,0>,<0,0>])}", toString(cba::getValuesOf(context, solution, code[10].as<CallExprAddress>()[1], C)));
-		EXPECT_EQ("{(LambdaExpr@0-1-1,[0,0],[<0,0>,<0,0>])}", toString(cba::getValuesOf(context, solution, code[12].as<CallExprAddress>()->getFunctionExpr(), C)));
-		EXPECT_EQ("{(LambdaExpr@0-0-1,[0,0],[<0,0>,<0,0>])}", toString(cba::getValuesOf(context, solution, code[12].as<CallExprAddress>()[1], C)));
+		EXPECT_EQ("{(LambdaExpr@0-6-1,[[0,0],[<0,0>,<0,0>]])}", toString(cba::getValuesOf(context, solution, code[6].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{(LambdaExpr@0-0-1,[[0,0],[<0,0>,<0,0>]])}", toString(cba::getValuesOf(context, solution, code[8].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{(LambdaExpr@0-1-1,[[0,0],[<0,0>,<0,0>]])}", toString(cba::getValuesOf(context, solution, code[10].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{(LambdaExpr@0-10-3,[[0,0],[<0,0>,<0,0>]])}", toString(cba::getValuesOf(context, solution, code[10].as<CallExprAddress>()[1], C)));
+		EXPECT_EQ("{(LambdaExpr@0-1-1,[[0,0],[<0,0>,<0,0>]])}", toString(cba::getValuesOf(context, solution, code[12].as<CallExprAddress>()->getFunctionExpr(), C)));
+		EXPECT_EQ("{(LambdaExpr@0-0-1,[[0,0],[<0,0>,<0,0>]])}", toString(cba::getValuesOf(context, solution, code[12].as<CallExprAddress>()[1], C)));
 
 		EXPECT_EQ("{1}", toString(cba::getValuesOf(context, solution, code[3].as<ExpressionAddress>(), A)));
 		EXPECT_EQ("{2}", toString(cba::getValuesOf(context, solution, code[5].as<ExpressionAddress>(), A)));

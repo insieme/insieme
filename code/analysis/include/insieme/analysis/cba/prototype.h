@@ -45,6 +45,7 @@
 
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/set_constraint/solver2.h"
@@ -63,39 +64,33 @@ namespace cba {
 	// forward declarations
 	typedef int Label;		// the type used to label code locations
 	typedef int Variable;	// the type used to identify variables
-	typedef int Value;		// the type used for values within the CBA
-
-	typedef int Set;		// the type used to represent sets
 
 
 	// ---------- context information ----------------
 
-	// TODO: combine call and thread context to a single object
 
 	template<typename T, unsigned s>
-	struct Context : public utils::Printable {
+	struct Sequence : public utils::Printable {
 		enum { size = s };
 		array<T, s> context;		// TODO: make length a generic parameter
-		Context() : context() {}
-		Context(const Context<T,s>& other) : context(other.context) {}
-		Context(const array<T,s>& context) : context(context) {}
+		Sequence() : context() {}
+		Sequence(const Sequence<T,s>& other) : context(other.context) {}
+		Sequence(const array<T,s>& context) : context(context) {}
 		template<typename ... E>
-		Context(const E& ... e) : context((array<T,s>){{e...}}) {}
-		bool operator==(const Context& other) const { return context == other.context; }
-		bool operator!=(const Context& other) const { return context != other.context; }
-		bool operator<(const Context& other) const { return context < other.context; }
-		Context<T,s>& operator<<=(const Label& label) {
+		Sequence(const E& ... e) : context((array<T,s>){{e...}}) {}
+		bool operator==(const Sequence& other) const { return this == &other || context == other.context; }
+		bool operator!=(const Sequence& other) const { return !(*this == other); }
+		bool operator<(const Sequence& other) const { return this != &other && context < other.context; }
+		Sequence<T,s>& operator<<=(const Label& label) {
 			for(unsigned i=0; i<(s-1); ++i) {
 				context[i] = context[i+1];
 				context[s-1] = label;
 			}
 			return *this;
 		}
-		Context<T,s> operator<<(const Label& label) const { Context cpy(*this); return cpy <<= label; }
+		Sequence<T,s> operator<<(const Label& label) const { Sequence cpy(*this); return cpy <<= label; }
 		std::ostream& printTo(std::ostream& out) const { return out << context; };
 	};
-
-	typedef Context<Label,2> CallContext;
 
 	struct ThreadID : public utils::Printable {
 		Label spawn;
@@ -106,7 +101,46 @@ namespace cba {
 		std::ostream& printTo(std::ostream& out) const { return out << "<" << spawn << "," << id << ">"; };
 	};
 
-	typedef Context<ThreadID,2> ThreadContext;
+	/**
+	 * The context class ...
+	 * TODO: document
+	 * TODO: make generic
+	 */
+	struct Context : public utils::Printable {
+
+		typedef Sequence<Label, 2> CallContext;
+		typedef Sequence<ThreadID, 2> ThreadContext;
+
+		CallContext callContext;
+		ThreadContext threadContext;
+
+		Context()
+			: callContext(), threadContext() {}
+
+		Context(const CallContext& callContext, const ThreadContext& threadContext = ThreadContext())
+			: callContext(callContext), threadContext(threadContext) {}
+
+		Context(const Context& other)
+			: callContext(other.callContext), threadContext(other.threadContext) {}
+
+		bool operator==(const Context& other) const {
+			return this == &other ||
+					(callContext == other.callContext && threadContext == other.threadContext);
+		}
+		bool operator!=(const Context& other) const {
+			return !(*this == other);
+		}
+		bool operator<(const Context& other) const {
+			if (*this == other) return false;
+			if (callContext != other.callContext) return callContext < other.callContext;
+			if (threadContext != other.threadContext) return threadContext < other.threadContext;
+			assert(false && "How did you get here?");
+			return false;
+		}
+		std::ostream& printTo(std::ostream& out) const {
+			return out << "[" << callContext << "," << threadContext << "]";
+		};
+	};
 
 	// ----------- set types ------------------
 
@@ -146,27 +180,25 @@ namespace cba {
 	// the type used to represent functions / closures
 	struct Callable : public utils::Printable {
 		core::ExpressionAddress definition;
-		CallContext callContext;
-		ThreadContext threadContext;
+		Context context;
 
 		Callable(const core::LiteralAddress& lit)
-			: definition(lit.getAddressedNode()), callContext(), threadContext() {}
+			: definition(lit.getAddressedNode()), context() {}
 		Callable(const core::LambdaExprAddress& fun)
-			: definition(fun), callContext(), threadContext() {}
-		Callable(const core::BindExprAddress& bind, const CallContext& callContext, const ThreadContext& threadContext)
-			: definition(bind), callContext(callContext), threadContext(threadContext) {}
+			: definition(fun), context() {}
+		Callable(const core::BindExprAddress& bind, const Context& context)
+			: definition(bind), context(context) {}
 		Callable(const Callable& other)
-			: definition(other.definition), callContext(other.callContext), threadContext(other.threadContext) {}
+			: definition(other.definition), context(other.context) {}
 
 		bool operator<(const Callable& other) const {
 			if (definition != other.definition) return definition < other.definition;
-			if (callContext != other.callContext) return callContext < other.callContext;
-			if (threadContext != other.threadContext) return threadContext < other.threadContext;
+			if (context != other.context) return context < other.context;
 			return false;
 		}
 		bool operator==(const Callable& other) const {
 			if (this == &other) return true;
-			return definition == other.definition && callContext == other.callContext && threadContext == other.threadContext;
+			return definition == other.definition && context == other.context;
 		}
 
 		bool operator!=(const Callable& other) const { return !(*this == other); }
@@ -174,7 +206,7 @@ namespace cba {
 
 		virtual std::ostream& printTo(std::ostream& out) const {
 			if (auto lit = definition.isa<core::LiteralPtr>()) return out << *lit;
-			return out << "(" << definition->getNodeType() << "@" << definition << "," << callContext << "," << threadContext << ")";
+			return out << "(" << definition->getNodeType() << "@" << definition << "," << context << ")";
 		}
 	};
 
@@ -184,7 +216,7 @@ namespace cba {
 
 	// ----------------- references ---------------
 
-	typedef std::tuple<core::ExpressionAddress, CallContext, ThreadContext> Location;
+	typedef std::tuple<core::ExpressionAddress, Context> Location;
 	extern const TypedSetType<Location> R;
 	extern const TypedSetType<Location> r;
 
@@ -246,7 +278,40 @@ namespace cba {
 	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
 
 
-	// - references ------------
+
+
+	// -------------------- Constraint Resolver ---------------------------
+
+	typedef utils::set_constraint_2::Constraints Constraints;
+
+	class CBAContext;
+	class ConstraintResolver;
+	class StateConstraintResolver;
+
+	class ConstraintResolver : public core::IRVisitor<void, core::Address, const Context&, Constraints&> {
+
+		typedef core::IRVisitor<void, core::Address, const Context&, Constraints&> super;
+
+		// a cache recording resolved items
+		typedef std::tuple<core::NodeAddress, Context> Item;
+		std::set<Item> processed;
+
+	protected:
+
+		CBAContext& context;
+
+	public:
+
+		ConstraintResolver(CBAContext& context) : processed(), context(context) {}
+
+		virtual void visit(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
+			if (!processed.insert(Item(node,ctxt)).second) return;
+			super::visit(node, ctxt, constraints);
+		}
+
+	};
+
+
 
 
 	// allows to check whether a given statement is a memory location constructor (including globals)
@@ -254,17 +319,15 @@ namespace cba {
 
 	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
 
-	typedef utils::set_constraint_2::Constraints Constraints;
-
 	typedef utils::set_constraint_2::Assignment Solution;
 
 
-	class CBAContext {
+	class CBAContext : public boost::noncopyable {
 
 		typedef utils::set_constraint_2::SetID SetID;
 
-		typedef tuple<const SetType*, int, CallContext, ThreadContext> SetKey;
-		typedef tuple<const StateSetType*, Label, CallContext, ThreadContext, Location, const SetType*, CallContext, ThreadContext> StateSetKey;
+		typedef tuple<const SetType*, int, Context> SetKey;
+		typedef tuple<const StateSetType*, Label, Context, Location, const SetType*> StateSetKey;
 
 		int setCounter;
 		std::map<SetKey, SetID> sets;
@@ -272,16 +335,46 @@ namespace cba {
 
 		// two caches for resolving labels and variables
 		int idCounter;
-		std::map<core::StatementAddress, Label> labels;
-		std::map<core::VariableAddress, Variable> vars;
+		std::unordered_map<core::StatementAddress, Label> labels;
+		std::unordered_map<core::VariableAddress, Variable> vars;
+
+		// a reverse lookup structure for labels
+		std::unordered_map<Label, core::StatementAddress> reverseLabels;
+
+		// a data structure managing constraint resolvers
+		std::map<const SetType*, std::unique_ptr<ConstraintResolver>> resolver;
+
+		// mapping sets to resolvers
+		std::unordered_map<SetID, std::unique_ptr<ConstraintResolver>> set2resolver;
 
 	public:
 
-		CBAContext() : setCounter(0), idCounter(0) {};
+		CBAContext() : setCounter(0), idCounter(0), resolver(), set2resolver() {};
+
+		template<typename R, typename ... Args>
+		void registerResolver(const SetType& type, const Args& ... args) {
+			assert(!resolver[&type] && "Must not bind two resolvers for the same set type!");
+			resolver[&type] = new R(args ...);
+		}
+
+		Constraints getConstraintsFor(const SetID& set) {
+			Constraints res;
+
+			// obtain resolver
+			auto pos = set2resolver.find(set);
+			if (pos == set2resolver.end()) {
+				return res;		// unknown set!
+			}
+
+			// use resolver to obtain result
+//			pos->second->visit()
+
+			return res;
+		}
 
 		template<typename T>
-		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const CallContext& c, const ThreadContext& t) {
-			SetKey key(&type, id, c, t);
+		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const Context& context) {
+			SetKey key(&type, id, context);
 			auto pos = sets.find(key);
 			if (pos != sets.end()) {
 				return pos->second;
@@ -292,10 +385,10 @@ namespace cba {
 		}
 
 		template<typename T>
-		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const CallContext& c, const ThreadContext& t) const {
+		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const Context& context) const {
 			static const utils::set_constraint_2::TypedSetID<T> empty(0);
 
-			SetKey key(&type, id, c, t);
+			SetKey key(&type, id, context);
 			auto pos = sets.find(key);
 			if (pos != sets.end()) {
 				return pos->second;
@@ -307,9 +400,8 @@ namespace cba {
 
 
 		template<typename T>
-		utils::set_constraint_2::TypedSetID<T> getSet(const StateSetType& type, Label label, const CallContext& c, const ThreadContext& t, Location loc, const TypedSetType<T>& type_loc) { // TODO: add support: , const CallContext& c_loc = CallContext(), const ThreadContext& t_loc = ThreadContext()) {
-//			StateSetKey key(type, label, c, t, loc, &type_loc, c_loc, t_loc);
-			StateSetKey key(&type, label, c, t, loc, &type_loc, CallContext(), ThreadContext());
+		utils::set_constraint_2::TypedSetID<T> getSet(const StateSetType& type, Label label, const Context& context, const Location& loc, const TypedSetType<T>& type_loc) {
+			StateSetKey key(&type, label, context, loc, &type_loc);
 			auto pos = stateSets.find(key);
 			if (pos != stateSets.end()) {
 				return pos->second;
@@ -332,6 +424,11 @@ namespace cba {
 		Label getLabel(const core::StatementAddress& expr) const {
 			auto pos = labels.find(expr);
 			return (pos != labels.end()) ? pos->second : 0;
+		}
+
+		core::StatementAddress getStmt(Label label) const {
+			auto pos = reverseLabels.find(label);
+			return (pos != reverseLabels.end()) ? pos->second : core::StatementAddress();
 		}
 
 		Variable getVariable(const core::VariableAddress& var) {
@@ -361,7 +458,7 @@ namespace cba {
 
 		// TODO: remove default values
 		Location getLocation(const core::ExpressionAddress& ctor) { // TODO: add support: , const CallContext& c = CallContext(), const ThreadContext& t = ThreadContext()) {
-			CallContext c; ThreadContext t;
+			Context context;
 
 			assert(isMemoryConstructor(ctor));
 
@@ -370,11 +467,11 @@ namespace cba {
 
 			// for globals the call context and thread context is not relevant
 			if (ctor.isa<core::LiteralPtr>()) {
-				return Location(def, CallContext(), ThreadContext());
+				return Location(def, Context());
 			}
 
 			// create the location instance
-			return Location(def, c, t);
+			return Location(def, context);
 		}
 
 		// only for debugging
@@ -395,30 +492,26 @@ namespace cba {
 
 	template<typename T>
 	const std::set<T>& getValuesOf(const CBAContext& context, const Solution& solution,
-			const core::ExpressionAddress& expr, const TypedSetType<T>& set,
-			const CallContext& callContext = CallContext(), const ThreadContext& threadContext = ThreadContext()) {
+			const core::ExpressionAddress& expr, const TypedSetType<T>& set, const Context& ctxt = Context()) {
 
 		auto label = context.getLabel(expr);
-		return solution[context.getSet(set, label, callContext, threadContext)];
+		return solution[context.getSet(set, label, ctxt)];
 	}
 
 	template<typename T>
 	const std::set<T>& getValuesOf(const CBAContext& context, const Solution& solution,
-			const core::VariableAddress& var, const TypedSetType<T>& set,
-			const CallContext& callContext = CallContext(), const ThreadContext& threadContext = ThreadContext()) {
+			const core::VariableAddress& var, const TypedSetType<T>& set, const Context& ctxt = Context()) {
 
 		auto id = context.getVariable(var);
-		return solution[context.getSet(set, id, callContext, threadContext)];
+		return solution[context.getSet(set, id, ctxt)];
 	}
 
-	const std::set<core::ExpressionPtr>& getValuesOf(const CBAContext& context, const Solution& solution, const core::ExpressionAddress& expr,
-			const CallContext& callContext = CallContext(), const ThreadContext& threadContext = ThreadContext()) {
-		return getValuesOf(context, solution, expr, D, callContext, threadContext);
+	const std::set<core::ExpressionPtr>& getValuesOf(const CBAContext& context, const Solution& solution, const core::ExpressionAddress& expr, const Context& ctxt = Context()) {
+		return getValuesOf(context, solution, expr, D, ctxt);
 	}
 
-	const std::set<core::ExpressionPtr>& getValuesOf(const CBAContext& context, const Solution& solution, const core::VariableAddress& var,
-			const CallContext& callContext = CallContext(), const ThreadContext& threadContext = ThreadContext()) {
-		return getValuesOf(context, solution, var, d, callContext, threadContext);
+	const std::set<core::ExpressionPtr>& getValuesOf(const CBAContext& context, const Solution& solution, const core::VariableAddress& var, const Context& ctxt = Context()) {
+		return getValuesOf(context, solution, var, d, ctxt);
 	}
 
 } // end namespace cba
