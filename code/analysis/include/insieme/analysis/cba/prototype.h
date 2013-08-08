@@ -39,6 +39,7 @@
 #include <array>
 #include <tuple>
 #include <map>
+#include <type_traits>
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/container_utils.h"
@@ -296,22 +297,48 @@ namespace cba {
 		typedef std::tuple<core::NodeAddress, Context> Item;
 		std::set<Item> processed;
 
+		Location const * location;
+
 	protected:
 
 		CBAContext& context;
 
 	public:
 
-		ConstraintResolver(CBAContext& context) : processed(), context(context) {}
+		ConstraintResolver(CBAContext& context) : processed(), location(0), context(context) {}
+
+		void addConstraints(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
+			// just forward call to visit-process
+			visit(node, ctxt, constraints);
+		}
+
+		void addConstraints(const core::NodeAddress& node, const Context& ctxt, const Location& location, Constraints& constraints) {
+			// fix location
+			this->location = &location;
+
+			// just forward call to visit-process
+			visit(node, ctxt, constraints);
+
+			// reset location
+			this->location = 0;
+		}
 
 		virtual void visit(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
 			if (!processed.insert(Item(node,ctxt)).second) return;
 			super::visit(node, ctxt, constraints);
 		}
 
+	protected:
+
+		// TODO: remove this one (just for development)
+		bool hasLocation() const {
+			return location;
+		}
+
+		const Location& getLocation() const {
+			return *location;
+		}
 	};
-
-
 
 
 	// allows to check whether a given statement is a memory location constructor (including globals)
@@ -342,34 +369,82 @@ namespace cba {
 		std::unordered_map<Label, core::StatementAddress> reverseLabels;
 
 		// a data structure managing constraint resolvers
-		std::map<const SetType*, std::unique_ptr<ConstraintResolver>> resolver;
+		std::set<ConstraintResolver*> resolver;
+		std::map<const SetType*, ConstraintResolver*> setResolver;
+		std::map<std::pair<const StateSetType*, const SetType*>, ConstraintResolver*> locationResolver;
 
-		// mapping sets to resolvers
-		std::unordered_map<SetID, std::unique_ptr<ConstraintResolver>> set2resolver;
+		// reverse maps for sets (for resolution)
+		std::unordered_map<SetID, SetKey> set2key;
+		std::unordered_map<SetID, StateSetKey> set2statekey;
 
 	public:
 
-		CBAContext() : setCounter(0), idCounter(0), resolver(), set2resolver() {};
+		CBAContext() : setCounter(0), idCounter(0), resolver(), setResolver(), locationResolver(), set2key(), set2statekey() {};
 
-		template<typename R, typename ... Args>
-		void registerResolver(const SetType& type, const Args& ... args) {
-			assert(!resolver[&type] && "Must not bind two resolvers for the same set type!");
-			resolver[&type] = new R(args ...);
+		~CBAContext() {
+			for(auto cur : resolver) delete cur;
 		}
 
-		Constraints getConstraintsFor(const SetID& set) {
-			Constraints res;
+		template<typename R, typename ... Args>
+		typename std::enable_if<std::is_base_of<ConstraintResolver, R>::value, void>::type
+		registerResolver(const SetType& type, const Args& ... args) {
+			assert(!setResolver[&type] && "Must not bind two resolvers for the same set type!");
+			R* r = new R(*this, args ...);
+			resolver.insert(r);
+			setResolver[&type] = r;
+		}
 
-			// obtain resolver
-			auto pos = set2resolver.find(set);
-			if (pos == set2resolver.end()) {
-				return res;		// unknown set!
+		template<typename R, typename T, typename ... Args>
+		typename std::enable_if<std::is_base_of<ConstraintResolver, R>::value, void>::type
+		registerLocationResolver(const StateSetType& in, const StateSetType& out, const TypedSetType<T>& dataType, const Args& ... args) {
+			// one resolver for in and out set
+			R* r = new R(*this, dataType, args ...);
+			resolver.insert(r);
+			locationResolver[std::make_pair(&in,  (const SetType*)(&dataType))] = r;
+			locationResolver[std::make_pair(&out, (const SetType*)(&dataType))] = r;
+		}
+
+		void addConstraintsFor(const SetID& set, Constraints& res) {
+
+			// check standard set keys
+			{
+				auto pos = set2key.find(set);
+				if (pos != set2key.end()) {
+					const SetKey& key = pos->second;
+
+					// get targeted node
+					core::StatementAddress trg = getStmt(std::get<1>(key));
+
+					// run resolution
+					if (trg) setResolver[std::get<0>(key)]->addConstraints(trg, std::get<2>(key), res);
+
+					// done
+					return;
+				}
 			}
 
-			// use resolver to obtain result
-//			pos->second->visit()
+			// try a state formula
+			{
+				auto pos = set2statekey.find(set);
+				if (pos != set2statekey.end()) {
+					const StateSetKey& key = pos->second;
 
-			return res;
+					// get targeted node
+					core::StatementAddress trg = getStmt(std::get<1>(key));
+
+					// run resolution
+					if (trg) {
+						auto type = std::make_pair(std::get<0>(key),std::get<4>(key));
+						locationResolver[type]->addConstraints(trg, std::get<2>(key), std::get<3>(key), res);
+					}
+
+					// done
+					return;
+				}
+			}
+
+			// an unknown set?
+			assert_true(false) << "Unknown set encountered: " << set << "\n";
 		}
 
 		template<typename T>
@@ -489,6 +564,8 @@ namespace cba {
 	Constraints generateConstraints(CBAContext& context, const core::StatementPtr& root);
 
 	Solution solve(const Constraints& constraints);
+
+	Solution solve(const core::StatementPtr& root, const core::ExpressionPtr& trg, const utils::set_constraint_2::SetID& set);
 
 	template<typename T>
 	const std::set<T>& getValuesOf(const CBAContext& context, const Solution& solution,

@@ -738,8 +738,8 @@ namespace cba {
 
 		public:
 
-			ArithmeticConstraintCollector(CBAContext& context, const vector<Callable>& callables, NodeManager& mgr)
-				: super(context, cba::A, cba::a, callables), base(mgr.getLangBasic()) { };
+			ArithmeticConstraintCollector(CBAContext& context, const vector<Callable>& callables, const core::lang::BasicGenerator& base)
+				: super(context, cba::A, cba::a, callables), base(base) { };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
@@ -900,8 +900,8 @@ namespace cba {
 
 		public:
 
-			BooleanConstraintCollector(CBAContext& context, const vector<Callable>& callables, NodeManager& mgr)
-				: super(context, cba::B, cba::b, callables), base(mgr.getLangBasic()) { };
+			BooleanConstraintCollector(CBAContext& context, const vector<Callable>& callables, const core::lang::BasicGenerator& base)
+				: super(context, cba::B, cba::b, callables), base(base) { };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
@@ -1148,7 +1148,7 @@ namespace cba {
 		public:
 
 			BaseImperativeConstraintCollector(CBAContext& context, const vector<Callable>& callables, const SetIDType& Ain, const SetIDType& Aout)
-				: ConstraintResolver(context), callables(callables), Ain(Ain), Aout(Aout) {};
+				: super(context), callables(callables), Ain(Ain), Aout(Aout) {};
 
 			// ----------- Expressions -----------------------------------------------------------------------------------------------------
 
@@ -1616,7 +1616,15 @@ namespace cba {
 			void connectStateSets(const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) {
 
 				// general handling - Sin = Sout
-				for(auto loc : locations) {
+				vector<Location> locations;
+				if (this->hasLocation()) {
+					locations.push_back(this->getLocation());
+				} else {
+					locations = this->locations;
+				}
+
+
+				for (auto loc : locations) {
 
 					// get Sin set		TODO: add context to locations
 					auto s_in = this->context.getSet(a, al, ac, loc, dataSet);
@@ -1632,7 +1640,14 @@ namespace cba {
 			void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) {
 
 				// general handling - Sin = Sout
-				for(auto loc : locations) {
+				vector<Location> locations;
+				if (this->hasLocation()) {
+					locations.push_back(this->getLocation());
+				} else {
+					locations = this->locations;
+				}
+
+				for (auto loc : locations) {
 
 					// get Sin set		TODO: add context to locations
 					auto s_in = this->context.getSet(a, al, ac, loc, dataSet);
@@ -1640,7 +1655,6 @@ namespace cba {
 
 					// state information entering the set is also leaving it
 					constraints.add(subsetIf(value, set, s_in, s_out));
-
 				}
 			}
 
@@ -1657,6 +1671,7 @@ namespace cba {
 
 	Constraints generateConstraints(CBAContext& context, const StatementPtr& stmt) {
 		NodeManager& mgr = stmt->getNodeManager();
+		const auto& base = mgr.getLangBasic();
 
 		// create resulting list of constraints
 		Constraints res;
@@ -1676,8 +1691,8 @@ namespace cba {
 		ControlFlowConstraintCollector(context, funs).visit(root, initContext, res);
 		ConstantConstraintCollector(context, funs).visit(root, initContext, res);
 		ReferenceConstraintCollector(context, funs).visit(root, initContext, res);
-		ArithmeticConstraintCollector(context, funs, mgr).visit(root, initContext, res);
-		BooleanConstraintCollector(context, funs, mgr).visit(root, initContext, res);
+		ArithmeticConstraintCollector(context, funs, base).visit(root, initContext, res);
+		BooleanConstraintCollector(context, funs, base).visit(root, initContext, res);
 
 		// and the imperative constraints
 		auto locations = getAllLocations(context, root);
@@ -1698,6 +1713,56 @@ namespace cba {
 	Solution solve(const Constraints& constraints) {
 		// just use the utils solver
 		return utils::set_constraint_2::solve(constraints);
+	}
+
+	namespace {
+
+		template<typename T>
+		void registerImperativeCollector(CBAContext& context, const TypedSetType<T>& type, const vector<Location>& locations, const vector<Callable>& funs) {
+			context.registerLocationResolver<ImperativeStateConstraintCollector<T>>(Sin, Sout, type, locations, funs);
+		}
+	}
+
+	Solution solve(const StatementPtr& stmt, const ExpressionPtr& trg, const SetID& set) {
+		NodeManager& mgr = stmt->getNodeManager();
+		const auto& base = mgr.getLangBasic();
+
+		// init root
+		StatementAddress root(stmt);
+
+		// create context
+		CBAContext context;
+
+		// obtain list of callable functions
+		vector<Callable> funs = getAllCallableTerms(context, root);
+
+		// install resolver
+		context.registerResolver<ReachableConstraintCollector>(R, funs, root);
+		context.registerResolver<ControlFlowConstraintCollector>(C, funs);
+		context.registerResolver<ConstantConstraintCollector>(D, funs);
+		context.registerResolver<ReferenceConstraintCollector>(R, funs);
+		context.registerResolver<ArithmeticConstraintCollector>(A, funs, base);
+		context.registerResolver<BooleanConstraintCollector>(B, funs, base);
+
+		// and the imperative constraints
+		auto locations = getAllLocations(context, root);
+		registerImperativeCollector(context, C, locations, funs);
+		registerImperativeCollector(context, D, locations, funs);
+		registerImperativeCollector(context, R, locations, funs);
+		registerImperativeCollector(context, A, locations, funs);
+		registerImperativeCollector(context, B, locations, funs);
+
+		// bridge context to resolution
+		auto resolver = [&](const std::set<SetID>& sets)->Constraints {
+			Constraints res;
+			for(auto set : sets) {
+				context.addConstraintsFor(set, res);
+			}
+			return res;
+		};
+
+		// use the lazy solver approach
+		return utils::set_constraint_2::solve(set, resolver);
 	}
 
 	using namespace utils::set_constraint_2;
