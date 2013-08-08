@@ -224,6 +224,13 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXMemberCallExpr(const cl
 	if (IS_CPP_REF(convFact.lookupTypeDetails(ownerObj->getType())))
 		ownerObj = builder.toIRRef(ownerObj);
 
+	// if owner object is not a ref is the case of a call on a return value which has not
+	// being identified as temporary expression, because in IR classes are always a left side
+	// we have to materialize
+	if(!ownerObj.getType().isa<core::RefTypePtr>()){
+		ownerObj =  builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getMaterialize(), ownerObj);
+	}
+
 	// reconstruct Arguments list, fist one is a scope location for the object
 	ExpressionList&& args = ExprConverter::getFunctionArguments(callExpr, llvm::cast<clang::FunctionDecl>(methodDecl) );
 	args.insert (args.begin(), ownerObj);

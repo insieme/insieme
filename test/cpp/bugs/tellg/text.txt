@@ -33,31 +33,3 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
-
-#pragma once
-
-#include <boost/filesystem/path.hpp>
-
-#include "insieme/core/forward_decls.h"
-
-namespace clang { class Decl; }
-
-namespace insieme {
-namespace frontend {
-namespace utils {
-
-	bool isDefinedInSystemHeader (const clang::Decl* decl, const vector<boost::filesystem::path>& stdLibDirs= vector<boost::filesystem::path>());
-
-	/**
-	 * Attaches a header annotation to the given node which is supposed to be
-	 * the result of converting the given declaration.
-	 *
-	 * @param node the node to be annotated
-	 * @param decl the declaration this node has been derived from
-	 * @param stdLibDirs libraries to be considered within the library path (to keep lib header paths short)
-	 */
-	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const vector<boost::filesystem::path>& stdLibDirs = vector<boost::filesystem::path>());
-
-} // end namespace utils
-} // end namespace frontend
-} // end namespace utils
