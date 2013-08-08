@@ -928,6 +928,16 @@ namespace std {
 		return (node) ? out << node.getPath() : out << "NULL";
 	}
 
+	/**
+	 * Integrate addresses into the std::hash framework.
+	 */
+	template<typename T>
+	struct hash<insieme::core::Address<T>> {
+		size_t operator()(const insieme::core::Address<T>& addr) const {
+			return addr.hash();
+		}
+	};
+
 }
 
 
