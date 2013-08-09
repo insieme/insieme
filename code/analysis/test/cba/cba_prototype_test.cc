@@ -78,6 +78,15 @@ namespace cba {
 
 		c.callContext = c.callContext << 2;
 		EXPECT_EQ("[[1,2],[<0,0>,<0,0>]]", toString(c));
+
+		c.callContext = c.callContext << 3;
+		EXPECT_EQ("[[2,3],[<0,0>,<0,0>]]", toString(c));
+
+		c.callContext = c.callContext >> 4;
+		EXPECT_EQ("[[4,2],[<0,0>,<0,0>]]", toString(c));
+
+		c.callContext >>= 5;
+		EXPECT_EQ("[[5,4],[<0,0>,<0,0>]]", toString(c));
 	}
 
 
@@ -223,9 +232,8 @@ namespace cba {
 		VariableAddress varX = declX->getVariable();
 		ExpressionAddress initX = declX->getInitialization();
 
-		EXPECT_EQ("{AP(12)}", toString(analysis.getValuesOf(varX)));
 		EXPECT_EQ("{AP(12)}", toString(analysis.getValuesOf(initX)));
-		createDotDump(analysis);
+		EXPECT_EQ("{AP(12)}", toString(analysis.getValuesOf(varX)));
 
 		auto declY = code[1].as<DeclarationStmtAddress>();
 		VariableAddress varY = declY->getVariable();
@@ -233,8 +241,8 @@ namespace cba {
 
 //		std::cout << *varY << " = " << cba::getValuesOf(context, solution, varY) << "\n";
 //		std::cout << *initY << " = " << cba::getValuesOf(context, solution, initY) << "\n";
-		EXPECT_EQ("{(LambdaExpr@0-1-1,[[0,0],[<0,0>,<0,0>]])}", toString(analysis.getValuesOf(varY, c)));
 		EXPECT_EQ("{(LambdaExpr@0-1-1,[[0,0],[<0,0>,<0,0>]])}", toString(analysis.getValuesOf(initY, C)));
+		EXPECT_EQ("{(LambdaExpr@0-1-1,[[0,0],[<0,0>,<0,0>]])}", toString(analysis.getValuesOf(varY, c)));
 
 
 		auto varZ = initY.as<LambdaExprAddress>()->getParameterList()[0];
@@ -245,41 +253,36 @@ namespace cba {
 		auto l2 = analysis.getLabel(code[3]);
 
 		EXPECT_EQ("{AP(14)}", toString(analysis.getValuesOf(varZ, Context::CallContext(0,l1))));
+		createDotDump(analysis);
 		EXPECT_EQ("{AP(16)}", toString(analysis.getValuesOf(varZ, Context::CallContext(0,l2))));
 
 	}
-//
-//	TEST(CBA, ReturnValue) {
-//
-//		NodeManager mgr;
-//		IRBuilder builder(mgr);
-//
-//		auto in = builder.parseStmt(
-//				"{"
-//				"	int<4> x = 12;"
-//				"	auto y = (int z)->int<4> { return 10; };"
-//				"	int<4> z = y(x);"
-//				"}"
-//		).as<CompoundStmtPtr>();
-//
-//		ASSERT_TRUE(in);
-//		CompoundStmtAddress code(in);
-//
-//		CBA context(code);
-//		auto constraints = generateConstraints(context, code);
-//		// std::cout << "Constraint: " << constraints << "\n";
-////		createDotDump(context, constraints);
-//
-//		auto solution = cba::solve(constraints);
-//		// std::cout << "Solutions:  " << solution << "\n";
-//		createDotDump(context, constraints, solution);
-//
-//		auto declZ = code[2].as<DeclarationStmtAddress>();
-//		VariableAddress varZ = declZ->getVariable();
-//
-//		// std::cout << *varZ << " = " << cba::getValuesOf(context, solution, varZ) << "\n";
-//		EXPECT_EQ("{AP(10)}", toString(cba::getValuesOf(context, solution, varZ)));
-//	}
+
+	TEST(CBA, ReturnValue) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+
+		auto in = builder.parseStmt(
+				"{"
+				"	int<4> x = 12;"
+				"	auto y = (int z)->int<4> { return 10; };"
+				"	int<4> z = y(x);"
+				"}"
+		).as<CompoundStmtPtr>();
+
+		ASSERT_TRUE(in);
+		CompoundStmtAddress code(in);
+
+		CBA analysis(code);
+
+		auto declZ = code[2].as<DeclarationStmtAddress>();
+		VariableAddress varZ = declZ->getVariable();
+
+		// std::cout << *varZ << " = " << cba::getValuesOf(context, solution, varZ) << "\n";
+		EXPECT_EQ("{AP(10)}", toString(analysis.getValuesOf(varZ)));
+		createDotDump(analysis);
+	}
 //
 //	TEST(CBA, ReturnValue2) {
 //

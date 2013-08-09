@@ -335,9 +335,23 @@ namespace cba {
 				: super(context, utils::set::toSet<SetTypeSet>(&A,&a)), callables(callables), A(A), a(a) { };
 
 			void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {
-				// just collect constraints from elements
-				// TODO: add data flow constraints
-				for(auto cur : compound) visit(cur, ctxt, constraints);
+
+				// TODO: identify return statements more efficiently
+
+				// since value of a compound is the value of return statements => visit those
+				visitDepthFirstPrunable(compound, [&](const StatementAddress& stmt) {
+					// prune inner functions
+					if (stmt.isa<LambdaExprAddress>()) return true;
+
+					// visit return statements
+					if (auto returnStmt = stmt.isa<ReturnStmtAddress>()) {
+						visit(returnStmt, ctxt, constraints);
+						return true;
+					}
+
+					return false;
+				});
+
 			}
 
 			void visitDeclarationStmt(const DeclarationStmtAddress& decl, const Context& ctxt, Constraints& constraints) {
@@ -357,18 +371,18 @@ namespace cba {
 
 			void visitIfStmt(const IfStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
 
-				// decent into sub-expressions
-				visit(stmt->getCondition(), ctxt, constraints);
-				visit(stmt->getThenBody(), ctxt, constraints);
-				visit(stmt->getElseBody(), ctxt, constraints);
+//				// decent into sub-expressions
+//				visit(stmt->getCondition(), ctxt, constraints);
+//				visit(stmt->getThenBody(), ctxt, constraints);
+//				visit(stmt->getElseBody(), ctxt, constraints);
 
 			}
 
 			void visitWhileStmt(const WhileStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
 
-				// decent into sub-expressions
-				visit(stmt->getCondition(), ctxt, constraints);
-				visit(stmt->getBody(), ctxt, constraints);
+//				// decent into sub-expressions
+//				visit(stmt->getCondition(), ctxt, constraints);
+//				visit(stmt->getBody(), ctxt, constraints);
 			}
 
 			void visitReturnStmt(const ReturnStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
@@ -419,10 +433,10 @@ namespace cba {
 
 			void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, Constraints& constraints) {
 
-				// process bound arguments recursively
-				for (auto cur : bind->getBoundExpressions()) {
-					visit(cur, ctxt, constraints);
-				}
+//				// process bound arguments recursively
+//				for (auto cur : bind->getBoundExpressions()) {
+//					visit(cur, ctxt, constraints);
+//				}
 
 			}
 
@@ -475,7 +489,7 @@ namespace cba {
 						constraints.add((fixed)? subset(A_ret, A_call) : subsetIf(target, C_fun, A_ret, A_call));
 
 						// add function body constraints for targeted call context
-						this->visit(lambda->getBody(), innerCallContext, constraints);
+						if (fixed) this->visit(lambda->getBody(), innerCallContext, constraints);
 
 					// handle bind
 					} else if (auto bind = expr.isa<BindExprAddress>()) {
@@ -516,7 +530,7 @@ namespace cba {
 						constraints.add((fixed) ? subset(A_ret, A_call) : subsetIf(target, C_fun, A_ret, A_call));
 
 						// add function body constraints for targeted bind expression
-						this->visit(body, innerCallContext, constraints);
+						if (fixed) this->visit(body, innerCallContext, constraints);
 					}
 				};
 
@@ -1151,6 +1165,13 @@ namespace cba {
 			BaseImperativeConstraintCollector(CBA& context, const vector<Callable>& callables, const SetIDType& Ain, const SetIDType& Aout)
 				: super(context, utils::set::toSet<SetTypeSet>(&Ain,&Aout)), callables(callables), Ain(Ain), Aout(Aout) {};
 
+
+			// TODO: redesign
+			//	- implement routine obtaining predecessor
+			//	- implement routine obtaining successors
+			//	- implement forward / backward constraint collector on top of those
+			//  - use utility within implementation of this class
+
 			// ----------- Expressions -----------------------------------------------------------------------------------------------------
 
 			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
@@ -1766,6 +1787,17 @@ namespace cba {
 		  resolver(), setResolver(), locationResolver(),
 		  set2key(), set2statekey() {
 
+		// fill dynamicCalls
+		core::visitDepthFirst(root, [&](const CallExprAddress& call) {
+			auto fun = call->getFunctionExpr();
+			if (fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>()) return;
+			this->dynamicCalls.push_back(call);
+		});
+
+		// fill dynamic call labels
+		dynamicCallLabels = ::transform(dynamicCalls, [&](const CallExprAddress& cur) { return getLabel(cur); });
+		dynamicCallLabels.push_back(0);
+
 		// TODO: move this to another place ...
 		NodeManager& mgr = root->getNodeManager();
 		const auto& base = mgr.getLangBasic();
@@ -1801,11 +1833,14 @@ namespace cba {
 		{
 			auto pos = set2key.find(set);
 			if (pos != set2key.end()) {
+
 				const SetKey& key = pos->second;
 
 				int id = std::get<1>(key);
 				const SetType& type = *std::get<0>(key);
 				const Context& context = std::get<2>(key);
+
+				auto resolver = setResolver[&type];
 
 				// get targeted node
 				core::StatementAddress trg = getStmt(id);
@@ -1824,12 +1859,12 @@ namespace cba {
 					} else if (auto decl = trg.getParentAddress().isa<core::DeclarationStmtAddress>()) {
 
 						// add constraints for declaration statement
-						addConstraintsFor(getSet(type, getLabel(decl), context), res);
+						resolver->addConstraints(decl, context, res);
 
 					} else if (auto params = trg.getParentAddress().isa<core::ParametersAddress>()) {
 
 						// it is within a function => get call sides
-						int userOffset = (params.getParentNode().isa<LambdaPtr>()) ? 3 : 2;		// for bind
+						int userOffset = (params.getParentNode().isa<LambdaPtr>()) ? 4 : 2;		// for bind
 
 						auto user = params.getParentAddress(userOffset).as<StatementAddress>();
 						auto userType = user->getNodeType();
@@ -1837,19 +1872,40 @@ namespace cba {
 						assert_lt(userOffset, params.getDepth());
 
 						if (userType == NT_CallExpr && user.as<CallExprAddress>()->getFunctionExpr() == params.getParentAddress(userOffset-1)) {
+
 							// it is a direct call - resolve the call expression
-							addConstraintsFor(getSet(type, getLabel(user), context), res);
+							resolver->addConstraints(user, context, res);
+
 						} else if (userType == NT_CompoundStmt) {
+
 							// nothing to do ... this function is not called ...
+
 						} else {
+
 							// it is an indirect call - resolve all calls with a matching parameter list
+							auto num_params = params.size();
+							for(auto call : dynamicCalls) {
+								if (call.size() == num_params) {
+
+									if (context.callContext.startsWith(0)) {
+										// nobody is calling the root context
+										Context srcContext = context;
+										srcContext.callContext >>= 0;
+										resolver->addConstraints(call, srcContext, res);
+									} else {
+										// anybody may call this nested context
+										for(auto l : dynamicCallLabels) {
+											Context srcContext = context;
+											srcContext.callContext >>= l;
+
+											resolver->addConstraints(call, srcContext, res);
+										}
+									}
+								}
+							}
 
 						}
 
-						std::cout << params.getParentNode(3)->getNodeType() << "\n";
-						std::cout << params.getParentNode(4)->getNodeType() << "\n";
-						std::cout << params.getParentNode(5)->getNodeType() << "\n";
-						assert(false);
 					} else {
 						std::cout << "Unsupported variable type: " << trg.getParentAddress()->getNodeType() << "\n";
 						assert(false && "Unsupported variable type encountered!");
@@ -1860,7 +1916,7 @@ namespace cba {
 				assert(trg && "Unable to obtain target!");
 
 				// run resolution
-				setResolver[std::get<0>(key)]->addConstraints(trg, std::get<2>(key), res);
+				resolver->addConstraints(trg, context, res);
 
 				// done
 				return;
@@ -1897,11 +1953,17 @@ namespace cba {
 		const Solution& ass = solver.getAssignment();
 
 		auto getAddress = [&](const Label l)->StatementAddress {
-			for(auto cur : this->labels) {
-				if (cur.second == l) return cur.first;
+			{
+				auto pos = this->reverseLabels.find(l);
+				if (pos != this->reverseLabels.end()) {
+					return pos->second;
+				}
 			}
-			for(auto cur : this->vars) {
-				if (cur.second == l) return cur.first;
+			{
+				auto pos = this->reverseVars.find(l);
+				if (pos != this->reverseVars.end()) {
+					return pos->second;
+				}
 			}
 			return StatementAddress();
 		};

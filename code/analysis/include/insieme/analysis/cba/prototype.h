@@ -82,14 +82,23 @@ namespace cba {
 		bool operator==(const Sequence& other) const { return this == &other || context == other.context; }
 		bool operator!=(const Sequence& other) const { return !(*this == other); }
 		bool operator<(const Sequence& other) const { return this != &other && context < other.context; }
+		bool startsWith(const T& e) const { return s == 0 || context[0] == e; }
 		Sequence<T,s>& operator<<=(const Label& label) {
 			for(unsigned i=0; i<(s-1); ++i) {
 				context[i] = context[i+1];
-				context[s-1] = label;
 			}
+			context[s-1] = label;
 			return *this;
 		}
-		Sequence<T,s> operator<<(const Label& label) const { Sequence cpy(*this); return cpy <<= label; }
+		Sequence<T,s>& operator>>=(const Label& label) {
+			for(int i=(s-1); i>=0; --i) {
+				context[i] = context[i-1];
+			}
+			context[0] = label;
+			return *this;
+		}
+		Sequence<T,s> operator<<(const Label& label) const { return Sequence(*this)<<=label; }
+		Sequence<T,s> operator>>(const Label& label) const { return Sequence(*this)>>=label; }
 		std::ostream& printTo(std::ostream& out) const { return out << context; };
 	};
 
@@ -348,6 +357,10 @@ namespace cba {
 
 		Solver solver;
 
+		// a list of all dynamic calls within the targeted fragment - filled by the constructor
+		std::vector<core::CallExprAddress> dynamicCalls;
+		std::vector<Label> dynamicCallLabels;
+
 		int setCounter;
 		std::map<SetKey, SetID> sets;
 		std::map<StateSetKey, SetID> stateSets;
@@ -509,11 +522,11 @@ namespace cba {
 			Variable res;
 			if (def == var) {
 				res = ++idCounter; 		// reserve 0 for the empty set
+				reverseVars[res] = def;
 			} else {
 				res = getVariable(def);
 			}
 			vars[var] = res;
-			reverseVars[res] = var;
 			return res;
 		}
 
