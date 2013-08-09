@@ -185,8 +185,7 @@ class PrunableDeclVisitor{
 				break;
 
 			default:
-				std::cout << "disp: " << decl->getDeclKindName() << std::endl;
-				assert(false);
+			//	std::cout << "disp: " << decl->getDeclKindName() << std::endl;
 				return;
 		}
 	}
