@@ -569,16 +569,11 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::
 
 	//TODO: check if we need to deref subExpr (for pointerProblem)
 	core::ExpressionPtr subExpr = Visit(throwExpr->getSubExpr());
-
-	VLOG(2) << throwExpr->getSubExpr()->getType().getTypePtr()->getTypeClassName();
 	core::TypePtr targetTy = convFact.convertType(throwExpr->getSubExpr()->getType().getTypePtr());
 	core::TypePtr srcTy = subExpr->getType();
-	VLOG(2) << (subExpr) << " " << subExpr->getType() << " " << targetTy;
 	if( targetTy != srcTy && *targetTy != *srcTy ) {
 		subExpr = convFact.tryDeref(subExpr);
 	}
-	VLOG(2) << (subExpr) << " " << subExpr->getType() << " " << targetTy;
-
 	assert(*subExpr->getType() == *targetTy);
 	/*
 	//if(literal || variable) {
@@ -588,10 +583,7 @@ core::ExpressionPtr Converter::CXXExprConverter::VisitCXXThrowExpr(const clang::
 	}
 	*/
 
-	retIr = core::transform::outline(mgr, builder.throwStmt(subExpr));
-	VLOG(2) << retIr << " " << retIr->getType();
-
-	return retIr;
+	return retIr = builder.createCallExprFromBody(builder.throwStmt(subExpr), subExpr->getType());
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

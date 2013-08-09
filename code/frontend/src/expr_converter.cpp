@@ -871,8 +871,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 	if ( binOp->getOpcode() == clang::BO_Comma ) {
 
 		core::TypePtr retType;
-		// the return type of this lambda is the type of the last expression (according to the C
-		// standard)
+		// the return type of this lambda is the type of the last expression (according to the C standard)
 		std::vector<core::StatementPtr> stmts { lhs };
 		if (core::analysis::isCallOf(rhs, gen.getRefAssign())) {
 			stmts.push_back(rhs);
@@ -884,7 +883,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			stmts.push_back(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs));
 			retType = rhs->getType();
 		}
-		return (retIr = builder.createCallExprFromBody(builder.compoundStmt(stmts), retType));
+
+		core::StatementPtr body =  builder.compoundStmt(stmts);
+		return (retIr = builder.createCallExprFromBody(body, retType));
 	}
 
 
