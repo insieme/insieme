@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include <set>
 #include <map>
 #include <tuple>
@@ -44,6 +46,7 @@
 #include "insieme/utils/printable.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/map_utils.h"
+
 
 namespace insieme {
 namespace utils {
@@ -84,6 +87,25 @@ namespace set_constraint_2 {
 		TypedSetID(const SetID& id) : SetID(id) { };
 		TypedSetID(const TypedSetID<T>& id) : SetID(id) { };
 	};
+
+} // end namespace set_constraint_2
+} // end namespace utils
+} // end namespace insieme
+
+namespace std {
+
+	template<>
+	struct hash<insieme::utils::set_constraint_2::SetID> {
+		size_t operator()(const insieme::utils::set_constraint_2::SetID& id) const {
+			return id.getID();
+		}
+	};
+
+} // end namespace std
+
+namespace insieme {
+namespace utils {
+namespace set_constraint_2 {
 
 
 	// ----------------------------- Constraints ------------------------------
@@ -554,6 +576,10 @@ namespace set_constraint_2 {
 			data.push_back(constraint);
 		}
 
+		void add(const Constraints& constraints) {
+			data.insert(data.end(), constraints.data.begin(), constraints.data.end());
+		}
+
 		const std::vector<ConstraintPtr>& getList() const {
 			return data;
 		}
@@ -698,6 +724,83 @@ namespace set_constraint_2 {
 	// The type of entities capable of resolving constraints.
 	typedef std::function<Constraints(const std::set<SetID>&)> ConstraintResolver;
 
+	class LazySolver {
+
+		/**
+		 * The source of lazy-generated constraints.
+		 */
+		ConstraintResolver resolver;
+
+		/**
+		 * The list of maintained constraints.
+		 */
+		Constraints constraints;
+
+		/**
+		 * The current partial solution.
+		 */
+		Assignment ass;
+
+		/**
+		 * The set of sets for which constraints have already been resolved.
+		 */
+		std::unordered_set<SetID> resolved;
+
+		/**
+		 * A lazily constructed graph of constraint dependencies.
+		 */
+		typedef std::unordered_map<SetID, std::set<const Constraint*>> Edges;
+		Edges edges;
+
+		/**
+		 * A set of fully resolved constraints (all inputs resolved, just for performance)
+		 */
+		std::unordered_set<const Constraint*> resolvedConstraints;
+
+	public:
+
+		LazySolver(const ConstraintResolver& resolver, const Assignment& initial = Assignment())
+			: resolver(resolver), ass(initial) {}
+
+		/**
+		 * Obtains an assignment including the solution of the requested set. This is an incremental
+		 * approach and may be used multiple times. Previously computed results will be reused.
+		 */
+		const Assignment& solve(const SetID& set);
+
+		/**
+		 * Obtains an assignment including solutions for the given sets. This is an incremental
+		 * approach and may be used multiple times. Previously computed results will be reused.
+		 */
+		const Assignment& solve(const std::set<SetID>& sets);
+
+		/**
+		 * Obtains a reference to the list of constraints maintained internally.
+		 */
+		const Constraints& getConstraints() const {
+			return constraints;
+		}
+
+		/**
+		 * Obtains a reference to the current assignment maintained internally.
+		 */
+		const Assignment& getAssignment() const {
+			return ass;
+		}
+
+
+	private:
+
+		// -- internal utility functions ---
+
+		bool hasUnresolvedInput(const Constraint& cur);
+
+		void resolveConstraints(const Constraint& cur, vector<SetID>& worklist);
+
+		void resolveConstraints(const std::set<SetID>& sets, vector<SetID>& worklist);
+
+	};
+
 	// an eager solver implementation
 	Assignment solve(const Constraints& constraints, Assignment initial = Assignment());
 
@@ -711,14 +814,3 @@ namespace set_constraint_2 {
 } // end namespace utils
 } // end namespace insieme
 
-namespace std {
-
-	template<>
-	struct hash<insieme::utils::set_constraint_2::SetID> {
-		size_t operator()(const insieme::utils::set_constraint_2::SetID& id) const {
-			return id.getID();
-		}
-	};
-
-
-} // end namespace std

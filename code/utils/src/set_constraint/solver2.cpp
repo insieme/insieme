@@ -102,153 +102,127 @@ namespace set_constraint_2 {
 	};
 
 
-	namespace {
+	const Assignment& LazySolver::solve(const SetID& set) {
+		std::set<SetID> sets; sets.insert(set);
+		return solve(sets);
+	}
 
-		// TODO: make this externally visible for
-		class LazySolver {
-			const ConstraintResolver& resolver;
+	const Assignment& LazySolver::solve(const std::set<SetID>& sets) {
 
-			Constraints constraints;
-			Assignment ass;
+		// create the work-list for this resolution
+		vector<SetID> worklist;
 
-			// the set of sets for which constraints have already been resolved
-			std::unordered_set<SetID> resolved;
+		// 1. start by resolving requested sets
+		resolveConstraints(sets, worklist);
 
-			// the lazily constructed graph
-			typedef map<SetID, set<const Constraint*>> Edges;
-			Edges edges;
+		// 2. solve constraints
+		while(!worklist.empty()) {
+			// retrieve first element
+			SetID head = worklist.back();
+			worklist.pop_back();
 
-			// the set of constraints with resolved inputs
-			std::unordered_set<const Constraint*> resolvedConstraints;
+			// process outgoing edges
+			for (const Constraint* cur : edges[head]) {
+				const Constraint& cc = *cur;
 
-		public:
+				// add and resolve list of used filters
+				resolveConstraints(cc, worklist);
 
-			LazySolver(const ConstraintResolver& resolver, const Assignment& initial)
-				: resolver(resolver), ass(initial) {}
+				// trigger update
+				bool change = cc.update(ass);
 
-
-			const Assignment& solve(const std::set<SetID>& sets) {
-
-				// create the work-list for this resolution
-				vector<SetID> worklist;
-
-				// 1. start by resolving requested sets
-				resolveConstraints(sets, worklist);
-
-				// 2. solve constraints
-				while(!worklist.empty()) {
-					// retrieve first element
-					SetID head = worklist.back();
-					worklist.pop_back();
-
-					// process outgoing edges
-					for (const Constraint* cur : edges[head]) {
-						const Constraint& cc = *cur;
-
-						// add and resolve list of used filters
-						resolveConstraints(cc, worklist);
-
-						// trigger update
-						bool change = cc.update(ass);
-
-						// register outputs in work-list
-						if (change) {
-							for (auto cur : cc.getOutputs()) {
-								worklist.push_back(cur);
-							}
-						}
+				// register outputs in work-list
+				if (change) {
+					for (auto cur : cc.getOutputs()) {
+						worklist.push_back(cur);
 					}
 				}
+			}
+		}
 
 
-				// return assignment - TODO: find way to project to requested values
-				return ass;
+		// return assignment - TODO: find way to project to requested values
+		return ass;
+	}
+
+
+	bool LazySolver::hasUnresolvedInput(const Constraint& cur) {
+
+		// check cache
+		auto pos = resolvedConstraints.find(&cur);
+		if (pos != resolvedConstraints.end()) {
+			return false;
+		}
+
+		// check dependencies
+		bool hasUnresolvedInputs = any(cur.getInputs(), [&](const SetID& cur) { return resolved.find(cur) == resolved.end(); });
+		if (!hasUnresolvedInputs) resolvedConstraints.insert(&cur);
+		return hasUnresolvedInputs;
+	}
+
+	void LazySolver::resolveConstraints(const Constraint& cur, vector<SetID>& worklist) {
+
+		// check whether there is anything to do
+		if (!hasUnresolvedInput(cur)) return;
+
+		// resolve constraints
+		resolveConstraints(cur.getUsedInputs(ass), worklist);
+	}
+
+	void LazySolver::resolveConstraints(const std::set<SetID>& sets, vector<SetID>& worklist) {
+
+		// if there is nothing to do => done
+		if (sets.empty()) return;
+
+		// filter out sets already resolved
+		std::set<SetID> missing;
+		for(auto cur : sets) {
+			if (!contains(resolved, cur)) missing.insert(cur);
+		}
+
+		// check whether there is anything to do
+		if (missing.empty()) return;
+
+		// add current to resolved set
+		for(auto cur : missing) {
+			resolved.insert(cur);
+		}
+
+		// obtain and integrate new constraints
+		std::set<SetID> nextGeneration;
+		for(auto cur : resolver(missing)) {
+
+			// copy constraint to internal list of constraints
+			constraints.add(cur);
+
+			// trigger init-routines
+			cur->init(ass, worklist);
+
+			// add edges to elements depending on
+			for (auto set : cur->getInputs()) {
+				edges[set].insert(&*cur);
 			}
 
-		private:
-
-			inline bool hasUnresolvedInput(const Constraint& cur) {
-
-				// check cache
-				auto pos = resolvedConstraints.find(&cur);
-				if (pos != resolvedConstraints.end()) {
-					return false;
-				}
-
-				// check dependencies
-				bool hasUnresolvedInputs = any(cur.getInputs(), [&](const SetID& cur) { return resolved.find(cur) == resolved.end(); });
-				if (!hasUnresolvedInputs) resolvedConstraints.insert(&cur);
-				return hasUnresolvedInputs;
-			}
-
-			inline void resolveConstraints(const Constraint& cur, vector<SetID>& worklist) {
-
-				// check whether there is anything to do
-				if (!hasUnresolvedInput(cur)) return;
-
-				// resolve constraints
-				resolveConstraints(cur.getUsedInputs(ass), worklist);
-			}
-
-			void resolveConstraints(const std::set<SetID>& sets, vector<SetID>& worklist) {
-
-				// if there is nothing to do => done
-				if (sets.empty()) return;
-
-				// filter out sets already resolved
-				std::set<SetID> missing;
-				for(auto cur : sets) {
-					if (!contains(resolved, cur)) missing.insert(cur);
-				}
-
-				// check whether there is anything to do
-				if (missing.empty()) return;
-
-				// add current to resolved set
-				for(auto cur : missing) {
-					resolved.insert(cur);
-				}
-
-				// obtain and integrate new constraints
-				std::set<SetID> nextGeneration;
-				for(auto cur : resolver(missing)) {
-
-					// copy constraint to internal list of constraints
-					constraints.add(cur);
-
-					// trigger init-routines
-					cur->init(ass, worklist);
-
-					// add edges to elements depending on
-					for (auto set : cur->getInputs()) {
-						edges[set].insert(&*cur);
-					}
-
-					// collect missing inputs
-					if (cur->hasAssignmentDependentDependencies()) {
-						// we need to obtain the used inputs
-						for (auto set : cur->getUsedInputs(ass)) {
-							if (!contains(resolved, set)) {
-								nextGeneration.insert(set);
-							}
-						}
-					} else {
-						// this is a faster way of obtaining inputs
-						for (auto set : cur->getInputs()) {
-							if (!contains(resolved, set)) {
-								nextGeneration.insert(set);
-							}
-						}
+			// collect missing inputs
+			if (cur->hasAssignmentDependentDependencies()) {
+				// we need to obtain the used inputs
+				for (auto set : cur->getUsedInputs(ass)) {
+					if (!contains(resolved, set)) {
+						nextGeneration.insert(set);
 					}
 				}
-
-				// resolve next generation
-				resolveConstraints(nextGeneration, worklist);
+			} else {
+				// this is a faster way of obtaining inputs
+				for (auto set : cur->getInputs()) {
+					if (!contains(resolved, set)) {
+						nextGeneration.insert(set);
+					}
+				}
 			}
+		}
 
-		};
-
-
+		// resolve next generation
+		resolveConstraints(nextGeneration, worklist);
 	}
 
 
