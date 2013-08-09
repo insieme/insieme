@@ -46,6 +46,8 @@ namespace insieme {
 namespace frontend {
 namespace utils {
 
+	bool isDefinedInSystemHeader (const clang::Decl* decl, const vector<boost::filesystem::path>& stdLibDirs= vector<boost::filesystem::path>());
+
 	/**
 	 * Attaches a header annotation to the given node which is supposed to be
 	 * the result of converting the given declaration.

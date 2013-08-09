@@ -119,7 +119,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	// Double
 	CHECK_BUILTIN_TYPE(Double, "real<8>");
 	// LongDouble
-	// CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
+	CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
 
 }
 

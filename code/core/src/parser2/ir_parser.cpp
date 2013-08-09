@@ -513,9 +513,15 @@ namespace parser {
 
 			// add generic type
 			g.addRule("T", rule(
-					seq(id, opt(seq(":", non_empty_list(parent, ","))), opt(seq("<", list(P|T, ","), ">"))),
+					seq(cap(non_empty_list(id, "::")), opt(seq(":", non_empty_list(parent, ","))), opt(seq("<", list(P|T, ","), ">"))),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
+
+						// build up generic type name
+						std::stringstream name;
+						for(auto a : cur.getSubRange(0)) {
+							name << a.getLexeme();
+						}
 
 						// extract parent types
 						ParentList parents;
@@ -555,7 +561,7 @@ namespace parser {
 							++it;
 						}
 
-						return cur.genericType(*cur.begin, parents, typeParams, intTypeParams);
+						return cur.genericType(name.str(), parents, typeParams, intTypeParams);
 					}
 			));
 

@@ -84,6 +84,19 @@ class PrunableDeclVisitor{
 	void VisitVarDecl(const clang::VarDecl* var) {
 	}
 
+	/**
+	 * class template
+	 */
+	void VisitClassTemplate(const clang::ClassTemplateDecl* templ) {
+	}
+
+
+	void VisitFunctionTemplate(const clang::FunctionTemplateDecl* templ) {
+	}
+
+	/**
+	 * for debug purposes
+	 */
 	void echocallback(const clang::Decl* decl){
 	}
 
@@ -107,14 +120,6 @@ class PrunableDeclVisitor{
 			case clang::Decl::CXXRecord:
 				{
 					if(llvm::cast<clang::TagDecl>(decl)->isDependentType() && !visitTemplates) break;
-					//if (decl->isTemplateDecl ()){ assert(false && " temmplate"); };
-					//if (llvm::cast<clang::CXXRecordDecl>(decl)->hasDefinition ()){ assert(false && " dependent base"); };
-					//if (llvm::cast<clang::CXXRecordDecl>(decl)->hasAnyDependentBases ()){ assert(false && " dependent base"); };
-					//if (llvm::isa<clang::ClassTemplateDecl>(decl)){ assert(false); };
-					//if (llvm::isa<clang::ClassTemplatePartialSpecializationDecl>(decl)) assert(false && "partial");
-					//if (llvm::isa<clang::RedeclarableTemplateDecl>(decl)) assert(false && "redecl templ");
-					//if (llvm::cast<clang::CXXRecordDecl>(decl)->getDescribedClassTemplate ()) assert(false && " describes template");
-					//if (llvm::cast<clang::CXXRecordDecl>(decl)->getInstantiatedFromMemberClass ()) assert(false && " instantiated");
 					static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
 					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 
@@ -129,6 +134,7 @@ class PrunableDeclVisitor{
 			case clang::Decl::CXXDestructor:
 			case clang::Decl::CXXConstructor:
 			case clang::Decl::CXXMethod:
+			case clang::Decl::CXXConversion:
 				{
 				if (llvm::cast<clang::DeclContext>(decl)->isDependentContext()) break;
 				}
@@ -144,8 +150,42 @@ class PrunableDeclVisitor{
 					static_cast<BASE*>(this)->VisitTypedefDecl(llvm::cast<clang::TypedefDecl>(decl));
 					break;
 				}
+			case clang::Decl::LinkageSpec:
+				{
+					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
+					break;
+				}
+			case clang::Decl::ClassTemplate:
+				{
+					if (visitTemplates) static_cast<BASE*>(this)->VisitClassTemplate(llvm::cast<clang::ClassTemplateDecl>(decl));
+					break;
+				}
+			case clang::Decl::ClassTemplateSpecialization:
+				{
+					static_cast<BASE*>(this)->VisitRecordDecl(llvm::cast<clang::RecordDecl>(decl));
+					break;
+				}
+			case clang::Decl::FunctionTemplate:
+				{
+					if (visitTemplates) static_cast<BASE*>(this)->VisitFunctionTemplate(llvm::cast<clang::FunctionTemplateDecl>(decl));
+					break;
+				}
+
+			case clang::Decl::Using:
+			case clang::Decl::UsingDirective:
+			case clang::Decl::UsingShadow:
+			case clang::Decl::AccessSpec:
+			case clang::Decl::ParmVar:
+			case clang::Decl::ClassTemplatePartialSpecialization:
+			case clang::Decl::Enum:
+			case clang::Decl::Field:
+			case clang::Decl::IndirectField:
+			case clang::Decl::Friend:
+
+				break;
+
 			default:
-				//std::cout << "disp: " << decl->getDeclKindName() << std::endl;
+			//	std::cout << "disp: " << decl->getDeclKindName() << std::endl;
 				return;
 		}
 	}

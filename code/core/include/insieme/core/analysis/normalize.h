@@ -100,6 +100,19 @@ namespace analysis {
 	template<typename T> Address<T> normalize(const Address<T>& node) { return normalize(NodeAddress(node)).as<Address<T>>(); }
 
 
+
+	/**
+	 *  This function compares the normalize value of two nodes, usefull to identify identic codes
+	 *  whith different variables
+	 *  @param node to compare
+	 *  @param node to compare
+	 *  @retun  if both nodes are equivalent
+	 */
+	inline bool equalNormalize ( const NodePtr& a, const NodePtr& b){
+		return *normalize(a) == *normalize(b);
+	}
+
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

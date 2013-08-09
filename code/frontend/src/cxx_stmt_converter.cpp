@@ -138,18 +138,17 @@ stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::Retur
 
 		// of the first node after a return is a constructor, copy constructor
 		// we are returning a value.
-		retStmt->dump();
 
 		// behind a return we might find a constructor, it might be elidable or not, but we DO NOT
 		// call a constructor on return in any case
-		if (retExpr->getNodeType() == core::NT_CallExpr){
+/*		if (retExpr->getNodeType() == core::NT_CallExpr){
 			if (const core::FunctionTypePtr& ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>()){
-				if(ty.isConstructor()){
+				if(ty.isConstructor() && ctorExpr->getConstructor()->isCopyConstructor()){
 					retExpr = retExpr.as<core::CallExprPtr>()->getArgument(1); // second argument is the copyed obj
 				}
 			}
 		}
-
+*/
 		// fist of all, have a look of what is behind the deRef
 		if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
 			retExpr = retExpr.as<core::CallExprPtr>()[0];

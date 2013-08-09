@@ -184,15 +184,17 @@ core::TypePtr Converter::CXXTypeConverter::VisitReferenceType(const ReferenceTyp
 
 	// find out if is a const ref or not
 	QualType  qual;
-	if(llvm::isa<clang::RValueReferenceType>(refTy))
+	bool isConst;
+	if(llvm::isa<clang::RValueReferenceType>(refTy)) {
 		qual = llvm::cast<clang::RValueReferenceType>(refTy)->desugar();
-	else{
+		isConst = llvm::cast<clang::RValueReferenceType>(refTy)->getPointeeType().isConstQualified();
+	} else {
 		qual = llvm::cast<clang::LValueReferenceType>(refTy)->desugar();
+		isConst = llvm::cast<clang::LValueReferenceType>(refTy)->getPointeeType().isConstQualified();
 	}
 
-	// FIXME: find a better way... i got annoyed
-	if (boost::starts_with (qual.getAsString (), "const"))
-		retTy =  core::analysis::getConstCppRef(inTy);
+	if(isConst)
+    	retTy =  core::analysis::getConstCppRef(inTy);
 	else
 		retTy =  core::analysis::getCppRef(inTy);
 
@@ -206,9 +208,16 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 	VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
 	VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
 	for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
-		assert(templTy->getArg(argId).getAsType().getTypePtr());
-		VLOG(2) << "TemplateArguments: " << templTy->getArg(argId).getAsType().getTypePtr()->getTypeClassName();
-	}
+        //we have to check if Template argument type is an expression or a type
+        clang::QualType qt;
+        if(templTy->getArg(argId).getKind() == clang::TemplateArgument::Expression) {
+            qt = templTy->getArg(argId).getAsExpr()->getType();
+        } else {
+            qt = templTy->getArg(argId).getAsType();
+        }
+        assert(qt.getTypePtr());
+        VLOG(2) << "TemplateArguments: " << qt.getTypePtr()->getTypeClassName();
+    }
 	VLOG(2) << "isSugared: " << templTy->isSugared();
 
 	//START_LOG_TYPE_CONVERSION(templTy);
@@ -218,12 +227,18 @@ core::TypePtr Converter::CXXTypeConverter::VisitTemplateSpecializationType(const
 		//convert Template arguments (template < ActualClass >) -> ActualClass has to be converted
 		for(TemplateSpecializationType::iterator ait=templTy->begin(), ait_end=templTy->end(); ait!=ait_end; ait++) {
 			VLOG(2) << "Converting TemplateArg";
-			convFact.convertType(ait->getAsType().getTypePtr());
+            //we have to check if Template argument type is an expression or a type
+			clang::QualType qt;
+			if(ait->getKind() == clang::TemplateArgument::Expression) {
+                qt = ait->getAsExpr()->getType();
+			} else {
+                qt = ait->getAsType();
+			}
+			convFact.convertType(qt.getTypePtr());
 		}
 
 		retTy = convFact.convertType(templTy->desugar().getTypePtr());
 	}
-	//assert(false && "TemplateSpecializationType not yet handled!");
 	return retTy;
 }
 
@@ -332,7 +347,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 			ctorDecl->isCopyConstructor() ||
 			ctorDecl->isMoveConstructor() ){
 
-			if (ctorDecl->isUserProvided ()){
+			if (ctorDecl->isUserProvided () && (ctorDecl->getAccess()!=clang::AccessSpecifier::AS_private)){
 
 				// the function is a template spetialization, but if it has no body, we wont
 				// convert it, it was never instanciated
@@ -341,7 +356,7 @@ void Converter::CXXTypeConverter::postConvertionAction(const clang::Type* clangT
 				}
 
 				core::ExpressionPtr&& ctorLambda = convFact.convertFunctionDecl(ctorDecl).as<core::ExpressionPtr>();
-				if (ctorLambda ){
+				if (ctorLambda){
 					assert(ctorLambda);
 					ctorLambda = convFact.lookupFunctionImpl(ctorLambda);
                     assert(!ctorLambda.isa<core::LiteralPtr>());

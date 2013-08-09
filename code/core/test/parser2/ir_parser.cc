@@ -478,7 +478,7 @@ namespace parser {
 //				builder.mul(one,one),
 //				parse(manager, "2*0.5")
 //		);
-		
+
 		// bitwise
 		EXPECT_EQ(
 				builder.bitwiseAnd(one, two),
@@ -1214,6 +1214,29 @@ namespace parser {
 
 		// this was working and should still work
 		res = builder.parseExpr("let delObj = (ref<array<'a,1>> ptr ,(ref<array<'a,1>>)->unit delOp)->unit { } in delObj");
+		ASSERT_TRUE(res);
+	}
+
+	TEST(IR_Parser2, IRppNamespaces) {
+
+		NodeManager mgr;
+		IRBuilder builder(mgr);
+		TypePtr res;
+
+		// the following should be supported
+		res = builder.parseType("std::size_t");
+		EXPECT_EQ(builder.genericType("std::size_t"), res);
+
+		// something parameterized
+		res = builder.parseType("std::vector<std::size_t>");
+		EXPECT_EQ(builder.genericType("std::vector", toVector<TypePtr>(builder.genericType("std::size_t"))), res);
+
+		// something parameterized
+		res = builder.parseType("std::vector<my::deeper::nested::type>");
+		EXPECT_EQ(builder.genericType("std::vector", toVector<TypePtr>(builder.genericType("my::deeper::nested::type"))), res);
+
+		// the following was reported to be not working
+		res = builder.parseType("('a)->struct { ref<std::type_info>  _const_cpp_ref; }");
 		ASSERT_TRUE(res);
 	}
 

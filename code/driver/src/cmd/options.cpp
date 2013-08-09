@@ -67,7 +67,7 @@ namespace cmd {
 					("no-omp", "disables OpenMP support")
 					("no-cilk", "disables cilk support")
 					("output-file,o", bpo::value<string>(), "the output file")
-					("intercept-file", bpo::value<string>(), "interceptor config file")
+					("intercept", bpo::value<string>(), "regular expressions to be intercepted - optional")
 			;
 
 		}
@@ -205,10 +205,13 @@ namespace cmd {
 			// enable support for OpenMP and Cilk
 			res.job.setOption(fe::ConversionJob::OpenMP, !map.count("no-omp"));
 			res.job.setOption(fe::ConversionJob::Cilk, !map.count("no-cilk"));
-            // interceptor file
-            if (map.count("intercept-file")) {
-                res.job.setIntercepterConfigFile(map["intercept-file"].as<string>());
-            }
+
+            // interceptions
+            if (map.count("intercept")) {
+				for(auto i : map["intercept"].as<vector<string>>()) {
+					res.job.setInterception(i);
+				}
+            } 
 
 			// extra flags
 			for(auto cur : parser_steps) {

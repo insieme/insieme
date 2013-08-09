@@ -235,6 +235,7 @@ tu::IRTranslationUnit Converter::convert() {
 			if (!var->hasGlobalStorage()) return;
 			if (var->hasExternalStorage()) return;
 			if (var->isStaticLocal()) return;
+			if (converter.getProgram().getInterceptor().isIntercepted(var->getQualifiedNameAsString())) return;
 
 			auto builder = converter.getIRBuilder();
 			// obtain type
@@ -251,7 +252,6 @@ tu::IRTranslationUnit Converter::convert() {
 
 			// NOTE: not all staticDataMember are seen here, so we take care of the "unseen"
 			// ones in lookUpVariable
-
 			auto initValue = convertInitForGlobal(converter, var, elementType);
 			converter.getIRTranslationUnit().addGlobal(literal, initValue);
 		}
@@ -350,8 +350,6 @@ core::StatementPtr Converter::materializeReadOnlyParams(const core::StatementPtr
 				wrapRefMap.erase(currParam);
 			}
 			else{
-
-				// FIXME:  structs pased as value will be wrapped ANYWAY...
 				//   if i have a READ operation on a struct:   v= x->a;
 				//   it wont be recognized as read only as the base is pased by reference
 				//	this turns into an extra copy at the begining of every function
@@ -542,6 +540,10 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// we could look for it in the cache, but is fast to create a new one, and we can not get
 		// rid if the qualified name function
 		std::string name = utils::buildNameForVariable(varDecl);
+		if (getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
+			name = varDecl->getQualifiedNameAsString();
+		}
+
  		if(varDecl->isStaticLocal()) {
 			VLOG(2)	<< "         isStaticLocal";
             if(staticVarDeclMap.find(varDecl) != staticVarDeclMap.end()) {
@@ -576,12 +578,17 @@ core::ExpressionPtr Converter::lookUpVariable(const clang::ValueDecl* valDecl) {
 		// some member statics might be missing because of defined in a template which was ignored
 		// since this is the fist time we get access to the complete type, we can define the
 		// suitable initialization
-		if (varDecl->isStaticDataMember()){
+		// if the variable is intercepted, we ignore the declaration, will be there once the header is attached
+		if (varDecl->isStaticDataMember() && !getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())){
 			VLOG(2)	<< "         is static data member";
 			core::TypePtr&& elementType = convertType( varTy.getTypePtr() );
 			auto initValue = convertInitForGlobal(*this, varDecl, elementType);
 			// as we don't see them in the globalVisitor we have to take care of them here
 			getIRTranslationUnit().addGlobal(globVar.as<core::LiteralPtr>(), initValue);
+		}
+
+		if (getProgram().getInterceptor().isIntercepted(varDecl->getQualifiedNameAsString())) {
+			utils::addHeaderForDecl(globVar, varDecl, program.getStdLibDirs());
 		}
 
 		// OMP threadPrivate
@@ -637,6 +644,8 @@ core::ExpressionPtr Converter::defaultInitVal(const core::TypePtr& valueType) co
 		if(mgr.getLangBasic().isReal4(type))
 			return builder.literal("0.0f", type);
 		if(mgr.getLangBasic().isReal8(type))
+			return builder.literal("0.0", type);
+		if(mgr.getLangBasic().isReal16(type))
 			return builder.literal("0.0", type);
 	}
 	// handle booleans initialization
@@ -754,12 +763,18 @@ core::StatementPtr Converter::convertVarDecl(const clang::VarDecl* varDecl) {
 			// we want the inner static object
 			auto lit = var.as<core::CallExprPtr>().getArgument(0).as<core::LiteralPtr>();
 
-			if (definition->getInit())
-				retStmt = builder.initStaticVariable(lit, convertInitExpr(definition->getType().getTypePtr(),
-																		  definition->getInit(),
-																		  var->getType().as<core::RefTypePtr>().getElementType(), false));
-			else
+			if (definition->getInit()) {
+				auto initIr = convertInitExpr(definition->getType().getTypePtr(), definition->getInit(),
+							var->getType().as<core::RefTypePtr>().getElementType(), false);
+				auto call = initIr.isa<core::CallExprPtr>();
+				if(call && call->getFunctionExpr()->getType().as<core::FunctionTypePtr>()->isConstructor()) {
+					//this can also be done by substituting the first param of ctor by the unwrapped static var
+					initIr = builder.deref(initIr);
+				}
+				retStmt = builder.initStaticVariable(lit, initIr);
+			} else {
 				retStmt = builder.getNoOp();
+			}
 		}
 		else{
 			// print diagnosis messages
@@ -959,7 +974,6 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 
 		// extract kind
 		core::NodeType kind = type->getNodeType();
-
 		if (kind == core::NT_RefType) {
 			core::TypePtr elementType = type.as<core::RefTypePtr>()->getElementType();
 
@@ -971,7 +985,6 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 			// handle others using a recursive call
 			return builder.refVar(convertInitExpr(clangType, expr, elementType, zeroInit));
 		}
-
 
 		// If the type of this declaration is translated as a array type then it may also include
 		// C99 variable array declaration where the size of the array is encoded into the type. This
@@ -990,15 +1003,10 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 
 		// if no init expression is provided => use zero or undefined value
 		return retIr = zeroInit ? builder.getZero(type) : builder.undefined(type);
-
-//		// use default value ..
-//		return retIr = defaultInitVal(type);
 	}
 
-	/*
-	 * if an expression is provided as initializer first check if this is an initializer list which is used for arrays,
-	 * structs and unions
-	 */
+	// if an expression is provided as initializer first check if this is an initializer list which is used for arrays,
+	// structs and unions
 	if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr )) {
 		retIr = utils::cast( convertInitializerList(listExpr, type), type);
 		return retIr;
@@ -1016,7 +1024,8 @@ Converter::convertInitExpr(const clang::Type* clangType, const clang::Expr* expr
 	}
 
 	// if is a constructor call, we are done
-	if (llvm::isa<clang::CXXConstructExpr>(expr) && retIr.isa<core::CallExprPtr>()){		// here you might even check whether it is a constructor call in the IR
+	// TODO: here you might even check whether it is a constructor call in the IR
+	if (llvm::isa<clang::CXXConstructExpr>(expr) && retIr.isa<core::CallExprPtr>()){	
 		return retIr;
 	}
 

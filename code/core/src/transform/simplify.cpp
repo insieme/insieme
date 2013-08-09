@@ -77,7 +77,10 @@ namespace transform {
 			NodePtr simplifyCall(const NodePtr& ptr) {
 				// it has to be a call expression ...
 				if (ptr->getNodeType() != core::NT_CallExpr) return ptr;
-				if(manager.getLangBasic().isBuiltIn(ptr.as<CallExprPtr>()->getFunctionExpr())) return ptr;
+
+				core::ExpressionPtr func = ptr.as<CallExprPtr>()->getFunctionExpr();
+				if(manager.getLangBasic().isBuiltIn(func)) return ptr;
+				if (core::lang::isDerived(func))  return ptr;
 				// try in-lining of call expression
 				return tryInlineToExpr(manager, ptr.as<CallExprPtr>());
 			}

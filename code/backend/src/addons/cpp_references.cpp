@@ -89,17 +89,14 @@ namespace addons {
 
 		OperatorConverterTable getCppRefOperatorTable(core::NodeManager& manager) {
 			OperatorConverterTable res;
-
 			const auto& ext = manager.getLangExtension<core::lang::IRppExtensions>();
 
 			#include "insieme/backend/operator_converter_begin.inc"
 
 			res[ext.getRefCppToIR()] 	  = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
 			res[ext.getRefConstCppToIR()] = OP_CONVERTER({ return c_ast::ref(CONVERT_ARG(0)); });
-
 			res[ext.getRefIRToCpp()] 	  = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
 			res[ext.getRefIRToConstCpp()] = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
-
 			res[ext.getRefCppToConstCpp()]= OP_CONVERTER({ return CONVERT_ARG(0); });
 
 			// FIXME: find the right place for this

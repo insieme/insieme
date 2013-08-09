@@ -149,6 +149,33 @@ namespace {
 		return std::vector<VariablePtr>(nonDecls.begin(), nonDecls.end());
 	}
 
+	/**
+	 * Returns the list of variables referenced within an expression.
+	 * This class is used when a code block needs to be transformed into a function
+	 */
+	struct LiteralUsage : public IRVisitor<bool> {
+
+	    LiteralUsage (const std::set<string>& litToCap) : core::IRVisitor<bool>(false), literalToCapture(litToCap)  { }
+
+	    bool visitLiteral(const core::LiteralPtr& lit) {
+	    	if(literalToCapture.find(lit->getStringValue()) != literalToCapture.end() ) {
+				usedLiterals.insert(lit);
+			}
+
+			return false;
+		}
+
+	    bool visitNode(const NodePtr& node) { return false; }
+		const std::set<string>& literalToCapture;
+	    utils::set::PointerSet<LiteralPtr> usedLiterals;
+	};
+
+	std::vector<core::LiteralPtr> getLiteralUsage(const core::NodePtr& root, std::set<string> literalToCapture) {
+		LiteralUsage visitor(literalToCapture);
+		visitDepthFirstPrunable(root, visitor);
+
+		return std::vector<core::LiteralPtr>(visitor.usedLiterals.begin(), visitor.usedLiterals.end());
+	}
 }
 
 
@@ -979,34 +1006,70 @@ CallExprPtr IRBuilder::parallel(const StatementPtr& stmt, int numThreads) const 
 	return callExpr(basic.getThreadGroup(), basic.getParallel(), jobExpr(stmt, numThreads));
 }
 
-core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
+core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy, std::set<string> literalToCapture) const {
     // Find the variables which are used in the body and not declared
 	std::vector<VariablePtr>&& args = getRechingVariables(body);
+	std::vector<core::LiteralPtr> usedLiterals = getLiteralUsage(body, literalToCapture);
 
     core::TypeList argsType;
     VariableList params;
     vector<ExpressionPtr> callArgs;
 
-    utils::map::PointerMap<VariablePtr, VariablePtr> replVariableMap;
+    utils::map::PointerMap<ExpressionPtr, ExpressionPtr> replVariableMap;
 	for(const core::ExpressionPtr& curr : args){
 		assert(curr->getNodeType() == core::NT_Variable);
 
 		const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
 		const core::TypePtr& varType = bodyVar->getType();
+
+		// substitute all value use of variables by a value paramenter, this avoids pointers in the 
+		// prototype and interacts better with the materialize read only routine
+		if (varType.isa<RefTypePtr>() && core::analysis::isReadOnly(body, bodyVar)){
+			core::VariablePtr&& parmVar = this->variable( varType.as<RefTypePtr>()->getElementType() );
+			argsType.push_back( parmVar->getType() );
+			params.push_back( parmVar );
+			callArgs.push_back(this->deref(bodyVar));
+			replVariableMap.insert( std::make_pair(deref(bodyVar), parmVar) );
+		}
+		else{
+			// we create a new variable to replace the captured variable
+			core::VariablePtr&& parmVar = this->variable( varType );
+			argsType.push_back( varType );
+			params.push_back( parmVar );
+			callArgs.push_back(curr);
+			replVariableMap.insert( std::make_pair(bodyVar, parmVar) );
+		}
+	}
+
+	// Replace the variables in the body with the input parameters which have been created
+    if ( !replVariableMap.empty() ) {
+		for (auto replace : replVariableMap )
+			body = core::transform::replaceAllGen (manager, body, replace.first, replace.second);
+		//TODO: there is no suitable tool to replace expression by variable
+//    	body = core::static_pointer_cast<const core::Statement>(
+//    			core::transform::replaceVars(manager, body, replVariableMap)
+//    		);
+    }
+
+    utils::map::PointerMap<NodePtr, NodePtr> replLiteralMap;
+	for(auto lit : usedLiterals) {
+		const core::LiteralPtr& bodyLit = lit;
+		const core::TypePtr& varType = bodyLit->getType();
+	
 		// we create a new variable to replace the captured variable
 		core::VariablePtr&& parmVar = this->variable( varType );
 		argsType.push_back( varType );
-		callArgs.push_back(curr);
+		callArgs.push_back(lit);
 		params.push_back( parmVar );
-		replVariableMap.insert( std::make_pair(bodyVar, parmVar) );
+		replLiteralMap.insert( std::make_pair(bodyLit, parmVar) );
 	}
 
-    // Replace the variables in the body with the input parameters which have been created
-    if ( !replVariableMap.empty() ) {
+    // Replace the literals in the body with the input parameters which have been created
+    if ( !replLiteralMap.empty() ) {
     	body = core::static_pointer_cast<const core::Statement>(
-    			core::transform::replaceVars(manager, body, replVariableMap)
+    			core::transform::replaceAll(manager, body, replLiteralMap)
     		);
-    }
+    } 
 
     core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, FK_PLAIN), params, wrapBody(body) );
     core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);

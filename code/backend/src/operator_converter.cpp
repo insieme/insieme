@@ -79,7 +79,6 @@ namespace backend {
 
 
 		core::ExpressionPtr inlineLazy(const core::NodePtr& lazy) {
-
 			core::NodeManager& manager = lazy->getNodeManager();
 
 			core::ExpressionPtr exprPtr = dynamic_pointer_cast<const core::Expression>(lazy);
@@ -136,7 +135,7 @@ namespace backend {
 		 */
 		c_ast::ExpressionPtr narrow(ConversionContext& context, const core::ExpressionPtr& root, const core::ExpressionPtr& dataPath) {
 			// convert data path to access operations and use standard conversion
-			return context.getConverter().getStmtConverter().convertExpression(context, wrapNarrow(root, dataPath));
+		 	return context.getConverter().getStmtConverter().convertExpression(context, wrapNarrow(root, dataPath));
 		}
 
 		/**
@@ -439,6 +438,11 @@ namespace backend {
 					// strings are forwarded to external functions (printf) directly
 					return c_ast::deref(c_ast::cast(c_ast::ptr(info.rValueType), CONVERT_ARG(0)));
 				}
+			}
+
+			// deref of an assigment, do not
+			if (core::analysis::isCallOf (ARG(0), LANG_BASIC.getRefAssign()) ){
+				return CONVERT_ARG(0);
 			}
 
 			return c_ast::deref(CONVERT_ARG(0));

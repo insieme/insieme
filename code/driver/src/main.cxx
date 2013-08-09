@@ -209,7 +209,6 @@ namespace {
 	//***************************************************************************************
 	// 				IR Pretty Print: Prints out the IR in textual form
 	//***************************************************************************************
-
 	void printIR(const NodePtr& program, const CommandLineOptions& options) {
 		using namespace insieme::core::printer;
 
@@ -224,7 +223,9 @@ namespace {
 				std::fstream fout(options.DumpIR,  std::fstream::out | std::fstream::trunc);
 				fout << "// -------------- Pretty Print Inspire --------------" << std::endl;
 				fout << PrettyPrinter(program, PrettyPrinter::PRINT_DEREFS);
-				fout << std::endl << std::endl << std::endl;
+				fout << "====================================================================================================================================" << std::endl;
+				fout << "====================================================================================================================================" << std::endl;
+				fout << std::endl << std::endl;
 				fout << "// --------- Pretty Print Inspire - Detail ----------" << std::endl;
 				fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_MAX_DETAIL);
 				return;

@@ -777,6 +777,7 @@ namespace detail {
 			updateLimit();
 		}
 
+		vector<TermPtr> getTerms() const;
 		const vector<SubSequence>& getSubSequences() const { return sequence; }
 
 		virtual bool updateTokenSets(const Grammar& g, TokenSet& begin, TokenSet& end) const;
@@ -936,12 +937,16 @@ namespace detail {
 		typedef std::multiset<RulePtr, compare_target<RulePtr>> RuleSet;
 		typedef std::map<string, RuleSet> Productions;
 
-		typedef pair<TokenSet, TokenSet> StartEndSets;
+		struct Sets {
+			TokenSet startSet;
+			TokenSet endSet;
+			TokenSet followSet;
+		};
 
 		struct TermInfo : public utils::Printable {
-			std::map<string, StartEndSets> nonTerminalInfos;
-			std::map<TermPtr, StartEndSets> termInfos;
-			std::map<Sequence::SubSequence const*, StartEndSets> subSequenceInfo;
+			std::map<string, Sets> nonTerminalInfos;
+			std::map<TermPtr, Sets> termInfos;
+			std::map<Sequence::SubSequence const*, Sets> subSequenceInfo;
 
 		private:
 
@@ -1023,46 +1028,58 @@ namespace detail {
 			return info;
 		}
 
-		const StartEndSets& getStartEndSets(const TermPtr& subTerm) const {
+		const Sets& getSets(const TermPtr& subTerm) const {
 			const auto& info = getTermInfo().termInfos;
 			assert(info.find(subTerm) != info.end());
 			return info.find(subTerm)->second;
 		}
 
 		const TokenSet& getStartSet(const TermPtr& subTerm) const {
-			return getStartEndSets(subTerm).first;
+			return getSets(subTerm).startSet;
 		}
 
 		const TokenSet& getEndSet(const TermPtr& subTerm) const {
-			return getStartEndSets(subTerm).second;
+			return getSets(subTerm).endSet;
 		}
 
-		const StartEndSets& getSequenceStartEndSets(const Sequence::SubSequence& subSequence) const {
+		const TokenSet& getFollowSet(const TermPtr& subTerm) const {
+			return getSets(subTerm).followSet;
+		}
+
+		const Sets& getSequenceInfoSets(const Sequence::SubSequence& subSequence) const {
 			const auto& info = getTermInfo().subSequenceInfo;
 			assert(info.find(&subSequence) != info.end());
 			return info.find(&subSequence)->second;
 		}
 
 		const TokenSet& getSequenceStartSet(const Sequence::SubSequence& subSequence) const {
-			return getSequenceStartEndSets(subSequence).first;
+			return getSequenceInfoSets(subSequence).startSet;
 		}
 
 		const TokenSet& getSequenceEndSet(const Sequence::SubSequence& subSequence) const {
-			return getSequenceStartEndSets(subSequence).second;
+			return getSequenceInfoSets(subSequence).endSet;
 		}
 
-		const StartEndSets& getStartEndSets(const string& nonTerminal) const {
+		const TokenSet& getSequenceFollowSet(const Sequence::SubSequence& subSequence) const {
+			return getSequenceInfoSets(subSequence).followSet;
+		}
+
+		const Sets& getSets(const string& nonTerminal) const {
 			const auto& info = getTermInfo().nonTerminalInfos;
 			assert(info.find(nonTerminal) != info.end());
 			return info.find(nonTerminal)->second;
 		}
 
 		const TokenSet& getStartSet(const string& nonTerminal) const {
-			return getStartEndSets(nonTerminal).first;
+			return getSets(nonTerminal).startSet;
 		}
 
 		const TokenSet& getEndSet(const string& nonTerminal) const {
-			return getStartEndSets(nonTerminal).second;
+			return getSets(nonTerminal).endSet;
+		}
+
+		const TokenSet& getFollowSet(const string& nonTerminal) const {
+			return getSets(nonTerminal).followSet;
 		}
 
 	protected:

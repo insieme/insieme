@@ -45,6 +45,7 @@
 #include "insieme/utils/map_utils.h"
 
 #include "insieme/core/ir.h"
+#include "insieme/core/analysis/normalize.h"
 
 namespace insieme {
 namespace frontend {
@@ -142,7 +143,7 @@ namespace tu {
 
 		void addFunction(const core::LiteralPtr& symbol, const core::LambdaExprPtr& definition) {
 			assert_eq(*symbol->getType(), *definition->getType());
-			assert(functions.find(symbol) == functions.end());
+			assert((functions.find(symbol) == functions.end()) || core::analysis::equalNormalize ( definition, functions[symbol] ));
 			functions.insert( { mgr->get(symbol), mgr->get(definition) } );
 		}
 
