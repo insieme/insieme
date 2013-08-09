@@ -161,7 +161,10 @@ namespace cba {
 		TypedSetType(const string& name) : SetType(name) {}
 	};
 
+	// all set types are global constants => pointers can be used plain
+	typedef const SetType* SetTypePtr;
 
+	typedef std::set<SetTypePtr> SetTypeSet;
 
 
 	// ------------------- reachable code ------------------
@@ -285,7 +288,7 @@ namespace cba {
 
 	typedef utils::set_constraint_2::Constraints Constraints;
 
-	class CBAContext;
+	class CBA;
 	class ConstraintResolver;
 	class StateConstraintResolver;
 
@@ -297,30 +300,20 @@ namespace cba {
 		typedef std::tuple<core::NodeAddress, Context> Item;
 		std::set<Item> processed;
 
-		Location const * location;
+		const SetTypeSet coveredSets;
 
 	protected:
 
-		CBAContext& context;
+		CBA& context;
 
 	public:
 
-		ConstraintResolver(CBAContext& context) : processed(), location(0), context(context) {}
+		ConstraintResolver(CBA& context, const SetTypeSet& coveredSets)
+			: processed(), coveredSets(coveredSets), context(context) {}
 
 		void addConstraints(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
 			// just forward call to visit-process
 			visit(node, ctxt, constraints);
-		}
-
-		void addConstraints(const core::NodeAddress& node, const Context& ctxt, const Location& location, Constraints& constraints) {
-			// fix location
-			this->location = &location;
-
-			// just forward call to visit-process
-			visit(node, ctxt, constraints);
-
-			// reset location
-			this->location = 0;
 		}
 
 		virtual void visit(const core::NodeAddress& node, const Context& ctxt, Constraints& constraints) {
@@ -328,17 +321,13 @@ namespace cba {
 			super::visit(node, ctxt, constraints);
 		}
 
-	protected:
-
-		// TODO: remove this one (just for development)
-		bool hasLocation() const {
-			return location;
+		const SetTypeSet& getCoveredSets() const {
+			return coveredSets;
 		}
 
-		const Location& getLocation() const {
-			return *location;
-		}
 	};
+
+	typedef ConstraintResolver* ConstraintResolverPtr;
 
 
 	// allows to check whether a given statement is a memory location constructor (including globals)
@@ -349,12 +338,15 @@ namespace cba {
 	typedef utils::set_constraint_2::Assignment Solution;
 
 
-	class CBAContext : public boost::noncopyable {
+	class CBA : public boost::noncopyable {
 
 		typedef utils::set_constraint_2::SetID SetID;
+		typedef utils::set_constraint_2::LazySolver Solver;
 
 		typedef tuple<const SetType*, int, Context> SetKey;
 		typedef tuple<const StateSetType*, Label, Context, Location, const SetType*> StateSetKey;
+
+		Solver solver;
 
 		int setCounter;
 		std::map<SetKey, SetID> sets;
@@ -367,11 +359,12 @@ namespace cba {
 
 		// a reverse lookup structure for labels
 		std::unordered_map<Label, core::StatementAddress> reverseLabels;
+		std::unordered_map<Variable, core::VariableAddress> reverseVars;
 
 		// a data structure managing constraint resolvers
-		std::set<ConstraintResolver*> resolver;
-		std::map<const SetType*, ConstraintResolver*> setResolver;
-		std::map<std::pair<const StateSetType*, const SetType*>, ConstraintResolver*> locationResolver;
+		std::set<ConstraintResolverPtr> resolver;
+		std::map<const SetType*, ConstraintResolverPtr> setResolver;
+		std::map<std::tuple<const StateSetType*, const SetType*, Location>, ConstraintResolverPtr> locationResolver;
 
 		// reverse maps for sets (for resolution)
 		std::unordered_map<SetID, SetKey> set2key;
@@ -379,89 +372,85 @@ namespace cba {
 
 	public:
 
-		CBAContext() : setCounter(0), idCounter(0), resolver(), setResolver(), locationResolver(), set2key(), set2statekey() {};
+		CBA(const core::StatementAddress& root);
 
-		~CBAContext() {
+		~CBA() {
 			for(auto cur : resolver) delete cur;
+		}
+
+		template<typename T>
+		const std::set<T>& getValuesOf(const core::ExpressionAddress& expr, const TypedSetType<T>& set, const Context& ctxt = Context()) {
+			auto id = getSet(set, getLabel(expr), ctxt);
+			return solver.solve(id)[id];
+		}
+
+		template<typename T>
+		const std::set<T>& getValuesOf(const core::VariableAddress& var, const TypedSetType<T>& set, const Context& ctxt = Context()) {
+			auto id = getSet(set, getVariable(var), ctxt);
+			return solver.solve(id)[id];
+		}
+
+		const std::set<core::ExpressionPtr>& getValuesOf(const core::ExpressionAddress& expr, const Context& ctxt = Context()) {
+			return getValuesOf(expr, D, ctxt);
+		}
+
+		const std::set<core::ExpressionPtr>& getValuesOf(const core::VariableAddress& var, const Context& ctxt = Context()) {
+			return getValuesOf(var, d, ctxt);
 		}
 
 		template<typename R, typename ... Args>
 		typename std::enable_if<std::is_base_of<ConstraintResolver, R>::value, void>::type
-		registerResolver(const SetType& type, const Args& ... args) {
-			assert(!setResolver[&type] && "Must not bind two resolvers for the same set type!");
+		registerResolver(const Args& ... args) {
 			R* r = new R(*this, args ...);
 			resolver.insert(r);
-			setResolver[&type] = r;
+			for(auto type : r->getCoveredSets()) {
+				assert(!setResolver[type] && "Must not bind two resolvers for the same set type!");
+				setResolver[type] = r;
+			}
 		}
 
 		template<typename R, typename T, typename ... Args>
 		typename std::enable_if<std::is_base_of<ConstraintResolver, R>::value, void>::type
-		registerLocationResolver(const StateSetType& in, const StateSetType& out, const TypedSetType<T>& dataType, const Args& ... args) {
+		registerLocationResolver(const TypedSetType<T>& dataType, const Location& location, const Args& ... args) {
 			// one resolver for in and out set
-			R* r = new R(*this, dataType, args ...);
+			R* r = new R(*this, dataType, location, args ...);
 			resolver.insert(r);
-			locationResolver[std::make_pair(&in,  (const SetType*)(&dataType))] = r;
-			locationResolver[std::make_pair(&out, (const SetType*)(&dataType))] = r;
+
+			for(auto type : r->getCoveredSets()) {
+				locationResolver[std::make_tuple((const StateSetType*)(type),  (const SetType*)(&dataType), location)] = r;
+			}
 		}
 
-		void addConstraintsFor(const SetID& set, Constraints& res) {
-
-			// check standard set keys
-			{
-				auto pos = set2key.find(set);
-				if (pos != set2key.end()) {
-					const SetKey& key = pos->second;
-
-					// get targeted node
-					core::StatementAddress trg = getStmt(std::get<1>(key));
-
-					// run resolution
-					if (trg) setResolver[std::get<0>(key)]->addConstraints(trg, std::get<2>(key), res);
-
-					// done
-					return;
-				}
-			}
-
-			// try a state formula
-			{
-				auto pos = set2statekey.find(set);
-				if (pos != set2statekey.end()) {
-					const StateSetKey& key = pos->second;
-
-					// get targeted node
-					core::StatementAddress trg = getStmt(std::get<1>(key));
-
-					// run resolution
-					if (trg) {
-						auto type = std::make_pair(std::get<0>(key),std::get<4>(key));
-						locationResolver[type]->addConstraints(trg, std::get<2>(key), std::get<3>(key), res);
-					}
-
-					// done
-					return;
-				}
-			}
-
-			// an unknown set?
-			assert_true(false) << "Unknown set encountered: " << set << "\n";
+		const std::set<ConstraintResolverPtr>& getAllResolver() const {
+			return resolver;
 		}
+
+		void addConstraintsFor(const SetID& set, Constraints& res);
 
 		template<typename T>
 		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const Context& context) {
+			return utils::set_constraint_2::TypedSetID<T>(getSet(static_cast<const SetType&>(type), id, context));
+		}
+
+		utils::set_constraint_2::SetID getSet(const SetType& type, int id, const Context& context) {
 			SetKey key(&type, id, context);
 			auto pos = sets.find(key);
 			if (pos != sets.end()) {
 				return pos->second;
 			}
-			utils::set_constraint_2::TypedSetID<T> newSet(++setCounter);		// reserve 0
+			utils::set_constraint_2::SetID newSet(++setCounter);		// reserve 0
 			sets[key] = newSet;
+			set2key[newSet] = key;
 			return newSet;
 		}
 
 		template<typename T>
 		utils::set_constraint_2::TypedSetID<T> getSet(const TypedSetType<T>& type, int id, const Context& context) const {
-			static const utils::set_constraint_2::TypedSetID<T> empty(0);
+			return utils::set_constraint_2::TypedSetID<T>(getSet(static_cast<const SetType&>(type), id, context));
+		}
+
+		utils::set_constraint_2::SetID getSet(const SetType& type, int id, const Context& context) const {
+			static const utils::set_constraint_2::SetID empty(0);
 
 			SetKey key(&type, id, context);
 			auto pos = sets.find(key);
@@ -483,6 +472,7 @@ namespace cba {
 			}
 			utils::set_constraint_2::TypedSetID<T> newSet(++setCounter);		// reserve 0
 			stateSets[key] = newSet;
+			set2statekey[newSet] = key;
 			return newSet;
 		}
 
@@ -493,6 +483,7 @@ namespace cba {
 			}
 			Label l = ++idCounter;		// reserve 0 for the empty set
 			labels[expr] = l;
+			reverseLabels[l] = expr;
 			return l;
 		}
 
@@ -522,6 +513,7 @@ namespace cba {
 				res = getVariable(def);
 			}
 			vars[var] = res;
+			reverseVars[res] = var;
 			return res;
 		}
 
@@ -530,6 +522,10 @@ namespace cba {
 			return (pos != vars.end()) ? pos->second : 0;
 		}
 
+		core::VariableAddress getVariable(const Variable& var) const {
+			auto pos = reverseVars.find(var);
+			return (pos != reverseVars.end()) ? pos->second : core::VariableAddress();
+		}
 
 		// TODO: remove default values
 		Location getLocation(const core::ExpressionAddress& ctor) { // TODO: add support: , const CallContext& c = CallContext(), const ThreadContext& t = ThreadContext()) {
@@ -554,42 +550,11 @@ namespace cba {
 			return std::get<0>(loc);
 		}
 
-		void plot(const Constraints& constraints, std::ostream& out = std::cout) const;
-		void plot(const Constraints& constraints, const Solution& ass, std::ostream& out = std::cout) const;
+		void plot(std::ostream& out = std::cout) const;
 		std::size_t getNumSets() const { return sets.size() + stateSets.size(); }
 
 	};
 
-
-	Constraints generateConstraints(CBAContext& context, const core::StatementPtr& root);
-
-	Solution solve(const Constraints& constraints);
-
-	Solution solve(const core::StatementPtr& root, const core::ExpressionPtr& trg, const utils::set_constraint_2::SetID& set);
-
-	template<typename T>
-	const std::set<T>& getValuesOf(const CBAContext& context, const Solution& solution,
-			const core::ExpressionAddress& expr, const TypedSetType<T>& set, const Context& ctxt = Context()) {
-
-		auto label = context.getLabel(expr);
-		return solution[context.getSet(set, label, ctxt)];
-	}
-
-	template<typename T>
-	const std::set<T>& getValuesOf(const CBAContext& context, const Solution& solution,
-			const core::VariableAddress& var, const TypedSetType<T>& set, const Context& ctxt = Context()) {
-
-		auto id = context.getVariable(var);
-		return solution[context.getSet(set, id, ctxt)];
-	}
-
-	const std::set<core::ExpressionPtr>& getValuesOf(const CBAContext& context, const Solution& solution, const core::ExpressionAddress& expr, const Context& ctxt = Context()) {
-		return getValuesOf(context, solution, expr, D, ctxt);
-	}
-
-	const std::set<core::ExpressionPtr>& getValuesOf(const CBAContext& context, const Solution& solution, const core::VariableAddress& var, const Context& ctxt = Context()) {
-		return getValuesOf(context, solution, var, d, ctxt);
-	}
 
 } // end namespace cba
 } // end namespace analysis

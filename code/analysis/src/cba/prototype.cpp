@@ -230,7 +230,7 @@ namespace cba {
 		}
 
 
-		vector<Callable> getAllCallableTerms(CBAContext& context, const StatementAddress& root) {
+		vector<Callable> getAllCallableTerms(CBA& context, const StatementAddress& root) {
 
 			// compute list of all potential call-contexts
 			vector<Label> labels;
@@ -322,7 +322,8 @@ namespace cba {
 		protected:
 
 			// the list of all terms in the targeted code
-			const vector<Callable>& callables;
+			// TODO: move callables to context class - one common place
+			vector<Callable> callables;
 
 			// the two set types to deal with
 			const TypedSetType<T>& A;		// the value set (labels -> values)
@@ -330,8 +331,8 @@ namespace cba {
 
 		public:
 
-			BasicDataFlowConstraintCollector(CBAContext& context, const TypedSetType<T>& A, const TypedSetType<T>& a, const vector<Callable>& callables)
-				: super(context), callables(callables), A(A), a(a) { };
+			BasicDataFlowConstraintCollector(CBA& context, const TypedSetType<T>& A, const TypedSetType<T>& a, const vector<Callable>& callables)
+				: super(context, utils::set::toSet<SetTypeSet>(&A,&a)), callables(callables), A(A), a(a) { };
 
 			void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {
 				// just collect constraints from elements
@@ -554,7 +555,7 @@ namespace cba {
 
 		public:
 
-			ControlFlowConstraintCollector(CBAContext& context, const vector<Callable>& callables)
+			ControlFlowConstraintCollector(CBA& context, const vector<Callable>& callables)
 				: super(context, C, c, callables) { };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
@@ -611,7 +612,7 @@ namespace cba {
 
 		public:
 
-			ConstantConstraintCollector(CBAContext& context, const vector<Callable>& callables)
+			ConstantConstraintCollector(CBA& context, const vector<Callable>& callables)
 				: super(context, D, d, callables) { };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
@@ -738,7 +739,7 @@ namespace cba {
 
 		public:
 
-			ArithmeticConstraintCollector(CBAContext& context, const vector<Callable>& callables, const core::lang::BasicGenerator& base)
+			ArithmeticConstraintCollector(CBA& context, const vector<Callable>& callables, const core::lang::BasicGenerator& base)
 				: super(context, cba::A, cba::a, callables), base(base) { };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
@@ -900,7 +901,7 @@ namespace cba {
 
 		public:
 
-			BooleanConstraintCollector(CBAContext& context, const vector<Callable>& callables, const core::lang::BasicGenerator& base)
+			BooleanConstraintCollector(CBA& context, const vector<Callable>& callables, const core::lang::BasicGenerator& base)
 				: super(context, cba::B, cba::b, callables), base(base) { };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
@@ -1070,7 +1071,7 @@ namespace cba {
 
 		public:
 
-			ReferenceConstraintCollector(CBAContext& context, const vector<Callable>& callables)
+			ReferenceConstraintCollector(CBA& context, const vector<Callable>& callables)
 				: BasicDataFlowConstraintCollector<Location>(context, R, r, callables) { };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
@@ -1109,7 +1110,7 @@ namespace cba {
 		};
 
 		// a utility function extracting a list of memory location constructors from the given code fragment
-		vector<Location> getAllLocations(CBAContext& context, const StatementAddress& root) {
+		vector<Location> getAllLocations(CBA& context, const StatementAddress& root) {
 			vector<Location> res;
 			// collect all memory location constructors
 			visitDepthFirst(root, [&](const ExpressionAddress& cur) {
@@ -1137,7 +1138,7 @@ namespace cba {
 		protected:
 
 			// the list of all function terms in the processed fragment
-			const vector<Callable>& callables;
+			vector<Callable> callables;
 
 		private:
 
@@ -1147,8 +1148,8 @@ namespace cba {
 
 		public:
 
-			BaseImperativeConstraintCollector(CBAContext& context, const vector<Callable>& callables, const SetIDType& Ain, const SetIDType& Aout)
-				: super(context), callables(callables), Ain(Ain), Aout(Aout) {};
+			BaseImperativeConstraintCollector(CBA& context, const vector<Callable>& callables, const SetIDType& Ain, const SetIDType& Aout)
+				: super(context, utils::set::toSet<SetTypeSet>(&Ain,&Aout)), callables(callables), Ain(Ain), Aout(Aout) {};
 
 			// ----------- Expressions -----------------------------------------------------------------------------------------------------
 
@@ -1474,14 +1475,14 @@ namespace cba {
 
 		public:
 
-			ReachableConstraintCollector(CBAContext& context, const vector<Callable>& callables, const StatementAddress& root)
+			ReachableConstraintCollector(CBA& context, const vector<Callable>& callables, const StatementAddress& root)
 				: super(context, callables, Rin, Rout), root(root) { }
 
-			virtual void visit(const StatementAddress& node, const Context& ctxt, Constraints& constraints) {
+			virtual void visit(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
 
 				// make sure root is reachable
 				if (node == root && ctxt == Context()) {
-					auto l = context.getLabel(node);
+					auto l = context.getLabel(root);
 					auto R = context.getSet(Rin, l, ctxt);
 					constraints.add(elem(Reachable(), R));
 				}
@@ -1525,13 +1526,16 @@ namespace cba {
 			const TypedSetType<T>& dataSet;
 
 			// list of all memory location in the processed fragment
-			const vector<Location>& locations;
+			vector<Location> locations;
+
+			// the one location this instance is working for
+			Location location;
 
 		public:
 
-			ImperativeStateConstraintCollector(CBAContext& context, const TypedSetType<T>& dataSet,
-					const vector<Location>& locations, const vector<Callable>& callables)
-				: super(context, callables, Sin, Sout), dataSet(dataSet), locations(locations) {};
+			ImperativeStateConstraintCollector(CBA& context, const TypedSetType<T>& dataSet,
+					const Location& location, const vector<Location>& locations, const vector<Callable>& callables)
+				: super(context, callables, Sin, Sout), dataSet(dataSet), locations(locations), location(location) {};
 
 
 			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
@@ -1616,62 +1620,38 @@ namespace cba {
 			void connectStateSets(const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) {
 
 				// general handling - Sin = Sout
-				vector<Location> locations;
-				if (this->hasLocation()) {
-					locations.push_back(this->getLocation());
-				} else {
-					locations = this->locations;
-				}
 
+				// get Sin set		TODO: add context to locations
+				auto s_in = this->context.getSet(a, al, ac, location, dataSet);
+				auto s_out = this->context.getSet(b, bl, bc, location, dataSet);
 
-				for (auto loc : locations) {
+				// state information entering the set is also leaving it
+				constraints.add(subset(s_in, s_out));
 
-					// get Sin set		TODO: add context to locations
-					auto s_in = this->context.getSet(a, al, ac, loc, dataSet);
-					auto s_out = this->context.getSet(b, bl, bc, loc, dataSet);
-
-					// state information entering the set is also leaving it
-					constraints.add(subset(s_in, s_out));
-
-				}
 			}
 
 			template<typename E>
 			void connectStateSetsIf(const E& value, const TypedSetID<E>& set, const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) {
 
 				// general handling - Sin = Sout
-				vector<Location> locations;
-				if (this->hasLocation()) {
-					locations.push_back(this->getLocation());
-				} else {
-					locations = this->locations;
-				}
 
-				for (auto loc : locations) {
+				// get Sin set		TODO: add context to locations
+				auto s_in = this->context.getSet(a, al, ac, location, dataSet);
+				auto s_out = this->context.getSet(b, bl, bc, location, dataSet);
 
-					// get Sin set		TODO: add context to locations
-					auto s_in = this->context.getSet(a, al, ac, loc, dataSet);
-					auto s_out = this->context.getSet(b, bl, bc, loc, dataSet);
-
-					// state information entering the set is also leaving it
-					constraints.add(subsetIf(value, set, s_in, s_out));
-				}
+				// state information entering the set is also leaving it
+				constraints.add(subsetIf(value, set, s_in, s_out));
 			}
 
 		};
 
-		template<typename T>
-		void addImperativeConstraints(CBAContext& context, const StatementAddress& root,
-				const TypedSetType<T>& type, const vector<Location>& locations, const vector<Callable>& funs,
-				const Context& ctxt, Constraints& res) {
-			ImperativeStateConstraintCollector<T>(context, type, locations, funs).visit(root, ctxt, res);
-		}
 	}
 
 
-	Constraints generateConstraints(CBAContext& context, const StatementPtr& stmt) {
-		NodeManager& mgr = stmt->getNodeManager();
-		const auto& base = mgr.getLangBasic();
+
+
+
+	Constraints generateConstraints(CBA& context, const StatementPtr& stmt) {
 
 		// create resulting list of constraints
 		Constraints res;
@@ -1681,31 +1661,54 @@ namespace cba {
 
 		Context initContext;
 
-		// TODO: resolve dependencies between collectors automatically
-		vector<Callable> funs = getAllCallableTerms(context, root);
+		// the set of resolved set-ids
+		std::set<SetID> resolved;
 
-		// TODO: can also be used to collect all call and thread contexts
-		ReachableConstraintCollector(context, funs, root).visit(root, initContext, res);
+		// create full constraint graph iteratively
+		std::set<SetID> unresolved;
 
-		// add other constraints
-		ControlFlowConstraintCollector(context, funs).visit(root, initContext, res);
-		ConstantConstraintCollector(context, funs).visit(root, initContext, res);
-		ReferenceConstraintCollector(context, funs).visit(root, initContext, res);
-		ArithmeticConstraintCollector(context, funs, base).visit(root, initContext, res);
-		BooleanConstraintCollector(context, funs, base).visit(root, initContext, res);
+		// a utility function used in the following two loops
+		auto extractUnresolved = [&](const Constraints& constraints) {
+			for(auto& cur : constraints) {
+				for(auto& in : cur->getInputs()) {
+					if (resolved.find(in) == resolved.end()) {
+						unresolved.insert(in);
+					}
+				}
+			}
+		};
 
-		// and the imperative constraints
-		auto locations = getAllLocations(context, root);
-		addImperativeConstraints(context, root, C, locations, funs, initContext, res);
-		addImperativeConstraints(context, root, D, locations, funs, initContext, res);
-		addImperativeConstraints(context, root, R, locations, funs, initContext, res);
-		addImperativeConstraints(context, root, A, locations, funs, initContext, res);
-		addImperativeConstraints(context, root, B, locations, funs, initContext, res);
+		// start with seed
+		for(auto cur : context.getAllResolver()) {
+			Constraints newEntries;
+			cur->addConstraints(root, initContext, newEntries);
 
+			extractUnresolved(newEntries);
+
+			// copy new entries to resulting list
+			res.add(newEntries);
+		}
+
+
+		// now iteratively resolve unresolved sets
+		while(!unresolved.empty()) {
+
+			Constraints newEntries;
+
+			for(auto cur : unresolved) {
+				context.addConstraintsFor(cur, newEntries);
+				resolved.insert(cur);
+			}
+
+			unresolved.clear();
+			extractUnresolved(newEntries);
+
+			// copy new entries to resulting list
+			res.add(newEntries);
+		}
 
 		// done
 		return res;
-
 
 	}
 
@@ -1715,42 +1718,13 @@ namespace cba {
 		return utils::set_constraint_2::solve(constraints);
 	}
 
-	namespace {
-
-		template<typename T>
-		void registerImperativeCollector(CBAContext& context, const TypedSetType<T>& type, const vector<Location>& locations, const vector<Callable>& funs) {
-			context.registerLocationResolver<ImperativeStateConstraintCollector<T>>(Sin, Sout, type, locations, funs);
-		}
-	}
-
 	Solution solve(const StatementPtr& stmt, const ExpressionPtr& trg, const SetID& set) {
-		NodeManager& mgr = stmt->getNodeManager();
-		const auto& base = mgr.getLangBasic();
 
 		// init root
 		StatementAddress root(stmt);
 
 		// create context
-		CBAContext context;
-
-		// obtain list of callable functions
-		vector<Callable> funs = getAllCallableTerms(context, root);
-
-		// install resolver
-		context.registerResolver<ReachableConstraintCollector>(R, funs, root);
-		context.registerResolver<ControlFlowConstraintCollector>(C, funs);
-		context.registerResolver<ConstantConstraintCollector>(D, funs);
-		context.registerResolver<ReferenceConstraintCollector>(R, funs);
-		context.registerResolver<ArithmeticConstraintCollector>(A, funs, base);
-		context.registerResolver<BooleanConstraintCollector>(B, funs, base);
-
-		// and the imperative constraints
-		auto locations = getAllLocations(context, root);
-		registerImperativeCollector(context, C, locations, funs);
-		registerImperativeCollector(context, D, locations, funs);
-		registerImperativeCollector(context, R, locations, funs);
-		registerImperativeCollector(context, A, locations, funs);
-		registerImperativeCollector(context, B, locations, funs);
+		CBA context(root);
 
 		// bridge context to resolution
 		auto resolver = [&](const std::set<SetID>& sets)->Constraints {
@@ -1767,53 +1741,160 @@ namespace cba {
 
 	using namespace utils::set_constraint_2;
 
-	void CBAContext::plot(const Constraints& constraints, std::ostream& out) const {
+	namespace {
 
-
-		auto getAddress = [&](const Label l)->StatementAddress {
-			for(auto cur : this->labels) {
-				if (cur.second == l) return cur.first;
+		template<typename T>
+		void registerImperativeCollector(CBA& context, const TypedSetType<T>& type, const vector<Location>& locations, const vector<Callable>& funs) {
+			for(auto loc : locations) {
+				context.registerLocationResolver<ImperativeStateConstraintCollector<T>>(type, loc, locations, funs);
 			}
-			for(auto cur : this->vars) {
-				if (cur.second == l) return cur.first;
-			}
-			return StatementAddress();
-		};
-
-
-		out << "digraph G {";
-
-		// name sets
-		for(auto cur : sets) {
-			string setName = std::get<0>(cur.first)->getName();
-			auto pos = getAddress(std::get<1>(cur.first));
-			out << "\n\t" << cur.second
-					<< " [label=\"" << cur.second << " = " << setName
-							<< "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << " : " << std::get<2>(cur.first) << "]\""
-					<< "];";
 		}
-
-		for(auto cur : stateSets) {
-			string setName = std::get<0>(cur.first)->getName();
-			string dataName = std::get<4>(cur.first)->getName();
-			auto pos = getAddress(std::get<1>(cur.first));
-			out << "\n\t" << cur.second
-					<< " [label=\"" << cur.second << " = " << setName << "-" << dataName << "@" << std::get<4>(cur.first)
-						<< "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << " : " << std::get<2>(cur.first) << "]\""
-					<< "];";
-		}
-
-		// link sets
-		for(auto cur : constraints) {
-			out << "\n\t";
-			cur->writeDotEdge(out);
-		}
-
-		out << "\n}\n";
 
 	}
 
-	void CBAContext::plot(const Constraints& constraints, const Solution& ass, std::ostream& out) const {
+	CBA::CBA(const core::StatementAddress& root)
+		: solver([&](const set<SetID>& sets) {
+				Constraints res;
+				std::cout << "Resolving sets " << sets << " ... ";
+				for (auto set : sets) {
+					this->addConstraintsFor(set, res);
+				}
+				std::cout << "New constraints: " << res << "\n";
+				return res;
+		  }),
+		  setCounter(0), idCounter(0),
+		  resolver(), setResolver(), locationResolver(),
+		  set2key(), set2statekey() {
+
+		// TODO: move this to another place ...
+		NodeManager& mgr = root->getNodeManager();
+		const auto& base = mgr.getLangBasic();
+
+		// obtain list of callable functions
+		vector<Callable> funs = getAllCallableTerms(*this, root);
+
+		// reachable constraint collector
+		registerResolver<ReachableConstraintCollector>(funs, root);
+
+		// install resolver
+		registerResolver<ControlFlowConstraintCollector>(funs);
+		registerResolver<ConstantConstraintCollector>(funs);
+		registerResolver<ReferenceConstraintCollector>(funs);
+		registerResolver<ArithmeticConstraintCollector>(funs, base);
+		registerResolver<BooleanConstraintCollector>(funs, base);
+
+		// and the imperative constraints
+		auto locations = getAllLocations(*this, root);
+		registerImperativeCollector(*this, C, locations, funs);
+		registerImperativeCollector(*this, D, locations, funs);
+		registerImperativeCollector(*this, R, locations, funs);
+		registerImperativeCollector(*this, A, locations, funs);
+		registerImperativeCollector(*this, B, locations, funs);
+
+	};
+
+	void CBA::addConstraintsFor(const SetID& set, Constraints& res) {
+
+		// TODO: split this up into several functions
+
+		// check standard set keys
+		{
+			auto pos = set2key.find(set);
+			if (pos != set2key.end()) {
+				const SetKey& key = pos->second;
+
+				int id = std::get<1>(key);
+				const SetType& type = *std::get<0>(key);
+				const Context& context = std::get<2>(key);
+
+				// get targeted node
+				core::StatementAddress trg = getStmt(id);
+				if (!trg) {
+
+					// it is a variable
+					trg = getVariable(id);
+
+					assert_true(trg) << "Unknown id encountered: " << id << "\n"
+							<< "Labels:\n\t" << labels << "\n\t" << reverseLabels << "\n"
+							<< "Variables:\n\t" << vars << "\n\t" << reverseVars << "\n";
+
+					// handle variable definition
+					if (trg.isRoot()) {
+						// nothing to do
+					} else if (auto decl = trg.getParentAddress().isa<core::DeclarationStmtAddress>()) {
+
+						// add constraints for declaration statement
+						addConstraintsFor(getSet(type, getLabel(decl), context), res);
+
+					} else if (auto params = trg.getParentAddress().isa<core::ParametersAddress>()) {
+
+						// it is within a function => get call sides
+						int userOffset = (params.getParentNode().isa<LambdaPtr>()) ? 3 : 2;		// for bind
+
+						auto user = params.getParentAddress(userOffset).as<StatementAddress>();
+						auto userType = user->getNodeType();
+
+						assert_lt(userOffset, params.getDepth());
+
+						if (userType == NT_CallExpr && user.as<CallExprAddress>()->getFunctionExpr() == params.getParentAddress(userOffset-1)) {
+							// it is a direct call - resolve the call expression
+							addConstraintsFor(getSet(type, getLabel(user), context), res);
+						} else if (userType == NT_CompoundStmt) {
+							// nothing to do ... this function is not called ...
+						} else {
+							// it is an indirect call - resolve all calls with a matching parameter list
+
+						}
+
+						std::cout << params.getParentNode(3)->getNodeType() << "\n";
+						std::cout << params.getParentNode(4)->getNodeType() << "\n";
+						std::cout << params.getParentNode(5)->getNodeType() << "\n";
+						assert(false);
+					} else {
+						std::cout << "Unsupported variable type: " << trg.getParentAddress()->getNodeType() << "\n";
+						assert(false && "Unsupported variable type encountered!");
+					}
+				}
+
+				// this should have worked
+				assert(trg && "Unable to obtain target!");
+
+				// run resolution
+				setResolver[std::get<0>(key)]->addConstraints(trg, std::get<2>(key), res);
+
+				// done
+				return;
+			}
+		}
+
+		// try a state formula
+		{
+			auto pos = set2statekey.find(set);
+			if (pos != set2statekey.end()) {
+				const StateSetKey& key = pos->second;
+
+				// get targeted node
+				core::StatementAddress trg = getStmt(std::get<1>(key));
+
+				// run resolution
+				if (trg) {
+					// TODO: make this key a sub-type of the set-index key to avoid copying state all the time
+					auto type = std::make_tuple(std::get<0>(key),std::get<4>(key), std::get<3>(key));
+					locationResolver[type]->addConstraints(trg, std::get<2>(key), res);
+				}
+
+				// done
+				return;
+			}
+		}
+
+		// an unknown set?
+		assert_true(false) << "Unknown set encountered: " << set << "\n";
+	}
+
+	void CBA::plot(std::ostream& out) const {
+		const Constraints& constraints = solver.getConstraints();
+		const Solution& ass = solver.getAssignment();
 
 		auto getAddress = [&](const Label l)->StatementAddress {
 			for(auto cur : this->labels) {
