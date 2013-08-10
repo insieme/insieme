@@ -321,18 +321,14 @@ namespace cba {
 
 		protected:
 
-			// the list of all terms in the targeted code
-			// TODO: move callables to context class - one common place
-			vector<Callable> callables;
-
 			// the two set types to deal with
 			const TypedSetType<T>& A;		// the value set (labels -> values)
 			const TypedSetType<T>& a;		// the variable set (variables -> values)
 
 		public:
 
-			BasicDataFlowConstraintCollector(CBA& context, const TypedSetType<T>& A, const TypedSetType<T>& a, const vector<Callable>& callables)
-				: super(context, utils::set::toSet<SetTypeSet>(&A,&a)), callables(callables), A(A), a(a) { };
+			BasicDataFlowConstraintCollector(CBA& context, const TypedSetType<T>& A, const TypedSetType<T>& a)
+				: super(context, utils::set::toSet<SetTypeSet>(&A,&a)), A(A), a(a) { };
 
 			void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {
 
@@ -366,7 +362,7 @@ namespace cba {
 				constraints.add(subset(A_init, a_var));		// TODO: add context (passed by argument)
 
 				// finally, add constraints for init expression
-				visit(decl->getInitialization(), ctxt, constraints);
+//				visit(decl->getInitialization(), ctxt, constraints);
 			}
 
 			void visitIfStmt(const IfStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
@@ -397,7 +393,7 @@ namespace cba {
 				}
 
 				// and add constraints for return value
-				visit(stmt->getReturnExpr(), ctxt, constraints);
+//				visit(stmt->getReturnExpr(), ctxt, constraints);
 
 				auto l_retVal = context.getLabel(stmt->getReturnExpr());
 				auto l_body = context.getLabel(lambda->getBody());
@@ -443,8 +439,8 @@ namespace cba {
 			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
 
 				// add constraints for function and argument expressions
-				visit(call->getFunctionExpr(), ctxt, constraints);
-				for(auto arg : call) visit(arg, ctxt, constraints);
+//				visit(call->getFunctionExpr(), ctxt, constraints);
+//				for(auto arg : call) visit(arg, ctxt, constraints);
 
 				// get values of function
 				auto fun = call->getFunctionExpr();
@@ -489,7 +485,7 @@ namespace cba {
 						constraints.add((fixed)? subset(A_ret, A_call) : subsetIf(target, C_fun, A_ret, A_call));
 
 						// add function body constraints for targeted call context
-						if (fixed) this->visit(lambda->getBody(), innerCallContext, constraints);
+//						if (fixed) this->visit(lambda->getBody(), innerCallContext, constraints);
 
 					// handle bind
 					} else if (auto bind = expr.isa<BindExprAddress>()) {
@@ -530,12 +526,32 @@ namespace cba {
 						constraints.add((fixed) ? subset(A_ret, A_call) : subsetIf(target, C_fun, A_ret, A_call));
 
 						// add function body constraints for targeted bind expression
-						if (fixed) this->visit(body, innerCallContext, constraints);
+//						if (fixed) this->visit(body, innerCallContext, constraints);
 					}
 				};
 
-				// no constraints for literals ...
-				if (fun.isa<LiteralPtr>()) return;
+				// constraints for literals ...
+				if (fun.isa<LiteralPtr>()) {
+					const auto& base = call->getNodeManager().getLangBasic();
+
+					// one special case: if it is a read operation
+					//  B) - read operation (ref.deref)
+					if (base.isRefDeref(fun)) {
+						// read value from memory location
+						auto l_trg = this->context.getLabel(call[0]);
+						auto R_trg = this->context.getSet(R, l_trg, ctxt);
+						for(auto loc : this->context.getLocations()) {
+
+							// TODO: add context
+
+							// if loc is in R(target) then add Sin[A,trg] to A[call]
+							auto S_in = this->context.getSet(Sin, l_call, ctxt, loc, A);
+							constraints.add(subsetIf(loc, R_trg, S_in, A_call));
+						}
+					}
+
+					return;
+				}
 
 				// if function expression is a lambda or bind => do not iterate through all callables, callable is fixed
 				if (auto lambda = fun.isa<LambdaExprAddress>()) {
@@ -550,7 +566,7 @@ namespace cba {
 
 				// fix pass-by-value semantic - by considering all potential terms
 				innerCallContext.callContext <<= l_call;
-				for(auto cur : callables) {
+				for(auto cur : context.getCallables()) {
 					addConstraints(cur, false);
 				}
 			}
@@ -569,8 +585,8 @@ namespace cba {
 
 		public:
 
-			ControlFlowConstraintCollector(CBA& context, const vector<Callable>& callables)
-				: super(context, C, c, callables) { };
+			ControlFlowConstraintCollector(CBA& context)
+				: super(context, C, c) { };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
@@ -626,8 +642,8 @@ namespace cba {
 
 		public:
 
-			ConstantConstraintCollector(CBA& context, const vector<Callable>& callables)
-				: super(context, D, d, callables) { };
+			ConstantConstraintCollector(CBA& context)
+				: super(context, D, d) { };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
@@ -753,8 +769,8 @@ namespace cba {
 
 		public:
 
-			ArithmeticConstraintCollector(CBA& context, const vector<Callable>& callables, const core::lang::BasicGenerator& base)
-				: super(context, cba::A, cba::a, callables), base(base) { };
+			ArithmeticConstraintCollector(CBA& context, const core::lang::BasicGenerator& base)
+				: super(context, cba::A, cba::a), base(base) { };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
@@ -915,8 +931,8 @@ namespace cba {
 
 		public:
 
-			BooleanConstraintCollector(CBA& context, const vector<Callable>& callables, const core::lang::BasicGenerator& base)
-				: super(context, cba::B, cba::b, callables), base(base) { };
+			BooleanConstraintCollector(CBA& context, const core::lang::BasicGenerator& base)
+				: super(context, cba::B, cba::b), base(base) { };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
@@ -1085,8 +1101,8 @@ namespace cba {
 
 		public:
 
-			ReferenceConstraintCollector(CBA& context, const vector<Callable>& callables)
-				: BasicDataFlowConstraintCollector<Location>(context, R, r, callables) { };
+			ReferenceConstraintCollector(CBA& context)
+				: BasicDataFlowConstraintCollector<Location>(context, R, r) { };
 
 			void visitLiteral(const LiteralAddress& literal, const Context& ctxt, Constraints& constraints) {
 
@@ -1144,15 +1160,14 @@ namespace cba {
 		// ----------------------------------------------------------------------------------------------------------------------------
 
 
+
 		template<typename SetIDType, typename Derived>
 		class BaseImperativeConstraintCollector : public ConstraintResolver {
 
 			typedef ConstraintResolver super;
 
-		protected:
-
-			// the list of all function terms in the processed fragment
-			vector<Callable> callables;
+			typedef std::pair<CallExprAddress, Context> Item;
+			std::set<Item> processed;
 
 		private:
 
@@ -1162,8 +1177,8 @@ namespace cba {
 
 		public:
 
-			BaseImperativeConstraintCollector(CBA& context, const vector<Callable>& callables, const SetIDType& Ain, const SetIDType& Aout)
-				: super(context, utils::set::toSet<SetTypeSet>(&Ain,&Aout)), callables(callables), Ain(Ain), Aout(Aout) {};
+			BaseImperativeConstraintCollector(CBA& context, const SetIDType& Ain, const SetIDType& Aout)
+				: super(context, utils::set::toSet<SetTypeSet>(&Ain,&Aout)), Ain(Ain), Aout(Aout) {};
 
 
 			// TODO: redesign
@@ -1175,10 +1190,21 @@ namespace cba {
 			// ----------- Expressions -----------------------------------------------------------------------------------------------------
 
 			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+				// establish surrounding constraints
+				handleParentContext(call, ctxt, constraints);
 
-				// recursively process sub-expressions
-				visit(call->getFunctionExpr(), ctxt, constraints);
-				for(auto arg : call) visit(arg, ctxt, constraints);
+				// use internal variant
+				visitCallExprInternal(call, ctxt, constraints);
+			}
+
+			virtual void visitCallExprInternal(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+
+				// check processed-cache
+				if (!processed.insert(Item(call, ctxt)).second) return;
+
+//				// recursively process sub-expressions
+//				visit(call->getFunctionExpr(), ctxt, constraints);
+//				for(auto arg : call) visit(arg, ctxt, constraints);
 
 				// otherwise default handling
 				//  - link in of call with in of arguments
@@ -1258,7 +1284,7 @@ namespace cba {
 					}
 
 					// process function body
-					this->visit(body, innerCallContext, constraints);
+					if(fixed) this->visit(body, innerCallContext, constraints);
 
 				};
 
@@ -1295,7 +1321,7 @@ namespace cba {
 					innerCallContext.callContext <<= l_call;
 
 					// indirect call => dynamic dispatching required
-					for(auto cur : callables) {
+					for(auto cur : context.getCallables()) {
 						addConstraints(cur,false);
 					}
 
@@ -1304,6 +1330,8 @@ namespace cba {
 			}
 
 			void visitBindExpr(const BindExprAddress& bind, const Context& ctxt, Constraints& constraints) {
+				// establish surrounding constraints
+				handleParentContext(bind, ctxt, constraints);
 
 				auto boundExprs = bind->getBoundExpressions();
 
@@ -1332,6 +1360,9 @@ namespace cba {
 			}
 
 			void visitExpression(const ExpressionAddress& expr, const Context& ctxt, Constraints& constraints) {
+				// establish surrounding constraints
+				handleParentContext(expr, ctxt, constraints);
+
 				// in the general case, not much happening => connect in and out
 				auto label = context.getLabel(expr);
 				connectStateSets(Ain, label, ctxt, Aout, label, ctxt, constraints);
@@ -1341,6 +1372,8 @@ namespace cba {
 			// ----------- Statements -----------------------------------------------------------------------------------------------------
 
 			void visitCompoundStmt(const CompoundStmtAddress& compound, const Context& ctxt, Constraints& constraints) {
+				// establish surrounding constraints
+				handleParentContext(compound, ctxt, constraints);
 
 				// special handling for empty compound = NoOp
 				if (compound.empty()) {
@@ -1379,6 +1412,8 @@ namespace cba {
 			}
 
 			void visitDeclarationStmt(const DeclarationStmtAddress& decl, const Context& ctxt, Constraints& constraints) {
+				// establish surrounding constraints
+				handleParentContext(decl, ctxt, constraints);
 
 				// just connect in with init value and out of innit value with out
 				auto l = context.getLabel(decl);
@@ -1392,6 +1427,8 @@ namespace cba {
 			}
 
 			void visitReturnStmt(const ReturnStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
+				// establish surrounding constraints
+				handleParentContext(stmt, ctxt, constraints);
 
 				// connect Ain with Ain of return expression
 				auto l_ret = context.getLabel(stmt);
@@ -1415,14 +1452,22 @@ namespace cba {
 
 
 			void visitContinueStmt(const ContinueStmtAddress& cur, const Context& ctxt, Constraints& constraints) {
+				// establish surrounding constraints
+				handleParentContext(cur, ctxt, constraints);
+
 				// do not connect in with out
 			}
 
 			void visitBreakStmt(const BreakStmtAddress& cur, const Context& ctxt, Constraints& constraints) {
+				// establish surrounding constraints
+				handleParentContext(cur, ctxt, constraints);
+
 				// do not connect in with out
 			}
 
 			void visitIfStmt(const IfStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
+				// establish surrounding constraints
+				handleParentContext(stmt, ctxt, constraints);
 
 				// get some labels
 				auto l_if = context.getLabel(stmt);
@@ -1443,13 +1488,15 @@ namespace cba {
 				connectStateSetsIf(true,  B_cond, Aout, l_then, ctxt, Aout, l_if, ctxt, constraints);
 				connectStateSetsIf(false, B_cond, Aout, l_else, ctxt, Aout, l_if, ctxt, constraints);
 
-				// add constraints recursively
-				visit(stmt->getCondition(), ctxt, constraints);
-				visit(stmt->getThenBody(), ctxt, constraints);
-				visit(stmt->getElseBody(), ctxt, constraints);
+//				// add constraints recursively
+//				visit(stmt->getCondition(), ctxt, constraints);
+//				visit(stmt->getThenBody(), ctxt, constraints);
+//				visit(stmt->getElseBody(), ctxt, constraints);
 			}
 
 			void visitWhileStmt(const WhileStmtAddress& stmt, const Context& ctxt, Constraints& constraints) {
+				// establish surrounding constraints
+				handleParentContext(stmt, ctxt, constraints);
 
 				// get some labels
 				auto l_while = context.getLabel(stmt);
@@ -1485,6 +1532,64 @@ namespace cba {
 				static_cast<Derived*>(this)->connectStateSetsIf(value,set,a,al,ac,b,bl,bc,constraints);
 			}
 
+			void handleParentContext(const StatementAddress& stmt, const Context& ctxt, Constraints& constraints) {
+
+				// no context for root node
+				if (stmt.isRoot()) return;
+
+				// check type of parent
+				auto parent = stmt.getParentAddress();;
+				if (auto stmt = parent.isa<StatementAddress>()) {
+					// add constraints for parent node
+					visit(stmt, ctxt, constraints);
+					return;
+				}
+
+				// special case: if parent is a lambda
+				if (auto lambda = parent.isa<LambdaAddress>()) {
+
+					// check whether there is a call-side
+					if (lambda.getDepth() < 4) return;
+
+					// get enclosing lambda expression and call
+					auto lambdaExpr = lambda.getParentAddress(3).as<LambdaExprAddress>();
+					auto call = lambdaExpr.getParentAddress().isa<CallExprAddress>();
+
+					// if it is a direct call => handle it
+					if (call && call->getFunctionExpr() == lambdaExpr) {
+						visit(call, ctxt, constraints);
+					} else {
+
+						// process any potential call site
+						for(auto call : context.getDynamicCalls()) {
+							if (ctxt.callContext.startsWith(0)) {
+
+								// nobody is calling the root context
+								Context srcCtxt = ctxt;
+								srcCtxt.callContext >>= 0;
+
+								visitCallExprInternal(call, srcCtxt, constraints);
+
+							} else {
+								// anybody may call this nested context
+								for(auto l : context.getDynamicCallLabels()) {
+									Context srcCtxt = ctxt;
+									srcCtxt.callContext >>= l;
+									visitCallExprInternal(call, srcCtxt, constraints);
+								}
+							}
+						}
+					}
+
+					// done
+					return;
+				}
+
+				// otherwise: something is wrong => fail
+				std::cout << "Unsupported parent node type: " << parent->getNodeType() << "\n";
+				assert(false && "Unsupported parent node type.");
+			}
+
 		};
 
 
@@ -1494,18 +1599,21 @@ namespace cba {
 
 			StatementAddress root;
 
+			bool initSet;
+
 		public:
 
-			ReachableConstraintCollector(CBA& context, const vector<Callable>& callables, const StatementAddress& root)
-				: super(context, callables, Rin, Rout), root(root) { }
+			ReachableConstraintCollector(CBA& context, const StatementAddress& root)
+				: super(context, Rin, Rout), root(root), initSet(false) { }
 
 			virtual void visit(const NodeAddress& node, const Context& ctxt, Constraints& constraints) {
 
 				// make sure root is reachable
-				if (node == root && ctxt == Context()) {
+				if (!initSet && node == root && ctxt == Context()) {
 					auto l = context.getLabel(root);
 					auto R = context.getSet(Rin, l, ctxt);
 					constraints.add(elem(Reachable(), R));
+					initSet = true;
 				}
 
 				// and all the other constraints
@@ -1546,20 +1654,18 @@ namespace cba {
 
 			const TypedSetType<T>& dataSet;
 
-			// list of all memory location in the processed fragment
-			vector<Location> locations;
-
 			// the one location this instance is working for
 			Location location;
 
 		public:
 
-			ImperativeStateConstraintCollector(CBA& context, const TypedSetType<T>& dataSet,
-					const Location& location, const vector<Location>& locations, const vector<Callable>& callables)
-				: super(context, callables, Sin, Sout), dataSet(dataSet), locations(locations), location(location) {};
+			ImperativeStateConstraintCollector(CBA& context, const TypedSetType<T>& dataSet, const Location& location)
+				: super(context, Sin, Sout), dataSet(dataSet), location(location) {
+				this->addCoveredSet(&Stmp);
+			};
 
 
-			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
+			virtual void visitCallExprInternal(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
 				const auto& base = call->getNodeManager().getLangBasic();
 
 				// two special cases:
@@ -1584,7 +1690,7 @@ namespace cba {
 
 					// add rule: loc \in R[rhs] => A[lhs] \sub Sout[call]
 					auto R_rhs = this->context.getSet(R, l_rhs, ctxt);
-					for(auto loc : locations) {
+					for(auto loc : this->context.getLocations()) {
 
 						// TODO: add context
 
@@ -1596,7 +1702,7 @@ namespace cba {
 
 
 					// add rule: |R[rhs]\{loc}| > 0 => Stmp[call] \sub Sout[call]
-					for(auto loc : locations) {
+					for(auto loc : this->context.getLocations()) {
 
 						// get Sin set		TODO: add context to locations
 						auto s_tmp = this->context.getSet(Stmp, l_call, ctxt, loc, dataSet);
@@ -1607,35 +1713,35 @@ namespace cba {
 					}
 
 					// process arguments
-					this->visit(call[0], ctxt, constraints);
-					this->visit(call[1], ctxt, constraints);
+//					this->visit(call[0], ctxt, constraints);
+//					this->visit(call[1], ctxt, constraints);
 
 					// done
 					return;
 				}
 
-				//  B) - read operation (ref.deref)
-				if (base.isRefDeref(fun)) {
-
-					// read value from memory location
-					auto l_call = this->context.getLabel(call);
-					auto l_trg = this->context.getLabel(call[0]);
-					auto R_trg = this->context.getSet(R, l_trg, ctxt);
-					for(auto loc : locations) {
-
-						// TODO: add context
-
-						// if loc is in R(target) then add Sin[A,trg] to A[call]
-						auto S_in = this->context.getSet(Sin, l_call, ctxt, loc, dataSet);
-						auto A_call = this->context.getSet(dataSet, l_call, ctxt);
-						constraints.add(subsetIf(loc, R_trg, S_in, A_call));
-					}
-
-					// and process default procedure (no return here)
-				}
+//				//  B) - read operation (ref.deref)
+//				if (base.isRefDeref(fun)) {
+//
+//					// read value from memory location
+//					auto l_call = this->context.getLabel(call);
+//					auto l_trg = this->context.getLabel(call[0]);
+//					auto R_trg = this->context.getSet(R, l_trg, ctxt);
+//					for(auto loc : locations) {
+//
+//						// TODO: add context
+//
+//						// if loc is in R(target) then add Sin[A,trg] to A[call]
+//						auto S_in = this->context.getSet(Sin, l_call, ctxt, loc, dataSet);
+//						auto A_call = this->context.getSet(dataSet, l_call, ctxt);
+//						constraints.add(subsetIf(loc, R_trg, S_in, A_call));
+//					}
+//
+//					// and process default procedure (no return here)
+//				}
 
 				// everything else is treated using the default procedure
-				super::visitCallExpr(call, ctxt, constraints);
+				super::visitCallExprInternal(call, ctxt, constraints);
 			}
 
 			void connectStateSets(const StateSetType& a, Label al, const Context& ac, const StateSetType& b, Label bl, const Context& bc, Constraints& constraints) {
@@ -1765,9 +1871,9 @@ namespace cba {
 	namespace {
 
 		template<typename T>
-		void registerImperativeCollector(CBA& context, const TypedSetType<T>& type, const vector<Location>& locations, const vector<Callable>& funs) {
-			for(auto loc : locations) {
-				context.registerLocationResolver<ImperativeStateConstraintCollector<T>>(type, loc, locations, funs);
+		void registerImperativeCollector(CBA& context, const TypedSetType<T>& type) {
+			for(auto loc : context.getLocations()) {
+				context.registerLocationResolver<ImperativeStateConstraintCollector<T>>(type, loc);
 			}
 		}
 
@@ -1776,11 +1882,9 @@ namespace cba {
 	CBA::CBA(const core::StatementAddress& root)
 		: solver([&](const set<SetID>& sets) {
 				Constraints res;
-				std::cout << "Resolving sets " << sets << " ... ";
 				for (auto set : sets) {
 					this->addConstraintsFor(set, res);
 				}
-				std::cout << "New constraints: " << res << "\n";
 				return res;
 		  }),
 		  setCounter(0), idCounter(0),
@@ -1790,7 +1894,7 @@ namespace cba {
 		// fill dynamicCalls
 		core::visitDepthFirst(root, [&](const CallExprAddress& call) {
 			auto fun = call->getFunctionExpr();
-			if (fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>()) return;
+			if (fun.isa<LiteralPtr>() || fun.isa<LambdaExprPtr>() || fun.isa<BindExprPtr>()) return;
 			this->dynamicCalls.push_back(call);
 		});
 
@@ -1798,30 +1902,34 @@ namespace cba {
 		dynamicCallLabels = ::transform(dynamicCalls, [&](const CallExprAddress& cur) { return getLabel(cur); });
 		dynamicCallLabels.push_back(0);
 
+		// obtain list of callable functions
+		callables = getAllCallableTerms(*this, root);
+
+		// and list of all memory locations
+		locations = getAllLocations(*this, root);
+
+
 		// TODO: move this to another place ...
 		NodeManager& mgr = root->getNodeManager();
 		const auto& base = mgr.getLangBasic();
 
-		// obtain list of callable functions
-		vector<Callable> funs = getAllCallableTerms(*this, root);
-
 		// reachable constraint collector
-		registerResolver<ReachableConstraintCollector>(funs, root);
+		registerResolver<ReachableConstraintCollector>(root);
 
 		// install resolver
-		registerResolver<ControlFlowConstraintCollector>(funs);
-		registerResolver<ConstantConstraintCollector>(funs);
-		registerResolver<ReferenceConstraintCollector>(funs);
-		registerResolver<ArithmeticConstraintCollector>(funs, base);
-		registerResolver<BooleanConstraintCollector>(funs, base);
+		registerResolver<ControlFlowConstraintCollector>();
+		registerResolver<ConstantConstraintCollector>();
+		registerResolver<ReferenceConstraintCollector>();
+		registerResolver<ArithmeticConstraintCollector>(base);
+		registerResolver<BooleanConstraintCollector>(base);
 
 		// and the imperative constraints
 		auto locations = getAllLocations(*this, root);
-		registerImperativeCollector(*this, C, locations, funs);
-		registerImperativeCollector(*this, D, locations, funs);
-		registerImperativeCollector(*this, R, locations, funs);
-		registerImperativeCollector(*this, A, locations, funs);
-		registerImperativeCollector(*this, B, locations, funs);
+		registerImperativeCollector(*this, C);
+		registerImperativeCollector(*this, D);
+		registerImperativeCollector(*this, R);
+		registerImperativeCollector(*this, A);
+		registerImperativeCollector(*this, B);
 
 	};
 
@@ -1853,6 +1961,8 @@ namespace cba {
 							<< "Labels:\n\t" << labels << "\n\t" << reverseLabels << "\n"
 							<< "Variables:\n\t" << vars << "\n\t" << reverseVars << "\n";
 
+					// TODO: the following code should be moved to the constraint resolver
+
 					// handle variable definition
 					if (trg.isRoot()) {
 						// nothing to do
@@ -1864,7 +1974,7 @@ namespace cba {
 					} else if (auto params = trg.getParentAddress().isa<core::ParametersAddress>()) {
 
 						// it is within a function => get call sides
-						int userOffset = (params.getParentNode().isa<LambdaPtr>()) ? 4 : 2;		// for bind
+						int userOffset = (params.getParentNode().isa<LambdaPtr>()) ? 5 : 2;		// for bind
 
 						auto user = params.getParentAddress(userOffset).as<StatementAddress>();
 						auto userType = user->getNodeType();
@@ -1874,7 +1984,19 @@ namespace cba {
 						if (userType == NT_CallExpr && user.as<CallExprAddress>()->getFunctionExpr() == params.getParentAddress(userOffset-1)) {
 
 							// it is a direct call - resolve the call expression
-							resolver->addConstraints(user, context, res);
+							if (context.callContext.startsWith(0)) {
+								// nobody is calling the root context
+								Context srcCtxt = context;
+								srcCtxt.callContext >>= 0;
+								resolver->addConstraints(user, srcCtxt, res);
+							} else {
+								// anybody may call this nested context
+								for(auto l : dynamicCallLabels) {
+									Context srcCtxt = context;
+									srcCtxt.callContext >>= l;
+									resolver->addConstraints(user, srcCtxt, res);
+								}
+							}
 
 						} else if (userType == NT_CompoundStmt) {
 
@@ -1889,16 +2011,16 @@ namespace cba {
 
 									if (context.callContext.startsWith(0)) {
 										// nobody is calling the root context
-										Context srcContext = context;
-										srcContext.callContext >>= 0;
-										resolver->addConstraints(call, srcContext, res);
+										Context srcCtxt = context;
+										srcCtxt.callContext >>= 0;
+										resolver->addConstraints(call, srcCtxt, res);
 									} else {
 										// anybody may call this nested context
 										for(auto l : dynamicCallLabels) {
-											Context srcContext = context;
-											srcContext.callContext >>= l;
+											Context srcCtxt = context;
+											srcCtxt.callContext >>= l;
 
-											resolver->addConstraints(call, srcContext, res);
+											resolver->addConstraints(call, srcCtxt, res);
 										}
 									}
 								}
@@ -1936,6 +2058,7 @@ namespace cba {
 				if (trg) {
 					// TODO: make this key a sub-type of the set-index key to avoid copying state all the time
 					auto type = std::make_tuple(std::get<0>(key),std::get<4>(key), std::get<3>(key));
+					assert_true(locationResolver.find(type) != locationResolver.end()) << "Unknown resolver for: " << std::get<0>(key)->getName() << "," << std::get<4>(key)->getName() << "," << std::get<3>(key) << "\n";
 					locationResolver[type]->addConstraints(trg, std::get<2>(key), res);
 				}
 
@@ -1980,7 +2103,8 @@ namespace cba {
 			out << "\n\t" << cur.second
 					<< " [label=\"" << cur.second << " = " << setName
 						<< "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << " : " << std::get<2>(cur.first) << "]"
-					<< " = " << solutions[cur.second] << "\"];";
+					<< " = " << solutions[cur.second] << "\""
+					<< ((solver.isResolved(cur.second)) ? " shape=box" : "") << "];";
 		}
 
 		for(auto cur : stateSets) {
@@ -1990,7 +2114,8 @@ namespace cba {
 			out << "\n\t" << cur.second
 					<< " [label=\"" << cur.second << " = " << setName << "-" << dataName << "@" << std::get<4>(cur.first)
 						<< "[l" << std::get<1>(cur.first) << " = " << pos->getNodeType() << " : " << pos << " : " << std::get<2>(cur.first) << "]"
-					<< " = " << solutions[cur.second] << "\"];";
+					<< " = " << solutions[cur.second] << "\""
+					<< ((solver.isResolved(cur.second)) ? " shape=box" : "") << "];";
 		}
 
 		// link sets

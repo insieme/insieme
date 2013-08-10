@@ -788,6 +788,9 @@ namespace set_constraint_2 {
 			return ass;
 		}
 
+		bool isResolved(const SetID& set) const {
+			return resolved.find(set) != resolved.end();
+		}
 
 	private:
 

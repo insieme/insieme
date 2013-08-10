@@ -288,10 +288,6 @@ namespace cba {
 	extern const StateSetType Stmp;		// temporary states of statements (assignment only)
 
 
-	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
-
-
-
 
 	// -------------------- Constraint Resolver ---------------------------
 
@@ -309,7 +305,7 @@ namespace cba {
 		typedef std::tuple<core::NodeAddress, Context> Item;
 		std::set<Item> processed;
 
-		const SetTypeSet coveredSets;
+		SetTypeSet coveredSets;
 
 	protected:
 
@@ -334,6 +330,12 @@ namespace cba {
 			return coveredSets;
 		}
 
+	protected:
+
+		void addCoveredSet(const SetTypePtr& type) {
+			coveredSets.insert(type);
+		}
+
 	};
 
 	typedef ConstraintResolver* ConstraintResolverPtr;
@@ -341,6 +343,8 @@ namespace cba {
 
 	// allows to check whether a given statement is a memory location constructor (including globals)
 	bool isMemoryConstructor(const core::StatementAddress& stmt);
+
+	core::VariableAddress getDefinitionPoint(const core::VariableAddress& varAddress);
 
 	core::ExpressionAddress getLocationDefinitionPoint(const core::StatementAddress& stmt);
 
@@ -360,6 +364,9 @@ namespace cba {
 		// a list of all dynamic calls within the targeted fragment - filled by the constructor
 		std::vector<core::CallExprAddress> dynamicCalls;
 		std::vector<Label> dynamicCallLabels;
+
+		std::vector<Location> locations;
+		std::vector<Callable> callables;
 
 		int setCounter;
 		std::map<SetKey, SetID> sets;
@@ -394,12 +401,14 @@ namespace cba {
 		template<typename T>
 		const std::set<T>& getValuesOf(const core::ExpressionAddress& expr, const TypedSetType<T>& set, const Context& ctxt = Context()) {
 			auto id = getSet(set, getLabel(expr), ctxt);
+//std::cout << "Looking for "<< id << "\n";
 			return solver.solve(id)[id];
 		}
 
 		template<typename T>
 		const std::set<T>& getValuesOf(const core::VariableAddress& var, const TypedSetType<T>& set, const Context& ctxt = Context()) {
 			auto id = getSet(set, getVariable(var), ctxt);
+//std::cout << "Looking for "<< id << "\n";
 			return solver.solve(id)[id];
 		}
 
@@ -563,8 +572,25 @@ namespace cba {
 			return std::get<0>(loc);
 		}
 
+		const std::vector<Location>& getLocations() const {
+			return locations;
+		}
+
+		const std::vector<Callable>& getCallables() const {
+			return callables;
+		}
+
+		const std::vector<core::CallExprAddress>& getDynamicCalls() const {
+			return dynamicCalls;
+		}
+
+		const std::vector<Label>& getDynamicCallLabels() const {
+			return dynamicCallLabels;
+		}
+
 		void plot(std::ostream& out = std::cout) const;
 		std::size_t getNumSets() const { return sets.size() + stateSets.size(); }
+		std::size_t getNumConstraints() const { return solver.getConstraints().size(); }
 
 	};
 
