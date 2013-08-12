@@ -40,9 +40,9 @@
 #include "insieme/core/forward_decls.h"
 
 /**
- * A header file for literals to be marked as being declared extern.
- * Extern literals are literals within an external storage - and therefore
- * only need to declared but not defined within resulting code.
+ * A header file for (global) literals to be marked as external C literals.
+ * Literals marked using this flag will be created within an extern "C" { .. }
+ * scope and excluded for the name mangling.
  */
 
 namespace insieme {
@@ -50,20 +50,21 @@ namespace annotations {
 namespace c {
 
 	/**
-	 * Checks whether the given literal is marked to be extern.
+	 * Checks whether the given literal is marked to be an external C object
+	 * where no name mangling should be applied to.
 	 *
 	 * @param literal the literal to be tested
-	 * @return true if extern, false otherwise
+	 * @return true if marked to be extern C, false otherwise
 	 */
-	bool isExtern(const insieme::core::LiteralPtr& literal);
+	bool isExternC(const insieme::core::LiteralPtr& literal);
 
 	/**
-	 * Updates the extern flag of the given literal to fit the given value.
+	 * Updates the extern-C flag of the given literal to fit the given value.
 	 *
 	 * @param literal the literal to be marked extern
 	 * @param value a flag determining whether to mark it extern or not
 	 */
-	void markExtern(const insieme::core::LiteralPtr& literal, bool value = true);
+	void markAsExternC(const insieme::core::LiteralPtr& literal, bool value = true);
 
 } // end namespace c
 } // end namespace annotations
