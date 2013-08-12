@@ -203,7 +203,6 @@ namespace tu {
 				for(auto cur : unit.getFunctions()) {
 					symbolMap[mgr.get(cur.first)] = mgr.get(cur.second);
 				}
-
 			}
 
 			virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
@@ -606,15 +605,18 @@ namespace tu {
 				}
 			}
 
-			core::IRBuilder builder(mainFunc->getNodeManager());
+			core::IRBuilder builder(mainFunc->getNodeManager());	
 			core::StatementList inits;
 
 			// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			for (auto cur : unit.getGlobals()) {
 				// only consider having an initialization value
 				if (!cur.second) continue;
-				if (!contains(usedLiterals, cur.first)) continue;
-				inits.push_back(builder.assign(resolver.map(cur.first), resolver.map(cur.second)));
+				core::TypePtr type = cur.first->getType();
+				type = resolver.map(type);
+				core::LiteralPtr newLit = builder.literal(cur.first->getValue(), type);
+				if (!contains(usedLiterals, newLit)) continue;
+				inits.push_back(builder.assign(resolver.map(newLit), resolver.map(cur.second)));
 			}
 
 			// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

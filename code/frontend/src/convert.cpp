@@ -253,6 +253,8 @@ tu::IRTranslationUnit Converter::convert() {
 			// NOTE: not all staticDataMember are seen here, so we take care of the "unseen"
 			// ones in lookUpVariable
 			auto initValue = convertInitForGlobal(converter, var, elementType);
+
+			std::cout << " Init for global " << var << " := " << initValue << std::endl;
 			converter.getIRTranslationUnit().addGlobal(literal, initValue);
 		}
 	} varVisitor(*this);
