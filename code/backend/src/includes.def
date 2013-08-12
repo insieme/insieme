@@ -72,6 +72,7 @@ FUN("stdio.h", fprintf)
 FUN("stdio.h", perror)
 
 TYPE("stdio.h", "FILE")
+TYPE("iostream", "__FILE")
 
 FUN("stdlib.h", malloc)
 FUN("stdlib.h", calloc)

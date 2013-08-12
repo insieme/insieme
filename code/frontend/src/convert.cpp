@@ -254,8 +254,6 @@ tu::IRTranslationUnit Converter::convert() {
 			// NOTE: not all staticDataMember are seen here, so we take care of the "unseen"
 			// ones in lookUpVariable
 			auto initValue = convertInitForGlobal(converter, var, elementType);
-
-			std::cout << " Init for global " << var << " := " << initValue << std::endl;
 			converter.getIRTranslationUnit().addGlobal(literal, initValue);
 		}
 	} varVisitor(*this);
@@ -277,10 +275,11 @@ tu::IRTranslationUnit Converter::convert() {
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl()) return;
-			if (!funcDecl->doesThisDeclarationHaveABody()) return;
+			//if (!funcDecl->doesThisDeclarationHaveABody()) return;
 			core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
-			if (externC) 
+			if (externC) {
 				annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
+			}
 			return;
 		}
 	} funVisitor(*this, false);

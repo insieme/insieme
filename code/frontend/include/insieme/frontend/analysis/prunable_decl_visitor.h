@@ -168,7 +168,6 @@ class PrunableDeclVisitor{
 			case clang::Decl::LinkageSpec:
 				{
 					static_cast<BASE*>(this)->VisitLinkageSpec(llvm::cast<clang::LinkageSpecDecl>(decl));
-					traverseDeclCtx (llvm::cast<clang::DeclContext>(decl));
 					break;
 				}
 			case clang::Decl::ClassTemplate:

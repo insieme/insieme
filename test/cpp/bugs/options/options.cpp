@@ -51,7 +51,7 @@ static struct option longopts[] = {
 /*        av argv                 */
 /**********************************/
 void option(int ac, char **av) {
-	if (ac == 1) std::cout << av[0] << ": Execute with default parameter(s)..\n(--help for program usage)\n\n";
+	if (ac == 1) std::cout << ": Execute with default parameter(s)..\n(--help for program usage)\n\n";
 	int opt;
 	while ((opt = getopt_long(ac, av, "r:", longopts, NULL)) != -1) {
 		switch (opt) {
