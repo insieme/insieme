@@ -202,7 +202,6 @@ namespace tu {
 				for(auto cur : unit.getFunctions()) {
 					symbolMap[mgr.get(cur.first)] = mgr.get(cur.second);
 				}
-
 			}
 
 			virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
@@ -605,15 +604,17 @@ namespace tu {
 				}
 			}
 
-			core::IRBuilder builder(mainFunc->getNodeManager());
+			core::IRBuilder builder(mainFunc->getNodeManager());	
 			core::StatementList inits;
 
 			// ~~~~~~~~~~~~~~~~~~ INITIALIZE GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			for (auto cur : unit.getGlobals()) {
 				// only consider having an initialization value
 				if (!cur.second) continue;
-				if (!contains(usedLiterals, cur.first)) continue;
-				inits.push_back(builder.assign(resolver.map(cur.first), resolver.map(cur.second)));
+				core::TypePtr type = cur.first->getType();
+				core::LiteralPtr newLit = builder.literal(cur.first->getValue(), type);
+				if (!contains(usedLiterals, newLit)) continue;
+				inits.push_back(builder.assign(resolver.map(newLit), resolver.map(cur.second)));
 			}
 
 			// ~~~~~~~~~~~~~~~~~~ PREPARE STATICS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -633,11 +634,11 @@ namespace tu {
 				insieme::annotations::c::markExtern(cur.as<LiteralPtr>(),
 						type.isa<RefTypePtr>() &&
 						cur.as<LiteralPtr>()->getStringValue()[0]!='\"' &&
+						!insieme::annotations::c::hasIncludeAttached(cur) &&
 						!ext.isStaticType(type.as<RefTypePtr>()->getElementType()) &&
 						!any(unit.getGlobals(), [&](const IRTranslationUnit::Global& global) { return *resolver.map(global.first) == *cur; })
 				);
 			}
-
 
 			// build resulting lambda
 			if (inits.empty()) return mainFunc;

@@ -206,15 +206,15 @@ namespace frontend {
 		ASSERT_TRUE(irtu[oddLit]);
 
 		// check their definition
-		EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (v1==0u)?1:odd( var(v1)-1u);}", print(irtu[evenLit]));
-		EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (v1==0u)?0:even( var(v1)-1u);}", print(irtu[oddLit]));
+		EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (v1==0u)?1:odd(v1-1u);}", print(irtu[evenLit]));
+		EXPECT_EQ("fun(uint<4> v1) -> int<4> {return (v1==0u)?0:even(v1-1u);}", print(irtu[oddLit]));
 
 		// check resolved version
 		auto even = irtu.resolve(evenLit);
-		EXPECT_EQ("recFun v0 {v0 = fun(uint<4> v1) -> int<4> {return (v1==0u)?1:v4( var(v1)-1u);};v4 = fun(uint<4> v5) -> int<4> {return (v5==0u)?0:v0( var(v5)-1u);};}", print(even));
+		EXPECT_EQ("recFun v0 {v0 = fun(uint<4> v1) -> int<4> {return (v1==0u)?1:v4(v1-1u);};v4 = fun(uint<4> v5) -> int<4> {return (v5==0u)?0:v0(v5-1u);};}", print(even));
 
 		auto odd = irtu.resolve(oddLit);
-		EXPECT_EQ("recFun v0 {v0 = fun(uint<4> v1) -> int<4> {return (v1==0u)?0:v4( var(v1)-1u);};v4 = fun(uint<4> v5) -> int<4> {return (v5==0u)?1:v0( var(v5)-1u);};}", print(odd));
+		EXPECT_EQ("recFun v0 {v0 = fun(uint<4> v1) -> int<4> {return (v1==0u)?0:v4(v1-1u);};v4 = fun(uint<4> v5) -> int<4> {return (v5==0u)?1:v0(v5-1u);};}", print(odd));
 
 		auto program = tu::toProgram(manager, irtu);
 //		dump(program);

@@ -540,10 +540,16 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	// -- TopLevelElement -------------------------
+
+	struct TopLevelElement : public Node {
+		TopLevelElement(NodeType type) : Node(type) {};
+	};
+
 	// -- Declarations ----------------------------
 
-	struct Declaration : public Node {
-		Declaration(NodeType type) : Node(type) {};
+	struct Declaration : public TopLevelElement {
+		Declaration(NodeType type) : TopLevelElement(type) {};
 	};
 
 	struct TypeDeclaration : public Declaration {
@@ -594,8 +600,8 @@ namespace c_ast {
 
 	// -- Definitions ----------------------------
 
-	struct Definition : public Node {
-		Definition(NodeType type) : Node(type) {};
+	struct Definition : public TopLevelElement {
+		Definition(NodeType type) : TopLevelElement(type) {};
 	};
 
 	struct TypeDefinition : public Definition {
@@ -658,11 +664,20 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
-	struct Namespace : public Definition {
+	struct Namespace : public TopLevelElement {
 		IdentifierPtr name;
-		DefinitionPtr definition;
-		Namespace(const IdentifierPtr& name, const DefinitionPtr& definition)
-			: Definition(NT_Namespace), name(name), definition(definition) {}
+		TopLevelElementPtr definition;
+		Namespace(const IdentifierPtr& name, const TopLevelElementPtr& definition)
+			: TopLevelElement(NT_Namespace), name(name), definition(definition) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct ExternC : public TopLevelElement {
+		vector<TopLevelElementPtr> definitions;
+		ExternC(const TopLevelElementPtr& definition)
+			: TopLevelElement(NT_ExternC), definitions(toVector(definition)) {}
+		ExternC(const vector<TopLevelElementPtr>& definitions = vector<TopLevelElementPtr>())
+			: TopLevelElement(NT_ExternC), definitions(definitions) {}
 		virtual bool equals(const Node& node) const;
 	};
 

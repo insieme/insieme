@@ -512,9 +512,6 @@ DERIVED(ArrayReduce, "array.reduce",
 		"}"
 )
 
-// -- special operations to support encoding of C ntnters as arrays ----------------------------------------------------
-
-LITERAL(GetNull,   		"get.null",				"(type<'a>) -> ref<'a>")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 

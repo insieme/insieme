@@ -469,6 +469,12 @@ namespace c_ast {
 
 	}
 
+	bool ExternC::equals(const Node& node) const {
+		assert(dynamic_cast<const ExternC*>(&node));
+		auto other = static_cast<const ExternC&>(node);
+		return ::equals(definitions, other.definitions, equal_target<TopLevelElementPtr>());
+	}
+
 } // end namespace c_ast
 } // end namespace backend
 } // end namespace insieme

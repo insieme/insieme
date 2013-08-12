@@ -587,7 +587,7 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 	// if it is a ref type ...
 	if (type->getNodeType() == core::NT_RefType) {
 		// return NULL for the specific type
-		return callExpr(type, manager.getLangBasic().getGetNull(), getTypeLiteral(type.as<RefTypePtr>()->getElementType()));
+		return refReinterpret(manager.getLangBasic().getRefNull(), type.as<RefTypePtr>()->getElementType());
 	}
 
 	// if it is a vector type use init uniform
@@ -659,6 +659,16 @@ CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& 
 	}
 
 	return callExpr(target.getType(), manager.getLangBasic().getRefAssign(), target, value);
+}
+
+ExpressionPtr IRBuilder::refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const {
+	assert(subExpr->getType().isa<RefTypePtr>());
+	return callExpr(
+		refType(newElementType),
+		manager.getLangBasic().getRefReinterpret(),
+		subExpr,
+		getTypeLiteral(newElementType)
+	);
 }
 
 ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
@@ -1015,25 +1025,40 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     VariableList params;
     vector<ExpressionPtr> callArgs;
 
-    utils::map::PointerMap<VariablePtr, VariablePtr> replVariableMap;
+    utils::map::PointerMap<ExpressionPtr, ExpressionPtr> replVariableMap;
 	for(const core::ExpressionPtr& curr : args){
 		assert(curr->getNodeType() == core::NT_Variable);
 
 		const core::VariablePtr& bodyVar = curr.as<core::VariablePtr>();
 		const core::TypePtr& varType = bodyVar->getType();
-		// we create a new variable to replace the captured variable
-		core::VariablePtr&& parmVar = this->variable( varType );
-		argsType.push_back( varType );
-		callArgs.push_back(curr);
-		params.push_back( parmVar );
-		replVariableMap.insert( std::make_pair(bodyVar, parmVar) );
+
+		// substitute all value use of variables by a value paramenter, this avoids pointers in the 
+		// prototype and interacts better with the materialize read only routine
+		if (varType.isa<RefTypePtr>() && core::analysis::isReadOnly(body, bodyVar)){
+			core::VariablePtr&& parmVar = this->variable( varType.as<RefTypePtr>()->getElementType() );
+			argsType.push_back( parmVar->getType() );
+			params.push_back( parmVar );
+			callArgs.push_back(this->deref(bodyVar));
+			replVariableMap.insert( std::make_pair(deref(bodyVar), parmVar) );
+		}
+		else{
+			// we create a new variable to replace the captured variable
+			core::VariablePtr&& parmVar = this->variable( varType );
+			argsType.push_back( varType );
+			params.push_back( parmVar );
+			callArgs.push_back(curr);
+			replVariableMap.insert( std::make_pair(bodyVar, parmVar) );
+		}
 	}
 
 	// Replace the variables in the body with the input parameters which have been created
     if ( !replVariableMap.empty() ) {
-    	body = core::static_pointer_cast<const core::Statement>(
-    			core::transform::replaceVars(manager, body, replVariableMap)
-    		);
+		for (auto replace : replVariableMap )
+			body = core::transform::replaceAllGen (manager, body, replace.first, replace.second);
+		//TODO: there is no suitable tool to replace expression by variable
+//    	body = core::static_pointer_cast<const core::Statement>(
+//    			core::transform::replaceVars(manager, body, replVariableMap)
+//    		);
     }
 
     utils::map::PointerMap<NodePtr, NodePtr> replLiteralMap;

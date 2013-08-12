@@ -440,6 +440,11 @@ namespace backend {
 				}
 			}
 
+			// deref of an assigment, do not
+			if (core::analysis::isCallOf (ARG(0), LANG_BASIC.getRefAssign()) ){
+				return CONVERT_ARG(0);
+			}
+
 			return c_ast::deref(CONVERT_ARG(0));
 		});
 
@@ -902,13 +907,6 @@ namespace backend {
 
 		// -- pointer --
 
-		res[basic.getGetNull()] = OP_CONVERTER({
-			// Operator Type:  (type<'a>) -> array<'a,1>
-			// generated code: (<target_type>){0}
-
-			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int32);
-			return c_ast::lit(intType,"0");
-		});
 /*
 		res[basic.getRefIsNull()] = OP_CONVERTER({
 			// Operator Type:  (array<'a,1>) -> bool

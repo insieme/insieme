@@ -84,7 +84,7 @@ namespace utils {
 			/**
 			 * A utility function cutting down std-lib header files.
 			 */
-			boost::optional<fs::path> toStdLibHeader(const fs::path& path) {
+			boost::optional<fs::path> toStdLibHeader(const fs::path& path) const {
 				static const boost::optional<fs::path> fail;
 
 				if (searchPath.empty()) { return fail; }
@@ -103,11 +103,16 @@ namespace utils {
 
 			}
 
-			bool isStdLibHeader(const fs::path& path) {
+			bool isStdLibHeader(const clang::SourceLocation& loc) const{
+				if (!loc.isValid()) return false;
+				return isStdLibHeader ( sm.getPresumedLoc(loc).getFilename());
+			}
+
+			bool isStdLibHeader(const fs::path& path) const{
 				return toStdLibHeader(fs::canonical(path));
 			}
 
-			bool isHeaderFile(const string& name) {
+			bool isHeaderFile(const string& name) const {
 				// everything ending wiht .h or .hpp or nothing (e.g. vector) => so check for not being c,cpp,...
 				return !name.empty() &&
 						!(ba::ends_with(name, ".c") ||
@@ -152,6 +157,12 @@ namespace utils {
 
 	} // annonymous namespace
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+	bool isDefinedInSystemHeader (const clang::Decl* decl, const vector<fs::path>& stdLibDirs){
+		HeaderTagger tagger(stdLibDirs, decl->getASTContext().getSourceManager());
+		return tagger.isStdLibHeader(decl->getLocation());
+	}
 
 	void addHeaderForDecl(const core::NodePtr& node, const clang::Decl* decl, const vector<fs::path>& stdLibDirs) {
 

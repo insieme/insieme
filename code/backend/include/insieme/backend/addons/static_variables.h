@@ -36,35 +36,32 @@
 
 #pragma once
 
-#include <string>
 #include "insieme/core/forward_decls.h"
 
+#include "insieme/backend/addon.h"
+
 /**
- * A header file for literals to be marked as being declared extern.
- * Extern literals are literals within an external storage - and therefore
- * only need to declared but not defined within resulting code.
+ * This header file defines a backend - addon to deal with static variables
+ * by re-creating static variables within the target code.
  */
-
 namespace insieme {
-namespace annotations {
-namespace c {
+namespace backend {
+namespace addons {
+
 
 	/**
-	 * Checks whether the given literal is marked to be extern.
-	 *
-	 * @param literal the literal to be tested
-	 * @return true if extern, false otherwise
+	 * An Add-On realizing support for C/C++ based static variables.
 	 */
-	bool isExtern(const insieme::core::LiteralPtr& literal);
+	struct StaticVariables : public AddOn {
 
-	/**
-	 * Updates the extern flag of the given literal to fit the given value.
-	 *
-	 * @param literal the literal to be marked extern
-	 * @param value a flag determining whether to mark it extern or not
-	 */
-	void markExtern(const insieme::core::LiteralPtr& literal, bool value = true);
+		/**
+		 * Installs this Add-On within the given converter.
+		 */
+		virtual void installOn(Converter& converter) const;
 
-} // end namespace c
-} // end namespace annotations
+	};
+
+
+} // end namespace addons
+} // end namespace backend
 } // end namespace insieme

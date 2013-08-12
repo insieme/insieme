@@ -34,37 +34,40 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <string>
-#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_builder.h"
 
-/**
- * A header file for literals to be marked as being declared extern.
- * Extern literals are literals within an external storage - and therefore
- * only need to declared but not defined within resulting code.
- */
+#include "insieme/annotations/c/extern_c.h"
+#include "insieme/backend/sequential/sequential_backend.h"
 
 namespace insieme {
-namespace annotations {
-namespace c {
+namespace backend {
 
-	/**
-	 * Checks whether the given literal is marked to be extern.
-	 *
-	 * @param literal the literal to be tested
-	 * @return true if extern, false otherwise
-	 */
-	bool isExtern(const insieme::core::LiteralPtr& literal);
+	TEST(CppCode, ExternC) {
 
-	/**
-	 * Updates the extern flag of the given literal to fit the given value.
-	 *
-	 * @param literal the literal to be marked extern
-	 * @param value a flag determining whether to mark it extern or not
-	 */
-	void markExtern(const insieme::core::LiteralPtr& literal, bool value = true);
+		core::NodeManager mgr;
+		core::IRBuilder builder(mgr);
 
-} // end namespace c
-} // end namespace annotations
-} // end namespace insieme
+		// create two external literals
+		auto type = builder.parseType("()->unit");
+		auto litA = builder.literal("funA", type);
+		auto litB = builder.literal("funB", type);
+
+		// the second shell be an extern "C" function
+		annotations::c::markAsExternC(litB);
+
+		// convert codes
+		auto targetCodeA = sequential::SequentialBackend::getDefault()->convert(litA);
+		ASSERT_TRUE((bool)targetCodeA);
+
+		auto targetCodeB = sequential::SequentialBackend::getDefault()->convert(litB);
+		ASSERT_TRUE((bool)targetCodeB);
+
+
+		EXPECT_PRED2(containsSubString, toString(*targetCodeA), "void funA();\n\n&funA");
+		EXPECT_PRED2(containsSubString, toString(*targetCodeB), "extern \"C\" {\n    void funB();\n}\n\n&funB");
+	}
+
+} // namespace backend
+} // namespace insieme

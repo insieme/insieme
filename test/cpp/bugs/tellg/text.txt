@@ -33,38 +33,3 @@
  * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
-
-#pragma once
-
-#include <string>
-#include "insieme/core/forward_decls.h"
-
-/**
- * A header file for literals to be marked as being declared extern.
- * Extern literals are literals within an external storage - and therefore
- * only need to declared but not defined within resulting code.
- */
-
-namespace insieme {
-namespace annotations {
-namespace c {
-
-	/**
-	 * Checks whether the given literal is marked to be extern.
-	 *
-	 * @param literal the literal to be tested
-	 * @return true if extern, false otherwise
-	 */
-	bool isExtern(const insieme::core::LiteralPtr& literal);
-
-	/**
-	 * Updates the extern flag of the given literal to fit the given value.
-	 *
-	 * @param literal the literal to be marked extern
-	 * @param value a flag determining whether to mark it extern or not
-	 */
-	void markExtern(const insieme::core::LiteralPtr& literal, bool value = true);
-
-} // end namespace c
-} // end namespace annotations
-} // end namespace insieme

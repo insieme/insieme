@@ -270,6 +270,8 @@ namespace core {
 		CallExprPtr assign(const ExpressionPtr& target, const ExpressionPtr& value) const;
 		ExpressionPtr tryDeref(const ExpressionPtr& subExpr) const;
 
+		ExpressionPtr refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const;
+
 		ExpressionPtr invertSign(const ExpressionPtr& subExpr) const;
 		// Returns the negation of the passed subExpr (which must be of boolean type)
 		// 	       (<BOOL> expr) -> <BOOL> !expr

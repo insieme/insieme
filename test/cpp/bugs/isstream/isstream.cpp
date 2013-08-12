@@ -3,10 +3,10 @@
 
 #include <sstream>
 
-char cad[] = "this is string";
+char str[] = "this is a string";
 
 int main(int argc, char **argv){
-	std::istringstream iss(cad);
+	std::istringstream iss(str);
 
 	int a;
 	iss >> a;

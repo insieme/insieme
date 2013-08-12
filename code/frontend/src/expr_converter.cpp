@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -634,9 +634,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitParenExpr(const clang::ParenE
 // of a pointer).
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::ExprConverter::VisitGNUNullExpr(const clang::GNUNullExpr* nullExpr) {
-	core::TypePtr&& type = convFact.convertType(GET_TYPE_PTR(nullExpr));
+	core::TypePtr type = convFact.convertType(GET_TYPE_PTR(nullExpr));
 	assert(type->getNodeType() != core::NT_ArrayType && "C pointer type must of type array<'a,1>");
-	return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(type));
+	return builder.refReinterpret(BASIC.getRefNull(), type);
 }
 
 core::ExpressionPtr Converter::ExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {
@@ -871,8 +871,7 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 	if ( binOp->getOpcode() == clang::BO_Comma ) {
 
 		core::TypePtr retType;
-		// the return type of this lambda is the type of the last expression (according to the C
-		// standard)
+		// the return type of this lambda is the type of the last expression (according to the C standard)
 		std::vector<core::StatementPtr> stmts { lhs };
 		if (core::analysis::isCallOf(rhs, gen.getRefAssign())) {
 			stmts.push_back(rhs);
@@ -884,7 +883,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitBinaryOperator(const clang::B
 			stmts.push_back(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs));
 			retType = rhs->getType();
 		}
-		return (retIr = builder.createCallExprFromBody(builder.compoundStmt(stmts), retType));
+
+		core::StatementPtr body =  builder.compoundStmt(stmts);
+		return (retIr = builder.createCallExprFromBody(body, retType));
 	}
 
 

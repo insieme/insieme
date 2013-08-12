@@ -219,7 +219,11 @@ AST_TERMINAL(DestructorCall, Expression)
 // --- Declarations ---
 //
 
-AST_NODE(Declaration, Node)
+AST_NODE(TopLevelElement, Node)
+ABSTRACT(TopLevelElement)
+
+
+AST_NODE(Declaration, TopLevelElement)
 ABSTRACT(Declaration)
 
 AST_TERMINAL(TypeDeclaration, Declaration)
@@ -230,7 +234,7 @@ AST_TERMINAL(GlobalVarDecl, Declaration)
 // --- Definitions ---
 //
 
-AST_NODE(Definition, Node)
+AST_NODE(Definition, TopLevelElement)
 ABSTRACT(Definition)
 
 AST_TERMINAL(TypeDefinition, Definition)
@@ -241,7 +245,8 @@ AST_TERMINAL(Function, Definition)
 // --- C++ Extensions ---
 //
 
-AST_TERMINAL(Namespace, Definition)
+AST_TERMINAL(Namespace, TopLevelElement)
+AST_TERMINAL(ExternC, TopLevelElement)
 
 AST_TERMINAL(Parent, Node)
 
