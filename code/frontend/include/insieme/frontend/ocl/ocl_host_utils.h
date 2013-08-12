@@ -117,9 +117,8 @@ public:
 	NullLitSearcher(core::IRBuilder build) : core::IRVisitor<bool>(false), builder(build) {}
 
 	bool visitNode(const core::NodePtr& node) { return false; }// go on with search
-	bool visitCallExpr(const core::CallExprPtr& call);
 	bool visitLiteral(const core::LiteralPtr& literal) {
-		return literal->getStringValue() == "0";
+		return literal->getStringValue() == "0" || builder.getLangBasic().isRefNull(literal);
 	}
 };
 

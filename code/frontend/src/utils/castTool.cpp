@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -509,7 +509,7 @@ switch (castExpr->getCastKind()) {
 			// is a cast of Null to another pointer type:
 			// we rebuild null
 			if (*expr == *builder.literal(expr->getType(), "0")) {
-				return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
+				return builder.getZero(targetTy);
 			}
 
 			// cast from void*
@@ -549,7 +549,7 @@ switch (castExpr->getCastKind()) {
 			// is a cast of Null to another pointer type:
 			// we rebuild null
 			if (*expr == *builder.literal(expr->getType(), "0")) {
-				return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
+				return builder.getZero(targetTy);
 			}
 			else{
 				dumpDetail(expr);
@@ -608,7 +608,7 @@ switch (castExpr->getCastKind()) {
 
 			// cast NULL to anything else
 			if ((targetTy->getNodeType() == core::NT_RefType) && (*expr == *builder.literal(expr->getType(), "0") || gen.isRefNull(expr))) {
-				return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(targetTy)));
+				return builder.getZero(targetTy);
 			}
 			else{
 				//FIXME:: might be a cast to function type

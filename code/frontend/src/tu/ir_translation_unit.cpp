@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -613,7 +613,6 @@ namespace tu {
 				// only consider having an initialization value
 				if (!cur.second) continue;
 				core::TypePtr type = cur.first->getType();
-				type = resolver.map(type);
 				core::LiteralPtr newLit = builder.literal(cur.first->getValue(), type);
 				if (!contains(usedLiterals, newLit)) continue;
 				inits.push_back(builder.assign(resolver.map(newLit), resolver.map(cur.second)));

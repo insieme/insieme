@@ -74,13 +74,13 @@ void basic_type_test() {
 	#pragma test "decl ref<vector<vector<real<4>,1>,2>> v0 =  var([[0.0f], [0.0f]])"
 	float vvvv[][1] = { {0}, {0} };
 
-	#pragma test "decl ref<ref<array<int<4>,1>>> v0 =  var(get.null(type<array<int<4>,1>>))"
+	#pragma test "decl ref<ref<array<int<4>,1>>> v0 =  var(ref.reinterpret(ref.null, type<array<int<4>,1>>))"
 	int* b1 = 0;
 
-	#pragma test "decl ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v0 =  var(get.null(type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>))"
+	#pragma test "decl ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v0 =  var(ref.reinterpret(ref.null, type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>))"
 	int*** c1 = 0;
 
-	#pragma test "v100 := get.null(type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)"
+	#pragma test "v100 := ref.reinterpret(ref.null, type<array<ref<array<ref<array<int<4>,1>>,1>>,1>>)"
 	c1 = 0;
 
 	#pragma test "decl ref<real<8>> v0 =  var(3.1415926535897931)"

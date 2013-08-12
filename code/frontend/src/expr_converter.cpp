@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
  * regarding third party software licenses.
  */
 
@@ -634,9 +634,9 @@ core::ExpressionPtr Converter::ExprConverter::VisitParenExpr(const clang::ParenE
 // of a pointer).
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr Converter::ExprConverter::VisitGNUNullExpr(const clang::GNUNullExpr* nullExpr) {
-	core::TypePtr&& type = convFact.convertType(GET_TYPE_PTR(nullExpr));
+	core::TypePtr type = convFact.convertType(GET_TYPE_PTR(nullExpr));
 	assert(type->getNodeType() != core::NT_ArrayType && "C pointer type must of type array<'a,1>");
-	return builder.callExpr(gen.getGetNull(), builder.getTypeLiteral(type));
+	return builder.refReinterpret(BASIC.getRefNull(), type);
 }
 
 core::ExpressionPtr Converter::ExprConverter::VisitImplicitCastExpr(const clang::ImplicitCastExpr* castExpr) {

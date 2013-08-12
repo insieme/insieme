@@ -104,7 +104,7 @@ void tryStructExtract(ExpressionPtr& expr, IRBuilder& builder) {
 
 bool isNullPtr(const ExpressionPtr& expr, const IRBuilder& builder) {
 	// cast to void pointer
-	if(core::analysis::isCallOf(expr, BASIC.getGetNull()))
+	if (BASIC.isRefNull(expr))
 		return true;
 
 	// null literal
@@ -639,9 +639,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program, const ConversionJo
 
 	ADD_Handler(builder, o2i, "icl_create_buffer",
 			// Flags can be ignored, INSPIRE is always blocking
-			return getCreateBuffer("icl_create_buffer", node->getArgument(1), node->getArgument(2), false, builder.intLit(0),
-					builder.callExpr(builder.refType(builder.arrayType(BASIC.getInt4())), BASIC.getGetNull(),
-					builder.getTypeLiteral(builder.arrayType(BASIC.getInt4())))); // errorcode_ret, never set
+			return getCreateBuffer("icl_create_buffer", node->getArgument(1), node->getArgument(2), false, builder.intLit(0), BASIC.getRefNull());
 	);
 
 	ADD_Handler(builder, o2i, "clEnqueueCopyBuffer",

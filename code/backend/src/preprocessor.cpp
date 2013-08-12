@@ -214,8 +214,8 @@ namespace backend {
 			}
 		}
 
-		// ... or a call to getNull(...)
-		if (core::analysis::isCallOf(value, basic.getGetNull())) {
+		// ... or the ref.null literal
+		if (basic.isRefNull(value)) {
 			return true;
 		}
 

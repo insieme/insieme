@@ -247,9 +247,8 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	///////////////////////////////////////////////////////////////////////////////////////
 	if ( gen.isAnyRef(trgTy) &&  *expr == *builder.literal(argTy,"0") ) 
 	{
-		// FIXME: not sure about this being correct, we have to get a ref from a null in order to
-		// convert it to the anyref value
-		return builder.callExpr( gen.getGetNull(), builder.getTypeLiteral(argTy) );
+		// just use the null literal
+		return gen.getRefNull();
 	}
 
 
@@ -260,7 +259,8 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	///////////////////////////////////////////////////////////////////////////////////////
 	if ( isRefArray(trgTy) && *expr == *builder.literal(argTy,"0") ) 
 	{
-		return builder.callExpr( gen.getGetNull(), builder.getTypeLiteral(GET_REF_ELEM_TYPE(trgTy)) );
+		// just use the null literal
+		return gen.getRefNull();
 	}
 
 	///////////////////////////////////////////////////////////////////////////////////////

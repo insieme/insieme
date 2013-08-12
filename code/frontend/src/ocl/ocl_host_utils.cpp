@@ -175,12 +175,6 @@ void copyAnnotations(const core::NodePtr& source, core::NodePtr& sink) {
 	sink->setAnnotations(source->getAnnotations());
 }
 
-bool NullLitSearcher::visitCallExpr(const core::CallExprPtr& call) {
-	if(BASIC.isGetNull(call->getFunctionExpr()))
-		return true;
-	return false;
-}
-
 
 bool LambdaSearcher::visitCallExpr(const core::CallExprAddress& call) {
 	bool ret = false;
