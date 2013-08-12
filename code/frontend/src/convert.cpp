@@ -88,6 +88,7 @@
 
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/c/extern.h"
+#include "insieme/annotations/c/extern_c.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 using namespace clang;
@@ -265,15 +266,24 @@ tu::IRTranslationUnit Converter::convert() {
 	struct FunctionVisitor : public analysis::PrunableDeclVisitor<FunctionVisitor> {
 
 		Converter& converter;
-		FunctionVisitor(Converter& converter) : converter(converter) {}
+		bool externC;
+		FunctionVisitor(Converter& converter, bool Ccode) : converter(converter), externC(Ccode) {}
+
+		void VisitLinkageSpec(const clang::LinkageSpecDecl* link) {
+			bool isC =  link->getLanguage () == clang::LinkageSpecDecl::lang_c;
+			FunctionVisitor vis(converter, isC);
+			vis.traverseDeclCtx(llvm::cast<clang::DeclContext> (link));
+		}
 
 		void VisitFunctionDecl(const clang::FunctionDecl* funcDecl) {
 			if (funcDecl->isTemplateDecl()) return;
 			if (!funcDecl->doesThisDeclarationHaveABody()) return;
-			converter.convertFunctionDecl(funcDecl);
+			core::ExpressionPtr irFunc = converter.convertFunctionDecl(funcDecl);
+			if (externC) 
+				annotations::c::markAsExternC(irFunc.as<core::LiteralPtr>());
 			return;
 		}
-	} funVisitor(*this);
+	} funVisitor(*this, false);
 
 	funVisitor.traverseDeclCtx(declContext);
 
