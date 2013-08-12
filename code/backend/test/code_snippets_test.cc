@@ -210,7 +210,7 @@ TEST(FunctionCall, GenericFunctionAndTypeLiteral) {
     		"int<4> main() {"
     		"	(ref<array<'a,1>> data)->uint<8> {"
     		"		return sizeof(lit('a));"
-    		"	} (get.null(lit(array<real<4>,1>)));"
+    		"	} (ref.reinterpret(ref.null,lit(array<real<4>,1>)));"
     		"	return 0;"
     		"}"
     );

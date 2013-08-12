@@ -587,7 +587,7 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 	// if it is a ref type ...
 	if (type->getNodeType() == core::NT_RefType) {
 		// return NULL for the specific type
-		return callExpr(type, manager.getLangBasic().getGetNull(), getTypeLiteral(type.as<RefTypePtr>()->getElementType()));
+		return refReinterpret(manager.getLangBasic().getRefNull(), type.as<RefTypePtr>()->getElementType());
 	}
 
 	// if it is a vector type use init uniform
@@ -659,6 +659,16 @@ CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& 
 	}
 
 	return callExpr(target.getType(), manager.getLangBasic().getRefAssign(), target, value);
+}
+
+ExpressionPtr IRBuilder::refReinterpret(const ExpressionPtr& subExpr, const TypePtr& newElementType) const {
+	assert(subExpr->getType().isa<RefTypePtr>());
+	return callExpr(
+		refType(newElementType),
+		manager.getLangBasic().getRefReinterpret(),
+		subExpr,
+		getTypeLiteral(newElementType)
+	);
 }
 
 ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
