@@ -29,18 +29,17 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
 #include "insieme/backend/runtime/runtime_extensions.h"
 
-#include "insieme/annotations/c/naming.h"
-
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/encoder/lists.h"
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/backend/runtime/runtime_entities.h"
 
@@ -56,7 +55,7 @@ namespace runtime {
 
 		// members are initialized using the content of the macro file
 		#define TYPE(_name, _type) 				_name(core::lang::getType(manager, _type)),
-		#define NTYPE(_name, _type, _cname)    	_name(annotations::c::attachCName(core::lang::getType(manager, _type), _cname)),
+		#define NTYPE(_name, _type, _cname)    	_name(core::annotations::attachNameWithReturn(core::lang::getType(manager, _type), _cname)),
 		#define LITERAL(_name, _value, _type) 	_name(core::lang::getLiteral(manager, _type, _value)),
 		#include "insieme/backend/runtime/ir_extensions.def"
 		#undef TYPE

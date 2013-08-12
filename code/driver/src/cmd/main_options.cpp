@@ -142,23 +142,30 @@ namespace cmd {
 
 	}
 
-	CommandLineOptions::operator frontend::ConversionJob() const {
-
-		frontend::ConversionJob job;
+	frontend::ConversionJob CommandLineOptions::toConversionJob() const {
 
 		// forward options
-		job.setFiles(InputFiles);
-		job.setIncludeDirectories(IncludePaths);
-		job.setDefinitions(Defs);
-		job.setIntercepterConfigFile(Intercept);
-		job.setStandard(STD);
+		frontend::ConversionJob job(InputFiles, IncludePaths);
+
+		// add intercepts
+		for (auto i : Interceptions) job.setInterception(i);
+
+		// add macro definitions
+		for (auto def : Defs) job.setDefinition(def);
+
+		// update standard
+		job.setStandard(frontend::ConversionSetup::Auto);
+		if (STD == "c99") {
+			job.setStandard(frontend::ConversionSetup::C99);
+		} else if (STD == "c++03") {
+			job.setStandard(frontend::ConversionSetup::Cxx03);
+		}
 
 		// forward flags
 		job.setOption(frontend::ConversionJob::OpenMP, OpenMP);
 		job.setOption(frontend::ConversionJob::OpenCL, OpenCL);
 		job.setOption(frontend::ConversionJob::Cilk, Cilk);
 		job.setOption(frontend::ConversionJob::WinCrossCompile, WinCrossCompile);
-		job.setOption(frontend::ConversionJob::DumpCFG, ClangCFGDump);
 		job.setOption(frontend::ConversionJob::TAG_MPI, MPITag);
 
 		// done

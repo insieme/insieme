@@ -752,6 +752,24 @@ namespace c_ast {
 				return out;
 			}
 
+			PRINT(ExternC) {
+				// extern "C" { \n <inner def> \n }
+
+				out << "extern \"C\" {";
+				incIndent();
+				newLine(out);
+
+				// print definitions
+				for(auto definition : node->definitions) {
+					out << print(definition);
+				}
+
+				decIndent();
+				out << "}";
+				newLine(out);
+				return out;
+			}
+
 			#undef PRINT
 
 		};

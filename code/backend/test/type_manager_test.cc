@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -128,6 +128,17 @@ TEST(TypeManager, Basic) {
 	EXPECT_EQ("double", toC(info.lValueType));
 	EXPECT_EQ("double", toC(info.rValueType));
 	EXPECT_EQ("double", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_FALSE(info.definition);
+	EXPECT_FALSE(info.declaration);
+
+
+	type = basic.getLongDouble();
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("long double", toC(info.lValueType));
+	EXPECT_EQ("long double", toC(info.rValueType));
+	EXPECT_EQ("long double", toC(info.externalType));
 	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_FALSE(info.definition);

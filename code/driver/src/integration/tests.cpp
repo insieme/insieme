@@ -52,21 +52,32 @@ namespace insieme {
 namespace driver {
 namespace integration {
 
+	namespace {
+
+		frontend::ConversionJob toJob(const IntegrationTestCase& testCase) {
+
+			// load code using frontend
+			auto job = frontend::ConversionJob(testCase.getFiles(), testCase.getIncludeDirs());
+			job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
+			job.setOption(frontend::ConversionJob::OpenCL, testCase.isEnableOpenCL());
+
+			// add pre-processor definitions
+			for_each(testCase.getDefinitions(), [&](const std::pair<string,string>& def) {
+				job.setDefinition(def.first, def.second);
+			});
+
+			return job;
+		}
+
+	}
+
 
 	core::ProgramPtr IntegrationTestCase::load(core::NodeManager& manager) const {
+		return toJob(*this).execute(manager);
+	}
 
-		// load code using frontend
-		auto job = frontend::ConversionJob(files, includeDirs);
-		job.setOption(frontend::ConversionJob::OpenMP, enableOpenMP);
-		job.setOption(frontend::ConversionJob::OpenCL, enableOpenCL);
-
-		// add pre-processor definitions
-		for_each(definitions, [&](const std::pair<string,string>& def) {
-			job.addDefinition(def.first, def.second);
-		});
-
-		return job.execute(manager);
-
+	frontend::tu::IRTranslationUnit IntegrationTestCase::loadTU(core::NodeManager& manager) const {
+		return toJob(*this).toTranslationUnit(manager);
 	}
 
 	namespace fs = boost::filesystem;
@@ -133,8 +144,8 @@ namespace integration {
 
 
 				// read inputs.data (if present)
-				vector<string> files;
-				vector<string> includeDirs;
+				vector<frontend::path> files;
+				vector<frontend::path> includeDirs;
 				auto inputFile = testCaseDir / "inputs.data";
 				if (fs::exists(inputFile)) {
 					// read file list from inputs.data
@@ -301,7 +312,7 @@ namespace integration {
 
 		// add pre-processor definitions
 		for_each(definitions, [&](const std::pair<string,string>& def) {
-			job.addDefinition(def.first, def.second);
+			job.setDefinition(def.first, def.second);
 		});
 
 		return job.execute(manager);

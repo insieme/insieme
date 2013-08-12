@@ -41,6 +41,8 @@
 
 /**
  * A header file for literals to be marked as being declared extern.
+ * Extern literals are literals within an external storage - and therefore
+ * only need to declared but not defined within resulting code.
  */
 
 namespace insieme {

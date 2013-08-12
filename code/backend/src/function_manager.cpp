@@ -59,6 +59,7 @@
 #include "insieme/core/types/type_variable_deduction.h"
 
 #include "insieme/annotations/c/include.h"
+#include "insieme/annotations/c/extern_c.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
@@ -573,6 +574,7 @@ namespace backend {
 
 			auto header = converter.getFunctionManager().getHeaderFor(literal);
 			if (header) {
+
 				// => use prototype of include file
 				res->prototype = c_ast::DummyFragment::createNew(converter.getFragmentManager());
 				res->prototype->addInclude(*header);
@@ -593,7 +595,8 @@ namespace backend {
 
 			} else {
 				// => add prototype for this literal
-				c_ast::FunctionPrototypePtr code = manager->create<c_ast::FunctionPrototype>(fun.function);
+				c_ast::TopLevelElementPtr code = manager->create<c_ast::FunctionPrototype>(fun.function);
+				if (annotations::c::isExternC(literal)) code = manager->create<c_ast::ExternC>(code);
 				res->prototype = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), code);
 				res->prototype->addDependencies(fun.prototypeDependencies);
 			}

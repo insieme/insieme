@@ -79,7 +79,6 @@ namespace backend {
 
 
 		core::ExpressionPtr inlineLazy(const core::NodePtr& lazy) {
-
 			core::NodeManager& manager = lazy->getNodeManager();
 
 			core::ExpressionPtr exprPtr = dynamic_pointer_cast<const core::Expression>(lazy);
@@ -136,7 +135,7 @@ namespace backend {
 		 */
 		c_ast::ExpressionPtr narrow(ConversionContext& context, const core::ExpressionPtr& root, const core::ExpressionPtr& dataPath) {
 			// convert data path to access operations and use standard conversion
-			return context.getConverter().getStmtConverter().convertExpression(context, wrapNarrow(root, dataPath));
+		 	return context.getConverter().getStmtConverter().convertExpression(context, wrapNarrow(root, dataPath));
 		}
 
 		/**
@@ -439,6 +438,11 @@ namespace backend {
 					// strings are forwarded to external functions (printf) directly
 					return c_ast::deref(c_ast::cast(c_ast::ptr(info.rValueType), CONVERT_ARG(0)));
 				}
+			}
+
+			// deref of an assigment, do not
+			if (core::analysis::isCallOf (ARG(0), LANG_BASIC.getRefAssign()) ){
+				return CONVERT_ARG(0);
 			}
 
 			return c_ast::deref(CONVERT_ARG(0));
@@ -1067,9 +1071,13 @@ namespace backend {
 			res[irppExt.getArrayCtor()] = OP_CONVERTER({
 
 				// init array using a vector expression
-				auto type = CONVERT_TYPE(ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType());
+				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
+				auto type = CONVERT_TYPE(objType);
 				auto size = CONVERT_ARG(2);
 				c_ast::ExpressionPtr res = c_ast::initArray(type, size);
+
+				// add dependency to class declaration
+				context.addDependency(GET_TYPE_INFO(objType).declaration);
 
 				// convert default constructor
 				auto ctor = CONVERT_ARG(1);
@@ -1088,10 +1096,14 @@ namespace backend {
 
 			res[irppExt.getVectorCtor()] = OP_CONVERTER({
 
-				// init array using a vector expression
-				auto type = CONVERT_TYPE(ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType());
+				// init vector using a vector expression
+				auto objType = ARG(1)->getType().as<core::FunctionTypePtr>()->getObjectType();
+				auto type = CONVERT_TYPE(objType);
 				auto size = CONVERT_ARG(2);
 				c_ast::ExpressionPtr res = c_ast::initArray(type, size);
+
+				// add dependency to class declaration
+				context.addDependency(GET_TYPE_INFO(objType).declaration);
 
 				// convert default constructor
 				auto ctor = CONVERT_ARG(1);

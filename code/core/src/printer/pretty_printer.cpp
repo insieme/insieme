@@ -46,6 +46,7 @@
 #include "insieme/utils/map_utils.h"
 
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_class_info.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/encoder/lists.h"
 
@@ -420,7 +421,19 @@ namespace {
 					this->visit(cur->getName());
 					out << ":";
 				   this->visit(cur->getType());
-			    }) << newLine << ">";
+			    });
+			
+// TODO: finnish 
+//
+//			if(hasMetaInfo(node)){
+//				const ClassMetaInfo& meta = getMetaInfo(node); 
+//				for (auto child: meta.getChildNodes()){
+//					out << newLine;
+//					this->visit(child);
+//				}
+//			}
+
+			out << newLine << ">";
 		});
 
 		PRINT(TupleType, {

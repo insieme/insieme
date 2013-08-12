@@ -41,7 +41,7 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/checks/full_check.h"
 
-#include "insieme/annotations/c/naming.h"
+#include "insieme/core/annotations/naming.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/frontend/clang_config.h"
@@ -146,7 +146,7 @@ TEST(OclCompilerTest, HelloCLTest) {
     job.setOption(fe::ConversionJob::OpenCL);
 
     LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";
-    core::ProgramPtr program = job.execute(manager);
+    core::ProgramPtr program = job.execute(manager, false);
     LOG(INFO) << "Done.";
 
     core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);

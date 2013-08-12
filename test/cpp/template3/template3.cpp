@@ -17,6 +17,7 @@ A assignValue(B b){
 template <class A>
 class Obj{
 
+	const A& c_ref;
 	A& ref;
 	A  value;
 
@@ -24,11 +25,11 @@ class Obj{
 	public:
 
 		Obj (A& a) : 
-		 ref(a), value(a)
+		 ref(a), c_ref(a), value(a)
 		{}
 
 		Obj (const Obj<A>& o):
-			ref(o.ref), value(o.value)
+			ref(o.ref), c_ref(o.c_ref), value(o.value)
 		{}
 
 		template <class B>
@@ -54,14 +55,16 @@ int main (){
 		Obj<int> a(value);
 		Obj<int> b(a);
 		value++;
-		std::cout << value << ":" << b.getRefValue() << ":" << b.getValue() << std::endl;
+		std::cout << value << ":" << b.getRefValue() << ":" << b.getRefValue() << ":" << b.getValue() << std::endl;
+
 	}
+	/*
 	{
 		float value =4;
 		Obj<float> a(value);
 		Obj<float> b(a);
 		value++;
-		std::cout << value << ":" << b.getRefValue() << ":" << b.getValue() << std::endl;
+		std::cout << value << ":" << b.getRefValue() << ":" << b.getRefValue() << ":" << b.getValue() << std::endl;
 	}
 	{
 		int  value = 4;
@@ -69,6 +72,7 @@ int main (){
 		Obj<int *> a(ptr);
 		Obj<int *> b(a);
 		value++;
-		std::cout << value << ":" << *b.getRefValue() << ":" << *b.getValue() << std::endl;
+		std::cout << value << ":" << *b.getRefValue() << ":" << *b.getRefValue() << ":" << *b.getValue() << std::endl;
 	}
+	*/
 }

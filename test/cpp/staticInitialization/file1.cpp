@@ -17,6 +17,8 @@ int main(){
 	std::cout << "extern" << a << std::endl;
 
 	std::cout << "statics " << A::zcall << " : " << A::acall << std::endl;
+	A::acall = 15;
+	std::cout << "statics " << A::zcall << " : " << A::acall << std::endl;
 
 	return 0;
 };

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -46,8 +46,6 @@
 #include <clang/AST/Decl.h>
 #pragma GCC diagnostic pop
 
-#include "insieme/core/ir_program.h"
-
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
@@ -55,7 +53,9 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/transform/node_replacer.h"
 
+#include "test_utils.inc"
 
 using namespace insieme;
 using namespace insieme::core;
@@ -65,7 +65,7 @@ using namespace insieme::frontend::conversion;
 namespace fe = insieme::frontend;
 
 #define CHECK_BUILTIN_TYPE(TypeName, InsiemeTypeDesc) \
-	{ ConversionFactory convFactory( manager, prog );\
+	{ Converter convFactory( manager, prog );\
 	clang::BuiltinType builtin(clang::BuiltinType::TypeName); \
 	TypePtr convType = convFactory.convertType( &builtin ); \
 	EXPECT_TRUE(convType); \
@@ -76,7 +76,7 @@ TEST(TypeConversion, HandleBuildinType) {
 	Logger::get(std::cerr, INFO);
 
 	NodeManager manager;
-	fe::Program prog(manager);
+	fe::Program prog(manager, SRC_DIR "/inputs/stmt.c");		// just using some dummy file ..
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
@@ -119,27 +119,8 @@ TEST(TypeConversion, HandleBuildinType) {
 	// Double
 	CHECK_BUILTIN_TYPE(Double, "real<8>");
 	// LongDouble
-	// CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
+	CHECK_BUILTIN_TYPE(LongDouble, "real<16>");
 
-}
-
-TEST(TypeConversion, HandlePointerType) {
-	using namespace clang;
-
-	NodeManager manager;
-	fe::ConversionJob job;
-	fe::Program prog(manager, job);
-	const fe::ClangCompiler& clang = fe::ClangCompiler(job);
-	ConversionFactory convFactory( manager, prog );
-
-	clang::Type* intTy = new clang::BuiltinType(clang::BuiltinType::Int);
-	QualType pointerTy = clang.getASTContext().getPointerType(QualType(intTy, 0));
-
-	TypePtr insiemeTy = convFactory.convertType( pointerTy.getTypePtr() );
-	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("ref<array<int<4>,1>>", insiemeTy->toString());
-
-	operator delete (intTy);
 }
 
 //CXX Reference Type -- NOT SUPPORTED IN C
@@ -361,71 +342,36 @@ TEST(TypeConversion, HandleFunctionType) {
 //	operator delete (floatTy);
 }
 
-TEST(TypeConversion, HandleArrayType) {
-	using namespace clang;
-
-	NodeManager manager;
-	fe::ConversionJob config;
-	fe::Program prog(manager, config);
-	const fe::ClangCompiler& clang = fe::ClangCompiler(config);
-
-
-	ASTContext& ctx = clang.getASTContext();
-
-	// Check constant arrays: i.e. int a[4];
-	BuiltinType* intTy = new BuiltinType(BuiltinType::Int);
-	{
-		QualType arrayTy = ctx.getConstantArrayType(QualType(intTy, 0), llvm::APInt(16,8,false), clang::ArrayType::Normal, 0);
-		ConversionFactory convFactory( manager, prog );
-		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
-		EXPECT_TRUE(insiemeTy);
-		EXPECT_EQ("vector<int<4>,8>", insiemeTy->toString());
-	}
-	operator delete (intTy);
-
-	// check incomplete array types: char* arr[]
-	BuiltinType* charTy = new BuiltinType(BuiltinType::SChar);
-	{
-		QualType arrayTy = ctx.getIncompleteArrayType(ctx.getPointerType(QualType(charTy, 0)), clang::ArrayType::Normal, 0);
-		ConversionFactory convFactory( manager, prog );
-		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
-		EXPECT_TRUE(insiemeTy);
-		EXPECT_EQ("array<ref<array<char,1>>,1>", insiemeTy->toString());
-	}
-	operator delete (charTy);
-
-	// ... check variable array and dependent array sizes
-
-}
-
-
 TEST(TypeConversion, FileTest) {
 	Logger::get(std::cerr, INFO, 2);
 
 	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob(SRC_DIR "/inputs/types.c") );
-	
-	prog.analyzeFuncDependencies();
+	fe::Program prog(manager, SRC_DIR "/inputs/types.c");
 
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
+	// we use an internal manager to have private counter for variables so we can write independent tests
+	NodeManager mgr;
+
+	fe::conversion::Converter convFactory( mgr, prog );
+	convFactory.convert();
+
+	auto resolve = [&](const core::NodePtr& cur) {
+		return convFactory.getIRTranslationUnit().resolve(cur);
+	};
+
 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-		// we use an internal manager to have private counter for variables so we can write independent tests
-		NodeManager mgr;
 
-		ConversionFactory convFactory( mgr, prog );
-		convFactory.setTranslationUnit(&tu);
+		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
-
-		if(tp.isStatement())
-			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(analysis::normalize(convFactory.convertStmt( tp.getStatement() )), printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
-		else {
+		if(tp.isStatement()) {
+            StatementPtr stmt = fe::fixVariableIDs(resolve(convFactory.convertStmt( tp.getStatement() ))).as<StatementPtr>();
+			EXPECT_EQ(tp.getExpected(), '\"' + toString(printer::PrettyPrinter(stmt, printer::PrettyPrinter::PRINT_SINGLE_LINE)) + '\"' );
+		} else {
 			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
+				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertType( td->getTypeForDecl() ))->toString() + '\"' );
 			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
-				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
+				EXPECT_EQ(tp.getExpected(), '\"' + resolve(convFactory.convertVarDecl( vd ))->toString() + '\"' );
 			}
 		}
 	}

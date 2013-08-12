@@ -26,5 +26,7 @@ int main(int argc, char **argv){
 	a->f();
 	b.f();
 
+	delete a;
+
 	return 0;
 }

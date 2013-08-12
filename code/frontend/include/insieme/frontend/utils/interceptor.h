@@ -36,29 +36,25 @@
 
 #pragma once 
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#include <clang/AST/Decl.h>
-#include <clang/AST/StmtVisitor.h>
-#include <clang/AST/TypeVisitor.h>
-#include <clang/AST/DeclTemplate.h>
-#pragma GCC diagnostic pop
-
+#include <map>
+#include <boost/regex.hpp>
 #include <boost/filesystem.hpp>
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/utils/map_utils.h"
 
-#include "insieme/frontend/utils/indexer.h"
 
-#include <boost/regex.hpp>
-#include <map>
+// Forward declarations
+namespace clang {
+class Type;
+class FunctionDecl;
+} // End clang namespace
 
 namespace insieme {
 namespace frontend { 
 
 namespace conversion {
-class ConversionFactory;
+class Converter;
 }
 
 namespace utils {
@@ -67,56 +63,41 @@ class Interceptor {
 public:
 	Interceptor(
 			insieme::core::NodeManager& mgr,
-			insieme::frontend::utils::Indexer& indexer,
-			const vector<boost::filesystem::path>& stdLibDirs)
-		: indexer(indexer), builder(mgr), stdLibDirs(stdLibDirs), 
+			const vector<boost::filesystem::path>& stdLibDirs,
+			const std::set<std::string>& interceptSet)
+		: builder(mgr), stdLibDirs(stdLibDirs),
 		
 		// by default intercept std:: and __gnu_cxx:: namespaces
 		// __gnu_cxx is needed for the iterator of std::vector for example
-		toIntercept( { "std::.*", "__gnu_cxx::.*" } ), rx("("+toString(join(")|(", toIntercept))+")")
+		toIntercept(interceptSet), 
+	
+		//joins all the strings in the toIntercept-set to one big regEx
+		rx("("+toString(join(")|(", toIntercept))+")")
 	{}
 
-	void loadConfigFile(std::string fileName);	
 	void loadConfigSet(std::set<std::string> toIntercept);	
 	
 	bool isIntercepted(const string& name) const;
 	bool isIntercepted(const clang::Type* type) const;
 	bool isIntercepted(const clang::FunctionDecl* decl) const;
 
-	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::ConversionFactory& convFact);
-	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::ConversionFactory& convFact);
-
-	insieme::frontend::utils::Indexer& getIndexer() const {
-		return indexer;
-	}
+	insieme::core::TypePtr intercept(const clang::Type* type, insieme::frontend::conversion::Converter& convFact);
+	insieme::core::ExpressionPtr intercept(const clang::FunctionDecl* decl, insieme::frontend::conversion::Converter& convFact);
 
 	const vector<boost::filesystem::path>& getStdLibDirectories() const {
 		return stdLibDirs;
 	}
 
 private:
-	insieme::frontend::utils::Indexer& indexer;
 	insieme::core::IRBuilder builder;
 
-	const vector<boost::filesystem::path>& stdLibDirs;
+	const vector<boost::filesystem::path> stdLibDirs;
 
+	// set of strings representing the regEx to be intercepted
 	std::set<std::string> toIntercept;
+
+	// the combined regex from the toIntercept-set
 	boost::regex rx;
-};
-
-struct InterceptTypeVisitor : public clang::TypeVisitor<InterceptTypeVisitor, core::TypePtr> {
-
-	insieme::frontend::conversion::ConversionFactory& convFact;
-	const insieme::core::IRBuilder& builder;
-	const Interceptor& interceptor;
-	
-	InterceptTypeVisitor(insieme::frontend::conversion::ConversionFactory& convFact, const Interceptor& interceptor);
-
-	//core::TypePtr VisitTypedefType(const clang::TypedefType* typedefType);
-	core::TypePtr VisitTagType(const clang::TagType* tagType);
-	core::TypePtr VisitTemplateSpecializationType(const clang::TemplateSpecializationType* templTy);
-	core::TypePtr VisitTemplateTypeParmType(const clang::TemplateTypeParmType* templParmType);
-	core::TypePtr Visit(const clang::Type* type);
 };
 
 } // end utils namespace

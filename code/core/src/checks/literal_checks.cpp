@@ -76,6 +76,14 @@ namespace checks {
 
 		const string& value = address->getStringValue();
 
+
+		if (value == "this"){
+			add(res, Message( address, 
+					EC_FORMAT_INVALID_LITERAL,
+					format(" Unresolved \"this\" literal found, check translation process :%s", toString(*type)),
+					Message::ERROR));
+		}
+
 		// a utility to register an error
 		auto addError = [&]() {
 			add(res, Message(address,

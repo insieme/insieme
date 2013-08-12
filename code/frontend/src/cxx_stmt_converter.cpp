@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -40,8 +40,8 @@
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/utils/ir_cast.h"
-#include "insieme/frontend/utils/ir_utils.h"
 #include "insieme/frontend/utils/debug.h"
+#include "insieme/frontend/utils/macros.h"
 
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/omp/omp_pragma.h"
@@ -55,7 +55,6 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/ir++_utils.h"
 
-#include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
@@ -75,14 +74,14 @@ namespace conversion {
 //							DECLARATION STATEMENT
 // 			In clang a declstmt is represented as a list of VarDecl
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
 	return StmtConverter::VisitDeclStmt(declStmt);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							RETURN STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
 
 	vector<core::StatementPtr> stmtList;
 	stmtutils::StmtWrapper stmt = StmtConverter::VisitReturnStmt(retStmt);
@@ -93,14 +92,14 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 	}
 
 	if(llvm::isa<clang::IntegerLiteral>(retStmt->getRetValue()) ||
-		llvm::isa<clang::BinaryOperator>(retStmt->getRetValue()) || 
+		llvm::isa<clang::BinaryOperator>(retStmt->getRetValue()) ||
 		llvm::isa<clang::CXXMemberCallExpr>(retStmt->getRetValue())) {
 		return stmt;
 	}
 
 	core::ExpressionPtr retExpr = stmt.getSingleStmt().as<core::ReturnStmtPtr>().getReturnExpr();
 
-	// check if the return must be converted or not to a reference, 
+	// check if the return must be converted or not to a reference,
 	// is easy to check if the value has being derefed or not
 	if (gen.isPrimitive(retExpr->getType()))
 			return stmt;
@@ -119,7 +118,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 	if ((cast = llvm::dyn_cast<clang::CastExpr>(retStmt->getRetValue())) != NULL){
 		switch(cast->getCastKind () ){
 			case CK_NoOp : // make constant
-	
+
 				if (core::analysis::isCppRef(retExpr->getType())){
 					retExpr =  builder.callExpr(mgr.getLangExtension<core::lang::IRppExtensions>().getRefCppToConstCpp(), retExpr);
 				}
@@ -136,29 +135,28 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 	else if ((ctorExpr = llvm::dyn_cast<clang::CXXConstructExpr>(retStmt->getRetValue())) != NULL){
 	// NOTE: if there is a copy constructor inside of the return statement, it should be ignored.
 	// this is produced by the AST, but we should delegate this matters to the backend compiler
-	
+
 		// of the first node after a return is a constructor, copy constructor
 		// we are returning a value.
-		retStmt->dump();
-		
+
 		// behind a return we might find a constructor, it might be elidable or not, but we DO NOT
 		// call a constructor on return in any case
-		if (retExpr->getNodeType() == core::NT_CallExpr){
+/*		if (retExpr->getNodeType() == core::NT_CallExpr){
 			if (const core::FunctionTypePtr& ty = retExpr.as<core::CallExprPtr>().getFunctionExpr().getType().as<core::FunctionTypePtr>()){
-				if(ty.isConstructor()){
+				if(ty.isConstructor() && ctorExpr->getConstructor()->isCopyConstructor()){
 					retExpr = retExpr.as<core::CallExprPtr>()->getArgument(1); // second argument is the copyed obj
 				}
 			}
 		}
-
+*/
 		// fist of all, have a look of what is behind the deRef
 		if (core::analysis::isCallOf(retExpr,mgr.getLangBasic().getRefDeref())){
 			retExpr = retExpr.as<core::CallExprPtr>()[0];
 		}
 
-		if(IS_CPP_REF_EXPR(retExpr)){
+		if(IS_CPP_REF(retExpr->getType())){
 			// we are returning a value, peel out the reference, or deref it
-			if (core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp()) || 
+			if (core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToConstCpp()) ||
 				core::analysis::isCallOf(retExpr,mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp()))
 				retExpr = retExpr.as<core::CallExprPtr>()->getArgument(0);
 			else{
@@ -179,7 +177,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 	else{
 		// not a cast, it is a ref then... only if not array
 		if (!core::analysis::isCallOf(retExpr,mgr.getLangBasic().getScalarToArray()) &&
-			!IS_CPP_REF_EXPR(retExpr)){
+			!IS_CPP_REF(retExpr->getType())){
 				retExpr = builder.callExpr (mgr.getLangExtension<core::lang::IRppExtensions>().getRefIRToCpp(), retExpr);
 		}
 	}
@@ -193,7 +191,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitReturnStmt(clan
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //							COMPOUND STATEMENT
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
 
 	return StmtConverter::VisitCompoundStmt(compStmt);
 
@@ -202,7 +200,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(cl
 	core::StatementPtr retIr;
 	LOG_STMT_CONVERSION(retIr);
 
-	CXXConversionFactory::CXXConversionContext::ScopeObjects parentScopeObjects = cxxConvFact.cxxCtx.scopeObjects;
+	CXXConverter::CXXConversionContext::ScopeObjects parentScopeObjects = cxxConvFact.cxxCtx.scopeObjects;
 	while (!cxxConvFact.cxxCtx.scopeObjects.empty()) {
 		cxxConvFact.cxxCtx.scopeObjects.pop();
 	}
@@ -250,13 +248,13 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCompoundStmt(cl
 }
 
 
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
 	assert(false && "Catch -- Taken care of inside of TryStmt!");
 	//return stmtutils::tryAggregateStmts( builder, Visit(catchStmt->getHandlerBlock()) );
 	return stmtutils::StmtWrapper();
 }
 
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
 
 	//assert(false && "Try -- Currently not supported!");
 	core::CompoundStmtPtr body = builder.wrapBody( stmtutils::tryAggregateStmts( builder, Visit(tryStmt->getTryBlock()) ) );
@@ -266,17 +264,17 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clan
 	for(unsigned i=0;i<numCatch;i++) {
 		clang::CXXCatchStmt* catchStmt = tryStmt->getHandler(i);
 
-		core::VariablePtr var; 
+		core::VariablePtr var;
 		if(const clang::VarDecl* exceptionVarDecl = catchStmt->getExceptionDecl() ) {
 			core::TypePtr exceptionTy = convFact.convertType(catchStmt->getCaughtType().getTypePtr());
-			
+
 			var = builder.variable(exceptionTy);
 
 			//we assume that exceptionVarDecl is not in the varDeclMap
-			assert(convFact.ctx.varDeclMap.find(exceptionVarDecl) == convFact.ctx.varDeclMap.end() 
+			assert(convFact.varDeclMap.find(exceptionVarDecl) == convFact.varDeclMap.end()
 					&& "excepionVarDecl already in vardeclmap");
 			//insert var to be used in conversion of handlerBlock
-			convFact.ctx.varDeclMap.insert( { exceptionVarDecl, var } );
+			convFact.varDeclMap.insert( { exceptionVarDecl, var } );
 			VLOG(2) << convFact.lookUpVariable(catchStmt->getExceptionDecl()).as<core::VariablePtr>();
 		}
 		else {
@@ -291,7 +289,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clan
 	return stmtutils::tryAggregateStmt(builder, builder.tryCatchStmt(body, catchClauses));
 }
 
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
 	assert(false && "ForRange -- Currently not supported!");
 	return stmtutils::StmtWrapper();
 }
@@ -300,7 +298,7 @@ stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt
 // Overwrite the basic visit method for expression in order to automatically
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper ConversionFactory::CXXStmtConverter::Visit(clang::Stmt* stmt) {
+stmtutils::StmtWrapper Converter::CXXStmtConverter::Visit(clang::Stmt* stmt) {
 	VLOG(2) << "CXX";
 	stmtutils::StmtWrapper&& retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 

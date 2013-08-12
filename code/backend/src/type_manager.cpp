@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -460,6 +460,9 @@ namespace backend {
 			if (basic.isDouble(ptr)) {
 				return type_info_utils::createInfo(manager, "double");
 			}
+			if (basic.isLongDouble(ptr)) {
+				return type_info_utils::createInfo(manager, "long double");
+			}
 
 			if (basic.isChar(ptr)) {
 				return type_info_utils::createInfo(manager, "char");
@@ -710,13 +713,17 @@ namespace backend {
 
 			// add member functions
 			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
+				// fix name of all member functions before converting them
+				auto impl = cur.getImplementation();
+				if (!core::analysis::isPureVirtual(impl)) {
+					nameMgr.setName(impl, cur.getName());
+				}
+			}
+			for(const core::MemberFunction& cur : info.getMemberFunctions()) {
 
 				// process function using function manager
 				auto impl = cur.getImplementation();
 				if (!core::analysis::isPureVirtual(impl)) {
-
-					// fix name
-					nameMgr.setName(impl, cur.getName());
 
 					// generate code for member function
 					funMgr.getInfo(cur.getImplementation().as<core::LambdaExprPtr>(), cur.isConst(), cur.isVirtual());
@@ -1372,6 +1379,8 @@ namespace backend {
 
 			// create new type information
 			TypeInfo* res = type_info_utils::createInfo(cType);
+			res->declaration = elementInfo->declaration;
+			res->definition = elementInfo->definition;
 
 			// register it (for destruction)
 			allInfos.insert(res);

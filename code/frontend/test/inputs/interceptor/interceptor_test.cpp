@@ -34,9 +34,6 @@
  * regarding third party software licenses.
  */
 
-// ignore warnings
-#pragma GCC diagnostic ignored "-Wall"
-
 #include "interceptor_header.h"
 
 void intercept_simpleFunc() {

@@ -29,8 +29,8 @@
  *
  * All copyright notices must be kept intact.
  *
- * INSIEME depends on several third party software packages. Please 
- * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * INSIEME depends on several third party software packages. Please
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details
  * regarding third party software licenses.
  */
 
@@ -39,9 +39,8 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
-#include "insieme/annotations/c/naming.h"
-
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/annotations/naming.h"
 
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
@@ -104,11 +103,11 @@ namespace ocl_host {
 
 		// fix name of kernel
 		std::string name;
-		if (kernelLambda->hasAnnotation(annotations::c::CNameAnnotation::KEY)) {
-			name = kernelLambda->getAnnotation(annotations::c::CNameAnnotation::KEY)->getName();
+		if (insieme::core::annotations::hasNameAttached(kernelLambda)) {
+			name = insieme::core::annotations::getAttachedName(kernelLambda);
 		} else {
 			name = "main_kernel";
-			kernelLambda->addAnnotation(std::make_shared<annotations::c::CNameAnnotation>(name));
+			insieme::core::annotations::attachName(kernelLambda,name);
 		}
 
 		// create a kernel code entry

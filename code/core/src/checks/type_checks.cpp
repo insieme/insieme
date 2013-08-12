@@ -62,6 +62,9 @@ namespace {
 		TypePtr fail;
 		const auto& basic = source.getNodeManager().getLangBasic();
 
+		if (source.isa<GenericTypePtr>())
+			return source;
+
 		// if data path is ROOT, the target type is equal to the source type
 		if (basic.isDataPathRoot(datapath)){
 			return source;		// no step to be taken
@@ -366,7 +369,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	TypePtr retType = substitution->applyTo(returnType);
 	TypePtr resType = address->getType();
 
-	if (*retType != *resType) {
+	if (!core::types::isSubTypeOf(retType, resType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_RETURN_TYPE,
 						format("Invalid result type of call expression - expected: %s, actual: %s - function type: %s",
@@ -802,6 +805,13 @@ namespace {
 			exprType = static_pointer_cast<const RecType>(exprType)->unroll();
 		}
 
+		// Accessing an element from a generic type (intercepted)
+		// we should allow it, and we have no way to check the consistency of
+		// the requested element. just return
+		if (dynamic_pointer_cast<const GenericType>(exprType)){
+			return res;
+		}
+
 		// check whether it is a composite type
 		const NamedCompositeTypePtr compositeType = dynamic_pointer_cast<const NamedCompositeType>(exprType);
 		if (!compositeType) {
@@ -1230,6 +1240,10 @@ OptionalMessageList NarrowCheck::visitCallExpr(const CallExprAddress& call) {
 						Message::ERROR));
 		return res;
 	}
+
+	// generic types can not be checked, we must trust 
+	if (narrowType.isa<GenericTypePtr>())
+		return res;
 
 	// check whether specified target type is correct
 	if (*narrowType != *analysis::getRepresentedType(trgArg)){

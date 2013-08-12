@@ -103,26 +103,19 @@ TEST(Interception, FileTest) {
 	Logger::get(std::cerr, DEBUG, 0);
 
 	NodeManager manager;
-	fe::ConversionJob job;
-	fe::Program prog( manager, job );
+	fe::Program prog( manager, SRC_DIR "/inputs/interceptor/interceptor_test.cpp" );
 
-	fe::TranslationUnit& tu = prog.addTranslationUnit( fe::ConversionJob( SRC_DIR "/inputs/interceptor/interceptor_test.cpp" ) );
-	//prog.addTranslationUnit( fe::ConversionJob( SRC_DIR "/inputs/interceptor/interceptor_header.cpp" ) );
+	//setup interceptor 
+	prog.getInterceptor().loadConfigSet( {"ns::simpleFunc.*", "ns::S.*", "nsInc::.*"} );
 	
-	//setting interceptor to use config file
-	prog.getInterceptor().loadConfigFile(std::string(SRC_DIR) + "/inputs/interceptor/interceptor_test.cfg");
-	
-	prog.analyzeFuncDependencies();
-
 	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
+		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it));
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
-		fe::conversion::ConversionFactory convFactory( mgr, prog, true /*isCxx*/);
-		convFactory.setTranslationUnit(&tu);
+		fe::conversion::Converter convFactory( mgr, prog );
 
 		if(tp.isStatement()) {
 			StatementPtr&& stmt = analysis::normalize(convFactory.convertStmt( tp.getStatement() ));
