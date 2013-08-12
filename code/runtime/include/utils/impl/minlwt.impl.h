@@ -261,7 +261,7 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, lwt_context *basestac
 }
 
 void lwt_start(irt_work_item *wi, lwt_context *basestack, wi_implementation_func* func) {
-	makecontext(&wi->stack_ptr, (void(*)(void))func, 1, wi);
+	makecontext(&wi->stack_ptr, (void(*)(void))&_irt_wi_trampoline, 2, wi, func);
 	swapcontext(basestack, &wi->stack_ptr);
 }
 void lwt_continue(lwt_context *newstack, lwt_context *basestack) {
