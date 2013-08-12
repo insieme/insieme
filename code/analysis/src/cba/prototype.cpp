@@ -437,7 +437,7 @@ namespace cba {
 			}
 
 			void visitCallExpr(const CallExprAddress& call, const Context& ctxt, Constraints& constraints) {
-
+std::cout << "Processing call " << call << " for " << ctxt << " ...\n";
 				// add constraints for function and argument expressions
 //				visit(call->getFunctionExpr(), ctxt, constraints);
 //				for(auto arg : call) visit(arg, ctxt, constraints);
@@ -1539,11 +1539,6 @@ namespace cba {
 
 				// check type of parent
 				auto parent = stmt.getParentAddress();;
-				if (auto stmt = parent.isa<StatementAddress>()) {
-					// add constraints for parent node
-					visit(stmt, ctxt, constraints);
-					return;
-				}
 
 				// special case: if parent is a lambda
 				if (auto lambda = parent.isa<LambdaAddress>()) {
@@ -1557,6 +1552,48 @@ namespace cba {
 
 					// if it is a direct call => handle it
 					if (call && call->getFunctionExpr() == lambdaExpr) {
+						visit(call, ctxt, constraints);
+					} else {
+
+						// process any potential call site
+						for(auto call : context.getDynamicCalls()) {
+							// TODO: check right number of arguments
+
+							if (ctxt.callContext.startsWith(0)) {
+
+								// nobody is calling the root context
+								Context srcCtxt = ctxt;
+								srcCtxt.callContext >>= 0;
+
+								visitCallExprInternal(call, srcCtxt, constraints);
+
+							} else {
+								// anybody may call this nested context
+								for(auto l : context.getDynamicCallLabels()) {
+									Context srcCtxt = ctxt;
+									srcCtxt.callContext >>= l;
+									visitCallExprInternal(call, srcCtxt, constraints);
+								}
+							}
+						}
+					}
+
+					// done
+					return;
+				}
+
+
+				// special case: if parent is a bind expression
+				if (auto bind = parent.isa<BindExprAddress>()) {
+
+					// check whether there is a call-side
+					if (bind.isRoot()) return;
+
+					// get enclosing call expression
+					auto call = bind.getParentAddress().isa<CallExprAddress>();
+
+					// if it is a direct call => handle it
+					if (call && call->getFunctionExpr() == bind) {
 						visit(call, ctxt, constraints);
 					} else {
 
@@ -1582,6 +1619,13 @@ namespace cba {
 					}
 
 					// done
+					return;
+				}
+
+				// handle all other statements
+				if (auto stmt = parent.isa<StatementAddress>()) {
+					// add constraints for parent node
+					visit(stmt, ctxt, constraints);
 					return;
 				}
 
@@ -1976,27 +2020,39 @@ namespace cba {
 						// it is within a function => get call sides
 						int userOffset = (params.getParentNode().isa<LambdaPtr>()) ? 5 : 2;		// for bind
 
+//if (!params.getParentNode().isa<LambdaPtr>()) {
+	std::cout << trg << " = " << *trg << "\n";
+	std::cout << params.getParentAddress(userOffset) << "\n";
+	std::cout << params.getParentAddress(userOffset-1) << " = " << *params.getParentAddress(userOffset-1) << "\n";
+	std::cout << params.getParentNode()->getNodeType() << "\n";
+	std::cout << params.getParentAddress(userOffset)->getNodeType() << "\n";
+	std::cout << "\n";
+//}
+
 						auto user = params.getParentAddress(userOffset).as<StatementAddress>();
 						auto userType = user->getNodeType();
 
 						assert_lt(userOffset, params.getDepth());
 
 						if (userType == NT_CallExpr && user.as<CallExprAddress>()->getFunctionExpr() == params.getParentAddress(userOffset-1)) {
-
-							// it is a direct call - resolve the call expression
-							if (context.callContext.startsWith(0)) {
-								// nobody is calling the root context
-								Context srcCtxt = context;
-								srcCtxt.callContext >>= 0;
-								resolver->addConstraints(user, srcCtxt, res);
-							} else {
-								// anybody may call this nested context
-								for(auto l : dynamicCallLabels) {
-									Context srcCtxt = context;
-									srcCtxt.callContext >>= l;
-									resolver->addConstraints(user, srcCtxt, res);
-								}
-							}
+std::cout << "Is direct call!\n";
+							resolver->addConstraints(user, context, res);
+//							// it is a direct call - resolve the call expression
+//							if (context.callContext.startsWith(0)) {
+//								// nobody is calling the root context
+//								Context srcCtxt = context;
+//								srcCtxt.callContext >>= 0;
+//std::cout << "A - Resolving context " << srcCtxt << "\n";
+//								resolver->addConstraints(user, srcCtxt, res);
+//							} else {
+//								// anybody may call this nested context
+//								for(auto l : dynamicCallLabels) {
+//									Context srcCtxt = context;
+//									srcCtxt.callContext >>= l;
+//std::cout << "B - Resolving context " << srcCtxt << "\n";
+//									resolver->addConstraints(user, srcCtxt, res);
+//								}
+//							}
 
 						} else if (userType == NT_CompoundStmt) {
 

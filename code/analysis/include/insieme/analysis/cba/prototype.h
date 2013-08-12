@@ -401,14 +401,14 @@ namespace cba {
 		template<typename T>
 		const std::set<T>& getValuesOf(const core::ExpressionAddress& expr, const TypedSetType<T>& set, const Context& ctxt = Context()) {
 			auto id = getSet(set, getLabel(expr), ctxt);
-//std::cout << "Looking for "<< id << "\n";
+std::cout << "Looking for "<< id << "\n";
 			return solver.solve(id)[id];
 		}
 
 		template<typename T>
 		const std::set<T>& getValuesOf(const core::VariableAddress& var, const TypedSetType<T>& set, const Context& ctxt = Context()) {
 			auto id = getSet(set, getVariable(var), ctxt);
-//std::cout << "Looking for "<< id << "\n";
+std::cout << "Looking for "<< id << "\n";
 			return solver.solve(id)[id];
 		}
 
