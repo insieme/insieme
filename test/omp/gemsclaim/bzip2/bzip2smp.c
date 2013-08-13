@@ -495,7 +495,7 @@ int main( int argc, char *argv[] )
   /* No further semantic cleanup is required.
   Don't care freeing up the resources, the OS must do it anyway. */
 
-  printf("Elapsed time %.16f (%f - %f, tick = %f)\n", endTime - startTime, endTime, startTime, omp_get_wtick());
+  printf("Elapsed time %.16f (%f - %f)\n", endTime - startTime, endTime, startTime);
 
   return 0;
 }
