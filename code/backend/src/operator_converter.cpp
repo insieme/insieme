@@ -1209,6 +1209,16 @@ namespace backend {
 				assert(core::analysis::isConstCppRef(targetTy) && "targetType not a reference type");
 				return c_ast::dynamicCast(targetCType, CONVERT_ARG(0));
 			});
+			res[irppExt.getTypeid()] = OP_CONVERTER({
+				// extract typeinfo
+				core::GenericTypePtr type = dynamic_pointer_cast<const core::GenericType>(ARG(0)->getType());
+				if(type) {
+                    			core::TypePtr target = type->getTypeParameter()[0];
+					return c_ast::typeId(CONVERT_TYPE(target));
+				} else {
+					return c_ast::typeId(CONVERT_ARG(0));
+				}
+			});
 		}
 
 		#include "insieme/backend/operator_converter_end.inc"

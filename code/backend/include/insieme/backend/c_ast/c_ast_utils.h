@@ -66,6 +66,7 @@ namespace c_ast {
 		case UnaryOperation::Indirection: 	return 14;
 		case UnaryOperation::Reference: 	return 14;
 		case UnaryOperation::SizeOf: 		return 14;
+		case UnaryOperation::Typeid: 		return 14;
 		case UnaryOperation::New:			return  1;
 		case UnaryOperation::Delete:		return  1;
 		case UnaryOperation::DeleteArray:	return  1;
@@ -343,6 +344,10 @@ namespace c_ast {
 
 	inline ExpressionPtr deleteArrayCall(ExpressionPtr expr) {
 		return unaryOp(UnaryOperation::DeleteArray, expr);
+	}
+
+	inline ExpressionPtr typeId(NodePtr element) {
+		return unaryOp(UnaryOperation::Typeid, element);
 	}
 
 	// -- Binary Operations -------------------------------------
