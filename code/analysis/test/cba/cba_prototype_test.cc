@@ -1045,9 +1045,62 @@ std::cout << in << "\n";
 
 	}
 
-	TEST(CBA, BindExpressions) {
+	TEST(CBA, BindExpressions_101) {
 
-		// call a higher-order function causing some effect
+			// first test for bind expressions - no captured context
+			NodeManager mgr;
+			IRBuilder builder(mgr);
+
+			auto in = builder.parseStmt(
+					"{"
+					"	auto inc = (int<4> x) => x + 1;"
+					"	inc(2);"
+					"	inc(4);"
+					"}"
+			).as<CompoundStmtPtr>();
+
+			ASSERT_TRUE(in);
+			CompoundStmtAddress code(in);
+
+			CBA analysis(code);
+
+			EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[1].as<ExpressionAddress>(), A)));
+			EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
+			createDotDump(analysis);
+	}
+
+	TEST(CBA, BindExpressions_102) {
+
+			// a bind expression capturing a reference
+			NodeManager mgr;
+			IRBuilder builder(mgr);
+
+			auto in = builder.parseStmt(
+					"{"
+					"	ref<int<4>> o = var(1);"
+					"	auto inc = let f = (int<4> a, ref<int<4>> b)->int<4> { return a + b; } in (int<4> x) => f(x,o);"
+					"	inc(2);"
+					"	o = 2;"
+					"	inc(2);"
+					"	o = 5;"
+					"	inc(3);"
+					"}"
+			).as<CompoundStmtPtr>();
+
+			ASSERT_TRUE(in);
+			CompoundStmtAddress code(in);
+
+			CBA analysis(code);
+
+			EXPECT_EQ("{3}", toString(analysis.getValuesOf(code[2].as<ExpressionAddress>(), A)));
+			EXPECT_EQ("{4}", toString(analysis.getValuesOf(code[4].as<ExpressionAddress>(), A)));
+			EXPECT_EQ("{8}", toString(analysis.getValuesOf(code[6].as<ExpressionAddress>(), A)));
+//			createDotDump(analysis);
+	}
+
+	TEST(CBA, BindExpressions_103) {
+
+		// a bind expression causing some side effect
 		NodeManager mgr;
 		IRBuilder builder(mgr);
 
@@ -1088,7 +1141,7 @@ std::cout << in << "\n";
 //		EXPECT_EQ("{5}", toString(analysis.getValuesOf(code[12].as<ExpressionAddress>(), A)));
 //		EXPECT_EQ("{7}", toString(analysis.getValuesOf(code[14].as<ExpressionAddress>(), A)));
 
-}
+	}
 
 
 	// Known Issues:
